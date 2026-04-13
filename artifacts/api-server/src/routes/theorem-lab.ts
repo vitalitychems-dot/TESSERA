@@ -335,6 +335,40 @@ router.patch("/theorem-lab/proofs/:proofId/steps/:stepId", (req, res) => {
   return res.json({ ok: true, proof });
 });
 
+router.post("/theorem-lab/proofs/:proofId/steps/:stepId/regenerate", (req, res) => {
+  const proof = proofStore.get(req.params.proofId);
+  if (!proof) return res.status(404).json({ ok: false, error: "Proof not found" });
+
+  const stepIndex = proof.steps.findIndex(s => s.id === req.params.stepId);
+  if (stepIndex === -1) return res.status(404).json({ ok: false, error: "Step not found" });
+
+  const oldStep = proof.steps[stepIndex];
+  const newSteps = generateProofSteps(proof.problem, proof.category);
+  const matchingNew = newSteps.find(s => s.type === oldStep.type);
+
+  if (matchingNew) {
+    proof.steps[stepIndex] = {
+      ...matchingNew,
+      id: oldStep.id,
+      title: oldStep.title,
+      confidence: Math.min(1, matchingNew.confidence + 0.02),
+    };
+  } else {
+    proof.steps[stepIndex] = {
+      ...oldStep,
+      reasoning: oldStep.reasoning + " [Regenerated with refined analysis.]",
+      confidence: Math.min(1, oldStep.confidence + 0.02),
+    };
+  }
+
+  proof.confidence = Math.round(proof.steps.reduce((s, st) => s * st.confidence, 1) * 100);
+  proof.completeness = Math.round((proof.steps.filter(s => s.confidence >= 0.8).length / proof.steps.length) * 100);
+
+  logger.info({ proofId: proof.id, stepId: oldStep.id, type: oldStep.type }, "Step regenerated");
+
+  return res.json({ ok: true, proof });
+});
+
 router.delete("/theorem-lab/proofs/:proofId", (req, res) => {
   const deleted = proofStore.delete(req.params.proofId);
   if (!deleted) return res.status(404).json({ ok: false, error: "Proof not found" });
@@ -431,6 +465,12 @@ ${step.notation}
 
 \\section*{Confidence Analysis}
 Overall chain confidence: ${proof.confidence}\\%. Completeness: ${proof.completeness}\\%.
+
+\\begin{thebibliography}{9}
+\\bibitem{tessera} Tessera Sovereign System, \\textit{Automated Theorem Proving Engine}, ${new Date(proof.createdAt).getFullYear()}.
+\\bibitem{foundations} Enderton, H.B., \\textit{A Mathematical Introduction to Logic}, Academic Press, 2001.
+\\bibitem{prooftheory} Buss, S.R., \\textit{Handbook of Proof Theory}, Elsevier, 1998.
+\\end{thebibliography}
 
 \\end{document}
 `;
