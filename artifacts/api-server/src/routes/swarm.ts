@@ -8,6 +8,23 @@ import { meshBroadcast } from "../lib/mesh-bus";
 
 const router: IRouter = Router();
 
+router.get("/swarm/agents", (_req, res) => {
+  res.json({
+    ok: true,
+    agents: [
+      { id: "math-agent", name: "Euler", domain: "math", modelId: "deepseek-chat", status: "idle", role: "Logic & Reasoning" },
+      { id: "physics-agent", name: "Curie", domain: "physics", modelId: "gemini-2.5-flash-preview-05-20", status: "idle", role: "Analysis & Systems" },
+      { id: "symbolic-agent", name: "Noether", domain: "symbolic", modelId: "claude-sonnet-4-20250514", status: "idle", role: "Architecture & Symbolism" },
+      { id: "retrieval-agent", name: "Athena", domain: "retrieval", modelId: "gpt-4.1", status: "idle", role: "Strategy & Wisdom" },
+      { id: "planning-agent", name: "Minerva", domain: "planning", modelId: "grok-3", status: "idle", role: "Execution & Mastery" },
+      { id: "architecture-agent", name: "Ada", domain: "architecture", modelId: "claude-sonnet-4-20250514", status: "idle", role: "Design & Integration" },
+      { id: "routing-agent", name: "Iris", domain: "routing", modelId: "mistral-large-latest", status: "idle", role: "Routing & Coordination" },
+    ],
+    count: 7,
+    timestamp: Date.now(),
+  });
+});
+
 router.get("/swarm/status", (_req, res) => {
   res.json({
     ok: true,
