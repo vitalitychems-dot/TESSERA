@@ -44,6 +44,7 @@ const TABS: { label: string; href: string; Icon: any; match: (l: string) => bool
   { label: "Forum", href: "/forum", Icon: MessageCircle, match: (l) => l === "/forum", color: "cyan" },
   { label: "Recruit", href: "/recruitment", Icon: UserPlus, match: (l) => l === "/recruitment", color: "emerald" },
   { label: "NLP", href: "/nlp", Icon: Lightbulb, match: (l) => l === "/nlp", color: "amber" },
+  { label: "Theorem", href: "/theorem-lab", Icon: BookOpen, match: (l) => l === "/theorem-lab", color: "cyan" },
 ];
 
 const COLOR_MAP: Record<string, { active: string; text: string; dot: string; inactive: string }> = {
