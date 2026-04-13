@@ -67,6 +67,7 @@ const MeshPage = lazy(() => import("@/pages/MeshPage"));
 const TesseractForumPage = lazy(() => import("@/pages/TesseractForumPage"));
 const RecruitmentPage = lazy(() => import("@/pages/RecruitmentPage"));
 const NLPSelfImprovementPage = lazy(() => import("@/pages/NLPSelfImprovementPage"));
+const TheoremLabPage = lazy(() => import("@/pages/TheoremLabPage"));
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -266,6 +267,7 @@ function AppRouter() {
         <ProtectedRoute path="/forum">{() => <TesseractForumPage />}</ProtectedRoute>
         <ProtectedRoute path="/recruitment">{() => <RecruitmentPage />}</ProtectedRoute>
         <ProtectedRoute path="/nlp">{() => <NLPSelfImprovementPage />}</ProtectedRoute>
+        <ProtectedRoute path="/theorem-lab">{() => <TheoremLabPage />}</ProtectedRoute>
 
         <Route path="/knowledge-pipeline"><Redirect to="/unified-knowledge" /></Route>
         <Route path="/knowledge-synthesis"><Redirect to="/unified-knowledge" /></Route>

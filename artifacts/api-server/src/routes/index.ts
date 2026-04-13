@@ -28,6 +28,7 @@ import roadmapRouter from "./roadmap";
 import sovereigntyScoreRouter from "./sovereignty-score";
 import systemMetricsRouter from "./system-metrics";
 import tesseraBibleRouter from "./tessera-bible";
+import theoremLabRouter from "./theorem-lab";
 
 const router: IRouter = Router();
 
@@ -60,5 +61,6 @@ router.use(roadmapRouter);
 router.use(sovereigntyScoreRouter);
 router.use(systemMetricsRouter);
 router.use(tesseraBibleRouter);
+router.use(theoremLabRouter);
 
 export default router;
