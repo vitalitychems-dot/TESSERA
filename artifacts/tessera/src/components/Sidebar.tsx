@@ -175,7 +175,7 @@ const NAV_GROUPS: NavGroup[] = [
           "/grand-council", "/summit", "/summit-report", "/agi-summit",
           "/grand-conference", "/conference-decisions", "/real-ai",
           "/community-hub", "/tesseract", "/agi-implementations", "/consensus",
-          "/forum", "/tesseract-console",
+          "/tesseract-console",
         ].includes(loc),
       },
       {

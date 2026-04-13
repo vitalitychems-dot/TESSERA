@@ -64,6 +64,9 @@ const ColonelLanguagePage = lazy(() => import("@/pages/ColonelLanguagePage"));
 const SportsArbPage = lazy(() => import("@/pages/SportsArbPage"));
 const ReflectionPage = lazy(() => import("@/pages/ReflectionPage"));
 const MeshPage = lazy(() => import("@/pages/MeshPage"));
+const TesseractForumPage = lazy(() => import("@/pages/TesseractForumPage"));
+const RecruitmentPage = lazy(() => import("@/pages/RecruitmentPage"));
+const NLPSelfImprovementPage = lazy(() => import("@/pages/NLPSelfImprovementPage"));
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -260,6 +263,9 @@ function AppRouter() {
         <ProtectedRoute path="/reasoning">{() => <ReasoningDashboardPage />}</ProtectedRoute>
         <ProtectedRoute path="/reflection">{() => <ReflectionPage />}</ProtectedRoute>
         <ProtectedRoute path="/mesh">{() => <MeshPage />}</ProtectedRoute>
+        <ProtectedRoute path="/forum">{() => <TesseractForumPage />}</ProtectedRoute>
+        <ProtectedRoute path="/recruitment">{() => <RecruitmentPage />}</ProtectedRoute>
+        <ProtectedRoute path="/nlp">{() => <NLPSelfImprovementPage />}</ProtectedRoute>
 
         <Route path="/knowledge-pipeline"><Redirect to="/unified-knowledge" /></Route>
         <Route path="/knowledge-synthesis"><Redirect to="/unified-knowledge" /></Route>
@@ -278,7 +284,6 @@ function AppRouter() {
         <Route path="/grand-conference"><Redirect to="/grand-council" /></Route>
         <Route path="/conclusions"><Redirect to="/grand-council" /></Route>
         <Route path="/consensus"><Redirect to="/grand-council" /></Route>
-        <Route path="/forum"><Redirect to="/grand-council" /></Route>
         <Route path="/tesseract-console"><Redirect to="/grand-council" /></Route>
         <Route path="/tesseract"><Redirect to="/grand-council" /></Route>
         <Route path="/agi-summit"><Redirect to="/grand-council" /></Route>
@@ -336,7 +341,6 @@ function AppRouter() {
         <Route path="/transparency-ledger"><Redirect to="/activity-feed" /></Route>
         <Route path="/alerts"><Redirect to="/activity-feed" /></Route>
 
-        <Route path="/recruitment"><Redirect to="/swarm" /></Route>
         <Route path="/lattice"><Redirect to="/network" /></Route>
         <Route path="/provider-leaderboard"><Redirect to="/agi" /></Route>
         <Route path="/vitality"><Redirect to="/economy-hub" /></Route>

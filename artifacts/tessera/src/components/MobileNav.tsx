@@ -3,7 +3,7 @@ import {
   MessageSquare, Heart, Users, Mic, Atom, BookOpen, Sparkles, Crown,
   BarChart3, FlaskConical, Zap, Globe, Shield, Brain, Radio, Network,
   HardDrive, Box, Server, Bot, ScanEye, Compass, Moon, BookMarked,
-  Wrench, Code2, ImageIcon, Radar, Flame, Eye,
+  Wrench, Code2, ImageIcon, Radar, Flame, Eye, MessageCircle, UserPlus, Lightbulb,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRef, useEffect } from "react";
@@ -41,6 +41,9 @@ const TABS: { label: string; href: string; Icon: any; match: (l: string) => bool
   { label: "Sports", href: "/sports-arb", Icon: Brain, match: (l) => l === "/sports-arb", color: "emerald" },
   { label: "Reflect", href: "/reflection", Icon: Eye, match: (l) => l === "/reflection", color: "violet" },
   { label: "Mesh", href: "/mesh", Icon: Network, match: (l) => l === "/mesh", color: "violet" },
+  { label: "Forum", href: "/forum", Icon: MessageCircle, match: (l) => l === "/forum", color: "cyan" },
+  { label: "Recruit", href: "/recruitment", Icon: UserPlus, match: (l) => l === "/recruitment", color: "emerald" },
+  { label: "NLP", href: "/nlp", Icon: Lightbulb, match: (l) => l === "/nlp", color: "amber" },
 ];
 
 const COLOR_MAP: Record<string, { active: string; text: string; dot: string; inactive: string }> = {

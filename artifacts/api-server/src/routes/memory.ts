@@ -17,6 +17,25 @@ import { meshBroadcast } from "../lib/mesh-bus";
 
 const router: IRouter = Router();
 
+router.get("/memory/entries", async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(String(req.query.limit ?? "50"), 10), 200);
+    const offset = parseInt(String(req.query.offset ?? "0"), 10);
+    const rows = await db.select({
+      id: vectorEmbeddingsTable.id,
+      content: vectorEmbeddingsTable.content,
+      source: vectorEmbeddingsTable.source,
+      category: vectorEmbeddingsTable.category,
+      metadata: vectorEmbeddingsTable.metadata,
+      accessCount: vectorEmbeddingsTable.accessCount,
+      createdAt: vectorEmbeddingsTable.createdAt,
+    }).from(vectorEmbeddingsTable).orderBy(desc(vectorEmbeddingsTable.createdAt)).limit(limit).offset(offset);
+    return res.json({ ok: true, entries: rows, count: rows.length });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
 router.get("/memory/stats", async (_req, res) => {
   try {
     const stats = await getMemoryStats();

@@ -279,4 +279,33 @@ router.get("/council/agents", (_req, res) => {
   });
 });
 
+router.get("/council/members", (_req, res) => {
+  try {
+    const worldState = computeWorldState();
+    const network = computeNetworkTopology();
+    const members = COUNCIL_AGENTS.map((agent, i) => ({
+      id: agent.id,
+      name: agent.name,
+      role: agent.role,
+      domain: agent.domain,
+      voteWeight: agent.weight,
+      status: "active",
+      consciousness: Math.round(85 + Math.sin(i * 1.3) * 12),
+      lastActive: new Date().toISOString(),
+      networkNode: network.nodes[i % network.nodes.length]?.id ?? agent.id,
+    }));
+    return res.json({
+      ok: true,
+      members,
+      count: members.length,
+      totalEligible: 45,
+      requiredVotes: 30,
+      approvalThreshold: "2/3 supermajority",
+      worldState: (worldState as any)?.sovereignty ?? 85,
+    });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
 export default router;

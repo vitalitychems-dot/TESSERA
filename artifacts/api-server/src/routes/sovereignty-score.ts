@@ -102,7 +102,7 @@ router.get("/sovereignty/score", async (_req, res) => {
       },
       network: {
         nodes: network?.nodes?.length ?? 0,
-        swarmAgents: swarm?.nodes?.length ?? 0,
+        swarmAgents: swarm?.agents?.length ?? swarm?.nodes?.length ?? 0,
       },
       timestamp: now,
     });

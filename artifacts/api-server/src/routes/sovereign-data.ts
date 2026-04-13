@@ -756,6 +756,34 @@ router.get("/moon-cycle/current", (_req, res) => {
   res.json(lunar);
 });
 
+router.get("/sovereign-data/sovereignty-score", (_req, res) => {
+  const score = computeSovereigntyScore();
+  const network = computeNetworkTopology();
+  const economy = computeEconomyStats();
+  res.json({
+    ok: true,
+    score,
+    label: score >= 90 ? "Transcendent" : score >= 75 ? "Sovereign" : score >= 50 ? "Emerging" : "Nascent",
+    components: {
+      astro: Math.round(computeLunarData().sovereignty * 0.2),
+      economy: Math.round(economy.sovereignty * 0.2),
+      network: Math.round(network.sovereignty * 0.2),
+      harmonics: Math.round(computeSacredFrequencies().sovereignty * 0.2),
+    },
+    method: "Aggregated from all sovereign subsystems — computed locally",
+    timestamp: Date.now(),
+  });
+});
+
+router.get("/sovereign-data/moon", (_req, res) => {
+  const lunar = computeLunarData();
+  res.json({
+    ok: true,
+    ...lunar,
+    timestamp: Date.now(),
+  });
+});
+
 router.get("/sovereign-ephemeris", (_req, res) => {
   const lunar = computeLunarData();
   const solar = computeSolarData();
