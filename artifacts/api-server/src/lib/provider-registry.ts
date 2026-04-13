@@ -271,7 +271,9 @@ export function sovereigntyEnforcementMiddleware() {
       const sovereignHeader = req.headers["x-sovereign-token"] as string | undefined;
 
       if (SOVEREIGN_TOKEN && sovereignHeader) {
-        if (crypto.timingSafeEqual(Buffer.from(sovereignHeader), Buffer.from(SOVEREIGN_TOKEN))) {
+        const headerBuf = Buffer.from(sovereignHeader);
+        const tokenBuf = Buffer.from(SOVEREIGN_TOKEN);
+        if (headerBuf.length === tokenBuf.length && crypto.timingSafeEqual(headerBuf, tokenBuf)) {
           next();
           return;
         }

@@ -88,10 +88,10 @@ function getSystemTelemetry() {
     uptime: { serverSeconds: Math.round(process.uptime()), systemSeconds: os.uptime() },
     lunar: { phase: lunar.phase, illumination: lunar.illumination, sign: lunar.moonZodiac, distance: lunar.moonDistanceKm },
     solar: { sign: solar.zodiac?.sign || "unknown", declination: solar.declination },
-    economy: { gdp: economy.gdp, avgProductivity: economy.avgProductivity, gini: economy.giniCoefficient, agentCount: economy.agents?.length || 0 },
+    economy: { gdp: economy.gdp, avgProductivity: economy.avgProductivity, gini: economy.giniCoefficient, agentCount: economy.totalAgents },
     market: { price: market.price, supply: market.circulatingSupply },
     network: { nodes: network.nodes.length, edges: network.edges.length, health: network.stats.networkHealth },
-    swarm: { agents: swarm.nodes?.length || 0, consensus: swarm.consensus?.status || "active" },
+    swarm: { agents: swarm.nodes.length, routing: swarm.routing.algorithm },
     frequencies: { solfeggio: freq.solfeggio.length, schumann: freq.schumannResonance.length, schumannBase: freq.schumannResonance[0]?.frequency || 7.83 },
   };
 }

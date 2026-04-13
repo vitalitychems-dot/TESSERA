@@ -46,28 +46,27 @@ function gatherSovereignContext(): string {
 
   try {
     const lunar = computeLunarData();
-    parts.push(`Moon: ${lunar.phase} (${(lunar.illumination * 100).toFixed(1)}% illuminated, age: ${lunar.age.toFixed(1)} days, zodiac: ${lunar.zodiacSign})`);
+    parts.push(`Moon: ${lunar.phase} (${lunar.illumination.toFixed(1)}% illuminated, age: ${lunar.lunarAge.toFixed(1)} days, zodiac: ${lunar.moonZodiac.sign})`);
   } catch {}
 
   try {
     const solar = computeSolarData();
-    parts.push(`Sun: ${solar.zodiacSign} (declination: ${solar.declination.toFixed(2)}°, ${solar.season})`);
+    parts.push(`Sun: ${solar.zodiac.sign} (declination: ${solar.declination.toFixed(2)}°, ${solar.season})`);
   } catch {}
 
   try {
     const world = computeWorldState(now);
-    parts.push(`Economy: GDP ${world.gdp.toLocaleString()} TSRT, price $${world.price.toFixed(8)}, Gini ${world.giniCoefficient.toFixed(3)}`);
+    parts.push(`Economy: GDP ${world.economy.gdp.toLocaleString()} TSRT, price $${world.economy.tokenPrice.toFixed(8)}, ${world.activeAgents}/${world.population} agents active`);
   } catch {}
 
   try {
     const network = computeNetworkTopology(now);
-    parts.push(`Network: ${(network as any).nodes?.length ?? 16} nodes, Dijkstra routing active`);
+    parts.push(`Network: ${network.nodes.length} nodes, ${network.stats.healthyNodes} healthy, Dijkstra routing active`);
   } catch {}
 
   try {
     const freq = computeSacredFrequencies();
-    const activeCount = (freq as any).solfeggio?.length ?? 9;
-    parts.push(`Harmonics: ${activeCount} solfeggio frequencies calibrated, Schumann 7.83 Hz`);
+    parts.push(`Harmonics: ${freq.solfeggio.length} solfeggio frequencies calibrated, ${freq.schumannResonance.length} Schumann harmonics`);
   } catch {}
 
   parts.push(`System: ${os.cpus().length} cores, ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB heap, uptime ${Math.round(process.uptime())}s`);
@@ -252,14 +251,14 @@ All computation happens locally with zero external dependencies. What would you 
     try {
       const lunar = computeLunarData();
       const solar = computeSolarData();
-      responseBlocks.push(`**Astronomical Analysis (Curie):** Moon ${lunar.phase} at ${(lunar.illumination * 100).toFixed(1)}% illumination (${lunar.zodiacSign}), Sun in ${solar.zodiacSign} (declination ${solar.declination.toFixed(2)}°)`);
+      responseBlocks.push(`**Astronomical Analysis (Curie):** Moon ${lunar.phase} at ${lunar.illumination.toFixed(1)}% illumination (${lunar.moonZodiac.sign}), Sun in ${solar.zodiac.sign} (declination ${solar.declination.toFixed(2)}°)`);
     } catch {}
   }
 
   if (domains.includes("architecture") || domains.includes("planning")) {
     try {
       const network = computeNetworkTopology(now);
-      responseBlocks.push(`**Network Topology (Ada/Minerva):** ${(network as { nodes: unknown[] }).nodes?.length ?? 16} nodes in mesh, Dijkstra routing active with real system metrics`);
+      responseBlocks.push(`**Network Topology (Ada/Minerva):** ${network.stats.totalNodes} nodes in mesh, ${network.stats.healthyNodes} healthy, avg latency ${network.stats.avgLatencyMs}ms`);
     } catch {}
   }
 
