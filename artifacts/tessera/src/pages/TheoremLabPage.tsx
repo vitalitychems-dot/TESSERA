@@ -61,18 +61,25 @@ function KaTeX({ math, display = false }: { math: string; display?: boolean }) {
   return <span ref={ref} className={display ? "block my-2 overflow-x-auto" : "inline"} />;
 }
 
+const CONFIDENCE_STYLES: Record<string, { bar: string; text: string }> = {
+  emerald: { bar: "bg-emerald-500", text: "text-emerald-400" },
+  amber: { bar: "bg-amber-500", text: "text-amber-400" },
+  red: { bar: "bg-red-500", text: "text-red-400" },
+};
+
 function ConfidenceMeter({ value, label }: { value: number; label: string }) {
-  const color = value >= 90 ? "emerald" : value >= 70 ? "amber" : "red";
+  const colorKey = value >= 90 ? "emerald" : value >= 70 ? "amber" : "red";
+  const styles = CONFIDENCE_STYLES[colorKey];
   return (
     <div className="flex items-center gap-2">
       <span className="text-[9px] text-slate-500 uppercase tracking-wider">{label}</span>
       <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
         <div
-          className={`h-full rounded-full bg-${color}-500 transition-all duration-500`}
+          className={`h-full rounded-full ${styles.bar} transition-all duration-500`}
           style={{ width: `${value}%` }}
         />
       </div>
-      <span className={`text-[10px] font-mono text-${color}-400`}>{value}%</span>
+      <span className={`text-[10px] font-mono ${styles.text}`}>{value}%</span>
     </div>
   );
 }
