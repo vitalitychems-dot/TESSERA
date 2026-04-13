@@ -46,6 +46,26 @@ All sovereignty scores are **real, verifiable, and computed live** — no hardco
 - Proof verification runs each engine live and validates outputs (not hardcoded sovereignty:100)
 - 30-second cache on benchmark results (`CACHE_TTL_MS`)
 
+## Sovereign Infrastructure (Council-Approved)
+
+5 sovereign improvements approved by Grand Council vote (37/45 YES):
+1. **Sovereign Mission Tracker** — Real-time sovereignty progress (currently 89%)
+2. **Council Decision Feed** — Live feed of council decisions on the hub page
+3. **Mesh Lattice Network** — 9-node lattice with agent connections and health monitoring
+4. **Bio-Neural Computation Engines** — 8 sovereign engines with latency metrics
+5. **System Vitals Dashboard** — Real heap/CPU/RSS metrics with progress bars
+
+All data is real and computed live — heap usage, CPU load, uptime, council decisions from DB.
+
+## ToroidalBackground
+
+Animated universe background (`ToroidalBackground.tsx`) with:
+- Starfield with depth parallax
+- Toroidal particle system
+- Sacred geometry rings
+- Nebula clouds
+- Rendered at z-index 0 behind all content (z-index 1)
+
 ## Key API Routes
 
 - `/api/health` — System health
@@ -59,6 +79,7 @@ All sovereignty scores are **real, verifiable, and computed live** — no hardco
 - `/api/council/meeting` — Full multi-round council meetings
 - `/api/grand-council/votes` — Council agent votes with real confidence scores
 - `/api/grand-council/proofs` — Live-verified sovereignty proofs per domain
+- `/api/sovereign-infrastructure/dashboard` — Full infrastructure dashboard (mission, lattice, engines, vitals)
 - `/api/world` — World state economics
 - `/api/tsrt/full-market` — Token market data
 - `/api/inventions/*` — Sovereign inventions CRUD

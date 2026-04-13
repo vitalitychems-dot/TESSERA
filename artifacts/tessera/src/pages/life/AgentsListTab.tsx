@@ -107,7 +107,7 @@ function AgentsListTab({ world, allChildren, tsrtPriceUsd = 0 }: { world: WorldS
   const agencyEntries: any[] = orgChart?.agencies || [];
   const selectedAgency = agencyEntries.find((e: any) => e.agency.id === drillAgencyId);
 
-  const activitiesWithWellbeing = world.currentActivities.filter(a => a.happiness != null && !a.agentId.includes("-clone"));
+  const activitiesWithWellbeing = world.currentActivities.filter(a => a.happiness != null && a.agentId && !a.agentId.includes("-clone"));
   const avgHappiness = activitiesWithWellbeing.length > 0 ? activitiesWithWellbeing.reduce((s, a) => s + (a.happiness || 0), 0) / activitiesWithWellbeing.length : 0;
 
   const breadcrumb = (

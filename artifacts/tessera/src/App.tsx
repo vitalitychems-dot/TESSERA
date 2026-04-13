@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import MobileNav from "@/components/MobileNav";
 import ActiveCommandsOverlay from "@/components/ActiveCommandsOverlay";
 import MeshStatusBadge from "@/components/MeshStatusBadge";
+import ToroidalBackground from "@/components/ToroidalBackground";
 import { Loader2, Shield } from "lucide-react";
 
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -379,6 +380,7 @@ function App() {
           <MeshProvider>
           <TooltipProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <ToroidalBackground />
               <div className="flex flex-col h-dvh w-full overflow-hidden" style={{ position: "relative", zIndex: 1 }}>
                 <Toaster />
                 <div className="fixed top-2 right-2 z-50">
