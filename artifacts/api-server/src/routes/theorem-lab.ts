@@ -54,10 +54,78 @@ function extractLatexFromProblem(problem: string): string[] {
   return matches.map(m => m.replace(/^\$|\$$/g, ""));
 }
 
+function analyzeProblem(problem: string): {
+  objects: string[];
+  relations: string[];
+  method: string;
+  keywords: string[];
+} {
+  const lower = problem.toLowerCase();
+  const objects: string[] = [];
+  const relations: string[] = [];
+  let method = "direct proof";
+  const keywords: string[] = [];
+
+  const objPatterns: [RegExp, string][] = [
+    [/\b(integer|integers|natural number|real number|rational|irrational)\b/i, "numbers"],
+    [/\b(function|mapping|transformation)\b/i, "functions"],
+    [/\b(set|subset|collection|family)\b/i, "sets"],
+    [/\b(group|ring|field|module|algebra)\b/i, "algebraic structures"],
+    [/\b(sequence|series|sum|product)\b/i, "sequences"],
+    [/\b(matrix|matrices|vector|determinant)\b/i, "linear algebra objects"],
+    [/\b(graph|vertex|edge|tree|path)\b/i, "graph objects"],
+    [/\b(probability|distribution|random variable)\b/i, "random variables"],
+    [/\b(algorithm|program|turing machine)\b/i, "computational objects"],
+    [/\b(triangle|circle|polygon|angle|line)\b/i, "geometric objects"],
+    [/\b(limit|derivative|integral|continuous)\b/i, "analytic objects"],
+    [/\b(prime|composite|divisor|factor|modular)\b/i, "number-theoretic objects"],
+  ];
+  for (const [pat, label] of objPatterns) {
+    if (pat.test(problem)) objects.push(label);
+  }
+
+  const relPatterns: [RegExp, string][] = [
+    [/\b(divides|divisible|congruent|equivalent)\b/i, "divisibility/equivalence"],
+    [/\b(converges|diverges|tends to|approaches)\b/i, "convergence"],
+    [/\b(isomorphic|homeomorphic|bijective)\b/i, "structural equivalence"],
+    [/\b(greater|less|equal|inequality|bound)\b/i, "ordering"],
+    [/\b(implies|if and only if|necessary|sufficient)\b/i, "logical implication"],
+    [/\b(contains|belongs|member|element)\b/i, "membership"],
+  ];
+  for (const [pat, label] of relPatterns) {
+    if (pat.test(problem)) relations.push(label);
+  }
+
+  if (lower.includes("contradiction") || lower.includes("suppose not") || lower.includes("assume the opposite")) method = "contradiction";
+  else if (lower.includes("induction") || lower.includes("base case") || lower.includes("for all n")) method = "mathematical induction";
+  else if (lower.includes("construct") || lower.includes("exhibit") || lower.includes("find")) method = "constructive proof";
+  else if (lower.includes("contrapositive")) method = "contrapositive";
+  else if (lower.includes("cases") || lower.includes("either") || lower.includes("case 1")) method = "proof by cases";
+  else if (lower.includes("infinite") || lower.includes("infinitely many")) method = "contradiction";
+  else if (lower.includes("unique") || lower.includes("exactly one")) method = "existence and uniqueness";
+
+  const kwPatterns = [
+    /\b(prime|primes)\b/i, /\b(infinite|infinity)\b/i, /\b(continuous|continuity)\b/i,
+    /\b(convergence|converge)\b/i, /\b(bounded|bound)\b/i, /\b(unique|uniqueness)\b/i,
+    /\b(maximum|minimum|extrema)\b/i, /\b(injective|surjective|bijective)\b/i,
+    /\b(countable|uncountable)\b/i, /\b(complete|completeness)\b/i,
+  ];
+  for (const pat of kwPatterns) {
+    const m = problem.match(pat);
+    if (m) keywords.push(m[1].toLowerCase());
+  }
+
+  if (objects.length === 0) objects.push("mathematical objects");
+  if (relations.length === 0) relations.push("logical deduction");
+
+  return { objects, relations, method, keywords };
+}
+
 function generateProofSteps(problem: string, category: string): ProofStep[] {
   const steps: ProofStep[] = [];
   const lower = problem.toLowerCase();
   const latexFragments = extractLatexFromProblem(problem);
+  const analysis = analyzeProblem(problem);
 
   const stepId = () => `step-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
@@ -86,17 +154,18 @@ function generateProofSteps(problem: string, category: string): ProofStep[] {
         confidence: 1.0,
       });
     } else {
+      const relStr = analysis.relations.join(", ");
       steps.push({
         id: stepId(), type: "lemma", title: "Key Lemma",
-        claim: "We establish a supporting result that will be used in the main proof.",
-        reasoning: "This lemma captures the essential algebraic or divisibility structure needed. It typically follows from the Euclidean algorithm, the division algorithm, or properties of modular arithmetic.",
+        claim: `We establish a supporting result about ${analysis.objects.join(", ")} via ${relStr}.`,
+        reasoning: `This lemma captures the essential algebraic or divisibility structure needed for the ${analysis.method}. It typically follows from the Euclidean algorithm, the division algorithm, or properties of modular arithmetic relevant to ${analysis.keywords.length > 0 ? analysis.keywords.join(", ") : "the given objects"}.`,
         notation: latexFragments.length > 0 ? `\\text{From the given: } ${latexFragments[0]}` : "\\text{By the Division Algorithm: } a = bq + r, \\quad 0 \\leq r < b",
         confidence: 0.9,
       });
       steps.push({
-        id: stepId(), type: "proof", title: "Main Argument",
-        claim: "We prove the central claim using the established definitions and lemma.",
-        reasoning: "Applying the lemma to the given conditions, we proceed by direct proof, contradiction, or induction as appropriate. Each step is justified by previously established results or axioms.",
+        id: stepId(), type: "proof", title: `Main Argument (by ${analysis.method})`,
+        claim: `We prove the central claim using ${analysis.method}, applying the established definitions and lemma.`,
+        reasoning: `Applying the lemma to the given conditions involving ${relStr}, we proceed by ${analysis.method}. Each step is justified by previously established results or axioms.${analysis.keywords.length > 0 ? ` Key concepts: ${analysis.keywords.join(", ")}.` : ""}`,
         notation: latexFragments.length > 1 ? `${latexFragments[0]} \\implies ${latexFragments[1]}` : "\\therefore \\text{ the claim follows from the preceding arguments.}",
         confidence: 0.85,
       });
@@ -124,9 +193,9 @@ function generateProofSteps(problem: string, category: string): ProofStep[] {
       confidence: 0.9,
     });
     steps.push({
-      id: stepId(), type: "proof", title: "Main Proof",
-      claim: "The result follows from the epsilon-delta construction.",
-      reasoning: "Combining the analytic setup, completeness, and our epsilon-delta bound, we complete the proof by showing all conditions are satisfied.",
+      id: stepId(), type: "proof", title: `Main Proof (by ${analysis.method})`,
+      claim: `The result follows from the epsilon-delta construction via ${analysis.method}.`,
+      reasoning: `Combining the analytic setup, completeness, and our epsilon-delta bound, we complete the proof using ${analysis.method}. The ${analysis.relations.join(" and ")} properties are verified for all relevant ${analysis.objects.join(", ")}.${analysis.keywords.length > 0 ? ` Key concepts: ${analysis.keywords.join(", ")}.` : ""}`,
       notation: "\\therefore \\text{ the result holds by the } \\varepsilon\\text{-}\\delta \\text{ argument. } \\blacksquare",
       confidence: 0.85,
     });
@@ -146,9 +215,9 @@ function generateProofSteps(problem: string, category: string): ProofStep[] {
       confidence: 0.92,
     });
     steps.push({
-      id: stepId(), type: "proof", title: "Main Proof",
-      claim: "The algebraic result follows from the structural properties established above.",
-      reasoning: "We apply the structural lemma to the specific algebraic objects in the problem, using the axioms and previously proved results to reach the conclusion.",
+      id: stepId(), type: "proof", title: `Main Proof (by ${analysis.method})`,
+      claim: `The algebraic result follows from the structural properties via ${analysis.method}.`,
+      reasoning: `We apply the structural lemma to the specific ${analysis.objects.join(", ")} in the problem, using ${analysis.method}. The ${analysis.relations.join(" and ")} relations are verified against the axioms.${analysis.keywords.length > 0 ? ` Key concepts: ${analysis.keywords.join(", ")}.` : ""}`,
       notation: "\\therefore \\text{ the result follows from the algebraic structure. } \\blacksquare",
       confidence: 0.88,
     });
@@ -168,9 +237,9 @@ function generateProofSteps(problem: string, category: string): ProofStep[] {
       confidence: 0.9,
     });
     steps.push({
-      id: stepId(), type: "proof", title: "Correctness and Complexity Proof",
-      claim: "The algorithm is correct and achieves the stated complexity bound.",
-      reasoning: "We prove correctness by induction on the input size (or loop invariant) and verify the complexity bound matches our analysis.",
+      id: stepId(), type: "proof", title: `Correctness and Complexity Proof (by ${analysis.method})`,
+      claim: `The algorithm is correct and achieves the stated complexity bound, proved via ${analysis.method}.`,
+      reasoning: `We prove correctness using ${analysis.method} on the ${analysis.objects.join(", ")} and verify the complexity bound. The ${analysis.relations.join(" and ")} properties ensure termination and correctness.${analysis.keywords.length > 0 ? ` Key concepts: ${analysis.keywords.join(", ")}.` : ""}`,
       notation: "\\text{Correctness: by induction on } |x|. \\text{ Complexity: } T(n) \\in O(f(n)). \\quad \\blacksquare",
       confidence: 0.87,
     });
@@ -190,38 +259,42 @@ function generateProofSteps(problem: string, category: string): ProofStep[] {
       confidence: 0.95,
     });
     steps.push({
-      id: stepId(), type: "proof", title: "Derivation",
-      claim: "We derive the result from the governing equations and conservation laws.",
-      reasoning: "Starting from the fundamental equations, we solve for the desired quantities using the constraints and initial/boundary conditions. Each step follows from the physical laws and mathematical analysis.",
+      id: stepId(), type: "proof", title: `Derivation (by ${analysis.method})`,
+      claim: `We derive the result from the governing equations using ${analysis.method}.`,
+      reasoning: `Starting from the fundamental equations for ${analysis.objects.join(", ")}, we solve using ${analysis.method}. The ${analysis.relations.join(" and ")} constraints are satisfied.${analysis.keywords.length > 0 ? ` Key concepts: ${analysis.keywords.join(", ")}.` : ""}`,
       notation: "\\therefore \\text{ the physical result follows from first principles. } \\blacksquare",
       confidence: 0.88,
     });
   } else {
+    const objStr = analysis.objects.join(", ");
+    const relStr = analysis.relations.join(", ");
+    const problemSnippet = problem.slice(0, 120).replace(/[\\{}$]/g, "");
+
     steps.push({
       id: stepId(), type: "definition", title: "Definitions and Setup",
-      claim: "We formally define the objects and relations involved in the problem.",
-      reasoning: "Clear definitions are the foundation of any rigorous proof. We identify the mathematical objects, their properties, and the relationships to be established.",
-      notation: latexFragments.length > 0 ? `\\text{Given: } ${latexFragments[0]}` : "\\text{Let the relevant objects be defined as stated in the problem.}",
+      claim: `We formally define the ${objStr} and establish the ${relStr} relations involved in this problem.`,
+      reasoning: `The problem concerns ${objStr}. We must precisely define each object and its domain before proceeding. The key relationships involve ${relStr}. We formalize the problem statement: "${problemSnippet}".`,
+      notation: latexFragments.length > 0 ? `\\text{Given: } ${latexFragments[0]}` : `\\text{Let the relevant } ${analysis.objects[0]} \\text{ be defined as stated in the problem.}`,
       confidence: 1.0,
     });
     steps.push({
       id: stepId(), type: "axiom", title: "Foundational Principles",
-      claim: "We state the axioms and previously proved theorems that our proof relies on.",
-      reasoning: "Every proof ultimately rests on axioms. We make these dependencies explicit for completeness and auditability.",
+      claim: `We state the axioms and previously proved theorems relevant to ${objStr} that our proof relies on.`,
+      reasoning: `For problems involving ${objStr}, we rely on the standard axioms of the relevant mathematical framework. The proof method will use ${analysis.method}, which requires specific foundational results about ${relStr}.`,
       notation: "\\text{We assume the standard axioms of ZFC set theory (or the relevant foundational system).}",
       confidence: 1.0,
     });
     steps.push({
       id: stepId(), type: "lemma", title: "Supporting Lemma",
-      claim: "We establish an intermediate result needed for the main proof.",
-      reasoning: "This lemma captures the key insight or technical step that makes the main argument work. It is proved independently before being applied.",
-      notation: latexFragments.length > 0 ? `\\text{Lemma: } ${latexFragments[0]} \\text{ holds under the given conditions.}` : "\\text{Lemma: The intermediate result holds.}",
+      claim: `We establish an intermediate result about ${objStr} needed for the ${analysis.method}.`,
+      reasoning: `This lemma captures the key structural insight about ${relStr} that enables the main argument. It addresses the specific ${analysis.objects[0]} mentioned in the problem and their ${analysis.relations[0]} properties.`,
+      notation: latexFragments.length > 0 ? `\\text{Lemma: } ${latexFragments[0]} \\text{ holds under the given conditions.}` : `\\text{Lemma: The intermediate result about } ${analysis.objects[0]} \\text{ holds.}`,
       confidence: 0.88,
     });
     steps.push({
-      id: stepId(), type: "proof", title: "Main Proof",
-      claim: "We prove the main result using the definitions, axioms, and lemma.",
-      reasoning: "Combining all the established results, we construct the proof using the appropriate technique (direct proof, contradiction, induction, or construction).",
+      id: stepId(), type: "proof", title: `Main Proof (by ${analysis.method})`,
+      claim: `We prove the main result using ${analysis.method}, applying the definitions, axioms, and lemma.`,
+      reasoning: `Combining all the established results about ${objStr}, we construct the proof using ${analysis.method}. Each step is justified by the previously established results about ${relStr}.${analysis.keywords.length > 0 ? ` Key concepts: ${analysis.keywords.join(", ")}.` : ""}`,
       notation: "\\therefore \\text{ the main result follows. } \\blacksquare",
       confidence: 0.85,
     });
