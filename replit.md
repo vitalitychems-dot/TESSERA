@@ -78,9 +78,24 @@ Animated universe background (`ToroidalBackground.tsx`) with:
 - **Swarm Agent Integration**: 7 agents (Euler/math, Curie/physics, Noether/symbolic, Athena/retrieval, Minerva/planning, Ada/architecture, Iris/routing) wired into server-side chat pipeline with domain detection and routing via `selectOptimalRoute()`.
 - **SSE Process Monitor**: `/api/processes/live` endpoint now supports SSE (text/event-stream) for real-time process monitoring, with 10-second interval updates from sovereign-network topology.
 
+## Sovereign Infrastructure Hardening (Task #1)
+
+New modules wiring the layered sovereign architecture: safeFetch → providers → SovereignEngineRouter → council → metaIntrospector.
+
+- **`safe-fetch.ts`**: Single `safeFetch` wrapper for all outbound HTTP calls. Automatically logs to `provider-call-logger` with latency tracking, error capture, and configurable timeout (default 15s). Used by all scrapers and providers.
+- **`providers/wikipedia-provider.ts`**: Wikipedia REST API provider module using `safeFetch`. Used by `SovereignEngineRouter` for knowledge domain queries.
+- **`sovereign-engine-router.ts`**: Central gateway (`SovereignEngineRouter`) that accepts domain-tagged requests and routes to the correct provider. Routes internal-call events to `provider-call-logger`. `knowledge` domain routes to Wikipedia; `quantum`/`bio`/`mesh`/`finance` are stubs.
+- **`meta-introspector.ts`**: `getSystemHealthSnapshot()` combines sovereignty monitor summary and eval suite results into a single system health object.
+- **`cli/run-eval.ts`**: CLI for `npm run eval` — runs the full eval suite and prints a formatted pass/fail report with grades, scores, and evidence per dimension.
+- **`routes/meta-introspector.ts`**: Exposes `GET /api/meta/health-snapshot` for frontend and CLI access.
+- **Eval additions**: 4 new knowledge retrieval eval cases added to `eval-runner.ts` (AI, quantum computing, climate change, router health check) with `mustContain` substring checks against sovereign engine results.
+- **Council integration**: `POST /api/council/deliberate` now calls `runThroughSovereignEngine` for knowledge lookups before deliberation; knowledge context is woven into the transcript.
+- **Ingestion update**: `scrapers.ts` rewritten to use `safeFetch` instead of raw `fetch`. `apis.ts` updated to use `fetchText` via safeFetch for arXiv.
+
 ## Key API Routes
 
 - `/api/health` — System health
+- `/api/meta/health-snapshot` — Combined sovereignty + eval health snapshot
 - `/api/sovereignty/score` — Live sovereignty score from real benchmark
 - `/api/sovereignty/benchmark` — Full detailed benchmark report with per-test evidence
 - `/api/sovereignty/modules` — Module-by-module engine status

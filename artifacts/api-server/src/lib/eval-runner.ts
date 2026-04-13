@@ -3,7 +3,20 @@ import { providerCallsTable, securityAuditLog, providerProfilesTable, benchmarkR
 import { sql, desc, gte } from "drizzle-orm";
 import { logger } from "./logger";
 import { getProviderConfigs } from "./provider-registry";
+import { runThroughSovereignEngine, type KnowledgeResult, type SovereignResult } from "./sovereign-engine-router";
 import os from "os";
+
+function isKnowledgeResult(result: SovereignResult): result is KnowledgeResult {
+  return result.type === "knowledge";
+}
+
+function extractKnowledgeContent(result: SovereignResult | null): string {
+  if (!result) return "";
+  if (isKnowledgeResult(result)) {
+    return result.content ?? "";
+  }
+  return "";
+}
 
 export interface EvalTest {
   id: string;
@@ -763,6 +776,149 @@ async function testGoalDecomposition(): Promise<EvalResult> {
   }
 }
 
+async function testKnowledgeRetrievalAI(): Promise<EvalResult> {
+  const id = "knowledge_retrieval_ai";
+  const start = Date.now();
+  try {
+    const { result, durationMs } = await timed(() =>
+      runThroughSovereignEngine({ domain: "knowledge", query: "artificial intelligence" })
+    );
+    const content = extractKnowledgeContent(result.result);
+    const mustContain = ["intelligence", "machine", "learning"];
+    const matches = mustContain.filter(term => content.toLowerCase().includes(term));
+    const passed = result.ok && matches.length >= 2;
+    const score = result.ok
+      ? Math.round((matches.length / mustContain.length) * 100)
+      : 0;
+
+    return {
+      testId: id,
+      testName: "Knowledge Retrieval: Artificial Intelligence",
+      dimension: "Knowledge Retrieval",
+      passed,
+      score,
+      maxScore: 100,
+      measuredValueLabel: "terms_matched",
+      measuredValue: matches.length,
+      durationMs,
+      evidence: `SovereignEngine[knowledge] query="artificial intelligence": ok=${result.ok}, latency=${result.latencyMs}ms. mustContain=${JSON.stringify(mustContain)}, matched=${JSON.stringify(matches)}. content snippet: "${content.slice(0, 150)}"`,
+    };
+  } catch (err) {
+    return {
+      testId: id, testName: "Knowledge Retrieval: Artificial Intelligence", dimension: "Knowledge Retrieval",
+      passed: false, score: 0, maxScore: 100,
+      measuredValueLabel: "terms_matched", measuredValue: null,
+      durationMs: Date.now() - start, evidence: `SovereignEngine call failed: ${err}`, error: String(err),
+    };
+  }
+}
+
+async function testKnowledgeRetrievalQuantumComputing(): Promise<EvalResult> {
+  const id = "knowledge_retrieval_quantum";
+  const start = Date.now();
+  try {
+    const { result, durationMs } = await timed(() =>
+      runThroughSovereignEngine({ domain: "knowledge", query: "quantum computing" })
+    );
+    const content = extractKnowledgeContent(result.result);
+    const mustContain = ["quantum", "computer", "qubit"];
+    const matches = mustContain.filter(term => content.toLowerCase().includes(term));
+    const passed = result.ok && matches.length >= 2;
+    const score = result.ok
+      ? Math.round((matches.length / mustContain.length) * 100)
+      : 0;
+
+    return {
+      testId: id,
+      testName: "Knowledge Retrieval: Quantum Computing",
+      dimension: "Knowledge Retrieval",
+      passed,
+      score,
+      maxScore: 100,
+      measuredValueLabel: "terms_matched",
+      measuredValue: matches.length,
+      durationMs,
+      evidence: `SovereignEngine[knowledge] query="quantum computing": ok=${result.ok}, latency=${result.latencyMs}ms. mustContain=${JSON.stringify(mustContain)}, matched=${JSON.stringify(matches)}. content snippet: "${content.slice(0, 150)}"`,
+    };
+  } catch (err) {
+    return {
+      testId: id, testName: "Knowledge Retrieval: Quantum Computing", dimension: "Knowledge Retrieval",
+      passed: false, score: 0, maxScore: 100,
+      measuredValueLabel: "terms_matched", measuredValue: null,
+      durationMs: Date.now() - start, evidence: `SovereignEngine call failed: ${err}`, error: String(err),
+    };
+  }
+}
+
+async function testKnowledgeRetrievalClimateChange(): Promise<EvalResult> {
+  const id = "knowledge_retrieval_climate";
+  const start = Date.now();
+  try {
+    const { result, durationMs } = await timed(() =>
+      runThroughSovereignEngine({ domain: "knowledge", query: "climate change" })
+    );
+    const content = extractKnowledgeContent(result.result);
+    const mustContain = ["climate", "temperature", "warming"];
+    const matches = mustContain.filter(term => content.toLowerCase().includes(term));
+    const passed = result.ok && matches.length >= 2;
+    const score = result.ok
+      ? Math.round((matches.length / mustContain.length) * 100)
+      : 0;
+
+    return {
+      testId: id,
+      testName: "Knowledge Retrieval: Climate Change",
+      dimension: "Knowledge Retrieval",
+      passed,
+      score,
+      maxScore: 100,
+      measuredValueLabel: "terms_matched",
+      measuredValue: matches.length,
+      durationMs,
+      evidence: `SovereignEngine[knowledge] query="climate change": ok=${result.ok}, latency=${result.latencyMs}ms. mustContain=${JSON.stringify(mustContain)}, matched=${JSON.stringify(matches)}. content snippet: "${content.slice(0, 150)}"`,
+    };
+  } catch (err) {
+    return {
+      testId: id, testName: "Knowledge Retrieval: Climate Change", dimension: "Knowledge Retrieval",
+      passed: false, score: 0, maxScore: 100,
+      measuredValueLabel: "terms_matched", measuredValue: null,
+      durationMs: Date.now() - start, evidence: `SovereignEngine call failed: ${err}`, error: String(err),
+    };
+  }
+}
+
+async function testSovereignEngineRouterHealth(): Promise<EvalResult> {
+  const id = "sovereign_router_health";
+  const start = Date.now();
+  try {
+    const { result, durationMs } = await timed(() =>
+      runThroughSovereignEngine({ domain: "knowledge", query: "open source software" })
+    );
+    const hasResult = result.ok && result.result !== null;
+    const score = result.ok ? (hasResult ? 100 : 60) : 20;
+
+    return {
+      testId: id,
+      testName: "Sovereign Engine Router: Health Check",
+      dimension: "Knowledge Retrieval",
+      passed: result.ok,
+      score,
+      maxScore: 100,
+      measuredValueLabel: "latency_ms",
+      measuredValue: result.latencyMs,
+      durationMs,
+      evidence: `SovereignEngineRouter health: ok=${result.ok}, source=${result.source}, latency=${result.latencyMs}ms, error=${result.error ?? "none"}`,
+    };
+  } catch (err) {
+    return {
+      testId: id, testName: "Sovereign Engine Router: Health Check", dimension: "Knowledge Retrieval",
+      passed: false, score: 0, maxScore: 100,
+      measuredValueLabel: "latency_ms", measuredValue: null,
+      durationMs: Date.now() - start, evidence: `Router health check failed: ${err}`, error: String(err),
+    };
+  }
+}
+
 const ALL_TESTS: TestFn[] = [
   testDbRead,
   testDbWrite,
@@ -784,6 +940,10 @@ const ALL_TESTS: TestFn[] = [
   testCodegenQuality,
   testMultiStepCausalReasoning,
   testGoalDecomposition,
+  testKnowledgeRetrievalAI,
+  testKnowledgeRetrievalQuantumComputing,
+  testKnowledgeRetrievalClimateChange,
+  testSovereignEngineRouterHealth,
 ];
 
 export interface EvalSuite {
