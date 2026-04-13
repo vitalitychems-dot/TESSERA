@@ -568,9 +568,10 @@ router.get("/conversations/:id/attachments", (req, res) => {
   res.json({ ok: true, attachments: [] });
 });
 
-router.get("/processes/live", (_req, res) => {
+router.get("/processes/live", (req, res) => {
+  const acceptsSSE = req.headers.accept?.includes("text/event-stream");
   const network = computeNetworkTopology();
-  res.json({
+  const payload = {
     ok: true,
     processes: network.nodes.slice(0, 8).map(n => ({
       id: n.id,
@@ -582,7 +583,42 @@ router.get("/processes/live", (_req, res) => {
       connections: n.connections.length,
     })),
     method: "Real system metrics + graph topology — computed locally",
-  });
+  };
+
+  if (acceptsSSE) {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders?.();
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+
+    const interval = setInterval(() => {
+      try {
+        const updated = computeNetworkTopology();
+        const data = {
+          ok: true,
+          processes: updated.nodes.slice(0, 8).map(n => ({
+            id: n.id,
+            name: n.name,
+            status: n.status === "healthy" ? "running" : "warning",
+            cpu: n.cpuUsage,
+            memory: n.memoryUsage,
+            load: n.load,
+            connections: n.connections.length,
+          })),
+          method: "Real system metrics + graph topology — computed locally",
+        };
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
+      } catch {}
+    }, 10000);
+
+    req.on("close", () => {
+      clearInterval(interval);
+      res.end();
+    });
+  } else {
+    res.json(payload);
+  }
 });
 
 router.get("/sacred-knowledge/traditions", (_req, res) => {

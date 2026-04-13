@@ -208,3 +208,63 @@ export async function initializeProviderProfiles(): Promise<void> {
   }
   logger.info({ count: PROVIDER_CONFIGS.length }, "Provider profiles initialized");
 }
+
+const INTERNAL_ONLY_PATHS = [
+  "/api/sovereign-",
+  "/api/mesh",
+  "/api/swarm",
+  "/api/council",
+  "/api/self-heal",
+  "/api/anomaly",
+  "/api/recovery",
+  "/api/file-integrity",
+  "/api/diagnostics",
+  "/api/ingestion",
+];
+
+export function sovereigntyEnforcementMiddleware() {
+  return (req: any, res: any, next: any) => {
+    const path = req.path || req.url || "";
+    const origin = req.headers["origin"] || "";
+    const referer = req.headers["referer"] || "";
+    const userAgent = req.headers["user-agent"] || "";
+
+    const isInternalPath = INTERNAL_ONLY_PATHS.some(p => path.startsWith(p));
+
+    if (isInternalPath) {
+      const isFromExternalProvider = PROVIDER_CONFIGS
+        .filter(p => p.isExternal && p.endpoint)
+        .some(p => {
+          try {
+            const providerDomain = new URL(p.endpoint!).hostname;
+            return origin.includes(providerDomain) || referer.includes(providerDomain);
+          } catch {
+            return false;
+          }
+        });
+
+      if (isFromExternalProvider) {
+        logger.warn({ path, origin, userAgent }, "External provider blocked from internal endpoint");
+        return res.status(403).json({
+          error: "Sovereignty violation: external entities cannot access internal sovereign endpoints",
+          code: "SOV-ENFORCE-001",
+        });
+      }
+    }
+
+    next();
+  };
+}
+
+export function isExternalProvider(providerId: string): boolean {
+  const config = getProviderConfig(providerId);
+  return config?.isExternal ?? true;
+}
+
+export function getInternalProviders(): ProviderConfig[] {
+  return PROVIDER_CONFIGS.filter(p => !p.isExternal);
+}
+
+export function getExternalProviders(): ProviderConfig[] {
+  return PROVIDER_CONFIGS.filter(p => p.isExternal);
+}

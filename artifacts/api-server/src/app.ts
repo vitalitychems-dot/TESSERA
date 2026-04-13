@@ -8,6 +8,7 @@ import { startAnomalyMonitor, stopAnomalyMonitor, recordRequest } from "./lib/an
 import { initRecoveryModule, registerRecoveryHandler, updateModuleStatus } from "./lib/auto-recovery";
 import { initializeMemoryOnStartup } from "./lib/vector-memory";
 import { startIngestionScheduler, runAllIngestion } from "./lib/ingestion/scheduler";
+import { sovereigntyEnforcementMiddleware } from "./lib/provider-registry";
 import { db } from "@workspace/db";
 import { dataSourcesTable } from "@workspace/db/schema";
 
@@ -35,6 +36,8 @@ app.use(
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use(sovereigntyEnforcementMiddleware());
 
 app.use((_req: Request, res: Response, next: NextFunction) => {
   res.on("finish", () => {
