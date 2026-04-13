@@ -30,16 +30,35 @@ All computations are local — zero external API calls:
 - **sovereign-network**: Mesh topology (16 nodes), Dijkstra routing, swarm status
 - **sovereign-harmonics**: Solfeggio frequencies, Schumann resonances, DNA healing
 
+## Sovereignty Benchmark System
+
+All sovereignty scores are **real, verifiable, and computed live** — no hardcoded values:
+- `sovereign-benchmarks.ts` runs 34 tests across 7 modules (astronomy, economics, network, harmonics, system-health, sovereignty, governance)
+- Each test validates engine outputs against physical/mathematical constraints with evidence strings
+- Astronomy: Meeus algorithm validated via illumination range, lunar distance (perigee-apogee), synodic month age, solar declination bounds, zodiac cross-checks
+- Economics: accounting identities (mcap = price × supply), Gini coefficient range, agent productivity bounds
+- Network: graph connectivity, Dijkstra route correctness, node ID validity
+- Harmonics: all 9 solfeggio frequencies present (174-963 Hz), Schumann base ~7.83 Hz confirmed
+- System-health: real heap/CPU metrics
+- Sovereignty: 100% local compute verified, no external APIs, no external LLM, local DB
+- Governance: council decisions and inventions counted from DB
+- Council vote confidence derived from real sovereignty scores per domain (not sine waves)
+- Proof verification runs each engine live and validates outputs (not hardcoded sovereignty:100)
+- 30-second cache on benchmark results (`CACHE_TTL_MS`)
+
 ## Key API Routes
 
 - `/api/health` — System health
-- `/api/sovereignty/score` — Live sovereignty score aggregating all engines
+- `/api/sovereignty/score` — Live sovereignty score from real benchmark
+- `/api/sovereignty/benchmark` — Full detailed benchmark report with per-test evidence
 - `/api/sovereignty/modules` — Module-by-module engine status
 - `/api/system/sovereign-metrics` — Full system telemetry (CPU, memory, engines, DB)
 - `/api/system/engines` — Engine latency benchmarks
 - `/api/council/deliberate` — Grand Council 3-round deliberation (POST, `topic` field)
 - `/api/council/decisions` — Council decision history
 - `/api/council/meeting` — Full multi-round council meetings
+- `/api/grand-council/votes` — Council agent votes with real confidence scores
+- `/api/grand-council/proofs` — Live-verified sovereignty proofs per domain
 - `/api/world` — World state economics
 - `/api/tsrt/full-market` — Token market data
 - `/api/inventions/*` — Sovereign inventions CRUD

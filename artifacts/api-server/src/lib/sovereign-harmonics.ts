@@ -179,7 +179,6 @@ export function computeSacredFrequencies(date: Date = new Date()) {
       frequency: Math.round(SCHUMANN_BASE * ((1 + Math.sqrt(5)) / 2) * 1000) / 1000,
       description: "Phi × Schumann = natural growth frequency",
     },
-    sovereignty: 100,
     computedAt: date.toISOString(),
     method: "Pure mathematical ratios — Pythagorean tuning, harmonic series, Schumann cavity modes — computed locally",
   };
