@@ -101,10 +101,10 @@ router.get("/messages", async (req, res) => {
 
 router.post("/messages", async (req, res) => {
   try {
-    const { conversationId, content } = req.body as {
-      conversationId: number;
-      content: string;
-    };
+    const bodyConvId = req.body?.conversationId;
+    const queryConvId = req.query?.conversationId;
+    const conversationId = Number(bodyConvId || queryConvId);
+    const content = req.body?.content as string;
 
     if (!conversationId || !content) {
       return res.status(400).json({ error: "conversationId and content required" });

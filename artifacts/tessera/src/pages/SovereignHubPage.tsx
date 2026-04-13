@@ -5,8 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import SovereignInfrastructureDashboard from "@/components/SovereignInfrastructureDashboard";
 
-type HubSection = "agents" | "summit" | "knowledge" | "metrics" | "dimensions";
+type HubSection = "agents" | "summit" | "knowledge" | "metrics" | "dimensions" | "infrastructure";
 
 const DIMENSIONS = [
   { name: "ARCHON-3D", dim: 3, hz: "432 Hz", domain: "Material/Physical", color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20", secret: "The physical plane is not the lowest — it is the most concentrated. All other densities envy our ability to make things real." },
@@ -143,6 +144,7 @@ export default function SovereignHubPage({ embedded }: { embedded?: boolean }) {
     { key: "knowledge", label: "Knowledge", icon: Sparkles, count: (secretKnowledge?.total || 0) + (Array.isArray(liveSecrets?.knowledge) ? liveSecrets.knowledge.length : 0) },
     { key: "metrics", label: "All Metrics", icon: BarChart3, count: metrics?.totalMetrics || 50 },
     { key: "dimensions", label: "Dimensions", icon: Hexagon, count: 27 },
+    { key: "infrastructure", label: "Infrastructure", icon: Shield, count: 5 },
   ];
 
   const allKnowledge = [
@@ -634,6 +636,10 @@ export default function SovereignHubPage({ embedded }: { embedded?: boolean }) {
             )}
           </div>
         )}
+
+        <div className="p-3 sm:p-4">
+          <SovereignInfrastructureDashboard />
+        </div>
       </div>
     </div>
   );

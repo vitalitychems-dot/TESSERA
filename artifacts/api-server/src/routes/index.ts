@@ -29,6 +29,7 @@ import sovereigntyScoreRouter from "./sovereignty-score";
 import systemMetricsRouter from "./system-metrics";
 import tesseraBibleRouter from "./tessera-bible";
 import theoremLabRouter from "./theorem-lab";
+import sovereignInfrastructureRouter from "./sovereign-infrastructure";
 
 const router: IRouter = Router();
 
@@ -62,5 +63,6 @@ router.use(sovereigntyScoreRouter);
 router.use(systemMetricsRouter);
 router.use(tesseraBibleRouter);
 router.use(theoremLabRouter);
+router.use(sovereignInfrastructureRouter);
 
 export default router;
