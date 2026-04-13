@@ -370,6 +370,49 @@ async function generateProofPDF(proof: Proof): Promise<void> {
   pdf.save(`${proof.title.replace(/\W+/g, "_")}.pdf`);
 }
 
+function generateLatexLocally(proof: Proof): { latex: string; filename: string } {
+  const year = new Date(proof.createdAt).getFullYear();
+  const dateStr = new Date(proof.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  const escTex = (s: string) => s.replace(/[&%$#_{}~^\\]/g, m => `\\${m}`);
+
+  const stepsLatex = proof.steps.map((step, i) => {
+    const typeLabel = step.type.charAt(0).toUpperCase() + step.type.slice(1);
+    return `\\subsection*{${typeLabel} ${i + 1}. ${escTex(step.title)}}
+\\textit{${escTex(step.claim)}}
+
+${escTex(step.reasoning)}
+
+$$${step.notation}$$
+`;
+  }).join("\n");
+
+  const latex = `\\documentclass[12pt]{article}
+\\usepackage{amsmath,amssymb,amsthm}
+\\usepackage[margin=1in]{geometry}
+\\title{${escTex(proof.title)}}
+\\author{${escTex(proof.author)}}
+\\date{${dateStr}}
+\\begin{document}
+\\maketitle
+\\begin{abstract}
+${escTex(proof.abstract)}
+\\end{abstract}
+\\section*{Problem Statement}
+${escTex(proof.problem)}
+\\section*{Proof}
+${stepsLatex}
+\\section*{Confidence Analysis}
+Overall chain confidence: ${proof.confidence}\\%. Completeness: ${proof.completeness}\\%.
+\\begin{thebibliography}{9}
+\\bibitem{tessera} Tessera Sovereign System, \\textit{Automated Theorem Proving Engine}, ${year}.
+\\bibitem{enderton} Enderton, H.B., \\textit{A Mathematical Introduction to Logic}, Academic Press, 2001.
+\\bibitem{buss} Buss, S.R., \\textit{Handbook of Proof Theory}, Elsevier, 1998.
+\\end{thebibliography}
+\\end{document}`;
+
+  return { latex, filename: `${proof.title.replace(/\W+/g, "_")}.tex` };
+}
+
 const LOCAL_STORAGE_KEY = "tessera_theorem_lab_proofs";
 
 function loadLocalProofs(): Proof[] {
@@ -422,21 +465,27 @@ function ProveTab() {
     onError: () => toast({ title: "Proof generation failed", variant: "destructive" }),
   });
 
+  const downloadLatex = useCallback((data: { latex: string; filename: string }) => {
+    const blob = new Blob([data.latex], { type: "text/x-latex" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = data.filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "LaTeX exported", description: data.filename });
+  }, [toast]);
+
   const exportLatex = useMutation({
-    mutationFn: async (proofId: string) => {
-      const res = await apiRequest("POST", "/api/theorem-lab/export/latex", { proofId });
-      return res.json();
+    mutationFn: async (proof: Proof) => {
+      try {
+        const res = await apiRequest("POST", "/api/theorem-lab/export/latex", { proofId: proof.id });
+        return res.json();
+      } catch {
+        return generateLatexLocally(proof);
+      }
     },
-    onSuccess: (data) => {
-      const blob = new Blob([data.latex], { type: "text/x-latex" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = data.filename;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast({ title: "LaTeX exported", description: data.filename });
-    },
+    onSuccess: (data) => downloadLatex(data),
     onError: () => toast({ title: "Export failed", variant: "destructive" }),
   });
 
@@ -520,7 +569,7 @@ function ProveTab() {
                   <Download className="w-3 h-3 mr-1" /> PDF
                 </Button>
                 <Button
-                  onClick={() => exportLatex.mutate(currentProof.id)}
+                  onClick={() => exportLatex.mutate(currentProof)}
                   disabled={exportLatex.isPending}
                   size="sm"
                   className="bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border border-violet-500/30 h-7 text-[10px]"
@@ -590,9 +639,13 @@ function LibraryTab() {
   });
 
   const exportLatex = useMutation({
-    mutationFn: async (proofId: string) => {
-      const res = await apiRequest("POST", "/api/theorem-lab/export/latex", { proofId });
-      return res.json();
+    mutationFn: async (proof: Proof) => {
+      try {
+        const res = await apiRequest("POST", "/api/theorem-lab/export/latex", { proofId: proof.id });
+        return res.json();
+      } catch {
+        return generateLatexLocally(proof);
+      }
     },
     onSuccess: (data) => {
       const blob = new Blob([data.latex], { type: "text/x-latex" });
@@ -604,6 +657,7 @@ function LibraryTab() {
       URL.revokeObjectURL(url);
       toast({ title: "LaTeX exported" });
     },
+    onError: () => toast({ title: "Export failed", variant: "destructive" }),
   });
 
   const exportPDF = useCallback(async (proof: Proof) => {
@@ -716,7 +770,7 @@ function LibraryTab() {
                       <Download className="w-3 h-3 mr-1" /> PDF
                     </Button>
                     <Button
-                      onClick={() => exportLatex.mutate(proof.id)}
+                      onClick={() => exportLatex.mutate(proof)}
                       size="sm"
                       className="bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border border-violet-500/30 h-7 text-[10px]"
                     >
