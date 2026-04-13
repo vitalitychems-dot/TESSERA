@@ -66,6 +66,15 @@ Animated universe background (`ToroidalBackground.tsx`) with:
 - Nebula clouds
 - Rendered at z-index 0 behind all content (z-index 1)
 
+## Security & Sovereignty Enforcement (Task #5)
+
+- **External API Sandboxing**: All external AI calls route through `secureExternalWrapper.ts` with domain allowlisting, intrusion detection, audit logging, and VM-based response sandboxing. Direct `new OpenAI()` removed from conversations.ts.
+- **Sovereignty Enforcement Middleware**: `sovereigntyEnforcementMiddleware()` in app.ts blocks external provider entities from accessing internal sovereign endpoints (mesh, swarm, council, self-heal, anomaly, recovery, file-integrity, diagnostics, ingestion).
+- **Provider Registry**: All external providers (Anthropic, OpenAI, Google, DeepSeek, xAI, Groq, Mistral, Meta, Qwen, Moonshot) marked `isExternal: true` with tier-based access control. Internal providers (Ollama, Puter) marked `isExternal: false`.
+- **Sovereign Response Engine**: `generateSovereignResponse()` dynamically gathers live data from all sovereign engines (astronomy, economics, harmonics, network) — no hardcoded templates. Agent domain detection routes through Dijkstra routing graph.
+- **Swarm Agent Integration**: 7 agents (Euler/math, Curie/physics, Noether/symbolic, Athena/retrieval, Minerva/planning, Ada/architecture, Iris/routing) wired into server-side chat pipeline with domain detection and routing via `selectOptimalRoute()`.
+- **SSE Process Monitor**: `/api/processes/live` endpoint now supports SSE (text/event-stream) for real-time process monitoring, with 10-second interval updates from sovereign-network topology.
+
 ## Key API Routes
 
 - `/api/health` — System health
