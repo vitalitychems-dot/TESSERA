@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   BookOpen, ChevronDown, ChevronUp, Download, FileText, Loader2,
@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 type Tab = "prove" | "library";
 
@@ -273,6 +274,102 @@ function StepCard({
   );
 }
 
+async function generateProofPDF(proof: Proof): Promise<void> {
+  const container = document.createElement("div");
+  container.style.cssText = "position:absolute;left:-9999px;top:0;width:800px;padding:40px;background:#fff;color:#000;font-family:serif;font-size:14px;line-height:1.6;";
+  document.body.appendChild(container);
+
+  const renderMath = (latex: string, display: boolean): string => {
+    try {
+      return katex.renderToString(latex, { displayMode: display, throwOnError: false, strict: false, trust: false });
+    } catch {
+      return "";
+    }
+  };
+
+  const el = (tag: string, styles: string, text?: string): HTMLElement => {
+    const node = document.createElement(tag);
+    node.style.cssText = styles;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+
+  const dateStr = new Date(proof.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  const year = new Date(proof.createdAt).getFullYear();
+
+  const header = el("div", "text-align:center;margin-bottom:24px");
+  header.appendChild(el("h1", "font-size:22px;margin:0 0 8px 0;font-weight:bold", proof.title));
+  header.appendChild(el("div", "font-size:13px;color:#444", proof.author));
+  header.appendChild(el("div", "font-size:12px;color:#666", dateStr));
+  container.appendChild(header);
+
+  const abstractSection = el("div", "margin-bottom:20px");
+  abstractSection.appendChild(el("h2", "font-size:15px;font-weight:bold;margin:0 0 6px 0", "Abstract"));
+  abstractSection.appendChild(el("p", "font-size:12px;color:#333;text-align:justify", proof.abstract));
+  container.appendChild(abstractSection);
+
+  const problemSection = el("div", "margin-bottom:20px");
+  problemSection.appendChild(el("h2", "font-size:15px;font-weight:bold;margin:0 0 6px 0", "Problem Statement"));
+  problemSection.appendChild(el("p", "font-size:13px", proof.problem));
+  container.appendChild(problemSection);
+
+  container.appendChild(el("h2", "font-size:15px;font-weight:bold;margin:0 0 12px 0", "Proof"));
+
+  proof.steps.forEach((step, i) => {
+    const stepDiv = el("div", "margin-bottom:16px;padding:10px;border:1px solid #ddd;border-radius:4px");
+    const typeLabel = step.type.charAt(0).toUpperCase() + step.type.slice(1);
+    stepDiv.appendChild(el("div", "font-size:13px;font-weight:bold;margin-bottom:4px", `${typeLabel} ${i + 1}. ${step.title}`));
+    stepDiv.appendChild(el("div", "font-size:12px;font-style:italic;margin-bottom:6px;color:#333", step.claim));
+    stepDiv.appendChild(el("div", "font-size:12px;margin-bottom:8px;color:#444", step.reasoning));
+    const mathDiv = el("div", "background:#f8f8f8;padding:8px;border-radius:4px;text-align:center;overflow-x:auto");
+    mathDiv.innerHTML = renderMath(step.notation, true);
+    stepDiv.appendChild(mathDiv);
+    container.appendChild(stepDiv);
+  });
+
+  const confSection = el("div", "margin-top:16px");
+  confSection.appendChild(el("h2", "font-size:15px;font-weight:bold;margin:0 0 6px 0", "Confidence Analysis"));
+  confSection.appendChild(el("p", "font-size:12px", `Overall chain confidence: ${proof.confidence}%. Completeness: ${proof.completeness}%.`));
+  container.appendChild(confSection);
+
+  const refSection = el("div", "margin-top:16px");
+  refSection.appendChild(el("h2", "font-size:15px;font-weight:bold;margin:0 0 6px 0", "References"));
+  const refList = el("div", "font-size:11px");
+  const refs = [
+    `[1] Tessera Sovereign System, Automated Theorem Proving Engine, ${year}.`,
+    '[2] Enderton, H.B., A Mathematical Introduction to Logic, Academic Press, 2001.',
+    '[3] Buss, S.R., Handbook of Proof Theory, Elsevier, 1998.',
+  ];
+  refs.forEach(r => refList.appendChild(el("p", "", r)));
+  refSection.appendChild(refList);
+  container.appendChild(refSection);
+
+  const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+  document.body.removeChild(container);
+
+  const imgData = canvas.toDataURL("image/jpeg", 0.95);
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = pdf.internal.pageSize.getHeight();
+  const imgWidth = pdfWidth - 20;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+  let heightLeft = imgHeight;
+  let position = 10;
+
+  pdf.addImage(imgData, "JPEG", 10, position, imgWidth, imgHeight);
+  heightLeft -= (pdfHeight - 20);
+
+  while (heightLeft > 0) {
+    position = position - pdfHeight + 10;
+    pdf.addPage();
+    pdf.addImage(imgData, "JPEG", 10, position, imgWidth, imgHeight);
+    heightLeft -= (pdfHeight - 20);
+  }
+
+  pdf.save(`${proof.title.replace(/\W+/g, "_")}.pdf`);
+}
+
 const LOCAL_STORAGE_KEY = "tessera_theorem_lab_proofs";
 
 function loadLocalProofs(): Proof[] {
@@ -311,7 +408,7 @@ function ProveTab() {
 
   const generateProof = useMutation({
     mutationFn: async () => {
-      const body: any = { problem };
+      const body: { problem: string; category?: string } = { problem };
       if (category) body.category = category;
       const res = await apiRequest("POST", "/api/theorem-lab/prove", body);
       return res.json();
@@ -345,152 +442,9 @@ function ProveTab() {
 
   const exportPDF = useCallback(async (proof: Proof) => {
     try {
-      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const margin = 20;
-      const textWidth = pageWidth - 2 * margin;
-      let y = 30;
-
-      const addPageCheck = (needed: number) => {
-        if (y + needed > doc.internal.pageSize.getHeight() - 20) {
-          doc.addPage();
-          y = 20;
-        }
-      };
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(18);
-      const titleLines = doc.splitTextToSize(proof.title, textWidth);
-      doc.text(titleLines, pageWidth / 2, y, { align: "center" });
-      y += titleLines.length * 8 + 5;
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(11);
-      doc.text(proof.author, pageWidth / 2, y, { align: "center" });
-      y += 6;
-      doc.setFontSize(10);
-      doc.text(new Date(proof.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }), pageWidth / 2, y, { align: "center" });
-      y += 12;
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.text("Abstract", margin, y);
-      y += 6;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      const abstractLines = doc.splitTextToSize(proof.abstract, textWidth);
-      addPageCheck(abstractLines.length * 5);
-      doc.text(abstractLines, margin, y);
-      y += abstractLines.length * 5 + 8;
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      addPageCheck(10);
-      doc.text("Problem Statement", margin, y);
-      y += 6;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      const probLines = doc.splitTextToSize(proof.problem, textWidth);
-      addPageCheck(probLines.length * 5);
-      doc.text(probLines, margin, y);
-      y += probLines.length * 5 + 8;
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      addPageCheck(10);
-      doc.text("Proof", margin, y);
-      y += 8;
-
-      proof.steps.forEach((step, i) => {
-        addPageCheck(30);
-
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
-        const typeLabel = step.type.charAt(0).toUpperCase() + step.type.slice(1);
-        doc.text(`${typeLabel} ${i + 1}. ${step.title}`, margin, y);
-        y += 6;
-
-        doc.setFont("helvetica", "italic");
-        doc.setFontSize(10);
-        const claimLines = doc.splitTextToSize(step.claim, textWidth);
-        addPageCheck(claimLines.length * 5);
-        doc.text(claimLines, margin, y);
-        y += claimLines.length * 5 + 3;
-
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        const reasonLines = doc.splitTextToSize(step.reasoning, textWidth);
-        addPageCheck(reasonLines.length * 5);
-        doc.text(reasonLines, margin, y);
-        y += reasonLines.length * 5 + 3;
-
-        doc.setFont("courier", "normal");
-        doc.setFontSize(9);
-        const notationClean = step.notation
-          .replace(/\\text\{([^}]*)\}/g, "$1")
-          .replace(/\\mathbb\{([^}]*)\}/g, "$1")
-          .replace(/\\[a-zA-Z]+/g, m => {
-            const sym: Record<string, string> = {
-              "\\forall": "for all", "\\exists": "there exists", "\\implies": "=>",
-              "\\iff": "<=>", "\\in": "in", "\\notin": "not in", "\\subset": "subset",
-              "\\therefore": "therefore", "\\blacksquare": "QED",
-              "\\infty": "infinity", "\\leq": "<=", "\\geq": ">=", "\\neq": "!=",
-              "\\cdot": "*", "\\times": "x", "\\mid": "|", "\\nmid": "does not divide",
-              "\\pmod": "mod", "\\equiv": "equiv", "\\prod": "PROD", "\\sum": "SUM",
-              "\\varepsilon": "epsilon", "\\delta": "delta", "\\alpha": "alpha",
-              "\\beta": "beta", "\\gamma": "gamma", "\\phi": "phi", "\\psi": "psi",
-              "\\hat": "", "\\frac": "", "\\left": "", "\\right": "",
-              "\\quad": "  ", "\\qquad": "    ", "\\trianglelefteq": "<|",
-            };
-            return sym[m] || m.replace("\\", "");
-          })
-          .replace(/[{}]/g, "")
-          .replace(/\s+/g, " ")
-          .trim();
-        const notationLines = doc.splitTextToSize(notationClean, textWidth);
-        addPageCheck(notationLines.length * 4 + 4);
-        doc.setDrawColor(100, 100, 100);
-        doc.rect(margin, y - 2, textWidth, notationLines.length * 4 + 4);
-        doc.text(notationLines, margin + 2, y + 2);
-        y += notationLines.length * 4 + 8;
-
-        doc.setFont("helvetica", "normal");
-      });
-
-      addPageCheck(15);
-      y += 5;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text("Confidence Analysis", margin, y);
-      y += 6;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.text(`Overall chain confidence: ${proof.confidence}%. Completeness: ${proof.completeness}%.`, margin, y);
-      y += 10;
-
-      addPageCheck(30);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.text("References", margin, y);
-      y += 6;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-      const refs = [
-        `[1] Tessera Sovereign System, "Automated Theorem Proving Engine", ${new Date(proof.createdAt).getFullYear()}.`,
-        '[2] Enderton, H.B., "A Mathematical Introduction to Logic", Academic Press, 2001.',
-        '[3] Buss, S.R., "Handbook of Proof Theory", Elsevier, 1998.',
-      ];
-      refs.forEach(r => {
-        addPageCheck(6);
-        const rLines = doc.splitTextToSize(r, textWidth);
-        doc.text(rLines, margin, y);
-        y += rLines.length * 4 + 3;
-      });
-
-      const filename = `${proof.title.replace(/\W+/g, "_")}.pdf`;
-      doc.save(filename);
-      toast({ title: "PDF exported", description: filename });
-    } catch (err) {
+      await generateProofPDF(proof);
+      toast({ title: "PDF exported", description: `${proof.title.replace(/\W+/g, "_")}.pdf` });
+    } catch {
       toast({ title: "PDF generation failed", variant: "destructive" });
     }
   }, [toast]);
@@ -654,78 +608,7 @@ function LibraryTab() {
 
   const exportPDF = useCallback(async (proof: Proof) => {
     try {
-      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const margin = 20;
-      const textWidth = pageWidth - 2 * margin;
-      let y = 30;
-
-      const addPageCheck = (needed: number) => {
-        if (y + needed > doc.internal.pageSize.getHeight() - 20) {
-          doc.addPage();
-          y = 20;
-        }
-      };
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(18);
-      const titleLines = doc.splitTextToSize(proof.title, textWidth);
-      doc.text(titleLines, pageWidth / 2, y, { align: "center" });
-      y += titleLines.length * 8 + 5;
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(11);
-      doc.text(proof.author, pageWidth / 2, y, { align: "center" });
-      y += 12;
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.text("Abstract", margin, y);
-      y += 6;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      const absLines = doc.splitTextToSize(proof.abstract, textWidth);
-      doc.text(absLines, margin, y);
-      y += absLines.length * 5 + 8;
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.text("Problem", margin, y);
-      y += 6;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      const probLines = doc.splitTextToSize(proof.problem, textWidth);
-      doc.text(probLines, margin, y);
-      y += probLines.length * 5 + 8;
-
-      proof.steps.forEach((step, i) => {
-        addPageCheck(25);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
-        doc.text(`${step.type.charAt(0).toUpperCase() + step.type.slice(1)} ${i + 1}. ${step.title}`, margin, y);
-        y += 6;
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        const lines = doc.splitTextToSize(`${step.claim}\n\n${step.reasoning}`, textWidth);
-        addPageCheck(lines.length * 5);
-        doc.text(lines, margin, y);
-        y += lines.length * 5 + 6;
-      });
-
-      y += 5;
-      addPageCheck(25);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text("References", margin, y);
-      y += 5;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-      [`[1] Tessera Sovereign System, "Automated Theorem Proving Engine", ${new Date(proof.createdAt).getFullYear()}.`,
-       '[2] Enderton, H.B., "A Mathematical Introduction to Logic", Academic Press, 2001.',
-       '[3] Buss, S.R., "Handbook of Proof Theory", Elsevier, 1998.']
-        .forEach(r => { addPageCheck(6); const rl = doc.splitTextToSize(r, textWidth); doc.text(rl, margin, y); y += rl.length * 4 + 3; });
-
-      doc.save(`${proof.title.replace(/\W+/g, "_")}.pdf`);
+      await generateProofPDF(proof);
       toast({ title: "PDF exported" });
     } catch {
       toast({ title: "PDF export failed", variant: "destructive" });
@@ -862,7 +745,7 @@ function LibraryTab() {
 export default function TheoremLabPage() {
   const [tab, setTab] = useState<Tab>("prove");
 
-  const tabs: { id: Tab; label: string; icon: any }[] = [
+  const tabs: { id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: "prove", label: "Prove", icon: Sparkles },
     { id: "library", label: "Library", icon: Archive },
   ];
