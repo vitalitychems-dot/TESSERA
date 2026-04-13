@@ -1,6 +1,8 @@
 import { db } from "@workspace/db";
 import { providerProfilesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import type { Request, Response, NextFunction } from "express";
+import crypto from "crypto";
 import { logger } from "./logger";
 
 export interface ProviderConfig {
@@ -222,33 +224,62 @@ const INTERNAL_ONLY_PATHS = [
   "/api/ingestion",
 ];
 
+const SOVEREIGN_TOKEN = process.env.SESSION_SECRET
+  ? crypto.createHash("sha256").update(`sovereign:${process.env.SESSION_SECRET}`).digest("hex").slice(0, 32)
+  : null;
+
+function isRequestFromTrustedOrigin(req: Request): boolean {
+  const host = req.headers.host || "";
+  const origin = req.headers.origin || "";
+
+  if (!origin) return true;
+
+  try {
+    const originHost = new URL(origin).hostname;
+    const serverHost = host.split(":")[0];
+    if (originHost === serverHost || originHost === "localhost" || originHost === "127.0.0.1") {
+      return true;
+    }
+    const replitDomain = process.env.REPLIT_DEV_DOMAIN || "";
+    if (replitDomain && (origin.includes(replitDomain) || origin.includes(".replit."))) {
+      return true;
+    }
+  } catch {
+    return true;
+  }
+
+  return false;
+}
+
 export function sovereigntyEnforcementMiddleware() {
-  return (req: any, res: any, next: any) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     const path = req.path || req.url || "";
-    const origin = req.headers["origin"] || "";
-    const referer = req.headers["referer"] || "";
-    const userAgent = req.headers["user-agent"] || "";
 
     const isInternalPath = INTERNAL_ONLY_PATHS.some(p => path.startsWith(p));
 
     if (isInternalPath) {
-      const isFromExternalProvider = PROVIDER_CONFIGS
-        .filter(p => p.isExternal && p.endpoint)
-        .some(p => {
-          try {
-            const providerDomain = new URL(p.endpoint!).hostname;
-            return origin.includes(providerDomain) || referer.includes(providerDomain);
-          } catch {
-            return false;
-          }
-        });
+      const sovereignHeader = req.headers["x-sovereign-token"] as string | undefined;
 
-      if (isFromExternalProvider) {
-        logger.warn({ path, origin, userAgent }, "External provider blocked from internal endpoint");
-        return res.status(403).json({
+      if (sovereignHeader && SOVEREIGN_TOKEN) {
+        if (sovereignHeader === SOVEREIGN_TOKEN) {
+          next();
+          return;
+        }
+        logger.warn({ path }, "Invalid sovereign token presented for internal endpoint");
+        res.status(403).json({
+          error: "Sovereignty violation: invalid sovereign token",
+          code: "SOV-ENFORCE-002",
+        });
+        return;
+      }
+
+      if (!isRequestFromTrustedOrigin(req)) {
+        logger.warn({ path, origin: req.headers.origin }, "Untrusted origin blocked from internal endpoint");
+        res.status(403).json({
           error: "Sovereignty violation: external entities cannot access internal sovereign endpoints",
           code: "SOV-ENFORCE-001",
         });
+        return;
       }
     }
 
