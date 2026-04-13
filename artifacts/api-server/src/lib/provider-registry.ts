@@ -230,9 +230,7 @@ const SOVEREIGN_TOKEN = process.env.SESSION_SECRET
 
 function isRequestFromLocalhost(req: Request): boolean {
   const remoteAddr = req.socket?.remoteAddress || "";
-  const xff = req.headers["x-forwarded-for"];
-  const clientIp = typeof xff === "string" ? xff.split(",")[0].trim() : remoteAddr;
-  return clientIp === "127.0.0.1" || clientIp === "::1" || clientIp === "::ffff:127.0.0.1";
+  return remoteAddr === "127.0.0.1" || remoteAddr === "::1" || remoteAddr === "::ffff:127.0.0.1";
 }
 
 export function sovereigntyEnforcementMiddleware() {

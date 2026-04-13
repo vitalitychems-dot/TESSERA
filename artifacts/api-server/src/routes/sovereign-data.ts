@@ -881,7 +881,7 @@ router.get("/sovereign-data/sovereignty-score", (_req, res) => {
       astro: Math.round(computeLunarData().sovereignty * 0.2),
       economy: Math.round(economy.sovereignty * 0.2),
       network: Math.round(network.sovereignty * 0.2),
-      harmonics: 20,
+      harmonics: Math.round(computeSacredFrequencies().solfeggio.length > 0 ? 20 : 0),
     },
     method: "Aggregated from all sovereign subsystems — computed locally",
     timestamp: Date.now(),
