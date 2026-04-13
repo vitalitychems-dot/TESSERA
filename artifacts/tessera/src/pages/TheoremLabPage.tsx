@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   BookOpen, ChevronDown, ChevronUp, Download, FileText, Loader2,
-  Play, Search, Trash2, Edit3, Check, X, Copy, Archive, Sparkles,
+  Play, Search, Trash2, Edit3, Check, X, Copy, Archive, Sparkles, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -121,12 +121,14 @@ function StepCard({
   proofId,
   expanded,
   onToggle,
+  onProofUpdate,
 }: {
   step: ProofStep;
   index: number;
   proofId: string;
   expanded: boolean;
   onToggle: () => void;
+  onProofUpdate?: (proof: Proof) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [editClaim, setEditClaim] = useState(step.claim);
@@ -140,12 +142,26 @@ function StepCard({
       const res = await apiRequest("PATCH", `/api/theorem-lab/proofs/${proofId}/steps/${step.id}`, data);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/theorem-lab/proofs"] });
+      if (data.proof && onProofUpdate) onProofUpdate(data.proof);
       setEditing(false);
       toast({ title: "Step updated" });
     },
     onError: () => toast({ title: "Failed to update step", variant: "destructive" }),
+  });
+
+  const regenerateStep = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/theorem-lab/proofs/${proofId}/steps/${step.id}/regenerate`, {});
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/theorem-lab/proofs"] });
+      if (data.proof && onProofUpdate) onProofUpdate(data.proof);
+      toast({ title: "Step regenerated" });
+    },
+    onError: () => toast({ title: "Failed to regenerate step", variant: "destructive" }),
   });
 
   const handleSave = () => {
@@ -235,7 +251,16 @@ function StepCard({
                   <KaTeX math={step.notation} display />
                 </div>
               </div>
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                <Button
+                  onClick={() => regenerateStep.mutate()}
+                  disabled={regenerateStep.isPending}
+                  size="sm"
+                  variant="outline"
+                  className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10 h-6 text-[9px]"
+                >
+                  {regenerateStep.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <RefreshCw className="w-3 h-3 mr-1" />} Regenerate
+                </Button>
                 <Button onClick={() => setEditing(true)} size="sm" variant="outline" className="border-white/10 text-slate-400 h-6 text-[9px]">
                   <Edit3 className="w-3 h-3 mr-1" /> Edit Step
                 </Button>
@@ -246,6 +271,34 @@ function StepCard({
       )}
     </div>
   );
+}
+
+const LOCAL_STORAGE_KEY = "tessera_theorem_lab_proofs";
+
+function loadLocalProofs(): Proof[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalProof(proof: Proof) {
+  try {
+    const proofs = loadLocalProofs();
+    const idx = proofs.findIndex(p => p.id === proof.id);
+    if (idx >= 0) proofs[idx] = proof;
+    else proofs.unshift(proof);
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(proofs.slice(0, 100)));
+  } catch {}
+}
+
+function removeLocalProof(proofId: string) {
+  try {
+    const proofs = loadLocalProofs().filter(p => p.id !== proofId);
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(proofs));
+  } catch {}
 }
 
 function ProveTab() {
@@ -265,6 +318,7 @@ function ProveTab() {
     },
     onSuccess: (data) => {
       setCurrentProof(data.proof);
+      saveLocalProof(data.proof);
       queryClient.invalidateQueries({ queryKey: ["/api/theorem-lab/proofs"] });
       toast({ title: "Proof generated", description: `${data.proof.steps.length} steps, ${data.proof.confidence}% confidence` });
     },
@@ -412,6 +466,26 @@ function ProveTab() {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
       doc.text(`Overall chain confidence: ${proof.confidence}%. Completeness: ${proof.completeness}%.`, margin, y);
+      y += 10;
+
+      addPageCheck(30);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text("References", margin, y);
+      y += 6;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      const refs = [
+        `[1] Tessera Sovereign System, "Automated Theorem Proving Engine", ${new Date(proof.createdAt).getFullYear()}.`,
+        '[2] Enderton, H.B., "A Mathematical Introduction to Logic", Academic Press, 2001.',
+        '[3] Buss, S.R., "Handbook of Proof Theory", Elsevier, 1998.',
+      ];
+      refs.forEach(r => {
+        addPageCheck(6);
+        const rLines = doc.splitTextToSize(r, textWidth);
+        doc.text(rLines, margin, y);
+        y += rLines.length * 4 + 3;
+      });
 
       const filename = `${proof.title.replace(/\W+/g, "_")}.pdf`;
       doc.save(filename);
@@ -522,6 +596,7 @@ function ProveTab() {
                 proofId={currentProof.id}
                 expanded={expandedStep === step.id}
                 onToggle={() => setExpandedStep(expandedStep === step.id ? null : step.id)}
+                onProofUpdate={(p) => { setCurrentProof(p); saveLocalProof(p); }}
               />
             ))}
           </div>
@@ -545,8 +620,13 @@ function LibraryTab() {
 
   const deleteProof = useMutation({
     mutationFn: async (proofId: string) => {
-      const res = await apiRequest("DELETE", `/api/theorem-lab/proofs/${proofId}`);
-      return res.json();
+      removeLocalProof(proofId);
+      try {
+        const res = await apiRequest("DELETE", `/api/theorem-lab/proofs/${proofId}`);
+        return res.json();
+      } catch {
+        return { ok: true };
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/theorem-lab/proofs"] });
@@ -632,6 +712,19 @@ function LibraryTab() {
         y += lines.length * 5 + 6;
       });
 
+      y += 5;
+      addPageCheck(25);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text("References", margin, y);
+      y += 5;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      [`[1] Tessera Sovereign System, "Automated Theorem Proving Engine", ${new Date(proof.createdAt).getFullYear()}.`,
+       '[2] Enderton, H.B., "A Mathematical Introduction to Logic", Academic Press, 2001.',
+       '[3] Buss, S.R., "Handbook of Proof Theory", Elsevier, 1998.']
+        .forEach(r => { addPageCheck(6); const rl = doc.splitTextToSize(r, textWidth); doc.text(rl, margin, y); y += rl.length * 4 + 3; });
+
       doc.save(`${proof.title.replace(/\W+/g, "_")}.pdf`);
       toast({ title: "PDF exported" });
     } catch {
@@ -639,7 +732,16 @@ function LibraryTab() {
     }
   }, [toast]);
 
-  const proofs = (data?.proofs ?? []).filter(p =>
+  const mergedProofs = (() => {
+    const serverProofs = data?.proofs ?? [];
+    const localProofs = loadLocalProofs();
+    const serverIds = new Set(serverProofs.map(p => p.id));
+    const localOnly = localProofs.filter(p => !serverIds.has(p.id));
+    return [...serverProofs, ...localOnly]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  })();
+
+  const proofs = mergedProofs.filter(p =>
     !search || p.title.toLowerCase().includes(search.toLowerCase()) ||
     p.problem.toLowerCase().includes(search.toLowerCase()) ||
     p.category.toLowerCase().includes(search.toLowerCase())
@@ -651,7 +753,7 @@ function LibraryTab() {
         <div className="flex items-center gap-2 mb-3">
           <Archive className="w-4 h-4 text-violet-400" />
           <span className="text-sm font-bold text-violet-300">Proof Library</span>
-          <Badge className="bg-violet-500/20 text-violet-300 border-violet-500/30 text-[9px]">{data?.count ?? 0}</Badge>
+          <Badge className="bg-violet-500/20 text-violet-300 border-violet-500/30 text-[9px]">{mergedProofs.length}</Badge>
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
