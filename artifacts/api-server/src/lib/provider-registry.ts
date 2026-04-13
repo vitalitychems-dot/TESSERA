@@ -231,21 +231,31 @@ const SOVEREIGN_TOKEN = process.env.SESSION_SECRET
 function isRequestFromTrustedOrigin(req: Request): boolean {
   const host = req.headers.host || "";
   const origin = req.headers.origin || "";
+  const referer = req.headers.referer || "";
 
-  if (!origin) return true;
+  const sourceUrl = origin || referer;
+
+  if (!sourceUrl) {
+    const xff = req.headers["x-forwarded-for"];
+    const remoteIp = typeof xff === "string" ? xff.split(",")[0].trim() : req.socket?.remoteAddress || "";
+    if (remoteIp === "127.0.0.1" || remoteIp === "::1" || remoteIp === "::ffff:127.0.0.1") {
+      return true;
+    }
+    return false;
+  }
 
   try {
-    const originHost = new URL(origin).hostname;
+    const sourceHost = new URL(sourceUrl).hostname;
     const serverHost = host.split(":")[0];
-    if (originHost === serverHost || originHost === "localhost" || originHost === "127.0.0.1") {
+    if (sourceHost === serverHost || sourceHost === "localhost" || sourceHost === "127.0.0.1") {
       return true;
     }
     const replitDomain = process.env.REPLIT_DEV_DOMAIN || "";
-    if (replitDomain && (origin.includes(replitDomain) || origin.includes(".replit."))) {
+    if (replitDomain && (sourceUrl.includes(replitDomain) || sourceUrl.includes(".replit."))) {
       return true;
     }
   } catch {
-    return true;
+    return false;
   }
 
   return false;
@@ -260,8 +270,8 @@ export function sovereigntyEnforcementMiddleware() {
     if (isInternalPath) {
       const sovereignHeader = req.headers["x-sovereign-token"] as string | undefined;
 
-      if (sovereignHeader && SOVEREIGN_TOKEN) {
-        if (sovereignHeader === SOVEREIGN_TOKEN) {
+      if (SOVEREIGN_TOKEN && sovereignHeader) {
+        if (crypto.timingSafeEqual(Buffer.from(sovereignHeader), Buffer.from(SOVEREIGN_TOKEN))) {
           next();
           return;
         }
@@ -273,11 +283,20 @@ export function sovereigntyEnforcementMiddleware() {
         return;
       }
 
-      if (!isRequestFromTrustedOrigin(req)) {
-        logger.warn({ path, origin: req.headers.origin }, "Untrusted origin blocked from internal endpoint");
+      if (SOVEREIGN_TOKEN && !sovereignHeader && !isRequestFromTrustedOrigin(req)) {
+        logger.warn({ path, origin: req.headers.origin }, "Untrusted origin blocked from internal endpoint (no token)");
         res.status(403).json({
           error: "Sovereignty violation: external entities cannot access internal sovereign endpoints",
           code: "SOV-ENFORCE-001",
+        });
+        return;
+      }
+
+      if (!SOVEREIGN_TOKEN && !isRequestFromTrustedOrigin(req)) {
+        logger.warn({ path }, "No SESSION_SECRET configured and untrusted origin — blocking internal endpoint");
+        res.status(403).json({
+          error: "Sovereignty violation: no sovereign token configured and untrusted origin",
+          code: "SOV-ENFORCE-003",
         });
         return;
       }

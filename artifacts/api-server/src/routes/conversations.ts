@@ -227,26 +227,47 @@ ${sovereignCtx}
 All computation happens locally with zero external dependencies. What would you like to explore?`;
   }
 
-  let routingInfo = "";
-  try {
-    const routing = {
-      selectedAgent: domains[0] === "math" ? "math-agent" : domains[0] === "physics" ? "physics-agent" : "retrieval-agent",
-      selectedProvider: "sovereign-local",
-      algorithm: "dijkstra",
-    };
-    routingInfo = `\n\n*Routed via ${routing.algorithm} → ${routing.selectedAgent} (sovereign-local)*`;
-  } catch {}
+  const agentNameMap: Record<string, string> = { math: "Euler", physics: "Curie", symbolic: "Noether", retrieval: "Athena", planning: "Minerva", architecture: "Ada", routing: "Iris" };
+  const primaryAgent = agentNameMap[domains[0]] || "Athena";
+  const activeAgents = domains.map(d => agentNameMap[d] || d).join(", ");
 
-  return `**Tessera Sovereign Processing**
+  const responseBlocks: string[] = [];
 
-${agentContribs || "[Analyzing your request across all agent domains]"}
+  responseBlocks.push(`**${primaryAgent} analyzing:** "${userInput.slice(0, 150)}${userInput.length > 150 ? "..." : ""}"`);
 
-**Live Context:**
-${sovereignCtx}
+  if (agentContribs) {
+    responseBlocks.push(agentContribs);
+  }
 
-I am analyzing your request: "${userInput.slice(0, 100)}${userInput.length > 100 ? "..." : ""}"
+  responseBlocks.push(`**Sovereign Context (computed live):**\n${sovereignCtx}`);
 
-The sovereign engine is processing this through ${domains.length} agent domain(s): ${domains.join(", ")}. For enhanced AI-assisted responses, the system can route through external providers (sandboxed and isolated per SEC-001/SEC-002) to augment the sovereign response.${routingInfo}`;
+  if (domains.includes("math")) {
+    try {
+      const market = computeMarketData(now);
+      responseBlocks.push(`**Economic Computation (Euler):** TSRT price $${market.price.toFixed(8)}, market cap ${market.marketCap.toLocaleString()} TSRT, 24h volume ${market.volume24h.toLocaleString()}`);
+    } catch {}
+  }
+
+  if (domains.includes("physics")) {
+    try {
+      const lunar = computeLunarData();
+      const solar = computeSolarData();
+      responseBlocks.push(`**Astronomical Analysis (Curie):** Moon ${lunar.phase} at ${(lunar.illumination * 100).toFixed(1)}% illumination (${lunar.zodiacSign}), Sun in ${solar.zodiacSign} (declination ${solar.declination.toFixed(2)}°)`);
+    } catch {}
+  }
+
+  if (domains.includes("architecture") || domains.includes("planning")) {
+    try {
+      const network = computeNetworkTopology(now);
+      responseBlocks.push(`**Network Topology (Ada/Minerva):** ${(network as { nodes: unknown[] }).nodes?.length ?? 16} nodes in mesh, Dijkstra routing active with real system metrics`);
+    } catch {}
+  }
+
+  responseBlocks.push(`\n**Active Agents:** ${activeAgents}\n**Domains:** ${domains.join(", ")}\n**Route:** Dijkstra → ${domains[0]}-agent (sovereign-local)`);
+
+  responseBlocks.push(`I am processing this through ${domains.length} sovereign agent(s). For deeper analysis, the system routes through sandboxed external providers (SEC-001/SEC-002 enforced) when available.`);
+
+  return responseBlocks.join("\n\n");
 }
 
 async function callExternalAISandboxed(
@@ -527,17 +548,28 @@ router.post("/messages", async (req, res) => {
     if (streamResult) {
       finalContent = streamResult;
       logger.info({
-        source: "external-sandboxed",
+        source: "external-sandboxed-streaming",
         domains,
         agent: routingDecision?.selectedAgent,
-      }, "Chat response generated via sandboxed external AI");
+      }, "Chat response generated via sandboxed streaming AI");
     } else {
-      finalContent = generateSovereignResponse(content);
-      res.write(`data: ${JSON.stringify({ content: finalContent })}\n\n`);
-      logger.info({
-        source: "sovereign-local",
-        domains,
-      }, "Chat response generated via sovereign local engine");
+      const nonStreamResult = await callExternalAISandboxed(historyMessages, sovereignCtx, agentContribs);
+      if (nonStreamResult) {
+        finalContent = nonStreamResult;
+        res.write(`data: ${JSON.stringify({ content: finalContent })}\n\n`);
+        logger.info({
+          source: "external-sandboxed-batch",
+          domains,
+          agent: routingDecision?.selectedAgent,
+        }, "Chat response generated via sandboxed batch AI");
+      } else {
+        finalContent = generateSovereignResponse(content);
+        res.write(`data: ${JSON.stringify({ content: finalContent })}\n\n`);
+        logger.info({
+          source: "sovereign-local",
+          domains,
+        }, "Chat response generated via sovereign local engine");
+      }
     }
 
     if (finalContent) {
