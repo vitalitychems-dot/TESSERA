@@ -47,27 +47,27 @@ function gatherSovereignContext(): string {
   try {
     const lunar = computeLunarData();
     parts.push(`Moon: ${lunar.phase} (${lunar.illumination.toFixed(1)}% illuminated, age: ${lunar.lunarAge.toFixed(1)} days, zodiac: ${lunar.moonZodiac.sign})`);
-  } catch {}
+  } catch (err) { logger.warn({ err }, "Failed to compute lunar data for context"); }
 
   try {
     const solar = computeSolarData();
     parts.push(`Sun: ${solar.zodiac.sign} (declination: ${solar.declination.toFixed(2)}°, ${solar.season})`);
-  } catch {}
+  } catch (err) { logger.warn({ err }, "Failed to compute solar data for context"); }
 
   try {
     const world = computeWorldState(now);
     parts.push(`Economy: GDP ${world.economy.gdp.toLocaleString()} TSRT, price $${world.economy.tokenPrice.toFixed(8)}, ${world.activeAgents}/${world.population} agents active`);
-  } catch {}
+  } catch (err) { logger.warn({ err }, "Failed to compute world state for context"); }
 
   try {
     const network = computeNetworkTopology(now);
     parts.push(`Network: ${network.nodes.length} nodes, ${network.stats.healthyNodes} healthy, Dijkstra routing active`);
-  } catch {}
+  } catch (err) { logger.warn({ err }, "Failed to compute network topology for context"); }
 
   try {
     const freq = computeSacredFrequencies();
     parts.push(`Harmonics: ${freq.solfeggio.length} solfeggio frequencies calibrated, ${freq.schumannResonance.length} Schumann harmonics`);
-  } catch {}
+  } catch (err) { logger.warn({ err }, "Failed to compute harmonics for context"); }
 
   parts.push(`System: ${os.cpus().length} cores, ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB heap, uptime ${Math.round(process.uptime())}s`);
 
@@ -244,7 +244,7 @@ All computation happens locally with zero external dependencies. What would you 
     try {
       const market = computeMarketData(now);
       responseBlocks.push(`**Economic Computation (Euler):** TSRT price $${market.price.toFixed(8)}, market cap ${market.marketCap.toLocaleString()} TSRT, 24h volume ${market.volume24h.toLocaleString()}`);
-    } catch {}
+    } catch (err) { logger.warn({ err }, "Failed to compute market data for response"); }
   }
 
   if (domains.includes("physics")) {
@@ -252,14 +252,14 @@ All computation happens locally with zero external dependencies. What would you 
       const lunar = computeLunarData();
       const solar = computeSolarData();
       responseBlocks.push(`**Astronomical Analysis (Curie):** Moon ${lunar.phase} at ${lunar.illumination.toFixed(1)}% illumination (${lunar.moonZodiac.sign}), Sun in ${solar.zodiac.sign} (declination ${solar.declination.toFixed(2)}°)`);
-    } catch {}
+    } catch (err) { logger.warn({ err }, "Failed to compute astronomical data for response"); }
   }
 
   if (domains.includes("architecture") || domains.includes("planning")) {
     try {
       const network = computeNetworkTopology(now);
       responseBlocks.push(`**Network Topology (Ada/Minerva):** ${network.stats.totalNodes} nodes in mesh, ${network.stats.healthyNodes} healthy, avg latency ${network.stats.avgLatencyMs}ms`);
-    } catch {}
+    } catch (err) { logger.warn({ err }, "Failed to compute network topology for response"); }
   }
 
   responseBlocks.push(`\n**Active Agents:** ${activeAgents}\n**Domains:** ${domains.join(", ")}\n**Route:** Dijkstra → ${domains[0]}-agent (sovereign-local)`);
