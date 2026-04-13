@@ -1,9 +1,9 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { conversationsTable, messagesTable } from "@workspace/db/schema";
-import { desc, eq, asc, count } from "drizzle-orm";
+import { desc, eq, asc } from "drizzle-orm";
 import { logger } from "../lib/logger";
-import { secureExternalFetch } from "../lib/secureExternalWrapper";
+import { secureExternalFetch, secureExternalStreamingFetch } from "../lib/secureExternalWrapper";
 import { selectOptimalRoute } from "../lib/routing-graph";
 import { computeWorldState, computeMarketData } from "../lib/sovereign-economics";
 import { computeLunarData, computeSolarData } from "../lib/sovereign-astro";
@@ -315,17 +315,6 @@ async function callExternalAIStreaming(
 
   const streamUrl = `${baseURL}/chat/completions`;
 
-  const preflightResult = await secureExternalFetch(baseURL, {
-    method: "HEAD",
-    timeoutMs: 5000,
-    requestedBy: "sovereign-chat-streaming-preflight",
-  }).catch(() => null);
-
-  if (preflightResult?.flagged) {
-    logger.warn({ reason: preflightResult.flagReason }, "Streaming preflight flagged by security wrapper");
-    return null;
-  }
-
   const systemWithContext = `${TESSERA_IDENTITY}\n\n[LIVE SOVEREIGN CONTEXT]\n${sovereignCtx}\n\n[AGENT CONTRIBUTIONS]\n${agentContribs}`;
 
   const sanitizedMessages = messages.map(m => ({
@@ -333,10 +322,8 @@ async function callExternalAIStreaming(
     content: String(m.content).slice(0, 8192),
   }));
 
-  const startTime = Date.now();
-
   try {
-    const response = await fetch(streamUrl, {
+    const { response, flagged, flagReason } = await secureExternalStreamingFetch(streamUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -352,8 +339,13 @@ async function callExternalAIStreaming(
         temperature: 0.7,
         stream: true,
       }),
-      signal: AbortSignal.timeout(30000),
+      timeoutMs: 30000,
+      requestedBy: "sovereign-chat-streaming",
     });
+
+    if (flagged) {
+      logger.warn({ reason: flagReason, url: streamUrl }, "Streaming request flagged by security wrapper");
+    }
 
     if (!response.ok || !response.body) {
       logger.warn({ status: response.status, url: streamUrl }, "Streaming response not OK");
@@ -391,13 +383,10 @@ async function callExternalAIStreaming(
       }
     }
 
-    const durationMs = Date.now() - startTime;
-    logger.info({ url: streamUrl, durationMs, chars: accumulated.length }, "Streaming external AI call completed (sandboxed)");
-
+    logger.info({ url: streamUrl, chars: accumulated.length }, "Streaming external AI call completed (sandboxed)");
     return accumulated || null;
   } catch (err) {
-    const durationMs = Date.now() - startTime;
-    logger.warn({ err, url: streamUrl, durationMs }, "External AI streaming failed (sandboxed)");
+    logger.warn({ err, url: streamUrl }, "External AI streaming failed (sandboxed)");
     return null;
   }
 }

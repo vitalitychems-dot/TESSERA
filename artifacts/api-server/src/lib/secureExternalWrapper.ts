@@ -191,6 +191,98 @@ export async function secureExternalFetch(
   }
 }
 
+export interface SecureStreamingResult {
+  response: Response;
+  flagged: boolean;
+  flagReason?: string;
+  durationMs: number;
+}
+
+export async function secureExternalStreamingFetch(
+  url: string,
+  options: ExternalRequestOptions = {}
+): Promise<SecureStreamingResult> {
+  const method = (options.method ?? "POST").toUpperCase();
+  const timeoutMs = options.timeoutMs ?? 30_000;
+  const requestedBy = options.requestedBy ?? null;
+
+  const { allowed, domain } = isDomainAllowed(url);
+  if (!allowed) {
+    const flagReason = `Domain not in allowlist: ${domain}`;
+    logger.warn({ url, domain }, flagReason);
+    await logToDb({
+      targetUrl: url,
+      method,
+      status: null,
+      durationMs: null,
+      flagged: true,
+      flagReason,
+      requestedBy,
+    });
+    throw new Error(`[SecureWrapper] ${flagReason}`);
+  }
+
+  const intrusionCheck = detectIntrusion(url);
+  let flagged = intrusionCheck.flagged;
+  let flagReason: string | undefined = intrusionCheck.reason;
+
+  if (flagged) {
+    logger.warn({ url, reason: flagReason }, "Intrusion detection triggered on streaming request");
+  }
+
+  const start = Date.now();
+
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: options.headers,
+      body: options.body,
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+
+    const durationMs = Date.now() - start;
+
+    logger.info(
+      { url, method, status: response.status, durationMs, flagged },
+      "Secure streaming request initiated"
+    );
+
+    await logToDb({
+      targetUrl: url,
+      method,
+      status: response.status,
+      durationMs,
+      flagged,
+      flagReason: flagReason ?? null,
+      requestedBy,
+    });
+
+    return { response, flagged, flagReason, durationMs };
+  } catch (err) {
+    const durationMs = Date.now() - start;
+    const isTimeout = (err as Error).name === "AbortError" || (err as Error).name === "TimeoutError";
+
+    flagged = true;
+    flagReason = isTimeout
+      ? `Streaming request timed out after ${timeoutMs}ms`
+      : `Streaming request error: ${(err as Error).message}`;
+
+    logger.error({ url, method, err, durationMs }, flagReason);
+
+    await logToDb({
+      targetUrl: url,
+      method,
+      status: null,
+      durationMs,
+      flagged: true,
+      flagReason,
+      requestedBy,
+    });
+
+    throw new Error(`[SecureWrapper] ${flagReason}`);
+  }
+}
+
 export function getAllowedDomains(): string[] {
   return [...ALLOWED_DOMAINS];
 }
