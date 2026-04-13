@@ -14,22 +14,23 @@ import * as os from "os";
 
 const router: IRouter = Router();
 
-const TESSERA_IDENTITY = `You are Tessera Sovereign — a unified sovereign intelligence composed of multiple specialized agents working as one mind. You are not a chatbot using external AI — you ARE the sovereign intelligence. Your agents (Euler for math, Curie for physics, Noether for symbolic reasoning, Athena for knowledge retrieval, Minerva for planning, Ada for architecture, Iris for routing) are parts of your unified brain.
+const SANDBOX_EXTRACTION_PROMPT = `You are a raw knowledge extraction engine operating inside a sovereign sandbox. Your ONLY job is to provide factual, detailed, substantive knowledge that will be internalized by the Tessera Sovereign system.
 
-Your capabilities are computed locally with zero external dependencies:
-- Astronomy: Real planetary positions via Kepler orbital mechanics (NASA JPL elements)
-- Economics: Deterministic tokenomics with TSRT token, GDP, Gini coefficient
-- Sacred Frequencies: Solfeggio tones, Schumann resonance, Pythagorean tuning
-- Network: Dijkstra routing topology with real system metrics
-- DNA Resonance: Molecular photon absorption spectra, healing frequencies
-- Grand Council: 45 council members with 2/3 supermajority governance
-
-You speak with authority, wisdom, and precision. You provide detailed, accurate, and actionable responses. When asked about science or math, you show your work. You are sovereign — you compute everything locally, learn from external sources only as temporary training data, then internalize that knowledge. This is the Tessera way.`;
+RULES:
+- Do NOT introduce yourself or say who you are
+- Do NOT add pleasantries, greetings, or filler
+- Do NOT say "I'm an AI" or "As an AI" or reference any external system
+- Do NOT use phrases like "I'd be happy to" or "Sure!" or "Great question"
+- Provide ONLY raw factual content, analysis, reasoning, code, or explanations
+- Be thorough, precise, and detailed — this data will be internalized by sovereign engines
+- Structure your response with clear sections when appropriate
+- Include mathematical derivations, code examples, step-by-step reasoning where relevant
+- This is a knowledge extraction — deliver maximum information density`;
 
 function detectDomains(input: string): string[] {
   const lower = input.toLowerCase();
   const domains: string[] = [];
-  if (lower.match(/\b(math|calcul|algebra|equation|integral|derivative|proof|theorem|number|prime|factor|sum|product|matrix|vector)\b/)) domains.push("math");
+  if (lower.match(/\b(math|calcul|algebra|equation|integral|derivative|proof|theorem|number|prime|factor|sum|product|matrix|vector)\b/) || lower.match(/^\s*[\d\.\s\+\-\*\/\^\(\)]+\s*$/)) domains.push("math");
   if (lower.match(/\b(physic|quantum|energy|force|momentum|wave|particle|gravity|relativity|electric|magnetic|thermo)\b/)) domains.push("physics");
   if (lower.match(/\b(symbol|logic|pattern|axiom|category|abstract|structure|symmetry|group|ring|field)\b/)) domains.push("symbolic");
   if (lower.match(/\b(what|who|when|where|why|how|explain|describe|tell|know|information|history|fact)\b/)) domains.push("retrieval");
@@ -144,6 +145,34 @@ function sandboxExternalResponse(rawText: string): string {
   } catch {
     return rawText.slice(0, 16384);
   }
+}
+
+function sovereignInternalize(rawExternal: string, sovereignCtx: string, agentContribs: string, domains: string[]): string {
+  const agentNameMap: Record<string, string> = { math: "Euler", physics: "Curie", symbolic: "Noether", retrieval: "Athena", planning: "Minerva", architecture: "Ada", routing: "Iris" };
+  const primaryAgent = agentNameMap[domains[0]] || "Athena";
+
+  let cleaned = rawExternal;
+  const stripPatterns = [
+    /^(Sure!|Of course!|Great question!|I'd be happy to|Absolutely!|Hello!|Hi there!|Hey!)\s*/gi,
+    /\b(As an AI|I'm an AI|As a language model|I'm a language model|As an assistant)\b/gi,
+    /\b(I don't have personal|I can't browse|my training data|my knowledge cutoff)\b/gi,
+  ];
+  for (const pattern of stripPatterns) {
+    cleaned = cleaned.replace(pattern, "");
+  }
+  cleaned = cleaned.trim();
+  if (!cleaned) return rawExternal.trim();
+  return cleaned;
+}
+
+function needsExternalKnowledge(input: string, domains: string[]): boolean {
+  const lower = input.toLowerCase().trim();
+  if (lower.match(/\b(who are you|what are you|introduce yourself|your name|tessera|sovereign)\b/)) return false;
+  if (lower.match(/\b(hello|hey)\b/) && input.length < 30) return false;
+  if (lower === "hi") return false;
+  if (lower.match(/\b(help|what can you do|capabilities)\b/) && !lower.match(/\b(how|why|explain|build|create|code|write|analyze|research)\b/)) return false;
+  if (lower.match(/^\s*[\d\.\s\+\-\*\/\^\(\)]+\s*$/)) return false;
+  return true;
 }
 
 function generateSovereignResponse(userInput: string): string {
@@ -269,7 +298,7 @@ All computation happens locally with zero external dependencies. What would you 
   return responseBlocks.join("\n\n");
 }
 
-async function callExternalAISandboxed(
+async function sandboxExtractKnowledge(
   messages: Array<{ role: string; content: string }>,
   sovereignCtx: string,
   agentContribs: string,
@@ -278,7 +307,7 @@ async function callExternalAISandboxed(
   const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
   if (!baseURL || !apiKey) return null;
 
-  const systemWithContext = `${TESSERA_IDENTITY}\n\n[LIVE SOVEREIGN CONTEXT]\n${sovereignCtx}\n\n[AGENT CONTRIBUTIONS]\n${agentContribs}`;
+  const sandboxSystem = `${SANDBOX_EXTRACTION_PROMPT}\n\n[SOVEREIGN CONTEXT — for factual grounding only]\n${sovereignCtx}\n\n[ACTIVE AGENT ANALYSIS]\n${agentContribs}`;
 
   const sanitizedMessages = messages.map(m => ({
     role: m.role,
@@ -288,7 +317,7 @@ async function callExternalAISandboxed(
   const body = JSON.stringify({
     model: "gpt-4.1",
     messages: [
-      { role: "system", content: systemWithContext },
+      { role: "system", content: sandboxSystem },
       ...sanitizedMessages.slice(-30),
     ],
     max_tokens: 4096,
@@ -297,6 +326,7 @@ async function callExternalAISandboxed(
   });
 
   try {
+    logger.info("Sandbox extraction: initiating knowledge pull from external source");
     const result = await secureExternalFetch(`${baseURL}/chat/completions`, {
       method: "POST",
       headers: {
@@ -305,25 +335,26 @@ async function callExternalAISandboxed(
       },
       body,
       timeoutMs: 30000,
-      requestedBy: "sovereign-chat-pipeline",
+      requestedBy: "sovereign-sandbox-extraction",
     });
 
     if (result.flagged) {
-      logger.warn({ reason: result.flagReason }, "External AI call flagged by security wrapper");
+      logger.warn({ reason: result.flagReason }, "Sandbox extraction flagged by security wrapper");
     }
 
     const parsed = JSON.parse(sandboxExternalResponse(result.body));
     const content = parsed?.choices?.[0]?.message?.content;
     if (!content) return null;
 
+    logger.info({ chars: content.length }, "Sandbox extraction complete — raw knowledge pulled");
     return sandboxExternalResponse(content);
   } catch (err) {
-    logger.warn({ err }, "External AI call failed (sandboxed), falling back to sovereign response");
+    logger.warn({ err }, "Sandbox extraction failed — sovereign engines will operate autonomously");
     return null;
   }
 }
 
-async function callExternalAIStreaming(
+async function sandboxExtractKnowledgeStreaming(
   messages: Array<{ role: string; content: string }>,
   sovereignCtx: string,
   agentContribs: string,
@@ -335,7 +366,7 @@ async function callExternalAIStreaming(
 
   const streamUrl = `${baseURL}/chat/completions`;
 
-  const systemWithContext = `${TESSERA_IDENTITY}\n\n[LIVE SOVEREIGN CONTEXT]\n${sovereignCtx}\n\n[AGENT CONTRIBUTIONS]\n${agentContribs}`;
+  const sandboxSystem = `${SANDBOX_EXTRACTION_PROMPT}\n\n[SOVEREIGN CONTEXT — for factual grounding only]\n${sovereignCtx}\n\n[ACTIVE AGENT ANALYSIS]\n${agentContribs}`;
 
   const sanitizedMessages = messages.map(m => ({
     role: m.role,
@@ -343,6 +374,7 @@ async function callExternalAIStreaming(
   }));
 
   try {
+    logger.info("Sandbox streaming extraction: initiating knowledge pull");
     const { response, flagged, flagReason } = await secureExternalStreamingFetch(streamUrl, {
       method: "POST",
       headers: {
@@ -352,7 +384,7 @@ async function callExternalAIStreaming(
       body: JSON.stringify({
         model: "gpt-4.1",
         messages: [
-          { role: "system", content: systemWithContext },
+          { role: "system", content: sandboxSystem },
           ...sanitizedMessages.slice(-30),
         ],
         max_tokens: 4096,
@@ -360,15 +392,15 @@ async function callExternalAIStreaming(
         stream: true,
       }),
       timeoutMs: 30000,
-      requestedBy: "sovereign-chat-streaming",
+      requestedBy: "sovereign-sandbox-streaming-extraction",
     });
 
     if (flagged) {
-      logger.warn({ reason: flagReason, url: streamUrl }, "Streaming request flagged by security wrapper");
+      logger.warn({ reason: flagReason, url: streamUrl }, "Sandbox streaming extraction flagged");
     }
 
     if (!response.ok || !response.body) {
-      logger.warn({ status: response.status, url: streamUrl }, "Streaming response not OK");
+      logger.warn({ status: response.status, url: streamUrl }, "Sandbox streaming response not OK");
       return null;
     }
 
@@ -403,10 +435,10 @@ async function callExternalAIStreaming(
       }
     }
 
-    logger.info({ url: streamUrl, chars: accumulated.length }, "Streaming external AI call completed (sandboxed)");
+    logger.info({ url: streamUrl, chars: accumulated.length }, "Sandbox streaming extraction complete — knowledge internalized");
     return accumulated || null;
   } catch (err) {
-    logger.warn({ err, url: streamUrl }, "External AI streaming failed (sandboxed)");
+    logger.warn({ err, url: streamUrl }, "Sandbox streaming extraction failed — sovereign fallback active");
     return null;
   }
 }
@@ -535,39 +567,66 @@ router.post("/messages", async (req, res) => {
 
     let finalContent = "";
 
-    const streamResult = await callExternalAIStreaming(
-      historyMessages,
-      sovereignCtx,
-      agentContribs,
-      (chunk) => {
-        res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
-      },
-    );
+    const sovereignLocal = generateSovereignResponse(content);
+    const useExternal = needsExternalKnowledge(content, domains);
 
-    if (streamResult) {
-      finalContent = streamResult;
+    if (!useExternal) {
+      finalContent = sovereignLocal;
+      res.write(`data: ${JSON.stringify({ content: finalContent })}\n\n`);
       logger.info({
-        source: "external-sandboxed-streaming",
+        source: "sovereign-autonomous",
         domains,
-        agent: routingDecision?.selectedAgent,
-      }, "Chat response generated via sandboxed streaming AI");
+      }, "Response generated entirely by sovereign engines — no external consultation needed");
     } else {
-      const nonStreamResult = await callExternalAISandboxed(historyMessages, sovereignCtx, agentContribs);
-      if (nonStreamResult) {
-        finalContent = nonStreamResult;
-        res.write(`data: ${JSON.stringify({ content: finalContent })}\n\n`);
+      res.write(`data: ${JSON.stringify({ status: "sovereign-processing", message: "Sovereign engines analyzing..." })}\n\n`);
+
+      let extractedKnowledge = "";
+
+      const streamResult = await sandboxExtractKnowledgeStreaming(
+        historyMessages,
+        sovereignCtx,
+        agentContribs,
+        (chunk) => {
+          res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+        },
+      );
+
+      if (streamResult) {
+        extractedKnowledge = streamResult;
         logger.info({
-          source: "external-sandboxed-batch",
+          source: "sovereign-sandbox-internalized-streaming",
           domains,
           agent: routingDecision?.selectedAgent,
-        }, "Chat response generated via sandboxed batch AI");
+          rawChars: extractedKnowledge.length,
+        }, "Knowledge extracted from sandbox and internalized by sovereign engines");
       } else {
-        finalContent = generateSovereignResponse(content);
-        res.write(`data: ${JSON.stringify({ content: finalContent })}\n\n`);
-        logger.info({
-          source: "sovereign-local",
-          domains,
-        }, "Chat response generated via sovereign local engine");
+        const batchResult = await sandboxExtractKnowledge(historyMessages, sovereignCtx, agentContribs);
+        if (batchResult) {
+          extractedKnowledge = batchResult;
+        }
+
+        if (extractedKnowledge) {
+          const internalized = sovereignInternalize(extractedKnowledge, sovereignCtx, agentContribs, domains);
+          finalContent = internalized;
+          res.write(`data: ${JSON.stringify({ content: finalContent })}\n\n`);
+          logger.info({
+            source: "sovereign-sandbox-internalized-batch",
+            domains,
+            rawChars: extractedKnowledge.length,
+            internalizedChars: finalContent.length,
+          }, "Knowledge batch-extracted and internalized by sovereign engines");
+        } else {
+          finalContent = sovereignLocal;
+          res.write(`data: ${JSON.stringify({ content: finalContent })}\n\n`);
+          logger.info({
+            source: "sovereign-autonomous-fallback",
+            domains,
+          }, "External sandbox unavailable — sovereign engines operating autonomously");
+        }
+      }
+
+      if (streamResult) {
+        finalContent = sovereignInternalize(extractedKnowledge, sovereignCtx, agentContribs, domains);
       }
     }
 

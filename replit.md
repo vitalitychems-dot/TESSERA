@@ -68,6 +68,9 @@ Animated universe background (`ToroidalBackground.tsx`) with:
 
 ## Security & Sovereignty Enforcement (Task #5)
 
+- **Sovereign-First Chat Pipeline**: All queries hit sovereign engines FIRST. External AI is ONLY used as a sandboxed knowledge extraction resource — never as the primary responder. Flow: sovereign analysis → sandbox extraction (if needed) → sovereign internalization → delivery as Tessera's own voice.
+- **Sandbox Knowledge Extraction**: External AI calls use `SANDBOX_EXTRACTION_PROMPT` (not Tessera identity) — the external model is a raw knowledge source, not Tessera. Responses are stripped of AI pleasantries and internalized through `sovereignInternalize()`.
+- **Sovereign Autonomy Detection**: `needsExternalKnowledge()` determines if sovereign engines can handle a query alone (identity, greetings, capabilities, simple math) or need sandbox enrichment. Sovereign-only responses have zero external latency.
 - **External API Sandboxing**: All external AI calls route through `secureExternalWrapper.ts` with domain allowlisting, intrusion detection, audit logging, and VM-based response sandboxing. Direct `new OpenAI()` removed from conversations.ts.
 - **Sovereignty Enforcement Middleware**: `sovereigntyEnforcementMiddleware()` in app.ts blocks external provider entities from accessing internal sovereign endpoints (mesh, swarm, council, self-heal, anomaly, recovery, file-integrity, diagnostics, ingestion).
 - **Provider Registry**: All external providers (Anthropic, OpenAI, Google, DeepSeek, xAI, Groq, Mistral, Meta, Qwen, Moonshot) marked `isExternal: true` with tier-based access control. Internal providers (Ollama, Puter) marked `isExternal: false`.
