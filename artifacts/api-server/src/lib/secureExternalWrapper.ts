@@ -18,12 +18,22 @@ export interface ExternalRequestResult {
   flagReason?: string;
 }
 
-const ALLOWED_DOMAINS: string[] = (
-  process.env.ALLOWED_EXTERNAL_DOMAINS ?? ""
-)
-  .split(",")
-  .map((d) => d.trim())
-  .filter(Boolean);
+const BUILTIN_ALLOWED: string[] = [];
+
+if (process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
+  try {
+    const aiHost = new URL(process.env.AI_INTEGRATIONS_OPENAI_BASE_URL).hostname;
+    BUILTIN_ALLOWED.push(aiHost);
+  } catch {}
+}
+
+const ALLOWED_DOMAINS: string[] = [
+  ...BUILTIN_ALLOWED,
+  ...(process.env.ALLOWED_EXTERNAL_DOMAINS ?? "")
+    .split(",")
+    .map((d) => d.trim())
+    .filter(Boolean),
+];
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 
@@ -45,7 +55,8 @@ function isDomainAllowed(url: string): { allowed: boolean; domain: string } {
     return { allowed: false, domain: url };
   }
   if (ALLOWED_DOMAINS.length === 0) {
-    return { allowed: true, domain };
+    logger.warn({ domain, url }, "External request blocked: no domains on allowlist (fail-closed policy)");
+    return { allowed: false, domain };
   }
   const allowed = ALLOWED_DOMAINS.some(
     (d) => domain === d || domain.endsWith(`.${d}`)
