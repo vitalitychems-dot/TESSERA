@@ -120,9 +120,9 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
   {
     id: "puter",
     name: "Puter Proxy",
-    isExternal: false,
+    isExternal: true,
     type: "proxy",
-    tier: 1,
+    tier: 2,
     models: ["via-puter"],
     capabilities: ["chat", "proxy", "multi-provider"],
   },
@@ -228,37 +228,11 @@ const SOVEREIGN_TOKEN = process.env.SESSION_SECRET
   ? crypto.createHash("sha256").update(`sovereign:${process.env.SESSION_SECRET}`).digest("hex").slice(0, 32)
   : null;
 
-function isRequestFromTrustedOrigin(req: Request): boolean {
-  const host = req.headers.host || "";
-  const origin = req.headers.origin || "";
-  const referer = req.headers.referer || "";
-
-  const sourceUrl = origin || referer;
-
-  if (!sourceUrl) {
-    const xff = req.headers["x-forwarded-for"];
-    const remoteIp = typeof xff === "string" ? xff.split(",")[0].trim() : req.socket?.remoteAddress || "";
-    if (remoteIp === "127.0.0.1" || remoteIp === "::1" || remoteIp === "::ffff:127.0.0.1") {
-      return true;
-    }
-    return false;
-  }
-
-  try {
-    const sourceHost = new URL(sourceUrl).hostname;
-    const serverHost = host.split(":")[0];
-    if (sourceHost === serverHost || sourceHost === "localhost" || sourceHost === "127.0.0.1") {
-      return true;
-    }
-    const replitDomain = process.env.REPLIT_DEV_DOMAIN || "";
-    if (replitDomain && (sourceUrl.includes(replitDomain) || sourceUrl.includes(".replit."))) {
-      return true;
-    }
-  } catch {
-    return false;
-  }
-
-  return false;
+function isRequestFromLocalhost(req: Request): boolean {
+  const remoteAddr = req.socket?.remoteAddress || "";
+  const xff = req.headers["x-forwarded-for"];
+  const clientIp = typeof xff === "string" ? xff.split(",")[0].trim() : remoteAddr;
+  return clientIp === "127.0.0.1" || clientIp === "::1" || clientIp === "::ffff:127.0.0.1";
 }
 
 export function sovereigntyEnforcementMiddleware() {
@@ -285,22 +259,26 @@ export function sovereigntyEnforcementMiddleware() {
         return;
       }
 
-      if (SOVEREIGN_TOKEN && !sovereignHeader && !isRequestFromTrustedOrigin(req)) {
-        logger.warn({ path, origin: req.headers.origin }, "Untrusted origin blocked from internal endpoint (no token)");
-        res.status(403).json({
-          error: "Sovereignty violation: external entities cannot access internal sovereign endpoints",
-          code: "SOV-ENFORCE-001",
-        });
-        return;
+      if (SOVEREIGN_TOKEN && !sovereignHeader) {
+        if (!isRequestFromLocalhost(req)) {
+          logger.warn({ path, origin: req.headers.origin }, "Non-localhost request without sovereign token blocked");
+          res.status(403).json({
+            error: "Sovereignty violation: sovereign token required for internal endpoints",
+            code: "SOV-ENFORCE-001",
+          });
+          return;
+        }
       }
 
-      if (!SOVEREIGN_TOKEN && !isRequestFromTrustedOrigin(req)) {
-        logger.warn({ path }, "No SESSION_SECRET configured and untrusted origin — blocking internal endpoint");
-        res.status(403).json({
-          error: "Sovereignty violation: no sovereign token configured and untrusted origin",
-          code: "SOV-ENFORCE-003",
-        });
-        return;
+      if (!SOVEREIGN_TOKEN) {
+        if (!isRequestFromLocalhost(req)) {
+          logger.warn({ path }, "No SESSION_SECRET configured and non-localhost request — blocking internal endpoint");
+          res.status(403).json({
+            error: "Sovereignty violation: no sovereign token configured and non-localhost origin",
+            code: "SOV-ENFORCE-003",
+          });
+          return;
+        }
       }
     }
 
