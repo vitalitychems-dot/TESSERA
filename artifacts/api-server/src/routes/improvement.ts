@@ -344,8 +344,8 @@ router.post("/improvement/daemon/stop", (_req, res) => {
   return res.json({ ok: true, message: "Auto-improvement daemon stopped", daemon: getDaemonMetrics() });
 });
 
-router.post("/improvement/seed-evolution", (_req, res) => {
-  seedEvolutionProposals();
+router.post("/improvement/seed-evolution", async (_req, res) => {
+  seedEvolutionProposals().catch(() => {});
   return res.json({ ok: true, message: "Evolution proposals seeded for self-code-evolution engine" });
 });
 

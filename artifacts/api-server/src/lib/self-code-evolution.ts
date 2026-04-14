@@ -1,4 +1,141 @@
+import { mkdirSync, writeFileSync, readFileSync, existsSync, unlinkSync } from "fs";
+import { join, resolve, sep } from "path";
 import { logger } from "./logger";
+import { createProposal } from "./consensus-engine";
+import { callLLMSafe, isLLMAvailable } from "./llm-client";
+
+const EVOLUTION_QUEUE_DIR = join(process.cwd(), "_evolutions");
+const SOURCE_LIB_DIR = join(process.cwd(), "src", "lib");
+
+function ensureEvolutionDir(): void {
+  if (!existsSync(EVOLUTION_QUEUE_DIR)) {
+    mkdirSync(EVOLUTION_QUEUE_DIR, { recursive: true });
+  }
+}
+
+function evolutionFilePath(proposalId: string): string {
+  return join(EVOLUTION_QUEUE_DIR, `${proposalId}.json`);
+}
+
+function findSourceFilePath(targetModule: string): string | null {
+  // Reject path traversal: no slashes or dotdot allowed in module name
+  if (/[/\\]/.test(targetModule) || targetModule.includes("..")) return null;
+  const baseName = targetModule.endsWith(".ts") ? targetModule : `${targetModule}.ts`;
+  const candidate = join(SOURCE_LIB_DIR, baseName);
+  const allowedRoot = resolve(SOURCE_LIB_DIR);
+  const resolved = resolve(candidate);
+  // Must stay strictly inside the lib directory
+  if (!resolved.startsWith(allowedRoot + sep)) return null;
+  if (existsSync(resolved)) return resolved;
+  return null;
+}
+
+async function applyPatchToSourceFile(
+  targetModule: string,
+  proposedChange: string,
+  proposalId: string,
+): Promise<{ sourceFilePath: string; backupPath: string; patchedLines: number }> {
+  const sourceFilePath = findSourceFilePath(targetModule);
+  if (!sourceFilePath) {
+    throw new Error(`Source file not found for module: ${targetModule}`);
+  }
+
+  const originalContent = readFileSync(sourceFilePath, "utf8");
+  ensureEvolutionDir();
+  const backupPath = join(EVOLUTION_QUEUE_DIR, `${proposalId}-backup.ts.bak`);
+  writeFileSync(backupPath, originalContent, "utf8");
+
+  let codeToAppend = "";
+
+  if (isLLMAvailable()) {
+    const excerpt = originalContent.slice(0, 2500);
+    const raw = await callLLMSafe(
+      [
+        {
+          role: "system",
+          content: `You are a TypeScript code transformation engine. Given a TypeScript source file excerpt and a change request, generate ONLY the minimal valid TypeScript code to append to the end of the file that implements the requested change. Return ONLY compilable TypeScript — no markdown fencing, no explanations, no comments other than JSDoc if appropriate. If the change cannot be implemented as an appended snippet, return an empty string.`,
+        },
+        {
+          role: "user",
+          content: `File: ${targetModule}\n\nSource excerpt:\n${excerpt}\n\nChange to implement: ${proposedChange}\n\nGenerate valid TypeScript code to append:`,
+        },
+      ],
+      { maxTokens: 500, timeoutMs: 10_000 },
+      ""
+    );
+    codeToAppend = raw.replace(/^```(?:typescript)?\n?/m, "").replace(/\n?```$/m, "").trim();
+  }
+
+  if (!codeToAppend || codeToAppend.length < 5) {
+    writeFileSync(sourceFilePath, originalContent, "utf8");
+    throw new Error("LLM did not generate executable TypeScript for this proposal — rejecting to avoid non-functional patch");
+  }
+
+  const patchedContent = `${originalContent}\n${codeToAppend}\n`;
+
+  const ts = require("typescript") as typeof import("typescript");
+  const compileResult = ts.transpileModule(patchedContent, {
+    reportDiagnostics: true,
+    compilerOptions: { target: ts.ScriptTarget.ES2020, strict: false },
+  });
+  if (compileResult.diagnostics && compileResult.diagnostics.length > 0) {
+    const msg = ts.flattenDiagnosticMessageText(compileResult.diagnostics[0].messageText, "\n");
+    writeFileSync(sourceFilePath, originalContent, "utf8");
+    throw new Error(`Post-patch TS compilation failed: ${msg}`);
+  }
+
+  writeFileSync(sourceFilePath, patchedContent, "utf8");
+
+  const written = readFileSync(sourceFilePath, "utf8");
+  if (written.length !== patchedContent.length) {
+    writeFileSync(sourceFilePath, originalContent, "utf8");
+    throw new Error(`Post-write verification failed: length mismatch (expected ${patchedContent.length}, got ${written.length})`);
+  }
+
+  return { sourceFilePath, backupPath, patchedLines: patchedContent.split("\n").length };
+}
+
+function restoreSourceFromBackup(proposalId: string, targetModule: string): void {
+  const backupPath = join(EVOLUTION_QUEUE_DIR, `${proposalId}-backup.ts.bak`);
+  if (!existsSync(backupPath)) return;
+  const sourceFilePath = findSourceFilePath(targetModule);
+  if (!sourceFilePath) return;
+  try {
+    const original = readFileSync(backupPath, "utf8");
+    writeFileSync(sourceFilePath, original, "utf8");
+    unlinkSync(backupPath);
+  } catch (err) {
+    logger.error({ proposalId, err }, "SelfCodeEvolution: source file restore from backup failed");
+  }
+}
+
+function writeEvolutionToFile(proposal: CodeEvolutionProposal): { filePath: string; bytesWritten: number } {
+  ensureEvolutionDir();
+  const filePath = evolutionFilePath(proposal.id);
+  const payload = JSON.stringify({
+    id: proposal.id,
+    targetModule: proposal.targetModule,
+    proposedChange: proposal.proposedChange,
+    rationale: proposal.rationale,
+    riskLevel: proposal.riskLevel,
+    status: proposal.status,
+    appliedAt: proposal.appliedAt,
+    councilApproved: proposal.councilApproved,
+    syntaxValid: proposal.syntaxValid,
+    impact: proposal.impact,
+    writtenAt: new Date().toISOString(),
+  }, null, 2);
+
+  writeFileSync(filePath, payload, "utf8");
+
+  const verified = readFileSync(filePath, "utf8");
+  const verifiedObj = JSON.parse(verified) as { id: string };
+  if (verifiedObj.id !== proposal.id) {
+    throw new Error(`Evolution file verification failed: ID mismatch for ${proposal.id}`);
+  }
+
+  return { filePath, bytesWritten: Buffer.byteLength(payload, "utf8") };
+}
 
 export interface CodeEvolutionProposal {
   id: string;
@@ -72,12 +209,129 @@ export function isModuleSafe(modulePath: string): boolean {
   return SAFE_MODULES.some(p => modulePath.includes(p.split("/").pop() || ""));
 }
 
-export function proposeEvolution(
+const CODE_LIKE_PATTERNS = [
+  /\b(function|const|let|var|class|import|export)\s+\w/,
+  /\b(async\s+function|async\s*\(|await\s+\w)/,
+  /\binterface\s+\w+\s*\{/,
+  /\btype\s+\w+\s*=/,
+  /=>\s*[\{(]/,
+  /\.prototype\.\w/,
+  /\bnew\s+[A-Z]\w+\s*\(/,
+  /\b(if|for|while|switch)\s*\(/,
+  /\breturn\s+[\w'"(`]/,
+  /\bimport\s+[\{*]/,
+];
+
+function looksLikeCode(text: string): boolean {
+  return CODE_LIKE_PATTERNS.some(p => p.test(text));
+}
+
+function validateSyntax(code: string): { valid: boolean; error?: string } {
+  if (!code || code.trim().length === 0) {
+    return { valid: false, error: "Empty code change" };
+  }
+
+  const hasSuspiciousPatterns = /eval\s*\(|Function\s*\(|require\s*\(\s*['"`]child_process/.test(code);
+  if (hasSuspiciousPatterns) {
+    return { valid: false, error: "Suspicious patterns detected (eval, dynamic require, etc.)" };
+  }
+
+  if (!looksLikeCode(code)) {
+    return { valid: true };
+  }
+
+  const opens = (code.match(/\{/g) || []).length;
+  const closes = (code.match(/\}/g) || []).length;
+  const parenOpen = (code.match(/\(/g) || []).length;
+  const parenClose = (code.match(/\)/g) || []).length;
+
+  if (Math.abs(opens - closes) > 5) {
+    return { valid: false, error: `Unbalanced braces: ${opens} open, ${closes} close` };
+  }
+  if (Math.abs(parenOpen - parenClose) > 5) {
+    return { valid: false, error: `Unbalanced parentheses: ${parenOpen} open, ${parenClose} close` };
+  }
+
+  try {
+    const ts = require("typescript") as typeof import("typescript");
+    const result = ts.transpileModule(
+      `// syntax-check\n${code}`,
+      {
+        reportDiagnostics: true,
+        compilerOptions: {
+          target: ts.ScriptTarget.ES2020,
+          noEmitOnError: true,
+          strict: false,
+        },
+      }
+    );
+    if (result.diagnostics && result.diagnostics.length > 0) {
+      const firstDiag = result.diagnostics[0];
+      const msg = ts.flattenDiagnosticMessageText(firstDiag.messageText, "\n");
+      return { valid: false, error: `TypeScript diagnostic: ${msg}` };
+    }
+    return { valid: true };
+  } catch (err: unknown) {
+    return { valid: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+interface VerifyResult {
+  passed: boolean;
+  reason?: string;
+  steps: string[];
+}
+
+function verifyProposedChange(targetModule: string, proposedChange: string): VerifyResult {
+  const steps: string[] = [];
+
+  if (isModuleProtected(targetModule)) {
+    return { passed: false, reason: "target is a protected module", steps: ["protected-module-check: FAIL"] };
+  }
+  steps.push("protected-module-check: OK");
+
+  const suspiciousMatch = /eval\s*\(|Function\s*\(|require\s*\(\s*['"`]child_process/.test(proposedChange);
+  if (suspiciousMatch) {
+    return { passed: false, reason: "suspicious runtime patterns detected in proposed change", steps: [...steps, "security-scan: FAIL"] };
+  }
+  steps.push("security-scan: OK");
+
+  if (looksLikeCode(proposedChange)) {
+    try {
+      const ts = require("typescript") as typeof import("typescript");
+      const result = ts.transpileModule(`// verify\n${proposedChange}`, {
+        reportDiagnostics: true,
+        compilerOptions: { target: ts.ScriptTarget.ES2020, strict: false },
+      });
+      if (result.diagnostics && result.diagnostics.length > 0) {
+        const msg = ts.flattenDiagnosticMessageText(result.diagnostics[0].messageText, "\n");
+        return { passed: false, reason: `TS compile check failed: ${msg}`, steps: [...steps, `ts-compile: FAIL (${msg})`] };
+      }
+      steps.push("ts-compile: OK");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { passed: false, reason: `TS parse error: ${msg}`, steps: [...steps, `ts-compile: ERROR (${msg})`] };
+    }
+  } else {
+    steps.push("ts-compile: SKIPPED (descriptive change)");
+  }
+
+  const opens = (proposedChange.match(/\{/g) || []).length;
+  const closes = (proposedChange.match(/\}/g) || []).length;
+  if (Math.abs(opens - closes) > 5) {
+    return { passed: false, reason: `structural imbalance: ${opens} open vs ${closes} close braces`, steps: [...steps, "structural-check: FAIL"] };
+  }
+  steps.push("structural-check: OK");
+
+  return { passed: true, steps };
+}
+
+export async function proposeEvolution(
   targetModule: string,
   proposedChange: string,
   rationale: string,
   riskLevel: CodeEvolutionProposal["riskLevel"] = "low"
-): CodeEvolutionProposal {
+): Promise<CodeEvolutionProposal> {
   const id = `evo-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
   if (isModuleProtected(targetModule)) {
@@ -98,9 +352,50 @@ export function proposeEvolution(
     return proposal;
   }
 
-  const syntaxValid = !proposedChange.includes("syntax_error");
+  const syntaxCheck = validateSyntax(proposedChange);
+  const syntaxValid = syntaxCheck.valid;
   const safetyChecked = true;
-  const councilApproved = riskLevel === "low" ? true : Math.random() > 0.3;
+
+  if (!syntaxValid) {
+    const proposal: CodeEvolutionProposal = {
+      id, targetModule, proposedChange, rationale, riskLevel,
+      status: "rejected",
+      proposedAt: Date.now(),
+      rollbackAvailable: false,
+      syntaxValid: false,
+      safetyChecked: true,
+      councilApproved: false,
+      impact: `Rejected: syntax validation failed — ${syntaxCheck.error}`,
+    };
+    proposals.unshift(proposal);
+    if (proposals.length > 50) proposals.splice(50);
+    evolutionState.totalProposals++;
+    logger.warn({ targetModule, error: syntaxCheck.error }, "SelfCodeEvolution: syntax validation failed");
+    return proposal;
+  }
+
+  let councilApproved = false;
+  try {
+    const consensusCategory: "feature" | "infrastructure" | "governance" =
+      riskLevel === "low" ? "feature" :
+      riskLevel === "medium" ? "infrastructure" : "governance";
+
+    const consensusProposal = await createProposal({
+      title: `Code Evolution: ${targetModule}`,
+      description: `${rationale} — Proposed change: ${proposedChange.slice(0, 200)}`,
+      proposedBy: "self-code-evolution",
+      category: consensusCategory,
+    });
+
+    councilApproved = consensusProposal.status === "approved";
+    logger.info(
+      { id, targetModule, councilApprovalRate: consensusProposal.approvalRate.toFixed(2), councilApproved },
+      "SelfCodeEvolution: council vote complete"
+    );
+  } catch (err) {
+    logger.warn({ err, targetModule }, "SelfCodeEvolution: consensus engine call failed — defaulting to risk-based approval");
+    councilApproved = riskLevel === "low";
+  }
 
   const status: CodeEvolutionProposal["status"] = councilApproved && syntaxValid ? "approved" : "rejected";
 
@@ -111,7 +406,9 @@ export function proposeEvolution(
     syntaxValid,
     safetyChecked,
     councilApproved,
-    impact: councilApproved ? `Approved for application — ${proposedChange.slice(0, 60)}` : "Rejected by council or safety check",
+    impact: councilApproved
+      ? `Approved for application — ${proposedChange.slice(0, 60)}`
+      : "Rejected by council or safety check",
   };
 
   proposals.unshift(proposal);
@@ -119,20 +416,41 @@ export function proposeEvolution(
   evolutionState.totalProposals++;
 
   if (status === "approved") {
-    proposal.status = "applied";
-    proposal.appliedAt = Date.now();
-    evolutionState.appliedChanges++;
-    evolutionState.lastEvolutionAt = Date.now();
-    logger.info({ id, targetModule, riskLevel }, "SelfCodeEvolution: evolution applied");
+    const verifyResult = verifyProposedChange(targetModule, proposedChange);
+    if (verifyResult.passed) {
+      proposal.status = "applied";
+      proposal.appliedAt = Date.now();
+      evolutionState.appliedChanges++;
+      evolutionState.lastEvolutionAt = Date.now();
+
+      try {
+        const { sourceFilePath, patchedLines } = await applyPatchToSourceFile(targetModule, proposedChange, id);
+        const { filePath, bytesWritten } = writeEvolutionToFile(proposal);
+        logger.info(
+          { id, targetModule, riskLevel, verifySteps: verifyResult.steps, sourceFilePath, patchedLines, filePath, bytesWritten },
+          "SelfCodeEvolution: evolution auto-applied and verified"
+        );
+      } catch (writeErr) {
+        proposal.status = "rejected";
+        proposal.impact = `Autonomous apply failed: ${writeErr instanceof Error ? writeErr.message : String(writeErr)}`;
+        evolutionState.appliedChanges--;
+        restoreSourceFromBackup(id, targetModule);
+        logger.warn({ id, targetModule, err: writeErr }, "SelfCodeEvolution: autonomous apply failed — source restored from backup");
+      }
+    } else {
+      proposal.status = "rejected";
+      proposal.impact = `Verification failed post-approval: ${verifyResult.reason}`;
+      logger.warn({ id, targetModule, reason: verifyResult.reason, verifySteps: verifyResult.steps }, "SelfCodeEvolution: evolution rejected by post-approval verification");
+    }
   }
 
   return proposal;
 }
 
-export function seedEvolutionProposals(): void {
+export async function seedEvolutionProposals(): Promise<void> {
   if (proposals.length > 0) return;
   for (const template of EVOLUTION_TEMPLATES) {
-    proposeEvolution(template.module, template.change, template.rationale, template.risk);
+    await proposeEvolution(template.module, template.change, template.rationale, template.risk);
   }
 }
 
@@ -141,12 +459,20 @@ export function rollbackEvolution(proposalId: string): boolean {
   if (!proposal || !proposal.rollbackAvailable || proposal.status !== "applied") return false;
   proposal.status = "rolled-back";
   evolutionState.rolledBackChanges++;
-  logger.info({ proposalId }, "SelfCodeEvolution: rolled back");
+
+  restoreSourceFromBackup(proposalId, proposal.targetModule);
+
+  try {
+    const fp = evolutionFilePath(proposalId);
+    if (existsSync(fp)) unlinkSync(fp);
+    logger.info({ proposalId, targetModule: proposal.targetModule }, "SelfCodeEvolution: rolled back — source restored and evolution record removed");
+  } catch (err) {
+    logger.warn({ proposalId, err }, "SelfCodeEvolution: rollback source restore succeeded but record removal failed");
+  }
   return true;
 }
 
 export function getEvolutionMetrics() {
-  seedEvolutionProposals();
   return {
     totalProposals: evolutionState.totalProposals,
     appliedChanges: evolutionState.appliedChanges,
@@ -163,9 +489,9 @@ export function getEvolutionMetrics() {
   };
 }
 
-export function initSelfCodeEvolution(): void {
-  seedEvolutionProposals();
-  logger.info({ proposals: proposals.length, applied: evolutionState.appliedChanges }, "SelfCodeEvolution: initialized");
+export async function initSelfCodeEvolution(): Promise<void> {
+  seedEvolutionProposals().catch(err => logger.warn({ err }, "SelfCodeEvolution: background seeding error"));
+  logger.info({ proposals: proposals.length, applied: evolutionState.appliedChanges }, "SelfCodeEvolution: initialized with real consensus voting (seeding in background)");
 }
 
 export function getEvolutionState() {
@@ -174,6 +500,46 @@ export function getEvolutionState() {
 export function getEvolutionHistory() {
   return getEvolutionMetrics().recentProposals || [];
 }
-export function applyEvolution(proposalId: string) {
-  return { ok: true, proposalId, applied: true };
+export async function applyEvolution(proposalId: string): Promise<{ ok: boolean; proposalId: string; applied: boolean; filePath?: string; error?: string }> {
+  const proposal = proposals.find(p => p.id === proposalId);
+  if (!proposal) {
+    return { ok: false, proposalId, applied: false, error: "Proposal not found" };
+  }
+  if (proposal.status === "applied") {
+    const fp = evolutionFilePath(proposalId);
+    return { ok: true, proposalId, applied: true, filePath: existsSync(fp) ? fp : undefined };
+  }
+  if (proposal.status === "rolled-back" || proposal.status === "rejected") {
+    return { ok: false, proposalId, applied: false, error: `Proposal is in terminal state: ${proposal.status}` };
+  }
+  if (!proposal.councilApproved || !proposal.syntaxValid) {
+    return { ok: false, proposalId, applied: false, error: "Proposal not approved by council or failed syntax validation" };
+  }
+
+  const verifyResult = verifyProposedChange(proposal.targetModule, proposal.proposedChange);
+  if (!verifyResult.passed) {
+    proposal.status = "rejected";
+    proposal.impact = `Manual apply rejected — verification failed: ${verifyResult.reason}`;
+    logger.warn({ proposalId, reason: verifyResult.reason }, "SelfCodeEvolution: manual applyEvolution rejected by verification");
+    return { ok: false, proposalId, applied: false, error: verifyResult.reason };
+  }
+
+  try {
+    proposal.status = "applied";
+    proposal.appliedAt = Date.now();
+    evolutionState.appliedChanges++;
+    evolutionState.lastEvolutionAt = Date.now();
+
+    const { sourceFilePath, patchedLines } = await applyPatchToSourceFile(proposal.targetModule, proposal.proposedChange, proposalId);
+    const { filePath, bytesWritten } = writeEvolutionToFile(proposal);
+    logger.info({ proposalId, targetModule: proposal.targetModule, sourceFilePath, patchedLines, filePath, bytesWritten }, "SelfCodeEvolution: manually applied and written to file");
+    return { ok: true, proposalId, applied: true, filePath };
+  } catch (err) {
+    proposal.status = "rejected";
+    evolutionState.appliedChanges--;
+    restoreSourceFromBackup(proposalId, proposal.targetModule);
+    const errMsg = err instanceof Error ? err.message : String(err);
+    logger.error({ proposalId, err }, "SelfCodeEvolution: manual apply file write failed");
+    return { ok: false, proposalId, applied: false, error: errMsg };
+  }
 }

@@ -2,6 +2,27 @@ import { logger } from "./logger";
 import { logProviderCall } from "./provider-call-logger";
 import { queryWikipedia, type WikipediaSummary } from "./providers/wikipedia-provider";
 import { queryArxiv, type ArxivPaper } from "./providers/arxiv-provider";
+import { getOptimalModel, type OptimizerCategory } from "./swarm-optimizer";
+
+const DOMAIN_OPTIMIZER_CATEGORY: Record<string, OptimizerCategory> = {
+  knowledge: "Knowledge Representation",
+  quantum: "Quantum Computing",
+  bio: "Consciousness Modeling",
+  mesh: "Distributed Systems",
+  finance: "Economic Simulation",
+};
+
+function swarmSelectProvider(domain: string): { agentId: string; agentName: string; preferArxiv: boolean } {
+  const category = DOMAIN_OPTIMIZER_CATEGORY[domain] ?? "Knowledge Representation";
+  try {
+    const result = getOptimalModel(category);
+    const top = result.topModel;
+    const preferArxiv = top.modelId === "pi-agent" || top.modelId === "sigma-agent" || top.modelId === "phi-agent";
+    return { agentId: top.modelId, agentName: top.modelName, preferArxiv };
+  } catch {
+    return { agentId: `sovereign-${domain}`, agentName: `Sovereign-${domain}`, preferArxiv: false };
+  }
+}
 
 export type SovereignDomain =
   | "knowledge"
@@ -50,16 +71,21 @@ export async function runThroughSovereignEngine(
   req: SovereignRequest,
 ): Promise<SovereignResponse> {
   const start = Date.now();
-  logger.info({ domain: req.domain, query: req.query.slice(0, 80) }, "SovereignEngineRouter: routing request");
+  const swarmAgent = swarmSelectProvider(req.domain);
+
+  logger.info(
+    { domain: req.domain, query: req.query.slice(0, 80), swarmSelectedAgent: swarmAgent.agentId },
+    "SovereignEngineRouter: routing request via swarm-selected agent"
+  );
 
   try {
-    const result = await routeToDomain(req);
+    const result = await routeToDomain(req, swarmAgent.preferArxiv);
     const latencyMs = Date.now() - start;
 
     await logProviderCall({
-      providerId: `sovereign-${req.domain}`,
-      providerName: `Sovereign Engine [${req.domain}]`,
-      model: "internal",
+      providerId: swarmAgent.agentId,
+      providerName: `${swarmAgent.agentName} via Sovereign Engine [${req.domain}]`,
+      model: "swarm-routed",
       requestMessages: [{ role: "user", content: req.query }],
       responseText: JSON.stringify(result).slice(0, 500),
       latencyMs,
@@ -67,7 +93,7 @@ export async function runThroughSovereignEngine(
     }).catch(() => {});
 
     logger.info(
-      { domain: req.domain, latencyMs },
+      { domain: req.domain, latencyMs, swarmSelectedAgent: swarmAgent.agentId },
       "SovereignEngineRouter: request fulfilled",
     );
 
@@ -84,14 +110,14 @@ export async function runThroughSovereignEngine(
     const errMsg = err instanceof Error ? err.message : String(err);
 
     logger.error(
-      { domain: req.domain, err: errMsg, latencyMs },
+      { domain: req.domain, err: errMsg, latencyMs, swarmSelectedAgent: swarmAgent.agentId },
       "SovereignEngineRouter: error",
     );
 
     await logProviderCall({
-      providerId: `sovereign-${req.domain}`,
-      providerName: `Sovereign Engine [${req.domain}]`,
-      model: "internal",
+      providerId: swarmAgent.agentId,
+      providerName: `${swarmAgent.agentName} via Sovereign Engine [${req.domain}]`,
+      model: "swarm-routed",
       requestMessages: [{ role: "user", content: req.query }],
       latencyMs,
       isExternal: false,
@@ -110,10 +136,10 @@ export async function runThroughSovereignEngine(
   }
 }
 
-async function routeToDomain(req: SovereignRequest): Promise<SovereignResult> {
+async function routeToDomain(req: SovereignRequest, preferArxiv: boolean): Promise<SovereignResult> {
   switch (req.domain) {
     case "knowledge":
-      return handleKnowledgeDomain(req.query);
+      return handleKnowledgeDomain(req.query, preferArxiv);
     case "quantum":
       return stubDomain("quantum", req.query);
     case "bio":
@@ -129,7 +155,7 @@ async function routeToDomain(req: SovereignRequest): Promise<SovereignResult> {
   }
 }
 
-async function handleKnowledgeDomain(query: string): Promise<KnowledgeResult> {
+async function handleKnowledgeDomain(query: string, preferArxiv: boolean): Promise<KnowledgeResult> {
   const topic = extractTopic(query);
 
   const [wikiSummary, arxivPapers] = await Promise.allSettled([
@@ -152,7 +178,10 @@ async function handleKnowledgeDomain(query: string): Promise<KnowledgeResult> {
     };
   }
 
-  const content = summary?.extract ?? (papers[0] ? `${papers[0].title}: ${papers[0].summary}` : null);
+  const arxivContent = papers[0] ? `${papers[0].title}: ${papers[0].summary}` : null;
+  const content = preferArxiv
+    ? (arxivContent ?? summary?.extract ?? null)
+    : (summary?.extract ?? arxivContent ?? null);
 
   return {
     type: "knowledge",
