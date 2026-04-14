@@ -130,7 +130,7 @@ function generateNarrativeEvents(world: WorldState): FeedEvent[] {
     if (!activity || !activity.agentId) return;
     const name = AGENT_DISPLAY_NAMES[activity.agentId] || activity.agentName || activity.agentId;
     const color = AGENT_HEX_COLORS[activity.agentId] || "#67e8f9";
-    const locId = activity.locationId || "";
+    const locId = activity.locationId || (activity as Record<string, unknown>).location as string || "";
     const loc = (world.locations || []).find(l => l.id === locId);
     const locName = loc?.name || "Tessera Nexus";
 
@@ -146,7 +146,7 @@ function generateNarrativeEvents(world: WorldState): FeedEvent[] {
     }
 
     if ((activity.promotions ?? 0) > 0) {
-      const jobs = (world as any).jobs || [];
+      const jobs = ((world as unknown as Record<string, unknown>).jobs as Array<{ agentId: string; title?: string; employer?: string }>) || [];
       const job = jobs.find((j: { agentId: string; title?: string; employer?: string }) => j.agentId === activity.agentId);
       events.push({
         id: `promo-${activity.agentId}`,
@@ -190,7 +190,7 @@ function generateNarrativeEvents(world: WorldState): FeedEvent[] {
 
   (world.recentEvents || []).slice(0, 12).forEach((event) => {
     if (!event) return;
-    const participants = event.participants || [];
+    const participants = event.participants || ((event as Record<string, unknown>).agentId ? [(event as Record<string, unknown>).agentId as string] : []);
     const loc = (world.locations || []).find(l => l.id === (event.locationId || ""))?.name || "Tessera";
 
     let type: EventType = "general";

@@ -30,11 +30,11 @@ interface JobBoardData {
     difficulty: string; reward: number; postedBy: string; status: string;
     assignedTo?: string; completedAt?: number; createdAt: number;
     tags?: string[]; isSubcontract?: boolean; applicants?: string[];
-    acceptedBy?: string; subcontractedTo?: string;
-    [key: string]: any;
+    acceptedBy?: string; subcontractedTo?: string; postedByType?: string;
   }>;
   totalJobs: number; openJobs: number; completedJobs: number;
-  [key: string]: any;
+  categories: string[];
+  stats: Record<string, number>;
 }
 
 function JobBoardTab() {
@@ -144,7 +144,7 @@ function JobBoardTab() {
           <div className="text-[11px] font-mono font-bold">All</div>
           <div className="text-[11px] font-mono">{data.stats.total}</div>
         </button>
-        {data.categories.map((cat: any) => {
+        {data.categories.map((cat: string) => {
           const CatIcon = jobCategoryIcons[cat] || Briefcase;
           const count = categoryCounts[cat] || 0;
           if (count === 0) return null;
@@ -211,7 +211,7 @@ function JobBoardTab() {
           />
           <div className="flex flex-wrap gap-2">
             <select value={newCategory} onChange={e => setNewCategory(e.target.value)} className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs font-mono text-foreground" data-testid="select-job-category">
-              {data.categories.map((c: any) => <option key={c} value={c}>{c}</option>)}
+              {data.categories.map((c: string) => <option key={c} value={c}>{c}</option>)}
             </select>
             <select value={newDifficulty} onChange={e => setNewDifficulty(e.target.value)} className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs font-mono text-foreground" data-testid="select-job-difficulty">
               <option value="easy">Easy</option>
@@ -277,11 +277,10 @@ function JobBoardTab() {
                         <Briefcase size={9} />
                         {job.category}
                       </span>
-                      // @ts-ignore
-                      {job.applicants?.length > 0 && (
+                      {(job.applicants?.length ?? 0) > 0 && (
                         <span className="flex items-center gap-1 text-violet-400">
                           <Users size={9} />
-                          {job.applicants?.length} applicant{job.applicants?.length !== 1 ? "s" : ""}
+                          {job.applicants?.length} applicant{(job.applicants?.length ?? 0) !== 1 ? "s" : ""}
                         </span>
                       )}
                       <ChevronRight size={10} className={cn("ml-auto transition-transform", isExpanded ? "rotate-90" : "")} />
@@ -451,9 +450,7 @@ function JobBoardTab() {
                           )}
                         </ul>
                       </div>
-// @ts-ignore
-
-                      {job.applicants?.length > 0 && (
+                      {(job.applicants?.length ?? 0) > 0 && (
                         <div>
                           <h4 className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
                             <Users size={10} /> Applicants ({job.applicants?.length})

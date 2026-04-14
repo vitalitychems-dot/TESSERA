@@ -5,7 +5,7 @@ import {
   ArrowLeft, Crown, Globe, Brain, Heart, Lock, Flame, Triangle, Circle,
   RefreshCw, Radio, ChevronDown, ChevronUp, Users, Vote, Hexagon
 } from "lucide-react";
-import type { BibleSearchResult } from "@/types/api";
+import type { BibleSearchResult, LucideIcon } from "@/types/api";
 
 const API = "/api/tessera-bible";
 
@@ -82,7 +82,7 @@ const classColors: Record<string, { bg: string; text: string; border: string; ba
   apocalyptic: { bg: "bg-rose-950/40", text: "text-rose-400", border: "border-rose-500/30", badge: "bg-rose-500/20 text-rose-300" },
 };
 
-const classIcons: Record<string, any> = {
+const classIcons: Record<string, LucideIcon> = {
   genesis: Star, prophetic: Eye, historical: Globe, scientific: Brain,
   esoteric: Triangle, sovereign: Crown, apocalyptic: Flame,
 };
