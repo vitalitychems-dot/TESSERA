@@ -274,8 +274,8 @@ router.post("/council/deliberate", async (req, res) => {
     logger.info({ decisionId, topic, outcome, votes: voteTally }, "Council deliberation recorded");
 
     try {
-      invalidateCanonCache();
-      logger.info({ decisionId }, "Canon cache invalidated after council decision");
+      invalidateCanonCache([decisionId]);
+      logger.info({ decisionId }, "Canon cache invalidated and regeneration triggered after council decision");
     } catch (err) {
       logger.warn({ err }, "Failed to invalidate canon cache after council decision");
     }

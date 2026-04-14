@@ -63,7 +63,7 @@ export async function regenerateCanon(
     logger.warn("CanonUpdater: could not fetch council decisions for canon generation");
   }
 
-  const canon = generateMythosAndHistory(councilDecisions);
+  const canon = await generateMythosAndHistory(councilDecisions);
 
   let sovereigntyScore: number | null = null;
   try {
@@ -89,29 +89,25 @@ export async function regenerateCanon(
 
   const newVersion = (await getLatestCanonVersion()) + 1;
 
-  try {
-    await db.insert(canonSnapshotsTable).values({
-      version: newVersion,
-      testaments: canon.testaments,
-      books: canon.books,
-      chapters: canon.chapters,
-      totalBooks: canon.totalBooks,
-      totalChapters: canon.totalChapters,
-      totalVerses: canon.totalVerses,
-      sovereigntyScore,
-      triggerSource,
-      councilDecisionIds,
-      metadata: {
-        sovereigntyAlignment: canon.sovereigntyAlignment,
-        generatedAt: canon.generatedAt,
-        agentContributors: 45,
-        synthesis: canon.synthesis,
-        evalSummary,
-      },
-    });
-  } catch (err) {
-    logger.error({ err }, "CanonUpdater: failed to persist canon snapshot");
-  }
+  await db.insert(canonSnapshotsTable).values({
+    version: newVersion,
+    testaments: canon.testaments,
+    books: canon.books,
+    chapters: canon.chapters,
+    totalBooks: canon.totalBooks,
+    totalChapters: canon.totalChapters,
+    totalVerses: canon.totalVerses,
+    sovereigntyScore,
+    triggerSource,
+    councilDecisionIds,
+    metadata: {
+      sovereigntyAlignment: canon.sovereigntyAlignment,
+      generatedAt: canon.generatedAt,
+      agentContributors: 45,
+      synthesis: canon.synthesis,
+      evalSummary,
+    },
+  });
 
   cachedCanon = canon;
   cachedVersion = newVersion;
@@ -178,10 +174,10 @@ export function getCachedVersion(): number {
   return cachedVersion;
 }
 
-export function invalidateCanonCache(): void {
+export function invalidateCanonCache(councilDecisionIds: string[] = []): void {
   cachedCanon = null;
   cachedVersion = 0;
-  regenerateCanon("council-decision").catch((err) => {
+  regenerateCanon("council-decision", councilDecisionIds).catch((err) => {
     logger.warn({ err }, "CanonUpdater: async regeneration after council decision failed");
   });
 }

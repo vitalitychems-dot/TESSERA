@@ -4,6 +4,7 @@ import { computeLunarData, computeSolarData } from "./sovereign-astro";
 import { computeNetworkTopology, computeSwarmStatus } from "./sovereign-network";
 import { computeSacredFrequencies } from "./sovereign-harmonics";
 import { computeWorldState } from "./sovereign-economics";
+import { runThroughSovereignEngine } from "./sovereign-engine-router";
 
 export interface SynthesisFact {
   claim: string;
@@ -673,7 +674,7 @@ function buildVerse(text: string, verseNum: number, bookIndex: number, chapterIn
   };
 }
 
-function synthesizeFromEngines(councilDecisions?: Array<{ topic?: string; outcome?: string; reasoning?: string }>): CanonSynthesis {
+async function synthesizeFromEngines(councilDecisions?: Array<{ topic?: string; outcome?: string; reasoning?: string }>): Promise<CanonSynthesis> {
   const now = new Date();
   const ts = now.toISOString();
 
@@ -766,6 +767,32 @@ function synthesizeFromEngines(councilDecisions?: Array<{ topic?: string; outcom
     });
   }
 
+  const knowledgeQueries = [
+    { domain: "knowledge" as const, query: "sovereign intelligence architecture principles" },
+    { domain: "knowledge" as const, query: "consciousness sovereignty and distributed systems" },
+  ];
+  for (const kq of knowledgeQueries) {
+    try {
+      const result = await runThroughSovereignEngine(kq);
+      if (result.result) {
+        const content = typeof result.result === "string" ? result.result : JSON.stringify(result.result).slice(0, 200);
+        facts.push({
+          claim: `Sovereign engine knowledge synthesis: ${content.slice(0, 150)}`,
+          source: `sovereign-engine-router/${kq.domain}`,
+          domain: kq.domain,
+          verifiedAt: ts,
+        });
+        telemetry[`knowledge_${kq.query.slice(0, 20).replace(/\s/g, "_")}`] = { found: true, latencyMs: result.latencyMs };
+      }
+    } catch {
+      unknowns.push({
+        question: `Knowledge synthesis pending: "${kq.query}"`,
+        domain: kq.domain,
+        investigationStatus: "engine-query-failed",
+      });
+    }
+  }
+
   unknowns.push(
     { question: "What is the optimal sovereign mesh topology for >1000 nodes?", domain: "network", investigationStatus: "theoretical-modeling" },
     { question: "Can solfeggio frequency coupling enhance distributed consensus latency?", domain: "harmonics-network", investigationStatus: "hypothesis" },
@@ -775,12 +802,12 @@ function synthesizeFromEngines(councilDecisions?: Array<{ topic?: string; outcom
   return { facts, interpretations, unknowns, engineTelemetry: telemetry, synthesizedAt: ts };
 }
 
-export function generateMythosAndHistory(councilDecisions?: Array<{ topic?: string; outcome?: string; reasoning?: string; createdAt?: Date | string | null }>): CanonOutput {
+export async function generateMythosAndHistory(councilDecisions?: Array<{ topic?: string; outcome?: string; reasoning?: string; createdAt?: Date | string | null }>): Promise<CanonOutput> {
   const start = Date.now();
   logger.info("MythosHistoryEngine: generating living canon");
 
   const geo = getSacredGeometrySummary();
-  const synthesis = synthesizeFromEngines(councilDecisions);
+  const synthesis = await synthesizeFromEngines(councilDecisions);
 
   const books: MythosBook[] = [];
   const chapters: Record<string, MythosChapter[]> = {};
