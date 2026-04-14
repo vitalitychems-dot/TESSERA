@@ -30,6 +30,7 @@ const SovereigntyDashboardPage = lazy(() => import("@/pages/SovereigntyDashboard
 const SystemPage = lazy(() => import("@/pages/SystemPage"));
 const TokenEconomyPage = lazy(() => import("@/pages/TokenEconomyPage"));
 const LatticeBrowserPage = lazy(() => import("@/pages/LatticeBrowserPage"));
+const GrandCouncilPage = lazy(() => import("@/pages/GrandCouncilPage"));
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -122,6 +123,10 @@ function AppRouter() {
         <Route path="/token-economy">{() => <TokenEconomyPage />}</Route>
         <Route path="/economy-hub">{() => <TokenEconomyPage />}</Route>
         <Route path="/lattice">{() => <LatticeBrowserPage />}</Route>
+        <Route path="/grand-council">{() => <GrandCouncilPage />}</Route>
+        <Route path="/grand-conference">{() => <GrandCouncilPage />}</Route>
+        <Route path="/conference-decisions">{() => <GrandCouncilPage />}</Route>
+        <Route path="/consensus">{() => <GrandCouncilPage />}</Route>
         <Route path="/settings">{() => <SettingsPage />}</Route>
         <Route component={NotFound} />
       </Switch>
