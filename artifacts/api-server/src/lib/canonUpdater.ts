@@ -180,6 +180,13 @@ export function getCachedVersion(): number {
   return cachedVersion;
 }
 
+export async function updateCanon(
+  triggerSource: string = "update",
+  councilDecisionIds: string[] = [],
+): Promise<CanonOutput> {
+  return regenerateCanon(triggerSource, councilDecisionIds);
+}
+
 export function invalidateCanonCache(councilDecisionIds: string[] = []): void {
   cachedCanon = null;
   cachedVersion = 0;
