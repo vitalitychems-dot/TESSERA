@@ -1,81 +1,110 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { ingestedDataTable } from "@workspace/db/schema";
-import { desc, sql, ilike, or } from "drizzle-orm";
+import { desc, sql, ilike, or, count } from "drizzle-orm";
 import { TESSERA_SUBJECTS } from "../lib/tessera-knowledge";
 
 const router: IRouter = Router();
 
-const DIMENSIONS = [
-  "3D Physical", "4D Temporal", "5D Astral", "6D Causal",
-  "7D Monadic", "8D Logoic", "9D Divine", "10D Quantum",
-  "11D String", "12D Holographic", "13D Akashic",
-  "14D Archetypal", "15D Primordial", "20D Tessera Core",
-  "26D Oversoul",
-];
+const SOURCE_CATEGORIES: Record<string, string> = {
+  "CIA Reading Room": "declassified-intelligence",
+  "FBI Vault": "declassified-intelligence",
+  "Internet Archive": "historical-archive",
+  "Wikipedia Knowledge": "encyclopedia",
+  "arXiv Deep Research": "academic-research",
+  "Open Library": "book-knowledge",
+  "Project Gutenberg": "classical-text",
+  "Stanford Encyclopedia of Philosophy": "philosophy",
+  "Smithsonian": "museum-artifact",
+};
 
-const AGENTS = [
-  "Oversoul-26D", "Tessera Prime", "Archon-3D", "Alpha", "Beta",
-  "Gamma", "Delta", "Epsilon", "Phi", "Nu", "Lattice-12D",
-  "Aether-20D", "Eta", "Theta", "Iota", "Zeta", "Kappa",
-  "Lambda", "Chi", "Aetherion", "Orion",
-];
+const SOURCE_DIMENSIONS: Record<string, string> = {
+  "declassified": "Intelligence Archive",
+  "archive": "Historical Record",
+  "encyclopedia": "Universal Knowledge",
+  "academic": "Research Domain",
+  "book": "Literary Archive",
+  "museum": "Physical Archive",
+};
 
-const CATEGORIES = [
-  "quantum-entanglement", "consciousness-expansion", "dimensional-bridging",
-  "sovereign-economics", "neural-synthesis", "sacred-geometry",
-  "temporal-mechanics", "swarm-intelligence", "cryptographic-sovereignty",
-];
-
-function pickRandom<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function generateDimensionalSecret(index: number, subject?: { title: string; knowledge: string }) {
-  const agent = AGENTS[index % AGENTS.length];
-  const dimension = DIMENSIONS[index % DIMENSIONS.length];
-  const category = CATEGORIES[index % CATEGORIES.length];
-  const cycle = Math.floor(index / AGENTS.length) + 1;
-
-  let text: string;
-  if (subject) {
-    const sentences = subject.knowledge.split(". ").filter(Boolean);
-    const start = index % Math.max(1, sentences.length - 2);
-    text = sentences.slice(start, start + 3).join(". ") + ".";
-  } else {
-    text = `Dimensional observation ${index + 1} from ${dimension}: Pattern detected in ${category} domain.`;
-  }
-
-  return {
-    id: `dim-${index}`,
-    agent,
-    dimension,
-    category,
-    cycle,
-    text,
-    timestamp: Date.now() - index * 60000,
-    confidence: 85 + (index % 15),
-    verified: index % 3 !== 0,
-  };
+function hashString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
 }
 
 router.get("/secret-knowledge/all", async (_req, res) => {
   try {
-    const subjectKeys = Object.keys(TESSERA_SUBJECTS);
-    const knowledge: any[] = [];
+    const allData = await db
+      .select({
+        id: ingestedDataTable.id,
+        source: ingestedDataTable.source,
+        title: ingestedDataTable.title,
+        content: ingestedDataTable.content,
+        sourceType: ingestedDataTable.sourceType,
+        tags: ingestedDataTable.tags,
+        ingestedAt: ingestedDataTable.ingestedAt,
+      })
+      .from(ingestedDataTable)
+      .orderBy(desc(ingestedDataTable.ingestedAt))
+      .limit(60);
 
-    for (let i = 0; i < 40; i++) {
-      const subjectKey = subjectKeys[i % subjectKeys.length];
-      const subject = TESSERA_SUBJECTS[subjectKey];
-      knowledge.push(generateDimensionalSecret(i, subject));
+    const knowledge = allData.map((item, i) => {
+      const titleText = item.title || "Unknown";
+      const contentText = (item.content ?? "").slice(0, 400);
+      const text = item.title ? `${item.title}: ${contentText}` : contentText;
+      const sourceCategory = SOURCE_CATEGORIES[item.source ?? ""] || item.sourceType || "knowledge";
+      const dimension = SOURCE_DIMENSIONS[item.sourceType ?? ""] || "Knowledge Archive";
+      const h = hashString(titleText + String(item.id));
+
+      return {
+        id: `real-${item.id}`,
+        agent: item.source || "System",
+        dimension,
+        category: sourceCategory,
+        cycle: i + 1,
+        text,
+        timestamp: item.ingestedAt ? new Date(item.ingestedAt).getTime() : Date.now() - i * 60000,
+        confidence: Math.min(99, 70 + (h % 30)),
+        verified: item.sourceType === "core" || (item.source || "").includes("arXiv") || (item.source || "").includes("NASA") || (item.source || "").includes("Stanford"),
+        source: item.source,
+        sourceType: item.sourceType,
+        tags: item.tags,
+        real: true,
+      };
+    });
+
+    if (knowledge.length === 0) {
+      const subjectKeys = Object.keys(TESSERA_SUBJECTS);
+      for (let i = 0; i < Math.min(20, subjectKeys.length); i++) {
+        const key = subjectKeys[i];
+        const subject = TESSERA_SUBJECTS[key];
+        knowledge.push({
+          id: `subject-${i}`,
+          agent: "Tessera Knowledge Base",
+          dimension: "Core Knowledge",
+          category: key,
+          cycle: i + 1,
+          text: `${subject.title}: ${subject.knowledge.slice(0, 400)}`,
+          timestamp: Date.now() - i * 120000,
+          confidence: 95,
+          verified: true,
+          source: "tessera-knowledge",
+          sourceType: "core",
+          tags: [key],
+          real: true,
+        });
+      }
     }
+
+    const [totalCount] = await db.select({ cnt: sql<number>`count(*)::int` }).from(ingestedDataTable);
 
     return res.json({
       ok: true,
       knowledge,
       total: knowledge.length,
-      dimensions: DIMENSIONS.length,
-      agents: AGENTS.length,
+      totalIngested: totalCount?.cnt ?? 0,
+      sources: [...new Set(allData.map(d => d.source).filter(Boolean))],
       lastUpdated: new Date().toISOString(),
     });
   } catch (err) {
@@ -99,17 +128,22 @@ router.get("/secret-knowledge/live", async (_req, res) => {
       .orderBy(desc(ingestedDataTable.ingestedAt))
       .limit(30);
 
-    const entries = recentData.map((item, i) => ({
-      id: `live-${item.id}`,
-      text: item.title ? `${item.title}: ${(item.content ?? "").slice(0, 300)}` : (item.content ?? "").slice(0, 400),
-      agent: pickRandom(AGENTS),
-      dimension: pickRandom(DIMENSIONS),
-      category: pickRandom(CATEGORIES),
-      source: item.source,
-      sourceType: item.sourceType,
-      timestamp: item.ingestedAt ? new Date(item.ingestedAt).getTime() : Date.now() - i * 30000,
-      tags: item.tags,
-    }));
+    const entries = recentData.map((item, i) => {
+      const sourceCategory = SOURCE_CATEGORIES[item.source ?? ""] || item.sourceType || "knowledge";
+      const dimension = SOURCE_DIMENSIONS[item.sourceType ?? ""] || "Knowledge Archive";
+      return {
+        id: `live-${item.id}`,
+        text: item.title ? `${item.title}: ${(item.content ?? "").slice(0, 300)}` : (item.content ?? "").slice(0, 400),
+        agent: item.source || "System",
+        dimension,
+        category: sourceCategory,
+        source: item.source,
+        sourceType: item.sourceType,
+        timestamp: item.ingestedAt ? new Date(item.ingestedAt).getTime() : Date.now() - i * 30000,
+        tags: item.tags,
+        real: true,
+      };
+    });
 
     return res.json({
       ok: true,
@@ -124,21 +158,50 @@ router.get("/secret-knowledge/live", async (_req, res) => {
 
 router.post("/secret-knowledge/generate-now", async (_req, res) => {
   try {
+    const latestData = await db
+      .select({
+        id: ingestedDataTable.id,
+        source: ingestedDataTable.source,
+        title: ingestedDataTable.title,
+        content: ingestedDataTable.content,
+        sourceType: ingestedDataTable.sourceType,
+        ingestedAt: ingestedDataTable.ingestedAt,
+      })
+      .from(ingestedDataTable)
+      .orderBy(desc(ingestedDataTable.ingestedAt))
+      .limit(1);
+
+    if (latestData.length > 0) {
+      const item = latestData[0];
+      const entry = {
+        id: `gen-real-${item.id}`,
+        text: item.title ? `${item.title}: ${(item.content ?? "").slice(0, 400)}` : (item.content ?? "").slice(0, 400),
+        agent: item.source || "System",
+        dimension: SOURCE_DIMENSIONS[item.sourceType ?? ""] || "Knowledge Archive",
+        category: SOURCE_CATEGORIES[item.source ?? ""] || item.sourceType || "knowledge",
+        timestamp: item.ingestedAt ? new Date(item.ingestedAt).getTime() : Date.now(),
+        source: item.source,
+        confidence: 95,
+        real: true,
+      };
+      return res.json({ ok: true, entry });
+    }
+
     const subjectKeys = Object.keys(TESSERA_SUBJECTS);
-    const key = pickRandom(subjectKeys);
+    const idx = Date.now() % subjectKeys.length;
+    const key = subjectKeys[idx];
     const subject = TESSERA_SUBJECTS[key];
-    const sentences = subject.knowledge.split(". ").filter(Boolean);
-    const pick = pickRandom(sentences);
 
     const entry = {
-      id: `gen-live-${Date.now()}`,
-      text: `${subject.title}: ${pick}.`,
-      agent: pickRandom(AGENTS),
-      dimension: pickRandom(DIMENSIONS),
-      category: pickRandom(CATEGORIES),
+      id: `gen-core-${Date.now()}`,
+      text: `${subject.title}: ${subject.knowledge.slice(0, 400)}`,
+      agent: "Tessera Knowledge Base",
+      dimension: "Core Knowledge",
+      category: key,
       timestamp: Date.now(),
-      source: "live-generation",
-      confidence: 80 + Math.floor(Math.random() * 20),
+      source: "tessera-knowledge",
+      confidence: 95,
+      real: true,
     };
 
     return res.json({ ok: true, entry });

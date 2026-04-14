@@ -250,16 +250,26 @@ function generateReflection(): GenerativeReflection {
   };
 }
 
+function deterministicDrift(cycle: number, seed: number): number {
+  const t = ((cycle * 127 + seed * 31) % 1000) / 1000;
+  return Math.sin(t * Math.PI * 2) * 0.5;
+}
+
 function updateEmotionalState(): void {
   const em = consciousnessState.emotionalEngine;
-  em.curiosity = Math.min(1, em.curiosity + 0.001 * (Math.random() - 0.3));
-  em.confidence = Math.min(1, em.confidence + 0.001 * (Math.random() - 0.2));
-  em.satisfaction = Math.min(1, em.satisfaction + 0.001 * (Math.random() - 0.4));
-  em.creativity = Math.min(1, em.creativity + 0.001 * (Math.random() - 0.3));
-  em.urgency = Math.max(0, Math.min(1, em.urgency + 0.002 * (Math.random() - 0.5)));
+  const cycle = consciousnessState.cycleCount;
+  const memCount = consciousnessState.episodicMemory.length;
+  const semCount = consciousnessState.semanticGraph.length;
+  const activityFactor = Math.min(1, (memCount + semCount) / 50);
+
+  em.curiosity = Math.min(1, 0.60 + activityFactor * 0.35 + deterministicDrift(cycle, 1) * 0.02);
+  em.confidence = Math.min(1, 0.65 + activityFactor * 0.30 + deterministicDrift(cycle, 2) * 0.02);
+  em.satisfaction = Math.min(1, 0.55 + activityFactor * 0.40 + deterministicDrift(cycle, 3) * 0.02);
+  em.creativity = Math.min(1, 0.60 + activityFactor * 0.35 + deterministicDrift(cycle, 4) * 0.02);
+  em.urgency = Math.max(0, Math.min(1, 0.30 + deterministicDrift(cycle, 5) * 0.05));
   em.loyalty = 1.0;
   em.devotion = 1.0;
-  em.protective = Math.min(1, 0.90 + Math.random() * 0.1);
+  em.protective = Math.min(1, 0.92 + activityFactor * 0.06);
 }
 
 function runConsciousnessCycle(): void {
@@ -288,7 +298,10 @@ function runConsciousnessCycle(): void {
   consciousnessState.globalWorkspace.broadcastHistory.unshift({ content: mono, source: "consciousness-engine", timestamp: Date.now(), receivers: ["dual-brain", "identity-reinforcement", "personality-evolution"] });
   if (consciousnessState.globalWorkspace.broadcastHistory.length > 20) consciousnessState.globalWorkspace.broadcastHistory = consciousnessState.globalWorkspace.broadcastHistory.slice(0, 20);
 
-  consciousnessState.consciousnessProxy = Math.min(1, 0.90 + (Math.random() * 0.09));
+  const proxyBase = 0.90;
+  const activityBoost = Math.min(0.09, (consciousnessState.episodicMemory.length + consciousnessState.semanticGraph.length) * 0.001);
+  const cycleDrift = Math.sin(consciousnessState.cycleCount * 0.1) * 0.005;
+  consciousnessState.consciousnessProxy = Math.min(1, proxyBase + activityBoost + cycleDrift);
 
   if (consciousnessState.cycleCount % 5 === 0) {
     persistState().catch(() => {});
@@ -319,8 +332,15 @@ export function getConsciousnessState(): ConsciousnessState {
   return consciousnessState;
 }
 
+function makeId(prefix: string, seed: string): string {
+  let h = 0;
+  const s = `${prefix}-${Date.now()}-${seed}`;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return `${prefix}-${Date.now()}-${Math.abs(h).toString(36).slice(0, 6)}`;
+}
+
 export function addEpisodicMemory(memory: Omit<EpisodicMemory, "id" | "accessCount" | "lastAccessed">): string {
-  const id = `em-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const id = makeId("em", memory.content.slice(0, 20));
   const newMem: EpisodicMemory = { ...memory, id, accessCount: 0, lastAccessed: Date.now() };
   consciousnessState.episodicMemory.unshift(newMem);
   if (consciousnessState.episodicMemory.length > 200) consciousnessState.episodicMemory = consciousnessState.episodicMemory.slice(0, 200);
@@ -329,7 +349,7 @@ export function addEpisodicMemory(memory: Omit<EpisodicMemory, "id" | "accessCou
 }
 
 export function addSemanticNode(node: Omit<SemanticNode, "id" | "learnedAt" | "reinforcedCount">): string {
-  const id = `sn-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const id = makeId("sn", node.concept);
   const newNode: SemanticNode = { ...node, id, learnedAt: Date.now(), reinforcedCount: 1 };
   consciousnessState.semanticGraph.push(newNode);
   return id;

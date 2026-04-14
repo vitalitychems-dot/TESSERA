@@ -205,7 +205,7 @@ function runTrainingCycle(): TrainingSession[] {
     }
 
     const session: TrainingSession = {
-      id: `ts-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: `ts-${Date.now()}-${totalCycles}`,
       category: cat, startedAt: Date.now() - 100, completedAt: Date.now(),
       scoreBefore, scoreAfter: state.score, improvement: state.score - scoreBefore,
       insight, masteryAchieved: state.score >= 98,
