@@ -126,10 +126,12 @@ function generateNarrativeEvents(world: WorldState): FeedEvent[] {
   const events: FeedEvent[] = [];
   const now = Date.now();
 
-  (world.currentActivities || []).forEach((activity, i) => {
-    const name = AGENT_DISPLAY_NAMES[activity.agentId] || activity.agentName;
+  (world.currentActivities || []).forEach((activity: any, i) => {
+    if (!activity || !activity.agentId) return;
+    const name = AGENT_DISPLAY_NAMES[activity.agentId] || activity.agentName || activity.agentId;
     const color = AGENT_HEX_COLORS[activity.agentId] || "#67e8f9";
-    const loc = world.locations.find(l => l.id === activity.locationId);
+    const locId = activity.locationId || activity.location || "";
+    const loc = (world.locations || []).find((l: any) => l.id === locId);
     const locName = loc?.name || "Tessera Nexus";
 
     if (activity.earning && activity.earning > 0) {
@@ -144,7 +146,8 @@ function generateNarrativeEvents(world: WorldState): FeedEvent[] {
     }
 
     if ((activity.promotions ?? 0) > 0) {
-      const job = world.jobs.find(j => j.agentId === activity.agentId);
+      const jobs = (world as any).jobs || [];
+      const job = jobs.find((j: any) => j.agentId === activity.agentId);
       events.push({
         id: `promo-${activity.agentId}`,
         type: "promotion",
@@ -185,12 +188,10 @@ function generateNarrativeEvents(world: WorldState): FeedEvent[] {
     }
   });
 
-  (world.recentEvents || []).slice(0, 12).forEach(event => {
-    const participantNames = event.participants
-      .map(p => AGENT_DISPLAY_NAMES[p] || p)
-      .slice(0, 3)
-      .join(", ");
-    const loc = world.locations.find(l => l.id === event.locationId)?.name || "Tessera";
+  (world.recentEvents || []).slice(0, 12).forEach((event: any) => {
+    if (!event) return;
+    const participants = event.participants || (event.agentId ? [event.agentId] : []);
+    const loc = (world.locations || []).find((l: any) => l.id === (event.locationId || ""))?.name || "Tessera";
 
     let type: EventType = "general";
     if (event.type === "mining" || event.type === "economy") type = "mining";
@@ -202,11 +203,12 @@ function generateNarrativeEvents(world: WorldState): FeedEvent[] {
     else if (event.type === "crime") type = "crime";
     else if (event.type === "health") type = "health";
 
+    const desc = event.description || "";
     events.push({
       id: `event-${event.id}`,
       type,
-      text: event.description.length > 90 ? event.description.slice(0, 90) + "…" : event.description,
-      agentId: event.participants[0],
+      text: desc.length > 90 ? desc.slice(0, 90) + "…" : desc,
+      agentId: participants[0],
       timestamp: event.timestamp,
     });
   });

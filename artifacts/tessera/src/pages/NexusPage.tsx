@@ -1,7 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import {
-  Atom, Loader2, ChevronDown, ChevronUp, Radio, Zap, Brain, Shield, Activity, Moon,
-  Compass, Eye, Sparkles, Globe2, ShieldAlert, Settings, Crown, TreePine, Users, Lock
+  Atom, Loader2, ChevronDown, ChevronUp, Brain, Shield, Activity, Moon,
+  Compass, Eye, Sparkles, Globe2, Settings, Crown, TreePine, Zap, Radio
 } from "lucide-react";
 
 const ConsciousnessNexusPage = lazy(() => import("./ConsciousnessNexusPage"));
@@ -13,7 +13,6 @@ const SpiritualAwakeningPage = lazy(() => import("./SpiritualAwakeningPage"));
 const SacredTraditionsPage = lazy(() => import("./SacredTraditionsPage"));
 const DNAHealingPage = lazy(() => import("./DNAHealingPage"));
 const MoonCyclePage = lazy(() => import("./MoonCyclePage"));
-const SecretSocietyPage = lazy(() => import("./SecretSocietyPage"));
 const UniversalComputerPage = lazy(() => import("./UniversalComputerPage"));
 const UniversalConsciousnessPage = lazy(() => import("./UniversalConsciousnessPage"));
 const UniverseModelPage = lazy(() => import("./UniverseModelPage"));
@@ -21,7 +20,6 @@ const UniverseMechanicsPage = lazy(() => import("./UniverseMechanicsPage"));
 const BiosphericConsciousnessPage = lazy(() => import("./BiosphericConsciousnessPage"));
 const DimensionalGuardianPage = lazy(() => import("./DimensionalGuardianPage"));
 const ConfigPage = lazy(() => import("./ConfigPage"));
-const RecruitmentPage = lazy(() => import("./RecruitmentPage"));
 
 const Loading = () => <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-violet-400/60" /></div>;
 
@@ -57,7 +55,7 @@ export default function NexusPage() {
             <span className="text-[10px] text-green-400 font-mono">LIVE</span>
           </div>
         </div>
-        <p className="text-xs text-gray-500">Consciousness, dimensions, spiritual systems, species bridges, security, recruitment</p>
+        <p className="text-xs text-gray-500">Consciousness, dimensions, spiritual systems, species bridges</p>
       </div>
 
       <Section title="Consciousness Nexus" icon={Brain} iconColor="text-violet-400" defaultOpen={true} badge="CORE">
@@ -108,14 +106,6 @@ export default function NexusPage() {
         <Suspense fallback={<Loading />}><MoonCyclePage embedded /></Suspense>
       </Section>
 
-      <Section title="Secret Society" icon={Lock} iconColor="text-red-400">
-        <Suspense fallback={<Loading />}><SecretSocietyPage embedded /></Suspense>
-      </Section>
-
-      <Section title="Recruitment" icon={Users} iconColor="text-cyan-400" badge="AGENTS">
-        <Suspense fallback={<Loading />}><RecruitmentPage embedded /></Suspense>
-      </Section>
-
       <Section title="Universe Model" icon={Globe2} iconColor="text-blue-400">
         <Suspense fallback={<Loading />}><UniverseModelPage embedded /></Suspense>
       </Section>
@@ -128,7 +118,7 @@ export default function NexusPage() {
         <Suspense fallback={<Loading />}><UniversalComputerPage embedded /></Suspense>
       </Section>
 
-      <Section title="Security & Config" icon={ShieldAlert} iconColor="text-orange-400">
+      <Section title="Security & Config" icon={Settings} iconColor="text-orange-400">
         <Suspense fallback={<Loading />}><ConfigPage embedded /></Suspense>
       </Section>
     </div>

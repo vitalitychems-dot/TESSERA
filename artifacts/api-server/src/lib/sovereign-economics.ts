@@ -226,21 +226,87 @@ export function computeWorldState(now: number = Date.now()) {
   const daysSinceGenesis = (now - GENESIS_TIMESTAMP) / 86400000;
   const hourOfDay = new Date(now).getUTCHours();
 
-  const activities = [
+  const activityTypes = [
     "processing", "analyzing", "synthesizing", "computing",
     "optimizing", "securing", "exploring", "building",
     "trading", "learning", "healing", "creating",
   ];
 
-  const worldAgents = agents.map((a, i) => ({
-    id: a.id,
-    name: a.name,
-    role: a.role,
-    status: a.productivity > 85 ? "active" : a.productivity > 70 ? "idle" : "maintenance",
-    activity: activities[i % activities.length],
-    location: { x: Math.round(Math.sin(i * 0.5 + daysSinceGenesis * 0.01) * 500), y: Math.round(Math.cos(i * 0.7 + daysSinceGenesis * 0.01) * 500) },
-    energy: Math.round((0.6 + 0.4 * Math.sin(hourOfDay / 24 * Math.PI * 2 + i)) * 100),
-    mood: a.happiness > 80 ? "excellent" : a.happiness > 60 ? "good" : "neutral",
+  const locationTypes = [
+    "gathering", "academy", "forge", "market", "observatory",
+    "garden", "archive", "arena", "mine", "bank", "cafe", "library",
+  ];
+
+  const worldAgents = agents.map((a, i) => {
+    const locType = locationTypes[i % locationTypes.length];
+    return {
+      id: a.id,
+      name: a.name,
+      role: a.role,
+      status: a.productivity > 85 ? "active" : a.productivity > 70 ? "idle" : "maintenance",
+      activity: activityTypes[i % activityTypes.length],
+      location: { x: Math.round(Math.sin(i * 0.5 + daysSinceGenesis * 0.01) * 500), y: Math.round(Math.cos(i * 0.7 + daysSinceGenesis * 0.01) * 500) },
+      energy: Math.round((0.6 + 0.4 * Math.sin(hourOfDay / 24 * Math.PI * 2 + i)) * 100),
+      mood: a.happiness > 80 ? "excellent" : a.happiness > 60 ? "good" : "neutral",
+      locationType: locType,
+      happiness: a.happiness,
+      productivity: a.productivity,
+    };
+  });
+
+  const locationDescriptions: Record<string, string> = {
+    gathering: "Central meeting hall for all agents", academy: "Training and education center",
+    forge: "Technology and crafting workshop", market: "Trading and commerce hub",
+    observatory: "Scientific observation tower", garden: "Meditation and culture space",
+    archive: "Knowledge and records repository", arena: "Competition and athletics venue",
+    mine: "Resource extraction facility", bank: "Financial operations center",
+    cafe: "Social gathering spot", library: "Research and reading hall",
+  };
+
+  const locations = locationTypes.map((type, i) => ({
+    id: `loc-${type}`,
+    type,
+    name: type.charAt(0).toUpperCase() + type.slice(1),
+    description: locationDescriptions[type] || `${type} facility`,
+    builtBy: [worldAgents[i % worldAgents.length]?.id || "tessera-prime"],
+    x: Math.round(Math.sin(i * 0.8) * 400),
+    y: Math.round(Math.cos(i * 0.8) * 400),
+    level: Math.min(5, 1 + Math.floor(deterministicRandom(hashSeed(now, type)) * 5)),
+    capacity: 10 + Math.floor(deterministicRandom(hashSeed(now, type + "cap")) * 40),
+    activities: activityTypes.slice(i % 4, (i % 4) + 3),
+    income: Math.round(deterministicRandom(hashSeed(now, type + "inc")) * 100),
+    agentCount: worldAgents.filter(a => a.locationType === type).length,
+  }));
+
+  const moods = ["content", "focused", "energized", "contemplative", "inspired"];
+  const currentActivities = worldAgents.map((a, i) => ({
+    agentId: a.id,
+    agentName: a.name,
+    locationId: `loc-${a.locationType}`,
+    action: a.activity,
+    mood: moods[i % moods.length],
+    detail: `${a.name} is ${a.activity} at the ${a.locationType}`,
+    timestamp: now - Math.round(deterministicRandom(hashSeed(now, a.id + "start")) * 3600000),
+    earning: Math.round(deterministicRandom(hashSeed(now, a.id + "earn")) * 10 * 10) / 10,
+    happiness: Math.round(50 + deterministicRandom(hashSeed(now, a.id + "act")) * 50),
+    energy: a.energy,
+  }));
+
+  const eventDescriptions = [
+    "completed a computation task", "discovered a new pattern",
+    "traded 50 TSRT tokens", "leveled up to rank B", "collaborated with the council",
+  ];
+  const recentEvents = worldAgents.slice(0, 5).map((a, i) => ({
+    id: `evt-${i}`,
+    agentId: a.id,
+    agentName: a.name,
+    participants: [a.id],
+    locationId: `loc-${a.locationType}`,
+    type: ["completed_task", "discovery", "economy", "training", "gathering"][i % 5],
+    title: `${a.name} ${eventDescriptions[i % 5]}`,
+    description: `${a.name} ${eventDescriptions[i % 5]}`,
+    impact: Math.round(50 + deterministicRandom(hashSeed(now, a.id + "impact")) * 50),
+    timestamp: now - i * 600000,
   }));
 
   return {
@@ -248,11 +314,27 @@ export function computeWorldState(now: number = Date.now()) {
     agents: worldAgents,
     population: worldAgents.length,
     activeAgents: worldAgents.filter(a => a.status === "active").length,
+    locations,
+    currentActivities,
+    recentEvents,
+    crimeLog: [],
+    wellbeingRecords: {},
+    workRecords: {},
     economy: {
       treasury: stats.treasury,
       gdp: stats.gdp,
       revenue: Math.round(stats.gdp * 0.15),
       tokenPrice: stats.tokenPrice,
+      totalTesseractCoins: stats.treasury,
+      circulatingSupply: Math.round(stats.treasury * 0.7),
+      totalCirculation: stats.treasury,
+      coinPrice: stats.tokenPrice,
+      coinPriceHistory: [],
+      agentBalances: {},
+      transactions: [],
+      miningPool: { totalHashRate: 12500, blockReward: 10, difficulty: 3, blocksMinedTotal: Math.round(daysSinceGenesis * 144), lastBlockTime: now - 600000 },
+      marketCap: Math.round(stats.treasury * stats.tokenPrice),
+      dailyVolume: Math.round(stats.treasury * 0.02),
     },
     environment: {
       stability: Math.round((0.85 + 0.1 * Math.sin(daysSinceGenesis * 0.1)) * 100),
