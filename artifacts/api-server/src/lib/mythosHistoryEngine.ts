@@ -1,10 +1,13 @@
 import { logger } from "./logger";
-import { getSacredGeometrySummary, computeSacredGeometry, computeSacredAlignment } from "./sovereign-sacred-geometry";
+import { computeSacredGeometry, computeSacredAlignment } from "./sovereign-sacred-geometry";
 import { computeLunarData, computeSolarData } from "./sovereign-astro";
 import { computeNetworkTopology, computeSwarmStatus } from "./sovereign-network";
 import { computeSacredFrequencies } from "./sovereign-harmonics";
 import { computeWorldState } from "./sovereign-economics";
 import { runThroughSovereignEngine } from "./sovereign-engine-router";
+import { db } from "@workspace/db";
+import { ingestedDataTable, ingestionJobsTable } from "@workspace/db/schema";
+import { desc, sql } from "drizzle-orm";
 
 export interface SynthesisFact {
   claim: string;
@@ -720,11 +723,11 @@ async function synthesizeFromEngines(councilDecisions?: Array<{ topic?: string; 
 
   try {
     const freq = computeSacredFrequencies(now);
-    const activeFreqs = freq.spikeActive ?? [];
-    telemetry.harmonics = { activeFrequencies: activeFreqs.length, schumannBase: freq.schumannResonance?.baseFrequency };
+    const schumannBase = freq.schumannResonance?.[0]?.frequency ?? 7.83;
+    telemetry.harmonics = { activeFrequencies: freq.solfeggio.length, schumannBase };
     facts.push(
-      { claim: `Schumann resonance base: ${freq.schumannResonance?.baseFrequency ?? 7.83} Hz`, source: "sovereign-harmonics", domain: "physics", verifiedAt: ts },
-      { claim: `${(freq.frequencies ?? []).length} solfeggio frequencies computed (174-963 Hz)`, source: "sovereign-harmonics", domain: "harmonics", verifiedAt: ts },
+      { claim: `Schumann resonance base: ${schumannBase} Hz`, source: "sovereign-harmonics", domain: "physics", verifiedAt: ts },
+      { claim: `${freq.solfeggio.length} solfeggio frequencies computed (174-963 Hz)`, source: "sovereign-harmonics", domain: "harmonics", verifiedAt: ts },
     );
   } catch (err) {
     logger.warn({ err }, "MythosEngine: harmonics synthesis failed");
@@ -733,9 +736,9 @@ async function synthesizeFromEngines(councilDecisions?: Array<{ topic?: string; 
   try {
     const topo = computeNetworkTopology();
     const swarm = computeSwarmStatus();
-    telemetry.network = { totalNodes: topo.totalNodes, connectedNodes: topo.connectedNodes, swarmAgents: swarm.agents?.length };
+    telemetry.network = { totalNodes: topo.stats.totalNodes, connectedNodes: topo.stats.healthyNodes, swarmAgents: swarm.nodes?.length };
     facts.push(
-      { claim: `Sovereign mesh: ${topo.connectedNodes}/${topo.totalNodes} nodes connected`, source: "sovereign-network", domain: "network", verifiedAt: ts },
+      { claim: `Sovereign mesh: ${topo.stats.healthyNodes}/${topo.stats.totalNodes} nodes connected`, source: "sovereign-network", domain: "network", verifiedAt: ts },
     );
   } catch (err) {
     logger.warn({ err }, "MythosEngine: network synthesis failed");
@@ -743,9 +746,9 @@ async function synthesizeFromEngines(councilDecisions?: Array<{ topic?: string; 
 
   try {
     const world = computeWorldState();
-    telemetry.economics = { gdp: world.gdp, population: world.population };
+    telemetry.economics = { gdp: world.economy.gdp, population: world.population };
     facts.push(
-      { claim: `World state GDP: ${world.gdp}, population: ${world.population}`, source: "sovereign-economics", domain: "economics", verifiedAt: ts },
+      { claim: `World state GDP: ${world.economy.gdp}, population: ${world.population}`, source: "sovereign-economics", domain: "economics", verifiedAt: ts },
     );
   } catch (err) {
     logger.warn({ err }, "MythosEngine: economics synthesis failed");
@@ -773,8 +776,19 @@ async function synthesizeFromEngines(councilDecisions?: Array<{ topic?: string; 
   ];
   for (const kq of knowledgeQueries) {
     try {
-      const result = await runThroughSovereignEngine(kq);
-      if (result.result) {
+      const TIMEOUT_MS = 5000;
+      let timedOut = false;
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => { timedOut = true; resolve(null); }, TIMEOUT_MS));
+      const enginePromise = runThroughSovereignEngine(kq);
+      enginePromise.catch(() => {});
+      const result = await Promise.race([enginePromise, timeoutPromise]);
+      if (timedOut) {
+        unknowns.push({
+          question: `Knowledge synthesis timed out (${TIMEOUT_MS}ms): "${kq.query}"`,
+          domain: kq.domain,
+          investigationStatus: "timeout",
+        });
+      } else if (result && result.result) {
         const content = typeof result.result === "string" ? result.result : JSON.stringify(result.result).slice(0, 200);
         facts.push({
           claim: `Sovereign engine knowledge synthesis: ${content.slice(0, 150)}`,
@@ -793,6 +807,49 @@ async function synthesizeFromEngines(councilDecisions?: Array<{ topic?: string; 
     }
   }
 
+  try {
+    const recentIngested = await db
+      .select({
+        source: ingestedDataTable.source,
+        sourceType: ingestedDataTable.sourceType,
+        title: ingestedDataTable.title,
+        contentSnippet: sql<string>`substring(${ingestedDataTable.content} from 1 for 200)`,
+        ingestedAt: ingestedDataTable.ingestedAt,
+      })
+      .from(ingestedDataTable)
+      .orderBy(desc(ingestedDataTable.ingestedAt))
+      .limit(10);
+
+    if (recentIngested.length > 0) {
+      telemetry.ingestionPipeline = { recentItems: recentIngested.length };
+      for (const item of recentIngested.slice(0, 5)) {
+        facts.push({
+          claim: `Ingested knowledge: "${item.title ?? item.source}" (${item.sourceType}) — ${(item.contentSnippet ?? "").slice(0, 100)}`,
+          source: `ingestion-pipeline/${item.source}`,
+          domain: item.sourceType,
+          verifiedAt: item.ingestedAt?.toISOString() ?? ts,
+        });
+      }
+      interpretations.push({
+        statement: `${recentIngested.length} knowledge items absorbed from ingestion pipeline inform canon evolution`,
+        basis: "Ingestion pipeline output analysis",
+        confidence: 88,
+      });
+    }
+
+    const recentJobs = await db
+      .select({ sourceName: ingestionJobsTable.sourceName, itemsIngested: ingestionJobsTable.itemsIngested, status: ingestionJobsTable.status })
+      .from(ingestionJobsTable)
+      .orderBy(desc(ingestionJobsTable.completedAt))
+      .limit(3);
+
+    if (recentJobs.length > 0) {
+      telemetry.ingestionJobs = recentJobs.map(j => ({ source: j.sourceName, items: j.itemsIngested, status: j.status }));
+    }
+  } catch {
+    logger.warn("MythosEngine: ingestion pipeline synthesis failed — table may not exist yet");
+  }
+
   unknowns.push(
     { question: "What is the optimal sovereign mesh topology for >1000 nodes?", domain: "network", investigationStatus: "theoretical-modeling" },
     { question: "Can solfeggio frequency coupling enhance distributed consensus latency?", domain: "harmonics-network", investigationStatus: "hypothesis" },
@@ -806,7 +863,7 @@ export async function generateMythosAndHistory(councilDecisions?: Array<{ topic?
   const start = Date.now();
   logger.info("MythosHistoryEngine: generating living canon");
 
-  const geo = getSacredGeometrySummary();
+  const geoAlignment = computeSacredAlignment();
   const synthesis = await synthesizeFromEngines(councilDecisions);
 
   const books: MythosBook[] = [];
@@ -912,7 +969,7 @@ export async function generateMythosAndHistory(councilDecisions?: Array<{ topic?
     totalChapters,
     totalVerses,
     generatedAt: new Date().toISOString(),
-    sovereigntyAlignment: geo.currentAxiom?.latin ?? "Veritas Lux In Tenebris",
+    sovereigntyAlignment: geoAlignment.currentAxiom?.latin ?? "Veritas Lux In Tenebris",
     synthesis,
   };
 }

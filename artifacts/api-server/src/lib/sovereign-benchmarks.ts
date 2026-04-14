@@ -8,6 +8,31 @@ import { councilDecisionsTable, inventionsTable } from "@workspace/db/schema";
 import { count } from "drizzle-orm";
 import * as os from "os";
 
+interface NetworkNode {
+  id: string;
+  latencyMs: number;
+}
+
+interface SolfeggioEntry {
+  frequency: number;
+}
+
+interface SchumannEntry {
+  order?: number;
+  frequency: number;
+}
+
+interface UniversalConstantEntry {
+  symbol: string;
+  value: number;
+}
+
+interface PlatonicSolid {
+  vertices: number;
+  edges: number;
+  faces: number;
+}
+
 export interface BenchmarkTest {
   id: string;
   name: string;
@@ -351,7 +376,7 @@ function verifyNetwork(): BenchmarkTest[] {
   });
 
   if (topo?.nodes) {
-    const allNodesHaveIds = topo.nodes.every((n: any) => n.id && typeof n.id === "string");
+    const allNodesHaveIds = topo.nodes.every((n: NetworkNode) => n.id && typeof n.id === "string");
     tests.push({
       id: "net-node-integrity",
       name: "All Nodes Have Valid IDs",
@@ -364,7 +389,7 @@ function verifyNetwork(): BenchmarkTest[] {
       method: "Node identity validation",
     });
 
-    const allLatenciesPositive = topo.nodes.every((n: any) => n.latencyMs >= 0);
+    const allLatenciesPositive = topo.nodes.every((n: NetworkNode) => n.latencyMs >= 0);
     tests.push({
       id: "net-latency-positive",
       name: "All Node Latencies Non-Negative",
@@ -373,7 +398,7 @@ function verifyNetwork(): BenchmarkTest[] {
       score: allLatenciesPositive ? 5 : 0,
       maxScore: 5,
       latencyMs: 0,
-      evidence: `Latency range: ${Math.min(...topo.nodes.map((n: any) => n.latencyMs))}ms - ${Math.max(...topo.nodes.map((n: any) => n.latencyMs))}ms — ${allLatenciesPositive ? "ALL VALID" : "NEGATIVE LATENCIES FOUND"}`,
+      evidence: `Latency range: ${Math.min(...topo.nodes.map((n: NetworkNode) => n.latencyMs))}ms - ${Math.max(...topo.nodes.map((n: NetworkNode) => n.latencyMs))}ms — ${allLatenciesPositive ? "ALL VALID" : "NEGATIVE LATENCIES FOUND"}`,
       method: "Physical constraint validation (latency >= 0)",
     });
   }
@@ -428,7 +453,7 @@ function verifyHarmonics(): BenchmarkTest[] {
 
   if (freq?.solfeggio) {
     const knownSolfeggio = [174, 285, 396, 417, 528, 639, 741, 852, 963];
-    const allPresent = knownSolfeggio.every(f => freq.solfeggio.some((s: any) => s.frequency === f));
+    const allPresent = knownSolfeggio.every(f => freq.solfeggio.some((s: SolfeggioEntry) => s.frequency === f));
     tests.push({
       id: "harm-solfeggio-complete",
       name: "All 9 Solfeggio Frequencies Present",
@@ -443,7 +468,7 @@ function verifyHarmonics(): BenchmarkTest[] {
   }
 
   if (freq?.schumannResonance) {
-    const schumannBase = freq.schumannResonance.find((s: any) => s.order === 1 || s.frequency < 10);
+    const schumannBase = freq.schumannResonance.find((s: SchumannEntry) => s.order === 1 || s.frequency < 10);
     const baseCorrect = schumannBase && Math.abs(schumannBase.frequency - 7.83) < 0.5;
     tests.push({
       id: "harm-schumann-base",
@@ -655,7 +680,7 @@ function verifySacredGeometry(): BenchmarkTest[] {
   });
 
   if (sg) {
-    const phiEntry = sg.universalConstants?.find((c: any) => c.symbol === "phi");
+    const phiEntry = sg.universalConstants?.find((c: UniversalConstantEntry) => c.symbol === "phi");
     const phiVal = phiEntry?.value ?? sg.goldenRatio?.phi;
     const hasPhi = phiVal && Math.abs(phiVal - 1.618033988749895) < 0.0001;
     tests.push({
@@ -683,7 +708,7 @@ function verifySacredGeometry(): BenchmarkTest[] {
       method: "Enumeration check against the 5 convex regular polyhedra",
     });
 
-    const eulerValid = sg.platonicSolids?.every((s: any) => s.vertices - s.edges + s.faces === 2);
+    const eulerValid = sg.platonicSolids?.every((s: PlatonicSolid) => s.vertices - s.edges + s.faces === 2);
     tests.push({
       id: "sg-euler-characteristic",
       name: "Euler Characteristic V-E+F=2 for All Solids",
