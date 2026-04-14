@@ -60,7 +60,7 @@ export default function ActivityFeedPage({ embedded }: { embedded?: boolean }) {
               <Activity className="w-8 h-8 text-cyan-400" />
               Unified Activity Feed
             </h1>
-            <p className="text-gray-400 mt-1">Real-time timeline of all 45 agent actions, votes, and decisions</p>
+            <p className="text-gray-400 mt-1">Real-time timeline of agent actions, votes, and decisions</p>
           </div>
           <Button variant="outline" onClick={() => refetch()} data-testid="button-refresh" className="border-cyan-500/30 text-cyan-400">
             <RefreshCw className="w-4 h-4 mr-2" /> Refresh

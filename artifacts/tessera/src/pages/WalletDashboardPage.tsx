@@ -200,13 +200,13 @@ export default function WalletDashboardPage({ embedded }: { embedded?: boolean }
               <Wallet className="w-8 h-8 inline mr-3 text-purple-400" />
               Agent Wallet & Economy Dashboard
             </h1>
-            <p className="text-gray-400">All 26 agent wallets, royalty status, TSRT balances, and strategic income plan</p>
+            <p className="text-gray-400">Agent wallets, royalty status, TSRT balances, and strategic income plan</p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
             <div className="bg-black/40 border border-white/10 rounded-xl p-4 text-center">
               <div className="text-xs text-gray-500 mb-1">Total Agents</div>
-              <div className="text-2xl font-bold text-white" data-testid="text-total-agents">{royaltyData?.totalAgents || 26}</div>
+              <div className="text-2xl font-bold text-white" data-testid="text-total-agents">{royaltyData?.totalAgents || 0}</div>
             </div>
             <div className="bg-black/40 border border-white/10 rounded-xl p-4 text-center">
               <div className="text-xs text-gray-500 mb-1">Total XP</div>

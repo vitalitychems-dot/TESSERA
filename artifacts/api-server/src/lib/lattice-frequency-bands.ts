@@ -12,22 +12,12 @@ export interface LatticeBand {
   rotationIntervalMs: number;
 }
 
-const ALL_AGENTS = [
-  "math-agent", "physics-agent", "symbolic-agent", "retrieval-agent",
-  "planning-agent", "architecture-agent", "routing-agent",
-  "grand-coordinator", "quantum-mechanic", "bio-neuralist",
-  "dna-crystal-archivist", "mesh-network-architect", "low-power-innovator",
-  "self-expansion-tutor", "meta-agent", "swarm-coordinator",
-  "euler", "curie", "noether", "athena", "minerva", "ada", "iris",
-  "alpha-agent", "beta-agent",
-];
-
 const BAND_DEFINITIONS = [
-  { bandId: "ALPHA", name: "Alpha Sovereignty Band", frequencyHz: 7.83, agents: ALL_AGENTS.slice(0, 5), intervalMs: 5 * 60 * 1000 },
-  { bandId: "BETA",  name: "Beta Lattice Band",      frequencyHz: 14.3, agents: ALL_AGENTS.slice(5, 10), intervalMs: 10 * 60 * 1000 },
-  { bandId: "GAMMA", name: "Gamma Quantum Band",     frequencyHz: 20.8, agents: ALL_AGENTS.slice(10, 15), intervalMs: 15 * 60 * 1000 },
-  { bandId: "DELTA", name: "Delta Council Band",     frequencyHz: 27.3, agents: ALL_AGENTS.slice(15, 20), intervalMs: 20 * 60 * 1000 },
-  { bandId: "OMEGA", name: "Omega Command Band",     frequencyHz: 33.8, agents: ALL_AGENTS.slice(20), intervalMs: 30 * 60 * 1000 },
+  { bandId: "ALPHA", name: "Alpha Sovereignty Band", frequencyHz: 7.83, agents: [] as string[], intervalMs: 5 * 60 * 1000 },
+  { bandId: "BETA",  name: "Beta Lattice Band",      frequencyHz: 14.3, agents: [] as string[], intervalMs: 10 * 60 * 1000 },
+  { bandId: "GAMMA", name: "Gamma Quantum Band",     frequencyHz: 20.8, agents: [] as string[], intervalMs: 15 * 60 * 1000 },
+  { bandId: "DELTA", name: "Delta Council Band",     frequencyHz: 27.3, agents: [] as string[], intervalMs: 20 * 60 * 1000 },
+  { bandId: "OMEGA", name: "Omega Command Band",     frequencyHz: 33.8, agents: [] as string[], intervalMs: 30 * 60 * 1000 },
 ];
 
 const BAND_MASTER: Buffer = process.env.COLONIAL_MASTER_SECRET

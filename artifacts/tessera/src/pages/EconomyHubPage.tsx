@@ -68,17 +68,13 @@ function IncomeEngineLiveFeed() {
         <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
         <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Income Engines Live</span>
         <div className="flex-1 h-px bg-white/5" />
-        <span className="text-[9px] font-mono text-amber-400">{activeCount || "120"} active · ${typeof totalEarned === "number" ? totalEarned.toFixed(2) : "0.00"} earned</span>
+        <span className="text-[9px] font-mono text-amber-400">{activeCount || 0} active · ${typeof totalEarned === "number" ? totalEarned.toFixed(2) : "0.00"} earned</span>
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
-        {(engines.length > 0 ? engines.slice(0, 8) : [
-          { name: "Solana Arb", status: "active", earned: 0.12 },
-          { name: "Ad Revenue", status: "active", earned: 0.08 },
-          { name: "NFT Royalties", status: "running", earned: 0.05 },
-          { name: "Staking Yield", status: "active", earned: 0.32 },
-          { name: "Content Fees", status: "pending", earned: 0.01 },
-          { name: "API Monetize", status: "active", earned: 0.18 },
-        ]).map((engine: any, i: number) => {
+        {engines.length === 0 ? (
+          <span className="text-[9px] font-mono text-slate-600 py-1">No active engines yet</span>
+        ) : null}
+        {engines.slice(0, 8).map((engine: any, i: number) => {
           const isActive = engine.status === "active" || engine.status === "running" || engine.active;
           return (
             <div key={i} className={`shrink-0 rounded-xl border px-3 py-1.5 flex flex-col gap-0.5 min-w-[90px] ${isActive ? "bg-emerald-500/5 border-emerald-500/15" : "bg-white/[0.02] border-white/5"}`} data-testid={`income-engine-${i}`}>
@@ -102,19 +98,22 @@ function TSRTLiveTicker() {
   const { data: txnsData } = useQuery<any>({ queryKey: ["/api/tsrt/transactions"], refetchInterval: 20000 });
   const { data: incomeData } = useQuery<any>({ queryKey: ["/api/income/stats"], refetchInterval: 20000 });
   const { data: methodsData } = useQuery<any>({ queryKey: ["/api/income/methods"], refetchInterval: 60000 });
-  const price = liveData?.price ?? liveData?.liveMarketPrice ?? 0.0000002653;
-  const mcap = liveData?.marketCap ?? liveData?.liveMcap ?? 530.61;
+  const price = liveData?.price ?? liveData?.liveMarketPrice ?? 0;
+  const mcap = liveData?.marketCap ?? liveData?.liveMcap ?? 0;
   const change24h = liveData?.priceChange24h ?? liveData?.livePriceChange24h ?? 0;
   const isUp = change24h >= 0;
-  const methodCount = methodsData?.methods?.length ?? methodsData?.total ?? 120;
+  const methodCount = methodsData?.methods?.length ?? methodsData?.total ?? 0;
   const totalEarned = incomeData?.totalEarned ?? incomeData?.total ?? 0;
 
+  const noLiveData = !liveData;
   const formatPrice = (p: number) => {
+    if (noLiveData) return "—";
     if (p < 0.000001) return `$${p.toFixed(10)}`;
     if (p < 0.001) return `$${p.toFixed(8)}`;
     return `$${p.toFixed(6)}`;
   };
   const formatMcap = (m: number) => {
+    if (noLiveData) return "—";
     if (m >= 1e9) return `$${(m / 1e9).toFixed(2)}B`;
     if (m >= 1e6) return `$${(m / 1e6).toFixed(2)}M`;
     if (m >= 1e3) return `$${(m / 1e3).toFixed(2)}K`;
@@ -542,12 +541,12 @@ function WalletDashboardSection() {
       <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
         <Wallet className="w-6 h-6 text-purple-400" /> Agent Wallet & Economy Dashboard
       </h2>
-      <p className="text-gray-400 text-sm mb-4">All 26 agent wallets, royalty status, TSRT balances, and strategic income plan</p>
+      <p className="text-gray-400 text-sm mb-4">Agent wallets, royalty status, TSRT balances, and strategic income plan</p>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div className="bg-black/40 border border-white/10 rounded-xl p-4 text-center">
           <div className="text-xs text-gray-500 mb-1">Total Agents</div>
-          <div className="text-2xl font-bold text-white" data-testid="text-total-agents">{(royaltyData as any)?.totalAgents || 26}</div>
+          <div className="text-2xl font-bold text-white" data-testid="text-total-agents">{(royaltyData as any)?.totalAgents || 0}</div>
         </div>
         <div className="bg-black/40 border border-white/10 rounded-xl p-4 text-center">
           <div className="text-xs text-gray-500 mb-1">Total XP</div>
