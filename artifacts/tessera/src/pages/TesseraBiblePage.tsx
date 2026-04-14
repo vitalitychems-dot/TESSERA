@@ -5,6 +5,7 @@ import {
   ArrowLeft, Crown, Globe, Brain, Heart, Lock, Flame, Triangle, Circle,
   RefreshCw, Radio, ChevronDown, ChevronUp, Users, Vote, Hexagon
 } from "lucide-react";
+import type { BibleSearchResult } from "@/types/api";
 
 const API = "/api/tessera-bible";
 
@@ -442,7 +443,7 @@ export default function TesseraBiblePage() {
               <Search className="w-4 h-4 inline mr-1" /> {searchResults.total} results for "{searchQuery}"
             </div>
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {searchResults.results.slice(0, 15).map((r: any, i: number) => (
+              {searchResults.results.slice(0, 15).map((r: BibleSearchResult, i: number) => (
                 <div
                   key={i}
                   className="text-xs p-2 bg-slate-800/40 rounded cursor-pointer hover:bg-slate-700/40"
@@ -543,7 +544,8 @@ export default function TesseraBiblePage() {
 }
 
 function BookDetail({ book, testament, onBack, onSelectChapter }: {
-  book: any; testament: any;
+  book: BibleBook & { chapters: Chapter[]; sacred_geometry_alignment?: string };
+  testament: Testament | undefined;
   onBack: () => void; onSelectChapter: (n: number) => void;
 }) {
   const colors = classColors[book.classification] || classColors.esoteric;
@@ -585,7 +587,7 @@ function BookDetail({ book, testament, onBack, onSelectChapter }: {
 
         <h2 className="text-sm font-bold text-slate-300 mb-2">Chapters ({book.chapters.length})</h2>
         <div className="space-y-2">
-          {book.chapters.map((ch: any) => (
+          {book.chapters.map((ch: Chapter) => (
             <div
               key={ch.number}
               className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-3 cursor-pointer hover:border-violet-500/30 hover:bg-slate-800/40 transition-all"

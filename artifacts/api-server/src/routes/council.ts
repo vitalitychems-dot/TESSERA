@@ -184,10 +184,10 @@ router.post("/council/deliberate", async (req, res) => {
         () => computeWorldState(),
       ];
       for (const fn of testFns) {
-        try { fn(); activeEngines++; } catch {}
+        try { fn(); activeEngines++; } catch (err) { logger.error({ err }, "Sovereign engine probe failed"); }
       }
       systemState.moduleCount = activeEngines + 4;
-    } catch (_e) { /* sovereign engines optional */ }
+    } catch (err) { logger.error({ err }, "Sovereign engine state collection failed"); }
 
     let knowledgeContext = "";
     try {
@@ -201,7 +201,9 @@ router.post("/council/deliberate", async (req, res) => {
           knowledgeContext = `\n\nKnowledge Base (via SovereignEngine): ${kr.content.slice(0, 500)}`;
         }
       }
-    } catch (_e) {}
+    } catch (err) {
+      logger.error({ err }, "Failed to query knowledge context for council session");
+    }
 
     const decisionId = `council-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const agentsParticipated = COUNCIL_AGENTS.map(a => a.name);

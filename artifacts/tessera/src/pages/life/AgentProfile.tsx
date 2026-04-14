@@ -6,6 +6,7 @@ import {
   GraduationCap, Target, Smile, Loader2, MapPin, Clock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { AgentPosition } from "@/types/api";
 
 const AGENT_HEX_COLORS: Record<string, string> = {
   "tessera-prime": "#67e8f9", "tessera-alpha": "#f87171", "tessera-beta": "#60a5fa",
@@ -143,7 +144,7 @@ export default function AgentProfile({ agentId, world, onClose }: AgentProfilePr
       .finally(() => setLoading(false));
   }, [agentId]);
 
-  const { data: positions = [] } = useQuery<any[]>({ queryKey: ["/api/agencies/positions"], refetchInterval: 60000 });
+  const { data: positions = [] } = useQuery<AgentPosition[]>({ queryKey: ["/api/agencies/positions"], refetchInterval: 60000 });
 
   const color = AGENT_HEX_COLORS[agentId] || "#67e8f9";
   const colorClass = AGENT_COLOR_CLASSES[agentId] || "text-cyan-300";
@@ -153,7 +154,7 @@ export default function AgentProfile({ agentId, world, onClose }: AgentProfilePr
   const job = world?.jobs?.find(j => j.agentId === agentId);
   const wellbeing = world?.wellbeingRecords?.[agentId];
   const coinPrice = world?.economy?.coinPrice ?? 0;
-  const position = positions.find((p: any) => p.agentId === agentId);
+  const position = positions.find((p: AgentPosition) => p.agentId === agentId);
   const currentLoc = activity ? world?.locations?.find(l => l.id === activity.locationId) : null;
   const homeLoc = wellbeing?.homeLocationId ? world?.locations?.find(l => l.id === wellbeing.homeLocationId) : null;
   const agentTxs = (world?.economy?.transactions?.filter(tx => tx.from === agentId || tx.to === agentId) ?? []).slice(-6);
@@ -444,9 +445,9 @@ export default function AgentProfile({ agentId, world, onClose }: AgentProfilePr
                   <MessageSquare size={9} />Recent Thoughts
                 </div>
                 <div className="space-y-2 max-h-[100px] overflow-y-auto custom-scrollbar">
-                  {detail.recentMessages.slice(0, 4).map((msg: any, i: number) => (
+                  {detail.recentMessages.slice(0, 4).map((msg: { content?: string }, i: number) => (
                     <div key={i} className="text-[10px] text-foreground/70 leading-relaxed border-l-2 pl-2 font-mono" style={{ borderColor: `${color}50` }}>
-                      {msg.content?.slice(0, 120)}{msg.content?.length > 120 ? "…" : ""}
+                      {msg.content?.slice(0, 120)}{(msg.content?.length ?? 0) > 120 ? "…" : ""}
                     </div>
                   ))}
                 </div>

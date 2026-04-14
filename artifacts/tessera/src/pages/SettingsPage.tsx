@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Settings, Activity, Shield, Cpu, HardDrive, Wifi, Zap, RefreshCw, Database, Globe, Search, BookOpen, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { SovereignEngine, IngestionSource, IngestionJob } from "@/types/api";
 
 const API = import.meta.env.VITE_API_URL || "";
 
@@ -56,7 +57,7 @@ export default function SettingsPage() {
         <div className="rounded-xl border border-border bg-card p-4">
           <h3 className="text-sm font-bold font-mono mb-3 flex items-center gap-2"><Zap size={14} className="text-amber-400" /> Sovereign Engines</h3>
           <div className="space-y-2">
-            {engineList.map((e: any, i: number) => (
+            {engineList.map((e: SovereignEngine, i: number) => (
               <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-background/50 border border-white/5">
                 <div className={cn("w-2 h-2 rounded-full", e.status === "active" || e.online ? "bg-emerald-400" : "bg-red-400")} />
                 <div className="flex-1 min-w-0">
@@ -128,7 +129,7 @@ export default function SettingsPage() {
             <div className="text-[10px] text-muted-foreground">Items Ingested</div>
           </div>
           <div className="p-2 rounded-lg bg-background/50 border border-white/5 text-center">
-            <div className="text-lg font-bold font-mono text-cyan-400">{ingestionStats?.enabledSources ?? ingestionStats?.sources?.filter((s: any) => s.enabled)?.length ?? 0}</div>
+            <div className="text-lg font-bold font-mono text-cyan-400">{ingestionStats?.enabledSources ?? ingestionStats?.sources?.filter((s: IngestionSource) => s.enabled)?.length ?? 0}</div>
             <div className="text-[10px] text-muted-foreground">Active Sources</div>
           </div>
           <div className="p-2 rounded-lg bg-background/50 border border-white/5 text-center">
@@ -143,7 +144,7 @@ export default function SettingsPage() {
         {(ingestionStats?.recentItems?.length > 0 || ingestionStats?.recentJobs?.length > 0) && (
           <div className="space-y-1">
             <div className="text-[10px] text-muted-foreground font-mono mb-1">RECENT ACTIVITY</div>
-            {(ingestionStats.recentJobs || []).slice(0, 5).map((job: any, i: number) => (
+            {(ingestionStats.recentJobs || []).slice(0, 5).map((job: IngestionJob, i: number) => (
               <div key={i} className="flex items-center gap-2 p-1.5 rounded-lg bg-background/30 border border-white/5 text-[11px] font-mono">
                 <BookOpen size={10} className="text-rose-400 shrink-0" />
                 <span className="text-foreground/80 truncate flex-1">{job.sourceName}</span>

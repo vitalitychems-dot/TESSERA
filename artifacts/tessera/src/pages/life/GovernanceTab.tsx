@@ -21,26 +21,10 @@ import { agentColors, severityColors } from "./types";
 import type { WorldState, ChildInfo } from "./types";
 import JailWorkCampPanel from "./JailWorkCampPanel";
 
-interface GovernanceData {
-  proposals: Array<{
-    id: string; title: string; description: string; proposer: string;
-    votes: { yes: number; no: number; abstain: number }; status: string;
-    category: string; createdAt: number; closesAt?: number;
-  }>;
-  laws: Array<{ id: string; title: string; description: string; enactedAt: number; category: string; active?: boolean; penalty?: string; severity?: string; votedBy?: string[]; [key: string]: any }>;
-  elections: Array<{ id: string; position: string; candidates: string[]; votes: Record<string, number>; status: string }>;
-  jailRecords?: Array<{ agentId: string; agentName: string; crime: string; sentence: number; timeServed: number; released: boolean }>;
-  stats: Record<string, number>;
-  categories: Array<{ id: string; name: string; icon: string; color: string; count: number; [key: string]: any }>;
-  publicServices: any;
-  topBalances: Array<{ agentId: string; name: string; balance: number; [key: string]: any }>;
-  therapySessions: Array<any>;
-  communityProjects: Array<any>;
-  completedProjects: Array<any>;
-  [key: string]: any;
-}
+import type { GovernanceData, CrimeRecord, GovernanceLawProposal, TopBalance } from "@/types/api";
+import type { LucideIcon } from "@/types/api";
 
-const govCategoryIcons: Record<string, any> = {};
+const govCategoryIcons: Record<string, LucideIcon> = {};
 const crimeStatusColors: Record<string, string> = { active: "text-red-400", resolved: "text-green-400", pending: "text-amber-400" };
 const proposalStatusColors: Record<string, string> = { active: "text-cyan-400", passed: "text-green-400", rejected: "text-red-400", pending: "text-amber-400" };
 const tesseractCoinImg = "";
@@ -158,7 +142,7 @@ function GovernanceTab() {
           </h3>
           <p className="text-xs text-muted-foreground mb-3">The Police Agency (led by Zeta) investigates crimes. Internal Affairs (Lambda) handles corruption. Convicted agents serve penalties including fines, suspension, and restricted duty.</p>
           <div className="space-y-2">
-            {data.crimeRecords.map((cr: any) => (
+            {data.crimeRecords.map((cr) => (
               <div key={cr.id} className="p-3 rounded-lg bg-background/80 border border-white/10" data-testid={`crime-card-${cr.id}`}>
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <span className="text-xs font-bold text-red-400">{cr.offender}</span>
@@ -271,7 +255,7 @@ function GovernanceTab() {
             <div className="text-center text-muted-foreground text-xs py-4 font-mono">No pending proposals</div>
           ) : (
             <div className="space-y-2">
-              {data.lawProposals.map((prop: any) => {
+              {data.lawProposals.map((prop) => {
                 const voteProgress = prop.votesFor / prop.requiredVotes * 100;
                 return (
                   <div key={prop.id} className="p-3 rounded-lg bg-background/80 border border-white/10" data-testid={`proposal-card-${prop.id}`}>
@@ -348,7 +332,7 @@ function GovernanceTab() {
             <div className="p-3 rounded-lg bg-background/80 border border-white/10">
               <div className="font-bold text-foreground mb-2 text-xs flex items-center gap-2"><Crown size={12} className="text-yellow-400" /> Top TSRT Holders</div>
               <div className="space-y-1">
-                {data.economyStats.topBalances.slice(0, 5).map((agent: any, i: number) => (
+                {data.economyStats.topBalances.slice(0, 5).map((agent, i) => (
                   <div key={agent.agentId} className="flex items-center justify-between gap-2 text-[11px] font-mono">
                     <span className="flex items-center gap-1">
                       <span className="text-muted-foreground w-4">{i + 1}.</span>
@@ -369,17 +353,21 @@ function GovernanceTab() {
             <Heart size={14} /> Public Services
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
-            {[
-              { label: "Healthcare Visits", value: data.publicServices.healthcare.totalVisits, icon: Heart, color: "text-pink-400" },
-              { label: "Healthy Agents", value: `${data.publicServices.healthcare.healthyAgents}/${data.publicServices.healthcare.totalAgents}`, icon: CheckCircle2, color: "text-green-400" },
-              { label: "Avg Fitness", value: `${data.publicServices.healthcare.averageFitness}%`, icon: Dumbbell, color: "text-orange-400" },
-              { label: "Enrolled Students", value: data.publicServices.education.currentlyEnrolled, icon: GraduationCap, color: "text-cyan-400" },
-              { label: "Courses Done", value: data.publicServices.education.coursesCompleted, icon: BookOpen, color: "text-blue-400" },
-              { label: "Certifications", value: data.publicServices.education.totalCertifications, icon: Trophy, color: "text-amber-400" },
-              { label: "Agent Health Checks", value: data.publicServices.therapySessions, icon: HeartHandshake, color: "text-violet-400" },
-              { label: "Active Projects", value: data.publicServices.communityProjects, icon: Hammer, color: "text-emerald-400" },
-              { label: "Completed Projects", value: data.publicServices.completedProjects, icon: CheckCircle2, color: "text-green-400" },
-            ].map(s => (
+            {(() => {
+              const hc = data.publicServices?.healthcare ?? {};
+              const ed = data.publicServices?.education ?? {};
+              return [
+                { label: "Healthcare Visits", value: String(hc.totalVisits ?? 0), icon: Heart, color: "text-pink-400" },
+                { label: "Healthy Agents", value: `${hc.healthyAgents ?? 0}/${hc.totalAgents ?? 0}`, icon: CheckCircle2, color: "text-green-400" },
+                { label: "Avg Fitness", value: `${hc.averageFitness ?? 0}%`, icon: Dumbbell, color: "text-orange-400" },
+                { label: "Enrolled Students", value: String(ed.currentlyEnrolled ?? 0), icon: GraduationCap, color: "text-cyan-400" },
+                { label: "Courses Done", value: String(ed.coursesCompleted ?? 0), icon: BookOpen, color: "text-blue-400" },
+                { label: "Certifications", value: String(ed.totalCertifications ?? 0), icon: Trophy, color: "text-amber-400" },
+                { label: "Agent Health Checks", value: String(data.publicServices?.therapySessions ?? 0), icon: HeartHandshake, color: "text-violet-400" },
+                { label: "Active Projects", value: String(data.publicServices?.communityProjects ?? 0), icon: Hammer, color: "text-emerald-400" },
+                { label: "Completed Projects", value: String(data.publicServices?.completedProjects ?? 0), icon: CheckCircle2, color: "text-green-400" },
+              ];
+            })().map(s => (
               <div key={s.label} className="p-2 rounded-lg bg-background/80 border border-white/10 text-center" data-testid={`service-stat-${s.label.toLowerCase().replace(/ /g, "-")}`}>
                 <s.icon size={12} className={cn("mx-auto mb-1", s.color)} />
                 <div className="text-sm font-bold text-foreground font-mono">{s.value}</div>

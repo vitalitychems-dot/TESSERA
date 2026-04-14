@@ -9,6 +9,7 @@ import {
 
 import type { WorldState } from "./life/types";
 import { locationIcons, agentColors } from "./life/types";
+import type { LucideIcon } from "@/types/api";
 
 const AgentNFTPage = lazy(() => import("@/pages/AgentNFTPage"));
 
@@ -19,8 +20,9 @@ import CourtTab from "./life/CourtTab";
 import SocietyTab from "./life/SocietyTab";
 import { TesseractFamilyTab } from "./GrandCouncilPage";
 
-class LifeErrorBoundary extends Component<{ children: any; fallback?: any }, { hasError: boolean; error?: Error }> {
-  constructor(props: any) { super(props); this.state = { hasError: false }; }
+interface LifeErrorBoundaryProps { children: React.ReactNode; fallback?: React.ReactNode }
+class LifeErrorBoundary extends Component<LifeErrorBoundaryProps, { hasError: boolean; error?: Error }> {
+  constructor(props: LifeErrorBoundaryProps) { super(props); this.state = { hasError: false }; }
   static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }
   componentDidCatch(error: Error, errorInfo: ErrorInfo) { console.error("[LifePage] Error caught:", error, errorInfo); }
   render() {
@@ -62,7 +64,7 @@ const AGENCY_FOR_LOC: Record<string, string> = {
 function ExpandableSection({
   id, title, icon: Icon, iconColor, children, defaultOpen = false,
 }: {
-  id: string; title: string; icon: any; iconColor: string; children: React.ReactNode; defaultOpen?: boolean;
+  id: string; title: string; icon: LucideIcon; iconColor: string; children: React.ReactNode; defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (

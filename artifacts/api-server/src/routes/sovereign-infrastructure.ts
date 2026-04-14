@@ -42,12 +42,14 @@ router.get("/sovereign-infrastructure/dashboard", async (_req, res) => {
         .from(councilDecisionsTable)
         .orderBy(desc(councilDecisionsTable.createdAt))
         .limit(5);
-    } catch (_e) {}
+    } catch (err) {
+      logger.error({ err }, "Failed to query recent council decisions for dashboard");
+    }
 
     let networkData: ReturnType<typeof computeNetworkTopology> | null = null;
     let swarmData: ReturnType<typeof computeSwarmStatus> | null = null;
-    try { networkData = computeNetworkTopology(now); } catch {}
-    try { swarmData = computeSwarmStatus(now); } catch {}
+    try { networkData = computeNetworkTopology(now); } catch (err) { logger.error({ err }, "Failed to compute network topology"); }
+    try { swarmData = computeSwarmStatus(now); } catch (err) { logger.error({ err }, "Failed to compute swarm status"); }
 
     const cpuUsage = loadAvg[0] ?? 0;
     const cpuPercent = Math.min(100, Math.round((cpuUsage / cpus.length) * 100));

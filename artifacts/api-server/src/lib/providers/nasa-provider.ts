@@ -1,6 +1,12 @@
 import { safeFetchJson } from "../safe-fetch";
 import type { NormalizedItem } from "../ingestion/pipeline";
 
+function getNasaApiKey(): string {
+  if (process.env.NASA_API_KEY) return process.env.NASA_API_KEY;
+  if (process.env.NODE_ENV !== "production") return "DEMO_KEY";
+  throw new Error("NASA_API_KEY environment variable is required in production");
+}
+
 interface NasaApodApiItem {
   title?: string;
   explanation?: string;
@@ -22,7 +28,7 @@ export interface NasaApodItem {
 export async function queryNasaApod(count = 3): Promise<NasaApodItem[]> {
   try {
     const raw = await safeFetchJson<NasaApodApiItem | NasaApodApiItem[]>(
-      `https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY&count=${count}`,
+      `https://api.nasa.gov/planetary/apod?api_key=${getNasaApiKey()}&count=${count}`,
       {
         providerId: "nasa-apod",
         providerName: "NASA APOD API",

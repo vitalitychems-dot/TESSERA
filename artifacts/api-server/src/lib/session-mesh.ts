@@ -1,4 +1,5 @@
 import { WebSocket } from "ws";
+import { createHash } from "crypto";
 import { logger } from "./logger";
 
 export interface MeshSession {
@@ -32,13 +33,7 @@ const SESSION_TIMEOUT_MS = 45_000;
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 
 function hashKey(key: string): string {
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) {
-    const char = key.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash;
-  }
-  return Math.abs(hash).toString(16).padStart(8, "0");
+  return createHash("sha256").update(key).digest("hex");
 }
 
 export function getSovereignKeyHash(key: string): string {
