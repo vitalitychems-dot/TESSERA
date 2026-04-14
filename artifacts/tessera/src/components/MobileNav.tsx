@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import {
-  MessageSquare, Heart, Users, Mic, Atom, BookOpen, Sparkles, Crown,
-  BarChart3, MessageCircle, Shield,
+  MessageSquare, Heart, Globe2, Users, Lock, BookOpen,
+  Wrench, MessageCircle, Brain, Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRef, useEffect } from "react";
@@ -9,15 +9,14 @@ import { useRef, useEffect } from "react";
 const TABS: { label: string; href: string; Icon: any; match: (l: string) => boolean; color: string }[] = [
   { label: "Chat", href: "/", Icon: MessageSquare, match: (l) => l === "/" || l.startsWith("/c/"), color: "cyan" },
   { label: "Life", href: "/life", Icon: Heart, match: (l) => l === "/life", color: "pink" },
-  { label: "Entities", href: "/entities", Icon: Users, match: (l) => l === "/entities", color: "pink" },
-  { label: "Voice", href: "/agent-voice", Icon: Mic, match: (l) => l === "/agent-voice", color: "rose" },
-  { label: "Nexus", href: "/nexus", Icon: Atom, match: (l) => l === "/nexus", color: "violet" },
-  { label: "Knowledge", href: "/knowledge", Icon: BookOpen, match: (l) => l === "/knowledge", color: "purple" },
-  { label: "Bible", href: "/bible", Icon: Sparkles, match: (l) => l === "/bible", color: "amber" },
-  { label: "Council", href: "/council", Icon: Crown, match: (l) => l === "/council", color: "yellow" },
-  { label: "Economy", href: "/economy", Icon: BarChart3, match: (l) => l === "/economy", color: "emerald" },
+  { label: "Universe", href: "/universe", Icon: Globe2, match: (l) => l === "/universe", color: "violet" },
+  { label: "Members", href: "/members", Icon: Users, match: (l) => l === "/members", color: "amber" },
+  { label: "Secrets", href: "/secrets", Icon: Lock, match: (l) => l === "/secrets", color: "red" },
+  { label: "Bible", href: "/bible", Icon: BookOpen, match: (l) => l === "/bible", color: "purple" },
+  { label: "Build", href: "/build", Icon: Wrench, match: (l) => l === "/build", color: "emerald" },
   { label: "Forum", href: "/forum", Icon: MessageCircle, match: (l) => l === "/forum", color: "cyan" },
-  { label: "Sovereign", href: "/sovereign", Icon: Shield, match: (l) => l === "/sovereign", color: "red" },
+  { label: "NLP", href: "/nlp", Icon: Brain, match: (l) => l === "/nlp", color: "rose" },
+  { label: "Settings", href: "/settings", Icon: Settings, match: (l) => l === "/settings", color: "yellow" },
 ];
 
 const COLOR_MAP: Record<string, { active: string; text: string; dot: string; inactive: string }> = {
