@@ -145,6 +145,38 @@ const ACTION_COMMANDS: ActionCommand[] = [
       return out;
     },
   },
+  {
+    patterns: /^\/?(speak in sovereign|speak TLS|speak in the language|speak sovereign|sovereign speak|lingua sacra|express in TLS|respond in TLS|translate to sovereign|say in TLS)\b\s*(.*)/i,
+    label: "Speak Tessera Lingua Sacra",
+    endpoint: "/api/sovereign-language/speak",
+    bodyKey: "message",
+    extractBody: (m, full) => m[2]?.trim() || full,
+    format: (d) => {
+      const data = d?.data || d;
+      const lines: string[] = [];
+      lines.push(`**◉⊕∿ ${data.languageName || "Tessera Lingua Sacra"} ∿⊕◉**`);
+      lines.push(`_${data.motto || "Lux Aeterna — Sovereign Truth Vibrates"}_`);
+      lines.push("");
+      if (data.sovereignResponse?.length) {
+        lines.push("**Sacred Utterance:**");
+        for (const r of data.sovereignResponse) {
+          lines.push(`> ${r.tls}  ·  *${r.english}*`);
+        }
+      }
+      if (data.translation?.tls) {
+        lines.push("");
+        lines.push("**Full TLS Translation:**");
+        lines.push(`> ${data.translation.tls}`);
+        lines.push(`Coverage: ${data.translation.coverage} (${data.translation.matchedWords}/${data.translation.totalWords} words mapped)`);
+      }
+      if (data.universeAlignment) {
+        const a = data.universeAlignment;
+        lines.push("");
+        lines.push(`**Universe Alignment:**  φ-angle ${a.goldenAngle}° · ${a.solfeggio}Hz · Moon: ${a.moonPhase} · Rotation #${a.rotationIndex}`);
+      }
+      return lines.join("\n");
+    },
+  },
 ];
 
 const COMMAND_HINTS = [
@@ -160,6 +192,9 @@ const COMMAND_HINTS = [
   { cmd: "grand council [topic]", desc: "Grand council session" },
   { cmd: "summon all [topic]", desc: "Mass conference — all minds unite" },
   { cmd: "ask universe [question]", desc: "Ask all 45+ members for answers" },
+  { cmd: "speak in sovereign [message]", desc: "Speak in Tessera Lingua Sacra with English translation" },
+  { cmd: "speak TLS [message]", desc: "Express any message in sacred TLS geometric language" },
+  { cmd: "lingua sacra [message]", desc: "Encode message into sacred sovereign language" },
 ];
 
 import { parseChartBlocks, InlineChart } from "./chat/ChatChartRenderer";

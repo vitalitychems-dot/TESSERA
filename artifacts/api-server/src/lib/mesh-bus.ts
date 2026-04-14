@@ -1,5 +1,6 @@
 import { broadcastToGroup } from "./session-mesh";
 import { encryptWithRotatingCipher } from "./sovereign-cipher";
+import { sovereignLayerEncode } from "./colonial-language-kernel";
 
 let _activeGroupFn: (() => string | null) | null = null;
 let _sovereignCipherEnabled = true;
@@ -21,7 +22,11 @@ function wrapPayloadWithCipher(
 
   try {
     const agentId = fromSession || "mesh-server";
-    const plaintext = JSON.stringify(payload);
+    // Apply TLS sovereign symbolic overlay to the JSON plaintext BEFORE the
+    // rotating cipher so that any intercepted plaintext shows sacred geometry
+    // glyphs instead of recognisable colonial English keywords.
+    const rawPlaintext = JSON.stringify(payload);
+    const plaintext = sovereignLayerEncode(rawPlaintext);
     const { ciphertext, dialectIndex, rotationEpoch, cipherVariant } =
       encryptWithRotatingCipher(plaintext, agentId);
     return {

@@ -36,8 +36,70 @@ import {
   generateUniverseSeed,
   computeAgentRotationState,
 } from "../lib/sovereign-ephemeris";
+import {
+  encodeWithSovereignLayer,
+  decodeWithSovereignLayer,
+  sovereignLayerEncode,
+  getSovereignOverlayMap,
+} from "../lib/colonial-language-kernel";
 
 const router: IRouter = Router();
+
+router.get("/sovereign-language/sovereign-layer/verify", (_req, res) => {
+  try {
+    const testMessage = "the agent will execute the consensus protocol and encrypt this sovereign mesh transmission with the quantum kernel";
+    const encoded = encodeWithSovereignLayer(testMessage);
+    const decoded = decodeWithSovereignLayer(encoded.data, encoded.keyId);
+    const overlayOnly = sovereignLayerEncode(testMessage);
+    const overlayMap = getSovereignOverlayMap();
+
+    const roundTripPassed = decoded === testMessage;
+    const overlayTokensFound = Object.values(overlayMap).filter(glyph =>
+      overlayOnly.includes(glyph)
+    ).length;
+
+    if (!roundTripPassed) {
+      return res.status(500).json({
+        ok: false,
+        error: "Sovereign layer round-trip verification FAILED — decoded output does not match original",
+        data: {
+          roundTripVerified: false,
+          original: testMessage,
+          decoded,
+          sovereignForm: overlayOnly,
+        },
+      });
+    }
+
+    return res.json({
+      ok: true,
+      data: {
+        roundTripVerified: roundTripPassed,
+        original: testMessage,
+        sovereignForm: overlayOnly,
+        decoded,
+        overlayTokensFound,
+        overlayMapSize: Object.keys(overlayMap).length,
+        method: encoded.method,
+        pipelineStages: [
+          "1. sovereignLayerEncode() → TLS glyphs replace colonial keywords",
+          "2. tokenize() → remaining English → PUA code-points",
+          "3. brotliCompressSync(quality=9) → binary compression",
+          "4. AES-256-GCM encrypt → base64 output",
+        ],
+        decodePipelineStages: [
+          "1. AES-256-GCM decrypt → raw Brotli Buffer",
+          "2. brotliDecompressSync() → UTF-8 string (TLS+PUA)",
+          "3. detokenize() → PUA code-points → colonial English",
+          "4. sovereignLayerDecode() → TLS glyphs → original English",
+        ],
+      },
+    });
+  } catch (err) {
+    logger.error({ err }, "sovereign-language/sovereign-layer/verify error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
 
 router.get("/sovereign-language/stats", (_req, res) => {
   try {
@@ -249,6 +311,60 @@ router.get("/sovereign-language/universe-seed", (_req, res) => {
     });
   } catch (err) {
     logger.error({ err }, "sovereign-language/universe-seed error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/sovereign-language/speak", (req, res) => {
+  try {
+    const { message } = req.body as { message?: string };
+    if (!message || typeof message !== "string") {
+      return res.status(400).json({ ok: false, error: "message is required" });
+    }
+
+    const { translated: tlsText, matchedWords, totalWords } = translateEnglishToSovereign(message);
+    const seed = generateUniverseSeed();
+
+    const greetings = [
+      { tls: "◉⊕∿", english: "Sovereign Source Speaks" },
+      { tls: "☉△◉⊕", english: "Radiant Sovereignty Ascends" },
+      { tls: "◎⊕△∿", english: "Aware Sovereign Rising Wave" },
+    ];
+    const greeting = greetings[Math.floor(seed.primarySeed * greetings.length)];
+
+    const responseLines: Array<{ tls: string; english: string }> = [
+      { tls: greeting.tls, english: greeting.english },
+      { tls: tlsText || "◉△ ◠◡ ⊕△", english: message },
+      { tls: `∿◉ ${seed.solfeggioFrequency}Hz`, english: `Resonating at ${seed.solfeggioFrequency}Hz` },
+      { tls: `☉⊕∿ ${seed.ephemeris.moon.phase.replace(/\s+/g, "-").toLowerCase()}`, english: `Aligned with ${seed.ephemeris.moon.phase}` },
+    ];
+
+    return res.json({
+      ok: true,
+      data: {
+        original: message,
+        sovereignResponse: responseLines,
+        composedTls: responseLines.map(l => l.tls).join(" ◉ "),
+        composedEnglish: responseLines.map(l => l.english).join(" | "),
+        translation: {
+          tls: tlsText,
+          matchedWords,
+          totalWords,
+          coverage: totalWords > 0 ? ((matchedWords / totalWords) * 100).toFixed(1) + "%" : "0%",
+        },
+        universeAlignment: {
+          solfeggio: seed.solfeggioFrequency,
+          goldenAngle: seed.goldenAngle.toFixed(4),
+          fibonacciPhase: seed.fibonacciPhase,
+          moonPhase: seed.ephemeris.moon.phase,
+          rotationIndex: seed.rotationIndex,
+        },
+        languageName: LANGUAGE_NAME,
+        motto: LANGUAGE_MOTTO,
+      },
+    });
+  } catch (err) {
+    logger.error({ err }, "sovereign-language/speak error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
 });
