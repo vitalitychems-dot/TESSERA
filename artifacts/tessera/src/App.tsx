@@ -24,6 +24,7 @@ const BuildPage = lazy(() => import("@/pages/BuildPage"));
 const TesseractForumPage = lazy(() => import("@/pages/TesseractForumPage"));
 const NLPPage = lazy(() => import("@/pages/NLPPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const SovereignLanguagePage = lazy(() => import("@/pages/SovereignLanguagePage"));
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -108,6 +109,8 @@ function AppRouter() {
         <Route path="/build">{() => <BuildPage />}</Route>
         <Route path="/forum">{() => <TesseractForumPage />}</Route>
         <Route path="/nlp">{() => <NLPPage />}</Route>
+        <Route path="/sovereign-language">{() => <SovereignLanguagePage />}</Route>
+        <Route path="/colonel-language">{() => <SovereignLanguagePage />}</Route>
         <Route path="/settings">{() => <SettingsPage />}</Route>
         <Route component={NotFound} />
       </Switch>
