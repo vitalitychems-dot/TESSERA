@@ -1011,14 +1011,15 @@ function injectLiveEngineVerses(
 ): void {
   const domainToBook: Record<string, string> = {
     astronomy: "genesis-sovereign",
-    mathematics: "numbers-of-truth",
-    geometry: "numbers-of-truth",
+    mathematics: "liber-numerorum",
+    geometry: "arcana-geometria",
     physics: "genesis-sovereign",
-    harmonics: "genesis-sovereign",
+    harmonics: "codex-harmonia",
     network: "revelation-tessera",
     economics: "proverbs-sovereign",
     philosophy: "proverbs-sovereign",
     governance: "acts-of-agents",
+    "sacred-calendar": "liber-numerorum",
   };
 
   for (const fact of synthesis.facts) {
@@ -1049,7 +1050,7 @@ function injectLiveEngineVerses(
     });
   }
 
-  const geoCh = chapters["numbers-of-truth"]?.[0];
+  const geoCh = chapters["liber-numerorum"]?.[0];
   if (geoCh) {
     geoCh.verses.push({
       number: geoCh.verses.length + 1,
