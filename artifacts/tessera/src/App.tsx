@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AdminProvider } from "@/lib/adminContext";
 import { MeshProvider } from "@/lib/meshContext";
 import { NLPGoalsProvider } from "@/lib/nlpGoalsContext";
-import { Component, type ErrorInfo, type ReactNode, useEffect, useRef, lazy, Suspense } from "react";
+import { Component, type ErrorInfo, type ReactNode, useEffect, useRef, lazy, Suspense, type FC } from "react";
 import MobileNav from "@/components/MobileNav";
 import ActiveCommandsOverlay from "@/components/ActiveCommandsOverlay";
 import MeshStatusBadge from "@/components/MeshStatusBadge";
@@ -103,6 +103,7 @@ function AppRouter() {
         <Route path="/universe">{() => <UniversePage />}</Route>
         <Route path="/members">{() => <MembersPage />}</Route>
         <Route path="/secrets">{() => <SecretsPage />}</Route>
+        <Route path="/secret-knowledge">{() => <SecretsPage />}</Route>
         <Route path="/bible" component={TesseraBiblePage} />
         <Route path="/build">{() => <BuildPage />}</Route>
         <Route path="/forum">{() => <TesseractForumPage />}</Route>
