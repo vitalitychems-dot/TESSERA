@@ -13,12 +13,17 @@ export default function SettingsPage() {
   const { data: meshStats } = useQuery<MeshStatsResponse>({ queryKey: ["/api/mesh/stats"], refetchInterval: 15000 });
   const { data: ingestionStats } = useQuery<IngestionStatsResponse>({ queryKey: ["/api/ingestion/stats"], refetchInterval: 10000 });
 
-  const uptime = diagnostics?.uptime ? `${Math.floor(diagnostics.uptime / 3600)}h ${Math.floor((diagnostics.uptime % 3600) / 60)}m` : "—";
-  const heapUsed = diagnostics?.memory?.heapUsed ? `${(diagnostics.memory.heapUsed / 1024 / 1024).toFixed(0)}MB` : "—";
-  const rss = diagnostics?.memory?.rss ? `${(diagnostics.memory.rss / 1024 / 1024).toFixed(0)}MB` : "—";
+  const uptimeVal = diagnostics?.uptime;
+  const uptimeSeconds = typeof uptimeVal === "number" ? uptimeVal : uptimeVal?.seconds;
+  const uptime = uptimeVal?.formatted || (uptimeSeconds ? `${Math.floor(uptimeSeconds / 3600)}h ${Math.floor((uptimeSeconds % 3600) / 60)}m` : "—");
+  const heapUsed = diagnostics?.memory?.heapUsedMB ? `${Math.round(diagnostics.memory.heapUsedMB)}MB` : diagnostics?.memory?.heapUsed ? `${(diagnostics.memory.heapUsed / 1024 / 1024).toFixed(0)}MB` : "—";
+  const heapTotal = diagnostics?.memory?.heapTotalMB ? `${Math.round(diagnostics.memory.heapTotalMB)}MB` : "—";
+  const memPercent = diagnostics?.memory?.percent ?? null;
 
-  const engineList = engines?.engines || engines?.data || [];
-  const sovereigntyScore = sovereignty?.score ?? sovereignty?.data?.score ?? "—";
+  const rawEngines = engines?.engines || engines?.data || {};
+  const engineList = Array.isArray(rawEngines) ? rawEngines : Object.entries(rawEngines).map(([name, val]: [string, any]) => ({ name, engine: name, ...val }));
+  const sovereigntyData = sovereignty?.sovereignty || sovereignty;
+  const sovereigntyScore = sovereigntyData?.overallScore ?? sovereignty?.score ?? sovereignty?.data?.score ?? "—";
 
   return (
     <div className="p-4 space-y-4 max-w-4xl mx-auto pb-20">
@@ -33,7 +38,7 @@ export default function SettingsPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="p-3 rounded-xl bg-card border border-border text-center">
           <Shield size={18} className="text-emerald-400 mx-auto mb-1" />
-          <div className="text-lg font-bold font-mono text-emerald-400">{sovereigntyScore}%</div>
+          <div className="text-lg font-bold font-mono text-emerald-400">{typeof sovereigntyScore === "number" ? `${sovereigntyScore.toFixed(1)}%` : `${sovereigntyScore}%`}</div>
           <div className="text-[11px] text-muted-foreground">Sovereignty</div>
         </div>
         <div className="p-3 rounded-xl bg-card border border-border text-center">
@@ -48,10 +53,30 @@ export default function SettingsPage() {
         </div>
         <div className="p-3 rounded-xl bg-card border border-border text-center">
           <HardDrive size={18} className="text-amber-400 mx-auto mb-1" />
-          <div className="text-lg font-bold font-mono text-amber-400">{rss}</div>
-          <div className="text-[11px] text-muted-foreground">RSS Memory</div>
+          <div className="text-lg font-bold font-mono text-amber-400">{memPercent !== null ? `${memPercent}%` : heapTotal}</div>
+          <div className="text-[11px] text-muted-foreground">Memory %</div>
         </div>
       </div>
+
+      {sovereigntyData?.modules && (
+        <div className="rounded-xl border border-border bg-card p-4">
+          <h3 className="text-sm font-bold font-mono mb-3 flex items-center gap-2">
+            <Shield size={14} className="text-emerald-400" /> Sovereignty Benchmark
+            {sovereigntyData?.level && <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">{sovereigntyData.level}</span>}
+          </h3>
+          <div className="text-[11px] text-muted-foreground font-mono mb-3">
+            {sovereigntyData?.breakdown?.testsPassed ?? 0}/{sovereigntyData?.breakdown?.totalTests ?? 0} tests passed · {sovereigntyData?.activeModules ?? 0} modules active
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-3 gap-2">
+            {Object.entries(sovereigntyData.modules).map(([name, mod]: [string, any]) => (
+              <div key={name} className="p-2 rounded-lg bg-background/50 border border-white/5 text-center">
+                <div className={cn("text-sm font-bold font-mono", mod.percentile === 100 ? "text-emerald-400" : mod.percentile >= 80 ? "text-cyan-400" : "text-amber-400")}>{mod.percentile?.toFixed(0) ?? 0}%</div>
+                <div className="text-[9px] text-muted-foreground font-mono capitalize">{name.replace(/-/g, " ")}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {Array.isArray(engineList) && engineList.length > 0 && (
         <div className="rounded-xl border border-border bg-card p-4">
@@ -63,7 +88,7 @@ export default function SettingsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-bold font-mono">{e.name || e.engine}</div>
                 </div>
-                <div className="text-[11px] text-muted-foreground font-mono">{e.latency || e.responseTime || "—"}ms</div>
+                <div className="text-[11px] text-muted-foreground font-mono">{e.latencyMs?.toFixed(2) || e.latency || e.responseTime || "—"}ms</div>
                 <div className={cn("text-[10px] px-2 py-0.5 rounded-full border", e.status === "active" || e.online ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/30" : "text-red-400 bg-red-500/10 border-red-500/30")}>
                   {e.status || (e.online ? "active" : "offline")}
                 </div>

@@ -22,6 +22,13 @@
       "when": 1776165775475,
       "tag": "0002_forum_identity_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1744661800000,
+      "tag": "0003_natal_chart_schema",
+      "breakpoints": true
     }
   ]
 }

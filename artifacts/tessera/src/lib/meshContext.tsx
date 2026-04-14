@@ -147,6 +147,12 @@ export function MeshProvider({ children }: { children: ReactNode }) {
 
     setHealth("connecting");
 
+    const connectTimeout = setTimeout(() => {
+      if (!isRegisteredRef.current) {
+        setHealth("isolated");
+      }
+    }, 5000);
+
     const sovereignKey = localStorage.getItem("t9_sovereign_key") || token;
     sovereignKeyRef.current = sovereignKey;
 
@@ -281,6 +287,7 @@ export function MeshProvider({ children }: { children: ReactNode }) {
     window.addEventListener("popstate", handleNavigation);
 
     return () => {
+      clearTimeout(connectTimeout);
       unsub();
       if (heartbeatRef.current) {
         clearInterval(heartbeatRef.current);

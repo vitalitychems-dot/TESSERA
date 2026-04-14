@@ -266,6 +266,118 @@ function getDayOfYear(date: Date): number {
   return Math.floor(diff / 86400000);
 }
 
+export interface NatalPosition {
+  name: string;
+  longitude: number;
+  house: number;
+  sign: string;
+}
+
+export interface TransitToNatalAspect {
+  transitPlanet: string;
+  natalPlanet: string;
+  aspectType: string;
+  orb: number;
+  symbol: string;
+  nature: "harmonious" | "challenging" | "neutral";
+  transitLongitude: number;
+  transitSign: string;
+  natalLongitude: number;
+  natalSign: string;
+  natalHouse: number;
+}
+
+const TRANSIT_ASPECT_DEFS = [
+  { name: "Conjunction", angle: 0, orb: 8, symbol: "☌", nature: "neutral" as const },
+  { name: "Sextile", angle: 60, orb: 6, symbol: "✶", nature: "harmonious" as const },
+  { name: "Square", angle: 90, orb: 8, symbol: "□", nature: "challenging" as const },
+  { name: "Trine", angle: 120, orb: 8, symbol: "△", nature: "harmonious" as const },
+  { name: "Opposition", angle: 180, orb: 8, symbol: "☍", nature: "challenging" as const },
+];
+
+function computeInnerPlanetLongitude(T: number, el: { L0: number; L1: number; e0: number; omega0: number; omega1: number }): number {
+  const L = normalize(el.L0 + el.L1 * T);
+  const omega = normalize(el.omega0 + el.omega1 * T);
+  const M = normalize(L - omega);
+  const Mrad = M * DEG;
+  const e = el.e0;
+  const E = Mrad + e * Math.sin(Mrad) + 0.5 * e * e * Math.sin(2 * Mrad);
+  const v = 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2)) * RAD;
+  return normalize(v + omega);
+}
+
+const INNER_PLANETS = [
+  { name: "Mercury", L0: 252.2509, L1: 149472.6746, e0: 0.20563, omega0: 77.456, omega1: 1.556 },
+  { name: "Venus", L0: 181.9798, L1: 58517.8157, e0: 0.00677, omega0: 131.564, omega1: 1.402 },
+  { name: "Mars", L0: 355.4330, L1: 19140.2993, e0: 0.09340, omega0: 336.060, omega1: 1.841 },
+  { name: "Jupiter", L0: 34.3515, L1: 3034.9057, e0: 0.04839, omega0: 14.331, omega1: 1.612 },
+  { name: "Saturn", L0: 50.0774, L1: 1222.1138, e0: 0.05415, omega0: 93.057, omega1: 1.964 },
+];
+
+const ZODIAC_SIGNS_TRANSIT = [
+  "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+  "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"
+];
+
+function longitudeToSign(lon: number): string {
+  return ZODIAC_SIGNS_TRANSIT[Math.floor(normalize(lon) / 30)];
+}
+
+function angleDiff(a: number, b: number): number {
+  let d = Math.abs(a - b) % 360;
+  if (d > 180) d = 360 - d;
+  return d;
+}
+
+/**
+ * Compute current transit planet positions and return aspects to natal positions.
+ * This extends the existing sovereign astrology engine with natal transit capability.
+ */
+export function computeNatalTransits(
+  natalPositions: NatalPosition[],
+  date: Date = new Date(),
+  maxResults = 12,
+): TransitToNatalAspect[] {
+  const jd = julianDate(date);
+  const T = (jd - 2451545.0) / 36525.0;
+  const sLon = sunLongitude(jd);
+  const mLon = moonLongitude(jd);
+
+  const transitPlanets: Array<{ name: string; longitude: number }> = [
+    { name: "Sun", longitude: sLon },
+    { name: "Moon", longitude: mLon },
+    ...INNER_PLANETS.map(p => ({ name: p.name, longitude: computeInnerPlanetLongitude(T, p) })),
+  ];
+
+  const aspects: TransitToNatalAspect[] = [];
+
+  for (const transit of transitPlanets) {
+    for (const natal of natalPositions) {
+      const diff = angleDiff(transit.longitude, natal.longitude);
+      for (const asp of TRANSIT_ASPECT_DEFS) {
+        if (Math.abs(diff - asp.angle) <= asp.orb) {
+          aspects.push({
+            transitPlanet: transit.name,
+            natalPlanet: natal.name,
+            aspectType: asp.name,
+            orb: Math.round(Math.abs(diff - asp.angle) * 100) / 100,
+            symbol: asp.symbol,
+            nature: asp.nature,
+            transitLongitude: Math.round(transit.longitude * 100) / 100,
+            transitSign: longitudeToSign(transit.longitude),
+            natalLongitude: Math.round(natal.longitude * 100) / 100,
+            natalSign: natal.sign,
+            natalHouse: natal.house,
+          });
+          break;
+        }
+      }
+    }
+  }
+
+  return aspects.sort((a, b) => a.orb - b.orb).slice(0, maxResults);
+}
+
 export function computePlanetaryHours(date: Date = new Date(), latitude: number = 40.7128) {
   const jd = julianDate(date);
   const T = (jd - 2451545.0) / 36525.0;

@@ -31,13 +31,13 @@ function ScoreBar({ label, score, maxScore = 100 }: { label: string; score: numb
   );
 }
 
-export default function SystemPage() {
-  const [activeTab, setActiveTab] = useState<"agi" | "improvement" | "evolution" | "quantum" | "agents">("agi");
+export default function SystemPage({ initialTab }: { initialTab?: "agi" | "improvement" | "evolution" | "quantum" | "agents" }) {
+  const [activeTab, setActiveTab] = useState<"agi" | "improvement" | "evolution" | "quantum" | "agents">(initialTab || "agi");
 
   const { data: agiMetrics } = useQuery({
     queryKey: ["agi-metrics"],
     queryFn: () => fetch(`${API}/api/agi-training/metrics`).then(r => r.json()).then(d => d.data),
-    refetchInterval: 60000,
+    refetchInterval: 15000,
   });
 
   const { data: improvementMetrics } = useQuery({

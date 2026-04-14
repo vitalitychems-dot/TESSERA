@@ -63,13 +63,13 @@ export default function TokenEconomyPage() {
   const { data: personalityMetrics } = useQuery({
     queryKey: ["personality-metrics"],
     queryFn: () => fetch(`${API}/api/personality-evolution/metrics`).then(r => r.json()).then(d => d.data),
-    refetchInterval: 60000,
+    refetchInterval: 20000,
   });
 
   const { data: collectiveMetrics } = useQuery({
     queryKey: ["collective-metrics"],
     queryFn: () => fetch(`${API}/api/collective-intelligence/metrics`).then(r => r.json()).then(d => d.data),
-    refetchInterval: 60000,
+    refetchInterval: 20000,
   });
 
   const filteredAgents = filter === "all" ? AGENT_LIST : AGENT_LIST.filter(a => a.tier === filter);

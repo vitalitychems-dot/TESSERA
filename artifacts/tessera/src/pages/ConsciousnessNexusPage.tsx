@@ -34,9 +34,9 @@ function EmotionBar({ label, value }: { label: string; value: number }) {
   );
 }
 
-export default function ConsciousnessNexusPage() {
+export default function ConsciousnessNexusPage({ initialTab }: { initialTab?: "overview" | "memory" | "semantic" | "reflections" | "dual-brain" }) {
   const qc = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"overview" | "memory" | "semantic" | "reflections" | "dual-brain">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "memory" | "semantic" | "reflections" | "dual-brain">(initialTab || "overview");
 
   const { data: metrics } = useQuery({
     queryKey: ["consciousness-metrics"],

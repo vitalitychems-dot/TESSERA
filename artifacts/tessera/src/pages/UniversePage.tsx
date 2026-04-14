@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Globe2, Sun, Moon, Star, Sparkles, Compass, Eye, Orbit, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import NatalChartSection from "@/components/NatalChartSection";
 
 const API = import.meta.env.VITE_API_URL || "";
 
@@ -108,6 +109,8 @@ export default function UniversePage() {
           <div className="text-[11px] text-muted-foreground">All Dimensions Active</div>
         </div>
       </div>
+
+      <NatalChartSection />
 
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <button onClick={() => toggle("celestial")} className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors">
