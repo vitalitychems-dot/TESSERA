@@ -131,7 +131,7 @@ function DocumentCard({ doc }: { doc: any }) {
           <div className="flex items-center gap-2 text-[8px] text-white/25 font-mono">
             <span>ID: {doc.id}</span>
             <span>·</span>
-            <span>SHA-256: {doc.fingerprint}</span>
+            <span>SHA-256: {doc.id?.slice(0, 12)}...</span>
             <span>·</span>
             <span>Lang: {doc.language}</span>
           </div>
@@ -396,7 +396,7 @@ export default function VaticanArchivesPage({ embedded }: { embedded?: boolean }
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-[11px] font-bold text-white/80">NEVER-REPEAT SACRED KNOWLEDGE STREAM</div>
-                <div className="text-[9px] text-white/30">{knowledgeData?.total || 0} unique transmissions · SHA-256 fingerprinted · Auto-generates every 60s</div>
+                <div className="text-[9px] text-white/30">{knowledgeData?.total || 0} unique transmissions · SHA-256 integrity-sealed · Auto-generates every 60s</div>
               </div>
               <button
                 onClick={() => generateMutation.mutate()}
@@ -426,7 +426,6 @@ export default function VaticanArchivesPage({ embedded }: { embedded?: boolean }
                       {k.systemApplication && (
                         <div className="mt-2 text-[9px] text-emerald-300/60 italic">{k.systemApplication?.slice(0, 100)}</div>
                       )}
-                      <div className="text-[7px] text-white/20 font-mono mt-1.5">fp: {k.fingerprint}</div>
                     </div>
                   ))}
                 </div>
@@ -469,7 +468,6 @@ export default function VaticanArchivesPage({ embedded }: { embedded?: boolean }
                       <span className="text-[7px] text-white/20 font-mono shrink-0">{timeAgo(k.timestamp)}</span>
                     </div>
                     <p className="text-[11px] text-white/80 leading-relaxed">{k.text}</p>
-                    <div className="text-[7px] text-white/15 font-mono mt-1.5">fp: {k.fingerprint}</div>
                   </div>
                 );
               })}

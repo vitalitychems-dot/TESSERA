@@ -170,10 +170,10 @@ export default function NetworkFleetPage({ embedded }: { embedded?: boolean }) {
                 <Badge className="text-[9px] bg-green-500/20 text-green-400 border-green-500/30">Active</Badge>
               </div>
             ))}
-            {opsecData?.fingerprints && (
+            {opsecData?.identityRotation && (
               <div className="bg-black/30 border border-white/10 rounded-lg p-3">
                 <div className="text-xs font-bold text-amber-400 mb-2 flex items-center gap-1.5"><Eye size={12} />Identity Rotation</div>
-                <div className="text-sm font-mono text-muted-foreground">{opsecData.fingerprints} rotating fingerprints</div>
+                <div className="text-sm font-mono text-muted-foreground">Rotating identity layers: {opsecData.identityRotation}</div>
               </div>
             )}
           </div>

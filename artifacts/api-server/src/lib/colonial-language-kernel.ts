@@ -149,7 +149,7 @@ const PHRASES: string[] = [
   "threat quarantined",
   "threat scanned",
   "threat neutralized",
-  "honeypot detected",
+  "trap detected",
   "malicious payload detected",
   "malicious payload",
   "payload detection",

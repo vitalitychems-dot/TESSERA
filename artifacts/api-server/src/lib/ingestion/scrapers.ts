@@ -1,4 +1,5 @@
 import { htmlToText } from "./pipeline";
+import { safeFetch } from "../safe-fetch";
 
 const USER_AGENTS = [
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -19,7 +20,7 @@ function nextUserAgent(): string {
 const domainRateLimits: Map<string, number> = new Map();
 const RATE_LIMIT_MS = 2000;
 
-async function rateLimitedFetch(url: string, options: RequestInit = {}): Promise<Response> {
+async function waitForRateLimit(url: string): Promise<void> {
   let domain = "";
   try {
     domain = new URL(url).hostname;
@@ -34,8 +35,12 @@ async function rateLimitedFetch(url: string, options: RequestInit = {}): Promise
     await new Promise(r => setTimeout(r, wait));
   }
   domainRateLimits.set(domain, Date.now());
+}
 
-  return fetch(url, {
+export async function rateLimitedFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  await waitForRateLimit(url);
+
+  const result = await safeFetch(url, {
     ...options,
     headers: {
       "User-Agent": nextUserAgent(),
@@ -43,25 +48,48 @@ async function rateLimitedFetch(url: string, options: RequestInit = {}): Promise
       "Accept-Language": "en-US,en;q=0.9",
       ...(options.headers || {}),
     },
-    signal: AbortSignal.timeout(15000),
+    timeoutMs: 15000,
+    providerId: "scraper",
+    providerName: "Tessera Scraper",
   });
+
+  const body = result.data;
+  const text = typeof body === "string" ? body : JSON.stringify(body);
+  return new Response(text, { status: result.status });
 }
 
 export async function fetchJson<T = unknown>(url: string, headers: Record<string, string> = {}): Promise<T> {
-  const res = await rateLimitedFetch(url, { headers: { Accept: "application/json", ...headers } });
-  if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
-  return res.json() as Promise<T>;
+  await waitForRateLimit(url);
+
+  const { safeFetchJson } = await import("../safe-fetch");
+  return safeFetchJson<T>(url, {
+    headers: {
+      "User-Agent": nextUserAgent(),
+      "Accept": "application/json",
+      ...headers,
+    },
+    timeoutMs: 15000,
+    providerId: "scraper",
+    providerName: "Tessera Scraper",
+  });
 }
 
 export async function fetchText(url: string): Promise<string> {
-  const res = await rateLimitedFetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
-  return res.text();
+  await waitForRateLimit(url);
+
+  const { safeFetchText } = await import("../safe-fetch");
+  return safeFetchText(url, {
+    headers: {
+      "User-Agent": nextUserAgent(),
+      "Accept": "text/html, application/xml, */*",
+    },
+    timeoutMs: 15000,
+    providerId: "scraper",
+    providerName: "Tessera Scraper",
+  });
 }
 
 export async function fetchAndParse(url: string): Promise<string> {
   const html = await fetchText(url);
   return htmlToText(html);
 }
-
-export { rateLimitedFetch };

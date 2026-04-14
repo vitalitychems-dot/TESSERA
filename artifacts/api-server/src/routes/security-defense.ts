@@ -77,7 +77,7 @@ router.get("/security/real-threats", async (req, res) => {
 
     const stats = {
       totalInterceptions: flaggedRows.length,
-      honeypotHits: events.filter(e => e.attackType === "UNAUTHORIZED_DOMAIN").length,
+      unauthorizedDomainAttempts: events.filter(e => e.attackType === "UNAUTHORIZED_DOMAIN").length,
       sqlInjectionAttempts: events.filter(e => e.attackType === "SQL_INJECTION").length,
       xssAttempts: events.filter(e => e.attackType === "XSS").length,
       dirTraversalAttempts: events.filter(e => e.attackType === "DIR_TRAVERSAL").length,

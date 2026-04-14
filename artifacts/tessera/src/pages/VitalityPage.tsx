@@ -9,8 +9,8 @@ import {
   Megaphone, ArrowUpRight, ShoppingCart, Palette, Clock
 } from "lucide-react";
 
-const VITALITY_URL = "https://www.vitalitysupply.net";
-const STORE_DOMAIN = "vitalitysupply.myshopify.com";
+const COMMERCE_URL = "https://www.sovereigncommerce.example";
+const STORE_DOMAIN = "sovereign-store.myshopify.com";
 
 interface ShopifyStatus {
   connected: boolean;
@@ -63,7 +63,7 @@ function StatusDot({ status }: { status: string }) {
 }
 
 export default function VitalityPage({ embedded }: { embedded?: boolean }) {
-  useEffect(() => { document.title = "Vitality Supply | Tessera"; }, []);
+  useEffect(() => { document.title = "Sovereign Commerce | Tessera"; }, []);
   const queryClient = useQueryClient();
   const [executionLog, setExecutionLog] = useState<string[]>([]);
   const [autoRunning, setAutoRunning] = useState(false);
@@ -100,8 +100,8 @@ export default function VitalityPage({ embedded }: { embedded?: boolean }) {
 
   const siteAudit = useMutation({
     mutationFn: async () => {
-      addLog("Running full SEO audit on vitalitysupply.net...");
-      const res = await apiRequest("POST", "/api/seo/site-audit", { url: VITALITY_URL });
+      addLog("Running full SEO audit on sovereign commerce site...");
+      const res = await apiRequest("POST", "/api/seo/site-audit", { url: COMMERCE_URL });
       return res.json();
     },
     onSuccess: (data) => addLog(`Audit complete: Score ${data.seoScore}/100`),
@@ -112,8 +112,8 @@ export default function VitalityPage({ embedded }: { embedded?: boolean }) {
     mutationFn: async () => {
       addLog("Generating and publishing SEO blog post to Shopify...");
       const res = await apiRequest("POST", "/api/seo/generate-blog-posts", {
-        targetUrl: VITALITY_URL,
-        keywords: ["natural supplements", "health wellness", "vitality supply"],
+        targetUrl: COMMERCE_URL,
+        keywords: ["natural supplements", "health wellness", "sovereign commerce"],
         count: 1,
         style: "human",
         wordCount: 1500,
@@ -129,8 +129,8 @@ export default function VitalityPage({ embedded }: { embedded?: boolean }) {
 
   const runCompetitorAnalysis = useMutation({
     mutationFn: async () => {
-      addLog("Analyzing VitalitySupply competitors...");
-      const res = await apiRequest("POST", "/api/seo/competitor-audit", { url: VITALITY_URL, depth: "full" });
+      addLog("Analyzing sovereign commerce competitors...");
+      const res = await apiRequest("POST", "/api/seo/competitor-audit", { url: COMMERCE_URL, depth: "full" });
       return res.json();
     },
     onSuccess: () => addLog("Competitor analysis complete"),
@@ -139,10 +139,10 @@ export default function VitalityPage({ embedded }: { embedded?: boolean }) {
 
   const generateAds = useMutation({
     mutationFn: async () => {
-      addLog("Generating ad creatives for VitalitySupply...");
+      addLog("Generating ad creatives for sovereign commerce...");
       const res = await apiRequest("POST", "/api/seo/generate-ads", {
-        product: "VitalitySupply Health Supplements",
-        url: VITALITY_URL,
+        product: "Sovereign Commerce Health Supplements",
+        url: COMMERCE_URL,
         platforms: ["google", "facebook", "tiktok"],
       });
       return res.json();
@@ -154,7 +154,7 @@ export default function VitalityPage({ embedded }: { embedded?: boolean }) {
   const executePlan = useMutation({
     mutationFn: async () => {
       addLog("Generating full marketing execution plan...");
-      const res = await apiRequest("POST", "/api/seo/execute-plan", { url: VITALITY_URL, autoExecute: true });
+      const res = await apiRequest("POST", "/api/seo/execute-plan", { url: COMMERCE_URL, autoExecute: true });
       return res.json();
     },
     onSuccess: (data) => addLog(`Marketing plan generated with ${data.blogTopics?.length || 0} blog topics`),
@@ -164,7 +164,7 @@ export default function VitalityPage({ embedded }: { embedded?: boolean }) {
   const storeAudit = useMutation({
     mutationFn: async () => {
       addLog("Running full Shopify store audit...");
-      const res = await apiRequest("POST", "/api/shopify/audit", { url: VITALITY_URL });
+      const res = await apiRequest("POST", "/api/shopify/audit", { url: COMMERCE_URL });
       return res.json();
     },
     onSuccess: (data) => addLog(`Store audit complete: ${data.score || "N/A"}/100`),
@@ -183,7 +183,7 @@ export default function VitalityPage({ embedded }: { embedded?: boolean }) {
 
   const runFullAuto = useCallback(async () => {
     setAutoRunning(true);
-    addLog("=== FULL AUTONOMOUS VITALITY ENGINE STARTED ===");
+    addLog("=== FULL AUTONOMOUS COMMERCE ENGINE STARTED ===");
     try {
       addLog("Step 1/6: Site audit...");
       await siteAudit.mutateAsync();
@@ -219,9 +219,9 @@ export default function VitalityPage({ embedded }: { embedded?: boolean }) {
   const posts = Array.isArray(blogPosts) ? blogPosts : blogPosts?.posts || [];
   const shopify = shopifyStatus || {};
   const streams = Array.isArray(incomeProcesses) ? incomeProcesses : [];
-  const vitalityStreams = streams.filter((s: any) => {
+  const commerceStreams = streams.filter((s: any) => {
     const n = (s.name || s.type || s.method || "").toLowerCase();
-    return n.includes("shopify") || n.includes("seo") || n.includes("blog") || n.includes("affiliate") || n.includes("vitality") || n.includes("content") || n.includes("email");
+    return n.includes("shopify") || n.includes("seo") || n.includes("blog") || n.includes("affiliate") || n.includes("commerce") || n.includes("content") || n.includes("email");
   });
 
   const isAnyLoading = siteAudit.isPending || publishBlog.isPending || runCompetitorAnalysis.isPending || generateAds.isPending || executePlan.isPending || storeAudit.isPending || findLeads.isPending;
@@ -235,7 +235,7 @@ export default function VitalityPage({ embedded }: { embedded?: boolean }) {
   ];
 
   return (
-    <div className={embedded ? "flex-1 overflow-auto" : "flex h-full"} data-testid="page-vitality">
+    <div className={embedded ? "flex-1 overflow-auto" : "flex h-full"} data-testid="page-sovereign-commerce">
       {!embedded && null}
       <div className="flex-1 overflow-y-auto tessera-page backdrop-blur-md" data-scroll-container>
         <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/50">
@@ -244,11 +244,11 @@ export default function VitalityPage({ embedded }: { embedded?: boolean }) {
               <ShoppingBag size={20} className="text-emerald-400" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground" data-testid="text-page-title">VitalitySupply.net</h1>
+              <h1 className="text-xl font-bold text-foreground" data-testid="text-page-title">Sovereign Commerce</h1>
               <p className="text-xs text-muted-foreground">Autonomous Shopify engine for organic traffic, SEO, and conversions</p>
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <a href={VITALITY_URL} target="_blank" rel="noopener noreferrer" className="text-[11px] text-emerald-400 font-mono flex items-center gap-1 hover:underline">
+              <a href={COMMERCE_URL} target="_blank" rel="noopener noreferrer" className="text-[11px] text-emerald-400 font-mono flex items-center gap-1 hover:underline">
                 <ExternalLink size={12} /> Live Site
               </a>
               <button
@@ -272,7 +272,7 @@ export default function VitalityPage({ embedded }: { embedded?: boolean }) {
                 <MetricCard label="Products" value={shopify.products || shopify.productCount || "..."} color="text-emerald-400" icon={Package} sub="Synced from Shopify" />
                 <MetricCard label="Orders" value={shopify.orders || shopify.orderCount || "..."} color="text-cyan-400" icon={ShoppingCart} sub={shopify.monthlyRevenue ? `$${Number(shopify.monthlyRevenue).toFixed(2)}/mo` : "Tracking"} />
                 <MetricCard label="Blog Posts" value={posts.length} color="text-violet-400" icon={FileText} sub="Published SEO content" />
-                <MetricCard label="Active Streams" value={vitalityStreams.length} color="text-amber-400" icon={Activity} sub="Income processes running" />
+                <MetricCard label="Active Streams" value={commerceStreams.length} color="text-amber-400" icon={Activity} sub="Income processes running" />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -501,15 +501,15 @@ export default function VitalityPage({ embedded }: { embedded?: boolean }) {
                 )}
               </div>
 
-              {vitalityStreams.length > 0 && (
+              {commerceStreams.length > 0 && (
                 <div className="border border-cyan-500/20 rounded-xl bg-cyan-500/5 overflow-hidden">
                   <div className="px-4 py-3 border-b border-cyan-500/15 flex items-center gap-2">
                     <Activity size={14} className="text-cyan-400" />
-                    <span className="text-sm font-bold text-cyan-400">Active Vitality Streams</span>
-                    <span className="ml-auto text-[11px] text-muted-foreground font-mono">{vitalityStreams.length} running</span>
+                    <span className="text-sm font-bold text-cyan-400">Active Commerce Streams</span>
+                    <span className="ml-auto text-[11px] text-muted-foreground font-mono">{commerceStreams.length} running</span>
                   </div>
                   <div className="divide-y divide-border/20">
-                    {vitalityStreams.map((s: any, i: number) => (
+                    {commerceStreams.map((s: any, i: number) => (
                       <div key={i} className="px-4 py-3 flex items-center gap-3">
                         <StatusDot status={s.status === "active" ? "running" : s.status || "pending"} />
                         <span className="text-xs font-mono text-foreground/80 truncate flex-1">{s.name || s.type || "Stream"}</span>
@@ -562,7 +562,7 @@ export default function VitalityPage({ embedded }: { embedded?: boolean }) {
               <span className="text-sm font-bold text-foreground">Execution Log</span>
               <span className="ml-auto text-[11px] text-muted-foreground font-mono">{executionLog.length} entries</span>
             </div>
-            <div className="p-4 max-h-[300px] overflow-y-auto font-mono text-[11px] space-y-0.5" data-testid="vitality-execution-log">
+            <div className="p-4 max-h-[300px] overflow-y-auto font-mono text-[11px] space-y-0.5" data-testid="commerce-execution-log">
               {executionLog.length === 0 && (
                 <div className="text-muted-foreground text-center py-4">Click Auto-Execute All or use Quick Actions to begin autonomous operations</div>
               )}

@@ -1,4 +1,4 @@
-import { fetchJson } from "./scrapers";
+import { fetchJson, fetchText } from "./scrapers";
 import type { NormalizedItem } from "./pipeline";
 
 export async function fetchNASA(): Promise<NormalizedItem[]> {
@@ -86,7 +86,7 @@ export async function fetchWikipedia(topics: string[] = ["Artificial intelligenc
 
 export async function fetchArxiv(query = "artificial intelligence", maxResults = 5): Promise<NormalizedItem[]> {
   const url = `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(query)}&start=0&max_results=${maxResults}&sortBy=submittedDate&sortOrder=descending`;
-  const text = await (await fetch(url, { signal: AbortSignal.timeout(15000) })).text();
+  const text = await fetchText(url);
 
   const items: NormalizedItem[] = [];
   const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;

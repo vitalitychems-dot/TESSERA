@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AdminProvider } from "@/lib/adminContext";
 import { MeshProvider } from "@/lib/meshContext";
+import { NLPGoalsProvider } from "@/lib/nlpGoalsContext";
 import { Component, type ErrorInfo, type ReactNode, useState, useCallback, useEffect, useRef, lazy, Suspense, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import MobileNav from "@/components/MobileNav";
@@ -21,7 +22,7 @@ const NetworkFleetPage = lazy(() => import("@/pages/NetworkFleetPage"));
 const LifePage = lazy(() => import("@/pages/LifePage"));
 const EntitiesPage = lazy(() => import("@/pages/EntitiesPage"));
 const AgentVoicePage = lazy(() => import("@/pages/AgentVoicePage"));
-const VitalityPage = lazy(() => import("@/pages/VitalityPage"));
+
 const SovereignHubPage = lazy(() => import("@/pages/SovereignHubPage"));
 const PortalBridgePage = lazy(() => import("@/pages/PortalBridgePage"));
 const UnifiedTesseractPage = lazy(() => import("@/pages/UnifiedTesseractPage"));
@@ -346,7 +347,6 @@ function AppRouter() {
 
         <Route path="/lattice"><Redirect to="/network" /></Route>
         <Route path="/provider-leaderboard"><Redirect to="/agi" /></Route>
-        <Route path="/vitality"><Redirect to="/economy-hub" /></Route>
 
         <Route path="/config"><Redirect to="/consciousness-nexus" /></Route>
         <Route path="/command"><Redirect to="/consciousness-nexus" /></Route>
@@ -378,6 +378,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <AdminProvider>
           <MeshProvider>
+          <NLPGoalsProvider>
           <TooltipProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <ToroidalBackground />
@@ -395,6 +396,7 @@ function App() {
               </div>
             </WouterRouter>
           </TooltipProvider>
+          </NLPGoalsProvider>
           </MeshProvider>
         </AdminProvider>
       </QueryClientProvider>

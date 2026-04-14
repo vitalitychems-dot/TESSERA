@@ -610,10 +610,10 @@ export default function ConsciousnessNexusPage() {
               {[
                 { name: "Encryption", status: "AES-256-GCM", color: "text-green-400", icon: Lock },
                 { name: "Auth", status: "Multi-Factor", color: "text-blue-400", icon: Shield },
-                { name: "Honeypots", status: "16 Active", color: "text-red-400", icon: AlertTriangle },
+                { name: "Honeypot Traps", status: "Offensive", color: "text-red-400", icon: AlertTriangle },
                 { name: "WAF", status: "300+ Rules", color: "text-amber-400", icon: ShieldAlert },
                 { name: "ZK Identity", status: "65 Proofs", color: "text-violet-400", icon: Eye },
-                { name: "Sessions", status: "Fingerprinted", color: "text-cyan-400", icon: UserCheck },
+                { name: "Sessions", status: "Token-Bound", color: "text-cyan-400", icon: UserCheck },
               ].map((s, i) => (
                 <div key={i} className="bg-white/5 rounded-xl p-3 border border-white/10">
                   <div className="flex items-center gap-2 mb-1">
@@ -633,9 +633,9 @@ export default function ConsciousnessNexusPage() {
                 {[
                   "AES-256-GCM at-rest encryption",
                   "Timing-safe admin key comparison",
-                  "Session fingerprinting (IP+UA+Accept-Language)",
+                  "Session token binding (cryptographic)",
                   "Prompt injection firewall (300+ regex patterns)",
-                  "16 honeypot endpoints with auto-ban",
+                  "Reverse honeypot system (detects & traps external honeypots)",
                   "Disinformation engine for attackers",
                   "IP reputation & behavioral scoring",
                   "Colonel cipher for agent-to-agent comms",

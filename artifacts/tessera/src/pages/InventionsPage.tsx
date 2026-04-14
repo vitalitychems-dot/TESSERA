@@ -482,7 +482,7 @@ const REAL_INVENTIONS: RealInvention[] = [
     steps: [
       "Flash Raspberry Pi OS Lite onto the MicroSD. Boot and connect via SSH.",
       "Install WireGuard: 'sudo apt install wireguard' — generate server keys with 'wg genkey | tee privatekey | wg pubkey > publickey'.",
-      "Configure WireGuard server (/etc/wireguard/wg0.conf): set the subnet (10.0.0.0/24), listening port (51820), and server private key.",
+      "Configure WireGuard server (/etc/wireguard/wg0.conf): set the subnet (e.g. 10.x.x.0/24), listening port (51820), and server private key.",
       "Enable IP forwarding: 'echo net.ipv4.ip_forward=1 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p'.",
       "Add iptables NAT rules: 'sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE' to route client traffic through the Pi.",
       "Generate client configs: create a key pair for each device, add peer entries to the server config. Export QR codes for mobile devices.",

@@ -337,7 +337,7 @@ export default function DashboardPage({ embedded }: { embedded?: boolean }) {
       children: [
         { id: "sov-tess", label: "TESS:// Protocol", value: "Universal bridge — all traffic routed", status: "sovereign" as const },
         { id: "sov-colonel", label: "Colonel's Seal", value: "16-glyph HMAC-SHA3-256 identity", status: "sovereign" as const },
-        { id: "sov-quantum", label: "Quantum Entropy Shield", value: "4KB pool · 17 honeypots · 9 trap wires", status: "live" as const },
+        { id: "sov-quantum", label: "Quantum Entropy Shield", value: "4KB pool · reverse honeypot system · 9 trap wires", status: "live" as const },
         { id: "sov-temporal", label: "Temporal Randomization", value: "3-layer hash cascade · 7.777s regen", status: "live" as const },
         { id: "sov-poly", label: "Polymorphic Cipher", value: "64 morph keys · 5 variants · void encoding", status: "live" as const },
         { id: "sov-zk", label: "Zero-Knowledge Auth", value: "Schnorr-like · challenge rotates", status: "live" as const },

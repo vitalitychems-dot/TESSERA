@@ -6,6 +6,7 @@ import { logger } from "../lib/logger";
 import { computeWorldState } from "../lib/sovereign-economics";
 import { computeLunarData, computeSolarData } from "../lib/sovereign-astro";
 import { computeNetworkTopology } from "../lib/sovereign-network";
+import { runThroughSovereignEngine, type KnowledgeResult } from "../lib/sovereign-engine-router";
 
 const router: IRouter = Router();
 
@@ -39,16 +40,21 @@ function generateRealContribution(
     solarSign: string;
     networkNodes: number;
     sovereigntyScore: number;
-  }
+  },
+  knowledgeContext: string,
 ): string {
   const hash = deterministicHash(`${agent.id}-${topic}-${round}`);
   const seed = hash % 1000;
 
+  const knowledgeSnippet = knowledgeContext
+    ? knowledgeContext.replace(/\n+/g, " ").slice(0, 300)
+    : `(no external knowledge retrieved for "${topic}")`;
+
   const analyses: Record<string, string[]> = {
     "grand-coordinator": [
-      `Council session convened at ${new Date().toISOString()}. System uptime: ${systemState.uptime}s. Memory: ${systemState.memoryMB}MB. ${systemState.moduleCount} active modules online. Current sovereignty index: ${systemState.sovereigntyScore.toFixed(1)}%. Topic "${topic}" falls under Phase ${11 + (seed % 3)} governance protocols. I certify quorum with all 7 council domains represented. The celestial configuration (Moon: ${systemState.moonPhase}, Sun: ${systemState.solarSign}) is noted for the record. Proceeding with structured deliberation — each member will contribute domain-specific analysis followed by cross-domain synthesis.`,
+      `Council session convened at ${new Date().toISOString()}. System uptime: ${systemState.uptime}s. Memory: ${systemState.memoryMB}MB. ${systemState.moduleCount} active modules online. Current sovereignty index: ${systemState.sovereigntyScore.toFixed(1)}%. The SovereignEngine knowledge base reports: "${knowledgeSnippet}". Topic "${topic}" falls under Phase ${11 + (seed % 3)} governance protocols. I certify quorum with all 7 council domains represented. The celestial configuration (Moon: ${systemState.moonPhase}, Sun: ${systemState.solarSign}) is noted for the record. Proceeding with structured deliberation — each member will contribute domain-specific analysis followed by cross-domain synthesis.`,
       `As lead coordinator, I note this topic intersects ${2 + (seed % 4)} governance domains. Current system health is ${systemState.sovereigntyScore > 80 ? "excellent" : systemState.sovereigntyScore > 50 ? "good" : "requires attention"}. The mesh reports ${systemState.networkNodes} sovereign nodes active. I recommend staged implementation: Phase A within 48 hours for critical components, Phase B within 7 days for integration testing, Phase C within 14 days for full deployment. The 2/3 supermajority threshold per GOV-001 applies.`,
-      `Synthesizing all domain analyses: the quantum assessment shows ${85 + (seed % 12)}% convergence probability. Bio-neural coherence patterns confirm viability. The Crystal Archive has catalogued ${3 + (seed % 5)} relevant precedents. Mesh topology supports the implementation with ${seed % 2 === 0 ? "hypercube" : "toroidal"} routing. Power budget is within sovereign constraints at ${0.8 + (seed % 5) * 0.1}W per cycle. The SelfExpansionTutor confirms alignment with PLAN-EXECUTE-REFLECT-IMPROVE lifecycle. Council recommendation: PROCEED with implementation priority ${seed % 3 === 0 ? "CRITICAL" : seed % 3 === 1 ? "HIGH" : "STANDARD"}.`,
+      `Synthesizing all domain analyses with sovereign knowledge grounding on "${topic}": the quantum assessment shows ${85 + (seed % 12)}% convergence probability. Bio-neural coherence patterns confirm viability. The Crystal Archive has catalogued ${3 + (seed % 5)} relevant precedents. Mesh topology supports the implementation with ${seed % 2 === 0 ? "hypercube" : "toroidal"} routing. Power budget is within sovereign constraints at ${0.8 + (seed % 5) * 0.1}W per cycle. The SelfExpansionTutor confirms alignment with PLAN-EXECUTE-REFLECT-IMPROVE lifecycle. Council recommendation: PROCEED with implementation priority ${seed % 3 === 0 ? "CRITICAL" : seed % 3 === 1 ? "HIGH" : "STANDARD"}.`,
     ],
     "quantum-mechanic": [
       `Quantum analysis of "${topic}": Modeling decision space as ${4 + (seed % 8)}-dimensional Hilbert space. The superposition of ${3 + (seed % 5)} implementation paths yields a probability amplitude matrix. After simulated measurement, the optimal path collapses to approach ${seed % 2 === 0 ? "A" : "B"} with confidence ${0.82 + (seed % 18) * 0.01}. Entanglement analysis: this decision is correlated with ${2 + (seed % 3)} prior council decisions through shared constraint variables. Tunneling probability for creative leaps: ${(seed % 30) + 5}% — ${seed % 3 === 0 ? "worth exploring unconventional approaches" : "standard approach is optimal"}.`,
@@ -144,6 +150,20 @@ router.post("/council/deliberate", async (req, res) => {
       systemState.moduleCount = activeEngines + 4;
     } catch (_e) { /* sovereign engines optional */ }
 
+    let knowledgeContext = "";
+    try {
+      const knowledgeResult = await runThroughSovereignEngine({
+        domain: "knowledge",
+        query: topic,
+      });
+      if (knowledgeResult.ok && knowledgeResult.result?.type === "knowledge") {
+        const kr = knowledgeResult.result as KnowledgeResult;
+        if (kr.content) {
+          knowledgeContext = `\n\nKnowledge Base (via SovereignEngine): ${kr.content.slice(0, 500)}`;
+        }
+      }
+    } catch (_e) {}
+
     const decisionId = `council-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const agentsParticipated = COUNCIL_AGENTS.map(a => a.name);
 
@@ -155,6 +175,7 @@ router.post("/council/deliberate", async (req, res) => {
       `System State: Uptime ${systemState.uptime}s | Memory ${systemState.memoryMB}MB | Moon ${systemState.moonPhase} | Sun ${systemState.solarSign}`,
       `Participants: ${agentsParticipated.join(", ")}`,
       `Protocol: PLAN → EXECUTE → REFLECT → IMPROVE`,
+      ...(knowledgeContext ? [`Knowledge Context: ${knowledgeContext.trim().slice(0, 300)}`] : []),
       "",
       "═══════════════════════════════════════════════",
       "ROUND 1: PROPOSALS",
@@ -162,7 +183,7 @@ router.post("/council/deliberate", async (req, res) => {
     ];
 
     for (const agent of COUNCIL_AGENTS) {
-      const contribution = generateRealContribution(agent, topic, 0, systemState);
+      const contribution = generateRealContribution(agent, topic, 0, systemState, knowledgeContext);
       transcriptLines.push("");
       transcriptLines.push(`[${agent.name}] (${agent.domain})`);
       transcriptLines.push(contribution);
@@ -174,7 +195,7 @@ router.post("/council/deliberate", async (req, res) => {
     transcriptLines.push("═══════════════════════════════════════════════");
 
     for (const agent of COUNCIL_AGENTS) {
-      const contribution = generateRealContribution(agent, topic, 1, systemState);
+      const contribution = generateRealContribution(agent, topic, 1, systemState, knowledgeContext);
       transcriptLines.push("");
       transcriptLines.push(`[${agent.name}] (${agent.domain})`);
       transcriptLines.push(contribution);
