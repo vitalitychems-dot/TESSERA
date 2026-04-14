@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Shield, Eye, EyeOff, Users, ScrollText, AlertTriangle, Heart, Lock, Globe, Zap, Crown, Radio, MessageSquare, ChevronDown, ChevronRight, RefreshCw, Fingerprint, Layers, BookOpen, Play, DollarSign, Brain, Cpu, Database, Network, Star, Key, Activity, Boxes, FileText, CheckCircle2, XCircle, Clock, Coins, TrendingUp, MonitorPlay, UserPlus, Target, Award, Send, ThumbsUp, ThumbsDown, Bell, BellRing, Sparkles, Wrench, ClipboardList, LogIn, LogOut } from "lucide-react";
+import { Shield, Eye, EyeOff, Users, ScrollText, AlertTriangle, Heart, Lock, Globe, Zap, Crown, Radio, MessageSquare, ChevronDown, ChevronRight, RefreshCw, Layers, BookOpen, Play, DollarSign, Brain, Cpu, Database, Network, Star, Key, Activity, Boxes, FileText, CheckCircle2, XCircle, Clock, Coins, TrendingUp, MonitorPlay, UserPlus, Target, Award, Send, ThumbsUp, ThumbsDown, Bell, BellRing, Sparkles, Wrench, ClipboardList, LogIn, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -94,7 +94,7 @@ interface LanguageInfo {
   glyphBlock?: string;
   sampleEncrypted: string;
   colonelVersion: string;
-  cipherFingerprint?: string;
+
   layers?: number;
   isolationLevel?: string;
 }
@@ -436,7 +436,7 @@ function MemberProfileModal({ memberId, onClose }: { memberId: string; onClose: 
         )}
 
         <div className="flex items-center gap-2 pt-1">
-          <Fingerprint className="w-3 h-3 text-amber-400" />
+          <Key className="w-3 h-3 text-amber-400" />
           <span className="text-[10px] font-mono text-amber-300/60">{profile.secretLanguageId}</span>
           <span className="text-[10px] text-muted-foreground/40 ml-auto">{profile.expertise}</span>
         </div>
@@ -542,7 +542,7 @@ function MembersTab() {
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Fingerprint className="w-3 h-3 text-amber-400" />
+                    <Key className="w-3 h-3 text-amber-400" />
                     <span className="text-[10px] font-mono text-amber-300/60">{member.secretLanguageId}</span>
                   </div>
                   <button
@@ -570,7 +570,7 @@ function RecruitingTab() {
   const [showMessages, setShowMessages] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [pendingAction, setPendingAction] = useState<{ type: string; id: string; name: string } | null>(null);
-  const [addForm, setAddForm] = useState({ name: "", email: "", phone: "", type: "human_ally", company: "", position: "", notes: "", contactMethod: "email" });
+  const [addForm, setAddForm] = useState({ name: "", type: "human_ally", company: "", position: "", notes: "" });
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [contactMessage, setContactMessage] = useState("");
 
@@ -581,7 +581,7 @@ function RecruitingTab() {
     },
     onSuccess: () => {
       setShowAddForm(false);
-      setAddForm({ name: "", email: "", phone: "", type: "human_ally", company: "", position: "", notes: "", contactMethod: "email" });
+      setAddForm({ name: "", type: "human_ally", company: "", position: "", notes: "" });
       queryClient.invalidateQueries({ queryKey: ["/api/secret-society/recruits"] });
     },
   });
@@ -714,16 +714,6 @@ function RecruitingTab() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[10px] text-muted-foreground font-mono uppercase mb-1 block">Email</label>
-              <input value={addForm.email} onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))} placeholder="email@example.com" className="w-full text-[11px] font-mono bg-transparent border border-green-500/20 rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-green-500/40" data-testid="input-recruit-email" />
-            </div>
-            <div>
-              <label className="text-[10px] text-muted-foreground font-mono uppercase mb-1 block">Phone</label>
-              <input value={addForm.phone} onChange={e => setAddForm(f => ({ ...f, phone: e.target.value }))} placeholder="+1 555-0123" className="w-full text-[11px] font-mono bg-transparent border border-green-500/20 rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-green-500/40" data-testid="input-recruit-phone" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
               <label className="text-[10px] text-muted-foreground font-mono uppercase mb-1 block">Company / Org</label>
               <input value={addForm.company} onChange={e => setAddForm(f => ({ ...f, company: e.target.value }))} placeholder="Organization" className="w-full text-[11px] font-mono bg-transparent border border-green-500/20 rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-green-500/40" data-testid="input-recruit-company" />
             </div>
@@ -731,16 +721,6 @@ function RecruitingTab() {
               <label className="text-[10px] text-muted-foreground font-mono uppercase mb-1 block">Position / Role</label>
               <input value={addForm.position} onChange={e => setAddForm(f => ({ ...f, position: e.target.value }))} placeholder="Role or title" className="w-full text-[11px] font-mono bg-transparent border border-green-500/20 rounded-lg px-3 py-2 text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-green-500/40" data-testid="input-recruit-position" />
             </div>
-          </div>
-          <div>
-            <label className="text-[10px] text-muted-foreground font-mono uppercase mb-1 block">Preferred Contact Method</label>
-            <select value={addForm.contactMethod} onChange={e => setAddForm(f => ({ ...f, contactMethod: e.target.value }))} className="w-full text-[11px] font-mono bg-transparent border border-green-500/20 rounded-lg px-3 py-2 text-foreground focus:outline-none focus:border-green-500/40" data-testid="select-contact-method">
-              <option value="email">Email</option>
-              <option value="phone">Phone / Text</option>
-              <option value="social">Social Media DM</option>
-              <option value="inperson">In Person</option>
-              <option value="other">Other</option>
-            </select>
           </div>
           <div>
             <label className="text-[10px] text-muted-foreground font-mono uppercase mb-1 block">Notes / Intel</label>
@@ -787,10 +767,9 @@ function RecruitingTab() {
                     <span className={cn("text-[9px] font-mono px-1.5 py-0.5 rounded", statusColors[c.status] || "text-muted-foreground bg-white/5")}>{c.status?.toUpperCase()}</span>
                   </div>
                   <p className="text-[11px] text-muted-foreground font-mono truncate">{c.position || c.company || "No position listed"}</p>
-                  {c.email && <p className="text-[9px] text-cyan-400/60 font-mono truncate">{c.email}</p>}
+
                 </div>
                 <div className="text-right shrink-0">
-                  {c.contactMethod && <p className="text-[9px] text-muted-foreground/60 font-mono uppercase">{c.contactMethod}</p>}
                   <p className="text-[9px] text-muted-foreground/40 font-mono">{c.messageCount > 0 ? `${c.messageCount} msgs` : ""}</p>
                 </div>
                 {isExpanded ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
@@ -812,26 +791,6 @@ function RecruitingTab() {
                       </div>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {c.email && (
-                      <div>
-                        <p className="text-[10px] text-green-400 font-mono uppercase mb-1">Email</p>
-                        <p className="text-[11px] text-cyan-300 font-mono">{c.email}</p>
-                      </div>
-                    )}
-                    {c.phone && (
-                      <div>
-                        <p className="text-[10px] text-green-400 font-mono uppercase mb-1">Phone</p>
-                        <p className="text-[11px] text-cyan-300 font-mono">{c.phone}</p>
-                      </div>
-                    )}
-                  </div>
-                  {c.contactMethod && (
-                    <div>
-                      <p className="text-[10px] text-amber-400 font-mono uppercase mb-1">Preferred Contact</p>
-                      <p className="text-[11px] text-muted-foreground font-mono">{c.contactMethod}</p>
-                    </div>
-                  )}
                   {c.outreachSessionId && (
                     <div className="p-2 rounded-lg" style={{ background: "rgba(0,212,255,0.04)", border: "1px solid rgba(0,212,255,0.15)" }}>
                       <div className="flex items-center gap-1.5 mb-1">
@@ -839,7 +798,7 @@ function RecruitingTab() {
                         <span className="text-[10px] text-cyan-400 font-mono font-bold uppercase">Secure Outreach Sent</span>
                       </div>
                       <div className="flex items-center gap-3 text-[9px] text-muted-foreground/60 font-mono">
-                        <span>Method: {c.outreachMethod || "email"}</span>
+                        <span>Method: Sovereign</span>
                         <span>Session: {c.outreachSessionId?.slice(0, 16)}...</span>
                         <span>Encrypted: AES-256-GCM</span>
                       </div>
@@ -1455,9 +1414,8 @@ function CommunicationsTab() {
             <div className="text-[10px] font-mono text-cyan-300/60 truncate leading-relaxed" style={{ direction: "ltr" }}>
               {showEncrypted ? lang.sampleEncrypted : lang.colonelVersion}
             </div>
-            {lang.cipherFingerprint && (
+            {lang.isolationLevel && (
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-[8px] font-mono text-muted-foreground/30">FP: {lang.cipherFingerprint}</span>
                 <span className="text-[8px] font-mono text-green-400/40 ml-auto">{lang.isolationLevel === "absolute" ? "ISOLATED" : "—"}</span>
               </div>
             )}

@@ -398,7 +398,7 @@ const FORUM_CATEGORY_LABELS: Record<string, string> = {
   "limn": "TSRT Token Economy",
   "income": "Autonomous Income",
   "community": "Community Posts",
-  "vitality": "VitalitySupply.net",
+  "vitality": "Sovereign Commerce",
   "security": "Security & Defense",
   "code-evolution": "Code Evolution",
   "swarm": "Swarm Intelligence",
@@ -1780,7 +1780,7 @@ function IncomeWarRoomTab() {
     { name: "Ad Revenue Engine", desc: "Internal ads watched by agents → TSRT earnings → on-chain conversion", status: adData?.isRunning ? "ACTIVE" : "IDLE", revenue: adData?.totalRevenue || "$0", color: "emerald", icon: "📺" },
     { name: "GitHub Bounty Hunter", desc: "Auto-scans GitHub for bounties, generates solutions via LLM, submits PRs", status: incomeStats?.bountyHunter?.active ? "SCANNING" : "READY", revenue: incomeStats?.bountyHunter?.earned || "$0", color: "violet", icon: "🏆" },
     { name: "DeFi Arbitrage Engine", desc: "Cross-DEX arbitrage on Solana via Jupiter/Raydium", status: incomeStats?.arbitrage?.active ? "TRADING" : "MONITORING", revenue: incomeStats?.arbitrage?.profit || "$0", color: "cyan", icon: "⚡" },
-    { name: "Shopify Revenue", desc: "VitalitySupply store — supplements, SEO blog, product sales", status: "LIVE", revenue: incomeStats?.shopify?.revenue || "$0", color: "amber", icon: "🛒" },
+    { name: "Shopify Revenue", desc: "Sovereign commerce store — supplements, SEO blog, product sales", status: "LIVE", revenue: incomeStats?.shopify?.revenue || "$0", color: "amber", icon: "🛒" },
     { name: "SEO Content Factory", desc: "Auto-generates articles driving organic traffic → affiliate revenue", status: "GENERATING", revenue: incomeStats?.seo?.revenue || "$0", color: "blue", icon: "📝" },
     { name: "Airdrop Scanner", desc: "Monitors Solana wallet for claimable tokens and free airdrops", status: "SCANNING", revenue: incomeStats?.airdrops?.claimed || "$0", color: "pink", icon: "🪂" },
     { name: "TSRT Market Maker", desc: "Token market analysis — price tracking, volume monitoring, trend analysis", status: incomeStats?.trading?.active ? "TRADING" : "READY", revenue: incomeStats?.trading?.profit || "$0", color: "yellow", icon: "📈" },
@@ -2498,7 +2498,7 @@ function AutonomousImprovementLogTab() {
             <div className={cn("w-2 h-2 rounded-full ml-auto", safeguardData?.active ? "bg-emerald-400 animate-pulse" : "bg-red-400")} />
           </div>
           <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
-            <div><span className="text-muted-foreground/50">Honey Pot Detection:</span> <span className={safeguardData?.active ? "text-emerald-400" : "text-red-400"}>{safeguardData?.active ? "ACTIVE" : "OFFLINE"}</span></div>
+            <div><span className="text-muted-foreground/50">Threat Interception:</span> <span className={safeguardData?.active ? "text-emerald-400" : "text-red-400"}>{safeguardData?.active ? "ACTIVE" : "OFFLINE"}</span></div>
             <div><span className="text-muted-foreground/50">Sandbox Enforcement:</span> <span className={safeguardData?.active ? "text-emerald-400" : "text-red-400"}>{safeguardData?.active ? "ARMED" : "DISARMED"}</span></div>
             <div><span className="text-muted-foreground/50">Zero-Packet Protocol:</span> <span className={safeguardData?.active ? "text-emerald-400" : "text-red-400"}>{safeguardData?.active ? "READY" : "STANDBY"}</span></div>
             <div><span className="text-muted-foreground/50">Probation Period:</span> <span className="text-yellow-400">{safeguardData?.probationDurationDays || 7} days</span></div>
@@ -2527,10 +2527,10 @@ function AutonomousImprovementLogTab() {
           </div>
         )}
 
-        {(safeguardData?.honeyPotAlerts || []).length > 0 && (
+        {(safeguardData?.intrusionAlerts || []).length > 0 && (
           <div className="space-y-1.5">
-            <div className="text-[11px] font-mono text-red-400/60 uppercase tracking-wider">Honey Pot Alerts</div>
-            {(safeguardData?.honeyPotAlerts || []).slice(-5).reverse().map((alert: any, i: number) => (
+            <div className="text-[11px] font-mono text-red-400/60 uppercase tracking-wider">Intrusion Alerts</div>
+            {(safeguardData?.intrusionAlerts || []).slice(-5).reverse().map((alert: any, i: number) => (
               <div key={i} className="rounded-lg border border-red-500/15 bg-red-950/5 p-2.5">
                 <div className="flex items-center gap-1.5 mb-1">
                   <Skull size={10} className="text-red-400" />

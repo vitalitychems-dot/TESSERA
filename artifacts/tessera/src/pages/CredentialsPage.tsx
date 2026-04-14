@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Shield, Key, Eye, EyeOff, Check, Trash2, Cloud, ShoppingBag, MessageCircle, Send, BarChart, CreditCard, Globe, Server, AlertTriangle, RefreshCw, ExternalLink, Lock, ChevronRight, ArrowRight, CheckCircle2, Circle, Info, Plus, Zap, Code, Crown } from "lucide-react";
+import { Shield, Key, Eye, EyeOff, Check, Trash2, Cloud, ShoppingBag, MessageCircle, Send, CreditCard, Globe, Server, AlertTriangle, RefreshCw, ExternalLink, Lock, ChevronRight, ArrowRight, CheckCircle2, Circle, Info, Plus, Zap, Code, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -51,7 +51,7 @@ export const SERVICE_TEMPLATES: ServiceTemplate[] = [
       { step: 3, text: "Go to Identity > Users > click your user — copy the User OCID from the top of that page" },
       { step: 4, text: "On the same user page, scroll to 'API Keys' and click 'Add API Key'" },
       { step: 5, text: "Select 'Generate API Key Pair' — download the private key file, then click 'Add'" },
-      { step: 6, text: "A 'Configuration File Preview' will appear — copy the fingerprint value shown" },
+      { step: 6, text: "A 'Configuration File Preview' will appear — copy the private key PEM contents" },
       { step: 7, text: "Open the downloaded private key file in a text editor and copy the entire contents" },
       { step: 8, text: "For Region: check the top bar in the console (e.g. US East (Ashburn) = 'us-ashburn-1')" },
       { step: 9, text: "For Compartment: go to Identity > Compartments — copy the OCID of your root or target compartment" },
@@ -67,7 +67,6 @@ export const SERVICE_TEMPLATES: ServiceTemplate[] = [
     fields: [
       { name: "tenancy_ocid", label: "Tenancy OCID", type: "text", placeholder: "ocid1.tenancy.oc1..aaaa...", required: true },
       { name: "user_ocid", label: "User OCID", type: "text", placeholder: "ocid1.user.oc1..aaaa...", required: true },
-      { name: "fingerprint", label: "API Key Fingerprint", type: "text", placeholder: "xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx", required: true },
       { name: "private_key", label: "Private Key (PEM)", type: "password", placeholder: "-----BEGIN RSA PRIVATE KEY-----", required: true },
       { name: "region", label: "Region", type: "text", placeholder: "us-ashburn-1", required: true },
       { name: "compartment_ocid", label: "Compartment OCID", type: "text", placeholder: "ocid1.compartment.oc1..aaaa...", required: true },
@@ -75,31 +74,31 @@ export const SERVICE_TEMPLATES: ServiceTemplate[] = [
   },
   {
     service: "shopify",
-    label: "Shopify (VitalitySupply)",
+    label: "Shopify (Sovereign Store)",
     icon: ShoppingBag,
     color: "text-green-400",
     description: "Product management, orders, and blog publishing",
     category: "Revenue",
-    loginUrl: "https://vitalitysupply.myshopify.com/admin",
+    loginUrl: "https://admin.shopify.com",
     loginLabel: "Open Shopify Admin",
     instructions: [
-      { step: 1, text: "Click below to open your Shopify Admin panel and sign in", link: "https://vitalitysupply.myshopify.com/admin", linkLabel: "Open Shopify Admin" },
+      { step: 1, text: "Click below to open your Shopify Admin panel and sign in", link: "https://admin.shopify.com", linkLabel: "Open Shopify Admin" },
       { step: 2, text: "Go to Settings (bottom left gear icon)" },
-      { step: 3, text: "Click 'Apps and sales channels' then 'Develop apps'", link: "https://vitalitysupply.myshopify.com/admin/settings/apps/development", linkLabel: "Go to App Development" },
+      { step: 3, text: "Click 'Apps and sales channels' then 'Develop apps'", linkLabel: "Go to App Development" },
       { step: 4, text: "Click 'Create an app' — name it 'Tessera Integration'" },
       { step: 5, text: "In the new app, click 'Configure Admin API scopes' — enable all read/write scopes you want (products, orders, content, etc.)" },
       { step: 6, text: "Click 'Install app' and confirm — then click 'Reveal token once' to see the Admin API access token" },
       { step: 7, text: "Copy the access token (starts with shpat_) and paste it below" },
     ],
     whatItUnlocks: [
-      "Publish products to VitalitySupply store automatically",
+      "Publish products to your sovereign store automatically",
       "Create and schedule blog posts for SEO",
       "Process and fulfill orders",
       "Manage inventory across channels",
     ],
     fields: [
       { name: "access_token", label: "Admin API Access Token", type: "password", placeholder: "shpat_...", required: true },
-      { name: "store_url", label: "Store URL", type: "text", placeholder: "vitalitysupply.myshopify.com", required: true },
+      { name: "store_url", label: "Store URL", type: "text", placeholder: "your-store.myshopify.com", required: true },
     ],
   },
   {
@@ -205,31 +204,6 @@ export const SERVICE_TEMPLATES: ServiceTemplate[] = [
     fields: [
       { name: "secret_key", label: "Secret Key", type: "password", placeholder: "sk_live_...", required: true },
       { name: "publishable_key", label: "Publishable Key", type: "text", placeholder: "pk_live_...", required: true },
-    ],
-  },
-  {
-    service: "google_analytics",
-    label: "Google Analytics",
-    icon: BarChart,
-    color: "text-yellow-400",
-    description: "Track website traffic, user behavior, and conversions",
-    category: "Analytics",
-    loginUrl: "https://analytics.google.com",
-    loginLabel: "Open Google Analytics",
-    instructions: [
-      { step: 1, text: "Open Google Analytics and sign in", link: "https://analytics.google.com", linkLabel: "Open Google Analytics" },
-      { step: 2, text: "Go to Admin (gear icon) > Data Streams" },
-      { step: 3, text: "Click your web stream (or create one)" },
-      { step: 4, text: "Copy the Measurement ID (starts with G-)" },
-      { step: 5, text: "Paste it below" },
-    ],
-    whatItUnlocks: [
-      "Track blog and store traffic automatically",
-      "Monitor conversion rates",
-      "Analyze user behavior patterns",
-    ],
-    fields: [
-      { name: "measurement_id", label: "Measurement ID", type: "text", placeholder: "G-XXXXXXXXXX", required: true },
     ],
   },
   {
@@ -352,7 +326,7 @@ export const SERVICE_TEMPLATES: ServiceTemplate[] = [
       "Issue tracking and resolution",
     ],
     fields: [
-      { name: "dsn", label: "DSN", type: "password", placeholder: "https://xxx@sentry.io/xxx", required: true },
+      { name: "dsn", label: "DSN", type: "password", placeholder: "https://sentry.io/...", required: true },
     ],
   },
 ];

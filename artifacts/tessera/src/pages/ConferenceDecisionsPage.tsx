@@ -206,7 +206,7 @@ export default function ConferenceDecisionsPage() {
             <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
               <p className="text-sm font-medium mb-1">Pipeline Stats</p>
               <p className="text-xs text-gray-400">Total articles: {(blog as any).total} | Views: {(blog as any).totalViews} | Clicks: {(blog as any).totalClicks}</p>
-              <p className="text-xs text-gray-400 mt-1">Auto-publishing to VitalitySupply.net via Shopify API</p>
+              <p className="text-xs text-gray-400 mt-1">Auto-publishing to sovereign store via Shopify API</p>
             </div>
           </div>
         )}

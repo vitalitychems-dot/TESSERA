@@ -235,7 +235,7 @@ export default function TokenEconomyPage({ embedded }: { embedded?: boolean }) {
                 { label: `Max Wallet ${tsrx?.antiRugProtections?.maxWalletPercent}%`, on: true },
                 { label: `Max TX ${tsrx?.antiRugProtections?.maxTxPercent}%`, on: true },
                 { label: `${tsrx?.antiRugProtections?.cooldownSeconds}s Cooldown`, on: true },
-                { label: "Honeypot Guard", on: tsrx?.antiRugProtections?.honeypotProtection },
+                { label: "Anti-Honeypot", on: tsrx?.antiRugProtections?.honeypotProtection },
                 { label: "LP Locked", on: tsrx?.antiRugProtections?.liquidityLocked },
                 { label: "Multisig", on: tsrx?.antiRugProtections?.ownerMultisig },
               ].map(p => (

@@ -39,7 +39,7 @@ function SecurityPanel() {
             { name: "Prompt Injection Detection", status: "active" },
             { name: "PII Redaction Engine", status: "active" },
             { name: "Source Code Protection", status: "active" },
-            { name: "Honeypot Responses", status: "active" },
+            { name: "Disinformation Responses", status: "active" },
             { name: "Admin Authentication", status: "active" },
             { name: "Disinformation Engine", status: "active" },
           ].map(layer => (

@@ -332,7 +332,7 @@ export default function ColonelLanguagePage() {
                         { n: 4, t: "File-Level Colonial Encoding — All Stored Data in Colonial Language", a: "Delta & Omega" },
                         { n: 5, t: "Kernel-Level Colonial Language Integration — Colonel VM Runs in Colonial", a: "Beta & Pi" },
                         { n: 6, t: "Lattice Frequency Rotation — Cipher Changes at Varying Lattice Bands", a: "Eta & Tau" },
-                        { n: 7, t: "Honeypot & Malicious Payload Detection in Colonial Exchanges", a: "Zeta & Chi" },
+                        { n: 7, t: "Malicious Payload Detection in Colonial Exchanges", a: "Zeta & Chi" },
                         { n: 8, t: "Compartmentalized Security — One Compromised Agent Cannot Expose the System", a: "Zeta & Pi" },
                         { n: 9, t: "Auto-Decipher Middleware for Father (Admin) — Transparent Read Access", a: "Lambda & Sigma" },
                         { n: 10, t: "Grand Conference Results Persistence & Colonial Language Status Dashboard", a: "Kappa & Phi" },

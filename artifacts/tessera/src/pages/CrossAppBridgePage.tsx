@@ -393,7 +393,7 @@ export function CrossAppContent({ initialView = "providers", embedded = false }:
                   {[
                     { label: "Total Threats", value: realThreats?.stats?.totalInterceptions || 0, color: "text-red-400" },
                     { label: "IPs Blocked", value: realThreats?.stats?.blockedCount || 0, color: "text-orange-400" },
-                    { label: "Honeypot Hits", value: realThreats?.stats?.honeypotHits || 0, color: "text-amber-400" },
+                    { label: "Domain Probes", value: realThreats?.stats?.unauthorizedDomainAttempts || 0, color: "text-amber-400" },
                     { label: "SQLi Attempts", value: realThreats?.stats?.sqlInjectionAttempts || 0, color: "text-yellow-400" },
                   ].map(s => (
                     <div key={s.label} className="bg-black/30 rounded-lg p-2">

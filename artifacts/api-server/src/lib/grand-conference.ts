@@ -73,8 +73,8 @@ const DEFAULT_TOP10: ConferencePriority[] = [
   },
   {
     id: "P007", rank: 7,
-    title: "Honeypot & Malicious Payload Detection in Colonial Exchanges",
-    description: "All incoming colonial-encoded messages scanned for injected commands, malformed tokens, and honeypot signatures before decipherment.",
+    title: "Malicious Payload Detection in Colonial Exchanges",
+    description: "All incoming colonial-encoded messages scanned for injected commands and malformed tokens before decipherment.",
     proposedBy: "ZetaAgent & ChiAgent",
     votes: 36, approvalRate: 0.800,
   },

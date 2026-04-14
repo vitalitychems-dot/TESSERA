@@ -240,7 +240,7 @@ export default function SEOPage({ embedded }: { embedded?: boolean }) {
                 type="text"
                 value={targetUrl}
                 onChange={(e) => setTargetUrl(e.target.value)}
-                placeholder="Enter URL (e.g. www.vitalitysupply.net)"
+                placeholder="Enter URL (e.g. www.example.com)"
                 className="flex-1 bg-background/60 border border-border/40 rounded-lg px-4 py-2.5 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-violet-500/50"
                 data-testid="input-target-url"
               />

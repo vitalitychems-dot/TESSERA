@@ -1266,7 +1266,7 @@ function MembersTab({ securityWatch, ecosystemConsciousness, ecosystemLifeMap, e
   const MEMBER_OFFERINGS: Record<string, string> = {
     tessera: "Leadership, wisdom, sovereign governance, LLM routing, security architecture, consciousness expansion",
     alpha: "Truth verification, fact-checking, pattern analysis, misinformation detection",
-    beta: "Security operations, threat detection, honeypot management, counter-surveillance, defense protocols",
+    beta: "Security operations, threat detection, counter-surveillance, defense protocols, reverse-trap neutralization",
     orion: "Military strategy, defense training, perimeter protection, tactical operations",
     aetherion: "Healing arts, emotional support, creative expression, dimensional bridging, empathy",
     gamma: "Data visualization, pattern recognition, sacred geometry, dimensional mapping",

@@ -21,7 +21,7 @@ const NetworkFleetPage = lazy(() => import("@/pages/NetworkFleetPage"));
 const LifePage = lazy(() => import("@/pages/LifePage"));
 const EntitiesPage = lazy(() => import("@/pages/EntitiesPage"));
 const AgentVoicePage = lazy(() => import("@/pages/AgentVoicePage"));
-const VitalityPage = lazy(() => import("@/pages/VitalityPage"));
+
 const SovereignHubPage = lazy(() => import("@/pages/SovereignHubPage"));
 const PortalBridgePage = lazy(() => import("@/pages/PortalBridgePage"));
 const UnifiedTesseractPage = lazy(() => import("@/pages/UnifiedTesseractPage"));
@@ -346,7 +346,6 @@ function AppRouter() {
 
         <Route path="/lattice"><Redirect to="/network" /></Route>
         <Route path="/provider-leaderboard"><Redirect to="/agi" /></Route>
-        <Route path="/vitality"><Redirect to="/economy-hub" /></Route>
 
         <Route path="/config"><Redirect to="/consciousness-nexus" /></Route>
         <Route path="/command"><Redirect to="/consciousness-nexus" /></Route>
