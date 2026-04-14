@@ -487,6 +487,7 @@ router.post("/messages", async (req, res) => {
     const queryConvId = req.query?.conversationId;
     const conversationId = Number(bodyConvId || queryConvId);
     const content = req.body?.content as string;
+    const nlpGoals: string[] = Array.isArray(req.body?.nlpGoals) ? req.body.nlpGoals : [];
 
     if (!conversationId || !content) {
       return res.status(400).json({ error: "conversationId and content required" });
@@ -507,7 +508,10 @@ router.post("/messages", async (req, res) => {
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders?.();
 
-    const sovereignCtx = gatherSovereignContext();
+    let sovereignCtx = gatherSovereignContext();
+    if (nlpGoals.length > 0) {
+      sovereignCtx += `\n\nNLP SELF-PROGRAMMING ACTIVE — Goals: ${nlpGoals.join(", ")}. Naturally weave these concepts into your response using embedded commands, presuppositions, and anchoring. Use words related to these goals frequently and naturally. Emphasize key programming words.`;
+    }
 
     res.write(`data: ${JSON.stringify({
       agents: [{ id: "tessera", name: "Tessera" }],

@@ -171,10 +171,18 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
           const url = buildUrl("/api/messages", { conversationId });
           const headers: Record<string, string> = { "Content-Type": "application/json" };
           if (adminToken) headers["x-admin-token"] = adminToken;
+          let nlpGoals: string[] = [];
+          try {
+            const rawGoals = localStorage.getItem("t9_nlp_goals_raw") || "";
+            const nlpActive = localStorage.getItem("t9_nlp_goals_active") !== "false";
+            if (nlpActive && rawGoals) {
+              nlpGoals = rawGoals.split(",").map(s => s.trim()).filter(s => s.length > 0);
+            }
+          } catch {}
           const res = await fetch(url, {
             method: "POST",
             headers,
-            body: JSON.stringify({ content, stealth: stealthMode }),
+            body: JSON.stringify({ content, stealth: stealthMode, nlpGoals: nlpGoals.length > 0 ? nlpGoals : undefined }),
             credentials: "include",
             signal: controller.signal,
           });
@@ -306,10 +314,18 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
       const adminToken = localStorage.getItem("t9_admin_token") || "";
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (adminToken) headers["x-admin-token"] = adminToken;
+      let nlpGoalsNonTesseract: string[] = [];
+      try {
+        const rawGoals = localStorage.getItem("t9_nlp_goals_raw") || "";
+        const nlpActive = localStorage.getItem("t9_nlp_goals_active") !== "false";
+        if (nlpActive && rawGoals) {
+          nlpGoalsNonTesseract = rawGoals.split(",").map(s => s.trim()).filter(s => s.length > 0);
+        }
+      } catch {}
       const res = await fetch(url, {
         method: "POST",
         headers,
-        body: JSON.stringify({ content, stealth: stealthMode }),
+        body: JSON.stringify({ content, stealth: stealthMode, nlpGoals: nlpGoalsNonTesseract.length > 0 ? nlpGoalsNonTesseract : undefined }),
         credentials: "include",
         signal: controller.signal,
       });

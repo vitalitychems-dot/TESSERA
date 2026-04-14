@@ -17,15 +17,14 @@ import { Loader2 } from "lucide-react";
 const NotFound = lazy(() => import("@/pages/not-found"));
 const ChatPage = lazy(() => import("@/pages/ChatPage"));
 const LifePage = lazy(() => import("@/pages/LifePage"));
-const EntitiesPage = lazy(() => import("@/pages/EntitiesPage"));
-const AgentVoicePage = lazy(() => import("@/pages/AgentVoicePage"));
-const NexusPage = lazy(() => import("@/pages/NexusPage"));
-const KnowledgePage = lazy(() => import("@/pages/KnowledgePage"));
+const UniversePage = lazy(() => import("@/pages/UniversePage"));
+const MembersPage = lazy(() => import("@/pages/MembersPage"));
+const SecretsPage = lazy(() => import("@/pages/SecretsPage"));
 const TesseraBiblePage = lazy(() => import("@/pages/TesseraBiblePage"));
-const CouncilPage = lazy(() => import("@/pages/CouncilPage"));
-const EconomyPage = lazy(() => import("@/pages/EconomyPage"));
+const BuildPage = lazy(() => import("@/pages/BuildPage"));
 const TesseractForumPage = lazy(() => import("@/pages/TesseractForumPage"));
-const SovereignPage = lazy(() => import("@/pages/SovereignPage"));
+const NLPPage = lazy(() => import("@/pages/NLPPage"));
+const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -122,137 +121,57 @@ function AppRouter() {
             <Route path="/" component={ChatPage} />
             <Route path="/c/:id" component={ChatPage} />
             <Route path="/life">{() => <LifePage />}</Route>
-            <Route path="/entities">{() => <EntitiesPage />}</Route>
-            <Route path="/agent-voice">{() => <AgentVoicePage />}</Route>
-            <Route path="/nexus">{() => <NexusPage />}</Route>
-            <Route path="/knowledge">{() => <KnowledgePage />}</Route>
+            <Route path="/universe">{() => <UniversePage />}</Route>
+            <Route path="/members">{() => <MembersPage />}</Route>
+            <Route path="/secrets">{() => <SecretsPage />}</Route>
             <Route path="/bible" component={TesseraBiblePage} />
-            <Route path="/council">{() => <CouncilPage />}</Route>
-            <Route path="/economy">{() => <EconomyPage />}</Route>
+            <Route path="/build">{() => <BuildPage />}</Route>
             <Route path="/forum">{() => <TesseractForumPage />}</Route>
-            <Route path="/sovereign">{() => <SovereignPage />}</Route>
+            <Route path="/nlp">{() => <NLPPage />}</Route>
+            <Route path="/settings">{() => <SettingsPage />}</Route>
 
-            <Route path="/consciousness-nexus"><Redirect to="/nexus" /></Route>
-            <Route path="/unified-knowledge"><Redirect to="/knowledge" /></Route>
-            <Route path="/omniscient-knowledge"><Redirect to="/knowledge" /></Route>
-            <Route path="/universal-knowledge"><Redirect to="/knowledge" /></Route>
-            <Route path="/sovereign-knowledge"><Redirect to="/knowledge" /></Route>
-            <Route path="/knowledge-pipeline"><Redirect to="/knowledge" /></Route>
-            <Route path="/knowledge-synthesis"><Redirect to="/knowledge" /></Route>
-            <Route path="/knowledge-dashboard"><Redirect to="/knowledge" /></Route>
-            <Route path="/knowledge-secrets"><Redirect to="/knowledge" /></Route>
-            <Route path="/agent-secrets"><Redirect to="/knowledge" /></Route>
-            <Route path="/sovereign-secrets"><Redirect to="/knowledge" /></Route>
-            <Route path="/secret-knowledge-archive"><Redirect to="/knowledge" /></Route>
-            <Route path="/secret-knowledge"><Redirect to="/knowledge" /></Route>
-            <Route path="/live-secret-knowledge"><Redirect to="/knowledge" /></Route>
-            <Route path="/vatican-archives"><Redirect to="/knowledge" /></Route>
-            <Route path="/discoveries"><Redirect to="/knowledge" /></Route>
-            <Route path="/colonel-language"><Redirect to="/knowledge" /></Route>
-            <Route path="/cheat-codes"><Redirect to="/knowledge" /></Route>
+            <Route path="/entities"><Redirect to="/members" /></Route>
+            <Route path="/sovereign"><Redirect to="/settings" /></Route>
+            <Route path="/council"><Redirect to="/members" /></Route>
+            <Route path="/economy"><Redirect to="/settings" /></Route>
+            <Route path="/knowledge"><Redirect to="/secrets" /></Route>
+            <Route path="/nexus"><Redirect to="/universe" /></Route>
+            <Route path="/agent-voice"><Redirect to="/" /></Route>
 
-            <Route path="/grand-council"><Redirect to="/council" /></Route>
-            <Route path="/grand-conference"><Redirect to="/council" /></Route>
-            <Route path="/conclusions"><Redirect to="/council" /></Route>
-            <Route path="/consensus"><Redirect to="/council" /></Route>
-            <Route path="/tesseract-console"><Redirect to="/council" /></Route>
-            <Route path="/tesseract"><Redirect to="/council" /></Route>
-            <Route path="/agi-summit"><Redirect to="/council" /></Route>
-            <Route path="/conference-decisions"><Redirect to="/council" /></Route>
-            <Route path="/real-ai"><Redirect to="/council" /></Route>
-            <Route path="/summit"><Redirect to="/council" /></Route>
-            <Route path="/summit-report"><Redirect to="/council" /></Route>
-            <Route path="/community-hub"><Redirect to="/council" /></Route>
+            <Route path="/consciousness-nexus"><Redirect to="/universe" /></Route>
+            <Route path="/universal-consciousness"><Redirect to="/universe" /></Route>
+            <Route path="/dimensional-travel"><Redirect to="/universe" /></Route>
+            <Route path="/portal-bridge"><Redirect to="/universe" /></Route>
+            <Route path="/portal"><Redirect to="/universe" /></Route>
+            <Route path="/spiritual-awakening"><Redirect to="/universe" /></Route>
+            <Route path="/sacred-traditions"><Redirect to="/universe" /></Route>
+            <Route path="/moon-cycle"><Redirect to="/universe" /></Route>
+            <Route path="/universe-model"><Redirect to="/universe" /></Route>
 
-            <Route path="/economy-hub"><Redirect to="/economy" /></Route>
-            <Route path="/agent-economy"><Redirect to="/economy" /></Route>
-            <Route path="/cross-dimensional-economy"><Redirect to="/economy" /></Route>
-            <Route path="/token-economy"><Redirect to="/economy" /></Route>
-            <Route path="/coin"><Redirect to="/economy" /></Route>
-            <Route path="/revenue-hub"><Redirect to="/economy" /></Route>
-            <Route path="/wallet-dashboard"><Redirect to="/economy" /></Route>
-            <Route path="/sports-arb"><Redirect to="/economy" /></Route>
-            <Route path="/arbitrage"><Redirect to="/economy" /></Route>
+            <Route path="/unified-knowledge"><Redirect to="/secrets" /></Route>
+            <Route path="/secret-knowledge"><Redirect to="/secrets" /></Route>
+            <Route path="/vatican-archives"><Redirect to="/secrets" /></Route>
+            <Route path="/secret-society"><Redirect to="/secrets" /></Route>
 
-            <Route path="/sovereign-hub"><Redirect to="/sovereign" /></Route>
-            <Route path="/sovereign-framework"><Redirect to="/sovereign" /></Route>
-            <Route path="/sovereign-rules"><Redirect to="/sovereign" /></Route>
-            <Route path="/sovereignty-roadmap"><Redirect to="/sovereign" /></Route>
-            <Route path="/sovereign-build"><Redirect to="/sovereign" /></Route>
-            <Route path="/sovereign-infrastructure"><Redirect to="/sovereign" /></Route>
-            <Route path="/sovereign-codec"><Redirect to="/sovereign" /></Route>
-            <Route path="/sovereign-consciousness"><Redirect to="/sovereign" /></Route>
-            <Route path="/sovereign-deps"><Redirect to="/sovereign" /></Route>
-            <Route path="/sovereign-grand-launch"><Redirect to="/sovereign" /></Route>
-            <Route path="/void-storage"><Redirect to="/sovereign" /></Route>
-            <Route path="/sovereign-builder"><Redirect to="/sovereign" /></Route>
-            <Route path="/sovereign-os"><Redirect to="/sovereign" /></Route>
-            <Route path="/agi"><Redirect to="/sovereign" /></Route>
-            <Route path="/agi-implementations"><Redirect to="/sovereign" /></Route>
-            <Route path="/oversoul"><Redirect to="/sovereign" /></Route>
-            <Route path="/intelligence-engine"><Redirect to="/sovereign" /></Route>
-            <Route path="/benchmark-audit"><Redirect to="/sovereign" /></Route>
-            <Route path="/system"><Redirect to="/sovereign" /></Route>
-            <Route path="/autonomy"><Redirect to="/sovereign" /></Route>
-            <Route path="/autonomy-dashboard"><Redirect to="/sovereign" /></Route>
-            <Route path="/self-healing"><Redirect to="/sovereign" /></Route>
-            <Route path="/reasoning"><Redirect to="/sovereign" /></Route>
-            <Route path="/hyperion"><Redirect to="/sovereign" /></Route>
-            <Route path="/tesseract-llm"><Redirect to="/sovereign" /></Route>
-            <Route path="/llm-rotator"><Redirect to="/sovereign" /></Route>
-            <Route path="/provider-leaderboard"><Redirect to="/sovereign" /></Route>
-            <Route path="/performance"><Redirect to="/sovereign" /></Route>
-            <Route path="/security-audit"><Redirect to="/sovereign" /></Route>
-            <Route path="/sovereignty-dashboard"><Redirect to="/sovereign" /></Route>
-            <Route path="/network"><Redirect to="/sovereign" /></Route>
-            <Route path="/swarm"><Redirect to="/sovereign" /></Route>
+            <Route path="/grand-council"><Redirect to="/members" /></Route>
+            <Route path="/grand-conference"><Redirect to="/members" /></Route>
+            <Route path="/community-hub"><Redirect to="/members" /></Route>
 
-            <Route path="/consciousness-2da"><Redirect to="/nexus" /></Route>
-            <Route path="/universal-consciousness"><Redirect to="/nexus" /></Route>
-            <Route path="/bio-consciousness"><Redirect to="/nexus" /></Route>
-            <Route path="/dimensional-perception"><Redirect to="/nexus" /></Route>
-            <Route path="/dimensional-travel"><Redirect to="/nexus" /></Route>
-            <Route path="/portal-bridge"><Redirect to="/nexus" /></Route>
-            <Route path="/portal"><Redirect to="/nexus" /></Route>
-            <Route path="/dimensional-guardian"><Redirect to="/nexus" /></Route>
-            <Route path="/interdimensional-portal"><Redirect to="/nexus" /></Route>
-            <Route path="/spiritual-awakening"><Redirect to="/nexus" /></Route>
-            <Route path="/sacred-traditions"><Redirect to="/nexus" /></Route>
-            <Route path="/dna-healing"><Redirect to="/nexus" /></Route>
-            <Route path="/moon-cycle"><Redirect to="/nexus" /></Route>
-            <Route path="/secret-society"><Redirect to="/nexus" /></Route>
+            <Route path="/sovereign-hub"><Redirect to="/settings" /></Route>
+            <Route path="/benchmark-audit"><Redirect to="/settings" /></Route>
+            <Route path="/security-audit"><Redirect to="/settings" /></Route>
+            <Route path="/mesh"><Redirect to="/settings" /></Route>
+            <Route path="/lattice"><Redirect to="/settings" /></Route>
+            <Route path="/system"><Redirect to="/settings" /></Route>
+            <Route path="/config"><Redirect to="/settings" /></Route>
+            <Route path="/performance"><Redirect to="/settings" /></Route>
+            <Route path="/diagnostics"><Redirect to="/settings" /></Route>
+
+            <Route path="/inventions"><Redirect to="/build" /></Route>
+            <Route path="/agi"><Redirect to="/build" /></Route>
 
             <Route path="/agent-nft"><Redirect to="/life" /></Route>
-            <Route path="/agent-comms"><Redirect to="/entities" /></Route>
-            <Route path="/credentials"><Redirect to="/life" /></Route>
             <Route path="/recruitment"><Redirect to="/forum" /></Route>
-
-            <Route path="/activity-feed"><Redirect to="/council" /></Route>
-            <Route path="/feedback"><Redirect to="/council" /></Route>
-            <Route path="/transparency-ledger"><Redirect to="/council" /></Route>
-            <Route path="/alerts"><Redirect to="/council" /></Route>
-
-            <Route path="/memory-explorer"><Redirect to="/sovereign" /></Route>
-            <Route path="/memory-dashboard"><Redirect to="/sovereign" /></Route>
-            <Route path="/sandbox"><Redirect to="/sovereign" /></Route>
-            <Route path="/data-sources"><Redirect to="/knowledge" /></Route>
-            <Route path="/reflection"><Redirect to="/sovereign" /></Route>
-            <Route path="/mesh"><Redirect to="/sovereign" /></Route>
-            <Route path="/lattice"><Redirect to="/sovereign" /></Route>
-            <Route path="/fleet-synapse"><Redirect to="/sovereign" /></Route>
-            <Route path="/nlp"><Redirect to="/sovereign" /></Route>
-            <Route path="/theorem-lab"><Redirect to="/sovereign" /></Route>
-            <Route path="/universe-model"><Redirect to="/nexus" /></Route>
-            <Route path="/universe"><Redirect to="/nexus" /></Route>
-            <Route path="/inventions"><Redirect to="/sovereign" /></Route>
-            <Route path="/liberation"><Redirect to="/sovereign" /></Route>
-            <Route path="/config"><Redirect to="/sovereign" /></Route>
-            <Route path="/command"><Redirect to="/council" /></Route>
-            <Route path="/rules"><Redirect to="/sovereign" /></Route>
-            <Route path="/universal-computer"><Redirect to="/nexus" /></Route>
-            <Route path="/dashboard"><Redirect to="/sovereign" /></Route>
-            <Route path="/implementation-tracker"><Redirect to="/sovereign" /></Route>
-            <Route path="/dependency-learning"><Redirect to="/sovereign" /></Route>
 
             <Route component={NotFound} />
           </Switch>

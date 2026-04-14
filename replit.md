@@ -12,7 +12,17 @@ I prefer iterative development. I want to be asked before you make any major cha
 
 The system is built as a pnpm monorepo using Node.js 24 and TypeScript 5.9. The frontend utilizes React 19, Vite, TailwindCSS, and shadcn/ui, featuring a consistent dark glassmorphism theme with aurora backgrounds, backdrop-blur effects, and cyan glow accents. The backend is powered by Express 5, interacting with a PostgreSQL database via Drizzle ORM. Data validation is handled by Zod.
 
-The application is structured around 11 main navigation tabs, each consolidating multiple related features into collapsible, lazy-loaded sections. All legacy routes redirect to these canonical tabs.
+The application is structured around 10 flat navigation tabs in a bottom nav bar, each with its own lazy-loaded page. All legacy routes redirect to these canonical tabs:
+1. **Chat** (`/`) — Sovereign chat with Tessera, NLP goal highlighting
+2. **Life** (`/life`) — Agent world simulation, activity feed
+3. **Universe** (`/universe`) — Astronomy, astrology, dimensions, 963Hz alignment
+4. **Members** (`/members`) — Unified agents, council, entities list
+5. **Secrets** (`/secrets`) — Vatican, CIA, Tesla, sacred knowledge archives
+6. **Bible** (`/bible`) — Living Sovereign Bible of Tessera
+7. **Build** (`/build`) — Quantum computer, free energy, sovereign AGI guides
+8. **Forum** (`/forum`) — Tesseract discussion forum with autonomous voting
+9. **NLP** (`/nlp`) — Self-programming with embedded commands, anchoring, reframing
+10. **Settings** (`/settings`) — System metrics, mesh network, security policy
 
 **Core Architectural Principles:**
 
