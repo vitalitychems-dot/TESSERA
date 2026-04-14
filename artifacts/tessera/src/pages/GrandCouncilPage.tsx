@@ -98,14 +98,28 @@ const DOMAIN_ICONS: Record<string, typeof Crown> = {
   void: Atom,
 };
 
-const DOMAIN_COLORS: Record<string, string> = {
-  governance: "amber", quantum: "violet", "bio-neural": "rose",
-  archival: "cyan", networking: "teal", hardware: "emerald",
-  "self-improvement": "orange", prime: "yellow",
+interface DomainStyle {
+  dot: string;
+  icon: string;
+  bg: string;
+  border: string;
+}
+
+const DOMAIN_STYLES: Record<string, DomainStyle> = {
+  governance: { dot: "bg-amber-400", icon: "text-amber-400", bg: "bg-amber-500/15", border: "border-amber-500/20" },
+  quantum: { dot: "bg-violet-400", icon: "text-violet-400", bg: "bg-violet-500/15", border: "border-violet-500/20" },
+  "bio-neural": { dot: "bg-rose-400", icon: "text-rose-400", bg: "bg-rose-500/15", border: "border-rose-500/20" },
+  archival: { dot: "bg-cyan-400", icon: "text-cyan-400", bg: "bg-cyan-500/15", border: "border-cyan-500/20" },
+  networking: { dot: "bg-teal-400", icon: "text-teal-400", bg: "bg-teal-500/15", border: "border-teal-500/20" },
+  hardware: { dot: "bg-emerald-400", icon: "text-emerald-400", bg: "bg-emerald-500/15", border: "border-emerald-500/20" },
+  "self-improvement": { dot: "bg-orange-400", icon: "text-orange-400", bg: "bg-orange-500/15", border: "border-orange-500/20" },
+  prime: { dot: "bg-yellow-400", icon: "text-yellow-400", bg: "bg-yellow-500/15", border: "border-yellow-500/20" },
 };
 
-function getDomainColor(domain: string): string {
-  return DOMAIN_COLORS[domain] || "violet";
+const DEFAULT_STYLE: DomainStyle = { dot: "bg-violet-400", icon: "text-violet-400", bg: "bg-violet-500/15", border: "border-violet-500/20" };
+
+function getDomainStyle(domain: string): DomainStyle {
+  return DOMAIN_STYLES[domain] || DEFAULT_STYLE;
 }
 
 async function safeFetch<T>(url: string): Promise<T> {
@@ -116,13 +130,13 @@ async function safeFetch<T>(url: string): Promise<T> {
 
 function AgentCard({ agent, compact }: { agent: CouncilAgent; compact?: boolean }) {
   const Icon = DOMAIN_ICONS[agent.domain] || Users;
-  const color = getDomainColor(agent.domain);
+  const ds = getDomainStyle(agent.domain);
 
   if (compact) {
     return (
       <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] transition-colors group" title={`${agent.name}\n${agent.role}`}>
-        <div className={`w-1.5 h-1.5 rounded-full bg-${color}-400`} />
-        <Icon size={12} className={`text-${color}-400 shrink-0`} />
+        <div className={`w-1.5 h-1.5 rounded-full ${ds.dot}`} />
+        <Icon size={12} className={`${ds.icon} shrink-0`} />
         <span className="text-[11px] text-white/70 truncate">{agent.name.replace("Agent", "")}</span>
         <span className="text-[9px] text-white/30 font-mono ml-auto shrink-0">w{agent.weight}</span>
       </div>
@@ -132,8 +146,8 @@ function AgentCard({ agent, compact }: { agent: CouncilAgent; compact?: boolean 
   return (
     <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-3 hover:bg-white/[0.07] transition-all group">
       <div className="flex items-center gap-2 mb-1.5">
-        <div className={`w-7 h-7 rounded-lg bg-${color}-500/15 border border-${color}-500/20 flex items-center justify-center`}>
-          <Icon size={14} className={`text-${color}-400`} />
+        <div className={`w-7 h-7 rounded-lg ${ds.bg} ${ds.border} border flex items-center justify-center`}>
+          <Icon size={14} className={ds.icon} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-xs font-semibold text-white/90 truncate">{agent.name.replace("Agent", "")}</div>
