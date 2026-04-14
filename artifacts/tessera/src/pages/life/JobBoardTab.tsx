@@ -18,8 +18,9 @@ import {
   Network, Radio, MessageCircle, History
 } from "lucide-react";
 import type { WorldState, ChildInfo } from "./types";
+import type { LucideIcon } from "@/types/api";
 
-const jobCategoryIcons: Record<string, any> = {};
+const jobCategoryIcons: Record<string, LucideIcon> = {};
 const jobCategoryColors: Record<string, string> = {};
 const difficultyColors: Record<string, string> = { easy: "text-green-400", medium: "text-yellow-400", hard: "text-red-400" };
 const statusColors: Record<string, string> = { open: "text-emerald-400", filled: "text-blue-400", closed: "text-gray-400" };

@@ -66,7 +66,7 @@ export default function UniversePage() {
   const sunData = useMemo(() => getSunPosition(now), [now]);
   const [expandedSection, setExpandedSection] = useState<string | null>("celestial");
 
-  const { data: sovereigntyData } = useQuery<any>({
+  const { data: sovereigntyData } = useQuery<{ score?: number }>({
     queryKey: ["/api/sovereignty/score"],
     refetchInterval: 30000,
   });

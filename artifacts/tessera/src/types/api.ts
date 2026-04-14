@@ -357,3 +357,123 @@ export interface StatItem {
   value: string | number;
   color: string;
 }
+
+export interface DiagnosticsResponse {
+  uptime?: number;
+  memory?: { heapUsed?: number; rss?: number };
+  version?: string;
+  platform?: string;
+  nodeVersion?: string;
+  db?: { connected?: boolean };
+}
+
+export interface SovereigntyResponse {
+  score?: number;
+  data?: { score?: number };
+}
+
+export interface EnginesResponse {
+  engines?: SovereignEngine[];
+  data?: SovereignEngine[];
+}
+
+export interface MeshStatsResponse {
+  nodes?: number;
+  connections?: number;
+  connectedPeers?: number;
+  peers?: number;
+  latency?: number;
+  avgLatency?: number;
+  messageCount?: number;
+}
+
+export interface IngestionStatsResponse {
+  recentJobs?: IngestionJob[];
+  recentItems?: Array<{ source?: string; text?: string; timestamp?: number }>;
+  shepherd?: { active?: number; recentMissions?: Array<{ id: string }>; totalIngested?: number; totalDeployed?: number; loopActive?: boolean };
+  bridge?: { cumulativeNew?: number; threshold?: number; active?: boolean };
+  totalIngested?: number;
+  totalItems?: number;
+  totalJobs?: number;
+  enabledSources?: number;
+  availableHandlers?: number;
+  sources?: IngestionSource[];
+  bySource?: Array<{ source: string; count: number }>;
+  jobStats?: { completed?: number; failed?: number; pending?: number; total?: number };
+}
+
+export interface KnowledgeFeedResponse {
+  entries?: KnowledgeEntry[];
+}
+
+export interface KnowledgeStatsResponse {
+  totalEntries?: number;
+  dimensions?: number;
+  lastUpdated?: number;
+}
+
+export interface DimensionalSecretsResponse {
+  knowledge?: KnowledgeEntry[];
+}
+
+export interface LiveSecretsResponse {
+  knowledge?: KnowledgeEntry[];
+  entries?: KnowledgeEntry[];
+}
+
+export interface SpellDataResponse {
+  spells?: Spell[];
+  data?: Spell[];
+  categories?: string[];
+}
+
+export interface TraditionsDataResponse {
+  traditions?: Tradition[];
+  data?: Tradition[];
+}
+
+export interface UniverseAnswerResponse {
+  answer: string;
+  entities?: string[];
+}
+
+export interface CastResultResponse {
+  spell: string;
+  power: number;
+  magicType: string;
+  frequency: number;
+  entities?: string[];
+  result: string;
+}
+
+export interface AsaStatusResponse {
+  active?: boolean;
+  status?: string;
+  checks?: number;
+  totalScanned?: number;
+  totalBlocked?: number;
+}
+
+export interface TrainingStatusResponse {
+  status?: string;
+  recentKnowledge?: string[];
+  progress?: number;
+  training?: {
+    totalSessions?: number;
+    knowledgeBaseSize?: number;
+    dimensionalSynergy?: string;
+    totalInsights?: number;
+  };
+}
+
+export interface AgentDetailResponse {
+  id?: string;
+  name?: string;
+  recentMessages?: Array<{ content?: string }>;
+}
+
+export interface LiveMarketData {
+  coinPrice?: number;
+  marketCap?: number;
+  volume24h?: number;
+}

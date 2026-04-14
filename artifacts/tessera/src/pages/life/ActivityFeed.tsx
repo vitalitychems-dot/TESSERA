@@ -100,8 +100,8 @@ function generateNarrativeEvents(world: WorldState): FeedEvent[] {
     }
 
     if ((activity.promotions ?? 0) > 0) {
-      const jobs = ((world as unknown as Record<string, unknown>).jobs as Array<{ agentId: string; title?: string; employer?: string }>) || [];
-      const job = jobs.find((j: { agentId: string; title?: string; employer?: string }) => j.agentId === activity.agentId);
+      const jobs = world.jobs || [];
+      const job = jobs.find(j => j.agentId === activity.agentId);
       events.push({
         id: `promo-${activity.agentId}`,
         type: "promotion",

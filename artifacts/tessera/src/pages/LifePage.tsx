@@ -94,7 +94,7 @@ export default function LifePage({ embedded }: { embedded?: boolean }) {
   const [world, setWorld] = useState<WorldState | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
-  const [liveMarket, setLiveMarket] = useState<any>(null);
+  const [liveMarket, setLiveMarket] = useState<{ coinPrice?: number; marketCap?: number; volume24h?: number } | null>(null);
   const [worldError, setWorldError] = useState<string | null>(null);
   const [worldRetryCount, setWorldRetryCount] = useState(0);
 
