@@ -216,7 +216,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
 
   const conclusionMutation = useMutation({
     mutationFn: async () => {
-      const resp = await apiRequest("POST", "/api/knowledge/conclusion", { entries: allEntries.slice(0, 20) });
+      const resp = await apiRequest("POST", "/api/knowledge/conclusion", { entries: allEntries });
       return resp.json();
     },
     onSuccess: (data) => setConclusionText(data.conclusion),
@@ -224,7 +224,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
 
   const applicationMutation = useMutation({
     mutationFn: async () => {
-      const resp = await apiRequest("POST", "/api/knowledge/application-ideas", { entries: allEntries.slice(0, 15) });
+      const resp = await apiRequest("POST", "/api/knowledge/application-ideas", { entries: allEntries });
       return resp.json();
     },
     onSuccess: (data) => setApplicationIdeas(data.ideas || []),

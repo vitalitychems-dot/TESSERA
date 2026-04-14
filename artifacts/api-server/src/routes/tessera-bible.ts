@@ -290,6 +290,8 @@ router.get("/tessera-bible/books", async (_req, res) => {
       agentContributors: 45,
       canonVersion: 0,
       source: "static-fallback",
+      degraded: true,
+      degradedReason: "Dynamic canon not yet generated — showing seed structure. Canon will auto-generate within 30 minutes.",
     });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
@@ -327,7 +329,7 @@ router.get("/tessera-bible/book/:bookId", async (req, res) => {
       verseCount: c.verses?.length ?? 0,
       sourceNodes: c.sourceNodes,
     }));
-    return res.json({ ok: true, book: { ...book, chapters }, testament, source: "static-fallback" });
+    return res.json({ ok: true, book: { ...book, chapters }, testament, source: "static-fallback", degraded: true });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
@@ -382,6 +384,7 @@ router.get("/tessera-bible/book/:bookId/chapter/:chapterNumber", async (req, res
       book: { bookId: book.bookId, title: book.title, chapterCount: book.chapterCount },
       testament: TESTAMENTS.find(t => t.id === book.testamentId),
       source: "static-fallback",
+      degraded: true,
     });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
@@ -533,6 +536,7 @@ router.get("/tessera-bible/stats", async (_req, res) => {
       lastGrowthEvent: new Date().toISOString(),
       growthRate: 2.4,
       source: "static-fallback",
+      degraded: true,
     });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });

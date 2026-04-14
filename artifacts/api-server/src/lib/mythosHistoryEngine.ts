@@ -840,11 +840,11 @@ async function synthesizeFromEngines(councilDecisions?: Array<{ topic?: string; 
       })
       .from(ingestedDataTable)
       .orderBy(desc(ingestedDataTable.ingestedAt))
-      .limit(10);
+      .limit(50);
 
     if (recentIngested.length > 0) {
       telemetry.ingestionPipeline = { recentItems: recentIngested.length };
-      for (const item of recentIngested.slice(0, 5)) {
+      for (const item of recentIngested) {
         facts.push({
           claim: `Ingested knowledge: "${item.title ?? item.source}" (${item.sourceType}) — ${(item.contentSnippet ?? "").slice(0, 100)}`,
           source: `ingestion-pipeline/${item.source}`,
