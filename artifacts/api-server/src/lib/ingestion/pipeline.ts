@@ -1,7 +1,7 @@
 import * as crypto from "crypto";
 import { db } from "@workspace/db";
 import { ingestedDataTable, ingestionJobsTable, dataSourcesTable } from "@workspace/db/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { storeMemory } from "../vector-memory";
 
 export interface NormalizedItem {
@@ -118,7 +118,7 @@ export async function runSourceIngestion(
         lastRunAt: new Date(),
         lastSuccessAt: ingested > 0 ? new Date() : undefined,
         lastError: errors.length > 0 ? errors[0] : null,
-        totalRuns: undefined,
+        totalRuns: sql`${dataSourcesTable.totalRuns} + 1`,
       })
       .where(eq(dataSourcesTable.id, sourceId));
   }

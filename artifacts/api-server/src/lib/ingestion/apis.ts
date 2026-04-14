@@ -1,9 +1,15 @@
 import { fetchJson, fetchText } from "./scrapers";
 import type { NormalizedItem } from "./pipeline";
 
+function getNasaApiKey(): string {
+  if (process.env.NASA_API_KEY) return process.env.NASA_API_KEY;
+  if (process.env.NODE_ENV !== "production") return "DEMO_KEY";
+  throw new Error("NASA_API_KEY environment variable is required in production");
+}
+
 export async function fetchNASA(): Promise<NormalizedItem[]> {
   const data = await fetchJson<any>(
-    "https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY&count=5"
+    `https://api.nasa.gov/planetary/apod?api_key=${getNasaApiKey()}&count=5`
   );
   const items: any[] = Array.isArray(data) ? data : [data];
   return items.map(item => ({

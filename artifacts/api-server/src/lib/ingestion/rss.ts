@@ -1,81 +1,116 @@
+import { XMLParser } from "fast-xml-parser";
 import { fetchText } from "./scrapers";
 import { htmlToText } from "./pipeline";
 import type { NormalizedItem } from "./pipeline";
 
-interface RssItem {
-  title?: string;
-  link?: string;
-  description?: string;
-  pubDate?: string;
-  content?: string;
+const xmlParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: "@_",
+  allowBooleanAttributes: true,
+  parseTagValue: true,
+  cdataPropName: "__cdata",
+  trimValues: true,
+});
+
+function coerceText(val: unknown): string {
+  if (!val) return "";
+  if (typeof val === "string") return val;
+  if (typeof val === "object") {
+    const o = val as Record<string, unknown>;
+    if (o["__cdata"]) return String(o["__cdata"]);
+    if (o["#text"]) return String(o["#text"]);
+  }
+  return String(val);
 }
 
-function extractTag(xml: string, tag: string): string {
-  const cdataMatch = xml.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>`, "i"));
-  if (cdataMatch) return cdataMatch[1].trim();
-  const match = xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i"));
-  return match ? htmlToText(match[1].trim()) : "";
+function coerceArray<T>(val: T | T[] | undefined): T[] {
+  if (!val) return [];
+  return Array.isArray(val) ? val : [val];
 }
 
 function parseRss(xml: string, feedName: string, feedUrl: string): NormalizedItem[] {
   const items: NormalizedItem[] = [];
-  const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
-  let match: RegExpExecArray | null;
 
-  while ((match = itemRegex.exec(xml)) !== null) {
-    const itemXml = match[1];
-    const title = extractTag(itemXml, "title");
-    const link = extractTag(itemXml, "link") || extractTag(itemXml, "guid");
-    const description = extractTag(itemXml, "description");
-    const content = extractTag(itemXml, "content:encoded") || description;
-    const pubDate = extractTag(itemXml, "pubDate");
-
-    if (!content && !title) continue;
-
-    let publishedAt: Date | undefined;
-    if (pubDate) {
-      try { publishedAt = new Date(pubDate); } catch { }
-    }
-
-    items.push({
-      source: feedName,
-      sourceType: "rss",
-      title: title || undefined,
-      content: content || title,
-      url: link || feedUrl,
-      tags: ["rss", feedName.toLowerCase().replace(/\s+/g, "-")],
-      metadata: { feedUrl },
-      publishedAt,
-    });
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = xmlParser.parse(xml) as Record<string, unknown>;
+  } catch {
+    return items;
   }
 
-  const entryRegex = /<entry[^>]*>([\s\S]*?)<\/entry>/gi;
-  while ((match = entryRegex.exec(xml)) !== null) {
-    const entryXml = match[1];
-    const title = extractTag(entryXml, "title");
-    const linkMatch = entryXml.match(/<link[^>]+href="([^"]+)"/i);
-    const link = linkMatch ? linkMatch[1] : "";
-    const summary = extractTag(entryXml, "summary");
-    const content = extractTag(entryXml, "content") || summary;
-    const updated = extractTag(entryXml, "updated") || extractTag(entryXml, "published");
+  const rss = parsed["rss"] as Record<string, unknown> | undefined;
+  const feed = parsed["feed"] as Record<string, unknown> | undefined;
 
-    if (!content && !title) continue;
+  if (rss) {
+    const channel = rss["channel"] as Record<string, unknown> | undefined;
+    const rawItems = coerceArray((channel?.["item"] as unknown[] | undefined));
+    for (const rawItem of rawItems) {
+      const item = rawItem as Record<string, unknown>;
+      const title = htmlToText(coerceText(item["title"]));
+      const link = coerceText(item["link"]) || coerceText(item["guid"]);
+      const description = htmlToText(coerceText(item["description"]));
+      const content = htmlToText(coerceText(item["content:encoded"])) || description;
+      const pubDate = coerceText(item["pubDate"]);
 
-    let publishedAt: Date | undefined;
-    if (updated) {
-      try { publishedAt = new Date(updated); } catch { }
+      if (!content && !title) continue;
+
+      let publishedAt: Date | undefined;
+      if (pubDate) {
+        try { publishedAt = new Date(pubDate); } catch { }
+      }
+
+      items.push({
+        source: feedName,
+        sourceType: "rss",
+        title: title || undefined,
+        content: content || title,
+        url: link || feedUrl,
+        tags: ["rss", feedName.toLowerCase().replace(/\s+/g, "-")],
+        metadata: { feedUrl },
+        publishedAt,
+      });
     }
+  }
 
-    items.push({
-      source: feedName,
-      sourceType: "rss",
-      title: title || undefined,
-      content: content || title,
-      url: link || feedUrl,
-      tags: ["atom", feedName.toLowerCase().replace(/\s+/g, "-")],
-      metadata: { feedUrl },
-      publishedAt,
-    });
+  if (feed) {
+    const rawEntries = coerceArray((feed["entry"] as unknown[] | undefined));
+    for (const rawEntry of rawEntries) {
+      const entry = rawEntry as Record<string, unknown>;
+      const title = htmlToText(coerceText(entry["title"]));
+      const linkVal = entry["link"];
+      let link = "";
+      if (Array.isArray(linkVal)) {
+        const links = linkVal as Record<string, unknown>[];
+        const altLink = links.find(l => l["@_rel"] === "alternate");
+        const chosen = altLink ?? links[0];
+        link = coerceText(chosen?.["@_href"] ?? chosen);
+      } else if (linkVal && typeof linkVal === "object") {
+        link = coerceText((linkVal as Record<string, unknown>)["@_href"]);
+      } else {
+        link = coerceText(linkVal);
+      }
+      const summary = htmlToText(coerceText(entry["summary"]));
+      const content = htmlToText(coerceText(entry["content"])) || summary;
+      const updated = coerceText(entry["updated"]) || coerceText(entry["published"]);
+
+      if (!content && !title) continue;
+
+      let publishedAt: Date | undefined;
+      if (updated) {
+        try { publishedAt = new Date(updated); } catch { }
+      }
+
+      items.push({
+        source: feedName,
+        sourceType: "rss",
+        title: title || undefined,
+        content: content || title,
+        url: link || feedUrl,
+        tags: ["atom", feedName.toLowerCase().replace(/\s+/g, "-")],
+        metadata: { feedUrl },
+        publishedAt,
+      });
+    }
   }
 
   return items.slice(0, 20);

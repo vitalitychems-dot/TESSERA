@@ -45,6 +45,7 @@ interface CallRecord {
   ts: number;
 }
 
+const RECENT_CALLS_MAX = 500;
 const recentCalls: CallRecord[] = [];
 
 function isDomainAllowed(url: string): { allowed: boolean; domain: string } {
@@ -71,6 +72,10 @@ function detectIntrusion(url: string): { flagged: boolean; reason?: string } {
   const windowStart = now - INTRUSION_WINDOW_MS;
   while (recentCalls.length > 0 && recentCalls[0].ts < windowStart) {
     recentCalls.shift();
+  }
+
+  if (recentCalls.length > RECENT_CALLS_MAX) {
+    recentCalls.splice(0, recentCalls.length - RECENT_CALLS_MAX);
   }
 
   if (recentCalls.length > INTRUSION_THRESHOLD) {

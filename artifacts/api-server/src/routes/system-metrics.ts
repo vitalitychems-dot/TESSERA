@@ -29,7 +29,9 @@ router.get("/system/sovereign-metrics", async (_req, res) => {
         inventions: inv?.count ?? 0,
         meetings: meet?.count ?? 0,
       };
-    } catch (_e) {}
+    } catch (err) {
+      logger.error({ err }, "Failed to query DB stats for system metrics");
+    }
 
     const engineStatus: Record<string, boolean> = {};
     const engines = [
@@ -47,7 +49,8 @@ router.get("/system/sovereign-metrics", async (_req, res) => {
       try {
         engine.fn();
         engineStatus[engine.name] = true;
-      } catch {
+      } catch (err) {
+        logger.error({ err, engine: engine.name }, "Engine status check failed");
         engineStatus[engine.name] = false;
       }
     }
