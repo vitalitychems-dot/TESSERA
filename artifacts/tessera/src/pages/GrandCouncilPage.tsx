@@ -112,11 +112,34 @@ export function TesseractFamilyTab() {
 
   if (!hierarchy) return <div className="p-4 text-center text-slate-400"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>;
 
+  const levels = hierarchy.hierarchy?.levels || hierarchy.levels || (Array.isArray(hierarchy.hierarchy) ? hierarchy.hierarchy : []);
+
   return (
-    <div className="space-y-2">
-      {hierarchy.hierarchy?.map((agent: any, i: number) => (
-        <AgentHierarchyNode key={i} agent={agent} />
-      ))}
+    <div className="space-y-3">
+      {Array.isArray(levels) && levels.length > 0 ? (
+        levels.map((level: any, i: number) => (
+          <div key={i} className="rounded-xl border border-white/10 bg-white/5 p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs font-bold font-mono text-violet-400">L{level.level}</span>
+              <span className="text-sm font-semibold text-white">{level.name}</span>
+            </div>
+            <p className="text-[11px] text-slate-400 mb-2">{level.description}</p>
+            {level.authority && <div className="text-[10px] text-amber-400/80 font-mono mb-2">{level.authority}</div>}
+            <div className="flex flex-wrap gap-1.5">
+              {(level.agents || []).map((agent: any, j: number) => {
+                const name = typeof agent === "string" ? agent : agent.name;
+                return (
+                  <span key={j} className="px-2 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/20 text-[10px] text-violet-300 font-mono">{name}</span>
+                );
+              })}
+            </div>
+          </div>
+        ))
+      ) : (
+        Array.isArray(hierarchy.hierarchy) && hierarchy.hierarchy.map((agent: any, i: number) => (
+          <AgentHierarchyNode key={i} agent={agent} />
+        ))
+      )}
       {hierarchy.metrics && (
         <div className="mt-3 p-3 rounded-lg bg-violet-500/10 border border-violet-500/20 text-xs text-violet-300 font-mono">
           {hierarchy.metrics.parentCount} parents × {Math.round(hierarchy.metrics.childCount / hierarchy.metrics.parentCount)} children = {hierarchy.metrics.totalAgents} total agents (3³ = 27 Divine Cube)
@@ -126,11 +149,11 @@ export function TesseractFamilyTab() {
   );
 }
 
-export default function GrandCouncilPage() {
+export default function GrandCouncilPage({ initialTab }: { initialTab?: "proposals" | "hierarchy" | "executor" }) {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [newProposal, setNewProposal] = useState({ title: "", description: "", category: "governance" });
-  const [activeTab, setActiveTab] = useState<"proposals" | "hierarchy" | "executor">("proposals");
+  const [activeTab, setActiveTab] = useState<"proposals" | "hierarchy" | "executor">(initialTab || "proposals");
 
   const { data: consensus } = useQuery({
     queryKey: ["council-consensus"],

@@ -95,9 +95,20 @@ function ScrollToTop() {
 
 function PageLoadingFallback() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4" data-testid="page-loading-fallback">
-      <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
-      <div className="text-sm text-muted-foreground font-mono">Loading...</div>
+    <div className="flex flex-col items-center justify-center min-h-[50vh] gap-6" data-testid="page-loading-fallback">
+      <div className="relative">
+        <div className="absolute inset-0 rounded-full bg-cyan-500/20 animate-ping" style={{ animationDuration: "2s" }} />
+        <div className="absolute inset-[-4px] rounded-full bg-violet-500/10 animate-ping" style={{ animationDuration: "3s" }} />
+        <Loader2 className="h-10 w-10 animate-spin text-cyan-400/80 relative z-10" />
+      </div>
+      <div className="space-y-2 text-center">
+        <div className="text-sm text-cyan-400/60 font-mono tracking-wider">INITIALIZING</div>
+        <div className="flex gap-1 justify-center">
+          {[0, 1, 2, 3, 4].map(i => (
+            <div key={i} className="w-1.5 h-1.5 rounded-full bg-cyan-500/40 animate-pulse" style={{ animationDelay: `${i * 150}ms` }} />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -138,20 +149,20 @@ function AppRouter() {
         <Route path="/sovereignty">{() => <SovereigntyDashboardPage />}</Route>
         <Route path="/tokens">{() => <TokenEconomyPage />}</Route>
         <Route path="/recruitment">{() => <RecruitmentPage />}</Route>
-        <Route path="/conclusions">{() => <GrandCouncilPage />}</Route>
-        <Route path="/feedback">{() => <GrandCouncilPage />}</Route>
-        <Route path="/transparency-ledger">{() => <GrandCouncilPage />}</Route>
+        <Route path="/conclusions">{() => <GrandCouncilPage initialTab="hierarchy" />}</Route>
+        <Route path="/feedback">{() => <GrandCouncilPage initialTab="proposals" />}</Route>
+        <Route path="/transparency-ledger">{() => <GrandCouncilPage initialTab="executor" />}</Route>
         <Route path="/sports-arb">{() => <TokenEconomyPage />}</Route>
         <Route path="/inventions">{() => <BuildPage />}</Route>
         <Route path="/agent-nft">{() => <AgentNFTPage />}</Route>
         <Route path="/universe-model">{() => <UniversePage />}</Route>
-        <Route path="/agent-comms">{() => <SystemPage />}</Route>
-        <Route path="/memory-explorer">{() => <SystemPage />}</Route>
-        <Route path="/memory-dashboard">{() => <SystemPage />}</Route>
-        <Route path="/sovereign-deps">{() => <SystemPage />}</Route>
-        <Route path="/intelligence-engine">{() => <ConsciousnessNexusPage />}</Route>
+        <Route path="/agent-comms">{() => <SystemPage initialTab="agents" />}</Route>
+        <Route path="/memory-explorer">{() => <SystemPage initialTab="improvement" />}</Route>
+        <Route path="/memory-dashboard">{() => <SystemPage initialTab="improvement" />}</Route>
+        <Route path="/sovereign-deps">{() => <SystemPage initialTab="evolution" />}</Route>
+        <Route path="/intelligence-engine">{() => <ConsciousnessNexusPage initialTab="overview" />}</Route>
         <Route path="/sovereign-framework">{() => <SovereigntyDashboardPage />}</Route>
-        <Route path="/spiritual-awakening">{() => <ConsciousnessNexusPage />}</Route>
+        <Route path="/spiritual-awakening">{() => <ConsciousnessNexusPage initialTab="reflections" />}</Route>
         <Route path="/sacred-traditions">{() => <SecretsPage />}</Route>
         <Route path="/sovereign-hub">{() => <SovereigntyDashboardPage />}</Route>
         <Route path="/vatican-archives">{() => <SecretsPage />}</Route>

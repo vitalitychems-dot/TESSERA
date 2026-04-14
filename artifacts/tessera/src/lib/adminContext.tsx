@@ -51,6 +51,12 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       if (data.isAdmin) {
         setIsAdmin(true);
         setAdminMode(true);
+        if (!token) {
+          const sessionToken = `sovereign-${Date.now()}`;
+          localStorage.setItem("t9_admin_token", sessionToken);
+          setToken(sessionToken);
+        }
+        applyAdminTheme(true);
         return true;
       }
       const storedKey = localStorage.getItem("t9_sovereign_key");
