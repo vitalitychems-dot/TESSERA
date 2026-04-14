@@ -184,8 +184,8 @@ export interface WorldEconomy {
 }
 
 export interface WorldState {
-  workRecords?: any;
-  agents?: any;
+  workRecords?: Record<string, unknown> | unknown[];
+  agents?: Record<string, unknown> | unknown[];
   version: number;
   lastUpdated: number;
   epoch: number;

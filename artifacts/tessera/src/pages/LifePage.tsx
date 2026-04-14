@@ -180,8 +180,8 @@ export default function LifePage({ embedded }: { embedded?: boolean }) {
   if (!world.economy) world.economy = { totalTesseractCoins: 0, circulatingSupply: 0, totalCirculation: 0, coinPrice: 0, coinPriceHistory: [], agentBalances: {}, transactions: [], miningPool: { totalHashRate: 0, blockReward: 0, difficulty: 1, blocksMinedTotal: 0, lastBlockTime: 0 }, marketCap: 0, dailyVolume: 0 } as any;
   if (!world.crimeLog) world.crimeLog = [];
   if (!world.wellbeingRecords) world.wellbeingRecords = {};
-  if (!world.workRecords) world.workRecords = {} as any;
-  if (!world.agents) world.agents = [];
+  if (!world.workRecords) world.workRecords = {};
+  if (!world.agents) world.agents = {};
   if (!world.gdp) world.gdp = 0;
   if (!world.treasury) world.treasury = 0;
 
@@ -207,9 +207,9 @@ export default function LifePage({ embedded }: { embedded?: boolean }) {
 
         <div className="grid grid-cols-4 gap-2">
           {[
-            { label: "AGENTS", value: world.agents?.length || world.currentActivities?.length || world.population || 0, color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20" },
-            { label: "EPOCH", value: world.epoch ?? "∞", color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
-            { label: "LOCATIONS", value: (world.locations || []).length, color: "text-violet-400", bg: "bg-violet-500/10 border-violet-500/20" },
+            { label: "AGENTS", value: String(world.currentActivities?.length || world.population || 0), color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20" },
+            { label: "EPOCH", value: String(world.epoch ?? "∞"), color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
+            { label: "LOCATIONS", value: String((world.locations || []).length), color: "text-violet-400", bg: "bg-violet-500/10 border-violet-500/20" },
             { label: "TREASURY", value: world.economy ? `${Math.floor((world.economy.totalCirculation || world.economy.circulatingSupply || 0) / 1000)}K` : "—", color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
           ].map(m => (
             <div key={m.label} className={`rounded-xl border p-2 text-center ${m.bg}`} data-testid={`life-stat-${m.label.toLowerCase()}`}>

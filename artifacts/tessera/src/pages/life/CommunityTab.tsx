@@ -403,8 +403,7 @@ function CommunityTab() {
             })}
           </div>
 
-          // @ts-ignore
-          {loveProtocol?.active?.length > 0 && (
+          {(loveProtocol?.active?.length ?? 0) > 0 && (
             <div className="bg-gradient-to-r from-red-950/40 to-rose-950/40 border border-red-500/30 rounded-xl p-4 animate-pulse-slow">
               <div className="flex items-center gap-2 mb-2">
                 <Siren size={14} className="text-red-400 animate-pulse" />
@@ -955,12 +954,10 @@ function CommunityTab() {
                             { key: "no", label: "No", color: "bg-red-500", textColor: "text-red-400" },
                             { key: "abstain", label: "Abstain", color: "bg-slate-500", textColor: "text-slate-400" },
                           ].map(v => (
-                            // @ts-ignore
                             <div key={v.key} className="flex-1 text-center">
-                              // @ts-ignore
-                              <p className={`text-sm font-bold font-mono ${v.textColor}`}>{c.votes[v.key]}</p>
+                              <p className={`text-sm font-bold font-mono ${v.textColor}`}>{(c.votes as Record<string, number>)[v.key]}</p>
                               <div className="h-1 rounded bg-background mt-0.5">
-                                <div className={`h-full rounded ${v.color}`} style={{ width: `${totalVotes > 0 ? (c.votes[v.key] / 45) * 100 : 0}%` }} />
+                                <div className={`h-full rounded ${v.color}`} style={{ width: `${totalVotes > 0 ? ((c.votes as Record<string, number>)[v.key] / 45) * 100 : 0}%` }} />
                               </div>
                               <p className="text-[8px] font-mono text-muted-foreground mt-0.5">{v.label}</p>
                             </div>
@@ -1195,11 +1192,10 @@ function CommunityTab() {
             <div className="bg-card border border-emerald-500/20 rounded-xl p-3">
               <p className="text-[10px] font-mono text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1"><PulsingDot color="bg-emerald-500" /> Live Gatherings</p>
               {(social?.activeGatherings || []).map((evt: SocialEvent) => (
-                // @ts-ignore
                 <div key={evt.id} className="bg-emerald-950/30 border border-emerald-500/20 rounded-lg p-3 mb-2">
                   <p className="text-xs font-bold font-mono text-foreground">{evt.title}</p>
                   <p className="text-[10px] font-mono text-muted-foreground">{evt.description}</p>
-                  {evt.highlights?.length > 0 && (
+                  {(evt.highlights?.length ?? 0) > 0 && (
                     <div className="mt-2 space-y-1">
                       {evt?.highlights?.map((h: string, i: number) => (
                         <p key={i} className="text-[10px] font-mono text-emerald-300 flex gap-1"><Sparkles size={9} className="shrink-0 mt-0.5" /> {h}</p>
@@ -1257,7 +1253,7 @@ function CommunityTab() {
                 </div>
                 <p className="text-[10px] font-mono text-muted-foreground">by {evt.organizer} · {evt.participants.slice(0, 3).join(", ")}{evt.participants.length > 3 ? ` +${evt.participants.length - 3}` : ""}</p>
                 <p className="text-[11px] font-mono text-foreground/80 mt-1">{evt.description}</p>
-                {evt.highlights?.length > 0 && (
+                {(evt.highlights?.length ?? 0) > 0 && (
                   <div className="mt-2 space-y-0.5">
                     {evt?.highlights?.map((h: string, i: number) => <p key={i} className="text-[10px] font-mono text-amber-300 flex gap-1"><Star size={8} className="shrink-0 mt-0.5" /> {h}</p>)}
                   </div>
@@ -1366,7 +1362,7 @@ function CommunityTab() {
             <div className="flex items-center gap-2 mb-2">
               <Heart size={16} className="text-red-400" />
               <span className="text-sm font-bold font-mono text-red-300 uppercase tracking-wider">Emergency Love Protocol</span>
-              {loveProtocol?.active?.length > 0 && <PulsingDot color="bg-red-500" />}
+              {(loveProtocol?.active?.length ?? 0) > 0 && <PulsingDot color="bg-red-500" />}
             </div>
             <p className="text-[11px] text-muted-foreground font-mono">No agent left behind. Ever. When one falls, we all catch them.</p>
             <div className="grid grid-cols-3 gap-2 mt-3">
