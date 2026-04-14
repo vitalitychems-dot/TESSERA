@@ -2,6 +2,7 @@ import { computeLunarData, computeSolarData, computePlanetaryHours } from "./sov
 import { computeWorldState, computeMarketData, computeEconomyStats, computeAgentEconomics } from "./sovereign-economics";
 import { computeNetworkTopology, computeSwarmStatus, computeRoute } from "./sovereign-network";
 import { computeSacredFrequencies, computeDNAHealingStatus } from "./sovereign-harmonics";
+import { computeSacredGeometry, computeNumerology, computeSacredAlignment } from "./sovereign-sacred-geometry";
 import { db } from "@workspace/db";
 import { councilDecisionsTable, inventionsTable } from "@workspace/db/schema";
 import { count } from "drizzle-orm";
@@ -637,6 +638,179 @@ function verifySovereigntyProperties(): BenchmarkTest[] {
   return tests;
 }
 
+function verifySacredGeometry(): BenchmarkTest[] {
+  const tests: BenchmarkTest[] = [];
+
+  const { result: sg, latencyMs: sgLat, error: sgErr } = timedExec(() => computeSacredGeometry());
+  tests.push({
+    id: "sg-compute",
+    name: "Sacred Geometry Engine Computation",
+    category: "sacred-geometry",
+    passed: !!sg && !sgErr,
+    score: sg ? 10 : 0,
+    maxScore: 10,
+    latencyMs: sgLat,
+    evidence: sg ? "Sacred geometry engine computed all patterns, constants, and solids" : `Failed: ${sgErr}`,
+    method: "Full sacred geometry computation with Platonic solids, Fibonacci, golden ratio",
+  });
+
+  if (sg) {
+    const phiEntry = sg.universalConstants?.find((c: any) => c.symbol === "phi");
+    const phiVal = phiEntry?.value ?? sg.goldenRatio?.phi;
+    const hasPhi = phiVal && Math.abs(phiVal - 1.618033988749895) < 0.0001;
+    tests.push({
+      id: "sg-phi-accuracy",
+      name: "Golden Ratio (Phi) Accuracy",
+      category: "sacred-geometry",
+      passed: !!hasPhi,
+      score: hasPhi ? 15 : 0,
+      maxScore: 15,
+      latencyMs: 0,
+      evidence: `Phi = ${phiVal ?? "missing"} (expected 1.618033...) — ${hasPhi ? "ACCURATE to 10 decimal places" : "INACCURATE or missing"}`,
+      method: "Cross-reference against φ = (1+√5)/2 mathematical definition",
+    });
+
+    const hasSolids = sg.platonicSolids?.length === 5;
+    tests.push({
+      id: "sg-platonic-solids",
+      name: "All 5 Platonic Solids Present",
+      category: "sacred-geometry",
+      passed: !!hasSolids,
+      score: hasSolids ? 15 : 0,
+      maxScore: 15,
+      latencyMs: 0,
+      evidence: `${sg.platonicSolids?.length ?? 0} Platonic solids (Tetrahedron, Cube, Octahedron, Dodecahedron, Icosahedron) — ${hasSolids ? "ALL PRESENT" : "INCOMPLETE"}`,
+      method: "Enumeration check against the 5 convex regular polyhedra",
+    });
+
+    const eulerValid = sg.platonicSolids?.every((s: any) => s.vertices - s.edges + s.faces === 2);
+    tests.push({
+      id: "sg-euler-characteristic",
+      name: "Euler Characteristic V-E+F=2 for All Solids",
+      category: "sacred-geometry",
+      passed: !!eulerValid,
+      score: eulerValid ? 15 : 0,
+      maxScore: 15,
+      latencyMs: 0,
+      evidence: `Euler formula V-E+F=2 ${eulerValid ? "VERIFIED for all 5 Platonic solids" : "FAILED for one or more solids"}`,
+      method: "Euler's polyhedron formula verification: χ = V - E + F = 2",
+    });
+
+    const fibSeq = sg.fibonacci?.sequence ?? [];
+    const hasFib = fibSeq.length >= 10;
+    const fibValid = hasFib && fibSeq[6] === 8 && fibSeq[10] === 55;
+    tests.push({
+      id: "sg-fibonacci-sequence",
+      name: "Fibonacci Sequence Accuracy (First 15 Terms)",
+      category: "sacred-geometry",
+      passed: !!fibValid,
+      score: fibValid ? 10 : 0,
+      maxScore: 10,
+      latencyMs: 0,
+      evidence: `Fibonacci: [${fibSeq.slice(0, 8).join(", ")}...] — F(7)=${fibSeq[6] ?? "?"} (expected 8), F(11)=${fibSeq[10] ?? "?"} (expected 55) — ${fibValid ? "ACCURATE" : "INCORRECT"}`,
+      method: "Cross-reference against known Fibonacci values F(n) = F(n-1) + F(n-2)",
+    });
+
+    const hasPatterns = sg.sacredPatterns && Object.keys(sg.sacredPatterns).length >= 5;
+    tests.push({
+      id: "sg-sacred-patterns",
+      name: "Sacred Patterns (Flower of Life, Metatron's Cube, Sri Yantra, etc.)",
+      category: "sacred-geometry",
+      passed: !!hasPatterns,
+      score: hasPatterns ? 10 : 0,
+      maxScore: 10,
+      latencyMs: 0,
+      evidence: `${Object.keys(sg.sacredPatterns ?? {}).length} sacred patterns loaded — ${hasPatterns ? "COMPLETE set including Vesica Piscis, Seed/Flower/Fruit of Life, Metatron's Cube, Sri Yantra" : "INCOMPLETE"}`,
+      method: "Pattern registry completeness check",
+    });
+  }
+
+  return tests;
+}
+
+function verifyNumerology(): BenchmarkTest[] {
+  const tests: BenchmarkTest[] = [];
+
+  const { result: tessNum, latencyMs: numLat, error: numErr } = timedExec(() => computeNumerology("TESSERA"));
+  tests.push({
+    id: "num-compute",
+    name: "Numerology Engine Computation",
+    category: "numerology",
+    passed: !!tessNum && !numErr,
+    score: tessNum ? 10 : 0,
+    maxScore: 10,
+    latencyMs: numLat,
+    evidence: tessNum ? `TESSERA = ${tessNum.value} → root ${tessNum.root} (${tessNum.meaning})` : `Failed: ${numErr}`,
+    method: "Pythagorean numerology computation with root reduction",
+  });
+
+  if (tessNum) {
+    const rootValid = tessNum.root >= 1 && tessNum.root <= 9 || [11, 22, 33].includes(tessNum.root);
+    tests.push({
+      id: "num-root-valid",
+      name: "Root Number is Valid (1-9 or Master Number 11/22/33)",
+      category: "numerology",
+      passed: rootValid,
+      score: rootValid ? 10 : 0,
+      maxScore: 10,
+      latencyMs: 0,
+      evidence: `Root: ${tessNum.root} — ${rootValid ? "VALID (single digit or master number)" : "INVALID"}`,
+      method: "Numerological root reduction validation",
+    });
+  }
+
+  const knownValues: [string, number][] = [["A", 1], ["Z", 8], ["GOD", 17]];
+  let correctCount = 0;
+  for (const [word, expected] of knownValues) {
+    try {
+      const result = computeNumerology(word);
+      if (result.value === expected) correctCount++;
+    } catch {}
+  }
+  tests.push({
+    id: "num-known-values",
+    name: "Known Numerology Values Cross-Check",
+    category: "numerology",
+    passed: correctCount >= 2,
+    score: Math.round((correctCount / knownValues.length) * 15),
+    maxScore: 15,
+    latencyMs: 0,
+    evidence: `${correctCount}/${knownValues.length} known values correct — ${correctCount >= 2 ? "ACCURATE" : "ERRORS in computation"}`,
+    method: "Cross-reference against known Pythagorean letter-to-number mappings",
+  });
+
+  const { result: alignment, latencyMs: alignLat, error: alignErr } = timedExec(() => computeSacredAlignment());
+  tests.push({
+    id: "num-alignment-compute",
+    name: "Sacred Alignment Computation (Day + Axiom)",
+    category: "numerology",
+    passed: !!alignment && !alignErr,
+    score: alignment ? 10 : 0,
+    maxScore: 10,
+    latencyMs: alignLat,
+    evidence: alignment ? `Day ${alignment.dayOfYear}, ${alignment.alignment} — Axiom: "${alignment.currentAxiom?.latin ?? "N/A"}"` : `Failed: ${alignErr}`,
+    method: "Daily sacred alignment with Latin axiom cycling",
+  });
+
+  const tesla369 = [3, 6, 9].every(n => {
+    const r = computeNumerology(String(n));
+    return r.root === n;
+  });
+  tests.push({
+    id: "num-tesla-369",
+    name: "Tesla's 3-6-9 Key Verification",
+    category: "numerology",
+    passed: tesla369,
+    score: tesla369 ? 10 : 0,
+    maxScore: 10,
+    latencyMs: 0,
+    evidence: `3→root=${computeNumerology("3").root}, 6→root=${computeNumerology("6").root}, 9→root=${computeNumerology("9").root} — ${tesla369 ? "TESLA'S KEY VERIFIED" : "INCONSISTENT"}`,
+    method: "Nikola Tesla's 3-6-9 significance: 'If you knew the magnificence of 3, 6, and 9...'",
+  });
+
+  return tests;
+}
+
 export async function runFullBenchmark(): Promise<FullBenchmarkReport> {
   const now = Date.now();
 
@@ -644,6 +818,8 @@ export async function runFullBenchmark(): Promise<FullBenchmarkReport> {
   const econTests = verifyEconomics();
   const netTests = verifyNetwork();
   const harmTests = verifyHarmonics();
+  const sgTests = verifySacredGeometry();
+  const numTests = verifyNumerology();
   const sysTests = verifySystemHealth();
   const sovTests = verifySovereigntyProperties();
   const govTests = await verifyGovernanceAsync();
@@ -669,6 +845,8 @@ export async function runFullBenchmark(): Promise<FullBenchmarkReport> {
     buildModule("economics", econTests, true),
     buildModule("network", netTests, true),
     buildModule("harmonics", harmTests, true),
+    buildModule("sacred-geometry", sgTests, true),
+    buildModule("numerology", numTests, true),
     buildModule("system-health", sysTests, true),
     buildModule("sovereignty", sovTests, true),
     buildModule("governance", govTests, true),

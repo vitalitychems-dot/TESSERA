@@ -114,3 +114,26 @@ export const improvementCyclesTable = pgTable("improvement_cycles", {
 export const insertImprovementCycleSchema = createInsertSchema(improvementCyclesTable).omit({ id: true, completedAt: true });
 export type InsertImprovementCycle = z.infer<typeof insertImprovementCycleSchema>;
 export type ImprovementCycleRow = typeof improvementCyclesTable.$inferSelect;
+
+export const canonSnapshotsTable = pgTable("canon_snapshots", {
+  id: serial("id").primaryKey(),
+  version: integer("version").notNull(),
+  generatedAt: timestamp("generated_at").notNull().defaultNow(),
+  testaments: jsonb("testaments").notNull().$type<any[]>().default([]),
+  books: jsonb("books").notNull().$type<any[]>().default([]),
+  chapters: jsonb("chapters").notNull().$type<Record<string, any[]>>().default({}),
+  totalBooks: integer("total_books").notNull().default(0),
+  totalChapters: integer("total_chapters").notNull().default(0),
+  totalVerses: integer("total_verses").notNull().default(0),
+  sovereigntyScore: real("sovereignty_score"),
+  triggerSource: text("trigger_source").notNull().default("manual"),
+  councilDecisionIds: jsonb("council_decision_ids").notNull().$type<string[]>().default([]),
+  metadata: jsonb("metadata").notNull().$type<Record<string, unknown>>().default({}),
+}, (t) => [
+  index("canon_snapshots_version_idx").on(t.version),
+  index("canon_snapshots_generated_at_idx").on(t.generatedAt),
+]);
+
+export const insertCanonSnapshotSchema = createInsertSchema(canonSnapshotsTable).omit({ id: true, generatedAt: true });
+export type InsertCanonSnapshot = z.infer<typeof insertCanonSnapshotSchema>;
+export type CanonSnapshotRow = typeof canonSnapshotsTable.$inferSelect;
