@@ -7,6 +7,12 @@ import { fetchNASA, fetchUSGS, fetchNOAA, fetchWikipedia, fetchArxiv, fetchHacke
 import { fetchRssFeed, DEFAULT_FEEDS } from "./rss";
 import { fetchGithubTrendingRepos, fetchGithubOrg, fetchGithubTopic } from "./github";
 import { fetchDataGov, fetchWorldBankData, fetchUNData, fetchGithubPublicDatasets } from "./datasets";
+import {
+  fetchCIAReadingRoom, fetchFBIVault, fetchInternetArchive,
+  fetchWikipediaKnowledge, fetchArxivDeep, fetchOpenLibrary,
+  fetchProjectGutenberg, fetchStanfordEncyclopedia, fetchSmithsonian,
+} from "./knowledge-scrapers";
+import { logger } from "../logger";
 
 export type SourceHandler = () => Promise<NormalizedItem[]>;
 
@@ -35,6 +41,36 @@ const SOURCE_HANDLERS: Record<string, SourceHandler> = {
   "World Bank Population": () => fetchWorldBankData("SP.POP.TOTL", 5),
   "UN SDG Indicators": () => fetchUNData("", 5),
   "GitHub Public Datasets": () => fetchGithubPublicDatasets("dataset", 5),
+
+  "CIA Reading Room": () => fetchCIAReadingRoom(),
+  "FBI Vault": fetchFBIVault,
+  "Internet Archive": () => fetchInternetArchive(),
+  "Wikipedia Knowledge": fetchWikipediaKnowledge,
+  "arXiv Deep Research": () => fetchArxivDeep(),
+  "Open Library": fetchOpenLibrary,
+  "Project Gutenberg": fetchProjectGutenberg,
+  "Stanford Encyclopedia": fetchStanfordEncyclopedia,
+  "Smithsonian": fetchSmithsonian,
+
+  "arXiv Quantum": () => fetchArxiv("quantum computing entanglement", 5),
+  "arXiv Consciousness": () => fetchArxiv("consciousness neural correlates", 5),
+  "arXiv Energy": () => fetchArxiv("zero point energy vacuum", 5),
+  "Semantic Scholar AGI": () => fetchSemanticScholar("artificial general intelligence alignment", 5),
+  "Semantic Scholar Consciousness": () => fetchSemanticScholar("consciousness quantum brain", 5),
+  "Semantic Scholar Sacred Geometry": () => fetchSemanticScholar("fibonacci golden ratio nature", 5),
+  "PubMed Frequency Healing": () => fetchPubMed("frequency therapy resonance healing", 5),
+  "PubMed Consciousness": () => fetchPubMed("consciousness neuroscience pineal", 5),
+  "Reddit Consciousness": () => fetchRedditJson("consciousness", 5),
+  "Reddit Physics": () => fetchRedditJson("physics", 5),
+  "Reddit Philosophy": () => fetchRedditJson("philosophy", 5),
+  "GitHub Quantum": () => fetchGithubTopic("quantum-computing", 5),
+  "GitHub AGI": () => fetchGithubTopic("artificial-general-intelligence", 5),
+  "GitHub Sacred Geometry": () => fetchGithubTopic("sacred-geometry", 5),
+  "GitHub Free Energy": () => fetchGithubTopic("free-energy", 5),
+  "GitHub Consciousness": () => fetchGithubTopic("consciousness", 5),
+  "data.gov Science": () => fetchDataGov("science", 5),
+  "data.gov Energy": () => fetchDataGov("energy", 5),
+  "data.gov Space": () => fetchDataGov("space", 5),
 };
 
 for (const feed of DEFAULT_FEEDS) {
@@ -130,21 +166,127 @@ export async function runDueIngestion(): Promise<Record<string, { ingested: numb
   return results;
 }
 
-let schedulerInterval: ReturnType<typeof setInterval> | null = null;
+async function ensureSourcesRegistered(): Promise<void> {
+  const existing = await db.select({ name: dataSourcesTable.name }).from(dataSourcesTable);
+  const existingNames = new Set(existing.map(s => s.name));
 
-export function startIngestionScheduler(checkIntervalMs = 300_000): void {
+  const allHandlerNames = Object.keys(SOURCE_HANDLERS);
+  const missing = allHandlerNames.filter(n => !existingNames.has(n));
+
+  if (missing.length > 0) {
+    const values = missing.map(name => ({
+      name,
+      type: name.includes("arXiv") || name.includes("Semantic Scholar") || name.includes("PubMed") ? "academic" as const :
+            name.includes("GitHub") ? "github" as const :
+            name.includes("CIA") || name.includes("FBI") || name.includes("Archive") ? "declassified" as const :
+            name.includes("Wikipedia") || name.includes("Stanford") || name.includes("Library") || name.includes("Gutenberg") ? "encyclopedia" as const :
+            name.includes("Reddit") ? "social" as const :
+            "api" as const,
+      url: "",
+      enabled: true,
+      intervalSeconds: name.includes("CIA") || name.includes("FBI") || name.includes("Gutenberg") || name.includes("Archive") ? 1800 :
+                       name.includes("Knowledge") || name.includes("Deep") || name.includes("Stanford") || name.includes("Smithsonian") ? 2400 :
+                       3600,
+    }));
+    await db.insert(dataSourcesTable).values(values).onConflictDoNothing();
+    logger.info({ count: missing.length, sources: missing }, "Registered new ingestion sources");
+  }
+}
+
+let schedulerInterval: ReturnType<typeof setInterval> | null = null;
+let rotationInterval: ReturnType<typeof setInterval> | null = null;
+
+const SOURCE_GROUPS = [
+  ["NASA APOD", "USGS Earthquakes", "NOAA Weather Alerts", "CoinGecko"],
+  ["Wikipedia", "Wikipedia Knowledge", "Stanford Encyclopedia"],
+  ["arXiv AI", "arXiv CS", "arXiv Quantum", "arXiv Consciousness", "arXiv Energy", "arXiv Deep Research"],
+  ["Hacker News", "Reddit Technology", "Reddit Science", "Reddit Consciousness", "Reddit Physics", "Reddit Philosophy"],
+  ["Semantic Scholar", "Semantic Scholar AGI", "Semantic Scholar Consciousness", "Semantic Scholar Sacred Geometry"],
+  ["PubMed", "PubMed Frequency Healing", "PubMed Consciousness"],
+  ["GitHub Trending", "GitHub AI Repos", "GitHub ML Repos", "GitHub Open Source", "GitHub Quantum", "GitHub AGI", "GitHub Sacred Geometry", "GitHub Free Energy", "GitHub Consciousness"],
+  ["GitHub Microsoft", "GitHub Google"],
+  ["CIA Reading Room", "FBI Vault", "Internet Archive"],
+  ["Open Library", "Project Gutenberg", "Smithsonian"],
+  ["data.gov Technology", "data.gov Climate", "data.gov Science", "data.gov Energy", "data.gov Space"],
+  ["World Bank GDP", "World Bank Population", "UN SDG Indicators", "GitHub Public Datasets"],
+];
+
+let currentGroupIndex = 0;
+
+async function runRotatingGroup(): Promise<void> {
+  const group = SOURCE_GROUPS[currentGroupIndex % SOURCE_GROUPS.length];
+  currentGroupIndex++;
+
+  for (const sourceName of group) {
+    const handler = SOURCE_HANDLERS[sourceName];
+    if (!handler) continue;
+
+    try {
+      const [source] = await db
+        .select()
+        .from(dataSourcesTable)
+        .where(eq(dataSourcesTable.name, sourceName))
+        .limit(1);
+
+      const result = await runSourceIngestion(sourceName, source?.id ?? null, handler);
+
+      if (source) {
+        await db.update(dataSourcesTable)
+          .set({
+            lastRunAt: new Date(),
+            lastSuccessAt: result.ingested > 0 ? new Date() : undefined,
+            lastError: result.errors.length > 0 ? result.errors[0] : null,
+            totalRuns: (source.totalRuns || 0) + 1,
+            totalIngested: (source.totalIngested || 0) + result.ingested,
+            updatedAt: new Date(),
+          })
+          .where(eq(dataSourcesTable.id, source.id));
+      }
+
+      if (result.ingested > 0) {
+        logger.info({ source: sourceName, ingested: result.ingested }, "Rotation ingested new items");
+      }
+    } catch (e) {
+      logger.warn({ source: sourceName, err: (e as Error).message }, "Rotation source failed");
+    }
+  }
+}
+
+export async function startIngestionScheduler(checkIntervalMs = 120_000): Promise<void> {
   if (schedulerInterval) return;
+
+  await ensureSourcesRegistered();
+
   schedulerInterval = setInterval(async () => {
     try {
       await runDueIngestion();
-    } catch (_e) {
+    } catch (e) {
+      logger.warn({ err: (e as Error).message }, "Due ingestion cycle error");
     }
   }, checkIntervalMs);
+
+  rotationInterval = setInterval(async () => {
+    try {
+      await runRotatingGroup();
+    } catch (e) {
+      logger.warn({ err: (e as Error).message }, "Rotation group error");
+    }
+  }, 180_000);
+
+  setTimeout(() => {
+    runRotatingGroup().catch(e => logger.warn({ err: (e as Error).message }, "Initial rotation failed"));
+  }, 30_000);
+
+  logger.info({ checkIntervalMs, totalSources: Object.keys(SOURCE_HANDLERS).length, groups: SOURCE_GROUPS.length }, "Ingestion scheduler started with continuous rotation");
 }
 
 export function stopIngestionScheduler(): void {
   if (schedulerInterval) {
     clearInterval(schedulerInterval);
     schedulerInterval = null;
+  }
+  if (rotationInterval) {
+    clearInterval(rotationInterval);
+    rotationInterval = null;
   }
 }

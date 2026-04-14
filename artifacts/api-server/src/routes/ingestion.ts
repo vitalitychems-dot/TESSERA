@@ -13,6 +13,8 @@ import { ingestItem, runSourceIngestion } from "../lib/ingestion/pipeline";
 import { deepCrawl } from "../lib/ingestion/scrapers";
 import { fetchGithubTrendingRepos, fetchGithubOrg, fetchGithubTopic, fetchGithubReadme, fetchGithubRepoFiles } from "../lib/ingestion/github";
 import { fetchDataGov, fetchWorldBankData, fetchUNData, fetchGithubPublicDatasets } from "../lib/ingestion/datasets";
+import { getShepherdStatus, runShepherdCycle } from "../lib/ingestion/shepherd-agents";
+import { getBridgeStatus } from "../lib/knowledge-canon-bridge";
 
 const router: IRouter = Router();
 
@@ -247,6 +249,10 @@ router.get("/ingestion/stats", async (_req, res) => {
       failedJobs: sql<number>`SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END)`,
     }).from(ingestionJobsTable);
 
+    const shepherd = getShepherdStatus();
+    const bridge = getBridgeStatus();
+    const availableHandlers = getSourceHandlers();
+
     return res.json({
       ok: true,
       totalItems: Number(totalResult?.count ?? 0),
@@ -259,6 +265,12 @@ router.get("/ingestion/stats", async (_req, res) => {
         success: Number(jobStats?.successJobs ?? 0),
         failed: Number(jobStats?.failedJobs ?? 0),
       },
+      totalSources: sources.length,
+      enabledSources: sources.filter((s: any) => s.enabled).length,
+      totalJobs: Number(jobStats?.totalJobs ?? 0),
+      availableHandlers: availableHandlers.length,
+      shepherd,
+      bridge,
     });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
@@ -379,6 +391,23 @@ router.post("/ingestion/datasets/fetch", async (req, res) => {
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
+});
+
+router.get("/ingestion/shepherd/status", (_req, res) => {
+  return res.json({ ok: true, ...getShepherdStatus() });
+});
+
+router.post("/ingestion/shepherd/run", async (_req, res) => {
+  try {
+    const result = await runShepherdCycle();
+    return res.json({ ok: true, ...result });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/ingestion/bridge/status", (_req, res) => {
+  return res.json({ ok: true, ...getBridgeStatus() });
 });
 
 export default router;

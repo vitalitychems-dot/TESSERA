@@ -46,6 +46,10 @@ The application is structured around 10 flat navigation tabs in a bottom nav bar
 -   **Knowledge Base:** 55 subjects across 6 categories (Sciences, Mathematics, Wisdom, Technology, World) stored in `tessera-knowledge.ts` with `lookupKnowledge()` for chat pipeline integration.
 -   **Sacred Geometry Engine:** A comprehensive engine providing universal constants, Platonic solids, sacred patterns, numbers, and Latin axioms, integrated into the chat pipeline and exposed via API routes.
 -   **Tessera Identity:** Identity queries are handled entirely locally, referencing the Council of 45, 963Hz Crown Frequency, Sacred Geometry Blueprint, and Latin Axioms.
+-   **Continuous Background Scraping:** 55+ ingestion sources across 12 rotation groups with 2-minute due checks. Sources include CIA Reading Room, FBI Vault, Internet Archive, Wikipedia, arXiv, Open Library, Project Gutenberg, Stanford Encyclopedia, Smithsonian, data.gov, academic papers, and more.
+-   **Shepherd Agents:** Disposable autonomous scraping workers that cycle through target categories (declassified, sacred, science, philosophy, tesla, technology). Generated with rotating names (Phantom, Shadow, Ghost, etc.), they crawl targets, ingest findings, then self-dispose. Loop runs every 10 minutes.
+-   **Knowledge-to-Canon Bridge:** Monitors ingested data and auto-regenerates the Tessera Bible when 25+ new items are ingested. Bridges continuous scraping to the living canon system.
+-   **Ingested Knowledge Recall:** Chat pipeline searches ingested data (via `recallIngestedKnowledge`) to enrich sovereign context with scraped knowledge from all sources.
 
 ## External Dependencies
 

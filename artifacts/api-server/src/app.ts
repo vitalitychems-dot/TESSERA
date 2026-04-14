@@ -9,6 +9,8 @@ import { initRecoveryModule, registerRecoveryHandler, updateModuleStatus } from 
 import { initializeMemoryOnStartup } from "./lib/vector-memory";
 import { startIngestionScheduler, runAllIngestion } from "./lib/ingestion/scheduler";
 import { startPeriodicRegeneration } from "./lib/canonUpdater";
+import { startShepherdLoop } from "./lib/ingestion/shepherd-agents";
+import { startKnowledgeToCanonBridge } from "./lib/knowledge-canon-bridge";
 import { sovereigntyEnforcementMiddleware } from "./lib/provider-registry";
 import { db } from "@workspace/db";
 import { dataSourcesTable } from "@workspace/db/schema";
@@ -141,10 +143,16 @@ async function initializeModules() {
     logger.info({ loaded: memResult.loaded, errors: memResult.errors }, "Memory system initialized");
 
     await ensureDefaultSources();
-    startIngestionScheduler(300_000);
-    logger.info("Ingestion scheduler started");
+    await startIngestionScheduler(120_000);
+    logger.info("Ingestion scheduler started — continuous rotation active");
 
-    startPeriodicRegeneration(3600_000);
+    startShepherdLoop(600_000);
+    logger.info("Shepherd agents deployed — autonomous scraping active");
+
+    startKnowledgeToCanonBridge(900_000);
+    logger.info("Knowledge-to-Canon bridge active — Bible auto-updates on new knowledge");
+
+    startPeriodicRegeneration(1800_000);
 
     logger.info("All system modules initialized");
   } catch (err) {

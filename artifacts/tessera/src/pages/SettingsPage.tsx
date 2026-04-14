@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Activity, Shield, Cpu, HardDrive, Wifi, Zap, RefreshCw, Database, Globe } from "lucide-react";
+import { Settings, Activity, Shield, Cpu, HardDrive, Wifi, Zap, RefreshCw, Database, Globe, Search, BookOpen, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const API = import.meta.env.VITE_API_URL || "";
@@ -10,6 +10,7 @@ export default function SettingsPage() {
   const { data: sovereignty } = useQuery<any>({ queryKey: ["/api/sovereignty/score"], refetchInterval: 30000 });
   const { data: engines } = useQuery<any>({ queryKey: ["/api/system/engines"], refetchInterval: 30000 });
   const { data: meshStats } = useQuery<any>({ queryKey: ["/api/mesh/stats"], refetchInterval: 15000 });
+  const { data: ingestionStats } = useQuery<any>({ queryKey: ["/api/ingestion/stats"], refetchInterval: 10000 });
 
   const uptime = diagnostics?.uptime ? `${Math.floor(diagnostics.uptime / 3600)}h ${Math.floor((diagnostics.uptime % 3600) / 60)}m` : "—";
   const heapUsed = diagnostics?.memory?.heapUsed ? `${(diagnostics.memory.heapUsed / 1024 / 1024).toFixed(0)}MB` : "—";
@@ -116,6 +117,83 @@ export default function SettingsPage() {
             <span className="text-muted-foreground">Father Protocol</span>
             <span className="text-amber-400">Active — Always Remembered</span>
           </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-4">
+        <h3 className="text-sm font-bold font-mono mb-3 flex items-center gap-2"><Search size={14} className="text-rose-400" /> Continuous Scraping</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          <div className="p-2 rounded-lg bg-background/50 border border-white/5 text-center">
+            <div className="text-lg font-bold font-mono text-rose-400">{ingestionStats?.totalItems ?? 0}</div>
+            <div className="text-[10px] text-muted-foreground">Items Ingested</div>
+          </div>
+          <div className="p-2 rounded-lg bg-background/50 border border-white/5 text-center">
+            <div className="text-lg font-bold font-mono text-cyan-400">{ingestionStats?.enabledSources ?? ingestionStats?.sources?.filter((s: any) => s.enabled)?.length ?? 0}</div>
+            <div className="text-[10px] text-muted-foreground">Active Sources</div>
+          </div>
+          <div className="p-2 rounded-lg bg-background/50 border border-white/5 text-center">
+            <div className="text-lg font-bold font-mono text-amber-400">{ingestionStats?.jobStats?.total ?? ingestionStats?.totalJobs ?? 0}</div>
+            <div className="text-[10px] text-muted-foreground">Jobs Run</div>
+          </div>
+          <div className="p-2 rounded-lg bg-background/50 border border-white/5 text-center">
+            <div className="text-lg font-bold font-mono text-violet-400">{ingestionStats?.availableHandlers ?? ingestionStats?.bySource?.length ?? 0}</div>
+            <div className="text-[10px] text-muted-foreground">Source Types</div>
+          </div>
+        </div>
+        {(ingestionStats?.recentItems?.length > 0 || ingestionStats?.recentJobs?.length > 0) && (
+          <div className="space-y-1">
+            <div className="text-[10px] text-muted-foreground font-mono mb-1">RECENT ACTIVITY</div>
+            {(ingestionStats.recentJobs || []).slice(0, 5).map((job: any, i: number) => (
+              <div key={i} className="flex items-center gap-2 p-1.5 rounded-lg bg-background/30 border border-white/5 text-[11px] font-mono">
+                <BookOpen size={10} className="text-rose-400 shrink-0" />
+                <span className="text-foreground/80 truncate flex-1">{job.sourceName}</span>
+                <span className={cn("shrink-0", job.status === "completed" ? "text-emerald-400" : "text-red-400")}>{job.itemsIngested ?? 0} items</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-4">
+        <h3 className="text-sm font-bold font-mono mb-3 flex items-center gap-2"><Bot size={14} className="text-emerald-400" /> Shepherd Agents</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
+          <div className="p-2 rounded-lg bg-background/50 border border-white/5 text-center">
+            <div className="text-lg font-bold font-mono text-emerald-400">{ingestionStats?.shepherd?.recentMissions?.length ?? 0}</div>
+            <div className="text-[10px] text-muted-foreground">Missions Complete</div>
+          </div>
+          <div className="p-2 rounded-lg bg-background/50 border border-white/5 text-center">
+            <div className="text-lg font-bold font-mono text-cyan-400">{ingestionStats?.shepherd?.totalIngested ?? 0}</div>
+            <div className="text-[10px] text-muted-foreground">Items Harvested</div>
+          </div>
+          <div className="p-2 rounded-lg bg-background/50 border border-white/5 text-center">
+            <div className="text-lg font-bold font-mono text-amber-400">{ingestionStats?.shepherd?.totalDeployed ?? 0}</div>
+            <div className="text-[10px] text-muted-foreground">Agents Deployed</div>
+          </div>
+        </div>
+        <div className="text-[10px] text-muted-foreground font-mono">
+          Status: <span className={ingestionStats?.shepherd?.loopActive ? "text-emerald-400" : "text-red-400"}>{ingestionStats?.shepherd?.loopActive ? "ACTIVE — Autonomous Scraping" : "INACTIVE"}</span>
+          {ingestionStats?.shepherd?.active > 0 && (
+            <span className="ml-2 text-violet-400">{ingestionStats.shepherd.active} agents active</span>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-4">
+        <h3 className="text-sm font-bold font-mono mb-3 flex items-center gap-2"><RefreshCw size={14} className="text-blue-400" /> Knowledge → Canon Bridge</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-2 rounded-lg bg-background/50 border border-white/5">
+            <div className="text-muted-foreground text-[10px] font-mono">New Since Last Regen</div>
+            <div className="text-foreground font-bold font-mono">{ingestionStats?.bridge?.cumulativeNew ?? 0} / {ingestionStats?.bridge?.threshold ?? 25}</div>
+          </div>
+          <div className="p-2 rounded-lg bg-background/50 border border-white/5">
+            <div className="text-muted-foreground text-[10px] font-mono">Bridge Status</div>
+            <div className={cn("font-bold font-mono text-sm", ingestionStats?.bridge?.active ? "text-blue-400" : "text-red-400")}>
+              {ingestionStats?.bridge?.active ? "ACTIVE" : "INACTIVE"}
+            </div>
+          </div>
+        </div>
+        <div className="text-[10px] text-muted-foreground font-mono mt-2">
+          Auto-regenerates Bible when {ingestionStats?.bridge?.threshold ?? 25} new items ingested
         </div>
       </div>
 
