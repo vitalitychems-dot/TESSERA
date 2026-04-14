@@ -1,7 +1,7 @@
 import http from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { v4 as uuidv4 } from "uuid";
-import app from "./app";
+import app, { initPromise, setServerReady, setServerUnready, deriveStartupProbeRoutes, type StartupProbeRoute } from "./app";
 import { logger } from "./lib/logger";
 import {
   registerSession,
@@ -13,6 +13,14 @@ import {
   startMeshHeartbeatMonitor,
 } from "./lib/session-mesh";
 import { validateMeshToken } from "./lib/mesh-auth";
+import { setActualPort } from "./lib/server-config";
+import {
+  setOnRoutesHealthyCallback,
+  setOnRoutesUnhealthyCallback,
+  setWatchdogProbeRoutes,
+  INTERNAL_PROBE_HEADER,
+  INTERNAL_PROBE_SECRET,
+} from "./lib/auto-recovery";
 import { db } from "@workspace/db";
 import { swarmTasksTable, decisionHistoryTable } from "@workspace/db/schema";
 import { desc } from "drizzle-orm";
@@ -25,13 +33,43 @@ if (!rawPort) {
   );
 }
 
-const port = Number(rawPort);
+const basePort = Number(rawPort);
 
-if (Number.isNaN(port) || port <= 0) {
+if (Number.isNaN(basePort) || basePort <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
 const server = http.createServer(app);
+
+async function findAvailablePort(startPort: number, maxAttempts = 10): Promise<number> {
+  return new Promise((resolve, reject) => {
+    let attempt = 0;
+
+    function tryPort(p: number) {
+      const probe = http.createServer();
+      probe.once("error", (err: NodeJS.ErrnoException) => {
+        probe.close();
+        if (err.code === "EADDRINUSE") {
+          attempt++;
+          if (attempt >= maxAttempts) {
+            reject(new Error(`No available port found after ${maxAttempts} attempts starting from ${startPort}`));
+            return;
+          }
+          logger.warn({ port: p, nextPort: p + 1 }, "Port in use, trying next port");
+          tryPort(p + 1);
+        } else {
+          reject(err);
+        }
+      });
+      probe.once("listening", () => {
+        probe.close(() => resolve(p));
+      });
+      probe.listen(p);
+    }
+
+    tryPort(startPort);
+  });
+}
 
 const wss = new WebSocketServer({ server, path: "/ws" });
 
@@ -236,10 +274,95 @@ wss.on("connection", (ws, req) => {
 
 startMeshHeartbeatMonitor();
 
-server.listen(port, (err?: Error) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
+const PROBE_MAX_ATTEMPTS = 3;
+const PROBE_RETRY_DELAY_MS = 1500;
+
+async function probeRoute(
+  baseUrl: string,
+  route: string,
+  treatNotFoundAsFailure: boolean,
+): Promise<{ status: number; ok: boolean }> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(`${baseUrl}${route}`, {
+      signal: controller.signal,
+      headers: { [INTERNAL_PROBE_HEADER]: INTERNAL_PROBE_SECRET },
+    });
+    clearTimeout(timeout);
+    const is404Failure = res.status === 404 && treatNotFoundAsFailure;
+    const ok = res.status < 500 && !is404Failure;
+    return { status: res.status, ok };
+  } catch (err: unknown) {
+    clearTimeout(timeout);
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.warn({ route, err: msg }, "Startup route probe attempt failed");
+    return { status: 0, ok: false };
+  }
+}
+
+async function runPostBindHealthProbe(port: number): Promise<void> {
+  const baseUrl = `http://localhost:${port}`;
+
+  const probeRoutes: StartupProbeRoute[] = deriveStartupProbeRoutes();
+  const staticCount = probeRoutes.filter(p => !p.hasParams).length;
+  const paramCount = probeRoutes.filter(p => p.hasParams).length;
+  logger.info(
+    { total: probeRoutes.length, staticRoutes: staticCount, parameterizedRoutes: paramCount },
+    "=== STARTUP ROUTE PROBE BEGIN — static routes: 404=failure; parameterized routes: 404=OK ===",
+  );
+
+  setWatchdogProbeRoutes(probeRoutes);
+  setOnRoutesHealthyCallback(setServerReady);
+  setOnRoutesUnhealthyCallback(() => setServerUnready("route-health-watchdog"));
+
+  for (let attempt = 1; attempt <= PROBE_MAX_ATTEMPTS; attempt++) {
+    const results = await Promise.all(
+      probeRoutes.map(p =>
+        probeRoute(baseUrl, p.path, !p.hasParams).then(res => ({ route: p.path, hasParams: p.hasParams, ...res })),
+      ),
+    );
+    const passed = results.filter(r => r.ok).length;
+    const failed = results.filter(r => !r.ok).map(r => ({ route: r.route, status: r.status, parameterized: r.hasParams }));
+    const allOk = failed.length === 0;
+
+    if (allOk) {
+      logger.info(
+        { passed, total: results.length, attempt },
+        "=== STARTUP ROUTE PROBE COMPLETE — all route categories healthy — opening to external traffic ===",
+      );
+      setServerReady();
+      return;
+    }
+
+    if (attempt < PROBE_MAX_ATTEMPTS) {
+      logger.warn({ failed, attempt, nextAttemptIn: `${PROBE_RETRY_DELAY_MS}ms` }, "Startup route probe: some routes failed — retrying");
+      await new Promise<void>(resolve => setTimeout(resolve, PROBE_RETRY_DELAY_MS));
+    } else {
+      logger.error(
+        { passed, total: results.length, failed },
+        "=== STARTUP ROUTE PROBE EXHAUSTED — auto-fix strategy: readiness gate stays CLOSED (503). Express route registration cannot be repaired in-process. Watchdog will re-open gate if routes recover on subsequent cycles. If routes are permanently missing, a process-manager restart (systemd/Docker restart policy) is required to re-register them. ===",
+      );
+    }
+  }
+}
+
+(async () => {
+  try {
+    await initPromise;
+    logger.info("Module initialization complete — binding port");
+
+    const port = await findAvailablePort(basePort);
+    if (port !== basePort) {
+      logger.warn({ requestedPort: basePort, actualPort: port }, "Port conflict resolved — using alternate port");
+    }
+    server.listen(port, async () => {
+      setActualPort(port);
+      logger.info({ port }, "Server listening with WebSocket mesh enabled");
+      await runPostBindHealthProbe(port);
+    });
+  } catch (err) {
+    logger.error({ err }, "Fatal: could not start server");
     process.exit(1);
   }
-  logger.info({ port }, "Server listening with WebSocket mesh enabled");
-});
+})();

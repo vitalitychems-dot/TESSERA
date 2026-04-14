@@ -2,20 +2,45 @@ import express, { type Express, type Request, type Response, type NextFunction }
 import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
+import type { IRouter } from "express";
 import { logger } from "./lib/logger";
 import { initFileIntegrity } from "./lib/file-integrity";
 import { startAnomalyMonitor, stopAnomalyMonitor, recordRequest } from "./lib/anomaly-detection";
-import { initRecoveryModule, registerRecoveryHandler, updateModuleStatus } from "./lib/auto-recovery";
+import { initRecoveryModule, registerRecoveryHandler, updateModuleStatus, startRouteHealthMonitor, INTERNAL_PROBE_HEADER, INTERNAL_PROBE_SECRET } from "./lib/auto-recovery";
 import { initializeMemoryOnStartup } from "./lib/vector-memory";
-import { startIngestionScheduler, runAllIngestion } from "./lib/ingestion/scheduler";
+import { startIngestionScheduler, isSchedulerStarted } from "./lib/ingestion/scheduler";
 import { startPeriodicRegeneration } from "./lib/canonUpdater";
 import { startShepherdLoop } from "./lib/ingestion/shepherd-agents";
 import { startKnowledgeToCanonBridge } from "./lib/knowledge-canon-bridge";
 import { sovereigntyEnforcementMiddleware } from "./lib/provider-registry";
 import { db } from "@workspace/db";
 import { dataSourcesTable } from "@workspace/db/schema";
+import { seedForumIdentities } from "./lib/forum-identity-registry";
 
 const app: Express = express();
+
+let serverReady = false;
+
+export function setServerReady(): void {
+  if (serverReady) return;
+  serverReady = true;
+  logger.info("Server readiness gate OPEN — accepting external traffic");
+}
+
+export function setServerUnready(reason: string): void {
+  if (!serverReady) return;
+  serverReady = false;
+  logger.warn({ reason }, "Server readiness gate CLOSED — returning 503 until routes recover; watchdog will re-open gate when healthy");
+}
+
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const isInternalProbe = req.headers[INTERNAL_PROBE_HEADER] === INTERNAL_PROBE_SECRET;
+  if (!serverReady && !isInternalProbe) {
+    res.status(503).json({ ok: false, error: "Server is starting up — not yet ready for traffic" });
+    return;
+  }
+  next();
+});
 
 app.use(
   pinoHttp({
@@ -85,6 +110,15 @@ function registerModuleHandlers(): void {
     updateModuleStatus("auto-recovery", "running");
     logger.info("auto-recovery module self-healed");
   });
+
+  registerRecoveryHandler("route-health", async () => {
+    updateModuleStatus("route-health", "recovering");
+    setServerUnready("route-health watchdog detected persistent route failures");
+    logger.warn(
+      "Route health recovery: closing readiness gate (503) — watchdog will re-open gate automatically once routes respond again",
+    );
+    updateModuleStatus("route-health", "running");
+  });
 }
 
 const DEFAULT_SOURCES = [
@@ -132,34 +166,215 @@ async function ensureDefaultSources(): Promise<void> {
   }
 }
 
-async function initializeModules() {
+const CRITICAL_ROUTES: Array<{ method: string; path: string }> = [
+  { method: "GET",  path: "/healthz" },
+  { method: "GET",  path: "/tesseract-forum/topics" },
+  { method: "POST", path: "/tesseract-forum/topics" },
+  { method: "GET",  path: "/diagnostics" },
+  { method: "GET",  path: "/provider-sovereignty/providers" },
+];
+
+type RouterLayer = {
+  route?: { path: string; methods: Record<string, boolean> };
+  handle?: { stack?: RouterLayer[] };
+  regexp?: RegExp;
+};
+
+export function collectRegisteredRoutes(routerHandle: IRouter): Set<string> {
+  const found = new Set<string>();
+  const stack: RouterLayer[] = (routerHandle as unknown as { stack?: RouterLayer[] }).stack ?? [];
+  for (const layer of stack) {
+    if (layer.route?.path) {
+      const methods = Object.keys(layer.route.methods).filter(m => layer.route!.methods[m]);
+      for (const m of methods) {
+        found.add(`${m.toUpperCase()} ${layer.route.path}`);
+      }
+    } else if (layer.handle?.stack) {
+      for (const entry of collectRegisteredRoutes(layer.handle as unknown as IRouter)) {
+        found.add(entry);
+      }
+    }
+  }
+  return found;
+}
+
+export interface StartupProbeRoute {
+  path: string;
+  hasParams: boolean;
+}
+
+export function deriveStartupProbeRoutes(): StartupProbeRoute[] {
+  const registered = collectRegisteredRoutes(router);
+  const probes: StartupProbeRoute[] = [];
+
+  for (const entry of registered) {
+    const spaceIdx = entry.indexOf(" ");
+    if (spaceIdx === -1) continue;
+    const method = entry.slice(0, spaceIdx);
+    const originalPath = entry.slice(spaceIdx + 1);
+    if (method !== "GET") continue;
+    const hasParams = originalPath.includes(":");
+    const probePath = `/api${originalPath}`.replace(/:[^/]+/g, "0");
+    probes.push({ path: probePath, hasParams });
+  }
+
+  return probes;
+}
+
+function checkRouteManifest(): { check: string; ok: boolean; missing?: string[]; registered?: number } {
   try {
-    initRecoveryModule();
-    registerModuleHandlers();
-    await initFileIntegrity();
-    startAnomalyMonitor(30_000);
-
-    const memResult = await initializeMemoryOnStartup();
-    logger.info({ loaded: memResult.loaded, errors: memResult.errors }, "Memory system initialized");
-
-    await ensureDefaultSources();
-    await startIngestionScheduler(120_000);
-    logger.info("Ingestion scheduler started — continuous rotation active");
-
-    startShepherdLoop(600_000);
-    logger.info("Shepherd agents deployed — autonomous scraping active");
-
-    startKnowledgeToCanonBridge(900_000);
-    logger.info("Knowledge-to-Canon bridge active — Bible auto-updates on new knowledge");
-
-    startPeriodicRegeneration(1800_000);
-
-    logger.info("All system modules initialized");
+    const registered = collectRegisteredRoutes(router);
+    const missing: string[] = [];
+    for (const route of CRITICAL_ROUTES) {
+      const key = `${route.method} ${route.path}`;
+      if (!registered.has(key)) {
+        missing.push(key);
+      }
+    }
+    if (missing.length > 0) {
+      return { check: "critical-route-manifest", ok: false, missing, registered: registered.size };
+    }
+    return { check: "critical-route-manifest", ok: true, registered: registered.size };
   } catch (err) {
-    logger.error({ err }, "Module initialization error (non-fatal)");
+    return { check: "critical-route-manifest", ok: false, missing: [(err as Error).message] };
   }
 }
 
-initializeModules().catch(err => logger.error({ err }, "initializeModules uncaught error"));
+async function runStartupHealthCheck(): Promise<void> {
+  logger.info("=== STARTUP HEALTH CHECK BEGIN ===");
+
+  const results: Array<{ check: string; ok: boolean; detail?: string; critical?: boolean }> = [];
+
+  const dbCheck = await (async () => {
+    try {
+      const rows = await db.select().from(dataSourcesTable).limit(1);
+      return { check: "database-connectivity", ok: true, critical: true, detail: `data sources accessible (${rows.length} sampled)` };
+    } catch (err) {
+      return { check: "database-connectivity", ok: false, critical: true, detail: (err as Error).message };
+    }
+  })();
+  results.push(dbCheck);
+
+  const schedulerCheck = await (async () => {
+    try {
+      const started = isSchedulerStarted();
+      const [row] = await db.select().from(dataSourcesTable).limit(1);
+      const hasSeededSources = row !== undefined;
+      const ok = started && hasSeededSources;
+      let detail: string;
+      if (!started && !hasSeededSources) detail = "scheduler not started and no data sources found";
+      else if (!started) detail = "scheduler not started (startIngestionScheduler() not yet called)";
+      else if (!hasSeededSources) detail = "scheduler started but no data sources seeded in DB";
+      else detail = "scheduler running with seeded data sources";
+      return { check: "ingestion-scheduler", ok, detail };
+    } catch (err) {
+      return { check: "ingestion-scheduler", ok: false, detail: (err as Error).message };
+    }
+  })();
+  results.push(schedulerCheck);
+
+  const routeManifestCheck = checkRouteManifest();
+  if (!routeManifestCheck.ok) {
+    logger.error(
+      { missing: routeManifestCheck.missing, registeredCount: routeManifestCheck.registered },
+      "Route manifest FAILED — critical routes not found in router stack; post-bind probes will confirm or reject traffic gate",
+    );
+    results.push({ check: routeManifestCheck.check, ok: false, detail: `missing routes: ${routeManifestCheck.missing?.join(", ")}; remaining ${routeManifestCheck.registered} routes verified` });
+  } else {
+    results.push({ check: routeManifestCheck.check, ok: true, detail: `${routeManifestCheck.registered} routes registered and confirmed in router stack` });
+  }
+
+  const criticalFailures = results.filter(r => !r.ok && r.critical);
+  const allPassed = results.every(r => r.ok);
+
+  for (const r of results) {
+    if (r.ok) {
+      logger.info({ check: r.check, detail: r.detail }, "Startup health check PASSED");
+    } else if (r.critical) {
+      logger.error({ check: r.check, detail: r.detail }, "Startup health check CRITICAL FAILURE — server cannot function without this dependency");
+    } else {
+      logger.warn({ check: r.check, detail: r.detail }, "Startup health check WARNING — degraded but can continue; post-bind probes will gate traffic");
+    }
+  }
+
+  logger.info(
+    { passed: results.filter(r => r.ok).length, total: results.length, allPassed, criticalFailures: criticalFailures.length },
+    allPassed
+      ? "=== STARTUP HEALTH CHECK COMPLETE — all checks passed — post-bind probes will confirm routes before opening traffic gate ==="
+      : "=== STARTUP HEALTH CHECK COMPLETE WITH FAILURES — traffic gate remains CLOSED until post-bind probes confirm recovery ===",
+  );
+
+  if (criticalFailures.length > 0) {
+    throw new Error(`Startup health check CRITICAL FAILURE: ${criticalFailures.map(r => r.check).join(", ")} — see logs for details`);
+  }
+}
+
+async function initializeModules() {
+  initRecoveryModule();
+  registerModuleHandlers();
+
+  try {
+    await db.select().from(dataSourcesTable).limit(1);
+    logger.info("Pre-init DB connectivity confirmed");
+  } catch (err) {
+    logger.error({ err }, "CRITICAL: Database is unreachable at startup — aborting module initialization");
+    throw err;
+  }
+
+  try {
+    await initFileIntegrity();
+  } catch (err) {
+    logger.warn({ err }, "File integrity init failed — continuing without baseline snapshots");
+  }
+
+  startAnomalyMonitor(30_000);
+
+  try {
+    const memResult = await initializeMemoryOnStartup();
+    logger.info({ loaded: memResult.loaded, errors: memResult.errors }, "Memory system initialized");
+  } catch (err) {
+    logger.warn({ err }, "Memory system init failed — non-critical, continuing");
+  }
+
+  try {
+    await ensureDefaultSources();
+    await startIngestionScheduler(120_000);
+    logger.info("Ingestion scheduler started — continuous rotation active");
+  } catch (err) {
+    logger.warn({ err }, "Ingestion scheduler failed to start — non-critical, continuing");
+  }
+
+  try {
+    startShepherdLoop(600_000);
+    logger.info("Shepherd agents deployed — autonomous scraping active");
+  } catch (err) {
+    logger.warn({ err }, "Shepherd loop failed — non-critical, continuing");
+  }
+
+  try {
+    startKnowledgeToCanonBridge(900_000);
+    logger.info("Knowledge-to-Canon bridge active — Bible auto-updates on new knowledge");
+  } catch (err) {
+    logger.warn({ err }, "Knowledge-to-Canon bridge failed — non-critical, continuing");
+  }
+
+  try {
+    startPeriodicRegeneration(1800_000);
+  } catch (err) {
+    logger.warn({ err }, "Periodic regeneration failed — non-critical, continuing");
+  }
+
+  try {
+    await seedForumIdentities();
+  } catch (err) {
+    logger.warn({ err }, "Forum identity seeding failed — non-critical, forum may reject unknown identities");
+  }
+
+  await runStartupHealthCheck();
+
+  logger.info("All system modules initialized");
+}
+
+export const initPromise = initializeModules();
 
 export default app;
