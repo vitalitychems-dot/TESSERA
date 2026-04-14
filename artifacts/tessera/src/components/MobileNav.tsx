@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import {
   MessageSquare, Heart, Globe2, Users, Lock,
-  Wrench, MessageCircle, Brain, Settings,
+  Wrench, MessageCircle, Brain, Settings, Shield, Cpu, DollarSign, Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRef, useEffect } from "react";
@@ -11,10 +11,15 @@ const TABS: { label: string; href: string; Icon: any; match: (l: string) => bool
   { label: "Life", href: "/life", Icon: Heart, match: (l) => l === "/life", color: "pink" },
   { label: "Universe", href: "/universe", Icon: Globe2, match: (l) => l === "/universe", color: "violet" },
   { label: "Members", href: "/members", Icon: Users, match: (l) => l === "/members", color: "amber" },
-  { label: "Secrets", href: "/secrets", Icon: Lock, match: (l) => l === "/secrets" || l === "/bible", color: "red" },
+  { label: "Secrets", href: "/secrets", Icon: Lock, match: (l) => l === "/secrets" || l === "/bible" || l === "/secret-knowledge" || l === "/secret-society", color: "red" },
   { label: "Build", href: "/build", Icon: Wrench, match: (l) => l === "/build", color: "emerald" },
   { label: "Forum", href: "/forum", Icon: MessageCircle, match: (l) => l === "/forum", color: "cyan" },
   { label: "NLP", href: "/nlp", Icon: Brain, match: (l) => l === "/nlp", color: "rose" },
+  { label: "Nexus", href: "/consciousness", Icon: Brain, match: (l) => l === "/consciousness", color: "purple" },
+  { label: "Sovereign", href: "/sovereignty", Icon: Shield, match: (l) => l === "/sovereignty", color: "emerald" },
+  { label: "System", href: "/system", Icon: Cpu, match: (l) => l === "/system", color: "cyan" },
+  { label: "Tokens", href: "/tokens", Icon: DollarSign, match: (l) => l === "/tokens", color: "amber" },
+  { label: "Lattice", href: "/lattice", Icon: Search, match: (l) => l === "/lattice", color: "violet" },
   { label: "Settings", href: "/settings", Icon: Settings, match: (l) => l === "/settings", color: "yellow" },
 ];
 

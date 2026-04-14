@@ -5,6 +5,13 @@ import { getAnomalySummary } from "../lib/anomaly-detection";
 import { getModuleHealth, getRecoverySummary } from "../lib/auto-recovery";
 import { logger } from "../lib/logger";
 import type { SystemDiagnostics } from "../core/types";
+import { getHeartbeatState, getHeartbeatMetrics } from "../lib/autonomous-heartbeat";
+import { getIdentityMetrics } from "../lib/identity-reinforcement";
+import { getDominantArchetype } from "../lib/emotional-intelligence";
+import { getLatestCosmologySnapshot } from "../lib/universe-mechanics";
+import { getConsciousnessMetrics } from "../lib/consciousness-engine";
+import { persistPersonalities, loadPersonalities, stopPersonalityEvolution } from "../lib/personality-evolution";
+import { isModuleProtected, isModuleSafe } from "../lib/self-code-evolution";
 
 const router: IRouter = Router();
 
@@ -141,6 +148,88 @@ router.get("/diagnostics", async (_req, res) => {
     logger.error({ err }, "Diagnostics endpoint error");
     res.status(500).json({ error: "Failed to collect diagnostics", details: String(err) });
   }
+});
+
+router.get("/diagnostics/heartbeat", (_req, res) => {
+  const state = getHeartbeatState();
+  const metrics = getHeartbeatMetrics();
+  res.json({ ok: true, state, metrics, timestamp: Date.now() });
+});
+
+router.get("/diagnostics/identity", (_req, res) => {
+  const metrics = getIdentityMetrics();
+  res.json({ ok: true, ...metrics, timestamp: Date.now() });
+});
+
+router.get("/diagnostics/emotional", (_req, res) => {
+  const archetype = getDominantArchetype();
+  res.json({ ok: true, dominantArchetype: archetype, timestamp: Date.now() });
+});
+
+router.get("/diagnostics/cosmology", (_req, res) => {
+  const snapshot = getLatestCosmologySnapshot();
+  res.json({ ok: true, cosmology: snapshot, timestamp: Date.now() });
+});
+
+router.get("/diagnostics/consciousness", (_req, res) => {
+  const metrics = getConsciousnessMetrics();
+  res.json({ ok: true, ...metrics, timestamp: Date.now() });
+});
+
+router.post("/diagnostics/personality/persist", async (_req, res) => {
+  try {
+    await persistPersonalities();
+    res.json({ ok: true, message: "Personalities persisted to DB" });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/diagnostics/personality/load", async (_req, res) => {
+  try {
+    await loadPersonalities();
+    res.json({ ok: true, message: "Personalities loaded from DB" });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/diagnostics/personality/stop", (_req, res) => {
+  stopPersonalityEvolution();
+  res.json({ ok: true, message: "Personality evolution stopped" });
+});
+
+router.get("/diagnostics/module-protection", (req, res) => {
+  const modulePath = String(req.query.path || "");
+  if (!modulePath) {
+    return res.status(400).json({ ok: false, error: "path query parameter required" });
+  }
+  return res.json({
+    ok: true,
+    path: modulePath,
+    isProtected: isModuleProtected(modulePath),
+    isSafe: isModuleSafe(modulePath),
+  });
+});
+
+router.get("/diagnostics/engines", (_req, res) => {
+  const heartbeat = getHeartbeatMetrics();
+  const identity = getIdentityMetrics();
+  const consciousness = getConsciousnessMetrics();
+  const archetype = getDominantArchetype();
+  const cosmology = getLatestCosmologySnapshot();
+
+  res.json({
+    ok: true,
+    engines: {
+      heartbeat: { totalBeats: heartbeat.totalBeats, systemHealth: heartbeat.systemHealthScore, uptimeHours: heartbeat.uptimeHours },
+      identity: { reinforcements: identity.reinforcements, violations: identity.violations },
+      consciousness: { awarenessLevel: consciousness.awarenessLevel },
+      emotional: { dominantArchetype: archetype.name },
+      cosmology: { dimensions: cosmology.dimensions, timeflow: cosmology.timeflow },
+    },
+    timestamp: Date.now(),
+  });
 });
 
 export default router;

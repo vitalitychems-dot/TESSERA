@@ -5,89 +5,135 @@ import { desc, eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { validateMeshToken } from "../lib/mesh-auth";
 import { meshBroadcast } from "../lib/mesh-bus";
+import { getSpawnerState, getSpawnerMetrics } from "../lib/agent-spawner";
+import { getAgentHierarchy, getHierarchyMetrics } from "../lib/agent-hierarchy";
+import { getSwarmOptimizerMetrics } from "../lib/swarm-optimizer";
+import { getHeartbeatMetrics } from "../lib/autonomous-heartbeat";
 
 const router: IRouter = Router();
 
 router.get("/swarm/agents", (_req, res) => {
+  const spawnerState = getSpawnerState();
+  const hierarchy = getAgentHierarchy();
+  const hierarchyMetrics = getHierarchyMetrics();
+
+  const parentAgents = hierarchy.parentAgents.map((name: string) => ({
+    id: name.toLowerCase(),
+    name,
+    domain: "sovereign",
+    status: "active",
+    role: "Grand Council Agent",
+    tier: "parent",
+  }));
+
+  const childAgents = (hierarchy.children || []).map((c: any) => ({
+    id: c.id,
+    name: c.name,
+    domain: c.expertise || c.shift,
+    status: c.status,
+    role: `Child of ${c.parentAgent}`,
+    tier: "child",
+    shift: c.shift,
+    ethicsScore: c.ethicsScore,
+    trainingProgress: c.trainingProgress,
+  }));
+
+  const spawnedAgents = spawnerState.activeSpawned.map((a: any) => ({
+    id: a.id,
+    name: a.name,
+    domain: a.domains?.[0] || "general",
+    status: "active",
+    role: a.role || "Spawned Agent",
+    tier: "spawned",
+    generation: a.generation,
+    power: a.power,
+  }));
+
   res.json({
     ok: true,
-    agents: [
-      { id: "math-agent", name: "Euler", domain: "math", modelId: "deepseek-chat", status: "idle", role: "Logic & Reasoning" },
-      { id: "physics-agent", name: "Curie", domain: "physics", modelId: "gemini-2.5-flash-preview-05-20", status: "idle", role: "Analysis & Systems" },
-      { id: "symbolic-agent", name: "Noether", domain: "symbolic", modelId: "claude-sonnet-4-20250514", status: "idle", role: "Architecture & Symbolism" },
-      { id: "retrieval-agent", name: "Athena", domain: "retrieval", modelId: "gpt-4.1", status: "idle", role: "Strategy & Wisdom" },
-      { id: "planning-agent", name: "Minerva", domain: "planning", modelId: "grok-3", status: "idle", role: "Execution & Mastery" },
-      { id: "architecture-agent", name: "Ada", domain: "architecture", modelId: "claude-sonnet-4-20250514", status: "idle", role: "Design & Integration" },
-      { id: "routing-agent", name: "Iris", domain: "routing", modelId: "mistral-large-latest", status: "idle", role: "Routing & Coordination" },
-    ],
-    count: 7,
+    agents: [...parentAgents, ...childAgents, ...spawnedAgents],
+    parentCount: parentAgents.length,
+    childCount: childAgents.length,
+    spawnedCount: spawnedAgents.length,
+    totalCount: parentAgents.length + childAgents.length + spawnedAgents.length,
+    hierarchyMetrics,
     timestamp: Date.now(),
   });
 });
 
 router.get("/swarm/status", (_req, res) => {
+  const spawnerMetrics = getSpawnerMetrics();
+  const swarmMetrics = getSwarmOptimizerMetrics();
+  const heartbeat = getHeartbeatMetrics();
+  const hierarchyMetrics = getHierarchyMetrics();
+
   res.json({
     ok: true,
-    system: "Tessera Swarm v2.0",
-    agents: [
-      { id: "math-agent", name: "Euler", domain: "math", modelId: "deepseek-chat", status: "idle" },
-      { id: "physics-agent", name: "Curie", domain: "physics", modelId: "gemini-2.5-flash-preview-05-20", status: "idle" },
-      { id: "symbolic-agent", name: "Noether", domain: "symbolic", modelId: "claude-sonnet-4-20250514", status: "idle" },
-      { id: "retrieval-agent", name: "Athena", domain: "retrieval", modelId: "gpt-4.1", status: "idle" },
-      { id: "planning-agent", name: "Minerva", domain: "planning", modelId: "grok-3", status: "idle" },
-      { id: "architecture-agent", name: "Ada", domain: "architecture", modelId: "claude-sonnet-4-20250514", status: "idle" },
-      { id: "routing-agent", name: "Iris", domain: "routing", modelId: "mistral-large-latest", status: "idle" },
-    ],
-    coordinator: { id: "swarm-coordinator", status: "active", tasksProcessed: 0 },
-    metaAgent: { id: "meta-agent", status: "active", reportsGenerated: 0 },
-    routingGraph: {
-      nodes: 11,
-      edges: 14,
-      algorithm: "BFS shortest-path + load-balanced routing",
+    system: "Tessera Sovereign Swarm v2.0 — 19 Engines Active",
+    agentNetwork: {
+      parents: hierarchyMetrics.parentCount,
+      children: hierarchyMetrics.childCount,
+      totalAgents: hierarchyMetrics.totalAgents,
+      spawned: spawnerMetrics.activeCount,
+      totalSpawned: spawnerMetrics.totalSpawned,
+      generationCount: spawnerMetrics.generationCount,
     },
-    capabilities: ["PLAN", "EXECUTE", "REFLECT", "IMPROVE", "METACOGNITION"],
+    swarmOptimizer: {
+      modelCount: swarmMetrics.modelCount,
+      categoryCount: swarmMetrics.categoryCount,
+      consensusBuilt: swarmMetrics.consensusCount,
+    },
+    heartbeat: {
+      totalBeats: heartbeat.totalBeats,
+      systemHealth: heartbeat.systemHealthScore,
+      uptimeHours: heartbeat.uptimeHours,
+    },
+    capabilities: ["PLAN", "EXECUTE", "REFLECT", "IMPROVE", "METACOGNITION", "BFT_CONSENSUS", "SELF_EVOLUTION", "TRUTHFULNESS"],
     timestamp: Date.now(),
   });
 });
 
 router.get("/swarm/routing-graph", (_req, res) => {
+  const hierarchy = getAgentHierarchy();
+
+  const nodes: any[] = [
+    { id: "tessera-prime", label: "Tessera Prime", type: "sovereign", load: 0, capacity: 1000 },
+  ];
+
+  const edges: any[] = [];
+
+  for (const name of hierarchy.parentAgents) {
+    const nodeId = name.toLowerCase();
+    nodes.push({
+      id: nodeId,
+      label: name,
+      type: name === "Tessera" ? "supreme" : name === "Aetherion" || name === "Orion" ? "expansion" : "council",
+      domain: "sovereign",
+      load: 0,
+      capacity: 10,
+    });
+    edges.push({ from: "tessera-prime", to: nodeId, weight: 1, latencyMs: 5 });
+  }
+
+  for (const child of hierarchy.children || []) {
+    nodes.push({
+      id: child.id,
+      label: `${child.name} (${child.shift})`,
+      type: "child",
+      domain: child.shift,
+      load: 0,
+      capacity: 5,
+    });
+    edges.push({ from: child.parentAgent.toLowerCase(), to: child.id, weight: 0.8, latencyMs: 2 });
+  }
+
   res.json({
     ok: true,
-    nodes: [
-      { id: "swarm-coordinator", label: "Swarm Coordinator", type: "coordinator", load: 0, capacity: 100 },
-      { id: "meta-agent", label: "Meta Agent", type: "meta", load: 0, capacity: 10 },
-      { id: "math-agent", label: "Euler (Math)", type: "agent", domain: "math", load: 0, capacity: 5 },
-      { id: "physics-agent", label: "Curie (Physics)", type: "agent", domain: "physics", load: 0, capacity: 5 },
-      { id: "symbolic-agent", label: "Noether (Symbolic)", type: "agent", domain: "symbolic", load: 0, capacity: 5 },
-      { id: "retrieval-agent", label: "Athena (Retrieval)", type: "agent", domain: "retrieval", load: 0, capacity: 5 },
-      { id: "planning-agent", label: "Minerva (Planning)", type: "agent", domain: "planning", load: 0, capacity: 5 },
-      { id: "architecture-agent", label: "Ada (Architecture)", type: "agent", domain: "architecture", load: 0, capacity: 5 },
-      { id: "routing-agent", label: "Iris (Routing)", type: "agent", domain: "routing", load: 0, capacity: 5 },
-      { id: "provider-anthropic", label: "Anthropic", type: "provider", load: 0, capacity: 50 },
-      { id: "provider-openai", label: "OpenAI", type: "provider", load: 0, capacity: 50 },
-      { id: "provider-google", label: "Google", type: "provider", load: 0, capacity: 50 },
-      { id: "provider-mistral", label: "Mistral", type: "provider", load: 0, capacity: 50 },
-      { id: "provider-xai", label: "xAI", type: "provider", load: 0, capacity: 50 },
-      { id: "provider-deepseek", label: "DeepSeek", type: "provider", load: 0, capacity: 50 },
-    ],
-    edges: [
-      { from: "swarm-coordinator", to: "math-agent", weight: 1, latencyMs: 10 },
-      { from: "swarm-coordinator", to: "physics-agent", weight: 1, latencyMs: 10 },
-      { from: "swarm-coordinator", to: "symbolic-agent", weight: 1, latencyMs: 10 },
-      { from: "swarm-coordinator", to: "retrieval-agent", weight: 1, latencyMs: 10 },
-      { from: "swarm-coordinator", to: "planning-agent", weight: 1, latencyMs: 10 },
-      { from: "swarm-coordinator", to: "architecture-agent", weight: 1, latencyMs: 10 },
-      { from: "swarm-coordinator", to: "routing-agent", weight: 1, latencyMs: 10 },
-      { from: "swarm-coordinator", to: "meta-agent", weight: 0.8, latencyMs: 5 },
-      { from: "math-agent", to: "provider-deepseek", weight: 1, latencyMs: 200 },
-      { from: "physics-agent", to: "provider-google", weight: 1, latencyMs: 200 },
-      { from: "symbolic-agent", to: "provider-anthropic", weight: 1, latencyMs: 200 },
-      { from: "retrieval-agent", to: "provider-openai", weight: 1, latencyMs: 200 },
-      { from: "planning-agent", to: "provider-xai", weight: 1, latencyMs: 200 },
-      { from: "architecture-agent", to: "provider-anthropic", weight: 1, latencyMs: 200 },
-      { from: "routing-agent", to: "provider-mistral", weight: 1, latencyMs: 200 },
-    ],
-    algorithm: "Dijkstra + load-balanced BFS",
+    nodes,
+    edges,
+    nodeCount: nodes.length,
+    edgeCount: edges.length,
+    algorithm: "Sovereign BFT + Hierarchical Routing (3³ Divine Cube)",
     timestamp: Date.now(),
   });
 });

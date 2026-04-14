@@ -111,6 +111,7 @@ function AppRouter() {
         <Route path="/members">{() => <MembersPage />}</Route>
         <Route path="/secrets">{() => <SecretsPage />}</Route>
         <Route path="/secret-knowledge">{() => <SecretsPage />}</Route>
+        <Route path="/secret-society">{() => <SecretsPage />}</Route>
         <Route path="/bible" component={TesseraBiblePage} />
         <Route path="/build">{() => <BuildPage />}</Route>
         <Route path="/forum">{() => <TesseractForumPage />}</Route>
@@ -128,6 +129,11 @@ function AppRouter() {
         <Route path="/conference-decisions">{() => <GrandCouncilPage />}</Route>
         <Route path="/consensus">{() => <GrandCouncilPage />}</Route>
         <Route path="/settings">{() => <SettingsPage />}</Route>
+        <Route path="/consciousness">{() => <ConsciousnessNexusPage />}</Route>
+        <Route path="/sovereignty">{() => <SovereigntyDashboardPage />}</Route>
+        <Route path="/system">{() => <SystemPage />}</Route>
+        <Route path="/tokens">{() => <TokenEconomyPage />}</Route>
+        <Route path="/lattice">{() => <LatticeBrowserPage />}</Route>
         <Route component={NotFound} />
       </Switch>
     </Suspense>
