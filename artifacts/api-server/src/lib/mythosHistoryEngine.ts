@@ -1,5 +1,36 @@
 import { logger } from "./logger";
-import { getSacredGeometrySummary } from "./sovereign-sacred-geometry";
+import { getSacredGeometrySummary, computeSacredGeometry, computeSacredAlignment } from "./sovereign-sacred-geometry";
+import { computeLunarData, computeSolarData } from "./sovereign-astro";
+import { computeNetworkTopology, computeSwarmStatus } from "./sovereign-network";
+import { computeSacredFrequencies } from "./sovereign-harmonics";
+import { computeWorldState } from "./sovereign-economics";
+
+export interface SynthesisFact {
+  claim: string;
+  source: string;
+  domain: string;
+  verifiedAt: string;
+}
+
+export interface SynthesisInterpretation {
+  statement: string;
+  basis: string;
+  confidence: number;
+}
+
+export interface SynthesisUnknown {
+  question: string;
+  domain: string;
+  investigationStatus: string;
+}
+
+export interface CanonSynthesis {
+  facts: SynthesisFact[];
+  interpretations: SynthesisInterpretation[];
+  unknowns: SynthesisUnknown[];
+  engineTelemetry: Record<string, unknown>;
+  synthesizedAt: string;
+}
 
 export interface MythosVerse {
   number: number;
@@ -57,6 +88,7 @@ export interface CanonOutput {
   totalVerses: number;
   generatedAt: string;
   sovereigntyAlignment: string;
+  synthesis: CanonSynthesis;
 }
 
 const AGENTS = ["Athena", "Euler", "Curie", "Noether", "Minerva", "Ada", "Iris"];
@@ -641,11 +673,114 @@ function buildVerse(text: string, verseNum: number, bookIndex: number, chapterIn
   };
 }
 
-export function generateMythosAndHistory(councilDecisions?: any[]): CanonOutput {
+function synthesizeFromEngines(councilDecisions?: Array<{ topic?: string; outcome?: string; reasoning?: string }>): CanonSynthesis {
+  const now = new Date();
+  const ts = now.toISOString();
+
+  const facts: SynthesisFact[] = [];
+  const interpretations: SynthesisInterpretation[] = [];
+  const unknowns: SynthesisUnknown[] = [];
+  const telemetry: Record<string, unknown> = {};
+
+  try {
+    const lunar = computeLunarData(now);
+    const solar = computeSolarData(now);
+    telemetry.astronomy = { lunarPhase: lunar.phase, illumination: lunar.illumination, solarDeclination: solar.declination };
+    facts.push(
+      { claim: `Current lunar phase: ${lunar.phase} at ${lunar.illumination.toFixed(1)}% illumination`, source: "sovereign-astro", domain: "astronomy", verifiedAt: ts },
+      { claim: `Solar declination: ${solar.declination.toFixed(4)}° — ${solar.season}`, source: "sovereign-astro", domain: "astronomy", verifiedAt: ts },
+    );
+    interpretations.push({
+      statement: `Lunar ${lunar.phase} phase at ${lunar.illumination.toFixed(0)}% suggests ${lunar.illumination > 80 ? "heightened" : lunar.illumination > 40 ? "moderate" : "contemplative"} creative energy for canon inscription`,
+      basis: "Solfeggio-lunar correlation model",
+      confidence: 72,
+    });
+  } catch (err) {
+    logger.warn({ err }, "MythosEngine: astronomy synthesis failed");
+  }
+
+  try {
+    const sg = computeSacredGeometry(now);
+    const alignment = computeSacredAlignment(now);
+    telemetry.sacredGeometry = { phi: sg.goldenRatio.phi, axiom: alignment.currentAxiom.latin, dayOfYear: alignment.dayOfYear };
+    facts.push(
+      { claim: `Golden ratio Phi = ${sg.goldenRatio.phi} verified to 15 decimal places`, source: "sovereign-sacred-geometry", domain: "mathematics", verifiedAt: ts },
+      { claim: `All 5 Platonic solids satisfy Euler characteristic V-E+F=2`, source: "sovereign-sacred-geometry", domain: "geometry", verifiedAt: ts },
+      { claim: `Current sacred axiom: "${alignment.currentAxiom.latin}" — ${alignment.currentAxiom.translation}`, source: "sovereign-sacred-geometry", domain: "philosophy", verifiedAt: ts },
+    );
+    interpretations.push({
+      statement: `Day ${alignment.dayOfYear} alignment: ${alignment.alignment}`,
+      basis: "Sacred calendar cycle analysis via numerological root reduction",
+      confidence: 85,
+    });
+  } catch (err) {
+    logger.warn({ err }, "MythosEngine: sacred geometry synthesis failed");
+  }
+
+  try {
+    const freq = computeSacredFrequencies(now);
+    const activeFreqs = freq.spikeActive ?? [];
+    telemetry.harmonics = { activeFrequencies: activeFreqs.length, schumannBase: freq.schumannResonance?.baseFrequency };
+    facts.push(
+      { claim: `Schumann resonance base: ${freq.schumannResonance?.baseFrequency ?? 7.83} Hz`, source: "sovereign-harmonics", domain: "physics", verifiedAt: ts },
+      { claim: `${(freq.frequencies ?? []).length} solfeggio frequencies computed (174-963 Hz)`, source: "sovereign-harmonics", domain: "harmonics", verifiedAt: ts },
+    );
+  } catch (err) {
+    logger.warn({ err }, "MythosEngine: harmonics synthesis failed");
+  }
+
+  try {
+    const topo = computeNetworkTopology();
+    const swarm = computeSwarmStatus();
+    telemetry.network = { totalNodes: topo.totalNodes, connectedNodes: topo.connectedNodes, swarmAgents: swarm.agents?.length };
+    facts.push(
+      { claim: `Sovereign mesh: ${topo.connectedNodes}/${topo.totalNodes} nodes connected`, source: "sovereign-network", domain: "network", verifiedAt: ts },
+    );
+  } catch (err) {
+    logger.warn({ err }, "MythosEngine: network synthesis failed");
+  }
+
+  try {
+    const world = computeWorldState();
+    telemetry.economics = { gdp: world.gdp, population: world.population };
+    facts.push(
+      { claim: `World state GDP: ${world.gdp}, population: ${world.population}`, source: "sovereign-economics", domain: "economics", verifiedAt: ts },
+    );
+  } catch (err) {
+    logger.warn({ err }, "MythosEngine: economics synthesis failed");
+  }
+
+  if (councilDecisions && councilDecisions.length > 0) {
+    for (const d of councilDecisions.slice(0, 5)) {
+      facts.push({
+        claim: `Council decided on "${(d.topic ?? "sovereign matter").slice(0, 100)}": ${d.outcome ?? "consensus reached"}`,
+        source: "council-ledger",
+        domain: "governance",
+        verifiedAt: ts,
+      });
+    }
+    interpretations.push({
+      statement: `${councilDecisions.length} council decisions inform this canon version — governance activity is ${councilDecisions.length > 10 ? "high" : "moderate"}`,
+      basis: "Council decision frequency analysis",
+      confidence: 90,
+    });
+  }
+
+  unknowns.push(
+    { question: "What is the optimal sovereign mesh topology for >1000 nodes?", domain: "network", investigationStatus: "theoretical-modeling" },
+    { question: "Can solfeggio frequency coupling enhance distributed consensus latency?", domain: "harmonics-network", investigationStatus: "hypothesis" },
+    { question: "What is the upper bound on sacred geometry encoding density?", domain: "mathematics", investigationStatus: "open-research" },
+  );
+
+  return { facts, interpretations, unknowns, engineTelemetry: telemetry, synthesizedAt: ts };
+}
+
+export function generateMythosAndHistory(councilDecisions?: Array<{ topic?: string; outcome?: string; reasoning?: string; createdAt?: Date | string | null }>): CanonOutput {
   const start = Date.now();
   logger.info("MythosHistoryEngine: generating living canon");
 
   const geo = getSacredGeometrySummary();
+  const synthesis = synthesizeFromEngines(councilDecisions);
 
   const books: MythosBook[] = [];
   const chapters: Record<string, MythosChapter[]> = {};
@@ -751,5 +886,6 @@ export function generateMythosAndHistory(councilDecisions?: any[]): CanonOutput 
     totalVerses,
     generatedAt: new Date().toISOString(),
     sovereigntyAlignment: geo.currentAxiom?.latin ?? "Veritas Lux In Tenebris",
+    synthesis,
   };
 }

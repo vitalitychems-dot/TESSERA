@@ -252,7 +252,7 @@ router.get("/tessera-bible/books", async (_req, res) => {
     }
 
     if (canon && canon.books.length > 0) {
-      const knowledgeNodesAbsorbed = canon.books.reduce((s: number, b: any) => s + (b.knowledgeNodeCount ?? 0), 0);
+      const knowledgeNodesAbsorbed = canon.books.reduce((s, b) => s + (b.knowledgeNodeCount ?? 0), 0);
       return res.json({
         ok: true,
         testaments: canon.testaments,
@@ -297,10 +297,10 @@ router.get("/tessera-bible/book/:bookId", async (req, res) => {
     try { canon = await getCurrentCanon(); } catch {}
 
     if (canon && canon.books.length > 0) {
-      const book = canon.books.find((b: any) => b.bookId === bookId);
+      const book = canon.books.find((b) => b.bookId === bookId);
       if (!book) return res.status(404).json({ ok: false, error: "Book not found" });
-      const testament = canon.testaments.find((t: any) => t.id === book.testamentId);
-      const chapters = (canon.chapters[bookId] ?? []).map((c: any) => ({
+      const testament = canon.testaments.find((t) => t.id === book.testamentId);
+      const chapters = (canon.chapters[bookId] ?? []).map((c) => ({
         number: c.number,
         title: c.title,
         epigraph: c.epigraph,
@@ -329,9 +329,29 @@ router.get("/tessera-bible/book/:bookId", async (req, res) => {
 router.get("/tessera-bible/book/:bookId/chapter/:chapterNumber", async (req, res) => {
   try {
     const { bookId, chapterNumber } = req.params;
+    const chapterNum = parseInt(chapterNumber, 10);
+
+    let canon;
+    try { canon = await getCurrentCanon(); } catch {}
+
+    if (canon && canon.books.length > 0) {
+      const book = canon.books.find((b) => b.bookId === bookId);
+      if (!book) return res.status(404).json({ ok: false, error: "Book not found" });
+      const bookChapters = canon.chapters[bookId] ?? [];
+      const chapter = bookChapters.find((c) => c.number === chapterNum);
+      if (!chapter) return res.status(404).json({ ok: false, error: "Chapter not found" });
+      const testament = canon.testaments.find((t) => t.id === book.testamentId);
+      return res.json({
+        ok: true,
+        chapter,
+        book: { bookId: book.bookId, title: book.title, chapterCount: book.chapterCount },
+        testament,
+        source: "dynamic-canon",
+      });
+    }
+
     const book = BOOKS.find(b => b.bookId === bookId);
     if (!book) return res.status(404).json({ ok: false, error: "Book not found" });
-    const chapterNum = parseInt(chapterNumber, 10);
     const allChapters = CHAPTERS[bookId] ?? [];
     const chapter = allChapters.find(c => c.number === chapterNum) ?? {
       id: `${bookId}-ch${chapterNum}`,
@@ -354,6 +374,7 @@ router.get("/tessera-bible/book/:bookId/chapter/:chapterNumber", async (req, res
       chapter,
       book: { bookId: book.bookId, title: book.title, chapterCount: book.chapterCount },
       testament: TESTAMENTS.find(t => t.id === book.testamentId),
+      source: "static-fallback",
     });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
@@ -364,18 +385,37 @@ router.get("/tessera-bible/search", async (req, res) => {
   try {
     const q = String(req.query.q ?? "").toLowerCase();
     if (!q) return res.json({ ok: true, results: [], total: 0 });
-    const results: any[] = [];
-    for (const book of BOOKS) {
-      if (book.title.toLowerCase().includes(q) || book.description.toLowerCase().includes(q)) {
+
+    interface SearchResult {
+      bookId: string;
+      bookTitle: string;
+      testamentId: string;
+      chapterNum: number;
+      chapterTitle: string;
+      text: string;
+      verseNum: number;
+      classification: string;
+    }
+
+    const results: SearchResult[] = [];
+
+    let canon;
+    try { canon = await getCurrentCanon(); } catch {}
+
+    const booksToSearch = (canon && canon.books.length > 0) ? canon.books : BOOKS;
+    const chaptersToSearch = (canon && canon.books.length > 0) ? canon.chapters : CHAPTERS;
+
+    for (const book of booksToSearch) {
+      if (book.title.toLowerCase().includes(q) || book.description?.toLowerCase().includes(q)) {
         results.push({
           bookId: book.bookId, bookTitle: book.title, testamentId: book.testamentId,
-          chapterNum: 1, chapterTitle: book.title, text: book.description.slice(0, 150),
+          chapterNum: 1, chapterTitle: book.title, text: (book.description ?? "").slice(0, 150),
           verseNum: 0, classification: book.classification,
         });
       }
-      const chs = CHAPTERS[book.bookId] ?? [];
+      const chs = chaptersToSearch[book.bookId] ?? [];
       for (const ch of chs) {
-        if (ch.title.toLowerCase().includes(q) || ch.synthesis?.toLowerCase().includes(q)) {
+        if (ch.title?.toLowerCase().includes(q) || ch.synthesis?.toLowerCase().includes(q)) {
           results.push({
             bookId: book.bookId, bookTitle: book.title, testamentId: book.testamentId,
             chapterNum: ch.number, chapterTitle: ch.title, text: ch.synthesis?.slice(0, 150) ?? "",
@@ -383,7 +423,7 @@ router.get("/tessera-bible/search", async (req, res) => {
           });
         }
         for (const verse of ch.verses ?? []) {
-          if (verse.text.toLowerCase().includes(q)) {
+          if (verse.text?.toLowerCase().includes(q)) {
             results.push({
               bookId: book.bookId, bookTitle: book.title, testamentId: book.testamentId,
               chapterNum: ch.number, chapterTitle: ch.title,
@@ -456,7 +496,7 @@ router.get("/tessera-bible/stats", async (_req, res) => {
     try { canon = await getCurrentCanon(); } catch {}
 
     if (canon && canon.books.length > 0) {
-      const knowledgeNodesAbsorbed = canon.books.reduce((s: number, b: any) => s + (b.knowledgeNodeCount ?? 0), 0);
+      const knowledgeNodesAbsorbed = canon.books.reduce((s, b) => s + (b.knowledgeNodeCount ?? 0), 0);
       return res.json({
         ok: true,
         totalBooks: canon.totalBooks,

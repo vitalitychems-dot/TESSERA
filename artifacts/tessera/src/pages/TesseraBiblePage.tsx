@@ -102,6 +102,7 @@ export default function TesseraBiblePage() {
   const [showConference, setShowConference] = useState(false);
   const [showGrowthFeed, setShowGrowthFeed] = useState(false);
   const [showVotes, setShowVotes] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
   const qc = useQueryClient();
 
   const { data: bibleData, isLoading } = useQuery({
@@ -166,6 +167,15 @@ export default function TesseraBiblePage() {
       return res.json();
     },
     refetchInterval: 30000,
+  });
+
+  const { data: versionsData } = useQuery({
+    queryKey: ["sovereign-bible-versions"],
+    queryFn: async () => {
+      const res = await fetch(`${API}/versions?limit=20`);
+      return res.json();
+    },
+    enabled: showVersionHistory,
   });
 
   const rebuildMutation = useMutation({
@@ -274,6 +284,12 @@ export default function TesseraBiblePage() {
             <Radio className="w-3.5 h-3.5" /> Live Feed
           </button>
           <button
+            onClick={() => setShowVersionHistory(!showVersionHistory)}
+            className={`px-3 py-2 rounded-lg text-xs font-mono border flex items-center gap-1.5 ${showVersionHistory ? "bg-sky-500/20 border-sky-500/40 text-sky-300" : "bg-slate-900/60 border-slate-700 text-slate-400 hover:text-sky-300"}`}
+          >
+            <ScrollText className="w-3.5 h-3.5" /> Versions
+          </button>
+          <button
             onClick={() => rebuildMutation.mutate()}
             disabled={rebuildMutation.isPending}
             className="px-3 py-2 rounded-lg text-xs font-mono bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 flex items-center gap-1.5 disabled:opacity-50"
@@ -316,6 +332,41 @@ export default function TesseraBiblePage() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {showVersionHistory && versionsData?.versions && (
+          <div className="mb-4 bg-slate-900/60 border border-sky-500/20 rounded-lg p-3 max-h-64 overflow-y-auto">
+            <div className="flex items-center gap-2 mb-2">
+              <ScrollText className="w-4 h-4 text-sky-400" />
+              <span className="text-sm font-bold text-sky-300">Canon Version History</span>
+              <span className="text-xs text-slate-500 ml-auto">Current: v{versionsData.currentVersion}</span>
+            </div>
+            {versionsData.versions.length === 0 ? (
+              <p className="text-xs text-slate-500 font-mono">No versions yet — reconvene to generate the first canon.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {versionsData.versions.map((v: { version: number; generatedAt: string | null; totalBooks: number; totalChapters: number; totalVerses: number; sovereigntyScore: number | null; triggerSource: string; evalSummary: { level?: string; overallScore?: number; testsPassed?: number; totalTests?: number } | null }) => (
+                  <div
+                    key={v.version}
+                    className={`text-xs font-mono p-2 rounded flex items-center gap-3 ${v.version === versionsData.currentVersion ? "bg-sky-500/10 border border-sky-500/30" : "bg-slate-800/30"}`}
+                  >
+                    <span className="text-sky-400 font-bold min-w-[3rem]">v{v.version}</span>
+                    <span className="text-slate-500 min-w-[8rem]">{v.generatedAt ? new Date(v.generatedAt).toLocaleString() : "—"}</span>
+                    <span className="text-amber-400">{v.totalBooks}B</span>
+                    <span className="text-violet-400">{v.totalChapters}Ch</span>
+                    <span className="text-cyan-400">{v.totalVerses}V</span>
+                    {v.sovereigntyScore !== null && (
+                      <span className="text-emerald-400">{v.sovereigntyScore.toFixed(1)}%</span>
+                    )}
+                    {v.evalSummary?.level && (
+                      <span className="text-rose-300 text-[10px] uppercase">{v.evalSummary.level}</span>
+                    )}
+                    <span className="text-slate-600 ml-auto">{v.triggerSource}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
