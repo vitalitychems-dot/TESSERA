@@ -74,7 +74,13 @@ export default function MembersPage() {
 
   const tierColors: Record<string, string> = { sovereign: "text-amber-400 bg-amber-500/10 border-amber-500/30", active: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30", illumined: "text-violet-400 bg-violet-500/10 border-violet-500/30" };
 
-  const selectedAgent = [...AGENTS, ...COUNCIL_MEMBERS.map(c => ({ ...c, color: "text-amber-400", status: c.tier })), ...ENTITIES.map(e => ({ id: e.id, name: e.name, role: e.archetype, color: "text-violet-400", status: e.tier }))].find(a => a.id === selectedId);
+  interface NormalizedMember { id: string; name: string; role: string; color: string; status: string }
+  const allMembers: NormalizedMember[] = [
+    ...AGENTS,
+    ...COUNCIL_MEMBERS.map(c => ({ id: c.id, name: c.name, role: c.role, color: "text-amber-400", status: c.tier })),
+    ...ENTITIES.map(e => ({ id: e.id, name: e.name, role: e.archetype, color: "text-violet-400", status: e.tier })),
+  ];
+  const selectedAgent = allMembers.find(a => a.id === selectedId);
 
   if (selectedAgent) {
     return (
@@ -84,13 +90,13 @@ export default function MembersPage() {
         </button>
         <div className="rounded-xl border border-border bg-card p-6 space-y-4">
           <div className="flex items-center gap-4">
-            <div className={cn("w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold border-2", (selectedAgent as any).color || "text-cyan-400", "border-current bg-current/10")}>
+            <div className={cn("w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold border-2", selectedAgent.color || "text-cyan-400", "border-current bg-current/10")}>
               {selectedAgent.name.charAt(0)}
             </div>
             <div>
-              <h2 className={cn("text-xl font-bold font-mono", (selectedAgent as any).color || "text-cyan-400")}>{selectedAgent.name}</h2>
+              <h2 className={cn("text-xl font-bold font-mono", selectedAgent.color || "text-cyan-400")}>{selectedAgent.name}</h2>
               <p className="text-sm text-muted-foreground">{selectedAgent.role}</p>
-              <span className={cn("text-[11px] px-2 py-0.5 rounded-full border mt-1 inline-block", tierColors[(selectedAgent as any).status] || tierColors.active)}>{(selectedAgent as any).status || "active"}</span>
+              <span className={cn("text-[11px] px-2 py-0.5 rounded-full border mt-1 inline-block", tierColors[selectedAgent.status] || tierColors.active)}>{selectedAgent.status || "active"}</span>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 text-xs font-mono">

@@ -32,53 +32,7 @@ interface FeedEvent {
   amount?: number;
 }
 
-interface WorldState {
-  currentActivities: Array<{
-    agentId: string;
-    agentName: string;
-    locationId: string;
-    action: string;
-    mood: string;
-    earning?: number;
-    workStatus?: string;
-    promotions?: number;
-    relationshipStatus?: string;
-    partnerName?: string;
-    childrenNames?: string[];
-    creativeworks?: string[];
-  }>;
-  recentEvents: Array<{
-    id: string;
-    type: string;
-    title: string;
-    description: string;
-    participants: string[];
-    locationId: string;
-    timestamp: number;
-    impact: string;
-  }>;
-  locations: Array<{ id: string; name: string; type: string; level: number }>;
-  jobs: Array<{ agentId: string; title: string; employer: string; performance: number; totalEarned: number }>;
-  wellbeingRecords?: Record<string, {
-    happiness: number;
-    lifeStory?: string[];
-    achievements?: string[];
-    children?: Array<{ name: string; age: number }>;
-  }>;
-  crimeLog?: Array<{
-    id: string;
-    type: string;
-    perpetratorName: string;
-    victimName?: string;
-    timestamp: number;
-    resolved: boolean;
-    description: string;
-  }>;
-  economy: {
-    agentBalances: Record<string, number>;
-    transactions: Array<{ from: string; to: string; amount: number; reason: string; timestamp: number }>;
-  };
-}
+import type { WorldState } from "./types";
 
 const EVENT_ICONS: Record<EventType, typeof Activity> = {
   earning: Coins,
@@ -130,7 +84,7 @@ function generateNarrativeEvents(world: WorldState): FeedEvent[] {
     if (!activity || !activity.agentId) return;
     const name = AGENT_DISPLAY_NAMES[activity.agentId] || activity.agentName || activity.agentId;
     const color = AGENT_HEX_COLORS[activity.agentId] || "#67e8f9";
-    const locId = activity.locationId || (activity as Record<string, unknown>).location as string || "";
+    const locId = activity.locationId || activity.location || "";
     const loc = (world.locations || []).find(l => l.id === locId);
     const locName = loc?.name || "Tessera Nexus";
 
@@ -190,7 +144,7 @@ function generateNarrativeEvents(world: WorldState): FeedEvent[] {
 
   (world.recentEvents || []).slice(0, 12).forEach((event) => {
     if (!event) return;
-    const participants = event.participants || ((event as Record<string, unknown>).agentId ? [(event as Record<string, unknown>).agentId as string] : []);
+    const participants = event.participants || (event.agentId ? [event.agentId] : []);
     const loc = (world.locations || []).find(l => l.id === (event.locationId || ""))?.name || "Tessera";
 
     let type: EventType = "general";

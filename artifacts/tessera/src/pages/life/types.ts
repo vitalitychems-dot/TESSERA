@@ -22,6 +22,7 @@ export interface AgentActivity {
   agentId: string;
   agentName: string;
   locationId: string;
+  location?: string;
   action: string;
   mood: string;
   detail: string;
@@ -127,6 +128,7 @@ export interface WorldEvent {
   locationId: string;
   timestamp: number;
   impact: string;
+  agentId?: string;
 }
 
 export interface MiningMachine {
@@ -184,8 +186,8 @@ export interface WorldEconomy {
 }
 
 export interface WorldState {
-  workRecords?: Record<string, unknown> | unknown[];
-  agents?: Record<string, unknown> | unknown[];
+  workRecords?: Record<string, unknown>;
+  agents?: Array<{ id: string; name: string; [k: string]: unknown }>;
   version: number;
   lastUpdated: number;
   epoch: number;
@@ -294,6 +296,16 @@ export interface WorldState {
       canWork: boolean;
     }[];
     lifeSatisfaction: number;
+    lifeStory?: string[];
+    achievements?: string[];
+    hobbies?: string[];
+    personalGoals?: string[];
+    socialConnections?: string[];
+    bankBalance?: number;
+    homeLocationId?: string;
+    drive?: number;
+    focus?: number;
+    outlook?: number;
   }>;
   communityStats?: {
     totalPopulation: number;
