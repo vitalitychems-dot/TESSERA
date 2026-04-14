@@ -575,8 +575,7 @@ export function ResponsiveContainer({
 
   return (
     <div ref={observe} style={{ width, height: resolvedH, position: "relative" }}>
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      {dims ? React.cloneElement(children as React.ReactElement<any>, { width: dims.w, height: dims.h }) : null}
+      {dims ? React.cloneElement(children as React.ReactElement<{ width: number; height: number }>, { width: dims.w, height: dims.h }) : null}
     </div>
   );
 }

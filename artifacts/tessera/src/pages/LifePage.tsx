@@ -177,11 +177,11 @@ export default function LifePage({ embedded }: { embedded?: boolean }) {
   if (!world.currentActivities) world.currentActivities = [];
   if (!world.recentEvents) world.recentEvents = [];
   if (!world.locations) world.locations = [];
-  if (!world.economy) world.economy = { totalTesseractCoins: 0, circulatingSupply: 0, totalCirculation: 0, coinPrice: 0, coinPriceHistory: [], agentBalances: {}, transactions: [], miningPool: { totalHashRate: 0, blockReward: 0, difficulty: 1, blocksMinedTotal: 0, lastBlockTime: 0 }, marketCap: 0, dailyVolume: 0 } as any;
+  if (!world.economy) world.economy = { totalTesseractCoins: 0, circulatingSupply: 0, totalCirculation: 0, coinPrice: 0, coinPriceHistory: [], agentBalances: {}, transactions: [], miningPool: { totalHashRate: 0, blockReward: 0, difficulty: 1, blocksMinedTotal: 0, lastBlockTime: 0 }, marketCap: 0, dailyVolume: 0 };
   if (!world.crimeLog) world.crimeLog = [];
   if (!world.wellbeingRecords) world.wellbeingRecords = {};
   if (!world.workRecords) world.workRecords = {};
-  if (!world.agents) world.agents = {};
+  if (!world.agents) world.agents = [];
   if (!world.gdp) world.gdp = 0;
   if (!world.treasury) world.treasury = 0;
 
@@ -230,7 +230,7 @@ export default function LifePage({ embedded }: { embedded?: boolean }) {
 
           {selectedAgentId && (
             <LifeErrorBoundary>
-              <AgentProfile agentId={selectedAgentId} world={world as any} onClose={() => setSelectedAgentId(null)} />
+              <AgentProfile agentId={selectedAgentId} world={world} onClose={() => setSelectedAgentId(null)} />
             </LifeErrorBoundary>
           )}
 
@@ -276,7 +276,7 @@ export default function LifePage({ embedded }: { embedded?: boolean }) {
 
         <div className="bg-card/50 border border-white/8 rounded-xl p-4">
           <LifeErrorBoundary>
-            <ActivityFeed world={world as any} />
+            <ActivityFeed world={world} />
           </LifeErrorBoundary>
         </div>
 

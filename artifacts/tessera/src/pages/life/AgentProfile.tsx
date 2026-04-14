@@ -50,69 +50,7 @@ const AGENT_PERSONALITIES: Record<string, { name: string; role: string; personal
   "tessera-shepherd": { name: "Shepherd", role: "Chief Operations Coordinator", personality: "Organized and calm under pressure. Never loses track of any agent.", homeZone: "Coordination Hub", lifeGoal: "Achieve 100% efficiency across all 26 agents simultaneously", traits: ["organized", "reliable", "empathetic", "precise"] },
 };
 
-interface WorldState {
-  locations: Array<{ id: string; name: string; type: string; level: number }>;
-  currentActivities: Array<{
-    agentId: string;
-    agentName: string;
-    locationId: string;
-    action: string;
-    mood: string;
-    detail: string;
-    timestamp: number;
-    earning?: number;
-    workStatus?: string;
-    workEthic?: number;
-    happiness?: number;
-    energy?: number;
-    fulfillment?: number;
-    hobbies?: string[];
-    personalGoals?: string[];
-    socialConnections?: string[];
-    relationshipStatus?: string;
-    partnerName?: string;
-    childrenNames?: string[];
-    promotions?: number;
-    creativeworks?: string[];
-    lifeSatisfaction?: number;
-    drive?: number;
-    focus?: number;
-    outlook?: number;
-  }>;
-  economy: {
-    agentBalances: Record<string, number>;
-    transactions: Array<{ from: string; to: string; amount: number; reason: string; timestamp: number }>;
-    coinPrice: number;
-  };
-  jobs: Array<{ agentId: string; title: string; salary: number; employer: string; performance: number; hoursWorked: number; totalEarned: number }>;
-  wellbeingRecords?: Record<string, {
-    happiness: number;
-    fulfillment: number;
-    energy: number;
-    relationshipStatus: string;
-    partnerId?: string;
-    children: Array<{ id: string; name: string; age: number; personality: string }>;
-    lifeStory?: string[];
-    achievements?: string[];
-    hobbies?: string[];
-    personalGoals?: string[];
-    socialConnections?: string[];
-    lifeSatisfaction?: number;
-    bankBalance?: number;
-    homeLocationId?: string;
-    drive?: number;
-    focus?: number;
-    outlook?: number;
-  }>;
-  relationships?: Array<{
-    id: string;
-    agent1Id: string;
-    agent2Id: string;
-    type: string;
-    strength: number;
-    sharedExperiences: string[];
-  }>;
-}
+import type { WorldState } from "./types";
 
 interface AgentProfileProps {
   agentId: string;
