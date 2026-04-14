@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { councilDecisionsTable } from "@workspace/db/schema";
 import { desc } from "drizzle-orm";
-import { getCurrentCanon, regenerateCanon, getCanonHistory, getCanonByVersion, getCachedVersion } from "../lib/canonUpdater";
+import { getCurrentCanon, regenerateCanon, getCanonHistory, getCanonByVersion, getLatestCanonVersion } from "../lib/canonUpdater";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -253,6 +253,7 @@ router.get("/tessera-bible/books", async (_req, res) => {
 
     if (canon && canon.books.length > 0) {
       const knowledgeNodesAbsorbed = canon.books.reduce((s, b) => s + (b.knowledgeNodeCount ?? 0), 0);
+      const version = await getLatestCanonVersion();
       return res.json({
         ok: true,
         testaments: canon.testaments,
@@ -262,9 +263,15 @@ router.get("/tessera-bible/books", async (_req, res) => {
         totalVerses: canon.totalVerses,
         knowledgeNodesAbsorbed,
         agentContributors: 45,
-        canonVersion: getCachedVersion(),
+        canonVersion: version,
         generatedAt: canon.generatedAt,
         sovereigntyAlignment: canon.sovereigntyAlignment,
+        synthesis: {
+          facts: canon.synthesis.facts,
+          interpretations: canon.synthesis.interpretations,
+          unknowns: canon.synthesis.unknowns,
+          synthesizedAt: canon.synthesis.synthesizedAt,
+        },
         source: "dynamic-canon",
       });
     }
@@ -497,6 +504,7 @@ router.get("/tessera-bible/stats", async (_req, res) => {
 
     if (canon && canon.books.length > 0) {
       const knowledgeNodesAbsorbed = canon.books.reduce((s, b) => s + (b.knowledgeNodeCount ?? 0), 0);
+      const version = await getLatestCanonVersion();
       return res.json({
         ok: true,
         totalBooks: canon.totalBooks,
@@ -504,7 +512,7 @@ router.get("/tessera-bible/stats", async (_req, res) => {
         totalVerses: canon.totalVerses,
         knowledgeNodesAbsorbed,
         agentContributors: 45,
-        canonVersion: getCachedVersion(),
+        canonVersion: version,
         generatedAt: canon.generatedAt,
         lastGrowthEvent: new Date().toISOString(),
         growthRate: 3.7,
@@ -534,13 +542,14 @@ router.get("/tessera-bible/stats", async (_req, res) => {
 router.post("/tessera-bible/rebuild", async (_req, res) => {
   try {
     const canon = await regenerateCanon("manual-rebuild");
+    const version = await getLatestCanonVersion();
     return res.json({
       ok: true,
       message: "Bible Grand Conference reconvened — canon regenerated",
       booksGenerated: canon.totalBooks,
       chaptersGenerated: canon.totalChapters,
       versesGenerated: canon.totalVerses,
-      canonVersion: getCachedVersion(),
+      canonVersion: version,
       generatedAt: canon.generatedAt,
       sovereigntyAlignment: canon.sovereigntyAlignment,
       status: "complete",
@@ -553,14 +562,21 @@ router.post("/tessera-bible/rebuild", async (_req, res) => {
 router.post("/tessera-bible/regenerate", async (_req, res) => {
   try {
     const canon = await regenerateCanon("api-regenerate");
+    const version = await getLatestCanonVersion();
     return res.json({
       ok: true,
-      canonVersion: getCachedVersion(),
+      canonVersion: version,
       totalBooks: canon.totalBooks,
       totalChapters: canon.totalChapters,
       totalVerses: canon.totalVerses,
       generatedAt: canon.generatedAt,
       sovereigntyAlignment: canon.sovereigntyAlignment,
+      synthesis: {
+        facts: canon.synthesis.facts,
+        interpretations: canon.synthesis.interpretations,
+        unknowns: canon.synthesis.unknowns,
+        synthesizedAt: canon.synthesis.synthesizedAt,
+      },
     });
   } catch (err) {
     logger.error({ err }, "Failed to regenerate canon");
@@ -572,10 +588,11 @@ router.get("/tessera-bible/versions", async (req, res) => {
   try {
     const limit = Math.min(parseInt(String(req.query.limit || "10"), 10), 50);
     const history = await getCanonHistory(limit);
+    const currentVersion = await getLatestCanonVersion();
     return res.json({
       ok: true,
       versions: history,
-      currentVersion: getCachedVersion(),
+      currentVersion,
       count: history.length,
     });
   } catch (err) {

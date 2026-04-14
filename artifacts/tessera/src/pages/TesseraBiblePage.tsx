@@ -370,6 +370,72 @@ export default function TesseraBiblePage() {
           </div>
         )}
 
+        {bibleData?.synthesis && (bibleData.synthesis.facts?.length > 0 || bibleData.synthesis.interpretations?.length > 0 || bibleData.synthesis.unknowns?.length > 0) && (
+          <div className="mb-4 bg-slate-900/60 border border-indigo-500/20 rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-3">
+              <Brain className="w-4 h-4 text-indigo-400" />
+              <span className="text-sm font-bold text-indigo-300">Canon Synthesis — Sovereign Engine Analysis</span>
+              {bibleData.synthesis.synthesizedAt && (
+                <span className="text-[10px] text-slate-500 ml-auto font-mono">{new Date(bibleData.synthesis.synthesizedAt).toLocaleString()}</span>
+              )}
+            </div>
+
+            {bibleData.synthesis.facts?.length > 0 && (
+              <div className="mb-3">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Shield className="w-3 h-3 text-emerald-400" />
+                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wide">Verified Facts ({bibleData.synthesis.facts.length})</span>
+                </div>
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {bibleData.synthesis.facts.slice(0, 10).map((f: { claim: string; source: string; domain: string; verifiedAt: string }, i: number) => (
+                    <div key={i} className="text-xs font-mono flex gap-2 items-start">
+                      <span className="text-emerald-500 mt-0.5 shrink-0">&#9679;</span>
+                      <span className="text-slate-300 flex-1">{f.claim}</span>
+                      <span className="text-slate-600 shrink-0">{f.domain}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {bibleData.synthesis.interpretations?.length > 0 && (
+              <div className="mb-3">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Eye className="w-3 h-3 text-amber-400" />
+                  <span className="text-xs font-bold text-amber-400 uppercase tracking-wide">Interpretations ({bibleData.synthesis.interpretations.length})</span>
+                </div>
+                <div className="space-y-1 max-h-24 overflow-y-auto">
+                  {bibleData.synthesis.interpretations.map((interp: { statement: string; basis: string; confidence: number }, i: number) => (
+                    <div key={i} className="text-xs font-mono flex gap-2 items-start">
+                      <span className="text-amber-500 mt-0.5 shrink-0">&#9670;</span>
+                      <span className="text-slate-300 flex-1">{interp.statement}</span>
+                      <span className="text-amber-600 shrink-0">{interp.confidence}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {bibleData.synthesis.unknowns?.length > 0 && (
+              <div>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Sparkles className="w-3 h-3 text-violet-400" />
+                  <span className="text-xs font-bold text-violet-400 uppercase tracking-wide">Open Questions ({bibleData.synthesis.unknowns.length})</span>
+                </div>
+                <div className="space-y-1 max-h-24 overflow-y-auto">
+                  {bibleData.synthesis.unknowns.map((u: { question: string; domain: string; investigationStatus: string }, i: number) => (
+                    <div key={i} className="text-xs font-mono flex gap-2 items-start">
+                      <span className="text-violet-500 mt-0.5 shrink-0">?</span>
+                      <span className="text-slate-400 flex-1">{u.question}</span>
+                      <span className="text-violet-600 shrink-0">{u.investigationStatus}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {searchQuery.length >= 3 && searchResults?.results?.length > 0 && (
           <div className="mb-4 bg-slate-900/60 border border-cyan-500/20 rounded-lg p-3">
             <div className="text-sm font-bold text-cyan-300 mb-2">
