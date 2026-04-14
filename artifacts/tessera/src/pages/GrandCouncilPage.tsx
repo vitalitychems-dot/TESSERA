@@ -10,7 +10,74 @@ import {
 
 const API = import.meta.env.VITE_API_URL || "/api";
 
-const DOMAIN_ICONS: Record<string, any> = {
+interface CouncilAgent {
+  id: string;
+  name: string;
+  role: string;
+  domain: string;
+  weight: number;
+}
+
+interface VoteTallyData {
+  yes: number;
+  no: number;
+  abstain: number;
+  totalEligible: number;
+}
+
+interface DeliberateResponse {
+  ok: boolean;
+  decisionId: string;
+  topic: string;
+  outcome: string;
+  voteTally: VoteTallyData;
+  passed: boolean;
+  transcript: string;
+  decisionText: string;
+  reasoning: string;
+  agentsParticipated: string[];
+  systemState: {
+    uptime: number;
+    memoryMB: number;
+    moduleCount: number;
+    moonPhase: string;
+    solarSign: string;
+    networkNodes: number;
+    sovereigntyScore: number;
+  };
+  timestamp: number;
+}
+
+interface AgentsResponse {
+  ok: boolean;
+  agents: CouncilAgent[];
+  totalEligible: number;
+  requiredVotes: number;
+  approvalThreshold: string;
+}
+
+interface CouncilDecision {
+  id: number;
+  decisionId: string;
+  topic: string;
+  transcript: string;
+  decisionText: string;
+  voteTally: VoteTallyData;
+  outcome: string;
+  agentsParticipated: string[];
+  reasoning: string;
+  category: string;
+  createdAt: string;
+}
+
+interface DecisionsResponse {
+  ok: boolean;
+  decisions: CouncilDecision[];
+  count: number;
+  councilAgents: CouncilAgent[];
+}
+
+const DOMAIN_ICONS: Record<string, typeof Crown> = {
   governance: Crown, quantum: Atom, "bio-neural": Brain,
   archival: BookOpen, networking: Globe, hardware: Cpu,
   "self-improvement": Zap, "sacred-geometry": Star,
@@ -41,7 +108,13 @@ function getDomainColor(domain: string): string {
   return DOMAIN_COLORS[domain] || "violet";
 }
 
-function AgentCard({ agent, compact }: { agent: any; compact?: boolean }) {
+async function safeFetch<T>(url: string): Promise<T> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json();
+}
+
+function AgentCard({ agent, compact }: { agent: CouncilAgent; compact?: boolean }) {
   const Icon = DOMAIN_ICONS[agent.domain] || Users;
   const color = getDomainColor(agent.domain);
 
@@ -51,7 +124,7 @@ function AgentCard({ agent, compact }: { agent: any; compact?: boolean }) {
         <div className={`w-1.5 h-1.5 rounded-full bg-${color}-400`} />
         <Icon size={12} className={`text-${color}-400 shrink-0`} />
         <span className="text-[11px] text-white/70 truncate">{agent.name.replace("Agent", "")}</span>
-        <span className="text-[9px] text-white/30 font-mono ml-auto shrink-0">w{agent.weight || agent.votingWeight || 1}</span>
+        <span className="text-[9px] text-white/30 font-mono ml-auto shrink-0">w{agent.weight}</span>
       </div>
     );
   }
@@ -66,9 +139,9 @@ function AgentCard({ agent, compact }: { agent: any; compact?: boolean }) {
           <div className="text-xs font-semibold text-white/90 truncate">{agent.name.replace("Agent", "")}</div>
           <div className="text-[9px] text-white/30 font-mono uppercase">{agent.domain}</div>
         </div>
-        {(agent.weight > 1 || agent.votingWeight > 1) && (
+        {agent.weight > 1 && (
           <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 font-mono font-bold border border-amber-500/20">
-            w{agent.weight || agent.votingWeight}
+            w{agent.weight}
           </span>
         )}
       </div>
@@ -77,23 +150,12 @@ function AgentCard({ agent, compact }: { agent: any; compact?: boolean }) {
   );
 }
 
-function normalizeVoteTally(raw: any): { yes: number; no: number; abstain: number; total: number; weightedYes: number; totalWeight: number; required: number } {
-  const inner = raw?.tally || raw;
-  const yes = inner?.yes ?? 0;
-  const no = inner?.no ?? 0;
-  const abstain = inner?.abstain ?? 0;
-  const total = inner?.totalEligible || raw?.totalWeight || (yes + no + abstain) || 1;
-  const weightedYes = raw?.weightedYes ?? yes;
-  const totalWeight = raw?.totalWeight || total;
-  const required = raw?.requiredThreshold || Math.ceil(total * 2 / 3);
-  return { yes, no, abstain, total, weightedYes, totalWeight, required };
-}
-
-function VoteTally({ tally: rawTally, passed }: { tally: any; passed: boolean }) {
-  const t = normalizeVoteTally(rawTally);
-  const yesPercent = t.total ? Math.round((t.yes / t.total) * 100) : 0;
-  const noPercent = t.total ? Math.round((t.no / t.total) * 100) : 0;
-  const abstainPercent = t.total ? Math.round((t.abstain / t.total) * 100) : 0;
+function VoteTally({ tally, passed }: { tally: VoteTallyData; passed: boolean }) {
+  const total = tally.totalEligible || (tally.yes + tally.no + tally.abstain) || 1;
+  const yesPercent = Math.round((tally.yes / total) * 100);
+  const noPercent = Math.round((tally.no / total) * 100);
+  const abstainPercent = Math.round((tally.abstain / total) * 100);
+  const required = Math.ceil(total * 2 / 3);
 
   return (
     <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-4">
@@ -113,21 +175,21 @@ function VoteTally({ tally: rawTally, passed }: { tally: any; passed: boolean })
 
       <div className="grid grid-cols-3 gap-2 text-center">
         <div>
-          <div className="text-lg font-bold text-emerald-400">{t.weightedYes}</div>
-          <div className="text-[10px] text-white/40">YES ({t.yes} votes)</div>
+          <div className="text-lg font-bold text-emerald-400">{tally.yes}</div>
+          <div className="text-[10px] text-white/40">YES</div>
         </div>
         <div>
-          <div className="text-lg font-bold text-red-400">{t.no}</div>
+          <div className="text-lg font-bold text-red-400">{tally.no}</div>
           <div className="text-[10px] text-white/40">NO</div>
         </div>
         <div>
-          <div className="text-lg font-bold text-white/50">{t.abstain}</div>
+          <div className="text-lg font-bold text-white/50">{tally.abstain}</div>
           <div className="text-[10px] text-white/40">ABSTAIN</div>
         </div>
       </div>
 
       <div className="mt-2 pt-2 border-t border-white/5 flex justify-between text-[10px] text-white/30 font-mono">
-        <span>Required: {t.required}/{t.totalWeight} (2/3)</span>
+        <span>Required: {required}/{total} (2/3)</span>
         <span>Approval: {yesPercent}%</span>
       </div>
     </div>
@@ -151,22 +213,16 @@ function TranscriptLine({ line, delay }: { line: string; delay: number }) {
 
   if (!visible) return null;
 
-  const isHeader = line.startsWith("═══") || line.startsWith("╔") || line.startsWith("╠") || line.startsWith("╚") || line.startsWith("║");
-  const isVoteYes = line.startsWith("✓");
-  const isVoteNo = line.startsWith("✗");
-  const isVoteAbstain = line.startsWith("○");
-  const isDecision = line.startsWith("DECISION:");
-  const isAgentSpeech = line.match(/^\[(\w+Agent)\]/);
-  const isPriority = line.match(/^Priority P\d/);
+  const isHeader = line.startsWith("═══") || line.startsWith("╔") || line.startsWith("╠") || line.startsWith("╚") || line.startsWith("║") || line.startsWith("[GRAND COUNCIL");
+  const isVoteLine = line.startsWith("YES:") || line.startsWith("[VOTE TALLY");
+  const isOutcome = line.startsWith("Outcome:");
+  const isAgentSpeech = /^\[(\w+Agent)\]/.test(line);
 
   let className = "text-white/60 text-xs font-mono leading-relaxed";
   if (isHeader) className = "text-amber-400/80 text-xs font-mono font-bold";
-  else if (isVoteYes) className = "text-emerald-400 text-xs font-mono";
-  else if (isVoteNo) className = "text-red-400 text-xs font-mono";
-  else if (isVoteAbstain) className = "text-white/40 text-xs font-mono";
-  else if (isDecision) className = line.includes("APPROVED") ? "text-emerald-400 text-sm font-mono font-bold" : "text-red-400 text-sm font-mono font-bold";
+  else if (isVoteLine) className = "text-cyan-400 text-xs font-mono";
+  else if (isOutcome) className = line.includes("APPROVED") ? "text-emerald-400 text-sm font-mono font-bold" : "text-red-400 text-sm font-mono font-bold";
   else if (isAgentSpeech) className = "text-violet-300/80 text-xs font-mono";
-  else if (isPriority) className = line.includes("ADOPTED") ? "text-cyan-400 text-xs font-mono" : "text-orange-400 text-xs font-mono";
 
   return (
     <div ref={ref} className={`${className} animate-in fade-in slide-in-from-bottom-1 duration-300`}>
@@ -177,13 +233,9 @@ function TranscriptLine({ line, delay }: { line: string; delay: number }) {
 
 function TranscriptView({ transcript, animated }: { transcript: string; animated?: boolean }) {
   const lines = transcript.split("\n");
-  const containerRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div
-      ref={containerRef}
-      className="bg-black/40 border border-white/[0.06] rounded-xl p-4 max-h-[500px] overflow-y-auto custom-scrollbar space-y-0.5"
-    >
+    <div className="bg-black/40 border border-white/[0.06] rounded-xl p-4 max-h-[500px] overflow-y-auto custom-scrollbar space-y-0.5">
       {lines.map((line, i) => (
         <TranscriptLine key={i} line={line} delay={animated ? i * 40 : 0} />
       ))}
@@ -191,29 +243,35 @@ function TranscriptView({ transcript, animated }: { transcript: string; animated
   );
 }
 
-function SessionHistoryCard({ session, type, onClick }: { session: any; type: "meeting" | "decision"; onClick: () => void }) {
-  const passed = type === "meeting"
-    ? session.outcome === "approved"
-    : session.outcome === "approved";
-  const topic = type === "meeting" ? session.topic : session.topic;
-  const date = new Date(session.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+function DecisionHistoryCard({ decision, onClick }: { decision: CouncilDecision; onClick: () => void }) {
+  const passed = decision.outcome === "approved";
+  const date = new Date(decision.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 
   return (
-    <button
-      onClick={onClick}
-      className="w-full text-left bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 hover:bg-white/[0.06] transition-colors group"
-    >
+    <button onClick={onClick} className="w-full text-left bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 hover:bg-white/[0.06] transition-colors group">
       <div className="flex items-center gap-2 mb-1">
         {passed ? <CheckCircle2 size={12} className="text-emerald-400 shrink-0" /> : <XCircle size={12} className="text-red-400 shrink-0" />}
-        <span className="text-xs font-semibold text-white/80 truncate flex-1">{topic}</span>
+        <span className="text-xs font-semibold text-white/80 truncate flex-1">{decision.topic}</span>
       </div>
       <div className="flex items-center gap-2 text-[10px] text-white/30 font-mono">
         <Clock size={10} />
         <span>{date}</span>
-        {type === "meeting" && session.rounds && <span className="ml-auto">{session.rounds} rounds</span>}
+        <span className="ml-auto">{decision.agentsParticipated?.length || 45} agents</span>
       </div>
     </button>
   );
+}
+
+interface ActiveSession {
+  decisionId: string;
+  topic: string;
+  outcome: string;
+  voteTally: VoteTallyData;
+  passed: boolean;
+  transcript: string;
+  decisionText: string;
+  agentsParticipated: string[];
+  systemState?: DeliberateResponse["systemState"];
 }
 
 export function TesseractFamilyTab() {
@@ -229,50 +287,49 @@ export default function GrandCouncilPage() {
   const [category, setCategory] = useState("general");
   const [activeTab, setActiveTab] = useState<"chamber" | "history" | "agents">("chamber");
   const [showAgents, setShowAgents] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<any>(null);
-  const [selectedType, setSelectedType] = useState<"meeting" | "decision">("meeting");
+  const [selectedSession, setSelectedSession] = useState<ActiveSession | null>(null);
   const [historySearch, setHistorySearch] = useState("");
-
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [isAnimatedSession, setIsAnimatedSession] = useState(false);
 
-  async function safeFetch(url: string) {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-    return res.json();
-  }
-
-  const { data: agentsData } = useQuery({
+  const { data: agentsData } = useQuery<AgentsResponse>({
     queryKey: ["council-agents"],
-    queryFn: () => safeFetch(`${API}/council/agents`),
+    queryFn: () => safeFetch<AgentsResponse>(`${API}/council/agents`),
     staleTime: 60000,
   });
 
-  const { data: meetingsData, isLoading: meetingsLoading } = useQuery({
-    queryKey: ["council-meetings"],
-    queryFn: () => safeFetch(`${API}/council/meetings?limit=50`),
-    staleTime: 10000,
-  });
-
-  const { data: decisionsData } = useQuery({
+  const { data: decisionsData, isLoading: decisionsLoading } = useQuery<DecisionsResponse>({
     queryKey: ["council-decisions"],
-    queryFn: () => safeFetch(`${API}/council/decisions?limit=50`),
+    queryFn: () => safeFetch<DecisionsResponse>(`${API}/council/decisions?limit=50`),
     staleTime: 10000,
   });
 
-  const deliberateMutation = useMutation({
-    mutationFn: async (payload: { topic: string; category: string }) => {
-      const res = await fetch(`${API}/council/meeting`, {
+  const deliberateMutation = useMutation<DeliberateResponse, Error, { topic: string; category: string }>({
+    mutationFn: async (payload) => {
+      const res = await fetch(`${API}/council/deliberate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...payload, rounds: 3 }),
+        body: JSON.stringify({ topic: payload.topic, category: payload.category }),
       });
-      if (!res.ok) throw new Error("Deliberation failed");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(body.error || `${res.status} ${res.statusText}`);
+      }
       return res.json();
     },
     onSuccess: (data) => {
-      setSelectedSession(data);
-      setSelectedType("meeting");
-      queryClient.invalidateQueries({ queryKey: ["council-meetings"] });
+      setSelectedSession({
+        decisionId: data.decisionId,
+        topic: data.topic,
+        outcome: data.outcome,
+        voteTally: data.voteTally,
+        passed: data.passed,
+        transcript: data.transcript,
+        decisionText: data.decisionText,
+        agentsParticipated: data.agentsParticipated,
+        systemState: data.systemState,
+      });
+      setIsAnimatedSession(true);
       queryClient.invalidateQueries({ queryKey: ["council-decisions"] });
       setTopic("");
     },
@@ -281,38 +338,30 @@ export default function GrandCouncilPage() {
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (!topic.trim() || deliberateMutation.isPending) return;
+    setFetchError(null);
     deliberateMutation.mutate({ topic: topic.trim(), category });
   }, [topic, category, deliberateMutation]);
 
   const handleDownloadTranscript = useCallback(() => {
     if (!selectedSession) return;
-    const transcript = selectedSession.transcript || selectedSession.meeting?.transcript || "";
-    const blob = new Blob([transcript], { type: "text/plain" });
+    const blob = new Blob([selectedSession.transcript], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `council-${selectedSession.meetingId || selectedSession.decisionId || "session"}-${Date.now()}.txt`;
+    a.download = `council-${selectedSession.decisionId}-${Date.now()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   }, [selectedSession]);
 
   const agents = agentsData?.agents || [];
-  const meetings = meetingsData?.meetings || [];
   const decisions = decisionsData?.decisions || [];
 
-  const filteredMeetings = historySearch
-    ? meetings.filter((m: any) => m.topic?.toLowerCase().includes(historySearch.toLowerCase()))
-    : meetings;
   const filteredDecisions = historySearch
-    ? decisions.filter((d: any) => d.topic?.toLowerCase().includes(historySearch.toLowerCase()))
+    ? decisions.filter((d) => d.topic?.toLowerCase().includes(historySearch.toLowerCase()))
     : decisions;
 
-  const totalWeight = agents.reduce((s: number, a: any) => s + (a.weight || 1), 0);
-  const requiredVotes = Math.ceil(totalWeight * 2 / 3);
-
-  const currentTranscript = selectedSession?.transcript || selectedSession?.meeting?.transcript || null;
-  const currentVoteTally = selectedSession?.votingResults || (selectedSession?.voteTally ? { ...selectedSession.voteTally } : null);
-  const currentPassed = selectedSession?.passed ?? selectedSession?.outcome === "approved";
+  const totalWeight = agents.reduce((s, a) => s + a.weight, 0);
+  const requiredVotes = agentsData?.requiredVotes || Math.ceil(totalWeight * 2 / 3);
 
   const tabs = [
     { id: "chamber" as const, label: "Council Chamber", icon: Crown },
@@ -431,7 +480,7 @@ export default function GrandCouncilPage() {
             {showAgents && (
               <div className="mt-3 pt-3 border-t border-white/5">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1.5 max-h-[200px] overflow-y-auto custom-scrollbar">
-                  {agents.map((agent: any) => (
+                  {agents.map((agent) => (
                     <AgentCard key={agent.id} agent={agent} compact />
                   ))}
                 </div>
@@ -443,7 +492,9 @@ export default function GrandCouncilPage() {
             <div className="bg-red-500/5 border border-red-500/15 rounded-xl p-4 flex items-center gap-3">
               <XCircle size={16} className="text-red-400 shrink-0" />
               <div className="flex-1 text-sm text-red-300">
-                {deliberateMutation.isError ? `Deliberation failed: ${(deliberateMutation.error as Error)?.message || "Unknown error"}` : fetchError}
+                {deliberateMutation.isError
+                  ? `Deliberation failed: ${deliberateMutation.error.message}`
+                  : fetchError}
               </div>
               <button
                 onClick={() => { deliberateMutation.reset(); setFetchError(null); }}
@@ -469,87 +520,69 @@ export default function GrandCouncilPage() {
             </div>
           )}
 
-          {selectedSession && currentTranscript && (
+          {selectedSession && (
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  {currentPassed ? (
-                    <CheckCircle2 size={18} className="text-emerald-400" />
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  {selectedSession.passed ? (
+                    <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
                   ) : (
-                    <XCircle size={18} className="text-red-400" />
+                    <XCircle size={18} className="text-red-400 shrink-0" />
                   )}
-                  <div>
-                    <div className="text-sm font-semibold text-white/90">
-                      {selectedSession.topic || "Council Session"}
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-white/90 truncate">
+                      {selectedSession.topic}
                     </div>
                     <div className="text-[10px] text-white/30 font-mono">
-                      {selectedSession.meetingId || selectedSession.decisionId} | {selectedSession.themes?.join(", ") || selectedSession.category || "general"}
+                      {selectedSession.decisionId} | {selectedSession.agentsParticipated.length} agents
                     </div>
                   </div>
                 </div>
-                <div className="flex-1" />
                 <button
                   onClick={handleDownloadTranscript}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white/60 hover:text-white/80 hover:bg-white/[0.06] transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white/60 hover:text-white/80 hover:bg-white/[0.06] transition-colors shrink-0"
                 >
                   <Download size={12} />
                   <span>Save Transcript</span>
                 </button>
               </div>
 
-              {currentVoteTally && (
-                <VoteTally tally={currentVoteTally} passed={currentPassed} />
-              )}
+              <VoteTally tally={selectedSession.voteTally} passed={selectedSession.passed} />
 
-              {selectedSession.actionPlan && (
+              {selectedSession.decisionText && (
                 <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Zap size={14} className="text-cyan-400" />
-                    <span className="text-sm font-semibold text-white/80">Action Plan</span>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Shield size={14} className="text-cyan-400" />
+                    <span className="text-sm font-semibold text-white/80">Decision Summary</span>
                   </div>
-                  <div className="space-y-1.5">
-                    {selectedSession.actionPlan.map((action: string, i: number) => (
-                      <div key={i} className="flex items-start gap-2 text-xs">
-                        <span className="text-cyan-400/60 font-mono shrink-0 mt-0.5">{String(i + 1).padStart(2, "0")}</span>
-                        <span className="text-white/60">{action}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <p className="text-xs text-white/60 leading-relaxed">{selectedSession.decisionText}</p>
                 </div>
               )}
 
-              {selectedSession.selfExpansionAnalysis && (
+              {selectedSession.systemState && (
                 <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Cpu size={14} className="text-orange-400" />
-                    <span className="text-sm font-semibold text-white/80">Self-Expansion Analysis</span>
+                    <span className="text-sm font-semibold text-white/80">System Telemetry at Deliberation</span>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                    <div className="bg-black/20 rounded-lg p-3">
-                      <div className="text-[10px] text-white/30 uppercase font-mono mb-1">Learn</div>
-                      <div className="text-xs text-white/60">{selectedSession.selfExpansionAnalysis.learnBuildMore?.learn || "—"}</div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-black/20 rounded-lg p-2.5">
+                      <div className="text-[10px] text-white/30 font-mono">Uptime</div>
+                      <div className="text-xs text-white/70 font-semibold">{Math.round(selectedSession.systemState.uptime / 60)}m</div>
                     </div>
-                    <div className="bg-black/20 rounded-lg p-3">
-                      <div className="text-[10px] text-white/30 uppercase font-mono mb-1">Build</div>
-                      <div className="text-xs text-white/60">{selectedSession.selfExpansionAnalysis.learnBuildMore?.build || "—"}</div>
+                    <div className="bg-black/20 rounded-lg p-2.5">
+                      <div className="text-[10px] text-white/30 font-mono">Memory</div>
+                      <div className="text-xs text-white/70 font-semibold">{selectedSession.systemState.memoryMB}MB</div>
                     </div>
-                    <div className="bg-black/20 rounded-lg p-3">
-                      <div className="text-[10px] text-white/30 uppercase font-mono mb-1">More</div>
-                      <div className="text-xs text-white/60">{selectedSession.selfExpansionAnalysis.learnBuildMore?.more || "—"}</div>
+                    <div className="bg-black/20 rounded-lg p-2.5">
+                      <div className="text-[10px] text-white/30 font-mono">Moon</div>
+                      <div className="text-xs text-white/70 font-semibold">{selectedSession.systemState.moonPhase}</div>
+                    </div>
+                    <div className="bg-black/20 rounded-lg p-2.5">
+                      <div className="text-[10px] text-white/30 font-mono">Sovereignty</div>
+                      <div className="text-xs text-white/70 font-semibold">{selectedSession.systemState.sovereigntyScore.toFixed(1)}%</div>
                     </div>
                   </div>
-                  {selectedSession.selfExpansionAnalysis.proposedModules?.length > 0 && (
-                    <div className="space-y-1.5">
-                      <div className="text-[10px] text-white/30 uppercase font-mono">Proposed Modules</div>
-                      {selectedSession.selfExpansionAnalysis.proposedModules.map((mod: any, i: number) => (
-                        <div key={i} className="flex items-center gap-2 text-xs bg-black/20 rounded-lg px-3 py-2">
-                          <span className="text-orange-400 font-mono font-bold">{mod.name}</span>
-                          <span className="text-white/40 flex-1 truncate">{mod.purpose}</span>
-                          <span className="text-white/20 font-mono shrink-0">~{mod.estimatedLines}L</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -557,8 +590,9 @@ export default function GrandCouncilPage() {
                 <div className="flex items-center gap-2 mb-2">
                   <BookOpen size={14} className="text-violet-400" />
                   <span className="text-sm font-semibold text-white/80">Full Transcript</span>
+                  <span className="text-[10px] text-white/20 font-mono ml-auto">{selectedSession.transcript.split("\n").length} lines</span>
                 </div>
-                <TranscriptView transcript={currentTranscript} animated={!!deliberateMutation.data && selectedSession === deliberateMutation.data} />
+                <TranscriptView transcript={selectedSession.transcript} animated={isAnimatedSession} />
               </div>
             </div>
           )}
@@ -568,12 +602,12 @@ export default function GrandCouncilPage() {
               <Crown size={40} className="text-amber-400/30 mx-auto mb-3" />
               <div className="text-sm text-white/40 mb-1">No Active Session</div>
               <div className="text-xs text-white/20">Submit a topic above to convene the Grand Council</div>
-              {meetings.length > 0 && (
+              {decisions.length > 0 && (
                 <button
                   onClick={() => setActiveTab("history")}
                   className="mt-3 text-xs text-amber-400/60 hover:text-amber-400 transition-colors"
                 >
-                  View {meetings.length} past session{meetings.length !== 1 ? "s" : ""}
+                  View {decisions.length} past session{decisions.length !== 1 ? "s" : ""}
                 </button>
               )}
             </div>
@@ -583,91 +617,55 @@ export default function GrandCouncilPage() {
 
       {activeTab === "history" && (
         <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
-              <input
-                type="text"
-                value={historySearch}
-                onChange={e => setHistorySearch(e.target.value)}
-                placeholder="Search sessions..."
-                className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-amber-500/20 transition-colors"
-              />
-            </div>
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+            <input
+              type="text"
+              value={historySearch}
+              onChange={e => setHistorySearch(e.target.value)}
+              placeholder="Search past decisions..."
+              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-amber-500/20 transition-colors"
+            />
           </div>
 
-          {meetingsLoading ? (
+          {decisionsLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 size={24} className="animate-spin text-amber-400/40" />
             </div>
+          ) : filteredDecisions.length > 0 ? (
+            <div>
+              <div className="text-[10px] font-mono text-amber-400/50 uppercase tracking-[0.2em] mb-3">
+                Council Decisions ({filteredDecisions.length})
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {filteredDecisions.map((d) => (
+                  <DecisionHistoryCard
+                    key={d.decisionId || d.id}
+                    decision={d}
+                    onClick={() => {
+                      setSelectedSession({
+                        decisionId: d.decisionId,
+                        topic: d.topic,
+                        outcome: d.outcome,
+                        voteTally: d.voteTally,
+                        passed: d.outcome === "approved",
+                        transcript: d.transcript,
+                        decisionText: d.decisionText,
+                        agentsParticipated: d.agentsParticipated || [],
+                      });
+                      setIsAnimatedSession(false);
+                      setActiveTab("chamber");
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
           ) : (
-            <div className="space-y-6">
-              {filteredMeetings.length > 0 && (
-                <div>
-                  <div className="text-[10px] font-mono text-amber-400/50 uppercase tracking-[0.2em] mb-3">Council Meetings ({filteredMeetings.length})</div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {filteredMeetings.map((m: any) => (
-                      <SessionHistoryCard
-                        key={m.meetingId || m.id}
-                        session={m}
-                        type="meeting"
-                        onClick={async () => {
-                          setFetchError(null);
-                          try {
-                            const data = await safeFetch(`${API}/council/meetings/${m.meetingId}`);
-                            if (data.ok && data.meeting) {
-                              setSelectedSession({
-                                ...data.meeting,
-                                votingResults: data.meeting.votingResults,
-                                actionPlan: data.meeting.actionPlan,
-                                selfExpansionAnalysis: data.meeting.selfExpansionAnalysis,
-                              });
-                              setSelectedType("meeting");
-                              setActiveTab("chamber");
-                            }
-                          } catch (err: any) {
-                            setFetchError(`Failed to load meeting: ${err.message}`);
-                          }
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {filteredDecisions.length > 0 && (
-                <div>
-                  <div className="text-[10px] font-mono text-violet-400/50 uppercase tracking-[0.2em] mb-3">Council Decisions ({filteredDecisions.length})</div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {filteredDecisions.map((d: any) => (
-                      <SessionHistoryCard
-                        key={d.decisionId || d.id}
-                        session={d}
-                        type="decision"
-                        onClick={() => {
-                          setSelectedSession({
-                            ...d,
-                            topic: d.topic,
-                            transcript: d.transcript,
-                            decisionId: d.decisionId,
-                            passed: d.outcome === "approved",
-                            votingResults: d.voteTally,
-                          });
-                          setSelectedType("decision");
-                          setActiveTab("chamber");
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {filteredMeetings.length === 0 && filteredDecisions.length === 0 && (
-                <div className="text-center py-12">
-                  <History size={32} className="text-white/10 mx-auto mb-2" />
-                  <div className="text-sm text-white/30">No sessions found</div>
-                </div>
-              )}
+            <div className="text-center py-12">
+              <History size={32} className="text-white/10 mx-auto mb-2" />
+              <div className="text-sm text-white/30">
+                {historySearch ? "No matching sessions found" : "No past sessions yet"}
+              </div>
             </div>
           )}
         </div>
@@ -676,7 +674,7 @@ export default function GrandCouncilPage() {
       {activeTab === "agents" && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-            {agents.map((agent: any) => (
+            {agents.map((agent) => (
               <AgentCard key={agent.id} agent={agent} />
             ))}
           </div>
