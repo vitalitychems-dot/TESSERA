@@ -31,6 +31,7 @@ import tesseraBibleRouter from "./tessera-bible";
 import theoremLabRouter from "./theorem-lab";
 import sovereignInfrastructureRouter from "./sovereign-infrastructure";
 import metaIntrospectorRouter from "./meta-introspector";
+import sacredGeometryRouter from "./sacred-geometry";
 
 const router: IRouter = Router();
 
@@ -66,5 +67,6 @@ router.use(tesseraBibleRouter);
 router.use(theoremLabRouter);
 router.use(sovereignInfrastructureRouter);
 router.use(metaIntrospectorRouter);
+router.use(sacredGeometryRouter);
 
 export default router;
