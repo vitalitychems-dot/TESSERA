@@ -150,20 +150,27 @@ function AgentCard({ agent, compact }: { agent: CouncilAgent; compact?: boolean 
   );
 }
 
-function VoteTally({ tally, passed }: { tally: VoteTallyData; passed: boolean }) {
+function getOutcomeStyle(outcome: string): { label: string; bgClass: string; textClass: string; borderClass: string; iconColor: string } {
+  if (outcome === "approved") return { label: "APPROVED", bgClass: "bg-emerald-500/15", textClass: "text-emerald-400", borderClass: "border-emerald-500/20", iconColor: "text-emerald-400" };
+  if (outcome === "pending") return { label: "PENDING", bgClass: "bg-amber-500/15", textClass: "text-amber-400", borderClass: "border-amber-500/20", iconColor: "text-amber-400" };
+  return { label: "REJECTED", bgClass: "bg-red-500/15", textClass: "text-red-400", borderClass: "border-red-500/20", iconColor: "text-red-400" };
+}
+
+function VoteTally({ tally, outcome }: { tally: VoteTallyData; outcome: string }) {
   const total = tally.totalEligible || (tally.yes + tally.no + tally.abstain) || 1;
   const yesPercent = Math.round((tally.yes / total) * 100);
   const noPercent = Math.round((tally.no / total) * 100);
   const abstainPercent = Math.round((tally.abstain / total) * 100);
   const required = Math.ceil(total * 2 / 3);
+  const style = getOutcomeStyle(outcome);
 
   return (
     <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-4">
       <div className="flex items-center gap-2 mb-3">
-        <BarChart3 size={16} className={passed ? "text-emerald-400" : "text-red-400"} />
+        <BarChart3 size={16} className={style.iconColor} />
         <span className="text-sm font-semibold text-white/90">BFT Vote Tally</span>
-        <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-mono font-bold ${passed ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" : "bg-red-500/15 text-red-400 border border-red-500/20"}`}>
-          {passed ? "APPROVED" : "REJECTED"}
+        <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-mono font-bold ${style.bgClass} ${style.textClass} border ${style.borderClass}`}>
+          {style.label}
         </span>
       </div>
 
@@ -243,14 +250,19 @@ function TranscriptView({ transcript, animated }: { transcript: string; animated
   );
 }
 
+function OutcomeIcon({ outcome, size = 12 }: { outcome: string; size?: number }) {
+  if (outcome === "approved") return <CheckCircle2 size={size} className="text-emerald-400 shrink-0" />;
+  if (outcome === "pending") return <Clock size={size} className="text-amber-400 shrink-0" />;
+  return <XCircle size={size} className="text-red-400 shrink-0" />;
+}
+
 function DecisionHistoryCard({ decision, onClick }: { decision: CouncilDecision; onClick: () => void }) {
-  const passed = decision.outcome === "approved";
   const date = new Date(decision.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 
   return (
     <button onClick={onClick} className="w-full text-left bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 hover:bg-white/[0.06] transition-colors group">
       <div className="flex items-center gap-2 mb-1">
-        {passed ? <CheckCircle2 size={12} className="text-emerald-400 shrink-0" /> : <XCircle size={12} className="text-red-400 shrink-0" />}
+        <OutcomeIcon outcome={decision.outcome} />
         <span className="text-xs font-semibold text-white/80 truncate flex-1">{decision.topic}</span>
       </div>
       <div className="flex items-center gap-2 text-[10px] text-white/30 font-mono">
@@ -524,11 +536,7 @@ export default function GrandCouncilPage() {
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  {selectedSession.passed ? (
-                    <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
-                  ) : (
-                    <XCircle size={18} className="text-red-400 shrink-0" />
-                  )}
+                  <OutcomeIcon outcome={selectedSession.outcome} size={18} />
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-white/90 truncate">
                       {selectedSession.topic}
@@ -547,7 +555,7 @@ export default function GrandCouncilPage() {
                 </button>
               </div>
 
-              <VoteTally tally={selectedSession.voteTally} passed={selectedSession.passed} />
+              <VoteTally tally={selectedSession.voteTally} outcome={selectedSession.outcome} />
 
               {selectedSession.decisionText && (
                 <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-4">
