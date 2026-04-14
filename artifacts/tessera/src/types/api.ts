@@ -13,6 +13,12 @@ export interface KnowledgeEntry {
   cycle?: number;
   timestamp?: number;
   source?: string;
+  url?: string;
+  sourceType?: string;
+  tags?: string[];
+  classification?: string;
+  confidence?: number;
+  verified?: boolean;
 }
 
 export interface Spell {

@@ -11,6 +11,7 @@ import {
   fetchCIAReadingRoom, fetchFBIVault, fetchInternetArchive,
   fetchWikipediaKnowledge, fetchArxivDeep, fetchOpenLibrary,
   fetchProjectGutenberg, fetchStanfordEncyclopedia, fetchSmithsonian,
+  fetchSecretSocietyArchives, fetchDeclassifiedArchives,
 } from "./knowledge-scrapers";
 import { logger } from "../logger";
 
@@ -51,6 +52,8 @@ const SOURCE_HANDLERS: Record<string, SourceHandler> = {
   "Project Gutenberg": fetchProjectGutenberg,
   "Stanford Encyclopedia": fetchStanfordEncyclopedia,
   "Smithsonian": fetchSmithsonian,
+  "Secret Society Archives": fetchSecretSocietyArchives,
+  "Declassified Archives": fetchDeclassifiedArchives,
 
   "arXiv Quantum": () => fetchArxiv("quantum computing entanglement", 5),
   "arXiv Consciousness": () => fetchArxiv("consciousness neural correlates", 5),
@@ -210,7 +213,7 @@ const SOURCE_GROUPS = [
   ["PubMed", "PubMed Frequency Healing", "PubMed Consciousness"],
   ["GitHub Trending", "GitHub AI Repos", "GitHub ML Repos", "GitHub Open Source", "GitHub Quantum", "GitHub AGI", "GitHub Sacred Geometry", "GitHub Free Energy", "GitHub Consciousness"],
   ["GitHub Microsoft", "GitHub Google"],
-  ["CIA Reading Room", "FBI Vault", "Internet Archive"],
+  ["CIA Reading Room", "FBI Vault", "Internet Archive", "Secret Society Archives", "Declassified Archives"],
   ["Open Library", "Project Gutenberg", "Smithsonian"],
   ["data.gov Technology", "data.gov Climate", "data.gov Science", "data.gov Energy", "data.gov Space"],
   ["World Bank GDP", "World Bank Population", "UN SDG Indicators", "GitHub Public Datasets"],

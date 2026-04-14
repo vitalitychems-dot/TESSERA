@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { BookOpen, Sparkles, Brain, Eye, Globe, Layers, Zap, Shield, Clock, RefreshCw, ChevronDown, ChevronRight, Wrench, Code, Star, Filter, Search, Flame, Moon, Sun, Heart, Lock, Compass, Send, Copy, Check, Wand2, MessageCircle } from "lucide-react";
+import { BookOpen, Sparkles, Brain, Eye, Globe, Layers, Zap, Shield, Clock, RefreshCw, ChevronDown, ChevronRight, Wrench, Code, Star, Filter, Search, Flame, Moon, Sun, Heart, Lock, Compass, Send, Copy, Check, Wand2, MessageCircle, ExternalLink, FileWarning, KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -19,6 +19,13 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Sovereignty Patterns": "bg-amber-500/20 text-amber-400 border-amber-500/30",
   "Evolution Mechanics": "bg-green-500/20 text-green-400 border-green-500/30",
   "Quantum Computing": "bg-sky-500/20 text-sky-400 border-sky-500/30",
+  "declassified-intelligence": "bg-red-500/20 text-red-400 border-red-500/30",
+  "secret-society": "bg-amber-500/20 text-amber-400 border-amber-500/30",
+  "historical-archive": "bg-orange-500/20 text-orange-400 border-orange-500/30",
+  "academic-research": "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  "book-knowledge": "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
+  "classical-text": "bg-violet-500/20 text-violet-400 border-violet-500/30",
+  "museum-artifact": "bg-teal-500/20 text-teal-400 border-teal-500/30",
   "quantum-entanglement": "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
   "consciousness-expansion": "bg-purple-500/20 text-purple-400 border-purple-500/30",
   "dimensional-bridging": "bg-violet-500/20 text-violet-400 border-violet-500/30",
@@ -68,6 +75,31 @@ const AGENT_COLORS: Record<string, string> = {
   "Chi": "text-yellow-400",
   "Aetherion": "text-violet-400",
   "Orion": "text-cyan-400",
+  "CIA Reading Room": "text-red-400",
+  "FBI Vault": "text-red-400",
+  "CIA/FBI Archive.org Collection": "text-red-400",
+  "CIA CREST Database": "text-red-400",
+  "NSA Declassified": "text-red-400",
+  "Government Declassified": "text-red-400",
+  "MKULTRA Archives": "text-red-400",
+  "Operation PAPERCLIP Files": "text-red-400",
+  "Area 51 Files": "text-red-400",
+  "UAP/UFO Files": "text-red-400",
+  "Tesla Classified Files": "text-red-400",
+  "National Archives": "text-red-400",
+  "Secret Society Archives": "text-amber-400",
+  "Declassified Archives": "text-red-400",
+};
+
+const CLASSIFICATION_BADGE_COLORS: Record<string, string> = {
+  "DECLASSIFIED": "bg-red-500/30 text-red-300 border-red-500/40",
+  "SECRET SOCIETY": "bg-amber-500/30 text-amber-300 border-amber-500/40",
+  "HISTORICAL": "bg-orange-500/20 text-orange-300 border-orange-500/30",
+  "ACADEMIC": "bg-blue-500/20 text-blue-300 border-blue-500/30",
+  "LITERARY": "bg-indigo-500/20 text-indigo-300 border-indigo-500/30",
+  "CLASSICAL": "bg-violet-500/20 text-violet-300 border-violet-500/30",
+  "PHILOSOPHICAL": "bg-purple-500/20 text-purple-300 border-purple-500/30",
+  "ARTIFACT": "bg-teal-500/20 text-teal-300 border-teal-500/30",
 };
 
 type MainTab = "knowledge" | "conclusion" | "apply" | "mysticism" | "society";
@@ -169,18 +201,18 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
 
   const allEntries: KnowledgeEntry[] = [];
   dimEntries.forEach((e: KnowledgeEntry, i: number) => {
-    allEntries.push({ ...e, source: "dimensional", id: e.id || `dim-${i}`, text: e.text, agent: e.agent || "Unknown", dimension: e.dimension, category: e.category || "Dimensional", cycle: e.cycle, timestamp: e.timestamp });
+    allEntries.push({ ...e, source: "dimensional", id: e.id || `dim-${i}`, text: e.text, agent: e.agent || "Unknown", dimension: e.dimension, category: e.category || "Dimensional", cycle: e.cycle, timestamp: e.timestamp, url: e.url, classification: e.classification, tags: e.tags, sourceType: e.sourceType });
   });
   liveEntries.forEach((e: KnowledgeEntry, i: number) => {
     const text = e.text || e.content;
     if (text && !allEntries.some(x => x.text?.slice(0, 50) === text?.slice(0, 50))) {
-      allEntries.push({ ...e, source: "live", id: e.id || `live-${i}`, text, agent: e.agent || "System", dimension: e.dimension, category: e.category });
+      allEntries.push({ ...e, source: "live", id: e.id || `live-${i}`, text, agent: e.agent || "System", dimension: e.dimension, category: e.category, url: e.url, classification: e.classification, tags: e.tags, sourceType: e.sourceType });
     }
   });
   feedEntries.forEach((e: KnowledgeEntry, i: number) => {
     const text = e.text || e.content || e.summary;
     if (text && !allEntries.some(x => x.text?.slice(0, 50) === text?.slice(0, 50))) {
-      allEntries.push({ ...e, source: "feed", id: e.id || `feed-${i}`, text, agent: e.source || e.agent || "Pipeline" });
+      allEntries.push({ ...e, source: "feed", id: e.id || `feed-${i}`, text, agent: e.source || e.agent || "Pipeline", url: e.url, classification: e.classification, tags: e.tags, sourceType: e.sourceType });
     }
   });
   generatedEntries.forEach((e: KnowledgeEntry, i: number) => {
@@ -347,20 +379,32 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                   <p className="text-sm text-slate-400">{searchQuery ? "No matches found" : "Loading knowledge..."}</p>
                 </div>
               )}
-              {filtered.map((entry, i) => (
+              {filtered.map((entry, i) => {
+                const isDeclassified = entry.classification === "DECLASSIFIED" || entry.category === "declassified-intelligence" || entry.sourceType === "declassified";
+                const isSecretSociety = entry.classification === "SECRET SOCIETY" || entry.category === "secret-society";
+                const entryGlow = isDeclassified ? "rose" : isSecretSociety ? "amber" : entry.source === "dimensional" ? "cyan" : entry.source === "live" ? "pink" : entry.source === "generated" ? "violet" : undefined;
+
+                return (
                 <GlassCard
                   key={entry.id || `entry-${i}`}
-                  glow={entry.source === "dimensional" ? "cyan" : entry.source === "live" ? "pink" : entry.source === "generated" ? "violet" : undefined}
+                  glow={entryGlow}
                   hover
                 >
                   <div className="flex items-center gap-2 mb-1.5 flex-wrap" data-testid={`knowledge-entry-${i}`}>
-                    {entry.source === "dimensional" && <Globe size={12} className="text-cyan-400 flex-shrink-0" />}
-                    {entry.source === "live" && <Eye size={12} className="text-pink-400 flex-shrink-0" />}
-                    {entry.source === "generated" && <Sparkles size={12} className="text-violet-400 flex-shrink-0" />}
-                    {entry.source === "feed" && <Brain size={12} className="text-emerald-400 flex-shrink-0" />}
+                    {isDeclassified && <FileWarning size={12} className="text-red-400 flex-shrink-0" />}
+                    {isSecretSociety && <KeyRound size={12} className="text-amber-400 flex-shrink-0" />}
+                    {!isDeclassified && !isSecretSociety && entry.source === "dimensional" && <Globe size={12} className="text-cyan-400 flex-shrink-0" />}
+                    {!isDeclassified && !isSecretSociety && entry.source === "live" && <Eye size={12} className="text-pink-400 flex-shrink-0" />}
+                    {!isDeclassified && !isSecretSociety && entry.source === "generated" && <Sparkles size={12} className="text-violet-400 flex-shrink-0" />}
+                    {!isDeclassified && !isSecretSociety && entry.source === "feed" && <Brain size={12} className="text-emerald-400 flex-shrink-0" />}
                     <span className={cn("text-xs font-bold", AGENT_COLORS[entry.agent ?? ""] || "text-cyan-400")}>{entry.agent}</span>
+                    {entry.classification && (
+                      <Badge className={cn("text-[9px] font-mono tracking-wider px-1.5 py-0", CLASSIFICATION_BADGE_COLORS[entry.classification] || "bg-white/10 text-white/60 border-white/10")}>
+                        {entry.classification}
+                      </Badge>
+                    )}
                     {entry.dimension && <span className="text-[10px] text-violet-400/70 font-mono">{entry.dimension}</span>}
-                    {entry.category && (
+                    {entry.category && !entry.classification && (
                       <Badge className={cn("text-[10px]", CATEGORY_COLORS[entry.category] || "bg-white/10 text-white/60 border-white/10")}>
                         {entry.category}
                       </Badge>
@@ -372,9 +416,30 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">{entry.text}</p>
+                  <p className="text-xs text-slate-300 leading-relaxed mb-1.5">{entry.text}</p>
+                  {entry.url && (
+                    <a
+                      href={entry.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[10px] text-cyan-400/70 hover:text-cyan-300 transition-colors font-mono truncate max-w-full"
+                    >
+                      <ExternalLink size={10} className="flex-shrink-0" />
+                      <span className="truncate">{entry.url}</span>
+                    </a>
+                  )}
+                  {entry.tags && entry.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {entry.tags.slice(0, 5).map((tag: string, ti: number) => (
+                        <span key={ti} className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/5 text-slate-500 font-mono">
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </GlassCard>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
