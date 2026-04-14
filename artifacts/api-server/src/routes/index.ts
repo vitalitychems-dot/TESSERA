@@ -39,6 +39,7 @@ import sovereignLanguageRouter from "./sovereign-language";
 import legacyEnginesRouter from "./legacy-engines";
 import sovereignEnginesRouter from "./sovereign-engines";
 import agentNetworkRouter from "./agent-network";
+import natalChartRouter from "./natal-chart";
 import intelligenceCoreRouter from "./intelligence-core";
 import trainingEvolutionRouter from "./training-evolution";
 import governanceConsensusRouter from "./governance-consensus";
@@ -48,6 +49,7 @@ const router: IRouter = Router();
 
 router.use(sovereignEnginesRouter);
 router.use(agentNetworkRouter);
+router.use(natalChartRouter);
 router.use(intelligenceCoreRouter);
 router.use(trainingEvolutionRouter);
 router.use(governanceConsensusRouter);

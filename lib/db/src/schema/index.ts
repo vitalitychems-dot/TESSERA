@@ -8,3 +8,4 @@ export * from "./ingestion";
 export * from "./inventions";
 export * from "./conversations";
 export * from "./phases-8-12";
+export * from "./natal-chart";
