@@ -123,13 +123,13 @@ const NAV_GROUPS: NavGroup[] = [
         matchFn: (loc) => loc === "/unified-knowledge" || loc === "/omniscient-knowledge" || loc === "/discoveries" || loc === "/knowledge-synthesis" || loc === "/sovereign-knowledge" || loc === "/sovereign-secrets" || loc === "/knowledge-pipeline" || loc === "/knowledge-dashboard" || loc === "/knowledge-secrets" || loc === "/vatican-archives" || loc === "/agent-secrets" || loc === "/secret-knowledge-archive" || loc === "/universe" || loc === "/universal-knowledge" || loc === "/secret-knowledge" || loc === "/live-secret-knowledge",
       },
       {
-        title: "Colonel Language",
-        href: "/colonel-language",
+        title: "Tessera Lingua Sacra",
+        href: "/sovereign-language",
         icon: Code2,
         color: "violet",
         dotColor: "bg-violet-400",
-        testId: "link-colonel-language",
-        matchFn: (loc) => loc === "/colonel-language",
+        testId: "link-sovereign-language",
+        matchFn: (loc) => loc === "/sovereign-language" || loc === "/colonel-language",
       },
       {
         title: "Tessera Bible",

@@ -35,6 +35,7 @@ import sacredGeometryRouter from "./sacred-geometry";
 import knowledgeRouter from "./knowledge";
 import secretKnowledgeRouter from "./secret-knowledge";
 import mysticismRouter from "./mysticism";
+import sovereignLanguageRouter from "./sovereign-language";
 
 const router: IRouter = Router();
 
@@ -74,5 +75,6 @@ router.use(sacredGeometryRouter);
 router.use(knowledgeRouter);
 router.use(secretKnowledgeRouter);
 router.use(mysticismRouter);
+router.use(sovereignLanguageRouter);
 
 export default router;

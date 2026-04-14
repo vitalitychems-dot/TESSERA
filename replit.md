@@ -50,6 +50,7 @@ The application is structured around 10 flat navigation tabs in a bottom nav bar
 -   **Shepherd Agents:** Disposable autonomous scraping workers that cycle through target categories (declassified, sacred, science, philosophy, tesla, technology). Generated with rotating names (Phantom, Shadow, Ghost, etc.), they crawl targets, ingest findings, then self-dispose. Loop runs every 10 minutes.
 -   **Knowledge-to-Canon Bridge:** Monitors ingested data and auto-regenerates the Tessera Bible when 25+ new items are ingested. Bridges continuous scraping to the living canon system.
 -   **Ingested Knowledge Recall:** Chat pipeline searches ingested data (via `recallIngestedKnowledge`) to enrich sovereign context with scraped knowledge from all sources.
+-   **Tessera Lingua Sacra (TLS):** A divine sacred language created and ratified by a Grand Conference of 61+ members via Byzantine Fault Tolerant voting. Features 36 sacred geometry alphabet symbols, 234+ word dictionary across 15 categories, 10 grammar rules, and a universe-aligned ephemeris cipher rotation system. The Sovereign Kernel interpreter provides 11 opcodes with pixel/blank-space compression using 16 Unicode whitespace variants. The Language Hub page (`/sovereign-language`) has 8 tabs: Overview, Alphabet, Dictionary, Grammar, Learning Center, Live Translator, Conference Record, and Kernel Console. Mesh broadcasts are encrypted via the rotating cipher system integrated into `mesh-bus.ts`. API routes under `/api/sovereign-language/*`.
 
 ## External Dependencies
 

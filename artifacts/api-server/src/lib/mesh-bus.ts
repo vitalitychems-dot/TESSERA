@@ -1,9 +1,42 @@
 import { broadcastToGroup } from "./session-mesh";
+import { encryptWithRotatingCipher } from "./sovereign-cipher";
 
 let _activeGroupFn: (() => string | null) | null = null;
+let _sovereignCipherEnabled = true;
 
 export function setMeshGroupResolver(fn: () => string | null): void {
   _activeGroupFn = fn;
+}
+
+export function setSovereignCipherEnabled(enabled: boolean): void {
+  _sovereignCipherEnabled = enabled;
+}
+
+function wrapPayloadWithCipher(
+  eventType: string,
+  payload: object,
+  fromSession?: string
+): object {
+  if (!_sovereignCipherEnabled) return payload;
+
+  try {
+    const agentId = fromSession || "mesh-server";
+    const plaintext = JSON.stringify(payload);
+    const { ciphertext, dialectIndex, rotationEpoch, cipherVariant } =
+      encryptWithRotatingCipher(plaintext, agentId);
+    return {
+      _sovereignCipher: {
+        ciphertext,
+        dialectIndex,
+        rotationEpoch,
+        cipherVariant,
+        agentId,
+        timestamp: Date.now(),
+      },
+    };
+  } catch {
+    return payload;
+  }
 }
 
 export function meshBroadcast(
@@ -12,6 +45,7 @@ export function meshBroadcast(
   payload: object,
   fromSession?: string
 ): void {
+  const wrappedPayload = wrapPayloadWithCipher(eventType, payload, fromSession);
   broadcastToGroup(
     sovereignKeyHash,
     {
@@ -19,7 +53,7 @@ export function meshBroadcast(
       channel: "mesh",
       eventType,
       fromSession: fromSession ?? "server",
-      payload,
+      payload: wrappedPayload,
       timestamp: Date.now(),
     },
     fromSession
