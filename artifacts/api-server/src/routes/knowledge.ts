@@ -146,7 +146,7 @@ router.post("/knowledge/conclusion", async (_req, res) => {
       })
       .from(ingestedDataTable)
       .orderBy(desc(ingestedDataTable.ingestedAt))
-      .limit(30);
+      .limit(100);
 
     const total = Number(corpusStats[0]?.totalItems ?? 0);
     const sources = Number(corpusStats[0]?.distinctSources ?? 0);
@@ -160,7 +160,7 @@ router.post("/knowledge/conclusion", async (_req, res) => {
 
     const sampleInsights = recentTitles
       .filter(t => t.title || t.contentSnippet)
-      .slice(0, 10)
+      .slice(0, 25)
       .map(t => `• ${t.title ?? t.source}: ${(t.contentSnippet ?? "").replace(/\n/g, " ").trim()}`)
       .join("\n");
 

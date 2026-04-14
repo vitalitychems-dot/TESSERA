@@ -199,6 +199,16 @@ let periodicTimer: ReturnType<typeof setInterval> | null = null;
 
 export function startPeriodicRegeneration(intervalMs: number = 3600000): void {
   if (periodicTimer) return;
+
+  setTimeout(async () => {
+    try {
+      logger.info("CanonUpdater: initial startup canon generation");
+      await regenerateCanon("startup");
+    } catch (err) {
+      logger.warn({ err }, "CanonUpdater: startup canon generation failed (will retry on schedule)");
+    }
+  }, 2000);
+
   periodicTimer = setInterval(async () => {
     try {
       logger.info("CanonUpdater: periodic regeneration triggered");
