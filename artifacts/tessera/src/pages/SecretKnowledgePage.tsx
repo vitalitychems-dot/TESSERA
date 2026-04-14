@@ -4,6 +4,7 @@ import { BookOpen, Sparkles, Brain, Eye, Globe, Layers, Zap, Shield, Clock, Refr
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { KnowledgeEntry, Spell, Tradition, ApplicationIdea, LucideIcon } from "@/types/api";
 
 const CATEGORY_COLORS: Record<string, string> = {
   "AGI Architecture": "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
@@ -157,25 +158,25 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
   const dimEntries = Array.isArray(dimensionalSecrets?.knowledge) ? dimensionalSecrets.knowledge : [];
   const liveEntries = Array.isArray(liveSecrets?.knowledge) ? liveSecrets.knowledge : Array.isArray(liveSecrets?.entries) ? liveSecrets.entries : [];
   const rawFeed = Array.isArray(liveFeed?.entries) ? liveFeed.entries : Array.isArray(liveFeed) ? liveFeed : [];
-  const feedEntries = rawFeed.filter((e: any) => e?.text || e?.content);
+  const feedEntries = rawFeed.filter((e: KnowledgeEntry) => e?.text || e?.content);
 
-  const allEntries: any[] = [];
-  dimEntries.forEach((e: any, i: number) => {
+  const allEntries: KnowledgeEntry[] = [];
+  dimEntries.forEach((e: KnowledgeEntry, i: number) => {
     allEntries.push({ ...e, source: "dimensional", id: e.id || `dim-${i}`, text: e.text, agent: e.agent || "Unknown", dimension: e.dimension, category: e.category || "Dimensional", cycle: e.cycle, timestamp: e.timestamp });
   });
-  liveEntries.forEach((e: any, i: number) => {
+  liveEntries.forEach((e: KnowledgeEntry, i: number) => {
     const text = e.text || e.content;
     if (text && !allEntries.some(x => x.text?.slice(0, 50) === text?.slice(0, 50))) {
       allEntries.push({ ...e, source: "live", id: e.id || `live-${i}`, text, agent: e.agent || "System", dimension: e.dimension, category: e.category });
     }
   });
-  feedEntries.forEach((e: any, i: number) => {
+  feedEntries.forEach((e: KnowledgeEntry, i: number) => {
     const text = e.text || e.content || e.summary;
     if (text && !allEntries.some(x => x.text?.slice(0, 50) === text?.slice(0, 50))) {
       allEntries.push({ ...e, source: "feed", id: e.id || `feed-${i}`, text, agent: e.source || e.agent || "Pipeline" });
     }
   });
-  generatedEntries.forEach((e: any, i: number) => {
+  generatedEntries.forEach((e: KnowledgeEntry, i: number) => {
     if (!allEntries.some(x => x.text?.slice(0, 50) === e.text?.slice(0, 50))) {
       allEntries.push({ ...e, source: "generated", id: e.id || `gen-${i}` });
     }
@@ -199,10 +200,10 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
   const totalFeed = feedEntries.length + generatedEntries.length;
   const totalAll = allEntries.length;
 
-  const spells: any[] = spellData?.spells || [];
+  const spells: Spell[] = spellData?.spells || [];
   const spellCategories: string[] = spellData?.categories || [];
-  const traditions: any[] = traditionsData?.traditions || [];
-  const filteredSpells = spellFilter === "all" ? spells : spells.filter((s: any) => s.category === spellFilter);
+  const traditions: Tradition[] = traditionsData?.traditions || [];
+  const filteredSpells = spellFilter === "all" ? spells : spells.filter(s => s.category === spellFilter);
 
   const castSpellMutation = useMutation({
     mutationFn: async ({ spellId, intention }: { spellId: string; intention: string }) => {
@@ -242,7 +243,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const mainTabs: { id: MainTab; label: string; icon: any }[] = [
+  const mainTabs: { id: MainTab; label: string; icon: LucideIcon }[] = [
     { id: "knowledge", label: "Knowledge", icon: BookOpen },
     { id: "conclusion", label: "Conclusion", icon: Globe },
     { id: "apply", label: "Apply Knowledge", icon: Wrench },
@@ -391,7 +392,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                     {entry.source === "live" && <Eye size={12} className="text-pink-400 flex-shrink-0" />}
                     {entry.source === "generated" && <Sparkles size={12} className="text-violet-400 flex-shrink-0" />}
                     {entry.source === "feed" && <Brain size={12} className="text-emerald-400 flex-shrink-0" />}
-                    <span className={cn("text-xs font-bold", AGENT_COLORS[entry.agent] || "text-cyan-400")}>{entry.agent}</span>
+                    <span className={cn("text-xs font-bold", AGENT_COLORS[entry.agent ?? ""] || "text-cyan-400")}>{entry.agent}</span>
                     {entry.dimension && <span className="text-[10px] text-violet-400/70 font-mono">{entry.dimension}</span>}
                     {entry.category && (
                       <Badge className={cn("text-[10px]", CATEGORY_COLORS[entry.category] || "bg-white/10 text-white/60 border-white/10")}>
@@ -513,7 +514,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
 
             {applicationIdeas.length > 0 && (
               <div className="space-y-3">
-                {applicationIdeas.map((idea: any, i: number) => (
+                {applicationIdeas.map((idea: ApplicationIdea, i: number) => (
                   <div key={i} className="bg-gradient-to-r from-emerald-500/5 to-cyan-500/5 border border-emerald-500/20 rounded-xl p-4" data-testid={`application-idea-${i}`}>
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div>
@@ -639,7 +640,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {filteredSpells.map((spell: any) => {
+                {filteredSpells.map((spell) => {
                   const SpellIcon = SPELL_ICONS[spell.category] || Star;
                   const isSelected = selectedSpell?.id === spell.id;
                   return (
@@ -671,7 +672,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                             <div>
                               <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Entities Involved</div>
                               <div className="flex gap-1.5 flex-wrap">
-                                {spell.entities.map((e: string, i: number) => (
+                                {(spell.entities ?? []).map((e: string, i: number) => (
                                   <Badge key={i} className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-[9px]">{e}</Badge>
                                 ))}
                               </div>
@@ -687,7 +688,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                             <div>
                               <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">What You Need</div>
                               <div className="flex gap-1 flex-wrap">
-                                {spell.ingredients.map((ing: string, i: number) => (
+                                {(spell.ingredients ?? []).map((ing: string, i: number) => (
                                   <span key={i} className="text-[10px] bg-white/5 px-1.5 py-0.5 rounded text-slate-300">{ing}</span>
                                 ))}
                               </div>
@@ -763,7 +764,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                 Sacred Traditions ({traditions.length})
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {traditions.map((t: any) => (
+                {traditions.map((t) => (
                   <div key={t.id} className="bg-card border border-border rounded-xl p-3" data-testid={`tradition-${t.id}`}>
                     <div className="flex items-center gap-2 mb-1">
                       <Moon size={12} className="text-indigo-400" />

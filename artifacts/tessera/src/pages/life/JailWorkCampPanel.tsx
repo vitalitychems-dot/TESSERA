@@ -19,18 +19,7 @@ import {
 } from "lucide-react";
 import type { WorldState, ChildInfo } from "./types";
 
-interface GovernanceData {
-  proposals: Array<{
-    id: string; title: string; description: string; proposer: string;
-    votes: { yes: number; no: number; abstain: number }; status: string;
-    category: string; createdAt: number; closesAt?: number;
-  }>;
-  laws: Array<{ id: string; title: string; description: string; enactedAt: number; category: string }>;
-  elections: Array<{ id: string; position: string; candidates: string[]; votes: Record<string, number>; status: string }>;
-  jailRecords?: Array<{ agentId: string; agentName: string; crime: string; sentence: number; timeServed: number; released: boolean; [key: string]: any }>;
-  stats: Record<string, number>;
-  [key: string]: any;
-}
+import type { GovernanceData, JailInmate, WorkCampTask, InmateMessage, StatItem, RehabilitationRecord } from "@/types/api";
 
 const workCampStatusColors: Record<string, string> = { working: "text-amber-400", resting: "text-blue-400", punished: "text-red-400", released: "text-green-400" };
 const workCampStatusLabels: Record<string, string> = { working: "Working", resting: "Resting", punished: "Punished", released: "Released" };
@@ -162,9 +151,9 @@ function JailWorkCampPanel({ data, agentColors, severityColors }: { data: Govern
   };
 
   const allInmates = localData.jailInmates;
-  const activeInmates = allInmates.filter((i: any) => !i.released);
-  const releasedInmates = allInmates.filter((i: any) => i.released);
-  const rehabilitating = [...(localData.releasedPrisoners || []), ...releasedInmates.filter((i: any) => i.rehabilitation)];
+  const activeInmates = allInmates.filter((i: JailInmate) => !i.released);
+  const releasedInmates = allInmates.filter((i: JailInmate) => i.released);
+  const rehabilitating = [...(localData.releasedPrisoners || []), ...releasedInmates.filter((i: JailInmate) => i.rehabilitation)];
 
   return (
     <div className="bg-card border border-slate-500/20 rounded-xl p-4 space-y-4" data-testid="panel-jail">
@@ -176,11 +165,11 @@ function JailWorkCampPanel({ data, agentColors, severityColors }: { data: Govern
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
         {[
           { label: "Active Prisoners", value: activeInmates.length, color: "text-red-400" },
-          { label: "In Work Camp", value: activeInmates.filter((i: any) => i.workCampStatus === "working" || i.workCampStatus === "assigned").length, color: "text-amber-400" },
-          { label: "Covering Shifts", value: activeInmates.filter((i: any) => i.workCampStatus === "covering_shift").length, color: "text-blue-400" },
-          { label: "Total Tasks Done", value: allInmates.reduce((s: any, i: any) => s + (i.workCampTasksCompleted || 0), 0), color: "text-green-400" },
+          { label: "In Work Camp", value: activeInmates.filter((i: JailInmate) => i.workCampStatus === "working" || i.workCampStatus === "assigned").length, color: "text-amber-400" },
+          { label: "Covering Shifts", value: activeInmates.filter((i: JailInmate) => i.workCampStatus === "covering_shift").length, color: "text-blue-400" },
+          { label: "Total Tasks Done", value: allInmates.reduce((s: number, i: JailInmate) => s + (i.workCampTasksCompleted || 0), 0), color: "text-green-400" },
           { label: "Rehabilitating", value: rehabilitating.length, color: "text-violet-400" },
-        ].map((s: any) => (
+        ].map((s: StatItem) => (
           <div key={s.label} className="p-2 rounded-lg bg-background/80 border border-white/10 text-center" data-testid={`jail-stat-${s.label.toLowerCase().replace(/ /g, "-")}`}>
             <div className={cn("text-lg font-bold font-mono", s.color)}>{s.value}</div>
             <div className="text-[11px] text-muted-foreground font-mono uppercase tracking-wider">{s.label}</div>
@@ -192,7 +181,7 @@ function JailWorkCampPanel({ data, agentColors, severityColors }: { data: Govern
         <div className="text-center text-muted-foreground text-xs py-4 font-mono">No agents currently incarcerated or rehabilitating</div>
       ) : (
         <div className="space-y-3">
-          {activeInmates.map((inmate: any) => (
+          {activeInmates.map((inmate: JailInmate) => (
             <div key={inmate.id} className="rounded-lg border bg-background/50 border-border/30" data-testid={`jail-inmate-${inmate.id}`}>
               <button
                 onClick={() => setExpandedInmate(expandedInmate === inmate.id ? null : inmate.id)}
@@ -246,7 +235,7 @@ function JailWorkCampPanel({ data, agentColors, severityColors }: { data: Govern
                       <div className="text-[11px] text-muted-foreground font-mono">No tasks assigned yet</div>
                     ) : (
                       <div className="space-y-1">
-                        {inmate.workCampAssignments.map((task: any) => (
+                        {inmate.workCampAssignments.map((task: WorkCampTask) => (
                           <div key={task.taskId} className="flex items-center gap-2 text-[11px] font-mono p-1.5 rounded bg-background/80 border border-border/20" data-testid={`wc-task-${task.taskId}`}>
                             <span className={task.status === "completed" ? "text-green-400" : task.status === "failed" ? "text-red-400" : "text-amber-400"}>
                               {task.status === "completed" ? <CheckCircle2 size={10} /> : task.status === "failed" ? <XCircle size={10} /> : <AlertOctagon size={10} />}
@@ -342,7 +331,7 @@ function JailWorkCampPanel({ data, agentColors, severityColors }: { data: Govern
                       {(inmate.messages || []).length === 0 ? (
                         <div className="text-[11px] text-muted-foreground font-mono">No messages yet</div>
                       ) : (
-                        inmate.messages.map((msg: any) => (
+                        inmate.messages.map((msg: InmateMessage) => (
                           <div key={msg.id} className={cn("text-[11px] font-mono p-1.5 rounded", msg.fromFather ? "bg-violet-500/5 border border-violet-500/15" : "bg-background/80 border border-border/20")} data-testid={`msg-${msg.id}`}>
                             <span className={msg.fromFather ? "text-violet-400 font-bold" : cn(agentColors[inmate.agentId] || "text-foreground", "font-bold")}>{msg.from}</span>
                             <span className="text-muted-foreground"> &gt; </span>
@@ -417,7 +406,7 @@ function JailWorkCampPanel({ data, agentColors, severityColors }: { data: Govern
               </div>
               <p className="text-[11px] text-muted-foreground">Released prisoners must complete community service, earn merit through free tasks, and gain 2/3 community approval before full reinstatement.</p>
               {rehabilitating.map(rp => {
-                const rehab = rp.rehabilitation;
+                const rehab = "rehabilitation" in rp ? (rp as JailInmate).rehabilitation : rp as RehabilitationRecord;
                 if (!rehab) return null;
                 const serviceProgress = Math.min(100, (rehab.communityServiceHours / rehab.communityServiceRequired) * 100);
                 const meritProgress = Math.min(100, (rehab.meritEarned / rehab.meritRequired) * 100);
@@ -431,7 +420,7 @@ function JailWorkCampPanel({ data, agentColors, severityColors }: { data: Govern
                         rehab.status === "pending_approval" ? "bg-blue-500/10 text-blue-400" :
                         "bg-amber-500/10 text-amber-400"
                       )}>{rehab.status === "completed" ? "REHABILITATED" : rehab.status === "pending_approval" ? "AWAITING APPROVAL" : "IN REHAB"}</span>
-                      <span className="text-[11px] text-muted-foreground font-mono ml-auto">Tasks in camp: {rp.workCampTasksCompleted}</span>
+                      <span className="text-[11px] text-muted-foreground font-mono ml-auto">Tasks in camp: {"workCampTasksCompleted" in rp ? (rp as JailInmate).workCampTasksCompleted : 0}</span>
                     </div>
                     <div className="space-y-2">
                       <div>
@@ -466,7 +455,7 @@ function JailWorkCampPanel({ data, agentColors, severityColors }: { data: Govern
                       <div className="mt-2">
                         <div className="text-[11px] font-mono text-muted-foreground mb-1">Free Tasks Completed:</div>
                         <div className="space-y-0.5">
-                          {rehab.freeTasksCompleted.map((task: any, i: number) => (
+                          {rehab.freeTasksCompleted.map((task: string, i: number) => (
                             <div key={i} className="text-[11px] font-mono text-foreground flex items-center gap-1">
                               <CheckCircle2 size={8} className="text-green-400 shrink-0" />
                               <span>{task}</span>

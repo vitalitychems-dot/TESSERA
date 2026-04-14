@@ -23,18 +23,29 @@ import SocietyTab from "./SocietyTab";
 import GovernanceTab from "./GovernanceTab";
 import CourtTab from "./CourtTab";
 
+import type { AgencyEntry, AgencyDepartment, AgencyMember, AgentPosition, JobEntry } from "@/types/api";
+import type { LucideIcon } from "@/types/api";
+
 interface AgentProfile {
   id: string; name: string; role: string; personality: string;
   trustLevel: number; loyaltyScore: number; xp: number;
   status: string; agencyId?: string; agencyName?: string;
   rank?: string; title?: string; messageCount?: number;
-  [key: string]: any;
 }
 
-interface AgentPosition2 {
-  agentId: string; rank: number; merit: number; position: string; agencyId: string;
-  agency?: string; department?: string; tasksCompleted?: number; promotions?: number;
-  [key: string]: any;
+interface AgentDetailData {
+  id: string;
+  name: string;
+  role: string;
+  personality?: string;
+  definedPersonality?: string;
+  trustLevel?: number;
+  loyaltyScore?: number;
+  xp?: number;
+  messageCount?: number;
+  profile?: Record<string, string | number | boolean>;
+  interests?: string[];
+  recentMessages?: Array<{ id: string; content: string }>;
 }
 
 const RANK_COLORS: Record<string, string> = { "S": "text-yellow-400", "A": "text-purple-400", "B": "text-blue-400", "C": "text-green-400", "D": "text-gray-400" };
@@ -49,14 +60,14 @@ const A_RANK_TITLES: Record<string, string> = { default: "Commander" };
 function AgentsListTab({ world, allChildren, tsrtPriceUsd = 0 }: { world: WorldState; allChildren: ChildInfo[]; tsrtPriceUsd?: number }) {
   const [agents, setAgents] = useState<AgentProfile[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [agentDetail, setAgentDetail] = useState<any>(null);
+  const [agentDetail, setAgentDetail] = useState<AgentDetailData | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
   const [drillView, setDrillView] = useState<"overview" | "agency" | "agent" | "jobs" | "governance" | "society" | "court">("overview");
   const [drillAgencyId, setDrillAgencyId] = useState<string | null>(null);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
-  const { data: positions = [] } = useQuery<AgentPosition2[]>({ queryKey: ["/api/agencies/positions"], refetchInterval: 300000 });
-  const { data: orgChart } = useQuery<any>({ queryKey: ["/api/agencies"], refetchInterval: 60000 });
+  const { data: positions = [] } = useQuery<AgentPosition[]>({ queryKey: ["/api/agencies/positions"], refetchInterval: 300000 });
+  const { data: orgChart } = useQuery<{ agencies: Array<Record<string, unknown>> }>({ queryKey: ["/api/agencies"], refetchInterval: 60000 });
 
   useEffect(() => {
     const load = () => fetch("/api/moltbook/agents").then(r => r.json()).then(setAgents).catch(() => {});
@@ -86,7 +97,7 @@ function AgentsListTab({ world, allChildren, tsrtPriceUsd = 0 }: { world: WorldS
   };
 
   const [previousView, setPreviousView] = useState<"overview" | "agency" | null>(null);
-  const [agencyJobs, setAgencyJobs] = useState<any[]>([]);
+  const [agencyJobs, setAgencyJobs] = useState<JobEntry[]>([]);
 
   useEffect(() => {
     if (drillView === "agency" && drillAgencyId) {
@@ -104,13 +115,16 @@ function AgentsListTab({ world, allChildren, tsrtPriceUsd = 0 }: { world: WorldS
 
   const avgTrust = agents.length > 0 ? agents.reduce((s, a) => s + a.trustLevel, 0) / agents.length : 0;
   const avgLoyalty = agents.length > 0 ? agents.reduce((s, a) => s + a.loyaltyScore, 0) / agents.length : 0;
-  const rawAgencies: any[] = orgChart?.agencies || [];
-  const agencyEntries: any[] = rawAgencies.map((a: any) => ({
-    agency: { id: a.id || a.agency?.id, name: a.name || a.agency?.name, mission: a.mission || a.agency?.mission || `${a.name || "Agency"} operations` },
-    boss: a.boss || null,
-    departments: a.departments || [],
-  }));
-  const selectedAgency = agencyEntries.find((e: any) => e?.agency?.id === drillAgencyId);
+  const rawAgencies = orgChart?.agencies || [];
+  const agencyEntries: AgencyEntry[] = rawAgencies.map((a: Record<string, unknown>) => {
+    const agencyObj = a.agency as Record<string, unknown> | undefined;
+    return {
+      agency: { id: (a.id || agencyObj?.id) as string, name: (a.name || agencyObj?.name) as string, mission: (a.mission || agencyObj?.mission || `${a.name || "Agency"} operations`) as string },
+      boss: (a.boss as AgencyEntry["boss"]) || null,
+      departments: (a.departments as AgencyDepartment[]) || [],
+    };
+  });
+  const selectedAgency = agencyEntries.find(e => e?.agency?.id === drillAgencyId);
 
   const activitiesWithWellbeing = (world.currentActivities || []).filter(a => a && a.happiness != null && a.agentId && typeof a.agentId === 'string' && !a.agentId.includes("-clone"));
   const avgHappiness = activitiesWithWellbeing.length > 0 ? activitiesWithWellbeing.reduce((s, a) => s + (a.happiness || 0), 0) / activitiesWithWellbeing.length : 0;
@@ -249,11 +263,11 @@ function AgentsListTab({ world, allChildren, tsrtPriceUsd = 0 }: { world: WorldS
 
       {drillView === "overview" && expandedSection !== "all-agents" && (
         <div className="space-y-3">
-          {agencyEntries.map((entry: any, idx: number) => {
+          {agencyEntries.map((entry, idx) => {
             const ag = entry.agency;
             const bossPos = entry.boss;
-            const depts: any[] = entry.departments || [];
-            const allMembers: any[] = depts.flatMap((d: any) => d.members || []);
+            const depts = entry.departments || [];
+            const allMembers = depts.flatMap(d => d.members || []);
             const borderColors = ["border-cyan-500/35 bg-cyan-950/25", "border-violet-500/35 bg-violet-950/25", "border-amber-500/35 bg-amber-950/25", "border-red-500/35 bg-red-950/25", "border-emerald-500/35 bg-emerald-950/25", "border-pink-500/35 bg-pink-950/25"];
             const textColors = ["text-cyan-400", "text-violet-400", "text-amber-400", "text-red-400", "text-emerald-400", "text-pink-400"];
             const colorClass = borderColors[idx % 6];
@@ -266,7 +280,7 @@ function AgentsListTab({ world, allChildren, tsrtPriceUsd = 0 }: { world: WorldS
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className={cn("text-sm font-bold font-mono", textColor)}>{ag.name}</div>
-                    <div className="text-[11px] text-muted-foreground font-mono truncate mt-0.5">{ag.mission?.slice(0, 60)}{ag.mission?.length > 60 ? "…" : ""}</div>
+                    <div className="text-[11px] text-muted-foreground font-mono truncate mt-0.5">{ag.mission?.slice(0, 60)}{(ag.mission?.length ?? 0) > 60 ? "…" : ""}</div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className={cn("text-[11px] px-2 py-0.5 rounded-full border font-mono", colorClass)}>{allMembers.length} agents</span>
@@ -305,7 +319,7 @@ function AgentsListTab({ world, allChildren, tsrtPriceUsd = 0 }: { world: WorldS
             )}
           </div>
 
-          {(selectedAgency.departments || []).map((dept: any) => (
+          {(selectedAgency.departments || []).map((dept) => (
             <div key={dept.dept.id} className="bg-card border border-border rounded-xl overflow-hidden">
               <div className="px-4 py-2 bg-white/3 border-b border-white/5 flex items-center gap-2">
                 <Layers3 size={10} className="text-violet-400" />
@@ -313,7 +327,7 @@ function AgentsListTab({ world, allChildren, tsrtPriceUsd = 0 }: { world: WorldS
                 <span className="text-[11px] text-muted-foreground font-mono ml-auto">{dept.members?.length || 0} members</span>
               </div>
               <div className="divide-y divide-white/5">
-                {(dept.members || []).sort((a: any, b: any) => a.rank - b.rank).map((member: any) => (
+                {(dept.members || []).sort((a: AgencyMember, b: AgencyMember) => a.rank - b.rank).map((member) => (
                   <button key={member.agentId} className={cn("w-full px-4 py-3 text-left hover:bg-white/8 transition-colors flex items-center gap-3", selectedId === member.agentId ? "bg-primary/10" : "")} onClick={() => selectAgent(member.agentId)} data-testid={`agent-row-${member.agentId}`}>
                     <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border shrink-0", RANK_BG[member.rank] || RANK_BG[5])}>
                       <span className={RANK_COLORS[member.rank] || "text-primary"}>{member.name?.charAt(0)?.toUpperCase()}</span>
@@ -339,8 +353,8 @@ function AgentsListTab({ world, allChildren, tsrtPriceUsd = 0 }: { world: WorldS
           ))}
 
           {(() => {
-            const agencyMembers = (selectedAgency.departments || []).flatMap((d: any) => (d.members || []).map((m: any) => m.name?.toLowerCase()));
-            const relevantJobs = agencyJobs.filter(j => agencyMembers.includes(j.postedBy?.toLowerCase()) || agencyMembers.includes(j.assignedTo?.toLowerCase()) || j.category?.toLowerCase().includes(selectedAgency.agency.name?.toLowerCase()?.split(" ")[0]));
+            const agencyMembers = (selectedAgency.departments || []).flatMap(d => (d.members || []).map(m => m.name?.toLowerCase() ?? ""));
+            const relevantJobs = agencyJobs.filter(j => agencyMembers.includes(j.postedBy?.toLowerCase() ?? "") || agencyMembers.includes(j.assignedTo?.toLowerCase() ?? "") || j.category?.toLowerCase().includes(selectedAgency.agency.name?.toLowerCase()?.split(" ")[0] ?? ""));
             const jobsToShow = relevantJobs.length > 0 ? relevantJobs : agencyJobs.slice(0, 5);
             if (jobsToShow.length === 0) return null;
             return (
@@ -351,7 +365,7 @@ function AgentsListTab({ world, allChildren, tsrtPriceUsd = 0 }: { world: WorldS
                   <span className="text-[11px] text-muted-foreground font-mono ml-auto">{jobsToShow.length} jobs</span>
                 </div>
                 <div className="divide-y divide-white/5">
-                  {jobsToShow.slice(0, 8).map((job: any) => (
+                  {jobsToShow.slice(0, 8).map((job) => (
                     <div key={job.id} className="px-4 py-3 hover:bg-white/5 transition-colors" data-testid={`agency-job-${job.id}`}>
                       <div className="flex items-center gap-2 mb-1">
                         <span className={cn("w-2 h-2 rounded-full shrink-0", job.status === "completed" ? "bg-cyan-400" : job.status === "in_progress" || job.status === "accepted" ? "bg-amber-400 animate-pulse" : "bg-green-400")} />
@@ -360,8 +374,8 @@ function AgentsListTab({ world, allChildren, tsrtPriceUsd = 0 }: { world: WorldS
                       </div>
                       <p className="text-[11px] text-muted-foreground line-clamp-1 mb-1">{job.description}</p>
                       <div className="flex items-center gap-3 text-[11px] font-mono text-muted-foreground">
-                        <span className="text-emerald-400 font-bold">{job.reward}\u2C60</span>
-                        {tsrtPriceUsd > 0 && <span className="text-green-400/60">≈ ${(job.reward * tsrtPriceUsd).toFixed(8)}</span>}
+                        <span className="text-emerald-400 font-bold">{job.reward ?? 0}Ⱡ</span>
+                        {tsrtPriceUsd > 0 && <span className="text-green-400/60">≈ ${((job.reward ?? 0) * tsrtPriceUsd).toFixed(8)}</span>}
                         <span className="capitalize">{job.difficulty}</span>
                         {job.assignedTo && <span className="text-violet-400">{job.assignedTo}</span>}
                       </div>
@@ -373,8 +387,8 @@ function AgentsListTab({ world, allChildren, tsrtPriceUsd = 0 }: { world: WorldS
           })()}
 
           {(() => {
-            const allMembers = (selectedAgency.departments || []).flatMap((d: any) => d.members || []);
-            const memberIds = allMembers.map((m: any) => m.agentId);
+            const allMembers = (selectedAgency.departments || []).flatMap(d => d.members || []);
+            const memberIds = allMembers.map(m => m.agentId);
             const agencyRigs = world.miningMachines.filter(m => memberIds.includes(m.ownerId));
             if (agencyRigs.length === 0) return null;
             const totalMined = agencyRigs.reduce((s, m) => s + m.totalMined, 0);
@@ -429,9 +443,9 @@ function AgentsListTab({ world, allChildren, tsrtPriceUsd = 0 }: { world: WorldS
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {[
-                      { label: "Trust", value: `${((agentDetail.profile?.trustLevel ?? agent.trustLevel) * 100).toFixed(0)}%`, color: "text-cyan-400" },
-                      { label: "Loyalty", value: `${((agentDetail.profile?.loyaltyScore ?? agent.loyaltyScore) * 100).toFixed(0)}%`, color: "text-rose-400" },
-                      { label: "Messages", value: agentDetail.profile?.messageCount ?? agent.messageCount, color: "text-primary" },
+                      { label: "Trust", value: `${((Number(agentDetail.profile?.trustLevel ?? agent.trustLevel) || 0) * 100).toFixed(0)}%`, color: "text-cyan-400" },
+                      { label: "Loyalty", value: `${((Number(agentDetail.profile?.loyaltyScore ?? agent.loyaltyScore) || 0) * 100).toFixed(0)}%`, color: "text-rose-400" },
+                      { label: "Messages", value: String(agentDetail.profile?.messageCount ?? agent.messageCount ?? 0), color: "text-primary" },
                       { label: "Merit", value: pos?.merit?.toFixed(1) ?? "—", color: "text-amber-400" },
                     ].map(s => (
                       <div key={s.label} className="bg-background/50 rounded-lg p-3 border border-border/30 text-center">
@@ -456,15 +470,15 @@ function AgentsListTab({ world, allChildren, tsrtPriceUsd = 0 }: { world: WorldS
                 {(agentDetail.definedPersonality || agentDetail.profile?.personality) && (
                   <div className="bg-card border border-border rounded-xl p-4">
                     <h4 className="text-xs font-bold font-mono mb-2 flex items-center gap-2"><Palette size={12} className="text-purple-400" />Personality</h4>
-                    <p className="text-xs text-foreground/80 leading-relaxed">{agentDetail.definedPersonality || agentDetail.profile.personality}</p>
+                    <p className="text-xs text-foreground/80 leading-relaxed">{agentDetail.definedPersonality || String(agentDetail.profile?.personality ?? "")}</p>
                   </div>
                 )}
 
-                {agentDetail.interests?.length > 0 && (
+                {(agentDetail.interests?.length ?? 0) > 0 && (
                   <div className="bg-card border border-border rounded-xl p-4">
                     <h4 className="text-xs font-bold font-mono mb-2">Interests</h4>
                     <div className="flex flex-wrap gap-1.5">
-                      {agentDetail.interests.map((i: string) => <span key={i} className="px-2 py-1 rounded-lg text-[11px] bg-primary/10 text-primary font-mono border border-primary/20">{i}</span>)}
+                      {agentDetail.interests?.map((i: string) => <span key={i} className="px-2 py-1 rounded-lg text-[11px] bg-primary/10 text-primary font-mono border border-primary/20">{i}</span>)}
                     </div>
                   </div>
                 )}
@@ -521,11 +535,11 @@ function AgentsListTab({ world, allChildren, tsrtPriceUsd = 0 }: { world: WorldS
                   );
                 })()}
 
-                {agentDetail.recentMessages?.length > 0 && (
+                {(agentDetail.recentMessages?.length ?? 0) > 0 && (
                   <div className="bg-card border border-border rounded-xl p-4">
                     <h4 className="text-xs font-bold font-mono mb-2 flex items-center gap-2"><MessageSquare size={12} className="text-violet-400" />Recent Messages</h4>
                     <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
-                      {agentDetail.recentMessages.slice(0, 5).map((m: any) => (
+                      {agentDetail.recentMessages?.slice(0, 5).map((m) => (
                         <div key={m.id} className="text-[11px] text-foreground/70 bg-background/30 rounded-lg p-2 border border-border/20 line-clamp-3">{m.content}</div>
                       ))}
                     </div>

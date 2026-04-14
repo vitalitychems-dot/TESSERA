@@ -12,16 +12,17 @@ import {
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
+import type { DiscussionTracking, DiscussionVote, KnowledgeFeedEntry, LucideIcon } from "@/types/api";
 import { useToast } from "@/hooks/use-toast";
 
 // ─── Discussion Enforcement Tracker Panel ─────────────────────────────────────
 function DiscussionEnforcementPanel({ topicId }: { topicId: string }) {
-  const { data: tracking } = useQuery<any>({
+  const { data: tracking } = useQuery<DiscussionTracking>({
     queryKey: ["/api/discussion/tracking", topicId],
     queryFn: () => fetch(`/api/discussion/tracking/${topicId}`).then(r => r.json()),
     refetchInterval: 5000,
   });
-  const { data: votes } = useQuery<any>({
+  const { data: votes } = useQuery<DiscussionVote[]>({
     queryKey: ["/api/discussion/votes", topicId],
     queryFn: () => fetch(`/api/discussion/votes/${topicId}`).then(r => r.json()),
     refetchInterval: 5000,
@@ -59,7 +60,7 @@ function DiscussionEnforcementPanel({ topicId }: { topicId: string }) {
       {votes && votes.length > 0 && (
         <div className="flex gap-2 flex-wrap items-center">
           <span className="text-[10px] font-mono font-bold text-violet-400">Active Votes:</span>
-          {votes.slice(0, 3).map((vote: any, i: number) => (
+          {votes.slice(0, 3).map((vote: DiscussionVote, i: number) => (
             <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/10 border border-violet-500/20 text-violet-300 font-mono">
               {vote.motion} · {vote.yea || 0}Y / {vote.nay || 0}N
             </span>
@@ -180,7 +181,7 @@ const TYPE_LABELS: Record<string, string> = {
   "external-ai": "EXT AI", llm: "LLM", entity: "ENTITY",
 };
 
-const CATEGORY_ICONS: Record<string, any> = {
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
   agi: Brain, "ml-reverse": Cpu, tsrt: Coins, income: DollarSign,
   community: Users, vitality: Globe, security: Shield, "code-evolution": Code,
   swarm: Network, infrastructure: Server, trading: TrendingUp, research: Search,
@@ -255,7 +256,7 @@ function CategoryBadge({ category, categories }: { category?: string; categories
 
 function ExecutionStatusBadge({ status }: { status?: string }) {
   if (!status) return null;
-  const cfg: Record<string, { icon: any; label: string; cls: string }> = {
+  const cfg: Record<string, { icon: LucideIcon; label: string; cls: string }> = {
     pending:         { icon: Clock,        label: "PENDING",       cls: "border-yellow-500/40 bg-yellow-500/10 text-yellow-400" },
     executing:       { icon: Loader2,      label: "EXECUTING",     cls: "border-blue-500/40 bg-blue-500/10 text-blue-400 animate-pulse" },
     completed:       { icon: CheckCircle2, label: "DONE",          cls: "border-green-500/40 bg-green-500/10 text-green-400" },
@@ -682,7 +683,7 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
       setReplyText("");
       toast({ title: mentions.length > 0 ? `Reply posted — @mentioning ${mentions.join(", ")}` : "Reply posted" });
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast({ title: "Reply blocked", description: err.message, variant: "destructive" });
     },
   });
@@ -732,7 +733,7 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
       setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/topics"] }), 10000);
       setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/topics"] }), 25000);
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast({ title: "Intervention failed", description: err.message, variant: "destructive" });
     },
   });
@@ -1098,7 +1099,7 @@ function ComposeModal({ onClose, entities, categories, onCreated }: {
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const body: any = {
+      const body = {
         title, content, category,
         author: postAs === "entity" && selectedEntity ? selectedEntity : "Father",
         authorType: postAs === "entity" && selectedEntity ? "entity" : "father",
@@ -1114,7 +1115,7 @@ function ComposeModal({ onClose, entities, categories, onCreated }: {
       onCreated(data.topic.id);
       onClose();
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast({ title: "Blocked by Anti-Simulation Agency", description: err.message, variant: "destructive" });
     },
   });
@@ -1223,7 +1224,7 @@ function ComposeModal({ onClose, entities, categories, onCreated }: {
 
 // ─── ASA Status Badge ─────────────────────────────────────────────────────────
 
-function ASABadge({ status }: { status: any }) {
+function ASABadge({ status }: { status: { active?: boolean; totalScanned?: number; totalBlocked?: number } | null }) {
   const active = status?.active !== false;
   return (
     <div
@@ -1238,8 +1239,8 @@ function ASABadge({ status }: { status: any }) {
     >
       <ShieldAlert size={10} />
       <span>ASA {active ? "ACTIVE" : "OFFLINE"}</span>
-      {status?.totalBlocked > 0 && (
-        <span className="opacity-60">· {status.totalBlocked} blocked</span>
+      {(status?.totalBlocked ?? 0) > 0 && (
+        <span className="opacity-60">· {status?.totalBlocked} blocked</span>
       )}
     </div>
   );
@@ -1487,7 +1488,7 @@ export default function TesseractForumPage({ embedded }: { embedded?: boolean })
                     LATEST KNOWLEDGE
                   </h3>
                   <div className="space-y-1.5">
-                    {(knowledgeFeed.entries as any[]).slice(0, 8).map((entry: any, i: number) => (
+                    {(knowledgeFeed.entries as KnowledgeFeedEntry[]).slice(0, 8).map((entry, i) => (
                       <div key={i} className="text-[11px] border-l-2 border-indigo-400/30 pl-2 py-1">
                         <span className="text-indigo-300 font-medium">{entry.title || entry.key || `Entry ${i+1}`}</span>
                         {entry.category && <span className="text-indigo-400/50 ml-1.5 text-[9px]">[{entry.category}]</span>}

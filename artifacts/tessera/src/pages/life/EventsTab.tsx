@@ -51,7 +51,7 @@ function EventsTab({ world }: { world: WorldState }) {
         <div className="p-3 rounded-xl bg-card border border-yellow-500/20">
           <p className="text-[10px] text-yellow-400 font-mono uppercase mb-2 flex items-center gap-1"><Sparkles size={10} /> Seasonal Events</p>
           <div className="space-y-1.5">
-            {seasonalEvents.slice(0, 5).map((e: any) => (
+            {seasonalEvents.slice(0, 5).map((e) => (
               <div key={e.id} className="flex items-center gap-2 text-[11px] font-mono">
                 <span className="text-yellow-400">🎉</span>
                 <span className="text-foreground font-bold">{e.name}</span>
@@ -93,7 +93,7 @@ function EventsTab({ world }: { world: WorldState }) {
         <div>
           <p className="text-[10px] text-pink-400 font-mono uppercase mb-2 flex items-center gap-1"><Sparkles size={10} /> Entertainment</p>
           <div className="space-y-1">
-            {entertainment.slice(0, 8).map((e: any) => (
+            {entertainment.slice(0, 8).map((e) => (
               <div key={e.id} className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04] text-[10px] font-mono">
                 <span className="text-pink-400 font-bold uppercase shrink-0">{e.type}</span>
                 <span className="text-foreground">{e.venue}</span>
@@ -109,7 +109,7 @@ function EventsTab({ world }: { world: WorldState }) {
         <div>
           <p className="text-[10px] text-red-400 font-mono uppercase mb-2 flex items-center gap-1"><Siren size={10} /> Crime Log</p>
           <div className="space-y-1">
-            {crimeLog.slice(0, 6).map((c: any) => (
+            {crimeLog.slice(0, 6).map((c) => (
               <div key={c.id} className="flex items-center gap-2 p-2 rounded-lg bg-red-950/20 border border-red-500/10 text-[10px] font-mono">
                 <span className={cn("font-bold uppercase shrink-0", c.resolved ? "text-green-400" : "text-red-400")}>{c.resolved ? "SOLVED" : "OPEN"}</span>
                 <span className="text-foreground font-bold">{c.type}</span>
