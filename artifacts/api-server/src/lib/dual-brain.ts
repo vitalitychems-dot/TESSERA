@@ -233,3 +233,4 @@ export function getDecisionHistory() {
   const s = getDualBrainState();
   return s.conversationLog;
 }
+

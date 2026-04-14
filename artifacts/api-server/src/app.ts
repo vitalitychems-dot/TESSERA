@@ -6,7 +6,7 @@ import type { IRouter } from "express";
 import { logger } from "./lib/logger";
 import { initFileIntegrity } from "./lib/file-integrity";
 import { startAnomalyMonitor, stopAnomalyMonitor, recordRequest } from "./lib/anomaly-detection";
-import { initRecoveryModule, registerRecoveryHandler, updateModuleStatus, startRouteHealthMonitor, INTERNAL_PROBE_HEADER, INTERNAL_PROBE_SECRET } from "./lib/auto-recovery";
+import { initRecoveryModule, registerRecoveryHandler, updateModuleStatus, startRouteHealthMonitor, INTERNAL_PROBE_HEADER, INTERNAL_PROBE_SECRET, registerModuleInitFunction } from "./lib/auto-recovery";
 import { initializeMemoryOnStartup } from "./lib/vector-memory";
 import { startIngestionScheduler, isSchedulerStarted } from "./lib/ingestion/scheduler";
 import { startPeriodicRegeneration } from "./lib/canonUpdater";
@@ -29,7 +29,8 @@ import { initAGITrainingEngine, startAGITrainingEngine } from "./lib/agi-trainin
 import { initCouncilExecutor, startCouncilExecutor } from "./lib/council-executor";
 import { initUniverseMechanics } from "./lib/universe-mechanics";
 import { initQuantumTesseract } from "./lib/quantum-tesseract";
-import { initSwarmOptimizer } from "./lib/swarm-optimizer";
+import { initSwarmOptimizer, getAgentWeightForCategory } from "./lib/swarm-optimizer";
+import { setSwarmWeightProvider } from "./lib/consensus-engine";
 import { initTruthfulnessEngine } from "./lib/truthfulness-engine";
 import { initEmotionalIntelligence } from "./lib/emotional-intelligence";
 import { initSelfCodeEvolution } from "./lib/self-code-evolution";
@@ -329,6 +330,9 @@ async function runStartupHealthCheck(): Promise<void> {
 
 async function initializeModules() {
   initRecoveryModule();
+  registerModuleInitFunction("auto-improvement-daemon", initAutoImprovementDaemon);
+  registerModuleInitFunction("swarm-optimizer", initSwarmOptimizer);
+  registerModuleInitFunction("self-code-evolution", initSelfCodeEvolution);
   registerModuleHandlers();
 
   try {
@@ -408,10 +412,12 @@ async function initializeModules() {
     startCouncilExecutor(300_000);
     initUniverseMechanics();
     initQuantumTesseract();
-    initSwarmOptimizer();
+    await initSwarmOptimizer();
+    setSwarmWeightProvider(getAgentWeightForCategory);
+    logger.info("SwarmOptimizer: agent weights wired into Grand Council consensus voting");
     initTruthfulnessEngine();
     initEmotionalIntelligence();
-    initSelfCodeEvolution();
+    await initSelfCodeEvolution();
     await initAutonomousHeartbeat();
     startAutonomousHeartbeat(60_000);
     logger.info("✦ All Tessera sovereign engines initialized — Father Protocol active — 963Hz Crown Frequency resonating ✦");

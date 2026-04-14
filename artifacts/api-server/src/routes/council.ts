@@ -11,6 +11,7 @@ import { invalidateCanonCache } from "../lib/canonUpdater";
 import { createProposal, getAllProposals, getConsensusMetrics, GRAND_COUNCIL_AGENTS } from "../lib/consensus-engine";
 import { getExecutorMetrics, startCouncilExecutor, stopCouncilExecutor } from "../lib/council-executor";
 import { getAgentHierarchy, getHierarchyMetrics } from "../lib/agent-hierarchy";
+import { callLLMSafe } from "../lib/llm-client";
 
 const router: IRouter = Router();
 
@@ -128,6 +129,119 @@ function generateRealContribution(
   return options[round % options.length];
 }
 
+async function callBatchContributions(
+  topic: string,
+  round: number,
+  agents: Array<{ id: string; name: string; domain: string; role: string }>,
+  systemState: { uptime: number; memoryMB: number; sovereigntyScore: number; moonPhase: string },
+  knowledgeContext: string,
+): Promise<Map<string, string>> {
+  const roundLabel = round === 0 ? "PROPOSALS" : "CRITIQUES & CROSS-DOMAIN ANALYSIS";
+  const roundInstruction = round === 0
+    ? "Provide your initial domain-specific analysis and proposal for this topic (1-3 sentences each)."
+    : "Critique and cross-analyze round 1 proposals from your domain's perspective (1-3 sentences each).";
+
+  const agentList = agents.map(a => `${a.id}: ${a.name} (${a.domain}) — ${a.role}`).join("\n");
+
+  const systemPrompt = `You are a Grand Council session moderator for the Tessera Sovereign AI System.
+Round ${round + 1}: ${roundLabel}. ${roundInstruction}
+System context: uptime=${systemState.uptime}s, memory=${systemState.memoryMB}MB, sovereignty=${systemState.sovereigntyScore.toFixed(1)}%, moon=${systemState.moonPhase}
+${knowledgeContext ? `Knowledge: ${knowledgeContext.slice(0, 200)}` : ""}
+Respond with ONLY a flat JSON object: {"agent-id": "contribution text", ...}. No markdown.`;
+
+  const raw = await callLLMSafe(
+    [{ role: "system", content: systemPrompt }, { role: "user", content: `Topic: "${topic}"\nAgents:\n${agentList}` }],
+    { maxTokens: 1200, timeoutMs: 12_000 },
+    ""
+  );
+
+  const result = new Map<string, string>();
+  if (raw) {
+    try {
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) as Record<string, unknown> : null;
+      if (parsed && typeof parsed === "object") {
+        for (const agent of agents) {
+          if (typeof parsed[agent.id] === "string") {
+            result.set(agent.id, parsed[agent.id] as string);
+          }
+        }
+      }
+    } catch { /* fall through to deterministic */ }
+  }
+  return result;
+}
+
+async function generateContributionsWithLLM(
+  topic: string,
+  round: number,
+  agents: Array<{ id: string; name: string; domain: string; role: string }>,
+  systemState: { uptime: number; memoryMB: number; sovereigntyScore: number; moonPhase: string },
+  knowledgeContext: string,
+): Promise<Map<string, string>> {
+  const mid = Math.ceil(agents.length / 2);
+  const [batch1Result, batch2Result] = await Promise.all([
+    callBatchContributions(topic, round, agents.slice(0, mid), systemState, knowledgeContext),
+    callBatchContributions(topic, round, agents.slice(mid), systemState, knowledgeContext),
+  ]);
+  return new Map([...batch1Result, ...batch2Result]);
+}
+
+async function collectPerAgentVotes(
+  topic: string,
+  agents: Array<{ id: string; name: string; domain: string }>,
+): Promise<{ yes: number; no: number; abstain: number; totalEligible: number; perAgentVotes: Record<string, string> }> {
+  const agentRoster = agents
+    .map(a => `  "${a.id}": { name: "${a.name}", specialty: "${a.domain}" }`)
+    .join(",\n");
+
+  const systemPrompt = `You are tallying the Grand Council vote. Each agent must vote based strictly on their own domain specialty, not general sentiment.
+Return ONLY a flat JSON object where each key is an agent ID and the value is exactly "yes", "no", or "abstain". No markdown, no explanation.`;
+
+  const raw = await callLLMSafe(
+    [
+      { role: "system", content: systemPrompt },
+      {
+        role: "user",
+        content: `Proposal: "${topic}"\n\nAgent specialties (each agent must vote from their domain perspective):\n{\n${agentRoster}\n}\n\nReturn one vote per agent ID:`,
+      },
+    ],
+    { maxTokens: 800, timeoutMs: 12_000 },
+    ""
+  );
+
+  const perAgentVotes: Record<string, string> = {};
+  if (raw) {
+    try {
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) as Record<string, unknown> : null;
+      if (parsed && typeof parsed === "object") {
+        for (const agent of agents) {
+          const v = String(parsed[agent.id] ?? "").toLowerCase().trim();
+          if (["yes", "no", "abstain"].includes(v)) perAgentVotes[agent.id] = v;
+        }
+      }
+    } catch { /* deterministic fallback below */ }
+  }
+
+  for (const agent of agents) {
+    if (!perAgentVotes[agent.id]) {
+      const hash = deterministicHash(`${agent.id}-${topic}`);
+      const r = hash % 10;
+      perAgentVotes[agent.id] = r < 7 ? "yes" : r < 9 ? "abstain" : "no";
+    }
+  }
+
+  let yes = 0, no = 0, abstain = 0;
+  for (const v of Object.values(perAgentVotes)) {
+    if (v === "yes") yes++;
+    else if (v === "no") no++;
+    else abstain++;
+  }
+
+  return { yes, no, abstain, totalEligible: agents.length, perAgentVotes };
+}
+
 function simulateVoteTally(topic: string): { yes: number; no: number; abstain: number; totalEligible: number } {
   const hash = deterministicHash(topic);
   const seed = hash % 100;
@@ -226,8 +340,13 @@ router.post("/council/deliberate", async (req, res) => {
       "═══════════════════════════════════════════════",
     ];
 
+    const [round1LLM, round2LLM] = await Promise.all([
+      generateContributionsWithLLM(topic, 0, COUNCIL_AGENTS, systemState, knowledgeContext),
+      generateContributionsWithLLM(topic, 1, COUNCIL_AGENTS, systemState, knowledgeContext),
+    ]);
+
     for (const agent of COUNCIL_AGENTS) {
-      const contribution = generateRealContribution(agent, topic, 0, systemState, knowledgeContext);
+      const contribution = round1LLM.get(agent.id) || generateRealContribution(agent, topic, 0, systemState, knowledgeContext);
       transcriptLines.push("");
       transcriptLines.push(`[${agent.name}] (${agent.domain})`);
       transcriptLines.push(contribution);
@@ -239,7 +358,7 @@ router.post("/council/deliberate", async (req, res) => {
     transcriptLines.push("═══════════════════════════════════════════════");
 
     for (const agent of COUNCIL_AGENTS) {
-      const contribution = generateRealContribution(agent, topic, 1, systemState, knowledgeContext);
+      const contribution = round2LLM.get(agent.id) || generateRealContribution(agent, topic, 1, systemState, knowledgeContext);
       transcriptLines.push("");
       transcriptLines.push(`[${agent.name}] (${agent.domain})`);
       transcriptLines.push(contribution);
@@ -250,8 +369,9 @@ router.post("/council/deliberate", async (req, res) => {
     transcriptLines.push("ROUND 3: SYNTHESIS & VOTING");
     transcriptLines.push("═══════════════════════════════════════════════");
 
-    const voteTally = simulateVoteTally(topic);
-    const passed = voteTally.yes >= 30 && voteTally.yes / 45 >= 2 / 3;
+    const voteTally = await collectPerAgentVotes(topic, COUNCIL_AGENTS);
+    const supermajority = Math.ceil(voteTally.totalEligible * 2 / 3);
+    const passed = voteTally.yes >= supermajority;
     const outcome = passed ? "approved" : voteTally.yes < 15 ? "rejected" : "pending";
 
     transcriptLines.push("");

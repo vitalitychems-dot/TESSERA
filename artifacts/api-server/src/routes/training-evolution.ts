@@ -53,13 +53,13 @@ router.get("/self-evolution/metrics", (_req: Request, res: Response) => {
   res.json({ ok: true, data: getEvolutionMetrics() });
 });
 
-router.post("/self-evolution/propose", (req: Request, res: Response) => {
+router.post("/self-evolution/propose", async (req: Request, res: Response) => {
   const { targetModule, proposedChange, rationale, riskLevel = "low" } = req.body;
   if (!targetModule || !proposedChange || !rationale) {
     res.status(400).json({ ok: false, error: "targetModule, proposedChange, and rationale are required" });
     return;
   }
-  const proposal = proposeEvolution(targetModule, proposedChange, rationale, riskLevel);
+  const proposal = await proposeEvolution(targetModule, proposedChange, rationale, riskLevel);
   res.json({ ok: true, data: proposal });
 });
 

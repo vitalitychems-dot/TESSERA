@@ -6,7 +6,8 @@ import { ingestedDataTable } from "@workspace/db/schema";
 import { providerCallsTable, sovereigntyMetricsTable } from "@workspace/db/schema";
 import { systemLogsTable, integrityChecksTable } from "@workspace/db/schema";
 import { decisionHistoryTable } from "@workspace/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { evaluationRunsTable } from "@workspace/db/schema";
+import { eq, sql, desc } from "drizzle-orm";
 import { logger } from "./logger";
 
 export interface CategoryState {
@@ -123,6 +124,16 @@ async function queryRealCounts(): Promise<Record<string, number>> {
       integrityCount = ic?.cnt ?? 0;
     } catch { integrityCount = 0; }
 
+    let evalQuestions = 0;
+    let evalAccuracy = 0;
+    try {
+      const latestEval = await db.select().from(evaluationRunsTable).orderBy(desc(evaluationRunsTable.ranAt)).limit(1);
+      if (latestEval.length > 0) {
+        evalQuestions = latestEval[0].totalQuestions ?? 0;
+        evalAccuracy = latestEval[0].accuracyPct ?? 0;
+      }
+    } catch { /* eval table may not exist yet */ }
+
     return {
       messages: msgCount?.cnt ?? 0,
       conversations: convCount?.cnt ?? 0,
@@ -135,6 +146,8 @@ async function queryRealCounts(): Promise<Record<string, number>> {
       integrity_checks: integrityCount,
       forum_topics: forumTopicCount?.cnt ?? 0,
       forum_replies: forumReplyCount?.cnt ?? 0,
+      eval_questions: evalQuestions,
+      eval_accuracy: evalAccuracy,
     };
   } catch (err) {
     logger.warn({ err }, "AGITraining: failed to query real counts");
@@ -149,8 +162,16 @@ function computeRealScore(category: string): { score: number; sessions: number }
     totalActivity += realCounts[source] || 0;
   }
   const sessionsCount = totalActivity;
-  const score = scoreFromCount(totalActivity);
-  return { score, sessions: sessionsCount };
+  let score = scoreFromCount(totalActivity);
+
+  const evalQ = realCounts["eval_questions"] || 0;
+  const evalAcc = realCounts["eval_accuracy"] || 0;
+  if (evalQ >= 100 && evalAcc >= 95) {
+    const evalBoost = Math.min(5, (evalAcc - 90) * 0.5);
+    score = Math.min(99.5, score + evalBoost);
+  }
+
+  return { score, sessions: sessionsCount + evalQ };
 }
 
 function initFromRealData(): void {

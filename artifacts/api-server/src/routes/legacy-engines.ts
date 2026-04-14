@@ -210,13 +210,13 @@ router.get("/training/history", (req, res) => {
 router.get("/training/domains", (_req, res) => res.json(getAvailableDomains()));
 
 router.get("/evolution/state", (_req, res) => res.json(getEvolutionState()));
-router.post("/evolution/propose", (req, res) => {
+router.post("/evolution/propose", async (req, res) => {
   const { targetFile, changeType, description } = req.body || {};
   if (!targetFile || !description) return res.status(400).json({ error: "targetFile and description required" });
-  res.json(proposeEvolution(targetFile, changeType || "optimize", description));
+  res.json(await proposeEvolution(targetFile, changeType || "optimize", description));
 });
-router.post("/evolution/apply/:id", (req, res) => {
-  res.json({ success: applyEvolution(req.params.id) });
+router.post("/evolution/apply/:id", async (req, res) => {
+  res.json({ success: await applyEvolution(req.params.id) });
 });
 router.get("/evolution/history", (req, res) => {
   const limit = parseInt(req.query.limit as string) || 10;

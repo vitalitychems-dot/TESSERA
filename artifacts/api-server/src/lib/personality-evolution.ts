@@ -251,3 +251,4 @@ export function getTraitsByCategory(category?: string) {
   if (category) return all.filter(p => (p.coreTraits || []).some((t: any) => t.category === category));
   return all;
 }
+
