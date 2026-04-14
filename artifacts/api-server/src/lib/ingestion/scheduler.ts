@@ -195,6 +195,11 @@ async function ensureSourcesRegistered(): Promise<void> {
 
 let schedulerInterval: ReturnType<typeof setInterval> | null = null;
 let rotationInterval: ReturnType<typeof setInterval> | null = null;
+let schedulerStarted = false;
+
+export function isSchedulerStarted(): boolean {
+  return schedulerStarted;
+}
 
 const SOURCE_GROUPS = [
   ["NASA APOD", "USGS Earthquakes", "NOAA Weather Alerts", "CoinGecko"],
@@ -277,6 +282,7 @@ export async function startIngestionScheduler(checkIntervalMs = 120_000): Promis
     runRotatingGroup().catch(e => logger.warn({ err: (e as Error).message }, "Initial rotation failed"));
   }, 30_000);
 
+  schedulerStarted = true;
   logger.info({ checkIntervalMs, totalSources: Object.keys(SOURCE_HANDLERS).length, groups: SOURCE_GROUPS.length }, "Ingestion scheduler started with continuous rotation");
 }
 

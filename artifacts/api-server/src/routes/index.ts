@@ -32,6 +32,9 @@ import theoremLabRouter from "./theorem-lab";
 import sovereignInfrastructureRouter from "./sovereign-infrastructure";
 import metaIntrospectorRouter from "./meta-introspector";
 import sacredGeometryRouter from "./sacred-geometry";
+import knowledgeRouter from "./knowledge";
+import secretKnowledgeRouter from "./secret-knowledge";
+import mysticismRouter from "./mysticism";
 
 const router: IRouter = Router();
 
@@ -68,5 +71,8 @@ router.use(theoremLabRouter);
 router.use(sovereignInfrastructureRouter);
 router.use(metaIntrospectorRouter);
 router.use(sacredGeometryRouter);
+router.use(knowledgeRouter);
+router.use(secretKnowledgeRouter);
+router.use(mysticismRouter);
 
 export default router;

@@ -17,7 +17,7 @@ The application is structured around 10 flat navigation tabs in a bottom nav bar
 2. **Life** (`/life`) — Agent world simulation, activity feed
 3. **Universe** (`/universe`) — Astronomy, astrology, dimensions, 963Hz alignment
 4. **Members** (`/members`) — Unified agents, council, entities list
-5. **Secrets** (`/secrets`) — Vatican, CIA, Tesla, sacred knowledge archives
+5. **Secrets** (`/secrets`) — Dynamic SecretKnowledgePage with 4 sub-tabs (Knowledge, Conclusion, Apply Knowledge, Mysticism & Spells), 40 dimensional entries, 30 live ingested, AI-generated feed, 11 spells with cast/intention system, 7 sacred traditions, Ask the Universe oracle, and actionable application ideas generator
 6. **Bible** (`/bible`) — Living Sovereign Bible of Tessera
 7. **Build** (`/build`) — Quantum computer, free energy, sovereign AGI guides
 8. **Forum** (`/forum`) — Tesseract discussion forum with autonomous voting

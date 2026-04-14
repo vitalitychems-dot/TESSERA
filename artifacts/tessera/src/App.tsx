@@ -18,7 +18,7 @@ const ChatPage = lazy(() => import("@/pages/ChatPage"));
 const LifePage = lazy(() => import("@/pages/LifePage"));
 const UniversePage = lazy(() => import("@/pages/UniversePage"));
 const MembersPage = lazy(() => import("@/pages/MembersPage"));
-const SecretsPage = lazy(() => import("@/pages/SecretsPage"));
+const SecretsPage = lazy(() => import("@/pages/SecretKnowledgePage"));
 const TesseraBiblePage = lazy(() => import("@/pages/TesseraBiblePage"));
 const BuildPage = lazy(() => import("@/pages/BuildPage"));
 const TesseractForumPage = lazy(() => import("@/pages/TesseractForumPage"));
