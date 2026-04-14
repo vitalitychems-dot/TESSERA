@@ -148,6 +148,12 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
     return () => clearInterval(interval);
   }, [autoGenerate]);
 
+  useEffect(() => {
+    if (!conclusionText && !conclusionMutation.isPending) {
+      conclusionMutation.mutate();
+    }
+  }, []);
+
   const dimEntries = Array.isArray(dimensionalSecrets?.knowledge) ? dimensionalSecrets.knowledge : [];
   const liveEntries = Array.isArray(liveSecrets?.knowledge) ? liveSecrets.knowledge : Array.isArray(liveSecrets?.entries) ? liveSecrets.entries : [];
   const rawFeed = Array.isArray(liveFeed?.entries) ? liveFeed.entries : Array.isArray(liveFeed) ? liveFeed : [];
@@ -216,7 +222,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
 
   const conclusionMutation = useMutation({
     mutationFn: async () => {
-      const resp = await apiRequest("POST", "/api/knowledge/conclusion", { entries: allEntries });
+      const resp = await apiRequest("POST", "/api/knowledge/conclusion", {});
       return resp.json();
     },
     onSuccess: (data) => setConclusionText(data.conclusion),
@@ -296,6 +302,17 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
             );
           })}
         </div>
+
+        {conclusionText && mainTab === "knowledge" && (
+          <div className="bg-gradient-to-r from-violet-500/10 via-indigo-500/5 to-purple-500/10 border border-violet-500/20 rounded-xl p-3" data-testid="synthesis-banner">
+            <div className="flex items-center gap-2 mb-1">
+              <Globe size={14} className="text-violet-400" />
+              <span className="text-xs font-bold text-violet-300">Grand Synthesis</span>
+              <button onClick={() => setMainTab("conclusion")} className="ml-auto text-[10px] text-violet-400 hover:text-violet-300 underline underline-offset-2">View Full</button>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-relaxed line-clamp-3">{conclusionText.split("\n\n")[1] || conclusionText.slice(0, 200)}</p>
+          </div>
+        )}
 
         {mainTab === "knowledge" && (
           <div className="space-y-3">
