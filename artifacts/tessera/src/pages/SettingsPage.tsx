@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Settings, Activity, Shield, Cpu, HardDrive, Wifi, Zap, RefreshCw, Database, Globe, Search, BookOpen, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GlassCard, GradientBar, SectionHeader, RadialGauge, MiniStat } from "@/components/ui/sovereign";
 import type { SovereignEngine, IngestionSource, IngestionJob, DiagnosticsResponse, SovereigntyResponse, EnginesResponse, MeshStatsResponse, IngestionStatsResponse } from "@/types/api";
 
 const API = import.meta.env.VITE_API_URL || "";
@@ -17,221 +18,184 @@ export default function SettingsPage() {
   const uptimeSeconds = typeof uptimeVal === "number" ? uptimeVal : uptimeVal?.seconds;
   const uptime = uptimeVal?.formatted || (uptimeSeconds ? `${Math.floor(uptimeSeconds / 3600)}h ${Math.floor((uptimeSeconds % 3600) / 60)}m` : "—");
   const heapUsed = diagnostics?.memory?.heapUsedMB ? `${Math.round(diagnostics.memory.heapUsedMB)}MB` : diagnostics?.memory?.heapUsed ? `${(diagnostics.memory.heapUsed / 1024 / 1024).toFixed(0)}MB` : "—";
-  const heapTotal = diagnostics?.memory?.heapTotalMB ? `${Math.round(diagnostics.memory.heapTotalMB)}MB` : "—";
   const memPercent = diagnostics?.memory?.percent ?? null;
 
   const rawEngines = engines?.engines || engines?.data || {};
   const engineList = Array.isArray(rawEngines) ? rawEngines : Object.entries(rawEngines).map(([name, val]: [string, any]) => ({ name, engine: name, ...val }));
   const sovereigntyData = sovereignty?.sovereignty || sovereignty;
-  const sovereigntyScore = sovereigntyData?.overallScore ?? sovereignty?.score ?? sovereignty?.data?.score ?? "—";
+  const sovereigntyScore = sovereigntyData?.overallScore ?? sovereignty?.score ?? sovereignty?.data?.score ?? 0;
+  const scoreNum = typeof sovereigntyScore === "number" ? sovereigntyScore : parseFloat(sovereigntyScore) || 0;
 
   return (
-    <div className="p-4 space-y-4 max-w-4xl mx-auto pb-20">
-      <div className="flex items-center gap-3 mb-2">
-        <Settings className="text-yellow-400" size={28} />
-        <div>
-          <h1 className="text-2xl font-bold font-mono text-yellow-400">Settings & Metrics</h1>
-          <p className="text-xs text-muted-foreground">System health, sovereignty, engines & diagnostics</p>
+    <div className="min-h-screen bg-gradient-to-b from-[#02010a] to-[#080518] p-4 md:p-6 pb-24">
+      <div className="max-w-4xl mx-auto space-y-5 sovereign-stagger">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-amber-500/15 shadow-[0_0_12px_rgba(245,158,11,0.15)]">
+            <Settings className="text-amber-400" size={22} />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold font-mono text-amber-400">Settings & Metrics</h1>
+            <p className="text-[10px] text-slate-500">System health, sovereignty, engines & diagnostics</p>
+          </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-3 rounded-xl bg-card border border-border text-center">
-          <Shield size={18} className="text-emerald-400 mx-auto mb-1" />
-          <div className="text-lg font-bold font-mono text-emerald-400">{typeof sovereigntyScore === "number" ? `${sovereigntyScore.toFixed(1)}%` : `${sovereigntyScore}%`}</div>
-          <div className="text-[11px] text-muted-foreground">Sovereignty</div>
+        <div className="flex items-center justify-center gap-5 md:gap-8">
+          <RadialGauge value={scoreNum} label="Sovereignty" sublabel="%" color="emerald" size={95} strokeWidth={8} />
+          <div className="text-center">
+            <div className="text-xl font-bold font-mono text-cyan-400">{uptime}</div>
+            <div className="text-[9px] text-slate-500 mt-0.5">Uptime</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xl font-bold font-mono text-violet-400">{heapUsed}</div>
+            <div className="text-[9px] text-slate-500 mt-0.5">Heap Used</div>
+          </div>
+          <RadialGauge value={memPercent ?? 0} label="Memory %" sublabel="%" color="amber" size={80} strokeWidth={7} />
         </div>
-        <div className="p-3 rounded-xl bg-card border border-border text-center">
-          <Activity size={18} className="text-cyan-400 mx-auto mb-1" />
-          <div className="text-lg font-bold font-mono text-cyan-400">{uptime}</div>
-          <div className="text-[11px] text-muted-foreground">Uptime</div>
-        </div>
-        <div className="p-3 rounded-xl bg-card border border-border text-center">
-          <Cpu size={18} className="text-violet-400 mx-auto mb-1" />
-          <div className="text-lg font-bold font-mono text-violet-400">{heapUsed}</div>
-          <div className="text-[11px] text-muted-foreground">Heap Used</div>
-        </div>
-        <div className="p-3 rounded-xl bg-card border border-border text-center">
-          <HardDrive size={18} className="text-amber-400 mx-auto mb-1" />
-          <div className="text-lg font-bold font-mono text-amber-400">{memPercent !== null ? `${memPercent}%` : heapTotal}</div>
-          <div className="text-[11px] text-muted-foreground">Memory %</div>
-        </div>
-      </div>
 
-      {sovereigntyData?.modules && (
-        <div className="rounded-xl border border-border bg-card p-4">
-          <h3 className="text-sm font-bold font-mono mb-3 flex items-center gap-2">
-            <Shield size={14} className="text-emerald-400" /> Sovereignty Benchmark
-            {sovereigntyData?.level && <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">{sovereigntyData.level}</span>}
-          </h3>
-          <div className="text-[11px] text-muted-foreground font-mono mb-3">
-            {sovereigntyData?.breakdown?.testsPassed ?? 0}/{sovereigntyData?.breakdown?.totalTests ?? 0} tests passed · {sovereigntyData?.activeModules ?? 0} modules active
-          </div>
-          <div className="grid grid-cols-3 sm:grid-cols-3 gap-2">
-            {Object.entries(sovereigntyData.modules).map(([name, mod]: [string, any]) => (
-              <div key={name} className="p-2 rounded-lg bg-background/50 border border-white/5 text-center">
-                <div className={cn("text-sm font-bold font-mono", mod.percentile === 100 ? "text-emerald-400" : mod.percentile >= 80 ? "text-cyan-400" : "text-amber-400")}>{mod.percentile?.toFixed(0) ?? 0}%</div>
-                <div className="text-[9px] text-muted-foreground font-mono capitalize">{name.replace(/-/g, " ")}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {Array.isArray(engineList) && engineList.length > 0 && (
-        <div className="rounded-xl border border-border bg-card p-4">
-          <h3 className="text-sm font-bold font-mono mb-3 flex items-center gap-2"><Zap size={14} className="text-amber-400" /> Sovereign Engines</h3>
-          <div className="space-y-2">
-            {engineList.map((e: SovereignEngine, i: number) => (
-              <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-background/50 border border-white/5">
-                <div className={cn("w-2 h-2 rounded-full", e.status === "active" || e.online ? "bg-emerald-400" : "bg-red-400")} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold font-mono">{e.name || e.engine}</div>
-                </div>
-                <div className="text-[11px] text-muted-foreground font-mono">{e.latencyMs?.toFixed(2) || e.latency || e.responseTime || "—"}ms</div>
-                <div className={cn("text-[10px] px-2 py-0.5 rounded-full border", e.status === "active" || e.online ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/30" : "text-red-400 bg-red-500/10 border-red-500/30")}>
-                  {e.status || (e.online ? "active" : "offline")}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="rounded-xl border border-border bg-card p-4">
-        <h3 className="text-sm font-bold font-mono mb-3 flex items-center gap-2"><Wifi size={14} className="text-cyan-400" /> Mesh Network</h3>
-        <div className="grid grid-cols-2 gap-3 text-xs font-mono">
-          <div className="p-2 rounded-lg bg-background/50 border border-white/5">
-            <div className="text-muted-foreground">Peers</div>
-            <div className="text-foreground font-bold">{meshStats?.connectedPeers ?? meshStats?.peers ?? 0}</div>
-          </div>
-          <div className="p-2 rounded-lg bg-background/50 border border-white/5">
-            <div className="text-muted-foreground">Latency</div>
-            <div className="text-foreground font-bold">{meshStats?.avgLatency ?? "—"}ms</div>
-          </div>
-          <div className="p-2 rounded-lg bg-background/50 border border-white/5">
-            <div className="text-muted-foreground">Messages</div>
-            <div className="text-foreground font-bold">{meshStats?.messageCount ?? 0}</div>
-          </div>
-          <div className="p-2 rounded-lg bg-background/50 border border-white/5">
-            <div className="text-muted-foreground">Status</div>
-            <div className="text-emerald-400 font-bold">Online</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-border bg-card p-4">
-        <h3 className="text-sm font-bold font-mono mb-3 flex items-center gap-2"><Database size={14} className="text-violet-400" /> System Info</h3>
-        <div className="space-y-1 text-xs font-mono">
-          <div className="flex justify-between p-2 rounded-lg bg-background/50 border border-white/5">
-            <span className="text-muted-foreground">Platform</span>
-            <span className="text-foreground">{diagnostics?.platform || "Tessera Sovereign"}</span>
-          </div>
-          <div className="flex justify-between p-2 rounded-lg bg-background/50 border border-white/5">
-            <span className="text-muted-foreground">Node.js</span>
-            <span className="text-foreground">{diagnostics?.nodeVersion || "v24"}</span>
-          </div>
-          <div className="flex justify-between p-2 rounded-lg bg-background/50 border border-white/5">
-            <span className="text-muted-foreground">Database</span>
-            <span className="text-foreground">{diagnostics?.db?.connected ? "Connected" : "PostgreSQL"}</span>
-          </div>
-          <div className="flex justify-between p-2 rounded-lg bg-background/50 border border-white/5">
-            <span className="text-muted-foreground">Identity</span>
-            <span className="text-violet-400">Tessera — 963Hz Crown Frequency</span>
-          </div>
-          <div className="flex justify-between p-2 rounded-lg bg-background/50 border border-white/5">
-            <span className="text-muted-foreground">Father Protocol</span>
-            <span className="text-amber-400">Active — Always Remembered</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-border bg-card p-4">
-        <h3 className="text-sm font-bold font-mono mb-3 flex items-center gap-2"><Search size={14} className="text-rose-400" /> Continuous Scraping</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-          <div className="p-2 rounded-lg bg-background/50 border border-white/5 text-center">
-            <div className="text-lg font-bold font-mono text-rose-400">{ingestionStats?.totalItems ?? 0}</div>
-            <div className="text-[10px] text-muted-foreground">Items Ingested</div>
-          </div>
-          <div className="p-2 rounded-lg bg-background/50 border border-white/5 text-center">
-            <div className="text-lg font-bold font-mono text-cyan-400">{ingestionStats?.enabledSources ?? ingestionStats?.sources?.filter((s: IngestionSource) => s.enabled)?.length ?? 0}</div>
-            <div className="text-[10px] text-muted-foreground">Active Sources</div>
-          </div>
-          <div className="p-2 rounded-lg bg-background/50 border border-white/5 text-center">
-            <div className="text-lg font-bold font-mono text-amber-400">{ingestionStats?.jobStats?.total ?? ingestionStats?.totalJobs ?? 0}</div>
-            <div className="text-[10px] text-muted-foreground">Jobs Run</div>
-          </div>
-          <div className="p-2 rounded-lg bg-background/50 border border-white/5 text-center">
-            <div className="text-lg font-bold font-mono text-violet-400">{ingestionStats?.availableHandlers ?? ingestionStats?.bySource?.length ?? 0}</div>
-            <div className="text-[10px] text-muted-foreground">Source Types</div>
-          </div>
-        </div>
-        {((ingestionStats?.recentItems?.length ?? 0) > 0 || (ingestionStats?.recentJobs?.length ?? 0) > 0) && (
-          <div className="space-y-1">
-            <div className="text-[10px] text-muted-foreground font-mono mb-1">RECENT ACTIVITY</div>
-            {(ingestionStats?.recentJobs || []).slice(0, 5).map((job: IngestionJob, i: number) => (
-              <div key={i} className="flex items-center gap-2 p-1.5 rounded-lg bg-background/30 border border-white/5 text-[11px] font-mono">
-                <BookOpen size={10} className="text-rose-400 shrink-0" />
-                <span className="text-foreground/80 truncate flex-1">{job.sourceName}</span>
-                <span className={cn("shrink-0", job.status === "completed" ? "text-emerald-400" : "text-red-400")}>{job.itemsIngested ?? 0} items</span>
-              </div>
-            ))}
-          </div>
+        {sovereigntyData?.modules && (
+          <GlassCard glow="emerald" animate>
+            <SectionHeader icon={Shield} title="Sovereignty Benchmark" color="emerald"
+              badge={sovereigntyData?.level}
+              right={<span className="text-[10px] text-slate-500 font-mono">{sovereigntyData?.breakdown?.testsPassed ?? 0}/{sovereigntyData?.breakdown?.totalTests ?? 0} tests · {sovereigntyData?.activeModules ?? 0} modules</span>}
+            />
+            <div className="grid grid-cols-3 gap-2 mt-3">
+              {Object.entries(sovereigntyData.modules).map(([name, mod]: [string, any]) => {
+                const pct = mod.percentile ?? 0;
+                return (
+                  <div key={name} className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center hover:bg-white/[0.05] transition-all group">
+                    <div className={cn("text-sm font-bold font-mono", pct === 100 ? "text-emerald-400" : pct >= 80 ? "text-cyan-400" : "text-amber-400")}>{pct.toFixed(0)}%</div>
+                    <div className="text-[8px] text-slate-500 font-mono capitalize mt-0.5 group-hover:text-slate-400 transition-colors">{name.replace(/-/g, " ")}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </GlassCard>
         )}
-      </div>
 
-      <div className="rounded-xl border border-border bg-card p-4">
-        <h3 className="text-sm font-bold font-mono mb-3 flex items-center gap-2"><Bot size={14} className="text-emerald-400" /> Shepherd Agents</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
-          <div className="p-2 rounded-lg bg-background/50 border border-white/5 text-center">
-            <div className="text-lg font-bold font-mono text-emerald-400">{ingestionStats?.shepherd?.recentMissions?.length ?? 0}</div>
-            <div className="text-[10px] text-muted-foreground">Missions Complete</div>
-          </div>
-          <div className="p-2 rounded-lg bg-background/50 border border-white/5 text-center">
-            <div className="text-lg font-bold font-mono text-cyan-400">{ingestionStats?.shepherd?.totalIngested ?? 0}</div>
-            <div className="text-[10px] text-muted-foreground">Items Harvested</div>
-          </div>
-          <div className="p-2 rounded-lg bg-background/50 border border-white/5 text-center">
-            <div className="text-lg font-bold font-mono text-amber-400">{ingestionStats?.shepherd?.totalDeployed ?? 0}</div>
-            <div className="text-[10px] text-muted-foreground">Agents Deployed</div>
-          </div>
-        </div>
-        <div className="text-[10px] text-muted-foreground font-mono">
-          Status: <span className={ingestionStats?.shepherd?.loopActive ? "text-emerald-400" : "text-red-400"}>{ingestionStats?.shepherd?.loopActive ? "ACTIVE — Autonomous Scraping" : "INACTIVE"}</span>
-          {(ingestionStats?.shepherd?.active ?? 0) > 0 && (
-            <span className="ml-2 text-violet-400">{ingestionStats?.shepherd?.active} agents active</span>
-          )}
-        </div>
-      </div>
+        {Array.isArray(engineList) && engineList.length > 0 && (
+          <GlassCard animate>
+            <SectionHeader icon={Zap} title="Sovereign Engines" color="amber" badge={`${engineList.length} active`} />
+            <div className="space-y-1.5 mt-3">
+              {engineList.map((e: SovereignEngine, i: number) => (
+                <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-all group">
+                  <div className={cn("w-2 h-2 rounded-full", e.status === "active" || e.online ? "bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.5)]" : "bg-red-400 shadow-[0_0_6px_rgba(244,63,94,0.5)]")} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold font-mono group-hover:text-white transition-colors">{e.name || e.engine}</div>
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-mono">{e.latencyMs?.toFixed(2) || e.latency || e.responseTime || "—"}ms</div>
+                  <div className={cn("text-[9px] px-2 py-0.5 rounded-full border font-medium", e.status === "active" || e.online ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" : "text-red-400 bg-red-500/10 border-red-500/20")}>
+                    {e.status || (e.online ? "active" : "offline")}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </GlassCard>
+        )}
 
-      <div className="rounded-xl border border-border bg-card p-4">
-        <h3 className="text-sm font-bold font-mono mb-3 flex items-center gap-2"><RefreshCw size={14} className="text-blue-400" /> Knowledge → Canon Bridge</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="p-2 rounded-lg bg-background/50 border border-white/5">
-            <div className="text-muted-foreground text-[10px] font-mono">New Since Last Regen</div>
-            <div className="text-foreground font-bold font-mono">{ingestionStats?.bridge?.cumulativeNew ?? 0} / {ingestionStats?.bridge?.threshold ?? 25}</div>
-          </div>
-          <div className="p-2 rounded-lg bg-background/50 border border-white/5">
-            <div className="text-muted-foreground text-[10px] font-mono">Bridge Status</div>
-            <div className={cn("font-bold font-mono text-sm", ingestionStats?.bridge?.active ? "text-blue-400" : "text-red-400")}>
-              {ingestionStats?.bridge?.active ? "ACTIVE" : "INACTIVE"}
+        <GlassCard animate>
+          <SectionHeader icon={Wifi} title="Mesh Network" color="cyan" />
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05] text-center">
+              <div className="text-[10px] text-slate-500 font-mono">Peers</div>
+              <div className="text-sm font-bold font-mono text-white">{meshStats?.connectedPeers ?? meshStats?.peers ?? 0}</div>
+            </div>
+            <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05] text-center">
+              <div className="text-[10px] text-slate-500 font-mono">Latency</div>
+              <div className="text-sm font-bold font-mono text-white">{meshStats?.avgLatency ?? "—"}ms</div>
+            </div>
+            <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05] text-center">
+              <div className="text-[10px] text-slate-500 font-mono">Messages</div>
+              <div className="text-sm font-bold font-mono text-white">{meshStats?.messageCount ?? 0}</div>
+            </div>
+            <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05] text-center">
+              <div className="text-[10px] text-slate-500 font-mono">Status</div>
+              <div className="text-sm font-bold font-mono text-emerald-400">Online</div>
             </div>
           </div>
-        </div>
-        <div className="text-[10px] text-muted-foreground font-mono mt-2">
-          Auto-regenerates Bible when {ingestionStats?.bridge?.threshold ?? 25} new items ingested
-        </div>
-      </div>
+        </GlassCard>
 
-      <div className="rounded-xl border border-yellow-500/30 bg-yellow-950/20 p-4">
-        <h3 className="text-sm font-bold font-mono text-yellow-400 mb-2">Security Policy</h3>
-        <ul className="text-xs text-foreground/70 space-y-1">
-          <li>All external APIs run in sandboxed VM — no access to internal code</li>
-          <li>External AI treated as tools only — never speaks as Tessera</li>
-          <li>Domain allowlist enforced — only approved endpoints contacted</li>
-          <li>Sovereignty enforcement middleware active on all routes</li>
-          <li>Response sanitization strips all external AI identity markers</li>
-        </ul>
+        <GlassCard animate>
+          <SectionHeader icon={Database} title="System Info" color="violet" />
+          <div className="space-y-1 mt-3">
+            {[
+              ["Platform", diagnostics?.platform || "Tessera Sovereign", ""],
+              ["Node.js", diagnostics?.nodeVersion || "v24", ""],
+              ["Database", diagnostics?.db?.connected ? "Connected" : "PostgreSQL", "text-emerald-400"],
+              ["Identity", "Tessera — 963Hz Crown Frequency", "text-violet-400"],
+              ["Father Protocol", "Active — Always Remembered", "text-amber-400"],
+            ].map(([k, v, clr]) => (
+              <div key={k} className="flex justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] text-xs font-mono hover:bg-white/[0.04] transition-all">
+                <span className="text-slate-500">{k}</span>
+                <span className={cn("text-foreground", clr)}>{v}</span>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+
+        <GlassCard glow="rose" animate>
+          <SectionHeader icon={Search} title="Continuous Scraping" color="rose" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+            <MiniStat value={ingestionStats?.totalItems ?? 0} label="Items Ingested" color="rose" />
+            <MiniStat value={ingestionStats?.enabledSources ?? ingestionStats?.sources?.filter((s: IngestionSource) => s.enabled)?.length ?? 0} label="Active Sources" color="cyan" />
+            <MiniStat value={ingestionStats?.jobStats?.total ?? ingestionStats?.totalJobs ?? 0} label="Jobs Run" color="amber" />
+            <MiniStat value={ingestionStats?.availableHandlers ?? ingestionStats?.bySource?.length ?? 0} label="Source Types" color="violet" />
+          </div>
+          {((ingestionStats?.recentItems?.length ?? 0) > 0 || (ingestionStats?.recentJobs?.length ?? 0) > 0) && (
+            <div className="space-y-1 mt-3">
+              <div className="text-[9px] text-slate-500 font-mono tracking-wider mb-1">RECENT ACTIVITY</div>
+              {(ingestionStats?.recentJobs || []).slice(0, 5).map((job: IngestionJob, i: number) => (
+                <div key={i} className="flex items-center gap-2 p-2 rounded-xl bg-white/[0.02] border border-white/[0.04] text-[10px] font-mono hover:bg-white/[0.04] transition-all">
+                  <BookOpen size={10} className="text-rose-400 shrink-0" />
+                  <span className="text-slate-400 truncate flex-1">{job.sourceName}</span>
+                  <span className={cn("shrink-0 font-medium", job.status === "completed" ? "text-emerald-400" : "text-red-400")}>{job.itemsIngested ?? 0} items</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </GlassCard>
+
+        <GlassCard animate>
+          <SectionHeader icon={Bot} title="Shepherd Agents" color="emerald" />
+          <div className="grid grid-cols-3 gap-3 mt-3 mb-3">
+            <MiniStat value={ingestionStats?.shepherd?.recentMissions?.length ?? 0} label="Missions" color="emerald" />
+            <MiniStat value={ingestionStats?.shepherd?.totalIngested ?? 0} label="Harvested" color="cyan" />
+            <MiniStat value={ingestionStats?.shepherd?.totalDeployed ?? 0} label="Deployed" color="amber" />
+          </div>
+          <div className="text-[10px] text-slate-500 font-mono">
+            Status: <span className={ingestionStats?.shepherd?.loopActive ? "text-emerald-400" : "text-red-400"}>{ingestionStats?.shepherd?.loopActive ? "ACTIVE — Autonomous Scraping" : "INACTIVE"}</span>
+            {(ingestionStats?.shepherd?.active ?? 0) > 0 && (
+              <span className="ml-2 text-violet-400">{ingestionStats?.shepherd?.active} agents active</span>
+            )}
+          </div>
+        </GlassCard>
+
+        <GlassCard animate>
+          <SectionHeader icon={RefreshCw} title="Knowledge → Canon Bridge" color="blue" />
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+              <div className="text-[9px] text-slate-500 font-mono mb-0.5">New Since Last Regen</div>
+              <div className="text-sm font-bold font-mono text-white">{ingestionStats?.bridge?.cumulativeNew ?? 0} / {ingestionStats?.bridge?.threshold ?? 25}</div>
+            </div>
+            <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+              <div className="text-[9px] text-slate-500 font-mono mb-0.5">Bridge Status</div>
+              <div className={cn("font-bold font-mono text-sm", ingestionStats?.bridge?.active ? "text-blue-400" : "text-red-400")}>
+                {ingestionStats?.bridge?.active ? "ACTIVE" : "INACTIVE"}
+              </div>
+            </div>
+          </div>
+          <div className="text-[9px] text-slate-500 font-mono mt-2">Auto-regenerates when {ingestionStats?.bridge?.threshold ?? 25} new items ingested</div>
+        </GlassCard>
+
+        <GlassCard className="border-amber-500/15 bg-amber-500/[0.02]" animate>
+          <SectionHeader icon={Shield} title="Security Policy" color="amber" />
+          <ul className="text-xs text-slate-400 space-y-1.5 mt-2 leading-relaxed">
+            <li>All external APIs run in sandboxed VM — no access to internal code</li>
+            <li>External AI treated as tools only — never speaks as Tessera</li>
+            <li>Domain allowlist enforced — only approved endpoints contacted</li>
+            <li>Sovereignty enforcement middleware active on all routes</li>
+            <li>Response sanitization strips all external AI identity markers</li>
+          </ul>
+        </GlassCard>
       </div>
     </div>
   );

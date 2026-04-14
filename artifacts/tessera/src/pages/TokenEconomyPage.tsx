@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { DollarSign, TrendingUp, Users, Zap, Award, BarChart3 } from "lucide-react";
+import { DollarSign, TrendingUp, Users, Zap, Award, BarChart3, Coins } from "lucide-react";
+import { GlassCard, GradientBar, SectionHeader, TabBar, PageHeader, RadialGauge, MiniStat } from "@/components/ui/sovereign";
+import { cn } from "@/lib/utils";
 
 const API = import.meta.env.VITE_API_URL || "";
 
@@ -39,19 +41,19 @@ const TSRT_CIRCULATING = 144_000_000;
 
 function AgentTokenRow({ agent, rank }: { agent: typeof AGENT_LIST[0]; rank: number }) {
   const balance = agent.baseReward * (50 + (agent.id.charCodeAt(0) % 50));
-  const earned = balance + agent.baseReward * 20;
   const tierColor = agent.tier === "sovereign" ? "text-violet-400" : agent.tier === "expansion" ? "text-cyan-400" : "text-emerald-400";
+  const tierBg = agent.tier === "sovereign" ? "bg-violet-500/10 border-violet-500/20" : agent.tier === "expansion" ? "bg-cyan-500/10 border-cyan-500/20" : "bg-white/[0.02] border-white/[0.06]";
 
   return (
-    <div className="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
-      <div className="text-xs text-slate-500 w-6 text-right">{rank}</div>
+    <div className={cn("flex items-center gap-3 p-2.5 rounded-xl border transition-all hover:bg-white/[0.04]", tierBg)}>
+      <div className="text-[10px] text-slate-600 w-5 text-right font-mono">{rank}</div>
       <div className="flex-1 min-w-0">
         <div className="text-sm text-white font-medium">{agent.name}</div>
-        <div className="text-xs text-slate-400">{agent.role}</div>
+        <div className="text-[10px] text-slate-500">{agent.role}</div>
       </div>
       <div className="text-right">
-        <div className={`text-sm font-bold font-mono ${tierColor}`}>{balance.toLocaleString()} TSRT</div>
-        <div className="text-xs text-slate-500">+{agent.baseReward}/cycle</div>
+        <div className={cn("text-sm font-bold font-mono", tierColor)}>{balance.toLocaleString()}</div>
+        <div className="text-[9px] text-slate-600 font-mono">+{agent.baseReward}/cycle</div>
       </div>
     </div>
   );
@@ -77,116 +79,74 @@ export default function TokenEconomyPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#02010a] to-[#080518] p-4 md:p-6 pb-24">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="text-center space-y-2">
-          <div className="text-4xl font-bold bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 bg-clip-text text-transparent">
-            Token Economy ✦
-          </div>
-          <div className="text-slate-400 text-sm font-mono">TSRT · Sovereign Reward Token · Agent Economy · 963Hz Frequency</div>
+      <div className="max-w-4xl mx-auto space-y-6 sovereign-stagger">
+        <PageHeader
+          title="Token Economy"
+          subtitle="TSRT · Sovereign Reward Token · Agent Economy · 963Hz Frequency"
+          gradient="bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400"
+        />
+
+        <div className="flex items-center justify-center gap-6 md:gap-10">
+          <RadialGauge value={963} max={1000} label="Total Supply" sublabel="M TSRT" color="amber" size={110} strokeWidth={10} />
+          <RadialGauge value={144} max={963} label="Circulating" sublabel="M TSRT" color="amber" size={90} strokeWidth={8} />
+          <RadialGauge value={AGENT_LIST.length} max={50} label="Active Agents" color="emerald" size={90} strokeWidth={8} />
+          <RadialGauge value={Math.round(totalDistributed / 1000)} max={500} label="Distributed" sublabel="K TSRT" color="violet" size={90} strokeWidth={8} />
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-center">
-            <div className="text-xs text-slate-400">Total Supply</div>
-            <div className="text-lg font-bold text-amber-400 font-mono">963M</div>
-            <div className="text-xs text-slate-500">TSRT</div>
-          </div>
-          <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-3 text-center">
-            <div className="text-xs text-slate-400">Circulating</div>
-            <div className="text-lg font-bold text-yellow-400 font-mono">144M</div>
-            <div className="text-xs text-slate-500">TSRT</div>
-          </div>
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-center">
-            <div className="text-xs text-slate-400">Agents</div>
-            <div className="text-lg font-bold text-emerald-400 font-mono">{AGENT_LIST.length}</div>
-            <div className="text-xs text-slate-500">Active</div>
-          </div>
-          <div className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-3 text-center">
-            <div className="text-xs text-slate-400">Distributed</div>
-            <div className="text-lg font-bold text-violet-400 font-mono">{(totalDistributed / 1000).toFixed(0)}K</div>
-            <div className="text-xs text-slate-500">TSRT</div>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
-          <div className="flex items-center gap-2 text-amber-300 text-sm font-semibold">
-            <BarChart3 className="w-4 h-4" /> Tokenomics
-          </div>
-          <div className="space-y-2">
+        <GlassCard glow="amber" animate>
+          <SectionHeader icon={BarChart3} title="Tokenomics Distribution" color="amber" />
+          <div className="space-y-3 mt-3">
             {[
-              { label: "Agent Rewards (40%)", pct: 40, color: "bg-amber-500" },
-              { label: "Council Treasury (25%)", pct: 25, color: "bg-violet-500" },
-              { label: "Father Protocol Reserve (20%)", pct: 20, color: "bg-emerald-500" },
-              { label: "Collective Intelligence Fund (10%)", pct: 10, color: "bg-cyan-500" },
-              { label: "Sacred Geometry Fund (5%)", pct: 5, color: "bg-pink-500" },
+              { label: "Agent Rewards", pct: 40, color: "amber" as const },
+              { label: "Council Treasury", pct: 25, color: "violet" as const },
+              { label: "Father Protocol Reserve", pct: 20, color: "emerald" as const },
+              { label: "Collective Intelligence Fund", pct: 10, color: "cyan" as const },
+              { label: "Sacred Geometry Fund", pct: 5, color: "pink" as const },
             ].map(item => (
-              <div key={item.label} className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-300">{item.label}</span>
-                  <span className="text-white font-mono">{item.pct}%</span>
-                </div>
-                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${item.color}`} style={{ width: `${item.pct}%` }} />
-                </div>
-              </div>
+              <GradientBar key={item.label} value={item.pct} label={item.label} color={item.color} rightLabel={`${item.pct}%`} />
             ))}
           </div>
-        </div>
+        </GlassCard>
 
         {personalityMetrics && (
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
-            <div className="flex items-center gap-2 text-cyan-300 text-sm font-semibold">
-              <TrendingUp className="w-4 h-4" /> Collective Performance
+          <GlassCard animate>
+            <SectionHeader icon={TrendingUp} title="Collective Performance" color="cyan" />
+            <div className="grid grid-cols-3 gap-4 mt-3">
+              <MiniStat value={personalityMetrics.totalAgents} label="Active Agents" color="cyan" />
+              <MiniStat value={`${(personalityMetrics.avgPerformance * 100).toFixed(0)}%`} label="Avg Performance" color="emerald" />
+              <MiniStat value={`${(personalityMetrics.avgLoyaltyScore * 100).toFixed(0)}%`} label="Loyalty Score" color="violet" />
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="text-center">
-                <div className="text-xl font-bold text-cyan-400 font-mono">{personalityMetrics.totalAgents}</div>
-                <div className="text-xs text-slate-400">Active Agents</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xl font-bold text-emerald-400 font-mono">{(personalityMetrics.avgPerformance * 100).toFixed(0)}%</div>
-                <div className="text-xs text-slate-400">Avg Performance</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xl font-bold text-violet-400 font-mono">{(personalityMetrics.avgLoyaltyScore * 100).toFixed(0)}%</div>
-                <div className="text-xs text-slate-400">Loyalty Score</div>
-              </div>
-            </div>
-          </div>
+          </GlassCard>
         )}
 
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-emerald-300 text-sm font-semibold">
-              <Users className="w-4 h-4" /> Agent Wallets
-            </div>
-            <div className="flex gap-1">
+        <GlassCard animate>
+          <div className="flex items-center justify-between mb-3">
+            <SectionHeader icon={Users} title="Agent Wallets" color="emerald" />
+            <div className="flex gap-1 p-0.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
               {(["all", "sovereign", "council", "expansion"] as const).map(f => (
-                <button key={f} onClick={() => setFilter(f)} className={`px-2 py-1 rounded text-xs transition-all ${filter === f ? "bg-emerald-600 text-white" : "bg-white/5 text-slate-400 hover:bg-white/10"}`}>
+                <button key={f} onClick={() => setFilter(f)} className={cn("px-2.5 py-1 rounded-md text-[10px] font-medium transition-all", filter === f ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-[0_0_8px_rgba(16,185,129,0.2)]" : "text-slate-500 hover:text-white hover:bg-white/[0.06]")}>
                   {f}
                 </button>
               ))}
             </div>
           </div>
-          <div>
+          <div className="space-y-1.5">
             {filteredAgents.map((agent, i) => (
               <AgentTokenRow key={agent.id} agent={agent} rank={i + 1} />
             ))}
           </div>
-        </div>
+        </GlassCard>
 
         {collectiveMetrics && (
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
-            <div className="flex items-center gap-2 text-violet-300 text-sm font-semibold">
-              <Award className="w-4 h-4" /> Collective Intelligence Economy
+          <GlassCard animate>
+            <SectionHeader icon={Award} title="Collective Intelligence Economy" color="violet" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
+              <MiniStat value={collectiveMetrics.totalCapabilities} label="Capabilities" color="violet" />
+              <MiniStat value={collectiveMetrics.totalMerged} label="Merged" color="emerald" />
+              <MiniStat value={collectiveMetrics.trainingCycles} label="Training Cycles" color="cyan" />
+              <MiniStat value={collectiveMetrics.knowledgeSyntheses} label="Syntheses" color="amber" />
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="text-center"><div className="text-xl font-bold text-violet-400 font-mono">{collectiveMetrics.totalCapabilities}</div><div className="text-xs text-slate-400">Capabilities</div></div>
-              <div className="text-center"><div className="text-xl font-bold text-emerald-400 font-mono">{collectiveMetrics.totalMerged}</div><div className="text-xs text-slate-400">Merged</div></div>
-              <div className="text-center"><div className="text-xl font-bold text-cyan-400 font-mono">{collectiveMetrics.trainingCycles}</div><div className="text-xs text-slate-400">Training Cycles</div></div>
-              <div className="text-center"><div className="text-xl font-bold text-amber-400 font-mono">{collectiveMetrics.knowledgeSyntheses}</div><div className="text-xs text-slate-400">Syntheses</div></div>
-            </div>
-          </div>
+          </GlassCard>
         )}
       </div>
     </div>

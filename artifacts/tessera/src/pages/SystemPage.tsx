@@ -1,35 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Cpu, Activity, Database, Zap, GitBranch, RefreshCw, TrendingUp, Star } from "lucide-react";
+import { GlassCard, GradientBar, SectionHeader, TabBar, PageHeader, RadialGauge, MiniStat, HeroStat } from "@/components/ui/sovereign";
+import { cn } from "@/lib/utils";
 
 const API = import.meta.env.VITE_API_URL || "";
-
-function Panel({ title, icon: Icon, iconColor, children }: { title: string; icon: any; iconColor: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
-      <div className={`flex items-center gap-2 text-sm font-semibold ${iconColor}`}>
-        <Icon className="w-4 h-4" /> {title}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function ScoreBar({ label, score, maxScore = 100 }: { label: string; score: number; maxScore?: number }) {
-  const pct = Math.round((score / maxScore) * 100);
-  const color = pct >= 95 ? "bg-violet-500" : pct >= 85 ? "bg-emerald-500" : pct >= 70 ? "bg-yellow-500" : "bg-red-500";
-  return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs">
-        <span className="text-slate-300">{label}</span>
-        <span className="text-white font-mono">{score.toFixed(1)}</span>
-      </div>
-      <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
-}
 
 export default function SystemPage({ initialTab }: { initialTab?: "agi" | "improvement" | "evolution" | "quantum" | "agents" }) {
   const [activeTab, setActiveTab] = useState<"agi" | "improvement" | "evolution" | "quantum" | "agents">(initialTab || "agi");
@@ -78,187 +53,172 @@ export default function SystemPage({ initialTab }: { initialTab?: "agi" | "impro
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#02010a] to-[#080518] p-4 md:p-6 pb-24">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="text-center space-y-2">
-          <div className="text-4xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
-            System Engine ✦
-          </div>
-          <div className="text-slate-400 text-sm font-mono">AGI Training · Self-Improvement · Quantum Architecture · Agent Network</div>
-        </div>
+      <div className="max-w-4xl mx-auto space-y-6 sovereign-stagger">
+        <PageHeader
+          title="System Engine"
+          subtitle="AGI Training · Self-Improvement · Quantum Architecture · Agent Network"
+          gradient="bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400"
+        />
 
         {agiMetrics && activeTab === "agi" && (
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-3 text-center">
-              <div className="text-xs text-slate-400">Avg Score</div>
-              <div className="text-2xl font-bold text-cyan-400 font-mono">{agiMetrics.avgScore?.toFixed(1)}%</div>
-            </div>
-            <div className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-3 text-center">
-              <div className="text-xs text-slate-400">Sovereign</div>
-              <div className="text-2xl font-bold text-violet-400 font-mono">{agiMetrics.sovereignMastery}</div>
-            </div>
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-center">
-              <div className="text-xs text-slate-400">Total Cycles</div>
-              <div className="text-2xl font-bold text-emerald-400 font-mono">{agiMetrics.totalCycles}</div>
-            </div>
+          <div className="flex items-center justify-center gap-6 md:gap-10">
+            <RadialGauge value={agiMetrics.avgScore ?? 0} label="Avg Score" sublabel="%" color="cyan" size={110} strokeWidth={10} />
+            <RadialGauge value={agiMetrics.sovereignMastery ?? 0} max={20} label="Sovereign" color="violet" size={90} strokeWidth={8} />
+            <RadialGauge value={agiMetrics.totalCycles ?? 0} max={100} label="Total Cycles" color="emerald" size={90} strokeWidth={8} />
           </div>
         )}
 
-        <div className="flex gap-2 overflow-x-auto">
-          {tabs.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${activeTab === tab.id ? "bg-cyan-600 text-white" : "bg-white/5 text-slate-400 hover:bg-white/10"}`}>
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <TabBar tabs={tabs} activeTab={activeTab} onChange={id => setActiveTab(id as any)} color="cyan" />
 
         {activeTab === "agi" && agiMetrics && (
-          <div className="space-y-4">
-            <Panel title="Top AGI Categories" icon={Star} iconColor="text-yellow-300">
-              <div className="space-y-2">
+          <div className="space-y-4 sovereign-stagger">
+            <GlassCard glow="amber" animate>
+              <SectionHeader icon={Star} title="Top AGI Categories" color="amber" />
+              <div className="space-y-2.5 mt-3">
                 {agiMetrics.topCategories?.map((cat: any) => (
-                  <div key={cat.category} className="flex items-center gap-2">
+                  <div key={cat.category} className="flex items-center gap-2.5">
                     <div className="flex-1 min-w-0">
-                      <ScoreBar label={cat.category} score={cat.score} />
+                      <GradientBar label={cat.category} value={cat.score} color="dynamic" rightLabel={cat.score.toFixed(1)} />
                     </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${cat.masteryLevel === "sovereign" ? "bg-violet-500/20 text-violet-300" : cat.masteryLevel === "expert" ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-500/20 text-slate-300"}`}>
+                    <span className={cn("text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 border font-medium", cat.masteryLevel === "sovereign" ? "bg-violet-500/15 text-violet-400 border-violet-500/20" : cat.masteryLevel === "expert" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : "bg-slate-500/15 text-slate-400 border-slate-500/20")}>
                       {cat.masteryLevel}
                     </span>
                   </div>
                 ))}
               </div>
-            </Panel>
-            <Panel title="All Categories" icon={Cpu} iconColor="text-cyan-300">
-              <div className="grid gap-2">
+            </GlassCard>
+            <GlassCard animate>
+              <SectionHeader icon={Cpu} title="All Categories" color="cyan" />
+              <div className="space-y-2.5 mt-3">
                 {agiMetrics.categoryStates && Object.entries(agiMetrics.categoryStates as Record<string, { score: number; masteryLevel: string; sessions: number }>).map(([cat, state]) => (
-                  <ScoreBar key={cat} label={`${cat} (${state.sessions} sessions)`} score={state.score} />
+                  <GradientBar key={cat} label={`${cat} (${state.sessions} sessions)`} value={state.score} color="dynamic" rightLabel={state.score.toFixed(1)} />
                 ))}
               </div>
-            </Panel>
+            </GlassCard>
           </div>
         )}
 
         {activeTab === "improvement" && improvementMetrics && (
-          <div className="space-y-4">
-            <Panel title="Auto-Improvement Daemon" icon={TrendingUp} iconColor="text-emerald-300">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-emerald-400 font-mono">{improvementMetrics.totalCycles}</div>
-                  <div className="text-xs text-slate-400">Cycles</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-cyan-400 font-mono">{improvementMetrics.totalImprovements}</div>
-                  <div className="text-xs text-slate-400">Improvements</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-violet-400 font-mono">{improvementMetrics.overallSystemScorePct?.toFixed(1)}%</div>
-                  <div className="text-xs text-slate-400">System Score</div>
-                </div>
+          <div className="space-y-4 sovereign-stagger">
+            <GlassCard glow="emerald" animate>
+              <SectionHeader icon={TrendingUp} title="Auto-Improvement Daemon" color="emerald" />
+              <div className="grid grid-cols-3 gap-4 mt-3">
+                <MiniStat value={improvementMetrics.totalCycles} label="Cycles" color="emerald" />
+                <MiniStat value={improvementMetrics.totalImprovements} label="Improvements" color="cyan" />
+                <MiniStat value={`${improvementMetrics.overallSystemScorePct?.toFixed(1)}%`} label="System Score" color="violet" />
               </div>
-            </Panel>
-            <Panel title="Category Scores" icon={Activity} iconColor="text-blue-300">
-              <div className="space-y-2">
+            </GlassCard>
+            <GlassCard animate>
+              <SectionHeader icon={Activity} title="Category Scores" color="blue" />
+              <div className="space-y-2.5 mt-3">
                 {improvementMetrics.categories && Object.entries(improvementMetrics.categories as Record<string, { score: number; sessions: number }>)
                   .sort(([, a], [, b]) => b.score - a.score)
                   .map(([cat, state]) => (
-                    <ScoreBar key={cat} label={`${cat} (${state.sessions} sessions)`} score={state.score} />
+                    <GradientBar key={cat} label={`${cat} (${state.sessions} sessions)`} value={state.score} color="dynamic" rightLabel={state.score.toFixed(1)} />
                   ))}
               </div>
-            </Panel>
-            <Panel title="Recent Improvements" icon={Zap} iconColor="text-yellow-300">
-              <div className="space-y-2">
+            </GlassCard>
+            <GlassCard animate>
+              <SectionHeader icon={Zap} title="Recent Improvements" color="amber" />
+              <div className="space-y-2 mt-3">
                 {improvementMetrics.recentImprovements?.map((imp: any, i: number) => (
-                  <div key={i} className="rounded-lg border border-white/10 bg-white/5 p-2 text-xs">
-                    <div className="text-white">{imp.description}</div>
-                    <div className="text-emerald-400 font-mono mt-1">+{(imp.impact * 100).toFixed(2)}%</div>
+                  <div key={i} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-xs hover:bg-white/[0.04] transition-all">
+                    <div className="text-white leading-relaxed">{imp.description}</div>
+                    <div className="text-emerald-400 font-mono font-bold mt-1">+{(imp.impact * 100).toFixed(2)}%</div>
                   </div>
                 ))}
               </div>
-            </Panel>
+            </GlassCard>
           </div>
         )}
 
         {activeTab === "evolution" && evolutionMetrics && (
-          <div className="space-y-4">
-            <Panel title="Self-Code Evolution" icon={GitBranch} iconColor="text-violet-300">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="text-center"><div className="text-2xl font-bold text-violet-400 font-mono">{evolutionMetrics.totalProposals}</div><div className="text-xs text-slate-400">Proposals</div></div>
-                <div className="text-center"><div className="text-2xl font-bold text-emerald-400 font-mono">{evolutionMetrics.approvedCount}</div><div className="text-xs text-slate-400">Applied</div></div>
-                <div className="text-center"><div className="text-2xl font-bold text-red-400 font-mono">{evolutionMetrics.rejectedCount}</div><div className="text-xs text-slate-400">Rejected</div></div>
+          <div className="space-y-4 sovereign-stagger">
+            <GlassCard glow="violet" animate>
+              <SectionHeader icon={GitBranch} title="Self-Code Evolution" color="violet" />
+              <div className="grid grid-cols-3 gap-4 mt-3">
+                <MiniStat value={evolutionMetrics.totalProposals} label="Proposals" color="violet" />
+                <MiniStat value={evolutionMetrics.approvedCount} label="Applied" color="emerald" />
+                <MiniStat value={evolutionMetrics.rejectedCount} label="Rejected" color="rose" />
               </div>
-              <div className="text-xs text-slate-400">Protected modules: {evolutionMetrics.protectedModuleCount}</div>
-              <div className="space-y-2">
+              <div className="text-[10px] text-slate-500 mt-3 font-mono">Protected modules: {evolutionMetrics.protectedModuleCount}</div>
+              <div className="space-y-2 mt-3">
                 {evolutionMetrics.recentProposals?.map((p: any, i: number) => (
-                  <div key={p.id || i} className="rounded-lg border border-white/10 bg-white/5 p-2 space-y-1">
+                  <div key={p.id || i} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-1 hover:bg-white/[0.04] transition-all">
                     <div className="flex justify-between items-start gap-2">
                       <div className="text-xs text-white font-medium">{p.targetModule}</div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${p.status === "applied" ? "bg-emerald-500/20 text-emerald-300" : p.status === "rejected" ? "bg-red-500/20 text-red-300" : "bg-slate-500/20 text-slate-300"}`}>{p.status}</span>
+                      <span className={cn("text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 border", p.status === "applied" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : p.status === "rejected" ? "bg-red-500/15 text-red-400 border-red-500/20" : "bg-slate-500/15 text-slate-400 border-slate-500/20")}>{p.status}</span>
                     </div>
                     <div className="text-xs text-slate-400">{p.proposedChange}</div>
-                    <div className="text-xs text-slate-500">{p.rationale?.slice(0, 80)}</div>
+                    <div className="text-[10px] text-slate-500">{p.rationale?.slice(0, 80)}</div>
                   </div>
                 ))}
               </div>
-            </Panel>
+            </GlassCard>
           </div>
         )}
 
         {activeTab === "quantum" && quantumMetrics && (
-          <div className="space-y-4">
-            <Panel title="Quantum Tesseract State" icon={Zap} iconColor="text-blue-300">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="text-center"><div className="text-xl font-bold text-blue-400 font-mono">{quantumMetrics.qubitCount}</div><div className="text-xs text-slate-400">Qubits</div></div>
-                <div className="text-center"><div className="text-xl font-bold text-purple-400 font-mono">{quantumMetrics.entanglementPairs}</div><div className="text-xs text-slate-400">Entangled Pairs</div></div>
-                <div className="text-center"><div className="text-xl font-bold text-cyan-400 font-mono">{quantumMetrics.activeBridges}</div><div className="text-xs text-slate-400">Dim. Bridges</div></div>
-                <div className="text-center"><div className="text-xl font-bold text-violet-400 font-mono">{quantumMetrics.dimensionalDepth}</div><div className="text-xs text-slate-400">Dimensions</div></div>
+          <div className="space-y-4 sovereign-stagger">
+            <GlassCard glow="blue" animate>
+              <SectionHeader icon={Zap} title="Quantum Tesseract State" color="blue" />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
+                <MiniStat value={quantumMetrics.qubitCount} label="Qubits" color="blue" />
+                <MiniStat value={quantumMetrics.entanglementPairs} label="Entangled Pairs" color="purple" />
+                <MiniStat value={quantumMetrics.activeBridges} label="Dim. Bridges" color="cyan" />
+                <MiniStat value={quantumMetrics.dimensionalDepth} label="Dimensions" color="violet" />
               </div>
-              <div className="text-xs text-slate-400 font-mono">Quantum Volume: {quantumMetrics.quantumVolume?.toLocaleString()} · Error Rate: {quantumMetrics.errorRate?.toFixed(4)}</div>
-            </Panel>
-            <Panel title="Quantum Gates" icon={RefreshCw} iconColor="text-purple-300">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="text-[10px] text-slate-500 font-mono mt-3">Quantum Volume: {quantumMetrics.quantumVolume?.toLocaleString()} · Error Rate: {quantumMetrics.errorRate?.toFixed(4)}</div>
+            </GlassCard>
+            <GlassCard animate>
+              <SectionHeader icon={RefreshCw} title="Quantum Gates" color="purple" />
+              <div className="grid grid-cols-2 gap-2 mt-3">
                 {quantumMetrics.gates?.map((gate: any) => (
-                  <div key={gate.symbol} className="rounded-lg border border-white/10 bg-white/5 p-2">
-                    <div className="text-sm font-bold text-purple-400 font-mono">{gate.symbol}</div>
-                    <div className="text-xs text-white">{gate.name}</div>
-                    <div className="text-xs text-slate-400">{gate.description}</div>
+                  <div key={gate.symbol} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 hover:bg-white/[0.04] transition-all group">
+                    <div className="text-sm font-bold text-purple-400 font-mono group-hover:text-purple-300 transition-colors">{gate.symbol}</div>
+                    <div className="text-xs text-white mt-0.5">{gate.name}</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">{gate.description}</div>
                   </div>
                 ))}
               </div>
-            </Panel>
-            <Panel title="Interdimensional Bridges" icon={Database} iconColor="text-indigo-300">
-              <div className="space-y-2">
+            </GlassCard>
+            <GlassCard animate>
+              <SectionHeader icon={Database} title="Interdimensional Bridges" color="blue" />
+              <div className="space-y-2 mt-3">
                 {quantumMetrics.bridges?.slice(0, 5).map((b: any) => (
-                  <div key={b.id} className="flex items-center gap-2 text-xs">
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${b.active ? "bg-emerald-400" : "bg-slate-500"}`} />
-                    <span className="text-white">Dim {b.dimA} ↔ Dim {b.dimB}</span>
-                    <span className="text-slate-400">Fidelity: {(b.fidelity * 100).toFixed(1)}%</span>
-                    <span className="text-slate-500 ml-auto text-xs">{b.protocol.split(" ")[0]}</span>
+                  <div key={b.id} className="flex items-center gap-2.5 text-xs p-2 rounded-xl hover:bg-white/[0.03] transition-all">
+                    <div className={cn("w-2 h-2 rounded-full flex-shrink-0", b.active ? "bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.5)]" : "bg-slate-500")} />
+                    <span className="text-white font-medium">Dim {b.dimA} ↔ Dim {b.dimB}</span>
+                    <GradientBar value={b.fidelity * 100} color="blue" showValue={false} height="h-1" className="flex-1" />
+                    <span className="text-slate-400 font-mono">{(b.fidelity * 100).toFixed(1)}%</span>
                   </div>
                 ))}
               </div>
-            </Panel>
+            </GlassCard>
           </div>
         )}
 
         {activeTab === "agents" && agentMetrics && (
-          <div className="space-y-4">
+          <div className="space-y-4 sovereign-stagger">
             <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-center"><div className="text-2xl font-bold text-emerald-400 font-mono">{agentMetrics.totalSpawned}</div><div className="text-xs text-slate-400">Total Spawned</div></div>
-              <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-3 text-center"><div className="text-2xl font-bold text-cyan-400 font-mono">{agentMetrics.activeCount}</div><div className="text-xs text-slate-400">Active</div></div>
-              <div className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-3 text-center"><div className="text-2xl font-bold text-violet-400 font-mono">{agentMetrics.generationCount}</div><div className="text-xs text-slate-400">Generation</div></div>
+              <HeroStat icon={Cpu} value={agentMetrics.totalSpawned} label="Total Spawned" color="emerald" />
+              <HeroStat icon={Activity} value={agentMetrics.activeCount} label="Active" color="cyan" />
+              <HeroStat icon={Zap} value={agentMetrics.generationCount} label="Generation" color="violet" />
             </div>
-            <Panel title="Active Agents" icon={Cpu} iconColor="text-emerald-300">
-              <div className="space-y-2">
+            <GlassCard animate>
+              <SectionHeader icon={Cpu} title="Active Agents" color="emerald" />
+              <div className="space-y-2 mt-3">
                 {agentMetrics.activeAgents?.map((a: any) => (
-                  <div key={a.id} className="rounded-lg border border-white/10 bg-white/5 p-2 space-y-1">
+                  <div key={a.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-1 hover:bg-white/[0.04] transition-all">
                     <div className="flex justify-between text-xs">
                       <span className="text-white font-medium">{a.name}</span>
-                      <span className="text-slate-400">Gen {a.generation} · Power {a.power}</span>
+                      <span className="text-slate-500 font-mono">Gen {a.generation} · Power {a.power}</span>
                     </div>
-                    <div className="text-xs text-slate-400">{a.role}</div>
+                    <div className="text-[10px] text-slate-400">{a.role}</div>
                   </div>
                 ))}
               </div>
-            </Panel>
+            </GlassCard>
           </div>
         )}
       </div>

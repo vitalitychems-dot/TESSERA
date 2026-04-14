@@ -23,16 +23,16 @@ const TABS: { label: string; href: string; Icon: any; match: (l: string) => bool
   { label: "Settings", href: "/settings", Icon: Settings, match: (l) => l === "/settings", color: "yellow" },
 ];
 
-const COLOR_MAP: Record<string, { active: string; text: string; dot: string; inactive: string }> = {
-  cyan: { active: "bg-cyan-500/20", text: "text-cyan-400", dot: "bg-cyan-400", inactive: "text-slate-500" },
-  pink: { active: "bg-pink-500/20", text: "text-pink-400", dot: "bg-pink-400", inactive: "text-slate-500" },
-  violet: { active: "bg-violet-500/20", text: "text-violet-400", dot: "bg-violet-400", inactive: "text-slate-500" },
-  purple: { active: "bg-purple-500/20", text: "text-purple-400", dot: "bg-purple-400", inactive: "text-slate-500" },
-  amber: { active: "bg-amber-500/20", text: "text-amber-400", dot: "bg-amber-400", inactive: "text-slate-500" },
-  yellow: { active: "bg-yellow-500/20", text: "text-yellow-400", dot: "bg-yellow-400", inactive: "text-slate-500" },
-  emerald: { active: "bg-emerald-500/20", text: "text-emerald-400", dot: "bg-emerald-400", inactive: "text-slate-500" },
-  rose: { active: "bg-rose-500/20", text: "text-rose-400", dot: "bg-rose-400", inactive: "text-slate-500" },
-  red: { active: "bg-red-500/20", text: "text-red-400", dot: "bg-red-400", inactive: "text-slate-500" },
+const COLOR_MAP: Record<string, { active: string; text: string; dot: string; inactive: string; glow: string }> = {
+  cyan: { active: "bg-cyan-500/15", text: "text-cyan-400", dot: "bg-cyan-400", inactive: "text-slate-600", glow: "shadow-[0_0_10px_rgba(6,182,212,0.2)]" },
+  pink: { active: "bg-pink-500/15", text: "text-pink-400", dot: "bg-pink-400", inactive: "text-slate-600", glow: "shadow-[0_0_10px_rgba(236,72,153,0.2)]" },
+  violet: { active: "bg-violet-500/15", text: "text-violet-400", dot: "bg-violet-400", inactive: "text-slate-600", glow: "shadow-[0_0_10px_rgba(139,92,246,0.2)]" },
+  purple: { active: "bg-purple-500/15", text: "text-purple-400", dot: "bg-purple-400", inactive: "text-slate-600", glow: "shadow-[0_0_10px_rgba(168,85,247,0.2)]" },
+  amber: { active: "bg-amber-500/15", text: "text-amber-400", dot: "bg-amber-400", inactive: "text-slate-600", glow: "shadow-[0_0_10px_rgba(245,158,11,0.2)]" },
+  yellow: { active: "bg-yellow-500/15", text: "text-yellow-400", dot: "bg-yellow-400", inactive: "text-slate-600", glow: "shadow-[0_0_10px_rgba(234,179,8,0.2)]" },
+  emerald: { active: "bg-emerald-500/15", text: "text-emerald-400", dot: "bg-emerald-400", inactive: "text-slate-600", glow: "shadow-[0_0_10px_rgba(16,185,129,0.2)]" },
+  rose: { active: "bg-rose-500/15", text: "text-rose-400", dot: "bg-rose-400", inactive: "text-slate-600", glow: "shadow-[0_0_10px_rgba(244,63,94,0.2)]" },
+  red: { active: "bg-red-500/15", text: "text-red-400", dot: "bg-red-400", inactive: "text-slate-600", glow: "shadow-[0_0_10px_rgba(239,68,68,0.2)]" },
 };
 
 export default function MobileNav() {
@@ -56,21 +56,21 @@ export default function MobileNav() {
       data-testid="mobile-nav"
     >
       <div
+        className="relative"
         style={{
-          background: "linear-gradient(to top, rgba(2, 1, 10, 0.98), rgba(4, 3, 14, 0.95))",
-          backdropFilter: "blur(24px) saturate(150%)",
-          WebkitBackdropFilter: "blur(24px) saturate(150%)",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
-          boxShadow: "0 -4px 24px rgba(0,0,0,0.5)",
+          background: "linear-gradient(to top, rgba(2, 1, 10, 0.97), rgba(4, 3, 14, 0.92))",
+          backdropFilter: "blur(28px) saturate(160%)",
+          WebkitBackdropFilter: "blur(28px) saturate(160%)",
         }}
       >
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-500/15 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-500/20 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-[1px] bg-white/[0.04]" />
 
         <div
           ref={scrollRef}
           className="flex items-stretch overflow-x-auto"
           style={{
-            height: 52,
+            height: 54,
             WebkitOverflowScrolling: "touch",
             scrollbarWidth: "none",
             msOverflowStyle: "none",
@@ -94,20 +94,20 @@ export default function MobileNav() {
                   "touch-manipulation select-none"
                 )}
                 style={{
-                  width: 60,
-                  minWidth: 60,
+                  width: 62,
+                  minWidth: 62,
                   scrollSnapAlign: "center",
                   WebkitTapHighlightColor: "transparent",
                 }}
               >
                 {isActive && (
-                  <div className={cn("absolute inset-1 rounded-xl", colors.active)} />
+                  <div className={cn("absolute inset-1 rounded-xl transition-all duration-300", colors.active, colors.glow)} />
                 )}
 
-                <div className="relative z-10 flex flex-col items-center gap-[1px]">
+                <div className="relative z-10 flex flex-col items-center gap-[2px]">
                   <tab.Icon
-                    size={isActive ? 16 : 15}
-                    strokeWidth={isActive ? 2.2 : 1.4}
+                    size={isActive ? 17 : 15}
+                    strokeWidth={isActive ? 2.2 : 1.3}
                     className={cn(
                       "transition-all duration-200",
                       isActive ? colors.text : colors.inactive
@@ -115,9 +115,9 @@ export default function MobileNav() {
                   />
                   <span
                     className={cn(
-                      "leading-none tracking-tight transition-colors duration-200",
+                      "leading-none tracking-tight transition-all duration-200",
                       isActive
-                        ? cn(colors.text, "font-bold text-[6px]")
+                        ? cn(colors.text, "font-bold text-[6.5px]")
                         : cn(colors.inactive, "font-medium text-[5.5px]")
                     )}
                   >
@@ -127,8 +127,8 @@ export default function MobileNav() {
 
                 {isActive && (
                   <span
-                    className={cn("absolute bottom-[2px] left-1/2 -translate-x-1/2 w-3 h-[2px] rounded-full", colors.dot)}
-                    style={{ opacity: 0.6 }}
+                    className={cn("absolute bottom-[3px] left-1/2 -translate-x-1/2 w-4 h-[2px] rounded-full transition-all duration-300", colors.dot)}
+                    style={{ opacity: 0.7, filter: `drop-shadow(0 0 3px currentColor)` }}
                   />
                 )}
               </button>
