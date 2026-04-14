@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AdminProvider } from "@/lib/adminContext";
 import { MeshProvider } from "@/lib/meshContext";
+import { NLPGoalsProvider } from "@/lib/nlpGoalsContext";
 import { Component, type ErrorInfo, type ReactNode, useState, useCallback, useEffect, useRef, lazy, Suspense, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import MobileNav from "@/components/MobileNav";
@@ -377,6 +378,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <AdminProvider>
           <MeshProvider>
+          <NLPGoalsProvider>
           <TooltipProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <ToroidalBackground />
@@ -394,6 +396,7 @@ function App() {
               </div>
             </WouterRouter>
           </TooltipProvider>
+          </NLPGoalsProvider>
           </MeshProvider>
         </AdminProvider>
       </QueryClientProvider>

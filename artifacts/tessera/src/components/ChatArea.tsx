@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Send, Loader2, Mic, MicOff, Paperclip, X, FileText, Image, File, Volume2, VolumeX, Copy, Check, Download, Square, Zap, PhoneOff, Pause, Play, MessageSquare, Shield, Settings2, Palette, Bot, CheckCircle2, RefreshCw, ThumbsUp, ThumbsDown, Search, ArrowDown, Sparkles, ChevronRight, Globe, Code, Radio, Network, Lock, Activity, Database, ExternalLink, Brain, DollarSign, Users, Keyboard, Eye } from "lucide-react";
+import { NLPGoalsPanel } from "./chat/NLPGoalsPanel";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -2260,6 +2261,8 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
                 </motion.div>
               )}
             </AnimatePresence>
+            <NLPGoalsPanel />
+
             {colonelMessage && !isAdmin && (
               <div className={cn(
                 "flex items-center gap-2 px-4 py-2 mx-2 mb-1 rounded-lg border font-mono text-[11px] tracking-wider transition-all duration-500",
