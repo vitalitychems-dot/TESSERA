@@ -104,10 +104,15 @@ function AgentsListTab({ world, allChildren, tsrtPriceUsd = 0 }: { world: WorldS
 
   const avgTrust = agents.length > 0 ? agents.reduce((s, a) => s + a.trustLevel, 0) / agents.length : 0;
   const avgLoyalty = agents.length > 0 ? agents.reduce((s, a) => s + a.loyaltyScore, 0) / agents.length : 0;
-  const agencyEntries: any[] = orgChart?.agencies || [];
-  const selectedAgency = agencyEntries.find((e: any) => e.agency.id === drillAgencyId);
+  const rawAgencies: any[] = orgChart?.agencies || [];
+  const agencyEntries: any[] = rawAgencies.map((a: any) => ({
+    agency: { id: a.id || a.agency?.id, name: a.name || a.agency?.name, mission: a.mission || a.agency?.mission || `${a.name || "Agency"} operations` },
+    boss: a.boss || null,
+    departments: a.departments || [],
+  }));
+  const selectedAgency = agencyEntries.find((e: any) => e?.agency?.id === drillAgencyId);
 
-  const activitiesWithWellbeing = world.currentActivities.filter(a => a.happiness != null && a.agentId && !a.agentId.includes("-clone"));
+  const activitiesWithWellbeing = (world.currentActivities || []).filter(a => a && a.happiness != null && a.agentId && typeof a.agentId === 'string' && !a.agentId.includes("-clone"));
   const avgHappiness = activitiesWithWellbeing.length > 0 ? activitiesWithWellbeing.reduce((s, a) => s + (a.happiness || 0), 0) / activitiesWithWellbeing.length : 0;
 
   const breadcrumb = (
