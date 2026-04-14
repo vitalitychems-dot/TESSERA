@@ -1490,9 +1490,9 @@ export default function TesseractForumPage({ embedded }: { embedded?: boolean })
                   <div className="space-y-1.5">
                     {((knowledgeFeed?.entries ?? []) as KnowledgeFeedEntry[]).slice(0, 8).map((entry, i) => (
                       <div key={i} className="text-[11px] border-l-2 border-indigo-400/30 pl-2 py-1">
-                        <span className="text-indigo-300 font-medium">{entry.title || entry.key || `Entry ${i+1}`}</span>
-                        {entry.category && <span className="text-indigo-400/50 ml-1.5 text-[9px]">[{entry.category}]</span>}
-                        {entry.content && <p className="text-muted-foreground/60 text-[10px] line-clamp-1 mt-0.5">{entry.content}</p>}
+                        <span className="text-indigo-300 font-medium">{entry.summary || entry.title || entry.source || entry.key || `Knowledge item`}</span>
+                        {(entry.sourceType || entry.category) && <span className="text-indigo-400/50 ml-1.5 text-[9px]">[{entry.sourceType || entry.category}]</span>}
+                        {(entry.text || entry.content) && <p className="text-muted-foreground/60 text-[10px] line-clamp-1 mt-0.5">{(entry.text || entry.content || "").slice(0, 200)}</p>}
                       </div>
                     ))}
                   </div>

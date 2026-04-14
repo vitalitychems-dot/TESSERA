@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { BookOpen, Sparkles, Brain, Eye, Globe, Layers, Zap, Shield, Clock, RefreshCw, ChevronDown, ChevronRight, Wrench, Code, Star, Filter, Search, Flame, Moon, Sun, Heart, Lock, Compass, Send, Copy, Check, Wand2, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -68,7 +69,7 @@ const AGENT_COLORS: Record<string, string> = {
   "Orion": "text-cyan-400",
 };
 
-type MainTab = "knowledge" | "conclusion" | "apply" | "mysticism";
+type MainTab = "knowledge" | "conclusion" | "apply" | "mysticism" | "society";
 
 function timeAgo(ts: number) {
   const d = Math.floor((Date.now() - ts) / 1000);
@@ -99,7 +100,12 @@ const SPELL_ICONS: Record<string, LucideIcon> = {
 
 export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }) {
   useEffect(() => { document.title = "Secret Knowledge | Tessera"; }, []);
-  const [mainTab, setMainTab] = useState<MainTab>("knowledge");
+  const [location] = useLocation();
+  const [mainTab, setMainTab] = useState<MainTab>(location.includes("secret-society") ? "society" : "knowledge");
+
+  useEffect(() => {
+    if (location.includes("secret-society")) setMainTab("society");
+  }, [location]);
   const [activeView, setActiveView] = useState<"all" | "dimensional" | "live" | "generated">("all");
   const [autoGenerate, setAutoGenerate] = useState(false);
   const [generatedEntries, setGeneratedEntries] = useState<KnowledgeEntry[]>([]);
@@ -248,6 +254,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
     { id: "conclusion", label: "Conclusion", icon: Globe },
     { id: "apply", label: "Apply Knowledge", icon: Wrench },
     { id: "mysticism", label: "Mysticism & Spells", icon: Wand2 },
+    { id: "society", label: "The Society", icon: Eye },
   ];
 
   return (
@@ -779,6 +786,93 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
             </div>
           </div>
         )}
+
+        {mainTab === "society" && <SecretSocietyTab />}
+      </div>
+    </div>
+  );
+}
+
+interface SocietyOrder {
+  id: string;
+  name: string;
+  members: number;
+  level: string;
+}
+
+function SecretSocietyTab() {
+  const { data: societyData } = useQuery<{ ok: boolean; orders: SocietyOrder[] }>({
+    queryKey: ["/api/grand-council/secret-society"],
+    refetchInterval: 30000,
+  });
+  const { data: knowledgeData } = useQuery<{ ok: boolean; domains: Array<{ id: string; name: string; entries: number; accessLevel: string }> }>({
+    queryKey: ["/api/grand-council/secret-knowledge"],
+    refetchInterval: 30000,
+  });
+
+  const orders = societyData?.orders || [];
+  const domains = knowledgeData?.domains || [];
+
+  const LEVEL_STYLES: Record<string, string> = {
+    inner: "bg-violet-500/20 text-violet-400 border-violet-500/30",
+    outer: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
+    council: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-gradient-to-r from-violet-500/10 via-purple-500/5 to-indigo-500/10 border border-violet-500/20 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Eye size={16} className="text-violet-400" />
+          <span className="text-sm font-bold text-violet-300">The Secret Society</span>
+        </div>
+        <p className="text-xs text-slate-400 leading-relaxed">
+          The sovereign orders of Tessera — hierarchical circles of agents organized by
+          productivity, reputation, and domain mastery. Each order guards specific knowledge domains.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <h3 className="text-xs font-bold text-white/80 flex items-center gap-1.5">
+          <Shield size={13} className="text-amber-400" />
+          Sovereign Orders
+        </h3>
+        {orders.length === 0 && (
+          <p className="text-xs text-slate-500">Loading sovereign orders...</p>
+        )}
+        {orders.map((order) => (
+          <div key={order.id} className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Lock size={13} className="text-violet-400" />
+              <span className="text-sm font-semibold text-white/90">{order.name}</span>
+              <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-mono border ${LEVEL_STYLES[order.level] || LEVEL_STYLES.outer}`}>
+                {order.level.toUpperCase()} CIRCLE
+              </span>
+            </div>
+            <div className="text-xs text-slate-400">
+              {order.members} agent{order.members !== 1 ? "s" : ""} inducted
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-3">
+        <h3 className="text-xs font-bold text-white/80 flex items-center gap-1.5">
+          <BookOpen size={13} className="text-cyan-400" />
+          Protected Knowledge Domains
+        </h3>
+        {domains.map((domain) => (
+          <div key={domain.id} className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Layers size={13} className="text-indigo-400" />
+              <span className="text-sm font-semibold text-white/90">{domain.name}</span>
+              <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-mono border ${LEVEL_STYLES[domain.accessLevel] || LEVEL_STYLES.outer}`}>
+                {domain.accessLevel.toUpperCase()} ACCESS
+              </span>
+            </div>
+            <div className="text-xs text-slate-400">{domain.entries} knowledge entries protected</div>
+          </div>
+        ))}
       </div>
     </div>
   );

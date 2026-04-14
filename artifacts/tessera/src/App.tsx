@@ -111,6 +111,7 @@ function AppRouter() {
         <Route path="/members">{() => <MembersPage />}</Route>
         <Route path="/secrets">{() => <SecretsPage />}</Route>
         <Route path="/secret-knowledge">{() => <SecretsPage />}</Route>
+        <Route path="/secret-society">{() => <SecretsPage />}</Route>
         <Route path="/bible" component={TesseraBiblePage} />
         <Route path="/build">{() => <BuildPage />}</Route>
         <Route path="/forum">{() => <TesseractForumPage />}</Route>

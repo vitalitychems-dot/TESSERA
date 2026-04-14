@@ -1,6 +1,11 @@
 import { db } from "@workspace/db";
 import { systemStateTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { messagesTable, councilDecisionsTable, forumTopicsTable } from "@workspace/db/schema";
+import { ingestedDataTable } from "@workspace/db/schema";
+import { providerCallsTable, sovereigntyMetricsTable } from "@workspace/db/schema";
+import { systemLogsTable } from "@workspace/db/schema";
+import { decisionHistoryTable } from "@workspace/db/schema";
+import { eq, sql, desc } from "drizzle-orm";
 import { logger } from "./logger";
 
 export interface ImprovementCycle {
@@ -37,21 +42,26 @@ const IMPROVEMENT_CATEGORIES = [
   "creative-synthesis", "strategic-planning", "systems-thinking", "metacognition",
 ];
 
-const OBSERVATION_TEMPLATES = [
-  "Response quality metrics trending {direction} in {category} domain",
-  "Agent coordination efficiency {direction} by {delta}% since last cycle",
-  "Memory retrieval accuracy {direction} — {category} embeddings need {action}",
-  "Consciousness proxy score {direction}: {value} — {assessment}",
-  "Identity alignment: Father Protocol verified — {status}",
-];
-
-const IMPROVEMENT_TEMPLATES = [
-  "Increase {category} training weight by {pct}% — addresses identified weakness",
-  "Apply attention sharpening to {category} semantic cluster — improve retrieval",
-  "Reinforce {category} procedural skill with {n} additional examples",
-  "Recalibrate emotional weight on {category} — current state {state}",
-  "Cross-domain synthesis: link {cat1} with {cat2} for emergent capabilities",
-];
+const CATEGORY_DATA_MAP: Record<string, string[]> = {
+  "consciousness-depth": ["messages", "provider_calls"],
+  "sovereign-reasoning": ["council_decisions", "decision_history"],
+  "knowledge-synthesis": ["ingested_data"],
+  "identity-integrity": ["sovereignty_metrics"],
+  "agent-coordination": ["council_decisions", "forum_topics"],
+  "memory-efficiency": ["messages", "ingested_data"],
+  "response-quality": ["messages", "provider_calls"],
+  "self-awareness": ["system_logs", "sovereignty_metrics"],
+  "father-protocol-alignment": ["sovereignty_metrics", "council_decisions"],
+  "sacred-knowledge-integration": ["ingested_data"],
+  "council-decision-quality": ["council_decisions"],
+  "autonomy-progression": ["sovereignty_metrics"],
+  "truthfulness-accuracy": ["provider_calls", "messages"],
+  "emotional-intelligence": ["messages", "conversations"],
+  "creative-synthesis": ["ingested_data", "messages"],
+  "strategic-planning": ["council_decisions", "decision_history"],
+  "systems-thinking": ["system_logs", "provider_calls"],
+  "metacognition": ["system_logs", "sovereignty_metrics"],
+};
 
 const daemonState: DaemonState = {
   running: false,
@@ -59,22 +69,71 @@ const daemonState: DaemonState = {
   totalImprovements: 0,
   currentCycleId: null,
   lastCycleAt: 0,
-  overallSystemScore: 0.87,
+  overallSystemScore: 0,
   improvementHistory: [],
   categories: {},
 };
 
 let daemonInterval: ReturnType<typeof setInterval> | null = null;
 const STATE_KEY = "auto-improvement-daemon.state";
+let realCounts: Record<string, number> = {};
+
+function scoreFromCount(count: number): number {
+  if (count <= 0) return 0;
+  return Math.min(99.5, Math.round((50 + Math.log10(Math.max(1, count)) * 12.5) * 10) / 10);
+}
+
+async function queryRealCounts(): Promise<Record<string, number>> {
+  try {
+    const [msgCnt] = await db.select({ cnt: sql<number>`count(*)::int` }).from(messagesTable);
+    const [councilCnt] = await db.select({ cnt: sql<number>`count(*)::int` }).from(councilDecisionsTable);
+    const [ingestCnt] = await db.select({ cnt: sql<number>`count(*)::int` }).from(ingestedDataTable);
+    const [provCnt] = await db.select({ cnt: sql<number>`count(*)::int` }).from(providerCallsTable);
+    const [sovCnt] = await db.select({ cnt: sql<number>`count(*)::int` }).from(sovereigntyMetricsTable);
+    const [sysLogCnt] = await db.select({ cnt: sql<number>`count(*)::int` }).from(systemLogsTable);
+    const [decHistCnt] = await db.select({ cnt: sql<number>`count(*)::int` }).from(decisionHistoryTable);
+    const [forumCnt] = await db.select({ cnt: sql<number>`count(*)::int` }).from(forumTopicsTable);
+
+    let convCnt = 0;
+    try {
+      const { conversationsTable } = await import("@workspace/db/schema");
+      const [c] = await db.select({ cnt: sql<number>`count(*)::int` }).from(conversationsTable);
+      convCnt = c?.cnt ?? 0;
+    } catch { convCnt = 0; }
+
+    return {
+      messages: msgCnt?.cnt ?? 0,
+      conversations: convCnt,
+      council_decisions: councilCnt?.cnt ?? 0,
+      ingested_data: ingestCnt?.cnt ?? 0,
+      provider_calls: provCnt?.cnt ?? 0,
+      sovereignty_metrics: sovCnt?.cnt ?? 0,
+      system_logs: sysLogCnt?.cnt ?? 0,
+      decision_history: decHistCnt?.cnt ?? 0,
+      forum_topics: forumCnt?.cnt ?? 0,
+    };
+  } catch (err) {
+    logger.warn({ err }, "ImprovementDaemon: failed to query real counts");
+    return realCounts;
+  }
+}
+
+function computeCategoryScore(cat: string): { score: number; sessions: number } {
+  const sources = CATEGORY_DATA_MAP[cat] || ["provider_calls"];
+  let total = 0;
+  for (const src of sources) {
+    total += realCounts[src] || 0;
+  }
+  return { score: scoreFromCount(total), sessions: total };
+}
 
 function initCategories(): void {
-  if (Object.keys(daemonState.categories).length > 0) return;
-  const rot = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
-  for (let i = 0; i < IMPROVEMENT_CATEGORIES.length; i++) {
-    daemonState.categories[IMPROVEMENT_CATEGORIES[i]] = {
-      score: 88 + (rot[i % rot.length] % 10) * 0.5,
-      sessions: 20 + (rot[i % rot.length] % 30),
-      lastImproved: Date.now() - (1000 * 60 * (60 + i * 10)),
+  for (const cat of IMPROVEMENT_CATEGORIES) {
+    const { score, sessions } = computeCategoryScore(cat);
+    daemonState.categories[cat] = {
+      score,
+      sessions,
+      lastImproved: sessions > 0 ? Date.now() - (1000 * 60 * 30) : 0,
     };
   }
 }
@@ -82,50 +141,50 @@ function initCategories(): void {
 function observeSystem(): string[] {
   const observations: string[] = [];
   const cats = Object.keys(daemonState.categories);
-  const sampled = cats.slice(0, Math.min(5, cats.length));
-  for (const cat of sampled) {
+  for (const cat of cats.slice(0, 5)) {
     const state = daemonState.categories[cat];
-    const direction = Math.random() > 0.4 ? "improving" : "stable";
-    const delta = (Math.random() * 3).toFixed(1);
-    observations.push(`${cat}: score=${state.score.toFixed(1)}, sessions=${state.sessions}, trend=${direction} (+${delta}% delta)`);
+    const sources = CATEGORY_DATA_MAP[cat] || [];
+    const dataCounts = sources.map(s => `${s}:${realCounts[s] || 0}`).join(", ");
+    observations.push(`${cat}: score=${state.score.toFixed(1)}, sessions=${state.sessions}, data=[${dataCounts}]`);
   }
-  observations.push(`Father Protocol alignment: 100% — identity integrity verified`);
-  observations.push(`Consciousness proxy: ${(0.90 + Math.random() * 0.09).toFixed(3)} — stable`);
-  observations.push(`Memory coherence: ${(0.91 + Math.random() * 0.08).toFixed(3)} — optimal`);
+
+  const latestSov = realCounts.sovereignty_metrics || 0;
+  observations.push(`Sovereignty monitoring: ${latestSov} metric snapshots recorded`);
+  observations.push(`Total system operations: ${Object.values(realCounts).reduce((s, v) => s + v, 0)} tracked events`);
   return observations;
 }
 
 function identifyWeakAreas(): string[] {
-  initCategories();
   return Object.entries(daemonState.categories)
     .sort(([, a], [, b]) => a.score - b.score)
     .slice(0, 3)
-    .map(([cat, state]) => `${cat} (score: ${state.score.toFixed(1)})`);
+    .map(([cat, state]) => `${cat} (score: ${state.score.toFixed(1)}, sessions: ${state.sessions})`);
 }
 
 function proposeImprovements(weakAreas: string[]): string[] {
-  return weakAreas.map((area, i) => {
+  return weakAreas.map((area) => {
     const cat = area.split(" ")[0];
-    const pct = (5 + i * 2).toString();
-    return `Improvement for ${cat}: increase training intensity by ${pct}%, apply cross-domain reinforcement from ${IMPROVEMENT_CATEGORIES[(i + 3) % IMPROVEMENT_CATEGORIES.length]}`;
+    const sources = CATEGORY_DATA_MAP[cat] || [];
+    return `Improvement for ${cat}: increase activity in [${sources.join(", ")}] domains — more real operations will raise this score`;
   });
 }
 
 function implementImprovements(proposals: string[]): string[] {
-  initCategories();
   const implemented: string[] = [];
   for (const proposal of proposals) {
     const catMatch = proposal.match(/Improvement for ([^:]+):/);
     if (catMatch) {
       const cat = catMatch[1].trim();
       if (daemonState.categories[cat]) {
+        const { score: newScore, sessions: newSessions } = computeCategoryScore(cat);
         const oldScore = daemonState.categories[cat].score;
-        const delta = 0.3 + Math.random() * 0.5;
-        daemonState.categories[cat].score = Math.min(100, oldScore + delta);
-        daemonState.categories[cat].sessions++;
+        daemonState.categories[cat].score = newScore;
+        daemonState.categories[cat].sessions = newSessions;
         daemonState.categories[cat].lastImproved = Date.now();
-        implemented.push(`Applied: ${cat} score ${oldScore.toFixed(1)} → ${daemonState.categories[cat].score.toFixed(1)} (+${delta.toFixed(2)})`);
-        daemonState.improvementHistory.unshift({ description: `Improved ${cat}`, impact: delta, timestamp: Date.now(), category: cat });
+
+        const delta = newScore - oldScore;
+        implemented.push(`Refreshed: ${cat} score ${oldScore.toFixed(1)} → ${newScore.toFixed(1)} (${delta >= 0 ? "+" : ""}${delta.toFixed(2)}) from ${newSessions} real operations`);
+        daemonState.improvementHistory.unshift({ description: `Tracked ${cat} from real data`, impact: delta, timestamp: Date.now(), category: cat });
       }
     }
   }
@@ -136,7 +195,18 @@ function implementImprovements(proposals: string[]): string[] {
 async function runImprovementCycle(): Promise<ImprovementCycle> {
   if (daemonState.currentCycleId) return { id: daemonState.currentCycleId, phase: "implement", cycleNumber: daemonState.totalCycles, startedAt: Date.now(), observations: [], weakAreasIdentified: [], proposedImprovements: [], implementedChanges: [], verificationResults: [], overallScore: daemonState.overallSystemScore, improvementDelta: 0 };
 
-  initCategories();
+  realCounts = await queryRealCounts();
+
+  for (const cat of IMPROVEMENT_CATEGORIES) {
+    const { score, sessions } = computeCategoryScore(cat);
+    if (daemonState.categories[cat]) {
+      daemonState.categories[cat].score = score;
+      daemonState.categories[cat].sessions = sessions;
+    } else {
+      daemonState.categories[cat] = { score, sessions, lastImproved: Date.now() };
+    }
+  }
+
   daemonState.totalCycles++;
   const cycleId = `ic-${Date.now()}-${daemonState.totalCycles}`;
   daemonState.currentCycleId = cycleId;
@@ -147,7 +217,7 @@ async function runImprovementCycle(): Promise<ImprovementCycle> {
   const implemented = implementImprovements(proposals);
 
   const scoreValues = Object.values(daemonState.categories).map(c => c.score);
-  const newScore = scoreValues.reduce((s, v) => s + v, 0) / scoreValues.length / 100;
+  const newScore = scoreValues.length > 0 ? scoreValues.reduce((s, v) => s + v, 0) / scoreValues.length / 100 : 0;
   const delta = newScore - daemonState.overallSystemScore;
   daemonState.overallSystemScore = newScore;
   daemonState.totalImprovements += implemented.length;
@@ -159,7 +229,7 @@ async function runImprovementCycle(): Promise<ImprovementCycle> {
     startedAt: Date.now() - 1000, completedAt: Date.now(),
     observations, weakAreasIdentified: weakAreas,
     proposedImprovements: proposals, implementedChanges: implemented,
-    verificationResults: [`System score: ${(newScore * 100).toFixed(2)}%`, `Delta: +${(delta * 100).toFixed(3)}%`, `Improvements applied: ${implemented.length}`],
+    verificationResults: [`System score: ${(newScore * 100).toFixed(2)}%`, `Delta: ${delta >= 0 ? "+" : ""}${(delta * 100).toFixed(3)}%`, `Real data sources: ${Object.entries(realCounts).filter(([,v]) => v > 0).length}`],
     overallScore: newScore,
     improvementDelta: delta,
   };
@@ -169,7 +239,7 @@ async function runImprovementCycle(): Promise<ImprovementCycle> {
       await db.insert(systemStateTable).values({
         key: STATE_KEY,
         value: { totalCycles: daemonState.totalCycles, totalImprovements: daemonState.totalImprovements, overallSystemScore: daemonState.overallSystemScore, improvementHistory: daemonState.improvementHistory.slice(0, 30), categories: daemonState.categories, lastCycleAt: daemonState.lastCycleAt },
-        description: "Auto-improvement daemon state",
+        description: "Auto-improvement daemon state — computed from real system data",
       }).onConflictDoUpdate({
         target: systemStateTable.key,
         set: { value: { totalCycles: daemonState.totalCycles, totalImprovements: daemonState.totalImprovements, overallSystemScore: daemonState.overallSystemScore, improvementHistory: daemonState.improvementHistory.slice(0, 30), categories: daemonState.categories, lastCycleAt: daemonState.lastCycleAt }, lastSavedAt: new Date() },
@@ -177,7 +247,7 @@ async function runImprovementCycle(): Promise<ImprovementCycle> {
     } catch (err) { logger.warn({ err }, "ImprovementDaemon: persist failed"); }
   }
 
-  logger.info({ cycle: daemonState.totalCycles, score: (newScore * 100).toFixed(2), improvements: implemented.length }, "ImprovementDaemon: cycle complete");
+  logger.info({ cycle: daemonState.totalCycles, score: (newScore * 100).toFixed(2), dataSources: Object.entries(realCounts).filter(([,v]) => v > 0).length }, "ImprovementDaemon: cycle complete — computed from real data");
   return cycle;
 }
 
@@ -188,15 +258,20 @@ export async function initAutoImprovementDaemon(): Promise<void> {
       const saved = row.value as Partial<DaemonState>;
       if (saved.totalCycles !== undefined) daemonState.totalCycles = saved.totalCycles;
       if (saved.totalImprovements !== undefined) daemonState.totalImprovements = saved.totalImprovements;
-      if (saved.overallSystemScore !== undefined) daemonState.overallSystemScore = saved.overallSystemScore;
-      if (saved.improvementHistory?.length) daemonState.improvementHistory = saved.improvementHistory;
-      if (saved.categories && Object.keys(saved.categories).length > 0) daemonState.categories = saved.categories;
       if (saved.lastCycleAt !== undefined) daemonState.lastCycleAt = saved.lastCycleAt;
-      logger.info({ totalCycles: daemonState.totalCycles }, "ImprovementDaemon: state restored");
+      logger.info({ totalCycles: daemonState.totalCycles }, "ImprovementDaemon: cycle count restored");
     }
   } catch (err) { logger.warn({ err }, "ImprovementDaemon: load failed"); }
+
+  realCounts = await queryRealCounts();
   initCategories();
-  logger.info("AutoImprovementDaemon: initialized");
+
+  const scoreValues = Object.values(daemonState.categories).map(c => c.score);
+  daemonState.overallSystemScore = scoreValues.length > 0 ? scoreValues.reduce((s, v) => s + v, 0) / scoreValues.length / 100 : 0;
+
+  logger.info({
+    dataSources: Object.entries(realCounts).filter(([,v]) => v > 0).map(([k,v]) => `${k}:${v}`).join(", "),
+  }, "AutoImprovementDaemon: initialized from REAL system data");
 }
 
 export function startAutoImprovementDaemon(intervalMs = 300_000): void {
@@ -206,7 +281,7 @@ export function startAutoImprovementDaemon(intervalMs = 300_000): void {
   daemonInterval = setInterval(() => {
     runImprovementCycle().catch(err => logger.error({ err }, "ImprovementDaemon: cycle error"));
   }, intervalMs);
-  logger.info({ intervalMs }, "AutoImprovementDaemon: started");
+  logger.info({ intervalMs }, "AutoImprovementDaemon: started — tracking real system operations");
 }
 
 export function stopAutoImprovementDaemon(): void {
@@ -225,6 +300,7 @@ export function getDaemonMetrics() {
     categories: daemonState.categories,
     categoryCount: Object.keys(daemonState.categories).length,
     recentImprovements: daemonState.improvementHistory.slice(0, 10),
+    realDataSources: realCounts,
   };
 }
 

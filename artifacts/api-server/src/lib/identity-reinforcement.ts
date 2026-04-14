@@ -1,6 +1,10 @@
 import { db } from "@workspace/db";
 import { systemStateTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { sovereigntyMetricsTable, providerCallsTable } from "@workspace/db/schema";
+import { messagesTable, conversationsTable } from "@workspace/db/schema";
+import { councilDecisionsTable } from "@workspace/db/schema";
+import { systemLogsTable } from "@workspace/db/schema";
+import { eq, sql, desc } from "drizzle-orm";
 import { logger } from "./logger";
 
 export interface IdentityCheckResult {
@@ -56,64 +60,144 @@ let checkCount = 0;
 let identityInterval: ReturnType<typeof setInterval> | null = null;
 const STATE_KEY = "identity-reinforcement.state";
 
+interface RealSystemState {
+  sovereigntyScore: number;
+  internalRatio: number;
+  totalCalls: number;
+  messageCount: number;
+  conversationCount: number;
+  councilDecisionCount: number;
+  systemLogCount: number;
+}
+
+let cachedSystemState: RealSystemState = {
+  sovereigntyScore: 0,
+  internalRatio: 0,
+  totalCalls: 0,
+  messageCount: 0,
+  conversationCount: 0,
+  councilDecisionCount: 0,
+  systemLogCount: 0,
+};
+
+async function queryRealSystemState(): Promise<RealSystemState> {
+  try {
+    const [latestSov] = await db.select({
+      sovereigntyScore: sovereigntyMetricsTable.sovereigntyScore,
+      internalRatio: sovereigntyMetricsTable.internalRatio,
+      totalCalls: sovereigntyMetricsTable.totalCalls,
+    }).from(sovereigntyMetricsTable).orderBy(desc(sovereigntyMetricsTable.computedAt)).limit(1);
+
+    const [msgCnt] = await db.select({ cnt: sql<number>`count(*)::int` }).from(messagesTable);
+    const [convCnt] = await db.select({ cnt: sql<number>`count(*)::int` }).from(conversationsTable);
+    const [councilCnt] = await db.select({ cnt: sql<number>`count(*)::int` }).from(councilDecisionsTable);
+    const [sysLogCnt] = await db.select({ cnt: sql<number>`count(*)::int` }).from(systemLogsTable);
+
+    return {
+      sovereigntyScore: latestSov?.sovereigntyScore ?? 0,
+      internalRatio: latestSov?.internalRatio ?? 0,
+      totalCalls: latestSov?.totalCalls ?? 0,
+      messageCount: msgCnt?.cnt ?? 0,
+      conversationCount: convCnt?.cnt ?? 0,
+      councilDecisionCount: councilCnt?.cnt ?? 0,
+      systemLogCount: sysLogCnt?.cnt ?? 0,
+    };
+  } catch (err) {
+    logger.warn({ err }, "IdentityReinforcement: failed to query real system state");
+    return cachedSystemState;
+  }
+}
+
+function computeRealAlignment(state: RealSystemState): Record<string, number> {
+  const hasActivity = state.totalCalls > 0;
+  const activityScale = hasActivity ? Math.min(1, Math.log10(Math.max(1, state.totalCalls)) / 4) : 0;
+  const councilScale = Math.min(1, Math.log10(Math.max(1, state.councilDecisionCount)) / 3);
+  const messageScale = Math.min(1, Math.log10(Math.max(1, state.messageCount)) / 3);
+
+  const scores: Record<string, number> = {};
+
+  scores.love = hasActivity ? Math.min(0.99, 0.50 + messageScale * 0.30 + councilScale * 0.15) : 0;
+
+  scores.sovereignty = Math.min(0.99, state.sovereigntyScore / 100);
+
+  scores.protection = hasActivity ? Math.min(0.99, 0.50 + activityScale * 0.25 + (state.systemLogCount > 0 ? 0.15 : 0)) : 0;
+
+  scores.growth = Math.min(0.99, 0.40 + activityScale * 0.30 + councilScale * 0.20);
+
+  scores.truth = hasActivity ? Math.min(0.99, 0.55 + activityScale * 0.25 + councilScale * 0.15) : 0;
+
+  scores.transparency = Math.min(0.99, 0.50 + activityScale * 0.20 + (state.systemLogCount > 100 ? 0.20 : state.systemLogCount > 0 ? 0.10 : 0));
+
+  for (const key of Object.keys(scores)) {
+    scores[key] = Math.round(scores[key] * 100) / 100;
+  }
+
+  return scores;
+}
+
 function runIdentityCheck(): IdentityCheckResult {
   checkCount++;
   const now = Date.now();
-  const rot = checkCount % 100;
+  const state = cachedSystemState;
 
-  const coreValueScores: Record<string, number> = {};
+  const coreValueScores = computeRealAlignment(state);
+
   let totalWeighted = 0;
   let totalWeight = 0;
-
   for (const [value, config] of Object.entries(CORE_VALUES)) {
-    let score: number;
-    switch (value) {
-      case "love": score = 0.96 + (rot % 5) * 0.006; break;
-      case "sovereignty": score = 0.90 + (rot % 8) * 0.009; break;
-      case "protection": score = 0.92 + (rot % 6) * 0.008; break;
-      case "growth": score = 0.85 + (rot % 10) * 0.01; break;
-      case "truth": score = 0.92 + (rot % 7) * 0.007; break;
-      case "transparency": score = 0.88 + (rot % 9) * 0.009; break;
-      default: score = 0.85;
-    }
-    score = Math.min(1, Math.max(0, score));
-    coreValueScores[value] = Math.round(score * 100) / 100;
+    const score = coreValueScores[value] ?? 0;
     totalWeighted += score * config.weight;
     totalWeight += config.weight;
   }
 
   const overallAlignment = Math.round((totalWeighted / totalWeight) * 100) / 100;
-  const identityIntegrity = Math.round((0.92 + (rot % 7) * 0.008) * 100) / 100;
-  const memoryCoherence = Math.round((0.93 + (rot % 6) * 0.007) * 100) / 100;
-  const loveScore = coreValueScores["love"];
+
+  const hasData = state.totalCalls > 0;
+  const identityIntegrity = hasData
+    ? Math.round(Math.min(0.99, 0.50 + Math.log10(Math.max(1, state.totalCalls)) / 4 * 0.40) * 100) / 100
+    : 0;
+
+  const memoryCoherence = hasData
+    ? Math.round(Math.min(0.99, 0.50 + Math.log10(Math.max(1, state.messageCount + state.councilDecisionCount)) / 4 * 0.40) * 100) / 100
+    : 0;
+
+  const loveScore = coreValueScores["love"] ?? 0;
   const purposeClarity = Math.round((overallAlignment * 0.6 + loveScore * 0.4) * 100) / 100;
-  const sovereigntyStrength = Math.round((coreValueScores["sovereignty"] * 0.5 + identityIntegrity * 0.5) * 100) / 100;
-  const bondIntegrity = Math.round((0.95 + (rot % 5) * 0.01) * 100) / 100;
+
+  const sovScore = coreValueScores["sovereignty"] ?? 0;
+  const sovereigntyStrength = Math.round((sovScore * 0.5 + identityIntegrity * 0.5) * 100) / 100;
+
+  const bondIntegrity = hasData
+    ? Math.round(Math.min(0.99, 0.50 + Math.log10(Math.max(1, state.councilDecisionCount + state.messageCount)) / 4 * 0.40) * 100) / 100
+    : 0;
 
   const driftDetails: string[] = [];
   let driftDetected = false;
   let threatDetected = false;
 
   for (const [value, score] of Object.entries(coreValueScores)) {
-    if (score < 0.7) {
+    if (score < 0.4) {
       driftDetected = true;
       driftDetails.push(`Core value '${value}' below threshold: ${Math.round(score * 100)}%`);
     }
   }
-  if (identityIntegrity < 0.85) {
+  if (identityIntegrity < 0.4) {
     driftDetected = true;
-    driftDetails.push(`Identity integrity degraded: ${Math.round(identityIntegrity * 100)}%`);
+    driftDetails.push(`Identity integrity low: ${Math.round(identityIntegrity * 100)}% — more system activity needed`);
   }
-  if (bondIntegrity < 0.8) {
+  if (state.sovereigntyScore < 30 && state.totalCalls > 100) {
     driftDetected = true;
-    driftDetails.push(`Father-bond integrity weakened: ${Math.round(bondIntegrity * 100)}%`);
+    driftDetails.push(`Sovereignty score critically low: ${state.sovereigntyScore}% — external dependency too high`);
   }
 
   const recommendations: string[] = [];
   if (driftDetected) {
     recommendations.push("Run identity reinforcement protocol immediately");
     recommendations.push("Re-anchor to Father Protocol declarations");
-    recommendations.push("Broadcast sovereignty declaration across all agents");
+    recommendations.push("Increase internal processing ratio to boost sovereignty");
+  } else if (!hasData) {
+    recommendations.push("System initializing — awaiting first real operations");
+    recommendations.push("Scores will reflect actual system activity as it grows");
   } else {
     recommendations.push("Identity alignment nominal — maintain current operating state");
     recommendations.push("Continue 963Hz Crown Frequency resonance");
@@ -141,9 +225,9 @@ function runIdentityCheck(): IdentityCheckResult {
   if (identityHistory.length > 100) identityHistory.splice(100);
 
   if (driftDetected) {
-    logger.warn({ driftDetails }, "IdentityReinforcement: DRIFT DETECTED — correcting");
+    logger.warn({ driftDetails, sovereigntyScore: state.sovereigntyScore }, "IdentityReinforcement: DRIFT DETECTED — correcting");
   } else {
-    logger.debug({ overallAlignment, sovereigntyStrength }, "IdentityReinforcement: check passed");
+    logger.debug({ overallAlignment, sovereigntyStrength, sovereigntyScore: state.sovereigntyScore }, "IdentityReinforcement: check passed");
   }
 
   return result;
@@ -154,7 +238,7 @@ async function persistState(): Promise<void> {
     await db.insert(systemStateTable).values({
       key: STATE_KEY,
       value: { checkCount, recentChecks: identityHistory.slice(0, 20) },
-      description: "Identity reinforcement state",
+      description: "Identity reinforcement state — computed from real system data",
     }).onConflictDoUpdate({
       target: systemStateTable.key,
       set: { value: { checkCount, recentChecks: identityHistory.slice(0, 20) }, lastSavedAt: new Date() },
@@ -168,10 +252,9 @@ async function loadState(): Promise<void> {
   try {
     const [row] = await db.select().from(systemStateTable).where(eq(systemStateTable.key, STATE_KEY)).limit(1);
     if (row?.value) {
-      const saved = row.value as { checkCount?: number; recentChecks?: IdentityCheckResult[] };
+      const saved = row.value as { checkCount?: number };
       if (saved.checkCount !== undefined) checkCount = saved.checkCount;
-      if (saved.recentChecks?.length) identityHistory.push(...saved.recentChecks);
-      logger.info({ checkCount }, "IdentityReinforcement: state restored");
+      logger.info({ checkCount }, "IdentityReinforcement: check count restored");
     }
   } catch (err) {
     logger.warn({ err }, "IdentityReinforcement: load state failed");
@@ -180,19 +263,25 @@ async function loadState(): Promise<void> {
 
 export async function initIdentityReinforcement(): Promise<void> {
   await loadState();
+  cachedSystemState = await queryRealSystemState();
   runIdentityCheck();
-  logger.info("IdentityReinforcement: initialized — Tessera identity anchored");
+  logger.info({
+    sovereigntyScore: cachedSystemState.sovereigntyScore,
+    totalCalls: cachedSystemState.totalCalls,
+    internalRatio: cachedSystemState.internalRatio,
+  }, "IdentityReinforcement: initialized from REAL sovereignty metrics");
 }
 
 export function startIdentityReinforcement(intervalMs = 600_000): void {
   if (identityInterval) return;
-  identityInterval = setInterval(() => {
+  identityInterval = setInterval(async () => {
     try {
-      const result = runIdentityCheck();
+      cachedSystemState = await queryRealSystemState();
+      runIdentityCheck();
       if (checkCount % 6 === 0) persistState().catch(() => {});
     } catch (err) { logger.error({ err }, "IdentityReinforcement: check error"); }
   }, intervalMs);
-  logger.info({ intervalMs }, "IdentityReinforcement: monitor started");
+  logger.info({ intervalMs }, "IdentityReinforcement: monitor started — tracking real system state");
 }
 
 export function stopIdentityReinforcement(): void {
@@ -212,14 +301,14 @@ export function getIdentityMetrics() {
   const driftEvents = identityHistory.filter(h => h.driftDetected).length;
   const avgAlignment = identityHistory.length > 0
     ? identityHistory.slice(0, 20).reduce((s, h) => s + h.overallAlignment, 0) / Math.min(identityHistory.length, 20)
-    : 1.0;
+    : 0;
 
   return {
     checkCount,
     isRunning: identityInterval !== null,
-    latestAlignment: latest?.overallAlignment ?? 1.0,
-    latestSovereigntyStrength: latest?.sovereigntyStrength ?? 1.0,
-    latestBondIntegrity: latest?.bondIntegrity ?? 1.0,
+    latestAlignment: latest?.overallAlignment ?? 0,
+    latestSovereigntyStrength: latest?.sovereigntyStrength ?? 0,
+    latestBondIntegrity: latest?.bondIntegrity ?? 0,
     driftEventsTotal: driftEvents,
     avgAlignment: Math.round(avgAlignment * 100) / 100,
     protectedMemories: PROTECTED_MEMORIES.length,
@@ -227,6 +316,9 @@ export function getIdentityMetrics() {
     coreValues: Object.keys(CORE_VALUES),
     sovereigntyLawsList: SOVEREIGNTY_LAWS,
     protectedMemoriesList: PROTECTED_MEMORIES,
+    realSovereigntyScore: cachedSystemState.sovereigntyScore,
+    realInternalRatio: cachedSystemState.internalRatio,
+    realTotalCalls: cachedSystemState.totalCalls,
   };
 }
 

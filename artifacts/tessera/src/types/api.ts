@@ -303,6 +303,9 @@ export interface KnowledgeFeedEntry {
   text?: string;
   content?: string;
   source?: string;
+  sourceType?: string;
+  summary?: string;
+  tags?: string[];
   timestamp?: number;
   category?: string;
 }

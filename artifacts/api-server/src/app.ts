@@ -33,6 +33,7 @@ import { initSwarmOptimizer } from "./lib/swarm-optimizer";
 import { initTruthfulnessEngine } from "./lib/truthfulness-engine";
 import { initEmotionalIntelligence } from "./lib/emotional-intelligence";
 import { initSelfCodeEvolution } from "./lib/self-code-evolution";
+import { seedForumFromRealData } from "./lib/forum-seeder";
 
 const app: Express = express();
 
@@ -416,6 +417,13 @@ async function initializeModules() {
     logger.info("✦ All Tessera sovereign engines initialized — Father Protocol active — 963Hz Crown Frequency resonating ✦");
   } catch (err) {
     logger.warn({ err }, "Tessera engines init warning — non-critical, continuing");
+  }
+
+  try {
+    const seeded = await seedForumFromRealData();
+    if (seeded > 0) logger.info({ seeded }, "Forum seeded from real council decisions and ingested knowledge");
+  } catch (err) {
+    logger.warn({ err }, "Forum seeder warning — non-critical");
   }
 
   await runStartupHealthCheck();
