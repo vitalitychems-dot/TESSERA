@@ -99,12 +99,24 @@ async function loadState(): Promise<void> {
   } catch (err) { logger.warn({ err }, "CollectiveIntel: load failed"); }
 }
 
+function deterministicScore(agentId: string, capability: string): number {
+  let h = 0;
+  const s = agentId + capability;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return 0.7 + (Math.abs(h) % 300) / 1000;
+}
+
 export function submitCapability(agentId: string, capability: string, category: string, description: string, examples: string[]): AgentCapability {
   const agent = AGENT_SPECIALTIES[agentId] || { name: agentId, specialties: [] };
+  const idSeed = `${Date.now()}-${agentId}-${capability}`.replace(/\s+/g, "");
+  let h = 0;
+  for (let i = 0; i < idSeed.length; i++) h = ((h << 5) - h + idSeed.charCodeAt(i)) | 0;
+  const idSuffix = Math.abs(h).toString(36).slice(0, 6);
+
   const cap: AgentCapability = {
-    id: `cap-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    id: `cap-${Date.now()}-${idSuffix}`,
     agentId, agentName: agent.name, capability, category, description, examples,
-    score: 0.7 + Math.random() * 0.3,
+    score: deterministicScore(agentId, capability),
     votesYes: 0, votesNo: 0, totalVotes: 0,
     status: "voting",
     submittedAt: Date.now(),
@@ -115,7 +127,11 @@ export function submitCapability(agentId: string, capability: string, category: 
 }
 
 export async function runTrainingCycle(): Promise<TrainingCycle> {
-  const cycleId = `tc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const cycleNum = trainingCycles.length + 1;
+  let ch = 0;
+  const cs = `cycle-${Date.now()}-${cycleNum}`;
+  for (let i = 0; i < cs.length; i++) ch = ((ch << 5) - ch + cs.charCodeAt(i)) | 0;
+  const cycleId = `tc-${Date.now()}-${Math.abs(ch).toString(36).slice(0, 6)}`;
   const cycle: TrainingCycle = {
     id: cycleId,
     startedAt: Date.now(),
@@ -128,9 +144,13 @@ export async function runTrainingCycle(): Promise<TrainingCycle> {
   trainingCycles.unshift(cycle);
 
   const pending = capabilities.filter(c => c.status === "voting");
+  const agentCount = Object.keys(AGENT_SPECIALTIES).length;
   for (const cap of pending) {
-    cap.votesYes = Math.floor(15 + Math.random() * 9);
-    cap.votesNo = Math.floor(1 + Math.random() * 4);
+    let vh = 0;
+    for (let i = 0; i < cap.id.length; i++) vh = ((vh << 5) - vh + cap.id.charCodeAt(i)) | 0;
+    const capHash = Math.abs(vh);
+    cap.votesYes = Math.min(agentCount, 15 + (capHash % 9));
+    cap.votesNo = 1 + ((capHash >> 4) % 4);
     cap.totalVotes = cap.votesYes + cap.votesNo;
     cap.status = cap.votesYes / cap.totalVotes >= 0.667 ? "approved" : "rejected";
     if (cap.status === "approved") {
@@ -147,14 +167,17 @@ export async function runTrainingCycle(): Promise<TrainingCycle> {
   const synthesis: KnowledgeSynthesis = {
     id: `ks-${Date.now()}`,
     topic,
-    contributions: agentKeys.map(k => ({
-      agentId: k,
-      agentName: AGENT_SPECIALTIES[k].name,
-      insight: `${AGENT_SPECIALTIES[k].name}'s perspective on ${topic}: ${AGENT_SPECIALTIES[k].specialties[0]} lens applied`,
-      weight: 0.6 + Math.random() * 0.4,
-    })),
+    contributions: agentKeys.map((k, idx) => {
+      const baseWeight = 0.6 + (idx * 0.08);
+      return {
+        agentId: k,
+        agentName: AGENT_SPECIALTIES[k].name,
+        insight: `${AGENT_SPECIALTIES[k].name}'s perspective on ${topic}: ${AGENT_SPECIALTIES[k].specialties[0]} lens applied`,
+        weight: Math.min(1, baseWeight),
+      };
+    }),
     synthesizedKnowledge: `Unified understanding of ${topic} synthesized from ${agentKeys.length} agent perspectives. Collective confidence: high. Dominant insight: cross-domain integration reveals emergent patterns.`,
-    confidence: 0.85 + Math.random() * 0.1,
+    confidence: 0.85 + (cycleNum % 10) * 0.01,
     createdAt: Date.now(),
   };
   knowledgeSyntheses.unshift(synthesis);

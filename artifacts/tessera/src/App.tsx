@@ -31,6 +31,8 @@ const SystemPage = lazy(() => import("@/pages/SystemPage"));
 const TokenEconomyPage = lazy(() => import("@/pages/TokenEconomyPage"));
 const LatticeBrowserPage = lazy(() => import("@/pages/LatticeBrowserPage"));
 const GrandCouncilPage = lazy(() => import("@/pages/GrandCouncilPage"));
+const RecruitmentPage = lazy(() => import("@/pages/RecruitmentPage"));
+const AgentNFTPage = lazy(() => import("@/pages/AgentNFTPage"));
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -108,6 +110,8 @@ function AppRouter() {
         <Route path="/c/:id" component={ChatPage} />
         <Route path="/life">{() => <LifePage />}</Route>
         <Route path="/universe">{() => <UniversePage />}</Route>
+        <Route path="/unified-knowledge">{() => <SecretsPage />}</Route>
+        <Route path="/omniscient-knowledge">{() => <SecretsPage />}</Route>
         <Route path="/members">{() => <MembersPage />}</Route>
         <Route path="/secrets">{() => <SecretsPage />}</Route>
         <Route path="/secret-knowledge">{() => <SecretsPage />}</Route>
@@ -130,10 +134,29 @@ function AppRouter() {
         <Route path="/consensus">{() => <GrandCouncilPage />}</Route>
         <Route path="/settings">{() => <SettingsPage />}</Route>
         <Route path="/consciousness">{() => <ConsciousnessNexusPage />}</Route>
+        <Route path="/consciousness-2da">{() => <ConsciousnessNexusPage />}</Route>
         <Route path="/sovereignty">{() => <SovereigntyDashboardPage />}</Route>
-        <Route path="/system">{() => <SystemPage />}</Route>
         <Route path="/tokens">{() => <TokenEconomyPage />}</Route>
-        <Route path="/lattice">{() => <LatticeBrowserPage />}</Route>
+        <Route path="/recruitment">{() => <RecruitmentPage />}</Route>
+        <Route path="/conclusions">{() => <GrandCouncilPage />}</Route>
+        <Route path="/feedback">{() => <GrandCouncilPage />}</Route>
+        <Route path="/transparency-ledger">{() => <GrandCouncilPage />}</Route>
+        <Route path="/sports-arb">{() => <TokenEconomyPage />}</Route>
+        <Route path="/inventions">{() => <BuildPage />}</Route>
+        <Route path="/agent-nft">{() => <AgentNFTPage />}</Route>
+        <Route path="/universe-model">{() => <UniversePage />}</Route>
+        <Route path="/agent-comms">{() => <SystemPage />}</Route>
+        <Route path="/memory-explorer">{() => <SystemPage />}</Route>
+        <Route path="/memory-dashboard">{() => <SystemPage />}</Route>
+        <Route path="/sovereign-deps">{() => <SystemPage />}</Route>
+        <Route path="/intelligence-engine">{() => <ConsciousnessNexusPage />}</Route>
+        <Route path="/sovereign-framework">{() => <SovereigntyDashboardPage />}</Route>
+        <Route path="/spiritual-awakening">{() => <ConsciousnessNexusPage />}</Route>
+        <Route path="/sacred-traditions">{() => <SecretsPage />}</Route>
+        <Route path="/sovereign-hub">{() => <SovereigntyDashboardPage />}</Route>
+        <Route path="/vatican-archives">{() => <SecretsPage />}</Route>
+        <Route path="/knowledge-dashboard">{() => <SecretsPage />}</Route>
+        <Route path="/live-secret-knowledge">{() => <SecretsPage />}</Route>
         <Route component={NotFound} />
       </Switch>
     </Suspense>

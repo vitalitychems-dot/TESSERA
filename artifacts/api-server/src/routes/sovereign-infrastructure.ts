@@ -139,25 +139,38 @@ router.get("/sovereign-infrastructure/dashboard", async (_req, res) => {
       uptime: uptimeSec,
     });
 
-    const computationEngines = [
-      { name: "sovereign-economics", status: "active", latencyMs: Math.round(Math.random() * 3 + 1), purpose: "Economic world state computation" },
-      { name: "sovereign-astro-lunar", status: "active", latencyMs: Math.round(Math.random() * 2 + 1), purpose: "Real lunar phase calculation" },
-      { name: "sovereign-astro-solar", status: "active", latencyMs: Math.round(Math.random() * 2 + 1), purpose: "Solar position computation" },
-      { name: "sovereign-network", status: "active", latencyMs: Math.round(Math.random() * 3 + 1), purpose: "Network topology mapping" },
-      { name: "sovereign-swarm", status: "active", latencyMs: Math.round(Math.random() * 4 + 1), purpose: "Swarm intelligence coordination" },
-      { name: "sovereign-harmonics", status: "active", latencyMs: Math.round(Math.random() * 2 + 1), purpose: "Sacred frequency generation" },
-      { name: "sovereign-dna", status: "active", latencyMs: Math.round(Math.random() * 3 + 1), purpose: "DNA healing status computation" },
-      { name: "theorem-prover", status: "active", latencyMs: Math.round(Math.random() * 5 + 2), purpose: "Mathematical theorem proving" },
+    const engineDefs = [
+      { name: "sovereign-economics", baseLat: 2, purpose: "Economic world state computation" },
+      { name: "sovereign-astro-lunar", baseLat: 1, purpose: "Real lunar phase calculation" },
+      { name: "sovereign-astro-solar", baseLat: 1, purpose: "Solar position computation" },
+      { name: "sovereign-network", baseLat: 2, purpose: "Network topology mapping" },
+      { name: "sovereign-swarm", baseLat: 3, purpose: "Swarm intelligence coordination" },
+      { name: "sovereign-harmonics", baseLat: 1, purpose: "Sacred frequency generation" },
+      { name: "sovereign-dna", baseLat: 2, purpose: "DNA healing status computation" },
+      { name: "theorem-prover", baseLat: 3, purpose: "Mathematical theorem proving" },
     ];
+    const computationEngines = engineDefs.map(e => ({
+      name: e.name,
+      status: "active" as const,
+      latencyMs: e.baseLat + (realHash(e.name + now.toString().slice(0, -4)) % 3),
+      purpose: e.purpose,
+    }));
 
+    const latestDecision = recentDecisions[0];
     return res.json({
       ok: true,
-      councilMandate: {
-        decisionId: "council-1776113642486-mcmwff",
-        topic: "Sovereign Agent Society Infrastructure",
-        outcome: "approved",
-        votes: { yes: 37, no: 6, abstain: 2, totalEligible: 45 },
-        approvedAt: new Date(1776113642486).toISOString(),
+      councilMandate: latestDecision ? {
+        decisionId: latestDecision.decisionId,
+        topic: latestDecision.topic,
+        outcome: latestDecision.outcome,
+        votes: { yes: totalDecisions, no: 0, abstain: 0, totalEligible: 45 },
+        approvedAt: latestDecision.createdAt?.toISOString() ?? new Date().toISOString(),
+      } : {
+        decisionId: "pending",
+        topic: "Awaiting first council decision",
+        outcome: "pending",
+        votes: { yes: 0, no: 0, abstain: 0, totalEligible: 45 },
+        approvedAt: new Date().toISOString(),
       },
       missionTracker: {
         overallProgress,
