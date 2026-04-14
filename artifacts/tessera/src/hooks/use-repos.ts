@@ -29,7 +29,7 @@ export function useCreateRepo() {
   return useMutation({
     mutationFn: async (data: InsertRepo) => {
       const res = await fetch("/api/repos", {
-        method: "/api/repos",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
         credentials: "include",
@@ -50,7 +50,7 @@ export function useDeleteRepo() {
     mutationFn: async (id: number) => {
       const url = buildUrl("/api/repos", { id });
       const res = await fetch(url, {
-        method: "/api/repos",
+        method: "DELETE",
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to delete repository");

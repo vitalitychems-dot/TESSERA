@@ -1,10 +1,12 @@
 import { db } from "@workspace/db";
 import { dataSourcesTable } from "@workspace/db/schema";
-import { eq, lte, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { runSourceIngestion } from "./pipeline";
 import type { NormalizedItem } from "./pipeline";
 import { fetchNASA, fetchUSGS, fetchNOAA, fetchWikipedia, fetchArxiv, fetchHackerNews, fetchRedditJson, fetchCoinGecko, fetchSemanticScholar, fetchPubMed } from "./apis";
 import { fetchRssFeed, DEFAULT_FEEDS } from "./rss";
+import { fetchGithubTrendingRepos, fetchGithubOrg, fetchGithubTopic } from "./github";
+import { fetchDataGov, fetchWorldBankData, fetchUNData, fetchGithubPublicDatasets } from "./datasets";
 
 export type SourceHandler = () => Promise<NormalizedItem[]>;
 
@@ -21,6 +23,18 @@ const SOURCE_HANDLERS: Record<string, SourceHandler> = {
   "CoinGecko": () => fetchCoinGecko(["bitcoin", "ethereum", "solana"]),
   "Semantic Scholar": () => fetchSemanticScholar("large language models", 5),
   "PubMed": () => fetchPubMed("artificial intelligence medicine", 5),
+  "GitHub Trending": () => fetchGithubTrendingRepos("", "weekly", 8),
+  "GitHub AI Repos": () => fetchGithubTopic("artificial-intelligence", 8),
+  "GitHub ML Repos": () => fetchGithubTopic("machine-learning", 8),
+  "GitHub Open Source": () => fetchGithubTrendingRepos("", "weekly", 5),
+  "GitHub Microsoft": () => fetchGithubOrg("microsoft", 5),
+  "GitHub Google": () => fetchGithubOrg("google", 5),
+  "data.gov Technology": () => fetchDataGov("technology", 5),
+  "data.gov Climate": () => fetchDataGov("climate", 5),
+  "World Bank GDP": () => fetchWorldBankData("NY.GDP.MKTP.CD", 5),
+  "World Bank Population": () => fetchWorldBankData("SP.POP.TOTL", 5),
+  "UN SDG Indicators": () => fetchUNData("", 5),
+  "GitHub Public Datasets": () => fetchGithubPublicDatasets("dataset", 5),
 };
 
 for (const feed of DEFAULT_FEEDS) {

@@ -93,3 +93,117 @@ export async function fetchAndParse(url: string): Promise<string> {
   const html = await fetchText(url);
   return htmlToText(html);
 }
+
+export interface CrawledPage {
+  url: string;
+  title: string;
+  content: string;
+  links: string[];
+  depth: number;
+}
+
+function extractTitle(html: string): string {
+  const match = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+  return match ? match[1].trim() : "";
+}
+
+function extractLinks(html: string, baseUrl: string): string[] {
+  const links: string[] = [];
+  const hrefRegex = /href=["']([^"'#?]+)["']/gi;
+  let match: RegExpExecArray | null;
+  let base: URL;
+  try {
+    base = new URL(baseUrl);
+  } catch {
+    return [];
+  }
+
+  while ((match = hrefRegex.exec(html)) !== null) {
+    const href = match[1].trim();
+    if (!href || href.startsWith("javascript:") || href.startsWith("mailto:")) continue;
+    try {
+      const resolved = new URL(href, base);
+      if (resolved.hostname === base.hostname && resolved.protocol.startsWith("http")) {
+        const clean = resolved.origin + resolved.pathname;
+        if (!links.includes(clean)) links.push(clean);
+      }
+    } catch {
+    }
+  }
+  return links;
+}
+
+function isLikelyContentUrl(url: string): boolean {
+  const skipPatterns = [
+    /\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|pdf|zip|tar|gz)$/i,
+    /\/wp-admin\//i,
+    /\/wp-content\//i,
+    /\/wp-includes\//i,
+    /\/feed\//i,
+    /\/rss\//i,
+    /\/print\//i,
+    /\/login/i,
+    /\/register/i,
+    /\/cart/i,
+    /\/checkout/i,
+    /\/search\?/i,
+    /\/tag\//i,
+    /\/author\//i,
+  ];
+  return !skipPatterns.some(p => p.test(url));
+}
+
+export async function deepCrawl(
+  startUrl: string,
+  opts: {
+    maxDepth?: number;
+    maxPages?: number;
+    minContentLength?: number;
+  } = {}
+): Promise<CrawledPage[]> {
+  const maxDepth = opts.maxDepth ?? 2;
+  const maxPages = opts.maxPages ?? 10;
+  const minContentLength = opts.minContentLength ?? 100;
+
+  const visited = new Set<string>();
+  const results: CrawledPage[] = [];
+  const queue: Array<{ url: string; depth: number }> = [{ url: startUrl, depth: 0 }];
+
+  while (queue.length > 0 && results.length < maxPages) {
+    const item = queue.shift();
+    if (!item) break;
+    const { url, depth } = item;
+
+    if (visited.has(url)) continue;
+    visited.add(url);
+
+    if (!isLikelyContentUrl(url)) continue;
+
+    let html = "";
+    try {
+      html = await fetchText(url);
+    } catch {
+      continue;
+    }
+
+    const title = extractTitle(html);
+    const content = htmlToText(html);
+
+    if (content.length < minContentLength) continue;
+
+    const links = depth < maxDepth ? extractLinks(html, url) : [];
+
+    results.push({ url, title, content: content.slice(0, 10000), links, depth });
+
+    if (depth < maxDepth) {
+      const newLinks = links
+        .filter(l => !visited.has(l) && isLikelyContentUrl(l))
+        .slice(0, 5);
+      for (const link of newLinks) {
+        queue.push({ url: link, depth: depth + 1 });
+      }
+    }
+  }
+
+  return results;
+}
