@@ -4,7 +4,7 @@ import { BookOpen, Sparkles, Brain, Eye, Globe, Layers, Zap, Shield, Clock, Refr
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { KnowledgeEntry, Spell, Tradition, ApplicationIdea, LucideIcon } from "@/types/api";
+import type { KnowledgeEntry, Spell, Tradition, ApplicationIdea, LucideIcon, KnowledgeFeedResponse, KnowledgeStatsResponse, DimensionalSecretsResponse, LiveSecretsResponse, SpellDataResponse, TraditionsDataResponse, UniverseAnswerResponse, CastResultResponse } from "@/types/api";
 
 const CATEGORY_COLORS: Record<string, string> = {
   "AGI Architecture": "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
@@ -91,7 +91,7 @@ const SPELL_COLORS: Record<string, string> = {
   Ascension: "from-cyan-500/20 to-violet-500/10 border-cyan-500/30",
 };
 
-const SPELL_ICONS: Record<string, any> = {
+const SPELL_ICONS: Record<string, LucideIcon> = {
   Protection: Shield, Wisdom: Eye, Manifestation: Star, Divination: Compass,
   Awakening: Flame, Healing: Heart, Security: Lock, Love: Heart,
   Vision: Eye, Transformation: RefreshCw, Ascension: Sun,
@@ -102,26 +102,26 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
   const [mainTab, setMainTab] = useState<MainTab>("knowledge");
   const [activeView, setActiveView] = useState<"all" | "dimensional" | "live" | "generated">("all");
   const [autoGenerate, setAutoGenerate] = useState(false);
-  const [generatedEntries, setGeneratedEntries] = useState<any[]>([]);
+  const [generatedEntries, setGeneratedEntries] = useState<KnowledgeEntry[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const seenTextsRef = useRef(new Set<string>());
-  const [selectedSpell, setSelectedSpell] = useState<any>(null);
+  const [selectedSpell, setSelectedSpell] = useState<Spell | null>(null);
   const [spellIntention, setSpellIntention] = useState("");
   const [universeQuestion, setUniverseQuestion] = useState("");
-  const [universeAnswer, setUniverseAnswer] = useState<any>(null);
-  const [castResult, setCastResult] = useState<any>(null);
+  const [universeAnswer, setUniverseAnswer] = useState<UniverseAnswerResponse | null>(null);
+  const [castResult, setCastResult] = useState<CastResultResponse | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [spellFilter, setSpellFilter] = useState("all");
   const [conclusionText, setConclusionText] = useState<string | null>(null);
-  const [applicationIdeas, setApplicationIdeas] = useState<any[]>([]);
+  const [applicationIdeas, setApplicationIdeas] = useState<ApplicationIdea[]>([]);
 
-  const { data: liveFeed } = useQuery<any>({ queryKey: ["/api/knowledge/feed"], refetchInterval: 15000 });
-  const { data: stats } = useQuery<any>({ queryKey: ["/api/knowledge/stats"], refetchInterval: 30000 });
-  const { data: dimensionalSecrets } = useQuery<any>({ queryKey: ["/api/secret-knowledge/all"], refetchInterval: 60000 });
-  const { data: liveSecrets } = useQuery<any>({ queryKey: ["/api/secret-knowledge/live"], refetchInterval: 15000 });
-  const { data: spellData } = useQuery<any>({ queryKey: ["/api/mysticism/spells"] });
-  const { data: traditionsData } = useQuery<any>({ queryKey: ["/api/mysticism/traditions"] });
+  const { data: liveFeed } = useQuery<KnowledgeFeedResponse>({ queryKey: ["/api/knowledge/feed"], refetchInterval: 15000 });
+  const { data: stats } = useQuery<KnowledgeStatsResponse>({ queryKey: ["/api/knowledge/stats"], refetchInterval: 30000 });
+  const { data: dimensionalSecrets } = useQuery<DimensionalSecretsResponse>({ queryKey: ["/api/secret-knowledge/all"], refetchInterval: 60000 });
+  const { data: liveSecrets } = useQuery<LiveSecretsResponse>({ queryKey: ["/api/secret-knowledge/live"], refetchInterval: 15000 });
+  const { data: spellData } = useQuery<SpellDataResponse>({ queryKey: ["/api/mysticism/spells"] });
+  const { data: traditionsData } = useQuery<TraditionsDataResponse>({ queryKey: ["/api/mysticism/traditions"] });
 
   const generateNew = useCallback(async () => {
     if (isGenerating) return;

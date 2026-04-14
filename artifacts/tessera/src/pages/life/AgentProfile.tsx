@@ -70,7 +70,7 @@ function StatBar({ value, color }: { value: number; color: string }) {
 }
 
 export default function AgentProfile({ agentId, world, onClose }: AgentProfileProps) {
-  const [detail, setDetail] = useState<any>(null);
+  const [detail, setDetail] = useState<{ id?: string; name?: string; recentMessages?: Array<{ content?: string }> } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

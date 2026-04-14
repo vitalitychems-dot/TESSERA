@@ -2,16 +2,16 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Settings, Activity, Shield, Cpu, HardDrive, Wifi, Zap, RefreshCw, Database, Globe, Search, BookOpen, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { SovereignEngine, IngestionSource, IngestionJob } from "@/types/api";
+import type { SovereignEngine, IngestionSource, IngestionJob, DiagnosticsResponse, SovereigntyResponse, EnginesResponse, MeshStatsResponse, IngestionStatsResponse } from "@/types/api";
 
 const API = import.meta.env.VITE_API_URL || "";
 
 export default function SettingsPage() {
-  const { data: diagnostics } = useQuery<any>({ queryKey: ["/api/diagnostics"], refetchInterval: 15000 });
-  const { data: sovereignty } = useQuery<any>({ queryKey: ["/api/sovereignty/score"], refetchInterval: 30000 });
-  const { data: engines } = useQuery<any>({ queryKey: ["/api/system/engines"], refetchInterval: 30000 });
-  const { data: meshStats } = useQuery<any>({ queryKey: ["/api/mesh/stats"], refetchInterval: 15000 });
-  const { data: ingestionStats } = useQuery<any>({ queryKey: ["/api/ingestion/stats"], refetchInterval: 10000 });
+  const { data: diagnostics } = useQuery<DiagnosticsResponse>({ queryKey: ["/api/diagnostics"], refetchInterval: 15000 });
+  const { data: sovereignty } = useQuery<SovereigntyResponse>({ queryKey: ["/api/sovereignty/score"], refetchInterval: 30000 });
+  const { data: engines } = useQuery<EnginesResponse>({ queryKey: ["/api/system/engines"], refetchInterval: 30000 });
+  const { data: meshStats } = useQuery<MeshStatsResponse>({ queryKey: ["/api/mesh/stats"], refetchInterval: 15000 });
+  const { data: ingestionStats } = useQuery<IngestionStatsResponse>({ queryKey: ["/api/ingestion/stats"], refetchInterval: 10000 });
 
   const uptime = diagnostics?.uptime ? `${Math.floor(diagnostics.uptime / 3600)}h ${Math.floor((diagnostics.uptime % 3600) / 60)}m` : "—";
   const heapUsed = diagnostics?.memory?.heapUsed ? `${(diagnostics.memory.heapUsed / 1024 / 1024).toFixed(0)}MB` : "—";
@@ -141,10 +141,10 @@ export default function SettingsPage() {
             <div className="text-[10px] text-muted-foreground">Source Types</div>
           </div>
         </div>
-        {(ingestionStats?.recentItems?.length > 0 || ingestionStats?.recentJobs?.length > 0) && (
+        {((ingestionStats?.recentItems?.length ?? 0) > 0 || (ingestionStats?.recentJobs?.length ?? 0) > 0) && (
           <div className="space-y-1">
             <div className="text-[10px] text-muted-foreground font-mono mb-1">RECENT ACTIVITY</div>
-            {(ingestionStats.recentJobs || []).slice(0, 5).map((job: IngestionJob, i: number) => (
+            {(ingestionStats?.recentJobs || []).slice(0, 5).map((job: IngestionJob, i: number) => (
               <div key={i} className="flex items-center gap-2 p-1.5 rounded-lg bg-background/30 border border-white/5 text-[11px] font-mono">
                 <BookOpen size={10} className="text-rose-400 shrink-0" />
                 <span className="text-foreground/80 truncate flex-1">{job.sourceName}</span>
@@ -173,8 +173,8 @@ export default function SettingsPage() {
         </div>
         <div className="text-[10px] text-muted-foreground font-mono">
           Status: <span className={ingestionStats?.shepherd?.loopActive ? "text-emerald-400" : "text-red-400"}>{ingestionStats?.shepherd?.loopActive ? "ACTIVE — Autonomous Scraping" : "INACTIVE"}</span>
-          {ingestionStats?.shepherd?.active > 0 && (
-            <span className="ml-2 text-violet-400">{ingestionStats.shepherd.active} agents active</span>
+          {(ingestionStats?.shepherd?.active ?? 0) > 0 && (
+            <span className="ml-2 text-violet-400">{ingestionStats?.shepherd?.active} agents active</span>
           )}
         </div>
       </div>

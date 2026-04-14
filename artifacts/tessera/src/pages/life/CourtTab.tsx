@@ -143,7 +143,12 @@ export default function CourtTab() {
   const [governance, setGovernance] = useState<GovernanceProposalFull[]>([]);
   const [childWork, setChildWork] = useState<ChildWorkRecord[]>([]);
   const [familySummary, setFamilySummary] = useState<FamilyWorkSummary[]>([]);
-  const [courtStatus, setCourtStatus] = useState<any>(null);
+  const [courtStatus, setCourtStatus] = useState<{
+    childWorkers?: { autonomous?: number; workRecordsToday?: number; xpGeneratedToday?: number };
+    accountability?: { activeWarnings?: number; totalViolations?: number; courtCasesTriggered?: number };
+    court?: { total?: number; guilty?: number; acquitted?: number; pending?: number };
+    governance?: { total?: number; passed?: number; blocked?: number };
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [runningWork, setRunningWork] = useState(false);
   const [expandedTrial, setExpandedTrial] = useState<string | null>(null);

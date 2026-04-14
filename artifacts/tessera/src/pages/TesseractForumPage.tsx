@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
-import type { DiscussionTracking, DiscussionVote, KnowledgeFeedEntry, LucideIcon } from "@/types/api";
+import type { DiscussionTracking, DiscussionVote, KnowledgeFeedEntry, LucideIcon, AsaStatusResponse, TrainingStatusResponse, KnowledgeStatsResponse, KnowledgeFeedResponse } from "@/types/api";
 import { useToast } from "@/hooks/use-toast";
 
 // ─── Discussion Enforcement Tracker Panel ─────────────────────────────────────
@@ -1262,22 +1262,22 @@ export default function TesseractForumPage({ embedded }: { embedded?: boolean })
     refetchInterval: activeVoting ? 4000 : 8000,
   });
 
-  const { data: asaStatus } = useQuery<any>({
+  const { data: asaStatus } = useQuery<AsaStatusResponse>({
     queryKey: ["/api/anti-simulation/status"],
     refetchInterval: 60000,
   });
 
-  const { data: trainingStatus } = useQuery<any>({
+  const { data: trainingStatus } = useQuery<TrainingStatusResponse>({
     queryKey: ["/api/tesseract/unified/status"],
     refetchInterval: 15000,
   });
 
-  const { data: knowledgeStats } = useQuery<any>({
+  const { data: knowledgeStats } = useQuery<KnowledgeStatsResponse>({
     queryKey: ["/api/knowledge/stats"],
     refetchInterval: 30000,
   });
 
-  const { data: knowledgeFeed } = useQuery<any>({
+  const { data: knowledgeFeed } = useQuery<KnowledgeFeedResponse>({
     queryKey: ["/api/knowledge/feed"],
     refetchInterval: 30000,
   });
@@ -1354,7 +1354,7 @@ export default function TesseractForumPage({ embedded }: { embedded?: boolean })
             </>
           )}
           <div className="ml-auto flex items-center gap-2">
-            <ASABadge status={asaStatus} />
+            <ASABadge status={asaStatus ?? null} />
             {!selectedTopic && (
               <button
                 onClick={() => setShowCompose(true)}
@@ -1481,14 +1481,14 @@ export default function TesseractForumPage({ embedded }: { embedded?: boolean })
               ))}
 
               {/* Knowledge Feed */}
-              {knowledgeFeed?.entries?.length > 0 && categoryFilter === "all" && (
+              {(knowledgeFeed?.entries?.length ?? 0) > 0 && categoryFilter === "all" && (
                 <div className="mt-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-3">
                   <h3 className="text-xs font-bold text-indigo-400 mb-2 flex items-center gap-1.5 font-mono">
                     <BookOpen size={12} />
                     LATEST KNOWLEDGE
                   </h3>
                   <div className="space-y-1.5">
-                    {(knowledgeFeed.entries as KnowledgeFeedEntry[]).slice(0, 8).map((entry, i) => (
+                    {((knowledgeFeed?.entries ?? []) as KnowledgeFeedEntry[]).slice(0, 8).map((entry, i) => (
                       <div key={i} className="text-[11px] border-l-2 border-indigo-400/30 pl-2 py-1">
                         <span className="text-indigo-300 font-medium">{entry.title || entry.key || `Entry ${i+1}`}</span>
                         {entry.category && <span className="text-indigo-400/50 ml-1.5 text-[9px]">[{entry.category}]</span>}
@@ -1500,14 +1500,14 @@ export default function TesseractForumPage({ embedded }: { embedded?: boolean })
               )}
 
               {/* Recent Training Knowledge */}
-              {trainingStatus?.recentKnowledge?.length > 0 && categoryFilter === "all" && (
+              {(trainingStatus?.recentKnowledge?.length ?? 0) > 0 && categoryFilter === "all" && (
                 <div className="mt-2 rounded-xl border border-purple-500/20 bg-purple-500/5 p-3">
                   <h3 className="text-xs font-bold text-purple-400 mb-2 flex items-center gap-1.5 font-mono">
                     <Brain size={12} />
                     TRAINING INSIGHTS
                   </h3>
                   <div className="space-y-1">
-                    {(trainingStatus.recentKnowledge as string[]).slice(0, 5).map((k: string, i: number) => (
+                    {(trainingStatus?.recentKnowledge ?? []).slice(0, 5).map((k: string, i: number) => (
                       <p key={i} className="text-[10px] text-purple-300/70 border-l-2 border-purple-400/20 pl-2 py-0.5">{k}</p>
                     ))}
                   </div>
