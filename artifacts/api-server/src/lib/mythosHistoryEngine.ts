@@ -840,7 +840,7 @@ async function synthesizeFromEngines(councilDecisions?: Array<{ topic?: string; 
       })
       .from(ingestedDataTable)
       .orderBy(desc(ingestedDataTable.ingestedAt))
-      .limit(50);
+      .limit(100);
 
     if (recentIngested.length > 0) {
       telemetry.ingestionPipeline = { recentItems: recentIngested.length };
