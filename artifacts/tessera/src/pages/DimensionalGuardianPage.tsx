@@ -85,7 +85,7 @@ const categoryIcons: Record<string, any> = {
   infrastructure: Cpu,
 };
 
-export default function DimensionalGuardianPage() {
+export default function DimensionalGuardianPage({ embedded }: { embedded?: boolean }) {
   const [expandedProtocol, setExpandedProtocol] = useState<string | null>(null);
 
   const { data: status, isLoading } = useQuery<GuardianStatus>({

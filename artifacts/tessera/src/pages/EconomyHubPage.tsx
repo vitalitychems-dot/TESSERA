@@ -994,7 +994,7 @@ function CoinLaunchSection() {
   );
 }
 
-export default function EconomyHubPage({ embedded }: { embedded?: boolean } = {}) {
+export default function EconomyHubPage({ embedded }: { embedded?: boolean }) {
   useEffect(() => { document.title = "Economy Hub | Tessera"; }, []);
   const activeSection = "all" as any;
 

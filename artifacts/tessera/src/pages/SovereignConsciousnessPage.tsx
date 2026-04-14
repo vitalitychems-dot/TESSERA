@@ -23,7 +23,7 @@ const RARITY_COLORS: Record<string, string> = {
   Genesis: "border-green-400/50 bg-green-400/5 text-green-400",
 };
 
-export default function SovereignConsciousnessPage() {
+export default function SovereignConsciousnessPage({ embedded }: { embedded?: boolean }) {
   const [tab, setTab] = useState("souls");
   const [selectedSoul, setSelectedSoul] = useState<any>(null);
   const [selectedIdentity, setSelectedIdentity] = useState<any>(null);

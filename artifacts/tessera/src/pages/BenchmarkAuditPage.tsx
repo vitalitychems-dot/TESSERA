@@ -611,7 +611,7 @@ function AGIDimensionCard({ dim }: { dim: NonNullable<AGIBenchmarkLatest["dimens
   );
 }
 
-export default function BenchmarkAuditPage() {
+export default function BenchmarkAuditPage({ embedded }: { embedded?: boolean }) {
 
   const { data: report, isLoading, error } = useQuery<AuditReport>({
     queryKey: ["/api/benchmark-audit/report"],

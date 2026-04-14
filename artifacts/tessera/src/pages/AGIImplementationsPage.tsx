@@ -209,7 +209,7 @@ function ResearchLoopPanel() {
   );
 }
 
-export default function AGIImplementationsPage({ embedded }: { embedded?: boolean } = {}) {
+export default function AGIImplementationsPage({ embedded }: { embedded?: boolean }) {
   useEffect(() => { document.title = "AGI Implementations | Tessera"; }, []);
   const [expandedRank, setExpandedRank] = useState<number | null>(null);
   const [activePanel, setActivePanel] = useState<"tracker" | "memory" | "goals" | "research" | "consciousness">("tracker");

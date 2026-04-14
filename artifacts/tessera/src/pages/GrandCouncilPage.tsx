@@ -2828,7 +2828,7 @@ function PsyopsCouncilDiscussion() {
   );
 }
 
-export default function GrandCouncilPage() {
+export default function GrandCouncilPage({ embedded }: { embedded?: boolean }) {
   const { isAdmin } = useAdmin();
   const search = useSearch();
   const [activeCard, setActiveCard] = useState<string | null>(null);

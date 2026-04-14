@@ -1475,7 +1475,7 @@ function BroadcastTab() {
 }
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
-export default function FleetSynapsePage() {
+export default function FleetSynapsePage({ embedded }: { embedded?: boolean }) {
   const activeTab = "all" as any;
 
   useEffect(() => { document.title = "Fleet Synapse | Tessera Sovereign"; }, []);

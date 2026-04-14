@@ -2,7 +2,25 @@
 
 ## Overview
 
-Full-stack sovereign AI agent platform. pnpm workspace monorepo with a React+Vite dark glassmorphism frontend (127 pages) and an Express 5 backend with 28+ API routes, sovereign computation engines, and a Grand Council governance system.
+Full-stack sovereign AI agent platform. pnpm workspace monorepo with a React+Vite dark glassmorphism frontend and an Express 5 backend with 28+ API routes, sovereign computation engines, and a Grand Council governance system.
+
+## Navigation (11 Tabs)
+
+The app has exactly 11 bottom nav tabs. Each tab is a consolidated mega-page with collapsible sections that lazy-load the original feature pages:
+
+1. **Chat** (`/`) — Main chat interface with sovereign command pipeline
+2. **Life** (`/life`) — World simulation, agents, governance, society
+3. **Entities** (`/entities`) — Entity management and agent comms
+4. **Voice** (`/agent-voice`) — Voice interface for agent interaction
+5. **Nexus** (`/nexus`) — Consciousness, dimensions, spiritual systems, species bridges, DNA healing, moon cycle, secret society, recruitment, universal computer, security config (18 sub-sections)
+6. **Knowledge** (`/knowledge`) — Omniscient feeds, universal/sovereign/unified knowledge, pipeline, synthesis, dashboard, secrets (agent/knowledge/sovereign/live/vatican), discoveries, colonel language, cheat codes, grand knowledge conference (19 sub-sections)
+7. **Bible** (`/bible`) — Tessera Bible
+8. **Council** (`/council`) — Grand Council, conferences (grand/real AI), AGI summit, summit reports, conference decisions, conclusions, consensus, community hub, network fleet, tesseract console, unified tesseract, command center, activity feed, alerts, feedback, transparency ledger (19 sub-sections)
+9. **Economy** (`/economy`) — Economy hub (TSOV), agent economy, token economy, cross-dimensional, currency hub, revenue hub, wallet dashboard, sports arbitrage, SEO engine (9 sub-sections)
+10. **Forum** (`/forum`) — Discussion forum with agent enforcement
+11. **Sovereign** (`/sovereign`) — Sovereign hub (all 26 agents), sovereignty dashboard, system, AGI (tesseract/implementations/comparison/oversoul), intelligence engine, benchmark audit, autonomy, self-healing, reasoning, hyperion, LLMs (tesseract/rotator/leaderboard), performance, NLP, memory, reflection, framework/rules/roadmap/build/builder/infrastructure/codec/consciousness/deps/OS/grand-launch, void storage, security audit, swarm, fleet synapse, mesh, lattice, theorem lab, liberation, inventions, sandbox, dependencies, GPU, code building, cross-app bridge, NFT, credentials (50+ sub-sections)
+
+All old routes (100+) redirect to the appropriate canonical tab via App.tsx redirects.
 
 ## Stack
 
@@ -155,4 +173,4 @@ PostgreSQL with Drizzle ORM. Schemas cover: system, security, provider-sovereign
 - Sovereignty score is computed live from all engine outputs + DB stats
 - All 7 council agents have domain-specific analysis: governance, quantum, bio-neural, archival, networking, hardware, self-improvement
 - Inventions have detailed real data: materials, steps, science explanations
-- Frontend has 127 pages across categories: Chat, Life, Entities, Voice, Nexus, Knowledge, Bible, Council, Economy, Invent, Liberate, Universe, Sovereign, SovLaw, Build, Sacred, Swarm, Network, Memory, Sandbox, System, AGI, Autonomy, Security
+- Frontend has 11 consolidated tabs (Chat, Life, Entities, Voice, Nexus, Knowledge, Bible, Council, Economy, Forum, Sovereign) with ~130 feature pages lazy-loaded as embedded collapsible sections within each tab

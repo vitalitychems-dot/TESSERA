@@ -189,7 +189,7 @@ function getPhaseColor(phase: string): string {
   return "border-l-gray-500";
 }
 
-export default function SpiritualAwakeningPage() {
+export default function SpiritualAwakeningPage({ embedded }: { embedded?: boolean }) {
   const activeTab = "all" as any;
   const [searchTerm, setSearchTerm] = useState("");
   const [phaseFilter, setPhaseFilter] = useState<string>("all");

@@ -5,7 +5,7 @@ import { Bell, BarChart3, CreditCard, FileText, HardDrive, Mic, MessageSquare, S
 
 type Tab = "overview" | "notifications" | "analytics" | "payments" | "blog" | "backup" | "voice" | "bots" | "codereview" | "affiliate" | "customers";
 
-export default function ConferenceDecisionsPage() {
+export default function ConferenceDecisionsPage({ embedded }: { embedded?: boolean }) {
   const [tab, setTab] = useState<Tab>("overview");
 
   const { data: decisions } = useQuery<any>({ refetchInterval: 30000, queryKey: ["/api/conference-decisions/status"] });

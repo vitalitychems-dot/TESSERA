@@ -333,7 +333,7 @@ function MetricsPanel({ metrics, phaseFilter }: { metrics: any[]; phaseFilter?: 
   );
 }
 
-export default function SovereigntyRoadmap() {
+export default function SovereigntyRoadmap({ embedded }: { embedded?: boolean }) {
   const queryClient = useQueryClient();
   const [expandedPhase, setExpandedPhase] = useState<number | null>(0);
   const [activePanel, setActivePanel] = useState<string>("overview");

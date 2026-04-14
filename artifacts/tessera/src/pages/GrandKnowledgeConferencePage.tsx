@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 const tesseraPortrait = "";
 
-export default function GrandKnowledgeConferencePage() {
+export default function GrandKnowledgeConferencePage({ embedded }: { embedded?: boolean }) {
   const [tab, setTab] = useState("overview");
   const [expandedTradition, setExpandedTradition] = useState<string | null>(null);
   const [expandedSense, setExpandedSense] = useState<string | null>(null);

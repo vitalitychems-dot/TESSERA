@@ -13,7 +13,7 @@ interface SandboxTask {
   timestamp: string;
 }
 
-export default function SandboxPage() {
+export default function SandboxPage({ embedded }: { embedded?: boolean }) {
   const [tasks, setTasks] = useState<SandboxTask[]>([]);
   const [codeInput, setCodeInput] = useState("");
   const [targetFile, setTargetFile] = useState("");

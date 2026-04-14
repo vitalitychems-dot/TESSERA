@@ -197,7 +197,7 @@ interface PlanetState {
 // Component
 // ---------------------------------------------------------------------------
 
-export default function UniverseModelPage() {
+export default function UniverseModelPage({ embedded }: { embedded?: boolean }) {
   const canvasRef      = useRef<HTMLCanvasElement>(null);
   const containerRef   = useRef<HTMLDivElement>(null);
   const animFrameRef   = useRef<number>(0);

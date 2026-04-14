@@ -115,7 +115,7 @@ function CategoryScoreBar({ category, score, rank, benchmark }: { category: stri
   );
 }
 
-export default function SummitReportPage() {
+export default function SummitReportPage({ embedded }: { embedded?: boolean }) {
   useEffect(() => { document.title = "Grand Convergence Summit | Tessera"; }, []);
 
   const [expandedCycle, setExpandedCycle] = useState<number | null>(null);

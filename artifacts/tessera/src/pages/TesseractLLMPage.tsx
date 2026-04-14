@@ -328,7 +328,7 @@ function TranscriptPanel() {
   );
 }
 
-export default function TesseractLLMPage() {
+export default function TesseractLLMPage({ embedded }: { embedded?: boolean }) {
   const [tab, setTab] = useState<Tab>("overview");
 
   useEffect(() => {

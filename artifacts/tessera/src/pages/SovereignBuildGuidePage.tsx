@@ -323,7 +323,7 @@ function Section({ title, icon: Icon, children, color = "text-cyan-400", default
   );
 }
 
-export default function SovereignBuildGuidePage() {
+export default function SovereignBuildGuidePage({ embedded }: { embedded?: boolean }) {
   const [expandedTier, setExpandedTier] = useState<number | null>(1);
   const [expandedCombo, setExpandedCombo] = useState<number | null>(null);
   const [expandedDevice, setExpandedDevice] = useState<number | null>(null);

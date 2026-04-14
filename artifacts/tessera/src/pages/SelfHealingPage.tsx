@@ -22,7 +22,7 @@ const TYPE_LABELS: Record<string, string> = {
   "port-recovery": "Port Recovery",
 };
 
-export default function SelfHealingPage() {
+export default function SelfHealingPage({ embedded }: { embedded?: boolean }) {
   document.title = "Self-Healing Monitor | Tessera";
 
   const { data: stats } = useQuery<any>({

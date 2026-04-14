@@ -517,7 +517,7 @@ const TABS: { id: CommsTab; label: string; icon: React.ElementType; color: strin
   { id: "stats", label: "Stats", icon: BarChart3, color: "text-amber-400" },
 ];
 
-export default function AgentCommsPage() {
+export default function AgentCommsPage({ embedded }: { embedded?: boolean }) {
   const tab = "all" as any;
 
   return (

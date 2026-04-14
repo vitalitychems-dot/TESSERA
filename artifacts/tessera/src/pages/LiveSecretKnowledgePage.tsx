@@ -117,7 +117,7 @@ function GrandConclusionPanel() {
   );
 }
 
-export default function LiveSecretKnowledgePage({ embedded }: { embedded?: boolean } = {}) {
+export default function LiveSecretKnowledgePage({ embedded }: { embedded?: boolean }) {
   useEffect(() => { document.title = "Live Secret Knowledge | Tessera"; }, []);
   const [categoryFilter, setCategoryFilter] = useState("all");
 

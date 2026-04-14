@@ -803,7 +803,7 @@ function LibraryTab() {
   );
 }
 
-export default function TheoremLabPage() {
+export default function TheoremLabPage({ embedded }: { embedded?: boolean }) {
   const [tab, setTab] = useState<Tab>("prove");
 
   const tabs: { id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [

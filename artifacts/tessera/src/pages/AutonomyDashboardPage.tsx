@@ -296,7 +296,7 @@ function ApprovalQueuePanel() {
   );
 }
 
-export default function AutonomyDashboardPage() {
+export default function AutonomyDashboardPage({ embedded }: { embedded?: boolean }) {
   document.title = "Autonomy Dashboard | Tessera";
 
   return (

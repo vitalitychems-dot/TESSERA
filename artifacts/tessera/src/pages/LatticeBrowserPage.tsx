@@ -60,7 +60,7 @@ interface MemberDossier {
   suspiciousActions: number;
 }
 
-export default function LatticeBrowserPage() {
+export default function LatticeBrowserPage({ embedded }: { embedded?: boolean }) {
   const [tab, setTab] = useState("search");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);

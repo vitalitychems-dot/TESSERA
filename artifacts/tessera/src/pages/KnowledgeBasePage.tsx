@@ -34,7 +34,7 @@ const TYPE_COLORS: Record<string, string> = {
   capability: "text-yellow-400 bg-yellow-500/10 border-yellow-500/20",
 };
 
-export default function KnowledgeBasePage() {
+export default function KnowledgeBasePage({ embedded }: { embedded?: boolean }) {
   useEffect(() => { document.title = "Knowledge Base | Tessera"; }, []);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("");

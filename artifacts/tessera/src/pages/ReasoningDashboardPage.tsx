@@ -702,7 +702,7 @@ function CodeGenTab() {
   );
 }
 
-export default function ReasoningDashboardPage() {
+export default function ReasoningDashboardPage({ embedded }: { embedded?: boolean }) {
   const [tab, setTab] = useState<Tab>("overview");
 
   const tabs: { id: Tab; label: string; icon: typeof Brain }[] = [

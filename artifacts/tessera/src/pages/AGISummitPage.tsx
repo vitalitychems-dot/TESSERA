@@ -214,7 +214,7 @@ function LiveDebateAnimation() {
   );
 }
 
-export default function AGISummitPage({ embedded }: { embedded?: boolean } = {}) {
+export default function AGISummitPage({ embedded }: { embedded?: boolean }) {
   useEffect(() => { document.title = "AGI-20 Summit | Tessera"; }, []);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [filter, setFilter] = useState<"all" | "PASSED" | "FAILED" | "CRITICAL">("all");

@@ -286,7 +286,7 @@ function ProposalResultCard({ result, proposal, votes }: {
   );
 }
 
-export default function GrandConferencePage() {
+export default function GrandConferencePage({ embedded }: { embedded?: boolean }) {
   const activeTab = "all" as any;
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
