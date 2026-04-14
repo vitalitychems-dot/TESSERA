@@ -25,6 +25,11 @@ const TesseractForumPage = lazy(() => import("@/pages/TesseractForumPage"));
 const NLPPage = lazy(() => import("@/pages/NLPPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const SovereignLanguagePage = lazy(() => import("@/pages/SovereignLanguagePage"));
+const ConsciousnessNexusPage = lazy(() => import("@/pages/ConsciousnessNexusPage"));
+const SovereigntyDashboardPage = lazy(() => import("@/pages/SovereigntyDashboardPage"));
+const SystemPage = lazy(() => import("@/pages/SystemPage"));
+const TokenEconomyPage = lazy(() => import("@/pages/TokenEconomyPage"));
+const LatticeBrowserPage = lazy(() => import("@/pages/LatticeBrowserPage"));
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -111,6 +116,12 @@ function AppRouter() {
         <Route path="/nlp">{() => <NLPPage />}</Route>
         <Route path="/sovereign-language">{() => <SovereignLanguagePage />}</Route>
         <Route path="/colonel-language">{() => <SovereignLanguagePage />}</Route>
+        <Route path="/consciousness-nexus">{() => <ConsciousnessNexusPage />}</Route>
+        <Route path="/sovereignty-dashboard">{() => <SovereigntyDashboardPage />}</Route>
+        <Route path="/system">{() => <SystemPage />}</Route>
+        <Route path="/token-economy">{() => <TokenEconomyPage />}</Route>
+        <Route path="/economy-hub">{() => <TokenEconomyPage />}</Route>
+        <Route path="/lattice">{() => <LatticeBrowserPage />}</Route>
         <Route path="/settings">{() => <SettingsPage />}</Route>
         <Route component={NotFound} />
       </Switch>

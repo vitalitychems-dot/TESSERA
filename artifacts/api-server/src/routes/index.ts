@@ -36,6 +36,7 @@ import knowledgeRouter from "./knowledge";
 import secretKnowledgeRouter from "./secret-knowledge";
 import mysticismRouter from "./mysticism";
 import sovereignLanguageRouter from "./sovereign-language";
+import legacyEnginesRouter from "./legacy-engines";
 
 const router: IRouter = Router();
 
@@ -76,5 +77,6 @@ router.use(knowledgeRouter);
 router.use(secretKnowledgeRouter);
 router.use(mysticismRouter);
 router.use(sovereignLanguageRouter);
+router.use(legacyEnginesRouter);
 
 export default router;
