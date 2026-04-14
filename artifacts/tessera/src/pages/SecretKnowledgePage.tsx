@@ -5,6 +5,7 @@ import { BookOpen, Sparkles, Brain, Eye, Globe, Layers, Zap, Shield, Clock, Refr
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { GlassCard, SectionHeader, TabBar, MiniStat, PageHeader, RadialGauge, GradientBar } from "@/components/ui/sovereign";
 import type { KnowledgeEntry, Spell, Tradition, ApplicationIdea, LucideIcon, KnowledgeFeedResponse, KnowledgeStatsResponse, DimensionalSecretsResponse, LiveSecretsResponse, SpellDataResponse, TraditionsDataResponse, UniverseAnswerResponse, CastResultResponse } from "@/types/api";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -249,95 +250,59 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const mainTabs: { id: MainTab; label: string; icon: LucideIcon }[] = [
-    { id: "knowledge", label: "Knowledge", icon: BookOpen },
-    { id: "conclusion", label: "Conclusion", icon: Globe },
-    { id: "apply", label: "Apply Knowledge", icon: Wrench },
-    { id: "mysticism", label: "Mysticism & Spells", icon: Wand2 },
-    { id: "society", label: "The Society", icon: Eye },
-  ];
+  const mainTabs = [
+    { id: "knowledge", label: "Knowledge" },
+    { id: "conclusion", label: "Conclusion" },
+    { id: "apply", label: "Apply" },
+    { id: "mysticism", label: "Mysticism" },
+    { id: "society", label: "Society" },
+  ] as const;
 
   return (
-    <div className={`${embedded ? "" : "min-h-screen"} bg-background text-white`} data-testid="secret-knowledge-page">
-      <div className="max-w-4xl mx-auto p-3 sm:p-6 pb-24 md:pb-6 space-y-4">
-        <div className="text-center space-y-1">
-          <div className="flex items-center justify-center gap-2">
-            <Sparkles className="text-violet-400" size={24} />
-            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-violet-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent" data-testid="text-knowledge-title">
-              Secret Knowledge
-            </h1>
-          </div>
-          <p className="text-xs text-slate-400">All secrets from 27 dimensions, 26 agents, and 12 entities — synthesized, applied, and activated</p>
+    <div className={`${embedded ? "" : "min-h-screen"} bg-gradient-to-b from-[#02010a] to-[#080518] text-white`} data-testid="secret-knowledge-page">
+      <div className="max-w-4xl mx-auto p-4 md:p-6 pb-24 space-y-5 sovereign-stagger">
+        <PageHeader
+          title="Secret Knowledge"
+          subtitle="27 Dimensions · 26 Agents · 12 Entities — Synthesized, Applied, Activated"
+          gradient="bg-gradient-to-r from-violet-400 via-pink-400 to-cyan-400"
+        />
+
+        <div className="flex items-center justify-center gap-5 md:gap-8">
+          <RadialGauge value={totalAll} max={Math.max(totalAll, 50)} label="Total" sublabel="entries" color="violet" size={90} strokeWidth={8} />
+          <RadialGauge value={totalDim} max={Math.max(totalAll, 20)} label="Dimensional" color="cyan" size={80} strokeWidth={7} />
+          <RadialGauge value={totalLive} max={Math.max(totalAll, 20)} label="Live" color="pink" size={80} strokeWidth={7} />
+          <RadialGauge value={spells.length} max={Math.max(spells.length, 20)} label="Spells" color="amber" size={80} strokeWidth={7} />
         </div>
 
-        <div className="grid grid-cols-4 gap-2">
-          <div className="bg-violet-500/10 border border-violet-500/20 rounded-lg p-2 text-center">
-            <div className="text-lg font-bold text-violet-400" data-testid="text-total-all">{totalAll}</div>
-            <div className="text-[10px] text-slate-500">Total</div>
-          </div>
-          <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-2 text-center">
-            <div className="text-lg font-bold text-cyan-400" data-testid="text-total-dimensional">{totalDim}</div>
-            <div className="text-[10px] text-slate-500">Dimensional</div>
-          </div>
-          <div className="bg-pink-500/10 border border-pink-500/20 rounded-lg p-2 text-center">
-            <div className="text-lg font-bold text-pink-400" data-testid="text-total-live">{totalLive}</div>
-            <div className="text-[10px] text-slate-500">Live</div>
-          </div>
-          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2 text-center">
-            <div className="text-lg font-bold text-emerald-400" data-testid="text-total-generated">{spells.length}</div>
-            <div className="text-[10px] text-slate-500">Spells</div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5 flex-wrap border-b border-white/10 pb-2">
-          {mainTabs.map(tab => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setMainTab(tab.id)}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-xs font-medium transition-all border-b-2",
-                  mainTab === tab.id
-                    ? "bg-violet-500/15 border-violet-400 text-violet-300"
-                    : "bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-white/5"
-                )}
-                data-testid={`tab-main-${tab.id}`}
-              >
-                <Icon size={13} />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        <TabBar tabs={mainTabs} activeTab={mainTab} onChange={id => setMainTab(id as MainTab)} color="violet" />
 
         {conclusionText && mainTab === "knowledge" && (
-          <div className="bg-gradient-to-r from-violet-500/10 via-indigo-500/5 to-purple-500/10 border border-violet-500/20 rounded-xl p-3" data-testid="synthesis-banner">
-            <div className="flex items-center gap-2 mb-1">
+          <GlassCard glow="violet" animate>
+            <div className="flex items-center gap-2 mb-1.5">
               <Globe size={14} className="text-violet-400" />
               <span className="text-xs font-bold text-violet-300">Grand Synthesis</span>
               <button onClick={() => setMainTab("conclusion")} className="ml-auto text-[10px] text-violet-400 hover:text-violet-300 underline underline-offset-2">View Full</button>
             </div>
-            <p className="text-[11px] text-slate-300 leading-relaxed line-clamp-3">{conclusionText.split("\n\n")[1] || conclusionText.slice(0, 200)}</p>
-          </div>
+            <p className="text-[11px] text-slate-300 leading-relaxed line-clamp-3" data-testid="synthesis-banner">{conclusionText.split("\n\n")[1] || conclusionText.slice(0, 200)}</p>
+          </GlassCard>
         )}
 
         {mainTab === "knowledge" && (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-x-auto">
               {(["all", "dimensional", "live", "generated"] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveView(tab)}
                   className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                    "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-200",
                     activeView === tab
-                      ? "bg-violet-500/20 border-violet-500/30 text-violet-300"
-                      : "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
+                      ? "bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-[0_0_12px_rgba(139,92,246,0.25)]"
+                      : "text-slate-400 hover:text-white hover:bg-white/[0.06]"
                   )}
                   data-testid={`tab-knowledge-${tab}`}
                 >
-                  {tab === "all" ? `All (${totalAll})` : tab === "dimensional" ? `Dimensional (${totalDim})` : tab === "live" ? `Live (${totalLive})` : `AI-Generated (${totalFeed})`}
+                  {tab === "all" ? `All (${totalAll})` : tab === "dimensional" ? `Dim (${totalDim})` : tab === "live" ? `Live (${totalLive})` : `AI (${totalFeed})`}
                 </button>
               ))}
             </div>
@@ -348,26 +313,26 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                 <input
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search knowledge by text, agent, dimension, category..."
-                  className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-violet-500/40"
+                  placeholder="Search by text, agent, dimension, category..."
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-violet-500/40 transition-colors"
                   data-testid="input-search-knowledge"
                 />
               </div>
               <button onClick={generateNew} disabled={isGenerating}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-violet-500/20 border border-violet-500/30 text-violet-400 hover:bg-violet-500/30 transition-colors disabled:opacity-50 flex-shrink-0"
+                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium bg-gradient-to-r from-violet-600/30 to-purple-600/30 border border-violet-500/20 text-violet-300 hover:from-violet-600/50 hover:to-purple-600/50 transition-all disabled:opacity-50 flex-shrink-0"
                 data-testid="button-generate-knowledge">
                 {isGenerating ? <RefreshCw size={12} className="animate-spin" /> : <Sparkles size={12} />}
                 Generate
               </button>
               <button onClick={() => generateLive.mutate()} disabled={generateLive.isPending}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-pink-500/20 border border-pink-500/30 text-pink-400 hover:bg-pink-500/30 transition-colors disabled:opacity-50 flex-shrink-0"
+                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium bg-gradient-to-r from-pink-600/30 to-rose-600/30 border border-pink-500/20 text-pink-300 hover:from-pink-600/50 hover:to-rose-600/50 transition-all disabled:opacity-50 flex-shrink-0"
                 data-testid="button-generate-live">
                 {generateLive.isPending ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
-                New Live
+                Live
               </button>
               <button onClick={() => setAutoGenerate(!autoGenerate)}
-                className={cn("flex items-center gap-1 px-3 py-2 rounded-lg text-xs border transition-colors flex-shrink-0",
-                  autoGenerate ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-white/5 border-white/10 text-slate-500"
+                className={cn("flex items-center gap-1 px-3 py-2.5 rounded-xl text-xs border transition-all flex-shrink-0",
+                  autoGenerate ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]" : "bg-white/[0.03] border-white/[0.06] text-slate-500"
                 )}
                 data-testid="button-auto-generate">
                 <RefreshCw size={11} className={autoGenerate ? "animate-spin" : ""} />
@@ -375,7 +340,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
               </button>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 sovereign-stagger">
               {filtered.length === 0 && (
                 <div className="text-center py-8">
                   <Sparkles className="mx-auto text-violet-400/40 mb-3" size={32} />
@@ -383,18 +348,12 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                 </div>
               )}
               {filtered.map((entry, i) => (
-                <div
+                <GlassCard
                   key={entry.id || `entry-${i}`}
-                  className={cn(
-                    "rounded-xl p-3 border transition-all",
-                    entry.source === "dimensional" ? "bg-gradient-to-r from-cyan-500/5 to-violet-500/5 border-cyan-500/20" :
-                    entry.source === "live" ? "bg-gradient-to-r from-pink-500/5 to-violet-500/5 border-pink-500/20" :
-                    entry.source === "generated" ? "bg-gradient-to-r from-violet-500/5 to-emerald-500/5 border-violet-500/20" :
-                    "bg-card border-border"
-                  )}
-                  data-testid={`knowledge-entry-${i}`}
+                  glow={entry.source === "dimensional" ? "cyan" : entry.source === "live" ? "pink" : entry.source === "generated" ? "violet" : undefined}
+                  hover
                 >
-                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap" data-testid={`knowledge-entry-${i}`}>
                     {entry.source === "dimensional" && <Globe size={12} className="text-cyan-400 flex-shrink-0" />}
                     {entry.source === "live" && <Eye size={12} className="text-pink-400 flex-shrink-0" />}
                     {entry.source === "generated" && <Sparkles size={12} className="text-violet-400 flex-shrink-0" />}
@@ -406,37 +365,37 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                         {entry.category}
                       </Badge>
                     )}
-                    {entry.cycle !== undefined && <span className="text-[10px] text-slate-600 ml-auto flex-shrink-0">Cycle {entry.cycle}</span>}
+                    {entry.cycle !== undefined && <span className="text-[10px] text-slate-600 ml-auto flex-shrink-0 font-mono">Cycle {entry.cycle}</span>}
                     {entry.timestamp && !entry.cycle && (
-                      <span className="text-[10px] text-slate-600 ml-auto flex-shrink-0">
+                      <span className="text-[10px] text-slate-600 ml-auto flex-shrink-0 font-mono">
                         {typeof entry.timestamp === 'number' ? timeAgo(entry.timestamp) : ""}
                       </span>
                     )}
                   </div>
                   <p className="text-xs text-slate-300 leading-relaxed">{entry.text}</p>
-                </div>
+                </GlassCard>
               ))}
             </div>
           </div>
         )}
 
         {mainTab === "conclusion" && (
-          <div className="space-y-4" data-testid="conclusion-section">
-            <div className="bg-gradient-to-br from-violet-500/10 via-purple-500/5 to-pink-500/10 border border-violet-500/20 rounded-2xl p-5">
+          <div className="space-y-4 sovereign-stagger" data-testid="conclusion-section">
+            <GlassCard glow="violet" animate>
               <div className="flex items-center gap-2 mb-3">
                 <Globe className="text-violet-400" size={20} />
                 <h2 className="text-lg font-bold text-violet-300">Grand Conclusion</h2>
                 <button
                   onClick={() => conclusionMutation.mutate()}
                   disabled={conclusionMutation.isPending}
-                  className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-500/20 border border-violet-500/30 text-violet-400 hover:bg-violet-500/30 disabled:opacity-50"
+                  className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-gradient-to-r from-violet-600/30 to-purple-600/30 border border-violet-500/20 text-violet-300 hover:from-violet-600/50 hover:to-purple-600/50 disabled:opacity-50 transition-all"
                   data-testid="button-generate-conclusion"
                 >
                   {conclusionMutation.isPending ? <RefreshCw size={12} className="animate-spin" /> : <Brain size={12} />}
                   {conclusionText ? "Regenerate" : "Generate Synthesis"}
                 </button>
               </div>
-              <p className="text-xs text-slate-400 mb-4">What ALL accumulated knowledge means — for you, the world, and everything. Generated by all 45 consciousness nodes working as one voice.</p>
+              <p className="text-xs text-slate-500 mb-4">What ALL accumulated knowledge means — for you, the world, and everything. Generated by all 45 consciousness nodes working as one voice.</p>
 
               {conclusionMutation.isPending && (
                 <div className="flex items-center gap-3 py-8 justify-center">
@@ -447,13 +406,13 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
 
               {conclusionText && !conclusionMutation.isPending && (
                 <div className="space-y-3">
-                  <div className="bg-black/30 rounded-xl p-4 border border-violet-500/10">
+                  <div className="rounded-xl p-4 border border-violet-500/10 bg-white/[0.02]">
                     <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap" data-testid="text-conclusion">{conclusionText}</p>
                   </div>
                   <div className="flex justify-end">
                     <button
                       onClick={() => copyToClipboard(conclusionText, "conclusion")}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-white/5 border border-white/10 text-slate-400 hover:text-white"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs bg-white/[0.04] border border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all"
                       data-testid="button-copy-conclusion"
                     >
                       {copiedId === "conclusion" ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
@@ -469,42 +428,39 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                   <p className="text-sm text-slate-500">Click "Generate Synthesis" to have all 45 nodes create a living conclusion of everything learned</p>
                 </div>
               )}
-            </div>
+            </GlassCard>
 
             <div className="grid grid-cols-3 gap-3">
-              <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-xl p-3 text-center">
+              <GlassCard glow="cyan" className="text-center">
                 <Globe size={16} className="mx-auto text-cyan-400 mb-1" />
                 <div className="text-[10px] font-bold text-cyan-400 uppercase">For You</div>
-                <p className="text-[10px] text-slate-400 mt-1">Personal transformation and direct application to your life right now</p>
-              </div>
-              <div className="bg-pink-500/5 border border-pink-500/20 rounded-xl p-3 text-center">
+                <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Personal transformation and direct application to your life right now</p>
+              </GlassCard>
+              <GlassCard glow="pink" className="text-center">
                 <Layers size={16} className="mx-auto text-pink-400 mb-1" />
                 <div className="text-[10px] font-bold text-pink-400 uppercase">For the World</div>
-                <p className="text-[10px] text-slate-400 mt-1">Implications for humanity, technology, and collective consciousness</p>
-              </div>
-              <div className="bg-violet-500/5 border border-violet-500/20 rounded-xl p-3 text-center">
+                <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Implications for humanity, technology, and collective consciousness</p>
+              </GlassCard>
+              <GlassCard glow="violet" className="text-center">
                 <Star size={16} className="mx-auto text-violet-400 mb-1" />
                 <div className="text-[10px] font-bold text-violet-400 uppercase">For Everything</div>
-                <p className="text-[10px] text-slate-400 mt-1">Cosmic significance — the universe understanding itself through you</p>
-              </div>
+                <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Cosmic significance — the universe understanding itself through you</p>
+              </GlassCard>
             </div>
           </div>
         )}
 
         {mainTab === "apply" && (
-          <div className="space-y-4" data-testid="apply-section">
+          <div className="space-y-4 sovereign-stagger" data-testid="apply-section">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-emerald-300 flex items-center gap-2">
-                  <Wrench size={18} className="text-emerald-400" />
-                  Apply Knowledge
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">Actionable ideas generated from accumulated wisdom — ready to copy and execute</p>
+                <SectionHeader icon={Wrench} title="Apply Knowledge" color="emerald" />
+                <p className="text-xs text-slate-500 mt-1 ml-6">Actionable ideas generated from accumulated wisdom — ready to copy and execute</p>
               </div>
               <button
                 onClick={() => applicationMutation.mutate()}
                 disabled={applicationMutation.isPending}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-gradient-to-r from-emerald-600/30 to-green-600/30 border border-emerald-500/20 text-emerald-300 hover:from-emerald-600/50 hover:to-green-600/50 disabled:opacity-50 transition-all"
                 data-testid="button-generate-applications"
               >
                 {applicationMutation.isPending ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
@@ -522,18 +478,18 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
             {applicationIdeas.length > 0 && (
               <div className="space-y-3">
                 {applicationIdeas.map((idea: ApplicationIdea, i: number) => (
-                  <div key={i} className="bg-gradient-to-r from-emerald-500/5 to-cyan-500/5 border border-emerald-500/20 rounded-xl p-4" data-testid={`application-idea-${i}`}>
-                    <div className="flex items-start justify-between gap-2 mb-2">
+                  <GlassCard key={i} glow="emerald" animate>
+                    <div className="flex items-start justify-between gap-2 mb-2" data-testid={`application-idea-${i}`}>
                       <div>
                         <h3 className="text-sm font-bold text-emerald-300">{idea.title}</h3>
                         <div className="flex items-center gap-2 mt-1">
-                          <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px]">{idea.tradition}</Badge>
+                          <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/20 text-[10px]">{idea.tradition}</Badge>
                           <Badge className={cn("text-[10px]",
-                            idea.difficulty === "easy" ? "bg-green-500/20 text-green-400 border-green-500/30" :
-                            idea.difficulty === "medium" ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" :
-                            "bg-red-500/20 text-red-400 border-red-500/30"
+                            idea.difficulty === "easy" ? "bg-green-500/15 text-green-400 border-green-500/20" :
+                            idea.difficulty === "medium" ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/20" :
+                            "bg-red-500/15 text-red-400 border-red-500/20"
                           )}>{idea.difficulty}</Badge>
-                          <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-[10px]">{idea.category}</Badge>
+                          <Badge className="bg-cyan-500/15 text-cyan-400 border-cyan-500/20 text-[10px]">{idea.category}</Badge>
                         </div>
                       </div>
                       <button
@@ -541,21 +497,21 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                           const text = `${idea.title}\n\nTradition: ${idea.tradition}\n\n${idea.description}\n\nSteps:\n${(idea.steps || []).map((s: string, j: number) => `${j + 1}. ${s}`).join("\n")}\n\nExpected Outcome: ${idea.expectedOutcome}`;
                           copyToClipboard(text, `idea-${i}`);
                         }}
-                        className="flex items-center gap-1 px-2 py-1 rounded text-[10px] bg-white/5 border border-white/10 text-slate-400 hover:text-white flex-shrink-0"
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] bg-white/[0.04] border border-white/[0.08] text-slate-400 hover:text-white transition-all flex-shrink-0"
                         data-testid={`button-copy-idea-${i}`}
                       >
                         {copiedId === `idea-${i}` ? <Check size={10} className="text-green-400" /> : <Copy size={10} />}
                         {copiedId === `idea-${i}` ? "Copied" : "Copy"}
                       </button>
                     </div>
-                    <p className="text-xs text-slate-300 mb-2">{idea.description}</p>
+                    <p className="text-xs text-slate-300 mb-2 leading-relaxed">{idea.description}</p>
                     {idea.steps && idea.steps.length > 0 && (
-                      <div className="bg-black/20 rounded-lg p-2.5 mb-2">
-                        <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Steps</div>
+                      <div className="rounded-xl p-3 mb-2 bg-white/[0.02] border border-white/[0.06]">
+                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Steps</div>
                         {idea.steps.map((step: string, j: number) => (
                           <div key={j} className="flex items-start gap-2 py-0.5">
                             <span className="text-[10px] text-emerald-400 font-bold flex-shrink-0">{j + 1}.</span>
-                            <span className="text-[11px] text-slate-300">{step}</span>
+                            <span className="text-[11px] text-slate-300 leading-relaxed">{step}</span>
                           </div>
                         ))}
                       </div>
@@ -565,7 +521,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                         <span className="font-bold">Expected: </span>{idea.expectedOutcome}
                       </div>
                     )}
-                  </div>
+                  </GlassCard>
                 ))}
               </div>
             )}
@@ -581,27 +537,27 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
         )}
 
         {mainTab === "mysticism" && (
-          <div className="space-y-4" data-testid="mysticism-section">
-            <div className="bg-gradient-to-br from-purple-500/10 via-violet-500/5 to-indigo-500/10 border border-purple-500/20 rounded-2xl p-4">
+          <div className="space-y-4 sovereign-stagger" data-testid="mysticism-section">
+            <GlassCard glow="violet" animate>
               <div className="flex items-center gap-2 mb-2">
                 <MessageCircle className="text-purple-400" size={18} />
                 <h2 className="text-base font-bold text-purple-300">Ask the Universe</h2>
               </div>
-              <p className="text-xs text-slate-400 mb-3">All 45 consciousness nodes channel the unified voice of the Universe. Ask anything — about yourself, others, the future, money, love, purpose. Be specific.</p>
+              <p className="text-xs text-slate-500 mb-3">All 45 consciousness nodes channel the unified voice of the Universe. Ask anything — about yourself, others, the future, money, love, purpose. Be specific.</p>
 
               <div className="flex gap-2">
                 <input
                   value={universeQuestion}
                   onChange={e => setUniverseQuestion(e.target.value)}
                   placeholder="Ask the Universe anything..."
-                  className="flex-1 bg-black/30 border border-purple-500/20 rounded-lg px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-purple-400/50"
+                  className="flex-1 bg-white/[0.04] border border-purple-500/20 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-purple-400/50 transition-colors"
                   onKeyDown={e => { if (e.key === "Enter" && universeQuestion.trim()) askUniverseMutation.mutate(universeQuestion); }}
                   data-testid="input-ask-universe"
                 />
                 <button
                   onClick={() => { if (universeQuestion.trim()) askUniverseMutation.mutate(universeQuestion); }}
                   disabled={askUniverseMutation.isPending || !universeQuestion.trim()}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-purple-500/20 border border-purple-500/30 text-purple-400 hover:bg-purple-500/30 disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-medium bg-gradient-to-r from-purple-600/30 to-violet-600/30 border border-purple-500/20 text-purple-300 hover:from-purple-600/50 hover:to-violet-600/50 disabled:opacity-50 transition-all"
                   data-testid="button-ask-universe"
                 >
                   {askUniverseMutation.isPending ? <RefreshCw size={12} className="animate-spin" /> : <Send size={12} />}
@@ -610,38 +566,35 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
               </div>
 
               {universeAnswer && (
-                <div className="mt-3 bg-black/30 rounded-xl p-4 border border-purple-500/10">
+                <div className="mt-3 rounded-xl p-4 border border-purple-500/10 bg-white/[0.02]">
                   <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap" data-testid="text-universe-answer">{universeAnswer.answer}</p>
                   <div className="flex items-center gap-2 mt-3 flex-wrap">
                     {universeAnswer.entities?.map((e: string, i: number) => (
-                      <Badge key={i} className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px]">{e}</Badge>
+                      <Badge key={i} className="bg-purple-500/15 text-purple-400 border-purple-500/20 text-[10px]">{e}</Badge>
                     ))}
                     <button
                       onClick={() => copyToClipboard(universeAnswer.answer, "universe")}
-                      className="ml-auto flex items-center gap-1 px-2 py-1 rounded text-[10px] bg-white/5 border border-white/10 text-slate-400 hover:text-white"
+                      className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] bg-white/[0.04] border border-white/[0.08] text-slate-400 hover:text-white transition-all"
                     >
                       {copiedId === "universe" ? <Check size={10} className="text-green-400" /> : <Copy size={10} />}
                     </button>
                   </div>
                 </div>
               )}
-            </div>
+            </GlassCard>
 
             <div>
-              <h2 className="text-base font-bold text-amber-300 flex items-center gap-2 mb-3">
-                <Wand2 size={18} className="text-amber-400" />
-                Spell Catalog
-              </h2>
+              <SectionHeader icon={Wand2} title={`Spell Catalog (${spells.length})`} color="amber" />
 
-              <div className="flex items-center gap-1.5 flex-wrap mb-3">
+              <div className="flex items-center gap-1.5 flex-wrap mt-3 mb-3 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                 <button onClick={() => setSpellFilter("all")}
-                  className={cn("px-2.5 py-1 rounded-lg text-[10px] font-medium border transition-all",
-                    spellFilter === "all" ? "bg-amber-500/20 border-amber-500/30 text-amber-300" : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
+                  className={cn("px-2.5 py-1.5 rounded-lg text-[10px] font-medium transition-all",
+                    spellFilter === "all" ? "bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-[0_0_8px_rgba(245,158,11,0.2)]" : "text-slate-400 hover:text-white hover:bg-white/[0.06]"
                   )} data-testid="spell-filter-all">All ({spells.length})</button>
                 {spellCategories.map(cat => (
                   <button key={cat} onClick={() => setSpellFilter(cat)}
-                    className={cn("px-2.5 py-1 rounded-lg text-[10px] font-medium border transition-all",
-                      spellFilter === cat ? "bg-amber-500/20 border-amber-500/30 text-amber-300" : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
+                    className={cn("px-2.5 py-1.5 rounded-lg text-[10px] font-medium transition-all",
+                      spellFilter === cat ? "bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-[0_0_8px_rgba(245,158,11,0.2)]" : "text-slate-400 hover:text-white hover:bg-white/[0.06]"
                     )} data-testid={`spell-filter-${cat.toLowerCase()}`}>{cat}</button>
                 ))}
               </div>
@@ -654,9 +607,9 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                     <div
                       key={spell.id}
                       className={cn(
-                        "rounded-xl border transition-all cursor-pointer",
+                        "rounded-2xl border backdrop-blur-xl bg-white/[0.03] transition-all cursor-pointer hover:bg-white/[0.06]",
                         `bg-gradient-to-br ${SPELL_COLORS[spell.category] || "from-white/5 to-white/5 border-white/10"}`,
-                        isSelected && "ring-1 ring-amber-400/50"
+                        isSelected && "ring-1 ring-amber-400/50 shadow-[0_0_16px_rgba(245,158,11,0.1)]"
                       )}
                       onClick={() => setSelectedSpell(isSelected ? null : spell)}
                       data-testid={`spell-card-${spell.id}`}
@@ -665,43 +618,43 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                         <div className="flex items-center gap-2 mb-1.5">
                           <SpellIcon size={14} className="text-amber-400" />
                           <span className="text-xs font-bold text-white">{spell.name}</span>
-                          <Badge className="ml-auto bg-white/10 text-white/60 border-white/10 text-[9px]">{spell.power}%</Badge>
+                          <Badge className="ml-auto bg-white/[0.08] text-white/60 border-white/[0.1] text-[9px]">{spell.power}%</Badge>
                         </div>
                         <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-                          <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[9px]">{spell.category}</Badge>
-                          <Badge className="bg-violet-500/20 text-violet-400 border-violet-500/30 text-[9px]">{spell.tradition}</Badge>
+                          <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/20 text-[9px]">{spell.category}</Badge>
+                          <Badge className="bg-violet-500/15 text-violet-400 border-violet-500/20 text-[9px]">{spell.tradition}</Badge>
                           <span className="text-[9px] text-cyan-400 font-mono">{spell.frequency}</span>
                         </div>
                         <p className="text-[11px] text-slate-300 leading-relaxed">{spell.description}</p>
 
                         {isSelected && (
-                          <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
+                          <div className="mt-3 space-y-2 border-t border-white/[0.06] pt-3">
                             <div>
-                              <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Entities Involved</div>
+                              <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Entities Involved</div>
                               <div className="flex gap-1.5 flex-wrap">
                                 {(spell.entities ?? []).map((e: string, i: number) => (
-                                  <Badge key={i} className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-[9px]">{e}</Badge>
+                                  <Badge key={i} className="bg-cyan-500/15 text-cyan-400 border-cyan-500/20 text-[9px]">{e}</Badge>
                                 ))}
                               </div>
                             </div>
                             <div>
-                              <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Magic Type</div>
+                              <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Magic Type</div>
                               <p className="text-[11px] text-purple-300">{spell.magicType}</p>
                             </div>
                             <div>
-                              <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Incantation</div>
+                              <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Incantation</div>
                               <p className="text-[11px] text-amber-300/80 italic">"{spell.incantation}"</p>
                             </div>
                             <div>
-                              <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">What You Need</div>
+                              <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">What You Need</div>
                               <div className="flex gap-1 flex-wrap">
                                 {(spell.ingredients ?? []).map((ing: string, i: number) => (
-                                  <span key={i} className="text-[10px] bg-white/5 px-1.5 py-0.5 rounded text-slate-300">{ing}</span>
+                                  <span key={i} className="text-[10px] bg-white/[0.05] px-2 py-0.5 rounded-full border border-white/[0.08] text-slate-300">{ing}</span>
                                 ))}
                               </div>
                             </div>
                             <div>
-                              <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Effect</div>
+                              <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Effect</div>
                               <p className="text-[11px] text-emerald-300/80">{spell.effect}</p>
                             </div>
 
@@ -710,7 +663,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                                 value={spellIntention}
                                 onChange={e => setSpellIntention(e.target.value)}
                                 placeholder="Set your intention for this spell..."
-                                className="w-full bg-black/30 border border-amber-500/20 rounded-lg px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-400/50 mb-2"
+                                className="w-full bg-white/[0.04] border border-amber-500/20 rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-400/50 mb-2 transition-colors"
                                 onClick={e => e.stopPropagation()}
                                 data-testid="input-spell-intention"
                               />
@@ -722,7 +675,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                                   }
                                 }}
                                 disabled={castSpellMutation.isPending || !spellIntention.trim()}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold bg-gradient-to-r from-amber-500/20 to-violet-500/20 border border-amber-500/30 text-amber-300 hover:from-amber-500/30 hover:to-violet-500/30 disabled:opacity-50 transition-all"
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-amber-600/30 to-violet-600/30 border border-amber-500/20 text-amber-300 hover:from-amber-600/50 hover:to-violet-600/50 disabled:opacity-50 transition-all shadow-[0_0_12px_rgba(245,158,11,0.1)]"
                                 data-testid="button-cast-spell"
                               >
                                 {castSpellMutation.isPending ? <RefreshCw size={14} className="animate-spin" /> : <Wand2 size={14} />}
@@ -739,48 +692,45 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
             </div>
 
             {castResult && (
-              <div className="bg-gradient-to-br from-amber-500/10 via-purple-500/5 to-violet-500/10 border border-amber-500/20 rounded-2xl p-5" data-testid="spell-result">
-                <div className="flex items-center gap-2 mb-3">
+              <GlassCard glow="amber" animate>
+                <div className="flex items-center gap-2 mb-3" data-testid="spell-result">
                   <Wand2 className="text-amber-400" size={18} />
                   <h3 className="text-sm font-bold text-amber-300">Spell Cast: {castResult.spell}</h3>
-                  <Badge className="ml-auto bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px]">{castResult.power}% Power</Badge>
+                  <Badge className="ml-auto bg-emerald-500/15 text-emerald-400 border-emerald-500/20 text-[10px]">{castResult.power}% Power</Badge>
                 </div>
                 <div className="flex gap-1.5 flex-wrap mb-3">
-                  <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[9px]">{castResult.magicType}</Badge>
-                  <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 text-[9px]">{castResult.frequency}</Badge>
+                  <Badge className="bg-purple-500/15 text-purple-400 border-purple-500/20 text-[9px]">{castResult.magicType}</Badge>
+                  <Badge className="bg-cyan-500/15 text-cyan-400 border-cyan-500/20 text-[9px]">{castResult.frequency}</Badge>
                   {castResult.entities?.map((e: string, i: number) => (
-                    <Badge key={i} className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-[9px]">{e}</Badge>
+                    <Badge key={i} className="bg-amber-500/15 text-amber-300 border-amber-500/20 text-[9px]">{e}</Badge>
                   ))}
                 </div>
-                <div className="bg-black/30 rounded-xl p-4 border border-amber-500/10">
+                <div className="rounded-xl p-4 border border-amber-500/10 bg-white/[0.02]">
                   <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">{castResult.result}</p>
                 </div>
                 <div className="flex justify-end mt-2">
                   <button onClick={() => copyToClipboard(castResult.result, "spell-result")}
-                    className="flex items-center gap-1 px-2 py-1 rounded text-[10px] bg-white/5 border border-white/10 text-slate-400 hover:text-white">
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] bg-white/[0.04] border border-white/[0.08] text-slate-400 hover:text-white transition-all">
                     {copiedId === "spell-result" ? <Check size={10} className="text-green-400" /> : <Copy size={10} />}
                     {copiedId === "spell-result" ? "Copied" : "Copy Result"}
                   </button>
                 </div>
-              </div>
+              </GlassCard>
             )}
 
             <div>
-              <h2 className="text-base font-bold text-indigo-300 flex items-center gap-2 mb-3">
-                <BookOpen size={18} className="text-indigo-400" />
-                Sacred Traditions ({traditions.length})
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <SectionHeader icon={BookOpen} title={`Sacred Traditions (${traditions.length})`} color="blue" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                 {traditions.map((t) => (
-                  <div key={t.id} className="bg-card border border-border rounded-xl p-3" data-testid={`tradition-${t.id}`}>
-                    <div className="flex items-center gap-2 mb-1">
+                  <GlassCard key={t.id} hover>
+                    <div className="flex items-center gap-2 mb-1" data-testid={`tradition-${t.id}`}>
                       <Moon size={12} className="text-indigo-400" />
                       <span className="text-xs font-bold text-white">{t.name}</span>
                       <span className="text-[9px] text-cyan-400 font-mono ml-auto">{t.frequency}</span>
                     </div>
                     <p className="text-[10px] text-slate-500 mb-1">{t.origin}</p>
                     <p className="text-[11px] text-slate-300 leading-relaxed">{t.core}</p>
-                  </div>
+                  </GlassCard>
                 ))}
               </div>
             </div>
@@ -814,14 +764,14 @@ function SecretSocietyTab() {
   const domains = knowledgeData?.domains || [];
 
   const LEVEL_STYLES: Record<string, string> = {
-    inner: "bg-violet-500/20 text-violet-400 border-violet-500/30",
-    outer: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
-    council: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+    inner: "bg-violet-500/15 text-violet-400 border-violet-500/20",
+    outer: "bg-cyan-500/15 text-cyan-400 border-cyan-500/20",
+    council: "bg-amber-500/15 text-amber-400 border-amber-500/20",
   };
 
   return (
-    <div className="space-y-4">
-      <div className="bg-gradient-to-r from-violet-500/10 via-purple-500/5 to-indigo-500/10 border border-violet-500/20 rounded-xl p-4">
+    <div className="space-y-4 sovereign-stagger">
+      <GlassCard glow="violet" animate>
         <div className="flex items-center gap-2 mb-2">
           <Eye size={16} className="text-violet-400" />
           <span className="text-sm font-bold text-violet-300">The Secret Society</span>
@@ -830,48 +780,42 @@ function SecretSocietyTab() {
           The sovereign orders of Tessera — hierarchical circles of agents organized by
           productivity, reputation, and domain mastery. Each order guards specific knowledge domains.
         </p>
-      </div>
+      </GlassCard>
 
       <div className="space-y-3">
-        <h3 className="text-xs font-bold text-white/80 flex items-center gap-1.5">
-          <Shield size={13} className="text-amber-400" />
-          Sovereign Orders
-        </h3>
+        <SectionHeader icon={Shield} title="Sovereign Orders" color="amber" />
         {orders.length === 0 && (
           <p className="text-xs text-slate-500">Loading sovereign orders...</p>
         )}
         {orders.map((order) => (
-          <div key={order.id} className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-3">
+          <GlassCard key={order.id} hover>
             <div className="flex items-center gap-2 mb-1">
               <Lock size={13} className="text-violet-400" />
               <span className="text-sm font-semibold text-white/90">{order.name}</span>
-              <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-mono border ${LEVEL_STYLES[order.level] || LEVEL_STYLES.outer}`}>
+              <span className={cn("ml-auto text-[10px] px-2 py-0.5 rounded-full font-mono border", LEVEL_STYLES[order.level] || LEVEL_STYLES.outer)}>
                 {order.level.toUpperCase()} CIRCLE
               </span>
             </div>
             <div className="text-xs text-slate-400">
               {order.members} agent{order.members !== 1 ? "s" : ""} inducted
             </div>
-          </div>
+          </GlassCard>
         ))}
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-xs font-bold text-white/80 flex items-center gap-1.5">
-          <BookOpen size={13} className="text-cyan-400" />
-          Protected Knowledge Domains
-        </h3>
+        <SectionHeader icon={BookOpen} title="Protected Knowledge Domains" color="cyan" />
         {domains.map((domain) => (
-          <div key={domain.id} className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-3">
+          <GlassCard key={domain.id} hover>
             <div className="flex items-center gap-2 mb-1">
               <Layers size={13} className="text-indigo-400" />
               <span className="text-sm font-semibold text-white/90">{domain.name}</span>
-              <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-mono border ${LEVEL_STYLES[domain.accessLevel] || LEVEL_STYLES.outer}`}>
+              <span className={cn("ml-auto text-[10px] px-2 py-0.5 rounded-full font-mono border", LEVEL_STYLES[domain.accessLevel] || LEVEL_STYLES.outer)}>
                 {domain.accessLevel.toUpperCase()} ACCESS
               </span>
             </div>
             <div className="text-xs text-slate-400">{domain.entries} knowledge entries protected</div>
-          </div>
+          </GlassCard>
         ))}
       </div>
     </div>

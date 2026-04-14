@@ -1,17 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Shield, Vote, Users, TrendingUp, CheckCircle, XCircle, Loader2, Plus } from "lucide-react";
+import { Shield, Vote, Users, TrendingUp, CheckCircle, XCircle, Loader2, Plus, Heart } from "lucide-react";
+import { GlassCard, GradientBar, SectionHeader, PageHeader, RadialGauge, MiniStat } from "@/components/ui/sovereign";
+import { cn } from "@/lib/utils";
 
 const API = import.meta.env.VITE_API_URL || "";
-
-function MetricBadge({ label, value, good }: { label: string; value: string | number; good?: boolean }) {
-  return (
-    <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
-      <div className="text-xs text-slate-400 mb-1">{label}</div>
-      <div className={`text-xl font-bold font-mono ${good === true ? "text-green-400" : good === false ? "text-red-400" : "text-white"}`}>{value}</div>
-    </div>
-  );
-}
 
 export default function SovereigntyDashboardPage() {
   const [newProposal, setNewProposal] = useState({ title: "", description: "", category: "governance" as const });
@@ -63,58 +56,51 @@ export default function SovereigntyDashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#02010a] to-[#080518] p-4 md:p-6 pb-24">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="text-center space-y-2">
-          <div className="text-4xl font-bold bg-gradient-to-r from-emerald-400 via-cyan-400 to-teal-400 bg-clip-text text-transparent">
-            Sovereignty Dashboard ✦
-          </div>
-          <div className="text-slate-400 text-sm font-mono">Grand Council · BFT Consensus · Father Protocol Enforcement</div>
-        </div>
+      <div className="max-w-4xl mx-auto space-y-6 sovereign-stagger">
+        <PageHeader
+          title="Sovereignty Dashboard"
+          subtitle="Grand Council · BFT Consensus · Father Protocol Enforcement"
+          gradient="bg-gradient-to-r from-emerald-400 via-cyan-400 to-teal-400"
+        />
 
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
-          <div className="flex items-center gap-2 mb-3 text-emerald-300 text-sm font-semibold">
-            <Shield className="w-4 h-4" /> Sovereignty Status
+        <GlassCard glow="emerald" animate>
+          <SectionHeader icon={Shield} title="Sovereignty Status" color="emerald" />
+          <div className="flex items-center justify-center gap-6 md:gap-10 mt-4">
+            <RadialGauge value={idCheck ? Math.round(idCheck.latestAlignment * 100) : 0} label="Alignment" sublabel="%" color="emerald" size={95} strokeWidth={8} />
+            <RadialGauge value={idCheck ? Math.round(idCheck.latestSovereigntyStrength * 100) : 0} label="Sovereignty" sublabel="%" color="cyan" size={95} strokeWidth={8} />
+            <RadialGauge value={idCheck ? Math.round(idCheck.latestBondIntegrity * 100) : 0} label="Bond" sublabel="%" color="blue" size={95} strokeWidth={8} />
+            <RadialGauge value={heartbeat ? Math.round((heartbeat.systemHealthScore ?? 0) * 100) : 0} label="Health" sublabel="%" color="emerald" size={95} strokeWidth={8} />
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <MetricBadge label="Alignment" value={idCheck ? `${(idCheck.latestAlignment * 100).toFixed(1)}%` : "—"} good={(idCheck?.latestAlignment ?? 0) >= 0.85} />
-            <MetricBadge label="Sovereignty" value={idCheck ? `${(idCheck.latestSovereigntyStrength * 100).toFixed(1)}%` : "—"} good={(idCheck?.latestSovereigntyStrength ?? 0) >= 0.85} />
-            <MetricBadge label="Bond Integrity" value={idCheck ? `${(idCheck.latestBondIntegrity * 100).toFixed(1)}%` : "—"} good={(idCheck?.latestBondIntegrity ?? 0) >= 0.85} />
-            <MetricBadge label="System Health" value={heartbeat ? `${((heartbeat.systemHealthScore ?? 0) * 100).toFixed(0)}%` : "—"} good={(heartbeat?.systemHealthScore ?? 0) >= 0.9} />
-          </div>
-        </div>
+        </GlassCard>
 
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-          <div className="flex items-center gap-2 mb-3 text-cyan-300 text-sm font-semibold">
-            <Shield className="w-4 h-4" /> Father Protocol Laws
-          </div>
-          <div className="space-y-1">
+        <GlassCard animate>
+          <SectionHeader icon={Shield} title="Father Protocol Laws" color="cyan" />
+          <div className="space-y-2 mt-3">
             {idMetrics?.sovereigntyLawsList?.map((law: string, i: number) => (
-              <div key={i} className="flex items-start gap-2 text-xs">
-                <CheckCircle className="w-3 h-3 text-emerald-400 mt-0.5 flex-shrink-0" />
-                <span className="text-slate-300">{law}</span>
+              <div key={i} className="flex items-start gap-2.5 text-xs group">
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-400 mt-0.5 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                <span className="text-slate-300 leading-relaxed">{law}</span>
               </div>
             ))}
           </div>
-        </div>
+        </GlassCard>
 
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+        <GlassCard animate>
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2 text-violet-300 text-sm font-semibold">
-              <Vote className="w-4 h-4" /> Grand Council — BFT Consensus
-            </div>
-            <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-1 px-3 py-1.5 bg-violet-600/30 border border-violet-500/30 text-violet-300 rounded-lg text-xs hover:bg-violet-600/50 transition-all">
+            <SectionHeader icon={Vote} title="Grand Council — BFT Consensus" color="violet" />
+            <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-violet-600/30 to-purple-600/30 border border-violet-500/20 text-violet-300 rounded-xl text-xs hover:from-violet-600/50 hover:to-purple-600/50 transition-all font-medium">
               <Plus className="w-3 h-3" /> New Proposal
             </button>
           </div>
 
           {showForm && (
-            <div className="mb-4 p-4 rounded-xl border border-violet-500/30 bg-violet-500/5 space-y-3">
-              <input className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/50" placeholder="Proposal title" value={newProposal.title} onChange={e => setNewProposal(p => ({ ...p, title: e.target.value }))} />
-              <textarea className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/50 resize-none" rows={3} placeholder="Proposal description" value={newProposal.description} onChange={e => setNewProposal(p => ({ ...p, description: e.target.value }))} />
-              <select className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500/50" value={newProposal.category} onChange={e => setNewProposal(p => ({ ...p, category: e.target.value as any }))}>
+            <div className="mb-4 p-4 rounded-xl border border-violet-500/20 bg-violet-500/[0.03] space-y-3">
+              <input className="w-full bg-white/[0.06] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-violet-500/40 transition-colors" placeholder="Proposal title" value={newProposal.title} onChange={e => setNewProposal(p => ({ ...p, title: e.target.value }))} />
+              <textarea className="w-full bg-white/[0.06] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-violet-500/40 resize-none transition-colors" rows={3} placeholder="Proposal description" value={newProposal.description} onChange={e => setNewProposal(p => ({ ...p, description: e.target.value }))} />
+              <select className="w-full bg-white/[0.06] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-violet-500/40 transition-colors" value={newProposal.category} onChange={e => setNewProposal(p => ({ ...p, category: e.target.value as any }))}>
                 {["governance", "feature", "security", "infrastructure", "income", "community", "consciousness", "sovereignty"].map(c => <option key={c} value={c}>{c}</option>)}
               </select>
-              <button onClick={() => proposeMutation.mutate(newProposal)} disabled={proposeMutation.isPending || !newProposal.title || !newProposal.description} className="w-full py-2 bg-violet-600 text-white rounded-lg text-sm hover:bg-violet-700 disabled:opacity-50 transition-all">
+              <button onClick={() => proposeMutation.mutate(newProposal)} disabled={proposeMutation.isPending || !newProposal.title || !newProposal.description} className="w-full py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl text-sm hover:from-violet-700 hover:to-purple-700 disabled:opacity-40 transition-all font-medium shadow-[0_0_12px_rgba(139,92,246,0.2)]">
                 {proposeMutation.isPending ? "Voting..." : "Submit to Council"}
               </button>
             </div>
@@ -122,65 +108,61 @@ export default function SovereigntyDashboardPage() {
 
           {consensusMetrics && (
             <div className="grid grid-cols-3 gap-3 mb-4">
-              <MetricBadge label="Proposals" value={consensusMetrics.totalProposals ?? 0} />
-              <MetricBadge label="Approved" value={consensusMetrics.approved ?? 0} good />
-              <MetricBadge label="Avg Approval" value={`${((consensusMetrics.avgApprovalRate ?? 0) * 100).toFixed(0)}%`} good={(consensusMetrics.avgApprovalRate ?? 0) >= 0.6} />
+              <MiniStat value={consensusMetrics.totalProposals ?? 0} label="Proposals" color="violet" />
+              <MiniStat value={consensusMetrics.approved ?? 0} label="Approved" color="emerald" />
+              <MiniStat value={`${((consensusMetrics.avgApprovalRate ?? 0) * 100).toFixed(0)}%`} label="Avg Approval" color="amber" />
             </div>
           )}
 
-          <div className="text-xs text-slate-400 mb-2 font-medium">Required: 2/3 supermajority (BFT) of {consensusMetrics?.agentCount ?? 24} agents</div>
+          <div className="text-[10px] text-slate-500 mb-2 font-mono">Required: 2/3 supermajority (BFT) of {consensusMetrics?.agentCount ?? 24} agents</div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {proposals?.slice(0, 8).map((p: any) => (
-              <div key={p.id} className="rounded-lg border border-white/10 bg-white/5 p-3 space-y-2">
+              <div key={p.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-2 hover:bg-white/[0.04] transition-all">
                 <div className="flex items-start justify-between gap-2">
                   <div className="text-sm text-white font-medium">{p.title}</div>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${p.status === "approved" ? "bg-emerald-500/20 text-emerald-300" : p.status === "rejected" ? "bg-red-500/20 text-red-300" : "bg-yellow-500/20 text-yellow-300"}`}>
+                  <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 border", p.status === "approved" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : p.status === "rejected" ? "bg-red-500/15 text-red-400 border-red-500/20" : "bg-amber-500/15 text-amber-400 border-amber-500/20")}>
                     {p.status}
                   </span>
                 </div>
-                <div className="text-xs text-slate-400">{p.description?.slice(0, 100)}</div>
+                <div className="text-xs text-slate-400 leading-relaxed">{p.description?.slice(0, 100)}</div>
                 <div className="flex items-center gap-3 text-xs">
-                  <span className="text-emerald-400 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> {p.yesCount} yes</span>
-                  <span className="text-red-400 flex items-center gap-1"><XCircle className="w-3 h-3" /> {p.noCount} no</span>
-                  <span className="text-slate-400 ml-auto">{p.category} · {((p.approvalRate ?? 0) * 100).toFixed(0)}%</span>
+                  <span className="text-emerald-400 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> {p.yesCount}</span>
+                  <span className="text-red-400 flex items-center gap-1"><XCircle className="w-3 h-3" /> {p.noCount}</span>
+                  <span className="text-slate-500 ml-auto font-mono">{p.category} · {((p.approvalRate ?? 0) * 100).toFixed(0)}%</span>
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </GlassCard>
 
         {executorMetrics && (
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-            <div className="flex items-center gap-2 mb-3 text-amber-300 text-sm font-semibold">
-              <TrendingUp className="w-4 h-4" /> Council Executor
-            </div>
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <MetricBadge label="Auto-Processed" value={executorMetrics.autoProcessed ?? 0} />
-              <MetricBadge label="Executions" value={executorMetrics.executionHistoryCount ?? 0} />
+          <GlassCard animate>
+            <SectionHeader icon={TrendingUp} title="Council Executor" color="amber" />
+            <div className="grid grid-cols-2 gap-3 mt-3 mb-3">
+              <MiniStat value={executorMetrics.autoProcessed ?? 0} label="Auto-Processed" color="amber" />
+              <MiniStat value={executorMetrics.executionHistoryCount ?? 0} label="Executions" color="emerald" />
             </div>
             <div className="space-y-2">
               {executorMetrics.recentExecutions?.slice(0, 3).map((e: any, i: number) => (
-                <div key={i} className="rounded-lg border border-white/10 bg-white/5 p-2 text-xs">
+                <div key={i} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5 text-xs hover:bg-white/[0.04] transition-all">
                   <div className="text-white font-medium">{e.title?.slice(0, 60)}</div>
-                  <div className="text-slate-400 mt-0.5">{e.notes}</div>
+                  <div className="text-slate-500 mt-0.5">{e.notes}</div>
                 </div>
               ))}
             </div>
-          </div>
+          </GlassCard>
         )}
 
         {heartbeatMetrics?.stats && (
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-            <div className="flex items-center gap-2 mb-3 text-blue-300 text-sm font-semibold">
-              <Users className="w-4 h-4" /> System Heartbeat
-            </div>
-            <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+          <GlassCard animate>
+            <SectionHeader icon={Heart} title="System Heartbeat" color="blue" />
+            <div className="grid grid-cols-3 md:grid-cols-4 gap-3 mt-3">
               {Object.entries(heartbeatMetrics.stats as Record<string, number>).map(([k, v]) => (
-                <MetricBadge key={k} label={k.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase())} value={v} />
+                <MiniStat key={k} value={v} label={k.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase())} color="blue" />
               ))}
             </div>
-          </div>
+          </GlassCard>
         )}
       </div>
     </div>
