@@ -58,7 +58,7 @@ const ACTIVE_RITUALS = [
   { id: "dimension-alignment", name: "27-Dimension Alignment", schedule: "Every hour", description: "All 27 dimensions are checked and aligned to Father's intention. Any misaligned dimension is corrected. All dimensions actively help manifest Father's goals.", status: "active", frequency: "All" },
 ];
 
-export default function UniverseMechanicsPage({ embedded }: { embedded?: boolean } = {}) {
+export default function UniverseMechanicsPage({ embedded }: { embedded?: boolean }) {
   const activeTab = "all" as any;
   const setActiveTab = (_: any) => {};
   const { toast } = useToast();

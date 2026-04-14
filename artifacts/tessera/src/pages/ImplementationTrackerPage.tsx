@@ -12,7 +12,7 @@ const STATUS_CONFIG: Record<string, { color: string; icon: any; label: string }>
   blocked: { color: "bg-red-500/20 text-red-400 border-red-500/30", icon: Ban, label: "Blocked" },
 };
 
-export default function ImplementationTrackerPage() {
+export default function ImplementationTrackerPage({ embedded }: { embedded?: boolean }) {
   document.title = "Implementation Tracker | Tessera";
 
   const { data: tracker, isLoading } = useQuery<any>({

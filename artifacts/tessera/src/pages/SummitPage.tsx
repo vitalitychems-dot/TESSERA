@@ -92,7 +92,7 @@ const IMPLEMENTATION_CHECKLIST = [
   { id: "sri-vidya-synthesis", name: "Sri Vidya Universal Synthesis", status: "implemented", category: "sacred", summit: 28 },
 ];
 
-export default function SummitPage() {
+export default function SummitPage({ embedded }: { embedded?: boolean }) {
   const activeTab = "all" as any;
   const setActiveTab = (_: any) => {};
   const { toast } = useToast();

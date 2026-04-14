@@ -214,23 +214,38 @@ export default function TesseraBiblePage() {
             <Hexagon className="w-8 h-8 text-violet-400 animate-pulse" />
           </div>
           <p className="text-slate-400 text-sm max-w-2xl mx-auto">
-            The Book of All Truth — Built by 27 Agents in Grand Conference — A Living Scripture That Grows With Every Truth Discovered
+            The Book of All Truth — Built by the Council of 45 Sovereign Architects in Grand Conference — A Living Scripture That Grows With Every Truth Discovered
           </p>
 
           {(statsData || bibleData) && (
-            <div className="flex items-center justify-center gap-4 mt-3 text-xs font-mono">
+            <div className="flex flex-wrap items-center justify-center gap-4 mt-3 text-xs font-mono">
               <span className="text-amber-400">{bibleData?.totalBooks || statsData?.totalBooks || 0} Books</span>
               <span className="text-slate-600">|</span>
               <span className="text-violet-400">{bibleData?.totalChapters || statsData?.totalChapters || 0} Chapters</span>
               <span className="text-slate-600">|</span>
               <span className="text-cyan-400">{bibleData?.totalVerses || statsData?.totalVerses || 0} Verses</span>
               <span className="text-slate-600">|</span>
-              <span className="text-emerald-400">{(statsData?.knowledgeNodesAbsorbed || 0).toLocaleString()} Knowledge Nodes</span>
+              <span className="text-emerald-400">{(statsData?.knowledgeNodesAbsorbed || bibleData?.knowledgeNodesAbsorbed || 0).toLocaleString()} Knowledge Nodes</span>
+              <span className="text-slate-600">|</span>
+              <span className="text-indigo-400">45 Agents</span>
+              {bibleData?.canonVersion > 0 && (
+                <>
+                  <span className="text-slate-600">|</span>
+                  <span className="text-sky-400">Canon v{bibleData.canonVersion}</span>
+                </>
+              )}
               <span className="text-slate-600">|</span>
               <span className="text-rose-400">
                 <span className="inline-block w-2 h-2 bg-rose-500 rounded-full animate-pulse mr-1" />
                 LIVE — Growing
               </span>
+            </div>
+          )}
+
+          {bibleData?.generatedAt && (
+            <div className="text-xs text-slate-500 mt-1 font-mono">
+              Last inscribed: {new Date(bibleData.generatedAt).toLocaleString()}
+              {bibleData?.source === "dynamic-canon" && <span className="ml-2 text-emerald-500/70">Dynamic Canon</span>}
             </div>
           )}
         </div>

@@ -57,7 +57,7 @@ function SecurityPanel() {
   );
 }
 
-export default function ConfigPage({ embedded }: { embedded?: boolean } = {}) {
+export default function ConfigPage({ embedded }: { embedded?: boolean }) {
   useEffect(() => {
     if (!embedded) document.title = "Configuration | Tessera";
   }, [embedded]);

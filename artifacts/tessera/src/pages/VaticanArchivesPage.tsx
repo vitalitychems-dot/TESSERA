@@ -235,7 +235,7 @@ const COUNCIL_MEMBERS_COUNT = 46;
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 
-export default function VaticanArchivesPage({ embedded }: { embedded?: boolean } = {}) {
+export default function VaticanArchivesPage({ embedded }: { embedded?: boolean }) {
   const activeTab = "all" as any;
   const [domainFilter, setDomainFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");

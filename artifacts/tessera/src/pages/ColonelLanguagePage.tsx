@@ -117,7 +117,7 @@ function StatCard({ label, value, sub, icon: Icon, color }: {
   );
 }
 
-export default function ColonelLanguagePage() {
+export default function ColonelLanguagePage({ embedded }: { embedded?: boolean }) {
   const [inputText, setInputText] = useState(SAMPLE_TEXTS[0].text);
   const [compressResult, setCompressResult] = useState<any>(null);
   const [encryptResult, setEncryptResult] = useState<any>(null);

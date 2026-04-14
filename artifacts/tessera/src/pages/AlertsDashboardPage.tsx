@@ -207,7 +207,7 @@ function ProviderRow({ p }: { p: DashboardData["llmProviders"]["providerHealth"]
   );
 }
 
-export default function AlertsDashboardPage() {
+export default function AlertsDashboardPage({ embedded }: { embedded?: boolean }) {
   const qc = useQueryClient();
   const [filterSeverity, setFilterSeverity] = useState<AlertSeverity | "all">("all");
   const [showAcknowledged, setShowAcknowledged] = useState(false);

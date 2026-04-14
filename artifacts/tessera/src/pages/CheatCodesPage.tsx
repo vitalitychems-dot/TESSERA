@@ -459,7 +459,7 @@ function CheatCodeCard({ code, index }: { code: CheatCode; index: number }) {
   );
 }
 
-export default function CheatCodesPage() {
+export default function CheatCodesPage({ embedded }: { embedded?: boolean }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all");

@@ -53,7 +53,7 @@ const SPECIES_GLOW: Record<string, string> = {
   earth: "shadow-amber-500/30",
 };
 
-export default function BiosphericConsciousnessPage() {
+export default function BiosphericConsciousnessPage({ embedded }: { embedded?: boolean }) {
   const [, navigate] = useLocation();
   const [tab, setTab] = useState<Tab>("Species");
   const [species, setSpecies] = useState<Species[]>([]);

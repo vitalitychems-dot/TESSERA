@@ -138,7 +138,7 @@ function RevenueDashboard() {
   );
 }
 
-export default function RevenueHubPage() {
+export default function RevenueHubPage({ embedded }: { embedded?: boolean }) {
   useEffect(() => { document.title = "Revenue Hub | Tessera"; }, []);
   return (
     <div className="flex h-full bg-background" data-testid="page-revenue-hub">

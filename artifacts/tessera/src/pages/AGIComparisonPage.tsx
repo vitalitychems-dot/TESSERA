@@ -8,7 +8,7 @@ import { Tabs } from "@/components/ui/tabs";
 import { Trophy, Brain, Shield, Zap, Crown, TrendingUp, BarChart3, Target, Cpu, Activity, ChevronRight, Sparkles } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
-export default function AGIComparisonPage() {
+export default function AGIComparisonPage({ embedded }: { embedded?: boolean }) {
 
   const { data: report, isLoading: reportLoading } = useQuery<any>({
     queryKey: ["/api/agi-comparison"],

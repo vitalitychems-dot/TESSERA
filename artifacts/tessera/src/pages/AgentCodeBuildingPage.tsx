@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-export default function AgentCodeBuildingPage({ embedded }: { embedded?: boolean } = {}) {
+export default function AgentCodeBuildingPage({ embedded }: { embedded?: boolean }) {
   useEffect(() => { document.title = "Agent Code Building | Tessera"; }, []);
   const { toast } = useToast();
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);

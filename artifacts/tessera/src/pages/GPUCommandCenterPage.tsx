@@ -125,7 +125,7 @@ function StatCard({ label, value, sub, color = "cyan" }: { label: string; value:
   );
 }
 
-export default function GPUCommandCenterPage({ embedded }: { embedded?: boolean } = {}) {
+export default function GPUCommandCenterPage({ embedded }: { embedded?: boolean }) {
   const activeTab = "all" as any;
   useEffect(() => { document.title = "GPU Command Center | Tessera Sovereign"; }, []);
   const [colabName, setColabName] = useState("Tessera-LoRA-Training");

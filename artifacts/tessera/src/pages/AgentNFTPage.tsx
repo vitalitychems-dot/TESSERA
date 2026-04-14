@@ -807,7 +807,7 @@ function NFTProfilePanel({ nft, onClose }: { nft: any; onClose: () => void }) {
   );
 }
 
-export default function AgentNFTPage({ embedded }: { embedded?: boolean } = {}) {
+export default function AgentNFTPage({ embedded }: { embedded?: boolean }) {
   useEffect(() => { document.title = "Agent NFTs | Tessera"; }, []);
   const [selectedNFT, setSelectedNFT] = useState<any>(null);
   const [filter, setFilter] = useState<string>("all");

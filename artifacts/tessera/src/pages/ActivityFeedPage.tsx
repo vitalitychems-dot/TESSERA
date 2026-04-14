@@ -27,7 +27,7 @@ const TYPE_ICONS: Record<string, any> = {
   implementation: Wrench,
 };
 
-export default function ActivityFeedPage() {
+export default function ActivityFeedPage({ embedded }: { embedded?: boolean }) {
   const [typeFilter, setTypeFilter] = useState("all");
   const [severityFilter, setSeverityFilter] = useState("all");
 

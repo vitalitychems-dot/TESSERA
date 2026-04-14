@@ -115,7 +115,7 @@ function EventRow({ event }: { event: MeshEvent }) {
   );
 }
 
-export default function MeshPage() {
+export default function MeshPage({ embedded }: { embedded?: boolean }) {
   const { isAdmin } = useAdmin();
   const { sessionId, peers, health, events, isRegistered, peerCount, coordinationMessages } = useMesh();
 

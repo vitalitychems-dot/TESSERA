@@ -683,7 +683,7 @@ function SystemDiagnosticsPanel({ visible }: { visible: boolean }) {
   );
 }
 
-export default function SystemPage({ embedded }: { embedded?: boolean } = {}) {
+export default function SystemPage({ embedded }: { embedded?: boolean }) {
   useEffect(() => { document.title = "System | Tessera"; }, []);
   const visible = usePageVisible();
 

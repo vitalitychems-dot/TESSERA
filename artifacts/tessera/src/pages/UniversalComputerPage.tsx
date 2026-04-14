@@ -7,7 +7,7 @@ import {
   CheckCircle, Clock, Cpu, Network, Flame, Compass, Search, BookOpen
 } from "lucide-react";
 
-export default function UniversalComputerPage({ embedded }: { embedded?: boolean } = {}) {
+export default function UniversalComputerPage({ embedded }: { embedded?: boolean }) {
   const [tab, setTab] = useState("torus");
   const [expandedDim, setExpandedDim] = useState<number | null>(null);
   const [expandedConclusion, setExpandedConclusion] = useState<string | null>(null);

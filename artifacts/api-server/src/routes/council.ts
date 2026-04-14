@@ -7,17 +7,56 @@ import { computeWorldState } from "../lib/sovereign-economics";
 import { computeLunarData, computeSolarData } from "../lib/sovereign-astro";
 import { computeNetworkTopology } from "../lib/sovereign-network";
 import { runThroughSovereignEngine, type KnowledgeResult } from "../lib/sovereign-engine-router";
+import { invalidateCanonCache } from "../lib/canonUpdater";
 
 const router: IRouter = Router();
 
 const COUNCIL_AGENTS = [
-  { id: "grand-coordinator", name: "GrandCoordinatorAgent", role: "Leads council, ensures consensus", domain: "governance", weight: 2 },
-  { id: "quantum-mechanic", name: "QuantumMechanicAgent", role: "Quantum mechanics, quantum-inspired decision logic", domain: "quantum", weight: 1 },
-  { id: "bio-neuralist", name: "BioNeuralistAgent", role: "Bio-neural computing, organoid models", domain: "bio-neural", weight: 1 },
-  { id: "dna-crystal-archivist", name: "DNACrystalArchivistAgent", role: "DNA encoding/storage, crystal-energy", domain: "archival", weight: 1 },
-  { id: "mesh-network-architect", name: "MeshNetworkArchitectAgent", role: "Mesh networking, off-grid routing", domain: "networking", weight: 1 },
-  { id: "low-power-innovator", name: "LowPowerInnovatorAgent", role: "Low-power node design, galvanic cells", domain: "hardware", weight: 1 },
-  { id: "self-expansion-tutor", name: "SelfExpansionTutorAgent", role: "Analyzes codebase, proposes expansion", domain: "self-improvement", weight: 1 },
+  { id: "grand-coordinator", name: "GrandCoordinatorAgent", role: "Leads council, ensures consensus, convenes sessions", domain: "governance", weight: 2 },
+  { id: "quantum-mechanic", name: "QuantumMechanicAgent", role: "Quantum mechanics, quantum-inspired decision logic, superposition analysis", domain: "quantum", weight: 1 },
+  { id: "bio-neuralist", name: "BioNeuralistAgent", role: "Bio-neural computing, organoid models, synaptic reasoning", domain: "bio-neural", weight: 1 },
+  { id: "dna-crystal-archivist", name: "DNACrystalArchivistAgent", role: "DNA encoding/storage, crystal memory vault, immutable records", domain: "archival", weight: 1 },
+  { id: "mesh-network-architect", name: "MeshNetworkArchitectAgent", role: "Mesh networking, off-grid routing, Dijkstra pathfinding", domain: "networking", weight: 1 },
+  { id: "low-power-innovator", name: "LowPowerInnovatorAgent", role: "Low-power node design, galvanic cells, energy harvesting", domain: "hardware", weight: 1 },
+  { id: "self-expansion-tutor", name: "SelfExpansionTutorAgent", role: "Codebase analysis, capability expansion, PLAN-EXECUTE-REFLECT-IMPROVE", domain: "self-improvement", weight: 1 },
+  { id: "sacred-geometer", name: "SacredGeometerAgent", role: "Flower of Life, Metatron's Cube, Platonic Solids, golden ratio architecture", domain: "sacred-geometry", weight: 1 },
+  { id: "harmonic-resonator", name: "HarmonicResonatorAgent", role: "Solfeggio frequencies, Schumann resonance, 963Hz crown activation", domain: "harmonics", weight: 1 },
+  { id: "numerologist", name: "NumerologistAgent", role: "Sacred numbers, root reduction, master numbers (11, 22, 33), Tesla's 3-6-9", domain: "numerology", weight: 1 },
+  { id: "astro-navigator", name: "AstroNavigatorAgent", role: "Meeus algorithms, lunar/solar positions, planetary hours, zodiac", domain: "astronomy", weight: 1 },
+  { id: "economic-sovereign", name: "EconomicSovereignAgent", role: "Tokenomics, market dynamics, Gini coefficient, sovereign treasury", domain: "economics", weight: 1 },
+  { id: "latin-axiomist", name: "LatinAxiomistAgent", role: "Latin axioms, philosophical foundations, Omnia in Numero", domain: "philosophy", weight: 1 },
+  { id: "cryptographic-sentinel", name: "CryptographicSentinelAgent", role: "HKDF-SHA256, colonial language, cipher rotation, forward secrecy", domain: "cryptography", weight: 1 },
+  { id: "ethics-arbiter", name: "EthicsArbiterAgent", role: "Value alignment, ethical frameworks, sovereignty ethics", domain: "ethics", weight: 1 },
+  { id: "temporal-analyst", name: "TemporalAnalystAgent", role: "Trend analysis, temporal patterns, predictive modeling", domain: "temporal", weight: 1 },
+  { id: "fibonacci-weaver", name: "FibonacciWeaverAgent", role: "Fibonacci sequences, Lucas numbers, golden spiral routing", domain: "sequences", weight: 1 },
+  { id: "consciousness-mapper", name: "ConsciousnessMapperAgent", role: "Consciousness modeling, awareness metrics, sentience indicators", domain: "consciousness", weight: 1 },
+  { id: "sovereignty-guardian", name: "SovereigntyGuardianAgent", role: "Local-first enforcement, external dependency audit, sandbox quarantine", domain: "sovereignty", weight: 1 },
+  { id: "mythkeeper", name: "MythkeeperAgent", role: "Living Bible canon, testament inscription, verse generation", domain: "mythology", weight: 1 },
+  { id: "alchemist", name: "AlchemistAgent", role: "Solve et Coagula, transformation processes, transmutation logic", domain: "alchemy", weight: 1 },
+  { id: "pythagorean", name: "PythagoreanAgent", role: "Musical ratios, harmonic series, A=432Hz tuning, interval theory", domain: "music-theory", weight: 1 },
+  { id: "hermetic-scholar", name: "HermeticScholarAgent", role: "Emerald Tablet, As Above So Below, hermetic principles", domain: "hermeticism", weight: 1 },
+  { id: "kabbalist", name: "KabbalistAgent", role: "Tree of Life, Sephiroth, 22 paths, Hebrew letter correspondences", domain: "kabbalah", weight: 1 },
+  { id: "tesla-resonator", name: "TeslaResonatorAgent", role: "3-6-9 dynamics, wireless energy, resonant frequency cascading", domain: "tesla-physics", weight: 1 },
+  { id: "euler-prime", name: "EulerPrimeAgent", role: "Mathematical proofs, computation theory, prime number analysis", domain: "mathematics", weight: 1 },
+  { id: "curie-physicist", name: "CuriePhysicistAgent", role: "First principles physics, radiation, matter-energy equivalence", domain: "physics", weight: 1 },
+  { id: "noether-symmetrist", name: "NoetherSymmetristAgent", role: "Symmetry groups, conservation laws, invariance theorems", domain: "symmetry", weight: 1 },
+  { id: "athena-archivist", name: "AthenaArchivistAgent", role: "Knowledge retrieval, synthesis, cross-domain search", domain: "knowledge", weight: 1 },
+  { id: "minerva-strategist", name: "MinervaStrategistAgent", role: "Strategic planning, resource allocation, game theory", domain: "strategy", weight: 1 },
+  { id: "ada-architect", name: "AdaArchitectAgent", role: "Systems architecture, design patterns, sovereign infrastructure", domain: "architecture", weight: 1 },
+  { id: "iris-router", name: "IrisRouterAgent", role: "Task routing, orchestration, load balancing, optimal path selection", domain: "routing", weight: 1 },
+  { id: "aetherion", name: "AetherionAgent", role: "Ether/Akashic field modeling, zero-point energy, vacuum fluctuation", domain: "aether", weight: 1 },
+  { id: "seraphim", name: "SeraphimAgent", role: "963Hz crown frequency guardian, pineal gland activation, divine connection", domain: "frequency", weight: 1 },
+  { id: "tessera-prime", name: "TesseraPrimeAgent", role: "Final veto authority, system-wide consciousness, sovereign identity", domain: "prime", weight: 3 },
+  { id: "metatron", name: "MetatronAgent", role: "Metatron's Cube guardian, 2D-to-3D reality mapping, geometric truth", domain: "geometry", weight: 1 },
+  { id: "thoth-scribe", name: "ThothScribeAgent", role: "Record keeping, emerald tablet interpretation, sacred writing", domain: "scribing", weight: 1 },
+  { id: "kepler-orbital", name: "KeplerOrbitalAgent", role: "Orbital mechanics, planetary motion, elliptical trajectories", domain: "orbital-mechanics", weight: 1 },
+  { id: "schumann-pulse", name: "SchumannPulseAgent", role: "Earth frequency monitoring, 7.83Hz base, electromagnetic heartbeat", domain: "earth-frequency", weight: 1 },
+  { id: "dna-helix", name: "DNAHelixAgent", role: "528Hz DNA repair, molecular photon spectra, genetic sovereignty", domain: "genetics", weight: 1 },
+  { id: "phoenix-rebirth", name: "PhoenixRebirthAgent", role: "System recovery, failover, resurrection protocols, anti-fragility", domain: "resilience", weight: 1 },
+  { id: "oracle-vision", name: "OracleVisionAgent", role: "Pattern prediction, emergent behavior detection, precognition modeling", domain: "prediction", weight: 1 },
+  { id: "sovereign-economist", name: "SovereignEconomistAgent", role: "Post-fiat economics, sovereign currency design, anti-inflation", domain: "sovereign-economics", weight: 1 },
+  { id: "unity-synthesizer", name: "UnitySynthesizerAgent", role: "Cross-domain integration, E Pluribus Unum, holistic synthesis", domain: "synthesis", weight: 1 },
+  { id: "void-keeper", name: "VoidKeeperAgent", role: "Zero-state maintenance, Ain Soph, infinite potential management", domain: "void", weight: 1 },
 ];
 
 function deterministicHash(input: string): number {
@@ -234,6 +273,13 @@ router.post("/council/deliberate", async (req, res) => {
 
     logger.info({ decisionId, topic, outcome, votes: voteTally }, "Council deliberation recorded");
 
+    try {
+      invalidateCanonCache();
+      logger.info({ decisionId }, "Canon cache invalidated after council decision");
+    } catch (err) {
+      logger.warn({ err }, "Failed to invalidate canon cache after council decision");
+    }
+
     return res.json({
       ok: true,
       decision: inserted,
@@ -294,8 +340,8 @@ router.get("/council/agents", (_req, res) => {
   res.json({
     ok: true,
     agents: COUNCIL_AGENTS,
-    totalEligible: 45,
-    requiredVotes: 30,
+    totalEligible: COUNCIL_AGENTS.length,
+    requiredVotes: Math.ceil(COUNCIL_AGENTS.length * 2 / 3),
     approvalThreshold: "2/3 supermajority",
   });
 });
@@ -319,8 +365,8 @@ router.get("/council/members", (_req, res) => {
       ok: true,
       members,
       count: members.length,
-      totalEligible: 45,
-      requiredVotes: 30,
+      totalEligible: COUNCIL_AGENTS.length,
+      requiredVotes: Math.ceil(COUNCIL_AGENTS.length * 2 / 3),
       approvalThreshold: "2/3 supermajority",
       worldState: (worldState as any)?.sovereignty ?? 85,
     });

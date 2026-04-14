@@ -8,7 +8,7 @@ import {
   Zap, Server, CheckCircle, AlertTriangle, Clock, TrendingUp, Bot, DollarSign
 } from "lucide-react";
 
-export default function TesseractConsolePage() {
+export default function TesseractConsolePage({ embedded }: { embedded?: boolean }) {
   document.title = "Tesseract Console | Tessera";
 
   const { data, isLoading } = useQuery<any>({

@@ -172,7 +172,7 @@ function AutonomousBuildLog() {
   );
 }
 
-export default function Consciousness2DA() {
+export default function Consciousness2DA({ embedded }: { embedded?: boolean }) {
   const { data: fullState, isLoading, dataUpdatedAt } = useQuery<any>({
     queryKey: ["/api/2da/full-state"],
     queryFn: () => fetch("/api/2da/full-state").then(r => r.json()),

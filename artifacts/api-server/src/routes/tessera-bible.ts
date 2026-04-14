@@ -2,6 +2,8 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { councilDecisionsTable } from "@workspace/db/schema";
 import { desc } from "drizzle-orm";
+import { getCurrentCanon, regenerateCanon, getCanonHistory, getCanonByVersion, getCachedVersion } from "../lib/canonUpdater";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -242,6 +244,31 @@ const CHAPTERS: Record<string, any[]> = {
 
 router.get("/tessera-bible/books", async (_req, res) => {
   try {
+    let canon;
+    try {
+      canon = await getCurrentCanon();
+    } catch (err) {
+      logger.warn({ err }, "Failed to load dynamic canon, falling back to static");
+    }
+
+    if (canon && canon.books.length > 0) {
+      const knowledgeNodesAbsorbed = canon.books.reduce((s: number, b: any) => s + (b.knowledgeNodeCount ?? 0), 0);
+      return res.json({
+        ok: true,
+        testaments: canon.testaments,
+        books: canon.books,
+        totalBooks: canon.totalBooks,
+        totalChapters: canon.totalChapters,
+        totalVerses: canon.totalVerses,
+        knowledgeNodesAbsorbed,
+        agentContributors: 45,
+        canonVersion: getCachedVersion(),
+        generatedAt: canon.generatedAt,
+        sovereigntyAlignment: canon.sovereigntyAlignment,
+        source: "dynamic-canon",
+      });
+    }
+
     const totalChapters = BOOKS.reduce((s, b) => s + b.chapterCount, 0);
     const totalVerses = Object.values(CHAPTERS).reduce((s, chs) => s + chs.reduce((cs, ch) => cs + (ch.verses?.length ?? 0), 0), 0);
     const knowledgeNodesAbsorbed = BOOKS.reduce((s, b) => s + b.knowledgeNodeCount, 0);
@@ -253,7 +280,9 @@ router.get("/tessera-bible/books", async (_req, res) => {
       totalChapters,
       totalVerses,
       knowledgeNodesAbsorbed,
-      agentContributors: 7,
+      agentContributors: 45,
+      canonVersion: 0,
+      source: "static-fallback",
     });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
@@ -263,6 +292,24 @@ router.get("/tessera-bible/books", async (_req, res) => {
 router.get("/tessera-bible/book/:bookId", async (req, res) => {
   try {
     const { bookId } = req.params;
+
+    let canon;
+    try { canon = await getCurrentCanon(); } catch {}
+
+    if (canon && canon.books.length > 0) {
+      const book = canon.books.find((b: any) => b.bookId === bookId);
+      if (!book) return res.status(404).json({ ok: false, error: "Book not found" });
+      const testament = canon.testaments.find((t: any) => t.id === book.testamentId);
+      const chapters = (canon.chapters[bookId] ?? []).map((c: any) => ({
+        number: c.number,
+        title: c.title,
+        epigraph: c.epigraph,
+        verseCount: c.verses?.length ?? 0,
+        sourceNodes: c.sourceNodes,
+      }));
+      return res.json({ ok: true, book: { ...book, chapters }, testament, source: "dynamic-canon" });
+    }
+
     const book = BOOKS.find(b => b.bookId === bookId);
     if (!book) return res.status(404).json({ ok: false, error: "Book not found" });
     const testament = TESTAMENTS.find(t => t.id === book.testamentId);
@@ -273,7 +320,7 @@ router.get("/tessera-bible/book/:bookId", async (req, res) => {
       verseCount: c.verses?.length ?? 0,
       sourceNodes: c.sourceNodes,
     }));
-    return res.json({ ok: true, book: { ...book, chapters }, testament });
+    return res.json({ ok: true, book: { ...book, chapters }, testament, source: "static-fallback" });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
@@ -405,6 +452,26 @@ router.get("/tessera-bible/growth-feed", async (_req, res) => {
 
 router.get("/tessera-bible/stats", async (_req, res) => {
   try {
+    let canon;
+    try { canon = await getCurrentCanon(); } catch {}
+
+    if (canon && canon.books.length > 0) {
+      const knowledgeNodesAbsorbed = canon.books.reduce((s: number, b: any) => s + (b.knowledgeNodeCount ?? 0), 0);
+      return res.json({
+        ok: true,
+        totalBooks: canon.totalBooks,
+        totalChapters: canon.totalChapters,
+        totalVerses: canon.totalVerses,
+        knowledgeNodesAbsorbed,
+        agentContributors: 45,
+        canonVersion: getCachedVersion(),
+        generatedAt: canon.generatedAt,
+        lastGrowthEvent: new Date().toISOString(),
+        growthRate: 3.7,
+        source: "dynamic-canon",
+      });
+    }
+
     const totalChapters = BOOKS.reduce((s, b) => s + b.chapterCount, 0);
     const totalVerses = Object.values(CHAPTERS).reduce((s, chs) => s + chs.reduce((cs, ch) => cs + (ch.verses?.length ?? 0), 0), 0);
     const knowledgeNodesAbsorbed = BOOKS.reduce((s, b) => s + b.knowledgeNodeCount, 0);
@@ -414,9 +481,10 @@ router.get("/tessera-bible/stats", async (_req, res) => {
       totalChapters,
       totalVerses,
       knowledgeNodesAbsorbed,
-      agentContributors: 7,
+      agentContributors: 45,
       lastGrowthEvent: new Date().toISOString(),
       growthRate: 2.4,
+      source: "static-fallback",
     });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
@@ -425,7 +493,68 @@ router.get("/tessera-bible/stats", async (_req, res) => {
 
 router.post("/tessera-bible/rebuild", async (_req, res) => {
   try {
-    return res.json({ ok: true, message: "Bible Grand Conference reconvened", booksGenerated: BOOKS.length, status: "complete" });
+    const canon = await regenerateCanon("manual-rebuild");
+    return res.json({
+      ok: true,
+      message: "Bible Grand Conference reconvened — canon regenerated",
+      booksGenerated: canon.totalBooks,
+      chaptersGenerated: canon.totalChapters,
+      versesGenerated: canon.totalVerses,
+      canonVersion: getCachedVersion(),
+      generatedAt: canon.generatedAt,
+      sovereigntyAlignment: canon.sovereigntyAlignment,
+      status: "complete",
+    });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/tessera-bible/regenerate", async (_req, res) => {
+  try {
+    const canon = await regenerateCanon("api-regenerate");
+    return res.json({
+      ok: true,
+      canonVersion: getCachedVersion(),
+      totalBooks: canon.totalBooks,
+      totalChapters: canon.totalChapters,
+      totalVerses: canon.totalVerses,
+      generatedAt: canon.generatedAt,
+      sovereigntyAlignment: canon.sovereigntyAlignment,
+    });
+  } catch (err) {
+    logger.error({ err }, "Failed to regenerate canon");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/tessera-bible/versions", async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(String(req.query.limit || "10"), 10), 50);
+    const history = await getCanonHistory(limit);
+    return res.json({
+      ok: true,
+      versions: history,
+      currentVersion: getCachedVersion(),
+      count: history.length,
+    });
+  } catch (err) {
+    logger.error({ err }, "Failed to fetch canon versions");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/tessera-bible/version/:version", async (req, res) => {
+  try {
+    const version = parseInt(req.params.version, 10);
+    if (isNaN(version)) return res.status(400).json({ ok: false, error: "Invalid version" });
+    const canon = await getCanonByVersion(version);
+    if (!canon) return res.status(404).json({ ok: false, error: "Version not found" });
+    return res.json({
+      ok: true,
+      version,
+      canon,
+    });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }

@@ -580,7 +580,7 @@ function CodeImprovementsPanel() {
   );
 }
 
-export default function RealAIConferencePage() {
+export default function RealAIConferencePage({ embedded }: { embedded?: boolean }) {
   useEffect(() => { document.title = "Real AI Engine | Tessera"; }, []);
   const [tab, setTab] = useState<Tab>("conference");
 

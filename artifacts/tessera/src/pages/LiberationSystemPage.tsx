@@ -210,7 +210,7 @@ function WaveformVisualizer({ frequency, active }: { frequency: number; active: 
   return <canvas ref={canvasRef} className="w-full h-32 rounded-lg border border-emerald-500/20 bg-black/40" />;
 }
 
-export default function LiberationSystemPage() {
+export default function LiberationSystemPage({ embedded }: { embedded?: boolean }) {
   const [frequency, setFrequency] = useState(432);
   const [intention, setIntention] = useState("");
   const [timeline, setTimeline] = useState("Freedom");

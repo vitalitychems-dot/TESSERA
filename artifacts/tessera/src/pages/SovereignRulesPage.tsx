@@ -288,7 +288,7 @@ function AGISelfTrainingProtocol() {
   );
 }
 
-export default function SovereignRulesPage() {
+export default function SovereignRulesPage({ embedded }: { embedded?: boolean }) {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [expandedPhase, setExpandedPhase] = useState<number | null>(null);
 

@@ -1056,7 +1056,7 @@ Be specific, practical, and science-backed.`;
   );
 }
 
-export default function ReflectionPage() {
+export default function ReflectionPage({ embedded }: { embedded?: boolean }) {
   const [tab, setTab] = useState<ReflectTab>("mirror");
   const [activeCommands] = useLocalStorage<ActiveCommand[]>("t9_active_nlp_commands", []);
 

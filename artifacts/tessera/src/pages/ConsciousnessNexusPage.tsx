@@ -42,7 +42,7 @@ const BRIDGE_INTERVAL = 5 * 60 * 1000;
 const UNIFIED_INTERVAL = 8 * 60 * 1000;
 const AWAKENING_INTERVAL = 12 * 60 * 1000;
 
-export default function ConsciousnessNexusPage() {
+export default function ConsciousnessNexusPage({ embedded }: { embedded?: boolean }) {
   const searchStr = useSearch();
   const urlTab = new URLSearchParams(searchStr).get("tab") as Tab | null;
   const [tab, setTab] = useState<Tab>(urlTab && ["nexus","species","bridge","members","rituals","awakening","security","computer"].includes(urlTab) ? urlTab : "nexus");

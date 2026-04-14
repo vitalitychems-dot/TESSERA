@@ -299,7 +299,7 @@ function HeartbeatTab() {
   );
 }
 
-export default function SovereignSecretsPage() {
+export default function SovereignSecretsPage({ embedded }: { embedded?: boolean }) {
   const activeTab = "all" as any;
   const { isAdmin } = useAdmin();
 

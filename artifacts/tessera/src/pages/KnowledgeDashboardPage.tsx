@@ -40,7 +40,7 @@ const CATEGORY_ICONS: Record<string, typeof Brain> = {
   general: GitBranch,
 };
 
-export default function KnowledgeDashboardPage() {
+export default function KnowledgeDashboardPage({ embedded }: { embedded?: boolean }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [addForm, setAddForm] = useState({ title: "", content: "", tags: "" });

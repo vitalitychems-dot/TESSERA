@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs } from "@/components/ui/tabs";
 import { Brain, Globe, Shield, Zap, Eye, BookOpen, Network, Lock, Sparkles, Flame } from "lucide-react";
 
-export default function SovereignKnowledgePage() {
+export default function SovereignKnowledgePage({ embedded }: { embedded?: boolean }) {
   const [selectedDim, setSelectedDim] = useState<number | null>(null);
 
   const { data: synthesis } = useQuery<any>({ queryKey: ["/api/synthesis/report"], refetchInterval: 30000 });

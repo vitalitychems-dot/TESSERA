@@ -1247,7 +1247,7 @@ function ASABadge({ status }: { status: any }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function TesseractForumPage({ embedded }: { embedded?: boolean } = {}) {
+export default function TesseractForumPage({ embedded }: { embedded?: boolean }) {
   useEffect(() => { document.title = "Tesseract Forum | Tessera"; }, []);
   const { toast } = useToast();
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);

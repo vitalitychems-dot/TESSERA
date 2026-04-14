@@ -205,7 +205,7 @@ function today(): string {
   return new Date().toDateString();
 }
 
-export default function NLPSelfImprovementPage() {
+export default function NLPSelfImprovementPage({ embedded }: { embedded?: boolean }) {
   const [activeTab, setActiveTab] = useState<NLPTab>("daily");
   const [habits, setHabits] = useState<HabitEntry[]>(() => readLS("t9_nlp_habits", DEFAULT_HABITS));
   const [reprogramQueue, setReprogramQueue] = useState<ReprogramEntry[]>(() => readLS("t9_nlp_reprogram", DEFAULT_REPROGRAM_QUEUE));
