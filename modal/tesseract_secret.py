@@ -6,13 +6,13 @@ app = modal.App("tessera-tesseract")
 
 @app.function(secrets=[modal.Secret.from_name("Tesseract")])
 def read_tesseract_secret():
-    secret_keys = {k: v[:4] + "..." for k, v in os.environ.items() if k.startswith(("TESSERACT", "MODAL", "SECRET"))}
+    secret_keys = [k for k in os.environ.keys() if k.startswith(("TESSERACT", "SECRET"))]
     if not secret_keys:
-        return {"status": "no_keys_found", "message": "No Tesseract secret keys found in environment"}
+        return {"status": "no_keys_found", "keys_found": [], "message": "No Tesseract secret keys found in environment"}
     return {
         "status": "active",
-        "keys_found": list(secret_keys.keys()),
-        "preview": secret_keys,
+        "keys_found": secret_keys,
+        "count": len(secret_keys),
         "message": "Tesseract secret accessible from Modal remote worker"
     }
 
