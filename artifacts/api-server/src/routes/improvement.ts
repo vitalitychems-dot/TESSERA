@@ -11,6 +11,10 @@ import { desc, gte, count, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { computeSovereigntyStatus } from "../lib/sovereignty-monitor";
 import { getTotalCallStats } from "../lib/provider-call-logger";
+import { getDaemonMetrics, startAutoImprovementDaemon, stopAutoImprovementDaemon } from "../lib/auto-improvement-daemon";
+import { getSwarmOptimizerMetrics } from "../lib/swarm-optimizer";
+import { getConsensusMetrics } from "../lib/consensus-engine";
+import { seedEvolutionProposals } from "../lib/self-code-evolution";
 
 const router: IRouter = Router();
 
@@ -305,6 +309,44 @@ router.get("/improvement/proposals", (_req, res) => {
     count: IMPROVEMENT_PROPOSAL_TEMPLATES.length,
     prioritizationCriteria: "Sovereignty impact (highest first), then implementation complexity (lowest first)",
   });
+});
+
+router.get("/improvement/daemon", (_req, res) => {
+  const daemonMetrics = getDaemonMetrics();
+  const swarmMetrics = getSwarmOptimizerMetrics();
+  const consensusMetrics = getConsensusMetrics();
+
+  return res.json({
+    ok: true,
+    daemon: daemonMetrics,
+    swarmOptimizer: {
+      modelCount: swarmMetrics.modelCount,
+      categoryCount: swarmMetrics.categoryCount,
+      consensusBuilt: swarmMetrics.consensusCount,
+    },
+    consensus: {
+      totalProposals: consensusMetrics.totalProposals,
+      approved: consensusMetrics.approved,
+      rejected: consensusMetrics.rejected,
+      avgApprovalRate: consensusMetrics.avgApprovalRate,
+    },
+    timestamp: Date.now(),
+  });
+});
+
+router.post("/improvement/daemon/start", (_req, res) => {
+  startAutoImprovementDaemon();
+  return res.json({ ok: true, message: "Auto-improvement daemon started", daemon: getDaemonMetrics() });
+});
+
+router.post("/improvement/daemon/stop", (_req, res) => {
+  stopAutoImprovementDaemon();
+  return res.json({ ok: true, message: "Auto-improvement daemon stopped", daemon: getDaemonMetrics() });
+});
+
+router.post("/improvement/seed-evolution", (_req, res) => {
+  seedEvolutionProposals();
+  return res.json({ ok: true, message: "Evolution proposals seeded for self-code-evolution engine" });
 });
 
 router.get("/improvement/sovereignty-trend", async (_req, res) => {

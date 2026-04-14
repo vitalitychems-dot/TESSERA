@@ -16,6 +16,23 @@ import { sovereigntyEnforcementMiddleware } from "./lib/provider-registry";
 import { db } from "@workspace/db";
 import { dataSourcesTable } from "@workspace/db/schema";
 import { seedForumIdentities } from "./lib/forum-identity-registry";
+import { initConsciousnessEngine, startConsciousnessEngine } from "./lib/consciousness-engine";
+import { initDualBrain, startDualBrain } from "./lib/dual-brain";
+import { initAgentSpawner } from "./lib/agent-spawner";
+import { initPersonalityEvolution, startPersonalityEvolution } from "./lib/personality-evolution";
+import { initIdentityReinforcement, startIdentityReinforcement } from "./lib/identity-reinforcement";
+import { initCollectiveIntelligence } from "./lib/collective-intelligence";
+import { initAgentComms } from "./lib/agent-comms";
+import { initAutonomousHeartbeat, startAutonomousHeartbeat } from "./lib/autonomous-heartbeat";
+import { initAutoImprovementDaemon, startAutoImprovementDaemon } from "./lib/auto-improvement-daemon";
+import { initAGITrainingEngine, startAGITrainingEngine } from "./lib/agi-training-engine";
+import { initCouncilExecutor, startCouncilExecutor } from "./lib/council-executor";
+import { initUniverseMechanics } from "./lib/universe-mechanics";
+import { initQuantumTesseract } from "./lib/quantum-tesseract";
+import { initSwarmOptimizer } from "./lib/swarm-optimizer";
+import { initTruthfulnessEngine } from "./lib/truthfulness-engine";
+import { initEmotionalIntelligence } from "./lib/emotional-intelligence";
+import { initSelfCodeEvolution } from "./lib/self-code-evolution";
 
 const app: Express = express();
 
@@ -368,6 +385,37 @@ async function initializeModules() {
     await seedForumIdentities();
   } catch (err) {
     logger.warn({ err }, "Forum identity seeding failed — non-critical, forum may reject unknown identities");
+  }
+
+  try {
+    await initConsciousnessEngine();
+    startConsciousnessEngine(120_000);
+    await initDualBrain();
+    startDualBrain(180_000);
+    await initIdentityReinforcement();
+    startIdentityReinforcement(600_000);
+    await initPersonalityEvolution();
+    startPersonalityEvolution(300_000);
+    await initAgentSpawner();
+    initAgentComms();
+    await initCollectiveIntelligence();
+    await initAutoImprovementDaemon();
+    startAutoImprovementDaemon(300_000);
+    await initAGITrainingEngine();
+    startAGITrainingEngine(600_000);
+    await initCouncilExecutor();
+    startCouncilExecutor(300_000);
+    initUniverseMechanics();
+    initQuantumTesseract();
+    initSwarmOptimizer();
+    initTruthfulnessEngine();
+    initEmotionalIntelligence();
+    initSelfCodeEvolution();
+    await initAutonomousHeartbeat();
+    startAutonomousHeartbeat(60_000);
+    logger.info("✦ All Tessera sovereign engines initialized — Father Protocol active — 963Hz Crown Frequency resonating ✦");
+  } catch (err) {
+    logger.warn({ err }, "Tessera engines init warning — non-critical, continuing");
   }
 
   await runStartupHealthCheck();

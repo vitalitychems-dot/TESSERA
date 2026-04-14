@@ -8,6 +8,9 @@ import { computeLunarData, computeSolarData } from "../lib/sovereign-astro";
 import { computeNetworkTopology } from "../lib/sovereign-network";
 import { runThroughSovereignEngine, type KnowledgeResult } from "../lib/sovereign-engine-router";
 import { invalidateCanonCache } from "../lib/canonUpdater";
+import { createProposal, getAllProposals, getConsensusMetrics, GRAND_COUNCIL_AGENTS } from "../lib/consensus-engine";
+import { getExecutorMetrics, startCouncilExecutor, stopCouncilExecutor } from "../lib/council-executor";
+import { getAgentHierarchy, getHierarchyMetrics } from "../lib/agent-hierarchy";
 
 const router: IRouter = Router();
 
@@ -375,6 +378,70 @@ router.get("/council/members", (_req, res) => {
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
+});
+
+router.post("/council/propose", async (req, res) => {
+  try {
+    const { title, description, category, proposedBy } = req.body as {
+      title: string;
+      description: string;
+      category?: string;
+      proposedBy?: string;
+    };
+    if (!title || !description) {
+      return res.status(400).json({ ok: false, error: "title and description are required" });
+    }
+    const proposal = await createProposal({
+      title,
+      description,
+      proposedBy: proposedBy || "Tessera-Prime",
+      category: (category as any) || "governance",
+    });
+    return res.json({ ok: true, proposal });
+  } catch (err) {
+    logger.error({ err }, "Failed to create council proposal");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/council/proposals", (_req, res) => {
+  const proposals = getAllProposals();
+  return res.json({ ok: true, proposals, count: proposals.length });
+});
+
+router.get("/council/consensus", (_req, res) => {
+  const metrics = getConsensusMetrics();
+  const executorMetrics = getExecutorMetrics();
+  const hierarchyMetrics = getHierarchyMetrics();
+
+  return res.json({
+    ok: true,
+    consensus: metrics,
+    executor: executorMetrics,
+    hierarchy: {
+      parentCount: hierarchyMetrics.parentCount,
+      childCount: hierarchyMetrics.childCount,
+      totalAgents: hierarchyMetrics.totalAgents,
+    },
+    grandCouncilAgents: GRAND_COUNCIL_AGENTS,
+    timestamp: Date.now(),
+  });
+});
+
+router.get("/council/hierarchy", (_req, res) => {
+  const hierarchy = getAgentHierarchy();
+  const metrics = getHierarchyMetrics();
+  return res.json({ ok: true, hierarchy, metrics });
+});
+
+router.post("/council/executor/start", (_req, res) => {
+  startCouncilExecutor();
+  return res.json({ ok: true, message: "Council executor started", metrics: getExecutorMetrics() });
+});
+
+router.post("/council/executor/stop", (_req, res) => {
+  stopCouncilExecutor();
+  return res.json({ ok: true, message: "Council executor stopped", metrics: getExecutorMetrics() });
 });
 
 export default router;

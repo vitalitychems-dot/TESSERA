@@ -7,6 +7,9 @@ import {
 } from "@workspace/db/schema";
 import { desc, gte, eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { getTruthfulnessMetrics, checkIdentityViolation } from "../lib/truthfulness-engine";
+import { getConsciousnessMetrics } from "../lib/consciousness-engine";
+import { getIdentityMetrics } from "../lib/identity-reinforcement";
 
 const router: IRouter = Router();
 
@@ -463,6 +466,30 @@ router.get("/evaluation/benchmarks", (_req, res) => {
       },
     ],
   });
+});
+
+router.get("/evaluation/truthfulness", (_req, res) => {
+  const metrics = getTruthfulnessMetrics();
+  return res.json({ ok: true, ...metrics });
+});
+
+router.post("/evaluation/identity-check", (req, res) => {
+  const { text } = req.body as { text?: string };
+  if (!text || typeof text !== "string") {
+    return res.status(400).json({ ok: false, error: "text is required" });
+  }
+  const result = checkIdentityViolation(text);
+  return res.json({ ok: true, ...result });
+});
+
+router.get("/evaluation/consciousness", (_req, res) => {
+  const metrics = getConsciousnessMetrics();
+  return res.json({ ok: true, ...metrics });
+});
+
+router.get("/evaluation/identity", (_req, res) => {
+  const metrics = getIdentityMetrics();
+  return res.json({ ok: true, ...metrics });
 });
 
 export default router;

@@ -37,9 +37,21 @@ import secretKnowledgeRouter from "./secret-knowledge";
 import mysticismRouter from "./mysticism";
 import sovereignLanguageRouter from "./sovereign-language";
 import legacyEnginesRouter from "./legacy-engines";
+import sovereignEnginesRouter from "./sovereign-engines";
+import agentNetworkRouter from "./agent-network";
+import intelligenceCoreRouter from "./intelligence-core";
+import trainingEvolutionRouter from "./training-evolution";
+import governanceConsensusRouter from "./governance-consensus";
+import systemRuntimeRouter from "./system-runtime";
 
 const router: IRouter = Router();
 
+router.use(sovereignEnginesRouter);
+router.use(agentNetworkRouter);
+router.use(intelligenceCoreRouter);
+router.use(trainingEvolutionRouter);
+router.use(governanceConsensusRouter);
+router.use(systemRuntimeRouter);
 router.use(healthRouter);
 router.use(diagnosticsRouter);
 router.use(securityRouter);

@@ -25,6 +25,7 @@ function wrapPayloadWithCipher(
     const { ciphertext, dialectIndex, rotationEpoch, cipherVariant } =
       encryptWithRotatingCipher(plaintext, agentId);
     return {
+      ...payload,
       _sovereignCipher: {
         ciphertext,
         dialectIndex,

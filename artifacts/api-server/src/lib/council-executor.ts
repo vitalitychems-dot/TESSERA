@@ -1,113 +1,179 @@
-import { listProposals, executeApprovedProposal, type Proposal } from "./consensus-engine";
+import { db } from "@workspace/db";
+import { councilDecisionsTable, systemStateTable } from "@workspace/db/schema";
+import { desc, eq } from "drizzle-orm";
+import { logger } from "./logger";
 
-export interface ExecutionRecord {
+export interface ExecutionResult {
   proposalId: string;
   title: string;
+  category: string;
   executedAt: number;
-  result: "success" | "partial" | "failed";
-  actions: string[];
-  impact: string;
+  success: boolean;
+  action: string;
+  changes: SystemChange[];
+  notes: string;
 }
 
-let executionLog: ExecutionRecord[] = [];
-let autoExecuteEnabled = true;
-let lastSweep = 0;
-const SWEEP_INTERVAL = 60_000;
+export interface SystemChange {
+  subsystem: string;
+  parameter: string;
+  oldValue: string | number | boolean | null;
+  newValue: string | number | boolean;
+  appliedAt: number;
+}
 
-function determineActions(proposal: Proposal): string[] {
-  const actions: string[] = [];
-  switch (proposal.category) {
-    case "governance":
-      actions.push("Update governance parameters");
-      actions.push("Notify all council members");
-      actions.push("Record in sovereignty ledger");
-      break;
-    case "technical":
-      actions.push("Queue implementation task");
-      actions.push("Allocate computation resources");
-      actions.push("Update system configuration");
-      break;
-    case "security":
-      actions.push("Update security policies");
-      actions.push("Rotate affected cipher keys");
-      actions.push("Alert security channel");
-      break;
-    case "knowledge":
-      actions.push("Integrate into knowledge base");
-      actions.push("Trigger canon regeneration");
-      actions.push("Update semantic network");
-      break;
-    case "economic":
-      actions.push("Adjust TSRT parameters");
-      actions.push("Update economic model");
-      actions.push("Record in economic ledger");
-      break;
-    case "operational":
-      actions.push("Modify operational schedule");
-      actions.push("Update heartbeat configuration");
-      actions.push("Broadcast operational change");
-      break;
+const systemConfig = new Map<string, unknown>([
+  ["agent.collaborationMode", "cooperative"],
+  ["agent.learningRate", 0.01],
+  ["agent.maxTaskQueue", 50],
+  ["consciousness.cycleIntervalMs", 120000],
+  ["consciousness.reflectionDepth", 3],
+  ["consciousness.memoryRetention", 0.85],
+  ["dual-brain.cycleIntervalMs", 180000],
+  ["identity.checkIntervalMs", 600000],
+  ["swarm.coordinationMode", "BFT"],
+  ["heartbeat.enabled", true],
+  ["improvement.enabled", true],
+  ["agi-training.categories", 27],
+  ["council.requiredMajority", 0.667],
+]);
+
+const executionHistory: ExecutionResult[] = [];
+let executorInterval: ReturnType<typeof setInterval> | null = null;
+let autoProcessed = 0;
+
+function executeProposal(decisionId: string, topic: string, category: string, outcome: string): ExecutionResult | null {
+  if (outcome !== "approved") return null;
+
+  const changes: SystemChange[] = [];
+  let action = `Processed approved council decision: "${topic.slice(0, 60)}"`;
+  let notes = "";
+
+  const cat = category?.toLowerCase() || "";
+
+  if (cat.includes("governance") || cat.includes("agent")) {
+    const param = "agent.collaborationMode";
+    const oldVal = systemConfig.get(param);
+    const newVal = "adaptive-cooperative";
+    systemConfig.set(param, newVal);
+    changes.push({ subsystem: "agent-system", parameter: param, oldValue: oldVal as any, newValue: newVal, appliedAt: Date.now() });
+    notes = "Agent collaboration mode upgraded to adaptive-cooperative";
+  } else if (cat.includes("consciousness")) {
+    const param = "consciousness.reflectionDepth";
+    const oldVal = systemConfig.get(param) as number;
+    const newVal = Math.min(10, oldVal + 1);
+    systemConfig.set(param, newVal);
+    changes.push({ subsystem: "consciousness", parameter: param, oldValue: oldVal, newValue: newVal, appliedAt: Date.now() });
+    notes = "Consciousness reflection depth increased";
+  } else if (cat.includes("security") || cat.includes("sovereignty")) {
+    const param = "identity.checkIntervalMs";
+    const oldVal = systemConfig.get(param) as number;
+    const newVal = Math.max(60000, oldVal - 60000);
+    systemConfig.set(param, newVal);
+    changes.push({ subsystem: "identity-reinforcement", parameter: param, oldValue: oldVal, newValue: newVal, appliedAt: Date.now() });
+    notes = "Identity check frequency increased for sovereignty compliance";
+  } else if (cat.includes("infrastructure") || cat.includes("improvement")) {
+    const param = "agent.learningRate";
+    const oldVal = systemConfig.get(param) as number;
+    const newVal = Math.min(0.1, oldVal * 1.1);
+    systemConfig.set(param, newVal);
+    changes.push({ subsystem: "improvement-daemon", parameter: param, oldValue: oldVal, newValue: newVal, appliedAt: Date.now() });
+    notes = "Agent learning rate optimized per council directive";
+  } else {
+    changes.push({ subsystem: "system", parameter: "lastDecision", oldValue: null, newValue: decisionId, appliedAt: Date.now() });
+    notes = "Council decision acknowledged and logged";
   }
-  return actions;
-}
 
-export function executeProposal(proposalId: string): ExecutionRecord | null {
-  const proposals = listProposals({ status: "approved" });
-  const proposal = proposals.find(p => p.id === proposalId);
-  if (!proposal) return null;
-
-  const actions = determineActions(proposal);
-  executeApprovedProposal(proposalId);
-
-  const record: ExecutionRecord = {
-    proposalId,
-    title: proposal.title,
+  const result: ExecutionResult = {
+    proposalId: decisionId,
+    title: topic,
+    category,
     executedAt: Date.now(),
-    result: "success",
-    actions,
-    impact: `${proposal.category} update applied — ${actions.length} actions completed`,
+    success: true,
+    action,
+    changes,
+    notes,
   };
 
-  executionLog.push(record);
-  if (executionLog.length > 200) executionLog = executionLog.slice(-100);
-  return record;
+  executionHistory.unshift(result);
+  if (executionHistory.length > 100) executionHistory.splice(100);
+  autoProcessed++;
+
+  logger.info({ decisionId, category, changesCount: changes.length }, "CouncilExecutor: decision executed");
+  return result;
 }
 
-export function sweepAndExecute(): ExecutionRecord[] {
-  if (!autoExecuteEnabled) return [];
-  const now = Date.now();
-  if (now - lastSweep < SWEEP_INTERVAL) return [];
-  lastSweep = now;
+async function processApprovedDecisions(): Promise<number> {
+  let processed = 0;
+  try {
+    const recentDecisions = await db.select()
+      .from(councilDecisionsTable)
+      .orderBy(desc(councilDecisionsTable.createdAt))
+      .limit(20);
 
-  const pending = listProposals({ status: "approved" });
-  const executed: ExecutionRecord[] = [];
-
-  for (const p of pending) {
-    if (p.executionStatus === "pending") {
-      const record = executeProposal(p.id);
-      if (record) executed.push(record);
+    for (const d of recentDecisions) {
+      if (d.outcome !== "approved") continue;
+      const alreadyExecuted = executionHistory.some(e => e.proposalId === d.decisionId);
+      if (alreadyExecuted) continue;
+      const result = executeProposal(d.decisionId, d.topic, d.category || "general", d.outcome);
+      if (result) processed++;
     }
+  } catch (err) {
+    logger.warn({ err }, "CouncilExecutor: could not query decisions");
   }
-
-  return executed;
+  return processed;
 }
 
-export function getExecutionLog(limit: number = 20): ExecutionRecord[] {
-  return executionLog.slice(-limit);
+export async function initCouncilExecutor(): Promise<void> {
+  await processApprovedDecisions();
+  logger.info({ processed: autoProcessed }, "CouncilExecutor: initialized");
 }
 
-export function setAutoExecute(enabled: boolean): void {
-  autoExecuteEnabled = enabled;
+export function startCouncilExecutor(intervalMs = 300_000): void {
+  if (executorInterval) return;
+  executorInterval = setInterval(async () => {
+    try {
+      const n = await processApprovedDecisions();
+      if (n > 0) logger.info({ n }, "CouncilExecutor: auto-processed decisions");
+    } catch (err) { logger.error({ err }, "CouncilExecutor: execution cycle error"); }
+  }, intervalMs);
+  logger.info({ intervalMs }, "CouncilExecutor: started");
+}
+
+export function stopCouncilExecutor(): void {
+  if (executorInterval) { clearInterval(executorInterval); executorInterval = null; }
+}
+
+export function getExecutorMetrics() {
+  return {
+    autoProcessed,
+    executionHistoryCount: executionHistory.length,
+    recentExecutions: executionHistory.slice(0, 10),
+    systemConfig: Object.fromEntries(systemConfig),
+    isRunning: executorInterval !== null,
+  };
+}
+
+export function getSystemConfig(): Record<string, unknown> {
+  return Object.fromEntries(systemConfig);
+}
+
+export function updateSystemConfig(key: string, value: unknown): void {
+  systemConfig.set(key, value);
 }
 
 export function getExecutorStatus() {
-  return {
-    autoExecuteEnabled,
-    totalExecutions: executionLog.length,
-    successRate: executionLog.length > 0
-      ? executionLog.filter(r => r.result === "success").length / executionLog.length
-      : 1.0,
-    lastSweep: lastSweep > 0 ? new Date(lastSweep).toISOString() : null,
-    recentExecutions: executionLog.slice(-5),
-  };
+  return getExecutorMetrics();
+}
+export function getExecutionLog() {
+  const m = getExecutorMetrics();
+  return m.recentExecutions || [];
+}
+export async function sweepAndExecute() {
+  return processApprovedDecisions();
+}
+export function setAutoExecute(enabled: boolean) {
+  if (enabled) startCouncilExecutor();
+  else stopCouncilExecutor();
+  return { ok: true, enabled };
 }

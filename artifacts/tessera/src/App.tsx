@@ -128,6 +128,11 @@ function AppRouter() {
         <Route path="/conference-decisions">{() => <GrandCouncilPage />}</Route>
         <Route path="/consensus">{() => <GrandCouncilPage />}</Route>
         <Route path="/settings">{() => <SettingsPage />}</Route>
+        <Route path="/consciousness">{() => <ConsciousnessNexusPage />}</Route>
+        <Route path="/sovereignty">{() => <SovereigntyDashboardPage />}</Route>
+        <Route path="/system">{() => <SystemPage />}</Route>
+        <Route path="/tokens">{() => <TokenEconomyPage />}</Route>
+        <Route path="/lattice">{() => <LatticeBrowserPage />}</Route>
         <Route component={NotFound} />
       </Switch>
     </Suspense>
