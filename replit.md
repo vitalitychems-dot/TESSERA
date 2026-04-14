@@ -125,6 +125,18 @@ New modules wiring the layered sovereign architecture: safeFetch → providers �
 - `/api/inventions/*` — Sovereign inventions CRUD
 - `/api/swarm/*`, `/api/memory/*`, `/api/reasoning/*` — Agent systems
 
+## Modal Remote Compute
+
+Python-based serverless compute via Modal (`modal/` directory):
+- **Python 3.12** installed with `modal` package (v1.4.1)
+- **Authentication**: `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` environment secrets → run `modal token set --token-id "$MODAL_TOKEN_ID" --token-secret "$MODAL_TOKEN_SECRET"` to authenticate
+- **Files**:
+  - `modal/get_started.py` — Basic square/cube verification functions
+  - `modal/tesseract_secret.py` — Reads "Tesseract" secret from Modal secret store
+  - `modal/sovereign_compute.py` — Sacred mathematics engine (Fibonacci, numerology, sacred alignment) for remote execution
+- **Usage**: `modal run modal/get_started.py`, `modal run modal/sovereign_compute.py`
+- **Pattern**: Each file defines a `modal.App()` with `@app.function()` decorated functions and a `@app.local_entrypoint()` main
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages
