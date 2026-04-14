@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Wrench, Cpu, Zap, Shield, Brain, ChevronDown, ChevronUp, ExternalLink, Lightbulb } from "lucide-react";
+import { Wrench, Cpu, Zap, Shield, Brain, ChevronDown, ChevronUp, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const BUILD_GUIDES = [
@@ -59,7 +59,6 @@ const BUILD_GUIDES = [
 
 export default function BuildPage() {
   const [expandedGuide, setExpandedGuide] = useState<string | null>("sovereign-agi");
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   return (
     <div className="p-4 space-y-4 max-w-4xl mx-auto pb-20">
@@ -92,25 +91,16 @@ export default function BuildPage() {
                 {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
               </button>
               {isOpen && (
-                <div className="px-4 pb-4 space-y-2 border-t border-white/5">
-                  {guide.sections.map((section, idx) => {
-                    const sKey = `${guide.id}-${idx}`;
-                    const sOpen = expandedSection === sKey;
-                    return (
-                      <div key={idx} className="rounded-lg border border-white/5 bg-background/50 overflow-hidden">
-                        <button onClick={() => setExpandedSection(sOpen ? null : sKey)} className="w-full flex items-center gap-2 p-3 hover:bg-white/5 transition-colors text-left">
-                          <span className={cn("text-xs font-bold font-mono w-6", guide.color)}>{idx + 1}</span>
-                          <span className="text-sm font-mono flex-1">{section.title}</span>
-                          {sOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                        </button>
-                        {sOpen && (
-                          <div className="px-3 pb-3 pt-1">
-                            <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{section.content}</p>
-                          </div>
-                        )}
+                <div className="px-4 pb-4 space-y-4 border-t border-white/5 pt-4">
+                  {guide.sections.map((section, idx) => (
+                    <div key={idx}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className={cn("text-xs font-bold font-mono w-5 shrink-0", guide.color)}>{idx + 1}</span>
+                        <span className="text-sm font-mono font-semibold text-foreground">{section.title}</span>
                       </div>
-                    );
-                  })}
+                      <p className="text-sm text-foreground/75 leading-relaxed pl-7">{section.content}</p>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

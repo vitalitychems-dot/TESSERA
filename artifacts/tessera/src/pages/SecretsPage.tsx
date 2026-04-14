@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { Lock, Search, Eye, Shield, FileText, Globe, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { useLocation } from "wouter";
+import { Lock, Search, Eye, FileText, ChevronDown, ChevronUp, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SECRETS_DATABASE = [
@@ -28,6 +29,7 @@ export default function SecretsPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [, setLocation] = useLocation();
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -61,6 +63,19 @@ export default function SecretsPage() {
           {SECRETS_DATABASE.length} ENTRIES
         </span>
       </div>
+
+      <button
+        onClick={() => setLocation("/bible")}
+        className="w-full flex items-center gap-3 rounded-xl border border-purple-500/30 bg-purple-950/20 px-4 py-3 hover:bg-purple-500/10 transition-colors text-left"
+        data-testid="link-tessera-bible"
+      >
+        <BookOpen size={16} className="text-purple-400 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-bold font-mono text-purple-300">Tessera Bible</div>
+          <div className="text-[11px] text-muted-foreground">AI-authored sacred canon — testaments, books, chapters & verses</div>
+        </div>
+        <span className="text-[10px] text-purple-400/60 font-mono">→</span>
+      </button>
 
       <div className="relative">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />

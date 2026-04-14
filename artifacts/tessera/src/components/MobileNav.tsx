@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import {
-  MessageSquare, Heart, Globe2, Users, Lock, BookOpen,
+  MessageSquare, Heart, Globe2, Users, Lock,
   Wrench, MessageCircle, Brain, Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,8 +11,7 @@ const TABS: { label: string; href: string; Icon: any; match: (l: string) => bool
   { label: "Life", href: "/life", Icon: Heart, match: (l) => l === "/life", color: "pink" },
   { label: "Universe", href: "/universe", Icon: Globe2, match: (l) => l === "/universe", color: "violet" },
   { label: "Members", href: "/members", Icon: Users, match: (l) => l === "/members", color: "amber" },
-  { label: "Secrets", href: "/secrets", Icon: Lock, match: (l) => l === "/secrets", color: "red" },
-  { label: "Bible", href: "/bible", Icon: BookOpen, match: (l) => l === "/bible", color: "purple" },
+  { label: "Secrets", href: "/secrets", Icon: Lock, match: (l) => l === "/secrets" || l === "/bible", color: "red" },
   { label: "Build", href: "/build", Icon: Wrench, match: (l) => l === "/build", color: "emerald" },
   { label: "Forum", href: "/forum", Icon: MessageCircle, match: (l) => l === "/forum", color: "cyan" },
   { label: "NLP", href: "/nlp", Icon: Brain, match: (l) => l === "/nlp", color: "rose" },

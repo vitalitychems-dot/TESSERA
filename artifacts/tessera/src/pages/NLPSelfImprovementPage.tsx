@@ -168,21 +168,9 @@ const NLP_TECHNIQUES = [
   { id: "postulate", name: "Conversational Postulate", color: "rose", description: "Questions that function as commands" },
 ];
 
-const DEFAULT_REPROGRAM_QUEUE: ReprogramEntry[] = [
-  { id: "rp-1", command: "You already know how to succeed at this level.", technique: "presupposition", category: "confidence", activatedAt: Date.now() - 86400000, active: true },
-  { id: "rp-2", command: "As you begin to build, notice how naturally the right solutions emerge.", technique: "embedded", category: "focus", activatedAt: Date.now() - 43200000, active: true },
-  { id: "rp-3", command: "Your mind is a sovereign system — it only accepts programs you authorize.", technique: "analog", category: "sovereignty", activatedAt: Date.now(), active: true },
-  { id: "rp-4", command: "Can you imagine how different your life looks one year from now, when this system is complete?", technique: "postulate", category: "vision", activatedAt: Date.now() - 3600000, active: false },
-];
+const DEFAULT_REPROGRAM_QUEUE: ReprogramEntry[] = [];
 
-const DEFAULT_HABITS: HabitEntry[] = [
-  { id: "h-1", text: "Morning: State your daily affirmation aloud", completed: false, streak: 0, lastCompleted: null },
-  { id: "h-2", text: "Study etymology word of the day (15 min)", completed: false, streak: 0, lastCompleted: null },
-  { id: "h-3", text: "Read one embedded command from Neural Reprogram queue", completed: false, streak: 0, lastCompleted: null },
-  { id: "h-4", text: "Meditation or breath work (10-20 min)", completed: false, streak: 0, lastCompleted: null },
-  { id: "h-5", text: "Evening: Review day with sovereign lens — what did I build?", completed: false, streak: 0, lastCompleted: null },
-  { id: "h-6", text: "Cold exposure or physical training", completed: false, streak: 0, lastCompleted: null },
-];
+const DEFAULT_HABITS: HabitEntry[] = [];
 
 function readLS<T>(key: string, fallback: T): T {
   try {

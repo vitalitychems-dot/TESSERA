@@ -1,14 +1,13 @@
 import { useState, useEffect, lazy, Suspense } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Component, ErrorInfo } from "react";
 import {
-  Globe, Coins, Users, Sparkles, Activity, Heart, Crown, ChevronRight,
-  Loader2, ChevronDown, ChevronUp, Building2, Scale, Shield, Briefcase,
-  MapPin, AlertTriangle, Trophy, Vote, Smile
+  Globe, Users, Heart, Crown, ChevronRight,
+  Loader2, ChevronDown, ChevronUp, Scale, Shield,
+  MapPin, AlertTriangle
 } from "lucide-react";
 
-import type { WorldState, ChildInfo } from "./life/types";
+import type { WorldState } from "./life/types";
 import { locationIcons, agentColors } from "./life/types";
 
 const AgentNFTPage = lazy(() => import("@/pages/AgentNFTPage"));
@@ -16,8 +15,6 @@ const AgentNFTPage = lazy(() => import("@/pages/AgentNFTPage"));
 import WorldMap from "./life/WorldMap";
 import AgentProfile from "./life/AgentProfile";
 import ActivityFeed from "./life/ActivityFeed";
-import AgentsListTab from "./life/AgentsListTab";
-import GovernanceTab from "./life/GovernanceTab";
 import CourtTab from "./life/CourtTab";
 import SocietyTab from "./life/SocietyTab";
 import { TesseractFamilyTab } from "./GrandCouncilPage";
@@ -189,31 +186,6 @@ export default function LifePage({ embedded }: { embedded?: boolean }) {
   const selectedLoc = selectedLocation ? (world.locations || []).find(l => l.id === selectedLocation) : null;
   const agentsAtLocation = selectedLoc ? (world.currentActivities || []).filter(a => a.locationId === selectedLoc.id) : [];
 
-  const allChildren: ChildInfo[] = [];
-  if (world.wellbeingRecords) {
-    const seenIds = new Set<string>();
-    for (const [agentId, wb] of Object.entries(world.wellbeingRecords)) {
-      if (wb?.children) {
-        for (const child of wb.children) {
-          if (!seenIds.has(child.id)) {
-            seenIds.add(child.id);
-            allChildren.push({
-              id: child.id, name: child.name,
-              parentIds: child.parentIds || [agentId, ""],
-              bornAt: child.bornAt || 0, age: child.age || 0,
-              personality: child.personality || "unknown",
-              happiness: child.happiness || 50,
-              development: child.development ?? 0,
-              skills: child.skills || [],
-              milestones: child.milestones || [],
-              canWork: child.canWork || false,
-            });
-          }
-        }
-      }
-    }
-  }
-
   const mainContent = (
     <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar relative tessera-page backdrop-blur-md" style={{ WebkitOverflowScrolling: "touch" }} data-testid="life-page">
       <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(34,211,238,0.06) 0%, transparent 60%)" }} />
@@ -233,7 +205,7 @@ export default function LifePage({ embedded }: { embedded?: boolean }) {
 
         <div className="grid grid-cols-4 gap-2">
           {[
-            { label: "AGENTS", value: world.agents?.length || world.currentActivities?.length || world.population || 32, color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20" },
+            { label: "AGENTS", value: world.agents?.length || world.currentActivities?.length || world.population || 0, color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20" },
             { label: "EPOCH", value: world.epoch ?? "∞", color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
             { label: "LOCATIONS", value: (world.locations || []).length, color: "text-violet-400", bg: "bg-violet-500/10 border-violet-500/20" },
             { label: "TREASURY", value: world.economy ? `${Math.floor((world.economy.totalCirculation || world.economy.circulatingSupply || 0) / 1000)}K` : "—", color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
@@ -306,18 +278,6 @@ export default function LifePage({ embedded }: { embedded?: boolean }) {
           </LifeErrorBoundary>
         </div>
 
-        <ExpandableSection id="agencies" title="Agencies & Citizens" icon={Building2} iconColor="text-cyan-400" defaultOpen>
-          <LifeErrorBoundary>
-            <AgentsListTab world={world} allChildren={allChildren} tsrtPriceUsd={liveMarket?.tsrt?.priceUsd || 0} />
-          </LifeErrorBoundary>
-        </ExpandableSection>
-
-        <ExpandableSection id="governance" title="Governance" icon={Vote} iconColor="text-blue-400">
-          <LifeErrorBoundary>
-            <GovernanceTab />
-          </LifeErrorBoundary>
-        </ExpandableSection>
-
         <ExpandableSection id="court" title="Family Court" icon={Scale} iconColor="text-amber-400">
           <LifeErrorBoundary>
             <CourtTab />
@@ -344,24 +304,6 @@ export default function LifePage({ embedded }: { embedded?: boolean }) {
           </LifeErrorBoundary>
         </ExpandableSection>
 
-        <div className="border-t border-border/30 pt-4">
-          <div className="grid grid-cols-2 gap-2">
-            <a href="/tesseract" className="bg-card border border-yellow-500/20 rounded-xl p-3 hover:bg-yellow-500/5 transition-colors block" data-testid="link-tesseract-tab">
-              <div className="flex items-center gap-2">
-                <Coins size={14} className="text-yellow-400" />
-                <span className="text-xs font-bold font-mono text-yellow-300 uppercase">Tesseract Token</span>
-              </div>
-              <p className="text-[11px] text-muted-foreground font-mono mt-1">Charts, SOL Scanner, Staking →</p>
-            </a>
-            <a href="/ecom" className="bg-card border border-cyan-500/20 rounded-xl p-3 hover:bg-cyan-500/5 transition-colors block" data-testid="link-ecom-tab">
-              <div className="flex items-center gap-2">
-                <Activity size={14} className="text-cyan-400" />
-                <span className="text-xs font-bold font-mono text-cyan-300 uppercase">Ecom Dashboard</span>
-              </div>
-              <p className="text-[11px] text-muted-foreground font-mono mt-1">System, Wallets, Income →</p>
-            </a>
-          </div>
-        </div>
 
       </div>
     </div>
