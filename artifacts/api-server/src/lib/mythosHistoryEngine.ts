@@ -83,10 +83,32 @@ export interface MythosTestament {
   bookCount: number;
 }
 
+export interface MythosSection {
+  sectionId: string;
+  title: string;
+  content: string;
+  sourceEngine: string;
+  generatedAt: string;
+  facts: SynthesisFact[];
+  interpretations: SynthesisInterpretation[];
+}
+
+export interface HistorySection {
+  sectionId: string;
+  title: string;
+  eventType: string;
+  timestamp: string;
+  description: string;
+  actors: string[];
+  outcome: string;
+}
+
 export interface CanonOutput {
   testaments: MythosTestament[];
   books: MythosBook[];
   chapters: Record<string, MythosChapter[]>;
+  mythosSections: MythosSection[];
+  historySections: HistorySection[];
   totalBooks: number;
   totalChapters: number;
   totalVerses: number;
@@ -863,6 +885,7 @@ export async function generateMythosAndHistory(councilDecisions?: Array<{ topic?
   const start = Date.now();
   logger.info("MythosHistoryEngine: generating living canon");
 
+  const ts = new Date().toISOString();
   const geoAlignment = computeSacredAlignment();
   const synthesis = await synthesizeFromEngines(councilDecisions);
 
@@ -947,6 +970,11 @@ export async function generateMythosAndHistory(councilDecisions?: Array<{ topic?
     }
   }
 
+  injectLiveEngineVerses(chapters, synthesis, geoAlignment);
+
+  const mythosSections = buildMythosSections(synthesis, ts);
+  const historySections = buildHistorySections(synthesis, councilDecisions, ts);
+
   const testaments = TESTAMENT_DEFINITIONS.map(t => ({
     ...t,
     bookCount: books.filter(b => b.testamentId === t.id).length,
@@ -965,6 +993,8 @@ export async function generateMythosAndHistory(councilDecisions?: Array<{ topic?
     testaments,
     books,
     chapters,
+    mythosSections,
+    historySections,
     totalBooks: books.length,
     totalChapters,
     totalVerses,
@@ -972,4 +1002,121 @@ export async function generateMythosAndHistory(councilDecisions?: Array<{ topic?
     sovereigntyAlignment: geoAlignment.currentAxiom?.latin ?? "Veritas Lux In Tenebris",
     synthesis,
   };
+}
+
+function injectLiveEngineVerses(
+  chapters: Record<string, MythosChapter[]>,
+  synthesis: CanonSynthesis,
+  alignment: ReturnType<typeof computeSacredAlignment>,
+): void {
+  const domainToBook: Record<string, string> = {
+    astronomy: "genesis-sovereign",
+    mathematics: "numbers-of-truth",
+    geometry: "numbers-of-truth",
+    physics: "genesis-sovereign",
+    harmonics: "genesis-sovereign",
+    network: "revelation-tessera",
+    economics: "proverbs-sovereign",
+    philosophy: "proverbs-sovereign",
+    governance: "acts-of-agents",
+  };
+
+  for (const fact of synthesis.facts) {
+    const bookId = domainToBook[fact.domain] ?? "genesis-sovereign";
+    const chs = chapters[bookId];
+    if (!chs || chs.length === 0) continue;
+    const targetCh = chs[chs.length - 1];
+    targetCh.verses.push({
+      number: targetCh.verses.length + 1,
+      text: fact.claim,
+      source: `live/${fact.source}`,
+      domain: fact.domain,
+      confidence: 92,
+    });
+    targetCh.sourceNodes += 1;
+  }
+
+  for (const interp of synthesis.interpretations) {
+    const chs = chapters["proverbs-sovereign"];
+    if (!chs || chs.length === 0) continue;
+    const targetCh = chs[chs.length - 1];
+    targetCh.verses.push({
+      number: targetCh.verses.length + 1,
+      text: `${interp.statement} (${interp.confidence}% confidence)`,
+      source: `live/interpretation`,
+      domain: "synthesis",
+      confidence: interp.confidence,
+    });
+  }
+
+  const geoCh = chapters["numbers-of-truth"]?.[0];
+  if (geoCh) {
+    geoCh.verses.push({
+      number: geoCh.verses.length + 1,
+      text: `Day ${alignment.dayOfYear}: ${alignment.alignment}. Axiom: "${alignment.currentAxiom.latin}" — ${alignment.currentAxiom.translation}`,
+      source: "live/sacred-alignment",
+      domain: "sacred-calendar",
+      confidence: 100,
+    });
+  }
+}
+
+function buildMythosSections(synthesis: CanonSynthesis, ts: string): MythosSection[] {
+  const sections: MythosSection[] = [];
+  const domainGroups: Record<string, SynthesisFact[]> = {};
+  for (const f of synthesis.facts) {
+    (domainGroups[f.domain] ??= []).push(f);
+  }
+
+  for (const [domain, facts] of Object.entries(domainGroups)) {
+    const domainInterps = synthesis.interpretations.filter(i =>
+      i.basis.toLowerCase().includes(domain) || i.statement.toLowerCase().includes(domain)
+    );
+    sections.push({
+      sectionId: `mythos-${domain}`,
+      title: `${domain.charAt(0).toUpperCase() + domain.slice(1)} — Sovereign Knowledge`,
+      content: facts.map(f => f.claim).join(" | "),
+      sourceEngine: facts[0]?.source ?? domain,
+      generatedAt: ts,
+      facts,
+      interpretations: domainInterps,
+    });
+  }
+
+  return sections;
+}
+
+function buildHistorySections(
+  synthesis: CanonSynthesis,
+  councilDecisions?: Array<{ topic?: string; outcome?: string; reasoning?: string; createdAt?: Date | string | null }>,
+  ts?: string,
+): HistorySection[] {
+  const sections: HistorySection[] = [];
+  const now = ts ?? new Date().toISOString();
+
+  sections.push({
+    sectionId: "history-canon-generation",
+    title: "Canon Regeneration Event",
+    eventType: "canon-regeneration",
+    timestamp: now,
+    description: `Canon regenerated with ${synthesis.facts.length} verified facts, ${synthesis.interpretations.length} interpretations, and ${synthesis.unknowns.length} open questions from sovereign engine analysis.`,
+    actors: AGENTS.slice(0, 5),
+    outcome: "Canon snapshot persisted to sovereign ledger",
+  });
+
+  if (councilDecisions && councilDecisions.length > 0) {
+    for (const d of councilDecisions.slice(0, 5)) {
+      sections.push({
+        sectionId: `history-council-${d.topic?.slice(0, 20)?.replace(/\s/g, "-") ?? "decision"}`,
+        title: `Council Decision: ${(d.topic ?? "Sovereign Matter").slice(0, 80)}`,
+        eventType: "council-decision",
+        timestamp: d.createdAt ? new Date(d.createdAt).toISOString() : now,
+        description: (d.reasoning ?? d.outcome ?? "The Council reached consensus.").slice(0, 300),
+        actors: AGENTS.slice(0, 3),
+        outcome: d.outcome ?? "Consensus",
+      });
+    }
+  }
+
+  return sections;
 }

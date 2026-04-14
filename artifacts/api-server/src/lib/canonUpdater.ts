@@ -2,7 +2,7 @@ import { db } from "@workspace/db";
 import { canonSnapshotsTable, councilDecisionsTable } from "@workspace/db/schema";
 import { desc, sql } from "drizzle-orm";
 import { logger } from "./logger";
-import { generateMythosAndHistory, type CanonOutput, type MythosTestament, type MythosBook, type MythosChapter } from "./mythosHistoryEngine";
+import { generateMythosAndHistory, type CanonOutput, type MythosTestament, type MythosBook, type MythosChapter, type MythosSection, type HistorySection } from "./mythosHistoryEngine";
 import { computeSovereigntyStatus } from "./sovereignty-monitor";
 import { runFullBenchmark } from "./sovereign-benchmarks";
 
@@ -32,6 +32,8 @@ export async function getCurrentCanon(): Promise<CanonOutput> {
       testaments: row.testaments as MythosTestament[],
       books: row.books as MythosBook[],
       chapters: row.chapters as Record<string, MythosChapter[]>,
+      mythosSections: (meta?.mythosSections as MythosSection[]) ?? [],
+      historySections: (meta?.historySections as HistorySection[]) ?? [],
       totalBooks: row.totalBooks,
       totalChapters: row.totalChapters,
       totalVerses: row.totalVerses,
@@ -105,6 +107,8 @@ export async function regenerateCanon(
       generatedAt: canon.generatedAt,
       agentContributors: 45,
       synthesis: canon.synthesis,
+      mythosSections: canon.mythosSections,
+      historySections: canon.historySections,
       evalSummary,
     },
   });
@@ -161,6 +165,8 @@ export async function getCanonByVersion(version: number): Promise<CanonOutput | 
     testaments: row.testaments as MythosTestament[],
     books: row.books as MythosBook[],
     chapters: row.chapters as Record<string, MythosChapter[]>,
+    mythosSections: (meta?.mythosSections as MythosSection[]) ?? [],
+    historySections: (meta?.historySections as HistorySection[]) ?? [],
     totalBooks: row.totalBooks,
     totalChapters: row.totalChapters,
     totalVerses: row.totalVerses,
@@ -180,4 +186,27 @@ export function invalidateCanonCache(councilDecisionIds: string[] = []): void {
   regenerateCanon("council-decision", councilDecisionIds).catch((err) => {
     logger.warn({ err }, "CanonUpdater: async regeneration after council decision failed");
   });
+}
+
+let periodicTimer: ReturnType<typeof setInterval> | null = null;
+
+export function startPeriodicRegeneration(intervalMs: number = 3600000): void {
+  if (periodicTimer) return;
+  periodicTimer = setInterval(async () => {
+    try {
+      logger.info("CanonUpdater: periodic regeneration triggered");
+      await regenerateCanon("periodic-scheduler");
+    } catch (err) {
+      logger.warn({ err }, "CanonUpdater: periodic regeneration failed");
+    }
+  }, intervalMs);
+  logger.info({ intervalMs }, "CanonUpdater: periodic regeneration scheduler started");
+}
+
+export function stopPeriodicRegeneration(): void {
+  if (periodicTimer) {
+    clearInterval(periodicTimer);
+    periodicTimer = null;
+    logger.info("CanonUpdater: periodic regeneration scheduler stopped");
+  }
 }

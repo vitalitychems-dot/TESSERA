@@ -8,6 +8,7 @@ import { startAnomalyMonitor, stopAnomalyMonitor, recordRequest } from "./lib/an
 import { initRecoveryModule, registerRecoveryHandler, updateModuleStatus } from "./lib/auto-recovery";
 import { initializeMemoryOnStartup } from "./lib/vector-memory";
 import { startIngestionScheduler, runAllIngestion } from "./lib/ingestion/scheduler";
+import { startPeriodicRegeneration } from "./lib/canonUpdater";
 import { sovereigntyEnforcementMiddleware } from "./lib/provider-registry";
 import { db } from "@workspace/db";
 import { dataSourcesTable } from "@workspace/db/schema";
@@ -131,6 +132,8 @@ async function initializeModules() {
     await ensureDefaultSources();
     startIngestionScheduler(300_000);
     logger.info("Ingestion scheduler started");
+
+    startPeriodicRegeneration(3600_000);
 
     logger.info("All system modules initialized");
   } catch (err) {
