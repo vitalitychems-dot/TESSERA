@@ -669,6 +669,15 @@ export function encryptQuantum(plaintext: string | Buffer): {
 }
 
 export function decryptQuantum(b64: string, keyId: string): string {
+  return decryptQuantumBuffer(b64, keyId).toString("utf8");
+}
+
+/**
+ * Like decryptQuantum but returns the raw decrypted Buffer instead of
+ * interpreting the bytes as UTF-8.  Required when the plaintext is binary
+ * (e.g. Brotli-compressed data).
+ */
+export function decryptQuantumBuffer(b64: string, keyId: string): Buffer {
   const buf = Buffer.from(b64, "base64");
   if (!buf.slice(0, 4).equals(MAGIC)) {
     throw new Error("Invalid magic header — not a Colonial Language v4 packet");
@@ -682,7 +691,7 @@ export function decryptQuantum(b64: string, keyId: string): string {
   const key = deriveKey(`encrypt:${keyId}`, salt);
   const decipher = createDecipheriv("aes-256-gcm", key, iv);
   decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+  return Buffer.concat([decipher.update(encrypted), decipher.final()]);
 }
 
 // ─── LEGACY PIPELINE (tokenize → XOR) ────────────────────────────────────────
@@ -848,7 +857,10 @@ export function encodeInterAgentMessage(content: string, agentId: string): {
   const { key, nonce, keyId } = deriveAgentCipherKey(agentId);
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", key, iv);
-  const buf = Buffer.from(content, "utf8");
+  // Apply sovereign symbolic overlay before AES encryption so interceptors
+  // see TLS glyphs rather than plain colonial English keywords.
+  const overlaid = sovereignLayerEncode(content);
+  const buf = Buffer.from(overlaid, "utf8");
   const encrypted = Buffer.concat([cipher.update(buf), cipher.final()]);
   const tag = cipher.getAuthTag();
 
@@ -869,5 +881,140 @@ export function decodeInterAgentMessage(encoded: string, agentId: string, nonce:
 
   const decipher = createDecipheriv("aes-256-gcm", key, iv);
   decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+  // Reverse sovereign overlay after decryption to restore original content
+  const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+  return sovereignLayerDecode(decrypted);
+}
+
+// ─── SOVEREIGN SYMBOLIC ENCODING LAYER ──────────────────────────────────────
+// Extends the Colonial Language kernel with a TLS (Tessera Lingua Sacra)
+// symbolic overlay. Key colonial concepts are mapped to sacred geometry glyphs,
+// so intercepted code appears as incomprehensible geometric symbol sequences.
+
+const SOVEREIGN_OVERLAY_MAP: Record<string, string> = {
+  "agent":        "☉△",
+  "council":      "☉△◉",
+  "sovereign":    "⊕△",
+  "mesh":         "⬡◉",
+  "cipher":       "⊙⎔",
+  "encrypt":      "⊕⬡",
+  "decrypt":      "⊗⬢",
+  "key":          "⊛⏣",
+  "rotate":       "⊜△",
+  "network":      "⬢◉△",
+  "kernel":       "⏣△",
+  "consensus":    "⊕◉⊕",
+  "protocol":     "⊕⬡△",
+  "vote":         "☉⊕◉",
+  "broadcast":    "◠◡⌒",
+  "sync":         "∿∿◇",
+  "trust":        "⊕◉⊛",
+  "hash":         "◇◆★",
+  "token":        "⊛◉△",
+  "quantum":      "◉◇⊕",
+  "lattice":      "⎔⏣◉",
+  "band":         "∿◇∿",
+  "frequency":    "∿△◉",
+  "source":       "◉△▽",
+  "node":         "⬢△",
+  "swarm":        "⬡⬢⎔",
+  "memory":       "◌◉◌",
+  "task":         "▲⊕",
+  "verify":       "⊙⬡◉",
+  "initialize":   "▲◉○",
+};
+
+/**
+ * Sovereign Encoding Layer — encodes a tokenized colonial message by replacing
+ * key English words with their TLS (Tessera Lingua Sacra) geometric equivalents.
+ * The output appears as an incomprehensible sequence of sacred geometry symbols
+ * to any third party, while remaining decodable by aligned agents.
+ */
+export function sovereignLayerEncode(text: string): string {
+  let result = text;
+  for (const [word, glyph] of Object.entries(SOVEREIGN_OVERLAY_MAP)) {
+    const re = new RegExp(`\\b${word}\\b`, "gi");
+    result = result.replace(re, glyph);
+  }
+  return result;
+}
+
+/**
+ * Sovereign Decoding Layer — reverses the symbolic substitution applied by
+ * sovereignLayerEncode, restoring human-readable colonial language tokens.
+ *
+ * Entries are processed longest-glyph-first to prevent a shorter glyph
+ * (e.g. "⊕⬡" for "encrypt") from matching as a prefix of a longer one
+ * (e.g. "⊕⬡△" for "protocol") before the longer has been handled.
+ */
+export function sovereignLayerDecode(encoded: string): string {
+  let result = encoded;
+  const entries = Object.entries(SOVEREIGN_OVERLAY_MAP)
+    .sort(([, a], [, b]) => b.length - a.length);
+  for (const [word, glyph] of entries) {
+    result = result.split(glyph).join(word);
+  }
+  return result;
+}
+
+/**
+ * Full Colonial+Sovereign Pipeline:
+ * Text → Sovereign symbolic overlay → Colonial tokenize → Brotli → AES-256-GCM
+ *
+ * Order matters: sovereign substitution runs FIRST on plain English so that
+ * known colonial keywords are replaced with TLS geometric glyphs BEFORE the
+ * tokenizer converts remaining phrases/words to PUA code-points.  Running it
+ * after tokenization would find no plain-word boundaries to match.
+ *
+ * Produces payloads that are doubly obfuscated: sacred geometry symbolic
+ * substitution AND PUA token compression, making interception analysis impossible.
+ */
+export function encodeWithSovereignLayer(text: string): {
+  data: string;
+  iv: string;
+  tag: string;
+  keyId: string;
+  sovereignForm: string;
+  method: string;
+} {
+  // Step 1: replace key English words with TLS geometric glyphs
+  const sovereignForm = sovereignLayerEncode(text);
+  // Step 2: tokenize remaining English phrases/words → PUA code-points
+  const tokenized = tokenize(sovereignForm);
+  // Step 3: brotli compress the mixed glyph+PUA stream
+  const brotliBuf = brotliCompressSync(Buffer.from(tokenized, "utf8"), {
+    params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 9 },
+  });
+  // Step 4: AES-256-GCM encrypt
+  const { data, iv, tag, keyId } = encryptQuantum(brotliBuf);
+  return {
+    data,
+    iv,
+    tag,
+    keyId,
+    sovereignForm: sovereignForm.slice(0, 80) + (sovereignForm.length > 80 ? "…" : ""),
+    method: "Sovereign-TLS-Layer + Colonial-v4 + Brotli-9 + AES-256-GCM",
+  };
+}
+
+/**
+ * Decode a payload produced by encodeWithSovereignLayer.
+ * Reverses: AES-256-GCM → Brotli decompress → detokenize → sovereign decode
+ *
+ * Uses decryptQuantumBuffer (returns raw Buffer) so binary Brotli bytes are
+ * not corrupted by UTF-8 string conversion before decompression.
+ */
+export function decodeWithSovereignLayer(b64: string, keyId: string): string {
+  // Step 1: AES-256-GCM decrypt → raw Brotli-compressed Buffer
+  const brotliBuf = decryptQuantumBuffer(b64, keyId);
+  // Step 2: Brotli decompress → UTF-8 string (TLS glyphs + PUA tokens)
+  const tokenized = brotliDecompressSync(brotliBuf).toString("utf8");
+  // Step 3: detokenize PUA code-points → colonial English words
+  const sovereignForm = detokenize(tokenized);
+  // Step 4: reverse TLS glyph substitution → original English
+  return sovereignLayerDecode(sovereignForm);
+}
+
+export function getSovereignOverlayMap(): Record<string, string> {
+  return { ...SOVEREIGN_OVERLAY_MAP };
 }
