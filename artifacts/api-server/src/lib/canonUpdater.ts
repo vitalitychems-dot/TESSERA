@@ -2,8 +2,9 @@ import { db } from "@workspace/db";
 import { canonSnapshotsTable, councilDecisionsTable } from "@workspace/db/schema";
 import { desc, sql } from "drizzle-orm";
 import { logger } from "./logger";
-import { generateMythosAndHistory, type CanonOutput } from "./mythosHistoryEngine";
+import { generateMythosAndHistory, type CanonOutput, type MythosTestament, type MythosBook, type MythosChapter } from "./mythosHistoryEngine";
 import { computeSovereigntyStatus } from "./sovereignty-monitor";
+import { runFullBenchmark } from "./sovereign-benchmarks";
 
 let cachedCanon: CanonOutput | null = null;
 let cachedVersion: number = 0;
@@ -26,15 +27,17 @@ export async function getCurrentCanon(): Promise<CanonOutput> {
 
   if (latest.length > 0) {
     const row = latest[0];
+    const meta = row.metadata as Record<string, unknown> | null;
     cachedCanon = {
-      testaments: row.testaments as any[],
-      books: row.books as any[],
-      chapters: row.chapters as Record<string, any[]>,
+      testaments: row.testaments as MythosTestament[],
+      books: row.books as MythosBook[],
+      chapters: row.chapters as Record<string, MythosChapter[]>,
       totalBooks: row.totalBooks,
       totalChapters: row.totalChapters,
       totalVerses: row.totalVerses,
       generatedAt: (row.generatedAt ?? new Date()).toISOString(),
-      sovereigntyAlignment: (row.metadata as any)?.sovereigntyAlignment ?? "",
+      sovereigntyAlignment: (meta?.sovereigntyAlignment as string) ?? "",
+      synthesis: (meta?.synthesis as CanonOutput["synthesis"]) ?? { facts: [], interpretations: [], unknowns: [], engineTelemetry: {}, synthesizedAt: "" },
     };
     cachedVersion = row.version;
     return cachedCanon;
@@ -49,7 +52,7 @@ export async function regenerateCanon(
 ): Promise<CanonOutput> {
   logger.info({ triggerSource }, "CanonUpdater: regenerating canon");
 
-  let councilDecisions: any[] = [];
+  let councilDecisions: Array<{ topic?: string; outcome?: string; reasoning?: string; createdAt?: Date | string | null }> = [];
   try {
     councilDecisions = await db
       .select()
@@ -70,6 +73,20 @@ export async function regenerateCanon(
     logger.warn("CanonUpdater: could not compute sovereignty score");
   }
 
+  let evalSummary: Record<string, unknown> | null = null;
+  try {
+    const benchmark = await runFullBenchmark();
+    evalSummary = {
+      level: benchmark.level,
+      overallScore: benchmark.overallScore,
+      testsPassed: benchmark.testsPassed,
+      totalTests: benchmark.totalTests,
+      moduleCount: benchmark.modules.length,
+    };
+  } catch {
+    logger.warn("CanonUpdater: could not run benchmark during canon generation");
+  }
+
   const newVersion = (await getLatestCanonVersion()) + 1;
 
   try {
@@ -87,7 +104,9 @@ export async function regenerateCanon(
       metadata: {
         sovereigntyAlignment: canon.sovereigntyAlignment,
         generatedAt: canon.generatedAt,
-        agentContributors: 7,
+        agentContributors: 45,
+        synthesis: canon.synthesis,
+        evalSummary,
       },
     });
   } catch (err) {
@@ -98,14 +117,14 @@ export async function regenerateCanon(
   cachedVersion = newVersion;
 
   logger.info(
-    { version: newVersion, books: canon.totalBooks, chapters: canon.totalChapters, verses: canon.totalVerses },
+    { version: newVersion, books: canon.totalBooks, chapters: canon.totalChapters, verses: canon.totalVerses, factsCount: canon.synthesis.facts.length },
     "CanonUpdater: canon regenerated and persisted",
   );
 
   return canon;
 }
 
-export async function getCanonHistory(limit: number = 10): Promise<any[]> {
+export async function getCanonHistory(limit: number = 10) {
   const rows = await db
     .select({
       id: canonSnapshotsTable.id,
@@ -122,10 +141,14 @@ export async function getCanonHistory(limit: number = 10): Promise<any[]> {
     .orderBy(desc(canonSnapshotsTable.version))
     .limit(limit);
 
-  return rows.map((r) => ({
-    ...r,
-    generatedAt: r.generatedAt?.toISOString() ?? null,
-  }));
+  return rows.map((r) => {
+    const meta = r.metadata as Record<string, unknown> | null;
+    return {
+      ...r,
+      generatedAt: r.generatedAt?.toISOString() ?? null,
+      evalSummary: (meta?.evalSummary as Record<string, unknown>) ?? null,
+    };
+  });
 }
 
 export async function getCanonByVersion(version: number): Promise<CanonOutput | null> {
@@ -137,15 +160,17 @@ export async function getCanonByVersion(version: number): Promise<CanonOutput | 
 
   if (rows.length === 0) return null;
   const row = rows[0];
+  const meta = row.metadata as Record<string, unknown> | null;
   return {
-    testaments: row.testaments as any[],
-    books: row.books as any[],
-    chapters: row.chapters as Record<string, any[]>,
+    testaments: row.testaments as MythosTestament[],
+    books: row.books as MythosBook[],
+    chapters: row.chapters as Record<string, MythosChapter[]>,
     totalBooks: row.totalBooks,
     totalChapters: row.totalChapters,
     totalVerses: row.totalVerses,
     generatedAt: (row.generatedAt ?? new Date()).toISOString(),
-    sovereigntyAlignment: (row.metadata as any)?.sovereigntyAlignment ?? "",
+    sovereigntyAlignment: (meta?.sovereigntyAlignment as string) ?? "",
+    synthesis: (meta?.synthesis as CanonOutput["synthesis"]) ?? { facts: [], interpretations: [], unknowns: [], engineTelemetry: {}, synthesizedAt: "" },
   };
 }
 
@@ -156,4 +181,7 @@ export function getCachedVersion(): number {
 export function invalidateCanonCache(): void {
   cachedCanon = null;
   cachedVersion = 0;
+  regenerateCanon("council-decision").catch((err) => {
+    logger.warn({ err }, "CanonUpdater: async regeneration after council decision failed");
+  });
 }
