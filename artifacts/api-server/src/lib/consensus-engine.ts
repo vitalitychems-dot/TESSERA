@@ -158,17 +158,21 @@ function startRetryProcessor(): void {
     logger.info({ id: proposal.id, title: proposal.title, retryCount: proposal.retryCount }, "ConsensusEngine: retrying queued proposal");
     try {
       const votes = await generateVotesWithLLM(proposal);
-      if (votes.length >= Math.ceil(GRAND_COUNCIL_AGENTS.length * 0.5)) {
+      if (votes.length >= GRAND_COUNCIL_AGENTS.length) {
         finalizeProposal(proposal, votes);
       } else {
         proposal.retryCount = (proposal.retryCount || 0) + 1;
         if (proposal.retryCount < 5) {
           retryQueue.push(proposal);
         } else {
-          proposal.status = "rejected";
-          proposal.implementationNotes = "Rejected — exhausted retry attempts, insufficient LLM votes";
-          proposals.set(proposal.id, proposal);
-          logger.warn({ id: proposal.id }, "ConsensusEngine: proposal rejected after max retries");
+          if (votes.length >= Math.ceil(GRAND_COUNCIL_AGENTS.length * 0.75)) {
+            finalizeProposal(proposal, votes);
+          } else {
+            proposal.status = "rejected";
+            proposal.implementationNotes = `Rejected — exhausted retry attempts, only ${votes.length}/${GRAND_COUNCIL_AGENTS.length} votes collected`;
+            proposals.set(proposal.id, proposal);
+            logger.warn({ id: proposal.id, collected: votes.length }, "ConsensusEngine: proposal rejected after max retries");
+          }
         }
       }
     } catch (err) {
@@ -252,13 +256,13 @@ export async function createProposal(paramsOrTitle: {
     logger.warn({ err, id }, "ConsensusEngine: LLM vote generation failed — queuing for retry");
   }
 
-  if (votes.length < Math.ceil(GRAND_COUNCIL_AGENTS.length * 0.5)) {
+  if (votes.length < GRAND_COUNCIL_AGENTS.length) {
     proposal.status = "queued";
-    proposal.implementationNotes = `Queued — only ${votes.length}/${GRAND_COUNCIL_AGENTS.length} votes collected, will retry`;
+    proposal.implementationNotes = `Queued — ${votes.length}/${GRAND_COUNCIL_AGENTS.length} votes collected, awaiting full council participation`;
     proposals.set(id, proposal);
     retryQueue.push(proposal);
     startRetryProcessor();
-    logger.info({ id, votesCollected: votes.length }, "ConsensusEngine: insufficient votes, queued for retry");
+    logger.info({ id, votesCollected: votes.length, required: GRAND_COUNCIL_AGENTS.length }, "ConsensusEngine: awaiting full council votes, queued for retry");
     return proposal;
   }
 
