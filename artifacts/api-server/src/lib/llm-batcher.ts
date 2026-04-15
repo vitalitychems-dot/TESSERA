@@ -35,8 +35,9 @@ const batchStats = {
   batchesProcessed: 0,
 };
 
-function hashRequest(messages: LLMMessage[], model: string): string {
-  const key = messages.map(m => `${m.role}:${m.content}`).join("|") + `|model:${model}`;
+function hashRequest(messages: LLMMessage[], model: string, opts: LLMCallOptions = {}): string {
+  const key = messages.map(m => `${m.role}:${m.content}`).join("|") +
+    `|model:${model}|maxTokens:${opts.maxTokens ?? 2048}|temp:${opts.temperature ?? 1}|structured:${opts.expectsStructuredOutput ?? false}`;
   return crypto.createHash("sha256").update(key).digest("hex");
 }
 
@@ -257,7 +258,7 @@ function scheduleBatch(): void {
 export function batchedCallLLM(messages: LLMMessage[], opts: LLMCallOptions = {}): Promise<string> {
   batchStats.totalBatched++;
   const model = opts.model ?? "gpt-5-mini";
-  const hash = hashRequest(messages, model);
+  const hash = hashRequest(messages, model, opts);
   const userContent = extractUserContent(messages);
 
   return new Promise<string>((resolve, reject) => {
