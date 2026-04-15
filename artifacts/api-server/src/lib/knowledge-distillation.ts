@@ -3,6 +3,7 @@ import { distilledKnowledgeTable } from "@workspace/db/schema";
 import { eq, sql, desc, gt } from "drizzle-orm";
 import { logger } from "./logger";
 import { evictExpired, invalidateRelatedEntries } from "./semantic-cache";
+import { generateEmbedding, cosineSimilarity } from "./neural-embeddings";
 
 let CONFIDENCE_THRESHOLD = 0.6;
 const STALE_DAYS = 7;
@@ -134,12 +135,42 @@ export async function lookupKnowledge(
       .orderBy(desc(distilledKnowledgeTable.confidence))
       .limit(500);
 
-    const scored = rows
-      .filter(r => !category || r.category === category)
+    const filtered = rows.filter(r => !category || r.category === category);
+
+    let queryEmbedding: number[] | null = null;
+    try {
+      queryEmbedding = await generateEmbedding(query);
+    } catch {
+      logger.debug("KnowledgeDistillation: embedding generation failed, using keyword-only lookup");
+    }
+
+    const factEmbeddings = new Map<number, number[]>();
+    if (queryEmbedding) {
+      const topByKeyword = filtered.slice(0, 50);
+      for (const r of topByKeyword) {
+        try {
+          const emb = await generateEmbedding(r.fact);
+          factEmbeddings.set(r.id, emb);
+        } catch {}
+      }
+    }
+
+    const scored = filtered
       .map(r => {
         const factLower = r.fact.toLowerCase();
         const matches = queryTerms.filter(t => factLower.includes(t)).length;
-        const relevance = matches / queryTerms.length;
+        const keywordRelevance = matches / queryTerms.length;
+
+        let semanticRelevance = 0;
+        const factEmb = factEmbeddings.get(r.id);
+        if (queryEmbedding && factEmb) {
+          semanticRelevance = cosineSimilarity(queryEmbedding, factEmb);
+        }
+
+        const relevance = semanticRelevance > 0
+          ? 0.6 * semanticRelevance + 0.4 * keywordRelevance
+          : keywordRelevance;
+
         return { ...r, relevance };
       })
       .filter(r => r.relevance > 0.3)
