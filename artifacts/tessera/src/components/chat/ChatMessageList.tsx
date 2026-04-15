@@ -1,4 +1,4 @@
-import { memo, type RefObject } from "react";
+import { memo, type MutableRefObject, type RefObject } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { motion, AnimatePresence } from "framer-motion";
 import { Zap, Loader2, RefreshCw, ArrowDown } from "lucide-react";
@@ -10,9 +10,16 @@ interface MoltAgent {
   role?: string;
 }
 
+interface ChatMessage {
+  id?: number;
+  role: string;
+  content: string;
+  createdAt?: Date | string;
+}
+
 interface ChatMessageListProps {
-  messages: any[];
-  filteredMessages: any[];
+  messages: ChatMessage[];
+  filteredMessages: ChatMessage[];
   isStreaming: boolean;
   isTesseraConv: boolean;
   moltChatLoading: boolean;
@@ -27,16 +34,16 @@ interface ChatMessageListProps {
   activeAgents: any[];
   codeExecutionResults: any[];
   adminMode: boolean;
-  tesseraMsgStyle: string;
-  copiedId: string | null;
-  messageReactions: Record<string, string>;
+  tesseraMsgStyle: { wrapper: string; prose: string } | null;
+  copiedId: string;
+  messageReactions: Record<string, "up" | "down">;
   showScrollBottom: boolean;
   virtuosoRef: RefObject<VirtuosoHandle | null>;
-  isAtBottomRef: RefObject<boolean>;
-  setCopiedId: (id: string | null) => void;
+  isAtBottomRef: MutableRefObject<boolean>;
+  setCopiedId: (id: string) => void;
   setShowScrollBottom: (show: boolean) => void;
-  onReaction: (msgId: string, reaction: string) => void;
-  onRegenerate: (msgId: string) => void;
+  onReaction: (msgId: string, type: "up" | "down") => void;
+  onRegenerate: (index: number) => void;
   onRetry: () => void;
 }
 
@@ -72,7 +79,7 @@ export const ChatMessageList = memo(function ChatMessageList({
           followOutput="smooth"
           initialTopMostItemIndex={filteredMessages.length > 0 ? filteredMessages.length - 1 : 0}
           atBottomStateChange={(atBottom) => {
-            (isAtBottomRef as any).current = atBottom;
+            isAtBottomRef.current = atBottom;
             setShowScrollBottom(!atBottom);
           }}
           components={{
@@ -153,7 +160,6 @@ export const ChatMessageList = memo(function ChatMessageList({
           itemContent={(index, msg) => (
             <div className="px-4 py-1 max-w-3xl mx-auto w-full" key={msg.id || index}>
               <ChatMessageItem
-                // @ts-ignore
                 msg={msg}
                 index={index}
                 adminMode={adminMode}
