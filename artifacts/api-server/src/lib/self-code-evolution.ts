@@ -75,6 +75,16 @@ async function applyPatchToSourceFile(
     throw new Error("LLM did not generate executable TypeScript for this proposal — rejecting to avoid non-functional patch");
   }
 
+  const codeLines = codeToAppend.split("\n").filter(l => l.trim().length > 0);
+  const duplicateLines = codeLines.filter(line => {
+    const trimmed = line.trim();
+    return trimmed.length > 10 && originalContent.includes(trimmed);
+  });
+  if (duplicateLines.length > 0 && duplicateLines.length >= codeLines.length * 0.5) {
+    writeFileSync(sourceFilePath, originalContent, "utf8");
+    throw new Error(`Proposed code would duplicate existing declarations: ${duplicateLines[0].trim().slice(0, 60)}`);
+  }
+
   const patchedContent = `${originalContent}\n${codeToAppend}\n`;
 
   const ts = require("typescript") as typeof import("typescript");
