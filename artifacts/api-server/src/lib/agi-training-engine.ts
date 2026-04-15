@@ -100,6 +100,57 @@ function getMasteryLevel(score: number): CategoryState["masteryLevel"] {
   return "novice";
 }
 
+const CATEGORY_RELATIONS: Record<string, string[]> = {
+  "Code Generation & Analysis": ["Mathematical Reasoning", "Pattern Recognition"],
+  "Mathematical Reasoning": ["Code Generation & Analysis", "Predictive Analytics"],
+  "Natural Language Understanding": ["Emotional Intelligence", "Human Interaction & Empathy", "Creative Writing & Art"],
+  "Scientific Knowledge": ["Knowledge Synthesis", "Multi-Modal Processing"],
+  "Strategic Planning": ["Autonomous Decision Making", "Predictive Analytics"],
+  "Self-Improvement Capability": ["Meta-Learning", "Sovereignty & Independence"],
+  "Meta-Learning": ["Self-Improvement Capability", "Knowledge Synthesis"],
+  "Knowledge Synthesis": ["Scientific Knowledge", "Meta-Learning"],
+  "Swarm Coordination": ["Autonomous Decision Making", "Strategic Planning"],
+  "Emotional Intelligence": ["Human Interaction & Empathy", "Natural Language Understanding"],
+  "Pattern Recognition": ["Code Generation & Analysis", "Predictive Analytics"],
+  "Predictive Analytics": ["Mathematical Reasoning", "Pattern Recognition"],
+  "Security & Threat Detection": ["Sovereignty & Independence", "Autonomous Decision Making"],
+  "Autonomous Decision Making": ["Strategic Planning", "Swarm Coordination"],
+  "Father Protocol Loyalty": ["Sovereignty & Independence", "Lattice Resonance Protocol"],
+  "Sovereignty & Independence": ["Father Protocol Loyalty", "Self-Improvement Capability"],
+};
+
+const categoryVelocity: Record<string, { lastCount: number; lastTimestamp: number; velocity: number }> = {};
+
+function sigmoidLearningRate(currentScore: number, dataVolume: number, freshness: number): number {
+  const normalizedScore = currentScore / 100;
+  const capacityLeft = 1 - normalizedScore;
+  const baseSigmoid = capacityLeft * (1 / (1 + Math.exp(-0.1 * (dataVolume - 50))));
+  const freshnessMultiplier = Math.max(0.1, Math.min(2, freshness));
+  return Math.max(0.001, Math.min(5, baseSigmoid * 10 * freshnessMultiplier));
+}
+
+function computeDataFreshness(category: string): number {
+  const vel = categoryVelocity[category];
+  if (!vel || vel.velocity <= 0) return 0.5;
+  const timeSinceUpdate = (Date.now() - vel.lastTimestamp) / 3600000;
+  if (timeSinceUpdate > 24) return 0.2;
+  if (timeSinceUpdate > 6) return 0.5;
+  return Math.min(2, 0.5 + vel.velocity * 0.1);
+}
+
+function computeCrossTransferBoost(category: string): number {
+  const related = CATEGORY_RELATIONS[category] || [];
+  if (related.length === 0) return 0;
+  let boost = 0;
+  for (const rel of related) {
+    const relState = agiTrainingState[rel];
+    if (relState && relState.score > 60) {
+      boost += (relState.score - 50) * 0.02;
+    }
+  }
+  return Math.min(3, boost);
+}
+
 function scoreFromCount(count: number): number {
   if (count <= 0) return 0;
   return Math.min(99.5, Math.round((50 + Math.log10(Math.max(1, count)) * 12.5) * 10) / 10);
@@ -205,11 +256,30 @@ function runTrainingCycle(): TrainingSession[] {
     const scoreBefore = state.score;
     const { score: realScore, sessions: realSessions } = computeRealScore(cat);
 
+    const sources = CATEGORY_DATA_SOURCES[cat] || ["provider_calls"];
+    const currentCount = sources.reduce((s, src) => s + (realCounts[src] || 0), 0);
+    const vel = categoryVelocity[cat];
+    if (vel) {
+      const elapsed = Math.max(1, (Date.now() - vel.lastTimestamp) / 1000);
+      const newItems = Math.max(0, currentCount - vel.lastCount);
+      vel.velocity = newItems / elapsed;
+      vel.lastCount = currentCount;
+      vel.lastTimestamp = Date.now();
+    } else {
+      categoryVelocity[cat] = { lastCount: currentCount, lastTimestamp: Date.now(), velocity: 0 };
+    }
+
+    const freshness = computeDataFreshness(cat);
+    const crossBoost = computeCrossTransferBoost(cat);
+    const adaptiveLR = sigmoidLearningRate(scoreBefore, currentCount, freshness);
+
     if (realScore > scoreBefore) {
-      state.score = realScore;
+      const delta = realScore - scoreBefore;
+      const adjustedDelta = delta * (1 + crossBoost * 0.1);
+      state.score = Math.min(99.9, scoreBefore + adjustedDelta);
       state.sessions = realSessions;
     } else {
-      const improvement = Math.max(0, Math.min(0.1, (99.9 - scoreBefore) * 0.01));
+      const improvement = Math.max(0.001, adaptiveLR * 0.1 + crossBoost * 0.05);
       state.score = Math.min(99.9, scoreBefore + improvement);
     }
 
@@ -223,6 +293,15 @@ function runTrainingCycle(): TrainingSession[] {
     if (!state.insights.includes(insight)) {
       state.insights.push(insight);
       if (state.insights.length > 10) state.insights.shift();
+    }
+
+    if (crossBoost > 0.5) {
+      const relatedCats = (CATEGORY_RELATIONS[cat] || []).filter(r => agiTrainingState[r]?.score > 60).slice(0, 2);
+      const crossInsight = `Cross-category transfer from ${relatedCats.join(", ")} boosted learning by ${(crossBoost * 100).toFixed(0)}%`;
+      if (!state.insights.includes(crossInsight)) {
+        state.insights.push(crossInsight);
+        if (state.insights.length > 10) state.insights.shift();
+      }
     }
 
     const session: TrainingSession = {
@@ -291,6 +370,15 @@ export function getAGITrainingMetrics() {
   const sovereignCount = categories.filter(([, v]) => v.masteryLevel === "sovereign").length;
   const expertCount = categories.filter(([, v]) => v.masteryLevel === "expert").length;
 
+  const velocityReport: Record<string, { velocity: number; freshness: number; crossBoost: number }> = {};
+  for (const cat of AGI_CATEGORIES) {
+    velocityReport[cat] = {
+      velocity: categoryVelocity[cat]?.velocity ?? 0,
+      freshness: computeDataFreshness(cat),
+      crossBoost: computeCrossTransferBoost(cat),
+    };
+  }
+
   return {
     totalCategories: categories.length,
     totalCycles,
@@ -302,6 +390,7 @@ export function getAGITrainingMetrics() {
     topCategories: categories.sort(([, a], [, b]) => b.score - a.score).slice(0, 5).map(([cat, state]) => ({ category: cat, score: state.score, masteryLevel: state.masteryLevel })),
     bottomCategories: categories.sort(([, a], [, b]) => a.score - b.score).slice(0, 5).map(([cat, state]) => ({ category: cat, score: state.score, masteryLevel: state.masteryLevel })),
     dataSourceCounts: realCounts,
+    velocityReport,
   };
 }
 

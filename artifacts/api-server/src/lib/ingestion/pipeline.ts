@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { ingestedDataTable, ingestionJobsTable, dataSourcesTable } from "@workspace/db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { storeMemory } from "../vector-memory";
+import { logger } from "../logger";
 
 export interface NormalizedItem {
   source: string;
@@ -13,6 +14,146 @@ export interface NormalizedItem {
   tags?: string[];
   metadata?: Record<string, unknown>;
   publishedAt?: Date;
+}
+
+const MAX_CONTENT_LENGTH = 50_000;
+const MAX_TITLE_LENGTH = 500;
+const MAX_TAGS = 50;
+const MAX_URL_LENGTH = 2048;
+
+const sourceRateLimits = new Map<string, { count: number; windowStart: number }>();
+const MAX_ITEMS_PER_SOURCE_PER_CYCLE = 100;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+
+const ingestionAuditLog: Array<{
+  timestamp: number;
+  source: string;
+  action: "ingested" | "rejected" | "sanitized" | "rate-limited";
+  reason?: string;
+  contentHash?: string;
+}> = [];
+
+function addAuditEntry(source: string, action: typeof ingestionAuditLog[0]["action"], reason?: string, contentHash?: string): void {
+  ingestionAuditLog.unshift({ timestamp: Date.now(), source, action, reason, contentHash });
+  if (ingestionAuditLog.length > 500) ingestionAuditLog.splice(500);
+}
+
+export function getIngestionAuditLog() {
+  return {
+    total: ingestionAuditLog.length,
+    rejected: ingestionAuditLog.filter(e => e.action === "rejected").length,
+    sanitized: ingestionAuditLog.filter(e => e.action === "sanitized").length,
+    rateLimited: ingestionAuditLog.filter(e => e.action === "rate-limited").length,
+    ingested: ingestionAuditLog.filter(e => e.action === "ingested").length,
+    recent: ingestionAuditLog.slice(0, 50),
+  };
+}
+
+function stripHtmlAndScripts(text: string): { cleaned: string; wasSanitized: boolean } {
+  let wasSanitized = false;
+  let cleaned = text;
+
+  if (/<script[\s>]/i.test(cleaned)) {
+    cleaned = cleaned.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
+    wasSanitized = true;
+  }
+  if (/<style[\s>]/i.test(cleaned)) {
+    cleaned = cleaned.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
+    wasSanitized = true;
+  }
+  if (/<iframe[\s>]/i.test(cleaned)) {
+    cleaned = cleaned.replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, "");
+    wasSanitized = true;
+  }
+  if (/on\w+\s*=/i.test(cleaned)) {
+    cleaned = cleaned.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]*)/gi, "");
+    wasSanitized = true;
+  }
+  if (/javascript:/i.test(cleaned)) {
+    cleaned = cleaned.replace(/javascript:[^\s"'>]*/gi, "");
+    wasSanitized = true;
+  }
+
+  if (/<[^>]+>/g.test(cleaned)) {
+    cleaned = cleaned
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&nbsp;/g, " ");
+    wasSanitized = true;
+  }
+
+  cleaned = cleaned.replace(/\s+/g, " ").trim();
+  return { cleaned, wasSanitized };
+}
+
+function validateUrl(url: string): boolean {
+  if (!url || url.length > MAX_URL_LENGTH) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function checkRateLimit(source: string): boolean {
+  const now = Date.now();
+  const entry = sourceRateLimits.get(source);
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    sourceRateLimits.set(source, { count: 1, windowStart: now });
+    return true;
+  }
+  if (entry.count >= MAX_ITEMS_PER_SOURCE_PER_CYCLE) {
+    return false;
+  }
+  entry.count++;
+  return true;
+}
+
+function sanitizeItem(item: NormalizedItem): { item: NormalizedItem; sanitized: boolean; rejectionReason?: string } {
+  if (!item.content || item.content.trim().length === 0) {
+    return { item, sanitized: false, rejectionReason: "empty content" };
+  }
+
+  if (item.url && !validateUrl(item.url)) {
+    return { item, sanitized: false, rejectionReason: `invalid URL: ${item.url?.slice(0, 100)}` };
+  }
+
+  let wasSanitized = false;
+
+  const { cleaned: cleanedContent, wasSanitized: contentSanitized } = stripHtmlAndScripts(item.content);
+  if (contentSanitized) wasSanitized = true;
+
+  let cleanedTitle = item.title;
+  if (cleanedTitle) {
+    const { cleaned, wasSanitized: titleSanitized } = stripHtmlAndScripts(cleanedTitle);
+    cleanedTitle = cleaned.slice(0, MAX_TITLE_LENGTH);
+    if (titleSanitized) wasSanitized = true;
+  }
+
+  const truncatedContent = cleanedContent.slice(0, MAX_CONTENT_LENGTH);
+  if (truncatedContent.length < cleanedContent.length) wasSanitized = true;
+
+  const sanitizedTags = (item.tags || [])
+    .filter(t => typeof t === "string" && t.length > 0 && t.length < 100)
+    .map(t => t.replace(/<[^>]+>/g, "").trim())
+    .filter(Boolean)
+    .slice(0, MAX_TAGS);
+
+  return {
+    item: {
+      ...item,
+      content: truncatedContent,
+      title: cleanedTitle,
+      tags: sanitizedTags,
+      url: item.url && validateUrl(item.url) ? item.url : undefined,
+    },
+    sanitized: wasSanitized,
+  };
 }
 
 export function hashContent(content: string): string {
@@ -29,38 +170,59 @@ export async function isDuplicate(contentHash: string): Promise<boolean> {
 }
 
 export async function ingestItem(item: NormalizedItem): Promise<{ ingested: boolean; id?: number; reason?: string }> {
-  const text = [item.title, item.content].filter(Boolean).join(" ").trim();
-  if (!text) return { ingested: false, reason: "empty content" };
+  if (!checkRateLimit(item.source)) {
+    addAuditEntry(item.source, "rate-limited", `Rate limit exceeded for source: ${item.source}`);
+    return { ingested: false, reason: "rate-limited" };
+  }
+
+  const { item: sanitizedItem, sanitized, rejectionReason } = sanitizeItem(item);
+  if (rejectionReason) {
+    addAuditEntry(item.source, "rejected", rejectionReason);
+    return { ingested: false, reason: rejectionReason };
+  }
+
+  if (sanitized) {
+    addAuditEntry(item.source, "sanitized", "Content sanitized (HTML/script stripping or truncation)");
+  }
+
+  const text = [sanitizedItem.title, sanitizedItem.content].filter(Boolean).join(" ").trim();
+  if (!text) {
+    addAuditEntry(item.source, "rejected", "empty content after sanitization");
+    return { ingested: false, reason: "empty content" };
+  }
 
   const contentHash = hashContent(text);
   if (await isDuplicate(contentHash)) {
     return { ingested: false, reason: "duplicate" };
   }
 
+  const storedHash = crypto.createHash("sha256").update(sanitizedItem.content).digest("hex");
+
   let embeddingId: number | undefined;
   try {
     embeddingId = await storeMemory({
       content: text.slice(0, 8000),
-      source: item.source,
-      category: item.sourceType,
-      metadata: { url: item.url, tags: item.tags, ...(item.metadata || {}) },
+      source: sanitizedItem.source,
+      category: sanitizedItem.sourceType,
+      metadata: { url: sanitizedItem.url, tags: sanitizedItem.tags, contentIntegrity: storedHash, ...(sanitizedItem.metadata || {}) },
     });
   } catch (_e) {
   }
 
   const [row] = await db.insert(ingestedDataTable).values({
-    source: item.source,
-    sourceType: item.sourceType,
-    title: item.title,
-    content: item.content.slice(0, 20000),
-    url: item.url,
+    source: sanitizedItem.source,
+    sourceType: sanitizedItem.sourceType,
+    title: sanitizedItem.title,
+    content: sanitizedItem.content.slice(0, 20000),
+    url: sanitizedItem.url,
     contentHash,
     embeddingId: embeddingId ?? null,
-    tags: item.tags ?? [],
-    metadata: item.metadata ?? {},
-    publishedAt: item.publishedAt ?? null,
+    tags: sanitizedItem.tags ?? [],
+    metadata: { ...(sanitizedItem.metadata || {}), contentIntegrity: storedHash, sanitized },
+    publishedAt: sanitizedItem.publishedAt ?? null,
   }).returning({ id: ingestedDataTable.id });
 
+  addAuditEntry(sanitizedItem.source, "ingested", undefined, contentHash);
   return { ingested: true, id: row.id };
 }
 
@@ -86,7 +248,14 @@ export async function runSourceIngestion(
 
   try {
     const items = await fetchFn();
-    for (const item of items) {
+
+    if (items.length > MAX_ITEMS_PER_SOURCE_PER_CYCLE * 2) {
+      logger.warn({ source: sourceName, itemCount: items.length }, "Ingestion: excessive items from source, truncating");
+    }
+
+    const itemsToProcess = items.slice(0, MAX_ITEMS_PER_SOURCE_PER_CYCLE * 2);
+
+    for (const item of itemsToProcess) {
       try {
         const result = await ingestItem(item);
         if (result.ingested) ingested++;

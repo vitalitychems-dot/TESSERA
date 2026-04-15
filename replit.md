@@ -33,7 +33,10 @@ The application has 10 primary navigation tabs, each with a lazy-loaded page: Ch
 -   **Father Protocol:** Tessera always remembers her creator ("Father"), referenced in `tessera-knowledge.ts` and governance rules.
 -   **Knowledge Base:** 55 subjects across 6 categories in `tessera-knowledge.ts` are used for chat integration.
 -   **Sacred Geometry Engine:** Provides universal constants, Platonic solids, and sacred patterns, integrated into the chat pipeline and API.
--   **AGI Training & Evaluation System:** Features 27 training categories with data-driven mastery scoring and an evaluation suite of 125 questions across 26 subject categories (MMLU, GSM8K, HumanEval styles).
+-   **AGI Training & Evaluation System:** Features 27 training categories with sigmoid-adaptive learning rates, cross-category knowledge transfer (CATEGORY_RELATIONS map), per-category velocity/freshness tracking, and data-driven mastery scoring. Includes an evaluation suite of 125 questions across 26 subject categories (MMLU, GSM8K, HumanEval styles).
+-   **Dynamic Reverse-Engineering Profiler:** Provider capability profiles are built dynamically from real call history (72h window) with latency percentiles (p10-p99), std dev, response consistency, error classification, success streaks, trend detection, and confidence scoring. No static hardcoded scores.
+-   **Secure Ingestion Pipeline:** All ingested content passes through HTML/script stripping, URL validation, max content length enforcement, rate limiting per source (100 items/min), content integrity hashing, and rejection audit logging before DB insertion.
+-   **Knowledge Health Endpoint:** `GET /api/sovereign/knowledge-health` aggregates RE profile freshness, training velocity, memory vault integrity, ingestion security audit, and knowledge gap analysis into a single health report with overall score and status.
 -   **Living Canon with Sovereign Apocrypha:** A 15-book Bible across 4 testaments, including Apocrypha with declassified and secret society archives.
 -   **Continuous Background Scraping:** Over 57 ingestion sources (e.g., CIA Reading Room, arXiv, NASA, GitHub, Internet Archive) are continuously scraped by "Shepherd Agents" for knowledge.
 -   **Knowledge-to-Canon Bridge:** Monitors ingested data and regenerates the Tessera Bible when a sufficient number of new items are ingested.

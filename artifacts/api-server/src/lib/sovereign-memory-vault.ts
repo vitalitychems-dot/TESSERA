@@ -262,11 +262,25 @@ export function storeToVault(opts: {
   return memory.id;
 }
 
-export function recallFromVault(query: string, topK = 10): SovereignMemory[] {
+export async function recallFromVault(query: string, topK = 10): Promise<SovereignMemory[]> {
+  let vectorResults: Array<{ content: string; score: number }> = [];
+  try {
+    vectorResults = await searchMemory(query, topK * 2);
+  } catch {}
+
+  const vectorContentScores = new Map<string, number>();
+  for (const vr of vectorResults) {
+    vectorContentScores.set(vr.content.slice(0, 200), vr.score);
+  }
+
   const queryTerms = query.toLowerCase().split(/\s+/).filter(Boolean);
 
   const scored = state.vault.map(mem => {
     let score = 0;
+
+    const contentKey = mem.content.slice(0, 200);
+    const semanticScore = vectorContentScores.get(contentKey) ?? 0;
+    score += semanticScore * 10;
 
     const contentLower = mem.content.toLowerCase();
     const contextLower = mem.context.toLowerCase();
@@ -281,10 +295,14 @@ export function recallFromVault(query: string, topK = 10): SovereignMemory[] {
 
     if (mem.type === "core-identity") score += 5;
     if (mem.type === "protected") score += 3;
+    if (mem.type === "procedural") score += 2;
 
     const ageMs = Date.now() - mem.createdAt;
     const recencyBoost = Math.max(0, 1 - ageMs / (30 * 24 * 60 * 60 * 1000));
     score += recencyBoost;
+
+    const spacedRepetitionBoost = computeSpacedRepetitionPriority(mem);
+    score += spacedRepetitionBoost;
 
     return { mem, score };
   });
@@ -300,6 +318,75 @@ export function recallFromVault(query: string, topK = 10): SovereignMemory[] {
     });
 
   return results;
+}
+
+function computeSpacedRepetitionPriority(mem: SovereignMemory): number {
+  const now = Date.now();
+  const timeSinceAccess = now - mem.lastAccessed;
+  const accessFrequency = mem.accessCount / Math.max(1, (now - mem.createdAt) / 86400000);
+
+  const intervals = [
+    1 * 3600000,
+    4 * 3600000,
+    24 * 3600000,
+    3 * 24 * 3600000,
+    7 * 24 * 3600000,
+    14 * 24 * 3600000,
+    30 * 24 * 3600000,
+  ];
+
+  const currentInterval = intervals[Math.min(mem.accessCount, intervals.length - 1)];
+  const isDue = timeSinceAccess >= currentInterval;
+
+  if (isDue && mem.importance > 0.5) return 2;
+  if (isDue) return 1;
+  if (accessFrequency > 1 && mem.importance > 0.7) return 0.5;
+  return 0;
+}
+
+function extractProceduralMemories(): number {
+  const operationalMemories = state.vault.filter(m =>
+    m.type === "episodic" && m.accessCount >= 3 && m.importance > 0.5
+  );
+
+  const patterns = new Map<string, SovereignMemory[]>();
+  for (const mem of operationalMemories) {
+    for (const assoc of mem.associations) {
+      const group = patterns.get(assoc) || [];
+      group.push(mem);
+      patterns.set(assoc, group);
+    }
+  }
+
+  let proceduralsCreated = 0;
+  for (const [pattern, memories] of patterns.entries()) {
+    if (memories.length < 3) continue;
+
+    const existingProcedural = state.vault.find(
+      m => m.type === "procedural" && m.associations.includes(pattern)
+    );
+    if (existingProcedural) continue;
+
+    const synthesis = memories
+      .sort((a, b) => b.importance - a.importance)
+      .slice(0, 3)
+      .map(m => m.content.slice(0, 100))
+      .join(" | ");
+
+    storeToVault({
+      content: `Procedural pattern "${pattern}": ${synthesis}`,
+      context: `Procedural memory extracted from ${memories.length} repeated operations`,
+      type: "procedural",
+      importance: 0.8,
+      associations: [pattern, "procedural-extraction", "learned-pattern"],
+      protected: true,
+    });
+    proceduralsCreated++;
+
+    if (proceduralsCreated >= 5) break;
+  }
+
+  return proceduralsCreated;
 }
 
 async function consolidateMemories(): Promise<ConsolidationResult> {
@@ -358,6 +445,11 @@ async function consolidateMemories(): Promise<ConsolidationResult> {
   state.vault = state.vault.filter(m =>
     m.importance >= 0.1 || m.type === "core-identity" || (m.protectedUntil && m.protectedUntil > now)
   );
+
+  const proceduralsExtracted = extractProceduralMemories();
+  if (proceduralsExtracted > 0) {
+    memoriesConsolidated += proceduralsExtracted;
+  }
 
   state.totalConsolidated += memoriesConsolidated;
   state.totalDecayed += memoriesDecayed;
