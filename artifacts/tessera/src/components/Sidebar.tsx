@@ -263,6 +263,15 @@ const NAV_GROUPS: NavGroup[] = [
         matchFn: (loc) => loc === "/inventions",
       },
       {
+        title: "Rick Sanchez",
+        href: "/rick",
+        icon: Atom,
+        color: "green",
+        dotColor: "bg-green-400",
+        testId: "link-rick",
+        matchFn: (loc) => loc === "/rick" || loc === "/rick-sanchez",
+      },
+      {
         title: "Agent NFTs",
         href: "/agent-nft",
         icon: Crown,

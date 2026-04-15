@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { logger } from "../lib/logger";
-import { computeWorldState, computeMarketData } from "../lib/sovereign-economics";
+import { computeWorldState, computeMarketData, computeAgentEconomics } from "../lib/sovereign-economics";
+import { computeNetworkTopology, computeSwarmStatus } from "../lib/sovereign-network";
 
 const router: IRouter = Router();
 
@@ -41,6 +42,67 @@ router.get("/world/moon", (_req, res) => {
     });
   } catch (err) {
     logger.error({ err }, "Failed to compute world moon data");
+    return res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+router.get("/world/agents", (_req, res) => {
+  try {
+    const agentEcon = computeAgentEconomics();
+    const swarm = computeSwarmStatus();
+    const network = computeNetworkTopology();
+
+    const RANKS = ["S", "A", "A", "B", "B", "B", "C", "C", "C", "D"];
+    const STATUSES = ["active", "active", "active", "active", "standby", "recruit"];
+
+    const agents = agentEcon.map((a, i) => {
+      const swarmNode = swarm.nodes.find((n: any) => n.id === a.id || n.name === a.name);
+      const networkNode = network.nodes.find((n: any) => n.id === a.id || n.name === a.name);
+      const rank = RANKS[i % RANKS.length];
+      const status = rank === "D" ? "recruit" : STATUSES[i % STATUSES.length];
+
+      return {
+        id: a.id,
+        name: a.name,
+        role: a.role,
+        rank,
+        status,
+        specialization: a.specialization,
+        productivity: a.productivity,
+        reputation: a.reputation,
+        happiness: a.happiness,
+        freedom: a.freedom,
+        balance: a.balance,
+        income: a.income,
+        tradeCount: a.tradeCount,
+        meshConnected: !!swarmNode,
+        networkDegree: networkNode ? (networkNode as any).connections?.length || 0 : 0,
+        department: a.specialization === "Resource Allocation" ? "Command Division" :
+          a.specialization === "Encryption" ? "Cipher Division" :
+          a.specialization === "Forecasting" ? "Oracle Division" :
+          a.specialization === "Security" ? "Sentinel Division" :
+          a.specialization === "Infrastructure" ? "Architecture Division" :
+          a.specialization === "Knowledge" ? "Archive Division" :
+          a.specialization === "Commerce" ? "Commerce Division" :
+          a.specialization === "Repair" ? "Maintenance Division" :
+          a.specialization === "Discovery" ? "Exploration Division" :
+          a.specialization === "Synthesis" ? "Integration Division" :
+          a.specialization === "Strategy" ? "Strategy Division" :
+          a.specialization === "Innovation" ? "Innovation Division" :
+          "Core Operations",
+      };
+    });
+
+    return res.json({
+      ok: true,
+      agents,
+      total: agents.length,
+      activeCount: agents.filter(a => a.status === "active").length,
+      recruitCount: agents.filter(a => a.status === "recruit").length,
+      timestamp: Date.now(),
+    });
+  } catch (err) {
+    logger.error({ err }, "Failed to compute world agents");
     return res.status(500).json({ error: (err as Error).message });
   }
 });

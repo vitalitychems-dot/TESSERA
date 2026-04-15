@@ -33,6 +33,7 @@ const LatticeBrowserPage = lazy(() => import("@/pages/LatticeBrowserPage"));
 const GrandCouncilPage = lazy(() => import("@/pages/GrandCouncilPage"));
 const RecruitmentPage = lazy(() => import("@/pages/RecruitmentPage"));
 const AgentNFTPage = lazy(() => import("@/pages/AgentNFTPage"));
+const RickPage = lazy(() => import("@/pages/RickPage"));
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -154,6 +155,8 @@ function AppRouter() {
         <Route path="/transparency-ledger">{() => <GrandCouncilPage initialTab="executor" />}</Route>
         <Route path="/sports-arb">{() => <TokenEconomyPage />}</Route>
         <Route path="/inventions">{() => <BuildPage />}</Route>
+        <Route path="/rick">{() => <RickPage />}</Route>
+        <Route path="/rick-sanchez">{() => <RickPage />}</Route>
         <Route path="/agent-nft">{() => <AgentNFTPage />}</Route>
         <Route path="/universe-model">{() => <UniversePage />}</Route>
         <Route path="/agent-comms">{() => <SystemPage initialTab="agents" />}</Route>

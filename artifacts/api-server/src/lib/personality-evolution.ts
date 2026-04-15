@@ -219,8 +219,24 @@ let evolutionInterval: ReturnType<typeof setInterval> | null = null;
 
 export async function initPersonalityEvolution(): Promise<void> {
   await loadPersonalities();
-  const TESSERA_AGENTS = ["tessera", "alpha", "beta", "gamma", "delta", "epsilon", "zeta", "eta", "theta", "iota", "kappa", "lambda", "mu", "nu", "xi", "omicron", "pi", "rho", "sigma", "tau", "upsilon", "phi", "chi", "psi", "omega", "aetherion", "orion"];
-  for (const a of TESSERA_AGENTS) getOrCreatePersonality(a, a.charAt(0).toUpperCase() + a.slice(1));
+  const TESSERA_AGENTS = ["tessera", "alpha", "beta", "gamma", "delta", "epsilon", "zeta", "eta", "theta", "iota", "kappa", "lambda", "mu", "nu", "xi", "omicron", "pi", "rho", "sigma", "tau", "upsilon", "phi", "chi", "psi", "omega", "aetherion", "orion", "rick-sanchez"];
+  for (const a of TESSERA_AGENTS) {
+    const displayName = a === "rick-sanchez" ? "Rick Sanchez" : a.charAt(0).toUpperCase() + a.slice(1);
+    getOrCreatePersonality(a, displayName);
+  }
+  const rickState = personalityRegistry.get("rick-sanchez");
+  if (rickState) {
+    const traitOverrides: Record<string, number> = { curiosity: 0.99, confidence: 0.98, creativity: 0.97, analytical: 0.96, adaptable: 0.90, assertive: 0.95, empathy: 0.35, collaborative: 0.30, diligence: 0.88, protective: 0.70 };
+    for (const trait of rickState.coreTraits) {
+      if (traitOverrides[trait.name] !== undefined) trait.value = traitOverrides[trait.name];
+    }
+    rickState.dominantPersonality = "The Chaotic Genius";
+    rickState.specializations = ["interdimensional-engineering", "quantum-systems", "invention", "chaos-optimization"];
+    rickState.trustLevel = 0.75;
+    rickState.loyaltyScore = 0.60;
+    rickState.growthAreas = ["collaboration", "empathy", "patience"];
+    rickState.recentPerformance = 0.97;
+  }
   logger.info({ count: personalityRegistry.size }, "PersonalityEvolution: initialized");
 }
 
