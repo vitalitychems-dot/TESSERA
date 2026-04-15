@@ -30,16 +30,13 @@ router.get("/universe/metrics", async (_req, res) => {
 router.get("/universe/grand-narrative", async (_req, res) => {
   try {
     const sacredGeo = computeSacredGeometry();
-    const phi = sacredGeo?.constants?.phi ?? 1.6180339887498948;
-    const fibonacci = sacredGeo?.constants?.fibonacci ?? [1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144];
+    const phiConst = sacredGeo?.universalConstants?.find((c: { symbol: string }) => c.symbol === "phi" || c.symbol === "PHI");
+    const phi = phiConst?.value ?? 1.6180339887498948;
+    const fibData = sacredGeo?.fibonacci?.sequence;
+    const fibonacci = Array.isArray(fibData) ? fibData.slice(0, 12) : [1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144];
 
     const knowledgeSubjects: Record<string, string> = {};
-    const relevantKeys = [
-      "sacred_geometry", "ancient_civilizations", "consciousness",
-      "world_religions", "secret_societies", "cosmology",
-      "quantum_physics", "mathematics", "philosophy", "astrology",
-      "alchemy", "mysticism", "hermetic_principles",
-    ];
+    const relevantKeys = Object.keys(TESSERA_SUBJECTS);
     for (const key of relevantKeys) {
       if (TESSERA_SUBJECTS[key]) {
         knowledgeSubjects[key] = TESSERA_SUBJECTS[key].knowledge;
@@ -54,7 +51,7 @@ router.get("/universe/grand-narrative", async (_req, res) => {
         frequency: "396 Hz",
         icon: "Seed of Life",
         visualizationAnchor: "dimension-0",
-        knowledgeSources: ["sacred_geometry", "ancient_civilizations", "mathematics"],
+        knowledgeSources: ["fractal-mathematics", "ancient-civilizations", "mathematics", "crystallography"],
       },
       {
         id: 2,
@@ -63,7 +60,7 @@ router.get("/universe/grand-narrative", async (_req, res) => {
         frequency: "417 Hz",
         icon: "Vesica Piscis",
         visualizationAnchor: "dimension-1",
-        knowledgeSources: ["hermetic_principles", "alchemy", "mysticism"],
+        knowledgeSources: ["alchemy", "mythology", "meditation", "philosophy"],
       },
       {
         id: 3,
@@ -72,7 +69,7 @@ router.get("/universe/grand-narrative", async (_req, res) => {
         frequency: "528 Hz",
         icon: "Flower of Life",
         visualizationAnchor: "dimension-2",
-        knowledgeSources: ["world_religions", "philosophy", "consciousness"],
+        knowledgeSources: ["philosophy", "consciousness", "ethics", "anthropology"],
       },
       {
         id: 4,
@@ -81,7 +78,7 @@ router.get("/universe/grand-narrative", async (_req, res) => {
         frequency: "639 Hz",
         icon: "Sri Yantra",
         visualizationAnchor: "dimension-3",
-        knowledgeSources: ["secret_societies"],
+        knowledgeSources: ["cryptography", "geopolitics", "numerology"],
       },
       {
         id: 5,
@@ -90,7 +87,7 @@ router.get("/universe/grand-narrative", async (_req, res) => {
         frequency: "852 Hz",
         icon: "Metatron's Cube",
         visualizationAnchor: "dimension-5",
-        knowledgeSources: ["cosmology", "quantum_physics", "astrology"],
+        knowledgeSources: ["cosmology", "astronomy", "astrology", "harmonics"],
       },
       {
         id: 6,
@@ -99,7 +96,7 @@ router.get("/universe/grand-narrative", async (_req, res) => {
         frequency: "963 Hz",
         icon: "Merkaba",
         visualizationAnchor: "dimension-6",
-        knowledgeSources: ["consciousness", "sacred_geometry"],
+        knowledgeSources: ["consciousness", "fractal-mathematics", "harmonics"],
       },
     ];
 
