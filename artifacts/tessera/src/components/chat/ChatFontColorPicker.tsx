@@ -61,7 +61,7 @@ export function ChatFontColorPicker({ isOpen, onToggle, localFontColor, onColorC
             {localFontColor && (
               <button
                 type="button"
-                onClick={() => onColorChange(localFontColor)}
+                onClick={() => onColorChange("")}
                 className="mt-2 w-full text-[11px] text-gray-500 hover:text-gray-300 transition-all text-center"
                 data-testid="button-chat-font-reset"
               >
