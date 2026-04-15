@@ -41,6 +41,7 @@ import { initRecursiveSelfImprovement, startRecursiveImprovementLoop } from "./l
 import { initCrossDomainSynthesis, startCrossDomainSynthesisLoop } from "./lib/cross-domain-synthesis";
 import { initSovereignMemoryVault, startSovereignMemoryVaultLoop } from "./lib/sovereign-memory-vault";
 import { initAutonomousForumEngine, startAutonomousForumLoop } from "./lib/autonomous-forum-engine";
+import { initSovereignLoop, startSovereignLoop } from "./lib/sovereign-loop";
 
 const app: Express = express();
 
@@ -463,6 +464,14 @@ async function initializeModules() {
     if (seeded > 0) logger.info({ seeded }, "Forum seeded from real council decisions and ingested knowledge");
   } catch (err) {
     logger.warn({ err }, "Forum seeder warning — non-critical");
+  }
+
+  try {
+    await initSovereignLoop();
+    startSovereignLoop(120_000);
+    logger.info("✦ SOVEREIGN AUTONOMOUS LOOP ACTIVE — unified 8-phase orchestration running — zero human intervention ✦");
+  } catch (err) {
+    logger.warn({ err }, "SovereignLoop init warning — engines continue on independent timers");
   }
 
   await runStartupHealthCheck();

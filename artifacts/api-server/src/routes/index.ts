@@ -47,6 +47,8 @@ import systemRuntimeRouter from "./system-runtime";
 import rickRouter from "./rick";
 import universeRouter from "./universe";
 import mandatesRouter from "./mandates";
+import archivesRouter from "./archives";
+import politicalDossiersRouter from "./political-dossiers";
 
 const router: IRouter = Router();
 
@@ -98,5 +100,7 @@ router.use(legacyEnginesRouter);
 router.use(rickRouter);
 router.use(universeRouter);
 router.use(mandatesRouter);
+router.use(archivesRouter);
+router.use(politicalDossiersRouter);
 
 export default router;
