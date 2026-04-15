@@ -180,14 +180,24 @@ async function executeGroup(group: RequestGroup): Promise<void> {
   const mergedResponse = await callLLM(mergedMessages, mergedOpts);
   const parts = splitMergedResponse(mergedResponse, totalQueries);
 
-  primary.resolve(parts[0]);
-  for (const dup of duplicates) dup.resolve(parts[0]);
-
-  for (let i = 0; i < semanticPeers.length; i++) {
-    semanticPeers[i].resolve(parts[i + 1] ?? mergedResponse);
+  const hasLabels = mergedResponse.includes("[Q1]");
+  if (hasLabels) {
+    primary.resolve(parts[0]);
+    for (const dup of duplicates) dup.resolve(parts[0]);
+    for (let i = 0; i < semanticPeers.length; i++) {
+      semanticPeers[i].resolve(parts[i + 1] ?? mergedResponse);
+    }
+    logger.info({ totalQueries, peers: semanticPeers.length }, "LLMBatcher: semantic merge executed");
+  } else {
+    logger.warn({ totalQueries }, "LLMBatcher: merged response missing labels, falling back to individual calls");
+    primary.resolve(mergedResponse);
+    for (const dup of duplicates) dup.resolve(mergedResponse);
+    const fallbackPromises = semanticPeers.map(async (peer) => {
+      const result = await callLLM(peer.messages, { ...peer.opts, skipCache: false });
+      peer.resolve(result);
+    });
+    await Promise.allSettled(fallbackPromises);
   }
-
-  logger.info({ totalQueries, peers: semanticPeers.length }, "LLMBatcher: semantic merge executed");
 }
 
 async function flushBatch(): Promise<void> {
