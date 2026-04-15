@@ -1,8 +1,8 @@
-import { pgTable, serial, text, real, timestamp, jsonb, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, real, timestamp, jsonb, integer, boolean, uniqueIndex, index } from "drizzle-orm/pg-core";
 
 export const semanticCacheTable = pgTable("semantic_cache", {
   id: serial("id").primaryKey(),
-  promptHash: text("prompt_hash").notNull(),
+  promptHash: text("prompt_hash").notNull().unique(),
   promptText: text("prompt_text").notNull(),
   embedding: jsonb("embedding").$type<number[]>().default([]),
   response: text("response").notNull(),
