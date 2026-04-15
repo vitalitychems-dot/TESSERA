@@ -201,21 +201,27 @@ function App() {
               <SectionErrorBoundary name="Background" compact>
                 <UniverseBackground />
               </SectionErrorBoundary>
-              <div className="flex flex-col h-dvh w-full overflow-hidden" style={{ position: "relative", zIndex: 1 }}>
-                <Toaster />
+              <div className="flex flex-col h-dvh w-full overflow-hidden" style={{ position: "relative", zIndex: 1, pointerEvents: "none" }}>
+                <div style={{ pointerEvents: "auto" }}>
+                  <Toaster />
+                </div>
                 <SectionErrorBoundary name="Status Badge" compact>
-                  <div className="fixed top-2 right-2 z-50">
+                  <div className="fixed top-2 right-2 z-50" style={{ pointerEvents: "auto" }}>
                     <MeshStatusBadge />
                   </div>
                 </SectionErrorBoundary>
-                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden" data-scroll-container style={{ paddingBottom: "calc(52px + env(safe-area-inset-bottom, 0px))", WebkitOverflowScrolling: "touch" }}>
+                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden" data-scroll-container style={{ paddingBottom: "calc(52px + env(safe-area-inset-bottom, 0px))", WebkitOverflowScrolling: "touch", pointerEvents: "auto" }}>
                   <ScrollToTop />
                   <AppRouter />
                 </div>
                 <SectionErrorBoundary name="Commands" compact>
-                  <ActiveCommandsOverlay />
+                  <div style={{ pointerEvents: "auto" }}>
+                    <ActiveCommandsOverlay />
+                  </div>
                 </SectionErrorBoundary>
-                <MobileNav />
+                <div style={{ pointerEvents: "auto" }}>
+                  <MobileNav />
+                </div>
               </div>
             </WouterRouter>
           </TooltipProvider>
