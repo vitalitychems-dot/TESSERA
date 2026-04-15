@@ -11,7 +11,7 @@ import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import MobileNav from "@/components/MobileNav";
 import ActiveCommandsOverlay from "@/components/ActiveCommandsOverlay";
 import MeshStatusBadge from "@/components/MeshStatusBadge";
-import ToroidalBackground from "@/components/ToroidalBackground";
+import UniverseBackground from "@/components/UniverseBackground";
 import { Loader2 } from "lucide-react";
 
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -199,7 +199,7 @@ function App() {
           <TooltipProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <SectionErrorBoundary name="Background" compact>
-                <ToroidalBackground />
+                <UniverseBackground />
               </SectionErrorBoundary>
               <div className="flex flex-col h-dvh w-full overflow-hidden" style={{ position: "relative", zIndex: 1 }}>
                 <Toaster />
