@@ -36,6 +36,7 @@ const AgentNFTPage = lazy(() => import("@/pages/AgentNFTPage"));
 const RickPage = lazy(() => import("@/pages/RickPage"));
 const GrandNarrativePage = lazy(() => import("@/pages/GrandNarrativePage"));
 const CompressionLabPage = lazy(() => import("@/pages/CompressionLabPage"));
+const SacredConferencePage = lazy(() => import("@/pages/SacredConferencePage"));
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -176,6 +177,10 @@ function AppRouter() {
         <Route path="/knowledge-dashboard">{() => <SecretsPage />}</Route>
         <Route path="/live-secret-knowledge">{() => <SecretsPage />}</Route>
         <Route path="/compression-lab">{() => <CompressionLabPage />}</Route>
+        <Route path="/sacred-conference">{() => <SacredConferencePage />}</Route>
+        <Route path="/sacred-knowledge-vault">{() => <SacredConferencePage />}</Route>
+        <Route path="/living-bible">{() => <SacredConferencePage />}</Route>
+        <Route path="/3d-diagrams">{() => <SacredConferencePage />}</Route>
         <Route component={NotFound} />
       </Switch>
     </Suspense>

@@ -57,6 +57,7 @@ const CLUSTERS: NavCluster[] = [
       { label: "Secrets", href: "/secrets", Icon: Lock, match: (l) => l === "/secrets" || l === "/bible" || l === "/secret-knowledge" || l === "/secret-society", color: "red" },
       { label: "Members", href: "/members", Icon: Users, match: (l) => l === "/members", color: "amber" },
       { label: "Compress", href: "/compression-lab", Icon: Zap, match: (l) => l === "/compression-lab", color: "cyan" },
+      { label: "Conference", href: "/sacred-conference", Icon: BookOpen, match: (l) => l === "/sacred-conference" || l === "/sacred-knowledge-vault" || l === "/living-bible" || l === "/3d-diagrams", color: "violet" },
     ],
   },
   {

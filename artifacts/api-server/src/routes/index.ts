@@ -49,6 +49,7 @@ import universeRouter from "./universe";
 import mandatesRouter from "./mandates";
 import archivesRouter from "./archives";
 import politicalDossiersRouter from "./political-dossiers";
+import sacredConferenceRouter from "./sacred-conference";
 
 const router: IRouter = Router();
 
@@ -102,5 +103,6 @@ router.use(universeRouter);
 router.use(mandatesRouter);
 router.use(archivesRouter);
 router.use(politicalDossiersRouter);
+router.use(sacredConferenceRouter);
 
 export default router;
