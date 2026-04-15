@@ -28,7 +28,7 @@ import { computeMarketData, computeAgentEconomics, computeEconomyStats } from ".
 import { getConsensusMetrics } from "./consensus-engine";
 import { initSemanticCache, getCacheStats } from "./semantic-cache";
 import { runSelfEvaluation, getSelfEvaluationMetrics } from "./self-evaluation";
-import { distillFromResponse, refreshStaleKnowledge, getDistillationStats } from "./knowledge-distillation";
+import { distillFromResponse, refreshStaleKnowledge, revalidateStaleKnowledge, getDistillationStats } from "./knowledge-distillation";
 import { getBatcherStats } from "./llm-batcher";
 import { getLLMStats } from "./llm-client";
 import { getEmbeddingStats } from "./neural-embeddings";
@@ -375,6 +375,22 @@ async function phase8_IntelligenceEvaluation(): Promise<Record<string, unknown>>
     staleRefreshed = await refreshStaleKnowledge();
   } catch {}
 
+  let revalidated = 0;
+  try {
+    revalidated = await revalidateStaleKnowledge(async (fact: string) => {
+      const { callLLMSafe } = await import("./llm-client");
+      const verdict = await callLLMSafe(
+        [
+          { role: "system", content: "You are a fact checker. Reply with only 'true' or 'false'." },
+          { role: "user", content: `Is this statement factually correct? "${fact}"` },
+        ],
+        { maxTokens: 10, timeoutMs: 8000 },
+        "false",
+      );
+      return verdict.toLowerCase().includes("true");
+    });
+  } catch {}
+
   const cacheStats = getCacheStats();
   const distillStats = await getDistillationStats();
   const batcherStats = getBatcherStats();
@@ -383,11 +399,11 @@ async function phase8_IntelligenceEvaluation(): Promise<Record<string, unknown>>
 
   return {
     selfEvaluation: evalResult
-      ? { score: evalResult.overallScore, weak: evalResult.weakAreas, strong: evalResult.strongAreas, llmReduced: evalResult.llmCallsReduced }
+      ? { score: evalResult.overallScore, weak: evalResult.weakAreas, strong: evalResult.strongAreas, adjustments: evalResult.adjustments, llmReduced: evalResult.llmCallsReduced }
       : { skipped: true },
-    cache: { hitRate: cacheStats.hitRate, size: cacheStats.cacheSize, hits: cacheStats.totalHits },
-    distillation: { totalFacts: distillStats.totalFacts, hitRate: distillStats.hitRate, staleRefreshed },
-    batcher: { batched: batcherStats.totalBatched, deduplicated: batcherStats.totalDeduplicated },
+    cache: { hitRate: cacheStats.hitRate, size: cacheStats.cacheSize, hits: cacheStats.totalHits, ttl: cacheStats.ttlSeconds },
+    distillation: { totalFacts: distillStats.totalFacts, hitRate: distillStats.hitRate, staleRefreshed, revalidated },
+    batcher: { batched: batcherStats.totalBatched, deduplicated: batcherStats.totalDeduplicated, semanticMerged: batcherStats.totalSemanticMerged, callsSaved: batcherStats.callsSaved, reductionRate: batcherStats.reductionRate },
     llm: { totalCalls: llmStats.totalCalls, cacheHits: llmStats.cacheHits, errors: llmStats.errors },
     embeddings: { cacheSize: embeddingStats.cacheSize, dimension: embeddingStats.dimension },
   };
