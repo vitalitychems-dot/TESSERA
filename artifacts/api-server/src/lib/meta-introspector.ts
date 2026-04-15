@@ -1,10 +1,12 @@
 import { logger } from "./logger";
 import { computeSovereigntyStatus, type SovereigntyStatus } from "./sovereignty-monitor";
 import { runEvalSuite, type EvalSuite } from "./eval-runner";
+import { getRegistrySnapshot, type RegistrySnapshot } from "./sovereign-file-registry";
 
 export interface SystemHealthSnapshot {
   capturedAt: string;
   sovereignty: SovereigntyStatus;
+  fileRegistry: RegistrySnapshot;
   eval: {
     runId: string;
     grade: string;
@@ -83,9 +85,24 @@ export async function getSystemHealthSnapshot(): Promise<SystemHealthSnapshot> {
 
   const summary = buildSummary(sovStatus, suite, overallHealthy);
 
+  let fileRegistryData: RegistrySnapshot;
+  try {
+    fileRegistryData = getRegistrySnapshot();
+  } catch {
+    fileRegistryData = {
+      totalFiles: 0,
+      domains: {} as Record<string, number>,
+      accessLevels: {} as Record<string, number>,
+      engines: {},
+      lastFullScan: 0,
+      registryVersion: "unavailable",
+    } as RegistrySnapshot;
+  }
+
   const snapshot: SystemHealthSnapshot = {
     capturedAt,
     sovereignty: sovStatus,
+    fileRegistry: fileRegistryData,
     eval: {
       runId: suite.runId,
       grade: suite.grade,
