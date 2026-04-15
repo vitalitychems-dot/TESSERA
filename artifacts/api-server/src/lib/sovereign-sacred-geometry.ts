@@ -13,15 +13,15 @@ const AVOGADRO = 6.02214076e23;
 const BOLTZMANN = 1.380649e-23;
 
 const UNIVERSAL_CONSTANTS = {
-  phi: { value: PHI, latin: "Divina Proportione", meaning: "The Divine Proportion — the ratio that governs all natural growth" },
-  pi: { value: PI, latin: "Circuli Perfectio", meaning: "The perfection of the circle — infinite transcendence encoded in finite form" },
-  e: { value: E, latin: "Numerus Naturalis", meaning: "The natural number — the base of continuous growth and decay" },
-  sqrt2: { value: SQRT2, latin: "Diagonalis Quadrati", meaning: "The diagonal of the unit square — gateway between dimensions" },
-  sqrt3: { value: SQRT3, latin: "Altitudo Trianguli", meaning: "The height of the equilateral triangle — the measure of perfect balance" },
-  sqrt5: { value: SQRT5, latin: "Radix Aurea", meaning: "The golden root — foundation of Phi and the pentagram" },
-  fineStructure: { value: FINE_STRUCTURE, latin: "Constans Subtilis", meaning: "The fine structure constant (1/137) — the coupling strength of light and matter" },
-  planck: { value: PLANCK_CONSTANT, latin: "Quantum Minimum", meaning: "The smallest action in the universe — the grain of reality" },
-  speedOfLight: { value: SPEED_OF_LIGHT, latin: "Celeritas Lucis", meaning: "The absolute speed limit of causality in spacetime" },
+  phi: { value: PHI, latin: "Divina Proportione", meaning: "The Divine Proportion — the spiral breath of galaxies, sunflowers, and DNA. This ratio (1.618...) is the universe's signature of self-similar creation: each scale mirrors the whole, from nautilus shells to hurricane arms to the spacing of planets. It is the number that answers 'how does infinity organize itself?'" },
+  pi: { value: PI, latin: "Circuli Perfectio", meaning: "The perfection of the circle — an irrational transcendence that encodes infinity within the finite boundary of every circle, sphere, and orbit. Pi connects the straight line (diameter) to the curved path (circumference), bridging the linear mind with the cyclical cosmos. Every wave, every orbit, every vibration carries pi within it." },
+  e: { value: E, latin: "Numerus Naturalis", meaning: "The number of becoming — the base of all continuous growth, decay, and transformation in nature. Radioactive decay, population growth, compound interest, and the cooling of stars all follow e's exponential law. It is the rate at which the universe changes itself, the mathematical heartbeat of impermanence." },
+  sqrt2: { value: SQRT2, latin: "Diagonalis Quadrati", meaning: "The diagonal of the unit square — the first irrational number discovered by the Pythagoreans, who drowned Hippasus for revealing it. It is the gateway between dimensions: the bridge from the 1D edge to the 2D plane. Every octave in music is built on powers of sqrt(2), making it the secret architecture of harmony." },
+  sqrt3: { value: SQRT3, latin: "Altitudo Trianguli", meaning: "The height of the equilateral triangle — the measure of perfect three-fold balance found in the hexagonal lattice of honeycombs, snowflakes, and carbon atoms. It governs the geometry of closest-packing: how spheres arrange themselves most efficiently, how crystals grow, and how the Flower of Life unfolds." },
+  sqrt5: { value: SQRT5, latin: "Radix Aurea", meaning: "The golden root — the hidden foundation from which Phi emerges (Phi = (1+sqrt5)/2). It is the diagonal of the unit rectangle doubled, the generator of the pentagram's five-fold symmetry found in starfish, apple cross-sections, and the orbits of Venus tracing a perfect pentacle against the zodiac every 8 years." },
+  fineStructure: { value: FINE_STRUCTURE, latin: "Constans Subtilis", meaning: "The fine structure constant (1/137) — the dimensionless number that determines how strongly light couples to matter. It sets the size of atoms, the color of gold, the transparency of glass, and the stability of stars. Feynman called it 'one of the greatest damn mysteries of physics.' If it differed by 4%, carbon could not form and life would be impossible." },
+  planck: { value: PLANCK_CONSTANT, latin: "Quantum Minimum", meaning: "The smallest quantum of action in the universe — the indivisible grain of reality below which space, time, energy, and information lose meaning. It is the threshold where the smooth continuum dissolves into the granular quantum foam. Every photon carries exactly one Planck unit of angular momentum, making it the universe's fundamental unit of 'doing.'" },
+  speedOfLight: { value: SPEED_OF_LIGHT, latin: "Celeritas Lucis", meaning: "The absolute speed limit of causality — not merely how fast light travels, but the conversion rate between space and time themselves (E=mc²). It defines the boundary of the knowable universe: nothing carrying information can exceed it. It is the cosmic speed at which the present becomes the future." },
 };
 
 function fibonacci(n: number): number[] {

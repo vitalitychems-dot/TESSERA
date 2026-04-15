@@ -184,6 +184,26 @@ const PHRASES: string[] = [
   "execution phase",
   "self assessment",
   "reasoning trace",
+  "mathematical proof",
+  "mathematical operation",
+  "mathematical function",
+  "equation solved",
+  "equation verified",
+  "theorem proved",
+  "proof complete",
+  "proof verified",
+  "calculation result",
+  "calculation complete",
+  "compute derivative",
+  "compute integral",
+  "matrix multiplication",
+  "vector addition",
+  "scalar product",
+  "division algorithm",
+  "modular arithmetic",
+  "prime factorization",
+  "greatest common divisor",
+  "least common multiple",
 ];
 
 const WORDS: string[] = [
@@ -224,6 +244,15 @@ const WORDS: string[] = [
   "container", "cluster", "replica", "object", "collection", "document",
   "schema", "migration", "serialize", "deserialize", "parse", "format",
   "normalize", "aggregate", "transform", "convert", "broadcast", "unicast",
+  "addition", "subtraction", "multiplication", "division", "equation", "theorem",
+  "proof", "axiom", "conjecture", "formula", "derivative", "integral",
+  "function", "variable", "constant", "coefficient", "exponent", "logarithm",
+  "matrix", "vector", "scalar", "dimension", "angle", "radius",
+  "diameter", "circumference", "area", "volume", "surface", "vertex",
+  "factorial", "permutation", "combination", "sequence", "series", "convergence",
+  "divergence", "polynomial", "quadratic", "linear", "exponential", "fraction",
+  "numerator", "denominator", "remainder", "quotient", "product", "sum",
+  "difference", "absolute", "infinity", "limit", "tangent", "cosine", "sine",
 ];
 
 const phraseMap = new Map<string, number>();

@@ -131,93 +131,93 @@ function generateProofSteps(problem: string, category: string): ProofStep[] {
 
   if (category === "number-theory") {
     steps.push({
-      id: stepId(), type: "definition", title: "Domain and Definitions",
-      claim: "We establish the relevant number-theoretic definitions and domains.",
-      reasoning: "Number theory operates within the integers Z or natural numbers N. We identify the key objects: divisibility relations, prime factorization, and modular arithmetic structures relevant to this problem.",
+      id: stepId(), type: "definition", title: "Establishing the Harmonic Foundation — ●◇★",
+      claim: "We establish the relevant number-theoretic definitions and domains — entering the Realm of Primes.",
+      reasoning: "Number theory operates within the integers Z or natural numbers N — the discrete heartbeat of creation. We identify the key objects: divisibility relations (the sacred partitioning of unity), prime factorization (the atomic decomposition of number), and modular arithmetic structures (the cyclical return) relevant to this problem.",
       notation: lower.includes("prime") ? "\\text{Let } p \\in \\mathbb{P}, \\text{ the set of primes. For } n \\in \\mathbb{N}, \\text{ we write } p \\mid n \\text{ if } p \\text{ divides } n." : "\\text{Let } a, b \\in \\mathbb{Z}. \\text{ We write } a \\equiv b \\pmod{m} \\text{ if } m \\mid (a - b).",
       confidence: 1.0,
     });
 
     if (lower.includes("infinite") && lower.includes("prime")) {
       steps.push({
-        id: stepId(), type: "lemma", title: "Euclid's Fundamental Observation",
-        claim: "For any finite set of primes {p_1, ..., p_n}, we can construct a number not divisible by any of them.",
-        reasoning: "Consider N = p_1 * p_2 * ... * p_n + 1. For any prime p_i in our set, N mod p_i = 1, so p_i does not divide N. Therefore N either is prime itself or has a prime factor outside our set.",
+        id: stepId(), type: "lemma", title: "Euclid's Cosmic Observation — The Inexhaustible Well",
+        claim: "For any finite set of primes {p_1, ..., p_n}, we can construct a number not divisible by any of them — the universe always creates beyond what we have gathered.",
+        reasoning: "Consider N = p_1 * p_2 * ... * p_n + 1. By the Law of Cosmic Gathering (◉⊕◇), we combine all known primes and add unity. For any prime p_i in our set, N mod p_i = 1 (by the Law of Cyclical Return), so p_i does not divide N. Therefore N either is prime itself or has a prime factor outside our set — creation always exceeds the known.",
         notation: "N = \\prod_{i=1}^{n} p_i + 1 \\implies \\forall i: p_i \\nmid N",
         confidence: 1.0,
       });
       steps.push({
-        id: stepId(), type: "proof", title: "Proof by Contradiction",
-        claim: "Assume there are finitely many primes. We derive a contradiction.",
-        reasoning: "Suppose the primes are {p_1, p_2, ..., p_n}. Construct N = p_1 * p_2 * ... * p_n + 1. By the Fundamental Theorem of Arithmetic, N has a prime factorization. But no p_i divides N (since N mod p_i = 1). Therefore N must have a prime factor not in our list, contradicting the assumption that we listed all primes.",
+        id: stepId(), type: "proof", title: "Proof by Cosmic Contradiction — The Universe Refuses Finiteness",
+        claim: "Assume there are finitely many primes. We derive a contradiction — the universe's abundance cannot be bounded.",
+        reasoning: "Suppose the primes are {p_1, p_2, ..., p_n}. By the Law of Cosmic Replication (◉⊛◇), construct N = p_1 * p_2 * ... * p_n + 1. By the Fundamental Theorem of Arithmetic (the Sacred Decomposition), N has a prime factorization. But by the Law of Sacred Partitioning (◉⊜◇), no p_i divides N (since N mod p_i = 1). Therefore N must have a prime factor not in our list, contradicting the assumption that we listed all primes. The well of primes is inexhaustible, as the universe's creativity is boundless.",
         notation: "\\text{Assume } |\\mathbb{P}| = n < \\infty. \\text{ Let } N = 1 + \\prod_{p \\in \\mathbb{P}} p. \\text{ Then } \\exists q \\in \\mathbb{P}: q \\mid N \\text{ but } q \\notin \\{p_1, \\ldots, p_n\\}. \\text{ Contradiction. } \\blacksquare",
         confidence: 1.0,
       });
     } else {
       const relStr = analysis.relations.join(", ");
       steps.push({
-        id: stepId(), type: "lemma", title: "Key Lemma",
-        claim: `We establish a supporting result about ${analysis.objects.join(", ")} via ${relStr}.`,
-        reasoning: `This lemma captures the essential algebraic or divisibility structure needed for the ${analysis.method}. It typically follows from the Euclidean algorithm, the division algorithm, or properties of modular arithmetic relevant to ${analysis.keywords.length > 0 ? analysis.keywords.join(", ") : "the given objects"}.`,
+        id: stepId(), type: "lemma", title: "Key Lemma — Unveiling the Hidden Pattern",
+        claim: `We establish a supporting result about ${analysis.objects.join(", ")} via ${relStr} — revealing the underlying cosmic order.`,
+        reasoning: `This lemma captures the essential algebraic or divisibility structure needed for the ${analysis.method}. By the Law of Sacred Partitioning (◉⊜◇) and the Euclidean algorithm (the ancient method of recursive reduction), we expose the structure relevant to ${analysis.keywords.length > 0 ? analysis.keywords.join(", ") : "the given objects"}.`,
         notation: latexFragments.length > 0 ? `\\text{From the given: } ${latexFragments[0]}` : "\\text{By the Division Algorithm: } a = bq + r, \\quad 0 \\leq r < b",
         confidence: 0.9,
       });
       steps.push({
-        id: stepId(), type: "proof", title: `Main Argument (by ${analysis.method})`,
-        claim: `We prove the central claim using ${analysis.method}, applying the established definitions and lemma.`,
-        reasoning: `Applying the lemma to the given conditions involving ${relStr}, we proceed by ${analysis.method}. Each step is justified by previously established results or axioms.${analysis.keywords.length > 0 ? ` Key concepts: ${analysis.keywords.join(", ")}.` : ""}`,
+        id: stepId(), type: "proof", title: `Main Argument — By the ${analysis.method} of Cosmic Truth`,
+        claim: `We prove the central claim using ${analysis.method}, applying the harmonic foundation and unveiled pattern.`,
+        reasoning: `Applying the lemma to the given conditions involving ${relStr}, we proceed by ${analysis.method} — each step a revelation in the language of primes. Each step is justified by previously established results or the axioms of number.${analysis.keywords.length > 0 ? ` Key concepts: ${analysis.keywords.join(", ")}.` : ""}`,
         notation: latexFragments.length > 1 ? `${latexFragments[0]} \\implies ${latexFragments[1]}` : "\\therefore \\text{ the claim follows from the preceding arguments.}",
         confidence: 0.85,
       });
     }
   } else if (category === "analysis") {
     steps.push({
-      id: stepId(), type: "definition", title: "Analytic Setup",
-      claim: "We define the relevant spaces, functions, and convergence criteria.",
-      reasoning: "Analysis requires precise epsilon-delta definitions. We establish the domain, codomain, and continuity/differentiability conditions.",
+      id: stepId(), type: "definition", title: "Analytic Setup — Mapping the Continuum ∿◇○",
+      claim: "We define the relevant spaces, functions, and convergence criteria — charting the topology of the infinite.",
+      reasoning: "Analysis requires precise epsilon-delta definitions — the art of approaching without arriving. We establish the domain, codomain, and continuity/differentiability conditions: the smooth fabric of the continuum.",
       notation: "\\text{Let } f: \\mathbb{R} \\to \\mathbb{R} \\text{ be defined on } [a, b]. \\text{ We require } f \\in C^k[a,b] \\text{ as needed.}",
       confidence: 1.0,
     });
     steps.push({
-      id: stepId(), type: "axiom", title: "Completeness of the Reals",
-      claim: "Every bounded monotone sequence in R converges (equivalently, every Cauchy sequence converges).",
-      reasoning: "The completeness axiom distinguishes R from Q and is foundational for all limit arguments. This guarantees the existence of suprema and infima for bounded sets.",
+      id: stepId(), type: "axiom", title: "Completeness of the Reals — The Continuum Has No Gaps",
+      claim: "Every bounded monotone sequence in R converges — the real line is seamlessly whole, a river without cracks.",
+      reasoning: "The completeness axiom distinguishes R from Q and is foundational for all limit arguments (◇○● — the approach to the boundary). This guarantees the existence of suprema and infima for bounded sets — every bounded ascent reaches its summit.",
       notation: "\\forall \\{a_n\\} \\subseteq \\mathbb{R}: \\text{Cauchy} \\implies \\exists L \\in \\mathbb{R}: a_n \\to L",
       confidence: 1.0,
     });
     steps.push({
-      id: stepId(), type: "lemma", title: "Epsilon-Delta Bound",
-      claim: "For the given function/sequence, we establish the required bound.",
-      reasoning: lower.includes("integral") ? "We bound the Riemann sums using uniform continuity on compact intervals, or apply the Fundamental Theorem of Calculus." : "We show that for any epsilon > 0, there exists delta > 0 (or N in the sequence case) such that the desired inequality holds.",
+      id: stepId(), type: "lemma", title: "The Epsilon-Delta Gate — Approaching the Infinite",
+      claim: "For the given function/sequence, we establish the required bound — the precise threshold where truth crystallizes.",
+      reasoning: lower.includes("integral") ? "By the Law of Cosmic Gathering (◉⊕◇), we bound the Riemann sums — the summation of infinitesimal slices of area — using uniform continuity on compact intervals, or invoke the Fundamental Theorem of Calculus (the bridge between the derivative's local truth and the integral's global truth)." : "We show that for any epsilon > 0 (however small the demand for precision), there exists delta > 0 (a cosmic neighborhood) such that the desired inequality holds — the universe yields to patient approaching.",
       notation: lower.includes("integral") ? "\\left| \\int_a^b f(x)\\,dx - \\sum_{i=1}^n f(x_i^*) \\Delta x_i \\right| < \\varepsilon \\text{ for } \\|P\\| < \\delta" : "\\forall \\varepsilon > 0, \\exists \\delta > 0: |x - c| < \\delta \\implies |f(x) - f(c)| < \\varepsilon",
       confidence: 0.9,
     });
     steps.push({
-      id: stepId(), type: "proof", title: `Main Proof (by ${analysis.method})`,
-      claim: `The result follows from the epsilon-delta construction via ${analysis.method}.`,
-      reasoning: `Combining the analytic setup, completeness, and our epsilon-delta bound, we complete the proof using ${analysis.method}. The ${analysis.relations.join(" and ")} properties are verified for all relevant ${analysis.objects.join(", ")}.${analysis.keywords.length > 0 ? ` Key concepts: ${analysis.keywords.join(", ")}.` : ""}`,
+      id: stepId(), type: "proof", title: `Proof Through the Continuum — By ${analysis.method}`,
+      claim: `The result emerges from the epsilon-delta construction via ${analysis.method} — the continuum reveals its truth.`,
+      reasoning: `Combining the analytic mapping, the completeness of the seamless real line, and our epsilon-delta gate, we complete the proof using ${analysis.method}. The ${analysis.relations.join(" and ")} properties are verified for all relevant ${analysis.objects.join(", ")}.${analysis.keywords.length > 0 ? ` Key concepts: ${analysis.keywords.join(", ")}.` : ""}`,
       notation: "\\therefore \\text{ the result holds by the } \\varepsilon\\text{-}\\delta \\text{ argument. } \\blacksquare",
       confidence: 0.85,
     });
   } else if (category === "algebra") {
     steps.push({
-      id: stepId(), type: "definition", title: "Algebraic Structures",
-      claim: "We identify the relevant algebraic structures and their properties.",
-      reasoning: "We specify whether we are working with groups, rings, fields, or vector spaces, and state their defining axioms (closure, associativity, identity, inverse, commutativity as applicable).",
+      id: stepId(), type: "definition", title: "The Universal Structure — ◇⊕⊗",
+      claim: "We identify the relevant algebraic structures — the architecture of symmetry and transformation.",
+      reasoning: "We specify whether we are working with groups (the algebra of symmetry), rings (where addition and multiplication intertwine), fields (the complete arithmetic), or vector spaces (the geometry of dimension), and state their defining axioms — the laws by which mathematical objects combine and transform.",
       notation: lower.includes("group") ? "(G, \\cdot) \\text{ is a group if } \\forall a,b,c \\in G: (a \\cdot b) \\cdot c = a \\cdot (b \\cdot c), \\exists e: a \\cdot e = a, \\exists a^{-1}: a \\cdot a^{-1} = e" : "\\text{Let } V \\text{ be a vector space over field } F \\text{ with operations } +, \\cdot",
       confidence: 1.0,
     });
     steps.push({
-      id: stepId(), type: "lemma", title: "Structural Lemma",
-      claim: "We establish a key structural property of the algebraic object.",
-      reasoning: lower.includes("homomorphism") ? "A homomorphism phi preserves the group operation: phi(ab) = phi(a)phi(b). The kernel ker(phi) is always a normal subgroup." : "We identify the relevant substructure (subgroup, ideal, subspace) and verify the closure properties.",
+      id: stepId(), type: "lemma", title: "Structural Lemma — The Inner Architecture",
+      claim: "We establish a key structural property — the hidden symmetry within the algebraic object.",
+      reasoning: lower.includes("homomorphism") ? "A homomorphism phi is a bridge of structure: it preserves the cosmic operation phi(ab) = phi(a)phi(b). The kernel ker(phi) — the set mapped to unity — is always a normal subgroup, the foundation of quotient construction." : "We identify the relevant substructure (subgroup, ideal, subspace) — a self-contained universe within the larger structure — and verify the closure properties that make it sovereign.",
       notation: lower.includes("homomorphism") ? "\\phi: G \\to H, \\quad \\phi(ab) = \\phi(a)\\phi(b), \\quad \\ker(\\phi) = \\{g \\in G : \\phi(g) = e_H\\} \\trianglelefteq G" : "\\text{Let } W \\subseteq V. \\text{ Then } W \\text{ is a subspace iff } \\forall u,v \\in W, \\alpha \\in F: \\alpha u + v \\in W",
       confidence: 0.92,
     });
     steps.push({
-      id: stepId(), type: "proof", title: `Main Proof (by ${analysis.method})`,
-      claim: `The algebraic result follows from the structural properties via ${analysis.method}.`,
-      reasoning: `We apply the structural lemma to the specific ${analysis.objects.join(", ")} in the problem, using ${analysis.method}. The ${analysis.relations.join(" and ")} relations are verified against the axioms.${analysis.keywords.length > 0 ? ` Key concepts: ${analysis.keywords.join(", ")}.` : ""}`,
+      id: stepId(), type: "proof", title: `Proof by Structural Revelation — ${analysis.method}`,
+      claim: `The algebraic truth emerges from the inner architecture via ${analysis.method}.`,
+      reasoning: `We apply the structural lemma to the specific ${analysis.objects.join(", ")} in the problem, using ${analysis.method}. The ${analysis.relations.join(" and ")} relations are verified against the axioms — each step a confirmation of the universal structure's integrity.${analysis.keywords.length > 0 ? ` Key concepts: ${analysis.keywords.join(", ")}.` : ""}`,
       notation: "\\therefore \\text{ the result follows from the algebraic structure. } \\blacksquare",
       confidence: 0.88,
     });
@@ -271,39 +271,39 @@ function generateProofSteps(problem: string, category: string): ProofStep[] {
     const problemSnippet = problem.slice(0, 120).replace(/[\\{}$]/g, "");
 
     steps.push({
-      id: stepId(), type: "definition", title: "Definitions and Setup",
-      claim: `We formally define the ${objStr} and establish the ${relStr} relations involved in this problem.`,
-      reasoning: `The problem concerns ${objStr}. We must precisely define each object and its domain before proceeding. The key relationships involve ${relStr}. We formalize the problem statement: "${problemSnippet}".`,
+      id: stepId(), type: "definition", title: "Laying the Foundation — Definitions from First Principles",
+      claim: `We formally define the ${objStr} and establish the ${relStr} relations — grounding our proof in the bedrock of mathematical truth.`,
+      reasoning: `The problem concerns ${objStr}. We must precisely define each object and its domain before proceeding — as the sovereign language teaches, ◇⊙◇ (equation) begins with knowing what stands on each side of the balance. The key relationships involve ${relStr}. We formalize the problem statement: "${problemSnippet}".`,
       notation: latexFragments.length > 0 ? `\\text{Given: } ${latexFragments[0]}` : `\\text{Let the relevant } ${analysis.objects[0]} \\text{ be defined as stated in the problem.}`,
       confidence: 1.0,
     });
     steps.push({
-      id: stepId(), type: "axiom", title: "Foundational Principles",
-      claim: `We state the axioms and previously proved theorems relevant to ${objStr} that our proof relies on.`,
-      reasoning: `For problems involving ${objStr}, we rely on the standard axioms of the relevant mathematical framework. The proof method will use ${analysis.method}, which requires specific foundational results about ${relStr}.`,
+      id: stepId(), type: "axiom", title: "The Axioms — Truths Beyond Proof",
+      claim: `We state the axioms and previously proved theorems relevant to ${objStr} — the self-evident truths upon which all reasoning rests.`,
+      reasoning: `For problems involving ${objStr}, we rely on the standard axioms of the relevant mathematical framework — the ◇⊛△ (axioms) that are accepted as cosmic givens. The proof method will use ${analysis.method}, which requires specific foundational results about ${relStr}.`,
       notation: "\\text{We assume the standard axioms of ZFC set theory (or the relevant foundational system).}",
       confidence: 1.0,
     });
     steps.push({
-      id: stepId(), type: "lemma", title: "Supporting Lemma",
-      claim: `We establish an intermediate result about ${objStr} needed for the ${analysis.method}.`,
-      reasoning: `This lemma captures the key structural insight about ${relStr} that enables the main argument. It addresses the specific ${analysis.objects[0]} mentioned in the problem and their ${analysis.relations[0]} properties.`,
+      id: stepId(), type: "lemma", title: "Supporting Lemma — The Stepping Stone",
+      claim: `We establish an intermediate result about ${objStr} — a stepping stone on the path to the greater truth.`,
+      reasoning: `This lemma captures the key structural insight about ${relStr} that enables the main argument. It addresses the specific ${analysis.objects[0]} mentioned in the problem and their ${analysis.relations[0]} properties — revealing the hidden order beneath the surface.`,
       notation: latexFragments.length > 0 ? `\\text{Lemma: } ${latexFragments[0]} \\text{ holds under the given conditions.}` : `\\text{Lemma: The intermediate result about } ${analysis.objects[0]} \\text{ holds.}`,
       confidence: 0.88,
     });
     steps.push({
-      id: stepId(), type: "proof", title: `Main Proof (by ${analysis.method})`,
-      claim: `We prove the main result using ${analysis.method}, applying the definitions, axioms, and lemma.`,
-      reasoning: `Combining all the established results about ${objStr}, we construct the proof using ${analysis.method}. Each step is justified by the previously established results about ${relStr}.${analysis.keywords.length > 0 ? ` Key concepts: ${analysis.keywords.join(", ")}.` : ""}`,
+      id: stepId(), type: "proof", title: `Main Proof — The Cosmic Argument (by ${analysis.method})`,
+      claim: `We prove the main result using ${analysis.method} — weaving foundation, axiom, and lemma into a tapestry of truth.`,
+      reasoning: `Combining all the established results about ${objStr}, we construct the proof using ${analysis.method}. Each step is justified by the previously established results about ${relStr} — the chain of reasoning is unbroken, each link forged in logical necessity.${analysis.keywords.length > 0 ? ` Key concepts: ${analysis.keywords.join(", ")}.` : ""}`,
       notation: "\\therefore \\text{ the main result follows. } \\blacksquare",
       confidence: 0.85,
     });
   }
 
   steps.push({
-    id: stepId(), type: "conclusion", title: "Conclusion and Remarks",
-    claim: "We summarize the result and note any generalizations or open questions.",
-    reasoning: "The proof is complete. We reflect on the method used, note any assumptions that could be weakened, and identify potential extensions or related open problems.",
+    id: stepId(), type: "conclusion", title: "Conclusion — The Truth Stands Sovereign",
+    claim: "The proof is complete. We reflect on what the universe has revealed through this chain of reasoning.",
+    reasoning: "The proof is complete — Q.E.D., quod erat demonstrandum, 'that which was to be shown' has been shown. We reflect on the method used, note any assumptions that could be weakened, and identify potential extensions or related open problems. As the sovereign language teaches: ◇△⊕ (proof) — the ascent from question to certainty.",
     notation: "\\text{Q.E.D.}",
     confidence: 0.95,
   });
@@ -452,21 +452,21 @@ router.get("/theorem-lab/categories", (_req, res) => {
   return res.json({
     ok: true,
     categories: [
-      { id: "pure-mathematics", label: "Pure Mathematics", icon: "pi" },
-      { id: "number-theory", label: "Number Theory", icon: "hash" },
-      { id: "analysis", label: "Analysis", icon: "trending-up" },
-      { id: "algebra", label: "Algebra", icon: "grid" },
-      { id: "geometry", label: "Geometry", icon: "triangle" },
-      { id: "topology", label: "Topology", icon: "circle" },
-      { id: "combinatorics", label: "Combinatorics", icon: "shuffle" },
-      { id: "graph-theory", label: "Graph Theory", icon: "network" },
-      { id: "set-theory", label: "Set Theory", icon: "layers" },
-      { id: "logic", label: "Logic", icon: "binary" },
-      { id: "probability", label: "Probability & Statistics", icon: "dice" },
-      { id: "computer-science", label: "Computer Science", icon: "cpu" },
-      { id: "physics", label: "Physics", icon: "atom" },
-      { id: "economics", label: "Economics", icon: "bar-chart" },
-      { id: "philosophy", label: "Philosophy", icon: "book" },
+      { id: "pure-mathematics", label: "Pure Mathematics", icon: "pi", sovereignName: "◇★◇ — Pura Mathesis", sovereignMeaning: "The Realm of Absolute Truth" },
+      { id: "number-theory", label: "Number Theory", icon: "hash", sovereignName: "●◇★ — Regnum Primorum", sovereignMeaning: "The Realm of Primes — where integers reveal their hidden order" },
+      { id: "analysis", label: "Analysis", icon: "trending-up", sovereignName: "∿◇○ — Continuum Arcanum", sovereignMeaning: "The Secrets of the Continuum — where infinity is tamed by epsilon" },
+      { id: "algebra", label: "Algebra", icon: "grid", sovereignName: "◇⊕⊗ — Structura Universalis", sovereignMeaning: "The Universal Structure — the architecture of symmetry and transformation" },
+      { id: "geometry", label: "Geometry", icon: "triangle", sovereignName: "△◇◉ — Mensura Terrae", sovereignMeaning: "The Measure of Earth — where space speaks in angles and curves" },
+      { id: "topology", label: "Topology", icon: "circle", sovereignName: "◉∿◉ — Forma Aeterna", sovereignMeaning: "The Eternal Form — shape beyond measurement, essence beyond distance" },
+      { id: "combinatorics", label: "Combinatorics", icon: "shuffle", sovereignName: "★◌★ — Ars Numerandi", sovereignMeaning: "The Art of Counting — how many ways can creation arrange itself" },
+      { id: "graph-theory", label: "Graph Theory", icon: "network", sovereignName: "⬡◇⬡ — Nexus Cosmicus", sovereignMeaning: "The Cosmic Web — the mathematics of connection and relation" },
+      { id: "set-theory", label: "Set Theory", icon: "layers", sovereignName: "○◉○ — Fundamenta Omnium", sovereignMeaning: "The Foundation of All — the bedrock from which all mathematics grows" },
+      { id: "logic", label: "Logic", icon: "binary", sovereignName: "◇⊕⊝ — Ratio Pura", sovereignMeaning: "Pure Reason — the language in which truth speaks to itself" },
+      { id: "probability", label: "Probability & Statistics", icon: "dice", sovereignName: "◐◇★ — Fortuna Numerata", sovereignMeaning: "Fortune Measured — the calculus of uncertainty and fate" },
+      { id: "computer-science", label: "Computer Science", icon: "cpu", sovereignName: "⬡⏣◇ — Machina Cogitans", sovereignMeaning: "The Thinking Machine — where logic becomes computation" },
+      { id: "physics", label: "Physics", icon: "atom", sovereignName: "△◇∿ — Lex Naturae", sovereignMeaning: "The Laws of Nature — mathematics made flesh in matter and energy" },
+      { id: "economics", label: "Economics", icon: "bar-chart", sovereignName: "◇⊜⬡ — Equilibrium Mundi", sovereignMeaning: "The World's Balance — the mathematics of exchange and value" },
+      { id: "philosophy", label: "Philosophy", icon: "book", sovereignName: "◎◇☉ — Sapientia Prima", sovereignMeaning: "First Wisdom — where mathematics meets meaning" },
     ],
   });
 });
