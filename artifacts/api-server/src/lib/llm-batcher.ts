@@ -96,10 +96,17 @@ function extractSystemPrompt(messages: LLMMessage[]): string {
   return messages.filter(m => m.role === "system").map(m => m.content).join("|");
 }
 
-function areRequestsCompatible(a: QueuedRequest, b: QueuedRequest): boolean {
+function requiresStructuredOutput(messages: LLMMessage[]): boolean {
+  const sysContent = messages.filter(m => m.role === "system").map(m => m.content).join(" ");
+  return /\bjson\b|flat.*object|return.*only|no markdown|schema|parseable/i.test(sysContent);
+}
+
+function areRequestsMergeable(a: QueuedRequest, b: QueuedRequest): boolean {
   const modelA = a.opts.model ?? "gpt-5-mini";
   const modelB = b.opts.model ?? "gpt-5-mini";
   if (modelA !== modelB) return false;
+
+  if (requiresStructuredOutput(a.messages) || requiresStructuredOutput(b.messages)) return false;
 
   const sysA = extractSystemPrompt(a.messages);
   const sysB = extractSystemPrompt(b.messages);
@@ -139,7 +146,7 @@ function groupRequests(batch: QueuedRequest[]): RequestGroup[] {
       if (
         batch[i].userContent.length > 0 &&
         batch[j].userContent.length > 0 &&
-        areRequestsCompatible(batch[i], batch[j])
+        areRequestsMergeable(batch[i], batch[j])
       ) {
         const similarity = tokenJaccard(batch[i].userContent, batch[j].userContent);
         if (similarity >= SEMANTIC_SIMILARITY_THRESHOLD) {
