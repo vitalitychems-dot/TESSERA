@@ -1,5 +1,34 @@
 import { logger } from "./logger";
 
+/**
+ * Centralized Task Scheduler — Priority-based background task orchestration.
+ *
+ * ARCHITECTURE: Two-tier scheduling system
+ * ─────────────────────────────────────────
+ * 1. **TaskScheduler** (this module): Handles application-level periodic tasks
+ *    registered via `autonomous-wiring.ts`. These include: ingestion, forum engine,
+ *    auto-improvement, self-code evolution, and anomaly detection. The scheduler
+ *    enforces priority ordering, max concurrency (3), and 5s tick intervals.
+ *
+ * 2. **SovereignLoop** (`sovereign-loop.ts`): Acts as the "Master Clock" for
+ *    sovereign AI engine cycles (consciousness, identity, memory vault, council,
+ *    personality, etc.). When the sovereign loop starts, it calls
+ *    `stopIndependentTimers()` to subsume standalone engine intervals into its
+ *    unified 120s cycle. These engines intentionally run under the sovereign loop
+ *    rather than this scheduler because they require strict phase ordering
+ *    (ingestion → reasoning → deliberation → recalibration) that a generic
+ *    priority queue cannot enforce.
+ *
+ * INTENTIONALLY INDEPENDENT TIMERS:
+ * - `auto-recovery.ts`: Watchdog (30s) + route health (60s) — must run even if
+ *   scheduler or sovereign loop is down, so it keeps its own intervals.
+ * - `session-mesh.ts`: Heartbeat checks for distributed mesh protocol — tied to
+ *   mesh lifecycle, not application task scheduling.
+ * - `lattice-hardware.ts`: Stale peer cleanup (60s) — simple infrastructure timer.
+ * - `sovereign-cipher.ts` / `lattice-frequency-bands.ts`: Security key rotation —
+ *   must remain independent for security isolation.
+ */
+
 type Priority = "critical" | "high" | "normal" | "low";
 
 const PRIORITY_ORDER: Record<Priority, number> = {

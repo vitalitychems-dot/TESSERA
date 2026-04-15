@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Cpu, Activity, Database, Zap, GitBranch, RefreshCw, TrendingUp, Star, Shield, Pause, Play, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
 import { GlassCard, GradientBar, SectionHeader, TabBar, PageHeader, RadialGauge, MiniStat, HeroStat } from "@/components/ui/sovereign";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
+import { QueryErrorFallback } from "@/components/ui/QueryErrorFallback";
 import { cn } from "@/lib/utils";
 import { queryClient } from "@/lib/queryClient";
 
@@ -11,41 +12,41 @@ const API = import.meta.env.VITE_API_URL || "";
 export default function SystemPage({ initialTab }: { initialTab?: "agi" | "improvement" | "evolution" | "quantum" | "agents" | "health" }) {
   const [activeTab, setActiveTab] = useState<"agi" | "improvement" | "evolution" | "quantum" | "agents" | "health">(initialTab || "agi");
 
-  const { data: agiMetrics } = useQuery({
+  const { data: agiMetrics, error: agiError, refetch: refetchAgi } = useQuery({
     queryKey: ["agi-metrics"],
     queryFn: () => fetch(`${API}/api/agi-training/metrics`).then(r => r.json()).then(d => d.data),
     refetchInterval: 15000,
   });
 
-  const { data: improvementMetrics } = useQuery({
+  const { data: improvementMetrics, error: improvementError, refetch: refetchImprovement } = useQuery({
     queryKey: ["improvement-metrics"],
     queryFn: () => fetch(`${API}/api/auto-improvement/metrics`).then(r => r.json()).then(d => d.data),
     refetchInterval: 60000,
     enabled: activeTab === "improvement",
   });
 
-  const { data: evolutionMetrics } = useQuery({
+  const { data: evolutionMetrics, error: evolutionError, refetch: refetchEvolution } = useQuery({
     queryKey: ["evolution-metrics"],
     queryFn: () => fetch(`${API}/api/self-evolution/metrics`).then(r => r.json()).then(d => d.data),
     refetchInterval: 60000,
     enabled: activeTab === "evolution",
   });
 
-  const { data: quantumMetrics } = useQuery({
+  const { data: quantumMetrics, error: quantumError, refetch: refetchQuantum } = useQuery({
     queryKey: ["quantum-metrics"],
     queryFn: () => fetch(`${API}/api/quantum/metrics`).then(r => r.json()).then(d => d.data),
     refetchInterval: 60000,
     enabled: activeTab === "quantum",
   });
 
-  const { data: agentMetrics } = useQuery({
+  const { data: agentMetrics, error: agentError, refetch: refetchAgents } = useQuery({
     queryKey: ["spawner-metrics"],
     queryFn: () => fetch(`${API}/api/agent-spawner/metrics`).then(r => r.json()).then(d => d.data),
     refetchInterval: 30000,
     enabled: activeTab === "agents",
   });
 
-  const { data: healthData, refetch: refetchHealth } = useQuery({
+  const { data: healthData, error: healthError, refetch: refetchHealth } = useQuery({
     queryKey: ["evolution-health"],
     queryFn: () => fetch(`${API}/api/evolution-health`).then(r => r.json()).then(d => d.data),
     refetchInterval: 10000,
@@ -104,6 +105,9 @@ export default function SystemPage({ initialTab }: { initialTab?: "agi" | "impro
 
         <TabBar tabs={tabs} activeTab={activeTab} onChange={id => setActiveTab(id as any)} color="cyan" />
 
+        {activeTab === "agi" && !agiMetrics && agiError && (
+          <QueryErrorFallback error={agiError as Error} onRetry={() => refetchAgi()} label="AGI Training" />
+        )}
         {activeTab === "agi" && agiMetrics && (
           <SectionErrorBoundary name="AGI Training">
             <div className="space-y-4 sovereign-stagger">
@@ -134,6 +138,9 @@ export default function SystemPage({ initialTab }: { initialTab?: "agi" | "impro
           </SectionErrorBoundary>
         )}
 
+        {activeTab === "improvement" && !improvementMetrics && improvementError && (
+          <QueryErrorFallback error={improvementError as Error} onRetry={() => refetchImprovement()} label="Improvement" />
+        )}
         {activeTab === "improvement" && improvementMetrics && (
           <SectionErrorBoundary name="Improvement">
             <div className="space-y-4 sovereign-stagger">
@@ -170,6 +177,9 @@ export default function SystemPage({ initialTab }: { initialTab?: "agi" | "impro
           </SectionErrorBoundary>
         )}
 
+        {activeTab === "evolution" && !evolutionMetrics && evolutionError && (
+          <QueryErrorFallback error={evolutionError as Error} onRetry={() => refetchEvolution()} label="Self-Evolution" />
+        )}
         {activeTab === "evolution" && evolutionMetrics && (
           <SectionErrorBoundary name="Self-Evolution">
             <div className="space-y-4 sovereign-stagger">
@@ -198,6 +208,9 @@ export default function SystemPage({ initialTab }: { initialTab?: "agi" | "impro
           </SectionErrorBoundary>
         )}
 
+        {activeTab === "health" && !healthData && healthError && (
+          <QueryErrorFallback error={healthError as Error} onRetry={() => refetchHealth()} label="Evolution Health" />
+        )}
         {activeTab === "health" && (
           <SectionErrorBoundary name="Evolution Health">
             <div className="space-y-4 sovereign-stagger">
@@ -342,6 +355,9 @@ export default function SystemPage({ initialTab }: { initialTab?: "agi" | "impro
           </SectionErrorBoundary>
         )}
 
+        {activeTab === "quantum" && !quantumMetrics && quantumError && (
+          <QueryErrorFallback error={quantumError as Error} onRetry={() => refetchQuantum()} label="Quantum" />
+        )}
         {activeTab === "quantum" && quantumMetrics && (
           <SectionErrorBoundary name="Quantum">
             <div className="space-y-4 sovereign-stagger">
@@ -384,6 +400,9 @@ export default function SystemPage({ initialTab }: { initialTab?: "agi" | "impro
           </SectionErrorBoundary>
         )}
 
+        {activeTab === "agents" && !agentMetrics && agentError && (
+          <QueryErrorFallback error={agentError as Error} onRetry={() => refetchAgents()} label="Agents" />
+        )}
         {activeTab === "agents" && agentMetrics && (
           <SectionErrorBoundary name="Agents">
             <div className="space-y-4 sovereign-stagger">
