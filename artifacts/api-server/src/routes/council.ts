@@ -11,7 +11,7 @@ import { invalidateCanonCache } from "../lib/canonUpdater";
 import { createProposal, getAllProposals, getConsensusMetrics, GRAND_COUNCIL_AGENTS } from "../lib/consensus-engine";
 import { getExecutorMetrics, startCouncilExecutor, stopCouncilExecutor } from "../lib/council-executor";
 import { getAgentHierarchy, getHierarchyMetrics } from "../lib/agent-hierarchy";
-import { callLLMSafe } from "../lib/llm-client";
+import { batchedCallLLM } from "../lib/llm-batcher";
 
 const router: IRouter = Router();
 
@@ -149,10 +149,9 @@ System context: uptime=${systemState.uptime}s, memory=${systemState.memoryMB}MB,
 ${knowledgeContext ? `Knowledge: ${knowledgeContext.slice(0, 200)}` : ""}
 Respond with ONLY a flat JSON object: {"agent-id": "contribution text", ...}. No markdown.`;
 
-  const raw = await callLLMSafe(
+  const raw = await batchedCallLLM(
     [{ role: "system", content: systemPrompt }, { role: "user", content: `Topic: "${topic}"\nAgents:\n${agentList}` }],
-    { maxTokens: 1200, timeoutMs: 12_000 },
-    ""
+    { maxTokens: 1200, timeoutMs: 12_000 }
   );
 
   const result = new Map<string, string>();
@@ -198,7 +197,7 @@ async function collectPerAgentVotes(
   const systemPrompt = `You are tallying the Grand Council vote. Each agent must vote based strictly on their own domain specialty, not general sentiment.
 Return ONLY a flat JSON object where each key is an agent ID and the value is exactly "yes", "no", or "abstain". No markdown, no explanation.`;
 
-  const raw = await callLLMSafe(
+  const raw = await batchedCallLLM(
     [
       { role: "system", content: systemPrompt },
       {
@@ -207,7 +206,6 @@ Return ONLY a flat JSON object where each key is an agent ID and the value is ex
       },
     ],
     { maxTokens: 800, timeoutMs: 12_000 },
-    ""
   );
 
   const perAgentVotes: Record<string, string> = {};

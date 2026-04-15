@@ -2,8 +2,8 @@ import { db } from "@workspace/db";
 import { selfEvaluationTable } from "@workspace/db/schema";
 import { desc, sql } from "drizzle-orm";
 import { logger } from "./logger";
-import { getCacheStats } from "./semantic-cache";
-import { getDistillationStats } from "./knowledge-distillation";
+import { getCacheStats, setCacheTtl } from "./semantic-cache";
+import { getDistillationStats, setConfidenceThreshold } from "./knowledge-distillation";
 import { getEmbeddingStats } from "./neural-embeddings";
 import { getBatcherStats } from "./llm-batcher";
 import { getLLMStats } from "./llm-client";
@@ -20,6 +20,8 @@ interface EvalResult {
   weakAreas: string[];
   strongAreas: string[];
 }
+
+const CONFIDENCE_THRESHOLD_DEFAULT = 0.6;
 
 const evalState = {
   totalEvaluations: 0,
@@ -69,10 +71,19 @@ export async function runSelfEvaluation(cycleNumber: number): Promise<EvalResult
   const llmCallsReduced = llmStats.cacheHits + batcherStats.totalDeduplicated;
 
   if (cacheStats.hitRate < 0.1 && llmStats.totalCalls > 50) {
-    adjustments.cacheTtlIncrease = true;
+    const newTtl = Math.min((cacheStats as any).ttlSeconds * 1.5, 86400);
+    setCacheTtl(newTtl);
+    adjustments.cacheTtlIncrease = { applied: true, newTtl };
   }
   if (distillStats.hitRate < 0.1 && distillStats.totalFacts > 20) {
-    adjustments.lowerConfidenceThreshold = true;
+    const newThreshold = Math.max(CONFIDENCE_THRESHOLD_DEFAULT - 0.1, 0.3);
+    setConfidenceThreshold(newThreshold);
+    adjustments.lowerConfidenceThreshold = { applied: true, newThreshold };
+  }
+  if (cacheStats.hitRate > 0.6 && llmStats.totalCalls > 100) {
+    const newTtl = Math.max((cacheStats as any).ttlSeconds * 0.8, 300);
+    setCacheTtl(newTtl);
+    adjustments.cacheTtlDecrease = { applied: true, newTtl };
   }
 
   const weights = [0.35, 0.25, 0.2, 0.2];

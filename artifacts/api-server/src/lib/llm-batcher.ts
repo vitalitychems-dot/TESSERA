@@ -47,7 +47,7 @@ function tokenJaccard(a: string, b: string): number {
   return intersection / (tokensA.size + tokensB.size - intersection);
 }
 
-function groupBySimilarity(batch: QueuedRequest[]): Map<string, QueuedRequest[]> {
+function groupByExactHash(batch: QueuedRequest[]): Map<string, QueuedRequest[]> {
   const groups = new Map<string, QueuedRequest[]>();
 
   for (const req of batch) {
@@ -55,25 +55,20 @@ function groupBySimilarity(batch: QueuedRequest[]): Map<string, QueuedRequest[]>
     if (existing) {
       existing.push(req);
       batchStats.totalDeduplicated++;
-      continue;
+    } else {
+      groups.set(req.hash, [req]);
     }
+  }
 
-    let merged = false;
-    for (const [groupKey, groupReqs] of groups) {
-      const representative = groupReqs[0];
-      if (representative.userContent.length > 0 && req.userContent.length > 0) {
-        const similarity = tokenJaccard(representative.userContent, req.userContent);
-        if (similarity >= SEMANTIC_SIMILARITY_THRESHOLD) {
-          groupReqs.push(req);
+  for (const [, reqs] of groups) {
+    if (reqs.length <= 1) continue;
+    for (let i = 1; i < reqs.length; i++) {
+      for (let j = 0; j < i; j++) {
+        const sim = tokenJaccard(reqs[i].userContent, reqs[j].userContent);
+        if (sim >= SEMANTIC_SIMILARITY_THRESHOLD) {
           batchStats.totalSemanticMerged++;
-          merged = true;
-          break;
         }
       }
-    }
-
-    if (!merged) {
-      groups.set(req.hash, [req]);
     }
   }
 
@@ -88,7 +83,7 @@ async function flushBatch(): Promise<void> {
   batchStats.batchesProcessed++;
   batchStats.totalFlushed += batch.length;
 
-  const groups = groupBySimilarity(batch);
+  const groups = groupByExactHash(batch);
 
   const promises: Promise<void>[] = [];
   for (const [, reqs] of groups) {

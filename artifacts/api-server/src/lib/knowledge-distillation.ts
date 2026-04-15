@@ -2,11 +2,16 @@ import { db } from "@workspace/db";
 import { distilledKnowledgeTable } from "@workspace/db/schema";
 import { eq, sql, desc, gt } from "drizzle-orm";
 import { logger } from "./logger";
-import { evictExpired } from "./semantic-cache";
+import { evictExpired, invalidateByCategory } from "./semantic-cache";
 
-const CONFIDENCE_THRESHOLD = 0.6;
+let CONFIDENCE_THRESHOLD = 0.6;
 const STALE_DAYS = 7;
 const MAX_FACTS = 10000;
+
+export function setConfidenceThreshold(threshold: number): void {
+  CONFIDENCE_THRESHOLD = Math.max(0.3, Math.min(threshold, 0.95));
+  logger.info({ threshold: CONFIDENCE_THRESHOLD }, "KnowledgeDistillation: confidence threshold updated");
+}
 
 const distillStats = {
   totalExtracted: 0,
@@ -96,6 +101,7 @@ export async function distillFromResponse(
   if (stored > 0) {
     logger.info({ stored, category }, "KnowledgeDistillation: facts extracted");
     evictExpired().catch(() => {});
+    invalidateByCategory(category).catch(() => {});
   }
   return stored;
 }
