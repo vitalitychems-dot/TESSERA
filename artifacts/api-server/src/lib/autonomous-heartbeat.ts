@@ -168,11 +168,12 @@ async function attemptSubsystemRestart(name: string, pulse: SubsystemPulse): Pro
     return true;
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
+    pulse.consecutiveFailures++;
     pulse.backoffUntil = now + computeBackoff(pulse.consecutiveFailures);
     pulse.restartCount++;
 
     recoveryLog.push({ subsystem: name, action: "restart-failed", timestamp: now, success: false, error: errMsg });
-    logger.error({ subsystem: name, err: errMsg, backoffMs: pulse.backoffUntil - now }, "Heartbeat: subsystem restart failed");
+    logger.error({ subsystem: name, err: errMsg, consecutiveFailures: pulse.consecutiveFailures, backoffMs: pulse.backoffUntil - now }, "Heartbeat: subsystem restart failed");
     return false;
   }
 }
@@ -212,14 +213,13 @@ async function runHealthChecks(): Promise<void> {
         if (!pulse.healthy) {
           pulse.healthy = true;
           pulse.consecutiveFailures = 0;
+          escalatedSubsystems.delete(name);
           logger.info({ subsystem: name }, "Heartbeat: subsystem recovered");
         }
       } else {
-        if (pulse.healthy) {
-          pulse.healthy = false;
-          pulse.consecutiveFailures++;
-          logger.warn({ subsystem: name }, "Heartbeat: health check failed");
-        }
+        pulse.healthy = false;
+        pulse.consecutiveFailures++;
+        logger.warn({ subsystem: name, consecutiveFailures: pulse.consecutiveFailures }, "Heartbeat: health check failed");
       }
     } catch (err) {
       pulse.healthy = false;
