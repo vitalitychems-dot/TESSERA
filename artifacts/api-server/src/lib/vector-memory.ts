@@ -244,6 +244,7 @@ export async function initializeMemoryOnStartup(): Promise<{ loaded: string[]; e
 const REEMBED_BATCH_SIZE = 20;
 const REEMBED_INTERVAL_MS = 60_000;
 let reembedTimer: ReturnType<typeof setInterval> | null = null;
+let reembedLastId = 0;
 const reembedStats = { processed: 0, remaining: 0, running: false };
 
 async function reembedBatch(): Promise<number> {
@@ -254,16 +255,25 @@ async function reembedBatch(): Promise<number> {
     const rows = await db
       .select({ id: vectorEmbeddingsTable.id, content: vectorEmbeddingsTable.content, embedding: vectorEmbeddingsTable.embedding })
       .from(vectorEmbeddingsTable)
-      .limit(REEMBED_BATCH_SIZE);
+      .where(sql`${vectorEmbeddingsTable.id} > ${reembedLastId}`)
+      .orderBy(vectorEmbeddingsTable.id)
+      .limit(REEMBED_BATCH_SIZE * 2);
 
+    const VALID_DIMS = new Set([256, 1536, 3072]);
     const needsReembed = rows.filter(r => {
       const emb = r.embedding as number[];
-      return !Array.isArray(emb) || emb.length === 0 || emb.length > 256;
+      if (!Array.isArray(emb) || emb.length === 0) return true;
+      if (VALID_DIMS.has(emb.length)) return false;
+      return true;
     });
 
+    if (rows.length > 0) {
+      reembedLastId = rows[rows.length - 1].id;
+    }
+
     if (needsReembed.length === 0) {
-      reembedStats.remaining = 0;
-      return 0;
+      reembedStats.remaining = rows.length === 0 ? 0 : -1;
+      return rows.length === 0 ? 0 : -1;
     }
 
     const texts = needsReembed.map(r => r.content);
@@ -297,10 +307,10 @@ function scheduleBackgroundReembedding(): void {
     if (count === 0 && reembedTimer) {
       clearInterval(reembedTimer);
       reembedTimer = null;
-      logger.info({ totalProcessed: reembedStats.processed }, "VectorMemory: background re-embedding complete");
+      logger.info({ totalProcessed: reembedStats.processed }, "VectorMemory: background re-embedding complete — all rows scanned");
     }
   }, REEMBED_INTERVAL_MS);
-  logger.info("VectorMemory: background re-embedding scheduled");
+  logger.info("VectorMemory: background re-embedding scheduled (progressive scan)");
 }
 
 export function getReembedStats() {

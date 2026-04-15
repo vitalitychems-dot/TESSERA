@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { distilledKnowledgeTable } from "@workspace/db/schema";
 import { eq, sql, desc, gt } from "drizzle-orm";
 import { logger } from "./logger";
+import { evictExpired } from "./semantic-cache";
 
 const CONFIDENCE_THRESHOLD = 0.6;
 const STALE_DAYS = 7;
@@ -94,6 +95,7 @@ export async function distillFromResponse(
   distillStats.totalExtracted += stored;
   if (stored > 0) {
     logger.info({ stored, category }, "KnowledgeDistillation: facts extracted");
+    evictExpired().catch(() => {});
   }
   return stored;
 }
