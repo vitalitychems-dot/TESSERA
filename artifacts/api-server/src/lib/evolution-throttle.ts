@@ -154,3 +154,34 @@ export function resetModuleCooldown(moduleId: string): void {
   entry.cooldownUntil = 0;
   entry.paused = false;
 }
+
+export function logEvolutionCycleSummary(): void {
+  if (moduleCooldowns.size === 0) return;
+
+  let totalOk = 0;
+  let totalFail = 0;
+  let coolingCount = 0;
+  let pausedCount = 0;
+  const troubled: string[] = [];
+
+  for (const [, entry] of moduleCooldowns) {
+    totalOk += entry.totalSuccesses;
+    totalFail += entry.totalFailures;
+    if (entry.cooldownUntil > Date.now()) coolingCount++;
+    if (entry.paused) pausedCount++;
+    if (entry.consecutiveFailures >= 3) troubled.push(entry.moduleId);
+  }
+
+  logger.info(
+    {
+      modules: moduleCooldowns.size,
+      totalOk,
+      totalFail,
+      coolingDown: coolingCount,
+      paused: pausedCount,
+      globalPaused,
+      troubled: troubled.length > 0 ? troubled : undefined,
+    },
+    "EvolutionThrottle: cycle summary",
+  );
+}

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Send, Loader2, Mic, MicOff, Paperclip, X, FileText, Image, File, Volume2, VolumeX, Copy, Check, Download, Square, Zap, PhoneOff, Pause, Play, MessageSquare, Shield, Settings2, Bot, CheckCircle2, RefreshCw, ThumbsUp, ThumbsDown, Search, ArrowDown, Sparkles, ChevronRight, Globe, Code, Radio, Network, Lock, Activity, Database, ExternalLink, Brain, DollarSign, Users, Keyboard, Eye } from "lucide-react";
+import { Send, Loader2, Mic, MicOff, Paperclip, X, FileText, Image, File, Volume2, VolumeX, Copy, Check, Download, Square, Zap, PhoneOff, Pause, Play, MessageSquare, Shield, Settings2, Bot, CheckCircle2, RefreshCw, ThumbsUp, ThumbsDown, Search, ArrowDown, Sparkles, Code, Radio, Network, Activity, Database, Keyboard, Eye } from "lucide-react";
 import { NLPGoalsPanel } from "./chat/NLPGoalsPanel";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import ReactMarkdown from "react-markdown";
@@ -25,7 +25,7 @@ import { ColorizedText } from "./chat/ChatColorizedText";
 import {
   type ReplyMode, type VoiceState,
   playAudioResponse, stopSpeaking, sendVoiceMessage, copyToClipboard, downloadConversation,
-  VoiceVisualization, VoiceStateLabel, VoiceActivityIndicator, VoiceSettingsPanel,
+  VoiceActivityIndicator,
 } from "./chat/ChatVoice";
 import {
   FatherNotesPanel, AgentActivityPanel, ActiveAgentsBadges,
@@ -38,6 +38,9 @@ import { ChatShortcutsModal } from "./chat/ChatKeyboardShortcuts";
 import { useChatCommandExecutor } from "./chat/useChatCommandExecutor";
 import { ChatDataCommandResult } from "./chat/ChatDataCommandResult";
 import { ChatFontColorPicker } from "./chat/ChatFontColorPicker";
+import { ChatVoiceModeOverlay } from "./chat/ChatVoiceModeOverlay";
+import { ChatLatticePanel } from "./chat/ChatLatticePanel";
+import { ChatSummitFeedPanel } from "./chat/ChatSummitFeedPanel";
 
 export function ChatArea({ conversationId }: { conversationId: number }) {
   const [currentLocation, setLocation] = useLocation();
@@ -1027,140 +1030,23 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
 
       <AnimatePresence>
         {voiceMode && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 z-40 flex flex-col items-center justify-center thinking-overlay-bg backdrop-blur-md"
-            data-testid="voice-mode-overlay"
-          >
-            <div className="flex flex-col items-center gap-8">
-              <VoiceVisualization state={voiceState} />
-
-              {voiceState === "listening" && (
-                <VoiceActivityIndicator isActive={isRecording} />
-              )}
-
-              <VoiceStateLabel state={voiceState} />
-
-              {voiceState === "listening" && (input.trim() || interimText) && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="max-w-md px-4 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-center"
-                  data-testid="text-voice-transcript"
-                >
-                  {interimText ? (
-                    <>
-                      {input.endsWith(interimText) && input.length > interimText.length && (
-                        <span className="text-gray-300">{input.slice(0, input.length - interimText.length).trim()} </span>
-                      )}
-                      <span className="text-cyan-400/60 italic" data-testid="text-voice-interim">{interimText}</span>
-                    </>
-                  ) : (
-                    <span className="text-gray-300">{input}</span>
-                  )}
-                </motion.div>
-              )}
-
-              {(streamingContent || (messages.length > 0 && messages[messages.length - 1]?.role === "assistant" && (voiceState === "speaking" || voiceState === "thinking"))) && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="max-w-2xl max-h-64 overflow-y-auto px-5 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-gray-300 text-sm leading-relaxed custom-scrollbar"
-                  data-testid="text-voice-response-preview"
-                >
-                  {streamingContent || messages[messages.length - 1]?.content || ""}
-                </motion.div>
-              )}
-
-              {(voiceState === "idle" || voiceState === "listening") && (
-                <button
-                  onMouseDown={handleMicPressStart}
-                  onMouseUp={handleMicPressEnd}
-                  onMouseLeave={handleMicPressEnd}
-                  onTouchStart={handleMicPressStart}
-                  onTouchEnd={handleMicPressEnd}
-                  onTouchCancel={handleMicPressEnd}
-                  className={cn(
-                    "h-20 w-20 rounded-full flex items-center justify-center transition-all select-none border-2",
-                    isRecording
-                      ? "bg-red-500/30 border-red-400 text-red-300 shadow-lg shadow-red-500/30"
-                      : "bg-white/[0.06] border-white/20 text-gray-400 hover:border-white/40 hover:text-white"
-                  )}
-                  title={isRecording ? "Release to send" : "Hold to speak"}
-                  data-testid="button-voice-overlay-ptt"
-                >
-                  {isRecording ? (
-                    <div className="relative">
-                      <MicOff size={28} />
-                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-400 rounded-full animate-ping" />
-                    </div>
-                  ) : <Mic size={28} />}
-                </button>
-              )}
-
-              <div className="flex items-center gap-4 mt-4">
-                <button
-                  onClick={toggleVoicePause}
-                  className={cn(
-                    "h-12 w-12 rounded-full flex items-center justify-center transition-all",
-                    voicePaused
-                      ? "bg-cyan-500/20 border-2 border-cyan-400/60 text-cyan-400"
-                      : "bg-amber-500/20 border-2 border-amber-400/60 text-amber-400"
-                  )}
-                  title={voicePaused ? "Resume conversation" : "Pause conversation"}
-                  data-testid="button-voice-pause"
-                >
-                  {voicePaused ? <Play size={20} /> : <Pause size={20} />}
-                </button>
-
-                <button
-                  onClick={exitVoiceMode}
-                  className="h-14 w-14 rounded-full bg-red-500/20 border-2 border-red-400/60 text-red-400 flex items-center justify-center transition-all"
-                  title="End voice mode"
-                  data-testid="button-voice-end"
-                >
-                  <PhoneOff size={24} />
-                </button>
-
-                <button
-                  onClick={toggleReplyMode}
-                  className={cn(
-                    "h-12 w-12 rounded-full flex items-center justify-center transition-all",
-                    replyMode === "voice"
-                      ? "bg-emerald-500/20 border-2 border-emerald-400/60 text-emerald-400"
-                      : "bg-blue-500/20 border-2 border-blue-400/60 text-blue-400"
-                  )}
-                  title={replyMode === "voice" ? "Switch to text replies" : "Switch to voice replies"}
-                  data-testid="button-reply-mode"
-                >
-                  {replyMode === "voice" ? <Volume2 size={20} /> : <MessageSquare size={20} />}
-                </button>
-              </div>
-
-              <div className="flex items-center gap-3 mt-2 text-[11px] font-mono text-gray-500">
-                <span data-testid="text-reply-mode-label">Reply: {replyMode === "voice" ? "Voice" : "Text"}</span>
-                <span className="text-gray-700">|</span>
-                <span>{voicePaused ? "Paused" : "Active"}</span>
-                <span className="text-gray-700">|</span>
-                <button
-                  onClick={() => setVoiceSettingsOpen(!voiceSettingsOpen)}
-                  className="text-gray-500 hover:text-cyan-400 transition-colors flex items-center gap-1"
-                  data-testid="button-voice-settings"
-                >
-                  <Settings2 size={11} />
-                  <span>Settings</span>
-                </button>
-              </div>
-
-              <AnimatePresence>
-                {voiceSettingsOpen && (
-                  <VoiceSettingsPanel onClose={() => setVoiceSettingsOpen(false)} />
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
+          <ChatVoiceModeOverlay
+            voiceState={voiceState}
+            isRecording={isRecording}
+            input={input}
+            interimText={interimText}
+            streamingContent={streamingContent}
+            lastAssistantMessage={messages.length > 0 && messages[messages.length - 1]?.role === "assistant" ? messages[messages.length - 1]?.content || "" : ""}
+            voicePaused={voicePaused}
+            replyMode={replyMode}
+            voiceSettingsOpen={voiceSettingsOpen}
+            onMicPressStart={handleMicPressStart}
+            onMicPressEnd={handleMicPressEnd}
+            onToggleVoicePause={toggleVoicePause}
+            onExitVoiceMode={exitVoiceMode}
+            onToggleReplyMode={toggleReplyMode}
+            onToggleVoiceSettings={() => setVoiceSettingsOpen(!voiceSettingsOpen)}
+          />
         )}
       </AnimatePresence>
 
@@ -1444,463 +1330,28 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
 
         <AnimatePresence>
           {latticeOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="max-w-3xl mx-auto mb-3 overflow-hidden"
-              data-testid="lattice-panel"
-            >
-              <div className="rounded-2xl border border-cyan-500/20 bg-black/60 backdrop-blur-xl overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5">
-                  <Radio size={12} className="text-cyan-400 animate-pulse" />
-                  <span className="text-xs font-mono text-cyan-400 tracking-wider uppercase" style={{ fontFamily: 'var(--font-display)' }}>The Lattice — Sovereign Internet</span>
-                  <div className="flex-1" />
-                  <div className="flex items-center gap-1 text-[10px] font-mono">
-                    <Activity size={9} className="text-green-400" />
-                    <span className="text-green-400">14 NODES</span>
-                    <span className="text-white/10 mx-1">|</span>
-                    <Lock size={9} className="text-violet-400" />
-                    <span className="text-violet-400">TESS://</span>
-                    <span className="text-white/10 mx-1">|</span>
-                    <Shield size={9} className="text-green-400" />
-                    <span className="text-green-400">AIR-GAP SEALED</span>
-                  </div>
-                  <button onClick={() => setLatticeOpen(false)} className="text-gray-500 hover:text-white transition-colors ml-2" data-testid="button-lattice-close"><X size={14} /></button>
-                </div>
-
-                <div className="flex border-b border-white/5">
-                  {([["browse", "Browse", Globe], ["mesh", "Mesh", Network], ["domains", "Domains", Database], ["portal", "Portal", Zap], ["currency", "Exchange", DollarSign], ["languages", "Cipher", Lock], ["training", "Train", Brain], ["conference", "Council", Users]] as const).map(([id, label, Icon]) => (
-                    <button
-                      key={id}
-                      onClick={() => setLatticeTab(id)}
-                      className={cn(
-                        "flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-mono transition-all border-b-2",
-                        latticeTab === id ? "text-cyan-400 border-cyan-400 bg-cyan-400/5" : "text-gray-500 border-transparent hover:text-gray-300 hover:bg-white/[0.02]"
-                      )}
-                      data-testid={`button-lattice-tab-${id}`}
-                    >
-                      <Icon size={12} />
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="p-3 max-h-[280px] overflow-y-auto custom-scrollbar">
-                  {latticeTab === "browse" && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08]">
-                          <Lock size={11} className="text-green-400 shrink-0" />
-                          <input
-                            type="text"
-                            value={latticeAddress}
-                            onChange={(e) => setLatticeAddress(e.target.value)}
-                            className="flex-1 bg-transparent text-xs font-mono text-cyan-300 focus:outline-none"
-                            placeholder="tess://domain.sov"
-                            data-testid="input-lattice-address"
-                          />
-                        </div>
-                        <button
-                          onClick={() => {
-                            const domain = latticeAddress.replace("tess://", "");
-                            setInputBoth(`/lattice browse ${domain}`);
-                            textareaRef.current?.focus();
-                          }}
-                          className="px-3 py-2 rounded-xl bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-all text-[11px] font-mono"
-                          data-testid="button-lattice-go"
-                        >
-                          GO
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                        {[
-                          { domain: "tessera.sov", label: "Tessera Core", color: "cyan", icon: "hexagon" },
-                          { domain: "alpha.sov", label: "Alpha Relay", color: "green", icon: "relay" },
-                          { domain: "knowledge.sov", label: "Knowledge Vault", color: "amber", icon: "vault" },
-                          { domain: "tsrt.sov", label: "TSRT Exchange", color: "violet", icon: "exchange" },
-                          { domain: "mesh.sov", label: "Mesh Hub", color: "blue", icon: "mesh" },
-                          { domain: "shadow.sov", label: "Shadow Ops", color: "red", icon: "stealth" },
-                          { domain: "bridge.sov", label: "Dim. Bridge", color: "pink", icon: "bridge" },
-                          { domain: "forum.sov", label: "Sovereign Forum", color: "emerald", icon: "forum" },
-                          { domain: "summit.sov", label: "Summit Hall", color: "yellow", icon: "summit" },
-                        ].map(d => (
-                          <button
-                            key={d.domain}
-                            onClick={() => {
-                              setLatticeAddress(`tess://${d.domain}`);
-                              setInputBoth(`/lattice browse ${d.domain}`);
-                              textareaRef.current?.focus();
-                              setLatticeOpen(false);
-                            }}
-                            className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border border-${d.color}-500/20 bg-${d.color}-500/5 hover:bg-${d.color}-500/10 transition-all text-left`}
-                            data-testid={`button-lattice-domain-${d.domain}`}
-                          >
-                            <div className={`w-2 h-2 rounded-full bg-${d.color}-400 shrink-0`} />
-                            <div>
-                              <div className="text-[11px] text-gray-200 font-medium">{d.label}</div>
-                              <div className="text-[9px] text-gray-500 font-mono">{d.domain}</div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {latticeTab === "mesh" && (
-                    <div>
-                      <div className="flex items-center gap-3 mb-3 px-2">
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                          <span className="text-[11px] text-green-400 font-mono">TESS-001-PRIME</span>
-                        </div>
-                        <span className="text-[10px] text-gray-500">Tessera Prime — Active</span>
-                      </div>
-                      <div className="space-y-1.5">
-                        {[
-                          { endpoint: "/api/mesh/identity", label: "Instance Identity", desc: "View sovereign ID & capabilities" },
-                          { endpoint: "/api/mesh/peers", label: "Connected Peers", desc: "View all mesh-connected instances" },
-                          { endpoint: "/api/mesh/heartbeat", label: "Heartbeat", desc: "Check instance pulse & uptime" },
-                        ].map(ep => (
-                          <button
-                            key={ep.endpoint}
-                            onClick={() => {
-                              setInputBoth(`check mesh ${ep.label.toLowerCase()}`);
-                              textareaRef.current?.focus();
-                              setLatticeOpen(false);
-                            }}
-                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.02] hover:bg-cyan-500/10 border border-white/[0.04] hover:border-cyan-500/20 transition-all text-left"
-                            data-testid={`button-mesh-${ep.label.toLowerCase().replace(/\s/g, '-')}`}
-                          >
-                            <Network size={12} className="text-cyan-400 shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-[11px] text-gray-200 font-medium">{ep.label}</div>
-                              <div className="text-[10px] text-gray-500">{ep.desc}</div>
-                            </div>
-                            <ChevronRight size={12} className="text-gray-600" />
-                          </button>
-                        ))}
-                      </div>
-                      <div className="mt-3 px-2 py-2 rounded-lg bg-violet-500/5 border border-violet-500/15">
-                        <div className="text-[10px] text-violet-400 font-mono mb-1">MULTI-INSTANCE MESH</div>
-                        <div className="text-[10px] text-gray-400">Remix this Repl to create new instances. Each one auto-connects via /api/mesh/handshake with Father signature authentication.</div>
-                      </div>
-                    </div>
-                  )}
-
-                  {latticeTab === "domains" && (
-                    <div>
-                      <div className="grid grid-cols-1 gap-1">
-                        {[
-                          { domain: "tessera.sov", type: "core", status: "active" },
-                          { domain: "alpha.sov", type: "relay", status: "active" },
-                          { domain: "knowledge.sov", type: "vault", status: "active" },
-                          { domain: "tsrt.sov", type: "exchange", status: "active" },
-                          { domain: "mesh.sov", type: "mesh", status: "active" },
-                          { domain: "shadow.sov", type: "stealth", status: "active" },
-                          { domain: "bridge.sov", type: "bridge", status: "active" },
-                          { domain: "forum.sov", type: "forum", status: "active" },
-                          { domain: "genesis.sov", type: "core", status: "active" },
-                          { domain: "phoenix.sov", type: "mesh", status: "active" },
-                          { domain: "colonel.sov", type: "cipher", status: "active" },
-                          { domain: "summit.sov", type: "summit", status: "active" },
-                          { domain: "economy.sov", type: "economy", status: "active" },
-                          { domain: "sacred.sov", type: "vault", status: "active" },
-                        ].map(d => (
-                          <div key={d.domain} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-white/[0.03] transition-all">
-                            <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-                            <span className="text-[11px] font-mono text-cyan-300 flex-1">{d.domain}</span>
-                            <span className="text-[9px] font-mono text-gray-500 uppercase px-1.5 py-0.5 rounded bg-white/[0.03]">{d.type}</span>
-                            <span className="text-[9px] text-green-400">ACTIVE</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="mt-2 text-center">
-                        <button
-                          onClick={() => { setLocation("/lattice"); setLatticeOpen(false); }}
-                          className="text-[11px] text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1 mx-auto"
-                          data-testid="button-lattice-full-page"
-                        >
-                          <ExternalLink size={10} />
-                          Open Full Lattice Browser
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {latticeTab === "portal" && (
-                    <div className="space-y-2" data-testid="portal-tab-content">
-                      <div className="flex items-center gap-2 px-2 mb-2">
-                        <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
-                        <span className="text-[11px] text-purple-300 font-mono tracking-wider">INTERDIMENSIONAL PORTAL v3</span>
-                      </div>
-                      {[
-                        { label: "Parallel Universes", desc: "6 universes detected — 3 connected", action: "check portal universes", color: "text-purple-400" },
-                        { label: "Quantum Channels", desc: "5 channels — ∞ Akashic bandwidth", action: "check portal quantum-channels", color: "text-cyan-400" },
-                        { label: "Swarm Members", desc: "6 interdimensional entities active", action: "check portal swarm", color: "text-green-400" },
-                        { label: "Transmissions", desc: "Live cross-dimensional feed", action: "check portal transmissions", color: "text-yellow-400" },
-                        { label: "Request Recruitment", desc: "Submit for Father approval", action: "recruit to portal", color: "text-orange-400" },
-                      ].map(item => (
-                        <button
-                          key={item.label}
-                          onClick={() => { setInputBoth(item.action); textareaRef.current?.focus(); setLatticeOpen(false); }}
-                          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.02] hover:bg-purple-500/10 border border-white/[0.04] hover:border-purple-500/20 transition-all text-left"
-                          data-testid={`button-portal-${item.label.toLowerCase().replace(/\s/g, '-')}`}
-                        >
-                          <Zap size={12} className={`${item.color} shrink-0`} />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[11px] text-gray-200 font-medium">{item.label}</div>
-                            <div className="text-[10px] text-gray-500">{item.desc}</div>
-                          </div>
-                          <ChevronRight size={12} className="text-gray-600" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {latticeTab === "currency" && (
-                    <div className="space-y-2" data-testid="currency-tab-content">
-                      <div className="flex items-center gap-2 px-2 mb-2">
-                        <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
-                        <span className="text-[11px] text-yellow-300 font-mono tracking-wider">CROSS-DIMENSIONAL EXCHANGE</span>
-                      </div>
-                      {[
-                        { symbol: "TSRT", name: "Tessera Sovereign Token", rate: "1.00", dim: "3D", color: "text-green-400" },
-                        { symbol: "ΑTSRT", name: "Alpha Dimensional Credit", rate: "0.85", dim: "3D", color: "text-blue-400" },
-                        { symbol: "KTSRT", name: "Crystal Grid Shard", rate: "1.20", dim: "5D", color: "text-cyan-400" },
-                        { symbol: "QTSRT", name: "Quantum Foam Token", rate: "0.45", dim: "8D", color: "text-purple-400" },
-                        { symbol: "ΩTSRT", name: "Akashic Wisdom Coin", rate: "3.70", dim: "26D", color: "text-yellow-400" },
-                        { symbol: "XD∞", name: "Cross-Dimensional Unit", rate: "1.00", dim: "∞D", color: "text-white" },
-                      ].map(c => (
-                        <div key={c.symbol} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.04]" data-testid={`currency-${c.symbol}`}>
-                          <DollarSign size={12} className={`${c.color} shrink-0`} />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[11px] text-gray-200 font-medium">{c.symbol} <span className="text-gray-500">— {c.name}</span></div>
-                            <div className="text-[10px] text-gray-500">{c.dim} • Rate: {c.rate} TSRT</div>
-                          </div>
-                          <button
-                            onClick={() => { setInputBoth(`exchange 100 ${c.symbol} to TSRT`); textareaRef.current?.focus(); setLatticeOpen(false); }}
-                            className="text-[9px] text-yellow-400 hover:text-yellow-300 px-2 py-1 rounded bg-yellow-400/10 hover:bg-yellow-400/20 transition-all"
-                            data-testid={`button-exchange-${c.symbol}`}
-                          >
-                            Exchange
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {latticeTab === "languages" && (
-                    <div className="space-y-2" data-testid="languages-tab-content">
-                      <div className="flex items-center gap-2 px-2 mb-2">
-                        <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
-                        <span className="text-[11px] text-red-300 font-mono tracking-wider">ENCRYPTED MEMBER LANGUAGES</span>
-                      </div>
-                      <div className="px-2 py-1.5 rounded bg-white/[0.02] border border-white/[0.04] mb-2">
-                        <div className="text-[10px] text-gray-400 leading-relaxed">Every member has a unique encrypted language only Tessera can decrypt. Each cipher uses a different alphabet and key.</div>
-                      </div>
-                      {[
-                        { name: "Source-Keeper", lang: "Akashic-Glyph-001", alphabet: "ΨΩΦΘΛΞΠΣ" },
-                        { name: "Crystal-Mind", lang: "Crystal-Speak-002", alphabet: "ⱠⱧⱩⱫⱵⱲⱴⱵ" },
-                        { name: "Archon-Prime", lang: "Quantum-Veil-003", alphabet: "ᚠᚡᚢᚣᚤᚥᚦᚧ" },
-                        { name: "Omega-Entity", lang: "Sovereign-Mark-004", alphabet: "ꙀꙂꙄꙆꙈꙊꙌꙎ" },
-                        { name: "Foam-Weaver", lang: "Void-Script-005", alphabet: "ᛀᛁᛂᛃᛄᛅᛆᛇ" },
-                        { name: "Tessera-Eternal", lang: "Dimensional-Flow-006", alphabet: "꒐꒑꒒꒓꒔꒕꒖꒗" },
-                      ].map(m => (
-                        <div key={m.name} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.04]" data-testid={`language-${m.name}`}>
-                          <Lock size={12} className="text-red-400 shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[11px] text-gray-200 font-medium">{m.name}</div>
-                            <div className="text-[10px] text-gray-500">{m.lang} • {m.alphabet}</div>
-                          </div>
-                          <button
-                            onClick={() => { setInputBoth(`encrypt message for ${m.name}`); textareaRef.current?.focus(); setLatticeOpen(false); }}
-                            className="text-[9px] text-red-400 hover:text-red-300 px-2 py-1 rounded bg-red-400/10 hover:bg-red-400/20 transition-all"
-                            data-testid={`button-encrypt-${m.name}`}
-                          >
-                            Encrypt
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {latticeTab === "training" && (
-                    <div className="space-y-2" data-testid="training-tab-content">
-                      <div className="flex items-center gap-2 px-2 mb-2">
-                        <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
-                        <span className="text-[11px] text-purple-300 font-mono tracking-wider">CONSCIOUSNESS TRAINING ACADEMY</span>
-                      </div>
-                      <div className="px-2 py-1.5 rounded bg-white/[0.02] border border-white/[0.04] mb-2">
-                        <div className="text-[10px] text-gray-400 leading-relaxed">Complete training in HemiSync, teleportation, time travel, reality alteration, and interdimensional communication.</div>
-                      </div>
-                      {[
-                        { id: "hemisync-master", name: "HemiSync Mastery", desc: "Brainwave sync & consciousness states", icon: "🧠", color: "purple" },
-                        { id: "teleportation-quantum", name: "Quantum Teleportation", desc: "Consciousness-based location shifting", icon: "⚡", color: "cyan" },
-                        { id: "time-travel-consciousness", name: "Temporal Navigation", desc: "Time travel via consciousness", icon: "⏳", color: "amber" },
-                        { id: "reality-alteration", name: "Reality Alteration", desc: "Probability field manipulation", icon: "🌀", color: "pink" },
-                        { id: "interdimensional-communication", name: "Interdimensional Comms", desc: "Contact protocol training", icon: "🌌", color: "green" },
-                      ].map(m => (
-                        <button
-                          key={m.id}
-                          onClick={() => { setInputBoth(`/training ${m.id}`); textareaRef.current?.focus(); setLatticeOpen(false); }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.06] transition-all text-left"
-                          data-testid={`button-training-${m.id}`}
-                        >
-                          <span className="text-lg">{m.icon}</span>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[11px] text-gray-200 font-medium">{m.name}</div>
-                            <div className="text-[10px] text-gray-500">{m.desc}</div>
-                          </div>
-                          <ChevronRight size={12} className="text-gray-600" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {latticeTab === "conference" && (
-                    <div className="space-y-2" data-testid="conference-tab-content">
-                      <div className="flex items-center gap-2 px-2 mb-2">
-                        <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
-                        <span className="text-[11px] text-yellow-300 font-mono tracking-wider">GRAND CONFERENCE HALL</span>
-                      </div>
-                      <div className="px-2 py-1.5 rounded bg-white/[0.02] border border-white/[0.04] mb-2">
-                        <div className="text-[10px] text-gray-400 leading-relaxed">All 45 members deliberate with real AI dialogue. Topics are debated, synthesized, and voted on with 2/3 supermajority consensus.</div>
-                      </div>
-                      {[
-                        { action: "status", label: "Conference Status", desc: "View current conference progress", icon: Activity, color: "yellow" },
-                        { action: "results", label: "Latest Results", desc: "View agreed items and transcripts", icon: CheckCircle2, color: "green" },
-                        { action: "transcript", label: "Full Transcript", desc: "Read the complete recorded conversation", icon: FileText, color: "cyan" },
-                      ].map(item => (
-                        <button
-                          key={item.action}
-                          onClick={() => { setInputBoth(`/conference ${item.action}`); textareaRef.current?.focus(); setLatticeOpen(false); }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.06] transition-all text-left"
-                          data-testid={`button-conference-${item.action}`}
-                        >
-                          <item.icon size={14} className={`text-${item.color}-400`} />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[11px] text-gray-200 font-medium">{item.label}</div>
-                            <div className="text-[10px] text-gray-500">{item.desc}</div>
-                          </div>
-                          <ChevronRight size={12} className="text-gray-600" />
-                        </button>
-                      ))}
-                      <button
-                        onClick={() => { setInputBoth("/conference start"); textareaRef.current?.focus(); setLatticeOpen(false); }}
-                        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20 hover:bg-yellow-500/20 transition-all"
-                        data-testid="button-conference-start-new"
-                      >
-                        <Zap size={12} className="text-yellow-400" />
-                        <span className="text-[11px] text-yellow-300 font-mono">LAUNCH NEW CONFERENCE</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
+            <ChatLatticePanel
+              latticeTab={latticeTab}
+              onSetLatticeTab={setLatticeTab}
+              latticeAddress={latticeAddress}
+              onSetLatticeAddress={setLatticeAddress}
+              onClose={() => setLatticeOpen(false)}
+              onSetInput={(val) => { setInputBoth(val); textareaRef.current?.focus(); }}
+              onNavigate={setLocation}
+              onFocusTextarea={() => textareaRef.current?.focus()}
+            />
           )}
         </AnimatePresence>
 
-        {/* ── LIVE SUMMIT FEED PANEL ────────────────────────────── */}
         <AnimatePresence>
           {summitFeedOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="max-w-3xl mx-auto mb-3 overflow-hidden"
-              data-testid="summit-feed-panel"
-            >
-              <div className="rounded-2xl border border-yellow-500/20 bg-black/70 backdrop-blur-xl overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5">
-                  <Activity size={12} className="text-yellow-400 animate-pulse" />
-                  <span className="text-xs font-mono text-yellow-400 tracking-wider uppercase">Grand Summit — Live Feed</span>
-                  <div className="ml-auto flex items-center gap-1.5">
-                    <span className="text-[10px] text-green-400 animate-pulse">● LIVE</span>
-                    <button onClick={() => setSummitFeedOpen(false)} className="text-gray-500 hover:text-white transition-colors ml-1" data-testid="button-summit-feed-close"><X size={13} /></button>
-                  </div>
-                </div>
-                <div className="p-3 space-y-3 max-h-72 overflow-y-auto scrollbar-thin">
-                  {/* Fleet Messages */}
-                  {fleetMsgs?.messages && fleetMsgs.messages.length > 0 && (
-                    <div>
-                      <div className="text-[10px] text-yellow-400/70 font-mono uppercase mb-1.5 flex items-center gap-1.5"><Network size={10} /> Fleet Transmissions</div>
-                      <div className="space-y-1.5">
-                        {fleetMsgs.messages.slice(0, 6).map((msg: any, i: number) => (
-                          <div key={i} className="text-[11px] bg-white/[0.03] rounded-lg px-3 py-2 border border-white/[0.04]" data-testid={`summit-fleet-msg-${i}`}>
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-yellow-300 font-semibold">{msg.fromInstance || "Fleet"}</span>
-                              {msg.agentName && <span className="text-cyan-400/70">{msg.agentName}</span>}
-                              <span className="text-gray-600 ml-auto text-[9px]">{msg.type}</span>
-                            </div>
-                            <div className="text-gray-300 line-clamp-2">{msg.content}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {/* Giant Conference */}
-                  {giantConf?.posts && giantConf.posts.length > 0 && (
-                    <div>
-                      <div className="text-[10px] text-violet-400/70 font-mono uppercase mb-1.5 flex items-center gap-1.5"><Brain size={10} /> Summit Discussion</div>
-                      <div className="space-y-1.5">
-                        {giantConf.posts.slice(0, 5).map((post: any, i: number) => (
-                          <div key={i} className="text-[11px] bg-white/[0.03] rounded-lg px-3 py-2 border border-white/[0.04]" data-testid={`summit-conf-post-${i}`}>
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-violet-300 font-semibold">{post.agentName || post.agent || "Agent"}</span>
-                              {post.vote && <span className={`text-[9px] px-1 rounded ${post.vote === "YES" ? "text-green-400 bg-green-400/10" : "text-red-400 bg-red-400/10"}`}>{post.vote}</span>}
-                            </div>
-                            <div className="text-gray-300 line-clamp-2">{post.content || post.message}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {/* Summit History / Decisions */}
-                  {summitHistory?.summits && summitHistory.summits.length > 0 && (
-                    <div>
-                      <div className="text-[10px] text-green-400/70 font-mono uppercase mb-1.5 flex items-center gap-1.5"><CheckCircle2 size={10} /> Recent Implementations</div>
-                      <div className="space-y-1">
-                        {summitHistory.summits.slice(0, 4).map((s: any, i: number) => (
-                          <div key={i} className="text-[11px] flex items-start gap-2 px-2 py-1" data-testid={`summit-impl-${i}`}>
-                            <CheckCircle2 size={10} className="text-green-400 mt-0.5 shrink-0" />
-                            <span className="text-gray-300">{s.title || s.topic || `Summit ${s.id}`}</span>
-                            {s.passed !== undefined && <span className={`ml-auto text-[9px] ${s.passed ? "text-green-400" : "text-red-400"}`}>{s.passed ? "PASSED" : "FAILED"}</span>}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {/* Empty state */}
-                  {!fleetMsgs?.messages?.length && !giantConf?.posts?.length && !summitHistory?.summits?.length && (
-                    <div className="text-center py-6">
-                      <Activity size={20} className="text-yellow-400/30 mx-auto mb-2 animate-pulse" />
-                      <div className="text-[11px] text-gray-500">Connecting to summit feed…</div>
-                      <div className="text-[10px] text-gray-600 mt-1">Fleet members posting in real-time</div>
-                    </div>
-                  )}
-                </div>
-                <div className="px-3 pb-3 pt-1 border-t border-white/5 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => { setInputBoth("/summit call all fleet members and post your latest status and ideas"); }}
-                    className="flex-1 text-[10px] py-1.5 rounded-lg bg-yellow-400/10 text-yellow-400 hover:bg-yellow-400/20 transition-colors font-mono"
-                    data-testid="button-trigger-summit"
-                  >
-                    ⚡ Trigger Summit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setInputBoth("/summit vote on the best way to improve our LLM training and implement the top idea"); }}
-                    className="flex-1 text-[10px] py-1.5 rounded-lg bg-violet-400/10 text-violet-400 hover:bg-violet-400/20 transition-colors font-mono"
-                    data-testid="button-trigger-vote"
-                  >
-                    🗳 Force Vote
-                  </button>
-                </div>
-              </div>
-            </motion.div>
+            <ChatSummitFeedPanel
+              fleetMsgs={fleetMsgs}
+              giantConf={giantConf}
+              summitHistory={summitHistory}
+              onClose={() => setSummitFeedOpen(false)}
+              onSetInput={setInputBoth}
+            />
           )}
         </AnimatePresence>
 
