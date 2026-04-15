@@ -514,10 +514,37 @@ function FrameLimiter({ fps }: { fps: number }) {
   return null;
 }
 
+const EVENT_OVERLAY_ID = "universe-event-overlay";
+
+function getOrCreateEventOverlay(): HTMLDivElement {
+  let el = document.getElementById(EVENT_OVERLAY_ID) as HTMLDivElement | null;
+  if (!el) {
+    el = document.createElement("div");
+    el.id = EVENT_OVERLAY_ID;
+    Object.assign(el.style, {
+      position: "fixed",
+      inset: "0",
+      zIndex: "1",
+      pointerEvents: "auto",
+    });
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
 function UniverseBackground() {
   const [isMobile, setIsMobile] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [hasWebGL, setHasWebGL] = useState(true);
+  const overlayRef = useRef<HTMLDivElement>(null!);
+
+  useEffect(() => {
+    overlayRef.current = getOrCreateEventOverlay();
+    return () => {
+      const el = document.getElementById(EVENT_OVERLAY_ID);
+      if (el) el.remove();
+    };
+  }, []);
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
@@ -551,6 +578,8 @@ function UniverseBackground() {
           frameloop="demand"
           style={{ background: "#030108" }}
           dpr={isMobile ? [1, 1.5] : [1, 2]}
+          eventSource={overlayRef}
+          eventPrefix="client"
         >
           <FrameLimiter fps={isMobile ? 20 : 30} />
           <color attach="background" args={["#030108"]} />
