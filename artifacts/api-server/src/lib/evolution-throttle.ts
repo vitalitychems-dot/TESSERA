@@ -1,0 +1,156 @@
+import { logger } from "./logger";
+
+interface ModuleCooldown {
+  moduleId: string;
+  consecutiveFailures: number;
+  lastFailureAt: number;
+  cooldownUntil: number;
+  totalFailures: number;
+  totalSuccesses: number;
+  paused: boolean;
+}
+
+const COOLDOWN_TIERS_MS = [
+  60_000,
+  300_000,
+  900_000,
+  1_800_000,
+  3_600_000,
+];
+
+const moduleCooldowns = new Map<string, ModuleCooldown>();
+let globalPaused = false;
+
+function getCooldown(moduleId: string): ModuleCooldown {
+  let entry = moduleCooldowns.get(moduleId);
+  if (!entry) {
+    entry = {
+      moduleId,
+      consecutiveFailures: 0,
+      lastFailureAt: 0,
+      cooldownUntil: 0,
+      totalFailures: 0,
+      totalSuccesses: 0,
+      paused: false,
+    };
+    moduleCooldowns.set(moduleId, entry);
+  }
+  return entry;
+}
+
+export function isModuleCoolingDown(moduleId: string): boolean {
+  if (globalPaused) return true;
+  const entry = getCooldown(moduleId);
+  if (entry.paused) return true;
+  if (entry.cooldownUntil > Date.now()) return true;
+  return false;
+}
+
+export function getCooldownRemainingMs(moduleId: string): number {
+  const entry = getCooldown(moduleId);
+  if (entry.paused) return Infinity;
+  const remaining = entry.cooldownUntil - Date.now();
+  return remaining > 0 ? remaining : 0;
+}
+
+export function recordEvolutionSuccess(moduleId: string): void {
+  const entry = getCooldown(moduleId);
+  entry.consecutiveFailures = 0;
+  entry.cooldownUntil = 0;
+  entry.totalSuccesses++;
+}
+
+export function recordEvolutionFailure(moduleId: string): void {
+  const entry = getCooldown(moduleId);
+  entry.consecutiveFailures++;
+  entry.totalFailures++;
+  entry.lastFailureAt = Date.now();
+
+  if (entry.consecutiveFailures >= 3) {
+    const tierIndex = Math.min(
+      entry.consecutiveFailures - 3,
+      COOLDOWN_TIERS_MS.length - 1,
+    );
+    const cooldownMs = COOLDOWN_TIERS_MS[tierIndex];
+    entry.cooldownUntil = Date.now() + cooldownMs;
+
+    logger.info(
+      {
+        moduleId,
+        consecutiveFailures: entry.consecutiveFailures,
+        cooldownMs,
+        cooldownUntilISO: new Date(entry.cooldownUntil).toISOString(),
+      },
+      "EvolutionThrottle: module suspended after repeated failures",
+    );
+  }
+}
+
+export function pauseModule(moduleId: string): void {
+  const entry = getCooldown(moduleId);
+  entry.paused = true;
+  logger.info({ moduleId }, "EvolutionThrottle: module manually paused");
+}
+
+export function resumeModule(moduleId: string): void {
+  const entry = getCooldown(moduleId);
+  entry.paused = false;
+  entry.consecutiveFailures = 0;
+  entry.cooldownUntil = 0;
+  logger.info({ moduleId }, "EvolutionThrottle: module manually resumed");
+}
+
+export function pauseAllEvolution(): void {
+  globalPaused = true;
+  logger.info("EvolutionThrottle: all evolution paused globally");
+}
+
+export function resumeAllEvolution(): void {
+  globalPaused = false;
+  logger.info("EvolutionThrottle: global evolution resumed");
+}
+
+export function isGloballyPaused(): boolean {
+  return globalPaused;
+}
+
+export function getThrottleMetrics() {
+  const modules: Array<{
+    moduleId: string;
+    consecutiveFailures: number;
+    totalFailures: number;
+    totalSuccesses: number;
+    successRate: number;
+    cooldownRemainingMs: number;
+    paused: boolean;
+    lastFailureAt: number;
+  }> = [];
+
+  for (const [, entry] of moduleCooldowns) {
+    const total = entry.totalSuccesses + entry.totalFailures;
+    modules.push({
+      moduleId: entry.moduleId,
+      consecutiveFailures: entry.consecutiveFailures,
+      totalFailures: entry.totalFailures,
+      totalSuccesses: entry.totalSuccesses,
+      successRate: total > 0 ? Math.round((entry.totalSuccesses / total) * 100) : 100,
+      cooldownRemainingMs: Math.max(0, entry.cooldownUntil - Date.now()),
+      paused: entry.paused,
+      lastFailureAt: entry.lastFailureAt,
+    });
+  }
+
+  return {
+    globalPaused,
+    modules,
+    totalModulesTracked: moduleCooldowns.size,
+    totalModulesCoolingDown: modules.filter(m => m.cooldownRemainingMs > 0 || m.paused).length,
+  };
+}
+
+export function resetModuleCooldown(moduleId: string): void {
+  const entry = getCooldown(moduleId);
+  entry.consecutiveFailures = 0;
+  entry.cooldownUntil = 0;
+  entry.paused = false;
+}

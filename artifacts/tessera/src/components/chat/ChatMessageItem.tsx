@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, Suspense } from "react";
 import { Copy, Check, RefreshCw, Volume2, ThumbsUp, ThumbsDown } from "lucide-react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -9,6 +9,7 @@ import { CodePreview } from "./ChatCodePreview";
 import { ColorizedText } from "./ChatColorizedText";
 import { copyToClipboard, playAudioResponse } from "./ChatVoice";
 import { CodeExecutionResult, parseCodeExecutionBlocks, stripCodeExecutionBlocks } from "./CodeExecutionResult";
+import { parse3DObjectBlocks, inferObjectSpec, InlineObject3D, type Object3DSpec } from "./ChatObject3D";
 
 const AGENT_FREQUENCIES: Record<string, number> = {
   "paraclete": 852, "brahman-all": 963, "aletheia": 963, "melchizedek": 963,
@@ -217,7 +218,10 @@ const AssistantMessage = memo(function AssistantMessage({
   const sanitized = sanitizeMessageContent(msg.content);
   const execBlocks = parseCodeExecutionBlocks(sanitized);
   const strippedExec = stripCodeExecutionBlocks(sanitized);
-  const { text: chartText, charts } = parseChartBlocks(strippedExec);
+  const { text: after3d, objects: explicit3DObjects } = parse3DObjectBlocks(strippedExec);
+  const { text: chartText, charts } = parseChartBlocks(after3d);
+  const inferred3DSpec = explicit3DObjects.length === 0 ? inferObjectSpec(msg.content) : null;
+  const all3DObjects: Object3DSpec[] = explicit3DObjects.length > 0 ? explicit3DObjects : (inferred3DSpec ? [inferred3DSpec] : []);
   const tokenCount = Math.ceil(msg.content.split(/\s+/).length / 0.75);
 
   return (
@@ -249,6 +253,12 @@ const AssistantMessage = memo(function AssistantMessage({
 
       {charts.map((chart, ci) => (
         <InlineChart key={ci} chart={chart} />
+      ))}
+
+      {all3DObjects.map((obj, oi) => (
+        <Suspense key={oi} fallback={<div className="my-3 h-[220px] rounded-xl bg-black/30 border border-white/5 animate-pulse" />}>
+          <InlineObject3D spec={obj} />
+        </Suspense>
       ))}
 
       {execBlocks.length > 0 && (

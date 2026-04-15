@@ -89,6 +89,25 @@ export function buildUrl(path: string, params?: Record<string, string | number |
   return s ? `${path}?${s}` : path;
 }
 
+function isTransientError(failureCount: number, error: unknown): boolean {
+  if (failureCount >= 2) return false;
+  if (error instanceof Error) {
+    const msg = error.message;
+    if (/^4\d{2}:/.test(msg) && !/^(408|429):/.test(msg)) return false;
+    if (/network|fetch|abort|timeout|ECONNREFUSED|ENOTFOUND|5\d{2}:|408:|429:/i.test(msg)) return true;
+  }
+  if (typeof error === "object" && error !== null && "status" in error) {
+    const status = (error as { status: number }).status;
+    if (status >= 500 || status === 408 || status === 429) return true;
+    if (status >= 400 && status < 500) return false;
+  }
+  return true;
+}
+
+function retryDelay(attemptIndex: number): number {
+  return Math.min(1000 * 2 ** attemptIndex, 8000);
+}
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -96,7 +115,8 @@ export const queryClient = new QueryClient({
       refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: Infinity,
-      retry: false,
+      retry: isTransientError,
+      retryDelay,
     },
     mutations: {
       retry: false,

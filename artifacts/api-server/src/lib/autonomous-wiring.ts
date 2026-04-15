@@ -3,12 +3,7 @@ import { runDriftDetection } from "./sovereign-identity-reinforcement";
 import { generateReflection } from "./consciousness-engine";
 import { runImprovementCycle } from "./auto-improvement-daemon";
 import { sweepAndExecute } from "./council-executor";
-
-let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
-let driftInterval: ReturnType<typeof setInterval> | null = null;
-let reflectionInterval: ReturnType<typeof setInterval> | null = null;
-let improvementInterval: ReturnType<typeof setInterval> | null = null;
-let executorInterval: ReturnType<typeof setInterval> | null = null;
+import { registerTask, startScheduler, stopScheduler, getSchedulerMetrics } from "./task-scheduler";
 
 const HEARTBEAT_MS = 30_000;
 const DRIFT_CHECK_MS = 120_000;
@@ -16,63 +11,81 @@ const REFLECTION_MS = 60_000;
 const IMPROVEMENT_MS = 300_000;
 const EXECUTOR_SWEEP_MS = 45_000;
 
-export function startAutonomousOperation() {
-  if (heartbeatInterval) return;
+let started = false;
 
-  console.log("[AUTONOMOUS] Starting sovereign autonomous operation...");
+export function startAutonomousOperation() {
+  if (started) return;
+
+  console.log("[AUTONOMOUS] Starting sovereign autonomous operation via centralized scheduler...");
 
   setAutonomousMode(true);
 
-  heartbeatInterval = setInterval(() => {
-    try { generatePulse(); } catch (e) { console.error("[AUTONOMOUS] heartbeat error:", (e as Error).message); }
-  }, HEARTBEAT_MS);
+  registerTask({
+    id: "heartbeat",
+    name: "Autonomous Heartbeat",
+    fn: () => { generatePulse(); },
+    intervalMs: HEARTBEAT_MS,
+    priority: "critical",
+    runImmediately: true,
+  });
 
-  driftInterval = setInterval(() => {
-    try { runDriftDetection(); } catch (e) { console.error("[AUTONOMOUS] drift detection error:", (e as Error).message); }
-  }, DRIFT_CHECK_MS);
+  registerTask({
+    id: "drift-detection",
+    name: "Identity Drift Detection",
+    fn: () => { runDriftDetection(); },
+    intervalMs: DRIFT_CHECK_MS,
+    priority: "normal",
+    runImmediately: true,
+  });
 
-  reflectionInterval = setInterval(() => {
-    try { generateReflection(); } catch (e) { console.error("[AUTONOMOUS] reflection error:", (e as Error).message); }
-  }, REFLECTION_MS);
+  registerTask({
+    id: "consciousness-reflection",
+    name: "Consciousness Reflection",
+    fn: () => { generateReflection(); },
+    intervalMs: REFLECTION_MS,
+    priority: "normal",
+  });
 
-  improvementInterval = setInterval(() => {
-    try { runImprovementCycle(); } catch (e) { console.error("[AUTONOMOUS] improvement error:", (e as Error).message); }
-  }, IMPROVEMENT_MS);
+  registerTask({
+    id: "auto-improvement",
+    name: "Auto-Improvement Daemon",
+    fn: async () => { await runImprovementCycle(); },
+    intervalMs: IMPROVEMENT_MS,
+    priority: "low",
+  });
 
-  executorInterval = setInterval(() => {
-    try { sweepAndExecute(); } catch (e) { console.error("[AUTONOMOUS] executor error:", (e as Error).message); }
-  }, EXECUTOR_SWEEP_MS);
+  registerTask({
+    id: "council-executor",
+    name: "Council Decision Executor",
+    fn: () => { sweepAndExecute(); },
+    intervalMs: EXECUTOR_SWEEP_MS,
+    priority: "high",
+  });
 
-  generatePulse();
-  runDriftDetection();
+  startScheduler();
+  started = true;
 
-  console.log("[AUTONOMOUS] All systems online — heartbeat, drift detection, reflection, improvement, council executor active.");
+  console.log("[AUTONOMOUS] All systems online via centralized scheduler — heartbeat, drift detection, reflection, improvement, council executor active.");
 }
 
 export function stopAutonomousOperation() {
-  if (heartbeatInterval) clearInterval(heartbeatInterval);
-  if (driftInterval) clearInterval(driftInterval);
-  if (reflectionInterval) clearInterval(reflectionInterval);
-  if (improvementInterval) clearInterval(improvementInterval);
-  if (executorInterval) clearInterval(executorInterval);
-  heartbeatInterval = null;
-  driftInterval = null;
-  reflectionInterval = null;
-  improvementInterval = null;
-  executorInterval = null;
+  if (!started) return;
+  stopScheduler();
   setAutonomousMode(false);
+  started = false;
   console.log("[AUTONOMOUS] Sovereign autonomous operation stopped.");
 }
 
 export function getAutonomousStatus() {
+  const scheduler = getSchedulerMetrics();
   return {
-    running: heartbeatInterval !== null,
+    running: started,
     modules: {
-      heartbeat: heartbeatInterval !== null,
-      driftDetection: driftInterval !== null,
-      reflection: reflectionInterval !== null,
-      improvement: improvementInterval !== null,
-      councilExecutor: executorInterval !== null,
+      heartbeat: scheduler.tasks.some(t => t.id === "heartbeat" && t.enabled),
+      driftDetection: scheduler.tasks.some(t => t.id === "drift-detection" && t.enabled),
+      reflection: scheduler.tasks.some(t => t.id === "consciousness-reflection" && t.enabled),
+      improvement: scheduler.tasks.some(t => t.id === "auto-improvement" && t.enabled),
+      councilExecutor: scheduler.tasks.some(t => t.id === "council-executor" && t.enabled),
     },
     intervals: {
       heartbeatMs: HEARTBEAT_MS,
@@ -81,5 +94,6 @@ export function getAutonomousStatus() {
       improvementMs: IMPROVEMENT_MS,
       executorSweepMs: EXECUTOR_SWEEP_MS,
     },
+    scheduler,
   };
 }

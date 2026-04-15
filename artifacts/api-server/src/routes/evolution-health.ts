@@ -1,0 +1,106 @@
+import { Router, type Request, type Response } from "express";
+import {
+  getThrottleMetrics,
+  pauseModule,
+  resumeModule,
+  pauseAllEvolution,
+  resumeAllEvolution,
+  resetModuleCooldown,
+} from "../lib/evolution-throttle";
+import { getEvolutionMetrics } from "../lib/self-code-evolution";
+import { getRecursiveSelfImprovementMetrics } from "../lib/recursive-self-improvement";
+import { getSchedulerMetrics } from "../lib/task-scheduler";
+import { validateMeshToken } from "../lib/mesh-auth";
+
+const router = Router();
+
+function requireAuth(req: Request, res: Response, next: () => void): void {
+  const rawToken = req.headers["x-admin-token"];
+  const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
+  const keyHash = validateMeshToken(token);
+  if (!keyHash) {
+    res.status(401).json({ ok: false, error: "Valid sovereign key required" });
+    return;
+  }
+  next();
+}
+
+router.get("/evolution-health", (_req: Request, res: Response) => {
+  const throttle = getThrottleMetrics();
+  const evolution = getEvolutionMetrics();
+  const improvement = getRecursiveSelfImprovementMetrics();
+  const scheduler = getSchedulerMetrics();
+
+  res.json({
+    ok: true,
+    data: {
+      throttle,
+      evolution: {
+        totalProposals: evolution.totalProposals,
+        appliedChanges: evolution.appliedChanges,
+        rejectedCount: evolution.rejectedCount,
+        rolledBackChanges: evolution.rolledBackChanges,
+        lastEvolutionAt: evolution.lastEvolutionAt,
+        isLocked: evolution.isLocked,
+      },
+      improvement: {
+        improvementCycles: improvement.improvementCycles,
+        overallCodeHealth: improvement.overallCodeHealth,
+        patches: improvement.patches,
+        testing: improvement.testing,
+      },
+      scheduler: {
+        running: scheduler.running,
+        totalTasks: scheduler.totalTasks,
+        activeTasks: scheduler.activeTasks,
+        runningNow: scheduler.runningNow,
+      },
+    },
+  });
+});
+
+router.get("/evolution-health/scheduler", (_req: Request, res: Response) => {
+  res.json({ ok: true, data: getSchedulerMetrics() });
+});
+
+router.post("/evolution-health/pause/:moduleId", requireAuth, (req: Request, res: Response) => {
+  const moduleId = req.params.moduleId;
+  if (!moduleId) {
+    res.status(400).json({ ok: false, error: "moduleId required" });
+    return;
+  }
+  if (moduleId === "_all") {
+    pauseAllEvolution();
+    res.json({ ok: true, message: "All evolution paused" });
+  } else {
+    pauseModule(moduleId);
+    res.json({ ok: true, message: `Module ${moduleId} paused` });
+  }
+});
+
+router.post("/evolution-health/resume/:moduleId", requireAuth, (req: Request, res: Response) => {
+  const moduleId = req.params.moduleId;
+  if (!moduleId) {
+    res.status(400).json({ ok: false, error: "moduleId required" });
+    return;
+  }
+  if (moduleId === "_all") {
+    resumeAllEvolution();
+    res.json({ ok: true, message: "All evolution resumed" });
+  } else {
+    resumeModule(moduleId);
+    res.json({ ok: true, message: `Module ${moduleId} resumed` });
+  }
+});
+
+router.post("/evolution-health/reset/:moduleId", requireAuth, (req: Request, res: Response) => {
+  const moduleId = req.params.moduleId;
+  if (!moduleId) {
+    res.status(400).json({ ok: false, error: "moduleId required" });
+    return;
+  }
+  resetModuleCooldown(moduleId);
+  res.json({ ok: true, message: `Cooldown reset for ${moduleId}` });
+});
+
+export default router;

@@ -332,6 +332,14 @@ function drawConnectionLine(ctx: CanvasRenderingContext2D, x1: number, y1: numbe
   ctx.fill();
 }
 
+function isLowEndDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const cores = navigator.hardwareConcurrency || 4;
+  if (cores <= 2) return true;
+  if ("deviceMemory" in navigator && (navigator as any).deviceMemory < 4) return true;
+  return false;
+}
+
 function ToroidalBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const frameRef = useRef<number>(0);
@@ -340,18 +348,22 @@ function ToroidalBackground() {
   const nebulaeRef = useRef<NebulaCloud[]>([]);
   const timeRef = useRef(0);
   const visibleRef = useRef(true);
+  const onScreenRef = useRef(true);
   const lastFrameRef = useRef(0);
   const targetFpsRef = useRef(20);
 
   useEffect(() => {
+    const lowEnd = isLowEndDevice();
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     const reducedRef = { current: motionQuery.matches };
     if (reducedRef.current) {
       targetFpsRef.current = 1;
+    } else if (lowEnd) {
+      targetFpsRef.current = 12;
     }
     const onMotionChange = (e: MediaQueryListEvent) => {
       reducedRef.current = e.matches;
-      targetFpsRef.current = e.matches ? 1 : 20;
+      targetFpsRef.current = e.matches ? 1 : lowEnd ? 12 : 20;
     };
     motionQuery.addEventListener("change", onMotionChange);
 
@@ -362,13 +374,26 @@ function ToroidalBackground() {
 
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    let observer: IntersectionObserver | null = null;
+    if (typeof IntersectionObserver !== "undefined") {
+      observer = new IntersectionObserver(
+        (entries) => {
+          onScreenRef.current = entries[0]?.isIntersecting ?? true;
+        },
+        { threshold: 0 },
+      );
+      observer.observe(canvas);
+    }
+
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
 
+    const particleScale = lowEnd ? 0.5 : 1;
     const layers = [
-      { R: 290, r: 85, count: 55, tilt: 0 },
-      { R: 185, r: 58, count: 42, tilt: Math.PI / 5 },
-      { R: 115, r: 36, count: 30, tilt: Math.PI / 2.8 },
+      { R: 290, r: 85, count: Math.round(55 * particleScale), tilt: 0 },
+      { R: 185, r: 58, count: Math.round(42 * particleScale), tilt: Math.PI / 5 },
+      { R: 115, r: 36, count: Math.round(30 * particleScale), tilt: Math.PI / 2.8 },
     ];
 
     const resize = () => {
@@ -378,7 +403,8 @@ function ToroidalBackground() {
       const H = canvas.height;
 
       starsRef.current = [];
-      const starCount = Math.floor((W * H) / 3800);
+      const starDensity = lowEnd ? 6000 : 3800;
+      const starCount = Math.floor((W * H) / starDensity);
       for (let i = 0; i < starCount; i++) {
         starsRef.current.push(createStar(W, H));
       }
@@ -410,7 +436,7 @@ function ToroidalBackground() {
       }
       lastFrameRef.current = timestamp;
 
-      if (!visibleRef.current) {
+      if (!visibleRef.current || !onScreenRef.current) {
         frameRef.current = requestAnimationFrame(draw);
         return;
       }
@@ -666,6 +692,7 @@ function ToroidalBackground() {
       window.removeEventListener("resize", resize);
       document.removeEventListener("visibilitychange", onVisChange);
       motionQuery.removeEventListener("change", onMotionChange);
+      if (observer) observer.disconnect();
     };
   }, []);
 

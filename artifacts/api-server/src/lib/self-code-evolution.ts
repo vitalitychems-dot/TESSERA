@@ -3,6 +3,7 @@ import { join, resolve, sep } from "path";
 import { logger } from "./logger";
 import { createProposal } from "./consensus-engine";
 import { callLLMSafe, isLLMAvailable } from "./llm-client";
+import { isModuleCoolingDown, recordEvolutionSuccess, recordEvolutionFailure } from "./evolution-throttle";
 
 const EVOLUTION_QUEUE_DIR = join(process.cwd(), "_evolutions");
 const SOURCE_LIB_DIR = join(process.cwd(), "src", "lib");
@@ -334,6 +335,23 @@ export async function proposeEvolution(
 ): Promise<CodeEvolutionProposal> {
   const id = `evo-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
+  if (isModuleCoolingDown(targetModule)) {
+    const proposal: CodeEvolutionProposal = {
+      id, targetModule, proposedChange, rationale, riskLevel,
+      status: "rejected",
+      proposedAt: Date.now(),
+      rollbackAvailable: false,
+      syntaxValid: false,
+      safetyChecked: false,
+      councilApproved: false,
+      impact: "Skipped: module is in cooldown after repeated failures",
+    };
+    proposals.unshift(proposal);
+    if (proposals.length > 50) proposals.splice(50);
+    evolutionState.totalProposals++;
+    return proposal;
+  }
+
   if (isModuleProtected(targetModule)) {
     const proposal: CodeEvolutionProposal = {
       id, targetModule, proposedChange, rationale,
@@ -426,6 +444,7 @@ export async function proposeEvolution(
       try {
         const { sourceFilePath, patchedLines } = await applyPatchToSourceFile(targetModule, proposedChange, id);
         const { filePath, bytesWritten } = writeEvolutionToFile(proposal);
+        recordEvolutionSuccess(targetModule);
         logger.info(
           { id, targetModule, riskLevel, verifySteps: verifyResult.steps, sourceFilePath, patchedLines, filePath, bytesWritten },
           "SelfCodeEvolution: evolution auto-applied and verified"
@@ -435,11 +454,13 @@ export async function proposeEvolution(
         proposal.impact = `Autonomous apply failed: ${writeErr instanceof Error ? writeErr.message : String(writeErr)}`;
         evolutionState.appliedChanges--;
         restoreSourceFromBackup(id, targetModule);
+        recordEvolutionFailure(targetModule);
         logger.warn({ id, targetModule, err: writeErr }, "SelfCodeEvolution: autonomous apply failed — source restored from backup");
       }
     } else {
       proposal.status = "rejected";
       proposal.impact = `Verification failed post-approval: ${verifyResult.reason}`;
+      recordEvolutionFailure(targetModule);
       logger.warn({ id, targetModule, reason: verifyResult.reason, verifySteps: verifyResult.steps }, "SelfCodeEvolution: evolution rejected by post-approval verification");
     }
   }
