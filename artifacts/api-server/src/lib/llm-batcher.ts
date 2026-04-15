@@ -243,6 +243,14 @@ export function batchedCallLLM(messages: LLMMessage[], opts: LLMCallOptions = {}
   });
 }
 
+export async function batchedCallLLMSafe(messages: LLMMessage[], opts: LLMCallOptions = {}, fallback = ""): Promise<string> {
+  try {
+    return await batchedCallLLM(messages, opts);
+  } catch {
+    return fallback;
+  }
+}
+
 export function getBatcherStats() {
   const callsSaved = batchStats.totalDeduplicated + batchStats.totalSemanticMerged;
   const reductionRate = batchStats.totalBatched > 0 ? callsSaved / batchStats.totalBatched : 0;
