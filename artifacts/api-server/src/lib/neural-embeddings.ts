@@ -21,6 +21,13 @@ const MAX_BATCH_SIZE = 20;
 const embeddingCache = new Map<string, { vec: number[]; ts: number }>();
 const EMBEDDING_CACHE_TTL = 300_000;
 
+const embeddingMetrics = {
+  neuralCalls: 0,
+  fallbackCalls: 0,
+  cacheHits: 0,
+  errors: 0,
+};
+
 function hashText(text: string): string {
   let h = 0;
   const t = text.slice(0, 500).toLowerCase().trim();
@@ -48,6 +55,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   const key = hashText(text);
   const cached = embeddingCache.get(key);
   if (cached && Date.now() - cached.ts < EMBEDDING_CACHE_TTL) {
+    embeddingMetrics.cacheHits++;
     return cached.vec;
   }
 
@@ -64,6 +72,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 
     const vec = response.data[0]?.embedding;
     if (vec && vec.length > 0) {
+      embeddingMetrics.neuralCalls++;
       embeddingCache.set(key, { vec, ts: Date.now() });
       if (embeddingCache.size > 1000) {
         const oldest = [...embeddingCache.entries()].sort((a, b) => a[1].ts - b[1].ts)[0];
@@ -72,9 +81,11 @@ export async function generateEmbedding(text: string): Promise<number[]> {
       return vec;
     }
   } catch (err) {
+    embeddingMetrics.errors++;
     logger.debug({ err: (err as Error).message }, "NeuralEmbeddings: API call failed, using fallback");
   }
 
+  embeddingMetrics.fallbackCalls++;
   const fallback = localFallbackEmbedding(text);
   embeddingCache.set(key, { vec: fallback, ts: Date.now() });
   return fallback;
@@ -150,9 +161,16 @@ export function cosineSimilarity(a: number[], b: number[]): number {
 }
 
 export function getEmbeddingStats() {
+  const total = embeddingMetrics.neuralCalls + embeddingMetrics.fallbackCalls;
   return {
     cacheSize: embeddingCache.size,
     dimension: EMBEDDING_DIM,
     maxBatchSize: MAX_BATCH_SIZE,
+    neuralCalls: embeddingMetrics.neuralCalls,
+    fallbackCalls: embeddingMetrics.fallbackCalls,
+    cacheHits: embeddingMetrics.cacheHits,
+    errors: embeddingMetrics.errors,
+    neuralRate: total > 0 ? Math.round((embeddingMetrics.neuralCalls / total) * 1000) / 1000 : 0,
+    mode: embeddingMetrics.neuralCalls > 0 ? "neural" : embeddingMetrics.fallbackCalls > 0 ? "fallback" : "idle",
   };
 }
