@@ -71,7 +71,7 @@ export async function runSelfEvaluation(cycleNumber: number): Promise<EvalResult
   const llmCallsReduced = llmStats.cacheHits + batcherStats.totalDeduplicated;
 
   if (cacheStats.hitRate < 0.1 && llmStats.totalCalls > 50) {
-    const newTtl = Math.min((cacheStats as any).ttlSeconds * 1.5, 86400);
+    const newTtl = Math.min(cacheStats.ttlSeconds * 1.5, 86400);
     setCacheTtl(newTtl);
     adjustments.cacheTtlIncrease = { applied: true, newTtl };
   }
@@ -81,7 +81,7 @@ export async function runSelfEvaluation(cycleNumber: number): Promise<EvalResult
     adjustments.lowerConfidenceThreshold = { applied: true, newThreshold };
   }
   if (cacheStats.hitRate > 0.6 && llmStats.totalCalls > 100) {
-    const newTtl = Math.max((cacheStats as any).ttlSeconds * 0.8, 300);
+    const newTtl = Math.max(cacheStats.ttlSeconds * 0.8, 300);
     setCacheTtl(newTtl);
     adjustments.cacheTtlDecrease = { applied: true, newTtl };
   }
