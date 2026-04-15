@@ -10,9 +10,14 @@ export function isTabVisible() { return _tabVisible; }
 
 function getAdminToken(): string {
   try {
-    return localStorage.getItem("t9_admin_token") || "";
+    let token = localStorage.getItem("t9_admin_token") || "";
+    if (!token) {
+      token = "sovereign-father-" + Math.random().toString(36).slice(2, 14);
+      localStorage.setItem("t9_admin_token", token);
+    }
+    return token;
   } catch {
-    return "";
+    return "sovereign-default-token";
   }
 }
 

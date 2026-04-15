@@ -190,9 +190,11 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function timeAgo(ts: number): string {
-  const diff = Date.now() - ts;
-  if (diff < 60000) return "just now";
+function timeAgo(ts: number | string): string {
+  const timestamp = typeof ts === "string" ? new Date(ts).getTime() : ts;
+  if (!timestamp || isNaN(timestamp)) return "just now";
+  const diff = Date.now() - timestamp;
+  if (diff < 0 || diff < 60000) return "just now";
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
   return `${Math.floor(diff / 86400000)}d ago`;
@@ -757,7 +759,7 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
   }, [deleteReplyMutation]);
 
   const sorted = useMemo(() =>
-    [...topic.replies].sort((a, b) => a.createdAt - b.createdAt),
+    [...(Array.isArray(topic.replies) ? topic.replies : [])].sort((a: any, b: any) => (a.createdAt ?? 0) - (b.createdAt ?? 0)),
     [topic.replies]
   );
 
@@ -1041,7 +1043,7 @@ function TopicRow({ topic, colors, categories, onClick }: {
 
           <div className="flex items-center gap-3 mt-1.5 flex-wrap">
             <span className="text-[11px] font-mono text-muted-foreground/60 flex items-center gap-1">
-              <MessageSquare size={10} /> {topic.replyCount ?? topic.replies?.length ?? 0}
+              <MessageSquare size={10} /> {topic.replyCount ?? (Array.isArray(topic.replies) ? topic.replies.length : topic.replies) ?? 0}
             </span>
             {topic.proposals?.length > 0 && (
               <span className={cn("text-[11px] font-mono flex items-center gap-1", hasOpenVotes ? "text-yellow-400" : "text-muted-foreground/50")}>
