@@ -41,6 +41,7 @@ const DEFAULT_CONFIG: Record<string, unknown> = {
 };
 
 const executionHistory: ExecutionResult[] = [];
+const executedProposalIds = new Set<string>();
 let executorInterval: ReturnType<typeof setInterval> | null = null;
 let autoProcessed = 0;
 let configLoaded = false;
@@ -56,9 +57,10 @@ async function loadConfigFromDB(): Promise<void> {
     const rows = await db.select().from(councilConfigTable).orderBy(councilConfigTable.appliedAt);
     for (const row of rows) {
       systemConfig.set(row.parameter, row.newValue);
+      executedProposalIds.add(row.proposalId);
     }
     configLoaded = true;
-    logger.info({ configKeys: systemConfig.size, dbRows: rows.length }, "CouncilExecutor: config loaded from DB history");
+    logger.info({ configKeys: systemConfig.size, dbRows: rows.length, executedIds: executedProposalIds.size }, "CouncilExecutor: config loaded from full DB history");
   } catch (err) {
     configLoaded = true;
     logger.warn({ err }, "CouncilExecutor: DB config load failed, using defaults");
@@ -71,8 +73,8 @@ async function persistConfigChange(proposalId: string, change: SystemChange, cat
       proposalId,
       subsystem: change.subsystem,
       parameter: change.parameter,
-      oldValue: change.oldValue,
-      newValue: change.newValue as any,
+      oldValue: change.oldValue as string | number | null,
+      newValue: change.newValue as string | number,
       category,
     });
   } catch (err) {
@@ -94,7 +96,7 @@ function executeProposal(decisionId: string, topic: string, category: string, ou
     const oldVal = systemConfig.get(param);
     const newVal = "adaptive-cooperative";
     systemConfig.set(param, newVal);
-    changes.push({ subsystem: "agent-system", parameter: param, oldValue: oldVal as any, newValue: newVal, appliedAt: Date.now() });
+    changes.push({ subsystem: "agent-system", parameter: param, oldValue: oldVal as string | null, newValue: newVal, appliedAt: Date.now() });
     notes = "Agent collaboration mode upgraded to adaptive-cooperative";
   } else if (cat.includes("consciousness")) {
     const param = "consciousness.reflectionDepth";
@@ -139,6 +141,7 @@ function executeProposal(decisionId: string, topic: string, category: string, ou
 
   executionHistory.unshift(result);
   if (executionHistory.length > 100) executionHistory.splice(100);
+  executedProposalIds.add(decisionId);
   autoProcessed++;
 
   logger.info({ decisionId, category, changesCount: changes.length }, "CouncilExecutor: decision executed and persisted to DB");
@@ -150,13 +153,11 @@ async function processApprovedDecisions(): Promise<number> {
   try {
     const recentDecisions = await db.select()
       .from(councilDecisionsTable)
-      .orderBy(desc(councilDecisionsTable.createdAt))
-      .limit(20);
+      .orderBy(desc(councilDecisionsTable.createdAt));
 
     for (const d of recentDecisions) {
       if (d.outcome !== "approved") continue;
-      const alreadyExecuted = executionHistory.some(e => e.proposalId === d.decisionId);
-      if (alreadyExecuted) continue;
+      if (executedProposalIds.has(d.decisionId)) continue;
       const result = executeProposal(d.decisionId, d.topic, d.category || "general", d.outcome);
       if (result) processed++;
     }

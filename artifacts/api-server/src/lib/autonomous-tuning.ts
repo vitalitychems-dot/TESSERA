@@ -9,6 +9,12 @@ import { getEmbeddingStats } from "./neural-embeddings";
 import { getDistillationStats } from "./knowledge-distillation";
 import { getSelfEvaluationMetrics } from "./self-evaluation";
 
+let rescheduleFn: ((newIntervalMs: number) => void) | null = null;
+
+export function setRescheduleFn(fn: (newIntervalMs: number) => void): void {
+  rescheduleFn = fn;
+}
+
 export interface TuningState {
   loopIntervalMs: number;
   cacheThreshold: number;
@@ -75,6 +81,7 @@ export async function runAutonomousTuning(cycleNumber: number, cycleDurationMs: 
     const newVal = clamp(Math.round(oldVal * 1.15), 60_000, 600_000);
     if (newVal !== oldVal) {
       tuningState.loopIntervalMs = newVal;
+      if (rescheduleFn) rescheduleFn(newVal);
       adjustments.push({ parameter: "loopIntervalMs", from: oldVal, to: newVal, reason: `Cycle duration ${cycleDurationMs}ms approaching interval limit — increased by 15%` });
       await persistTuningDecision("cycleDuration", "loopIntervalMs", oldVal, newVal, `Cycle took ${cycleDurationMs}ms, ${((cycleDurationMs / oldVal) * 100).toFixed(0)}% of interval`, cycleNumber);
     }
@@ -83,12 +90,13 @@ export async function runAutonomousTuning(cycleNumber: number, cycleDurationMs: 
     const newVal = clamp(Math.round(oldVal * 0.9), 60_000, 600_000);
     if (newVal !== oldVal) {
       tuningState.loopIntervalMs = newVal;
+      if (rescheduleFn) rescheduleFn(newVal);
       adjustments.push({ parameter: "loopIntervalMs", from: oldVal, to: newVal, reason: `Cycle completing fast (${cycleDurationMs}ms) — tightened interval by 10%` });
       await persistTuningDecision("cycleDuration", "loopIntervalMs", oldVal, newVal, `Fast cycle ${cycleDurationMs}ms, only ${((cycleDurationMs / oldVal) * 100).toFixed(0)}% of interval`, cycleNumber);
     }
   }
 
-  if (cacheStats.hitRate < 0.2 && cacheStats.totalHits + (cacheStats as any).totalMisses > 10) {
+  if (cacheStats.hitRate < 0.2 && cacheStats.totalHits + cacheStats.totalMisses > 10) {
     const oldVal = tuningState.cacheThreshold;
     const newVal = clamp(oldVal - 0.05, 0.5, 0.95);
     if (newVal !== oldVal) {
