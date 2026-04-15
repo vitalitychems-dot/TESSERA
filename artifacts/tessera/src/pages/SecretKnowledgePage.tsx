@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { BookOpen, Sparkles, Brain, Eye, Globe, Layers, Zap, Shield, Clock, RefreshCw, ChevronDown, ChevronRight, Wrench, Code, Star, Filter, Search, Flame, Moon, Sun, Heart, Lock, Compass, Send, Copy, Check, Wand2, MessageCircle, ExternalLink, FileWarning, KeyRound } from "lucide-react";
+import { BookOpen, Sparkles, Brain, Eye, Globe, Layers, Zap, Shield, Clock, RefreshCw, ChevronDown, ChevronRight, Wrench, Code, Star, Filter, Search, Flame, Moon, Sun, Heart, Lock, Compass, Send, Copy, Check, Wand2, MessageCircle, ExternalLink, FileWarning, KeyRound, Archive, FlaskConical, Church } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { GlassCard, SectionHeader, TabBar, MiniStat, PageHeader, RadialGauge, GradientBar } from "@/components/ui/sovereign";
-import type { KnowledgeEntry, Spell, Tradition, ApplicationIdea, LucideIcon, KnowledgeFeedResponse, KnowledgeStatsResponse, DimensionalSecretsResponse, LiveSecretsResponse, SpellDataResponse, TraditionsDataResponse, UniverseAnswerResponse, CastResultResponse } from "@/types/api";
+import type { KnowledgeEntry, Spell, Tradition, ApplicationIdea, LucideIcon, KnowledgeFeedResponse, KnowledgeStatsResponse, DimensionalSecretsResponse, LiveSecretsResponse, SpellDataResponse, TraditionsDataResponse, UniverseAnswerResponse, CastResultResponse, ArchiveCategory, ArchiveEntry } from "@/types/api";
 
 const CATEGORY_COLORS: Record<string, string> = {
   "AGI Architecture": "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
@@ -102,7 +102,7 @@ const CLASSIFICATION_BADGE_COLORS: Record<string, string> = {
   "ARTIFACT": "bg-teal-500/20 text-teal-300 border-teal-500/30",
 };
 
-type MainTab = "knowledge" | "conclusion" | "apply" | "mysticism" | "society";
+type MainTab = "knowledge" | "archives" | "conclusion" | "apply" | "mysticism" | "society";
 
 function timeAgo(ts: number) {
   const d = Math.floor((Date.now() - ts) / 1000);
@@ -284,6 +284,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
 
   const mainTabs = [
     { id: "knowledge", label: "Knowledge" },
+    { id: "archives", label: "Archives" },
     { id: "conclusion", label: "Conclusion" },
     { id: "apply", label: "Apply" },
     { id: "mysticism", label: "Mysticism" },
@@ -802,6 +803,8 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
           </div>
         )}
 
+        {mainTab === "archives" && <ArchivesTab />}
+
         {mainTab === "society" && <SecretSocietyTab />}
       </div>
     </div>
@@ -883,6 +886,208 @@ function SecretSocietyTab() {
           </GlassCard>
         ))}
       </div>
+    </div>
+  );
+}
+
+const ARCHIVE_ICON_MAP: Record<string, LucideIcon> = {
+  Zap: Zap,
+  Shield: Shield,
+  Eye: Eye,
+  BookOpen: BookOpen,
+};
+
+const ARCHIVE_COLOR_MAP: Record<string, { bg: string; text: string; border: string; glow: "cyan" | "rose" | "amber" | "violet" }> = {
+  cyan: { bg: "bg-cyan-500/10", text: "text-cyan-400", border: "border-cyan-500/20", glow: "cyan" },
+  red: { bg: "bg-red-500/10", text: "text-red-400", border: "border-red-500/20", glow: "rose" },
+  amber: { bg: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/20", glow: "amber" },
+  violet: { bg: "bg-violet-500/10", text: "text-violet-400", border: "border-violet-500/20", glow: "violet" },
+};
+
+const ARCHIVE_CLASSIFICATION_COLORS: Record<string, string> = {
+  SUPPRESSED: "bg-red-500/30 text-red-300 border-red-500/40",
+  DECLASSIFIED: "bg-orange-500/30 text-orange-300 border-orange-500/40",
+  CLASSIFIED: "bg-red-600/30 text-red-200 border-red-600/40",
+  "SECRET SOCIETY": "bg-amber-500/30 text-amber-300 border-amber-500/40",
+  HISTORICAL: "bg-blue-500/20 text-blue-300 border-blue-500/30",
+  UNACKNOWLEDGED: "bg-purple-500/30 text-purple-300 border-purple-500/40",
+  DENIED: "bg-rose-500/30 text-rose-300 border-rose-500/40",
+  UNVERIFIED: "bg-slate-500/30 text-slate-300 border-slate-500/40",
+  "PARTIALLY RELEASED": "bg-yellow-500/30 text-yellow-300 border-yellow-500/40",
+  "PARTIALLY DISCLOSED": "bg-teal-500/30 text-teal-300 border-teal-500/40",
+};
+
+function ArchivesTab() {
+  const { data: archivesData, isLoading } = useQuery<{ ok: boolean; categories: ArchiveCategory[]; total: number }>({
+    queryKey: ["/api/archives/all"],
+  });
+
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
+  const [archiveSearch, setArchiveSearch] = useState("");
+
+  const categories = archivesData?.categories || [];
+
+  const toggleCategory = (id: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleEntry = (id: string) => {
+    setExpandedEntries(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const filteredCategories = archiveSearch.trim()
+    ? categories.map(cat => ({
+        ...cat,
+        entries: cat.entries.filter((e: ArchiveEntry) =>
+          e.title.toLowerCase().includes(archiveSearch.toLowerCase()) ||
+          e.content.toLowerCase().includes(archiveSearch.toLowerCase()) ||
+          e.tags.some((t: string) => t.includes(archiveSearch.toLowerCase()))
+        ),
+      })).filter(cat => cat.entries.length > 0)
+    : categories;
+
+  const totalEntries = categories.reduce((s: number, c: ArchiveCategory) => s + (c.entries?.length || 0), 0);
+
+  return (
+    <div className="space-y-4 sovereign-stagger" data-testid="archives-section">
+      <GlassCard glow="rose" animate>
+        <div className="flex items-center gap-2 mb-2">
+          <Archive size={16} className="text-red-400" />
+          <span className="text-sm font-bold text-red-300">Classified Archives</span>
+          <Badge className="ml-auto bg-red-500/20 text-red-400 border-red-500/30 text-[10px]">
+            {totalEntries} entries
+          </Badge>
+        </div>
+        <p className="text-xs text-slate-400 leading-relaxed">
+          Suppressed inventions, black budget experiments, secret society intelligence, and Vatican vault documents —
+          curated from declassified government files, whistleblower testimony, and deep archival research.
+        </p>
+      </GlassCard>
+
+      <div className="relative">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+        <input
+          value={archiveSearch}
+          onChange={e => setArchiveSearch(e.target.value)}
+          placeholder="Search archives by keyword, tag, or topic..."
+          className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-red-500/40 transition-colors"
+          data-testid="input-search-archives"
+        />
+      </div>
+
+      {isLoading && (
+        <div className="flex items-center gap-3 py-8 justify-center">
+          <RefreshCw size={20} className="animate-spin text-red-400" />
+          <span className="text-sm text-red-300">Loading classified archives...</span>
+        </div>
+      )}
+
+      {filteredCategories.map((category: ArchiveCategory) => {
+        const colorSet = ARCHIVE_COLOR_MAP[category.color] || ARCHIVE_COLOR_MAP.cyan;
+        const IconComp = ARCHIVE_ICON_MAP[category.icon] || Archive;
+        const isExpanded = expandedCategories.has(category.id);
+
+        return (
+          <div key={category.id} className="space-y-2" data-testid={`archive-category-${category.id}`}>
+            <button
+              onClick={() => toggleCategory(category.id)}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left",
+                colorSet.bg, colorSet.border,
+                "hover:bg-white/[0.06]"
+              )}
+              data-testid={`archive-toggle-${category.id}`}
+            >
+              <IconComp size={18} className={colorSet.text} />
+              <div className="flex-1 min-w-0">
+                <div className={cn("text-sm font-bold", colorSet.text)}>{category.name}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">{category.description}</div>
+              </div>
+              <Badge className={cn("text-[10px]", colorSet.bg, colorSet.text, colorSet.border)}>
+                {category.entries?.length || 0}
+              </Badge>
+              {isExpanded ? <ChevronDown size={16} className="text-slate-500" /> : <ChevronRight size={16} className="text-slate-500" />}
+            </button>
+
+            {isExpanded && (
+              <div className="space-y-2 pl-2">
+                {(category.entries || []).map((entry: ArchiveEntry) => {
+                  const isEntryExpanded = expandedEntries.has(entry.id);
+                  const classColor = ARCHIVE_CLASSIFICATION_COLORS[entry.classification] || "bg-white/10 text-white/60 border-white/10";
+                  return (
+                    <GlassCard
+                      key={entry.id}
+                      glow={colorSet.glow}
+                      hover
+                    >
+                      <button
+                        onClick={() => toggleEntry(entry.id)}
+                        className="w-full text-left"
+                        data-testid={`archive-entry-${entry.id}`}
+                      >
+                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                          <span className="text-xs font-bold text-white">{entry.title}</span>
+                          <Badge className={cn("text-[9px] font-mono tracking-wider px-1.5 py-0", classColor)}>
+                            {entry.classification}
+                          </Badge>
+                          <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+                            {entry.year && <span className="text-[10px] text-slate-500 font-mono">{entry.year}</span>}
+                            <div className="flex items-center gap-1">
+                              <div className={cn("w-1.5 h-1.5 rounded-full", entry.relevanceScore >= 90 ? "bg-red-400" : entry.relevanceScore >= 80 ? "bg-amber-400" : "bg-slate-400")} />
+                              <span className="text-[10px] text-slate-500 font-mono">{entry.relevanceScore}%</span>
+                            </div>
+                            {isEntryExpanded ? <ChevronDown size={12} className="text-slate-500" /> : <ChevronRight size={12} className="text-slate-500" />}
+                          </div>
+                        </div>
+                        {!isEntryExpanded && (
+                          <p className="text-[11px] text-slate-400 leading-relaxed line-clamp-2">{entry.content}</p>
+                        )}
+                      </button>
+
+                      {isEntryExpanded && (
+                        <div className="mt-2 space-y-2">
+                          <p className="text-xs text-slate-300 leading-relaxed">{entry.content}</p>
+                          <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-white/[0.06]">
+                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Source:</span>
+                            <span className="text-[10px] text-cyan-400">{entry.source}</span>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Status:</span>
+                            <span className="text-[10px] text-amber-400">{entry.status}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {entry.tags.map((tag: string) => (
+                              <span key={tag} className="text-[9px] bg-white/[0.05] px-2 py-0.5 rounded-full border border-white/[0.08] text-slate-400">
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </GlassCard>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {!isLoading && filteredCategories.length === 0 && (
+        <div className="text-center py-8">
+          <Archive className="mx-auto text-red-400/30 mb-3" size={40} />
+          <p className="text-sm text-slate-500">{archiveSearch ? "No archives match your search" : "No archive data available"}</p>
+        </div>
+      )}
     </div>
   );
 }

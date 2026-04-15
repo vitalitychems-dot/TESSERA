@@ -486,3 +486,58 @@ export interface LiveMarketData {
   marketCap?: number;
   volume24h?: number;
 }
+
+export interface ArchiveEntry {
+  id: string;
+  title: string;
+  content: string;
+  source: string;
+  classification: string;
+  relevanceScore: number;
+  tags: string[];
+  year?: string;
+  status: string;
+}
+
+export interface ArchiveCategory {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  entries: ArchiveEntry[];
+  entryCount?: number;
+}
+
+export interface PoliticalProfile {
+  id: string;
+  name: string;
+  title: string;
+  country: string;
+  party: string;
+  actorScore: number;
+  actorLabel: string;
+  reasoning: string;
+  affiliations: string[];
+  votingHighlights: string[];
+  recruitPriority: "critical" | "high" | "medium" | "low";
+  recruitReasoning?: string;
+  fullDossier?: string;
+  sources?: string[];
+  lastUpdated: string;
+}
+
+export interface ShepherdContactResponse {
+  ok: boolean;
+  queued: boolean;
+  targetName: string;
+  targetId: string;
+  protocol: string;
+  status: string;
+  estimatedDelivery: string;
+  message: string;
+  shepherdAgent: string;
+  hopCount: number;
+  encryptionLevel: string;
+  timestamp: number;
+}
