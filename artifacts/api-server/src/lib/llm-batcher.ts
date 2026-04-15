@@ -190,13 +190,16 @@ async function executeGroup(group: RequestGroup): Promise<void> {
     logger.info({ totalQueries, peers: semanticPeers.length }, "LLMBatcher: semantic merge executed");
   } else {
     logger.warn({ totalQueries }, "LLMBatcher: merged response missing labels, falling back to individual calls");
-    primary.resolve(mergedResponse);
-    for (const dup of duplicates) dup.resolve(mergedResponse);
-    const fallbackPromises = semanticPeers.map(async (peer) => {
+    const primaryResult = await callLLM(primary.messages, { ...primary.opts, skipCache: false });
+    primary.resolve(primaryResult);
+    for (const dup of duplicates) {
+      dup.resolve(primaryResult);
+    }
+    const peerPromises = semanticPeers.map(async (peer) => {
       const result = await callLLM(peer.messages, { ...peer.opts, skipCache: false });
       peer.resolve(result);
     });
-    await Promise.allSettled(fallbackPromises);
+    await Promise.allSettled(peerPromises);
   }
 }
 

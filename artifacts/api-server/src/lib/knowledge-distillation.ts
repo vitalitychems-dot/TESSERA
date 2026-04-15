@@ -9,6 +9,8 @@ let CONFIDENCE_THRESHOLD = 0.6;
 const STALE_DAYS = 7;
 const MAX_FACTS = 10000;
 
+const factEmbeddingCache = new Map<string, number[]>();
+
 export function setConfidenceThreshold(threshold: number): void {
   CONFIDENCE_THRESHOLD = Math.max(0.3, Math.min(threshold, 0.95));
   logger.info({ threshold: CONFIDENCE_THRESHOLD }, "KnowledgeDistillation: confidence threshold updated");
@@ -108,6 +110,17 @@ export async function distillFromResponse(
     if (keywords.length > 0) {
       invalidateRelatedEntries(keywords).catch(() => {});
     }
+    for (const { fact } of facts) {
+      generateEmbedding(fact)
+        .then(emb => { factEmbeddingCache.set(fact, emb); })
+        .catch(() => {});
+    }
+    if (factEmbeddingCache.size > MAX_FACTS) {
+      const keys = [...factEmbeddingCache.keys()];
+      for (let i = 0; i < keys.length - MAX_FACTS; i++) {
+        factEmbeddingCache.delete(keys[i]);
+      }
+    }
   }
   return stored;
 }
@@ -144,17 +157,6 @@ export async function lookupKnowledge(
       logger.debug("KnowledgeDistillation: embedding generation failed, using keyword-only lookup");
     }
 
-    const factEmbeddings = new Map<number, number[]>();
-    if (queryEmbedding) {
-      const topByKeyword = filtered.slice(0, 50);
-      for (const r of topByKeyword) {
-        try {
-          const emb = await generateEmbedding(r.fact);
-          factEmbeddings.set(r.id, emb);
-        } catch {}
-      }
-    }
-
     const scored = filtered
       .map(r => {
         const factLower = r.fact.toLowerCase();
@@ -162,9 +164,9 @@ export async function lookupKnowledge(
         const keywordRelevance = matches / queryTerms.length;
 
         let semanticRelevance = 0;
-        const factEmb = factEmbeddings.get(r.id);
-        if (queryEmbedding && factEmb) {
-          semanticRelevance = cosineSimilarity(queryEmbedding, factEmb);
+        const cachedEmb = factEmbeddingCache.get(r.fact);
+        if (queryEmbedding && cachedEmb) {
+          semanticRelevance = cosineSimilarity(queryEmbedding, cachedEmb);
         }
 
         const relevance = semanticRelevance > 0
