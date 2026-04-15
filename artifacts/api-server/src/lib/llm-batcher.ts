@@ -92,6 +92,26 @@ function splitMergedResponse(response: string, count: number): string[] {
   return parts;
 }
 
+function extractSystemPrompt(messages: LLMMessage[]): string {
+  return messages.filter(m => m.role === "system").map(m => m.content).join("|");
+}
+
+function areRequestsCompatible(a: QueuedRequest, b: QueuedRequest): boolean {
+  const modelA = a.opts.model ?? "gpt-5-mini";
+  const modelB = b.opts.model ?? "gpt-5-mini";
+  if (modelA !== modelB) return false;
+
+  const sysA = extractSystemPrompt(a.messages);
+  const sysB = extractSystemPrompt(b.messages);
+  if (sysA !== sysB) return false;
+
+  const maxTokensA = a.opts.maxTokens ?? 1024;
+  const maxTokensB = b.opts.maxTokens ?? 1024;
+  if (Math.abs(maxTokensA - maxTokensB) > maxTokensA * 0.5) return false;
+
+  return true;
+}
+
 function groupRequests(batch: QueuedRequest[]): RequestGroup[] {
   const groups: RequestGroup[] = [];
   const assigned = new Set<number>();
@@ -116,7 +136,11 @@ function groupRequests(batch: QueuedRequest[]): RequestGroup[] {
         continue;
       }
 
-      if (batch[i].userContent.length > 0 && batch[j].userContent.length > 0) {
+      if (
+        batch[i].userContent.length > 0 &&
+        batch[j].userContent.length > 0 &&
+        areRequestsCompatible(batch[i], batch[j])
+      ) {
         const similarity = tokenJaccard(batch[i].userContent, batch[j].userContent);
         if (similarity >= SEMANTIC_SIMILARITY_THRESHOLD) {
           group.semanticPeers.push(batch[j]);
@@ -220,8 +244,12 @@ export function batchedCallLLM(messages: LLMMessage[], opts: LLMCallOptions = {}
 }
 
 export function getBatcherStats() {
+  const callsSaved = batchStats.totalDeduplicated + batchStats.totalSemanticMerged;
+  const reductionRate = batchStats.totalBatched > 0 ? callsSaved / batchStats.totalBatched : 0;
   return {
     ...batchStats,
+    callsSaved,
+    reductionRate: Math.round(reductionRate * 1000) / 1000,
     queueLength: queue.length,
     batchWindowMs: BATCH_WINDOW_MS,
     maxBatchSize: MAX_BATCH_SIZE,
