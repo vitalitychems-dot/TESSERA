@@ -1,4 +1,4 @@
-import { pgTable, serial, text, real, timestamp, jsonb, integer, boolean, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, real, timestamp, jsonb, integer, boolean, uniqueIndex, index, varchar } from "drizzle-orm/pg-core";
 
 export const semanticCacheTable = pgTable("semantic_cache", {
   id: serial("id").primaryKey(),
@@ -26,6 +26,44 @@ export const distilledKnowledgeTable = pgTable("distilled_knowledge", {
   lastVerifiedAt: timestamp("last_verified_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const agentHierarchyTable = pgTable("agent_hierarchy", {
+  id: serial("id").primaryKey(),
+  agentId: text("agent_id").notNull().unique(),
+  name: text("name").notNull(),
+  parentAgent: text("parent_agent"),
+  tier: text("tier").notNull().default("council"),
+  shift: text("shift"),
+  status: text("status").notNull().default("active"),
+  domain: text("domain").notNull().default("general"),
+  lastActiveAt: timestamp("last_active_at").defaultNow(),
+  taskHistory: jsonb("task_history").$type<Array<{ task: string; completedAt: number; success: boolean }>>().default([]),
+  performanceMetrics: jsonb("performance_metrics").$type<{ tasksCompleted: number; successRate: number; avgResponseMs: number; ethicsScore: number }>().default({ tasksCompleted: 0, successRate: 1.0, avgResponseMs: 0, ethicsScore: 95 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const councilConfigTable = pgTable("council_config_changes", {
+  id: serial("id").primaryKey(),
+  proposalId: text("proposal_id").notNull(),
+  subsystem: text("subsystem").notNull(),
+  parameter: text("parameter").notNull(),
+  oldValue: jsonb("old_value"),
+  newValue: jsonb("new_value").notNull(),
+  category: text("category").notNull().default("general"),
+  appliedAt: timestamp("applied_at").notNull().defaultNow(),
+});
+
+export const tuningDecisionsTable = pgTable("tuning_decisions", {
+  id: serial("id").primaryKey(),
+  metric: text("metric").notNull(),
+  parameter: text("parameter").notNull(),
+  oldValue: real("old_value").notNull(),
+  newValue: real("new_value").notNull(),
+  reason: text("reason").notNull(),
+  cycleNumber: integer("cycle_number").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const selfEvaluationTable = pgTable("self_evaluation_history", {

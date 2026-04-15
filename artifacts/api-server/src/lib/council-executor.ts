@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { councilDecisionsTable, systemStateTable } from "@workspace/db/schema";
+import { councilDecisionsTable, councilConfigTable, systemStateTable } from "@workspace/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { logger } from "./logger";
 
@@ -22,25 +22,63 @@ export interface SystemChange {
   appliedAt: number;
 }
 
-const systemConfig = new Map<string, unknown>([
-  ["agent.collaborationMode", "cooperative"],
-  ["agent.learningRate", 0.01],
-  ["agent.maxTaskQueue", 50],
-  ["consciousness.cycleIntervalMs", 120000],
-  ["consciousness.reflectionDepth", 3],
-  ["consciousness.memoryRetention", 0.85],
-  ["dual-brain.cycleIntervalMs", 180000],
-  ["identity.checkIntervalMs", 600000],
-  ["swarm.coordinationMode", "BFT"],
-  ["heartbeat.enabled", true],
-  ["improvement.enabled", true],
-  ["agi-training.categories", 27],
-  ["council.requiredMajority", 0.667],
-]);
+const systemConfig = new Map<string, unknown>();
+
+const DEFAULT_CONFIG: Record<string, unknown> = {
+  "agent.collaborationMode": "cooperative",
+  "agent.learningRate": 0.01,
+  "agent.maxTaskQueue": 50,
+  "consciousness.cycleIntervalMs": 120000,
+  "consciousness.reflectionDepth": 3,
+  "consciousness.memoryRetention": 0.85,
+  "dual-brain.cycleIntervalMs": 180000,
+  "identity.checkIntervalMs": 600000,
+  "swarm.coordinationMode": "BFT",
+  "heartbeat.enabled": true,
+  "improvement.enabled": true,
+  "agi-training.categories": 27,
+  "council.requiredMajority": 0.667,
+};
 
 const executionHistory: ExecutionResult[] = [];
 let executorInterval: ReturnType<typeof setInterval> | null = null;
 let autoProcessed = 0;
+let configLoaded = false;
+
+async function loadConfigFromDB(): Promise<void> {
+  if (configLoaded) return;
+
+  for (const [key, value] of Object.entries(DEFAULT_CONFIG)) {
+    systemConfig.set(key, value);
+  }
+
+  try {
+    const rows = await db.select().from(councilConfigTable).orderBy(councilConfigTable.appliedAt);
+    for (const row of rows) {
+      systemConfig.set(row.parameter, row.newValue);
+    }
+    configLoaded = true;
+    logger.info({ configKeys: systemConfig.size, dbRows: rows.length }, "CouncilExecutor: config loaded from DB history");
+  } catch (err) {
+    configLoaded = true;
+    logger.warn({ err }, "CouncilExecutor: DB config load failed, using defaults");
+  }
+}
+
+async function persistConfigChange(proposalId: string, change: SystemChange, category: string): Promise<void> {
+  try {
+    await db.insert(councilConfigTable).values({
+      proposalId,
+      subsystem: change.subsystem,
+      parameter: change.parameter,
+      oldValue: change.oldValue,
+      newValue: change.newValue as any,
+      category,
+    });
+  } catch (err) {
+    logger.warn({ err, parameter: change.parameter }, "CouncilExecutor: config persist failed");
+  }
+}
 
 function executeProposal(decisionId: string, topic: string, category: string, outcome: string): ExecutionResult | null {
   if (outcome !== "approved") return null;
@@ -84,6 +122,10 @@ function executeProposal(decisionId: string, topic: string, category: string, ou
     notes = "Council decision acknowledged and logged";
   }
 
+  for (const change of changes) {
+    persistConfigChange(decisionId, change, category).catch(() => {});
+  }
+
   const result: ExecutionResult = {
     proposalId: decisionId,
     title: topic,
@@ -99,7 +141,7 @@ function executeProposal(decisionId: string, topic: string, category: string, ou
   if (executionHistory.length > 100) executionHistory.splice(100);
   autoProcessed++;
 
-  logger.info({ decisionId, category, changesCount: changes.length }, "CouncilExecutor: decision executed");
+  logger.info({ decisionId, category, changesCount: changes.length }, "CouncilExecutor: decision executed and persisted to DB");
   return result;
 }
 
@@ -125,8 +167,9 @@ async function processApprovedDecisions(): Promise<number> {
 }
 
 export async function initCouncilExecutor(): Promise<void> {
+  await loadConfigFromDB();
   await processApprovedDecisions();
-  logger.info({ processed: autoProcessed }, "CouncilExecutor: initialized");
+  logger.info({ processed: autoProcessed, configKeys: systemConfig.size }, "CouncilExecutor: initialized with persistent config");
 }
 
 export function startCouncilExecutor(intervalMs = 300_000): void {
@@ -151,6 +194,8 @@ export function getExecutorMetrics() {
     recentExecutions: executionHistory.slice(0, 10),
     systemConfig: Object.fromEntries(systemConfig),
     isRunning: executorInterval !== null,
+    configPersisted: configLoaded,
+    configKeys: systemConfig.size,
   };
 }
 

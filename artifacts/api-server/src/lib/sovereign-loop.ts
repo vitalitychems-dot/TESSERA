@@ -32,6 +32,9 @@ import { distillFromResponse, refreshStaleKnowledge, revalidateStaleKnowledge, g
 import { getBatcherStats } from "./llm-batcher";
 import { getLLMStats } from "./llm-client";
 import { getEmbeddingStats } from "./neural-embeddings";
+import { runAutonomousTuning, getTuningMetrics } from "./autonomous-tuning";
+import { initAgentHierarchy } from "./agent-hierarchy";
+import { reportSubsystemHealthy, reportSubsystemError, setCouncilEscalation } from "./autonomous-heartbeat";
 
 const SCHUMANN_BASE = 7.83;
 const CROWN_FREQUENCY = 963;
@@ -139,11 +142,13 @@ async function executePhase(phaseName: string, phaseIndex: number, fn: () => Pro
     const metrics = await fn();
     const duration = Date.now() - start;
     loopState.totalPhasesExecuted++;
+    reportSubsystemHealthy(`phase-${phaseIndex}`);
     return { phase: phaseName, phaseIndex, durationMs: duration, success: true, metrics };
   } catch (err) {
     const duration = Date.now() - start;
     loopState.phaseErrorCount++;
     const errorMsg = err instanceof Error ? err.message : String(err);
+    reportSubsystemError(`phase-${phaseIndex}`, errorMsg);
     logger.error({ phase: phaseName, err: errorMsg, durationMs: duration }, "SovereignLoop: phase error");
     return { phase: phaseName, phaseIndex, durationMs: duration, success: false, metrics: {}, error: errorMsg };
   }
@@ -471,6 +476,16 @@ async function runSovereignCycle(): Promise<CycleResult> {
   const cycleEnd = Date.now();
   const totalDurationMs = cycleEnd - cycleStart;
 
+  const phaseErrors = phases.filter(p => !p.success).length;
+  try {
+    const tuningResult = await runAutonomousTuning(loopState.cycleCount, totalDurationMs, phaseErrors);
+    if (tuningResult.adjustments.length > 0) {
+      logger.info({ adjustments: tuningResult.adjustments.length }, "SovereignLoop: autonomous tuning applied");
+    }
+  } catch (err) {
+    logger.warn({ err }, "SovereignLoop: autonomous tuning failed");
+  }
+
   const allSuccess = phases.every(p => p.success);
   if (allSuccess) {
     loopState.consecutiveSuccesses++;
@@ -542,8 +557,20 @@ function stopIndependentTimers(): void {
 export async function initSovereignLoop(): Promise<void> {
   await loadLoopState();
   try { await initSemanticCache(); } catch {}
+  try { await initAgentHierarchy(); } catch {}
   warmFactEmbeddings().catch(() => {});
-  logger.info({ cycleCount: loopState.cycleCount }, "SovereignLoop: initialized (with semantic cache + intelligence layer)");
+
+  setCouncilEscalation(async (subsystem: string, failures: number) => {
+    const { createProposal } = await import("./consensus-engine");
+    await createProposal({
+      title: `Self-Healing Escalation: ${subsystem} failed ${failures} times`,
+      description: `Subsystem "${subsystem}" has failed ${failures} consecutive times. Auto-restart attempts have been exhausted. Council review requested for manual intervention or architectural changes.`,
+      proposedBy: "autonomous-heartbeat",
+      category: "infrastructure",
+    });
+  });
+
+  logger.info({ cycleCount: loopState.cycleCount }, "SovereignLoop: initialized (with intelligence layer + agent hierarchy + self-healing)");
 }
 
 /**
@@ -634,6 +661,7 @@ export function getSovereignLoopMetrics() {
       durationMs: c.totalDurationMs,
       harmony: c.harmonicAlignment,
     })),
+    tuning: getTuningMetrics(),
   };
 }
 
