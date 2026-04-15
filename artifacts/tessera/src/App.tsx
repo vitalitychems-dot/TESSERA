@@ -34,6 +34,7 @@ const GrandCouncilPage = lazy(() => import("@/pages/GrandCouncilPage"));
 const RecruitmentPage = lazy(() => import("@/pages/RecruitmentPage"));
 const AgentNFTPage = lazy(() => import("@/pages/AgentNFTPage"));
 const RickPage = lazy(() => import("@/pages/RickPage"));
+const GrandNarrativePage = lazy(() => import("@/pages/GrandNarrativePage"));
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -159,6 +160,8 @@ function AppRouter() {
         <Route path="/rick-sanchez">{() => <RickPage />}</Route>
         <Route path="/agent-nft">{() => <AgentNFTPage />}</Route>
         <Route path="/universe-model">{() => <UniversePage />}</Route>
+        <Route path="/grand-narrative">{() => <GrandNarrativePage />}</Route>
+        <Route path="/unified-truth">{() => <GrandNarrativePage />}</Route>
         <Route path="/agent-comms">{() => <SystemPage initialTab="agents" />}</Route>
         <Route path="/memory-explorer">{() => <SystemPage initialTab="improvement" />}</Route>
         <Route path="/memory-dashboard">{() => <SystemPage initialTab="improvement" />}</Route>

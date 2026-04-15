@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Globe2, Sun, Moon, Orbit, Sparkles, Eye, EyeOff, ChevronRight, ChevronLeft, Loader2, Layers } from "lucide-react";
+import { Globe2, Sun, Moon, Orbit, Sparkles, Eye, EyeOff, ChevronRight, ChevronLeft, Loader2, Layers, Hexagon, BookOpen } from "lucide-react";
+import { Link } from "wouter";
 import NatalChartSection from "@/components/NatalChartSection";
 
 const SolarSystem3D = lazy(() => import("@/components/SolarSystem3D"));
@@ -95,6 +96,7 @@ export default function UniversePage() {
   const [showNatalChart, setShowNatalChart] = useState(false);
   const [focusedDimension, setFocusedDimension] = useState(-1);
   const [showDimSlider, setShowDimSlider] = useState(false);
+  const [showSacredOverlays, setShowSacredOverlays] = useState(false);
 
   const { data: sovereigntyData } = useQuery<{ score?: number }>({
     queryKey: ["/api/sovereignty/score"],
@@ -175,6 +177,7 @@ export default function UniversePage() {
           apodItems={apodItems}
           userZodiac={userZodiac}
           dimensionOpacities={dimensionOpacities}
+          showSacredOverlays={showSacredOverlays}
         />
       </Suspense>
 
@@ -189,11 +192,24 @@ export default function UniversePage() {
 
         <div className="flex gap-2 pointer-events-auto flex-wrap justify-end">
           {userZodiac && (
-            <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10">
-              <span className={`text-lg ${ELEMENT_COLOR[userZodiac.element] || "text-violet-400"}`}>{userZodiac.symbol}</span>
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-md border ${
+              userZodiac.sign === "Libra"
+                ? "bg-gradient-to-r from-cyan-950/60 to-violet-950/60 border-cyan-500/30 shadow-[0_0_12px_rgba(34,211,238,0.15)]"
+                : "bg-black/60 border-white/10"
+            }`}>
+              <span className={`text-xl ${ELEMENT_COLOR[userZodiac.element] || "text-violet-400"}`}>{userZodiac.symbol}</span>
               <div>
-                <div className="text-[11px] font-bold font-mono text-foreground">{userZodiac.sign}</div>
-                <div className="text-[9px] text-muted-foreground">{RULER_SYMBOLS[userZodiac.ruler] || "★"} {userZodiac.ruler}</div>
+                <div className="text-[11px] font-bold font-mono text-foreground flex items-center gap-1">
+                  {userZodiac.sign}
+                  {userZodiac.sign === "Libra" && <span className="text-[8px] text-cyan-400/70">☉ Natal</span>}
+                </div>
+                <div className="text-[9px] text-muted-foreground flex items-center gap-1">
+                  <span>{RULER_SYMBOLS[userZodiac.ruler] || "★"} {userZodiac.ruler}</span>
+                  {userZodiac.element === "Air" && <span className="text-cyan-400/60">· Air</span>}
+                </div>
+                {userZodiac.sign === "Libra" && (
+                  <div className="text-[8px] text-violet-400/60 font-mono">Virgo ↑ · Oct 7</div>
+                )}
               </div>
               {activeTransits.length > 0 && (
                 <div className="ml-1 flex flex-col gap-0.5" title="Chart transits">
@@ -222,6 +238,13 @@ export default function UniversePage() {
           >
             <Layers size={14} className="text-cyan-400" />
             <span className="text-cyan-400">Depth</span>
+          </button>
+          <button
+            onClick={() => setShowSacredOverlays(!showSacredOverlays)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 text-xs font-mono hover:bg-white/10 transition-colors"
+          >
+            <Hexagon size={14} className={showSacredOverlays ? "text-fuchsia-400" : "text-muted-foreground"} />
+            <span className={showSacredOverlays ? "text-fuchsia-400" : "text-muted-foreground"}>Sacred</span>
           </button>
           <button
             onClick={() => setShowNatalChart(!showNatalChart)}
@@ -337,6 +360,15 @@ export default function UniversePage() {
               <div className="text-[9px] text-muted-foreground">Sovereignty</div>
             </div>
           </div>
+          <Link href="/grand-narrative">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-fuchsia-500/30 hover:bg-fuchsia-500/10 transition-colors cursor-pointer">
+              <BookOpen size={14} className="text-fuchsia-400" />
+              <div>
+                <div className="text-[11px] font-bold font-mono text-fuchsia-400">Grand Narrative</div>
+                <div className="text-[9px] text-muted-foreground">The Unified Truth</div>
+              </div>
+            </div>
+          </Link>
         </div>
       </div>
 
