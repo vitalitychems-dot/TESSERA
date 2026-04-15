@@ -114,6 +114,8 @@ function areRequestsMergeable(a: QueuedRequest, b: QueuedRequest): boolean {
 
   if (a.messages.length !== b.messages.length) return false;
 
+  if (a.messages.length > 2 || b.messages.length > 2) return false;
+
   const sysA = extractSystemPrompt(a.messages);
   const sysB = extractSystemPrompt(b.messages);
   if (sysA !== sysB) return false;
