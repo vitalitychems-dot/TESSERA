@@ -3,6 +3,7 @@ import { join, resolve, sep } from "path";
 import { logger } from "./logger";
 import { createProposal } from "./consensus-engine";
 import { callLLMSafe, isLLMAvailable } from "./llm-client";
+import { batchedCallLLM } from "./llm-batcher";
 import { isModuleCoolingDown, recordEvolutionSuccess, recordEvolutionFailure, shouldSkipEvolutionForLoad } from "./evolution-throttle";
 
 const EVOLUTION_QUEUE_DIR = join(process.cwd(), "_evolutions");

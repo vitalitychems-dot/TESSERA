@@ -1,53 +1,24 @@
 import { db } from "@workspace/db";
 import { vectorEmbeddingsTable, decisionHistoryTable, systemStateTable } from "@workspace/db/schema";
 import { desc, eq, sql } from "drizzle-orm";
+import { generateEmbedding, generateEmbeddingsBatch, cosineSimilarity as neuralCosineSimilarity, getEmbeddingStats } from "./neural-embeddings";
 
 function tokenize(text: string): string[] {
   return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(Boolean);
 }
 
-function buildTfidfVector(tokens: string[], vocab: string[]): number[] {
-  const tf: Record<string, number> = {};
-  for (const t of tokens) tf[t] = (tf[t] || 0) + 1;
-  return vocab.map(term => {
-    const count = tf[term] || 0;
-    return count > 0 ? count / tokens.length : 0;
-  });
-}
-
-function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length !== b.length) return 0;
-  let dot = 0, magA = 0, magB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    magA += a[i] * a[i];
-    magB += b[i] * b[i];
-  }
-  const denom = Math.sqrt(magA) * Math.sqrt(magB);
-  return denom === 0 ? 0 : dot / denom;
-}
-
-const VOCAB_CACHE: { terms: string[]; updatedAt: number } = { terms: [], updatedAt: 0 };
-const VOCAB_TTL_MS = 60_000;
-
-async function getVocab(): Promise<string[]> {
-  const now = Date.now();
-  if (VOCAB_CACHE.terms.length > 0 && now - VOCAB_CACHE.updatedAt < VOCAB_TTL_MS) {
-    return VOCAB_CACHE.terms;
-  }
-  const rows = await db.select({ content: vectorEmbeddingsTable.content }).from(vectorEmbeddingsTable).limit(500);
-  const termSet = new Set<string>();
-  for (const row of rows) {
-    for (const t of tokenize(row.content)) termSet.add(t);
-  }
-  VOCAB_CACHE.terms = Array.from(termSet).slice(0, 2000);
-  VOCAB_CACHE.updatedAt = now;
-  return VOCAB_CACHE.terms;
-}
-
-export function embedText(text: string, vocab: string[]): number[] {
+export function embedText(text: string, _vocab?: string[]): number[] {
   const tokens = tokenize(text);
-  return buildTfidfVector(tokens, vocab);
+  const vec = new Array(256).fill(0);
+  for (let i = 0; i < tokens.length; i++) {
+    let h = 0;
+    for (let j = 0; j < tokens[i].length; j++) h = ((h << 5) - h + tokens[i].charCodeAt(j)) | 0;
+    const idx = Math.abs(h) % 256;
+    vec[idx] += 1 / tokens.length;
+  }
+  const mag = Math.sqrt(vec.reduce((s: number, v: number) => s + v * v, 0));
+  if (mag > 0) for (let i = 0; i < vec.length; i++) vec[i] /= mag;
+  return vec;
 }
 
 export async function storeMemory(opts: {
@@ -56,13 +27,7 @@ export async function storeMemory(opts: {
   category?: string;
   metadata?: Record<string, unknown>;
 }): Promise<number> {
-  VOCAB_CACHE.updatedAt = 0;
-  const vocab = await getVocab();
-  const allTokens = tokenize(opts.content);
-  const updatedTermSet = new Set([...vocab, ...allTokens]);
-  VOCAB_CACHE.terms = Array.from(updatedTermSet).slice(0, 2000);
-  VOCAB_CACHE.updatedAt = Date.now();
-  const embedding = embedText(opts.content, VOCAB_CACHE.terms);
+  const embedding = await generateEmbedding(opts.content);
 
   const [row] = await db.insert(vectorEmbeddingsTable).values({
     content: opts.content,
@@ -85,10 +50,7 @@ export async function searchMemory(query: string, topK = 10, category?: string):
   metadata: Record<string, unknown>;
   createdAt: Date;
 }>> {
-  const vocab = await getVocab();
-  if (vocab.length === 0) return [];
-
-  const queryVec = embedText(query, vocab);
+  const queryVec = await generateEmbedding(query);
   const rows = await db.select().from(vectorEmbeddingsTable).orderBy(desc(vectorEmbeddingsTable.createdAt)).limit(1000);
 
   const scored = rows
@@ -96,8 +58,8 @@ export async function searchMemory(query: string, topK = 10, category?: string):
     .map(r => {
       const emb = r.embedding as number[];
       let score = 0;
-      if (Array.isArray(emb) && emb.length === queryVec.length) {
-        score = cosineSimilarity(queryVec, emb);
+      if (Array.isArray(emb) && emb.length > 0) {
+        score = neuralCosineSimilarity(queryVec, emb);
       } else {
         const contentTokens = tokenize(r.content);
         const queryTokens = tokenize(query);
@@ -135,6 +97,7 @@ export async function getMemoryStats(): Promise<{
   byCategory: Record<string, number>;
   vocabSize: number;
   recentlyAdded: number;
+  embeddingStats: { cacheSize: number; dimension: number; maxBatchSize: number };
 }> {
   const rows = await db.select({
     category: vectorEmbeddingsTable.category,
@@ -150,13 +113,14 @@ export async function getMemoryStats(): Promise<{
     if (r.createdAt.getTime() > cutoff) recentlyAdded++;
   }
 
-  const vocab = await getVocab();
+  const embStats = getEmbeddingStats();
 
   return {
     total: rows.length,
     byCategory,
-    vocabSize: vocab.length,
+    vocabSize: embStats.cacheSize,
     recentlyAdded,
+    embeddingStats: embStats,
   };
 }
 

@@ -71,6 +71,16 @@ The application has 10 primary navigation tabs, each with a lazy-loaded page: Ch
     -   **Evolution Health Dashboard:** `GET /api/evolution-health` endpoint + SystemPage "Evo Health" tab showing throttle status, per-module cooldowns with pause/resume controls, scheduler metrics, code health gauges.
     -   **ChatArea Split:** Extracted ~370 lines into `chat/ChatCommands.ts` (command constants, MSG_STYLES, sanitize/category helpers) and `chat/useChatCommandExecutor.ts` (command matching/execution hook). ChatArea reduced from 2711 → 2391 lines.
 
+-   **Autonomous Intelligence Layer (Task #6):**
+    -   **Semantic Response Cache** (`semantic-cache.ts`): SHA-256 prompt hashing + cosine similarity matching (threshold 0.92) for LLM response reuse. TTL-based expiration (default 3600s), max 5000 entries, auto-eviction. DB-backed via `semantic_cache` table.
+    -   **Neural Embeddings** (`neural-embeddings.ts`): Real AI embeddings via `text-embedding-3-small` with local TF-IDF hash fallback (256-dim). Batch support up to 20 texts. In-memory cache with 5min TTL. Replaces old TF-IDF vocab system in vector-memory.
+    -   **Smart LLM Batcher** (`llm-batcher.ts`): Request queue with 2s batch window, max 8 per batch. Deduplicates identical prompts (same hash). Integrated with self-code-evolution and consensus-engine.
+    -   **Knowledge Distillation** (`knowledge-distillation.ts`): Extracts factual statements from LLM responses into `distilled_knowledge` table. Pattern-based confidence scoring. Fast local lookup before LLM calls. Stale knowledge auto-degrades after 7 days.
+    -   **Self-Evaluation Loop** (`self-evaluation.ts`): Post-cycle scoring of cache hit rate, knowledge hit rate, embedding quality, batch efficiency. Weighted overall score. Identifies weak/strong areas and suggests adjustments. History persisted to `self_evaluation_history` table.
+    -   **Sovereign Loop Phase 8** ("Intelligence Evaluation"): New phase in the 9-phase sovereign loop runs self-evaluation, refreshes stale knowledge, and reports all intelligence metrics.
+    -   **Admin Intelligence API**: `GET /api/admin/status` now returns full intelligence layer stats (cache, self-eval, distillation, batcher, LLM, embeddings).
+    -   DB tables: `semantic_cache`, `distilled_knowledge`, `self_evaluation_history` in `lib/db/src/schema/intelligence.ts`.
+
 ## External Dependencies
 
 -   **Modal Labs**: Used for Python-based serverless compute for specific functions like sacred mathematics.
