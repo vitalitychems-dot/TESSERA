@@ -84,11 +84,19 @@ export async function callLLM(
       if (knowledgeFacts.length > 0) {
         llmStats.knowledgeHits++;
 
-        const highConfFacts = knowledgeFacts.filter(f => f.confidence >= 0.85);
-        if (highConfFacts.length >= 2) {
-          const directAnswer = highConfFacts.map(f => f.fact).join(" ");
-          logger.info({ facts: highConfFacts.length, avgConf: (highConfFacts.reduce((s, f) => s + f.confidence, 0) / highConfFacts.length).toFixed(2) }, "LLMClient: short-circuit from distilled knowledge");
-          return directAnswer;
+        const highConfFacts = knowledgeFacts.filter(f => f.confidence >= 0.90);
+        const avgConf = highConfFacts.length > 0 ? highConfFacts.reduce((s, f) => s + f.confidence, 0) / highConfFacts.length : 0;
+        const queryTerms = new Set(userQuery.toLowerCase().split(/\s+/).filter(t => t.length > 3));
+        const factsRelevant = highConfFacts.filter(f => {
+          const factLower = f.fact.toLowerCase();
+          const matchCount = [...queryTerms].filter(t => factLower.includes(t)).length;
+          return matchCount >= Math.min(2, queryTerms.size);
+        });
+
+        if (factsRelevant.length >= 2 && avgConf >= 0.92) {
+          const synthesized = `Based on verified knowledge: ${factsRelevant.map(f => f.fact).join(". ")}`;
+          logger.info({ facts: factsRelevant.length, avgConf: avgConf.toFixed(2) }, "LLMClient: short-circuit from distilled knowledge");
+          return synthesized;
         }
 
         const factContext = knowledgeFacts

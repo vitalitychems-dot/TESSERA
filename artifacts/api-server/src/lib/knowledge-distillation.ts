@@ -2,7 +2,7 @@ import { db } from "@workspace/db";
 import { distilledKnowledgeTable } from "@workspace/db/schema";
 import { eq, sql, desc, gt } from "drizzle-orm";
 import { logger } from "./logger";
-import { evictExpired, invalidateByCategory } from "./semantic-cache";
+import { evictExpired, invalidateRelatedEntries } from "./semantic-cache";
 
 let CONFIDENCE_THRESHOLD = 0.6;
 const STALE_DAYS = 7;
@@ -101,7 +101,12 @@ export async function distillFromResponse(
   if (stored > 0) {
     logger.info({ stored, category }, "KnowledgeDistillation: facts extracted");
     evictExpired().catch(() => {});
-    invalidateByCategory(category).catch(() => {});
+    const keywords = facts
+      .flatMap(f => f.fact.toLowerCase().split(/\s+/).filter(t => t.length > 4))
+      .slice(0, 5);
+    if (keywords.length > 0) {
+      invalidateRelatedEntries(keywords).catch(() => {});
+    }
   }
   return stored;
 }

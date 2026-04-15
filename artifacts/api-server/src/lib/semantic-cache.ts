@@ -211,19 +211,24 @@ export function setCacheTtl(ttl: number): void {
   logger.info({ ttl: DEFAULT_TTL_SECONDS }, "SemanticCache: TTL updated");
 }
 
-export async function invalidateByCategory(category: string): Promise<number> {
+export async function invalidateRelatedEntries(keywords: string[]): Promise<number> {
+  if (keywords.length === 0) return 0;
   try {
-    const result = await db.delete(semanticCacheTable)
-      .where(sql`${semanticCacheTable.promptText} ILIKE ${"%" + category + "%"}`)
-      .returning({ id: semanticCacheTable.id });
-    const evicted = result.length;
-    stats.totalEvictions += evicted;
-    if (evicted > 0) {
-      logger.info({ evicted, category }, "SemanticCache: category invalidation");
+    let totalEvicted = 0;
+    for (const keyword of keywords.slice(0, 5)) {
+      if (keyword.length < 4) continue;
+      const result = await db.delete(semanticCacheTable)
+        .where(sql`${semanticCacheTable.promptText} ILIKE ${"%" + keyword + "%"} AND ${semanticCacheTable.expiresAt} > now()`)
+        .returning({ id: semanticCacheTable.id });
+      totalEvicted += result.length;
     }
-    return evicted;
+    stats.totalEvictions += totalEvicted;
+    if (totalEvicted > 0) {
+      logger.info({ evicted: totalEvicted, keywords: keywords.slice(0, 3) }, "SemanticCache: targeted invalidation");
+    }
+    return totalEvicted;
   } catch (err) {
-    logger.warn({ err: (err as Error).message }, "SemanticCache: category invalidation error");
+    logger.warn({ err: (err as Error).message }, "SemanticCache: targeted invalidation error");
     return 0;
   }
 }
