@@ -1,8 +1,24 @@
 import { useState } from "react";
-import { Wrench, Cpu, Zap, Shield, Brain, ChevronDown, ChevronUp, Lightbulb } from "lucide-react";
+import { Wrench, Cpu, Zap, Shield, Brain, ChevronDown, ChevronUp, Lightbulb, Server } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const BUILD_GUIDES = [
+  {
+    id: "free-energy-sovereign-computer",
+    title: "Free Energy Sovereign Computer",
+    difficulty: "Intermediate → Advanced",
+    icon: Server,
+    color: "text-emerald-400",
+    sections: [
+      { title: "Overview — The Full Stack", content: "This guide chains 8 inventions into a complete sovereign computing platform powered by free energy. The build path: 1) Atmospheric Radiant Energy Harvester (harvest ambient electricity from Earth's electric field), 2) Solar-Piezo Hybrid Charger (supplement with solar + vibration energy), 3) Scalar Wave Power Conditioner (clean and regulate raw power), 4) Toroidal Field UPS Battery (store energy with automatic failover), 5) Crystal-Cooled Sovereign Micro-Server (the computer itself — Raspberry Pi running sovereign services), 6) Sovereign DNS & Mesh Routing Node (replace corporate DNS and routing), 7) Sacred Geometry Fractal Mesh Antenna (long-range 10-25km mesh links), 8) Sovereign Mesh Compute Cluster (multi-node redundancy). Total estimated cost: $300-700 for a complete sovereign internet node. Total build time: 40-80 hours across all inventions." },
+      { title: "Phase 1 — Energy Harvesting ($85-170)", content: "Start with the Atmospheric Radiant Energy Harvester — a Tesla-inspired collector using a Fibonacci-spiral copper antenna, germanium diode rectifier, and capacitor bank. It taps Earth's 100-150V/m atmospheric electric field for 0.5-5W continuous power. Supplement with the Solar-Piezo Hybrid Charger — a 6V 3.5W solar panel plus 5 piezoelectric discs that harvest vibration energy. Solar dominates during day; piezo provides trickle charge from ambient vibration 24/7. Together these feed into the Scalar Wave Power Conditioner — a bifilar Tesla coil on a ferrite toroid (72 turns, sacred pentagon angle) that cancels noise and outputs clean 5V/3.3V DC." },
+      { title: "Phase 2 — Energy Storage ($50-100)", content: "Build the Toroidal Field UPS Battery from recycled 18650 laptop cells arranged in a donut geometry. A 4S3P configuration (12 cells) gives 30-60Wh = 4-8 hours of Raspberry Pi runtime. The toroidal arrangement creates self-balancing magnetic fields for better charge distribution. A BMS board handles cell protection and balancing. An automatic failover relay switches between harvester power and battery power seamlessly — your server never goes down, even at night." },
+      { title: "Phase 3 — The Sovereign Computer ($80-150)", content: "The Crystal-Cooled Sovereign Micro-Server: a Raspberry Pi 4/5 with a hexagonal quartz crystal heatsink array (Metatron's Cube geometry) and copper Flower of Life heat frame. Runs a full software stack: Linux, Docker, IPFS, Unbound DNS, WireGuard VPN, and Tessera node — all on under 15W. The quartz crystals provide passive cooling through piezoelectric thermal conversion. With GPU memory at 16MB and zram swap, the Pi runs lean and efficient." },
+      { title: "Phase 4 — Sovereign Networking ($75-150)", content: "Two inventions form the network layer. The Sovereign DNS & Mesh Routing Node runs recursive DNS resolution (queries root servers directly — no Google/Cloudflare), IPFS gateway for uncensorable web hosting, and Yggdrasil encrypted mesh routing. The Sacred Geometry Fractal Mesh Antenna — a Sierpinski triangle fractal etched on copper PCB — provides 8-12 dBi directional gain across both LoRa (915 MHz) and WiFi (2.4 GHz) bands simultaneously from a single element. Range: 10-25km per link with line of sight." },
+      { title: "Phase 5 — Cluster & Redundancy ($150-300)", content: "Scale to the Sovereign Mesh Compute Cluster: 3-5 Raspberry Pi nodes running K3s (lightweight Kubernetes), each with its own toroidal UPS. Workloads automatically migrate if any node fails. Deploy Tessera, IPFS, DNS, and mesh routing as Kubernetes pods with anti-affinity rules ensuring redundancy across physical nodes. The cluster survives individual node failure, power loss, or even physical confiscation." },
+      { title: "Sacred Knowledge Principles", content: "Every invention in this stack encodes sacred geometry and natural principles: Fibonacci spirals in the energy collector (same ratio found in galaxies, sunflowers, DNA), toroidal fields in the UPS battery (mirrors Earth's magnetosphere, human heart field, galaxies), hexagonal crystal arrays (matches quartz's SiO₂ molecular structure), pentagonal angles in coil windings (72° — the DNA helix angle), Sierpinski fractal antennas (nature's most efficient space-filling geometry), and mycelial network topology in the mesh cluster (same resilience pattern as forest fungal networks). Tesla's key insight was that the universe is fundamentally electromagnetic — energy is everywhere, freely available. These inventions simply provide the geometry to collect and organize it." },
+    ]
+  },
   {
     id: "quantum-computer",
     title: "Build a Quantum Computer",
@@ -58,7 +74,7 @@ const BUILD_GUIDES = [
 ];
 
 export default function BuildPage() {
-  const [expandedGuide, setExpandedGuide] = useState<string | null>("sovereign-agi");
+  const [expandedGuide, setExpandedGuide] = useState<string | null>("free-energy-sovereign-computer");
 
   return (
     <div className="p-4 space-y-4 max-w-4xl mx-auto pb-20">
@@ -66,7 +82,7 @@ export default function BuildPage() {
         <Wrench className="text-emerald-400" size={28} />
         <div>
           <h1 className="text-2xl font-bold font-mono text-emerald-400">Build</h1>
-          <p className="text-xs text-muted-foreground">How to build sovereign AGI, quantum computers & free energy systems</p>
+          <p className="text-xs text-muted-foreground">How to build a free energy sovereign computer, quantum computers, AGI & more</p>
         </div>
       </div>
 
