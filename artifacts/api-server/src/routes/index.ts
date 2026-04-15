@@ -44,6 +44,7 @@ import intelligenceCoreRouter from "./intelligence-core";
 import trainingEvolutionRouter from "./training-evolution";
 import governanceConsensusRouter from "./governance-consensus";
 import systemRuntimeRouter from "./system-runtime";
+import rickRouter from "./rick";
 
 const router: IRouter = Router();
 
@@ -92,5 +93,6 @@ router.use(secretKnowledgeRouter);
 router.use(mysticismRouter);
 router.use(sovereignLanguageRouter);
 router.use(legacyEnginesRouter);
+router.use(rickRouter);
 
 export default router;
