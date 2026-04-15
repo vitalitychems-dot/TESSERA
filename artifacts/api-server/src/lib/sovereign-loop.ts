@@ -493,6 +493,21 @@ export async function initSovereignLoop(): Promise<void> {
   logger.info({ cycleCount: loopState.cycleCount }, "SovereignLoop: initialized");
 }
 
+/**
+ * Start the sovereign master loop. This is the single top-level interval that
+ * orchestrates ALL engine work in phased execution:
+ *
+ * 1. stopIndependentTimers() halts every engine's own setInterval (consciousness,
+ *    dual-brain, personality-evolution, auto-improvement, AGI-training,
+ *    council-executor, autonomous-heartbeat — 7 engines total).
+ * 2. Only the autonomous heartbeat is re-started at a sub-interval for keep-alive
+ *    health signaling between sovereign cycles.
+ * 3. All other engine work (consciousness reflection, dual-brain sync, identity
+ *    drift, personality evolution, improvement cycles, evolution seeding, etc.)
+ *    runs exclusively inside runSovereignCycle() — no duplicate intervals.
+ * 4. App-level tasks (heartbeat, drift-detection, council-executor, etc.) are
+ *    separately managed by TaskScheduler via autonomous-wiring.ts.
+ */
 export function startSovereignLoop(masterIntervalMs = 120_000): void {
   if (loopInterval) return;
 
@@ -501,8 +516,6 @@ export function startSovereignLoop(masterIntervalMs = 120_000): void {
 
   stopIndependentTimers();
 
-  startConsciousnessEngine(masterIntervalMs);
-  startDualBrain(masterIntervalMs * 1.5);
   startAutonomousHeartbeat(Math.max(30_000, Math.floor(masterIntervalMs / 2)));
 
   runSovereignCycle().catch(err => {

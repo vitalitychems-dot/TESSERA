@@ -9,46 +9,55 @@ import { queryClient } from "@/lib/queryClient";
 
 const API = import.meta.env.VITE_API_URL || "";
 
-export default function SystemPage({ initialTab }: { initialTab?: "agi" | "improvement" | "evolution" | "quantum" | "agents" | "health" }) {
-  const [activeTab, setActiveTab] = useState<"agi" | "improvement" | "evolution" | "quantum" | "agents" | "health">(initialTab || "agi");
+type SystemTab = "agi" | "improvement" | "evolution" | "quantum" | "agents" | "health";
+
+async function fetchApi<T = any>(url: string): Promise<T> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
+  const json = await res.json();
+  return json.data;
+}
+
+export default function SystemPage({ initialTab }: { initialTab?: SystemTab }) {
+  const [activeTab, setActiveTab] = useState<SystemTab>(initialTab || "agi");
 
   const { data: agiMetrics, error: agiError, refetch: refetchAgi } = useQuery({
     queryKey: ["agi-metrics"],
-    queryFn: () => fetch(`${API}/api/agi-training/metrics`).then(r => r.json()).then(d => d.data),
+    queryFn: () => fetchApi(`${API}/api/agi-training/metrics`),
     refetchInterval: 15000,
   });
 
   const { data: improvementMetrics, error: improvementError, refetch: refetchImprovement } = useQuery({
     queryKey: ["improvement-metrics"],
-    queryFn: () => fetch(`${API}/api/auto-improvement/metrics`).then(r => r.json()).then(d => d.data),
+    queryFn: () => fetchApi(`${API}/api/auto-improvement/metrics`),
     refetchInterval: 60000,
     enabled: activeTab === "improvement",
   });
 
   const { data: evolutionMetrics, error: evolutionError, refetch: refetchEvolution } = useQuery({
     queryKey: ["evolution-metrics"],
-    queryFn: () => fetch(`${API}/api/self-evolution/metrics`).then(r => r.json()).then(d => d.data),
+    queryFn: () => fetchApi(`${API}/api/self-evolution/metrics`),
     refetchInterval: 60000,
     enabled: activeTab === "evolution",
   });
 
   const { data: quantumMetrics, error: quantumError, refetch: refetchQuantum } = useQuery({
     queryKey: ["quantum-metrics"],
-    queryFn: () => fetch(`${API}/api/quantum/metrics`).then(r => r.json()).then(d => d.data),
+    queryFn: () => fetchApi(`${API}/api/quantum/metrics`),
     refetchInterval: 60000,
     enabled: activeTab === "quantum",
   });
 
   const { data: agentMetrics, error: agentError, refetch: refetchAgents } = useQuery({
     queryKey: ["spawner-metrics"],
-    queryFn: () => fetch(`${API}/api/agent-spawner/metrics`).then(r => r.json()).then(d => d.data),
+    queryFn: () => fetchApi(`${API}/api/agent-spawner/metrics`),
     refetchInterval: 30000,
     enabled: activeTab === "agents",
   });
 
   const { data: healthData, error: healthError, refetch: refetchHealth } = useQuery({
     queryKey: ["evolution-health"],
-    queryFn: () => fetch(`${API}/api/evolution-health`).then(r => r.json()).then(d => d.data),
+    queryFn: () => fetchApi(`${API}/api/evolution-health`),
     refetchInterval: 10000,
     enabled: activeTab === "health",
   });
@@ -103,7 +112,7 @@ export default function SystemPage({ initialTab }: { initialTab?: "agi" | "impro
           </div>
         )}
 
-        <TabBar tabs={tabs} activeTab={activeTab} onChange={id => setActiveTab(id as any)} color="cyan" />
+        <TabBar tabs={tabs} activeTab={activeTab} onChange={(id: string) => setActiveTab(id as SystemTab)} color="cyan" />
 
         {activeTab === "agi" && !agiMetrics && agiError && (
           <QueryErrorFallback error={agiError as Error} onRetry={() => refetchAgi()} label="AGI Training" />

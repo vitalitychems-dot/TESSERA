@@ -392,6 +392,7 @@ export async function proposeEvolution(
   const safetyChecked = true;
 
   if (!syntaxValid) {
+    recordEvolutionFailure(targetModule);
     const proposal: CodeEvolutionProposal = {
       id, targetModule, proposedChange, rationale, riskLevel,
       status: "rejected",
@@ -405,7 +406,7 @@ export async function proposeEvolution(
     proposals.unshift(proposal);
     if (proposals.length > 50) proposals.splice(50);
     evolutionState.totalProposals++;
-    logger.warn({ targetModule, error: syntaxCheck.error }, "SelfCodeEvolution: syntax validation failed");
+    logger.warn({ targetModule, error: syntaxCheck.error }, "SelfCodeEvolution: syntax validation failed — throttle updated");
     return proposal;
   }
 
@@ -433,6 +434,10 @@ export async function proposeEvolution(
   }
 
   const status: CodeEvolutionProposal["status"] = councilApproved && syntaxValid ? "approved" : "rejected";
+
+  if (status === "rejected") {
+    recordEvolutionFailure(targetModule);
+  }
 
   const proposal: CodeEvolutionProposal = {
     id, targetModule, proposedChange, rationale, riskLevel, status,
