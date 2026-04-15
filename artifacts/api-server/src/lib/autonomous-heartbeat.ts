@@ -58,6 +58,18 @@ const LATTICE_DOMAINS = [
 
 const MAX_CONSECUTIVE_FAILURES = 3;
 const BASE_BACKOFF_MS = 5_000;
+const HEAP_GROWTH_THRESHOLD = 0.15;
+const HEAP_USED_CRITICAL_MB = 512;
+
+interface MemorySnapshot {
+  heapUsedMB: number;
+  heapTotalMB: number;
+  rssMB: number;
+  ts: number;
+}
+
+const memorySnapshots: MemorySnapshot[] = [];
+let memoryLeakDetected = false;
 const MAX_BACKOFF_MS = 300_000;
 
 const SUBSYSTEM_NAMES = [
@@ -229,11 +241,57 @@ async function runHealthChecks(): Promise<void> {
   }
 }
 
+function checkMemoryHealth(): void {
+  const mem = process.memoryUsage();
+  const snapshot: MemorySnapshot = {
+    heapUsedMB: Math.round(mem.heapUsed / 1048576),
+    heapTotalMB: Math.round(mem.heapTotal / 1048576),
+    rssMB: Math.round(mem.rss / 1048576),
+    ts: Date.now(),
+  };
+  memorySnapshots.push(snapshot);
+
+  if (memorySnapshots.length > 60) memorySnapshots.shift();
+
+  if (snapshot.heapUsedMB > HEAP_USED_CRITICAL_MB) {
+    memoryLeakDetected = true;
+    logger.error({ heapUsedMB: snapshot.heapUsedMB, threshold: HEAP_USED_CRITICAL_MB }, "Heartbeat: CRITICAL heap usage — possible memory leak");
+    try { global.gc?.(); } catch {}
+    return;
+  }
+
+  if (memorySnapshots.length >= 10) {
+    const recent = memorySnapshots.slice(-10);
+    const oldest = recent[0];
+    const newest = recent[recent.length - 1];
+    const growthRate = (newest.heapUsedMB - oldest.heapUsedMB) / oldest.heapUsedMB;
+
+    if (growthRate > HEAP_GROWTH_THRESHOLD) {
+      memoryLeakDetected = true;
+      logger.warn({ growthRate: (growthRate * 100).toFixed(1) + "%", heapUsedMB: newest.heapUsedMB, windowCycles: 10 }, "Heartbeat: sustained heap growth detected — possible memory leak");
+      try { global.gc?.(); } catch {}
+    } else if (memoryLeakDetected && growthRate < 0.05) {
+      memoryLeakDetected = false;
+      logger.info({ heapUsedMB: newest.heapUsedMB }, "Heartbeat: memory leak condition cleared");
+    }
+  }
+}
+
+export function getMemoryDiagnostics() {
+  return {
+    leakDetected: memoryLeakDetected,
+    snapshots: memorySnapshots.slice(-10),
+    currentHeapMB: Math.round(process.memoryUsage().heapUsed / 1048576),
+  };
+}
+
 async function runHeartbeatCycle(): Promise<void> {
   heartbeatState.cycleCount++;
   heartbeatState.lastCycleAt = Date.now();
 
   const now = Date.now();
+
+  checkMemoryHealth();
 
   await runHealthChecks();
 

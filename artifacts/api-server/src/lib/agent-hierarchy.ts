@@ -8,7 +8,7 @@ export interface AgentChild {
   name: string;
   parentAgent: string;
   shift: "day" | "night" | "swing";
-  status: "pending-birth" | "training" | "probation" | "autonomous";
+  status: "active" | "idle" | "error";
   trainingProgress: number;
   ethicsScore: number;
   moralsVerified: boolean;
@@ -113,7 +113,7 @@ function buildChildren(): void {
         name: childName,
         parentAgent: parent,
         shift,
-        status: "autonomous",
+        status: "active",
         trainingProgress: 85 + (pIdx + sIdx) % 15,
         ethicsScore: 90 + (pIdx * 3 + sIdx) % 10,
         moralsVerified: true,
@@ -144,7 +144,7 @@ export async function initAgentHierarchy(): Promise<void> {
             name: row.name,
             parentAgent: row.parentAgent,
             shift: row.shift as "day" | "night" | "swing",
-            status: (row.status === "active" ? "autonomous" : row.status) as AgentChild["status"],
+            status: (["active", "idle", "error"].includes(row.status) ? row.status : "active") as AgentChild["status"],
             trainingProgress: 100,
             ethicsScore: perf.ethicsScore ?? 95,
             moralsVerified: true,
@@ -311,8 +311,9 @@ export function getAgentHierarchy() {
     totalParents: parentAgentStates.size,
     totalChildren: agentChildren.length,
     totalAgents: parentAgentStates.size + agentChildren.length,
-    totalAutonomous: agentChildren.filter(c => c.status === "autonomous").length,
-    totalTraining: agentChildren.filter(c => c.status === "training").length,
+    totalActive: agentChildren.filter(c => c.status === "active").length,
+    totalIdle: agentChildren.filter(c => c.status === "idle").length,
+    totalError: agentChildren.filter(c => c.status === "error").length,
     children: agentChildren,
     birthVows: BIRTH_VOWS,
     sacredStructure: {
@@ -333,15 +334,15 @@ export function getChildrenOf(parentName: string): AgentChild[] {
 
 export function getHierarchyMetrics() {
   ensureChildrenBuilt();
-  const autonomous = agentChildren.filter(c => c.status === "autonomous");
-  const avgEthics = autonomous.length > 0 ? autonomous.reduce((s, c) => s + c.ethicsScore, 0) / autonomous.length : 100;
+  const active = agentChildren.filter(c => c.status === "active");
+  const avgEthics = active.length > 0 ? active.reduce((s, c) => s + c.ethicsScore, 0) / active.length : 100;
   const avgTraining = agentChildren.length > 0 ? agentChildren.reduce((s, c) => s + c.trainingProgress, 0) / agentChildren.length : 0;
 
   return {
     totalAgents: PARENT_AGENTS.length + agentChildren.length,
     parentCount: PARENT_AGENTS.length,
     childCount: agentChildren.length,
-    autonomousCount: autonomous.length,
+    activeCount: active.length,
     avgEthicsScore: Math.round(avgEthics * 10) / 10,
     avgTrainingProgress: Math.round(avgTraining * 10) / 10,
     hierarchyLevels: HIERARCHY_LEVELS.length,
