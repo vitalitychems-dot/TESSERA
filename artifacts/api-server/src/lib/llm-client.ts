@@ -30,6 +30,7 @@ export interface LLMCallOptions {
   skipCache?: boolean;
   skipDistillation?: boolean;
   cacheTtl?: number;
+  _internal?: boolean;
 }
 
 const llmStats = {
@@ -53,6 +54,11 @@ export async function callLLM(
   messages: LLMMessage[],
   opts: LLMCallOptions = {}
 ): Promise<string> {
+  if (!opts._internal) {
+    const { batchedCallLLM } = await import("./llm-batcher");
+    return batchedCallLLM(messages, opts);
+  }
+
   const {
     model = "gpt-5-mini",
     maxTokens = 2048,

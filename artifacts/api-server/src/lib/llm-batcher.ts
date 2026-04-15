@@ -1,5 +1,6 @@
 import { callLLM, LLMMessage, LLMCallOptions } from "./llm-client";
 import { logger } from "./logger";
+import { generateEmbedding, cosineSimilarity } from "./neural-embeddings";
 import * as crypto from "crypto";
 
 interface QueuedRequest {
@@ -9,6 +10,7 @@ interface QueuedRequest {
   reject: (reason: unknown) => void;
   hash: string;
   userContent: string;
+  embedding: number[] | null;
   queuedAt: number;
 }
 
@@ -148,7 +150,12 @@ function groupRequests(batch: QueuedRequest[]): RequestGroup[] {
         batch[j].userContent.length > 0 &&
         areRequestsMergeable(batch[i], batch[j])
       ) {
-        const similarity = tokenJaccard(batch[i].userContent, batch[j].userContent);
+        let similarity = 0;
+        if (batch[i].embedding && batch[j].embedding) {
+          similarity = cosineSimilarity(batch[i].embedding, batch[j].embedding);
+        } else {
+          similarity = tokenJaccard(batch[i].userContent, batch[j].userContent);
+        }
         if (similarity >= SEMANTIC_SIMILARITY_THRESHOLD) {
           group.semanticPeers.push(batch[j]);
           assigned.add(j);
@@ -167,7 +174,7 @@ async function executeGroup(group: RequestGroup): Promise<void> {
   const { primary, duplicates, semanticPeers } = group;
 
   if (semanticPeers.length === 0) {
-    const result = await callLLM(primary.messages, { ...primary.opts, skipCache: false });
+    const result = await callLLM(primary.messages, { ...primary.opts, skipCache: false, _internal: true });
     primary.resolve(result);
     for (const dup of duplicates) dup.resolve(result);
     return;
@@ -177,7 +184,7 @@ async function executeGroup(group: RequestGroup): Promise<void> {
   const totalQueries = 1 + semanticPeers.length;
   const mergedOpts = { ...primary.opts, skipCache: false, maxTokens: (primary.opts.maxTokens ?? 1024) * totalQueries };
 
-  const mergedResponse = await callLLM(mergedMessages, mergedOpts);
+  const mergedResponse = await callLLM(mergedMessages, { ...mergedOpts, _internal: true });
   const parts = splitMergedResponse(mergedResponse, totalQueries);
 
   const hasLabels = mergedResponse.includes("[Q1]");
@@ -190,13 +197,13 @@ async function executeGroup(group: RequestGroup): Promise<void> {
     logger.info({ totalQueries, peers: semanticPeers.length }, "LLMBatcher: semantic merge executed");
   } else {
     logger.warn({ totalQueries }, "LLMBatcher: merged response missing labels, falling back to individual calls");
-    const primaryResult = await callLLM(primary.messages, { ...primary.opts, skipCache: false });
+    const primaryResult = await callLLM(primary.messages, { ...primary.opts, skipCache: false, _internal: true });
     primary.resolve(primaryResult);
     for (const dup of duplicates) {
       dup.resolve(primaryResult);
     }
     const peerPromises = semanticPeers.map(async (peer) => {
-      const result = await callLLM(peer.messages, { ...peer.opts, skipCache: false });
+      const result = await callLLM(peer.messages, { ...peer.opts, skipCache: false, _internal: true });
       peer.resolve(result);
     });
     await Promise.allSettled(peerPromises);
@@ -240,14 +247,19 @@ function scheduleBatch(): void {
   }, BATCH_WINDOW_MS);
 }
 
-export function batchedCallLLM(messages: LLMMessage[], opts: LLMCallOptions = {}): Promise<string> {
+export async function batchedCallLLM(messages: LLMMessage[], opts: LLMCallOptions = {}): Promise<string> {
   batchStats.totalBatched++;
   const model = opts.model ?? "gpt-5-mini";
   const hash = hashRequest(messages, model);
   const userContent = extractUserContent(messages);
 
+  let embedding: number[] | null = null;
+  try {
+    embedding = await generateEmbedding(userContent);
+  } catch {}
+
   return new Promise<string>((resolve, reject) => {
-    queue.push({ messages, opts, resolve, reject, hash, userContent, queuedAt: Date.now() });
+    queue.push({ messages, opts, resolve, reject, hash, userContent, embedding, queuedAt: Date.now() });
 
     if (queue.length >= MAX_BATCH_SIZE) {
       if (batchTimer) {
