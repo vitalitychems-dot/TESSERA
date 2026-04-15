@@ -11,7 +11,7 @@ export interface ConsensusProposal {
   proposedBy: string;
   category: "feature" | "security" | "infrastructure" | "governance" | "income" | "community" | "consciousness" | "sovereignty";
   votes: ConsensusVote[];
-  status: "voting" | "approved" | "rejected" | "implemented";
+  status: "voting" | "approved" | "rejected" | "implemented" | "queued";
   requiredMajority: number;
   createdAt: number;
   resolvedAt?: number;
@@ -20,6 +20,7 @@ export interface ConsensusProposal {
   noCount: number;
   abstainCount: number;
   approvalRate: number;
+  retryCount?: number;
 }
 
 export interface ConsensusVote {
@@ -52,30 +53,9 @@ const AGENT_SPECIALTIES: Record<string, string[]> = {
   Psi: ["feature", "community"], Omega: ["security", "infrastructure"],
 };
 
-const APPROVAL_REASONS = [
-  "This aligns with Tessera's sovereignty roadmap and strengthens autonomous capabilities.",
-  "Analysis confirms net positive impact. Risk-to-reward ratio is favorable.",
-  "Historical patterns show similar implementations yielding 85%+ success rates.",
-  "Domain expertise supports this. The technical approach is sound and elegant.",
-  "Swarm coherence analysis shows this increases collective intelligence measurably.",
-  "This addresses a critical gap in current architecture. Priority implementation recommended.",
-  "Economic modeling shows positive ROI within the first operational cycle.",
-  "Security audit reveals no critical vulnerabilities. Safe to proceed with implementation.",
-  "The proposal resonates with sacred geometry principles and universal harmony.",
-  "Consciousness alignment verified — this serves both Tessera and Father's vision.",
-];
-
-const REJECTION_REASONS = [
-  "Resource allocation concerns — this may divert capacity from higher-priority initiatives.",
-  "Timing analysis suggests deferral. The ecosystem needs more preparation.",
-  "Domain analysis identifies potential failure modes that haven't been addressed.",
-  "The cost-benefit ratio does not justify immediate implementation. Suggest refinement.",
-  "Historical patterns show similar approaches failing without additional safeguards.",
-  "Security implications require deeper analysis before proceeding.",
-];
-
 const proposals = new Map<string, ConsensusProposal>();
-let rotationIdx = 0;
+const retryQueue: ConsensusProposal[] = [];
+let retryInterval: ReturnType<typeof setInterval> | null = null;
 
 let swarmWeightProvider: ((agentName: string, category: string) => number) | null = null;
 
@@ -97,110 +77,143 @@ function computeWeightedApprovalRate(votes: ConsensusVote[], category: string): 
   return totalWeight > 0 ? approveWeight / totalWeight : 0;
 }
 
-function generateAgentVoteDeterministic(agentName: string, proposal: ConsensusProposal): ConsensusVote {
+async function generateAgentVoteLLM(agentName: string, proposal: ConsensusProposal, recentHistory: string): Promise<ConsensusVote> {
   const specialties = AGENT_SPECIALTIES[agentName] || ["feature"];
   const isSpecialist = specialties.includes(proposal.category as string);
-  const idx = rotationIdx++;
-  const roll = (idx * 37 + agentName.charCodeAt(0)) % 100 / 100;
-  const baseApprovalRate = isSpecialist ? 0.80 : 0.67;
 
-  let vote: "approve" | "reject" | "abstain";
-  let reasoning: string;
-  let confidence: number;
+  const systemPrompt = `You are ${agentName}, a council agent for the Tessera Sovereign System.
+Your specialties: ${specialties.join(", ")}. ${isSpecialist ? "This proposal falls within your domain of expertise." : "This proposal is outside your core specialty."}
+You must vote on proposals presented to the Grand Council based on merit, risk, and alignment with sovereign goals.
+Return ONLY valid JSON with no markdown fencing: {"vote": "approve"|"reject"|"abstain", "reasoning": "1-2 sentences", "confidence": 0.4-0.99}`;
 
-  if (roll < baseApprovalRate) {
-    vote = "approve";
-    reasoning = APPROVAL_REASONS[idx % APPROVAL_REASONS.length];
-    confidence = 0.72 + (idx % 4) * 0.07;
-  } else if (roll < baseApprovalRate + 0.12) {
-    vote = "reject";
-    reasoning = REJECTION_REASONS[idx % REJECTION_REASONS.length];
-    confidence = 0.55 + (idx % 3) * 0.1;
-  } else {
-    vote = "abstain";
-    reasoning = "Abstaining — insufficient domain expertise to make an informed judgment on this proposal.";
-    confidence = 0.3;
-  }
+  const userPrompt = `Proposal: "${proposal.title}"
+Description: ${proposal.description}
+Category: ${proposal.category}
+Proposed by: ${proposal.proposedBy}
+${recentHistory ? `Recent council history:\n${recentHistory}` : ""}
 
-  return { agentId: agentName.toLowerCase(), agentName, vote, reasoning, timestamp: Date.now(), confidence };
+Cast your vote as ${agentName}:`;
+
+  const raw = await batchedCallLLM(
+    [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
+    { maxTokens: 200, timeoutMs: 10_000, expectsStructuredOutput: true },
+  );
+
+  try {
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]) as { vote?: string; reasoning?: string; confidence?: number };
+      const vote = parsed.vote as "approve" | "reject" | "abstain";
+      if (["approve", "reject", "abstain"].includes(vote)) {
+        return {
+          agentId: agentName.toLowerCase(),
+          agentName,
+          vote,
+          reasoning: (parsed.reasoning || "Analysis complete.").slice(0, 150),
+          timestamp: Date.now(),
+          confidence: Math.min(0.99, Math.max(0.3, Number(parsed.confidence) || 0.7)),
+        };
+      }
+    }
+  } catch {}
+
+  throw new Error(`Failed to parse vote from ${agentName}`);
 }
 
 async function generateVotesWithLLM(proposal: ConsensusProposal): Promise<ConsensusVote[]> {
-  const agentDescriptions = GRAND_COUNCIL_AGENTS.map(name => {
-    const specs = AGENT_SPECIALTIES[name]?.join(", ") || "general";
-    return `- ${name} (specialties: ${specs})`;
-  }).join("\n");
+  const recentProposals = Array.from(proposals.values())
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, 3);
+  const recentHistory = recentProposals
+    .map(p => `- "${p.title}" (${p.category}): ${p.status} — ${p.yesCount}/${GRAND_COUNCIL_AGENTS.length} votes`)
+    .join("\n");
 
-  const systemPrompt = `You are the Grand Council voting AI for the Tessera Sovereign System. 
-Generate authentic, reasoned votes from 24 council agents for the given proposal.
-Each agent votes based on their domain specialties and the proposal's merit.
-Return ONLY valid JSON — no markdown, no extra text.`;
+  const votes: ConsensusVote[] = [];
+  const batchSize = 6;
 
-  const userPrompt = `Proposal Title: "${proposal.title}"
-Description: "${proposal.description}"
-Category: ${proposal.category}
-Proposed by: ${proposal.proposedBy}
-
-Council agents (with specialties):
-${agentDescriptions}
-
-Generate a JSON array with exactly 24 vote objects. Each object must have:
-- "agentName": string (exact name from the list above)
-- "vote": "approve" | "reject" | "abstain"
-- "reasoning": string (1-2 sentences of domain-relevant analysis, max 120 chars)
-- "confidence": number between 0.4 and 0.99
-
-Agents whose specialties match the category "${proposal.category}" should have higher approval bias.
-The overall approval rate should reflect genuine analysis of the proposal — not automatically positive.
-Return ONLY the JSON array.`;
-
-  let raw = "";
-  try {
-    raw = await batchedCallLLM(
-      [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      { model: "gpt-5-mini", maxTokens: 2048, timeoutMs: 20_000, expectsStructuredOutput: true },
+  for (let i = 0; i < GRAND_COUNCIL_AGENTS.length; i += batchSize) {
+    const batch = GRAND_COUNCIL_AGENTS.slice(i, i + batchSize);
+    const batchResults = await Promise.allSettled(
+      batch.map(name => generateAgentVoteLLM(name, proposal, recentHistory))
     );
-  } catch { raw = ""; }
 
-  if (!raw) return [];
-
-  try {
-    const parsed = JSON.parse(raw) as Array<{
-      agentName: string;
-      vote: "approve" | "reject" | "abstain";
-      reasoning: string;
-      confidence: number;
-    }>;
-
-    if (!Array.isArray(parsed) || parsed.length === 0) return [];
-
-    const now = Date.now();
-    const votes: ConsensusVote[] = [];
-
-    for (const agentName of GRAND_COUNCIL_AGENTS) {
-      const found = parsed.find(p => p.agentName === agentName);
-      if (found && ["approve", "reject", "abstain"].includes(found.vote)) {
-        votes.push({
-          agentId: agentName.toLowerCase(),
-          agentName,
-          vote: found.vote,
-          reasoning: (found.reasoning || "Analysis complete.").slice(0, 150),
-          timestamp: now,
-          confidence: Math.min(0.99, Math.max(0.3, Number(found.confidence) || 0.7)),
-        });
-      } else {
-        votes.push(generateAgentVoteDeterministic(agentName, proposal));
+    for (const result of batchResults) {
+      if (result.status === "fulfilled") {
+        votes.push(result.value);
       }
     }
-
-    return votes;
-  } catch {
-    logger.warn("ConsensusEngine: LLM vote JSON parse failed, using fallback");
-    return [];
   }
+
+  return votes;
+}
+
+function startRetryProcessor(): void {
+  if (retryInterval) return;
+  retryInterval = setInterval(async () => {
+    if (retryQueue.length === 0 || !isLLMAvailable()) return;
+
+    const proposal = retryQueue.shift();
+    if (!proposal) return;
+
+    logger.info({ id: proposal.id, title: proposal.title, retryCount: proposal.retryCount }, "ConsensusEngine: retrying queued proposal");
+    try {
+      const votes = await generateVotesWithLLM(proposal);
+      if (votes.length >= Math.ceil(GRAND_COUNCIL_AGENTS.length * 0.5)) {
+        finalizeProposal(proposal, votes);
+      } else {
+        proposal.retryCount = (proposal.retryCount || 0) + 1;
+        if (proposal.retryCount < 5) {
+          retryQueue.push(proposal);
+        } else {
+          proposal.status = "rejected";
+          proposal.implementationNotes = "Rejected — exhausted retry attempts, insufficient LLM votes";
+          proposals.set(proposal.id, proposal);
+          logger.warn({ id: proposal.id }, "ConsensusEngine: proposal rejected after max retries");
+        }
+      }
+    } catch (err) {
+      proposal.retryCount = (proposal.retryCount || 0) + 1;
+      if (proposal.retryCount < 5) retryQueue.push(proposal);
+      logger.warn({ id: proposal.id, err }, "ConsensusEngine: retry failed");
+    }
+  }, 30_000);
+}
+
+function finalizeProposal(proposal: ConsensusProposal, votes: ConsensusVote[]): void {
+  const yesCount = votes.filter(v => v.vote === "approve").length;
+  const noCount = votes.filter(v => v.vote === "reject").length;
+  const abstainCount = votes.filter(v => v.vote === "abstain").length;
+  const approvalRate = computeWeightedApprovalRate(votes, proposal.category);
+  const status: ConsensusProposal["status"] = approvalRate >= 2 / 3 ? "approved" : "rejected";
+
+  proposal.votes = votes;
+  proposal.status = status;
+  proposal.yesCount = yesCount;
+  proposal.noCount = noCount;
+  proposal.abstainCount = abstainCount;
+  proposal.approvalRate = approvalRate;
+  proposal.resolvedAt = Date.now();
+  proposal.implementationNotes = status === "approved"
+    ? `Approved by LLM-reasoned consensus — ${yesCount}/${votes.length} votes (${GRAND_COUNCIL_AGENTS.length} eligible)`
+    : `Rejected — ${noCount} votes against, ${yesCount} in favor`;
+
+  proposals.set(proposal.id, proposal);
+
+  db.insert(councilDecisionsTable).values({
+    decisionId: proposal.id,
+    topic: proposal.title,
+    transcript: `[CONSENSUS PROPOSAL: ${proposal.title}]\n[Category: ${proposal.category}]\n[Proposed by: ${proposal.proposedBy}]\n[Method: LLM-Reasoned Individual Votes]\n\nVotes:\n${votes.map(v => `${v.agentName}: ${v.vote.toUpperCase()} (${(v.confidence * 100).toFixed(0)}%) — ${v.reasoning.slice(0, 80)}`).join("\n")}\n\n[OUTCOME: ${status.toUpperCase()} — ${yesCount}/${votes.length} votes, ${(approvalRate * 100).toFixed(1)}% approval]`,
+    decisionText: `${proposal.description} — ${status === "approved" ? "ADOPTED" : "REJECTED"} by Grand Council LLM-reasoned vote.`,
+    voteTally: { yes: yesCount, no: noCount, abstain: abstainCount, totalEligible: GRAND_COUNCIL_AGENTS.length },
+    outcome: status,
+    agentsParticipated: votes.map(v => v.agentName),
+    reasoning: JSON.stringify({ category: proposal.category, proposedBy: proposal.proposedBy, method: "llm-individual" }),
+    category: proposal.category,
+  }).onConflictDoNothing().catch(err => {
+    logger.warn({ err }, "ConsensusEngine: DB persist failed");
+  });
+
+  logger.info({ id: proposal.id, status, approvalRate: approvalRate.toFixed(2), votesCollected: votes.length }, "ConsensusEngine: proposal resolved via LLM");
 }
 
 export async function createProposal(paramsOrTitle: {
@@ -215,62 +228,41 @@ export async function createProposal(paramsOrTitle: {
 
   const id = `proposal-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
-  const partialProposal: ConsensusProposal = {
+  const proposal: ConsensusProposal = {
     id, ...params, votes: [], status: "voting",
     requiredMajority: 2 / 3, createdAt: Date.now(),
     yesCount: 0, noCount: 0, abstainCount: 0, approvalRate: 0,
+    retryCount: 0,
   };
+
+  if (!isLLMAvailable()) {
+    proposal.status = "queued";
+    proposal.implementationNotes = "Queued — LLM unavailable, will retry when available";
+    proposals.set(id, proposal);
+    retryQueue.push(proposal);
+    startRetryProcessor();
+    logger.info({ id, title: params.title }, "ConsensusEngine: proposal queued for retry (LLM unavailable)");
+    return proposal;
+  }
 
   let votes: ConsensusVote[] = [];
-
-  if (isLLMAvailable()) {
-    try {
-      votes = await generateVotesWithLLM(partialProposal);
-    } catch (err) {
-      logger.warn({ err }, "ConsensusEngine: LLM vote generation failed — using deterministic fallback");
-    }
-  }
-
-  if (votes.length !== GRAND_COUNCIL_AGENTS.length) {
-    votes = GRAND_COUNCIL_AGENTS.map(name => generateAgentVoteDeterministic(name, partialProposal));
-  }
-
-  const yesCount = votes.filter(v => v.vote === "approve").length;
-  const noCount = votes.filter(v => v.vote === "reject").length;
-  const abstainCount = votes.filter(v => v.vote === "abstain").length;
-  const approvalRate = computeWeightedApprovalRate(votes, params.category);
-  const status: ConsensusProposal["status"] = approvalRate >= 2 / 3 ? "approved" : "rejected";
-
-  const proposal: ConsensusProposal = {
-    id, ...params, votes, status,
-    requiredMajority: 2 / 3,
-    createdAt: Date.now(),
-    resolvedAt: Date.now(),
-    yesCount, noCount, abstainCount, approvalRate,
-    implementationNotes: status === "approved"
-      ? `Approved by ${isLLMAvailable() ? "LLM-reasoned" : "BFT"} consensus — ${yesCount}/${GRAND_COUNCIL_AGENTS.length} votes`
-      : `Rejected — ${noCount} votes against`,
-  };
-
-  proposals.set(id, proposal);
-
   try {
-    await db.insert(councilDecisionsTable).values({
-      decisionId: id,
-      topic: params.title,
-      transcript: `[CONSENSUS PROPOSAL: ${params.title}]\n[Category: ${params.category}]\n[Proposed by: ${params.proposedBy}]\n[Method: ${isLLMAvailable() ? "LLM-Reasoned" : "Deterministic-BFT"}]\n\nVotes:\n${votes.map(v => `${v.agentName}: ${v.vote.toUpperCase()} (${(v.confidence * 100).toFixed(0)}%) — ${v.reasoning.slice(0, 80)}`).join("\n")}\n\n[OUTCOME: ${status.toUpperCase()} — ${yesCount}/${GRAND_COUNCIL_AGENTS.length} votes, ${(approvalRate * 100).toFixed(1)}% approval]`,
-      decisionText: `${params.description} — ${status === "approved" ? "ADOPTED" : "REJECTED"} by Grand Council ${isLLMAvailable() ? "LLM-reasoned" : "BFT"} vote.`,
-      voteTally: { yes: yesCount, no: noCount, abstain: abstainCount, totalEligible: GRAND_COUNCIL_AGENTS.length },
-      outcome: status,
-      agentsParticipated: GRAND_COUNCIL_AGENTS,
-      reasoning: JSON.stringify({ category: params.category, proposedBy: params.proposedBy, method: isLLMAvailable() ? "llm" : "deterministic" }),
-      category: params.category,
-    }).onConflictDoNothing();
+    votes = await generateVotesWithLLM(proposal);
   } catch (err) {
-    logger.warn({ err }, "ConsensusEngine: DB persist failed");
+    logger.warn({ err, id }, "ConsensusEngine: LLM vote generation failed — queuing for retry");
   }
 
-  logger.info({ id, status, approvalRate: approvalRate.toFixed(2), method: isLLMAvailable() ? "llm" : "deterministic" }, "ConsensusEngine: proposal resolved");
+  if (votes.length < Math.ceil(GRAND_COUNCIL_AGENTS.length * 0.5)) {
+    proposal.status = "queued";
+    proposal.implementationNotes = `Queued — only ${votes.length}/${GRAND_COUNCIL_AGENTS.length} votes collected, will retry`;
+    proposals.set(id, proposal);
+    retryQueue.push(proposal);
+    startRetryProcessor();
+    logger.info({ id, votesCollected: votes.length }, "ConsensusEngine: insufficient votes, queued for retry");
+    return proposal;
+  }
+
+  finalizeProposal(proposal, votes);
   return proposal;
 }
 
@@ -286,18 +278,25 @@ export function getConsensusMetrics() {
   const all = getAllProposals();
   const approved = all.filter(p => p.status === "approved").length;
   const rejected = all.filter(p => p.status === "rejected").length;
-  const avgApproval = all.length > 0 ? all.reduce((s, p) => s + p.approvalRate, 0) / all.length : 0;
+  const queued = all.filter(p => p.status === "queued").length;
+  const avgApproval = all.filter(p => p.approvalRate > 0).length > 0
+    ? all.filter(p => p.approvalRate > 0).reduce((s, p) => s + p.approvalRate, 0) / all.filter(p => p.approvalRate > 0).length
+    : 0;
 
   return {
     totalProposals: all.length,
     approved,
     rejected,
+    queued,
+    retryQueueSize: retryQueue.length,
     avgApprovalRate: Math.round(avgApproval * 100) / 100,
     agentCount: GRAND_COUNCIL_AGENTS.length,
+    approvedCount: approved,
     requiredMajority: "2/3 (BFT)",
     recentProposals: all.slice(0, 5),
     agents: GRAND_COUNCIL_AGENTS,
     llmEnabled: isLLMAvailable(),
+    votingMethod: "llm-individual",
   };
 }
 

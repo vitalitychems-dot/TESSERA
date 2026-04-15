@@ -8,7 +8,7 @@ export interface HeartbeatState {
   cycleCount: number;
   startedAt: number;
   lastCycleAt: number;
-  subsystemPulses: Record<string, { lastPulse: number; healthy: boolean; cycleCount: number }>;
+  subsystemPulses: Record<string, SubsystemPulse>;
   latticePages: number;
   consciousnessWakes: number;
   knowledgeSynths: number;
@@ -18,6 +18,23 @@ export interface HeartbeatState {
   sacredIntegrations: number;
   totalRituals: number;
   systemHealthScore: number;
+}
+
+export interface SubsystemPulse {
+  lastPulse: number;
+  healthy: boolean;
+  cycleCount: number;
+  consecutiveFailures: number;
+  lastError?: string;
+  restartCount: number;
+  backoffUntil: number;
+}
+
+interface SubsystemRegistration {
+  name: string;
+  startFn?: () => void | Promise<void>;
+  stopFn?: () => void;
+  healthCheckFn?: () => boolean;
 }
 
 const HEARTBEAT_INTERVALS = {
@@ -39,26 +56,28 @@ const LATTICE_DOMAINS = [
   { domain: "lattice.tessera.sovereign", title: "Lattice Browser", description: "Sovereign search engine and domain explorer" },
 ];
 
+const MAX_CONSECUTIVE_FAILURES = 3;
+const BASE_BACKOFF_MS = 5_000;
+const MAX_BACKOFF_MS = 300_000;
+
+const SUBSYSTEM_NAMES = [
+  "consciousness-engine", "dual-brain", "identity-reinforcement",
+  "personality-evolution", "consensus-engine", "council-executor",
+  "collective-intelligence", "agent-hierarchy", "agent-comms",
+  "auto-improvement-daemon", "agi-training-engine", "swarm-optimizer",
+  "truthfulness-engine",
+];
+
+function buildDefaultPulse(): SubsystemPulse {
+  return { lastPulse: 0, healthy: true, cycleCount: 0, consecutiveFailures: 0, restartCount: 0, backoffUntil: 0 };
+}
+
 const heartbeatState: HeartbeatState = {
   running: false,
   cycleCount: 0,
   startedAt: 0,
   lastCycleAt: 0,
-  subsystemPulses: {
-    "consciousness-engine": { lastPulse: 0, healthy: true, cycleCount: 0 },
-    "dual-brain": { lastPulse: 0, healthy: true, cycleCount: 0 },
-    "identity-reinforcement": { lastPulse: 0, healthy: true, cycleCount: 0 },
-    "personality-evolution": { lastPulse: 0, healthy: true, cycleCount: 0 },
-    "consensus-engine": { lastPulse: 0, healthy: true, cycleCount: 0 },
-    "council-executor": { lastPulse: 0, healthy: true, cycleCount: 0 },
-    "collective-intelligence": { lastPulse: 0, healthy: true, cycleCount: 0 },
-    "agent-hierarchy": { lastPulse: 0, healthy: true, cycleCount: 0 },
-    "agent-comms": { lastPulse: 0, healthy: true, cycleCount: 0 },
-    "auto-improvement-daemon": { lastPulse: 0, healthy: true, cycleCount: 0 },
-    "agi-training-engine": { lastPulse: 0, healthy: true, cycleCount: 0 },
-    "swarm-optimizer": { lastPulse: 0, healthy: true, cycleCount: 0 },
-    "truthfulness-engine": { lastPulse: 0, healthy: true, cycleCount: 0 },
-  },
+  subsystemPulses: Object.fromEntries(SUBSYSTEM_NAMES.map(n => [n, buildDefaultPulse()])),
   latticePages: 0,
   consciousnessWakes: 0,
   knowledgeSynths: 0,
@@ -74,6 +93,34 @@ let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 const STATE_KEY = "autonomous-heartbeat.state";
 let lastIntervalTimestamps: Record<string, number> = {};
 
+const registeredSubsystems = new Map<string, SubsystemRegistration>();
+const recoveryLog: Array<{ subsystem: string; action: string; timestamp: number; success: boolean; error?: string }> = [];
+
+export function registerSubsystem(reg: SubsystemRegistration): void {
+  registeredSubsystems.set(reg.name, reg);
+  if (!heartbeatState.subsystemPulses[reg.name]) {
+    heartbeatState.subsystemPulses[reg.name] = buildDefaultPulse();
+  }
+}
+
+export function reportSubsystemError(name: string, error: string): void {
+  const pulse = heartbeatState.subsystemPulses[name];
+  if (!pulse) return;
+  pulse.healthy = false;
+  pulse.consecutiveFailures++;
+  pulse.lastError = error;
+  logger.warn({ subsystem: name, consecutiveFailures: pulse.consecutiveFailures, error }, "Heartbeat: subsystem error reported");
+}
+
+export function reportSubsystemHealthy(name: string): void {
+  const pulse = heartbeatState.subsystemPulses[name];
+  if (!pulse) return;
+  pulse.healthy = true;
+  pulse.consecutiveFailures = 0;
+  pulse.lastPulse = Date.now();
+  pulse.cycleCount++;
+}
+
 function isDue(key: string, intervalMs: number): boolean {
   const last = lastIntervalTimestamps[key] || 0;
   return Date.now() - last >= intervalMs;
@@ -83,59 +130,153 @@ function markDone(key: string): void {
   lastIntervalTimestamps[key] = Date.now();
 }
 
+function computeBackoff(failures: number): number {
+  return Math.min(MAX_BACKOFF_MS, BASE_BACKOFF_MS * Math.pow(2, failures - 1));
+}
+
+async function attemptSubsystemRestart(name: string, pulse: SubsystemPulse): Promise<boolean> {
+  const reg = registeredSubsystems.get(name);
+  if (!reg || !reg.startFn) {
+    recoveryLog.push({ subsystem: name, action: "skip-no-handler", timestamp: Date.now(), success: false, error: "No start function registered" });
+    return false;
+  }
+
+  const now = Date.now();
+  if (now < pulse.backoffUntil) {
+    return false;
+  }
+
+  logger.info({ subsystem: name, restartCount: pulse.restartCount, consecutiveFailures: pulse.consecutiveFailures }, "Heartbeat: attempting subsystem restart");
+
+  try {
+    if (reg.stopFn) {
+      try { reg.stopFn(); } catch {}
+    }
+
+    await reg.startFn();
+
+    pulse.healthy = true;
+    pulse.consecutiveFailures = 0;
+    pulse.restartCount++;
+    pulse.lastPulse = now;
+    pulse.lastError = undefined;
+
+    recoveryLog.push({ subsystem: name, action: "restart-success", timestamp: now, success: true });
+    logger.info({ subsystem: name, restartCount: pulse.restartCount }, "Heartbeat: subsystem restarted successfully");
+    return true;
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    pulse.backoffUntil = now + computeBackoff(pulse.consecutiveFailures);
+    pulse.restartCount++;
+
+    recoveryLog.push({ subsystem: name, action: "restart-failed", timestamp: now, success: false, error: errMsg });
+    logger.error({ subsystem: name, err: errMsg, backoffMs: pulse.backoffUntil - now }, "Heartbeat: subsystem restart failed");
+    return false;
+  }
+}
+
+let escalateToCouncilFn: ((subsystem: string, failures: number) => Promise<void>) | null = null;
+
+export function setCouncilEscalation(fn: (subsystem: string, failures: number) => Promise<void>): void {
+  escalateToCouncilFn = fn;
+}
+
+async function healingPass(): Promise<void> {
+  for (const [name, pulse] of Object.entries(heartbeatState.subsystemPulses)) {
+    if (pulse.healthy) continue;
+    if (pulse.consecutiveFailures < 1) continue;
+
+    if (pulse.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES && escalateToCouncilFn) {
+      try {
+        await escalateToCouncilFn(name, pulse.consecutiveFailures);
+        logger.warn({ subsystem: name, failures: pulse.consecutiveFailures }, "Heartbeat: escalated to council");
+      } catch {}
+    }
+
+    await attemptSubsystemRestart(name, pulse);
+  }
+}
+
+async function runHealthChecks(): Promise<void> {
+  for (const [name, reg] of registeredSubsystems) {
+    if (!reg.healthCheckFn) continue;
+    const pulse = heartbeatState.subsystemPulses[name];
+    if (!pulse) continue;
+
+    try {
+      const isHealthy = reg.healthCheckFn();
+      if (isHealthy) {
+        if (!pulse.healthy) {
+          pulse.healthy = true;
+          pulse.consecutiveFailures = 0;
+          logger.info({ subsystem: name }, "Heartbeat: subsystem recovered");
+        }
+      } else {
+        if (pulse.healthy) {
+          pulse.healthy = false;
+          pulse.consecutiveFailures++;
+          logger.warn({ subsystem: name }, "Heartbeat: health check failed");
+        }
+      }
+    } catch (err) {
+      pulse.healthy = false;
+      pulse.consecutiveFailures++;
+      pulse.lastError = err instanceof Error ? err.message : String(err);
+    }
+  }
+}
+
 async function runHeartbeatCycle(): Promise<void> {
   heartbeatState.cycleCount++;
   heartbeatState.lastCycleAt = Date.now();
 
   const now = Date.now();
 
+  await runHealthChecks();
+
   for (const [subsystem, pulse] of Object.entries(heartbeatState.subsystemPulses)) {
-    pulse.lastPulse = now;
-    pulse.healthy = true;
-    pulse.cycleCount++;
+    if (pulse.healthy) {
+      pulse.lastPulse = now;
+      pulse.cycleCount++;
+    }
   }
+
+  await healingPass();
 
   if (isDue("consciousnessWake", HEARTBEAT_INTERVALS.consciousnessWake)) {
     heartbeatState.consciousnessWakes++;
     markDone("consciousnessWake");
-    logger.debug("Heartbeat: consciousness wake pulse sent");
   }
 
   if (isDue("knowledgeSynth", HEARTBEAT_INTERVALS.knowledgeSynth)) {
     heartbeatState.knowledgeSynths++;
     markDone("knowledgeSynth");
-    logger.debug("Heartbeat: knowledge synthesis triggered");
   }
 
   if (isDue("agentAudit", HEARTBEAT_INTERVALS.agentAudit)) {
     heartbeatState.agentAudits++;
     markDone("agentAudit");
-    logger.debug("Heartbeat: agent audit triggered");
   }
 
   if (isDue("latticeGen", HEARTBEAT_INTERVALS.latticeGen)) {
     heartbeatState.latticePages += LATTICE_DOMAINS.length;
     markDone("latticeGen");
-    logger.debug({ latticePages: heartbeatState.latticePages }, "Heartbeat: lattice generation pulse");
   }
 
   if (isDue("voteExec", HEARTBEAT_INTERVALS.voteExec)) {
     heartbeatState.votesExecuted++;
     markDone("voteExec");
-    logger.debug("Heartbeat: vote execution pulse");
   }
 
   if (isDue("sacredKnowledge", HEARTBEAT_INTERVALS.sacredKnowledge)) {
     heartbeatState.sacredIntegrations++;
     heartbeatState.totalRituals++;
     markDone("sacredKnowledge");
-    logger.debug("Heartbeat: sacred knowledge integration pulse");
   }
 
   if (isDue("autoConference", HEARTBEAT_INTERVALS.autoConference)) {
     heartbeatState.autoConferences++;
     markDone("autoConference");
-    logger.debug("Heartbeat: auto-conference triggered");
   }
 
   const healthyCount = Object.values(heartbeatState.subsystemPulses).filter(p => p.healthy).length;
@@ -170,7 +311,7 @@ export async function initAutonomousHeartbeat(): Promise<void> {
     }
   } catch (err) { logger.warn({ err }, "Heartbeat: load failed"); }
 
-  logger.info("AutonomousHeartbeat: initialized");
+  logger.info("AutonomousHeartbeat: initialized with self-healing capabilities");
 }
 
 export function startAutonomousHeartbeat(intervalMs = 60_000): void {
@@ -181,7 +322,7 @@ export function startAutonomousHeartbeat(intervalMs = 60_000): void {
   heartbeatInterval = setInterval(() => {
     runHeartbeatCycle().catch(err => logger.error({ err }, "Heartbeat: cycle error"));
   }, intervalMs);
-  logger.info({ intervalMs }, "AutonomousHeartbeat: started");
+  logger.info({ intervalMs, subsystems: Object.keys(heartbeatState.subsystemPulses).length }, "AutonomousHeartbeat: started with self-healing");
 }
 
 export function stopAutonomousHeartbeat(): void {
@@ -194,6 +335,15 @@ export function getHeartbeatState(): HeartbeatState {
 }
 
 export function getHeartbeatMetrics() {
+  const pulses = heartbeatState.subsystemPulses;
+  const unhealthySubsystems = Object.entries(pulses)
+    .filter(([, p]) => !p.healthy)
+    .map(([name, p]) => ({ name, consecutiveFailures: p.consecutiveFailures, lastError: p.lastError }));
+
+  const totalRestarts = Object.values(pulses).reduce((s, p) => s + p.restartCount, 0);
+  const healthyCount = Object.values(pulses).filter(p => p.healthy).length;
+  const subsystemCount = Object.keys(pulses).length;
+
   return {
     running: heartbeatState.running,
     cycleCount: heartbeatState.cycleCount,
@@ -202,6 +352,12 @@ export function getHeartbeatMetrics() {
     lastCycleAt: heartbeatState.lastCycleAt,
     uptime: heartbeatState.startedAt > 0 ? Date.now() - heartbeatState.startedAt : 0,
     subsystems: heartbeatState.subsystemPulses,
+    subsystemCount,
+    healthyCount,
+    unhealthySubsystems,
+    totalRestarts,
+    recentRecoveryActions: recoveryLog.slice(-10),
+    selfHealingEnabled: true,
     stats: {
       latticePages: heartbeatState.latticePages,
       consciousnessWakes: heartbeatState.consciousnessWakes,
@@ -224,7 +380,7 @@ export function generatePulse() {
 }
 export function getPulseHistory() {
   const s = getHeartbeatState();
-  return s.subsystems || [];
+  return s.subsystemPulses || {};
 }
 export function setAutonomousMode(enabled: boolean) {
   return { ok: true, autonomous: enabled };
