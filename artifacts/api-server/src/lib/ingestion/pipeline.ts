@@ -218,24 +218,28 @@ export async function ingestItem(item: NormalizedItem): Promise<{ ingested: bool
   } catch (_e) {
   }
 
-  const postStoreVerification = crypto.createHash("sha256").update(sanitizedItem.content).digest("hex");
-  if (postStoreVerification !== preStoreHash) {
-    addAuditEntry(sanitizedItem.source, "rejected", "Content mutated during storage — integrity check failed", preStoreHash);
-    return { ingested: false, reason: "integrity-verification-failed" };
-  }
+  const contentToStore = sanitizedItem.content.slice(0, 20000);
 
   const [row] = await db.insert(ingestedDataTable).values({
     source: sanitizedItem.source,
     sourceType: sanitizedItem.sourceType,
     title: sanitizedItem.title,
-    content: sanitizedItem.content.slice(0, 20000),
+    content: contentToStore,
     url: sanitizedItem.url,
     contentHash,
     embeddingId: embeddingId ?? null,
     tags: sanitizedItem.tags ?? [],
     metadata: { ...(sanitizedItem.metadata || {}), contentIntegrity: preStoreHash, sanitized },
     publishedAt: sanitizedItem.publishedAt ?? null,
-  }).returning({ id: ingestedDataTable.id });
+  }).returning({ id: ingestedDataTable.id, content: ingestedDataTable.content });
+
+  const storedContentHash = crypto.createHash("sha256").update(row.content).digest("hex");
+  const expectedStoredHash = crypto.createHash("sha256").update(contentToStore).digest("hex");
+  if (storedContentHash !== expectedStoredHash) {
+    addAuditEntry(sanitizedItem.source, "rejected", `Post-store integrity mismatch: stored content hash ${storedContentHash.slice(0, 16)}… differs from expected ${expectedStoredHash.slice(0, 16)}…`, preStoreHash);
+    await db.delete(ingestedDataTable).where(eq(ingestedDataTable.id, row.id));
+    return { ingested: false, reason: "integrity-verification-failed" };
+  }
 
   addAuditEntry(sanitizedItem.source, "ingested", undefined, contentHash);
   return { ingested: true, id: row.id };
