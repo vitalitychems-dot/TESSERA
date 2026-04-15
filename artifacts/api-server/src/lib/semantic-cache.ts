@@ -128,7 +128,18 @@ export async function storeInCache(
       model,
       ttlSeconds,
       expiresAt,
-    }).onConflictDoNothing();
+    }).onConflictDoUpdate({
+      target: semanticCacheTable.promptHash,
+      set: {
+        response: response.slice(0, 50000),
+        embedding,
+        ttlSeconds,
+        expiresAt,
+        hitCount: 0,
+        createdAt: new Date(),
+        lastHitAt: null,
+      },
+    });
 
     const [countRow] = await db.select({ cnt: sql<number>`count(*)::int` }).from(semanticCacheTable);
     stats.cacheSize = countRow?.cnt ?? 0;
