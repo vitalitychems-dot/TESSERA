@@ -25,7 +25,7 @@ import { getIdentityStatus, runDriftDetection } from "./sovereign-identity-reinf
 import { computeSacredFrequencies, computeDNAHealingStatus } from "./sovereign-harmonics";
 import { computeSacredGeometry, computeSacredAlignment, PHI } from "./sovereign-sacred-geometry";
 import { computeMarketData, computeAgentEconomics, computeEconomyStats } from "./sovereign-economics";
-import { getConsensusMetrics } from "./consensus-engine";
+import { getConsensusMetrics, loadRetryQueue } from "./consensus-engine";
 import { initSemanticCache, getCacheStats } from "./semantic-cache";
 import { runSelfEvaluation, getSelfEvaluationMetrics } from "./self-evaluation";
 import { distillFromResponse, refreshStaleKnowledge, revalidateStaleKnowledge, getDistillationStats, warmFactEmbeddings } from "./knowledge-distillation";
@@ -568,6 +568,7 @@ export async function initSovereignLoop(): Promise<void> {
   await loadLoopState();
   try { await initSemanticCache(); } catch {}
   try { await initAgentHierarchy(); } catch {}
+  try { await loadRetryQueue(); } catch {}
   warmFactEmbeddings().catch(() => {});
 
   const phaseNames = [
