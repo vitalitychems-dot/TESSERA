@@ -265,12 +265,29 @@ export function storeToVault(opts: {
 export async function recallFromVault(query: string, topK = 10): Promise<SovereignMemory[]> {
   let vectorResults: Array<{ content: string; score: number }> = [];
   try {
-    vectorResults = await searchMemory(query, topK * 2);
+    vectorResults = await searchMemory(query, topK * 3);
   } catch {}
 
-  const vectorContentScores = new Map<string, number>();
-  for (const vr of vectorResults) {
-    vectorContentScores.set(vr.content.slice(0, 200), vr.score);
+  const vectorContentNormalized = vectorResults.map(vr => ({
+    tokens: new Set(vr.content.toLowerCase().split(/\s+/).filter(Boolean).slice(0, 50)),
+    score: vr.score,
+  }));
+
+  function bestSemanticMatch(memContent: string): number {
+    if (vectorContentNormalized.length === 0) return 0;
+    const memTokens = new Set(memContent.toLowerCase().split(/\s+/).filter(Boolean).slice(0, 50));
+    let bestScore = 0;
+    for (const vr of vectorContentNormalized) {
+      let overlap = 0;
+      for (const t of memTokens) {
+        if (vr.tokens.has(t)) overlap++;
+      }
+      const similarity = overlap / Math.max(1, Math.max(memTokens.size, vr.tokens.size));
+      if (similarity > 0.3) {
+        bestScore = Math.max(bestScore, vr.score * similarity);
+      }
+    }
+    return bestScore;
   }
 
   const queryTerms = query.toLowerCase().split(/\s+/).filter(Boolean);
@@ -278,24 +295,23 @@ export async function recallFromVault(query: string, topK = 10): Promise<Soverei
   const scored = state.vault.map(mem => {
     let score = 0;
 
-    const contentKey = mem.content.slice(0, 200);
-    const semanticScore = vectorContentScores.get(contentKey) ?? 0;
-    score += semanticScore * 10;
+    const semanticScore = bestSemanticMatch(mem.content);
+    score += semanticScore * 15;
 
     const contentLower = mem.content.toLowerCase();
     const contextLower = mem.context.toLowerCase();
 
     for (const term of queryTerms) {
-      if (contentLower.includes(term)) score += 2;
-      if (contextLower.includes(term)) score += 1;
-      if (mem.associations.some(a => a.toLowerCase().includes(term))) score += 1.5;
+      if (contentLower.includes(term)) score += 1.5;
+      if (contextLower.includes(term)) score += 0.75;
+      if (mem.associations.some(a => a.toLowerCase().includes(term))) score += 1;
     }
 
-    score += mem.importance * 3;
+    score += mem.importance * 2;
 
-    if (mem.type === "core-identity") score += 5;
-    if (mem.type === "protected") score += 3;
-    if (mem.type === "procedural") score += 2;
+    if (mem.type === "core-identity") score += 3;
+    if (mem.type === "protected") score += 2;
+    if (mem.type === "procedural") score += 1.5;
 
     const ageMs = Date.now() - mem.createdAt;
     const recencyBoost = Math.max(0, 1 - ageMs / (30 * 24 * 60 * 60 * 1000));
@@ -400,7 +416,21 @@ async function consolidateMemories(): Promise<ConsolidationResult> {
   let newAssociationsFormed = 0;
 
   const now = Date.now();
+
+  const dueMemories: SovereignMemory[] = [];
+  const otherMemories: SovereignMemory[] = [];
   for (const mem of state.vault) {
+    const srPriority = computeSpacedRepetitionPriority(mem);
+    if (srPriority > 0) {
+      dueMemories.push(mem);
+    } else {
+      otherMemories.push(mem);
+    }
+  }
+
+  const orderedVault = [...dueMemories, ...otherMemories];
+
+  for (const mem of orderedVault) {
     memoriesProcessed++;
 
     if (mem.protectedUntil && mem.protectedUntil > now) {
@@ -408,9 +438,20 @@ async function consolidateMemories(): Promise<ConsolidationResult> {
       continue;
     }
 
+    const srPriority = computeSpacedRepetitionPriority(mem);
+
+    if (srPriority >= 2) {
+      mem.importance = Math.min(1, mem.importance + 0.05);
+      memoriesConsolidated++;
+    } else if (srPriority >= 1) {
+      mem.importance = Math.min(1, mem.importance + 0.02);
+      memoriesConsolidated++;
+    }
+
     if (mem.decayRate > 0) {
       const ageHours = (now - mem.lastAccessed) / 3600000;
-      const decay = mem.decayRate * ageHours * 0.01;
+      const overdueMultiplier = srPriority === 0 && mem.importance < 0.3 ? 2.0 : 1.0;
+      const decay = mem.decayRate * ageHours * 0.01 * overdueMultiplier;
       mem.importance = Math.max(0.05, mem.importance - decay);
 
       if (mem.importance < 0.1 && mem.type !== "core-identity") {
