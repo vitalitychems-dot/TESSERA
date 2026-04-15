@@ -390,3 +390,5 @@ export { generateReflection };
 export function setAttentionFocus(focus: string) {
   return { ok: true, focus };
 }
+
+export const EPISODIC_MEMORY_RETENTION = 500;

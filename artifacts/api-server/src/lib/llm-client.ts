@@ -29,6 +29,7 @@ export interface LLMCallOptions {
   timeoutMs?: number;
   skipCache?: boolean;
   skipDistillation?: boolean;
+  skipBatcher?: boolean;
   cacheTtl?: number;
   _internal?: boolean;
 }
@@ -116,7 +117,7 @@ export async function callLLM(
     } catch {}
   }
 
-  if (!opts._internal) {
+  if (!opts._internal && !opts.skipBatcher) {
     const { batchedCallLLM } = await import("./llm-batcher");
     const result = await batchedCallLLM(canonicalMessages, { ...opts, _internal: true, skipCache: true, skipDistillation: true });
 
