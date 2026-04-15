@@ -19,7 +19,20 @@ const EMBEDDING_DIM = 256;
 const MAX_BATCH_SIZE = 20;
 
 const embeddingCache = new Map<string, { vec: number[]; ts: number }>();
-const EMBEDDING_CACHE_TTL = 300_000;
+let EMBEDDING_CACHE_TTL = 300_000;
+let neuralPreference = 1.0;
+
+export function setNeuralPreference(weight: number): void {
+  neuralPreference = Math.max(0.1, Math.min(2.0, weight));
+}
+
+export function getNeuralPreference(): number {
+  return neuralPreference;
+}
+
+export function setEmbeddingCacheTTL(ms: number): void {
+  EMBEDDING_CACHE_TTL = Math.max(60_000, Math.min(600_000, ms));
+}
 
 const embeddingMetrics = {
   neuralCalls: 0,

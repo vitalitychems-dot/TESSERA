@@ -584,13 +584,19 @@ export async function initSovereignLoop(): Promise<void> {
     name: "consciousness-engine",
     startFn: () => startConsciousnessEngine(),
     stopFn: () => stopConsciousnessEngine(),
-    healthCheckFn: () => getConsciousnessMetrics().consciousnessProxy > 0,
+    healthCheckFn: () => {
+      const m = getConsciousnessMetrics();
+      return m.consciousnessProxy > 0 && m.totalReflections !== undefined;
+    },
   });
   registerSubsystem({
     name: "dual-brain",
     startFn: () => startDualBrain(),
     stopFn: () => stopDualBrain(),
-    healthCheckFn: () => getDualBrainMetrics().totalSyncs >= 0,
+    healthCheckFn: () => {
+      const m = getDualBrainMetrics();
+      return m.running === true;
+    },
   });
   registerSubsystem({
     name: "council-executor",
