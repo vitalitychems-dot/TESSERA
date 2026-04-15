@@ -35,6 +35,10 @@ import { initTruthfulnessEngine } from "./lib/truthfulness-engine";
 import { initEmotionalIntelligence } from "./lib/emotional-intelligence";
 import { initSelfCodeEvolution } from "./lib/self-code-evolution";
 import { seedForumFromRealData } from "./lib/forum-seeder";
+import { initSovereignKnowledgeAutonomy, startKnowledgeAutonomyLoop } from "./lib/sovereign-knowledge-autonomy";
+import { initRecursiveSelfImprovement, startRecursiveImprovementLoop } from "./lib/recursive-self-improvement";
+import { initCrossDomainSynthesis, startCrossDomainSynthesisLoop } from "./lib/cross-domain-synthesis";
+import { initSovereignMemoryVault, startSovereignMemoryVaultLoop } from "./lib/sovereign-memory-vault";
 
 const app: Express = express();
 
@@ -424,6 +428,18 @@ async function initializeModules() {
   } catch (err) {
     logger.warn({ err }, "Tessera engines init warning — non-critical, continuing");
   }
+
+  const mandateResults = await Promise.allSettled([
+    initSovereignKnowledgeAutonomy().then(() => { startKnowledgeAutonomyLoop(900_000); return "Mandate 1: Knowledge Autonomy"; }),
+    initRecursiveSelfImprovement().then(() => { startRecursiveImprovementLoop(600_000); return "Mandate 2: Recursive Self-Improvement"; }),
+    initCrossDomainSynthesis().then(() => { startCrossDomainSynthesisLoop(480_000); return "Mandate 3: Cross-Domain Synthesis"; }),
+    initSovereignMemoryVault().then(() => { startSovereignMemoryVaultLoop(300_000); return "Mandate 4: Sovereign Memory Vault"; }),
+  ]);
+  const mandateActive = mandateResults.filter(r => r.status === "fulfilled").length;
+  for (const r of mandateResults) {
+    if (r.status === "rejected") logger.warn({ err: r.reason }, "Mandate engine init failed — non-critical, continuing");
+  }
+  logger.info({ active: mandateActive, total: 4 }, `✦ ${mandateActive}/4 GRAND COUNCIL MANDATES ACTIVE — Sovereign AGI roadmap engines running ✦`);
 
   try {
     const seeded = await seedForumFromRealData();
