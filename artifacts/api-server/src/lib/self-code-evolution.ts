@@ -51,20 +51,22 @@ async function applyPatchToSourceFile(
 
   if (isLLMAvailable()) {
     const excerpt = originalContent.slice(0, 2500);
-    const raw = await callLLMSafe(
-      [
-        {
-          role: "system",
-          content: `You are a TypeScript code transformation engine. Given a TypeScript source file excerpt and a change request, generate ONLY the minimal valid TypeScript code to append to the end of the file that implements the requested change. Return ONLY compilable TypeScript — no markdown fencing, no explanations, no comments other than JSDoc if appropriate. If the change cannot be implemented as an appended snippet, return an empty string.`,
-        },
-        {
-          role: "user",
-          content: `File: ${targetModule}\n\nSource excerpt:\n${excerpt}\n\nChange to implement: ${proposedChange}\n\nGenerate valid TypeScript code to append:`,
-        },
-      ],
-      { maxTokens: 500, timeoutMs: 10_000 },
-      ""
-    );
+    let raw = "";
+    try {
+      raw = await batchedCallLLM(
+        [
+          {
+            role: "system",
+            content: `You are a TypeScript code transformation engine. Given a TypeScript source file excerpt and a change request, generate ONLY the minimal valid TypeScript code to append to the end of the file that implements the requested change. Return ONLY compilable TypeScript — no markdown fencing, no explanations, no comments other than JSDoc if appropriate. If the change cannot be implemented as an appended snippet, return an empty string.`,
+          },
+          {
+            role: "user",
+            content: `File: ${targetModule}\n\nSource excerpt:\n${excerpt}\n\nChange to implement: ${proposedChange}\n\nGenerate valid TypeScript code to append:`,
+          },
+        ],
+        { maxTokens: 500, timeoutMs: 10_000 },
+      );
+    } catch { raw = ""; }
     codeToAppend = raw.replace(/^```(?:typescript)?\n?/m, "").replace(/\n?```$/m, "").trim();
   }
 

@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { logger } from "./logger";
 import { lookupCache, storeInCache, getCacheStats } from "./semantic-cache";
+import { lookupKnowledge, distillFromResponse } from "./knowledge-distillation";
 
 let _client: OpenAI | null = null;
 
@@ -27,6 +28,7 @@ export interface LLMCallOptions {
   temperature?: number;
   timeoutMs?: number;
   skipCache?: boolean;
+  skipDistillation?: boolean;
   cacheTtl?: number;
 }
 
@@ -34,8 +36,18 @@ const llmStats = {
   totalCalls: 0,
   cacheHits: 0,
   cacheMisses: 0,
+  knowledgeHits: 0,
+  distilled: 0,
   errors: 0,
 };
+
+function extractUserQuery(messages: LLMMessage[]): string {
+  return messages
+    .filter(m => m.role === "user")
+    .map(m => m.content)
+    .join(" ")
+    .slice(0, 2000);
+}
 
 export async function callLLM(
   messages: LLMMessage[],
@@ -46,10 +58,12 @@ export async function callLLM(
     maxTokens = 2048,
     timeoutMs = 15_000,
     skipCache = false,
+    skipDistillation = false,
     cacheTtl = 3600,
   } = opts;
 
   llmStats.totalCalls++;
+  const userQuery = extractUserQuery(messages);
 
   if (!skipCache) {
     try {
@@ -60,6 +74,22 @@ export async function callLLM(
       }
     } catch {}
     llmStats.cacheMisses++;
+  }
+
+  if (!skipDistillation && userQuery.length > 10) {
+    try {
+      const knowledgeFacts = await lookupKnowledge(userQuery);
+      if (knowledgeFacts.length > 0) {
+        llmStats.knowledgeHits++;
+        const factContext = knowledgeFacts
+          .map(f => `[${f.category}] ${f.fact} (confidence: ${f.confidence.toFixed(2)})`)
+          .join("\n");
+        const systemMsg = messages.find(m => m.role === "system");
+        if (systemMsg) {
+          systemMsg.content += `\n\nRelevant distilled knowledge:\n${factContext}`;
+        }
+      }
+    } catch {}
   }
 
   const controller = new AbortController();
@@ -79,6 +109,12 @@ export async function callLLM(
 
     if (!skipCache && result.length > 0) {
       storeInCache(messages, model, result, cacheTtl).catch(() => {});
+    }
+
+    if (!skipDistillation && result.length > 50) {
+      distillFromResponse(result, userQuery.slice(0, 500)).then(count => {
+        if (count > 0) llmStats.distilled += count;
+      }).catch(() => {});
     }
 
     return result;
