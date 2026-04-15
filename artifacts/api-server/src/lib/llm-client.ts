@@ -81,6 +81,14 @@ export async function callLLM(
       const knowledgeFacts = await lookupKnowledge(userQuery);
       if (knowledgeFacts.length > 0) {
         llmStats.knowledgeHits++;
+
+        const highConfFacts = knowledgeFacts.filter(f => f.confidence >= 0.85);
+        if (highConfFacts.length >= 2) {
+          const directAnswer = highConfFacts.map(f => f.fact).join(" ");
+          logger.info({ facts: highConfFacts.length, avgConf: (highConfFacts.reduce((s, f) => s + f.confidence, 0) / highConfFacts.length).toFixed(2) }, "LLMClient: short-circuit from distilled knowledge");
+          return directAnswer;
+        }
+
         const factContext = knowledgeFacts
           .map(f => `[${f.category}] ${f.fact} (confidence: ${f.confidence.toFixed(2)})`)
           .join("\n");
