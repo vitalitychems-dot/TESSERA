@@ -126,6 +126,106 @@ export function GlassCard({
   );
 }
 
+export function HudPanel({
+  children,
+  className,
+  accent = "cyan",
+  scanline = false,
+  corners = false,
+  hover = true,
+  animate = false,
+  depth = false,
+  label,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  accent?: "cyan" | "violet" | "emerald" | "amber" | "pink" | "blue" | "rose";
+  scanline?: boolean;
+  corners?: boolean;
+  hover?: boolean;
+  animate?: boolean;
+  depth?: boolean;
+  label?: string;
+}) {
+  const accentBorders: Record<string, string> = {
+    cyan: "border-cyan-500/15 hover:border-cyan-500/30",
+    violet: "border-violet-500/15 hover:border-violet-500/30",
+    emerald: "border-emerald-500/15 hover:border-emerald-500/30",
+    amber: "border-amber-500/15 hover:border-amber-500/30",
+    pink: "border-pink-500/15 hover:border-pink-500/30",
+    blue: "border-blue-500/15 hover:border-blue-500/30",
+    rose: "border-rose-500/15 hover:border-rose-500/30",
+  };
+  const labelColors: Record<string, string> = {
+    cyan: "text-cyan-500/50",
+    violet: "text-violet-500/50",
+    emerald: "text-emerald-500/50",
+    amber: "text-amber-500/50",
+    pink: "text-pink-500/50",
+    blue: "text-blue-500/50",
+    rose: "text-rose-500/50",
+  };
+  return (
+    <div
+      className={cn(
+        "hud-panel rounded-lg border p-4",
+        accentBorders[accent],
+        scanline && "hud-scanline",
+        corners && "hud-corner-accent",
+        hover && "hud-panel-hover transition-all duration-300",
+        animate && "sovereign-fade-in",
+        depth && "hud-parallax",
+        className
+      )}
+    >
+      {label && (
+        <div className={cn("text-[9px] font-mono uppercase tracking-[0.2em] mb-2", labelColors[accent])}>
+          {label}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+export function HudMetric({
+  value,
+  label,
+  unit,
+  color = "cyan",
+  size = "md",
+}: {
+  value: string | number;
+  label: string;
+  unit?: string;
+  color?: "cyan" | "violet" | "emerald" | "amber" | "pink" | "blue" | "rose";
+  size?: "sm" | "md" | "lg";
+}) {
+  const textColors: Record<string, string> = {
+    cyan: "text-cyan-400",
+    violet: "text-violet-400",
+    emerald: "text-emerald-400",
+    amber: "text-amber-400",
+    pink: "text-pink-400",
+    blue: "text-blue-400",
+    rose: "text-rose-400",
+  };
+  const sizes = {
+    sm: "text-sm",
+    md: "text-xl",
+    lg: "text-3xl",
+  };
+  return (
+    <div className="text-center">
+      <div className={cn("font-bold font-mono leading-none", sizes[size], textColors[color])}>
+        {value}
+        {unit && <span className="text-[60%] ml-0.5 opacity-60">{unit}</span>}
+      </div>
+      <div className="text-[9px] text-slate-500 font-mono uppercase tracking-wider mt-1">{label}</div>
+    </div>
+  );
+}
+
 export function GradientBar({
   value,
   max = 100,

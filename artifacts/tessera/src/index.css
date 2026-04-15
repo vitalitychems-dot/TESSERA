@@ -273,9 +273,9 @@
 }
 
 .glass-panel {
-  background: rgba(15, 12, 30, 0.6);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(6, 182, 212, 0.15);
+  background: rgba(8, 6, 18, 0.85);
+  border: 1px solid rgba(6, 182, 212, 0.12);
+  box-shadow: inset 0 1px 0 rgba(6, 182, 212, 0.06);
 }
 
 .glass-panel-hover:hover {
@@ -289,6 +289,128 @@
 
 .aurora-gradient {
   background: linear-gradient(135deg, rgba(6, 182, 212, 0.05) 0%, rgba(139, 92, 246, 0.03) 50%, rgba(6, 182, 212, 0.02) 100%);
+}
+
+.hud-panel {
+  background: rgba(6, 4, 16, 0.92);
+  border: 1px solid rgba(6, 182, 212, 0.15);
+  box-shadow:
+    inset 0 1px 0 rgba(6, 182, 212, 0.08),
+    inset 0 -1px 0 rgba(6, 182, 212, 0.04),
+    0 4px 24px rgba(0, 0, 0, 0.5);
+  position: relative;
+}
+
+.hud-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(6, 182, 212, 0.015) 2px,
+      rgba(6, 182, 212, 0.015) 4px
+    );
+  mix-blend-mode: screen;
+  opacity: 0.5;
+  border-radius: inherit;
+}
+
+.hud-panel-hover:hover {
+  border-color: rgba(6, 182, 212, 0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(6, 182, 212, 0.12),
+    0 0 30px rgba(6, 182, 212, 0.06),
+    0 4px 24px rgba(0, 0, 0, 0.5);
+}
+
+.hud-wireframe {
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  background: transparent;
+  box-shadow: inset 0 0 30px rgba(6, 182, 212, 0.02);
+}
+
+.hud-wireframe-hover:hover {
+  border-color: rgba(6, 182, 212, 0.4);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.08);
+}
+
+.hud-corner-accent {
+  position: relative;
+}
+
+.hud-corner-accent::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 12px;
+  height: 12px;
+  border-top: 2px solid rgba(6, 182, 212, 0.5);
+  border-right: 2px solid rgba(6, 182, 212, 0.5);
+  pointer-events: none;
+}
+
+.hud-corner-accent::before {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: -1px;
+  width: 12px;
+  height: 12px;
+  border-bottom: 2px solid rgba(6, 182, 212, 0.5);
+  border-left: 2px solid rgba(6, 182, 212, 0.5);
+  pointer-events: none;
+}
+
+@keyframes scanline-sweep {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.hud-scanline {
+  position: relative;
+  overflow: hidden;
+}
+
+.hud-scanline::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(6, 182, 212, 0.03) 50%,
+    transparent 100%
+  );
+  height: 50%;
+  animation: scanline-sweep 8s linear infinite;
+  pointer-events: none;
+}
+
+.hud-grid-bg {
+  background-image:
+    linear-gradient(rgba(6, 182, 212, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6, 182, 212, 0.04) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.hud-depth-layer {
+  transform: perspective(1200px) rotateX(0.5deg);
+  transform-style: preserve-3d;
+}
+
+.hud-parallax {
+  transform: translateZ(0);
+  will-change: transform;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hud-parallax:hover {
+  transform: translateY(-2px) scale(1.005);
 }
 
 @keyframes pulse-glow {
@@ -353,3 +475,19 @@
 .sovereign-stagger > *:nth-child(8) { animation-delay: 420ms; }
 .sovereign-stagger > *:nth-child(9) { animation-delay: 480ms; }
 .sovereign-stagger > *:nth-child(10) { animation-delay: 540ms; }
+
+@keyframes hud-border-flow {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
+}
+
+.hud-border-flow {
+  border-image: linear-gradient(
+    90deg,
+    rgba(6, 182, 212, 0.1),
+    rgba(6, 182, 212, 0.4),
+    rgba(139, 92, 246, 0.3),
+    rgba(6, 182, 212, 0.1)
+  ) 1;
+  animation: hud-border-flow 4s linear infinite;
+}
