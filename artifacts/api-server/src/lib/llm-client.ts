@@ -118,7 +118,18 @@ export async function callLLM(
 
   if (!opts._internal) {
     const { batchedCallLLM } = await import("./llm-batcher");
-    return batchedCallLLM(canonicalMessages, { ...opts, _internal: true, skipCache: true, skipDistillation: true });
+    const result = await batchedCallLLM(canonicalMessages, { ...opts, _internal: true, skipCache: true, skipDistillation: true });
+
+    if (!skipCache && result.length > 0) {
+      storeInCache(messages, model, result, cacheTtl).catch(() => {});
+    }
+    if (!skipDistillation && result.length > 50) {
+      distillFromResponse(result, userQuery.slice(0, 500)).then(count => {
+        if (count > 0) llmStats.distilled += count;
+      }).catch(() => {});
+    }
+
+    return result;
   }
 
   const controller = new AbortController();
