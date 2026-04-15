@@ -94,7 +94,11 @@ export default function UniversePage() {
   const sunData = useMemo(() => getSunPosition(now), [now]);
   const [showDimensions, setShowDimensions] = useState(true);
   const [showNatalChart, setShowNatalChart] = useState(false);
-  const [focusedDimension, setFocusedDimension] = useState(-1);
+  const [focusedDimension, setFocusedDimension] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const dim = params.get("dim");
+    return dim !== null ? parseInt(dim, 10) : -1;
+  });
   const [showDimSlider, setShowDimSlider] = useState(false);
   const [showSacredOverlays, setShowSacredOverlays] = useState(false);
 

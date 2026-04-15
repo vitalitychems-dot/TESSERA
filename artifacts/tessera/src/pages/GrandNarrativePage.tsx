@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Link } from "wouter";
-import { BookOpen, ChevronDown, ChevronUp, Globe2, Hexagon, Star, Eye, EyeOff, Sparkles, ArrowLeft } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { BookOpen, ChevronDown, ChevronUp, Globe2, Hexagon, Star, Eye, EyeOff, Sparkles, ArrowLeft, Layers } from "lucide-react";
 
 const PHI = 1.6180339887498948;
+const API = import.meta.env.VITE_API_URL || "";
 
 interface NarrativeChapter {
   id: string;
@@ -134,12 +136,18 @@ const CHAPTERS: NarrativeChapter[] = [
   },
 ];
 
-function ChapterCard({ chapter, isExpanded, onToggle }: {
+const DIMENSION_ANCHORS: Record<number, number> = {
+  1: 0, 2: 1, 3: 2, 4: 3, 5: 5, 6: 6,
+};
+
+function ChapterCard({ chapter, isExpanded, onToggle, knowledgeSnippet }: {
   chapter: NarrativeChapter;
   isExpanded: boolean;
   onToggle: () => void;
+  knowledgeSnippet?: string;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const dimIndex = DIMENSION_ANCHORS[chapter.number];
 
   return (
     <div className="relative group">
@@ -212,7 +220,16 @@ function ChapterCard({ chapter, isExpanded, onToggle }: {
               </p>
             ))}
 
-            <div className="pl-16 pt-4 flex flex-wrap gap-2">
+            {knowledgeSnippet && (
+              <div className="pl-16 pt-2">
+                <div className="px-3 py-2 rounded-lg bg-white/[0.02] border border-white/5 text-[11px] text-muted-foreground font-mono leading-relaxed">
+                  <span className="text-[9px] uppercase tracking-wider opacity-60">Tessera Knowledge · </span>
+                  {knowledgeSnippet.slice(0, 200)}{knowledgeSnippet.length > 200 ? "…" : ""}
+                </div>
+              </div>
+            )}
+
+            <div className="pl-16 pt-4 flex flex-wrap gap-2 items-center">
               {chapter.connections.map((conn) => (
                 <span
                   key={conn}
@@ -226,6 +243,14 @@ function ChapterCard({ chapter, isExpanded, onToggle }: {
                   {conn}
                 </span>
               ))}
+              {dimIndex !== undefined && (
+                <Link href={`/universe?dim=${dimIndex}`}>
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-mono border border-violet-500/30 text-violet-400 bg-violet-500/5 hover:bg-violet-500/15 transition-colors cursor-pointer">
+                    <Layers size={10} />
+                    View Plane
+                  </span>
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -246,6 +271,36 @@ function SacredDivider({ color }: { color: string }) {
 
 export default function GrandNarrativePage() {
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set(["ancient-origins"]));
+
+  const { data: narrativeData } = useQuery<{
+    ok: boolean;
+    narrative: {
+      chapters: Array<{ id: number; title: string; visualizationAnchor: string; knowledgeSources: string[] }>;
+      knowledgeSources: Record<string, string>;
+      sacredConstants: { phi: number; fibonacci: number[] };
+      generatedAt: string;
+    };
+  }>({
+    queryKey: [`${API}/api/universe/grand-narrative`],
+    staleTime: 1000 * 60 * 30,
+  });
+
+  const knowledgeSnippets = useMemo(() => {
+    const snippets: Record<number, string> = {};
+    if (!narrativeData?.narrative) return snippets;
+    const { chapters, knowledgeSources } = narrativeData.narrative;
+    for (const ch of chapters) {
+      for (const src of ch.knowledgeSources) {
+        if (knowledgeSources[src]) {
+          snippets[ch.id] = knowledgeSources[src];
+          break;
+        }
+      }
+    }
+    return snippets;
+  }, [narrativeData]);
+
+  const apiPhi = narrativeData?.narrative?.sacredConstants?.phi;
 
   const toggleChapter = (id: string) => {
     setExpandedChapters((prev) => {
@@ -335,6 +390,7 @@ export default function GrandNarrativePage() {
                 chapter={chapter}
                 isExpanded={expandedChapters.has(chapter.id)}
                 onToggle={() => toggleChapter(chapter.id)}
+                knowledgeSnippet={knowledgeSnippets[chapter.number]}
               />
               {i < CHAPTERS.length - 1 && (
                 <SacredDivider color={chapter.color} />
@@ -352,7 +408,7 @@ export default function GrandNarrativePage() {
             </p>
             <span className="text-[11px] font-mono text-violet-400">— Nikola Tesla</span>
             <div className="flex items-center gap-2 mt-2 text-[10px] font-mono text-muted-foreground">
-              <span>Φ = {PHI.toFixed(10)}</span>
+              <span>Φ = {(apiPhi ?? PHI).toFixed(10)}</span>
               <span>·</span>
               <span>963 Hz Crown</span>
               <span>·</span>

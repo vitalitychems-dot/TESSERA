@@ -1119,7 +1119,9 @@ function OrbitControlsRefCapture() {
 
 function AutoRotateController() {
   const lastInteraction = useRef(Date.now());
-  const { gl } = useThree();
+  const { gl, camera } = useThree();
+  const velocity = useRef(new THREE.Vector3());
+  const lastMouse = useRef({ x: 0, y: 0, time: 0 });
 
   const onInteraction = useCallback(() => {
     lastInteraction.current = Date.now();
@@ -1128,14 +1130,22 @@ function AutoRotateController() {
     }
   }, []);
 
+  const onWheel = useCallback((e: WheelEvent) => {
+    const forward = new THREE.Vector3();
+    camera.getWorldDirection(forward);
+    velocity.current.addScaledVector(forward, -e.deltaY * 0.003);
+  }, [camera]);
+
   useEffect(() => {
     const canvas = gl.domElement;
-    const events = ["pointerdown", "pointermove", "wheel", "touchstart", "touchmove"] as const;
+    const events = ["pointerdown", "pointermove", "touchstart", "touchmove"] as const;
     events.forEach(e => canvas.addEventListener(e, onInteraction));
+    canvas.addEventListener("wheel", onWheel as EventListener, { passive: true });
     return () => {
       events.forEach(e => canvas.removeEventListener(e, onInteraction));
+      canvas.removeEventListener("wheel", onWheel as EventListener);
     };
-  }, [gl, onInteraction]);
+  }, [gl, onInteraction, onWheel]);
 
   useFrame(() => {
     const ctrl = orbitControlsRef.current;
@@ -1144,6 +1154,11 @@ function AutoRotateController() {
     if (idle && !ctrl.autoRotate) {
       ctrl.autoRotate = true;
       ctrl.autoRotateSpeed = 0.3;
+    }
+
+    if (velocity.current.lengthSq() > 0.0001) {
+      camera.position.add(velocity.current);
+      velocity.current.multiplyScalar(0.92);
     }
   });
 
