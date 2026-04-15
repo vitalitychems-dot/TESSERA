@@ -84,8 +84,8 @@ export async function callLLM(
       if (knowledgeFacts.length > 0) {
         llmStats.knowledgeHits++;
 
-        const systemContent = messages.filter(m => m.role === "system").map(m => m.content).join(" ").toLowerCase();
-        const requiresStructuredOutput = /\bjson\b|flat.*object|return.*only|no markdown/i.test(systemContent);
+        const allContent = messages.map(m => m.content).join(" ");
+        const requiresStructuredOutput = /\bjson\b|flat.*object|return.*only|no markdown|schema|parseable|format.*as|respond.*with.*only/i.test(allContent);
 
         if (!requiresStructuredOutput) {
           const highConfFacts = knowledgeFacts.filter(f => f.confidence >= 0.90);
