@@ -95,6 +95,7 @@ let lastIntervalTimestamps: Record<string, number> = {};
 
 const registeredSubsystems = new Map<string, SubsystemRegistration>();
 const recoveryLog: Array<{ subsystem: string; action: string; timestamp: number; success: boolean; error?: string }> = [];
+const escalatedSubsystems = new Set<string>();
 
 export function registerSubsystem(reg: SubsystemRegistration): void {
   registeredSubsystems.set(reg.name, reg);
@@ -119,6 +120,7 @@ export function reportSubsystemHealthy(name: string): void {
   pulse.consecutiveFailures = 0;
   pulse.lastPulse = Date.now();
   pulse.cycleCount++;
+  escalatedSubsystems.delete(name);
 }
 
 function isDue(key: string, intervalMs: number): boolean {
@@ -186,8 +188,9 @@ async function healingPass(): Promise<void> {
     if (pulse.healthy) continue;
     if (pulse.consecutiveFailures < 1) continue;
 
-    if (pulse.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES && escalateToCouncilFn) {
+    if (pulse.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES && escalateToCouncilFn && !escalatedSubsystems.has(name)) {
       try {
+        escalatedSubsystems.add(name);
         await escalateToCouncilFn(name, pulse.consecutiveFailures);
         logger.warn({ subsystem: name, failures: pulse.consecutiveFailures }, "Heartbeat: escalated to council");
       } catch {}

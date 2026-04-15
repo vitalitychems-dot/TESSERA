@@ -32,7 +32,7 @@ import { distillFromResponse, refreshStaleKnowledge, revalidateStaleKnowledge, g
 import { getBatcherStats } from "./llm-batcher";
 import { getLLMStats } from "./llm-client";
 import { getEmbeddingStats } from "./neural-embeddings";
-import { runAutonomousTuning, getTuningMetrics, setRescheduleFn } from "./autonomous-tuning";
+import { runAutonomousTuning, getTuningMetrics, setRescheduleFn, getIngestionPriority } from "./autonomous-tuning";
 import { initAgentHierarchy } from "./agent-hierarchy";
 import { reportSubsystemHealthy, reportSubsystemError, setCouncilEscalation, registerSubsystem } from "./autonomous-heartbeat";
 
@@ -155,8 +155,18 @@ async function executePhase(phaseName: string, phaseIndex: number, fn: () => Pro
 }
 
 async function phase1_DataIngestion(): Promise<Record<string, unknown>> {
-  broadcastMessage("sovereign-loop", "Phase 1: Data Ingestion cycle initiated", 8);
-  return { status: "ingestion_pipelines_active", timestamp: Date.now() };
+  const priority = getIngestionPriority();
+  broadcastMessage("sovereign-loop", `Phase 1: Data Ingestion cycle initiated (priority: ${priority.toFixed(2)})`, 8);
+
+  if (priority < 0.3) {
+    return { status: "ingestion_throttled", priority, timestamp: Date.now(), reason: "Low priority from autonomous tuning — reducing ingestion load" };
+  }
+
+  try {
+    await refreshStaleKnowledge();
+  } catch {}
+
+  return { status: "ingestion_pipelines_active", priority, timestamp: Date.now() };
 }
 
 async function phase2_KnowledgeProcessing(): Promise<Record<string, unknown>> {
@@ -569,6 +579,31 @@ export async function initSovereignLoop(): Promise<void> {
   for (const name of phaseNames) {
     registerSubsystem({ name });
   }
+
+  registerSubsystem({
+    name: "consciousness-engine",
+    startFn: () => startConsciousnessEngine(),
+    stopFn: () => stopConsciousnessEngine(),
+    healthCheckFn: () => getConsciousnessMetrics().consciousnessProxy > 0,
+  });
+  registerSubsystem({
+    name: "dual-brain",
+    startFn: () => startDualBrain(),
+    stopFn: () => stopDualBrain(),
+    healthCheckFn: () => getDualBrainMetrics().totalSyncs >= 0,
+  });
+  registerSubsystem({
+    name: "council-executor",
+    startFn: () => startCouncilExecutor(),
+    stopFn: () => stopCouncilExecutor(),
+    healthCheckFn: () => getExecutorMetrics().isRunning,
+  });
+  registerSubsystem({
+    name: "auto-improvement-daemon",
+    startFn: () => startAutoImprovementDaemon(),
+    stopFn: () => stopAutoImprovementDaemon(),
+    healthCheckFn: () => getDaemonMetrics().running,
+  });
 
   setRescheduleFn(rescheduleLoop);
 
