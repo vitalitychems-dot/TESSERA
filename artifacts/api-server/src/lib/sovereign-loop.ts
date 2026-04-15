@@ -28,7 +28,7 @@ import { computeMarketData, computeAgentEconomics, computeEconomyStats } from ".
 import { getConsensusMetrics } from "./consensus-engine";
 import { initSemanticCache, getCacheStats } from "./semantic-cache";
 import { runSelfEvaluation, getSelfEvaluationMetrics } from "./self-evaluation";
-import { distillFromResponse, refreshStaleKnowledge, revalidateStaleKnowledge, getDistillationStats } from "./knowledge-distillation";
+import { distillFromResponse, refreshStaleKnowledge, revalidateStaleKnowledge, getDistillationStats, warmFactEmbeddings } from "./knowledge-distillation";
 import { getBatcherStats } from "./llm-batcher";
 import { getLLMStats } from "./llm-client";
 import { getEmbeddingStats } from "./neural-embeddings";
@@ -542,6 +542,7 @@ function stopIndependentTimers(): void {
 export async function initSovereignLoop(): Promise<void> {
   await loadLoopState();
   try { await initSemanticCache(); } catch {}
+  warmFactEmbeddings().catch(() => {});
   logger.info({ cycleCount: loopState.cycleCount }, "SovereignLoop: initialized (with semantic cache + intelligence layer)");
 }
 

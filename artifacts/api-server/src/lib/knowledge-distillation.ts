@@ -322,3 +322,30 @@ export async function getDistillationStats() {
     return { ...distillStats, totalFacts: 0, verifiedFacts: 0, hitRate: 0 };
   }
 }
+
+export async function warmFactEmbeddings(): Promise<number> {
+  try {
+    const rows = await db
+      .select()
+      .from(distilledKnowledgeTable)
+      .where(gt(distilledKnowledgeTable.confidence, CONFIDENCE_THRESHOLD))
+      .orderBy(desc(distilledKnowledgeTable.confidence))
+      .limit(500);
+
+    let warmed = 0;
+    for (const row of rows) {
+      if (!factEmbeddingCache.has(row.fact)) {
+        try {
+          const emb = await generateEmbedding(row.fact);
+          factEmbeddingCache.set(row.fact, emb);
+          warmed++;
+        } catch {}
+      }
+    }
+    logger.info({ warmed, total: rows.length }, "KnowledgeDistillation: fact embeddings warmed");
+    return warmed;
+  } catch (err) {
+    logger.debug({ err: (err as Error).message }, "KnowledgeDistillation: warm-up error");
+    return 0;
+  }
+}
