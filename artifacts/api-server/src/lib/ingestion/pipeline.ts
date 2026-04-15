@@ -196,7 +196,16 @@ export async function ingestItem(item: NormalizedItem): Promise<{ ingested: bool
     return { ingested: false, reason: "duplicate" };
   }
 
-  const storedHash = crypto.createHash("sha256").update(sanitizedItem.content).digest("hex");
+  const preStoreHash = crypto.createHash("sha256").update(sanitizedItem.content).digest("hex");
+
+  const expectedHash = typeof sanitizedItem.metadata?.expectedChecksum === "string"
+    ? sanitizedItem.metadata.expectedChecksum
+    : null;
+
+  if (expectedHash && expectedHash !== preStoreHash) {
+    addAuditEntry(sanitizedItem.source, "rejected", `Integrity mismatch: expected ${expectedHash.slice(0, 16)}… got ${preStoreHash.slice(0, 16)}…`, preStoreHash);
+    return { ingested: false, reason: "integrity-mismatch" };
+  }
 
   let embeddingId: number | undefined;
   try {
@@ -204,9 +213,15 @@ export async function ingestItem(item: NormalizedItem): Promise<{ ingested: bool
       content: text.slice(0, 8000),
       source: sanitizedItem.source,
       category: sanitizedItem.sourceType,
-      metadata: { url: sanitizedItem.url, tags: sanitizedItem.tags, contentIntegrity: storedHash, ...(sanitizedItem.metadata || {}) },
+      metadata: { url: sanitizedItem.url, tags: sanitizedItem.tags, contentIntegrity: preStoreHash, ...(sanitizedItem.metadata || {}) },
     });
   } catch (_e) {
+  }
+
+  const postStoreVerification = crypto.createHash("sha256").update(sanitizedItem.content).digest("hex");
+  if (postStoreVerification !== preStoreHash) {
+    addAuditEntry(sanitizedItem.source, "rejected", "Content mutated during storage — integrity check failed", preStoreHash);
+    return { ingested: false, reason: "integrity-verification-failed" };
   }
 
   const [row] = await db.insert(ingestedDataTable).values({
@@ -218,7 +233,7 @@ export async function ingestItem(item: NormalizedItem): Promise<{ ingested: bool
     contentHash,
     embeddingId: embeddingId ?? null,
     tags: sanitizedItem.tags ?? [],
-    metadata: { ...(sanitizedItem.metadata || {}), contentIntegrity: storedHash, sanitized },
+    metadata: { ...(sanitizedItem.metadata || {}), contentIntegrity: preStoreHash, sanitized },
     publishedAt: sanitizedItem.publishedAt ?? null,
   }).returning({ id: ingestedDataTable.id });
 

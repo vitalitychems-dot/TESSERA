@@ -91,7 +91,13 @@ async function buildDynamicProfile(providerId: string): Promise<DynamicProfile> 
 
   const errorClassification: Record<string, number> = {};
   for (const row of rows.filter(r => r.status !== "success")) {
-    const errType = (row as any).errorType || row.status || "unknown";
+    const errMsg = row.error ?? "";
+    const errType = errMsg.includes("timeout") ? "timeout"
+      : errMsg.includes("rate") ? "rate_limit"
+      : errMsg.includes("auth") ? "auth_error"
+      : errMsg.includes("network") ? "network_error"
+      : row.status !== "success" ? row.status
+      : "unknown";
     errorClassification[errType] = (errorClassification[errType] || 0) + 1;
   }
 
@@ -227,12 +233,34 @@ function computeHallucinationTendency(
   return "medium";
 }
 
-export function getLearnedProfileFreshness(): Array<{ providerId: string; updatedAt: number; dataPoints: number; age: string }> {
-  const results: Array<{ providerId: string; updatedAt: number; dataPoints: number; age: string }> = [];
+export interface ProfileFreshnessEntry {
+  providerId: string;
+  updatedAt: number;
+  dataPoints: number;
+  age: string;
+  confidence: number;
+  responseConsistency: number;
+  recentTrend: "improving" | "stable" | "degrading" | "unknown";
+  successStreak: number;
+}
+
+export function getLearnedProfileFreshness(): ProfileFreshnessEntry[] {
+  const results: ProfileFreshnessEntry[] = [];
   for (const [id, entry] of learnedProfiles.entries()) {
     const ageMs = Date.now() - entry.updatedAt;
     const ageStr = ageMs < 60000 ? `${Math.round(ageMs / 1000)}s` : ageMs < 3600000 ? `${Math.round(ageMs / 60000)}m` : `${Math.round(ageMs / 3600000)}h`;
-    results.push({ providerId: id, updatedAt: entry.updatedAt, dataPoints: entry.profile.dataPoints, age: ageStr });
+    const dp = entry.profile.dataPoints;
+    const confidence = Math.min(1, dp / 100);
+    results.push({
+      providerId: id,
+      updatedAt: entry.updatedAt,
+      dataPoints: dp,
+      age: ageStr,
+      confidence,
+      responseConsistency: entry.profile.responseConsistency,
+      recentTrend: entry.profile.recentTrend,
+      successStreak: entry.profile.successStreak,
+    });
   }
   return results;
 }

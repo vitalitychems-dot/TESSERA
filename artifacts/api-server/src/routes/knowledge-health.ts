@@ -75,11 +75,23 @@ router.get("/sovereign/knowledge-health", async (_req, res) => {
         analyzedProviders,
         unanalyzedProviders,
         staleProfiles: staleProfiles.length,
+        avgConfidence: analyzedProviders > 0
+          ? Math.round(profileFreshness.reduce((s, p) => s + p.confidence, 0) / analyzedProviders * 100) / 100
+          : 0,
+        avgConsistency: analyzedProviders > 0
+          ? Math.round(profileFreshness.reduce((s, p) => s + p.responseConsistency, 0) / analyzedProviders * 100) / 100
+          : 0,
+        improvingProviders: profileFreshness.filter(p => p.recentTrend === "improving").length,
+        degradingProviders: profileFreshness.filter(p => p.recentTrend === "degrading").length,
         profileFreshness: profileFreshness.map(p => ({
           providerId: p.providerId,
           age: p.age,
           dataPoints: p.dataPoints,
           isFresh: Date.now() - p.updatedAt < 6 * 3600000,
+          confidence: p.confidence,
+          responseConsistency: p.responseConsistency,
+          recentTrend: p.recentTrend,
+          successStreak: p.successStreak,
         })),
         note: analyzedProviders === 0 ? "No providers analyzed yet — profiles populate after provider calls" : undefined,
       },
