@@ -30,6 +30,7 @@ export interface LLMCallOptions {
   skipCache?: boolean;
   skipDistillation?: boolean;
   skipBatcher?: boolean;
+  expectsStructuredOutput?: boolean;
   cacheTtl?: number;
   _internal?: boolean;
 }
@@ -87,7 +88,8 @@ export async function callLLM(
         llmStats.knowledgeHits++;
 
         const allContent = messages.map(m => m.content).join(" ");
-        const requiresStructuredOutput = /\bjson\b|flat.*object|return.*only|no markdown|schema|parseable|format.*as|respond.*with.*only/i.test(allContent);
+        const requiresStructuredOutput = opts.expectsStructuredOutput === true ||
+          /\bjson\b|flat.*object|return.*only|no markdown|schema|parseable|format.*as|respond.*with.*only/i.test(allContent);
 
         if (!requiresStructuredOutput) {
           const highConfFacts = knowledgeFacts.filter(f => f.confidence >= 0.90);

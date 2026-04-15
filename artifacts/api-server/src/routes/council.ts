@@ -151,7 +151,7 @@ Respond with ONLY a flat JSON object: {"agent-id": "contribution text", ...}. No
 
   const raw = await batchedCallLLMSafe(
     [{ role: "system", content: systemPrompt }, { role: "user", content: `Topic: "${topic}"\nAgents:\n${agentList}` }],
-    { maxTokens: 1200, timeoutMs: 12_000 },
+    { maxTokens: 1200, timeoutMs: 12_000, expectsStructuredOutput: true },
     "",
   );
 
@@ -206,7 +206,7 @@ Return ONLY a flat JSON object where each key is an agent ID and the value is ex
         content: `Proposal: "${topic}"\n\nAgent specialties (each agent must vote from their domain perspective):\n{\n${agentRoster}\n}\n\nReturn one vote per agent ID:`,
       },
     ],
-    { maxTokens: 800, timeoutMs: 12_000 },
+    { maxTokens: 800, timeoutMs: 12_000, expectsStructuredOutput: true },
     "",
   );
 

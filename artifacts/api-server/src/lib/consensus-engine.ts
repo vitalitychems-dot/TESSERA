@@ -161,7 +161,7 @@ Return ONLY the JSON array.`;
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      { model: "gpt-5-mini", maxTokens: 2048, timeoutMs: 20_000 },
+      { model: "gpt-5-mini", maxTokens: 2048, timeoutMs: 20_000, expectsStructuredOutput: true },
     );
   } catch { raw = ""; }
 

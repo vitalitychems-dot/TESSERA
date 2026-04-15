@@ -98,9 +98,10 @@ function extractSystemPrompt(messages: LLMMessage[]): string {
   return messages.filter(m => m.role === "system").map(m => m.content).join("|");
 }
 
-function requiresStructuredOutput(messages: LLMMessage[]): boolean {
-  const sysContent = messages.filter(m => m.role === "system").map(m => m.content).join(" ");
-  return /\bjson\b|flat.*object|return.*only|no markdown|schema|parseable/i.test(sysContent);
+function requiresStructuredOutput(req: QueuedRequest): boolean {
+  if (req.opts.expectsStructuredOutput === true) return true;
+  const allContent = req.messages.map(m => m.content).join(" ");
+  return /\bjson\b|flat.*object|return.*only|no markdown|schema|parseable/i.test(allContent);
 }
 
 function areRequestsMergeable(a: QueuedRequest, b: QueuedRequest): boolean {
@@ -108,7 +109,7 @@ function areRequestsMergeable(a: QueuedRequest, b: QueuedRequest): boolean {
   const modelB = b.opts.model ?? "gpt-5-mini";
   if (modelA !== modelB) return false;
 
-  if (requiresStructuredOutput(a.messages) || requiresStructuredOutput(b.messages)) return false;
+  if (requiresStructuredOutput(a) || requiresStructuredOutput(b)) return false;
 
   const sysA = extractSystemPrompt(a.messages);
   const sysB = extractSystemPrompt(b.messages);
@@ -187,8 +188,8 @@ async function executeGroup(group: RequestGroup): Promise<void> {
   const mergedResponse = await callLLM(mergedMessages, { ...mergedOpts, _internal: true });
   const parts = splitMergedResponse(mergedResponse, totalQueries);
 
-  const hasLabels = mergedResponse.includes("[Q1]");
-  if (hasLabels) {
+  const allLabelsPresent = Array.from({ length: totalQueries }, (_, i) => `[Q${i + 1}]`).every(label => mergedResponse.includes(label));
+  if (allLabelsPresent) {
     primary.resolve(parts[0]);
     for (const dup of duplicates) dup.resolve(parts[0]);
     for (let i = 0; i < semanticPeers.length; i++) {
