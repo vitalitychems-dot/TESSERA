@@ -173,6 +173,12 @@ export async function refreshStaleKnowledge(): Promise<number> {
 
     let refreshed = 0;
     for (const row of staleRows) {
+      if (row.confidence < 0.5) {
+        await db.delete(distilledKnowledgeTable).where(eq(distilledKnowledgeTable.id, row.id));
+        refreshed++;
+        continue;
+      }
+
       await db
         .update(distilledKnowledgeTable)
         .set({
@@ -188,6 +194,70 @@ export async function refreshStaleKnowledge(): Promise<number> {
     return refreshed;
   } catch (err) {
     logger.debug({ err: (err as Error).message }, "KnowledgeDistillation: refresh error");
+    return 0;
+  }
+}
+
+export async function verifyFact(factId: number, isValid: boolean): Promise<void> {
+  try {
+    if (isValid) {
+      await db
+        .update(distilledKnowledgeTable)
+        .set({
+          verified: true,
+          confidence: sql`LEAST(${distilledKnowledgeTable.confidence} + 0.1, 1.0)`,
+          lastVerifiedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(distilledKnowledgeTable.id, factId));
+    } else {
+      await db
+        .update(distilledKnowledgeTable)
+        .set({
+          verified: false,
+          confidence: sql`GREATEST(${distilledKnowledgeTable.confidence} - 0.2, 0.0)`,
+          updatedAt: new Date(),
+        })
+        .where(eq(distilledKnowledgeTable.id, factId));
+    }
+    logger.info({ factId, isValid }, "KnowledgeDistillation: fact verified");
+  } catch (err) {
+    logger.debug({ err: (err as Error).message }, "KnowledgeDistillation: verify error");
+  }
+}
+
+export async function revalidateStaleKnowledge(verifyFn: (fact: string) => Promise<boolean>): Promise<number> {
+  try {
+    const staleDate = new Date(Date.now() - STALE_DAYS * 24 * 60 * 60 * 1000);
+    const staleFacts = await db
+      .select()
+      .from(distilledKnowledgeTable)
+      .where(sql`${distilledKnowledgeTable.updatedAt} < ${staleDate} AND ${distilledKnowledgeTable.verified} = false`)
+      .orderBy(desc(distilledKnowledgeTable.confidence))
+      .limit(10);
+
+    let revalidated = 0;
+    for (const fact of staleFacts) {
+      try {
+        const isValid = await verifyFn(fact.fact);
+        await verifyFact(fact.id, isValid);
+        revalidated++;
+      } catch {
+        await db
+          .update(distilledKnowledgeTable)
+          .set({
+            confidence: Math.max(fact.confidence * 0.85, 0.2),
+            updatedAt: new Date(),
+          })
+          .where(eq(distilledKnowledgeTable.id, fact.id));
+      }
+    }
+
+    distillStats.staleRefreshes += revalidated;
+    logger.info({ revalidated }, "KnowledgeDistillation: stale revalidation complete");
+    return revalidated;
+  } catch (err) {
+    logger.debug({ err: (err as Error).message }, "KnowledgeDistillation: revalidation error");
     return 0;
   }
 }

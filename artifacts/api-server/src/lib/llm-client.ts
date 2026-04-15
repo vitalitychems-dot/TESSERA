@@ -76,6 +76,8 @@ export async function callLLM(
     llmStats.cacheMisses++;
   }
 
+  const canonicalMessages = messages.map(m => ({ ...m }));
+
   if (!skipDistillation && userQuery.length > 10) {
     try {
       const knowledgeFacts = await lookupKnowledge(userQuery);
@@ -92,7 +94,7 @@ export async function callLLM(
         const factContext = knowledgeFacts
           .map(f => `[${f.category}] ${f.fact} (confidence: ${f.confidence.toFixed(2)})`)
           .join("\n");
-        const systemMsg = messages.find(m => m.role === "system");
+        const systemMsg = canonicalMessages.find(m => m.role === "system");
         if (systemMsg) {
           systemMsg.content += `\n\nRelevant distilled knowledge:\n${factContext}`;
         }
@@ -109,7 +111,7 @@ export async function callLLM(
       {
         model,
         max_completion_tokens: maxTokens,
-        messages,
+        messages: canonicalMessages,
       },
       { signal: controller.signal as AbortSignal }
     );
