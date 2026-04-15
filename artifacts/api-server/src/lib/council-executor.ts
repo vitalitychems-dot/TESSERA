@@ -91,28 +91,24 @@ async function executeProposal(decisionId: string, topic: string, category: stri
     const param = "agent.collaborationMode";
     const oldVal = systemConfig.get(param);
     const newVal = "adaptive-cooperative";
-    systemConfig.set(param, newVal);
     changes.push({ subsystem: "agent-system", parameter: param, oldValue: oldVal as string | null, newValue: newVal, appliedAt: Date.now() });
     notes = "Agent collaboration mode upgraded to adaptive-cooperative";
   } else if (cat.includes("consciousness")) {
     const param = "consciousness.reflectionDepth";
     const oldVal = systemConfig.get(param) as number;
     const newVal = Math.min(10, oldVal + 1);
-    systemConfig.set(param, newVal);
     changes.push({ subsystem: "consciousness", parameter: param, oldValue: oldVal, newValue: newVal, appliedAt: Date.now() });
     notes = "Consciousness reflection depth increased";
   } else if (cat.includes("security") || cat.includes("sovereignty")) {
     const param = "identity.checkIntervalMs";
     const oldVal = systemConfig.get(param) as number;
     const newVal = Math.max(60000, oldVal - 60000);
-    systemConfig.set(param, newVal);
     changes.push({ subsystem: "identity-reinforcement", parameter: param, oldValue: oldVal, newValue: newVal, appliedAt: Date.now() });
     notes = "Identity check frequency increased for sovereignty compliance";
   } else if (cat.includes("infrastructure") || cat.includes("improvement")) {
     const param = "agent.learningRate";
     const oldVal = systemConfig.get(param) as number;
     const newVal = Math.min(0.1, oldVal * 1.1);
-    systemConfig.set(param, newVal);
     changes.push({ subsystem: "improvement-daemon", parameter: param, oldValue: oldVal, newValue: newVal, appliedAt: Date.now() });
     notes = "Agent learning rate optimized per council directive";
   } else {
@@ -120,18 +116,17 @@ async function executeProposal(decisionId: string, topic: string, category: stri
     notes = "Council decision acknowledged and logged";
   }
 
-  let allPersisted = true;
   for (const change of changes) {
     try {
       await persistConfigChange(decisionId, change, category);
-    } catch {
-      allPersisted = false;
+    } catch (err) {
+      logger.warn({ decisionId, category, parameter: change.parameter, err }, "CouncilExecutor: config persist failed — aborting execution to prevent state divergence");
+      return null;
     }
   }
 
-  if (!allPersisted) {
-    logger.warn({ decisionId, category }, "CouncilExecutor: some config changes failed to persist — will retry next cycle");
-    return null;
+  for (const change of changes) {
+    systemConfig.set(change.parameter, change.newValue);
   }
 
   const result: ExecutionResult = {
