@@ -32,9 +32,9 @@ import { distillFromResponse, refreshStaleKnowledge, revalidateStaleKnowledge, g
 import { getBatcherStats } from "./llm-batcher";
 import { getLLMStats } from "./llm-client";
 import { getEmbeddingStats } from "./neural-embeddings";
-import { runAutonomousTuning, getTuningMetrics } from "./autonomous-tuning";
+import { runAutonomousTuning, getTuningMetrics, setRescheduleFn } from "./autonomous-tuning";
 import { initAgentHierarchy } from "./agent-hierarchy";
-import { reportSubsystemHealthy, reportSubsystemError, setCouncilEscalation } from "./autonomous-heartbeat";
+import { reportSubsystemHealthy, reportSubsystemError, setCouncilEscalation, registerSubsystem } from "./autonomous-heartbeat";
 
 const SCHUMANN_BASE = 7.83;
 const CROWN_FREQUENCY = 963;
@@ -142,13 +142,13 @@ async function executePhase(phaseName: string, phaseIndex: number, fn: () => Pro
     const metrics = await fn();
     const duration = Date.now() - start;
     loopState.totalPhasesExecuted++;
-    reportSubsystemHealthy(`phase-${phaseIndex}`);
+    reportSubsystemHealthy(phaseName);
     return { phase: phaseName, phaseIndex, durationMs: duration, success: true, metrics };
   } catch (err) {
     const duration = Date.now() - start;
     loopState.phaseErrorCount++;
     const errorMsg = err instanceof Error ? err.message : String(err);
-    reportSubsystemError(`phase-${phaseIndex}`, errorMsg);
+    reportSubsystemError(phaseName, errorMsg);
     logger.error({ phase: phaseName, err: errorMsg, durationMs: duration }, "SovereignLoop: phase error");
     return { phase: phaseName, phaseIndex, durationMs: duration, success: false, metrics: {}, error: errorMsg };
   }
@@ -560,6 +560,18 @@ export async function initSovereignLoop(): Promise<void> {
   try { await initAgentHierarchy(); } catch {}
   warmFactEmbeddings().catch(() => {});
 
+  const phaseNames = [
+    "Data Ingestion", "Knowledge Processing", "Consciousness & Reasoning",
+    "Self-Assessment & Proposals", "Council Deliberation & Voting",
+    "Evolution & Application", "Harmonic Recalibration",
+    "Intelligence Evaluation", "Logging & Transmission",
+  ];
+  for (const name of phaseNames) {
+    registerSubsystem({ name });
+  }
+
+  setRescheduleFn(rescheduleLoop);
+
   setCouncilEscalation(async (subsystem: string, failures: number) => {
     const { createProposal } = await import("./consensus-engine");
     await createProposal({
@@ -571,6 +583,20 @@ export async function initSovereignLoop(): Promise<void> {
   });
 
   logger.info({ cycleCount: loopState.cycleCount }, "SovereignLoop: initialized (with intelligence layer + agent hierarchy + self-healing)");
+}
+
+export function rescheduleLoop(newIntervalMs: number): void {
+  if (!loopInterval || !loopState.running) return;
+  clearInterval(loopInterval);
+  loopState.masterIntervalMs = newIntervalMs;
+  loopInterval = setInterval(async () => {
+    try {
+      await runSovereignCycle();
+    } catch (err) {
+      logger.error({ err }, "SovereignLoop: cycle error");
+    }
+  }, newIntervalMs);
+  logger.info({ newIntervalMs }, "SovereignLoop: rescheduled with new interval");
 }
 
 /**
