@@ -3,7 +3,7 @@ import { join, resolve, sep } from "path";
 import { logger } from "./logger";
 import { createProposal } from "./consensus-engine";
 import { callLLMSafe, isLLMAvailable } from "./llm-client";
-import { isModuleCoolingDown, recordEvolutionSuccess, recordEvolutionFailure } from "./evolution-throttle";
+import { isModuleCoolingDown, recordEvolutionSuccess, recordEvolutionFailure, shouldSkipEvolutionForLoad } from "./evolution-throttle";
 
 const EVOLUTION_QUEUE_DIR = join(process.cwd(), "_evolutions");
 const SOURCE_LIB_DIR = join(process.cwd(), "src", "lib");
@@ -334,6 +334,23 @@ export async function proposeEvolution(
   riskLevel: CodeEvolutionProposal["riskLevel"] = "low"
 ): Promise<CodeEvolutionProposal> {
   const id = `evo-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+  if (shouldSkipEvolutionForLoad()) {
+    const proposal: CodeEvolutionProposal = {
+      id, targetModule, proposedChange, rationale, riskLevel,
+      status: "rejected",
+      proposedAt: Date.now(),
+      rollbackAvailable: false,
+      syntaxValid: false,
+      safetyChecked: false,
+      councilApproved: false,
+      impact: "Skipped: system under high load — evolution deferred",
+    };
+    proposals.unshift(proposal);
+    if (proposals.length > 50) proposals.splice(50);
+    evolutionState.totalProposals++;
+    return proposal;
+  }
 
   if (isModuleCoolingDown(targetModule)) {
     const proposal: CodeEvolutionProposal = {

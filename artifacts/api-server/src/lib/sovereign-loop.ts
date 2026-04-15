@@ -17,7 +17,7 @@ import { getEmotionalProfile, updateEmotionalState, getEmotionalMetrics } from "
 import { getQuantumMetrics } from "./quantum-tesseract";
 import { getUniverseMetrics, generateNewSnapshot } from "./universe-mechanics";
 import { getEvolutionMetrics, seedEvolutionProposals } from "./self-code-evolution";
-import { logEvolutionCycleSummary } from "./evolution-throttle";
+import { logEvolutionCycleSummary, shouldSkipEvolutionForLoad, getSystemLoad } from "./evolution-throttle";
 import { getSpawnerMetrics, spawnAgent } from "./agent-spawner";
 import { broadcastMessage, getAgentCommsMetrics } from "./agent-comms";
 import { getCollectiveIntelMetrics, runTrainingCycle as runCollectiveTrainingCycle } from "./collective-intelligence";
@@ -204,7 +204,9 @@ async function phase4_SelfAssessmentProposals(): Promise<Record<string, unknown>
 
   const evolutionMetrics = getEvolutionMetrics();
 
-  try { await seedEvolutionProposals(); } catch {}
+  if (!shouldSkipEvolutionForLoad()) {
+    try { await seedEvolutionProposals(); } catch {}
+  }
 
   return {
     identity: {

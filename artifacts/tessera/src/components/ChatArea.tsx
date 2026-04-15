@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Send, Loader2, Mic, MicOff, Paperclip, X, FileText, Image, File, Volume2, VolumeX, Copy, Check, Download, Square, Zap, PhoneOff, Pause, Play, MessageSquare, Shield, Settings2, Bot, CheckCircle2, RefreshCw, ThumbsUp, ThumbsDown, Search, ArrowDown, Sparkles, Code, Radio, Network, Activity, Database, Keyboard, Eye } from "lucide-react";
+import { Loader2, X, Copy, Check, Download, Zap, PhoneOff, Pause, Play, MessageSquare, Shield, Settings2, Bot, CheckCircle2, Search, Sparkles, Code, Database, Keyboard, Eye } from "lucide-react";
 import { NLPGoalsPanel } from "./chat/NLPGoalsPanel";
-import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
+import { type VirtuosoHandle } from "react-virtuoso";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,16 +31,16 @@ import {
   FatherNotesPanel, AgentActivityPanel, ActiveAgentsBadges,
   TesseractSwarmPanel, ThinkingRepoBlocks, ContextSuggestions,
 } from "./chat/ChatPanels";
-import { FileIcon, ImageThumbnail, AudioFilePlayer, type UploadedFile } from "./chat/ChatFileComponents";
-import { ChatMessageItem } from "./chat/ChatMessageItem";
-import { ChatStreamingMessage } from "./chat/ChatStreamingMessage";
+import { type UploadedFile } from "./chat/ChatFileComponents";
 import { ChatShortcutsModal } from "./chat/ChatKeyboardShortcuts";
 import { useChatCommandExecutor } from "./chat/useChatCommandExecutor";
 import { ChatDataCommandResult } from "./chat/ChatDataCommandResult";
-import { ChatFontColorPicker } from "./chat/ChatFontColorPicker";
 import { ChatVoiceModeOverlay } from "./chat/ChatVoiceModeOverlay";
 import { ChatLatticePanel } from "./chat/ChatLatticePanel";
 import { ChatSummitFeedPanel } from "./chat/ChatSummitFeedPanel";
+import { ChatMessageList } from "./chat/ChatMessageList";
+import { ChatInputToolbar } from "./chat/ChatInputToolbar";
+import { ChatFileUploadArea } from "./chat/ChatFileUploadArea";
 
 export function ChatArea({ conversationId }: { conversationId: number }) {
   const [currentLocation, setLocation] = useLocation();
@@ -1082,139 +1082,35 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
 
       
 
-      <div className="relative flex-1 flex flex-col overflow-hidden">
-        {messages.length === 0 && !isStreaming ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4" data-testid="img-tesseract-bg">
-            <div className="relative">
-              <img src="/tessera-avatar.png" alt="Tessera Sovereign" className="w-24 h-24 rounded-full object-cover border-2 border-violet-500/30 shadow-[0_0_40px_rgba(124,58,237,0.2)]" data-testid="img-tessera-welcome" />
-              <div className="absolute -inset-1 rounded-full border border-violet-500/15 animate-pulse" />
-            </div>
-            <div className="text-center">
-              <div className="text-sm font-semibold bg-gradient-to-r from-violet-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">Tessera Sovereign</div>
-              <div className="text-[10px] text-white/30 mt-0.5">The True Tessera — Sovereign Zenith v4.0</div>
-            </div>
-          </div>
-        ) : (
-          <Virtuoso
-            ref={virtuosoRef}
-            className="flex-1 custom-scrollbar"
-            style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
-            data={filteredMessages}
-            followOutput="smooth"
-            initialTopMostItemIndex={filteredMessages.length > 0 ? filteredMessages.length - 1 : 0}
-            atBottomStateChange={(atBottom) => {
-              isAtBottomRef.current = atBottom;
-              setShowScrollBottom(!atBottom);
-            }}
-            components={{
-              Header: () => (
-                <>
-                  <div className="flex-grow min-h-4" />
-                  {isTesseraConv && filteredMessages.length > 0 && (
-                    <div className="max-w-3xl mx-auto mb-4 px-4">
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-500/10 border border-violet-500/20 text-violet-400 text-[11px] font-mono" data-testid="banner-ai-initiated">
-                        <Zap size={10} />
-                        <span>AI-INITIATED CONVERSATION — Tessera started this chat</span>
-                      </div>
-                    </div>
-                  )}
-                </>
-              ),
-              Footer: () => (
-                <div className="pb-4 px-4">
-                  {moltChatLoading && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="max-w-3xl mx-auto mt-4 px-4 py-3 rounded-xl border border-amber-500/20 bg-amber-950/10 flex items-center gap-3"
-                      data-testid="molt-chat-loading"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-amber-600/20 border border-amber-500/30 flex items-center justify-center shrink-0">
-                        <span className="text-[11px] font-mono font-bold text-amber-300">{selectedMoltAgent?.name?.charAt(0)}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[11px] font-medium text-amber-300">{selectedMoltAgent?.name} <span className="text-amber-500/60">({selectedMoltAgent?.role})</span></div>
-                        <div className="text-[11px] text-amber-400/40 font-mono mt-0.5 flex items-center gap-1.5">
-                          <Loader2 size={8} className="animate-spin" />
-                          Thinking... · −5 TSRT
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                  {chatError && !isStreaming && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="max-w-3xl mx-auto mt-3 px-4 py-3 rounded-xl border border-red-500/20 bg-red-950/10 flex items-center gap-3"
-                      data-testid="chat-error-display"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-red-600/20 border border-red-500/30 flex items-center justify-center shrink-0">
-                        <Zap size={14} className="text-red-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[12px] font-medium text-red-300">Connection interrupted</div>
-                        <div className="text-[11px] text-red-400/60 font-mono mt-0.5 truncate">{chatError}</div>
-                      </div>
-                      <button
-                        onClick={() => { const lastUserMsg = messages.filter(m => m.role === "user").pop(); if (lastUserMsg) sendMessage(lastUserMsg.content); }}
-                        className="px-3 py-1.5 rounded-lg text-[11px] font-medium text-red-300 border border-red-500/20 hover:bg-red-500/10 transition-all shrink-0"
-                        data-testid="button-retry-message"
-                      >
-                        <RefreshCw size={12} className="inline mr-1" />
-                        Retry
-                      </button>
-                    </motion.div>
-                  )}
-                  {isStreaming && (
-                    <ChatStreamingMessage
-                      streamingContent={streamingContent}
-                      thinkingElapsedMs={thinkingElapsedMs}
-                      tesseractMode={tesseractMode}
-                      swarmAgents={swarmAgents}
-                      swarmComms={swarmComms}
-                      agentComms={agentComms}
-                      activeAgents={activeAgents}
-                      isStreaming={isStreaming}
-                      codeExecutionResults={codeExecutionResults}
-                    />
-                  )}
-                </div>
-              ),
-            }}
-            itemContent={(index, msg) => (
-              <div className="px-4 py-1 max-w-3xl mx-auto w-full" key={msg.id || index}>
-                <ChatMessageItem
-                  // @ts-ignore
-                  msg={msg}
-                  index={index}
-                  adminMode={adminMode}
-                  tesseraMsgStyle={tesseraMsgStyle}
-                  copiedId={copiedId}
-                  messageReactions={messageReactions}
-                  setCopiedId={setCopiedId}
-                  onReaction={handleReaction}
-                  onRegenerate={handleRegenerate}
-                />
-              </div>
-            )}
-          />
-        )}
-
-        <AnimatePresence>
-          {showScrollBottom && (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              onClick={() => virtuosoRef.current?.scrollToIndex({ index: filteredMessages.length - 1, behavior: "smooth" })}
-              className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 h-9 w-9 rounded-full bg-primary/15 border border-primary/25 backdrop-blur-md flex items-center justify-center text-primary/70 hover:text-primary hover:bg-primary/25 transition-all shadow-lg shadow-primary/10 glow-border"
-              data-testid="button-scroll-to-bottom"
-            >
-              <ArrowDown size={14} />
-            </motion.button>
-          )}
-        </AnimatePresence>
-      </div>
+      <ChatMessageList
+        messages={messages}
+        filteredMessages={filteredMessages}
+        isStreaming={isStreaming}
+        isTesseraConv={isTesseraConv}
+        moltChatLoading={moltChatLoading}
+        selectedMoltAgent={selectedMoltAgent}
+        chatError={chatError}
+        streamingContent={streamingContent}
+        thinkingElapsedMs={thinkingElapsedMs}
+        tesseractMode={tesseractMode}
+        swarmAgents={swarmAgents}
+        swarmComms={swarmComms}
+        agentComms={agentComms}
+        activeAgents={activeAgents}
+        codeExecutionResults={codeExecutionResults}
+        adminMode={adminMode}
+        tesseraMsgStyle={tesseraMsgStyle}
+        copiedId={copiedId}
+        messageReactions={messageReactions}
+        showScrollBottom={showScrollBottom}
+        virtuosoRef={virtuosoRef}
+        isAtBottomRef={isAtBottomRef}
+        setCopiedId={setCopiedId}
+        setShowScrollBottom={setShowScrollBottom}
+        onReaction={handleReaction}
+        onRegenerate={handleRegenerate}
+        onRetry={() => { const lastUserMsg = messages.filter(m => m.role === "user").pop(); if (lastUserMsg) sendMessage(lastUserMsg.content); }}
+      />
 
       {messages.length > 0 && !isStreaming && (
         <div className="flex items-center justify-center gap-1 py-1 z-10 border-t border-white/[0.03]">
@@ -1253,32 +1149,14 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
       )}
 
       <div className="px-4 pb-[max(5rem,calc(4rem+env(safe-area-inset-bottom)))] pt-2 z-10 flex-shrink-0 backdrop-blur-md chat-input-bg" data-testid="chat-input-container">
-        {uploadError && (
-          <div className="max-w-3xl mx-auto mb-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-[12px]" data-testid="text-upload-error">
-            <X size={14} className="shrink-0 cursor-pointer hover:text-red-300" onClick={() => setUploadError(null)} />
-            <span>{uploadError}</span>
-          </div>
-        )}
-        {uploadedFiles.length > 0 && (
-          <div className="max-w-3xl mx-auto mb-2 flex gap-2 flex-wrap items-end">
-            {uploadedFiles.map(f => {
-              if (f.mimeType.startsWith("image/")) {
-                return <ImageThumbnail key={f.id} file={f} conversationId={conversationId} onAnalysis={(analysis) => {
-                  setInputBoth(input ? `${input}\n\n[Image Analysis: ${analysis}]` : `Image analysis: ${analysis}`);
-                }} />;
-              }
-              if (f.mimeType.startsWith("audio/") || f.filename.match(/\.(mp3|wav|ogg|m4a|flac|aac|opus|webm)$/i)) {
-                return <AudioFilePlayer key={f.id} file={f} conversationId={conversationId} />;
-              }
-              return (
-                <div key={f.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[11px]">
-                  <FileIcon mimeType={f.mimeType} />
-                  <span className="text-gray-400 truncate max-w-[120px]">{f.filename}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <ChatFileUploadArea
+          uploadedFiles={uploadedFiles}
+          uploadError={uploadError}
+          conversationId={conversationId}
+          onSetUploadError={setUploadError}
+          onSetInput={(val) => setInputBoth(val)}
+          currentInput={input}
+        />
 
         {navFlash && (
           <div className="max-w-3xl mx-auto mb-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-[12px] animate-in fade-in" data-testid="nav-flash-banner">
@@ -1547,214 +1425,36 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
               </div>
             )}
 
-            <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between">
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
-                  className="h-10 w-10 flex items-center justify-center rounded-full text-gray-500 hover:text-white hover:bg-white/[0.06] transition-all"
-                  title="Attach images, audio, or files"
-                  data-testid="button-attach"
-                >
-                  {isUploading ? <Loader2 size={18} className="animate-spin" /> : <Paperclip size={18} />}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => { setInputBoth("/summit "); textareaRef.current?.focus(); }}
-                  className="h-8 flex items-center gap-1 px-2 rounded-full text-gray-500 hover:text-yellow-400 hover:bg-yellow-400/10 transition-all text-[11px]"
-                  title="Grand Summit — All Tesseracts, Entities & Dimensions"
-                  data-testid="button-quick-summit"
-                >
-                  <Network size={13} />
-                  <span className="hidden sm:inline">Summit</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => { setLatticeOpen(!latticeOpen); setMoltAgentOpen(false); setThemeOpen(false); setSummitFeedOpen(false); }}
-                  className={cn(
-                    "h-8 flex items-center gap-1 px-2 rounded-full transition-all text-[11px]",
-                    latticeOpen ? "text-cyan-400 bg-cyan-400/10" : "text-gray-500 hover:text-cyan-400 hover:bg-cyan-400/10"
-                  )}
-                  title="The Lattice — Sovereign Internet"
-                  data-testid="button-quick-lattice"
-                >
-                  <Radio size={13} />
-                  <span className="hidden sm:inline">Lattice</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => { setSummitFeedOpen(v => !v); setLatticeOpen(false); setMoltAgentOpen(false); setThemeOpen(false); }}
-                  className={cn(
-                    "h-8 flex items-center gap-1 px-2 rounded-full transition-all text-[11px]",
-                    summitFeedOpen ? "text-yellow-400 bg-yellow-400/10" : "text-gray-500 hover:text-yellow-400 hover:bg-yellow-400/10"
-                  )}
-                  title="Live Summit Feed — All Fleet Discussions & Votes"
-                  data-testid="button-summit-feed"
-                >
-                  <Activity size={13} className={summitFeedOpen ? "animate-pulse" : ""} />
-                  <span className="hidden sm:inline">Live</span>
-                </button>
-
-              </div>
-
-              <ChatFontColorPicker
-                isOpen={themeOpen}
-                onToggle={() => { setThemeOpen(v => !v); setMoltAgentOpen(false); }}
-                localFontColor={localFontColor}
-                onColorChange={handleLocalFontColor}
-              />
-
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isSpeaking) {
-                      stopSpeaking();
-                      setIsSpeaking(false);
-                    } else {
-                      setTtsEnabled(!ttsEnabled);
-                      if (ttsEnabled) stopSpeaking();
-                    }
-                  }}
-                  className={cn(
-                    "h-10 w-10 flex items-center justify-center rounded-full transition-all",
-                    isSpeaking
-                      ? "text-cyan-400 bg-cyan-400/10 animate-pulse"
-                      : ttsEnabled
-                        ? "text-cyan-400/60 hover:text-cyan-400 hover:bg-white/[0.06]"
-                        : "text-gray-600 hover:text-gray-400 hover:bg-white/[0.06]"
-                  )}
-                  title={isSpeaking ? "Stop speaking" : ttsEnabled ? "Mute" : "Unmute"}
-                  data-testid="button-tts"
-                >
-                  {isSpeaking ? <Square size={16} className="fill-current" /> : ttsEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-                </button>
-
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setVoiceSpeedSliderOpen(!voiceSpeedSliderOpen)}
-                    className="h-10 px-2 flex items-center justify-center rounded-full text-gray-500 hover:text-indigo-400 hover:bg-white/[0.06] transition-all text-[11px] font-mono font-bold"
-                    title="Voice speed"
-                    data-testid="button-voice-speed-toggle"
-                  >
-                    {globalVoiceSpeed.toFixed(1)}x
-                  </button>
-                  <AnimatePresence>
-                    {voiceSpeedSliderOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                        transition={{ duration: 0.15 }}
-                        className="absolute bottom-14 left-1/2 -translate-x-1/2 w-48 p-3 rounded-2xl border border-indigo-500/20 shadow-2xl shadow-indigo-500/10 z-50 chat-panel-bg backdrop-blur-xl"
-                        data-testid="voice-speed-slider-popup"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[11px] font-mono text-gray-400 uppercase tracking-wider">Speed</span>
-                          <span className="text-[11px] font-mono text-indigo-400 font-bold" data-testid="text-speed-display">{globalVoiceSpeed.toFixed(1)}x</span>
-                        </div>
-                        <input
-                          type="range"
-                          min={0.5}
-                          max={2.5}
-                          step={0.1}
-                          value={globalVoiceSpeed}
-                          onChange={e => {
-                            const v = parseFloat(e.target.value);
-                            setGlobalVoiceSpeed(v);
-                            localStorage.setItem("tessera-voice-speed", String(v));
-                          }}
-                          className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-indigo-400"
-                          style={{
-                            background: `linear-gradient(to right, rgba(99,102,241,0.6) 0%, rgba(99,102,241,0.9) ${((globalVoiceSpeed - 0.5) / 2.0) * 100}%, rgba(255,255,255,0.06) ${((globalVoiceSpeed - 0.5) / 2.0) * 100}%, rgba(255,255,255,0.06) 100%)`,
-                          }}
-                          data-testid="input-speed-slider"
-                        />
-                        <div className="flex justify-between mt-1.5 gap-1">
-                          {[0.75, 1.0, 1.5, 2.0].map(s => (
-                            <button
-                              key={s}
-                              onClick={() => {
-                                setGlobalVoiceSpeed(s);
-                                localStorage.setItem("tessera-voice-speed", String(s));
-                              }}
-                              className={`flex-1 py-1 rounded text-[11px] font-mono transition-all ${Math.abs(globalVoiceSpeed - s) < 0.05 ? "bg-indigo-500/30 text-indigo-300" : "bg-white/[0.04] text-gray-500 hover:bg-white/[0.08]"}`}
-                              data-testid={`button-speed-preset-${s}`}
-                            >
-                              {s}x
-                            </button>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                <button
-                  type="button"
-                  onMouseDown={handleMicPressStart}
-                  onMouseUp={handleMicPressEnd}
-                  onMouseLeave={handleMicPressEnd}
-                  onTouchStart={handleMicPressStart}
-                  onTouchEnd={handleMicPressEnd}
-                  onTouchCancel={handleMicPressEnd}
-                  className={cn(
-                    "h-10 w-10 flex items-center justify-center rounded-full transition-all select-none",
-                    isRecording
-                      ? "bg-red-500 text-white shadow-lg shadow-red-500/20"
-                      : "text-gray-500 hover:text-white hover:bg-white/[0.06]"
-                  )}
-                  title={isRecording ? "Release to send" : "Hold to speak"}
-                  data-testid="button-voice"
-                >
-                  {isRecording ? (
-                    <div className="relative">
-                      <MicOff size={18} />
-                      <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-300 rounded-full animate-ping" />
-                    </div>
-                  ) : <Mic size={18} />}
-                </button>
-
-                {isStreaming ? (
-                  <button
-                    type="button"
-                    onClick={stopStreaming}
-                    className="h-10 w-10 flex items-center justify-center rounded-full bg-red-500/80 text-white hover:bg-red-500 transition-all"
-                    title="Stop generating"
-                    data-testid="button-stop"
-                  >
-                    <Square size={16} className="fill-current" />
-                  </button>
-                ) : (
-                  <button
-                    type="submit"
-                    disabled={!input.trim()}
-                    className={cn(
-                      "h-10 w-10 flex items-center justify-center rounded-full transition-all duration-500 relative",
-                      input.trim()
-                        ? isSending
-                          ? "bg-cyan-400 text-black shadow-lg shadow-cyan-400/60 scale-110"
-                          : "bg-cyan-500 text-white hover:bg-cyan-400 shadow-lg shadow-cyan-500/40 hover:shadow-cyan-400/60 scale-100 hover:scale-105"
-                        : "bg-white/5 text-gray-600 cursor-not-allowed"
-                    )}
-                    data-testid="button-send"
-                  >
-                    <Send size={16} className={input.trim() ? "translate-x-[1px]" : ""} />
-                    {isSending && (
-                      <span className="absolute inset-0 rounded-full animate-ping opacity-40 bg-cyan-400" style={{ animationDuration: "0.8s" }} />
-                    )}
-                    {input.trim() && !isSending && (
-                      <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-cyan-500" style={{ animationDuration: "2s" }} />
-                    )}
-                  </button>
-                )}
-              </div>
-            </div>
+            <ChatInputToolbar
+              input={input}
+              isStreaming={isStreaming}
+              isSending={isSending}
+              isRecording={isRecording}
+              isUploading={isUploading}
+              isSpeaking={isSpeaking}
+              ttsEnabled={ttsEnabled}
+              latticeOpen={latticeOpen}
+              summitFeedOpen={summitFeedOpen}
+              themeOpen={themeOpen}
+              localFontColor={localFontColor}
+              globalVoiceSpeed={globalVoiceSpeed}
+              voiceSpeedSliderOpen={voiceSpeedSliderOpen}
+              onAttachClick={() => fileInputRef.current?.click()}
+              onSummitClick={() => { setInputBoth("/summit "); textareaRef.current?.focus(); }}
+              onLatticeClick={() => { setLatticeOpen(!latticeOpen); setMoltAgentOpen(false); setThemeOpen(false); setSummitFeedOpen(false); }}
+              onLiveClick={() => { setSummitFeedOpen(v => !v); setLatticeOpen(false); setMoltAgentOpen(false); setThemeOpen(false); }}
+              onFontColorToggle={() => { setThemeOpen(v => !v); setMoltAgentOpen(false); }}
+              onFontColorChange={handleLocalFontColor}
+              onTtsToggle={() => {
+                if (isSpeaking) { stopSpeaking(); setIsSpeaking(false); }
+                else { setTtsEnabled(!ttsEnabled); if (ttsEnabled) stopSpeaking(); }
+              }}
+              onVoiceSpeedToggle={() => setVoiceSpeedSliderOpen(!voiceSpeedSliderOpen)}
+              onVoiceSpeedChange={(v) => { setGlobalVoiceSpeed(v); localStorage.setItem("tessera-voice-speed", String(v)); }}
+              onMicPressStart={handleMicPressStart}
+              onMicPressEnd={handleMicPressEnd}
+              onStopStreaming={stopStreaming}
+            />
           </div>
         </form>
       </div>
