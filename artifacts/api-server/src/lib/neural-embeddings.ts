@@ -162,6 +162,8 @@ export function cosineSimilarity(a: number[], b: number[]): number {
 
 export function getEmbeddingStats() {
   const total = embeddingMetrics.neuralCalls + embeddingMetrics.fallbackCalls;
+  const neuralRate = total > 0 ? Math.round((embeddingMetrics.neuralCalls / total) * 1000) / 1000 : 0;
+  const healthy = total === 0 || neuralRate >= 0.5;
   return {
     cacheSize: embeddingCache.size,
     dimension: EMBEDDING_DIM,
@@ -170,7 +172,9 @@ export function getEmbeddingStats() {
     fallbackCalls: embeddingMetrics.fallbackCalls,
     cacheHits: embeddingMetrics.cacheHits,
     errors: embeddingMetrics.errors,
-    neuralRate: total > 0 ? Math.round((embeddingMetrics.neuralCalls / total) * 1000) / 1000 : 0,
+    neuralRate,
     mode: embeddingMetrics.neuralCalls > 0 ? "neural" : embeddingMetrics.fallbackCalls > 0 ? "fallback" : "idle",
+    healthy,
+    healthWarning: !healthy ? `Neural embedding rate ${(neuralRate * 100).toFixed(1)}% is below 50% threshold — semantic quality degraded` : null,
   };
 }
