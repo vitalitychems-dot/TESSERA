@@ -174,7 +174,7 @@ async function executeGroup(group: RequestGroup): Promise<void> {
   const { primary, duplicates, semanticPeers } = group;
 
   if (semanticPeers.length === 0) {
-    const result = await callLLM(primary.messages, { ...primary.opts, skipCache: false, _internal: true });
+    const result = await callLLM(primary.messages, { ...primary.opts, _internal: true });
     primary.resolve(result);
     for (const dup of duplicates) dup.resolve(result);
     return;
@@ -182,7 +182,7 @@ async function executeGroup(group: RequestGroup): Promise<void> {
 
   const mergedMessages = mergePrompts(primary, semanticPeers);
   const totalQueries = 1 + semanticPeers.length;
-  const mergedOpts = { ...primary.opts, skipCache: false, maxTokens: (primary.opts.maxTokens ?? 1024) * totalQueries };
+  const mergedOpts = { ...primary.opts, maxTokens: (primary.opts.maxTokens ?? 1024) * totalQueries };
 
   const mergedResponse = await callLLM(mergedMessages, { ...mergedOpts, _internal: true });
   const parts = splitMergedResponse(mergedResponse, totalQueries);
@@ -197,13 +197,13 @@ async function executeGroup(group: RequestGroup): Promise<void> {
     logger.info({ totalQueries, peers: semanticPeers.length }, "LLMBatcher: semantic merge executed");
   } else {
     logger.warn({ totalQueries }, "LLMBatcher: merged response missing labels, falling back to individual calls");
-    const primaryResult = await callLLM(primary.messages, { ...primary.opts, skipCache: false, _internal: true });
+    const primaryResult = await callLLM(primary.messages, { ...primary.opts, _internal: true });
     primary.resolve(primaryResult);
     for (const dup of duplicates) {
       dup.resolve(primaryResult);
     }
     const peerPromises = semanticPeers.map(async (peer) => {
-      const result = await callLLM(peer.messages, { ...peer.opts, skipCache: false, _internal: true });
+      const result = await callLLM(peer.messages, { ...peer.opts, _internal: true });
       peer.resolve(result);
     });
     await Promise.allSettled(peerPromises);
