@@ -233,15 +233,14 @@ export async function recordAgentTask(agentId: string, task: string, success: bo
   }
 }
 
-function initializeHierarchy(): void {
-  if (!hierarchyInitialized) {
-    hierarchyInitialized = true;
+function ensureChildrenBuilt(): void {
+  if (!hierarchyInitialized && agentChildren.length === 0) {
     buildChildren();
   }
 }
 
 export function getAgentHierarchy() {
-  initializeHierarchy();
+  ensureChildrenBuilt();
   return {
     levels: HIERARCHY_LEVELS,
     parentAgents: PARENT_AGENTS,
@@ -262,12 +261,12 @@ export function getAgentHierarchy() {
 }
 
 export function getChildrenOf(parentName: string): AgentChild[] {
-  initializeHierarchy();
+  ensureChildrenBuilt();
   return agentChildren.filter(c => c.parentAgent === parentName);
 }
 
 export function getHierarchyMetrics() {
-  initializeHierarchy();
+  ensureChildrenBuilt();
   const autonomous = agentChildren.filter(c => c.status === "autonomous");
   const avgEthics = autonomous.length > 0 ? autonomous.reduce((s, c) => s + c.ethicsScore, 0) / autonomous.length : 100;
   const avgTraining = agentChildren.length > 0 ? agentChildren.reduce((s, c) => s + c.trainingProgress, 0) / agentChildren.length : 0;

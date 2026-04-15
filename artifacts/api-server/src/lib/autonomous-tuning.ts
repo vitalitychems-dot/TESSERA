@@ -166,6 +166,22 @@ export function getTuningState(): TuningState {
   return { ...tuningState };
 }
 
+export function getIngestionPriority(): number {
+  return tuningState.ingestionPriority;
+}
+
+export function getCacheThreshold(): number {
+  return tuningState.cacheThreshold;
+}
+
+export function getBatcherWindowMs(): number {
+  return tuningState.batcherWindowMs;
+}
+
+export function getKnowledgeConfidenceThreshold(): number {
+  return tuningState.knowledgeConfidenceThreshold;
+}
+
 export async function getTuningHistory(limit = 20): Promise<Array<typeof tuningDecisionsTable.$inferSelect>> {
   try {
     return await db.select().from(tuningDecisionsTable).orderBy(desc(tuningDecisionsTable.createdAt)).limit(limit);
