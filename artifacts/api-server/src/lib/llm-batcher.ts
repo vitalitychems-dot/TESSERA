@@ -111,9 +111,15 @@ function areRequestsMergeable(a: QueuedRequest, b: QueuedRequest): boolean {
 
   if (requiresStructuredOutput(a) || requiresStructuredOutput(b)) return false;
 
+  if (a.messages.length !== b.messages.length) return false;
+
   const sysA = extractSystemPrompt(a.messages);
   const sysB = extractSystemPrompt(b.messages);
   if (sysA !== sysB) return false;
+
+  const assistantA = a.messages.filter(m => m.role === "assistant").map(m => m.content).join("|");
+  const assistantB = b.messages.filter(m => m.role === "assistant").map(m => m.content).join("|");
+  if (assistantA !== assistantB) return false;
 
   const maxTokensA = a.opts.maxTokens ?? 1024;
   const maxTokensB = b.opts.maxTokens ?? 1024;
