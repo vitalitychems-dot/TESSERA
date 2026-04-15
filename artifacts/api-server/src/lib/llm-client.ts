@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { logger } from "./logger";
+import { lookupCache, storeInCache, getCacheStats } from "./semantic-cache";
 
 let _client: OpenAI | null = null;
 
@@ -25,7 +26,16 @@ export interface LLMCallOptions {
   maxTokens?: number;
   temperature?: number;
   timeoutMs?: number;
+  skipCache?: boolean;
+  cacheTtl?: number;
 }
+
+const llmStats = {
+  totalCalls: 0,
+  cacheHits: 0,
+  cacheMisses: 0,
+  errors: 0,
+};
 
 export async function callLLM(
   messages: LLMMessage[],
@@ -35,7 +45,22 @@ export async function callLLM(
     model = "gpt-5-mini",
     maxTokens = 2048,
     timeoutMs = 15_000,
+    skipCache = false,
+    cacheTtl = 3600,
   } = opts;
+
+  llmStats.totalCalls++;
+
+  if (!skipCache) {
+    try {
+      const cached = await lookupCache(messages, model);
+      if (cached !== null) {
+        llmStats.cacheHits++;
+        return cached;
+      }
+    } catch {}
+    llmStats.cacheMisses++;
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -50,8 +75,15 @@ export async function callLLM(
       },
       { signal: controller.signal as AbortSignal }
     );
-    return response.choices[0]?.message?.content ?? "";
+    const result = response.choices[0]?.message?.content ?? "";
+
+    if (!skipCache && result.length > 0) {
+      storeInCache(messages, model, result, cacheTtl).catch(() => {});
+    }
+
+    return result;
   } catch (err: unknown) {
+    llmStats.errors++;
     const msg = err instanceof Error ? err.message : String(err);
     logger.warn({ err: msg, model }, "LLMClient: call failed");
     throw err;
@@ -74,4 +106,12 @@ export async function callLLMSafe(
 
 export function isLLMAvailable(): boolean {
   return !!process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+}
+
+export function getLLMStats() {
+  const cacheStats = getCacheStats();
+  return {
+    ...llmStats,
+    cache: cacheStats,
+  };
 }

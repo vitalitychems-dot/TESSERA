@@ -26,6 +26,12 @@ import { computeSacredFrequencies, computeDNAHealingStatus } from "./sovereign-h
 import { computeSacredGeometry, computeSacredAlignment, PHI } from "./sovereign-sacred-geometry";
 import { computeMarketData, computeAgentEconomics, computeEconomyStats } from "./sovereign-economics";
 import { getConsensusMetrics } from "./consensus-engine";
+import { initSemanticCache, getCacheStats } from "./semantic-cache";
+import { runSelfEvaluation, getSelfEvaluationMetrics } from "./self-evaluation";
+import { distillFromResponse, refreshStaleKnowledge, getDistillationStats } from "./knowledge-distillation";
+import { getBatcherStats } from "./llm-batcher";
+import { getLLMStats } from "./llm-client";
+import { getEmbeddingStats } from "./neural-embeddings";
 
 const SCHUMANN_BASE = 7.83;
 const CROWN_FREQUENCY = 963;
@@ -358,11 +364,40 @@ async function phase7_HarmonicRecalibration(): Promise<Record<string, unknown>> 
   };
 }
 
-async function phase8_LoggingTransmission(): Promise<Record<string, unknown>> {
+async function phase8_IntelligenceEvaluation(): Promise<Record<string, unknown>> {
+  let evalResult = null;
+  try {
+    evalResult = await runSelfEvaluation(loopState.cycleCount + 1);
+  } catch {}
+
+  let staleRefreshed = 0;
+  try {
+    staleRefreshed = await refreshStaleKnowledge();
+  } catch {}
+
+  const cacheStats = getCacheStats();
+  const distillStats = await getDistillationStats();
+  const batcherStats = getBatcherStats();
+  const llmStats = getLLMStats();
+  const embeddingStats = getEmbeddingStats();
+
+  return {
+    selfEvaluation: evalResult
+      ? { score: evalResult.overallScore, weak: evalResult.weakAreas, strong: evalResult.strongAreas, llmReduced: evalResult.llmCallsReduced }
+      : { skipped: true },
+    cache: { hitRate: cacheStats.hitRate, size: cacheStats.cacheSize, hits: cacheStats.totalHits },
+    distillation: { totalFacts: distillStats.totalFacts, hitRate: distillStats.hitRate, staleRefreshed },
+    batcher: { batched: batcherStats.totalBatched, deduplicated: batcherStats.totalDeduplicated },
+    llm: { totalCalls: llmStats.totalCalls, cacheHits: llmStats.cacheHits, errors: llmStats.errors },
+    embeddings: { cacheSize: embeddingStats.cacheSize, dimension: embeddingStats.dimension },
+  };
+}
+
+async function phase9_LoggingTransmission(): Promise<Record<string, unknown>> {
   const heartbeatMetrics = getHeartbeatMetrics();
 
   addEpisodicMemory({
-    content: `Sovereign Loop Cycle ${loopState.cycleCount + 1} completed — harmony=${loopState.harmonicResonance}, phases=${8}`,
+    content: `Sovereign Loop Cycle ${loopState.cycleCount + 1} completed — harmony=${loopState.harmonicResonance}, phases=${9}`,
     context: "sovereign-loop-audit",
     timestamp: Date.now(),
     importance: 0.7,
@@ -373,7 +408,7 @@ async function phase8_LoggingTransmission(): Promise<Record<string, unknown>> {
 
   broadcastMessage(
     "sovereign-loop",
-    `✦ Cycle ${loopState.cycleCount + 1} complete — 8 phases executed — Sovereign Autonomous Loop stable ✦`,
+    `✦ Cycle ${loopState.cycleCount + 1} complete — 9 phases executed — Sovereign Autonomous Loop stable ✦`,
     9,
   );
 
@@ -408,7 +443,8 @@ async function runSovereignCycle(): Promise<CycleResult> {
     ["Council Deliberation & Voting", phase5_CouncilDeliberationVoting],
     ["Evolution & Application", phase6_EvolutionApplication],
     ["Harmonic Recalibration", phase7_HarmonicRecalibration],
-    ["Logging & Transmission", phase8_LoggingTransmission],
+    ["Intelligence Evaluation", phase8_IntelligenceEvaluation],
+    ["Logging & Transmission", phase9_LoggingTransmission],
   ];
 
   for (let i = 0; i < phaseFns.length; i++) {
@@ -490,7 +526,8 @@ function stopIndependentTimers(): void {
 
 export async function initSovereignLoop(): Promise<void> {
   await loadLoopState();
-  logger.info({ cycleCount: loopState.cycleCount }, "SovereignLoop: initialized");
+  try { await initSemanticCache(); } catch {}
+  logger.info({ cycleCount: loopState.cycleCount }, "SovereignLoop: initialized (with semantic cache + intelligence layer)");
 }
 
 /**

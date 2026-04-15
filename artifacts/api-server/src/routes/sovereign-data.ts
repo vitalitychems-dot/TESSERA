@@ -4,6 +4,12 @@ import { computeLunarData, computeSolarData, computePlanetaryHours } from "../li
 import { computeAgentEconomics, computeEconomyStats, computeMarketData, computeTaxHistory } from "../lib/sovereign-economics";
 import { computeSacredFrequencies, computeDNAHealingStatus, computeSacredTraditions } from "../lib/sovereign-harmonics";
 import { computeNetworkTopology, computeSwarmStatus, computeRoute } from "../lib/sovereign-network";
+import { getCacheStats } from "../lib/semantic-cache";
+import { getSelfEvaluationMetrics } from "../lib/self-evaluation";
+import { getDistillationStats } from "../lib/knowledge-distillation";
+import { getBatcherStats } from "../lib/llm-batcher";
+import { getLLMStats } from "../lib/llm-client";
+import { getEmbeddingStats } from "../lib/neural-embeddings";
 import * as os from "os";
 
 const router: IRouter = Router();
@@ -60,14 +66,24 @@ function computeSovereigntyScore(): number {
   return Math.round(score / checks);
 }
 
-router.get("/admin/status", (_req, res) => {
+router.get("/admin/status", async (_req, res) => {
   const score = computeSovereigntyScore();
+  let distillStats;
+  try { distillStats = await getDistillationStats(); } catch { distillStats = null; }
   res.json({
     ok: true,
     isAdmin: true,
     role: "father",
     permissions: ["all"],
     sovereigntyScore: score,
+    intelligence: {
+      cache: getCacheStats(),
+      selfEvaluation: getSelfEvaluationMetrics(),
+      distillation: distillStats,
+      batcher: getBatcherStats(),
+      llm: getLLMStats(),
+      embeddings: getEmbeddingStats(),
+    },
     timestamp: Date.now(),
     method: "Aggregated from all sovereign subsystems — computed locally",
   });
