@@ -186,6 +186,9 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   community: Users, vitality: Globe, security: Shield, "code-evolution": Code,
   swarm: Network, infrastructure: Server, trading: TrendingUp, research: Search,
   governance: Scale, creative: Palette, tesseract: Sparkles, free: MessageCircle,
+  sovereignty: Shield, technology: Code, performance: TrendingUp,
+  consciousness: Brain, knowledge: BookOpen, philosophy: Lightbulb,
+  external: Globe, general: MessageCircle,
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

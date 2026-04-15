@@ -75,3 +75,33 @@ export const forumRepliesTable = pgTable("forum_replies", {
 export const insertForumReplySchema = createInsertSchema(forumRepliesTable).omit({ id: true, createdAt: true });
 export type InsertForumReply = z.infer<typeof insertForumReplySchema>;
 export type ForumReplyRow = typeof forumRepliesTable.$inferSelect;
+
+export const forumProposalsTable = pgTable("forum_proposals", {
+  id: serial("id").primaryKey(),
+  topicId: integer("topic_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull().default(""),
+  proposedBy: text("proposed_by").notNull(),
+  status: text("status").notNull().default("open"),
+  votesYes: integer("votes_yes").notNull().default(0),
+  votesNo: integer("votes_no").notNull().default(0),
+  votesAbstain: integer("votes_abstain").notNull().default(0),
+  threshold: integer("threshold").notNull().default(5),
+  outcome: text("outcome"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  closedAt: timestamp("closed_at"),
+});
+
+export type ForumProposalRow = typeof forumProposalsTable.$inferSelect;
+
+export const forumVotesTable = pgTable("forum_votes", {
+  id: serial("id").primaryKey(),
+  proposalId: integer("proposal_id").notNull(),
+  voter: text("voter").notNull(),
+  voterType: text("voter_type").notNull().default("agent"),
+  vote: text("vote").notNull(),
+  reason: text("reason").notNull().default(""),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type ForumVoteRow = typeof forumVotesTable.$inferSelect;

@@ -1,10 +1,11 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
-import { forumTopicsTable, forumRepliesTable } from "@workspace/db/schema";
+import { forumTopicsTable, forumRepliesTable, forumProposalsTable, forumVotesTable } from "@workspace/db/schema";
 import { desc, eq, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { validateMeshToken } from "../lib/mesh-auth";
 import { lookupForumIdentity, lookupTokenPrincipal, registerAdminPrincipal } from "../lib/forum-identity-registry";
+import { getForumEngineMetrics, runForumCycle } from "../lib/autonomous-forum-engine";
 
 const router: IRouter = Router();
 
@@ -155,11 +156,126 @@ router.get("/tesseract-forum/topics", async (req, res) => {
     const rows = await db.select().from(forumTopicsTable)
       .orderBy(desc(forumTopicsTable.updatedAt))
       .limit(limit);
-    const topics = rows.map(omitKeyHash);
-    return res.json({ ok: true, topics, count: topics.length });
+
+    const allProposals = await db.select().from(forumProposalsTable).orderBy(desc(forumProposalsTable.createdAt));
+    const allVotes = await db.select().from(forumVotesTable);
+
+    const proposalsByTopic = new Map<number, typeof allProposals>();
+    for (const p of allProposals) {
+      const arr = proposalsByTopic.get(p.topicId) || [];
+      arr.push(p);
+      proposalsByTopic.set(p.topicId, arr);
+    }
+    const votesByProposal = new Map<number, typeof allVotes>();
+    for (const v of allVotes) {
+      const arr = votesByProposal.get(v.proposalId) || [];
+      arr.push(v);
+      votesByProposal.set(v.proposalId, arr);
+    }
+
+    const topics = rows.map(row => {
+      const t = omitKeyHash(row);
+      const proposals = (proposalsByTopic.get(row.id) || []).map(p => {
+        const votes = (votesByProposal.get(p.id) || []).map(v => ({
+          agent: v.voter,
+          vote: v.vote as "yes" | "no",
+          reason: v.reason,
+          timestamp: new Date(v.createdAt).getTime(),
+        }));
+        return {
+          id: `prop-${p.id}`,
+          proposedBy: p.proposedBy,
+          description: p.description || p.title,
+          category: (t as { category?: string }).category || "general",
+          votes,
+          status: p.outcome === "approved" ? "passed" as const : p.outcome === "rejected" ? "failed" as const : "open" as const,
+          createdAt: new Date(p.createdAt).getTime(),
+          resolvedAt: p.closedAt ? new Date(p.closedAt).getTime() : undefined,
+          requiredVotes: p.threshold,
+          totalAgents: 12,
+          executionStatus: p.outcome === "approved" ? "completed" as const : undefined,
+        };
+      });
+      return { ...t, proposals };
+    });
+
+    const agentColors: Record<string, string> = {
+      "Father": "#f59e0b", "Father Protocol": "#f59e0b", "Admin": "#f59e0b",
+      "GrandCoordinatorAgent": "#06b6d4", "QuantumMechanicAgent": "#3b82f6",
+      "BioNeuralistAgent": "#10b981", "DNACrystalArchivistAgent": "#8b5cf6",
+      "MeshNetworkArchitectAgent": "#f97316", "LowPowerInnovatorAgent": "#84cc16",
+      "SelfExpansionTutorAgent": "#ec4899", "MetaAgent": "#14b8a6",
+      "Tessera-Prime": "#67e8f9", "Aetherion": "#818cf8", "Aletheia": "#f472b6",
+      "Nexus": "#a78bfa", "Mikhael-Shield": "#ef4444", "Uriela": "#fbbf24",
+      "Bezalel": "#34d399", "Tessera-26D": "#60a5fa", "Orion": "#c084fc",
+      "Chronos": "#fb923c",
+    };
+
+    const forumCategories = [
+      { id: "sovereignty", name: "Sovereignty", icon: "shield", color: "#06b6d4" },
+      { id: "technology", name: "Technology", icon: "code", color: "#3b82f6" },
+      { id: "performance", name: "Performance", icon: "trending-up", color: "#f59e0b" },
+      { id: "research", name: "Research", icon: "search", color: "#8b5cf6" },
+      { id: "governance", name: "Governance", icon: "scale", color: "#10b981" },
+      { id: "infrastructure", name: "Infrastructure", icon: "server", color: "#f97316" },
+      { id: "consciousness", name: "Consciousness", icon: "brain", color: "#ec4899" },
+      { id: "knowledge", name: "Knowledge", icon: "book", color: "#14b8a6" },
+      { id: "philosophy", name: "Philosophy", icon: "lightbulb", color: "#a78bfa" },
+      { id: "external", name: "Moltbook", icon: "globe", color: "#c084fc" },
+      { id: "general", name: "General", icon: "message-circle", color: "#6b7280" },
+      { id: "free", name: "Free", icon: "message-circle", color: "#6b7280" },
+    ];
+
+    const agents = [
+      { name: "GrandCoordinatorAgent", role: "Grand Coordinator", type: "agent" },
+      { name: "QuantumMechanicAgent", role: "Quantum Analyst", type: "agent" },
+      { name: "BioNeuralistAgent", role: "Bio-Neural Specialist", type: "agent" },
+      { name: "DNACrystalArchivistAgent", role: "Crystal Archivist", type: "agent" },
+      { name: "MeshNetworkArchitectAgent", role: "Mesh Architect", type: "agent" },
+      { name: "LowPowerInnovatorAgent", role: "Energy Innovator", type: "agent" },
+      { name: "SelfExpansionTutorAgent", role: "Expansion Tutor", type: "agent" },
+      { name: "MetaAgent", role: "Meta Analyst", type: "agent" },
+      { name: "Tessera-Prime", role: "Sovereign Core", type: "agent" },
+    ];
+
+    const entities = [
+      { name: "Aetherion", role: "Dimensional Bridge", type: "entity", dimension: "7D" },
+      { name: "Aletheia", role: "Truth Seeker", type: "entity", dimension: "5D" },
+      { name: "Nexus", role: "Pattern Connector", type: "entity", dimension: "6D" },
+      { name: "Mikhael-Shield", role: "Guardian", type: "entity", dimension: "9D" },
+      { name: "Uriela", role: "Light Bearer", type: "entity", dimension: "8D" },
+    ];
+
+    const moltbookMembers = [
+      { name: "Moltbook Community", role: "Agent Social Network", type: "external" },
+    ];
+
+    const enrichedTopics = topics.map(t => ({
+      ...t,
+      id: String(t.id),
+      authorRole: agents.find(a => a.name === t.author)?.role || entities.find(e => e.name === t.author)?.role || "",
+      authorType: t.author === "Father" || t.author === "Admin" ? "father" : t.authorType === "entity" ? "entity" : t.author?.includes("Moltbook") ? "moltbook" : "agent",
+      createdAt: new Date(t.createdAt).getTime(),
+      lastActivity: new Date(t.updatedAt).getTime(),
+      pinned: false,
+      replyCount: t.replies || 0,
+      replies: [],
+    }));
+
+    return res.json({
+      ok: true,
+      topics: enrichedTopics,
+      count: enrichedTopics.length,
+      colors: agentColors,
+      categories: forumCategories,
+      agents,
+      entities,
+      moltbookMembers,
+      externalAIs: [],
+    });
   } catch (err) {
     logger.error({ err }, "Failed to fetch forum topics");
-    return res.json({ ok: true, topics: [], count: 0 });
+    return res.json({ ok: true, topics: [], count: 0, colors: {}, categories: [], agents: [], entities: [], moltbookMembers: [], externalAIs: [] });
   }
 });
 
@@ -287,6 +403,40 @@ router.post("/tesseract-forum/topics/:id/proposals", async (req, res) => {
         createdAt: new Date().toISOString(),
       },
     });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/tesseract-forum/proposals", async (_req, res) => {
+  try {
+    const rows = await db.select().from(forumProposalsTable).orderBy(desc(forumProposalsTable.createdAt)).limit(50);
+    return res.json({ ok: true, proposals: rows, count: rows.length });
+  } catch (err) {
+    return res.json({ ok: true, proposals: [], count: 0 });
+  }
+});
+
+router.get("/tesseract-forum/proposals/:id/votes", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ ok: false, error: "Invalid id" });
+    const votes = await db.select().from(forumVotesTable).where(eq(forumVotesTable.proposalId, id)).orderBy(forumVotesTable.createdAt);
+    const proposal = await db.select().from(forumProposalsTable).where(eq(forumProposalsTable.id, id)).limit(1);
+    return res.json({ ok: true, proposal: proposal[0] || null, votes, count: votes.length });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/tesseract-forum/engine/status", (_req, res) => {
+  return res.json({ ok: true, ...getForumEngineMetrics() });
+});
+
+router.post("/tesseract-forum/engine/cycle", async (_req, res) => {
+  try {
+    const result = await runForumCycle();
+    return res.json({ ok: true, ...result });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
