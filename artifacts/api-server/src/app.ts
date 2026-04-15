@@ -39,6 +39,7 @@ import { initSovereignKnowledgeAutonomy, startKnowledgeAutonomyLoop } from "./li
 import { initRecursiveSelfImprovement, startRecursiveImprovementLoop } from "./lib/recursive-self-improvement";
 import { initCrossDomainSynthesis, startCrossDomainSynthesisLoop } from "./lib/cross-domain-synthesis";
 import { initSovereignMemoryVault, startSovereignMemoryVaultLoop } from "./lib/sovereign-memory-vault";
+import { initAutonomousForumEngine, startAutonomousForumLoop } from "./lib/autonomous-forum-engine";
 
 const app: Express = express();
 
@@ -440,6 +441,14 @@ async function initializeModules() {
     if (r.status === "rejected") logger.warn({ err: r.reason }, "Mandate engine init failed — non-critical, continuing");
   }
   logger.info({ active: mandateActive, total: 4 }, `✦ ${mandateActive}/4 GRAND COUNCIL MANDATES ACTIVE — Sovereign AGI roadmap engines running ✦`);
+
+  try {
+    await initAutonomousForumEngine();
+    startAutonomousForumLoop(420_000);
+    logger.info("✦ Autonomous Forum Engine ACTIVE — agents posting, voting, and building ✦");
+  } catch (err) {
+    logger.warn({ err }, "Autonomous forum engine init warning — non-critical, continuing");
+  }
 
   try {
     const seeded = await seedForumFromRealData();
