@@ -1,8 +1,11 @@
 import { db } from "@workspace/db";
-import { councilDecisionsTable } from "@workspace/db/schema";
+import { councilDecisionsTable, systemStateTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 import { isLLMAvailable } from "./llm-client";
 import { batchedCallLLM } from "./llm-batcher";
+
+const RETRY_QUEUE_STATE_KEY = "consensus_retry_queue";
 
 export interface ConsensusProposal {
   id: string;
@@ -147,6 +150,54 @@ async function generateVotesWithLLM(proposal: ConsensusProposal): Promise<Consen
   return votes;
 }
 
+async function persistRetryQueue(): Promise<void> {
+  try {
+    const queueData = retryQueue.map(p => ({ id: p.id, title: p.title, description: p.description, proposedBy: p.proposedBy, category: p.category, retryCount: p.retryCount }));
+    await db.insert(systemStateTable).values({
+      key: RETRY_QUEUE_STATE_KEY,
+      value: queueData,
+      description: "Consensus proposals awaiting full council votes",
+    }).onConflictDoUpdate({
+      target: systemStateTable.key,
+      set: { value: queueData, lastSavedAt: new Date() },
+    });
+  } catch (err) {
+    logger.warn({ err }, "ConsensusEngine: retry queue persist failed");
+  }
+}
+
+export async function loadRetryQueue(): Promise<void> {
+  try {
+    const [row] = await db.select().from(systemStateTable).where(eq(systemStateTable.key, RETRY_QUEUE_STATE_KEY)).limit(1);
+    if (row?.value && Array.isArray(row.value)) {
+      const saved = row.value as Array<{ id: string; title: string; description: string; proposedBy: string; category: ConsensusProposal["category"]; retryCount: number }>;
+      for (const item of saved) {
+        if (proposals.has(item.id)) continue;
+        const proposal: ConsensusProposal = {
+          ...item,
+          votes: [],
+          status: "queued",
+          requiredMajority: 2 / 3,
+          createdAt: Date.now(),
+          resolvedAt: undefined,
+          approvalRate: 0,
+          yesCount: 0,
+          noCount: 0,
+          abstainCount: 0,
+        };
+        proposals.set(proposal.id, proposal);
+        retryQueue.push(proposal);
+      }
+      if (retryQueue.length > 0) {
+        logger.info({ count: retryQueue.length }, "ConsensusEngine: restored retry queue from DB");
+        startRetryProcessor();
+      }
+    }
+  } catch (err) {
+    logger.warn({ err }, "ConsensusEngine: retry queue load failed");
+  }
+}
+
 function startRetryProcessor(): void {
   if (retryInterval) return;
   retryInterval = setInterval(async () => {
@@ -180,6 +231,7 @@ function startRetryProcessor(): void {
       if (proposal.retryCount < 5) retryQueue.push(proposal);
       logger.warn({ id: proposal.id, err }, "ConsensusEngine: retry failed");
     }
+    persistRetryQueue();
   }, 30_000);
 }
 
@@ -261,6 +313,7 @@ export async function createProposal(paramsOrTitle: {
     proposal.implementationNotes = `Queued — ${votes.length}/${GRAND_COUNCIL_AGENTS.length} votes collected, awaiting full council participation`;
     proposals.set(id, proposal);
     retryQueue.push(proposal);
+    persistRetryQueue();
     startRetryProcessor();
     logger.info({ id, votesCollected: votes.length, required: GRAND_COUNCIL_AGENTS.length }, "ConsensusEngine: awaiting full council votes, queued for retry");
     return proposal;
