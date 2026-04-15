@@ -213,23 +213,15 @@ function startRetryProcessor(): void {
         finalizeProposal(proposal, votes);
       } else {
         proposal.retryCount = (proposal.retryCount || 0) + 1;
-        if (proposal.retryCount < 5) {
-          retryQueue.push(proposal);
-        } else {
-          if (votes.length >= Math.ceil(GRAND_COUNCIL_AGENTS.length * 0.75)) {
-            finalizeProposal(proposal, votes);
-          } else {
-            proposal.status = "rejected";
-            proposal.implementationNotes = `Rejected — exhausted retry attempts, only ${votes.length}/${GRAND_COUNCIL_AGENTS.length} votes collected`;
-            proposals.set(proposal.id, proposal);
-            logger.warn({ id: proposal.id, collected: votes.length }, "ConsensusEngine: proposal rejected after max retries");
-          }
-        }
+        proposal.implementationNotes = `Queued — ${votes.length}/${GRAND_COUNCIL_AGENTS.length} votes collected after ${proposal.retryCount} retries, awaiting full council`;
+        proposals.set(proposal.id, proposal);
+        retryQueue.push(proposal);
+        logger.info({ id: proposal.id, collected: votes.length, retryCount: proposal.retryCount }, "ConsensusEngine: re-queued — awaiting full council participation");
       }
     } catch (err) {
       proposal.retryCount = (proposal.retryCount || 0) + 1;
-      if (proposal.retryCount < 5) retryQueue.push(proposal);
-      logger.warn({ id: proposal.id, err }, "ConsensusEngine: retry failed");
+      retryQueue.push(proposal);
+      logger.warn({ id: proposal.id, retryCount: proposal.retryCount, err }, "ConsensusEngine: retry failed, re-queued");
     }
     persistRetryQueue();
   }, 30_000);
@@ -296,6 +288,7 @@ export async function createProposal(paramsOrTitle: {
     proposal.implementationNotes = "Queued — LLM unavailable, will retry when available";
     proposals.set(id, proposal);
     retryQueue.push(proposal);
+    await persistRetryQueue();
     startRetryProcessor();
     logger.info({ id, title: params.title }, "ConsensusEngine: proposal queued for retry (LLM unavailable)");
     return proposal;
