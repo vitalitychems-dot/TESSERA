@@ -68,18 +68,14 @@ async function loadConfigFromDB(): Promise<void> {
 }
 
 async function persistConfigChange(proposalId: string, change: SystemChange, category: string): Promise<void> {
-  try {
-    await db.insert(councilConfigTable).values({
-      proposalId,
-      subsystem: change.subsystem,
-      parameter: change.parameter,
-      oldValue: change.oldValue as string | number | null,
-      newValue: change.newValue as string | number,
-      category,
-    });
-  } catch (err) {
-    logger.warn({ err, parameter: change.parameter }, "CouncilExecutor: config persist failed");
-  }
+  await db.insert(councilConfigTable).values({
+    proposalId,
+    subsystem: change.subsystem,
+    parameter: change.parameter,
+    oldValue: change.oldValue as string | number | null,
+    newValue: change.newValue as string | number,
+    category,
+  });
 }
 
 async function executeProposal(decisionId: string, topic: string, category: string, outcome: string): Promise<ExecutionResult | null> {
