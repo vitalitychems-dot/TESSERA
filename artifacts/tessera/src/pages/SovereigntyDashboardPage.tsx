@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Shield, Vote, Users, TrendingUp, CheckCircle, XCircle, Loader2, Plus, Heart } from "lucide-react";
+import { Shield, Vote, Users, TrendingUp, CheckCircle, XCircle, Loader2, Plus, Heart, Brain } from "lucide-react";
 import { GlassCard, GradientBar, SectionHeader, PageHeader, RadialGauge, MiniStat } from "@/components/ui/sovereign";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +39,14 @@ export default function SovereigntyDashboardPage() {
     queryFn: () => fetch(`${API}/api/heartbeat/metrics`).then(r => r.json()).then(d => d.data),
     refetchInterval: 15000,
   });
+
+  const { data: adminStatus } = useQuery({
+    queryKey: ["admin-status-intelligence"],
+    queryFn: () => fetch(`${API}/api/admin/status`).then(r => r.json()),
+    refetchInterval: 30000,
+  });
+
+  const intelligence = adminStatus?.intelligence;
 
   const proposeMutation = useMutation({
     mutationFn: (body: typeof newProposal) =>
@@ -150,6 +158,44 @@ export default function SovereigntyDashboardPage() {
                   <div className="text-slate-500 mt-0.5">{e.notes}</div>
                 </div>
               ))}
+            </div>
+          </GlassCard>
+        )}
+
+        {intelligence && (
+          <GlassCard animate>
+            <SectionHeader icon={Brain} title="Intelligence Layer" color="cyan" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+              <MiniStat value={`${((intelligence.cache?.hitRate ?? 0) * 100).toFixed(0)}%`} label="Cache Hit Rate" color="cyan" />
+              <MiniStat value={intelligence.cache?.cacheSize ?? 0} label="Cache Size" color="blue" />
+              <MiniStat value={`${((intelligence.distillation?.hitRate ?? 0) * 100).toFixed(0)}%`} label="Knowledge Hit" color="emerald" />
+              <MiniStat value={intelligence.distillation?.totalFacts ?? 0} label="Distilled Facts" color="violet" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
+              <MiniStat value={intelligence.batcher?.callsSaved ?? 0} label="Calls Saved" color="amber" />
+              <MiniStat value={`${((intelligence.batcher?.reductionRate ?? 0) * 100).toFixed(0)}%`} label="Reduction" color="amber" />
+              <MiniStat value={intelligence.llm?.totalCalls ?? 0} label="LLM Calls" color="blue" />
+              <MiniStat value={intelligence.llm?.errors ?? 0} label="LLM Errors" color="red" />
+            </div>
+            {intelligence.selfEvaluation?.lastResult && (
+              <div className="mt-3 p-3 rounded-xl border border-cyan-500/10 bg-cyan-500/[0.03]">
+                <div className="text-xs text-cyan-400 font-medium mb-2">Self-Evaluation (Cycle {intelligence.selfEvaluation.lastResult.cycleNumber})</div>
+                <div className="grid grid-cols-3 gap-3">
+                  <MiniStat value={`${(intelligence.selfEvaluation.lastResult.overallScore * 100).toFixed(0)}%`} label="Overall Score" color="cyan" />
+                  <MiniStat value={intelligence.selfEvaluation.lastResult.llmCallsReduced} label="LLM Reduced" color="emerald" />
+                  <MiniStat value={intelligence.selfEvaluation.totalEvaluations} label="Total Evals" color="violet" />
+                </div>
+                {intelligence.selfEvaluation.lastResult.weakAreas?.length > 0 && (
+                  <div className="mt-2 text-[10px] text-amber-400/70 font-mono">Weak: {intelligence.selfEvaluation.lastResult.weakAreas.join(", ")}</div>
+                )}
+                {intelligence.selfEvaluation.lastResult.strongAreas?.length > 0 && (
+                  <div className="mt-1 text-[10px] text-emerald-400/70 font-mono">Strong: {intelligence.selfEvaluation.lastResult.strongAreas.join(", ")}</div>
+                )}
+              </div>
+            )}
+            <div className="mt-2 grid grid-cols-2 gap-3">
+              <MiniStat value={intelligence.embeddings?.cacheSize ?? 0} label="Embeddings" color="violet" />
+              <MiniStat value={`${intelligence.cache?.ttlSeconds ?? 3600}s`} label="Cache TTL" color="blue" />
             </div>
           </GlassCard>
         )}

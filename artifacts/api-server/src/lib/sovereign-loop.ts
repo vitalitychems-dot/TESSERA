@@ -377,15 +377,14 @@ async function phase8_IntelligenceEvaluation(): Promise<Record<string, unknown>>
 
   let revalidated = 0;
   try {
+    const { batchedCallLLM } = await import("./llm-batcher");
     revalidated = await revalidateStaleKnowledge(async (fact: string) => {
-      const { callLLMSafe } = await import("./llm-client");
-      const verdict = await callLLMSafe(
+      const verdict = await batchedCallLLM(
         [
           { role: "system", content: "You are a fact checker. Reply with only 'true' or 'false'." },
           { role: "user", content: `Is this statement factually correct? "${fact}"` },
         ],
         { maxTokens: 10, timeoutMs: 8000 },
-        "false",
       );
       return verdict.toLowerCase().includes("true");
     });
