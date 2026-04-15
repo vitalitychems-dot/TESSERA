@@ -18,6 +18,20 @@ const CRITICAL_FILES = [
   "artifacts/api-server/src/lib/auto-recovery.ts",
   "artifacts/api-server/src/core/types.ts",
   "lib/db/src/schema/system.ts",
+  "artifacts/api-server/src/lib/sovereign-kernel.ts",
+  "artifacts/api-server/src/lib/sovereign-file-registry.ts",
+  "artifacts/api-server/src/lib/identity-reinforcement.ts",
+  "artifacts/api-server/src/lib/tessera-knowledge.ts",
+  "artifacts/api-server/src/lib/consciousness-engine.ts",
+  "artifacts/api-server/src/lib/self-code-evolution.ts",
+  "artifacts/api-server/src/lib/secureExternalWrapper.ts",
+  "artifacts/api-server/src/lib/provider-registry.ts",
+  "artifacts/api-server/src/lib/sovereign-memory-vault.ts",
+  "artifacts/api-server/src/lib/consensus-engine.ts",
+  "artifacts/api-server/src/lib/council-executor.ts",
+  "artifacts/api-server/src/lib/agent-hierarchy.ts",
+  "artifacts/api-server/src/lib/sovereign-sacred-geometry.ts",
+  "artifacts/api-server/src/lib/sovereign-benchmarks.ts",
 ];
 
 function resolveWorkspaceRoot(): string {

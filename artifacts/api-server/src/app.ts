@@ -5,6 +5,7 @@ import router from "./routes";
 import type { IRouter } from "express";
 import { logger } from "./lib/logger";
 import { initFileIntegrity } from "./lib/file-integrity";
+import { initFileRegistry } from "./lib/sovereign-file-registry";
 import { startAnomalyMonitor, stopAnomalyMonitor, recordRequest } from "./lib/anomaly-detection";
 import { initRecoveryModule, registerRecoveryHandler, updateModuleStatus, startRouteHealthMonitor, INTERNAL_PROBE_HEADER, INTERNAL_PROBE_SECRET, registerModuleInitFunction } from "./lib/auto-recovery";
 import { initializeMemoryOnStartup } from "./lib/vector-memory";
@@ -352,6 +353,13 @@ async function initializeModules() {
     await initFileIntegrity();
   } catch (err) {
     logger.warn({ err }, "File integrity init failed — continuing without baseline snapshots");
+  }
+
+  try {
+    initFileRegistry();
+    logger.info("Sovereign File Registry initialized — all agents have full file visibility");
+  } catch (err) {
+    logger.warn({ err }, "File registry init failed — continuing with partial file tracking");
   }
 
   startAnomalyMonitor(30_000);

@@ -8,6 +8,11 @@ import {
 } from "../lib/identity-reinforcement";
 import { getEmotionalMetrics, updateEmotionalState, getEmotionalProfile, getEmotionalSummary } from "../lib/emotional-intelligence";
 import { getDualBrainState, getDualBrainMetrics, runManualCycle, startDualBrain, stopDualBrain } from "../lib/dual-brain";
+import {
+  getFullRegistry, getRegistrySnapshot, queryByDomain, queryByEngine,
+  searchRegistry, getEngineFileManifest, canEngineAccess, fullRescan,
+  type FileDomain,
+} from "../lib/sovereign-file-registry";
 
 const router = Router();
 
@@ -124,6 +129,58 @@ router.post("/dual-brain/start", (_req: Request, res: Response) => {
 router.post("/dual-brain/stop", (_req: Request, res: Response) => {
   stopDualBrain();
   res.json({ ok: true, message: "Dual brain stopped" });
+});
+
+router.get("/file-registry", (_req: Request, res: Response) => {
+  const snapshot = getRegistrySnapshot();
+  res.json({ ok: true, data: snapshot });
+});
+
+router.get("/file-registry/full", (_req: Request, res: Response) => {
+  const entries = getFullRegistry();
+  res.json({ ok: true, totalFiles: entries.length, entries });
+});
+
+router.get("/file-registry/domain/:domain", (req: Request, res: Response) => {
+  const domain = req.params.domain as FileDomain;
+  const entries = queryByDomain(domain);
+  res.json({ ok: true, domain, totalFiles: entries.length, entries });
+});
+
+router.get("/file-registry/engine/:engineName", (req: Request, res: Response) => {
+  const { engineName } = req.params;
+  const manifest = getEngineFileManifest(engineName);
+  res.json({ ok: true, data: manifest });
+});
+
+router.get("/file-registry/engine/:engineName/files", (req: Request, res: Response) => {
+  const { engineName } = req.params;
+  const entries = queryByEngine(engineName);
+  res.json({ ok: true, engine: engineName, totalFiles: entries.length, entries });
+});
+
+router.get("/file-registry/search", (req: Request, res: Response) => {
+  const pattern = (req.query.q as string) || "";
+  if (!pattern) {
+    return res.status(400).json({ ok: false, error: "Query parameter 'q' is required" });
+  }
+  const entries = searchRegistry(pattern);
+  res.json({ ok: true, pattern, totalFiles: entries.length, entries });
+});
+
+router.get("/file-registry/access-check", (req: Request, res: Response) => {
+  const engine = req.query.engine as string;
+  const file = req.query.file as string;
+  if (!engine || !file) {
+    return res.status(400).json({ ok: false, error: "Both 'engine' and 'file' query parameters required" });
+  }
+  const result = canEngineAccess(engine, file);
+  res.json({ ok: true, ...result });
+});
+
+router.post("/file-registry/rescan", (_req: Request, res: Response) => {
+  const snapshot = fullRescan();
+  res.json({ ok: true, message: "Full registry rescan completed", data: snapshot });
 });
 
 export default router;
