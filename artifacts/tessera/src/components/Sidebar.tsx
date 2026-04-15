@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link, useLocation } from "wouter";
-import { MessageSquare, Plus, Trash2, X, Brain, RefreshCw, MessageCircle, ChevronUp, ChevronDown, Search, Code2, Database, Sparkles, Globe, Shield, ShieldCheck, Crown, Eye, Atom, BarChart3, Rocket, Layers, Heart, BookOpen, Cpu } from "lucide-react";
+import { MessageSquare, Plus, Trash2, X, Brain, RefreshCw, MessageCircle, ChevronUp, ChevronDown, Search, Code2, Database, Sparkles, Globe, Shield, ShieldCheck, Crown, Eye, Atom, BarChart3, Rocket, Layers, Heart, BookOpen, Cpu, Zap } from "lucide-react";
 import { useConversations, useCreateConversation, useDeleteConversation } from "@/hooks/use-conversations";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -357,6 +357,15 @@ const NAV_GROUPS: NavGroup[] = [
         dotColor: "bg-emerald-400",
         testId: "link-sovereign-deps",
         matchFn: (loc) => loc === "/sovereign-deps",
+      },
+      {
+        title: "Compression Lab",
+        href: "/compression-lab",
+        icon: Zap,
+        color: "cyan",
+        dotColor: "bg-cyan-400",
+        testId: "link-compression-lab",
+        matchFn: (loc) => loc === "/compression-lab",
       },
     ],
   },

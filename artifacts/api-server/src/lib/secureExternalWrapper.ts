@@ -27,8 +27,16 @@ if (process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
   } catch {}
 }
 
+const SOVEREIGN_DOMAINS: string[] = [
+  "images-api.nasa.gov",
+  "images-assets.nasa.gov",
+  "images-orig.nasa.gov",
+  "api.nasa.gov",
+];
+
 const ALLOWED_DOMAINS: string[] = [
   ...BUILTIN_ALLOWED,
+  ...SOVEREIGN_DOMAINS,
   ...(process.env.ALLOWED_EXTERNAL_DOMAINS ?? "")
     .split(",")
     .map((d) => d.trim())
@@ -296,6 +304,130 @@ export async function secureExternalStreamingFetch(
     });
 
     throw new Error(`[SecureWrapper] ${flagReason}`);
+  }
+}
+
+export async function secureExternalBinaryFetch(
+  url: string,
+  options: ExternalRequestOptions = {}
+): Promise<{ buffer: Buffer; contentType: string; status: number; durationMs: number; flagged: boolean }> {
+  const method = (options.method ?? "GET").toUpperCase();
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const requestedBy = options.requestedBy ?? null;
+
+  const { allowed, domain } = isDomainAllowed(url);
+  if (!allowed) {
+    const flagReason = `Domain not in allowlist: ${domain}`;
+    logger.warn({ url, domain }, flagReason);
+    await logToDb({
+      targetUrl: url,
+      method,
+      status: null,
+      durationMs: null,
+      flagged: true,
+      flagReason,
+      requestedBy,
+    });
+    throw new Error(`[SecureWrapper] ${flagReason}`);
+  }
+
+  const parsedUrl = new URL(url);
+  if (parsedUrl.protocol !== "https:") {
+    const flagReason = `Protocol not allowed: ${parsedUrl.protocol} (only https permitted)`;
+    logger.warn({ url }, flagReason);
+    await logToDb({
+      targetUrl: url,
+      method,
+      status: null,
+      durationMs: null,
+      flagged: true,
+      flagReason,
+      requestedBy,
+    });
+    throw new Error(`[SecureWrapper] ${flagReason}`);
+  }
+
+  const intrusionCheck = detectIntrusion(url);
+  let flagged = intrusionCheck.flagged;
+  let flagReason: string | undefined = intrusionCheck.reason;
+
+  if (flagged) {
+    logger.warn({ url, reason: flagReason }, "Intrusion detection triggered on binary fetch");
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const start = Date.now();
+
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: options.headers,
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+
+    const durationMs = Date.now() - start;
+    const contentType = res.headers.get("content-type") || "";
+
+    if (!contentType.startsWith("image/")) {
+      flagged = true;
+      flagReason = `Non-image content-type rejected: ${contentType}`;
+      logger.warn({ url, contentType }, flagReason);
+      await logToDb({
+        targetUrl: url,
+        method,
+        status: res.status,
+        durationMs,
+        flagged: true,
+        flagReason,
+        requestedBy,
+      });
+      throw new Error(`[SecureWrapper] ${flagReason}`);
+    }
+
+    const arrayBuf = await res.arrayBuffer();
+
+    await logToDb({
+      targetUrl: url,
+      method,
+      status: res.status,
+      durationMs,
+      flagged,
+      flagReason: flagReason ?? null,
+      requestedBy,
+    });
+
+    return {
+      buffer: Buffer.from(arrayBuf),
+      contentType,
+      status: res.status,
+      durationMs,
+      flagged,
+    };
+  } catch (err) {
+    clearTimeout(timer);
+    const durationMs = Date.now() - start;
+    const isTimeout = (err as Error).name === "AbortError";
+
+    if (!(err as Error).message?.includes("[SecureWrapper]")) {
+      flagReason = isTimeout
+        ? `Binary request timed out after ${timeoutMs}ms`
+        : `Binary request error: ${(err as Error).message}`;
+      await logToDb({
+        targetUrl: url,
+        method,
+        status: null,
+        durationMs,
+        flagged: true,
+        flagReason,
+        requestedBy,
+      });
+    }
+
+    throw err instanceof Error && err.message.includes("[SecureWrapper]")
+      ? err
+      : new Error(`[SecureWrapper] ${flagReason}`);
   }
 }
 

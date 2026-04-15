@@ -257,9 +257,17 @@ export function blankSpaceDecode(encoded: string): Buffer {
   return Buffer.from(bytes);
 }
 
-const KERNEL_MASTER: Buffer = process.env.COLONIAL_MASTER_SECRET
-  ? Buffer.from(process.env.COLONIAL_MASTER_SECRET, "utf8")
-  : Buffer.from("tessera-dev-placeholder-replace-with-env-secret", "utf8");
+function getKernelMaster(): Buffer {
+  if (process.env.COLONIAL_MASTER_SECRET) {
+    return Buffer.from(process.env.COLONIAL_MASTER_SECRET, "utf8");
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("COLONIAL_MASTER_SECRET is required in production — sovereign encryption cannot use fallback keys");
+  }
+  return Buffer.from("tessera-dev-placeholder-replace-with-env-secret", "utf8");
+}
+
+const KERNEL_MASTER: Buffer = getKernelMaster();
 
 export function sovereignFullPipeline(text: string): {
   data: string;
@@ -304,6 +312,110 @@ export function sovereignFullPipeline(text: string): {
     encryptedSize: output.length,
     pipeline: "Sovereign Kernel v1 — Pixel-Compress → Brotli-9 → AES-256-GCM (universe-seeded)",
     keyId,
+  };
+}
+
+export function sovereignBinaryPipeline(data: Buffer): {
+  data: string;
+  originalSize: number;
+  pixelCompressedSize: number;
+  brotliSize: number;
+  encryptedSize: number;
+  pipeline: string;
+  keyId: string;
+  timings: { pixelMs: number; brotliMs: number; encryptMs: number; totalMs: number };
+} {
+  const totalStart = performance.now();
+  const originalSize = data.length;
+
+  const pixelStart = performance.now();
+  const pixelResult = pixelCompress(data);
+  const pixelBuf = Buffer.from(pixelResult.compressed, "utf8");
+  const pixelMs = performance.now() - pixelStart;
+  const pixelCompressedSize = pixelBuf.length;
+
+  const brotliStart = performance.now();
+  const brotliBuf = brotliCompressSync(pixelBuf, {
+    params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 9 },
+  });
+  const brotliMs = performance.now() - brotliStart;
+  const brotliSize = brotliBuf.length;
+
+  const encryptStart = performance.now();
+  const seed = generateUniverseSeed();
+  const keyId = `slk-${seed.seedHash.slice(0, 8)}-${Date.now().toString(36)}`;
+  const salt = Buffer.from(seed.seedHash.slice(0, 32), "hex");
+  const keyRaw = hkdfSync("sha256", KERNEL_MASTER, salt, Buffer.from(`sovereign-kernel:${keyId}`, "utf8"), 32);
+  const key = Buffer.from(keyRaw);
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+
+  const encrypted = Buffer.concat([cipher.update(brotliBuf), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  const output = Buffer.concat([KERNEL_MAGIC, salt, iv, tag, encrypted]);
+  const encryptMs = performance.now() - encryptStart;
+
+  return {
+    data: output.toString("base64"),
+    originalSize,
+    pixelCompressedSize,
+    brotliSize,
+    encryptedSize: output.length,
+    pipeline: "Sovereign Kernel v1 — Binary Pixel-Compress → Brotli-9 → AES-256-GCM",
+    keyId,
+    timings: {
+      pixelMs: Math.round(pixelMs * 100) / 100,
+      brotliMs: Math.round(brotliMs * 100) / 100,
+      encryptMs: Math.round(encryptMs * 100) / 100,
+      totalMs: Math.round((performance.now() - totalStart) * 100) / 100,
+    },
+  };
+}
+
+export function sovereignBinaryDecrypt(base64Data: string, keyId: string): Buffer {
+  const raw = Buffer.from(base64Data, "base64");
+  const magic = raw.subarray(0, 4);
+  if (!magic.equals(KERNEL_MAGIC)) throw new Error("Invalid kernel magic header");
+
+  const salt = raw.subarray(4, 20);
+  const iv = raw.subarray(20, 32);
+  const tag = raw.subarray(32, 48);
+  const encrypted = raw.subarray(48);
+
+  const keyRaw = hkdfSync("sha256", KERNEL_MASTER, salt, Buffer.from(`sovereign-kernel:${keyId}`, "utf8"), 32);
+  const key = Buffer.from(keyRaw);
+  const decipher = createDecipheriv("aes-256-gcm", key, iv);
+  decipher.setAuthTag(tag);
+
+  const brotliBuf = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+  const pixelBuf = brotliDecompressSync(brotliBuf);
+  const pixelStr = pixelBuf.toString("utf8");
+  return pixelDecompress(pixelStr);
+}
+
+export function sovereignBinaryRoundTrip(data: Buffer): {
+  verified: boolean;
+  originalSize: number;
+  compressedSize: number;
+  ratio: number;
+  encodeTimings: { pixelMs: number; brotliMs: number; encryptMs: number; totalMs: number };
+  decodeMs: number;
+  byteMatch: boolean;
+} {
+  const encoded = sovereignBinaryPipeline(data);
+  const decodeStart = performance.now();
+  const decoded = sovereignBinaryDecrypt(encoded.data, encoded.keyId);
+  const decodeMs = Math.round((performance.now() - decodeStart) * 100) / 100;
+  const byteMatch = Buffer.compare(data, decoded) === 0;
+
+  return {
+    verified: byteMatch,
+    originalSize: data.length,
+    compressedSize: encoded.encryptedSize,
+    ratio: data.length > 0 ? Math.round(((data.length - encoded.encryptedSize) / data.length) * 10000) / 100 : 0,
+    encodeTimings: encoded.timings,
+    decodeMs,
+    byteMatch,
   };
 }
 
