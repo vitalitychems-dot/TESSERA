@@ -223,45 +223,45 @@ function generateProofSteps(problem: string, category: string): ProofStep[] {
     });
   } else if (category === "computer-science") {
     steps.push({
-      id: stepId(), type: "definition", title: "Computational Model",
-      claim: "We define the computational model and complexity classes involved.",
-      reasoning: "Formal reasoning about computation requires a precise model (Turing machine, RAM model, lambda calculus). We specify the input encoding and define the relevant complexity measures.",
+      id: stepId(), type: "definition", title: "The Thinking Machine — Defining the Computational Model ⬡⏣◇",
+      claim: "We define the computational model and complexity classes — establishing the formal architecture of thought made mechanical.",
+      reasoning: "Formal reasoning about computation requires a precise model (Turing machine — the universal engine of logic, RAM model, or lambda calculus — the algebra of pure functions). We specify the input encoding and define the relevant complexity measures — the cosmic cost of knowing.",
       notation: lower.includes("np") || lower.includes("p =") ? "\\text{P} = \\{L : \\exists \\text{ TM } M \\text{ deciding } L \\text{ in } O(n^k) \\text{ for some } k\\}. \\quad \\text{NP} = \\{L : \\exists \\text{ verifier } V \\text{ in poly time}\\}" : "\\text{Let } M = (Q, \\Sigma, \\Gamma, \\delta, q_0, q_{\\text{acc}}, q_{\\text{rej}}) \\text{ be a Turing machine.}",
       confidence: 1.0,
     });
     steps.push({
-      id: stepId(), type: "lemma", title: "Complexity Bound",
-      claim: "We establish the time/space complexity of the key operation.",
-      reasoning: lower.includes("algorithm") ? "We analyze the algorithm by counting operations in the worst case, using recurrence relations or amortized analysis." : "We reduce from a known problem to establish the complexity lower bound, or construct an algorithm for the upper bound.",
+      id: stepId(), type: "lemma", title: "Complexity Bound — The Cosmic Cost of Computation",
+      claim: "We establish the time/space complexity of the key operation — measuring the price the universe charges for this knowledge.",
+      reasoning: lower.includes("algorithm") ? "We analyze the algorithm by counting operations in the worst case — like counting the heartbeats of the machine — using recurrence relations (self-similar patterns of work, fractal in nature) or amortized analysis." : "We reduce from a known problem to establish the complexity lower bound (the universe's minimum price), or construct an algorithm for the upper bound (our best offering).",
       notation: lower.includes("sort") ? "T(n) = 2T(n/2) + O(n) \\implies T(n) = O(n \\log n)" : "T(n) = O(f(n)) \\iff \\exists c, n_0: \\forall n \\geq n_0, T(n) \\leq c \\cdot f(n)",
       confidence: 0.9,
     });
     steps.push({
-      id: stepId(), type: "proof", title: `Correctness and Complexity Proof (by ${analysis.method})`,
-      claim: `The algorithm is correct and achieves the stated complexity bound, proved via ${analysis.method}.`,
-      reasoning: `We prove correctness using ${analysis.method} on the ${analysis.objects.join(", ")} and verify the complexity bound. The ${analysis.relations.join(" and ")} properties ensure termination and correctness.${analysis.keywords.length > 0 ? ` Key concepts: ${analysis.keywords.join(", ")}.` : ""}`,
+      id: stepId(), type: "proof", title: `Proof of Correctness — The Machine's Truth (by ${analysis.method})`,
+      claim: `The algorithm is correct and achieves the stated complexity bound — the thinking machine fulfills its cosmic contract, proved via ${analysis.method}.`,
+      reasoning: `We prove correctness using ${analysis.method} on the ${analysis.objects.join(", ")} and verify the complexity bound. The ${analysis.relations.join(" and ")} properties ensure termination (the computation halts — it does not wander forever) and correctness (it speaks only truth).${analysis.keywords.length > 0 ? ` Key concepts: ${analysis.keywords.join(", ")}.` : ""}`,
       notation: "\\text{Correctness: by induction on } |x|. \\text{ Complexity: } T(n) \\in O(f(n)). \\quad \\blacksquare",
       confidence: 0.87,
     });
   } else if (category === "physics") {
     steps.push({
-      id: stepId(), type: "definition", title: "Physical System",
-      claim: "We define the physical system, its state variables, and governing laws.",
-      reasoning: "Physics problems require identifying the relevant forces, fields, or particles and selecting the appropriate framework (classical mechanics, electromagnetism, quantum mechanics, thermodynamics, or relativity).",
+      id: stepId(), type: "definition", title: "The Physical System — Where Mathematics Becomes Nature △◇∿",
+      claim: "We define the physical system, its state variables, and governing laws — mapping the universe's own language onto symbols.",
+      reasoning: "Physics problems require identifying the relevant forces, fields, or particles and selecting the appropriate framework: classical mechanics (the dance of planets), electromagnetism (the weave of light), quantum mechanics (the dice of creation), thermodynamics (the arrow of time), or relativity (the curvature of spacetime).",
       notation: lower.includes("quantum") ? "\\hat{H}|\\psi\\rangle = E|\\psi\\rangle, \\quad \\hat{H} = -\\frac{\\hbar^2}{2m}\\nabla^2 + V(\\mathbf{r})" : lower.includes("relativ") ? "ds^2 = -c^2 dt^2 + dx^2 + dy^2 + dz^2, \\quad E = mc^2" : "F = ma, \\quad \\mathcal{L} = T - V, \\quad \\frac{d}{dt}\\frac{\\partial \\mathcal{L}}{\\partial \\dot{q}} - \\frac{\\partial \\mathcal{L}}{\\partial q} = 0",
       confidence: 1.0,
     });
     steps.push({
-      id: stepId(), type: "lemma", title: "Conservation Law / Symmetry",
-      claim: "We identify the relevant conservation law or symmetry principle.",
-      reasoning: "By Noether's theorem, every continuous symmetry of the Lagrangian corresponds to a conserved quantity. We identify which conservation laws (energy, momentum, angular momentum, charge) apply to our system.",
+      id: stepId(), type: "lemma", title: "Conservation Law — The Universe's Unbreakable Promises",
+      claim: "We identify the relevant conservation law or symmetry principle — the eternal covenants the cosmos keeps with itself.",
+      reasoning: "By Noether's theorem (Emmy Noether, 1918 — perhaps the deepest insight connecting mathematics to physics), every continuous symmetry of the Lagrangian corresponds to a conserved quantity. Time invariance gives energy conservation; spatial invariance gives momentum; rotational invariance gives angular momentum. We identify which of the universe's unbreakable promises apply to our system.",
       notation: "\\text{Time invariance} \\implies \\text{energy conservation: } E = T + V = \\text{const}",
       confidence: 0.95,
     });
     steps.push({
-      id: stepId(), type: "proof", title: `Derivation (by ${analysis.method})`,
-      claim: `We derive the result from the governing equations using ${analysis.method}.`,
-      reasoning: `Starting from the fundamental equations for ${analysis.objects.join(", ")}, we solve using ${analysis.method}. The ${analysis.relations.join(" and ")} constraints are satisfied.${analysis.keywords.length > 0 ? ` Key concepts: ${analysis.keywords.join(", ")}.` : ""}`,
+      id: stepId(), type: "proof", title: `Derivation from First Principles — Nature Speaks (by ${analysis.method})`,
+      claim: `We derive the result from the governing equations using ${analysis.method} — letting the universe's own laws carry us to the answer.`,
+      reasoning: `Starting from the fundamental equations for ${analysis.objects.join(", ")} — the words the cosmos wrote in mathematics — we solve using ${analysis.method}. The ${analysis.relations.join(" and ")} constraints are satisfied, and the physical law emerges as a necessary consequence of the symmetries we identified.${analysis.keywords.length > 0 ? ` Key concepts: ${analysis.keywords.join(", ")}.` : ""}`,
       notation: "\\therefore \\text{ the physical result follows from first principles. } \\blacksquare",
       confidence: 0.88,
     });
