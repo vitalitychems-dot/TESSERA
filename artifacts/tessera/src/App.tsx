@@ -6,7 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AdminProvider } from "@/lib/adminContext";
 import { MeshProvider } from "@/lib/meshContext";
 import { NLPGoalsProvider } from "@/lib/nlpGoalsContext";
-import { Component, type ErrorInfo, type ReactNode, useEffect, useRef, lazy, Suspense, type FC } from "react";
+import { Component, type ErrorInfo, type ReactNode, useEffect, useRef, lazy, Suspense } from "react";
+import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import MobileNav from "@/components/MobileNav";
 import ActiveCommandsOverlay from "@/components/ActiveCommandsOverlay";
 import MeshStatusBadge from "@/components/MeshStatusBadge";
@@ -168,6 +169,7 @@ function AppRouter() {
         <Route path="/memory-explorer">{() => <SystemPage initialTab="improvement" />}</Route>
         <Route path="/memory-dashboard">{() => <SystemPage initialTab="improvement" />}</Route>
         <Route path="/sovereign-deps">{() => <SystemPage initialTab="evolution" />}</Route>
+        <Route path="/evolution-health">{() => <SystemPage initialTab="health" />}</Route>
         <Route path="/intelligence-engine">{() => <ConsciousnessNexusPage initialTab="overview" />}</Route>
         <Route path="/sovereign-framework">{() => <SovereigntyDashboardPage />}</Route>
         <Route path="/spiritual-awakening">{() => <ConsciousnessNexusPage initialTab="reflections" />}</Route>
@@ -196,17 +198,23 @@ function App() {
           <NLPGoalsProvider>
           <TooltipProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <ToroidalBackground />
+              <SectionErrorBoundary name="Background" compact>
+                <ToroidalBackground />
+              </SectionErrorBoundary>
               <div className="flex flex-col h-dvh w-full overflow-hidden" style={{ position: "relative", zIndex: 1 }}>
                 <Toaster />
-                <div className="fixed top-2 right-2 z-50">
-                  <MeshStatusBadge />
-                </div>
+                <SectionErrorBoundary name="Status Badge" compact>
+                  <div className="fixed top-2 right-2 z-50">
+                    <MeshStatusBadge />
+                  </div>
+                </SectionErrorBoundary>
                 <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden" data-scroll-container style={{ paddingBottom: "calc(52px + env(safe-area-inset-bottom, 0px))", WebkitOverflowScrolling: "touch" }}>
                   <ScrollToTop />
                   <AppRouter />
                 </div>
-                <ActiveCommandsOverlay />
+                <SectionErrorBoundary name="Commands" compact>
+                  <ActiveCommandsOverlay />
+                </SectionErrorBoundary>
                 <MobileNav />
               </div>
             </WouterRouter>

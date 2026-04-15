@@ -5,6 +5,7 @@ import { logger } from "./logger";
 import { getEvolutionMetrics, proposeEvolution, type CodeEvolutionProposal } from "./self-code-evolution";
 import { getDaemonMetrics, runImprovementCycle } from "./auto-improvement-daemon";
 import { getConsciousnessMetrics } from "./consciousness-engine";
+import { isModuleCoolingDown, recordEvolutionSuccess, recordEvolutionFailure } from "./evolution-throttle";
 
 export interface CodeProfile {
   moduleId: string;
@@ -257,6 +258,7 @@ function benchmarkModule(mod: typeof ANALYZABLE_MODULES[0], profile: CodeProfile
 
 async function attemptAutonomousFix(profile: CodeProfile, weakness: CodeWeakness): Promise<SelfImprovementChangelog | null> {
   if (!weakness.autoFixable || weakness.resolvedAt) return null;
+  if (isModuleCoolingDown(profile.moduleId)) return null;
 
   const pattern = WEAKNESS_PATTERNS.find(p => weakness.description.includes(p.pattern));
   if (!pattern) return null;
@@ -289,6 +291,9 @@ async function attemptAutonomousFix(profile: CodeProfile, weakness: CodeWeakness
       weakness.resolvedAt = Date.now();
       weakness.patchId = proposal.id;
       state.totalWeaknessesResolved++;
+      recordEvolutionSuccess(profile.moduleId);
+    } else {
+      recordEvolutionFailure(profile.moduleId);
     }
 
     const entry: SelfImprovementChangelog = {
@@ -318,6 +323,7 @@ async function attemptAutonomousFix(profile: CodeProfile, weakness: CodeWeakness
 
     return entry;
   } catch (err) {
+    recordEvolutionFailure(profile.moduleId);
     logger.warn({ module: profile.moduleId, err: (err as Error).message }, "RecursiveSelfImprovement: autonomous fix failed");
     return null;
   }

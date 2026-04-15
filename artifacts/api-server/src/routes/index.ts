@@ -51,6 +51,7 @@ import archivesRouter from "./archives";
 import politicalDossiersRouter from "./political-dossiers";
 import sacredConferenceRouter from "./sacred-conference";
 import knowledgeHealthRouter from "./knowledge-health";
+import evolutionHealthRouter from "./evolution-health";
 
 const router: IRouter = Router();
 
@@ -106,5 +107,6 @@ router.use(archivesRouter);
 router.use(politicalDossiersRouter);
 router.use(sacredConferenceRouter);
 router.use(knowledgeHealthRouter);
+router.use(evolutionHealthRouter);
 
 export default router;
