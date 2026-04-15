@@ -133,13 +133,13 @@ router.post("/mandates/4/memory-vault/store", (req: Request, res: Response) => {
   res.json({ ok: true, memoryId: id });
 });
 
-router.post("/mandates/4/memory-vault/recall", (req: Request, res: Response) => {
+router.post("/mandates/4/memory-vault/recall", async (req: Request, res: Response) => {
   const { query, topK } = req.body;
   if (!query) {
     res.status(400).json({ ok: false, error: "query is required" });
     return;
   }
-  const memories = recallFromVault(query, topK || 10);
+  const memories = await recallFromVault(query, topK || 10);
   res.json({ ok: true, count: memories.length, memories });
 });
 

@@ -50,6 +50,7 @@ import mandatesRouter from "./mandates";
 import archivesRouter from "./archives";
 import politicalDossiersRouter from "./political-dossiers";
 import sacredConferenceRouter from "./sacred-conference";
+import knowledgeHealthRouter from "./knowledge-health";
 
 const router: IRouter = Router();
 
@@ -104,5 +105,6 @@ router.use(mandatesRouter);
 router.use(archivesRouter);
 router.use(politicalDossiersRouter);
 router.use(sacredConferenceRouter);
+router.use(knowledgeHealthRouter);
 
 export default router;
