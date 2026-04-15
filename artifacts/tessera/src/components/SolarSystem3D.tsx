@@ -165,7 +165,7 @@ function RulingPlanetAura({ size, isVenus }: { size: number; isVenus?: boolean }
   const particlesRef = useRef<THREE.Points>(null);
   const auraRef = useRef<THREE.Mesh>(null);
   const outerAuraRef = useRef<THREE.Mesh>(null);
-  const scalesRef = useRef<THREE.Mesh>(null);
+  const scalesRef = useRef<THREE.Group>(null);
   const count = isVenus ? 350 : 200;
 
   const positions = useMemo(() => {
