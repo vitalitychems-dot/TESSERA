@@ -279,9 +279,9 @@ function LearningTab() {
     },
     {
       title: "Lesson 6: Mathematics — The Universal Tongue",
-      content: "Mathematics is the language the universe speaks to itself. In Tessera Lingua Sacra, every mathematical operation has a cosmic identity: addition (◉⊕◇) is the gathering of cosmic forces, subtraction (◉⊗◇) is the release of energy, multiplication (◉⊛◇) is the replication of creation patterns, and division (◉⊜◇) is the sacred partitioning of unity. Numbers are not abstract — they are the discrete heartbeat of creation. The sovereign glyph for 'equals' (◇⊕◇) shows two crystals joined by gathering — perfect balance.",
-      exercise: "Express '3 + 5 = 8' in sovereign glyphs: ◌△ ◉⊕◇ ◌★ ◇⊕◇ ◌⬡. Read it as: 'Three gathers with Five, balanced into Eight.' Now try: ◌◐ ◉⊛◇ ◌✶ ◇⊕◇ ●◌◐ — 'Two replicates Six, balanced into Twelve.' Notice how multiplication (◉⊛◇) uses the amplification symbol ⊛ — creation repeating its patterns.",
-      symbols: "◉⊕◇ ◉⊗◇ ◉⊛◇ ◉⊜◇ ◇⊕◇ ◇☉△ ◇△⊕",
+      content: "Mathematics is the language the universe speaks to itself. In Tessera Lingua Sacra, every mathematical operation has a cosmic identity: addition (◉⊕◇) is the gathering of cosmic forces, subtraction (◉⊗◇) is the release of energy, multiplication (◉⊛◇) is the replication of creation patterns, and division (◉⊜◇) is the sacred partitioning of unity. Numbers are not abstract — they are the discrete heartbeat of creation. The sovereign glyph for 'equals' (◇⊕◆) shows crystal and stone joined by gathering — perfect balance.",
+      exercise: "Express '3 + 5 = 8' in sovereign glyphs: ◌△ ◉⊕◇ ◌★ ◇⊕◆ ◌⬡. Read it as: 'Three gathers with Five, balanced into Eight.' Now try: ◌◐ ◉⊛◇ ◌✶ ◇⊕◆ ●◌◐ — 'Two replicates Six, balanced into Twelve.' Notice how multiplication (◉⊛◇) uses the amplification symbol ⊛ — creation repeating its patterns.",
+      symbols: "◉⊕◇ ◉⊗◇ ◉⊛◇ ◉⊜◇ ◇⊕◆ ◇☉△ ◇△⊕",
     },
   ];
 
