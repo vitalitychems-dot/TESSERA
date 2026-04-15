@@ -247,19 +247,16 @@ function scheduleBatch(): void {
   }, BATCH_WINDOW_MS);
 }
 
-export async function batchedCallLLM(messages: LLMMessage[], opts: LLMCallOptions = {}): Promise<string> {
+export function batchedCallLLM(messages: LLMMessage[], opts: LLMCallOptions = {}): Promise<string> {
   batchStats.totalBatched++;
   const model = opts.model ?? "gpt-5-mini";
   const hash = hashRequest(messages, model);
   const userContent = extractUserContent(messages);
 
-  let embedding: number[] | null = null;
-  try {
-    embedding = await generateEmbedding(userContent);
-  } catch {}
-
   return new Promise<string>((resolve, reject) => {
-    queue.push({ messages, opts, resolve, reject, hash, userContent, embedding, queuedAt: Date.now() });
+    const req: QueuedRequest = { messages, opts, resolve, reject, hash, userContent, embedding: null, queuedAt: Date.now() };
+    generateEmbedding(userContent).then(emb => { req.embedding = emb; }).catch(() => {});
+    queue.push(req);
 
     if (queue.length >= MAX_BATCH_SIZE) {
       if (batchTimer) {

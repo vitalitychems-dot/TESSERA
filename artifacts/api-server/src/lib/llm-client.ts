@@ -54,11 +54,6 @@ export async function callLLM(
   messages: LLMMessage[],
   opts: LLMCallOptions = {}
 ): Promise<string> {
-  if (!opts._internal) {
-    const { batchedCallLLM } = await import("./llm-batcher");
-    return batchedCallLLM(messages, opts);
-  }
-
   const {
     model = "gpt-5-mini",
     maxTokens = 2048,
@@ -119,6 +114,11 @@ export async function callLLM(
         }
       }
     } catch {}
+  }
+
+  if (!opts._internal) {
+    const { batchedCallLLM } = await import("./llm-batcher");
+    return batchedCallLLM(canonicalMessages, { ...opts, _internal: true, skipCache: true, skipDistillation: true });
   }
 
   const controller = new AbortController();
