@@ -2,6 +2,8 @@ import { db } from "@workspace/db";
 import { vectorEmbeddingsTable, decisionHistoryTable, systemStateTable } from "@workspace/db/schema";
 import { desc, eq, sql } from "drizzle-orm";
 import { generateEmbedding, generateEmbeddingsBatch, cosineSimilarity as neuralCosineSimilarity, getEmbeddingStats } from "./neural-embeddings";
+import { evictExpired } from "./semantic-cache";
+import { logger } from "./logger";
 
 function tokenize(text: string): string[] {
   return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(Boolean);
@@ -234,5 +236,73 @@ export async function initializeMemoryOnStartup(): Promise<{ loaded: string[]; e
     errors.push(`Failed to log startup decision: ${(e as Error).message}`);
   }
 
+  scheduleBackgroundReembedding();
+
   return { loaded, errors };
+}
+
+const REEMBED_BATCH_SIZE = 20;
+const REEMBED_INTERVAL_MS = 60_000;
+let reembedTimer: ReturnType<typeof setInterval> | null = null;
+const reembedStats = { processed: 0, remaining: 0, running: false };
+
+async function reembedBatch(): Promise<number> {
+  if (reembedStats.running) return 0;
+  reembedStats.running = true;
+
+  try {
+    const rows = await db
+      .select({ id: vectorEmbeddingsTable.id, content: vectorEmbeddingsTable.content, embedding: vectorEmbeddingsTable.embedding })
+      .from(vectorEmbeddingsTable)
+      .limit(REEMBED_BATCH_SIZE);
+
+    const needsReembed = rows.filter(r => {
+      const emb = r.embedding as number[];
+      return !Array.isArray(emb) || emb.length === 0 || emb.length > 256;
+    });
+
+    if (needsReembed.length === 0) {
+      reembedStats.remaining = 0;
+      return 0;
+    }
+
+    const texts = needsReembed.map(r => r.content);
+    const embeddings = await generateEmbeddingsBatch(texts);
+
+    for (let i = 0; i < needsReembed.length; i++) {
+      await db
+        .update(vectorEmbeddingsTable)
+        .set({ embedding: embeddings[i] })
+        .where(eq(vectorEmbeddingsTable.id, needsReembed[i].id));
+    }
+
+    reembedStats.processed += needsReembed.length;
+    logger.info({ batch: needsReembed.length, total: reembedStats.processed }, "VectorMemory: re-embedded batch");
+
+    evictExpired().catch(() => {});
+
+    return needsReembed.length;
+  } catch (err) {
+    logger.debug({ err: (err as Error).message }, "VectorMemory: re-embed error");
+    return 0;
+  } finally {
+    reembedStats.running = false;
+  }
+}
+
+function scheduleBackgroundReembedding(): void {
+  if (reembedTimer) return;
+  reembedTimer = setInterval(async () => {
+    const count = await reembedBatch();
+    if (count === 0 && reembedTimer) {
+      clearInterval(reembedTimer);
+      reembedTimer = null;
+      logger.info({ totalProcessed: reembedStats.processed }, "VectorMemory: background re-embedding complete");
+    }
+  }, REEMBED_INTERVAL_MS);
+  logger.info("VectorMemory: background re-embedding scheduled");
+}
+
+export function getReembedStats() {
+  return { ...reembedStats };
 }

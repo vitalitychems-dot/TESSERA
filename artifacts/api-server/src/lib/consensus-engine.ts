@@ -154,14 +154,16 @@ Agents whose specialties match the category "${proposal.category}" should have h
 The overall approval rate should reflect genuine analysis of the proposal — not automatically positive.
 Return ONLY the JSON array.`;
 
-  const raw = await callLLMSafe(
-    [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
-    { model: "gpt-5-mini", maxTokens: 2048, timeoutMs: 20_000 },
-    ""
-  );
+  let raw = "";
+  try {
+    raw = await batchedCallLLM(
+      [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      { model: "gpt-5-mini", maxTokens: 2048, timeoutMs: 20_000 },
+    );
+  } catch { raw = ""; }
 
   if (!raw) return [];
 
