@@ -72,10 +72,19 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     return cached.vec;
   }
 
+  if (neuralPreference < 0.3) {
+    embeddingMetrics.fallbackCalls++;
+    const fallback = localFallbackEmbedding(text);
+    embeddingCache.set(key, { vec: fallback, ts: Date.now() });
+    return fallback;
+  }
+
+  const timeoutMs = Math.round(10_000 * Math.min(neuralPreference, 2.0));
+
   try {
     const client = getClient();
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10_000);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     const response = await client.embeddings.create(
       { model: "text-embedding-3-small", input: text.slice(0, 8000) },

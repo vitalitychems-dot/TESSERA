@@ -86,7 +86,19 @@ const AGENT_DOMAINS: Record<string, string> = {
   Aetherion: "Creative Intelligence & Expansion", Orion: "Strategic Command",
 };
 
+interface ParentAgentState {
+  agentId: string;
+  name: string;
+  tier: string;
+  status: string;
+  domain: string;
+  lastActiveAt: number;
+  taskHistory: Array<{ task: string; completedAt: number; success: boolean }>;
+  performanceMetrics: { tasksCompleted: number; successRate: number; avgResponseMs: number; ethicsScore: number };
+}
+
 const agentChildren: AgentChild[] = [];
+const parentAgentStates = new Map<string, ParentAgentState>();
 let hierarchyInitialized = false;
 let dbPersisted = false;
 
@@ -141,6 +153,24 @@ export async function initAgentHierarchy(): Promise<void> {
             expertise: row.domain,
             birthVows: BIRTH_VOWS,
           });
+        } else if (row.tier !== "child") {
+          const perf = (row.performanceMetrics || {}) as { tasksCompleted?: number; successRate?: number; avgResponseMs?: number; ethicsScore?: number };
+          const taskHist = (row.taskHistory || []) as Array<{ task: string; completedAt: number; success: boolean }>;
+          parentAgentStates.set(row.name, {
+            agentId: row.agentId,
+            name: row.name,
+            tier: row.tier,
+            status: row.status,
+            domain: row.domain,
+            lastActiveAt: row.lastActiveAt?.getTime() ?? row.createdAt.getTime(),
+            taskHistory: taskHist,
+            performanceMetrics: {
+              tasksCompleted: perf.tasksCompleted ?? 0,
+              successRate: perf.successRate ?? 100,
+              avgResponseMs: perf.avgResponseMs ?? 0,
+              ethicsScore: perf.ethicsScore ?? 95,
+            },
+          });
         }
       }
 
@@ -148,14 +178,43 @@ export async function initAgentHierarchy(): Promise<void> {
         buildChildren();
       }
 
+      if (parentAgentStates.size === 0) {
+        for (const parent of PARENT_AGENTS) {
+          const tier = parent === "Tessera" ? "supreme" : ["Aetherion", "Orion"].includes(parent) ? "expansion" : "council";
+          parentAgentStates.set(parent, {
+            agentId: parent.toLowerCase(),
+            name: parent,
+            tier,
+            status: "active",
+            domain: AGENT_DOMAINS[parent] || "General Intelligence",
+            lastActiveAt: Date.now(),
+            taskHistory: [],
+            performanceMetrics: { tasksCompleted: 0, successRate: 100, avgResponseMs: 0, ethicsScore: 95 },
+          });
+        }
+      }
+
       dbPersisted = true;
-      logger.info({ agents: allRows.length, children: agentChildren.length }, "AgentHierarchy: loaded from database");
+      logger.info({ agents: allRows.length, parents: parentAgentStates.size, children: agentChildren.length }, "AgentHierarchy: loaded from database");
       return;
     }
   } catch (err) {
     logger.warn({ err }, "AgentHierarchy: DB load failed, using in-memory");
   }
 
+  for (const parent of PARENT_AGENTS) {
+    const tier = parent === "Tessera" ? "supreme" : ["Aetherion", "Orion"].includes(parent) ? "expansion" : "council";
+    parentAgentStates.set(parent, {
+      agentId: parent.toLowerCase(),
+      name: parent,
+      tier,
+      status: "active",
+      domain: AGENT_DOMAINS[parent] || "General Intelligence",
+      lastActiveAt: Date.now(),
+      taskHistory: [],
+      performanceMetrics: { tasksCompleted: 0, successRate: 100, avgResponseMs: 0, ethicsScore: 95 },
+    });
+  }
   buildChildren();
   await persistHierarchyToDB();
 }
@@ -239,12 +298,19 @@ function ensureChildrenBuilt(): void {
   }
 }
 
+export function getParentAgentStates(): ParentAgentState[] {
+  return Array.from(parentAgentStates.values());
+}
+
 export function getAgentHierarchy() {
   ensureChildrenBuilt();
   return {
     levels: HIERARCHY_LEVELS,
     parentAgents: PARENT_AGENTS,
+    parentStates: Array.from(parentAgentStates.values()),
+    totalParents: parentAgentStates.size,
     totalChildren: agentChildren.length,
+    totalAgents: parentAgentStates.size + agentChildren.length,
     totalAutonomous: agentChildren.filter(c => c.status === "autonomous").length,
     totalTraining: agentChildren.filter(c => c.status === "training").length,
     children: agentChildren,
