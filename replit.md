@@ -23,6 +23,7 @@ The application has 10 primary navigation tabs, each with a lazy-loaded page: Ch
 -   **Living Canon System:** A dynamic, versioned canon (`tessera-bible.ts`) with immutable snapshots stored in PostgreSQL for historical tracking.
 -   **Grand Council Governance:** A central governance mechanism where council decisions influence system operations, utilizing knowledge lookups from sovereign engines.
 -   **UI/UX Design:** A consistent dark glassmorphism aesthetic with a `ToroidalBackground` (starfield, particle system, sacred geometry, nebula clouds). A premium shared component library includes `RadialGauge`, `GlassCard`, `GradientBar`, `HeroStat`, `SectionHeader`, `TabBar`, `PageHeader`, `MiniStat`. CSS animations include `sovereign-fade-in`, `sovereign-shimmer`, `sovereign-gauge-arc`, `sovereign-page-glow`, and `sovereign-stagger`.
+-   **3D Universe Visualization:** The Universe page (`/universe`) uses React Three Fiber (`@react-three/fiber`), Drei (`@react-three/drei`), and Three.js for an immersive 3D solar system. Features include: Sun with emissive glow, 8 orbiting planets with animation, Saturn rings, hover tooltips, 7 dimensional plane shells (toggle-able via Planes button), deep-space starfield with nebula particles, orbit controls (zoom/pan/rotate with mouse and touch), glassmorphic HUD overlay (moon phase, sun sign, 963Hz frequency, plane count), and a slide-out natal chart panel. Includes WebGL detection with graceful fallback. Key component: `SolarSystem3D.tsx`.
 
 **Key Features & Implementations:**
 
