@@ -5,7 +5,7 @@ import { eq, sql, gt } from "drizzle-orm";
 import { logger } from "./logger";
 import { generateEmbedding, cosineSimilarity } from "./neural-embeddings";
 
-const DEFAULT_TTL_SECONDS = 3600;
+let DEFAULT_TTL_SECONDS = 3600;
 const SIMILARITY_THRESHOLD = 0.92;
 const MAX_CACHE_SIZE = 5000;
 
@@ -168,8 +168,30 @@ export async function invalidateCache(): Promise<void> {
   }
 }
 
-export function getCacheStats(): CacheStats {
-  return { ...stats };
+export function getCacheStats(): CacheStats & { ttlSeconds: number } {
+  return { ...stats, ttlSeconds: DEFAULT_TTL_SECONDS };
+}
+
+export function setCacheTtl(ttl: number): void {
+  DEFAULT_TTL_SECONDS = Math.max(300, Math.min(ttl, 86400));
+  logger.info({ ttl: DEFAULT_TTL_SECONDS }, "SemanticCache: TTL updated");
+}
+
+export async function invalidateByCategory(category: string): Promise<number> {
+  try {
+    const result = await db.delete(semanticCacheTable)
+      .where(sql`${semanticCacheTable.promptText} ILIKE ${"%" + category + "%"}`)
+      .returning({ id: semanticCacheTable.id });
+    const evicted = result.length;
+    stats.totalEvictions += evicted;
+    if (evicted > 0) {
+      logger.info({ evicted, category }, "SemanticCache: category invalidation");
+    }
+    return evicted;
+  } catch (err) {
+    logger.warn({ err: (err as Error).message }, "SemanticCache: category invalidation error");
+    return 0;
+  }
 }
 
 export async function initSemanticCache(): Promise<void> {

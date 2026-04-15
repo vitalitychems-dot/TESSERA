@@ -1,7 +1,7 @@
 import { db } from "@workspace/db";
 import { councilDecisionsTable } from "@workspace/db/schema";
 import { logger } from "./logger";
-import { callLLMSafe, isLLMAvailable } from "./llm-client";
+import { isLLMAvailable } from "./llm-client";
 import { batchedCallLLM } from "./llm-batcher";
 
 export interface ConsensusProposal {

@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync, unlinkSync } from "
 import { join, resolve, sep } from "path";
 import { logger } from "./logger";
 import { createProposal } from "./consensus-engine";
-import { callLLMSafe, isLLMAvailable } from "./llm-client";
+import { isLLMAvailable } from "./llm-client";
 import { batchedCallLLM } from "./llm-batcher";
 import { isModuleCoolingDown, recordEvolutionSuccess, recordEvolutionFailure, shouldSkipEvolutionForLoad } from "./evolution-throttle";
 
