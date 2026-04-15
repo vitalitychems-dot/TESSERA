@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { providerCallsTable } from "@workspace/db";
+import { providerCallsTable, systemStateTable } from "@workspace/db";
 import { eq, gte, desc, and } from "drizzle-orm";
 import { logger } from "./logger";
 import { upsertProviderProfile, getProviderConfigs } from "./provider-registry";
@@ -265,26 +265,51 @@ export function getLearnedProfileFreshness(): ProfileFreshnessEntry[] {
   return results;
 }
 
+const LEARNED_PROFILES_STATE_KEY = "re_learned_profiles";
+
+async function persistLearnedProfilesToDb(): Promise<void> {
+  try {
+    const payload: Record<string, { profile: DynamicProfile; updatedAt: number }> = {};
+    for (const [id, entry] of learnedProfiles.entries()) {
+      payload[id] = entry;
+    }
+    const existing = await db.select().from(systemStateTable)
+      .where(eq(systemStateTable.key, LEARNED_PROFILES_STATE_KEY)).limit(1);
+    if (existing.length > 0) {
+      await db.update(systemStateTable)
+        .set({ value: payload, lastSavedAt: new Date() })
+        .where(eq(systemStateTable.key, LEARNED_PROFILES_STATE_KEY));
+    } else {
+      await db.insert(systemStateTable).values({
+        key: LEARNED_PROFILES_STATE_KEY,
+        value: payload,
+        description: "Dynamic reverse-engineering provider profiles",
+      });
+    }
+  } catch (err) {
+    logger.error({ err }, "Failed to persist learned profiles to DB");
+  }
+}
+
 export async function restoreLearnedProfilesFromDb(): Promise<number> {
   try {
-    const { getAllProviderProfiles } = await import("./provider-registry");
-    const profiles = await getAllProviderProfiles();
+    const rows = await db.select().from(systemStateTable)
+      .where(eq(systemStateTable.key, LEARNED_PROFILES_STATE_KEY)).limit(1);
+    if (rows.length === 0) return 0;
+
+    const payload = rows[0].value as Record<string, { profile: Record<string, unknown>; updatedAt: number }>;
+    if (!payload || typeof payload !== "object") return 0;
+
     let restored = 0;
-    for (const row of profiles) {
-      const caps = row.capabilities as unknown[];
-      if (!Array.isArray(caps)) continue;
-      const dynamicEntry = caps.find((c): c is { __dynamicProfile: Record<string, unknown> } =>
-        typeof c === "object" && c !== null && "__dynamicProfile" in c
-      );
-      if (!dynamicEntry) continue;
-      const dp = dynamicEntry.__dynamicProfile;
-      const profileBuiltAt = typeof dp.profileBuiltAt === "number" ? dp.profileBuiltAt : row.updatedAt.getTime();
+    for (const [providerId, entry] of Object.entries(payload)) {
+      if (!entry || typeof entry !== "object" || !entry.profile) continue;
+      const dp = entry.profile;
 
       const restoredProfile: DynamicProfile = {
         latencyPercentiles: (dp.latencyPercentiles as DynamicProfile["latencyPercentiles"]) ?? null,
         latencyStdDev: typeof dp.latencyStdDev === "number" ? dp.latencyStdDev : null,
         avgResponseLength: typeof dp.avgResponseLength === "number" ? dp.avgResponseLength : null,
-        responseLengthStdDev: null,
+        responseLengthStdDev: typeof dp.responseLengthStdDev === "number" ? dp.responseLengthStdDev : null,
         responseConsistency: typeof dp.responseConsistency === "number" ? dp.responseConsistency : 0,
         errorClassification: (typeof dp.errorClassification === "object" && dp.errorClassification !== null ? dp.errorClassification : {}) as Record<string, number>,
         successStreak: typeof dp.successStreak === "number" ? dp.successStreak : 0,
@@ -292,11 +317,12 @@ export async function restoreLearnedProfilesFromDb(): Promise<number> {
         dataPoints: typeof dp.dataPoints === "number" ? dp.dataPoints : 0,
       };
 
-      learnedProfiles.set(row.providerId, { profile: restoredProfile, updatedAt: profileBuiltAt });
+      learnedProfiles.set(providerId, { profile: restoredProfile, updatedAt: entry.updatedAt ?? Date.now() });
       restored++;
     }
     return restored;
-  } catch {
+  } catch (err) {
+    logger.error({ err }, "Failed to restore learned profiles from DB");
     return 0;
   }
 }
@@ -355,19 +381,6 @@ export async function analyzeProvider(providerId: string): Promise<CapabilityPro
     dynamicConfidence,
   };
 
-  const dynamicProfilePayload = {
-    latencyPercentiles: dynamic.latencyPercentiles,
-    latencyStdDev: dynamic.latencyStdDev,
-    responseConsistency: dynamic.responseConsistency,
-    errorClassification: dynamic.errorClassification,
-    successStreak: dynamic.successStreak,
-    recentTrend: dynamic.recentTrend,
-    avgResponseLength: dynamic.avgResponseLength,
-    dataPoints: dynamic.dataPoints,
-    dynamicConfidence,
-    profileBuiltAt: Date.now(),
-  };
-
   await upsertProviderProfile(providerId, {
     totalCalls,
     successCalls,
@@ -377,7 +390,7 @@ export async function analyzeProvider(providerId: string): Promise<CapabilityPro
     errorRate,
     avgInputTokens: stats?.avgInputTokens ?? undefined,
     avgOutputTokens: stats?.avgOutputTokens ?? undefined,
-    capabilities: [...config.capabilities, { __dynamicProfile: dynamicProfilePayload }],
+    capabilities: config.capabilities,
     strengths,
     weaknesses,
     capabilityScore,
@@ -385,6 +398,8 @@ export async function analyzeProvider(providerId: string): Promise<CapabilityPro
     speedScore,
     lastAnalyzedAt: new Date(),
   });
+
+  await persistLearnedProfilesToDb();
 
   return profile;
 }
