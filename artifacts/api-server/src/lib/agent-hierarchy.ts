@@ -93,7 +93,7 @@ let dbPersisted = false;
 function buildChildren(): void {
   if (agentChildren.length > 0) return;
   const SHIFTS: Array<"day" | "night" | "swing"> = ["day", "night", "swing"];
-  PARENT_AGENTS.filter(p => p !== "Tessera").forEach((parent, pIdx) => {
+  PARENT_AGENTS.forEach((parent, pIdx) => {
     SHIFTS.forEach((shift, sIdx) => {
       const childName = `${parent}-${shift.charAt(0).toUpperCase() + shift.slice(1)}`;
       agentChildren.push({
