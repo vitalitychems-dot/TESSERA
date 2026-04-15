@@ -124,7 +124,7 @@ async function generateContributionsWithLLM(
 async function collectPerAgentVotes(
   topic: string,
   agents: Array<{ id: string; name: string; domain: string }>,
-): Promise<{ yes: number; no: number; abstain: number; totalEligible: number; perAgentVotes: Record<string, string> }> {
+): Promise<{ yes: number; no: number; abstain: number; totalEligible: number; perAgentVotes: Record<string, string>; incomplete: boolean; votedCount: number }> {
   const agentRoster = agents
     .map(a => `  "${a.id}": { name: "${a.name}", specialty: "${a.domain}" }`)
     .join(",\n");
