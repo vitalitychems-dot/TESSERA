@@ -1094,6 +1094,8 @@ function ApodPanel({ item, index, total }: { item: ApodItem; index: number; tota
 interface OrbitControlsLike {
   autoRotate: boolean;
   autoRotateSpeed: number;
+  target: THREE.Vector3;
+  update(): void;
 }
 
 const orbitControlsRef: { current: OrbitControlsLike | null } = { current: null };
@@ -1117,11 +1119,12 @@ function OrbitControlsRefCapture() {
   return null;
 }
 
-function AutoRotateController() {
+function AutoRotateController({ onCameraMove }: { onCameraMove?: (pos: THREE.Vector3) => void }) {
   const lastInteraction = useRef(Date.now());
   const { gl, camera } = useThree();
   const velocity = useRef(new THREE.Vector3());
-  const lastMouse = useRef({ x: 0, y: 0, time: 0 });
+  const keysPressed = useRef<Set<string>>(new Set());
+  const flightModeRef = useRef(false);
 
   const onInteraction = useCallback(() => {
     lastInteraction.current = Date.now();
@@ -1130,48 +1133,129 @@ function AutoRotateController() {
     }
   }, []);
 
-  const onWheel = useCallback((e: WheelEvent) => {
-    const forward = new THREE.Vector3();
-    camera.getWorldDirection(forward);
-    velocity.current.addScaledVector(forward, -e.deltaY * 0.003);
-  }, [camera]);
+  const onKeyDown = useCallback((e: KeyboardEvent) => {
+    keysPressed.current.add(e.key.toLowerCase());
+    if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(e.key.toLowerCase())) {
+      flightModeRef.current = true;
+      lastInteraction.current = Date.now();
+      if (orbitControlsRef.current) orbitControlsRef.current.autoRotate = false;
+      e.preventDefault();
+    }
+    if (e.key.toLowerCase() === "f") {
+      flightModeRef.current = !flightModeRef.current;
+    }
+  }, []);
+
+  const onKeyUp = useCallback((e: KeyboardEvent) => {
+    keysPressed.current.delete(e.key.toLowerCase());
+  }, []);
 
   useEffect(() => {
     const canvas = gl.domElement;
     const events = ["pointerdown", "pointermove", "touchstart", "touchmove"] as const;
     events.forEach(e => canvas.addEventListener(e, onInteraction));
-    canvas.addEventListener("wheel", onWheel as EventListener, { passive: true });
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
     return () => {
       events.forEach(e => canvas.removeEventListener(e, onInteraction));
-      canvas.removeEventListener("wheel", onWheel as EventListener);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
     };
-  }, [gl, onInteraction, onWheel]);
+  }, [gl, onInteraction, onKeyDown, onKeyUp]);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     const ctrl = orbitControlsRef.current;
-    if (!ctrl) return;
-    const idle = Date.now() - lastInteraction.current > 5000;
-    if (idle && !ctrl.autoRotate) {
+    const idle = Date.now() - lastInteraction.current > 6000;
+    if (ctrl && idle && !ctrl.autoRotate && !flightModeRef.current) {
       ctrl.autoRotate = true;
-      ctrl.autoRotateSpeed = 0.3;
+      ctrl.autoRotateSpeed = 0.25;
     }
 
+    const keys = keysPressed.current;
+    const speed = 18;
+    const forward = new THREE.Vector3();
+    camera.getWorldDirection(forward);
+    const right = new THREE.Vector3();
+    right.crossVectors(forward, camera.up).normalize();
+
+    if (keys.has("w") || keys.has("arrowup")) velocity.current.addScaledVector(forward, speed * delta);
+    if (keys.has("s") || keys.has("arrowdown")) velocity.current.addScaledVector(forward, -speed * delta);
+    if (keys.has("a") || keys.has("arrowleft")) velocity.current.addScaledVector(right, -speed * delta);
+    if (keys.has("d") || keys.has("arrowright")) velocity.current.addScaledVector(right, speed * delta);
+    if (keys.has("q")) velocity.current.addScaledVector(camera.up, speed * delta);
+    if (keys.has("e")) velocity.current.addScaledVector(camera.up, -speed * delta);
+
     if (velocity.current.lengthSq() > 0.0001) {
-      camera.position.add(velocity.current);
-      velocity.current.multiplyScalar(0.92);
+      const movement = velocity.current.clone().multiplyScalar(delta * 60);
+      camera.position.add(movement);
+      if (ctrl) {
+        ctrl.target.add(movement);
+        ctrl.update();
+      }
+      velocity.current.multiplyScalar(0.82);
+      onCameraMove?.(camera.position);
     }
   });
 
   return null;
 }
 
-function SceneContent({ showDimensions, isMobile, apodItems, userZodiac, dimensionOpacities, showSacredOverlays }: {
+function FloatingInfoPanel({ position, title, value, subtitle, color, isMobile }: {
+  position: [number, number, number];
+  title: string;
+  value: string;
+  subtitle?: string;
+  color: string;
+  isMobile?: boolean;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => {
+    if (groupRef.current) {
+      groupRef.current.position.y = position[1] + Math.sin(clock.getElapsedTime() * 0.5 + position[0]) * (isMobile ? 0.3 : 0.5);
+    }
+  });
+  const planeW = isMobile ? 5 : 8;
+  const planeH = isMobile ? 2 : 3;
+  return (
+    <group ref={groupRef} position={position}>
+      <mesh>
+        <planeGeometry args={[planeW, planeH]} />
+        <meshBasicMaterial color="#000000" transparent opacity={0.55} side={THREE.DoubleSide} depthWrite={false} />
+      </mesh>
+      <mesh position={[0, 0, 0.01]}>
+        <planeGeometry args={[planeW, planeH]} />
+        <meshBasicMaterial color={color} transparent opacity={0.04} side={THREE.DoubleSide} depthWrite={false} />
+      </mesh>
+      <Html distanceFactor={isMobile ? 20 : 25} center style={{ pointerEvents: "none" }}>
+        <div style={{
+          background: "rgba(0,0,0,0.7)",
+          border: `1px solid ${color}40`,
+          borderRadius: isMobile ? "6px" : "8px",
+          padding: isMobile ? "5px 8px" : "8px 14px",
+          fontFamily: "monospace",
+          minWidth: isMobile ? "60px" : "90px",
+          backdropFilter: "blur(8px)",
+        }}>
+          <div style={{ fontSize: isMobile ? "7px" : "9px", color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "2px" }}>{title}</div>
+          <div style={{ fontSize: isMobile ? "11px" : "15px", fontWeight: "bold", color }}>{value}</div>
+          {subtitle && <div style={{ fontSize: isMobile ? "7px" : "9px", color: "#94a3b8", marginTop: "2px" }}>{subtitle}</div>}
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+function SceneContent({ showDimensions, isMobile, apodItems, userZodiac, dimensionOpacities, showSacredOverlays, onCameraMove, moonPhase, sunSign, sovereigntyScore }: {
   showDimensions: boolean;
   isMobile: boolean;
   apodItems: ApodItem[];
   userZodiac?: { sign: string; symbol: string; ruler: string; element: string } | null;
   dimensionOpacities: number[];
   showSacredOverlays?: boolean;
+  onCameraMove?: (pos: THREE.Vector3) => void;
+  moonPhase?: string;
+  sunSign?: string;
+  sovereigntyScore?: number;
 }) {
   const initialAngles = useMemo(() =>
     PLANETS_DATA.map(() => Math.random() * Math.PI * 2), []);
@@ -1212,17 +1296,42 @@ function SceneContent({ showDimensions, isMobile, apodItems, userZodiac, dimensi
       {apodItems.length > 0 && <ApodGallery items={apodItems} />}
       {showSacredOverlays && <FlowerOfLifeOverlay />}
       {showSacredOverlays && <MetatronsCubeOverlay />}
-      <Stars radius={250} depth={150} count={isMobile ? 3000 : 8000} factor={3.5} saturation={0.3} fade speed={0.4} />
+      <Stars radius={250} depth={150} count={isMobile ? 2000 : 8000} factor={3.5} saturation={0.3} fade speed={0.4} />
       <NebulaParticles />
+      {moonPhase && (
+        <FloatingInfoPanel position={isMobile ? [-22, 14, -10] : [-40, 22, -18]} title="Moon Phase" value={moonPhase} color="#94a3b8" isMobile={isMobile} />
+      )}
+      {sunSign && (
+        <FloatingInfoPanel position={isMobile ? [22, 12, -8] : [42, 19, -15]} title="Sun in" value={sunSign} color="#facc15" isMobile={isMobile} />
+      )}
+      {sovereigntyScore !== undefined && (
+        <FloatingInfoPanel position={isMobile ? [0, -20, 22] : [0, -38, 44]} title="Sovereignty" value={`${sovereigntyScore}%`} subtitle={isMobile ? "Crown" : "963 Hz Crown"} color="#4ade80" isMobile={isMobile} />
+      )}
+      {showSacredOverlays && (
+        <FloatingInfoPanel position={isMobile ? [-10, 18, -16] : [-18, 30, -30]} title="Sacred Geometry" value="Active" subtitle={isMobile ? "Active" : "Flower of Life · Metatron's Cube"} color="#e879f9" isMobile={isMobile} />
+      )}
+      {showDimensions && (
+        <FloatingInfoPanel position={isMobile ? [18, -12, 16] : [35, -22, 30]} title="Dimensional Planes" value="7 Active" subtitle={isMobile ? "7 Planes" : "Physical → Atmic"} color="#a78bfa" isMobile={isMobile} />
+      )}
+      {userZodiac && (
+        <FloatingInfoPanel
+          position={isMobile ? [0, 28, -40] : [0, 55, -80]}
+          title="Natal Constellation"
+          value={`${userZodiac.symbol} ${userZodiac.sign}`}
+          subtitle={`${userZodiac.element} · ${userZodiac.ruler}`}
+          color="#22d3ee"
+          isMobile={isMobile}
+        />
+      )}
       <OrbitControls
         makeDefault
         enablePan
         enableZoom
         enableRotate
         minDistance={2}
-        maxDistance={250}
-        zoomSpeed={1.0}
-        panSpeed={0.6}
+        maxDistance={280}
+        zoomSpeed={1.2}
+        panSpeed={0.7}
         rotateSpeed={0.5}
         enableDamping
         dampingFactor={0.05}
@@ -1234,7 +1343,7 @@ function SceneContent({ showDimensions, isMobile, apodItems, userZodiac, dimensi
         }}
       />
       <OrbitControlsRefCapture />
-      <AutoRotateController />
+      <AutoRotateController onCameraMove={onCameraMove} />
     </>
   );
 }
@@ -1245,6 +1354,9 @@ interface SolarSystem3DProps {
   userZodiac?: { sign: string; symbol: string; ruler: string; element: string } | null;
   dimensionOpacities: number[];
   showSacredOverlays?: boolean;
+  moonPhase?: string;
+  sunSign?: string;
+  sovereigntyScore?: number;
 }
 
 function WebGLFallback() {
@@ -1275,12 +1387,24 @@ function useIsMobile() {
   return isMobile;
 }
 
-export default function SolarSystem3D({ showDimensions, apodItems, userZodiac, dimensionOpacities, showSacredOverlays }: SolarSystem3DProps) {
+export default function SolarSystem3D({ showDimensions, apodItems, userZodiac, dimensionOpacities, showSacredOverlays, moonPhase, sunSign, sovereigntyScore }: SolarSystem3DProps) {
   const isMobile = useIsMobile();
   const [contextLost, setContextLost] = useState(false);
+  const [cameraPos, setCameraPos] = useState({ x: 0, y: 25, z: 50 });
+  const [showNavHint, setShowNavHint] = useState(true);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   const hasWebGL = useMemo(() => detectWebGL(), []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowNavHint(false), 6000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleCameraMove = useCallback((pos: THREE.Vector3) => {
+    setCameraPos({ x: Math.round(pos.x), y: Math.round(pos.y), z: Math.round(pos.z) });
+    setShowNavHint(false);
+  }, []);
 
   useEffect(() => {
     const container = canvasContainerRef.current;
@@ -1306,17 +1430,89 @@ export default function SolarSystem3D({ showDimensions, apodItems, userZodiac, d
     return <WebGLFallback />;
   }
 
+  const distFromCenter = Math.round(Math.sqrt(cameraPos.x ** 2 + cameraPos.y ** 2 + cameraPos.z ** 2));
+  const zone = distFromCenter < 10 ? "Solar Core" : distFromCenter < 30 ? "Inner System" : distFromCenter < 80 ? "Outer Planets" : distFromCenter < 110 ? "Dimensional Planes" : "Deep Space";
+
+  const MINIMAP_SIZE = 88;
+  const MINIMAP_SCALE = 0.28;
+  const MINIMAP_ORBITS = PLANETS_DATA.map(p => p.distance * MINIMAP_SCALE);
+  const mapCamX = Math.max(-42, Math.min(42, cameraPos.x * MINIMAP_SCALE));
+  const mapCamZ = Math.max(-42, Math.min(42, cameraPos.z * MINIMAP_SCALE));
+  const camAngle = Math.atan2(cameraPos.z, cameraPos.x);
+
   return (
     <WebGLErrorBoundary fallback={<WebGLFallback />}>
-      <div ref={canvasContainerRef} style={{ width: "100%", height: "100%" }}>
+      <div ref={canvasContainerRef} style={{ width: "100%", height: "100%", position: "relative" }}>
+        {showNavHint && (
+          <div style={{
+            position: "absolute", bottom: isMobile ? "70px" : "80px", left: "50%", transform: "translateX(-50%)",
+            zIndex: 10, pointerEvents: "none",
+            background: "rgba(0,0,0,0.7)", border: "1px solid rgba(139,92,246,0.3)",
+            borderRadius: isMobile ? "10px" : "12px", padding: isMobile ? "6px 12px" : "8px 16px",
+            fontFamily: "monospace", fontSize: isMobile ? "9px" : "11px", color: "#94a3b8",
+            backdropFilter: "blur(8px)", whiteSpace: "nowrap",
+          }}>
+            {isMobile ? "Drag to rotate · Pinch to zoom · Two-finger pan to fly" : "Drag to rotate · Scroll to zoom · WASD / ↑↓←→ to fly · Q/E for vertical"}
+          </div>
+        )}
+        <div style={{
+          position: "absolute", bottom: isMobile ? "70px" : "16px", right: "12px",
+          zIndex: 10, pointerEvents: "none",
+          display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px",
+        }}>
+          {(() => {
+            const sz = isMobile ? 56 : MINIMAP_SIZE;
+            const sc = isMobile ? 0.18 : MINIMAP_SCALE;
+            const orbits = PLANETS_DATA.map(p => p.distance * sc);
+            const cX = Math.max(-(sz/2-2), Math.min(sz/2-2, cameraPos.x * sc));
+            const cZ = Math.max(-(sz/2-2), Math.min(sz/2-2, cameraPos.z * sc));
+            const triSz = isMobile ? 3 : 4;
+            return (
+              <svg width={sz} height={sz} style={{
+                borderRadius: "50%",
+                background: "rgba(3,1,8,0.80)",
+                border: `1px solid rgba(167,139,250,${isMobile ? "0.2" : "0.25"})`,
+                boxShadow: "0 0 12px rgba(139,92,246,0.12)",
+                backdropFilter: "blur(6px)",
+              }}>
+                <circle cx={sz/2} cy={sz/2} r={sz/2-1} fill="none" stroke="rgba(167,139,250,0.1)" strokeWidth="0.5" />
+                {orbits.filter(r => r < sz/2-2).map((r, i) => (
+                  <circle key={i} cx={sz/2} cy={sz/2} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.5" />
+                ))}
+                {!isMobile && DIMENSIONS.map((d) => {
+                  const r = d.radius * sc;
+                  return r < sz/2-2 ? (
+                    <circle key={d.id} cx={sz/2} cy={sz/2} r={r} fill="none" stroke={d.color + "30"} strokeWidth="0.5" />
+                  ) : null;
+                })}
+                <circle cx={sz/2} cy={sz/2} r={isMobile ? 1.5 : 2} fill="#ffcc22" />
+                <polygon
+                  points={`${sz/2 + cX},${sz/2 + cZ} ${sz/2 + cX + Math.cos(camAngle-2.5)*triSz},${sz/2 + cZ + Math.sin(camAngle-2.5)*triSz} ${sz/2 + cX + Math.cos(camAngle+2.5)*triSz},${sz/2 + cZ + Math.sin(camAngle+2.5)*triSz}`}
+                  fill="#a78bfa"
+                  opacity="0.9"
+                />
+                {!isMobile && <text x={4} y={sz-4} fontSize="6" fill="#64748b" fontFamily="monospace">{zone}</text>}
+              </svg>
+            );
+          })()}
+          <div style={{
+            background: "rgba(0,0,0,0.65)", border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: isMobile ? "6px" : "8px", padding: isMobile ? "3px 6px" : "4px 8px",
+            fontFamily: "monospace", fontSize: isMobile ? "8px" : "9px", color: "#64748b",
+            backdropFilter: "blur(6px)", textAlign: "right",
+          }}>
+            <div style={{ color: "#a78bfa", fontWeight: "bold", fontSize: isMobile ? "9px" : undefined }}>{zone}</div>
+            <div>{distFromCenter}u</div>
+          </div>
+        </div>
         <Canvas
-          camera={{ position: [0, 25, 50], fov: 55, near: 0.1, far: 500 }}
+          camera={{ position: [0, 25, 50], fov: 55, near: 0.1, far: 600 }}
           style={{ width: "100%", height: "100%" }}
           gl={{ antialias: !isMobile, alpha: false, powerPreference: "high-performance" }}
           dpr={isMobile ? [1, 1.5] : [1, 2]}
         >
           <color attach="background" args={["#030108"]} />
-          <fog attach="fog" args={["#030108", 150, 350]} />
+          <fog attach="fog" args={["#030108", 200, 500]} />
           <SceneContent
             showDimensions={showDimensions}
             isMobile={isMobile}
@@ -1324,6 +1520,10 @@ export default function SolarSystem3D({ showDimensions, apodItems, userZodiac, d
             userZodiac={userZodiac}
             dimensionOpacities={dimensionOpacities}
             showSacredOverlays={showSacredOverlays}
+            onCameraMove={handleCameraMove}
+            moonPhase={moonPhase}
+            sunSign={sunSign}
+            sovereigntyScore={sovereigntyScore}
           />
         </Canvas>
       </div>

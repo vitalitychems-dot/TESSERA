@@ -1,8 +1,18 @@
-import { useState, useMemo, useCallback, lazy, Suspense } from "react";
+import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Globe2, Sun, Moon, Orbit, Sparkles, Eye, EyeOff, ChevronRight, ChevronLeft, Loader2, Layers, Hexagon, BookOpen } from "lucide-react";
 import { Link } from "wouter";
 import NatalChartSection from "@/components/NatalChartSection";
+
+function useIsMobile() {
+  const [m, setM] = useState(() => typeof window !== "undefined" ? window.innerWidth < 768 : false);
+  useEffect(() => {
+    const h = () => setM(window.innerWidth < 768);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
+  return m;
+}
 
 const SolarSystem3D = lazy(() => import("@/components/SolarSystem3D"));
 
@@ -89,6 +99,7 @@ const ELEMENT_COLOR: Record<string, string> = {
 const API = import.meta.env.VITE_API_URL || "";
 
 export default function UniversePage() {
+  const isMobile = useIsMobile();
   const now = useMemo(() => new Date(), []);
   const moonData = useMemo(() => getMoonPhase(now), [now]);
   const sunData = useMemo(() => getSunPosition(now), [now]);
@@ -182,40 +193,47 @@ export default function UniversePage() {
           userZodiac={userZodiac}
           dimensionOpacities={dimensionOpacities}
           showSacredOverlays={showSacredOverlays}
+          moonPhase={moonData.name}
+          sunSign={`${sunData.zodiac.symbol} ${sunData.zodiac.sign}`}
+          sovereigntyScore={sovereigntyData?.score ?? 100}
         />
       </Suspense>
 
-      <div className="absolute top-3 left-3 right-3 flex items-start justify-between pointer-events-none z-10">
+      <div className={`absolute left-0 right-0 flex items-start justify-between pointer-events-none z-10 ${isMobile ? "top-0 px-2 pt-[max(8px,env(safe-area-inset-top))]" : "top-3 left-3 right-3 px-0"}`}
+        style={isMobile ? { paddingTop: "max(8px, env(safe-area-inset-top, 8px))" } : undefined}
+      >
         <div className="pointer-events-auto">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10">
-            <Globe2 className="text-violet-400" size={18} />
-            <span className="text-sm font-bold font-mono text-violet-400">Universe</span>
-            <span className="px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-400 text-[10px] font-mono border border-violet-500/30">LIVE</span>
+          <div className={`flex items-center gap-1.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 ${isMobile ? "px-2 py-1.5" : "px-3 py-2 gap-2"}`}>
+            <Globe2 className="text-violet-400" size={isMobile ? 14 : 18} />
+            {!isMobile && <span className="text-sm font-bold font-mono text-violet-400">Universe</span>}
+            <span className={`rounded-full bg-violet-500/20 text-violet-400 font-mono border border-violet-500/30 ${isMobile ? "px-1.5 py-px text-[8px]" : "px-2 py-0.5 text-[10px]"}`}>LIVE</span>
           </div>
         </div>
 
-        <div className="flex gap-2 pointer-events-auto flex-wrap justify-end">
+        <div className={`flex pointer-events-auto justify-end ${isMobile ? "gap-1 flex-wrap" : "gap-2 flex-wrap"}`}>
           {userZodiac && (
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-md border ${
+            <div className={`flex items-center rounded-xl backdrop-blur-md border ${isMobile ? "gap-1.5 px-2 py-1.5" : "gap-2 px-3 py-2"} ${
               userZodiac.sign === "Libra"
                 ? "bg-gradient-to-r from-cyan-950/60 to-violet-950/60 border-cyan-500/30 shadow-[0_0_12px_rgba(34,211,238,0.15)]"
                 : "bg-black/60 border-white/10"
             }`}>
-              <span className={`text-xl ${ELEMENT_COLOR[userZodiac.element] || "text-violet-400"}`}>{userZodiac.symbol}</span>
-              <div>
-                <div className="text-[11px] font-bold font-mono text-foreground flex items-center gap-1">
-                  {userZodiac.sign}
-                  {userZodiac.sign === "Libra" && <span className="text-[8px] text-cyan-400/70">☉ Natal</span>}
+              <span className={`${isMobile ? "text-base" : "text-xl"} ${ELEMENT_COLOR[userZodiac.element] || "text-violet-400"}`}>{userZodiac.symbol}</span>
+              {!isMobile && (
+                <div>
+                  <div className="text-[11px] font-bold font-mono text-foreground flex items-center gap-1">
+                    {userZodiac.sign}
+                    {userZodiac.sign === "Libra" && <span className="text-[8px] text-cyan-400/70">☉ Natal</span>}
+                  </div>
+                  <div className="text-[9px] text-muted-foreground flex items-center gap-1">
+                    <span>{RULER_SYMBOLS[userZodiac.ruler] || "★"} {userZodiac.ruler}</span>
+                    {userZodiac.element === "Air" && <span className="text-cyan-400/60">· Air</span>}
+                  </div>
+                  {userZodiac.sign === "Libra" && (
+                    <div className="text-[8px] text-violet-400/60 font-mono">Virgo ↑ · Oct 7</div>
+                  )}
                 </div>
-                <div className="text-[9px] text-muted-foreground flex items-center gap-1">
-                  <span>{RULER_SYMBOLS[userZodiac.ruler] || "★"} {userZodiac.ruler}</span>
-                  {userZodiac.element === "Air" && <span className="text-cyan-400/60">· Air</span>}
-                </div>
-                {userZodiac.sign === "Libra" && (
-                  <div className="text-[8px] text-violet-400/60 font-mono">Virgo ↑ · Oct 7</div>
-                )}
-              </div>
-              {activeTransits.length > 0 && (
+              )}
+              {!isMobile && activeTransits.length > 0 && (
                 <div className="ml-1 flex flex-col gap-0.5" title="Chart transits">
                   {activeTransits.map((t, i) => (
                     <div key={i} className="text-[8px] font-mono text-muted-foreground whitespace-nowrap">
@@ -231,39 +249,39 @@ export default function UniversePage() {
           )}
           <button
             onClick={() => setShowDimensions(!showDimensions)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 text-xs font-mono hover:bg-white/10 transition-colors"
+            className={`flex items-center rounded-xl bg-black/60 backdrop-blur-md border border-white/10 font-mono hover:bg-white/10 transition-colors ${isMobile ? "p-2" : "gap-1.5 px-3 py-2 text-xs"}`}
           >
-            {showDimensions ? <Eye size={14} className="text-violet-400" /> : <EyeOff size={14} className="text-muted-foreground" />}
-            <span className={showDimensions ? "text-violet-400" : "text-muted-foreground"}>Planes</span>
+            {showDimensions ? <Eye size={isMobile ? 13 : 14} className="text-violet-400" /> : <EyeOff size={isMobile ? 13 : 14} className="text-muted-foreground" />}
+            {!isMobile && <span className={showDimensions ? "text-violet-400" : "text-muted-foreground"}>Planes</span>}
           </button>
           <button
             onClick={() => setShowDimSlider(!showDimSlider)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 text-xs font-mono hover:bg-white/10 transition-colors"
+            className={`flex items-center rounded-xl bg-black/60 backdrop-blur-md border border-white/10 font-mono hover:bg-white/10 transition-colors ${isMobile ? "p-2" : "gap-1.5 px-3 py-2 text-xs"}`}
           >
-            <Layers size={14} className="text-cyan-400" />
-            <span className="text-cyan-400">Depth</span>
+            <Layers size={isMobile ? 13 : 14} className="text-cyan-400" />
+            {!isMobile && <span className="text-cyan-400">Depth</span>}
           </button>
           <button
             onClick={() => setShowSacredOverlays(!showSacredOverlays)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 text-xs font-mono hover:bg-white/10 transition-colors"
+            className={`flex items-center rounded-xl bg-black/60 backdrop-blur-md border border-white/10 font-mono hover:bg-white/10 transition-colors ${isMobile ? "p-2" : "gap-1.5 px-3 py-2 text-xs"}`}
           >
-            <Hexagon size={14} className={showSacredOverlays ? "text-fuchsia-400" : "text-muted-foreground"} />
-            <span className={showSacredOverlays ? "text-fuchsia-400" : "text-muted-foreground"}>Sacred</span>
+            <Hexagon size={isMobile ? 13 : 14} className={showSacredOverlays ? "text-fuchsia-400" : "text-muted-foreground"} />
+            {!isMobile && <span className={showSacredOverlays ? "text-fuchsia-400" : "text-muted-foreground"}>Sacred</span>}
           </button>
           <button
             onClick={() => setShowNatalChart(!showNatalChart)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 text-xs font-mono hover:bg-white/10 transition-colors"
+            className={`flex items-center rounded-xl bg-black/60 backdrop-blur-md border border-white/10 font-mono hover:bg-white/10 transition-colors ${isMobile ? "p-2" : "gap-1.5 px-3 py-2 text-xs"}`}
           >
-            <Sparkles size={14} className="text-amber-400" />
-            <span className="text-amber-400">Chart</span>
-            {showNatalChart ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            <Sparkles size={isMobile ? 13 : 14} className="text-amber-400" />
+            {!isMobile && <span className="text-amber-400">Chart</span>}
+            {!isMobile && (showNatalChart ? <ChevronRight size={14} /> : <ChevronLeft size={14} />)}
           </button>
         </div>
       </div>
 
       {showDimSlider && showDimensions && (
-        <div className="absolute top-16 right-3 z-10 pointer-events-auto">
-          <div className="px-3 py-3 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 space-y-3 w-52">
+        <div className={`absolute z-10 pointer-events-auto ${isMobile ? "top-12 right-2 left-2" : "top-16 right-3"}`}>
+          <div className={`px-3 py-3 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 space-y-3 ${isMobile ? "w-full" : "w-52"}`}>
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Dimension Depth</span>
               <button
@@ -322,76 +340,156 @@ export default function UniversePage() {
         </div>
       )}
 
-      <div className="absolute bottom-16 left-3 right-3 pointer-events-none z-10 sm:bottom-4">
-        <div className="pointer-events-auto inline-flex flex-wrap gap-2 max-w-full">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10">
-            <Moon size={14} className="text-slate-300" />
-            <div>
-              <div className="text-[11px] font-bold font-mono text-slate-200">{moonData.name}</div>
-              <div className="text-[9px] text-muted-foreground">{moonData.illumination}% lit</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10">
-            <Sun size={14} className="text-yellow-400" />
-            <div>
-              <div className="text-[11px] font-bold font-mono text-yellow-400">{sunData.zodiac.symbol} {sunData.zodiac.sign}</div>
-              <div className="text-[9px] text-muted-foreground">Decl: {sunData.declination}°</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10">
-            <Orbit size={14} className="text-cyan-400" />
-            <div>
-              <div className="text-[11px] font-bold font-mono text-cyan-400">963 Hz</div>
-              <div className="text-[9px] text-muted-foreground">Crown</div>
-            </div>
-          </div>
-          <button
-            onClick={cycleDimension}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-colors"
-          >
-            <Sparkles size={14} className="text-violet-400" />
-            <div>
-              <div className="text-[11px] font-bold font-mono text-violet-400">
-                {focusedDimension === -1 ? "7 Planes" : DIMENSION_NAMES[focusedDimension]}
+      <div className={`absolute pointer-events-none z-10 ${isMobile ? "bottom-[64px] left-2 right-2" : "bottom-16 left-3 right-3 sm:bottom-4"}`}
+        style={isMobile ? { paddingBottom: "env(safe-area-inset-bottom, 0px)" } : undefined}
+      >
+        {isMobile ? (
+          <div className="pointer-events-auto grid grid-cols-3 gap-1">
+            <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10">
+              <Moon size={11} className="text-slate-300 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-[9px] font-bold font-mono text-slate-200 truncate">{moonData.name}</div>
+                <div className="text-[7px] text-muted-foreground">{moonData.illumination}%</div>
               </div>
-              <div className="text-[9px] text-muted-foreground">{showDimensions ? (focusedDimension === -1 ? "Unified" : "Focused") : "Hidden"}</div>
             </div>
-          </button>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10">
-            <Globe2 size={14} className="text-emerald-400" />
-            <div>
-              <div className="text-[11px] font-bold font-mono text-emerald-400">{sovereigntyData?.score ?? 100}%</div>
-              <div className="text-[9px] text-muted-foreground">Sovereignty</div>
+            <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10">
+              <Sun size={11} className="text-yellow-400 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-[9px] font-bold font-mono text-yellow-400 truncate">{sunData.zodiac.symbol} {sunData.zodiac.sign}</div>
+                <div className="text-[7px] text-muted-foreground">{sunData.declination}°</div>
+              </div>
             </div>
+            <button
+              onClick={cycleDimension}
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 active:bg-white/10 transition-colors"
+            >
+              <Sparkles size={11} className="text-violet-400 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-[9px] font-bold font-mono text-violet-400 truncate">
+                  {focusedDimension === -1 ? "7 Planes" : DIMENSION_NAMES[focusedDimension]}
+                </div>
+                <div className="text-[7px] text-muted-foreground">{showDimensions ? "Active" : "Off"}</div>
+              </div>
+            </button>
+            <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10">
+              <Orbit size={11} className="text-cyan-400 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-[9px] font-bold font-mono text-cyan-400">963 Hz</div>
+                <div className="text-[7px] text-muted-foreground">Crown</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10">
+              <Globe2 size={11} className="text-emerald-400 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-[9px] font-bold font-mono text-emerald-400">{sovereigntyData?.score ?? 100}%</div>
+                <div className="text-[7px] text-muted-foreground">Sov</div>
+              </div>
+            </div>
+            <Link href="/grand-narrative">
+              <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-fuchsia-500/30 active:bg-fuchsia-500/10 transition-colors">
+                <BookOpen size={11} className="text-fuchsia-400 shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-[9px] font-bold font-mono text-fuchsia-400 truncate">Narrative</div>
+                  <div className="text-[7px] text-muted-foreground">Truth</div>
+                </div>
+              </div>
+            </Link>
           </div>
-          <Link href="/grand-narrative">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-fuchsia-500/30 hover:bg-fuchsia-500/10 transition-colors cursor-pointer">
-              <BookOpen size={14} className="text-fuchsia-400" />
+        ) : (
+          <div className="pointer-events-auto inline-flex flex-wrap gap-2 max-w-full">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10">
+              <Moon size={14} className="text-slate-300" />
               <div>
-                <div className="text-[11px] font-bold font-mono text-fuchsia-400">Grand Narrative</div>
-                <div className="text-[9px] text-muted-foreground">The Unified Truth</div>
+                <div className="text-[11px] font-bold font-mono text-slate-200">{moonData.name}</div>
+                <div className="text-[9px] text-muted-foreground">{moonData.illumination}% lit</div>
               </div>
             </div>
-          </Link>
-        </div>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10">
+              <Sun size={14} className="text-yellow-400" />
+              <div>
+                <div className="text-[11px] font-bold font-mono text-yellow-400">{sunData.zodiac.symbol} {sunData.zodiac.sign}</div>
+                <div className="text-[9px] text-muted-foreground">Decl: {sunData.declination}°</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10">
+              <Orbit size={14} className="text-cyan-400" />
+              <div>
+                <div className="text-[11px] font-bold font-mono text-cyan-400">963 Hz</div>
+                <div className="text-[9px] text-muted-foreground">Crown</div>
+              </div>
+            </div>
+            <button
+              onClick={cycleDimension}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-colors"
+            >
+              <Sparkles size={14} className="text-violet-400" />
+              <div>
+                <div className="text-[11px] font-bold font-mono text-violet-400">
+                  {focusedDimension === -1 ? "7 Planes" : DIMENSION_NAMES[focusedDimension]}
+                </div>
+                <div className="text-[9px] text-muted-foreground">{showDimensions ? (focusedDimension === -1 ? "Unified" : "Focused") : "Hidden"}</div>
+              </div>
+            </button>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10">
+              <Globe2 size={14} className="text-emerald-400" />
+              <div>
+                <div className="text-[11px] font-bold font-mono text-emerald-400">{sovereigntyData?.score ?? 100}%</div>
+                <div className="text-[9px] text-muted-foreground">Sovereignty</div>
+              </div>
+            </div>
+            <Link href="/grand-narrative">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-fuchsia-500/30 hover:bg-fuchsia-500/10 transition-colors cursor-pointer">
+                <BookOpen size={14} className="text-fuchsia-400" />
+                <div>
+                  <div className="text-[11px] font-bold font-mono text-fuchsia-400">Grand Narrative</div>
+                  <div className="text-[9px] text-muted-foreground">The Unified Truth</div>
+                </div>
+              </div>
+            </Link>
+          </div>
+        )}
       </div>
 
-      <div className={`absolute top-0 right-0 h-full z-20 transition-transform duration-300 ease-in-out ${showNatalChart ? "translate-x-0" : "translate-x-full"}`}
-        style={{ width: "min(400px, 90vw)" }}
-      >
-        <div className="h-full overflow-y-auto bg-black/80 backdrop-blur-xl border-l border-white/10 p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-bold font-mono text-violet-400">Natal Chart</h2>
-            <button
-              onClick={() => setShowNatalChart(false)}
-              className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
-            >
-              <ChevronRight size={16} className="text-muted-foreground" />
-            </button>
+      {isMobile ? (
+        <div className={`absolute inset-x-0 bottom-0 z-20 transition-transform duration-300 ease-in-out ${showNatalChart ? "translate-y-0" : "translate-y-full"}`}
+          style={{ height: "70vh", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+        >
+          <div className="h-full overflow-y-auto bg-black/90 backdrop-blur-xl border-t border-white/10 rounded-t-2xl">
+            <div className="sticky top-0 z-10 bg-black/90 backdrop-blur-xl px-4 pt-3 pb-2 border-b border-white/5">
+              <div className="w-8 h-1 bg-white/20 rounded-full mx-auto mb-2" />
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-bold font-mono text-violet-400">Natal Chart</h2>
+                <button
+                  onClick={() => setShowNatalChart(false)}
+                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                >
+                  <ChevronRight size={14} className="text-muted-foreground rotate-90" />
+                </button>
+              </div>
+            </div>
+            <div className="p-3">
+              <NatalChartSection />
+            </div>
           </div>
-          <NatalChartSection />
         </div>
-      </div>
+      ) : (
+        <div className={`absolute top-0 right-0 h-full z-20 transition-transform duration-300 ease-in-out ${showNatalChart ? "translate-x-0" : "translate-x-full"}`}
+          style={{ width: "min(400px, 90vw)" }}
+        >
+          <div className="h-full overflow-y-auto bg-black/80 backdrop-blur-xl border-l border-white/10 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold font-mono text-violet-400">Natal Chart</h2>
+              <button
+                onClick={() => setShowNatalChart(false)}
+                className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <ChevronRight size={16} className="text-muted-foreground" />
+              </button>
+            </div>
+            <NatalChartSection />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
