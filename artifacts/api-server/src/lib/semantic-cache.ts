@@ -30,6 +30,20 @@ function hashPrompt(messages: Array<{ role: string; content: string }>, model: s
   return crypto.createHash("sha256").update(key).digest("hex");
 }
 
+const SYSTEM_FP_PREFIX = "@@sysfp:";
+
+function fingerprintSystemContext(messages: Array<{ role: string; content: string }>, model: string): string {
+  const systemContent = messages.filter(m => m.role === "system").map(m => m.content).join("|");
+  if (systemContent.length === 0) return "";
+  return crypto.createHash("sha256").update(model + "|sys:" + systemContent.slice(0, 500)).digest("hex").slice(0, 16);
+}
+
+function extractStoredFingerprint(promptText: string): string {
+  const idx = promptText.indexOf(SYSTEM_FP_PREFIX);
+  if (idx === -1) return "";
+  return promptText.slice(idx + SYSTEM_FP_PREFIX.length, idx + SYSTEM_FP_PREFIX.length + 16);
+}
+
 function updateHitRate(): void {
   const total = stats.totalHits + stats.totalMisses;
   stats.hitRate = total > 0 ? stats.totalHits / total : 0;
@@ -66,11 +80,12 @@ export async function lookupCache(
     }
 
     const queryEmbedding = await generateEmbedding(userContent);
+    const systemFp = fingerprintSystemContext(messages, model);
 
     const candidates = await db
       .select()
       .from(semanticCacheTable)
-      .where(gt(semanticCacheTable.expiresAt, new Date()))
+      .where(sql`${semanticCacheTable.expiresAt} > now() AND ${semanticCacheTable.model} = ${model}`)
       .limit(200);
 
     let bestMatch: typeof candidates[0] | null = null;
@@ -79,6 +94,10 @@ export async function lookupCache(
     for (const candidate of candidates) {
       const emb = candidate.embedding as number[];
       if (!Array.isArray(emb) || emb.length === 0) continue;
+
+      const candidateStoredFp = extractStoredFingerprint(candidate.promptText);
+      if (systemFp.length > 0 && candidateStoredFp.length > 0 && systemFp !== candidateStoredFp) continue;
+
       const score = cosineSimilarity(queryEmbedding, emb);
       if (score > bestScore && score >= SIMILARITY_THRESHOLD) {
         bestScore = score;
@@ -112,6 +131,10 @@ export async function storeInCache(
 ): Promise<void> {
   const hash = hashPrompt(messages, model);
   const userContent = messages.filter(m => m.role === "user").map(m => m.content).join(" ");
+  const sysFp = fingerprintSystemContext(messages, model);
+  const promptTextWithFp = sysFp.length > 0
+    ? `${userContent.slice(0, 4900)}${SYSTEM_FP_PREFIX}${sysFp}`
+    : userContent.slice(0, 5000);
   const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
 
   try {
@@ -122,7 +145,7 @@ export async function storeInCache(
 
     await db.insert(semanticCacheTable).values({
       promptHash: hash,
-      promptText: userContent.slice(0, 5000),
+      promptText: promptTextWithFp,
       embedding,
       response: response.slice(0, 50000),
       model,
