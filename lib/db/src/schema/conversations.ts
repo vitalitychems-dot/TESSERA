@@ -105,3 +105,36 @@ export const forumVotesTable = pgTable("forum_votes", {
 });
 
 export type ForumVoteRow = typeof forumVotesTable.$inferSelect;
+
+export const forumKnowledgeTable = pgTable("forum_knowledge", {
+  id: serial("id").primaryKey(),
+  cycleNumber: integer("cycle_number").notNull(),
+  insightType: text("insight_type").notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  sourceTopicId: integer("source_topic_id"),
+  sourceProposalId: integer("source_proposal_id"),
+  author: text("author").notNull(),
+  confidence: integer("confidence").notNull().default(50),
+  referencedBy: integer("referenced_by").notNull().default(0),
+  supersededBy: integer("superseded_by"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type ForumKnowledgeRow = typeof forumKnowledgeTable.$inferSelect;
+
+export const forumLearningMetricsTable = pgTable("forum_learning_metrics", {
+  id: serial("id").primaryKey(),
+  cycleNumber: integer("cycle_number").notNull(),
+  collaborationScore: integer("collaboration_score").notNull().default(0),
+  knowledgeDepth: integer("knowledge_depth").notNull().default(0),
+  crossDomainLinks: integer("cross_domain_links").notNull().default(0),
+  proposalQuality: integer("proposal_quality").notNull().default(0),
+  insightCount: integer("insight_count").notNull().default(0),
+  topicsReferringPast: integer("topics_referring_past").notNull().default(0),
+  improvementDelta: integer("improvement_delta").notNull().default(0),
+  reflectionSummary: text("reflection_summary").notNull().default(""),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type ForumLearningMetricsRow = typeof forumLearningMetricsTable.$inferSelect;

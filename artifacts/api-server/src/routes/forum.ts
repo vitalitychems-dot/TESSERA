@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
-import { forumTopicsTable, forumRepliesTable, forumProposalsTable, forumVotesTable } from "@workspace/db/schema";
+import { forumTopicsTable, forumRepliesTable, forumProposalsTable, forumVotesTable, forumKnowledgeTable, forumLearningMetricsTable } from "@workspace/db/schema";
 import { desc, eq, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { validateMeshToken } from "../lib/mesh-auth";
@@ -437,6 +437,28 @@ router.post("/tesseract-forum/engine/cycle", async (_req, res) => {
   try {
     const result = await runForumCycle();
     return res.json({ ok: true, ...result });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/tesseract-forum/knowledge", async (_req, res) => {
+  try {
+    const insights = await db.select().from(forumKnowledgeTable)
+      .orderBy(desc(forumKnowledgeTable.confidence), desc(forumKnowledgeTable.referencedBy))
+      .limit(50);
+    return res.json({ ok: true, count: insights.length, insights });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/tesseract-forum/learning-metrics", async (_req, res) => {
+  try {
+    const metrics = await db.select().from(forumLearningMetricsTable)
+      .orderBy(desc(forumLearningMetricsTable.cycleNumber))
+      .limit(20);
+    return res.json({ ok: true, count: metrics.length, metrics });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
