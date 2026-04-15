@@ -265,6 +265,42 @@ export function getLearnedProfileFreshness(): ProfileFreshnessEntry[] {
   return results;
 }
 
+export async function restoreLearnedProfilesFromDb(): Promise<number> {
+  try {
+    const { getAllProviderProfiles } = await import("./provider-registry");
+    const profiles = await getAllProviderProfiles();
+    let restored = 0;
+    for (const row of profiles) {
+      const caps = row.capabilities as unknown[];
+      if (!Array.isArray(caps)) continue;
+      const dynamicEntry = caps.find((c): c is { __dynamicProfile: Record<string, unknown> } =>
+        typeof c === "object" && c !== null && "__dynamicProfile" in c
+      );
+      if (!dynamicEntry) continue;
+      const dp = dynamicEntry.__dynamicProfile;
+      const profileBuiltAt = typeof dp.profileBuiltAt === "number" ? dp.profileBuiltAt : row.updatedAt.getTime();
+
+      const restoredProfile: DynamicProfile = {
+        latencyPercentiles: (dp.latencyPercentiles as DynamicProfile["latencyPercentiles"]) ?? null,
+        latencyStdDev: typeof dp.latencyStdDev === "number" ? dp.latencyStdDev : null,
+        avgResponseLength: typeof dp.avgResponseLength === "number" ? dp.avgResponseLength : null,
+        responseLengthStdDev: null,
+        responseConsistency: typeof dp.responseConsistency === "number" ? dp.responseConsistency : 0,
+        errorClassification: (typeof dp.errorClassification === "object" && dp.errorClassification !== null ? dp.errorClassification : {}) as Record<string, number>,
+        successStreak: typeof dp.successStreak === "number" ? dp.successStreak : 0,
+        recentTrend: (["improving", "stable", "degrading", "unknown"].includes(dp.recentTrend as string) ? dp.recentTrend : "unknown") as DynamicProfile["recentTrend"],
+        dataPoints: typeof dp.dataPoints === "number" ? dp.dataPoints : 0,
+      };
+
+      learnedProfiles.set(row.providerId, { profile: restoredProfile, updatedAt: profileBuiltAt });
+      restored++;
+    }
+    return restored;
+  } catch {
+    return 0;
+  }
+}
+
 export async function analyzeProvider(providerId: string): Promise<CapabilityProfile | null> {
   const config = getProviderConfigs().find(p => p.id === providerId);
   if (!config) return null;
@@ -319,6 +355,19 @@ export async function analyzeProvider(providerId: string): Promise<CapabilityPro
     dynamicConfidence,
   };
 
+  const dynamicProfilePayload = {
+    latencyPercentiles: dynamic.latencyPercentiles,
+    latencyStdDev: dynamic.latencyStdDev,
+    responseConsistency: dynamic.responseConsistency,
+    errorClassification: dynamic.errorClassification,
+    successStreak: dynamic.successStreak,
+    recentTrend: dynamic.recentTrend,
+    avgResponseLength: dynamic.avgResponseLength,
+    dataPoints: dynamic.dataPoints,
+    dynamicConfidence,
+    profileBuiltAt: Date.now(),
+  };
+
   await upsertProviderProfile(providerId, {
     totalCalls,
     successCalls,
@@ -328,7 +377,7 @@ export async function analyzeProvider(providerId: string): Promise<CapabilityPro
     errorRate,
     avgInputTokens: stats?.avgInputTokens ?? undefined,
     avgOutputTokens: stats?.avgOutputTokens ?? undefined,
-    capabilities: config.capabilities,
+    capabilities: [...config.capabilities, { __dynamicProfile: dynamicProfilePayload }],
     strengths,
     weaknesses,
     capabilityScore,
@@ -341,6 +390,13 @@ export async function analyzeProvider(providerId: string): Promise<CapabilityPro
 }
 
 export async function analyzeAllProviders(): Promise<CapabilityProfile[]> {
+  if (learnedProfiles.size === 0) {
+    const restored = await restoreLearnedProfilesFromDb();
+    if (restored > 0) {
+      logger.info({ restored }, "Restored learned provider profiles from database");
+    }
+  }
+
   const configs = getProviderConfigs();
   const profiles: CapabilityProfile[] = [];
 
