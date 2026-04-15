@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getLearnedProfileFreshness } from "../lib/reverse-engineering-engine";
+import { getLearnedProfileFreshness, restoreLearnedProfilesFromDb } from "../lib/reverse-engineering-engine";
 import { getAGITrainingMetrics } from "../lib/agi-training-engine";
 import { getSovereignMemoryVaultMetrics } from "../lib/sovereign-memory-vault";
 import { getIngestionAuditLog } from "../lib/ingestion/pipeline";
@@ -10,7 +10,11 @@ const router = Router();
 
 router.get("/sovereign/knowledge-health", async (_req, res) => {
   try {
-    const profileFreshness = getLearnedProfileFreshness();
+    let profileFreshness = getLearnedProfileFreshness();
+    if (profileFreshness.length === 0) {
+      await restoreLearnedProfilesFromDb();
+      profileFreshness = getLearnedProfileFreshness();
+    }
     const staleProfiles = profileFreshness.filter(p => Date.now() - p.updatedAt > 6 * 3600000);
     const configuredProviders = getProviderConfigs().length;
     const analyzedProviders = profileFreshness.length;
