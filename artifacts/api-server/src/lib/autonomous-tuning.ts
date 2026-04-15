@@ -5,7 +5,7 @@ import { logger } from "./logger";
 import { getCacheStats } from "./semantic-cache";
 import { getBatcherStats } from "./llm-batcher";
 import { getLLMStats } from "./llm-client";
-import { getEmbeddingStats } from "./neural-embeddings";
+import { getEmbeddingStats, setNeuralPreference } from "./neural-embeddings";
 import { getDistillationStats } from "./knowledge-distillation";
 import { getSelfEvaluationMetrics } from "./self-evaluation";
 
@@ -139,6 +139,26 @@ export async function runAutonomousTuning(cycleNumber: number, cycleDurationMs: 
       tuningState.batcherWindowMs = newVal;
       adjustments.push({ parameter: "batcherWindowMs", from: oldVal, to: newVal, reason: `High batch reduction rate (${(batcherStats.reductionRate * 100).toFixed(0)}%) — widened batch window` });
       await persistTuningDecision("batcherReduction", "batcherWindowMs", oldVal, newVal, `${(batcherStats.reductionRate * 100).toFixed(0)}% reduction rate`, cycleNumber);
+    }
+  }
+
+  if (embeddingStats.neuralRate < 0.3 && embeddingStats.neuralCalls + embeddingStats.fallbackCalls > 5) {
+    const oldVal = tuningState.embeddingWeight;
+    const newVal = clamp(oldVal + 0.15, 0.5, 2.0);
+    if (newVal !== oldVal) {
+      tuningState.embeddingWeight = newVal;
+      setNeuralPreference(newVal);
+      adjustments.push({ parameter: "embeddingWeight", from: oldVal, to: newVal, reason: `Low neural embedding rate (${(embeddingStats.neuralRate * 100).toFixed(1)}%) — increased neural preference weight` });
+      await persistTuningDecision("embeddingNeuralRate", "embeddingWeight", oldVal, newVal, `Neural rate ${(embeddingStats.neuralRate * 100).toFixed(1)}%, boosting preference`, cycleNumber);
+    }
+  } else if (embeddingStats.neuralRate > 0.9 && tuningState.embeddingWeight > 1.0) {
+    const oldVal = tuningState.embeddingWeight;
+    const newVal = clamp(oldVal - 0.1, 0.5, 2.0);
+    if (newVal !== oldVal) {
+      tuningState.embeddingWeight = newVal;
+      setNeuralPreference(newVal);
+      adjustments.push({ parameter: "embeddingWeight", from: oldVal, to: newVal, reason: `High neural embedding rate (${(embeddingStats.neuralRate * 100).toFixed(1)}%) — normalizing weight` });
+      await persistTuningDecision("embeddingNeuralRate", "embeddingWeight", oldVal, newVal, `Neural rate ${(embeddingStats.neuralRate * 100).toFixed(1)}%, reducing to baseline`, cycleNumber);
     }
   }
 

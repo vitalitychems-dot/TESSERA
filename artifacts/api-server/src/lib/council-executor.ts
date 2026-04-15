@@ -82,7 +82,7 @@ async function persistConfigChange(proposalId: string, change: SystemChange, cat
   }
 }
 
-function executeProposal(decisionId: string, topic: string, category: string, outcome: string): ExecutionResult | null {
+async function executeProposal(decisionId: string, topic: string, category: string, outcome: string): Promise<ExecutionResult | null> {
   if (outcome !== "approved") return null;
 
   const changes: SystemChange[] = [];
@@ -124,8 +124,18 @@ function executeProposal(decisionId: string, topic: string, category: string, ou
     notes = "Council decision acknowledged and logged";
   }
 
+  let allPersisted = true;
   for (const change of changes) {
-    persistConfigChange(decisionId, change, category).catch(() => {});
+    try {
+      await persistConfigChange(decisionId, change, category);
+    } catch {
+      allPersisted = false;
+    }
+  }
+
+  if (!allPersisted) {
+    logger.warn({ decisionId, category }, "CouncilExecutor: some config changes failed to persist — will retry next cycle");
+    return null;
   }
 
   const result: ExecutionResult = {
@@ -158,7 +168,7 @@ async function processApprovedDecisions(): Promise<number> {
     for (const d of recentDecisions) {
       if (d.outcome !== "approved") continue;
       if (executedProposalIds.has(d.decisionId)) continue;
-      const result = executeProposal(d.decisionId, d.topic, d.category || "general", d.outcome);
+      const result = await executeProposal(d.decisionId, d.topic, d.category || "general", d.outcome);
       if (result) processed++;
     }
   } catch (err) {
