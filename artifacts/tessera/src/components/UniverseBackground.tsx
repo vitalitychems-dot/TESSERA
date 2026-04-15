@@ -365,9 +365,16 @@ function createLabelCanvas(symbol: string, name: string): HTMLCanvasElement {
 function ConstellationLabels() {
   const labelData = useMemo(() =>
     Object.entries(ZODIAC_CONSTELLATIONS).map(([name, constellation]) => {
-      let avgRa = 0, avgDec = 0;
-      constellation.starCoords.forEach(s => { avgRa += s.ra; avgDec += s.dec; });
-      avgRa /= constellation.starCoords.length;
+      let avgDec = 0;
+      let sinSum = 0, cosSum = 0;
+      constellation.starCoords.forEach(s => {
+        const raRad = (s.ra / 24) * Math.PI * 2;
+        sinSum += Math.sin(raRad);
+        cosSum += Math.cos(raRad);
+        avgDec += s.dec;
+      });
+      const avgRaRad = Math.atan2(sinSum, cosSum);
+      const avgRa = ((avgRaRad / (Math.PI * 2)) * 24 + 24) % 24;
       avgDec /= constellation.starCoords.length;
       const pos = raDecToXYZ(avgRa, avgDec + 4, SPHERE_RADIUS * 0.97);
       const canvas = createLabelCanvas(ZODIAC_SYMBOLS[name] || "", name);
