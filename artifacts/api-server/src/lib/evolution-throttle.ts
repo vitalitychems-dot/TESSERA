@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import * as os from "os";
 
 interface ModuleCooldown {
   moduleId: string;
@@ -9,6 +10,9 @@ interface ModuleCooldown {
   totalSuccesses: number;
   paused: boolean;
 }
+
+const HIGH_LOAD_THRESHOLD = 0.85;
+const HIGH_MEMORY_THRESHOLD = 0.90;
 
 const COOLDOWN_TIERS_MS = [
   60_000,
@@ -36,6 +40,36 @@ function getCooldown(moduleId: string): ModuleCooldown {
     moduleCooldowns.set(moduleId, entry);
   }
   return entry;
+}
+
+export function getSystemLoad(): { cpuLoad: number; memoryUsage: number; highLoad: boolean } {
+  const cpus = os.cpus();
+  const cpuLoad = cpus.length > 0
+    ? cpus.reduce((sum, cpu) => {
+        const total = Object.values(cpu.times).reduce((a, b) => a + b, 0);
+        return sum + (1 - cpu.times.idle / total);
+      }, 0) / cpus.length
+    : 0;
+  const totalMem = os.totalmem();
+  const freeMem = os.freemem();
+  const memoryUsage = totalMem > 0 ? 1 - freeMem / totalMem : 0;
+  return {
+    cpuLoad,
+    memoryUsage,
+    highLoad: cpuLoad > HIGH_LOAD_THRESHOLD || memoryUsage > HIGH_MEMORY_THRESHOLD,
+  };
+}
+
+export function shouldSkipEvolutionForLoad(): boolean {
+  const load = getSystemLoad();
+  if (load.highLoad) {
+    logger.info(
+      { cpuLoad: (load.cpuLoad * 100).toFixed(1) + "%", memoryUsage: (load.memoryUsage * 100).toFixed(1) + "%" },
+      "EvolutionThrottle: skipping evolution cycle due to high system load",
+    );
+    return true;
+  }
+  return false;
 }
 
 export function isModuleCoolingDown(moduleId: string): boolean {

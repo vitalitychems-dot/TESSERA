@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import {
   getThrottleMetrics,
+  getSystemLoad,
   pauseModule,
   resumeModule,
   pauseAllEvolution,
@@ -31,9 +32,16 @@ router.get("/evolution-health", (_req: Request, res: Response) => {
   const improvement = getRecursiveSelfImprovementMetrics();
   const scheduler = getSchedulerMetrics();
 
+  const systemLoad = getSystemLoad();
+
   res.json({
     ok: true,
     data: {
+      systemLoad: {
+        cpuLoad: Math.round(systemLoad.cpuLoad * 100),
+        memoryUsage: Math.round(systemLoad.memoryUsage * 100),
+        highLoad: systemLoad.highLoad,
+      },
       throttle,
       evolution: {
         totalProposals: evolution.totalProposals,
