@@ -5,7 +5,7 @@ import { logger } from "./logger";
 import { getEvolutionMetrics, proposeEvolution, type CodeEvolutionProposal } from "./self-code-evolution";
 import { getDaemonMetrics, runImprovementCycle } from "./auto-improvement-daemon";
 import { getConsciousnessMetrics } from "./consciousness-engine";
-import { isModuleCoolingDown, recordEvolutionSuccess, recordEvolutionFailure } from "./evolution-throttle";
+import { isModuleCoolingDown } from "./evolution-throttle";
 
 export interface CodeProfile {
   moduleId: string;
@@ -291,9 +291,6 @@ async function attemptAutonomousFix(profile: CodeProfile, weakness: CodeWeakness
       weakness.resolvedAt = Date.now();
       weakness.patchId = proposal.id;
       state.totalWeaknessesResolved++;
-      recordEvolutionSuccess(profile.moduleId);
-    } else {
-      recordEvolutionFailure(profile.moduleId);
     }
 
     const entry: SelfImprovementChangelog = {
@@ -323,7 +320,6 @@ async function attemptAutonomousFix(profile: CodeProfile, weakness: CodeWeakness
 
     return entry;
   } catch (err) {
-    recordEvolutionFailure(profile.moduleId);
     logger.warn({ module: profile.moduleId, err: (err as Error).message }, "RecursiveSelfImprovement: autonomous fix failed");
     return null;
   }

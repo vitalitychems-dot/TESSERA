@@ -455,13 +455,13 @@ export async function proposeEvolution(
         evolutionState.appliedChanges--;
         restoreSourceFromBackup(id, targetModule);
         recordEvolutionFailure(targetModule);
-        logger.warn({ id, targetModule, err: writeErr }, "SelfCodeEvolution: autonomous apply failed — source restored from backup");
+        logger.info({ id, targetModule }, "SelfCodeEvolution: apply failed — source restored, throttle updated");
       }
     } else {
       proposal.status = "rejected";
       proposal.impact = `Verification failed post-approval: ${verifyResult.reason}`;
       recordEvolutionFailure(targetModule);
-      logger.warn({ id, targetModule, reason: verifyResult.reason, verifySteps: verifyResult.steps }, "SelfCodeEvolution: evolution rejected by post-approval verification");
+      logger.info({ id, targetModule, reason: verifyResult.reason }, "SelfCodeEvolution: rejected by verification — throttle updated");
     }
   }
 

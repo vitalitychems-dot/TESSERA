@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Send, Loader2, Mic, MicOff, Paperclip, X, FileText, Image, File, Volume2, VolumeX, Copy, Check, Download, Square, Zap, PhoneOff, Pause, Play, MessageSquare, Shield, Settings2, Palette, Bot, CheckCircle2, RefreshCw, ThumbsUp, ThumbsDown, Search, ArrowDown, Sparkles, ChevronRight, Globe, Code, Radio, Network, Lock, Activity, Database, ExternalLink, Brain, DollarSign, Users, Keyboard, Eye } from "lucide-react";
+import { Send, Loader2, Mic, MicOff, Paperclip, X, FileText, Image, File, Volume2, VolumeX, Copy, Check, Download, Square, Zap, PhoneOff, Pause, Play, MessageSquare, Shield, Settings2, Bot, CheckCircle2, RefreshCw, ThumbsUp, ThumbsDown, Search, ArrowDown, Sparkles, ChevronRight, Globe, Code, Radio, Network, Lock, Activity, Database, ExternalLink, Brain, DollarSign, Users, Keyboard, Eye } from "lucide-react";
 import { NLPGoalsPanel } from "./chat/NLPGoalsPanel";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import ReactMarkdown from "react-markdown";
@@ -22,7 +22,6 @@ import {
 import { parseChartBlocks, InlineChart } from "./chat/ChatChartRenderer";
 import { CodePreview } from "./chat/ChatCodePreview";
 import { ColorizedText } from "./chat/ChatColorizedText";
-import { FONT_COLORS } from "@/lib/theme-constants";
 import {
   type ReplyMode, type VoiceState,
   playAudioResponse, stopSpeaking, sendVoiceMessage, copyToClipboard, downloadConversation,
@@ -37,6 +36,8 @@ import { ChatMessageItem } from "./chat/ChatMessageItem";
 import { ChatStreamingMessage } from "./chat/ChatStreamingMessage";
 import { ChatShortcutsModal } from "./chat/ChatKeyboardShortcuts";
 import { useChatCommandExecutor } from "./chat/useChatCommandExecutor";
+import { ChatDataCommandResult } from "./chat/ChatDataCommandResult";
+import { ChatFontColorPicker } from "./chat/ChatFontColorPicker";
 
 export function ChatArea({ conversationId }: { conversationId: number }) {
   const [currentLocation, setLocation] = useLocation();
@@ -1401,33 +1402,10 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
         )}
 
         {dataCommandResult && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="max-w-3xl mx-auto mb-3 data-command-card"
-            data-testid="data-command-result"
-          >
-            <div className="px-4 py-3 rounded-xl border border-cyan-500/20 bg-black/40 backdrop-blur-md">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 rounded-full bg-cyan-400 pulse-glow" />
-                <span className="text-[11px] font-mono text-cyan-400 tracking-wider uppercase" style={{ fontFamily: 'var(--font-display)' }}>{dataCommandResult.label}</span>
-                {!dataCommandResult.loading && (
-                  <button onClick={() => setDataCommandResult(null)} className="ml-auto text-white/30 hover:text-white/60 transition-colors" data-testid="button-dismiss-data"><X size={12} /></button>
-                )}
-              </div>
-              {dataCommandResult.loading ? (
-                <div className="flex items-center gap-2 text-cyan-300/60 text-xs">
-                  <Loader2 size={12} className="animate-spin" />
-                  <span className="font-mono">Fetching live data...</span>
-                </div>
-              ) : (
-                <div className="tessera-message prose prose-invert max-w-none prose-sm text-[13px] leading-relaxed">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{dataCommandResult.content}</ReactMarkdown>
-                </div>
-              )}
-            </div>
-          </motion.div>
+          <ChatDataCommandResult
+            result={dataCommandResult}
+            onDismiss={() => setDataCommandResult(null)}
+          />
         )}
 
         {walletDetected.length > 0 && (
@@ -2172,67 +2150,12 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
 
               </div>
 
-              {/* Font Color Picker */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => { setThemeOpen(v => !v); setMoltAgentOpen(false); }}
-                  className={cn(
-                    "h-10 w-10 flex items-center justify-center rounded-full transition-all",
-                    themeOpen
-                      ? "text-cyan-400 bg-cyan-400/10"
-                      : localFontColor
-                        ? "bg-white/[0.06]"
-                        : "text-gray-500 hover:text-cyan-400 hover:bg-white/[0.06]"
-                  )}
-                  title="Font color"
-                  data-testid="button-font-color-picker"
-                  style={localFontColor && !themeOpen ? { color: localFontColor } : {}}
-                >
-                  <Palette size={16} />
-                </button>
-                <AnimatePresence>
-                  {themeOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute bottom-14 left-1/2 -translate-x-1/2 w-48 p-3 rounded-2xl border border-primary/20 shadow-2xl shadow-primary/10 z-50 chat-panel-bg backdrop-blur-xl"
-                      data-testid="font-color-picker-panel"
-                    >
-                      <div className="text-[11px] font-mono text-cyan-400/70 uppercase tracking-wider mb-2">Typing Color</div>
-                      <div className="grid grid-cols-4 gap-1.5">
-                        {FONT_COLORS.map(fc => (
-                          <button
-                            key={fc.value}
-                            title={fc.label}
-                            onClick={() => handleLocalFontColor(fc.value)}
-                            className={cn(
-                              "w-full h-7 rounded-md transition-all border-2 flex items-center justify-center",
-                              localFontColor === fc.value ? "border-white scale-110 shadow-lg" : "border-transparent opacity-60 hover:opacity-100 hover:scale-105"
-                            )}
-                            style={{ backgroundColor: fc.bg }}
-                            data-testid={`button-chat-font-${fc.label.toLowerCase().replace(/\s/g, "-")}`}
-                          >
-                            {localFontColor === fc.value && <Check size={10} className="text-black/80" />}
-                          </button>
-                        ))}
-                      </div>
-                      {localFontColor && (
-                        <button
-                          type="button"
-                          onClick={() => handleLocalFontColor(localFontColor)}
-                          className="mt-2 w-full text-[11px] text-gray-500 hover:text-gray-300 transition-all text-center"
-                          data-testid="button-chat-font-reset"
-                        >
-                          Reset to default
-                        </button>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+              <ChatFontColorPicker
+                isOpen={themeOpen}
+                onToggle={() => { setThemeOpen(v => !v); setMoltAgentOpen(false); }}
+                localFontColor={localFontColor}
+                onColorChange={handleLocalFontColor}
+              />
 
               <div className="flex items-center gap-1.5">
                 <button
