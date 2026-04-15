@@ -1,5 +1,5 @@
-import { useRef, useMemo, useState, useEffect, Component, type ReactNode } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import React, { useRef, useMemo, useState, useEffect, useCallback, Component, type ReactNode } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Stars, Html, Ring, Text } from "@react-three/drei";
 import * as THREE from "three";
 
@@ -59,9 +59,61 @@ const DIMENSIONS = [
   { id: 7, name: "Atmic", freq: "963 Hz", color: "#a78bfa", radius: 98 },
 ];
 
-function Sun() {
+const CONSTELLATION_DATA: Record<string, { stars: number[][]; lines: number[][] }> = {
+  Aries: {
+    stars: [[0, 0], [3, 1.5], [6, 2], [8, 0.5]],
+    lines: [[0, 1], [1, 2], [2, 3]],
+  },
+  Taurus: {
+    stars: [[0, 0], [2, 2], [4, 3], [6, 2.5], [3, -1], [5, -0.5], [7, 0]],
+    lines: [[0, 1], [1, 2], [2, 3], [1, 4], [4, 5], [5, 6]],
+  },
+  Gemini: {
+    stars: [[0, 4], [1, 2], [2, 0], [3, -1], [5, 4], [4, 2], [3, 0.5]],
+    lines: [[0, 1], [1, 2], [2, 3], [4, 5], [5, 6], [2, 6]],
+  },
+  Cancer: {
+    stars: [[0, 0], [2, 2], [4, 1], [3, -1], [5, -0.5]],
+    lines: [[0, 1], [1, 2], [1, 3], [3, 4]],
+  },
+  Leo: {
+    stars: [[0, 2], [1, 3], [3, 3.5], [4, 2], [3, 0], [5, -1], [7, 0]],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6]],
+  },
+  Virgo: {
+    stars: [[0, 3], [2, 2], [4, 2.5], [6, 3], [3, 0], [5, -1], [7, 0.5]],
+    lines: [[0, 1], [1, 2], [2, 3], [2, 4], [4, 5], [5, 6]],
+  },
+  Libra: {
+    stars: [[0, 0], [3, 2], [6, 0], [2, -2], [4, -2], [3, -3.5]],
+    lines: [[0, 1], [1, 2], [1, 5], [3, 5], [4, 5], [0, 3], [2, 4]],
+  },
+  Scorpio: {
+    stars: [[0, 1], [2, 2], [4, 1.5], [6, 0], [7, -2], [8, -3], [9, -2.5], [9.5, -1.5]],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7]],
+  },
+  Sagittarius: {
+    stars: [[0, 0], [2, 2], [4, 1], [3, -1], [5, 3], [6, 0], [2, -2]],
+    lines: [[0, 1], [1, 2], [2, 3], [1, 4], [2, 5], [3, 6]],
+  },
+  Capricorn: {
+    stars: [[0, 1], [2, 2], [4, 1.5], [6, 0], [5, -2], [3, -1.5]],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0]],
+  },
+  Aquarius: {
+    stars: [[0, 2], [2, 1], [4, 2], [6, 1], [3, -1], [5, -2], [7, -1]],
+    lines: [[0, 1], [1, 2], [2, 3], [1, 4], [4, 5], [5, 6]],
+  },
+  Pisces: {
+    stars: [[0, 0], [2, 1], [4, 2], [6, 1.5], [3, -1], [5, -2], [7, -1], [3.5, 0]],
+    lines: [[0, 1], [1, 2], [2, 3], [4, 5], [5, 6], [1, 7], [7, 5]],
+  },
+};
+
+function Sun({ isRuler }: { isRuler?: boolean }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const glowRef = useRef<THREE.Mesh>(null);
+  const rulerGlowRef = useRef<THREE.Mesh>(null);
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
@@ -72,22 +124,33 @@ function Sun() {
       const scale = 1.8 + Math.sin(t * 0.5) * 0.15;
       glowRef.current.scale.setScalar(scale);
     }
+    if (rulerGlowRef.current) {
+      const s = 1 + Math.sin(t * 1.2) * 0.15;
+      rulerGlowRef.current.scale.setScalar(s);
+      (rulerGlowRef.current.material as THREE.MeshBasicMaterial).opacity = 0.06 + Math.sin(t * 2) * 0.03;
+    }
   });
 
   return (
     <group>
-      <pointLight position={[0, 0, 0]} intensity={3} distance={200} color="#ffcc44" />
+      <pointLight position={[0, 0, 0]} intensity={isRuler ? 4 : 3} distance={200} color="#ffcc44" />
       <pointLight position={[0, 0, 0]} intensity={1.5} distance={300} color="#ff8800" />
       <mesh ref={glowRef}>
         <sphereGeometry args={[2.2, 32, 32]} />
-        <meshBasicMaterial color="#ffaa00" transparent opacity={0.08} />
+        <meshBasicMaterial color="#ffaa00" transparent opacity={isRuler ? 0.14 : 0.08} />
       </mesh>
+      {isRuler && (
+        <mesh ref={rulerGlowRef}>
+          <sphereGeometry args={[4, 32, 32]} />
+          <meshBasicMaterial color="#e879f9" transparent opacity={0.06} side={THREE.BackSide} depthWrite={false} />
+        </mesh>
+      )}
       <mesh ref={meshRef}>
         <sphereGeometry args={[1.8, 48, 48]} />
         <meshStandardMaterial
           color="#ffcc22"
-          emissive="#ff8800"
-          emissiveIntensity={2}
+          emissive={isRuler ? "#c084fc" : "#ff8800"}
+          emissiveIntensity={isRuler ? 2.5 : 2}
           roughness={0.8}
         />
       </mesh>
@@ -95,7 +158,58 @@ function Sun() {
   );
 }
 
-function PlanetWithTexture({ name, distance, size, speed, color, emissive, initialAngle }: {
+function RulingPlanetAura({ size }: { size: number }) {
+  const particlesRef = useRef<THREE.Points>(null);
+  const auraRef = useRef<THREE.Mesh>(null);
+  const count = 200;
+
+  const positions = useMemo(() => {
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const r = size * (1.5 + Math.random() * 1.5);
+      pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      pos[i * 3 + 2] = r * Math.cos(phi);
+    }
+    return pos;
+  }, [size]);
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    if (particlesRef.current) {
+      particlesRef.current.rotation.y = t * 0.3;
+      particlesRef.current.rotation.x = Math.sin(t * 0.2) * 0.2;
+    }
+    if (auraRef.current) {
+      const s = 1 + Math.sin(t * 1.5) * 0.1;
+      auraRef.current.scale.setScalar(s);
+      (auraRef.current.material as THREE.MeshBasicMaterial).opacity = 0.08 + Math.sin(t * 2) * 0.04;
+    }
+  });
+
+  return (
+    <group>
+      <mesh ref={auraRef}>
+        <sphereGeometry args={[size * 2.5, 32, 32]} />
+        <meshBasicMaterial color="#e879f9" transparent opacity={0.1} side={THREE.BackSide} depthWrite={false} />
+      </mesh>
+      <mesh>
+        <sphereGeometry args={[size * 3.5, 32, 32]} />
+        <meshBasicMaterial color="#a78bfa" transparent opacity={0.04} side={THREE.BackSide} depthWrite={false} />
+      </mesh>
+      <points ref={particlesRef}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+        </bufferGeometry>
+        <pointsMaterial size={0.08} color="#e879f9" transparent opacity={0.7} sizeAttenuation depthWrite={false} />
+      </points>
+    </group>
+  );
+}
+
+function PlanetWithTexture({ name, distance, size, speed, color, emissive, initialAngle, isRulingPlanet }: {
   name: string;
   distance: number;
   size: number;
@@ -103,6 +217,7 @@ function PlanetWithTexture({ name, distance, size, speed, color, emissive, initi
   color: string;
   emissive: string;
   initialAngle: number;
+  isRulingPlanet?: boolean;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
@@ -121,7 +236,7 @@ function PlanetWithTexture({ name, distance, size, speed, color, emissive, initi
         setTexture(tex);
       },
       undefined,
-      () => { /* fallback to procedural color */ }
+      () => {}
     );
   }, [name]);
 
@@ -137,6 +252,8 @@ function PlanetWithTexture({ name, distance, size, speed, color, emissive, initi
     }
   });
 
+  const emissiveBoost = isRulingPlanet ? 0.6 : 0;
+
   return (
     <>
       <Ring args={[distance - 0.03, distance + 0.03, 128]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -151,16 +268,16 @@ function PlanetWithTexture({ name, distance, size, speed, color, emissive, initi
           {texture ? (
             <meshStandardMaterial
               map={texture}
-              emissive={emissive}
-              emissiveIntensity={hovered ? 0.8 : 0.15}
+              emissive={isRulingPlanet ? "#c084fc" : emissive}
+              emissiveIntensity={(hovered ? 0.8 : 0.15) + emissiveBoost}
               roughness={0.7}
               metalness={0.05}
             />
           ) : (
             <meshStandardMaterial
               color={color}
-              emissive={emissive}
-              emissiveIntensity={hovered ? 1.5 : 0.3}
+              emissive={isRulingPlanet ? "#c084fc" : emissive}
+              emissiveIntensity={(hovered ? 1.5 : 0.3) + emissiveBoost}
               roughness={0.6}
               metalness={0.1}
             />
@@ -172,11 +289,12 @@ function PlanetWithTexture({ name, distance, size, speed, color, emissive, initi
             <meshBasicMaterial color="#d4b96a" transparent opacity={0.4} side={THREE.DoubleSide} />
           </mesh>
         )}
+        {isRulingPlanet && <RulingPlanetAura size={size} />}
         {hovered && (
           <Html distanceFactor={15} center style={{ pointerEvents: "none" }}>
             <div style={{
               background: "rgba(0,0,0,0.85)",
-              border: "1px solid rgba(139,92,246,0.5)",
+              border: `1px solid ${isRulingPlanet ? "rgba(192,132,252,0.7)" : "rgba(139,92,246,0.5)"}`,
               borderRadius: "8px",
               padding: "6px 12px",
               color: "#e2e8f0",
@@ -185,7 +303,7 @@ function PlanetWithTexture({ name, distance, size, speed, color, emissive, initi
               whiteSpace: "nowrap",
               backdropFilter: "blur(8px)",
             }}>
-              {name}
+              {name}{isRulingPlanet ? " ✦ Ruling Planet" : ""}
             </div>
           </Html>
         )}
@@ -194,20 +312,267 @@ function PlanetWithTexture({ name, distance, size, speed, color, emissive, initi
   );
 }
 
-function DimensionalShell({ radius, color, name, freq, visible }: {
+function DimensionParticles({ radius, color, dimIndex, opacityRef }: {
+  radius: number;
+  color: string;
+  dimIndex: number;
+  opacityRef: React.MutableRefObject<number>;
+}) {
+  const ref = useRef<THREE.Points>(null);
+  const count = 300;
+
+  const { positions, velocities } = useMemo(() => {
+    const pos = new Float32Array(count * 3);
+    const vel = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const r = radius + (Math.random() - 0.5) * 4;
+      pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      pos[i * 3 + 2] = r * Math.cos(phi);
+
+      const speedFactor = [0.3, 0.5, 0.8, 0.4, 0.6, 0.9, 1.2][dimIndex] || 0.5;
+      vel[i * 3] = (Math.random() - 0.5) * speedFactor;
+      vel[i * 3 + 1] = (Math.random() - 0.5) * speedFactor;
+      vel[i * 3 + 2] = (Math.random() - 0.5) * speedFactor;
+    }
+    return { positions: pos, velocities: vel };
+  }, [radius, dimIndex]);
+
+  useFrame(({ clock }) => {
+    if (!ref.current) return;
+    const o = opacityRef.current;
+    const mat = ref.current.material as THREE.PointsMaterial;
+    mat.opacity = o * 0.6;
+    if (o < 0.01) return;
+
+    const t = clock.getElapsedTime();
+    const geo = ref.current.geometry;
+    const posAttr = geo.getAttribute("position");
+    const arr = posAttr.array as Float32Array;
+
+    const patterns = [
+      () => Math.sin(t * 0.5) * 0.15,
+      () => Math.cos(t * 0.3) * 0.2,
+      () => Math.sin(t * 0.7) * Math.cos(t * 0.4) * 0.1,
+      () => Math.sin(t * 0.2) * 0.08,
+      () => Math.cos(t * 0.6) * 0.12,
+      () => Math.sin(t * 1.0) * 0.06,
+      () => Math.sin(t * 0.8) * Math.sin(t * 0.3) * 0.15,
+    ];
+
+    const drift = patterns[dimIndex]?.() ?? 0;
+
+    for (let i = 0; i < count; i++) {
+      const ix = i * 3;
+      arr[ix] = positions[ix] + velocities[ix] * Math.sin(t + i) + drift;
+      arr[ix + 1] = positions[ix + 1] + velocities[ix + 1] * Math.cos(t * 0.7 + i * 0.5);
+      arr[ix + 2] = positions[ix + 2] + velocities[ix + 2] * Math.sin(t * 0.5 + i * 0.3) + drift * 0.5;
+    }
+    posAttr.needsUpdate = true;
+
+    ref.current.rotation.y = t * [0.003, 0.005, 0.004, 0.002, 0.006, 0.007, 0.008][dimIndex];
+  });
+
+  const sizes = [0.3, 0.25, 0.35, 0.2, 0.28, 0.32, 0.4];
+
+  return (
+    <points ref={ref}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions.slice(), 3]} />
+      </bufferGeometry>
+      <pointsMaterial
+        size={sizes[dimIndex] || 0.3}
+        color={color}
+        transparent
+        opacity={0.6}
+        sizeAttenuation
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </points>
+  );
+}
+
+function SacredGeometryWireframe({ radius, color, dimIndex, opacityRef }: {
+  radius: number;
+  color: string;
+  dimIndex: number;
+  opacityRef: React.MutableRefObject<number>;
+}) {
+  const ref = useRef<THREE.Group>(null);
+
+  useFrame(({ clock }) => {
+    if (!ref.current) return;
+    const t = clock.getElapsedTime();
+    const speeds = [0.002, 0.003, 0.004, 0.0015, 0.005, 0.0035, 0.006];
+    ref.current.rotation.y = t * (speeds[dimIndex] || 0.003);
+    ref.current.rotation.x = Math.sin(t * 0.001 * (dimIndex + 1)) * 0.05;
+    ref.current.traverse((child) => {
+      if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshBasicMaterial) {
+        child.material.opacity = opacityRef.current * 0.12;
+      }
+    });
+  });
+
+  const wireframeOpacity = 0.12;
+
+  const geometries: Record<number, React.JSX.Element> = {
+    0: (
+      <mesh>
+        <icosahedronGeometry args={[radius * 0.98, 1]} />
+        <meshBasicMaterial color={color} wireframe transparent opacity={wireframeOpacity} depthWrite={false} />
+      </mesh>
+    ),
+    1: (
+      <mesh>
+        <dodecahedronGeometry args={[radius * 0.98, 0]} />
+        <meshBasicMaterial color={color} wireframe transparent opacity={wireframeOpacity} depthWrite={false} />
+      </mesh>
+    ),
+    2: (
+      <mesh>
+        <octahedronGeometry args={[radius * 0.98, 1]} />
+        <meshBasicMaterial color={color} wireframe transparent opacity={wireframeOpacity} depthWrite={false} />
+      </mesh>
+    ),
+    3: (
+      <mesh>
+        <icosahedronGeometry args={[radius * 0.98, 2]} />
+        <meshBasicMaterial color={color} wireframe transparent opacity={wireframeOpacity * 0.7} depthWrite={false} />
+      </mesh>
+    ),
+    4: (
+      <mesh>
+        <dodecahedronGeometry args={[radius * 0.98, 1]} />
+        <meshBasicMaterial color={color} wireframe transparent opacity={wireframeOpacity} depthWrite={false} />
+      </mesh>
+    ),
+    5: (
+      <mesh>
+        <tetrahedronGeometry args={[radius * 0.98, 2]} />
+        <meshBasicMaterial color={color} wireframe transparent opacity={wireframeOpacity} depthWrite={false} />
+      </mesh>
+    ),
+    6: (
+      <mesh>
+        <icosahedronGeometry args={[radius * 0.98, 3]} />
+        <meshBasicMaterial color={color} wireframe transparent opacity={wireframeOpacity * 0.5} depthWrite={false} />
+      </mesh>
+    ),
+  };
+
+  return (
+    <group ref={ref}>
+      {geometries[dimIndex] || geometries[0]}
+    </group>
+  );
+}
+
+function EnergyFlowRing({ radius, color, dimIndex, opacityRef }: {
+  radius: number;
+  color: string;
+  dimIndex: number;
+  opacityRef: React.MutableRefObject<number>;
+}) {
+  const ref = useRef<THREE.Mesh>(null);
+
+  useFrame(({ clock }) => {
+    if (!ref.current) return;
+    const t = clock.getElapsedTime();
+    const rotSpeeds = [0.01, 0.015, 0.008, 0.012, 0.02, 0.018, 0.025];
+    ref.current.rotation.z = t * (rotSpeeds[dimIndex] || 0.01);
+    const pulse = 0.5 + Math.sin(t * (0.5 + dimIndex * 0.15)) * 0.5;
+    (ref.current.material as THREE.MeshBasicMaterial).opacity = opacityRef.current * 0.06 * pulse;
+  });
+
+  const tiltAngles = [0, 0.3, 0.6, 0.9, 1.2, 1.5, 0.15];
+
+  return (
+    <mesh ref={ref} rotation={[Math.PI / 2 + (tiltAngles[dimIndex] || 0), 0, 0]}>
+      <torusGeometry args={[radius, 0.3 + dimIndex * 0.05, 8, 64]} />
+      <meshBasicMaterial color={color} transparent opacity={0.06} side={THREE.DoubleSide} depthWrite={false} blending={THREE.AdditiveBlending} />
+    </mesh>
+  );
+}
+
+function DimensionLabel({ radius, color, name, freq, opacityRef }: {
   radius: number;
   color: string;
   name: string;
   freq: string;
-  visible: boolean;
+  opacityRef: React.MutableRefObject<number>;
+}) {
+  const nameRef = useRef<THREE.Mesh>(null);
+  const freqRef = useRef<THREE.Mesh>(null);
+
+  useFrame(() => {
+    const o = opacityRef.current;
+    if (nameRef.current) {
+      const mat = nameRef.current.material as THREE.MeshBasicMaterial;
+      if (mat && "opacity" in mat) mat.opacity = o > 0.3 ? o : 0;
+    }
+    if (freqRef.current) {
+      const mat = freqRef.current.material as THREE.MeshBasicMaterial;
+      if (mat && "opacity" in mat) mat.opacity = o > 0.3 ? o * 0.6 : 0;
+    }
+  });
+
+  return (
+    <>
+      <Text
+        ref={nameRef}
+        position={[0, radius + 1.5, 0]}
+        fontSize={1.8}
+        color={color}
+        anchorX="center"
+        anchorY="bottom"
+        font="https://fonts.gstatic.com/s/spacemono/v13/i7dPIFZifjKcF5UAWdDRYEF8RQ.woff2"
+        fillOpacity={1}
+      >
+        {name}
+      </Text>
+      <Text
+        ref={freqRef}
+        position={[0, radius - 0.5, 0]}
+        fontSize={1.2}
+        color={color}
+        anchorX="center"
+        anchorY="top"
+        font="https://fonts.gstatic.com/s/spacemono/v13/i7dPIFZifjKcF5UAWdDRYEF8RQ.woff2"
+        fillOpacity={0.6}
+      >
+        {freq}
+      </Text>
+    </>
+  );
+}
+
+function DimensionalShell({ radius, color, name, freq, dimIndex, opacity: targetOpacity }: {
+  radius: number;
+  color: string;
+  name: string;
+  freq: string;
+  dimIndex: number;
+  opacity: number;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const smoothOpacity = useRef(targetOpacity);
+  const [visible, setVisible] = useState(targetOpacity > 0.01);
 
   useFrame(({ clock }) => {
+    smoothOpacity.current += (targetOpacity - smoothOpacity.current) * 0.04;
+
+    if (smoothOpacity.current < 0.01 && visible) setVisible(false);
+    else if (smoothOpacity.current >= 0.01 && !visible) setVisible(true);
+
     if (meshRef.current) {
       const t = clock.getElapsedTime();
       meshRef.current.rotation.y = t * 0.003;
       meshRef.current.rotation.x = Math.sin(t * 0.002) * 0.1;
+      const mat = meshRef.current.material as THREE.MeshBasicMaterial;
+      mat.opacity = smoothOpacity.current * 0.025;
     }
   });
 
@@ -220,32 +585,94 @@ function DimensionalShell({ radius, color, name, freq, visible }: {
         <meshBasicMaterial
           color={color}
           transparent
-          opacity={0.035}
+          opacity={targetOpacity * 0.025}
           side={THREE.DoubleSide}
           depthWrite={false}
         />
       </mesh>
-      <Text
-        position={[0, radius + 1.5, 0]}
-        fontSize={1.8}
-        color={color}
-        anchorX="center"
-        anchorY="bottom"
-        font="https://fonts.gstatic.com/s/spacemono/v13/i7dPIFZifjKcF5UAWdDRYEF8RQ.woff2"
-      >
-        {name}
-      </Text>
-      <Text
-        position={[0, radius - 0.5, 0]}
-        fontSize={1.2}
-        color={color}
-        anchorX="center"
-        anchorY="top"
-        font="https://fonts.gstatic.com/s/spacemono/v13/i7dPIFZifjKcF5UAWdDRYEF8RQ.woff2"
-        fillOpacity={0.6}
-      >
-        {freq}
-      </Text>
+
+      <DimensionParticles radius={radius} color={color} dimIndex={dimIndex} opacityRef={smoothOpacity} />
+      <SacredGeometryWireframe radius={radius} color={color} dimIndex={dimIndex} opacityRef={smoothOpacity} />
+      <EnergyFlowRing radius={radius} color={color} dimIndex={dimIndex} opacityRef={smoothOpacity} />
+
+      <DimensionLabel radius={radius} color={color} name={name} freq={freq} opacityRef={smoothOpacity} />
+    </group>
+  );
+}
+
+function ZodiacConstellation({ sign, signColor }: { sign: string; signColor: string }) {
+  const data = CONSTELLATION_DATA[sign];
+  if (!data) return null;
+
+  const { starPositions, linePositions } = useMemo(() => {
+    const baseTheta = Math.PI * 0.25;
+    const basePhi = Math.PI * 0.3;
+    const r = 170;
+    const scale = 3;
+
+    const stars3d = data.stars.map(([sx, sy]) => {
+      const theta = baseTheta + sx * 0.02 * scale;
+      const phi = basePhi + sy * 0.02 * scale;
+      return new THREE.Vector3(
+        r * Math.sin(phi) * Math.cos(theta),
+        r * Math.cos(phi),
+        r * Math.sin(phi) * Math.sin(theta)
+      );
+    });
+
+    const sp = new Float32Array(stars3d.length * 3);
+    stars3d.forEach((v, i) => {
+      sp[i * 3] = v.x;
+      sp[i * 3 + 1] = v.y;
+      sp[i * 3 + 2] = v.z;
+    });
+
+    const lp = new Float32Array(data.lines.length * 6);
+    data.lines.forEach(([a, b], i) => {
+      const va = stars3d[a];
+      const vb = stars3d[b];
+      if (va && vb) {
+        lp[i * 6] = va.x;
+        lp[i * 6 + 1] = va.y;
+        lp[i * 6 + 2] = va.z;
+        lp[i * 6 + 3] = vb.x;
+        lp[i * 6 + 4] = vb.y;
+        lp[i * 6 + 5] = vb.z;
+      }
+    });
+
+    return { starPositions: sp, linePositions: lp };
+  }, [data]);
+
+  const starsRef = useRef<THREE.Points>(null);
+  const linesRef = useRef<THREE.LineSegments>(null);
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    if (starsRef.current) {
+      const mat = starsRef.current.material as THREE.PointsMaterial;
+      mat.opacity = 0.7 + Math.sin(t * 0.8) * 0.3;
+    }
+    if (linesRef.current) {
+      const mat = linesRef.current.material as THREE.LineBasicMaterial;
+      mat.opacity = 0.15 + Math.sin(t * 0.5) * 0.1;
+    }
+  });
+
+  return (
+    <group>
+      <points ref={starsRef}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[starPositions, 3]} />
+        </bufferGeometry>
+        <pointsMaterial size={1.5} color={signColor} transparent opacity={0.8} sizeAttenuation depthWrite={false} blending={THREE.AdditiveBlending} />
+      </points>
+      <lineSegments ref={linesRef}>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[linePositions, 3]} />
+        </bufferGeometry>
+        <lineBasicMaterial color={signColor} transparent opacity={0.2} depthWrite={false} />
+      </lineSegments>
     </group>
   );
 }
@@ -373,50 +800,132 @@ function ApodPanel({ item, index, total }: { item: ApodItem; index: number; tota
   );
 }
 
-function SceneContent({ showDimensions, isMobile, apodItems }: {
+interface OrbitControlsLike {
+  autoRotate: boolean;
+  autoRotateSpeed: number;
+}
+
+const orbitControlsRef: { current: OrbitControlsLike | null } = { current: null };
+
+function isOrbitControlsLike(obj: unknown): obj is OrbitControlsLike {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    "autoRotate" in obj &&
+    "autoRotateSpeed" in obj
+  );
+}
+
+function OrbitControlsRefCapture() {
+  const state = useThree();
+  useEffect(() => {
+    if (isOrbitControlsLike(state.controls)) {
+      orbitControlsRef.current = state.controls;
+    }
+  }, [state.controls]);
+  return null;
+}
+
+function AutoRotateController() {
+  const lastInteraction = useRef(Date.now());
+  const { gl } = useThree();
+
+  const onInteraction = useCallback(() => {
+    lastInteraction.current = Date.now();
+    if (orbitControlsRef.current) {
+      orbitControlsRef.current.autoRotate = false;
+    }
+  }, []);
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const events = ["pointerdown", "pointermove", "wheel", "touchstart", "touchmove"] as const;
+    events.forEach(e => canvas.addEventListener(e, onInteraction));
+    return () => {
+      events.forEach(e => canvas.removeEventListener(e, onInteraction));
+    };
+  }, [gl, onInteraction]);
+
+  useFrame(() => {
+    const ctrl = orbitControlsRef.current;
+    if (!ctrl) return;
+    const idle = Date.now() - lastInteraction.current > 5000;
+    if (idle && !ctrl.autoRotate) {
+      ctrl.autoRotate = true;
+      ctrl.autoRotateSpeed = 0.3;
+    }
+  });
+
+  return null;
+}
+
+function SceneContent({ showDimensions, isMobile, apodItems, userZodiac, dimensionOpacities }: {
   showDimensions: boolean;
   isMobile: boolean;
   apodItems: ApodItem[];
+  userZodiac?: { sign: string; symbol: string; ruler: string; element: string } | null;
+  dimensionOpacities: number[];
 }) {
   const initialAngles = useMemo(() =>
     PLANETS_DATA.map(() => Math.random() * Math.PI * 2), []);
 
+  const ELEMENT_COLORS: Record<string, string> = {
+    Fire: "#f87171",
+    Earth: "#4ade80",
+    Air: "#22d3ee",
+    Water: "#60a5fa",
+  };
+
+  const signColor = userZodiac ? (ELEMENT_COLORS[userZodiac.element] || "#a78bfa") : "#a78bfa";
+
   return (
     <>
       <ambientLight intensity={0.15} />
-      <Sun />
+      <Sun isRuler={userZodiac?.ruler === "Sun"} />
       {PLANETS_DATA.map((p, i) => (
-        <PlanetWithTexture key={p.name} {...p} initialAngle={initialAngles[i]} />
+        <PlanetWithTexture
+          key={p.name}
+          {...p}
+          initialAngle={initialAngles[i]}
+          isRulingPlanet={userZodiac ? p.name === userZodiac.ruler : false}
+        />
       ))}
-      {DIMENSIONS.map((d) => (
+      {DIMENSIONS.map((d, i) => (
         <DimensionalShell
           key={d.id}
           radius={d.radius}
           color={d.color}
           name={d.name}
           freq={d.freq}
-          visible={showDimensions}
+          dimIndex={i}
+          opacity={showDimensions ? dimensionOpacities[i] : 0}
         />
       ))}
+      {userZodiac && <ZodiacConstellation sign={userZodiac.sign} signColor={signColor} />}
       {apodItems.length > 0 && <ApodGallery items={apodItems} />}
       <Stars radius={200} depth={100} count={isMobile ? 2000 : 6000} factor={3} saturation={0.3} fade speed={0.5} />
       <NebulaParticles />
       <OrbitControls
+        makeDefault
         enablePan
         enableZoom
         enableRotate
-        minDistance={3}
-        maxDistance={180}
-        zoomSpeed={0.8}
+        minDistance={2}
+        maxDistance={250}
+        zoomSpeed={1.0}
         panSpeed={0.6}
         rotateSpeed={0.5}
         enableDamping
         dampingFactor={0.05}
+        autoRotate={false}
+        autoRotateSpeed={0.3}
         touches={{
           ONE: THREE.TOUCH.ROTATE,
           TWO: THREE.TOUCH.DOLLY_PAN,
         }}
       />
+      <OrbitControlsRefCapture />
+      <AutoRotateController />
     </>
   );
 }
@@ -424,6 +933,8 @@ function SceneContent({ showDimensions, isMobile, apodItems }: {
 interface SolarSystem3DProps {
   showDimensions: boolean;
   apodItems: ApodItem[];
+  userZodiac?: { sign: string; symbol: string; ruler: string; element: string } | null;
+  dimensionOpacities: number[];
 }
 
 function WebGLFallback() {
@@ -454,7 +965,7 @@ function useIsMobile() {
   return isMobile;
 }
 
-export default function SolarSystem3D({ showDimensions, apodItems }: SolarSystem3DProps) {
+export default function SolarSystem3D({ showDimensions, apodItems, userZodiac, dimensionOpacities }: SolarSystem3DProps) {
   const isMobile = useIsMobile();
   const [contextLost, setContextLost] = useState(false);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -495,8 +1006,14 @@ export default function SolarSystem3D({ showDimensions, apodItems }: SolarSystem
           dpr={isMobile ? [1, 1.5] : [1, 2]}
         >
           <color attach="background" args={["#030108"]} />
-          <fog attach="fog" args={["#030108", 120, 300]} />
-          <SceneContent showDimensions={showDimensions} isMobile={isMobile} apodItems={apodItems} />
+          <fog attach="fog" args={["#030108", 150, 350]} />
+          <SceneContent
+            showDimensions={showDimensions}
+            isMobile={isMobile}
+            apodItems={apodItems}
+            userZodiac={userZodiac}
+            dimensionOpacities={dimensionOpacities}
+          />
         </Canvas>
       </div>
     </WebGLErrorBoundary>
