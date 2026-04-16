@@ -1486,7 +1486,11 @@ export default function SolarSystem3D({ showDimensions, apodItems, userZodiac, d
 
   return (
     <WebGLErrorBoundary ref={errorBoundaryRef} fallback={<WebGLFallback onRetry={handleRetry} />} onRetry={handleRetry}>
-      <div ref={canvasContainerRef} key={renderKey} style={{ width: "100%", height: "100%", position: "relative" }}>
+      <div
+        ref={canvasContainerRef}
+        key={renderKey}
+        style={{ width: "100%", height: "100%", position: "relative", touchAction: "none", overscrollBehavior: "contain", WebkitUserSelect: "none", userSelect: "none" }}
+      >
         {showNavHint && (
           <div style={{
             position: "absolute", bottom: isMobile ? "70px" : "80px", left: "50%", transform: "translateX(-50%)",
@@ -1551,9 +1555,16 @@ export default function SolarSystem3D({ showDimensions, apodItems, userZodiac, d
         </div>
         <Canvas
           camera={{ position: [0, 25, 50], fov: 55, near: 0.1, far: 600 }}
-          style={{ width: "100%", height: "100%" }}
-          gl={{ antialias: !isMobile, alpha: false, powerPreference: isMobile ? "default" : "high-performance", failIfMajorPerformanceCaveat: false }}
+          style={{ width: "100%", height: "100%", touchAction: "none", display: "block" }}
+          gl={{ antialias: !isMobile, alpha: false, powerPreference: isMobile ? "default" : "high-performance", failIfMajorPerformanceCaveat: false, preserveDrawingBuffer: false }}
           dpr={isMobile ? [1, 1.5] : [1, 2]}
+          onCreated={({ gl }) => {
+            try {
+              gl.setClearColor("#030108", 1);
+            } catch (e) {
+              console.error("[SolarSystem3D] Canvas onCreated error:", e);
+            }
+          }}
         >
           <color attach="background" args={["#030108"]} />
           <fog attach="fog" args={["#030108", 200, 500]} />
