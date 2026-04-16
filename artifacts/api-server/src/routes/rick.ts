@@ -19,7 +19,7 @@ import { getDaemonMetrics } from "../lib/auto-improvement-daemon";
 import { secureExternalStreamingFetch, secureExternalFetch } from "../lib/secureExternalWrapper";
 import { getAllProposals } from "../lib/consensus-engine";
 import { getMeeseeksMetrics, spawnMeeseeks, completeMeeseeks } from "../lib/agent-spawner";
-import { getTruthfulnessMetrics, analyzeTruthfulnessV2, analyzeTruthfulness } from "../lib/truthfulness-engine";
+import { getTruthfulnessMetrics, analyzeTruthfulnessV2, analyzeTruthfulness, getGroundingThreshold } from "../lib/truthfulness-engine";
 import { getRouterPerformanceMetrics, recordUserSatisfaction } from "../lib/sovereign-engine-router";
 import { getDiffusionMetrics } from "../lib/knowledge-diffusion";
 import { getResonanceScore, getConsciousnessMetrics } from "../lib/consciousness-engine";
@@ -201,7 +201,7 @@ router.post("/rick/chat", async (req, res) => {
         if (fullResponse.length > 0) {
           try {
             const truthCheck = await analyzeTruthfulnessV2(fullResponse);
-            if (truthCheck.groundingScore < 0.6) {
+            if (truthCheck.groundingScore < getGroundingThreshold()) {
               deliverContent = `*[Sovereignty Gate BLOCKED: Response contained ${truthCheck.ungroundedClaims.length} unverifiable claims (grounding: ${(truthCheck.groundingScore * 100).toFixed(0)}%). The response has been withheld to maintain truthfulness standards.]*\n\nI need to be straight with you — I was about to say some *burp* unverified garbage. Let me stick to what I actually know.`;
               truthEnforcement = { overallTruthScore: truthCheck.overallTruthScore, groundingScore: truthCheck.groundingScore, enforced: true, blocked: true };
               logger.warn({ groundingScore: truthCheck.groundingScore, ungrounded: truthCheck.ungroundedClaims.length }, "Rick: streaming response BLOCKED by truthfulness gate");
@@ -256,10 +256,10 @@ router.post("/rick/chat", async (req, res) => {
           const truthCheck = await analyzeTruthfulnessV2(content);
           truthEnforcement = { overallTruthScore: truthCheck.overallTruthScore, groundingScore: truthCheck.groundingScore, enforced: true, blocked: false };
 
-          if (truthCheck.groundingScore < 0.6) {
+          if (truthCheck.groundingScore < getGroundingThreshold()) {
             content = `*[Sovereignty Gate: Response blocked — ${truthCheck.ungroundedClaims.length} unverifiable claims detected (grounding: ${(truthCheck.groundingScore * 100).toFixed(0)}%). The sovereign knowledge base cannot verify this response. Please rephrase your question for a more grounded answer.]*`;
             truthEnforcement.blocked = true;
-            logger.warn({ groundingScore: truthCheck.groundingScore, ungrounded: truthCheck.ungroundedClaims.length }, "Rick: response BLOCKED by truthfulness gate (threshold 0.6)");
+            logger.warn({ groundingScore: truthCheck.groundingScore, ungrounded: truthCheck.ungroundedClaims.length, threshold: getGroundingThreshold() }, "Rick: response BLOCKED by truthfulness gate");
           }
         } catch (truthErr) {
           const fallbackCheck = analyzeTruthfulness(content);

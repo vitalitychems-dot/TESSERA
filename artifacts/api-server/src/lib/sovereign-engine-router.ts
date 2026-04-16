@@ -8,7 +8,7 @@ import { recallIngestedKnowledge } from "./ingested-recall";
 import { searchMemory } from "./vector-memory";
 import { injectStimulus } from "./consciousness-engine";
 import { DOMAIN_SIMILARITY } from "./dimensional-lru-cache";
-import { analyzeTruthfulnessV2 } from "./truthfulness-engine";
+import { analyzeTruthfulnessV2, getGroundingThreshold } from "./truthfulness-engine";
 
 interface RoutePerformanceEntry {
   domain: string;
@@ -283,7 +283,7 @@ export async function runThroughSovereignEngine(
         const resultText = typeof result === "string" ? result : JSON.stringify(result);
         if (resultText.length > 50) {
           const truthCheck = await analyzeTruthfulnessV2(resultText.slice(0, 3000));
-          if (truthCheck.groundingScore < 0.6) {
+          if (truthCheck.groundingScore < getGroundingThreshold()) {
             truthGateApplied = true;
             logger.warn(
               { domain: req.domain, groundingScore: truthCheck.groundingScore, ungrounded: truthCheck.ungroundedClaims.length },
