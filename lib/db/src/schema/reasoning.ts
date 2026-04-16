@@ -67,3 +67,21 @@ export const causalModelsTable = pgTable("causal_models", {
 export const insertCausalModelSchema = createInsertSchema(causalModelsTable).omit({ id: true, createdAt: true });
 export type InsertCausalModel = z.infer<typeof insertCausalModelSchema>;
 export type CausalModelRow = typeof causalModelsTable.$inferSelect;
+
+export const selfCritiqueLogTable = pgTable("self_critique_log", {
+  id: serial("id").primaryKey(),
+  userQuery: text("user_query").notNull(),
+  finalResponse: text("final_response").notNull(),
+  attempts: integer("attempts").notNull().default(1),
+  passed: boolean("passed").notNull().default(false),
+  groundingScore: integer("grounding_score_x1000").notNull().default(0),
+  truthfulnessScore: integer("truthfulness_score_x1000").notNull().default(0),
+  hallucinationSeverity: text("hallucination_severity").notNull().default("none"),
+  sources: jsonb("sources").notNull().default([]),
+  verdict: text("verdict").notNull().default("safe"),
+  attemptHistory: jsonb("attempt_history").notNull().default([]),
+  metadata: jsonb("metadata").notNull().default({}),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type SelfCritiqueLogRow = typeof selfCritiqueLogTable.$inferSelect;
