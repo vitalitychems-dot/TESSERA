@@ -359,11 +359,11 @@ export class DimensionalLRUCache<T> {
     if (val !== undefined) {
       this.exactHits++;
       this.recordLatency(performance.now() - start);
-      return { value: val, dimension: primaryDimension, weight: 1.0, portalJumped: false, preWarmedDimensions: [] };
+      return { value: val, dimension: primaryDimension, weight: 1.0, portalJumped: false, preWarmedDimensions: [], preWarmedAssociatedKeys: [] };
     }
 
     const domainEdges = DOMAIN_SIMILARITY[primaryDimension];
-    const candidates: { value: T; dimension: string; weight: number }[] = [];
+    const candidates: { value: T; dimension: string; weight: number; associations: string[] }[] = [];
     const dimsToScan: { dim: string; weight: number }[] = [];
 
     if (relatedDimensions) {
