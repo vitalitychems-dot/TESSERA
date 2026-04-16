@@ -552,7 +552,8 @@ export async function forceRunScheduler(): Promise<{ rotation: boolean; due: Rec
 async function runLinkHarvestCycle(): Promise<void> {
   const start = Date.now();
   try {
-    const result = await harvestLinksFromRecentIngestion();
+    const result = await runWithRetry("link-harvest", () => harvestLinksFromRecentIngestion(), 3, 1500);
+    if (!result) throw new Error("link-harvest: all retries failed");
     lastLinkHarvestAt = Date.now();
     lastLinkHarvest = result;
     const detail = `scanned=${result.scanned} urls=${result.urlsFound} candidates=${result.uniqueCandidates} new=${result.newSourcesRegistered} blocked=${result.skippedNotAllowed} rateLimited=${result.skippedRateLimited}`;
@@ -655,9 +656,18 @@ export async function startIngestionScheduler(checkIntervalMs = 120_000): Promis
   scheduleDue();
   scheduleRotation();
 
-  linkHarvestInterval = setInterval(() => {
-    if (!schedulerPaused && !schedulerStopping) runLinkHarvestCycle();
-  }, 15 * 60_000);
+  const scheduleLinkHarvest = () => {
+    if (schedulerStopping) return;
+    const next = jitter(15 * 60_000);
+    linkHarvestInterval = setTimeout(() => {
+      if (!schedulerPaused && !schedulerStopping) {
+        runLinkHarvestCycle().catch(() => {}).finally(() => scheduleLinkHarvest());
+      } else {
+        scheduleLinkHarvest();
+      }
+    }, next) as unknown as ReturnType<typeof setInterval>;
+  };
+  scheduleLinkHarvest();
 
   initialRotationTimeout = setTimeout(() => {
     if (schedulerStopping) return;
