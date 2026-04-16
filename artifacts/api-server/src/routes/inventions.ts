@@ -1094,8 +1094,8 @@ async function autonomousTick() {
     // 6. Test: built inventions get a synthetic reality-check sim. Occasionally
     //    we flip a built invention back to "building" at 90% to simulate a test regression.
     for (const inv of (byStatus.built || []).slice(0, 2)) {
-      // Deterministic pass/fail bucket.
-      const passed = (hashStringFNV(inv.title) % 12) !== 0;
+      // Deterministic pass/fail bucket: depends on title hash + tick count.
+      const passed = ((hashStringFNV(inv.title) + autoLoopState.ticks) % 12) !== 0;
       if (!passed) {
         await db.update(inventionsTable).set({
           status: "building",
