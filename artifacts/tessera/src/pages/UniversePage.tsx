@@ -14,7 +14,70 @@ function useIsMobile() {
   return m;
 }
 
-const SolarSystem3D = lazy(() => import("@/components/SolarSystem3D"));
+const SolarSystem3D = lazy(() => {
+  const attempt = (remaining: number): Promise<typeof import("@/components/SolarSystem3D")> =>
+    import("@/components/SolarSystem3D").catch((err) => {
+      if (remaining <= 0) throw err;
+      return new Promise((resolve) => setTimeout(() => resolve(attempt(remaining - 1)), 1000));
+    });
+  return attempt(2);
+});
+
+function LoadingUniverseFallback({ onBack, onRetry }: { onBack: () => void; onRetry: () => void }) {
+  const [slow, setSlow] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
+  useEffect(() => {
+    const t1 = setTimeout(() => setSlow(true), 6000);
+    const t2 = setTimeout(() => setTimedOut(true), 15000);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+
+  if (timedOut) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-[#030108]">
+        <div className="text-center p-6 max-w-md">
+          <div className="text-4xl mb-4">🌌</div>
+          <h2 className="text-lg font-bold font-mono text-violet-400 mb-2">3D Universe took too long</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Your connection or device couldn't finish loading the interactive solar system.
+          </p>
+          <div className="flex gap-2 justify-center">
+            <button
+              onClick={onRetry}
+              className="px-4 py-2 rounded-lg bg-violet-600/40 border border-violet-500/50 text-violet-200 text-xs font-mono hover:bg-violet-600/60 transition-colors"
+              data-testid="button-retry-3d-universe"
+            >
+              Retry
+            </button>
+            <button
+              onClick={onBack}
+              className="px-4 py-2 rounded-lg bg-black/60 border border-white/10 text-slate-300 text-xs font-mono hover:bg-white/10 transition-colors"
+              data-testid="button-back-from-3d-loading"
+            >
+              ← Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+      <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+      <div className="text-[11px] font-mono text-violet-400/70">Loading 3D universe…</div>
+      {slow && (
+        <button
+          onClick={onBack}
+          className="mt-2 px-3 py-1.5 rounded-lg bg-black/60 border border-white/10 text-slate-400 text-[10px] font-mono hover:bg-white/10 transition-colors"
+          data-testid="button-back-while-loading-3d"
+        >
+          Taking a while — tap to go back
+        </button>
+      )}
+    </div>
+  );
+}
 
 class Scene3DErrorBoundary extends Component<
   { children: ReactNode; onBack: () => void },
@@ -149,6 +212,7 @@ export default function UniversePage() {
   const sunData = useMemo(() => getSunPosition(now), [now]);
   const [showDimensions, setShowDimensions] = useState(true);
   const [show3D, setShow3D] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const [focusedDimension, setFocusedDimension] = useState(-1);
   const [showSacredOverlays, setShowSacredOverlays] = useState(false);
 
@@ -219,12 +283,12 @@ export default function UniversePage() {
   if (show3D) {
     return (
       <div className="fixed inset-0 w-full h-full overflow-hidden bg-[#030108]" style={{ touchAction: "none", overscrollBehavior: "contain" }}>
-        <Scene3DErrorBoundary onBack={() => setShow3D(false)}>
+        <Scene3DErrorBoundary key={retryKey} onBack={() => setShow3D(false)}>
           <Suspense fallback={
-            <div className="w-full h-full flex flex-col items-center justify-center gap-3">
-              <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
-              <div className="text-[11px] font-mono text-violet-400/70">Loading 3D universe…</div>
-            </div>
+            <LoadingUniverseFallback
+              onBack={() => setShow3D(false)}
+              onRetry={() => setRetryKey((k) => k + 1)}
+            />
           }>
             <SolarSystem3D
               showDimensions={showDimensions}
