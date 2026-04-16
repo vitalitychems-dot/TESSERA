@@ -516,17 +516,21 @@ export function getDetailedMeeseeksMetrics() {
   const avgLifetime = history.length > 0 ? Math.round(history.reduce((s, h) => s + h.lifetimeMs, 0) / history.length) : 0;
   const successRate = history.length > 0 ? completedSuccessfully / history.length : 0;
 
-  const taskTypeBreakdown: Record<string, { total: number; completed: number; timedOut: number }> = {};
+  const taskTypeBreakdown: Record<string, { total: number; completed: number; timedOut: number }> = Object.create(null);
   for (const entry of history) {
-    if (!taskTypeBreakdown[entry.taskType]) {
-      taskTypeBreakdown[entry.taskType] = { total: 0, completed: 0, timedOut: 0 };
+    const key = entry.taskType;
+    if (!Object.prototype.hasOwnProperty.call(TASK_TYPE_REGISTRY, key) && key !== "custom") continue;
+    if (!taskTypeBreakdown[key]) {
+      taskTypeBreakdown[key] = { total: 0, completed: 0, timedOut: 0 };
     }
-    taskTypeBreakdown[entry.taskType].total++;
-    if (entry.reason === "task-completed") taskTypeBreakdown[entry.taskType].completed++;
-    else taskTypeBreakdown[entry.taskType].timedOut++;
+    taskTypeBreakdown[key].total++;
+    if (entry.reason === "task-completed") taskTypeBreakdown[key].completed++;
+    else taskTypeBreakdown[key].timedOut++;
   }
 
   const activeMemoryKB = active.reduce((s, a) => s + (a.memoryBudgetKB || 0), 0);
+  const totalAllocatedKB = totalMemoryFreedKB + activeMemoryKB;
+  const memoryReductionPct = totalAllocatedKB > 0 ? Math.round((totalMemoryFreedKB / totalAllocatedKB) * 100) : 0;
 
   return {
     ...spawnerState.meeseeksMetrics,
@@ -540,7 +544,7 @@ export function getDetailedMeeseeksMetrics() {
     avgLifetimeMs: avgLifetime,
     totalMemoryFreedKB,
     activeMemoryKB,
-    memoryReductionPct: totalMemoryFreedKB > 0 ? 70 : 0,
+    memoryReductionPct,
     taskTypeBreakdown,
     taskTypeRegistry: Object.values(TASK_TYPE_REGISTRY).map(p => ({ taskType: p.taskType, label: p.label, complexity: p.complexity, baseTTLMs: p.baseTTLMs })),
   };
