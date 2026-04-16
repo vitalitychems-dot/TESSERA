@@ -311,37 +311,54 @@ function createSyntheticFinding(index: number, cycleNumber: number, corpus: Corp
   };
 }
 
-function generateInventions(cycleNumber: number): Invention[] {
-  const clusters = getDomainClusters();
-  const corpus = getCorpus();
-  const stats = getCorpusStats();
-  const inventions: Invention[] = [];
+interface DomainTriplet {
+  a: ReturnType<typeof getDomainClusters>[0];
+  b: ReturnType<typeof getDomainClusters>[0];
+  c: ReturnType<typeof getDomainClusters>[0];
+  bridgeStrength: number;
+}
 
-  const clusterPairs: Array<{ a: typeof clusters[0]; b: typeof clusters[0] }> = [];
-  for (let i = 0; i < clusters.length && clusterPairs.length < 20; i++) {
-    for (let j = i + 1; j < clusters.length && clusterPairs.length < 20; j++) {
-      if (clusters[i].relatedDomains.includes(clusters[j].domain) || clusters[j].relatedDomains.includes(clusters[i].domain)) {
-        clusterPairs.push({ a: clusters[i], b: clusters[j] });
+function findDomainTriplets(clusters: ReturnType<typeof getDomainClusters>, limit: number): DomainTriplet[] {
+  const triplets: DomainTriplet[] = [];
+  const sorted = clusters.filter(c => c.entries.length >= 2).sort((a, b) => b.entries.length - a.entries.length).slice(0, 30);
+
+  for (let i = 0; i < sorted.length && triplets.length < limit; i++) {
+    for (let j = i + 1; j < sorted.length && triplets.length < limit; j++) {
+      if (!sorted[i].relatedDomains.includes(sorted[j].domain) && !sorted[j].relatedDomains.includes(sorted[i].domain)) continue;
+      for (let k = j + 1; k < sorted.length && triplets.length < limit; k++) {
+        const cRelatedToA = sorted[k].relatedDomains.includes(sorted[i].domain) || sorted[i].relatedDomains.includes(sorted[k].domain);
+        const cRelatedToB = sorted[k].relatedDomains.includes(sorted[j].domain) || sorted[j].relatedDomains.includes(sorted[k].domain);
+        if (cRelatedToA || cRelatedToB) {
+          const strength = (cRelatedToA ? 1 : 0) + (cRelatedToB ? 1 : 0);
+          triplets.push({ a: sorted[i], b: sorted[j], c: sorted[k], bridgeStrength: strength });
+        }
       }
     }
   }
+  return triplets.sort((a, b) => b.bridgeStrength - a.bridgeStrength);
+}
 
-  const offset = ((cycleNumber - 1) * 5) % Math.max(clusterPairs.length, 5);
+function generateInventions(cycleNumber: number): Invention[] {
+  const clusters = getDomainClusters();
+  const stats = getCorpusStats();
+  const inventions: Invention[] = [];
+  const triplets = findDomainTriplets(clusters, 25);
+
+  const offset = ((cycleNumber - 1) * 5) % Math.max(triplets.length, 5);
 
   for (let i = 0; i < 5; i++) {
-    const pairIdx = (offset + i) % clusterPairs.length;
-    const pair = clusterPairs[pairIdx];
-    if (!pair) continue;
+    const tripIdx = (offset + i) % triplets.length;
+    const triplet = triplets[tripIdx];
+    if (!triplet) continue;
 
-    const domA = pair.a;
-    const domB = pair.b;
-    const allEntries = [...domA.entries.slice(0, 3), ...domB.entries.slice(0, 3)];
+    const { a: domA, b: domB, c: domC } = triplet;
+    const allEntries = [...domA.entries.slice(0, 2), ...domB.entries.slice(0, 2), ...domC.entries.slice(0, 2)];
     const inspirations = allEntries.map(e => e.title);
     const citations = allEntries.map(e => e.id);
 
     const agents = CONFERENCE_AGENTS.filter(a =>
-      a.expertise.some(exp => domA.domain.includes(exp) || domB.domain.includes(exp)) ||
-      a.domain === domA.domain || a.domain === domB.domain
+      a.expertise.some(exp => domA.domain.includes(exp) || domB.domain.includes(exp) || domC.domain.includes(exp)) ||
+      [domA.domain, domB.domain, domC.domain].includes(a.domain)
     );
     const inventors = agents.length >= 2
       ? [agents[0].name, agents[1].name]
@@ -349,14 +366,14 @@ function generateInventions(cycleNumber: number): Invention[] {
 
     const geom = SACRED_GEOMETRIES[(i + cycleNumber) % SACRED_GEOMETRIES.length];
     const freq = SOLFEGGIO_FREQUENCIES[(i + cycleNumber) % SOLFEGGIO_FREQUENCIES.length];
-    const category = `${domA.domain}-${domB.domain}-synthesis`;
+    const category = `${domA.domain}+${domB.domain}+${domC.domain}-synthesis`;
 
-    const diagram = generateBuildDiagram(domA, domB, i, cycleNumber);
+    const diagram = generateBuildDiagramTriplet(domA, domB, domC, i, cycleNumber);
 
     inventions.push({
       id: `INV-C${cycleNumber}-${String(i + 1).padStart(2, "0")}`,
-      title: `${capitalize(domA.domain)}-${capitalize(domB.domain)} Synthesis Engine v${cycleNumber}`,
-      description: `Cross-domain invention synthesizing ${domA.entries.length} entries from "${domA.domain}" with ${domB.entries.length} entries from "${domB.domain}". Discovered via corpus cross-reference analysis: ${domA.relatedDomains.filter(d => d === domB.domain).length > 0 ? "direct domain link" : "transitive tag overlap"}. Total corpus: ${stats.totalEntries} entries across ${stats.uniqueDomains} domains. Citations: ${citations.join(", ")}.`,
+      title: `${capitalize(domA.domain)}-${capitalize(domB.domain)}-${capitalize(domC.domain)} Synthesis v${cycleNumber}`,
+      description: `Tri-domain invention synthesizing ${domA.entries.length} entries from "${domA.domain}", ${domB.entries.length} from "${domB.domain}", and ${domC.entries.length} from "${domC.domain}". Bridge strength: ${triplet.bridgeStrength}/2. Corpus: ${stats.totalEntries} entries, ${stats.uniqueDomains} domains. Citations: ${citations.join(", ")}.`,
       inventedBy: inventors,
       category,
       inspirations,
