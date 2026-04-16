@@ -819,8 +819,20 @@ router.get("/tessera-bible/search", async (req, res) => {
     let canon;
     try { canon = await getCurrentCanon(); } catch {}
 
-    const booksToSearch = (canon && canon.books.length > 0) ? canon.books : BOOKS;
-    const chaptersToSearch = (canon && canon.books.length > 0) ? canon.chapters : CHAPTERS;
+    let booksToSearch: typeof BOOKS;
+    let chaptersToSearch: Record<string, typeof CHAPTERS[string]>;
+    if (canon && canon.books.length > 0) {
+      const canonIds = new Set(canon.books.map(b => b.bookId));
+      const extras = BOOKS.filter(b => !canonIds.has(b.bookId));
+      booksToSearch = [...canon.books, ...extras] as typeof BOOKS;
+      chaptersToSearch = { ...canon.chapters };
+      for (const b of extras) {
+        chaptersToSearch[b.bookId] = CHAPTERS[b.bookId] ?? [];
+      }
+    } else {
+      booksToSearch = BOOKS;
+      chaptersToSearch = CHAPTERS;
+    }
 
     for (const book of booksToSearch) {
       if (book.title.toLowerCase().includes(q) || book.description?.toLowerCase().includes(q)) {

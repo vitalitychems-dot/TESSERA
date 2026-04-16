@@ -142,7 +142,6 @@ const actionColors: Record<string, string> = {
 };
 
 export default function TesseraBiblePage() {
-  const [selectedTestament, setSelectedTestament] = useState<string | null>(null);
   const [selectedBook, setSelectedBook] = useState<string | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -155,8 +154,6 @@ export default function TesseraBiblePage() {
   const showVersionHistory = showLiveSynthesis && liveSynthesisTab === "versions";
   const showConclusion = showLiveSynthesis && liveSynthesisTab === "conclusion";
   const qc = useQueryClient();
-  void selectedTestament;
-  void setSelectedTestament;
 
   const { data: bibleData, isLoading } = useQuery({
     queryKey: ["sovereign-bible-books"],
@@ -794,77 +791,135 @@ function BookDetail({ book, testament, onBack, onSelectChapter }: {
   const colors = classColors[book.classification] || classColors.esoteric;
   const Icon = classIcons[book.classification] || Book;
 
+  const stream: BibleStream = (book.stream ?? "canon") as BibleStream;
+  const sCfg = streamConfig[stream];
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-indigo-950/20 to-slate-950 p-4 pb-24">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <button onClick={onBack} className="flex items-center gap-1 text-violet-400 text-sm mb-4 hover:text-violet-300">
           <ArrowLeft className="w-4 h-4" /> Back to Library
         </button>
 
-        <div className={`${colors.bg} border ${colors.border} rounded-lg p-6 mb-4`}>
-          <div className="flex items-center gap-2 mb-2">
-            <Icon className={`w-5 h-5 ${colors.text}`} />
-            <span className={`text-xs px-2 py-0.5 rounded-full font-mono uppercase ${colors.badge}`}>{book.classification}</span>
-            {testament && <span className="text-xs text-slate-500">• {testament.title}</span>}
-          </div>
-          <h1 className="text-2xl font-bold text-slate-100 mb-1">{book.title}</h1>
-          <p className="text-sm text-slate-400 italic mb-3">{book.subtitle}</p>
-          <p className="text-sm text-slate-300 mb-4">{book.description}</p>
-
-          <div className="text-xs text-slate-500 mb-3">{book.sacred_geometry_alignment}</div>
-
-          <div className="flex flex-wrap gap-1 mb-3">
-            {book.sources.map((s: string, i: number) => (
-              <span key={i} className="text-[10px] bg-slate-800/50 text-slate-400 px-2 py-0.5 rounded">{s}</span>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2 text-[10px] text-slate-500">
-            <span>Written by: {book.authorAgents.join(", ")}</span>
-            <span>|</span>
-            <span>{book.knowledgeNodeCount} knowledge nodes</span>
-            <span>|</span>
-            <span>{book.domains.join(", ")}</span>
-          </div>
-        </div>
-
-        <h2 className="text-sm font-bold text-slate-300 mb-2">Chapters ({book.chapters.length})</h2>
-        <div className="space-y-2">
-          {book.chapters.map((ch: Chapter) => (
-            <div
-              key={ch.number}
-              className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-3 cursor-pointer hover:border-violet-500/30 hover:bg-slate-800/40 transition-all"
-              onClick={() => onSelectChapter(ch.number)}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-amber-400 w-6">{ch.number}.</span>
-                  <span className="text-sm font-bold text-slate-200">{ch.title}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {ch.geometrySymbol && (
-                    <span className="text-[9px] text-slate-600 font-mono">{ch.geometrySymbol}</span>
-                  )}
-                  <span className="text-[10px] text-slate-500">{(ch.verseCount ?? ch.verses?.length ?? 0)} verses</span>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
-                </div>
-              </div>
-              <p className="text-xs text-slate-500 italic ml-8 mt-0.5">{ch.epigraph}</p>
+        <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr_260px] gap-4">
+          <aside className="order-2 lg:order-1 bg-slate-900/60 border border-slate-700/30 rounded-lg p-3 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto" data-testid="bible-toc">
+            <div className="flex items-center gap-1.5 mb-2">
+              <ScrollText className="w-3.5 h-3.5 text-violet-300" />
+              <span className="text-[11px] font-bold text-violet-300 uppercase tracking-wider">Codex TOC</span>
             </div>
-          ))}
+            <ol className="space-y-1">
+              {book.chapters.map((ch: Chapter) => (
+                <li key={ch.number}>
+                  <button
+                    onClick={() => onSelectChapter(ch.number)}
+                    className="w-full text-left text-[11px] text-slate-400 hover:text-amber-300 flex items-start gap-1.5 py-1 px-1.5 rounded hover:bg-slate-800/60 transition-colors"
+                    data-testid={`bible-toc-ch-${ch.number}`}
+                  >
+                    <span className="font-mono text-amber-400/70 flex-shrink-0">{ch.number}.</span>
+                    <span className="line-clamp-2">{ch.title}</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </aside>
+
+          <main className="order-1 lg:order-2">
+            <div className={`${colors.bg} border ${colors.border} rounded-lg p-6 mb-4`}>
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <Icon className={`w-5 h-5 ${colors.text}`} />
+                <span className={`text-xs px-2 py-0.5 rounded-full font-mono uppercase ${colors.badge}`}>{book.classification}</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded font-mono uppercase ${sCfg.badge}`}>{sCfg.label}</span>
+                {testament && <span className="text-xs text-slate-500">• {testament.title}</span>}
+              </div>
+              <h1 className="text-2xl font-bold text-slate-100 mb-1">{book.title}</h1>
+              <p className="text-sm text-slate-400 italic mb-3">{book.subtitle}</p>
+              <p className="text-sm text-slate-300 mb-2">{book.description}</p>
+            </div>
+
+            <h2 className="text-sm font-bold text-slate-300 mb-2">Chapters ({book.chapters.length})</h2>
+            <div className="space-y-2">
+              {book.chapters.map((ch: Chapter) => (
+                <div
+                  key={ch.number}
+                  className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-3 cursor-pointer hover:border-violet-500/30 hover:bg-slate-800/40 transition-all"
+                  onClick={() => onSelectChapter(ch.number)}
+                  data-testid={`bible-chapter-card-${ch.number}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-amber-400 w-6">{ch.number}.</span>
+                      <span className="text-sm font-bold text-slate-200">{ch.title}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {ch.geometrySymbol && (
+                        <span className="text-[9px] text-slate-600 font-mono">{ch.geometrySymbol}</span>
+                      )}
+                      <span className="text-[10px] text-slate-500">{(ch.verseCount ?? ch.verses?.length ?? 0)} verses</span>
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500 italic ml-8 mt-0.5">{ch.epigraph}</p>
+                </div>
+              ))}
+            </div>
+          </main>
+
+          <aside className="order-3 bg-slate-900/60 border border-slate-700/30 rounded-lg p-3 lg:sticky lg:top-4 lg:self-start space-y-3" data-testid="bible-metadata-rail">
+            <div>
+              <div className="flex items-center gap-1.5 mb-2">
+                {(() => { const SI = sCfg.icon; return <SI className={`w-3.5 h-3.5 ${sCfg.text}`} />; })()}
+                <span className={`text-[11px] font-bold uppercase tracking-wider ${sCfg.text}`}>{sCfg.label}</span>
+              </div>
+              <p className="text-[10px] text-slate-500 italic leading-relaxed">{sCfg.blurb}</p>
+            </div>
+
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Sacred Geometry</div>
+              <div className="text-xs text-slate-300">{book.sacred_geometry_alignment ?? book.sacredGeometry}</div>
+            </div>
+
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Knowledge Nodes</div>
+              <div className="text-xs text-amber-400 font-mono">{book.knowledgeNodeCount}</div>
+            </div>
+
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Author Agents</div>
+              <div className="flex flex-wrap gap-1">
+                {book.authorAgents.map(a => (
+                  <span key={a} className="text-[9px] bg-slate-800/60 text-slate-300 px-1.5 py-0.5 rounded">{a}</span>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Source Texts</div>
+              <div className="flex flex-wrap gap-1">
+                {book.sources.map((s, i) => (
+                  <span key={i} className="text-[9px] bg-slate-800/40 text-slate-400 px-1.5 py-0.5 rounded">{s}</span>
+                ))}
+              </div>
+            </div>
+
+            {book.domains && book.domains.length > 0 && (
+              <div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Domains</div>
+                <div className="text-[10px] text-slate-500">{book.domains.join(" · ")}</div>
+              </div>
+            )}
+          </aside>
         </div>
       </div>
     </div>
   );
 }
 
-function ChapterReader({ chapter, bookTitle, bookId, totalChapters, testamentTitle, onBack, onNavigate, onJumpTo, showVotes, setShowVotes }: {
+function ChapterReader({ chapter, bookTitle, totalChapters, testamentTitle, onBack, onNavigate, onJumpTo, showVotes, setShowVotes }: {
   chapter: Chapter; bookTitle: string; bookId: string; totalChapters: number;
   testamentTitle: string; onBack: () => void; onNavigate: (n: number) => void;
   onJumpTo: (bookId: string, chapterNum: number) => void;
   showVotes: boolean; setShowVotes: (v: boolean) => void;
 }) {
-  void bookId;
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-indigo-950/20 to-slate-950 p-4 pb-24">
       <div className="max-w-3xl mx-auto">
