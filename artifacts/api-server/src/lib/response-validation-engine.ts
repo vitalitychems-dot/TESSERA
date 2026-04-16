@@ -29,7 +29,7 @@ interface QuarantineEntry {
   groundingScore: number;
   bestMatchSource: string;
   fallbackAttempted: boolean;
-  fallbackResult: "verified" | "rejected" | "pending";
+  fallbackResult: "verified" | "rejected" | "pending" | "response_level_quarantine";
   quarantinedAt: number;
   responseContext: string;
 }
@@ -244,7 +244,7 @@ function addToQuarantineStore(
   claim: ClaimScore,
   responseContext: string,
   fallbackAttempted: boolean,
-  fallbackOutcome: "verified" | "rejected" | "pending" = "pending",
+  fallbackOutcome: "verified" | "rejected" | "pending" | "response_level_quarantine" = "pending",
 ): void {
   const entry: QuarantineEntry = {
     id: `q-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -379,7 +379,7 @@ export async function validateResponse(
     redactedCount = claims.length;
 
     for (const claim of passed) {
-      addToQuarantineStore(claim, userQuery, true, "rejected");
+      addToQuarantineStore(claim, userQuery, false, "response_level_quarantine");
     }
 
     logger.warn({
