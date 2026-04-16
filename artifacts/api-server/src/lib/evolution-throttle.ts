@@ -77,6 +77,11 @@ export function isModuleCoolingDown(moduleId: string): boolean {
   const entry = getCooldown(moduleId);
   if (entry.paused) return true;
   if (entry.cooldownUntil > Date.now()) return true;
+  if (entry.cooldownUntil > 0 && entry.cooldownUntil <= Date.now()) {
+    entry.consecutiveFailures = 0;
+    entry.cooldownUntil = 0;
+    logger.info({ moduleId }, "EvolutionThrottle: module auto-recovered after cooldown");
+  }
   return false;
 }
 
@@ -100,9 +105,9 @@ export function recordEvolutionFailure(moduleId: string): void {
   entry.totalFailures++;
   entry.lastFailureAt = Date.now();
 
-  if (entry.consecutiveFailures >= 3) {
+  if (entry.consecutiveFailures >= 5) {
     const tierIndex = Math.min(
-      entry.consecutiveFailures - 3,
+      entry.consecutiveFailures - 5,
       COOLDOWN_TIERS_MS.length - 1,
     );
     const cooldownMs = COOLDOWN_TIERS_MS[tierIndex];
@@ -203,7 +208,7 @@ export function logEvolutionCycleSummary(): void {
     totalFail += entry.totalFailures;
     if (entry.cooldownUntil > Date.now()) coolingCount++;
     if (entry.paused) pausedCount++;
-    if (entry.consecutiveFailures >= 3) troubled.push(entry.moduleId);
+    if (entry.consecutiveFailures >= 5) troubled.push(entry.moduleId);
   }
 
   logger.info(

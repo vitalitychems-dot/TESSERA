@@ -4,7 +4,7 @@ import {
   MessageSquare, Heart, Globe2, Users, Lock,
   Wrench, MessageCircle, Brain, Settings, Shield, Cpu, DollarSign, Search, BookOpen,
   ChevronUp, Zap, Gavel, Languages, UserPlus, Hexagon, Skull, Book, Eye,
-  Network, Terminal, ArrowUpDown, BarChart3, Code2, Key, Map, User, CheckSquare, Scale, TrendingUp, Target, ShoppingCart, Lightbulb, MapPin, Truck, Link2, Workflow,
+  Network, Terminal, ArrowUpDown, BarChart3, Code2, Key, Map, User, CheckSquare, Scale, TrendingUp, Target, ShoppingCart, Lightbulb, MapPin, Truck, Link2, Workflow, Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -65,6 +65,7 @@ const CLUSTERS: NavCluster[] = [
       { label: "Conference", href: "/sacred-conference", Icon: BookOpen, match: (l) => l === "/sacred-conference" || l === "/sacred-knowledge-vault" || l === "/3d-diagrams", color: "violet" },
       { label: "Compress", href: "/compression-lab", Icon: Zap, match: (l) => l === "/compression-lab", color: "cyan" },
       { label: "Recruit", href: "/recruitment", Icon: UserPlus, match: (l) => l === "/recruitment", color: "rose" },
+      { label: "Departments", href: "/departments", Icon: Building2, match: (l) => l === "/departments", color: "cyan" },
     ],
   },
   {

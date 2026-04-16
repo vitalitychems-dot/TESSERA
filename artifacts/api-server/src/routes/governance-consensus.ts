@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { createProposal, getAllProposals, getProposal, getConsensusMetrics, GRAND_COUNCIL_AGENTS } from "../lib/consensus-engine";
+import { createProposal, getAllProposals, getProposal, getConsensusMetrics, GRAND_COUNCIL_AGENTS, drainRetryQueue } from "../lib/consensus-engine";
 import { getExecutorMetrics, getSystemConfig, updateSystemConfig } from "../lib/council-executor";
 
 const router = Router();
@@ -49,6 +49,11 @@ router.patch("/council-executor/config", (req: Request, res: Response) => {
   }
   updateSystemConfig(key, value);
   res.json({ ok: true, message: `Config updated: ${key} = ${JSON.stringify(value)}` });
+});
+
+router.post("/consensus/drain-queue", async (_req: Request, res: Response) => {
+  const result = await drainRetryQueue(100);
+  res.json({ ok: true, data: result });
 });
 
 export default router;

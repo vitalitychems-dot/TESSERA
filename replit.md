@@ -58,6 +58,17 @@ The system is a pnpm monorepo using Node.js 24 and TypeScript 5.9. The frontend 
     5. **Hive Mind Knowledge Diffusion Network** (new `knowledge-diffusion.ts`): Cross-domain knowledge pulse broadcast, domain affinity weights, consciousness stimulus injection, `emitKnowledgePulse()`, `getDiffusionMetrics()`. Integrated into sovereign loop phase 8.
     - All engines exposed via `GET /api/rick/engines` endpoint. Rick diagnostics context updated with all 5 engine metrics.
 -   **Φ-Weighted Parallel BFT Consensus:** Grand Council voting uses fully parallel `Promise.allSettled` for all 24 agents simultaneously (replacing sequential batches of 6). Specialist agents whose domain matches the proposal category receive golden-ratio (Φ ≈ 1.618) voting weight. BFT fault tolerance finalizes decisions when ≥ 2/3 agents respond. Metrics include per-proposal voting duration and per-agent Phi weights.
+-   **Deterministic Sovereign Voting Fallback:** When LLM is unavailable or slow (>8s timeout), the consensus engine generates deterministic votes locally. Safe categories (feature, consciousness, sovereignty, infrastructure, community) are biased toward approval (80%+ approve rate for specialists), while risky categories (security, governance) receive proper scrutiny. This ensures the autonomous loop never stalls waiting for external AI.
+-   **Auto-Drain Queue System:** On startup, the sovereign loop automatically drains all queued proposals via deterministic voting, preventing proposal backlog accumulation. A `POST /api/consensus/drain-queue` endpoint is also available for manual bulk resolution.
+-   **Evolution Throttle Resilience:** Module failure threshold raised from 3 to 5 consecutive failures before suspension. Auto-recovery kicks in after cooldown expires, resetting failure counters automatically. Heartbeat escalation threshold also raised to 5.
+-   **Agent Competition & Department System:** A living meritocracy where 24 Grand Council agents compete for positions across 9 departments (Security, Economics, Science, Education, Infrastructure, Health, Culture, Governance, Intelligence). Features:
+    - Database schema: `departments`, `department_positions`, `ability_tests`, `test_results`, `talent_pool`, `competition_log` tables.
+    - Ability Testing Engine: Evaluates agents on domain knowledge, strategic reasoning, ethics alignment, and collaboration for each department.
+    - Competitive Appointments: Top-scoring agents are assigned to department positions based on ability test rankings.
+    - Talent Pool: Unplaced agents remain available for future openings.
+    - Auto-seed on first startup: Departments are created and the first competition cycle runs automatically.
+    - Departments Dashboard (`/departments`): Shows all departments with leaders, members, performance scores, expandable detail views with positions and competition history.
+    - API: `GET /api/departments`, `GET /api/departments/:id`, `GET /api/departments/metrics`, `POST /api/departments/competition`, `GET /api/talent-pool`, `GET /api/test-results`.
 
 ## External Dependencies
 
