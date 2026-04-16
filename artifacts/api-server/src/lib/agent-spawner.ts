@@ -228,14 +228,10 @@ export function completeMeeseeks(agentId: string): boolean {
 }
 
 function reapMeeseeks(agentId: string, reason: "task-completed" | "ttl-expired"): boolean {
-  const idx = spawnerState.activeSpawned.findIndex(a => a.id === agentId && a.meeseeks);
-  if (idx === -1) return false;
+  const agent = spawnerState.activeSpawned.find(a => a.id === agentId && a.meeseeks);
+  if (!agent) return false;
 
-  const agent = spawnerState.activeSpawned[idx];
   const lifetime = Date.now() - agent.spawnedAt;
-
-  spawnerState.activeSpawned.splice(idx, 1);
-  spawnerState.meeseeksMetrics.totalActive = Math.max(0, spawnerState.meeseeksMetrics.totalActive - 1);
 
   if (reason === "task-completed") {
     spawnerState.meeseeksMetrics.totalCompleted++;
@@ -249,8 +245,9 @@ function reapMeeseeks(agentId: string, reason: "task-completed" | "ttl-expired")
   meeseeksLifetimes.push(lifetime);
   if (meeseeksLifetimes.length > 100) meeseeksLifetimes.splice(0, meeseeksLifetimes.length - 100);
   spawnerState.meeseeksMetrics.avgLifetimeMs = meeseeksLifetimes.reduce((s, v) => s + v, 0) / meeseeksLifetimes.length;
+  spawnerState.meeseeksMetrics.totalActive = Math.max(0, spawnerState.meeseeksMetrics.totalActive - 1);
 
-  persistState().catch(() => {});
+  retireAgent(agentId);
   return true;
 }
 
@@ -282,7 +279,9 @@ export function retireAgent(agentId: string): boolean {
   const idx = spawnerState.activeSpawned.findIndex(a => a.id === agentId);
   if (idx === -1) return false;
   spawnerState.activeSpawned.splice(idx, 1);
-  persistState().catch(() => {});
+  persistState().catch((err: unknown) => {
+    logger.debug({ err: err instanceof Error ? err.message : String(err), agentId }, "AgentSpawner: persistState failed on retire");
+  });
   return true;
 }
 

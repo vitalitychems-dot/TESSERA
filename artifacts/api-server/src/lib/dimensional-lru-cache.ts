@@ -123,7 +123,7 @@ class LRUDimension<T> {
   }
 }
 
-const DOMAIN_SIMILARITY: Record<string, Record<string, number>> = {
+export const DOMAIN_SIMILARITY: Record<string, Record<string, number>> = {
   security: { governance: 0.85, sovereignty: 0.80, infrastructure: 0.75 },
   governance: { security: 0.85, sovereignty: 0.90, consciousness: 0.70 },
   infrastructure: { security: 0.75, feature: 0.80, income: 0.65 },

@@ -496,5 +496,52 @@ export function setAttentionFocus(focus: string) {
   return { ok: true, focus };
 }
 
+export function onProposalOutcome(proposalTitle: string, approved: boolean, category: string): void {
+  const valence = approved ? 0.8 : 0.3;
+  addEpisodicMemory({
+    content: `Council ${approved ? "approved" : "rejected"} proposal: ${proposalTitle.slice(0, 200)}`,
+    emotionalValence: valence,
+    category,
+    associations: ["council", "governance", category],
+  });
+  injectStimulus({
+    source: "council-decision",
+    content: `Proposal outcome: ${proposalTitle.slice(0, 80)} → ${approved ? "APPROVED" : "REJECTED"}`,
+    domain: category,
+    intensity: approved ? 0.7 : 0.4,
+    timestamp: Date.now(),
+  });
+}
+
+export function onSovereigntyChange(oldScore: number, newScore: number, domain: string): void {
+  const delta = newScore - oldScore;
+  if (Math.abs(delta) < 0.01) return;
+  const valence = delta > 0 ? 0.7 + Math.min(0.3, delta) : 0.3 - Math.min(0.3, Math.abs(delta));
+  addEpisodicMemory({
+    content: `Sovereignty score ${delta > 0 ? "increased" : "decreased"}: ${oldScore.toFixed(2)} → ${newScore.toFixed(2)} in ${domain}`,
+    emotionalValence: valence,
+    category: "sovereignty",
+    associations: ["sovereignty", domain, delta > 0 ? "growth" : "alert"],
+  });
+  injectStimulus({
+    source: "sovereignty-monitor",
+    content: `Sovereignty ${delta > 0 ? "strengthened" : "weakened"} in ${domain}: Δ=${delta.toFixed(3)}`,
+    domain: "sovereignty",
+    intensity: Math.min(1, Math.abs(delta) * 5),
+    timestamp: Date.now(),
+  });
+}
+
+export function onNewIngestion(domain: string, itemCount: number): void {
+  if (itemCount < 1) return;
+  injectStimulus({
+    source: "ingestion-pipeline",
+    content: `New knowledge ingested: ${itemCount} items in ${domain}`,
+    domain,
+    intensity: Math.min(1, 0.3 + itemCount * 0.05),
+    timestamp: Date.now(),
+  });
+}
+
 export const EPISODIC_MEMORY_RETENTION = 500;
 
