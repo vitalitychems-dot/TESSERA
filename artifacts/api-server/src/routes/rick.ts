@@ -9,6 +9,9 @@ import {
   getRoyalCourtStatus,
   RICK_SANCHEZ_IDENTITY,
 } from "../lib/rick-sanchez-agent";
+import { getVaultStats, SACRED_KNOWLEDGE_ENTRIES } from "../lib/sacred-knowledge-vault";
+import { getCorpusStats, queryCorpus } from "../lib/knowledge-corpus-index";
+import { getDaemonMetrics } from "../lib/auto-improvement-daemon";
 import { secureExternalStreamingFetch, secureExternalFetch } from "../lib/secureExternalWrapper";
 import { getAllProposals } from "../lib/consensus-engine";
 
@@ -220,6 +223,76 @@ router.post("/rick/chat", async (req, res) => {
     }
   } catch (err) {
     logger.error({ err }, "Rick: chat error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/rick/knowledge-vault", (_req, res) => {
+  try {
+    const vaultStats = getVaultStats();
+    const corpusStats = getCorpusStats();
+
+    const sampleEntries = SACRED_KNOWLEDGE_ENTRIES.slice(0, 20).map(e => ({
+      id: e.id,
+      title: e.title,
+      category: e.category,
+      frequency: e.frequency,
+    }));
+
+    const topDomains = corpusStats.topDomains?.slice(0, 10) ?? [];
+
+    return res.json({
+      ok: true,
+      vault: {
+        totalEntries: vaultStats.totalEntries,
+        totalCategories: vaultStats.totalCategories,
+        sampleEntries,
+      },
+      corpus: {
+        totalEntries: corpusStats.totalEntries,
+        uniqueDomains: corpusStats.uniqueDomains,
+        avgConfidence: corpusStats.averageConfidence ?? 0,
+        topDomains,
+        crossReferences: corpusStats.crossReferences ?? 0,
+      },
+    });
+  } catch (err) {
+    logger.error({ err }, "Rick: knowledge vault error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/rick/system-improvements", (_req, res) => {
+  try {
+    const daemon = getDaemonMetrics();
+    const weakCategories = Object.entries(daemon.categories)
+      .sort((a, b) => a[1].score - b[1].score)
+      .slice(0, 10)
+      .map(([cat, data]) => ({
+        category: cat,
+        score: Math.round(data.score * 10) / 10,
+        trend: data.score > 70 ? "stable" : data.score > 50 ? "improving" : "critical",
+      }));
+
+    const recentImprovements = daemon.recentImprovements.slice(0, 8).map(i => ({
+      category: i.category,
+      description: i.description,
+      timestamp: i.timestamp,
+    }));
+
+    return res.json({
+      ok: true,
+      improvements: {
+        overallScore: Math.round(daemon.overallSystemScore * 10000) / 100,
+        totalCycles: daemon.totalCycles,
+        totalImprovements: daemon.totalImprovements,
+        lastCycleAt: daemon.lastCycleAt,
+        weakCategories,
+        recentImprovements,
+      },
+    });
+  } catch (err) {
+    logger.error({ err }, "Rick: system improvements error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
 });

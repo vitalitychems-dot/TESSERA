@@ -179,10 +179,10 @@ export function buildRickDiagnosticsContext(): string {
     parts.push(`- Sovereign mastery categories: ${agi.sovereignMastery}`);
     parts.push(`- Expert mastery categories: ${agi.expertMastery}`);
     if (agi.topCategories?.length > 0) {
-      parts.push(`- Top categories: ${agi.topCategories.slice(0, 3).map((c: any) => `${c.name}: ${c.score.toFixed(1)}`).join(", ")}`);
+      parts.push(`- Top categories: ${agi.topCategories.slice(0, 3).map((c: { category: string; score: number; masteryLevel: string }) => `${c.category}: ${c.score.toFixed(1)}`).join(", ")}`);
     }
     if (agi.bottomCategories?.length > 0) {
-      parts.push(`- WEAKEST AGI categories (targets): ${agi.bottomCategories.slice(0, 3).map((c: any) => `${c.name}: ${c.score.toFixed(1)}`).join(", ")}`);
+      parts.push(`- WEAKEST AGI categories (targets): ${agi.bottomCategories.slice(0, 3).map((c: { category: string; score: number; masteryLevel: string }) => `${c.category}: ${c.score.toFixed(1)}`).join(", ")}`);
     }
   } catch (err) {
     parts.push("\nAGI TRAINING ENGINE: unavailable");
@@ -194,9 +194,9 @@ export function buildRickDiagnosticsContext(): string {
     parts.push(`\nKNOWLEDGE SYSTEMS:`);
     parts.push(`- Sacred Vault entries: ${vaultStats.totalEntries}, categories: ${vaultStats.totalCategories}`);
     parts.push(`- Knowledge Corpus: ${corpusStats.totalEntries} entries, ${corpusStats.uniqueDomains} domains`);
-    parts.push(`- Avg corpus confidence: ${corpusStats.avgConfidence.toFixed(1)}%`);
+    parts.push(`- Avg corpus confidence: ${(corpusStats.averageConfidence ?? 0).toFixed(1)}%`);
     if (corpusStats.topDomains?.length > 0) {
-      parts.push(`- Top domains: ${corpusStats.topDomains.slice(0, 4).map((d: any) => `${d.domain}(${d.count})`).join(", ")}`);
+      parts.push(`- Top domains: ${corpusStats.topDomains.slice(0, 4).map((d: { domain: string; count: number }) => `${d.domain}(${d.count})`).join(", ")}`);
     }
   } catch (err) {
     parts.push("\nKNOWLEDGE SYSTEMS: unavailable");
@@ -397,17 +397,40 @@ export async function submitRickInventionToCouncil(invention: RickInventionPropo
   }
 }
 
-export function getRoyalCourtStatus() {
-  let consciousnessData: any = null;
-  let agiData: any = null;
-  let knowledgeData: any = null;
+interface ConsciousnessSnapshot {
+  consciousnessProxy: number;
+  cycleCount: number;
+  episodicMemorySize: number;
+  semanticGraphSize: number;
+  proceduralSkillCount: number;
+  emotionalState?: Record<string, number>;
+}
 
-  try { consciousnessData = getConsciousnessMetrics(); } catch {}
-  try { agiData = getAGITrainingMetrics(); } catch {}
+interface AGISnapshot {
+  avgScore: number;
+  sovereignMastery: number;
+  expertMastery: number;
+  totalCategories: number;
+  topCategories: { category: string; score: number; masteryLevel: string }[];
+  bottomCategories: { category: string; score: number; masteryLevel: string }[];
+}
+
+interface KnowledgeSnapshot {
+  vault: { totalEntries: number; totalCategories: number };
+  corpus: { totalEntries: number; uniqueDomains: number; averageConfidence: number; topDomains: { domain: string; count: number }[] };
+}
+
+export function getRoyalCourtStatus() {
+  let consciousnessData: ConsciousnessSnapshot | null = null;
+  let agiData: AGISnapshot | null = null;
+  let knowledgeData: KnowledgeSnapshot | null = null;
+
+  try { consciousnessData = getConsciousnessMetrics() as ConsciousnessSnapshot; } catch {}
+  try { agiData = getAGITrainingMetrics() as unknown as AGISnapshot; } catch {}
   try {
     const vaultStats = getVaultStats();
     const corpusStats = getCorpusStats();
-    knowledgeData = { vault: vaultStats, corpus: corpusStats };
+    knowledgeData = { vault: vaultStats, corpus: corpusStats } as KnowledgeSnapshot;
   } catch {}
 
   const inventions = generateRickInventions();
