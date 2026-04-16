@@ -1,10 +1,11 @@
 import { db } from "@workspace/db";
-import { distilledKnowledgeTable } from "@workspace/db/schema";
-import { eq, sql, desc, gt } from "drizzle-orm";
+import { distilledKnowledgeTable, knowledgeCanonicalTable } from "@workspace/db/schema";
+import { eq, sql, desc, gt, or, isNotNull } from "drizzle-orm";
 import { logger } from "./logger";
 import { evictExpired, invalidateRelatedEntries } from "./semantic-cache";
 import { generateEmbedding, cosineSimilarity } from "./neural-embeddings";
 import { resolveCanonicalId } from "./semantic-deduplication";
+import { compressNewFacts, portalJumpResolve } from "./semantic-compression";
 
 let CONFIDENCE_THRESHOLD = 0.6;
 const STALE_DAYS = 7;
@@ -102,6 +103,16 @@ export async function distillFromResponse(
   }
 
   distillStats.totalExtracted += stored;
+
+  // Run compression on ALL facts (new and existing) to ensure cross-domain
+  // pointer updates fire even when facts already exist in a different domain.
+  if (facts.length > 0) {
+    const allFactTexts = facts.map(f => f.fact);
+    compressNewFacts(allFactTexts, category).catch(err => {
+      logger.debug({ err: (err as Error).message }, "KnowledgeDistillation: compressNewFacts error");
+    });
+  }
+
   if (stored > 0) {
     logger.info({ stored, category }, "KnowledgeDistillation: facts extracted");
     evictExpired().catch(() => {});
@@ -130,7 +141,7 @@ export async function lookupKnowledge(
   query: string,
   category?: string,
   limit = 5,
-): Promise<Array<{ fact: string; confidence: number; category: string }>> {
+): Promise<Array<{ fact: string; confidence: number; category: string; canonicalId?: number }>> {
   distillStats.totalLookups++;
 
   try {
@@ -142,10 +153,13 @@ export async function lookupKnowledge(
 
     if (queryTerms.length === 0) return [];
 
+    // Include rows that either have fact text OR have a canonicalId (compressed).
     const rows = await db
       .select()
       .from(distilledKnowledgeTable)
-      .where(gt(distilledKnowledgeTable.confidence, CONFIDENCE_THRESHOLD))
+      .where(
+        gt(distilledKnowledgeTable.confidence, CONFIDENCE_THRESHOLD),
+      )
       .orderBy(desc(distilledKnowledgeTable.confidence))
       .limit(500);
 
@@ -158,14 +172,39 @@ export async function lookupKnowledge(
       logger.debug("KnowledgeDistillation: embedding generation failed, using keyword-only lookup");
     }
 
-    const scored = filtered
+    // Resolve fact text: prefer portal-jump cache for compressed rows, then DB fallback.
+    const resolved = await Promise.all(filtered.map(async r => {
+      let fact = r.fact;
+      if (fact === null && r.canonicalId != null) {
+        // Canonical-authoritative read: try portal-jump O(1) cache first.
+        fact = portalJumpResolve(r.canonicalId) ?? null;
+        if (fact === null) {
+          // Cold cache: fall back to DB canonical table.
+          try {
+            const [row] = await db
+              .select({ canonicalFact: knowledgeCanonicalTable.canonicalFact })
+              .from(knowledgeCanonicalTable)
+              .where(eq(knowledgeCanonicalTable.id, r.canonicalId))
+              .limit(1);
+            if (row) fact = row.canonicalFact;
+          } catch (err) {
+            logger.debug({ err: (err as Error).message }, "KnowledgeDistillation: canonical DB fallback error");
+          }
+        }
+      }
+      return { ...r, fact };
+    }));
+
+    const scored = resolved
+      .filter(r => r.fact !== null)
       .map(r => {
-        const factLower = r.fact.toLowerCase();
+        const factText = r.fact as string;
+        const factLower = factText.toLowerCase();
         const matches = queryTerms.filter(t => factLower.includes(t)).length;
         const keywordRelevance = matches / queryTerms.length;
 
         let semanticRelevance = 0;
-        const cachedEmb = factEmbeddingCache.get(r.fact);
+        const cachedEmb = factEmbeddingCache.get(factText);
         if (queryEmbedding && cachedEmb) {
           semanticRelevance = cosineSimilarity(queryEmbedding, cachedEmb);
         }
@@ -174,15 +213,25 @@ export async function lookupKnowledge(
           ? 0.6 * semanticRelevance + 0.4 * keywordRelevance
           : keywordRelevance;
 
-        return { ...r, relevance };
+        return { ...r, fact: factText, relevance };
       })
       .filter(r => r.relevance > 0.3)
-      .sort((a, b) => b.relevance * b.confidence - a.relevance * a.confidence)
-      .slice(0, limit);
+      .sort((a, b) => b.relevance * b.confidence - a.relevance * a.confidence);
 
-    if (scored.length > 0) {
+    // Deduplicate by canonicalId: when multiple distilled rows share the same canonical
+    // pointer, retain only the highest-scored representative — enforcing single-storage
+    // semantics in the read path. Rows without a canonicalId pass through unchanged.
+    const seenCanonicals = new Set<number>();
+    const deduped = scored.filter(r => {
+      if (r.canonicalId == null) return true;
+      if (seenCanonicals.has(r.canonicalId)) return false;
+      seenCanonicals.add(r.canonicalId);
+      return true;
+    }).slice(0, limit);
+
+    if (deduped.length > 0) {
       distillStats.lookupHits++;
-      for (const r of scored) {
+      for (const r of deduped) {
         await db
           .update(distilledKnowledgeTable)
           .set({ accessCount: sql`${distilledKnowledgeTable.accessCount} + 1` })
@@ -190,12 +239,38 @@ export async function lookupKnowledge(
       }
     }
 
-    return scored.map(r => ({
-      id: resolveCanonicalId("distilled_knowledge", r.id),
-      fact: r.fact,
-      confidence: r.confidence,
-      category: r.category,
-    }));
+    // Canonical-first read: resolve fact text from the canonical store.
+    // If the portal-jump cache is cold/stale for a canonicalId, fall back to a direct
+    // DB lookup of knowledge_canonical to ensure correctness is not cache-dependent.
+    const results: Array<{ fact: string; confidence: number; category: string; canonicalId?: number }> = [];
+    for (const r of deduped) {
+      let fact = r.fact ?? null;
+      let confidence = r.confidence;
+      if (r.canonicalId != null) {
+        const cached = portalJumpResolve(r.canonicalId);
+        if (cached) {
+          fact = cached.fact;
+          confidence = Math.max(r.confidence, cached.confidence);
+        } else {
+          // Cache miss — resolve from DB directly so cold-start doesn't degrade results.
+          try {
+            const [row] = await db
+              .select({ canonicalFact: knowledgeCanonicalTable.canonicalFact, confidence: knowledgeCanonicalTable.confidence })
+              .from(knowledgeCanonicalTable)
+              .where(eq(knowledgeCanonicalTable.id, r.canonicalId))
+              .limit(1);
+            if (row) {
+              fact = row.canonicalFact;
+              confidence = Math.max(r.confidence, row.confidence);
+            }
+          } catch (err) {
+            logger.debug({ err: (err as Error).message }, "KnowledgeDistillation: canonical DB fallback error");
+          }
+        }
+      }
+      if (fact) results.push({ fact, confidence, category: r.category, canonicalId: r.canonicalId ?? undefined });
+    }
+    return results;
   } catch (err) {
     logger.debug({ err: (err as Error).message }, "KnowledgeDistillation: lookup error");
     return [];
@@ -213,6 +288,9 @@ export async function refreshStaleKnowledge(): Promise<number> {
 
     let refreshed = 0;
     for (const row of staleRows) {
+      // Skip compressed rows (fact=null + canonicalId set) — canonical store manages their text.
+      if (row.fact === null && row.canonicalId != null) continue;
+
       if (row.confidence < 0.5) {
         await db.delete(distilledKnowledgeTable).where(eq(distilledKnowledgeTable.id, row.id));
         refreshed++;
@@ -279,6 +357,8 @@ export async function revalidateStaleKnowledge(verifyFn: (fact: string) => Promi
 
     let revalidated = 0;
     for (const fact of staleFacts) {
+      // Skip compressed rows (fact=null) — their text lives in the canonical store.
+      if (fact.fact === null) continue;
       try {
         const isValid = await verifyFn(fact.fact);
         await verifyFact(fact.id, isValid);
@@ -328,21 +408,32 @@ export async function getDistillationStats() {
 
 export async function warmFactEmbeddings(): Promise<number> {
   try {
+    // Filter null-fact rows: compressed facts have fact=null; their embeddings are managed
+    // by the canonical store and not cached in factEmbeddingCache.
     const rows = await db
       .select()
       .from(distilledKnowledgeTable)
-      .where(gt(distilledKnowledgeTable.confidence, CONFIDENCE_THRESHOLD))
+      .where(
+        or(
+          gt(distilledKnowledgeTable.confidence, CONFIDENCE_THRESHOLD),
+          isNotNull(distilledKnowledgeTable.fact),
+        ),
+      )
       .orderBy(desc(distilledKnowledgeTable.confidence))
       .limit(500);
 
     let warmed = 0;
     for (const row of rows) {
+      // Skip compressed rows (fact=null) — embeddings tracked via canonical store.
+      if (!row.fact) continue;
       if (!factEmbeddingCache.has(row.fact)) {
         try {
           const emb = await generateEmbedding(row.fact);
           factEmbeddingCache.set(row.fact, emb);
           warmed++;
-        } catch {}
+        } catch (err) {
+          logger.debug({ err: (err as Error).message }, "KnowledgeDistillation: embedding warmup error");
+        }
       }
     }
     logger.info({ warmed, total: rows.length }, "KnowledgeDistillation: fact embeddings warmed");

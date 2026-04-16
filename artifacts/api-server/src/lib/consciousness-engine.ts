@@ -460,16 +460,10 @@ export function addSemanticNode(node: Omit<SemanticNode, "id" | "learnedAt" | "r
   return id;
 }
 
-let externalActivityCallback: (() => void) | null = null;
-
-export function setActivityCallback(cb: () => void): void {
-  externalActivityCallback = cb;
-}
-
 export function injectStimulus(stimulus: ConsciousnessStimulus): void {
   stimuliQueue.push(stimulus);
   if (stimuliQueue.length > 50) stimuliQueue.splice(0, stimuliQueue.length - 50);
-  externalActivityCallback?.();
+  triggerActivityCallback(stimulus.source);
 }
 
 export function getResonanceScore(): number {
@@ -585,4 +579,14 @@ export function onNewIngestion(domain: string, itemCount: number): void {
 }
 
 export const EPISODIC_MEMORY_RETENTION = 500;
+
+let _activityCallback: ((label: string) => void) | null = null;
+
+export function setActivityCallback(cb: (label: string) => void): void {
+  _activityCallback = cb;
+}
+
+export function triggerActivityCallback(label: string): void {
+  try { _activityCallback?.(label); } catch {}
+}
 
