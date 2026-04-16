@@ -317,17 +317,32 @@ function CycleCard({ cycle, isExpanded, onToggle }: { cycle: any; isExpanded: bo
 
       {isExpanded && (
         <div className="border-t border-white/5 p-4 space-y-6">
+          {cycle.auditSummary && (
+            <div className="flex flex-wrap gap-3 p-3 rounded-lg bg-gradient-to-r from-cyan-500/5 to-violet-500/5 border border-cyan-500/10">
+              <div className="text-[10px] font-mono text-cyan-400/80 uppercase tracking-wider">Audit Summary</div>
+              <div className="flex gap-3 text-[10px]">
+                <span className="px-1.5 py-0.5 rounded bg-white/5 text-white/60">{cycle.auditSummary.totalFindings} findings</span>
+                <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-300">{cycle.auditSummary.critical} critical</span>
+                <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">{cycle.auditSummary.major} major</span>
+                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">{cycle.auditSummary.resolved} resolved</span>
+              </div>
+            </div>
+          )}
+
           <div>
-            <SectionHeader icon={Zap} title="10 Improvements" badge="Implemented" />
+            <SectionHeader icon={Zap} title="10 Improvements" badge="Audit-Driven" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
               {cycle.improvements.map((imp: any) => (
                 <div key={imp.id} className="p-3 rounded-lg bg-white/5 border border-cyan-500/10">
                   <div className="text-sm font-semibold text-cyan-300">{imp.title}</div>
                   <div className="text-xs text-white/60 mt-1 line-clamp-2">{imp.description}</div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${imp.impact === "critical" ? "bg-red-500/20 text-red-300" : imp.impact === "major" ? "bg-amber-500/20 text-amber-300" : "bg-green-500/20 text-green-300"}`}>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${imp.impact === "critical" ? "bg-red-500/20 text-red-300" : imp.impact === "major" ? "bg-amber-500/20 text-amber-300" : imp.impact === "moderate" ? "bg-blue-500/20 text-blue-300" : "bg-green-500/20 text-green-300"}`}>
                       {imp.impact.toUpperCase()}
                     </span>
+                    {imp.auditFindingRef && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300/70 font-mono">{imp.auditFindingRef}</span>
+                    )}
                     <span className="text-[10px] text-violet-300/60">{imp.sacredPrinciple}</span>
                   </div>
                 </div>
@@ -342,10 +357,20 @@ function CycleCard({ cycle, isExpanded, onToggle }: { cycle: any; isExpanded: bo
                 <div className="p-3 rounded-lg bg-violet-500/10 border border-violet-500/20">
                   <div className="text-sm font-semibold text-violet-300">{inv.title}</div>
                   <div className="text-xs text-white/60 mt-1">{inv.description}</div>
-                  <div className="flex items-center gap-2 mt-2">
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300">{inv.sacredGeometry}</span>
                     <span className="text-[10px] text-amber-300">{inv.frequency}Hz</span>
+                    {inv.corpusCitations?.length > 0 && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300/60 font-mono">{inv.corpusCitations.length} citations</span>
+                    )}
                   </div>
+                  {inv.corpusCitations?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {inv.corpusCitations.slice(0, 6).map((c: string) => (
+                        <span key={c} className="text-[8px] px-1 py-0.5 rounded bg-white/5 text-white/30 font-mono">{c}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 {inv.buildDiagram && (
                   <div>

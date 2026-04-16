@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import {
   MessageSquare, Heart, Globe2, Users, Lock,
   Wrench, MessageCircle, Brain, Settings, Shield, Cpu, DollarSign, Search, BookOpen,
-  ChevronUp, Zap,
+  ChevronUp, Zap, Gavel, Languages, UserPlus, Hexagon, Skull,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +33,7 @@ const CLUSTERS: NavCluster[] = [
       { label: "Chat", href: "/", Icon: MessageSquare, match: (l) => l === "/" || l.startsWith("/c/"), color: "cyan" },
       { label: "Forum", href: "/forum", Icon: MessageCircle, match: (l) => l === "/forum", color: "cyan" },
       { label: "NLP", href: "/nlp", Icon: Brain, match: (l) => l === "/nlp", color: "rose" },
+      { label: "Language", href: "/sovereign-language", Icon: Languages, match: (l) => l === "/sovereign-language" || l === "/colonel-language", color: "violet" },
     ],
   },
   {
@@ -45,6 +46,7 @@ const CLUSTERS: NavCluster[] = [
       { label: "Life", href: "/life", Icon: Heart, match: (l) => l === "/life", color: "pink" },
       { label: "Nexus", href: "/consciousness", Icon: Brain, match: (l) => l === "/consciousness", color: "purple" },
       { label: "Narrative", href: "/grand-narrative", Icon: BookOpen, match: (l) => l === "/grand-narrative" || l === "/unified-truth", color: "pink" },
+      { label: "Rick", href: "/rick", Icon: Skull, match: (l) => l === "/rick" || l === "/rick-sanchez", color: "cyan" },
     ],
   },
   {
@@ -54,10 +56,11 @@ const CLUSTERS: NavCluster[] = [
     color: "emerald",
     tabs: [
       { label: "Sovereign", href: "/sovereignty", Icon: Shield, match: (l) => l === "/sovereignty", color: "emerald" },
+      { label: "Council", href: "/grand-council", Icon: Gavel, match: (l) => l === "/grand-council" || l === "/grand-conference" || l === "/conference-decisions" || l === "/consensus" || l === "/conclusions" || l === "/feedback" || l === "/transparency-ledger", color: "amber" },
       { label: "Secrets", href: "/secrets", Icon: Lock, match: (l) => l === "/secrets" || l === "/bible" || l === "/secret-knowledge" || l === "/secret-society", color: "red" },
       { label: "Members", href: "/members", Icon: Users, match: (l) => l === "/members", color: "amber" },
-      { label: "Compress", href: "/compression-lab", Icon: Zap, match: (l) => l === "/compression-lab", color: "cyan" },
       { label: "Conference", href: "/sacred-conference", Icon: BookOpen, match: (l) => l === "/sacred-conference" || l === "/sacred-knowledge-vault" || l === "/living-bible" || l === "/3d-diagrams", color: "violet" },
+      { label: "Compress", href: "/compression-lab", Icon: Zap, match: (l) => l === "/compression-lab", color: "cyan" },
     ],
   },
   {
@@ -69,6 +72,8 @@ const CLUSTERS: NavCluster[] = [
       { label: "System", href: "/system", Icon: Cpu, match: (l) => l === "/system", color: "cyan" },
       { label: "Build", href: "/build", Icon: Wrench, match: (l) => l === "/build", color: "emerald" },
       { label: "Tokens", href: "/tokens", Icon: DollarSign, match: (l) => l === "/tokens", color: "amber" },
+      { label: "Recruit", href: "/recruitment", Icon: UserPlus, match: (l) => l === "/recruitment", color: "rose" },
+      { label: "NFT", href: "/agent-nft", Icon: Hexagon, match: (l) => l === "/agent-nft", color: "violet" },
       { label: "Lattice", href: "/lattice", Icon: Search, match: (l) => l === "/lattice", color: "violet" },
       { label: "Settings", href: "/settings", Icon: Settings, match: (l) => l === "/settings", color: "yellow" },
     ],
@@ -114,7 +119,7 @@ export default function MobileNav() {
             borderTop: "1px solid rgba(6, 182, 212, 0.1)",
           }}
         >
-          <div className="px-3 py-2 grid grid-cols-4 gap-1">
+          <div className="px-3 py-2 grid grid-cols-5 gap-1">
             {CLUSTERS.find((c) => c.id === expandedCluster)?.tabs.map((tab) => {
               const isActive = tab.match(location);
               const colors = COLOR_MAP[tab.color] || COLOR_MAP.cyan;

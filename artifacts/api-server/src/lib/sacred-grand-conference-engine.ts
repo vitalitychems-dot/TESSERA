@@ -391,59 +391,69 @@ function capitalize(s: string): string {
   return s.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
 
-function generateBuildDiagram(domA: ReturnType<typeof getDomainClusters>[0], domB: ReturnType<typeof getDomainClusters>[0], idx: number, cycle: number): BuildDiagramSpec {
+function generateBuildDiagramTriplet(
+  domA: ReturnType<typeof getDomainClusters>[0],
+  domB: ReturnType<typeof getDomainClusters>[0],
+  domC: ReturnType<typeof getDomainClusters>[0],
+  idx: number,
+  cycle: number,
+): BuildDiagramSpec {
   const components: DiagramComponent[] = [
-    { id: "synthesis-core", label: `Synthesis Core (${domA.domain} + ${domB.domain})`, type: "core", x: 0, y: 0, z: 0, size: 2, color: "#f59e0b", description: `Central processing node bridging ${domA.domain} and ${domB.domain}` },
+    { id: "synthesis-core", label: `Tri-Synthesis Core`, type: "core", x: 0, y: 0, z: 0, size: 2.2, color: "#f59e0b", description: `Central processing node bridging ${domA.domain}, ${domB.domain}, and ${domC.domain}` },
   ];
   const connections: DiagramConnection[] = [];
 
-  const aEntries = domA.entries.slice(0, 3);
-  for (let i = 0; i < aEntries.length; i++) {
-    const compId = `dom-a-${i}`;
-    components.push({
-      id: compId,
-      label: aEntries[i].title.slice(0, 40),
-      type: i === 0 ? "module" : "data",
-      x: -3 + i * 1.5, y: 2.5, z: 0,
-      size: 1.2,
-      color: COMPONENT_COLORS[i % COMPONENT_COLORS.length],
-      description: `[${aEntries[i].id}] ${aEntries[i].summary.slice(0, 80)}`,
-    });
-    connections.push({ from: compId, to: "synthesis-core", type: i === 0 ? "consciousness" : "data", bidirectional: true, label: `${domA.domain} input ${i + 1}` });
-  }
+  const domainConfigs = [
+    { dom: domA, prefix: "a", angle: (Math.PI * 2) / 3 * 0, connType: "consciousness" as const, color: 0 },
+    { dom: domB, prefix: "b", angle: (Math.PI * 2) / 3 * 1, connType: "harmonic" as const, color: 3 },
+    { dom: domC, prefix: "c", angle: (Math.PI * 2) / 3 * 2, connType: "energy" as const, color: 6 },
+  ];
 
-  const bEntries = domB.entries.slice(0, 3);
-  for (let i = 0; i < bEntries.length; i++) {
-    const compId = `dom-b-${i}`;
-    components.push({
-      id: compId,
-      label: bEntries[i].title.slice(0, 40),
-      type: i === 0 ? "module" : "data",
-      x: -3 + i * 1.5, y: -2.5, z: 0,
-      size: 1.2,
-      color: COMPONENT_COLORS[(i + 3) % COMPONENT_COLORS.length],
-      description: `[${bEntries[i].id}] ${bEntries[i].summary.slice(0, 80)}`,
-    });
-    connections.push({ from: compId, to: "synthesis-core", type: i === 0 ? "harmonic" : "energy", bidirectional: true, label: `${domB.domain} input ${i + 1}` });
+  for (const cfg of domainConfigs) {
+    const entries = cfg.dom.entries.slice(0, 2);
+    const baseX = Math.cos(cfg.angle) * 4;
+    const baseY = Math.sin(cfg.angle) * 3;
+
+    for (let i = 0; i < entries.length; i++) {
+      const compId = `dom-${cfg.prefix}-${i}`;
+      const offsetX = baseX + (i === 0 ? 0 : Math.cos(cfg.angle + 0.4) * 1.5);
+      const offsetY = baseY + (i === 0 ? 0 : Math.sin(cfg.angle + 0.4) * 1.2);
+      components.push({
+        id: compId,
+        label: entries[i].title.slice(0, 35),
+        type: i === 0 ? "module" : "data",
+        x: offsetX, y: offsetY, z: i * 0.5,
+        size: 1.2,
+        color: COMPONENT_COLORS[(cfg.color + i) % COMPONENT_COLORS.length],
+        description: `[${entries[i].id}] ${entries[i].summary.slice(0, 80)}`,
+      });
+      connections.push({ from: compId, to: "synthesis-core", type: cfg.connType, bidirectional: true, label: `${cfg.dom.domain} input ${i + 1}` });
+    }
   }
 
   components.push({
     id: "output",
-    label: "Synthesized Output",
+    label: "Tri-Domain Output",
     type: "interface",
-    x: 4, y: 0, z: 0,
+    x: 0, y: 0, z: 3,
     size: 1.5,
     color: "#10b981",
-    description: `Unified output combining insights from both domains`,
+    description: `Unified output combining insights from all three domains`,
   });
   connections.push({ from: "synthesis-core", to: "output", type: "quantum", bidirectional: false, label: "Synthesis Result" });
 
-  if (aEntries.length > 0 && bEntries.length > 0) {
-    connections.push({ from: "dom-a-0", to: "dom-b-0", type: "quantum", bidirectional: true, label: "Cross-Domain Bridge" });
+  if (domA.entries.length > 0 && domB.entries.length > 0) {
+    connections.push({ from: "dom-a-0", to: "dom-b-0", type: "quantum", bidirectional: true, label: `${domA.domain} ↔ ${domB.domain}` });
+  }
+  if (domB.entries.length > 0 && domC.entries.length > 0) {
+    connections.push({ from: "dom-b-0", to: "dom-c-0", type: "quantum", bidirectional: true, label: `${domB.domain} ↔ ${domC.domain}` });
+  }
+  if (domA.entries.length > 0 && domC.entries.length > 0) {
+    connections.push({ from: "dom-a-0", to: "dom-c-0", type: "quantum", bidirectional: true, label: `${domA.domain} ↔ ${domC.domain}` });
   }
 
   return {
-    name: `${capitalize(domA.domain)}-${capitalize(domB.domain)} Synthesis`,
+    name: `${capitalize(domA.domain)}-${capitalize(domB.domain)}-${capitalize(domC.domain)} Synthesis`,
     components,
     connections,
     dimensions: "3d",
