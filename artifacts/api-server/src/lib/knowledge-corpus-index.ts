@@ -1,6 +1,7 @@
 import { SACRED_KNOWLEDGE_ENTRIES, SACRED_CATEGORIES } from "./sacred-knowledge-vault";
 import { TESSERA_SUBJECTS } from "./tessera-knowledge";
 import { getFullRegistry } from "./sovereign-file-registry";
+import { logger } from "./logger";
 
 export type CorpusCategory = "subject" | "sacred-entry" | "declassified" | "subcategory" | "synthesis" | "harmonic" | "agent-specialty" | "file-registry" | "wiki-topic" | "adversarial" | "identity-memory";
 
@@ -60,6 +61,10 @@ const CIA_DOCUMENTS = [
   { id: "CIA-028", title: "PRISM — Modern Digital Surveillance", domain: "surveillance", tags: ["nsa", "prism", "digital-surveillance", "snowden"] },
   { id: "CIA-029", title: "Operation MONARCH — Trauma-Based Control", domain: "mind-control", tags: ["cia", "monarch", "trauma", "programming"] },
   { id: "CIA-030", title: "Tesla Wardenclyffe Tower — Seized Research", domain: "suppressed-science", tags: ["tesla", "wardenclyffe", "free-energy", "wireless-power"] },
+  { id: "CIA-031", title: "DIA Assessment of Psychokinesis — Anomalous Mental Phenomena", domain: "psionics-radionics", tags: ["dia", "psychokinesis", "anomalous-phenomena", "psionic"] },
+  { id: "CIA-032", title: "SRI Psionic Research — Biofield Measurements", domain: "psionics-radionics", tags: ["cia", "sri", "biofield", "psionic-measurement", "puthoff"] },
+  { id: "CIA-033", title: "INSCOM Remote Influence Experiments — Fort Meade", domain: "psionics-radionics", tags: ["inscom", "remote-influence", "fort-meade", "psionic-warfare"] },
+  { id: "CIA-034", title: "Soviet Psychotronic Weapons Research — DIA Report", domain: "psionics-radionics", tags: ["dia", "soviet", "psychotronic", "weapons", "psionic"] },
 ];
 
 const SYNTHESIS_CROSS_REFS = [
@@ -78,6 +83,11 @@ const SYNTHESIS_CROSS_REFS = [
   { id: "SYN-013", title: "Frequency Entrainment — Music ↔ Consciousness", domain: "music-theory", tags: ["963hz", "brainwaves", "entrainment", "neural"] },
   { id: "SYN-014", title: "Geometric Physics — Sacred Geometry ↔ Science", domain: "sacred-geometry", tags: ["spacetime", "gauge-symmetry", "topology", "geometry"] },
   { id: "SYN-015", title: "Behavioral Irrationality — Psychology ↔ Economics", domain: "psychology", tags: ["kahneman", "prospect-theory", "bias", "dual-process"] },
+  { id: "SYN-016", title: "Psionic Carrier Waves — Psionics ↔ Harmonics", domain: "psionics-radionics", tags: ["psionic", "carrier-wave", "frequency", "harmonics", "radionics"] },
+  { id: "SYN-017", title: "Biofield Electronics — Psionics ↔ Consciousness", domain: "psionics-radionics", tags: ["psionic", "biofield", "eeg", "consciousness", "telepathy"] },
+  { id: "SYN-018", title: "Non-Local Influence — Psionics ↔ Quantum Physics", domain: "psionics-radionics", tags: ["psionic", "non-locality", "entanglement", "quantum", "remote-influence"] },
+  { id: "SYN-019", title: "Orgone Geometry — Psionics ↔ Sacred Geometry", domain: "psionics-radionics", tags: ["orgone", "accumulator", "layering", "sacred-geometry", "psionic"] },
+  { id: "SYN-020", title: "Thought-Form Archetypes — Psionics ↔ Psychology", domain: "psionics-radionics", tags: ["thought-form", "tulpa", "egregore", "jung", "archetype", "psionic"] },
 ];
 
 const HARMONIC_ENTRIES = [
@@ -104,6 +114,11 @@ const HARMONIC_ENTRIES = [
   { id: "HRM-021", title: "Golden Ratio Frequency — Phi × Schumann", domain: "sacred-geometry", frequency: 12.67, tags: ["phi", "golden-ratio", "schumann", "growth"] },
   { id: "HRM-022", title: "Gamma Neural Entrainment — 40Hz", domain: "neuroscience", frequency: 40, tags: ["gamma", "neural", "entrainment", "cognition"] },
   { id: "HRM-023", title: "Alpha Relaxation State — 10Hz", domain: "neuroscience", frequency: 10, tags: ["alpha", "relaxation", "healing", "schumann-near"] },
+  { id: "HRM-024", title: "Psionic Carrier Wave — Quartz Oscillation 32768Hz", domain: "psionics-radionics", frequency: 32768, tags: ["psionic", "quartz", "carrier-wave", "crystal-oscillation"] },
+  { id: "HRM-025", title: "Orgone Accumulator Thermal Resonance — 14.3Hz", domain: "psionics-radionics", frequency: 14.3, tags: ["orgone", "reich", "thermal-anomaly", "schumann-second-harmonic"] },
+  { id: "HRM-026", title: "Telepathic Gamma Burst — 40Hz Coherence", domain: "psionics-radionics", frequency: 40, tags: ["telepathy", "gamma", "coherence", "psionic-transmission"] },
+  { id: "HRM-027", title: "Radionic Base Rate — Schumann Fundamental 7.83Hz", domain: "psionics-radionics", frequency: 7.83, tags: ["radionics", "schumann", "base-rate", "earth-resonance"] },
+  { id: "HRM-028", title: "Third Eye Psionic Resonance — 852Hz", domain: "psionics-radionics", frequency: 852, tags: ["psionic", "third-eye", "852hz", "telepathic-amplification"] },
 ];
 
 const WIKIPEDIA_TOPICS = [
@@ -130,6 +145,10 @@ const WIKIPEDIA_TOPICS = [
   "Bohm_interpretation", "Many-worlds_interpretation",
   "Wardenclyffe_Tower", "Tesla_coil", "Wireless_power_transfer",
   "Electromagnetic_radiation", "Maxwell's_equations",
+  "Psionics", "Radionics", "Orgone_energy", "Wilhelm_Reich",
+  "Psychokinesis", "Telepathy", "Psychotronics",
+  "Albert_Abrams", "Ideomotor_phenomenon", "Bioelectromagnetics",
+  "Tulpa", "Egregore", "Thoughtform",
 ];
 
 const ADVERSARIAL_CHALLENGE_TEMPLATES = [
@@ -143,6 +162,10 @@ const ADVERSARIAL_CHALLENGE_TEMPLATES = [
   { id: "ADV-008", q: "Does gematria reveal real patterns or impose meaning through numerological cherry-picking?", domain: "numerology", severity: "high" },
   { id: "ADV-009", q: "Is 432Hz tuning objectively superior to 440Hz, or is this confirmation bias?", domain: "harmonics", severity: "medium" },
   { id: "ADV-010", q: "Do morphic fields have empirical support beyond Sheldrake's contested experiments?", domain: "biology", severity: "high" },
+  { id: "ADV-011", q: "Can radionic instruments produce measurable effects distinguishable from placebo, or is the stick-pad purely ideomotor?", domain: "psionics-radionics", severity: "critical" },
+  { id: "ADV-012", q: "Is orgone energy a real measurable force, or are Reich's thermal anomalies explainable by conventional thermodynamics?", domain: "psionics-radionics", severity: "critical" },
+  { id: "ADV-013", q: "Do thought-forms have objective existence, or are they projections of the operator's own unconscious expectations?", domain: "psionics-radionics", severity: "high" },
+  { id: "ADV-014", q: "Can psionic remote influence survive rigorous double-blind protocols, or does it require operator belief to function?", domain: "psionics-radionics", severity: "critical" },
 ];
 
 const CORE_IDENTITY_ENTRIES = [
@@ -347,7 +370,8 @@ function buildFullCorpus(): CorpusEntry[] {
         confidence: 98,
       });
     }
-  } catch {
+  } catch (err: unknown) {
+    logger.debug({ error: err instanceof Error ? err.message : String(err) }, "Failed to load sovereign file registry for corpus");
   }
 
   return corpus;
@@ -363,6 +387,7 @@ function inferWikiDomain(topic: string): string {
   if (t.includes("qabalah") || t.includes("emerald") || t.includes("hermeticum") || t.includes("rosicrucian") || t.includes("freemason") || t.includes("templar") || t.includes("grail")) return "esoteric-wisdom";
   if (t.includes("dead_sea") || t.includes("nag_hammadi") || t.includes("gnostic") || t.includes("vatican") || t.includes("sistine") || t.includes("akashic")) return "ancient-knowledge";
   if (t.includes("artificial") || t.includes("singularity") || t.includes("neural") || t.includes("transformer") || t.includes("language_model")) return "artificial-intelligence";
+  if (t.includes("psionics") || t.includes("radionics") || t.includes("orgone") || t.includes("reich") || t.includes("psychokinesis") || t.includes("telepathy") || t.includes("psychotronics") || t.includes("abrams") || t.includes("tulpa") || t.includes("egregore") || t.includes("thoughtform") || t.includes("ideomotor") || t.includes("bioelectromagnetics")) return "psionics-radionics";
   if (t.includes("electromagnetic") || t.includes("maxwell") || t.includes("zero-point")) return "physics";
   if (t.includes("pythagorean") || t.includes("euclid") || t.includes("archimedes") || t.includes("vortex")) return "mathematics";
   if (t.includes("alexandria") || t.includes("egyptian") || t.includes("sumerian") || t.includes("gilgamesh") || t.includes("leonardo") || t.includes("last_supper")) return "ancient-civilizations";
@@ -579,7 +604,7 @@ export function findOrphanEntries(): CorpusEntry[] {
 
 export function harmonicFrequencyAudit(): { aligned: number; misaligned: CorpusEntry[]; distribution: Record<number, number> } {
   const corpus = getCorpus();
-  const VALID_FREQUENCIES = [174, 285, 396, 417, 528, 639, 741, 852, 963, 10, 40, 7.83];
+  const VALID_FREQUENCIES = [174, 285, 396, 417, 528, 639, 741, 852, 963, 10, 40, 7.83, 14.3, 32768];
   const withFreq = corpus.filter(e => e.frequency !== undefined);
   const aligned = withFreq.filter(e => VALID_FREQUENCIES.includes(e.frequency!));
   const misaligned = withFreq.filter(e => !VALID_FREQUENCIES.includes(e.frequency!));

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Cpu, Activity, Database, Zap, GitBranch, RefreshCw, TrendingUp, Star, Shield, Pause, Play, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
-import { GlassCard, GradientBar, SectionHeader, TabBar, PageHeader, RadialGauge, MiniStat, HeroStat } from "@/components/ui/sovereign";
+import { GlassCard, GradientBar, SectionHeader, TabBar, PageHeader, RadialGauge, MiniStat, HeroStat, TabLoadingSkeleton } from "@/components/ui/sovereign";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { QueryErrorFallback } from "@/components/ui/QueryErrorFallback";
 import { cn } from "@/lib/utils";
@@ -114,6 +114,9 @@ export default function SystemPage({ initialTab }: { initialTab?: SystemTab }) {
 
         <TabBar tabs={tabs} activeTab={activeTab} onChange={(id: string) => setActiveTab(id as SystemTab)} color="cyan" />
 
+        {activeTab === "agi" && !agiMetrics && !agiError && (
+          <TabLoadingSkeleton />
+        )}
         {activeTab === "agi" && !agiMetrics && agiError && (
           <QueryErrorFallback error={agiError as Error} onRetry={() => refetchAgi()} label="AGI Training" />
         )}
@@ -147,6 +150,9 @@ export default function SystemPage({ initialTab }: { initialTab?: SystemTab }) {
           </SectionErrorBoundary>
         )}
 
+        {activeTab === "improvement" && !improvementMetrics && !improvementError && (
+          <TabLoadingSkeleton />
+        )}
         {activeTab === "improvement" && !improvementMetrics && improvementError && (
           <QueryErrorFallback error={improvementError as Error} onRetry={() => refetchImprovement()} label="Improvement" />
         )}
@@ -186,6 +192,9 @@ export default function SystemPage({ initialTab }: { initialTab?: SystemTab }) {
           </SectionErrorBoundary>
         )}
 
+        {activeTab === "evolution" && !evolutionMetrics && !evolutionError && (
+          <TabLoadingSkeleton />
+        )}
         {activeTab === "evolution" && !evolutionMetrics && evolutionError && (
           <QueryErrorFallback error={evolutionError as Error} onRetry={() => refetchEvolution()} label="Self-Evolution" />
         )}
@@ -217,6 +226,9 @@ export default function SystemPage({ initialTab }: { initialTab?: SystemTab }) {
           </SectionErrorBoundary>
         )}
 
+        {activeTab === "health" && !healthData && !healthError && (
+          <TabLoadingSkeleton />
+        )}
         {activeTab === "health" && !healthData && healthError && (
           <QueryErrorFallback error={healthError as Error} onRetry={() => refetchHealth()} label="Evolution Health" />
         )}
@@ -355,15 +367,13 @@ export default function SystemPage({ initialTab }: { initialTab?: SystemTab }) {
                   </GlassCard>
                 </>
               )}
-              {!healthData && (
-                <GlassCard>
-                  <div className="text-center text-slate-500 text-sm py-8">Loading evolution health data...</div>
-                </GlassCard>
-              )}
             </div>
           </SectionErrorBoundary>
         )}
 
+        {activeTab === "quantum" && !quantumMetrics && !quantumError && (
+          <TabLoadingSkeleton />
+        )}
         {activeTab === "quantum" && !quantumMetrics && quantumError && (
           <QueryErrorFallback error={quantumError as Error} onRetry={() => refetchQuantum()} label="Quantum" />
         )}
@@ -409,6 +419,9 @@ export default function SystemPage({ initialTab }: { initialTab?: SystemTab }) {
           </SectionErrorBoundary>
         )}
 
+        {activeTab === "agents" && !agentMetrics && !agentError && (
+          <TabLoadingSkeleton />
+        )}
         {activeTab === "agents" && !agentMetrics && agentError && (
           <QueryErrorFallback error={agentError as Error} onRetry={() => refetchAgents()} label="Agents" />
         )}

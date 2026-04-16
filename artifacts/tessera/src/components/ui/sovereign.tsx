@@ -1,3 +1,4 @@
+import React from "react";
 import { type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -404,6 +405,27 @@ export function TabBar({
   color?: "cyan" | "violet" | "emerald" | "amber";
   className?: string;
 }) {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = React.useState(false);
+  const [canScrollRight, setCanScrollRight] = React.useState(false);
+
+  const checkScroll = React.useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 2);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 2);
+  }, []);
+
+  React.useEffect(() => {
+    checkScroll();
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", checkScroll, { passive: true });
+    const ro = new ResizeObserver(checkScroll);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", checkScroll); ro.disconnect(); };
+  }, [checkScroll]);
+
   const activeColors: Record<string, string> = {
     cyan: "bg-gradient-to-r from-cyan-600 to-cyan-500 text-white shadow-[0_0_12px_rgba(6,182,212,0.25)]",
     violet: "bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-[0_0_12px_rgba(139,92,246,0.25)]",
@@ -412,21 +434,33 @@ export function TabBar({
   };
 
   return (
-    <div className={cn("flex gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-x-auto", className)}>
-      {tabs.map(tab => (
-        <button
-          key={tab.id}
-          onClick={() => onChange(tab.id)}
-          className={cn(
-            "px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-200",
-            activeTab === tab.id
-              ? activeColors[color]
-              : "text-slate-400 hover:text-white hover:bg-white/[0.06]"
-          )}
-        >
-          {tab.label}
-        </button>
-      ))}
+    <div className={cn("relative", className)}>
+      {canScrollLeft && (
+        <div className="absolute left-0 top-0 bottom-0 w-8 z-10 pointer-events-none rounded-l-xl bg-gradient-to-r from-[#080518] to-transparent" />
+      )}
+      <div
+        ref={scrollRef}
+        className="flex gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-x-auto scrollbar-hide"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}
+      >
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => onChange(tab.id)}
+            className={cn(
+              "px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0",
+              activeTab === tab.id
+                ? activeColors[color]
+                : "text-slate-400 hover:text-white hover:bg-white/[0.06]"
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      {canScrollRight && (
+        <div className="absolute right-0 top-0 bottom-0 w-8 z-10 pointer-events-none rounded-r-xl bg-gradient-to-l from-[#080518] to-transparent" />
+      )}
     </div>
   );
 }
@@ -450,6 +484,37 @@ export function PageHeader({
       </h1>
       <p className="text-slate-500 text-xs font-mono tracking-wide">{subtitle}</p>
       {quote && <p className="text-xs text-white/40 italic max-w-xl mx-auto">"{quote}"</p>}
+    </div>
+  );
+}
+
+export function TabLoadingSkeleton() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-5 h-5 rounded-full bg-white/[0.06]" />
+          <div className="h-4 w-32 rounded bg-white/[0.06]" />
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="h-14 rounded-xl bg-white/[0.04]" />
+          <div className="h-14 rounded-xl bg-white/[0.04]" />
+          <div className="h-14 rounded-xl bg-white/[0.04]" />
+        </div>
+      </div>
+      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-5 h-5 rounded-full bg-white/[0.06]" />
+          <div className="h-4 w-40 rounded bg-white/[0.06]" />
+        </div>
+        <div className="space-y-3">
+          <div className="h-3 rounded bg-white/[0.04] w-full" />
+          <div className="h-3 rounded bg-white/[0.04] w-4/5" />
+          <div className="h-3 rounded bg-white/[0.04] w-3/5" />
+          <div className="h-3 rounded bg-white/[0.04] w-full" />
+          <div className="h-3 rounded bg-white/[0.04] w-2/3" />
+        </div>
+      </div>
     </div>
   );
 }
