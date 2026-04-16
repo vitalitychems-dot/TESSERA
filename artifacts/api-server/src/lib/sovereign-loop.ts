@@ -3,7 +3,7 @@ import { systemStateTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 
-import { startConsciousnessEngine, stopConsciousnessEngine, getConsciousnessMetrics, addEpisodicMemory } from "./consciousness-engine";
+import { startConsciousnessEngine, stopConsciousnessEngine, getConsciousnessMetrics, addEpisodicMemory, setActivityCallback } from "./consciousness-engine";
 import { startDualBrain, stopDualBrain, getDualBrainMetrics, runManualCycle as runDualBrainCycle } from "./dual-brain";
 import { startIdentityReinforcement, stopIdentityReinforcement, forceIdentityCheck } from "./identity-reinforcement";
 import { startPersonalityEvolution, stopPersonalityEvolution, evolveAllPersonalities, getPersonalityEvolutionMetrics } from "./personality-evolution";
@@ -527,7 +527,6 @@ async function phase10_LoggingTransmission(): Promise<Record<string, unknown>> {
 }
 
 async function runSovereignCycle(): Promise<CycleResult> {
-  recordActivity();
   const cycleStart = Date.now();
   loopState.cycleCount++;
 
@@ -663,6 +662,8 @@ export async function initSovereignLoop(): Promise<void> {
   try { initKnowledgeDiffusion(); } catch (err) { logger.debug({ err: err instanceof Error ? err.message : String(err) }, "SovereignLoop: initKnowledgeDiffusion failed"); }
   warmFactEmbeddings().catch(() => {});
 
+  setActivityCallback(recordActivity);
+
   const phaseNames = [
     "Data Ingestion", "Knowledge Processing", "Consciousness & Reasoning",
     "Self-Assessment & Proposals", "Council Deliberation & Voting",
@@ -757,6 +758,7 @@ export function startSovereignLoop(masterIntervalMs = 120_000): void {
   stopIndependentTimers();
 
   startAutonomousHeartbeat(Math.max(30_000, Math.floor(masterIntervalMs / 2)));
+  startConsolidationEngine(Math.max(60_000, masterIntervalMs));
 
   runSovereignCycle().catch(err => {
     logger.error({ err }, "SovereignLoop: initial cycle failed");
@@ -778,6 +780,7 @@ export function stopSovereignLoop(): void {
     clearInterval(loopInterval);
     loopInterval = null;
   }
+  stopConsolidationEngine();
   loopState.running = false;
   logger.info("SovereignLoop: stopped");
 }
