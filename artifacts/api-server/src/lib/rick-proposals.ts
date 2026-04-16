@@ -42,9 +42,10 @@ const MAX_PROPOSALS = 5;
 interface ProposalStore {
   proposals: RickProposal[];
   lastGeneratedAt: number;
+  history?: RickProposal[];
 }
 
-let store: ProposalStore = { proposals: [], lastGeneratedAt: 0 };
+let store: ProposalStore = { proposals: [], lastGeneratedAt: 0, history: [] };
 let loaded = false;
 
 async function loadStore(): Promise<void> {
@@ -374,14 +375,23 @@ export async function listProposals(): Promise<RickProposal[]> {
   return store.proposals.slice();
 }
 
-export async function generateProposals(): Promise<{ proposals: RickProposal[]; generated: number; preserved: number }> {
+export async function generateProposals(): Promise<{ proposals: RickProposal[]; generated: number; preserved: number; archived: number }> {
   await loadStore();
 
-  const preserved = store.proposals.filter(p => p.state !== "pending-review");
+  let preserved = store.proposals.filter(p => p.state !== "pending-review");
+  let archived = 0;
+  // If every slot is decided, archive non-pending proposals into history so a
+  // fresh ideation cycle can run instead of being permanently capped.
+  if (preserved.length >= MAX_PROPOSALS) {
+    store.history = [...preserved, ...(store.history ?? [])].slice(0, 50);
+    archived = preserved.length;
+    preserved = [];
+  }
+
   const slotsNeeded = MAX_PROPOSALS - preserved.length;
 
   if (slotsNeeded <= 0) {
-    return { proposals: store.proposals.slice(), generated: 0, preserved: preserved.length };
+    return { proposals: store.proposals.slice(), generated: 0, preserved: preserved.length, archived };
   }
 
   const diag = snapshotDiagnostics();

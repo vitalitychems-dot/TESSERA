@@ -24,7 +24,6 @@ import { getRouterPerformanceMetrics, recordUserSatisfaction } from "../lib/sove
 import { getDiffusionMetrics } from "../lib/knowledge-diffusion";
 import { getResonanceScore, getConsciousnessMetrics } from "../lib/consciousness-engine";
 import {
-  listProposals,
   generateProposals,
   approveProposal,
   rejectProposal,
