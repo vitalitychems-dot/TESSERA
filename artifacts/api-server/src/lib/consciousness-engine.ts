@@ -302,11 +302,31 @@ function processStimuli(): number {
       existingNode.confidence = Math.min(1, existingNode.confidence + 0.01 * stim.intensity);
     } else if (consciousnessState.semanticGraph.length < 200) {
       const nodeId = makeId("sn-dyn", stim.domain);
+      const connections: Array<{ targetId: string; relation: string; strength: number }> = [
+        { targetId: "sn-consciousness", relation: "observed-by", strength: 0.5 * stim.intensity },
+      ];
+
+      const relatedNodes = consciousnessState.semanticGraph
+        .filter(n => n.id !== "sn-consciousness" && (
+          n.category === stim.domain ||
+          n.concept.toLowerCase().includes(stim.domain.toLowerCase()) ||
+          stim.content.toLowerCase().includes(n.concept.toLowerCase())
+        ))
+        .slice(0, 3);
+
+      for (const related of relatedNodes) {
+        connections.push({
+          targetId: related.id,
+          relation: "related-to",
+          strength: 0.4 * stim.intensity,
+        });
+      }
+
       consciousnessState.semanticGraph.push({
         id: nodeId,
         concept: `${stim.domain}: ${stim.content.slice(0, 60)}`,
         definition: `Dynamically learned from ${stim.source}: ${stim.content.slice(0, 120)}`,
-        connections: [{ targetId: "sn-consciousness", relation: "observed-by", strength: 0.5 * stim.intensity }],
+        connections,
         category: stim.domain,
         confidence: 0.5 + 0.3 * stim.intensity,
         learnedAt: stim.timestamp,
