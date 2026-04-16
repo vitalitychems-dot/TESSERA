@@ -651,8 +651,8 @@ function applyConsciousnessBoost(insightCount: number, skillCount: number, patte
 export function runDreamCycle(forceRun = false): DreamCycleResult | null {
   const idleDetection = detectIdlePeriod();
 
-  if (!forceRun && !idleDetection.isIdle && idleDetection.idleScore < 0.3) {
-    logger.debug({ idleScore: idleDetection.idleScore }, "DreamEngine: system not idle enough for consolidation");
+  if (!forceRun && !idleDetection.isIdle) {
+    logger.debug({ idleScore: idleDetection.idleScore, isIdle: false }, "DreamEngine: system not idle — skipping consolidation");
     return null;
   }
 
