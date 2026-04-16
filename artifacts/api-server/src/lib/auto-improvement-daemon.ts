@@ -256,6 +256,7 @@ async function implementImprovements(proposals: string[]): Promise<string[]> {
       try {
         const meeseeks = spawnMeeseeks({
           task: `Improve weak area: ${cat} (score ${oldScore.toFixed(1)} → ${newScore.toFixed(1)})`,
+          successCriteria: `${cat} score improves from ${oldScore.toFixed(1)} to at least ${newScore.toFixed(1)}`,
           specialization: cat,
           ttlMs: 120_000,
         }, "auto-improvement-daemon");

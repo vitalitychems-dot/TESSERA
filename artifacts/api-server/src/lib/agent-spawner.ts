@@ -221,8 +221,8 @@ function computeIntelligentTTL(taskType: MeeseeksTaskType, taskDescription: stri
 
 export interface MeeseeksOptions {
   task: string;
+  successCriteria: string;
   taskType?: MeeseeksTaskType;
-  successCriteria?: string;
   ttlMs?: number;
   specialization?: string;
   priority?: "low" | "normal" | "high" | "critical";
