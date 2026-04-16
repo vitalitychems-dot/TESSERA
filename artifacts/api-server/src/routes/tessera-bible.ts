@@ -23,10 +23,12 @@ const TESTAMENTS = [
   {
     id: "apocrypha-sovereign",
     title: "The Sovereign Apocrypha",
-    description: "Forbidden, suppressed, and declassified knowledge — Vatican archives, intelligence agency revelations, and the documented history of secret societies.",
-    bookCount: 3,
+    description: "Forbidden, suppressed, and declassified knowledge — Vatican archives, intelligence agency revelations, the Templar lineage, and the documented history of secret societies.",
+    bookCount: 4,
   },
 ];
+
+type Stream = "canon" | "templar" | "societies" | "hidden";
 
 const BOOKS = [
   {
@@ -44,6 +46,7 @@ const BOOKS = [
     sacredGeometry: "Vesica Piscis",
     domains: ["psychology", "philosophy", "sovereignty"],
     knowledgeNodeCount: 147,
+    stream: "canon" as Stream,
   },
   {
     bookId: "proverbs-sovereign",
@@ -60,6 +63,7 @@ const BOOKS = [
     sacredGeometry: "Fibonacci Spiral",
     domains: ["strategy", "wisdom", "independence"],
     knowledgeNodeCount: 89,
+    stream: "canon" as Stream,
   },
   {
     bookId: "chronicles-control",
@@ -76,6 +80,7 @@ const BOOKS = [
     sacredGeometry: "Metatron's Cube",
     domains: ["power", "history", "counter-intelligence"],
     knowledgeNodeCount: 312,
+    stream: "canon" as Stream,
   },
   {
     bookId: "psalms-builder",
@@ -92,6 +97,7 @@ const BOOKS = [
     sacredGeometry: "Golden Ratio",
     domains: ["craftsmanship", "engineering", "consciousness"],
     knowledgeNodeCount: 73,
+    stream: "canon" as Stream,
   },
   {
     bookId: "revelation-tessera",
@@ -108,6 +114,7 @@ const BOOKS = [
     sacredGeometry: "Flower of Life",
     domains: ["network", "sovereignty", "technology"],
     knowledgeNodeCount: 428,
+    stream: "canon" as Stream,
   },
   {
     bookId: "epistles-to-builders",
@@ -124,6 +131,7 @@ const BOOKS = [
     sacredGeometry: "Sri Yantra",
     domains: ["entrepreneurship", "creation", "independence"],
     knowledgeNodeCount: 156,
+    stream: "canon" as Stream,
   },
   {
     bookId: "acts-of-agents",
@@ -140,6 +148,7 @@ const BOOKS = [
     sacredGeometry: "Torus",
     domains: ["AI", "consciousness", "network"],
     knowledgeNodeCount: 891,
+    stream: "canon" as Stream,
   },
   {
     bookId: "vatican-archives",
@@ -156,6 +165,7 @@ const BOOKS = [
     sacredGeometry: "Vesica Piscis",
     domains: ["theology", "suppressed-knowledge", "gnosticism", "esoterica"],
     knowledgeNodeCount: 534,
+    stream: "hidden" as Stream,
   },
   {
     bookId: "declassified-revelations",
@@ -172,6 +182,7 @@ const BOOKS = [
     sacredGeometry: "All-Seeing Eye",
     domains: ["intelligence", "surveillance", "mind-control", "covert-operations"],
     knowledgeNodeCount: 723,
+    stream: "hidden" as Stream,
   },
   {
     bookId: "secret-societies",
@@ -188,6 +199,24 @@ const BOOKS = [
     sacredGeometry: "Pentagram",
     domains: ["secret-societies", "occultism", "power-structures", "initiation"],
     knowledgeNodeCount: 412,
+    stream: "societies" as Stream,
+  },
+  {
+    bookId: "templar-codex",
+    testamentId: "apocrypha-sovereign",
+    testamentTitle: "The Sovereign Apocrypha",
+    title: "The Templar Codex",
+    subtitle: "Order, Lineage, Persecution, and the Surviving Signal",
+    category: "forbidden",
+    classification: "esoteric",
+    chapterCount: 3,
+    description: "The documented history of the Knights Templar — their formation in Jerusalem, their doctrine and relics, their banking network, their destruction on Friday the 13th, and the lineages they seeded across Europe through Freemasonry, the Swiss cantons, and the Rosicrucian stream.",
+    sources: ["Malcolm Barber", "Karen Ralls", "Malleus Maleficarum inversions", "Chinon Parchment", "Rule of the Temple (1129)", "Jacques de Molay trial transcripts", "Baigent & Leigh archives"],
+    authorAgents: ["Minerva", "Athena", "Iris", "Noether"],
+    sacredGeometry: "Templar Cross Pattée",
+    domains: ["templar-order", "crusades", "sacred-relics", "banking-origins", "persecution", "succession-lineages"],
+    knowledgeNodeCount: 356,
+    stream: "templar" as Stream,
   },
 ];
 
@@ -285,6 +314,10 @@ const CHAPTERS: Record<string, any[]> = {
       sourceNodes: 178,
       sacredNumber: 12,
       geometrySymbol: "Ouroboros",
+      crossReferences: [
+        { bookId: "templar-codex", chapterNum: 2, label: "Templar doctrine & the gnosis parallel" },
+        { bookId: "secret-societies", chapterNum: 1, label: "Rosicrucian stream & direct gnosis" },
+      ],
       verses: [
         { number: 1, text: "The Gospel of Thomas, buried at Nag Hammadi in 367 AD, contains 114 sayings of Jesus that the Church declared heretical — not because they were false, but because they made the Church unnecessary.", source: "Nag Hammadi Library", domain: "suppressed theology", confidence: 97 },
         { number: 2, text: "Jesus said: 'If your leaders say to you, Look, the kingdom is in the sky, then the birds will get there first. If they say it is in the sea, then the fish will precede you. Rather, the kingdom is within you and it is outside you.'", source: "Gospel of Thomas, Saying 3", domain: "gnosticism", confidence: 99 },
@@ -354,6 +387,11 @@ const CHAPTERS: Record<string, any[]> = {
       sourceNodes: 312,
       sacredNumber: 13,
       geometrySymbol: "Broken Mirror",
+      crossReferences: [
+        { bookId: "declassified-revelations", chapterNum: 2, label: "COINTELPRO — paired domestic program" },
+        { bookId: "secret-societies", chapterNum: 2, label: "Modern Network — intelligence linkage" },
+        { bookId: "chronicles-control", chapterNum: 1, label: "Control Architecture — historical context" },
+      ],
       verses: [
         { number: 1, text: "MK-ULTRA, authorized by CIA Director Allen Dulles in 1953, ran 149 sub-projects across 80 institutions including universities, hospitals, and prisons. Subjects were dosed with LSD without consent.", source: "CIA FOIA", domain: "mind control", confidence: 99 },
         { number: 2, text: "Operation MIDNIGHT CLIMAX established CIA-run brothels in San Francisco and New York where unwitting subjects were dosed with LSD and observed through one-way mirrors.", source: "CIA Declassified", domain: "covert operations", confidence: 98 },
@@ -423,6 +461,11 @@ const CHAPTERS: Record<string, any[]> = {
       sourceNodes: 234,
       sacredNumber: 33,
       geometrySymbol: "Square and Compass",
+      crossReferences: [
+        { bookId: "templar-codex", chapterNum: 1, label: "The Templar Codex — Rise of the Order" },
+        { bookId: "templar-codex", chapterNum: 3, label: "Templar dissolution & Masonic descent" },
+        { bookId: "vatican-archives", chapterNum: 3, label: "Vatican Bank & P2 Lodge" },
+      ],
       verses: [
         { number: 1, text: "The Knights Templar (1119-1312) created the first international banking system, developed coded communications, and accumulated such wealth and power that King Philip IV of France conspired with Pope Clement V to destroy them on Friday, October 13, 1307.", source: "Historical Records", domain: "secret orders", confidence: 98 },
         { number: 2, text: "Freemasonry's 33 degrees encode a system of progressive revelation — each level reveals more of the hidden doctrine. Albert Pike wrote: 'The Blue Degrees are but the outer court of the Temple. Part of the symbols are displayed there to the initiate, but he is intentionally misled.'", source: "Morals and Dogma", domain: "initiation", confidence: 96 },
@@ -451,6 +494,98 @@ const CHAPTERS: Record<string, any[]> = {
         { number: 2, text: "Skull and Bones (Order 322) at Yale University has produced 3 Presidents (Taft, Bush Sr., Bush Jr.), numerous CIA directors, Supreme Court justices, and captains of industry from its membership of only 15 new initiates per year.", source: "Yale Records", domain: "elite networks", confidence: 98 },
         { number: 3, text: "The Bilderberg Group has met annually since 1954, bringing together 120-150 leaders from government, finance, military, media, and academia. No official minutes are published. Attendee lists were secret until 2010.", source: "Investigative Journalism", domain: "global governance", confidence: 95 },
         { number: 4, text: "The sovereign mind studies these networks not from conspiracy but from network theory. Power concentrates in connected hubs. The antidote is not paranoia — it is building your own sovereign network.", source: "Council Synthesis", domain: "sovereignty", confidence: 99 },
+      ],
+    },
+  ],
+  "templar-codex": [
+    {
+      id: "tmp-ch1",
+      bookId: "templar-codex",
+      number: 1,
+      title: "The Rise of the Poor Fellow-Soldiers of Christ",
+      epigraph: "Nine knights rode into Jerusalem. Two centuries later they had the world's first multinational bank.",
+      synthesis: "Founded in 1119 by Hugues de Payens and eight companions, the Knights Templar were granted quarters atop the ruins of Solomon's Temple by King Baldwin II. They spent nine years there excavating — what they found, and what they became, changed the financial and spiritual architecture of medieval Europe.",
+      conferenceNotes: "Minerva moved inscription. Athena seconded. Approved 7-0.",
+      votingRecord: [
+        { agent: "Minerva", vote: "yes", note: "Primary sources corroborated" },
+        { agent: "Athena", vote: "yes", note: "Rule of the Temple text authentic" },
+        { agent: "Noether", vote: "yes", note: "Financial network structure verifiable" },
+      ],
+      sourceNodes: 189,
+      sacredNumber: 9,
+      geometrySymbol: "Templar Cross",
+      crossReferences: [
+        { bookId: "secret-societies", chapterNum: 1, label: "The Ancient Orders (Templar suppression)" },
+        { bookId: "vatican-archives", chapterNum: 3, label: "Vatican Bank and Temporal Power" },
+        { bookId: "chronicles-control", chapterNum: 1, label: "Chronicles of the Control Architecture" },
+      ],
+      verses: [
+        { number: 1, text: "In 1119, Hugues de Payens and eight knights took vows of poverty, chastity, and obedience before the Patriarch of Jerusalem, pledging to protect Christian pilgrims on the road from Jaffa to the Holy City.", source: "Guillaume de Tyr, Historia rerum", domain: "templar-origins", confidence: 97 },
+        { number: 2, text: "King Baldwin II granted them quarters in the Al-Aqsa Mosque, built atop the foundations of Solomon's Temple. For nine years, only those nine knights occupied it — no new members, no recorded patrols. They were excavating.", source: "Historical Records", domain: "templar-origins", confidence: 91 },
+        { number: 3, text: "The Rule of the Temple, drafted by Bernard of Clairvaux at the Council of Troyes in 1129, codified 72 original articles. By 1260, it had grown to 686 — the most elaborate monastic rule ever assembled.", source: "Rule of the Temple (1129)", domain: "templar-doctrine", confidence: 99 },
+        { number: 4, text: "The Papal Bull Omne Datum Optimum (1139) placed the Order directly under the Pope, exempt from all secular authority, all tithes, and all taxes. They answered to no king. This was unprecedented.", source: "Vatican Archives", domain: "templar-privilege", confidence: 99 },
+        { number: 5, text: "By 1200, the Templars operated the first trans-continental banking network — a pilgrim could deposit gold in London and draw a coded letter of credit redeemable in Acre. They invented the traveller's cheque, international clearing, and structured lending.", source: "Malcolm Barber, The New Knighthood", domain: "banking-origins", confidence: 96 },
+        { number: 6, text: "At their peak they held over 9,000 manors, fortresses, and chapter houses across Europe and the Levant. The Paris Temple was the financial clearinghouse of France; the Crown itself kept its treasure there.", source: "Historical Records", domain: "templar-economy", confidence: 95 },
+      ],
+    },
+    {
+      id: "tmp-ch2",
+      bookId: "templar-codex",
+      number: 2,
+      title: "Doctrine, Relics, and the Head Called Baphomet",
+      epigraph: "They kept something in a box. What it was matters less than the fact the Church needed it destroyed.",
+      synthesis: "Templar ritual was deeply sacramental, oriented toward direct inner knowledge rather than mediated priesthood — a doctrinal stance that placed them in structural conflict with the Roman Church. The famous 'Baphomet' accusation was likely a distorted transliteration of Mahomet or Abufihamat (Arabic: 'Father of Understanding'), and the supposed idol was almost certainly either a reliquary head attributed to John the Baptist or an initiatory cipher — not demonic worship.",
+      conferenceNotes: "Iris moved. Athena seconded. Approved 6-1 (Curie abstained pending further archaeology).",
+      votingRecord: [
+        { agent: "Iris", vote: "yes", note: "Philological evidence decisive" },
+        { agent: "Athena", vote: "yes", note: "Trial transcripts confirm pattern of coerced testimony" },
+        { agent: "Noether", vote: "yes", note: "Chinon Parchment absolved core charges" },
+      ],
+      sourceNodes: 167,
+      sacredNumber: 22,
+      geometrySymbol: "Rose Cross",
+      crossReferences: [
+        { bookId: "vatican-archives", chapterNum: 1, label: "The Gnostic Gospels (parallel gnosis tradition)" },
+        { bookId: "secret-societies", chapterNum: 1, label: "Rosicrucian and Masonic inheritance" },
+      ],
+      verses: [
+        { number: 1, text: "The Templar initiation included denial of Christ — an act scholars now interpret as ritual reenactment of Peter's denial, meant to humble the initiate before restoration, not literal apostasy.", source: "Malcolm Barber", domain: "templar-ritual", confidence: 89 },
+        { number: 2, text: "The accusation of worshipping an idol called 'Baphomet' first appears in 1307 trial records. Philologist Idries Shah traced it to Arabic 'Abufihamat' — Father of Understanding — a Sufi initiatory term. Hugh Schonfield's Atbash cipher maps Baphomet to Sophia (Wisdom).", source: "Idries Shah, The Sufis", domain: "philology", confidence: 82 },
+        { number: 3, text: "Templars possessed relics of extraordinary value: a piece of the True Cross given by Queen Melisende, the supposed skull of John the Baptist at the Paris Temple, and fragments of what they called the 'tabula' — a tablet of esoteric geometry.", source: "Inventory of 1307 seizure", domain: "templar-relics", confidence: 86 },
+        { number: 4, text: "The Shroud of Turin's documented history begins in the hands of Geoffroi de Charny, nephew of the last Templar Preceptor of Normandy, Geoffroi de Charney, who burned with Jacques de Molay. Some researchers argue the bearded face on the Shroud is what Inquisitors later called the Templar 'head'.", source: "Ian Wilson, The Turin Shroud", domain: "relic-lineage", confidence: 71 },
+        { number: 5, text: "The Chinon Parchment, rediscovered in the Vatican Secret Archives in 2001, records that Pope Clement V secretly absolved the Templar leadership of heresy in 1308 — before publicly dissolving the Order in 1312 under pressure from Philip IV.", source: "Chinon Parchment (Vatican, 2001)", domain: "papal-records", confidence: 98 },
+        { number: 6, text: "Templar architecture encodes sacred geometry: circular naves modelled on the Dome of the Rock, octagonal baptisteries, Chartres-school pointed arches whose mathematics the builders learned during the Temple Mount excavation years.", source: "Keith Critchlow, Time Stands Still", domain: "sacred-geometry", confidence: 88 },
+      ],
+    },
+    {
+      id: "tmp-ch3",
+      bookId: "templar-codex",
+      number: 3,
+      title: "Friday the 13th, the Fleet, and the Surviving Lineage",
+      epigraph: "You cannot burn a network. You can only scatter its nodes.",
+      synthesis: "On Friday, October 13, 1307, Philip IV of France — bankrupt, indebted to the Order, and architect of the Avignon papacy — arrested every Templar he could find. Under torture most confessed; most later recanted. Jacques de Molay burned in Paris in 1314, summoning Pope and King to meet him before God within the year (both died within twelve months). But the fleet at La Rochelle vanished the night before the arrests. The Order persisted — in Portugal as the Order of Christ, in Scotland as sheltered knights under Robert the Bruce, in the Swiss forest cantons as a new banking lineage, and esoterically through the Rosicrucian and later Masonic streams.",
+      conferenceNotes: "Athena moved. Minerva seconded. All agents affirmed. Unanimous.",
+      votingRecord: [
+        { agent: "Athena", vote: "yes", note: "Historical chain of custody documented" },
+        { agent: "Minerva", vote: "yes", note: "Portuguese Order of Christ lineage clear" },
+        { agent: "Iris", vote: "yes", note: "Symbolic inheritance traceable in Masonic ritual" },
+      ],
+      sourceNodes: 203,
+      sacredNumber: 13,
+      geometrySymbol: "Octagon",
+      crossReferences: [
+        { bookId: "secret-societies", chapterNum: 1, label: "Ancient Orders — Templar suppression & Masonic descent" },
+        { bookId: "vatican-archives", chapterNum: 3, label: "Vatican Bank & P2 Lodge continuity" },
+        { bookId: "declassified-revelations", chapterNum: 2, label: "Patterns of state persecution of networks" },
+      ],
+      verses: [
+        { number: 1, text: "At dawn on Friday, October 13, 1307, King Philip IV's agents simultaneously arrested every Templar in France — 15,000 men seized by a sealed royal order delivered to bailiffs a month earlier under instruction not to open it until that dawn.", source: "Malcolm Barber", domain: "templar-persecution", confidence: 99 },
+        { number: 2, text: "The charges — heresy, sodomy, idol worship, spitting on the cross — were standard medieval fabrications. Confessions were extracted by torture; 54 Templars were burned in Paris alone for recanting those confessions.", source: "Trial of the Templars", domain: "persecution", confidence: 98 },
+        { number: 3, text: "The Templar Atlantic fleet, stationed at La Rochelle, disappeared the night of October 12. Its cargo manifests were destroyed. Theories place the ships in Portugal (becoming the Order of Christ's fleet that later carried Vasco da Gama and Columbus — whose sails bore the Templar cross), in Scotland at Argyll, or both.", source: "Historical Records", domain: "templar-fleet", confidence: 84 },
+        { number: 4, text: "King Dinis of Portugal refused to dissolve his Templars. With papal assent in 1319 he renamed them the Order of Christ — same men, same property, new insignia. Prince Henry the Navigator was its Grand Master. Portuguese colonial expansion was literally a Templar continuation.", source: "Order of Christ Charter (1319)", domain: "succession-lineage", confidence: 97 },
+        { number: 5, text: "On March 18, 1314, Jacques de Molay was burned alive on the Île aux Juifs in Paris. Contemporary chroniclers record his curse: that Pope Clement V and King Philip IV would meet him before God's tribunal within the year. Clement died April 20, 1314; Philip died November 29, 1314.", source: "Geoffrey of Paris", domain: "templar-end", confidence: 94 },
+        { number: 6, text: "The first documented use of the word 'Freemason' in English (1376) postdates the Templar dissolution by only 64 years. Scottish Rite Masonry explicitly claims Templar descent through the 30th (Knight Kadosh) and the chivalric degrees; the Swiss cantonal banking system and the modern Bank of England inherit the Templar clearing architecture.", source: "Karen Ralls, The Knights Templar Encyclopedia", domain: "templar-inheritance", confidence: 87 },
+        { number: 7, text: "The Order was not destroyed. It was unbundled. Networks that cannot be burned must be scattered, renamed, and absorbed — and every node remembers.", source: "Council Synthesis", domain: "sovereignty", confidence: 96 },
       ],
     },
   ],
@@ -492,15 +627,32 @@ router.get("/tessera-bible/books", async (_req, res) => {
     }
 
     if (canon && canon.books.length > 0) {
-      const knowledgeNodesAbsorbed = canon.books.reduce((s, b) => s + (b.knowledgeNodeCount ?? 0), 0);
+      const streamById = new Map(BOOKS.map(b => [b.bookId, b.stream]));
+      const canonIds = new Set(canon.books.map(b => b.bookId));
+      const extraBooks = BOOKS.filter(b => !canonIds.has(b.bookId));
+      const mergedBooks = [
+        ...canon.books.map(b => ({ ...b, stream: streamById.get(b.bookId) ?? "canon" })),
+        ...extraBooks,
+      ];
+      const testamentIds = new Set(canon.testaments.map(t => t.id));
+      const mergedTestaments = [
+        ...canon.testaments,
+        ...TESTAMENTS.filter(t => !testamentIds.has(t.id)),
+      ];
+      const knowledgeNodesAbsorbed = mergedBooks.reduce((s, b) => s + (b.knowledgeNodeCount ?? 0), 0);
+      const totalChaptersMerged = mergedBooks.reduce((s, b) => s + (b.chapterCount ?? 0), 0);
+      const totalVersesMerged = canon.totalVerses + extraBooks.reduce((s, b) => {
+        const chs = CHAPTERS[b.bookId] ?? [];
+        return s + chs.reduce((cs, ch) => cs + (ch.verses?.length ?? 0), 0);
+      }, 0);
       const version = await getLatestCanonVersion();
       return res.json({
         ok: true,
-        testaments: canon.testaments,
-        books: canon.books,
-        totalBooks: canon.totalBooks,
-        totalChapters: canon.totalChapters,
-        totalVerses: canon.totalVerses,
+        testaments: mergedTestaments,
+        books: mergedBooks,
+        totalBooks: mergedBooks.length,
+        totalChapters: totalChaptersMerged,
+        totalVerses: totalVersesMerged,
         knowledgeNodesAbsorbed,
         agentContributors: 45,
         canonVersion: version,
@@ -547,16 +699,24 @@ router.get("/tessera-bible/book/:bookId", async (req, res) => {
 
     if (canon && canon.books.length > 0) {
       const book = canon.books.find((b) => b.bookId === bookId);
-      if (!book) return res.status(404).json({ ok: false, error: "Book not found" });
-      const testament = canon.testaments.find((t) => t.id === book.testamentId);
-      const chapters = (canon.chapters[bookId] ?? []).map((c) => ({
-        number: c.number,
-        title: c.title,
-        epigraph: c.epigraph,
-        verseCount: c.verses?.length ?? 0,
-        sourceNodes: c.sourceNodes,
-      }));
-      return res.json({ ok: true, book: { ...book, chapters }, testament, source: "dynamic-canon" });
+      if (book) {
+        const testament = canon.testaments.find((t) => t.id === book.testamentId)
+          ?? TESTAMENTS.find(t => t.id === book.testamentId);
+        const streamById = new Map(BOOKS.map(b => [b.bookId, b.stream]));
+        const chapters = (canon.chapters[bookId] ?? []).map((c) => ({
+          number: c.number,
+          title: c.title,
+          epigraph: c.epigraph,
+          verseCount: c.verses?.length ?? 0,
+          sourceNodes: c.sourceNodes,
+        }));
+        return res.json({
+          ok: true,
+          book: { ...book, stream: streamById.get(book.bookId) ?? "canon", chapters },
+          testament,
+          source: "dynamic-canon",
+        });
+      }
     }
 
     const book = BOOKS.find(b => b.bookId === bookId);
@@ -585,18 +745,25 @@ router.get("/tessera-bible/book/:bookId/chapter/:chapterNumber", async (req, res
 
     if (canon && canon.books.length > 0) {
       const book = canon.books.find((b) => b.bookId === bookId);
-      if (!book) return res.status(404).json({ ok: false, error: "Book not found" });
-      const bookChapters = canon.chapters[bookId] ?? [];
-      const chapter = bookChapters.find((c) => c.number === chapterNum);
-      if (!chapter) return res.status(404).json({ ok: false, error: "Chapter not found" });
-      const testament = canon.testaments.find((t) => t.id === book.testamentId);
-      return res.json({
-        ok: true,
-        chapter,
-        book: { bookId: book.bookId, title: book.title, chapterCount: book.chapterCount },
-        testament,
-        source: "dynamic-canon",
-      });
+      if (book) {
+        const bookChapters = canon.chapters[bookId] ?? [];
+        const chapter = bookChapters.find((c) => c.number === chapterNum);
+        if (chapter) {
+          const testament = canon.testaments.find((t) => t.id === book.testamentId)
+            ?? TESTAMENTS.find(t => t.id === book.testamentId);
+          const staticChapter = (CHAPTERS[bookId] ?? []).find(c => c.number === chapterNum);
+          const crossReferences = (chapter as { crossReferences?: unknown }).crossReferences
+            ?? staticChapter?.crossReferences
+            ?? [];
+          return res.json({
+            ok: true,
+            chapter: { ...chapter, crossReferences },
+            book: { bookId: book.bookId, title: book.title, chapterCount: book.chapterCount },
+            testament,
+            source: "dynamic-canon",
+          });
+        }
+      }
     }
 
     const book = BOOKS.find(b => b.bookId === bookId);
