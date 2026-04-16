@@ -251,7 +251,7 @@ function AppRouter() {
         <Route path="/compression-lab">{() => <CompressionLabPage />}</Route>
         <Route path="/sacred-conference">{() => <SacredConferencePage />}</Route>
         <Route path="/sacred-knowledge-vault">{() => <SacredConferencePage />}</Route>
-        <Route path="/living-bible">{() => <SacredConferencePage />}</Route>
+        <Route path="/living-bible">{() => <TesseraBiblePage />}</Route>
         <Route path="/3d-diagrams">{() => <SacredConferencePage />}</Route>
         <Route path="/sovereignty-roadmap">{() => <SovereigntyRoadmapPage />}</Route>
         <Route path="/agent-profile">{() => <AgentProfilePage />}</Route>
