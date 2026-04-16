@@ -82,6 +82,50 @@ interface CouncilProposal {
   createdAt: number;
 }
 
+interface ActiveMeeseeks {
+  id: string;
+  name: string;
+  meeseeksTask?: string;
+  meeseeksTTL?: number;
+  meeseeksExpiresAt?: number;
+  taskType?: string;
+  priority?: string;
+  complexity?: string;
+  successCriteria?: string | null;
+  memoryBudgetKB?: number;
+  timeRemainingMs?: number;
+}
+
+interface MeeseeksHistoryItem {
+  id: string;
+  name: string;
+  task: string;
+  taskType: string;
+  lifetimeMs: number;
+  reason: "task-completed" | "ttl-expired";
+  memoryFreedKB: number;
+}
+
+interface TaskTypeBreakdownEntry {
+  total: number;
+  completed: number;
+  timedOut: number;
+}
+
+interface MeeseeksMetricsResponse {
+  activeCount: number;
+  successRate: number;
+  totalSpawned: number;
+  totalMemoryFreedKB: number;
+  taskTypeBreakdown: Record<string, TaskTypeBreakdownEntry>;
+  recentHistory: MeeseeksHistoryItem[];
+}
+
+interface TaskTypeOption {
+  taskType: string;
+  label: string;
+}
+
 export default function RickPage() {
   useEffect(() => { document.title = "Royal Inventor — Rick Sanchez | Tessera"; }, []);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -759,7 +803,7 @@ export default function RickPage() {
                   onChange={e => setSpawnTaskType(e.target.value)}
                   className="bg-background/50 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] font-mono text-foreground focus:outline-none focus:border-violet-500/40"
                 >
-                  {(taskTypesData?.taskTypes || []).map((tt: { taskType: string; label: string }) => (
+                  {((taskTypesData?.taskTypes || []) as TaskTypeOption[]).map((tt) => (
                     <option key={tt.taskType} value={tt.taskType}>{tt.label}</option>
                   ))}
                   {(!taskTypesData?.taskTypes || taskTypesData.taskTypes.length === 0) && <option value="custom">Custom Task</option>}
@@ -802,7 +846,7 @@ export default function RickPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {meeseeksActiveData.active.map((m: any) => {
+                {(meeseeksActiveData.active as ActiveMeeseeks[]).map((m) => {
                   const timeLeft = m.timeRemainingMs ?? (m.meeseeksExpiresAt ? Math.max(0, m.meeseeksExpiresAt - Date.now()) : 0);
                   const ttlPct = m.meeseeksTTL ? Math.min(100, (timeLeft / m.meeseeksTTL) * 100) : 0;
                   const isUrgent = ttlPct < 20;
@@ -858,9 +902,9 @@ export default function RickPage() {
           </div>
 
           {(() => {
-            const m = meeseeksMetricsData?.metrics;
-            const breakdown = m?.taskTypeBreakdown || {};
-            const history = m?.recentHistory || [];
+            const m = meeseeksMetricsData?.metrics as MeeseeksMetricsResponse | undefined;
+            const breakdown: Record<string, TaskTypeBreakdownEntry> = m?.taskTypeBreakdown || {};
+            const history: MeeseeksHistoryItem[] = m?.recentHistory || [];
             return (
               <>
                 {Object.keys(breakdown).length > 0 && (
@@ -869,7 +913,7 @@ export default function RickPage() {
                       <Target size={12} /> Task Type Breakdown
                     </h3>
                     <div className="space-y-1.5">
-                      {Object.entries(breakdown).map(([type, stats]: [string, any]) => (
+                      {Object.entries(breakdown).map(([type, stats]) => (
                         <div key={type} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-background/50 border border-white/5">
                           <div className="flex-1 min-w-0 text-[11px] font-mono text-foreground/90">{type}</div>
                           <span className="text-[10px] font-mono text-emerald-400">{stats.completed} done</span>
@@ -887,7 +931,7 @@ export default function RickPage() {
                       <Skull size={12} /> Recent Self-Destructions
                     </h3>
                     <div className="space-y-1.5">
-                      {history.slice(0, 10).map((h: any, i: number) => (
+                      {history.slice(0, 10).map((h, i) => (
                         <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background/50 border border-white/5">
                           {h.reason === "task-completed"
                             ? <CheckCircle2 size={10} className="text-emerald-400 shrink-0" />
