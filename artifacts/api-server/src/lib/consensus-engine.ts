@@ -4,6 +4,8 @@ import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 import { isLLMAvailable } from "./llm-client";
 import { batchedCallLLM } from "./llm-batcher";
+import { onProposalOutcome } from "./consciousness-engine";
+import { onCouncilDecision } from "./knowledge-diffusion";
 
 const RETRY_QUEUE_STATE_KEY = "consensus_retry_queue";
 const PHI = 1.618033988749895;
@@ -311,6 +313,15 @@ ${votes.map(v => `${v.agentName}: ${v.vote.toUpperCase()} (${(v.confidence * 100
   });
 
   logger.info({ id: proposal.id, status, approvalRate: approvalRate.toFixed(2), votesCollected: votes.length, durationMs, specialists: specialists.length }, "ConsensusEngine: proposal resolved via Phi-weighted parallel BFT");
+
+  try {
+    onProposalOutcome(proposal.title, status === "approved", proposal.category);
+  } catch (err) {
+    logger.debug({ err: err instanceof Error ? err.message : String(err) }, "ConsensusEngine: consciousness event hook failed");
+  }
+  onCouncilDecision(proposal.category, proposal.description, status === "approved").catch((err: unknown) => {
+    logger.debug({ err: err instanceof Error ? err.message : String(err) }, "ConsensusEngine: diffusion event hook failed");
+  });
 }
 
 export async function createProposal(paramsOrTitle: {

@@ -2,6 +2,8 @@ import { logger } from "../logger";
 import { ingestItem, type NormalizedItem } from "./pipeline";
 import { deepCrawl } from "./scrapers";
 import type { SourceHandler } from "./scheduler";
+import { onNewIngestion } from "../consciousness-engine";
+import { onIngestionEvent } from "../knowledge-diffusion";
 
 interface ShepherdAgent {
   id: string;
@@ -212,6 +214,12 @@ export async function runShepherdCycle(): Promise<{ agentsDeployed: number; tota
   }
 
   logger.info({ agentsDeployed: missions.length, totalIngested }, "Shepherd cycle complete");
+
+  if (totalIngested > 0) {
+    try { onNewIngestion("knowledge", totalIngested); } catch (err) { logger.debug({ err: err instanceof Error ? err.message : String(err) }, "Shepherd: consciousness ingestion hook failed"); }
+    onIngestionEvent("knowledge", totalIngested, "shepherd-cycle").catch((err: unknown) => { logger.debug({ err: err instanceof Error ? err.message : String(err) }, "Shepherd: diffusion ingestion hook failed"); });
+  }
+
   return { agentsDeployed: missions.length, totalIngested, missionResults: results };
 }
 

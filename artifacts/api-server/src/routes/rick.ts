@@ -169,6 +169,7 @@ router.post("/rick/chat", async (req, res) => {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
+        let fullResponse = "";
 
         while (true) {
           const { done, value } = await reader.read();
@@ -186,9 +187,27 @@ router.post("/rick/chat", async (req, res) => {
               const parsed = JSON.parse(data);
               const delta = parsed?.choices?.[0]?.delta?.content;
               if (delta) {
+                fullResponse += delta;
                 res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
               }
-            } catch {}
+            } catch (parseErr) {
+              logger.debug({ err: parseErr instanceof Error ? parseErr.message : String(parseErr) }, "Rick: stream chunk parse failed");
+            }
+          }
+        }
+
+        if (fullResponse.length > 0) {
+          try {
+            const truthCheck = await analyzeTruthfulnessV2(fullResponse);
+            if (truthCheck.groundingScore < 0.3 && truthCheck.ungroundedClaims.length > 2) {
+              res.write(`data: ${JSON.stringify({
+                content: `\n\n*[Sovereignty Gate: ${truthCheck.ungroundedClaims.length} unverifiable claims detected (grounding: ${(truthCheck.groundingScore * 100).toFixed(0)}%). Exercise caution with unverified claims.]*`,
+              })}\n\n`);
+              res.write(`data: ${JSON.stringify({ truthEnforcement: { overallTruthScore: truthCheck.overallTruthScore, groundingScore: truthCheck.groundingScore, enforced: true } })}\n\n`);
+              logger.warn({ groundingScore: truthCheck.groundingScore, ungrounded: truthCheck.ungroundedClaims.length }, "Rick: streaming response flagged by truthfulness gate");
+            }
+          } catch (truthErr) {
+            logger.debug({ err: truthErr instanceof Error ? truthErr.message : String(truthErr) }, "Rick: streaming V2 truth check failed");
           }
         }
 
@@ -225,18 +244,23 @@ router.post("/rick/chat", async (req, res) => {
         const parsed = JSON.parse(result.body);
         let content = parsed?.choices?.[0]?.message?.content || generateRickFallback(messages[messages.length - 1]?.content || "");
 
-        let truthEnforcement = { truthScore: 1, groundingScore: 1, enforced: false };
+        let truthEnforcement = { overallTruthScore: 1, groundingScore: 1, enforced: false, blocked: false };
         try {
           const truthCheck = await analyzeTruthfulnessV2(content);
-          truthEnforcement = { truthScore: truthCheck.truthScore, groundingScore: truthCheck.groundingScore, enforced: true };
+          truthEnforcement = { overallTruthScore: truthCheck.overallTruthScore, groundingScore: truthCheck.groundingScore, enforced: true, blocked: false };
+
           if (truthCheck.groundingScore < 0.3 && truthCheck.ungroundedClaims.length > 2) {
+            content = `*[Sovereignty Gate: Response blocked — ${truthCheck.ungroundedClaims.length} unverifiable claims detected (grounding: ${(truthCheck.groundingScore * 100).toFixed(0)}%). The sovereign knowledge base cannot verify this response. Please rephrase your question for a more grounded answer.]*`;
+            truthEnforcement.blocked = true;
+            logger.warn({ groundingScore: truthCheck.groundingScore, ungrounded: truthCheck.ungroundedClaims.length }, "Rick: response BLOCKED by truthfulness gate");
+          } else if (truthCheck.groundingScore < 0.5 && truthCheck.ungroundedClaims.length > 0) {
             const disclaimers = truthCheck.ungroundedClaims.slice(0, 3).map((c: string) => `"${c.slice(0, 60)}"`).join(", ");
-            content += `\n\n*[Sovereignty Notice: ${truthCheck.ungroundedClaims.length} claims could not be verified against sovereign knowledge base. Unverified: ${disclaimers}]*`;
-            logger.warn({ groundingScore: truthCheck.groundingScore, ungrounded: truthCheck.ungroundedClaims.length }, "Rick: low grounding detected — disclaimer appended");
+            content += `\n\n*[Sovereignty Notice: ${truthCheck.ungroundedClaims.length} claims unverified. Unverified: ${disclaimers}]*`;
+            logger.info({ groundingScore: truthCheck.groundingScore, ungrounded: truthCheck.ungroundedClaims.length }, "Rick: low grounding — disclaimer appended");
           }
         } catch (truthErr) {
           const fallbackCheck = analyzeTruthfulness(content);
-          truthEnforcement = { truthScore: fallbackCheck.truthScore, groundingScore: 1, enforced: true };
+          truthEnforcement = { overallTruthScore: fallbackCheck.overallTruthScore, groundingScore: 1, enforced: true, blocked: false };
           logger.debug({ err: truthErr instanceof Error ? truthErr.message : String(truthErr) }, "Rick: V2 truth check failed, used V1 fallback");
         }
 

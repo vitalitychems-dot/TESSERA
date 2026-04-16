@@ -67,9 +67,13 @@ function swarmSelectProvider(domain: string): { agentId: string; agentName: stri
 
     if (perfBonus < -0.2 && result.runners && result.runners.length > 0) {
       const relatedDomains = getCrossDomainContext(domain);
-      if (relatedDomains.length > 0) {
-        logger.debug({ domain, perfBonus, relatedDomains }, "SovereignEngineRouter: low performance — considering cross-domain portal jump");
-      }
+      const runner = result.runners[0];
+      logger.info(
+        { domain, perfBonus, topModel: top.modelId, runnerUp: runner.modelId, relatedDomains },
+        "SovereignEngineRouter: low domain performance — switching to runner-up via portal jump",
+      );
+      const runnerPreferArxiv = runner.modelId === "pi-agent" || runner.modelId === "sigma-agent" || runner.modelId === "phi-agent";
+      return { agentId: runner.modelId, agentName: runner.modelName, preferArxiv: runnerPreferArxiv };
     }
 
     return { agentId: top.modelId, agentName: top.modelName, preferArxiv };
