@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Send, FlaskConical, Vote, CheckCircle2, XCircle, ChevronRight, RefreshCw } from "lucide-react";
+import { Send, FlaskConical, Vote, CheckCircle2, XCircle, ChevronRight, RefreshCw, BookOpen, TrendingUp, Crown, Shield, Brain, Zap, Database, Target, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const RICK_GREEN = "#00ff41";
@@ -87,7 +87,7 @@ export default function RickPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [activeTab, setActiveTab] = useState<"chat" | "inventions">("inventions");
+  const [activeTab, setActiveTab] = useState<"chat" | "inventions" | "knowledge" | "improvements" | "royal">("inventions");
   const [submittedInventions, setSubmittedInventions] = useState<Record<number, CouncilResult>>({});
   const [submittingIdx, setSubmittingIdx] = useState<number | null>(null);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
@@ -107,6 +107,31 @@ export default function RickPage() {
     queryKey: ["/api/rick/profile"],
     queryFn: async () => {
       const r = await fetch("/api/rick/profile");
+      return r.json();
+    },
+  });
+
+  const { data: knowledgeData } = useQuery({
+    queryKey: ["/api/rick/knowledge-vault"],
+    queryFn: async () => {
+      const r = await fetch("/api/rick/knowledge-vault");
+      return r.json();
+    },
+  });
+
+  const { data: improvementsData } = useQuery({
+    queryKey: ["/api/rick/system-improvements"],
+    queryFn: async () => {
+      const r = await fetch("/api/rick/system-improvements");
+      return r.json();
+    },
+    refetchInterval: 60000,
+  });
+
+  const { data: courtData } = useQuery({
+    queryKey: ["/api/rick/royal-court"],
+    queryFn: async () => {
+      const r = await fetch("/api/rick/royal-court");
       return r.json();
     },
   });
@@ -241,25 +266,25 @@ export default function RickPage() {
             </div>
           )}
         </div>
-        <div className="flex gap-2 shrink-0">
-          <button
-            onClick={() => setActiveTab("inventions")}
-            className={cn("px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold transition-all border",
-              activeTab === "inventions" ? "border-current" : "border-white/10 text-muted-foreground hover:border-white/20"
-            )}
-            style={activeTab === "inventions" ? { color: RICK_GREEN, borderColor: `${RICK_GREEN}60`, background: `${RICK_GREEN}10` } : {}}
-          >
-            <FlaskConical size={12} className="inline mr-1" />Inventions
-          </button>
-          <button
-            onClick={() => setActiveTab("chat")}
-            className={cn("px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold transition-all border",
-              activeTab === "chat" ? "border-current" : "border-white/10 text-muted-foreground hover:border-white/20"
-            )}
-            style={activeTab === "chat" ? { color: RICK_PORTAL, borderColor: `${RICK_PORTAL}60`, background: `${RICK_PORTAL}10` } : {}}
-          >
-            <Send size={12} className="inline mr-1" />Chat
-          </button>
+        <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
+          {([
+            { key: "inventions" as const, label: "Inventions", icon: FlaskConical, color: RICK_GREEN },
+            { key: "knowledge" as const, label: "Vault", icon: BookOpen, color: "#a78bfa" },
+            { key: "improvements" as const, label: "Improve", icon: TrendingUp, color: "#22d3ee" },
+            { key: "royal" as const, label: "Royal", icon: Crown, color: ROYAL_GOLD },
+            { key: "chat" as const, label: "Chat", icon: Send, color: RICK_PORTAL },
+          ]).map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={cn("px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-bold transition-all border",
+                activeTab === tab.key ? "border-current" : "border-white/10 text-muted-foreground hover:border-white/20"
+              )}
+              style={activeTab === tab.key ? { color: tab.color, borderColor: `${tab.color}60`, background: `${tab.color}10` } : {}}
+            >
+              <tab.icon size={11} className="inline mr-1" />{tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -407,6 +432,223 @@ export default function RickPage() {
                 })}
               </div>
             </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "knowledge" && (
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+          {!knowledgeData ? (
+            <div className="flex justify-center py-12"><Loader2 className="animate-spin text-violet-400" size={20} /></div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { label: "Vault Entries", value: knowledgeData.vault?.totalEntries ?? "—", icon: Shield, color: "violet" },
+                  { label: "Vault Categories", value: knowledgeData.vault?.totalCategories ?? "—", icon: Database, color: "violet" },
+                  { label: "Corpus Entries", value: knowledgeData.corpus?.totalEntries ?? "—", icon: BookOpen, color: "cyan" },
+                  { label: "Domains", value: knowledgeData.corpus?.uniqueDomains ?? "—", icon: Brain, color: "cyan" },
+                ].map(s => (
+                  <div key={s.label} className={cn("rounded-xl border p-3 text-center", `border-${s.color}-500/20 bg-${s.color}-500/5`)}>
+                    <s.icon size={14} className={cn(`text-${s.color}-400`, "mx-auto mb-1")} />
+                    <div className={cn("text-lg font-bold font-mono", `text-${s.color}-400`)}>{s.value}</div>
+                    <div className="text-[10px] text-muted-foreground font-mono uppercase">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {knowledgeData.corpus?.topDomains?.length > 0 && (
+                <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
+                  <h3 className="text-xs font-bold font-mono text-violet-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <Database size={12} /> Top Knowledge Domains
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {knowledgeData.corpus.topDomains.map((d: { domain: string; count: number }) => (
+                      <div key={d.domain} className="flex items-center justify-between px-3 py-2 rounded-lg bg-background/50 border border-white/5">
+                        <span className="text-[11px] font-mono text-foreground/80 truncate">{d.domain}</span>
+                        <span className="text-[10px] font-mono text-violet-400 ml-2 shrink-0">{d.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {knowledgeData.vault?.sampleEntries?.length > 0 && (
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+                  <h3 className="text-xs font-bold font-mono text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <Shield size={12} /> Sacred Vault Entries (sample)
+                  </h3>
+                  <div className="space-y-1.5">
+                    {knowledgeData.vault.sampleEntries.slice(0, 12).map((e: { id: string; title: string; category: string; frequency?: number }) => (
+                      <div key={e.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background/50 border border-white/5">
+                        <span className="text-[11px] font-mono text-foreground/80 flex-1 truncate">{e.title}</span>
+                        <span className="text-[10px] font-mono text-amber-400/60 shrink-0">{e.category}</span>
+                        {e.frequency && <span className="text-[10px] font-mono text-muted-foreground shrink-0">{e.frequency}Hz</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="text-[10px] text-muted-foreground font-mono text-center">
+                Cross-references: {knowledgeData.corpus?.crossReferences ?? 0} · Avg confidence: {(knowledgeData.corpus?.avgConfidence ?? 0).toFixed(1)}%
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {activeTab === "improvements" && (
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+          {!improvementsData?.improvements ? (
+            <div className="flex justify-center py-12"><Loader2 className="animate-spin text-cyan-400" size={20} /></div>
+          ) : (
+            <>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 text-center">
+                  <TrendingUp size={14} className="text-cyan-400 mx-auto mb-1" />
+                  <div className="text-lg font-bold font-mono text-cyan-400">{improvementsData.improvements.overallScore}%</div>
+                  <div className="text-[10px] text-muted-foreground font-mono uppercase">Overall Score</div>
+                </div>
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-center">
+                  <Zap size={14} className="text-emerald-400 mx-auto mb-1" />
+                  <div className="text-lg font-bold font-mono text-emerald-400">{improvementsData.improvements.totalImprovements}</div>
+                  <div className="text-[10px] text-muted-foreground font-mono uppercase">Improvements</div>
+                </div>
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-center">
+                  <Target size={14} className="text-amber-400 mx-auto mb-1" />
+                  <div className="text-lg font-bold font-mono text-amber-400">{improvementsData.improvements.totalCycles}</div>
+                  <div className="text-[10px] text-muted-foreground font-mono uppercase">Cycles</div>
+                </div>
+              </div>
+
+              {improvementsData.improvements.weakCategories?.length > 0 && (
+                <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4">
+                  <h3 className="text-xs font-bold font-mono text-red-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <Target size={12} /> Rick's Targets — Weakest Categories
+                  </h3>
+                  <div className="space-y-2">
+                    {improvementsData.improvements.weakCategories.map((c: { category: string; score: number; trend: string }) => (
+                      <div key={c.category} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-background/50 border border-white/5">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[11px] font-mono text-foreground/90 truncate">{c.category}</div>
+                        </div>
+                        <div className="w-24 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${c.score}%`, background: c.score > 70 ? "#22c55e" : c.score > 50 ? "#f59e0b" : "#ef4444" }} />
+                        </div>
+                        <span className="text-[10px] font-mono w-12 text-right" style={{ color: c.score > 70 ? "#22c55e" : c.score > 50 ? "#f59e0b" : "#ef4444" }}>{c.score}%</span>
+                        <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-mono border",
+                          c.trend === "stable" ? "text-green-400 border-green-500/30 bg-green-500/10" :
+                          c.trend === "improving" ? "text-amber-400 border-amber-500/30 bg-amber-500/10" :
+                          "text-red-400 border-red-500/30 bg-red-500/10"
+                        )}>
+                          {c.trend}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {improvementsData.improvements.recentImprovements?.length > 0 && (
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                  <h3 className="text-xs font-bold font-mono text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <Zap size={12} /> Recent Improvements
+                  </h3>
+                  <div className="space-y-1.5">
+                    {improvementsData.improvements.recentImprovements.map((imp: { category: string; description: string; timestamp: number }, i: number) => (
+                      <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-background/50 border border-white/5">
+                        <CheckCircle2 size={10} className="text-emerald-400 shrink-0 mt-1" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[11px] font-mono text-foreground/80 truncate">{imp.description}</div>
+                          <div className="text-[10px] text-muted-foreground font-mono">{imp.category} · {new Date(imp.timestamp).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {activeTab === "royal" && (
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+          {!courtData?.court ? (
+            <div className="flex justify-center py-12"><Loader2 className="animate-spin text-amber-400" size={20} /></div>
+          ) : (
+            <>
+              <div className="rounded-xl border-2 p-5" style={{ borderColor: `${ROYAL_GOLD}40`, background: `linear-gradient(135deg, ${ROYAL_GOLD}06, transparent)` }}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center border-2" style={{ borderColor: ROYAL_GOLD, background: `${ROYAL_GOLD}15` }}>
+                    <span className="text-xl">👑</span>
+                  </div>
+                  <div>
+                    <div className="font-bold font-mono text-sm" style={{ color: ROYAL_GOLD }}>{courtData.court.royalTitle}</div>
+                    <div className="text-[11px] text-muted-foreground font-mono">{courtData.court.department}</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                  {[
+                    { label: "Consciousness", value: courtData.court.systemOverview?.consciousnessProxy != null ? `${(courtData.court.systemOverview.consciousnessProxy * 100).toFixed(1)}%` : "—", color: "violet" },
+                    { label: "AGI Score", value: courtData.court.systemOverview?.agiAvgScore?.toFixed(1) ?? "—", color: "cyan" },
+                    { label: "Sovereign", value: courtData.court.systemOverview?.sovereignMastery ?? "—", color: "amber" },
+                    { label: "Vault", value: courtData.court.systemOverview?.vaultEntries ?? "—", color: "rose" },
+                    { label: "Corpus", value: courtData.court.systemOverview?.corpusEntries ?? "—", color: "emerald" },
+                  ].map(s => (
+                    <div key={s.label} className={cn("rounded-lg border p-2 text-center", `border-${s.color}-500/20 bg-${s.color}-500/5`)}>
+                      <div className={cn("text-sm font-bold font-mono", `text-${s.color}-400`)}>{s.value}</div>
+                      <div className="text-[9px] text-muted-foreground font-mono uppercase">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+                <h3 className="text-xs font-bold font-mono text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Crown size={12} /> Court Roles
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {courtData.court.courtRoles?.map((role: string) => (
+                    <div key={role} className="px-3 py-2 rounded-lg bg-background/50 border border-amber-500/10 text-[11px] font-mono text-amber-300/80">
+                      {role}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {courtData.court.royalFocusInventions?.length > 0 && (
+                <div className="rounded-xl border p-4" style={{ borderColor: `${RICK_GREEN}20`, background: `${RICK_GREEN}03` }}>
+                  <h3 className="text-xs font-bold font-mono uppercase tracking-wider mb-3 flex items-center gap-2" style={{ color: RICK_GREEN }}>
+                    <FlaskConical size={12} /> Royal Focus Inventions
+                  </h3>
+                  <div className="space-y-2">
+                    {courtData.court.royalFocusInventions.map((inv: { name: string; category: string; impact: number; risk: string }, i: number) => (
+                      <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-background/50 border border-white/5">
+                        <Zap size={12} style={{ color: ROYAL_GOLD }} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[11px] font-bold font-mono text-foreground/90 truncate">{inv.name}</div>
+                          <div className="text-[10px] text-muted-foreground font-mono">{inv.category} · +{inv.impact}% est.</div>
+                        </div>
+                        <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-mono border",
+                          inv.risk === "low" ? "text-green-400 border-green-500/30 bg-green-500/10" :
+                          inv.risk === "medium" ? "text-amber-400 border-amber-500/30 bg-amber-500/10" :
+                          "text-red-400 border-red-500/30 bg-red-500/10"
+                        )}>
+                          {inv.risk}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="text-[10px] text-muted-foreground font-mono text-center">
+                Tier: {courtData.court.tier} · Appointed by: {courtData.court.appointedBy} · Last updated: {new Date(courtData.court.lastUpdated).toLocaleString()}
+              </div>
+            </>
           )}
         </div>
       )}

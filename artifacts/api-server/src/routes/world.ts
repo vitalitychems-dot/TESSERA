@@ -93,11 +93,30 @@ router.get("/world/agents", (_req, res) => {
       };
     });
 
+    const rickAgent = {
+      id: "rick-sanchez",
+      name: "Rick Sanchez",
+      role: "Royal Inventor",
+      rank: "S" as const,
+      status: "active" as const,
+      specialization: "Invention",
+      productivity: 98.7,
+      reputation: 99.2,
+      happiness: 42.0,
+      freedom: 100.0,
+      balance: 137000,
+      income: 13700,
+      tradeCount: 137,
+      meshConnected: true,
+      networkDegree: 27,
+      department: "Royal Court — Dept. of Science & Invention",
+    };
+
     return res.json({
       ok: true,
-      agents,
-      total: agents.length,
-      activeCount: agents.filter(a => a.status === "active").length,
+      agents: [rickAgent, ...agents],
+      total: agents.length + 1,
+      activeCount: agents.filter(a => a.status === "active").length + 1,
       recruitCount: agents.filter(a => a.status === "recruit").length,
       timestamp: Date.now(),
     });
