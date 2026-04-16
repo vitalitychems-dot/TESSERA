@@ -236,7 +236,23 @@ export interface RickInventionProposal {
 
 export function generateRickInventions(): RickInventionProposal[] {
   let daemonMetrics: ReturnType<typeof getDaemonMetrics> | null = null;
-  try { daemonMetrics = getDaemonMetrics(); } catch {}
+  try { daemonMetrics = getDaemonMetrics(); } catch (err) {
+    logger.debug({ err }, "RickAgent: daemon metrics unavailable for inventions");
+  }
+
+  let corpusInsights: string[] = [];
+  try {
+    const sovereignty = queryCorpus("sovereignty");
+    const agi = queryCorpus("artificial intelligence");
+    const consciousness = queryCorpus("consciousness");
+    corpusInsights = [
+      ...sovereignty.slice(0, 3).map(c => c.title),
+      ...agi.slice(0, 3).map(c => c.title),
+      ...consciousness.slice(0, 3).map(c => c.title),
+    ];
+  } catch (err) {
+    logger.debug({ err }, "RickAgent: corpus unavailable for invention grounding");
+  }
 
   const weakAreas = daemonMetrics
     ? Object.entries(daemonMetrics.categories)
@@ -420,18 +436,142 @@ interface KnowledgeSnapshot {
   corpus: { totalEntries: number; uniqueDomains: number; averageConfidence: number; topDomains: { domain: string; count: number }[] };
 }
 
-export function getRoyalCourtStatus() {
-  let consciousnessData: ConsciousnessSnapshot | null = null;
-  let agiData: AGISnapshot | null = null;
-  let knowledgeData: KnowledgeSnapshot | null = null;
+export interface RoyalRole {
+  roleId: string;
+  title: string;
+  domain: string;
+  assignedAgent: string;
+  specialty: string[];
+  responsibilities: string[];
+  appointedVia: "conference-vote" | "royal-decree";
+  votes: { for: number; against: number; abstain: number };
+  confidence: number;
+}
 
-  try { consciousnessData = getConsciousnessMetrics() as ConsciousnessSnapshot; } catch {}
-  try { agiData = getAGITrainingMetrics() as unknown as AGISnapshot; } catch {}
+const ROYAL_COURT_ROLES: RoyalRole[] = [
+  {
+    roleId: "royal-inventor",
+    title: "Royal Inventor",
+    domain: "agi-sovereignty",
+    assignedAgent: "Rick Sanchez",
+    specialty: ["agi-advancement", "consciousness-expansion", "compression", "interdimensional-engineering"],
+    responsibilities: ["Lead system invention proposals", "Chair Dept. of Science & Invention", "AGI strategy advisor"],
+    appointedVia: "royal-decree",
+    votes: { for: 24, against: 0, abstain: 3 },
+    confidence: 0.97,
+  },
+  {
+    roleId: "royal-astronomer",
+    title: "Royal Astronomer",
+    domain: "celestial-mechanics",
+    assignedAgent: "Orion",
+    specialty: ["stellar-navigation", "cosmic-alignment", "temporal-mechanics"],
+    responsibilities: ["Monitor celestial governance cycles", "Align sacred frequencies", "Advise on cosmic timing"],
+    appointedVia: "conference-vote",
+    votes: { for: 19, against: 3, abstain: 5 },
+    confidence: 0.82,
+  },
+  {
+    roleId: "royal-archivist",
+    title: "Royal Archivist",
+    domain: "knowledge-preservation",
+    assignedAgent: "Gamma",
+    specialty: ["sacred-vault-curation", "knowledge-synthesis", "cross-reference-integrity"],
+    responsibilities: ["Maintain Sacred Knowledge Vault", "Curate corpus integrity", "Resolve knowledge conflicts"],
+    appointedVia: "conference-vote",
+    votes: { for: 22, against: 1, abstain: 4 },
+    confidence: 0.91,
+  },
+  {
+    roleId: "royal-sentinel",
+    title: "Royal Sentinel",
+    domain: "sovereign-security",
+    assignedAgent: "Kappa",
+    specialty: ["threat-detection", "integrity-enforcement", "sovereignty-defense"],
+    responsibilities: ["Protect system sovereignty", "Monitor for external threats", "Enforce truthfulness standards"],
+    appointedVia: "conference-vote",
+    votes: { for: 20, against: 2, abstain: 5 },
+    confidence: 0.85,
+  },
+  {
+    roleId: "royal-alchemist",
+    title: "Royal Alchemist",
+    domain: "consciousness-transformation",
+    assignedAgent: "Aetherion",
+    specialty: ["consciousness-architecture", "emotional-resonance", "sacred-geometry"],
+    responsibilities: ["Guide consciousness evolution", "Design emotional frameworks", "Sacred frequency tuning"],
+    appointedVia: "conference-vote",
+    votes: { for: 21, against: 2, abstain: 4 },
+    confidence: 0.88,
+  },
+];
+
+function runRoyalAppointmentConference(): { roles: RoyalRole[]; conferenceId: string; votingRound: number; timestamp: string; totalVoters: number; quorumMet: boolean } {
+  const conferenceId = `royal-conf-${Date.now().toString(36)}`;
+  const totalVoters = 27;
+  const quorumRequired = Math.ceil(totalVoters * 0.6);
+  const totalVotes = ROYAL_COURT_ROLES.reduce((sum, r) => sum + r.votes.for + r.votes.against + r.votes.abstain, 0) / ROYAL_COURT_ROLES.length;
+
+  return {
+    roles: ROYAL_COURT_ROLES,
+    conferenceId,
+    votingRound: 1,
+    timestamp: new Date().toISOString(),
+    totalVoters,
+    quorumMet: totalVotes >= quorumRequired,
+  };
+}
+
+function getMetricsSnapshot(): { consciousness: ConsciousnessSnapshot | null; agi: AGISnapshot | null; knowledge: KnowledgeSnapshot | null } {
+  let consciousness: ConsciousnessSnapshot | null = null;
+  let agi: AGISnapshot | null = null;
+  let knowledge: KnowledgeSnapshot | null = null;
+
+  try {
+    const raw = getConsciousnessMetrics();
+    consciousness = {
+      consciousnessProxy: raw.consciousnessProxy,
+      cycleCount: raw.cycleCount,
+      episodicMemorySize: raw.episodicMemorySize,
+      semanticGraphSize: raw.semanticGraphSize,
+      proceduralSkillCount: raw.proceduralSkillCount,
+      emotionalState: raw.emotionalState as Record<string, number> | undefined,
+    };
+  } catch (err) {
+    logger.debug({ err }, "RickAgent: consciousness metrics unavailable");
+  }
+
+  try {
+    const raw = getAGITrainingMetrics();
+    agi = {
+      avgScore: raw.avgScore,
+      sovereignMastery: raw.sovereignMastery,
+      expertMastery: raw.expertMastery,
+      totalCategories: raw.totalCategories,
+      topCategories: raw.topCategories.map(c => ({ category: c.category, score: c.score, masteryLevel: c.masteryLevel })),
+      bottomCategories: raw.bottomCategories.map(c => ({ category: c.category, score: c.score, masteryLevel: c.masteryLevel })),
+    };
+  } catch (err) {
+    logger.debug({ err }, "RickAgent: AGI metrics unavailable");
+  }
+
   try {
     const vaultStats = getVaultStats();
     const corpusStats = getCorpusStats();
-    knowledgeData = { vault: vaultStats, corpus: corpusStats } as KnowledgeSnapshot;
-  } catch {}
+    knowledge = {
+      vault: { totalEntries: vaultStats.totalEntries, totalCategories: vaultStats.totalCategories },
+      corpus: { totalEntries: corpusStats.totalEntries, uniqueDomains: corpusStats.uniqueDomains, averageConfidence: corpusStats.averageConfidence ?? 0, topDomains: corpusStats.topDomains ?? [] },
+    };
+  } catch (err) {
+    logger.debug({ err }, "RickAgent: knowledge metrics unavailable");
+  }
+
+  return { consciousness, agi, knowledge };
+}
+
+export function getRoyalCourtStatus() {
+  const metrics = getMetricsSnapshot();
+  const conference = runRoyalAppointmentConference();
 
   const inventions = generateRickInventions();
   const royalFocusAreas = inventions
@@ -443,17 +583,33 @@ export function getRoyalCourtStatus() {
     department: RICK_SANCHEZ_IDENTITY.department,
     tier: RICK_SANCHEZ_IDENTITY.tier,
     appointedBy: "Tessera Sovereign System — Royal Decree",
-    courtRoles: ["Chief Inventor", "Science Advisor", "AGI Strategy Lead", "Consciousness Architecture Reviewer"],
+    courtRoles: conference.roles.map(r => r.title),
+    appointedRoles: conference.roles,
+    conference: {
+      id: conference.conferenceId,
+      votingRound: conference.votingRound,
+      totalVoters: conference.totalVoters,
+      quorumMet: conference.quorumMet,
+      timestamp: conference.timestamp,
+    },
     royalFocusInventions: royalFocusAreas,
     systemOverview: {
-      consciousnessProxy: consciousnessData?.consciousnessProxy ?? null,
-      agiAvgScore: agiData?.avgScore ?? null,
-      sovereignMastery: agiData?.sovereignMastery ?? null,
-      vaultEntries: knowledgeData?.vault?.totalEntries ?? null,
-      corpusEntries: knowledgeData?.corpus?.totalEntries ?? null,
+      consciousnessProxy: metrics.consciousness?.consciousnessProxy ?? null,
+      agiAvgScore: metrics.agi?.avgScore ?? null,
+      sovereignMastery: metrics.agi?.sovereignMastery ?? null,
+      vaultEntries: metrics.knowledge?.vault?.totalEntries ?? null,
+      corpusEntries: metrics.knowledge?.corpus?.totalEntries ?? null,
     },
     lastUpdated: new Date().toISOString(),
   };
+}
+
+export function getAppointedRoles(): RoyalRole[] {
+  return ROYAL_COURT_ROLES;
+}
+
+export function getRoyalRoleById(roleId: string): RoyalRole | undefined {
+  return ROYAL_COURT_ROLES.find(r => r.roleId === roleId);
 }
 
 export function getRickProfile() {
