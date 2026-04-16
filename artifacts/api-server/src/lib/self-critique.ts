@@ -12,6 +12,18 @@ const DEFAULT_MAX_ATTEMPTS = 2;
 const PER_STAGE_TIMEOUT_MS = 2500;
 const CONTEXT_GATHER_TIMEOUT_MS = 2000;
 
+export const INTERNAL_GROUNDING_OPEN = "<!--INTERNAL_GROUNDING_CONTEXT_START-->";
+export const INTERNAL_GROUNDING_CLOSE = "<!--INTERNAL_GROUNDING_CONTEXT_END-->";
+const INTERNAL_BLOCK_RE = new RegExp(
+  `${INTERNAL_GROUNDING_OPEN}[\\s\\S]*?${INTERNAL_GROUNDING_CLOSE}`,
+  "g",
+);
+
+export function stripInternalGroundingBlocks(text: string): string {
+  if (!text) return text;
+  return text.replace(INTERNAL_BLOCK_RE, "").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
   return new Promise<T>((resolve) => {
     let done = false;
@@ -188,7 +200,7 @@ export async function runCritiqueLoop(
 
     if (compositeScore > bestScore) {
       bestScore = compositeScore;
-      bestContent = c.validatedContent;
+      bestContent = stripInternalGroundingBlocks(c.validatedContent);
       bestSources = c.sources;
       bestVerdict = c.verdict;
       bestSeverity = c.hallucinationSeverity;
