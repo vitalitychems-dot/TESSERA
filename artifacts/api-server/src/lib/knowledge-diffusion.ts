@@ -3,6 +3,7 @@ import { searchMemory } from "./vector-memory";
 import { injectStimulus } from "./consciousness-engine";
 import { broadcastMessage } from "./agent-comms";
 import { DOMAIN_SIMILARITY } from "./dimensional-lru-cache";
+import { listAgents } from "./agent-spawner";
 
 export interface KnowledgePulse {
   id: string;
@@ -12,15 +13,26 @@ export interface KnowledgePulse {
   relevanceWeights: Record<string, number>;
   timestamp: number;
   diffusedTo: string[];
+  agentsReached: string[];
   impactScore: number;
+}
+
+interface AgentDiffusionRecord {
+  agentId: string;
+  pulsesReceived: number;
+  lastReceivedAt: number;
+  domainsReceived: Set<string>;
 }
 
 export interface DiffusionMetrics {
   totalPulses: number;
   totalDiffusions: number;
+  totalAgentDeliveries: number;
   avgRelevanceScore: number;
   avgImpactScore: number;
   domainCoverage: Record<string, number>;
+  agentCoverage: number;
+  agentDeliveryBreakdown: Array<{ agentId: string; pulsesReceived: number; domainsReceived: number }>;
   recentPulses: KnowledgePulse[];
   engineVersion: string;
 }
@@ -28,8 +40,45 @@ export interface DiffusionMetrics {
 const pulseHistory: KnowledgePulse[] = [];
 let pulseCounter = 0;
 let totalDiffusions = 0;
+let totalAgentDeliveries = 0;
 const relevanceScores: number[] = [];
 const impactScores: number[] = [];
+const agentDiffusionTracking = new Map<string, AgentDiffusionRecord>();
+
+function trackAgentReceive(agentId: string, domain: string): void {
+  let record = agentDiffusionTracking.get(agentId);
+  if (!record) {
+    record = { agentId, pulsesReceived: 0, lastReceivedAt: 0, domainsReceived: new Set() };
+    agentDiffusionTracking.set(agentId, record);
+  }
+  record.pulsesReceived++;
+  record.lastReceivedAt = Date.now();
+  record.domainsReceived.add(domain);
+}
+
+function diffuseToActiveAgents(pulse: KnowledgePulse): string[] {
+  const agents = listAgents();
+  const reached: string[] = [];
+
+  for (const agent of agents) {
+    if (!agent.specialization) continue;
+    const agentDomain = agent.specialization;
+    const weight = pulse.relevanceWeights[agentDomain] ?? DOMAIN_SIMILARITY[pulse.domain]?.[agentDomain] ?? 0;
+    if (weight < 0.3) continue;
+
+    reached.push(agent.id);
+    totalAgentDeliveries++;
+    trackAgentReceive(agent.id, pulse.domain);
+
+    broadcastMessage(
+      "knowledge-diffusion",
+      `[Agent ${agent.name}] Pulse ${pulse.id}: ${pulse.content.slice(0, 80)} (relevance: ${weight.toFixed(2)})`,
+      "low",
+    );
+  }
+
+  return reached;
+}
 
 function computeDomainRelevance(sourceDomain: string, content: string): Record<string, number> {
   const weights: Record<string, number> = {};
@@ -65,6 +114,7 @@ export async function emitKnowledgePulse(
     relevanceWeights,
     timestamp: Date.now(),
     diffusedTo: [],
+    agentsReached: [],
     impactScore: 0,
   };
 
@@ -87,6 +137,8 @@ export async function emitKnowledgePulse(
 
     impact += weight;
   }
+
+  pulse.agentsReached = diffuseToActiveAgents(pulse);
 
   pulse.impactScore = pulse.diffusedTo.length > 0
     ? Math.round((impact / pulse.diffusedTo.length) * 1000) / 1000
@@ -149,14 +201,27 @@ export function getDiffusionMetrics(): DiffusionMetrics {
     ? Math.round(impactScores.reduce((s, v) => s + v, 0) / impactScores.length * 1000) / 1000
     : 0;
 
+  const agentBreakdown = Array.from(agentDiffusionTracking.values()).map(r => ({
+    agentId: r.agentId,
+    pulsesReceived: r.pulsesReceived,
+    domainsReceived: r.domainsReceived.size,
+  }));
+  const activeAgents = listAgents();
+  const agentCoverage = activeAgents.length > 0
+    ? Math.round((agentDiffusionTracking.size / activeAgents.length) * 100) / 100
+    : 0;
+
   return {
     totalPulses: pulseCounter,
     totalDiffusions,
+    totalAgentDeliveries,
     avgRelevanceScore: avgRelevance,
     avgImpactScore: avgImpact,
     domainCoverage,
+    agentCoverage,
+    agentDeliveryBreakdown: agentBreakdown.slice(0, 20),
     recentPulses: pulseHistory.slice(0, 10),
-    engineVersion: "v1-hive-mind",
+    engineVersion: "v2-hive-mind-agent-mesh",
   };
 }
 
