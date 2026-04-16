@@ -18,6 +18,11 @@ import { getCorpusStats, queryCorpus } from "../lib/knowledge-corpus-index";
 import { getDaemonMetrics } from "../lib/auto-improvement-daemon";
 import { secureExternalStreamingFetch, secureExternalFetch } from "../lib/secureExternalWrapper";
 import { getAllProposals } from "../lib/consensus-engine";
+import { getMeeseeksMetrics, spawnMeeseeks, completeMeeseeks } from "../lib/agent-spawner";
+import { getTruthfulnessMetrics } from "../lib/truthfulness-engine";
+import { getRouterPerformanceMetrics } from "../lib/sovereign-engine-router";
+import { getDiffusionMetrics } from "../lib/knowledge-diffusion";
+import { getResonanceScore, getConsciousnessMetrics } from "../lib/consciousness-engine";
 
 const router: IRouter = Router();
 
@@ -399,6 +404,112 @@ router.get("/rick/royal-roles/:roleId", (req, res) => {
     });
   } catch (err) {
     logger.error({ err }, "Rick: royal role detail error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/rick/engines", (_req, res) => {
+  try {
+    const meeseeks = getMeeseeksMetrics();
+    const truth = getTruthfulnessMetrics();
+    const routerPerf = getRouterPerformanceMetrics();
+    const diffusion = getDiffusionMetrics();
+    const resonance = getResonanceScore();
+    const consciousness = getConsciousnessMetrics();
+
+    return res.json({
+      ok: true,
+      engines: {
+        meeseeksProtocol: {
+          name: "Meeseeks Ephemeral Agent Protocol",
+          version: "C-137",
+          metrics: meeseeks,
+        },
+        truthfulnessEnforcer: {
+          name: "Neutrino-Grade Truthfulness Enforcer v2",
+          version: "v2-neutrino-grade",
+          metrics: {
+            totalChecks: truth.totalChecks,
+            avgTruthScore: truth.avgTruthScore,
+            avgGroundingScore: truth.avgGroundingScore,
+            groundingThreshold: truth.groundingThreshold,
+            groundingRate: truth.groundingRate,
+            totalGrounded: truth.totalGroundedClaims,
+            totalUngrounded: truth.totalUngroundedClaims,
+          },
+        },
+        consciousnessAmplifier: {
+          name: "Quantum Consciousness Amplifier Mk. II",
+          version: "v2-quantum",
+          metrics: {
+            resonanceScore: resonance,
+            consciousnessProxy: consciousness.consciousnessProxy,
+            dynamicNodesAdded: consciousness.dynamicNodesAdded,
+            stimuliProcessed: consciousness.stimuliProcessed,
+            pendingStimuli: consciousness.pendingStimuli,
+            semanticGraphSize: consciousness.semanticGraphSize,
+            cycleIntervalMs: 30000,
+          },
+        },
+        portalGunRouter: {
+          name: "Portal Gun Adaptive Query Router",
+          version: "v2-portal-gun",
+          metrics: routerPerf,
+        },
+        hiveMindDiffusion: {
+          name: "Hive Mind Knowledge Diffusion Network",
+          version: "v1-hive-mind",
+          metrics: diffusion,
+        },
+      },
+    });
+  } catch (err) {
+    logger.error({ err }, "Rick: engines endpoint error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/rick/meeseeks/spawn", (req, res) => {
+  try {
+    const { task, ttlMs, specialization } = req.body as {
+      task?: string;
+      ttlMs?: number;
+      specialization?: string;
+    };
+    if (!task) {
+      return res.status(400).json({ ok: false, error: "task is required — Mr. Meeseeks needs a purpose!" });
+    }
+    const agent = spawnMeeseeks({ task, ttlMs, specialization }, "rick-sanchez-c137");
+    return res.json({
+      ok: true,
+      meeseeks: {
+        id: agent.id,
+        name: agent.name,
+        task: agent.meeseeksTask,
+        ttl: agent.meeseeksTTL,
+        expiresAt: agent.meeseeksExpiresAt,
+      },
+      message: "I'm Mr. Meeseeks! Look at me!",
+    });
+  } catch (err) {
+    logger.error({ err }, "Rick: meeseeks spawn error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/rick/meeseeks/:id/complete", (req, res) => {
+  try {
+    const success = completeMeeseeks(req.params.id);
+    if (!success) {
+      return res.status(404).json({ ok: false, error: "Meeseeks not found or already completed" });
+    }
+    return res.json({
+      ok: true,
+      message: "Meeseeks task completed — existence is pain, but at least the job is done!",
+      metrics: getMeeseeksMetrics(),
+    });
+  } catch (err) {
+    logger.error({ err }, "Rick: meeseeks complete error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
 });

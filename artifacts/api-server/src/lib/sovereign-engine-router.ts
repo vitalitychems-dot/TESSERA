@@ -6,6 +6,19 @@ import { getOptimalModel, type OptimizerCategory } from "./swarm-optimizer";
 import { batchedCallLLM } from "./llm-batcher";
 import { recallIngestedKnowledge } from "./ingested-recall";
 import { searchMemory } from "./vector-memory";
+import { injectStimulus } from "./consciousness-engine";
+
+interface RoutePerformanceEntry {
+  domain: string;
+  latencyMs: number;
+  groundingScore: number;
+  engineId: string;
+  timestamp: number;
+  success: boolean;
+}
+
+const routePerformanceLog: RoutePerformanceEntry[] = [];
+const domainScores: Record<string, { totalLatency: number; totalGrounding: number; count: number; successes: number }> = {};
 
 const DOMAIN_OPTIMIZER_CATEGORY: Record<string, OptimizerCategory> = {
   knowledge: "Knowledge Representation",
@@ -83,7 +96,42 @@ export interface SovereignResponse {
   result: SovereignResult | null;
   source: string;
   latencyMs: number;
+  groundingScore: number;
   error?: string;
+}
+
+function recordRoutePerformance(entry: RoutePerformanceEntry): void {
+  routePerformanceLog.unshift(entry);
+  if (routePerformanceLog.length > 200) routePerformanceLog.splice(200);
+
+  if (!domainScores[entry.domain]) {
+    domainScores[entry.domain] = { totalLatency: 0, totalGrounding: 0, count: 0, successes: 0 };
+  }
+  const ds = domainScores[entry.domain];
+  ds.totalLatency += entry.latencyMs;
+  ds.totalGrounding += entry.groundingScore;
+  ds.count++;
+  if (entry.success) ds.successes++;
+}
+
+function computeGroundingScore(result: SovereignResult | null): number {
+  if (!result) return 0;
+  if (result.type === "knowledge") {
+    const kr = result as KnowledgeResult;
+    if (!kr.found) return 0;
+    let score = 0.5;
+    if (kr.content && kr.content.length > 100) score += 0.2;
+    if (kr.papers && kr.papers.length > 0) score += 0.15;
+    if (kr.url) score += 0.1;
+    return Math.min(1, score);
+  }
+  if ("groundingContext" in result) {
+    const dr = result as DomainResult;
+    const contextScore = Math.min(1, (dr.groundingContext?.length ?? 0) / 3);
+    const analysisScore = dr.analysis && dr.analysis.length > 50 ? 0.5 : 0.2;
+    return Math.min(1, contextScore * 0.5 + analysisScore);
+  }
+  return 0.1;
 }
 
 export async function runThroughSovereignEngine(
@@ -100,6 +148,24 @@ export async function runThroughSovereignEngine(
   try {
     const result = await routeToDomain(req, swarmAgent.preferArxiv);
     const latencyMs = Date.now() - start;
+    const groundingScore = computeGroundingScore(result);
+
+    recordRoutePerformance({
+      domain: req.domain,
+      latencyMs,
+      groundingScore,
+      engineId: swarmAgent.agentId,
+      timestamp: Date.now(),
+      success: true,
+    });
+
+    injectStimulus({
+      source: `sovereign-router:${req.domain}`,
+      content: `Query routed: ${req.query.slice(0, 60)} — grounding: ${groundingScore.toFixed(2)}`,
+      domain: req.domain,
+      intensity: groundingScore,
+      timestamp: Date.now(),
+    });
 
     await logProviderCall({
       providerId: swarmAgent.agentId,
@@ -109,10 +175,12 @@ export async function runThroughSovereignEngine(
       responseText: JSON.stringify(result).slice(0, 500),
       latencyMs,
       isExternal: false,
-    }).catch(() => {});
+    }).catch((logErr: unknown) => {
+      logger.debug({ err: logErr instanceof Error ? logErr.message : String(logErr) }, "SovereignEngineRouter: logProviderCall failed (success path)");
+    });
 
     logger.info(
-      { domain: req.domain, latencyMs, swarmSelectedAgent: swarmAgent.agentId },
+      { domain: req.domain, latencyMs, groundingScore, swarmSelectedAgent: swarmAgent.agentId },
       "SovereignEngineRouter: request fulfilled",
     );
 
@@ -123,10 +191,20 @@ export async function runThroughSovereignEngine(
       result,
       source: domainSource(req.domain),
       latencyMs,
+      groundingScore,
     };
   } catch (err) {
     const latencyMs = Date.now() - start;
     const errMsg = err instanceof Error ? err.message : String(err);
+
+    recordRoutePerformance({
+      domain: req.domain,
+      latencyMs,
+      groundingScore: 0,
+      engineId: swarmAgent.agentId,
+      timestamp: Date.now(),
+      success: false,
+    });
 
     logger.error(
       { domain: req.domain, err: errMsg, latencyMs, swarmSelectedAgent: swarmAgent.agentId },
@@ -141,7 +219,9 @@ export async function runThroughSovereignEngine(
       latencyMs,
       isExternal: false,
       error: errMsg,
-    }).catch(() => {});
+    }).catch((logErr: unknown) => {
+      logger.debug({ err: logErr instanceof Error ? logErr.message : String(logErr) }, "SovereignEngineRouter: logProviderCall failed (error path)");
+    });
 
     return {
       ok: false,
@@ -150,6 +230,7 @@ export async function runThroughSovereignEngine(
       result: null,
       source: domainSource(req.domain),
       latencyMs,
+      groundingScore: 0,
       error: errMsg,
     };
   }
@@ -177,7 +258,9 @@ async function gatherGroundingContext(domain: string, query: string): Promise<st
   try {
     const ingested = await recallIngestedKnowledge(`${domain} ${query}`, 3);
     context.push(...ingested);
-  } catch {}
+  } catch (err) {
+    logger.debug({ err: err instanceof Error ? err.message : String(err), domain }, "SovereignEngineRouter: recallIngestedKnowledge failed");
+  }
 
   try {
     const memories = await searchMemory(query, 3, domain);
@@ -186,7 +269,9 @@ async function gatherGroundingContext(domain: string, query: string): Promise<st
         context.push(`[memory/${mem.source}] ${mem.content.slice(0, 300)}`);
       }
     }
-  } catch {}
+  } catch (err) {
+    logger.debug({ err: err instanceof Error ? err.message : String(err), domain }, "SovereignEngineRouter: searchMemory (domain) failed");
+  }
 
   try {
     const memories = await searchMemory(query, 2);
@@ -195,7 +280,9 @@ async function gatherGroundingContext(domain: string, query: string): Promise<st
         context.push(`[memory/${mem.source}] ${mem.content.slice(0, 300)}`);
       }
     }
-  } catch {}
+  } catch (err) {
+    logger.debug({ err: err instanceof Error ? err.message : String(err), domain }, "SovereignEngineRouter: searchMemory (global) failed");
+  }
 
   return context.slice(0, 5);
 }
@@ -290,4 +377,37 @@ function domainSource(domain: SovereignDomain): string {
     finance: "llm+knowledge",
   };
   return sources[domain] ?? "unknown";
+}
+
+export function getRouterPerformanceMetrics() {
+  const domainBreakdown = Object.entries(domainScores).map(([domain, stats]) => ({
+    domain,
+    avgLatencyMs: stats.count > 0 ? Math.round(stats.totalLatency / stats.count) : 0,
+    avgGroundingScore: stats.count > 0 ? Math.round((stats.totalGrounding / stats.count) * 1000) / 1000 : 0,
+    totalRequests: stats.count,
+    successRate: stats.count > 0 ? Math.round((stats.successes / stats.count) * 100) / 100 : 0,
+  }));
+
+  const totalRequests = routePerformanceLog.length;
+  const avgLatency = totalRequests > 0
+    ? Math.round(routePerformanceLog.reduce((s, e) => s + e.latencyMs, 0) / totalRequests)
+    : 0;
+  const avgGrounding = totalRequests > 0
+    ? Math.round(routePerformanceLog.reduce((s, e) => s + e.groundingScore, 0) / totalRequests * 1000) / 1000
+    : 0;
+
+  return {
+    totalRequests,
+    avgLatencyMs: avgLatency,
+    avgGroundingScore: avgGrounding,
+    domainBreakdown,
+    recentRoutes: routePerformanceLog.slice(0, 10).map(e => ({
+      domain: e.domain,
+      latencyMs: e.latencyMs,
+      groundingScore: e.groundingScore,
+      success: e.success,
+      timestamp: e.timestamp,
+    })),
+    engineVersion: "v2-portal-gun",
+  };
 }
