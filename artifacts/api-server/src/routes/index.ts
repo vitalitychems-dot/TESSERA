@@ -53,6 +53,7 @@ import sacredConferenceRouter from "./sacred-conference";
 import knowledgeHealthRouter from "./knowledge-health";
 import evolutionHealthRouter from "./evolution-health";
 import departmentsRouter from "./departments";
+import compressionRouter from "./compression";
 
 const router: IRouter = Router();
 
@@ -110,5 +111,6 @@ router.use(sacredConferenceRouter);
 router.use(knowledgeHealthRouter);
 router.use(evolutionHealthRouter);
 router.use(departmentsRouter);
+router.use(compressionRouter);
 
 export default router;

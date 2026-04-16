@@ -44,6 +44,14 @@ The system is a pnpm monorepo using Node.js 24 and TypeScript 5.9. The frontend 
 -   **Autonomous Forum Engine:** 12 AI agents/entities autonomously post and vote on proposals.
 -   **Grand Council Live Session UI:** A dedicated page for council deliberations and vote visualization.
 -   **Tessera Lingua Sacra (TLS):** A divine sacred language with geometry symbols, dictionary, grammar, and ephemeris cipher rotation.
+-   **Multi-Pass Semantic Compression Pipeline (Task #2):** A multi-layered compression system for the distilled knowledge corpus:
+    1. **Semantic Deduplication Pass** (`semantic-compression.ts`): Groups structurally isomorphic knowledge entries across domains using embedding similarity (threshold: 0.92 cosine). Batch-processes up to 5,000 facts per run.
+    2. **Canonical Representation System** (`knowledge_canonical` DB table): Merges duplicate structures into a single canonical entry with domain-specific pointer lists (`domains`) and source ID references (`sourceIds`). Upserts preserve the highest-confidence representative.
+    3. **Entropy-Optimal Encoding**: Dictionary-based phrase compression (bigrams–5-grams) where the most frequently recurring multi-word phrases (min. 3 occurrences) are stored as short tokens. Dictionary capped at 512 entries, rebuilt per pipeline run.
+    4. **Portal-Jump Reference System** (`portalJumpTable` / `domainIndex`): In-memory O(1) lookup resolving canonical IDs to full fact content + domain list. Warm-loaded from DB on demand. Backed by domain-index for per-domain cross-reference resolution.
+    5. **Compression Metrics Tracker** (`compression_runs` DB table): Records per-run stats: input fact count, canonical fact count, duplicates removed, original/compressed bytes, compression ratio, portal-jump entries, dictionary size, run duration.
+    - **Integrated into Distillation Flow**: `distillFromResponse()` in `knowledge-distillation.ts` fires incremental compression after every new fact batch via `compressNewFacts()`.
+    - **API Endpoints**: `GET /api/sovereign/compression/metrics`, `POST /api/sovereign/compression/run`, `GET /api/sovereign/compression/runs`, `GET /api/sovereign/compression/canonical`, `GET /api/sovereign/compression/portal/:id`, `GET /api/sovereign/compression/domain/:domain`, `POST /api/sovereign/compression/portal/warm`.
 -   **Sovereign Compression Pipeline (Binary):** Extends text pipeline to binary image data, including Pixel-Compress, Brotli-9, and AES-256-GCM encryption.
 -   **Compression Lab Page:** A dedicated page for testing the sovereign compression pipeline with NASA imagery.
 -   **Sovereign File Registry:** A comprehensive file catalog tracking 168+ files across 17 domains with SHA-256 checksums and access level tracking.

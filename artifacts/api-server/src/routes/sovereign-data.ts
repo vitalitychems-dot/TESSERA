@@ -12,6 +12,7 @@ import { getLLMStats } from "../lib/llm-client";
 import { getEmbeddingStats } from "../lib/neural-embeddings";
 import { getValidationStats } from "../lib/response-validation-engine";
 import { getDeduplicationStats } from "../lib/semantic-deduplication";
+import { getReflectionMetrics, getRecentSnapshots, runReflectionCycle } from "../lib/recursive-reflection-loop";
 import * as os from "os";
 
 const router: IRouter = Router();
@@ -1047,6 +1048,37 @@ router.get("/admin/deduplication/stats", (req, res) => {
     return;
   }
   res.json({ ok: true, ...getDeduplicationStats() });
+});
+
+router.get("/admin/reflection/metrics", (_req, res) => {
+  res.json({ ok: true, ...getReflectionMetrics() });
+});
+
+router.get("/admin/reflection/snapshots", (req, res) => {
+  const limit = Math.min(50, Number(req.query.limit) || 10);
+  res.json({ ok: true, snapshots: getRecentSnapshots(limit) });
+});
+
+router.post("/admin/reflection/cycle", (req, res) => {
+  const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
+  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+    res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
+    return;
+  }
+  const result = runReflectionCycle();
+  res.json({
+    ok: true,
+    snapshotId: result.snapshot.id,
+    cycleCount: result.snapshot.cycleCount,
+    diff: {
+      novelty: result.diff.novelty,
+      byteSizeRaw: result.diff.byteSizeRaw,
+      byteSizeDiff: result.diff.byteSizeDiff,
+      compressionRatio: result.diff.byteSizeRaw > 0 ? result.diff.byteSizeDiff / result.diff.byteSizeRaw : 0,
+    },
+    memoryId: result.memoryId,
+    patternsDetected: result.patternsDetected,
+  });
 });
 
 export default router;
