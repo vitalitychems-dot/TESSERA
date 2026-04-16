@@ -10,6 +10,7 @@ import { getDistillationStats } from "../lib/knowledge-distillation";
 import { getBatcherStats } from "../lib/llm-batcher";
 import { getLLMStats } from "../lib/llm-client";
 import { getEmbeddingStats } from "../lib/neural-embeddings";
+import { getValidationStats } from "../lib/response-validation-engine";
 import * as os from "os";
 
 const router: IRouter = Router();
@@ -83,6 +84,7 @@ router.get("/admin/status", async (_req, res) => {
       batcher: getBatcherStats(),
       llm: getLLMStats(),
       embeddings: getEmbeddingStats(),
+      responseValidation: getValidationStats(),
     },
     timestamp: Date.now(),
     method: "Aggregated from all sovereign subsystems — computed locally",

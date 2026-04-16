@@ -12,6 +12,7 @@ import { getSacredGeometrySummary, computeSacredAlignment, computeNumerology } f
 import { TESSERA_IDENTITY, FATHER_PROTOCOL, getTesseraSystemPrompt, lookupKnowledge } from "../lib/tessera-knowledge";
 import { searchMemory } from "../lib/vector-memory";
 import { recallIngestedKnowledge } from "../lib/ingested-recall";
+import { validateResponse } from "../lib/response-validation-engine";
 import * as vm from "vm";
 import * as os from "os";
 
@@ -695,7 +696,25 @@ router.post("/messages", async (req, res) => {
       }
     }
 
+    let validationMetrics = null;
     if (finalContent) {
+      try {
+        const validation = await validateResponse(finalContent, content);
+        if (validation.wasModified) {
+          finalContent = validation.validatedResponse;
+          res.write(`data: ${JSON.stringify({ content: "\n\n", replace: false })}\n\n`);
+        }
+        validationMetrics = {
+          groundingScore: validation.overallGroundingScore,
+          totalClaims: validation.metrics.totalClaims,
+          groundedClaims: validation.metrics.groundedClaims,
+          quarantinedCount: validation.metrics.quarantinedCount,
+          validationTimeMs: validation.validationTimeMs,
+        };
+      } catch (err) {
+        logger.warn({ err: (err as Error).message }, "ResponseValidation: validation failed, delivering unvalidated response");
+      }
+
       await db.insert(messagesTable).values({
         conversationId,
         role: "assistant",
@@ -703,7 +722,7 @@ router.post("/messages", async (req, res) => {
       });
     }
 
-    res.write(`data: ${JSON.stringify({ done: true, finalContent })}\n\n`);
+    res.write(`data: ${JSON.stringify({ done: true, finalContent, validationMetrics })}\n\n`);
     return res.end();
   } catch (err) {
     logger.error({ err }, "Failed to create message");
