@@ -8,6 +8,11 @@ import {
   runDueIngestion,
   getSourceHandlers,
   runRssIngestion,
+  getSchedulerStatus,
+  pauseScheduler,
+  resumeScheduler,
+  forceRunScheduler,
+  harvestLinksFromRecentIngestion,
 } from "../lib/ingestion/scheduler";
 import { ingestItem, runSourceIngestion } from "../lib/ingestion/pipeline";
 import { deepCrawl } from "../lib/ingestion/scrapers";
@@ -408,6 +413,39 @@ router.post("/ingestion/shepherd/run", async (_req, res) => {
 
 router.get("/ingestion/bridge/status", (_req, res) => {
   return res.json({ ok: true, ...getBridgeStatus() });
+});
+
+router.get("/ingestion/scheduler/status", (_req, res) => {
+  return res.json({ ok: true, ...getSchedulerStatus() });
+});
+
+router.post("/ingestion/scheduler/pause", (req, res) => {
+  const { reason } = (req.body ?? {}) as { reason?: string };
+  pauseScheduler(reason || "manual");
+  return res.json({ ok: true, ...getSchedulerStatus() });
+});
+
+router.post("/ingestion/scheduler/resume", (_req, res) => {
+  resumeScheduler();
+  return res.json({ ok: true, ...getSchedulerStatus() });
+});
+
+router.post("/ingestion/scheduler/force-run", async (_req, res) => {
+  try {
+    const result = await forceRunScheduler();
+    return res.json({ ok: true, ...result, status: getSchedulerStatus() });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/ingestion/scheduler/harvest-links", async (_req, res) => {
+  try {
+    const result = await harvestLinksFromRecentIngestion();
+    return res.json({ ok: true, ...result });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
 });
 
 export default router;

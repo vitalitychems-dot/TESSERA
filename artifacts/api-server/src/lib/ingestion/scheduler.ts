@@ -14,6 +14,7 @@ import {
   fetchSecretSocietyArchives, fetchDeclassifiedArchives,
 } from "./knowledge-scrapers";
 import { logger } from "../logger";
+import { harvestLinksFromRecentIngestion, type LinkHarvestResult } from "./link-harvester";
 
 export type SourceHandler = () => Promise<NormalizedItem[]>;
 
@@ -203,12 +204,118 @@ async function ensureSourcesRegistered(): Promise<void> {
   }
 }
 
-let schedulerInterval: ReturnType<typeof setInterval> | null = null;
-let rotationInterval: ReturnType<typeof setInterval> | null = null;
+let schedulerDueTimeout: ReturnType<typeof setTimeout> | null = null;
+let schedulerRotationTimeout: ReturnType<typeof setTimeout> | null = null;
+let linkHarvestInterval: ReturnType<typeof setInterval> | null = null;
+let initialRotationTimeout: ReturnType<typeof setTimeout> | null = null;
+let initialHarvestTimeout: ReturnType<typeof setTimeout> | null = null;
 let schedulerStarted = false;
+let schedulerStopping = false;
+let schedulerPaused = false;
+let pauseReason: string | null = null;
+let inFlightKind: string | null = null;
+
+async function withRunLock<T>(kind: string, fn: () => Promise<T>): Promise<T | "locked"> {
+  if (inFlightKind) {
+    audit({ kind: "retry", detail: `${kind} skipped: ${inFlightKind} already in flight`, ok: false });
+    return "locked";
+  }
+  inFlightKind = kind;
+  try {
+    return await fn();
+  } finally {
+    inFlightKind = null;
+  }
+}
+let lastRotationAt: number | null = null;
+let lastDueRunAt: number | null = null;
+let lastLinkHarvestAt: number | null = null;
+let lastLinkHarvest: LinkHarvestResult | null = null;
+let totalRotationsExecuted = 0;
+let totalDueRunsExecuted = 0;
+
+interface SchedulerAuditEntry {
+  ts: number;
+  kind: "rotation" | "due" | "force-run" | "link-harvest" | "retry" | "pause" | "resume";
+  detail: string;
+  durationMs?: number;
+  ok: boolean;
+}
+const schedulerAuditLog: SchedulerAuditEntry[] = [];
+function audit(entry: Omit<SchedulerAuditEntry, "ts">): void {
+  schedulerAuditLog.unshift({ ts: Date.now(), ...entry });
+  if (schedulerAuditLog.length > 200) schedulerAuditLog.splice(200);
+}
 
 export function isSchedulerStarted(): boolean {
   return schedulerStarted;
+}
+
+export function isSchedulerPaused(): boolean {
+  return schedulerPaused;
+}
+
+export function pauseScheduler(reason = "manual"): void {
+  if (schedulerPaused) return;
+  schedulerPaused = true;
+  pauseReason = reason;
+  audit({ kind: "pause", detail: reason, ok: true });
+  logger.warn({ reason }, "Ingestion scheduler paused");
+}
+
+export function resumeScheduler(): void {
+  if (!schedulerPaused) return;
+  schedulerPaused = false;
+  pauseReason = null;
+  audit({ kind: "resume", detail: "manual", ok: true });
+  logger.info("Ingestion scheduler resumed");
+}
+
+export function getSchedulerStatus() {
+  return {
+    started: schedulerStarted,
+    paused: schedulerPaused,
+    pauseReason,
+    totalSources: Object.keys(SOURCE_HANDLERS).length,
+    groups: SOURCE_GROUPS.length,
+    currentGroupIndex: currentGroupIndex % SOURCE_GROUPS.length,
+    lastRotationAt,
+    lastDueRunAt,
+    lastLinkHarvestAt,
+    lastLinkHarvest,
+    totalRotationsExecuted,
+    totalDueRunsExecuted,
+    recentAudit: schedulerAuditLog.slice(0, 40),
+    linkHarvestEnabled: (process.env.INGESTION_AUTOLINK_ALLOWLIST ?? "").trim().length > 0,
+  };
+}
+
+async function runWithRetry<T>(
+  label: string,
+  fn: () => Promise<T>,
+  maxAttempts = 3,
+  baseDelayMs = 1000,
+): Promise<T | null> {
+  let lastErr: Error | null = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err as Error;
+      if (attempt < maxAttempts) {
+        const delay = baseDelayMs * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 250);
+        audit({ kind: "retry", detail: `${label} attempt ${attempt} failed: ${lastErr.message}; retry in ${delay}ms`, ok: false });
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+  }
+  logger.warn({ label, err: lastErr?.message, attempts: maxAttempts }, "runWithRetry: all attempts failed");
+  return null;
+}
+
+function jitter(baseMs: number, spreadFraction = 0.25): number {
+  const spread = baseMs * spreadFraction;
+  return baseMs + Math.floor((Math.random() * 2 - 1) * spread);
 }
 
 const SOURCE_GROUPS = [
@@ -267,42 +374,139 @@ async function runRotatingGroup(): Promise<void> {
   }
 }
 
+export async function forceRunScheduler(): Promise<{ rotation: boolean; due: Record<string, { ingested: number; skipped: number; errors: string[] }>; locked?: boolean }> {
+  const start = Date.now();
+  const outcome = await withRunLock("force-run", async () => {
+    let rotationOk = false;
+    try {
+      await runRotatingGroup();
+      rotationOk = true;
+    } catch (e) {
+      logger.warn({ err: (e as Error).message }, "Force-run rotation error");
+    }
+    let dueResults: Record<string, { ingested: number; skipped: number; errors: string[] }> = {};
+    try {
+      dueResults = await runDueIngestion();
+    } catch (e) {
+      logger.warn({ err: (e as Error).message }, "Force-run due error");
+    }
+    return { rotation: rotationOk, due: dueResults };
+  });
+  if (outcome === "locked") {
+    audit({ kind: "force-run", detail: "skipped: another run in flight", durationMs: Date.now() - start, ok: false });
+    return { rotation: false, due: {}, locked: true };
+  }
+  audit({ kind: "force-run", detail: `rotationOk=${outcome.rotation} dueSources=${Object.keys(outcome.due).length}`, durationMs: Date.now() - start, ok: outcome.rotation });
+  return outcome;
+}
+
+async function runLinkHarvestCycle(): Promise<void> {
+  const start = Date.now();
+  try {
+    const result = await harvestLinksFromRecentIngestion();
+    lastLinkHarvestAt = Date.now();
+    lastLinkHarvest = result;
+    audit({
+      kind: "link-harvest",
+      detail: `scanned=${result.scanned} urls=${result.urlsFound} candidates=${result.uniqueCandidates} new=${result.newSourcesRegistered} blocked=${result.skippedNotAllowed} rateLimited=${result.skippedRateLimited}`,
+      durationMs: Date.now() - start,
+      ok: true,
+    });
+  } catch (e) {
+    audit({ kind: "link-harvest", detail: `error: ${(e as Error).message}`, durationMs: Date.now() - start, ok: false });
+    logger.warn({ err: (e as Error).message }, "Link harvest cycle error");
+  }
+}
+
 export async function startIngestionScheduler(checkIntervalMs = 120_000): Promise<void> {
-  if (schedulerInterval) return;
+  if (schedulerStarted) return;
+  schedulerStopping = false;
 
   await ensureSourcesRegistered();
 
-  schedulerInterval = setInterval(async () => {
-    try {
-      await runDueIngestion();
-    } catch (e) {
-      logger.warn({ err: (e as Error).message }, "Due ingestion cycle error");
-    }
-  }, checkIntervalMs);
+  const scheduleDue = () => {
+    if (schedulerStopping) return;
+    const next = jitter(checkIntervalMs);
+    schedulerDueTimeout = setTimeout(async () => {
+      if (schedulerStopping) return;
+      if (!schedulerPaused) {
+        const start = Date.now();
+        const result = await withRunLock("due", () => runWithRetry("runDueIngestion", () => runDueIngestion(), 2, 1500));
+        if (result !== "locked") {
+          lastDueRunAt = Date.now();
+          totalDueRunsExecuted++;
+          audit({
+            kind: "due",
+            detail: result ? `sources=${Object.keys(result).length}` : "failed",
+            durationMs: Date.now() - start,
+            ok: result !== null,
+          });
+        }
+      }
+      scheduleDue();
+    }, next);
+  };
 
-  rotationInterval = setInterval(async () => {
-    try {
-      await runRotatingGroup();
-    } catch (e) {
-      logger.warn({ err: (e as Error).message }, "Rotation group error");
-    }
-  }, 180_000);
+  const scheduleRotation = () => {
+    if (schedulerStopping) return;
+    const next = jitter(180_000);
+    schedulerRotationTimeout = setTimeout(async () => {
+      if (schedulerStopping) return;
+      if (!schedulerPaused) {
+        const start = Date.now();
+        const outcome = await withRunLock("rotation", async () => {
+          try {
+            await runRotatingGroup();
+            return { ok: true as const };
+          } catch (e) {
+            return { ok: false as const, err: (e as Error).message };
+          }
+        });
+        if (outcome !== "locked") {
+          if (outcome.ok) {
+            lastRotationAt = Date.now();
+            totalRotationsExecuted++;
+            audit({ kind: "rotation", detail: `group=${(currentGroupIndex - 1 + SOURCE_GROUPS.length) % SOURCE_GROUPS.length}`, durationMs: Date.now() - start, ok: true });
+          } else {
+            audit({ kind: "rotation", detail: `error: ${outcome.err}`, durationMs: Date.now() - start, ok: false });
+            logger.warn({ err: outcome.err }, "Rotation group error");
+          }
+        }
+      }
+      scheduleRotation();
+    }, next);
+  };
 
-  setTimeout(() => {
-    runRotatingGroup().catch(e => logger.warn({ err: (e as Error).message }, "Initial rotation failed"));
+  scheduleDue();
+  scheduleRotation();
+
+  linkHarvestInterval = setInterval(() => {
+    if (!schedulerPaused && !schedulerStopping) runLinkHarvestCycle();
+  }, 15 * 60_000);
+
+  initialRotationTimeout = setTimeout(() => {
+    if (schedulerStopping) return;
+    withRunLock("rotation", async () => {
+      try { await runRotatingGroup(); } catch (e) { logger.warn({ err: (e as Error).message }, "Initial rotation failed"); }
+    });
   }, 30_000);
 
+  initialHarvestTimeout = setTimeout(() => {
+    if (!schedulerStopping) runLinkHarvestCycle();
+  }, 5 * 60_000);
+
   schedulerStarted = true;
-  logger.info({ checkIntervalMs, totalSources: Object.keys(SOURCE_HANDLERS).length, groups: SOURCE_GROUPS.length }, "Ingestion scheduler started with continuous rotation");
+  logger.info({ checkIntervalMs, totalSources: Object.keys(SOURCE_HANDLERS).length, groups: SOURCE_GROUPS.length }, "Ingestion scheduler started with continuous rotation, jitter, retries, and link harvesting");
 }
 
 export function stopIngestionScheduler(): void {
-  if (schedulerInterval) {
-    clearInterval(schedulerInterval);
-    schedulerInterval = null;
-  }
-  if (rotationInterval) {
-    clearInterval(rotationInterval);
-    rotationInterval = null;
-  }
+  schedulerStopping = true;
+  if (schedulerDueTimeout) { clearTimeout(schedulerDueTimeout); schedulerDueTimeout = null; }
+  if (schedulerRotationTimeout) { clearTimeout(schedulerRotationTimeout); schedulerRotationTimeout = null; }
+  if (initialRotationTimeout) { clearTimeout(initialRotationTimeout); initialRotationTimeout = null; }
+  if (initialHarvestTimeout) { clearTimeout(initialHarvestTimeout); initialHarvestTimeout = null; }
+  if (linkHarvestInterval) { clearInterval(linkHarvestInterval); linkHarvestInterval = null; }
+  schedulerStarted = false;
 }
+
+export { harvestLinksFromRecentIngestion } from "./link-harvester";
