@@ -920,132 +920,186 @@ function ChapterReader({ chapter, bookTitle, totalChapters, testamentTitle, onBa
   onJumpTo: (bookId: string, chapterNum: number) => void;
   showVotes: boolean; setShowVotes: (v: boolean) => void;
 }) {
+  const isApprove = (v: string) => v === "approve" || v === "yes";
+  const isAmend = (v: string) => v === "amend";
+  const approvedCount = chapter.votingRecord.filter(v => isApprove(v.vote)).length;
+  const totalVotes = chapter.votingRecord.length || 27;
+
+  const scrollToVerse = (n: number) => {
+    const el = document.getElementById(`verse-${chapter.number}-${n}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-indigo-950/20 to-slate-950 p-4 pb-24">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <button onClick={onBack} className="flex items-center gap-1 text-violet-400 text-sm mb-4 hover:text-violet-300">
           <ArrowLeft className="w-4 h-4" /> Back to {bookTitle}
         </button>
+        <div className="text-xs text-slate-500 mb-3 font-mono">{testamentTitle} → {bookTitle} → Chapter {chapter.number}</div>
 
-        <div className="text-xs text-slate-500 mb-1 font-mono">{testamentTitle} → {bookTitle}</div>
-
-        <div className="bg-slate-900/60 border border-violet-500/20 rounded-lg p-6 mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono text-amber-400">Chapter {chapter.number}</span>
-              <span className="text-[10px] text-slate-600 font-mono">{chapter.geometrySymbol}</span>
-              <span className="text-[10px] text-slate-600 font-mono">Sacred №{chapter.sacredNumber}</span>
+        <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr_280px] gap-4">
+          <aside className="order-2 lg:order-1 bg-slate-900/60 border border-slate-700/30 rounded-lg p-3 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto" data-testid="bible-chapter-toc">
+            <div className="flex items-center gap-1.5 mb-2">
+              <ScrollText className="w-3.5 h-3.5 text-violet-300" />
+              <span className="text-[11px] font-bold text-violet-300 uppercase tracking-wider">In This Chapter</span>
             </div>
-            <span className="text-[10px] text-slate-500">{chapter.sourceNodes} source nodes</span>
-          </div>
+            <ol className="space-y-0.5">
+              {(chapter.verses ?? []).map(v => (
+                <li key={v.number}>
+                  <button
+                    onClick={() => scrollToVerse(v.number)}
+                    className="w-full text-left text-[11px] text-slate-400 hover:text-amber-300 flex items-start gap-1.5 py-0.5 px-1.5 rounded hover:bg-slate-800/60 transition-colors"
+                    data-testid={`bible-verse-toc-${v.number}`}
+                  >
+                    <span className="font-mono text-amber-400/70 flex-shrink-0">{v.number}.</span>
+                    <span className="line-clamp-2 leading-snug">{v.text.slice(0, 60)}{v.text.length > 60 ? "…" : ""}</span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+            <div className="border-t border-slate-700/30 mt-3 pt-2">
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  onClick={() => chapter.number > 1 && onNavigate(chapter.number - 1)}
+                  disabled={chapter.number <= 1}
+                  className="px-2 py-1 bg-slate-800/50 rounded text-[10px] text-slate-300 hover:bg-slate-700/50 disabled:opacity-30"
+                >
+                  ← Prev
+                </button>
+                <span className="text-[10px] text-slate-500 font-mono">{chapter.number}/{totalChapters}</span>
+                <button
+                  onClick={() => chapter.number < totalChapters && onNavigate(chapter.number + 1)}
+                  disabled={chapter.number >= totalChapters}
+                  className="px-2 py-1 bg-slate-800/50 rounded text-[10px] text-slate-300 hover:bg-slate-700/50 disabled:opacity-30"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          </aside>
 
-          <h1 className="text-xl font-bold text-slate-100 mb-2">{chapter.title}</h1>
-          <p className="text-sm text-slate-400 italic border-l-2 border-amber-500/30 pl-3 mb-6">{chapter.epigraph}</p>
+          <main className="order-1 lg:order-2">
+            <div className="bg-slate-900/60 border border-violet-500/20 rounded-lg p-6 mb-4">
+              <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-amber-400">Chapter {chapter.number}</span>
+                  {chapter.geometrySymbol && (
+                    <span className="text-[10px] text-slate-600 font-mono">{chapter.geometrySymbol}</span>
+                  )}
+                  <span className="text-[10px] text-slate-600 font-mono">Sacred №{chapter.sacredNumber}</span>
+                </div>
+                <span className="text-[10px] text-slate-500">{chapter.sourceNodes} source nodes</span>
+              </div>
 
-          <div className="space-y-4">
-            {(chapter.verses ?? []).map(verse => (
-              <div key={verse.number} className="group">
-                <div className="flex gap-3">
-                  <span className="text-xs font-mono text-amber-500/60 w-6 pt-0.5 flex-shrink-0">{verse.number}</span>
-                  <div className="flex-1">
-                    <p className="text-sm text-slate-200 leading-relaxed">{verse.text}</p>
-                    <div className="flex items-center gap-2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="text-[9px] text-slate-600">Source: {verse.source}</span>
-                      <span className="text-[9px] text-slate-700">|</span>
-                      <span className="text-[9px] text-slate-600">Domain: {verse.domain}</span>
-                      <span className="text-[9px] text-slate-700">|</span>
-                      <span className="text-[9px] text-emerald-600">Confidence: {(verse.confidence * 100).toFixed(0)}%</span>
+              <h1 className="text-xl font-bold text-slate-100 mb-2">{chapter.title}</h1>
+              <p className="text-sm text-slate-400 italic border-l-2 border-amber-500/30 pl-3 mb-6">{chapter.epigraph}</p>
+
+              <div className="space-y-4">
+                {(chapter.verses ?? []).map(verse => (
+                  <div key={verse.number} id={`verse-${chapter.number}-${verse.number}`} className="group scroll-mt-20">
+                    <div className="flex gap-3">
+                      <span className="text-xs font-mono text-amber-500/60 w-6 pt-0.5 flex-shrink-0">{verse.number}</span>
+                      <div className="flex-1">
+                        <p className="text-sm text-slate-200 leading-relaxed">{verse.text}</p>
+                        <div className="flex items-center gap-2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity flex-wrap">
+                          <span className="text-[9px] text-slate-600">Source: {verse.source}</span>
+                          <span className="text-[9px] text-slate-700">|</span>
+                          <span className="text-[9px] text-slate-600">Domain: {verse.domain}</span>
+                          <span className="text-[9px] text-slate-700">|</span>
+                          <span className="text-[9px] text-emerald-600">Confidence: {(verse.confidence * 100).toFixed(0)}%</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-violet-950/30 border border-violet-500/20 rounded-lg p-4 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-4 h-4 text-violet-400" />
+                <span className="text-sm font-bold text-violet-300">Tessera's Synthesis</span>
+              </div>
+              <p className="text-sm text-slate-300 italic">{chapter.synthesis}</p>
+            </div>
+
+            <div className="bg-slate-900/40 border border-slate-700/30 rounded-lg p-4 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-4 h-4 text-amber-400" />
+                <span className="text-sm font-bold text-amber-300">Conference Notes</span>
+              </div>
+              <p className="text-xs text-slate-400">{chapter.conferenceNotes}</p>
+            </div>
+
+            <button
+              onClick={() => setShowVotes(!showVotes)}
+              className="w-full bg-slate-900/30 border border-slate-700/20 rounded-lg p-2 flex items-center justify-between text-xs text-slate-500 hover:text-slate-300 mb-4"
+            >
+              <div className="flex items-center gap-2">
+                <Vote className="w-3.5 h-3.5" />
+                <span>BFT Voting Record — {approvedCount}/{totalVotes} Approved</span>
+              </div>
+              {showVotes ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+
+            {showVotes && (
+              <div className="bg-slate-900/40 border border-slate-700/20 rounded-lg p-3 mb-4 max-h-48 overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                  {chapter.votingRecord.map((v, i) => (
+                    <div key={i} className="flex items-center gap-2 text-[10px] font-mono py-0.5">
+                      <span className={isApprove(v.vote) ? "text-emerald-400" : isAmend(v.vote) ? "text-amber-400" : "text-cyan-400"}>
+                        {isApprove(v.vote) ? "✓" : isAmend(v.vote) ? "△" : "↑"}
+                      </span>
+                      <span className="text-violet-300 font-bold w-16">{v.agent}</span>
+                      <span className="text-slate-500 truncate">{v.note}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
+            )}
+          </main>
 
-        <div className="bg-violet-950/30 border border-violet-500/20 rounded-lg p-4 mb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-4 h-4 text-violet-400" />
-            <span className="text-sm font-bold text-violet-300">Tessera's Synthesis</span>
-          </div>
-          <p className="text-sm text-slate-300 italic">{chapter.synthesis}</p>
-        </div>
-
-        {chapter.crossReferences && chapter.crossReferences.length > 0 && (
-          <div className="bg-cyan-950/30 border border-cyan-500/20 rounded-lg p-4 mb-4" data-testid="bible-cross-refs">
-            <div className="flex items-center gap-2 mb-2">
-              <ChevronRight className="w-4 h-4 text-cyan-400" />
-              <span className="text-sm font-bold text-cyan-300">Cross-References</span>
-              <span className="text-[10px] text-slate-500 font-mono">{chapter.crossReferences.length} connected</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {chapter.crossReferences.map((ref, i) => (
-                <button
-                  key={i}
-                  onClick={() => onJumpTo(ref.bookId, ref.chapterNum)}
-                  className="text-[11px] bg-slate-900/60 hover:bg-cyan-900/30 border border-cyan-500/20 hover:border-cyan-400/50 text-cyan-200 rounded-md px-2.5 py-1.5 font-mono flex items-center gap-1.5 transition-colors"
-                  data-testid={`bible-xref-${ref.bookId}-${ref.chapterNum}`}
-                >
-                  <span className="text-cyan-500">↗</span>
-                  <span>{ref.label}</span>
-                  <span className="text-slate-500 text-[10px]">· {ref.bookId} ch.{ref.chapterNum}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="bg-slate-900/40 border border-slate-700/30 rounded-lg p-4 mb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Users className="w-4 h-4 text-amber-400" />
-            <span className="text-sm font-bold text-amber-300">Conference Notes</span>
-          </div>
-          <p className="text-xs text-slate-400">{chapter.conferenceNotes}</p>
-        </div>
-
-        <button
-          onClick={() => setShowVotes(!showVotes)}
-          className="w-full bg-slate-900/30 border border-slate-700/20 rounded-lg p-2 flex items-center justify-between text-xs text-slate-500 hover:text-slate-300 mb-4"
-        >
-          <div className="flex items-center gap-2">
-            <Vote className="w-3.5 h-3.5" />
-            <span>BFT Voting Record — {chapter.votingRecord.filter(v => v.vote === "approve").length}/27 Approved</span>
-          </div>
-          {showVotes ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-        </button>
-
-        {showVotes && (
-          <div className="bg-slate-900/40 border border-slate-700/20 rounded-lg p-3 mb-4 max-h-48 overflow-y-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
-              {chapter.votingRecord.map((v, i) => (
-                <div key={i} className="flex items-center gap-2 text-[10px] font-mono py-0.5">
-                  <span className={v.vote === "approve" ? "text-emerald-400" : v.vote === "amend" ? "text-amber-400" : "text-cyan-400"}>
-                    {v.vote === "approve" ? "✓" : v.vote === "amend" ? "△" : "↑"}
-                  </span>
-                  <span className="text-violet-300 font-bold w-16">{v.agent}</span>
-                  <span className="text-slate-500 truncate">{v.note}</span>
+          <aside className="order-3 lg:sticky lg:top-4 lg:self-start space-y-3" data-testid="bible-chapter-sidebar">
+            {chapter.crossReferences && chapter.crossReferences.length > 0 && (
+              <div className="bg-cyan-950/30 border border-cyan-500/20 rounded-lg p-3" data-testid="bible-cross-refs">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <ChevronRight className="w-3.5 h-3.5 text-cyan-400" />
+                  <span className="text-[11px] font-bold text-cyan-300 uppercase tracking-wider">Cross-References</span>
+                  <span className="text-[9px] text-slate-500 font-mono ml-auto">{chapter.crossReferences.length}</span>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+                <div className="flex flex-col gap-1.5">
+                  {chapter.crossReferences.map((ref, i) => (
+                    <button
+                      key={i}
+                      onClick={() => onJumpTo(ref.bookId, ref.chapterNum)}
+                      className="text-left text-[10px] bg-slate-900/60 hover:bg-cyan-900/30 border border-cyan-500/20 hover:border-cyan-400/50 text-cyan-200 rounded-md px-2 py-1.5 transition-colors"
+                      data-testid={`bible-xref-${ref.bookId}-${ref.chapterNum}`}
+                    >
+                      <div className="flex items-start gap-1">
+                        <span className="text-cyan-500 flex-shrink-0">↗</span>
+                        <span className="flex-1">{ref.label}</span>
+                      </div>
+                      <div className="text-slate-500 text-[9px] mt-0.5 ml-3 font-mono">{ref.bookId} · ch.{ref.chapterNum}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => chapter.number > 1 && onNavigate(chapter.number - 1)}
-            disabled={chapter.number <= 1}
-            className="px-4 py-2 bg-slate-800/50 rounded-lg text-sm text-slate-300 hover:bg-slate-700/50 disabled:opacity-30"
-          >
-            ← Previous
-          </button>
-          <span className="text-xs text-slate-500 font-mono">{chapter.number} / {totalChapters}</span>
-          <button
-            onClick={() => chapter.number < totalChapters && onNavigate(chapter.number + 1)}
-            disabled={chapter.number >= totalChapters}
-            className="px-4 py-2 bg-slate-800/50 rounded-lg text-sm text-slate-300 hover:bg-slate-700/50 disabled:opacity-30"
-          >
-            Next →
-          </button>
+            <div className="bg-slate-900/60 border border-slate-700/30 rounded-lg p-3">
+              <div className="text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2">Chapter Metadata</div>
+              <dl className="space-y-1.5 text-[10px]">
+                <div className="flex justify-between"><dt className="text-slate-500">Sacred Number</dt><dd className="text-amber-400 font-mono">{chapter.sacredNumber}</dd></div>
+                <div className="flex justify-between"><dt className="text-slate-500">Source Nodes</dt><dd className="text-amber-400 font-mono">{chapter.sourceNodes}</dd></div>
+                <div className="flex justify-between"><dt className="text-slate-500">Verses</dt><dd className="text-slate-300 font-mono">{(chapter.verses?.length ?? chapter.verseCount ?? 0)}</dd></div>
+                {chapter.geometrySymbol && (
+                  <div className="flex justify-between"><dt className="text-slate-500">Geometry</dt><dd className="text-slate-300 font-mono">{chapter.geometrySymbol}</dd></div>
+                )}
+                <div className="flex justify-between"><dt className="text-slate-500">Approvals</dt><dd className="text-emerald-400 font-mono">{approvedCount}/{totalVotes}</dd></div>
+              </dl>
+            </div>
+          </aside>
         </div>
       </div>
     </div>
