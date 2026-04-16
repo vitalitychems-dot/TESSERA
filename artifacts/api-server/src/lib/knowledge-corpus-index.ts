@@ -480,3 +480,306 @@ export function getCorpusStats() {
     averageConfidence: Math.round(corpus.reduce((s, e) => s + e.confidence, 0) / corpus.length * 10) / 10,
   };
 }
+
+export interface AuditFinding {
+  id: string;
+  type: "duplicate" | "coverage-gap" | "low-confidence" | "orphan" | "stale-ref" | "adversarial-fail" | "frequency-mismatch" | "domain-imbalance" | "missing-crossref" | "agent-blind-spot";
+  severity: "critical" | "major" | "moderate" | "minor";
+  title: string;
+  description: string;
+  affectedIds: string[];
+  suggestedFix: string;
+  domain: string;
+}
+
+export function deduplicateCorpus(): { duplicates: Array<{ id1: string; id2: string; similarity: number }>; deduplicatedCount: number } {
+  const corpus = getCorpus();
+  const duplicates: Array<{ id1: string; id2: string; similarity: number }> = [];
+
+  for (let i = 0; i < corpus.length; i++) {
+    for (let j = i + 1; j < corpus.length; j++) {
+      const a = corpus[i], b = corpus[j];
+      if (a.category === b.category && a.domain === b.domain) {
+        const aWords = new Set(a.title.toLowerCase().split(/\s+/));
+        const bWords = new Set(b.title.toLowerCase().split(/\s+/));
+        let overlap = 0;
+        for (const w of aWords) { if (bWords.has(w)) overlap++; }
+        const similarity = (overlap * 2) / (aWords.size + bWords.size);
+        if (similarity > 0.7) {
+          duplicates.push({ id1: a.id, id2: b.id, similarity: Math.round(similarity * 100) / 100 });
+        }
+      }
+    }
+  }
+  return { duplicates, deduplicatedCount: corpus.length - duplicates.length };
+}
+
+export function findCoverageGaps(): Array<{ domain: string; entryCount: number; categories: string[]; missingCategories: string[] }> {
+  const corpus = getCorpus();
+  const domainMap = getDomainMap();
+  const allCategories = [...new Set(corpus.map(e => e.category))];
+  const gaps: Array<{ domain: string; entryCount: number; categories: string[]; missingCategories: string[] }> = [];
+
+  for (const [domain, entries] of domainMap.entries()) {
+    const presentCats = [...new Set(entries.map(e => e.category))];
+    const missing = allCategories.filter(c => !presentCats.includes(c as CorpusCategory));
+    if (missing.length >= allCategories.length * 0.6 || entries.length <= 2) {
+      gaps.push({ domain, entryCount: entries.length, categories: presentCats, missingCategories: missing });
+    }
+  }
+  return gaps.sort((a, b) => a.entryCount - b.entryCount);
+}
+
+export function computeConfidenceDistribution(): { low: CorpusEntry[]; medium: CorpusEntry[]; high: CorpusEntry[]; averageByCategory: Record<string, number> } {
+  const corpus = getCorpus();
+  const low = corpus.filter(e => e.confidence < 70);
+  const medium = corpus.filter(e => e.confidence >= 70 && e.confidence < 90);
+  const high = corpus.filter(e => e.confidence >= 90);
+  const byCat: Record<string, number[]> = {};
+  for (const e of corpus) {
+    (byCat[e.category] ||= []).push(e.confidence);
+  }
+  const averageByCategory: Record<string, number> = {};
+  for (const [cat, vals] of Object.entries(byCat)) {
+    averageByCategory[cat] = Math.round(vals.reduce((s, v) => s + v, 0) / vals.length * 10) / 10;
+  }
+  return { low, medium, high, averageByCategory };
+}
+
+export function validateCrossReferenceIntegrity(): { valid: number; broken: number; brokenRefs: Array<{ fromId: string; toId: string; reason: string }> } {
+  const corpus = getCorpus();
+  const idSet = new Set(corpus.map(e => e.id));
+  const refs = getCrossReferences();
+  let valid = 0, broken = 0;
+  const brokenRefs: Array<{ fromId: string; toId: string; reason: string }> = [];
+
+  for (const ref of refs) {
+    if (!idSet.has(ref.fromId)) {
+      broken++;
+      brokenRefs.push({ fromId: ref.fromId, toId: ref.toId, reason: `fromId "${ref.fromId}" not found in corpus` });
+    } else if (!idSet.has(ref.toId)) {
+      broken++;
+      brokenRefs.push({ fromId: ref.fromId, toId: ref.toId, reason: `toId "${ref.toId}" not found in corpus` });
+    } else {
+      valid++;
+    }
+  }
+  return { valid, broken, brokenRefs: brokenRefs.slice(0, 20) };
+}
+
+export function findOrphanEntries(): CorpusEntry[] {
+  const refs = getCrossReferences();
+  const linkedIds = new Set<string>();
+  for (const ref of refs) {
+    linkedIds.add(ref.fromId);
+    linkedIds.add(ref.toId);
+  }
+  return getCorpus().filter(e => !linkedIds.has(e.id));
+}
+
+export function harmonicFrequencyAudit(): { aligned: number; misaligned: CorpusEntry[]; distribution: Record<number, number> } {
+  const corpus = getCorpus();
+  const VALID_FREQUENCIES = [174, 285, 396, 417, 528, 639, 741, 852, 963, 10, 40, 7.83];
+  const withFreq = corpus.filter(e => e.frequency !== undefined);
+  const aligned = withFreq.filter(e => VALID_FREQUENCIES.includes(e.frequency!));
+  const misaligned = withFreq.filter(e => !VALID_FREQUENCIES.includes(e.frequency!));
+  const distribution: Record<number, number> = {};
+  for (const e of withFreq) {
+    distribution[e.frequency!] = (distribution[e.frequency!] || 0) + 1;
+  }
+  return { aligned: aligned.length, misaligned, distribution };
+}
+
+export function adversarialChallengeAudit(): Array<{ challenge: string; targetDomain: string; severity: string; corpusSupport: number; supportingEntries: string[] }> {
+  const results: Array<{ challenge: string; targetDomain: string; severity: string; corpusSupport: number; supportingEntries: string[] }> = [];
+
+  for (const adv of ADVERSARIAL_CHALLENGE_TEMPLATES) {
+    const relevant = queryCorpus({ domain: adv.domain, limit: 50 });
+    const supporting = relevant.filter(e => e.confidence >= 85);
+    results.push({
+      challenge: adv.q,
+      targetDomain: adv.domain,
+      severity: adv.severity,
+      corpusSupport: supporting.length,
+      supportingEntries: supporting.map(e => e.id).slice(0, 5),
+    });
+  }
+  return results;
+}
+
+export function computeDomainCoherence(): Array<{ domain: string; coherenceScore: number; internalTagOverlap: number; entryCount: number }> {
+  const domainMap = getDomainMap();
+  const results: Array<{ domain: string; coherenceScore: number; internalTagOverlap: number; entryCount: number }> = [];
+
+  for (const [domain, entries] of domainMap.entries()) {
+    if (entries.length < 2) continue;
+    let totalOverlap = 0, pairs = 0;
+    for (let i = 0; i < entries.length; i++) {
+      for (let j = i + 1; j < entries.length; j++) {
+        const shared = entries[i].tags.filter(t => entries[j].tags.includes(t)).length;
+        const total = new Set([...entries[i].tags, ...entries[j].tags]).size;
+        totalOverlap += total > 0 ? shared / total : 0;
+        pairs++;
+      }
+    }
+    const coherence = pairs > 0 ? Math.round((totalOverlap / pairs) * 100) / 100 : 0;
+    results.push({ domain, coherenceScore: coherence, internalTagOverlap: Math.round(totalOverlap), entryCount: entries.length });
+  }
+  return results.sort((a, b) => a.coherenceScore - b.coherenceScore);
+}
+
+export function agentCoverageAudit(): Array<{ agentId: string; domain: string; coveredEntries: number; totalDomainEntries: number; coveragePercent: number }> {
+  const domainMap = getDomainMap();
+  const results: Array<{ agentId: string; domain: string; coveredEntries: number; totalDomainEntries: number; coveragePercent: number }> = [];
+
+  for (const agent of AGENT_SPECIALTIES) {
+    const domainEntries = domainMap.get(agent.domain) || [];
+    const tagMatches = queryCorpus({ tags: agent.tags, limit: 200 });
+    const covered = new Set([...domainEntries.map(e => e.id), ...tagMatches.map(e => e.id)]);
+    const totalDomain = domainEntries.length || 1;
+    results.push({
+      agentId: agent.id,
+      domain: agent.domain,
+      coveredEntries: covered.size,
+      totalDomainEntries: totalDomain,
+      coveragePercent: Math.round((Math.min(covered.size, totalDomain) / totalDomain) * 100),
+    });
+  }
+  return results.sort((a, b) => a.coveragePercent - b.coveragePercent);
+}
+
+export function runFullCorpusAudit(): AuditFinding[] {
+  const findings: AuditFinding[] = [];
+  let findingIdx = 0;
+
+  const { duplicates } = deduplicateCorpus();
+  for (const dup of duplicates.slice(0, 5)) {
+    findings.push({
+      id: `AUDIT-${String(++findingIdx).padStart(3, "0")}`,
+      type: "duplicate",
+      severity: "moderate",
+      title: `Duplicate entries: ${dup.id1} ↔ ${dup.id2}`,
+      description: `${Math.round(dup.similarity * 100)}% title similarity in same domain/category`,
+      affectedIds: [dup.id1, dup.id2],
+      suggestedFix: "Merge or disambiguate entries",
+      domain: getCorpus().find(e => e.id === dup.id1)?.domain || "unknown",
+    });
+  }
+
+  const gaps = findCoverageGaps();
+  for (const gap of gaps.slice(0, 5)) {
+    findings.push({
+      id: `AUDIT-${String(++findingIdx).padStart(3, "0")}`,
+      type: "coverage-gap",
+      severity: gap.entryCount <= 1 ? "critical" : "major",
+      title: `Coverage gap in domain "${gap.domain}"`,
+      description: `Only ${gap.entryCount} entries, missing categories: ${gap.missingCategories.join(", ")}`,
+      affectedIds: [],
+      suggestedFix: `Add entries for: ${gap.missingCategories.slice(0, 3).join(", ")}`,
+      domain: gap.domain,
+    });
+  }
+
+  const { low } = computeConfidenceDistribution();
+  for (const entry of low.slice(0, 5)) {
+    findings.push({
+      id: `AUDIT-${String(++findingIdx).padStart(3, "0")}`,
+      type: "low-confidence",
+      severity: entry.confidence < 50 ? "critical" : "major",
+      title: `Low confidence: "${entry.title}" (${entry.confidence}%)`,
+      description: `Entry ${entry.id} has confidence below threshold`,
+      affectedIds: [entry.id],
+      suggestedFix: "Verify against primary sources or add corroborating cross-references",
+      domain: entry.domain,
+    });
+  }
+
+  const orphans = findOrphanEntries();
+  for (const orphan of orphans.slice(0, 5)) {
+    findings.push({
+      id: `AUDIT-${String(++findingIdx).padStart(3, "0")}`,
+      type: "orphan",
+      severity: "moderate",
+      title: `Orphan entry: "${orphan.title}"`,
+      description: `Entry ${orphan.id} has no cross-references to any other entry`,
+      affectedIds: [orphan.id],
+      suggestedFix: "Link to related entries via shared tags or domain overlap",
+      domain: orphan.domain,
+    });
+  }
+
+  const { broken, brokenRefs } = validateCrossReferenceIntegrity();
+  if (broken > 0) {
+    findings.push({
+      id: `AUDIT-${String(++findingIdx).padStart(3, "0")}`,
+      type: "stale-ref",
+      severity: "major",
+      title: `${broken} broken cross-references found`,
+      description: brokenRefs.slice(0, 3).map(r => r.reason).join("; "),
+      affectedIds: brokenRefs.map(r => r.fromId),
+      suggestedFix: "Remove stale references or add missing corpus entries",
+      domain: "cross-references",
+    });
+  }
+
+  const advAudit = adversarialChallengeAudit();
+  for (const adv of advAudit.filter(a => a.corpusSupport < 3)) {
+    findings.push({
+      id: `AUDIT-${String(++findingIdx).padStart(3, "0")}`,
+      type: "adversarial-fail",
+      severity: adv.severity === "critical" ? "critical" : "major",
+      title: `Weak defense: "${adv.challenge.slice(0, 60)}..."`,
+      description: `Only ${adv.corpusSupport} supporting entries for adversarial challenge in ${adv.targetDomain}`,
+      affectedIds: adv.supportingEntries,
+      suggestedFix: "Add high-confidence entries with empirical citations",
+      domain: adv.targetDomain,
+    });
+  }
+
+  const harmonic = harmonicFrequencyAudit();
+  if (harmonic.misaligned.length > 0) {
+    findings.push({
+      id: `AUDIT-${String(++findingIdx).padStart(3, "0")}`,
+      type: "frequency-mismatch",
+      severity: "moderate",
+      title: `${harmonic.misaligned.length} entries with non-standard frequencies`,
+      description: `Frequencies not in Solfeggio/Schumann set: ${harmonic.misaligned.map(e => e.frequency).join(", ")}`,
+      affectedIds: harmonic.misaligned.map(e => e.id),
+      suggestedFix: "Align to nearest Solfeggio frequency or document justification",
+      domain: "harmonics",
+    });
+  }
+
+  const coherence = computeDomainCoherence();
+  for (const dc of coherence.filter(d => d.coherenceScore < 0.1 && d.entryCount >= 3).slice(0, 3)) {
+    findings.push({
+      id: `AUDIT-${String(++findingIdx).padStart(3, "0")}`,
+      type: "domain-imbalance",
+      severity: "moderate",
+      title: `Low coherence in domain "${dc.domain}" (${dc.coherenceScore})`,
+      description: `${dc.entryCount} entries but internal tag overlap is only ${dc.internalTagOverlap} — entries may be miscategorized`,
+      affectedIds: [],
+      suggestedFix: "Re-tag entries or split into sub-domains",
+      domain: dc.domain,
+    });
+  }
+
+  const agentAudit = agentCoverageAudit();
+  for (const blind of agentAudit.filter(a => a.coveragePercent < 50).slice(0, 3)) {
+    findings.push({
+      id: `AUDIT-${String(++findingIdx).padStart(3, "0")}`,
+      type: "agent-blind-spot",
+      severity: "major",
+      title: `Agent ${blind.agentId} has low domain coverage (${blind.coveragePercent}%)`,
+      description: `Covers ${blind.coveredEntries} of ${blind.totalDomainEntries} entries in "${blind.domain}"`,
+      affectedIds: [blind.agentId],
+      suggestedFix: "Expand agent tag set or add domain-specific corpus entries",
+      domain: blind.domain,
+    });
+  }
+
+  return findings.sort((a, b) => {
+    const sev = { critical: 0, major: 1, moderate: 2, minor: 3 };
+    return sev[a.severity] - sev[b.severity];
+  });
+}
