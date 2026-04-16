@@ -811,33 +811,33 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
 
   const handleMicPressStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
-    if (isRecordingRef.current || isMicPressedRef.current) return;
+    if (isRecordingRef.current) {
+      stopSpeechRecognition();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+        mediaRecorderRef.current.stop();
+      }
+      isRecordingRef.current = false;
+      setIsRecording(false);
+      isMicPressedRef.current = false;
+      detachWindowReleaseListeners();
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(t => t.stop());
+        mediaStreamRef.current = null;
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+        audioContextRef.current.close().catch(() => {});
+        audioContextRef.current = null;
+      }
+      setVoiceState("idle");
+      return;
+    }
     isMicPressedRef.current = true;
-    attachWindowReleaseListeners();
     toggleVoiceRef.current?.();
-  }, [attachWindowReleaseListeners]);
-
-  const handleMicPressEnd = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    isMicPressedRef.current = false;
-    detachWindowReleaseListeners();
-    if (!isRecordingRef.current) return;
-    stopSpeechRecognition();
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      mediaRecorderRef.current.stop();
-    }
-    isRecordingRef.current = false;
-    setIsRecording(false);
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(t => t.stop());
-      mediaStreamRef.current = null;
-    }
-    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
-      audioContextRef.current.close().catch(() => {});
-      audioContextRef.current = null;
-    }
-    setVoiceState("idle");
   }, [detachWindowReleaseListeners, stopSpeechRecognition]);
+
+  const handleMicPressEnd = useCallback((_e: React.MouseEvent | React.TouchEvent) => {
+    // Click-to-toggle mode: end handler is a no-op; toggling happens in handleMicPressStart.
+  }, []);
 
   useEffect(() => {
     toggleVoiceRef.current = toggleVoice;

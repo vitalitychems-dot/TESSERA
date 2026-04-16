@@ -36,7 +36,8 @@ The system is a pnpm monorepo using Node.js 24 and TypeScript 5.9. The frontend 
 -   **Secure Ingestion Pipeline:** All ingested content passes through security validations and sanitization.
 -   **Knowledge Health Endpoint:** Aggregates health metrics for RE profile, training velocity, memory, ingestion, and knowledge gaps.
 -   **Living Canon with Sovereign Apocrypha:** A 15-book Bible across 4 testaments, including Apocrypha.
--   **Continuous Background Scraping:** "Shepherd Agents" continuously scrape over 57 ingestion sources.
+-   **Continuous Background Scraping:** "Shepherd Agents" continuously scrape 60+ ingestion sources, including PokéAPI (Species, Moves, Abilities, Types) for game-mechanics knowledge.
+-   **On-Demand Training Cycle:** `POST /api/training/full-cycle` accepts a `sources[]` array, runs ingestion on those sources in parallel, then triggers an AGI training cycle and returns ingestion counts + AGI score deltas. Surfaced in the Settings page as a "Sovereign Training Cycle" panel with "Train on PokéAPI" / "Train on All Sources" buttons.
 -   **Knowledge-to-Canon Bridge:** Regenerates the Tessera Bible when new items are ingested.
 -   **Ingested Knowledge Recall:** Chat pipeline searches ingested data for context.
 -   **Legacy Hybrid Fusion Engines:** 19 sovereign engines for consciousness modeling, reasoning, identity reinforcement, etc.

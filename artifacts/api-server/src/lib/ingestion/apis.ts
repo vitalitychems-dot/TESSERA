@@ -238,6 +238,151 @@ export async function fetchPubMed(query = "artificial intelligence medicine", ma
   }).filter(Boolean) as NormalizedItem[];
 }
 
+// PokéAPI v2 — free, no auth required. Reference: https://pokeapi.co/docs/v2
+// PokéAPI has no rate-limit policy and a CDN, so we bypass the 2s/domain
+// scraper throttle and parallelize with a small concurrency cap.
+const POKEAPI_BASE = "https://pokeapi.co/api/v2";
+
+interface PokeResource { name: string; url: string }
+interface PokeListResponse { count: number; next: string | null; previous: string | null; results: PokeResource[] }
+
+async function pokeFetch<T>(url: string): Promise<T> {
+  const { safeFetchJson } = await import("../safe-fetch");
+  return safeFetchJson<T>(url, {
+    headers: { "Accept": "application/json", "User-Agent": "Tessera/PokéAPI-ingest" },
+    timeoutMs: 10000,
+    providerId: "pokeapi",
+    providerName: "PokéAPI",
+  });
+}
+
+async function pokeList(endpoint: string, limit: number, offset = 0): Promise<PokeResource[]> {
+  const data = await pokeFetch<PokeListResponse>(`${POKEAPI_BASE}/${endpoint}?limit=${limit}&offset=${offset}`);
+  return Array.isArray(data?.results) ? data.results : [];
+}
+
+async function pokeBatch<T>(urls: string[], concurrency = 5): Promise<(T | null)[]> {
+  const out: (T | null)[] = new Array(urls.length).fill(null);
+  let cursor = 0;
+  async function worker() {
+    while (cursor < urls.length) {
+      const idx = cursor++;
+      try { out[idx] = await pokeFetch<T>(urls[idx]); } catch { out[idx] = null; }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, urls.length) }, worker));
+  return out;
+}
+
+function flavorText(entries: { language?: { name?: string }; flavor_text?: string }[] | undefined): string {
+  if (!Array.isArray(entries)) return "";
+  const en = entries.find(e => e?.language?.name === "en" && e?.flavor_text);
+  return en?.flavor_text?.replace(/[\n\f\r]+/g, " ").trim() ?? "";
+}
+
+function effectText(entries: { language?: { name?: string }; effect?: string; short_effect?: string }[] | undefined): string {
+  if (!Array.isArray(entries)) return "";
+  const en = entries.find(e => e?.language?.name === "en");
+  return (en?.effect || en?.short_effect || "").replace(/\s+/g, " ").trim();
+}
+
+export async function fetchPokemonSpecies(limit = 20, offset = 0): Promise<NormalizedItem[]> {
+  const list = await pokeList("pokemon-species", limit, offset);
+  const details = await pokeBatch<any>(list.map(r => r.url));
+  const items: NormalizedItem[] = [];
+  for (const sp of details) {
+    if (!sp) continue;
+    try {
+      const desc = flavorText(sp?.flavor_text_entries);
+      const genus = (sp?.genera ?? []).find((g: any) => g?.language?.name === "en")?.genus ?? "";
+      const habitat = sp?.habitat?.name ?? "unknown";
+      const generation = sp?.generation?.name ?? "unknown";
+      const color = sp?.color?.name ?? "unknown";
+      const evolves = sp?.evolves_from_species?.name ?? "none";
+      const baseHappiness = sp?.base_happiness ?? 0;
+      const captureRate = sp?.capture_rate ?? 0;
+      items.push({
+        source: "PokéAPI Species",
+        sourceType: "api",
+        title: `Pokémon #${sp.id}: ${sp.name} (${genus})`,
+        content: `${sp.name} is a ${color} ${genus} from ${generation}. Habitat: ${habitat}. Evolves from: ${evolves}. Base happiness: ${baseHappiness}. Capture rate: ${captureRate}. ${desc}`,
+        url: `https://pokeapi.co/api/v2/pokemon-species/${sp.id}`,
+        tags: ["pokeapi", "pokemon", "species", color, generation, habitat],
+        metadata: { id: sp.id, name: sp.name, generation, color, habitat, captureRate, baseHappiness, isLegendary: !!sp.is_legendary, isMythical: !!sp.is_mythical },
+      });
+    } catch (_e) { /* skip individual failures */ }
+  }
+  return items;
+}
+
+export async function fetchPokemonMoves(limit = 15, offset = 0): Promise<NormalizedItem[]> {
+  const list = await pokeList("move", limit, offset);
+  const details = await pokeBatch<any>(list.map(r => r.url));
+  const items: NormalizedItem[] = [];
+  for (const m of details) {
+    if (!m) continue;
+    try {
+      const eff = effectText(m?.effect_entries) || flavorText(m?.flavor_text_entries);
+      items.push({
+        source: "PokéAPI Moves",
+        sourceType: "api",
+        title: `Move: ${m.name} (${m.type?.name ?? "?"} / ${m.damage_class?.name ?? "?"})`,
+        content: `${m.name} — type ${m.type?.name}, ${m.damage_class?.name} class. Power ${m.power ?? "—"}, accuracy ${m.accuracy ?? "—"}, PP ${m.pp ?? "—"}, priority ${m.priority ?? 0}. Effect: ${eff}`,
+        url: `https://pokeapi.co/api/v2/move/${m.id}`,
+        tags: ["pokeapi", "move", m.type?.name, m.damage_class?.name].filter(Boolean) as string[],
+        metadata: { id: m.id, type: m.type?.name, power: m.power, accuracy: m.accuracy, pp: m.pp, priority: m.priority, damageClass: m.damage_class?.name },
+      });
+    } catch (_e) { /* skip */ }
+  }
+  return items;
+}
+
+export async function fetchPokemonAbilities(limit = 15, offset = 0): Promise<NormalizedItem[]> {
+  const list = await pokeList("ability", limit, offset);
+  const details = await pokeBatch<any>(list.map(r => r.url));
+  const items: NormalizedItem[] = [];
+  for (const a of details) {
+    if (!a) continue;
+    try {
+      const eff = effectText(a?.effect_entries) || flavorText(a?.flavor_text_entries);
+      const carriers = (a?.pokemon ?? []).slice(0, 5).map((p: any) => p?.pokemon?.name).filter(Boolean).join(", ");
+      items.push({
+        source: "PokéAPI Abilities",
+        sourceType: "api",
+        title: `Ability: ${a.name}`,
+        content: `${a.name} — ${eff}. Notable carriers: ${carriers || "n/a"}.`,
+        url: `https://pokeapi.co/api/v2/ability/${a.id}`,
+        tags: ["pokeapi", "ability", a.generation?.name].filter(Boolean) as string[],
+        metadata: { id: a.id, generation: a.generation?.name, isMainSeries: !!a.is_main_series },
+      });
+    } catch (_e) { /* skip */ }
+  }
+  return items;
+}
+
+export async function fetchPokemonTypes(): Promise<NormalizedItem[]> {
+  const list = await pokeList("type", 3, 0);
+  const details = await pokeBatch<any>(list.map(r => r.url));
+  const items: NormalizedItem[] = [];
+  for (const t of details) {
+    if (!t) continue;
+    try {
+      const dr = t?.damage_relations ?? {};
+      const fmt = (arr: any[]) => (arr ?? []).map((x: any) => x?.name).filter(Boolean).join(", ") || "none";
+      items.push({
+        source: "PokéAPI Types",
+        sourceType: "api",
+        title: `Type: ${t.name}`,
+        content: `${t.name} type. Double damage to: ${fmt(dr.double_damage_to)}. Double damage from: ${fmt(dr.double_damage_from)}. Half damage to: ${fmt(dr.half_damage_to)}. Half damage from: ${fmt(dr.half_damage_from)}. No damage to: ${fmt(dr.no_damage_to)}. No damage from: ${fmt(dr.no_damage_from)}.`,
+        url: `https://pokeapi.co/api/v2/type/${t.id}`,
+        tags: ["pokeapi", "type", t.name],
+        metadata: { id: t.id, name: t.name, generation: t.generation?.name, damageRelations: dr },
+      });
+    } catch (_e) { /* skip */ }
+  }
+  return items;
+}
+
 export async function fetchOpenStreetMap(bbox = "-74.01,40.70,-73.96,40.75"): Promise<NormalizedItem[]> {
   const data = await fetchJson<any>(
     `https://nominatim.openstreetmap.org/search?q=point+of+interest&format=json&limit=10&bounded=1&viewbox=${bbox}`

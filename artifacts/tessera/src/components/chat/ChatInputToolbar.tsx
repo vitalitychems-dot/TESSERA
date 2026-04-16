@@ -130,19 +130,14 @@ export const ChatInputToolbar = memo(function ChatInputToolbar({
 
         <button
           type="button"
-          onMouseDown={onMicPressStart}
-          onMouseUp={onMicPressEnd}
-          onMouseLeave={onMicPressEnd}
-          onTouchStart={onMicPressStart}
-          onTouchEnd={onMicPressEnd}
-          onTouchCancel={onMicPressEnd}
+          onClick={onMicPressStart}
           className={cn(
             "h-10 w-10 flex items-center justify-center rounded-full transition-all select-none",
             isRecording
               ? "bg-red-500 text-white shadow-lg shadow-red-500/20"
               : "text-gray-500 hover:text-white hover:bg-white/[0.06]"
           )}
-          title={isRecording ? "Release to send" : "Hold to speak"}
+          title={isRecording ? "Tap to stop" : "Tap to speak"}
           data-testid="button-voice"
         >
           {isRecording ? (

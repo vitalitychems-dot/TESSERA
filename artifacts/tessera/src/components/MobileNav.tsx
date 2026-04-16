@@ -47,7 +47,15 @@ const CLUSTERS: NavCluster[] = [
       { label: "Life", href: "/life", Icon: Heart, match: (l) => l === "/life", color: "pink" },
       { label: "Nexus", href: "/consciousness", Icon: Brain, match: (l) => l === "/consciousness", color: "purple" },
       { label: "Narrative", href: "/grand-narrative", Icon: BookOpen, match: (l) => l === "/grand-narrative" || l === "/unified-truth", color: "pink" },
-      { label: "Rick", href: "/rick", Icon: Skull, match: (l) => l === "/rick" || l === "/rick-sanchez", color: "cyan" },
+    ],
+  },
+  {
+    id: "rick",
+    label: "RICK",
+    Icon: Skull,
+    color: "emerald",
+    tabs: [
+      { label: "Rick", href: "/rick", Icon: Skull, match: (l) => l === "/rick" || l === "/rick-sanchez", color: "emerald" },
     ],
   },
   {

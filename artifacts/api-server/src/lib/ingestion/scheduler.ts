@@ -3,7 +3,7 @@ import { dataSourcesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { runSourceIngestion } from "./pipeline";
 import type { NormalizedItem } from "./pipeline";
-import { fetchNASA, fetchUSGS, fetchNOAA, fetchWikipedia, fetchArxiv, fetchHackerNews, fetchRedditJson, fetchCoinGecko, fetchSemanticScholar, fetchPubMed } from "./apis";
+import { fetchNASA, fetchUSGS, fetchNOAA, fetchWikipedia, fetchArxiv, fetchHackerNews, fetchRedditJson, fetchCoinGecko, fetchSemanticScholar, fetchPubMed, fetchPokemonSpecies, fetchPokemonMoves, fetchPokemonAbilities, fetchPokemonTypes } from "./apis";
 import { fetchRssFeed, DEFAULT_FEEDS } from "./rss";
 import { fetchGithubTrendingRepos, fetchGithubOrg, fetchGithubTopic } from "./github";
 import { fetchDataGov, fetchWorldBankData, fetchUNData, fetchGithubPublicDatasets } from "./datasets";
@@ -74,6 +74,13 @@ const SOURCE_HANDLERS: Record<string, SourceHandler> = {
   "data.gov Science": () => fetchDataGov("science", 5),
   "data.gov Energy": () => fetchDataGov("energy", 5),
   "data.gov Space": () => fetchDataGov("space", 5),
+
+  // PokéAPI — game-mechanics, type matchups, abilities (free, no key)
+  // Small batches keep ingestion <30s; the rotation scheduler will keep cycling.
+  "PokéAPI Species": () => fetchPokemonSpecies(2, 0),
+  "PokéAPI Moves": () => fetchPokemonMoves(2, 0),
+  "PokéAPI Abilities": () => fetchPokemonAbilities(2, 0),
+  "PokéAPI Types": () => fetchPokemonTypes(),
 };
 
 for (const feed of DEFAULT_FEEDS) {

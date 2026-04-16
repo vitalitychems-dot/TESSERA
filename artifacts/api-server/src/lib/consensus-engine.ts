@@ -569,3 +569,12 @@ export function getConsensusStats() {
 export function listProposals() {
   return getAllProposals();
 }
+
+export function markProposalImplemented(proposalId: string): boolean {
+  const proposal = proposals.get(proposalId);
+  if (!proposal || proposal.status !== "approved") return false;
+  proposal.status = "implemented";
+  proposal.implementationNotes = (proposal.implementationNotes ? proposal.implementationNotes + " " : "") + `[Council Executor: implemented ${new Date().toISOString()}]`;
+  logger.info({ proposalId, title: proposal.title }, "ConsensusEngine: proposal marked as implemented");
+  return true;
+}

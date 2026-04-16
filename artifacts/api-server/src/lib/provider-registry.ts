@@ -222,6 +222,7 @@ const INTERNAL_ONLY_PATHS = [
   "/api/file-integrity",
   "/api/diagnostics",
   "/api/ingestion",
+  "/api/training",
 ];
 
 const SOVEREIGN_TOKEN = process.env.SESSION_SECRET
