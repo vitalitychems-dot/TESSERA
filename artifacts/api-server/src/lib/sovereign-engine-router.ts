@@ -69,6 +69,59 @@ function getCrossDomainContext(domain: string): string[] {
   return related;
 }
 
+export interface QueryFeatures {
+  length: number;
+  hasQuestion: boolean;
+  hasCode: boolean;
+  hasNumbers: boolean;
+  hasUrl: boolean;
+  isTechnical: boolean;
+  isHistorical: boolean;
+  isSpeculative: boolean;
+}
+
+export function extractQueryFeatures(query: string): QueryFeatures {
+  return {
+    length: query.length,
+    hasQuestion: /\?|\bwhat|\bwhy|\bhow|\bwhen|\bwhere|\bwho\b/i.test(query),
+    hasCode: /`|\bfunction\b|\bclass\b|\{.*\}|\bconst\b|\blet\b|\breturn\b/.test(query),
+    hasNumbers: /\d+/.test(query),
+    hasUrl: /https?:\/\//.test(query),
+    isTechnical: /\b(algorithm|protocol|system|api|kernel|cryptograph|quantum|neural|mesh|consensus)\b/i.test(query),
+    isHistorical: /\b(history|ancient|medieval|historical|origin|founded|era)\b/i.test(query),
+    isSpeculative: /\b(what if|could|might|suppose|imagine|hypothesis|theory)\b/i.test(query),
+  };
+}
+
+const FEATURE_WEIGHTS: Record<string, Partial<Record<keyof QueryFeatures, number>>> = {
+  knowledge: { isHistorical: 0.25, hasNumbers: 0.1, hasQuestion: 0.15, length: 0.05 },
+  quantum: { isTechnical: 0.3, hasNumbers: 0.15, isSpeculative: 0.1 },
+  bio: { isTechnical: 0.25, isHistorical: 0.1, hasQuestion: 0.1 },
+  mesh: { isTechnical: 0.3, hasCode: 0.2, hasNumbers: 0.1 },
+  finance: { hasNumbers: 0.3, isTechnical: 0.15, isSpeculative: 0.1 },
+};
+
+export function scoreDomainForFeatures(domain: string, features: QueryFeatures): number {
+  const weights = FEATURE_WEIGHTS[domain] ?? {};
+  let score = 0;
+  for (const [key, w] of Object.entries(weights) as [keyof QueryFeatures, number][]) {
+    const val = features[key];
+    if (typeof val === "boolean") score += val ? w : 0;
+    else if (typeof val === "number") score += Math.min(1, val / 200) * w;
+  }
+  return score;
+}
+
+export function recommendDomain(query: string): { domain: string; scores: Record<string, number>; features: QueryFeatures } {
+  const features = extractQueryFeatures(query);
+  const scores: Record<string, number> = {};
+  for (const d of Object.keys(FEATURE_WEIGHTS)) {
+    scores[d] = scoreDomainForFeatures(d, features) + getDomainPerformanceBonus(d) * 0.2;
+  }
+  const domain = Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "knowledge";
+  return { domain, scores, features };
+}
+
 function swarmSelectProvider(domain: string): { agentId: string; agentName: string; preferArxiv: boolean } {
   const category = DOMAIN_OPTIMIZER_CATEGORY[domain] ?? "Knowledge Representation";
   const perfBonus = getDomainPerformanceBonus(domain);

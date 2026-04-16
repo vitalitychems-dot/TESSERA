@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { logger } from "./logger";
 import { lookupCache, storeInCache, getCacheStats } from "./semantic-cache";
 import { lookupKnowledge, distillFromResponse } from "./knowledge-distillation";
+import { applyDreamToMessages } from "./dream-prompt-bridge";
 
 let _client: OpenAI | null = null;
 
@@ -79,7 +80,7 @@ export async function callLLM(
     llmStats.cacheMisses++;
   }
 
-  const canonicalMessages = messages.map(m => ({ ...m }));
+  const canonicalMessages = applyDreamToMessages(messages.map(m => ({ ...m })));
 
   if (!skipDistillation && userQuery.length > 10) {
     try {
@@ -148,7 +149,25 @@ export async function callLLM(
       },
       { signal: controller.signal as AbortSignal }
     );
-    const result = response.choices[0]?.message?.content ?? "";
+    const rawResult = response.choices[0]?.message?.content ?? "";
+
+    // SOVEREIGN POLICY: external LLM outputs are UNTRUSTED. Sanitize at the ingress
+    // boundary so forbidden patterns (override/admin/eval/etc.) are redacted before
+    // the content propagates into distillation, cache, or downstream engines.
+    let result = rawResult;
+    if (rawResult.length > 0) {
+      try {
+        const { sanitizeUntrustedText, extractLessonsFromUntrusted } = await import("./external-sandbox-policy");
+        const sanitization = sanitizeUntrustedText(rawResult, 50_000);
+        result = sanitization.sanitized;
+        if (sanitization.flags.length > 0 && sanitization.flags.some(f => f.startsWith("forbidden:"))) {
+          logger.warn({ flags: sanitization.flags, model }, "LLMClient: redacted forbidden patterns from untrusted LLM output");
+        }
+        if (result.length > 50 && userQuery.length > 0) {
+          extractLessonsFromUntrusted("external-llm", userQuery.slice(0, 80), result);
+        }
+      } catch {}
+    }
 
     if (!skipCache && result.length > 0) {
       storeInCache(messages, model, result, cacheTtl).catch(() => {});

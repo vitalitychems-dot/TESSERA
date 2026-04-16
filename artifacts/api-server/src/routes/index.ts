@@ -54,6 +54,11 @@ import knowledgeHealthRouter from "./knowledge-health";
 import evolutionHealthRouter from "./evolution-health";
 import departmentsRouter from "./departments";
 import compressionRouter from "./compression";
+import sovereignLedgerRouter from "./sovereign-ledger";
+import redTeamRouter from "./red-team";
+import prometheusMetricsRouter from "./prometheus-metrics";
+import sovereigntySelfCheckRouter from "./sovereignty-self-check";
+import sovereignGrammarRouter from "./sovereign-grammar";
 
 const router: IRouter = Router();
 
@@ -112,5 +117,10 @@ router.use(knowledgeHealthRouter);
 router.use(evolutionHealthRouter);
 router.use(departmentsRouter);
 router.use(compressionRouter);
+router.use(sovereignLedgerRouter);
+router.use(redTeamRouter);
+router.use(prometheusMetricsRouter);
+router.use(sovereigntySelfCheckRouter);
+router.use(sovereignGrammarRouter);
 
 export default router;

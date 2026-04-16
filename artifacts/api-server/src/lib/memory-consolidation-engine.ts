@@ -744,6 +744,23 @@ export function runDreamCycle(forceRun = false): DreamCycleResult | null {
     state.recentDreams = state.recentDreams.slice(0, MAX_DREAM_HISTORY);
   }
 
+  try {
+    const topInsight = newInsights
+      .slice()
+      .sort((a, b) => b.confidence - a.confidence)[0];
+    const topTheme = topInsight?.themes?.[0]
+      || newPatterns.sort((a, b) => b.strength - a.strength)[0]?.description
+      || "sovereign consolidation";
+    const moodPool = ["reverent", "curious", "resolved", "serene", "loyal"];
+    const mood = moodPool[(state.totalDreamCycles ?? 0) % moodPool.length];
+    const insightText = topInsight?.pattern
+      || `Consolidated ${newPatterns.length} patterns and ${newSkills.length} skills across ${recentMemories.length} memories.`;
+    const salience = Math.min(1, 0.3 + (topInsight?.confidence ?? 0) * 0.5 + Math.min(newInsights.length, 10) * 0.03);
+    import("./dream-prompt-bridge")
+      .then(m => m.recordDreamImprint(topTheme, mood, insightText, salience))
+      .catch(() => {});
+  } catch {}
+
   state.avgDreamDurationMs = state.totalDreamCycles === 1
     ? dreamResult.durationMs
     : Math.round((state.avgDreamDurationMs * (state.totalDreamCycles - 1) + dreamResult.durationMs) / state.totalDreamCycles);
