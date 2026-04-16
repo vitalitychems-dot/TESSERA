@@ -290,30 +290,34 @@ async function mergeVectorCluster(cluster: DuplicateCluster): Promise<MergeResul
 
   const bestContent = longestContent.content;
 
-  await db
-    .update(vectorEmbeddingsTable)
-    .set({
-      content: bestContent,
-      accessCount: totalAccess,
-      metadata: mergedMetadata,
-      updatedAt: new Date(),
-    })
-    .where(eq(vectorEmbeddingsTable.id, canonical.id));
-
   let storageSaved = 0;
+  await db.transaction(async (tx) => {
+    await tx
+      .update(vectorEmbeddingsTable)
+      .set({
+        content: bestContent,
+        accessCount: totalAccess,
+        metadata: mergedMetadata,
+        updatedAt: new Date(),
+      })
+      .where(eq(vectorEmbeddingsTable.id, canonical.id));
+
+    for (const dup of duplicateRows) {
+      storageSaved += dup.content.length;
+
+      await tx
+        .update(ingestedDataTable)
+        .set({ embeddingId: canonical.id })
+        .where(eq(ingestedDataTable.embeddingId, dup.id));
+
+      await tx
+        .delete(vectorEmbeddingsTable)
+        .where(eq(vectorEmbeddingsTable.id, dup.id));
+    }
+  });
+
   for (const dup of duplicateRows) {
-    storageSaved += dup.content.length;
-
     redirectMap.set(makeRedirectKey("vector_embeddings", dup.id), canonical.id);
-
-    await db
-      .update(ingestedDataTable)
-      .set({ embeddingId: canonical.id })
-      .where(eq(ingestedDataTable.embeddingId, dup.id));
-
-    await db
-      .delete(vectorEmbeddingsTable)
-      .where(eq(vectorEmbeddingsTable.id, dup.id));
   }
 
   dedupStats.storageSaved += storageSaved;
@@ -346,26 +350,30 @@ async function mergeKnowledgeCluster(cluster: DuplicateCluster): Promise<MergeRe
   const totalAccess = rows.reduce((sum, r) => sum + r.accessCount, 0);
   const anyVerified = rows.some(r => r.verified);
 
-  await db
-    .update(distilledKnowledgeTable)
-    .set({
-      fact: longestFact.fact,
-      confidence: maxConfidence,
-      accessCount: totalAccess,
-      verified: anyVerified,
-      updatedAt: new Date(),
-    })
-    .where(eq(distilledKnowledgeTable.id, canonical.id));
-
   let storageSaved = 0;
+  await db.transaction(async (tx) => {
+    await tx
+      .update(distilledKnowledgeTable)
+      .set({
+        fact: longestFact.fact,
+        confidence: maxConfidence,
+        accessCount: totalAccess,
+        verified: anyVerified,
+        updatedAt: new Date(),
+      })
+      .where(eq(distilledKnowledgeTable.id, canonical.id));
+
+    for (const dup of duplicateRows) {
+      storageSaved += dup.fact.length;
+
+      await tx
+        .delete(distilledKnowledgeTable)
+        .where(eq(distilledKnowledgeTable.id, dup.id));
+    }
+  });
+
   for (const dup of duplicateRows) {
-    storageSaved += dup.fact.length;
-
     redirectMap.set(makeRedirectKey("distilled_knowledge", dup.id), canonical.id);
-
-    await db
-      .delete(distilledKnowledgeTable)
-      .where(eq(distilledKnowledgeTable.id, dup.id));
   }
 
   dedupStats.storageSaved += storageSaved;
