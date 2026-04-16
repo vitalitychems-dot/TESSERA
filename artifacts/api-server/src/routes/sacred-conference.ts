@@ -16,7 +16,7 @@ import {
   searchKnowledge,
   getVaultStats,
 } from "../lib/sacred-knowledge-vault";
-import { getCorpusStats, getCorpusSize, getDomainClusters, queryCorpus } from "../lib/knowledge-corpus-index";
+import { getCorpusStats, getCorpusSize, getDomainClusters, queryCorpus, runFullCorpusAudit, type CorpusCategory } from "../lib/knowledge-corpus-index";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -140,8 +140,12 @@ router.get("/sacred-knowledge/classification/:classification", async (req, res) 
 });
 
 router.get("/sacred-knowledge/depth/:depth", async (req, res) => {
-  const depth = req.params.depth as any;
-  const entries = getKnowledgeByDepth(depth);
+  const validDepths = ["surface", "hidden", "deep"] as const;
+  const depth = req.params.depth;
+  if (!validDepths.includes(depth as typeof validDepths[number])) {
+    return res.status(400).json({ error: `Invalid depth. Must be one of: ${validDepths.join(", ")}` });
+  }
+  const entries = getKnowledgeByDepth(depth as typeof validDepths[number]);
   return res.json({ entries, count: entries.length });
 });
 
@@ -172,16 +176,46 @@ router.get("/knowledge-corpus/domains", async (_req, res) => {
   }
 });
 
+const VALID_CORPUS_CATEGORIES: readonly CorpusCategory[] = ["subject", "sacred-entry", "declassified", "subcategory", "synthesis", "harmonic", "agent-specialty", "file-registry", "wiki-topic", "adversarial", "identity-memory"];
+
 router.get("/knowledge-corpus/query", async (req, res) => {
   try {
     const tags = req.query.tags ? String(req.query.tags).split(",") : undefined;
     const domain = req.query.domain ? String(req.query.domain) : undefined;
-    const category = req.query.category ? String(req.query.category) as any : undefined;
-    const limit = req.query.limit ? Number(req.query.limit) : 50;
+    const rawCategory = req.query.category ? String(req.query.category) : undefined;
+    const rawLimit = req.query.limit ? Number(req.query.limit) : 50;
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 500) : 50;
+
+    let category: CorpusCategory | undefined;
+    if (rawCategory) {
+      if (!VALID_CORPUS_CATEGORIES.includes(rawCategory as CorpusCategory)) {
+        return res.status(400).json({ error: `Invalid category. Must be one of: ${VALID_CORPUS_CATEGORIES.join(", ")}` });
+      }
+      category = rawCategory as CorpusCategory;
+    }
+
     const results = queryCorpus({ tags, domain, category, limit });
     return res.json({ entries: results, count: results.length });
   } catch (err) {
     return res.status(500).json({ error: "Failed to query corpus" });
+  }
+});
+
+router.get("/knowledge-corpus/audit", async (_req, res) => {
+  try {
+    const findings = runFullCorpusAudit();
+    return res.json({
+      findings,
+      count: findings.length,
+      summary: {
+        critical: findings.filter(f => f.severity === "critical").length,
+        major: findings.filter(f => f.severity === "major").length,
+        moderate: findings.filter(f => f.severity === "moderate").length,
+        minor: findings.filter(f => f.severity === "minor").length,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to run corpus audit" });
   }
 });
 
