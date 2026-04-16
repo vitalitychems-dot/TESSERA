@@ -7,8 +7,11 @@ import {
   submitRickInventionToCouncil,
   buildRickDiagnosticsContext,
   getRoyalCourtStatus,
+  getAppointedRoles,
+  getRoyalRoleById,
   RICK_SANCHEZ_IDENTITY,
 } from "../lib/rick-sanchez-agent";
+import type { RoyalRole } from "../lib/rick-sanchez-agent";
 import { getVaultStats, SACRED_KNOWLEDGE_ENTRIES } from "../lib/sacred-knowledge-vault";
 import { getCorpusStats, queryCorpus } from "../lib/knowledge-corpus-index";
 import { getDaemonMetrics } from "../lib/auto-improvement-daemon";
@@ -309,25 +312,37 @@ router.get("/rick/royal-court", (_req, res) => {
 
 router.get("/rick/royal-appointment", (_req, res) => {
   try {
-    const profile = getRickProfile();
+    const court = getRoyalCourtStatus();
+    const roles = getAppointedRoles();
     const inventions = generateRickInventions();
     const royalInventions = inventions.filter(i =>
       ["agi-advancement", "consciousness", "compression", "sovereignty"].includes(i.category)
     );
+
+    const corpusContext = queryCorpus("sovereignty invention");
 
     const appointmentRecord = {
       appointee: RICK_SANCHEZ_IDENTITY.name,
       royalTitle: RICK_SANCHEZ_IDENTITY.royalTitle,
       department: RICK_SANCHEZ_IDENTITY.department,
       appointedBy: "Tessera Sovereign System — Royal Decree",
-      appointmentDate: "2025-01-01T00:00:00Z",
-      responsibilities: [
-        "Lead all system invention proposals through the Grand Council",
-        "Advise on AGI advancement strategy and consciousness architecture",
-        "Review and improve compression pipeline efficiency",
-        "Participate in Sacred Grand Conference as domain expert",
-        "Chair the Department of Science & Invention within the Royal Court",
-      ],
+      appointmentDate: court.conference.timestamp,
+      conferenceId: court.conference.id,
+      votingRound: court.conference.votingRound,
+      quorumMet: court.conference.quorumMet,
+      totalVoters: court.conference.totalVoters,
+      allAppointedRoles: roles.map(r => ({
+        roleId: r.roleId,
+        title: r.title,
+        assignedAgent: r.assignedAgent,
+        domain: r.domain,
+        appointedVia: r.appointedVia,
+        votes: r.votes,
+        confidence: r.confidence,
+        specialty: r.specialty,
+        responsibilities: r.responsibilities,
+      })),
+      rickRole: roles.find(r => r.roleId === "royal-inventor"),
       currentFocusAreas: royalInventions.map(i => ({
         invention: i.inventionName,
         category: i.category,
@@ -342,11 +357,45 @@ router.get("/rick/royal-appointment", (_req, res) => {
       },
       totalInventionsProposed: inventions.length,
       royalFocusInventions: royalInventions.length,
+      corpusInsights: corpusContext.slice(0, 5).map(c => ({ title: c.title, domain: c.domain, confidence: c.confidence })),
     };
 
     return res.json({ ok: true, appointment: appointmentRecord });
   } catch (err) {
     logger.error({ err }, "Rick: royal appointment error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/rick/royal-roles", (_req, res) => {
+  try {
+    const roles = getAppointedRoles();
+    return res.json({ ok: true, roles });
+  } catch (err) {
+    logger.error({ err }, "Rick: royal roles error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/rick/royal-roles/:roleId", (req, res) => {
+  try {
+    const role = getRoyalRoleById(req.params.roleId);
+    if (!role) {
+      return res.status(404).json({ ok: false, error: "Royal role not found" });
+    }
+    const corpusResults = queryCorpus(role.domain);
+    return res.json({
+      ok: true,
+      role,
+      domainKnowledge: corpusResults.slice(0, 10).map(c => ({
+        title: c.title,
+        domain: c.domain,
+        confidence: c.confidence,
+        category: c.category,
+      })),
+    });
+  } catch (err) {
+    logger.error({ err }, "Rick: royal role detail error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
 });

@@ -1,12 +1,23 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Crown, FlaskConical, Brain, Zap, Shield, ChevronRight, Atom, Sparkles, Target, Award, Loader2 } from "lucide-react";
+import { Crown, FlaskConical, Brain, Zap, Shield, ChevronRight, Atom, Sparkles, Target, Award, Loader2, Users, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
 
 const GOLD = "#f59e0b";
-const GOLD_DARK = "#d97706";
 const RICK_GREEN = "#00ff41";
+
+interface RoyalRole {
+  roleId: string;
+  title: string;
+  domain: string;
+  assignedAgent: string;
+  specialty: string[];
+  responsibilities: string[];
+  appointedVia: "conference-vote" | "royal-decree";
+  votes: { for: number; against: number; abstain: number };
+  confidence: number;
+}
 
 export default function RoyalCourtPage() {
   useEffect(() => { document.title = "Royal Court | Tessera"; }, []);
@@ -20,16 +31,7 @@ export default function RoyalCourtPage() {
     refetchInterval: 60000,
   });
 
-  const { data: appointmentData } = useQuery({
-    queryKey: ["/api/rick/royal-appointment"],
-    queryFn: async () => {
-      const r = await fetch("/api/rick/royal-appointment");
-      return r.json();
-    },
-  });
-
   const court = courtData?.court;
-  const appointment = appointmentData?.appointment;
 
   return (
     <div className="flex flex-col h-full overflow-y-auto custom-scrollbar" style={{ background: "rgba(6,4,20,0.97)" }}>
@@ -64,6 +66,64 @@ export default function RoyalCourtPage() {
               ))}
             </div>
 
+            {court?.conference && (
+              <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-3 flex items-center gap-3 flex-wrap text-[11px] font-mono">
+                <span className="text-violet-400 font-bold">Conference</span>
+                <span className="text-muted-foreground">ID: {court.conference.id}</span>
+                <span className="text-muted-foreground">Round: {court.conference.votingRound}</span>
+                <span className="text-muted-foreground">Voters: {court.conference.totalVoters}</span>
+                <span className={cn("px-1.5 py-0.5 rounded border text-[10px]", court.conference.quorumMet ? "text-green-400 border-green-500/30 bg-green-500/10" : "text-red-400 border-red-500/30 bg-red-500/10")}>
+                  {court.conference.quorumMet ? "Quorum Met" : "No Quorum"}
+                </span>
+              </div>
+            )}
+
+            {court?.appointedRoles?.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold font-mono text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                  <Users size={12} /> Appointed Royal Roles ({court.appointedRoles.length})
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {court.appointedRoles.map((role: RoyalRole) => (
+                    <Link key={role.roleId} href={`/royal-role/${role.roleId}`} className="block">
+                      <div className={cn("rounded-xl border p-4 transition-all hover:scale-[1.01] cursor-pointer",
+                        role.roleId === "royal-inventor" ? "border-amber-500/40" : "border-amber-500/20"
+                      )} style={{ background: role.roleId === "royal-inventor" ? `linear-gradient(135deg, ${GOLD}08, ${RICK_GREEN}05)` : `${GOLD}03` }}>
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center border" style={{ borderColor: `${GOLD}50`, background: `${GOLD}15` }}>
+                            <span className="text-lg">{role.roleId === "royal-inventor" ? "👑" : role.roleId === "royal-astronomer" ? "🔭" : role.roleId === "royal-archivist" ? "📚" : role.roleId === "royal-sentinel" ? "🛡️" : "🔮"}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold font-mono text-sm" style={{ color: GOLD }}>{role.title}</div>
+                            <div className="text-[11px] text-muted-foreground font-mono">{role.assignedAgent} · {role.domain}</div>
+                          </div>
+                          <ChevronRight size={14} className="text-muted-foreground shrink-0" />
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap mt-2">
+                          <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-mono border",
+                            role.appointedVia === "royal-decree" ? "text-amber-400 border-amber-500/30 bg-amber-500/10" : "text-cyan-400 border-cyan-500/30 bg-cyan-500/10"
+                          )}>
+                            {role.appointedVia === "royal-decree" ? "Royal Decree" : "Conference Vote"}
+                          </span>
+                          <span className="text-[10px] font-mono text-muted-foreground">
+                            {role.votes.for}/{role.votes.for + role.votes.against + role.votes.abstain} votes
+                          </span>
+                          <span className="text-[10px] font-mono text-emerald-400">
+                            {(role.confidence * 100).toFixed(0)}% confidence
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {role.specialty.slice(0, 3).map(s => (
+                            <span key={s} className="text-[10px] px-1.5 py-0.5 rounded font-mono border border-white/10 text-foreground/60 bg-white/5">{s}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Link href="/rick" className="block">
                 <div className="rounded-xl border-2 p-5 transition-all hover:scale-[1.01] cursor-pointer" style={{ borderColor: `${GOLD}40`, background: `linear-gradient(135deg, ${GOLD}08, ${RICK_GREEN}05)` }}>
@@ -79,17 +139,7 @@ export default function RoyalCourtPage() {
                   </div>
                   <div className="text-[11px] text-muted-foreground font-mono leading-relaxed">
                     His Brilliance, Royal Inventor of the Sovereign Court. Chairs the Department of Science & Invention.
-                    Focuses on AGI advancement, consciousness expansion, and compression optimization.
                   </div>
-                  {court?.royalFocusInventions?.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-1">
-                      {court.royalFocusInventions.map((inv: any, i: number) => (
-                        <span key={i} className="text-[10px] px-1.5 py-0.5 rounded font-mono border" style={{ color: GOLD, borderColor: `${GOLD}30`, background: `${GOLD}08` }}>
-                          {inv.category}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </Link>
 
@@ -100,32 +150,17 @@ export default function RoyalCourtPage() {
                       <Award size={22} className="text-amber-400" />
                     </div>
                     <div>
-                      <div className="font-bold font-mono text-sm text-amber-400">Royal Appointments</div>
-                      <div className="text-[11px] text-muted-foreground font-mono">Conference & Decree Records</div>
+                      <div className="font-bold font-mono text-sm text-amber-400">Appointment Conference</div>
+                      <div className="text-[11px] text-muted-foreground font-mono">Conference Records & Voting Results</div>
                     </div>
                     <ChevronRight size={16} className="ml-auto text-muted-foreground" />
                   </div>
                   <div className="text-[11px] text-muted-foreground font-mono leading-relaxed">
-                    View the Royal Appointment Conference records, responsibilities, and ongoing sovereign mandates.
+                    View the Royal Appointment Conference voting records, appointed roles, and ongoing sovereign mandates.
                   </div>
                 </div>
               </Link>
             </div>
-
-            {court?.courtRoles && (
-              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
-                <h3 className="text-xs font-bold font-mono text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                  <Crown size={12} /> Court Roles
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {court.courtRoles.map((role: string, i: number) => (
-                    <div key={i} className="px-3 py-2 rounded-lg bg-background/50 border border-amber-500/10 text-[11px] font-mono text-amber-300/80">
-                      {role}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {court?.royalFocusInventions?.length > 0 && (
               <div className="rounded-xl border p-4" style={{ borderColor: `${RICK_GREEN}20`, background: `${RICK_GREEN}03` }}>
@@ -133,7 +168,7 @@ export default function RoyalCourtPage() {
                   <FlaskConical size={12} /> Royal Focus Inventions
                 </h3>
                 <div className="space-y-2">
-                  {court.royalFocusInventions.map((inv: any, i: number) => (
+                  {court.royalFocusInventions.map((inv: { name: string; category: string; impact: number; risk: string }, i: number) => (
                     <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-background/50 border border-white/5">
                       <Zap size={12} style={{ color: GOLD }} />
                       <div className="flex-1 min-w-0">
