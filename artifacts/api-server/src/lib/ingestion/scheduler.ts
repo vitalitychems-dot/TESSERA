@@ -91,24 +91,57 @@ async function genericSourceHandler(source: { name: string; type: string; url: s
   return [];
 }
 
-async function recordSchedulerJob(kind: string, durationMs: number, ok: boolean, detail: string, metadata: Record<string, unknown> = {}): Promise<void> {
+interface CycleAudit {
+  ingested: number;
+  skipped: number;
+  errors: string[];
+  extra?: Record<string, unknown>;
+}
+
+async function recordSchedulerJob(kind: string, durationMs: number, ok: boolean, detail: string, cycleAudit: CycleAudit = { ingested: 0, skipped: 0, errors: [] }): Promise<void> {
   try {
     const started = new Date(Date.now() - durationMs);
     await db.insert(ingestionJobsTable).values({
       sourceId: null,
       sourceName: `_scheduler:${kind}`,
       status: ok ? "completed" : "failed",
-      itemsIngested: 0,
-      itemsSkipped: 0,
-      errors: ok ? [] : [detail],
+      itemsIngested: cycleAudit.ingested,
+      itemsSkipped: cycleAudit.skipped,
+      errors: ok && cycleAudit.errors.length === 0 ? [] : (cycleAudit.errors.length > 0 ? cycleAudit.errors.slice(0, 20) : [detail]),
       startedAt: started,
       completedAt: new Date(),
       durationMs,
-      metadata: { kind, detail, ...metadata },
+      metadata: { kind, detail, ...(cycleAudit.extra ?? {}) },
     });
   } catch (err) {
     logger.debug({ err: (err as Error).message }, "recordSchedulerJob insert failed");
   }
+}
+
+async function runPerSourceWithBackoff(
+  sourceName: string,
+  sourceId: number | null,
+  fetchFn: () => Promise<NormalizedItem[]>,
+  maxAttempts = 3,
+  baseDelayMs = 1000,
+): Promise<{ ingested: number; skipped: number; errors: string[]; attempts: number }> {
+  let lastResult: { ingested: number; skipped: number; errors: string[] } = { ingested: 0, skipped: 0, errors: [] };
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const result = await runSourceIngestion(sourceName, sourceId, fetchFn);
+      lastResult = { ingested: result.ingested, skipped: result.skipped, errors: result.errors };
+      const failed = result.errors.length > 0 && result.ingested === 0;
+      if (!failed) return { ...lastResult, attempts: attempt };
+    } catch (err) {
+      lastResult = { ingested: 0, skipped: 0, errors: [(err as Error).message] };
+    }
+    if (attempt < maxAttempts) {
+      const delay = baseDelayMs * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 250);
+      audit({ kind: "retry", detail: `${sourceName} attempt ${attempt} failed; retry in ${delay}ms`, ok: false });
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+  return { ...lastResult, attempts: maxAttempts };
 }
 
 export type SourceHandler = () => Promise<NormalizedItem[]>;
@@ -254,7 +287,7 @@ export async function runDueIngestion(): Promise<Record<string, { ingested: numb
     const handler: SourceHandler = staticHandler ?? (() => genericSourceHandler(source));
     if (!staticHandler && !source.url) continue;
     try {
-      const result = await runSourceIngestion(source.name, source.id, handler);
+      const result = await runPerSourceWithBackoff(source.name, source.id, handler, 3, 1000);
       results[source.name] = { ingested: result.ingested, skipped: result.skipped, errors: result.errors };
       await db.update(dataSourcesTable)
         .set({
@@ -431,10 +464,11 @@ const SOURCE_GROUPS = [
 
 let currentGroupIndex = 0;
 
-async function runRotatingGroup(): Promise<void> {
+async function runRotatingGroup(): Promise<{ ingested: number; skipped: number; errors: string[] }> {
   const group = SOURCE_GROUPS[currentGroupIndex % SOURCE_GROUPS.length];
   currentGroupIndex++;
 
+  const totals = { ingested: 0, skipped: 0, errors: [] as string[] };
   for (const sourceName of group) {
     const handler = SOURCE_HANDLERS[sourceName];
     if (!handler) continue;
@@ -446,7 +480,10 @@ async function runRotatingGroup(): Promise<void> {
         .where(eq(dataSourcesTable.name, sourceName))
         .limit(1);
 
-      const result = await runSourceIngestion(sourceName, source?.id ?? null, handler);
+      const result = await runPerSourceWithBackoff(sourceName, source?.id ?? null, handler, 3, 1000);
+      totals.ingested += result.ingested;
+      totals.skipped += result.skipped;
+      for (const err of result.errors) totals.errors.push(`${sourceName}: ${err}`);
 
       if (source) {
         await db.update(dataSourcesTable)
@@ -462,20 +499,24 @@ async function runRotatingGroup(): Promise<void> {
       }
 
       if (result.ingested > 0) {
-        logger.info({ source: sourceName, ingested: result.ingested }, "Rotation ingested new items");
+        logger.info({ source: sourceName, ingested: result.ingested, attempts: result.attempts }, "Rotation ingested new items");
       }
     } catch (e) {
-      logger.warn({ source: sourceName, err: (e as Error).message }, "Rotation source failed");
+      const msg = (e as Error).message;
+      totals.errors.push(`${sourceName}: ${msg}`);
+      logger.warn({ source: sourceName, err: msg }, "Rotation source failed");
     }
   }
+  return totals;
 }
 
 export async function forceRunScheduler(): Promise<{ rotation: boolean; due: Record<string, { ingested: number; skipped: number; errors: string[] }>; locked?: boolean }> {
   const start = Date.now();
   const outcome = await withRunLock("force-run", async () => {
     let rotationOk = false;
+    let rotationTotals = { ingested: 0, skipped: 0, errors: [] as string[] };
     try {
-      await runRotatingGroup();
+      rotationTotals = await runRotatingGroup();
       rotationOk = true;
     } catch (e) {
       logger.warn({ err: (e as Error).message }, "Force-run rotation error");
@@ -486,17 +527,26 @@ export async function forceRunScheduler(): Promise<{ rotation: boolean; due: Rec
     } catch (e) {
       logger.warn({ err: (e as Error).message }, "Force-run due error");
     }
-    return { rotation: rotationOk, due: dueResults };
+    return { rotation: rotationOk, rotationTotals, due: dueResults };
   });
   if (outcome === "locked") {
     audit({ kind: "force-run", detail: "skipped: another run in flight", durationMs: Date.now() - start, ok: false });
     await recordSchedulerJob("force-run", Date.now() - start, false, "skipped: another run in flight");
     return { rotation: false, due: {}, locked: true };
   }
-  const detail = `rotationOk=${outcome.rotation} dueSources=${Object.keys(outcome.due).length}`;
+  let dIng = outcome.rotationTotals.ingested, dSk = outcome.rotationTotals.skipped;
+  const dErr = [...outcome.rotationTotals.errors];
+  for (const [n, r] of Object.entries(outcome.due)) {
+    dIng += r.ingested; dSk += r.skipped;
+    for (const e of r.errors) dErr.push(`${n}: ${e}`);
+  }
+  const detail = `rotationOk=${outcome.rotation} dueSources=${Object.keys(outcome.due).length} ingested=${dIng} skipped=${dSk} errors=${dErr.length}`;
   audit({ kind: "force-run", detail, durationMs: Date.now() - start, ok: outcome.rotation });
-  await recordSchedulerJob("force-run", Date.now() - start, outcome.rotation, detail, { dueSources: Object.keys(outcome.due) });
-  return outcome;
+  await recordSchedulerJob("force-run", Date.now() - start, outcome.rotation, detail, {
+    ingested: dIng, skipped: dSk, errors: dErr,
+    extra: { dueSources: Object.keys(outcome.due) },
+  });
+  return { rotation: outcome.rotation, due: outcome.due };
 }
 
 async function runLinkHarvestCycle(): Promise<void> {
@@ -507,7 +557,12 @@ async function runLinkHarvestCycle(): Promise<void> {
     lastLinkHarvest = result;
     const detail = `scanned=${result.scanned} urls=${result.urlsFound} candidates=${result.uniqueCandidates} new=${result.newSourcesRegistered} blocked=${result.skippedNotAllowed} rateLimited=${result.skippedRateLimited}`;
     audit({ kind: "link-harvest", detail, durationMs: Date.now() - start, ok: true });
-    await recordSchedulerJob("link-harvest", Date.now() - start, true, detail, { ...result });
+    await recordSchedulerJob("link-harvest", Date.now() - start, true, detail, {
+      ingested: result.newSourcesRegistered,
+      skipped: (result.skippedNotAllowed ?? 0) + (result.skippedRateLimited ?? 0),
+      errors: [],
+      extra: { ...result },
+    });
   } catch (e) {
     const msg = (e as Error).message;
     audit({ kind: "link-harvest", detail: `error: ${msg}`, durationMs: Date.now() - start, ok: false });
@@ -533,9 +588,23 @@ export async function startIngestionScheduler(checkIntervalMs = 120_000): Promis
         if (result !== "locked") {
           lastDueRunAt = Date.now();
           totalDueRunsExecuted++;
-          const detail = result ? `sources=${Object.keys(result).length}` : "failed";
+          let totalIngested = 0, totalSkipped = 0;
+          const allErrors: string[] = [];
+          if (result) {
+            for (const [name, r] of Object.entries(result)) {
+              totalIngested += r.ingested;
+              totalSkipped += r.skipped;
+              for (const err of r.errors) allErrors.push(`${name}: ${err}`);
+            }
+          }
+          const detail = result ? `sources=${Object.keys(result).length} ingested=${totalIngested} skipped=${totalSkipped} errors=${allErrors.length}` : "failed";
           audit({ kind: "due", detail, durationMs: Date.now() - start, ok: result !== null });
-          await recordSchedulerJob("due", Date.now() - start, result !== null, detail, result ? { sources: Object.keys(result) } : {});
+          await recordSchedulerJob("due", Date.now() - start, result !== null, detail, {
+            ingested: totalIngested,
+            skipped: totalSkipped,
+            errors: allErrors,
+            extra: result ? { sources: Object.keys(result) } : {},
+          });
         }
       }
       scheduleDue();
@@ -551,8 +620,8 @@ export async function startIngestionScheduler(checkIntervalMs = 120_000): Promis
         const start = Date.now();
         const outcome = await withRunLock("rotation", async () => {
           try {
-            await runRotatingGroup();
-            return { ok: true as const };
+            const totals = await runRotatingGroup();
+            return { ok: true as const, totals };
           } catch (e) {
             return { ok: false as const, err: (e as Error).message };
           }
@@ -562,12 +631,19 @@ export async function startIngestionScheduler(checkIntervalMs = 120_000): Promis
             lastRotationAt = Date.now();
             totalRotationsExecuted++;
             const groupIdx = (currentGroupIndex - 1 + SOURCE_GROUPS.length) % SOURCE_GROUPS.length;
-            const detail = `group=${groupIdx}`;
+            const detail = `group=${groupIdx} ingested=${outcome.totals.ingested} skipped=${outcome.totals.skipped} errors=${outcome.totals.errors.length}`;
             audit({ kind: "rotation", detail, durationMs: Date.now() - start, ok: true });
-            await recordSchedulerJob("rotation", Date.now() - start, true, detail, { groupIndex: groupIdx });
+            await recordSchedulerJob("rotation", Date.now() - start, true, detail, {
+              ingested: outcome.totals.ingested,
+              skipped: outcome.totals.skipped,
+              errors: outcome.totals.errors,
+              extra: { groupIndex: groupIdx },
+            });
           } else {
             audit({ kind: "rotation", detail: `error: ${outcome.err}`, durationMs: Date.now() - start, ok: false });
-            await recordSchedulerJob("rotation", Date.now() - start, false, outcome.err ?? "unknown");
+            await recordSchedulerJob("rotation", Date.now() - start, false, outcome.err ?? "unknown", {
+              ingested: 0, skipped: 0, errors: [outcome.err ?? "unknown"],
+            });
             logger.warn({ err: outcome.err }, "Rotation group error");
           }
         }
