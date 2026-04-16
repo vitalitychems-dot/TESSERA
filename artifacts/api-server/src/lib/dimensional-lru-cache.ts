@@ -243,7 +243,7 @@ class LRUDimension<T> {
     this._latencySamples++;
     if (this._latencySamples > 10_000) {
       this._totalLatencyMs = this._totalLatencyMs / 2;
-      this._latencySamples = this._latencySamples / 2;
+      this._latencySamples = Math.floor(this._latencySamples / 2);
     }
   }
 
@@ -459,7 +459,8 @@ export class DimensionalLRUCache<T> {
     if (ms < 100) this.sub100msLookups++;
     if (this.latencySamples > 10_000) {
       this.totalLatencyMs = this.totalLatencyMs / 2;
-      this.latencySamples = this.latencySamples / 2;
+      this.latencySamples = Math.floor(this.latencySamples / 2);
+      this.sub100msLookups = Math.floor(this.sub100msLookups / 2);
     }
   }
 

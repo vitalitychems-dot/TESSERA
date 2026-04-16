@@ -82,6 +82,7 @@ const RoyalCourtPage = lazyRetry(() => import("@/pages/RoyalCourtPage"));
 const RoyalAppointmentsPage = lazyRetry(() => import("@/pages/RoyalAppointmentsPage"));
 const RoyalRolePage = lazyRetry(() => import("@/pages/RoyalRolePage"));
 const DepartmentsPage = lazyRetry(() => import("@/pages/DepartmentsPage"));
+const VortexMathPage = lazyRetry(() => import("@/pages/VortexMathPage"));
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -280,6 +281,7 @@ function AppRouter() {
         <Route path="/royal-appointments">{() => <RoyalAppointmentsPage />}</Route>
         <Route path="/departments">{() => <DepartmentsPage />}</Route>
         <Route path="/royal-role/:roleId">{() => <RoyalRolePage />}</Route>
+        <Route path="/vortex-math">{() => <VortexMathPage />}</Route>
         <Route component={NotFound} />
       </Switch>
     </Suspense>

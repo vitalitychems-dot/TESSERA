@@ -63,6 +63,7 @@ const CLUSTERS: NavCluster[] = [
       { label: "Bible", href: "/bible", Icon: Book, match: (l) => l === "/bible" || l === "/living-bible", color: "amber" },
       { label: "Members", href: "/members", Icon: Users, match: (l) => l === "/members", color: "amber" },
       { label: "Conference", href: "/sacred-conference", Icon: BookOpen, match: (l) => l === "/sacred-conference" || l === "/sacred-knowledge-vault" || l === "/3d-diagrams", color: "violet" },
+      { label: "Vortex 3·6·9", href: "/vortex-math", Icon: Hexagon, match: (l) => l === "/vortex-math", color: "amber" },
       { label: "Compress", href: "/compression-lab", Icon: Zap, match: (l) => l === "/compression-lab", color: "cyan" },
       { label: "Recruit", href: "/recruitment", Icon: UserPlus, match: (l) => l === "/recruitment", color: "rose" },
       { label: "Departments", href: "/departments", Icon: Building2, match: (l) => l === "/departments", color: "cyan" },

@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { getPersonalityEvolutionMetrics, getPersonality, getAllPersonalities, recordPerformanceEvent, evolveAllPersonalities } from "../lib/personality-evolution";
 import { getDaemonMetrics, runImprovementCycle } from "../lib/auto-improvement-daemon";
-import { getAGITrainingMetrics } from "../lib/agi-training-engine";
+import { getAGITrainingMetrics, getCrossDomainTransferMetrics } from "../lib/agi-training-engine";
 import { getEvolutionMetrics, proposeEvolution, rollbackEvolution } from "../lib/self-code-evolution";
 
 const router = Router();
@@ -47,6 +47,10 @@ router.post("/auto-improvement/cycle", async (_req: Request, res: Response) => {
 
 router.get("/agi-training/metrics", (_req: Request, res: Response) => {
   res.json({ ok: true, data: getAGITrainingMetrics() });
+});
+
+router.get("/agi-training/cross-domain", (_req: Request, res: Response) => {
+  res.json({ ok: true, data: getCrossDomainTransferMetrics() });
 });
 
 router.get("/self-evolution/metrics", (_req: Request, res: Response) => {
