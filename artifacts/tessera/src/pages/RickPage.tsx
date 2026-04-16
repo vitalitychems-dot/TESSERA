@@ -131,7 +131,7 @@ export default function RickPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [activeTab, setActiveTab] = useState<"chat" | "inventions" | "knowledge" | "improvements" | "royal" | "meeseeks">("inventions");
+  const [activeTab, setActiveTab] = useState<"chat" | "inventions" | "proposals" | "knowledge" | "improvements" | "royal" | "meeseeks">("proposals");
   const [submittedInventions, setSubmittedInventions] = useState<Record<number, CouncilResult>>({});
   const [submittingIdx, setSubmittingIdx] = useState<number | null>(null);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
@@ -369,6 +369,7 @@ export default function RickPage() {
         </div>
         <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
           {([
+            { key: "proposals" as const, label: "Proposals", icon: Vote, color: "#fbbf24" },
             { key: "inventions" as const, label: "Inventions", icon: FlaskConical, color: RICK_GREEN },
             { key: "meeseeks" as const, label: "Meeseeks", icon: Users, color: "#a855f7" },
             { key: "knowledge" as const, label: "Vault", icon: BookOpen, color: "#a78bfa" },
@@ -537,6 +538,8 @@ export default function RickPage() {
           )}
         </div>
       )}
+
+      {activeTab === "proposals" && <RickProposalsPanel />}
 
       {activeTab === "knowledge" && (
         <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
@@ -1035,6 +1038,284 @@ export default function RickPage() {
             </div>
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+interface RickProposalEvidence { metric: string; value: string }
+interface RickProposalItem {
+  id: string;
+  title: string;
+  problem: string;
+  evidence: RickProposalEvidence[];
+  proposedChange: string;
+  expectedImpact: string;
+  risk: "low" | "medium" | "high";
+  effortHours: number;
+  category: string;
+  state: "pending-review" | "approved" | "rejected" | "implemented";
+  reviewerReason?: string;
+  generatedAt: number;
+  decidedAt?: number;
+  source: "llm" | "deterministic";
+  truthfulnessScore?: number;
+}
+interface ProposalsResponse {
+  ok: boolean;
+  proposals: RickProposalItem[];
+  counts: Record<string, number>;
+  lastGeneratedAt: number;
+  capacity: number;
+}
+
+const PROPOSAL_GOLD = "#fbbf24";
+const PROPOSAL_RISK: Record<string, string> = { low: "#22c55e", medium: "#f59e0b", high: "#ef4444" };
+const PROPOSAL_STATE_COLOR: Record<string, string> = {
+  "pending-review": "#fbbf24",
+  approved: "#22c55e",
+  rejected: "#ef4444",
+  implemented: "#22d3ee",
+};
+
+function RickProposalsPanel() {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["/api/rick/proposals"],
+    queryFn: async () => {
+      const r = await fetch("/api/rick/proposals");
+      return r.json() as Promise<ProposalsResponse>;
+    },
+    refetchInterval: 30000,
+  });
+
+  const [generating, setGenerating] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+
+  async function generate() {
+    setGenerating(true);
+    try {
+      await fetch("/api/rick/proposals/generate", { method: "POST" });
+      await refetch();
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function approve(id: string) {
+    setBusyId(id);
+    try {
+      await fetch(`/api/rick/proposals/${id}/approve`, { method: "POST" });
+      await refetch();
+    } finally { setBusyId(null); }
+  }
+
+  async function reject(id: string) {
+    setBusyId(id);
+    try {
+      await fetch(`/api/rick/proposals/${id}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: rejectReason }),
+      });
+      setRejectingId(null);
+      setRejectReason("");
+      await refetch();
+    } finally { setBusyId(null); }
+  }
+
+  async function markImplementedFn(id: string) {
+    setBusyId(id);
+    try {
+      await fetch(`/api/rick/proposals/${id}/implemented`, { method: "POST" });
+      await refetch();
+    } finally { setBusyId(null); }
+  }
+
+  const proposals = data?.proposals ?? [];
+  const counts = data?.counts ?? {};
+  const lastGen = data?.lastGeneratedAt ?? 0;
+
+  return (
+    <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+      <div className="rounded-xl border p-4 flex items-start gap-4 flex-wrap" style={{ borderColor: `${PROPOSAL_GOLD}40`, background: `${PROPOSAL_GOLD}08` }}>
+        <div className="flex-1 min-w-[220px]">
+          <div className="font-bold font-mono text-sm" style={{ color: PROPOSAL_GOLD }}>
+            Rick&apos;s 5 System Improvement Proposals
+          </div>
+          <div className="text-[11px] text-muted-foreground font-mono mt-1">
+            Rick reads live diagnostics and proposes 5 concrete, evidence-backed changes. You approve or reject each one — nothing ships without your sign-off.
+          </div>
+          {lastGen > 0 && (
+            <div className="text-[10px] font-mono text-muted-foreground mt-1">
+              Last generated: {new Date(lastGen).toLocaleString()}
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col gap-2 items-end">
+          <div className="flex gap-2 text-[10px] font-mono flex-wrap justify-end">
+            {(["pending-review", "approved", "rejected", "implemented"] as const).map(k => (
+              <span key={k} className="px-1.5 py-0.5 rounded border" style={{ color: PROPOSAL_STATE_COLOR[k], borderColor: `${PROPOSAL_STATE_COLOR[k]}40`, background: `${PROPOSAL_STATE_COLOR[k]}10` }}>
+                {k.replace("-", " ")}: {counts[k] ?? 0}
+              </span>
+            ))}
+          </div>
+          <button
+            onClick={generate}
+            disabled={generating}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-mono font-bold transition-all border disabled:opacity-50"
+            style={{ color: PROPOSAL_GOLD, borderColor: `${PROPOSAL_GOLD}60`, background: `${PROPOSAL_GOLD}15` }}
+          >
+            {generating ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+            {proposals.length === 0 ? "Generate 5 Proposals" : "Refill Pending Slots"}
+          </button>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-12"><Loader2 className="animate-spin" size={20} style={{ color: PROPOSAL_GOLD }} /></div>
+      ) : proposals.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground text-sm font-mono">
+          No proposals yet. Hit &ldquo;Generate 5 Proposals&rdquo; to have Rick analyze the system.
+        </div>
+      ) : (
+        proposals.map((p) => {
+          const stateColor = PROPOSAL_STATE_COLOR[p.state] ?? "#888";
+          const riskColor = PROPOSAL_RISK[p.risk] ?? "#888";
+          const isPending = p.state === "pending-review";
+          const isApproved = p.state === "approved";
+          return (
+            <div
+              key={p.id}
+              className="rounded-xl border p-4 space-y-3"
+              style={{ borderColor: `${stateColor}40`, background: `${stateColor}06` }}
+            >
+              <div className="flex items-start gap-2 flex-wrap">
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold font-mono text-sm" style={{ color: PROPOSAL_GOLD }}>{p.title}</div>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-mono border" style={{ color: stateColor, borderColor: `${stateColor}40`, background: `${stateColor}10` }}>
+                      {p.state.replace("-", " ")}
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-mono border" style={{ color: riskColor, borderColor: `${riskColor}40`, background: `${riskColor}10` }}>
+                      risk: {p.risk}
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-white/5 text-muted-foreground border border-white/10">
+                      {p.category}
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-white/5 text-muted-foreground border border-white/10">
+                      ~{p.effortHours}h
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-white/5 text-muted-foreground border border-white/10">
+                      src: {p.source}
+                    </span>
+                    {typeof p.truthfulnessScore === "number" && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-white/5 text-muted-foreground border border-white/10">
+                        truth: {(p.truthfulnessScore * 100).toFixed(0)}%
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Problem</div>
+                <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">{p.problem}</p>
+              </div>
+
+              {p.evidence.length > 0 && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Evidence</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {p.evidence.map((e, i) => (
+                      <span key={i} className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-white/10 bg-white/5">
+                        <span className="text-muted-foreground">{e.metric}</span> = <span style={{ color: PROPOSAL_GOLD }}>{e.value}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Proposed Change</div>
+                <p className="text-[11px] font-mono text-foreground/80 leading-relaxed">{p.proposedChange}</p>
+              </div>
+
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Expected Impact</div>
+                <p className="text-[11px] font-mono" style={{ color: "#22d3ee" }}>{p.expectedImpact}</p>
+              </div>
+
+              {p.reviewerReason && (
+                <div className="rounded-lg border p-2 text-[11px] font-mono" style={{ borderColor: "#ef444440", background: "#ef444410", color: "#fca5a5" }}>
+                  <div className="text-[10px] uppercase tracking-wider mb-0.5 text-muted-foreground">Reject reason</div>
+                  {p.reviewerReason}
+                </div>
+              )}
+
+              {isPending && rejectingId === p.id && (
+                <div className="space-y-2">
+                  <textarea
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    placeholder="(Optional) Why are you rejecting this?"
+                    className="w-full text-[11px] font-mono p-2 rounded-lg bg-black/40 border border-white/10 focus:outline-none focus:border-white/30 resize-none"
+                    rows={2}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => reject(p.id)}
+                      disabled={busyId === p.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold border disabled:opacity-50"
+                      style={{ color: "#ef4444", borderColor: "#ef444460", background: "#ef444410" }}
+                    >
+                      {busyId === p.id ? <Loader2 size={10} className="animate-spin" /> : <XCircle size={10} />} Confirm reject
+                    </button>
+                    <button
+                      onClick={() => { setRejectingId(null); setRejectReason(""); }}
+                      className="px-3 py-1.5 rounded-lg text-[11px] font-mono border border-white/10 text-muted-foreground hover:text-foreground"
+                    >Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              {isPending && rejectingId !== p.id && (
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => approve(p.id)}
+                    disabled={busyId === p.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold border disabled:opacity-50"
+                    style={{ color: "#22c55e", borderColor: "#22c55e60", background: "#22c55e10" }}
+                  >
+                    {busyId === p.id ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle2 size={10} />} Approve
+                  </button>
+                  <button
+                    onClick={() => { setRejectingId(p.id); setRejectReason(""); }}
+                    disabled={busyId === p.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold border disabled:opacity-50"
+                    style={{ color: "#ef4444", borderColor: "#ef444460", background: "#ef444410" }}
+                  >
+                    <XCircle size={10} /> Reject
+                  </button>
+                </div>
+              )}
+
+              {isApproved && (
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => markImplementedFn(p.id)}
+                    disabled={busyId === p.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold border disabled:opacity-50"
+                    style={{ color: "#22d3ee", borderColor: "#22d3ee60", background: "#22d3ee10" }}
+                  >
+                    {busyId === p.id ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle2 size={10} />} Mark as Implemented
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })
       )}
     </div>
   );

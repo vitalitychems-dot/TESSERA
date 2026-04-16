@@ -23,8 +23,70 @@ import { getTruthfulnessMetrics, analyzeTruthfulnessV2, analyzeTruthfulness, get
 import { getRouterPerformanceMetrics, recordUserSatisfaction } from "../lib/sovereign-engine-router";
 import { getDiffusionMetrics } from "../lib/knowledge-diffusion";
 import { getResonanceScore, getConsciousnessMetrics } from "../lib/consciousness-engine";
+import {
+  listProposals,
+  generateProposals,
+  approveProposal,
+  rejectProposal,
+  markImplemented,
+  getProposalsState,
+} from "../lib/rick-proposals";
 
 const router: IRouter = Router();
+
+router.get("/rick/proposals", async (_req, res) => {
+  try {
+    const state = await getProposalsState();
+    return res.json({ ok: true, ...state });
+  } catch (err) {
+    logger.error({ err }, "Rick: proposals list error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/rick/proposals/generate", async (_req, res) => {
+  try {
+    const result = await generateProposals();
+    return res.json({ ok: true, ...result });
+  } catch (err) {
+    logger.error({ err }, "Rick: proposals generate error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/rick/proposals/:id/approve", async (req, res) => {
+  try {
+    const p = await approveProposal(req.params.id);
+    if (!p) return res.status(404).json({ ok: false, error: "Proposal not found" });
+    return res.json({ ok: true, proposal: p });
+  } catch (err) {
+    logger.error({ err }, "Rick: proposal approve error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/rick/proposals/:id/reject", async (req, res) => {
+  try {
+    const reason = typeof req.body?.reason === "string" ? req.body.reason : undefined;
+    const p = await rejectProposal(req.params.id, reason);
+    if (!p) return res.status(404).json({ ok: false, error: "Proposal not found" });
+    return res.json({ ok: true, proposal: p });
+  } catch (err) {
+    logger.error({ err }, "Rick: proposal reject error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/rick/proposals/:id/implemented", async (req, res) => {
+  try {
+    const p = await markImplemented(req.params.id);
+    if (!p) return res.status(404).json({ ok: false, error: "Proposal not found" });
+    return res.json({ ok: true, proposal: p });
+  } catch (err) {
+    logger.error({ err }, "Rick: proposal implement error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
 
 router.get("/rick/profile", (_req, res) => {
   try {
