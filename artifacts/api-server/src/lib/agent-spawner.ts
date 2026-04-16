@@ -3,12 +3,25 @@ import { systemStateTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 
+export type MeeseeksTaskType =
+  | "analysis" | "optimization" | "security-audit" | "knowledge-synthesis"
+  | "data-processing" | "code-review" | "proposal-drafting" | "research"
+  | "monitoring" | "translation" | "testing" | "custom";
+
+export interface MeeseeksResult {
+  success: boolean;
+  output: string;
+  metrics?: Record<string, unknown>;
+  completedAt: number;
+  durationMs: number;
+}
+
 export interface SpawnedAgent {
   id: string;
   name: string;
   role: string;
-  personality: string;
-  interests: string[];
+  personality: string | null;
+  interests: string[] | null;
   generation: number;
   parentAgent: string;
   spawnedAt: number;
@@ -24,7 +37,14 @@ export interface SpawnedAgent {
   meeseeksCompletedAt?: number;
   receivedPulses?: number;
   lastPulseAt?: number;
-  crossDomainContext?: string[];
+  crossDomainContext?: string[] | null;
+  taskType?: MeeseeksTaskType;
+  successCriteria?: string | null;
+  priority?: "low" | "normal" | "high" | "critical";
+  complexity?: "trivial" | "low" | "medium" | "high" | "extreme";
+  memoryBudgetKB?: number;
+  expectedDurationMs?: number;
+  result?: MeeseeksResult | null;
 }
 
 export interface MeeseeksMetrics {
@@ -147,11 +167,6 @@ export async function initAgentSpawner(): Promise<void> {
   logger.info({ totalSpawned: spawnerState.totalSpawned }, "AgentSpawner: initialized");
 }
 
-export type MeeseeksTaskType =
-  | "analysis" | "optimization" | "security-audit" | "knowledge-synthesis"
-  | "data-processing" | "code-review" | "proposal-drafting" | "research"
-  | "monitoring" | "translation" | "testing" | "custom";
-
 export interface TaskTypeProfile {
   taskType: MeeseeksTaskType;
   label: string;
@@ -202,14 +217,6 @@ function computeIntelligentTTL(taskType: MeeseeksTaskType, taskDescription: stri
 
   const computed = Math.round(baseTTL * complexityMult * descriptionComplexity);
   return Math.max(10_000, Math.min(600_000, computed));
-}
-
-export interface MeeseeksResult {
-  success: boolean;
-  output: string;
-  metrics?: Record<string, unknown>;
-  completedAt: number;
-  durationMs: number;
 }
 
 export interface MeeseeksOptions {
@@ -293,13 +300,13 @@ export function spawnMeeseeks(opts: MeeseeksOptions, parentAgent = "tessera-prim
     meeseeksExpiresAt: now + ttl,
   };
 
-  (agent as any).taskType = taskType;
-  (agent as any).successCriteria = opts.successCriteria || null;
-  (agent as any).priority = opts.priority || "normal";
-  (agent as any).complexity = profile.complexity;
-  (agent as any).memoryBudgetKB = profile.memoryBudgetKB;
-  (agent as any).expectedDurationMs = profile.expectedDurationMs;
-  (agent as any).result = null;
+  agent.taskType = taskType;
+  agent.successCriteria = opts.successCriteria;
+  agent.priority = opts.priority || "normal";
+  agent.complexity = profile.complexity;
+  agent.memoryBudgetKB = profile.memoryBudgetKB;
+  agent.expectedDurationMs = profile.expectedDurationMs;
+  agent.result = null;
 
   spawnerState.activeSpawned.push(agent);
   spawnerState.meeseeksMetrics.totalSpawned++;
@@ -342,8 +349,8 @@ function reapMeeseeks(agentId: string, reason: "task-completed" | "ttl-expired")
   if (!agent) return false;
 
   const lifetime = Date.now() - agent.spawnedAt;
-  const taskType = (agent as any).taskType || "custom";
-  const memoryBudget = (agent as any).memoryBudgetKB || 0;
+  const taskType = agent.taskType || "custom";
+  const memoryBudget = agent.memoryBudgetKB || 0;
 
   meeseeksHistory.push({
     id: agent.id,
@@ -354,7 +361,7 @@ function reapMeeseeks(agentId: string, reason: "task-completed" | "ttl-expired")
     completedAt: Date.now(),
     lifetimeMs: lifetime,
     reason,
-    result: (agent as any).result || null,
+    result: agent.result || null,
     memoryFreedKB: memoryBudget,
   });
   if (meeseeksHistory.length > 100) meeseeksHistory.splice(0, meeseeksHistory.length - 100);
@@ -373,11 +380,11 @@ function reapMeeseeks(agentId: string, reason: "task-completed" | "ttl-expired")
   spawnerState.meeseeksMetrics.avgLifetimeMs = meeseeksLifetimes.reduce((s, v) => s + v, 0) / meeseeksLifetimes.length;
   spawnerState.meeseeksMetrics.totalActive = Math.max(0, spawnerState.meeseeksMetrics.totalActive - 1);
 
-  (agent as any).personality = null;
-  (agent as any).interests = null;
-  (agent as any).crossDomainContext = null;
-  (agent as any).result = null;
-  (agent as any).successCriteria = null;
+  agent.personality = null;
+  agent.interests = null;
+  agent.crossDomainContext = null;
+  agent.result = null;
+  agent.successCriteria = null;
 
   retireAgent(agentId);
   return true;
@@ -479,24 +486,19 @@ export function getAvailableSpecializations() {
 export function submitMeeseeksResult(agentId: string, result: MeeseeksResult): boolean {
   const agent = spawnerState.activeSpawned.find(a => a.id === agentId && a.meeseeks);
   if (!agent) return false;
-  (agent as any).result = result;
+  agent.result = result;
   if (result.success) {
     return completeMeeseeks(agentId);
   }
   return true;
 }
 
-export function getActiveMeeseeks(): (SpawnedAgent & { taskType?: string; priority?: string; complexity?: string; successCriteria?: string; memoryBudgetKB?: number; timeRemainingMs?: number })[] {
+export function getActiveMeeseeks(): (SpawnedAgent & { timeRemainingMs: number })[] {
   const now = Date.now();
   return spawnerState.activeSpawned
     .filter(a => a.meeseeks)
     .map(a => ({
       ...a,
-      taskType: (a as any).taskType,
-      priority: (a as any).priority,
-      complexity: (a as any).complexity,
-      successCriteria: (a as any).successCriteria,
-      memoryBudgetKB: (a as any).memoryBudgetKB,
       timeRemainingMs: a.meeseeksExpiresAt ? Math.max(0, a.meeseeksExpiresAt - now) : 0,
     }));
 }

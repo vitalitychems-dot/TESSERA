@@ -525,6 +525,9 @@ router.post("/rick/meeseeks/spawn", (req, res) => {
     if (!task) {
       return res.status(400).json({ ok: false, error: "task is required — Mr. Meeseeks needs a purpose!" });
     }
+    if (!successCriteria || !successCriteria.trim()) {
+      return res.status(400).json({ ok: false, error: "successCriteria is required — every Meeseeks needs a definition of done!" });
+    }
     const agent = spawnMeeseeks({ task, ttlMs, specialization, taskType, successCriteria, priority }, "rick-sanchez-c137");
     return res.json({
       ok: true,
@@ -532,13 +535,13 @@ router.post("/rick/meeseeks/spawn", (req, res) => {
         id: agent.id,
         name: agent.name,
         task: agent.meeseeksTask,
-        taskType: (agent as any).taskType,
-        complexity: (agent as any).complexity,
-        priority: (agent as any).priority,
-        successCriteria: (agent as any).successCriteria,
+        taskType: agent.taskType,
+        complexity: agent.complexity,
+        priority: agent.priority,
+        successCriteria: agent.successCriteria,
         ttl: agent.meeseeksTTL,
         expiresAt: agent.meeseeksExpiresAt,
-        memoryBudgetKB: (agent as any).memoryBudgetKB,
+        memoryBudgetKB: agent.memoryBudgetKB,
       },
       message: "I'm Mr. Meeseeks! Look at me! Hyper-specialized and ready to self-destruct on completion!",
     });
