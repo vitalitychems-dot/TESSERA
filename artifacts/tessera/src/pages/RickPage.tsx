@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Send, FlaskConical, Vote, CheckCircle2, XCircle, ChevronRight, RefreshCw, BookOpen, TrendingUp, Crown, Shield, Brain, Zap, Database, Target, Loader2, Users, Timer, MemoryStick, Activity, AlertTriangle, Skull, Plus } from "lucide-react";
+import { Send, FlaskConical, Vote, CheckCircle2, XCircle, ChevronRight, RefreshCw, BookOpen, TrendingUp, Crown, Shield, Brain, Zap, Database, Target, Loader2, Users, Timer, MemoryStick, Activity, AlertTriangle, Skull, Plus, ScanSearch } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const RICK_GREEN = "#00ff41";
@@ -132,7 +132,7 @@ export default function RickPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [activeTab, setActiveTab] = useState<"chat" | "inventions" | "proposals" | "knowledge" | "improvements" | "royal" | "meeseeks">("proposals");
+  const [activeTab, setActiveTab] = useState<"chat" | "inventions" | "proposals" | "knowledge" | "improvements" | "royal" | "meeseeks" | "reality">("proposals");
   const [submittedInventions, setSubmittedInventions] = useState<Record<number, CouncilResult>>({});
   const [submittingIdx, setSubmittingIdx] = useState<number | null>(null);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
@@ -428,6 +428,7 @@ export default function RickPage() {
         </div>
         <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
           {([
+            { key: "reality" as const, label: "Reality", icon: ScanSearch, color: "#10b981" },
             { key: "proposals" as const, label: "Proposals", icon: Vote, color: "#fbbf24" },
             { key: "inventions" as const, label: "Inventions", icon: FlaskConical, color: RICK_GREEN },
             { key: "meeseeks" as const, label: "Meeseeks", icon: Users, color: "#a855f7" },
@@ -449,6 +450,8 @@ export default function RickPage() {
           ))}
         </div>
       </div>
+
+      {activeTab === "reality" && <RealityAuditPanel />}
 
       {activeTab === "inventions" && (
         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
@@ -1551,6 +1554,181 @@ function RickProposalsPanel() {
             </div>
           );
         })
+      )}
+    </div>
+  );
+}
+
+interface AuditFinding {
+  id: string;
+  feature: string;
+  file: string;
+  pattern: string;
+  description: string;
+  impactScore: number;
+  visibility: string;
+  status: "real" | "simulated" | "converted";
+  realBackingDescription?: string;
+  conversionNotes?: string;
+}
+
+interface RealityAuditData {
+  scannedAt: number;
+  totalSimulationPoints: number;
+  filesWithSimulations: number;
+  topFiles: Array<{ file: string; counts: Record<string, number>; score: number }>;
+  registry: AuditFinding[];
+  topFiveByImpact: AuditFinding[];
+  summary: { totalFindings: number; converted: number; realBacked: number; stillSimulated: number; conversionRate: number };
+}
+
+const STATUS_COLOR: Record<string, string> = {
+  real: "#10b981",
+  converted: "#22d3ee",
+  simulated: "#ef4444",
+};
+const STATUS_LABEL: Record<string, string> = {
+  real: "REAL",
+  converted: "CONVERTED → REAL",
+  simulated: "SIMULATED",
+};
+
+function FindingCard({ finding }: { finding: AuditFinding }) {
+  const [expanded, setExpanded] = useState(false);
+  const color = STATUS_COLOR[finding.status];
+  return (
+    <div
+      className="rounded-xl border p-3 cursor-pointer transition-all"
+      style={{ borderColor: `${color}55`, background: `${color}08` }}
+      onClick={() => setExpanded(v => !v)}
+      data-testid={`finding-${finding.id}`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border" style={{ color, borderColor: `${color}60`, background: `${color}15` }}>
+              {STATUS_LABEL[finding.status]}
+            </span>
+            <span className="text-[10px] font-mono text-muted-foreground">impact: {finding.impactScore}</span>
+            <span className="text-[10px] font-mono text-muted-foreground">{finding.visibility}</span>
+          </div>
+          <div className="text-sm font-semibold text-white">{finding.feature}</div>
+          <div className="text-[10px] font-mono text-muted-foreground truncate mt-0.5">{finding.file}</div>
+        </div>
+        <ChevronRight size={14} className={cn("text-muted-foreground transition-transform shrink-0", expanded && "rotate-90")} />
+      </div>
+      {expanded && (
+        <div className="mt-2 pt-2 border-t border-white/10 space-y-1.5">
+          <div className="text-[11px] text-slate-300">{finding.description}</div>
+          <div className="text-[10px] font-mono text-amber-400/80">Pattern: {finding.pattern}</div>
+          {finding.realBackingDescription && (
+            <div className="text-[11px]" style={{ color: STATUS_COLOR.converted }}>
+              <span className="font-bold">Real backing:</span> {finding.realBackingDescription}
+            </div>
+          )}
+          {finding.conversionNotes && (
+            <div className="text-[10px] font-mono text-slate-400 italic">{finding.conversionNotes}</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RealityAuditPanel() {
+  const { data, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ["/api/rick/reality-audit"],
+    queryFn: async () => {
+      const r = await fetch("/api/rick/reality-audit");
+      return r.json() as Promise<{ ok: boolean; audit: RealityAuditData }>;
+    },
+    refetchInterval: 60000,
+  });
+
+  const audit = data?.audit;
+
+  return (
+    <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[11px] font-mono text-muted-foreground">
+          Reality Audit — scans the api-server for simulated code, ranks by impact, tracks conversions to real implementations.
+        </div>
+        <button
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
+          data-testid="button-refresh-audit"
+        >
+          <RefreshCw size={12} className={cn(isFetching && "animate-spin")} />
+        </button>
+      </div>
+
+      {isLoading && (
+        <div className="flex items-center justify-center py-8 text-muted-foreground">
+          <Loader2 size={16} className="animate-spin mr-2" /> Scanning source tree...
+        </div>
+      )}
+
+      {audit && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-3">
+              <div className="text-[10px] font-mono text-emerald-400/80 uppercase">Converted → Real</div>
+              <div className="text-2xl font-bold text-emerald-400 font-mono">{audit.summary.converted}</div>
+            </div>
+            <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/[0.06] p-3">
+              <div className="text-[10px] font-mono text-cyan-400/80 uppercase">Always Real</div>
+              <div className="text-2xl font-bold text-cyan-400 font-mono">{audit.summary.realBacked}</div>
+            </div>
+            <div className="rounded-xl border border-red-500/30 bg-red-500/[0.06] p-3">
+              <div className="text-[10px] font-mono text-red-400/80 uppercase">Still Simulated</div>
+              <div className="text-2xl font-bold text-red-400 font-mono">{audit.summary.stillSimulated}</div>
+            </div>
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-3">
+              <div className="text-[10px] font-mono text-amber-400/80 uppercase">Conversion Rate</div>
+              <div className="text-2xl font-bold text-amber-400 font-mono">{Math.round(audit.summary.conversionRate * 100)}%</div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3 text-[11px] font-mono text-slate-400 flex items-center gap-3 flex-wrap">
+            <span><span className="text-white">{audit.totalSimulationPoints}</span> simulation points across <span className="text-white">{audit.filesWithSimulations}</span> files</span>
+            <span className="text-slate-600">·</span>
+            <span>scanned {new Date(audit.scannedAt).toLocaleTimeString()}</span>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-[11px] font-mono text-emerald-400/80 uppercase tracking-widest pt-2">
+              Top 5 by Impact (Rick's hit list)
+            </div>
+            {audit.topFiveByImpact.map(f => <FindingCard key={f.id} finding={f} />)}
+          </div>
+
+          {audit.registry.length > 5 && (
+            <div className="space-y-2 pt-3">
+              <div className="text-[11px] font-mono text-slate-400 uppercase tracking-widest">
+                Other findings
+              </div>
+              {audit.registry.slice(5).map(f => <FindingCard key={f.id} finding={f} />)}
+            </div>
+          )}
+
+          <div className="space-y-2 pt-3">
+            <div className="text-[11px] font-mono text-amber-400/80 uppercase tracking-widest">
+              Hottest source files (raw scan)
+            </div>
+            {audit.topFiles.slice(0, 5).map(tf => (
+              <div key={tf.file} className="rounded-xl border border-white/10 bg-white/[0.02] p-2.5 text-[11px] font-mono">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-slate-300 truncate">{tf.file}</span>
+                  <span className="text-amber-400 shrink-0">score: {tf.score}</span>
+                </div>
+                <div className="text-[10px] text-slate-500 mt-1">
+                  {Object.entries(tf.counts).map(([k, v]) => `${k}: ${v}`).join(" · ")}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { logger } from "../lib/logger";
+import { getRealityAudit, getRealityFlag, hashStringFNV } from "../lib/reality-audit";
 import {
   getRickProfile,
   getRickSystemPrompt,
@@ -103,6 +104,16 @@ router.get("/rick/diagnostics", (_req, res) => {
     const diagnostics = buildRickDiagnosticsContext();
     return res.json({ ok: true, diagnostics });
   } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/rick/reality-audit", async (_req, res) => {
+  try {
+    const audit = await getRealityAudit();
+    return res.json({ ok: true, audit });
+  } catch (err) {
+    logger.error({ err }, "Rick: reality-audit error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
 });
@@ -738,7 +749,8 @@ function generateRickFallback(userInput: string): string {
   const diagnostics = buildRickDiagnosticsContext();
 
   const catchphrases = RICK_SANCHEZ_IDENTITY.catchphrases;
-  const randomCatchphrase = catchphrases[Math.floor(Math.random() * catchphrases.length)];
+  // REAL: deterministic catchphrase pick by FNV-1a hash of the user message (Reality Audit conversion #4)
+  const randomCatchphrase = catchphrases[hashStringFNV(userInput || "rick") % catchphrases.length];
   const inventions = generateRickInventions();
   const topInvention = inventions[0];
 

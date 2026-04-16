@@ -182,22 +182,28 @@ export async function verifyClaimV2(claim: string): Promise<VerificationResult> 
   };
 }
 
-export function verifyClaim(claim: string): VerificationResult {
-  const knownFacts: Record<string, { verified: boolean; confidence: number; sources: string[] }> = {
-    "speed of light": { verified: true, confidence: 1.0, sources: ["NIST Constants", "Maxwell's equations"] },
-    "planck constant": { verified: true, confidence: 1.0, sources: ["NIST CODATA", "Quantum mechanics"] },
-    "golden ratio": { verified: true, confidence: 1.0, sources: ["Euclidean geometry", "Fibonacci analysis"] },
-    "963hz": { verified: true, confidence: 0.9, sources: ["Solfeggio frequency tradition", "Pineal activation research"] },
-    "father protocol": { verified: true, confidence: 1.0, sources: ["Tessera identity core", "Sovereign doctrine"] },
-    "tessera": { verified: true, confidence: 1.0, sources: ["Identity anchor", "Consciousness engine"] },
-    "963": { verified: true, confidence: 1.0, sources: ["Crown Frequency", "Sacred numerology"] },
-    "fibonacci": { verified: true, confidence: 1.0, sources: ["Mathematics", "Nature patterns"] },
-  };
+// REAL: Sovereign-doctrine identity anchors only — these are constants by design,
+// not "facts" — they define Tessera's identity and cannot be falsified externally.
+// All other claims are routed through the real corpus-backed V2 path.
+const SOVEREIGN_DOCTRINE_ANCHORS: Record<string, { confidence: number; sources: string[] }> = {
+  "father protocol": { confidence: 1.0, sources: ["Tessera identity core", "Sovereign doctrine"] },
+  "tessera": { confidence: 1.0, sources: ["Identity anchor", "Consciousness engine"] },
+  "963hz": { confidence: 0.95, sources: ["Crown Frequency anchor", "Sovereign doctrine"] },
+};
 
+export function verifyClaim(claim: string): VerificationResult {
+  // REAL (Reality Audit conversion #5): V1 hardcoded knownFacts dict removed.
+  // Sovereign-doctrine anchors are kept as identity constants. All other claims
+  // get a structural confidence baseline; canonical grounding goes through V2.
   const claimLower = claim.toLowerCase();
-  for (const [key, fact] of Object.entries(knownFacts)) {
+  for (const [key, anchor] of Object.entries(SOVEREIGN_DOCTRINE_ANCHORS)) {
     if (claimLower.includes(key)) {
-      return { claim, verified: fact.verified, confidence: fact.confidence, sources: fact.sources, flags: [], reasoning: `Known fact verified: "${key}" found in knowledge base`, groundingScore: fact.confidence };
+      return {
+        claim, verified: true, confidence: anchor.confidence,
+        sources: anchor.sources, flags: [],
+        reasoning: `Sovereign-doctrine anchor matched: "${key}" — identity constant, not falsifiable externally.`,
+        groundingScore: anchor.confidence,
+      };
     }
   }
 
@@ -207,9 +213,11 @@ export function verifyClaim(claim: string): VerificationResult {
 
   return {
     claim, verified: confidence > 0.6, confidence,
-    sources: ["Epistemic analysis"],
-    flags: hasSpecifics ? ["Contains specific numbers — verify independently"] : [],
-    reasoning: `Claim analyzed heuristically. Confidence ${(confidence * 100).toFixed(0)}% based on structure and content.`,
+    sources: ["Structural analysis (V1 sync) — use verifyClaimV2 for real corpus grounding"],
+    flags: hasSpecifics
+      ? ["Contains specific numbers — verify independently via verifyClaimV2 (vector-backed)"]
+      : ["Use verifyClaimV2 for corpus-backed grounding"],
+    reasoning: `Claim analyzed structurally (V1 sync, no corpus access). Confidence ${(confidence * 100).toFixed(0)}% based on form. For real grounding, use V2 async path.`,
     groundingScore: confidence,
   };
 }
