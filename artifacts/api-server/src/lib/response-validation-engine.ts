@@ -216,6 +216,7 @@ function addToQuarantineStore(
   claim: ClaimScore,
   responseContext: string,
   fallbackAttempted: boolean,
+  fallbackOutcome: "verified" | "rejected" | "pending" = "pending",
 ): void {
   const entry: QuarantineEntry = {
     id: `q-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -223,7 +224,7 @@ function addToQuarantineStore(
     groundingScore: claim.groundingScore,
     bestMatchSource: claim.bestMatchSource,
     fallbackAttempted,
-    fallbackResult: fallbackAttempted ? "rejected" : "pending",
+    fallbackResult: fallbackOutcome,
     quarantinedAt: Date.now(),
     responseContext: responseContext.slice(0, 200),
   };
@@ -320,10 +321,10 @@ export async function validateResponse(
     const verified = await fallbackVerifyClaim(claim);
     if (verified.verified && verified.groundingScore >= GROUNDING_THRESHOLD) {
       passed.push(verified);
-      addToQuarantineStore(verified, userQuery, true);
+      addToQuarantineStore(verified, userQuery, true, "verified");
     } else {
       stillQuarantined.push(verified);
-      addToQuarantineStore(verified, userQuery, true);
+      addToQuarantineStore(verified, userQuery, true, "rejected");
     }
   }
 
