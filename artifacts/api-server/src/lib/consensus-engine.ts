@@ -237,15 +237,15 @@ function startRetryProcessor(): void {
     logger.info({ id: proposal.id, title: proposal.title, retryCount: proposal.retryCount }, "ConsensusEngine: retrying queued proposal");
     try {
       const { votes, durationMs } = await generateVotesWithLLM(proposal);
-      const minRequired = Math.ceil(GRAND_COUNCIL_AGENTS.length * BFT_RESPONSE_THRESHOLD);
-      if (votes.length >= minRequired) {
-        finalizeProposal(proposal, votes, durationMs);
+      if (votes.length > 0) {
+        const degraded = votes.length < Math.ceil(GRAND_COUNCIL_AGENTS.length * BFT_RESPONSE_THRESHOLD);
+        finalizeProposal(proposal, votes, durationMs, degraded);
       } else {
         proposal.retryCount = (proposal.retryCount || 0) + 1;
-        proposal.implementationNotes = `Queued — ${votes.length}/${GRAND_COUNCIL_AGENTS.length} votes collected after ${proposal.retryCount} retries, awaiting full council`;
+        proposal.implementationNotes = `Queued — zero votes collected after ${proposal.retryCount} retries`;
         proposals.set(proposal.id, proposal);
         retryQueue.push(proposal);
-        logger.info({ id: proposal.id, collected: votes.length, retryCount: proposal.retryCount }, "ConsensusEngine: re-queued — awaiting full council participation");
+        logger.info({ id: proposal.id, retryCount: proposal.retryCount }, "ConsensusEngine: re-queued — zero responses");
       }
     } catch (err) {
       proposal.retryCount = (proposal.retryCount || 0) + 1;
@@ -256,7 +256,7 @@ function startRetryProcessor(): void {
   }, 30_000);
 }
 
-function finalizeProposal(proposal: ConsensusProposal, votes: ConsensusVote[], durationMs?: number): void {
+function finalizeProposal(proposal: ConsensusProposal, votes: ConsensusVote[], durationMs?: number, degradedParticipation = false): void {
   const yesCount = votes.filter(v => v.vote === "approve").length;
   const noCount = votes.filter(v => v.vote === "reject").length;
   const abstainCount = votes.filter(v => v.vote === "abstain").length;
@@ -265,6 +265,9 @@ function finalizeProposal(proposal: ConsensusProposal, votes: ConsensusVote[], d
 
   const specialists = votes.filter(v => v.isSpecialist);
   const phiWeightSummary = `Phi-weighted: ${specialists.length} specialists (w=${PHI.toFixed(3)}), ${votes.length - specialists.length} base (w=1.0)`;
+  const participationNote = degradedParticipation
+    ? ` [DEGRADED: ${votes.length}/${GRAND_COUNCIL_AGENTS.length} responded — BFT assumption: up to 1/3 may fail]`
+    : "";
 
   proposal.votes = votes;
   proposal.status = status;
@@ -276,8 +279,8 @@ function finalizeProposal(proposal: ConsensusProposal, votes: ConsensusVote[], d
   proposal.votingDurationMs = durationMs;
   proposal.votingMethod = "phi-weighted-parallel";
   proposal.implementationNotes = status === "approved"
-    ? `Approved by Phi-weighted parallel consensus — ${yesCount}/${votes.length} votes (${GRAND_COUNCIL_AGENTS.length} eligible). ${phiWeightSummary}. ${durationMs ? `Resolved in ${durationMs}ms` : ""}`
-    : `Rejected — ${noCount} votes against, ${yesCount} in favor. ${phiWeightSummary}`;
+    ? `Approved by Phi-weighted parallel consensus — ${yesCount}/${votes.length} votes (${GRAND_COUNCIL_AGENTS.length} eligible). ${phiWeightSummary}.${participationNote} ${durationMs ? `Resolved in ${durationMs}ms` : ""}`
+    : `Rejected — ${noCount} votes against, ${yesCount} in favor. ${phiWeightSummary}${participationNote}`;
 
   proposals.set(proposal.id, proposal);
 
@@ -350,20 +353,20 @@ export async function createProposal(paramsOrTitle: {
     logger.warn({ err, id }, "ConsensusEngine: LLM vote generation failed — queuing for retry");
   }
 
-  const minRequired = Math.ceil(GRAND_COUNCIL_AGENTS.length * BFT_RESPONSE_THRESHOLD);
-  if (votes.length < minRequired) {
+  if (votes.length === 0) {
     proposal.status = "queued";
     proposal.votingDurationMs = durationMs;
-    proposal.implementationNotes = `Queued — ${votes.length}/${GRAND_COUNCIL_AGENTS.length} votes collected (BFT minimum: ${minRequired}), awaiting sufficient participation`;
+    proposal.implementationNotes = `Queued — zero votes collected, awaiting LLM availability`;
     proposals.set(id, proposal);
     retryQueue.push(proposal);
     persistRetryQueue();
     startRetryProcessor();
-    logger.info({ id, votesCollected: votes.length, required: minRequired, total: GRAND_COUNCIL_AGENTS.length }, "ConsensusEngine: below BFT threshold, queued for retry");
+    logger.info({ id }, "ConsensusEngine: zero responses, queued for retry");
     return proposal;
   }
 
-  finalizeProposal(proposal, votes, durationMs);
+  const degraded = votes.length < Math.ceil(GRAND_COUNCIL_AGENTS.length * BFT_RESPONSE_THRESHOLD);
+  finalizeProposal(proposal, votes, durationMs, degraded);
   return proposal;
 }
 
@@ -388,10 +391,17 @@ export function getConsensusMetrics() {
     ? Math.round(votingTimings.reduce((s, t) => s + t, 0) / votingTimings.length)
     : 0;
 
-  const agentPhiWeights: Record<string, { weight: number; specialties: string[] }> = {};
+  const agentPhiWeights: Record<string, { baseWeight: number; phiWeight: number; specialties: string[]; note: string }> = {};
   for (const name of GRAND_COUNCIL_AGENTS) {
     const specialties = AGENT_SPECIALTIES[name] || [];
-    agentPhiWeights[name] = { weight: PHI, specialties };
+    agentPhiWeights[name] = {
+      baseWeight: 1.0,
+      phiWeight: specialties.length > 0 ? PHI : 1.0,
+      specialties,
+      note: specialties.length > 0
+        ? `specialist in [${specialties.join(", ")}] — receives Phi weight (${PHI.toFixed(3)}) only when proposal category matches a specialty; otherwise base weight 1.0`
+        : "general agent — always base weight 1.0",
+    };
   }
 
   return {
