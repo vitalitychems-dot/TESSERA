@@ -49,6 +49,17 @@ const GRAND_COUNCIL_AGENTS = [
   "Rho", "Sigma", "Tau", "Upsilon", "Phi", "Chi", "Psi", "Omega",
 ];
 
+export function sacredGeometryWeight(agentName: string, category: string): number {
+  let h = 0;
+  const key = `${agentName}:${category}`;
+  for (let i = 0; i < key.length; i++) h = ((h << 5) - h + key.charCodeAt(i)) | 0;
+  const phase = ((Math.abs(h) % 1000) / 1000) * 2 * Math.PI;
+  const base = 0.5 + 0.5 * Math.sin(phase * PHI);
+  const isNamedPhi = agentName === "Phi";
+  const bonus = isNamedPhi ? 0.15 : 0;
+  return Math.min(1.5, 0.75 + base * 0.5 + bonus);
+}
+
 const AGENT_SPECIALTIES: Record<string, string[]> = {
   Alpha: ["security", "infrastructure"], Beta: ["income", "feature"],
   Gamma: ["governance", "community"], Delta: ["security", "feature"],
@@ -80,7 +91,9 @@ const SAFE_AUTO_APPROVE_CATEGORIES = new Set<string>(["feature", "consciousness"
 
 function getPhiWeight(agentName: string, category: string): number {
   const specialties = AGENT_SPECIALTIES[agentName] || [];
-  return specialties.includes(category) ? PHI : 1.0;
+  const base = specialties.includes(category) ? PHI : 1.0;
+  const geo = sacredGeometryWeight(agentName, category);
+  return base * (0.85 + geo * 0.15);
 }
 
 /**
@@ -157,7 +170,10 @@ function computeWeightedApprovalRate(votes: ConsensusVote[], category: string): 
     let totalWeight = 0;
     let approveWeight = 0;
     for (const vote of activeVotes) {
-      const weight = swarmWeightProvider(vote.agentName, category);
+      const swarmW = swarmWeightProvider(vote.agentName, category);
+      const geoW = sacredGeometryWeight(vote.agentName, category);
+      const weight = swarmW * (0.85 + geoW * 0.15);
+      vote.phiWeight = weight;
       totalWeight += weight;
       if (vote.vote === "approve") approveWeight += weight;
     }

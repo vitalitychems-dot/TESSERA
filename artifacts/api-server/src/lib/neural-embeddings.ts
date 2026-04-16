@@ -49,18 +49,65 @@ function hashText(text: string): string {
   return `emb-${Math.abs(h).toString(36)}`;
 }
 
-function localFallbackEmbedding(text: string): number[] {
-  const tokens = text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(Boolean);
-  const vec = new Array(EMBEDDING_DIM).fill(0);
-  for (let i = 0; i < tokens.length; i++) {
-    let h = 0;
-    for (let j = 0; j < tokens[i].length; j++) h = ((h << 5) - h + tokens[i].charCodeAt(j)) | 0;
-    const idx = Math.abs(h) % EMBEDDING_DIM;
-    vec[idx] += 1 / tokens.length;
-    vec[(idx + 1) % EMBEDDING_DIM] += 0.5 / tokens.length;
-    vec[(idx + 2) % EMBEDDING_DIM] += 0.25 / tokens.length;
+const STOPWORDS = new Set([
+  "the","a","an","and","or","but","if","then","of","to","in","on","at","by","for","with","as","is","are","was","were","be","been","being","have","has","had","do","does","did","this","that","these","those","it","its","from","so","not","no","yes","i","you","he","she","we","they","them","us","our","your","their","my","me"
+]);
+
+function hashStr(s: string, seed = 2166136261): number {
+  let h = seed >>> 0;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
   }
-  const mag = Math.sqrt(vec.reduce((s: number, v: number) => s + v * v, 0));
+  return h >>> 0;
+}
+
+function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter(t => t.length >= 2 && !STOPWORDS.has(t));
+}
+
+function ngrams(tokens: string[], n: number): string[] {
+  if (tokens.length < n) return [];
+  const out: string[] = [];
+  for (let i = 0; i <= tokens.length - n; i++) {
+    out.push(tokens.slice(i, i + n).join(" "));
+  }
+  return out;
+}
+
+function localFallbackEmbedding(text: string): number[] {
+  const tokens = tokenize(text);
+  if (tokens.length === 0) return new Array(EMBEDDING_DIM).fill(0);
+
+  const bag = new Map<string, number>();
+  const add = (t: string, w: number) => bag.set(t, (bag.get(t) ?? 0) + w);
+  for (const t of tokens) add(t, 1);
+  for (const g of ngrams(tokens, 2)) add(g, 0.6);
+  for (const g of ngrams(tokens, 3)) add(g, 0.35);
+
+  const simhash = new Array(EMBEDDING_DIM).fill(0);
+  let totalWeight = 0;
+  for (const [term, weight] of bag) {
+    totalWeight += weight;
+    const h1 = hashStr(term, 2166136261);
+    const h2 = hashStr(term, 40503);
+    for (let i = 0; i < EMBEDDING_DIM; i++) {
+      const bit = ((h1 >>> (i % 32)) ^ (h2 >>> ((i * 7) % 32))) & 1;
+      simhash[i] += bit ? weight : -weight;
+    }
+  }
+
+  const vec = new Array(EMBEDDING_DIM).fill(0);
+  const avgAbs = totalWeight > 0 ? totalWeight / EMBEDDING_DIM : 1;
+  for (let i = 0; i < EMBEDDING_DIM; i++) {
+    vec[i] = Math.tanh(simhash[i] / (avgAbs * 4 + 1));
+  }
+
+  const mag = Math.sqrt(vec.reduce((s, v) => s + v * v, 0));
   if (mag > 0) for (let i = 0; i < vec.length; i++) vec[i] /= mag;
   return vec;
 }
