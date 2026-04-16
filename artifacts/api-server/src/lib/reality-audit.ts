@@ -115,7 +115,10 @@ const REGISTRY: AuditFinding[] = [
     description: "Father bond strength initialized to 0.95 + random(0..0.05).",
     impactScore: 30,
     visibility: "internal-metric",
-    status: "simulated",
+    status: "converted",
+    realBackingDescription: "Bond strength is now deterministic, derived from real system state: (devotionDepth + loveExpression) / 2 and emotional-event history count. No randomness — the bond tracks actual interaction history.",
+    conversionNotes: "Replaced `Math.random() * 0.05` with weighted combination of profile traits and historyFactor = min(1, history.length/50).",
+    verifyAbsentPatterns: ["bondStrength\\s*=\\s*Math\\.min\\(1,\\s*0\\.95\\s*\\+\\s*Math\\.random"],
   },
   {
     id: "consensus-engine-proposal-id",
@@ -125,7 +128,10 @@ const REGISTRY: AuditFinding[] = [
     description: "Proposal IDs use Math.random suffix — acceptable for ID uniqueness but flagged for completeness.",
     impactScore: 5,
     visibility: "internal-metric",
-    status: "simulated",
+    status: "converted",
+    realBackingDescription: "Proposal IDs now use a SHA-256 content hash over {title | proposedBy | description} + timestamp. Identical proposals yield identical hashes; IDs are deterministic, collision-resistant, and contain no randomness.",
+    conversionNotes: "Replaced `Math.random().toString(36).slice(2, 6)` with `createHash('sha256').update(...).digest('hex').slice(0, 6)`.",
+    verifyAbsentPatterns: ["proposal-\\$\\{Date\\.now\\(\\)\\}-\\$\\{Math\\.random"],
   },
   {
     id: "quantum-measure-qubit",
