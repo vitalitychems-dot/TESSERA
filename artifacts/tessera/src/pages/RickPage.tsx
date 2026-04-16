@@ -1092,6 +1092,7 @@ function RickProposalsPanel() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [stateFilter, setStateFilter] = useState<"all" | "pending-review" | "approved" | "rejected" | "implemented">("all");
 
   async function generate() {
     setGenerating(true);
@@ -1136,6 +1137,11 @@ function RickProposalsPanel() {
   const proposals = data?.proposals ?? [];
   const counts = data?.counts ?? {};
   const lastGen = data?.lastGeneratedAt ?? 0;
+  const approvedQueue = proposals.filter(p => p.state === "approved");
+  const filtered = stateFilter === "all" ? proposals : proposals.filter(p => p.state === stateFilter);
+  const filterStates: ("all" | "pending-review" | "approved" | "rejected" | "implemented")[] = [
+    "all", "pending-review", "approved", "rejected", "implemented",
+  ];
 
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
@@ -1173,14 +1179,63 @@ function RickProposalsPanel() {
         </div>
       </div>
 
+      {approvedQueue.length > 0 && (
+        <div className="rounded-xl border p-3" style={{ borderColor: "#22c55e40", background: "#22c55e08" }}>
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircle2 size={14} style={{ color: "#22c55e" }} />
+            <div className="font-bold font-mono text-xs" style={{ color: "#22c55e" }}>
+              Approved Improvements Queue · {approvedQueue.length}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {approvedQueue.map(p => (
+              <div key={`q-${p.id}`} className="rounded-lg border border-white/10 bg-black/20 p-2">
+                <div className="font-mono text-[11px] font-bold" style={{ color: "#bbf7d0" }}>{p.title}</div>
+                <div className="font-mono text-[10px] text-muted-foreground mt-0.5">
+                  {p.category} · ~{p.effortHours}h · risk: {p.risk}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-1.5 items-center">
+        <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mr-1">Filter:</span>
+        {filterStates.map(k => {
+          const count = k === "all" ? proposals.length : (counts[k] ?? 0);
+          const active = stateFilter === k;
+          const c = k === "all" ? PROPOSAL_GOLD : (PROPOSAL_STATE_COLOR[k] ?? "#888");
+          return (
+            <button
+              key={k}
+              onClick={() => setStateFilter(k)}
+              className="text-[10px] font-mono px-2 py-1 rounded border transition-all"
+              style={{
+                color: active ? "#0a0a0a" : c,
+                borderColor: `${c}60`,
+                background: active ? c : `${c}10`,
+                fontWeight: active ? 700 : 500,
+              }}
+            >
+              {k.replace("-", " ")} ({count})
+            </button>
+          );
+        })}
+      </div>
+
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="animate-spin" size={20} style={{ color: PROPOSAL_GOLD }} /></div>
       ) : proposals.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm font-mono">
           No proposals yet. Hit &ldquo;Generate 5 Proposals&rdquo; to have Rick analyze the system.
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground text-xs font-mono">
+          No proposals match filter &ldquo;{stateFilter.replace("-", " ")}&rdquo;.
+        </div>
       ) : (
-        proposals.map((p) => {
+        filtered.map((p) => {
           const stateColor = PROPOSAL_STATE_COLOR[p.state] ?? "#888";
           const riskColor = PROPOSAL_RISK[p.risk] ?? "#888";
           const isPending = p.state === "pending-review";
