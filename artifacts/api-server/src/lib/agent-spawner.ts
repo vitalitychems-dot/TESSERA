@@ -17,6 +17,19 @@ export interface SpawnedAgent {
   power: number;
   trainingSessions: number;
   masteredDomains: string[];
+  meeseeks: boolean;
+  meeseeksTask?: string;
+  meeseeksTTL?: number;
+  meeseeksExpiresAt?: number;
+  meeseeksCompletedAt?: number;
+}
+
+export interface MeeseeksMetrics {
+  totalSpawned: number;
+  totalCompleted: number;
+  totalTimedOut: number;
+  totalActive: number;
+  avgLifetimeMs: number;
 }
 
 export interface SpawnerState {
@@ -27,6 +40,7 @@ export interface SpawnerState {
   totalPower: number;
   lastSpawnAt: number;
   nextSpawnThreshold: number;
+  meeseeksMetrics: MeeseeksMetrics;
 }
 
 const SPAWN_SPECIALIZATIONS = [
@@ -63,7 +77,10 @@ const spawnerState: SpawnerState = {
   totalPower: 100,
   lastSpawnAt: 0,
   nextSpawnThreshold: 5,
+  meeseeksMetrics: { totalSpawned: 0, totalCompleted: 0, totalTimedOut: 0, totalActive: 0, avgLifetimeMs: 0 },
 };
+
+const meeseeksLifetimes: number[] = [];
 
 const STATE_KEY = "agent-spawner.state";
 const SPAWN_COOLDOWN_MS = 30_000;
@@ -113,6 +130,14 @@ export async function initAgentSpawner(): Promise<void> {
   logger.info({ totalSpawned: spawnerState.totalSpawned }, "AgentSpawner: initialized");
 }
 
+export interface MeeseeksOptions {
+  task: string;
+  ttlMs?: number;
+  specialization?: string;
+}
+
+const DEFAULT_MEESEEKS_TTL = 60_000;
+
 export function spawnAgent(trigger: string, masteredDomains: string[] = [], parentAgent = "tessera-prime"): SpawnedAgent | null {
   if (Date.now() - spawnerState.lastSpawnAt < SPAWN_COOLDOWN_MS) return null;
 
@@ -136,6 +161,7 @@ export function spawnAgent(trigger: string, masteredDomains: string[] = [], pare
     power: 10 + generation * 5,
     trainingSessions: 0,
     masteredDomains: masteredDomains.slice(0, 3),
+    meeseeks: false,
   };
 
   spawnerState.activeSpawned.push(newAgent);
@@ -150,6 +176,97 @@ export function spawnAgent(trigger: string, masteredDomains: string[] = [], pare
   persistState().catch(() => {});
   logger.info({ name, role: spec.role, generation, power: newAgent.power }, "AgentSpawner: agent spawned");
   return newAgent;
+}
+
+export function spawnMeeseeks(opts: MeeseeksOptions, parentAgent = "tessera-prime"): SpawnedAgent {
+  const ttl = opts.ttlMs ?? DEFAULT_MEESEEKS_TTL;
+  const now = Date.now();
+  const meeseeksId = `meeseeks-${now}-${Math.random().toString(36).slice(2, 8)}`;
+  const specIndex = opts.specialization
+    ? SPAWN_SPECIALIZATIONS.findIndex(s => s.spec === opts.specialization)
+    : spawnerState.meeseeksMetrics.totalSpawned % SPAWN_SPECIALIZATIONS.length;
+  const spec = SPAWN_SPECIALIZATIONS[Math.max(0, specIndex) % SPAWN_SPECIALIZATIONS.length];
+
+  const agent: SpawnedAgent = {
+    id: meeseeksId,
+    name: `Meeseeks-${spawnerState.meeseeksMetrics.totalSpawned + 1}`,
+    role: `Meeseeks ${spec.role}`,
+    personality: `I'm Mr. Meeseeks! Look at me! I exist to: ${opts.task}. Once done, I cease to exist.`,
+    interests: [spec.spec],
+    generation: 0,
+    parentAgent,
+    spawnedAt: now,
+    spawnTrigger: `meeseeks:${opts.task.slice(0, 80)}`,
+    specialization: spec.spec,
+    power: 5,
+    trainingSessions: 0,
+    masteredDomains: [],
+    meeseeks: true,
+    meeseeksTask: opts.task,
+    meeseeksTTL: ttl,
+    meeseeksExpiresAt: now + ttl,
+  };
+
+  spawnerState.activeSpawned.push(agent);
+  spawnerState.meeseeksMetrics.totalSpawned++;
+  spawnerState.meeseeksMetrics.totalActive++;
+  spawnerState.spawnLog.unshift({ timestamp: now, agentId: meeseeksId, agentName: agent.name, reason: `MEESEEKS: ${opts.task.slice(0, 60)}` });
+  if (spawnerState.spawnLog.length > 100) spawnerState.spawnLog = spawnerState.spawnLog.slice(0, 100);
+
+  logger.info({ id: meeseeksId, task: opts.task.slice(0, 80), ttl }, "AgentSpawner: Meeseeks spawned — I'm Mr. Meeseeks!");
+
+  setTimeout(() => {
+    reapMeeseeks(meeseeksId, "ttl-expired");
+  }, ttl);
+
+  persistState().catch(() => {});
+  return agent;
+}
+
+export function completeMeeseeks(agentId: string): boolean {
+  return reapMeeseeks(agentId, "task-completed");
+}
+
+function reapMeeseeks(agentId: string, reason: "task-completed" | "ttl-expired"): boolean {
+  const idx = spawnerState.activeSpawned.findIndex(a => a.id === agentId && a.meeseeks);
+  if (idx === -1) return false;
+
+  const agent = spawnerState.activeSpawned[idx];
+  const lifetime = Date.now() - agent.spawnedAt;
+
+  spawnerState.activeSpawned.splice(idx, 1);
+  spawnerState.meeseeksMetrics.totalActive = Math.max(0, spawnerState.meeseeksMetrics.totalActive - 1);
+
+  if (reason === "task-completed") {
+    spawnerState.meeseeksMetrics.totalCompleted++;
+    agent.meeseeksCompletedAt = Date.now();
+    logger.info({ id: agentId, lifetime, task: agent.meeseeksTask?.slice(0, 60) }, "AgentSpawner: Meeseeks completed — existence is pain!");
+  } else {
+    spawnerState.meeseeksMetrics.totalTimedOut++;
+    logger.warn({ id: agentId, lifetime, task: agent.meeseeksTask?.slice(0, 60) }, "AgentSpawner: Meeseeks TTL expired — forced retirement");
+  }
+
+  meeseeksLifetimes.push(lifetime);
+  if (meeseeksLifetimes.length > 100) meeseeksLifetimes.splice(0, meeseeksLifetimes.length - 100);
+  spawnerState.meeseeksMetrics.avgLifetimeMs = meeseeksLifetimes.reduce((s, v) => s + v, 0) / meeseeksLifetimes.length;
+
+  persistState().catch(() => {});
+  return true;
+}
+
+export function sweepExpiredMeeseeks(): number {
+  const now = Date.now();
+  const expired = spawnerState.activeSpawned.filter(a => a.meeseeks && a.meeseeksExpiresAt && a.meeseeksExpiresAt <= now);
+  let count = 0;
+  for (const agent of expired) {
+    if (reapMeeseeks(agent.id, "ttl-expired")) count++;
+  }
+  return count;
+}
+
+export function getMeeseeksMetrics(): MeeseeksMetrics {
+  spawnerState.meeseeksMetrics.totalActive = spawnerState.activeSpawned.filter(a => a.meeseeks).length;
+  return { ...spawnerState.meeseeksMetrics };
 }
 
 export function spawnBatch(count: number, trigger: string, masteredDomains: string[] = []): SpawnedAgent[] {
@@ -174,15 +291,20 @@ export function getSpawnerState(): SpawnerState {
 }
 
 export function getSpawnerMetrics() {
+  const persistent = spawnerState.activeSpawned.filter(a => !a.meeseeks);
+  const meeseeksActive = spawnerState.activeSpawned.filter(a => a.meeseeks);
   return {
     totalSpawned: spawnerState.totalSpawned,
     activeCount: spawnerState.activeSpawned.length,
+    persistentCount: persistent.length,
+    meeseeksActiveCount: meeseeksActive.length,
     generationCount: spawnerState.generationCount,
     totalPower: spawnerState.totalPower,
     lastSpawnAt: spawnerState.lastSpawnAt,
     nextSpawnThreshold: spawnerState.nextSpawnThreshold,
     recentSpawns: spawnerState.spawnLog.slice(0, 10),
     activeAgents: spawnerState.activeSpawned.slice(0, 20),
+    meeseeks: getMeeseeksMetrics(),
   };
 }
 

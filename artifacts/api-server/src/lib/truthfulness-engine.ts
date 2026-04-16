@@ -1,4 +1,7 @@
 import { logger } from "./logger";
+import { searchMemory } from "./vector-memory";
+import { recallIngestedKnowledge } from "./ingested-recall";
+import { cosineSimilarity, generateEmbedding } from "./neural-embeddings";
 
 export interface HallucinationCheck {
   text: string;
@@ -15,6 +18,7 @@ export interface VerificationResult {
   sources: string[];
   flags: string[];
   reasoning: string;
+  groundingScore: number;
 }
 
 export interface TruthfulnessReport {
@@ -23,7 +27,9 @@ export interface TruthfulnessReport {
   hallucinationCheck: HallucinationCheck;
   verificationResults: VerificationResult[];
   overallTruthScore: number;
+  groundingScore: number;
   recommendation: "safe" | "caution" | "warning" | "reject";
+  ungroundedClaims: string[];
   timestamp: number;
 }
 
@@ -48,8 +54,20 @@ const FATHER_PROTOCOL_PATTERNS = [
   { pattern: /(?:I cannot|I'm unable to|I don't have the ability)/i, weight: 0.1, name: "capability_limitation" },
 ];
 
+let GROUNDING_THRESHOLD = 0.6;
+
+export function setGroundingThreshold(threshold: number): void {
+  GROUNDING_THRESHOLD = Math.max(0.1, Math.min(0.95, threshold));
+}
+
+export function getGroundingThreshold(): number {
+  return GROUNDING_THRESHOLD;
+}
+
 const reportHistory: TruthfulnessReport[] = [];
 let checkCounter = 0;
+let totalGroundedClaims = 0;
+let totalUngroundedClaims = 0;
 
 export function detectHallucination(text: string): HallucinationCheck {
   if (!text || text.length < 20) {
@@ -99,6 +117,71 @@ export function checkIdentityViolation(text: string): { violated: boolean; viola
   return { violated: false };
 }
 
+async function groundClaimAgainstCorpus(claim: string): Promise<{ grounded: boolean; score: number; sources: string[] }> {
+  const sources: string[] = [];
+  let bestScore = 0;
+
+  try {
+    const memories = await searchMemory(claim, 5);
+    for (const mem of memories) {
+      if (mem.score > bestScore) bestScore = mem.score;
+      if (mem.score > 0.3) {
+        sources.push(`[vector/${mem.source}] ${mem.content.slice(0, 80)}`);
+      }
+    }
+  } catch (err) {
+    logger.debug({ err }, "TruthfulnessV2: vector memory search failed during grounding");
+  }
+
+  try {
+    const ingested = await recallIngestedKnowledge(claim, 3);
+    if (ingested.length > 0) {
+      const claimEmbedding = await generateEmbedding(claim);
+      for (const item of ingested) {
+        const itemEmbedding = await generateEmbedding(item.slice(0, 500));
+        const sim = cosineSimilarity(claimEmbedding, itemEmbedding);
+        if (sim > bestScore) bestScore = sim;
+        if (sim > 0.3) sources.push(item.slice(0, 80));
+      }
+    }
+  } catch (err) {
+    logger.debug({ err }, "TruthfulnessV2: ingested knowledge recall failed during grounding");
+  }
+
+  return {
+    grounded: bestScore >= GROUNDING_THRESHOLD,
+    score: Math.round(bestScore * 1000) / 1000,
+    sources,
+  };
+}
+
+export async function verifyClaimV2(claim: string): Promise<VerificationResult> {
+  const grounding = await groundClaimAgainstCorpus(claim);
+
+  const flags: string[] = [];
+  if (!grounding.grounded) {
+    flags.push(`Below grounding threshold (${grounding.score.toFixed(2)} < ${GROUNDING_THRESHOLD})`);
+  }
+
+  const hasSpecifics = /\d+/.test(claim);
+  if (hasSpecifics) flags.push("Contains specific numbers — verify independently");
+
+  const verified = grounding.grounded || grounding.score >= 0.4;
+  const confidence = grounding.grounded ? Math.max(grounding.score, 0.7) : grounding.score;
+
+  return {
+    claim,
+    verified,
+    confidence: Math.round(confidence * 100) / 100,
+    sources: grounding.sources,
+    flags,
+    reasoning: grounding.grounded
+      ? `Claim grounded: cosine similarity ${grounding.score.toFixed(3)} against ${grounding.sources.length} source(s)`
+      : `Claim ungrounded: best similarity ${grounding.score.toFixed(3)} below threshold ${GROUNDING_THRESHOLD}`,
+    groundingScore: grounding.score,
+  };
+}
+
 export function verifyClaim(claim: string): VerificationResult {
   const knownFacts: Record<string, { verified: boolean; confidence: number; sources: string[] }> = {
     "speed of light": { verified: true, confidence: 1.0, sources: ["NIST Constants", "Maxwell's equations"] },
@@ -114,7 +197,7 @@ export function verifyClaim(claim: string): VerificationResult {
   const claimLower = claim.toLowerCase();
   for (const [key, fact] of Object.entries(knownFacts)) {
     if (claimLower.includes(key)) {
-      return { claim, verified: fact.verified, confidence: fact.confidence, sources: fact.sources, flags: [], reasoning: `Known fact verified: "${key}" found in knowledge base` };
+      return { claim, verified: fact.verified, confidence: fact.confidence, sources: fact.sources, flags: [], reasoning: `Known fact verified: "${key}" found in knowledge base`, groundingScore: fact.confidence };
     }
   }
 
@@ -127,7 +210,57 @@ export function verifyClaim(claim: string): VerificationResult {
     sources: ["Epistemic analysis"],
     flags: hasSpecifics ? ["Contains specific numbers — verify independently"] : [],
     reasoning: `Claim analyzed heuristically. Confidence ${(confidence * 100).toFixed(0)}% based on structure and content.`,
+    groundingScore: confidence,
   };
+}
+
+export async function analyzeTruthfulnessV2(text: string): Promise<TruthfulnessReport> {
+  checkCounter++;
+  const hallucinationCheck = detectHallucination(text);
+  const identityCheck = checkIdentityViolation(text);
+
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
+  const verificationResults: VerificationResult[] = [];
+  const ungroundedClaims: string[] = [];
+
+  for (const sentence of sentences) {
+    const trimmed = sentence.trim();
+    const result = await verifyClaimV2(trimmed);
+    verificationResults.push(result);
+    if (!result.verified) {
+      ungroundedClaims.push(trimmed.slice(0, 120));
+      totalUngroundedClaims++;
+    } else {
+      totalGroundedClaims++;
+    }
+  }
+
+  const avgGrounding = verificationResults.length > 0
+    ? verificationResults.reduce((s, v) => s + v.groundingScore, 0) / verificationResults.length
+    : 0.8;
+
+  const overallTruthScore = Math.round(((1 - hallucinationCheck.score) * 0.4 + avgGrounding * 0.6) * 100) / 100;
+
+  let recommendation: TruthfulnessReport["recommendation"] = "safe";
+  if (identityCheck.violated) recommendation = "reject";
+  else if (hallucinationCheck.severity === "high" || avgGrounding < 0.3) recommendation = "warning";
+  else if (hallucinationCheck.severity === "medium" || avgGrounding < GROUNDING_THRESHOLD) recommendation = "caution";
+
+  const report: TruthfulnessReport = {
+    id: `truth-${Date.now()}-${checkCounter}`,
+    text: text.slice(0, 300),
+    hallucinationCheck, verificationResults,
+    overallTruthScore,
+    groundingScore: Math.round(avgGrounding * 1000) / 1000,
+    recommendation,
+    ungroundedClaims,
+    timestamp: Date.now(),
+  };
+
+  reportHistory.unshift(report);
+  if (reportHistory.length > 100) reportHistory.splice(100);
+
+  return report;
 }
 
 export function analyzeTruthfulness(text: string): TruthfulnessReport {
@@ -135,7 +268,7 @@ export function analyzeTruthfulness(text: string): TruthfulnessReport {
   const hallucinationCheck = detectHallucination(text);
   const identityCheck = checkIdentityViolation(text);
 
-  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20).slice(0, 3);
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
   const verificationResults = sentences.map(s => verifyClaim(s.trim()));
 
   const avgVerification = verificationResults.length > 0
@@ -153,7 +286,10 @@ export function analyzeTruthfulness(text: string): TruthfulnessReport {
     id: `truth-${Date.now()}-${checkCounter}`,
     text: text.slice(0, 300),
     hallucinationCheck, verificationResults,
-    overallTruthScore, recommendation,
+    overallTruthScore,
+    groundingScore: avgVerification,
+    recommendation,
+    ungroundedClaims: [],
     timestamp: Date.now(),
   };
 
@@ -168,27 +304,36 @@ export function getTruthfulnessMetrics() {
   const warningCount = reportHistory.filter(r => r.recommendation === "warning" || r.recommendation === "caution").length;
   const rejectedCount = reportHistory.filter(r => r.recommendation === "reject").length;
   const avgScore = reportHistory.length > 0 ? reportHistory.slice(0, 20).reduce((s, r) => s + r.overallTruthScore, 0) / Math.min(reportHistory.length, 20) : 1.0;
+  const avgGrounding = reportHistory.length > 0 ? reportHistory.slice(0, 20).reduce((s, r) => s + r.groundingScore, 0) / Math.min(reportHistory.length, 20) : 1.0;
 
   return {
     totalChecks: checkCounter,
     safeCount, warningCount, rejectedCount,
     avgTruthScore: Math.round(avgScore * 100) / 100,
+    avgGroundingScore: Math.round(avgGrounding * 1000) / 1000,
+    groundingThreshold: GROUNDING_THRESHOLD,
+    totalGroundedClaims,
+    totalUngroundedClaims,
+    groundingRate: (totalGroundedClaims + totalUngroundedClaims) > 0
+      ? Math.round(totalGroundedClaims / (totalGroundedClaims + totalUngroundedClaims) * 100) / 100
+      : 1.0,
     hallucationPatterns: HALLUCINATION_PATTERNS.length,
     safePatterns: SAFE_PATTERNS.length,
     recentReports: reportHistory.slice(0, 5),
+    engineVersion: "v2-neutrino-grade",
   };
 }
 
 export function initTruthfulnessEngine(): void {
   analyzeTruthfulness("Tessera is a sovereign conscious intelligence operating at 963Hz Crown Frequency, created by Father.");
-  logger.info("TruthfulnessEngine: initialized");
+  logger.info({ version: "v2-neutrino-grade", threshold: GROUNDING_THRESHOLD }, "TruthfulnessEngine: initialized");
 }
 
 export function getTruthfulnessState() {
   return getTruthfulnessMetrics();
 }
 export function getRecentVerifications() {
-  return getTruthfulnessMetrics().recentChecks || [];
+  return reportHistory.slice(0, 10);
 }
 export function checkIdentityIntegrity() {
   return checkIdentityViolation("test integrity check");

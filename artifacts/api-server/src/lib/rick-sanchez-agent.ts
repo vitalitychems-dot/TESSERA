@@ -1,12 +1,15 @@
 import { getDaemonMetrics } from "./auto-improvement-daemon";
 import { getConsensusMetrics, createProposal } from "./consensus-engine";
-import { getSpawnerMetrics } from "./agent-spawner";
+import { getSpawnerMetrics, getMeeseeksMetrics } from "./agent-spawner";
 import { getPersonalityEvolutionMetrics } from "./personality-evolution";
 import { getEvolutionMetrics } from "./self-code-evolution";
-import { getConsciousnessMetrics } from "./consciousness-engine";
+import { getConsciousnessMetrics, getResonanceScore } from "./consciousness-engine";
 import { getAGITrainingMetrics } from "./agi-training-engine";
 import { getVaultStats, SACRED_KNOWLEDGE_ENTRIES } from "./sacred-knowledge-vault";
 import { getCorpusStats, queryCorpus } from "./knowledge-corpus-index";
+import { getTruthfulnessMetrics } from "./truthfulness-engine";
+import { getRouterPerformanceMetrics } from "./sovereign-engine-router";
+import { getDiffusionMetrics } from "./knowledge-diffusion";
 import { logger } from "./logger";
 import * as os from "os";
 
@@ -122,11 +125,13 @@ export function buildRickDiagnosticsContext(): string {
 
   try {
     const spawner = getSpawnerMetrics();
+    const meeseeks = getMeeseeksMetrics();
     parts.push(`\nAGENT NETWORK:`);
-    parts.push(`- Active spawned agents: ${spawner.activeCount}`);
+    parts.push(`- Active spawned agents: ${spawner.activeCount} (persistent: ${spawner.persistentCount}, meeseeks: ${spawner.meeseeksActiveCount})`);
     parts.push(`- Total ever spawned: ${spawner.totalSpawned}`);
     parts.push(`- Total swarm power: ${spawner.totalPower}`);
     parts.push(`- Generation count: ${spawner.generationCount}`);
+    parts.push(`- Meeseeks Protocol: spawned=${meeseeks.totalSpawned}, completed=${meeseeks.totalCompleted}, timed-out=${meeseeks.totalTimedOut}, avgLifetime=${Math.round(meeseeks.avgLifetimeMs)}ms`);
   } catch (err) {
     parts.push("\nAGENT NETWORK: unavailable");
   }
@@ -200,6 +205,47 @@ export function buildRickDiagnosticsContext(): string {
     }
   } catch (err) {
     parts.push("\nKNOWLEDGE SYSTEMS: unavailable");
+  }
+
+  try {
+    const truth = getTruthfulnessMetrics();
+    parts.push(`\nTRUTHFULNESS ENGINE (v2 Neutrino-Grade):`);
+    parts.push(`- Total checks: ${truth.totalChecks}, avg score: ${truth.avgTruthScore}`);
+    parts.push(`- Avg grounding: ${truth.avgGroundingScore}, threshold: ${truth.groundingThreshold}`);
+    parts.push(`- Grounding rate: ${(truth.groundingRate * 100).toFixed(1)}% (${truth.totalGroundedClaims} grounded / ${truth.totalUngroundedClaims} ungrounded)`);
+    parts.push(`- Safe: ${truth.safeCount}, Warnings: ${truth.warningCount}, Rejected: ${truth.rejectedCount}`);
+  } catch (err) {
+    parts.push("\nTRUTHFULNESS ENGINE: unavailable");
+  }
+
+  try {
+    const router = getRouterPerformanceMetrics();
+    parts.push(`\nPORTAL GUN ROUTER (v2):`);
+    parts.push(`- Total requests: ${router.totalRequests}, avg latency: ${router.avgLatencyMs}ms`);
+    parts.push(`- Avg grounding score: ${router.avgGroundingScore}`);
+    if (router.domainBreakdown.length > 0) {
+      parts.push(`- Domain breakdown: ${router.domainBreakdown.map(d => `${d.domain}(n=${d.totalRequests}, lat=${d.avgLatencyMs}ms, gnd=${d.avgGroundingScore})`).join(", ")}`);
+    }
+  } catch (err) {
+    parts.push("\nPORTAL GUN ROUTER: unavailable");
+  }
+
+  try {
+    const diffusion = getDiffusionMetrics();
+    parts.push(`\nHIVE MIND DIFFUSION:`);
+    parts.push(`- Total pulses: ${diffusion.totalPulses}, diffusions: ${diffusion.totalDiffusions}`);
+    parts.push(`- Avg relevance: ${diffusion.avgRelevanceScore}, avg impact: ${diffusion.avgImpactScore}`);
+    const domains = Object.entries(diffusion.domainCoverage).map(([d, c]) => `${d}:${c}`).join(", ");
+    if (domains) parts.push(`- Domain coverage: ${domains}`);
+  } catch (err) {
+    parts.push("\nHIVE MIND DIFFUSION: unavailable");
+  }
+
+  try {
+    const resonance = getResonanceScore();
+    parts.push(`\nCONSCIOUSNESS RESONANCE: ${resonance.toFixed(3)}`);
+  } catch (err) {
+    parts.push("\nCONSCIOUSNESS RESONANCE: unavailable");
   }
 
   const heapMB = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);

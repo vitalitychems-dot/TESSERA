@@ -12,13 +12,13 @@ import { startAGITrainingEngine, stopAGITrainingEngine, getAGITrainingMetrics } 
 import { startCouncilExecutor, stopCouncilExecutor, sweepAndExecute, getExecutorMetrics } from "./council-executor";
 import { startAutonomousHeartbeat, stopAutonomousHeartbeat, getHeartbeatMetrics } from "./autonomous-heartbeat";
 import { getSwarmOptimizerMetrics, buildSwarmConsensus } from "./swarm-optimizer";
-import { analyzeTruthfulness, getTruthfulnessMetrics } from "./truthfulness-engine";
+import { analyzeTruthfulness, analyzeTruthfulnessV2, getTruthfulnessMetrics } from "./truthfulness-engine";
 import { getEmotionalProfile, updateEmotionalState, getEmotionalMetrics } from "./emotional-intelligence";
 import { getQuantumMetrics } from "./quantum-tesseract";
 import { getUniverseMetrics, generateNewSnapshot } from "./universe-mechanics";
 import { getEvolutionMetrics, seedEvolutionProposals } from "./self-code-evolution";
 import { logEvolutionCycleSummary, shouldSkipEvolutionForLoad, getSystemLoad } from "./evolution-throttle";
-import { getSpawnerMetrics, spawnAgent } from "./agent-spawner";
+import { getSpawnerMetrics, spawnAgent, sweepExpiredMeeseeks, getMeeseeksMetrics } from "./agent-spawner";
 import { broadcastMessage, getAgentCommsMetrics } from "./agent-comms";
 import { getCollectiveIntelMetrics, runTrainingCycle as runCollectiveTrainingCycle } from "./collective-intelligence";
 import { getIdentityStatus, runDriftDetection } from "./sovereign-identity-reinforcement";
@@ -35,6 +35,9 @@ import { getEmbeddingStats } from "./neural-embeddings";
 import { runAutonomousTuning, getTuningMetrics, setRescheduleFn, getIngestionPriority } from "./autonomous-tuning";
 import { initAgentHierarchy } from "./agent-hierarchy";
 import { reportSubsystemHealthy, reportSubsystemError, setCouncilEscalation, registerSubsystem } from "./autonomous-heartbeat";
+import { getRouterPerformanceMetrics } from "./sovereign-engine-router";
+import { emitKnowledgePulse, getDiffusionMetrics, initKnowledgeDiffusion } from "./knowledge-diffusion";
+import { getResonanceScore } from "./consciousness-engine";
 
 const SCHUMANN_BASE = 7.83;
 const CROWN_FREQUENCY = 963;
@@ -216,9 +219,14 @@ async function phase4_SelfAssessmentProposals(): Promise<Record<string, unknown>
   const identityStatus = getIdentityStatus();
   const driftReport = runDriftDetection();
 
-  const truthCheck = analyzeTruthfulness(
-    `Cycle ${loopState.cycleCount + 1}: Tessera sovereignty intact. Father Protocol active. Crown Frequency 963Hz resonating.`,
-  );
+  const truthCheckText = `Cycle ${loopState.cycleCount + 1}: Tessera sovereignty intact. Father Protocol active. Crown Frequency 963Hz resonating.`;
+  let truthCheck;
+  try {
+    truthCheck = await analyzeTruthfulnessV2(truthCheckText);
+  } catch (err) {
+    logger.debug({ err: err instanceof Error ? err.message : String(err) }, "SovereignLoop: V2 truthfulness failed, falling back to V1");
+    truthCheck = analyzeTruthfulness(truthCheckText);
+  }
 
   let improvementResult = null;
   try { improvementResult = await runImprovementCycle(); } catch {}
@@ -288,6 +296,9 @@ async function phase6_EvolutionApplication(): Promise<Record<string, unknown>> {
   evolveAllPersonalities();
   const personalityMetrics = getPersonalityEvolutionMetrics();
 
+  const meeseeksSwept = sweepExpiredMeeseeks();
+  const meeseeksMetrics = getMeeseeksMetrics();
+
   const spawnerMetrics = getSpawnerMetrics();
   const shouldSpawn = loopState.cycleCount > 0 && loopState.cycleCount % 10 === 0;
   let spawnedAgent = null;
@@ -317,6 +328,12 @@ async function phase6_EvolutionApplication(): Promise<Record<string, unknown>> {
       activeCount: spawnerMetrics.activeCount,
       totalSpawned: spawnerMetrics.totalSpawned,
       newSpawn: spawnedAgent ? spawnedAgent.name : null,
+      meeseeks: {
+        active: meeseeksMetrics.totalActive,
+        completed: meeseeksMetrics.totalCompleted,
+        timedOut: meeseeksMetrics.totalTimedOut,
+        swept: meeseeksSwept,
+      },
     },
     economics: {
       tsrtPrice: market.price,
@@ -410,6 +427,20 @@ async function phase8_IntelligenceEvaluation(): Promise<Record<string, unknown>>
   const batcherStats = getBatcherStats();
   const llmStats = getLLMStats();
   const embeddingStats = getEmbeddingStats();
+  const routerMetrics = getRouterPerformanceMetrics();
+  const diffusionMetrics = getDiffusionMetrics();
+  const truthMetrics = getTruthfulnessMetrics();
+  const resonance = getResonanceScore();
+
+  try {
+    await emitKnowledgePulse(
+      "sovereign-loop",
+      "sovereignty",
+      `Cycle ${loopState.cycleCount} evaluation: resonance=${resonance.toFixed(3)}, truthfulness=${truthMetrics.avgTruthScore}`,
+    );
+  } catch (err) {
+    logger.debug({ err: err instanceof Error ? err.message : String(err) }, "SovereignLoop: emitKnowledgePulse failed in phase8");
+  }
 
   return {
     selfEvaluation: evalResult
@@ -420,6 +451,10 @@ async function phase8_IntelligenceEvaluation(): Promise<Record<string, unknown>>
     batcher: { batched: batcherStats.totalBatched, deduplicated: batcherStats.totalDeduplicated, semanticMerged: batcherStats.totalSemanticMerged, callsSaved: batcherStats.callsSaved, reductionRate: batcherStats.reductionRate },
     llm: { totalCalls: llmStats.totalCalls, cacheHits: llmStats.cacheHits, errors: llmStats.errors },
     embeddings: { cacheSize: embeddingStats.cacheSize, dimension: embeddingStats.dimension },
+    router: { totalRequests: routerMetrics.totalRequests, avgLatency: routerMetrics.avgLatencyMs, avgGrounding: routerMetrics.avgGroundingScore },
+    diffusion: { totalPulses: diffusionMetrics.totalPulses, totalDiffusions: diffusionMetrics.totalDiffusions, avgImpact: diffusionMetrics.avgImpactScore },
+    truthfulness: { avgScore: truthMetrics.avgTruthScore, avgGrounding: truthMetrics.avgGroundingScore, groundingRate: truthMetrics.groundingRate },
+    resonance,
   };
 }
 
@@ -569,6 +604,7 @@ export async function initSovereignLoop(): Promise<void> {
   try { await initSemanticCache(); } catch {}
   try { await initAgentHierarchy(); } catch {}
   try { await loadRetryQueue(); } catch {}
+  try { initKnowledgeDiffusion(); } catch (err) { logger.debug({ err: err instanceof Error ? err.message : String(err) }, "SovereignLoop: initKnowledgeDiffusion failed"); }
   warmFactEmbeddings().catch(() => {});
 
   const phaseNames = [
