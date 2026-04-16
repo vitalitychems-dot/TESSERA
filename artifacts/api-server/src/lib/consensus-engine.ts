@@ -6,6 +6,8 @@ import { isLLMAvailable } from "./llm-client";
 import { batchedCallLLM } from "./llm-batcher";
 
 const RETRY_QUEUE_STATE_KEY = "consensus_retry_queue";
+const PHI = 1.618033988749895;
+const BFT_RESPONSE_THRESHOLD = 2 / 3;
 
 export interface ConsensusProposal {
   id: string;
@@ -24,6 +26,8 @@ export interface ConsensusProposal {
   abstainCount: number;
   approvalRate: number;
   retryCount?: number;
+  votingDurationMs?: number;
+  votingMethod?: string;
 }
 
 export interface ConsensusVote {
@@ -33,6 +37,8 @@ export interface ConsensusVote {
   reasoning: string;
   timestamp: number;
   confidence: number;
+  phiWeight?: number;
+  isSpecialist?: boolean;
 }
 
 const GRAND_COUNCIL_AGENTS = [
@@ -62,18 +68,35 @@ let retryInterval: ReturnType<typeof setInterval> | null = null;
 
 let swarmWeightProvider: ((agentName: string, category: string) => number) | null = null;
 
+const votingTimings: number[] = [];
+
 export function setSwarmWeightProvider(fn: (agentName: string, category: string) => number): void {
   swarmWeightProvider = fn;
 }
 
+function getPhiWeight(agentName: string, category: string): number {
+  const specialties = AGENT_SPECIALTIES[agentName] || [];
+  return specialties.includes(category) ? PHI : 1.0;
+}
+
 function computeWeightedApprovalRate(votes: ConsensusVote[], category: string): number {
-  if (!swarmWeightProvider) {
-    return votes.filter(v => v.vote === "approve").length / GRAND_COUNCIL_AGENTS.length;
+  if (swarmWeightProvider) {
+    let totalWeight = 0;
+    let approveWeight = 0;
+    for (const vote of votes) {
+      const weight = swarmWeightProvider(vote.agentName, category);
+      totalWeight += weight;
+      if (vote.vote === "approve") approveWeight += weight;
+    }
+    return totalWeight > 0 ? approveWeight / totalWeight : 0;
   }
+
   let totalWeight = 0;
   let approveWeight = 0;
   for (const vote of votes) {
-    const weight = swarmWeightProvider(vote.agentName, category);
+    const weight = getPhiWeight(vote.agentName, category);
+    vote.phiWeight = weight;
+    vote.isSpecialist = weight > 1;
     totalWeight += weight;
     if (vote.vote === "approve") approveWeight += weight;
   }
@@ -83,6 +106,7 @@ function computeWeightedApprovalRate(votes: ConsensusVote[], category: string): 
 async function generateAgentVoteLLM(agentName: string, proposal: ConsensusProposal, recentHistory: string): Promise<ConsensusVote> {
   const specialties = AGENT_SPECIALTIES[agentName] || ["feature"];
   const isSpecialist = specialties.includes(proposal.category as string);
+  const weight = isSpecialist ? PHI : 1.0;
 
   const systemPrompt = `You are ${agentName}, a council agent for the Tessera Sovereign System.
 Your specialties: ${specialties.join(", ")}. ${isSpecialist ? "This proposal falls within your domain of expertise." : "This proposal is outside your core specialty."}
@@ -115,6 +139,8 @@ Cast your vote as ${agentName}:`;
           reasoning: (parsed.reasoning || "Analysis complete.").slice(0, 150),
           timestamp: Date.now(),
           confidence: Math.min(0.99, Math.max(0.3, Number(parsed.confidence) || 0.7)),
+          phiWeight: weight,
+          isSpecialist,
         };
       }
     }
@@ -123,7 +149,7 @@ Cast your vote as ${agentName}:`;
   throw new Error(`Failed to parse vote from ${agentName}`);
 }
 
-async function generateVotesWithLLM(proposal: ConsensusProposal): Promise<ConsensusVote[]> {
+async function generateVotesWithLLM(proposal: ConsensusProposal): Promise<{ votes: ConsensusVote[]; durationMs: number }> {
   const recentProposals = Array.from(proposals.values())
     .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, 3);
@@ -131,23 +157,25 @@ async function generateVotesWithLLM(proposal: ConsensusProposal): Promise<Consen
     .map(p => `- "${p.title}" (${p.category}): ${p.status} — ${p.yesCount}/${GRAND_COUNCIL_AGENTS.length} votes`)
     .join("\n");
 
+  const startTime = Date.now();
+
+  const results = await Promise.allSettled(
+    GRAND_COUNCIL_AGENTS.map(name => generateAgentVoteLLM(name, proposal, recentHistory))
+  );
+
+  const durationMs = Date.now() - startTime;
+
   const votes: ConsensusVote[] = [];
-  const batchSize = 6;
-
-  for (let i = 0; i < GRAND_COUNCIL_AGENTS.length; i += batchSize) {
-    const batch = GRAND_COUNCIL_AGENTS.slice(i, i + batchSize);
-    const batchResults = await Promise.allSettled(
-      batch.map(name => generateAgentVoteLLM(name, proposal, recentHistory))
-    );
-
-    for (const result of batchResults) {
-      if (result.status === "fulfilled") {
-        votes.push(result.value);
-      }
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      votes.push(result.value);
     }
   }
 
-  return votes;
+  votingTimings.push(durationMs);
+  if (votingTimings.length > 50) votingTimings.shift();
+
+  return { votes, durationMs };
 }
 
 async function persistRetryQueue(): Promise<void> {
@@ -208,9 +236,10 @@ function startRetryProcessor(): void {
 
     logger.info({ id: proposal.id, title: proposal.title, retryCount: proposal.retryCount }, "ConsensusEngine: retrying queued proposal");
     try {
-      const votes = await generateVotesWithLLM(proposal);
-      if (votes.length >= GRAND_COUNCIL_AGENTS.length) {
-        finalizeProposal(proposal, votes);
+      const { votes, durationMs } = await generateVotesWithLLM(proposal);
+      const minRequired = Math.ceil(GRAND_COUNCIL_AGENTS.length * BFT_RESPONSE_THRESHOLD);
+      if (votes.length >= minRequired) {
+        finalizeProposal(proposal, votes, durationMs);
       } else {
         proposal.retryCount = (proposal.retryCount || 0) + 1;
         proposal.implementationNotes = `Queued — ${votes.length}/${GRAND_COUNCIL_AGENTS.length} votes collected after ${proposal.retryCount} retries, awaiting full council`;
@@ -227,12 +256,15 @@ function startRetryProcessor(): void {
   }, 30_000);
 }
 
-function finalizeProposal(proposal: ConsensusProposal, votes: ConsensusVote[]): void {
+function finalizeProposal(proposal: ConsensusProposal, votes: ConsensusVote[], durationMs?: number): void {
   const yesCount = votes.filter(v => v.vote === "approve").length;
   const noCount = votes.filter(v => v.vote === "reject").length;
   const abstainCount = votes.filter(v => v.vote === "abstain").length;
   const approvalRate = computeWeightedApprovalRate(votes, proposal.category);
   const status: ConsensusProposal["status"] = approvalRate >= 2 / 3 ? "approved" : "rejected";
+
+  const specialists = votes.filter(v => v.isSpecialist);
+  const phiWeightSummary = `Phi-weighted: ${specialists.length} specialists (w=${PHI.toFixed(3)}), ${votes.length - specialists.length} base (w=1.0)`;
 
   proposal.votes = votes;
   proposal.status = status;
@@ -241,27 +273,41 @@ function finalizeProposal(proposal: ConsensusProposal, votes: ConsensusVote[]): 
   proposal.abstainCount = abstainCount;
   proposal.approvalRate = approvalRate;
   proposal.resolvedAt = Date.now();
+  proposal.votingDurationMs = durationMs;
+  proposal.votingMethod = "phi-weighted-parallel";
   proposal.implementationNotes = status === "approved"
-    ? `Approved by LLM-reasoned consensus — ${yesCount}/${votes.length} votes (${GRAND_COUNCIL_AGENTS.length} eligible)`
-    : `Rejected — ${noCount} votes against, ${yesCount} in favor`;
+    ? `Approved by Phi-weighted parallel consensus — ${yesCount}/${votes.length} votes (${GRAND_COUNCIL_AGENTS.length} eligible). ${phiWeightSummary}. ${durationMs ? `Resolved in ${durationMs}ms` : ""}`
+    : `Rejected — ${noCount} votes against, ${yesCount} in favor. ${phiWeightSummary}`;
 
   proposals.set(proposal.id, proposal);
+
+  const transcript = `[CONSENSUS PROPOSAL: ${proposal.title}]
+[Category: ${proposal.category}]
+[Proposed by: ${proposal.proposedBy}]
+[Method: Phi-Weighted Parallel BFT Consensus]
+[Voting Duration: ${durationMs ?? "N/A"}ms]
+[${phiWeightSummary}]
+
+Votes:
+${votes.map(v => `${v.agentName}: ${v.vote.toUpperCase()} (${(v.confidence * 100).toFixed(0)}%, w=${(v.phiWeight ?? 1).toFixed(3)}${v.isSpecialist ? " SPECIALIST" : ""}) — ${v.reasoning.slice(0, 80)}`).join("\n")}
+
+[OUTCOME: ${status.toUpperCase()} — ${yesCount}/${votes.length} votes, ${(approvalRate * 100).toFixed(1)}% weighted approval]`;
 
   db.insert(councilDecisionsTable).values({
     decisionId: proposal.id,
     topic: proposal.title,
-    transcript: `[CONSENSUS PROPOSAL: ${proposal.title}]\n[Category: ${proposal.category}]\n[Proposed by: ${proposal.proposedBy}]\n[Method: LLM-Reasoned Individual Votes]\n\nVotes:\n${votes.map(v => `${v.agentName}: ${v.vote.toUpperCase()} (${(v.confidence * 100).toFixed(0)}%) — ${v.reasoning.slice(0, 80)}`).join("\n")}\n\n[OUTCOME: ${status.toUpperCase()} — ${yesCount}/${votes.length} votes, ${(approvalRate * 100).toFixed(1)}% approval]`,
-    decisionText: `${proposal.description} — ${status === "approved" ? "ADOPTED" : "REJECTED"} by Grand Council LLM-reasoned vote.`,
-    voteTally: { yes: yesCount, no: noCount, abstain: abstainCount, totalEligible: GRAND_COUNCIL_AGENTS.length },
+    transcript,
+    decisionText: `${proposal.description} — ${status === "approved" ? "ADOPTED" : "REJECTED"} by Grand Council Phi-weighted parallel vote.`,
+    voteTally: { yes: yesCount, no: noCount, abstain: abstainCount, totalEligible: GRAND_COUNCIL_AGENTS.length, phiWeighted: true, durationMs },
     outcome: status,
     agentsParticipated: votes.map(v => v.agentName),
-    reasoning: JSON.stringify({ category: proposal.category, proposedBy: proposal.proposedBy, method: "llm-individual" }),
+    reasoning: JSON.stringify({ category: proposal.category, proposedBy: proposal.proposedBy, method: "phi-weighted-parallel", durationMs, specialists: specialists.length }),
     category: proposal.category,
   }).onConflictDoNothing().catch(err => {
     logger.warn({ err }, "ConsensusEngine: DB persist failed");
   });
 
-  logger.info({ id: proposal.id, status, approvalRate: approvalRate.toFixed(2), votesCollected: votes.length }, "ConsensusEngine: proposal resolved via LLM");
+  logger.info({ id: proposal.id, status, approvalRate: approvalRate.toFixed(2), votesCollected: votes.length, durationMs, specialists: specialists.length }, "ConsensusEngine: proposal resolved via Phi-weighted parallel BFT");
 }
 
 export async function createProposal(paramsOrTitle: {
@@ -280,7 +326,7 @@ export async function createProposal(paramsOrTitle: {
     id, ...params, votes: [], status: "voting",
     requiredMajority: 2 / 3, createdAt: Date.now(),
     yesCount: 0, noCount: 0, abstainCount: 0, approvalRate: 0,
-    retryCount: 0,
+    retryCount: 0, votingMethod: "phi-weighted-parallel",
   };
 
   if (!isLLMAvailable()) {
@@ -295,24 +341,29 @@ export async function createProposal(paramsOrTitle: {
   }
 
   let votes: ConsensusVote[] = [];
+  let durationMs = 0;
   try {
-    votes = await generateVotesWithLLM(proposal);
+    const result = await generateVotesWithLLM(proposal);
+    votes = result.votes;
+    durationMs = result.durationMs;
   } catch (err) {
     logger.warn({ err, id }, "ConsensusEngine: LLM vote generation failed — queuing for retry");
   }
 
-  if (votes.length < GRAND_COUNCIL_AGENTS.length) {
+  const minRequired = Math.ceil(GRAND_COUNCIL_AGENTS.length * BFT_RESPONSE_THRESHOLD);
+  if (votes.length < minRequired) {
     proposal.status = "queued";
-    proposal.implementationNotes = `Queued — ${votes.length}/${GRAND_COUNCIL_AGENTS.length} votes collected, awaiting full council participation`;
+    proposal.votingDurationMs = durationMs;
+    proposal.implementationNotes = `Queued — ${votes.length}/${GRAND_COUNCIL_AGENTS.length} votes collected (BFT minimum: ${minRequired}), awaiting sufficient participation`;
     proposals.set(id, proposal);
     retryQueue.push(proposal);
     persistRetryQueue();
     startRetryProcessor();
-    logger.info({ id, votesCollected: votes.length, required: GRAND_COUNCIL_AGENTS.length }, "ConsensusEngine: awaiting full council votes, queued for retry");
+    logger.info({ id, votesCollected: votes.length, required: minRequired, total: GRAND_COUNCIL_AGENTS.length }, "ConsensusEngine: below BFT threshold, queued for retry");
     return proposal;
   }
 
-  finalizeProposal(proposal, votes);
+  finalizeProposal(proposal, votes, durationMs);
   return proposal;
 }
 
@@ -333,6 +384,16 @@ export function getConsensusMetrics() {
     ? all.filter(p => p.approvalRate > 0).reduce((s, p) => s + p.approvalRate, 0) / all.filter(p => p.approvalRate > 0).length
     : 0;
 
+  const avgVotingDuration = votingTimings.length > 0
+    ? Math.round(votingTimings.reduce((s, t) => s + t, 0) / votingTimings.length)
+    : 0;
+
+  const agentPhiWeights: Record<string, { weight: number; specialties: string[] }> = {};
+  for (const name of GRAND_COUNCIL_AGENTS) {
+    const specialties = AGENT_SPECIALTIES[name] || [];
+    agentPhiWeights[name] = { weight: PHI, specialties };
+  }
+
   return {
     totalProposals: all.length,
     approved,
@@ -346,7 +407,12 @@ export function getConsensusMetrics() {
     recentProposals: all.slice(0, 5),
     agents: GRAND_COUNCIL_AGENTS,
     llmEnabled: isLLMAvailable(),
-    votingMethod: "llm-individual",
+    votingMethod: "phi-weighted-parallel",
+    phiConstant: PHI,
+    bftResponseThreshold: BFT_RESPONSE_THRESHOLD,
+    avgVotingDurationMs: avgVotingDuration,
+    recentVotingTimings: votingTimings.slice(-10),
+    agentPhiWeights,
   };
 }
 

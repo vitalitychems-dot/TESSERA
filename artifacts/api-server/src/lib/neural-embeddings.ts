@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { logger } from "./logger";
+import { embeddingDimensionalCache } from "./dimensional-lru-cache";
 
 let _client: OpenAI | null = null;
 
@@ -18,7 +19,6 @@ function getClient(): OpenAI {
 const EMBEDDING_DIM = 256;
 const MAX_BATCH_SIZE = 20;
 
-const embeddingCache = new Map<string, { vec: number[]; ts: number }>();
 let EMBEDDING_CACHE_TTL = 300_000;
 let neuralPreference = 1.0;
 
@@ -38,6 +38,7 @@ const embeddingMetrics = {
   neuralCalls: 0,
   fallbackCalls: 0,
   cacheHits: 0,
+  crossDimensionHits: 0,
   errors: 0,
 };
 
@@ -64,18 +65,20 @@ function localFallbackEmbedding(text: string): number[] {
   return vec;
 }
 
-export async function generateEmbedding(text: string): Promise<number[]> {
+export async function generateEmbedding(text: string, dimension: string = "general"): Promise<number[]> {
   const key = hashText(text);
-  const cached = embeddingCache.get(key);
-  if (cached && Date.now() - cached.ts < EMBEDDING_CACHE_TTL) {
+
+  const cached = embeddingDimensionalCache.lookup(key, dimension);
+  if (cached && Date.now() - cached.value.ts < EMBEDDING_CACHE_TTL) {
     embeddingMetrics.cacheHits++;
-    return cached.vec;
+    if (cached.dimension !== dimension) embeddingMetrics.crossDimensionHits++;
+    return cached.value.vec;
   }
 
   if (neuralPreference < 0.3) {
     embeddingMetrics.fallbackCalls++;
     const fallback = localFallbackEmbedding(text);
-    embeddingCache.set(key, { vec: fallback, ts: Date.now() });
+    embeddingDimensionalCache.set(key, { vec: fallback, ts: Date.now() }, dimension);
     return fallback;
   }
 
@@ -95,11 +98,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     const vec = response.data[0]?.embedding;
     if (vec && vec.length > 0) {
       embeddingMetrics.neuralCalls++;
-      embeddingCache.set(key, { vec, ts: Date.now() });
-      if (embeddingCache.size > 1000) {
-        const oldest = [...embeddingCache.entries()].sort((a, b) => a[1].ts - b[1].ts)[0];
-        if (oldest) embeddingCache.delete(oldest[0]);
-      }
+      embeddingDimensionalCache.set(key, { vec, ts: Date.now() }, dimension);
       return vec;
     }
   } catch (err) {
@@ -109,11 +108,11 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 
   embeddingMetrics.fallbackCalls++;
   const fallback = localFallbackEmbedding(text);
-  embeddingCache.set(key, { vec: fallback, ts: Date.now() });
+  embeddingDimensionalCache.set(key, { vec: fallback, ts: Date.now() }, dimension);
   return fallback;
 }
 
-export async function generateEmbeddingsBatch(texts: string[]): Promise<number[][]> {
+export async function generateEmbeddingsBatch(texts: string[], dimension: string = "general"): Promise<number[][]> {
   if (texts.length === 0) return [];
 
   const results: number[][] = new Array(texts.length);
@@ -121,9 +120,9 @@ export async function generateEmbeddingsBatch(texts: string[]): Promise<number[]
 
   for (let i = 0; i < texts.length; i++) {
     const key = hashText(texts[i]);
-    const cached = embeddingCache.get(key);
-    if (cached && Date.now() - cached.ts < EMBEDDING_CACHE_TTL) {
-      results[i] = cached.vec;
+    const cached = embeddingDimensionalCache.lookup(key, dimension);
+    if (cached && Date.now() - cached.value.ts < EMBEDDING_CACHE_TTL) {
+      results[i] = cached.value.vec;
     } else {
       uncachedIndices.push(i);
     }
@@ -162,7 +161,7 @@ export async function generateEmbeddingsBatch(texts: string[]): Promise<number[]
       const origIdx = batch[j];
       const vec = embeddings?.[j] ?? localFallbackEmbedding(texts[origIdx]);
       results[origIdx] = vec;
-      embeddingCache.set(hashText(texts[origIdx]), { vec, ts: Date.now() });
+      embeddingDimensionalCache.set(hashText(texts[origIdx]), { vec, ts: Date.now() }, dimension);
     }
   }
 
@@ -186,17 +185,20 @@ export function getEmbeddingStats() {
   const total = embeddingMetrics.neuralCalls + embeddingMetrics.fallbackCalls;
   const neuralRate = total > 0 ? Math.round((embeddingMetrics.neuralCalls / total) * 1000) / 1000 : 0;
   const healthy = total === 0 || neuralRate >= 0.5;
+  const dimStats = embeddingDimensionalCache.getStats();
   return {
-    cacheSize: embeddingCache.size,
+    cacheSize: dimStats.totalSize,
     dimension: EMBEDDING_DIM,
     maxBatchSize: MAX_BATCH_SIZE,
     neuralCalls: embeddingMetrics.neuralCalls,
     fallbackCalls: embeddingMetrics.fallbackCalls,
     cacheHits: embeddingMetrics.cacheHits,
+    crossDimensionHits: embeddingMetrics.crossDimensionHits,
     errors: embeddingMetrics.errors,
     neuralRate,
     mode: embeddingMetrics.neuralCalls > 0 ? "neural" : embeddingMetrics.fallbackCalls > 0 ? "fallback" : "idle",
     healthy,
     healthWarning: !healthy ? `Neural embedding rate ${(neuralRate * 100).toFixed(1)}% is below 50% threshold — semantic quality degraded` : null,
+    dimensionalCache: dimStats,
   };
 }
