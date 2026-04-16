@@ -176,15 +176,34 @@ export class DimensionalLRUCache<T> {
       return { value: val, dimension: primaryDimension, weight: 1.0 };
     }
 
-    const related = relatedDimensions ?? DOMAIN_SIMILARITY[primaryDimension] ?? [];
-    for (const dim of related) {
-      const dimCache = this.dimensions.get(dim);
-      if (!dimCache) continue;
-      const crossVal = dimCache.get(key);
-      if (crossVal !== undefined) {
-        this.crossDimensionHits++;
-        return { value: crossVal, dimension: dim, weight: CROSS_DIMENSION_WEIGHT };
+    const domainEdges = DOMAIN_SIMILARITY[primaryDimension];
+    const candidates: { value: T; dimension: string; weight: number }[] = [];
+
+    if (relatedDimensions) {
+      for (const dim of relatedDimensions) {
+        const dimCache = this.dimensions.get(dim);
+        if (!dimCache) continue;
+        const crossVal = dimCache.get(key);
+        if (crossVal !== undefined) {
+          const edgeWeight = domainEdges?.[dim] ?? 0.5;
+          candidates.push({ value: crossVal, dimension: dim, weight: edgeWeight });
+        }
       }
+    } else if (domainEdges) {
+      for (const [dim, similarity] of Object.entries(domainEdges)) {
+        const dimCache = this.dimensions.get(dim);
+        if (!dimCache) continue;
+        const crossVal = dimCache.get(key);
+        if (crossVal !== undefined) {
+          candidates.push({ value: crossVal, dimension: dim, weight: similarity });
+        }
+      }
+    }
+
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => b.weight - a.weight);
+      this.crossDimensionHits++;
+      return candidates[0];
     }
 
     return undefined;
