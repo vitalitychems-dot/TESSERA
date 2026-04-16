@@ -233,16 +233,22 @@ function buildValidatedResponse(
   if (quarantined.length === 0) return original;
 
   let modified = original;
-  const severelyUngrounded = quarantined.filter(c => c.groundingScore < QUARANTINE_THRESHOLD);
 
-  for (const claim of severelyUngrounded) {
+  for (const claim of quarantined) {
     const idx = modified.indexOf(claim.claim.text);
-    if (idx !== -1) {
+    if (idx === -1) continue;
+
+    if (claim.groundingScore < QUARANTINE_THRESHOLD) {
       modified = modified.slice(0, idx) +
-        `[Note: This claim could not be verified against known data] ${claim.claim.text}` +
+        modified.slice(idx + claim.claim.text.length);
+    } else {
+      modified = modified.slice(0, idx) +
+        `[Unverified] ${claim.claim.text}` +
         modified.slice(idx + claim.claim.text.length);
     }
   }
+
+  modified = modified.replace(/\n{3,}/g, "\n\n").trim();
 
   return modified;
 }
@@ -303,7 +309,7 @@ export async function validateResponse(
       new Promise<ClaimScore>(resolve =>
         setTimeout(() => resolve({
           claim,
-          groundingScore: 0.5,
+          groundingScore: 0.3,
           bestMatchContent: "",
           bestMatchSource: "timeout",
           verified: false,
