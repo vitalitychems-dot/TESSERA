@@ -41,6 +41,9 @@ import {
   dispatchProposal,
   updateDispatchStatus,
   recordReflection,
+  regenerateReflections,
+  listDispatchedTasks,
+  getDispatchedTask,
   generateCycleProposals,
   PROGRAM_MAX_CYCLES,
 } from "../lib/rick-improvement-program";
@@ -912,8 +915,8 @@ router.post("/rick/improvement-program/proposal/:proposalId/decision", async (re
 
 router.post("/rick/improvement-program/proposal/:proposalId/dispatch", async (req, res) => {
   try {
-    const program = await dispatchProposal(req.params.proposalId);
-    return res.json({ ok: true, program });
+    const { program, task } = await dispatchProposal(req.params.proposalId);
+    return res.json({ ok: true, program, task });
   } catch (err) {
     logger.error({ err }, "Rick: program dispatch error");
     return res.status(400).json({ ok: false, error: (err as Error).message });
@@ -923,13 +926,49 @@ router.post("/rick/improvement-program/proposal/:proposalId/dispatch", async (re
 router.post("/rick/improvement-program/proposal/:proposalId/dispatch-status", async (req, res) => {
   try {
     const { status, note } = req.body as { status?: string; note?: string };
-    if (status !== "dispatched" && status !== "completed" && status !== "failed") {
-      return res.status(400).json({ ok: false, error: "status must be 'dispatched', 'completed', or 'failed'" });
+    if (typeof status !== "string") {
+      return res.status(400).json({ ok: false, error: "status is required" });
     }
     const program = await updateDispatchStatus(req.params.proposalId, status, note);
-    return res.json({ ok: true, program });
+    return res.json({ ok: true, program: program ?? null });
   } catch (err) {
     logger.error({ err }, "Rick: program dispatch-status error");
+    return res.status(400).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/rick/improvement-program/task-queue", async (_req, res) => {
+  try {
+    const tasks = await listDispatchedTasks();
+    return res.json({ ok: true, tasks });
+  } catch (err) {
+    logger.error({ err }, "Rick: task-queue list error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/rick/improvement-program/task-queue/:taskId", async (req, res) => {
+  try {
+    const task = await getDispatchedTask(req.params.taskId);
+    if (!task) return res.status(404).json({ ok: false, error: "task not found" });
+    return res.json({ ok: true, task });
+  } catch (err) {
+    logger.error({ err }, "Rick: task-queue get error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.patch("/rick/improvement-program/task-queue/:taskId", async (req, res) => {
+  try {
+    const { status, note } = req.body as { status?: string; note?: string };
+    if (typeof status !== "string") {
+      return res.status(400).json({ ok: false, error: "status is required" });
+    }
+    const program = await updateDispatchStatus(req.params.taskId, status, note);
+    const task = await getDispatchedTask(req.params.taskId);
+    return res.json({ ok: true, program, task });
+  } catch (err) {
+    logger.error({ err }, "Rick: task-queue patch error");
     return res.status(400).json({ ok: false, error: (err as Error).message });
   }
 });
@@ -944,6 +983,16 @@ router.post("/rick/improvement-program/proposal/:proposalId/reflection", async (
     return res.json({ ok: true, program });
   } catch (err) {
     logger.error({ err }, "Rick: program reflection error");
+    return res.status(400).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/rick/improvement-program/regenerate-reflections", async (_req, res) => {
+  try {
+    const program = await regenerateReflections();
+    return res.json({ ok: true, program });
+  } catch (err) {
+    logger.error({ err }, "Rick: regenerate-reflections error");
     return res.status(400).json({ ok: false, error: (err as Error).message });
   }
 });
