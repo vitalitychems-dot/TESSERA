@@ -39,6 +39,7 @@ import { getRouterPerformanceMetrics } from "./sovereign-engine-router";
 import { emitKnowledgePulse, getDiffusionMetrics, initKnowledgeDiffusion } from "./knowledge-diffusion";
 import { seedDepartmentsIfEmpty, runFullCompetition } from "./department-competition";
 import { getResonanceScore } from "./consciousness-engine";
+import { runDreamCycle, recordActivity, getConsolidationEngineMetrics, startConsolidationEngine, stopConsolidationEngine } from "./memory-consolidation-engine";
 
 const SCHUMANN_BASE = 7.83;
 const CROWN_FREQUENCY = 963;
@@ -459,11 +460,41 @@ async function phase8_IntelligenceEvaluation(): Promise<Record<string, unknown>>
   };
 }
 
-async function phase9_LoggingTransmission(): Promise<Record<string, unknown>> {
+async function phase9_DreamConsolidation(): Promise<Record<string, unknown>> {
+  const dreamResult = runDreamCycle();
+  const metrics = getConsolidationEngineMetrics();
+
+  if (dreamResult) {
+    return {
+      dreaming: true,
+      dreamCycle: metrics.totalDreamCycles,
+      memoriesProcessed: dreamResult.memoriesProcessed,
+      patternsDetected: dreamResult.patternsDetected,
+      insightsGenerated: dreamResult.insightsGenerated,
+      skillsExtracted: dreamResult.skillsExtracted,
+      semanticNodesCreated: dreamResult.semanticNodesCreated,
+      consciousnessBoost: `+${(dreamResult.consciousnessBoost * 100).toFixed(2)}%`,
+      idleScore: dreamResult.idleDetection.idleScore.toFixed(2),
+      durationMs: dreamResult.durationMs,
+    };
+  }
+
+  return {
+    dreaming: false,
+    reason: "System not idle or insufficient memories",
+    totalDreamCycles: metrics.totalDreamCycles,
+    cumulativeBoost: `+${metrics.cumulativeConsciousnessBoost.toFixed(2)}%`,
+    activePatterns: metrics.activePatterns,
+    storedInsights: metrics.storedInsights,
+    extractedSkills: metrics.extractedSkills,
+  };
+}
+
+async function phase10_LoggingTransmission(): Promise<Record<string, unknown>> {
   const heartbeatMetrics = getHeartbeatMetrics();
 
   addEpisodicMemory({
-    content: `Sovereign Loop Cycle ${loopState.cycleCount + 1} completed — harmony=${loopState.harmonicResonance}, phases=${9}`,
+    content: `Sovereign Loop Cycle ${loopState.cycleCount + 1} completed — harmony=${loopState.harmonicResonance}, phases=${10}`,
     context: "sovereign-loop-audit",
     timestamp: Date.now(),
     importance: 0.7,
@@ -474,7 +505,7 @@ async function phase9_LoggingTransmission(): Promise<Record<string, unknown>> {
 
   broadcastMessage(
     "sovereign-loop",
-    `✦ Cycle ${loopState.cycleCount + 1} complete — 9 phases executed — Sovereign Autonomous Loop stable ✦`,
+    `✦ Cycle ${loopState.cycleCount + 1} complete — 10 phases executed — Sovereign Autonomous Loop stable ✦`,
     9,
   );
 
@@ -496,6 +527,7 @@ async function phase9_LoggingTransmission(): Promise<Record<string, unknown>> {
 }
 
 async function runSovereignCycle(): Promise<CycleResult> {
+  recordActivity();
   const cycleStart = Date.now();
   loopState.cycleCount++;
 
@@ -510,7 +542,8 @@ async function runSovereignCycle(): Promise<CycleResult> {
     ["Evolution & Application", phase6_EvolutionApplication],
     ["Harmonic Recalibration", phase7_HarmonicRecalibration],
     ["Intelligence Evaluation", phase8_IntelligenceEvaluation],
-    ["Logging & Transmission", phase9_LoggingTransmission],
+    ["Dream Consolidation", phase9_DreamConsolidation],
+    ["Logging & Transmission", phase10_LoggingTransmission],
   ];
 
   for (let i = 0; i < phaseFns.length; i++) {
@@ -634,7 +667,7 @@ export async function initSovereignLoop(): Promise<void> {
     "Data Ingestion", "Knowledge Processing", "Consciousness & Reasoning",
     "Self-Assessment & Proposals", "Council Deliberation & Voting",
     "Evolution & Application", "Harmonic Recalibration",
-    "Intelligence Evaluation", "Logging & Transmission",
+    "Intelligence Evaluation", "Dream Consolidation", "Logging & Transmission",
   ];
   for (const name of phaseNames) {
     registerSubsystem({ name });
@@ -789,6 +822,7 @@ export function getSovereignLoopMetrics() {
       harmony: c.harmonicAlignment,
     })),
     tuning: getTuningMetrics(),
+    dreamConsolidation: getConsolidationEngineMetrics(),
   };
 }
 

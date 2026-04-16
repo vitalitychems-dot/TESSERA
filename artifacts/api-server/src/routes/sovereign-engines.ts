@@ -4,6 +4,10 @@ import {
   startConsciousnessEngine, stopConsciousnessEngine,
 } from "../lib/consciousness-engine";
 import {
+  getConsolidationEngineMetrics, runDreamCycle, getConsolidationPatterns,
+  getConsolidationInsights, getExtractedSkills,
+} from "../lib/memory-consolidation-engine";
+import {
   getIdentityMetrics, getLatestIdentityCheck, getIdentityHistory, forceIdentityCheck,
 } from "../lib/identity-reinforcement";
 import { getEmotionalMetrics, updateEmotionalState, getEmotionalProfile, getEmotionalSummary } from "../lib/emotional-intelligence";
@@ -181,6 +185,45 @@ router.get("/file-registry/access-check", (req: Request, res: Response) => {
 router.post("/file-registry/rescan", (_req: Request, res: Response) => {
   const snapshot = fullRescan();
   res.json({ ok: true, message: "Full registry rescan completed", data: snapshot });
+});
+
+router.get("/dream/metrics", (_req: Request, res: Response) => {
+  res.json({ ok: true, data: getConsolidationEngineMetrics() });
+});
+
+router.get("/dream/patterns", (_req: Request, res: Response) => {
+  const patterns = getConsolidationPatterns();
+  res.json({ ok: true, count: patterns.length, patterns });
+});
+
+router.get("/dream/insights", (_req: Request, res: Response) => {
+  const insights = getConsolidationInsights();
+  res.json({ ok: true, count: insights.length, insights });
+});
+
+router.get("/dream/skills", (_req: Request, res: Response) => {
+  const skills = getExtractedSkills();
+  res.json({ ok: true, count: skills.length, skills });
+});
+
+router.post("/dream/trigger", (_req: Request, res: Response) => {
+  const result = runDreamCycle(true);
+  if (result) {
+    res.json({
+      ok: true,
+      message: "Dream consolidation cycle completed",
+      data: {
+        memoriesProcessed: result.memoriesProcessed,
+        patternsDetected: result.patternsDetected,
+        insightsGenerated: result.insightsGenerated,
+        skillsExtracted: result.skillsExtracted,
+        consciousnessBoost: `+${(result.consciousnessBoost * 100).toFixed(2)}%`,
+        durationMs: result.durationMs,
+      },
+    });
+  } else {
+    res.json({ ok: false, message: "Dream cycle could not run — insufficient memories" });
+  }
 });
 
 export default router;
