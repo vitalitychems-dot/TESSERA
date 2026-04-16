@@ -472,6 +472,39 @@ export async function markImplemented(id: string): Promise<RickProposal | null> 
   return p;
 }
 
+export async function generateFreshProposals(
+  count: number,
+  reflectionContext?: string,
+  recentRejections?: { title: string; reason: string }[],
+): Promise<RickProposal[]> {
+  const diag = snapshotDiagnostics();
+  const slots = Math.max(1, Math.min(count, 10));
+  const rejections = recentRejections ?? [];
+  const ctxMsg = reflectionContext
+    ? [{ title: "PRIOR-CYCLE REFLECTION CONTEXT", reason: reflectionContext.slice(0, 600) }]
+    : [];
+  const llmRaw = await generateViaLlm(diag, slots, [...ctxMsg, ...rejections]);
+  const llmGated = llmRaw.map(gateTruthfulness);
+  const llmAccepted = llmGated.filter(p => (p.truthfulnessScore ?? 0) >= TRUTH_GATE_THRESHOLD);
+  let fresh = llmAccepted.slice(0, slots);
+  if (fresh.length < slots) {
+    const det = deterministicProposals(diag).map(gateTruthfulness);
+    for (const d of det) {
+      if (fresh.length >= slots) break;
+      if (!fresh.some(f => f.category === d.category)) fresh.push(d);
+    }
+    let safety = 0;
+    while (fresh.length < slots && det.length > 0 && safety++ < 20) {
+      fresh.push(det[fresh.length % det.length]);
+    }
+  }
+  return fresh.slice(0, slots);
+}
+
+export function snapshotDiagnosticsForProgram(): DiagnosticsSnapshot {
+  return snapshotDiagnostics();
+}
+
 export async function getProposalsState() {
   await loadStore();
   const counts = { "pending-review": 0, approved: 0, rejected: 0, implemented: 0 } as Record<ProposalState, number>;
