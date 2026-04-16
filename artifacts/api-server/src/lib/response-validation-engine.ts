@@ -7,6 +7,7 @@ const GROUNDING_THRESHOLD = 0.6;
 const MAX_CLAIMS_PER_RESPONSE = 10;
 const VERIFICATION_TIMEOUT_MS = 5000;
 const QUARANTINE_STORE_MAX = 200;
+const SAFE_QUARANTINE_RESPONSE = "I was unable to verify the accuracy of my response against my knowledge base. To maintain sovereignty integrity, I've withheld that response. Could you rephrase your question so I can provide verified information?";
 
 interface ExtractedClaim {
   text: string;
@@ -77,23 +78,38 @@ const CLAIM_PATTERNS: Array<{ pattern: RegExp; type: ExtractedClaim["type"] }> =
 
 export function extractClaims(response: string): ExtractedClaim[] {
   const claims: ExtractedClaim[] = [];
-  const sentences = response
-    .split(/(?<=[.!?])\s+|\n+/)
-    .map(s => s.trim())
-    .filter(s => s.length > 25 && s.length < 600);
 
-  for (let i = 0; i < sentences.length && claims.length < MAX_CLAIMS_PER_RESPONSE; i++) {
-    const sentence = sentences[i];
+  const segments = response
+    .split(/(?<=[.!?])\s+|\n+|(?<=\n)\s*[-•*]\s+/)
+    .map(s => s.replace(/^[-•*]\s*/, "").trim())
+    .filter(s => s.length > 10 && s.length < 600);
 
+  for (let i = 0; i < segments.length && claims.length < MAX_CLAIMS_PER_RESPONSE; i++) {
+    const segment = segments[i];
+
+    let matched = false;
     for (const { pattern, type } of CLAIM_PATTERNS) {
-      if (pattern.test(sentence)) {
+      if (pattern.test(segment)) {
         const alreadyExists = claims.some(c =>
-          c.text === sentence || levenshteinRatio(c.text, sentence) > 0.85
+          c.text === segment || levenshteinRatio(c.text, segment) > 0.85
         );
         if (!alreadyExists) {
-          claims.push({ text: sentence, index: i, type });
+          claims.push({ text: segment, index: i, type });
         }
+        matched = true;
         break;
+      }
+    }
+
+    if (!matched && segment.length >= 15) {
+      const hasSubjectVerb = /\b\w+\s+(?:is|are|was|were|has|have|had|does|do|did|can|will|would|should|could|may|might)\b/i.test(segment);
+      if (hasSubjectVerb) {
+        const alreadyExists = claims.some(c =>
+          c.text === segment || levenshteinRatio(c.text, segment) > 0.85
+        );
+        if (!alreadyExists) {
+          claims.push({ text: segment, index: i, type: "factual" });
+        }
       }
     }
   }
@@ -330,14 +346,39 @@ export async function validateResponse(
 
   const verifiedViaFallback = validationStats.fallbackVerifications - preVerifiedFallback;
 
-  const validatedResponse = buildValidatedResponse(response, stillQuarantined);
-  const wasModified = validatedResponse !== response;
-  const redactedCount = stillQuarantined.length;
-
   const allScored = [...passed, ...stillQuarantined];
   const avgScore = allScored.length > 0
     ? allScored.reduce((sum, c) => sum + c.groundingScore, 0) / allScored.length
     : 1.0;
+
+  const ungroundedRatio = claims.length > 0
+    ? stillQuarantined.length / claims.length
+    : 0;
+
+  let validatedResponse: string;
+  let wasModified: boolean;
+  let redactedCount: number;
+  const responseQuarantined = avgScore < GROUNDING_THRESHOLD || ungroundedRatio > 0.5;
+
+  if (responseQuarantined) {
+    validatedResponse = SAFE_QUARANTINE_RESPONSE;
+    wasModified = true;
+    redactedCount = claims.length;
+
+    for (const claim of allScored) {
+      addToQuarantineStore(claim, userQuery, true, "rejected");
+    }
+
+    logger.warn({
+      avgScore: avgScore.toFixed(3),
+      ungroundedRatio: ungroundedRatio.toFixed(3),
+      totalClaims: claims.length,
+    }, "ResponseValidation: entire response quarantined — grounding below threshold");
+  } else {
+    validatedResponse = buildValidatedResponse(response, stillQuarantined);
+    wasModified = validatedResponse !== response;
+    redactedCount = stillQuarantined.length;
+  }
 
   validationStats.totalClaims += claims.length;
   validationStats.groundedClaims += passed.length;
@@ -355,6 +396,7 @@ export async function validateResponse(
     grounded: passed.length,
     quarantined: quarantined.length,
     redacted: redactedCount,
+    responseQuarantined,
     fallbackVerified: verifiedViaFallback,
     avgGrounding: avgScore.toFixed(3),
     modified: wasModified,
