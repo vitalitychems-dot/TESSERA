@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { createProposal, getAllProposals, getProposal, getConsensusMetrics, GRAND_COUNCIL_AGENTS, drainRetryQueue } from "../lib/consensus-engine";
 import { getExecutorMetrics, getSystemConfig, updateSystemConfig } from "../lib/council-executor";
+import { validateMeshToken } from "../lib/mesh-auth";
 
 const router = Router();
 
@@ -51,7 +52,13 @@ router.patch("/council-executor/config", (req: Request, res: Response) => {
   res.json({ ok: true, message: `Config updated: ${key} = ${JSON.stringify(value)}` });
 });
 
-router.post("/consensus/drain-queue", async (_req: Request, res: Response) => {
+router.post("/consensus/drain-queue", async (req: Request, res: Response) => {
+  const rawToken = req.headers["x-admin-token"];
+  const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
+  if (!validateMeshToken(token)) {
+    res.status(401).json({ ok: false, error: "Valid sovereign key required" });
+    return;
+  }
   const result = await drainRetryQueue(100);
   res.json({ ok: true, data: result });
 });

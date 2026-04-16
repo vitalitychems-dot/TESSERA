@@ -83,6 +83,15 @@ function getPhiWeight(agentName: string, category: string): number {
   return specialties.includes(category) ? PHI : 1.0;
 }
 
+/**
+ * Fallback vote resolution when LLM is unavailable.
+ * All decisions are policy-driven with no randomness:
+ *   - Safe category + specialist  → approve  (domain expertise confirms alignment)
+ *   - Safe category + generalist  → abstain  (defer to specialists, no opinion)
+ *   - Risk category + specialist  → reject   (conservative: requires LLM deliberation)
+ *   - Risk category + generalist  → abstain  (no expertise — withhold judgment)
+ * This ensures fallback outcomes are auditable and repeatably deterministic.
+ */
 function generateDeterministicVotes(proposal: ConsensusProposal): { votes: ConsensusVote[]; durationMs: number } {
   const isSafeCategory = SAFE_AUTO_APPROVE_CATEGORIES.has(proposal.category);
   const startTime = Date.now();
@@ -103,23 +112,19 @@ function generateDeterministicVotes(proposal: ConsensusProposal): { votes: Conse
         reasoning = `As a ${proposal.category} specialist, this self-improvement proposal aligns with sovereign goals.`;
         confidence = 0.88;
       } else {
-        vote = Math.random() < 0.8 ? "approve" : "abstain";
-        reasoning = vote === "approve"
-          ? "Constructive improvement — benefits the sovereign system."
-          : "Outside my domain — deferring to specialists.";
-        confidence = 0.72;
+        vote = "abstain";
+        reasoning = "Outside my domain — deferring judgment to category specialists.";
+        confidence = 0.60;
       }
     } else {
       if (isSpecialist) {
-        vote = Math.random() < 0.6 ? "approve" : "reject";
-        reasoning = vote === "approve"
-          ? `Reviewed as ${proposal.category} specialist — acceptable risk profile.`
-          : `As ${proposal.category} specialist, this requires further review.`;
-        confidence = 0.65;
+        vote = "reject";
+        reasoning = `As ${proposal.category} specialist, this requires full LLM deliberation before approval.`;
+        confidence = 0.70;
       } else {
-        vote = Math.random() < 0.4 ? "approve" : Math.random() < 0.5 ? "reject" : "abstain";
-        reasoning = "Evaluated based on general system alignment.";
-        confidence = 0.55;
+        vote = "abstain";
+        reasoning = "Insufficient domain expertise — withholding vote pending deliberation.";
+        confidence = 0.50;
       }
     }
 
@@ -138,11 +143,20 @@ function generateDeterministicVotes(proposal: ConsensusProposal): { votes: Conse
   return { votes, durationMs: Date.now() - startTime };
 }
 
+/**
+ * Compute weighted approval rate over ACTIVE (non-abstaining) voters only.
+ * Abstentions mean "I defer to others" — they must not be treated as rejections
+ * by diluting the denominator. Only approve/reject votes carry weight.
+ * Returns -1 if all voters abstained (caller must treat as no-quorum).
+ */
 function computeWeightedApprovalRate(votes: ConsensusVote[], category: string): number {
+  const activeVotes = votes.filter(v => v.vote !== "abstain");
+  if (activeVotes.length === 0) return -1;
+
   if (swarmWeightProvider) {
     let totalWeight = 0;
     let approveWeight = 0;
-    for (const vote of votes) {
+    for (const vote of activeVotes) {
       const weight = swarmWeightProvider(vote.agentName, category);
       totalWeight += weight;
       if (vote.vote === "approve") approveWeight += weight;
@@ -156,10 +170,12 @@ function computeWeightedApprovalRate(votes: ConsensusVote[], category: string): 
     const weight = getPhiWeight(vote.agentName, category);
     vote.phiWeight = weight;
     vote.isSpecialist = weight > 1;
-    totalWeight += weight;
-    if (vote.vote === "approve") approveWeight += weight;
+    if (vote.vote !== "abstain") {
+      totalWeight += weight;
+      if (vote.vote === "approve") approveWeight += weight;
+    }
   }
-  return totalWeight > 0 ? approveWeight / totalWeight : 0;
+  return totalWeight > 0 ? approveWeight / totalWeight : -1;
 }
 
 async function generateAgentVoteLLM(agentName: string, proposal: ConsensusProposal, recentHistory: string): Promise<ConsensusVote> {
@@ -313,6 +329,12 @@ function startRetryProcessor(): void {
 
       const degraded = votes.length < Math.ceil(GRAND_COUNCIL_AGENTS.length * BFT_RESPONSE_THRESHOLD);
       finalizeProposal(proposal, votes, durationMs, degraded);
+
+      if (proposal.status === "queued") {
+        proposal.retryCount = (proposal.retryCount || 0) + 1;
+        retryQueue.push(proposal);
+        logger.info({ id: proposal.id, retryCount: proposal.retryCount }, "ConsensusEngine: no-quorum on retry — re-queued for LLM deliberation");
+      }
     } catch (err) {
       proposal.retryCount = (proposal.retryCount || 0) + 1;
       retryQueue.push(proposal);
@@ -327,7 +349,10 @@ function finalizeProposal(proposal: ConsensusProposal, votes: ConsensusVote[], d
   const noCount = votes.filter(v => v.vote === "reject").length;
   const abstainCount = votes.filter(v => v.vote === "abstain").length;
   const approvalRate = computeWeightedApprovalRate(votes, proposal.category);
-  const status: ConsensusProposal["status"] = approvalRate >= 2 / 3 ? "approved" : "rejected";
+  const noQuorum = approvalRate < 0;
+  const status: ConsensusProposal["status"] = noQuorum
+    ? "queued"
+    : approvalRate >= 2 / 3 ? "approved" : "rejected";
 
   const specialists = votes.filter(v => v.isSpecialist);
   const phiWeightSummary = `Phi-weighted: ${specialists.length} specialists (w=${PHI.toFixed(3)}), ${votes.length - specialists.length} base (w=1.0)`;
@@ -340,15 +365,22 @@ function finalizeProposal(proposal: ConsensusProposal, votes: ConsensusVote[], d
   proposal.yesCount = yesCount;
   proposal.noCount = noCount;
   proposal.abstainCount = abstainCount;
-  proposal.approvalRate = approvalRate;
-  proposal.resolvedAt = Date.now();
+  proposal.approvalRate = noQuorum ? 0 : approvalRate;
+  if (!noQuorum) proposal.resolvedAt = Date.now();
   proposal.votingDurationMs = durationMs;
   proposal.votingMethod = "phi-weighted-parallel";
-  proposal.implementationNotes = status === "approved"
-    ? `Approved by Phi-weighted parallel consensus — ${yesCount}/${votes.length} votes (${GRAND_COUNCIL_AGENTS.length} eligible). ${phiWeightSummary}.${participationNote} ${durationMs ? `Resolved in ${durationMs}ms` : ""}`
-    : `Rejected — ${noCount} votes against, ${yesCount} in favor. ${phiWeightSummary}${participationNote}`;
+  proposal.implementationNotes = noQuorum
+    ? `No quorum — all ${abstainCount} votes abstained (no active specialist coverage). Queued for LLM deliberation. ${phiWeightSummary}`
+    : status === "approved"
+      ? `Approved by Phi-weighted parallel consensus — ${yesCount}/${votes.length} votes (${GRAND_COUNCIL_AGENTS.length} eligible). ${phiWeightSummary}.${participationNote} ${durationMs ? `Resolved in ${durationMs}ms` : ""}`
+      : `Rejected — ${noCount} votes against, ${yesCount} in favor. ${phiWeightSummary}${participationNote}`;
 
   proposals.set(proposal.id, proposal);
+
+  if (noQuorum) {
+    logger.info({ id: proposal.id, abstainCount }, "ConsensusEngine: no-quorum on deterministic fallback — queued for LLM deliberation");
+    return;
+  }
 
   const transcript = `[CONSENSUS PROPOSAL: ${proposal.title}]
 [Category: ${proposal.category}]
@@ -432,6 +464,14 @@ export async function createProposal(paramsOrTitle: {
 
   const degraded = votes.length < Math.ceil(GRAND_COUNCIL_AGENTS.length * BFT_RESPONSE_THRESHOLD);
   finalizeProposal(proposal, votes, durationMs, degraded);
+
+  if (proposal.status === "queued") {
+    retryQueue.push(proposal);
+    persistRetryQueue();
+    startRetryProcessor();
+    logger.info({ id, category: params.category }, "ConsensusEngine: no-quorum on initial vote — added to retry queue for LLM deliberation");
+  }
+
   return proposal;
 }
 
@@ -493,22 +533,34 @@ export function getConsensusMetrics() {
 
 export { GRAND_COUNCIL_AGENTS };
 
-export async function drainRetryQueue(batchSize = 50): Promise<{ resolved: number; remaining: number }> {
+export async function drainRetryQueue(batchSize = 50): Promise<{ resolved: number; deferred: number; remaining: number }> {
   let resolved = 0;
+  let deferred = 0;
   const limit = Math.min(batchSize, retryQueue.length);
+  const noQuorumBatch: ConsensusProposal[] = [];
+
   for (let i = 0; i < limit; i++) {
     const proposal = retryQueue.shift();
     if (!proposal) break;
 
     const result = generateDeterministicVotes(proposal);
-    const degraded = false;
-    finalizeProposal(proposal, result.votes, result.durationMs, degraded);
-    resolved++;
+    finalizeProposal(proposal, result.votes, result.durationMs, false);
+
+    if (proposal.status === "queued") {
+      noQuorumBatch.push(proposal);
+      deferred++;
+    } else {
+      resolved++;
+    }
+  }
+
+  for (const p of noQuorumBatch) {
+    retryQueue.push(p);
   }
 
   persistRetryQueue();
-  logger.info({ resolved, remaining: retryQueue.length }, "ConsensusEngine: batch drain complete");
-  return { resolved, remaining: retryQueue.length };
+  logger.info({ resolved, deferred, remaining: retryQueue.length }, "ConsensusEngine: batch drain complete");
+  return { resolved, deferred, remaining: retryQueue.length };
 }
 
 export function getConsensusStats() {

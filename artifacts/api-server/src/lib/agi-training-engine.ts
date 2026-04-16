@@ -400,6 +400,24 @@ export function getTrainingState() {
 export function startTraining(_category?: string) {
   return { ok: true, message: "Training cycle initiated" };
 }
+
+/**
+ * Trigger a single AGI training cycle on-demand (used by the task scheduler
+ * for load-adaptive scheduling). This is the externally callable version of
+ * the internal runTrainingCycle(), without the periodic interval overhead.
+ */
+export async function triggerTrainingCycle(): Promise<{ sessions: number; avgScore: number }> {
+  try {
+    realCounts = await queryRealCounts();
+  } catch {}
+  const sessions = runTrainingCycle();
+  if (sessions.length > 0) {
+    logger.info({ sessions: sessions.length }, "AGITraining: scheduler-triggered cycle complete");
+    persistState().catch(() => {});
+  }
+  const metrics = getAGITrainingMetrics();
+  return { sessions: sessions.length, avgScore: metrics.avgScore };
+}
 export function getSessionHistory() {
   return getAGITrainingMetrics().recentSessions || [];
 }
