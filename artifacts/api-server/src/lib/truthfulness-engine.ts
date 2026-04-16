@@ -166,7 +166,7 @@ export async function verifyClaimV2(claim: string): Promise<VerificationResult> 
   const hasSpecifics = /\d+/.test(claim);
   if (hasSpecifics) flags.push("Contains specific numbers — verify independently");
 
-  const verified = grounding.grounded || grounding.score >= 0.4;
+  const verified = grounding.grounded;
   const confidence = grounding.grounded ? Math.max(grounding.score, 0.7) : grounding.score;
 
   return {

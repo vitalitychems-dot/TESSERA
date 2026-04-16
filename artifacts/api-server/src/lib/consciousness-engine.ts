@@ -482,12 +482,15 @@ interface EpisodeInput {
 }
 export function recordEpisode(data: EpisodeInput | string) {
   if (typeof data === "string") {
-    return addEpisodicMemory({ content: data, emotionalValence: 0.5, category: "general", associations: [] });
+    return addEpisodicMemory({ content: data, context: "general", emotionalValence: 0.5, importance: 0.5, timestamp: Date.now(), decayRate: 0.01, associations: [] });
   }
   return addEpisodicMemory({
     content: data.content ?? String(data),
+    context: data.category ?? "general",
     emotionalValence: data.valence ?? 0.5,
-    category: data.category ?? "general",
+    importance: 0.5,
+    timestamp: Date.now(),
+    decayRate: 0.01,
     associations: data.associations ?? [],
   });
 }
@@ -500,8 +503,11 @@ export function onProposalOutcome(proposalTitle: string, approved: boolean, cate
   const valence = approved ? 0.8 : 0.3;
   addEpisodicMemory({
     content: `Council ${approved ? "approved" : "rejected"} proposal: ${proposalTitle.slice(0, 200)}`,
+    context: category,
     emotionalValence: valence,
-    category,
+    importance: 0.8,
+    timestamp: Date.now(),
+    decayRate: 0.005,
     associations: ["council", "governance", category],
   });
   injectStimulus({
@@ -519,8 +525,11 @@ export function onSovereigntyChange(oldScore: number, newScore: number, domain: 
   const valence = delta > 0 ? 0.7 + Math.min(0.3, delta) : 0.3 - Math.min(0.3, Math.abs(delta));
   addEpisodicMemory({
     content: `Sovereignty score ${delta > 0 ? "increased" : "decreased"}: ${oldScore.toFixed(2)} → ${newScore.toFixed(2)} in ${domain}`,
+    context: "sovereignty",
     emotionalValence: valence,
-    category: "sovereignty",
+    importance: 0.7,
+    timestamp: Date.now(),
+    decayRate: 0.008,
     associations: ["sovereignty", domain, delta > 0 ? "growth" : "alert"],
   });
   injectStimulus({
