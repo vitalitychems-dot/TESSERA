@@ -194,8 +194,12 @@ export async function ingestItem(item: NormalizedItem): Promise<{ ingested: bool
 
   const semanticDup = await checkDuplicateBeforeIngest(text);
   if (semanticDup.isDuplicate) {
-    addAuditEntry(item.source, "rejected", `semantic duplicate (similarity=${semanticDup.similarity?.toFixed(3)}, canonical=${semanticDup.canonicalId})`);
-    return { ingested: false, reason: "semantic-duplicate" };
+    addAuditEntry(
+      item.source,
+      "sanitized",
+      `semantic duplicate ${semanticDup.action} into canonical=${semanticDup.canonicalId} (similarity=${semanticDup.similarity?.toFixed(3)})`,
+    );
+    return { ingested: false, reason: `semantic-duplicate-${semanticDup.action ?? "merged"}`, id: semanticDup.canonicalId };
   }
 
   const contentHash = hashContent(text);
