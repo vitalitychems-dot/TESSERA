@@ -1,4 +1,4 @@
-import { useEffect, useRef, memo, Component, type ReactNode } from "react";
+import { useEffect, useRef, memo, Component, type ReactNode, useState } from "react";
 import { useLocation } from "wouter";
 
 class ErrorBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, { hasError: boolean }> {
@@ -395,8 +395,254 @@ function HyperdimensionalCanvas() {
   );
 }
 
+function RickMortyPsychedelicCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const frameRef = useRef<number>(0);
+  const timeRef = useRef(0);
+  const visibleRef = useRef(true);
+  const lastFrameRef = useRef(0);
+  const targetFpsRef = useRef(20);
+
+  useEffect(() => {
+    const lowEnd = isLowEnd();
+    if (lowEnd) targetFpsRef.current = 12;
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (motionQuery.matches) targetFpsRef.current = 1;
+
+    const onVisChange = () => { visibleRef.current = !document.hidden; };
+    document.addEventListener("visibilitychange", onVisChange);
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d", { alpha: false });
+    if (!ctx) return;
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    const draw = (timestamp: number) => {
+      const frameInterval = 1000 / targetFpsRef.current;
+      if (timestamp - lastFrameRef.current < frameInterval) {
+        frameRef.current = requestAnimationFrame(draw);
+        return;
+      }
+      lastFrameRef.current = timestamp;
+      if (!visibleRef.current) {
+        frameRef.current = requestAnimationFrame(draw);
+        return;
+      }
+
+      const W = canvas.width;
+      const H = canvas.height;
+      timeRef.current += 0.018;
+      const t = timeRef.current;
+
+      ctx.fillStyle = "#04080d";
+      ctx.fillRect(0, 0, W, H);
+
+      const bgGrad = ctx.createRadialGradient(W * 0.5, H * 0.45, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.9);
+      const h1 = (t * 0.04) % 1;
+      const h2 = (t * 0.04 + 0.33) % 1;
+      const h3 = (t * 0.04 + 0.66) % 1;
+      const [r1, g1, b1] = hslToRgb(h1, 0.75, 0.14);
+      const [r2, g2, b2] = hslToRgb(h2, 0.65, 0.09);
+      const [r3, g3, b3] = hslToRgb(h3, 0.55, 0.06);
+      bgGrad.addColorStop(0, `rgba(${r1},${g1},${b1},0.9)`);
+      bgGrad.addColorStop(0.55, `rgba(${r2},${g2},${b2},0.5)`);
+      bgGrad.addColorStop(1, `rgba(${r3},${g3},${b3},0.3)`);
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, W, H);
+
+      const portalX = W * 0.62;
+      const portalY = H * 0.36;
+      const scale = W / 400;
+      const maxRings = lowEnd ? 4 : 7;
+
+      for (let i = 0; i < maxRings; i++) {
+        const frac = i / maxRings;
+        const ringR = (55 + i * 42) * scale;
+        const angle = t * (0.4 + i * 0.08) + i * 0.25;
+        const hue = (0.37 + frac * 0.12 + t * 0.015) % 1;
+        const [pr, pg, pb] = hslToRgb(hue, 0.95, 0.55 - frac * 0.15);
+        ctx.save();
+        ctx.translate(portalX, portalY);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, ringR, ringR * 0.38, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${pr},${pg},${pb},${0.75 - frac * 0.55})`;
+        ctx.lineWidth = 2.5 - frac * 1.3;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      const portalGlow = ctx.createRadialGradient(portalX, portalY, 0, portalX, portalY, 90 * scale);
+      const portalHue = (0.38 + t * 0.025) % 1;
+      const [pgr, pgg, pgb] = hslToRgb(portalHue, 0.9, 0.6);
+      portalGlow.addColorStop(0, `rgba(${pgr},${pgg},${pgb},0.45)`);
+      portalGlow.addColorStop(0.45, `rgba(${pgr},${pgg},${pgb},0.12)`);
+      portalGlow.addColorStop(1, `rgba(0,0,0,0)`);
+      ctx.fillStyle = portalGlow;
+      ctx.fillRect(0, 0, W, H);
+
+      const particleCount = lowEnd ? 18 : 36;
+      for (let i = 0; i < particleCount; i++) {
+        const ang = (i / particleCount) * Math.PI * 2 + t * 0.25;
+        const pr2 = (32 + Math.sin(t * 0.4 + i * 0.45) * 90) * scale;
+        const px = portalX + Math.cos(ang) * pr2;
+        const py = portalY + Math.sin(ang) * pr2 * 0.42;
+        const hue = (i / particleCount + t * 0.045) % 1;
+        const [sr, sg, sb] = hslToRgb(hue, 0.95, 0.62);
+        ctx.beginPath();
+        ctx.arc(px, py, 1.8, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${sr},${sg},${sb},${0.35 + Math.sin(t + i * 0.55) * 0.2})`;
+        ctx.fill();
+      }
+
+      const rickX = W * 0.18;
+      const rickY = H * 0.76;
+      const s = Math.min(W, H) * 0.003;
+
+      const auraGrad = ctx.createRadialGradient(rickX, rickY - 20 * s, 0, rickX, rickY - 10 * s, 70 * s);
+      const auraHue = (t * 0.07) % 1;
+      const [ar, ag, ab] = hslToRgb(auraHue, 0.9, 0.55);
+      const auraAlpha = 0.14 + Math.sin(t * 1.4) * 0.06;
+      auraGrad.addColorStop(0, `rgba(${ar},${ag},${ab},${auraAlpha * 2.5})`);
+      auraGrad.addColorStop(0.5, `rgba(${ar},${ag},${ab},${auraAlpha})`);
+      auraGrad.addColorStop(1, `rgba(0,0,0,0)`);
+      ctx.fillStyle = auraGrad;
+      ctx.beginPath();
+      ctx.ellipse(rickX, rickY - 15 * s, 65 * s, 55 * s, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(215,215,225,0.88)";
+      ctx.fillRect(rickX - 17 * s, rickY - 28 * s, 34 * s, 48 * s);
+      ctx.fillStyle = "rgba(50,180,100,0.75)";
+      ctx.fillRect(rickX - 7 * s, rickY - 28 * s, 14 * s, 12 * s);
+
+      ctx.beginPath();
+      ctx.ellipse(rickX, rickY - 44 * s, 15 * s, 17 * s, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(225,205,175,0.92)";
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(155,155,165,0.97)";
+      ctx.beginPath();
+      ctx.ellipse(rickX - 6 * s, rickY - 61 * s, 13 * s, 9 * s, -0.25, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(rickX + 7 * s, rickY - 57 * s);
+      ctx.lineTo(rickX + 23 * s, rickY - 80 * s);
+      ctx.lineTo(rickX + 15 * s, rickY - 55 * s);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(140,140,150,0.95)";
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(20,20,30,0.85)";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.ellipse(rickX - 7 * s, rickY - 44 * s, 5 * s, 4 * s, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(rickX + 7 * s, rickY - 44 * s, 5 * s, 4 * s, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(20,20,30,0.5)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(rickX - 2 * s, rickY - 44 * s);
+      ctx.lineTo(rickX + 2 * s, rickY - 44 * s);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(50,210,110,0.9)";
+      ctx.beginPath();
+      ctx.arc(rickX - 7 * s, rickY - 44 * s, 2 * s, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(rickX + 7 * s, rickY - 44 * s, 2 * s, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(215,215,225,0.82)";
+      ctx.lineWidth = 5 * s;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(rickX - 17 * s, rickY - 18 * s);
+      ctx.lineTo(rickX - 38 * s, rickY - 38 * s);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(rickX + 17 * s, rickY - 18 * s);
+      ctx.lineTo(rickX + 28 * s, rickY + 2 * s);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(0,195,95,0.82)";
+      ctx.fillRect(rickX - 55 * s, rickY - 47 * s, 20 * s, 11 * s);
+      const gunGlowX = rickX - 38 * s;
+      const gunGlowY = rickY - 42 * s;
+      const ggPulse = 0.6 + Math.sin(t * 3) * 0.35;
+      ctx.fillStyle = `rgba(0,255,130,${ggPulse})`;
+      ctx.beginPath();
+      ctx.arc(gunGlowX, gunGlowY, 5 * s, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(70,70,90,0.82)";
+      ctx.lineWidth = 5 * s;
+      ctx.beginPath();
+      ctx.moveTo(rickX - 8 * s, rickY + 20 * s);
+      ctx.lineTo(rickX - 11 * s, rickY + 48 * s);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(rickX + 8 * s, rickY + 20 * s);
+      ctx.lineTo(rickX + 11 * s, rickY + 48 * s);
+      ctx.stroke();
+
+      if (Math.floor(t * 0.4) % 6 === 0) {
+        const textAlpha = (Math.sin(t * 2.5) * 0.25 + 0.2);
+        ctx.fillStyle = `rgba(0,255,100,${textAlpha})`;
+        ctx.font = `bold ${Math.max(9, Math.round(10 * s))}px monospace`;
+        ctx.fillText("WUBBA LUBBA DUB DUB", rickX - 45 * s, rickY - 92 * s);
+      }
+
+      frameRef.current = requestAnimationFrame(draw);
+    };
+
+    frameRef.current = requestAnimationFrame(draw);
+
+    return () => {
+      cancelAnimationFrame(frameRef.current);
+      window.removeEventListener("resize", resize);
+      document.removeEventListener("visibilitychange", onVisChange);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 0,
+        width: "100%",
+        height: "100%",
+        pointerEvents: "none",
+      }}
+    />
+  );
+}
+
 function HyperdimensionalBackground() {
   const [location] = useLocation();
+  const [variant, setVariant] = useState<"hyperdimensional" | "rick-morty">(() => {
+    try { return (localStorage.getItem("tessera-bg") as "hyperdimensional" | "rick-morty") || "hyperdimensional"; }
+    catch { return "hyperdimensional"; }
+  });
+
+  const toggleVariant = () => {
+    const next = variant === "hyperdimensional" ? "rick-morty" : "hyperdimensional";
+    setVariant(next);
+    try { localStorage.setItem("tessera-bg", next); } catch {}
+  };
+
   const isUniversePage = location === "/universe" || location === "/universe-model";
 
   if (isUniversePage) {
@@ -404,9 +650,32 @@ function HyperdimensionalBackground() {
   }
 
   return (
-    <ErrorBoundary fallback={StaticFallback}>
-      <HyperdimensionalCanvas />
-    </ErrorBoundary>
+    <>
+      <ErrorBoundary fallback={StaticFallback}>
+        {variant === "rick-morty" ? <RickMortyPsychedelicCanvas /> : <HyperdimensionalCanvas />}
+      </ErrorBoundary>
+      <button
+        onClick={toggleVariant}
+        title={variant === "rick-morty" ? "Switch to Hyperdimensional" : "Switch to Rick & Morty Psychedelic"}
+        style={{
+          position: "fixed",
+          bottom: "calc(60px + env(safe-area-inset-bottom, 0px))",
+          left: "8px",
+          zIndex: 49,
+          background: "rgba(0,0,0,0.55)",
+          border: "1px solid rgba(255,255,255,0.12)",
+          borderRadius: "8px",
+          padding: "5px 9px",
+          fontSize: "15px",
+          cursor: "pointer",
+          backdropFilter: "blur(6px)",
+          lineHeight: 1,
+          pointerEvents: "auto",
+        }}
+      >
+        {variant === "rick-morty" ? "🌌" : "🧪"}
+      </button>
+    </>
   );
 }
 

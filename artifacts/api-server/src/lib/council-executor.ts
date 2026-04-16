@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { councilDecisionsTable, councilConfigTable, systemStateTable } from "@workspace/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { logger } from "./logger";
+import { markProposalImplemented } from "./consensus-engine";
 
 export interface ExecutionResult {
   proposalId: string;
@@ -144,6 +145,7 @@ async function executeProposal(decisionId: string, topic: string, category: stri
   if (executionHistory.length > 100) executionHistory.splice(100);
   executedProposalIds.add(decisionId);
   autoProcessed++;
+  markProposalImplemented(decisionId);
 
   logger.info({ decisionId, category, changesCount: changes.length }, "CouncilExecutor: decision executed and persisted to DB");
   return result;
@@ -160,7 +162,14 @@ async function processApprovedDecisions(): Promise<number> {
       if (d.outcome !== "approved") continue;
       if (executedProposalIds.has(d.decisionId)) continue;
       const result = await executeProposal(d.decisionId, d.topic, d.category || "general", d.outcome);
-      if (result) processed++;
+      if (result) {
+        processed++;
+        try {
+          await db.update(councilDecisionsTable).set({ outcome: "implemented" }).where(eq(councilDecisionsTable.decisionId, d.decisionId));
+        } catch (dbErr) {
+          logger.warn({ decisionId: d.decisionId, dbErr }, "CouncilExecutor: could not update outcome to implemented in DB");
+        }
+      }
     }
   } catch (err) {
     logger.warn({ err }, "CouncilExecutor: could not query decisions");

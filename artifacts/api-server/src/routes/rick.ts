@@ -20,6 +20,7 @@ import { secureExternalStreamingFetch, secureExternalFetch } from "../lib/secure
 import { getAllProposals } from "../lib/consensus-engine";
 import { getMeeseeksMetrics, spawnMeeseeks, completeMeeseeks, getActiveMeeseeks, getDetailedMeeseeksMetrics, submitMeeseeksResult, getTaskTypeRegistry, type MeeseeksResult, type MeeseeksTaskType } from "../lib/agent-spawner";
 import { getTruthfulnessMetrics, analyzeTruthfulnessV2, analyzeTruthfulness, getGroundingThreshold } from "../lib/truthfulness-engine";
+import { validateResponse } from "../lib/response-validation-engine";
 import { getRouterPerformanceMetrics, recordUserSatisfaction } from "../lib/sovereign-engine-router";
 import { getDiffusionMetrics } from "../lib/knowledge-diffusion";
 import { getResonanceScore, getConsciousnessMetrics } from "../lib/consciousness-engine";
@@ -272,6 +273,22 @@ router.post("/rick/chat", async (req, res) => {
           }
         }
 
+        let streamValidationScore = 1.0;
+        let streamValidationModified = false;
+        if (deliverContent.length > 0) {
+          try {
+            const valResult = await validateResponse(deliverContent, messages[messages.length - 1]?.content || "");
+            streamValidationScore = valResult.overallGroundingScore;
+            streamValidationModified = valResult.wasModified;
+            if (valResult.wasModified) {
+              deliverContent = valResult.validatedResponse;
+              logger.warn({ groundingScore: streamValidationScore }, "Rick: streaming response replaced by validation engine (quarantine/redaction)");
+            }
+          } catch (valErr) {
+            logger.debug({ err: valErr instanceof Error ? valErr.message : String(valErr) }, "Rick: stream validation check failed");
+          }
+        }
+
         const chunkSize = 20;
         for (let i = 0; i < deliverContent.length; i += chunkSize) {
           res.write(`data: ${JSON.stringify({ content: deliverContent.slice(i, i + chunkSize) })}\n\n`);
@@ -279,6 +296,7 @@ router.post("/rick/chat", async (req, res) => {
         if (truthEnforcement) {
           res.write(`data: ${JSON.stringify({ truthEnforcement })}\n\n`);
         }
+        res.write(`data: ${JSON.stringify({ validationScore: streamValidationScore, validationModified: streamValidationModified })}\n\n`);
         res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
         return res.end();
       } catch (streamErr) {
@@ -328,7 +346,22 @@ router.post("/rick/chat", async (req, res) => {
           logger.debug({ err: truthErr instanceof Error ? truthErr.message : String(truthErr) }, "Rick: V2 truth check failed, used V1 fallback");
         }
 
-        return res.json({ ok: true, content, source: "rick-llm", truthEnforcement });
+        let nonStreamValidationScore = 1.0;
+        let nonStreamValidationModified = false;
+        let deliveredContent = content;
+        try {
+          const valResult = await validateResponse(content, messages[messages.length - 1]?.content || "");
+          nonStreamValidationScore = valResult.overallGroundingScore;
+          nonStreamValidationModified = valResult.wasModified;
+          if (valResult.wasModified) {
+            deliveredContent = valResult.validatedResponse;
+            logger.warn({ groundingScore: nonStreamValidationScore }, "Rick: non-stream response replaced by validation engine (quarantine/redaction)");
+          }
+        } catch (valErr) {
+          logger.debug({ err: valErr instanceof Error ? valErr.message : String(valErr) }, "Rick: non-stream validation failed");
+        }
+
+        return res.json({ ok: true, content: deliveredContent, source: "rick-llm", truthEnforcement, validationScore: nonStreamValidationScore, validationModified: nonStreamValidationModified });
       } catch (err) {
         const fallback = generateRickFallback(messages[messages.length - 1]?.content || "");
         return res.json({ ok: true, content: fallback, source: "rick-sovereign-fallback" });

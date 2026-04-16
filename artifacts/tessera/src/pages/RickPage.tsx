@@ -30,6 +30,7 @@ interface CouncilResult {
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  groundingScore?: number;
 }
 
 const RISK_COLORS: Record<string, string> = {
@@ -135,6 +136,14 @@ export default function RickPage() {
   const [submittedInventions, setSubmittedInventions] = useState<Record<number, CouncilResult>>({});
   const [submittingIdx, setSubmittingIdx] = useState<number | null>(null);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  const [showProposeForm, setShowProposeForm] = useState(false);
+  const [proposeName, setProposeName] = useState("");
+  const [proposeApproach, setProposeApproach] = useState("");
+  const [proposeImpact, setProposeImpact] = useState("");
+  const [proposeCategory, setProposeCategory] = useState("optimization");
+  const [proposeRisk, setProposeRisk] = useState<"low" | "medium" | "high">("medium");
+  const [isProposing, setIsProposing] = useState(false);
+  const [proposeResult, setProposeResult] = useState<CouncilResult | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -263,6 +272,7 @@ export default function RickPage() {
     const allMessages = newMessages.map(m => ({ role: m.role, content: m.content }));
     let accumulated = "";
     let assistantMsgAdded = false;
+    let capturedValidationScore: number | undefined;
 
     try {
       const response = await fetch("/api/rick/chat", {
@@ -303,6 +313,9 @@ export default function RickPage() {
                 });
               }
             }
+            if (parsed.validationScore !== undefined) {
+              capturedValidationScore = parsed.validationScore as number;
+            }
             if (parsed.done) break;
           } catch {}
         }
@@ -310,6 +323,16 @@ export default function RickPage() {
 
       if (!assistantMsgAdded && accumulated) {
         setMessages(prev => [...prev, { role: "assistant", content: accumulated }]);
+      }
+      if (capturedValidationScore !== undefined) {
+        setMessages(prev => {
+          const updated = [...prev];
+          const lastIdx = updated.length - 1;
+          if (lastIdx >= 0 && updated[lastIdx].role === "assistant") {
+            updated[lastIdx] = { ...updated[lastIdx], groundingScore: capturedValidationScore };
+          }
+          return updated;
+        });
       }
     } catch (err) {
       setMessages(prev => [...prev, {
@@ -332,6 +355,42 @@ export default function RickPage() {
       }
     } catch {}
     finally { setSubmittingIdx(null); }
+  }
+
+  async function submitCustomInvention() {
+    if (!proposeName.trim() || !proposeApproach.trim() || isProposing) return;
+    setIsProposing(true);
+    setProposeResult(null);
+    try {
+      const r = await fetch("/api/rick/inventions/submit-custom", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          inventionName: proposeName.trim(),
+          technicalApproach: proposeApproach.trim(),
+          expectedImpact: proposeImpact.trim() || "User-proposed improvement to the sovereign system.",
+          rickRationale: "User-proposed via the sovereign inventions form.",
+          systemMetricTargeted: "user-defined",
+          category: proposeCategory,
+          riskLevel: proposeRisk,
+          estimatedImprovementPct: 15,
+        }),
+      });
+      const data = await r.json();
+      if (data.ok && data.councilResult) {
+        setProposeResult(data.councilResult);
+        setProposeName("");
+        setProposeApproach("");
+        setProposeImpact("");
+        refetchCouncilProposals();
+      } else {
+        setProposeResult({ proposalId: "err", status: "error", approvalRate: 0, councilNote: data.error || "Submission failed." });
+      }
+    } catch (e) {
+      setProposeResult({ proposalId: "err", status: "error", approvalRate: 0, councilNote: (e as Error).message });
+    } finally {
+      setIsProposing(false);
+    }
   }
 
   const inventions: RickInvention[] = inventionsData?.inventions || [];
@@ -397,13 +456,100 @@ export default function RickPage() {
             <div className="text-[11px] font-mono text-muted-foreground">
               Rick has analyzed the Tessera system and identified {inventions.length} critical improvements.
             </div>
-            <button
-              onClick={() => refetchInventions()}
-              className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground"
-            >
-              <RefreshCw size={12} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setShowProposeForm(v => !v)}
+                className="px-2 py-1 rounded-lg text-[10px] font-mono font-bold border flex items-center gap-1 transition-colors"
+                style={{ color: RICK_GREEN, borderColor: `${RICK_GREEN}50`, background: showProposeForm ? `${RICK_GREEN}18` : `${RICK_GREEN}08` }}
+                data-testid="button-propose-invention"
+              >
+                <Plus size={10} /> {showProposeForm ? "Close" : "Propose Your Own"}
+              </button>
+              <button
+                onClick={() => refetchInventions()}
+                className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground"
+              >
+                <RefreshCw size={12} />
+              </button>
+            </div>
           </div>
+
+          {showProposeForm && (
+            <div className="rounded-xl border p-4 space-y-2.5 mb-3" style={{ borderColor: `${RICK_GREEN}35`, background: `${RICK_GREEN}06` }} data-testid="invention-propose-form">
+              <div className="text-[10px] font-mono uppercase tracking-widest" style={{ color: RICK_GREEN }}>
+                Propose Your Own Invention — submits directly to the Grand Council
+              </div>
+              <input
+                type="text"
+                placeholder="Invention name (e.g. Biofield Coherence Sensor)"
+                value={proposeName}
+                onChange={e => setProposeName(e.target.value)}
+                className="w-full bg-background/60 border border-white/10 rounded-lg px-3 py-2 text-[12px] font-mono focus:outline-none focus:border-current"
+                style={{ color: RICK_GREEN }}
+                data-testid="input-invention-name"
+              />
+              <textarea
+                placeholder="Technical approach — how does it work? what does it do? which part of the system does it improve?"
+                value={proposeApproach}
+                onChange={e => setProposeApproach(e.target.value)}
+                rows={3}
+                className="w-full bg-background/60 border border-white/10 rounded-lg px-3 py-2 text-[12px] font-mono focus:outline-none focus:border-current resize-none"
+                style={{ color: RICK_GREEN }}
+                data-testid="input-invention-approach"
+              />
+              <input
+                type="text"
+                placeholder="Expected impact (optional)"
+                value={proposeImpact}
+                onChange={e => setProposeImpact(e.target.value)}
+                className="w-full bg-background/60 border border-white/10 rounded-lg px-3 py-2 text-[12px] font-mono focus:outline-none focus:border-current"
+                style={{ color: RICK_GREEN }}
+                data-testid="input-invention-impact"
+              />
+              <div className="flex gap-2 flex-wrap">
+                <select
+                  value={proposeCategory}
+                  onChange={e => setProposeCategory(e.target.value)}
+                  className="flex-1 bg-background/60 border border-white/10 rounded-lg px-2 py-1.5 text-[11px] font-mono"
+                  style={{ color: RICK_GREEN }}
+                >
+                  {["optimization","architecture","caching","agent-delegation","memory","consensus","monitoring","sovereignty","agi-advancement","consciousness","compression"].map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <select
+                  value={proposeRisk}
+                  onChange={e => setProposeRisk(e.target.value as "low" | "medium" | "high")}
+                  className="flex-1 bg-background/60 border border-white/10 rounded-lg px-2 py-1.5 text-[11px] font-mono"
+                  style={{ color: RISK_COLORS[proposeRisk] }}
+                >
+                  <option value="low">low risk</option>
+                  <option value="medium">medium risk</option>
+                  <option value="high">high risk</option>
+                </select>
+                <button
+                  onClick={submitCustomInvention}
+                  disabled={isProposing || !proposeName.trim() || !proposeApproach.trim()}
+                  className="px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold border flex items-center gap-1.5 disabled:opacity-40"
+                  style={{ color: RICK_GREEN, borderColor: `${RICK_GREEN}60`, background: `${RICK_GREEN}18` }}
+                  data-testid="button-submit-invention"
+                >
+                  {isProposing ? <PortalSpinner /> : <Vote size={11} />}
+                  Submit to Council
+                </button>
+              </div>
+              {proposeResult && (
+                <div className="rounded-lg p-2.5 border text-[11px] font-mono" style={{
+                  borderColor: proposeResult.status === "approved" ? "#22c55e40" : proposeResult.status === "error" ? "#ef444440" : "#f59e0b40",
+                  background: proposeResult.status === "approved" ? "#22c55e10" : proposeResult.status === "error" ? "#ef444410" : "#f59e0b10",
+                  color: proposeResult.status === "approved" ? "#22c55e" : proposeResult.status === "error" ? "#ef4444" : "#f59e0b",
+                }}>
+                  {proposeResult.status === "approved" ? "APPROVED" : proposeResult.status.toUpperCase()} · {(proposeResult.approvalRate * 100).toFixed(0)}% approval
+                  <div className="text-foreground/80 mt-1">{proposeResult.councilNote}</div>
+                </div>
+              )}
+            </div>
+          )}
 
           {invLoading ? (
             <div className="flex justify-center py-12"><PortalSpinner /></div>
@@ -897,6 +1043,32 @@ export default function RickPage() {
                           Success: {m.successCriteria}
                         </div>
                       )}
+                      <div className="flex justify-end mt-1.5 gap-1.5">
+                        <button
+                          onClick={async () => {
+                            try {
+                              await fetch(`/api/rick/meeseeks/${m.id}/complete`, { method: "POST" });
+                              refetchMeeseeksActive();
+                              refetchMeeseeksMetrics();
+                            } catch {}
+                          }}
+                          className="text-[9px] font-mono px-2 py-0.5 rounded border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors flex items-center gap-1"
+                        >
+                          <CheckCircle2 size={8} /> Complete
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await fetch(`/api/rick/meeseeks/${m.id}/complete`, { method: "POST" });
+                              refetchMeeseeksActive();
+                              refetchMeeseeksMetrics();
+                            } catch {}
+                          }}
+                          className="text-[9px] font-mono px-2 py-0.5 rounded border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors flex items-center gap-1"
+                        >
+                          <Skull size={8} /> Self-Destruct
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -987,14 +1159,22 @@ export default function RickPage() {
                     <span className="text-sm">🧪</span>
                   </div>
                 )}
-                <div
-                  className={cn("max-w-[80%] rounded-2xl px-3 py-2 text-[12px] font-mono leading-relaxed whitespace-pre-wrap", msg.role === "user" ? "rounded-tr-sm" : "rounded-tl-sm")}
-                  style={msg.role === "user"
-                    ? { background: `${RICK_PORTAL}20`, color: "rgba(255,255,255,0.9)", border: `1px solid ${RICK_PORTAL}30` }
-                    : { background: `${RICK_GREEN}08`, color: "rgba(255,255,255,0.85)", border: `1px solid ${RICK_GREEN}20` }
-                  }
-                >
-                  {msg.content}
+                <div className="flex flex-col gap-0.5 max-w-[80%]">
+                  <div
+                    className={cn("rounded-2xl px-3 py-2 text-[12px] font-mono leading-relaxed whitespace-pre-wrap", msg.role === "user" ? "rounded-tr-sm" : "rounded-tl-sm")}
+                    style={msg.role === "user"
+                      ? { background: `${RICK_PORTAL}20`, color: "rgba(255,255,255,0.9)", border: `1px solid ${RICK_PORTAL}30` }
+                      : { background: `${RICK_GREEN}08`, color: "rgba(255,255,255,0.85)", border: `1px solid ${RICK_GREEN}20` }
+                    }
+                  >
+                    {msg.content}
+                  </div>
+                  {msg.role === "assistant" && msg.groundingScore !== undefined && (
+                    <div className="flex items-center gap-1 px-1" style={{ color: msg.groundingScore >= 0.7 ? "#22c55e" : msg.groundingScore >= 0.5 ? "#f59e0b" : "#ef4444" }}>
+                      <Shield size={8} />
+                      <span className="text-[9px] font-mono">Grounding: {(msg.groundingScore * 100).toFixed(0)}%</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
