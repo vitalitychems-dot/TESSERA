@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Send, FlaskConical, Vote, CheckCircle2, XCircle, ChevronRight, RefreshCw, BookOpen, TrendingUp, Crown, Shield, Brain, Zap, Database, Target, Loader2, Users, Timer, MemoryStick, Activity, AlertTriangle, Skull, Plus, ScanSearch } from "lucide-react";
+import { Send, FlaskConical, Vote, CheckCircle2, XCircle, ChevronRight, RefreshCw, BookOpen, TrendingUp, Crown, Shield, Brain, Zap, Database, Target, Loader2, Users, Timer, MemoryStick, Activity, AlertTriangle, Skull, Plus, ScanSearch, Repeat, Send as SendIcon, Lightbulb, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const RICK_GREEN = "#00ff41";
@@ -132,7 +132,7 @@ export default function RickPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [activeTab, setActiveTab] = useState<"chat" | "inventions" | "proposals" | "knowledge" | "improvements" | "royal" | "meeseeks" | "reality">("proposals");
+  const [activeTab, setActiveTab] = useState<"chat" | "inventions" | "proposals" | "knowledge" | "improvements" | "royal" | "meeseeks" | "reality" | "program">("proposals");
   const [submittedInventions, setSubmittedInventions] = useState<Record<number, CouncilResult>>({});
   const [submittingIdx, setSubmittingIdx] = useState<number | null>(null);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
@@ -429,6 +429,7 @@ export default function RickPage() {
         <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
           {([
             { key: "reality" as const, label: "Reality", icon: ScanSearch, color: "#10b981" },
+            { key: "program" as const, label: "Program", icon: Repeat, color: "#f472b6" },
             { key: "proposals" as const, label: "Proposals", icon: Vote, color: "#fbbf24" },
             { key: "inventions" as const, label: "Inventions", icon: FlaskConical, color: RICK_GREEN },
             { key: "meeseeks" as const, label: "Meeseeks", icon: Users, color: "#a855f7" },
@@ -452,6 +453,8 @@ export default function RickPage() {
       </div>
 
       {activeTab === "reality" && <RealityAuditPanel />}
+
+      {activeTab === "program" && <RickImprovementProgramPanel />}
 
       {activeTab === "inventions" && (
         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
@@ -1742,6 +1745,700 @@ function RealityAuditPanel() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Rick's 5-Cycle Improvement Program Panel
+// ============================================================================
+
+type CycleStage = "propose" | "review" | "implement" | "reflect" | "done";
+
+interface ProgramEvidence { metric: string; value: string }
+interface ProgramProposal {
+  id: string;
+  title: string;
+  problem: string;
+  evidence: ProgramEvidence[];
+  proposedChange: string;
+  expectedImpact: string;
+  risk: "low" | "medium" | "high";
+  effortHours: number;
+  category: string;
+  source: "llm" | "deterministic";
+  truthfulnessScore?: number;
+  decision: "pending" | "approved" | "rejected";
+  decidedAt?: number;
+  reviewerReason?: string;
+  dispatch?: {
+    taskRef: string;
+    dispatchedAt: number;
+    filePath?: string;
+    status: "dispatched" | "completed" | "failed";
+    statusNote?: string;
+  };
+  reflection?: {
+    text: string;
+    metricDelta?: { metric: string; before: number; after: number; delta: number }[];
+    reflectedAt: number;
+  };
+}
+
+interface MetricSnapshot {
+  capturedAt: number;
+  overallScorePct: number;
+  truthGroundingRate: number;
+  truthAvgScore: number;
+  meeseeksSuccessRate: number;
+  weakCategories: { category: string; score: number }[];
+}
+
+interface ProgramCycle {
+  cycleNumber: number;
+  stage: CycleStage;
+  startedAt: number;
+  startSnapshot?: MetricSnapshot;
+  endSnapshot?: MetricSnapshot;
+  proposals: ProgramProposal[];
+  reflectionSummary?: string;
+}
+
+interface ImprovementProgram {
+  id: string;
+  status: "active" | "completed" | "abandoned";
+  createdAt: number;
+  completedAt?: number;
+  currentCycle: number;
+  cycles: ProgramCycle[];
+  finalSummary?: {
+    totalProposals: number;
+    approvedCount: number;
+    rejectedCount: number;
+    approvalRate: number;
+    strongestImprovement?: { cycle: number; title: string; reflection: string };
+    weakestImprovement?: { cycle: number; title: string; reflection: string };
+    overallScoreStart: number;
+    overallScoreEnd: number;
+    overallScoreDelta: number;
+  };
+}
+
+interface ProgramResponse {
+  ok: boolean;
+  active: ImprovementProgram | null;
+  history: ImprovementProgram[];
+  maxCycles: number;
+}
+
+const STAGE_COLORS: Record<CycleStage, string> = {
+  propose: "#fbbf24",
+  review: "#22d3ee",
+  implement: "#a855f7",
+  reflect: "#22c55e",
+  done: "#94a3b8",
+};
+
+const STAGE_LABELS: Record<CycleStage, string> = {
+  propose: "Propose",
+  review: "Review",
+  implement: "Implement",
+  reflect: "Reflect",
+  done: "Done",
+};
+
+const STAGE_ICONS: Record<CycleStage, typeof Lightbulb> = {
+  propose: Lightbulb,
+  review: Vote,
+  implement: SendIcon,
+  reflect: Sparkles,
+  done: CheckCircle2,
+};
+
+const PROGRAM_PINK = "#f472b6";
+
+function RickImprovementProgramPanel() {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["/api/rick/improvement-program"],
+    queryFn: async () => {
+      const r = await fetch("/api/rick/improvement-program");
+      return r.json() as Promise<ProgramResponse>;
+    },
+    refetchInterval: 20000,
+  });
+
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [reflectingId, setReflectingId] = useState<string | null>(null);
+  const [reflectText, setReflectText] = useState("");
+  const [expandedCycle, setExpandedCycle] = useState<number | null>(null);
+
+  const active = data?.active ?? null;
+  const maxCycles = data?.maxCycles ?? 5;
+  const history = data?.history ?? [];
+
+  async function call(path: string, body?: Record<string, unknown>): Promise<boolean> {
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await fetch(path, {
+        method: "POST",
+        headers: body ? { "Content-Type": "application/json" } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const j = await r.json();
+      if (!r.ok || j.ok === false) {
+        setErr(j.error || `Request failed: ${r.status}`);
+        return false;
+      }
+      await refetch();
+      return true;
+    } catch (e) {
+      setErr((e as Error).message);
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function start() { await call("/api/rick/improvement-program/start"); }
+  async function abandon() {
+    if (!confirm("Abandon the current program? This cannot be undone.")) return;
+    await call("/api/rick/improvement-program/abandon");
+  }
+  async function advance() { await call("/api/rick/improvement-program/advance"); }
+  async function generate() { await call("/api/rick/improvement-program/generate-proposals"); }
+  async function decide(id: string, decision: "approved" | "rejected", reason?: string) {
+    await call(`/api/rick/improvement-program/proposal/${id}/decision`, { decision, reason });
+  }
+  async function dispatch(id: string) { await call(`/api/rick/improvement-program/proposal/${id}/dispatch`); }
+  async function updateStatus(id: string, status: "completed" | "failed") {
+    await call(`/api/rick/improvement-program/proposal/${id}/dispatch-status`, { status });
+  }
+  async function reflect(id: string, text: string) {
+    const ok = await call(`/api/rick/improvement-program/proposal/${id}/reflection`, { text });
+    if (ok) { setReflectingId(null); setReflectText(""); }
+  }
+
+  if (isLoading && !data) {
+    return <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin" size={20} style={{ color: PROGRAM_PINK }} /></div>;
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+      <div className="rounded-xl border p-4" style={{ borderColor: `${PROGRAM_PINK}40`, background: `${PROGRAM_PINK}08` }}>
+        <div className="flex items-start gap-3 flex-wrap">
+          <div className="flex-1 min-w-[240px]">
+            <div className="font-bold font-mono text-sm" style={{ color: PROGRAM_PINK }}>
+              Rick&apos;s 5-Cycle Improvement Loop
+            </div>
+            <div className="text-[11px] text-muted-foreground font-mono mt-1 leading-relaxed">
+              Five iterative cycles · four stages each (Propose → Review → Implement → Reflect). Nothing auto-advances — you click Next Stage. Cycle N&apos;s Propose reads Cycle N-1&apos;s Reflection so Rick stops repeating himself.
+            </div>
+          </div>
+          <div className="flex gap-2 flex-wrap justify-end">
+            {!active && (
+              <button onClick={start} disabled={busy} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-mono font-bold transition-all border disabled:opacity-50"
+                style={{ color: PROGRAM_PINK, borderColor: `${PROGRAM_PINK}60`, background: `${PROGRAM_PINK}15` }}>
+                {busy ? <Loader2 size={12} className="animate-spin" /> : <Repeat size={12} />}
+                Start New Program
+              </button>
+            )}
+            {active && active.status === "active" && (
+              <button onClick={abandon} disabled={busy} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-mono font-bold transition-all border disabled:opacity-50"
+                style={{ color: "#ef4444", borderColor: "#ef444460", background: "#ef444415" }}>
+                <XCircle size={12} /> Abandon
+              </button>
+            )}
+          </div>
+        </div>
+        {err && (
+          <div className="mt-2 text-[10px] font-mono px-2 py-1.5 rounded border" style={{ color: "#ef4444", borderColor: "#ef444440", background: "#ef444410" }}>
+            {err}
+          </div>
+        )}
+      </div>
+
+      {!active && history.length === 0 && (
+        <div className="text-center py-12 text-muted-foreground text-xs font-mono">
+          No programs yet. Hit &ldquo;Start New Program&rdquo; to begin Cycle 1.
+        </div>
+      )}
+
+      {active && (
+        <>
+          <CycleTimeline program={active} maxCycles={maxCycles} expandedCycle={expandedCycle} setExpandedCycle={setExpandedCycle} />
+
+          <ActiveCyclePanel
+            program={active}
+            busy={busy}
+            onAdvance={advance}
+            onGenerate={generate}
+            onDecide={decide}
+            onDispatch={dispatch}
+            onUpdateStatus={updateStatus}
+            onReflect={reflect}
+            rejectingId={rejectingId}
+            setRejectingId={setRejectingId}
+            rejectReason={rejectReason}
+            setRejectReason={setRejectReason}
+            reflectingId={reflectingId}
+            setReflectingId={setReflectingId}
+            reflectText={reflectText}
+            setReflectText={setReflectText}
+          />
+        </>
+      )}
+
+      {!active && history.length > 0 && history[0].finalSummary && (
+        <FinalSummaryCard program={history[0]} />
+      )}
+
+      {history.length > 0 && (
+        <div className="rounded-xl border border-white/10 p-3">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-2">
+            Program History ({history.length})
+          </div>
+          <div className="space-y-1.5">
+            {history.map(h => (
+              <div key={h.id} className="text-[10px] font-mono text-foreground/70 flex items-center gap-2 flex-wrap">
+                <span className={cn("px-1.5 py-0.5 rounded border", h.status === "completed" ? "text-emerald-400 border-emerald-500/40" : "text-slate-400 border-slate-500/40")}>
+                  {h.status}
+                </span>
+                <span>{new Date(h.createdAt).toLocaleDateString()}</span>
+                <span>· {h.cycles.length}/{maxCycles} cycles</span>
+                {h.finalSummary && (
+                  <span>· approval {(h.finalSummary.approvalRate * 100).toFixed(0)}% · Δscore {h.finalSummary.overallScoreDelta >= 0 ? "+" : ""}{h.finalSummary.overallScoreDelta}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CycleTimeline({
+  program, maxCycles, expandedCycle, setExpandedCycle,
+}: {
+  program: ImprovementProgram;
+  maxCycles: number;
+  expandedCycle: number | null;
+  setExpandedCycle: (n: number | null) => void;
+}) {
+  const cycles: (ProgramCycle | null)[] = [];
+  for (let i = 1; i <= maxCycles; i++) {
+    const existing = program.cycles.find(c => c.cycleNumber === i);
+    cycles.push(existing ?? null);
+  }
+
+  return (
+    <div className="rounded-xl border border-white/10 p-3 bg-black/20">
+      <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-3">
+        Program Timeline · {program.id.slice(0, 14)}… · Cycle {program.currentCycle}/{maxCycles}
+      </div>
+      <div className="flex items-stretch gap-1.5 overflow-x-auto pb-1">
+        {cycles.map((c, idx) => {
+          const num = idx + 1;
+          const isActive = c && program.currentCycle === num && program.status === "active";
+          const stage = c?.stage ?? null;
+          const stageColor = stage ? STAGE_COLORS[stage] : "#1e293b";
+          return (
+            <div
+              key={num}
+              onClick={() => c && setExpandedCycle(expandedCycle === num ? null : num)}
+              className={cn("flex-1 min-w-[140px] rounded-lg border p-2 transition-all", c ? "cursor-pointer" : "opacity-40")}
+              style={{
+                borderColor: isActive ? stageColor : `${stageColor}40`,
+                background: isActive ? `${stageColor}15` : `${stageColor}06`,
+                borderWidth: isActive ? 2 : 1,
+              }}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-mono font-bold" style={{ color: isActive ? stageColor : "#94a3b8" }}>
+                  Cycle {num}
+                </span>
+                {c && stage && (
+                  <span className="text-[9px] font-mono px-1 py-0.5 rounded border" style={{ color: stageColor, borderColor: `${stageColor}60`, background: `${stageColor}10` }}>
+                    {STAGE_LABELS[stage]}
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-0.5">
+                {(["propose", "review", "implement", "reflect"] as const).map((s) => {
+                  const done = c && (stageRank(c.stage) > stageRank(s));
+                  const current = c && c.stage === s;
+                  const col = current ? STAGE_COLORS[s] : done ? "#22c55e" : "#1e293b";
+                  return (
+                    <div key={s} className="flex-1 h-1.5 rounded-full" style={{ background: col }} title={STAGE_LABELS[s]} />
+                  );
+                })}
+              </div>
+              {c && (
+                <div className="mt-1.5 text-[9px] font-mono text-muted-foreground">
+                  {c.proposals.length} prop · {c.proposals.filter(p => p.decision === "approved").length} ok
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {expandedCycle !== null && (() => {
+        const c = program.cycles.find(cy => cy.cycleNumber === expandedCycle);
+        if (!c) return null;
+        return (
+          <div className="mt-3 rounded-lg border border-white/10 bg-black/30 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-[11px] font-mono font-bold" style={{ color: STAGE_COLORS[c.stage] }}>
+                Cycle {c.cycleNumber} · {STAGE_LABELS[c.stage]}
+              </div>
+              <button onClick={() => setExpandedCycle(null)} className="text-[10px] font-mono text-muted-foreground hover:text-foreground">close</button>
+            </div>
+            {c.startSnapshot && (
+              <div className="text-[10px] font-mono text-muted-foreground">
+                Start: score {c.startSnapshot.overallScorePct} · grounding {(c.startSnapshot.truthGroundingRate * 100).toFixed(0)}% · meeseeks {(c.startSnapshot.meeseeksSuccessRate * 100).toFixed(0)}%
+              </div>
+            )}
+            {c.endSnapshot && (
+              <div className="text-[10px] font-mono text-muted-foreground">
+                End: score {c.endSnapshot.overallScorePct} · grounding {(c.endSnapshot.truthGroundingRate * 100).toFixed(0)}% · meeseeks {(c.endSnapshot.meeseeksSuccessRate * 100).toFixed(0)}%
+              </div>
+            )}
+            {c.reflectionSummary && (
+              <div className="mt-2 text-[10px] font-mono text-foreground/80 whitespace-pre-wrap">{c.reflectionSummary}</div>
+            )}
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+function stageRank(s: CycleStage): number {
+  return ["propose", "review", "implement", "reflect", "done"].indexOf(s);
+}
+
+function ActiveCyclePanel({
+  program, busy, onAdvance, onGenerate, onDecide, onDispatch, onUpdateStatus, onReflect,
+  rejectingId, setRejectingId, rejectReason, setRejectReason,
+  reflectingId, setReflectingId, reflectText, setReflectText,
+}: {
+  program: ImprovementProgram;
+  busy: boolean;
+  onAdvance: () => void;
+  onGenerate: () => void;
+  onDecide: (id: string, decision: "approved" | "rejected", reason?: string) => void;
+  onDispatch: (id: string) => void;
+  onUpdateStatus: (id: string, status: "completed" | "failed") => void;
+  onReflect: (id: string, text: string) => void;
+  rejectingId: string | null; setRejectingId: (id: string | null) => void;
+  rejectReason: string; setRejectReason: (s: string) => void;
+  reflectingId: string | null; setReflectingId: (id: string | null) => void;
+  reflectText: string; setReflectText: (s: string) => void;
+}) {
+  const cycle = program.cycles[program.cycles.length - 1];
+  if (!cycle || program.status !== "active") return null;
+  const StageIcon = STAGE_ICONS[cycle.stage];
+  const stageColor = STAGE_COLORS[cycle.stage];
+  const pending = cycle.proposals.filter(p => p.decision === "pending").length;
+  const approved = cycle.proposals.filter(p => p.decision === "approved");
+  const canAdvance = cycle.stage === "propose"
+    ? true
+    : cycle.stage === "review"
+      ? pending === 0 && cycle.proposals.length > 0
+      : true;
+
+  return (
+    <div className="rounded-xl border p-4 space-y-3" style={{ borderColor: `${stageColor}40`, background: `${stageColor}06` }}>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <StageIcon size={16} style={{ color: stageColor }} />
+          <div>
+            <div className="font-bold font-mono text-sm" style={{ color: stageColor }}>
+              Cycle {cycle.cycleNumber} · Stage: {STAGE_LABELS[cycle.stage]}
+            </div>
+            <div className="text-[10px] font-mono text-muted-foreground">
+              {stageDescription(cycle.stage)}
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          {cycle.stage === "propose" && cycle.proposals.length === 0 && (
+            <button onClick={onGenerate} disabled={busy} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-mono font-bold transition-all border disabled:opacity-50"
+              style={{ color: STAGE_COLORS.propose, borderColor: `${STAGE_COLORS.propose}60`, background: `${STAGE_COLORS.propose}15` }}>
+              {busy ? <Loader2 size={12} className="animate-spin" /> : <Lightbulb size={12} />}
+              Generate 5 Proposals
+            </button>
+          )}
+          <button onClick={onAdvance} disabled={busy || !canAdvance} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-mono font-bold transition-all border disabled:opacity-40"
+            style={{ color: stageColor, borderColor: `${stageColor}60`, background: `${stageColor}15` }}>
+            {busy ? <Loader2 size={12} className="animate-spin" /> : <ChevronRight size={12} />}
+            Next Stage → {STAGE_LABELS[nextStage(cycle.stage)] ?? "Next Cycle"}
+          </button>
+        </div>
+      </div>
+      {cycle.stage === "review" && pending > 0 && (
+        <div className="text-[10px] font-mono px-2 py-1.5 rounded border" style={{ color: "#fbbf24", borderColor: "#fbbf2440", background: "#fbbf2410" }}>
+          {pending} proposal(s) still need your approve/reject decision before you can advance.
+        </div>
+      )}
+
+      {cycle.proposals.length === 0 && cycle.stage === "propose" && (
+        <div className="text-[11px] font-mono text-muted-foreground py-6 text-center">
+          No proposals generated yet. Click &ldquo;Generate 5 Proposals&rdquo; to have Rick read live diagnostics
+          {program.cycles.length > 1 ? " (plus the previous cycle's reflection)" : ""} and propose changes.
+        </div>
+      )}
+
+      {cycle.proposals.map(p => {
+        const showDispatch = cycle.stage === "implement" && p.decision === "approved";
+        const showReflect = cycle.stage === "reflect" && p.decision === "approved";
+        const isRejecting = rejectingId === p.id;
+        const isReflecting = reflectingId === p.id;
+        return (
+          <div key={p.id} className="rounded-lg border border-white/10 bg-black/20 p-3 space-y-2">
+            <div className="flex items-start justify-between flex-wrap gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="font-bold font-mono text-[12px]" style={{ color: "#fde68a" }}>{p.title}</div>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  <DecisionBadge decision={p.decision} />
+                  <MiniBadge color={PROGRAM_RISK_COLORS[p.risk]}>risk: {p.risk}</MiniBadge>
+                  <MiniBadge>{p.category}</MiniBadge>
+                  <MiniBadge>~{p.effortHours}h</MiniBadge>
+                  <MiniBadge>src: {p.source}</MiniBadge>
+                  {typeof p.truthfulnessScore === "number" && (
+                    <MiniBadge>truth: {(p.truthfulnessScore * 100).toFixed(0)}%</MiniBadge>
+                  )}
+                  {p.dispatch && (
+                    <MiniBadge color={p.dispatch.status === "completed" ? "#22c55e" : p.dispatch.status === "failed" ? "#ef4444" : "#a855f7"}>
+                      dispatch: {p.dispatch.status}
+                    </MiniBadge>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">Problem</div>
+            <div className="text-[11px] font-mono text-foreground/80">{p.problem}</div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Proposed change</div>
+            <div className="text-[11px] font-mono text-foreground/80">{p.proposedChange}</div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Expected impact</div>
+            <div className="text-[11px] font-mono text-foreground/80">{p.expectedImpact}</div>
+            {p.evidence.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {p.evidence.map((e, i) => (
+                  <span key={i} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/5 text-muted-foreground border border-white/10">
+                    {e.metric}: {e.value}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {p.reviewerReason && (
+              <div className="text-[10px] font-mono text-muted-foreground italic">
+                Reviewer: {p.reviewerReason}
+              </div>
+            )}
+
+            {cycle.stage === "review" && p.decision === "pending" && (
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => onDecide(p.id, "approved")} disabled={busy}
+                  className="text-[10px] font-mono px-2 py-1 rounded border transition-all disabled:opacity-50"
+                  style={{ color: "#22c55e", borderColor: "#22c55e60", background: "#22c55e15" }}>
+                  <CheckCircle2 size={10} className="inline mr-1" />Approve
+                </button>
+                {!isRejecting ? (
+                  <button onClick={() => { setRejectingId(p.id); setRejectReason(""); }} disabled={busy}
+                    className="text-[10px] font-mono px-2 py-1 rounded border transition-all disabled:opacity-50"
+                    style={{ color: "#ef4444", borderColor: "#ef444460", background: "#ef444415" }}>
+                    <XCircle size={10} className="inline mr-1" />Reject
+                  </button>
+                ) : (
+                  <div className="flex-1 flex gap-1.5 items-center">
+                    <input type="text" value={rejectReason} onChange={e => setRejectReason(e.target.value)}
+                      placeholder="Reason (optional)" className="flex-1 text-[10px] font-mono bg-black/40 border border-white/10 rounded px-2 py-1 text-foreground focus:outline-none focus:border-red-500/40" />
+                    <button onClick={() => { onDecide(p.id, "rejected", rejectReason); setRejectingId(null); setRejectReason(""); }} disabled={busy}
+                      className="text-[10px] font-mono px-2 py-1 rounded border" style={{ color: "#ef4444", borderColor: "#ef444460", background: "#ef444415" }}>
+                      Confirm
+                    </button>
+                    <button onClick={() => { setRejectingId(null); setRejectReason(""); }} className="text-[10px] font-mono px-2 py-1 text-muted-foreground">cancel</button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {showDispatch && !p.dispatch && (
+              <button onClick={() => onDispatch(p.id)} disabled={busy}
+                className="text-[10px] font-mono px-2 py-1 rounded border transition-all disabled:opacity-50"
+                style={{ color: "#a855f7", borderColor: "#a855f760", background: "#a855f715" }}>
+                <SendIcon size={10} className="inline mr-1" />Dispatch as Project Task
+              </button>
+            )}
+
+            {showDispatch && p.dispatch && (
+              <div className="rounded border border-white/10 bg-black/30 p-2 space-y-1.5">
+                <div className="text-[10px] font-mono text-purple-300">
+                  Task ref: <span className="text-foreground">{p.dispatch.taskRef}</span>
+                </div>
+                {p.dispatch.filePath && (
+                  <div className="text-[9px] font-mono text-muted-foreground break-all">
+                    File: {p.dispatch.filePath}
+                  </div>
+                )}
+                {p.dispatch.statusNote && (
+                  <div className="text-[10px] font-mono text-foreground/70 italic">{p.dispatch.statusNote}</div>
+                )}
+                {p.dispatch.status === "dispatched" && (
+                  <div className="flex gap-1.5">
+                    <button onClick={() => onUpdateStatus(p.id, "completed")} disabled={busy}
+                      className="text-[9px] font-mono px-1.5 py-0.5 rounded border" style={{ color: "#22c55e", borderColor: "#22c55e60" }}>
+                      mark completed
+                    </button>
+                    <button onClick={() => onUpdateStatus(p.id, "failed")} disabled={busy}
+                      className="text-[9px] font-mono px-1.5 py-0.5 rounded border" style={{ color: "#ef4444", borderColor: "#ef444460" }}>
+                      mark failed
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {p.reflection && (
+              <div className="rounded border border-emerald-500/20 bg-emerald-500/5 p-2 space-y-1">
+                <div className="text-[10px] uppercase tracking-wider text-emerald-400">Reflection</div>
+                <div className="text-[11px] font-mono text-foreground/85 whitespace-pre-wrap">{p.reflection.text}</div>
+                {p.reflection.metricDelta && p.reflection.metricDelta.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {p.reflection.metricDelta.map((d, i) => {
+                      const pos = d.delta >= 0;
+                      return (
+                        <span key={i} className="text-[9px] font-mono px-1.5 py-0.5 rounded border"
+                          style={{ color: pos ? "#22c55e" : "#ef4444", borderColor: pos ? "#22c55e40" : "#ef444440", background: pos ? "#22c55e10" : "#ef444410" }}>
+                          {d.metric}: {d.before} → {d.after} ({pos ? "+" : ""}{d.delta})
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {showReflect && !p.reflection && (
+              <div className="pt-1">
+                {!isReflecting ? (
+                  <button onClick={() => { setReflectingId(p.id); setReflectText(""); }}
+                    className="text-[10px] font-mono px-2 py-1 rounded border"
+                    style={{ color: "#22c55e", borderColor: "#22c55e60", background: "#22c55e15" }}>
+                    <Sparkles size={10} className="inline mr-1" />Record Reflection
+                  </button>
+                ) : (
+                  <div className="space-y-1.5">
+                    <textarea value={reflectText} onChange={e => setReflectText(e.target.value)} rows={3}
+                      placeholder="What actually changed? Did this work? What did we learn for the next cycle?"
+                      className="w-full text-[10px] font-mono bg-black/40 border border-white/10 rounded px-2 py-1 text-foreground focus:outline-none focus:border-emerald-500/40" />
+                    <div className="flex gap-2">
+                      <button onClick={() => reflectText.trim() && onReflect(p.id, reflectText.trim())} disabled={busy || !reflectText.trim()}
+                        className="text-[10px] font-mono px-2 py-1 rounded border disabled:opacity-40"
+                        style={{ color: "#22c55e", borderColor: "#22c55e60", background: "#22c55e15" }}>
+                        Save
+                      </button>
+                      <button onClick={() => { setReflectingId(null); setReflectText(""); }}
+                        className="text-[10px] font-mono px-2 py-1 text-muted-foreground">cancel</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {approved.length > 0 && (cycle.stage === "implement" || cycle.stage === "reflect") && (
+        <div className="text-[10px] font-mono text-muted-foreground pt-1">
+          {approved.length} approved · {approved.filter(p => p.dispatch).length} dispatched · {approved.filter(p => p.reflection).length} reflected
+        </div>
+      )}
+    </div>
+  );
+}
+
+function stageDescription(s: CycleStage): string {
+  switch (s) {
+    case "propose": return "Rick reads live metrics and proposes 5 evidence-backed changes.";
+    case "review": return "Approve or reject each proposal. All must be decided before advancing.";
+    case "implement": return "Dispatch each approved proposal as a project task. No auto-execution.";
+    case "reflect": return "Record what changed. Deltas are captured and fed into the next cycle.";
+    case "done": return "Cycle complete.";
+  }
+}
+
+function nextStage(s: CycleStage): CycleStage {
+  const order: CycleStage[] = ["propose", "review", "implement", "reflect", "done"];
+  const i = order.indexOf(s);
+  return order[Math.min(i + 1, order.length - 1)];
+}
+
+function DecisionBadge({ decision }: { decision: "pending" | "approved" | "rejected" }) {
+  const color = decision === "approved" ? "#22c55e" : decision === "rejected" ? "#ef4444" : "#fbbf24";
+  const label = decision === "pending" ? "pending" : decision;
+  return <MiniBadge color={color}>{label}</MiniBadge>;
+}
+
+function MiniBadge({ children, color }: { children: React.ReactNode; color?: string }) {
+  if (color) {
+    return <span className="text-[9px] px-1.5 py-0.5 rounded font-mono border" style={{ color, borderColor: `${color}40`, background: `${color}10` }}>{children}</span>;
+  }
+  return <span className="text-[9px] px-1.5 py-0.5 rounded font-mono bg-white/5 text-muted-foreground border border-white/10">{children}</span>;
+}
+
+const PROGRAM_RISK_COLORS: Record<string, string> = { low: "#22c55e", medium: "#f59e0b", high: "#ef4444" };
+
+function FinalSummaryCard({ program }: { program: ImprovementProgram }) {
+  const s = program.finalSummary;
+  if (!s) return null;
+  const positive = s.overallScoreDelta >= 0;
+  return (
+    <div className="rounded-xl border p-4 space-y-2" style={{ borderColor: `${PROGRAM_PINK}60`, background: `${PROGRAM_PINK}10` }}>
+      <div className="font-bold font-mono text-sm flex items-center gap-2" style={{ color: PROGRAM_PINK }}>
+        <Sparkles size={14} /> Final Program Summary
+      </div>
+      <div className="text-[11px] font-mono text-muted-foreground">
+        Program {program.id.slice(0, 18)}… · completed {program.completedAt ? new Date(program.completedAt).toLocaleString() : "—"}
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+        <MetricBox label="Proposals" value={String(s.totalProposals)} />
+        <MetricBox label="Approved" value={`${s.approvedCount} (${(s.approvalRate * 100).toFixed(0)}%)`} />
+        <MetricBox label="Rejected" value={String(s.rejectedCount)} />
+        <MetricBox label="Overall Score Δ" value={`${positive ? "+" : ""}${s.overallScoreDelta}`} color={positive ? "#22c55e" : "#ef4444"} />
+      </div>
+      <div className="text-[10px] font-mono text-muted-foreground mt-1">
+        Start score {s.overallScoreStart} → End score {s.overallScoreEnd}
+      </div>
+      {s.strongestImprovement && (
+        <div className="rounded border border-emerald-500/30 bg-emerald-500/5 p-2 mt-2">
+          <div className="text-[10px] uppercase tracking-wider text-emerald-400 mb-1">Strongest improvement · Cycle {s.strongestImprovement.cycle}</div>
+          <div className="text-[11px] font-mono text-foreground/85">{s.strongestImprovement.title}</div>
+          <div className="text-[10px] font-mono text-foreground/70 mt-1 whitespace-pre-wrap">{s.strongestImprovement.reflection}</div>
+        </div>
+      )}
+      {s.weakestImprovement && (
+        <div className="rounded border border-red-500/20 bg-red-500/5 p-2">
+          <div className="text-[10px] uppercase tracking-wider text-red-400 mb-1">Weakest · Cycle {s.weakestImprovement.cycle}</div>
+          <div className="text-[11px] font-mono text-foreground/85">{s.weakestImprovement.title}</div>
+          <div className="text-[10px] font-mono text-foreground/70 mt-1 whitespace-pre-wrap">{s.weakestImprovement.reflection}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MetricBox({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-black/30 px-2 py-1.5">
+      <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="text-[12px] font-mono font-bold" style={{ color: color ?? "#f0f0f0" }}>{value}</div>
     </div>
   );
 }

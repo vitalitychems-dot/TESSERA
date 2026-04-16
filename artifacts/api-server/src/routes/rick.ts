@@ -32,6 +32,18 @@ import {
   markImplemented,
   getProposalsState,
 } from "../lib/rick-proposals";
+import {
+  getProgram,
+  startProgram,
+  abandonProgram,
+  advanceStage,
+  decideProposal,
+  dispatchProposal,
+  updateDispatchStatus,
+  recordReflection,
+  generateCycleProposals,
+  PROGRAM_MAX_CYCLES,
+} from "../lib/rick-improvement-program";
 
 const router: IRouter = Router();
 
@@ -827,6 +839,112 @@ router.post("/rick/engine-feedback", (req, res) => {
   } catch (err) {
     logger.error({ err }, "Rick: engine feedback error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+// ============================================================================
+// Rick's 5-Cycle Improvement Program (user-gated)
+// ============================================================================
+
+router.get("/rick/improvement-program", async (_req, res) => {
+  try {
+    const state = await getProgram();
+    return res.json({ ok: true, ...state, maxCycles: PROGRAM_MAX_CYCLES });
+  } catch (err) {
+    logger.error({ err }, "Rick: program get error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/rick/improvement-program/start", async (_req, res) => {
+  try {
+    const program = await startProgram();
+    return res.json({ ok: true, program, maxCycles: PROGRAM_MAX_CYCLES });
+  } catch (err) {
+    logger.error({ err }, "Rick: program start error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/rick/improvement-program/abandon", async (_req, res) => {
+  try {
+    const program = await abandonProgram();
+    return res.json({ ok: true, program });
+  } catch (err) {
+    logger.error({ err }, "Rick: program abandon error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/rick/improvement-program/advance", async (_req, res) => {
+  try {
+    const program = await advanceStage();
+    return res.json({ ok: true, program, maxCycles: PROGRAM_MAX_CYCLES });
+  } catch (err) {
+    logger.error({ err }, "Rick: program advance error");
+    return res.status(400).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/rick/improvement-program/generate-proposals", async (_req, res) => {
+  try {
+    const program = await generateCycleProposals();
+    return res.json({ ok: true, program });
+  } catch (err) {
+    logger.error({ err }, "Rick: program generate-proposals error");
+    return res.status(400).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/rick/improvement-program/proposal/:proposalId/decision", async (req, res) => {
+  try {
+    const { decision, reason } = req.body as { decision?: string; reason?: string };
+    if (decision !== "approved" && decision !== "rejected") {
+      return res.status(400).json({ ok: false, error: "decision must be 'approved' or 'rejected'" });
+    }
+    const program = await decideProposal(req.params.proposalId, decision, reason);
+    return res.json({ ok: true, program });
+  } catch (err) {
+    logger.error({ err }, "Rick: program decide error");
+    return res.status(400).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/rick/improvement-program/proposal/:proposalId/dispatch", async (req, res) => {
+  try {
+    const program = await dispatchProposal(req.params.proposalId);
+    return res.json({ ok: true, program });
+  } catch (err) {
+    logger.error({ err }, "Rick: program dispatch error");
+    return res.status(400).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/rick/improvement-program/proposal/:proposalId/dispatch-status", async (req, res) => {
+  try {
+    const { status, note } = req.body as { status?: string; note?: string };
+    if (status !== "dispatched" && status !== "completed" && status !== "failed") {
+      return res.status(400).json({ ok: false, error: "status must be 'dispatched', 'completed', or 'failed'" });
+    }
+    const program = await updateDispatchStatus(req.params.proposalId, status, note);
+    return res.json({ ok: true, program });
+  } catch (err) {
+    logger.error({ err }, "Rick: program dispatch-status error");
+    return res.status(400).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/rick/improvement-program/proposal/:proposalId/reflection", async (req, res) => {
+  try {
+    const { text } = req.body as { text?: string };
+    if (!text || !text.trim()) {
+      return res.status(400).json({ ok: false, error: "reflection text is required" });
+    }
+    const program = await recordReflection(req.params.proposalId, text.trim());
+    return res.json({ ok: true, program });
+  } catch (err) {
+    logger.error({ err }, "Rick: program reflection error");
+    return res.status(400).json({ ok: false, error: (err as Error).message });
   }
 });
 
