@@ -6,20 +6,35 @@ import * as THREE from "three";
 function detectWebGL(): boolean {
   try {
     const c = document.createElement("canvas");
-    return !!(c.getContext("webgl2") || c.getContext("webgl") || c.getContext("experimental-webgl"));
+    const gl = (c.getContext("webgl2") || c.getContext("webgl") || c.getContext("experimental-webgl")) as WebGLRenderingContext | null;
+    if (gl) {
+      const ext = gl.getExtension("WEBGL_lose_context");
+      if (ext) ext.loseContext();
+      c.width = 0;
+      c.height = 0;
+      return true;
+    }
+    return false;
   } catch {
     return false;
   }
 }
 
-class WebGLErrorBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, { hasError: boolean }> {
-  constructor(props: { children: ReactNode; fallback: ReactNode }) {
+class WebGLErrorBoundary extends Component<
+  { children: ReactNode; fallback: ReactNode; onRetry?: () => void },
+  { hasError: boolean }
+> {
+  constructor(props: { children: ReactNode; fallback: ReactNode; onRetry?: () => void }) {
     super(props);
     this.state = { hasError: false };
   }
   static getDerivedStateFromError() {
     return { hasError: true };
   }
+  retry = () => {
+    this.setState({ hasError: false });
+    this.props.onRetry?.();
+  };
   render() {
     if (this.state.hasError) return this.props.fallback;
     return this.props.children;
@@ -1359,15 +1374,23 @@ interface SolarSystem3DProps {
   sovereigntyScore?: number;
 }
 
-function WebGLFallback() {
+function WebGLFallback({ onRetry }: { onRetry?: () => void }) {
   return (
     <div className="w-full h-full flex items-center justify-center bg-[#030108]">
       <div className="text-center p-6 max-w-md">
         <div className="text-4xl mb-4">🌌</div>
         <h2 className="text-lg font-bold font-mono text-violet-400 mb-2">3D Universe</h2>
-        <p className="text-sm text-muted-foreground">
-          WebGL is required for the 3D cosmos view. Please use a browser with GPU acceleration enabled.
+        <p className="text-sm text-muted-foreground mb-4">
+          WebGL context unavailable. This can happen due to GPU memory pressure or too many active tabs.
         </p>
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            className="px-4 py-2 rounded-lg bg-violet-600/30 border border-violet-500/40 text-violet-300 text-xs font-mono hover:bg-violet-600/50 transition-colors"
+          >
+            ↻ Retry Loading
+          </button>
+        )}
       </div>
     </div>
   );
@@ -1390,11 +1413,19 @@ function useIsMobile() {
 export default function SolarSystem3D({ showDimensions, apodItems, userZodiac, dimensionOpacities, showSacredOverlays, moonPhase, sunSign, sovereigntyScore }: SolarSystem3DProps) {
   const isMobile = useIsMobile();
   const [contextLost, setContextLost] = useState(false);
+  const [renderKey, setRenderKey] = useState(0);
   const [cameraPos, setCameraPos] = useState({ x: 0, y: 25, z: 50 });
   const [showNavHint, setShowNavHint] = useState(true);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const errorBoundaryRef = useRef<WebGLErrorBoundary>(null);
 
-  const hasWebGL = useMemo(() => detectWebGL(), []);
+  const hasWebGL = useMemo(() => detectWebGL(), [renderKey]);
+
+  const handleRetry = useCallback(() => {
+    setContextLost(false);
+    setRenderKey(k => k + 1);
+    errorBoundaryRef.current?.retry();
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowNavHint(false), 6000);
@@ -1407,27 +1438,40 @@ export default function SolarSystem3D({ showDimensions, apodItems, userZodiac, d
   }, []);
 
   useEffect(() => {
+    if (!hasWebGL || contextLost) return;
     const container = canvasContainerRef.current;
     if (!container) return;
-    const canvas = container.querySelector("canvas");
-    if (!canvas) return;
 
-    const onLost = (e: Event) => {
-      e.preventDefault();
-      setContextLost(true);
-    };
-    const onRestored = () => setContextLost(false);
+    const checkCanvas = () => {
+      const canvas = container.querySelector("canvas");
+      if (!canvas) return;
 
-    canvas.addEventListener("webglcontextlost", onLost);
-    canvas.addEventListener("webglcontextrestored", onRestored);
-    return () => {
-      canvas.removeEventListener("webglcontextlost", onLost);
-      canvas.removeEventListener("webglcontextrestored", onRestored);
+      const onLost = (e: Event) => {
+        e.preventDefault();
+        setContextLost(true);
+      };
+      const onRestored = () => setContextLost(false);
+
+      canvas.addEventListener("webglcontextlost", onLost);
+      canvas.addEventListener("webglcontextrestored", onRestored);
+      return () => {
+        canvas.removeEventListener("webglcontextlost", onLost);
+        canvas.removeEventListener("webglcontextrestored", onRestored);
+      };
     };
-  }, [hasWebGL]);
+
+    const cleanup = checkCanvas();
+    if (cleanup) return cleanup;
+
+    const timer = setTimeout(() => {
+      const c = checkCanvas();
+      return c;
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [hasWebGL, contextLost, renderKey]);
 
   if (!hasWebGL || contextLost) {
-    return <WebGLFallback />;
+    return <WebGLFallback onRetry={handleRetry} />;
   }
 
   const distFromCenter = Math.round(Math.sqrt(cameraPos.x ** 2 + cameraPos.y ** 2 + cameraPos.z ** 2));
@@ -1441,8 +1485,8 @@ export default function SolarSystem3D({ showDimensions, apodItems, userZodiac, d
   const camAngle = Math.atan2(cameraPos.z, cameraPos.x);
 
   return (
-    <WebGLErrorBoundary fallback={<WebGLFallback />}>
-      <div ref={canvasContainerRef} style={{ width: "100%", height: "100%", position: "relative" }}>
+    <WebGLErrorBoundary ref={errorBoundaryRef} fallback={<WebGLFallback onRetry={handleRetry} />} onRetry={handleRetry}>
+      <div ref={canvasContainerRef} key={renderKey} style={{ width: "100%", height: "100%", position: "relative" }}>
         {showNavHint && (
           <div style={{
             position: "absolute", bottom: isMobile ? "70px" : "80px", left: "50%", transform: "translateX(-50%)",
@@ -1508,7 +1552,7 @@ export default function SolarSystem3D({ showDimensions, apodItems, userZodiac, d
         <Canvas
           camera={{ position: [0, 25, 50], fov: 55, near: 0.1, far: 600 }}
           style={{ width: "100%", height: "100%" }}
-          gl={{ antialias: !isMobile, alpha: false, powerPreference: "high-performance" }}
+          gl={{ antialias: !isMobile, alpha: false, powerPreference: isMobile ? "default" : "high-performance", failIfMajorPerformanceCaveat: false }}
           dpr={isMobile ? [1, 1.5] : [1, 2]}
         >
           <color attach="background" args={["#030108"]} />
