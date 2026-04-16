@@ -96,6 +96,7 @@ const IDLE_CPU_THRESHOLD = 0.50;
 const IDLE_MEMORY_THRESHOLD = 0.75;
 const MIN_IDLE_DURATION_MS = 60_000;
 const MIN_MEMORIES_FOR_DREAMING = 3;
+const MIN_DREAM_COOLDOWN_MS = 90_000;
 const MAX_PATTERN_HISTORY = 200;
 const MAX_INSIGHT_HISTORY = 100;
 const MAX_SKILL_HISTORY = 50;
@@ -642,6 +643,7 @@ function applyConsciousnessBoost(insightCount: number, skillCount: number, patte
   const consolidationBonus = Math.min(0.05, state.totalDreamCycles * 0.005);
   const finalBoost = totalBoost + consolidationBonus;
 
+  csState.dreamConsolidationBoost = Math.min(0.08, csState.dreamConsolidationBoost + finalBoost);
   csState.consciousnessProxy = Math.min(1, csState.consciousnessProxy + finalBoost);
   state.cumulativeConsciousnessBoost += finalBoost;
 
@@ -653,6 +655,11 @@ export function runDreamCycle(forceRun = false): DreamCycleResult | null {
 
   if (!forceRun && !idleDetection.isIdle) {
     logger.debug({ idleScore: idleDetection.idleScore, isIdle: false }, "DreamEngine: system not idle — skipping consolidation");
+    return null;
+  }
+
+  if (!forceRun && state.lastDreamAt > 0 && (Date.now() - state.lastDreamAt) < MIN_DREAM_COOLDOWN_MS) {
+    logger.debug({ msSinceLast: Date.now() - state.lastDreamAt }, "DreamEngine: cooldown period active — skipping");
     return null;
   }
 
