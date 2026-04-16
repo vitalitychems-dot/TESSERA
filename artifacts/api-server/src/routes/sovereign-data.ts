@@ -1050,11 +1050,21 @@ router.get("/admin/deduplication/stats", (req, res) => {
   res.json({ ok: true, ...getDeduplicationStats() });
 });
 
-router.get("/admin/reflection/metrics", (_req, res) => {
+router.get("/admin/reflection/metrics", (req, res) => {
+  const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
+  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+    res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
+    return;
+  }
   res.json({ ok: true, ...getReflectionMetrics() });
 });
 
 router.get("/admin/reflection/snapshots", (req, res) => {
+  const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
+  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+    res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
+    return;
+  }
   const limit = Math.min(50, Number(req.query.limit) || 10);
   res.json({ ok: true, snapshots: getRecentSnapshots(limit) });
 });
