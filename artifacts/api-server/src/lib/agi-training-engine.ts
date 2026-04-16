@@ -9,6 +9,14 @@ import { decisionHistoryTable } from "@workspace/db/schema";
 import { evaluationRunsTable } from "@workspace/db/schema";
 import { eq, sql, desc } from "drizzle-orm";
 import { logger } from "./logger";
+import {
+  propagateTransfer,
+  masteryCascade,
+  aggregateBoost,
+  getTransferMetrics,
+  logTransferSummary,
+  type CategoryRef,
+} from "./cross-domain-transfer-accelerator";
 
 export interface CategoryState {
   score: number;
@@ -139,16 +147,16 @@ function computeDataFreshness(category: string): number {
 }
 
 function computeCrossTransferBoost(category: string): number {
-  const related = CATEGORY_RELATIONS[category] || [];
-  if (related.length === 0) return 0;
-  let boost = 0;
-  for (const rel of related) {
-    const relState = agiTrainingState[rel];
-    if (relState && relState.score > 60) {
-      boost += (relState.score - 50) * 0.02;
-    }
-  }
-  return Math.min(3, boost);
+  const refs = AGI_CATEGORIES.map((name) => {
+    const s = agiTrainingState[name];
+    return {
+      name,
+      score: s?.score ?? 0,
+      masteryLevel: s?.masteryLevel ?? "novice",
+      sessions: s?.sessions ?? 0,
+    };
+  });
+  return aggregateBoost(category, refs);
 }
 
 function scoreFromCount(count: number): number {
@@ -283,6 +291,26 @@ function runTrainingCycle(): TrainingSession[] {
       state.score = Math.min(99.9, scoreBefore + improvement);
     }
 
+    const realizedDelta = state.score - scoreBefore;
+    if (realizedDelta > 0.05) {
+      const refs: CategoryRef[] = AGI_CATEGORIES.map((name) => {
+        const s = agiTrainingState[name];
+        return {
+          name,
+          score: s?.score ?? 0,
+          masteryLevel: s?.masteryLevel ?? "novice",
+          sessions: s?.sessions ?? 0,
+        };
+      });
+      const propagated = propagateTransfer(cat, realizedDelta, refs);
+      for (const [tgtName, gain] of Object.entries(propagated)) {
+        const tgt = agiTrainingState[tgtName];
+        if (!tgt) continue;
+        tgt.score = Math.min(99.9, tgt.score + gain);
+        tgt.masteryLevel = getMasteryLevel(tgt.score);
+      }
+    }
+
     state.lastTrained = Date.now();
     state.trained = true;
     state.masteryLevel = getMasteryLevel(state.score);
@@ -315,7 +343,55 @@ function runTrainingCycle(): TrainingSession[] {
     if (trainingHistory.length > 100) trainingHistory.splice(100);
   }
 
+  // Mastery cascade: sovereign categories actively train laggards
+  const refs: CategoryRef[] = AGI_CATEGORIES.map((name) => {
+    const s = agiTrainingState[name];
+    return {
+      name,
+      score: s?.score ?? 0,
+      masteryLevel: s?.masteryLevel ?? "novice",
+      sessions: s?.sessions ?? 0,
+    };
+  });
+  const cascade = masteryCascade(refs);
+  for (const [tgtName, gain] of Object.entries(cascade.gains)) {
+    const tgt = agiTrainingState[tgtName];
+    if (!tgt) continue;
+    const before = tgt.score;
+    tgt.score = Math.min(99.9, tgt.score + gain);
+    tgt.masteryLevel = getMasteryLevel(tgt.score);
+    const ex = cascade.exercises.find((e) => e.to === tgtName);
+    if (ex) {
+      const cascadeInsight = `Sovereign cascade from ${ex.from} (intensity ${(ex.intensity * 100).toFixed(0)}%) lifted ${tgtName} +${gain.toFixed(2)}`;
+      if (!tgt.insights.includes(cascadeInsight)) {
+        tgt.insights.push(cascadeInsight);
+        if (tgt.insights.length > 10) tgt.insights.shift();
+      }
+    }
+    if (tgt.score - before > 0.01) {
+      const synthSession: TrainingSession = {
+        id: `cs-${Date.now()}-${tgtName.slice(0, 4)}`,
+        category: tgtName,
+        startedAt: Date.now() - 50,
+        completedAt: Date.now(),
+        scoreBefore: before,
+        scoreAfter: tgt.score,
+        improvement: tgt.score - before,
+        insight: `Mastery cascade synthetic exercise (+${gain.toFixed(2)})`,
+        masteryAchieved: tgt.score >= 98,
+      };
+      sessions.push(synthSession);
+      trainingHistory.unshift(synthSession);
+      if (trainingHistory.length > 100) trainingHistory.splice(100);
+    }
+  }
+
+  logTransferSummary();
   return sessions;
+}
+
+export function getCrossDomainTransferMetrics() {
+  return getTransferMetrics();
 }
 
 async function persistState(): Promise<void> {
