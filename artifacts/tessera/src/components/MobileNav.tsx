@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import {
   MessageSquare, Heart, Globe2, Users, Lock,
   Wrench, MessageCircle, Brain, Settings, Shield, Cpu, DollarSign, Search, BookOpen,
-  ChevronUp, Zap, Gavel, Languages, UserPlus, Hexagon, Skull,
+  ChevronUp, Zap, Gavel, Languages, UserPlus, Hexagon, Skull, Book, Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -57,10 +57,13 @@ const CLUSTERS: NavCluster[] = [
     tabs: [
       { label: "Sovereign", href: "/sovereignty", Icon: Shield, match: (l) => l === "/sovereignty", color: "emerald" },
       { label: "Council", href: "/grand-council", Icon: Gavel, match: (l) => l === "/grand-council" || l === "/grand-conference" || l === "/conference-decisions" || l === "/consensus" || l === "/conclusions" || l === "/feedback" || l === "/transparency-ledger", color: "amber" },
-      { label: "Secrets", href: "/secrets", Icon: Lock, match: (l) => l === "/secrets" || l === "/bible" || l === "/secret-knowledge" || l === "/secret-society", color: "red" },
+      { label: "Secrets", href: "/secrets", Icon: Lock, match: (l) => l === "/secrets" || l === "/secret-knowledge", color: "red" },
+      { label: "Society", href: "/secret-society", Icon: Eye, match: (l) => l === "/secret-society", color: "purple" },
+      { label: "Bible", href: "/bible", Icon: Book, match: (l) => l === "/bible" || l === "/living-bible", color: "amber" },
       { label: "Members", href: "/members", Icon: Users, match: (l) => l === "/members", color: "amber" },
-      { label: "Conference", href: "/sacred-conference", Icon: BookOpen, match: (l) => l === "/sacred-conference" || l === "/sacred-knowledge-vault" || l === "/living-bible" || l === "/3d-diagrams", color: "violet" },
+      { label: "Conference", href: "/sacred-conference", Icon: BookOpen, match: (l) => l === "/sacred-conference" || l === "/sacred-knowledge-vault" || l === "/3d-diagrams", color: "violet" },
       { label: "Compress", href: "/compression-lab", Icon: Zap, match: (l) => l === "/compression-lab", color: "cyan" },
+      { label: "Recruit", href: "/recruitment", Icon: UserPlus, match: (l) => l === "/recruitment", color: "rose" },
     ],
   },
   {
@@ -72,7 +75,6 @@ const CLUSTERS: NavCluster[] = [
       { label: "System", href: "/system", Icon: Cpu, match: (l) => l === "/system", color: "cyan" },
       { label: "Build", href: "/build", Icon: Wrench, match: (l) => l === "/build", color: "emerald" },
       { label: "Tokens", href: "/tokens", Icon: DollarSign, match: (l) => l === "/tokens", color: "amber" },
-      { label: "Recruit", href: "/recruitment", Icon: UserPlus, match: (l) => l === "/recruitment", color: "rose" },
       { label: "NFT", href: "/agent-nft", Icon: Hexagon, match: (l) => l === "/agent-nft", color: "violet" },
       { label: "Lattice", href: "/lattice", Icon: Search, match: (l) => l === "/lattice", color: "violet" },
       { label: "Settings", href: "/settings", Icon: Settings, match: (l) => l === "/settings", color: "yellow" },
@@ -119,7 +121,12 @@ export default function MobileNav() {
             borderTop: "1px solid rgba(6, 182, 212, 0.1)",
           }}
         >
-          <div className="px-3 py-2 grid grid-cols-5 gap-1">
+          <div className={cn(
+            "px-3 py-2 gap-1",
+            (CLUSTERS.find((c) => c.id === expandedCluster)?.tabs.length ?? 0) > 5
+              ? "flex overflow-x-auto scrollbar-none"
+              : "grid grid-cols-5"
+          )} style={{ WebkitOverflowScrolling: "touch" }}>
             {CLUSTERS.find((c) => c.id === expandedCluster)?.tabs.map((tab) => {
               const isActive = tab.match(location);
               const colors = COLOR_MAP[tab.color] || COLOR_MAP.cyan;
@@ -132,9 +139,10 @@ export default function MobileNav() {
                   }}
                   className={cn(
                     "flex flex-col items-center justify-center py-2.5 rounded-lg transition-all duration-150",
-                    "active:scale-95 touch-manipulation select-none",
+                    "active:scale-95 touch-manipulation select-none shrink-0",
                     isActive ? cn(colors.active, colors.glow) : "hover:bg-white/5"
                   )}
+                  style={{ minWidth: (CLUSTERS.find((c) => c.id === expandedCluster)?.tabs.length ?? 0) > 5 ? 60 : undefined }}
                   data-testid={`mobile-tab-${tab.label.toLowerCase().replace(/\s+/g, "-")}`}
                 >
                   <tab.Icon
