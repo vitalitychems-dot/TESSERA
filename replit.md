@@ -49,7 +49,8 @@ The system is a pnpm monorepo using Node.js 24 and TypeScript 5.9. The frontend 
 -   **Sovereign File Registry:** A comprehensive file catalog tracking 168+ files across 17 domains with SHA-256 checksums and access level tracking.
 -   **Stability & Self-Healing Infrastructure:** Includes smart retry logic, evolution throttling, a centralized task scheduler, ToroidalBackground optimization, and error boundaries.
 -   **Sacred Grand Conference Engine:** Knowledge-driven conference system with 40 corpus-backed improvement specs and 10 invention specs (with 3D build diagrams). Each cycle produces 10 unique improvements and 5 unique inventions by rotating through the spec pool, cross-referencing the full Knowledge Corpus Index. Transcripts reference real corpus statistics.
--   **Autonomous Intelligence Layer:** Features semantic response caching, neural embeddings, an LLM batcher, knowledge distillation, and a self-evaluation loop.
+-   **Autonomous Intelligence Layer:** Features semantic response caching, neural embeddings with multi-dimensional LRU cache (per-domain caching with cross-dimension recall), an LLM batcher, knowledge distillation, and a self-evaluation loop.
+-   **Φ-Weighted Parallel BFT Consensus:** Grand Council voting uses fully parallel `Promise.allSettled` for all 24 agents simultaneously (replacing sequential batches of 6). Specialist agents whose domain matches the proposal category receive golden-ratio (Φ ≈ 1.618) voting weight. BFT fault tolerance finalizes decisions when ≥ 2/3 agents respond. Metrics include per-proposal voting duration and per-agent Phi weights.
 
 ## External Dependencies
 

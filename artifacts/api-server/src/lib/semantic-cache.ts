@@ -4,6 +4,7 @@ import { semanticCacheTable } from "@workspace/db/schema";
 import { eq, sql, gt } from "drizzle-orm";
 import { logger } from "./logger";
 import { generateEmbedding, cosineSimilarity } from "./neural-embeddings";
+import { semanticDimensionalCache } from "./dimensional-lru-cache";
 
 let DEFAULT_TTL_SECONDS = 3600;
 const SIMILARITY_THRESHOLD = 0.92;
@@ -17,12 +18,14 @@ interface CacheStats {
   hitRate: number;
 }
 
-const stats: CacheStats = {
+const stats: CacheStats & { dimensionalHits: number; crossDimensionHits: number } = {
   totalHits: 0,
   totalMisses: 0,
   totalEvictions: 0,
   cacheSize: 0,
   hitRate: 0,
+  dimensionalHits: 0,
+  crossDimensionHits: 0,
 };
 
 function hashPrompt(messages: Array<{ role: string; content: string }>, model: string): string {
@@ -52,8 +55,19 @@ function updateHitRate(): void {
 export async function lookupCache(
   messages: Array<{ role: string; content: string }>,
   model: string,
+  dimension: string = "general",
 ): Promise<string | null> {
   const hash = hashPrompt(messages, model);
+
+  const dimResult = semanticDimensionalCache.lookup(hash, dimension);
+  if (dimResult && Date.now() - dimResult.value.ts < DEFAULT_TTL_SECONDS * 1000) {
+    stats.totalHits++;
+    stats.dimensionalHits++;
+    if (dimResult.dimension !== dimension) stats.crossDimensionHits++;
+    updateHitRate();
+    logger.info({ hash: hash.slice(0, 12), dimension: dimResult.dimension }, "SemanticCache: dimensional hit");
+    return dimResult.value.response;
+  }
 
   try {
     const [exact] = await db
@@ -68,6 +82,9 @@ export async function lookupCache(
       await db.update(semanticCacheTable)
         .set({ hitCount: sql`${semanticCacheTable.hitCount} + 1`, lastHitAt: new Date() })
         .where(eq(semanticCacheTable.id, exact.id));
+
+      semanticDimensionalCache.set(hash, { response: exact.response, ts: Date.now() }, dimension);
+
       logger.info({ hash: hash.slice(0, 12) }, "SemanticCache: exact hit");
       return exact.response;
     }
@@ -79,7 +96,7 @@ export async function lookupCache(
       return null;
     }
 
-    const queryEmbedding = await generateEmbedding(userContent);
+    const queryEmbedding = await generateEmbedding(userContent, dimension);
     const systemFp = fingerprintSystemContext(messages, model);
 
     const candidates = await db
@@ -111,6 +128,9 @@ export async function lookupCache(
       await db.update(semanticCacheTable)
         .set({ hitCount: sql`${semanticCacheTable.hitCount} + 1`, lastHitAt: new Date() })
         .where(eq(semanticCacheTable.id, bestMatch.id));
+
+      semanticDimensionalCache.set(hash, { response: bestMatch.response, ts: Date.now() }, dimension);
+
       logger.info({ score: bestScore.toFixed(3), hash: bestMatch.promptHash.slice(0, 12) }, "SemanticCache: semantic hit");
       return bestMatch.response;
     }
@@ -128,6 +148,7 @@ export async function storeInCache(
   model: string,
   response: string,
   ttlSeconds = DEFAULT_TTL_SECONDS,
+  dimension: string = "general",
 ): Promise<void> {
   const hash = hashPrompt(messages, model);
   const userContent = messages.filter(m => m.role === "user").map(m => m.content).join(" ");
@@ -140,7 +161,7 @@ export async function storeInCache(
   try {
     let embedding: number[] = [];
     if (userContent.length >= 10) {
-      embedding = await generateEmbedding(userContent);
+      embedding = await generateEmbedding(userContent, dimension);
     }
 
     await db.insert(semanticCacheTable).values({
@@ -163,6 +184,8 @@ export async function storeInCache(
         lastHitAt: null,
       },
     });
+
+    semanticDimensionalCache.set(hash, { response: response.slice(0, 50000), ts: Date.now() }, dimension);
 
     const [countRow] = await db.select({ cnt: sql<number>`count(*)::int` }).from(semanticCacheTable);
     stats.cacheSize = countRow?.cnt ?? 0;
@@ -196,14 +219,19 @@ export async function invalidateCache(): Promise<void> {
   try {
     await db.delete(semanticCacheTable);
     stats.cacheSize = 0;
+    semanticDimensionalCache.clear();
     logger.info("SemanticCache: full invalidation");
   } catch (err) {
     logger.warn({ err: (err as Error).message }, "SemanticCache: invalidation error");
   }
 }
 
-export function getCacheStats(): CacheStats & { ttlSeconds: number } {
-  return { ...stats, ttlSeconds: DEFAULT_TTL_SECONDS };
+export function getCacheStats(): CacheStats & { ttlSeconds: number; dimensionalHits: number; crossDimensionHits: number; dimensionalCache: ReturnType<typeof semanticDimensionalCache.getStats> } {
+  return {
+    ...stats,
+    ttlSeconds: DEFAULT_TTL_SECONDS,
+    dimensionalCache: semanticDimensionalCache.getStats(),
+  };
 }
 
 export function setCacheTtl(ttl: number): void {

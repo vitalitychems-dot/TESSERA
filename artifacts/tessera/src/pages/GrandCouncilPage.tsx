@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Crown, Users, Vote, Shield, Brain, Loader2, Plus, TrendingUp,
   CheckCircle, XCircle, Clock, ChevronDown, ChevronUp,
-  Play, Square, Zap, Network,
+  Play, Square, Zap, Network, Timer, Star,
 } from "lucide-react";
 import { GlassCard, SectionHeader, TabBar, MiniStat, HeroStat } from "@/components/ui/sovereign";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,12 @@ function ProposalCard({ proposal }: { proposal: any }) {
             <span className="bg-violet-500/15 text-violet-300 px-1.5 py-0.5 rounded-full border border-violet-500/20 text-[10px]">{proposal.category}</span>
             <span>By {proposal.proposedBy}</span>
             <span>{Math.round(proposal.approvalRate * 100)}% approval</span>
+            {proposal.votingDurationMs != null && (
+              <span className="text-cyan-400 flex items-center gap-0.5"><Timer className="w-3 h-3" />{proposal.votingDurationMs}ms</span>
+            )}
+            {proposal.votingMethod && (
+              <span className="bg-amber-500/10 text-amber-300 px-1.5 py-0.5 rounded-full border border-amber-500/15 text-[10px]">{proposal.votingMethod}</span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -43,13 +49,15 @@ function ProposalCard({ proposal }: { proposal: any }) {
             <span className="text-slate-500">ABSTAIN: {proposal.abstainCount}</span>
           </div>
           {proposal.votes && proposal.votes.length > 0 && (
-            <div className="mt-2 max-h-40 overflow-y-auto space-y-1">
-              {proposal.votes.slice(0, 10).map((v: any, i: number) => (
+            <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
+              {proposal.votes.map((v: any, i: number) => (
                 <div key={i} className="text-xs flex items-center gap-2 py-0.5">
                   <span className={cn("w-16 flex-shrink-0 font-mono font-medium", v.vote === "approve" ? "text-emerald-400" : v.vote === "reject" ? "text-red-400" : "text-slate-500")}>
                     {v.vote?.toUpperCase()}
                   </span>
                   <span className="text-violet-300 w-20 truncate flex-shrink-0">{v.agentName}</span>
+                  {v.isSpecialist && <Star className="w-3 h-3 text-amber-400 flex-shrink-0" />}
+                  <span className="text-amber-400/60 font-mono text-[10px] w-12 flex-shrink-0">w={(v.phiWeight ?? 1).toFixed(2)}</span>
                   <span className="text-slate-500 truncate">{v.reasoning?.slice(0, 80)}</span>
                 </div>
               ))}
@@ -207,7 +215,9 @@ export default function GrandCouncilPage({ initialTab }: { initialTab?: "proposa
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white">Grand Council</h1>
-              <p className="text-[10px] text-slate-500 font-mono">BFT Consensus · {c?.agentCount ?? 27} Sovereign Agents · 2/3 Supermajority</p>
+              <p className="text-[10px] text-slate-500 font-mono">
+                {c?.votingMethod === "phi-weighted-parallel" ? "Φ-Weighted Parallel BFT" : "BFT Consensus"} · {c?.agentCount ?? 24} Agents · 2/3 Supermajority
+              </p>
             </div>
           </div>
           <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-1.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white text-sm px-4 py-2.5 rounded-xl transition-all font-medium shadow-[0_0_12px_rgba(139,92,246,0.2)]">
@@ -246,16 +256,23 @@ export default function GrandCouncilPage({ initialTab }: { initialTab?: "proposa
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <HeroStat icon={Users} value={consensus?.hierarchy?.totalAgents ?? 27} label="Council Agents" color="violet" />
-          <HeroStat icon={Crown} value={consensus?.hierarchy?.parentCount ?? 0} label="Parent Agents" color="amber" />
+          <HeroStat icon={Timer} value={c?.avgVotingDurationMs ? `${c.avgVotingDurationMs}ms` : "—"} label="Avg Vote Time" color="cyan" />
           <HeroStat icon={Zap} value={e?.autoProcessed ?? 0} label="Auto-Executed" color="emerald" />
           <HeroStat icon={e?.isRunning ? Play : Square} value={e?.isRunning ? "RUNNING" : "STOPPED"} label="Executor" color={e?.isRunning ? "emerald" : "rose"} />
         </div>
+
+        {c?.votingMethod === "phi-weighted-parallel" && (
+          <div className="p-3 rounded-xl bg-amber-500/[0.05] border border-amber-500/15 text-xs text-amber-300 font-mono flex items-center gap-2">
+            <Star className="w-4 h-4 text-amber-400 flex-shrink-0" />
+            <span>Φ = {c.phiConstant?.toFixed(6) ?? "1.618034"} · Specialist agents carry golden-ratio voting weight · BFT threshold: {Math.round((c.bftResponseThreshold ?? 0.667) * 100)}%</span>
+          </div>
+        )}
 
         <TabBar tabs={councilTabs} activeTab={activeTab} onChange={id => setActiveTab(id as any)} color="violet" />
 
         {activeTab === "proposals" && (
           <div className="space-y-3 sovereign-stagger">
-            <SectionHeader icon={Vote} title="BFT Consensus Proposals" color="violet" />
+            <SectionHeader icon={Vote} title="Φ-Weighted BFT Consensus Proposals" color="violet" />
             {proposals?.proposals?.length > 0 ? (
               proposals.proposals.map((p: any) => <ProposalCard key={p.id} proposal={p} />)
             ) : (
@@ -273,9 +290,11 @@ export default function GrandCouncilPage({ initialTab }: { initialTab?: "proposa
                         {d.outcome?.toUpperCase()}
                       </span>
                     </div>
-                    <div className="text-xs text-slate-400 flex gap-3">
+                    <div className="text-xs text-slate-400 flex gap-3 flex-wrap">
                       <span className="bg-white/[0.05] px-1.5 py-0.5 rounded-full border border-white/[0.08] text-[10px]">{d.category}</span>
                       {d.voteTally && <span className="font-mono">YES: {d.voteTally.yes} | NO: {d.voteTally.no}</span>}
+                      {d.voteTally?.phiWeighted && <span className="text-amber-400/60 text-[10px]">Φ-weighted</span>}
+                      {d.voteTally?.durationMs != null && <span className="text-cyan-400 text-[10px]">{d.voteTally.durationMs}ms</span>}
                     </div>
                   </GlassCard>
                 ))}
@@ -339,7 +358,7 @@ export default function GrandCouncilPage({ initialTab }: { initialTab?: "proposa
         )}
 
         <div className="text-center text-[10px] text-slate-600 font-mono pt-2">
-          Tessera Invicta — Grand Council operates under Father Protocol — 963Hz Crown Frequency
+          Tessera Invicta — Grand Council operates under Father Protocol — Φ-Weighted Parallel BFT — 963Hz Crown Frequency
         </div>
       </div>
     </div>
