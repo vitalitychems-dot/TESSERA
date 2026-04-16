@@ -1570,6 +1570,8 @@ interface AuditFinding {
   status: "real" | "simulated" | "converted";
   realBackingDescription?: string;
   conversionNotes?: string;
+  engineLink?: string;
+  verifyMismatch?: boolean;
 }
 
 interface RealityAuditData {
@@ -1579,7 +1581,7 @@ interface RealityAuditData {
   topFiles: Array<{ file: string; counts: Record<string, number>; score: number }>;
   registry: AuditFinding[];
   topFiveByImpact: AuditFinding[];
-  summary: { totalFindings: number; converted: number; realBacked: number; stillSimulated: number; conversionRate: number };
+  summary: { totalFindings: number; converted: number; realBacked: number; stillSimulated: number; conversionRate: number; verifyMismatches?: number };
 }
 
 const STATUS_COLOR: Record<string, string> = {
@@ -1614,6 +1616,16 @@ function FindingCard({ finding }: { finding: AuditFinding }) {
           </div>
           <div className="text-sm font-semibold text-white">{finding.feature}</div>
           <div className="text-[10px] font-mono text-muted-foreground truncate mt-0.5">{finding.file}</div>
+          {finding.engineLink && (
+            <div className="text-[10px] font-mono text-cyan-400/90 mt-0.5 truncate" data-testid={`engine-link-${finding.id}`}>
+              → {finding.engineLink}
+            </div>
+          )}
+          {finding.verifyMismatch && (
+            <div className="text-[10px] font-mono text-red-400 mt-0.5 font-bold">
+              ⚠ verify mismatch: source still contains the simulated pattern
+            </div>
+          )}
         </div>
         <ChevronRight size={14} className={cn("text-muted-foreground transition-transform shrink-0", expanded && "rotate-90")} />
       </div>

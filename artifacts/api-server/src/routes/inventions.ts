@@ -858,7 +858,7 @@ router.post("/inventions/generate", async (_req, res) => {
     for (const area of SYSTEM_IMPROVEMENT_TEMPLATES) {
       for (const idea of area.ideas) {
         if (existingTitles.has(idea.title)) continue;
-        // REAL: deterministic seeding from title hash + real metrics (Reality Audit conversion #1)
+        // Deterministic: seeded from FNV hash of title.
         const titleHash = hashStringFNV(idea.title);
         const agent1 = AGENTS[titleHash % AGENTS.length];
         const agent2 = AGENTS[(titleHash >>> 8) % AGENTS.length] === agent1
@@ -978,7 +978,7 @@ async function autonomousTick() {
       const candidateAreas = SYSTEM_IMPROVEMENT_TEMPLATES.flatMap(a => a.ideas.map(i => ({ ...i, area: a.area })));
       const fresh = candidateAreas.filter(c => !existingTitles.has(c.title));
       if (fresh.length > 0) {
-        // REAL: deterministic pick by tick-indexed round-robin over title-hash-sorted candidates
+        // Deterministic: round-robin over hash-sorted candidates.
         const sortedFresh = [...fresh].sort((a, b) => hashStringFNV(a.title) - hashStringFNV(b.title));
         const pick = sortedFresh[autoLoopState.ticks % sortedFresh.length];
         const pickHash = hashStringFNV(pick.title);
@@ -1035,7 +1035,7 @@ async function autonomousTick() {
       const feas = inv.feasibilityScore ?? 70;
       const yesAdd = 8 + Math.floor((feas / 100) * 10);
       const noAdd = Math.max(1, Math.floor((1 - feas / 100) * 12));
-      // REAL: deterministic abstain count from invention hash + tick number
+      // Deterministic abstain count: f(hash, tick).
       const absAdd = 1 + ((hashStringFNV(inv.title) + autoLoopState.ticks) % 3);
       const newVotes = {
         yes: currentVotes.yes + yesAdd,
@@ -1072,7 +1072,7 @@ async function autonomousTick() {
     // 5. Progress: building → building + progress, eventually built.
     for (const inv of (byStatus.building || []).slice(0, 5)) {
       const cur = inv.buildProgress ?? 0;
-      // REAL: constant 12% step ± deterministic variation per invention
+      // Deterministic build step: 8 + (hash % 14) percent.
       const step = 8 + ((hashStringFNV(inv.title) + autoLoopState.ticks) % 14);
       const next = Math.min(100, cur + step);
       if (next >= 100) {
@@ -1094,7 +1094,7 @@ async function autonomousTick() {
     // 6. Test: built inventions get a synthetic reality-check sim. Occasionally
     //    we flip a built invention back to "building" at 90% to simulate a test regression.
     for (const inv of (byStatus.built || []).slice(0, 2)) {
-      // REAL: deterministic pass/fail by title hash bucket (1-in-12 fail = ~8%)
+      // Deterministic pass/fail bucket.
       const passed = (hashStringFNV(inv.title) % 12) !== 0;
       if (!passed) {
         await db.update(inventionsTable).set({
