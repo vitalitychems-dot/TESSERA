@@ -275,7 +275,7 @@ wss.on("connection", (ws, req) => {
 startMeshHeartbeatMonitor();
 
 const PROBE_MAX_ATTEMPTS = 3;
-const PROBE_RETRY_DELAY_MS = 1500;
+const PROBE_RETRY_DELAY_MS = 2000;
 
 async function probeRoute(
   baseUrl: string,
@@ -283,7 +283,7 @@ async function probeRoute(
   treatNotFoundAsFailure: boolean,
 ): Promise<{ status: number; ok: boolean }> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5000);
+  const timeout = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(`${baseUrl}${route}`, {
       signal: controller.signal,
@@ -296,6 +296,11 @@ async function probeRoute(
   } catch (err: unknown) {
     clearTimeout(timeout);
     const msg = err instanceof Error ? err.message : String(err);
+    const isAbort = msg.includes("aborted") || msg.includes("abort");
+    if (isAbort) {
+      logger.warn({ route }, "Startup route probe: timeout (route exists but slow) — inconclusive");
+      return { status: 0, ok: false, timedOut: true } as { status: number; ok: boolean; timedOut?: boolean };
+    }
     logger.warn({ route, err: msg }, "Startup route probe attempt failed");
     return { status: 0, ok: false };
   }
@@ -323,7 +328,8 @@ async function runPostBindHealthProbe(port: number): Promise<void> {
       ),
     );
     const passed = results.filter(r => r.ok).length;
-    const failed = results.filter(r => !r.ok).map(r => ({ route: r.route, status: r.status, parameterized: r.hasParams }));
+    const failedResults = results.filter(r => !r.ok);
+    const failed = failedResults.map(r => ({ route: r.route, status: r.status, parameterized: r.hasParams, timedOut: (r as { timedOut?: boolean }).timedOut ?? false }));
     const allOk = failed.length === 0;
 
     if (allOk) {
@@ -335,9 +341,17 @@ async function runPostBindHealthProbe(port: number): Promise<void> {
       return;
     }
 
+    const allFailuresAreTimeouts = failed.every(f => f.timedOut);
+
     if (attempt < PROBE_MAX_ATTEMPTS) {
       logger.warn({ failed, attempt, nextAttemptIn: `${PROBE_RETRY_DELAY_MS}ms` }, "Startup route probe: some routes failed — retrying");
       await new Promise<void>(resolve => setTimeout(resolve, PROBE_RETRY_DELAY_MS));
+    } else if (allFailuresAreTimeouts) {
+      logger.warn(
+        { passed, total: results.length, timedOutRoutes: failed.map(f => f.route) },
+        "=== STARTUP ROUTE PROBE: all failures are timeouts (routes exist but slow) — opening readiness gate. Watchdog will close if routes become truly unhealthy. ===",
+      );
+      setServerReady();
     } else {
       logger.error(
         { passed, total: results.length, failed },

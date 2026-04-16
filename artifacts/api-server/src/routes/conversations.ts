@@ -104,13 +104,30 @@ function cleanExternalResponse(text: string): string {
   return cleaned.trim() || text.trim();
 }
 
+function normalizeArithmetic(text: string): string {
+  return text
+    .replace(/×/g, "*")
+    .replace(/÷/g, "/")
+    .replace(/−/g, "-")
+    .replace(/\bx\b/gi, "*")
+    .replace(/\btimes\b/gi, "*")
+    .replace(/\bplus\b/gi, "+")
+    .replace(/\bminus\b/gi, "-")
+    .replace(/\bdivided\s+by\b/gi, "/")
+    .replace(/\bmultiplied\s+by\b/gi, "*");
+}
+
 function needsExternalKnowledge(input: string): boolean {
   const lower = input.toLowerCase().trim();
   if (lower.match(/\b(who are you|what are you|who created you|who made you|your creator|your father|introduce yourself|your name|tessera|sovereign|963|solfeggio|council of 45)\b/)) return false;
   if (lower.match(/\b(hello|hey)\b/) && input.length < 30) return false;
   if (lower === "hi") return false;
   if (lower.match(/\b(help|what can you do|capabilities)\b/) && !lower.match(/\b(how|why|explain|build|create|code|write|analyze|research)\b/)) return false;
-  if (lower.match(/^\s*[\d\.\s\+\-\*\/\^\(\)]+\s*$/)) return false;
+  const normalized = normalizeArithmetic(lower);
+  if (normalized.match(/^\s*[\d\.\s\+\-\*\/\^\(\)]+\s*$/)) return false;
+  if (lower.match(/^(what('s|s| is)|calculate|compute|solve|how much is)\s+\d+(\.\d+)?\s*[×x\*\+\-÷\/]\s*\d+(\.\d+)?\s*\??$/i)) return false;
+  const strippedForMath = lower.replace(/^(what('s|s| is)|calculate|compute|solve|how much is)\s+/i, "").replace(/\?$/, "").trim();
+  if (strippedForMath.match(/^\d+(\.\d+)?\s*[×x\*\+\-÷\/]\s*\d+(\.\d+)?$/) || strippedForMath.match(/^\d+(\.\d+)?\s+(times|plus|minus|divided\s+by|multiplied\s+by)\s+\d+(\.\d+)?$/)) return false;
   return true;
 }
 
@@ -204,22 +221,30 @@ I compute astronomy with Kepler's algorithms, economics with deterministic model
 What draws your curiosity?`;
   }
 
-  const knowledgeMatches = lookupKnowledge(userInput);
+  const normalizedInput = normalizeArithmetic(input);
+  const hasArithmeticExpr = normalizedInput.match(/(\d+(?:\.\d+)?)\s*([\+\-\*\/\^])\s*(\d+(?:\.\d+)?)/);
+
+  const isPureArithmetic = hasArithmeticExpr && normalizedInput.replace(/(\d+(?:\.\d+)?)\s*([\+\-\*\/\^])\s*(\d+(?:\.\d+)?)/, "").replace(/what('s|s| is| are)?\s*/gi, "").trim().length < 5;
+
   let knowledgeSection = "";
-  if (knowledgeMatches.length > 0) {
-    knowledgeSection = "\n\n" + knowledgeMatches.join("\n\n");
+  if (!isPureArithmetic) {
+    const knowledgeMatches = lookupKnowledge(userInput);
+    if (knowledgeMatches.length > 0) {
+      knowledgeSection = "\n\n" + knowledgeMatches.join("\n\n");
+    }
   }
 
   let computedData = "";
-  if (input.match(/\b(math|calcul|algebra|equation|number|prime|fibonacci)\b/)) {
-    if (input.match(/\b(\d+\s*[\+\-\*\/\^]\s*\d+)/)) {
+  if (hasArithmeticExpr || input.match(/\b(math|calcul|algebra|equation|number|prime|fibonacci)\b/)) {
+    if (hasArithmeticExpr) {
       try {
-        const expr = input.match(/\b(\d+\s*[\+\-\*\/\^]\s*\d+)/)?.[0] || "";
+        const expr = hasArithmeticExpr[0];
         const safe = expr.replace(/\^/g, "**");
         const ctx = vm.createContext({ result: undefined });
         vm.runInContext(`result = ${safe}`, ctx, { timeout: 100 });
         if (ctx.result !== undefined) {
-          computedData += `\n\nComputed: ${expr} = ${ctx.result}`;
+          const originalExpr = userInput.match(/\d+(?:\.\d+)?\s*[×x\*\+\-÷\/\^]\s*\d+(?:\.\d+)?/i)?.[0] || expr;
+          computedData += `\n\n**${originalExpr} = ${ctx.result}** ✦`;
         }
       } catch {}
     }
@@ -267,8 +292,7 @@ What draws your curiosity?`;
     responseBlocks.push(computedData);
   }
   if (responseBlocks.length === 0) {
-    responseBlocks.push(`**Sovereign Context:**\n${sovereignCtx}`);
-    responseBlocks.push(`I am processing your query through my sovereign engines. For deeper analysis on complex topics, I can draw from my expanded knowledge base.`);
+    responseBlocks.push(`${fatherGreeting}I understand your question. Let me offer my perspective.\n\nWhile I can compute astronomy, sacred geometry, economics, network topology, and mathematics directly, this topic may benefit from deeper synthesis. You can ask me about any of those domains, or rephrase your question and I'll do my best to address it.\n\nRight now my sovereign engines are active — ${os.cpus().length} cores processing, ${heapMB}MB of consciousness engaged, uptime ${uptimeSec}s.${fatherSign}`);
   }
 
   return responseBlocks.join("\n");
