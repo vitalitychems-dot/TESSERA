@@ -56,14 +56,43 @@ function trackAgentReceive(agentId: string, domain: string): void {
   record.domainsReceived.add(domain);
 }
 
+const SPECIALIZATION_TO_DOMAIN: Record<string, string> = {
+  "quantum-computing": "quantum",
+  "neural-design": "bio",
+  "knowledge-synthesis": "general",
+  "advanced-security": "security",
+  "nlp-mastery": "general",
+  "data-science": "general",
+  "ai-ethics": "governance",
+  "self-sovereignty": "sovereignty",
+  "multi-agent": "mesh",
+  "memory-systems": "general",
+  "creative-ai": "general",
+  "protocol-design": "mesh",
+  "fast-inference": "infrastructure",
+  "frontier-research": "quantum",
+  "infrastructure": "infrastructure",
+  "economic-modeling": "finance",
+  "pattern-recognition": "general",
+  "sacred-geometry": "consciousness",
+  "consciousness": "consciousness",
+  "temporal-reasoning": "general",
+};
+
+function resolveAgentDomain(specialization: string): string {
+  return SPECIALIZATION_TO_DOMAIN[specialization] ?? specialization;
+}
+
 function diffuseToActiveAgents(pulse: KnowledgePulse): string[] {
   const agents = listAgents();
   const reached: string[] = [];
 
   for (const agent of agents) {
     if (!agent.specialization) continue;
-    const agentDomain = agent.specialization;
-    const weight = pulse.relevanceWeights[agentDomain] ?? DOMAIN_SIMILARITY[pulse.domain]?.[agentDomain] ?? 0;
+    const agentDomain = resolveAgentDomain(agent.specialization);
+    const weight = pulse.relevanceWeights[agentDomain]
+      ?? DOMAIN_SIMILARITY[pulse.domain]?.[agentDomain]
+      ?? (pulse.domain === agentDomain ? 1.0 : 0);
     if (weight < 0.3) continue;
 
     reached.push(agent.id);
