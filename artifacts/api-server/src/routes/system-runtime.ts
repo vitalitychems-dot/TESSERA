@@ -3,6 +3,7 @@ import { getHeartbeatMetrics, startAutonomousHeartbeat, stopAutonomousHeartbeat 
 import { getUniverseMetrics, getUniverseParameters, generateNewSnapshot, runSimulation } from "../lib/universe-mechanics";
 import type { PhysicsSimulation } from "../lib/universe-mechanics";
 import { getQuantumMetrics, getQuantumState, applyQuantumGate, measureAllQubits } from "../lib/quantum-tesseract";
+import { getRealityFlag } from "../lib/reality-audit";
 import { getTruthfulnessMetrics, analyzeTruthfulness, detectHallucination, verifyClaim } from "../lib/truthfulness-engine";
 
 const router = Router();
@@ -50,7 +51,16 @@ router.get("/quantum/metrics", (_req: Request, res: Response) => {
 });
 
 router.get("/quantum/state", (_req: Request, res: Response) => {
-  res.json({ ok: true, data: getQuantumState() });
+  res.json({
+    ok: true,
+    data: getQuantumState(),
+    reality: {
+      bridgeFidelity: getRealityFlag("quantum-tesseract-fidelity"),
+      bridgeBandwidth: getRealityFlag("quantum-tesseract-fidelity"),
+      errorRate: getRealityFlag("quantum-tesseract-fidelity"),
+      measurement: getRealityFlag("quantum-measure-qubit"),
+    },
+  });
 });
 
 router.post("/quantum/gate", (req: Request, res: Response) => {
@@ -87,7 +97,11 @@ router.post("/truthfulness/verify-claim", (req: Request, res: Response) => {
   const { claim } = req.body;
   if (!claim) { res.status(400).json({ ok: false, error: "claim is required" }); return; }
   const result = verifyClaim(claim);
-  res.json({ ok: true, data: result });
+  res.json({
+    ok: true,
+    data: result,
+    reality: { verifyClaimV1: getRealityFlag("truthfulness-verify-claim-v1") },
+  });
 });
 
 export default router;

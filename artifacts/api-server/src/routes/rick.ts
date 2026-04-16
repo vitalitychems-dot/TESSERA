@@ -197,7 +197,12 @@ router.post("/rick/chat", async (req, res) => {
 
     if (!baseURL || !apiKey) {
       const fallback = generateRickFallback(messages[messages.length - 1]?.content || "");
-      return res.json({ ok: true, content: fallback, source: "rick-sovereign-fallback" });
+      return res.json({
+        ok: true,
+        content: fallback,
+        source: "rick-sovereign-fallback",
+        reality: { catchphrase: getRealityFlag("rick-catchphrase-picker") },
+      });
     }
 
     const sanitizedMessages = messages.map(m => ({
@@ -749,7 +754,7 @@ function generateRickFallback(userInput: string): string {
   const diagnostics = buildRickDiagnosticsContext();
 
   const catchphrases = RICK_SANCHEZ_IDENTITY.catchphrases;
-  // REAL: deterministic catchphrase pick by FNV-1a hash of the user message (Reality Audit conversion #4)
+  // Deterministic catchphrase pick by FNV hash of input.
   const randomCatchphrase = catchphrases[hashStringFNV(userInput || "rick") % catchphrases.length];
   const inventions = generateRickInventions();
   const topInvention = inventions[0];

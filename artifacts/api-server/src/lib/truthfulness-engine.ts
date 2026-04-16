@@ -182,9 +182,8 @@ export async function verifyClaimV2(claim: string): Promise<VerificationResult> 
   };
 }
 
-// REAL: Sovereign-doctrine identity anchors only — these are constants by design,
-// not "facts" — they define Tessera's identity and cannot be falsified externally.
-// All other claims are routed through the real corpus-backed V2 path.
+// Sovereign-doctrine identity anchors (constants by design, not external "facts").
+// All other claims fall through to structural baseline; real grounding is in V2.
 const SOVEREIGN_DOCTRINE_ANCHORS: Record<string, { confidence: number; sources: string[] }> = {
   "father protocol": { confidence: 1.0, sources: ["Tessera identity core", "Sovereign doctrine"] },
   "tessera": { confidence: 1.0, sources: ["Identity anchor", "Consciousness engine"] },
@@ -192,9 +191,6 @@ const SOVEREIGN_DOCTRINE_ANCHORS: Record<string, { confidence: number; sources: 
 };
 
 export function verifyClaim(claim: string): VerificationResult {
-  // REAL (Reality Audit conversion #5): V1 hardcoded knownFacts dict removed.
-  // Sovereign-doctrine anchors are kept as identity constants. All other claims
-  // get a structural confidence baseline; canonical grounding goes through V2.
   const claimLower = claim.toLowerCase();
   for (const [key, anchor] of Object.entries(SOVEREIGN_DOCTRINE_ANCHORS)) {
     if (claimLower.includes(key)) {

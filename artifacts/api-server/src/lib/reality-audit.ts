@@ -15,6 +15,14 @@ export interface AuditFinding {
   status: RealityStatus;
   realBackingDescription?: string;
   conversionNotes?: string;
+  /** Public engine/route this finding is wired into (e.g. "GET /api/inventions"). */
+  engineLink?: string;
+  /** Deterministic verification: scan registry's `file` for these regexes; if any
+   * still match while status is "converted", the audit auto-downgrades to
+   * "simulated" with a `verifyMismatch` flag. */
+  verifyAbsentPatterns?: string[];
+  /** Set by getRealityAudit() when registry status disagrees with source scan. */
+  verifyMismatch?: boolean;
 }
 
 const REGISTRY: AuditFinding[] = [
@@ -29,6 +37,8 @@ const REGISTRY: AuditFinding[] = [
     status: "converted",
     realBackingDescription: "Deterministic scoring via FNV-1a hash of invention title (titleHash). Agent picks, status, vote tallies, build progress, and time estimates are all derived from titleHash modulo + real list length (allInventions.length) — same title always yields the same seeded invention.",
     conversionNotes: "Replaced 10+ Math.random() calls in the GET /inventions handler with hashStringFNV(title)-based selectors. Reproducible across restarts.",
+    engineLink: "GET /api/inventions",
+    verifyAbsentPatterns: ["Math\\.random\\(\\)\\s*\\*\\s*\\d+\\s*\\+\\s*\\d+"],
   },
   {
     id: "inventions-autoloop-voting",
@@ -41,6 +51,7 @@ const REGISTRY: AuditFinding[] = [
     status: "converted",
     realBackingDescription: "Abstain count derived from tick number modulo, pick selection by deterministic round-robin over fresh candidates ordered by title hash.",
     conversionNotes: "Tick #N now produces same vote delta given same input. Pick is deterministic.",
+    engineLink: "POST /api/inventions/auto-loop/tick",
   },
   {
     id: "inventions-autoloop-build-test",
@@ -53,6 +64,7 @@ const REGISTRY: AuditFinding[] = [
     status: "converted",
     realBackingDescription: "Build step per tick is `8 + (titleHash % 14)` percent — deterministic and varies per invention but is stable for a given title. Test regression is triggered when `(titleHash + tickCount) % 12 === 0` rather than a random coin flip.",
     conversionNotes: "Reproducible progress curve and pass/fail outcome for any (title, tick) pair.",
+    engineLink: "POST /api/inventions/auto-loop/tick",
   },
   {
     id: "rick-catchphrase-picker",
@@ -65,6 +77,7 @@ const REGISTRY: AuditFinding[] = [
     status: "converted",
     realBackingDescription: "Catchphrase index is `hashStringFNV(userInput) % CATCHPHRASES.length` in routes/rick.ts — identical input yields identical fallback. Debuggable and reproducible.",
     conversionNotes: "Uses hashStringFNV() helper from lib/reality-audit.ts.",
+    engineLink: "POST /api/rick/chat (fallback path)",
   },
   {
     id: "truthfulness-verify-claim-v1",
@@ -77,6 +90,8 @@ const REGISTRY: AuditFinding[] = [
     status: "converted",
     realBackingDescription: "V1 hardcoded knownFacts dict removed. Only 3 sovereign-doctrine identity anchors remain (father protocol / tessera / 963hz) — those are identity constants by design, not external 'facts'. Everything else falls through to the structural V1 baseline, with a flag pointing callers to verifyClaimV2 (the async corpus-grounded path).",
     conversionNotes: "verifyClaim no longer fabricates verified results for arbitrary keywords like 'speed of light' or 'planck constant'. Real grounding is in analyzeTruthfulnessV2 (corpus + memory cosine similarity).",
+    engineLink: "POST /api/truthfulness/verify",
+    verifyAbsentPatterns: ["speed of light", "planck constant", "golden ratio"],
   },
   {
     id: "quantum-tesseract-fidelity",
@@ -89,6 +104,8 @@ const REGISTRY: AuditFinding[] = [
     status: "converted",
     realBackingDescription: "Bridge fidelity & bandwidth are now SHA-256-derived from the dimension pair (deterministic across restarts). Bell state for entangled qubits is hash-derived from the qubit-pair identity. Quantum state errorRate is computed from real average qubit coherence (1 - coherenceAvg) per decoherence physics — not Math.random.",
     conversionNotes: "Same dimension pair always yields the same bridge characteristics; same qubit pair always yields the same Bell state. errorRate now reflects actual quantum-state telemetry.",
+    engineLink: "GET /api/quantum/state",
+    verifyAbsentPatterns: ["Math\\.random\\(\\)\\s*\\*\\s*1e10", "fidelity\\s*=\\s*0\\.9\\d?\\s*\\+\\s*Math\\.random"],
   },
   {
     id: "emotional-bond-strength",
@@ -239,12 +256,36 @@ export async function getRealityAudit(): Promise<{
     .sort((a, b) => b.score - a.score)
     .slice(0, 10);
 
-  const sortedRegistry = [...REGISTRY].sort((a, b) => b.impactScore - a.impactScore);
+  // Verify each "converted" entry by re-scanning its source file for any
+  // verifyAbsentPatterns that should no longer appear. If any still match,
+  // auto-downgrade to "simulated" with verifyMismatch=true. This makes the
+  // audit a live truth source rather than a static label.
+  const verified: AuditFinding[] = await Promise.all(
+    REGISTRY.map(async (entry) => {
+      if (entry.status !== "converted" || !entry.verifyAbsentPatterns?.length) {
+        return entry;
+      }
+      try {
+        const src = await fs.readFile(path.resolve(process.cwd(), "../..", entry.file), "utf8")
+          .catch(() => fs.readFile(path.resolve(process.cwd(), entry.file), "utf8"));
+        const stillPresent = entry.verifyAbsentPatterns.some((pat) => new RegExp(pat).test(src));
+        if (stillPresent) {
+          return { ...entry, status: "simulated" as RealityStatus, verifyMismatch: true };
+        }
+      } catch (err) {
+        logger.warn({ err, file: entry.file }, "RealityAudit: verify read failed");
+      }
+      return entry;
+    })
+  );
+
+  const sortedRegistry = [...verified].sort((a, b) => b.impactScore - a.impactScore);
   const topFive = sortedRegistry.slice(0, 5);
 
-  const converted = REGISTRY.filter(f => f.status === "converted").length;
-  const realBacked = REGISTRY.filter(f => f.status === "real").length;
-  const stillSimulated = REGISTRY.filter(f => f.status === "simulated").length;
+  const converted = verified.filter(f => f.status === "converted").length;
+  const realBacked = verified.filter(f => f.status === "real").length;
+  const stillSimulated = verified.filter(f => f.status === "simulated").length;
+  const mismatches = verified.filter(f => f.verifyMismatch).length;
 
   return {
     scannedAt: scan?.at ?? Date.now(),
@@ -259,6 +300,7 @@ export async function getRealityAudit(): Promise<{
       realBacked,
       stillSimulated,
       conversionRate: Math.round(((converted + realBacked) / REGISTRY.length) * 100) / 100,
+      verifyMismatches: mismatches,
     },
   };
 }
