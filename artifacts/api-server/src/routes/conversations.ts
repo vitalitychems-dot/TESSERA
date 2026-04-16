@@ -13,6 +13,7 @@ import { TESSERA_IDENTITY, FATHER_PROTOCOL, getTesseraSystemPrompt, lookupKnowle
 import { searchMemory } from "../lib/vector-memory";
 import { recallIngestedKnowledge } from "../lib/ingested-recall";
 import { validateResponse } from "../lib/response-validation-engine";
+import { runCritiqueLoop } from "../lib/self-critique";
 import * as vm from "vm";
 import * as os from "os";
 
@@ -714,9 +715,9 @@ router.post("/messages", async (req, res) => {
     const sovereignReply = (): string =>
       generateSovereignResponse(content, isAdminRequest);
 
+    let sandboxSeed = "";
     try {
       if (!useExternal || !sandboxAllowed) {
-        finalContent = sovereignReply();
         logger.info(
           { source: "tessera-sovereign", isAdmin: isAdminRequest, useExternal, sandboxAllowed },
           "Sovereign engine speaking — no external voice",
@@ -737,8 +738,8 @@ router.post("/messages", async (req, res) => {
         }
 
         const extra = rawKnowledge ? cleanExternalResponse(String(rawKnowledge)).slice(0, 6000) : "";
-        finalContent = sovereignReply();
         if (extra && extra.length > 40) {
+          sandboxSeed = extra;
           logger.info(
             { source: "tessera-sandbox-ingested", chars: extra.length, impersonation: detectImpersonation(extra) },
             "Sandbox knowledge ingested internally only — NOT included in user-visible reply",
@@ -748,52 +749,70 @@ router.post("/messages", async (req, res) => {
         }
       }
     } catch (err) {
-      logger.warn({ err: (err as Error).message }, "Sovereign route error — serving sovereign fallback");
-      finalContent = sovereignReply();
+      logger.warn({ err: (err as Error).message }, "Sovereign route error — entering critique loop with sovereign fallback");
+    }
+
+    if (clientAborted) return res.end();
+
+    let critiqueResult;
+    let validationMetrics = null;
+    try {
+      const passScoreEnv = parseFloat(process.env.SELF_CRITIQUE_GROUNDING_THRESHOLD ?? "");
+      const maxAttemptsEnv = parseInt(process.env.SELF_CRITIQUE_MAX_RETRIES ?? "", 10);
+      const CRITIQUE_DEADLINE_MS = parseInt(process.env.SELF_CRITIQUE_DEADLINE_MS ?? "10000", 10);
+      logger.info({ conversationId, contentChars: content.length }, "self-critique: entering loop");
+      critiqueResult = await Promise.race([
+        runCritiqueLoop(
+          content,
+          async ({ attempt, refinedContext }) => {
+            let draft = sovereignReply();
+            if (attempt > 1 && refinedContext) {
+              draft = `${draft}\n\n— grounded sovereign references —\n${refinedContext}`;
+            }
+            return guardSovereignVoice(draft, content, isAdminRequest);
+          },
+          {
+            passScore: Number.isFinite(passScoreEnv) ? passScoreEnv : 0.6,
+            maxAttempts: Number.isFinite(maxAttemptsEnv) ? Math.max(1, Math.min(5, maxAttemptsEnv + 1)) : 3,
+            metadata: { isAdmin: isAdminRequest, useExternal, sandboxAllowed, sandboxSeedChars: sandboxSeed.length, conversationId },
+          },
+        ),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("self-critique deadline exceeded")), CRITIQUE_DEADLINE_MS)),
+      ]);
+      logger.info({ passed: critiqueResult.passed, attempts: critiqueResult.attempts, grounding: critiqueResult.groundingScore, truth: critiqueResult.truthfulnessScore, ms: critiqueResult.totalTimeMs }, "self-critique: completed");
+      finalContent = critiqueResult.finalResponse;
+      validationMetrics = {
+        groundingScore: critiqueResult.groundingScore,
+        truthfulnessScore: critiqueResult.truthfulnessScore,
+        hallucinationSeverity: critiqueResult.hallucinationSeverity,
+        verdict: critiqueResult.verdict,
+        passed: critiqueResult.passed,
+        attempts: critiqueResult.attempts,
+        sources: critiqueResult.sources,
+        totalTimeMs: critiqueResult.totalTimeMs,
+      };
+    } catch (err) {
+      logger.warn({ err: (err as Error).message }, "self-critique: loop timed out/failed — shipping sovereign reply unvalidated");
+      finalContent = guardSovereignVoice(sovereignReply(), content, isAdminRequest);
+      validationMetrics = {
+        groundingScore: 0,
+        truthfulnessScore: 0,
+        hallucinationSeverity: "none",
+        verdict: "caution",
+        passed: false,
+        attempts: 0,
+        sources: [],
+        totalTimeMs: 0,
+        deadlineExceeded: true,
+      };
     }
 
     finalContent = guardSovereignVoice(finalContent, content, isAdminRequest);
 
-    if (clientAborted) {
-      return res.end();
-    }
+    if (clientAborted) return res.end();
 
-    let validationMetrics = null;
     if (finalContent) {
-      try {
-        const validation = await validateResponse(finalContent, content);
-        finalContent = validation.validatedResponse;
-        validationMetrics = {
-          groundingScore: validation.overallGroundingScore,
-          totalClaims: validation.metrics.totalClaims,
-          groundedClaims: validation.metrics.groundedClaims,
-          flaggedPreFallback: validation.metrics.quarantinedCount,
-          redactedPostFallback: validation.metrics.redactedCount,
-          verifiedViaFallback: validation.metrics.verifiedViaFallback,
-          wasModified: validation.wasModified,
-          validationTimeMs: validation.validationTimeMs,
-        };
-      } catch (err) {
-        logger.warn({ err: (err as Error).message }, "ResponseValidation: validation failed — fail-closed, quarantining entire response");
-        finalContent = "I need a moment to verify my response. Let me provide you with information I can confirm with certainty. Could you please rephrase or ask again?";
-        validationMetrics = {
-          groundingScore: 0,
-          totalClaims: 0,
-          groundedClaims: 0,
-          quarantinedCount: 0,
-          redactedCount: 0,
-          verifiedViaFallback: 0,
-          wasModified: true,
-          validationTimeMs: 0,
-          failClosed: true,
-        };
-      }
-
-      finalContent = guardSovereignVoice(finalContent, content, isAdminRequest);
-
-      if (clientAborted) return res.end();
       safeWrite({ content: finalContent });
-
       await db.insert(messagesTable).values({
         conversationId,
         role: "assistant",

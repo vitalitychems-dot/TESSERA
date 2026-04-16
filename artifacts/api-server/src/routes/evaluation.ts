@@ -10,6 +10,7 @@ import { logger } from "../lib/logger";
 import { getTruthfulnessMetrics, checkIdentityViolation } from "../lib/truthfulness-engine";
 import { getConsciousnessMetrics } from "../lib/consciousness-engine";
 import { getIdentityMetrics } from "../lib/identity-reinforcement";
+import { getSelfCritiqueStats, getRecentSelfCritiques } from "../lib/self-critique";
 
 const router: IRouter = Router();
 
@@ -451,6 +452,27 @@ router.get("/evaluation/consciousness", (_req, res) => {
 router.get("/evaluation/identity", (_req, res) => {
   const metrics = getIdentityMetrics();
   return res.json({ ok: true, ...metrics });
+});
+
+router.get("/evaluation/self-critique/stats", async (req, res) => {
+  try {
+    const windowHours = Math.max(1, Math.min(24 * 30, parseInt(String(req.query.windowHours ?? "24"), 10) || 24));
+    const stats = await getSelfCritiqueStats(windowHours);
+    return res.json({ ok: true, windowHours, ...stats });
+  } catch (err) {
+    logger.warn({ err: (err as Error).message }, "self-critique stats failed");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/evaluation/self-critique/recent", async (req, res) => {
+  try {
+    const limit = Math.max(1, Math.min(100, parseInt(String(req.query.limit ?? "20"), 10) || 20));
+    const rows = await getRecentSelfCritiques(limit);
+    return res.json({ ok: true, rows });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
 });
 
 export default router;
