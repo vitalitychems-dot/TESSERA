@@ -22,6 +22,9 @@ export interface SpawnedAgent {
   meeseeksTTL?: number;
   meeseeksExpiresAt?: number;
   meeseeksCompletedAt?: number;
+  receivedPulses?: number;
+  lastPulseAt?: number;
+  crossDomainContext?: string[];
 }
 
 export interface MeeseeksMetrics {
@@ -312,6 +315,30 @@ export function listAgents() {
 }
 export function getAgent(agentId: string) {
   return getSpawnerState().activeSpawned.find(a => a.id === agentId) || null;
+}
+
+export function updateAgentFromPulse(agentId: string, sourceDomain: string): boolean {
+  const agent = getSpawnerState().activeSpawned.find(a => a.id === agentId);
+  if (!agent) return false;
+
+  agent.receivedPulses = (agent.receivedPulses ?? 0) + 1;
+  agent.lastPulseAt = Date.now();
+
+  if (!agent.crossDomainContext) {
+    agent.crossDomainContext = [];
+  }
+  if (!agent.crossDomainContext.includes(sourceDomain)) {
+    agent.crossDomainContext.push(sourceDomain);
+    if (agent.crossDomainContext.length > 10) {
+      agent.crossDomainContext.shift();
+    }
+  }
+
+  if (!agent.masteredDomains.includes(sourceDomain) && (agent.receivedPulses ?? 0) >= 5) {
+    agent.masteredDomains.push(sourceDomain);
+  }
+
+  return true;
 }
 export function getSpawnerStats() {
   return getSpawnerMetrics();

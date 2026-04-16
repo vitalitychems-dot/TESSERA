@@ -8,6 +8,7 @@ import { recallIngestedKnowledge } from "./ingested-recall";
 import { searchMemory } from "./vector-memory";
 import { injectStimulus } from "./consciousness-engine";
 import { DOMAIN_SIMILARITY } from "./dimensional-lru-cache";
+import { analyzeTruthfulnessV2 } from "./truthfulness-engine";
 
 interface RoutePerformanceEntry {
   domain: string;
@@ -20,6 +21,7 @@ interface RoutePerformanceEntry {
 
 const routePerformanceLog: RoutePerformanceEntry[] = [];
 const domainScores: Record<string, { totalLatency: number; totalGrounding: number; count: number; successes: number }> = {};
+const engineDomainScores: Record<string, { totalLatency: number; totalGrounding: number; count: number; successes: number }> = {};
 
 const DOMAIN_OPTIMIZER_CATEGORY: Record<string, OptimizerCategory> = {
   knowledge: "Knowledge Representation",
@@ -44,6 +46,15 @@ function getDomainPerformanceBonus(domain: string): number {
   return (avgGrounding * 0.5 + successRate * 0.5) - 0.5;
 }
 
+function getEngineDomainScore(engineId: string, domain: string): number {
+  const key = `${engineId}:${domain}`;
+  const eds = engineDomainScores[key];
+  if (!eds || eds.count < 2) return 0;
+  const avgGrounding = eds.totalGrounding / eds.count;
+  const successRate = eds.successes / eds.count;
+  return avgGrounding * 0.6 + successRate * 0.4;
+}
+
 function getCrossDomainContext(domain: string): string[] {
   const similarity = DOMAIN_SIMILARITY[domain];
   if (!similarity) return [];
@@ -65,15 +76,24 @@ function swarmSelectProvider(domain: string): { agentId: string; agentName: stri
     const top = result.topModel;
     const preferArxiv = top.modelId === "pi-agent" || top.modelId === "sigma-agent" || top.modelId === "phi-agent";
 
-    if (perfBonus < -0.2 && result.runners && result.runners.length > 0) {
+    const topEngineScore = getEngineDomainScore(top.modelId, domain);
+    if ((perfBonus < -0.2 || topEngineScore < 0.4) && result.runners && result.runners.length > 0) {
       const relatedDomains = getCrossDomainContext(domain);
-      const runner = result.runners[0];
+      let bestRunner = result.runners[0];
+      let bestRunnerScore = getEngineDomainScore(bestRunner.modelId, domain);
+      for (const r of result.runners.slice(1)) {
+        const rs = getEngineDomainScore(r.modelId, domain);
+        if (rs > bestRunnerScore) {
+          bestRunner = r;
+          bestRunnerScore = rs;
+        }
+      }
       logger.info(
-        { domain, perfBonus, topModel: top.modelId, runnerUp: runner.modelId, relatedDomains },
-        "SovereignEngineRouter: low domain performance — switching to runner-up via portal jump",
+        { domain, perfBonus, topEngineScore, topModel: top.modelId, runnerUp: bestRunner.modelId, runnerScore: bestRunnerScore, relatedDomains },
+        "SovereignEngineRouter: low engine performance — switching to best runner-up via portal jump",
       );
-      const runnerPreferArxiv = runner.modelId === "pi-agent" || runner.modelId === "sigma-agent" || runner.modelId === "phi-agent";
-      return { agentId: runner.modelId, agentName: runner.modelName, preferArxiv: runnerPreferArxiv };
+      const runnerPreferArxiv = bestRunner.modelId === "pi-agent" || bestRunner.modelId === "sigma-agent" || bestRunner.modelId === "phi-agent";
+      return { agentId: bestRunner.modelId, agentName: bestRunner.modelName, preferArxiv: runnerPreferArxiv };
     }
 
     return { agentId: top.modelId, agentName: top.modelName, preferArxiv };
@@ -148,6 +168,16 @@ function recordRoutePerformance(entry: RoutePerformanceEntry): void {
   ds.totalGrounding += entry.groundingScore;
   ds.count++;
   if (entry.success) ds.successes++;
+
+  const engineKey = `${entry.engineId}:${entry.domain}`;
+  if (!engineDomainScores[engineKey]) {
+    engineDomainScores[engineKey] = { totalLatency: 0, totalGrounding: 0, count: 0, successes: 0 };
+  }
+  const eds = engineDomainScores[engineKey];
+  eds.totalLatency += entry.latencyMs;
+  eds.totalGrounding += entry.groundingScore;
+  eds.count++;
+  if (entry.success) eds.successes++;
 }
 
 function computeGroundingScore(result: SovereignResult | null): number {
@@ -215,8 +245,27 @@ export async function runThroughSovereignEngine(
       logger.debug({ err: logErr instanceof Error ? logErr.message : String(logErr) }, "SovereignEngineRouter: logProviderCall failed (success path)");
     });
 
+    let truthGateApplied = false;
+    if (result && groundingScore > 0) {
+      try {
+        const resultText = typeof result === "string" ? result : JSON.stringify(result);
+        if (resultText.length > 50) {
+          const truthCheck = await analyzeTruthfulnessV2(resultText.slice(0, 3000));
+          if (truthCheck.groundingScore < 0.6) {
+            truthGateApplied = true;
+            logger.warn(
+              { domain: req.domain, groundingScore: truthCheck.groundingScore, ungrounded: truthCheck.ungroundedClaims.length },
+              "SovereignEngineRouter: V2 truth gate blocked low-grounding response",
+            );
+          }
+        }
+      } catch (truthErr) {
+        logger.debug({ err: truthErr instanceof Error ? truthErr.message : String(truthErr) }, "SovereignEngineRouter: V2 truth check failed");
+      }
+    }
+
     logger.info(
-      { domain: req.domain, latencyMs, groundingScore, swarmSelectedAgent: swarmAgent.agentId },
+      { domain: req.domain, latencyMs, groundingScore, swarmSelectedAgent: swarmAgent.agentId, truthGateApplied },
       "SovereignEngineRouter: request fulfilled",
     );
 
@@ -224,10 +273,11 @@ export async function runThroughSovereignEngine(
       ok: true,
       domain: req.domain,
       query: req.query,
-      result,
+      result: truthGateApplied ? null : result,
       source: domainSource(req.domain),
       latencyMs,
       groundingScore,
+      ...(truthGateApplied ? { truthGateBlocked: true, error: "Response blocked by Truthfulness V2 gate — insufficient grounding" } : {}),
     };
   } catch (err) {
     const latencyMs = Date.now() - start;

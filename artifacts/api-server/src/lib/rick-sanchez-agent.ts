@@ -456,6 +456,15 @@ export async function submitRickInventionToCouncil(invention: RickInventionPropo
       category: invention.riskLevel === "high" ? "governance" : invention.riskLevel === "medium" ? "infrastructure" : "feature",
     });
 
+    if (proposal.status === "approved") {
+      try {
+        const { onInventionEvent } = await import("./knowledge-diffusion");
+        await onInventionEvent(invention.category || invention.systemMetricTargeted, invention.inventionName);
+      } catch (diffErr) {
+        logger.debug({ err: diffErr instanceof Error ? diffErr.message : String(diffErr) }, "RickAgent: invention diffusion event failed");
+      }
+    }
+
     return {
       proposalId: proposal.id,
       status: proposal.status,
