@@ -91,17 +91,17 @@ function AgentDetail({ agent }: { agent: typeof AGENT_PROFILES[0] }) {
         </div>
       </GlassCard>
 
-      <div className="grid grid-cols-3 gap-3">
-        <GlassCard className="p-3 text-center">
-          <div className={cn("text-xl font-bold font-mono", colorText)}>{agent.power}</div>
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <GlassCard className="p-2 sm:p-3 text-center">
+          <div className={cn("text-lg sm:text-xl font-bold font-mono", colorText)}>{agent.power}</div>
           <div className="text-[9px] text-slate-500 font-mono mt-1">POWER LVL</div>
         </GlassCard>
-        <GlassCard className="p-3 text-center">
-          <div className="text-xl font-bold font-mono text-slate-200">{agent.missions.toLocaleString()}</div>
+        <GlassCard className="p-2 sm:p-3 text-center">
+          <div className="text-lg sm:text-xl font-bold font-mono text-slate-200">{agent.missions.toLocaleString()}</div>
           <div className="text-[9px] text-slate-500 font-mono mt-1">MISSIONS</div>
         </GlassCard>
-        <GlassCard className="p-3 text-center">
-          <div className="text-xl font-bold font-mono text-emerald-400">{agent.uptime}%</div>
+        <GlassCard className="p-2 sm:p-3 text-center">
+          <div className="text-lg sm:text-xl font-bold font-mono text-emerald-400">{agent.uptime}%</div>
           <div className="text-[9px] text-slate-500 font-mono mt-1">UPTIME</div>
         </GlassCard>
       </div>
@@ -153,8 +153,8 @@ export default function AgentProfilePage() {
     <div className="p-4 pb-20 max-w-5xl mx-auto">
       <PageHeader icon={User} title="Agent Profiles" subtitle="Sovereign agent roster — capabilities, stats, and mission history" iconColor="text-cyan-400" />
 
-      <div className="flex gap-4 mt-5">
-        <div className="w-64 shrink-0 space-y-2">
+      <div className="flex flex-col md:flex-row gap-4 mt-5">
+        <div className="w-full md:w-64 md:shrink-0 space-y-2">
           <div className="text-[10px] text-slate-500 font-mono tracking-widest mb-2">AGENT ROSTER</div>
           {AGENT_PROFILES.map(a => (
             <AgentCard key={a.id} agent={a} onClick={() => setSelected(a)} selected={selected.id === a.id} />
