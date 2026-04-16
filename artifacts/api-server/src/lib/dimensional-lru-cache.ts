@@ -5,6 +5,7 @@ interface CacheEntry<T> {
   value: T;
   ts: number;
   expiresAt: number;
+  hits: number;
   prev: CacheEntry<T> | null;
   next: CacheEntry<T> | null;
   associations: string[];
@@ -66,6 +67,7 @@ class LRUDimension<T> {
       return undefined;
     }
     this._hits++;
+    entry.hits++;
     this.moveToHead(entry);
     this.recordLatency(performance.now() - start);
     return entry.value;
@@ -84,17 +86,73 @@ class LRUDimension<T> {
       return;
     }
 
-    const entry: CacheEntry<T> = { key, value, ts: now, expiresAt, prev: null, next: null, associations };
+    const entry: CacheEntry<T> = { key, value, ts: now, expiresAt, hits: 0, prev: null, next: null, associations };
     this.map.set(key, entry);
     this.addToHead(entry);
 
     if (this.map.size > this.config.capacity) {
-      const evicted = this.removeTail();
+      const evicted = this.evictByPolicy();
       if (evicted) {
         this.map.delete(evicted.key);
         this._evictions++;
       }
     }
+  }
+
+  private evictByPolicy(): CacheEntry<T> | null {
+    switch (this.config.policy) {
+      case "lfu":
+        return this.evictLFU();
+      case "ttl-aware":
+        return this.evictTTLAware();
+      case "lru":
+      default:
+        return this.removeTail();
+    }
+  }
+
+  private evictLFU(): CacheEntry<T> | null {
+    let victim: CacheEntry<T> | null = null;
+    let minHits = Infinity;
+    let node = this.tail;
+    let scanned = 0;
+    const maxScan = Math.min(this.map.size, 50);
+    while (node && scanned < maxScan) {
+      if (node.hits < minHits) {
+        minHits = node.hits;
+        victim = node;
+        if (minHits === 0) break;
+      }
+      node = node.prev;
+      scanned++;
+    }
+    if (victim) this.removeNode(victim);
+    return victim;
+  }
+
+  private evictTTLAware(): CacheEntry<T> | null {
+    const now = Date.now();
+    let victim: CacheEntry<T> | null = null;
+    let earliestExpiry = Infinity;
+    let node = this.tail;
+    let scanned = 0;
+    const maxScan = Math.min(this.map.size, 50);
+    while (node && scanned < maxScan) {
+      if (node.expiresAt > 0 && node.expiresAt < now) {
+        victim = node;
+        break;
+      }
+      const expiry = node.expiresAt > 0 ? node.expiresAt : now + this.config.ttlMs;
+      if (expiry < earliestExpiry) {
+        earliestExpiry = expiry;
+        victim = node;
+      }
+      node = node.prev;
+      scanned++;
+    }
+    if (!victim) victim = this.removeTail();
+    else this.removeNode(victim);
+    return victim;
   }
 
   has(key: string): boolean {
@@ -138,16 +196,12 @@ class LRUDimension<T> {
     return result;
   }
 
-  topAssociations(limit: number): { key: string; associations: string[] }[] {
-    const result: { key: string; associations: string[] }[] = [];
-    let node = this.head;
-    while (node && result.length < limit) {
-      if (node.associations.length > 0) {
-        result.push({ key: node.key, associations: node.associations });
-      }
-      node = node.next;
-    }
-    return result;
+  /** Read entry without affecting LRU order or hit counters. */
+  peekEntry(key: string): { value: T; associations: string[] } | undefined {
+    const entry = this.map.get(key);
+    if (!entry) return undefined;
+    if (entry.expiresAt > 0 && entry.expiresAt < Date.now()) return undefined;
+    return { value: entry.value, associations: entry.associations };
   }
 
   clear(): void {
@@ -238,6 +292,7 @@ export interface PortalJumpResult<T> {
   weight: number;
   portalJumped: boolean;
   preWarmedDimensions: string[];
+  preWarmedAssociatedKeys: string[];
 }
 
 export class DimensionalLRUCache<T> {
@@ -325,24 +380,27 @@ export class DimensionalLRUCache<T> {
     for (const { dim, weight } of dimsToScan) {
       const dimCache = this.dimensions.get(dim);
       if (!dimCache) continue;
-      const entry = dimCache.get(key);
+      const entry = dimCache.peekEntry(key);
       if (entry !== undefined) {
-        const assoc = (dimCache as LRUDimension<T>).topAssociations(0);
-        candidates.push({ value: entry, dimension: dim, weight, associations: assoc[0]?.associations ?? [] });
+        candidates.push({ value: entry.value, dimension: dim, weight, associations: entry.associations });
       }
     }
 
     if (candidates.length > 0) {
       candidates.sort((a, b) => b.weight - a.weight);
       const best = candidates[0];
+      // Mark hit on the source dimension now that we've selected it
+      this.getDimension(best.dimension).get(key);
       this.crossDimensionHits++;
 
       const preWarmed: string[] = [];
+      const associatedKeysWarmed: string[] = [];
       if (best.weight >= PORTAL_JUMP_THRESHOLD) {
         this.portalJumps++;
-        primary.set(key, best.value, [`portal:${best.dimension}`]);
+        primary.set(key, best.value, [`portal:${best.dimension}`, ...best.associations]);
         preWarmed.push(primaryDimension);
 
+        const sourceDim = this.dimensions.get(best.dimension);
         for (const { dim, weight } of dimsToScan) {
           if (dim === best.dimension || dim === primaryDimension) continue;
           if (weight < PORTAL_JUMP_THRESHOLD) continue;
@@ -351,6 +409,21 @@ export class DimensionalLRUCache<T> {
             dimCache.set(key, best.value, [`portal:${best.dimension}`]);
             preWarmed.push(dim);
             this.preWarmedEntries++;
+          }
+        }
+
+        // Pre-warm associated entries from source dimension into primary
+        if (sourceDim && best.associations.length > 0) {
+          const maxAssoc = Math.min(best.associations.length, 5);
+          for (let i = 0; i < maxAssoc; i++) {
+            const assocKey = best.associations[i];
+            if (assocKey.startsWith("portal:")) continue;
+            const assocEntry = sourceDim.peekEntry(assocKey);
+            if (assocEntry && !primary.has(assocKey)) {
+              primary.set(assocKey, assocEntry.value, [`portal-assoc:${best.dimension}`]);
+              associatedKeysWarmed.push(assocKey);
+              this.preWarmedEntries++;
+            }
           }
         }
       }
@@ -362,6 +435,7 @@ export class DimensionalLRUCache<T> {
         weight: best.weight,
         portalJumped: preWarmed.length > 0,
         preWarmedDimensions: preWarmed,
+        preWarmedAssociatedKeys: associatedKeysWarmed,
       };
     }
 
