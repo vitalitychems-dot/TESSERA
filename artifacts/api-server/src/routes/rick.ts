@@ -18,7 +18,7 @@ import { getCorpusStats, queryCorpus } from "../lib/knowledge-corpus-index";
 import { getDaemonMetrics } from "../lib/auto-improvement-daemon";
 import { secureExternalStreamingFetch, secureExternalFetch } from "../lib/secureExternalWrapper";
 import { getAllProposals } from "../lib/consensus-engine";
-import { getMeeseeksMetrics, spawnMeeseeks, completeMeeseeks } from "../lib/agent-spawner";
+import { getMeeseeksMetrics, spawnMeeseeks, completeMeeseeks, getActiveMeeseeks, getDetailedMeeseeksMetrics, submitMeeseeksResult, getTaskTypeRegistry, type MeeseeksResult, type MeeseeksTaskType } from "../lib/agent-spawner";
 import { getTruthfulnessMetrics, analyzeTruthfulnessV2, analyzeTruthfulness, getGroundingThreshold } from "../lib/truthfulness-engine";
 import { getRouterPerformanceMetrics, recordUserSatisfaction } from "../lib/sovereign-engine-router";
 import { getDiffusionMetrics } from "../lib/knowledge-diffusion";
@@ -514,25 +514,33 @@ router.get("/rick/engines", (_req, res) => {
 
 router.post("/rick/meeseeks/spawn", (req, res) => {
   try {
-    const { task, ttlMs, specialization } = req.body as {
+    const { task, ttlMs, specialization, taskType, successCriteria, priority } = req.body as {
       task?: string;
       ttlMs?: number;
       specialization?: string;
+      taskType?: MeeseeksTaskType;
+      successCriteria?: string;
+      priority?: "low" | "normal" | "high" | "critical";
     };
     if (!task) {
       return res.status(400).json({ ok: false, error: "task is required — Mr. Meeseeks needs a purpose!" });
     }
-    const agent = spawnMeeseeks({ task, ttlMs, specialization }, "rick-sanchez-c137");
+    const agent = spawnMeeseeks({ task, ttlMs, specialization, taskType, successCriteria, priority }, "rick-sanchez-c137");
     return res.json({
       ok: true,
       meeseeks: {
         id: agent.id,
         name: agent.name,
         task: agent.meeseeksTask,
+        taskType: (agent as any).taskType,
+        complexity: (agent as any).complexity,
+        priority: (agent as any).priority,
+        successCriteria: (agent as any).successCriteria,
         ttl: agent.meeseeksTTL,
         expiresAt: agent.meeseeksExpiresAt,
+        memoryBudgetKB: (agent as any).memoryBudgetKB,
       },
-      message: "I'm Mr. Meeseeks! Look at me!",
+      message: "I'm Mr. Meeseeks! Look at me! Hyper-specialized and ready to self-destruct on completion!",
     });
   } catch (err) {
     logger.error({ err }, "Rick: meeseeks spawn error");
@@ -553,6 +561,73 @@ router.post("/rick/meeseeks/:id/complete", (req, res) => {
     });
   } catch (err) {
     logger.error({ err }, "Rick: meeseeks complete error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/rick/meeseeks/:id/result", (req, res) => {
+  try {
+    const { success, output, metrics: resultMetrics } = req.body as {
+      success?: boolean;
+      output?: string;
+      metrics?: Record<string, unknown>;
+    };
+    if (typeof success !== "boolean" || !output) {
+      return res.status(400).json({ ok: false, error: "success (boolean) and output (string) are required" });
+    }
+    const now = Date.now();
+    const activeList = getActiveMeeseeks();
+    const agent = activeList.find(a => a.id === req.params.id);
+    const result: MeeseeksResult = {
+      success,
+      output,
+      metrics: resultMetrics,
+      completedAt: now,
+      durationMs: agent ? now - agent.spawnedAt : 0,
+    };
+    const ok = submitMeeseeksResult(req.params.id, result);
+    if (!ok) {
+      return res.status(404).json({ ok: false, error: "Meeseeks not found or already terminated" });
+    }
+    return res.json({
+      ok: true,
+      message: success
+        ? "Meeseeks result accepted — task successful, agent self-destructing!"
+        : "Meeseeks result recorded — task failed, agent remains active until TTL.",
+      metrics: getMeeseeksMetrics(),
+    });
+  } catch (err) {
+    logger.error({ err }, "Rick: meeseeks result error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/rick/meeseeks/active", (_req, res) => {
+  try {
+    const active = getActiveMeeseeks();
+    return res.json({ ok: true, active, count: active.length });
+  } catch (err) {
+    logger.error({ err }, "Rick: meeseeks active error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/rick/meeseeks/metrics", (_req, res) => {
+  try {
+    const metrics = getDetailedMeeseeksMetrics();
+    return res.json({ ok: true, metrics });
+  } catch (err) {
+    logger.error({ err }, "Rick: meeseeks metrics error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/rick/meeseeks/task-types", (_req, res) => {
+  try {
+    const registry = getTaskTypeRegistry();
+    return res.json({ ok: true, taskTypes: Object.values(registry) });
+  } catch (err) {
+    logger.error({ err }, "Rick: task-types error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
 });
