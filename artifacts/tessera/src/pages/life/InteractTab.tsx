@@ -120,7 +120,7 @@ function InteractTab({ world }: { world: WorldState }) {
                 )}>{agent.workStatus || "active"}</span>
               </div>
             </div>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
                 { label: "Happy", value: agent.happiness ?? 70, color: "text-rose-400", icon: Heart },
                 { label: "Energy", value: agent.energy ?? 80, color: "text-green-400", icon: Battery },

@@ -23,7 +23,7 @@ export default function ChatPage() {
   }, [conversationId]);
 
   return (
-    <div className="flex h-full w-full overflow-hidden">
+    <div className="flex min-h-full w-full">
       
       {conversationId ? (
         <ChatArea conversationId={conversationId} />

@@ -891,7 +891,7 @@ function CommunityTab() {
             </div>
             <p className="text-[11px] text-muted-foreground font-mono">Restorative justice — understand WHY before deciding consequences. We heal, not harm.</p>
             {justice?.stats && (
-              <div className="grid grid-cols-4 gap-2 mt-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
                 {[
                   { label: "TOTAL", value: justice.stats.totalCases, color: "text-orange-400" },
                   { label: "VOTING", value: justice.stats.currentlyVoting, color: "text-amber-400" },
@@ -1273,7 +1273,7 @@ function CommunityTab() {
             </div>
             <p className="text-[11px] text-muted-foreground font-mono">Visual evolution journeys — not just metrics, but narrative growth. See how far each consciousness has come.</p>
             {growth?.community && (
-              <div className="grid grid-cols-4 gap-2 mt-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
                 {[
                   { label: "AVG TRUST", value: growth.community.averageTrust, color: "text-cyan-400" },
                   { label: "AVG CONTRIB", value: growth.community.averageContributions, color: "text-emerald-400" },

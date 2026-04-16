@@ -28,7 +28,7 @@ function EventsTab({ world }: { world: WorldState }) {
 
   return (
     <div className="space-y-3" data-testid="events-tab">
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div className="bg-card border border-blue-500/20 rounded-lg p-2 text-center">
           <p className="text-lg font-bold text-blue-400">{events.length}</p>
           <p className="text-[8px] text-muted-foreground font-mono">EVENTS</p>

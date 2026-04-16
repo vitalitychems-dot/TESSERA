@@ -249,21 +249,21 @@ function App() {
               <SectionErrorBoundary name="Background" compact>
                 <HyperdimensionalBackground />
               </SectionErrorBoundary>
-              <div className="flex flex-col h-dvh w-full overflow-hidden" style={{ position: "relative", zIndex: 2, pointerEvents: "none" }}>
-                <div style={{ pointerEvents: "auto" }}><Toaster /></div>
+              <div className="flex flex-col h-dvh w-full overflow-hidden" style={{ position: "relative", zIndex: 2 }}>
+                <Toaster />
                 <SectionErrorBoundary name="Status Badge" compact>
-                  <div className="fixed top-2 right-2 z-50" style={{ pointerEvents: "auto" }}>
+                  <div className="fixed top-2 right-2 z-50">
                     <MeshStatusBadge />
                   </div>
                 </SectionErrorBoundary>
-                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden" data-scroll-container style={{ paddingBottom: "calc(52px + env(safe-area-inset-bottom, 0px))", WebkitOverflowScrolling: "touch", pointerEvents: "auto" }}>
+                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden" data-scroll-container style={{ paddingBottom: "calc(56px + env(safe-area-inset-bottom, 0px))", WebkitOverflowScrolling: "touch" }}>
                   <ScrollToTop />
                   <AppRouter />
                 </div>
                 <SectionErrorBoundary name="Commands" compact>
-                  <div style={{ pointerEvents: "auto" }}><ActiveCommandsOverlay /></div>
+                  <ActiveCommandsOverlay />
                 </SectionErrorBoundary>
-                <div style={{ pointerEvents: "auto" }}><MobileNav /></div>
+                <MobileNav />
               </div>
             </WouterRouter>
           </TooltipProvider>
