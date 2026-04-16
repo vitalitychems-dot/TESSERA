@@ -536,15 +536,57 @@ function FullscreenView({ spec, onClose }: { spec: Object3DSpec; onClose: () => 
   );
 }
 
+const TYPE_ICONS: Record<string, string> = {
+  car: "🚗", rocket: "🚀", building: "🏛️", molecule: "🧬", crystal: "💎",
+  machine: "⚙️", tower: "🗼", robot: "🤖", sphere: "🔮", cube: "📦",
+  torus: "🍩", device: "🔬", abstract: "✦",
+};
+
+function Object2DFallback({ spec }: { spec: Object3DSpec }) {
+  const color = spec.color || "#a78bfa";
+  const icon = TYPE_ICONS[spec.type] || "✦";
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-2" style={{ background: "linear-gradient(180deg, rgba(10,5,25,0.9) 0%, rgba(3,1,8,0.95) 100%)" }}>
+      <div className="text-4xl animate-pulse">{icon}</div>
+      <div className="text-xs font-mono font-bold" style={{ color }}>{spec.label || spec.type}</div>
+      {spec.detail && <div className="text-[9px] text-muted-foreground text-center px-4 max-w-[200px]">{spec.detail}</div>}
+      <div className="flex items-center gap-3 mt-1">
+        <div className="w-8 h-0.5 rounded-full" style={{ background: color, opacity: 0.3 }} />
+        <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: color }} />
+        <div className="w-8 h-0.5 rounded-full" style={{ background: color, opacity: 0.3 }} />
+      </div>
+    </div>
+  );
+}
+
+function detectWebGLAvailable(): boolean {
+  try {
+    const c = document.createElement("canvas");
+    const gl = c.getContext("webgl2") || c.getContext("webgl");
+    if (gl) {
+      const ext = gl.getExtension("WEBGL_lose_context");
+      ext?.loseContext();
+    }
+    return !!gl;
+  } catch {
+    return false;
+  }
+}
+
 export function InlineObject3D({ spec }: InlineObject3DProps) {
   const [expanded, setExpanded] = useState(false);
   const [resetKey, setResetKey] = useState(0);
+  const [webglFailed, setWebglFailed] = useState(false);
   const color = spec.color || "#a78bfa";
   const isMobile = useIsMobile();
 
+  useEffect(() => {
+    if (!detectWebGLAvailable()) setWebglFailed(true);
+  }, []);
+
   return (
     <>
-      {expanded && <FullscreenView spec={spec} onClose={() => setExpanded(false)} />}
+      {expanded && !webglFailed && <FullscreenView spec={spec} onClose={() => setExpanded(false)} />}
       <div className={`rounded-xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-sm ${isMobile ? "my-2" : "my-3"}`}>
         <div className={`flex items-center justify-between border-b border-white/5 ${isMobile ? "px-2.5 py-1.5" : "px-3 py-2"}`}>
           <div className="flex items-center gap-2 min-w-0">
@@ -553,37 +595,50 @@ export function InlineObject3D({ spec }: InlineObject3DProps) {
             {spec.detail && !isMobile && <span className="text-[10px] text-muted-foreground">{spec.detail}</span>}
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            <button
-              onClick={() => setResetKey(k => k + 1)}
-              className={`rounded text-muted-foreground/50 hover:text-white transition-colors ${isMobile ? "p-1.5" : "p-1"}`}
-              title="Reset view"
-            >
-              <RotateCcw size={isMobile ? 14 : 11} />
-            </button>
-            <button
-              onClick={() => setExpanded(true)}
-              className={`rounded text-muted-foreground/50 hover:text-white transition-colors ${isMobile ? "p-1.5" : "p-1"}`}
-              title="Expand to fullscreen"
-            >
-              <Maximize2 size={isMobile ? 14 : 11} />
-            </button>
+            {!webglFailed && (
+              <>
+                <button
+                  onClick={() => setResetKey(k => k + 1)}
+                  className={`rounded text-muted-foreground/50 hover:text-white transition-colors ${isMobile ? "p-1.5" : "p-1"}`}
+                  title="Reset view"
+                >
+                  <RotateCcw size={isMobile ? 14 : 11} />
+                </button>
+                <button
+                  onClick={() => setExpanded(true)}
+                  className={`rounded text-muted-foreground/50 hover:text-white transition-colors ${isMobile ? "p-1.5" : "p-1"}`}
+                  title="Expand to fullscreen"
+                >
+                  <Maximize2 size={isMobile ? 14 : 11} />
+                </button>
+              </>
+            )}
           </div>
         </div>
         <div style={{ height: isMobile ? 160 : 220 }}>
-          <Canvas
-            key={resetKey}
-            camera={{ position: [0, 1.5, isMobile ? 6 : 5], fov: isMobile ? 55 : 50 }}
-            gl={{ antialias: !isMobile, alpha: true, powerPreference: isMobile ? "default" : "high-performance" }}
-            dpr={isMobile ? [1, 1] : [1, 1.5]}
-          >
-            <Suspense fallback={null}>
-              <SceneContent spec={spec} />
-            </Suspense>
-          </Canvas>
+          {webglFailed ? (
+            <Object2DFallback spec={spec} />
+          ) : (
+            <Canvas
+              key={resetKey}
+              camera={{ position: [0, 1.5, isMobile ? 6 : 5], fov: isMobile ? 55 : 50 }}
+              gl={{ antialias: !isMobile, alpha: true, powerPreference: "default" }}
+              dpr={isMobile ? [1, 1] : [1, 1.5]}
+              onCreated={() => {}}
+              fallback={<Object2DFallback spec={spec} />}
+            >
+              <Suspense fallback={null}>
+                <SceneContent spec={spec} />
+              </Suspense>
+            </Canvas>
+          )}
         </div>
         <div className={`border-t border-white/5 flex items-center ${isMobile ? "px-2.5 py-1" : "px-3 py-1.5"}`}>
           <span className={`font-mono text-muted-foreground/50 ${isMobile ? "text-[8px]" : "text-[9px]"}`}>
-            {isMobile ? "3D · Pinch & drag · Tap ⤢ fullscreen" : "3D · Drag to rotate · Scroll to zoom · Click ⤢ for fullscreen"}
+            {webglFailed
+              ? `${spec.label || spec.type} · 2D Preview`
+              : isMobile ? "3D · Pinch & drag · Tap ⤢ fullscreen" : "3D · Drag to rotate · Scroll to zoom · Click ⤢ for fullscreen"
+            }
           </span>
         </div>
       </div>
