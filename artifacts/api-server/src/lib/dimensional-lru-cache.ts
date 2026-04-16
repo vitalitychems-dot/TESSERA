@@ -124,15 +124,19 @@ class LRUDimension<T> {
 }
 
 export const DOMAIN_SIMILARITY: Record<string, Record<string, number>> = {
-  security: { governance: 0.85, sovereignty: 0.80, infrastructure: 0.75 },
-  governance: { security: 0.85, sovereignty: 0.90, consciousness: 0.70 },
-  infrastructure: { security: 0.75, feature: 0.80, income: 0.65 },
-  feature: { infrastructure: 0.80, income: 0.75, community: 0.70 },
-  income: { feature: 0.75, infrastructure: 0.65, sovereignty: 0.60 },
-  community: { governance: 0.70, feature: 0.70, consciousness: 0.80 },
-  consciousness: { governance: 0.70, community: 0.80, sovereignty: 0.85 },
-  sovereignty: { security: 0.80, governance: 0.90, consciousness: 0.85 },
-  general: { feature: 0.60, governance: 0.55, infrastructure: 0.55 },
+  security: { governance: 0.85, sovereignty: 0.80, infrastructure: 0.75, mesh: 0.70 },
+  governance: { security: 0.85, sovereignty: 0.90, consciousness: 0.70, finance: 0.65 },
+  infrastructure: { security: 0.75, feature: 0.80, income: 0.65, mesh: 0.80 },
+  feature: { infrastructure: 0.80, income: 0.75, community: 0.70, bio: 0.55 },
+  income: { feature: 0.75, infrastructure: 0.65, sovereignty: 0.60, finance: 0.85 },
+  community: { governance: 0.70, feature: 0.70, consciousness: 0.80, bio: 0.60 },
+  consciousness: { governance: 0.70, community: 0.80, sovereignty: 0.85, quantum: 0.75, bio: 0.90 },
+  sovereignty: { security: 0.80, governance: 0.90, consciousness: 0.85, finance: 0.70 },
+  general: { feature: 0.60, governance: 0.55, infrastructure: 0.55, quantum: 0.50 },
+  quantum: { consciousness: 0.75, security: 0.65, mesh: 0.70, bio: 0.60, general: 0.50 },
+  bio: { consciousness: 0.90, community: 0.60, quantum: 0.60, feature: 0.55, mesh: 0.50 },
+  mesh: { infrastructure: 0.80, security: 0.70, quantum: 0.70, sovereignty: 0.65, finance: 0.55 },
+  finance: { income: 0.85, governance: 0.65, sovereignty: 0.70, mesh: 0.55, infrastructure: 0.60 },
 };
 
 export class DimensionalLRUCache<T> {

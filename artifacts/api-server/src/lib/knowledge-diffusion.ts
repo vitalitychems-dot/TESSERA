@@ -3,7 +3,7 @@ import { searchMemory } from "./vector-memory";
 import { injectStimulus } from "./consciousness-engine";
 import { broadcastMessage } from "./agent-comms";
 import { DOMAIN_SIMILARITY } from "./dimensional-lru-cache";
-import { listAgents } from "./agent-spawner";
+import { listAgents, updateAgentFromPulse } from "./agent-spawner";
 
 export interface KnowledgePulse {
   id: string;
@@ -69,6 +69,7 @@ function diffuseToActiveAgents(pulse: KnowledgePulse): string[] {
     reached.push(agent.id);
     totalAgentDeliveries++;
     trackAgentReceive(agent.id, pulse.domain);
+    updateAgentFromPulse(agent.id, pulse.domain);
 
     broadcastMessage(
       "knowledge-diffusion",
