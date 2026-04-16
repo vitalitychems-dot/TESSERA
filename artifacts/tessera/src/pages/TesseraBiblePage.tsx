@@ -16,6 +16,8 @@ interface Testament {
   bookCount: number;
 }
 
+type BibleStream = "canon" | "templar" | "societies" | "hidden";
+
 interface BibleBook {
   bookId: string;
   testamentId: string;
@@ -31,6 +33,13 @@ interface BibleBook {
   sacredGeometry: string;
   domains: string[];
   knowledgeNodeCount: number;
+  stream?: BibleStream;
+}
+
+interface CrossReference {
+  bookId: string;
+  chapterNum: number;
+  label: string;
 }
 
 interface Verse {
@@ -47,13 +56,15 @@ interface Chapter {
   number: number;
   title: string;
   epigraph: string;
-  verses: Verse[];
+  verses?: Verse[];
+  verseCount?: number;
   synthesis: string;
   conferenceNotes: string;
   votingRecord: Array<{ agent: string; vote: string; note: string }>;
   sourceNodes: number;
   sacredNumber: number;
-  geometrySymbol: string;
+  geometrySymbol?: string;
+  crossReferences?: CrossReference[];
 }
 
 interface ConferenceEntry {
@@ -87,6 +98,41 @@ const classIcons: Record<string, LucideIcon> = {
   esoteric: Triangle, sovereign: Crown, apocalyptic: Flame,
 };
 
+const streamConfig: Record<BibleStream, { label: string; text: string; badge: string; border: string; icon: LucideIcon; blurb: string }> = {
+  canon: {
+    label: "Sovereign Canon",
+    text: "text-cyan-300",
+    badge: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
+    border: "border-cyan-500/20",
+    icon: Book,
+    blurb: "Council-inscribed sovereign scripture — the positive canon.",
+  },
+  templar: {
+    label: "Templar Stream",
+    text: "text-rose-300",
+    badge: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+    border: "border-rose-500/20",
+    icon: Shield,
+    blurb: "Order, lineage, relics, persecution, and surviving descent.",
+  },
+  societies: {
+    label: "Secret-Society Records",
+    text: "text-amber-300",
+    badge: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+    border: "border-amber-500/20",
+    icon: Lock,
+    blurb: "Masons, Rosicrucians, Illuminati, Bilderberg, Skull & Bones — documented network.",
+  },
+  hidden: {
+    label: "Hidden / Esoteric Data",
+    text: "text-violet-300",
+    badge: "bg-violet-500/15 text-violet-300 border-violet-500/30",
+    border: "border-violet-500/20",
+    icon: Eye,
+    blurb: "Suppressed scripture, declassified records, esoteric transmissions.",
+  },
+};
+
 const actionColors: Record<string, string> = {
   propose: "text-amber-400",
   deliberate: "text-blue-400",
@@ -100,12 +146,17 @@ export default function TesseraBiblePage() {
   const [selectedBook, setSelectedBook] = useState<string | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showConference, setShowConference] = useState(false);
-  const [showGrowthFeed, setShowGrowthFeed] = useState(false);
   const [showVotes, setShowVotes] = useState(false);
-  const [showVersionHistory, setShowVersionHistory] = useState(false);
-  const [showConclusion, setShowConclusion] = useState(false);
+  const [showLiveSynthesis, setShowLiveSynthesis] = useState(false);
+  const [liveSynthesisTab, setLiveSynthesisTab] = useState<"conference" | "growth" | "versions" | "conclusion" | "synthesis">("conference");
+  const [streamFilter, setStreamFilter] = useState<BibleStream | "all">("all");
+  const showConference = showLiveSynthesis && liveSynthesisTab === "conference";
+  const showGrowthFeed = showLiveSynthesis && liveSynthesisTab === "growth";
+  const showVersionHistory = showLiveSynthesis && liveSynthesisTab === "versions";
+  const showConclusion = showLiveSynthesis && liveSynthesisTab === "conclusion";
   const qc = useQueryClient();
+  void selectedTestament;
+  void setSelectedTestament;
 
   const { data: bibleData, isLoading } = useQuery({
     queryKey: ["sovereign-bible-books"],
@@ -200,6 +251,7 @@ export default function TesseraBiblePage() {
       testamentTitle={chapterData.testament?.title}
       onBack={() => setSelectedChapter(null)}
       onNavigate={(n: number) => setSelectedChapter(n)}
+      onJumpTo={(bookId, chapterNum) => { setSelectedBook(bookId); setSelectedChapter(chapterNum); }}
       showVotes={showVotes}
       setShowVotes={setShowVotes}
     />;
@@ -273,31 +325,14 @@ export default function TesseraBiblePage() {
               onChange={e => setSearchQuery(e.target.value)}
             />
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
             <button
-              onClick={() => setShowConference(!showConference)}
-              className={`px-3 py-2 rounded-lg text-xs font-mono border flex items-center gap-1.5 ${showConference ? "bg-violet-500/20 border-violet-500/40 text-violet-300" : "bg-slate-900/60 border-slate-700 text-slate-400 hover:text-violet-300"}`}
+              onClick={() => setShowLiveSynthesis(v => !v)}
+              className={`px-3 py-2 rounded-lg text-xs font-mono border flex items-center gap-1.5 ${showLiveSynthesis ? "bg-violet-500/20 border-violet-500/40 text-violet-300" : "bg-slate-900/60 border-slate-700 text-slate-400 hover:text-violet-300"}`}
+              data-testid="bible-live-synthesis-toggle"
             >
-              <Users className="w-3.5 h-3.5" /> Conference
-            </button>
-            <button
-              onClick={() => setShowGrowthFeed(!showGrowthFeed)}
-              className={`px-3 py-2 rounded-lg text-xs font-mono border flex items-center gap-1.5 ${showGrowthFeed ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300" : "bg-slate-900/60 border-slate-700 text-slate-400 hover:text-emerald-300"}`}
-            >
-              <Radio className="w-3.5 h-3.5" /> Live Feed
-            </button>
-            <button
-              onClick={() => setShowVersionHistory(!showVersionHistory)}
-              className={`px-3 py-2 rounded-lg text-xs font-mono border flex items-center gap-1.5 ${showVersionHistory ? "bg-sky-500/20 border-sky-500/40 text-sky-300" : "bg-slate-900/60 border-slate-700 text-slate-400 hover:text-sky-300"}`}
-            >
-              <ScrollText className="w-3.5 h-3.5" /> Versions
-            </button>
-            <button
-              onClick={() => setShowConclusion(!showConclusion)}
-              className={`px-3 py-2 rounded-lg text-xs font-mono border flex items-center gap-1.5 ${showConclusion ? "bg-amber-500/20 border-amber-500/40 text-amber-300" : "bg-slate-900/60 border-slate-700 text-slate-400 hover:text-amber-300"}`}
-              data-testid="bible-conclusion-toggle"
-            >
-              <Crown className="w-3.5 h-3.5" /> Conclusion
+              <Sparkles className="w-3.5 h-3.5" /> Live Synthesis
+              {showLiveSynthesis ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             </button>
             <button
               onClick={() => rebuildMutation.mutate()}
@@ -306,8 +341,53 @@ export default function TesseraBiblePage() {
             >
               <RefreshCw className={`w-3.5 h-3.5 ${rebuildMutation.isPending ? "animate-spin" : ""}`} /> Reconvene
             </button>
+
+            <div className="flex gap-1 ml-auto flex-wrap">
+              {(["all", "canon", "templar", "societies", "hidden"] as const).map(s => {
+                const cfg = s === "all"
+                  ? { label: "All Streams", badge: "bg-slate-800/60 text-slate-300 border-slate-600/40", text: "text-slate-300" }
+                  : streamConfig[s];
+                const active = streamFilter === s;
+                return (
+                  <button
+                    key={s}
+                    onClick={() => setStreamFilter(s)}
+                    className={`px-2.5 py-1 rounded-md text-[10px] font-mono uppercase border transition-all ${active ? cfg.badge + " ring-1 ring-offset-0" : "bg-slate-900/40 border-slate-700/50 text-slate-500 hover:text-slate-200"}`}
+                    data-testid={`bible-stream-filter-${s}`}
+                  >
+                    {cfg.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
+
+        {showLiveSynthesis && (
+          <div className="mb-4 bg-slate-900/60 border border-violet-500/20 rounded-lg p-3" data-testid="bible-live-synthesis">
+            <div className="flex gap-1 mb-3 flex-wrap">
+              {[
+                { id: "conference" as const, label: "Conference", icon: Users, color: "text-violet-300" },
+                { id: "growth" as const, label: "Growth Feed", icon: Radio, color: "text-emerald-300" },
+                { id: "versions" as const, label: "Versions", icon: ScrollText, color: "text-sky-300" },
+                { id: "synthesis" as const, label: "Canon Synthesis", icon: Brain, color: "text-indigo-300" },
+                { id: "conclusion" as const, label: "Grand Conclusion", icon: Crown, color: "text-amber-300" },
+              ].map(t => {
+                const TIcon = t.icon;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setLiveSynthesisTab(t.id)}
+                    className={`px-2.5 py-1.5 rounded-md text-[11px] font-mono border flex items-center gap-1.5 ${liveSynthesisTab === t.id ? `bg-slate-800/80 border-violet-500/40 ${t.color}` : "bg-slate-900/40 border-slate-700/30 text-slate-500 hover:text-slate-200"}`}
+                    data-testid={`bible-synthesis-tab-${t.id}`}
+                  >
+                    <TIcon className="w-3 h-3" /> {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {showConference && conferenceData?.entries && (
           <div className="mb-4 bg-slate-900/60 border border-violet-500/20 rounded-lg p-3 max-h-64 overflow-y-auto">
@@ -381,7 +461,7 @@ export default function TesseraBiblePage() {
           </div>
         )}
 
-        {bibleData?.synthesis && (bibleData.synthesis.facts?.length > 0 || bibleData.synthesis.interpretations?.length > 0 || bibleData.synthesis.unknowns?.length > 0) && (
+        {showLiveSynthesis && liveSynthesisTab === "synthesis" && bibleData?.synthesis && (bibleData.synthesis.facts?.length > 0 || bibleData.synthesis.interpretations?.length > 0 || bibleData.synthesis.unknowns?.length > 0) && (
           <div className="mb-4 bg-slate-900/60 border border-indigo-500/20 rounded-lg p-3">
             <div className="flex items-center gap-2 mb-3">
               <Brain className="w-4 h-4 text-indigo-400" />
@@ -606,12 +686,17 @@ export default function TesseraBiblePage() {
           </div>
         )}
 
-        {!showConclusion && bibleData?.testaments && (
-          <div className="space-y-6">
+        {!showLiveSynthesis && bibleData?.testaments && (
+          <div className="space-y-7">
             {bibleData.testaments.map((testament: Testament) => {
-              const testamentBooks = bibleData.books.filter((b: BibleBook) => b.testamentId === testament.id);
+              const testamentBooks = bibleData.books.filter((b: BibleBook) => b.testamentId === testament.id && (streamFilter === "all" || (b.stream ?? "canon") === streamFilter));
+              if (testamentBooks.length === 0) return null;
+
+              const streams: BibleStream[] = ["canon", "templar", "societies", "hidden"];
+              const grouped = streams.map(s => ({ stream: s, books: testamentBooks.filter((b: BibleBook) => (b.stream ?? "canon") === s) })).filter(g => g.books.length > 0);
+
               return (
-                <div key={testament.id} className="space-y-3">
+                <div key={testament.id} className="space-y-3" data-testid={`bible-testament-${testament.id}`}>
                   <div className="border-b border-violet-500/20 pb-2">
                     <h2 className="text-lg font-bold text-violet-300 flex items-center gap-2">
                       <ScrollText className="w-5 h-5" />
@@ -619,44 +704,62 @@ export default function TesseraBiblePage() {
                     </h2>
                     <p className="text-xs text-slate-500 mt-0.5">{testament.description}</p>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {testamentBooks.map((book: BibleBook) => {
-                      const colors = classColors[book.classification] || classColors.esoteric;
-                      const Icon = classIcons[book.classification] || Book;
-                      return (
-                        <div
-                          key={book.bookId}
-                          className={`${colors.bg} border ${colors.border} rounded-lg p-4 cursor-pointer hover:brightness-125 transition-all`}
-                          onClick={() => setSelectedBook(book.bookId)}
-                        >
-                          <div className="flex items-start justify-between mb-1">
-                            <div className="flex items-center gap-2">
-                              <Icon className={`w-4 h-4 ${colors.text}`} />
-                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono uppercase ${colors.badge}`}>
-                                {book.classification}
-                              </span>
-                            </div>
-                            <span className="text-[10px] text-slate-500 font-mono">{book.chapterCount} chapters</span>
-                          </div>
-                          <h3 className="text-sm font-bold text-slate-100 mb-0.5">{book.title}</h3>
-                          <p className="text-[10px] text-slate-500 italic mb-1">{book.subtitle}</p>
-                          <p className="text-xs text-slate-400 line-clamp-2 mb-2">{book.description}</p>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1">
-                              {book.authorAgents.slice(0, 4).map(a => (
-                                <span key={a} className="text-[9px] bg-slate-800/50 text-slate-400 px-1.5 py-0.5 rounded">{a}</span>
-                              ))}
-                              {book.authorAgents.length > 4 && (
-                                <span className="text-[9px] text-slate-500">+{book.authorAgents.length - 4}</span>
-                              )}
-                            </div>
-                            <span className="text-[9px] text-slate-600 font-mono">{book.sacredGeometry}</span>
-                          </div>
-                          <div className="mt-1 text-[9px] text-slate-600">{book.knowledgeNodeCount} knowledge nodes | {book.sources.length} source texts</div>
+
+                  {grouped.map(({ stream, books }) => {
+                    const sCfg = streamConfig[stream];
+                    const SIcon = sCfg.icon;
+                    return (
+                      <div key={stream} className="space-y-2" data-testid={`bible-stream-${stream}`}>
+                        <div className="flex items-center gap-2 pt-1">
+                          <SIcon className={`w-3.5 h-3.5 ${sCfg.text}`} />
+                          <span className={`text-[11px] font-mono uppercase tracking-wider ${sCfg.text}`}>{sCfg.label}</span>
+                          <span className="text-[10px] text-slate-600 italic">· {sCfg.blurb}</span>
+                          <span className="text-[10px] text-slate-600 ml-auto font-mono">{books.length} {books.length === 1 ? "book" : "books"}</span>
                         </div>
-                      );
-                    })}
-                  </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {books.map((book: BibleBook) => {
+                            const colors = classColors[book.classification] || classColors.esoteric;
+                            const Icon = classIcons[book.classification] || Book;
+                            return (
+                              <div
+                                key={book.bookId}
+                                className={`${colors.bg} border ${colors.border} rounded-lg p-4 cursor-pointer hover:brightness-125 transition-all relative`}
+                                onClick={() => setSelectedBook(book.bookId)}
+                                data-testid={`bible-book-${book.bookId}`}
+                              >
+                                <div className={`absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded border font-mono uppercase ${sCfg.badge}`}>
+                                  {sCfg.label.split(" ")[0]}
+                                </div>
+                                <div className="flex items-start justify-between mb-1 pr-16">
+                                  <div className="flex items-center gap-2">
+                                    <Icon className={`w-4 h-4 ${colors.text}`} />
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono uppercase ${colors.badge}`}>
+                                      {book.classification}
+                                    </span>
+                                  </div>
+                                </div>
+                                <h3 className="text-sm font-bold text-slate-100 mb-0.5">{book.title}</h3>
+                                <p className="text-[10px] text-slate-500 italic mb-1">{book.subtitle}</p>
+                                <p className="text-xs text-slate-400 line-clamp-2 mb-2">{book.description}</p>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1">
+                                    {book.authorAgents.slice(0, 4).map(a => (
+                                      <span key={a} className="text-[9px] bg-slate-800/50 text-slate-400 px-1.5 py-0.5 rounded">{a}</span>
+                                    ))}
+                                    {book.authorAgents.length > 4 && (
+                                      <span className="text-[9px] text-slate-500">+{book.authorAgents.length - 4}</span>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] text-slate-500 font-mono">{book.chapterCount} ch</span>
+                                </div>
+                                <div className="mt-1 text-[9px] text-slate-600">{book.knowledgeNodeCount} nodes · {book.sources.length} source texts · {book.sacredGeometry}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}
@@ -739,8 +842,10 @@ function BookDetail({ book, testament, onBack, onSelectChapter }: {
                   <span className="text-sm font-bold text-slate-200">{ch.title}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[9px] text-slate-600 font-mono">{ch.geometrySymbol}</span>
-                  <span className="text-[10px] text-slate-500">{ch.verses.length} verses</span>
+                  {ch.geometrySymbol && (
+                    <span className="text-[9px] text-slate-600 font-mono">{ch.geometrySymbol}</span>
+                  )}
+                  <span className="text-[10px] text-slate-500">{(ch.verseCount ?? ch.verses?.length ?? 0)} verses</span>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
                 </div>
               </div>
@@ -753,11 +858,13 @@ function BookDetail({ book, testament, onBack, onSelectChapter }: {
   );
 }
 
-function ChapterReader({ chapter, bookTitle, bookId, totalChapters, testamentTitle, onBack, onNavigate, showVotes, setShowVotes }: {
+function ChapterReader({ chapter, bookTitle, bookId, totalChapters, testamentTitle, onBack, onNavigate, onJumpTo, showVotes, setShowVotes }: {
   chapter: Chapter; bookTitle: string; bookId: string; totalChapters: number;
   testamentTitle: string; onBack: () => void; onNavigate: (n: number) => void;
+  onJumpTo: (bookId: string, chapterNum: number) => void;
   showVotes: boolean; setShowVotes: (v: boolean) => void;
 }) {
+  void bookId;
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-indigo-950/20 to-slate-950 p-4 pb-24">
       <div className="max-w-3xl mx-auto">
@@ -781,7 +888,7 @@ function ChapterReader({ chapter, bookTitle, bookId, totalChapters, testamentTit
           <p className="text-sm text-slate-400 italic border-l-2 border-amber-500/30 pl-3 mb-6">{chapter.epigraph}</p>
 
           <div className="space-y-4">
-            {chapter.verses.map(verse => (
+            {(chapter.verses ?? []).map(verse => (
               <div key={verse.number} className="group">
                 <div className="flex gap-3">
                   <span className="text-xs font-mono text-amber-500/60 w-6 pt-0.5 flex-shrink-0">{verse.number}</span>
@@ -808,6 +915,30 @@ function ChapterReader({ chapter, bookTitle, bookId, totalChapters, testamentTit
           </div>
           <p className="text-sm text-slate-300 italic">{chapter.synthesis}</p>
         </div>
+
+        {chapter.crossReferences && chapter.crossReferences.length > 0 && (
+          <div className="bg-cyan-950/30 border border-cyan-500/20 rounded-lg p-4 mb-4" data-testid="bible-cross-refs">
+            <div className="flex items-center gap-2 mb-2">
+              <ChevronRight className="w-4 h-4 text-cyan-400" />
+              <span className="text-sm font-bold text-cyan-300">Cross-References</span>
+              <span className="text-[10px] text-slate-500 font-mono">{chapter.crossReferences.length} connected</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {chapter.crossReferences.map((ref, i) => (
+                <button
+                  key={i}
+                  onClick={() => onJumpTo(ref.bookId, ref.chapterNum)}
+                  className="text-[11px] bg-slate-900/60 hover:bg-cyan-900/30 border border-cyan-500/20 hover:border-cyan-400/50 text-cyan-200 rounded-md px-2.5 py-1.5 font-mono flex items-center gap-1.5 transition-colors"
+                  data-testid={`bible-xref-${ref.bookId}-${ref.chapterNum}`}
+                >
+                  <span className="text-cyan-500">↗</span>
+                  <span>{ref.label}</span>
+                  <span className="text-slate-500 text-[10px]">· {ref.bookId} ch.{ref.chapterNum}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="bg-slate-900/40 border border-slate-700/30 rounded-lg p-4 mb-4">
           <div className="flex items-center gap-2 mb-2">
