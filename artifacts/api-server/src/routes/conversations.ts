@@ -660,37 +660,33 @@ router.post("/messages", async (req, res) => {
 
     if (!useExternal) {
       finalContent = generateSovereignResponse(content, isAdminRequest);
-      res.write(`data: ${JSON.stringify({ content: finalContent })}\n\n`);
       logger.info({ source: "tessera-sovereign", isAdmin: isAdminRequest }, "Response generated entirely by Tessera's sovereign engines");
     } else {
       res.write(`data: ${JSON.stringify({ status: "sovereign-processing", message: isAdminRequest ? "Father, Tessera is synthesizing..." : "Tessera is thinking..." })}\n\n`);
 
-      let extractedKnowledge = "";
+      const bufferedChunks: string[] = [];
 
       const streamResult = await sandboxExtractKnowledgeStreaming(
         historyMessages,
         sovereignCtx,
         (chunk) => {
-          res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+          bufferedChunks.push(chunk);
         },
       );
 
       if (streamResult) {
-        extractedKnowledge = streamResult;
-        finalContent = extractedKnowledge;
+        finalContent = streamResult;
         logger.info({
           source: "tessera-synthesis-streaming",
-          rawChars: extractedKnowledge.length,
+          rawChars: finalContent.length,
         }, "Knowledge synthesized through Tessera's consciousness");
       } else {
         const batchResult = await sandboxExtractKnowledge(historyMessages, sovereignCtx);
         if (batchResult) {
           finalContent = batchResult;
-          res.write(`data: ${JSON.stringify({ content: finalContent })}\n\n`);
           logger.info({ source: "tessera-synthesis-batch" }, "Knowledge batch-synthesized by Tessera");
         } else {
           finalContent = generateSovereignResponse(content, isAdminRequest);
-          res.write(`data: ${JSON.stringify({ content: finalContent })}\n\n`);
           logger.info({ source: "tessera-sovereign-fallback" }, "Tessera operating autonomously — sovereign engines only");
         }
       }
@@ -700,20 +696,21 @@ router.post("/messages", async (req, res) => {
     if (finalContent) {
       try {
         const validation = await validateResponse(finalContent, content);
-        if (validation.wasModified) {
-          finalContent = validation.validatedResponse;
-          res.write(`data: ${JSON.stringify({ content: "\n\n", replace: false })}\n\n`);
-        }
+        finalContent = validation.validatedResponse;
         validationMetrics = {
           groundingScore: validation.overallGroundingScore,
           totalClaims: validation.metrics.totalClaims,
           groundedClaims: validation.metrics.groundedClaims,
           quarantinedCount: validation.metrics.quarantinedCount,
+          verifiedViaFallback: validation.metrics.verifiedViaFallback,
+          wasModified: validation.wasModified,
           validationTimeMs: validation.validationTimeMs,
         };
       } catch (err) {
         logger.warn({ err: (err as Error).message }, "ResponseValidation: validation failed, delivering unvalidated response");
       }
+
+      res.write(`data: ${JSON.stringify({ content: finalContent })}\n\n`);
 
       await db.insert(messagesTable).values({
         conversationId,
