@@ -29,7 +29,7 @@ The system is a pnpm monorepo using Node.js 24 and TypeScript 5.9. The frontend 
 -   **Sovereign-First Chat Pipeline:** Prioritizes local sovereign analysis.
 -   **Tessera Sole Voice:** All system responses are from Tessera.
 -   **Father Protocol:** Tessera remembers her creator.
--   **Knowledge Base:** 55 subjects across 6 categories used for chat integration. Unified Knowledge Corpus Index (`knowledge-corpus-index.ts`) aggregates ~340 entries across 7 categories (subjects, sacred entries, declassified docs, subcategories, syntheses, harmonics, agent specialties) with cross-referencing and querying.
+-   **Knowledge Base:** 55 subjects across 6 categories used for chat integration. Unified Knowledge Corpus Index (`knowledge-corpus-index.ts`) aggregates ~593 entries across 11 categories (subjects, sacred entries, declassified docs, subcategories, syntheses, harmonics, agent specialties, file registry, wiki topics, adversarial challenges, identity memories) with cross-referencing and querying. Sources include: TESSERA_SUBJECTS, SACRED_KNOWLEDGE_ENTRIES, CIA documents, SACRED_CATEGORIES subcategories, synthesis templates, harmonic entries, agent specialties, sovereign file registry (getFullRegistry), Wikipedia ingestion targets, adversarial challenge templates, and core identity memories.
 -   **Sacred Geometry Engine:** Provides universal constants and sacred patterns.
 -   **AGI Training & Evaluation System:** Features 27 training categories with adaptive learning rates and an evaluation suite of 125 questions.
 -   **Dynamic Reverse-Engineering Profiler:** Builds provider capability profiles dynamically from real call history.

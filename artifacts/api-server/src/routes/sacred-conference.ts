@@ -152,4 +152,37 @@ router.get("/sacred-knowledge/search", async (req, res) => {
   return res.json({ entries, count: entries.length, query: q });
 });
 
+router.get("/knowledge-corpus/stats", async (_req, res) => {
+  try {
+    return res.json({
+      totalEntries: getCorpusSize(),
+      stats: getCorpusStats(),
+    });
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to get corpus stats" });
+  }
+});
+
+router.get("/knowledge-corpus/domains", async (_req, res) => {
+  try {
+    const clusters = getDomainClusters();
+    return res.json({ clusters, count: Object.keys(clusters).length });
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to get domain clusters" });
+  }
+});
+
+router.get("/knowledge-corpus/query", async (req, res) => {
+  try {
+    const tags = req.query.tags ? String(req.query.tags).split(",") : undefined;
+    const domain = req.query.domain ? String(req.query.domain) : undefined;
+    const category = req.query.category ? String(req.query.category) as any : undefined;
+    const limit = req.query.limit ? Number(req.query.limit) : 50;
+    const results = queryCorpus({ tags, domain, category, limit });
+    return res.json({ entries: results, count: results.length });
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to query corpus" });
+  }
+});
+
 export default router;
