@@ -59,6 +59,7 @@ import redTeamRouter from "./red-team";
 import prometheusMetricsRouter from "./prometheus-metrics";
 import sovereigntySelfCheckRouter from "./sovereignty-self-check";
 import sovereignGrammarRouter from "./sovereign-grammar";
+import autoHealerRouter from "./auto-healer";
 import feedbackRouter from "./feedback";
 
 const router: IRouter = Router();
@@ -124,5 +125,6 @@ router.use(prometheusMetricsRouter);
 router.use(sovereigntySelfCheckRouter);
 router.use(sovereignGrammarRouter);
 router.use(feedbackRouter);
+router.use(autoHealerRouter);
 
 export default router;

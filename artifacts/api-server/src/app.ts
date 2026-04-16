@@ -30,6 +30,7 @@ import { initAGITrainingEngine, startAGITrainingEngine } from "./lib/agi-trainin
 import { initCouncilExecutor, startCouncilExecutor } from "./lib/council-executor";
 import { seedFoundingCouncilEntry } from "./lib/sovereign-ledger";
 import { startRedTeamAgent } from "./lib/red-team-agent";
+import { startAutoHealer } from "./lib/auto-healer";
 import { initUniverseMechanics } from "./lib/universe-mechanics";
 import { initQuantumTesseract } from "./lib/quantum-tesseract";
 import { initSwarmOptimizer, getAgentWeightForCategory } from "./lib/swarm-optimizer";
@@ -429,7 +430,8 @@ async function initializeModules() {
     try {
       seedFoundingCouncilEntry();
       startRedTeamAgent(600_000);
-      logger.info("✦ Sovereign Ledger sealed and Red-Team Agent patrolling ✦");
+      startAutoHealer(45_000);
+      logger.info("✦ Sovereign Ledger sealed · Red-Team Agent patrolling · Auto-Healer active (10 strategies) ✦");
     } catch (err) {
       logger.warn({ err }, "Sovereign ledger / red-team bootstrap warning — non-critical");
     }
