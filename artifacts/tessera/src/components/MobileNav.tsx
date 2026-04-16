@@ -97,11 +97,17 @@ export default function MobileNav() {
     scroller.scrollTo({ left: Math.max(0, offset), behavior: "smooth" });
   }, [location]);
 
+  const handleTabClick = (href: string) => {
+    if (location !== href) setLocation(href);
+  };
+
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50"
-      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)", pointerEvents: "auto" }}
       data-testid="mobile-nav"
+      aria-label="Primary navigation"
+      role="navigation"
     >
       <div
         className="relative"
@@ -109,12 +115,12 @@ export default function MobileNav() {
           background: "linear-gradient(to top, rgba(2, 1, 10, 0.97), rgba(4, 3, 14, 0.92))",
         }}
       >
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent pointer-events-none" />
 
         <div
           ref={scrollerRef}
           className="flex overflow-x-auto scrollbar-none"
-          style={{ height: 56, WebkitOverflowScrolling: "touch" }}
+          style={{ height: 56, WebkitOverflowScrolling: "touch", pointerEvents: "auto" }}
         >
           <style>{`[data-testid="mobile-nav"] div::-webkit-scrollbar { display: none; }`}</style>
 
@@ -124,14 +130,17 @@ export default function MobileNav() {
             return (
               <button
                 key={tab.href}
+                type="button"
                 ref={isActive ? activeButtonRef : undefined}
-                onClick={() => setLocation(tab.href)}
+                onClick={() => handleTabClick(tab.href)}
+                aria-current={isActive ? "page" : undefined}
+                aria-label={tab.label}
                 className={cn(
                   "flex flex-col items-center justify-center relative shrink-0",
                   "active:scale-95 transition-all duration-150",
-                  "touch-manipulation select-none"
+                  "touch-manipulation select-none cursor-pointer"
                 )}
-                style={{ width: 60, WebkitTapHighlightColor: "transparent" }}
+                style={{ width: 60, WebkitTapHighlightColor: "transparent", pointerEvents: "auto" }}
                 data-testid={`mobile-tab-${tab.label.toLowerCase().replace(/\s+/g, "-")}`}
               >
                 {isActive && (
