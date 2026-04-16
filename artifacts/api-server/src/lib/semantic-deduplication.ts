@@ -272,6 +272,7 @@ async function mergeVectorCluster(cluster: DuplicateCluster): Promise<MergeResul
   }
 
   const canonical = rows[0];
+  const duplicateRows = rows.filter(r => r.id !== canonical.id);
   const longestContent = rows.reduce((a, b) => a.content.length >= b.content.length ? a : b);
   const totalAccess = rows.reduce((sum, r) => sum + r.accessCount, 0);
 
@@ -283,7 +284,7 @@ async function mergeVectorCluster(cluster: DuplicateCluster): Promise<MergeResul
       Object.assign(mergedMetadata, row.metadata);
     }
   }
-  mergedMetadata.mergedFrom = cluster.duplicateIds;
+  mergedMetadata.mergedFrom = duplicateRows.map(r => r.id);
   mergedMetadata.mergedSources = [...sources];
   mergedMetadata.mergedAt = Date.now();
 
@@ -300,29 +301,27 @@ async function mergeVectorCluster(cluster: DuplicateCluster): Promise<MergeResul
     .where(eq(vectorEmbeddingsTable.id, canonical.id));
 
   let storageSaved = 0;
-  for (const dupId of cluster.duplicateIds) {
-    if (dupId === canonical.id) continue;
-    const dup = rows.find(r => r.id === dupId);
-    if (dup) storageSaved += dup.content.length;
+  for (const dup of duplicateRows) {
+    storageSaved += dup.content.length;
 
-    redirectMap.set(makeRedirectKey("vector_embeddings", dupId), canonical.id);
+    redirectMap.set(makeRedirectKey("vector_embeddings", dup.id), canonical.id);
 
     await db
       .update(ingestedDataTable)
       .set({ embeddingId: canonical.id })
-      .where(eq(ingestedDataTable.embeddingId, dupId));
+      .where(eq(ingestedDataTable.embeddingId, dup.id));
 
     await db
       .delete(vectorEmbeddingsTable)
-      .where(eq(vectorEmbeddingsTable.id, dupId));
+      .where(eq(vectorEmbeddingsTable.id, dup.id));
   }
 
   dedupStats.storageSaved += storageSaved;
-  dedupStats.vectorDuplicates += cluster.duplicateIds.length;
+  dedupStats.vectorDuplicates += duplicateRows.length;
 
   return {
     canonicalId: canonical.id,
-    mergedIds: cluster.duplicateIds.filter(id => id !== canonical.id),
+    mergedIds: duplicateRows.map(r => r.id),
     contentPreview: bestContent.slice(0, 100),
   };
 }
@@ -341,6 +340,7 @@ async function mergeKnowledgeCluster(cluster: DuplicateCluster): Promise<MergeRe
   }
 
   const canonical = rows[0];
+  const duplicateRows = rows.filter(r => r.id !== canonical.id);
   const longestFact = rows.reduce((a, b) => a.fact.length >= b.fact.length ? a : b);
   const maxConfidence = Math.max(...rows.map(r => r.confidence));
   const totalAccess = rows.reduce((sum, r) => sum + r.accessCount, 0);
@@ -358,24 +358,22 @@ async function mergeKnowledgeCluster(cluster: DuplicateCluster): Promise<MergeRe
     .where(eq(distilledKnowledgeTable.id, canonical.id));
 
   let storageSaved = 0;
-  for (const dupId of cluster.duplicateIds) {
-    if (dupId === canonical.id) continue;
-    const dup = rows.find(r => r.id === dupId);
-    if (dup) storageSaved += dup.fact.length;
+  for (const dup of duplicateRows) {
+    storageSaved += dup.fact.length;
 
-    redirectMap.set(makeRedirectKey("distilled_knowledge", dupId), canonical.id);
+    redirectMap.set(makeRedirectKey("distilled_knowledge", dup.id), canonical.id);
 
     await db
       .delete(distilledKnowledgeTable)
-      .where(eq(distilledKnowledgeTable.id, dupId));
+      .where(eq(distilledKnowledgeTable.id, dup.id));
   }
 
   dedupStats.storageSaved += storageSaved;
-  dedupStats.knowledgeDuplicates += cluster.duplicateIds.length;
+  dedupStats.knowledgeDuplicates += duplicateRows.length;
 
   return {
     canonicalId: canonical.id,
-    mergedIds: cluster.duplicateIds.filter(id => id !== canonical.id),
+    mergedIds: duplicateRows.map(r => r.id),
     contentPreview: longestFact.fact.slice(0, 100),
   };
 }
