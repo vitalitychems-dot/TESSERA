@@ -4,6 +4,7 @@ import {
   MessageSquare, Heart, Globe2, Users, Lock,
   Wrench, MessageCircle, Brain, Settings, Shield, Cpu, DollarSign, Search, BookOpen,
   ChevronUp, Zap, Gavel, Languages, UserPlus, Hexagon, Skull, Book, Eye,
+  Network, Terminal, ArrowUpDown, BarChart3, Code2, Key, Map, User, CheckSquare, Scale, TrendingUp, Target, ShoppingCart, Lightbulb, MapPin, Truck, Link2, Workflow,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -78,6 +79,54 @@ const CLUSTERS: NavCluster[] = [
       { label: "NFT", href: "/agent-nft", Icon: Hexagon, match: (l) => l === "/agent-nft", color: "violet" },
       { label: "Lattice", href: "/lattice", Icon: Search, match: (l) => l === "/lattice", color: "violet" },
       { label: "Settings", href: "/settings", Icon: Settings, match: (l) => l === "/settings", color: "yellow" },
+    ],
+  },
+  {
+    id: "operations",
+    label: "COMMAND",
+    Icon: Terminal,
+    color: "cyan",
+    tabs: [
+      { label: "Command", href: "/command-center", Icon: Terminal, match: (l) => l === "/command-center", color: "cyan" },
+      { label: "Executor", href: "/executor", Icon: Zap, match: (l) => l === "/executor", color: "violet" },
+      { label: "Swarm", href: "/swarm", Icon: Network, match: (l) => l === "/swarm", color: "violet" },
+      { label: "Fleet", href: "/fleet", Icon: Truck, match: (l) => l === "/fleet", color: "cyan" },
+      { label: "Bridge", href: "/cross-app", Icon: Link2, match: (l) => l === "/cross-app", color: "violet" },
+    ],
+  },
+  {
+    id: "finance",
+    label: "FINANCE",
+    Icon: DollarSign,
+    color: "emerald",
+    tabs: [
+      { label: "Finance", href: "/finance", Icon: DollarSign, match: (l) => l === "/finance", color: "emerald" },
+      { label: "Market", href: "/market", Icon: BarChart3, match: (l) => l === "/market", color: "cyan" },
+      { label: "Arbitrage", href: "/arbitrage", Icon: ArrowUpDown, match: (l) => l === "/arbitrage", color: "emerald" },
+      { label: "Income", href: "/income", Icon: Workflow, match: (l) => l === "/income", color: "emerald" },
+      { label: "Ecom", href: "/ecom", Icon: ShoppingCart, match: (l) => l === "/ecom", color: "amber" },
+      { label: "Affiliate", href: "/affiliate", Icon: TrendingUp, match: (l) => l === "/affiliate", color: "emerald" },
+      { label: "Leads", href: "/lead-gen", Icon: Target, match: (l) => l === "/lead-gen", color: "amber" },
+      { label: "Ideas", href: "/business-ideas", Icon: Lightbulb, match: (l) => l === "/business-ideas", color: "amber" },
+      { label: "Services", href: "/local-services", Icon: MapPin, match: (l) => l === "/local-services", color: "cyan" },
+      { label: "SEO", href: "/seo", Icon: Search, match: (l) => l === "/seo", color: "cyan" },
+    ],
+  },
+  {
+    id: "sovereign-system",
+    label: "MESH",
+    Icon: Network,
+    color: "violet",
+    tabs: [
+      { label: "Roadmap", href: "/sovereignty-roadmap", Icon: Map, match: (l) => l === "/sovereignty-roadmap", color: "violet" },
+      { label: "Agents", href: "/agent-profile", Icon: User, match: (l) => l === "/agent-profile", color: "cyan" },
+      { label: "Mesh", href: "/sovereign-mesh", Icon: Network, match: (l) => l === "/sovereign-mesh", color: "cyan" },
+      { label: "Proofs", href: "/proof-center", Icon: CheckSquare, match: (l) => l === "/proof-center", color: "emerald" },
+      { label: "Rules", href: "/rules", Icon: Scale, match: (l) => l === "/rules", color: "amber" },
+      { label: "Code", href: "/code-builder", Icon: Code2, match: (l) => l === "/code-builder", color: "blue" },
+      { label: "APIs", href: "/api-marketplace", Icon: Zap, match: (l) => l === "/api-marketplace", color: "violet" },
+      { label: "Keys", href: "/credentials", Icon: Key, match: (l) => l === "/credentials", color: "cyan" },
+      { label: "Intel", href: "/intelligence", Icon: Brain, match: (l) => l === "/intelligence", color: "violet" },
     ],
   },
 ];

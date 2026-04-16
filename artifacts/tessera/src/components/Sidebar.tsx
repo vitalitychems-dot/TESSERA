@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link, useLocation } from "wouter";
-import { MessageSquare, Plus, Trash2, X, Brain, RefreshCw, MessageCircle, ChevronUp, ChevronDown, Search, Code2, Database, Sparkles, Globe, Shield, ShieldCheck, Crown, Eye, Atom, BarChart3, Rocket, Layers, Heart, BookOpen, Cpu, Zap } from "lucide-react";
+import { MessageSquare, Plus, Trash2, X, Brain, RefreshCw, MessageCircle, ChevronUp, ChevronDown, Search, Code2, Database, Sparkles, Globe, Shield, ShieldCheck, Crown, Eye, Atom, BarChart3, Rocket, Layers, Heart, BookOpen, Cpu, Zap, Network, User, CheckSquare, ArrowUpDown, Terminal, DollarSign, TrendingUp, Workflow, Target, Scale, Key, Truck, Link2, ShoppingCart, MapPin, Lightbulb, Link as LinkIcon, Map } from "lucide-react";
 import { useConversations, useCreateConversation, useDeleteConversation } from "@/hooks/use-conversations";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -367,6 +367,54 @@ const NAV_GROUPS: NavGroup[] = [
         testId: "link-compression-lab",
         matchFn: (loc) => loc === "/compression-lab",
       },
+    ],
+  },
+  {
+    label: "OPERATIONS",
+    labelColor: "text-cyan-400",
+    items: [
+      { title: "Command Center", href: "/command-center", icon: Terminal, color: "cyan", dotColor: "bg-cyan-400", testId: "link-command-center", matchFn: (loc) => loc === "/command-center" },
+      { title: "Self Executor", href: "/executor", icon: Zap, color: "violet", dotColor: "bg-violet-400", testId: "link-executor", matchFn: (loc) => loc === "/executor" },
+      { title: "Swarm Visualization", href: "/swarm", icon: Network, color: "violet", dotColor: "bg-violet-400", testId: "link-swarm", matchFn: (loc) => loc === "/swarm" },
+      { title: "Fleet", href: "/fleet", icon: Truck, color: "cyan", dotColor: "bg-cyan-400", testId: "link-fleet", matchFn: (loc) => loc === "/fleet" },
+      { title: "Cross-App Bridge", href: "/cross-app", icon: Link2, color: "violet", dotColor: "bg-violet-400", testId: "link-cross-app", matchFn: (loc) => loc === "/cross-app" },
+    ],
+  },
+  {
+    label: "FINANCE & BUSINESS",
+    labelColor: "text-emerald-400",
+    items: [
+      { title: "Finance", href: "/finance", icon: DollarSign, color: "emerald", dotColor: "bg-emerald-400", testId: "link-finance", matchFn: (loc) => loc === "/finance" },
+      { title: "Market Dashboard", href: "/market", icon: BarChart3, color: "cyan", dotColor: "bg-cyan-400", testId: "link-market", matchFn: (loc) => loc === "/market" },
+      { title: "Arbitrage", href: "/arbitrage", icon: ArrowUpDown, color: "emerald", dotColor: "bg-emerald-400", testId: "link-arbitrage", matchFn: (loc) => loc === "/arbitrage" },
+      { title: "Income Workflows", href: "/income", icon: Workflow, color: "emerald", dotColor: "bg-emerald-400", testId: "link-income", matchFn: (loc) => loc === "/income" },
+      { title: "E-Commerce", href: "/ecom", icon: ShoppingCart, color: "orange", dotColor: "bg-orange-400", testId: "link-ecom", matchFn: (loc) => loc === "/ecom" },
+      { title: "Affiliate Marketing", href: "/affiliate", icon: TrendingUp, color: "emerald", dotColor: "bg-emerald-400", testId: "link-affiliate", matchFn: (loc) => loc === "/affiliate" },
+      { title: "Lead Generation", href: "/lead-gen", icon: Target, color: "amber", dotColor: "bg-amber-400", testId: "link-lead-gen", matchFn: (loc) => loc === "/lead-gen" },
+      { title: "Business Ideas", href: "/business-ideas", icon: Lightbulb, color: "amber", dotColor: "bg-amber-400", testId: "link-business-ideas", matchFn: (loc) => loc === "/business-ideas" },
+      { title: "Local Services", href: "/local-services", icon: MapPin, color: "cyan", dotColor: "bg-cyan-400", testId: "link-local-services", matchFn: (loc) => loc === "/local-services" },
+      { title: "SEO Research", href: "/seo", icon: Search, color: "cyan", dotColor: "bg-cyan-400", testId: "link-seo", matchFn: (loc) => loc === "/seo" },
+    ],
+  },
+  {
+    label: "DEVELOPER",
+    labelColor: "text-blue-400",
+    items: [
+      { title: "Code Builder", href: "/code-builder", icon: Code2, color: "blue", dotColor: "bg-blue-400", testId: "link-code-builder", matchFn: (loc) => loc === "/code-builder" },
+      { title: "API Marketplace", href: "/api-marketplace", icon: Globe, color: "violet", dotColor: "bg-violet-400", testId: "link-api-marketplace", matchFn: (loc) => loc === "/api-marketplace" },
+      { title: "Credentials", href: "/credentials", icon: Key, color: "cyan", dotColor: "bg-cyan-400", testId: "link-credentials", matchFn: (loc) => loc === "/credentials" },
+    ],
+  },
+  {
+    label: "SOVEREIGN SYSTEM",
+    labelColor: "text-violet-400",
+    items: [
+      { title: "Sovereignty Roadmap", href: "/sovereignty-roadmap", icon: Map, color: "violet", dotColor: "bg-violet-400", testId: "link-sovereignty-roadmap", matchFn: (loc) => loc === "/sovereignty-roadmap" },
+      { title: "Agent Profiles", href: "/agent-profile", icon: User, color: "cyan", dotColor: "bg-cyan-400", testId: "link-agent-profile", matchFn: (loc) => loc === "/agent-profile" },
+      { title: "Sovereign Mesh", href: "/sovereign-mesh", icon: Network, color: "cyan", dotColor: "bg-cyan-400", testId: "link-sovereign-mesh", matchFn: (loc) => loc === "/sovereign-mesh" },
+      { title: "Proof Center", href: "/proof-center", icon: CheckSquare, color: "emerald", dotColor: "bg-emerald-400", testId: "link-proof-center", matchFn: (loc) => loc === "/proof-center" },
+      { title: "Sovereign Rules", href: "/rules", icon: Scale, color: "amber", dotColor: "bg-amber-400", testId: "link-rules", matchFn: (loc) => loc === "/rules" },
+      { title: "Intelligence", href: "/intelligence", icon: Brain, color: "violet", dotColor: "bg-violet-400", testId: "link-intelligence", matchFn: (loc) => loc === "/intelligence" },
     ],
   },
 ];

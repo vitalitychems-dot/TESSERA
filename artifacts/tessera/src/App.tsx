@@ -38,6 +38,30 @@ const RickPage = lazy(() => import("@/pages/RickPage"));
 const GrandNarrativePage = lazy(() => import("@/pages/GrandNarrativePage"));
 const CompressionLabPage = lazy(() => import("@/pages/CompressionLabPage"));
 const SacredConferencePage = lazy(() => import("@/pages/SacredConferencePage"));
+const SovereigntyRoadmapPage = lazy(() => import("@/pages/SovereigntyRoadmapPage"));
+const AgentProfilePage = lazy(() => import("@/pages/AgentProfilePage"));
+const SovereignMeshPage = lazy(() => import("@/pages/SovereignMeshPage"));
+const ProofCenterPage = lazy(() => import("@/pages/ProofCenterPage"));
+const ArbitragePage = lazy(() => import("@/pages/ArbitragePage"));
+const CommandCenterPage = lazy(() => import("@/pages/CommandCenterPage"));
+const FinancePage = lazy(() => import("@/pages/FinancePage"));
+const APIMarketplacePage = lazy(() => import("@/pages/APIMarketplacePage"));
+const SwarmVisualizationPage = lazy(() => import("@/pages/SwarmVisualizationPage"));
+const MarketDashboardPage = lazy(() => import("@/pages/MarketDashboardPage"));
+const CodeBuilderPage = lazy(() => import("@/pages/CodeBuilderPage"));
+const IncomeWorkflowPage = lazy(() => import("@/pages/IncomeWorkflowPage"));
+const LeadGenPage = lazy(() => import("@/pages/LeadGenPage"));
+const SEOResearchPage = lazy(() => import("@/pages/SEOResearchPage"));
+const SelfExecutorPage = lazy(() => import("@/pages/SelfExecutorPage"));
+const BusinessIdeasPage = lazy(() => import("@/pages/BusinessIdeasPage"));
+const AffiliateMarketingPage = lazy(() => import("@/pages/AffiliateMarketingPage"));
+const CredentialsPage = lazy(() => import("@/pages/CredentialsPage"));
+const FleetPage = lazy(() => import("@/pages/FleetPage"));
+const CrossAppBridgePage = lazy(() => import("@/pages/CrossAppBridgePage"));
+const EcomPage = lazy(() => import("@/pages/EcomPage"));
+const LocalServicesPage = lazy(() => import("@/pages/LocalServicesPage"));
+const RulesPage = lazy(() => import("@/pages/RulesPage"));
+const IntelligencePage = lazy(() => import("@/pages/IntelligencePage"));
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -183,6 +207,30 @@ function AppRouter() {
         <Route path="/sacred-knowledge-vault">{() => <SacredConferencePage />}</Route>
         <Route path="/living-bible">{() => <SacredConferencePage />}</Route>
         <Route path="/3d-diagrams">{() => <SacredConferencePage />}</Route>
+        <Route path="/sovereignty-roadmap">{() => <SovereigntyRoadmapPage />}</Route>
+        <Route path="/agent-profile">{() => <AgentProfilePage />}</Route>
+        <Route path="/sovereign-mesh">{() => <SovereignMeshPage />}</Route>
+        <Route path="/proof-center">{() => <ProofCenterPage />}</Route>
+        <Route path="/arbitrage">{() => <ArbitragePage />}</Route>
+        <Route path="/command-center">{() => <CommandCenterPage />}</Route>
+        <Route path="/finance">{() => <FinancePage />}</Route>
+        <Route path="/api-marketplace">{() => <APIMarketplacePage />}</Route>
+        <Route path="/swarm">{() => <SwarmVisualizationPage />}</Route>
+        <Route path="/market">{() => <MarketDashboardPage />}</Route>
+        <Route path="/code-builder">{() => <CodeBuilderPage />}</Route>
+        <Route path="/income">{() => <IncomeWorkflowPage />}</Route>
+        <Route path="/lead-gen">{() => <LeadGenPage />}</Route>
+        <Route path="/seo">{() => <SEOResearchPage />}</Route>
+        <Route path="/executor">{() => <SelfExecutorPage />}</Route>
+        <Route path="/business-ideas">{() => <BusinessIdeasPage />}</Route>
+        <Route path="/affiliate">{() => <AffiliateMarketingPage />}</Route>
+        <Route path="/credentials">{() => <CredentialsPage />}</Route>
+        <Route path="/fleet">{() => <FleetPage />}</Route>
+        <Route path="/cross-app">{() => <CrossAppBridgePage />}</Route>
+        <Route path="/ecom">{() => <EcomPage />}</Route>
+        <Route path="/local-services">{() => <LocalServicesPage />}</Route>
+        <Route path="/rules">{() => <RulesPage />}</Route>
+        <Route path="/intelligence">{() => <IntelligencePage />}</Route>
         <Route component={NotFound} />
       </Switch>
     </Suspense>
