@@ -236,6 +236,7 @@ export async function getRealityAudit(): Promise<{
     realBacked: number;
     stillSimulated: number;
     conversionRate: number;
+    verifyMismatches: number;
   };
 }> {
   let scan = lastScan;
@@ -279,6 +280,12 @@ export async function getRealityAudit(): Promise<{
     })
   );
 
+  // Cache verified statuses so getRealityFlag() reflects auto-downgrades —
+  // API reality flags can never drift from audit verification.
+  for (const v of verified) {
+    verifiedStatusCache.set(v.id, v.status);
+  }
+
   const sortedRegistry = [...verified].sort((a, b) => b.impactScore - a.impactScore);
   const topFive = sortedRegistry.slice(0, 5);
 
@@ -305,7 +312,12 @@ export async function getRealityAudit(): Promise<{
   };
 }
 
+const verifiedStatusCache = new Map<string, RealityStatus>();
+
 export function getRealityFlag(featureId: string): RealityStatus {
+  // Prefer the most recently verified status if getRealityAudit() has run.
+  const cached = verifiedStatusCache.get(featureId);
+  if (cached) return cached === "simulated" ? "simulated" : "real";
   const found = REGISTRY.find(f => f.id === featureId);
   if (!found) return "real";
   return found.status === "simulated" ? "simulated" : "real";
