@@ -167,41 +167,92 @@ async function loadAllDistilledKnowledge(): Promise<Array<{
   }));
 }
 
+class UnionFind {
+  private parent: Map<number, number> = new Map();
+  private rank: Map<number, number> = new Map();
+
+  find(x: number): number {
+    if (!this.parent.has(x)) {
+      this.parent.set(x, x);
+      this.rank.set(x, 0);
+    }
+    let root = x;
+    while (this.parent.get(root) !== root) {
+      root = this.parent.get(root)!;
+    }
+    let curr = x;
+    while (curr !== root) {
+      const next = this.parent.get(curr)!;
+      this.parent.set(curr, root);
+      curr = next;
+    }
+    return root;
+  }
+
+  union(a: number, b: number): void {
+    const ra = this.find(a);
+    const rb = this.find(b);
+    if (ra === rb) return;
+    const rankA = this.rank.get(ra) ?? 0;
+    const rankB = this.rank.get(rb) ?? 0;
+    if (rankA < rankB) {
+      this.parent.set(ra, rb);
+    } else if (rankA > rankB) {
+      this.parent.set(rb, ra);
+    } else {
+      this.parent.set(rb, ra);
+      this.rank.set(ra, rankA + 1);
+    }
+  }
+
+  getGroups(): Map<number, number[]> {
+    const groups = new Map<number, number[]>();
+    for (const id of this.parent.keys()) {
+      const root = this.find(id);
+      if (!groups.has(root)) groups.set(root, []);
+      groups.get(root)!.push(id);
+    }
+    return groups;
+  }
+}
+
 function findDuplicateClusters<T extends { id: number; embedding: number[] }>(
   rows: T[],
   table: "vector_embeddings" | "distilled_knowledge",
 ): DuplicateCluster[] {
-  const clusters: DuplicateCluster[] = [];
-  const merged = new Set<number>();
+  const uf = new UnionFind();
+  const bestSims = new Map<number, number>();
 
   for (let i = 0; i < rows.length; i++) {
-    if (merged.has(rows[i].id)) continue;
     if (rows[i].embedding.length === 0) continue;
-
-    const duplicateIds: number[] = [];
-    let bestSim = 0;
+    uf.find(rows[i].id);
 
     for (let j = i + 1; j < rows.length; j++) {
-      if (merged.has(rows[j].id)) continue;
       if (rows[j].embedding.length === 0) continue;
 
       const sim = cosineSimilarity(rows[i].embedding, rows[j].embedding);
       if (sim >= SIMILARITY_THRESHOLD) {
-        duplicateIds.push(rows[j].id);
-        merged.add(rows[j].id);
-        if (sim > bestSim) bestSim = sim;
+        uf.union(rows[i].id, rows[j].id);
+        const rootA = uf.find(rows[i].id);
+        bestSims.set(rootA, Math.max(bestSims.get(rootA) ?? 0, sim));
       }
     }
+  }
 
-    if (duplicateIds.length > 0) {
-      clusters.push({
-        canonicalId: rows[i].id,
-        duplicateIds,
-        similarity: bestSim,
-        table,
-      });
-      merged.add(rows[i].id);
-    }
+  const groups = uf.getGroups();
+  const clusters: DuplicateCluster[] = [];
+
+  for (const [root, members] of groups) {
+    if (members.length < 2) continue;
+
+    const canonicalId = members[0];
+    const duplicateIds = members.slice(1);
+    clusters.push({
+      canonicalId,
+      duplicateIds,
+      similarity: bestSims.get(root) ?? SIMILARITY_THRESHOLD,
+      table,
+    });
   }
 
   return clusters;
@@ -414,91 +465,107 @@ export async function checkDuplicateBeforeIngest(
     const newEmbedding = await generateEmbedding(content);
 
     if (table === "vector_embeddings") {
-      const rows = await db
-        .select({
-          id: vectorEmbeddingsTable.id,
-          content: vectorEmbeddingsTable.content,
-          embedding: vectorEmbeddingsTable.embedding,
-          accessCount: vectorEmbeddingsTable.accessCount,
-          source: vectorEmbeddingsTable.source,
-          metadata: vectorEmbeddingsTable.metadata,
-        })
-        .from(vectorEmbeddingsTable)
-        .orderBy(desc(vectorEmbeddingsTable.createdAt))
-        .limit(200);
+      let lastId = 0;
+      while (true) {
+        const rows = await db
+          .select({
+            id: vectorEmbeddingsTable.id,
+            content: vectorEmbeddingsTable.content,
+            embedding: vectorEmbeddingsTable.embedding,
+            accessCount: vectorEmbeddingsTable.accessCount,
+            source: vectorEmbeddingsTable.source,
+            metadata: vectorEmbeddingsTable.metadata,
+          })
+          .from(vectorEmbeddingsTable)
+          .where(gt(vectorEmbeddingsTable.id, lastId))
+          .orderBy(vectorEmbeddingsTable.id)
+          .limit(SCAN_BATCH_SIZE);
 
-      for (const row of rows) {
-        const emb = row.embedding as number[];
-        if (!Array.isArray(emb) || emb.length === 0) continue;
+        if (rows.length === 0) break;
+        lastId = rows[rows.length - 1].id;
 
-        const sim = cosineSimilarity(newEmbedding, emb);
-        if (sim >= SIMILARITY_THRESHOLD) {
-          const contentChanged = content.length > row.content.length;
-          const bestContent = contentChanged ? content : row.content;
+        for (const row of rows) {
+          const emb = row.embedding as number[];
+          if (!Array.isArray(emb) || emb.length === 0) continue;
 
-          const mergedMeta: Record<string, unknown> = {
-            ...((row.metadata ?? {}) as Record<string, unknown>),
-            ...(ingestMeta ?? {}),
-            lastMergedAt: Date.now(),
-          };
+          const sim = cosineSimilarity(newEmbedding, emb);
+          if (sim >= SIMILARITY_THRESHOLD) {
+            const contentChanged = content.length > row.content.length;
+            const bestContent = contentChanged ? content : row.content;
 
-          const updates: Record<string, unknown> = {
-            content: bestContent,
-            accessCount: sql`${vectorEmbeddingsTable.accessCount} + 1`,
-            metadata: mergedMeta,
-            updatedAt: new Date(),
-          };
+            const mergedMeta: Record<string, unknown> = {
+              ...((row.metadata ?? {}) as Record<string, unknown>),
+              ...(ingestMeta ?? {}),
+              lastMergedAt: Date.now(),
+            };
 
-          if (contentChanged) {
-            updates.embedding = await generateEmbedding(bestContent);
+            if (ingestSource) {
+              const existingSources = new Set<string>();
+              existingSources.add(row.source);
+              existingSources.add(ingestSource);
+              mergedMeta.mergedSources = [...existingSources];
+            }
+
+            const updates: Record<string, unknown> = {
+              content: bestContent,
+              accessCount: sql`${vectorEmbeddingsTable.accessCount} + 1`,
+              metadata: mergedMeta,
+              updatedAt: new Date(),
+            };
+
+            if (contentChanged) {
+              updates.embedding = await generateEmbedding(bestContent);
+            }
+
+            await db
+              .update(vectorEmbeddingsTable)
+              .set(updates)
+              .where(eq(vectorEmbeddingsTable.id, row.id));
+
+            dedupStats.ingestDeduped++;
+            dedupStats.ingestMerged++;
+            return { isDuplicate: true, canonicalId: row.id, similarity: sim, action: "merged" };
           }
-
-          if (ingestSource) {
-            const existingSources = new Set<string>();
-            existingSources.add(row.source);
-            existingSources.add(ingestSource);
-            mergedMeta.mergedSources = [...existingSources];
-          }
-
-          await db
-            .update(vectorEmbeddingsTable)
-            .set(updates)
-            .where(eq(vectorEmbeddingsTable.id, row.id));
-
-          dedupStats.ingestMerged++;
-          return { isDuplicate: true, canonicalId: row.id, similarity: sim, action: "merged" };
         }
       }
     } else {
-      const rows = await db
-        .select({
-          id: distilledKnowledgeTable.id,
-          fact: distilledKnowledgeTable.fact,
-          confidence: distilledKnowledgeTable.confidence,
-        })
-        .from(distilledKnowledgeTable)
-        .orderBy(desc(distilledKnowledgeTable.confidence))
-        .limit(200);
+      let lastId = 0;
+      while (true) {
+        const rows = await db
+          .select({
+            id: distilledKnowledgeTable.id,
+            fact: distilledKnowledgeTable.fact,
+            confidence: distilledKnowledgeTable.confidence,
+          })
+          .from(distilledKnowledgeTable)
+          .where(gt(distilledKnowledgeTable.id, lastId))
+          .orderBy(distilledKnowledgeTable.id)
+          .limit(SCAN_BATCH_SIZE);
 
-      const texts = rows.map(r => r.fact);
-      const embeddings = await generateEmbeddingsBatch(texts);
+        if (rows.length === 0) break;
+        lastId = rows[rows.length - 1].id;
 
-      for (let i = 0; i < rows.length; i++) {
-        if (!embeddings[i] || embeddings[i].length === 0) continue;
-        const sim = cosineSimilarity(newEmbedding, embeddings[i]);
-        if (sim >= SIMILARITY_THRESHOLD) {
-          const bestFact = content.length > rows[i].fact.length ? content : rows[i].fact;
-          await db
-            .update(distilledKnowledgeTable)
-            .set({
-              fact: bestFact,
-              accessCount: sql`${distilledKnowledgeTable.accessCount} + 1`,
-              updatedAt: new Date(),
-            })
-            .where(eq(distilledKnowledgeTable.id, rows[i].id));
+        const texts = rows.map(r => r.fact);
+        const embeddings = await generateEmbeddingsBatch(texts);
 
-          dedupStats.ingestMerged++;
-          return { isDuplicate: true, canonicalId: rows[i].id, similarity: sim, action: "merged" };
+        for (let i = 0; i < rows.length; i++) {
+          if (!embeddings[i] || embeddings[i].length === 0) continue;
+          const sim = cosineSimilarity(newEmbedding, embeddings[i]);
+          if (sim >= SIMILARITY_THRESHOLD) {
+            const bestFact = content.length > rows[i].fact.length ? content : rows[i].fact;
+            await db
+              .update(distilledKnowledgeTable)
+              .set({
+                fact: bestFact,
+                accessCount: sql`${distilledKnowledgeTable.accessCount} + 1`,
+                updatedAt: new Date(),
+              })
+              .where(eq(distilledKnowledgeTable.id, rows[i].id));
+
+            dedupStats.ingestDeduped++;
+            dedupStats.ingestMerged++;
+            return { isDuplicate: true, canonicalId: rows[i].id, similarity: sim, action: "merged" };
+          }
         }
       }
     }
