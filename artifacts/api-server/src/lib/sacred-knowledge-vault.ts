@@ -7,7 +7,7 @@ export interface SacredKnowledgeEntry {
   title: string;
   content: string;
   source: string;
-  classification: "esoteric" | "marian" | "vatican" | "secret-society" | "deep-web" | "hermetic" | "alchemical" | "gnostic" | "vedic" | "kabbalistic" | "templar" | "rosicrucian" | "masonic" | "sufi" | "mystical" | "apocryphal" | "prophetic" | "astronomical" | "quantum-sacred";
+  classification: "esoteric" | "marian" | "vatican" | "secret-society" | "deep-web" | "hermetic" | "alchemical" | "gnostic" | "vedic" | "kabbalistic" | "templar" | "rosicrucian" | "masonic" | "sufi" | "mystical" | "apocryphal" | "prophetic" | "astronomical" | "quantum-sacred" | "psionic";
   sacredFrequency?: number;
   sacredGeometry?: string;
   dimension?: string;
@@ -178,6 +178,24 @@ export const SACRED_CATEGORIES = {
       "Water Memory (Emoto)", "Unified Field Theory & Consciousness",
     ],
   },
+  "psionics-radionics": {
+    title: "Psionics & Radionics",
+    description: "Mind-power amplified through instruments — telepathy, psychokinesis, radionic broadcasting, and thought-form engineering",
+    icon: "radio",
+    color: "electric-blue",
+    subcategories: [
+      "Elementary Psionics — Telepathy & Psychokinesis",
+      "Radionic Instruments — Rate Dials & Witness Plates",
+      "Psionic Amplification — Helmets & Crystal Circuits",
+      "Thought-Form Engineering — Creation & Deployment",
+      "Psionic Magick — Ritual Integration & Sigil Broadcasting",
+      "Psionic Grimoire — Entity Contact & Spirit Communication",
+      "Remote Influence — Distant Healing & Mind-to-Mind",
+      "Cosimano Method — Uncle Chuckie's Techniques",
+      "Orgone Science — Reich's Life Energy Research",
+      "Radionic Rate Mathematics — Base-10 Encoding",
+    ],
+  },
 };
 
 export const SACRED_KNOWLEDGE_ENTRIES: SacredKnowledgeEntry[] = [
@@ -340,6 +358,86 @@ export const SACRED_KNOWLEDGE_ENTRIES: SacredKnowledgeEntry[] = [
     source: "Dr. Leonard Horowitz, Dr. Glen Rein (HeartMath Institute)", classification: "quantum-sacred",
     sacredFrequency: 528, sacredGeometry: "Hexagon", dimension: "Etheric Plane",
     confidenceScore: 85, scrapeDepth: "deep",
+  },
+  {
+    id: "SK021", category: "psionics-radionics", subcategory: "Elementary Psionics — Telepathy & Psychokinesis",
+    title: "Elementary Psionics — The Foundation of Mind-Power",
+    content: "Charles W. Cosimano's Elementary Psionics establishes the core framework: every human mind is a transmitter-receiver operating on bioelectric carrier waves. Telepathy is the transmission of thought-patterns between minds — measurable through EEG coherence between sender and receiver (correlated gamma bursts at 40Hz+). Psychokinesis (PK) is the direct influence of mind on matter — Princeton Engineering Anomalies Research (PEAR) lab documented statistically significant PK effects over 28 years of experiments (1979-2007) with random event generators showing p < 10⁻⁷. Cosimano teaches that psychic ability is not rare talent but a trainable skill — like a muscle that strengthens with systematic exercise. Basic training involves: visualization (creating and holding mental images), concentration (focusing attention on a single point for extended periods), energy sensing (detecting the biofield of objects and people through the hands), and projection (directing mental energy toward a target). The key insight: psychic energy follows attention. Where you focus, energy flows. This is not metaphor — it is measurable bioelectromagnetics.",
+    source: "Charles W. Cosimano — Elementary Psionics", classification: "psionic",
+    sacredFrequency: 852, sacredGeometry: "Third Eye", dimension: "Mental Plane",
+    confidenceScore: 82, scrapeDepth: "deep",
+  },
+  {
+    id: "SK022", category: "psionics-radionics", subcategory: "Radionic Instruments — Rate Dials & Witness Plates",
+    title: "Radionic Instruments — Tuning the Subtle Energy Spectrum",
+    content: "Radionics uses tunable instruments to detect and broadcast subtle energies. The classic radionic box contains: rate dials (potentiometers, typically 0-10 scale) that encode target signatures as numerical sequences, a witness well (a plate or cup that holds a physical sample — hair, photograph, or written name — establishing resonant link to the target), and a stick pad (a smooth rubber or metal surface rubbed by the operator's thumb — ideomotor response causes the thumb to 'stick' when the correct rate is dialed). Albert Abrams (1863-1924) founded radionics with his Oscilloclast and Reflexophone. Ruth Drown expanded the field with her Homo-Vibra Ray instrument and introduced broadcast treatment at a distance. George de la Warr built sophisticated multi-dial instruments and produced 'radionic photographs' — images allegedly produced through radionic tuning alone. T. Galen Hieronymus patented a radionic device (US Patent 2,482,773, 1949) — the only US patent ever granted for a purely radionic instrument. The mathematical structure: each dial position represents a coordinate in an n-dimensional psionic phase-space, with the full rate sequence forming a unique address for the target's energetic signature.",
+    source: "Albert Abrams, Ruth Drown, George de la Warr, T. Galen Hieronymus", classification: "psionic",
+    sacredFrequency: 741, sacredGeometry: "Spiral", dimension: "Etheric Plane",
+    confidenceScore: 78, scrapeDepth: "deep",
+  },
+  {
+    id: "SK023", category: "psionics-radionics", subcategory: "Psionic Amplification — Helmets & Crystal Circuits",
+    title: "The Psionic Helmet — Amplifying Telepathic Output",
+    content: "Cosimano's psionic helmet is a thought-amplification device constructed from a standard hard hat lined with conductive aluminum foil and connected via wire to radionic circuitry. The helmet concentrates and directs the bioelectric emissions from the temporal and frontal lobes — the brain regions most active during telepathic transmission (temporal lobe: 852Hz resonance with third-eye chakra, frontal lobe: executive intention and will-projection). Crystal circuits integrate piezoelectric quartz points into the helmet circuitry — quartz oscillates at 32,768 Hz when electrically stimulated, providing a stable carrier frequency for psionic signals. The orgone accumulator principle (alternating layers of organic and metallic materials) is applied to the helmet's construction — organic material attracts orgone energy, metallic material reflects it inward, creating concentrated energy density. Advanced configurations include multiple quartz points arranged in sacred geometric patterns (hexagonal arrays mirroring the crystal's own molecular structure), copper wire coils wound in specific ratios (Fibonacci-based winding patterns), and grounding connections to enhance energy flow. The helmet transforms the operator from a bare transmitter to an amplified broadcasting station.",
+    source: "Charles W. Cosimano — Psionic Power, The Psionic Path", classification: "psionic",
+    sacredFrequency: 852, sacredGeometry: "Hexagon", dimension: "Mental-Etheric Plane",
+    confidenceScore: 75, scrapeDepth: "hidden",
+  },
+  {
+    id: "SK024", category: "psionics-radionics", subcategory: "Thought-Form Engineering — Creation & Deployment",
+    title: "Thought-Form Engineering — Building Autonomous Psychic Constructs",
+    content: "Thought-forms (also called tulpas, servitors, or egregores depending on tradition) are semi-autonomous psychic constructs created through concentrated visualization and will. Cosimano's method: (1) Design — define the thought-form's purpose, appearance, name, and behavioral parameters. (2) Construction — enter deep meditation, visualize the form in complete detail, pour emotional energy into it, and 'breathe life' into the construct through rhythmic pranayama. (3) Charging — use a radionic box to continuously broadcast energy to the thought-form, strengthening it over days or weeks. (4) Deployment — give the thought-form its mission and release it. (5) Maintenance — periodic recharging sessions to prevent dissipation. Alexandra David-Néel documented tulpa creation in Tibetan Buddhist monasteries — monks reportedly created visible, tangible thought-forms through months of concentrated meditation. The Golden Dawn tradition formalized the creation of 'telesmatic images' — angelic or elemental forms built from Hebrew letter-correspondences. Dion Fortune described psychic attacks via projected thought-forms in 'Psychic Self-Defence' (1930). The mathematical model: a thought-form is an information pattern with allocated energy — it persists as long as energy input exceeds entropic dissipation. E(thought-form) = Σ(concentration × duration × emotional_intensity) - entropy_loss.",
+    source: "Charles W. Cosimano, Alexandra David-Néel, Dion Fortune", classification: "psionic",
+    sacredFrequency: 528, sacredGeometry: "Tetrahedron", dimension: "Astral Plane",
+    confidenceScore: 80, scrapeDepth: "deep",
+  },
+  {
+    id: "SK025", category: "psionics-radionics", subcategory: "Psionic Magick — Ritual Integration & Sigil Broadcasting",
+    title: "Psionic Magick — Where Technology Meets the Arcane",
+    content: "Cosimano's Psionic Magick bridges traditional ceremonial magic with radionic technology. Sigil magick (Austin Osman Spare's method) creates symbolic condensations of desire — psionics amplifies this by broadcasting the sigil's pattern through a radionic box, replacing the magician's personal energy expenditure with instrument-amplified transmission. Talismanic radionics: a talisman (charged symbolic object) is placed on the witness plate as a continuous broadcaster — the radionic instrument maintains and amplifies the talisman's programmed intention 24/7 without the operator's conscious attention. Ritual integration: traditional circle-casting, invocations, and banishings provide the psychic 'software' (programming the intention), while the radionic setup provides the 'hardware' (amplification and sustained transmission). Cosimano's key innovation: separating the energy source from the operator. Traditional magic exhausts the magician — psionic magick uses instruments to draw and direct energy, so the operator functions as programmer rather than battery. Planetary correspondences map to specific dial settings: Saturn (grounding, binding) = low rates, Jupiter (expansion, abundance) = mid-high rates, Mars (force, action) = sharp angular rates. The system 'speaks in math' — every magical operation reduces to a set of numerical coordinates in psionic phase-space.",
+    source: "Charles W. Cosimano — Psionic Magick", classification: "psionic",
+    sacredFrequency: 741, sacredGeometry: "Pentagram", dimension: "Astral-Mental Plane",
+    confidenceScore: 77, scrapeDepth: "hidden",
+  },
+  {
+    id: "SK026", category: "psionics-radionics", subcategory: "Psionic Grimoire — Entity Contact & Spirit Communication",
+    title: "The Psionic Grimoire — Instrument-Mediated Spirit Contact",
+    content: "Cosimano's Psionic Grimoire adapts traditional grimoire practices (the Lesser Key of Solomon, the Grimorium Verum, the Arbatel) for psionic operation. Rather than elaborate ritual preparations (fasting, robes, consecrated circles), the psionic approach uses radionic tuning to establish contact frequencies with non-physical entities. Pendulum protocols provide binary communication (yes/no via swing direction) and can be extended to alphabetic communication through letter-boards — the pendulum responds to ideomotor signals amplified by the operator's subconscious connection to the entity. The psionic approach to Goetic evocation replaces physical manifestation with telepathic contact — the operator tunes to the entity's rate (each of the 72 Goetic spirits has a unique radionic signature), establishes link via the witness plate (traditionally the spirit's seal drawn on the witness), and communicates through the pendulum or direct telepathic impression. Cosimano's safety principle: the radionic box functions as a natural 'circle of protection' — the instrument mediates the contact, preventing direct psychic intrusion. The mathematical model treats entities as persistent information patterns occupying specific coordinates in a multi-dimensional frequency space — 'tuning in' to an entity is literally dialing its address.",
+    source: "Charles W. Cosimano — Psionic Grimoire", classification: "psionic",
+    sacredFrequency: 396, sacredGeometry: "Triangle of Art", dimension: "Astral Plane",
+    confidenceScore: 72, scrapeDepth: "vault",
+  },
+  {
+    id: "SK027", category: "psionics-radionics", subcategory: "Remote Influence — Distant Healing & Mind-to-Mind",
+    title: "Remote Influence — Psionic Action at a Distance",
+    content: "Remote influence is the cornerstone application of psionics — affecting targets at any distance through radionic broadcasting. Cosimano's method: obtain a witness (photograph, hair sample, handwriting, or even a clearly visualized mental image), place it on the witness plate, tune the dials to the target's rate (using the stick pad for feedback), then overlay the intended influence pattern. Distant healing: tune to the target person's rate, then add a secondary rate for the desired health outcome — the instrument broadcasts the healing pattern continuously. The mechanism parallels quantum non-locality: once resonant link is established via the witness, distance becomes irrelevant — as in EPR entanglement, the connection is instantaneous regardless of spatial separation. Dr. William Tiller (Stanford) demonstrated that human intention can alter the pH of water at a distance through electronic devices conditioned by focused meditation — a modern radionic experiment published in peer-reviewed journals. PEAR lab's remote perception experiments showed that operators could influence random event generators from thousands of miles away with the same statistical significance as local operation. The inverse square law of classical physics does not apply to psionic transmission — this is non-local, non-electromagnetic, operating through what Rupert Sheldrake calls morphic resonance and Ervin Laszlo calls the Akashic field.",
+    source: "Charles W. Cosimano, William Tiller (Stanford), PEAR Lab", classification: "psionic",
+    sacredFrequency: 639, sacredGeometry: "Torus", dimension: "Etheric-Astral Plane",
+    confidenceScore: 79, scrapeDepth: "deep",
+  },
+  {
+    id: "SK028", category: "psionics-radionics", subcategory: "Orgone Science — Reich's Life Energy Research",
+    title: "Orgone Energy — Wilhelm Reich's Universal Life Force",
+    content: "Wilhelm Reich (1897-1957) identified orgone energy as a universal life force — measurable, concentratable, and directable. The orgone accumulator (ORAC) is constructed from alternating layers of organic material (wood, cotton) and metallic material (steel wool, aluminum foil). Organic layers attract orgone; metallic layers reflect it inward — creating a measurable temperature differential (T₀ - T = 0.5-1.5°C consistently above ambient, defying thermodynamic equilibrium). Reich documented this across thousands of experiments at his Orgonon laboratory in Rangeley, Maine. The FDA ordered all orgone accumulators destroyed in 1954 and burned six tons of Reich's publications — the largest act of book-burning in American history. The cloudbuster (an array of metal pipes grounded to water) allegedly affects weather patterns by drawing or redirecting orgone streams in the atmosphere — documented in Reich's 'Contact with Space' (1957). Cosimano integrates orgone principles into psionic instruments: the helmet uses ORAC-style layering to concentrate bioenergy around the operator's head, and radionic boxes incorporate orgone-accumulating materials to boost signal strength. DOR (Deadly Orgone Radiation) is stagnant, toxic orgone — the psionic operator must maintain clean, flowing energy in their workspace and instruments.",
+    source: "Wilhelm Reich — The Function of the Orgasm, Character Analysis, Contact with Space", classification: "psionic",
+    sacredFrequency: 417, sacredGeometry: "Spiral", dimension: "Etheric Plane",
+    confidenceScore: 81, scrapeDepth: "deep",
+  },
+  {
+    id: "SK029", category: "psionics-radionics", subcategory: "Radionic Rate Mathematics — Base-10 Encoding",
+    title: "Radionic Rate Mathematics — Speaking in Numbers",
+    content: "Radionic rates encode the energetic signature of any target — person, condition, substance, or concept — as a sequence of numerical values across the full 0-9 decimal space. Unlike binary computing (0 or 1), radionic mathematics operates in base-10, utilizing the complete numerical spectrum to encode infinitely nuanced patterns. A typical rate consists of 3-8 dial positions, each set between 0.0 and 10.0 with precision to one decimal place — creating a mathematical address in n-dimensional psionic phase-space. The total address space for an 8-dial instrument with 0.1 precision is 100⁸ = 10¹⁶ unique positions — sufficient to uniquely identify every object, organism, and concept on Earth. Rate families share common prefixes: health conditions cluster in certain numerical regions, emotional states in others, spiritual frequencies in others — the rate-space has topological structure. The Hieronymus Eloptic Energy formula relates the rate to physical measurement: R = f(λ, θ, Φ) where λ is wavelength, θ is angular displacement, and Φ is phase. Cosimano's contribution: rates are not arbitrary — they emerge from the interaction between the operator's consciousness and the target's energetic signature, mediated through the stick-pad's ideomotor response. The rate IS the mathematics of consciousness interfacing with reality. This is what it means for the system to 'speak in math' — every psionic operation is fundamentally a mathematical operation in phase-space.",
+    source: "T. Galen Hieronymus, Charles W. Cosimano, Malcolm Rae", classification: "psionic",
+    sacredFrequency: 963, sacredGeometry: "Cube", dimension: "Mathematical Plane",
+    confidenceScore: 76, scrapeDepth: "hidden",
+  },
+  {
+    id: "SK030", category: "psionics-radionics", subcategory: "Cosimano Method — Uncle Chuckie's Techniques",
+    title: "The Cosimano Method — Uncle Chuckie's Unified Psionic System",
+    content: "Charles W. Cosimano ('Uncle Chuckie') unified disparate psionic traditions into a coherent, practical system accessible to anyone willing to practice. His core methodology: (1) Meditation — daily practice to quiet the mind and develop concentration (minimum 20 minutes). (2) Energy work — sensing and directing bioelectric energy through the hands and body, building the 'psi muscle.' (3) Instrument construction — building your own radionic boxes, helmets, and amplifiers from inexpensive materials (the device itself is secondary; the operator's trained consciousness is primary). (4) Rate-setting — learning to use the stick pad for ideomotor feedback, developing sensitivity to the subtle 'stick' response. (5) Witness selection — choosing appropriate witnesses for maximum resonant link to targets. (6) Broadcasting — combining meditation, visualization, and radionic transmission for sustained influence. (7) Thought-form creation — building semi-autonomous psychic constructs for specific tasks. (8) Integration with ceremonial traditions — using psionic amplification to enhance traditional magical operations. Cosimano's philosophical position: psionics is ethically neutral — it is a technology of consciousness, like electricity. The operator bears moral responsibility for how it is used. His books are deliberately informal, humorous, and accessible — stripping away the mystical pretension that surrounds most occult instruction. Key teaching: 'The machine does nothing. YOU do everything. The machine just helps you do it better.'",
+    source: "Charles W. Cosimano — Complete Works", classification: "psionic",
+    sacredFrequency: 963, sacredGeometry: "Merkaba", dimension: "All Planes",
+    confidenceScore: 84, scrapeDepth: "archive",
   },
 ];
 
