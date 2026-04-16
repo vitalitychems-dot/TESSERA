@@ -22,6 +22,7 @@ const StaticFallback = (
       inset: 0,
       zIndex: 0,
       background: "radial-gradient(ellipse at 30% 40%, #1a0a3e 0%, #0d0628 30%, #050215 70%, #010005 100%)",
+      pointerEvents: "none",
     }}
   />
 );
@@ -388,6 +389,7 @@ function HyperdimensionalCanvas() {
         zIndex: 0,
         width: "100%",
         height: "100%",
+        pointerEvents: "none",
       }}
     />
   );

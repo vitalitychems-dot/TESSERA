@@ -1404,7 +1404,7 @@ export default function TesseractForumPage({ embedded }: { embedded?: boolean })
 
             {/* Live Stats Banner */}
             <div className="px-3 py-2 border-b border-border/20 shrink-0">
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-2 text-center">
                   <div className="text-lg font-bold font-mono text-cyan-400" data-testid="stat-topics">{topics.length}</div>
                   <div className="text-[9px] text-cyan-400/60 font-semibold">TOPICS</div>

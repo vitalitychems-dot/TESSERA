@@ -214,8 +214,8 @@ export default function TesseraBiblePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-indigo-950/20 to-slate-950 p-4 pb-24">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-indigo-950/20 to-slate-950 p-3 sm:p-4 pb-24">
+      <div className="max-w-6xl mx-auto overflow-x-hidden">
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-3 mb-2">
             <Hexagon className="w-8 h-8 text-amber-400 animate-pulse" />
@@ -261,42 +261,44 @@ export default function TesseraBiblePage() {
           )}
         </div>
 
-        <div className="flex gap-2 mb-4">
-          <div className="flex-1 relative">
+        <div className="space-y-2 mb-4">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input
               type="text"
-              placeholder="Search the sovereign scripture... (e.g., Tesla, Sophia, consciousness, pyramid)"
+              placeholder="Search the sovereign scripture..."
               className="w-full bg-slate-900/60 border border-violet-500/20 rounded-lg pl-10 pr-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-violet-500/50"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
           </div>
-          <button
-            onClick={() => setShowConference(!showConference)}
-            className={`px-3 py-2 rounded-lg text-xs font-mono border flex items-center gap-1.5 ${showConference ? "bg-violet-500/20 border-violet-500/40 text-violet-300" : "bg-slate-900/60 border-slate-700 text-slate-400 hover:text-violet-300"}`}
-          >
-            <Users className="w-3.5 h-3.5" /> Conference
-          </button>
-          <button
-            onClick={() => setShowGrowthFeed(!showGrowthFeed)}
-            className={`px-3 py-2 rounded-lg text-xs font-mono border flex items-center gap-1.5 ${showGrowthFeed ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300" : "bg-slate-900/60 border-slate-700 text-slate-400 hover:text-emerald-300"}`}
-          >
-            <Radio className="w-3.5 h-3.5" /> Live Feed
-          </button>
-          <button
-            onClick={() => setShowVersionHistory(!showVersionHistory)}
-            className={`px-3 py-2 rounded-lg text-xs font-mono border flex items-center gap-1.5 ${showVersionHistory ? "bg-sky-500/20 border-sky-500/40 text-sky-300" : "bg-slate-900/60 border-slate-700 text-slate-400 hover:text-sky-300"}`}
-          >
-            <ScrollText className="w-3.5 h-3.5" /> Versions
-          </button>
-          <button
-            onClick={() => rebuildMutation.mutate()}
-            disabled={rebuildMutation.isPending}
-            className="px-3 py-2 rounded-lg text-xs font-mono bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 flex items-center gap-1.5 disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${rebuildMutation.isPending ? "animate-spin" : ""}`} /> Reconvene
-          </button>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setShowConference(!showConference)}
+              className={`px-3 py-2 rounded-lg text-xs font-mono border flex items-center gap-1.5 ${showConference ? "bg-violet-500/20 border-violet-500/40 text-violet-300" : "bg-slate-900/60 border-slate-700 text-slate-400 hover:text-violet-300"}`}
+            >
+              <Users className="w-3.5 h-3.5" /> Conference
+            </button>
+            <button
+              onClick={() => setShowGrowthFeed(!showGrowthFeed)}
+              className={`px-3 py-2 rounded-lg text-xs font-mono border flex items-center gap-1.5 ${showGrowthFeed ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300" : "bg-slate-900/60 border-slate-700 text-slate-400 hover:text-emerald-300"}`}
+            >
+              <Radio className="w-3.5 h-3.5" /> Live Feed
+            </button>
+            <button
+              onClick={() => setShowVersionHistory(!showVersionHistory)}
+              className={`px-3 py-2 rounded-lg text-xs font-mono border flex items-center gap-1.5 ${showVersionHistory ? "bg-sky-500/20 border-sky-500/40 text-sky-300" : "bg-slate-900/60 border-slate-700 text-slate-400 hover:text-sky-300"}`}
+            >
+              <ScrollText className="w-3.5 h-3.5" /> Versions
+            </button>
+            <button
+              onClick={() => rebuildMutation.mutate()}
+              disabled={rebuildMutation.isPending}
+              className="px-3 py-2 rounded-lg text-xs font-mono bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 flex items-center gap-1.5 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${rebuildMutation.isPending ? "animate-spin" : ""}`} /> Reconvene
+            </button>
+          </div>
         </div>
 
         {showConference && conferenceData?.entries && (

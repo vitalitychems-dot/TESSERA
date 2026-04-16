@@ -1185,7 +1185,7 @@ function InventionsTab() {
         <p className="text-[11px] text-muted-foreground mb-3">
           Autonomous agents continuously propose, debate, and build improvements to the Tessera system. Each invention goes through council review before implementation.
         </p>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div className="text-center p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
             <div className="text-lg font-bold font-mono text-blue-400">{proposed.length}</div>
             <div className="text-[9px] text-muted-foreground">Proposed</div>

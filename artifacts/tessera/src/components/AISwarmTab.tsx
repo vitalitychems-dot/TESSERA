@@ -212,7 +212,7 @@ function RoutingGraphViz() {
         <div className="flex justify-center mb-1">
           <div className="w-px h-4 bg-emerald-500/30" />
         </div>
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
           {agentNodes.map((node: any) => {
             const DomainIcon = DOMAIN_ICONS[node.domain] || Brain;
             const dClass = DOMAIN_COLORS[node.domain] || "text-slate-400 border-slate-500/30 bg-slate-500/5";
@@ -419,7 +419,7 @@ export default function AISwarmTab() {
                 {activeTask.status.toUpperCase()}
               </Badge>
             </div>
-            <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="grid grid-cols-3 gap-2 text-center max-w-full">
               <div className="bg-[#080c14] rounded-lg p-2">
                 <div className="text-sm font-bold text-emerald-400">{completedAgents.length}</div>
                 <div className="text-[10px] text-slate-500">Complete</div>

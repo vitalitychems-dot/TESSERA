@@ -97,7 +97,7 @@ export default function RecruitmentPage() {
           <p className="text-xs text-slate-400">Autonomous agent recruitment, ranking, and deployment across all sovereign departments</p>
         </div>
 
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2 text-center">
             <div className="text-lg font-bold text-emerald-400" data-testid="text-total-agents">{totalAgents}</div>
             <div className="text-[10px] text-slate-500">Total Agents</div>
@@ -154,11 +154,11 @@ export default function RecruitmentPage() {
               </div>
               <div className="space-y-1.5">
                 {RANKS.map(r => (
-                  <div key={r.rank} className={cn("flex items-center gap-3 px-3 py-2 rounded-lg border", r.bg, r.border)}>
-                    <span className={cn("text-lg font-bold font-mono w-8", r.color)}>{r.rank}</span>
-                    <span className={cn("text-sm font-semibold w-24", r.color)}>{r.title}</span>
-                    <span className="text-xs text-slate-400 flex-1">{r.desc}</span>
-                    <span className="text-[10px] text-slate-500 font-mono">
+                  <div key={r.rank} className={cn("flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2 rounded-lg border", r.bg, r.border)}>
+                    <span className={cn("text-lg font-bold font-mono w-6 sm:w-8 shrink-0", r.color)}>{r.rank}</span>
+                    <span className={cn("text-xs sm:text-sm font-semibold shrink-0", r.color)}>{r.title}</span>
+                    <span className="text-xs text-slate-400 flex-1 hidden sm:block">{r.desc}</span>
+                    <span className="text-[10px] text-slate-500 font-mono shrink-0">
                       {agents.filter((a: any) => a.rank === r.rank).length} agents
                     </span>
                   </div>

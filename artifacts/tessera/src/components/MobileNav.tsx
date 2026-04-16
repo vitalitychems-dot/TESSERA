@@ -221,7 +221,7 @@ export default function MobileNav() {
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent" />
 
         <div
-          className="grid grid-cols-4"
+          className="flex overflow-x-auto scrollbar-none"
           style={{ height: 56 }}
         >
           <style>{`[data-testid="mobile-nav"] div::-webkit-scrollbar { display: none; }`}</style>
@@ -245,7 +245,7 @@ export default function MobileNav() {
                   }
                 }}
                 className={cn(
-                  "flex flex-col items-center justify-center relative",
+                  "flex flex-col items-center justify-center relative flex-1 min-w-[52px]",
                   "active:scale-95 transition-all duration-150",
                   "touch-manipulation select-none"
                 )}

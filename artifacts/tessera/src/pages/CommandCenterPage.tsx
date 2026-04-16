@@ -75,8 +75,8 @@ export default function CommandCenterPage() {
     <div className="p-4 pb-20 max-w-5xl mx-auto">
       <PageHeader icon={Terminal} title="Command Center" subtitle="Sovereign system command execution and monitoring" iconColor="text-cyan-400" />
 
-      <div className="flex gap-4 mt-5">
-        <div className="w-72 shrink-0 space-y-1.5">
+      <div className="flex flex-col md:flex-row gap-4 mt-5">
+        <div className="w-full md:w-72 md:shrink-0 space-y-1.5">
           <div className="text-[10px] text-slate-500 font-mono tracking-widest mb-2">COMMAND REGISTRY</div>
           {COMMANDS.map(cmd => {
             const StatusIcon = STATUS_ICONS[cmd.status];

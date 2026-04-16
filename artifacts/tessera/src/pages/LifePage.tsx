@@ -167,8 +167,7 @@ export default function LifePage({ embedded }: { embedded?: boolean }) {
     );
     if (embedded) return innerContent;
     return (
-      <div className="flex h-full w-full">
-        
+      <div className="flex min-h-full w-full">
         {innerContent}
       </div>
     );
@@ -205,7 +204,7 @@ export default function LifePage({ embedded }: { embedded?: boolean }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {[
             { label: "AGENTS", value: String(world.currentActivities?.length || world.population || 0), color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/20" },
             { label: "EPOCH", value: String(world.epoch ?? "∞"), color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
@@ -313,8 +312,7 @@ export default function LifePage({ embedded }: { embedded?: boolean }) {
 
   if (embedded) return mainContent;
   return (
-    <div className="flex h-full w-full">
-      
+    <div className="flex min-h-full w-full">
       {mainContent}
     </div>
   );
