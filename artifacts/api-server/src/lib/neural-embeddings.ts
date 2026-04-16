@@ -186,6 +186,8 @@ export function getEmbeddingStats() {
   const neuralRate = total > 0 ? Math.round((embeddingMetrics.neuralCalls / total) * 1000) / 1000 : 0;
   const healthy = total === 0 || neuralRate >= 0.5;
   const dimStats = embeddingDimensionalCache.getStats();
+  const avoidedEmbeddingCalls = embeddingMetrics.cacheHits + embeddingMetrics.crossDimensionHits;
+  const estimatedTimeSavedMs = avoidedEmbeddingCalls * 50;
   return {
     cacheSize: dimStats.totalSize,
     dimension: EMBEDDING_DIM,
@@ -200,5 +202,6 @@ export function getEmbeddingStats() {
     healthy,
     healthWarning: !healthy ? `Neural embedding rate ${(neuralRate * 100).toFixed(1)}% is below 50% threshold — semantic quality degraded` : null,
     dimensionalCache: dimStats,
+    speedup: { avoidedEmbeddingCalls, estimatedTimeSavedMs },
   };
 }

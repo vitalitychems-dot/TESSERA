@@ -226,11 +226,14 @@ export async function invalidateCache(): Promise<void> {
   }
 }
 
-export function getCacheStats(): CacheStats & { ttlSeconds: number; dimensionalHits: number; crossDimensionHits: number; dimensionalCache: ReturnType<typeof semanticDimensionalCache.getStats> } {
+export function getCacheStats(): CacheStats & { ttlSeconds: number; dimensionalHits: number; crossDimensionHits: number; dimensionalCache: ReturnType<typeof semanticDimensionalCache.getStats>; speedup: { avoidedDbQueries: number; estimatedTimeSavedMs: number } } {
+  const avoidedDbQueries = stats.dimensionalHits + stats.crossDimensionHits;
+  const estimatedTimeSavedMs = avoidedDbQueries * 15;
   return {
     ...stats,
     ttlSeconds: DEFAULT_TTL_SECONDS,
     dimensionalCache: semanticDimensionalCache.getStats(),
+    speedup: { avoidedDbQueries, estimatedTimeSavedMs },
   };
 }
 
