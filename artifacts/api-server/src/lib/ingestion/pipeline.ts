@@ -192,6 +192,17 @@ export async function ingestItem(item: NormalizedItem): Promise<{ ingested: bool
     return { ingested: false, reason: "empty content" };
   }
 
+  const preStoreHash = crypto.createHash("sha256").update(sanitizedItem.content).digest("hex");
+
+  const expectedHash = typeof sanitizedItem.metadata?.expectedChecksum === "string"
+    ? sanitizedItem.metadata.expectedChecksum
+    : null;
+
+  if (expectedHash && expectedHash !== preStoreHash) {
+    addAuditEntry(sanitizedItem.source, "rejected", `Integrity mismatch: expected ${expectedHash.slice(0, 16)}… got ${preStoreHash.slice(0, 16)}…`, preStoreHash);
+    return { ingested: false, reason: "integrity-mismatch" };
+  }
+
   const semanticDup = await checkDuplicateBeforeIngest(
     text,
     "vector_embeddings",
@@ -210,17 +221,6 @@ export async function ingestItem(item: NormalizedItem): Promise<{ ingested: bool
   const contentHash = hashContent(text);
   if (await isDuplicate(contentHash)) {
     return { ingested: false, reason: "duplicate" };
-  }
-
-  const preStoreHash = crypto.createHash("sha256").update(sanitizedItem.content).digest("hex");
-
-  const expectedHash = typeof sanitizedItem.metadata?.expectedChecksum === "string"
-    ? sanitizedItem.metadata.expectedChecksum
-    : null;
-
-  if (expectedHash && expectedHash !== preStoreHash) {
-    addAuditEntry(sanitizedItem.source, "rejected", `Integrity mismatch: expected ${expectedHash.slice(0, 16)}… got ${preStoreHash.slice(0, 16)}…`, preStoreHash);
-    return { ingested: false, reason: "integrity-mismatch" };
   }
 
   let embeddingId: number | undefined;
