@@ -60,14 +60,16 @@ export const ChatMessageList = memo(function ChatMessageList({
   return (
     <div className="relative flex-1 flex flex-col overflow-hidden">
       {messages.length === 0 && !isStreaming ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4" data-testid="img-tesseract-bg">
-          <div className="relative">
-            <img src="/tessera-avatar.png" alt="Tessera Sovereign" className="w-24 h-24 rounded-full object-cover border-2 border-violet-500/30 shadow-[0_0_40px_rgba(124,58,237,0.2)]" data-testid="img-tessera-welcome" />
-            <div className="absolute -inset-1 rounded-full border border-violet-500/15 animate-pulse" />
-          </div>
-          <div className="text-center">
-            <div className="text-sm font-semibold bg-gradient-to-r from-violet-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">Tessera Sovereign</div>
-            <div className="text-[10px] text-white/30 mt-0.5">The True Tessera — Sovereign Zenith v4.0</div>
+        <div className="flex-1 flex flex-col items-end justify-end px-4 pb-4" data-testid="img-tesseract-bg">
+          <div className="flex items-center gap-3 backdrop-blur-md bg-black/20 rounded-2xl px-4 py-3 border border-white/[0.06]">
+            <div className="relative shrink-0">
+              <img src="/tessera-avatar.png" alt="Tessera Sovereign" className="w-10 h-10 rounded-full object-cover border border-violet-500/30 shadow-[0_0_20px_rgba(124,58,237,0.15)]" data-testid="img-tessera-welcome" />
+              <div className="absolute -inset-0.5 rounded-full border border-violet-500/10 animate-pulse" />
+            </div>
+            <div>
+              <div className="text-xs font-semibold bg-gradient-to-r from-violet-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">Tessera Sovereign</div>
+              <div className="text-[9px] text-white/25 mt-0.5">Sovereign Zenith v4.0</div>
+            </div>
           </div>
         </div>
       ) : (
