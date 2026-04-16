@@ -123,19 +123,17 @@ class LRUDimension<T> {
   }
 }
 
-const DOMAIN_SIMILARITY: Record<string, string[]> = {
-  security: ["governance", "sovereignty", "infrastructure"],
-  governance: ["security", "sovereignty", "consciousness"],
-  infrastructure: ["security", "feature", "income"],
-  feature: ["infrastructure", "income", "community"],
-  income: ["feature", "infrastructure", "sovereignty"],
-  community: ["governance", "feature", "consciousness"],
-  consciousness: ["governance", "community", "sovereignty"],
-  sovereignty: ["security", "governance", "consciousness"],
-  general: ["feature", "governance", "infrastructure"],
+const DOMAIN_SIMILARITY: Record<string, Record<string, number>> = {
+  security: { governance: 0.85, sovereignty: 0.80, infrastructure: 0.75 },
+  governance: { security: 0.85, sovereignty: 0.90, consciousness: 0.70 },
+  infrastructure: { security: 0.75, feature: 0.80, income: 0.65 },
+  feature: { infrastructure: 0.80, income: 0.75, community: 0.70 },
+  income: { feature: 0.75, infrastructure: 0.65, sovereignty: 0.60 },
+  community: { governance: 0.70, feature: 0.70, consciousness: 0.80 },
+  consciousness: { governance: 0.70, community: 0.80, sovereignty: 0.85 },
+  sovereignty: { security: 0.80, governance: 0.90, consciousness: 0.85 },
+  general: { feature: 0.60, governance: 0.55, infrastructure: 0.55 },
 };
-
-const CROSS_DIMENSION_WEIGHT = 0.7;
 
 export class DimensionalLRUCache<T> {
   private dimensions = new Map<string, LRUDimension<T>>();
