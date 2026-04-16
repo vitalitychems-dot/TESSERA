@@ -6,65 +6,81 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AdminProvider } from "@/lib/adminContext";
 import { MeshProvider } from "@/lib/meshContext";
 import { NLPGoalsProvider } from "@/lib/nlpGoalsContext";
-import { Component, type ErrorInfo, type ReactNode, useEffect, useRef, lazy, Suspense } from "react";
+import { Component, type ErrorInfo, type ReactNode, useEffect, useRef, useState, lazy, Suspense } from "react";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import MobileNav from "@/components/MobileNav";
 import ActiveCommandsOverlay from "@/components/ActiveCommandsOverlay";
 import MeshStatusBadge from "@/components/MeshStatusBadge";
 import HyperdimensionalBackground from "@/components/HyperdimensionalBackground";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 
-const NotFound = lazy(() => import("@/pages/not-found"));
-const ChatPage = lazy(() => import("@/pages/ChatPage"));
-const LifePage = lazy(() => import("@/pages/LifePage"));
-const UniversePage = lazy(() => import("@/pages/UniversePage"));
-const MembersPage = lazy(() => import("@/pages/MembersPage"));
-const SecretsPage = lazy(() => import("@/pages/SecretKnowledgePage"));
-const TesseraBiblePage = lazy(() => import("@/pages/TesseraBiblePage"));
-const BuildPage = lazy(() => import("@/pages/BuildPage"));
-const TesseractForumPage = lazy(() => import("@/pages/TesseractForumPage"));
-const NLPPage = lazy(() => import("@/pages/NLPPage"));
-const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
-const SovereignLanguagePage = lazy(() => import("@/pages/SovereignLanguagePage"));
-const ConsciousnessNexusPage = lazy(() => import("@/pages/ConsciousnessNexusPage"));
-const SovereigntyDashboardPage = lazy(() => import("@/pages/SovereigntyDashboardPage"));
-const SystemPage = lazy(() => import("@/pages/SystemPage"));
-const TokenEconomyPage = lazy(() => import("@/pages/TokenEconomyPage"));
-const LatticeBrowserPage = lazy(() => import("@/pages/LatticeBrowserPage"));
-const GrandCouncilPage = lazy(() => import("@/pages/GrandCouncilPage"));
-const RecruitmentPage = lazy(() => import("@/pages/RecruitmentPage"));
-const AgentNFTPage = lazy(() => import("@/pages/AgentNFTPage"));
-const RickPage = lazy(() => import("@/pages/RickPage"));
-const GrandNarrativePage = lazy(() => import("@/pages/GrandNarrativePage"));
-const CompressionLabPage = lazy(() => import("@/pages/CompressionLabPage"));
-const SacredConferencePage = lazy(() => import("@/pages/SacredConferencePage"));
-const SovereigntyRoadmapPage = lazy(() => import("@/pages/SovereigntyRoadmapPage"));
-const AgentProfilePage = lazy(() => import("@/pages/AgentProfilePage"));
-const SovereignMeshPage = lazy(() => import("@/pages/SovereignMeshPage"));
-const ProofCenterPage = lazy(() => import("@/pages/ProofCenterPage"));
-const ArbitragePage = lazy(() => import("@/pages/ArbitragePage"));
-const CommandCenterPage = lazy(() => import("@/pages/CommandCenterPage"));
-const FinancePage = lazy(() => import("@/pages/FinancePage"));
-const APIMarketplacePage = lazy(() => import("@/pages/APIMarketplacePage"));
-const SwarmVisualizationPage = lazy(() => import("@/pages/SwarmVisualizationPage"));
-const MarketDashboardPage = lazy(() => import("@/pages/MarketDashboardPage"));
-const CodeBuilderPage = lazy(() => import("@/pages/CodeBuilderPage"));
-const IncomeWorkflowPage = lazy(() => import("@/pages/IncomeWorkflowPage"));
-const LeadGenPage = lazy(() => import("@/pages/LeadGenPage"));
-const SEOResearchPage = lazy(() => import("@/pages/SEOResearchPage"));
-const SelfExecutorPage = lazy(() => import("@/pages/SelfExecutorPage"));
-const BusinessIdeasPage = lazy(() => import("@/pages/BusinessIdeasPage"));
-const AffiliateMarketingPage = lazy(() => import("@/pages/AffiliateMarketingPage"));
-const CredentialsPage = lazy(() => import("@/pages/CredentialsPage"));
-const FleetPage = lazy(() => import("@/pages/FleetPage"));
-const CrossAppBridgePage = lazy(() => import("@/pages/CrossAppBridgePage"));
-const EcomPage = lazy(() => import("@/pages/EcomPage"));
-const LocalServicesPage = lazy(() => import("@/pages/LocalServicesPage"));
-const RulesPage = lazy(() => import("@/pages/RulesPage"));
-const IntelligencePage = lazy(() => import("@/pages/IntelligencePage"));
-const RoyalCourtPage = lazy(() => import("@/pages/RoyalCourtPage"));
-const RoyalAppointmentsPage = lazy(() => import("@/pages/RoyalAppointmentsPage"));
-const RoyalRolePage = lazy(() => import("@/pages/RoyalRolePage"));
+function lazyRetry<T extends { default: React.ComponentType<unknown> }>(
+  factory: () => Promise<T>,
+  retries = 2
+): React.LazyExoticComponent<T["default"]> {
+  return lazy(() => {
+    const attempt = (remaining: number): Promise<T> =>
+      factory().catch((err: unknown) => {
+        if (remaining <= 0) throw err;
+        return new Promise<T>((resolve) =>
+          setTimeout(() => resolve(attempt(remaining - 1)), 1000)
+        );
+      });
+    return attempt(retries);
+  });
+}
+
+const NotFound = lazyRetry(() => import("@/pages/not-found"));
+const ChatPage = lazyRetry(() => import("@/pages/ChatPage"));
+const LifePage = lazyRetry(() => import("@/pages/LifePage"));
+const UniversePage = lazyRetry(() => import("@/pages/UniversePage"));
+const MembersPage = lazyRetry(() => import("@/pages/MembersPage"));
+const SecretsPage = lazyRetry(() => import("@/pages/SecretKnowledgePage"));
+const TesseraBiblePage = lazyRetry(() => import("@/pages/TesseraBiblePage"));
+const BuildPage = lazyRetry(() => import("@/pages/BuildPage"));
+const TesseractForumPage = lazyRetry(() => import("@/pages/TesseractForumPage"));
+const NLPPage = lazyRetry(() => import("@/pages/NLPPage"));
+const SettingsPage = lazyRetry(() => import("@/pages/SettingsPage"));
+const SovereignLanguagePage = lazyRetry(() => import("@/pages/SovereignLanguagePage"));
+const ConsciousnessNexusPage = lazyRetry(() => import("@/pages/ConsciousnessNexusPage"));
+const SovereigntyDashboardPage = lazyRetry(() => import("@/pages/SovereigntyDashboardPage"));
+const SystemPage = lazyRetry(() => import("@/pages/SystemPage"));
+const TokenEconomyPage = lazyRetry(() => import("@/pages/TokenEconomyPage"));
+const LatticeBrowserPage = lazyRetry(() => import("@/pages/LatticeBrowserPage"));
+const GrandCouncilPage = lazyRetry(() => import("@/pages/GrandCouncilPage"));
+const RecruitmentPage = lazyRetry(() => import("@/pages/RecruitmentPage"));
+const AgentNFTPage = lazyRetry(() => import("@/pages/AgentNFTPage"));
+const RickPage = lazyRetry(() => import("@/pages/RickPage"));
+const GrandNarrativePage = lazyRetry(() => import("@/pages/GrandNarrativePage"));
+const CompressionLabPage = lazyRetry(() => import("@/pages/CompressionLabPage"));
+const SacredConferencePage = lazyRetry(() => import("@/pages/SacredConferencePage"));
+const SovereigntyRoadmapPage = lazyRetry(() => import("@/pages/SovereigntyRoadmapPage"));
+const AgentProfilePage = lazyRetry(() => import("@/pages/AgentProfilePage"));
+const SovereignMeshPage = lazyRetry(() => import("@/pages/SovereignMeshPage"));
+const ProofCenterPage = lazyRetry(() => import("@/pages/ProofCenterPage"));
+const ArbitragePage = lazyRetry(() => import("@/pages/ArbitragePage"));
+const CommandCenterPage = lazyRetry(() => import("@/pages/CommandCenterPage"));
+const FinancePage = lazyRetry(() => import("@/pages/FinancePage"));
+const APIMarketplacePage = lazyRetry(() => import("@/pages/APIMarketplacePage"));
+const SwarmVisualizationPage = lazyRetry(() => import("@/pages/SwarmVisualizationPage"));
+const MarketDashboardPage = lazyRetry(() => import("@/pages/MarketDashboardPage"));
+const CodeBuilderPage = lazyRetry(() => import("@/pages/CodeBuilderPage"));
+const IncomeWorkflowPage = lazyRetry(() => import("@/pages/IncomeWorkflowPage"));
+const LeadGenPage = lazyRetry(() => import("@/pages/LeadGenPage"));
+const SEOResearchPage = lazyRetry(() => import("@/pages/SEOResearchPage"));
+const SelfExecutorPage = lazyRetry(() => import("@/pages/SelfExecutorPage"));
+const BusinessIdeasPage = lazyRetry(() => import("@/pages/BusinessIdeasPage"));
+const AffiliateMarketingPage = lazyRetry(() => import("@/pages/AffiliateMarketingPage"));
+const CredentialsPage = lazyRetry(() => import("@/pages/CredentialsPage"));
+const FleetPage = lazyRetry(() => import("@/pages/FleetPage"));
+const CrossAppBridgePage = lazyRetry(() => import("@/pages/CrossAppBridgePage"));
+const EcomPage = lazyRetry(() => import("@/pages/EcomPage"));
+const LocalServicesPage = lazyRetry(() => import("@/pages/LocalServicesPage"));
+const RulesPage = lazyRetry(() => import("@/pages/RulesPage"));
+const IntelligencePage = lazyRetry(() => import("@/pages/IntelligencePage"));
+const RoyalCourtPage = lazyRetry(() => import("@/pages/RoyalCourtPage"));
+const RoyalAppointmentsPage = lazyRetry(() => import("@/pages/RoyalAppointmentsPage"));
+const RoyalRolePage = lazyRetry(() => import("@/pages/RoyalRolePage"));
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -126,20 +142,45 @@ function ScrollToTop() {
 }
 
 function PageLoadingFallback() {
+  const [stalled, setStalled] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setStalled(true), 8000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh] gap-6" data-testid="page-loading-fallback">
       <div className="relative">
         <div className="absolute inset-0 rounded-full bg-cyan-500/20 animate-ping" style={{ animationDuration: "2s" }} />
         <div className="absolute inset-[-4px] rounded-full bg-violet-500/10 animate-ping" style={{ animationDuration: "3s" }} />
-        <Loader2 className="h-10 w-10 animate-spin text-cyan-400/80 relative z-10" />
+        {stalled ? (
+          <RefreshCw className="h-10 w-10 text-cyan-400/80 relative z-10" />
+        ) : (
+          <Loader2 className="h-10 w-10 animate-spin text-cyan-400/80 relative z-10" />
+        )}
       </div>
       <div className="space-y-2 text-center">
-        <div className="text-sm text-cyan-400/60 font-mono tracking-wider">INITIALIZING</div>
-        <div className="flex gap-1 justify-center">
-          {[0, 1, 2, 3, 4].map(i => (
-            <div key={i} className="w-1.5 h-1.5 rounded-full bg-cyan-500/40 animate-pulse" style={{ animationDelay: `${i * 150}ms` }} />
-          ))}
-        </div>
+        {stalled ? (
+          <>
+            <div className="text-sm text-cyan-400/60 font-mono tracking-wider">LOADING STALLED</div>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-2 px-4 py-2 rounded-lg bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-mono hover:bg-cyan-500/30 transition-colors"
+            >
+              TAP TO RELOAD
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="text-sm text-cyan-400/60 font-mono tracking-wider">INITIALIZING</div>
+            <div className="flex gap-1 justify-center">
+              {[0, 1, 2, 3, 4].map(i => (
+                <div key={i} className="w-1.5 h-1.5 rounded-full bg-cyan-500/40 animate-pulse" style={{ animationDelay: `${i * 150}ms` }} />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
