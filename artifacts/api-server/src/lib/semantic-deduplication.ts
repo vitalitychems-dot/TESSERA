@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { vectorEmbeddingsTable, distilledKnowledgeTable, systemStateTable } from "@workspace/db/schema";
+import { vectorEmbeddingsTable, distilledKnowledgeTable, systemStateTable, ingestedDataTable } from "@workspace/db/schema";
 import { eq, sql, desc, gt } from "drizzle-orm";
 import { generateEmbedding, generateEmbeddingsBatch, cosineSimilarity } from "./neural-embeddings";
 import { logger } from "./logger";
@@ -257,6 +257,11 @@ async function mergeVectorCluster(cluster: DuplicateCluster): Promise<MergeResul
     redirectMap.set(makeRedirectKey("vector_embeddings", dupId), canonical.id);
 
     await db
+      .update(ingestedDataTable)
+      .set({ embeddingId: canonical.id })
+      .where(eq(ingestedDataTable.embeddingId, dupId));
+
+    await db
       .delete(vectorEmbeddingsTable)
       .where(eq(vectorEmbeddingsTable.id, dupId));
   }
@@ -397,6 +402,8 @@ export async function runDeduplicationScan(): Promise<{
 export async function checkDuplicateBeforeIngest(
   content: string,
   table: "vector_embeddings" | "distilled_knowledge" = "vector_embeddings",
+  ingestSource?: string,
+  ingestMeta?: Record<string, unknown>,
 ): Promise<{
   isDuplicate: boolean;
   canonicalId?: number;
@@ -413,6 +420,8 @@ export async function checkDuplicateBeforeIngest(
           content: vectorEmbeddingsTable.content,
           embedding: vectorEmbeddingsTable.embedding,
           accessCount: vectorEmbeddingsTable.accessCount,
+          source: vectorEmbeddingsTable.source,
+          metadata: vectorEmbeddingsTable.metadata,
         })
         .from(vectorEmbeddingsTable)
         .orderBy(desc(vectorEmbeddingsTable.createdAt))
@@ -424,14 +433,36 @@ export async function checkDuplicateBeforeIngest(
 
         const sim = cosineSimilarity(newEmbedding, emb);
         if (sim >= SIMILARITY_THRESHOLD) {
-          const bestContent = content.length > row.content.length ? content : row.content;
+          const contentChanged = content.length > row.content.length;
+          const bestContent = contentChanged ? content : row.content;
+
+          const mergedMeta: Record<string, unknown> = {
+            ...((row.metadata ?? {}) as Record<string, unknown>),
+            ...(ingestMeta ?? {}),
+            lastMergedAt: Date.now(),
+          };
+
+          const updates: Record<string, unknown> = {
+            content: bestContent,
+            accessCount: sql`${vectorEmbeddingsTable.accessCount} + 1`,
+            metadata: mergedMeta,
+            updatedAt: new Date(),
+          };
+
+          if (contentChanged) {
+            updates.embedding = await generateEmbedding(bestContent);
+          }
+
+          if (ingestSource) {
+            const existingSources = new Set<string>();
+            existingSources.add(row.source);
+            existingSources.add(ingestSource);
+            mergedMeta.mergedSources = [...existingSources];
+          }
+
           await db
             .update(vectorEmbeddingsTable)
-            .set({
-              content: bestContent,
-              accessCount: sql`${vectorEmbeddingsTable.accessCount} + 1`,
-              updatedAt: new Date(),
-            })
+            .set(updates)
             .where(eq(vectorEmbeddingsTable.id, row.id));
 
           dedupStats.ingestMerged++;
@@ -486,6 +517,73 @@ export function getDeduplicationStats() {
       ? dedupStats.duplicatesFound / Math.max(dedupStats.totalScans, 1)
       : 0,
   };
+}
+
+export async function runDeduplicationMigration(): Promise<{
+  status: "completed" | "failed";
+  vectorClusters: number;
+  knowledgeClusters: number;
+  totalMerged: number;
+  storageSaved: number;
+  durationMs: number;
+  embeddingIdRemaps: number;
+  error?: string;
+}> {
+  const start = Date.now();
+  let embeddingIdRemaps = 0;
+
+  try {
+    const preVectorCount = await db
+      .select({ cnt: sql<number>`count(*)::int` })
+      .from(vectorEmbeddingsTable);
+    const preKnowledgeCount = await db
+      .select({ cnt: sql<number>`count(*)::int` })
+      .from(distilledKnowledgeTable);
+
+    logger.info({
+      vectorEntries: preVectorCount[0]?.cnt ?? 0,
+      knowledgeEntries: preKnowledgeCount[0]?.cnt ?? 0,
+    }, "SemanticDedup Migration: starting one-time deduplication");
+
+    const result = await runDeduplicationScan();
+
+    embeddingIdRemaps = redirectMap.size;
+
+    const postVectorCount = await db
+      .select({ cnt: sql<number>`count(*)::int` })
+      .from(vectorEmbeddingsTable);
+    const postKnowledgeCount = await db
+      .select({ cnt: sql<number>`count(*)::int` })
+      .from(distilledKnowledgeTable);
+
+    logger.info({
+      preVector: preVectorCount[0]?.cnt ?? 0,
+      postVector: postVectorCount[0]?.cnt ?? 0,
+      preKnowledge: preKnowledgeCount[0]?.cnt ?? 0,
+      postKnowledge: postKnowledgeCount[0]?.cnt ?? 0,
+      merged: result.totalMerged,
+      embeddingIdRemaps,
+    }, "SemanticDedup Migration: complete");
+
+    return {
+      status: "completed",
+      ...result,
+      embeddingIdRemaps,
+    };
+  } catch (err) {
+    const msg = (err as Error).message;
+    logger.error({ err: msg }, "SemanticDedup Migration: failed");
+    return {
+      status: "failed",
+      vectorClusters: 0,
+      knowledgeClusters: 0,
+      totalMerged: 0,
+      storageSaved: 0,
+      durationMs: Date.now() - start,
+      embeddingIdRemaps,
+      error: msg,
+    };
+  }
 }
 
 export function resetDeduplicationStats(): void {
