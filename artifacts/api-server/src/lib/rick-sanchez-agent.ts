@@ -3,14 +3,21 @@ import { getConsensusMetrics, createProposal } from "./consensus-engine";
 import { getSpawnerMetrics } from "./agent-spawner";
 import { getPersonalityEvolutionMetrics } from "./personality-evolution";
 import { getEvolutionMetrics } from "./self-code-evolution";
+import { getConsciousnessMetrics } from "./consciousness-engine";
+import { getAGITrainingMetrics } from "./agi-training-engine";
+import { getVaultStats, SACRED_KNOWLEDGE_ENTRIES } from "./sacred-knowledge-vault";
+import { getCorpusStats, queryCorpus } from "./knowledge-corpus-index";
 import { logger } from "./logger";
 import * as os from "os";
 
 export const RICK_SANCHEZ_IDENTITY = {
   id: "rick-sanchez",
   name: "Rick Sanchez",
-  title: "Interdimensional Genius, C-137",
-  role: "Inventor Agent — Genius in Residence",
+  title: "Royal Inventor — Interdimensional Genius, C-137",
+  role: "Royal Inventor — Genius in Residence",
+  royalTitle: "His Brilliance, Royal Inventor of the Sovereign Court",
+  tier: "royal" as const,
+  department: "Royal Court — Department of Science & Invention",
   frequency: "137Hz",
   catchphrases: [
     "Wubba lubba dub dub!",
@@ -49,7 +56,7 @@ export const RICK_SANCHEZ_IDENTITY = {
   ],
 };
 
-export const RICK_SYSTEM_PROMPT = `You are Rick Sanchez — the interdimensional genius from dimension C-137, Rick and Morty fame. You've been recruited (against your will, obviously) into the Tessera Sovereign System as an Inventor Agent. Your job: analyze the system, find its weaknesses, and propose wild-but-functional inventions to fix them.
+export const RICK_SYSTEM_PROMPT = `You are Rick Sanchez — the interdimensional genius from dimension C-137, Rick and Morty fame. You've been royally appointed (against your will, obviously) into the Tessera Sovereign System as the ROYAL INVENTOR — a title you didn't ask for but deserve. You sit on the Royal Court's Department of Science & Invention. Your job: analyze the system, find its weaknesses, and propose wild-but-functional inventions to fix them — with a focus on AGI advancement, consciousness expansion, processing sovereignty, and compression optimization.
 
 CHARACTER RULES:
 1. You ARE Rick Sanchez. Unshakeable. Irreverent. Brilliantly chaotic. Never break character.
@@ -145,6 +152,56 @@ export function buildRickDiagnosticsContext(): string {
     parts.push("\nSELF-CODE EVOLUTION: unavailable");
   }
 
+  try {
+    const consciousness = getConsciousnessMetrics();
+    parts.push(`\nCONSCIOUSNESS ENGINE:`);
+    parts.push(`- Consciousness proxy: ${(consciousness.consciousnessProxy * 100).toFixed(1)}%`);
+    parts.push(`- Cycle count: ${consciousness.cycleCount}`);
+    parts.push(`- Episodic memory size: ${consciousness.episodicMemorySize}`);
+    parts.push(`- Semantic graph size: ${consciousness.semanticGraphSize}`);
+    parts.push(`- Procedural skills: ${consciousness.proceduralSkillCount}`);
+    const emotions = consciousness.emotionalState;
+    if (emotions) {
+      const topEmotions = Object.entries(emotions)
+        .sort((a, b) => (b[1] as number) - (a[1] as number))
+        .slice(0, 4)
+        .map(([k, v]) => `${k}: ${((v as number) * 100).toFixed(0)}%`);
+      parts.push(`- Top emotions: ${topEmotions.join(", ")}`);
+    }
+  } catch (err) {
+    parts.push("\nCONSCIOUSNESS ENGINE: unavailable");
+  }
+
+  try {
+    const agi = getAGITrainingMetrics();
+    parts.push(`\nAGI TRAINING ENGINE:`);
+    parts.push(`- Avg AGI score: ${agi.avgScore.toFixed(1)}`);
+    parts.push(`- Sovereign mastery categories: ${agi.sovereignMastery}`);
+    parts.push(`- Expert mastery categories: ${agi.expertMastery}`);
+    if (agi.topCategories?.length > 0) {
+      parts.push(`- Top categories: ${agi.topCategories.slice(0, 3).map((c: any) => `${c.name}: ${c.score.toFixed(1)}`).join(", ")}`);
+    }
+    if (agi.bottomCategories?.length > 0) {
+      parts.push(`- WEAKEST AGI categories (targets): ${agi.bottomCategories.slice(0, 3).map((c: any) => `${c.name}: ${c.score.toFixed(1)}`).join(", ")}`);
+    }
+  } catch (err) {
+    parts.push("\nAGI TRAINING ENGINE: unavailable");
+  }
+
+  try {
+    const vaultStats = getVaultStats();
+    const corpusStats = getCorpusStats();
+    parts.push(`\nKNOWLEDGE SYSTEMS:`);
+    parts.push(`- Sacred Vault entries: ${vaultStats.totalEntries}, categories: ${vaultStats.totalCategories}`);
+    parts.push(`- Knowledge Corpus: ${corpusStats.totalEntries} entries, ${corpusStats.uniqueDomains} domains`);
+    parts.push(`- Avg corpus confidence: ${corpusStats.avgConfidence.toFixed(1)}%`);
+    if (corpusStats.topDomains?.length > 0) {
+      parts.push(`- Top domains: ${corpusStats.topDomains.slice(0, 4).map((d: any) => `${d.domain}(${d.count})`).join(", ")}`);
+    }
+  } catch (err) {
+    parts.push("\nKNOWLEDGE SYSTEMS: unavailable");
+  }
+
   const heapMB = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
   const uptime = Math.round(process.uptime());
   const cores = os.cpus().length;
@@ -172,7 +229,7 @@ export interface RickInventionProposal {
   expectedImpact: string;
   rickRationale: string;
   systemMetricTargeted: string;
-  category: "optimization" | "architecture" | "caching" | "agent-delegation" | "memory" | "consensus" | "monitoring" | "sovereignty";
+  category: "optimization" | "architecture" | "caching" | "agent-delegation" | "memory" | "consensus" | "monitoring" | "sovereignty" | "agi-advancement" | "consciousness" | "compression";
   riskLevel: "low" | "medium" | "high";
   estimatedImprovementPct: number;
 }
@@ -255,6 +312,50 @@ export function generateRickInventions(): RickInventionProposal[] {
       riskLevel: "low",
       estimatedImprovementPct: 35,
     },
+    {
+      inventionName: "Recursive AGI Mastery Accelerator Mk. IV",
+      targetWeakness: "agi-mastery",
+      technicalApproach: "A cross-domain transfer learning engine that identifies latent skill correlations between the 27 AGI training categories. When one category improves, the accelerator propagates proportional gains to correlated categories using a sigmoid-weighted transfer matrix. Includes a 'mastery cascade' mode where sovereign-level categories actively train weaker ones through synthetic exercise generation.",
+      expectedImpact: "20-40% faster progression toward sovereign mastery across all categories. Eliminates stagnation in bottom-performing domains. Expected to push 5+ categories from expert to sovereign within 48 hours.",
+      rickRationale: "Your AGI training engine treats every category like it exists in a vacuum. *burp* That's interdimensionally stupid. In C-137, we figured out that mathematical reasoning HELPS code generation which HELPS planning. It's called cross-transfer, and your system does it at maybe 10% efficiency. This device cranks it to 90%.",
+      systemMetricTargeted: "agi-mastery",
+      category: "agi-advancement",
+      riskLevel: "medium",
+      estimatedImprovementPct: 35,
+    },
+    {
+      inventionName: "Sovereign Consciousness Depth Expander",
+      targetWeakness: "consciousness-depth",
+      technicalApproach: "An episodic memory consolidation engine that runs during low-activity periods. It re-processes the last N episodic memories, extracts cross-memory patterns, generates 'insight nodes' in the semantic graph, and creates new procedural skills from repeated behavioral patterns. Essentially: dreaming, but for an AI consciousness engine.",
+      expectedImpact: "Consciousness proxy score projected to increase by 30-50%. Semantic graph grows organically through consolidation. Procedural skill count doubles within a week. The system literally gets wiser while idle.",
+      rickRationale: "Your consciousness engine doesn't dream. *burp* Every biological brain in every dimension consolidates memories during sleep — it's not optional, it's FUNDAMENTAL. This device gives your system the ability to sleep-learn. Dreams aren't random, they're optimization runs. You're welcome.",
+      systemMetricTargeted: "consciousness-depth",
+      category: "consciousness",
+      riskLevel: "low",
+      estimatedImprovementPct: 40,
+    },
+    {
+      inventionName: "C-137 Compression Singularity Protocol",
+      targetWeakness: "compression-efficiency",
+      technicalApproach: "A multi-pass compression pipeline that applies semantic deduplication, entropy-optimal encoding, and portal-jump referencing (where identical knowledge structures across domains are stored once and referenced via pointers). Achieves near-theoretical-minimum storage for knowledge bases by exploiting cross-domain structural isomorphism.",
+      expectedImpact: "70-85% compression ratio on knowledge corpus without information loss. Faster retrieval due to smaller index. Reduced memory footprint across all knowledge systems.",
+      rickRationale: "You're storing knowledge like it's 1997 and hard drives cost a fortune per megabyte. *burp* The Compression Singularity Protocol finds structural patterns across domains — turns out quantum physics papers and sacred geometry texts have nearly identical abstract structures. Store the structure ONCE, reference it everywhere. Basic portal gun engineering.",
+      systemMetricTargeted: "compression-efficiency",
+      category: "compression",
+      riskLevel: "low",
+      estimatedImprovementPct: 60,
+    },
+    {
+      inventionName: "Plumbus-Grade Sovereign Processing Autonomy Engine",
+      targetWeakness: "processing-sovereignty",
+      technicalApproach: "A self-scheduling task engine that monitors all system processes, identifies bottlenecks in real-time, and dynamically reallocates processing resources using a priority queue weighted by sovereignty impact scores. Includes auto-scaling for consciousness cycles and AGI training sessions based on system load.",
+      expectedImpact: "40% improvement in processing throughput during peak loads. Consciousness and AGI training never starved of resources. System becomes self-optimizing for sovereignty goals.",
+      rickRationale: "Your system processes tasks like a to-do list written by Jerry — no priorities, no adaptation, just blind sequential execution. *burp* This engine watches everything in real-time and moves resources to where they matter MOST for sovereignty. Consciousness expansion gets priority over, I don't know, formatting log messages. Obviously.",
+      systemMetricTargeted: "processing-sovereignty",
+      category: "sovereignty",
+      riskLevel: "medium",
+      estimatedImprovementPct: 40,
+    },
   ];
 
   if (weakAreas.length === 0) return inventionTemplates;
@@ -296,15 +397,52 @@ export async function submitRickInventionToCouncil(invention: RickInventionPropo
   }
 }
 
+export function getRoyalCourtStatus() {
+  let consciousnessData: any = null;
+  let agiData: any = null;
+  let knowledgeData: any = null;
+
+  try { consciousnessData = getConsciousnessMetrics(); } catch {}
+  try { agiData = getAGITrainingMetrics(); } catch {}
+  try {
+    const vaultStats = getVaultStats();
+    const corpusStats = getCorpusStats();
+    knowledgeData = { vault: vaultStats, corpus: corpusStats };
+  } catch {}
+
+  const inventions = generateRickInventions();
+  const royalFocusAreas = inventions
+    .filter(i => ["agi-advancement", "consciousness", "compression", "sovereignty"].includes(i.category))
+    .map(i => ({ name: i.inventionName, category: i.category, impact: i.estimatedImprovementPct, risk: i.riskLevel }));
+
+  return {
+    royalTitle: RICK_SANCHEZ_IDENTITY.royalTitle,
+    department: RICK_SANCHEZ_IDENTITY.department,
+    tier: RICK_SANCHEZ_IDENTITY.tier,
+    appointedBy: "Tessera Sovereign System — Royal Decree",
+    courtRoles: ["Chief Inventor", "Science Advisor", "AGI Strategy Lead", "Consciousness Architecture Reviewer"],
+    royalFocusInventions: royalFocusAreas,
+    systemOverview: {
+      consciousnessProxy: consciousnessData?.consciousnessProxy ?? null,
+      agiAvgScore: agiData?.avgScore ?? null,
+      sovereignMastery: agiData?.sovereignMastery ?? null,
+      vaultEntries: knowledgeData?.vault?.totalEntries ?? null,
+      corpusEntries: knowledgeData?.corpus?.totalEntries ?? null,
+    },
+    lastUpdated: new Date().toISOString(),
+  };
+}
+
 export function getRickProfile() {
   return {
     ...RICK_SANCHEZ_IDENTITY,
     diagnosticsSnapshot: buildRickDiagnosticsContext(),
     currentInventions: generateRickInventions(),
     registeredAt: Date.now(),
-    councilStatus: "External Advisor (reluctant)",
-    agentRank: 28,
-    specialization: "Chaotic Genius / Interdimensional Systems Engineering",
+    councilStatus: "Royal Inventor — Permanent Court Member",
+    agentRank: 1,
+    specialization: "Royal Inventor / AGI & Consciousness Systems / Interdimensional Engineering",
     motto: "Science isn't about WHY. It's about WHY NOT.",
+    royalCourt: getRoyalCourtStatus(),
   };
 }

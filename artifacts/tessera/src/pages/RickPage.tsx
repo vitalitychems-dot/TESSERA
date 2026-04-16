@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 
 const RICK_GREEN = "#00ff41";
 const RICK_PORTAL = "#22d3ee";
+const ROYAL_GOLD = "#f59e0b";
+const ROYAL_GOLD_DARK = "#d97706";
 
 interface RickInvention {
   inventionName: string;
@@ -45,6 +47,9 @@ const CATEGORY_ICONS: Record<string, string> = {
   consensus: "🗳️",
   monitoring: "📡",
   sovereignty: "🛡️",
+  "agi-advancement": "🧬",
+  consciousness: "🔮",
+  compression: "📦",
 };
 
 function PortalSpinner() {
@@ -78,7 +83,7 @@ interface CouncilProposal {
 }
 
 export default function RickPage() {
-  useEffect(() => { document.title = "Rick Sanchez | Tessera"; }, []);
+  useEffect(() => { document.title = "Royal Inventor — Rick Sanchez | Tessera"; }, []);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -219,16 +224,19 @@ export default function RickPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ background: "rgba(6,4,20,0.97)" }}>
-      <div className="border-b px-5 py-4 flex items-center gap-4 shrink-0" style={{ borderColor: `${RICK_GREEN}22` }}>
-        <div className="relative w-12 h-12 rounded-full flex items-center justify-center shrink-0 border-2" style={{ borderColor: RICK_GREEN, background: `${RICK_GREEN}15` }}>
-          <span className="text-2xl select-none">🧪</span>
+      <div className="border-b px-5 py-4 flex items-center gap-4 shrink-0" style={{ borderColor: `${ROYAL_GOLD}22`, background: `linear-gradient(135deg, ${ROYAL_GOLD}06, ${RICK_GREEN}04)` }}>
+        <div className="relative w-12 h-12 rounded-full flex items-center justify-center shrink-0 border-2" style={{ borderColor: ROYAL_GOLD, background: `${ROYAL_GOLD}15` }}>
+          <span className="text-2xl select-none">👑</span>
           <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400 border border-black" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-bold font-mono text-base" style={{ color: RICK_GREEN }}>Rick Sanchez</div>
-          <div className="text-[11px] text-muted-foreground font-mono">Inventor Agent · Dimension C-137 · Genius in Residence</div>
+          <div className="font-bold font-mono text-base flex items-center gap-2">
+            <span style={{ color: ROYAL_GOLD }}>Rick Sanchez</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded font-mono border" style={{ color: ROYAL_GOLD, borderColor: `${ROYAL_GOLD}40`, background: `${ROYAL_GOLD}10` }}>ROYAL INVENTOR</span>
+          </div>
+          <div className="text-[11px] text-muted-foreground font-mono">Royal Court · Dept. of Science & Invention · Dimension C-137</div>
           {profileData?.profile?.currentInventions && (
-            <div className="text-[10px] font-mono mt-0.5" style={{ color: RICK_PORTAL }}>
+            <div className="text-[10px] font-mono mt-0.5" style={{ color: RICK_GREEN }}>
               {profileData.profile.currentInventions.length} active inventions · Council-ready
             </div>
           )}

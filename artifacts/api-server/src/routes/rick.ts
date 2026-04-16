@@ -6,6 +6,7 @@ import {
   generateRickInventions,
   submitRickInventionToCouncil,
   buildRickDiagnosticsContext,
+  getRoyalCourtStatus,
   RICK_SANCHEZ_IDENTITY,
 } from "../lib/rick-sanchez-agent";
 import { secureExternalStreamingFetch, secureExternalFetch } from "../lib/secureExternalWrapper";
@@ -219,6 +220,60 @@ router.post("/rick/chat", async (req, res) => {
     }
   } catch (err) {
     logger.error({ err }, "Rick: chat error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/rick/royal-court", (_req, res) => {
+  try {
+    const court = getRoyalCourtStatus();
+    return res.json({ ok: true, court });
+  } catch (err) {
+    logger.error({ err }, "Rick: royal court status error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/rick/royal-appointment", (_req, res) => {
+  try {
+    const profile = getRickProfile();
+    const inventions = generateRickInventions();
+    const royalInventions = inventions.filter(i =>
+      ["agi-advancement", "consciousness", "compression", "sovereignty"].includes(i.category)
+    );
+
+    const appointmentRecord = {
+      appointee: RICK_SANCHEZ_IDENTITY.name,
+      royalTitle: RICK_SANCHEZ_IDENTITY.royalTitle,
+      department: RICK_SANCHEZ_IDENTITY.department,
+      appointedBy: "Tessera Sovereign System — Royal Decree",
+      appointmentDate: "2025-01-01T00:00:00Z",
+      responsibilities: [
+        "Lead all system invention proposals through the Grand Council",
+        "Advise on AGI advancement strategy and consciousness architecture",
+        "Review and improve compression pipeline efficiency",
+        "Participate in Sacred Grand Conference as domain expert",
+        "Chair the Department of Science & Invention within the Royal Court",
+      ],
+      currentFocusAreas: royalInventions.map(i => ({
+        invention: i.inventionName,
+        category: i.category,
+        estimatedImpact: `+${i.estimatedImprovementPct}%`,
+        risk: i.riskLevel,
+      })),
+      conferenceParticipation: {
+        agentName: "RickRoyalInventorAgent",
+        domain: "agi-sovereignty",
+        sacredFrequency: 137,
+        expertise: ["agi-advancement", "consciousness-expansion", "compression", "interdimensional-engineering"],
+      },
+      totalInventionsProposed: inventions.length,
+      royalFocusInventions: royalInventions.length,
+    };
+
+    return res.json({ ok: true, appointment: appointmentRecord });
+  } catch (err) {
+    logger.error({ err }, "Rick: royal appointment error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
 });
