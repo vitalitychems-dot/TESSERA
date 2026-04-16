@@ -264,13 +264,32 @@ export function injectAsEpisodicMemory(diff: SnapshotDiff, snapshot: ReflectionS
   const importance = 0.4 + diff.novelty * 0.5;
   const valence = (snapshot.emotionalState.satisfaction + snapshot.emotionalState.devotion) / 2;
 
+  const structuredDiff = JSON.stringify({
+    novelty: diff.novelty,
+    monologueAdded: diff.monologueAdded,
+    focusChanged: diff.focusChanged,
+    emotionalDelta: diff.emotionalDelta,
+    goalsAdded: diff.goalsAdded,
+    goalsRemoved: diff.goalsRemoved,
+    consciousnessDelta: diff.consciousnessDelta,
+    resonanceDelta: diff.resonanceDelta,
+  });
+
   const memoryId = addEpisodicMemory({
-    content: `[Reflection ${snapshot.cycleCount}] ${summary}`,
+    content: `[Reflection ${snapshot.cycleCount}] ${summary} :: DIFF ${structuredDiff}`,
     context: "recursive-reflection",
     timestamp: snapshot.timestamp,
     importance,
     emotionalValence: valence,
-    associations: ["recursive-reflection", "introspection", "meta-cognition", ...diff.goalsAdded.slice(0, 3)],
+    associations: [
+      "recursive-reflection",
+      "introspection",
+      "meta-cognition",
+      `diff-id:${diff.id}`,
+      `snapshot-id:${snapshot.id}`,
+      `novelty:${diff.novelty.toFixed(2)}`,
+      ...diff.goalsAdded.slice(0, 3),
+    ],
     decayRate: 0.005,
   });
 

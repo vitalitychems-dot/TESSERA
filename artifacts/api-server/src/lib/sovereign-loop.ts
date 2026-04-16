@@ -830,6 +830,7 @@ export function getSovereignLoopMetrics() {
     })),
     tuning: getTuningMetrics(),
     dreamConsolidation: getConsolidationEngineMetrics(),
+    recursiveReflection: getReflectionMetrics(),
   };
 }
 
