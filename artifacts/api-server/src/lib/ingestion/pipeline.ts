@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { ingestedDataTable, ingestionJobsTable, dataSourcesTable } from "@workspace/db/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { storeMemory } from "../vector-memory";
+import { checkDuplicateBeforeIngest } from "../semantic-deduplication";
 import { logger } from "../logger";
 
 export interface NormalizedItem {
@@ -189,6 +190,12 @@ export async function ingestItem(item: NormalizedItem): Promise<{ ingested: bool
   if (!text) {
     addAuditEntry(item.source, "rejected", "empty content after sanitization");
     return { ingested: false, reason: "empty content" };
+  }
+
+  const semanticDup = await checkDuplicateBeforeIngest(text);
+  if (semanticDup.isDuplicate) {
+    addAuditEntry(item.source, "rejected", `semantic duplicate (similarity=${semanticDup.similarity?.toFixed(3)}, canonical=${semanticDup.canonicalId})`);
+    return { ingested: false, reason: "semantic-duplicate" };
   }
 
   const contentHash = hashContent(text);
