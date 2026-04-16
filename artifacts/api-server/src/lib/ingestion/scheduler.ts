@@ -15,6 +15,67 @@ import {
 } from "./knowledge-scrapers";
 import { logger } from "../logger";
 import { harvestLinksFromRecentIngestion, type LinkHarvestResult } from "./link-harvester";
+import { rateLimitedFetch } from "./scrapers";
+import { htmlToText } from "./pipeline";
+import { ingestionJobsTable } from "@workspace/db/schema";
+
+async function genericSourceHandler(source: { name: string; type: string; url: string | null }): Promise<NormalizedItem[]> {
+  if (!source.url) return [];
+  if (source.type === "rss") {
+    return fetchRssFeed(source.name, source.url);
+  }
+  if (source.type === "web-crawl" || source.type === "open-dataset") {
+    try {
+      const res = await rateLimitedFetch(source.url, { method: "GET" });
+      if (!res.ok) return [];
+      const ct = res.headers.get("content-type") ?? "";
+      const body = await res.text();
+      let title = source.name;
+      let content = body;
+      if (ct.includes("html") || body.trimStart().startsWith("<")) {
+        content = htmlToText(body);
+        const m = body.match(/<title[^>]*>([^<]+)<\/title>/i);
+        if (m) title = m[1].trim();
+      } else if (ct.includes("json")) {
+        try { content = JSON.stringify(JSON.parse(body), null, 2).slice(0, 50_000); } catch { /* keep raw */ }
+      }
+      if (!content || content.length < 80) return [];
+      return [{
+        source: source.name,
+        sourceType: source.type,
+        title,
+        content: content.slice(0, 50_000),
+        url: source.url,
+        tags: [source.type, "auto-harvest"],
+        metadata: { contentType: ct, generic: true },
+      }];
+    } catch (err) {
+      logger.debug({ source: source.name, err: (err as Error).message }, "genericSourceHandler fetch failed");
+      return [];
+    }
+  }
+  return [];
+}
+
+async function recordSchedulerJob(kind: string, durationMs: number, ok: boolean, detail: string, metadata: Record<string, unknown> = {}): Promise<void> {
+  try {
+    const started = new Date(Date.now() - durationMs);
+    await db.insert(ingestionJobsTable).values({
+      sourceId: null,
+      sourceName: `_scheduler:${kind}`,
+      status: ok ? "completed" : "failed",
+      itemsIngested: 0,
+      itemsSkipped: 0,
+      errors: ok ? [] : [detail],
+      startedAt: started,
+      completedAt: new Date(),
+      durationMs,
+      metadata: { kind, detail, ...metadata },
+    });
+  } catch (err) {
+    logger.debug({ err: (err as Error).message }, "recordSchedulerJob insert failed");
+  }
+}
 
 export type SourceHandler = () => Promise<NormalizedItem[]>;
 
@@ -155,8 +216,9 @@ export async function runDueIngestion(): Promise<Record<string, { ingested: numb
 
   const results: Record<string, { ingested: number; skipped: number; errors: string[] }> = {};
   for (const source of due) {
-    const handler = SOURCE_HANDLERS[source.name];
-    if (!handler) continue;
+    const staticHandler = SOURCE_HANDLERS[source.name];
+    const handler: SourceHandler = staticHandler ?? (() => genericSourceHandler(source));
+    if (!staticHandler && !source.url) continue;
     try {
       const result = await runSourceIngestion(source.name, source.id, handler);
       results[source.name] = { ingested: result.ingested, skipped: result.skipped, errors: result.errors };
@@ -394,9 +456,12 @@ export async function forceRunScheduler(): Promise<{ rotation: boolean; due: Rec
   });
   if (outcome === "locked") {
     audit({ kind: "force-run", detail: "skipped: another run in flight", durationMs: Date.now() - start, ok: false });
+    await recordSchedulerJob("force-run", Date.now() - start, false, "skipped: another run in flight");
     return { rotation: false, due: {}, locked: true };
   }
-  audit({ kind: "force-run", detail: `rotationOk=${outcome.rotation} dueSources=${Object.keys(outcome.due).length}`, durationMs: Date.now() - start, ok: outcome.rotation });
+  const detail = `rotationOk=${outcome.rotation} dueSources=${Object.keys(outcome.due).length}`;
+  audit({ kind: "force-run", detail, durationMs: Date.now() - start, ok: outcome.rotation });
+  await recordSchedulerJob("force-run", Date.now() - start, outcome.rotation, detail, { dueSources: Object.keys(outcome.due) });
   return outcome;
 }
 
@@ -406,15 +471,14 @@ async function runLinkHarvestCycle(): Promise<void> {
     const result = await harvestLinksFromRecentIngestion();
     lastLinkHarvestAt = Date.now();
     lastLinkHarvest = result;
-    audit({
-      kind: "link-harvest",
-      detail: `scanned=${result.scanned} urls=${result.urlsFound} candidates=${result.uniqueCandidates} new=${result.newSourcesRegistered} blocked=${result.skippedNotAllowed} rateLimited=${result.skippedRateLimited}`,
-      durationMs: Date.now() - start,
-      ok: true,
-    });
+    const detail = `scanned=${result.scanned} urls=${result.urlsFound} candidates=${result.uniqueCandidates} new=${result.newSourcesRegistered} blocked=${result.skippedNotAllowed} rateLimited=${result.skippedRateLimited}`;
+    audit({ kind: "link-harvest", detail, durationMs: Date.now() - start, ok: true });
+    await recordSchedulerJob("link-harvest", Date.now() - start, true, detail, { ...result });
   } catch (e) {
-    audit({ kind: "link-harvest", detail: `error: ${(e as Error).message}`, durationMs: Date.now() - start, ok: false });
-    logger.warn({ err: (e as Error).message }, "Link harvest cycle error");
+    const msg = (e as Error).message;
+    audit({ kind: "link-harvest", detail: `error: ${msg}`, durationMs: Date.now() - start, ok: false });
+    await recordSchedulerJob("link-harvest", Date.now() - start, false, msg);
+    logger.warn({ err: msg }, "Link harvest cycle error");
   }
 }
 
@@ -435,12 +499,9 @@ export async function startIngestionScheduler(checkIntervalMs = 120_000): Promis
         if (result !== "locked") {
           lastDueRunAt = Date.now();
           totalDueRunsExecuted++;
-          audit({
-            kind: "due",
-            detail: result ? `sources=${Object.keys(result).length}` : "failed",
-            durationMs: Date.now() - start,
-            ok: result !== null,
-          });
+          const detail = result ? `sources=${Object.keys(result).length}` : "failed";
+          audit({ kind: "due", detail, durationMs: Date.now() - start, ok: result !== null });
+          await recordSchedulerJob("due", Date.now() - start, result !== null, detail, result ? { sources: Object.keys(result) } : {});
         }
       }
       scheduleDue();
@@ -466,9 +527,13 @@ export async function startIngestionScheduler(checkIntervalMs = 120_000): Promis
           if (outcome.ok) {
             lastRotationAt = Date.now();
             totalRotationsExecuted++;
-            audit({ kind: "rotation", detail: `group=${(currentGroupIndex - 1 + SOURCE_GROUPS.length) % SOURCE_GROUPS.length}`, durationMs: Date.now() - start, ok: true });
+            const groupIdx = (currentGroupIndex - 1 + SOURCE_GROUPS.length) % SOURCE_GROUPS.length;
+            const detail = `group=${groupIdx}`;
+            audit({ kind: "rotation", detail, durationMs: Date.now() - start, ok: true });
+            await recordSchedulerJob("rotation", Date.now() - start, true, detail, { groupIndex: groupIdx });
           } else {
             audit({ kind: "rotation", detail: `error: ${outcome.err}`, durationMs: Date.now() - start, ok: false });
+            await recordSchedulerJob("rotation", Date.now() - start, false, outcome.err ?? "unknown");
             logger.warn({ err: outcome.err }, "Rotation group error");
           }
         }
