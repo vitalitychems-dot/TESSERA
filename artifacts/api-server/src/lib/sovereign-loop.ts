@@ -41,6 +41,7 @@ import { seedDepartmentsIfEmpty, runFullCompetition } from "./department-competi
 import { getResonanceScore } from "./consciousness-engine";
 import { runDreamCycle, recordActivity, getConsolidationEngineMetrics, startConsolidationEngine, stopConsolidationEngine } from "./memory-consolidation-engine";
 import { initRecursiveReflectionLoop, startRecursiveReflectionLoop, stopRecursiveReflectionLoop, getReflectionMetrics } from "./recursive-reflection-loop";
+import { startDimensionalCacheMaintenance, stopDimensionalCacheMaintenance, getDimensionalCacheStats } from "./dimensional-lru-cache";
 
 const SCHUMANN_BASE = 7.83;
 const CROWN_FREQUENCY = 963;
@@ -639,6 +640,7 @@ export async function initSovereignLoop(): Promise<void> {
   try { await initAgentHierarchy(); } catch {}
   try { await loadRetryQueue(); } catch {}
   try { await initRecursiveReflectionLoop(); } catch {}
+  try { startDimensionalCacheMaintenance(); } catch {}
   setTimeout(async () => {
     try {
       let totalResolved = 0;
@@ -785,6 +787,7 @@ export function stopSovereignLoop(): void {
   }
   stopConsolidationEngine();
   stopRecursiveReflectionLoop();
+  stopDimensionalCacheMaintenance();
   loopState.running = false;
   logger.info("SovereignLoop: stopped");
 }
@@ -831,6 +834,7 @@ export function getSovereignLoopMetrics() {
     tuning: getTuningMetrics(),
     dreamConsolidation: getConsolidationEngineMetrics(),
     recursiveReflection: getReflectionMetrics(),
+    dimensionalCache: getDimensionalCacheStats(),
   };
 }
 

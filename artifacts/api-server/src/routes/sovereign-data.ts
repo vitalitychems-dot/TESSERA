@@ -13,6 +13,7 @@ import { getEmbeddingStats } from "../lib/neural-embeddings";
 import { getValidationStats } from "../lib/response-validation-engine";
 import { getDeduplicationStats } from "../lib/semantic-deduplication";
 import { getReflectionMetrics, getRecentSnapshots, runReflectionCycle } from "../lib/recursive-reflection-loop";
+import { getDimensionalCacheStats, embeddingDimensionalCache, semanticDimensionalCache } from "../lib/dimensional-lru-cache";
 import * as os from "os";
 
 const router: IRouter = Router();
@@ -1067,6 +1068,38 @@ router.get("/admin/reflection/snapshots", (req, res) => {
   }
   const limit = Math.min(50, Number(req.query.limit) || 10);
   res.json({ ok: true, snapshots: getRecentSnapshots(limit) });
+});
+
+router.get("/admin/cache/dimensional/stats", (req, res) => {
+  const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
+  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+    res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
+    return;
+  }
+  res.json({ ok: true, ...getDimensionalCacheStats() });
+});
+
+router.post("/admin/cache/dimensional/tune", (req, res) => {
+  const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
+  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+    res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
+    return;
+  }
+  const embeddingResult = embeddingDimensionalCache.tuneCapacities({ minCapacity: 100, maxCapacity: 800, totalBudget: 3000 });
+  const semanticResult = semanticDimensionalCache.tuneCapacities({ minCapacity: 75, maxCapacity: 600, totalBudget: 2000 });
+  res.json({ ok: true, embedding: embeddingResult, semantic: semanticResult });
+});
+
+router.post("/admin/cache/dimensional/clear", (req, res) => {
+  const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
+  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+    res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
+    return;
+  }
+  const dimension = typeof req.query.dimension === "string" ? req.query.dimension : undefined;
+  embeddingDimensionalCache.clear(dimension);
+  semanticDimensionalCache.clear(dimension);
+  res.json({ ok: true, cleared: dimension ?? "all" });
 });
 
 router.post("/admin/reflection/cycle", (req, res) => {
