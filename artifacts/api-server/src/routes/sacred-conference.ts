@@ -16,6 +16,7 @@ import {
   searchKnowledge,
   getVaultStats,
 } from "../lib/sacred-knowledge-vault";
+import { getCorpusStats, getCorpusSize, getDomainClusters, queryCorpus } from "../lib/knowledge-corpus-index";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
