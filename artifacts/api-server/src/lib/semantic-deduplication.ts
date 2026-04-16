@@ -289,17 +289,28 @@ async function mergeVectorCluster(cluster: DuplicateCluster): Promise<MergeResul
   mergedMetadata.mergedAt = Date.now();
 
   const bestContent = longestContent.content;
+  const contentChanged = bestContent !== canonical.content;
+
+  let newEmbedding: number[] | undefined;
+  if (contentChanged) {
+    newEmbedding = await generateEmbedding(bestContent);
+  }
 
   let storageSaved = 0;
   await db.transaction(async (tx) => {
+    const updateSet: Record<string, unknown> = {
+      content: bestContent,
+      accessCount: totalAccess,
+      metadata: mergedMetadata,
+      updatedAt: new Date(),
+    };
+    if (newEmbedding) {
+      updateSet.embedding = newEmbedding;
+    }
+
     await tx
       .update(vectorEmbeddingsTable)
-      .set({
-        content: bestContent,
-        accessCount: totalAccess,
-        metadata: mergedMetadata,
-        updatedAt: new Date(),
-      })
+      .set(updateSet)
       .where(eq(vectorEmbeddingsTable.id, canonical.id));
 
     for (const dup of duplicateRows) {
