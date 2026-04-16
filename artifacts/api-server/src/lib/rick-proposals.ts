@@ -288,20 +288,31 @@ function coerceProposal(raw: LlmProposalShape, idx: number, fallbackCategory: st
   };
 }
 
-async function generateViaLlm(diag: DiagnosticsSnapshot, slotsNeeded: number): Promise<RickProposal[]> {
+async function generateViaLlm(diag: DiagnosticsSnapshot, slotsNeeded: number, recentRejections: { title: string; reason: string }[]): Promise<RickProposal[]> {
   const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
   const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
   if (!baseURL || !apiKey || slotsNeeded <= 0) return [];
+
+  const realityAuditBlock = `REALITY AUDIT (grounded checks against the knowledge base):
+- Grounding rate of recent claims: ${(diag.truthGroundingRate * 100).toFixed(1)}%
+- Average truth score of recent claims: ${diag.truthAvgScore}
+- Interpretation: anything below 80% grounding means the system is making claims it cannot back up with sources.`;
+
+  const rejectionBlock = recentRejections.length === 0
+    ? "REVIEWER FEEDBACK FROM PRIOR REJECTIONS: (none yet)"
+    : `REVIEWER FEEDBACK FROM PRIOR REJECTIONS — do NOT repeat these mistakes:\n${recentRejections.map((r, i) => `${i + 1}. "${r.title}" — rejected because: ${r.reason}`).join("\n")}`;
 
   const userPrompt = `Generate exactly ${slotsNeeded} concrete, actionable improvement proposals for the Tessera system.
 
 LIVE DIAGNOSTICS:
 - Overall daemon score: ${diag.overallScorePct}%
-- Truthfulness grounding rate: ${(diag.truthGroundingRate * 100).toFixed(1)}%
-- Truthfulness avg score: ${diag.truthAvgScore}
 - Meeseeks success rate: ${(diag.meeseeksSuccessRate * 100).toFixed(1)}%
 - Weakest daemon categories: ${diag.weakCategories.map(c => `${c.category}(${c.score})`).join(", ")}
 - Weakest AGI categories: ${diag.weakAgi.map(c => `${c.category}(${c.score})`).join(", ")}
+
+${realityAuditBlock}
+
+${rejectionBlock}
 
 RULES:
 - Each proposal must target a real metric from the diagnostics above.
@@ -374,7 +385,12 @@ export async function generateProposals(): Promise<{ proposals: RickProposal[]; 
   }
 
   const diag = snapshotDiagnostics();
-  const llmRaw = await generateViaLlm(diag, slotsNeeded);
+  const recentRejections = store.proposals
+    .filter(p => p.state === "rejected" && (p.reviewerReason || "").trim().length > 0)
+    .sort((a, b) => (b.decidedAt ?? 0) - (a.decidedAt ?? 0))
+    .slice(0, 5)
+    .map(p => ({ title: p.title, reason: (p.reviewerReason || "").slice(0, 240) }));
+  const llmRaw = await generateViaLlm(diag, slotsNeeded, recentRejections);
   const llmGated = llmRaw.map(gateTruthfulness);
   // Truthfulness gate: drop LLM proposals whose grounded score is below threshold
   const llmAccepted = llmGated.filter(p => (p.truthfulnessScore ?? 0) >= TRUTH_GATE_THRESHOLD);
