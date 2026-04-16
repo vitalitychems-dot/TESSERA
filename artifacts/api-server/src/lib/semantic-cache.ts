@@ -83,7 +83,7 @@ export async function lookupCache(
         .set({ hitCount: sql`${semanticCacheTable.hitCount} + 1`, lastHitAt: new Date() })
         .where(eq(semanticCacheTable.id, exact.id));
 
-      semanticDimensionalCache.set(hash, { response: exact.response, ts: Date.now() }, dimension);
+      semanticDimensionalCache.set(hash, { response: exact.response, ts: Date.now() }, dimension, [`model:${model}`]);
 
       logger.info({ hash: hash.slice(0, 12) }, "SemanticCache: exact hit");
       return exact.response;
@@ -129,7 +129,7 @@ export async function lookupCache(
         .set({ hitCount: sql`${semanticCacheTable.hitCount} + 1`, lastHitAt: new Date() })
         .where(eq(semanticCacheTable.id, bestMatch.id));
 
-      semanticDimensionalCache.set(hash, { response: bestMatch.response, ts: Date.now() }, dimension);
+      semanticDimensionalCache.set(hash, { response: bestMatch.response, ts: Date.now() }, dimension, [`model:${model}`, `match:${bestMatch.promptHash.slice(0, 12)}`]);
 
       logger.info({ score: bestScore.toFixed(3), hash: bestMatch.promptHash.slice(0, 12) }, "SemanticCache: semantic hit");
       return bestMatch.response;
