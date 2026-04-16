@@ -45,6 +45,7 @@ interface ValidationResult {
   validationTimeMs: number;
   metrics: {
     totalClaims: number;
+    claimsSkipped: number;
     groundedClaims: number;
     quarantinedCount: number;
     redactedCount: number;
@@ -76,40 +77,51 @@ const CLAIM_PATTERNS: Array<{ pattern: RegExp; type: ExtractedClaim["type"] }> =
   { pattern: /\b(?:invented|discovered|founded|created|built|established)\s+(?:by|in)\b/i, type: "factual" },
 ];
 
+let lastExtractionSkipped = 0;
+
+export function getClaimsSkipped(): number {
+  return lastExtractionSkipped;
+}
+
 export function extractClaims(response: string): ExtractedClaim[] {
   const claims: ExtractedClaim[] = [];
+  lastExtractionSkipped = 0;
 
   const segments = response
     .split(/(?<=[.!?])\s+|\n+|(?<=\n)\s*[-•*]\s+/)
     .map(s => s.replace(/^[-•*]\s*/, "").trim())
     .filter(s => s.length > 10 && s.length < 600);
 
-  for (let i = 0; i < segments.length && claims.length < MAX_CLAIMS_PER_RESPONSE; i++) {
+  for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
+    let isClaim = false;
+    let claimType: ExtractedClaim["type"] = "factual";
 
-    let matched = false;
     for (const { pattern, type } of CLAIM_PATTERNS) {
       if (pattern.test(segment)) {
-        const alreadyExists = claims.some(c =>
-          c.text === segment || levenshteinRatio(c.text, segment) > 0.85
-        );
-        if (!alreadyExists) {
-          claims.push({ text: segment, index: i, type });
-        }
-        matched = true;
+        isClaim = true;
+        claimType = type;
         break;
       }
     }
 
-    if (!matched && segment.length >= 15) {
+    if (!isClaim && segment.length >= 15) {
       const hasSubjectVerb = /\b\w+\s+(?:is|are|was|were|has|have|had|does|do|did|can|will|would|should|could|may|might)\b/i.test(segment);
       if (hasSubjectVerb) {
-        const alreadyExists = claims.some(c =>
-          c.text === segment || levenshteinRatio(c.text, segment) > 0.85
-        );
-        if (!alreadyExists) {
-          claims.push({ text: segment, index: i, type: "factual" });
-        }
+        isClaim = true;
+      }
+    }
+
+    if (isClaim) {
+      if (claims.length >= MAX_CLAIMS_PER_RESPONSE) {
+        lastExtractionSkipped++;
+        continue;
+      }
+      const alreadyExists = claims.some(c =>
+        c.text === segment || levenshteinRatio(c.text, segment) > 0.85
+      );
+      if (!alreadyExists) {
+        claims.push({ text: segment, index: i, type: claimType });
       }
     }
   }
@@ -293,6 +305,7 @@ export async function validateResponse(
       validationTimeMs: Date.now() - startTime,
       metrics: {
         totalClaims: 0,
+        claimsSkipped: 0,
         groundedClaims: 0,
         quarantinedCount: 0,
         redactedCount: 0,
@@ -365,7 +378,7 @@ export async function validateResponse(
     wasModified = true;
     redactedCount = claims.length;
 
-    for (const claim of allScored) {
+    for (const claim of passed) {
       addToQuarantineStore(claim, userQuery, true, "rejected");
     }
 
@@ -414,6 +427,7 @@ export async function validateResponse(
     validationTimeMs,
     metrics: {
       totalClaims: claims.length,
+      claimsSkipped: lastExtractionSkipped,
       groundedClaims: passed.length,
       quarantinedCount: quarantined.length,
       redactedCount,
