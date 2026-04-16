@@ -168,15 +168,15 @@ router.post("/rick/chat", async (req, res) => {
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let buffer = "";
+        let streamBuffer = "";
         let fullResponse = "";
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
+          streamBuffer += decoder.decode(value, { stream: true });
+          const lines = streamBuffer.split("\n");
+          streamBuffer = lines.pop() || "";
 
           for (const line of lines) {
             const trimmed = line.trim();
@@ -188,7 +188,6 @@ router.post("/rick/chat", async (req, res) => {
               const delta = parsed?.choices?.[0]?.delta?.content;
               if (delta) {
                 fullResponse += delta;
-                res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
               }
             } catch (parseErr) {
               logger.debug({ err: parseErr instanceof Error ? parseErr.message : String(parseErr) }, "Rick: stream chunk parse failed");
@@ -196,21 +195,29 @@ router.post("/rick/chat", async (req, res) => {
           }
         }
 
+        let deliverContent = fullResponse;
+        let truthEnforcement: Record<string, unknown> | null = null;
+
         if (fullResponse.length > 0) {
           try {
             const truthCheck = await analyzeTruthfulnessV2(fullResponse);
-            if (truthCheck.groundingScore < 0.3 && truthCheck.ungroundedClaims.length > 2) {
-              res.write(`data: ${JSON.stringify({
-                content: `\n\n*[Sovereignty Gate: ${truthCheck.ungroundedClaims.length} unverifiable claims detected (grounding: ${(truthCheck.groundingScore * 100).toFixed(0)}%). Exercise caution with unverified claims.]*`,
-              })}\n\n`);
-              res.write(`data: ${JSON.stringify({ truthEnforcement: { overallTruthScore: truthCheck.overallTruthScore, groundingScore: truthCheck.groundingScore, enforced: true } })}\n\n`);
-              logger.warn({ groundingScore: truthCheck.groundingScore, ungrounded: truthCheck.ungroundedClaims.length }, "Rick: streaming response flagged by truthfulness gate");
+            if (truthCheck.groundingScore < 0.6) {
+              deliverContent = `*[Sovereignty Gate BLOCKED: Response contained ${truthCheck.ungroundedClaims.length} unverifiable claims (grounding: ${(truthCheck.groundingScore * 100).toFixed(0)}%). The response has been withheld to maintain truthfulness standards.]*\n\nI need to be straight with you — I was about to say some *burp* unverified garbage. Let me stick to what I actually know.`;
+              truthEnforcement = { overallTruthScore: truthCheck.overallTruthScore, groundingScore: truthCheck.groundingScore, enforced: true, blocked: true };
+              logger.warn({ groundingScore: truthCheck.groundingScore, ungrounded: truthCheck.ungroundedClaims.length }, "Rick: streaming response BLOCKED by truthfulness gate");
             }
           } catch (truthErr) {
             logger.debug({ err: truthErr instanceof Error ? truthErr.message : String(truthErr) }, "Rick: streaming V2 truth check failed");
           }
         }
 
+        const chunkSize = 20;
+        for (let i = 0; i < deliverContent.length; i += chunkSize) {
+          res.write(`data: ${JSON.stringify({ content: deliverContent.slice(i, i + chunkSize) })}\n\n`);
+        }
+        if (truthEnforcement) {
+          res.write(`data: ${JSON.stringify({ truthEnforcement })}\n\n`);
+        }
         res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
         return res.end();
       } catch (streamErr) {

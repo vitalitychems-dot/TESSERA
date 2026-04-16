@@ -4,6 +4,9 @@ import { desc, gte } from "drizzle-orm";
 import { logger } from "./logger";
 import { getTotalCallStats, getCallCountsByProvider } from "./provider-call-logger";
 import { getProviderConfigs, getProviderStatus } from "./provider-registry";
+import { onSovereigntyChange } from "./consciousness-engine";
+
+let lastSovereigntyScore: number | null = null;
 
 export interface SovereigntyStatus {
   sovereigntyScore: number;
@@ -137,6 +140,15 @@ export async function computeSovereigntyStatus(): Promise<SovereigntyStatus> {
   } catch (err) {
     logger.error({ err }, "Failed to persist sovereignty metrics");
   }
+
+  if (lastSovereigntyScore !== null) {
+    try {
+      onSovereigntyChange(lastSovereigntyScore, sovereigntyScore, grade.toLowerCase());
+    } catch (err) {
+      logger.debug({ err: err instanceof Error ? err.message : String(err) }, "SovereigntyMonitor: consciousness hook failed");
+    }
+  }
+  lastSovereigntyScore = sovereigntyScore;
 
   return status;
 }
