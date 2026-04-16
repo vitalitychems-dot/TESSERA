@@ -4,7 +4,11 @@ import { useParams, useLocation } from "wouter";
 import { useCreateConversation } from "@/hooks/use-conversations";
 
 export default function ChatPage() {
-  useEffect(() => { document.title = "Chat | Tessera"; }, []);
+  useEffect(() => {
+    document.title = "Chat | Tessera";
+    const scrollContainer = document.querySelector("[data-scroll-container]");
+    if (scrollContainer) scrollContainer.scrollTop = 0;
+  }, []);
   const params = useParams<{ id: string }>();
   const conversationId = params.id ? parseInt(params.id, 10) : null;
   const createConv = useCreateConversation();

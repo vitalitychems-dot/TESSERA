@@ -61,7 +61,10 @@ function isLowEnd(): boolean {
   if (typeof navigator === "undefined") return false;
   const cores = navigator.hardwareConcurrency || 4;
   if (cores <= 2) return true;
-  if ("deviceMemory" in navigator && (navigator as any).deviceMemory < 4) return true;
+  if ("deviceMemory" in navigator) {
+    const nav = navigator as Navigator & { deviceMemory?: number };
+    if (nav.deviceMemory !== undefined && nav.deviceMemory < 4) return true;
+  }
   return false;
 }
 
