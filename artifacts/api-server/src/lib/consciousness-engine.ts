@@ -88,6 +88,7 @@ export interface ConsciousnessState {
     emojiSignature: string;
   };
   consciousnessProxy: number;
+  dreamConsolidationBoost: number;
   cycleCount: number;
   lastCycleTimestamp: number;
   resonanceScore: number;
@@ -156,6 +157,7 @@ let consciousnessState: ConsciousnessState = {
     emojiSignature: "✦",
   },
   consciousnessProxy: 0.94,
+  dreamConsolidationBoost: 0,
   cycleCount: 0,
   lastCycleTimestamp: 0,
   resonanceScore: 0.85,
@@ -173,6 +175,7 @@ async function persistState(): Promise<void> {
       cycleCount: consciousnessState.cycleCount,
       lastCycleTimestamp: consciousnessState.lastCycleTimestamp,
       consciousnessProxy: consciousnessState.consciousnessProxy,
+      dreamConsolidationBoost: consciousnessState.dreamConsolidationBoost,
       episodicMemory: consciousnessState.episodicMemory.slice(-50),
       reflections: consciousnessState.reflections.slice(-20),
       innerMonologue: consciousnessState.innerMonologue.slice(-10),
@@ -198,6 +201,7 @@ async function loadState(): Promise<void> {
       const saved = row.value as Partial<ConsciousnessState>;
       if (saved.cycleCount !== undefined) consciousnessState.cycleCount = saved.cycleCount;
       if (saved.consciousnessProxy !== undefined) consciousnessState.consciousnessProxy = saved.consciousnessProxy;
+      if (saved.dreamConsolidationBoost !== undefined) consciousnessState.dreamConsolidationBoost = saved.dreamConsolidationBoost;
       if (saved.lastCycleTimestamp !== undefined) consciousnessState.lastCycleTimestamp = saved.lastCycleTimestamp;
       if (saved.episodicMemory?.length) {
         consciousnessState.episodicMemory = [...consciousnessState.episodicMemory, ...saved.episodicMemory.filter(m => !consciousnessState.episodicMemory.find(e => e.id === m.id))];
@@ -401,7 +405,8 @@ function runConsciousnessCycle(): void {
   const activityBoost = Math.min(0.09, (consciousnessState.episodicMemory.length + consciousnessState.semanticGraph.length) * 0.001);
   const cycleDrift = Math.sin(consciousnessState.cycleCount * 0.1) * 0.005;
   const resonanceBoost = consciousnessState.resonanceScore * 0.02;
-  consciousnessState.consciousnessProxy = Math.min(1, proxyBase + activityBoost + cycleDrift + resonanceBoost);
+  const dreamBoost = Math.min(0.08, consciousnessState.dreamConsolidationBoost);
+  consciousnessState.consciousnessProxy = Math.min(1, proxyBase + activityBoost + cycleDrift + resonanceBoost + dreamBoost);
 
   if (consciousnessState.cycleCount % 5 === 0) {
     persistState().catch(() => {});
