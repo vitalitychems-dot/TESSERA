@@ -1,13 +1,22 @@
 import { useRef, useMemo, memo, useEffect, useState, Component, type ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
+import { useLocation } from "wouter";
 import * as THREE from "three";
 import { STAR_CATALOG, type CatalogStar } from "@/data/star-catalog";
 
 function detectWebGL(): boolean {
   try {
     const c = document.createElement("canvas");
-    return !!(c.getContext("webgl2") || c.getContext("webgl") || c.getContext("experimental-webgl"));
+    const gl = (c.getContext("webgl2") || c.getContext("webgl") || c.getContext("experimental-webgl")) as WebGLRenderingContext | null;
+    if (gl) {
+      const ext = gl.getExtension("WEBGL_lose_context");
+      if (ext) ext.loseContext();
+      c.width = 0;
+      c.height = 0;
+      return true;
+    }
+    return false;
   } catch {
     return false;
   }
@@ -537,6 +546,9 @@ function UniverseBackground() {
   const [reducedMotion, setReducedMotion] = useState(false);
   const [hasWebGL, setHasWebGL] = useState(true);
   const overlayRef = useRef<HTMLDivElement>(null!);
+  const [location] = useLocation();
+
+  const isUniversePage = location === "/universe" || location === "/universe-model";
 
   useEffect(() => {
     overlayRef.current = getOrCreateEventOverlay();
@@ -561,7 +573,7 @@ function UniverseBackground() {
     };
   }, []);
 
-  if (reducedMotion || !hasWebGL) {
+  if (isUniversePage || reducedMotion || !hasWebGL) {
     return StaticFallback;
   }
 
