@@ -79,8 +79,22 @@ function isScrapableUrl(url: string): boolean {
 const perDomainBudget = new Map<string, { count: number; windowStart: number }>();
 const WINDOW_MS = 60 * 60 * 1000;
 
+const BUDGET_MAX_ENTRIES = 10000;
+
+function pruneDomainBudget(now: number): void {
+  for (const [k, v] of perDomainBudget) {
+    if (now - v.windowStart > WINDOW_MS) perDomainBudget.delete(k);
+  }
+  if (perDomainBudget.size > BUDGET_MAX_ENTRIES) {
+    const entries = [...perDomainBudget.entries()].sort((a, b) => a[1].windowStart - b[1].windowStart);
+    const toDrop = entries.slice(0, perDomainBudget.size - BUDGET_MAX_ENTRIES);
+    for (const [k] of toDrop) perDomainBudget.delete(k);
+  }
+}
+
 function tryReserveDomainSlot(domain: string, limit: number): boolean {
   const now = Date.now();
+  if (perDomainBudget.size > BUDGET_MAX_ENTRIES / 2) pruneDomainBudget(now);
   const entry = perDomainBudget.get(domain);
   if (!entry || now - entry.windowStart > WINDOW_MS) {
     perDomainBudget.set(domain, { count: 1, windowStart: now });
