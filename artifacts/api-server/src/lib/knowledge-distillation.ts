@@ -4,6 +4,7 @@ import { eq, sql, desc, gt } from "drizzle-orm";
 import { logger } from "./logger";
 import { evictExpired, invalidateRelatedEntries } from "./semantic-cache";
 import { generateEmbedding, cosineSimilarity } from "./neural-embeddings";
+import { resolveCanonicalId } from "./semantic-deduplication";
 
 let CONFIDENCE_THRESHOLD = 0.6;
 const STALE_DAYS = 7;
@@ -190,6 +191,7 @@ export async function lookupKnowledge(
     }
 
     return scored.map(r => ({
+      id: resolveCanonicalId("distilled_knowledge", r.id),
       fact: r.fact,
       confidence: r.confidence,
       category: r.category,
@@ -236,7 +238,8 @@ export async function refreshStaleKnowledge(): Promise<number> {
   }
 }
 
-export async function verifyFact(factId: number, isValid: boolean): Promise<void> {
+export async function verifyFact(rawFactId: number, isValid: boolean): Promise<void> {
+  const factId = resolveCanonicalId("distilled_knowledge", rawFactId);
   try {
     if (isValid) {
       await db
