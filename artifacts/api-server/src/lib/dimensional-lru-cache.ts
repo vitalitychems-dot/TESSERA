@@ -158,7 +158,12 @@ class LRUDimension<T> {
   has(key: string): boolean {
     const entry = this.map.get(key);
     if (!entry) return false;
-    if (entry.expiresAt > 0 && entry.expiresAt < Date.now()) return false;
+    if (entry.expiresAt > 0 && entry.expiresAt < Date.now()) {
+      this.removeNode(entry);
+      this.map.delete(key);
+      this._ttlExpirations++;
+      return false;
+    }
     return true;
   }
 
@@ -200,7 +205,12 @@ class LRUDimension<T> {
   peekEntry(key: string): { value: T; associations: string[] } | undefined {
     const entry = this.map.get(key);
     if (!entry) return undefined;
-    if (entry.expiresAt > 0 && entry.expiresAt < Date.now()) return undefined;
+    if (entry.expiresAt > 0 && entry.expiresAt < Date.now()) {
+      this.removeNode(entry);
+      this.map.delete(key);
+      this._ttlExpirations++;
+      return undefined;
+    }
     return { value: entry.value, associations: entry.associations };
   }
 
