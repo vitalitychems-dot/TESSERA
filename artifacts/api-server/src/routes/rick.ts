@@ -529,7 +529,7 @@ router.post("/rick/meeseeks/spawn", (req, res) => {
       return res.status(400).json({ ok: false, error: "successCriteria is required — every Meeseeks needs a definition of done!" });
     }
     const validTaskTypes = Object.keys(getTaskTypeRegistry());
-    const resolvedTaskType: MeeseeksTaskType = taskType && validTaskTypes.includes(taskType) ? taskType : "custom";
+    const resolvedTaskType: MeeseeksTaskType | undefined = taskType && validTaskTypes.includes(taskType) ? taskType : undefined;
     const validPriorities = ["low", "normal", "high", "critical"] as const;
     const resolvedPriority = priority && validPriorities.includes(priority) ? priority : "normal";
     const agent = spawnMeeseeks({ task, ttlMs, specialization, taskType: resolvedTaskType, successCriteria, priority: resolvedPriority }, "rick-sanchez-c137");
