@@ -777,13 +777,13 @@ export default function RickPage() {
                 <input
                   value={spawnCriteria}
                   onChange={e => setSpawnCriteria(e.target.value)}
-                  placeholder="Success criteria..."
+                  placeholder="Success criteria (required)..."
                   className="bg-background/50 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] font-mono text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-violet-500/40"
                 />
               </div>
               <button
                 onClick={handleSpawnMeeseeks}
-                disabled={!spawnTask.trim() || isSpawning}
+                disabled={!spawnTask.trim() || !spawnCriteria.trim() || isSpawning}
                 className="w-full px-3 py-2 rounded-lg text-[11px] font-mono font-bold transition-all border border-violet-500/40 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isSpawning ? <Loader2 size={12} className="animate-spin" /> : <Skull size={12} />}
