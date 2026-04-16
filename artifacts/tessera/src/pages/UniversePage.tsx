@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from "react";
+import { useState, useMemo, useCallback, useEffect, lazy, Suspense, Component, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Globe2, Sun, Moon, Orbit, Sparkles, Eye, EyeOff, ChevronRight, ChevronLeft, Loader2, Layers, Hexagon, BookOpen, Activity, Zap, Star, Clock } from "lucide-react";
 import { Link } from "wouter";
@@ -15,6 +15,47 @@ function useIsMobile() {
 }
 
 const SolarSystem3D = lazy(() => import("@/components/SolarSystem3D"));
+
+class Scene3DErrorBoundary extends Component<
+  { children: ReactNode; onBack: () => void },
+  { hasError: boolean; message: string }
+> {
+  constructor(props: { children: ReactNode; onBack: () => void }) {
+    super(props);
+    this.state = { hasError: false, message: "" };
+  }
+  static getDerivedStateFromError(err: Error) {
+    return { hasError: true, message: err?.message || "Unknown render error" };
+  }
+  componentDidCatch(err: Error) {
+    console.error("[UniversePage] 3D scene failed to load:", err);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-[#030108]">
+          <div className="text-center p-6 max-w-md">
+            <div className="text-4xl mb-4">🌌</div>
+            <h2 className="text-lg font-bold font-mono text-violet-400 mb-2">3D Universe unavailable</h2>
+            <p className="text-sm text-muted-foreground mb-2">
+              Your device or browser could not render the interactive solar system.
+            </p>
+            <p className="text-[10px] text-slate-500 font-mono mb-4 break-words">
+              {this.state.message}
+            </p>
+            <button
+              onClick={this.props.onBack}
+              className="px-4 py-2 rounded-lg bg-violet-600/30 border border-violet-500/40 text-violet-300 text-xs font-mono hover:bg-violet-600/50 transition-colors"
+            >
+              ← Back to Universe
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const ZODIAC_SIGNS = [
   { sign: "Aries", symbol: "♈", element: "Fire", dates: "Mar 21 - Apr 19", ruler: "Mars" },
@@ -178,22 +219,25 @@ export default function UniversePage() {
   if (show3D) {
     return (
       <div className="fixed inset-0 w-full h-full overflow-hidden bg-[#030108]">
-        <Suspense fallback={
-          <div className="w-full h-full flex items-center justify-center">
-            <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
-          </div>
-        }>
-          <SolarSystem3D
-            showDimensions={showDimensions}
-            apodItems={apodItems}
-            userZodiac={userZodiac}
-            dimensionOpacities={dimensionOpacities}
-            showSacredOverlays={showSacredOverlays}
-            moonPhase={moonData.name}
-            sunSign={`${sunData.zodiac.symbol} ${sunData.zodiac.sign}`}
-            sovereigntyScore={sovereigntyData?.score ?? 100}
-          />
-        </Suspense>
+        <Scene3DErrorBoundary onBack={() => setShow3D(false)}>
+          <Suspense fallback={
+            <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+              <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+              <div className="text-[11px] font-mono text-violet-400/70">Loading 3D universe…</div>
+            </div>
+          }>
+            <SolarSystem3D
+              showDimensions={showDimensions}
+              apodItems={apodItems}
+              userZodiac={userZodiac}
+              dimensionOpacities={dimensionOpacities}
+              showSacredOverlays={showSacredOverlays}
+              moonPhase={moonData.name}
+              sunSign={`${sunData.zodiac.symbol} ${sunData.zodiac.sign}`}
+              sovereigntyScore={sovereigntyData?.score ?? 100}
+            />
+          </Suspense>
+        </Scene3DErrorBoundary>
         <button
           onClick={() => setShow3D(false)}
           className="fixed top-3 left-3 z-50 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-xs font-mono text-violet-400 hover:bg-white/10 transition-colors"
@@ -350,6 +394,7 @@ export default function UniversePage() {
         <button
           onClick={() => setShow3D(true)}
           className="w-full rounded-xl border border-violet-500/30 bg-gradient-to-r from-violet-950/40 to-indigo-950/40 p-4 text-center hover:border-violet-500/50 transition-all active:scale-[0.98]"
+          data-testid="button-enter-3d-universe"
         >
           <div className="text-2xl mb-1">🌌</div>
           <div className="text-sm font-bold font-mono text-violet-400">Enter 3D Universe</div>

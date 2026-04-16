@@ -171,7 +171,7 @@ export default function MobileNav() {
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       data-testid="mobile-nav"
     >
-      {expandedCluster && (
+      {expandedCluster && (CLUSTERS.find((c) => c.id === expandedCluster)?.tabs.length ?? 0) > 1 && (
         <div
           className="absolute inset-x-0 bottom-full"
           style={{
@@ -245,6 +245,12 @@ export default function MobileNav() {
               <button
                 key={cluster.id}
                 onClick={() => {
+                  const isSingle = cluster.tabs.length === 1;
+                  if (isSingle) {
+                    setExpandedCluster(null);
+                    setLocation(cluster.tabs[0].href);
+                    return;
+                  }
                   if (isExpanded) {
                     setExpandedCluster(null);
                   } else if (isActiveCluster && !isExpanded) {
@@ -283,7 +289,7 @@ export default function MobileNav() {
                   )}>
                     {cluster.label}
                   </span>
-                  {isActiveCluster && (
+                  {isActiveCluster && cluster.tabs.length > 1 && (
                     <ChevronUp size={8} className={cn(
                       colors.text, "transition-transform duration-200",
                       isExpanded && "rotate-180"
