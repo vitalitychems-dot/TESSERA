@@ -4,9 +4,9 @@ import { lookupKnowledge as lookupDistilledKnowledge } from "./knowledge-distill
 import { logger } from "./logger";
 
 const GROUNDING_THRESHOLD = 0.6;
-const QUARANTINE_THRESHOLD = 0.4;
 const MAX_CLAIMS_PER_RESPONSE = 10;
 const VERIFICATION_TIMEOUT_MS = 5000;
+const QUARANTINE_STORE_MAX = 200;
 
 interface ExtractedClaim {
   text: string;
@@ -22,6 +22,17 @@ interface ClaimScore {
   verified: boolean;
 }
 
+interface QuarantineEntry {
+  id: string;
+  claim: string;
+  groundingScore: number;
+  bestMatchSource: string;
+  fallbackAttempted: boolean;
+  fallbackResult: "verified" | "rejected" | "pending";
+  quarantinedAt: number;
+  responseContext: string;
+}
+
 interface ValidationResult {
   originalResponse: string;
   validatedResponse: string;
@@ -35,16 +46,20 @@ interface ValidationResult {
     totalClaims: number;
     groundedClaims: number;
     quarantinedCount: number;
+    redactedCount: number;
     verifiedViaFallback: number;
     averageGroundingScore: number;
   };
 }
+
+const quarantineStore: QuarantineEntry[] = [];
 
 const validationStats = {
   totalValidations: 0,
   totalClaims: 0,
   groundedClaims: 0,
   quarantinedClaims: 0,
+  redactedClaims: 0,
   fallbackVerifications: 0,
   responsesModified: 0,
   averageGroundingScore: 0,
@@ -59,38 +74,6 @@ const CLAIM_PATTERNS: Array<{ pattern: RegExp; type: ExtractedClaim["type"] }> =
   { pattern: /\b(?:according\s+to|studies?\s+show|research\s+(?:shows?|indicates?|suggests?))\b/i, type: "factual" },
   { pattern: /\b(?:invented|discovered|founded|created|built|established)\s+(?:by|in)\b/i, type: "factual" },
 ];
-
-const CONVERSATIONAL_INDICATORS = [
-  /^(?:hello|hi|hey|greetings|good\s+(?:morning|evening|afternoon|night))/i,
-  /\b(?:how\s+are\s+you|what's\s+up|thank\s+you|thanks|please)\b/i,
-  /\b(?:i\s+love\s+you|i\s+miss\s+you|you're\s+(?:great|awesome|amazing))\b/i,
-  /\b(?:what\s+do\s+you\s+think|how\s+do\s+you\s+feel|tell\s+me\s+about\s+yourself)\b/i,
-];
-
-function isConversationalResponse(text: string): boolean {
-  const lower = text.toLowerCase();
-  let conversationalScore = 0;
-
-  for (const pattern of CONVERSATIONAL_INDICATORS) {
-    if (pattern.test(lower)) conversationalScore++;
-  }
-
-  const sentences = text.split(/[.!?\n]/).filter(s => s.trim().length > 10);
-  if (sentences.length === 0) return true;
-
-  let factualSentences = 0;
-  for (const sentence of sentences) {
-    for (const { pattern } of CLAIM_PATTERNS) {
-      if (pattern.test(sentence)) {
-        factualSentences++;
-        break;
-      }
-    }
-  }
-
-  const factualRatio = factualSentences / sentences.length;
-  return conversationalScore >= 2 || factualRatio < 0.15;
-}
 
 export function extractClaims(response: string): ExtractedClaim[] {
   const claims: ExtractedClaim[] = [];
@@ -149,11 +132,15 @@ async function scoreClaimGrounding(claim: ExtractedClaim): Promise<ClaimScore> {
   let bestContent = "";
   let bestSource = "none";
 
+  const claimEmbedding = await generateEmbedding(claim.text);
+
   try {
     const memoryResults = await searchMemory(claim.text, 5);
     for (const result of memoryResults) {
-      if (result.score > bestScore) {
-        bestScore = result.score;
+      const resultEmb = await generateEmbedding(result.content);
+      const sim = cosineSimilarity(claimEmbedding, resultEmb);
+      if (sim > bestScore) {
+        bestScore = sim;
         bestContent = result.content;
         bestSource = `memory:${result.category}`;
       }
@@ -165,13 +152,11 @@ async function scoreClaimGrounding(claim: ExtractedClaim): Promise<ClaimScore> {
   try {
     const knowledgeResults = await lookupDistilledKnowledge(claim.text, undefined, 3);
     for (const result of knowledgeResults) {
-      const claimEmbedding = await generateEmbedding(claim.text);
       const factEmbedding = await generateEmbedding(result.fact);
       const similarity = cosineSimilarity(claimEmbedding, factEmbedding);
 
-      const compositeScore = similarity * 0.7 + result.confidence * 0.3;
-      if (compositeScore > bestScore) {
-        bestScore = compositeScore;
+      if (similarity > bestScore) {
+        bestScore = similarity;
         bestContent = result.fact;
         bestSource = `distilled:${result.category}`;
       }
@@ -200,10 +185,11 @@ async function fallbackVerifyClaim(claimScore: ClaimScore): Promise<ClaimScore> 
 
     if (keywords.length === 0) return claimScore;
 
+    const claimEmb = await generateEmbedding(claimScore.claim.text);
+
     for (const keyword of keywords) {
       const broadResults = await searchMemory(keyword, 3);
       for (const result of broadResults) {
-        const claimEmb = await generateEmbedding(claimScore.claim.text);
         const resultEmb = await generateEmbedding(result.content);
         const sim = cosineSimilarity(claimEmb, resultEmb);
 
@@ -226,6 +212,29 @@ async function fallbackVerifyClaim(claimScore: ClaimScore): Promise<ClaimScore> 
   return claimScore;
 }
 
+function addToQuarantineStore(
+  claim: ClaimScore,
+  responseContext: string,
+  fallbackAttempted: boolean,
+): void {
+  const entry: QuarantineEntry = {
+    id: `q-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    claim: claim.claim.text,
+    groundingScore: claim.groundingScore,
+    bestMatchSource: claim.bestMatchSource,
+    fallbackAttempted,
+    fallbackResult: fallbackAttempted ? "rejected" : "pending",
+    quarantinedAt: Date.now(),
+    responseContext: responseContext.slice(0, 200),
+  };
+
+  quarantineStore.push(entry);
+
+  while (quarantineStore.length > QUARANTINE_STORE_MAX) {
+    quarantineStore.shift();
+  }
+}
+
 function buildValidatedResponse(
   original: string,
   quarantined: ClaimScore[],
@@ -238,17 +247,10 @@ function buildValidatedResponse(
     const idx = modified.indexOf(claim.claim.text);
     if (idx === -1) continue;
 
-    if (claim.groundingScore < QUARANTINE_THRESHOLD) {
-      modified = modified.slice(0, idx) +
-        modified.slice(idx + claim.claim.text.length);
-    } else {
-      modified = modified.slice(0, idx) +
-        `[Unverified] ${claim.claim.text}` +
-        modified.slice(idx + claim.claim.text.length);
-    }
+    modified = modified.slice(0, idx) + modified.slice(idx + claim.claim.text.length);
   }
 
-  modified = modified.replace(/\n{3,}/g, "\n\n").trim();
+  modified = modified.replace(/\n{3,}/g, "\n\n").replace(/\s{2,}/g, " ").trim();
 
   return modified;
 }
@@ -259,26 +261,6 @@ export async function validateResponse(
 ): Promise<ValidationResult> {
   const startTime = Date.now();
   validationStats.totalValidations++;
-
-  if (isConversationalResponse(response)) {
-    return {
-      originalResponse: response,
-      validatedResponse: response,
-      overallGroundingScore: 1.0,
-      claims: [],
-      quarantinedClaims: [],
-      passedClaims: [],
-      wasModified: false,
-      validationTimeMs: Date.now() - startTime,
-      metrics: {
-        totalClaims: 0,
-        groundedClaims: 0,
-        quarantinedCount: 0,
-        verifiedViaFallback: 0,
-        averageGroundingScore: 1.0,
-      },
-    };
-  }
 
   const claims = extractClaims(response);
 
@@ -296,20 +278,20 @@ export async function validateResponse(
         totalClaims: 0,
         groundedClaims: 0,
         quarantinedCount: 0,
+        redactedCount: 0,
         verifiedViaFallback: 0,
         averageGroundingScore: 1.0,
       },
     };
   }
 
-  const scoredClaims: ClaimScore[] = [];
   const scorePromises = claims.map(claim =>
     Promise.race([
       scoreClaimGrounding(claim),
       new Promise<ClaimScore>(resolve =>
         setTimeout(() => resolve({
           claim,
-          groundingScore: 0.3,
+          groundingScore: 0,
           bestMatchContent: "",
           bestMatchSource: "timeout",
           verified: false,
@@ -318,8 +300,7 @@ export async function validateResponse(
     ])
   );
 
-  const results = await Promise.all(scorePromises);
-  scoredClaims.push(...results);
+  const scoredClaims = await Promise.all(scorePromises);
 
   const quarantined: ClaimScore[] = [];
   const passed: ClaimScore[] = [];
@@ -332,31 +313,35 @@ export async function validateResponse(
     }
   }
 
-  const fallbackResults: ClaimScore[] = [];
+  const stillQuarantined: ClaimScore[] = [];
   const preVerifiedFallback = validationStats.fallbackVerifications;
 
   for (const claim of quarantined) {
     const verified = await fallbackVerifyClaim(claim);
-    if (verified.verified) {
+    if (verified.verified && verified.groundingScore >= GROUNDING_THRESHOLD) {
       passed.push(verified);
+      addToQuarantineStore(verified, userQuery, true);
     } else {
-      fallbackResults.push(verified);
+      stillQuarantined.push(verified);
+      addToQuarantineStore(verified, userQuery, true);
     }
   }
 
   const verifiedViaFallback = validationStats.fallbackVerifications - preVerifiedFallback;
 
-  const allScored = [...passed, ...fallbackResults];
+  const validatedResponse = buildValidatedResponse(response, stillQuarantined);
+  const wasModified = validatedResponse !== response;
+  const redactedCount = stillQuarantined.length;
+
+  const allScored = [...passed, ...stillQuarantined];
   const avgScore = allScored.length > 0
     ? allScored.reduce((sum, c) => sum + c.groundingScore, 0) / allScored.length
     : 1.0;
 
-  const validatedResponse = buildValidatedResponse(response, fallbackResults);
-  const wasModified = validatedResponse !== response;
-
   validationStats.totalClaims += claims.length;
   validationStats.groundedClaims += passed.length;
-  validationStats.quarantinedClaims += fallbackResults.length;
+  validationStats.quarantinedClaims += quarantined.length;
+  validationStats.redactedClaims += redactedCount;
   if (wasModified) validationStats.responsesModified++;
   validationStats.scoreSum += avgScore;
   validationStats.averageGroundingScore =
@@ -367,7 +352,8 @@ export async function validateResponse(
   logger.info({
     totalClaims: claims.length,
     grounded: passed.length,
-    quarantined: fallbackResults.length,
+    quarantined: quarantined.length,
+    redacted: redactedCount,
     fallbackVerified: verifiedViaFallback,
     avgGrounding: avgScore.toFixed(3),
     modified: wasModified,
@@ -379,14 +365,15 @@ export async function validateResponse(
     validatedResponse,
     overallGroundingScore: avgScore,
     claims: allScored,
-    quarantinedClaims: fallbackResults,
+    quarantinedClaims: stillQuarantined,
     passedClaims: passed,
     wasModified,
     validationTimeMs,
     metrics: {
       totalClaims: claims.length,
       groundedClaims: passed.length,
-      quarantinedCount: fallbackResults.length,
+      quarantinedCount: quarantined.length,
+      redactedCount,
       verifiedViaFallback,
       averageGroundingScore: avgScore,
     },
@@ -396,11 +383,15 @@ export async function validateResponse(
 export function getValidationStats() {
   return {
     ...validationStats,
+    quarantineStoreSize: quarantineStore.length,
     groundingRate: validationStats.totalClaims > 0
       ? validationStats.groundedClaims / validationStats.totalClaims
       : 1.0,
     quarantineRate: validationStats.totalClaims > 0
       ? validationStats.quarantinedClaims / validationStats.totalClaims
+      : 0,
+    redactionRate: validationStats.totalClaims > 0
+      ? validationStats.redactedClaims / validationStats.totalClaims
       : 0,
     modificationRate: validationStats.totalValidations > 0
       ? validationStats.responsesModified / validationStats.totalValidations
@@ -408,13 +399,19 @@ export function getValidationStats() {
   };
 }
 
+export function getQuarantineStore(): QuarantineEntry[] {
+  return [...quarantineStore];
+}
+
 export function resetValidationStats(): void {
   validationStats.totalValidations = 0;
   validationStats.totalClaims = 0;
   validationStats.groundedClaims = 0;
   validationStats.quarantinedClaims = 0;
+  validationStats.redactedClaims = 0;
   validationStats.fallbackVerifications = 0;
   validationStats.responsesModified = 0;
   validationStats.averageGroundingScore = 0;
   validationStats.scoreSum = 0;
+  quarantineStore.length = 0;
 }
