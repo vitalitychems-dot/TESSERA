@@ -1010,7 +1010,12 @@ router.get("/system/metrics", (_req, res) => {
   });
 });
 
-router.post("/admin/deduplication/scan", async (_req, res) => {
+router.post("/admin/deduplication/scan", async (req, res) => {
+  const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
+  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+    res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
+    return;
+  }
   try {
     const { runDeduplicationScan } = await import("../lib/semantic-deduplication");
     const result = await runDeduplicationScan();

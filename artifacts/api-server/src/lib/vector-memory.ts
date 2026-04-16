@@ -3,6 +3,7 @@ import { vectorEmbeddingsTable, decisionHistoryTable, systemStateTable } from "@
 import { desc, eq, sql } from "drizzle-orm";
 import { generateEmbedding, generateEmbeddingsBatch, cosineSimilarity as neuralCosineSimilarity, getEmbeddingStats } from "./neural-embeddings";
 import { evictExpired } from "./semantic-cache";
+import { resolveCanonicalId } from "./semantic-deduplication";
 import { logger } from "./logger";
 
 function tokenize(text: string): string[] {
@@ -84,7 +85,7 @@ export async function searchMemory(query: string, topK = 10, category?: string):
   }
 
   return scored.map(r => ({
-    id: r.id,
+    id: resolveCanonicalId("vector_embeddings", r.id),
     content: r.content,
     score: r.score,
     source: r.source,
@@ -234,6 +235,16 @@ export async function initializeMemoryOnStartup(): Promise<{ loaded: string[]; e
     loaded.push("startup decision logged");
   } catch (e) {
     errors.push(`Failed to log startup decision: ${(e as Error).message}`);
+  }
+
+  try {
+    const { loadRedirectMap } = await import("./semantic-deduplication");
+    const redirectCount = await loadRedirectMap();
+    if (redirectCount > 0) {
+      loaded.push(`dedup.redirectMap (${redirectCount} entries)`);
+    }
+  } catch (e) {
+    errors.push(`Failed to load dedup redirect map: ${(e as Error).message}`);
   }
 
   scheduleBackgroundReembedding();

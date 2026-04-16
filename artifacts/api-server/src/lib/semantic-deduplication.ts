@@ -1,12 +1,12 @@
 import { db } from "@workspace/db";
-import { vectorEmbeddingsTable, distilledKnowledgeTable } from "@workspace/db/schema";
-import { eq, sql, desc } from "drizzle-orm";
+import { vectorEmbeddingsTable, distilledKnowledgeTable, systemStateTable } from "@workspace/db/schema";
+import { eq, sql, desc, gt } from "drizzle-orm";
 import { generateEmbedding, generateEmbeddingsBatch, cosineSimilarity } from "./neural-embeddings";
 import { logger } from "./logger";
 
 const SIMILARITY_THRESHOLD = 0.92;
-const SCAN_BATCH_SIZE = 50;
-const MAX_COMPARISONS_PER_BATCH = 2500;
+const SCAN_BATCH_SIZE = 100;
+const REDIRECT_STATE_KEY = "dedup.redirectMap";
 
 interface DuplicateCluster {
   canonicalId: number;
@@ -33,6 +33,7 @@ const dedupStats = {
   vectorDuplicates: 0,
   knowledgeDuplicates: 0,
   ingestDeduped: 0,
+  ingestMerged: 0,
 };
 
 function makeRedirectKey(table: string, id: number): string {
@@ -40,100 +41,151 @@ function makeRedirectKey(table: string, id: number): string {
 }
 
 export function resolveCanonicalId(table: string, id: number): number {
-  const key = makeRedirectKey(table, id);
-  return redirectMap.get(key) ?? id;
+  let resolved = id;
+  const visited = new Set<string>();
+  while (true) {
+    const key = makeRedirectKey(table, resolved);
+    if (visited.has(key)) break;
+    visited.add(key);
+    const next = redirectMap.get(key);
+    if (next === undefined || next === resolved) break;
+    resolved = next;
+  }
+  return resolved;
 }
 
-async function scanVectorEmbeddingDuplicates(offset: number): Promise<DuplicateCluster[]> {
-  const rows = await db
-    .select({
-      id: vectorEmbeddingsTable.id,
-      content: vectorEmbeddingsTable.content,
-      embedding: vectorEmbeddingsTable.embedding,
-      accessCount: vectorEmbeddingsTable.accessCount,
-      source: vectorEmbeddingsTable.source,
-    })
-    .from(vectorEmbeddingsTable)
-    .orderBy(vectorEmbeddingsTable.id)
-    .limit(SCAN_BATCH_SIZE)
-    .offset(offset);
+async function persistRedirectMap(): Promise<void> {
+  try {
+    const entries: Array<[string, number]> = [...redirectMap.entries()];
+    await db.insert(systemStateTable).values({
+      key: REDIRECT_STATE_KEY,
+      value: entries,
+      description: "Semantic deduplication redirect map (merged → canonical)",
+    }).onConflictDoUpdate({
+      target: systemStateTable.key,
+      set: { value: entries, lastSavedAt: new Date() },
+    });
+  } catch (err) {
+    logger.debug({ err: (err as Error).message }, "SemanticDedup: failed to persist redirect map");
+  }
+}
 
-  if (rows.length < 2) return [];
+export async function loadRedirectMap(): Promise<number> {
+  try {
+    const [row] = await db
+      .select()
+      .from(systemStateTable)
+      .where(eq(systemStateTable.key, REDIRECT_STATE_KEY))
+      .limit(1);
+    if (row && Array.isArray(row.value)) {
+      const entries = row.value as Array<[string, number]>;
+      for (const [key, canonicalId] of entries) {
+        redirectMap.set(key, canonicalId);
+      }
+      return entries.length;
+    }
+  } catch (err) {
+    logger.debug({ err: (err as Error).message }, "SemanticDedup: failed to load redirect map");
+  }
+  return 0;
+}
 
-  const clusters: DuplicateCluster[] = [];
-  const merged = new Set<number>();
+async function loadAllVectorEmbeddings(): Promise<Array<{
+  id: number;
+  content: string;
+  embedding: number[];
+  accessCount: number;
+  source: string;
+}>> {
+  const all: Array<{ id: number; content: string; embedding: number[]; accessCount: number; source: string }> = [];
+  let lastId = 0;
 
-  for (let i = 0; i < rows.length && clusters.length < MAX_COMPARISONS_PER_BATCH; i++) {
-    if (merged.has(rows[i].id)) continue;
+  while (true) {
+    const batch = await db
+      .select({
+        id: vectorEmbeddingsTable.id,
+        content: vectorEmbeddingsTable.content,
+        embedding: vectorEmbeddingsTable.embedding,
+        accessCount: vectorEmbeddingsTable.accessCount,
+        source: vectorEmbeddingsTable.source,
+      })
+      .from(vectorEmbeddingsTable)
+      .where(gt(vectorEmbeddingsTable.id, lastId))
+      .orderBy(vectorEmbeddingsTable.id)
+      .limit(SCAN_BATCH_SIZE);
 
-    const embA = rows[i].embedding as number[];
-    if (!Array.isArray(embA) || embA.length === 0) continue;
+    if (batch.length === 0) break;
 
-    const duplicateIds: number[] = [];
-    let bestSim = 0;
-
-    for (let j = i + 1; j < rows.length; j++) {
-      if (merged.has(rows[j].id)) continue;
-
-      const embB = rows[j].embedding as number[];
-      if (!Array.isArray(embB) || embB.length === 0) continue;
-
-      const sim = cosineSimilarity(embA, embB);
-      if (sim >= SIMILARITY_THRESHOLD) {
-        duplicateIds.push(rows[j].id);
-        merged.add(rows[j].id);
-        if (sim > bestSim) bestSim = sim;
+    for (const row of batch) {
+      const emb = row.embedding as number[];
+      if (Array.isArray(emb) && emb.length > 0) {
+        all.push({ ...row, embedding: emb });
       }
     }
-
-    if (duplicateIds.length > 0) {
-      clusters.push({
-        canonicalId: rows[i].id,
-        duplicateIds,
-        similarity: bestSim,
-        table: "vector_embeddings",
-      });
-      merged.add(rows[i].id);
-    }
+    lastId = batch[batch.length - 1].id;
   }
 
-  return clusters;
+  return all;
 }
 
-async function scanDistilledKnowledgeDuplicates(offset: number): Promise<DuplicateCluster[]> {
-  const rows = await db
-    .select({
-      id: distilledKnowledgeTable.id,
-      fact: distilledKnowledgeTable.fact,
-      confidence: distilledKnowledgeTable.confidence,
-      accessCount: distilledKnowledgeTable.accessCount,
-      category: distilledKnowledgeTable.category,
-    })
-    .from(distilledKnowledgeTable)
-    .orderBy(distilledKnowledgeTable.id)
-    .limit(SCAN_BATCH_SIZE)
-    .offset(offset);
+async function loadAllDistilledKnowledge(): Promise<Array<{
+  id: number;
+  fact: string;
+  confidence: number;
+  accessCount: number;
+  category: string;
+  embedding: number[];
+}>> {
+  const all: Array<{ id: number; fact: string; confidence: number; accessCount: number; category: string }> = [];
+  let lastId = 0;
 
-  if (rows.length < 2) return [];
+  while (true) {
+    const batch = await db
+      .select({
+        id: distilledKnowledgeTable.id,
+        fact: distilledKnowledgeTable.fact,
+        confidence: distilledKnowledgeTable.confidence,
+        accessCount: distilledKnowledgeTable.accessCount,
+        category: distilledKnowledgeTable.category,
+      })
+      .from(distilledKnowledgeTable)
+      .where(gt(distilledKnowledgeTable.id, lastId))
+      .orderBy(distilledKnowledgeTable.id)
+      .limit(SCAN_BATCH_SIZE);
 
-  const texts = rows.map(r => r.fact);
+    if (batch.length === 0) break;
+    all.push(...batch);
+    lastId = batch[batch.length - 1].id;
+  }
+
+  const texts = all.map(r => r.fact);
   const embeddings = await generateEmbeddingsBatch(texts);
 
+  return all.map((row, i) => ({
+    ...row,
+    embedding: embeddings[i] ?? [],
+  }));
+}
+
+function findDuplicateClusters<T extends { id: number; embedding: number[] }>(
+  rows: T[],
+  table: "vector_embeddings" | "distilled_knowledge",
+): DuplicateCluster[] {
   const clusters: DuplicateCluster[] = [];
   const merged = new Set<number>();
 
   for (let i = 0; i < rows.length; i++) {
     if (merged.has(rows[i].id)) continue;
-    if (!embeddings[i] || embeddings[i].length === 0) continue;
+    if (rows[i].embedding.length === 0) continue;
 
     const duplicateIds: number[] = [];
     let bestSim = 0;
 
     for (let j = i + 1; j < rows.length; j++) {
       if (merged.has(rows[j].id)) continue;
-      if (!embeddings[j] || embeddings[j].length === 0) continue;
+      if (rows[j].embedding.length === 0) continue;
 
-      const sim = cosineSimilarity(embeddings[i], embeddings[j]);
+      const sim = cosineSimilarity(rows[i].embedding, rows[j].embedding);
       if (sim >= SIMILARITY_THRESHOLD) {
         duplicateIds.push(rows[j].id);
         merged.add(rows[j].id);
@@ -146,7 +198,7 @@ async function scanDistilledKnowledgeDuplicates(offset: number): Promise<Duplica
         canonicalId: rows[i].id,
         duplicateIds,
         similarity: bestSim,
-        table: "distilled_knowledge",
+        table,
       });
       merged.add(rows[i].id);
     }
@@ -286,57 +338,41 @@ export async function runDeduplicationScan(): Promise<{
   let totalMerged = 0;
   let vectorClusters = 0;
   let knowledgeClusters = 0;
-  let totalStorageSaved = 0;
 
-  let offset = 0;
-  let hasMore = true;
-  while (hasMore) {
-    const clusters = await scanVectorEmbeddingDuplicates(offset);
-    if (clusters.length === 0) {
-      hasMore = false;
-      break;
-    }
+  const vectorRows = await loadAllVectorEmbeddings();
+  const vectorDupClusters = findDuplicateClusters(vectorRows, "vector_embeddings");
 
-    for (const cluster of clusters) {
-      const result = await mergeVectorCluster(cluster);
-      totalMerged += result.mergedIds.length;
-      vectorClusters++;
-      logger.info({
-        canonicalId: result.canonicalId,
-        merged: result.mergedIds.length,
-        preview: result.contentPreview,
-      }, "SemanticDedup: merged vector embedding cluster");
-    }
-
-    offset += SCAN_BATCH_SIZE;
+  for (const cluster of vectorDupClusters) {
+    const result = await mergeVectorCluster(cluster);
+    totalMerged += result.mergedIds.length;
+    vectorClusters++;
+    logger.info({
+      canonicalId: result.canonicalId,
+      merged: result.mergedIds.length,
+      preview: result.contentPreview,
+    }, "SemanticDedup: merged vector embedding cluster");
   }
 
-  offset = 0;
-  hasMore = true;
-  while (hasMore) {
-    const clusters = await scanDistilledKnowledgeDuplicates(offset);
-    if (clusters.length === 0) {
-      hasMore = false;
-      break;
-    }
+  const knowledgeRows = await loadAllDistilledKnowledge();
+  const knowledgeDupClusters = findDuplicateClusters(knowledgeRows, "distilled_knowledge");
 
-    for (const cluster of clusters) {
-      const result = await mergeKnowledgeCluster(cluster);
-      totalMerged += result.mergedIds.length;
-      knowledgeClusters++;
-      logger.info({
-        canonicalId: result.canonicalId,
-        merged: result.mergedIds.length,
-        preview: result.contentPreview,
-      }, "SemanticDedup: merged knowledge cluster");
-    }
-
-    offset += SCAN_BATCH_SIZE;
+  for (const cluster of knowledgeDupClusters) {
+    const result = await mergeKnowledgeCluster(cluster);
+    totalMerged += result.mergedIds.length;
+    knowledgeClusters++;
+    logger.info({
+      canonicalId: result.canonicalId,
+      merged: result.mergedIds.length,
+      preview: result.contentPreview,
+    }, "SemanticDedup: merged knowledge cluster");
   }
 
   dedupStats.entriesMerged += totalMerged;
   dedupStats.duplicatesFound += totalMerged;
-  totalStorageSaved = dedupStats.storageSaved;
+
+  if (totalMerged > 0) {
+    await persistRedirectMap();
+  }
 
   const durationMs = Date.now() - startTime;
   dedupStats.lastScanDurationMs = durationMs;
@@ -345,17 +381,28 @@ export async function runDeduplicationScan(): Promise<{
     vectorClusters,
     knowledgeClusters,
     totalMerged,
-    storageSaved: totalStorageSaved,
+    storageSaved: dedupStats.storageSaved,
     durationMs,
   }, "SemanticDedup: full scan complete");
 
-  return { vectorClusters, knowledgeClusters, totalMerged, storageSaved: totalStorageSaved, durationMs };
+  return {
+    vectorClusters,
+    knowledgeClusters,
+    totalMerged,
+    storageSaved: dedupStats.storageSaved,
+    durationMs,
+  };
 }
 
 export async function checkDuplicateBeforeIngest(
   content: string,
   table: "vector_embeddings" | "distilled_knowledge" = "vector_embeddings",
-): Promise<{ isDuplicate: boolean; canonicalId?: number; similarity?: number }> {
+): Promise<{
+  isDuplicate: boolean;
+  canonicalId?: number;
+  similarity?: number;
+  action?: "merged" | "skipped";
+}> {
   try {
     const newEmbedding = await generateEmbedding(content);
 
@@ -363,7 +410,9 @@ export async function checkDuplicateBeforeIngest(
       const rows = await db
         .select({
           id: vectorEmbeddingsTable.id,
+          content: vectorEmbeddingsTable.content,
           embedding: vectorEmbeddingsTable.embedding,
+          accessCount: vectorEmbeddingsTable.accessCount,
         })
         .from(vectorEmbeddingsTable)
         .orderBy(desc(vectorEmbeddingsTable.createdAt))
@@ -375,8 +424,18 @@ export async function checkDuplicateBeforeIngest(
 
         const sim = cosineSimilarity(newEmbedding, emb);
         if (sim >= SIMILARITY_THRESHOLD) {
-          dedupStats.ingestDeduped++;
-          return { isDuplicate: true, canonicalId: row.id, similarity: sim };
+          const bestContent = content.length > row.content.length ? content : row.content;
+          await db
+            .update(vectorEmbeddingsTable)
+            .set({
+              content: bestContent,
+              accessCount: sql`${vectorEmbeddingsTable.accessCount} + 1`,
+              updatedAt: new Date(),
+            })
+            .where(eq(vectorEmbeddingsTable.id, row.id));
+
+          dedupStats.ingestMerged++;
+          return { isDuplicate: true, canonicalId: row.id, similarity: sim, action: "merged" };
         }
       }
     } else {
@@ -384,6 +443,7 @@ export async function checkDuplicateBeforeIngest(
         .select({
           id: distilledKnowledgeTable.id,
           fact: distilledKnowledgeTable.fact,
+          confidence: distilledKnowledgeTable.confidence,
         })
         .from(distilledKnowledgeTable)
         .orderBy(desc(distilledKnowledgeTable.confidence))
@@ -396,8 +456,18 @@ export async function checkDuplicateBeforeIngest(
         if (!embeddings[i] || embeddings[i].length === 0) continue;
         const sim = cosineSimilarity(newEmbedding, embeddings[i]);
         if (sim >= SIMILARITY_THRESHOLD) {
-          dedupStats.ingestDeduped++;
-          return { isDuplicate: true, canonicalId: rows[i].id, similarity: sim };
+          const bestFact = content.length > rows[i].fact.length ? content : rows[i].fact;
+          await db
+            .update(distilledKnowledgeTable)
+            .set({
+              fact: bestFact,
+              accessCount: sql`${distilledKnowledgeTable.accessCount} + 1`,
+              updatedAt: new Date(),
+            })
+            .where(eq(distilledKnowledgeTable.id, rows[i].id));
+
+          dedupStats.ingestMerged++;
+          return { isDuplicate: true, canonicalId: rows[i].id, similarity: sim, action: "merged" };
         }
       }
     }
@@ -428,5 +498,6 @@ export function resetDeduplicationStats(): void {
   dedupStats.vectorDuplicates = 0;
   dedupStats.knowledgeDuplicates = 0;
   dedupStats.ingestDeduped = 0;
+  dedupStats.ingestMerged = 0;
   redirectMap.clear();
 }
