@@ -8,7 +8,7 @@ import { decisionHistoryTable } from "@workspace/db/schema";
 import { eq, sql, desc } from "drizzle-orm";
 import { logger } from "./logger";
 import { createProposal } from "./consensus-engine";
-import { spawnAgent } from "./agent-spawner";
+import { spawnAgent, spawnMeeseeks } from "./agent-spawner";
 import { runDueIngestion, getSourceHandlers } from "./ingestion/scheduler";
 import { swarmGetPreferredHandler } from "./swarm-optimizer";
 
@@ -254,37 +254,52 @@ async function implementImprovements(proposals: string[]): Promise<string[]> {
       }
     } else if (actionType === "spawn-agent") {
       try {
-        const agent = spawnAgent(
-          `auto-improvement:weak-area:${cat}`,
-          [cat, "self-improvement", "sovereignty"],
-          "tessera-prime"
-        );
-        if (agent) {
-          implemented.push(`[AGENT-SPAWNED] ${cat}: score ${oldScore.toFixed(1)} → ${newScore.toFixed(1)} | Spawned ${agent.name} (${agent.role}) to strengthen ${cat}`);
+        const meeseeks = spawnMeeseeks({
+          task: `Improve weak area: ${cat} (score ${oldScore.toFixed(1)} → ${newScore.toFixed(1)})`,
+          specialization: cat,
+          ttlMs: 120_000,
+        }, "auto-improvement-daemon");
+        implemented.push(`[MEESEEKS-SPAWNED] ${cat}: score ${oldScore.toFixed(1)} → ${newScore.toFixed(1)} | Spawned ${meeseeks.name} (${meeseeks.role}) to strengthen ${cat}`);
+        daemonState.improvementHistory.unshift({
+          description: `Spawned Meeseeks ${meeseeks.name} for ${cat}`,
+          impact: delta,
+          timestamp: Date.now(),
+          category: cat,
+        });
+      } catch (meeseeksErr) {
+        try {
+          const agent = spawnAgent(
+            `auto-improvement:weak-area:${cat}`,
+            [cat, "self-improvement", "sovereignty"],
+            "tessera-prime"
+          );
+          if (agent) {
+            implemented.push(`[AGENT-SPAWNED] ${cat}: score ${oldScore.toFixed(1)} → ${newScore.toFixed(1)} | Spawned ${agent.name} (${agent.role}) to strengthen ${cat}`);
+            daemonState.improvementHistory.unshift({
+              description: `Spawned agent ${agent.name} for ${cat} (meeseeks fallback)`,
+              impact: delta,
+              timestamp: Date.now(),
+              category: cat,
+            });
+          } else {
+            implemented.push(`[SPAWN-COOLDOWN] ${cat}: score refresh ${oldScore.toFixed(1)} → ${newScore.toFixed(1)} (spawn on cooldown)`);
+            daemonState.improvementHistory.unshift({
+              description: `Tracked ${cat} — spawn on cooldown`,
+              impact: delta,
+              timestamp: Date.now(),
+              category: cat,
+            });
+          }
+        } catch (err) {
+          logger.warn({ err, meeseeksErr, cat }, "ImprovementDaemon: agent spawn failed (meeseeks + persistent)");
+          implemented.push(`[SPAWN-FAILED] ${cat}: score refresh ${oldScore.toFixed(1)} → ${newScore.toFixed(1)}`);
           daemonState.improvementHistory.unshift({
-            description: `Spawned agent ${agent.name} for ${cat}`,
-            impact: delta,
-            timestamp: Date.now(),
-            category: cat,
-          });
-        } else {
-          implemented.push(`[SPAWN-COOLDOWN] ${cat}: score refresh ${oldScore.toFixed(1)} → ${newScore.toFixed(1)} (spawn on cooldown)`);
-          daemonState.improvementHistory.unshift({
-            description: `Tracked ${cat} — spawn on cooldown`,
+            description: `Tracked ${cat} from real data (spawn fallback)`,
             impact: delta,
             timestamp: Date.now(),
             category: cat,
           });
         }
-      } catch (err) {
-        logger.warn({ err, cat }, "ImprovementDaemon: agent spawn failed");
-        implemented.push(`[SPAWN-FAILED] ${cat}: score refresh ${oldScore.toFixed(1)} → ${newScore.toFixed(1)}`);
-        daemonState.improvementHistory.unshift({
-          description: `Tracked ${cat} from real data (spawn fallback)`,
-          impact: delta,
-          timestamp: Date.now(),
-          category: cat,
-        });
       }
     } else {
       try {

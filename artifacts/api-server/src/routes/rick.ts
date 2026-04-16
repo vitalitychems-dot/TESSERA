@@ -19,7 +19,7 @@ import { getDaemonMetrics } from "../lib/auto-improvement-daemon";
 import { secureExternalStreamingFetch, secureExternalFetch } from "../lib/secureExternalWrapper";
 import { getAllProposals } from "../lib/consensus-engine";
 import { getMeeseeksMetrics, spawnMeeseeks, completeMeeseeks } from "../lib/agent-spawner";
-import { getTruthfulnessMetrics } from "../lib/truthfulness-engine";
+import { getTruthfulnessMetrics, analyzeTruthfulnessV2, analyzeTruthfulness } from "../lib/truthfulness-engine";
 import { getRouterPerformanceMetrics } from "../lib/sovereign-engine-router";
 import { getDiffusionMetrics } from "../lib/knowledge-diffusion";
 import { getResonanceScore, getConsciousnessMetrics } from "../lib/consciousness-engine";
@@ -223,8 +223,24 @@ router.post("/rick/chat", async (req, res) => {
           requestedBy: "rick-sanchez-agent",
         });
         const parsed = JSON.parse(result.body);
-        const content = parsed?.choices?.[0]?.message?.content || generateRickFallback(messages[messages.length - 1]?.content || "");
-        return res.json({ ok: true, content, source: "rick-llm" });
+        let content = parsed?.choices?.[0]?.message?.content || generateRickFallback(messages[messages.length - 1]?.content || "");
+
+        let truthEnforcement = { truthScore: 1, groundingScore: 1, enforced: false };
+        try {
+          const truthCheck = await analyzeTruthfulnessV2(content);
+          truthEnforcement = { truthScore: truthCheck.truthScore, groundingScore: truthCheck.groundingScore, enforced: true };
+          if (truthCheck.groundingScore < 0.3 && truthCheck.ungroundedClaims.length > 2) {
+            const disclaimers = truthCheck.ungroundedClaims.slice(0, 3).map((c: string) => `"${c.slice(0, 60)}"`).join(", ");
+            content += `\n\n*[Sovereignty Notice: ${truthCheck.ungroundedClaims.length} claims could not be verified against sovereign knowledge base. Unverified: ${disclaimers}]*`;
+            logger.warn({ groundingScore: truthCheck.groundingScore, ungrounded: truthCheck.ungroundedClaims.length }, "Rick: low grounding detected — disclaimer appended");
+          }
+        } catch (truthErr) {
+          const fallbackCheck = analyzeTruthfulness(content);
+          truthEnforcement = { truthScore: fallbackCheck.truthScore, groundingScore: 1, enforced: true };
+          logger.debug({ err: truthErr instanceof Error ? truthErr.message : String(truthErr) }, "Rick: V2 truth check failed, used V1 fallback");
+        }
+
+        return res.json({ ok: true, content, source: "rick-llm", truthEnforcement });
       } catch (err) {
         const fallback = generateRickFallback(messages[messages.length - 1]?.content || "");
         return res.json({ ok: true, content: fallback, source: "rick-sovereign-fallback" });

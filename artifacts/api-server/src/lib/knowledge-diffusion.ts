@@ -2,6 +2,7 @@ import { logger } from "./logger";
 import { searchMemory } from "./vector-memory";
 import { injectStimulus } from "./consciousness-engine";
 import { broadcastMessage } from "./agent-comms";
+import { DOMAIN_SIMILARITY } from "./dimensional-lru-cache";
 
 export interface KnowledgePulse {
   id: string;
@@ -24,17 +25,6 @@ export interface DiffusionMetrics {
   engineVersion: string;
 }
 
-const DOMAIN_AFFINITY: Record<string, string[]> = {
-  knowledge: ["bio", "quantum", "mesh"],
-  quantum: ["knowledge", "mesh"],
-  bio: ["knowledge", "quantum"],
-  mesh: ["knowledge", "finance"],
-  finance: ["mesh", "knowledge"],
-  consciousness: ["knowledge", "quantum", "bio"],
-  sovereignty: ["knowledge", "consciousness"],
-  "sacred-knowledge": ["consciousness", "sovereignty"],
-};
-
 const pulseHistory: KnowledgePulse[] = [];
 let pulseCounter = 0;
 let totalDiffusions = 0;
@@ -43,12 +33,16 @@ const impactScores: number[] = [];
 
 function computeDomainRelevance(sourceDomain: string, content: string): Record<string, number> {
   const weights: Record<string, number> = {};
-  const affineDomains = DOMAIN_AFFINITY[sourceDomain] ?? ["knowledge"];
 
-  for (const target of affineDomains) {
-    const baseAffinity = 0.4 + Math.random() * 0.3;
-    const contentRelevance = content.length > 100 ? 0.2 : 0.1;
-    weights[target] = Math.round((baseAffinity + contentRelevance) * 100) / 100;
+  const domainEdges = DOMAIN_SIMILARITY[sourceDomain];
+  if (domainEdges) {
+    for (const [target, similarity] of Object.entries(domainEdges)) {
+      const contentBoost = content.length > 100 ? 0.1 : 0.05;
+      weights[target] = Math.round((similarity + contentBoost) * 100) / 100;
+    }
+  } else {
+    weights["knowledge"] = 0.5;
+    weights["consciousness"] = 0.4;
   }
 
   weights[sourceDomain] = 1.0;
@@ -166,6 +160,43 @@ export function getDiffusionMetrics(): DiffusionMetrics {
   };
 }
 
+export async function onIngestionEvent(domain: string, itemCount: number, source: string): Promise<void> {
+  if (itemCount < 1) return;
+  try {
+    await emitKnowledgePulse(
+      `ingestion:${source}`,
+      domain,
+      `New ingestion: ${itemCount} items from ${source} in ${domain}`,
+    );
+  } catch (err) {
+    logger.debug({ err: err instanceof Error ? err.message : String(err), domain, source }, "KnowledgeDiffusion: ingestion event pulse failed");
+  }
+}
+
+export async function onCouncilDecision(category: string, decision: string, approved: boolean): Promise<void> {
+  try {
+    await emitKnowledgePulse(
+      "council-decision",
+      category,
+      `Council ${approved ? "approved" : "rejected"}: ${decision.slice(0, 200)}`,
+    );
+  } catch (err) {
+    logger.debug({ err: err instanceof Error ? err.message : String(err), category }, "KnowledgeDiffusion: council decision pulse failed");
+  }
+}
+
+export async function onInventionEvent(domain: string, inventionName: string): Promise<void> {
+  try {
+    await emitKnowledgePulse(
+      "invention-event",
+      domain,
+      `New invention activated: ${inventionName} in ${domain}`,
+    );
+  } catch (err) {
+    logger.debug({ err: err instanceof Error ? err.message : String(err), domain }, "KnowledgeDiffusion: invention event pulse failed");
+  }
+}
+
 export function initKnowledgeDiffusion(): void {
-  logger.info("KnowledgeDiffusion: Hive Mind Network initialized");
+  logger.info("KnowledgeDiffusion: Hive Mind Network initialized (using DOMAIN_SIMILARITY weights)");
 }

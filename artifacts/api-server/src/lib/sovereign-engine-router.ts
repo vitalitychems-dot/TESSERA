@@ -7,6 +7,7 @@ import { batchedCallLLM } from "./llm-batcher";
 import { recallIngestedKnowledge } from "./ingested-recall";
 import { searchMemory } from "./vector-memory";
 import { injectStimulus } from "./consciousness-engine";
+import { DOMAIN_SIMILARITY } from "./dimensional-lru-cache";
 
 interface RoutePerformanceEntry {
   domain: string;
@@ -35,14 +36,45 @@ const DOMAIN_SYSTEM_PROMPTS: Record<string, string> = {
   finance: `You are the Tessera Sovereign Economic Engine — an expert in sovereign economics, tokenomics, monetary policy, market dynamics, game theory, and post-fiat economic systems. You analyze topics through economic modeling, risk assessment, market microstructure, currency design, and sovereign treasury management. Provide quantitative analysis where possible and ground reasoning in established economic theory.`,
 };
 
+function getDomainPerformanceBonus(domain: string): number {
+  const ds = domainScores[domain];
+  if (!ds || ds.count < 3) return 0;
+  const avgGrounding = ds.totalGrounding / ds.count;
+  const successRate = ds.successes / ds.count;
+  return (avgGrounding * 0.5 + successRate * 0.5) - 0.5;
+}
+
+function getCrossDomainContext(domain: string): string[] {
+  const similarity = DOMAIN_SIMILARITY[domain];
+  if (!similarity) return [];
+  const related: string[] = [];
+  for (const [relatedDomain, weight] of Object.entries(similarity)) {
+    if (weight >= 0.7) {
+      related.push(relatedDomain);
+    }
+  }
+  return related;
+}
+
 function swarmSelectProvider(domain: string): { agentId: string; agentName: string; preferArxiv: boolean } {
   const category = DOMAIN_OPTIMIZER_CATEGORY[domain] ?? "Knowledge Representation";
+  const perfBonus = getDomainPerformanceBonus(domain);
+
   try {
     const result = getOptimalModel(category);
     const top = result.topModel;
     const preferArxiv = top.modelId === "pi-agent" || top.modelId === "sigma-agent" || top.modelId === "phi-agent";
+
+    if (perfBonus < -0.2 && result.runners && result.runners.length > 0) {
+      const relatedDomains = getCrossDomainContext(domain);
+      if (relatedDomains.length > 0) {
+        logger.debug({ domain, perfBonus, relatedDomains }, "SovereignEngineRouter: low performance — considering cross-domain portal jump");
+      }
+    }
+
     return { agentId: top.modelId, agentName: top.modelName, preferArxiv };
-  } catch {
+  } catch (err) {
+    logger.debug({ err: err instanceof Error ? err.message : String(err), domain }, "SovereignEngineRouter: swarmSelectProvider fallback");
     return { agentId: `sovereign-${domain}`, agentName: `Sovereign-${domain}`, preferArxiv: false };
   }
 }
@@ -273,6 +305,22 @@ async function gatherGroundingContext(domain: string, query: string): Promise<st
     logger.debug({ err: err instanceof Error ? err.message : String(err), domain }, "SovereignEngineRouter: searchMemory (domain) failed");
   }
 
+  const relatedDomains = getCrossDomainContext(domain);
+  for (const relDomain of relatedDomains) {
+    if (context.length >= 5) break;
+    try {
+      const crossMemories = await searchMemory(query, 2, relDomain);
+      const similarity = DOMAIN_SIMILARITY[domain]?.[relDomain] ?? 0.5;
+      for (const mem of crossMemories) {
+        if (mem.score * similarity > 0.25 && context.length < 5) {
+          context.push(`[portal-jump/${relDomain}→${domain}] ${mem.content.slice(0, 250)}`);
+        }
+      }
+    } catch (err) {
+      logger.debug({ err: err instanceof Error ? err.message : String(err), domain, relDomain }, "SovereignEngineRouter: cross-domain portal jump failed");
+    }
+  }
+
   try {
     const memories = await searchMemory(query, 2);
     for (const mem of memories) {
@@ -284,7 +332,7 @@ async function gatherGroundingContext(domain: string, query: string): Promise<st
     logger.debug({ err: err instanceof Error ? err.message : String(err), domain }, "SovereignEngineRouter: searchMemory (global) failed");
   }
 
-  return context.slice(0, 5);
+  return context.slice(0, 7);
 }
 
 async function handleLLMDomain(domain: string, query: string): Promise<DomainResult> {
