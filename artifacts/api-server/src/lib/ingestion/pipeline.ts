@@ -192,7 +192,12 @@ export async function ingestItem(item: NormalizedItem): Promise<{ ingested: bool
     return { ingested: false, reason: "empty content" };
   }
 
-  const semanticDup = await checkDuplicateBeforeIngest(text);
+  const semanticDup = await checkDuplicateBeforeIngest(
+    text,
+    "vector_embeddings",
+    sanitizedItem.source,
+    { url: sanitizedItem.url, tags: sanitizedItem.tags, ...(sanitizedItem.metadata || {}) },
+  );
   if (semanticDup.isDuplicate) {
     addAuditEntry(
       item.source,

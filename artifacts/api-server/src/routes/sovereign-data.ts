@@ -1025,6 +1025,21 @@ router.post("/admin/deduplication/scan", async (req, res) => {
   }
 });
 
+router.post("/admin/deduplication/migrate", async (req, res) => {
+  const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
+  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+    res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
+    return;
+  }
+  try {
+    const { runDeduplicationMigration } = await import("../lib/semantic-deduplication");
+    const result = await runDeduplicationMigration();
+    res.json({ ok: result.status === "completed", ...result });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
 router.get("/admin/deduplication/stats", (_req, res) => {
   res.json({ ok: true, ...getDeduplicationStats() });
 });
