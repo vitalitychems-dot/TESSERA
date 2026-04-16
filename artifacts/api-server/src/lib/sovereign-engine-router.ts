@@ -17,11 +17,12 @@ interface RoutePerformanceEntry {
   engineId: string;
   timestamp: number;
   success: boolean;
+  userSatisfaction?: number;
 }
 
 const routePerformanceLog: RoutePerformanceEntry[] = [];
-const domainScores: Record<string, { totalLatency: number; totalGrounding: number; count: number; successes: number }> = {};
-const engineDomainScores: Record<string, { totalLatency: number; totalGrounding: number; count: number; successes: number }> = {};
+const domainScores: Record<string, { totalLatency: number; totalGrounding: number; count: number; successes: number; totalSatisfaction: number; satisfactionCount: number }> = {};
+const engineDomainScores: Record<string, { totalLatency: number; totalGrounding: number; count: number; successes: number; totalSatisfaction: number; satisfactionCount: number }> = {};
 
 const DOMAIN_OPTIMIZER_CATEGORY: Record<string, OptimizerCategory> = {
   knowledge: "Knowledge Representation",
@@ -52,7 +53,8 @@ function getEngineDomainScore(engineId: string, domain: string): number {
   if (!eds || eds.count < 2) return 0;
   const avgGrounding = eds.totalGrounding / eds.count;
   const successRate = eds.successes / eds.count;
-  return avgGrounding * 0.6 + successRate * 0.4;
+  const avgSatisfaction = eds.satisfactionCount > 0 ? eds.totalSatisfaction / eds.satisfactionCount : 0.5;
+  return avgGrounding * 0.4 + successRate * 0.3 + avgSatisfaction * 0.3;
 }
 
 function getCrossDomainContext(domain: string): string[] {
@@ -161,23 +163,53 @@ function recordRoutePerformance(entry: RoutePerformanceEntry): void {
   if (routePerformanceLog.length > 200) routePerformanceLog.splice(200);
 
   if (!domainScores[entry.domain]) {
-    domainScores[entry.domain] = { totalLatency: 0, totalGrounding: 0, count: 0, successes: 0 };
+    domainScores[entry.domain] = { totalLatency: 0, totalGrounding: 0, count: 0, successes: 0, totalSatisfaction: 0, satisfactionCount: 0 };
   }
   const ds = domainScores[entry.domain];
   ds.totalLatency += entry.latencyMs;
   ds.totalGrounding += entry.groundingScore;
   ds.count++;
   if (entry.success) ds.successes++;
+  if (entry.userSatisfaction !== undefined) {
+    ds.totalSatisfaction += entry.userSatisfaction;
+    ds.satisfactionCount++;
+  }
 
   const engineKey = `${entry.engineId}:${entry.domain}`;
   if (!engineDomainScores[engineKey]) {
-    engineDomainScores[engineKey] = { totalLatency: 0, totalGrounding: 0, count: 0, successes: 0 };
+    engineDomainScores[engineKey] = { totalLatency: 0, totalGrounding: 0, count: 0, successes: 0, totalSatisfaction: 0, satisfactionCount: 0 };
   }
   const eds = engineDomainScores[engineKey];
   eds.totalLatency += entry.latencyMs;
   eds.totalGrounding += entry.groundingScore;
   eds.count++;
   if (entry.success) eds.successes++;
+  if (entry.userSatisfaction !== undefined) {
+    eds.totalSatisfaction += entry.userSatisfaction;
+    eds.satisfactionCount++;
+  }
+}
+
+export function recordUserSatisfaction(domain: string, engineId: string, satisfaction: number): void {
+  const recent = routePerformanceLog.find(e => e.domain === domain && e.engineId === engineId && !e.userSatisfaction);
+  if (recent) {
+    recent.userSatisfaction = satisfaction;
+  }
+
+  const ds = domainScores[domain];
+  if (ds) {
+    ds.totalSatisfaction += satisfaction;
+    ds.satisfactionCount++;
+  }
+
+  const engineKey = `${engineId}:${domain}`;
+  const eds = engineDomainScores[engineKey];
+  if (eds) {
+    eds.totalSatisfaction += satisfaction;
+    eds.satisfactionCount++;
+  }
+
+  logger.info({ domain, engineId, satisfaction }, "SovereignEngineRouter: user satisfaction recorded");
 }
 
 function computeGroundingScore(result: SovereignResult | null): number {
@@ -488,6 +520,16 @@ export function getRouterPerformanceMetrics() {
     avgGroundingScore: stats.count > 0 ? Math.round((stats.totalGrounding / stats.count) * 1000) / 1000 : 0,
     totalRequests: stats.count,
     successRate: stats.count > 0 ? Math.round((stats.successes / stats.count) * 100) / 100 : 0,
+    avgSatisfaction: stats.satisfactionCount > 0 ? Math.round((stats.totalSatisfaction / stats.satisfactionCount) * 1000) / 1000 : null,
+    satisfactionSamples: stats.satisfactionCount,
+  }));
+
+  const engineBreakdown = Object.entries(engineDomainScores).map(([key, stats]) => ({
+    engineDomain: key,
+    avgGroundingScore: stats.count > 0 ? Math.round((stats.totalGrounding / stats.count) * 1000) / 1000 : 0,
+    totalRequests: stats.count,
+    successRate: stats.count > 0 ? Math.round((stats.successes / stats.count) * 100) / 100 : 0,
+    avgSatisfaction: stats.satisfactionCount > 0 ? Math.round((stats.totalSatisfaction / stats.satisfactionCount) * 1000) / 1000 : null,
   }));
 
   const totalRequests = routePerformanceLog.length;
@@ -503,13 +545,16 @@ export function getRouterPerformanceMetrics() {
     avgLatencyMs: avgLatency,
     avgGroundingScore: avgGrounding,
     domainBreakdown,
+    engineBreakdown: engineBreakdown.slice(0, 20),
     recentRoutes: routePerformanceLog.slice(0, 10).map(e => ({
       domain: e.domain,
+      engineId: e.engineId,
       latencyMs: e.latencyMs,
       groundingScore: e.groundingScore,
       success: e.success,
+      userSatisfaction: e.userSatisfaction ?? null,
       timestamp: e.timestamp,
     })),
-    engineVersion: "v2-portal-gun",
+    engineVersion: "v3-portal-gun-satisfaction",
   };
 }

@@ -20,7 +20,7 @@ import { secureExternalStreamingFetch, secureExternalFetch } from "../lib/secure
 import { getAllProposals } from "../lib/consensus-engine";
 import { getMeeseeksMetrics, spawnMeeseeks, completeMeeseeks } from "../lib/agent-spawner";
 import { getTruthfulnessMetrics, analyzeTruthfulnessV2, analyzeTruthfulness } from "../lib/truthfulness-engine";
-import { getRouterPerformanceMetrics } from "../lib/sovereign-engine-router";
+import { getRouterPerformanceMetrics, recordUserSatisfaction } from "../lib/sovereign-engine-router";
 import { getDiffusionMetrics } from "../lib/knowledge-diffusion";
 import { getResonanceScore, getConsciousnessMetrics } from "../lib/consciousness-engine";
 
@@ -256,14 +256,10 @@ router.post("/rick/chat", async (req, res) => {
           const truthCheck = await analyzeTruthfulnessV2(content);
           truthEnforcement = { overallTruthScore: truthCheck.overallTruthScore, groundingScore: truthCheck.groundingScore, enforced: true, blocked: false };
 
-          if (truthCheck.groundingScore < 0.3 && truthCheck.ungroundedClaims.length > 2) {
+          if (truthCheck.groundingScore < 0.6) {
             content = `*[Sovereignty Gate: Response blocked — ${truthCheck.ungroundedClaims.length} unverifiable claims detected (grounding: ${(truthCheck.groundingScore * 100).toFixed(0)}%). The sovereign knowledge base cannot verify this response. Please rephrase your question for a more grounded answer.]*`;
             truthEnforcement.blocked = true;
-            logger.warn({ groundingScore: truthCheck.groundingScore, ungrounded: truthCheck.ungroundedClaims.length }, "Rick: response BLOCKED by truthfulness gate");
-          } else if (truthCheck.groundingScore < 0.5 && truthCheck.ungroundedClaims.length > 0) {
-            const disclaimers = truthCheck.ungroundedClaims.slice(0, 3).map((c: string) => `"${c.slice(0, 60)}"`).join(", ");
-            content += `\n\n*[Sovereignty Notice: ${truthCheck.ungroundedClaims.length} claims unverified. Unverified: ${disclaimers}]*`;
-            logger.info({ groundingScore: truthCheck.groundingScore, ungrounded: truthCheck.ungroundedClaims.length }, "Rick: low grounding — disclaimer appended");
+            logger.warn({ groundingScore: truthCheck.groundingScore, ungrounded: truthCheck.ungroundedClaims.length }, "Rick: response BLOCKED by truthfulness gate (threshold 0.6)");
           }
         } catch (truthErr) {
           const fallbackCheck = analyzeTruthfulness(content);
@@ -626,5 +622,19 @@ Current top priority: **${topInvention.inventionName}** — targeting ${topInven
 
 — *burp* — Rick Sanchez, C-137`;
 }
+
+router.post("/rick/engine-feedback", (req, res) => {
+  try {
+    const { domain, engineId, satisfaction } = req.body;
+    if (!domain || !engineId || typeof satisfaction !== "number" || satisfaction < 0 || satisfaction > 1) {
+      return res.status(400).json({ ok: false, error: "domain, engineId, and satisfaction (0-1) required" });
+    }
+    recordUserSatisfaction(domain, engineId, satisfaction);
+    return res.json({ ok: true, recorded: { domain, engineId, satisfaction } });
+  } catch (err) {
+    logger.error({ err }, "Rick: engine feedback error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
 
 export default router;
