@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Globe2, Sun, Moon, Orbit, Sparkles, Eye, EyeOff, ChevronRight, ChevronLeft, Loader2, Layers, Hexagon, BookOpen } from "lucide-react";
+import { Globe2, Sun, Moon, Orbit, Sparkles, Eye, EyeOff, ChevronRight, ChevronLeft, Loader2, Layers, Hexagon, BookOpen, Activity, Zap, Star, Clock } from "lucide-react";
 import { Link } from "wouter";
 import NatalChartSection from "@/components/NatalChartSection";
 
@@ -33,6 +33,7 @@ const ZODIAC_SIGNS = [
 
 const DIMENSION_NAMES = ["Physical", "Etheric", "Astral", "Mental", "Causal", "Buddhic", "Atmic"];
 const DIMENSION_COLORS = ["#f87171", "#fb923c", "#facc15", "#4ade80", "#22d3ee", "#60a5fa", "#a78bfa"];
+const SOLFEGGIO = ["396", "417", "528", "639", "741", "852", "963"];
 
 function getZodiacFromBirthDate(dateStr: string): typeof ZODIAC_SIGNS[0] | null {
   if (!dateStr) return null;
@@ -77,40 +78,37 @@ function getSunPosition(now: Date) {
 }
 
 const RULER_SYMBOLS: Record<string, string> = {
-  Mars: "♂",
-  Venus: "♀",
-  Mercury: "☿",
-  Moon: "☽",
-  Sun: "☉",
-  Pluto: "♇",
-  Jupiter: "♃",
-  Saturn: "♄",
-  Uranus: "♅",
-  Neptune: "♆",
+  Mars: "♂", Venus: "♀", Mercury: "☿", Moon: "☽", Sun: "☉",
+  Pluto: "♇", Jupiter: "♃", Saturn: "♄", Uranus: "♅", Neptune: "♆",
 };
 
 const ELEMENT_COLOR: Record<string, string> = {
-  Fire: "text-red-400",
-  Earth: "text-emerald-400",
-  Air: "text-cyan-400",
-  Water: "text-blue-400",
+  Fire: "text-red-400", Earth: "text-emerald-400", Air: "text-cyan-400", Water: "text-blue-400",
 };
 
-const API = import.meta.env.VITE_API_URL || "";
+const MOON_EMOJIS: Record<string, string> = {
+  "New Moon": "🌑", "Waxing Crescent": "🌒", "First Quarter": "🌓", "Waxing Gibbous": "🌔",
+  "Full Moon": "🌕", "Waning Gibbous": "🌖", "Last Quarter": "🌗", "Waning Crescent": "🌘",
+};
+
+function useLiveClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
 
 export default function UniversePage() {
+  useEffect(() => { document.title = "Universe | Tessera"; }, []);
   const isMobile = useIsMobile();
-  const now = useMemo(() => new Date(), []);
+  const now = useLiveClock();
   const moonData = useMemo(() => getMoonPhase(now), [now]);
   const sunData = useMemo(() => getSunPosition(now), [now]);
   const [showDimensions, setShowDimensions] = useState(true);
-  const [showNatalChart, setShowNatalChart] = useState(false);
-  const [focusedDimension, setFocusedDimension] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    const dim = params.get("dim");
-    return dim !== null ? parseInt(dim, 10) : -1;
-  });
-  const [showDimSlider, setShowDimSlider] = useState(false);
+  const [show3D, setShow3D] = useState(false);
+  const [focusedDimension, setFocusedDimension] = useState(-1);
   const [showSacredOverlays, setShowSacredOverlays] = useState(false);
 
   const { data: sovereigntyData } = useQuery<{ score?: number }>({
@@ -154,15 +152,13 @@ export default function UniversePage() {
 
   const userZodiac = useMemo(() => {
     const birthDate = chartData?.chart?.birthDate;
-    if (birthDate) {
-      return getZodiacFromBirthDate(birthDate);
-    }
+    if (birthDate) return getZodiacFromBirthDate(birthDate);
     return getZodiacFromBirthDate("1998-10-07");
   }, [chartData]);
 
   const activeTransits = useMemo(() => {
     const all = transitsData?.transits ?? [];
-    return all.slice(0, 3);
+    return all.slice(0, 5);
   }, [transitsData]);
 
   const dimensionOpacities = useMemo(() => {
@@ -173,323 +169,266 @@ export default function UniversePage() {
     });
   }, [focusedDimension]);
 
-  const cycleDimension = useCallback(() => {
-    setFocusedDimension(prev => {
-      if (prev >= 6) return -1;
-      return prev + 1;
-    });
-  }, []);
+  const timeStr = now.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const dateStr = now.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000);
+  const sacredNumber = (dayOfYear % 9) + 1;
+  const season = dayOfYear < 80 ? "Winter" : dayOfYear < 172 ? "Spring (Vernal)" : dayOfYear < 264 ? "Summer (Solstice)" : dayOfYear < 355 ? "Autumn (Equinox)" : "Winter";
+
+  if (show3D) {
+    return (
+      <div className="fixed inset-0 w-full h-full overflow-hidden bg-[#030108]">
+        <Suspense fallback={
+          <div className="w-full h-full flex items-center justify-center">
+            <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+          </div>
+        }>
+          <SolarSystem3D
+            showDimensions={showDimensions}
+            apodItems={apodItems}
+            userZodiac={userZodiac}
+            dimensionOpacities={dimensionOpacities}
+            showSacredOverlays={showSacredOverlays}
+            moonPhase={moonData.name}
+            sunSign={`${sunData.zodiac.symbol} ${sunData.zodiac.sign}`}
+            sovereigntyScore={sovereigntyData?.score ?? 100}
+          />
+        </Suspense>
+        <button
+          onClick={() => setShow3D(false)}
+          className="fixed top-3 left-3 z-50 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-xs font-mono text-violet-400 hover:bg-white/10 transition-colors"
+          style={{ paddingTop: "max(8px, env(safe-area-inset-top, 8px))" }}
+        >
+          <ChevronLeft size={14} /> Back
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="fixed inset-0 w-full h-full overflow-hidden bg-[#030108]">
-      <Suspense fallback={
-        <div className="w-full h-full flex items-center justify-center">
-          <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+    <div className="tessera-page min-h-full pb-20">
+      <div className="px-3 pt-3 pb-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Globe2 className="text-violet-400" size={18} />
+          <h1 className="text-lg font-bold font-mono text-violet-400">Universe</h1>
+          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[9px] font-mono border border-emerald-500/30 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            LIVE
+          </span>
         </div>
-      }>
-        <SolarSystem3D
-          showDimensions={showDimensions}
-          apodItems={apodItems}
-          userZodiac={userZodiac}
-          dimensionOpacities={dimensionOpacities}
-          showSacredOverlays={showSacredOverlays}
-          moonPhase={moonData.name}
-          sunSign={`${sunData.zodiac.symbol} ${sunData.zodiac.sign}`}
-          sovereigntyScore={sovereigntyData?.score ?? 100}
-        />
-      </Suspense>
-
-      <div className={`absolute left-0 right-0 flex items-start justify-between pointer-events-none z-10 ${isMobile ? "top-0 px-2 pt-[max(8px,env(safe-area-inset-top))]" : "top-3 left-3 right-3 px-0"}`}
-        style={isMobile ? { paddingTop: "max(8px, env(safe-area-inset-top, 8px))" } : undefined}
-      >
-        <div className="pointer-events-auto">
-          <div className={`flex items-center gap-1.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 ${isMobile ? "px-2 py-1.5" : "px-3 py-2 gap-2"}`}>
-            <Globe2 className="text-violet-400" size={isMobile ? 14 : 18} />
-            {!isMobile && <span className="text-sm font-bold font-mono text-violet-400">Universe</span>}
-            <span className={`rounded-full bg-violet-500/20 text-violet-400 font-mono border border-violet-500/30 ${isMobile ? "px-1.5 py-px text-[8px]" : "px-2 py-0.5 text-[10px]"}`}>LIVE</span>
-          </div>
-        </div>
-
-        <div className={`flex pointer-events-auto justify-end ${isMobile ? "gap-1 flex-wrap" : "gap-2 flex-wrap"}`}>
-          {userZodiac && (
-            <div className={`flex items-center rounded-xl backdrop-blur-md border ${isMobile ? "gap-1.5 px-2 py-1.5" : "gap-2 px-3 py-2"} ${
-              userZodiac.sign === "Libra"
-                ? "bg-gradient-to-r from-cyan-950/60 to-violet-950/60 border-cyan-500/30 shadow-[0_0_12px_rgba(34,211,238,0.15)]"
-                : "bg-black/60 border-white/10"
-            }`}>
-              <span className={`${isMobile ? "text-base" : "text-xl"} ${ELEMENT_COLOR[userZodiac.element] || "text-violet-400"}`}>{userZodiac.symbol}</span>
-              {!isMobile && (
-                <div>
-                  <div className="text-[11px] font-bold font-mono text-foreground flex items-center gap-1">
-                    {userZodiac.sign}
-                    {userZodiac.sign === "Libra" && <span className="text-[8px] text-cyan-400/70">☉ Natal</span>}
-                  </div>
-                  <div className="text-[9px] text-muted-foreground flex items-center gap-1">
-                    <span>{RULER_SYMBOLS[userZodiac.ruler] || "★"} {userZodiac.ruler}</span>
-                    {userZodiac.element === "Air" && <span className="text-cyan-400/60">· Air</span>}
-                  </div>
-                  {userZodiac.sign === "Libra" && (
-                    <div className="text-[8px] text-violet-400/60 font-mono">Virgo ↑ · Oct 7</div>
-                  )}
-                </div>
-              )}
-              {!isMobile && activeTransits.length > 0 && (
-                <div className="ml-1 flex flex-col gap-0.5" title="Chart transits">
-                  {activeTransits.map((t, i) => (
-                    <div key={i} className="text-[8px] font-mono text-muted-foreground whitespace-nowrap">
-                      <span className={t.nature === "harmonious" ? "text-emerald-400" : t.nature === "challenging" ? "text-amber-400" : "text-slate-400"}>
-                        {t.symbol}
-                      </span>
-                      {" "}{t.transitPlanet.slice(0, 3)}→{t.natalPlanet.slice(0, 3)}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          <button
-            onClick={() => setShowDimensions(!showDimensions)}
-            className={`flex items-center rounded-xl bg-black/60 backdrop-blur-md border border-white/10 font-mono hover:bg-white/10 transition-colors ${isMobile ? "p-2" : "gap-1.5 px-3 py-2 text-xs"}`}
-          >
-            {showDimensions ? <Eye size={isMobile ? 13 : 14} className="text-violet-400" /> : <EyeOff size={isMobile ? 13 : 14} className="text-muted-foreground" />}
-            {!isMobile && <span className={showDimensions ? "text-violet-400" : "text-muted-foreground"}>Planes</span>}
-          </button>
-          <button
-            onClick={() => setShowDimSlider(!showDimSlider)}
-            className={`flex items-center rounded-xl bg-black/60 backdrop-blur-md border border-white/10 font-mono hover:bg-white/10 transition-colors ${isMobile ? "p-2" : "gap-1.5 px-3 py-2 text-xs"}`}
-          >
-            <Layers size={isMobile ? 13 : 14} className="text-cyan-400" />
-            {!isMobile && <span className="text-cyan-400">Depth</span>}
-          </button>
-          <button
-            onClick={() => setShowSacredOverlays(!showSacredOverlays)}
-            className={`flex items-center rounded-xl bg-black/60 backdrop-blur-md border border-white/10 font-mono hover:bg-white/10 transition-colors ${isMobile ? "p-2" : "gap-1.5 px-3 py-2 text-xs"}`}
-          >
-            <Hexagon size={isMobile ? 13 : 14} className={showSacredOverlays ? "text-fuchsia-400" : "text-muted-foreground"} />
-            {!isMobile && <span className={showSacredOverlays ? "text-fuchsia-400" : "text-muted-foreground"}>Sacred</span>}
-          </button>
-          <button
-            onClick={() => setShowNatalChart(!showNatalChart)}
-            className={`flex items-center rounded-xl bg-black/60 backdrop-blur-md border border-white/10 font-mono hover:bg-white/10 transition-colors ${isMobile ? "p-2" : "gap-1.5 px-3 py-2 text-xs"}`}
-          >
-            <Sparkles size={isMobile ? 13 : 14} className="text-amber-400" />
-            {!isMobile && <span className="text-amber-400">Chart</span>}
-            {!isMobile && (showNatalChart ? <ChevronRight size={14} /> : <ChevronLeft size={14} />)}
-          </button>
+        <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
+          <Clock size={10} />
+          <span className="text-violet-400 font-bold">{timeStr}</span>
         </div>
       </div>
 
-      {showDimSlider && showDimensions && (
-        <div className={`absolute z-10 pointer-events-auto ${isMobile ? "top-12 right-2 left-2" : "top-16 right-3"}`}>
-          <div className={`px-3 py-3 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 space-y-3 ${isMobile ? "w-full" : "w-52"}`}>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Dimension Depth</span>
-              <button
-                onClick={() => setFocusedDimension(-1)}
-                className={`text-[9px] font-mono px-1.5 py-0.5 rounded border transition-colors ${focusedDimension === -1 ? "text-violet-400 border-violet-500/30 bg-violet-500/10" : "text-muted-foreground border-white/10 hover:bg-white/5"}`}
-              >
-                UNIFIED
-              </button>
+      <div className="px-3 mb-2 text-[10px] font-mono text-muted-foreground text-center">
+        {dateStr} · Day {dayOfYear} · Sacred #{sacredNumber} · {season}
+      </div>
+
+      <div className="px-3 mb-3 grid grid-cols-2 gap-2">
+        <div className="rounded-xl border border-slate-500/20 bg-slate-900/40 p-3 backdrop-blur-sm">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-2xl">{MOON_EMOJIS[moonData.name] || "🌙"}</span>
+            <div>
+              <div className="text-xs font-bold font-mono text-slate-200">{moonData.name}</div>
+              <div className="text-[10px] text-muted-foreground">{moonData.illumination}% illuminated</div>
             </div>
-            <div className="px-1">
-              <input
-                type="range"
-                min={-1}
-                max={6}
-                step={1}
-                value={focusedDimension}
-                onChange={(e) => setFocusedDimension(parseInt(e.target.value))}
-                className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
-                style={{
-                  background: focusedDimension === -1
-                    ? "linear-gradient(to right, #f87171, #fb923c, #facc15, #4ade80, #22d3ee, #60a5fa, #a78bfa)"
-                    : `linear-gradient(to right, ${DIMENSION_COLORS.map((c, i) => `${c} ${(i / 6) * 100}%`).join(", ")})`,
-                }}
-              />
-              <div className="flex justify-between mt-1">
-                <span className="text-[8px] font-mono text-muted-foreground">All</span>
-                <span className="text-[8px] font-mono text-muted-foreground">Atmic</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+            <div className="h-full rounded-full bg-gradient-to-r from-slate-500 to-white/80 transition-all duration-1000" style={{ width: `${moonData.illumination}%` }} />
+          </div>
+        </div>
+        <div className="rounded-xl border border-yellow-500/20 bg-yellow-950/30 p-3 backdrop-blur-sm">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Sun size={24} className="text-yellow-400" />
+            <div>
+              <div className="text-xs font-bold font-mono text-yellow-400">{sunData.zodiac.symbol} {sunData.zodiac.sign}</div>
+              <div className="text-[10px] text-muted-foreground">Decl: {sunData.declination}°</div>
+            </div>
+          </div>
+          <div className="text-[9px] font-mono text-yellow-400/60">
+            {RULER_SYMBOLS[sunData.zodiac.ruler]} {sunData.zodiac.ruler} · {sunData.zodiac.element}
+          </div>
+        </div>
+      </div>
+
+      {userZodiac && (
+        <div className="mx-3 mb-3 rounded-xl border border-cyan-500/20 bg-gradient-to-r from-cyan-950/30 to-violet-950/30 p-3 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <span className={`text-3xl ${ELEMENT_COLOR[userZodiac.element]}`}>{userZodiac.symbol}</span>
+            <div className="flex-1">
+              <div className="text-sm font-bold font-mono text-cyan-300 flex items-center gap-2">
+                {userZodiac.sign}
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">NATAL</span>
+              </div>
+              <div className="text-[10px] text-muted-foreground">
+                {RULER_SYMBOLS[userZodiac.ruler]} {userZodiac.ruler} · {userZodiac.element} · {userZodiac.dates}
               </div>
             </div>
-            <div className="text-center py-1">
-              <span className="text-xs font-mono font-bold" style={{ color: focusedDimension >= 0 ? DIMENSION_COLORS[focusedDimension] : "#a78bfa" }}>
-                {focusedDimension === -1 ? "All 7 Planes Unified" : `${DIMENSION_NAMES[focusedDimension]} Plane`}
-              </span>
-              {focusedDimension >= 0 && (
-                <div className="text-[9px] text-muted-foreground font-mono">
-                  {["396", "417", "528", "639", "741", "852", "963"][focusedDimension]} Hz
-                </div>
-              )}
-            </div>
-            <div className="border-t border-white/5 pt-2">
-              <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1.5">Quick Select</div>
-              <div className="flex gap-1 flex-wrap">
-                {DIMENSION_NAMES.map((name, i) => (
-                  <button
-                    key={name}
-                    onClick={() => setFocusedDimension(focusedDimension === i ? -1 : i)}
-                    className={`px-1.5 py-0.5 rounded text-[9px] font-mono transition-all border ${focusedDimension === i ? "border-white/30 bg-white/10 font-bold" : "border-transparent hover:bg-white/5 text-muted-foreground"}`}
-                    style={{ color: focusedDimension === i ? DIMENSION_COLORS[i] : undefined }}
-                  >
-                    {name.slice(0, 4)}
-                  </button>
+          </div>
+          {activeTransits.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-white/5">
+              <div className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mb-1">Active Transits</div>
+              <div className="flex flex-wrap gap-1.5">
+                {activeTransits.map((t, i) => (
+                  <span key={i} className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                    t.nature === "harmonious" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" :
+                    t.nature === "challenging" ? "border-amber-500/30 bg-amber-500/10 text-amber-400" :
+                    "border-slate-500/30 bg-slate-500/10 text-slate-400"
+                  }`}>
+                    {t.symbol} {t.transitPlanet.slice(0, 3)}→{t.natalPlanet.slice(0, 3)} ({t.transitSign.slice(0, 3)})
+                  </span>
                 ))}
               </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
-      <div className={`absolute pointer-events-none z-10 ${isMobile ? "bottom-[64px] left-2 right-2" : "bottom-16 left-3 right-3 sm:bottom-4"}`}
-        style={isMobile ? { paddingBottom: "env(safe-area-inset-bottom, 0px)" } : undefined}
-      >
-        {isMobile ? (
-          <div className="pointer-events-auto grid grid-cols-3 gap-1">
-            <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10">
-              <Moon size={11} className="text-slate-300 shrink-0" />
-              <div className="min-w-0">
-                <div className="text-[9px] font-bold font-mono text-slate-200 truncate">{moonData.name}</div>
-                <div className="text-[7px] text-muted-foreground">{moonData.illumination}%</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10">
-              <Sun size={11} className="text-yellow-400 shrink-0" />
-              <div className="min-w-0">
-                <div className="text-[9px] font-bold font-mono text-yellow-400 truncate">{sunData.zodiac.symbol} {sunData.zodiac.sign}</div>
-                <div className="text-[7px] text-muted-foreground">{sunData.declination}°</div>
-              </div>
-            </div>
+      <div className="px-3 mb-3">
+        <div className="rounded-xl border border-violet-500/20 bg-violet-950/20 p-3 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-bold font-mono text-violet-400 flex items-center gap-1.5">
+              <Layers size={12} />
+              7 Dimensional Planes
+            </h3>
             <button
-              onClick={cycleDimension}
-              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 active:bg-white/10 transition-colors"
+              onClick={() => setFocusedDimension(-1)}
+              className="text-[9px] font-mono text-muted-foreground hover:text-violet-400 transition-colors"
             >
-              <Sparkles size={11} className="text-violet-400 shrink-0" />
-              <div className="min-w-0">
-                <div className="text-[9px] font-bold font-mono text-violet-400 truncate">
-                  {focusedDimension === -1 ? "7 Planes" : DIMENSION_NAMES[focusedDimension]}
-                </div>
-                <div className="text-[7px] text-muted-foreground">{showDimensions ? "Active" : "Off"}</div>
-              </div>
+              {focusedDimension === -1 ? "All Active" : "Show All"}
             </button>
-            <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10">
-              <Orbit size={11} className="text-cyan-400 shrink-0" />
-              <div className="min-w-0">
-                <div className="text-[9px] font-bold font-mono text-cyan-400">963 Hz</div>
-                <div className="text-[7px] text-muted-foreground">Crown</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10">
-              <Globe2 size={11} className="text-emerald-400 shrink-0" />
-              <div className="min-w-0">
-                <div className="text-[9px] font-bold font-mono text-emerald-400">{sovereigntyData?.score ?? 100}%</div>
-                <div className="text-[7px] text-muted-foreground">Sov</div>
-              </div>
-            </div>
-            <Link href="/grand-narrative">
-              <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-fuchsia-500/30 active:bg-fuchsia-500/10 transition-colors">
-                <BookOpen size={11} className="text-fuchsia-400 shrink-0" />
-                <div className="min-w-0">
-                  <div className="text-[9px] font-bold font-mono text-fuchsia-400 truncate">Narrative</div>
-                  <div className="text-[7px] text-muted-foreground">Truth</div>
-                </div>
-              </div>
-            </Link>
           </div>
-        ) : (
-          <div className="pointer-events-auto inline-flex flex-wrap gap-2 max-w-full">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10">
-              <Moon size={14} className="text-slate-300" />
-              <div>
-                <div className="text-[11px] font-bold font-mono text-slate-200">{moonData.name}</div>
-                <div className="text-[9px] text-muted-foreground">{moonData.illumination}% lit</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10">
-              <Sun size={14} className="text-yellow-400" />
-              <div>
-                <div className="text-[11px] font-bold font-mono text-yellow-400">{sunData.zodiac.symbol} {sunData.zodiac.sign}</div>
-                <div className="text-[9px] text-muted-foreground">Decl: {sunData.declination}°</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10">
-              <Orbit size={14} className="text-cyan-400" />
-              <div>
-                <div className="text-[11px] font-bold font-mono text-cyan-400">963 Hz</div>
-                <div className="text-[9px] text-muted-foreground">Crown</div>
-              </div>
-            </div>
-            <button
-              onClick={cycleDimension}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-colors"
-            >
-              <Sparkles size={14} className="text-violet-400" />
-              <div>
-                <div className="text-[11px] font-bold font-mono text-violet-400">
-                  {focusedDimension === -1 ? "7 Planes" : DIMENSION_NAMES[focusedDimension]}
+          <div className="space-y-1.5">
+            {DIMENSION_NAMES.map((name, i) => (
+              <button
+                key={name}
+                onClick={() => setFocusedDimension(focusedDimension === i ? -1 : i)}
+                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all ${focusedDimension === i ? "bg-white/5 border border-white/10" : "hover:bg-white/3"}`}
+              >
+                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: DIMENSION_COLORS[i], opacity: focusedDimension === -1 || focusedDimension === i ? 1 : 0.2 }} />
+                <span className="text-[11px] font-mono font-medium flex-1 text-left" style={{ color: focusedDimension === -1 || focusedDimension === i ? DIMENSION_COLORS[i] : "#475569" }}>
+                  {name}
+                </span>
+                <span className="text-[9px] font-mono text-muted-foreground">{SOLFEGGIO[i]} Hz</span>
+                <div className="w-16 h-1 rounded-full bg-white/5 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      backgroundColor: DIMENSION_COLORS[i],
+                      width: `${focusedDimension === -1 || focusedDimension === i ? 60 + Math.sin(now.getTime() / 2000 + i) * 40 : 10}%`,
+                      opacity: focusedDimension === -1 || focusedDimension === i ? 0.8 : 0.2,
+                    }}
+                  />
                 </div>
-                <div className="text-[9px] text-muted-foreground">{showDimensions ? (focusedDimension === -1 ? "Unified" : "Focused") : "Hidden"}</div>
-              </div>
-            </button>
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-white/10">
-              <Globe2 size={14} className="text-emerald-400" />
-              <div>
-                <div className="text-[11px] font-bold font-mono text-emerald-400">{sovereigntyData?.score ?? 100}%</div>
-                <div className="text-[9px] text-muted-foreground">Sovereignty</div>
-              </div>
-            </div>
-            <Link href="/grand-narrative">
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 backdrop-blur-md border border-fuchsia-500/30 hover:bg-fuchsia-500/10 transition-colors cursor-pointer">
-                <BookOpen size={14} className="text-fuchsia-400" />
-                <div>
-                  <div className="text-[11px] font-bold font-mono text-fuchsia-400">Grand Narrative</div>
-                  <div className="text-[9px] text-muted-foreground">The Unified Truth</div>
-                </div>
-              </div>
-            </Link>
+              </button>
+            ))}
           </div>
-        )}
+        </div>
       </div>
 
-      {isMobile ? (
-        <div className={`absolute inset-x-0 bottom-0 z-20 transition-transform duration-300 ease-in-out ${showNatalChart ? "translate-y-0" : "translate-y-full"}`}
-          style={{ height: "70vh", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
-        >
-          <div className="h-full overflow-y-auto bg-black/90 backdrop-blur-xl border-t border-white/10 rounded-t-2xl">
-            <div className="sticky top-0 z-10 bg-black/90 backdrop-blur-xl px-4 pt-3 pb-2 border-b border-white/5">
-              <div className="w-8 h-1 bg-white/20 rounded-full mx-auto mb-2" />
-              <div className="flex items-center justify-between">
-                <h2 className="text-xs font-bold font-mono text-violet-400">Natal Chart</h2>
-                <button
-                  onClick={() => setShowNatalChart(false)}
-                  className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-                >
-                  <ChevronRight size={14} className="text-muted-foreground rotate-90" />
-                </button>
-              </div>
-            </div>
-            <div className="p-3">
-              <NatalChartSection />
-            </div>
-          </div>
+      <div className="px-3 mb-3 grid grid-cols-3 gap-2">
+        <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/20 p-2.5 text-center">
+          <Orbit size={16} className="text-cyan-400 mx-auto mb-1" />
+          <div className="text-sm font-bold font-mono text-cyan-400">963 Hz</div>
+          <div className="text-[9px] text-muted-foreground">Crown</div>
         </div>
-      ) : (
-        <div className={`absolute top-0 right-0 h-full z-20 transition-transform duration-300 ease-in-out ${showNatalChart ? "translate-x-0" : "translate-x-full"}`}
-          style={{ width: "min(400px, 90vw)" }}
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-950/20 p-2.5 text-center">
+          <Globe2 size={16} className="text-emerald-400 mx-auto mb-1" />
+          <div className="text-sm font-bold font-mono text-emerald-400">{sovereigntyData?.score ?? 100}%</div>
+          <div className="text-[9px] text-muted-foreground">Sovereignty</div>
+        </div>
+        <div className="rounded-xl border border-violet-500/20 bg-violet-950/20 p-2.5 text-center">
+          <Sparkles size={16} className="text-violet-400 mx-auto mb-1" />
+          <div className="text-sm font-bold font-mono text-violet-400">#{sacredNumber}</div>
+          <div className="text-[9px] text-muted-foreground">Sacred</div>
+        </div>
+      </div>
+
+      <div className="px-3 mb-3">
+        <button
+          onClick={() => setShow3D(true)}
+          className="w-full rounded-xl border border-violet-500/30 bg-gradient-to-r from-violet-950/40 to-indigo-950/40 p-4 text-center hover:border-violet-500/50 transition-all active:scale-[0.98]"
         >
-          <div className="h-full overflow-y-auto bg-black/80 backdrop-blur-xl border-l border-white/10 p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold font-mono text-violet-400">Natal Chart</h2>
-              <button
-                onClick={() => setShowNatalChart(false)}
-                className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
-              >
-                <ChevronRight size={16} className="text-muted-foreground" />
-              </button>
-            </div>
-            <NatalChartSection />
+          <div className="text-2xl mb-1">🌌</div>
+          <div className="text-sm font-bold font-mono text-violet-400">Enter 3D Universe</div>
+          <div className="text-[10px] text-muted-foreground mt-0.5">Interactive solar system with dimensional planes</div>
+          <div className="text-[9px] text-violet-400/50 mt-1 font-mono">Drag · Pinch · Fly</div>
+        </button>
+      </div>
+
+      {apodItems.length > 0 && (
+        <div className="px-3 mb-3">
+          <div className="rounded-xl border border-indigo-500/20 bg-indigo-950/20 p-3 backdrop-blur-sm">
+            <h3 className="text-xs font-bold font-mono text-indigo-400 flex items-center gap-1.5 mb-2">
+              <Star size={12} />
+              NASA Astronomy Picture
+            </h3>
+            {apodItems.slice(0, 2).map((item, i) => (
+              <div key={i} className={`${i > 0 ? "mt-2 pt-2 border-t border-white/5" : ""}`}>
+                {item.url && (
+                  <img src={item.url} alt={item.title} className="w-full h-32 object-cover rounded-lg mb-1.5" loading="lazy" />
+                )}
+                <div className="text-[11px] font-bold text-indigo-300">{item.title}</div>
+                <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">{item.explanation}</p>
+              </div>
+            ))}
           </div>
         </div>
       )}
+
+      <div className="px-3 mb-3">
+        <div className="rounded-xl border border-fuchsia-500/20 bg-fuchsia-950/20 p-3 backdrop-blur-sm">
+          <h3 className="text-xs font-bold font-mono text-fuchsia-400 flex items-center gap-1.5 mb-2">
+            <Hexagon size={12} />
+            Sacred Geometry
+          </h3>
+          <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
+            <div className="flex justify-between border-b border-white/5 pb-1">
+              <span className="text-muted-foreground">Day</span>
+              <span className="text-fuchsia-300">{dayOfYear}</span>
+            </div>
+            <div className="flex justify-between border-b border-white/5 pb-1">
+              <span className="text-muted-foreground">Root</span>
+              <span className="text-fuchsia-300">{sacredNumber}</span>
+            </div>
+            <div className="flex justify-between border-b border-white/5 pb-1">
+              <span className="text-muted-foreground">Golden φ</span>
+              <span className="text-fuchsia-300">1.618034</span>
+            </div>
+            <div className="flex justify-between border-b border-white/5 pb-1">
+              <span className="text-muted-foreground">Fibonacci</span>
+              <span className="text-fuchsia-300">{[1,1,2,3,5,8,13,21,34,55,89,144][dayOfYear % 12]}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-3 mb-3">
+        <div className="rounded-xl border border-amber-500/20 bg-amber-950/20 p-3 backdrop-blur-sm">
+          <h3 className="text-xs font-bold font-mono text-amber-400 flex items-center gap-1.5 mb-2">
+            <Sparkles size={12} />
+            Natal Chart
+          </h3>
+          <NatalChartSection />
+        </div>
+      </div>
+
+      <div className="px-3 mb-3">
+        <Link href="/grand-narrative">
+          <div className="rounded-xl border border-fuchsia-500/30 bg-gradient-to-r from-fuchsia-950/30 to-pink-950/30 p-3 active:bg-fuchsia-500/10 transition-colors">
+            <div className="flex items-center gap-2">
+              <BookOpen size={16} className="text-fuchsia-400" />
+              <div>
+                <div className="text-xs font-bold font-mono text-fuchsia-400">Grand Narrative</div>
+                <div className="text-[10px] text-muted-foreground">The Unified Truth</div>
+              </div>
+              <ChevronRight size={14} className="text-muted-foreground ml-auto" />
+            </div>
+          </div>
+        </Link>
+      </div>
     </div>
   );
 }
