@@ -59,11 +59,28 @@ function signHash(hash: string): string {
   return createHmac("sha256", SECRET).update(hash).digest("hex");
 }
 
+let _ledgerFrozen = false;
+let _freezeReason = "";
+export function freezeLedger(reason: string): void {
+  _ledgerFrozen = true;
+  _freezeReason = reason;
+}
+export function unfreezeLedger(): void {
+  _ledgerFrozen = false;
+  _freezeReason = "";
+}
+export function isLedgerFrozen(): { frozen: boolean; reason: string } {
+  return { frozen: _ledgerFrozen, reason: _freezeReason };
+}
+
 export function appendLedgerEntry(
   kind: LedgerKind,
   actor: string,
   payload: Record<string, unknown>,
 ): LedgerEntry {
+  if (_ledgerFrozen && actor !== "auto-healer") {
+    throw new Error(`Ledger is quarantined: ${_freezeReason}. Writes suspended pending recovery.`);
+  }
   const prev = chain[chain.length - 1];
   const base = {
     index: prev ? prev.index + 1 : 0,
