@@ -34,6 +34,12 @@ const dedupStats = {
   knowledgeDuplicates: 0,
   ingestDeduped: 0,
   ingestMerged: 0,
+  mergeQuality: {
+    totalSimilaritySum: 0,
+    totalClusters: 0,
+    contentExpansions: 0,
+    totalMergeEvents: 0,
+  },
 };
 
 function makeRedirectKey(table: string, id: number): string {
@@ -333,6 +339,10 @@ async function mergeVectorCluster(cluster: DuplicateCluster): Promise<MergeResul
 
   dedupStats.storageSaved += storageSaved;
   dedupStats.vectorDuplicates += duplicateRows.length;
+  dedupStats.mergeQuality.totalSimilaritySum += cluster.similarity;
+  dedupStats.mergeQuality.totalClusters++;
+  dedupStats.mergeQuality.totalMergeEvents += duplicateRows.length;
+  if (contentChanged) dedupStats.mergeQuality.contentExpansions++;
 
   return {
     canonicalId: canonical.id,
@@ -389,6 +399,10 @@ async function mergeKnowledgeCluster(cluster: DuplicateCluster): Promise<MergeRe
 
   dedupStats.storageSaved += storageSaved;
   dedupStats.knowledgeDuplicates += duplicateRows.length;
+  dedupStats.mergeQuality.totalSimilaritySum += cluster.similarity;
+  dedupStats.mergeQuality.totalClusters++;
+  dedupStats.mergeQuality.totalMergeEvents += duplicateRows.length;
+  if (longestFact.id !== canonical.id) dedupStats.mergeQuality.contentExpansions++;
 
   return {
     canonicalId: canonical.id,
@@ -594,12 +608,18 @@ export async function checkDuplicateBeforeIngest(
 }
 
 export function getDeduplicationStats() {
+  const mq = dedupStats.mergeQuality;
   return {
     ...dedupStats,
     redirectMapSize: redirectMap.size,
     deduplicationRate: dedupStats.totalScans > 0
       ? dedupStats.duplicatesFound / Math.max(dedupStats.totalScans, 1)
       : 0,
+    mergeQuality: {
+      ...mq,
+      avgSimilarity: mq.totalClusters > 0 ? mq.totalSimilaritySum / mq.totalClusters : 0,
+      contentExpansionRate: mq.totalClusters > 0 ? mq.contentExpansions / mq.totalClusters : 0,
+    },
   };
 }
 
