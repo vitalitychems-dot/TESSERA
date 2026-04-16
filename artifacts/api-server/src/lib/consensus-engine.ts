@@ -446,7 +446,13 @@ export async function createProposal(paramsOrTitle: {
     ? { title: paramsOrTitle, description: description || "", proposedBy: proposedBy || "system", category: (category || "feature") as ConsensusProposal["category"] }
     : paramsOrTitle;
 
-  const id = `proposal-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  // Deterministic proposal ID derived from content hash + timestamp — no randomness.
+  const { createHash: _ch } = await import("crypto");
+  const _hash = _ch("sha256")
+    .update(`${params.title ?? ""}|${params.proposedBy ?? ""}|${params.description ?? ""}`)
+    .digest("hex")
+    .slice(0, 6);
+  const id = `proposal-${Date.now()}-${_hash}`;
 
   const proposal: ConsensusProposal = {
     id, ...params, votes: [], status: "voting",

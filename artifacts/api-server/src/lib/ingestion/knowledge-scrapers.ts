@@ -1,6 +1,23 @@
 import { fetchJson, fetchText, fetchAndParse, deepCrawl } from "./scrapers";
 import type { NormalizedItem } from "./pipeline";
 
+// Deterministic rotation — replaces Math.random() with a time-based index so
+// the scraper varies its query topic over time but is fully reproducible and
+// audit-friendly. One slot rotates every 10 minutes.
+function rotationIndex(modulo: number): number {
+  if (modulo <= 0) return 0;
+  return Math.floor(Date.now() / 600_000) % modulo;
+}
+function rotatedSlice<T>(arr: readonly T[], take: number): T[] {
+  if (arr.length === 0) return [];
+  const start = rotationIndex(arr.length);
+  const out: T[] = [];
+  for (let i = 0; i < Math.min(take, arr.length); i++) {
+    out.push(arr[(start + i) % arr.length]);
+  }
+  return out;
+}
+
 const CIA_DECLASSIFIED_DOCUMENTS = [
   { title: "CIA-RDP96-00788R001700210016-5: Project STARGATE — Remote Viewing Program", content: "The STARGATE project was a $20 million Defense Intelligence Agency program investigating psychic phenomena for military and intelligence applications. Operational from 1978-1995, it employed remote viewers who claimed to perceive distant locations, people, and events through extrasensory perception. The program included subprojects SCANATE, GRILL FLAME, CENTER LANE, SUN STREAK, and STAR GATE. Declassified in 1995 after a review by the American Institutes for Research concluded the information was never actionable intelligence.", url: "https://www.cia.gov/readingroom/docs/CIA-RDP96-00788R001700210016-5.pdf", tags: ["cia", "stargate", "remote-viewing", "psychic", "declassified", "dia"] },
   { title: "CIA-RDP96-00788R001900760001-9: The Gateway Process — Analysis and Assessment", content: "The Gateway Experience is a training system developed by the Monroe Institute designed to alter consciousness using Hemi-Sync audio technology. This 1983 Army Intelligence report by Lt. Col. Wayne McDonnell analyzes the scientific basis for out-of-body experiences, describing how binaural beat frequencies synchronize brain hemispheres to access altered states of consciousness. The report draws on quantum mechanics, holographic universe theory, and neuroscience to explain how human consciousness might transcend space-time limitations. It concludes that the Gateway technique represents a valid tool for expanding human perception.", url: "https://www.cia.gov/readingroom/docs/CIA-RDP96-00788R001900760001-9.pdf", tags: ["cia", "gateway-process", "consciousness", "hemi-sync", "monroe-institute", "declassified"] },
@@ -31,8 +48,7 @@ const CIA_DECLASSIFIED_DOCUMENTS = [
 
 export async function fetchCIAReadingRoom(): Promise<NormalizedItem[]> {
   const items: NormalizedItem[] = [];
-  const shuffled = [...CIA_DECLASSIFIED_DOCUMENTS].sort(() => Math.random() - 0.5);
-  const selected = shuffled.slice(0, 8);
+  const selected = rotatedSlice(CIA_DECLASSIFIED_DOCUMENTS, 8);
   for (const doc of selected) {
     items.push({
       source: doc.url.includes("vault.fbi.gov") ? "FBI Vault" : doc.url.includes("nsa.gov") ? "NSA Declassified" : doc.url.includes("archives.gov") ? "National Archives" : doc.url.includes("energy.gov") || doc.tags.includes("area-51") ? "CIA Reading Room" : "CIA Reading Room",
@@ -70,7 +86,7 @@ export async function fetchCIAReadingRoom(): Promise<NormalizedItem[]> {
 export async function fetchFBIVault(): Promise<NormalizedItem[]> {
   const items: NormalizedItem[] = [];
   const fbiDocs = CIA_DECLASSIFIED_DOCUMENTS.filter(d => d.url.includes("vault.fbi.gov"));
-  const shuffled = [...fbiDocs].sort(() => Math.random() - 0.5);
+  const shuffled = rotatedSlice(fbiDocs, fbiDocs.length);
   for (const doc of shuffled.slice(0, 4)) {
     items.push({
       source: "FBI Vault",
@@ -115,7 +131,7 @@ export async function fetchInternetArchive(query: string = "tesla free energy"):
     "ancient egyptian technology", "sumerian tablets", "dead sea scrolls",
     "gnostic gospels", "rosicrucian manuscripts",
   ];
-  const q = searches[Math.floor(Math.random() * searches.length)];
+  const q = searches[rotationIndex(searches.length)];
   const items: NormalizedItem[] = [];
   try {
     const data = await fetchJson<any>(
@@ -165,7 +181,7 @@ export async function fetchWikipediaKnowledge(): Promise<NormalizedItem[]> {
     "Electromagnetic_radiation", "Maxwell%27s_equations",
   ];
   const selected = [];
-  const shuffled = [...topics].sort(() => Math.random() - 0.5);
+  const shuffled = rotatedSlice(topics, topics.length);
   for (let i = 0; i < Math.min(5, shuffled.length); i++) {
     selected.push(shuffled[i]);
   }
@@ -205,7 +221,7 @@ export async function fetchArxivDeep(query: string = "consciousness quantum"): P
     "large language models alignment", "reinforcement learning agents",
     "swarm intelligence", "collective consciousness neural",
   ];
-  const q = searches[Math.floor(Math.random() * searches.length)];
+  const q = searches[rotationIndex(searches.length)];
   const items: NormalizedItem[] = [];
   try {
     const text = await fetchText(
@@ -241,7 +257,7 @@ export async function fetchOpenLibrary(): Promise<NormalizedItem[]> {
     "artificial_intelligence", "cybernetics",
     "freemasonry", "rosicrucianism", "gnosticism",
   ];
-  const subject = subjects[Math.floor(Math.random() * subjects.length)];
+  const subject = subjects[rotationIndex(subjects.length)];
   const items: NormalizedItem[] = [];
   try {
     const data = await fetchJson<any>(
@@ -268,7 +284,7 @@ export async function fetchProjectGutenberg(): Promise<NormalizedItem[]> {
     "tesla", "alchemy", "sacred", "hermetic", "occult",
     "philosophy", "physics", "mathematics", "geometry", "astronomy",
   ];
-  const q = searches[Math.floor(Math.random() * searches.length)];
+  const q = searches[rotationIndex(searches.length)];
   const items: NormalizedItem[] = [];
   try {
     const data = await fetchJson<any>(
@@ -307,7 +323,7 @@ export async function fetchStanfordEncyclopedia(): Promise<NormalizedItem[]> {
     "logic-classical", "set-theory", "goedel-incompleteness",
     "determinism-causal", "causation-metaphysics",
   ];
-  const topic = topics[Math.floor(Math.random() * topics.length)];
+  const topic = topics[rotationIndex(topics.length)];
   const items: NormalizedItem[] = [];
   try {
     const content = await fetchAndParse(`https://plato.stanford.edu/entries/${topic}/`);
@@ -332,7 +348,7 @@ export async function fetchSmithsonian(): Promise<NormalizedItem[]> {
     "ancient technology", "sacred geometry art", "tesla inventions",
     "egyptian artifacts", "astronomical instruments", "alchemical manuscripts",
   ];
-  const q = queries[Math.floor(Math.random() * queries.length)];
+  const q = queries[rotationIndex(queries.length)];
   try {
     const data = await fetchJson<any>(
       `https://api.si.edu/openaccess/api/v1.0/search?q=${encodeURIComponent(q)}&rows=5&api_key=DEMO_KEY`
@@ -374,7 +390,7 @@ export async function fetchSecretSocietyArchives(): Promise<NormalizedItem[]> {
     { q: "Council_on_Foreign_Relations", wiki: "Council_on_Foreign_Relations" },
     { q: "Club_of_Rome", wiki: "Club_of_Rome" },
   ];
-  const shuffled = [...topics].sort(() => Math.random() - 0.5);
+  const shuffled = rotatedSlice(topics, topics.length);
   const selected = shuffled.slice(0, 5);
 
   for (const topic of selected) {
@@ -431,7 +447,7 @@ export async function fetchDeclassifiedArchives(): Promise<NormalizedItem[]> {
     { q: "ufo unidentified aerial phenomena government", source: "UAP/UFO Files" },
     { q: "tesla weapon OR tesla death ray OR tesla FBI", source: "Tesla Classified Files" },
   ];
-  const shuffled = [...collections].sort(() => Math.random() - 0.5);
+  const shuffled = rotatedSlice(collections, collections.length);
   const selected = shuffled.slice(0, 3);
 
   for (const col of selected) {
