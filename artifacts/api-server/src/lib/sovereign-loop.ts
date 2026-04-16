@@ -40,6 +40,7 @@ import { emitKnowledgePulse, getDiffusionMetrics, initKnowledgeDiffusion } from 
 import { seedDepartmentsIfEmpty, runFullCompetition } from "./department-competition";
 import { getResonanceScore } from "./consciousness-engine";
 import { runDreamCycle, recordActivity, getConsolidationEngineMetrics, startConsolidationEngine, stopConsolidationEngine } from "./memory-consolidation-engine";
+import { initRecursiveReflectionLoop, startRecursiveReflectionLoop, stopRecursiveReflectionLoop, getReflectionMetrics } from "./recursive-reflection-loop";
 
 const SCHUMANN_BASE = 7.83;
 const CROWN_FREQUENCY = 963;
@@ -637,6 +638,7 @@ export async function initSovereignLoop(): Promise<void> {
   try { await initSemanticCache(); } catch {}
   try { await initAgentHierarchy(); } catch {}
   try { await loadRetryQueue(); } catch {}
+  try { await initRecursiveReflectionLoop(); } catch {}
   setTimeout(async () => {
     try {
       let totalResolved = 0;
@@ -759,6 +761,7 @@ export function startSovereignLoop(masterIntervalMs = 120_000): void {
 
   startAutonomousHeartbeat(Math.max(30_000, Math.floor(masterIntervalMs / 2)));
   startConsolidationEngine(Math.max(60_000, masterIntervalMs));
+  startRecursiveReflectionLoop(30_000);
 
   runSovereignCycle().catch(err => {
     logger.error({ err }, "SovereignLoop: initial cycle failed");
@@ -781,6 +784,7 @@ export function stopSovereignLoop(): void {
     loopInterval = null;
   }
   stopConsolidationEngine();
+  stopRecursiveReflectionLoop();
   loopState.running = false;
   logger.info("SovereignLoop: stopped");
 }
