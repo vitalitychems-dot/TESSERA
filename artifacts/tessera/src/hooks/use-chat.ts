@@ -36,6 +36,9 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
   const lastAccumulatedRef = useRef("");
   const abortControllerRef = useRef<AbortController | null>(null);
   const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
+  const hardTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timedOutRef = useRef<boolean>(false);
+  const HARD_TIMEOUT_MS = 25_000;
 
   const startThinkingTimer = useCallback(() => {
     thinkingStartRef.current = Date.now();
@@ -136,7 +139,16 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
     setAgentComms([]);
     setCodeExecutionResults([]);
     lastAccumulatedRef.current = "";
+    timedOutRef.current = false;
     startThinkingTimer();
+
+    if (hardTimeoutRef.current) clearTimeout(hardTimeoutRef.current);
+    hardTimeoutRef.current = setTimeout(() => {
+      if (!firstContentReceivedRef.current && lastAccumulatedRef.current.length === 0) {
+        timedOutRef.current = true;
+        try { controller.abort(); } catch {}
+      }
+    }, HARD_TIMEOUT_MS);
 
     const optimisticUserMsg: Message = {
       id: Date.now(),
@@ -255,7 +267,26 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
           }
         } catch {}
 
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted) {
+          if (timedOutRef.current && !serverAccumulated) {
+            const fallbackMsg = "Tessera paused. The sovereign engines are here but the synthesis took too long. Tap retry to ask again.";
+            setError(fallbackMsg);
+            const optimisticAssistantMsg: Message = {
+              id: Date.now() + 1,
+              conversationId: conversationId!,
+              role: "assistant",
+              content: `*${fallbackMsg}*`,
+              createdAt: new Date(),
+            };
+            queryClient.setQueryData(queryKey, (old: Message[] = []) => [...old, optimisticAssistantMsg]);
+            stopThinkingTimer();
+            setIsStreaming(false);
+            setStreamingContent("");
+            abortControllerRef.current = null;
+            if (hardTimeoutRef.current) { clearTimeout(hardTimeoutRef.current); hardTimeoutRef.current = null; }
+          }
+          return;
+        }
 
         let finalResponse = serverAccumulated;
 
@@ -375,6 +406,9 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
               accumulated += searchNotice;
               setStreamingContent(accumulated);
             }
+            if (data.content || (data.done && data.finalContent)) {
+              if (hardTimeoutRef.current) { clearTimeout(hardTimeoutRef.current); hardTimeoutRef.current = null; }
+            }
             if (data.done) {
               stopThinkingTimer();
               receivedDone = true;
@@ -466,6 +500,21 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
       queryClient.invalidateQueries({ queryKey });
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
+        if (timedOutRef.current) {
+          const fallbackMsg = "Tessera paused. The sovereign engines are here but the synthesis took too long. Tap retry to ask again.";
+          setError(fallbackMsg);
+          const optimisticAssistantMsg: Message = {
+            id: Date.now() + 1,
+            conversationId: conversationId!,
+            role: "assistant",
+            content: `*${fallbackMsg}*`,
+            createdAt: new Date(),
+          };
+          queryClient.setQueryData(queryKey, (old: Message[] = []) => [...old, optimisticAssistantMsg]);
+          stopThinkingTimer();
+          setIsStreaming(false);
+          setStreamingContent("");
+        }
         return;
       }
       setError(err instanceof Error ? err.message : "Unknown error occurred");
@@ -485,6 +534,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
       await new Promise(resolve => setTimeout(resolve, 300));
       queryClient.invalidateQueries({ queryKey });
     } finally {
+      if (hardTimeoutRef.current) { clearTimeout(hardTimeoutRef.current); hardTimeoutRef.current = null; }
       stopThinkingTimer();
       readerRef.current = null;
       abortControllerRef.current = null;
