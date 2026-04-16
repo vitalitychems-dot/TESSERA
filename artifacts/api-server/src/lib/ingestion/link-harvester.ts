@@ -55,7 +55,21 @@ function isScrapableUrl(url: string): boolean {
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
     const pathLower = parsed.pathname.toLowerCase();
     if (FILE_EXT_BLOCKLIST.some(ext => pathLower.endsWith(ext))) return false;
-    if (parsed.hostname.length < 4 || parsed.hostname.length > 253) return false;
+    const host = parsed.hostname.toLowerCase();
+    if (host.length < 4 || host.length > 253) return false;
+    if (host === "localhost" || host.endsWith(".local") || host.endsWith(".internal") || host.endsWith(".localhost")) return false;
+    const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    if (ipv4) {
+      const [a, b] = [parseInt(ipv4[1], 10), parseInt(ipv4[2], 10)];
+      if (
+        a === 0 || a === 10 || a === 127 ||
+        (a === 169 && b === 254) ||
+        (a === 172 && b >= 16 && b <= 31) ||
+        (a === 192 && b === 168) ||
+        a >= 224
+      ) return false;
+    }
+    if (host.includes(":")) return false;
     return true;
   } catch {
     return false;
