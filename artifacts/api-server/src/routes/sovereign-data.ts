@@ -11,6 +11,7 @@ import { getBatcherStats } from "../lib/llm-batcher";
 import { getLLMStats } from "../lib/llm-client";
 import { getEmbeddingStats } from "../lib/neural-embeddings";
 import { getValidationStats } from "../lib/response-validation-engine";
+import { getDeduplicationStats } from "../lib/semantic-deduplication";
 import * as os from "os";
 
 const router: IRouter = Router();
@@ -85,6 +86,7 @@ router.get("/admin/status", async (_req, res) => {
       llm: getLLMStats(),
       embeddings: getEmbeddingStats(),
       responseValidation: getValidationStats(),
+      deduplication: getDeduplicationStats(),
     },
     timestamp: Date.now(),
     method: "Aggregated from all sovereign subsystems — computed locally",
@@ -1006,6 +1008,20 @@ router.get("/system/metrics", (_req, res) => {
     computedAt: new Date().toISOString(),
     method: "All metrics computed locally — zero external API calls",
   });
+});
+
+router.post("/admin/deduplication/scan", async (_req, res) => {
+  try {
+    const { runDeduplicationScan } = await import("../lib/semantic-deduplication");
+    const result = await runDeduplicationScan();
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/admin/deduplication/stats", (_req, res) => {
+  res.json({ ok: true, ...getDeduplicationStats() });
 });
 
 export default router;
