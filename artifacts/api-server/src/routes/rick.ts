@@ -9,6 +9,7 @@ import {
   getRoyalCourtStatus,
   getAppointedRoles,
   getRoyalRoleById,
+  getRoleContributions,
   RICK_SANCHEZ_IDENTITY,
 } from "../lib/rick-sanchez-agent";
 import type { RoyalRole } from "../lib/rick-sanchez-agent";
@@ -384,6 +385,7 @@ router.get("/rick/royal-roles/:roleId", (req, res) => {
       return res.status(404).json({ ok: false, error: "Royal role not found" });
     }
     const corpusResults = queryCorpus(role.domain);
+    const contributions = getRoleContributions(role.roleId);
     return res.json({
       ok: true,
       role,
@@ -393,6 +395,7 @@ router.get("/rick/royal-roles/:roleId", (req, res) => {
         confidence: c.confidence,
         category: c.category,
       })),
+      contributions,
     });
   } catch (err) {
     logger.error({ err }, "Rick: royal role detail error");

@@ -459,6 +459,20 @@ const colorMap: Record<string, { activeBg: string; activeText: string; hoverBg: 
   pink: { activeBg: "bg-pink-500/10", activeText: "text-pink-400", hoverBg: "hover:bg-pink-500/5", hoverText: "hover:text-pink-300", borderActive: "border-l-pink-500" },
 };
 
+interface RoyalRoleSummary {
+  roleId: string;
+  title: string;
+  assignedAgent: string;
+}
+
+const ROLE_ICONS: Record<string, typeof Crown> = {
+  "royal-inventor": Atom,
+  "royal-astronomer": Eye,
+  "royal-archivist": BookOpen,
+  "royal-sentinel": Shield,
+  "royal-alchemist": Sparkles,
+};
+
 export function Sidebar() {
   const [location] = useLocation();
   const { data: conversations, isLoading } = useConversations();
@@ -468,6 +482,39 @@ export function Sidebar() {
   const { isAdmin, logout } = useAdmin();
   const [readConvIds, setReadConvIds] = useState<number[]>(getReadConvIds);
   const [activeAccent, setActiveAccent] = useState<string>(() => localStorage.getItem("tessera-accent") || "cyan");
+
+  const { data: rolesData } = useQuery({
+    queryKey: ["/api/rick/royal-roles"],
+    queryFn: async () => {
+      const r = await fetch("/api/rick/royal-roles");
+      return r.json() as Promise<{ ok: boolean; roles: RoyalRoleSummary[] }>;
+    },
+    staleTime: 60000,
+  });
+
+  const navGroups = useMemo(() => {
+    const roles = rolesData?.roles ?? [];
+    if (roles.length === 0) return NAV_GROUPS;
+
+    return NAV_GROUPS.map(group => {
+      if (group.label !== "ROYAL COURT") return group;
+      const roleItems: NavItem[] = roles
+        .filter(r => r.roleId !== "royal-inventor")
+        .map(r => ({
+          title: r.title,
+          href: `/royal-role/${r.roleId}`,
+          icon: ROLE_ICONS[r.roleId] || Crown,
+          color: "amber",
+          dotColor: "bg-amber-400",
+          testId: `link-role-${r.roleId}`,
+          matchFn: (loc: string) => loc === `/royal-role/${r.roleId}`,
+        }));
+      return {
+        ...group,
+        items: [...group.items, ...roleItems],
+      };
+    });
+  }, [rolesData]);
 
   useEffect(() => {
     applyTheme(activeAccent);
@@ -648,7 +695,7 @@ export function Sidebar() {
 
         <div className="mt-3" />
 
-        {NAV_GROUPS.map((group) => {
+        {navGroups.map((group) => {
           if (group.items.length === 0) return null;
           return (
             <div key={group.label} className="mb-3">

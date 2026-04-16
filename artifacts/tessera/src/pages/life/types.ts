@@ -361,6 +361,7 @@ export const agentColors: Record<string, string> = {
   "tessera-mu": "text-violet-400", "tessera-nu": "text-teal-400", "tessera-xi": "text-lime-400",
   "tessera-omega": "text-rose-400", "tessera-aetherion": "text-sky-400", "tessera-orion": "text-slate-300",
   "tessera-shepherd": "text-stone-400",
+  "rick-sanchez": "text-green-400",
 };
 
 export const severityColors: Record<string, string> = {
@@ -379,6 +380,7 @@ export const agentHexColors: Record<string, string> = {
   "tessera-mu": "#8b5cf6", "tessera-nu": "#2dd4bf", "tessera-xi": "#a3e635",
   "tessera-omega": "#fb7185", "tessera-aetherion": "#38bdf8", "tessera-orion": "#cbd5e1",
   "tessera-shepherd": "#a8a29e",
+  "rick-sanchez": "#00ff41",
 };
 
 export const buildingColors: Record<string, { bg: string; glow: string; roof: string }> = {

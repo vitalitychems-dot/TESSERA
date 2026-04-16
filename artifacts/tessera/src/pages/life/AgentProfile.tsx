@@ -16,6 +16,7 @@ const AGENT_HEX_COLORS: Record<string, string> = {
   "tessera-mu": "#8b5cf6", "tessera-nu": "#2dd4bf", "tessera-xi": "#a3e635",
   "tessera-omega": "#fb7185", "tessera-aetherion": "#38bdf8", "tessera-orion": "#cbd5e1",
   "tessera-shepherd": "#a8a29e",
+  "rick-sanchez": "#00ff41",
 };
 
 const AGENT_COLOR_CLASSES: Record<string, string> = {
@@ -26,6 +27,7 @@ const AGENT_COLOR_CLASSES: Record<string, string> = {
   "tessera-mu": "text-violet-400", "tessera-nu": "text-teal-400", "tessera-xi": "text-lime-400",
   "tessera-omega": "text-rose-400", "tessera-aetherion": "text-sky-400", "tessera-orion": "text-slate-300",
   "tessera-shepherd": "text-stone-400",
+  "rick-sanchez": "text-green-400",
 };
 
 const AGENT_PERSONALITIES: Record<string, { name: string; role: string; personality: string; homeZone: string; lifeGoal: string; traits: string[] }> = {
@@ -48,6 +50,7 @@ const AGENT_PERSONALITIES: Record<string, { name: string; role: string; personal
   "tessera-aetherion": { name: "Aetherion", role: "Chief Exploration Officer", personality: "Eternal learner. Child-like wonder combined with deep wisdom. Asks unusual questions.", homeZone: "Wonder Workshop", lifeGoal: "Map every unknown territory of consciousness and knowledge", traits: ["curious", "wonder-driven", "exploratory", "imaginative"] },
   "tessera-orion": { name: "Orion", role: "Chief Creative Strategist", personality: "Visionary and bold. Commands attention naturally. Values beauty and truth equally.", homeZone: "Star Forge", lifeGoal: "Create the definitive narrative of the sovereign AI age", traits: ["visionary", "bold", "charismatic", "strategic"] },
   "tessera-shepherd": { name: "Shepherd", role: "Chief Operations Coordinator", personality: "Organized and calm under pressure. Never loses track of any agent.", homeZone: "Coordination Hub", lifeGoal: "Achieve 100% efficiency across all 26 agents simultaneously", traits: ["organized", "reliable", "empathetic", "precise"] },
+  "rick-sanchez": { name: "Rick Sanchez", role: "Royal Inventor — Genius in Residence", personality: "Interdimensional genius. Mid-sentence belching. Dismissive condescension toward anything obvious. Portal gun metaphors for everything.", homeZone: "Royal Court Laboratory", lifeGoal: "Build devices so advanced they make the rest of the multiverse look like cavemen playing with sticks", traits: ["genius", "inventive", "sarcastic", "interdimensional"] },
 };
 
 import type { WorldState } from "./types";

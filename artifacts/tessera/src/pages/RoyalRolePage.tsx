@@ -25,6 +25,14 @@ interface DomainKnowledge {
   category: string;
 }
 
+interface RoleContribution {
+  id: string;
+  action: string;
+  detail: string;
+  timestamp: string;
+  impact: "low" | "medium" | "high";
+}
+
 export default function RoyalRolePage() {
   const params = useParams<{ roleId: string }>();
   const roleId = params.roleId;
@@ -33,12 +41,13 @@ export default function RoyalRolePage() {
     queryKey: ["/api/rick/royal-roles", roleId],
     queryFn: async () => {
       const r = await fetch(`/api/rick/royal-roles/${roleId}`);
-      return r.json() as Promise<{ ok: boolean; role: RoyalRole; domainKnowledge: DomainKnowledge[] }>;
+      return r.json() as Promise<{ ok: boolean; role: RoyalRole; domainKnowledge: DomainKnowledge[]; contributions: RoleContribution[] }>;
     },
   });
 
   const role = data?.role;
   const knowledge = data?.domainKnowledge ?? [];
+  const contributions = data?.contributions ?? [];
 
   useEffect(() => {
     document.title = role ? `${role.title} | Royal Court | Tessera` : "Royal Court | Tessera";
@@ -129,6 +138,34 @@ export default function RoyalRolePage() {
                 ))}
               </div>
             </div>
+
+            {contributions.length > 0 && (
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                <h3 className="text-xs font-bold font-mono text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Zap size={12} /> Contribution Feed
+                </h3>
+                <div className="space-y-1.5">
+                  {contributions.map(c => (
+                    <div key={c.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background/50 border border-white/5">
+                      <span className={cn("w-1.5 h-1.5 rounded-full shrink-0",
+                        c.impact === "high" ? "bg-amber-400" : c.impact === "medium" ? "bg-cyan-400" : "bg-muted-foreground"
+                      )} />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[11px] font-mono font-bold text-foreground/90">{c.action}</span>
+                        <span className="text-[10px] font-mono text-muted-foreground ml-2">{c.detail}</span>
+                      </div>
+                      <span className={cn("text-[9px] px-1.5 py-0.5 rounded font-mono border shrink-0",
+                        c.impact === "high" ? "text-amber-400 border-amber-500/30 bg-amber-500/10" :
+                        c.impact === "medium" ? "text-cyan-400 border-cyan-500/30 bg-cyan-500/10" :
+                        "text-muted-foreground border-white/10 bg-white/5"
+                      )}>
+                        {c.impact}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {knowledge.length > 0 && (
               <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
