@@ -702,6 +702,7 @@ router.post("/messages", async (req, res) => {
           totalClaims: validation.metrics.totalClaims,
           groundedClaims: validation.metrics.groundedClaims,
           quarantinedCount: validation.metrics.quarantinedCount,
+          redactedCount: validation.metrics.redactedCount,
           verifiedViaFallback: validation.metrics.verifiedViaFallback,
           wasModified: validation.wasModified,
           validationTimeMs: validation.validationTimeMs,
