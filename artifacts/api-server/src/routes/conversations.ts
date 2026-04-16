@@ -664,14 +664,10 @@ router.post("/messages", async (req, res) => {
     } else {
       res.write(`data: ${JSON.stringify({ status: "sovereign-processing", message: isAdminRequest ? "Father, Tessera is synthesizing..." : "Tessera is thinking..." })}\n\n`);
 
-      const bufferedChunks: string[] = [];
-
       const streamResult = await sandboxExtractKnowledgeStreaming(
         historyMessages,
         sovereignCtx,
-        (chunk) => {
-          bufferedChunks.push(chunk);
-        },
+        () => {},
       );
 
       if (streamResult) {
@@ -708,7 +704,19 @@ router.post("/messages", async (req, res) => {
           validationTimeMs: validation.validationTimeMs,
         };
       } catch (err) {
-        logger.warn({ err: (err as Error).message }, "ResponseValidation: validation failed, delivering unvalidated response");
+        logger.warn({ err: (err as Error).message }, "ResponseValidation: validation failed — fail-closed, quarantining entire response");
+        finalContent = "I need a moment to verify my response. Let me provide you with information I can confirm with certainty. Could you please rephrase or ask again?";
+        validationMetrics = {
+          groundingScore: 0,
+          totalClaims: 0,
+          groundedClaims: 0,
+          quarantinedCount: 0,
+          redactedCount: 0,
+          verifiedViaFallback: 0,
+          wasModified: true,
+          validationTimeMs: 0,
+          failClosed: true,
+        };
       }
 
       res.write(`data: ${JSON.stringify({ content: finalContent })}\n\n`);
