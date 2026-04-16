@@ -276,12 +276,22 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
       if (next[msgId] === type) { delete next[msgId]; } else { next[msgId] = type; }
       return next;
     });
-    fetch("/api/messages/reaction", {
+    const idx = messages.findIndex(m => `${m.id || ""}` === msgId || `${msgId}`.endsWith(String(m.id || "")));
+    const target = idx >= 0 ? messages[idx] : null;
+    const userBefore = idx > 0 ? [...messages.slice(0, idx)].reverse().find(m => m.role === "user") : null;
+    fetch("/api/feedback", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messageId: msgId, reaction: type }),
+      body: JSON.stringify({
+        clientMsgKey: msgId,
+        messageId: target?.id ? Number(target.id) : null,
+        conversationId: conversationId ?? null,
+        rating: type,
+        userQuery: userBefore?.content?.slice(0, 2000) ?? null,
+        responseExcerpt: target?.content?.slice(0, 4000) ?? null,
+      }),
     }).catch(() => {});
-  }, []);
+  }, [messages, conversationId]);
 
   const handleRegenerate = useCallback((msgIndex: number) => {
     const userMsgs = messages.slice(0, msgIndex).filter(m => m.role === "user");

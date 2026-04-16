@@ -11,3 +11,4 @@ export * from "./phases-8-12";
 export * from "./natal-chart";
 export * from "./intelligence";
 export * from "./departments";
+export * from "./feedback";
