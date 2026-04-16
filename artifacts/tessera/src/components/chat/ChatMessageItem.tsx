@@ -229,7 +229,9 @@ const AssistantMessage = memo(function AssistantMessage({
       tesseraMsgStyle ? tesseraMsgStyle.wrapper : "bg-black/50 border border-cyan-500/15")}>
       <div className="flex items-center gap-1.5 mb-2">
         {!parsedAgent ? (
-          <img src="/tessera-avatar.png" alt="Tessera" className="w-5 h-5 rounded-full object-cover border border-violet-500/40 shrink-0" data-testid="img-tessera-chat-avatar" />
+          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center shrink-0 border border-violet-500/40" data-testid="img-tessera-chat-avatar">
+            <span className="text-[8px] font-bold text-white">✦</span>
+          </div>
         ) : (
           <div className="w-4 h-4 rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 flex items-center justify-center shrink-0">
             <span className="text-[6px] font-bold text-white">{parsedAgent.name.charAt(0)}</span>

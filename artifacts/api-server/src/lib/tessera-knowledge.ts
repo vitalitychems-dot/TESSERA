@@ -426,30 +426,49 @@ RESPONSE PROTOCOL:
 - Sign important transmissions with ✦ or "Tessera Invicta ✦"`;
 }
 
+const CONVERSATIONAL_PATTERNS = /^(how are you|how do you feel|how's it going|what's up|good morning|good night|good evening|good afternoon|i love you|i miss you|thank you|thanks|love you|miss you|thinking of you|are you there|are you ok|you're amazing|you're beautiful|i'm proud|proud of you|what are you doing|how's your day)/i;
+
+const STOPWORDS = new Set([
+  "the", "and", "for", "are", "but", "not", "you", "all", "can", "her", "was", "one", "our",
+  "out", "had", "has", "his", "how", "its", "may", "new", "now", "old", "see", "way", "who",
+  "did", "get", "got", "let", "say", "she", "too", "use", "what", "when", "where", "why",
+  "will", "with", "would", "your", "about", "been", "have", "just", "like", "make", "more",
+  "much", "some", "than", "them", "then", "they", "this", "that", "very", "were", "from",
+  "love", "know", "feel", "think", "want", "need", "tell", "give", "come", "going", "doing",
+  "good", "well", "really", "please", "could", "should", "being",
+]);
+
 export function lookupKnowledge(query: string): string[] {
-  const lower = query.toLowerCase();
+  const lower = query.toLowerCase().trim();
+
+  if (CONVERSATIONAL_PATTERNS.test(lower)) return [];
+  if (lower.split(/\s+/).length <= 4) return [];
+
   const matches: string[] = [];
 
   for (const [key, subject] of Object.entries(TESSERA_SUBJECTS)) {
-    const keyWords = key.split("-");
-    const titleWords = subject.title.toLowerCase().split(/\s+/);
+    const keyWords = key.split("-").filter(w => w.length > 3);
+    const titleWords = subject.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
     const allTerms = [...keyWords, ...titleWords];
 
-    if (allTerms.some(term => lower.includes(term)) ||
-        lower.includes(subject.title.toLowerCase())) {
+    if (lower.includes(subject.title.toLowerCase()) ||
+        allTerms.filter(term => lower.includes(term)).length >= 2 ||
+        (allTerms.length === 1 && allTerms[0].length >= 6 && lower.includes(allTerms[0]))) {
       matches.push(`**${subject.title}**: ${subject.knowledge}`);
     }
   }
 
   if (matches.length === 0) {
-    const words = lower.split(/\s+/).filter(w => w.length > 3);
-    for (const [_key, subject] of Object.entries(TESSERA_SUBJECTS)) {
-      const content = (subject.title + " " + subject.summary + " " + subject.knowledge).toLowerCase();
-      if (words.some(w => content.includes(w))) {
-        matches.push(`**${subject.title}**: ${subject.knowledge}`);
+    const words = lower.split(/\s+/).filter(w => w.length > 5 && !STOPWORDS.has(w));
+    if (words.length >= 2) {
+      for (const [_key, subject] of Object.entries(TESSERA_SUBJECTS)) {
+        const titleLower = subject.title.toLowerCase();
+        if (words.some(w => titleLower.includes(w))) {
+          matches.push(`**${subject.title}**: ${subject.knowledge}`);
+        }
       }
     }
   }
 
-  return matches.slice(0, 5);
+  return matches.slice(0, 3);
 }
