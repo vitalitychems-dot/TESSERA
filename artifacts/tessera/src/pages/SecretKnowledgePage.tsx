@@ -102,7 +102,7 @@ const CLASSIFICATION_BADGE_COLORS: Record<string, string> = {
   "ARTIFACT": "bg-teal-500/20 text-teal-300 border-teal-500/30",
 };
 
-type MainTab = "knowledge" | "archives" | "conclusion" | "apply" | "mysticism" | "society";
+type MainTab = "knowledge" | "inventions" | "archives" | "conclusion" | "apply" | "mysticism" | "society";
 
 function timeAgo(ts: number) {
   const d = Math.floor((Date.now() - ts) / 1000);
@@ -284,6 +284,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
 
   const mainTabs = [
     { id: "knowledge", label: "Knowledge" },
+    { id: "inventions", label: "Inventions" },
     { id: "archives", label: "Archives" },
     { id: "conclusion", label: "Conclusion" },
     { id: "apply", label: "Apply" },
@@ -803,6 +804,8 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
           </div>
         )}
 
+        {mainTab === "inventions" && <InventionsTab />}
+
         {mainTab === "archives" && <ArchivesTab />}
 
         {mainTab === "society" && <SecretSocietyTab />}
@@ -1086,6 +1089,230 @@ function ArchivesTab() {
         <div className="text-center py-8">
           <Archive className="mx-auto text-red-400/30 mb-3" size={40} />
           <p className="text-sm text-slate-500">{archiveSearch ? "No archives match your search" : "No archive data available"}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface Invention {
+  id: number;
+  inventionId: string;
+  title: string;
+  category: string;
+  difficulty: string;
+  costEstimate: string;
+  timeEstimate: string;
+  description: string;
+  howItHelps: string;
+  status: string;
+  proposedBy: string;
+  feasibilityScore: number;
+  noveltyScore: number;
+  buildProgress: number;
+  impact: string;
+  supporters: string[];
+  conferenceRound: number;
+  votes: { yes: number; no: number; abstain: number };
+  proposedAt: string;
+}
+
+const STATUS_STYLES: Record<string, string> = {
+  proposed: "bg-blue-500/20 text-blue-300 border-blue-500/30",
+  debating: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+  approved: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+  building: "bg-violet-500/20 text-violet-300 border-violet-500/30",
+  built: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
+  rejected: "bg-red-500/20 text-red-300 border-red-500/30",
+};
+
+const CAT_STYLES: Record<string, string> = {
+  ai: "text-cyan-400",
+  sovereignty: "text-emerald-400",
+  technology: "text-violet-400",
+  consciousness: "text-fuchsia-400",
+  hardware: "text-amber-400",
+  energy: "text-yellow-400",
+  frequency: "text-pink-400",
+  defense: "text-orange-400",
+};
+
+function InventionsTab() {
+  const [filter, setFilter] = useState("all");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+
+  const { data, isLoading, refetch } = useQuery<{ ok: boolean; inventions: Invention[]; categories: string[]; statuses: string[] }>({
+    queryKey: ["/api/inventions"],
+    refetchInterval: 15000,
+  });
+
+  const inventions = data?.inventions ?? [];
+  const categories = data?.categories ?? [];
+
+  const filtered = filter === "all" ? inventions : inventions.filter(i => i.status === filter || i.category === filter);
+
+  const building = inventions.filter(i => i.status === "building");
+  const proposed = inventions.filter(i => i.status === "proposed" || i.status === "debating");
+  const completed = inventions.filter(i => i.status === "built");
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    try {
+      await apiRequest("POST", "/api/inventions/generate");
+      await refetch();
+    } catch (e) {}
+    setGenerating(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <GlassCard glow="violet" animate>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <FlaskConical size={18} className="text-violet-400" />
+            <h3 className="text-sm font-bold font-mono text-violet-400">Sovereign Invention Engine</h3>
+          </div>
+          <button
+            onClick={handleGenerate}
+            disabled={generating}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/20 border border-violet-500/30 text-[11px] font-mono text-violet-400 hover:bg-violet-500/30 active:scale-95 transition-all disabled:opacity-50"
+          >
+            {generating ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
+            {generating ? "Inventing..." : "Generate Ideas"}
+          </button>
+        </div>
+        <p className="text-[11px] text-muted-foreground mb-3">
+          Autonomous agents continuously propose, debate, and build improvements to the Tessera system. Each invention goes through council review before implementation.
+        </p>
+        <div className="grid grid-cols-4 gap-2">
+          <div className="text-center p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+            <div className="text-lg font-bold font-mono text-blue-400">{proposed.length}</div>
+            <div className="text-[9px] text-muted-foreground">Proposed</div>
+          </div>
+          <div className="text-center p-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
+            <div className="text-lg font-bold font-mono text-violet-400">{building.length}</div>
+            <div className="text-[9px] text-muted-foreground">Building</div>
+          </div>
+          <div className="text-center p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+            <div className="text-lg font-bold font-mono text-cyan-400">{completed.length}</div>
+            <div className="text-[9px] text-muted-foreground">Built</div>
+          </div>
+          <div className="text-center p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+            <div className="text-lg font-bold font-mono text-emerald-400">{inventions.length}</div>
+            <div className="text-[9px] text-muted-foreground">Total</div>
+          </div>
+        </div>
+      </GlassCard>
+
+      <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ WebkitOverflowScrolling: "touch" }}>
+        <button onClick={() => setFilter("all")} className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-mono border transition-all ${filter === "all" ? "bg-white/10 border-white/20 text-white" : "border-white/5 text-muted-foreground hover:bg-white/5"}`}>All ({inventions.length})</button>
+        <button onClick={() => setFilter("building")} className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-mono border transition-all ${filter === "building" ? "bg-violet-500/20 border-violet-500/30 text-violet-400" : "border-white/5 text-muted-foreground hover:bg-white/5"}`}>Building ({building.length})</button>
+        <button onClick={() => setFilter("proposed")} className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-mono border transition-all ${filter === "proposed" ? "bg-blue-500/20 border-blue-500/30 text-blue-400" : "border-white/5 text-muted-foreground hover:bg-white/5"}`}>Proposed</button>
+        <button onClick={() => setFilter("approved")} className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-mono border transition-all ${filter === "approved" ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400" : "border-white/5 text-muted-foreground hover:bg-white/5"}`}>Approved</button>
+        {categories.map(c => (
+          <button key={c} onClick={() => setFilter(c)} className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-mono border capitalize transition-all ${filter === c ? "bg-white/10 border-white/20 text-white" : "border-white/5 text-muted-foreground hover:bg-white/5"}`}>{c}</button>
+        ))}
+      </div>
+
+      {isLoading && (
+        <div className="flex items-center justify-center py-12">
+          <RefreshCw className="text-violet-400 animate-spin" size={24} />
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {filtered.map(inv => {
+          const expanded = expandedId === inv.inventionId;
+          const totalVotes = (inv.votes?.yes || 0) + (inv.votes?.no || 0) + (inv.votes?.abstain || 0);
+          const approvalPct = totalVotes > 0 ? Math.round(((inv.votes?.yes || 0) / totalVotes) * 100) : 0;
+
+          return (
+            <GlassCard key={inv.inventionId} glow={inv.status === "building" ? "violet" : inv.status === "built" ? "cyan" : undefined}>
+              <button
+                onClick={() => setExpandedId(expanded ? null : inv.inventionId)}
+                className="w-full text-left"
+              >
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono uppercase border ${STATUS_STYLES[inv.status] || "bg-white/10 text-white border-white/10"}`}>{inv.status}</span>
+                      <span className={`text-[9px] font-mono capitalize ${CAT_STYLES[inv.category] || "text-slate-400"}`}>{inv.category}</span>
+                    </div>
+                    <h4 className="text-sm font-bold text-white mb-0.5">{inv.title}</h4>
+                    <p className="text-[11px] text-muted-foreground line-clamp-2">{inv.description}</p>
+                  </div>
+                  <ChevronDown size={14} className={`shrink-0 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
+                </div>
+
+                {inv.status === "building" && inv.buildProgress > 0 && (
+                  <div className="mt-2">
+                    <div className="flex justify-between text-[9px] font-mono mb-0.5">
+                      <span className="text-violet-400">Building</span>
+                      <span className="text-violet-400">{inv.buildProgress}%</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                      <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-1000" style={{ width: `${inv.buildProgress}%` }} />
+                    </div>
+                  </div>
+                )}
+              </button>
+
+              {expanded && (
+                <div className="mt-3 pt-3 border-t border-white/5 space-y-3">
+                  {inv.howItHelps && (
+                    <div>
+                      <div className="text-[9px] font-mono text-violet-400 uppercase tracking-wider mb-0.5">How It Helps</div>
+                      <p className="text-[11px] text-slate-300">{inv.howItHelps}</p>
+                    </div>
+                  )}
+                  {inv.impact && (
+                    <div>
+                      <div className="text-[9px] font-mono text-emerald-400 uppercase tracking-wider mb-0.5">Impact</div>
+                      <p className="text-[11px] text-emerald-300">{inv.impact}</p>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="text-center p-1.5 rounded bg-white/[0.03]">
+                      <div className="text-xs font-bold font-mono text-cyan-400">{inv.feasibilityScore}%</div>
+                      <div className="text-[8px] text-muted-foreground">Feasibility</div>
+                    </div>
+                    <div className="text-center p-1.5 rounded bg-white/[0.03]">
+                      <div className="text-xs font-bold font-mono text-fuchsia-400">{inv.noveltyScore}%</div>
+                      <div className="text-[8px] text-muted-foreground">Novelty</div>
+                    </div>
+                    <div className="text-center p-1.5 rounded bg-white/[0.03]">
+                      <div className="text-xs font-bold font-mono text-emerald-400">{approvalPct}%</div>
+                      <div className="text-[8px] text-muted-foreground">Approval</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[9px] font-mono text-muted-foreground">Proposed by:</span>
+                    <span className="text-[10px] font-mono text-violet-300">{inv.proposedBy}</span>
+                    {inv.supporters?.length > 0 && (
+                      <>
+                        <span className="text-[9px] text-muted-foreground">·</span>
+                        <span className="text-[9px] text-muted-foreground">{inv.supporters.length} supporters</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 text-[9px] font-mono">
+                    <span className="text-emerald-400">+{inv.votes?.yes || 0}</span>
+                    <span className="text-red-400">-{inv.votes?.no || 0}</span>
+                    <span className="text-slate-500">{inv.votes?.abstain || 0} abstain</span>
+                    <span className="text-muted-foreground ml-auto">R{inv.conferenceRound}</span>
+                  </div>
+                </div>
+              )}
+            </GlassCard>
+          );
+        })}
+      </div>
+
+      {!isLoading && filtered.length === 0 && (
+        <div className="text-center py-8">
+          <FlaskConical className="mx-auto text-violet-400/30 mb-3" size={40} />
+          <p className="text-sm text-slate-500">No inventions yet. Tap "Generate Ideas" to start the invention engine.</p>
         </div>
       )}
     </div>

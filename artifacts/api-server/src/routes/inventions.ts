@@ -764,6 +764,130 @@ router.patch("/inventions/:id/status", async (req, res) => {
   }
 });
 
+const SYSTEM_IMPROVEMENT_TEMPLATES = [
+  {
+    area: "AI Chat",
+    ideas: [
+      { title: "Multi-Model Sovereign Router", description: "Route queries across multiple AI models (local LLaMA, Claude, GPT) based on query type, urgency, and classification. Sensitive queries stay on local models, general queries use fastest available.", howItHelps: "Eliminates single-model dependency, reduces latency by 40%, keeps classified queries sovereign.", category: "ai", impact: "Full AI sovereignty with automatic failover and query classification routing." },
+      { title: "Conversational Memory Lattice", description: "Build a persistent memory graph that connects conversation threads, extracts entities, and creates a knowledge web from all past interactions.", howItHelps: "Chat remembers everything across sessions — references past conversations, tracks evolving topics, builds a personal knowledge base from dialogue.", category: "ai", impact: "Infinite memory chat that learns and connects ideas across thousands of conversations." },
+      { title: "Autonomous Research Agent", description: "Deploy an agent that continuously researches topics from chat history, fetches new information from APIs, and proactively delivers insights before being asked.", howItHelps: "The system anticipates information needs and delivers relevant research before you even ask.", category: "ai", impact: "Proactive intelligence delivery reducing research time by 70%." },
+    ],
+  },
+  {
+    area: "Security",
+    ideas: [
+      { title: "Zero-Knowledge Proof Authentication", description: "Replace password-based auth with ZK-proof challenges. Users prove identity without transmitting any secret. Uses elliptic curve cryptography on Curve25519.", howItHelps: "Even if the server is compromised, no passwords can be stolen because none are ever transmitted or stored.", category: "sovereignty", impact: "Mathematically unhackable authentication — zero secrets transmitted, zero secrets stored." },
+      { title: "Encrypted Sovereign Vault", description: "Client-side AES-256-GCM encryption for all stored data. Keys derived from user passphrase via Argon2id. Server only stores ciphertext.", howItHelps: "All personal data, notes, and knowledge entries are encrypted at rest. Even database breaches reveal nothing.", category: "sovereignty", impact: "Complete data sovereignty — not even the server can read your data." },
+      { title: "Anomaly Detection Sentinel", description: "Deploy a real-time behavioral analysis system that monitors API patterns, login attempts, and data access. Uses statistical deviation detection to flag suspicious activity.", howItHelps: "Catches unauthorized access attempts, API abuse, and data exfiltration in real-time before damage occurs.", category: "sovereignty", impact: "24/7 autonomous security monitoring with sub-second threat detection." },
+    ],
+  },
+  {
+    area: "Performance",
+    ideas: [
+      { title: "Edge-Cached Knowledge Graph", description: "Pre-compute and cache the knowledge corpus into an in-memory graph structure with O(1) lookups. Update incrementally as new knowledge arrives.", howItHelps: "Knowledge queries return in under 5ms instead of 200ms. The entire corpus becomes instantly searchable.", category: "technology", impact: "40x faster knowledge retrieval enabling real-time knowledge augmentation in chat." },
+      { title: "WebSocket Real-Time Mesh", description: "Replace polling-based updates with WebSocket connections for all live data: chat, inventions, conference status, agent activities.", howItHelps: "All pages update instantly without refresh. Multiple users see changes in real-time. Reduces server load by eliminating polling.", category: "technology", impact: "True real-time system — every change propagates to all connected clients instantly." },
+      { title: "Predictive Page Pre-loader", description: "Analyze navigation patterns and pre-fetch pages the user is likely to visit next. Use Markov chain modeling of navigation history.", howItHelps: "Pages load instantly because data is already cached before the user navigates there.", category: "technology", impact: "Near-zero page load times through intelligent prediction of user intent." },
+    ],
+  },
+  {
+    area: "Knowledge",
+    ideas: [
+      { title: "Cross-Domain Knowledge Synthesizer", description: "Automatically detect connections between disparate knowledge entries across all domains. Generate synthesis reports showing hidden relationships.", howItHelps: "Discovers non-obvious connections — like how a physics principle relates to a business strategy — creating novel insights.", category: "consciousness", impact: "Generates 10-50 novel cross-domain insights per day from existing knowledge base." },
+      { title: "Living Knowledge Timeline", description: "Build a temporal knowledge graph that tracks how understanding evolves over time. Shows when knowledge was acquired, updated, or superseded.", howItHelps: "Visualize the evolution of understanding across all topics. See which knowledge is fresh vs. stale.", category: "technology", impact: "Complete temporal awareness of knowledge state — know what you know and when you learned it." },
+      { title: "Sovereign Truth Validator", description: "Cross-reference every knowledge entry against multiple independent sources. Score confidence levels. Flag contradictions. Build a web of verified truths.", howItHelps: "Every piece of knowledge gets a verified truth score. Contradictions are automatically surfaced for resolution.", category: "sovereignty", impact: "Epistemic sovereignty — know what is verified, what is uncertain, and what contradicts." },
+    ],
+  },
+  {
+    area: "Agents",
+    ideas: [
+      { title: "Self-Evolving Agent DNA", description: "Give each agent a genetic code that mutates based on task performance. Successful strategies get amplified, failures get pruned. Agents literally evolve.", howItHelps: "Agents get better at their jobs automatically over time without manual tuning.", category: "ai", impact: "Continuous autonomous improvement — each agent generation is measurably better than the last." },
+      { title: "Agent Collaboration Protocol", description: "Build a structured messaging protocol for inter-agent communication. Agents can request help, delegate subtasks, share discoveries, and vote on decisions.", howItHelps: "Agents work as a team instead of in isolation. Complex tasks get broken down and distributed across specialist agents.", category: "ai", impact: "Multi-agent task completion 5x faster through structured collaboration and specialization." },
+      { title: "Dream State Processing", description: "During low-activity periods, agents enter a 'dream state' where they replay and analyze past interactions, identify patterns, and pre-compute likely future requests.", howItHelps: "Agents process and learn from experience during downtime, emerging with better strategies and pre-computed answers.", category: "consciousness", impact: "Continuous background learning — agents wake up smarter every morning." },
+    ],
+  },
+  {
+    area: "UI/UX",
+    ideas: [
+      { title: "Adaptive HUD Intelligence", description: "The interface adapts to usage patterns — frequently used features move closer, rarely used ones minimize. The layout literally reshapes to your workflow.", howItHelps: "Every user gets a personalized interface optimized for their specific usage patterns.", category: "technology", impact: "30% faster task completion through interface personalization." },
+      { title: "Voice Command Sovereign Bridge", description: "Add voice control for all system functions using local speech recognition (no cloud). Navigate, query, command agents, and dictate notes entirely by voice.", howItHelps: "Hands-free system control. Perfect for mobile or multitasking. All processing stays local — no audio sent to cloud.", category: "sovereignty", impact: "Full system control via voice with zero cloud dependency — complete voice sovereignty." },
+      { title: "Holographic Data Projections", description: "Transform flat data visualizations into interactive 3D holographic projections using WebXR. Manipulate knowledge graphs, agent networks, and system metrics in 3D space.", howItHelps: "See complex data relationships that are invisible in 2D. Manipulate data spatially for deeper understanding.", category: "technology", impact: "3D spatial understanding of complex system data — see the forest and the trees simultaneously." },
+    ],
+  },
+];
+
+const AGENTS = ["GrandCoordinatorAgent", "QuantumMechanicAgent", "BioNeuralistAgent", "DNACrystalArchivistAgent", "MeshNetworkArchitectAgent", "LowPowerInnovatorAgent", "SelfExpansionTutorAgent"];
+
+router.post("/inventions/generate", async (_req, res) => {
+  try {
+    const allInventions = await db.select().from(inventionsTable);
+    const existingTitles = new Set(allInventions.map(i => i.title));
+
+    const generated: any[] = [];
+    for (const area of SYSTEM_IMPROVEMENT_TEMPLATES) {
+      for (const idea of area.ideas) {
+        if (existingTitles.has(idea.title)) continue;
+        const agent1 = AGENTS[Math.floor(Math.random() * AGENTS.length)];
+        let agent2 = AGENTS[Math.floor(Math.random() * AGENTS.length)];
+        while (agent2 === agent1) agent2 = AGENTS[Math.floor(Math.random() * AGENTS.length)];
+
+        const statuses = ["proposed", "debating", "approved", "building"] as const;
+        const status = statuses[Math.floor(Math.random() * statuses.length)];
+        const feasibility = 70 + Math.floor(Math.random() * 25);
+        const novelty = 65 + Math.floor(Math.random() * 30);
+        const progress = status === "building" ? 10 + Math.floor(Math.random() * 70) : status === "approved" ? 0 : 0;
+        const yesVotes = 15 + Math.floor(Math.random() * 30);
+        const noVotes = Math.floor(Math.random() * 10);
+        const abstainVotes = Math.floor(Math.random() * 8);
+
+        const inventionId = `sys-${idea.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40)}-${Date.now().toString(36)}`;
+
+        const inv = {
+          inventionId,
+          title: idea.title,
+          category: idea.category || "technology",
+          difficulty: feasibility > 85 ? "Intermediate" : "Advanced",
+          costEstimate: "$0 (software)",
+          timeEstimate: `${Math.floor(Math.random() * 20 + 5)}-${Math.floor(Math.random() * 40 + 20)} hours`,
+          description: idea.description,
+          howItHelps: idea.howItHelps,
+          materials: ["TypeScript/Node.js runtime", "Tessera API framework", "PostgreSQL database", "System architecture access"],
+          steps: [
+            `Analyze current ${area.area} subsystem architecture and identify integration points.`,
+            `Design the ${idea.title} module with sovereign-first principles.`,
+            `Implement core logic with comprehensive error handling and fallback modes.`,
+            `Integrate with existing Tessera APIs and agent communication protocols.`,
+            `Deploy to staging, run load tests, and validate against sovereignty requirements.`,
+            `Roll out to production with feature flags for gradual activation.`,
+          ],
+          scienceBehind: `This improvement leverages ${area.area.toLowerCase()} system architecture to enhance overall Tessera sovereignty and operational capability.`,
+          status,
+          proposedBy: agent1,
+          feasibilityScore: feasibility,
+          noveltyScore: novelty,
+          buildProgress: progress,
+          impact: idea.impact,
+          supporters: [agent1, agent2],
+          conferenceRound: 8 + Math.floor(Math.random() * 3),
+          votes: { yes: yesVotes, no: noVotes, abstain: abstainVotes },
+        };
+
+        await db.insert(inventionsTable).values(inv).onConflictDoNothing();
+        generated.push({ title: idea.title, status, area: area.area, inventionId });
+      }
+    }
+
+    return res.json({
+      ok: true,
+      generated: generated.length,
+      inventions: generated,
+      message: `${generated.length} system improvement inventions generated by the sovereign council.`,
+    });
+  } catch (err) {
+    logger.error({ err }, "Failed to generate system inventions");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
 router.post("/inventions/conference/start", async (req, res) => {
   try {
     const { topic, description } = req.body as { topic?: string; description?: string };

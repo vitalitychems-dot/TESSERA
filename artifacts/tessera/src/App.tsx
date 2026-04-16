@@ -256,11 +256,9 @@ function App() {
                     <MeshStatusBadge />
                   </div>
                 </SectionErrorBoundary>
-                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden" data-scroll-container style={{ paddingBottom: "calc(52px + env(safe-area-inset-bottom, 0px))", WebkitOverflowScrolling: "touch", pointerEvents: "none" }}>
+                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden" data-scroll-container style={{ paddingBottom: "calc(52px + env(safe-area-inset-bottom, 0px))", WebkitOverflowScrolling: "touch", pointerEvents: "auto" }}>
                   <ScrollToTop />
-                  <div style={{ pointerEvents: "auto" }}>
-                    <AppRouter />
-                  </div>
+                  <AppRouter />
                 </div>
                 <SectionErrorBoundary name="Commands" compact>
                   <div style={{ pointerEvents: "auto" }}><ActiveCommandsOverlay /></div>
