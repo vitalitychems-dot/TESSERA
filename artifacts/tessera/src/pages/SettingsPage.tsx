@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Activity, Shield, Cpu, HardDrive, Wifi, Zap, RefreshCw, Database, Globe, Search, BookOpen, Bot } from "lucide-react";
+import { Settings, Activity, Shield, Cpu, HardDrive, Wifi, Zap, RefreshCw, Database, Globe, Search, BookOpen, Bot, Rocket } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GlassCard, GradientBar, SectionHeader, RadialGauge, MiniStat } from "@/components/ui/sovereign";
 import type { SovereignEngine, IngestionSource, IngestionJob, DiagnosticsResponse, SovereigntyResponse, EnginesResponse, MeshStatsResponse, IngestionStatsResponse } from "@/types/api";
@@ -13,6 +13,38 @@ export default function SettingsPage() {
   const { data: engines } = useQuery<EnginesResponse>({ queryKey: ["/api/system/engines"], refetchInterval: 30000 });
   const { data: meshStats } = useQuery<MeshStatsResponse>({ queryKey: ["/api/mesh/stats"], refetchInterval: 15000 });
   const { data: ingestionStats } = useQuery<IngestionStatsResponse>({ queryKey: ["/api/ingestion/stats"], refetchInterval: 10000 });
+
+  const POKE_SOURCES = ["PokéAPI Species", "PokéAPI Moves", "PokéAPI Abilities", "PokéAPI Types"];
+  const [training, setTraining] = useState(false);
+  const [trainResult, setTrainResult] = useState<null | { ok: boolean; ingested?: number; skipped?: number; sessionsRun?: number; delta?: number; before?: number; after?: number; error?: string }>(null);
+
+  async function runFullCycle(sources: string[] | "all") {
+    setTraining(true);
+    setTrainResult(null);
+    try {
+      const body = sources === "all" ? { mode: "all" } : { sources };
+      const res = await fetch(`${API}/api/training/full-cycle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!json?.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+      setTrainResult({
+        ok: true,
+        ingested: json?.ingestion?.totalIngested ?? 0,
+        skipped: json?.ingestion?.totalSkipped ?? 0,
+        sessionsRun: json?.training?.sessionsRun ?? 0,
+        delta: json?.training?.delta ?? 0,
+        before: json?.training?.avgScoreBefore ?? 0,
+        after: json?.training?.avgScoreAfter ?? 0,
+      });
+    } catch (e) {
+      setTrainResult({ ok: false, error: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setTraining(false);
+    }
+  }
 
   const uptimeVal = diagnostics?.uptime;
   const uptimeSeconds = typeof uptimeVal === "number" ? uptimeVal : uptimeVal?.seconds;
@@ -130,6 +162,57 @@ export default function SettingsPage() {
               </div>
             ))}
           </div>
+        </GlassCard>
+
+        <GlassCard glow="amber" animate>
+          <SectionHeader icon={Rocket} title="Sovereign Training Cycle" color="amber"
+            badge={training ? "RUNNING" : "READY"}
+          />
+          <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
+            Trigger a full ingestion + AGI training pass on demand. Pulls fresh items from selected sources, then runs an evolution cycle on the sovereign engines.
+          </p>
+          <div className="flex flex-wrap gap-2 mt-3">
+            <button
+              type="button"
+              disabled={training}
+              onClick={() => runFullCycle(POKE_SOURCES)}
+              className={cn("px-3 py-2 rounded-xl text-[11px] font-bold font-mono border transition-all",
+                training ? "bg-slate-700/40 text-slate-500 border-slate-600/30 cursor-not-allowed"
+                         : "bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25")}
+              data-testid="btn-train-pokeapi"
+            >
+              {training ? "Training…" : "Train on PokéAPI"}
+            </button>
+            <button
+              type="button"
+              disabled={training}
+              onClick={() => runFullCycle("all")}
+              className={cn("px-3 py-2 rounded-xl text-[11px] font-bold font-mono border transition-all",
+                training ? "bg-slate-700/40 text-slate-500 border-slate-600/30 cursor-not-allowed"
+                         : "bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25")}
+              data-testid="btn-train-all"
+            >
+              {training ? "Training…" : "Train on All Sources"}
+            </button>
+          </div>
+          {trainResult && (
+            <div className={cn("mt-3 p-3 rounded-xl border text-[10px] font-mono leading-relaxed",
+              trainResult.ok ? "bg-emerald-500/[0.06] border-emerald-500/20 text-emerald-200"
+                             : "bg-red-500/[0.06] border-red-500/20 text-red-200")}
+              data-testid="train-result"
+            >
+              {trainResult.ok ? (
+                <>
+                  <div className="font-bold mb-1">✦ Cycle complete</div>
+                  <div>Ingested: <span className="text-white">{trainResult.ingested}</span> · Skipped: <span className="text-slate-300">{trainResult.skipped}</span></div>
+                  <div>Sessions run: <span className="text-white">{trainResult.sessionsRun}</span></div>
+                  <div>AGI score: <span className="text-white">{trainResult.before?.toFixed(2)}</span> → <span className="text-amber-300">{trainResult.after?.toFixed(2)}</span> (Δ {trainResult.delta && trainResult.delta >= 0 ? "+" : ""}{trainResult.delta?.toFixed(2)})</div>
+                </>
+              ) : (
+                <div>Failed: {trainResult.error}</div>
+              )}
+            </div>
+          )}
         </GlassCard>
 
         <GlassCard glow="rose" animate>
