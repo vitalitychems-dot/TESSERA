@@ -1040,7 +1040,12 @@ router.post("/admin/deduplication/migrate", async (req, res) => {
   }
 });
 
-router.get("/admin/deduplication/stats", (_req, res) => {
+router.get("/admin/deduplication/stats", (req, res) => {
+  const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
+  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+    res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
+    return;
+  }
   res.json({ ok: true, ...getDeduplicationStats() });
 });
 
