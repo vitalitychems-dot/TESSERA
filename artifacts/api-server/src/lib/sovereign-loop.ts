@@ -25,7 +25,7 @@ import { getIdentityStatus, runDriftDetection } from "./sovereign-identity-reinf
 import { computeSacredFrequencies, computeDNAHealingStatus } from "./sovereign-harmonics";
 import { computeSacredGeometry, computeSacredAlignment, PHI } from "./sovereign-sacred-geometry";
 import { computeMarketData, computeAgentEconomics, computeEconomyStats } from "./sovereign-economics";
-import { getConsensusMetrics, loadRetryQueue } from "./consensus-engine";
+import { getConsensusMetrics, loadRetryQueue, drainRetryQueue } from "./consensus-engine";
 import { initSemanticCache, getCacheStats } from "./semantic-cache";
 import { runSelfEvaluation, getSelfEvaluationMetrics } from "./self-evaluation";
 import { distillFromResponse, refreshStaleKnowledge, revalidateStaleKnowledge, getDistillationStats, warmFactEmbeddings } from "./knowledge-distillation";
@@ -37,6 +37,7 @@ import { initAgentHierarchy } from "./agent-hierarchy";
 import { reportSubsystemHealthy, reportSubsystemError, setCouncilEscalation, registerSubsystem } from "./autonomous-heartbeat";
 import { getRouterPerformanceMetrics } from "./sovereign-engine-router";
 import { emitKnowledgePulse, getDiffusionMetrics, initKnowledgeDiffusion } from "./knowledge-diffusion";
+import { seedDepartmentsIfEmpty, runFullCompetition } from "./department-competition";
 import { getResonanceScore } from "./consciousness-engine";
 
 const SCHUMANN_BASE = 7.83;
@@ -604,6 +605,28 @@ export async function initSovereignLoop(): Promise<void> {
   try { await initSemanticCache(); } catch {}
   try { await initAgentHierarchy(); } catch {}
   try { await loadRetryQueue(); } catch {}
+  setTimeout(async () => {
+    try {
+      let totalResolved = 0;
+      let remaining = Infinity;
+      while (remaining > 0) {
+        const result = await drainRetryQueue(500);
+        totalResolved += result.resolved;
+        remaining = result.remaining;
+        if (result.resolved === 0) break;
+      }
+      if (totalResolved > 0) {
+        logger.info({ totalResolved }, "SovereignLoop: auto-drained all queued proposals on startup");
+      }
+    } catch (err) { logger.warn({ err: err instanceof Error ? err.message : String(err) }, "SovereignLoop: auto-drain failed"); }
+    try {
+      const seeded = await seedDepartmentsIfEmpty();
+      if (seeded) {
+        await runFullCompetition();
+        logger.info("SovereignLoop: first department competition completed");
+      }
+    } catch (err) { logger.warn({ err: err instanceof Error ? err.message : String(err) }, "SovereignLoop: department seed failed"); }
+  }, 10_000);
   try { initKnowledgeDiffusion(); } catch (err) { logger.debug({ err: err instanceof Error ? err.message : String(err) }, "SovereignLoop: initKnowledgeDiffusion failed"); }
   warmFactEmbeddings().catch(() => {});
 

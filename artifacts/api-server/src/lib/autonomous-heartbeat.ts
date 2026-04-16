@@ -56,7 +56,7 @@ const LATTICE_DOMAINS = [
   { domain: "lattice.tessera.sovereign", title: "Lattice Browser", description: "Sovereign search engine and domain explorer" },
 ];
 
-const MAX_CONSECUTIVE_FAILURES = 3;
+const MAX_CONSECUTIVE_FAILURES = 5;
 const BASE_BACKOFF_MS = 5_000;
 const HEAP_GROWTH_THRESHOLD = 0.15;
 const HEAP_USED_CRITICAL_MB = 512;
