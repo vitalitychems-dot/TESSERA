@@ -10,7 +10,8 @@ import {
 } from "../lib/evolution-throttle";
 import { getEvolutionMetrics } from "../lib/self-code-evolution";
 import { getRecursiveSelfImprovementMetrics } from "../lib/recursive-self-improvement";
-import { getSchedulerMetrics } from "../lib/task-scheduler";
+import { getSchedulerMetrics, getSchedulerHistory } from "../lib/task-scheduler";
+import { getScoringMetrics } from "../lib/sovereignty-impact-scoring";
 import { validateMeshToken } from "../lib/mesh-auth";
 
 const router = Router();
@@ -68,7 +69,14 @@ router.get("/evolution-health", (_req: Request, res: Response) => {
 });
 
 router.get("/evolution-health/scheduler", (_req: Request, res: Response) => {
-  res.json({ ok: true, data: getSchedulerMetrics() });
+  res.json({
+    ok: true,
+    data: {
+      ...getSchedulerMetrics(),
+      sovereigntyScoring: getScoringMetrics(),
+      history: getSchedulerHistory(20),
+    },
+  });
 });
 
 router.post("/evolution-health/pause/:moduleId", requireAuth, (req: Request, res: Response) => {

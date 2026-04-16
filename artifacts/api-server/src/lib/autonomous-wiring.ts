@@ -1,15 +1,18 @@
-import { generatePulse, setAutonomousMode } from "./autonomous-heartbeat";
+import { generatePulse, setAutonomousMode, getHeartbeatMetrics, getHeartbeatStatus, getMemoryDiagnostics } from "./autonomous-heartbeat";
 import { runDriftDetection } from "./sovereign-identity-reinforcement";
 import { generateReflection } from "./consciousness-engine";
 import { runImprovementCycle } from "./auto-improvement-daemon";
 import { sweepAndExecute } from "./council-executor";
-import { registerTask, startScheduler, stopScheduler, getSchedulerMetrics } from "./task-scheduler";
+import { triggerTrainingCycle } from "./agi-training-engine";
+import { getSystemLoad } from "./evolution-throttle";
+import { registerTask, startScheduler, stopScheduler, getSchedulerMetrics, registerProcessMonitor } from "./task-scheduler";
 
 const HEARTBEAT_MS = 30_000;
 const DRIFT_CHECK_MS = 120_000;
 const REFLECTION_MS = 60_000;
 const IMPROVEMENT_MS = 300_000;
 const EXECUTOR_SWEEP_MS = 45_000;
+const AGI_TRAINING_MS = 300_000;
 
 let started = false;
 
@@ -19,6 +22,27 @@ export function startAutonomousOperation() {
   console.log("[AUTONOMOUS] Starting sovereign autonomous operation via centralized scheduler...");
 
   setAutonomousMode(true);
+
+  registerProcessMonitor("heartbeat", () => ({
+    ...getHeartbeatStatus(),
+    metrics: getHeartbeatMetrics(),
+    memoryDiagnostics: getMemoryDiagnostics(),
+  }));
+
+  registerProcessMonitor("systemLoad", () => {
+    const load = getSystemLoad();
+    const mem = process.memoryUsage();
+    return {
+      pid: process.pid,
+      uptimeSeconds: Math.round(process.uptime()),
+      cpuLoad: load.cpuLoad,
+      memoryUsage: load.memoryUsage,
+      highLoad: load.highLoad,
+      heapUsedMb: Math.round(mem.heapUsed / 1024 / 1024),
+      heapTotalMb: Math.round(mem.heapTotal / 1024 / 1024),
+      rssMb: Math.round(mem.rss / 1024 / 1024),
+    };
+  });
 
   registerTask({
     id: "heartbeat",
@@ -59,6 +83,14 @@ export function startAutonomousOperation() {
     name: "Council Decision Executor",
     fn: () => { sweepAndExecute(); },
     intervalMs: EXECUTOR_SWEEP_MS,
+    priority: "high",
+  });
+
+  registerTask({
+    id: "agi-training",
+    name: "AGI Training Session",
+    fn: async () => { await triggerTrainingCycle(); },
+    intervalMs: AGI_TRAINING_MS,
     priority: "high",
   });
 

@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Send, FlaskConical, Vote, CheckCircle2, XCircle, ChevronRight, RefreshCw, BookOpen, TrendingUp, Crown, Shield, Brain, Zap, Database, Target, Loader2 } from "lucide-react";
+import { Send, FlaskConical, Vote, CheckCircle2, XCircle, ChevronRight, RefreshCw, BookOpen, TrendingUp, Crown, Shield, Brain, Zap, Database, Target, Loader2, Users, Timer, MemoryStick, Activity, AlertTriangle, Skull, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const RICK_GREEN = "#00ff41";
@@ -87,7 +87,7 @@ export default function RickPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [activeTab, setActiveTab] = useState<"chat" | "inventions" | "knowledge" | "improvements" | "royal">("inventions");
+  const [activeTab, setActiveTab] = useState<"chat" | "inventions" | "knowledge" | "improvements" | "royal" | "meeseeks">("inventions");
   const [submittedInventions, setSubmittedInventions] = useState<Record<number, CouncilResult>>({});
   const [submittingIdx, setSubmittingIdx] = useState<number | null>(null);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
@@ -144,6 +144,63 @@ export default function RickPage() {
     },
     refetchInterval: 30000,
   });
+
+  const { data: meeseeksMetricsData, refetch: refetchMeeseeksMetrics } = useQuery({
+    queryKey: ["/api/rick/meeseeks/metrics"],
+    queryFn: async () => {
+      const r = await fetch("/api/rick/meeseeks/metrics");
+      return r.json();
+    },
+    refetchInterval: activeTab === "meeseeks" ? 5000 : 30000,
+  });
+
+  const { data: meeseeksActiveData, refetch: refetchMeeseeksActive } = useQuery({
+    queryKey: ["/api/rick/meeseeks/active"],
+    queryFn: async () => {
+      const r = await fetch("/api/rick/meeseeks/active");
+      return r.json();
+    },
+    refetchInterval: activeTab === "meeseeks" ? 3000 : 30000,
+  });
+
+  const { data: taskTypesData } = useQuery({
+    queryKey: ["/api/rick/meeseeks/task-types"],
+    queryFn: async () => {
+      const r = await fetch("/api/rick/meeseeks/task-types");
+      return r.json();
+    },
+  });
+
+  const [spawnTask, setSpawnTask] = useState("");
+  const [spawnTaskType, setSpawnTaskType] = useState("custom");
+  const [spawnCriteria, setSpawnCriteria] = useState("");
+  const [spawnPriority, setSpawnPriority] = useState("normal");
+  const [isSpawning, setIsSpawning] = useState(false);
+
+  const handleSpawnMeeseeks = useCallback(async () => {
+    if (!spawnTask.trim() || isSpawning) return;
+    setIsSpawning(true);
+    try {
+      const r = await fetch("/api/rick/meeseeks/spawn", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          task: spawnTask,
+          taskType: spawnTaskType,
+          successCriteria: spawnCriteria || undefined,
+          priority: spawnPriority,
+        }),
+      });
+      const data = await r.json();
+      if (data.ok) {
+        setSpawnTask("");
+        setSpawnCriteria("");
+        refetchMeeseeksActive();
+        refetchMeeseeksMetrics();
+      }
+    } catch {}
+    finally { setIsSpawning(false); }
+  }, [spawnTask, spawnTaskType, spawnCriteria, spawnPriority, isSpawning]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -269,6 +326,7 @@ export default function RickPage() {
         <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
           {([
             { key: "inventions" as const, label: "Inventions", icon: FlaskConical, color: RICK_GREEN },
+            { key: "meeseeks" as const, label: "Meeseeks", icon: Users, color: "#a855f7" },
             { key: "knowledge" as const, label: "Vault", icon: BookOpen, color: "#a78bfa" },
             { key: "improvements" as const, label: "Improve", icon: TrendingUp, color: "#22d3ee" },
             { key: "royal" as const, label: "Royal", icon: Crown, color: ROYAL_GOLD },
@@ -650,6 +708,204 @@ export default function RickPage() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {activeTab === "meeseeks" && (
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+          <div className="flex items-center justify-between mb-1">
+            <div className="text-[11px] font-mono text-muted-foreground">
+              Hyper-specialized single-purpose agents. Spawn, execute, self-destruct.
+            </div>
+            <button onClick={() => { refetchMeeseeksActive(); refetchMeeseeksMetrics(); }} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground">
+              <RefreshCw size={12} />
+            </button>
+          </div>
+
+          {(() => {
+            const m = meeseeksMetricsData?.metrics;
+            return (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { label: "Active", value: m?.activeCount ?? 0, icon: Activity, color: "violet" },
+                  { label: "Success Rate", value: `${m?.successRate ?? 0}%`, icon: CheckCircle2, color: "emerald" },
+                  { label: "Total Spawned", value: m?.totalSpawned ?? 0, icon: Users, color: "cyan" },
+                  { label: "Memory Freed", value: `${((m?.totalMemoryFreedKB ?? 0) / 1024).toFixed(1)} MB`, icon: MemoryStick, color: "amber" },
+                ].map(s => (
+                  <div key={s.label} className={cn("rounded-xl border p-3 text-center", `border-${s.color}-500/20 bg-${s.color}-500/5`)}>
+                    <s.icon size={14} className={cn(`text-${s.color}-400`, "mx-auto mb-1")} />
+                    <div className={cn("text-lg font-bold font-mono", `text-${s.color}-400`)}>{s.value}</div>
+                    <div className="text-[10px] text-muted-foreground font-mono uppercase">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
+          <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
+            <h3 className="text-xs font-bold font-mono text-violet-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Plus size={12} /> Spawn Meeseeks
+            </h3>
+            <div className="space-y-2">
+              <input
+                value={spawnTask}
+                onChange={e => setSpawnTask(e.target.value)}
+                placeholder="Describe the single-purpose task..."
+                className="w-full bg-background/50 border border-white/10 rounded-lg px-3 py-2 text-[11px] font-mono text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-violet-500/40"
+              />
+              <div className="grid grid-cols-3 gap-2">
+                <select
+                  value={spawnTaskType}
+                  onChange={e => setSpawnTaskType(e.target.value)}
+                  className="bg-background/50 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] font-mono text-foreground focus:outline-none focus:border-violet-500/40"
+                >
+                  {(taskTypesData?.taskTypes || []).map((tt: { taskType: string; label: string }) => (
+                    <option key={tt.taskType} value={tt.taskType}>{tt.label}</option>
+                  ))}
+                  {(!taskTypesData?.taskTypes || taskTypesData.taskTypes.length === 0) && <option value="custom">Custom Task</option>}
+                </select>
+                <select
+                  value={spawnPriority}
+                  onChange={e => setSpawnPriority(e.target.value)}
+                  className="bg-background/50 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] font-mono text-foreground focus:outline-none focus:border-violet-500/40"
+                >
+                  <option value="low">Low Priority</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High Priority</option>
+                  <option value="critical">Critical</option>
+                </select>
+                <input
+                  value={spawnCriteria}
+                  onChange={e => setSpawnCriteria(e.target.value)}
+                  placeholder="Success criteria..."
+                  className="bg-background/50 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] font-mono text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-violet-500/40"
+                />
+              </div>
+              <button
+                onClick={handleSpawnMeeseeks}
+                disabled={!spawnTask.trim() || isSpawning}
+                className="w-full px-3 py-2 rounded-lg text-[11px] font-mono font-bold transition-all border border-violet-500/40 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isSpawning ? <Loader2 size={12} className="animate-spin" /> : <Skull size={12} />}
+                {isSpawning ? "Spawning..." : "I'm Mr. Meeseeks! Look at me!"}
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">
+            <h3 className="text-xs font-bold font-mono text-cyan-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Activity size={12} /> Active Meeseeks ({meeseeksActiveData?.count ?? 0})
+            </h3>
+            {(!meeseeksActiveData?.active || meeseeksActiveData.active.length === 0) ? (
+              <div className="text-center py-6 text-muted-foreground text-[11px] font-mono">
+                No active Meeseeks. Existence is peaceful... for now.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {meeseeksActiveData.active.map((m: any) => {
+                  const timeLeft = m.timeRemainingMs ?? (m.meeseeksExpiresAt ? Math.max(0, m.meeseeksExpiresAt - Date.now()) : 0);
+                  const ttlPct = m.meeseeksTTL ? Math.min(100, (timeLeft / m.meeseeksTTL) * 100) : 0;
+                  const isUrgent = ttlPct < 20;
+                  return (
+                    <div key={m.id} className={cn("rounded-lg border px-3 py-2.5 bg-background/50", isUrgent ? "border-red-500/30" : "border-white/5")}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-bold font-mono text-violet-300">{m.name}</span>
+                          <span className={cn("text-[9px] px-1.5 py-0.5 rounded font-mono border",
+                            m.priority === "critical" ? "text-red-400 border-red-500/30 bg-red-500/10" :
+                            m.priority === "high" ? "text-amber-400 border-amber-500/30 bg-amber-500/10" :
+                            "text-cyan-400 border-cyan-500/30 bg-cyan-500/10"
+                          )}>
+                            {m.taskType || "custom"}
+                          </span>
+                          {m.complexity && (
+                            <span className={cn("text-[9px] px-1 py-0.5 rounded font-mono border",
+                              m.complexity === "extreme" ? "text-red-400 border-red-500/30" :
+                              m.complexity === "high" ? "text-amber-400 border-amber-500/30" :
+                              "text-emerald-400 border-emerald-500/30"
+                            )}>
+                              {m.complexity}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Timer size={10} className={isUrgent ? "text-red-400" : "text-muted-foreground"} />
+                          <span className={cn("text-[10px] font-mono", isUrgent ? "text-red-400" : "text-muted-foreground")}>
+                            {Math.ceil(timeLeft / 1000)}s
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-[10px] font-mono text-foreground/70 truncate mb-1.5">{m.meeseeksTask}</div>
+                      <div className="w-full h-1 rounded-full bg-white/5 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-1000"
+                          style={{
+                            width: `${ttlPct}%`,
+                            background: isUrgent ? "#ef4444" : ttlPct < 50 ? "#f59e0b" : "#a855f7",
+                          }}
+                        />
+                      </div>
+                      {m.successCriteria && (
+                        <div className="text-[9px] text-muted-foreground font-mono mt-1 truncate">
+                          Success: {m.successCriteria}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {(() => {
+            const m = meeseeksMetricsData?.metrics;
+            const breakdown = m?.taskTypeBreakdown || {};
+            const history = m?.recentHistory || [];
+            return (
+              <>
+                {Object.keys(breakdown).length > 0 && (
+                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                    <h3 className="text-xs font-bold font-mono text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <Target size={12} /> Task Type Breakdown
+                    </h3>
+                    <div className="space-y-1.5">
+                      {Object.entries(breakdown).map(([type, stats]: [string, any]) => (
+                        <div key={type} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-background/50 border border-white/5">
+                          <div className="flex-1 min-w-0 text-[11px] font-mono text-foreground/90">{type}</div>
+                          <span className="text-[10px] font-mono text-emerald-400">{stats.completed} done</span>
+                          {stats.timedOut > 0 && <span className="text-[10px] font-mono text-red-400">{stats.timedOut} expired</span>}
+                          <span className="text-[10px] font-mono text-muted-foreground">{stats.total} total</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {history.length > 0 && (
+                  <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+                    <h3 className="text-xs font-bold font-mono text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <Skull size={12} /> Recent Self-Destructions
+                    </h3>
+                    <div className="space-y-1.5">
+                      {history.slice(0, 10).map((h: any, i: number) => (
+                        <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background/50 border border-white/5">
+                          {h.reason === "task-completed"
+                            ? <CheckCircle2 size={10} className="text-emerald-400 shrink-0" />
+                            : <AlertTriangle size={10} className="text-red-400 shrink-0" />}
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[10px] font-mono text-foreground/80 truncate">{h.task}</div>
+                            <div className="text-[9px] text-muted-foreground font-mono">
+                              {h.name} · {h.taskType} · {(h.lifetimeMs / 1000).toFixed(0)}s · {h.memoryFreedKB}KB freed
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       )}
 
