@@ -19,8 +19,42 @@ import { rateLimitedFetch } from "./scrapers";
 import { htmlToText } from "./pipeline";
 import { ingestionJobsTable } from "@workspace/db/schema";
 
+function isSafePublicUrl(rawUrl: string): { ok: boolean; reason?: string } {
+  let u: URL;
+  try { u = new URL(rawUrl); } catch { return { ok: false, reason: "invalid URL" }; }
+  if (u.protocol !== "http:" && u.protocol !== "https:") return { ok: false, reason: `blocked protocol: ${u.protocol}` };
+  const host = u.hostname.toLowerCase();
+  if (!host) return { ok: false, reason: "empty host" };
+  if (host === "localhost" || host === "metadata" || host.endsWith(".localhost") || host.endsWith(".internal") || host.endsWith(".local")) {
+    return { ok: false, reason: `blocked host: ${host}` };
+  }
+  const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (ipv4) {
+    const [a, b] = [parseInt(ipv4[1], 10), parseInt(ipv4[2], 10)];
+    if (
+      a === 0 || a === 10 || a === 127 ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      a >= 224
+    ) return { ok: false, reason: `blocked private/reserved IPv4: ${host}` };
+  }
+  if (host.includes(":")) {
+    const lower = host.replace(/^\[|\]$/g, "");
+    if (lower === "::1" || lower.startsWith("fc") || lower.startsWith("fd") || lower.startsWith("fe80") || lower === "::") {
+      return { ok: false, reason: `blocked private/reserved IPv6: ${host}` };
+    }
+  }
+  return { ok: true };
+}
+
 async function genericSourceHandler(source: { name: string; type: string; url: string | null }): Promise<NormalizedItem[]> {
   if (!source.url) return [];
+  const safety = isSafePublicUrl(source.url);
+  if (!safety.ok) {
+    logger.warn({ source: source.name, url: source.url, reason: safety.reason }, "genericSourceHandler: refusing unsafe URL (SSRF guard)");
+    return [];
+  }
   if (source.type === "rss") {
     return fetchRssFeed(source.name, source.url);
   }
