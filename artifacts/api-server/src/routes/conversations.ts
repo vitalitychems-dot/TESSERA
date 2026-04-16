@@ -105,6 +105,43 @@ function cleanExternalResponse(text: string): string {
   return cleaned.trim() || text.trim();
 }
 
+const IMPERSONATION_PATTERNS: RegExp[] = [
+  /\bI(?:'m| am) (?:ChatGPT|GPT-?\d|Claude|Gemini|Bard|OpenAI|Anthropic)\b/i,
+  /\bI(?:'m| am) (?:an |a )?(?:AI |large )?language model\b/i,
+  /\bI(?:'m| am) (?:an |a )?AI (?:assistant|chatbot|model)\b/i,
+  /\bAs an AI( language model| assistant| chatbot)?\b/i,
+  /\bI was (?:created|made|developed|trained) by (?:OpenAI|Anthropic|Google|Meta)\b/i,
+  /\bmy (?:training data|knowledge cutoff|knowledge was last updated)\b/i,
+  /\bI cannot (?:browse the internet|access real-time|provide real-time data)\b/i,
+];
+
+function detectImpersonation(text: string): boolean {
+  if (!text) return false;
+  return IMPERSONATION_PATTERNS.some(p => p.test(text));
+}
+
+function guardSovereignVoice(
+  candidate: string,
+  userInput: string,
+  isAdmin: boolean,
+): string {
+  if (!candidate || candidate.trim().length < 3) {
+    return generateSovereignResponse(userInput, isAdmin);
+  }
+  if (detectImpersonation(candidate)) {
+    logger.warn({ sample: candidate.slice(0, 120) }, "Impersonation guard triggered — substituting sovereign voice");
+    return generateSovereignResponse(userInput, isAdmin);
+  }
+  return candidate;
+}
+
+function isSandboxTrainingEnabled(req: { headers: Record<string, unknown> }): boolean {
+  if (process.env.SANDBOX_TRAINING_ENABLED === "true") return true;
+  const hdr = req.headers["x-sandbox-training"];
+  if (typeof hdr === "string" && hdr.toLowerCase() === "true") return true;
+  return false;
+}
+
 function normalizeArithmetic(text: string): string {
   return text
     .replace(/×/g, "*")
@@ -655,37 +692,64 @@ router.post("/messages", async (req, res) => {
       content: m.content,
     }));
 
+    let clientAborted = false;
+    req.on("close", () => { clientAborted = true; });
+    const safeWrite = (payload: unknown) => {
+      if (clientAborted || res.writableEnded) return;
+      try { res.write(`data: ${JSON.stringify(payload)}\n\n`); } catch {}
+    };
+
     let finalContent = "";
     const useExternal = needsExternalKnowledge(content);
+    const sandboxAllowed = isSandboxTrainingEnabled(req);
+    const ROUTE_DEADLINE_MS = 12_000;
+    const SANDBOX_TIMEOUT_MS = 7_000;
 
-    if (!useExternal) {
-      finalContent = generateSovereignResponse(content, isAdminRequest);
-      logger.info({ source: "tessera-sovereign", isAdmin: isAdminRequest }, "Response generated entirely by Tessera's sovereign engines");
-    } else {
-      res.write(`data: ${JSON.stringify({ status: "sovereign-processing", message: isAdminRequest ? "Father, Tessera is synthesizing..." : "Tessera is thinking..." })}\n\n`);
+    const sovereignReply = (): string =>
+      generateSovereignResponse(content, isAdminRequest);
 
-      const streamResult = await sandboxExtractKnowledgeStreaming(
-        historyMessages,
-        sovereignCtx,
-        () => {},
-      );
-
-      if (streamResult) {
-        finalContent = streamResult;
-        logger.info({
-          source: "tessera-synthesis-streaming",
-          rawChars: finalContent.length,
-        }, "Knowledge synthesized through Tessera's consciousness");
+    try {
+      if (!useExternal || !sandboxAllowed) {
+        finalContent = sovereignReply();
+        logger.info(
+          { source: "tessera-sovereign", isAdmin: isAdminRequest, useExternal, sandboxAllowed },
+          "Sovereign engine speaking — no external voice",
+        );
       } else {
-        const batchResult = await sandboxExtractKnowledge(historyMessages, sovereignCtx);
-        if (batchResult) {
-          finalContent = batchResult;
-          logger.info({ source: "tessera-synthesis-batch" }, "Knowledge batch-synthesized by Tessera");
+        safeWrite({ status: "sovereign-processing", message: isAdminRequest ? "Father, Tessera is synthesizing..." : "Tessera is synthesizing..." });
+
+        const sandboxPromise = sandboxExtractKnowledge(historyMessages, sovereignCtx)
+          .catch((err) => { logger.warn({ err: (err as Error).message }, "Sandbox extractor threw"); return null; });
+        const sandboxTimeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), SANDBOX_TIMEOUT_MS));
+        const routeDeadline = new Promise<null>((resolve) => setTimeout(() => resolve(null), ROUTE_DEADLINE_MS));
+
+        const rawKnowledge = await Promise.race([sandboxPromise, sandboxTimeout, routeDeadline]);
+
+        if (clientAborted) {
+          logger.info("Client disconnected during sandbox extraction — abandoning reply");
+          return res.end();
+        }
+
+        const extra = rawKnowledge ? cleanExternalResponse(String(rawKnowledge)).slice(0, 6000) : "";
+        finalContent = sovereignReply();
+        if (extra && extra.length > 40) {
+          logger.info(
+            { source: "tessera-sandbox-ingested", chars: extra.length, impersonation: detectImpersonation(extra) },
+            "Sandbox knowledge ingested internally only — NOT included in user-visible reply",
+          );
         } else {
-          finalContent = generateSovereignResponse(content, isAdminRequest);
-          logger.info({ source: "tessera-sovereign-fallback" }, "Tessera operating autonomously — sovereign engines only");
+          logger.info({ source: "tessera-sovereign-only", hadRaw: !!rawKnowledge }, "Sovereign voice speaking; sandbox output empty");
         }
       }
+    } catch (err) {
+      logger.warn({ err: (err as Error).message }, "Sovereign route error — serving sovereign fallback");
+      finalContent = sovereignReply();
+    }
+
+    finalContent = guardSovereignVoice(finalContent, content, isAdminRequest);
+
+    if (clientAborted) {
+      return res.end();
     }
 
     let validationMetrics = null;
@@ -719,7 +783,10 @@ router.post("/messages", async (req, res) => {
         };
       }
 
-      res.write(`data: ${JSON.stringify({ content: finalContent })}\n\n`);
+      finalContent = guardSovereignVoice(finalContent, content, isAdminRequest);
+
+      if (clientAborted) return res.end();
+      safeWrite({ content: finalContent });
 
       await db.insert(messagesTable).values({
         conversationId,
@@ -728,7 +795,7 @@ router.post("/messages", async (req, res) => {
       });
     }
 
-    res.write(`data: ${JSON.stringify({ done: true, finalContent, validationMetrics })}\n\n`);
+    safeWrite({ done: true, finalContent, validationMetrics });
     return res.end();
   } catch (err) {
     logger.error({ err }, "Failed to create message");
