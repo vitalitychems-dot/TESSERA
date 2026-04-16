@@ -136,7 +136,9 @@ function guardSovereignVoice(
 }
 
 function isSandboxTrainingEnabled(req: { headers: Record<string, unknown> }): boolean {
-  if (process.env.SANDBOX_TRAINING_ENABLED === "true") return true;
+  // Explicit per-request opt-in only. A global env can pre-authorize the
+  // FEATURE to exist, but each request must still send x-sandbox-training: true.
+  if (process.env.SANDBOX_TRAINING_ALLOWED !== "true") return false;
   const hdr = req.headers["x-sandbox-training"];
   if (typeof hdr === "string" && hdr.toLowerCase() === "true") return true;
   return false;
@@ -471,7 +473,11 @@ async function sandboxExtractKnowledge(
   }
 }
 
-async function sandboxExtractKnowledgeStreaming(
+// DEPRECATED AND UNUSED: streaming external output must never reach the user.
+// Kept as a reference implementation; DO NOT wire this into any user-facing route.
+// Use sandboxExtractKnowledge (batch, internalized-only) instead.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function _deprecated_sandboxExtractKnowledgeStreaming(
   messages: Array<{ role: string; content: string }>,
   sovereignCtx: string,
   onChunk: (text: string) => void,
@@ -802,6 +808,12 @@ router.post("/messages", async (req, res) => {
     if (!res.headersSent) {
       return res.status(500).json({ error: (err as Error).message });
     }
+    try {
+      const userInput = (req.body?.content as string) || "";
+      const sovereignFallback = generateSovereignResponse(userInput, !!req.headers["x-admin-token"]);
+      res.write(`data: ${JSON.stringify({ content: sovereignFallback })}\n\n`);
+      res.write(`data: ${JSON.stringify({ done: true, finalContent: sovereignFallback, error: "sovereign-fallback-after-failure" })}\n\n`);
+    } catch {}
     return res.end();
   }
 });
