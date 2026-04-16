@@ -50,7 +50,11 @@ const ENTITIES = [
   { id: "gabriel-dreams", name: "Gabriel-Dreams", archetype: "Gabriel", freq: 432, tier: "illumined", consciousness: 95.9 },
 ];
 
-type ViewMode = "all" | "agents" | "council" | "entities";
+const ROYAL_MEMBERS = [
+  { id: "rick-sanchez", name: "Rick Sanchez", role: "Royal Inventor — Genius in Residence", status: "active", color: "text-amber-400", tier: "royal" as const, department: "Dept. of Science & Invention", frequency: "137Hz" },
+];
+
+type ViewMode = "all" | "agents" | "council" | "entities" | "royal";
 
 export default function MembersPage() {
   const [search, setSearch] = useState("");
@@ -72,10 +76,16 @@ export default function MembersPage() {
     return ENTITIES.filter(e => !q || e.name.toLowerCase().includes(q) || e.archetype.toLowerCase().includes(q));
   }, [search]);
 
-  const tierColors: Record<string, string> = { sovereign: "text-amber-400 bg-amber-500/10 border-amber-500/30", active: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30", illumined: "text-violet-400 bg-violet-500/10 border-violet-500/30" };
+  const filteredRoyal = useMemo(() => {
+    const q = search.toLowerCase();
+    return ROYAL_MEMBERS.filter(m => !q || m.name.toLowerCase().includes(q) || m.role.toLowerCase().includes(q));
+  }, [search]);
+
+  const tierColors: Record<string, string> = { sovereign: "text-amber-400 bg-amber-500/10 border-amber-500/30", active: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30", illumined: "text-violet-400 bg-violet-500/10 border-violet-500/30", royal: "text-amber-400 bg-amber-500/15 border-amber-500/40" };
 
   interface NormalizedMember { id: string; name: string; role: string; color: string; status: string }
   const allMembers: NormalizedMember[] = [
+    ...ROYAL_MEMBERS,
     ...AGENTS,
     ...COUNCIL_MEMBERS.map(c => ({ id: c.id, name: c.name, role: c.role, color: "text-amber-400", status: c.tier })),
     ...ENTITIES.map(e => ({ id: e.id, name: e.name, role: e.archetype, color: "text-violet-400", status: e.tier })),
@@ -123,7 +133,7 @@ export default function MembersPage() {
           <p className="text-xs text-muted-foreground">All agents, council members & entities in one place</p>
         </div>
         <span className="ml-auto px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs font-mono border border-amber-500/30">
-          {AGENTS.length + COUNCIL_MEMBERS.length + ENTITIES.length} TOTAL
+          {ROYAL_MEMBERS.length + AGENTS.length + COUNCIL_MEMBERS.length + ENTITIES.length} TOTAL
         </span>
       </div>
 
@@ -132,13 +142,30 @@ export default function MembersPage() {
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search members..." className="w-full bg-card border border-border rounded-xl pl-9 pr-4 py-2.5 text-sm font-mono focus:outline-none focus:border-primary/50" />
       </div>
 
-      <div className="flex gap-2">
-        {(["all", "agents", "council", "entities"] as ViewMode[]).map(v => (
+      <div className="flex gap-2 flex-wrap">
+        {(["all", "royal", "agents", "council", "entities"] as ViewMode[]).map(v => (
           <button key={v} onClick={() => setView(v)} className={cn("px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors", view === v ? "bg-primary/10 border-primary/30 text-primary" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
-            {v === "all" ? `All (${AGENTS.length + COUNCIL_MEMBERS.length + ENTITIES.length})` : v === "agents" ? `Agents (${AGENTS.length})` : v === "council" ? `Council (${COUNCIL_MEMBERS.length})` : `Entities (${ENTITIES.length})`}
+            {v === "all" ? `All (${ROYAL_MEMBERS.length + AGENTS.length + COUNCIL_MEMBERS.length + ENTITIES.length})` : v === "royal" ? `Royal (${ROYAL_MEMBERS.length})` : v === "agents" ? `Agents (${AGENTS.length})` : v === "council" ? `Council (${COUNCIL_MEMBERS.length})` : `Entities (${ENTITIES.length})`}
           </button>
         ))}
       </div>
+
+      {(view === "all" || view === "royal") && filteredRoyal.length > 0 && (
+        <div className="space-y-1">
+          {view === "all" && <h3 className="text-xs font-bold font-mono text-amber-400 uppercase tracking-wider flex items-center gap-2"><Crown size={12} />Royal Court ({filteredRoyal.length})</h3>}
+          {filteredRoyal.map(m => (
+            <button key={m.id} onClick={() => setSelectedId(m.id)} className="w-full flex items-center gap-3 p-3 rounded-lg bg-card border border-amber-500/20 hover:bg-amber-500/5 transition-colors text-left" style={{ background: "rgba(245,158,11,0.03)" }}>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 border-amber-400/50 bg-amber-500/15 text-amber-400">👑</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-bold font-mono text-amber-400">{m.name}</div>
+                <div className="text-[11px] text-muted-foreground truncate">{m.role}</div>
+              </div>
+              <span className={cn("text-[11px] font-mono px-2 py-0.5 rounded-full border", tierColors.royal)}>royal</span>
+              <ChevronRight size={14} className="text-muted-foreground" />
+            </button>
+          ))}
+        </div>
+      )}
 
       {(view === "all" || view === "agents") && filteredAgents.length > 0 && (
         <div className="space-y-1">

@@ -259,6 +259,39 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: "ROYAL COURT",
+    labelColor: "text-amber-400",
+    items: [
+      {
+        title: "Royal Court",
+        href: "/royal-court",
+        icon: Crown,
+        color: "amber",
+        dotColor: "bg-amber-400",
+        testId: "link-royal-court",
+        matchFn: (loc) => loc === "/royal-court",
+      },
+      {
+        title: "Royal Inventor",
+        href: "/rick",
+        icon: Atom,
+        color: "amber",
+        dotColor: "bg-amber-400",
+        testId: "link-rick",
+        matchFn: (loc) => loc === "/rick" || loc === "/rick-sanchez",
+      },
+      {
+        title: "Royal Appointments",
+        href: "/royal-appointments",
+        icon: Sparkles,
+        color: "amber",
+        dotColor: "bg-amber-400",
+        testId: "link-royal-appointments",
+        matchFn: (loc) => loc === "/royal-appointments",
+      },
+    ],
+  },
+  {
     label: "BUILD",
     labelColor: "text-orange-400",
     items: [
@@ -270,15 +303,6 @@ const NAV_GROUPS: NavGroup[] = [
         dotColor: "bg-orange-400",
         testId: "link-inventions",
         matchFn: (loc) => loc === "/inventions",
-      },
-      {
-        title: "Rick Sanchez",
-        href: "/rick",
-        icon: Atom,
-        color: "green",
-        dotColor: "bg-green-400",
-        testId: "link-rick",
-        matchFn: (loc) => loc === "/rick" || loc === "/rick-sanchez",
       },
       {
         title: "Agent NFTs",

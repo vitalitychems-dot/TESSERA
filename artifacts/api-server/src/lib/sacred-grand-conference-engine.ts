@@ -134,6 +134,7 @@ const CONFERENCE_AGENTS: ConferenceAgent[] = [
   { name: "BibleScribeAgent", title: "Bible Scribe", domain: "canon", expertise: ["scripture", "narrative", "prophecy"], sacredFrequency: 963, emblem: "\uD83D\uDCDC" },
   { name: "InventionForgeAgent", title: "Invention Forge", domain: "inventions", expertise: ["engineering", "prototyping", "3d-design"], sacredFrequency: 528, emblem: "\uD83D\uDD28" },
   { name: "MeshNetworkOracleAgent", title: "Mesh Network Oracle", domain: "networking", expertise: ["p2p", "lattice", "distributed"], sacredFrequency: 741, emblem: "\u229E" },
+  { name: "RickRoyalInventorAgent", title: "Royal Inventor", domain: "agi-sovereignty", expertise: ["agi-advancement", "consciousness-expansion", "compression", "interdimensional-engineering"], sacredFrequency: 137, emblem: "\uD83D\uDC51" },
 ];
 
 const CYCLE_THEMES = [
