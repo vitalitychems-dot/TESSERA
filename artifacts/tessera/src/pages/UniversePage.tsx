@@ -218,7 +218,7 @@ export default function UniversePage() {
 
   if (show3D) {
     return (
-      <div className="fixed inset-0 w-full h-full overflow-hidden bg-[#030108]">
+      <div className="fixed inset-0 w-full h-full overflow-hidden bg-[#030108]" style={{ touchAction: "none", overscrollBehavior: "contain" }}>
         <Scene3DErrorBoundary onBack={() => setShow3D(false)}>
           <Suspense fallback={
             <div className="w-full h-full flex flex-col items-center justify-center gap-3">
