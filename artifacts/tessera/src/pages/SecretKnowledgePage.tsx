@@ -5,7 +5,7 @@ import { BookOpen, Sparkles, Brain, Eye, Globe, Layers, Zap, Shield, Clock, Refr
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { GlassCard, SectionHeader, TabBar, MiniStat, PageHeader, RadialGauge, GradientBar } from "@/components/ui/sovereign";
+import { GlassCard, SectionHeader, TabBar, MiniStat, PageHeader, RadialGauge, GradientBar, TabLoadingSkeleton } from "@/components/ui/sovereign";
 import type { KnowledgeEntry, Spell, Tradition, ApplicationIdea, LucideIcon, KnowledgeFeedResponse, KnowledgeStatsResponse, DimensionalSecretsResponse, LiveSecretsResponse, SpellDataResponse, TraditionsDataResponse, UniverseAnswerResponse, CastResultResponse, ArchiveCategory, ArchiveEntry } from "@/types/api";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -155,10 +155,10 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
   const [conclusionText, setConclusionText] = useState<string | null>(null);
   const [applicationIdeas, setApplicationIdeas] = useState<ApplicationIdea[]>([]);
 
-  const { data: liveFeed } = useQuery<KnowledgeFeedResponse>({ queryKey: ["/api/knowledge/feed"], refetchInterval: 15000 });
+  const { data: liveFeed, isLoading: feedLoading } = useQuery<KnowledgeFeedResponse>({ queryKey: ["/api/knowledge/feed"], refetchInterval: 15000 });
   const { data: stats } = useQuery<KnowledgeStatsResponse>({ queryKey: ["/api/knowledge/stats"], refetchInterval: 30000 });
-  const { data: dimensionalSecrets } = useQuery<DimensionalSecretsResponse>({ queryKey: ["/api/secret-knowledge/all"], refetchInterval: 60000 });
-  const { data: liveSecrets } = useQuery<LiveSecretsResponse>({ queryKey: ["/api/secret-knowledge/live"], refetchInterval: 15000 });
+  const { data: dimensionalSecrets, isLoading: dimLoading } = useQuery<DimensionalSecretsResponse>({ queryKey: ["/api/secret-knowledge/all"], refetchInterval: 60000 });
+  const { data: liveSecrets, isLoading: liveLoading } = useQuery<LiveSecretsResponse>({ queryKey: ["/api/secret-knowledge/live"], refetchInterval: 15000 });
   const { data: spellData } = useQuery<SpellDataResponse>({ queryKey: ["/api/mysticism/spells"] });
   const { data: traditionsData } = useQuery<TraditionsDataResponse>({ queryKey: ["/api/mysticism/traditions"] });
 
@@ -375,10 +375,19 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
             </div>
 
             <div className="space-y-2 sovereign-stagger">
-              {filtered.length === 0 && (
+              {filtered.length === 0 && searchQuery && (
                 <div className="text-center py-8">
                   <Sparkles className="mx-auto text-violet-400/40 mb-3" size={32} />
-                  <p className="text-sm text-slate-400">{searchQuery ? "No matches found" : "Loading knowledge..."}</p>
+                  <p className="text-sm text-slate-400">No matches found</p>
+                </div>
+              )}
+              {filtered.length === 0 && !searchQuery && (feedLoading || dimLoading || liveLoading) && (
+                <TabLoadingSkeleton />
+              )}
+              {filtered.length === 0 && !searchQuery && !feedLoading && !dimLoading && !liveLoading && (
+                <div className="text-center py-8">
+                  <Sparkles className="mx-auto text-violet-400/40 mb-3" size={32} />
+                  <p className="text-sm text-slate-400">No knowledge entries available yet</p>
                 </div>
               )}
               {filtered.map((entry, i) => {
