@@ -1,23 +1,6 @@
 import { useEffect, useRef, memo, Component, type ReactNode } from "react";
 import { useLocation } from "wouter";
 
-function detectWebGL(): boolean {
-  try {
-    const c = document.createElement("canvas");
-    const gl = (c.getContext("webgl2") || c.getContext("webgl") || c.getContext("experimental-webgl")) as WebGLRenderingContext | null;
-    if (gl) {
-      const ext = gl.getExtension("WEBGL_lose_context");
-      if (ext) ext.loseContext();
-      c.width = 0;
-      c.height = 0;
-      return true;
-    }
-    return false;
-  } catch {
-    return false;
-  }
-}
-
 class ErrorBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, { hasError: boolean }> {
   constructor(props: { children: ReactNode; fallback: ReactNode }) {
     super(props);
@@ -103,9 +86,8 @@ function HyperdimensionalCanvas() {
       targetFpsRef.current = 14;
     }
 
-    document.addEventListener("visibilitychange", () => {
-      visibleRef.current = !document.hidden;
-    });
+    const onVisChange = () => { visibleRef.current = !document.hidden; };
+    document.addEventListener("visibilitychange", onVisChange);
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -389,6 +371,7 @@ function HyperdimensionalCanvas() {
     return () => {
       cancelAnimationFrame(frameRef.current);
       window.removeEventListener("resize", resize);
+      document.removeEventListener("visibilitychange", onVisChange);
       if (observer) observer.disconnect();
     };
   }, []);
