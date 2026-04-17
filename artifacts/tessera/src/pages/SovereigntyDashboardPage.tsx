@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Shield, Vote, Users, TrendingUp, CheckCircle, XCircle, Loader2, Plus, Heart, Brain } from "lucide-react";
+import { Shield, Vote, TrendingUp, CheckCircle, XCircle, Plus, Heart, Brain, GitBranch } from "lucide-react";
 import { GlassCard, GradientBar, SectionHeader, PageHeader, RadialGauge, MiniStat } from "@/components/ui/sovereign";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +38,31 @@ export default function SovereigntyDashboardPage() {
     queryKey: ["heartbeat-metrics"],
     queryFn: () => fetch(`${API}/api/heartbeat/metrics`).then(r => r.json()).then(d => d.data),
     refetchInterval: 15000,
+  });
+
+  // Self-evolution feed: surfaces every recent proposal with its decision
+  // status — including REJECTED ones with the council's rationale, so a
+  // failed self-improvement attempt is never silently swallowed.
+  const { data: evolutionMetrics } = useQuery<{
+    totalProposals: number;
+    appliedChanges: number;
+    rolledBackChanges: number;
+    isLocked: boolean;
+    recentProposals?: Array<{
+      id: string;
+      targetModule: string;
+      proposedChange: string;
+      rationale?: string;
+      status: string;
+      riskLevel?: string;
+      impact?: string;
+      proposedAt?: number;
+      appliedAt?: number;
+    }>;
+  }>({
+    queryKey: ["self-evolution-metrics"],
+    queryFn: () => fetch(`${API}/api/self-evolution/metrics`).then(r => r.json()).then(d => d.data),
+    refetchInterval: 30000,
   });
 
   const { data: adminStatus } = useQuery({
@@ -196,6 +221,47 @@ export default function SovereigntyDashboardPage() {
             <div className="mt-2 grid grid-cols-2 gap-3">
               <MiniStat value={intelligence.embeddings?.cacheSize ?? 0} label="Embeddings" color="violet" />
               <MiniStat value={`${intelligence.cache?.ttlSeconds ?? 3600}s`} label="Cache TTL" color="blue" />
+            </div>
+          </GlassCard>
+        )}
+
+        {evolutionMetrics && (
+          <GlassCard animate>
+            <SectionHeader icon={GitBranch} title="Self-Evolution Stream" color="emerald" />
+            <div className="grid grid-cols-3 gap-3 mt-3 mb-3">
+              <MiniStat value={evolutionMetrics.totalProposals ?? 0} label="Proposed" color="emerald" />
+              <MiniStat value={evolutionMetrics.appliedChanges ?? 0} label="Applied" color="cyan" />
+              <MiniStat value={evolutionMetrics.rolledBackChanges ?? 0} label="Rolled Back" color="amber" />
+            </div>
+            <div className="space-y-2">
+              {(evolutionMetrics.recentProposals ?? []).slice(0, 8).map(p => {
+                const rejected = /reject/i.test(p.status);
+                const applied = /appl/i.test(p.status);
+                return (
+                  <div key={p.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-1.5 hover:bg-white/[0.04] transition-all">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="text-xs text-white font-medium leading-snug">{p.proposedChange}</div>
+                      <span className={cn(
+                        "px-2 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 border uppercase",
+                        rejected ? "bg-red-500/15 text-red-400 border-red-500/20"
+                          : applied ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
+                          : "bg-amber-500/15 text-amber-400 border-amber-500/20"
+                      )}>{p.status}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-mono">{p.targetModule}{p.riskLevel ? ` · risk: ${p.riskLevel}` : ""}</div>
+                    {p.rationale && <div className="text-[11px] text-slate-400 leading-relaxed">Rationale: {p.rationale}</div>}
+                    {/* impact carries the council's explanation — surface it for rejected proposals so the user sees WHY */}
+                    {p.impact && (
+                      <div className={cn("text-[11px] leading-relaxed", rejected ? "text-red-300" : "text-slate-400")}>
+                        {rejected ? "Reason: " : ""}{p.impact}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {(evolutionMetrics.recentProposals ?? []).length === 0 && (
+                <div className="text-xs text-slate-500 italic">No self-evolution proposals yet — once the recursive improvement cycle runs they will appear here with applied/rejected status and the council's reasoning.</div>
+              )}
             </div>
           </GlassCard>
         )}
