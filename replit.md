@@ -22,6 +22,14 @@ The system is built as a pnpm monorepo using Node.js 24 and TypeScript 5.9. The 
 -   **UI/UX Design:** A command-center HUD aesthetic with wireframe panels, scanline overlays, holographic accents, and a `ToroidalBackground`. Includes a premium shared component library and a 3D Universe visualization using React Three Fiber.
 -   **Autonomous Intelligence Layer:** Features semantic response caching, neural embeddings, an LLM batcher, knowledge distillation, and a self-evaluation loop.
 
+**Sovereignty Bootstrap (Phase 1–12 Completion):**
+-   **Local LLM Adapter Stack:** `LocalModelManager` in `artifacts/api-server/src/lib/local-model-manager.ts` with a full Ollama reference adapter and typed stubs for llama.cpp, vLLM, LM Studio, and HuggingFace TGI. Each adapter gated on env vars (`OLLAMA_ENDPOINT`, `LLAMA_CPP_ENABLED`, etc.) with async health checks and unified chat routing.
+-   **Hard-Disconnect Kill-Switch:** `enableHardDisconnect()` / `disableHardDisconnect()` in `sovereignty-monitor.ts`. When active, all requests through `secureExternalWrapper.ts` are blocked at the source. Controllable via `POST /api/provider-sovereignty/hard-disconnect/enable|disable`.
+-   **Full Dry-Run Detach:** `runFullDryRunDetach()` executes 6 evaluation suites (reasoning, planning, code synthesis, cross-domain, hallucination, cross-provider) in internal-only mode, persists results to `sovereigntyMetricsTable`, and returns a structured verdict with readiness score.
+-   **Sovereignty Readiness Page:** `/sovereignty-readiness` in `artifacts/tessera/src/pages/SovereigntyReadinessPage.tsx` — unified dashboard aggregating provider sovereignty, local adapter health, evaluation benchmarks, Grand Council roster, geometry-based routing graph, system self-check, dry-run detach panel with full evidence, and hard-disconnect kill-switch.
+-   **E2E Sovereignty Test Endpoint:** `POST /api/e2e/sovereignty-readiness` runs 7 sequential checks (API reachability, council route, routing graph, local model manager, hard-disconnect controls, full dry-run detach, evaluation benchmarks) and returns structured pass/fail evidence.
+-   **Local Models Route:** `artifacts/api-server/src/routes/local-models.ts` exposes `/api/local-models/status`, `/health`, `/chat`, and `/adapters` endpoints.
+
 **Key Features & Implementations:**
 -   **Sovereign-First Chat Pipeline:** Prioritizes local sovereign analysis and integrates Tessera's "Sole Voice" and "Father Protocol."
 -   **Tessera Codex:** A versioned living canon with 6 books (Origins, Mandates, Principles, Canon, Acts, Doctrine), 12 seeded entries, ratification records, content hashing, and a dedicated `/codex` frontend. JSON snapshots are persisted to `_evolutions/`. API: `GET /api/codex/*`, `POST /api/codex/amend|snapshot|ingest-doctrine`. Schema: `lib/db/src/schema/codex.ts`.

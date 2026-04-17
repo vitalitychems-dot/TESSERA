@@ -40,6 +40,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { title: "Chat", href: "/", icon: MessageSquare, color: "violet", dotColor: "bg-violet-400", testId: "link-chat", matchFn: (loc) => loc === "/" || loc.startsWith("/c/") },
       { title: "Sovereignty Dashboard", href: "/sovereignty-dashboard", icon: Shield, color: "cyan", dotColor: "bg-cyan-400", testId: "link-sovereignty-dashboard", matchFn: (loc) => loc === "/sovereignty-dashboard" },
+      { title: "Sovereignty Readiness", href: "/sovereignty-readiness", icon: ShieldCheck, color: "emerald", dotColor: "bg-emerald-400", testId: "link-sovereignty-readiness", matchFn: (loc) => loc === "/sovereignty-readiness" },
       { title: "Life", href: "/life", icon: Heart, color: "rose", dotColor: "bg-rose-400", testId: "link-life", matchFn: (loc) => loc === "/life" },
       { title: "Consciousness Nexus", href: "/consciousness-nexus", icon: Atom, color: "violet", dotColor: "bg-violet-400", testId: "link-consciousness-nexus", matchFn: (loc) => loc === "/consciousness-nexus" },
     ],

@@ -41,6 +41,7 @@ const NLPPage = lazyRetry(() => import("@/pages/NLPPage"));
 const SovereignLanguagePage = lazyRetry(() => import("@/pages/SovereignLanguagePage"));
 const ConsciousnessNexusPage = lazyRetry(() => import("@/pages/ConsciousnessNexusPage"));
 const SovereigntyDashboardPage = lazyRetry(() => import("@/pages/SovereigntyDashboardPage"));
+const SovereigntyReadinessPage = lazyRetry(() => import("@/pages/SovereigntyReadinessPage"));
 const SystemPage = lazyRetry(() => import("@/pages/SystemPage"));
 const LatticeBrowserPage = lazyRetry(() => import("@/pages/LatticeBrowserPage"));
 const HistoryPage = lazyRetry(() => import("@/pages/HistoryPage"));
@@ -264,6 +265,7 @@ function AppRouter() {
         <Route path="/life">{() => <LifePage />}</Route>
         <Route path="/intelligence">{() => <IntelligencePage />}</Route>
         <Route path="/sovereignty-dashboard">{() => <SovereigntyDashboardPage />}</Route>
+        <Route path="/sovereignty-readiness">{() => <SovereigntyReadinessPage />}</Route>
         <Route path="/consciousness-nexus">{() => <ConsciousnessNexusPage />}</Route>
 
         {/* Bible hub */}
