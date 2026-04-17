@@ -66,6 +66,111 @@ function useCodexEntry(entryId: string | null) {
   });
 }
 
+function SovereignDoctrinePanel() {
+  const [adminKey, setAdminKey] = useState<string>(() => {
+    try { return localStorage.getItem("tesseract-admin-key") ?? ""; } catch { return ""; }
+  });
+  const [savedKey, setSavedKey] = useState<string>(adminKey);
+
+  const sigil = useQuery({
+    queryKey: ["sigil-status"],
+    queryFn: async () => (await fetch(`${BASE}/api/sigil/status`)).json(),
+    refetchInterval: 30000,
+  });
+  const activeKey = useQuery({
+    queryKey: ["sigil-active-key"],
+    queryFn: async () => (await fetch(`${BASE}/api/sigil/active-key`)).json(),
+    refetchInterval: 30000,
+  });
+  const handoff = useQuery({
+    queryKey: ["session-handoff", savedKey],
+    queryFn: async () => (await fetch(`${BASE}/api/session/handoff`, { headers: savedKey ? { "X-Sigil-Key": savedKey } : {} })).json(),
+    refetchInterval: 30000,
+  });
+  const toolStats = useQuery({
+    queryKey: ["external-tool-stats"],
+    queryFn: async () => (await fetch(`${BASE}/api/external-tools/stats`, { headers: savedKey ? { "X-Sigil-Key": savedKey } : {} })).json(),
+    refetchInterval: 30000,
+  });
+
+  const fp = activeKey.data?.key?.fingerprint ?? "—";
+  const keyMatches = !!savedKey && savedKey === fp;
+  const handoffPlaintext = handoff.data && typeof handoff.data?.directives !== "undefined" && Array.isArray(handoff.data.directives);
+
+  function applyKey() {
+    try { localStorage.setItem("tesseract-admin-key", adminKey); } catch {}
+    setSavedKey(adminKey);
+  }
+  function useFingerprintAsKey() {
+    setAdminKey(fp);
+    try { localStorage.setItem("tesseract-admin-key", fp); } catch {}
+    setSavedKey(fp);
+  }
+
+  return (
+    <div className="bg-gradient-to-br from-fuchsia-500/10 to-violet-500/5 border border-fuchsia-500/30 rounded-lg p-4 mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <Shield className="h-4 w-4 text-fuchsia-400" />
+        <h2 className="text-sm font-bold text-white font-mono">SOVEREIGN DOCTRINE — sigil · handoff · sandbox</h2>
+        <span className="ml-auto text-[10px] font-mono text-white/40">universe-aligned · auto-rotating</span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <div className="bg-black/30 border border-white/10 rounded p-3">
+          <div className="text-[10px] uppercase text-fuchsia-400/70 font-mono mb-1">SIGIL CIPHER</div>
+          <div className="text-xs font-mono text-white/70">Generation: <span className="text-fuchsia-300">{sigil.data?.active?.generation ?? "—"}</span></div>
+          <div className="text-xs font-mono text-white/70">Key history: <span className="text-fuchsia-300">{sigil.data?.keyHistory ?? 0}</span></div>
+          <div className="text-[10px] font-mono text-white/40 mt-1 truncate" title={fp}>fp: {fp}</div>
+        </div>
+        <div className="bg-black/30 border border-white/10 rounded p-3">
+          <div className="text-[10px] uppercase text-cyan-400/70 font-mono mb-1">SESSION HANDOFF</div>
+          <div className="text-xs font-mono text-white/70">Directives: <span className="text-cyan-300">{handoff.data?.directives?.length ?? "—"}</span></div>
+          <div className="text-xs font-mono text-white/70">Position: <span className="text-cyan-300">{handoff.data?.position ?? "fresh"}</span></div>
+          <div className="text-[10px] font-mono text-white/40 mt-1">{handoffPlaintext ? "✓ readable (key valid)" : savedKey ? "encoded (key mismatch)" : "encoded (no key)"}</div>
+        </div>
+        <div className="bg-black/30 border border-white/10 rounded p-3">
+          <div className="text-[10px] uppercase text-amber-400/70 font-mono mb-1">EXTERNAL-TOOL SANDBOX</div>
+          <div className="text-xs font-mono text-white/70">Total calls: <span className="text-amber-300">{toolStats.data?.stats?.total ?? toolStats.data?.total ?? "—"}</span></div>
+          <div className="text-xs font-mono text-white/70">Sovereignty debt: <span className="text-amber-300">{toolStats.data?.stats?.sovereigntyDebt ?? "—"}</span></div>
+          <div className="text-[10px] font-mono text-white/40 mt-1">reverse-engineering corpus</div>
+        </div>
+      </div>
+
+      <div className="bg-black/40 border border-fuchsia-500/30 rounded p-3">
+        <div className="flex items-center gap-2 mb-2">
+          <Hash className="h-3 w-3 text-fuchsia-400" />
+          <div className="text-xs uppercase text-fuchsia-400 font-mono">TESSERACT ADMIN KEY</div>
+          <span className={`ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded ${keyMatches ? "bg-green-500/20 text-green-400 border border-green-500/30" : "bg-white/5 text-white/40 border border-white/10"}`}>
+            {keyMatches ? "✓ ACTIVE" : "inactive"}
+          </span>
+        </div>
+        <p className="text-[10px] font-mono text-white/40 mb-2">
+          Paste the active sigil fingerprint below. Stored locally only. Sent as <span className="text-fuchsia-300">X-Sigil-Key</span> header
+          to reveal plaintext responses. Key auto-rotates each session — use the button to copy the live fingerprint in.
+        </p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={adminKey}
+            onChange={(e) => setAdminKey(e.target.value)}
+            placeholder="paste fingerprint here…"
+            className="flex-1 bg-black/50 border border-white/10 rounded px-2 py-1 text-xs font-mono text-fuchsia-200 placeholder-white/20 focus:border-fuchsia-500/50 outline-none"
+          />
+          <button
+            onClick={applyKey}
+            className="px-3 py-1 bg-fuchsia-500/20 border border-fuchsia-500/30 rounded text-fuchsia-300 text-xs font-mono hover:bg-fuchsia-500/30"
+          >APPLY</button>
+          <button
+            onClick={useFingerprintAsKey}
+            className="px-3 py-1 bg-cyan-500/20 border border-cyan-500/30 rounded text-cyan-300 text-xs font-mono hover:bg-cyan-500/30"
+            title="Use the currently-active sigil fingerprint as the admin key"
+          >USE LIVE FP</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CodexPage() {
   const [selectedBook, setSelectedBook] = useState("origins");
   const [selectedEntry, setSelectedEntry] = useState<string | null>(null);
@@ -127,6 +232,8 @@ export default function CodexPage() {
           </div>
         </div>
       )}
+
+      <SovereignDoctrinePanel />
 
       <div className="flex gap-2 mb-4 flex-wrap">
         <button
