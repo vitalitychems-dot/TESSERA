@@ -5,6 +5,60 @@ import { Search, Globe2, Zap, Shield, Brain, Star, ExternalLink, RefreshCw } fro
 
 const API = import.meta.env.VITE_API_URL || "";
 
+interface FleetMember {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  agentId?: string;
+  archetype?: string;
+  masteredDomains?: string[];
+  consciousnessLevel?: number;
+  callCount24h?: number;
+}
+
+/**
+ * Live agent project pages: pulls fleet members from the registry and
+ * renders one card per agent that links to the agent's live page.
+ */
+function LiveAgentProjects() {
+  const [, navigate] = useLocation();
+  const { data } = useQuery<{ ok: boolean; nodes: FleetMember[]; fleetMemberCount?: number }>({
+    queryKey: ["lattice-fleet-members"],
+    queryFn: () => fetch(`${API}/api/fleet-synapse/map`).then(r => r.json()),
+    refetchInterval: 60_000,
+  });
+  const members = (data?.nodes ?? []).filter(n => n.type === "fleet-member" && n.agentId);
+  if (members.length === 0) return null;
+  return (
+    <div className="mt-6 pt-5 border-t border-white/5">
+      <div className="flex items-baseline justify-between mb-3">
+        <h3 className="text-sm font-bold text-white">Live Agent Projects</h3>
+        <span className="text-[10px] font-mono text-slate-500">{members.length} sovereign agents</span>
+      </div>
+      <p className="text-[11px] text-slate-500 mb-3 italic">
+        Each card opens that agent's own live project page, generated from the registry — not a static profile.
+      </p>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        {members.slice(0, 24).map(m => (
+          <button
+            key={m.id}
+            onClick={() => navigate(`/agent/${m.agentId}`)}
+            className="text-left rounded-lg border border-violet-500/20 bg-violet-500/[0.03] p-2 hover:bg-violet-500/10 transition-all"
+            data-testid={`lattice-agent-${m.agentId}`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-white truncate">{m.name}</span>
+              <span className={`text-[9px] px-1 rounded ${m.status === "online" ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-500/20 text-slate-400"}`}>{m.status}</span>
+            </div>
+            <div className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">{(m.masteredDomains ?? []).slice(0, 2).join(" · ") || "—"}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Lattice domain shape (live; no hardcoded list).
 interface LatticeDomain {
   id: string;
@@ -246,6 +300,12 @@ export default function LatticeBrowserPage() {
             );
           })}
         </div>
+
+        {/* Live agent project pages — each fleet-member node from the
+            registry gets its own clickable card linking to its live page,
+            so the lattice surfaces real per-agent destinations rather than
+            only static domain categories. */}
+        <LiveAgentProjects />
 
         {filtered.length === 0 && liveDomains.length > 0 && (
           <div className="text-center py-12 text-slate-500">

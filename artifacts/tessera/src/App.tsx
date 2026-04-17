@@ -52,6 +52,7 @@ const CompressionLabPage = lazyRetry(() => import("@/pages/CompressionLabPage"))
 const SovereignMeshPage = lazyRetry(() => import("@/pages/SovereignMeshPage"));
 const ProofCenterPage = lazyRetry(() => import("@/pages/ProofCenterPage"));
 const FleetPage = lazyRetry(() => import("@/pages/FleetPage"));
+const AgentLivePage = lazyRetry(() => import("@/pages/AgentLivePage"));
 const EcomPage = lazyRetry(() => import("@/pages/EcomPage"));
 const IncomeWorkflowPage = lazyRetry(() => import("@/pages/IncomeWorkflowPage"));
 const RulesPage = lazyRetry(() => import("@/pages/RulesPage"));
@@ -288,6 +289,7 @@ function AppRouter() {
 
         {/* Fleet & Mission */}
         <Route path="/fleet">{() => <FleetPage />}</Route>
+        <Route path="/agent/:agentId">{() => <AgentLivePage />}</Route>
 
         {/* Royal Court */}
         <Route path="/royal-court">{() => <RoyalCourtPage />}</Route>
