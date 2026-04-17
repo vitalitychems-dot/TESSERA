@@ -635,6 +635,93 @@ export function rollbackEvolution(proposalId: string): boolean {
   return true;
 }
 
+/**
+ * Per-module evolution diagnostics — for the named module list (consciousness-engine,
+ * vector-memory, dual-brain, etc.) we need to surface attempted/applied/rejected
+ * counts and the most recent reason so the UI can show users WHY each evolution
+ * was rejected, not just a generic activity feed.
+ */
+export interface ModuleDiagnostics {
+  module: string;
+  attempted: number;
+  applied: number;
+  rejected: number;
+  rolledBack: number;
+  lastStatus: string | null;
+  lastReason: string | null;
+  lastProposedAt: number | null;
+  isProtected: boolean;
+  isSafe: boolean;
+  isCoolingDown: boolean;
+}
+
+// The named-module set the dashboard surface must always cover. We union the
+// SAFE_MODULES list (basenames) with any module that has actually had proposals
+// so newly-attempted modules also appear, plus a baseline of expected names so
+// the UI can always show consciousness-engine, vector-memory, etc.
+const TRACKED_MODULES_BASELINE = [
+  "consciousness-engine.ts",
+  "vector-memory.ts",
+  "dual-brain.ts",
+  "agi-training-engine.ts",
+  "swarm-optimizer.ts",
+  "personality-evolution.ts",
+  "auto-improvement-daemon.ts",
+  "agent-spawner.ts",
+];
+
+export function getModuleDiagnostics(): ModuleDiagnostics[] {
+  const seen = new Set<string>();
+  const tracked: string[] = [];
+  for (const m of [
+    ...TRACKED_MODULES_BASELINE,
+    ...SAFE_MODULES.map(m => m.split("/").pop() || m),
+    ...proposals.map(p => p.targetModule),
+  ]) {
+    if (!seen.has(m)) {
+      seen.add(m);
+      tracked.push(m);
+    }
+  }
+  return tracked.map(module => {
+    const forModule = proposals.filter(p => p.targetModule === module);
+    const last = forModule[0] ?? null;
+    return {
+      module,
+      attempted: forModule.length,
+      applied: forModule.filter(p => p.status === "applied").length,
+      rejected: forModule.filter(p => p.status === "rejected").length,
+      rolledBack: forModule.filter(p => p.status === "rolled-back").length,
+      lastStatus: last?.status ?? null,
+      lastReason: last?.impact ?? null,
+      lastProposedAt: last?.proposedAt ?? null,
+      isProtected: isModuleProtected(module),
+      isSafe: isModuleSafe(module),
+      isCoolingDown: isModuleCoolingDown(module),
+    };
+  });
+}
+
+/**
+ * Deduplicates the recent-proposal stream by collapsing consecutive proposals
+ * that share the same (targetModule, proposedChange, status) signature into a
+ * single entry. This is the deterministic stream dedup the council requires
+ * so the user doesn't see e.g. five identical "consciousness-engine memory
+ * retention" rejection rows in a row.
+ */
+function dedupedRecent(limit = 10): CodeEvolutionProposal[] {
+  const out: CodeEvolutionProposal[] = [];
+  let lastSig: string | null = null;
+  for (const p of proposals) {
+    const sig = `${p.targetModule}::${p.proposedChange}::${p.status}`;
+    if (sig === lastSig) continue;
+    lastSig = sig;
+    out.push(p);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 export function getEvolutionMetrics() {
   return {
     totalProposals: evolutionState.totalProposals,
@@ -644,11 +731,12 @@ export function getEvolutionMetrics() {
     isLocked: evolutionState.isLocked,
     protectedModuleCount: PROTECTED_MODULES.length,
     safeModuleCount: SAFE_MODULES.length,
-    recentProposals: proposals.slice(0, 10),
+    recentProposals: dedupedRecent(10),
     approvedCount: proposals.filter(p => p.status === "applied").length,
     rejectedCount: proposals.filter(p => p.status === "rejected").length,
     protectedModules: PROTECTED_MODULES,
     safeModules: SAFE_MODULES,
+    moduleDiagnostics: getModuleDiagnostics(),
   };
 }
 
