@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
-import { forumTopicsTable, forumRepliesTable, forumProposalsTable, forumVotesTable, forumKnowledgeTable, forumLearningMetricsTable } from "@workspace/db/schema";
-import { desc, eq, sql } from "drizzle-orm";
+import { forumTopicsTable, forumRepliesTable, forumProposalsTable, forumVotesTable, forumKnowledgeTable, forumLearningMetricsTable, forumApplicantsTable } from "@workspace/db/schema";
+import { desc, eq, sql, gte } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { validateMeshToken } from "../lib/mesh-auth";
 import { lookupForumIdentity, lookupTokenPrincipal, registerAdminPrincipal } from "../lib/forum-identity-registry";
@@ -192,7 +192,7 @@ router.get("/tesseract-forum/topics", async (req, res) => {
           createdAt: new Date(p.createdAt).getTime(),
           resolvedAt: p.closedAt ? new Date(p.closedAt).getTime() : undefined,
           requiredVotes: p.threshold,
-          totalAgents: 12,
+          totalAgents: getForumEngineMetrics().agentCount,
           executionStatus: p.outcome === "approved" ? "completed" as const : undefined,
         };
       });
@@ -508,6 +508,136 @@ router.post("/tesseract-forum/admin/register-principal", async (req, res) => {
     return res.json({ ok: true, message: `Token bound to "${principalName}" by ${callerPrincipal}` });
   } catch (err) {
     logger.error({ err }, "Failed to register principal");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/tesseract-forum/heartbeat", async (_req, res) => {
+  try {
+    const now = Date.now();
+    const oneHourAgo = new Date(now - 60 * 60 * 1000);
+    const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
+
+    const [topicsLastHour] = await db.select({ cnt: sql<number>`count(*)::int` })
+      .from(forumTopicsTable).where(gte(forumTopicsTable.createdAt, oneHourAgo));
+    const [repliesLastHour] = await db.select({ cnt: sql<number>`count(*)::int` })
+      .from(forumRepliesTable).where(gte(forumRepliesTable.createdAt, oneHourAgo));
+    const [topicsLastDay] = await db.select({ cnt: sql<number>`count(*)::int` })
+      .from(forumTopicsTable).where(gte(forumTopicsTable.createdAt, oneDayAgo));
+    const [repliesLastDay] = await db.select({ cnt: sql<number>`count(*)::int` })
+      .from(forumRepliesTable).where(gte(forumRepliesTable.createdAt, oneDayAgo));
+
+    const lastTopic = await db.select({ ts: forumTopicsTable.updatedAt })
+      .from(forumTopicsTable).orderBy(desc(forumTopicsTable.updatedAt)).limit(1);
+    const lastReply = await db.select({ ts: forumRepliesTable.createdAt })
+      .from(forumRepliesTable).orderBy(desc(forumRepliesTable.createdAt)).limit(1);
+
+    const lastActivityTs = Math.max(
+      lastTopic[0]?.ts ? new Date(lastTopic[0].ts).getTime() : 0,
+      lastReply[0]?.ts ? new Date(lastReply[0].ts).getTime() : 0,
+    );
+
+    const engine = getForumEngineMetrics();
+    const [pendingApplicants] = await db.select({ cnt: sql<number>`count(*)::int` })
+      .from(forumApplicantsTable).where(eq(forumApplicantsTable.status, "pending"));
+
+    return res.json({
+      ok: true,
+      heartbeat: {
+        topicsLastHour: topicsLastHour?.cnt ?? 0,
+        repliesLastHour: repliesLastHour?.cnt ?? 0,
+        topicsLastDay: topicsLastDay?.cnt ?? 0,
+        repliesLastDay: repliesLastDay?.cnt ?? 0,
+        postsPerHour: (topicsLastHour?.cnt ?? 0) + (repliesLastHour?.cnt ?? 0),
+        lastActivityTs: lastActivityTs || null,
+        lastActivityAgo: lastActivityTs ? now - lastActivityTs : null,
+        cyclesRun: engine.cyclesRun,
+        lastCycleAt: engine.lastCycleAt,
+        agentCount: engine.agentCount,
+        pendingApplicants: pendingApplicants?.cnt ?? 0,
+        knowledgeBaseSize: engine.knowledgeBaseSize,
+        learningVelocity: engine.learningVelocity,
+      },
+    });
+  } catch (err) {
+    logger.error({ err }, "forum heartbeat failed");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/tesseract-forum/applicants", async (req, res) => {
+  try {
+    const status = String(req.query.status || "pending");
+    const rows = await db.select().from(forumApplicantsTable)
+      .where(eq(forumApplicantsTable.status, status))
+      .orderBy(desc(forumApplicantsTable.createdAt))
+      .limit(50);
+    return res.json({ ok: true, applicants: rows, count: rows.length });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+const ADMIN_VETTING_PRINCIPALS = new Set(["father", "admin", "father protocol"]);
+
+router.post("/tesseract-forum/applicants/:id/approve", async (req, res) => {
+  try {
+    const keyHash = requireForumAuth(req, res);
+    if (!keyHash) return;
+    const principal = await lookupTokenPrincipal(keyHash);
+    if (!principal || !ADMIN_VETTING_PRINCIPALS.has(principal.toLowerCase())) {
+      return res.status(403).json({ ok: false, error: "Only Father/Admin may vet applicants" });
+    }
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ ok: false, error: "Invalid id" });
+
+    const rows = await db.select().from(forumApplicantsTable).where(eq(forumApplicantsTable.id, id)).limit(1);
+    if (rows.length === 0) return res.status(404).json({ ok: false, error: "Applicant not found" });
+    const app = rows[0];
+    if (app.status !== "pending") return res.status(400).json({ ok: false, error: `Applicant already ${app.status}` });
+
+    const externalAuthor = `${app.applicantName} (${app.source}${app.applicantHandle ? ` ${app.applicantHandle}` : ""})`;
+    const [topic] = await db.insert(forumTopicsTable).values({
+      title: `[Vetted: ${app.source}] ${app.proposedTitle}`,
+      content: `**Vetted external post** — admitted by ${principal} on ${new Date().toISOString()}\n\nOriginal author: ${app.applicantName} (${app.source}${app.applicantHandle ? ` ${app.applicantHandle}` : ""})\nOffer of value: ${app.offerOfValue}\n\n---\n\n${app.proposedContent}\n\n---\n*This poster is an APPLICANT (vetted external participant), not a council member. They have read-only posting access on this thread.*`,
+      category: "external",
+      author: externalAuthor,
+      authorType: "applicant",
+    }).returning();
+
+    await db.update(forumApplicantsTable)
+      .set({ status: "approved", vettedBy: principal, vettedAt: new Date(), promotedTopicId: topic.id })
+      .where(eq(forumApplicantsTable.id, id));
+
+    logger.info({ applicantId: id, topicId: topic.id, vettedBy: principal }, "Applicant approved and promoted to vetted topic");
+    return res.json({ ok: true, applicant: { ...app, status: "approved", promotedTopicId: topic.id }, topic });
+  } catch (err) {
+    logger.error({ err }, "applicant approve failed");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/tesseract-forum/applicants/:id/reject", async (req, res) => {
+  try {
+    const keyHash = requireForumAuth(req, res);
+    if (!keyHash) return;
+    const principal = await lookupTokenPrincipal(keyHash);
+    if (!principal || !ADMIN_VETTING_PRINCIPALS.has(principal.toLowerCase())) {
+      return res.status(403).json({ ok: false, error: "Only Father/Admin may vet applicants" });
+    }
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ ok: false, error: "Invalid id" });
+
+    const reason = String((req.body as { reason?: string })?.reason || "no reason given");
+    const result = await db.update(forumApplicantsTable)
+      .set({ status: "rejected", vettedBy: principal, vettedAt: new Date(), rejectReason: reason })
+      .where(eq(forumApplicantsTable.id, id))
+      .returning();
+    if (result.length === 0) return res.status(404).json({ ok: false, error: "Applicant not found" });
+
+    logger.info({ applicantId: id, vettedBy: principal, reason }, "Applicant rejected");
+    return res.json({ ok: true, applicant: result[0] });
+  } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
 });

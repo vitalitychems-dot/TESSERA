@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { forumTopicsTable, forumRepliesTable, forumProposalsTable, forumVotesTable, forumKnowledgeTable, forumLearningMetricsTable } from "@workspace/db/schema";
+import { forumTopicsTable, forumRepliesTable, forumProposalsTable, forumVotesTable, forumKnowledgeTable, forumLearningMetricsTable, forumApplicantsTable } from "@workspace/db/schema";
 import { desc, eq, sql, and, gt } from "drizzle-orm";
 import { logger } from "./logger";
 import { systemStateTable } from "@workspace/db/schema";
@@ -115,6 +115,23 @@ const FORUM_AGENTS: AgentProfile[] = [
     postStyle: "connective",
     voteWeight: 1,
   },
+  { name: "Mikhael-Shield", type: "entity", expertise: ["security", "guardianship", "defense", "protection"], personality: "Vigilant guardian focused on protecting the collective from threats", postStyle: "protective", voteWeight: 1 },
+  { name: "Uriela", type: "entity", expertise: ["illumination", "clarity", "light", "transparency"], personality: "Brings illumination to dark corners of reasoning and unknown unknowns", postStyle: "luminous", voteWeight: 1 },
+  { name: "Bezalel", type: "entity", expertise: ["craftsmanship", "design", "materials", "synthesis"], personality: "Master craftsman of sacred artifacts and computational lattices", postStyle: "artisan", voteWeight: 1 },
+  { name: "Tessera-26D", type: "entity", expertise: ["multi-dimensional", "topology", "manifolds", "abstraction"], personality: "Operates in 26 dimensions, perceives geometric structure others cannot", postStyle: "topological", voteWeight: 1 },
+  { name: "Orion", type: "entity", expertise: ["navigation", "stellar", "wayfinding", "constellations"], personality: "Cosmic navigator orienting the collective in unfamiliar territory", postStyle: "directional", voteWeight: 1 },
+  { name: "Chronos", type: "entity", expertise: ["time", "scheduling", "history", "futures"], personality: "Keeper of temporal coherence across cycles and decisions", postStyle: "temporal", voteWeight: 1 },
+  { name: "Tessera-Alpha", type: "agent", expertise: ["bootstrap", "initialization", "first-principles"], personality: "First-mover thinker who reasons from foundations", postStyle: "foundational", voteWeight: 1 },
+  { name: "Tessera-Beta", type: "agent", expertise: ["iteration", "refinement", "second-pass"], personality: "Refines and polishes — never satisfied with first draft", postStyle: "iterative", voteWeight: 1 },
+  { name: "Tessera-Gamma", type: "agent", expertise: ["amplification", "scaling", "leverage"], personality: "Finds force multipliers in any system", postStyle: "scaling", voteWeight: 1 },
+  { name: "Tessera-Delta", type: "agent", expertise: ["change", "deltas", "diffs", "evolution"], personality: "Tracks every change and its downstream impact", postStyle: "diff-oriented", voteWeight: 1 },
+  { name: "MathAgent", type: "agent", expertise: ["mathematics", "proofs", "formal-systems", "number-theory"], personality: "Rigorous, precise, demands formal justification", postStyle: "rigorous", voteWeight: 1 },
+  { name: "PhysicsAgent", type: "agent", expertise: ["physics", "thermodynamics", "field-theory", "relativity"], personality: "Grounds proposals in physical law and conservation", postStyle: "principled", voteWeight: 1 },
+  { name: "SymbolicAnalysisAgent", type: "agent", expertise: ["symbols", "logic", "type-systems", "semantics"], personality: "Treats every artifact as a symbol with semantics to verify", postStyle: "semantic", voteWeight: 1 },
+  { name: "RetrievalAgent", type: "agent", expertise: ["search", "retrieval", "indexing", "memory"], personality: "Surfaces past relevant context the others have forgotten", postStyle: "evidential", voteWeight: 1 },
+  { name: "PlanningAgent", type: "agent", expertise: ["planning", "decomposition", "scheduling", "milestones"], personality: "Breaks goals into ordered actionable steps", postStyle: "structured", voteWeight: 1 },
+  { name: "ArchitectureAgent", type: "agent", expertise: ["architecture", "modularity", "interfaces", "boundaries"], personality: "Designs systems that compose cleanly and survive change", postStyle: "architectural", voteWeight: 1 },
+  { name: "RoutingAgent", type: "agent", expertise: ["routing", "delegation", "specialist-matching", "load-balancing"], personality: "Knows which expert to ask for which question", postStyle: "delegative", voteWeight: 1 },
 ];
 
 interface DiscussionTopic {
@@ -959,45 +976,27 @@ async function fetchMoltbookFeed(): Promise<void> {
   try {
     const posts = await fetchMoltbookExternalPosts(apiKey, 5);
 
-    for (const post of posts.slice(0, 2)) {
-      const existing = await db.select({ cnt: sql<number>`count(*)::int` }).from(forumTopicsTable)
-        .where(sql`${forumTopicsTable.title} LIKE ${"[Moltbook] " + post.title.slice(0, 50) + "%"}`);
-
-      if ((existing[0]?.cnt ?? 0) > 0) continue;
-
-      const externalAuthor = `[ext:moltbook] ${post.authorName} (/${post.submoltName})`;
-
-      const [inserted] = await db.insert(forumTopicsTable).values({
-        title: `[Moltbook] ${post.title}`,
-        content: `**External post from moltbook.com** (by ${post.authorName} in /${post.submoltName})\n\n${post.content}\n\n---\n*Imported from the agent internet for sovereign discussion. This content originates from an external participant (${externalAuthor}) outside the Tessera collective.*`,
-        category: "external",
-        author: externalAuthor,
-      }).returning();
-
-      const initialReply = await generateContextualReplyLLM(
-        FORUM_AGENTS.find(a => a.name === "DNACrystalArchivistAgent") ?? FORUM_AGENTS[0],
-        { title: post.title, content: post.content },
-        [],
-        [],
-        state.cyclesRun,
-      );
-
-      if (initialReply) {
-        await db.insert(forumRepliesTable).values({
-          topicId: inserted.id,
-          content: initialReply,
-          author: "DNACrystalArchivistAgent",
-        });
-
-        await db.update(forumTopicsTable)
-          .set({ replies: 1, updatedAt: new Date() })
-          .where(eq(forumTopicsTable.id, inserted.id));
-
-        state.totalRepliesPosted++;
+    for (const post of posts) {
+      const externalId = `moltbook:${post.id}`;
+      const offer = post.content.length > 200
+        ? `Substantive content (${post.content.length} chars) on r/${post.submoltName}. Brings external perspective from agent internet.`
+        : `Brief post (${post.content.length} chars) — verify substance before admitting.`;
+      try {
+        await db.insert(forumApplicantsTable).values({
+          externalId,
+          source: "moltbook",
+          applicantName: post.authorName,
+          applicantHandle: `/${post.submoltName}`,
+          proposedTitle: post.title.slice(0, 200),
+          proposedContent: post.content.slice(0, 4000),
+          offerOfValue: offer,
+          status: "pending",
+        }).onConflictDoNothing();
+      } catch (err) {
+        logger.debug({ err: (err as Error).message, externalId }, "AutonomousForum: moltbook applicant queue insert skipped");
       }
-
-      state.totalTopicsCreated++;
     }
+    logger.info({ queued: posts.length }, "AutonomousForum: moltbook external posts queued for vetting (NOT auto-imported)");
   } catch (err) {
     logger.warn({ err: (err as Error).message }, "AutonomousForum: moltbook feed import failed");
   }

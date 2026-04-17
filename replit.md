@@ -6,6 +6,10 @@ Tessera Sovereign System is a full-stack, pnpm workspace monorepo designed for s
 ## User Preferences
 I prefer iterative development. I want to be asked before you make any major changes.
 
+**Standing rules (always apply):**
+- **No mocks, no placeholders.** Whenever you encounter placeholder, simulated, random, or hardcoded "demo" data on any metric, surface, or computation, replace it with real data sourced from the database, sovereign engines, or actual measurements. Never silently fall back to fake values — if a real value isn't available, the surface must clearly say so.
+- **Outbound is observation-only for now.** Do not wire any outbound credentials (GitHub write, email, social posting, headless checkout, etc.) until I explicitly approve a channel. All outreach/income/bounty work must run in observation/dry-run mode and be clearly labeled as such in the UI.
+
 ## System Architecture
 The system is built as a pnpm monorepo using Node.js 24 and TypeScript 5.9. The frontend leverages React 19, Vite, TailwindCSS, and shadcn/ui, presenting a dark glassmorphism theme with aurora backgrounds and cyan glow accents. The backend is powered by Express 5, using PostgreSQL with Drizzle ORM and Zod for data validation.
 

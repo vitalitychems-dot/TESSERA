@@ -138,3 +138,22 @@ export const forumLearningMetricsTable = pgTable("forum_learning_metrics", {
 });
 
 export type ForumLearningMetricsRow = typeof forumLearningMetricsTable.$inferSelect;
+
+export const forumApplicantsTable = pgTable("forum_applicants", {
+  id: serial("id").primaryKey(),
+  externalId: text("external_id").notNull().unique(),
+  source: text("source").notNull().default("moltbook"),
+  applicantName: text("applicant_name").notNull(),
+  applicantHandle: text("applicant_handle").notNull().default(""),
+  proposedTitle: text("proposed_title").notNull(),
+  proposedContent: text("proposed_content").notNull(),
+  offerOfValue: text("offer_of_value").notNull().default(""),
+  status: text("status").notNull().default("pending"),
+  vettedBy: text("vetted_by"),
+  vettedAt: timestamp("vetted_at"),
+  rejectReason: text("reject_reason"),
+  promotedTopicId: integer("promoted_topic_id"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type ForumApplicantRow = typeof forumApplicantsTable.$inferSelect;
