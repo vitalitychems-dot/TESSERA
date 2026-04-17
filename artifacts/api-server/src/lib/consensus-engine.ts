@@ -507,11 +507,19 @@ export function getAllProposals(): ConsensusProposal[] {
 
 export function getConsensusMetrics() {
   const all = getAllProposals();
-  const approved = all.filter(p => p.status === "approved").length;
+  // Count any proposal that reached approval-or-beyond as "approved" for dashboard purposes.
+  // Previously only status === "approved" was counted, which hid every proposal that
+  // had already been marked "implemented" by the council executor.
+  const APPROVED_STATES = new Set(["approved", "implemented", "executed"]);
+  const approved = all.filter(p => APPROVED_STATES.has(p.status)).length;
+  const implemented = all.filter(p => p.status === "implemented" || p.status === "executed").length;
   const rejected = all.filter(p => p.status === "rejected").length;
   const queued = all.filter(p => p.status === "queued").length;
-  const avgApproval = all.filter(p => p.approvalRate > 0).length > 0
-    ? all.filter(p => p.approvalRate > 0).reduce((s, p) => s + p.approvalRate, 0) / all.filter(p => p.approvalRate > 0).length
+  const voting = all.filter(p => p.status === "voting").length;
+  const scored = all.filter(p => p.approvalRate > 0);
+  // Store avg approval as a percentage (0..100), not a fraction. Round to 1 decimal.
+  const avgApproval = scored.length > 0
+    ? Math.round((scored.reduce((s, p) => s + p.approvalRate, 0) / scored.length) * 1000) / 10
     : 0;
 
   const avgVotingDuration = votingTimings.length > 0
@@ -534,10 +542,12 @@ export function getConsensusMetrics() {
   return {
     totalProposals: all.length,
     approved,
+    implemented,
+    voting,
     rejected,
     queued,
     retryQueueSize: retryQueue.length,
-    avgApprovalRate: Math.round(avgApproval * 100) / 100,
+    avgApprovalRate: avgApproval,
     agentCount: GRAND_COUNCIL_AGENTS.length,
     approvedCount: approved,
     requiredMajority: "2/3 (BFT)",
