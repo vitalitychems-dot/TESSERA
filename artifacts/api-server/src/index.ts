@@ -375,6 +375,15 @@ async function runPostBindHealthProbe(port: number): Promise<void> {
       logger.info({ port }, "Server listening with WebSocket mesh enabled");
       await runPostBindHealthProbe(port);
 
+      // Preload Tessera Codex directive so it's available synchronously in the chat system prompt
+      try {
+        const { loadCodexDirective } = await import("./lib/codex-startup-directive.js");
+        await loadCodexDirective();
+        logger.info("Codex startup directive pre-loaded into system prompt");
+      } catch (err) {
+        logger.warn({ err }, "Codex directive pre-load failed — fallback directive will be used");
+      }
+
       // AGI Metacognition loop: every 60s, self-audit and close causal loops.
       try {
         const { startMetacognitionLoop } = await import("./lib/agi/metacognition.js");

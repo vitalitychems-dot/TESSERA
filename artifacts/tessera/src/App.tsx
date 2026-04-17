@@ -64,6 +64,8 @@ const DepartmentsPage = lazyRetry(() => import("@/pages/DepartmentsPage"));
 const CouncilTranscriptPage = lazyRetry(() => import("@/pages/CouncilTranscriptPage"));
 const AutoHealerPage = lazyRetry(() => import("@/pages/AutoHealerPage"));
 const GalleryPage = lazyRetry(() => import("@/pages/GalleryPage"));
+const CodexPage = lazyRetry(() => import("@/pages/CodexPage"));
+const NextFivePage = lazyRetry(() => import("@/pages/NextFivePage"));
 
 // ---- Hub wrappers ----
 const UniverseHubPage = lazyRetry(() => import("@/pages/UniverseHubPage"));
@@ -325,6 +327,8 @@ function AppRouter() {
         <Route path="/agi-core">{() => <AGICorePage />}</Route>
         <Route path="/gallery">{() => <GalleryPage />}</Route>
         <Route path="/council-transcript">{() => <CouncilTranscriptPage />}</Route>
+        <Route path="/codex">{() => <CodexPage />}</Route>
+        <Route path="/next-five">{() => <NextFivePage />}</Route>
 
         <Route component={NotFound} />
       </Switch>

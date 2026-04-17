@@ -4,7 +4,7 @@ import {
   MessageSquare, Brain, Globe2, DollarSign, MoreHorizontal, X,
   Heart, Shield, BookOpen, Eye, Gavel, MessageCircle, Hexagon,
   Truck, Skull, Terminal, Map, Code2, Workflow, Target, ShoppingCart,
-  Search, Zap, UserPlus, Cpu, Crown,
+  Search, Zap, UserPlus, Cpu, Crown, GitCommit,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +47,8 @@ const SECONDARY: NavTab[] = [
   { label: "Leads", href: "/lead-gen", Icon: Target, match: (l) => l === "/lead-gen", color: "amber" },
   { label: "Ecom", href: "/ecom", Icon: ShoppingCart, match: (l) => l === "/ecom", color: "amber" },
   { label: "Code", href: "/code-builder", Icon: Code2, match: (l) => l === "/code-builder", color: "blue" },
+  { label: "Codex", href: "/codex", Icon: GitCommit, match: (l) => l === "/codex", color: "cyan" },
+  { label: "Next Five", href: "/next-five", Icon: Zap, match: (l) => l === "/next-five", color: "amber" },
 ];
 
 const COLOR_MAP: Record<string, { active: string; text: string; dot: string; inactive: string; glow: string }> = {

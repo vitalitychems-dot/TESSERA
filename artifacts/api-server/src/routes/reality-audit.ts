@@ -1,12 +1,12 @@
 import { Router, type IRouter } from "express";
 import { promises as fs } from "fs";
 import path from "path";
+import { getRealityAudit, getRealityFlag } from "../lib/reality-audit";
 import {
-  getRealityAudit,
-  getRealityFlag,
-  persistRealityAuditSnapshot,
-  listRealityAuditSnapshots,
-} from "../lib/reality-audit";
+  runAndPersistAuditSnapshot,
+  getLatestAuditSnapshot,
+  listAuditSnapshots,
+} from "../lib/reality-audit-snapshot";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -26,6 +26,9 @@ router.get("/reality-audit", async (_req, res) => {
   try {
     const audit = await getRealityAudit();
     res.json({ ok: true, ...audit });
+    runAndPersistAuditSnapshot().catch(err => {
+      logger.warn({ err }, "Background audit snapshot persistence failed");
+    });
   } catch (err) {
     res.status(500).json({ ok: false, error: (err as Error).message });
   }
@@ -59,11 +62,8 @@ router.get("/reality-audit/flag/:id", (req, res) => {
 router.post("/reality-audit/snapshot", async (req, res) => {
   if (!requireAdmin(req, res)) return;
   try {
-    const trigger = typeof req.body?.trigger === "string" ? req.body.trigger : "manual";
-    const snap = await persistRealityAuditSnapshot(
-      (trigger as "manual" | "startup" | "scheduled" | "post-council") ?? "manual",
-    );
-    res.json({ ok: true, snapshot: snap });
+    const snapshot = await runAndPersistAuditSnapshot();
+    res.json({ ok: true, snapshot });
   } catch (err) {
     logger.error({ err }, "reality-audit snapshot failed");
     res.status(500).json({ ok: false, error: (err as Error).message });
@@ -72,8 +72,20 @@ router.post("/reality-audit/snapshot", async (req, res) => {
 
 router.get("/reality-audit/snapshots", async (_req, res) => {
   try {
-    const rows = await listRealityAuditSnapshots(100);
-    res.json({ ok: true, snapshots: rows, count: rows.length });
+    const snapshots = await listAuditSnapshots();
+    res.json({ ok: true, snapshots, count: snapshots.length });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/reality-audit/snapshots/latest", async (_req, res) => {
+  try {
+    const snapshot = await getLatestAuditSnapshot();
+    if (!snapshot) {
+      return res.json({ ok: true, snapshot: null, message: "No snapshots found — POST /api/reality-audit/snapshot to generate one." });
+    }
+    res.json({ ok: true, snapshot });
   } catch (err) {
     res.status(500).json({ ok: false, error: (err as Error).message });
   }
@@ -81,14 +93,18 @@ router.get("/reality-audit/snapshots", async (_req, res) => {
 
 router.get("/reality-audit/snapshots/:id/payload", async (req, res) => {
   try {
-    const rows = await listRealityAuditSnapshots(200);
-    const row = rows.find((r) => r.id === Number(req.params.id));
-    if (!row) return res.status(404).json({ ok: false, error: "snapshot not found" });
+    const snapshots = await listAuditSnapshots(200);
+    const snap = snapshots.find(s => s.snapshotId === req.params.id);
+    if (!snap) return res.status(404).json({ ok: false, error: "snapshot not found" });
     const cwd = process.cwd();
     const root = cwd.includes("/artifacts/") ? path.resolve(cwd, "../..") : cwd;
-    const full = path.join(root, row.jsonPath);
-    const body = await fs.readFile(full, "utf-8");
-    res.type("application/json").send(body);
+    const jsonPath = path.join(root, "_evolutions", `reality-audit-${snap.snapshotId}.json`);
+    try {
+      const body = await fs.readFile(jsonPath, "utf-8");
+      res.type("application/json").send(body);
+    } catch {
+      res.json({ ok: true, snapshot: snap, note: "JSON file not on disk — returning DB record" });
+    }
   } catch (err) {
     res.status(500).json({ ok: false, error: (err as Error).message });
   }

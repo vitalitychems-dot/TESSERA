@@ -66,6 +66,7 @@ import realityAuditRouter from "./reality-audit";
 import feedbackRouter from "./feedback";
 import storageRouter from "./storage";
 import incomeAndLeadsRouter from "./income-and-leads";
+import tesseraCodexRouter from "./tessera-codex";
 import { startWalletObserver } from "../lib/wallet-observer";
 import { startFreeStuffScraper } from "../lib/free-stuff-scraper";
 import { startBountyRefresher } from "../lib/code-bounties-real";
@@ -141,6 +142,7 @@ router.use(autoHealerRouter);
 router.use(realityAuditRouter);
 router.use(storageRouter);
 router.use(incomeAndLeadsRouter);
+router.use(tesseraCodexRouter);
 
 startWalletObserver();
 startFreeStuffScraper();
