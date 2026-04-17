@@ -86,6 +86,7 @@ const DepartmentsPage = lazyRetry(() => import("@/pages/DepartmentsPage"));
 const VortexMathPage = lazyRetry(() => import("@/pages/VortexMathPage"));
 const CouncilTranscriptPage = lazyRetry(() => import("@/pages/CouncilTranscriptPage"));
 const AutoHealerPage = lazyRetry(() => import("@/pages/AutoHealerPage"));
+const GalleryPage = lazyRetry(() => import("@/pages/GalleryPage"));
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -232,6 +233,8 @@ function AppRouter() {
         <Route path="/transparency-ledger">{() => <GrandCouncilPage initialTab="executor" />}</Route>
         <Route path="/sports-arb">{() => <TokenEconomyPage />}</Route>
         <Route path="/inventions">{() => <RickPage initialTab="inventions" />}</Route>
+        <Route path="/gallery">{() => <GalleryPage />}</Route>
+        <Route path="/diagram-gallery">{() => <GalleryPage />}</Route>
         <Route path="/agi-core">{() => <AGICorePage />}</Route>
         <Route path="/agi">{() => <AGICorePage />}</Route>
         <Route path="/build-guides">{() => <BuildPage />}</Route>
