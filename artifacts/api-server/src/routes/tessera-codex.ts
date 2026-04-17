@@ -24,7 +24,9 @@ router.get("/codex/books", async (_req, res) => {
   try {
     await ensureCodexSeeded();
     const meta = getCodexBookMeta();
-    res.json({ ok: true, books: meta });
+    const stats = await getCodexStats();
+    const books = meta.map(b => ({ ...b, entryCount: stats.byBook[b.id] ?? 0 }));
+    res.json({ ok: true, books, totalEntries: stats.totalEntries });
   } catch (err) {
     res.status(500).json({ ok: false, error: (err as Error).message });
   }

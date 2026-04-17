@@ -126,16 +126,21 @@ export async function getOrCreateNextFiveSession(): Promise<{
   improvements: NextFiveImprovementRow[];
   isNew: boolean;
 }> {
-  const existing = await db
+  const allRows = await db
     .select()
-    .from(nextFiveImprovementsTable)
-    .orderBy(nextFiveImprovementsTable.rank)
-    .limit(10);
+    .from(nextFiveImprovementsTable);
 
-  if (existing.length >= 5) {
+  if (allRows.length >= 5) {
+    const latestSessionId = allRows
+      .map(r => r.sessionId)
+      .sort()
+      .reverse()[0];
+    const latestSessionRows = allRows
+      .filter(r => r.sessionId === latestSessionId)
+      .sort((a, b) => a.rank - b.rank);
     return {
-      sessionId: existing[0].sessionId,
-      improvements: existing,
+      sessionId: latestSessionId,
+      improvements: latestSessionRows,
       isNew: false,
     };
   }
