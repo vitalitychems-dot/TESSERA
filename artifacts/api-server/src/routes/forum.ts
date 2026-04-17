@@ -4,7 +4,7 @@ import { forumTopicsTable, forumRepliesTable, forumProposalsTable, forumVotesTab
 import { desc, eq, sql, gte } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { validateMeshToken } from "../lib/mesh-auth";
-import { lookupForumIdentity, lookupTokenPrincipal, registerAdminPrincipal } from "../lib/forum-identity-registry";
+import { lookupForumIdentity, lookupTokenPrincipal, registerAdminPrincipal, invalidateForumIdentityCache } from "../lib/forum-identity-registry";
 import { forumTrustedIdentitiesTable } from "@workspace/db/schema";
 import { createHash, randomBytes } from "node:crypto";
 import { getForumEngineMetrics, runForumCycle, FORUM_AGENTS } from "../lib/autonomous-forum-engine";
@@ -734,6 +734,7 @@ router.post("/tesseract-forum/applicants/:id/approve", async (req, res) => {
       identityType: "member",
       canPostFromClient: 1,
     }).onConflictDoNothing();
+    invalidateForumIdentityCache();
 
     const memberToken = randomBytes(32).toString("hex");
     const memberTokenHash = validateMeshToken(memberToken);

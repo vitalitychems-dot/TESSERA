@@ -84,6 +84,11 @@ async function getCache(): Promise<Map<string, { identityType: string; canPostFr
   return identityCache;
 }
 
+export function invalidateForumIdentityCache(): void {
+  identityCache = null;
+  cacheBuiltAt = 0;
+}
+
 export async function lookupForumIdentity(name: string): Promise<{
   found: boolean;
   identityType: string;
@@ -91,7 +96,14 @@ export async function lookupForumIdentity(name: string): Promise<{
 } | null> {
   try {
     const cache = await getCache();
-    const entry = cache.get(name.trim().toLowerCase());
+    const key = name.trim().toLowerCase();
+    let entry = cache.get(key);
+    if (!entry) {
+      const fresh = await buildCache();
+      identityCache = fresh;
+      cacheBuiltAt = Date.now();
+      entry = fresh.get(key);
+    }
     if (!entry) return { found: false, identityType: "unknown", canPostFromClient: false };
     return { found: true, ...entry };
   } catch (err) {
