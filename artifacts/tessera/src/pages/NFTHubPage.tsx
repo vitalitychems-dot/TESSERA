@@ -1,17 +1,9 @@
-import PageTabs from "@/components/PageTabs";
+import AgentDirectoryPage from "./AgentDirectoryPage";
 
 export default function NFTHubPage() {
   return (
-    <PageTabs
-      hubKey="nft"
-      title="Agent NFTs"
-      subtitle="Members · Profiles · Wallets · Conference roles"
-      iconColor="text-rose-400"
-      tabs={[
-        { id: "profile", label: "Unified Directory", load: () => import("./AgentDirectoryPage"), matchPaths: ["/agent-nft", "/agent-profile", "/agent-comms"] },
-        { id: "members", label: "Member Roster", load: () => import("./MembersPage"), matchPaths: ["/members"] },
-        { id: "wallets", label: "Wallets & Tokens", load: () => import("./TokenEconomyPage"), matchPaths: ["/wallet-dashboard", "/token-economy", "/economy-hub", "/tokens"] },
-      ]}
-    />
+    <div className="px-3 md:px-4 py-3">
+      <AgentDirectoryPage />
+    </div>
   );
 }

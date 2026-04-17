@@ -193,14 +193,14 @@ const REDIRECTS: Array<[string, string]> = [
   ["/3d-diagrams", "/universe"],
   ["/grand-narrative", "/universe"],
   ["/unified-truth", "/universe"],
-  // NFT cluster
-  ["/members", "/agent-nft?tab=members"],
-  ["/agent-profile", "/agent-nft?tab=members"],
-  ["/wallet-dashboard", "/agent-nft?tab=wallets"],
-  ["/token-economy", "/agent-nft?tab=wallets"],
-  ["/economy-hub", "/agent-nft?tab=wallets"],
-  ["/tokens", "/agent-nft?tab=wallets"],
-  ["/agent-comms", "/agent-nft?tab=profile"],
+  // NFT cluster — single canonical surface (Unified Directory)
+  ["/members", "/agent-nft"],
+  ["/agent-profile", "/agent-nft"],
+  ["/agent-comms", "/agent-nft"],
+  ["/wallet-dashboard", "/agent-nft"],
+  ["/token-economy", "/agent-nft"],
+  ["/economy-hub", "/agent-nft"],
+  ["/tokens", "/agent-nft"],
   // Fleet cluster
   ["/mission", "/fleet"],
   // Royal / Inventions
@@ -223,7 +223,7 @@ const REDIRECTS: Array<[string, string]> = [
   ["/business-ideas", "/lead-gen?tab=ideas"],
   ["/seo", "/lead-gen?tab=seo"],
   // Code cluster
-  ["/api-marketplace", "/lead-gen?tab=affiliate"],
+  ["/api-marketplace", "/code-builder?tab=api"],
   ["/credentials", "/code-builder?tab=credentials"],
   // Misc aliases
   ["/intelligence-engine", "/consciousness-nexus"],
