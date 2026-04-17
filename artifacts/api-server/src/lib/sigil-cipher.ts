@@ -433,10 +433,10 @@ export function cipherCoherenceSnapshot(): {
  *  and the glyph alphabet identifies who can decode. */
 export function readingKey(): { fingerprint: string; alphabetHash: string; expiresWith: string } {
   if (!_activeKey) rotateSessionKey("first-use");
-  const alphabet = Array.from(_encodeMap.entries()).map(([p, g]) => `${p}=${g}`).join("|");
+  const c = currentCoherence();
   return {
     fingerprint: _activeKey!.fingerprint,
-    alphabetHash: createHash("sha256").update(alphabet).digest("hex").slice(0, 16),
+    alphabetHash: c.permutationFingerprint,
     expiresWith: _activeKey!.id,
   };
 }

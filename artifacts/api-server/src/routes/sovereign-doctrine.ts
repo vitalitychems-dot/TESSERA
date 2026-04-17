@@ -33,6 +33,13 @@ import {
   toolUsageStats,
   captureExternalCall,
 } from "../lib/external-tool-sandbox";
+import {
+  bindNatalChart,
+  natalStatus,
+  rotatingNatalHash,
+  unbindNatalChart,
+  verifyNatalSignature,
+} from "../lib/natal-sigil";
 
 const router: Router = Router();
 
@@ -62,6 +69,64 @@ router.get("/sigil/status", (_req, res) => {
 
 router.get("/sigil/coherence", (_req, res) => {
   res.json({ ok: true, ...cipherCoherenceSnapshot() });
+});
+
+// ── Natal sigil binding ────────────────────────────────────────────────
+// Personal cosmic key bound to the holder's birth chart. Birthday/time are
+// NEVER stored in plain, NEVER returned, NEVER logged. The vault key is
+// derived from the holder's sigil fingerprint via scrypt, so the seed is
+// tied to identity and survives session-key rotation.
+function holderFromHeader(req: Request): string | null {
+  const presented = String(req.header("x-sigil-key") ?? "").trim();
+  if (!presented) return null;
+  const k = readingKey();
+  if (presented === k.fingerprint) return k.fingerprint;
+  if (presented === k.expiresWith) return k.fingerprint;
+  return null;
+}
+
+router.post("/sigil/natal/bind", (req, res) => {
+  const holder = holderFromHeader(req);
+  if (!holder) return res.status(401).json({ ok: false, error: "holder-required" });
+  const birthDate = String(req.body?.birthDate ?? "").trim();
+  const birthTime = String(req.body?.birthTime ?? "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate) || !/^\d{2}:\d{2}$/.test(birthTime)) {
+    return res.status(400).json({ ok: false, error: "invalid-natal-format" });
+  }
+  try {
+    const result = bindNatalChart(holder, birthDate, birthTime);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e instanceof Error ? e.message : "bind-failed" });
+  }
+});
+
+router.get("/sigil/natal/status", (req, res) => {
+  const holder = holderFromHeader(req);
+  if (!holder) return res.status(401).json({ ok: false, error: "holder-required" });
+  res.json({ ok: true, ...natalStatus(holder) });
+});
+
+router.get("/sigil/natal/rotating", (req, res) => {
+  const holder = holderFromHeader(req);
+  if (!holder) return res.status(401).json({ ok: false, error: "holder-required" });
+  const r = rotatingNatalHash(holder);
+  if (!r) return res.status(404).json({ ok: false, error: "not-bound" });
+  res.json({ ok: true, ...r });
+});
+
+router.post("/sigil/natal/unbind", (req, res) => {
+  const holder = holderFromHeader(req);
+  if (!holder) return res.status(401).json({ ok: false, error: "holder-required" });
+  res.json({ ok: true, ...unbindNatalChart(holder) });
+});
+
+router.post("/sigil/natal/verify", (req, res) => {
+  const presented = String(req.body?.signatureGlyph ?? "").trim();
+  const holderFp = verifyNatalSignature(presented);
+  if (!holderFp) return res.status(401).json({ ok: false, error: "no-match" });
+  const r = rotatingNatalHash(holderFp);
+  res.json({ ok: true, holderFp, rotating: r });
 });
 
 router.get("/sigil/active-key", (_req, res) => {
