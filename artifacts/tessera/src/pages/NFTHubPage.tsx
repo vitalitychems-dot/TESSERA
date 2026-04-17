@@ -8,8 +8,9 @@ export default function NFTHubPage() {
       subtitle="Members · Profiles · Wallets · Conference roles"
       iconColor="text-rose-400"
       tabs={[
-        { id: "members", label: "Members & Profiles", load: () => import("./MembersPage"), matchPaths: ["/agent-nft", "/members", "/agent-profile"] },
-        { id: "wallets", label: "Token Wallets", load: () => import("./TokenEconomyPage"), matchPaths: ["/wallet-dashboard", "/token-economy", "/economy-hub", "/tokens"] },
+        { id: "profile", label: "Unified Directory", load: () => import("./AgentDirectoryPage"), matchPaths: ["/agent-nft", "/agent-profile", "/agent-comms"] },
+        { id: "members", label: "Member Roster", load: () => import("./MembersPage"), matchPaths: ["/members"] },
+        { id: "wallets", label: "Wallets & Tokens", load: () => import("./TokenEconomyPage"), matchPaths: ["/wallet-dashboard", "/token-economy", "/economy-hub", "/tokens"] },
       ]}
     />
   );

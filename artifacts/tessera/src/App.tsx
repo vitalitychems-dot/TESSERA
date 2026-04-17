@@ -200,7 +200,7 @@ const REDIRECTS: Array<[string, string]> = [
   ["/token-economy", "/agent-nft?tab=wallets"],
   ["/economy-hub", "/agent-nft?tab=wallets"],
   ["/tokens", "/agent-nft?tab=wallets"],
-  ["/agent-comms", "/system"],
+  ["/agent-comms", "/agent-nft?tab=profile"],
   // Fleet cluster
   ["/mission", "/fleet"],
   // Royal / Inventions
