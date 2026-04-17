@@ -17,7 +17,7 @@ import { runCritiqueLoop } from "../lib/self-critique";
 import { classifyQuery } from "../lib/adaptive-router";
 import { hybridRetrieve, formatCitations } from "../lib/hybrid-retrieval";
 import { detectIntents, runToolLoop } from "../lib/tool-registry";
-import { injectInventionDiagrams } from "../lib/invention-3d";
+import { injectInventionDiagrams, buildInvention3DBlock, userRequested3D } from "../lib/invention-3d";
 import { inventionsTable } from "@workspace/db/schema";
 import { db as feedbackDb } from "@workspace/db";
 import { modelRoutingLogTable } from "@workspace/db/schema";
@@ -879,14 +879,25 @@ router.post("/messages", async (req, res) => {
         materials: inventionsTable.materials,
         scienceBehind: inventionsTable.scienceBehind,
       }).from(inventionsTable).orderBy(asc(inventionsTable.title)).limit(500);
-      finalContent = injectInventionDiagrams(finalContent, invRows.map(r => ({
+      const normalizedRows = invRows.map(r => ({
         inventionId: r.inventionId,
         title: r.title,
         category: r.category,
         description: r.description,
         materials: (r.materials as string[] | null) || [],
         scienceBehind: r.scienceBehind,
-      })), { max: 3 });
+      }));
+      finalContent = injectInventionDiagrams(finalContent, normalizedRows, { max: 3 });
+      // Hard guarantee: if the user asked to visualize/show/diagram/3D and no
+      // [3DOBJ:...] block made it in, emit at least one so the chat never
+      // silently drops the request.
+      if (userRequested3D(content) && !/\[3DOBJ:/i.test(finalContent)) {
+        const seed = normalizedRows[0];
+        const block = seed
+          ? buildInvention3DBlock(seed)
+          : `[3DOBJ:type="device" label="Tessera Invention" color="#a78bfa" secondary="#06b6d4" size="1" detail="interactive preview"]`;
+        finalContent = `${finalContent}\n\n${block}`;
+      }
     } catch (err) {
       logger.debug({ err: (err as Error).message }, "3D diagram injection skipped");
     }

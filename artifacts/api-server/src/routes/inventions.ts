@@ -4,6 +4,7 @@ import { inventionsTable, type InsertInvention } from "@workspace/db/schema";
 import { desc, eq, and } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { hashStringFNV, getRealityFlag } from "../lib/reality-audit";
+import { buildInvention3DBlock } from "../lib/invention-3d";
 
 const router: IRouter = Router();
 
@@ -605,9 +606,20 @@ router.get("/inventions", async (req, res) => {
     const categories = [...new Set(allInventions.map(i => i.category))];
     const statuses = [...new Set(allInventions.map(i => i.status))];
 
+    const inventionsWithDiagrams = filtered.map((inv) => ({
+      ...inv,
+      diagram3d: buildInvention3DBlock({
+        title: inv.title,
+        category: inv.category,
+        description: inv.description,
+        materials: (inv.materials as string[] | null) || [],
+        scienceBehind: (inv as { scienceBehind?: string | null }).scienceBehind ?? null,
+      }),
+    }));
+
     return res.json({
       ok: true,
-      inventions: filtered,
+      inventions: inventionsWithDiagrams,
       count: filtered.length,
       total: allInventions.length,
       categories,
@@ -659,7 +671,15 @@ router.get("/inventions/:id", async (req, res) => {
     const { id } = req.params;
     const found = await db.select().from(inventionsTable).where(eq(inventionsTable.inventionId, id)).limit(1);
     if (found.length === 0) return res.status(404).json({ ok: false, error: "Invention not found" });
-    return res.json({ ok: true, invention: found[0] });
+    const inv = found[0] as typeof found[0] & { materials?: string[] | null };
+    const diagram3d = buildInvention3DBlock({
+      title: inv.title,
+      category: inv.category,
+      description: inv.description,
+      materials: (inv.materials as string[] | null) || [],
+      scienceBehind: (inv as { scienceBehind?: string | null }).scienceBehind ?? null,
+    });
+    return res.json({ ok: true, invention: inv, diagram3d });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
