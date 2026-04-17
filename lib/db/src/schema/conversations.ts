@@ -142,9 +142,11 @@ export type ForumLearningMetricsRow = typeof forumLearningMetricsTable.$inferSel
 export const forumApplicantsTable = pgTable("forum_applicants", {
   id: serial("id").primaryKey(),
   externalId: text("external_id").notNull().unique(),
+  externalIdentity: text("external_identity").notNull().default(""),
   source: text("source").notNull().default("moltbook"),
   applicantName: text("applicant_name").notNull(),
   applicantHandle: text("applicant_handle").notNull().default(""),
+  contact: text("contact").notNull().default(""),
   proposedTitle: text("proposed_title").notNull(),
   proposedContent: text("proposed_content").notNull(),
   offerOfValue: text("offer_of_value").notNull().default(""),
