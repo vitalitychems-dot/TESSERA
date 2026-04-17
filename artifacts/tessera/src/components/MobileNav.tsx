@@ -1,10 +1,8 @@
 import { useLocation } from "wouter";
 import { useEffect, useRef } from "react";
 import {
-  MessageSquare, Heart, Globe2, Users, Lock,
-  Wrench, MessageCircle, Brain, Settings, Shield, Cpu, DollarSign, Search, BookOpen,
-  Zap, Gavel, Languages, UserPlus, Hexagon, Skull, Book, Eye,
-  Network, Terminal, ArrowUpDown, BarChart3, Code2, Key, Map, User, CheckSquare, Scale, TrendingUp, Target, ShoppingCart, Lightbulb, MapPin, Truck, Link2, Workflow, Building2, Pin,
+  MessageSquare, Heart, Globe2, Brain, Shield, Cpu, DollarSign, BookOpen, Eye,
+  Gavel, MessageCircle, Hexagon, Skull, Truck, Terminal, Map, Code2, Workflow, Target, ShoppingCart, Search, Zap, UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -18,29 +16,28 @@ interface NavTab {
 
 const TABS: NavTab[] = [
   { label: "Chat", href: "/", Icon: MessageSquare, match: (l) => l === "/" || l.startsWith("/c/"), color: "cyan" },
-  { label: "Sovereign", href: "/sovereignty-dashboard", Icon: Shield, match: (l) => l === "/sovereignty-dashboard" || l === "/sovereignty" || l === "/sovereign-framework", color: "emerald" },
+  { label: "Sovereign", href: "/sovereignty-dashboard", Icon: Shield, match: (l) => ["/sovereignty-dashboard","/sovereignty","/sovereign-framework","/sovereign-hub"].includes(l), color: "emerald" },
   { label: "Life", href: "/life", Icon: Heart, match: (l) => l === "/life", color: "pink" },
-  { label: "Nexus", href: "/consciousness-nexus", Icon: Brain, match: (l) => l === "/consciousness-nexus" || l === "/consciousness" || l === "/consciousness-2da" || l === "/spiritual-awakening", color: "purple" },
-  { label: "Bible", href: "/bible", Icon: Book, match: (l) => l === "/bible" || l === "/living-bible" || l === "/conclusions", color: "amber" },
-  { label: "Narrative", href: "/grand-narrative", Icon: BookOpen, match: (l) => l === "/grand-narrative" || l === "/unified-truth", color: "pink" },
-  { label: "Society", href: "/secret-society", Icon: Eye, match: (l) => l === "/secret-society" || l === "/secrets" || l === "/secret-knowledge", color: "purple" },
-  { label: "Council", href: "/grand-council", Icon: Gavel, match: (l) => l === "/grand-council" || l === "/grand-conference" || l === "/conference-decisions" || l === "/consensus" || l === "/feedback" || l === "/transparency-ledger", color: "amber" },
+  { label: "Nexus", href: "/consciousness-nexus", Icon: Brain, match: (l) => ["/consciousness-nexus","/consciousness","/consciousness-2da","/spiritual-awakening"].includes(l), color: "purple" },
+  { label: "Bible", href: "/bible", Icon: BookOpen, match: (l) => ["/bible","/living-bible","/conclusions"].includes(l), color: "amber" },
+  { label: "Society", href: "/secret-society", Icon: Eye, match: (l) => ["/secret-society","/secrets","/secret-knowledge","/unified-knowledge","/omniscient-knowledge","/sacred-traditions"].includes(l), color: "purple" },
+  { label: "Council", href: "/grand-council", Icon: Gavel, match: (l) => ["/grand-council","/grand-conference","/conference-decisions","/consensus","/feedback","/transparency-ledger"].includes(l), color: "amber" },
   { label: "Forum", href: "/forum", Icon: MessageCircle, match: (l) => l === "/forum", color: "cyan" },
-  { label: "Universe", href: "/universe-model", Icon: Globe2, match: (l) => l === "/universe-model" || l === "/universe" || l === "/swarm" || l === "/vortex-math" || l === "/sacred-conference" || l === "/3d-diagrams", color: "violet" },
+  { label: "Recruit", href: "/recruitment", Icon: UserPlus, match: (l) => l === "/recruitment", color: "rose" },
+  { label: "Universe", href: "/universe", Icon: Globe2, match: (l) => ["/universe-model","/universe","/swarm","/vortex-math","/sacred-conference","/sacred-knowledge-vault","/3d-diagrams","/grand-narrative","/unified-truth"].includes(l), color: "violet" },
   { label: "Compress", href: "/compression-lab", Icon: Zap, match: (l) => l === "/compression-lab", color: "cyan" },
   { label: "Lattice", href: "/lattice", Icon: Search, match: (l) => l === "/lattice", color: "violet" },
-  { label: "NFT", href: "/agent-nft", Icon: Hexagon, match: (l) => l === "/agent-nft" || l === "/members" || l === "/agent-profile" || l === "/agent-comms" || l === "/wallet-dashboard", color: "violet" },
-  { label: "Fleet", href: "/fleet", Icon: Truck, match: (l) => l === "/fleet", color: "cyan" },
-  { label: "Rick", href: "/rick", Icon: Skull, match: (l) => l === "/rick" || l === "/rick-sanchez" || l === "/inventions", color: "emerald" },
-  { label: "Recruit", href: "/recruitment", Icon: UserPlus, match: (l) => l === "/recruitment", color: "rose" },
-  { label: "Command", href: "/command-center", Icon: Terminal, match: (l) => l === "/command-center" || l === "/executor" || l === "/settings", color: "cyan" },
-  { label: "Roadmap", href: "/sovereignty-roadmap", Icon: Map, match: (l) => l === "/sovereignty-roadmap" || l === "/cross-app", color: "violet" },
-  { label: "System", href: "/system", Icon: Cpu, match: (l) => l === "/system", color: "cyan" },
-  { label: "Finance", href: "/finance", Icon: DollarSign, match: (l) => l === "/finance" || l === "/market" || l === "/arbitrage", color: "emerald" },
+  { label: "NFT", href: "/agent-nft", Icon: Hexagon, match: (l) => ["/agent-nft","/members","/agent-profile","/wallet-dashboard","/token-economy","/economy-hub","/tokens"].includes(l), color: "violet" },
+  { label: "Fleet", href: "/fleet", Icon: Truck, match: (l) => l === "/fleet" || l === "/mission", color: "cyan" },
+  { label: "Rick", href: "/rick", Icon: Skull, match: (l) => ["/rick","/rick-sanchez","/inventions"].includes(l), color: "emerald" },
+  { label: "Command", href: "/command-center", Icon: Terminal, match: (l) => ["/command-center","/executor","/settings"].includes(l), color: "cyan" },
+  { label: "Roadmap", href: "/sovereignty-roadmap", Icon: Map, match: (l) => ["/sovereignty-roadmap","/cross-app"].includes(l), color: "violet" },
+  { label: "System", href: "/system", Icon: Cpu, match: (l) => ["/system","/agent-comms","/memory-explorer","/memory-dashboard","/sovereign-deps","/evolution-health","/sovereign-mesh","/proof-center","/rules"].includes(l), color: "cyan" },
+  { label: "Finance", href: "/finance", Icon: DollarSign, match: (l) => ["/finance","/market","/arbitrage","/sports-arb"].includes(l), color: "emerald" },
   { label: "Income", href: "/income", Icon: Workflow, match: (l) => l === "/income", color: "emerald" },
-  { label: "Leads", href: "/lead-gen", Icon: Target, match: (l) => l === "/lead-gen" || l === "/affiliate" || l === "/local-services" || l === "/business-ideas" || l === "/seo", color: "amber" },
+  { label: "Leads", href: "/lead-gen", Icon: Target, match: (l) => ["/lead-gen","/affiliate","/local-services","/business-ideas","/seo"].includes(l), color: "amber" },
   { label: "Ecom", href: "/ecom", Icon: ShoppingCart, match: (l) => l === "/ecom", color: "amber" },
-  { label: "Code", href: "/code-builder", Icon: Code2, match: (l) => l === "/code-builder" || l === "/api-marketplace" || l === "/credentials", color: "blue" },
+  { label: "Code", href: "/code-builder", Icon: Code2, match: (l) => ["/code-builder","/api-marketplace","/credentials"].includes(l), color: "blue" },
 ];
 
 const COLOR_MAP: Record<string, { active: string; text: string; dot: string; inactive: string; glow: string }> = {
@@ -66,7 +63,6 @@ export default function MobileNav() {
     const scroller = scrollerRef.current;
     if (!btn || !scroller) return;
     const btnRect = btn.getBoundingClientRect();
-    const scrRect = scroller.getBoundingClientRect();
     const offset = btn.offsetLeft - scroller.clientWidth / 2 + btnRect.width / 2;
     scroller.scrollTo({ left: Math.max(0, offset), behavior: "smooth" });
   }, [location]);

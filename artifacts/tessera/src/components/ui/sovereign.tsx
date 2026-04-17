@@ -470,19 +470,36 @@ export function PageHeader({
   subtitle,
   gradient,
   quote,
+  icon: Icon,
+  iconColor,
 }: {
   title: string;
-  subtitle: string;
-  gradient: string;
+  subtitle?: string;
+  gradient?: string;
   quote?: string;
+  icon?: React.ComponentType<{ size?: number; className?: string }>;
+  iconColor?: string;
 }) {
+  if (Icon) {
+    return (
+      <div className="flex items-center gap-3 relative">
+        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center bg-white/[0.04] border border-white/10", iconColor || "text-cyan-400")}>
+          <Icon size={20} className={iconColor || "text-cyan-400"} />
+        </div>
+        <div className="min-w-0">
+          <h1 className={cn("text-lg md:text-xl font-bold font-mono truncate", iconColor || "text-cyan-400")}>{title}</h1>
+          {subtitle && <p className="text-slate-500 text-[11px] font-mono tracking-wide truncate">{subtitle}</p>}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="text-center space-y-2 relative">
       <div className="absolute inset-0 -top-8 sovereign-page-glow opacity-30 pointer-events-none" />
-      <h1 className={cn("text-3xl md:text-4xl font-bold bg-clip-text text-transparent", gradient)}>
+      <h1 className={cn("text-3xl md:text-4xl font-bold bg-clip-text text-transparent", gradient || "bg-gradient-to-r from-cyan-400 to-violet-400")}>
         {title}
       </h1>
-      <p className="text-slate-500 text-xs font-mono tracking-wide">{subtitle}</p>
+      {subtitle && <p className="text-slate-500 text-xs font-mono tracking-wide">{subtitle}</p>}
       {quote && <p className="text-xs text-white/40 italic max-w-xl mx-auto">"{quote}"</p>}
     </div>
   );
