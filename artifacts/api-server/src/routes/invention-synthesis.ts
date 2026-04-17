@@ -9,7 +9,7 @@ import { getTunableHistory } from "../lib/system-tunables.js";
 import { logger } from "../lib/logger.js";
 import { db } from "@workspace/db";
 import { inventionsTable } from "@workspace/db/schema";
-import { buildInvention3DBlock } from "../lib/invention-3d.js";
+import { buildInvention3DBlocks } from "../lib/invention-3d.js";
 
 const router = Router();
 
@@ -17,17 +17,22 @@ async function attachSynthesisDiagrams() {
   try {
     const all = await db.select().from(inventionsTable);
     const built = all.filter((i) => i.status === "built" || i.status === "tested");
-    return built.slice(0, 12).map((inv) => ({
-      inventionId: inv.inventionId,
-      title: inv.title,
-      diagram3d: buildInvention3DBlock({
+    return built.slice(0, 12).map((inv) => {
+      const diagram3dBlocks = buildInvention3DBlocks({
         title: inv.title,
         category: inv.category,
         description: inv.description,
         materials: (inv.materials as string[] | null) || [],
+        steps: ((inv as { steps?: string[] | null }).steps as string[] | null) || [],
         scienceBehind: (inv as { scienceBehind?: string | null }).scienceBehind ?? null,
-      }),
-    }));
+      }, { max: 4 });
+      return {
+        inventionId: inv.inventionId,
+        title: inv.title,
+        diagram3d: diagram3dBlocks[0],
+        diagram3dBlocks,
+      };
+    });
   } catch {
     return [];
   }
