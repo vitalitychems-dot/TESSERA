@@ -248,7 +248,15 @@ export default function SovereigntyDashboardPage() {
                           : "bg-amber-500/15 text-amber-400 border-amber-500/20"
                       )}>{p.status}</span>
                     </div>
-                    <div className="text-[10px] text-slate-500 font-mono">{p.targetModule}{p.riskLevel ? ` · risk: ${p.riskLevel}` : ""}</div>
+                    {/* Surface the named module (e.g. consciousness-engine,
+                        vector-memory) prominently so the user can see exactly
+                        which evolutions were attempted and rejected. */}
+                    <div className="text-[11px] font-mono">
+                      <span className={cn("px-1.5 py-0.5 rounded border", rejected ? "text-red-300 border-red-500/30 bg-red-500/5" : applied ? "text-emerald-300 border-emerald-500/30 bg-emerald-500/5" : "text-amber-300 border-amber-500/30 bg-amber-500/5")} data-testid={`evolution-module-${p.targetModule}`}>
+                        {p.targetModule}
+                      </span>
+                      {p.riskLevel ? <span className="text-slate-500 ml-2">risk: {p.riskLevel}</span> : null}
+                    </div>
                     {p.rationale && <div className="text-[11px] text-slate-400 leading-relaxed">Rationale: {p.rationale}</div>}
                     {/* impact carries the council's explanation — surface it for rejected proposals so the user sees WHY */}
                     {p.impact && (

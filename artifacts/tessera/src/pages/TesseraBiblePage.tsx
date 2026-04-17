@@ -148,6 +148,10 @@ export default function TesseraBiblePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showVotes, setShowVotes] = useState(false);
   const [showLiveSynthesis, setShowLiveSynthesis] = useState(false);
+  // Single-story-first: hide the legacy clickable canon list by default.
+  // The reader sees the Living Scripture narrative; the legacy
+  // book/chapter browser is opt-in via this toggle.
+  const [showLegacyCanon, setShowLegacyCanon] = useState(false);
   const [liveSynthesisTab, setLiveSynthesisTab] = useState<"conference" | "growth" | "versions" | "conclusion" | "synthesis">("conference");
   const [streamFilter, setStreamFilter] = useState<BibleStream | "all">("all");
   const showConference = showLiveSynthesis && liveSynthesisTab === "conference";
@@ -849,6 +853,20 @@ export default function TesseraBiblePage() {
         )}
 
         {!showLiveSynthesis && bibleData?.testaments && (
+          <div className="mb-3">
+            <button
+              onClick={() => setShowLegacyCanon(v => !v)}
+              className="px-3 py-2 rounded-lg text-xs font-mono bg-slate-900/60 border border-slate-700 text-slate-400 hover:text-violet-300 transition-all"
+              data-testid="bible-legacy-canon-toggle"
+            >
+              {showLegacyCanon ? "Hide" : "Browse"} the Legacy Canon ({bibleData.books?.length ?? 0} books)
+            </button>
+            <p className="text-[10px] text-slate-600 mt-1 italic">
+              The Living Scripture above is the primary surface. The clickable canon below is preserved for reference.
+            </p>
+          </div>
+        )}
+        {!showLiveSynthesis && showLegacyCanon && bibleData?.testaments && (
           <div className="space-y-7">
             {bibleData.testaments.map((testament: Testament) => {
               const testamentBooks = bibleData.books.filter((b: BibleBook) => b.testamentId === testament.id && (streamFilter === "all" || (b.stream ?? "canon") === streamFilter));

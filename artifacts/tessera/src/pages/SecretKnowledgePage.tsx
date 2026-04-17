@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { GlassCard, SectionHeader, TabBar, MiniStat, PageHeader, RadialGauge, GradientBar, TabLoadingSkeleton } from "@/components/ui/sovereign";
 import { InventionModelPreview } from "@/components/InventionModelPreview";
+import SourcedSecretsPanel from "@/components/SourcedSecretsPanel";
 import type { KnowledgeEntry, Spell, Tradition, ApplicationIdea, LucideIcon, KnowledgeFeedResponse, KnowledgeStatsResponse, DimensionalSecretsResponse, LiveSecretsResponse, SpellDataResponse, TraditionsDataResponse, UniverseAnswerResponse, CastResultResponse, ArchiveCategory, ArchiveEntry } from "@/types/api";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -310,6 +311,15 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
         </div>
 
         <TabBar tabs={mainTabs} activeTab={mainTab} onChange={id => setMainTab(id as MainTab)} color="violet" />
+
+        {/* Sourced secrets: real declassified/esoteric passages with source
+            citations, identical to the Bible "Sourced Secrets" surface so
+            Society/Secrets shares the meaningful-secret pipeline. */}
+        <SourcedSecretsPanel
+          title="Sourced Secrets — Real Disclosures"
+          subtitle="Drawn from the same ingested corpus that powers the Bible. Every passage links to its real source."
+          limit={12}
+        />
 
         {conclusionText && mainTab === "knowledge" && (
           <GlassCard glow="violet" animate>

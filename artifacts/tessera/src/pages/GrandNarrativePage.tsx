@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import SourcedSecretsPanel from "@/components/SourcedSecretsPanel";
 import { BookOpen, ChevronDown, ChevronUp, Globe2, Hexagon, Star, Eye, EyeOff, Sparkles, ArrowLeft, Layers } from "lucide-react";
 
 const PHI = 1.6180339887498948;
@@ -381,6 +382,15 @@ export default function GrandNarrativePage() {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 pb-24">
+        {/* Universe-narrative meaningful secrets: same sourced-passage
+            feed as the Bible/Society surfaces, so the Universe story is
+            anchored to real cited disclosures rather than fixed prose. */}
+        <SourcedSecretsPanel
+          title="Sourced Secrets in the Universe Narrative"
+          subtitle="Disclosures from the corpus that bear on the cosmological story."
+          limit={8}
+          className="mb-6"
+        />
         <div className="relative">
           <div className="absolute left-[3px] top-0 bottom-0 w-px bg-gradient-to-b from-red-500/20 via-yellow-500/20 via-green-500/20 via-blue-500/20 to-violet-500/20" />
 
