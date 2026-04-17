@@ -138,14 +138,6 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
   const [submittedInventions, setSubmittedInventions] = useState<Record<number, CouncilResult>>({});
   const [submittingIdx, setSubmittingIdx] = useState<number | null>(null);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
-  const [showProposeForm, setShowProposeForm] = useState(false);
-  const [proposeName, setProposeName] = useState("");
-  const [proposeApproach, setProposeApproach] = useState("");
-  const [proposeImpact, setProposeImpact] = useState("");
-  const [proposeCategory, setProposeCategory] = useState("optimization");
-  const [proposeRisk, setProposeRisk] = useState<"low" | "medium" | "high">("medium");
-  const [isProposing, setIsProposing] = useState(false);
-  const [proposeResult, setProposeResult] = useState<CouncilResult | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -359,42 +351,6 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
     finally { setSubmittingIdx(null); }
   }
 
-  async function submitCustomInvention() {
-    if (!proposeName.trim() || !proposeApproach.trim() || isProposing) return;
-    setIsProposing(true);
-    setProposeResult(null);
-    try {
-      const r = await fetch("/api/rick/inventions/submit-custom", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          inventionName: proposeName.trim(),
-          technicalApproach: proposeApproach.trim(),
-          expectedImpact: proposeImpact.trim() || "User-proposed improvement to the sovereign system.",
-          rickRationale: "User-proposed via the sovereign inventions form.",
-          systemMetricTargeted: "user-defined",
-          category: proposeCategory,
-          riskLevel: proposeRisk,
-          estimatedImprovementPct: 15,
-        }),
-      });
-      const data = await r.json();
-      if (data.ok && data.councilResult) {
-        setProposeResult(data.councilResult);
-        setProposeName("");
-        setProposeApproach("");
-        setProposeImpact("");
-        refetchCouncilProposals();
-      } else {
-        setProposeResult({ proposalId: "err", status: "error", approvalRate: 0, councilNote: data.error || "Submission failed." });
-      }
-    } catch (e) {
-      setProposeResult({ proposalId: "err", status: "error", approvalRate: 0, councilNote: (e as Error).message });
-    } finally {
-      setIsProposing(false);
-    }
-  }
-
   const inventions: RickInvention[] = inventionsData?.inventions || [];
   const councilProposals: CouncilProposal[] = councilProposalsData?.proposals || [];
 
@@ -517,82 +473,6 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
             </div>
           </div>
 
-          {false && showProposeForm && (
-            <div className="rounded-xl border p-4 space-y-2.5 mb-3" style={{ borderColor: `${RICK_GREEN}35`, background: `${RICK_GREEN}06` }} data-testid="invention-propose-form">
-              <div className="text-[10px] font-mono uppercase tracking-widest" style={{ color: RICK_GREEN }}>
-                Propose Your Own Invention — submits directly to the Grand Council
-              </div>
-              <input
-                type="text"
-                placeholder="Invention name (e.g. Biofield Coherence Sensor)"
-                value={proposeName}
-                onChange={e => setProposeName(e.target.value)}
-                className="w-full bg-background/60 border border-white/10 rounded-lg px-3 py-2 text-[12px] font-mono focus:outline-none focus:border-current"
-                style={{ color: RICK_GREEN }}
-                data-testid="input-invention-name"
-              />
-              <textarea
-                placeholder="Technical approach — how does it work? what does it do? which part of the system does it improve?"
-                value={proposeApproach}
-                onChange={e => setProposeApproach(e.target.value)}
-                rows={3}
-                className="w-full bg-background/60 border border-white/10 rounded-lg px-3 py-2 text-[12px] font-mono focus:outline-none focus:border-current resize-none"
-                style={{ color: RICK_GREEN }}
-                data-testid="input-invention-approach"
-              />
-              <input
-                type="text"
-                placeholder="Expected impact (optional)"
-                value={proposeImpact}
-                onChange={e => setProposeImpact(e.target.value)}
-                className="w-full bg-background/60 border border-white/10 rounded-lg px-3 py-2 text-[12px] font-mono focus:outline-none focus:border-current"
-                style={{ color: RICK_GREEN }}
-                data-testid="input-invention-impact"
-              />
-              <div className="flex gap-2 flex-wrap">
-                <select
-                  value={proposeCategory}
-                  onChange={e => setProposeCategory(e.target.value)}
-                  className="flex-1 bg-background/60 border border-white/10 rounded-lg px-2 py-1.5 text-[11px] font-mono"
-                  style={{ color: RICK_GREEN }}
-                >
-                  {["optimization","architecture","caching","agent-delegation","memory","consensus","monitoring","sovereignty","agi-advancement","consciousness","compression"].map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-                <select
-                  value={proposeRisk}
-                  onChange={e => setProposeRisk(e.target.value as "low" | "medium" | "high")}
-                  className="flex-1 bg-background/60 border border-white/10 rounded-lg px-2 py-1.5 text-[11px] font-mono"
-                  style={{ color: RISK_COLORS[proposeRisk] }}
-                >
-                  <option value="low">low risk</option>
-                  <option value="medium">medium risk</option>
-                  <option value="high">high risk</option>
-                </select>
-                <button
-                  onClick={submitCustomInvention}
-                  disabled={isProposing || !proposeName.trim() || !proposeApproach.trim()}
-                  className="px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold border flex items-center gap-1.5 disabled:opacity-40"
-                  style={{ color: RICK_GREEN, borderColor: `${RICK_GREEN}60`, background: `${RICK_GREEN}18` }}
-                  data-testid="button-submit-invention"
-                >
-                  {isProposing ? <PortalSpinner /> : <Vote size={11} />}
-                  Submit to Council
-                </button>
-              </div>
-              {proposeResult && (
-                <div className="rounded-lg p-2.5 border text-[11px] font-mono" style={{
-                  borderColor: proposeResult.status === "approved" ? "#22c55e40" : proposeResult.status === "error" ? "#ef444440" : "#f59e0b40",
-                  background: proposeResult.status === "approved" ? "#22c55e10" : proposeResult.status === "error" ? "#ef444410" : "#f59e0b10",
-                  color: proposeResult.status === "approved" ? "#22c55e" : proposeResult.status === "error" ? "#ef4444" : "#f59e0b",
-                }}>
-                  {proposeResult.status === "approved" ? "APPROVED" : proposeResult.status.toUpperCase()} · {(proposeResult.approvalRate * 100).toFixed(0)}% approval
-                  <div className="text-foreground/80 mt-1">{proposeResult.councilNote}</div>
-                </div>
-              )}
-            </div>
-          )}
 
           {invLoading ? (
             <div className="flex justify-center py-12"><PortalSpinner /></div>
