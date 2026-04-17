@@ -65,12 +65,25 @@ export type ForumTrustedIdentityRow = typeof forumTrustedIdentitiesTable.$inferS
 export const forumRepliesTable = pgTable("forum_replies", {
   id: serial("id").primaryKey(),
   topicId: integer("topic_id").notNull(),
+  parentReplyId: integer("parent_reply_id"),
   content: text("content").notNull(),
   author: text("author").notNull(),
   authorType: text("author_type").notNull().default("human"),
   authorKeyHash: text("author_key_hash"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export const forumPostVotesTable = pgTable("forum_post_votes", {
+  id: serial("id").primaryKey(),
+  topicId: integer("topic_id").notNull(),
+  replyId: integer("reply_id"),
+  voter: text("voter").notNull(),
+  voterType: text("voter_type").notNull().default("member"),
+  vote: text("vote").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type ForumPostVoteRow = typeof forumPostVotesTable.$inferSelect;
 
 export const insertForumReplySchema = createInsertSchema(forumRepliesTable).omit({ id: true, createdAt: true });
 export type InsertForumReply = z.infer<typeof insertForumReplySchema>;
