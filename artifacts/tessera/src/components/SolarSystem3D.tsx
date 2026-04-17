@@ -7,22 +7,39 @@ const LOCAL_BASE = (typeof import.meta !== "undefined" && (import.meta as { env?
 const LOCAL_FONT_URL = `${LOCAL_BASE}fonts/SpaceMono.woff2`;
 const LOCAL_PLANET_TEXTURE_BASE = `${LOCAL_BASE}textures/planets`;
 
+const fontStatusListeners = new Set<(failed: boolean) => void>();
 let __fontFailed = false;
+function setFontFailed(v: boolean) {
+  if (__fontFailed === v) return;
+  __fontFailed = v;
+  fontStatusListeners.forEach((l) => l(v));
+}
 if (typeof window !== "undefined") {
   const t = setTimeout(() => {
     if (!__fontFailed) {
-      __fontFailed = true;
       console.warn("[SolarSystem3D] custom font load timeout — using default 3D font");
+      setFontFailed(true);
     }
   }, 4000);
   fetch(LOCAL_FONT_URL, { method: "HEAD" })
-    .then((r) => { if (!r.ok) __fontFailed = true; clearTimeout(t); })
-    .catch(() => { __fontFailed = true; clearTimeout(t); });
+    .then((r) => { clearTimeout(t); if (!r.ok) setFontFailed(true); })
+    .catch(() => { clearTimeout(t); setFontFailed(true); });
+}
+
+function useFontFailed(): boolean {
+  const [failed, setFailed] = useState<boolean>(__fontFailed);
+  useEffect(() => {
+    const cb = (v: boolean) => setFailed(v);
+    fontStatusListeners.add(cb);
+    return () => { fontStatusListeners.delete(cb); };
+  }, []);
+  return failed;
 }
 
 function SafeText(props: React.ComponentProps<typeof Text>) {
   const { font, ...rest } = props;
-  const safeFont = __fontFailed ? undefined : font;
+  const failed = useFontFailed();
+  const safeFont = failed ? undefined : font;
   return (
     <Suspense fallback={null}>
       <Text {...rest} font={safeFont} />
