@@ -5,7 +5,7 @@ const router: IRouter = Router();
 
 interface HardwarePeer {
   peerId: string;
-  deviceType: "starlink-backbone" | "lora-repeater" | "sensor-node" | "compute-node" | "unknown";
+  deviceType: "uplink-backbone" | "lora-repeater" | "sensor-node" | "compute-node" | "unknown";
   displayName: string;
   ipAddress?: string;
   capabilities: string[];
@@ -44,7 +44,7 @@ router.post("/lattice/hardware-register", (req, res) => {
       return res.status(400).json({ ok: false, error: "peerId is required" });
     }
 
-    const validDeviceTypes = ["starlink-backbone", "lora-repeater", "sensor-node", "compute-node", "unknown"];
+    const validDeviceTypes = ["uplink-backbone", "lora-repeater", "sensor-node", "compute-node", "unknown"];
     const deviceType = validDeviceTypes.includes(body.deviceType || "")
       ? (body.deviceType as HardwarePeer["deviceType"])
       : "unknown";
@@ -174,8 +174,8 @@ router.delete("/lattice/hardware-peers/:peerId", (req, res) => {
 
 function defaultCapabilities(deviceType: string): string[] {
   switch (deviceType) {
-    case "starlink-backbone":
-      return ["internet-bridge", "high-bandwidth", "relay", "satellite-uplink"];
+    case "uplink-backbone":
+      return ["internet-bridge", "high-bandwidth", "relay", "wan-uplink"];
     case "lora-repeater":
       return ["lora", "relay", "low-power", "mesh-extend", "off-grid"];
     case "sensor-node":
