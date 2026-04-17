@@ -409,6 +409,20 @@ async function runPostBindHealthProbe(port: number): Promise<void> {
       } catch (err) {
         logger.warn({ err }, "AGI metacognition loop failed to start");
       }
+
+      // Reality Audit: persist a startup snapshot + schedule periodic snapshots every 30 minutes
+      try {
+        const { persistRealityAuditSnapshot } = await import("./lib/reality-audit.js");
+        const startupSnap = await persistRealityAuditSnapshot("startup");
+        logger.info({ snapId: startupSnap.id, hash: startupSnap.snapshotHash.slice(0, 12), path: startupSnap.jsonPath }, "Reality Audit startup snapshot persisted");
+        setInterval(() => {
+          persistRealityAuditSnapshot("scheduled").catch((err) =>
+            logger.warn({ err }, "Reality Audit scheduled snapshot failed"),
+          );
+        }, 30 * 60 * 1000).unref();
+      } catch (err) {
+        logger.warn({ err }, "Reality Audit startup snapshot failed");
+      }
     });
   } catch (err) {
     logger.error({ err }, "Fatal: could not start server");

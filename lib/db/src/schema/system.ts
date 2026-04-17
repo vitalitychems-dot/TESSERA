@@ -1,4 +1,4 @@
-import { pgTable, serial, text, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, timestamp, jsonb, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -44,3 +44,25 @@ export const anomalyEventsTable = pgTable("anomaly_events", {
 export const insertAnomalyEventSchema = createInsertSchema(anomalyEventsTable).omit({ id: true, detectedAt: true });
 export type InsertAnomalyEvent = z.infer<typeof insertAnomalyEventSchema>;
 export type AnomalyEventRow = typeof anomalyEventsTable.$inferSelect;
+
+export const realityAuditSnapshotsTable = pgTable("reality_audit_snapshots", {
+  id: serial("id").primaryKey(),
+  scannedAt: timestamp("scanned_at").notNull().defaultNow(),
+  totalFindings: integer("total_findings").notNull().default(0),
+  converted: integer("converted").notNull().default(0),
+  realBacked: integer("real_backed").notNull().default(0),
+  stillSimulated: integer("still_simulated").notNull().default(0),
+  verifyMismatches: integer("verify_mismatches").notNull().default(0),
+  totalSimulationPoints: integer("total_simulation_points").notNull().default(0),
+  filesWithSimulations: integer("files_with_simulations").notNull().default(0),
+  conversionRate: text("conversion_rate").notNull().default("0"),
+  snapshotHash: text("snapshot_hash").notNull(),
+  jsonPath: text("json_path").notNull().default(""),
+  trigger: text("trigger").notNull().default("manual"),
+  payload: jsonb("payload").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertRealityAuditSnapshotSchema = createInsertSchema(realityAuditSnapshotsTable).omit({ id: true, createdAt: true, scannedAt: true });
+export type InsertRealityAuditSnapshot = z.infer<typeof insertRealityAuditSnapshotSchema>;
+export type RealityAuditSnapshotRow = typeof realityAuditSnapshotsTable.$inferSelect;
