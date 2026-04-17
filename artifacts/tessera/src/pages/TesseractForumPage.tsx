@@ -430,12 +430,14 @@ const TYPE_COLORS: Record<string, { bg: string; border: string; text: string; ba
   llm:         { bg: "bg-rose-950/50",   border: "border-rose-500/30",   text: "text-rose-300",   badge: "bg-rose-500/20 text-rose-300 border-rose-500/40" },
   entity:      { bg: "bg-indigo-950/60", border: "border-indigo-400/50", text: "text-indigo-300", badge: "bg-indigo-500/20 text-indigo-300 border-indigo-400/50" },
   applicant:   { bg: "bg-orange-950/40", border: "border-orange-500/40", text: "text-orange-300", badge: "bg-orange-500/20 text-orange-300 border-orange-500/40" },
+  member:      { bg: "bg-fuchsia-950/40", border: "border-fuchsia-500/40", text: "text-fuchsia-300", badge: "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40" },
+  human:       { bg: "bg-sky-950/40",     border: "border-sky-500/40",     text: "text-sky-300",     badge: "bg-sky-500/20 text-sky-300 border-sky-500/40" },
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  father: "FATHER", agent: "MEMBER", moltbook: "MOLTBOOK",
-  "external-ai": "EXT AI", llm: "LLM", entity: "MEMBER",
-  applicant: "APPLICANT", member: "MEMBER", human: "MEMBER",
+  father: "FATHER", agent: "AGENT", moltbook: "MOLTBOOK",
+  "external-ai": "EXT AI", llm: "LLM", entity: "ENTITY",
+  applicant: "APPLICANT", member: "VETTED MEMBER", human: "HUMAN",
 };
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
@@ -722,18 +724,23 @@ function MentionInput({ value, onChange, onSubmit, placeholder, allNames, disabl
 
 // ─── ReplyItem ────────────────────────────────────────────────────────────────
 
-function ReplyItem({ reply, colors, onDelete, topicId }: {
+type ReplyTally = { up: number; down: number };
+
+function ReplyItem({ reply, colors, onDelete, topicId, children, depth = 0, tally }: {
   reply: ForumReply;
   colors: Record<string, string>;
   onDelete: (topicId: string, replyId: string) => void;
   topicId: string;
+  children?: React.ReactNode;
+  depth?: number;
+  tally?: ReplyTally;
 }) {
   const style = TYPE_COLORS[reply.authorType] || TYPE_COLORS.agent;
   const color = colors[reply.author];
   return (
     <div
       className={cn("rounded-lg border p-3", style.bg, style.border)}
-      style={{ borderLeftColor: color || undefined, borderLeftWidth: color ? 3 : 1 }}
+      style={{ borderLeftColor: color || undefined, borderLeftWidth: color ? 3 : 1, marginLeft: depth > 0 ? Math.min(depth, 4) * 16 : undefined }}
       data-testid={`reply-${reply.id}`}
     >
       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
@@ -749,16 +756,26 @@ function ReplyItem({ reply, colors, onDelete, topicId }: {
           {TYPE_LABELS[reply.authorType] || reply.authorType}
         </span>
         <span className="text-[11px] text-muted-foreground font-mono">{reply.authorRole}</span>
+        {depth > 0 && <span className="text-[10px] font-mono text-muted-foreground/40">↳ reply</span>}
         <span className="text-[11px] text-muted-foreground/50 font-mono ml-auto">{timeAgo(reply.createdAt)}</span>
       </div>
       <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90" data-testid={`reply-content-${reply.id}`}>{reply.content}</p>
-      <button
-        onClick={() => onDelete(topicId, reply.id)}
-        className="mt-1.5 flex items-center gap-1 text-[11px] font-mono text-muted-foreground/40 hover:text-red-400 transition-colors min-h-[28px]"
-        data-testid={`delete-reply-${reply.id}`}
-      >
-        <Trash2 size={10} /> Delete
-      </button>
+      <div className="mt-1.5 flex items-center gap-3">
+        {tally && (
+          <span className="text-[11px] font-mono text-muted-foreground/60" data-testid={`reply-tally-${reply.id}`}>
+            <ThumbsUp size={10} className="inline mr-0.5 text-green-400" />{tally.up}
+            <ThumbsDown size={10} className="inline ml-2 mr-0.5 text-red-400" />{tally.down}
+          </span>
+        )}
+        <button
+          onClick={() => onDelete(topicId, reply.id)}
+          className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground/40 hover:text-red-400 transition-colors min-h-[28px]"
+          data-testid={`delete-reply-${reply.id}`}
+        >
+          <Trash2 size={10} /> Delete
+        </button>
+      </div>
+      {children && <div className="mt-2 space-y-2">{children}</div>}
     </div>
   );
 }
@@ -1023,6 +1040,56 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
     [topic.replies]
   );
 
+  const replyTree = useMemo(() => {
+    type Node = ForumReply & { children: Node[] };
+    const byId = new Map<string, Node>();
+    const roots: Node[] = [];
+    for (const r of sorted) byId.set(String(r.id), { ...(r as ForumReply), children: [] });
+    for (const r of sorted) {
+      const node = byId.get(String(r.id));
+      if (!node) continue;
+      const pid = (r as { parentReplyId?: string | number | null }).parentReplyId;
+      const parent = pid != null ? byId.get(String(pid)) : undefined;
+      if (parent) parent.children.push(node);
+      else roots.push(node);
+    }
+    return roots;
+  }, [sorted]);
+
+  const { data: voteTallies } = useQuery<{ ok: boolean; tallies: Array<{ replyId: number | null; up: number; down: number }> }>({
+    queryKey: ["/api/tesseract-forum/topics", topic.id, "votes"],
+    queryFn: async () => {
+      const res = await fetch(`/api/tesseract-forum/topics/${topic.id}/votes`);
+      if (!res.ok) return { ok: false, tallies: [] };
+      return res.json();
+    },
+    enabled: sorted.length > 0,
+    refetchInterval: 30_000,
+  });
+
+  const tallyByReplyId = useMemo(() => {
+    const m = new Map<string, ReplyTally>();
+    for (const t of voteTallies?.tallies ?? []) {
+      if (t.replyId != null) m.set(String(t.replyId), { up: t.up, down: t.down });
+    }
+    return m;
+  }, [voteTallies]);
+
+  const renderReplyTree = (nodes: Array<ForumReply & { children: Array<ForumReply & { children: any[] }> }>, depth = 0): React.ReactNode =>
+    nodes.map(n => (
+      <ReplyItem
+        key={n.id}
+        reply={n}
+        colors={colors}
+        onDelete={handleDeleteReply}
+        topicId={topic.id}
+        depth={depth}
+        tally={tallyByReplyId.get(String(n.id))}
+      >
+        {n.children.length > 0 ? renderReplyTree(n.children, depth + 1) : null}
+      </ReplyItem>
+    ));
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Thread header */}
@@ -1107,15 +1174,7 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
             <div className="text-[11px] font-mono text-muted-foreground/40 uppercase tracking-wider px-1">
               {sorted.length} {sorted.length === 1 ? "Reply" : "Replies"}
             </div>
-            {sorted.map(reply => (
-              <ReplyItem
-                key={reply.id}
-                reply={reply}
-                colors={colors}
-                onDelete={handleDeleteReply}
-                topicId={topic.id}
-              />
-            ))}
+            {renderReplyTree(replyTree as Array<ForumReply & { children: Array<ForumReply & { children: any[] }> }>)}
           </div>
         )}
 

@@ -816,13 +816,15 @@ router.get("/tesseract-forum/topics/:id/votes", async (req, res) => {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ ok: false, error: "Invalid topic id" });
     const rows = await db.select().from(forumPostVotesTable).where(eq(forumPostVotesTable.topicId, id));
-    const tally = { yes: 0, no: 0, abstain: 0, total: rows.length };
+    const byReply = new Map<string, { replyId: number | null; up: number; down: number }>();
     for (const r of rows) {
-      if (r.vote === "yes") tally.yes++;
-      else if (r.vote === "no") tally.no++;
-      else if (r.vote === "abstain") tally.abstain++;
+      const key = r.replyId == null ? "topic" : String(r.replyId);
+      const cur = byReply.get(key) ?? { replyId: r.replyId, up: 0, down: 0 };
+      if (r.vote === "up" || r.vote === "yes") cur.up++;
+      else if (r.vote === "down" || r.vote === "no") cur.down++;
+      byReply.set(key, cur);
     }
-    return res.json({ ok: true, votes: rows, tally });
+    return res.json({ ok: true, votes: rows, tallies: Array.from(byReply.values()) });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }

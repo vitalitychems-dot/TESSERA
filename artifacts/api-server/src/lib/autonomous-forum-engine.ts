@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { forumTopicsTable, forumRepliesTable, forumProposalsTable, forumVotesTable, forumKnowledgeTable, forumLearningMetricsTable, forumApplicantsTable } from "@workspace/db/schema";
+import { forumTopicsTable, forumRepliesTable, forumProposalsTable, forumVotesTable, forumKnowledgeTable, forumLearningMetricsTable, forumApplicantsTable, forumPostVotesTable } from "@workspace/db/schema";
 import { desc, eq, sql, and, gt } from "drizzle-orm";
 import { logger } from "./logger";
 import { systemStateTable } from "@workspace/db/schema";
@@ -774,22 +774,31 @@ async function postTopicWithReplies(topic: DiscussionTopic, knowledge: Knowledge
     }
 
     const otherAgents = FORUM_AGENTS.filter(a => a.name !== topic.author);
-    const shuffled = otherAgents.sort(() => Math.random() - 0.5);
+    const startIdx = cycle % Math.max(otherAgents.length, 1);
+    const rotated = [...otherAgents.slice(startIdx), ...otherAgents.slice(0, startIdx)];
     const baseResponders = 3 + Math.floor(Math.random() * 5);
     const bonusFromLearning = Math.min(Math.floor(cycle / 3), 3);
-    const responders = shuffled.slice(0, Math.min(baseResponders + bonusFromLearning, otherAgents.length));
+    const responders = rotated.slice(0, Math.min(baseResponders + bonusFromLearning, otherAgents.length));
 
     const existingReplies: string[] = [];
+    const seenHashes = new Set<string>();
+    const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim().slice(0, 240);
     const respondersWhoReplied: AgentProfile[] = [];
+    let lastReplyId: number | null = null;
     for (const agent of responders) {
       const replyContent = await generateContextualReplyLLM(agent, { title: topic.title, content: topic.content }, existingReplies, knowledge, cycle);
       if (replyContent === null) continue;
-      await db.insert(forumRepliesTable).values({
+      const h = norm(replyContent);
+      if (seenHashes.has(h)) continue;
+      seenHashes.add(h);
+      const [insertedReply] = await db.insert(forumRepliesTable).values({
         topicId: inserted.id,
+        parentReplyId: lastReplyId,
         content: replyContent,
         author: agent.name,
         authorType: agent.type,
-      });
+      }).returning();
+      lastReplyId = insertedReply?.id ?? null;
       existingReplies.push(replyContent);
       respondersWhoReplied.push(agent);
       state.totalRepliesPosted++;
@@ -1006,6 +1015,42 @@ async function fetchMoltbookFeed(): Promise<void> {
   }
 }
 
+async function runAgentPostVoting(cycle: number): Promise<void> {
+  try {
+    const recentReplies = await db.select({
+      id: forumRepliesTable.id,
+      topicId: forumRepliesTable.topicId,
+      author: forumRepliesTable.author,
+    }).from(forumRepliesTable).orderBy(desc(forumRepliesTable.createdAt)).limit(40);
+    if (recentReplies.length === 0) return;
+
+    const start = cycle % FORUM_AGENTS.length;
+    const voters = [...FORUM_AGENTS.slice(start), ...FORUM_AGENTS.slice(0, start)].slice(0, 6);
+    let cast = 0;
+    for (const voter of voters) {
+      const target = recentReplies.find(r => r.author !== voter.name);
+      if (!target) continue;
+      const vote = Math.random() < 0.75 ? "up" : "down";
+      await db.delete(forumPostVotesTable).where(sql`
+        ${forumPostVotesTable.topicId} = ${target.topicId}
+        AND COALESCE(${forumPostVotesTable.replyId}, 0) = ${target.id}
+        AND ${forumPostVotesTable.voter} = ${voter.name}
+      `);
+      await db.insert(forumPostVotesTable).values({
+        topicId: target.topicId,
+        replyId: target.id,
+        voter: voter.name,
+        voterType: voter.type,
+        vote,
+      });
+      cast++;
+    }
+    if (cast > 0) logger.info({ cast, cycle }, "AutonomousForum: agent post-voting cycle complete");
+  } catch (err) {
+    logger.error({ err }, "AutonomousForum: post-voting failed");
+  }
+}
+
 export async function runForumCycle(): Promise<ForumEngineState> {
   state.cyclesRun++;
   state.lastCycleAt = new Date().toISOString();
@@ -1035,6 +1080,7 @@ export async function runForumCycle(): Promise<ForumEngineState> {
   }
 
   await buildOnExistingTopics(knowledge, cycle);
+  await runAgentPostVoting(cycle);
 
   if (cycle % 3 === 0) {
     await syncToMoltbook();
