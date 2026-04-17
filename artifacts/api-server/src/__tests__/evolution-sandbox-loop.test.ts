@@ -203,4 +203,69 @@ describe("evolution sandbox runner — TRUE end-to-end through verifyPatchInSand
   }, 60_000);
 });
 
+describe("evolution attempt ledger — durability flag", () => {
+  beforeEach(() => { _clearLedgerForTests(); });
+
+  it("marks recorded entries with persisted=true when JSONL append succeeds", () => {
+    const e = recordAttempt({ proposalId: "evo-persisted", event: "PROPOSED", targetModule: "m" });
+    expect(e.persisted).toBe(true);
+  });
+});
+
+describe("/api/evolution-health/attempts — auth regression", () => {
+  it("rejects unauthenticated requests and accepts admin-token requests", async () => {
+    // Lazy-load express + the route (avoids server bootstrap)
+    const express = (await import("express")).default;
+    const router = (await import("../routes/evolution-health")).default;
+    const app = express();
+    app.use("/api", router);
+
+    const prevToken = process.env["ADMIN_TOKEN"];
+    process.env["ADMIN_TOKEN"] = "test-admin-token-xyz";
+
+    try {
+      const server = app.listen(0);
+      try {
+        const port = (server.address() as { port: number }).port;
+        const noAuth = await fetch(`http://127.0.0.1:${port}/api/evolution-health/attempts`);
+        expect(noAuth.status).toBe(401);
+
+        const withAuth = await fetch(`http://127.0.0.1:${port}/api/evolution-health/attempts`, {
+          headers: { "x-admin-token": "test-admin-token-xyz" },
+        });
+        expect(withAuth.status).toBe(200);
+        const body = await withAuth.json() as { ok: boolean; data: { attempts: unknown[]; counts: Record<string, number>; total: number } };
+        expect(body.ok).toBe(true);
+        expect(Array.isArray(body.data.attempts)).toBe(true);
+        expect(typeof body.data.counts).toBe("object");
+        expect(typeof body.data.total).toBe("number");
+      } finally {
+        await new Promise<void>((res) => server.close(() => res()));
+      }
+    } finally {
+      if (prevToken === undefined) delete process.env["ADMIN_TOKEN"];
+      else process.env["ADMIN_TOKEN"] = prevToken;
+    }
+  });
+});
+
+// CI-only: exercises the FULL production sandbox path (cpSync-based monorepo
+// snapshot + real `pnpm typecheck`). Skipped by default because it can take
+// 60+ seconds. Enable by setting RUN_PRODUCTION_SANDBOX_TESTS=1.
+describe.skipIf(!process.env["RUN_PRODUCTION_SANDBOX_TESTS"])("production sandbox path (CI-gated)", () => {
+  it("runs the default pnpm typecheck pipeline end-to-end and returns a structured result", async () => {
+    const original = "module.exports.a = 1;\n";
+    const file = makeTempFile("ci-prod.js", original);
+    const result = await verifyPatchInSandbox({
+      targetFilePath: file,
+      patchedContent: original,
+      packageFilter: "@workspace/api-server",
+      runTests: false,
+    });
+    expect(result).toHaveProperty("ok");
+    expect(["init", "snapshot", "patch-write", "typecheck", "tests", "passed"]).toContain(result.stage);
+    expect(typeof result.durationMs).toBe("number");
+  }, 240_000);
+});
+
 void existsSync;
