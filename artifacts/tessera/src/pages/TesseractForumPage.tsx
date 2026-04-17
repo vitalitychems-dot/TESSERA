@@ -85,7 +85,11 @@ function HeartbeatAndApplicantsPanel() {
 
   const { data: appData } = useQuery<{ applicants: ForumApplicant[] }>({
     queryKey: ["/api/tesseract-forum/applicants"],
-    queryFn: () => fetch("/api/tesseract-forum/applicants?status=pending").then(r => r.json()),
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/tesseract-forum/applicants?status=pending");
+      if (res.status === 401 || res.status === 403) return { applicants: [] };
+      return res.json();
+    },
     refetchInterval: 15000,
   });
 
