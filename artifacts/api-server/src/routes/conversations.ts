@@ -892,11 +892,16 @@ router.post("/messages", async (req, res) => {
       // [3DOBJ:...] block made it in, emit at least one so the chat never
       // silently drops the request.
       if (userRequested3D(content) && !/\[3DOBJ:/i.test(finalContent)) {
-        const seed = normalizedRows[0];
-        const block = seed
-          ? buildInvention3DBlock(seed)
-          : `[3DOBJ:type="device" label="Tessera Invention" color="#a78bfa" secondary="#06b6d4" size="1" detail="interactive preview"]`;
-        finalContent = `${finalContent}\n\n${block}`;
+        // Context-aware: derive hint from the user's own message so we never
+        // append an unrelated invention's diagram just to satisfy the intent.
+        const synth = {
+          title: (content || "Visualization").slice(0, 80),
+          category: null,
+          description: content,
+          materials: [],
+          scienceBehind: finalContent,
+        };
+        finalContent = `${finalContent}\n\n${buildInvention3DBlock(synth)}`;
       }
     } catch (err) {
       logger.debug({ err: (err as Error).message }, "3D diagram injection skipped");
