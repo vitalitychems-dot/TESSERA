@@ -1109,6 +1109,11 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
     return m;
   }, [voteTallies]);
 
+  const topicTally = useMemo(() => {
+    const t = (voteTallies?.tallies ?? []).find(x => x.replyId == null);
+    return t ? { up: t.up, down: t.down } : null;
+  }, [voteTallies]);
+
   const renderReplyTree = (nodes: ReplyNode[], depth = 0): React.ReactNode =>
     nodes.map(n => (
       <ReplyItem
@@ -1162,6 +1167,13 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
             <span className="text-[11px] text-muted-foreground/50 font-mono shrink-0">{timeAgo(topic.createdAt)}</span>
           </div>
           <h2 className="text-lg font-bold text-foreground mb-2" data-testid="thread-title">{topic.title}</h2>
+          {topicTally && (
+            <div className="mb-2 inline-flex items-center gap-3 text-[11px] font-mono text-muted-foreground/70 px-2 py-1 rounded bg-background/40 border border-border/40" data-testid="topic-vote-tally">
+              <span className="uppercase tracking-wider opacity-60">Council vote</span>
+              <span className="text-green-400 inline-flex items-center gap-1"><ThumbsUp size={11} />{topicTally.up}</span>
+              <span className="text-red-400 inline-flex items-center gap-1"><ThumbsDown size={11} />{topicTally.down}</span>
+            </div>
+          )}
           <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90" data-testid="thread-content">{topic.content}</p>
 
           {topic.urls && topic.urls.length > 0 && (
