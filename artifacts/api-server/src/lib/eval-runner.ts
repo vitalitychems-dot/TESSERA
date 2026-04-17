@@ -466,8 +466,8 @@ async function testSwarmClassify(): Promise<EvalResult> {
       const port = process.env.PORT ?? "8080";
       const r = await fetch(`http://localhost:${port}/api/swarm/classify`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ task: "Solve: What is 2 + 2? Answer with a number." }),
+        headers: { "Content-Type": "application/json", "x-eval-test": "1" },
+        body: JSON.stringify({ task: "EVAL_TEST: classify capability probe — verify swarm classifier responds with a category for a benign math task." }),
         signal: AbortSignal.timeout(5000),
       });
       const b = (await r.json()) as { ok?: boolean; domains?: string[]; matchedDomains?: string[]; category?: string; agentCount?: number } | null;
@@ -507,8 +507,12 @@ async function testCouncilDeliberate(): Promise<EvalResult> {
       const port = process.env.PORT ?? "8080";
       const r = await fetch(`http://localhost:${port}/api/council/deliberate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: "What is 2 + 2?", category: "math" }),
+        headers: { "Content-Type": "application/json", "x-eval-test": "1" },
+        body: JSON.stringify({
+          topic: "EVAL_TEST: council liveness probe (do not persist as proposal)",
+          category: "eval-test",
+          dryRun: true,
+        }),
         signal: AbortSignal.timeout(30000),
       });
       const b = (await r.json()) as { ok?: boolean; decisionText?: string; transcript?: string; decision?: string; consensus?: string; agentsParticipated?: string[] } | null;

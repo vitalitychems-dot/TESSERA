@@ -156,8 +156,24 @@ export default function CompressionLabPage() {
                     <img
                       src={`/api/universe/nasa-images/${img.nasaId}/proxy`}
                       alt={img.title}
-                      className="w-full aspect-square object-cover"
+                      className="w-full aspect-square object-cover bg-slate-900"
                       loading="lazy"
+                      onError={(e) => {
+                        // Fall back to direct NASA thumbnail URL if proxy fails;
+                        // if THAT fails, swap in a placeholder tile so the
+                        // grid doesn't show broken-image icons.
+                        const el = e.currentTarget;
+                        if (el.dataset.fallback !== "direct" && img.thumbnailUrl) {
+                          el.dataset.fallback = "direct";
+                          el.src = img.thumbnailUrl;
+                        } else if (el.dataset.fallback !== "placeholder") {
+                          el.dataset.fallback = "placeholder";
+                          el.replaceWith(Object.assign(document.createElement("div"), {
+                            className: "w-full aspect-square bg-slate-900 flex items-center justify-center text-slate-700 text-[9px] font-mono",
+                            innerText: "NO IMAGE",
+                          }));
+                        }
+                      }}
                     />
                   ) : (
                     <div className="w-full aspect-square bg-slate-900 flex items-center justify-center">
@@ -188,7 +204,17 @@ export default function CompressionLabPage() {
               <img
                 src={`/api/universe/nasa-images/${selectedImage.nasaId}/proxy`}
                 alt={selectedImage.title}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover bg-slate-900"
+                onError={(e) => {
+                  const el = e.currentTarget;
+                  if (el.dataset.fallback !== "direct" && selectedImage.thumbnailUrl) {
+                    el.dataset.fallback = "direct";
+                    el.src = selectedImage.thumbnailUrl;
+                  } else if (el.dataset.fallback !== "placeholder") {
+                    el.dataset.fallback = "placeholder";
+                    el.style.display = "none";
+                  }
+                }}
               />
             </div>
             <div className="flex-1 min-w-0">

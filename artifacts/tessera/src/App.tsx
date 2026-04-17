@@ -43,6 +43,7 @@ const ConsciousnessNexusPage = lazyRetry(() => import("@/pages/ConsciousnessNexu
 const SovereigntyDashboardPage = lazyRetry(() => import("@/pages/SovereigntyDashboardPage"));
 const SystemPage = lazyRetry(() => import("@/pages/SystemPage"));
 const LatticeBrowserPage = lazyRetry(() => import("@/pages/LatticeBrowserPage"));
+const HistoryPage = lazyRetry(() => import("@/pages/HistoryPage"));
 const GrandCouncilPage = lazyRetry(() => import("@/pages/GrandCouncilPage"));
 const RecruitmentPage = lazyRetry(() => import("@/pages/RecruitmentPage"));
 const RickPage = lazyRetry(() => import("@/pages/RickPage"));
@@ -264,6 +265,7 @@ function AppRouter() {
 
         {/* Bible hub */}
         <Route path="/bible">{() => <BibleHubPage />}</Route>
+        <Route path="/history">{() => <HistoryPage />}</Route>
 
         {/* Knowledge & Society */}
         <Route path="/secret-society">{() => <SecretsPage />}</Route>

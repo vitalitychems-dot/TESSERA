@@ -45,6 +45,41 @@ router.post("/storage/uploads/request-url", async (req: Request, res: Response) 
   }
 });
 
+// Object Storage / GCS may be entirely unavailable in some environments
+// (no credentials, IdentityPool resource missing, sidecar down). When that
+// happens every storage call throws, which used to produce 500s — and the
+// AutoRecovery watchdog interpreted the resulting probe failures as a dead
+// API server and killed the process, looping forever. We now translate any
+// upstream storage failure into a clean 404 (or 503 for upload mints) so
+// the rest of the system stays alive when storage simply isn't configured.
+function isStorageUnavailable(err: unknown): boolean {
+  // Surface the deepest error string we can — Gaxios wraps the real cause
+  // ("no allowed resources" from the IdentityPool token endpoint) inside
+  // err.response.data, while err.message is just "Error code undefined".
+  const e = err as {
+    message?: string;
+    code?: string | number;
+    status?: number;
+    response?: { status?: number; data?: unknown };
+    cause?: unknown;
+  } | null | undefined;
+  const parts: string[] = [];
+  if (e?.message) parts.push(String(e.message));
+  if (e?.code != null) parts.push(String(e.code));
+  if (e?.status != null) parts.push(`status:${e.status}`);
+  if (e?.response?.status != null) parts.push(`response_status:${e.response.status}`);
+  if (e?.response?.data != null) {
+    try { parts.push(typeof e.response.data === "string" ? e.response.data : JSON.stringify(e.response.data)); } catch { /* ignore */ }
+  }
+  if (e?.cause) parts.push(String((e.cause as { message?: string })?.message ?? e.cause));
+  const msg = parts.join(" | ");
+  // Match ONLY signatures that mean the storage backend is unconfigured /
+  // unreachable in this environment. Genuine application bugs (programmer
+  // errors, validation failures, ACL denials with a populated entity) must
+  // continue to surface as 500 / 403 so they aren't silently masked as 404.
+  return /no allowed resources|identity[ _-]?pool|invalid_grant|ENOTFOUND|ECONNREFUSED|fetch failed|sidecar|REPLIT_SIDECAR|google-byoid-sdk.*Unauthorized/i.test(msg);
+}
+
 router.get("/storage/objects/*path", async (req: Request, res: Response) => {
   try {
     const raw = (req.params as Record<string, string | string[]>).path;
@@ -81,6 +116,11 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
       res.status(404).json({ error: "Object not found" });
       return;
     }
+    if (isStorageUnavailable(error)) {
+      req.log.warn({ err: error }, "Storage backend unavailable; returning 404");
+      res.status(404).json({ error: "Object not found", reason: "storage backend unavailable" });
+      return;
+    }
     req.log.error({ err: error }, "Error serving object");
     res.status(500).json({ error: "Failed to serve object" });
   }
@@ -105,6 +145,11 @@ router.get("/storage/public-objects/*filePath", async (req: Request, res: Respon
       res.end();
     }
   } catch (error) {
+    if (isStorageUnavailable(error)) {
+      req.log.warn({ err: error }, "Public storage backend unavailable; returning 404");
+      res.status(404).json({ error: "File not found", reason: "storage backend unavailable" });
+      return;
+    }
     req.log.error({ err: error }, "Error serving public object");
     res.status(500).json({ error: "Failed to serve public object" });
   }

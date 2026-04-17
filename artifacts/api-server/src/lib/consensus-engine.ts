@@ -501,8 +501,25 @@ export function getProposal(id: string): ConsensusProposal | undefined {
   return proposals.get(id);
 }
 
+// A small set of patterns that indicate a proposal was created by an automated
+// liveness/eval probe rather than by a real council action. We filter these
+// out of the public stream so the Council/Proposals UI shows only real work.
+const EVAL_PROPOSAL_PATTERNS: RegExp[] = [
+  /^what\s*is\s*2\s*\+\s*2/i,
+  /^EVAL_TEST/i,
+  /capability\s+probe/i,
+];
+
+function isEvalArtifactProposal(p: ConsensusProposal): boolean {
+  if ((p as { category?: string }).category === "eval-test") return true;
+  if (p.proposedBy === "council-route" && /^what\s*is/i.test(p.title)) return true;
+  return EVAL_PROPOSAL_PATTERNS.some(rx => rx.test(p.title) || rx.test(p.description ?? ""));
+}
+
 export function getAllProposals(): ConsensusProposal[] {
-  return Array.from(proposals.values()).sort((a, b) => b.createdAt - a.createdAt);
+  return Array.from(proposals.values())
+    .filter(p => !isEvalArtifactProposal(p))
+    .sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export function getConsensusMetrics() {
