@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll, beforeAll } from "vitest";
 import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } from "fs";
-import { execSync } from "child_process";
 import { tmpdir } from "os";
-import { join, resolve, relative } from "path";
+import { join } from "path";
 import { applyVerifiedPatch } from "../lib/self-code-evolution";
 import { verifyPatchInSandbox } from "../lib/evolution-sandbox";
 import type { SandboxFn, SandboxResult } from "../lib/evolution-sandbox";
@@ -17,25 +16,10 @@ const TMP_DIRS: string[] = [];
 const LEDGER_TMP = mkdtempSync(join(tmpdir(), "evo-ledger-"));
 TMP_DIRS.push(LEDGER_TMP);
 
-const MONOREPO_ROOT = (() => {
-  let dir = resolve(process.cwd());
-  for (let i = 0; i < 8; i++) {
-    if (existsSync(join(dir, "pnpm-workspace.yaml"))) return dir;
-    const parent = resolve(dir, "..");
-    if (parent === dir) break;
-    dir = parent;
-  }
-  throw new Error("monorepo root not found");
-})();
-
-const FIXTURE_REL = "artifacts/api-server/src/__fixtures__/sandbox-target.js";
-const FIXTURE_ABS = join(MONOREPO_ROOT, FIXTURE_REL);
-const FIXTURE_ORIGINAL = "// Fixture target for evolution-sandbox-loop integration tests.\n// Patches against this file are syntax-checked via `node --check` inside the\n// disposable git worktree (instead of the heavy api-server pnpm typecheck).\nmodule.exports.a = 1;\n";
-
-function makeTempFile(contents: string): string {
-  const dir = mkdtempSync(join(tmpdir(), "evo-sandbox-"));
+function makeTempFile(name: string, contents: string): string {
+  const dir = mkdtempSync(join(tmpdir(), "evo-target-"));
   TMP_DIRS.push(dir);
-  const file = join(dir, "target.ts");
+  const file = join(dir, name);
   writeFileSync(file, contents, "utf8");
   return file;
 }
@@ -63,37 +47,25 @@ const failingStubSandbox: (stage: SandboxResult["stage"], reason: string, exitCo
 
 /**
  * Real-runner sandbox factory: invokes verifyPatchInSandbox with the actual
- * git-worktree + subprocess pipeline, but uses `node --check` on the patched
- * fixture file as the verification command (lightweight equivalent of
- * typecheck — passes for valid JS, fails with non-zero exit on syntax errors).
+ * subprocess pipeline (no git, no monorepo snapshot — uses the lightweight
+ * verifyCommand path which writes the patched content to a temp file and
+ * runs `node --check` against it as a real subprocess).
+ *
+ * `node --check` exits 0 on valid JS, non-zero on syntax errors — a faithful
+ * lightweight equivalent of typecheck for the integration test fixture.
  */
-function realRunnerSandbox(relTargetInsideMonorepo: string): SandboxFn {
-  return async (params) =>
-    verifyPatchInSandbox({
-      targetFilePath: params.targetFilePath,
-      patchedContent: params.patchedContent,
-      packageFilter: "@workspace/api-server",
-      runTests: false,
-      verifyCommand: [
-        { cmd: "node", args: ["--check", relTargetInsideMonorepo], stageLabel: "typecheck" },
-      ],
-    });
-}
+const realRunnerSandbox: SandboxFn = (params) =>
+  verifyPatchInSandbox({
+    targetFilePath: params.targetFilePath,
+    patchedContent: params.patchedContent,
+    runTests: false,
+    verifyCommand: [
+      { cmd: "node", args: ["--check", "__SANDBOX_TARGET__"], stageLabel: "typecheck" },
+    ],
+  });
 
 beforeAll(() => {
   process.env["EVO_LEDGER_DIR"] = LEDGER_TMP;
-  // Ensure the fixture exists in HEAD so `git worktree add HEAD` includes it.
-  // If it's untracked (first run), commit it locally so the worktree sees it.
-  try {
-    execSync(`git ls-files --error-unmatch ${FIXTURE_REL}`, { cwd: MONOREPO_ROOT, stdio: "pipe" });
-  } catch {
-    try {
-      execSync(`git add ${FIXTURE_REL}`, { cwd: MONOREPO_ROOT, stdio: "pipe" });
-      execSync(`git -c user.email=evo@test -c user.name=evo commit -m "test: add sandbox fixture" --no-verify`, {
-        cwd: MONOREPO_ROOT, stdio: "pipe",
-      });
-    } catch { /* ignore — worktree test will report structured init failure if needed */ }
-  }
 });
 
 afterAll(() => {
@@ -108,7 +80,7 @@ describe("evolution apply pipeline — stub-sandbox unit coverage of applyVerifi
 
   it("rejects a bad patch without modifying the live file (byte-identical)", async () => {
     const original = "export const safe = 1;\n";
-    const file = makeTempFile(original);
+    const file = makeTempFile("target.ts", original);
     const patched = original + "\nexport const newThing = function( {{ broken !!!\n";
     const originalBytes = readFileSync(file);
 
@@ -122,8 +94,7 @@ describe("evolution apply pipeline — stub-sandbox unit coverage of applyVerifi
     });
 
     expect(result.ok).toBe(false);
-    const after = readFileSync(file);
-    expect(after.equals(originalBytes)).toBe(true);
+    expect(readFileSync(file).equals(originalBytes)).toBe(true);
 
     const entries = getAttemptsByProposal("evo-stub-bad");
     expect(entries.map(a => a.event)).toEqual(["SANDBOXED_FAIL"]);
@@ -133,7 +104,7 @@ describe("evolution apply pipeline — stub-sandbox unit coverage of applyVerifi
 
   it("applies a good patch and records APPLIED only after live write", async () => {
     const original = "export const a = 1;\n";
-    const file = makeTempFile(original);
+    const file = makeTempFile("target.ts", original);
     const patched = original + "\nexport const b = 2;\n";
 
     const result = await applyVerifiedPatch({
@@ -163,30 +134,29 @@ describe("evolution apply pipeline — stub-sandbox unit coverage of applyVerifi
   });
 });
 
-describe("evolution sandbox runner — TRUE end-to-end through verifyPatchInSandbox + applyVerifiedPatch", () => {
+describe("evolution sandbox runner — TRUE end-to-end through verifyPatchInSandbox + applyVerifiedPatch (no git)", () => {
   beforeEach(() => { _clearLedgerForTests(); });
 
-  it("BAD patch: real worktree + real `node --check` rejects, live file byte-identical, ledger SANDBOXED_FAIL with non-zero exit", async () => {
-    expect(existsSync(FIXTURE_ABS)).toBe(true);
-    const liveBefore = readFileSync(FIXTURE_ABS);
-    const original = liveBefore.toString("utf8");
-    const broken = original + "\nmodule.exports.broken = (((;\n"; // syntax error → node --check exits non-zero
+  it("BAD patch: real subprocess `node --check` rejects, live file byte-identical, ledger SANDBOXED_FAIL with non-zero exit", async () => {
+    const original = "module.exports.a = 1;\n";
+    const file = makeTempFile("real-bad.js", original);
+    const liveBefore = readFileSync(file);
+    const broken = original + "module.exports.broken = (((;\n"; // syntax error
 
     const result = await applyVerifiedPatch({
-      sourceFilePath: FIXTURE_ABS,
+      sourceFilePath: file,
       originalContent: original,
       patchedContent: broken,
       proposalId: "evo-real-bad",
-      targetModule: "sandbox-target.js",
-      sandboxFn: realRunnerSandbox(FIXTURE_REL),
+      targetModule: "real-bad.js",
+      sandboxFn: realRunnerSandbox,
     });
 
     expect(result.ok).toBe(false);
     expect(result.error).toBeDefined();
 
     // INVARIANT: live file is byte-identical
-    const liveAfter = readFileSync(FIXTURE_ABS);
-    expect(liveAfter.equals(liveBefore)).toBe(true);
+    expect(readFileSync(file).equals(liveBefore)).toBe(true);
 
     const entries = getAttemptsByProposal("evo-real-bad");
     expect(entries.map(a => a.event)).toEqual(["SANDBOXED_FAIL"]);
@@ -196,52 +166,41 @@ describe("evolution sandbox runner — TRUE end-to-end through verifyPatchInSand
     expect(fail.verifyOutput).toBeDefined();
     expect(fail.verifyOutput!.length).toBeGreaterThan(0);
     expect(fail.reason).toContain("sandbox.typecheck");
-  }, 90_000);
+  }, 60_000);
 
-  it("GOOD patch: real worktree + real `node --check` passes, live file updated, ledger SANDBOXED_PASS → APPLIED in order with exit 0", async () => {
-    expect(existsSync(FIXTURE_ABS)).toBe(true);
-    const liveBefore = readFileSync(FIXTURE_ABS, "utf8");
-    // Always patch back to a deterministic baseline + a benign valid addition
-    const original = FIXTURE_ORIGINAL;
+  it("GOOD patch: real subprocess `node --check` passes, live file updated, ledger SANDBOXED_PASS → APPLIED with exit 0", async () => {
+    const original = "module.exports.a = 1;\n";
+    const file = makeTempFile("real-good.js", original);
     const patched = original + "module.exports.b = 2;\n";
 
-    // Restore baseline before running (in case a prior test left state)
-    writeFileSync(FIXTURE_ABS, original, "utf8");
+    const result = await applyVerifiedPatch({
+      sourceFilePath: file,
+      originalContent: original,
+      patchedContent: patched,
+      proposalId: "evo-real-good",
+      targetModule: "real-good.js",
+      sandboxFn: realRunnerSandbox,
+    });
 
-    try {
-      const result = await applyVerifiedPatch({
-        sourceFilePath: FIXTURE_ABS,
-        originalContent: original,
-        patchedContent: patched,
-        proposalId: "evo-real-good",
-        targetModule: "sandbox-target.js",
-        sandboxFn: realRunnerSandbox(FIXTURE_REL),
-      });
+    expect(result.ok).toBe(true);
+    expect(result.patchedLines).toBeGreaterThan(0);
 
-      expect(result.ok).toBe(true);
-      expect(result.patchedLines).toBeGreaterThan(0);
+    // INVARIANT: live file equals patched content exactly
+    expect(readFileSync(file, "utf8")).toBe(patched);
 
-      // INVARIANT: live file equals patched content exactly
-      expect(readFileSync(FIXTURE_ABS, "utf8")).toBe(patched);
+    const entries = getAttemptsByProposal("evo-real-good");
+    expect(entries.map(a => a.event)).toEqual(["SANDBOXED_PASS", "APPLIED"]);
 
-      const entries = getAttemptsByProposal("evo-real-good");
-      expect(entries.map(a => a.event)).toEqual(["SANDBOXED_PASS", "APPLIED"]);
+    const pass = entries[0]!;
+    expect(pass.verifyExitCode).toBe(0);
+    expect(pass.verifyOutput).toBeDefined();
+    expect(pass.verifyOutput).toContain("node --check");
+    expect(pass.verifyOutput).toContain("exit=0");
 
-      const pass = entries[0]!;
-      expect(pass.verifyExitCode).toBe(0);
-      expect(pass.verifyOutput).toBeDefined();
-      expect(pass.verifyOutput).toContain("node --check");
-      expect(pass.verifyOutput).toContain("exit=0");
-
-      const applied = entries[1]!;
-      expect(applied.reason).toMatch(/^\+\d+ lines appended$/);
-      expect(typeof applied.durationMs).toBe("number");
-    } finally {
-      // Always restore the fixture to its committed state so other tests/builds aren't affected
-      writeFileSync(FIXTURE_ABS, liveBefore, "utf8");
-    }
-  }, 90_000);
+    const applied = entries[1]!;
+    expect(applied.reason).toMatch(/^\+\d+ lines appended$/);
+    expect(typeof applied.durationMs).toBe("number");
+  }, 60_000);
 });
 
-// Suppress unused-import warning for `relative` (kept for future use)
-void relative;
+void existsSync;
