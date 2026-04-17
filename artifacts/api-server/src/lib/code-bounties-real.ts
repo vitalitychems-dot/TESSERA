@@ -1,5 +1,7 @@
 import { logger } from "./logger";
 import { sanitizeUntrustedText } from "./external-sandbox-policy";
+import { guardedFetch } from "./outbound-host-policy";
+import { loadJson, saveJson } from "./disk-persistence";
 
 export interface CodeBounty {
   id: string;
@@ -40,6 +42,22 @@ let lastRefresh = 0;
 let refreshing = false;
 let timer: NodeJS.Timeout | null = null;
 const attempts = new Map<string, BountyAttempt[]>();
+let attemptsLoaded = false;
+const ATTEMPTS_FILE = "bounty-attempts.json";
+
+async function ensureAttemptsLoaded(): Promise<void> {
+  if (attemptsLoaded) return;
+  attemptsLoaded = true;
+  const stored = await loadJson<Record<string, BountyAttempt[]>>(ATTEMPTS_FILE, {});
+  for (const [k, v] of Object.entries(stored)) attempts.set(k, v);
+  logger.info({ keys: attempts.size }, "code-bounties: attempts restored from disk");
+}
+
+function persistAttempts(): void {
+  const obj: Record<string, BountyAttempt[]> = {};
+  for (const [k, v] of attempts) obj[k] = v;
+  saveJson(ATTEMPTS_FILE, obj);
+}
 
 interface GitHubSearchItem {
   id: number;
@@ -72,7 +90,7 @@ async function searchGitHub(q: string): Promise<CodeBounty[]> {
   };
   const token = (process.env.GITHUB_TOKEN ?? "").trim();
   if (token) headers["authorization"] = `Bearer ${token}`;
-  const r = await fetch(url, { headers });
+  const r = await guardedFetch(url, { headers });
   if (!r.ok) {
     logger.debug({ q, status: r.status }, "code-bounties: github search non-200");
     return [];
@@ -150,6 +168,7 @@ export function recordAttempt(bountyId: string, status: BountyAttempt["status"],
   const list = attempts.get(bountyId) ?? [];
   list.push(a);
   attempts.set(bountyId, list);
+  persistAttempts();
   return a;
 }
 
@@ -160,6 +179,7 @@ export function getAttempts(bountyId?: string): BountyAttempt[] {
 
 export function startBountyRefresher(): void {
   if (timer) return;
+  void ensureAttemptsLoaded();
   void refreshBounties().catch(err => logger.warn({ err: (err as Error).message }, "code-bounties: initial refresh failed"));
   timer = setInterval(() => {
     void refreshBounties().catch(err => logger.warn({ err: (err as Error).message }, "code-bounties: refresh failed"));

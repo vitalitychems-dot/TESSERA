@@ -1,5 +1,6 @@
 import { logger } from "./logger";
 import { sanitizeUntrustedText } from "./external-sandbox-policy";
+import { guardedFetch, isAllowedOutboundUrl } from "./outbound-host-policy";
 
 export interface FreeFinding {
   id: string;
@@ -49,7 +50,7 @@ interface RedditPostRaw {
 
 async function fetchSubreddit(sub: string): Promise<FreeFinding[]> {
   const url = `https://www.reddit.com/r/${sub}/new.json?limit=${MAX_PER_SOURCE}`;
-  const r = await fetch(url, { headers: { "user-agent": USER_AGENT, "accept": "application/json" } });
+  const r = await guardedFetch(url, { headers: { "user-agent": USER_AGENT, "accept": "application/json" } });
   if (!r.ok) {
     logger.debug({ sub, status: r.status }, "free-stuff: reddit fetch non-200");
     return [];
@@ -85,6 +86,12 @@ async function fetchSubreddit(sub: string): Promise<FreeFinding[]> {
 }
 
 async function validateLink(f: FreeFinding): Promise<FreeFinding> {
+  const policyDecision = isAllowedOutboundUrl(f.url, { mode: "validator" });
+  if (!policyDecision.allowed) {
+    f.validatedAt = Date.now();
+    f.validation = "blocked";
+    return f;
+  }
   try {
     const ctrl = new AbortController();
     const timeout = setTimeout(() => ctrl.abort(), VALIDATION_TIMEOUT_MS);
