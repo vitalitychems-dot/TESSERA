@@ -65,6 +65,10 @@ import autoHealerRouter from "./auto-healer";
 import realityAuditRouter from "./reality-audit";
 import feedbackRouter from "./feedback";
 import storageRouter from "./storage";
+import incomeAndLeadsRouter from "./income-and-leads";
+import { startWalletObserver } from "../lib/wallet-observer";
+import { startFreeStuffScraper } from "../lib/free-stuff-scraper";
+import { startBountyRefresher } from "../lib/code-bounties-real";
 
 const router: IRouter = Router();
 
@@ -134,5 +138,10 @@ router.use(feedbackRouter);
 router.use(autoHealerRouter);
 router.use(realityAuditRouter);
 router.use(storageRouter);
+router.use(incomeAndLeadsRouter);
+
+startWalletObserver();
+startFreeStuffScraper();
+startBountyRefresher();
 
 export default router;

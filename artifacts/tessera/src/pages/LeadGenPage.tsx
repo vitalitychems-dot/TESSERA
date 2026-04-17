@@ -1,118 +1,116 @@
 import { useState, useEffect } from "react";
-import { Target, Search, UserPlus, Filter, Star, Phone, Mail, Globe, ChevronRight, TrendingUp } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Target, ExternalLink, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GlassCard, PageHeader } from "@/components/ui/sovereign";
 
-interface Lead {
-  id: string;
-  name: string;
-  company: string;
-  title: string;
-  score: number;
-  status: "hot" | "warm" | "cold" | "converted";
+type LeadKind = "affiliate" | "service" | "access" | "knowledge" | "general";
+
+interface ExecutableLead {
+  id: number;
+  url: string;
+  title: string | null;
   source: string;
-  value: string;
-  lastContact: string;
-  tags: string[];
+  domain: string;
+  kind: LeadKind;
+  discoveredAt: number;
+  relevance: number;
+  executionSteps: string[];
+  estimatedRewardUsd: { low: number; high: number; rationale: string };
 }
 
-const LEADS: Lead[] = [
-  { id: "l1", name: "Marcus Chen", company: "QuantumFinance LLC", title: "CTO", score: 94, status: "hot", source: "Mesh Referral", value: "$48K", lastContact: "1h ago", tags: ["Enterprise", "AI/ML", "Crypto"] },
-  { id: "l2", name: "Sarah Walker", company: "Sovereignty DAO", title: "Founder", score: 88, status: "hot", source: "Forum", value: "$24K", lastContact: "3h ago", tags: ["DAO", "Sovereign", "Web3"] },
-  { id: "l3", name: "David Okafor", company: "NeuralSystems Inc.", title: "VP Engineering", score: 76, status: "warm", source: "API Marketplace", value: "$36K", lastContact: "1d ago", tags: ["Enterprise", "Infrastructure"] },
-  { id: "l4", name: "Elena Petrova", company: "Sacred Tech Ventures", title: "Partner", score: 71, status: "warm", source: "Council Referral", value: "$120K", lastContact: "2d ago", tags: ["VC", "Sacred", "Investment"] },
-  { id: "l5", name: "James Thornton", company: "Distributed Labs", title: "CEO", score: 62, status: "warm", source: "Content", value: "$18K", lastContact: "4d ago", tags: ["Startup", "Web3"] },
-  { id: "l6", name: "Aisha Mohammed", company: "Global Mesh Co.", title: "Head of BD", score: 45, status: "cold", source: "Cold Outreach", value: "$8K", lastContact: "1w ago", tags: ["SMB", "Network"] },
-  { id: "l7", name: "Robert Klein", company: "SovereignAI Corp.", title: "CIO", score: 97, status: "converted", source: "Direct", value: "$240K", lastContact: "2w ago", tags: ["Enterprise", "Converted"] },
-];
+interface LeadsResp {
+  ok: boolean;
+  leads: ExecutableLead[];
+  counts: Record<LeadKind, number>;
+}
 
-const STATUS_STYLES: Record<string, { text: string; bg: string; border: string }> = {
-  hot: { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/25" },
-  warm: { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/25" },
-  cold: { text: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/25" },
-  converted: { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/25" },
+const KIND_STYLES: Record<LeadKind, string> = {
+  affiliate: "text-emerald-400 bg-emerald-500/10 border-emerald-500/25",
+  service: "text-cyan-400 bg-cyan-500/10 border-cyan-500/25",
+  access: "text-violet-400 bg-violet-500/10 border-violet-500/25",
+  knowledge: "text-amber-400 bg-amber-500/10 border-amber-500/25",
+  general: "text-slate-400 bg-slate-500/10 border-slate-500/25",
 };
 
-function scoreColor(s: number) {
-  if (s >= 80) return "text-emerald-400";
-  if (s >= 60) return "text-amber-400";
-  return "text-red-400";
-}
-
 export default function LeadGenPage() {
-  useEffect(() => { document.title = "Lead Generation | Tessera"; }, []);
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<"all" | "hot" | "warm" | "cold" | "converted">("all");
+  useEffect(() => { document.title = "Leads | Tessera"; }, []);
+  const [filter, setFilter] = useState<LeadKind | "all">("all");
+  const [expanded, setExpanded] = useState<number | null>(null);
 
-  const filtered = LEADS.filter(l => {
-    const matchSearch = !search || l.name.toLowerCase().includes(search.toLowerCase()) || l.company.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = status === "all" || l.status === status;
-    return matchSearch && matchStatus;
+  const qs = filter === "all" ? "" : `?kind=${filter}`;
+  const { data, isLoading } = useQuery<LeadsResp>({
+    queryKey: [`/api/leads/feed${qs}`],
+    refetchInterval: 90_000,
   });
 
-  const pipeline = LEADS.filter(l => l.status !== "converted").reduce((s, l) => s + parseInt(l.value.replace(/[$K]/g, "")) * 1000, 0);
+  const leads = data?.leads ?? [];
+  const counts = data?.counts ?? { affiliate: 0, service: 0, access: 0, knowledge: 0, general: 0 };
 
   return (
     <div className="p-4 pb-20 max-w-3xl mx-auto space-y-5">
-      <PageHeader icon={Target} title="Lead Generation" subtitle="Sovereign intelligence-powered B2B lead pipeline" iconColor="text-amber-400" />
+      <PageHeader icon={Target} title="Executable Leads" subtitle="Real URLs harvested from the ingestion pipeline, classified and scored for execution." iconColor="text-amber-400" />
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: "Hot Leads", val: LEADS.filter(l => l.status === "hot").length, color: "red" },
-          { label: "Pipeline Value", val: `$${(pipeline / 1000).toFixed(0)}K`, color: "emerald" },
-          { label: "Avg Score", val: Math.round(LEADS.reduce((s, l) => s + l.score, 0) / LEADS.length), color: "cyan" },
-          { label: "Converted", val: LEADS.filter(l => l.status === "converted").length, color: "violet" },
-        ].map(({ label, val, color }) => (
-          <GlassCard key={label} className="p-3 text-center">
-            <div className={cn("text-xl font-bold font-mono", `text-${color}-400`)}>{val}</div>
-            <div className="text-[9px] text-slate-500 font-mono mt-1">{label.toUpperCase()}</div>
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+        {(Object.entries(counts) as Array<[LeadKind, number]>).map(([k, n]) => (
+          <GlassCard key={k} className="p-2 text-center">
+            <div className={cn("text-base font-bold font-mono", KIND_STYLES[k].split(" ")[0])}>{n}</div>
+            <div className="text-[8px] text-slate-500 font-mono mt-0.5">{k.toUpperCase()}</div>
           </GlassCard>
         ))}
       </div>
 
-      <GlassCard className="p-3 flex items-center gap-2">
-        <Search size={14} className="text-slate-500 shrink-0" />
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search leads..." className="flex-1 bg-transparent text-sm text-slate-200 placeholder:text-slate-600 outline-none" />
-      </GlassCard>
-
-      <div className="flex gap-2 flex-wrap">
-        {(["all", "hot", "warm", "cold", "converted"] as const).map(s => (
-          <button key={s} onClick={() => setStatus(s)} className={cn("px-3 py-1.5 rounded-lg text-xs font-mono capitalize transition-all", status === s ? "bg-amber-500/15 text-amber-400" : "text-slate-500 hover:text-slate-300")}>
-            {s}
+      <div className="flex gap-1.5 flex-wrap">
+        {(["all", "affiliate", "service", "access", "knowledge", "general"] as const).map(f => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={cn(
+              "px-2.5 py-1.5 rounded-lg text-[10px] font-mono uppercase transition",
+              filter === f ? "bg-amber-500/15 text-amber-300 border border-amber-500/30" : "text-slate-500 hover:text-slate-300 border border-transparent"
+            )}
+          >
+            {f}
           </button>
         ))}
       </div>
 
       <div className="space-y-2">
-        {filtered.map(lead => {
-          const s = STATUS_STYLES[lead.status];
+        {isLoading && <div className="text-xs text-slate-500 italic">Loading harvested leads…</div>}
+        {!isLoading && leads.length === 0 && (
+          <div className="text-xs text-slate-500 italic p-4 rounded-lg bg-white/[0.02] border border-white/5">
+            No leads yet. The ingestion pipeline + link harvester will populate this feed in real time.
+          </div>
+        )}
+        {leads.map(lead => {
+          const isOpen = expanded === lead.id;
           return (
-            <GlassCard key={lead.id} className="p-4 hover:bg-white/[0.04] transition-all">
-              <div className="flex items-center gap-3">
-                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0", s.bg, "border", s.border, s.text)}>
-                  {lead.name[0]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-white">{lead.name}</span>
-                    <span className={cn("text-[8px] px-1.5 py-0.5 rounded-full border font-mono uppercase", s.bg, s.text, s.border)}>{lead.status}</span>
+            <GlassCard key={lead.id} className="p-3 hover:bg-white/[0.04] transition">
+              <button onClick={() => setExpanded(isOpen ? null : lead.id)} className="w-full text-left">
+                <div className="flex items-start gap-2">
+                  <span className={cn("text-[8px] px-1.5 py-0.5 rounded-full border font-mono uppercase mt-0.5", KIND_STYLES[lead.kind])}>{lead.kind}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold text-white truncate">{lead.title || lead.domain}</div>
+                    <div className="text-[10px] text-slate-500 font-mono truncate">{lead.domain} · via {lead.source}</div>
                   </div>
-                  <div className="text-xs text-slate-500 mt-0.5">{lead.title} @ {lead.company}</div>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="text-[9px] text-slate-600">{lead.source}</span>
-                    <span className="text-[9px] text-slate-600">·</span>
-                    <span className="text-[9px] text-slate-600">{lead.lastContact}</span>
+                  <div className="text-right shrink-0">
+                    <div className="text-[10px] font-mono text-emerald-400">${lead.estimatedRewardUsd.low}–${lead.estimatedRewardUsd.high}</div>
+                    <ChevronDown size={11} className={cn("text-slate-500 transition", isOpen && "rotate-180")} />
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <div className={cn("text-sm font-bold font-mono", scoreColor(lead.score))}>{lead.score}</div>
-                  <div className="text-[9px] text-slate-600 font-mono">score</div>
-                  <div className="text-xs font-mono text-emerald-400 mt-1">{lead.value}</div>
+              </button>
+              {isOpen && (
+                <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
+                  <a href={lead.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[10px] text-cyan-400 hover:text-cyan-300 font-mono break-all">
+                    <ExternalLink size={10} />
+                    {lead.url}
+                  </a>
+                  <div className="text-[10px] text-slate-500 italic">{lead.estimatedRewardUsd.rationale}</div>
+                  <ol className="space-y-1 text-[11px] text-slate-300 list-decimal pl-4">
+                    {lead.executionSteps.map((step, i) => <li key={i}>{step}</li>)}
+                  </ol>
                 </div>
-              </div>
-              <div className="flex gap-1.5 mt-2 flex-wrap">
-                {lead.tags.map(tag => <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-slate-500 font-mono">{tag}</span>)}
-              </div>
+              )}
             </GlassCard>
           );
         })}

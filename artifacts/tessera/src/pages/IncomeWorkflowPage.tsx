@@ -1,114 +1,180 @@
-import { useState, useEffect } from "react";
-import { Workflow, DollarSign, Play, Pause, CheckCircle2, Clock, TrendingUp, ArrowRight, Plus } from "lucide-react";
+import { useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Workflow, RefreshCcw, Wallet, ExternalLink, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GlassCard, PageHeader } from "@/components/ui/sovereign";
+import { apiRequest } from "@/lib/queryClient";
 
-interface Workflow_ {
-  id: string;
-  name: string;
-  description: string;
-  status: "active" | "paused" | "draft";
-  earnings: string;
-  frequency: string;
-  steps: number;
-  lastRun: string;
-  nextRun: string;
-  category: string;
+interface OnChainDeposit {
+  signature: string;
+  amountSol: number;
+  blockTime: number;
+  explorerUrl: string;
 }
 
-const WORKFLOWS: Workflow_[] = [
-  { id: "w1", name: "Arbitrage Auto-Scanner", description: "Scan 12 exchanges for arb opportunities and log profitable spreads", status: "active", earnings: "$1,240/day", frequency: "Every 30s", steps: 5, lastRun: "30s ago", nextRun: "in 30s", category: "Trading" },
-  { id: "w2", name: "TSRT Reward Collector", description: "Automatically claim and stake council mission rewards", status: "active", earnings: "$890/week", frequency: "Daily", steps: 3, lastRun: "6h ago", nextRun: "in 18h", category: "Sovereign" },
-  { id: "w3", name: "API Royalty Collector", description: "Collect royalties from TSRT API marketplace usage", status: "active", earnings: "$340/week", frequency: "Weekly", steps: 2, lastRun: "1d ago", nextRun: "in 6d", category: "Passive" },
-  { id: "w4", name: "Lead Gen Outreach", description: "Auto-qualify leads and send sovereign pitch sequences", status: "paused", earnings: "$2,100/month", frequency: "Daily", steps: 7, lastRun: "3d ago", nextRun: "Paused", category: "Sales" },
-  { id: "w5", name: "Content Monetization", description: "Publish sovereign intelligence reports and charge for access", status: "active", earnings: "$560/month", frequency: "Weekly", steps: 4, lastRun: "2d ago", nextRun: "in 5d", category: "Content" },
-  { id: "w6", name: "Affiliate Commission Tracker", description: "Track and claim affiliate commissions from partner platforms", status: "draft", earnings: "Est. $800/month", frequency: "Monthly", steps: 6, lastRun: "Never", nextRun: "Draft", category: "Affiliate" },
-];
+interface WalletObservation {
+  configured: boolean;
+  walletAddress: string | null;
+  network: string;
+  balanceSol: number | null;
+  totalReceivedSol: number;
+  deposits: OnChainDeposit[];
+  lastObservedAt: number;
+  lastError: string | null;
+}
 
-const STATUS_STYLES: Record<string, { text: string; bg: string; border: string }> = {
-  active: { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/25" },
-  paused: { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/25" },
-  draft: { text: "text-slate-500", bg: "bg-slate-500/10", border: "border-slate-500/20" },
+interface IncomeStrategy {
+  id: string;
+  name: string;
+  kind: "passive" | "active";
+  status: "active" | "available" | "needs-config";
+  description: string;
+  requirement: string | null;
+}
+
+interface StrategiesResp {
+  ok: boolean;
+  walletReady: boolean;
+  confirmedIncome: { asset: string; totalReceived: number; currentBalance: number | null };
+  strategies: IncomeStrategy[];
+}
+
+interface WalletResp {
+  ok: boolean;
+  observation: WalletObservation;
+}
+
+const STATUS_BADGE: Record<IncomeStrategy["status"], string> = {
+  active: "text-emerald-400 bg-emerald-500/10 border-emerald-500/25",
+  available: "text-cyan-400 bg-cyan-500/10 border-cyan-500/25",
+  "needs-config": "text-amber-400 bg-amber-500/10 border-amber-500/25",
 };
 
-const totalEarnings = "$3,470";
-const monthlyProjected = "$41,640";
-
 export default function IncomeWorkflowPage() {
-  useEffect(() => { document.title = "Income Workflows | Tessera"; }, []);
-  const [filter, setFilter] = useState<"all" | "active" | "paused" | "draft">("all");
+  useEffect(() => { document.title = "Income | Tessera"; }, []);
+  const qc = useQueryClient();
 
-  const filtered = filter === "all" ? WORKFLOWS : WORKFLOWS.filter(w => w.status === filter);
-  const active = WORKFLOWS.filter(w => w.status === "active").length;
+  const { data: walletData } = useQuery<WalletResp>({
+    queryKey: ["/api/income/wallet"],
+    refetchInterval: 60_000,
+  });
+
+  const { data: stratData } = useQuery<StrategiesResp>({
+    queryKey: ["/api/income/strategies"],
+    refetchInterval: 60_000,
+  });
+
+  const refreshMutation = useMutation({
+    mutationFn: async () => {
+      const r = await apiRequest("POST", "/api/income/wallet/refresh", {});
+      return r.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/income/wallet"] });
+      qc.invalidateQueries({ queryKey: ["/api/income/strategies"] });
+    },
+  });
+
+  const obs = walletData?.observation;
+  const strategies = stratData?.strategies ?? [];
 
   return (
     <div className="p-4 pb-20 max-w-3xl mx-auto space-y-5">
-      <PageHeader icon={Workflow} title="Income Workflows" subtitle="Automated sovereign revenue streams and passive income pipelines" iconColor="text-emerald-400" />
+      <PageHeader icon={Workflow} title="Income" subtitle="Confirmed on-chain receipts and live revenue strategies — no projections, no fabricated balances." iconColor="text-emerald-400" />
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: "Daily Income", val: totalEarnings, color: "emerald" },
-          { label: "Monthly Proj.", val: monthlyProjected, color: "cyan" },
-          { label: "Active Flows", val: active, color: "violet" },
-          { label: "Total Flows", val: WORKFLOWS.length, color: "amber" },
-        ].map(({ label, val, color }) => (
-          <GlassCard key={label} className="p-3 text-center">
-            <div className={cn("text-base font-bold font-mono", `text-${color}-400`)}>{val}</div>
-            <div className="text-[9px] text-slate-500 font-mono mt-1">{label.toUpperCase()}</div>
-          </GlassCard>
-        ))}
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="flex gap-2">
-          {(["all", "active", "paused", "draft"] as const).map(f => (
-            <button key={f} onClick={() => setFilter(f)} className={cn("px-3 py-1.5 rounded-lg text-xs font-mono capitalize transition-all", filter === f ? "bg-emerald-500/15 text-emerald-400" : "text-slate-500 hover:text-slate-300")}>
-              {f}
-            </button>
-          ))}
+      <GlassCard className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Wallet size={16} className="text-emerald-400" />
+          <span className="text-sm font-bold text-emerald-300">Sovereign Wallet</span>
+          <button
+            onClick={() => refreshMutation.mutate()}
+            disabled={refreshMutation.isPending}
+            className="ml-auto flex items-center gap-1 px-2 py-1 rounded-md text-[10px] text-slate-400 hover:text-emerald-300 disabled:opacity-50 font-mono"
+          >
+            <RefreshCcw size={10} className={refreshMutation.isPending ? "animate-spin" : ""} />
+            Refresh
+          </button>
         </div>
-        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-xs font-mono hover:bg-emerald-500/25 transition-all">
-          <Plus size={12} />
-          New Flow
-        </button>
-      </div>
 
-      <div className="space-y-3">
-        {filtered.map(wf => {
-          const s = STATUS_STYLES[wf.status];
-          return (
-            <GlassCard key={wf.id} className={cn("p-4 border transition-all hover:bg-white/[0.04]", s.border)}>
-              <div className="flex items-start gap-3">
-                <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5", s.bg, "border", s.border)}>
-                  {wf.status === "active" ? <Play size={13} className={s.text} /> : wf.status === "paused" ? <Pause size={13} className={s.text} /> : <Clock size={13} className={s.text} />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-white">{wf.name}</span>
-                    <span className={cn("text-[8px] px-1.5 py-0.5 rounded-full border font-mono uppercase", s.bg, s.text, s.border)}>{wf.status}</span>
-                    <span className="text-[9px] text-slate-600 font-mono">{wf.category}</span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1 leading-snug">{wf.description}</p>
-                  <div className="flex items-center gap-4 mt-2 flex-wrap">
-                    <div className="flex items-center gap-1 text-[10px] text-slate-500">
-                      <Clock size={10} />
-                      <span>{wf.frequency}</span>
-                    </div>
-                    <div className="text-[10px] text-slate-500">{wf.steps} steps</div>
-                    <div className="text-[10px] text-slate-600">Last: {wf.lastRun}</div>
-                    <div className="text-[10px] text-slate-600">Next: {wf.nextRun}</div>
-                  </div>
-                </div>
-                <div className="text-right shrink-0">
-                  <div className="text-sm font-bold font-mono text-emerald-400">{wf.earnings}</div>
-                  <div className="flex justify-end mt-1">
-                    <TrendingUp size={11} className="text-emerald-400/50" />
-                  </div>
+        {!obs?.configured && (
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/25">
+            <AlertTriangle size={14} className="text-amber-400 mt-0.5 shrink-0" />
+            <div className="text-xs text-amber-200">
+              No sovereign wallet configured. Set the <code className="text-amber-400 font-mono">SOVEREIGN_WALLET_ADDRESS</code> environment variable to begin observing real on-chain deposits.
+            </div>
+          </div>
+        )}
+
+        {obs?.configured && (
+          <>
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
+                <div className="text-[9px] text-slate-500 font-mono">CURRENT BALANCE</div>
+                <div className="text-lg font-bold font-mono text-emerald-400">
+                  {obs.balanceSol === null ? "—" : `${obs.balanceSol.toFixed(6)} SOL`}
                 </div>
               </div>
-            </GlassCard>
-          );
-        })}
+              <div className="p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/15">
+                <div className="text-[9px] text-slate-500 font-mono">TOTAL RECEIVED</div>
+                <div className="text-lg font-bold font-mono text-cyan-400">{obs.totalReceivedSol.toFixed(6)} SOL</div>
+              </div>
+            </div>
+            <div className="text-[10px] text-slate-500 font-mono mb-2">
+              Address: <span className="text-slate-300">{obs.walletAddress}</span> · network: {obs.network}
+            </div>
+            {obs.lastError && (
+              <div className="text-[10px] text-red-400 font-mono mb-2">RPC error: {obs.lastError}</div>
+            )}
+
+            <div className="text-[10px] text-slate-500 font-mono tracking-widest mt-4 mb-2">CONFIRMED DEPOSITS</div>
+            {obs.deposits.length === 0 ? (
+              <div className="text-xs text-slate-500 italic p-3 rounded-lg bg-white/[0.02] border border-white/5">
+                No deposits observed yet. Any incoming SOL will appear here with the on-chain signature.
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {obs.deposits.map(d => (
+                  <a
+                    key={d.signature}
+                    href={d.explorerUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition"
+                  >
+                    <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs text-emerald-300 font-mono">+{d.amountSol.toFixed(6)} SOL</div>
+                      <div className="text-[9px] text-slate-500 font-mono truncate">{d.signature}</div>
+                    </div>
+                    <div className="text-[9px] text-slate-500 font-mono shrink-0">
+                      {new Date(d.blockTime * 1000).toLocaleString()}
+                    </div>
+                    <ExternalLink size={10} className="text-slate-500 shrink-0" />
+                  </a>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </GlassCard>
+
+      <div className="text-[10px] text-slate-500 font-mono tracking-widest">REVENUE STRATEGIES</div>
+      <div className="space-y-2">
+        {strategies.map(s => (
+          <GlassCard key={s.id} className={cn("p-3 border", STATUS_BADGE[s.status].split(" ").pop())}>
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span className="text-sm font-semibold text-white">{s.name}</span>
+              <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full border font-mono uppercase", STATUS_BADGE[s.status])}>
+                {s.status.replace("-", " ")}
+              </span>
+              <span className="text-[9px] text-slate-600 font-mono">{s.kind}</span>
+            </div>
+            <p className="text-xs text-slate-400 leading-snug">{s.description}</p>
+            {s.requirement && (
+              <p className="text-[10px] text-amber-300 mt-1 font-mono">⚠ {s.requirement}</p>
+            )}
+          </GlassCard>
+        ))}
       </div>
     </div>
   );
