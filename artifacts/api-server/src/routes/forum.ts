@@ -301,7 +301,21 @@ router.get("/tesseract-forum/topics/:id/replies", async (req, res) => {
       .where(eq(forumRepliesTable.topicId, id))
       .orderBy(forumRepliesTable.createdAt);
     const replies = rows.map(omitKeyHash);
-    return res.json({ ok: true, replies, count: replies.length });
+
+    type Node = (typeof replies)[number] & { children: Node[] };
+    const byId = new Map<number, Node>();
+    const roots: Node[] = [];
+    for (const r of replies) byId.set(r.id, { ...r, children: [] });
+    for (const r of replies) {
+      const node = byId.get(r.id);
+      if (!node) continue;
+      if (r.parentReplyId && byId.has(r.parentReplyId)) {
+        byId.get(r.parentReplyId)!.children.push(node);
+      } else {
+        roots.push(node);
+      }
+    }
+    return res.json({ ok: true, replies, tree: roots, count: replies.length });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
@@ -778,6 +792,11 @@ router.post("/tesseract-forum/topics/:id/vote", async (req, res) => {
       resolvedReplyId = rid;
     }
 
+    await db.delete(forumPostVotesTable).where(sql`
+      ${forumPostVotesTable.topicId} = ${id}
+      AND COALESCE(${forumPostVotesTable.replyId}, 0) = ${resolvedReplyId ?? 0}
+      AND ${forumPostVotesTable.voter} = ${resolved.resolvedAuthor}
+    `);
     const [row] = await db.insert(forumPostVotesTable).values({
       topicId: id,
       replyId: resolvedReplyId,
