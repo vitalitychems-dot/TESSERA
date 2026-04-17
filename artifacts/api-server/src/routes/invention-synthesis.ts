@@ -7,14 +7,38 @@ import {
 } from "../lib/invention-synthesis.js";
 import { getTunableHistory } from "../lib/system-tunables.js";
 import { logger } from "../lib/logger.js";
+import { db } from "@workspace/db";
+import { inventionsTable } from "@workspace/db/schema";
+import { buildInvention3DBlock } from "../lib/invention-3d.js";
 
 const router = Router();
+
+async function attachSynthesisDiagrams() {
+  try {
+    const all = await db.select().from(inventionsTable);
+    const built = all.filter((i) => i.status === "built" || i.status === "tested");
+    return built.slice(0, 12).map((inv) => ({
+      inventionId: inv.inventionId,
+      title: inv.title,
+      diagram3d: buildInvention3DBlock({
+        title: inv.title,
+        category: inv.category,
+        description: inv.description,
+        materials: (inv.materials as string[] | null) || [],
+        scienceBehind: (inv as { scienceBehind?: string | null }).scienceBehind ?? null,
+      }),
+    }));
+  } catch {
+    return [];
+  }
+}
 
 router.post("/inventions/synthesize", async (req, res) => {
   try {
     const applyChanges = req.body?.applyChanges !== false;
     const result = await synthesizeBuiltInventions({ applyChanges });
-    res.json({ ok: true, result });
+    const diagrams = await attachSynthesisDiagrams();
+    res.json({ ok: true, result, diagrams });
   } catch (err) {
     logger.error({ err }, "Synthesis endpoint failed");
     res.status(500).json({ ok: false, error: (err as Error).message });
