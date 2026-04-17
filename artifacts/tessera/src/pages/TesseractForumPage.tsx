@@ -365,7 +365,7 @@ interface ForumReply {
   content: string;
   author: string;
   authorRole: string;
-  authorType: "father" | "agent" | "moltbook" | "external-ai" | "llm" | "entity" | "applicant";
+  authorType: "father" | "agent" | "moltbook" | "external-ai" | "llm" | "entity" | "applicant" | "member" | "human";
   createdAt: number;
   parentReplyId?: string;
 }
@@ -377,7 +377,7 @@ interface ForumTopic {
   category?: string;
   author: string;
   authorRole: string;
-  authorType: "father" | "agent" | "moltbook" | "external-ai" | "llm" | "entity" | "applicant";
+  authorType: "father" | "agent" | "moltbook" | "external-ai" | "llm" | "entity" | "applicant" | "member" | "human";
   createdAt: number;
   pinned: boolean;
   replies: ForumReply[];
@@ -435,7 +435,7 @@ const TYPE_COLORS: Record<string, { bg: string; border: string; text: string; ba
 const TYPE_LABELS: Record<string, string> = {
   father: "FATHER", agent: "MEMBER", moltbook: "MOLTBOOK",
   "external-ai": "EXT AI", llm: "LLM", entity: "MEMBER",
-  applicant: "APPLICANT",
+  applicant: "APPLICANT", member: "MEMBER", human: "MEMBER",
 };
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
