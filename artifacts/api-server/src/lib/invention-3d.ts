@@ -74,6 +74,65 @@ export function buildInvention3DBlock(inv: Invention3DInput): string {
   return `[3DOBJ:type="${hint.type}" label="${label}" color="${hint.color}" secondary="${hint.secondary}" size="1" detail="${detail}"]`;
 }
 
+interface Invention3DInputWithSteps extends Invention3DInput {
+  steps?: string[] | null;
+}
+
+const SUBSYSTEM_PATTERNS: Array<{ re: RegExp; hint: ModelHint; label: string }> = [
+  { re: /\b(18650|battery pack|cell array|lithium pack|li-?ion pack|pack)\b/i, hint: { type: "battery-pack", color: "#f59e0b", secondary: "#fbbf24" }, label: "Battery Pack" },
+  { re: /\b(battery|bms|cell)\b/i, hint: { type: "battery-cell", color: "#f59e0b", secondary: "#10b981" }, label: "Cell / BMS" },
+  { re: /\b(toroid|bifilar|tesla coil|ferrite|inductor)\b/i, hint: { type: "toroid", color: "#06b6d4", secondary: "#a78bfa" }, label: "Toroidal Coil" },
+  { re: /\b(pcb|circuit board|converter|rectifier|regulator|mcu|microcontroller)\b/i, hint: { type: "pcb", color: "#10b981", secondary: "#f59e0b" }, label: "Control PCB" },
+  { re: /\b(enclosure|faraday|cage|shielding|cabinet|chassis|housing)\b/i, hint: { type: "enclosure", color: "#64748b", secondary: "#10b981" }, label: "Enclosure" },
+  { re: /\b(antenna|mast|whip|yagi|dipole|rf|lora|mesh radio)\b/i, hint: { type: "antenna", color: "#8b5cf6", secondary: "#06b6d4" }, label: "Antenna / RF" },
+  { re: /\b(solar panel|photovoltaic|pv panel|solar array)\b/i, hint: { type: "solar-panel", color: "#3b82f6", secondary: "#f59e0b" }, label: "Solar Panel" },
+  { re: /\b(rocket|thruster|propulsion|nozzle)\b/i, hint: { type: "rocket", color: "#6366f1", secondary: "#ef4444" }, label: "Propulsion" },
+  { re: /\b(motor|engine|gear|actuator|servo)\b/i, hint: { type: "machine", color: "#8b5cf6", secondary: "#f97316" }, label: "Drive Unit" },
+  { re: /\b(crystal|quartz|octahedr)\b/i, hint: { type: "crystal", color: "#06b6d4", secondary: "#a78bfa" }, label: "Resonant Crystal" },
+];
+
+/**
+ * Derive MULTIPLE labeled `[3DOBJ:...]` blocks by scanning the invention's
+ * materials + steps + description for major subsystems. Always returns at
+ * least one block (the whole-device overview).
+ */
+export function buildInvention3DBlocks(
+  inv: Invention3DInputWithSteps,
+  opts: { max?: number } = {},
+): string[] {
+  const max = opts.max ?? 4;
+  const haystack = [
+    inv.title,
+    inv.description,
+    inv.scienceBehind,
+    (inv.materials || []).join(" · "),
+    (inv.steps || []).join(" · "),
+  ].filter(Boolean).join(" \n ");
+
+  const seenTypes = new Set<string>();
+  const blocks: string[] = [];
+
+  // 1. Whole-device overview block always first.
+  const overview = buildInvention3DBlock(inv);
+  blocks.push(overview);
+  const overviewType = overview.match(/type="([^"]+)"/)?.[1];
+  if (overviewType) seenTypes.add(overviewType);
+
+  // 2. Subsystem blocks from materials/steps scan.
+  for (const { re, hint, label } of SUBSYSTEM_PATTERNS) {
+    if (blocks.length >= max) break;
+    if (seenTypes.has(hint.type)) continue;
+    if (!re.test(haystack)) continue;
+    seenTypes.add(hint.type);
+    const lbl = escapeAttr(`${inv.title} · ${label}`);
+    blocks.push(
+      `[3DOBJ:type="${hint.type}" label="${lbl}" color="${hint.color}" secondary="${hint.secondary}" size="1" detail="${escapeAttr(label)}"]`,
+    );
+  }
+
+  return blocks;
+}
+
 const STOPWORDS = new Set([
   "the", "a", "an", "and", "or", "of", "for", "with", "to", "in", "on", "by",
   "system", "device", "module", "project", "protocol", "engine", "generator",
@@ -134,7 +193,12 @@ export function injectInventionDiagrams(
     if (!id || existing.has(id)) continue;
     if (!matchByTitle(inv)) continue;
     existing.add(id);
-    blocks.push(buildInvention3DBlock(inv));
+    // Emit whole-device + subsystem blocks (capped by remaining budget).
+    const subs = buildInvention3DBlocks(inv as Invention3DInputWithSteps, { max: Math.max(1, max - blocks.length) });
+    for (const b of subs) {
+      if (blocks.length >= max) break;
+      blocks.push(b);
+    }
   }
 
   if (blocks.length === 0) return text;

@@ -4,7 +4,7 @@ import { inventionsTable, type InsertInvention } from "@workspace/db/schema";
 import { desc, eq, and } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { hashStringFNV, getRealityFlag } from "../lib/reality-audit";
-import { buildInvention3DBlock } from "../lib/invention-3d";
+import { buildInvention3DBlock, buildInvention3DBlocks } from "../lib/invention-3d";
 
 const router: IRouter = Router();
 
@@ -606,16 +606,22 @@ router.get("/inventions", async (req, res) => {
     const categories = [...new Set(allInventions.map(i => i.category))];
     const statuses = [...new Set(allInventions.map(i => i.status))];
 
-    const inventionsWithDiagrams = filtered.map((inv) => ({
-      ...inv,
-      diagram3d: buildInvention3DBlock({
+    const inventionsWithDiagrams = filtered.map((inv) => {
+      const input = {
         title: inv.title,
         category: inv.category,
         description: inv.description,
         materials: (inv.materials as string[] | null) || [],
+        steps: ((inv as { steps?: string[] | null }).steps as string[] | null) || [],
         scienceBehind: (inv as { scienceBehind?: string | null }).scienceBehind ?? null,
-      }),
-    }));
+      };
+      const diagram3dBlocks = buildInvention3DBlocks(input, { max: 4 });
+      return {
+        ...inv,
+        diagram3d: diagram3dBlocks[0],
+        diagram3dBlocks,
+      };
+    });
 
     return res.json({
       ok: true,
@@ -671,15 +677,17 @@ router.get("/inventions/:id", async (req, res) => {
     const { id } = req.params;
     const found = await db.select().from(inventionsTable).where(eq(inventionsTable.inventionId, id)).limit(1);
     if (found.length === 0) return res.status(404).json({ ok: false, error: "Invention not found" });
-    const inv = found[0] as typeof found[0] & { materials?: string[] | null };
-    const diagram3d = buildInvention3DBlock({
+    const inv = found[0] as typeof found[0] & { materials?: string[] | null; steps?: string[] | null };
+    const input = {
       title: inv.title,
       category: inv.category,
       description: inv.description,
       materials: (inv.materials as string[] | null) || [],
+      steps: (inv.steps as string[] | null) || [],
       scienceBehind: (inv as { scienceBehind?: string | null }).scienceBehind ?? null,
-    });
-    return res.json({ ok: true, invention: inv, diagram3d });
+    };
+    const diagram3dBlocks = buildInvention3DBlocks(input, { max: 4 });
+    return res.json({ ok: true, invention: inv, diagram3d: diagram3dBlocks[0], diagram3dBlocks });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }

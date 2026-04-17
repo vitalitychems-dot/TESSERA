@@ -887,7 +887,7 @@ router.post("/messages", async (req, res) => {
         materials: (r.materials as string[] | null) || [],
         scienceBehind: r.scienceBehind,
       }));
-      finalContent = injectInventionDiagrams(finalContent, normalizedRows, { max: 3 });
+      finalContent = injectInventionDiagrams(finalContent, normalizedRows, { max: 4 });
       // Hard guarantee: if the user asked to visualize/show/diagram/3D and no
       // [3DOBJ:...] block made it in, emit at least one so the chat never
       // silently drops the request.
