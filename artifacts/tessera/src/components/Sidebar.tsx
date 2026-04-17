@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/lib/adminContext";
 import { FONT_COLORS, ACCENT_COLORS, applyTheme } from "@/lib/theme-constants";
+import AdminKeyInput from "@/components/AdminKeyInput";
 
 const UNREAD_KEY = "tessera-read-convs";
 
@@ -388,6 +389,11 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      <div className="px-3 pb-4 pt-2 relative z-10">
+        <div className="h-px bg-gradient-to-r from-transparent via-white/[0.05] to-transparent mb-3" />
+        <AdminKeyInput />
+      </div>
     </>
   );
 
