@@ -924,8 +924,12 @@ async function buildOnExistingTopics(knowledge: KnowledgeInsight[], cycle: numbe
       const replyContent = await generateContextualReplyLLM(nextAgent, { title: topic.title, content: topic.content }, priorContents, knowledge, cycle);
       if (replyContent === null) continue;
 
+      const lastReply = existingReplies.length > 0 ? existingReplies[existingReplies.length - 1] : null;
+      const parentReplyId = lastReply && typeof (lastReply as { id?: number }).id === "number" ? (lastReply as { id: number }).id : null;
+
       await db.insert(forumRepliesTable).values({
         topicId: topic.id,
+        parentReplyId,
         content: replyContent,
         author: nextAgent.name,
         authorType: nextAgent.type,
