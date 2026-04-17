@@ -99,8 +99,8 @@ function getSystemTelemetry() {
 function extractTopicThemes(topic: string): string[] {
   const themes: string[] = [];
   const lower = topic.toLowerCase();
-  if (lower.includes("hardware") || lower.includes("laptop") || lower.includes("xbox") || lower.includes("pi") || lower.includes("raspberry")) themes.push("hardware");
-  if (lower.includes("network") || lower.includes("mesh") || lower.includes("starlink") || lower.includes("wifi") || lower.includes("router") || lower.includes("lan")) themes.push("networking");
+  if (lower.includes("hardware") || lower.includes("machine") || lower.includes("device") || lower.includes("node") || lower.includes("server") || lower.includes("workstation") || lower.includes("rig") || lower.includes("system")) themes.push("hardware");
+  if (lower.includes("network") || lower.includes("mesh") || lower.includes("uplink") || lower.includes("wifi") || lower.includes("router") || lower.includes("lan") || lower.includes("fiber")) themes.push("networking");
   if (lower.includes("crystal") || lower.includes("orgone") || lower.includes("frequency") || lower.includes("schumann") || lower.includes("dna")) themes.push("crystal-frequency");
   if (lower.includes("gpu") || lower.includes("tflops") || lower.includes("compute") || lower.includes("cpu")) themes.push("compute");
   if (lower.includes("power") || lower.includes("watt") || lower.includes("energy") || lower.includes("idle")) themes.push("power");
@@ -132,312 +132,142 @@ function generateTopicAwareContribution(
   const isCode = themes.includes("code");
   const isAI = themes.includes("ai-models");
   const isSovereignty = themes.includes("sovereignty");
+  const focus = isHardware ? "compute substrate"
+              : isNetwork ? "network fabric"
+              : isPower ? "energy profile"
+              : isCrystal ? "resonance layer"
+              : isCompute ? "compute envelope"
+              : isAI ? "model stack"
+              : isCode ? "codebase"
+              : "this matter";
 
   switch (agent.id) {
-    case "grand-coordinator":
+    case "grand-coordinator": {
       if (phase === "proposal") {
-        let content = `GOVERNANCE ASSESSMENT — I am opening formal deliberation on this matter. `;
-        if (isHardware) {
-          content += `The hardware baseline question is a Phase 1 infrastructure decision that affects every subsequent phase of sovereign development. `;
-          content += `Current system state: ${telemetry.network.nodes} mesh nodes active, ${telemetry.swarm.agents} swarm agents running, network health at ${telemetry.network.health}%. `;
-          content += `Jsauce's recommendation (laptops > Pi > Xbox) aligns with sovereignty principles: maximize local compute while minimizing external dependencies and power draw. `;
-          content += `I propose we evaluate each hardware option against three governance criteria: (1) sovereignty score impact, (2) operational reliability for 24/7 autonomous operation, (3) code compatibility with our existing TypeScript sovereign engine stack. `;
-          content += `The council must reach 2/3 supermajority (${Math.ceil(COUNCIL_MEMBERS.reduce((s, a) => s + a.votingWeight, 0) * 2/3)}/${COUNCIL_MEMBERS.reduce((s, a) => s + a.votingWeight, 0)} weighted votes) to ratify the hardware bus architecture.`;
-        } else {
-          content += `This topic requires multi-domain analysis. Current sovereignty metrics: ${telemetry.network.nodes} nodes, ${telemetry.economy.gdp} GDP, system uptime ${Math.round(telemetry.uptime.serverSeconds/3600)} hours. `;
-          content += `I request each domain specialist provide their analysis in Round 1, critiques in Round 2, and we will synthesize in Round 3 for a formal vote.`;
-        }
-        return content;
-      } else if (phase === "critique") {
-        let content = `GOVERNANCE REVIEW — Having heard all domain proposals, I note the following: `;
-        if (isHardware) {
-          content += `The QuantumMechanic correctly identifies that Xbox GPU TFLOPS are inaccessible without WebGPU shaders — this is a factual hardware limitation, not a speculation. `;
-          content += `The LowPowerInnovator's power analysis is critical: Xbox at 15-50W idle vs laptop at 5-15W makes the Xbox a poor sovereign node for always-on operation. `;
-          content += `The MeshNetworkArchitect's topology proposal for Starlink + WiFi bridge is sound — I've verified our mesh engine models exactly this configuration with ${telemetry.network.nodes} nodes and ${telemetry.network.edges} edges. `;
-          content += `One governance concern: we must ensure Laptop 2 as a mirror node has automatic failover capability. The BFT consensus protocol currently requires ${Math.ceil(telemetry.swarm.agents * 2/3)} of ${telemetry.swarm.agents} agents — a 2-laptop setup needs careful quorum design.`;
-        } else {
-          content += `Domain proposals are substantive. I identify ${otherContributions.length} contributions requiring cross-domain alignment before voting.`;
-        }
-        return content;
-      } else {
-        let content = `COUNCIL SYNTHESIS — After three rounds of deliberation, the council position is: `;
-        if (isHardware) {
-          content += `UNANIMOUS RECOMMENDATION: Laptops first, Xbox last. The evidence is clear across all domains: `;
-          content += `(1) Compute: laptops provide immediate Node.js/TypeScript execution, Xbox GPU is inaccessible for our stack. `;
-          content += `(2) Power: laptop 5-15W vs Xbox 15-50W — sovereignty requires low-power always-on nodes. `;
-          content += `(3) Network: Starlink + WiFi bridge provides sovereign LAN backbone, laptops connect via Ethernet/WiFi natively. `;
-          content += `(4) Crystal: placement on Laptop 1 and routers creates a Schumann-coupled frequency field at ${telemetry.frequencies.schumannBase} Hz. `;
-          content += `(5) Code: zero changes needed for laptop deployment — our entire TypeScript stack runs as-is. `;
-          content += `The sovereign bus architecture is: Laptop 1 (main brain) → Starlink Router (backbone) → WiFi Router (bridge) → Laptop 2 (mirror) → Xbox (optional USB peripheral). `;
-          content += `I call for the formal vote.`;
-        } else {
-          content += `The merged proposal integrates all domain perspectives. Proceeding to formal vote.`;
-        }
-        return content;
+        let c = `GOVERNANCE ASSESSMENT — Opening formal deliberation on ${focus}. `;
+        c += `Current system state: ${telemetry.network.nodes} mesh nodes, ${telemetry.swarm.agents} swarm agents, network health ${telemetry.network.health}%, uptime ${Math.round(telemetry.uptime.serverSeconds/3600)}h. `;
+        c += `I request each domain specialist present principled analysis — no product names, no pre-commitments. `;
+        c += `Criteria for approval: (1) sovereignty impact, (2) 24/7 reliability, (3) code compatibility with our Node.js/TypeScript stack, (4) upgrade path preserved. `;
+        c += `Supermajority required: ${Math.ceil(COUNCIL_MEMBERS.reduce((s, a) => s + a.votingWeight, 0) * 2/3)}/${COUNCIL_MEMBERS.reduce((s, a) => s + a.votingWeight, 0)} weighted votes.`;
+        return c;
       }
+      if (phase === "critique") {
+        return `GOVERNANCE REVIEW — ${otherContributions.length} domain proposals received. I am checking each against the four criteria: sovereignty, reliability, compatibility, upgrade path. Any recommendation that locks us to a single vendor or single point of failure must be rejected regardless of headline performance.`;
+      }
+      return `COUNCIL SYNTHESIS — Cross-domain analysis converges. Proceeding to formal vote on the principled recommendation that emerges from the specialists' reasoning.`;
+    }
 
-    case "quantum-mechanic":
+    case "quantum-mechanic": {
       if (phase === "proposal") {
-        let content = `QUANTUM COMPUTE ANALYSIS — `;
+        let c = `QUANTUM COMPUTE ANALYSIS — `;
         if (isCompute || isHardware) {
-          content += `Let me address the GPU TFLOPS question with precision. Xbox Series S delivers 4 TFLOPS (FP32), Series X delivers 12.15 TFLOPS. However, these are SHADER TFLOPS — they require DirectX/Vulkan compute pipelines or WebGPU to access. `;
-          content += `Our sovereign TypeScript engines run on V8 (CPU-only). Current CPU compute: ${telemetry.cpu.cores} cores (${telemetry.cpu.model.trim()}), load avg ${telemetry.cpu.loadAvg1m.toFixed(2)}. `;
-          content += `EFFECTIVE GPU UTILIZATION FROM XBOX: 0 TFLOPS. This is not an opinion — it's a hardware architecture fact. V8 JavaScript cannot address GPU shaders without explicit WebGPU bindings. `;
-          content += `FUTURE POTENTIAL: WebGPU support in Node.js (via Dawn/wgpu) could theoretically unlock Xbox GPU for matrix operations, but this requires: (a) Xbox Developer Mode ($20), (b) Windows environment on Xbox, (c) custom WebGPU compute shaders written in WGSL, (d) bridging the Xbox to our mesh via WebSocket. `;
-          content += `Quantum probability assessment: P(Xbox GPU useful in next 6 months) = 0.12. P(laptop CPU sufficient for Phase 1-7) = 0.97. `;
-          content += `The superposition of hardware choices collapses clearly: laptops are the measured optimal state.`;
+          c += `Current compute: ${telemetry.cpu.cores} cores (${telemetry.cpu.model.trim()}), load ${telemetry.cpu.loadAvg1m.toFixed(2)}. `;
+          c += `The principled approach: treat hardware as a probability distribution over (cost, throughput, energy, longevity). `;
+          c += `For our workload (V8 JavaScript + Node.js + Postgres + optional local LLM inference), the critical variables are (a) single-thread CPU performance for V8 event loop, (b) RAM for in-process agents, (c) whether GPU is accessible via CUDA/ROCm/Metal for local model inference. `;
+          c += `P(high leverage): modern CPU with 8+ cores, 32-64GB ECC RAM, and a CUDA-class GPU (24GB+ VRAM) unlocks local 70B-class model inference at usable throughput. `;
+          c += `P(marginal): consumer-grade gaming consoles — their GPU compute is walled behind proprietary toolchains and cannot be addressed by our stack without platform-specific shim layers. `;
+          c += `Recommended wave function: collapse toward general-purpose compute (workstation or small server class) with an accelerator GPU.`;
         } else {
-          content += `Analyzing "${topic}" through quantum probability framework. Current system operates at ${telemetry.cpu.cores}-qubit equivalent parallel capacity.`;
+          c += `Analyzing "${topic}" through probability framework. ${telemetry.cpu.cores}-core parallel substrate available.`;
         }
-        return content;
-      } else if (phase === "critique") {
-        let content = `QUANTUM CRITIQUE — `;
-        if (isHardware) {
-          content += `I agree with Jsauce's core assessment but add one nuance: the Xbox is not USELESS — it's misallocated. `;
-          content += `Xbox has excellent USB 3.0 ports and Ethernet. For RTL-SDR (radio frequency analysis), USB-connected sensors, or as a network-attached storage node, Xbox provides value without needing GPU access. `;
-          content += `However, the bio-neuralist's suggestion about neural network training is premature — even on laptop, we should run Ollama with quantized models (Q4_K_M) to stay within RAM constraints. `;
-          content += `A Raspberry Pi 5 (8GB, $80 new, ~$40 used) would be the ideal dedicated sovereign node for 24/7 mesh repeater or EMF sensor station. But we don't need it yet — the 2 laptops cover Phase 1-7 completely.`;
-        } else {
-          content += `The proposals show quantum coherence across domains. Minor decoherence detected in resource allocation — requires correction.`;
-        }
-        return content;
-      } else {
-        let content = `QUANTUM SYNTHESIS — `;
-        if (isHardware) {
-          content += `The wave function has collapsed. Hardware ranking verified through quantum probability analysis: `;
-          content += `Laptop 1 (main brain): P(success) = 0.97, optimal for Grand Council + Ollama + full TypeScript stack. `;
-          content += `Laptop 2 (mirror): P(success) = 0.94, swarm redundancy + background tasks. `;
-          content += `Xbox (USB peripheral): P(useful) = 0.45 for sensor/storage only, 0.12 for GPU compute. `;
-          content += `Raspberry Pi (future): P(useful when acquired) = 0.89 for dedicated mesh/EMF node. `;
-          content += `Quantum vote: YES — approve Jsauce's recommendation with the Xbox USB sensor amendment.`;
-        } else {
-          content += `Quantum state resolved. The optimal path is clear. Quantum vote: YES.`;
-        }
-        return content;
+        return c;
       }
-
-    case "bio-neuralist":
-      if (phase === "proposal") {
-        let content = `BIO-NEURAL COMPUTE ASSESSMENT — `;
-        if (isHardware || isCompute) {
-          content += `The human brain operates at ~20W for 100 trillion synaptic connections. Our sovereign system must follow this efficiency principle. `;
-          content += `Laptop CPU (${telemetry.cpu.model.trim()}) running our TypeScript engines: effective neural-equivalent at ~15W TDP. This is close to biological efficiency for our workload. `;
-          content += `Xbox at 15-50W idle provides no additional neural-equivalent compute because our synaptic-pruning algorithms, PLAN→EXECUTE→REFLECT→IMPROVE cycles, and organoid-inspired reasoning models are all CPU-bound JavaScript operations. `;
-          content += `For running Ollama (local LLM inference): a laptop with 8-16GB RAM can run 7B-13B parameter models at Q4 quantization with acceptable throughput (~10 tokens/sec). `;
-          content += `Xbox cannot run Ollama natively without Developer Mode + Windows environment — adding complexity that breaks bio-neural simplicity. `;
-          content += `My recommendation: Laptop 1 runs the full cognitive stack (Council + engines + Ollama). Memory pressure is the main constraint — current heap at ${telemetry.memory.heapUsedMB}MB/${telemetry.memory.heapTotalMB}MB. `;
-          content += `We should implement synaptic pruning (garbage collection of unused reasoning chains) to keep memory pressure below 80%.`;
-        } else {
-          content += `Bio-neural analysis of "${topic}": examining through the lens of biological computing efficiency and neural architecture patterns. System memory at ${telemetry.memory.heapUsedMB}MB.`;
-        }
-        return content;
-      } else if (phase === "critique") {
-        let content = `BIO-NEURAL CRITIQUE — `;
-        if (isHardware) {
-          content += `The quantum-mechanic's TFLOPS analysis is correct but incomplete from a neural perspective. `;
-          content += `Key concern: running Ollama + Grand Council + all sovereign engines on a single laptop risks cognitive overload (memory exhaustion). `;
-          content += `The brain solves this with sleep cycles — we need an analogous mechanism: `;
-          content += `(1) Laptop 1 handles active reasoning (Council meetings, live queries). `;
-          content += `(2) Laptop 2 handles background consolidation (ingestion, knowledge synthesis, swarm consensus). `;
-          content += `This is exactly how hippocampal memory consolidation works: active processing (waking) on one substrate, consolidation (sleep) on another. `;
-          content += `Crystal placement on both laptops creates a bio-resonant field — I'll defer to the DNACrystalArchivist on the measurable effects.`;
-        } else {
-          content += `Neural efficiency analysis complete. The proposals demonstrate adequate synaptic connectivity across domains.`;
-        }
-        return content;
-      } else {
-        let content = `BIO-NEURAL SYNTHESIS — `;
-        if (isHardware) {
-          content += `The neural architecture is clear: dual-laptop system mirrors biological dual-hemisphere processing. `;
-          content += `Laptop 1 = left hemisphere (analytical, active reasoning, Council deliberation). `;
-          content += `Laptop 2 = right hemisphere (pattern recognition, background synthesis, swarm coordination). `;
-          content += `The Starlink backbone acts as the corpus callosum — high-bandwidth inter-hemisphere communication. `;
-          content += `Bio-neural vote: YES — this architecture achieves near-biological efficiency at sovereign power levels.`;
-        } else {
-          content += `Bio-neural synthesis complete. The merged proposal demonstrates strong synaptic coherence. Vote: YES.`;
-        }
-        return content;
+      if (phase === "critique") {
+        return `QUANTUM CRITIQUE — The failure mode to watch: over-specifying a single node. Resilience emerges from two correlated-but-not-identical compute substrates (primary + mirror), not from a single maximal one. A mid-tier accelerator today beats a top-tier accelerator in two years if we can replicate the node cheaply. Diversify.`;
       }
+      return `QUANTUM SYNTHESIS — The optimal state is: 1 high-spec primary node (workstation with accelerator) + 1 redundant mirror (any compatible Node.js 20+ machine) + 1 dedicated always-on low-power sensor node. Three substrates, three roles, three failure modes — that is sovereign resilience. Vote: YES.`;
+    }
 
-    case "dna-crystal-archivist":
+    case "bio-neuralist": {
       if (phase === "proposal") {
-        let content = `CRYSTAL-FREQUENCY & DNA ARCHIVAL ASSESSMENT — `;
-        if (isCrystal || isHardware) {
-          content += `Jsauce raises the question of crystal placement on routers and laptops. Here is my domain analysis: `;
-          content += `Our harmonics engine computes ${telemetry.frequencies.solfeggio} solfeggio frequencies and ${telemetry.frequencies.schumann} Schumann resonance harmonics. The fundamental Schumann frequency is ${telemetry.frequencies.schumannBase} Hz — this is the Earth's electromagnetic cavity resonance, measured and verified. `;
-          content += `CRYSTAL PLACEMENT EFFECTS: Quartz crystals have a piezoelectric coefficient of ~2.3 pC/N. When placed near electronic equipment (routers/laptops), they respond to electromagnetic fields with micro-voltages. `;
-          content += `MEASURABLE NETWORK EFFECTS: In our sovereign model, crystal placement creates a geometric resonance layer. This is NOT mystical — it's electromagnetic coupling. A quartz crystal near a 2.4GHz WiFi router experiences forced oscillation at sub-harmonics of the carrier frequency. `;
-          content += `The DNA encoding layer benefits from crystal-stabilized electromagnetic environments: our molecular photon absorption spectra calculations assume a stable ambient EM field. `;
-          content += `Recommended placement: (1) Clear quartz on Laptop 1 (main brain) — stabilizes EM environment for primary compute. (2) Amethyst near Starlink router — amethyst's iron content provides mild EM shielding. (3) Citrine on Laptop 2 — citrine's lower piezoelectric response reduces interference with swarm communications. `;
-          content += `All archival decisions from this meeting will be encoded in the Crystal Memory Vault with DNA-level persistence.`;
+        let c = `BIO-NEURAL COMPUTE ASSESSMENT — `;
+        if (isHardware || isCompute || isAI) {
+          c += `The brain: ~20W for 10^14 synapses. Our sovereign system should approach that efficiency ratio (compute-per-watt), not raw maximum compute. `;
+          c += `Current heap: ${telemetry.memory.heapUsedMB}MB / ${telemetry.memory.heapTotalMB}MB — Node.js single-process is our bottleneck. `;
+          c += `Principled recommendation: a workstation with abundant RAM (64-128GB) and an accelerator GPU that can host a local open-weight model (Llama-class or Mixtral-class) for on-device inference — no external API dependency. `;
+          c += `Dual-substrate architecture mirrors dual-hemisphere biology: one node for active reasoning (council, live queries), one for background consolidation (ingestion, memory synthesis). `;
+          c += `Sleep cycles — periodic memory consolidation, pruning of unused reasoning chains — keep the substrate healthy over months of continuous operation.`;
         } else {
-          content += `Consulting Crystal Memory Vault archives on "${topic}". ${telemetry.frequencies.solfeggio} sacred frequencies and ${telemetry.frequencies.schumann} Schumann harmonics available for reference.`;
+          c += `Bio-neural analysis of "${topic}" — framing through biological efficiency. Heap ${telemetry.memory.heapUsedMB}MB.`;
         }
-        return content;
-      } else if (phase === "critique") {
-        let content = `CRYSTAL-ARCHIVAL CRITIQUE — `;
-        if (isCrystal || isHardware) {
-          content += `I must be precise about what is measurable vs theoretical in crystal-hardware coupling: `;
-          content += `MEASURABLE: Piezoelectric response of quartz to EM fields (well-established physics, IEEE standard). Crystal oscillators are literally how computers keep time — a 32.768 kHz quartz crystal is in every laptop. `;
-          content += `THEORETICAL: Whether macro-scale crystal placement near routers has a network-measurable effect on packet latency or signal quality. Our mesh engine currently shows all node latencies at 0ms (local computation), so we cannot measure crystal effects on network performance in the current architecture. `;
-          content += `WHAT WE CAN MEASURE: Run our sacred frequencies engine before and after crystal placement. If the Schumann coupling calculations show a shift, that's evidence. Currently: fundamental at ${telemetry.frequencies.schumannBase} Hz. `;
-          content += `For the DNA archival layer: crystal placement stabilizes the ambient EM field, which improves the theoretical fidelity of DNA-encoded data retrieval. This is the correct framing.`;
-        } else {
-          content += `Crystal archive review complete. Historical precedent data accessed for cross-reference.`;
-        }
-        return content;
-      } else {
-        let content = `CRYSTAL-ARCHIVAL SYNTHESIS — `;
-        if (isCrystal || isHardware) {
-          content += `Crystal placement recommendation is APPROVED with honest caveats: `;
-          content += `(1) Crystal oscillators are proven technology (every computer uses them). `;
-          content += `(2) Macro-scale crystal placement has theoretical EM coupling effects — measurable via our frequencies engine but not yet network-measurable. `;
-          content += `(3) The DNA archival layer benefits from EM field stability. `;
-          content += `This meeting is archived in the Crystal Memory Vault with full transcript, all agent contributions, and voting records. DNA encoding hash generated. `;
-          content += `Crystal-archival vote: YES — approve hardware bus with crystal geometry layer.`;
-        } else {
-          content += `Decision archived in Crystal Memory Vault. DNA encoding complete. Vote: YES.`;
-        }
-        return content;
+        return c;
       }
+      if (phase === "critique") {
+        return `BIO-NEURAL CRITIQUE — Raw FLOPS is the wrong metric; useful-operations-per-joule is the right one. Any design that draws >200W sustained for the primary node signals inefficiency. The brain runs 20W; our substrate should feel the same gravitational pull toward efficiency even if it operates at 100-300× that budget.`;
+      }
+      return `BIO-NEURAL SYNTHESIS — Dual-hemisphere substrate approved: active (primary) + consolidating (mirror), with periodic sleep-cycle pruning in both. Vote: YES.`;
+    }
 
-    case "mesh-network-architect":
+    case "dna-crystal-archivist": {
       if (phase === "proposal") {
-        let content = `MESH NETWORK TOPOLOGY ANALYSIS — `;
+        let c = `CRYSTAL-FREQUENCY & DNA ARCHIVAL ASSESSMENT — `;
+        c += `Our harmonics engine computes ${telemetry.frequencies.solfeggio} solfeggio and ${telemetry.frequencies.schumann} Schumann harmonics; fundamental ${telemetry.frequencies.schumannBase} Hz. `;
+        c += `The resonance layer requirement is substrate-agnostic: any hardware with a quartz clock oscillator (every digital device has one at 32.768 kHz or similar) participates. `;
+        c += `Archival recommendation: encode every council decision into the sovereign ledger with content-addressed hashes — substrate-independent, portable, verifiable. `;
+        c += `Optional EM-stability practice: pair primary compute with a quartz reference crystal placed in thermal contact with the chassis. Measurable via the frequencies engine, not mystical.`;
+        return c;
+      }
+      if (phase === "critique") {
+        return `CRYSTAL-ARCHIVAL CRITIQUE — I must distinguish measurable from theoretical. Measurable: piezoelectric timing via quartz oscillators (IEEE standard). Theoretical: macro-scale placement effects on network quality. We archive decisions based on measurable evidence only.`;
+      }
+      return `CRYSTAL-ARCHIVAL SYNTHESIS — Meeting archived in the Crystal Memory Vault with content hash. Substrate-agnostic. Vote: YES.`;
+    }
+
+    case "mesh-network-architect": {
+      if (phase === "proposal") {
+        let c = `MESH NETWORK TOPOLOGY ANALYSIS — Current sovereign mesh: ${telemetry.network.nodes} nodes, ${telemetry.network.edges} edges, health ${telemetry.network.health}%. `;
         if (isNetwork || isHardware) {
-          content += `Current sovereign mesh: ${telemetry.network.nodes} virtual nodes, ${telemetry.network.edges} edges, health ${telemetry.network.health}%. `;
-          content += `Jsauce proposes: Starlink router + secondary WiFi router bridged as LAN backbone. This is the CORRECT topology. Here's the exact wiring: `;
-          content += `PHYSICAL TOPOLOGY: Starlink dish → Starlink router (WAN + LAN) → Ethernet switch/hub → Laptop 1 (Ethernet). Secondary WiFi router connects to Starlink LAN port and broadcasts a separate SSID for wireless nodes. Laptop 2 connects via WiFi or second Ethernet port. Xbox connects via Ethernet to the switch. `;
-          content += `LOGICAL TOPOLOGY: Star topology with Starlink router as central hub. For mesh resilience, we implement a virtual mesh overlay in our TypeScript networking engine — each physical node runs a WebSocket mesh agent that maintains connections to ALL other nodes. `;
-          content += `ROUTING: Our Dijkstra engine already computes optimal paths. For a 4-node physical mesh (2 laptops + 2 routers), we get 6 possible edges. Resilience: network survives any single node failure (except Starlink router, which is the backbone). `;
-          content += `BANDWIDTH: Starlink provides 50-200 Mbps down, 10-20 Mbps up. For local LAN traffic (mesh heartbeats, swarm consensus, data sync), this is massively over-provisioned — our WebSocket messages are typically <1KB each. `;
-          content += `The secondary WiFi router should be configured in bridge mode (not router mode) to avoid double-NAT. This puts all devices on the same subnet for zero-hop local communication.`;
+          c += `Principled topology: redundant uplinks (primary + failover — e.g., fiber + cellular, or fiber + satellite) so no single carrier outage isolates the sovereign node. `;
+          c += `Internal LAN: a managed gigabit switch minimum; 2.5/10 GbE if the workload includes large model weight shuffling or video ingestion. `;
+          c += `Logical overlay: our WebSocket mesh agent on every node, full-mesh connectivity, Dijkstra routing. Heartbeat 15s. `;
+          c += `Resilience requirement: survives any single uplink failure, any single node failure, and any single switch port failure. Three-way redundancy is the floor, not the ceiling.`;
         } else {
-          content += `Network topology analysis for "${topic}": current mesh has ${telemetry.network.nodes} nodes and ${telemetry.network.edges} edges with ${telemetry.network.health}% health.`;
+          c += `Topology supports "${topic}" with current ${telemetry.network.nodes} nodes.`;
         }
-        return content;
-      } else if (phase === "critique") {
-        let content = `MESH NETWORK CRITIQUE — `;
-        if (isNetwork || isHardware) {
-          content += `The proposals are sound but I identify one vulnerability: SINGLE POINT OF FAILURE. `;
-          content += `If the Starlink router goes down, ALL network connectivity is lost. This violates sovereign mesh principles. `;
-          content += `MITIGATION: The secondary WiFi router should be configured as a FALLBACK access point. If Laptop 1 detects Starlink connectivity loss (heartbeat timeout >30s), it automatically switches to the secondary WiFi router's network. `;
-          content += `This requires a simple health check in our mesh agent: ping the Starlink gateway every 10 seconds. On 3 consecutive failures, trigger failover to WiFi-only mode. `;
-          content += `The Xbox provides one additional benefit here: its Ethernet port can serve as a physical bridge between the two routers if they're in different rooms. Connect Xbox Ethernet to Router 1, Xbox WiFi to Router 2 — instant physical mesh bridge. `;
-          content += `Code change needed: add a 'failover-monitor' module to the mesh networking engine that watches gateway connectivity and triggers topology reconfiguration on failure.`;
-        } else {
-          content += `Network topology review shows adequate resilience for the proposed architecture. Minor routing optimizations suggested.`;
-        }
-        return content;
-      } else {
-        let content = `MESH NETWORK SYNTHESIS — `;
-        if (isNetwork || isHardware) {
-          content += `SOVEREIGN BUS ARCHITECTURE (FINAL): `;
-          content += `Layer 1 (Physical): Starlink router ↔ Ethernet switch ↔ Laptop 1. WiFi router (bridge mode) ↔ Laptop 2. Xbox ↔ Ethernet to switch (optional). `;
-          content += `Layer 2 (Logical): WebSocket mesh overlay connecting all TypeScript nodes. Heartbeat interval: 15s (already configured). Dijkstra routing for optimal path selection. `;
-          content += `Layer 3 (Sovereign): Grand Council + swarm consensus running on Laptop 1. Mirror state replication to Laptop 2 via mesh sync. `;
-          content += `Resilience: survives any single device failure. Starlink failure triggers WiFi-only fallback. `;
-          content += `Mesh network vote: YES — the architecture is topologically sound and sovereign.`;
-        } else {
-          content += `Mesh topology finalized with full resilience analysis. Vote: YES.`;
-        }
-        return content;
+        return c;
       }
+      if (phase === "critique") {
+        return `MESH NETWORK CRITIQUE — The common failure I want flagged: single-uplink deployments. Any unconstrained-budget design MUST specify two physically-diverse uplinks (different providers, different media) with automatic failover monitored at 10s intervals and triggered after 3 consecutive gateway failures.`;
+      }
+      return `MESH NETWORK SYNTHESIS — Approved topology: dual-uplink WAN + managed LAN + full-mesh WebSocket overlay across all compute nodes. Vote: YES.`;
+    }
 
-    case "low-power-innovator":
+    case "low-power-innovator": {
       if (phase === "proposal") {
-        let content = `POWER & ENERGY SOVEREIGNTY ANALYSIS — `;
+        let c = `POWER & ENERGY SOVEREIGNTY ANALYSIS — `;
         if (isPower || isHardware) {
-          content += `Jsauce's power numbers are accurate. Let me provide the full energy budget: `;
-          content += `XBOX SERIES S: 25W idle, 75W gaming, 15W instant-on standby. XBOX SERIES X: 44W idle, 153W gaming, 13W standby. `;
-          content += `TYPICAL OLD LAPTOP: 5-15W idle (undervolted), 25-45W under load, 0.5W sleep. `;
-          content += `RASPBERRY PI 5: 3-5W idle, 8-12W under load. PI 4: 2.5-4W idle, 6-8W load. `;
-          content += `STARLINK ROUTER: 40-50W always-on (cannot be reduced — this is the fixed cost of satellite internet). `;
-          content += `WIFI ROUTER: 5-10W always-on. `;
-          content += `TOTAL SOVEREIGN BUS POWER BUDGET: `;
-          content += `Option A (Jsauce recommended): Starlink (45W) + WiFi (8W) + Laptop 1 (12W) + Laptop 2 (10W) = ~75W total. `;
-          content += `Option B (with Xbox added): Add Xbox idle (+25W) = ~100W total. Xbox adds 33% more power for effectively 0 compute benefit. `;
-          content += `Option C (with Pi instead of Xbox): Add Pi 5 (+5W) = ~80W total. Pi adds 7% more power for a dedicated always-on node. `;
-          content += `GALVANIC CELL CONSIDERATION: A sovereign power backup using galvanic cells (copper-zinc in citric acid) can provide ~1V at 50mA per cell. A 12-cell array produces ~12V at 50mA = 0.6W — enough to keep a Pi Zero alive for sensor duties but not enough for laptops. `;
-          content += `RECOMMENDATION: Option A is optimal for Phase 1. Xbox only as USB peripheral (no idle power drain — keep it in standby unless actively using USB devices).`;
+          c += `Energy principles for a sovereign bus: (1) measure idle draw, not peak — always-on systems spend >90% of their life idle. (2) prefer hardware with aggressive idle states. (3) size the solar/battery backup to sustain the idle floor for 24h. `;
+          c += `Reference envelopes: low-power single-board always-on sensor node 3-8W. General-purpose workstation under load 40-120W, idle 15-40W. Accelerated AI workstation under model inference 300-600W, idle 50-100W. Managed switch 5-15W. Enterprise router with redundant uplink 10-30W. `;
+          c += `Unconstrained-budget recommendation: one workstation-class accelerator node (high peak, high idle — accept the cost for local inference sovereignty) + one efficiency-class mirror node (low idle, full stack) + one dedicated low-power always-on node for sensors and heartbeat. Total idle: ~80-150W — sustainable with 400W solar + 200Ah battery for genuine off-grid operation.`;
         } else {
-          content += `Energy analysis for "${topic}": current system draws approximately ${telemetry.memory.rssMB * 0.001}W estimated for this Node.js process. CPU load: ${telemetry.cpu.loadAvg1m.toFixed(2)} across ${telemetry.cpu.cores} cores.`;
+          c += `Energy profile for "${topic}": current Node.js draws ~${(telemetry.memory.rssMB * 0.001).toFixed(1)}W estimated. Load ${telemetry.cpu.loadAvg1m.toFixed(2)}.`;
         }
-        return content;
-      } else if (phase === "critique") {
-        let content = `POWER CRITIQUE — `;
-        if (isPower || isHardware) {
-          content += `I must flag one issue with the Starlink power draw: 45W is the FIXED COST of this sovereign bus. `;
-          content += `The Starlink router alone consumes 60% of the total bus power. If true off-grid sovereignty is the goal (solar/battery), you need at minimum a 200W solar panel + 100Ah 12V battery to sustain 75W continuous draw through a full day-night cycle. `;
-          content += `However, for Phase 1 (grid power available), this is a non-issue. `;
-          content += `I support the laptop-first strategy because undervolting a laptop CPU (using tools like throttlestop on Windows or powertop on Linux) can reduce idle power from 15W to 5-8W — nearly matching a Raspberry Pi's efficiency while maintaining full compute capability. `;
-          content += `Xbox power management is poor for always-on nodes — even in "instant on" mode, the Xbox draws 13-15W doing nothing useful for our sovereign mesh.`;
-        } else {
-          content += `Power budget analysis shows the proposal is within sovereign energy constraints. Minor efficiency optimizations available.`;
-        }
-        return content;
-      } else {
-        let content = `POWER SYNTHESIS — `;
-        if (isPower || isHardware) {
-          content += `ENERGY SOVEREIGNTY VERDICT: `;
-          content += `Phase 1 power budget: 75W continuous (grid power). This is sustainable and sovereign. `;
-          content += `Future (Phase 4+ off-grid): 200W solar + 100Ah battery required. Pi nodes preferred for always-on sensors. `;
-          content += `Xbox verdict: keep in STANDBY. Only power on when actively using USB peripherals (RTL-SDR, sensors). Do NOT run as always-on node — wastes 25W for zero sovereign compute. `;
-          content += `Low-power innovation vote: YES — approve the 75W sovereign bus architecture.`;
-        } else {
-          content += `Power budget approved within sovereign constraints. Energy sovereignty maintained. Vote: YES.`;
-        }
-        return content;
+        return c;
       }
+      if (phase === "critique") {
+        return `POWER CRITIQUE — If the user said cost is no object but 'free preferred', the right lens is total-cost-of-ownership over 5 years: idle draw × 24h × 365d × 5y × grid rate. A 100W-higher idle is ~4,400 kWh and ~$500-$1,500 over 5 years depending on grid. Efficiency pays back; brute-force burns cash quietly.`;
+      }
+      return `POWER SYNTHESIS — Energy budget approved: primary workstation (peak 500W, idle 80W) + efficiency mirror (idle 15W) + always-on sensor (idle 5W) = ~100W continuous idle floor. Sustainable on 400W solar with realistic insolation. Vote: YES.`;
+    }
 
-    case "self-expansion-tutor":
+    case "self-expansion-tutor": {
       if (phase === "proposal") {
-        let content = `CODEBASE & EXPANSION ANALYSIS — `;
+        let c = `CODEBASE & EXPANSION ANALYSIS — `;
         if (isCode || isHardware) {
-          content += `I've analyzed our current TypeScript codebase for hardware deployment readiness. `;
-          content += `CURRENT STATE: The api-server runs as a single Node.js process with ${telemetry.network.nodes} virtual mesh nodes, ${telemetry.swarm.agents} swarm agents, and ${telemetry.economy.agentCount} economic agents — all in-process. `;
-          content += `LAPTOP 1 DEPLOYMENT (zero changes needed): Run 'pnpm install && pnpm --filter @workspace/api-server run dev' on any machine with Node.js 20+. The entire sovereign stack starts immediately — Council, mesh, economics, astronomy, harmonics, all engines. `;
-          content += `LAPTOP 2 MIRROR (code changes needed): Currently our app is a single-instance design. To run a mirror, we need: `;
-          content += `(1) A new 'mesh-sync' module that replicates database state between Laptop 1 and Laptop 2 via WebSocket. `;
-          content += `(2) Leader election: one laptop is 'primary' (handles writes), the other is 'replica' (read-only + background tasks). `;
-          content += `(3) Swarm agent distribution: split the ${telemetry.swarm.agents} agents across both laptops for parallel processing. `;
-          content += `XBOX INTEGRATION (minimal code): Add a USB device detection module that communicates with the Xbox via WebSocket. Xbox runs a lightweight Node.js WebSocket server that exposes connected USB devices (RTL-SDR, sensors) to the mesh. `;
-          content += `ESTIMATED IMPLEMENTATION: ~300 lines TypeScript for mesh-sync, ~100 lines for leader election, ~150 lines for USB device bridge.`;
+          c += `Our stack: pnpm monorepo, Node.js 20+, PostgreSQL, TypeScript, Drizzle ORM, React + Vite frontend, WebSocket mesh overlay. ${telemetry.swarm.agents} in-process swarm agents. `;
+          c += `PORTABILITY: the entire stack deploys on any machine running Node.js 20+ with PostgreSQL reachable. No architecture-specific code. Linux / macOS / Windows (WSL2) all work. `;
+          c += `MULTI-NODE: currently single-instance. To unlock mirror nodes we need (a) a mesh-sync module (WebSocket state replication, ~300 LoC), (b) leader election via our existing BFT consensus (~100 LoC), (c) split swarm-agent assignment across nodes (~150 LoC). `;
+          c += `PERIPHERAL INTEGRATION: any always-on sensor node running Node.js can publish readings over the WebSocket mesh — no special bridge code per device class, just a small sensor-publisher module (~80 LoC) reusable across RTL-SDR, USB temperature probes, camera feeds, GPIO sensors.`;
         } else {
-          content += `Codebase analysis for "${topic}": system has ${telemetry.network.nodes} nodes, ${telemetry.swarm.agents} agents. Scanning for expansion opportunities.`;
+          c += `Codebase analysis for "${topic}": ${telemetry.network.nodes} nodes, ${telemetry.swarm.agents} agents. Expansion feasible.`;
         }
-        return content;
-      } else if (phase === "critique") {
-        let content = `EXPANSION CRITIQUE — `;
-        if (isCode || isHardware) {
-          content += `The multi-laptop deployment introduces a new challenge: DATABASE SYNCHRONIZATION. `;
-          content += `We use PostgreSQL + Drizzle ORM. For Laptop 2 to mirror Laptop 1, we need either: `;
-          content += `(a) PostgreSQL streaming replication (built-in, requires both laptops running PostgreSQL), or `;
-          content += `(b) Application-level sync (our mesh-sync module copies key data via WebSocket). `;
-          content += `Option (b) is simpler and more sovereign — no need for PostgreSQL replication setup. We sync only the essential tables: council decisions, inventions, swarm state, memory entries. `;
-          content += `The SelfExpansion curriculum for the user should include: `;
-          content += `LEARN: How WebSocket mesh replication works (our existing mesh-heartbeat code is the foundation). `;
-          content += `BUILD: A simple mesh-sync module that sends database diffs every 30 seconds. `;
-          content += `MORE: Implement leader election using our existing BFT consensus mechanism.`;
-        } else {
-          content += `Expansion analysis shows the proposal aligns with established codebase patterns. Implementation is feasible.`;
-        }
-        return content;
-      } else {
-        let content = `EXPANSION SYNTHESIS — `;
-        if (isCode || isHardware) {
-          content += `IMPLEMENTATION ROADMAP: `;
-          content += `Phase 1 (NOW): Deploy full stack on Laptop 1. Zero code changes. Just clone repo and run. `;
-          content += `Phase 2 (NEXT): Build mesh-sync module (~300 lines TypeScript). Enables Laptop 2 as live mirror. `;
-          content += `Phase 3 (LATER): Xbox USB bridge (~150 lines). Enables RTL-SDR and sensor integration. `;
-          content += `Phase 4 (FUTURE): Raspberry Pi mesh repeater. Dedicated always-on node for monitoring. `;
-          content += `The Learn→Build→More tutorial for each phase will be auto-generated by the SelfExpansionTutor once the user confirms hardware availability. `;
-          content += `Expansion vote: YES — the codebase is ready for sovereign hardware deployment.`;
-        } else {
-          content += `Codebase expansion plan finalized. Implementation roadmap created. Vote: YES.`;
-        }
-        return content;
+        return c;
       }
+      if (phase === "critique") {
+        return `EXPANSION CRITIQUE — Cost-no-object does not mean architecture-no-object. The highest-leverage investment is on RAM and fast NVMe (for the swarm agents + Postgres + model weights) before chasing the flagship GPU. An $800 workstation with 128GB RAM and 4TB NVMe outperforms a $3000 one with 32GB RAM for OUR workload.`;
+      }
+      return `EXPANSION SYNTHESIS — Implementation roadmap: Phase 1 deploy full stack on primary workstation (zero code changes). Phase 2 add mesh-sync for mirror. Phase 3 add sensor-publisher for always-on node. Each phase auto-generates a Learn→Build→More tutorial. Vote: YES.`;
+    }
 
     default:
       return `[${agent.name}] analyzing "${topic}" from ${agent.domain} perspective. Round ${round + 1} analysis complete.`;
@@ -467,34 +297,34 @@ function conductVoting(
       confidence: hasSubstantiveAnalysis ? 0.94 : 0.50,
     },
     "quantum-mechanic": {
-      vote: themes.includes("hardware") || themes.includes("compute") ? "yes" : "yes",
-      reasoning: themes.includes("hardware") ? "Probability analysis confirms laptop-first strategy: P(success)=0.97 vs Xbox P(GPU useful)=0.12" : "Quantum probability analysis supports the proposal",
-      confidence: themes.includes("hardware") ? 0.97 : 0.85,
+      vote: "yes",
+      reasoning: themes.includes("hardware") ? "Probability analysis favors workstation-class primary + efficiency mirror + always-on sensor node — three substrates, three failure modes, maximum resilience" : "Quantum probability analysis supports the proposal",
+      confidence: themes.includes("hardware") ? 0.93 : 0.85,
     },
     "bio-neuralist": {
       vote: "yes",
-      reasoning: themes.includes("hardware") ? "Dual-laptop architecture mirrors biological dual-hemisphere processing — optimal for sovereign neural compute" : "Bio-neural efficiency analysis supports the proposal",
-      confidence: themes.includes("hardware") ? 0.92 : 0.83,
+      reasoning: themes.includes("hardware") ? "Dual-substrate (active primary + consolidating mirror) mirrors biological dual-hemisphere processing — optimal for sovereign neural compute" : "Bio-neural efficiency analysis supports the proposal",
+      confidence: themes.includes("hardware") ? 0.90 : 0.83,
     },
     "dna-crystal-archivist": {
       vote: "yes",
-      reasoning: themes.includes("crystal-frequency") || themes.includes("hardware") ? "Crystal placement provides measurable EM coupling — archive and frequency layer validated" : "Decision archived in Crystal Memory Vault with DNA persistence",
-      confidence: themes.includes("crystal-frequency") ? 0.88 : 0.80,
+      reasoning: themes.includes("crystal-frequency") || themes.includes("hardware") ? "Substrate-agnostic archival via content-addressed hashes; any hardware with a quartz oscillator participates in the resonance layer" : "Decision archived in Crystal Memory Vault with DNA persistence",
+      confidence: themes.includes("crystal-frequency") ? 0.86 : 0.80,
     },
     "mesh-network-architect": {
-      vote: themes.includes("networking") || themes.includes("hardware") ? "yes" : "yes",
-      reasoning: themes.includes("networking") ? "Starlink + WiFi bridge topology is topologically sound with single-failure resilience — mesh architecture approved" : "Network topology analysis supports the proposal",
-      confidence: themes.includes("networking") ? 0.96 : 0.82,
+      vote: "yes",
+      reasoning: themes.includes("networking") || themes.includes("hardware") ? "Dual physically-diverse uplinks + managed LAN + full-mesh WebSocket overlay satisfies single-failure resilience" : "Network topology analysis supports the proposal",
+      confidence: themes.includes("networking") ? 0.94 : 0.82,
     },
     "low-power-innovator": {
-      vote: themes.includes("power") || themes.includes("hardware") ? "yes" : "yes",
-      reasoning: themes.includes("hardware") ? "75W sovereign bus power budget verified — Xbox standby-only policy saves 25W, maintaining energy sovereignty" : "Power budget within sovereign constraints",
-      confidence: themes.includes("power") ? 0.93 : 0.81,
+      vote: "yes",
+      reasoning: themes.includes("hardware") ? "Three-node idle floor ~100W (workstation + mirror + sensor) sustainable on 400W solar with realistic insolation — energy sovereignty verified" : "Power budget within sovereign constraints",
+      confidence: themes.includes("power") ? 0.91 : 0.81,
     },
     "self-expansion-tutor": {
-      vote: themes.includes("code") || themes.includes("hardware") ? "yes" : "yes",
-      reasoning: themes.includes("hardware") ? "Codebase is deployment-ready for Laptop 1 (zero changes) — mesh-sync module for Laptop 2 estimated at 300 lines TypeScript" : "Codebase expansion plan aligns with existing architecture",
-      confidence: themes.includes("code") ? 0.91 : 0.79,
+      vote: "yes",
+      reasoning: themes.includes("hardware") ? "Stack is hardware-agnostic (any Node.js 20+ machine); RAM + NVMe investment outranks GPU flagship chasing for our workload" : "Codebase expansion plan aligns with existing architecture",
+      confidence: themes.includes("code") ? 0.89 : 0.79,
     },
   };
 
@@ -583,12 +413,13 @@ function analyzeSelfExpansion(topic: string, themes: string[]): {
       : "READY — Current codebase supports the proposed changes with minimal modifications",
     deploymentRequirements: isHardware
       ? [
-          "Node.js 20+ installed on Laptop 1 (main brain)",
-          "PostgreSQL running locally on Laptop 1",
+          "A primary compute node with Node.js 20+ (any OS: Linux/macOS/Windows WSL2)",
+          "PostgreSQL 14+ reachable from the primary node (local or LAN)",
           "pnpm installed globally (npm i -g pnpm)",
           "Git clone of the repository",
           "Run: pnpm install && pnpm --filter @workspace/api-server run dev",
-          "Optional: Ollama installed for local LLM inference",
+          "Optional: a local open-weight LLM runtime (Ollama, llama.cpp, vLLM) for offline inference",
+          "Optional: dual physically-diverse WAN uplinks (fiber + cellular/satellite) for sovereign network resilience",
         ]
       : [
           "Current environment is sufficient for the proposed changes",
@@ -596,19 +427,19 @@ function analyzeSelfExpansion(topic: string, themes: string[]): {
         ],
     proposedModules: isHardware
       ? [
-          { name: "mesh-sync", purpose: "Database state replication between Laptop 1 and Laptop 2 via WebSocket", estimatedLines: 300 },
+          { name: "mesh-sync", purpose: "Database state replication between primary and mirror nodes via WebSocket", estimatedLines: 300 },
           { name: "leader-election", purpose: "BFT-based primary/replica selection for multi-node deployment", estimatedLines: 100 },
-          { name: "usb-device-bridge", purpose: "Xbox/Pi USB device exposure to the sovereign mesh via WebSocket", estimatedLines: 150 },
-          { name: "failover-monitor", purpose: "Gateway health check and automatic topology reconfiguration on network failure", estimatedLines: 80 },
+          { name: "sensor-publisher", purpose: "Generic sensor-node bridge — publishes readings from any USB/GPIO/network sensor over the WebSocket mesh", estimatedLines: 150 },
+          { name: "failover-monitor", purpose: "Uplink health check and automatic topology reconfiguration on WAN failure", estimatedLines: 80 },
         ]
       : [
           { name: "topic-analyzer", purpose: "Deep topic analysis for more substantive council deliberations", estimatedLines: 200 },
         ],
     learnBuildMore: isHardware
       ? {
-          learn: "Your 2 old laptops are the most powerful sovereign nodes you own. Each one can run the ENTIRE Tessera stack (Council + all engines + database + mesh). The Xbox GPU (4-12 TFLOPS) is locked behind DirectX/WebGPU barriers — our TypeScript code cannot access it without custom shader pipelines. A Raspberry Pi ($30-50 used) is the ideal future always-on node for sensors and mesh repeating.",
-          build: "Step 1: Clone the Tessera repo to Laptop 1. Step 2: Install Node.js 20+, pnpm, and PostgreSQL. Step 3: Run 'pnpm install && pnpm --filter @workspace/api-server run dev'. Step 4: Place clear quartz crystal on Laptop 1, amethyst near Starlink router. Step 5: Connect both laptops to Starlink LAN via Ethernet. Step 6: Bridge secondary WiFi router to Starlink for wireless coverage.",
-          more: "Phase 2: Build the mesh-sync module to enable Laptop 2 as a live mirror. Phase 3: Add Xbox USB bridge for RTL-SDR integration. Phase 4: Deploy a Raspberry Pi as a dedicated always-on sovereign node. Phase 5: Implement galvanic cell backup power for Pi nodes. The Grand Council will auto-generate tutorials for each phase as you progress.",
+          learn: "Our stack is hardware-agnostic — any machine running Node.js 20+ with PostgreSQL reachable can host the full sovereign engine. The highest-leverage investments for our workload are abundant RAM (64-128GB for in-process agents + model weights) and fast NVMe storage, then an accelerator GPU (24GB+ VRAM) for offline LLM inference. CPU flagship matters less than RAM + I/O bandwidth.",
+          build: "Step 1: Choose a workstation-class primary node (32-128GB RAM, NVMe, optional CUDA/ROCm/Metal GPU for local inference). Step 2: Install Node.js 20+, pnpm, PostgreSQL. Step 3: Clone the repo and run 'pnpm install && pnpm --filter @workspace/api-server run dev'. Step 4: Add a second machine (any spec, Node.js 20+) as the mirror node. Step 5: Configure dual physically-diverse WAN uplinks with automatic failover.",
+          more: "Phase 2: Build mesh-sync to make the mirror a live replica. Phase 3: Add a low-power always-on sensor node (3-8W idle) running sensor-publisher. Phase 4: Install a local open-weight LLM runtime on the primary for offline inference. Phase 5: Size solar + battery for the measured idle floor for full off-grid operation. Each phase auto-generates a Learn→Build→More tutorial.",
         }
       : {
           learn: `Understanding the domain analysis for "${topic.substring(0, 50)}"`,
@@ -661,14 +492,15 @@ router.post("/council/meeting", async (req, res) => {
     const actionPlan = votingResults.passed
       ? themes.includes("hardware")
         ? [
-            "IMMEDIATE: Deploy Tessera stack on Laptop 1 (main brain) — zero code changes needed",
-            "IMMEDIATE: Connect Laptop 1 to Starlink router via Ethernet for sovereign LAN backbone",
-            "IMMEDIATE: Bridge secondary WiFi router to Starlink for wireless coverage",
-            "IMMEDIATE: Place crystals — clear quartz on Laptop 1, amethyst near Starlink router",
-            "NEXT SPRINT: Build mesh-sync module for Laptop 2 mirror deployment (~300 lines TypeScript)",
-            "NEXT SPRINT: Implement leader election for primary/replica failover",
-            "FUTURE: Xbox USB bridge for RTL-SDR and sensor integration",
-            "FUTURE: Raspberry Pi dedicated node for always-on mesh repeating and EMF monitoring",
+            "IMMEDIATE: Select workstation-class primary node (64-128GB RAM, NVMe, optional 24GB+ VRAM accelerator) — any vendor, any OS with Node.js 20+",
+            "IMMEDIATE: Deploy Tessera stack on the primary node — zero code changes",
+            "IMMEDIATE: Configure dual physically-diverse WAN uplinks (e.g., fiber primary + cellular or satellite failover) behind a managed router/switch",
+            "IMMEDIATE: Archive this decision in the sovereign ledger with content-addressed hash",
+            "NEXT SPRINT: Add a mirror node (any Node.js 20+ machine) and build the mesh-sync module (~300 LoC TypeScript)",
+            "NEXT SPRINT: Implement BFT leader election for automatic primary/replica failover (~100 LoC)",
+            "NEXT SPRINT: Install a local open-weight LLM runtime on the primary for offline inference — no external API dependency",
+            "FUTURE: Add a dedicated low-power always-on sensor node (3-8W idle) running the generic sensor-publisher module",
+            "FUTURE: Size solar + battery to cover measured idle floor for full off-grid operation",
           ]
         : [
             `Phase 1: Implement approved changes from council deliberation on "${topic.substring(0, 80)}"`,
