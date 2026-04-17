@@ -66,7 +66,12 @@ export function InventionModelPreview({ src, label, color = "#a78bfa", height = 
           <ambientLight intensity={0.6} />
           <pointLight position={[4, 4, 4]} intensity={1.2} />
           <pointLight position={[-4, -2, -3]} intensity={0.4} color={color} />
-          <Suspense fallback={null}>
+          <Suspense fallback={
+            <mesh>
+              <sphereGeometry args={[0.6, 16, 16]} />
+              <meshStandardMaterial color={color} wireframe transparent opacity={0.4} />
+            </mesh>
+          }>
             <CustomGLTFModel src={src} color={color} />
           </Suspense>
           <OrbitControls
