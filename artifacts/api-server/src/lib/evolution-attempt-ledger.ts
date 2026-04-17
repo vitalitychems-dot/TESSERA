@@ -26,6 +26,8 @@ export interface AttemptEntry {
   verifyExitCode?: number;
   durationMs?: number;
   timestamp: number;
+  /** Whether the JSONL append succeeded. False → memory-only (durability gap). */
+  persisted?: boolean;
 }
 
 const memoryLedger: AttemptEntry[] = [];
@@ -74,8 +76,10 @@ export function recordAttempt(
   };
   try {
     appendFileSync(getLedgerPath(), JSON.stringify(full) + "\n", "utf8");
+    full.persisted = true;
   } catch (err) {
-    logger.warn({ err, proposalId: full.proposalId }, "AttemptLedger: append failed");
+    full.persisted = false;
+    logger.warn({ err, proposalId: full.proposalId }, "AttemptLedger: append failed (memory-only)");
   }
   memoryLedger.push(full);
   if (memoryLedger.length > MAX_MEMORY) memoryLedger.splice(0, memoryLedger.length - MAX_MEMORY);
