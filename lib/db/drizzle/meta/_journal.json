@@ -57,6 +57,13 @@
       "when": 1776446227529,
       "tag": "0007_add_forum_applicants",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1776469000000,
+      "tag": "0008_reality_audit_snapshots",
+      "breakpoints": true
     }
   ]
 }
