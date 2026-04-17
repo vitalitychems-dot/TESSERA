@@ -236,6 +236,41 @@ export default function TesseraBiblePage() {
     enabled: showVersionHistory,
   });
 
+  // Single-coherent-story view: default landing surface for the Bible page.
+  // Composed live from the ingested-knowledge corpus by /api/tessera-bible/narrative.
+  const { data: narrativeData, isLoading: narrativeLoading, refetch: refetchNarrative } = useQuery<{
+    ok: boolean;
+    preface?: string;
+    sourceCount?: number;
+    totalParagraphs?: number;
+    generatedAt?: string;
+    chapters?: Array<{
+      title: string;
+      intro: string;
+      paragraphs: Array<{ paragraph: string; source: string; url: string | null; year: number | null }>;
+    }>;
+  }>({
+    queryKey: ["sovereign-bible-narrative"],
+    queryFn: async () => {
+      const res = await fetch(`${API}/narrative`);
+      return res.json();
+    },
+    refetchInterval: 120000,
+  });
+
+  const { data: secretsData } = useQuery<{
+    ok: boolean;
+    count: number;
+    items: Array<{ id: number; title: string; source: string; sourceUrl: string | null; ingestedAt: string | null; excerpt: string }>;
+  }>({
+    queryKey: ["sovereign-bible-secrets"],
+    queryFn: async () => {
+      const res = await fetch(`${API}/secrets`);
+      return res.json();
+    },
+    refetchInterval: 180000,
+  });
+
   const rebuildMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch(`${API}/rebuild`, { method: "POST" });
@@ -274,6 +309,94 @@ export default function TesseraBiblePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-indigo-950/20 to-slate-950 p-3 sm:p-4 pb-24">
       <div className="max-w-6xl mx-auto overflow-x-hidden">
+
+        {/* === SINGLE COHERENT STORY (default landing) =================== */}
+        <section className="mb-6 bg-gradient-to-b from-slate-900/70 via-indigo-950/30 to-slate-900/70 border border-amber-500/20 rounded-2xl p-5 sm:p-7" data-testid="bible-narrative-panel">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.2em] text-amber-400/70 font-mono mb-1">
+                The Living Scripture · Composed Live
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-serif text-amber-200">One Continuous Story of Sovereignty</h2>
+              {narrativeData?.preface && (
+                <p className="text-slate-400 text-sm leading-relaxed mt-2 max-w-3xl">{narrativeData.preface}</p>
+              )}
+              <div className="text-[10px] font-mono text-slate-500 mt-2">
+                Drawn from {narrativeData?.sourceCount ?? 0} live ingested sources
+                {narrativeData?.generatedAt && ` · regenerated ${new Date(narrativeData.generatedAt).toLocaleTimeString()}`}
+              </div>
+            </div>
+            <button
+              onClick={() => refetchNarrative()}
+              className="shrink-0 px-3 py-2 rounded-lg text-[11px] font-mono bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:bg-amber-500/20 flex items-center gap-1.5"
+              data-testid="bible-narrative-refresh"
+            >
+              <RefreshCw className="w-3 h-3" /> Recompose
+            </button>
+          </div>
+
+          {narrativeLoading && (
+            <div className="text-slate-500 text-sm font-mono py-4">Composing the scripture from live sources…</div>
+          )}
+
+          {!narrativeLoading && (!narrativeData?.chapters || narrativeData.chapters.length === 0 || (narrativeData.totalParagraphs ?? 0) === 0) && (
+            <div className="text-slate-500 text-sm font-mono py-4">
+              The corpus is still empty — once the sovereign ingestion engine has loaded its first sources the scripture will appear here. Use the Reconvene button below to trigger a canon rebuild.
+            </div>
+          )}
+
+          {narrativeData?.chapters?.map((ch, ci) => (
+            ch.paragraphs.length > 0 && (
+              <article key={ci} className="mt-5 first:mt-0">
+                <h3 className="text-lg sm:text-xl font-serif text-amber-100 border-b border-amber-500/15 pb-1 mb-2">{ch.title}</h3>
+                <p className="text-[12px] italic text-slate-400 mb-3">{ch.intro}</p>
+                <div className="space-y-3">
+                  {ch.paragraphs.map((p, pi) => (
+                    <p key={pi} className="text-[14px] leading-relaxed text-slate-200">
+                      <span>{p.paragraph}</span>
+                      {p.url ? (
+                        <a href={p.url} target="_blank" rel="noopener noreferrer" className="ml-2 text-[10px] font-mono text-cyan-400 hover:underline">
+                          [source]
+                        </a>
+                      ) : (
+                        <span className="ml-2 text-[10px] font-mono text-slate-500">[source: {p.source}]</span>
+                      )}
+                    </p>
+                  ))}
+                </div>
+              </article>
+            )
+          ))}
+
+          {/* Secrets sub-section — meaningful, sourced */}
+          {secretsData?.items && secretsData.items.length > 0 && (
+            <div className="mt-7 pt-5 border-t border-amber-500/15">
+              <div className="flex items-center gap-2 mb-3">
+                <Lock className="w-4 h-4 text-rose-400" />
+                <h3 className="text-lg font-serif text-rose-200">Secrets — With Sources</h3>
+                <span className="text-[10px] font-mono text-slate-500">{secretsData.count} substantive disclosures</span>
+              </div>
+              <div className="space-y-3">
+                {secretsData.items.slice(0, 12).map(s => (
+                  <div key={s.id} className="bg-slate-950/50 border border-rose-500/15 rounded-lg p-3" data-testid={`bible-secret-${s.id}`}>
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="text-sm text-rose-100 font-medium">{s.title}</div>
+                      {s.sourceUrl ? (
+                        <a href={s.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] font-mono text-cyan-400 hover:underline shrink-0">
+                          {s.source} ↗
+                        </a>
+                      ) : (
+                        <span className="text-[10px] font-mono text-slate-500 shrink-0">{s.source}</span>
+                      )}
+                    </div>
+                    <p className="text-[12px] text-slate-300 leading-relaxed">{s.excerpt}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-3 mb-2">
             <Hexagon className="w-8 h-8 text-amber-400 animate-pulse" />
