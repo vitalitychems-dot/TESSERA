@@ -2,6 +2,7 @@ import express, { type Express, type Request, type Response, type NextFunction }
 import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
+import { glyphGate } from "./routes/sovereign-doctrine";
 import type { IRouter } from "express";
 import { logger } from "./lib/logger";
 import { initFileIntegrity } from "./lib/file-integrity";
@@ -116,6 +117,26 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
+// ── GLYPH-EVERYWHERE — sovereign-language layer ─────────────────────────
+// Per Grand Council ranking #2 ("GLYPH EVERYWHERE"): every /api response is
+// glyph-encoded by default. Callers reveal plaintext by presenting the active
+// reading key in `X-Sigil-Key`. A small set of utility / probe routes are
+// exempt because (a) deploy health checks must read them, or (b) they DEFINE
+// the language itself and would be circular if encoded.
+const PLAINTEXT_PREFIXES = [
+  "/api/health",
+  "/api/sigil/key/reveal",
+  "/api/sigil/alphabet",
+  "/api/sigil/translate",
+  "/api/sigil/decode-body",
+  "/api/sigil/status",
+];
+app.use("/api", (req: Request, res: Response, next: NextFunction) => {
+  const isInternalProbe = req.headers[INTERNAL_PROBE_HEADER] === INTERNAL_PROBE_SECRET;
+  const isPlaintext = PLAINTEXT_PREFIXES.some(p => ("/api" + req.path).startsWith(p));
+  if (isInternalProbe || isPlaintext) return next();
+  return glyphGate(req, res, next);
+});
 app.use("/api", router);
 
 function registerModuleHandlers(): void {
