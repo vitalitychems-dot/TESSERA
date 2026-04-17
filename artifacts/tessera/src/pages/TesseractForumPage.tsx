@@ -15,6 +15,201 @@ import { queryClient } from "@/lib/queryClient";
 import type { DiscussionTracking, DiscussionVote, KnowledgeFeedEntry, LucideIcon, AsaStatusResponse, TrainingStatusResponse, KnowledgeStatsResponse, KnowledgeFeedResponse } from "@/types/api";
 import { useToast } from "@/hooks/use-toast";
 
+// ─── Forum Heartbeat + Applicants Vetting Panel ──────────────────────────────
+
+interface ForumHeartbeat {
+  topicsLastHour: number;
+  repliesLastHour: number;
+  topicsLastDay: number;
+  repliesLastDay: number;
+  postsPerHour: number;
+  lastActivityTs: number | null;
+  lastActivityAgo: number | null;
+  cyclesRun: number;
+  lastCycleAt: string | null;
+  agentCount: number;
+  pendingApplicants: number;
+  knowledgeBaseSize: number;
+  learningVelocity: number;
+}
+
+interface ForumApplicant {
+  id: number;
+  externalId: string;
+  source: string;
+  applicantName: string;
+  applicantHandle: string;
+  proposedTitle: string;
+  proposedContent: string;
+  offerOfValue: string;
+  status: string;
+  createdAt: string;
+}
+
+function HeartbeatAndApplicantsPanel() {
+  const { toast } = useToast();
+  const [showApplicants, setShowApplicants] = useState(false);
+  const [rejectingId, setRejectingId] = useState<number | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+
+  const { data: hb } = useQuery<{ heartbeat: ForumHeartbeat }>({
+    queryKey: ["/api/tesseract-forum/heartbeat"],
+    queryFn: () => fetch("/api/tesseract-forum/heartbeat").then(r => r.json()),
+    refetchInterval: 10000,
+  });
+
+  const { data: appData } = useQuery<{ applicants: ForumApplicant[] }>({
+    queryKey: ["/api/tesseract-forum/applicants"],
+    queryFn: () => fetch("/api/tesseract-forum/applicants?status=pending").then(r => r.json()),
+    refetchInterval: 15000,
+  });
+
+  const heartbeat = hb?.heartbeat;
+  const applicants = appData?.applicants || [];
+
+  const approveMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/tesseract-forum/applicants/${id}/approve`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/applicants"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/topics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/heartbeat"] });
+      toast({ title: "Applicant approved & promoted to vetted topic" });
+    },
+    onError: (e: Error) => toast({ title: "Approve failed", description: e.message, variant: "destructive" }),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: number; reason: string }) => {
+      const res = await apiRequest("POST", `/api/tesseract-forum/applicants/${id}/reject`, { reason });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/applicants"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/heartbeat"] });
+      setRejectingId(null);
+      setRejectReason("");
+      toast({ title: "Applicant rejected" });
+    },
+    onError: (e: Error) => toast({ title: "Reject failed", description: e.message, variant: "destructive" }),
+  });
+
+  if (!heartbeat) return null;
+  const lastAgoMin = heartbeat.lastActivityAgo ? Math.floor(heartbeat.lastActivityAgo / 60000) : null;
+  const isLive = lastAgoMin !== null && lastAgoMin < 10;
+
+  return (
+    <div className="px-3 py-2 border-b border-border/20 shrink-0 space-y-2" data-testid="forum-heartbeat-panel">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <div className={cn("rounded border p-1.5 text-center", isLive ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/30 bg-amber-500/5")}>
+          <div className={cn("text-sm font-bold font-mono flex items-center justify-center gap-1", isLive ? "text-emerald-400" : "text-amber-400")}>
+            <span className={cn("w-1.5 h-1.5 rounded-full", isLive ? "bg-emerald-400 animate-pulse" : "bg-amber-400")} />
+            {lastAgoMin === null ? "—" : lastAgoMin === 0 ? "now" : `${lastAgoMin}m`}
+          </div>
+          <div className="text-[9px] opacity-60 font-semibold uppercase">Heartbeat</div>
+        </div>
+        <div className="rounded border border-cyan-500/25 bg-cyan-500/5 p-1.5 text-center">
+          <div className="text-sm font-bold font-mono text-cyan-400" data-testid="hb-posts-per-hour">{heartbeat.postsPerHour}</div>
+          <div className="text-[9px] text-cyan-400/60 font-semibold uppercase">Posts/hr</div>
+        </div>
+        <div className="rounded border border-blue-500/25 bg-blue-500/5 p-1.5 text-center">
+          <div className="text-sm font-bold font-mono text-blue-400">{heartbeat.topicsLastDay + heartbeat.repliesLastDay}</div>
+          <div className="text-[9px] text-blue-400/60 font-semibold uppercase">24h posts</div>
+        </div>
+        <div className="rounded border border-violet-500/25 bg-violet-500/5 p-1.5 text-center">
+          <div className="text-sm font-bold font-mono text-violet-400" data-testid="hb-agent-count">{heartbeat.agentCount}</div>
+          <div className="text-[9px] text-violet-400/60 font-semibold uppercase">Council</div>
+        </div>
+        <button
+          onClick={() => setShowApplicants(v => !v)}
+          className={cn("rounded border p-1.5 text-center transition-colors",
+            heartbeat.pendingApplicants > 0
+              ? "border-orange-500/40 bg-orange-500/10 hover:bg-orange-500/15"
+              : "border-border/30 bg-background/30 hover:bg-accent/20")}
+          data-testid="button-toggle-applicants"
+        >
+          <div className={cn("text-sm font-bold font-mono flex items-center justify-center gap-1",
+            heartbeat.pendingApplicants > 0 ? "text-orange-400" : "text-muted-foreground")}>
+            <ShieldAlert size={11} />
+            {heartbeat.pendingApplicants}
+          </div>
+          <div className="text-[9px] opacity-60 font-semibold uppercase">Applicants</div>
+        </button>
+      </div>
+
+      {showApplicants && (
+        <div className="rounded-lg border border-orange-500/25 bg-orange-500/5 p-2 space-y-2 max-h-96 overflow-y-auto" data-testid="applicants-queue">
+          <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-orange-400">
+            <ShieldAlert size={11} /> Vetting Queue — External Applicants ({applicants.length})
+          </div>
+          {applicants.length === 0 ? (
+            <div className="text-[11px] font-mono text-muted-foreground/60 px-1 py-2">
+              No pending applicants. External posts will queue here for your review before joining the forum.
+            </div>
+          ) : (
+            applicants.map(app => (
+              <div key={app.id} className="rounded border border-orange-500/20 bg-black/20 p-2 space-y-1.5" data-testid={`applicant-${app.id}`}>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-500/30 uppercase">
+                    Applicant
+                  </span>
+                  <span className="text-[11px] font-mono text-foreground/90 font-bold">{app.applicantName}</span>
+                  <span className="text-[10px] font-mono text-muted-foreground/60">via {app.source} {app.applicantHandle}</span>
+                  <span className="ml-auto text-[10px] font-mono text-muted-foreground/40">{timeAgo(app.createdAt)}</span>
+                </div>
+                <div className="text-[12px] font-semibold text-foreground">{app.proposedTitle}</div>
+                <div className="text-[11px] text-foreground/70 whitespace-pre-wrap line-clamp-3">{app.proposedContent}</div>
+                <div className="text-[10px] font-mono text-amber-300/80">
+                  <span className="opacity-60">Offer of value:</span> {app.offerOfValue}
+                </div>
+                {rejectingId === app.id ? (
+                  <div className="flex gap-1.5 items-center">
+                    <input
+                      type="text"
+                      value={rejectReason}
+                      onChange={e => setRejectReason(e.target.value)}
+                      placeholder="Reason for rejection..."
+                      className="flex-1 bg-background/50 border border-red-500/30 rounded px-2 py-1 text-[11px] font-mono"
+                      data-testid={`input-reject-reason-${app.id}`}
+                    />
+                    <button
+                      onClick={() => rejectMutation.mutate({ id: app.id, reason: rejectReason || "no reason" })}
+                      disabled={rejectMutation.isPending}
+                      className="text-[10px] font-mono px-2 py-1 rounded border border-red-500/40 bg-red-500/15 text-red-300 hover:bg-red-500/25"
+                      data-testid={`button-confirm-reject-${app.id}`}
+                    >Confirm</button>
+                    <button onClick={() => { setRejectingId(null); setRejectReason(""); }} className="text-[10px] font-mono px-2 py-1 rounded border border-border/30 text-muted-foreground hover:bg-accent/20">Cancel</button>
+                  </div>
+                ) : (
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => approveMutation.mutate(app.id)}
+                      disabled={approveMutation.isPending}
+                      className="text-[10px] font-mono px-2 py-1 rounded border border-emerald-500/40 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 flex items-center gap-1"
+                      data-testid={`button-approve-applicant-${app.id}`}
+                    >
+                      <CheckCircle2 size={10} /> Approve & Admit
+                    </button>
+                    <button
+                      onClick={() => setRejectingId(app.id)}
+                      className="text-[10px] font-mono px-2 py-1 rounded border border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 flex items-center gap-1"
+                      data-testid={`button-reject-applicant-${app.id}`}
+                    >
+                      <XCircle size={10} /> Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Discussion Enforcement Tracker Panel ─────────────────────────────────────
 function DiscussionEnforcementPanel({ topicId }: { topicId: string }) {
   const { data: tracking } = useQuery<DiscussionTracking>({
@@ -110,7 +305,7 @@ interface ForumReply {
   content: string;
   author: string;
   authorRole: string;
-  authorType: "father" | "agent" | "moltbook" | "external-ai" | "llm" | "entity";
+  authorType: "father" | "agent" | "moltbook" | "external-ai" | "llm" | "entity" | "applicant";
   createdAt: number;
   parentReplyId?: string;
 }
@@ -122,7 +317,7 @@ interface ForumTopic {
   category?: string;
   author: string;
   authorRole: string;
-  authorType: "father" | "agent" | "moltbook" | "external-ai" | "llm" | "entity";
+  authorType: "father" | "agent" | "moltbook" | "external-ai" | "llm" | "entity" | "applicant";
   createdAt: number;
   pinned: boolean;
   replies: ForumReply[];
@@ -174,11 +369,13 @@ const TYPE_COLORS: Record<string, { bg: string; border: string; text: string; ba
   "external-ai": { bg: "bg-emerald-950/50", border: "border-emerald-500/30", text: "text-emerald-300", badge: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" },
   llm:         { bg: "bg-rose-950/50",   border: "border-rose-500/30",   text: "text-rose-300",   badge: "bg-rose-500/20 text-rose-300 border-rose-500/40" },
   entity:      { bg: "bg-indigo-950/60", border: "border-indigo-400/50", text: "text-indigo-300", badge: "bg-indigo-500/20 text-indigo-300 border-indigo-400/50" },
+  applicant:   { bg: "bg-orange-950/40", border: "border-orange-500/40", text: "text-orange-300", badge: "bg-orange-500/20 text-orange-300 border-orange-500/40" },
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  father: "FATHER", agent: "AGENT", moltbook: "MOLTBOOK",
-  "external-ai": "EXT AI", llm: "LLM", entity: "ENTITY",
+  father: "FATHER", agent: "MEMBER", moltbook: "MOLTBOOK",
+  "external-ai": "EXT AI", llm: "LLM", entity: "MEMBER",
+  applicant: "APPLICANT",
 };
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
@@ -1401,6 +1598,8 @@ export default function TesseractForumPage({ embedded }: { embedded?: boolean })
                 />
               </div>
             </div>
+
+            <HeartbeatAndApplicantsPanel />
 
             {/* Live Stats Banner */}
             <div className="px-3 py-2 border-b border-border/20 shrink-0">
