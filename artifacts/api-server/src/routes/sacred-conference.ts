@@ -54,9 +54,22 @@ router.get("/sacred-conference/status", async (_req, res) => {
 router.post("/sacred-conference/run", async (req, res) => {
   try {
     const cycles = Math.min(Math.max(Number(req.body?.cycles) || 10, 1), 10);
-    logger.info({ cycles }, "Running Sacred Grand Conference");
+    const persist = req.body?.persist !== false; // default true
+    logger.info({ cycles, persist }, "Running Sacred Grand Conference");
     const session = await runSacredGrandConference(cycles);
-    return res.json(session);
+    let persistence: import("../lib/conference-persistence").PersistResult | null = null;
+    let persistenceError: string | null = null;
+    if (persist) {
+      const { persistConferenceOutputs } = await import("../lib/conference-persistence");
+      try {
+        persistence = await persistConferenceOutputs(session);
+      } catch (err) {
+        persistenceError = (err as Error).message ?? String(err);
+        logger.error({ err }, "persistConferenceOutputs failed (session still returned)");
+      }
+    }
+    const httpStatus = persistenceError || (persistence && persistence.failedAmendments > 0) ? 207 : 200;
+    return res.status(httpStatus).json({ ...session, persistence, persistenceError });
   } catch (err) {
     logger.error({ err }, "Failed to run sacred conference");
     return res.status(500).json({ error: "Failed to run conference" });
