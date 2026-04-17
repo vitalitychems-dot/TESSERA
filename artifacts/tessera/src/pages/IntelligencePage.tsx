@@ -18,16 +18,23 @@ interface ProviderCallRow {
   calledAt: string;
 }
 
+interface ChatMessageLike {
+  role?: string;
+  content?: unknown;
+}
+function isChatMessageLike(v: unknown): v is ChatMessageLike {
+  return typeof v === "object" && v !== null && ("role" in v || "content" in v);
+}
 function previewPrompt(req: unknown): string | null {
   // requestMessages is a JSON array typically [{role, content}]; tolerate
   // strings, arrays, and objects so we always render something readable.
   if (!req) return null;
   if (typeof req === "string") return req;
   if (Array.isArray(req)) {
-    const last = req.find((m: any) => m && m.role === "user") ?? req[req.length - 1];
-    if (last && typeof last === "object" && "content" in last) {
-      const c = (last as { content: unknown }).content;
-      return typeof c === "string" ? c : JSON.stringify(c);
+    const messages = req.filter(isChatMessageLike);
+    const last = messages.find(m => m.role === "user") ?? messages[messages.length - 1];
+    if (last && last.content !== undefined) {
+      return typeof last.content === "string" ? last.content : JSON.stringify(last.content);
     }
     return JSON.stringify(req);
   }
