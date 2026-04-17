@@ -21,6 +21,14 @@ function getAdminToken(): string {
   }
 }
 
+export function getTesseractAdminKey(): string {
+  try {
+    return localStorage.getItem("tesseract-admin-key") || "";
+  } catch {
+    return "";
+  }
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -34,9 +42,11 @@ export async function apiRequest(
   data?: unknown | undefined,
 ): Promise<Response> {
   const token = getAdminToken();
+  const sigilKey = getTesseractAdminKey();
   const headers: Record<string, string> = {};
   if (data) headers["Content-Type"] = "application/json";
   if (token) headers["x-admin-token"] = token;
+  if (sigilKey) headers["X-Sigil-Key"] = sigilKey;
 
   const res = await fetch(url, {
     method,
@@ -56,8 +66,10 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const token = getAdminToken();
+    const sigilKey = getTesseractAdminKey();
     const headers: Record<string, string> = {};
     if (token) headers["x-admin-token"] = token;
+    if (sigilKey) headers["X-Sigil-Key"] = sigilKey;
 
     const res = await fetch(queryKey[0] as string, {
       credentials: "include",
