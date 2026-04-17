@@ -9,7 +9,7 @@ export default function BibleHubPage() {
       iconColor="text-amber-400"
       tabs={[
         { id: "bible", label: "Bible", load: () => import("./TesseraBiblePage"), matchPaths: ["/bible", "/living-bible"] },
-        { id: "conclusions", label: "Conclusions", load: () => import("./GrandCouncilPage"), matchPaths: ["/conclusions"] },
+        { id: "conclusions", label: "Conclusions", load: () => import("./ConclusionsPage"), matchPaths: ["/conclusions"] },
       ]}
     />
   );
