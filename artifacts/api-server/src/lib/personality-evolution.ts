@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { systemStateTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface PersonalityTrait {
   name: string;
@@ -215,7 +216,7 @@ export function getPersonalityEvolutionMetrics() {
   };
 }
 
-let evolutionInterval: ReturnType<typeof setInterval> | null = null;
+let evolutionInterval: SacredHandle | null = null;
 
 export async function initPersonalityEvolution(): Promise<void> {
   await loadPersonalities();
@@ -242,17 +243,17 @@ export async function initPersonalityEvolution(): Promise<void> {
 
 export function startPersonalityEvolution(intervalMs = 300_000): void {
   if (evolutionInterval) return;
-  evolutionInterval = setInterval(() => {
+  evolutionInterval = setSacredInterval(() => {
     try {
       evolveAllPersonalities();
       persistPersonalities().catch(() => {});
-    } catch (err) { logger.error({ err }, "PersonalityEvolution: cycle error"); }
-  }, intervalMs);
+    } catch (err) { logger.error({ err }, "PersonalityEvolution: cycle error", "personality-evolution"); }
+  }, intervalMs, "personality-evolution");
   logger.info({ intervalMs }, "PersonalityEvolution: started");
 }
 
 export function stopPersonalityEvolution(): void {
-  if (evolutionInterval) { clearInterval(evolutionInterval); evolutionInterval = null; }
+  if (evolutionInterval) { clearSacredInterval(evolutionInterval); evolutionInterval = null; }
 }
 
 export function getPersonalitySnapshot() {

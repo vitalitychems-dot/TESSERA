@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { systemStateTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface BrainMessage {
   from: "cortex" | "executor";
@@ -83,7 +84,7 @@ const dualBrainState: DualBrainState = {
   lastCycleAt: 0,
 };
 
-let dualBrainInterval: ReturnType<typeof setInterval> | null = null;
+let dualBrainInterval: SacredHandle | null = null;
 const STATE_KEY = "dual-brain.state";
 
 async function persistState(): Promise<void> {
@@ -192,14 +193,14 @@ export function startDualBrain(intervalMs = 180_000): void {
   if (dualBrainInterval) return;
   dualBrainState.running = true;
   runDualBrainCycle();
-  dualBrainInterval = setInterval(() => {
-    try { runDualBrainCycle(); } catch (err) { logger.error({ err }, "DualBrain: cycle error"); }
-  }, intervalMs);
+  dualBrainInterval = setSacredInterval(() => {
+    try { runDualBrainCycle(); } catch (err) { logger.error({ err }, "DualBrain: cycle error", "dual-brain"); }
+  }, intervalMs, "dual-brain");
   logger.info({ intervalMs }, "DualBrain: started");
 }
 
 export function stopDualBrain(): void {
-  if (dualBrainInterval) { clearInterval(dualBrainInterval); dualBrainInterval = null; }
+  if (dualBrainInterval) { clearSacredInterval(dualBrainInterval); dualBrainInterval = null; }
   dualBrainState.running = false;
 }
 

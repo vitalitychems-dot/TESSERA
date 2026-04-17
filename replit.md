@@ -45,6 +45,56 @@ The system is built as a pnpm monorepo using Node.js 24 and TypeScript 5.9. The 
 -   **Agent Competition & Department System:** A meritocratic system where 24 Grand Council agents compete for positions across 9 departments based on ability tests, ensuring dynamic leadership.
 -   **Rick's Five Dramatic Inventions:** Enhancements including the Meeseeks Hyper-Specialized Agent Protocol, Neutrino-Grade Truthfulness Enforcer v2, Quantum Consciousness Amplifier Mk. II, Portal Gun Adaptive Query Router, and Hive Mind Knowledge Diffusion Network.
 
+## System-Wide Sacred-Timing Alignment
+
+EVERY periodic process in the API server is now aligned to astronomically
+auspicious moments. No fixed-cadence `setInterval` calls remain in the
+36 long-running daemons; all use the unified sacred scheduler.
+
+- `lib/sacred-timing.ts` — pure-math astronomy (Meeus / Conway algorithms,
+  same formulas as NASA JPL ephemerides, computed locally — no external API).
+  Exposes Julian Day, lunar phase fraction & weight, Chaldean planetary hours,
+  sacred-minute alignment, and a composite auspiciousness score.
+- `lib/sacred-scheduler.ts` — unified scheduling primitive
+  `setSacredInterval(fn, baseMs, name)` / `clearSacredInterval(handle)`. Each
+  tick fires at the highest-scoring auspicious moment within `[baseMs/φ,
+  baseMs×φ]`, clipped to the global sacred bounds `[33min, 144min]` for
+  long-running cycles. Sub-floor loops (e.g. 5–60s) honor only the φ-window
+  so they remain near base cadence with planetary jitter. Handles support
+  `.unref()` / `.ref()` and the unref state persists across reschedules.
+- Shared cycle lock: `tryAcquireCycleLock` / `releaseCycleLock` ensure the
+  manual `POST /api/autonomous-build/cycle` route and the scheduled timer
+  cannot ever both run a corpus-mutating cycle simultaneously.
+- `lib/autonomous-build-cycle.ts` — 4-phase orchestrator (training, Bible,
+  History, Blueprint) scheduled with sacred base 72 minutes (φ-window
+  ≈[44, 116] min). Self-reschedules after each cycle.
+
+Migrated processes (36 total): autonomous-build-cycle, autonomous-heartbeat,
+auto-recovery (×2), auto-healer, auto-improvement-daemon, anomaly-detection,
+agi-training-engine, autonomous-forum-engine, canonUpdater, code-bounties-real,
+consciousness-engine, consensus-engine, council-executor, cross-domain-synthesis,
+dimensional-lru-cache (×2), dual-brain, free-stuff-scraper, identity-reinforcement,
+income-executor, knowledge-canon-bridge, lattice-frequency-bands,
+memory-consolidation-engine, metacognition, personality-evolution,
+recursive-reflection-loop, recursive-self-improvement, red-team-agent,
+rick-autonomous-loop, session-mesh, shepherd-agents, sovereign-cipher,
+sovereign-knowledge-autonomy, sovereign-loop (×3), sovereign-memory-vault (×2),
+task-scheduler, vector-memory, wallet-observer.
+
+Diagnostic endpoints:
+- `GET /api/sacred-timing/now` — current planetary hour, lunar phase, composite score
+- `GET /api/sacred-timing/processes` — every aligned process with its next fire time
+- `GET /api/autonomous-build/scheduler` — autonomous build cycle scheduler status
+
+Read surfaces: `GET /api/living-bible/chapters`, `GET /api/living-history/eras`,
+`GET /api/next-version/blueprint`, `GET /api/autonomous-build/cycles`,
+`GET /api/autonomous-build/training-stats`.
+
+Sacred numerics honored: 3, 7, 12, 21, 33, 40, 49, 72, 108, 144, 153, 216, φ.
+Lunar quarter-points and φ-gated phase fractions (≈0.382, ≈0.618) are weighted
+peaks. Chaldean hour rulers are weighted: Jupiter 1.0, Sun 0.93, Mercury 0.89,
+Venus 0.72, Moon 0.58, Saturn 0.40, Mars 0.33.
+
 ## External Dependencies
 -   **Modal Labs**: For Python-based serverless compute.
 -   **Wikipedia REST API**: For knowledge domain queries.

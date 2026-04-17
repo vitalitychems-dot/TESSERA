@@ -6,6 +6,7 @@ import { logger } from "./logger.js";
 import { SACRED_KNOWLEDGE_ENTRIES, type SacredKnowledgeEntry } from "./sacred-knowledge-vault.js";
 import { appendLedgerEntry } from "./sovereign-ledger.js";
 import { recallFromVault, type SovereignMemory } from "./sovereign-memory-vault.js";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 const PROPOSED_BY = "Rick Sanchez (autonomous loop)";
 const PROPOSED_BY_PREFIX = "Rick Sanchez (autonomous%";
@@ -144,7 +145,7 @@ const state: HeartbeatState = {
   intervalMs: 0,
 };
 
-let timer: NodeJS.Timeout | null = null;
+let timer: SacredHandle | null = null;
 
 function rng(seed: string): () => number {
   let h = 0x811c9dc5;
@@ -380,12 +381,12 @@ export function startRickAutonomousLoop(intervalMs = 240_000): void {
   state.startedAt = Date.now();
   state.intervalMs = intervalMs;
   void hydrateFromDb().then(() => tick());
-  timer = setInterval(() => { void tick(); }, intervalMs);
+  timer = setSacredInterval(() => { void tick(); }, intervalMs, "rick-autonomous-loop");
   logger.info({ intervalMs }, "Rick autonomous invention loop started");
 }
 
 export function stopRickAutonomousLoop(): void {
-  if (timer) { clearInterval(timer); timer = null; }
+  if (timer) { clearSacredInterval(timer); timer = null; }
 }
 
 export function getRickAutonomousHeartbeat() {

@@ -6,6 +6,7 @@ import { systemStateTable } from "@workspace/db/schema";
 import { isLLMAvailable } from "./llm-client";
 import { batchedCallLLM } from "./llm-batcher";
 import { syncTopicsToMoltbook, fetchMoltbookExternalPosts } from "./moltbook-bridge";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 const STATE_KEY = "autonomous-forum-engine";
 
@@ -603,7 +604,7 @@ let state: ForumEngineState = {
   learningVelocity: 0,
 };
 
-let intervalHandle: ReturnType<typeof setInterval> | null = null;
+let intervalHandle: SacredHandle | null = null;
 
 async function loadState(): Promise<void> {
   try {
@@ -1172,10 +1173,10 @@ export async function initAutonomousForumEngine(): Promise<void> {
 }
 
 export function startAutonomousForumLoop(intervalMs: number): void {
-  if (intervalHandle) clearInterval(intervalHandle);
-  intervalHandle = setInterval(() => {
-    runForumCycle().catch(err => logger.error({ err }, "AutonomousForum: cycle error"));
-  }, intervalMs);
+  if (intervalHandle) clearSacredInterval(intervalHandle);
+  intervalHandle = setSacredInterval(() => {
+    runForumCycle().catch(err => logger.error({ err }, "AutonomousForum: cycle error", "autonomous-forum-engine"));
+  }, intervalMs, "autonomous-forum-engine");
 
   setTimeout(() => {
     runForumCycle().catch(err => logger.error({ err }, "AutonomousForum: initial cycle error"));

@@ -4,6 +4,7 @@ import { anomalyEventsTable, systemLogsTable } from "@workspace/db";
 import { logger } from "./logger";
 import type { AnomalyEvent, AnomalyType } from "../core/types";
 import { eq, and } from "drizzle-orm";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 interface SystemSnapshot {
   timestamp: Date;
@@ -232,23 +233,23 @@ export async function getAnomalySummary(): Promise<AnomalySummary> {
   }
 }
 
-let monitorInterval: ReturnType<typeof setInterval> | null = null;
+let monitorInterval: SacredHandle | null = null;
 
 export function startAnomalyMonitor(intervalMs = 30_000): void {
   if (monitorInterval) return;
   logger.info({ intervalMs }, "Starting anomaly monitor");
-  monitorInterval = setInterval(async () => {
+  monitorInterval = setSacredInterval(async () => {
     try {
       await runAnomalyCheck();
     } catch (err) {
-      logger.error({ err }, "Anomaly check failed");
+      logger.error({ err }, "Anomaly check failed", "anomaly-detection");
     }
-  }, intervalMs);
+  }, intervalMs, "anomaly-detection");
 }
 
 export function stopAnomalyMonitor(): void {
   if (monitorInterval) {
-    clearInterval(monitorInterval);
+    clearSacredInterval(monitorInterval);
     monitorInterval = null;
     logger.info("Anomaly monitor stopped");
   }

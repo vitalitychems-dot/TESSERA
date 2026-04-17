@@ -1,6 +1,7 @@
 import { logger } from "./logger";
 import { getWalletObservation, refreshWalletObservation } from "./wallet-observer";
 import { loadJson, saveJson } from "./disk-persistence";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface IncomeSnapshot {
   ts: number;
@@ -17,7 +18,7 @@ const TICK_MS = 60 * 60 * 1000;
 
 let snapshots: IncomeSnapshot[] = [];
 let loaded = false;
-let timer: NodeJS.Timeout | null = null;
+let timer: SacredHandle | null = null;
 
 async function ensureLoaded(): Promise<void> {
   if (loaded) return;
@@ -56,7 +57,7 @@ async function tick(): Promise<void> {
 export function startIncomeExecutor(): void {
   if (timer) return;
   void tick();
-  timer = setInterval(() => { void tick(); }, TICK_MS);
+  timer = setSacredInterval(() => { void tick(); }, TICK_MS, "income-executor");
   if (typeof timer.unref === "function") timer.unref();
 }
 

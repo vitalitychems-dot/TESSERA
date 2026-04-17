@@ -152,3 +152,122 @@ export const insertCorpusAmendmentSchema = createInsertSchema(corpusAmendmentsTa
 export type InsertCorpusAmendment = z.infer<typeof insertCorpusAmendmentSchema>;
 export type CorpusAmendmentRow = typeof corpusAmendmentsTable.$inferSelect;
 
+// Living Bible chapters authored by the Sovereign Society from the corpus.
+// Each chapter is council-ratified and content-hashed; new versions append.
+export const livingBibleChaptersTable = pgTable(
+  "living_bible_chapters",
+  {
+    id: serial("id").primaryKey(),
+    chapterSlug: text("chapter_slug").notNull(),
+    version: integer("version").notNull().default(1),
+    domain: text("domain").notNull(),
+    title: text("title").notNull(),
+    epigraph: text("epigraph").notNull().default(""),
+    verses: jsonb("verses").notNull(),
+    sourceEntryIds: jsonb("source_entry_ids").notNull(),
+    ratifiedBy: jsonb("ratified_by").notNull().default([]),
+    contentHash: text("content_hash").notNull(),
+    sessionId: text("session_id").notNull(),
+    sealedLedgerIndex: integer("sealed_ledger_index"),
+    generatedAt: timestamp("generated_at").notNull().defaultNow(),
+  },
+  t => ({
+    uxChapterVersion: uniqueIndex("ux_living_bible_chapter_version").on(t.chapterSlug, t.version),
+    ixDomain: index("ix_living_bible_domain").on(t.domain),
+  }),
+);
+export type LivingBibleChapterRow = typeof livingBibleChaptersTable.$inferSelect;
+
+// Living History eras chronologically ordered, each authored from declassified
+// + historical corpus entries; council-ratified and continuously appended.
+export const livingHistoryErasTable = pgTable(
+  "living_history_eras",
+  {
+    id: serial("id").primaryKey(),
+    eraSlug: text("era_slug").notNull(),
+    version: integer("version").notNull().default(1),
+    eraName: text("era_name").notNull(),
+    startYear: integer("start_year").notNull(),
+    endYear: integer("end_year").notNull(),
+    narrative: text("narrative").notNull(),
+    events: jsonb("events").notNull(),
+    sourceEntryIds: jsonb("source_entry_ids").notNull(),
+    ratifiedBy: jsonb("ratified_by").notNull().default([]),
+    contentHash: text("content_hash").notNull(),
+    sessionId: text("session_id").notNull(),
+    sealedLedgerIndex: integer("sealed_ledger_index"),
+    generatedAt: timestamp("generated_at").notNull().defaultNow(),
+  },
+  t => ({
+    uxEraVersion: uniqueIndex("ux_living_history_era_version").on(t.eraSlug, t.version),
+    ixStartYear: index("ix_living_history_start_year").on(t.startYear),
+  }),
+);
+export type LivingHistoryEraRow = typeof livingHistoryErasTable.$inferSelect;
+
+// Per-agent training records: each agent ingests a slice of the corpus and
+// records before/after specialty-confidence shift. Drives the agent training loop.
+export const agentTrainingRecordsTable = pgTable(
+  "agent_training_records",
+  {
+    id: serial("id").primaryKey(),
+    sessionId: text("session_id").notNull(),
+    agentId: text("agent_id").notNull(),
+    agentName: text("agent_name").notNull(),
+    domain: text("domain").notNull(),
+    sourcesIngested: jsonb("sources_ingested").notNull(),
+    insightsExtracted: jsonb("insights_extracted").notNull(),
+    confidenceBefore: integer("confidence_before").notNull(),
+    confidenceAfter: integer("confidence_after").notNull(),
+    masteryDelta: integer("mastery_delta").notNull(),
+    trainedAt: timestamp("trained_at").notNull().defaultNow(),
+  },
+  t => ({
+    ixSession: index("ix_agent_training_session").on(t.sessionId),
+    ixAgent: index("ix_agent_training_agent").on(t.agentId),
+  }),
+);
+export type AgentTrainingRecordRow = typeof agentTrainingRecordsTable.$inferSelect;
+
+// Next-version blueprint: agents propose system improvements based on
+// remaining audit findings + their newly-trained knowledge; council ratifies.
+export const nextVersionBlueprintsTable = pgTable(
+  "next_version_blueprints",
+  {
+    id: serial("id").primaryKey(),
+    blueprintVersion: integer("blueprint_version").notNull(),
+    sessionId: text("session_id").notNull(),
+    proposals: jsonb("proposals").notNull(),
+    ratifiedProposals: jsonb("ratified_proposals").notNull(),
+    rejectedProposals: jsonb("rejected_proposals").notNull(),
+    blueprintSummary: text("blueprint_summary").notNull(),
+    contentHash: text("content_hash").notNull(),
+    sealedLedgerIndex: integer("sealed_ledger_index"),
+    sealedAt: timestamp("sealed_at").notNull().defaultNow(),
+  },
+  t => ({
+    uxVersion: uniqueIndex("ux_next_version_blueprint_version").on(t.blueprintVersion),
+  }),
+);
+export type NextVersionBlueprintRow = typeof nextVersionBlueprintsTable.$inferSelect;
+
+// One row per autonomous-build cycle, summarizing all four phases.
+export const autonomousBuildCyclesTable = pgTable(
+  "autonomous_build_cycles",
+  {
+    id: serial("id").primaryKey(),
+    sessionId: text("session_id").notNull().unique(),
+    cycleNumber: integer("cycle_number").notNull(),
+    trainingRecordCount: integer("training_record_count").notNull().default(0),
+    bibleChaptersAuthored: integer("bible_chapters_authored").notNull().default(0),
+    historyErasAuthored: integer("history_eras_authored").notNull().default(0),
+    blueprintProposalsRatified: integer("blueprint_proposals_ratified").notNull().default(0),
+    auditBefore: integer("audit_before").notNull().default(0),
+    auditAfter: integer("audit_after").notNull().default(0),
+    sealedLedgerIndex: integer("sealed_ledger_index"),
+    summary: jsonb("summary").notNull(),
+    completedAt: timestamp("completed_at").notNull().defaultNow(),
+  },
+);
+export type AutonomousBuildCycleRow = typeof autonomousBuildCyclesTable.$inferSelect;
+

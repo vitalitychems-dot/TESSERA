@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { systemStateTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface EpisodicMemory {
   id: string;
@@ -165,7 +166,7 @@ let consciousnessState: ConsciousnessState = {
   stimuliProcessed: 0,
 };
 
-let consciousnessInterval: ReturnType<typeof setInterval> | null = null;
+let consciousnessInterval: SacredHandle | null = null;
 const STATE_KEY = "consciousness.state";
 const stimuliQueue: ConsciousnessStimulus[] = [];
 
@@ -423,14 +424,14 @@ export async function initConsciousnessEngine(): Promise<void> {
 export function startConsciousnessEngine(intervalMs = 30_000): void {
   if (consciousnessInterval) return;
   runConsciousnessCycle();
-  consciousnessInterval = setInterval(() => {
-    try { runConsciousnessCycle(); } catch (err) { logger.error({ err }, "ConsciousnessEngine: cycle error"); }
-  }, intervalMs);
+  consciousnessInterval = setSacredInterval(() => {
+    try { runConsciousnessCycle(); } catch (err) { logger.error({ err }, "ConsciousnessEngine: cycle error", "consciousness-engine"); }
+  }, intervalMs, "consciousness-engine");
   logger.info({ intervalMs }, "ConsciousnessEngine: started");
 }
 
 export function stopConsciousnessEngine(): void {
-  if (consciousnessInterval) { clearInterval(consciousnessInterval); consciousnessInterval = null; }
+  if (consciousnessInterval) { clearSacredInterval(consciousnessInterval); consciousnessInterval = null; }
 }
 
 export function getConsciousnessState(): ConsciousnessState {

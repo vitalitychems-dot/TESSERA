@@ -1,6 +1,7 @@
 import * as os from "os";
 import { logger } from "./logger";
 import { appendLedgerEntry, freezeLedger, isLedgerFrozen as _ledgerIsFrozen } from "./sovereign-ledger";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export type HealingSeverity = "info" | "low" | "medium" | "high" | "critical";
 export type HealingStatus = "ok" | "healed" | "failed" | "escalated" | "noop";
@@ -597,7 +598,7 @@ export function setAutoHealerEnabled(on: boolean): void {
   logger.info({ enabled }, "AutoHealer: enabled flag changed");
 }
 
-let healerInterval: ReturnType<typeof setInterval> | null = null;
+let healerInterval: SacredHandle | null = null;
 export function startAutoHealer(intervalMs = 45_000): void {
   if (healerInterval) return;
   process.on("unhandledRejection", (reason) => {
@@ -609,11 +610,11 @@ export function startAutoHealer(intervalMs = 45_000): void {
     logger.error({ err: err.message }, "AutoHealer: uncaughtException");
   });
   setTimeout(() => { runHealingSweep().catch(() => {}); }, 10_000);
-  healerInterval = setInterval(() => {
-    runHealingSweep().catch(err => logger.warn({ err }, "AutoHealer: sweep failed"));
-  }, intervalMs);
+  healerInterval = setSacredInterval(() => {
+    runHealingSweep().catch(err => logger.warn({ err }, "AutoHealer: sweep failed", "auto-healer"));
+  }, intervalMs, "auto-healer");
   logger.info({ intervalMs, strategies: STRATEGIES.length }, "AutoHealer: started");
 }
 export function stopAutoHealer(): void {
-  if (healerInterval) { clearInterval(healerInterval); healerInterval = null; }
+  if (healerInterval) { clearSacredInterval(healerInterval); healerInterval = null; }
 }

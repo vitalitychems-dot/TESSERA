@@ -19,6 +19,7 @@ import { getAllTunables } from "../system-tunables.js";
 import { getLastSynthesis, getSynthesisHistory } from "../invention-synthesis.js";
 import { getConsensusMetrics } from "../consensus-engine.js";
 import { logger } from "../logger.js";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "../sacred-scheduler";
 
 export interface MetacognitionFinding {
   id: string;
@@ -187,11 +188,11 @@ export function metacognitionSnapshot() {
 }
 
 // ----- auto-run loop -----
-let loopHandle: NodeJS.Timeout | null = null;
+let loopHandle: SacredHandle | null = null;
 export function startMetacognitionLoop(intervalMs = 60_000, getMetrics: () => Record<string, number>) {
   if (loopHandle) return;
-  loopHandle = setInterval(() => {
-    try { runMetacognitionTick(getMetrics()); } catch (err) { logger.warn({ err }, "Metacognition tick failed"); }
-  }, intervalMs);
+  loopHandle = setSacredInterval(() => {
+    try { runMetacognitionTick(getMetrics()); } catch (err) { logger.warn({ err }, "Metacognition tick failed", "metacognition"); }
+  }, intervalMs, "metacognition");
   if (typeof loopHandle.unref === "function") loopHandle.unref();
 }

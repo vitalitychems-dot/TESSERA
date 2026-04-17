@@ -6,6 +6,7 @@ import { isLLMAvailable } from "./llm-client";
 import { batchedCallLLM } from "./llm-batcher";
 import { onProposalOutcome } from "./consciousness-engine";
 import { onCouncilDecision } from "./knowledge-diffusion";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 const RETRY_QUEUE_STATE_KEY = "consensus_retry_queue";
 const PHI = 1.618033988749895;
@@ -77,7 +78,7 @@ const AGENT_SPECIALTIES: Record<string, string[]> = {
 
 const proposals = new Map<string, ConsensusProposal>();
 const retryQueue: ConsensusProposal[] = [];
-let retryInterval: ReturnType<typeof setInterval> | null = null;
+let retryInterval: SacredHandle | null = null;
 
 let swarmWeightProvider: ((agentName: string, category: string) => number) | null = null;
 
@@ -319,13 +320,13 @@ export async function loadRetryQueue(): Promise<void> {
 
 function startRetryProcessor(): void {
   if (retryInterval) return;
-  retryInterval = setInterval(async () => {
+  retryInterval = setSacredInterval(async () => {
     if (retryQueue.length === 0) return;
 
     const proposal = retryQueue.shift();
     if (!proposal) return;
 
-    logger.info({ id: proposal.id, title: proposal.title, retryCount: proposal.retryCount }, "ConsensusEngine: retrying queued proposal");
+    logger.info({ id: proposal.id, title: proposal.title, retryCount: proposal.retryCount }, "ConsensusEngine: retrying queued proposal", "consensus-engine");
     try {
       let votes: ConsensusVote[] = [];
       let durationMs = 0;
@@ -357,7 +358,7 @@ function startRetryProcessor(): void {
       logger.warn({ id: proposal.id, retryCount: proposal.retryCount, err }, "ConsensusEngine: retry failed, re-queued");
     }
     persistRetryQueue();
-  }, 30_000);
+  }, 30_000, "consensus-engine");
 }
 
 function finalizeProposal(proposal: ConsensusProposal, votes: ConsensusVote[], durationMs?: number, degradedParticipation = false): void {
