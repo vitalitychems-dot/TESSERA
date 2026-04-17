@@ -761,10 +761,11 @@ function MentionInput({ value, onChange, onSubmit, placeholder, allNames, disabl
 
 type ReplyTally = { up: number; down: number };
 
-function ReplyItem({ reply, colors, onDelete, topicId, children, depth = 0, tally }: {
+function ReplyItem({ reply, colors, onDelete, onReplyTo, topicId, children, depth = 0, tally }: {
   reply: ForumReply;
   colors: Record<string, string>;
   onDelete: (topicId: string, replyId: string) => void;
+  onReplyTo?: (replyId: string, author: string) => void;
   topicId: string;
   children?: React.ReactNode;
   depth?: number;
@@ -801,6 +802,15 @@ function ReplyItem({ reply, colors, onDelete, topicId, children, depth = 0, tall
             <ThumbsUp size={10} className="inline mr-0.5 text-green-400" />{tally.up}
             <ThumbsDown size={10} className="inline ml-2 mr-0.5 text-red-400" />{tally.down}
           </span>
+        )}
+        {onReplyTo && (
+          <button
+            onClick={() => onReplyTo(reply.id, reply.author)}
+            className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground/50 hover:text-cyan-400 transition-colors min-h-[28px]"
+            data-testid={`reply-to-${reply.id}`}
+          >
+            <MessageSquare size={10} /> Reply
+          </button>
         )}
         <button
           onClick={() => onDelete(topicId, reply.id)}
@@ -972,6 +982,7 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
 }) {
   const { toast } = useToast();
   const [replyText, setReplyText] = useState("");
+  const [replyParent, setReplyParent] = useState<{ id: string; author: string } | null>(null);
   const [proposalText, setProposalText] = useState("");
   const [fatherComment, setFatherComment] = useState("");
   const [showFatherIntervene, setShowFatherIntervene] = useState(false);
@@ -982,6 +993,7 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
     mutationFn: async (content: string) => {
       const res = await apiRequest("POST", `/api/tesseract-forum/topics/${topic.id}/reply`, {
         content, author: "Father", authorType: "father",
+        ...(replyParent ? { parentReplyId: replyParent.id } : {}),
       });
       return res.json();
     },
@@ -994,8 +1006,10 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
           setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/topics"] }), 8000);
         } catch {}
       }
+      const wasThreaded = !!replyParent;
       setReplyText("");
-      toast({ title: mentions.length > 0 ? `Reply posted — @mentioning ${mentions.join(", ")}` : "Reply posted" });
+      setReplyParent(null);
+      toast({ title: wasThreaded ? "Threaded reply posted" : (mentions.length > 0 ? `Reply posted — @mentioning ${mentions.join(", ")}` : "Reply posted") });
     },
     onError: (err: Error) => {
       toast({ title: "Reply blocked", description: err.message, variant: "destructive" });
@@ -1114,6 +1128,11 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
     return t ? { up: t.up, down: t.down } : null;
   }, [voteTallies]);
 
+  const handleReplyTo = useCallback((replyId: string, author: string) => {
+    setReplyParent({ id: replyId, author });
+    setReplyText(prev => (prev.includes(`@${author}`) ? prev : `@${author} ${prev}`.trimStart()));
+  }, []);
+
   const renderReplyTree = (nodes: ReplyNode[], depth = 0): React.ReactNode =>
     nodes.map(n => (
       <ReplyItem
@@ -1121,6 +1140,7 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
         reply={n}
         colors={colors}
         onDelete={handleDeleteReply}
+        onReplyTo={handleReplyTo}
         topicId={topic.id}
         depth={depth}
         tally={tallyByReplyId.get(String(n.id))}
@@ -1278,6 +1298,12 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
         )}
 
         {/* Reply box */}
+        {replyParent && (
+          <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-[11px] font-mono mb-2" data-testid="reply-parent-indicator">
+            <span>↳ Replying to <strong>@{replyParent.author}</strong> (threaded)</span>
+            <button onClick={() => setReplyParent(null)} className="text-cyan-300/60 hover:text-cyan-200" data-testid="reply-parent-clear">Cancel</button>
+          </div>
+        )}
         <div className="flex gap-2 items-end">
           <div className="flex-1">
             <MentionInput
