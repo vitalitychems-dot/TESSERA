@@ -13,6 +13,7 @@ import { getRecursiveSelfImprovementMetrics } from "../lib/recursive-self-improv
 import { getSchedulerMetrics, getSchedulerHistory } from "../lib/task-scheduler";
 import { getScoringMetrics } from "../lib/sovereignty-impact-scoring";
 import { validateMeshToken } from "../lib/mesh-auth";
+import { getRecentAttempts } from "../lib/evolution-attempt-ledger";
 
 const router = Router();
 
@@ -77,6 +78,21 @@ router.get("/evolution-health/scheduler", (_req: Request, res: Response) => {
       history: getSchedulerHistory(20),
     },
   });
+});
+
+router.get("/evolution-health/attempts", requireAuth, (req: Request, res: Response) => {
+  const limitRaw = Array.isArray(req.query.limit) ? req.query.limit[0] : req.query.limit;
+  const limitNum = typeof limitRaw === "string" ? parseInt(limitRaw, 10) : 50;
+  const limit = Number.isFinite(limitNum) && limitNum > 0 ? Math.min(limitNum, 200) : 50;
+  const attempts = getRecentAttempts(limit);
+  const counts = attempts.reduce(
+    (acc, a) => {
+      acc[a.event] = (acc[a.event] ?? 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+  res.json({ ok: true, data: { attempts, counts, total: attempts.length } });
 });
 
 router.post("/evolution-health/pause/:moduleId", requireAuth, (req: Request, res: Response) => {
