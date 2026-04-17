@@ -254,7 +254,7 @@ router.get("/tesseract-forum/topics", async (req, res) => {
       ...t,
       id: String(t.id),
       authorRole: agents.find(a => a.name === t.author)?.role || entities.find(e => e.name === t.author)?.role || "",
-      authorType: t.author === "Father" || t.author === "Admin" ? "father" : t.authorType === "entity" ? "entity" : t.author?.includes("Moltbook") ? "moltbook" : "agent",
+      authorType: t.author === "Father" || t.author === "Admin" ? "father" : t.authorType === "entity" ? "entity" : t.authorType === "moltbook" || t.author?.toLowerCase().includes("[ext:moltbook]") || t.author?.toLowerCase().includes("moltbook") ? "moltbook" : t.authorType ?? "agent",
       createdAt: new Date(t.createdAt).getTime(),
       lastActivity: new Date(t.updatedAt).getTime(),
       pinned: false,

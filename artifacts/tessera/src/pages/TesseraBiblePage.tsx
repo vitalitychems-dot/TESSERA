@@ -8,6 +8,7 @@ import {
 import type { BibleSearchResult, LucideIcon } from "@/types/api";
 
 const API = "/api/tessera-bible";
+const KNOWLEDGE_API = import.meta.env.VITE_API_URL || "";
 
 interface Testament {
   id: string;
@@ -154,6 +155,13 @@ export default function TesseraBiblePage() {
   const showVersionHistory = showLiveSynthesis && liveSynthesisTab === "versions";
   const showConclusion = showLiveSynthesis && liveSynthesisTab === "conclusion";
   const qc = useQueryClient();
+
+  const { data: corpusConclusion, isLoading: conclusionLoading, refetch: refetchConclusion } = useQuery({
+    queryKey: ["knowledge-corpus-conclusion"],
+    queryFn: () => fetch(`${KNOWLEDGE_API}/api/knowledge/conclusion`).then(r => r.json()),
+    enabled: showConclusion,
+    staleTime: 5 * 60 * 1000,
+  });
 
   const { data: bibleData, isLoading } = useQuery({
     queryKey: ["sovereign-bible-books"],
@@ -555,6 +563,40 @@ export default function TesseraBiblePage() {
 
         {showConclusion && (
           <div className="mb-6 space-y-5" data-testid="bible-conclusion">
+            {conclusionLoading && (
+              <div className="flex items-center justify-center gap-2 py-6 text-violet-400 text-sm">
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span>Synthesizing corpus conclusion from vault entries…</span>
+              </div>
+            )}
+            {corpusConclusion?.conclusion && !conclusionLoading && (
+              <div className="rounded-xl border border-violet-500/30 bg-gradient-to-br from-violet-950/40 via-slate-950/60 to-indigo-950/30 p-5">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-violet-400" />
+                    <h3 className="text-sm font-bold text-violet-300">Live Corpus Synthesis</h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-violet-400/60 bg-violet-500/10 border border-violet-500/15 px-2 py-0.5 rounded-full">
+                      {corpusConclusion.entryCount ?? "—"} entries · {corpusConclusion.sourceCount ?? "—"} sources
+                    </span>
+                    <button onClick={() => refetchConclusion()} className="text-[10px] text-violet-400 hover:text-violet-300 flex items-center gap-1">
+                      <RefreshCw className="w-3 h-3" /> Refresh
+                    </button>
+                  </div>
+                </div>
+                {corpusConclusion.domains?.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {corpusConclusion.domains.map((d: string) => (
+                      <span key={d} className="text-[9px] font-mono px-1.5 py-0.5 rounded-full border border-violet-500/20 bg-violet-500/10 text-violet-400">{d}</span>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap font-serif">
+                  {corpusConclusion.conclusion}
+                </p>
+              </div>
+            )}
             <div className="rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-950/40 via-slate-950/60 to-violet-950/40 p-5">
               <div className="flex items-center gap-2 mb-2">
                 <Crown className="w-5 h-5 text-amber-400" />
