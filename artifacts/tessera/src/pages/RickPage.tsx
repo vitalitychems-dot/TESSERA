@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Send, FlaskConical, Vote, CheckCircle2, XCircle, ChevronRight, RefreshCw, BookOpen, TrendingUp, Crown, Shield, Brain, Zap, Database, Target, Loader2, Users, Timer, MemoryStick, Activity, AlertTriangle, Skull, Plus, ScanSearch, Repeat, Send as SendIcon, Lightbulb, Sparkles } from "lucide-react";
+import { Send, FlaskConical, Vote, CheckCircle2, XCircle, ChevronRight, ChevronDown, RefreshCw, BookOpen, TrendingUp, Crown, Shield, Brain, Zap, Database, Target, Loader2, Users, Timer, MemoryStick, Activity, AlertTriangle, Skull, Plus, ScanSearch, Repeat, Send as SendIcon, Lightbulb, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const RICK_GREEN = "#00ff41";
@@ -428,8 +428,8 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
             </div>
           )}
         </div>
-        <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
-          {([
+        {(() => {
+          const RICK_TABS = [
             { key: "reality" as const, label: "Reality", icon: ScanSearch, color: "#10b981" },
             { key: "program" as const, label: "Program", icon: Repeat, color: "#f472b6" },
             { key: "proposals" as const, label: "Proposals", icon: Vote, color: "#fbbf24" },
@@ -439,19 +439,52 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
             { key: "improvements" as const, label: "Improve", icon: TrendingUp, color: "#22d3ee" },
             { key: "royal" as const, label: "Royal", icon: Crown, color: ROYAL_GOLD },
             { key: "chat" as const, label: "Chat", icon: Send, color: RICK_PORTAL },
-          ]).map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={cn("px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-bold transition-all border",
-                activeTab === tab.key ? "border-current" : "border-white/10 text-muted-foreground hover:border-white/20"
-              )}
-              style={activeTab === tab.key ? { color: tab.color, borderColor: `${tab.color}60`, background: `${tab.color}10` } : {}}
-            >
-              <tab.icon size={11} className="inline mr-1" />{tab.label}
-            </button>
-          ))}
-        </div>
+          ];
+          const activeMeta = RICK_TABS.find(t => t.key === activeTab) || RICK_TABS[0];
+          return (
+            <>
+              {/* Mobile: compact native dropdown — no row of buttons */}
+              <div className="md:hidden shrink-0 w-full sm:w-auto" data-testid="rick-section-dropdown-wrapper">
+                <div className="relative">
+                  <div
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg border text-[12px] font-mono font-bold pointer-events-none"
+                    style={{ color: activeMeta.color, borderColor: `${activeMeta.color}60`, background: `${activeMeta.color}10` }}
+                  >
+                    <activeMeta.icon size={14} />
+                    <span className="truncate">{activeMeta.label}</span>
+                    <ChevronDown size={14} className="ml-auto opacity-70" />
+                  </div>
+                  <select
+                    aria-label="Rick section"
+                    value={activeTab}
+                    onChange={e => setActiveTab(e.target.value as RickTabKey)}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                    data-testid="rick-section-dropdown"
+                  >
+                    {RICK_TABS.map(tab => (
+                      <option key={tab.key} value={tab.key}>{tab.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {/* Desktop: keep button row */}
+              <div className="hidden md:flex gap-1.5 shrink-0 flex-wrap justify-end">
+                {RICK_TABS.map(tab => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={cn("px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-bold transition-all border",
+                      activeTab === tab.key ? "border-current" : "border-white/10 text-muted-foreground hover:border-white/20"
+                    )}
+                    style={activeTab === tab.key ? { color: tab.color, borderColor: `${tab.color}60`, background: `${tab.color}10` } : {}}
+                  >
+                    <tab.icon size={11} className="inline mr-1" />{tab.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          );
+        })()}
       </div>
 
       {activeTab === "reality" && <RealityAuditPanel />}

@@ -223,7 +223,7 @@ const REDIRECTS: Array<[string, string]> = [
   ["/business-ideas", "/lead-gen?tab=ideas"],
   ["/seo", "/lead-gen?tab=seo"],
   // Code cluster
-  ["/api-marketplace", "/code-builder?tab=api"],
+  ["/api-marketplace", "/lead-gen?tab=affiliate"],
   ["/credentials", "/code-builder?tab=credentials"],
   // Misc aliases
   ["/intelligence-engine", "/consciousness-nexus"],
