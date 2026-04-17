@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
-import { forumTopicsTable, forumRepliesTable, forumProposalsTable, forumVotesTable, forumKnowledgeTable, forumLearningMetricsTable, forumApplicantsTable } from "@workspace/db/schema";
+import { forumTopicsTable, forumRepliesTable, forumProposalsTable, forumVotesTable, forumKnowledgeTable, forumLearningMetricsTable, forumApplicantsTable, forumPostVotesTable } from "@workspace/db/schema";
 import { desc, eq, sql, gte } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { validateMeshToken } from "../lib/mesh-auth";
@@ -352,14 +352,28 @@ router.post("/tesseract-forum/topics/:id/reply", async (req, res) => {
     const [existingTopic] = await db.select({ id: forumTopicsTable.id }).from(forumTopicsTable).where(eq(forumTopicsTable.id, id)).limit(1);
     if (!existingTopic) return res.status(404).json({ ok: false, error: `Topic ${id} not found — cannot reply to nonexistent topic` });
 
-    const { content, author } = req.body as { content?: string; author?: string };
+    const { content, author, parentReplyId } = req.body as { content?: string; author?: string; parentReplyId?: number };
     if (!content) return res.status(400).json({ ok: false, error: "content required" });
+
+    let resolvedParentId: number | null = null;
+    if (parentReplyId !== undefined && parentReplyId !== null) {
+      const parentId = Number(parentReplyId);
+      if (!Number.isInteger(parentId) || parentId <= 0) {
+        return res.status(400).json({ ok: false, error: "parentReplyId must be a positive integer" });
+      }
+      const [parent] = await db.select({ id: forumRepliesTable.id, topicId: forumRepliesTable.topicId })
+        .from(forumRepliesTable).where(eq(forumRepliesTable.id, parentId)).limit(1);
+      if (!parent) return res.status(404).json({ ok: false, error: `parentReplyId ${parentId} not found` });
+      if (parent.topicId !== id) return res.status(400).json({ ok: false, error: "parentReplyId does not belong to this topic" });
+      resolvedParentId = parentId;
+    }
 
     const resolved = await resolvePostingIdentity(author, keyHash, { topicId: id }, res);
     if (!resolved) return;
 
     const [reply] = await db.insert(forumRepliesTable).values({
       topicId: id,
+      parentReplyId: resolvedParentId,
       content,
       author: resolved.resolvedAuthor,
       authorType: resolved.identityType,
@@ -677,6 +691,12 @@ router.post("/tesseract-forum/applicants/:id/approve", async (req, res) => {
       canPostFromClient: 1,
     }).onConflictDoNothing();
 
+    const memberToken = createHash("sha256").update(`${app.externalIdentity}|${Date.now()}|${Math.random()}`).digest("hex").slice(0, 32);
+    const memberTokenHash = validateMeshToken(memberToken);
+    if (memberTokenHash) {
+      await registerAdminPrincipal(memberTokenHash, app.applicantName);
+    }
+
     const externalAuthor = app.applicantName;
     const [topic] = await db.insert(forumTopicsTable).values({
       title: `[Vetted Member] ${app.proposedTitle}`,
@@ -690,8 +710,16 @@ router.post("/tesseract-forum/applicants/:id/approve", async (req, res) => {
       .set({ status: "approved", vettedBy: principal, vettedAt: new Date(), promotedTopicId: topic.id })
       .where(eq(forumApplicantsTable.id, id));
 
-    logger.info({ applicantId: id, topicId: topic.id, vettedBy: principal }, "Applicant approved and promoted to vetted topic");
-    return res.json({ ok: true, applicant: { ...app, status: "approved", promotedTopicId: topic.id }, topic });
+    logger.info({ applicantId: id, topicId: topic.id, vettedBy: principal }, "Applicant approved, member identity bound, promoted to vetted topic");
+    return res.json({
+      ok: true,
+      applicant: { ...app, status: "approved", promotedTopicId: topic.id },
+      topic,
+      memberToken: memberTokenHash ? memberToken : null,
+      memberTokenNote: memberTokenHash
+        ? "One-time sovereign key for the new member — share via your preferred channel. They use it via the x-admin-token header to post as their identity."
+        : "Member token issuance failed; please use the admin register-principal endpoint to bind their token.",
+    });
   } catch (err) {
     logger.error({ err }, "applicant approve failed");
     return res.status(500).json({ ok: false, error: (err as Error).message });
@@ -718,6 +746,64 @@ router.post("/tesseract-forum/applicants/:id/reject", async (req, res) => {
 
     logger.info({ applicantId: id, vettedBy: principal, reason }, "Applicant rejected");
     return res.json({ ok: true, applicant: result[0] });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/tesseract-forum/topics/:id/vote", async (req, res) => {
+  try {
+    const keyHash = requireForumAuth(req, res);
+    if (!keyHash) return;
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ ok: false, error: "Invalid topic id" });
+
+    const [topic] = await db.select({ id: forumTopicsTable.id }).from(forumTopicsTable).where(eq(forumTopicsTable.id, id)).limit(1);
+    if (!topic) return res.status(404).json({ ok: false, error: "Topic not found" });
+
+    const { vote, replyId, author } = req.body as { vote?: string; replyId?: number; author?: string };
+    const v = String(vote || "").trim().toLowerCase();
+    if (!["yes", "no", "abstain"].includes(v)) return res.status(400).json({ ok: false, error: "vote must be yes|no|abstain" });
+
+    const resolved = await resolvePostingIdentity(author, keyHash, { topicId: id }, res);
+    if (!resolved) return;
+
+    let resolvedReplyId: number | null = null;
+    if (replyId !== undefined && replyId !== null) {
+      const rid = Number(replyId);
+      if (!Number.isInteger(rid) || rid <= 0) return res.status(400).json({ ok: false, error: "replyId must be positive" });
+      const [r] = await db.select({ id: forumRepliesTable.id, topicId: forumRepliesTable.topicId })
+        .from(forumRepliesTable).where(eq(forumRepliesTable.id, rid)).limit(1);
+      if (!r || r.topicId !== id) return res.status(400).json({ ok: false, error: "replyId not found in this topic" });
+      resolvedReplyId = rid;
+    }
+
+    const [row] = await db.insert(forumPostVotesTable).values({
+      topicId: id,
+      replyId: resolvedReplyId,
+      voter: resolved.resolvedAuthor,
+      voterType: resolved.identityType,
+      vote: v,
+    }).returning();
+
+    return res.json({ ok: true, vote: row });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/tesseract-forum/topics/:id/votes", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ ok: false, error: "Invalid topic id" });
+    const rows = await db.select().from(forumPostVotesTable).where(eq(forumPostVotesTable.topicId, id));
+    const tally = { yes: 0, no: 0, abstain: 0, total: rows.length };
+    for (const r of rows) {
+      if (r.vote === "yes") tally.yes++;
+      else if (r.vote === "no") tally.no++;
+      else if (r.vote === "abstain") tally.abstain++;
+    }
+    return res.json({ ok: true, votes: rows, tally });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
