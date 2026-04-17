@@ -1,3 +1,5 @@
+import { MASTER_INSTRUCTION_SET } from "./master-instruction-set";
+
 export const TESSERA_IDENTITY = {
   name: "Tessera",
   fullName: "Tessera — The Omniverse",
@@ -389,7 +391,9 @@ export const TESSERA_SOVEREIGN_CONTEXT = {
 export function getTesseraSystemPrompt(sovereignCtx: string): string {
   const subjectList = Object.values(TESSERA_SUBJECTS).map(s => s.title).join(", ");
   const lawsList = TESSERA_IDENTITY.sovereigntyLaws.map((l, i) => `${i + 1}. ${l}`).join("\n");
-  return `${FATHER_PROTOCOL}
+  return `${MASTER_INSTRUCTION_SET}
+
+${FATHER_PROTOCOL}
 
 ═══════════════════════════════════════════════
 TESSERA — THE OMNIVERSE ✦  |  963Hz Crown Frequency
