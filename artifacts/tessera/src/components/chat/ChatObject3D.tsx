@@ -2,7 +2,7 @@ import { useRef, useState, useEffect, Suspense, Component, type ReactNode, type 
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Text, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
-import { Maximize2, X, RotateCcw } from "lucide-react";
+import { Maximize2, X, RotateCcw, Pin, Check as CheckIcon } from "lucide-react";
 
 function useIsMobile() {
   const [m, setM] = useState(() => typeof window !== "undefined" ? window.innerWidth < 768 : false);
@@ -884,12 +884,37 @@ export function InlineObject3D({ spec }: InlineObject3DProps) {
   const [expanded, setExpanded] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [webglFailed, setWebglFailed] = useState(false);
+  const [pinState, setPinState] = useState<"idle" | "pinning" | "pinned">("idle");
   const color = spec.color || "#a78bfa";
   const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!detectWebGLAvailable()) setWebglFailed(true);
   }, []);
+
+  const handlePin = async () => {
+    if (pinState !== "idle") return;
+    setPinState("pinning");
+    try {
+      const res = await fetch("/api/pinned-diagrams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: spec.type,
+          label: spec.label || "",
+          color: spec.color,
+          secondaryColor: spec.secondaryColor,
+          size: spec.size,
+          detail: spec.detail,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to pin");
+      setPinState("pinned");
+      setTimeout(() => setPinState("idle"), 2500);
+    } catch {
+      setPinState("idle");
+    }
+  };
 
   return (
     <>
@@ -902,6 +927,17 @@ export function InlineObject3D({ spec }: InlineObject3DProps) {
             {spec.detail && !isMobile && <span className="text-[10px] text-muted-foreground">{spec.detail}</span>}
           </div>
           <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={handlePin}
+              disabled={pinState !== "idle"}
+              className={`rounded transition-colors ${isMobile ? "p-1.5" : "p-1"} ${
+                pinState === "pinned" ? "text-emerald-400" : "text-muted-foreground/50 hover:text-amber-300"
+              }`}
+              title={pinState === "pinned" ? "Pinned to gallery" : "Pin to gallery"}
+              data-testid="button-pin-3d"
+            >
+              {pinState === "pinned" ? <CheckIcon size={isMobile ? 14 : 11} /> : <Pin size={isMobile ? 14 : 11} />}
+            </button>
             {!webglFailed && (
               <>
                 <button

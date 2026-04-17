@@ -4,7 +4,7 @@ import {
   MessageSquare, Heart, Globe2, Users, Lock,
   Wrench, MessageCircle, Brain, Settings, Shield, Cpu, DollarSign, Search, BookOpen,
   Zap, Gavel, Languages, UserPlus, Hexagon, Skull, Book, Eye,
-  Network, Terminal, ArrowUpDown, BarChart3, Code2, Key, Map, User, CheckSquare, Scale, TrendingUp, Target, ShoppingCart, Lightbulb, MapPin, Truck, Link2, Workflow, Building2,
+  Network, Terminal, ArrowUpDown, BarChart3, Code2, Key, Map, User, CheckSquare, Scale, TrendingUp, Target, ShoppingCart, Lightbulb, MapPin, Truck, Link2, Workflow, Building2, Pin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +39,7 @@ const TABS: NavTab[] = [
   { label: "Depts", href: "/departments", Icon: Building2, match: (l) => l === "/departments", color: "cyan" },
   { label: "System", href: "/system", Icon: Cpu, match: (l) => l === "/system", color: "cyan" },
   { label: "Build", href: "/build", Icon: Wrench, match: (l) => l === "/build", color: "emerald" },
+  { label: "Gallery", href: "/gallery", Icon: Pin, match: (l) => l === "/gallery" || l === "/diagram-gallery", color: "amber" },
   { label: "Tokens", href: "/tokens", Icon: DollarSign, match: (l) => l === "/tokens", color: "amber" },
   { label: "NFT", href: "/agent-nft", Icon: Hexagon, match: (l) => l === "/agent-nft", color: "violet" },
   { label: "Lattice", href: "/lattice", Icon: Search, match: (l) => l === "/lattice", color: "violet" },

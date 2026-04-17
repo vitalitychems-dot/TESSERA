@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
 import { createHash } from "node:crypto";
 import { db } from "@workspace/db";
-import { inventionsTable, type InsertInvention } from "@workspace/db/schema";
+import { inventionsTable, pinnedDiagramsTable, insertPinnedDiagramSchema, type InsertInvention } from "@workspace/db/schema";
 import { desc, eq, and } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
 import { logger } from "../lib/logger";
 import { hashStringFNV, getRealityFlag } from "../lib/reality-audit";
 import { buildInvention3DBlock, buildInvention3DBlocks } from "../lib/invention-3d";
@@ -1406,6 +1407,74 @@ router.post("/inventions/conference/start", async (req, res) => {
       inventionsInDebate: debatingInventions.length,
       topic: topic || "Grand Inventions Conference",
     });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/pinned-diagrams", async (req, res) => {
+  try {
+    const { userId } = req.query as { userId?: string };
+    const baseQuery = db.select().from(pinnedDiagramsTable);
+    const rows = userId
+      ? await baseQuery.where(eq(pinnedDiagramsTable.userId, userId)).orderBy(desc(pinnedDiagramsTable.createdAt))
+      : await baseQuery.orderBy(desc(pinnedDiagramsTable.createdAt));
+    return res.json({ ok: true, diagrams: rows });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/pinned-diagrams", async (req, res) => {
+  try {
+    const body = req.body ?? {};
+    const payload = {
+      diagramId: typeof body.diagramId === "string" && body.diagramId.length > 0 ? body.diagramId : randomUUID(),
+      userId: typeof body.userId === "string" ? body.userId : null,
+      type: typeof body.type === "string" && body.type.length > 0 ? body.type : "abstract",
+      label: typeof body.label === "string" ? body.label : "",
+      color: typeof body.color === "string" ? body.color : null,
+      secondaryColor: typeof body.secondaryColor === "string" ? body.secondaryColor : null,
+      size: typeof body.size === "number" && Number.isFinite(body.size) ? body.size : null,
+      detail: typeof body.detail === "string" ? body.detail : null,
+      note: typeof body.note === "string" ? body.note : null,
+      sourceMessageId: typeof body.sourceMessageId === "string" ? body.sourceMessageId : null,
+    };
+    const parsed = insertPinnedDiagramSchema.safeParse(payload);
+    if (!parsed.success) {
+      return res.status(400).json({ ok: false, error: "Invalid pinned diagram payload", issues: parsed.error.issues });
+    }
+    const [row] = await db.insert(pinnedDiagramsTable).values(parsed.data).returning();
+    return res.json({ ok: true, diagram: row });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.patch("/pinned-diagrams/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isFinite(id)) return res.status(400).json({ ok: false, error: "Invalid id" });
+    const body = req.body ?? {};
+    const updates: Record<string, unknown> = {};
+    if (typeof body.label === "string") updates.label = body.label;
+    if (typeof body.note === "string") updates.note = body.note;
+    if (Object.keys(updates).length === 0) return res.status(400).json({ ok: false, error: "No updatable fields" });
+    const [row] = await db.update(pinnedDiagramsTable).set(updates).where(eq(pinnedDiagramsTable.id, id)).returning();
+    if (!row) return res.status(404).json({ ok: false, error: "Not found" });
+    return res.json({ ok: true, diagram: row });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.delete("/pinned-diagrams/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isFinite(id)) return res.status(400).json({ ok: false, error: "Invalid id" });
+    const [row] = await db.delete(pinnedDiagramsTable).where(eq(pinnedDiagramsTable.id, id)).returning();
+    if (!row) return res.status(404).json({ ok: false, error: "Not found" });
+    return res.json({ ok: true, deleted: row });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
