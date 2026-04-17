@@ -96,15 +96,19 @@ function HeartbeatAndApplicantsPanel() {
   const heartbeat = hb?.heartbeat;
   const applicants = appData?.applicants || [];
 
+  const [issuedToken, setIssuedToken] = useState<{ name: string; token: string } | null>(null);
   const approveMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await apiRequest("POST", `/api/tesseract-forum/applicants/${id}/approve`, {});
-      return res.json();
+      return res.json() as Promise<{ ok: boolean; memberToken?: string | null; promotedAuthor?: string }>;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/applicants"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/topics"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/heartbeat"] });
+      if (data.memberToken && data.promotedAuthor) {
+        setIssuedToken({ name: data.promotedAuthor, token: data.memberToken });
+      }
       toast({ title: "Applicant approved & promoted to vetted topic" });
     },
     onError: (e: Error) => toast({ title: "Approve failed", description: e.message, variant: "destructive" }),
@@ -177,6 +181,30 @@ function HeartbeatAndApplicantsPanel() {
           {showApplyForm ? "Close application form" : "Apply to post (external humans/agents)"}
         </button>
       </div>
+
+      {issuedToken && (
+        <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-2 space-y-1.5" data-testid="issued-token-panel">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-emerald-300">
+            One-time sovereign key for {issuedToken.name}
+          </div>
+          <div className="text-[10px] text-emerald-200/80 font-mono">
+            Share this securely with the new member. They post using header <code>x-admin-token</code>. This will not be shown again.
+          </div>
+          <div className="flex gap-1.5 items-center">
+            <input readOnly value={issuedToken.token} className="flex-1 bg-background/60 border border-emerald-500/30 rounded px-2 py-1 text-[11px] font-mono text-emerald-100" data-testid="issued-token-value" />
+            <button
+              onClick={() => { navigator.clipboard.writeText(issuedToken.token); toast({ title: "Token copied" }); }}
+              className="text-[10px] font-mono px-2 py-1 rounded border border-emerald-500/40 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25"
+              data-testid="button-copy-token"
+            >Copy</button>
+            <button
+              onClick={() => setIssuedToken(null)}
+              className="text-[10px] font-mono px-2 py-1 rounded border border-border/30 text-muted-foreground hover:bg-accent/20"
+              data-testid="button-dismiss-token"
+            >Dismiss</button>
+          </div>
+        </div>
+      )}
 
       {showApplyForm && (
         <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/5 p-2 space-y-1.5" data-testid="apply-form">
