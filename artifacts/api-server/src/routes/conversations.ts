@@ -673,7 +673,11 @@ router.post("/messages", async (req, res) => {
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
     res.flushHeaders?.();
+
+    // Emit a heartbeat immediately so proxies/clients know the stream is alive.
+    res.write(`: stream-open\n\n`);
 
     let sovereignCtx = gatherSovereignContext();
 
@@ -706,7 +710,10 @@ router.post("/messages", async (req, res) => {
     // ---- Hybrid retrieval + citations (T4 + T10) ----
     let retrievedChunks: Array<{ text: string; source: string; score: number }> = [];
     try {
-      retrievedChunks = await hybridRetrieve(content, { topK: 6, rerankTopK: 3 });
+      retrievedChunks = await Promise.race([
+        hybridRetrieve(content, { topK: 6, rerankTopK: 3 }),
+        new Promise<typeof retrievedChunks>((resolve) => setTimeout(() => resolve([]), 2500)),
+      ]);
     } catch (err) {
       logger.debug({ err: (err as Error).message }, "hybrid retrieval skipped");
     }
@@ -736,6 +743,16 @@ router.post("/messages", async (req, res) => {
       tools: toolResults.map(t => ({ name: t.name, ok: t.ok })),
     })}\n\n`);
 
+    // Send the sovereign reply IMMEDIATELY so users see a response within ~1s
+    // even if downstream sandbox/critique LLM calls hang. This is overwritten
+    // later via a reset+content if the critique loop produces a refined reply.
+    const earlySovereign = guardSovereignVoice(
+      generateSovereignResponse(content, isAdminRequest),
+      content,
+      isAdminRequest,
+    );
+    safeWrite({ content: earlySovereign });
+
     if (routingDecision.isStrong) {
       safeWrite({ status: "thinking-harder", tier: routingDecision.tier, reason: routingDecision.reason });
     }
@@ -750,7 +767,8 @@ router.post("/messages", async (req, res) => {
       content: m.content,
     }));
 
-    let finalContent = "";
+    let finalContent = earlySovereign;
+    const initialSovereign = earlySovereign;
     const useExternal = needsExternalKnowledge(content);
     const sandboxAllowed = isSandboxTrainingEnabled(req);
     const ROUTE_DEADLINE_MS = 12_000;
@@ -912,7 +930,10 @@ router.post("/messages", async (req, res) => {
     if (clientAborted) return res.end();
 
     if (finalContent) {
-      safeWrite({ content: finalContent });
+      if (finalContent !== initialSovereign) {
+        safeWrite({ reset: true });
+        safeWrite({ content: finalContent });
+      }
       await db.insert(messagesTable).values({
         conversationId,
         role: "assistant",

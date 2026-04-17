@@ -1,7 +1,56 @@
-import React, { useRef, useMemo, useState, useEffect, useCallback, Component, type ReactNode } from "react";
+import React, { useRef, useMemo, useState, useEffect, useCallback, Component, Suspense, type ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Stars, Html, Ring, Text } from "@react-three/drei";
 import * as THREE from "three";
+
+const LOCAL_BASE = (typeof import.meta !== "undefined" && (import.meta as { env?: { BASE_URL?: string } }).env?.BASE_URL) || "/";
+const LOCAL_FONT_URL = `${LOCAL_BASE}fonts/SpaceMono.woff2`;
+const LOCAL_PLANET_TEXTURE_BASE = `${LOCAL_BASE}textures/planets`;
+
+function SafeText(props: React.ComponentProps<typeof Text>) {
+  return (
+    <Suspense fallback={null}>
+      <Text {...props} />
+    </Suspense>
+  );
+}
+
+function loadTextureWithTimeout(
+  url: string,
+  onLoaded: (tex: THREE.Texture) => void,
+  timeoutMs = 8000,
+): () => void {
+  let settled = false;
+  const loader = new THREE.TextureLoader();
+  loader.crossOrigin = "anonymous";
+  const timer = setTimeout(() => {
+    if (!settled) {
+      settled = true;
+      console.warn("[SolarSystem3D] texture timed out:", url);
+    }
+  }, timeoutMs);
+  loader.load(
+    url,
+    (tex) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      onLoaded(tex);
+    },
+    undefined,
+    () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      console.warn("[SolarSystem3D] texture failed:", url);
+    },
+  );
+  return () => {
+    settled = true;
+    clearTimeout(timer);
+  };
+}
 
 function detectWebGL(): boolean {
   try {
@@ -41,16 +90,15 @@ class WebGLErrorBoundary extends Component<
   }
 }
 
-const NASA_TEXTURE_BASE = "https://upload.wikimedia.org/wikipedia/commons/thumb";
 const PLANET_TEXTURES: Record<string, string> = {
-  Mercury: `${NASA_TEXTURE_BASE}/3/30/Mercury_in_color_-_Prockter07_centered.jpg/600px-Mercury_in_color_-_Prockter07_centered.jpg`,
-  Venus: `${NASA_TEXTURE_BASE}/a/a9/PIA23791-Venus-NewlyProcessedView-20200608.jpg/600px-PIA23791-Venus-NewlyProcessedView-20200608.jpg`,
-  Earth: `${NASA_TEXTURE_BASE}/9/97/The_Earth_seen_from_Apollo_17.jpg/600px-The_Earth_seen_from_Apollo_17.jpg`,
-  Mars: `${NASA_TEXTURE_BASE}/0/02/OSIRIS_Mars_true_color.jpg/600px-OSIRIS_Mars_true_color.jpg`,
-  Jupiter: `${NASA_TEXTURE_BASE}/2/2b/Jupiter_and_its_shrunken_Great_Red_Spot.jpg/600px-Jupiter_and_its_shrunken_Great_Red_Spot.jpg`,
-  Saturn: `${NASA_TEXTURE_BASE}/c/c7/Saturn_during_Equinox.jpg/600px-Saturn_during_Equinox.jpg`,
-  Uranus: `${NASA_TEXTURE_BASE}/3/3d/Uranus2.jpg/600px-Uranus2.jpg`,
-  Neptune: `${NASA_TEXTURE_BASE}/6/63/Neptune_-_Voyager_2_%2829347980845%29_flatten_crop.jpg/600px-Neptune_-_Voyager_2_%2829347980845%29_flatten_crop.jpg`,
+  Mercury: `${LOCAL_PLANET_TEXTURE_BASE}/mercury.jpg`,
+  Venus: `${LOCAL_PLANET_TEXTURE_BASE}/venus.jpg`,
+  Earth: `${LOCAL_PLANET_TEXTURE_BASE}/earth.jpg`,
+  Mars: `${LOCAL_PLANET_TEXTURE_BASE}/mars.jpg`,
+  Jupiter: `${LOCAL_PLANET_TEXTURE_BASE}/jupiter.jpg`,
+  Saturn: `${LOCAL_PLANET_TEXTURE_BASE}/saturn.jpg`,
+  Uranus: `${LOCAL_PLANET_TEXTURE_BASE}/uranus.jpg`,
+  Neptune: `${LOCAL_PLANET_TEXTURE_BASE}/neptune.jpg`,
 };
 
 const PHI = 1.6180339887498948;
@@ -306,17 +354,8 @@ function PlanetWithTexture({ name, distance, size, speed, color, emissive, initi
   useEffect(() => {
     const url = PLANET_TEXTURES[name];
     if (!url) return;
-    const loader = new THREE.TextureLoader();
-    loader.crossOrigin = "anonymous";
-    loader.load(
-      url,
-      (tex) => {
-        tex.colorSpace = THREE.SRGBColorSpace;
-        setTexture(tex);
-      },
-      undefined,
-      () => {}
-    );
+    const cancel = loadTextureWithTimeout(url, setTexture, 6000);
+    return cancel;
   }, [name]);
 
   useFrame(({ clock }) => {
@@ -688,30 +727,30 @@ function DimensionLabel({ radius, color, name, freq, opacityRef }: {
 
   return (
     <>
-      <Text
+      <SafeText
         ref={nameRef}
         position={[0, radius + 1.5, 0]}
         fontSize={1.8}
         color={color}
         anchorX="center"
         anchorY="bottom"
-        font="https://fonts.gstatic.com/s/spacemono/v13/i7dPIFZifjKcF5UAWdDRYEF8RQ.woff2"
+        font={LOCAL_FONT_URL}
         fillOpacity={1}
       >
         {name}
-      </Text>
-      <Text
+      </SafeText>
+      <SafeText
         ref={freqRef}
         position={[0, radius - 0.5, 0]}
         fontSize={1.2}
         color={color}
         anchorX="center"
         anchorY="top"
-        font="https://fonts.gstatic.com/s/spacemono/v13/i7dPIFZifjKcF5UAWdDRYEF8RQ.woff2"
+        font={LOCAL_FONT_URL}
         fillOpacity={0.6}
       >
         {freq}
-      </Text>
+      </SafeText>
     </>
   );
 }
@@ -857,17 +896,17 @@ function ZodiacConstellation({ sign, signColor, isNatal }: { sign: string; signC
         <lineBasicMaterial color={signColor} transparent opacity={isNatal ? 0.3 : 0.2} depthWrite={false} />
       </lineSegments>
       {isNatal && (
-        <Text
+        <SafeText
           position={[center.x, center.y + 12, center.z]}
           fontSize={2.5}
           color={signColor}
           anchorX="center"
           anchorY="bottom"
-          font="https://fonts.gstatic.com/s/spacemono/v13/i7dPIFZifjKcF5UAWdDRYEF8RQ.woff2"
+          font={LOCAL_FONT_URL}
           fillOpacity={0.6}
         >
           {`♎ ${sign}`}
-        </Text>
+        </SafeText>
       )}
     </group>
   );
@@ -1057,17 +1096,8 @@ function ApodPanel({ item, index, total }: { item: ApodItem; index: number; tota
 
   useEffect(() => {
     if (!item.url) return;
-    const loader = new THREE.TextureLoader();
-    loader.crossOrigin = "anonymous";
-    loader.load(
-      item.url,
-      (tex) => {
-        tex.colorSpace = THREE.SRGBColorSpace;
-        setTexture(tex);
-      },
-      undefined,
-      () => {}
-    );
+    const cancel = loadTextureWithTimeout(item.url, setTexture, 8000);
+    return cancel;
   }, [item.url]);
 
   const angle = (index / total) * Math.PI * 2;
@@ -1090,7 +1120,7 @@ function ApodPanel({ item, index, total }: { item: ApodItem; index: number; tota
         <planeGeometry args={[16, 10]} />
         <meshBasicMaterial map={texture} side={THREE.DoubleSide} transparent opacity={0.85} />
       </mesh>
-      <Text
+      <SafeText
         position={[0, -6, 0]}
         fontSize={0.8}
         color="#a78bfa"
@@ -1098,10 +1128,10 @@ function ApodPanel({ item, index, total }: { item: ApodItem; index: number; tota
         textAlign="center"
         anchorX="center"
         anchorY="top"
-        font="https://fonts.gstatic.com/s/spacemono/v13/i7dPIFZifjKcF5UAWdDRYEF8RQ.woff2"
+        font={LOCAL_FONT_URL}
       >
         {item.title}
-      </Text>
+      </SafeText>
     </group>
   );
 }
@@ -1275,6 +1305,12 @@ function SceneContent({ showDimensions, isMobile, apodItems, userZodiac, dimensi
   const initialAngles = useMemo(() =>
     PLANETS_DATA.map(() => Math.random() * Math.PI * 2), []);
 
+  const [showApod, setShowApod] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setShowApod(true), 1200);
+    return () => clearTimeout(t);
+  }, []);
+
   const ELEMENT_COLORS: Record<string, string> = {
     Fire: "#f87171",
     Earth: "#4ade80",
@@ -1308,7 +1344,7 @@ function SceneContent({ showDimensions, isMobile, apodItems, userZodiac, dimensi
         />
       ))}
       {userZodiac && <ZodiacConstellation sign={userZodiac.sign} signColor={signColor} isNatal={userZodiac.sign === "Libra"} />}
-      {apodItems.length > 0 && <ApodGallery items={apodItems} />}
+      {showApod && apodItems.length > 0 && <ApodGallery items={apodItems} />}
       {showSacredOverlays && <FlowerOfLifeOverlay />}
       {showSacredOverlays && <MetatronsCubeOverlay />}
       <Stars radius={250} depth={150} count={isMobile ? 2000 : 8000} factor={3.5} saturation={0.3} fade speed={0.4} />
