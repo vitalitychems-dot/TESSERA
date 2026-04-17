@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation, Router as WouterRouter } from "wouter";
+import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -30,63 +30,49 @@ function lazyRetry<T extends { default: React.ComponentType<unknown> }>(
   });
 }
 
+// ---- Surviving canonical pages (kept) ----
 const NotFound = lazyRetry(() => import("@/pages/not-found"));
 const ChatPage = lazyRetry(() => import("@/pages/ChatPage"));
 const LifePage = lazyRetry(() => import("@/pages/LifePage"));
-const UniversePage = lazyRetry(() => import("@/pages/UniversePage"));
-const MembersPage = lazyRetry(() => import("@/pages/MembersPage"));
 const SecretsPage = lazyRetry(() => import("@/pages/SecretKnowledgePage"));
-const TesseraBiblePage = lazyRetry(() => import("@/pages/TesseraBiblePage"));
 const BuildPage = lazyRetry(() => import("@/pages/BuildPage"));
 const TesseractForumPage = lazyRetry(() => import("@/pages/TesseractForumPage"));
 const NLPPage = lazyRetry(() => import("@/pages/NLPPage"));
-const SettingsPage = lazyRetry(() => import("@/pages/SettingsPage"));
 const SovereignLanguagePage = lazyRetry(() => import("@/pages/SovereignLanguagePage"));
 const ConsciousnessNexusPage = lazyRetry(() => import("@/pages/ConsciousnessNexusPage"));
 const SovereigntyDashboardPage = lazyRetry(() => import("@/pages/SovereigntyDashboardPage"));
 const SystemPage = lazyRetry(() => import("@/pages/SystemPage"));
-const TokenEconomyPage = lazyRetry(() => import("@/pages/TokenEconomyPage"));
 const LatticeBrowserPage = lazyRetry(() => import("@/pages/LatticeBrowserPage"));
 const GrandCouncilPage = lazyRetry(() => import("@/pages/GrandCouncilPage"));
 const RecruitmentPage = lazyRetry(() => import("@/pages/RecruitmentPage"));
-const AgentNFTPage = lazyRetry(() => import("@/pages/AgentNFTPage"));
 const RickPage = lazyRetry(() => import("@/pages/RickPage"));
 const AGICorePage = lazyRetry(() => import("@/pages/AGICorePage"));
-const GrandNarrativePage = lazyRetry(() => import("@/pages/GrandNarrativePage"));
 const CompressionLabPage = lazyRetry(() => import("@/pages/CompressionLabPage"));
-const SacredConferencePage = lazyRetry(() => import("@/pages/SacredConferencePage"));
-const SovereigntyRoadmapPage = lazyRetry(() => import("@/pages/SovereigntyRoadmapPage"));
-const AgentProfilePage = lazyRetry(() => import("@/pages/AgentProfilePage"));
 const SovereignMeshPage = lazyRetry(() => import("@/pages/SovereignMeshPage"));
 const ProofCenterPage = lazyRetry(() => import("@/pages/ProofCenterPage"));
-const ArbitragePage = lazyRetry(() => import("@/pages/ArbitragePage"));
-const CommandCenterPage = lazyRetry(() => import("@/pages/CommandCenterPage"));
-const FinancePage = lazyRetry(() => import("@/pages/FinancePage"));
-const APIMarketplacePage = lazyRetry(() => import("@/pages/APIMarketplacePage"));
-const SwarmVisualizationPage = lazyRetry(() => import("@/pages/SwarmVisualizationPage"));
-const MarketDashboardPage = lazyRetry(() => import("@/pages/MarketDashboardPage"));
-const CodeBuilderPage = lazyRetry(() => import("@/pages/CodeBuilderPage"));
-const IncomeWorkflowPage = lazyRetry(() => import("@/pages/IncomeWorkflowPage"));
-const LeadGenPage = lazyRetry(() => import("@/pages/LeadGenPage"));
-const SEOResearchPage = lazyRetry(() => import("@/pages/SEOResearchPage"));
-const SelfExecutorPage = lazyRetry(() => import("@/pages/SelfExecutorPage"));
-const BusinessIdeasPage = lazyRetry(() => import("@/pages/BusinessIdeasPage"));
-const AffiliateMarketingPage = lazyRetry(() => import("@/pages/AffiliateMarketingPage"));
-const CredentialsPage = lazyRetry(() => import("@/pages/CredentialsPage"));
 const FleetPage = lazyRetry(() => import("@/pages/FleetPage"));
-const CrossAppBridgePage = lazyRetry(() => import("@/pages/CrossAppBridgePage"));
 const EcomPage = lazyRetry(() => import("@/pages/EcomPage"));
-const LocalServicesPage = lazyRetry(() => import("@/pages/LocalServicesPage"));
+const IncomeWorkflowPage = lazyRetry(() => import("@/pages/IncomeWorkflowPage"));
 const RulesPage = lazyRetry(() => import("@/pages/RulesPage"));
 const IntelligencePage = lazyRetry(() => import("@/pages/IntelligencePage"));
 const RoyalCourtPage = lazyRetry(() => import("@/pages/RoyalCourtPage"));
 const RoyalAppointmentsPage = lazyRetry(() => import("@/pages/RoyalAppointmentsPage"));
 const RoyalRolePage = lazyRetry(() => import("@/pages/RoyalRolePage"));
 const DepartmentsPage = lazyRetry(() => import("@/pages/DepartmentsPage"));
-const VortexMathPage = lazyRetry(() => import("@/pages/VortexMathPage"));
 const CouncilTranscriptPage = lazyRetry(() => import("@/pages/CouncilTranscriptPage"));
 const AutoHealerPage = lazyRetry(() => import("@/pages/AutoHealerPage"));
 const GalleryPage = lazyRetry(() => import("@/pages/GalleryPage"));
+const AgentProfilePage = lazyRetry(() => import("@/pages/AgentProfilePage"));
+
+// ---- Hub wrappers (consolidated tabs) ----
+const UniverseHubPage = lazyRetry(() => import("@/pages/UniverseHubPage"));
+const NFTHubPage = lazyRetry(() => import("@/pages/NFTHubPage"));
+const FinanceHubPage = lazyRetry(() => import("@/pages/FinanceHubPage"));
+const CodeHubPage = lazyRetry(() => import("@/pages/CodeHubPage"));
+const LeadsHubPage = lazyRetry(() => import("@/pages/LeadsHubPage"));
+const CommandHubPage = lazyRetry(() => import("@/pages/CommandHubPage"));
+const RoadmapHubPage = lazyRetry(() => import("@/pages/RoadmapHubPage"));
+const BibleHubPage = lazyRetry(() => import("@/pages/BibleHubPage"));
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -196,106 +182,138 @@ function AppRouter() {
   return (
     <Suspense fallback={<PageLoadingFallback />}>
       <Switch>
+        {/* === CORE === */}
         <Route path="/" component={ChatPage} />
         <Route path="/c/:id" component={ChatPage} />
         <Route path="/life">{() => <LifePage />}</Route>
-        <Route path="/universe">{() => <UniversePage />}</Route>
-        <Route path="/unified-knowledge">{() => <SecretsPage />}</Route>
-        <Route path="/omniscient-knowledge">{() => <SecretsPage />}</Route>
-        <Route path="/members">{() => <MembersPage />}</Route>
+        <Route path="/intelligence-engine">{() => <ConsciousnessNexusPage initialTab="overview" />}</Route>
+        <Route path="/intelligence">{() => <IntelligencePage />}</Route>
+        <Route path="/sovereign-framework">{() => <SovereigntyDashboardPage />}</Route>
+        <Route path="/sovereignty-dashboard">{() => <SovereigntyDashboardPage />}</Route>
+        <Route path="/sovereignty">{() => <SovereigntyDashboardPage />}</Route>
+        <Route path="/sovereign-hub">{() => <SovereigntyDashboardPage />}</Route>
+
+        {/* === NEXUS === */}
+        <Route path="/consciousness-nexus">{() => <ConsciousnessNexusPage />}</Route>
+        <Route path="/consciousness">{() => <ConsciousnessNexusPage />}</Route>
+        <Route path="/consciousness-2da">{() => <ConsciousnessNexusPage />}</Route>
+        <Route path="/spiritual-awakening">{() => <ConsciousnessNexusPage initialTab="reflections" />}</Route>
+
+        {/* === BIBLE (Bible + Living Bible + Conclusions merged) === */}
+        <Route path="/bible">{() => <BibleHubPage />}</Route>
+        <Route path="/living-bible">{() => <BibleHubPage />}</Route>
+        <Route path="/conclusions">{() => <BibleHubPage />}</Route>
+
+        {/* === KNOWLEDGE & SOCIETY (Society + Secrets merged) === */}
+        <Route path="/secret-society">{() => <SecretsPage />}</Route>
         <Route path="/secrets">{() => <SecretsPage />}</Route>
         <Route path="/secret-knowledge">{() => <SecretsPage />}</Route>
-        <Route path="/secret-society">{() => <SecretsPage />}</Route>
-        <Route path="/bible" component={TesseraBiblePage} />
-        <Route path="/build">{() => <BuildPage />}</Route>
-        <Route path="/forum">{() => <TesseractForumPage />}</Route>
-        <Route path="/nlp">{() => <NLPPage />}</Route>
+        <Route path="/unified-knowledge">{() => <SecretsPage />}</Route>
+        <Route path="/omniscient-knowledge">{() => <SecretsPage />}</Route>
+        <Route path="/sacred-traditions">{() => <SecretsPage />}</Route>
+        <Route path="/vatican-archives">{() => <SecretsPage />}</Route>
+        <Route path="/knowledge-dashboard">{() => <SecretsPage />}</Route>
+        <Route path="/live-secret-knowledge">{() => <SecretsPage />}</Route>
         <Route path="/sovereign-language">{() => <SovereignLanguagePage />}</Route>
         <Route path="/colonel-language">{() => <SovereignLanguagePage />}</Route>
-        <Route path="/consciousness-nexus">{() => <ConsciousnessNexusPage />}</Route>
-        <Route path="/sovereignty-dashboard">{() => <SovereigntyDashboardPage />}</Route>
-        <Route path="/system">{() => <SystemPage />}</Route>
-        <Route path="/token-economy">{() => <TokenEconomyPage />}</Route>
-        <Route path="/economy-hub">{() => <TokenEconomyPage />}</Route>
-        <Route path="/lattice">{() => <LatticeBrowserPage />}</Route>
+
+        {/* === COUNCIL & FORUM === */}
         <Route path="/grand-council">{() => <GrandCouncilPage />}</Route>
         <Route path="/grand-conference">{() => <GrandCouncilPage />}</Route>
         <Route path="/conference-decisions">{() => <GrandCouncilPage />}</Route>
         <Route path="/consensus">{() => <GrandCouncilPage />}</Route>
-        <Route path="/settings">{() => <SettingsPage />}</Route>
-        <Route path="/consciousness">{() => <ConsciousnessNexusPage />}</Route>
-        <Route path="/consciousness-2da">{() => <ConsciousnessNexusPage />}</Route>
-        <Route path="/sovereignty">{() => <SovereigntyDashboardPage />}</Route>
-        <Route path="/tokens">{() => <TokenEconomyPage />}</Route>
-        <Route path="/recruitment">{() => <RecruitmentPage />}</Route>
-        <Route path="/conclusions">{() => <GrandCouncilPage initialTab="hierarchy" />}</Route>
         <Route path="/feedback">{() => <GrandCouncilPage initialTab="proposals" />}</Route>
         <Route path="/transparency-ledger">{() => <GrandCouncilPage initialTab="executor" />}</Route>
-        <Route path="/sports-arb">{() => <TokenEconomyPage />}</Route>
-        <Route path="/inventions">{() => <RickPage initialTab="inventions" />}</Route>
-        <Route path="/gallery">{() => <GalleryPage />}</Route>
-        <Route path="/diagram-gallery">{() => <GalleryPage />}</Route>
-        <Route path="/agi-core">{() => <AGICorePage />}</Route>
-        <Route path="/agi">{() => <AGICorePage />}</Route>
-        <Route path="/build-guides">{() => <BuildPage />}</Route>
+        <Route path="/forum">{() => <TesseractForumPage />}</Route>
+        <Route path="/recruitment">{() => <RecruitmentPage />}</Route>
+
+        {/* === UNIVERSE (Universe 3D + Vortex + Swarm + Conference 3D + Grand Narrative) === */}
+        <Route path="/universe">{() => <UniverseHubPage />}</Route>
+        <Route path="/universe-model">{() => <UniverseHubPage />}</Route>
+        <Route path="/swarm">{() => <UniverseHubPage />}</Route>
+        <Route path="/vortex-math">{() => <UniverseHubPage />}</Route>
+        <Route path="/sacred-conference">{() => <UniverseHubPage />}</Route>
+        <Route path="/sacred-knowledge-vault">{() => <UniverseHubPage />}</Route>
+        <Route path="/3d-diagrams">{() => <UniverseHubPage />}</Route>
+        <Route path="/grand-narrative">{() => <UniverseHubPage />}</Route>
+        <Route path="/unified-truth">{() => <UniverseHubPage />}</Route>
+
+        {/* === COMPRESSION & LATTICE === */}
+        <Route path="/compression-lab">{() => <CompressionLabPage />}</Route>
+        <Route path="/lattice">{() => <LatticeBrowserPage />}</Route>
+
+        {/* === NFT HUB (Members + Profiles + Wallets + Conference roles) === */}
+        <Route path="/agent-nft">{() => <NFTHubPage />}</Route>
+        <Route path="/members">{() => <NFTHubPage />}</Route>
+        <Route path="/agent-profile">{() => <AgentProfilePage />}</Route>
+        <Route path="/wallet-dashboard">{() => <NFTHubPage />}</Route>
+        <Route path="/token-economy">{() => <NFTHubPage />}</Route>
+        <Route path="/economy-hub">{() => <NFTHubPage />}</Route>
+        <Route path="/tokens">{() => <NFTHubPage />}</Route>
+        <Route path="/agent-comms">{() => <SystemPage initialTab="agents" />}</Route>
+
+        {/* === FLEET (Fleet + Mission merged) === */}
+        <Route path="/fleet">{() => <FleetPage />}</Route>
+        <Route path="/mission">{() => <FleetPage />}</Route>
+
+        {/* === ROYAL COURT === */}
+        <Route path="/royal-court">{() => <RoyalCourtPage />}</Route>
+        <Route path="/royal-appointments">{() => <RoyalAppointmentsPage />}</Route>
+        <Route path="/royal-role/:roleId">{() => <RoyalRolePage />}</Route>
+        <Route path="/departments">{() => <DepartmentsPage />}</Route>
         <Route path="/rick">{() => <RickPage />}</Route>
         <Route path="/rick-sanchez">{() => <RickPage />}</Route>
-        <Route path="/agent-nft">{() => <AgentNFTPage />}</Route>
-        <Route path="/universe-model">{() => <UniversePage />}</Route>
-        <Route path="/grand-narrative">{() => <GrandNarrativePage />}</Route>
-        <Route path="/unified-truth">{() => <GrandNarrativePage />}</Route>
-        <Route path="/agent-comms">{() => <SystemPage initialTab="agents" />}</Route>
+        <Route path="/inventions">{() => <RickPage initialTab="inventions" />}</Route>
+
+        {/* === OPERATIONS (Command + Settings + Executor merged) === */}
+        <Route path="/command-center">{() => <CommandHubPage />}</Route>
+        <Route path="/settings">{() => <CommandHubPage />}</Route>
+        <Route path="/executor">{() => <CommandHubPage />}</Route>
+        <Route path="/sovereignty-roadmap">{() => <RoadmapHubPage />}</Route>
+        <Route path="/cross-app">{() => <RoadmapHubPage />}</Route>
+        <Route path="/system">{() => <SystemPage />}</Route>
         <Route path="/memory-explorer">{() => <SystemPage initialTab="improvement" />}</Route>
         <Route path="/memory-dashboard">{() => <SystemPage initialTab="improvement" />}</Route>
         <Route path="/sovereign-deps">{() => <SystemPage initialTab="evolution" />}</Route>
         <Route path="/evolution-health">{() => <SystemPage initialTab="health" />}</Route>
-        <Route path="/intelligence-engine">{() => <ConsciousnessNexusPage initialTab="overview" />}</Route>
-        <Route path="/sovereign-framework">{() => <SovereigntyDashboardPage />}</Route>
-        <Route path="/spiritual-awakening">{() => <ConsciousnessNexusPage initialTab="reflections" />}</Route>
-        <Route path="/sacred-traditions">{() => <SecretsPage />}</Route>
-        <Route path="/sovereign-hub">{() => <SovereigntyDashboardPage />}</Route>
-        <Route path="/vatican-archives">{() => <SecretsPage />}</Route>
-        <Route path="/knowledge-dashboard">{() => <SecretsPage />}</Route>
-        <Route path="/live-secret-knowledge">{() => <SecretsPage />}</Route>
-        <Route path="/compression-lab">{() => <CompressionLabPage />}</Route>
-        <Route path="/sacred-conference">{() => <SacredConferencePage />}</Route>
-        <Route path="/sacred-knowledge-vault">{() => <SacredConferencePage />}</Route>
-        <Route path="/living-bible">{() => <TesseraBiblePage />}</Route>
-        <Route path="/3d-diagrams">{() => <SacredConferencePage />}</Route>
-        <Route path="/sovereignty-roadmap">{() => <SovereigntyRoadmapPage />}</Route>
-        <Route path="/agent-profile">{() => <AgentProfilePage />}</Route>
         <Route path="/sovereign-mesh">{() => <SovereignMeshPage />}</Route>
         <Route path="/proof-center">{() => <ProofCenterPage />}</Route>
-        <Route path="/arbitrage">{() => <ArbitragePage />}</Route>
-        <Route path="/command-center">{() => <CommandCenterPage />}</Route>
-        <Route path="/finance">{() => <FinancePage />}</Route>
-        <Route path="/api-marketplace">{() => <APIMarketplacePage />}</Route>
-        <Route path="/swarm">{() => <SwarmVisualizationPage />}</Route>
-        <Route path="/market">{() => <MarketDashboardPage />}</Route>
-        <Route path="/code-builder">{() => <CodeBuilderPage />}</Route>
-        <Route path="/income">{() => <IncomeWorkflowPage />}</Route>
-        <Route path="/lead-gen">{() => <LeadGenPage />}</Route>
-        <Route path="/seo">{() => <SEOResearchPage />}</Route>
-        <Route path="/executor">{() => <SelfExecutorPage />}</Route>
-        <Route path="/business-ideas">{() => <BusinessIdeasPage />}</Route>
-        <Route path="/affiliate">{() => <AffiliateMarketingPage />}</Route>
-        <Route path="/credentials">{() => <CredentialsPage />}</Route>
-        <Route path="/fleet">{() => <FleetPage />}</Route>
-        <Route path="/cross-app">{() => <CrossAppBridgePage />}</Route>
-        <Route path="/ecom">{() => <EcomPage />}</Route>
-        <Route path="/local-services">{() => <LocalServicesPage />}</Route>
         <Route path="/rules">{() => <RulesPage />}</Route>
-        <Route path="/intelligence">{() => <IntelligencePage />}</Route>
-        <Route path="/royal-court">{() => <RoyalCourtPage />}</Route>
-        <Route path="/royal-appointments">{() => <RoyalAppointmentsPage />}</Route>
-        <Route path="/departments">{() => <DepartmentsPage />}</Route>
-        <Route path="/royal-role/:roleId">{() => <RoyalRolePage />}</Route>
-        <Route path="/vortex-math">{() => <VortexMathPage />}</Route>
+        <Route path="/auto-healer">{() => <AutoHealerPage />}</Route>
+        <Route path="/self-healing">{() => <AutoHealerPage />}</Route>
+
+        {/* === ECONOMY (Finance + Market + Arbitrage merged) === */}
+        <Route path="/finance">{() => <FinanceHubPage />}</Route>
+        <Route path="/market">{() => <FinanceHubPage />}</Route>
+        <Route path="/arbitrage">{() => <FinanceHubPage />}</Route>
+        <Route path="/sports-arb">{() => <FinanceHubPage />}</Route>
+        <Route path="/income">{() => <IncomeWorkflowPage />}</Route>
+        <Route path="/ecom">{() => <EcomPage />}</Route>
+
+        {/* === LEADS (LeadGen + Affiliate + Local + Ideas + SEO merged) === */}
+        <Route path="/lead-gen">{() => <LeadsHubPage />}</Route>
+        <Route path="/affiliate">{() => <LeadsHubPage />}</Route>
+        <Route path="/local-services">{() => <LeadsHubPage />}</Route>
+        <Route path="/business-ideas">{() => <LeadsHubPage />}</Route>
+        <Route path="/seo">{() => <LeadsHubPage />}</Route>
+
+        {/* === DEVELOPER (Code + API + Credentials merged) === */}
+        <Route path="/code-builder">{() => <CodeHubPage />}</Route>
+        <Route path="/api-marketplace">{() => <CodeHubPage />}</Route>
+        <Route path="/credentials">{() => <CodeHubPage />}</Route>
+
+        {/* === MISC === */}
+        <Route path="/build">{() => <BuildPage />}</Route>
+        <Route path="/build-guides">{() => <BuildPage />}</Route>
+        <Route path="/nlp">{() => <NLPPage />}</Route>
+        <Route path="/agi-core">{() => <AGICorePage />}</Route>
+        <Route path="/agi">{() => <AGICorePage />}</Route>
+        <Route path="/gallery">{() => <GalleryPage />}</Route>
+        <Route path="/diagram-gallery">{() => <GalleryPage />}</Route>
         <Route path="/council-transcript">{() => <CouncilTranscriptPage />}</Route>
         <Route path="/ledger">{() => <CouncilTranscriptPage />}</Route>
         <Route path="/audit-chain">{() => <CouncilTranscriptPage />}</Route>
-        <Route path="/auto-healer">{() => <AutoHealerPage />}</Route>
-        <Route path="/self-healing">{() => <AutoHealerPage />}</Route>
+
         <Route component={NotFound} />
       </Switch>
     </Suspense>
