@@ -209,39 +209,224 @@ const GLYPH_ALPHABET = [
   "·","·","·","·","·","·","·","·","·","·","·","·","·","·","·","·",
 ] as const;
 
-const _encodeMap = new Map<string, string>();
-const _decodeMap = new Map<string, string>();
-for (let i = 0; i < PLAIN_ALPHABET.length && i < GLYPH_ALPHABET.length; i++) {
-  _encodeMap.set(PLAIN_ALPHABET[i], GLYPH_ALPHABET[i]);
-  _decodeMap.set(GLYPH_ALPHABET[i], PLAIN_ALPHABET[i]);
-}
-// Distinguish the dot-positions by appending a combining marker so decode is unambiguous
+// Distinguish the dot-positions so decode is unambiguous even before rotation
 const DOT_GLYPHS = ["⊕","⊖","⊗","⊘","⊙","⊚","⊛","⊜","⊝","⊞","⊟","⊠","⊡","⊢","⊣","⊤"];
-let dotIdx = 0;
-for (let i = 0; i < PLAIN_ALPHABET.length && i < GLYPH_ALPHABET.length; i++) {
-  if (GLYPH_ALPHABET[i] === "·" && dotIdx < DOT_GLYPHS.length) {
-    _encodeMap.set(PLAIN_ALPHABET[i], DOT_GLYPHS[dotIdx]);
-    _decodeMap.set(DOT_GLYPHS[dotIdx], PLAIN_ALPHABET[i]);
-    dotIdx++;
+
+/** The full glyph universe — Greek + Coptic + Phoenician + sacred operators.
+ *  Every position is a unique symbol after dot-disambiguation. */
+const FULL_GLYPH_UNIVERSE: ReadonlyArray<string> = (() => {
+  const out: string[] = [];
+  let dotIdx = 0;
+  for (const g of GLYPH_ALPHABET) {
+    if (g === "·" && dotIdx < DOT_GLYPHS.length) { out.push(DOT_GLYPHS[dotIdx++]); }
+    else { out.push(g); }
   }
+  return out;
+})();
+
+// ── Live universe-aligned cipher rotation ─────────────────────────────
+//
+// The substitution alphabet is NOT static. It is a permutation of the glyph
+// universe, deterministically derived from the live celestial state plus the
+// active sigil fingerprint. Every coherence window (30 s, one "cosmic
+// moment"), the permutation re-derives — so the same plaintext encodes
+// differently as the planets, moon, and Julian day shift.
+//
+// Sacred geometry inputs to the permutation seed:
+//   • Julian Day (rounded to coherence window — universe time)
+//   • Planetary hour ruler + index   (Saturn, Jupiter, Mars, Sun, …)
+//   • Lunar fraction                 (continuous 0..1)
+//   • Composite sacred score         (engine-derived 0..1)
+//   • Φ (golden ratio)               (proportion law)
+//   • Sacred numerics 3,7,12,21,33,40,49,72,108,144,153,216
+//   • Active sigil fingerprint       (sovereign holder)
+//
+// Anyone in the universe with the same coherence window + active fingerprint
+// derives the same alphabet — making it dimensionally portable and
+// universally readable to any consciousness aligned to this moment.
+
+const COHERENCE_WINDOW_SECONDS = 30;
+const ROTATION_HISTORY_DEPTH = 8; // last N windows kept for decode-tolerance
+
+interface CipherCoherence {
+  windowId: string;
+  windowStartMs: number;
+  encode: Map<string, string>;
+  decode: Map<string, string>;
+  permutationFingerprint: string;
+  cosmicAnchor: {
+    julianDayBin: number;
+    planetaryHour: string;
+    lunarFraction: number;
+    composite: number;
+    phi: number;
+    sacredNumerics: readonly number[];
+    sigilFingerprint: string;
+  };
+}
+
+const _cipherWindowCache = new Map<string, CipherCoherence>();
+
+function deterministicPRNG(seedHex: string): () => number {
+  // xoroshiro-style 64-bit splitmix from the hex seed
+  let s0 = parseInt(seedHex.slice(0, 16), 16) || 1;
+  let s1 = parseInt(seedHex.slice(16, 32), 16) || 1;
+  return () => {
+    s0 = (s0 * 6364136223846793005 + 1442695040888963407) % Number.MAX_SAFE_INTEGER;
+    s1 = (s1 * 1103515245 + 12345) % Number.MAX_SAFE_INTEGER;
+    const x = (s0 ^ s1) >>> 0;
+    return (x % 1_000_000) / 1_000_000;
+  };
+}
+
+function fisherYates<T>(arr: ReadonlyArray<T>, rand: () => number): T[] {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    const t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+function activeFingerprintForCipher(): string {
+  if (!_activeKey) rotateSessionKey("first-use");
+  return _activeKey!.fingerprint;
+}
+
+function deriveCipherWindow(nowMs: number): CipherCoherence {
+  const snap = sacredTimingSnapshot();
+  const windowStartMs = Math.floor(nowMs / (COHERENCE_WINDOW_SECONDS * 1000)) * (COHERENCE_WINDOW_SECONDS * 1000);
+  const julianDayBin = Math.floor(snap.julianDay * (86400 / COHERENCE_WINDOW_SECONDS)) / (86400 / COHERENCE_WINDOW_SECONDS);
+  const planetaryHour = `${snap.planetaryHour.ruler}#${snap.planetaryHour.index}`;
+  const sigilFp = activeFingerprintForCipher();
+
+  const seedString = [
+    "tessera-cipher-v1",
+    julianDayBin.toFixed(8),
+    planetaryHour,
+    snap.lunar.fraction.toFixed(8),
+    snap.composite.toFixed(8),
+    PHI.toFixed(12),
+    SACRED_NUMERICS.join(":"),
+    sigilFp,
+    windowStartMs.toString(),
+  ].join("|");
+  const seedHex = createHash("sha512").update(seedString).digest("hex");
+  const windowId = createHash("sha256").update(seedHex).digest("hex").slice(0, 12);
+
+  const cached = _cipherWindowCache.get(windowId);
+  if (cached) return cached;
+
+  const rand = deterministicPRNG(seedHex);
+  const permutedGlyphs = fisherYates(FULL_GLYPH_UNIVERSE, rand);
+
+  const encode = new Map<string, string>();
+  const decode = new Map<string, string>();
+  for (let i = 0; i < PLAIN_ALPHABET.length && i < permutedGlyphs.length; i++) {
+    encode.set(PLAIN_ALPHABET[i], permutedGlyphs[i]);
+    decode.set(permutedGlyphs[i], PLAIN_ALPHABET[i]);
+  }
+
+  const permutationFingerprint = createHash("sha256")
+    .update(Array.from(encode.entries()).map(([p, g]) => `${p}=${g}`).join("|"))
+    .digest("hex").slice(0, 16);
+
+  const coherence: CipherCoherence = {
+    windowId,
+    windowStartMs,
+    encode,
+    decode,
+    permutationFingerprint,
+    cosmicAnchor: {
+      julianDayBin,
+      planetaryHour,
+      lunarFraction: snap.lunar.fraction,
+      composite: snap.composite,
+      phi: PHI,
+      sacredNumerics: SACRED_NUMERICS,
+      sigilFingerprint: sigilFp,
+    },
+  };
+
+  _cipherWindowCache.set(windowId, coherence);
+  // Trim history to the last ROTATION_HISTORY_DEPTH coherence windows
+  if (_cipherWindowCache.size > ROTATION_HISTORY_DEPTH) {
+    const sorted = Array.from(_cipherWindowCache.values()).sort((a, b) => a.windowStartMs - b.windowStartMs);
+    while (_cipherWindowCache.size > ROTATION_HISTORY_DEPTH) {
+      _cipherWindowCache.delete(sorted.shift()!.windowId);
+    }
+  }
+  return coherence;
+}
+
+function currentCoherence(): CipherCoherence {
+  return deriveCipherWindow(Date.now());
+}
+
+function recentCoherenceList(): CipherCoherence[] {
+  return Array.from(_cipherWindowCache.values()).sort((a, b) => b.windowStartMs - a.windowStartMs);
 }
 
 export function glyphEncode(text: string): string {
+  const c = currentCoherence();
   let out = "";
-  for (const ch of text) out += _encodeMap.get(ch) ?? ch;
+  for (const ch of text) out += c.encode.get(ch) ?? ch;
   return out;
 }
 
 export function glyphDecode(text: string): string {
+  // Try the current window first; if a glyph isn't found there (window
+  // rotated mid-flight), walk back through recent coherences. Universe-
+  // aligned tolerance: the receiver decodes whichever cosmic moment encoded.
+  const candidates = recentCoherenceList();
+  if (candidates.length === 0) {
+    deriveCipherWindow(Date.now());
+    candidates.push(currentCoherence());
+  }
   let out = "";
-  for (const ch of text) out += _decodeMap.get(ch) ?? ch;
+  for (const ch of text) {
+    let plain: string | undefined;
+    for (const c of candidates) {
+      const p = c.decode.get(ch);
+      if (p !== undefined) { plain = p; break; }
+    }
+    out += plain ?? ch;
+  }
   return out;
 }
 
 export function glyphAlphabet(): Array<{ plain: string; glyph: string }> {
+  const c = currentCoherence();
   const out: Array<{ plain: string; glyph: string }> = [];
-  for (const [plain, glyph] of _encodeMap.entries()) out.push({ plain, glyph });
+  for (const [plain, glyph] of c.encode.entries()) out.push({ plain, glyph });
   return out;
+}
+
+/** Universe-alignment surface: exposes the live cipher coherence state so
+ *  consumers can verify which cosmic moment the alphabet is anchored to. */
+export function cipherCoherenceSnapshot(): {
+  current: { windowId: string; permutationFingerprint: string; windowStartMs: number; expiresInMs: number };
+  cosmicAnchor: CipherCoherence["cosmicAnchor"];
+  coherenceWindowSeconds: number;
+  recentWindows: Array<{ windowId: string; permutationFingerprint: string; windowStartMs: number }>;
+} {
+  const c = currentCoherence();
+  const expiresInMs = (c.windowStartMs + COHERENCE_WINDOW_SECONDS * 1000) - Date.now();
+  return {
+    current: {
+      windowId: c.windowId,
+      permutationFingerprint: c.permutationFingerprint,
+      windowStartMs: c.windowStartMs,
+      expiresInMs: Math.max(0, expiresInMs),
+    },
+    cosmicAnchor: c.cosmicAnchor,
+    coherenceWindowSeconds: COHERENCE_WINDOW_SECONDS,
+    recentWindows: recentCoherenceList().map(w => ({
+      windowId: w.windowId,
+      permutationFingerprint: w.permutationFingerprint,
+      windowStartMs: w.windowStartMs,
+    })),
+  };
 }
 
 /** The "key" the user holds. Combination of the active sigil fingerprint

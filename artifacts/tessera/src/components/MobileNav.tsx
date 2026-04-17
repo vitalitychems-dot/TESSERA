@@ -7,6 +7,7 @@ import {
   Search, Zap, UserPlus, Cpu, Crown, GitCommit,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import AdminKeyInput from "@/components/AdminKeyInput";
 
 interface NavTab {
   label: string;
@@ -137,10 +138,15 @@ export default function MobileNav() {
               <X size={16} />
             </button>
           </div>
-          <div className="grid grid-cols-4 gap-1 px-3 py-3 overflow-y-auto" style={{ maxHeight: "calc(60vh - 56px)" }}>
-            {SECONDARY.map(tab => (
-              <TabButton key={tab.href} tab={tab} active={tab.match(location)} large fullWidth onClick={() => setLocation(tab.href)} />
-            ))}
+          <div className="overflow-y-auto" style={{ maxHeight: "calc(60vh - 56px)" }}>
+            <div className="grid grid-cols-4 gap-1 px-3 py-3">
+              {SECONDARY.map(tab => (
+                <TabButton key={tab.href} tab={tab} active={tab.match(location)} large fullWidth onClick={() => setLocation(tab.href)} />
+              ))}
+            </div>
+            <div className="px-3 pb-3 pt-1">
+              <AdminKeyInput compact />
+            </div>
           </div>
         </div>
       )}

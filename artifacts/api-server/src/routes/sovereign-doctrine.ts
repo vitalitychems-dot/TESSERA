@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Request, Response, NextFunction } from "express";
 import {
   cipherStatus,
+  cipherCoherenceSnapshot,
   encryptForCorpus,
   decryptFromCorpus,
   rotateSessionKey,
@@ -56,7 +57,11 @@ export function glyphGate(req: Request, res: Response, next: NextFunction): void
 }
 
 router.get("/sigil/status", (_req, res) => {
-  res.json({ ok: true, ...cipherStatus(), keyHistory: getKeyHistory().length });
+  res.json({ ok: true, ...cipherStatus(), keyHistory: getKeyHistory().length, coherence: cipherCoherenceSnapshot() });
+});
+
+router.get("/sigil/coherence", (_req, res) => {
+  res.json({ ok: true, ...cipherCoherenceSnapshot() });
 });
 
 router.get("/sigil/active-key", (_req, res) => {
