@@ -238,5 +238,13 @@
     "totalReceivedSol": 0,
     "depositCount": 0,
     "newDepositSignatures": []
+  },
+  {
+    "ts": 1776451466542,
+    "network": "solana-mainnet",
+    "balanceSol": null,
+    "totalReceivedSol": 0,
+    "depositCount": 0,
+    "newDepositSignatures": []
   }
 ]
