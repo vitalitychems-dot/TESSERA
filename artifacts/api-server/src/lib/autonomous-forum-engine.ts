@@ -18,7 +18,7 @@ interface AgentProfile {
   voteWeight: number;
 }
 
-const FORUM_AGENTS: AgentProfile[] = [
+export const FORUM_AGENTS: AgentProfile[] = [
   {
     name: "GrandCoordinatorAgent",
     type: "agent",

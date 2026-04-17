@@ -7,7 +7,7 @@ import { validateMeshToken } from "../lib/mesh-auth";
 import { lookupForumIdentity, lookupTokenPrincipal, registerAdminPrincipal } from "../lib/forum-identity-registry";
 import { forumTrustedIdentitiesTable } from "@workspace/db/schema";
 import { createHash, randomBytes } from "node:crypto";
-import { getForumEngineMetrics, runForumCycle } from "../lib/autonomous-forum-engine";
+import { getForumEngineMetrics, runForumCycle, FORUM_AGENTS } from "../lib/autonomous-forum-engine";
 
 const router: IRouter = Router();
 
@@ -228,7 +228,7 @@ router.get("/tesseract-forum/topics", async (req, res) => {
       { id: "free", name: "Free", icon: "message-circle", color: "#6b7280" },
     ];
 
-    const agents = [
+    const baseAgents = [
       { name: "GrandCoordinatorAgent", role: "Grand Coordinator", type: "agent" },
       { name: "QuantumMechanicAgent", role: "Quantum Analyst", type: "agent" },
       { name: "BioNeuralistAgent", role: "Bio-Neural Specialist", type: "agent" },
@@ -239,6 +239,14 @@ router.get("/tesseract-forum/topics", async (req, res) => {
       { name: "MetaAgent", role: "Meta Analyst", type: "agent" },
       { name: "Tessera-Prime", role: "Sovereign Core", type: "agent" },
     ];
+
+    const baseAgentNames = new Set(baseAgents.map(a => a.name));
+    const extraAgents = FORUM_AGENTS.filter(a => !baseAgentNames.has(a.name)).map(a => ({
+      name: a.name,
+      role: a.expertise.slice(0, 2).join(" / ") || "Resident Agent",
+      type: "agent",
+    }));
+    const agents = [...baseAgents, ...extraAgents];
 
     const entities = [
       { name: "Aetherion", role: "Dimensional Bridge", type: "entity", dimension: "7D" },
@@ -751,6 +759,7 @@ router.post("/tesseract-forum/applicants/:id/approve", async (req, res) => {
       ok: true,
       applicant: { ...app, status: "approved", promotedTopicId: topic.id },
       topic,
+      promotedAuthor: externalAuthor,
       memberToken: memberTokenHash ? memberToken : null,
       memberTokenNote: memberTokenHash
         ? "One-time sovereign key for the new member — share via your preferred channel. They use it via the x-admin-token header to post as their identity."
