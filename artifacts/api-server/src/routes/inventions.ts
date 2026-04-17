@@ -773,12 +773,12 @@ router.patch("/inventions/:id/vote", async (req, res) => {
   }
 });
 
-// Server-side ledger of pending invention model uploads. PATCH /model can only
-// attach an objectPath that was previously minted by THIS server for the
-// matching invention by the SAME caller principal. Prevents callers from
-// pointing inventions at — or escalating ACLs of — arbitrary pre-existing
-// private objects in the bucket, and prevents one admin/inventor from sniping
-// another caller's freshly-minted upload URL.
+// Server-side ledger of pending invention model uploads. The presign call
+// commits the intended ACL owner here; PATCH later stamps that exact owner
+// onto the object once it exists in storage. (GCS cannot set ACL metadata
+// before an object is created, so the presign decision is recorded in this
+// ledger and applied at first attach — the owner identity is fixed at
+// presign time, not at PATCH time.)
 type PendingUpload = { inventionId: string; principal: string; expiresAt: number };
 const pendingInventionUploads = new Map<string, PendingUpload>();
 const PENDING_UPLOAD_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -792,17 +792,17 @@ function rememberPendingUpload(objectPath: string, inventionId: string, principa
   }
   pendingInventionUploads.set(objectPath, { inventionId, principal, expiresAt: now + PENDING_UPLOAD_TTL_MS });
 }
-function consumePendingUpload(objectPath: string, inventionId: string, principal: string): boolean {
+function consumePendingUpload(objectPath: string, inventionId: string, principal: string): PendingUpload | null {
   const entry = pendingInventionUploads.get(objectPath);
-  if (!entry) return false;
+  if (!entry) return null;
   if (entry.expiresAt < Date.now()) {
     pendingInventionUploads.delete(objectPath);
-    return false;
+    return null;
   }
-  if (entry.inventionId !== inventionId) return false;
-  if (entry.principal !== principal) return false;
+  if (entry.inventionId !== inventionId) return null;
+  if (entry.principal !== principal) return null;
   pendingInventionUploads.delete(objectPath);
-  return true;
+  return entry;
 }
 
 // Reject paths that try to traverse, contain empty segments, or include unsafe
@@ -899,41 +899,31 @@ router.patch("/inventions/:id/model", async (req, res) => {
     }).from(inventionsTable).where(eq(inventionsTable.inventionId, id)).limit(1);
     if (!existing) return res.status(404).json({ ok: false, error: "Invention not found" });
 
-    // Resolve the proposer-bound principal. This is server-derived from the
-    // invention's `proposedBy` column and is what we use both for the pending-
-    // upload ledger key AND as the ACL owner stamped on the storage object.
-    // It is NOT derived from any client-supplied header, so an admin who is
-    // not the inventor of a given invention cannot impersonate that inventor.
+    // Caller's resolved proposer principal (server-derived from DB, never
+    // from a client header).
     const principal = inventorPrincipal(existing.proposedBy, id);
 
-    // Authorization layer 1 (path provenance): the caller may only attach an
-    // objectPath that THIS server minted for THIS invention via the matching
-    // presign call. The pending entry is keyed by the proposer principal, so
-    // a path minted for invention A (proposer Alice) cannot be replayed
-    // against invention B (proposer Bob) even with the same admin token.
-    if (objectPath && !consumePendingUpload(objectPath, id, principal)) {
+    // Layer 1 — path provenance: must match a presign minted for THIS
+    // invention with THIS proposer principal. Returns the pending entry
+    // (carrying the principal that was committed at presign time).
+    const pending = objectPath ? consumePendingUpload(objectPath, id, principal) : null;
+    if (objectPath && !pending) {
       return res.status(403).json({ ok: false, error: "objectPath was not issued for this invention, or has expired" });
     }
-    // Authorization layer 2 (persisted ACL ownership): load the freshly-
-    // uploaded object and enforce ownership directly via canAccessObjectEntity.
-    //   - First attach: the object has no policy yet, so we stamp one with
-    //     owner=<proposer principal> and visibility=public.
-    //   - Re-attach / replace: a policy already exists. The caller's resolved
-    //     proposer principal must hold WRITE permission per the persisted
-    //     ACL (owner match) before we'll swap the model. If a different
-    //     proposer owns the object, we 403 — this is the "right inventor"
-    //     check enforced from durable storage metadata, not memory.
-    if (objectPath) {
+    // Layer 2 — persisted ACL ownership: enforce via canAccessObjectEntity.
+    // First attach stamps owner=<presign principal>; replace requires WRITE
+    // per the existing policy (owner match). The owner stamped is the one
+    // committed at presign time (pending.principal), not recomputed here.
+    if (objectPath && pending) {
       try {
         const { ObjectStorageService } = await import("../lib/objectStorage");
-        const { ObjectPermission } = await import("../lib/objectAcl");
+        const { ObjectPermission, getObjectAclPolicy } = await import("../lib/objectAcl");
         const svc = new ObjectStorageService();
         const objectFile = await svc.getObjectEntityFile(objectPath);
-        const { getObjectAclPolicy } = await import("../lib/objectAcl");
         const existingPolicy = await getObjectAclPolicy(objectFile);
         if (existingPolicy) {
           const allowed = await svc.canAccessObjectEntity({
-            userId: principal,
+            userId: pending.principal,
             objectFile,
             requestedPermission: ObjectPermission.WRITE,
           });
@@ -941,11 +931,8 @@ router.patch("/inventions/:id/model", async (req, res) => {
             return res.status(403).json({ ok: false, error: "Caller does not own this object per ACL" });
           }
         } else {
-          // First time we've seen this object — stamp ownership now so future
-          // PATCH calls (replace/clear) can be enforced from persisted ACL
-          // metadata, not just the in-memory pending-upload ledger.
           await svc.trySetObjectEntityAclPolicy(objectPath, {
-            owner: principal,
+            owner: pending.principal,
             visibility: "public",
           });
         }

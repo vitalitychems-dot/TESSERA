@@ -51,11 +51,14 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
     const wildcardPath = Array.isArray(raw) ? raw.join("/") : raw;
     const objectPath = `/objects/${wildcardPath}`;
     const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
-    // Enforce ACL: only serve objects with an explicit stored policy that
-    // permits anonymous reads (visibility="public"). We deliberately do NOT
-    // derive userId from a raw client-supplied header — that would let any
-    // caller spoof an owner string to fetch private objects. Owner/group ACL
-    // checks would require a verified auth principal we don't have here.
+    // ACL gate (READ): canAccessObjectEntity returns true only if the object
+    // has a stored ObjectAclPolicy whose visibility is "public". Objects
+    // uploaded without a policy (or with visibility="private") are
+    // unreadable here. Inventor-uploaded invention models intentionally get
+    // visibility="public" stamped by inventions.ts on attach so they can be
+    // embedded in chat; everything else (general /storage uploads with no
+    // policy) is rejected. We do NOT trust any client-supplied userId
+    // header for owner/group rule evaluation.
     const allowed = await objectStorageService.canAccessObjectEntity({
       objectFile,
       requestedPermission: ObjectPermission.READ,
