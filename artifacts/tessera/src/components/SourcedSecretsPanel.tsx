@@ -8,10 +8,6 @@ interface SecretEntry {
   year: number | null;
   domain?: string;
 }
-// The /api/tessera-bible/secrets endpoint emits { ok, count, items: [{ excerpt,
-// source, sourceUrl, title, ingestedAt }] }. We normalize to a single shape so
-// the component renders consistently and won't silently empty out if the
-// backend later switches to { secrets, totalSources }.
 interface RawItem {
   excerpt?: string;
   passage?: string;
