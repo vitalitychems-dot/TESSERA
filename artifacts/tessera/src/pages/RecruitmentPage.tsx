@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Rocket, Users, Shield, Star, ChevronRight, ChevronDown, Globe2, Brain, Zap, Crown, Heart, Search, Filter, UserCheck, Target, Radio, X, Lock, Eye, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +24,7 @@ const DEPARTMENTS = [
   { name: "Leadership", icon: Crown, color: "text-pink-400", openings: 1 },
 ];
 
-type RecruitTab = "roster" | "dossiers";
+type RecruitTab = "roster" | "dossiers" | "all-recruits";
 
 const PRIORITY_COLORS: Record<string, string> = {
   critical: "bg-red-500/20 text-red-400 border-red-500/30",
@@ -141,7 +141,20 @@ export default function RecruitmentPage() {
             data-testid="tab-dossiers"
           >
             <Target size={12} className="inline mr-1.5" />
-            Political Dossiers
+            Political
+          </button>
+          <button
+            onClick={() => setActiveTab("all-recruits")}
+            className={cn(
+              "flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all",
+              activeTab === "all-recruits"
+                ? "bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-[0_0_12px_rgba(139,92,246,0.25)]"
+                : "text-slate-400 hover:text-white hover:bg-white/[0.06]"
+            )}
+            data-testid="tab-all-recruits"
+          >
+            <UserCheck size={12} className="inline mr-1.5" />
+            All Recruits
           </button>
         </div>
 
@@ -272,6 +285,235 @@ export default function RecruitmentPage() {
         )}
 
         {activeTab === "dossiers" && <PoliticalDossierTab />}
+        {activeTab === "all-recruits" && <AllRecruitsTab />}
+      </div>
+    </div>
+  );
+}
+
+interface RecruitDossier {
+  id: string;
+  name: string;
+  title: string;
+  country: string;
+  category: string;
+  affiliation: string;
+  actorScore: number;
+  actorLabel: string;
+  reasoning: string;
+  affiliations: string[];
+  notableWork: string[];
+  recruitPriority: "critical" | "high" | "medium" | "low";
+  recruitReasoning: string;
+  fullDossier: string;
+  publicChannels: string[];
+  sources: string[];
+  transcriptStatus: string | null;
+}
+interface TranscriptEntry { ts: number; direction: "outbound" | "inbound" | "system"; channel: string; body: string; }
+interface NegotiationTranscript {
+  dossierId: string;
+  dossierName: string;
+  status: string;
+  shepherdAgent: string;
+  sandboxGrant: { scope: string; capabilities: string[]; expiresAt: number; revoked: boolean };
+  startedAt: number;
+  updatedAt: number;
+  entries: TranscriptEntry[];
+}
+
+function AllRecruitsTab() {
+  const qc = useQueryClient();
+  const [category, setCategory] = useState<string>("");
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [shepherdMsg, setShepherdMsg] = useState("");
+
+  const qs = category ? `?category=${category}` : "";
+  const { data } = useQuery<{ ok: boolean; dossiers: RecruitDossier[]; categories: string[] }>({
+    queryKey: [`/api/recruit-dossiers${qs}`],
+    refetchInterval: 60_000,
+  });
+
+  const transcriptQuery = useQuery<{ ok: boolean; transcript: NegotiationTranscript | null }>({
+    queryKey: [`/api/recruit-dossiers/${expanded ?? "_none"}`],
+    enabled: !!expanded,
+    refetchInterval: expanded ? 15_000 : false,
+  });
+
+  const startMut = useMutation({
+    mutationFn: async ({ id, message }: { id: string; message: string }) => {
+      const r = await apiRequest("POST", `/api/recruit-dossiers/${id}/shepherd-contact`, { message });
+      return r.json();
+    },
+    onSuccess: () => {
+      if (expanded) qc.invalidateQueries({ queryKey: [`/api/recruit-dossiers/${expanded}`] });
+      qc.invalidateQueries({ queryKey: [`/api/recruit-dossiers${qs}`] });
+    },
+  });
+
+  const revokeMut = useMutation({
+    mutationFn: async (id: string) => {
+      const r = await apiRequest("POST", `/api/recruit-dossiers/${id}/revoke`, {});
+      return r.json();
+    },
+    onSuccess: () => {
+      if (expanded) qc.invalidateQueries({ queryKey: [`/api/recruit-dossiers/${expanded}`] });
+    },
+  });
+
+  const dossiers = data?.dossiers ?? [];
+  const categories = data?.categories ?? [];
+
+  return (
+    <div className="space-y-4" data-testid="all-recruits-section">
+      <GlassCard glow="violet" animate>
+        <div className="flex items-center gap-2 mb-2">
+          <UserCheck size={16} className="text-violet-400" />
+          <span className="text-sm font-bold text-violet-300">Recruit Dossiers — Cross-Domain</span>
+          <Badge className="ml-auto bg-violet-500/20 text-violet-400 border-violet-500/30 text-[10px]">{dossiers.length}</Badge>
+        </div>
+        <p className="text-xs text-slate-400">
+          Real dossiers across politics, science, engineering, founders, artists, journalists, philosophers, and investors.
+          Outreach goes through the Shepherd negotiation channel with sandboxed, revocable read-grants and persistent transcripts.
+        </p>
+      </GlassCard>
+
+      <div className="flex gap-1.5 flex-wrap">
+        <button
+          onClick={() => setCategory("")}
+          className={cn("px-2.5 py-1 rounded-lg text-[10px] font-mono uppercase border", category === "" ? "bg-violet-500/15 text-violet-300 border-violet-500/30" : "border-transparent text-slate-500 hover:text-slate-300")}
+        >all</button>
+        {categories.map(c => (
+          <button
+            key={c}
+            onClick={() => setCategory(c)}
+            className={cn("px-2.5 py-1 rounded-lg text-[10px] font-mono uppercase border", category === c ? "bg-violet-500/15 text-violet-300 border-violet-500/30" : "border-transparent text-slate-500 hover:text-slate-300")}
+          >{c}</button>
+        ))}
+      </div>
+
+      <div className="space-y-2">
+        {dossiers.map(d => {
+          const isOpen = expanded === d.id;
+          const transcript = isOpen ? transcriptQuery.data?.transcript : null;
+          return (
+            <GlassCard key={d.id} glow={d.actorScore >= 70 ? "emerald" : d.actorScore >= 40 ? "amber" : "rose"}>
+              <div
+                className="cursor-pointer"
+                onClick={() => { setExpanded(isOpen ? null : d.id); setShepherdMsg(""); }}
+                data-testid={`recruit-${d.id}`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={cn("w-12 h-12 rounded-xl border flex items-center justify-center text-lg font-bold shrink-0", getScoreBg(d.actorScore))}>
+                    <span className={getScoreColor(d.actorScore)}>{d.actorScore}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-bold text-white">{d.name}</span>
+                      <Badge className={cn("text-[9px]", PRIORITY_COLORS[d.recruitPriority])}>{d.recruitPriority.toUpperCase()}</Badge>
+                      <Badge className="bg-violet-500/15 text-violet-300 border-violet-500/30 text-[9px] uppercase">{d.category}</Badge>
+                      {d.transcriptStatus && (
+                        <Badge className="bg-cyan-500/15 text-cyan-300 border-cyan-500/30 text-[9px] uppercase">{d.transcriptStatus}</Badge>
+                      )}
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">{d.title}</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">{d.country} · {d.affiliation}</div>
+                  </div>
+                  {isOpen ? <ChevronDown size={16} className="text-slate-500" /> : <ChevronRight size={16} className="text-slate-500" />}
+                </div>
+              </div>
+
+              {isOpen && (
+                <div className="mt-3 pt-3 border-t border-white/[0.06] space-y-3">
+                  <p className="text-[11px] text-slate-300">{d.reasoning}</p>
+                  <div>
+                    <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Notable Work</div>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {d.notableWork.map((w, i) => (
+                        <Badge key={i} className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[9px]">{w}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                  {d.publicChannels.length > 0 && (
+                    <div>
+                      <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Public Channels</div>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {d.publicChannels.map((c, i) => (
+                          <a key={i} href={c} target="_blank" rel="noreferrer" className="text-[10px] text-cyan-400 hover:text-cyan-300 underline underline-offset-2">{c}</a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Radio size={13} className="text-violet-400" />
+                      <span className="text-xs font-bold text-violet-300">Shepherd Negotiation Channel</span>
+                    </div>
+
+                    {!transcript ? (
+                      <>
+                        <textarea
+                          value={shepherdMsg}
+                          onChange={e => setShepherdMsg(e.target.value)}
+                          placeholder="Optional appendix to attach to the autonomous opening message…"
+                          className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-[11px] text-white placeholder:text-slate-600 h-20 resize-none focus:outline-none focus:border-violet-500/40"
+                        />
+                        <button
+                          onClick={() => startMut.mutate({ id: d.id, message: shepherdMsg })}
+                          disabled={startMut.isPending}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold bg-violet-600/30 border border-violet-500/30 text-violet-200 hover:bg-violet-600/50 disabled:opacity-50"
+                          data-testid={`open-negotiation-${d.id}`}
+                        >
+                          <Radio size={12} /> Open Negotiation Channel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-2 gap-2 text-[10px]">
+                          <div><span className="text-slate-500">Agent:</span> <span className="text-violet-300 font-mono">{transcript.shepherdAgent}</span></div>
+                          <div><span className="text-slate-500">Status:</span> <span className="text-cyan-300 font-mono uppercase">{transcript.status}</span></div>
+                          <div className="col-span-2"><span className="text-slate-500">Grant scope:</span> <span className="text-amber-300 font-mono break-all">{transcript.sandboxGrant.scope}</span></div>
+                          <div><span className="text-slate-500">Grant expires:</span> <span className="text-slate-300 font-mono">{new Date(transcript.sandboxGrant.expiresAt).toLocaleString()}</span></div>
+                          <div><span className="text-slate-500">Revoked:</span> <span className={cn("font-mono", transcript.sandboxGrant.revoked ? "text-red-400" : "text-emerald-400")}>{transcript.sandboxGrant.revoked ? "yes" : "no"}</span></div>
+                        </div>
+
+                        <div className="space-y-1 max-h-64 overflow-y-auto">
+                          {transcript.entries.map((e, i) => (
+                            <div key={i} className={cn(
+                              "p-2 rounded-lg border text-[11px] whitespace-pre-wrap break-words",
+                              e.direction === "outbound" && "bg-violet-500/5 border-violet-500/20 text-violet-100",
+                              e.direction === "inbound" && "bg-emerald-500/5 border-emerald-500/20 text-emerald-100",
+                              e.direction === "system" && "bg-slate-500/5 border-slate-500/20 text-slate-300 italic"
+                            )}>
+                              <div className="text-[9px] text-slate-500 font-mono mb-1">
+                                {e.direction.toUpperCase()} · {e.channel} · {new Date(e.ts).toLocaleString()}
+                              </div>
+                              {e.body}
+                            </div>
+                          ))}
+                        </div>
+
+                        {!transcript.sandboxGrant.revoked && (
+                          <button
+                            onClick={() => revokeMut.mutate(d.id)}
+                            disabled={revokeMut.isPending}
+                            className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-red-600/20 border border-red-500/30 text-red-300 hover:bg-red-600/40 disabled:opacity-50"
+                          >
+                            <Lock size={11} /> Revoke Sandbox Grant
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </GlassCard>
+          );
+        })}
+        {dossiers.length === 0 && (
+          <div className="text-xs text-slate-500 italic p-4 rounded-lg bg-white/[0.02] border border-white/5">No recruit dossiers in the selected filter.</div>
+        )}
       </div>
     </div>
   );
