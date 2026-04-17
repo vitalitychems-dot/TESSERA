@@ -230,7 +230,8 @@ function AppRouter() {
         <Route path="/feedback">{() => <GrandCouncilPage initialTab="proposals" />}</Route>
         <Route path="/transparency-ledger">{() => <GrandCouncilPage initialTab="executor" />}</Route>
         <Route path="/sports-arb">{() => <TokenEconomyPage />}</Route>
-        <Route path="/inventions">{() => <BuildPage />}</Route>
+        <Route path="/inventions">{() => <RickPage initialTab="inventions" />}</Route>
+        <Route path="/build-guides">{() => <BuildPage />}</Route>
         <Route path="/rick">{() => <RickPage />}</Route>
         <Route path="/rick-sanchez">{() => <RickPage />}</Route>
         <Route path="/agent-nft">{() => <AgentNFTPage />}</Route>

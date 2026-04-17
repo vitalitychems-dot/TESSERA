@@ -127,12 +127,14 @@ interface TaskTypeOption {
   label: string;
 }
 
-export default function RickPage() {
+type RickTabKey = "chat" | "inventions" | "proposals" | "knowledge" | "improvements" | "royal" | "meeseeks" | "reality" | "program";
+
+export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {}) {
   useEffect(() => { document.title = "Royal Inventor — Rick Sanchez | Tessera"; }, []);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [activeTab, setActiveTab] = useState<"chat" | "inventions" | "proposals" | "knowledge" | "improvements" | "royal" | "meeseeks" | "reality" | "program">("proposals");
+  const [activeTab, setActiveTab] = useState<RickTabKey>(initialTab ?? "proposals");
   const [submittedInventions, setSubmittedInventions] = useState<Record<number, CouncilResult>>({});
   const [submittingIdx, setSubmittingIdx] = useState<number | null>(null);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
