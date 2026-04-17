@@ -614,6 +614,7 @@ router.get("/inventions", async (req, res) => {
         materials: (inv.materials as string[] | null) || [],
         steps: ((inv as { steps?: string[] | null }).steps as string[] | null) || [],
         scienceBehind: (inv as { scienceBehind?: string | null }).scienceBehind ?? null,
+        customModelUrl: (inv as { customModelUrl?: string | null }).customModelUrl ?? null,
       };
       const diagram3dBlocks = buildInvention3DBlocks(input, { max: 4 });
       return {
@@ -685,6 +686,7 @@ router.get("/inventions/:id", async (req, res) => {
       materials: (inv.materials as string[] | null) || [],
       steps: (inv.steps as string[] | null) || [],
       scienceBehind: (inv as { scienceBehind?: string | null }).scienceBehind ?? null,
+      customModelUrl: (inv as { customModelUrl?: string | null }).customModelUrl ?? null,
     };
     const diagram3dBlocks = buildInvention3DBlocks(input, { max: 4 });
     return res.json({ ok: true, invention: inv, diagram3d: diagram3dBlocks[0], diagram3dBlocks });
@@ -766,6 +768,127 @@ router.patch("/inventions/:id/vote", async (req, res) => {
 
     return res.json({ ok: true, invention: updated, votes: newVotes, newStatus });
   } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+// Server-side ledger of pending invention model uploads. PATCH /model can only
+// attach an objectPath that was previously minted by THIS server for the
+// matching invention. Prevents callers from pointing inventions at — or
+// escalating ACLs of — arbitrary pre-existing private objects in the bucket.
+type PendingUpload = { inventionId: string; expiresAt: number };
+const pendingInventionUploads = new Map<string, PendingUpload>();
+const PENDING_UPLOAD_TTL_MS = 60 * 60 * 1000; // 1 hour
+function rememberPendingUpload(objectPath: string, inventionId: string) {
+  // Sweep expired entries cheaply (cap memory).
+  const now = Date.now();
+  if (pendingInventionUploads.size > 5000) {
+    for (const [k, v] of pendingInventionUploads) {
+      if (v.expiresAt < now) pendingInventionUploads.delete(k);
+    }
+  }
+  pendingInventionUploads.set(objectPath, { inventionId, expiresAt: now + PENDING_UPLOAD_TTL_MS });
+}
+function consumePendingUpload(objectPath: string, inventionId: string): boolean {
+  const entry = pendingInventionUploads.get(objectPath);
+  if (!entry) return false;
+  if (entry.expiresAt < Date.now()) {
+    pendingInventionUploads.delete(objectPath);
+    return false;
+  }
+  if (entry.inventionId !== inventionId) return false;
+  pendingInventionUploads.delete(objectPath);
+  return true;
+}
+
+// Lightweight admin-token guard: requires an x-admin-token header. If the
+// SOVEREIGN_ADMIN_TOKEN env secret is configured, the value must match it
+// exactly via constant-time comparison; otherwise any non-empty token is
+// accepted (matches the existing isAdminRequest pattern in conversations.ts).
+async function requireInventorAuth(req: import("express").Request): Promise<boolean> {
+  const token = (req.headers["x-admin-token"] as string | undefined)?.trim();
+  if (!token || token.length < 8) return false;
+  const configured = process.env["SOVEREIGN_ADMIN_TOKEN"];
+  if (configured && configured.length >= 8) {
+    const { validateSovereignAdminToken } = await import("../lib/mesh-auth");
+    return validateSovereignAdminToken(token);
+  }
+  return true;
+}
+
+// Request a presigned URL for uploading a custom 3D model (GLB/GLTF) to an
+// invention. Client then PUTs the file directly to the returned URL, then
+// PATCHes /inventions/:id/model with the returned objectPath.
+router.post("/inventions/:id/model/upload-url", async (req, res) => {
+  try {
+    if (!(await requireInventorAuth(req))) {
+      return res.status(401).json({ ok: false, error: "Admin token required to upload invention models" });
+    }
+    const { id } = req.params;
+    const { name, contentType } = (req.body || {}) as { name?: string; contentType?: string };
+    if (!name || !/\.(glb|gltf)$/i.test(name)) {
+      return res.status(400).json({ ok: false, error: "name must end in .glb or .gltf" });
+    }
+    const [existing] = await db.select({ id: inventionsTable.id }).from(inventionsTable)
+      .where(eq(inventionsTable.inventionId, id)).limit(1);
+    if (!existing) return res.status(404).json({ ok: false, error: "Invention not found" });
+
+    const { ObjectStorageService } = await import("../lib/objectStorage");
+    const svc = new ObjectStorageService();
+    const uploadURL = await svc.getObjectEntityUploadURL();
+    const objectPath = svc.normalizeObjectEntityPath(uploadURL);
+    rememberPendingUpload(objectPath, id);
+    return res.json({ ok: true, uploadURL, objectPath, contentType: contentType || "model/gltf-binary", inventionId: id });
+  } catch (err) {
+    logger.error({ err }, "Failed to create invention model upload URL");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+// Save the uploaded GLB/GLTF object path on the invention so it can be rendered
+// in chat with a [3DOBJ:type="custom" src="..."] block.
+router.patch("/inventions/:id/model", async (req, res) => {
+  try {
+    if (!(await requireInventorAuth(req))) {
+      return res.status(401).json({ ok: false, error: "Admin token required to modify invention models" });
+    }
+    const { id } = req.params;
+    const { objectPath } = (req.body || {}) as { objectPath?: string | null };
+    if (objectPath !== null && (!objectPath || typeof objectPath !== "string" || !objectPath.startsWith("/objects/"))) {
+      return res.status(400).json({ ok: false, error: "objectPath must start with /objects/ (or be null to clear)" });
+    }
+    // Authorization: the caller may only attach an objectPath that THIS server
+    // minted for THIS invention via the matching presign call. This prevents
+    // arbitrary bucket-path attachment and ACL escalation of pre-existing
+    // private objects.
+    if (objectPath && !consumePendingUpload(objectPath, id)) {
+      return res.status(403).json({ ok: false, error: "objectPath was not issued for this invention or has expired" });
+    }
+    // Stamp an ACL policy on the freshly uploaded object so the gated serve
+    // route at GET /storage/objects/:id will allow read. Inventor diagrams are
+    // intentionally world-readable (they are embedded in the public chat),
+    // hence visibility="public".
+    if (objectPath) {
+      try {
+        const { ObjectStorageService } = await import("../lib/objectStorage");
+        const svc = new ObjectStorageService();
+        await svc.trySetObjectEntityAclPolicy(objectPath, {
+          owner: `invention:${id}`,
+          visibility: "public",
+        });
+      } catch (aclErr) {
+        logger.error({ err: aclErr, objectPath }, "Failed to set ACL on invention model");
+        return res.status(500).json({ ok: false, error: "Failed to apply object ACL" });
+      }
+    }
+    const [updated] = await db.update(inventionsTable)
+      .set({ customModelUrl: objectPath, updatedAt: new Date() })
+      .where(eq(inventionsTable.inventionId, id))
+      .returning();
+    if (!updated) return res.status(404).json({ ok: false, error: "Invention not found" });
+    return res.json({ ok: true, invention: updated });
+  } catch (err) {
+    logger.error({ err }, "Failed to set invention custom model");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
 });

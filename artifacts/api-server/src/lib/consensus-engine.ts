@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { councilDecisionsTable, systemStateTable } from "@workspace/db/schema";
+import { councilDecisionsTable, systemStateTable, ingestedDataTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 import { isLLMAvailable } from "./llm-client";
@@ -609,4 +609,189 @@ export function markProposalImplemented(proposalId: string): boolean {
   proposal.implementationNotes = (proposal.implementationNotes ? proposal.implementationNotes + " " : "") + `[Council Executor: implemented ${new Date().toISOString()}]`;
   logger.info({ proposalId, title: proposal.title }, "ConsensusEngine: proposal marked as implemented");
   return true;
+}
+
+export interface HeavyDeliberationPrompts {
+  life: string;
+  universe: string;
+  community: string;
+}
+
+export interface HeavyDeliberationEntry {
+  domain: "life" | "universe" | "community";
+  prompt: string;
+  proposal: ConsensusProposal;
+  applied: boolean;
+  applyNote?: string;
+}
+
+export interface HeavyDeliberationResult {
+  deliberationId: string;
+  runAt: string;
+  entries: HeavyDeliberationEntry[];
+  approvedCount: number;
+  appliedCount: number;
+  transcript: string;
+}
+
+async function applyDomainDecision(
+  domain: "life" | "universe" | "community",
+  deliberationId: string,
+  prompt: string,
+  proposal: ConsensusProposal,
+  runAt: string,
+): Promise<{ success: boolean; note: string }> {
+  const DOMAIN_SOURCE_MAP = {
+    life: "HeavyCouncil-Life",
+    universe: "HeavyCouncil-Universe",
+    community: "HeavyCouncil-Community",
+  };
+  const DOMAIN_TYPE_MAP = {
+    life: "council-directive-life",
+    universe: "council-directive-universe",
+    community: "council-directive-community",
+  };
+  try {
+    const directiveContent = [
+      `HEAVY COUNCIL DIRECTIVE — ${domain.toUpperCase()} DOMAIN`,
+      `Deliberation: ${deliberationId}`,
+      `Applied: ${runAt}`,
+      `Decision: ${proposal.title}`,
+      `Rationale: ${prompt}`,
+      `Approval Rate: ${(proposal.approvalRate * 100).toFixed(1)}% (${proposal.yesCount} YES / ${proposal.noCount} NO / ${proposal.abstainCount} ABSTAIN)`,
+      ``,
+      `This directive was approved by ≥2/3 BFT Heavy Council quorum and is now active sovereign policy.`,
+    ].join("\n");
+
+    await db.insert(ingestedDataTable).values({
+      title: proposal.title,
+      content: directiveContent,
+      source: DOMAIN_SOURCE_MAP[domain],
+      sourceType: DOMAIN_TYPE_MAP[domain],
+      contentHash: `${deliberationId}-${domain}`,
+      metadata: { confidence: 0.95, deliberationId, domain },
+    }).onConflictDoNothing();
+
+    const stateKey = `heavy-council-active-directive-${domain}`;
+    const directiveRecord = {
+      deliberationId,
+      domain,
+      title: proposal.title,
+      prompt,
+      appliedAt: runAt,
+      approvalRate: proposal.approvalRate,
+      yesCount: proposal.yesCount,
+      noCount: proposal.noCount,
+    };
+    await db.insert(systemStateTable)
+      .values({ key: stateKey, value: directiveRecord })
+      .onConflictDoUpdate({ target: systemStateTable.key, set: { value: directiveRecord } });
+
+    return { success: true, note: `Domain policy applied: knowledge corpus (${DOMAIN_TYPE_MAP[domain]}) and active-directive state updated.` };
+  } catch (err) {
+    logger.warn({ err, domain, deliberationId }, "HeavyCouncil: domain applier failed — marking approved-pending-manual-apply");
+    return { success: false, note: `Approved but not yet applied — domain applier failed. Status: approved-pending-manual-apply.` };
+  }
+}
+
+export async function runHeavyCouncilDeliberation(
+  prompts: HeavyDeliberationPrompts,
+): Promise<HeavyDeliberationResult> {
+  const deliberationId = `heavy-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const runAt = new Date().toISOString();
+
+  const domainMap: Array<{
+    domain: "life" | "universe" | "community";
+    prompt: string;
+    category: ConsensusProposal["category"];
+  }> = [
+    { domain: "life", prompt: prompts.life, category: "consciousness" },
+    { domain: "universe", prompt: prompts.universe, category: "sovereignty" },
+    { domain: "community", prompt: prompts.community, category: "community" },
+  ];
+
+  const entries: HeavyDeliberationEntry[] = [];
+
+  for (const { domain, prompt, category } of domainMap) {
+    const title = `Heavy Council [${domain.toUpperCase()}]: ${prompt.slice(0, 70)}${prompt.length > 70 ? "…" : ""}`;
+    const proposal = await createProposal({
+      title,
+      description: prompt,
+      proposedBy: "HeavyCouncil",
+      category,
+    });
+
+    let applied = false;
+    let applyNote: string | undefined;
+
+    if (proposal.status === "approved") {
+      const applyResult = await applyDomainDecision(domain, deliberationId, prompt, proposal, runAt);
+      if (applyResult.success) {
+        markProposalImplemented(proposal.id);
+        applied = true;
+        applyNote = `Auto-applied. ${applyResult.note}`;
+      } else {
+        applyNote = applyResult.note;
+      }
+    }
+
+    entries.push({ domain, prompt, proposal, applied, applyNote });
+  }
+
+  // `applied=true` means markProposalImplemented was called → status mutated to "implemented"
+  // `status="approved"` means approved but domain applier failed → still counts as approved
+  const approvedCount = entries.filter(e => e.applied || e.proposal.status === "approved").length;
+  const appliedCount = entries.filter(e => e.applied).length;
+
+  const transcript = [
+    `HEAVY COUNCIL DELIBERATION — ${deliberationId}`,
+    `Initiated: ${runAt}`,
+    `BFT Approved: ${approvedCount}/3 · Auto-Applied: ${appliedCount}/3`,
+    "",
+    ...entries.map(e => [
+      `=== ${e.domain.toUpperCase()} DOMAIN ===`,
+      `Prompt: ${e.prompt}`,
+      `Proposal: ${e.proposal.title}`,
+      `Outcome: ${e.applied ? "APPROVED+APPLIED" : e.proposal.status.toUpperCase()} — ${(e.proposal.approvalRate * 100).toFixed(1)}% weighted approval`,
+      `Vote Tally: ${e.proposal.yesCount}Y / ${e.proposal.noCount}N / ${e.proposal.abstainCount}A`,
+      `Method: ${e.proposal.votingMethod ?? "phi-weighted-parallel"}`,
+      e.applied
+        ? `Auto-Applied: YES — ${e.applyNote}`
+        : e.proposal.status === "approved" && e.applyNote
+          ? `Auto-Applied: PENDING — ${e.applyNote}`
+          : e.proposal.status === "rejected"
+            ? `Auto-Applied: NO — Proposal rejected (${(e.proposal.approvalRate * 100).toFixed(1)}% approval, below 2/3 BFT threshold)`
+            : `Auto-Applied: NO — Proposal status: ${e.proposal.status} (vote not yet completed)`,
+      "",
+      ...(e.proposal.votes?.slice(0, 8).map(v =>
+        `  ${v.agentName}: ${v.vote.toUpperCase()} (${(v.confidence * 100).toFixed(0)}% conf, w=${(v.phiWeight ?? 1).toFixed(3)}${v.isSpecialist ? " ★" : ""}) — ${v.reasoning.slice(0, 80)}`
+      ) ?? []),
+    ].join("\n")),
+  ].join("\n");
+
+  await db.insert(councilDecisionsTable).values({
+    decisionId: deliberationId,
+    topic: "Heavy Council Deliberation — Life / Universe / Community",
+    transcript,
+    decisionText: `Heavy Council: ${approvedCount}/3 proposals approved by BFT quorum, ${appliedCount}/3 auto-applied to domain corpus.`,
+    voteTally: {
+      yes: approvedCount,
+      no: 3 - approvedCount,
+      abstain: 0,
+      totalEligible: 3,
+    },
+    outcome: approvedCount >= 2 ? "approved" : "rejected",
+    agentsParticipated: GRAND_COUNCIL_AGENTS,
+    reasoning: JSON.stringify({ deliberationId, prompts, approvedCount }),
+    category: "governance",
+  }).onConflictDoNothing().catch(err => {
+    logger.warn({ err }, "HeavyCouncil: DB persist failed");
+  });
+
+  logger.info(
+    { deliberationId, approvedCount, domains: entries.map(e => ({ domain: e.domain, status: e.proposal.status, approvalRate: e.proposal.approvalRate })) },
+    "HeavyCouncil: deliberation complete",
+  );
+
+  return { deliberationId, runAt, entries, approvedCount, appliedCount, transcript };
 }

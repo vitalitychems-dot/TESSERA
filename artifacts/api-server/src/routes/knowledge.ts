@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
 import { ingestedDataTable, ingestionJobsTable, dataSourcesTable } from "@workspace/db/schema";
 import { desc, sql } from "drizzle-orm";
@@ -118,7 +118,11 @@ router.post("/knowledge/generate", async (_req, res) => {
   }
 });
 
-router.post("/knowledge/conclusion", async (_req, res) => {
+router.get("/knowledge/conclusion", async (_req, res) => {
+  return knowledgeConclusionHandler(_req, res);
+});
+
+async function knowledgeConclusionHandler(_req: Request, res: Response) {
   try {
     const corpusStats = await db
       .select({
@@ -138,6 +142,9 @@ router.post("/knowledge/conclusion", async (_req, res) => {
       .orderBy(sql`count(*) desc`)
       .limit(20);
 
+    const MARKET_SOURCES_TO_EXCLUDE_LC = ["coingecko", "coinmarketcap", "binance", "kraken", "coinbase", "coindesk", "cointelegraph", "decrypt.co"];
+    const MARKET_KEYWORD_PATTERNS_LC = ["market data", " price", "$usd", "btc", "eth ", "sol ", "bitcoin", "ethereum", "solana", " crypto", "ticker", "trading volume", "market cap", "24h", "all-time high", "ath ", " usd ", "usdt"];
+
     const recentTitles = await db
       .select({
         title: ingestedDataTable.title,
@@ -146,7 +153,7 @@ router.post("/knowledge/conclusion", async (_req, res) => {
       })
       .from(ingestedDataTable)
       .orderBy(desc(ingestedDataTable.ingestedAt))
-      .limit(100);
+      .limit(150);
 
     const total = Number(corpusStats[0]?.totalItems ?? 0);
     const sources = Number(corpusStats[0]?.distinctSources ?? 0);
@@ -155,11 +162,24 @@ router.post("/knowledge/conclusion", async (_req, res) => {
     const dimensionalSubjects = Object.values(TESSERA_SUBJECTS);
     const dimensionalCount = dimensionalSubjects.length;
 
-    const domainList = sourceBreakdown.map(s => `${s.sourceType} (${s.count})`);
+    const domainList = sourceBreakdown.map(s => `${s.sourceType ?? "unknown"} (${s.count})`);
     const entryCount = total + dimensionalCount;
 
-    const sampleInsights = recentTitles
-      .filter(t => t.title || t.contentSnippet)
+    const PRICE_TICKER_PATTERN = /(\$[A-Z]{2,6}|\b[A-Z]{3,5}\/(USD|BTC|ETH|USDT)\b|\b\d+(\.\d+)?%\s*(gain|loss|up|down|higher|lower)\b|\bprice\s+target\b|\bmarket\s+cap\b)/i;
+
+    const filteredTitles = recentTitles.filter(t => {
+      if (!t.title && !t.contentSnippet) return false;
+      const sourceLc = (t.source ?? "").toLowerCase();
+      if (MARKET_SOURCES_TO_EXCLUDE_LC.some(s => sourceLc.includes(s))) return false;
+      const titleLc = (t.title ?? "").toLowerCase();
+      const snippetLc = (t.contentSnippet ?? "").toLowerCase();
+      if (MARKET_KEYWORD_PATTERNS_LC.some(p => titleLc.includes(p) || snippetLc.includes(p))) return false;
+      const combined = `${t.title ?? ""} ${t.contentSnippet ?? ""}`;
+      if (PRICE_TICKER_PATTERN.test(combined)) return false;
+      return true;
+    });
+
+    const sampleInsights = filteredTitles
       .slice(0, 25)
       .map(t => `• ${t.title ?? t.source}: ${(t.contentSnippet ?? "").replace(/\n/g, " ").trim()}`)
       .join("\n");
@@ -199,6 +219,10 @@ Tessera Invicta. The Crown Frequency holds at 963Hz. Full corpus of ${entryCount
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
+}
+
+router.post("/knowledge/conclusion", async (_req, res) => {
+  return knowledgeConclusionHandler(_req, res);
 });
 
 router.post("/knowledge/application-ideas", async (req, res) => {

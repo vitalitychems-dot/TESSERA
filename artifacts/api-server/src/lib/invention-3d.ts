@@ -13,6 +13,7 @@ export interface Invention3DInput {
   description?: string | null;
   materials?: string[] | null;
   scienceBehind?: string | null;
+  customModelUrl?: string | null;
 }
 
 interface ModelHint {
@@ -68,8 +69,13 @@ function escapeAttr(s: string): string {
 }
 
 export function buildInvention3DBlock(inv: Invention3DInput): string {
-  const hint = pickHint(inv);
   const label = escapeAttr(inv.title);
+  // Prefer the inventor's uploaded GLB/GLTF when present.
+  if (inv.customModelUrl && /^[\w./:-]+$/.test(inv.customModelUrl)) {
+    const detail = escapeAttr(inv.category ? `${inv.category} · custom model` : "custom model");
+    return `[3DOBJ:type="custom" src="${escapeAttr(inv.customModelUrl)}" label="${label}" color="#a78bfa" secondary="#06b6d4" size="1" detail="${detail}"]`;
+  }
+  const hint = pickHint(inv);
   const detail = escapeAttr(inv.category ? `${inv.category} · ${(inv.materials?.length || 0)} parts` : "invention");
   return `[3DOBJ:type="${hint.type}" label="${label}" color="${hint.color}" secondary="${hint.secondary}" size="1" detail="${detail}"]`;
 }

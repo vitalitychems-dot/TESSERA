@@ -878,6 +878,7 @@ router.post("/messages", async (req, res) => {
         description: inventionsTable.description,
         materials: inventionsTable.materials,
         scienceBehind: inventionsTable.scienceBehind,
+        customModelUrl: inventionsTable.customModelUrl,
       }).from(inventionsTable).orderBy(asc(inventionsTable.title)).limit(500);
       const normalizedRows = invRows.map(r => ({
         inventionId: r.inventionId,
@@ -886,6 +887,7 @@ router.post("/messages", async (req, res) => {
         description: r.description,
         materials: (r.materials as string[] | null) || [],
         scienceBehind: r.scienceBehind,
+        customModelUrl: r.customModelUrl,
       }));
       finalContent = injectInventionDiagrams(finalContent, normalizedRows, { max: 4 });
       // Hard guarantee: if the user asked to visualize/show/diagram/3D and no

@@ -1,14 +1,14 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { councilDecisionsTable, type InsertCouncilDecision } from "@workspace/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { councilDecisionsTable, systemStateTable, type InsertCouncilDecision } from "@workspace/db/schema";
+import { desc, eq, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { computeWorldState } from "../lib/sovereign-economics";
 import { computeLunarData, computeSolarData } from "../lib/sovereign-astro";
 import { computeNetworkTopology } from "../lib/sovereign-network";
 import { runThroughSovereignEngine, type KnowledgeResult } from "../lib/sovereign-engine-router";
 import { invalidateCanonCache } from "../lib/canonUpdater";
-import { createProposal, getAllProposals, getConsensusMetrics, GRAND_COUNCIL_AGENTS } from "../lib/consensus-engine";
+import { createProposal, getAllProposals, getConsensusMetrics, GRAND_COUNCIL_AGENTS, runHeavyCouncilDeliberation, type HeavyDeliberationPrompts } from "../lib/consensus-engine";
 import { getExecutorMetrics, startCouncilExecutor, stopCouncilExecutor } from "../lib/council-executor";
 import { getAgentHierarchy, getHierarchyMetrics } from "../lib/agent-hierarchy";
 import { batchedCallLLMSafe } from "../lib/llm-batcher";
@@ -524,6 +524,59 @@ router.post("/council/executor/start", (_req, res) => {
 router.post("/council/executor/stop", (_req, res) => {
   stopCouncilExecutor();
   return res.json({ ok: true, message: "Council executor stopped", metrics: getExecutorMetrics() });
+});
+
+router.post("/council/heavy-deliberation", async (req, res) => {
+  try {
+    const { life, universe, community } = req.body as Partial<HeavyDeliberationPrompts>;
+
+    if (!life || !universe || !community) {
+      return res.status(400).json({
+        ok: false,
+        error: "All three prompts are required: life, universe, community",
+      });
+    }
+
+    const result = await runHeavyCouncilDeliberation({
+      life: String(life).slice(0, 1000),
+      universe: String(universe).slice(0, 1000),
+      community: String(community).slice(0, 1000),
+    });
+
+    return res.json({ ok: true, ...result });
+  } catch (err) {
+    logger.error({ err }, "HeavyCouncil: deliberation route failed");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/council/heavy-deliberations", async (_req, res) => {
+  try {
+    const rows = await db.select().from(councilDecisionsTable)
+      .where(sql`${councilDecisionsTable.decisionId} LIKE ${"heavy-%"}`)
+      .orderBy(desc(councilDecisionsTable.createdAt))
+      .limit(20);
+
+    return res.json({ ok: true, deliberations: rows });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/council/active-directives", async (_req, res) => {
+  try {
+    const DOMAINS = ["life", "universe", "community"] as const;
+    const directives: Record<string, unknown> = {};
+    for (const domain of DOMAINS) {
+      const [row] = await db.select()
+        .from(systemStateTable)
+        .where(eq(systemStateTable.key, `heavy-council-active-directive-${domain}`));
+      directives[domain] = row?.value ?? null;
+    }
+    return res.json({ ok: true, directives });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
 });
 
 export default router;
