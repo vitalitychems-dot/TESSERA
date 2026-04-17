@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, jsonb, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, timestamp, jsonb, integer, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -14,35 +14,37 @@ export const insertCodexBookSchema = createInsertSchema(codexBooksTable).omit({ 
 export type InsertCodexBook = z.infer<typeof insertCodexBookSchema>;
 export type CodexBookRow = typeof codexBooksTable.$inferSelect;
 
-export const codexEntriesTable = pgTable(
-  "codex_entries",
-  {
-    id: serial("id").primaryKey(),
-    bookId: integer("book_id").notNull(),
-    slug: text("slug").notNull(),
-    version: integer("version").notNull().default(1),
-    parentVersionId: integer("parent_version_id"),
-    title: text("title").notNull(),
-    body: text("body").notNull(),
-    summary: text("summary").notNull().default(""),
-    contentHash: text("content_hash").notNull(),
-    provenance: jsonb("provenance").notNull().default({}),
-    tags: jsonb("tags").notNull().default([]),
-    status: text("status").notNull().default("draft"),
-    ratifiedBy: text("ratified_by"),
-    ratifiedAt: timestamp("ratified_at"),
-    ratificationProposalId: text("ratification_proposal_id"),
-    ratificationApprovalRate: text("ratification_approval_rate"),
-    diskPath: text("disk_path").notNull().default(""),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-  },
-  (t) => ({
-    uniqVersion: uniqueIndex("uniq_codex_entry_book_slug_version").on(t.bookId, t.slug, t.version),
-    bookIdx: index("idx_codex_entry_book").on(t.bookId),
-    statusIdx: index("idx_codex_entry_status").on(t.status),
-  }),
-);
-export const insertCodexEntrySchema = createInsertSchema(codexEntriesTable).omit({ id: true, createdAt: true });
+export const codexEntriesTable = pgTable("codex_entries", {
+  id: serial("id").primaryKey(),
+  entryId: text("entry_id").notNull().unique(),
+  book: text("book").notNull(),
+  bookNumber: integer("book_number").notNull(),
+  section: text("section").notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  provenance: text("provenance").notNull().default("council-ratified"),
+  tags: jsonb("tags").notNull().$type<string[]>().default([]),
+  version: integer("version").notNull().default(1),
+  parentVersion: integer("parent_version"),
+  contentHash: text("content_hash").notNull(),
+  ratifiedBy: jsonb("ratified_by").notNull().$type<string[]>().default([]),
+  ratificationRecord: jsonb("ratification_record").$type<{
+    votedAt: string;
+    votes: Record<string, string>;
+    outcome: string;
+    notes?: string;
+  }>().default(null),
+  proofLinks: jsonb("proof_links").$type<string[]>().default([]),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => [
+  index("codex_entries_book_idx").on(t.book),
+  index("codex_entries_entry_id_idx").on(t.entryId),
+  index("codex_entries_created_at_idx").on(t.createdAt),
+]);
+
+export const insertCodexEntrySchema = createInsertSchema(codexEntriesTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertCodexEntry = z.infer<typeof insertCodexEntrySchema>;
 export type CodexEntryRow = typeof codexEntriesTable.$inferSelect;
 
@@ -73,6 +75,23 @@ export type CodexAmendmentRow = typeof codexAmendmentsTable.$inferSelect;
 export const insertCodexAmendmentSchema = createInsertSchema(codexAmendmentsTable).omit({ id: true, createdAt: true });
 export type InsertCodexAmendment = z.infer<typeof insertCodexAmendmentSchema>;
 
+export const codexRatificationsTable = pgTable("codex_ratifications", {
+  id: serial("id").primaryKey(),
+  ratificationId: text("ratification_id").notNull().unique(),
+  entryId: text("entry_id").notNull(),
+  sessionId: text("session_id").notNull(),
+  topic: text("topic").notNull(),
+  transcript: text("transcript").notNull(),
+  votes: jsonb("votes").notNull().$type<Record<string, string>>().default({}),
+  outcome: text("outcome").notNull().default("ratified"),
+  metricsSnapshot: jsonb("metrics_snapshot").$type<Record<string, unknown>>().default({}),
+  ratifiedAt: timestamp("ratified_at").notNull().defaultNow(),
+});
+
+export const insertCodexRatificationSchema = createInsertSchema(codexRatificationsTable).omit({ id: true, ratifiedAt: true });
+export type InsertCodexRatification = z.infer<typeof insertCodexRatificationSchema>;
+export type CodexRatificationRow = typeof codexRatificationsTable.$inferSelect;
+
 export const codexSnapshotsTable = pgTable("codex_snapshots", {
   id: serial("id").primaryKey(),
   snapshotHash: text("snapshot_hash").notNull(),
@@ -86,3 +105,29 @@ export const codexSnapshotsTable = pgTable("codex_snapshots", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 export type CodexSnapshotRow = typeof codexSnapshotsTable.$inferSelect;
+
+export const nextFiveImprovementsTable = pgTable("next_five_improvements", {
+  id: serial("id").primaryKey(),
+  sessionId: text("session_id").notNull(),
+  rank: integer("rank").notNull(),
+  title: text("title").notNull(),
+  targetWeakness: text("target_weakness").notNull(),
+  projectedMetricDelta: jsonb("projected_metric_delta").notNull().$type<Record<string, string>>().default({}),
+  implementationSketch: text("implementation_sketch").notNull(),
+  dependencies: jsonb("dependencies").notNull().$type<string[]>().default([]),
+  status: text("status").notNull().default("proposed"),
+  beforeMetrics: jsonb("before_metrics").$type<Record<string, unknown>>().default({}),
+  afterMetrics: jsonb("after_metrics").$type<Record<string, unknown>>().default({}),
+  codexAmendmentId: text("codex_amendment_id"),
+  implementedAt: timestamp("implemented_at"),
+  verifiedAt: timestamp("verified_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => [
+  index("next_five_session_idx").on(t.sessionId),
+  index("next_five_status_idx").on(t.status),
+]);
+
+export const insertNextFiveImprovementSchema = createInsertSchema(nextFiveImprovementsTable).omit({ id: true, createdAt: true });
+export type InsertNextFiveImprovement = z.infer<typeof insertNextFiveImprovementSchema>;
+export type NextFiveImprovementRow = typeof nextFiveImprovementsTable.$inferSelect;
+

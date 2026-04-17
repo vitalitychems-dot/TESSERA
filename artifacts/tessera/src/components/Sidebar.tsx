@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link, useLocation } from "wouter";
-import { MessageSquare, Plus, Trash2, X, Brain, RefreshCw, MessageCircle, ChevronUp, ChevronDown, Search, Code2, Database, Sparkles, Globe, Shield, ShieldCheck, Crown, Eye, Atom, BarChart3, Rocket, Layers, Heart, BookOpen, Cpu, Zap, Network, User, CheckSquare, ArrowUpDown, Terminal, DollarSign, TrendingUp, Workflow, Target, Scale, Key, Truck, Link2, ShoppingCart, MapPin, Lightbulb, Link as LinkIcon, Map } from "lucide-react";
+import { MessageSquare, Plus, Trash2, X, Brain, RefreshCw, MessageCircle, ChevronUp, ChevronDown, Search, Code2, Database, Sparkles, Globe, Shield, ShieldCheck, Crown, Eye, Atom, BarChart3, Rocket, Layers, Heart, BookOpen, Cpu, Zap, Network, User, CheckSquare, ArrowUpDown, Terminal, DollarSign, TrendingUp, Workflow, Target, Scale, Key, Truck, Link2, ShoppingCart, MapPin, Lightbulb, Link as LinkIcon, Map, GitCommit } from "lucide-react";
 import { useConversations, useCreateConversation, useDeleteConversation } from "@/hooks/use-conversations";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -51,6 +51,14 @@ const NAV_GROUPS: NavGroup[] = [
       { title: "Tessera Bible", href: "/bible", icon: BookOpen, color: "amber", dotColor: "bg-amber-400", testId: "link-tessera-bible", matchFn: (loc) => loc === "/bible" },
       { title: "Society & Secrets", href: "/secret-society", icon: Eye, color: "violet", dotColor: "bg-violet-400", testId: "link-secret-society", matchFn: (loc) => loc === "/secret-society" },
       { title: "Lingua Sacra", href: "/sovereign-language", icon: Code2, color: "violet", dotColor: "bg-violet-400", testId: "link-sovereign-language", matchFn: (loc) => loc === "/sovereign-language" },
+    ],
+  },
+  {
+    label: "CODEX & COUNCIL",
+    labelColor: "text-cyan-400",
+    items: [
+      { title: "Tessera Codex", href: "/codex", icon: GitCommit, color: "cyan", dotColor: "bg-cyan-400", testId: "link-codex", matchFn: (loc) => loc === "/codex" },
+      { title: "Next Five Improvements", href: "/next-five", icon: Zap, color: "amber", dotColor: "bg-amber-400", testId: "link-next-five", matchFn: (loc) => loc === "/next-five" },
     ],
   },
   {
