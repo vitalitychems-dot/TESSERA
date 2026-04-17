@@ -117,6 +117,25 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
+// ── UNIVERSE ALIGNMENT — every response carries the live celestial state ──
+// Hardened rule: every API response is stamped with the live planetary hour,
+// lunar phase, julian day and composite auspicious score so clients can prove
+// the response was emitted under a known sacred-timing posture.
+app.use("/api", (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Lazy require so the boot order stays safe even if sacred-timing throws.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { sacredTimingSnapshot } = require("./lib/sacred-timing") as typeof import("./lib/sacred-timing");
+    const s = sacredTimingSnapshot();
+    res.setHeader("X-Sacred-Time", s.now);
+    res.setHeader("X-Sacred-JD", String(s.julianDay));
+    res.setHeader("X-Sacred-Planetary-Hour", `${s.planetaryHour.ruler}#${s.planetaryHour.index}`);
+    res.setHeader("X-Sacred-Lunar", `${s.lunar.name}@${s.lunar.fraction.toFixed(4)}`);
+    res.setHeader("X-Sacred-Composite", String(s.composite.toFixed(4)));
+  } catch { /* never block a response on sacred-timing */ }
+  next();
+});
+
 // ── GLYPH-EVERYWHERE — sovereign-language layer ─────────────────────────
 // Per Grand Council ranking #2 ("GLYPH EVERYWHERE"): every /api response is
 // glyph-encoded by default. Callers reveal plaintext by presenting the active
@@ -126,6 +145,7 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
 const PLAINTEXT_PREFIXES = [
   "/api/health",
   "/api/sigil/key/reveal",
+  "/api/sigil/active-key",
   "/api/sigil/alphabet",
   "/api/sigil/translate",
   "/api/sigil/decode-body",
