@@ -110,7 +110,12 @@ export async function getExecutableLeads(opts: { kind?: LeadKind; limit?: number
       if (!url || seen.has(url)) continue;
       seen.add(url);
       let domain = "";
-      try { domain = new URL(url).hostname; } catch { continue; }
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") continue;
+        domain = parsed.hostname;
+        if (!domain) continue;
+      } catch { continue; }
       const title = r.title ?? domain;
       const kind = classifyLead(url, title);
       if (opts.kind && kind !== opts.kind) continue;
