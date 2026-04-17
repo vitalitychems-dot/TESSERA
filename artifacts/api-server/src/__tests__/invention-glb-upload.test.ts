@@ -6,7 +6,27 @@ import { inventionsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 
 const STUB_OBJECT_PATH = "/objects/uploads/test-glb-object-id";
-const STUB_UPLOAD_URL = "https://storage.googleapis.com/fake-signed-url/test-object?X-Goog-Algorithm=GOOG4";
+
+// Minimal valid-shaped GLB (binary glTF) header bytes — magic "glTF",
+// version 2, totalLength=20, JSON chunk length=0, JSON chunk type=0x4E4F534A.
+// Real GLB files have actual JSON+BIN chunks; we only need a recognizable
+// header to prove the bytes/content-type traveled through the PUT step.
+const TINY_GLB = (() => {
+  const buf = Buffer.alloc(20);
+  buf.write("glTF", 0, "ascii");
+  buf.writeUInt32LE(2, 4);
+  buf.writeUInt32LE(20, 8);
+  buf.writeUInt32LE(0, 12);
+  buf.writeUInt32LE(0x4e4f534a, 16);
+  return buf;
+})();
+
+// Capture for assertions on the actual PUT.
+interface PutCapture { body: Buffer; contentType: string; method: string; url: string }
+let lastPut: PutCapture | null = null;
+
+let fakeStorageServer: Server;
+let fakeStorageBaseUrl: string;
 
 // Test-controlled toggles for ACL behavior. Declared via globalThis so the
 // vi.mock factory (which is hoisted above this file's top-level statements)
@@ -23,7 +43,10 @@ globalThis.__TEST_NEXT_OBJECT_PATH = null;
 vi.mock("../lib/objectStorage", () => {
   class FakeObjectStorageService {
     async getObjectEntityUploadURL() {
-      return STUB_UPLOAD_URL;
+      // Return a URL into the in-process fake storage server so the test
+      // can perform a REAL PUT and assert the bytes/content-type round-trip.
+      const path = globalThis.__TEST_NEXT_OBJECT_PATH ?? STUB_OBJECT_PATH;
+      return `${fakeStorageBaseUrl}/upload?path=${encodeURIComponent(path)}`;
     }
     normalizeObjectEntityPath(_raw: string) {
       return globalThis.__TEST_NEXT_OBJECT_PATH ?? STUB_OBJECT_PATH;
@@ -80,6 +103,29 @@ async function patchJson(path: string, body: unknown, headers: Record<string, st
 }
 
 beforeAll(async () => {
+  // Fake "GCS" PUT endpoint so the test can perform a REAL PUT against the
+  // signed URL and assert the bytes/content-type traveled through.
+  await new Promise<void>((resolve) => {
+    fakeStorageServer = createServer((req, res) => {
+      const chunks: Buffer[] = [];
+      req.on("data", (c: Buffer) => chunks.push(c));
+      req.on("end", () => {
+        lastPut = {
+          method: req.method || "",
+          url: req.url || "",
+          contentType: (req.headers["content-type"] as string) || "",
+          body: Buffer.concat(chunks),
+        };
+        res.statusCode = 200;
+        res.end("OK");
+      });
+    });
+    fakeStorageServer.listen(0, "127.0.0.1", () => resolve());
+  });
+  const fakeAddr = fakeStorageServer.address();
+  if (!fakeAddr || typeof fakeAddr === "string") throw new Error("no fake storage address");
+  fakeStorageBaseUrl = `http://127.0.0.1:${fakeAddr.port}`;
+
   app = express();
   app.use(express.json());
   app.use("/api", inventionsRouter);
@@ -112,12 +158,14 @@ afterAll(async () => {
   await db.delete(inventionsTable).where(eq(inventionsTable.inventionId, TEST_INVENTION_ID));
   await db.delete(inventionsTable).where(eq(inventionsTable.inventionId, SECOND_INVENTION_ID));
   await new Promise<void>((resolve) => server.close(() => resolve()));
+  await new Promise<void>((resolve) => fakeStorageServer.close(() => resolve()));
 });
 
 beforeEach(() => {
   aclState = null;
   globalThis.__TEST_ACL_ALLOW = true;
   globalThis.__TEST_NEXT_OBJECT_PATH = null;
+  lastPut = null;
 });
 
 describe("GLB upload flow (presign -> PUT -> PATCH -> chat render)", () => {
@@ -147,16 +195,28 @@ describe("GLB upload flow (presign -> PUT -> PATCH -> chat render)", () => {
       ok: boolean; uploadURL: string; objectPath: string; inventionId: string; contentType: string;
     };
     expect(presign.ok).toBe(true);
-    expect(presign.uploadURL).toBe(STUB_UPLOAD_URL);
+    expect(presign.uploadURL.startsWith(`${fakeStorageBaseUrl}/upload?path=`)).toBe(true);
     expect(presign.objectPath).toBe(STUB_OBJECT_PATH);
     expect(presign.inventionId).toBe(TEST_INVENTION_ID);
     expect(presign.contentType).toBe("model/gltf-binary");
 
-    // 2. Simulate the client PUT to the signed URL. (We do not actually
-    //    contact GCS; the server side never sees this request — its only job
-    //    is to mint the URL and to honor the persisted ledger entry on PATCH.
-    //    We assert the URL shape so a regression in URL generation is caught.)
+    // 2. REAL PUT of GLB bytes to the signed URL (an in-process fake GCS
+    //    server stands in for GCS so we can exercise actual byte/Content-Type
+    //    flow, not just URL minting).
     expect(presign.uploadURL).toMatch(/^https?:\/\//);
+    const putRes = await fetch(presign.uploadURL, {
+      method: "PUT",
+      headers: { "content-type": presign.contentType },
+      body: TINY_GLB,
+    });
+    expect(putRes.status).toBe(200);
+    expect(lastPut).not.toBeNull();
+    expect(lastPut!.method).toBe("PUT");
+    expect(lastPut!.contentType).toBe("model/gltf-binary");
+    // Bytes round-tripped intact.
+    expect(Buffer.compare(lastPut!.body, TINY_GLB)).toBe(0);
+    // First 4 bytes are the GLB "glTF" magic.
+    expect(lastPut!.body.subarray(0, 4).toString("ascii")).toBe("glTF");
 
     // 3. PATCH attach — server consumes the pending entry, applies ACL on
     //    first attach, and persists customModelUrl.
@@ -196,6 +256,43 @@ describe("GLB upload flow (presign -> PUT -> PATCH -> chat render)", () => {
     expect(parsed.objects.length).toBe(1);
     expect(parsed.objects[0].type).toBe("custom");
     expect(parsed.objects[0].src).toBe(presign.objectPath);
+
+    // 8. CHAT-RENDER ROUND-TRIP via the real API. The chat & inventions UI
+    //    pulls the rendered diagram3d / diagram3dBlocks straight off
+    //    GET /api/inventions/:id (and GET /api/inventions). We hit the live
+    //    route to prove the persisted custom model is what the chat surface
+    //    will render — not a fallback primitive.
+    const detailRes = await fetch(`${baseUrl}/api/inventions/${TEST_INVENTION_ID}`);
+    expect(detailRes.status).toBe(200);
+    const detail = await detailRes.json() as {
+      ok: boolean;
+      diagram3d: string;
+      diagram3dBlocks: string[];
+      invention: { customModelUrl: string };
+    };
+    expect(detail.ok).toBe(true);
+    expect(detail.invention.customModelUrl).toBe(presign.objectPath);
+    expect(detail.diagram3d).toContain('type="custom"');
+    expect(detail.diagram3d).toContain(`src="${presign.objectPath}"`);
+    expect(detail.diagram3dBlocks[0]).toBe(detail.diagram3d);
+    const renderedSpec = parse3DObjectBlocks(detail.diagram3d).objects[0];
+    expect(renderedSpec.type).toBe("custom");
+    expect(renderedSpec.src).toBe(presign.objectPath);
+
+    // 9. The list endpoint that the chat / gallery scans for inventions to
+    //    render also exposes the custom model — so any chat reply that
+    //    references this invention will get a custom GLB block.
+    const listRes = await fetch(`${baseUrl}/api/inventions`);
+    expect(listRes.status).toBe(200);
+    const list = await listRes.json() as {
+      ok: boolean;
+      inventions: Array<{ inventionId: string; customModelUrl: string | null; diagram3d: string }>;
+    };
+    const ours = list.inventions.find(i => i.inventionId === TEST_INVENTION_ID);
+    expect(ours).toBeDefined();
+    expect(ours!.customModelUrl).toBe(presign.objectPath);
+    expect(ours!.diagram3d).toContain('type="custom"');
+    expect(ours!.diagram3d).toContain(`src="${presign.objectPath}"`);
   });
 
   it("PATCH replays / cross-id attach are rejected", async () => {
