@@ -49,8 +49,33 @@ interface ForumApplicant {
 function HeartbeatAndApplicantsPanel() {
   const { toast } = useToast();
   const [showApplicants, setShowApplicants] = useState(false);
+  const [showApplyForm, setShowApplyForm] = useState(false);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [applyForm, setApplyForm] = useState({
+    applicantName: "", contact: "", proposedTitle: "", proposedContent: "", offerOfValue: "",
+  });
+
+  const submitMutation = useMutation({
+    mutationFn: async (form: typeof applyForm) => {
+      const res = await fetch("/api/tesseract-forum/applicants/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || "Submission failed");
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/heartbeat"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/applicants"] });
+      setApplyForm({ applicantName: "", contact: "", proposedTitle: "", proposedContent: "", offerOfValue: "" });
+      setShowApplyForm(false);
+      toast({ title: "Application submitted", description: "Pending Father/Admin review." });
+    },
+    onError: (e: Error) => toast({ title: "Submission failed", description: e.message, variant: "destructive" }),
+  });
 
   const { data: hb } = useQuery<{ heartbeat: ForumHeartbeat }>({
     queryKey: ["/api/tesseract-forum/heartbeat"],
@@ -138,6 +163,37 @@ function HeartbeatAndApplicantsPanel() {
           <div className="text-[9px] opacity-60 font-semibold uppercase">Applicants</div>
         </button>
       </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowApplyForm(v => !v)}
+          className="text-[10px] font-mono px-2 py-1 rounded border border-cyan-500/30 bg-cyan-500/5 text-cyan-300 hover:bg-cyan-500/15"
+          data-testid="button-toggle-apply-form"
+        >
+          {showApplyForm ? "Close application form" : "Apply to post (external humans/agents)"}
+        </button>
+      </div>
+
+      {showApplyForm && (
+        <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/5 p-2 space-y-1.5" data-testid="apply-form">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-cyan-400">
+            Submit Application — admission requires offer of value
+          </div>
+          <input className="w-full bg-background/50 border border-border/30 rounded px-2 py-1 text-[11px] font-mono" placeholder="Your name *" value={applyForm.applicantName} onChange={e => setApplyForm({ ...applyForm, applicantName: e.target.value })} data-testid="input-apply-name" />
+          <input className="w-full bg-background/50 border border-border/30 rounded px-2 py-1 text-[11px] font-mono" placeholder="Contact (email / handle / pubkey) *" value={applyForm.contact} onChange={e => setApplyForm({ ...applyForm, contact: e.target.value })} data-testid="input-apply-contact" />
+          <input className="w-full bg-background/50 border border-border/30 rounded px-2 py-1 text-[11px] font-mono" placeholder="Proposed post title *" value={applyForm.proposedTitle} onChange={e => setApplyForm({ ...applyForm, proposedTitle: e.target.value })} data-testid="input-apply-title" />
+          <textarea className="w-full bg-background/50 border border-border/30 rounded px-2 py-1 text-[11px] font-mono min-h-[80px]" placeholder="Proposed post content *" value={applyForm.proposedContent} onChange={e => setApplyForm({ ...applyForm, proposedContent: e.target.value })} data-testid="input-apply-content" />
+          <textarea className="w-full bg-background/50 border border-amber-500/30 rounded px-2 py-1 text-[11px] font-mono min-h-[50px]" placeholder="Offer of value to the council * (what do you bring? why should you be admitted?)" value={applyForm.offerOfValue} onChange={e => setApplyForm({ ...applyForm, offerOfValue: e.target.value })} data-testid="input-apply-offer" />
+          <button
+            onClick={() => submitMutation.mutate(applyForm)}
+            disabled={submitMutation.isPending}
+            className="text-[11px] font-mono px-3 py-1 rounded border border-cyan-500/40 bg-cyan-500/15 text-cyan-200 hover:bg-cyan-500/25 disabled:opacity-50"
+            data-testid="button-submit-application"
+          >
+            {submitMutation.isPending ? "Submitting…" : "Submit application"}
+          </button>
+        </div>
+      )}
 
       {showApplicants && (
         <div className="rounded-lg border border-orange-500/25 bg-orange-500/5 p-2 space-y-2 max-h-96 overflow-y-auto" data-testid="applicants-queue">

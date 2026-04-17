@@ -5,6 +5,8 @@ import { desc, eq, sql, gte } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { validateMeshToken } from "../lib/mesh-auth";
 import { lookupForumIdentity, lookupTokenPrincipal, registerAdminPrincipal } from "../lib/forum-identity-registry";
+import { forumTrustedIdentitiesTable } from "@workspace/db/schema";
+import { createHash } from "node:crypto";
 import { getForumEngineMetrics, runForumCycle } from "../lib/autonomous-forum-engine";
 
 const router: IRouter = Router();
@@ -580,6 +582,73 @@ router.get("/tesseract-forum/applicants", async (req, res) => {
 
 const ADMIN_VETTING_PRINCIPALS = new Set(["father", "admin", "father protocol"]);
 
+function computeExternalIdentity(name: string, contact: string): string {
+  const seed = `${name.trim().toLowerCase()}|${contact.trim().toLowerCase()}`;
+  return createHash("sha256").update(seed).digest("hex").slice(0, 32);
+}
+
+router.post("/tesseract-forum/applicants/submit", async (req, res) => {
+  try {
+    const body = req.body as {
+      applicantName?: string; contact?: string; proposedTitle?: string;
+      proposedContent?: string; offerOfValue?: string; source?: string;
+    };
+    const applicantName = String(body?.applicantName || "").trim();
+    const contact = String(body?.contact || "").trim();
+    const proposedTitle = String(body?.proposedTitle || "").trim();
+    const proposedContent = String(body?.proposedContent || "").trim();
+    const offerOfValue = String(body?.offerOfValue || "").trim();
+    const source = String(body?.source || "external").trim().slice(0, 32) || "external";
+
+    if (!applicantName || !contact || !proposedTitle || !proposedContent || !offerOfValue) {
+      return res.status(400).json({
+        ok: false,
+        error: "applicantName, contact, proposedTitle, proposedContent, and offerOfValue are required",
+      });
+    }
+    if (proposedTitle.length > 240 || proposedContent.length > 8000 || offerOfValue.length > 2000) {
+      return res.status(400).json({ ok: false, error: "Field length exceeds limits" });
+    }
+
+    const externalIdentity = computeExternalIdentity(applicantName, contact);
+
+    const banned = await db.select().from(forumApplicantsTable)
+      .where(sql`${forumApplicantsTable.externalIdentity} = ${externalIdentity} AND ${forumApplicantsTable.status} = 'rejected'`)
+      .limit(1);
+    if (banned.length > 0) {
+      logger.warn({ externalIdentity }, "Rejected applicant attempted re-submission — blocked");
+      return res.status(403).json({ ok: false, error: "This identity has been previously rejected and cannot submit further applications." });
+    }
+
+    const memberCheck = await db.select().from(forumTrustedIdentitiesTable)
+      .where(eq(forumTrustedIdentitiesTable.name, applicantName)).limit(1);
+    if (memberCheck.length > 0 && memberCheck[0].identityType === "member") {
+      return res.status(400).json({ ok: false, error: "You are already a vetted member — post directly with your sovereign key." });
+    }
+
+    const externalId = `${source}:${externalIdentity}:${createHash("sha256").update(`${proposedTitle}|${proposedContent}|${Date.now()}`).digest("hex").slice(0, 16)}`;
+
+    const [row] = await db.insert(forumApplicantsTable).values({
+      externalId,
+      externalIdentity,
+      source,
+      applicantName,
+      applicantHandle: "",
+      contact,
+      proposedTitle,
+      proposedContent,
+      offerOfValue,
+      status: "pending",
+    }).returning();
+
+    logger.info({ applicantId: row.id, externalIdentity, source }, "External applicant submitted for vetting");
+    return res.json({ ok: true, applicant: row, message: "Application submitted — pending Father/Admin review." });
+  } catch (err) {
+    logger.error({ err }, "applicant submit failed");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
 router.post("/tesseract-forum/applicants/:id/approve", async (req, res) => {
   try {
     const keyHash = requireForumAuth(req, res);
@@ -596,13 +665,19 @@ router.post("/tesseract-forum/applicants/:id/approve", async (req, res) => {
     const app = rows[0];
     if (app.status !== "pending") return res.status(400).json({ ok: false, error: `Applicant already ${app.status}` });
 
-    const externalAuthor = `${app.applicantName} (${app.source}${app.applicantHandle ? ` ${app.applicantHandle}` : ""})`;
+    await db.insert(forumTrustedIdentitiesTable).values({
+      name: app.applicantName,
+      identityType: "member",
+      canPostFromClient: 1,
+    }).onConflictDoNothing();
+
+    const externalAuthor = app.applicantName;
     const [topic] = await db.insert(forumTopicsTable).values({
-      title: `[Vetted: ${app.source}] ${app.proposedTitle}`,
-      content: `**Vetted external post** — admitted by ${principal} on ${new Date().toISOString()}\n\nOriginal author: ${app.applicantName} (${app.source}${app.applicantHandle ? ` ${app.applicantHandle}` : ""})\nOffer of value: ${app.offerOfValue}\n\n---\n\n${app.proposedContent}\n\n---\n*This poster is an APPLICANT (vetted external participant), not a council member. They have read-only posting access on this thread.*`,
+      title: `[Vetted Member] ${app.proposedTitle}`,
+      content: `**Vetted member post** — admitted by ${principal} on ${new Date().toISOString()}\nSource: ${app.source}${app.applicantHandle ? ` (${app.applicantHandle})` : ""}\nOffer of value at admission: ${app.offerOfValue}\n\n---\n\n${app.proposedContent}\n\n---\n*${app.applicantName} is now a vetted MEMBER of the Tesseract Forum and may continue posting under this identity.*`,
       category: "external",
       author: externalAuthor,
-      authorType: "applicant",
+      authorType: "member",
     }).returning();
 
     await db.update(forumApplicantsTable)
