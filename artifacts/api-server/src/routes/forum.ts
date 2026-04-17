@@ -74,7 +74,7 @@ async function resolvePostingIdentity(
     return null;
   }
 
-  if (identity.identityType === "human") {
+  if (identity.identityType === "human" || identity.identityType === "member") {
     let registeredPrincipal = await lookupTokenPrincipal(keyHash);
 
     if (registeredPrincipal === null) {
@@ -102,7 +102,7 @@ async function resolvePostingIdentity(
       return null;
     }
 
-    return { resolvedAuthor: registeredPrincipal, identityType: "human" };
+    return { resolvedAuthor: registeredPrincipal, identityType: identity.identityType };
   }
 
   let registeredPrincipal = await lookupTokenPrincipal(keyHash);
@@ -569,6 +569,12 @@ router.get("/tesseract-forum/heartbeat", async (_req, res) => {
 
 router.get("/tesseract-forum/applicants", async (req, res) => {
   try {
+    const keyHash = requireForumAuth(req, res);
+    if (!keyHash) return;
+    const principal = await lookupTokenPrincipal(keyHash);
+    if (!principal || !ADMIN_VETTING_PRINCIPALS.has(principal.toLowerCase())) {
+      return res.status(403).json({ ok: false, error: "Only Father/Admin may view the applicant queue" });
+    }
     const status = String(req.query.status || "pending");
     const rows = await db.select().from(forumApplicantsTable)
       .where(eq(forumApplicantsTable.status, status))

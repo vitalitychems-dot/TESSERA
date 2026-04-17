@@ -50,6 +50,13 @@
       "when": 1776347800000,
       "tag": "0006_semantic_compression_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776446227529,
+      "tag": "0007_add_forum_applicants",
+      "breakpoints": true
     }
   ]
 }
