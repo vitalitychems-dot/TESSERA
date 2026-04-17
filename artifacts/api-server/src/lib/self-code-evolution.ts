@@ -668,6 +668,8 @@ const TRACKED_MODULES_BASELINE = [
   "personality-evolution.ts",
   "auto-improvement-daemon.ts",
   "agent-spawner.ts",
+  "collective-intelligence.ts",
+  "recursive-self-improvement.ts",
 ];
 
 export function getModuleDiagnostics(): ModuleDiagnostics[] {

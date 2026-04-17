@@ -419,6 +419,16 @@ async function initializeModules() {
     startDualBrain(180_000);
     await initIdentityReinforcement();
     startIdentityReinforcement(600_000);
+    // Force the first identity check immediately so the sovereignty
+    // dashboard has real values to render on the very first poll instead
+    // of the all-zero "no check yet" state. Subsequent checks come from
+    // the 10-minute interval above.
+    try {
+      const { forceIdentityCheck } = await import("./lib/identity-reinforcement");
+      forceIdentityCheck();
+    } catch (err) {
+      logger.warn({ err }, "IdentityReinforcement: initial forceCheck failed");
+    }
     await initPersonalityEvolution();
     startPersonalityEvolution(300_000);
     await initAgentSpawner();

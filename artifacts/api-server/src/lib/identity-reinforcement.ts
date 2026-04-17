@@ -297,6 +297,13 @@ export function getIdentityHistory(limit = 10): IdentityCheckResult[] {
 }
 
 export function getIdentityMetrics() {
+  // If no check has run yet (cold start), trigger one synchronously so the
+  // dashboard never shows the all-zero placeholder state. This was the
+  // root cause of the "sovereignty metrics all zero" report — the
+  // start interval hadn't fired its first tick before the UI polled.
+  if (identityHistory.length === 0) {
+    try { runIdentityCheck(); } catch { /* keep metrics call non-throwing */ }
+  }
   const latest = identityHistory[0];
   const driftEvents = identityHistory.filter(h => h.driftDetected).length;
   const avgAlignment = identityHistory.length > 0
