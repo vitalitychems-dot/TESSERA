@@ -5,6 +5,8 @@ import { createProposal } from "./consensus-engine";
 import { isLLMAvailable } from "./llm-client";
 import { batchedCallLLM } from "./llm-batcher";
 import { isModuleCoolingDown, recordEvolutionSuccess, recordEvolutionFailure, shouldSkipEvolutionForLoad } from "./evolution-throttle";
+import { verifyPatchInSandbox } from "./evolution-sandbox";
+import { recordAttempt } from "./evolution-attempt-ledger";
 
 const EVOLUTION_QUEUE_DIR = join(process.cwd(), "_evolutions");
 const SOURCE_LIB_DIR = join(process.cwd(), "src", "lib");
@@ -71,40 +73,66 @@ async function applyPatchToSourceFile(
   }
 
   if (!codeToAppend || codeToAppend.length < 5) {
-    writeFileSync(sourceFilePath, originalContent, "utf8");
+    // Live file untouched — nothing to revert
+    recordAttempt({
+      proposalId,
+      event: "SANDBOXED_FAIL",
+      targetModule,
+      reason: "LLM did not generate executable TypeScript",
+    });
     throw new Error("LLM did not generate executable TypeScript for this proposal — rejecting to avoid non-functional patch");
-  }
-
-  const codeLines = codeToAppend.split("\n").filter(l => l.trim().length > 0);
-  const duplicateLines = codeLines.filter(line => {
-    const trimmed = line.trim();
-    return trimmed.length > 10 && originalContent.includes(trimmed);
-  });
-  if (duplicateLines.length > 0 && duplicateLines.length >= codeLines.length * 0.5) {
-    writeFileSync(sourceFilePath, originalContent, "utf8");
-    throw new Error(`Proposed code would duplicate existing declarations: ${duplicateLines[0].trim().slice(0, 60)}`);
   }
 
   const patchedContent = `${originalContent}\n${codeToAppend}\n`;
 
-  const ts = require("typescript") as typeof import("typescript");
-  const compileResult = ts.transpileModule(patchedContent, {
-    reportDiagnostics: true,
-    compilerOptions: { target: ts.ScriptTarget.ES2020, strict: false },
+  // Sandboxed verify (transpile + duplicate-check + security-scan + semantic-typecheck
+  // against a virtual overlay of the target file). LIVE FILE IS NEVER WRITTEN HERE.
+  const sandbox = await verifyPatchInSandbox({
+    targetFilePath: sourceFilePath,
+    originalContent,
+    patchedContent,
   });
-  if (compileResult.diagnostics && compileResult.diagnostics.length > 0) {
-    const msg = ts.flattenDiagnosticMessageText(compileResult.diagnostics[0].messageText, "\n");
-    writeFileSync(sourceFilePath, originalContent, "utf8");
-    throw new Error(`Post-patch TS compilation failed: ${msg}`);
+
+  if (!sandbox.ok) {
+    recordAttempt({
+      proposalId,
+      event: "SANDBOXED_FAIL",
+      targetModule,
+      reason: `sandbox.${sandbox.stage}: ${sandbox.diagnostics[0] ?? "unknown"}`,
+      verifyOutput: sandbox.diagnostics.slice(0, 5).join("\n"),
+      durationMs: sandbox.durationMs,
+    });
+    throw new Error(`Sandbox verification failed at stage=${sandbox.stage}: ${sandbox.diagnostics[0] ?? "unknown"}`);
   }
 
-  writeFileSync(sourceFilePath, patchedContent, "utf8");
+  recordAttempt({
+    proposalId,
+    event: "SANDBOXED_PASS",
+    targetModule,
+    durationMs: sandbox.durationMs,
+  });
 
+  // Sandbox green → write live now (and only now).
+  writeFileSync(sourceFilePath, patchedContent, "utf8");
   const written = readFileSync(sourceFilePath, "utf8");
   if (written.length !== patchedContent.length) {
     writeFileSync(sourceFilePath, originalContent, "utf8");
+    recordAttempt({
+      proposalId,
+      event: "REVERTED",
+      targetModule,
+      reason: `post-write length mismatch (expected ${patchedContent.length}, got ${written.length})`,
+    });
     throw new Error(`Post-write verification failed: length mismatch (expected ${patchedContent.length}, got ${written.length})`);
   }
+
+  recordAttempt({
+    proposalId,
+    event: "APPLIED",
+    targetModule,
+    reason: `+${codeToAppend.split("\n").filter(l => l.trim()).length} lines appended`,
+    durationMs: sandbox.durationMs,
+  });
 
   return { sourceFilePath, backupPath, patchedLines: patchedContent.split("\n").length };
 }
@@ -347,6 +375,13 @@ export async function proposeEvolution(
   riskLevel: CodeEvolutionProposal["riskLevel"] = "low"
 ): Promise<CodeEvolutionProposal> {
   const id = `evo-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+  recordAttempt({
+    proposalId: id,
+    event: "PROPOSED",
+    targetModule,
+    reason: rationale.slice(0, 200),
+  });
 
   if (shouldSkipEvolutionForLoad()) {
     const proposal: CodeEvolutionProposal = {

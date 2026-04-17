@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Cpu, Activity, Database, Zap, GitBranch, RefreshCw, TrendingUp, Star, Shield, Pause, Play, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+import { Cpu, Activity, Database, Zap, GitBranch, RefreshCw, TrendingUp, Star, Shield, Pause, Play, AlertTriangle, CheckCircle2, Clock, History, XCircle } from "lucide-react";
 import { GlassCard, GradientBar, SectionHeader, TabBar, PageHeader, RadialGauge, MiniStat, HeroStat, TabLoadingSkeleton } from "@/components/ui/sovereign";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { QueryErrorFallback } from "@/components/ui/QueryErrorFallback";
@@ -58,6 +58,18 @@ export default function SystemPage({ initialTab }: { initialTab?: SystemTab }) {
   const { data: healthData, error: healthError, refetch: refetchHealth } = useQuery({
     queryKey: ["evolution-health"],
     queryFn: () => fetchApi(`${API}/api/evolution-health`),
+    refetchInterval: 10000,
+    enabled: activeTab === "health",
+  });
+
+  const { data: attemptsData } = useQuery({
+    queryKey: ["evolution-attempts"],
+    queryFn: () =>
+      fetch(`${API}/api/evolution-health/attempts?limit=30`, {
+        headers: { "x-admin-token": localStorage.getItem("t9_admin_token") || "" },
+      })
+        .then(r => (r.ok ? r.json() : { ok: false, data: { attempts: [], counts: {}, total: 0 } }))
+        .then(j => j.data ?? { attempts: [], counts: {}, total: 0 }),
     refetchInterval: 10000,
     enabled: activeTab === "health",
   });
@@ -363,6 +375,60 @@ export default function SystemPage({ initialTab }: { initialTab?: SystemTab }) {
                       <MiniStat value={healthData.scheduler?.totalTasks ?? 0} label="Tasks" color="blue" />
                       <MiniStat value={healthData.scheduler?.activeTasks ?? 0} label="Active" color="emerald" />
                       <MiniStat value={healthData.scheduler?.runningNow ?? 0} label="Running" color="cyan" />
+                    </div>
+                  </GlassCard>
+
+                  <GlassCard glow="amber" animate>
+                    <SectionHeader icon={History} title="Self-Evolution Attempt Ledger" color="amber" />
+                    <div className="grid grid-cols-5 gap-2 mt-3">
+                      <MiniStat value={attemptsData?.counts?.PROPOSED ?? 0} label="Proposed" color="cyan" />
+                      <MiniStat value={attemptsData?.counts?.SANDBOXED_PASS ?? 0} label="Sandbox OK" color="emerald" />
+                      <MiniStat value={attemptsData?.counts?.SANDBOXED_FAIL ?? 0} label="Sandbox Fail" color="amber" />
+                      <MiniStat value={attemptsData?.counts?.APPLIED ?? 0} label="Applied" color="violet" />
+                      <MiniStat value={attemptsData?.counts?.REVERTED ?? 0} label="Reverted" color="rose" />
+                    </div>
+                    <div className="space-y-2 mt-3 max-h-96 overflow-y-auto">
+                      {attemptsData?.attempts?.length ? attemptsData.attempts.map((a: any) => (
+                        <div key={a.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5 hover:bg-white/[0.04] transition-all">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              {a.event === "APPLIED" ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                              ) : a.event === "SANDBOXED_PASS" ? (
+                                <Shield className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                              ) : a.event === "SANDBOXED_FAIL" ? (
+                                <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                              ) : a.event === "REVERTED" ? (
+                                <XCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                              ) : (
+                                <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              )}
+                              <span className="text-[11px] text-white font-mono truncate">{a.targetModule}</span>
+                              <span className={cn(
+                                "text-[9px] px-1.5 py-0.5 rounded border font-medium shrink-0",
+                                a.event === "APPLIED" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" :
+                                a.event === "SANDBOXED_PASS" ? "bg-cyan-500/15 text-cyan-400 border-cyan-500/20" :
+                                a.event === "SANDBOXED_FAIL" ? "bg-amber-500/15 text-amber-400 border-amber-500/20" :
+                                a.event === "REVERTED" ? "bg-rose-500/15 text-rose-400 border-rose-500/20" :
+                                "bg-slate-500/15 text-slate-400 border-slate-500/20"
+                              )}>{a.event}</span>
+                            </div>
+                            <span className="text-[10px] text-slate-500 font-mono shrink-0">
+                              {a.durationMs != null ? `${a.durationMs}ms` : ""}
+                            </span>
+                          </div>
+                          {a.reason && (
+                            <div className="text-[10px] text-slate-400 mt-1 truncate">{a.reason}</div>
+                          )}
+                          {a.verifyOutput && (
+                            <div className="text-[10px] text-rose-400/80 mt-0.5 font-mono truncate">{a.verifyOutput.split("\n")[0]}</div>
+                          )}
+                        </div>
+                      )) : (
+                        <div className="text-[11px] text-slate-500 text-center py-4">
+                          No attempts yet. Set <span className="font-mono text-slate-400">t9_admin_token</span> in localStorage to view ledger.
+                        </div>
+                      )}
                     </div>
                   </GlassCard>
                 </>
