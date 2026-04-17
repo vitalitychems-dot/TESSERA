@@ -10,6 +10,7 @@ interface InventionRow {
   status: string;
   feasibilityScore: number | null;
   noveltyScore: number | null;
+  customModelUrl: string | null;
   proposedAt: number;
 }
 
@@ -197,6 +198,17 @@ export default function GalleryPage() {
                       {inv.category}
                     </span>
                   </div>
+                  {inv.customModelUrl && (
+                    <div className="aspect-square w-full bg-black/60 flex items-center justify-center overflow-hidden border-b border-white/5">
+                      <img
+                        src={inv.customModelUrl}
+                        alt={`${inv.title} sigil`}
+                        className="w-full h-full object-contain"
+                        loading="lazy"
+                        data-testid={`img-invention-model-${inv.inventionId}`}
+                      />
+                    </div>
+                  )}
                   <div className="px-3 py-2 text-[11px] text-foreground/80 leading-relaxed flex-1">
                     {inv.description}
                   </div>

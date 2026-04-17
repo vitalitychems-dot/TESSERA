@@ -499,24 +499,25 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
               Rick has analyzed the Tessera system and identified {inventions.length} critical improvements.
             </div>
             <div className="flex items-center gap-1">
-              <button
-                onClick={() => setShowProposeForm(v => !v)}
-                className="px-2 py-1 rounded-lg text-[10px] font-mono font-bold border flex items-center gap-1 transition-colors"
-                style={{ color: RICK_GREEN, borderColor: `${RICK_GREEN}50`, background: showProposeForm ? `${RICK_GREEN}18` : `${RICK_GREEN}08` }}
-                data-testid="button-propose-invention"
+              <span
+                className="px-2 py-1 rounded-lg text-[10px] font-mono font-bold border flex items-center gap-1"
+                style={{ color: RICK_GREEN, borderColor: `${RICK_GREEN}50`, background: `${RICK_GREEN}10` }}
+                data-testid="badge-autonomous-mode"
+                title="Rick proposes and submits inventions on his own — no human action required."
               >
-                <Plus size={10} /> {showProposeForm ? "Close" : "Propose Your Own"}
-              </button>
+                <Activity size={10} /> autonomous mode
+              </span>
               <button
                 onClick={() => refetchInventions()}
                 className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground"
+                title="Refresh"
               >
                 <RefreshCw size={12} />
               </button>
             </div>
           </div>
 
-          {showProposeForm && (
+          {false && showProposeForm && (
             <div className="rounded-xl border p-4 space-y-2.5 mb-3" style={{ borderColor: `${RICK_GREEN}35`, background: `${RICK_GREEN}06` }} data-testid="invention-propose-form">
               <div className="text-[10px] font-mono uppercase tracking-widest" style={{ color: RICK_GREEN }}>
                 Propose Your Own Invention — submits directly to the Grand Council
@@ -675,15 +676,14 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
                           <div className="text-[10px] text-muted-foreground font-mono mt-1">ID: {result.proposalId.slice(0, 20)}…</div>
                         </div>
                       ) : (
-                        <button
-                          onClick={() => submitToCouncil(idx)}
-                          disabled={submittingIdx === idx}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-mono font-bold transition-all border disabled:opacity-50"
-                          style={{ color: RICK_GREEN, borderColor: `${RICK_GREEN}50`, background: `${RICK_GREEN}10` }}
+                        <div
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-mono border text-muted-foreground"
+                          style={{ borderColor: `${RICK_GREEN}30`, background: `${RICK_GREEN}06` }}
+                          data-testid={`autonomous-pending-${idx}`}
                         >
-                          {submittingIdx === idx ? <PortalSpinner /> : <Vote size={12} />}
-                          Submit to Grand Council
-                        </button>
+                          <Activity size={12} style={{ color: RICK_GREEN }} />
+                          Autonomous mode — Rick will queue this for Grand Council on the next tick.
+                        </div>
                       )}
                     </div>
                   )}
