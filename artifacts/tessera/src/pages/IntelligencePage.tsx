@@ -70,7 +70,6 @@ export default function IntelligencePage() {
     queryKey: ["intel-recent-provider-calls"],
     queryFn: async () => (await fetch("/api/provider-sovereignty/calls?limit=12")).json(),
     refetchInterval: 20000,
-    enabled: activeTab === "query",
   });
   const recentCalls = callsData?.calls ?? [];
 
