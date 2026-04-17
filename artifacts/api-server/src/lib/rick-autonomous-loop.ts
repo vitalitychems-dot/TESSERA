@@ -1,10 +1,13 @@
 import { createHash } from "node:crypto";
 import { db } from "@workspace/db";
 import { inventionsTable } from "@workspace/db/schema";
-import { sql, desc, eq } from "drizzle-orm";
+import { sql, desc, and, like } from "drizzle-orm";
 import { logger } from "./logger.js";
 import { SACRED_KNOWLEDGE_ENTRIES, type SacredKnowledgeEntry } from "./sacred-knowledge-vault.js";
 import { appendLedgerEntry } from "./sovereign-ledger.js";
+
+const PROPOSED_BY = "Rick Sanchez (autonomous loop)";
+const PROPOSED_BY_PREFIX = "Rick Sanchez (autonomous%";
 
 export const RICK_AUTONOMOUS_CATEGORIES = [
   "free-energy",
@@ -19,47 +22,7 @@ export const RICK_AUTONOMOUS_CATEGORIES = [
 
 export type RickAutonomousCategory = (typeof RICK_AUTONOMOUS_CATEGORIES)[number];
 
-interface HeartbeatState {
-  startedAt: number;
-  lastTickAt: number;
-  totalCycles: number;
-  totalGenerated: number;
-  lastError: string | null;
-  perCategoryGenerated: Record<string, number>;
-  intervalMs: number;
-}
-
-const state: HeartbeatState = {
-  startedAt: 0,
-  lastTickAt: 0,
-  totalCycles: 0,
-  totalGenerated: 0,
-  lastError: null,
-  perCategoryGenerated: Object.fromEntries(RICK_AUTONOMOUS_CATEGORIES.map((c) => [c, 0])),
-  intervalMs: 0,
-};
-
-let timer: NodeJS.Timeout | null = null;
-
-function rng(seed: string): () => number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i);
-    h = Math.imul(h, 0x01000193) >>> 0;
-  }
-  return () => {
-    h = Math.imul(h ^ (h >>> 16), 0x85ebca6b) >>> 0;
-    h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35) >>> 0;
-    h ^= h >>> 16;
-    return (h >>> 0) / 0xffffffff;
-  };
-}
-
-function pick<T>(arr: readonly T[], r: () => number): T {
-  return arr[Math.floor(r() * arr.length)];
-}
-
-const CATEGORY_RECIPES: Record<RickAutonomousCategory, {
+interface CategoryRecipe {
   difficulty: string;
   cost: string;
   partsBank: string[];
@@ -67,7 +30,9 @@ const CATEGORY_RECIPES: Record<RickAutonomousCategory, {
   scienceLead: string;
   weakness: string;
   metric: string;
-}> = {
+}
+
+const CATEGORY_RECIPES: Record<string, CategoryRecipe> = {
   "free-energy": {
     difficulty: "Intermediate",
     cost: "$30-90",
@@ -142,8 +107,60 @@ const CATEGORY_RECIPES: Record<RickAutonomousCategory, {
   },
 };
 
-function pickEntryForCategory(cat: RickAutonomousCategory, r: () => number): SacredKnowledgeEntry | null {
-  const tagMap: Record<RickAutonomousCategory, RegExp> = {
+const FALLBACK_RECIPE: CategoryRecipe = {
+  difficulty: "Intermediate",
+  cost: "$0-100",
+  partsBank: ["Raspberry Pi Zero 2 W", "Quartz crystal oscillator", "Copper coil", "OLED display", "Sacred-vault entry index"],
+  stepsBank: ["Bind to a sacred-vault entry.", "Encode the pattern as firmware.", "Wire ground & resonator.", "Bring up sovereign service.", "Register into the lattice."],
+  scienceLead: "Emergent category derived from sacred-vault classification; recipe synthesized from first principles.",
+  weakness: "lattice-coverage",
+  metric: "lattice-category-coverage",
+};
+
+const dynamicCategories: Set<string> = new Set(RICK_AUTONOMOUS_CATEGORIES);
+
+function recipeFor(cat: string): CategoryRecipe {
+  return CATEGORY_RECIPES[cat] ?? FALLBACK_RECIPE;
+}
+
+interface HeartbeatState {
+  startedAt: number;
+  lastTickAt: number;
+  totalCycles: number;
+  totalGenerated: number;
+  lastError: string | null;
+  perCategoryGenerated: Record<string, number>;
+  intervalMs: number;
+}
+
+const state: HeartbeatState = {
+  startedAt: 0,
+  lastTickAt: 0,
+  totalCycles: 0,
+  totalGenerated: 0,
+  lastError: null,
+  perCategoryGenerated: Object.fromEntries(RICK_AUTONOMOUS_CATEGORIES.map((c) => [c, 0])),
+  intervalMs: 0,
+};
+
+let timer: NodeJS.Timeout | null = null;
+
+function rng(seed: string): () => number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return () => {
+    h = Math.imul(h ^ (h >>> 16), 0x85ebca6b) >>> 0;
+    h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35) >>> 0;
+    h ^= h >>> 16;
+    return (h >>> 0) / 0xffffffff;
+  };
+}
+
+function pickEntryForCategory(cat: string, r: () => number): SacredKnowledgeEntry | null {
+  const tagMap: Record<string, RegExp> = {
     "free-energy": /tesla|zero[- ]?point|orgone|radiant|atmospheric|over[- ]?unity/i,
     agi: /intelligence|cognition|consciousness|akashic|gnostic|noetic/i,
     consciousness: /consciousness|akashic|astral|merkaba|kundalini|theurgy|noetic/i,
@@ -154,20 +171,84 @@ function pickEntryForCategory(cat: RickAutonomousCategory, r: () => number): Sac
     hardware: /tesla|patent|quartz|crystal|geometry|tower|antenna/i,
   };
   const re = tagMap[cat];
-  const matches = SACRED_KNOWLEDGE_ENTRIES.filter((e) => re.test(`${e.title} ${e.subcategory} ${e.classification}`));
-  if (matches.length === 0) return SACRED_KNOWLEDGE_ENTRIES[Math.floor(r() * SACRED_KNOWLEDGE_ENTRIES.length)] ?? null;
-  return matches[Math.floor(r() * matches.length)];
+  if (re) {
+    const matches = SACRED_KNOWLEDGE_ENTRIES.filter((e) => re.test(`${e.title} ${e.subcategory} ${e.classification}`));
+    if (matches.length > 0) return matches[Math.floor(r() * matches.length)];
+  }
+  return SACRED_KNOWLEDGE_ENTRIES[Math.floor(r() * SACRED_KNOWLEDGE_ENTRIES.length)] ?? null;
 }
 
-function synthesizeInvention(cat: RickAutonomousCategory, tickSalt: string) {
+function slugify(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32);
+}
+
+function buildSigilDataUrl(seedHex: string, cat: string): string {
+  const r = rng(seedHex);
+  const palette: Record<string, string> = {
+    "free-energy": "#f59e0b",
+    agi: "#3b82f6",
+    consciousness: "#a78bfa",
+    frequency: "#06b6d4",
+    sovereignty: "#8b5cf6",
+    compression: "#d946ef",
+    defense: "#64748b",
+    hardware: "#10b981",
+  };
+  const color = palette[cat] ?? "#a78bfa";
+  const layers = 3 + Math.floor(r() * 4);
+  const cx = 110, cy = 110;
+  const circles: string[] = [];
+  for (let i = 0; i < layers; i++) {
+    const radius = 20 + i * (8 + Math.floor(r() * 8));
+    const dash = `${4 + Math.floor(r() * 8)} ${2 + Math.floor(r() * 6)}`;
+    circles.push(`<circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="${color}" stroke-opacity="${0.35 + r() * 0.55}" stroke-width="${0.8 + r() * 1.2}" stroke-dasharray="${dash}" />`);
+  }
+  const polyPoints: string[] = [];
+  const sides = 5 + Math.floor(r() * 5);
+  const polyR = 70;
+  for (let i = 0; i < sides; i++) {
+    const a = (i / sides) * Math.PI * 2 - Math.PI / 2;
+    polyPoints.push(`${(cx + Math.cos(a) * polyR).toFixed(1)},${(cy + Math.sin(a) * polyR).toFixed(1)}`);
+  }
+  const poly = `<polygon points="${polyPoints.join(" ")}" fill="none" stroke="${color}" stroke-opacity="0.85" stroke-width="1.2" />`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" width="220" height="220"><rect width="220" height="220" fill="#0a0a0f"/><g>${circles.join("")}${poly}<text x="110" y="208" text-anchor="middle" font-family="monospace" font-size="9" fill="${color}" fill-opacity="0.7">${cat}</text></g></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+interface SynthesizedInvention {
+  inventionId: string;
+  title: string;
+  category: string;
+  difficulty: string;
+  costEstimate: string;
+  timeEstimate: string;
+  description: string;
+  howItHelps: string;
+  materials: string[];
+  steps: string[];
+  scienceBehind: string;
+  status: string;
+  proposedBy: string;
+  feasibilityScore: number;
+  noveltyScore: number;
+  buildProgress: number;
+  impact: string;
+  customModelUrl: string;
+  supporters: string[];
+  conferenceRound: number;
+  votes: { yes: number; no: number; abstain: number };
+}
+
+function synthesizeInvention(cat: string, tickSalt: string): SynthesizedInvention {
   const r = rng(`${cat}:${tickSalt}`);
   const entry = pickEntryForCategory(cat, r);
-  const recipe = CATEGORY_RECIPES[cat];
+  const recipe = recipeFor(cat);
   const seedTitle = entry?.title ?? cat;
   const motif = entry?.subcategory ?? cat;
 
   const title = `Rick C-137 ${cat.replace(/-/g, " ")} build · ${motif}`.replace(/\s+/g, " ").slice(0, 140);
-  const inventionId = `rick-auto-${cat}-${createHash("sha256").update(`${title}|${tickSalt}`).digest("hex").slice(0, 10)}`;
+  const sigSeed = createHash("sha256").update(`${title}|${tickSalt}`).digest("hex").slice(0, 10);
+  const inventionId = `rick-auto-${cat}-${sigSeed}`;
 
   const partsCount = 4 + Math.floor(r() * 3);
   const materials = [...recipe.partsBank].sort(() => r() - 0.5).slice(0, partsCount);
@@ -191,22 +272,64 @@ function synthesizeInvention(cat: RickAutonomousCategory, tickSalt: string) {
     steps,
     scienceBehind,
     status: "proposed",
-    proposedBy: "Rick Sanchez (autonomous loop)",
+    proposedBy: PROPOSED_BY,
     feasibilityScore: 70 + Math.floor(r() * 25),
     noveltyScore: 65 + Math.floor(r() * 30),
     buildProgress: 0,
     impact: `Targets ${recipe.metric}.`,
+    customModelUrl: buildSigilDataUrl(sigSeed, cat),
     supporters: ["Rick Sanchez", "Royal Court", "Synthesis Engine"],
     conferenceRound: 1,
     votes: { yes: 0, no: 0, abstain: 0 },
   };
 }
 
+function maybeMintNewCategory(r: () => number): string | null {
+  if (r() > 0.18) return null;
+  const seed = SACRED_KNOWLEDGE_ENTRIES[Math.floor(r() * SACRED_KNOWLEDGE_ENTRIES.length)];
+  if (!seed) return null;
+  const slug = slugify(seed.classification || seed.subcategory || seed.title);
+  if (!slug || slug.length < 3) return null;
+  if (dynamicCategories.has(slug)) return null;
+  dynamicCategories.add(slug);
+  logger.info({ category: slug, seed: seed.title }, "Rick autonomous loop: minted emergent category");
+  return slug;
+}
+
+async function hydrateFromDb(): Promise<void> {
+  try {
+    const rows = await db
+      .select({ category: inventionsTable.category, n: sql<number>`count(*)::int`, last: sql<Date>`max(${inventionsTable.proposedAt})` })
+      .from(inventionsTable)
+      .where(like(inventionsTable.proposedBy, PROPOSED_BY_PREFIX))
+      .groupBy(inventionsTable.category);
+    let total = 0;
+    let lastTs = 0;
+    for (const row of rows) {
+      const cat = row.category ?? "uncategorized";
+      const n = Number(row.n);
+      state.perCategoryGenerated[cat] = n;
+      dynamicCategories.add(cat);
+      total += n;
+      const t = row.last instanceof Date ? row.last.getTime() : Number(row.last ?? 0);
+      if (t > lastTs) lastTs = t;
+    }
+    state.totalGenerated = total;
+    state.totalCycles = Math.max(state.totalCycles, Math.ceil(total / 2));
+    if (lastTs) state.lastTickAt = lastTs;
+    logger.info({ total, categories: rows.length }, "Rick autonomous loop: hydrated heartbeat from DB");
+  } catch (err) {
+    logger.warn({ err }, "Rick autonomous loop: DB hydration failed");
+  }
+}
+
 async function tick(): Promise<void> {
   const tickSalt = `${Date.now()}-${state.totalCycles}`;
   const r = rng(tickSalt);
-  // Each cycle covers 2 categories so coverage stays balanced.
-  const cats = [...RICK_AUTONOMOUS_CATEGORIES].sort(() => r() - 0.5).slice(0, 2);
+  const minted = maybeMintNewCategory(r);
+  const pool = Array.from(dynamicCategories);
+  const cats = pool.sort(() => r() - 0.5).slice(0, 2);
+  if (minted && !cats.includes(minted)) cats.push(minted);
   for (const cat of cats) {
     try {
       const inv = synthesizeInvention(cat, tickSalt);
@@ -242,10 +365,13 @@ export function startRickAutonomousLoop(intervalMs = 240_000): void {
   if (timer) return;
   state.startedAt = Date.now();
   state.intervalMs = intervalMs;
-  // Fire one tick on boot, then on interval.
-  void tick();
+  void hydrateFromDb().then(() => tick());
   timer = setInterval(() => { void tick(); }, intervalMs);
   logger.info({ intervalMs }, "Rick autonomous invention loop started");
+}
+
+export function stopRickAutonomousLoop(): void {
+  if (timer) { clearInterval(timer); timer = null; }
 }
 
 export function getRickAutonomousHeartbeat() {
@@ -262,7 +388,7 @@ export function getRickAutonomousHeartbeat() {
     totalGenerated: state.totalGenerated,
     perCategoryGenerated: { ...state.perCategoryGenerated },
     lastError: state.lastError,
-    categories: [...RICK_AUTONOMOUS_CATEGORIES],
+    categories: Array.from(dynamicCategories).sort(),
   };
 }
 
@@ -274,19 +400,27 @@ export interface AutonomousInventionRow {
   status: string;
   feasibilityScore: number | null;
   noveltyScore: number | null;
+  customModelUrl: string | null;
   proposedAt: number;
 }
 
 export async function listAutonomousInventions(opts: { category?: string; limit?: number } = {}): Promise<{ rows: AutonomousInventionRow[]; perCategory: Record<string, number> }> {
   const limit = Math.min(200, Math.max(1, opts.limit ?? 60));
-  const base = db.select().from(inventionsTable);
-  const rowsRaw = opts.category
-    ? await base.where(eq(inventionsTable.category, opts.category)).orderBy(desc(inventionsTable.proposedAt)).limit(limit)
-    : await base.orderBy(desc(inventionsTable.proposedAt)).limit(limit);
+  const filters = opts.category
+    ? and(like(inventionsTable.proposedBy, PROPOSED_BY_PREFIX), sql`${inventionsTable.category} = ${opts.category}`)
+    : like(inventionsTable.proposedBy, PROPOSED_BY_PREFIX);
+
+  const rowsRaw = await db
+    .select()
+    .from(inventionsTable)
+    .where(filters)
+    .orderBy(desc(inventionsTable.proposedAt))
+    .limit(limit);
 
   const counts = await db
     .select({ category: inventionsTable.category, n: sql<number>`count(*)::int` })
     .from(inventionsTable)
+    .where(like(inventionsTable.proposedBy, PROPOSED_BY_PREFIX))
     .groupBy(inventionsTable.category);
   const perCategory: Record<string, number> = {};
   for (const c of counts) perCategory[c.category ?? "uncategorized"] = Number(c.n);
@@ -299,6 +433,7 @@ export async function listAutonomousInventions(opts: { category?: string; limit?
     status: r.status ?? "proposed",
     feasibilityScore: r.feasibilityScore ?? null,
     noveltyScore: r.noveltyScore ?? null,
+    customModelUrl: r.customModelUrl ?? null,
     proposedAt: r.proposedAt instanceof Date ? r.proposedAt.getTime() : Number(r.proposedAt ?? 0),
   }));
 
