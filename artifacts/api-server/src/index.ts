@@ -374,6 +374,41 @@ async function runPostBindHealthProbe(port: number): Promise<void> {
       setActualPort(port);
       logger.info({ port }, "Server listening with WebSocket mesh enabled");
       await runPostBindHealthProbe(port);
+
+      // AGI Metacognition loop: every 60s, self-audit and close causal loops.
+      try {
+        const { startMetacognitionLoop } = await import("./lib/agi/metacognition.js");
+        const { db } = await import("@workspace/db");
+        const { inventionsTable } = await import("@workspace/db/schema");
+        const { getConsensusMetrics } = await import("./lib/consensus-engine.js");
+        const { snapshotWorkingMemory } = await import("./lib/agi/working-memory.js");
+        const { getAllTunables } = await import("./lib/system-tunables.js");
+        startMetacognitionLoop(60_000, () => {
+          try {
+            const c = getConsensusMetrics();
+            const wm = snapshotWorkingMemory();
+            const tun = getAllTunables();
+            // Keys MUST match the preState recorded in invention-synthesis.ts
+            // (builtInventions, approvedProposals, totalProposals, voting) or
+            // the causal model can never close its outcome-sampling loop.
+            return {
+              builtInventions: (c as unknown as { implemented?: number }).implemented ?? 0,
+              approvedProposals: c.approved,
+              totalProposals: c.totalProposals,
+              voting: c.voting,
+              openContradictions: wm.stats.openContradictions,
+              tunableDriftCount: tun.filter((t) => Math.abs(t.value - t.default) / Math.max(1, t.default) > 0.1).length,
+            };
+          } catch {
+            return {};
+          }
+        });
+        // Prime a synchronous sample so db/inventions types are referenced (tree-shake guard).
+        void db.select().from(inventionsTable).limit(1).catch(() => void 0);
+        logger.info("AGI metacognition loop started (60s cadence)");
+      } catch (err) {
+        logger.warn({ err }, "AGI metacognition loop failed to start");
+      }
     });
   } catch (err) {
     logger.error({ err }, "Fatal: could not start server");
