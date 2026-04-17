@@ -493,7 +493,8 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
 
       {activeTab === "inventions" && (
         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-          <div className="flex items-center justify-between mb-2">
+          <RickAutonomousHeartbeatStrip />
+          <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
             <div className="text-[11px] font-mono text-muted-foreground">
               Rick has analyzed the Tessera system and identified {inventions.length} critical improvements.
             </div>
@@ -2714,6 +2715,67 @@ function MetricBox({ label, value, color }: { label: string; value: string; colo
     <div className="rounded-lg border border-white/10 bg-black/30 px-2 py-1.5">
       <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className="text-[12px] font-mono font-bold" style={{ color: color ?? "#f0f0f0" }}>{value}</div>
+    </div>
+  );
+}
+
+interface AutonomousHeartbeat {
+  running: boolean;
+  lastTickAt: number;
+  intervalMs: number;
+  totalCycles: number;
+  totalGenerated: number;
+  perCategoryGenerated: Record<string, number>;
+  categories: string[];
+  lastError: string | null;
+}
+
+function fmtAgoShort(ms: number): string {
+  if (!ms) return "—";
+  const dt = Date.now() - ms;
+  if (dt < 60_000) return `${Math.floor(dt / 1000)}s`;
+  if (dt < 3_600_000) return `${Math.floor(dt / 60_000)}m`;
+  return `${Math.floor(dt / 3_600_000)}h`;
+}
+
+function RickAutonomousHeartbeatStrip() {
+  const { data } = useQuery({
+    queryKey: ["/api/rick/autonomous/heartbeat"],
+    queryFn: async () => {
+      const r = await fetch("/api/rick/autonomous/heartbeat");
+      return r.json() as Promise<{ ok: boolean; heartbeat: AutonomousHeartbeat }>;
+    },
+    refetchInterval: 15_000,
+  });
+  const hb = data?.heartbeat;
+  if (!hb) return null;
+  const accent = hb.running ? "#22c55e" : "#ef4444";
+  return (
+    <div
+      className="rounded-xl border p-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5"
+      style={{ borderColor: `${accent}40`, background: `${accent}08` }}
+      data-testid="rick-autonomous-strip"
+    >
+      <span className="flex items-center gap-1.5 text-[11px] font-mono font-bold" style={{ color: accent }}>
+        <Activity size={11} /> {hb.running ? "AUTONOMOUS" : "STOPPED"}
+      </span>
+      <span className="text-[10px] font-mono text-muted-foreground">
+        last tick {fmtAgoShort(hb.lastTickAt)} · cycles {hb.totalCycles} · built {hb.totalGenerated}
+      </span>
+      <div className="flex flex-wrap gap-1 ml-auto">
+        {hb.categories.slice(0, 8).map((c) => (
+          <span key={c} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-foreground/70">
+            {c} {hb.perCategoryGenerated[c] ?? 0}
+          </span>
+        ))}
+      </div>
+      <a
+        href="/gallery"
+        className="text-[10px] font-mono underline opacity-70 hover:opacity-100 ml-1"
+        data-testid="link-open-gallery"
+      >
+        open gallery →
+      </a>
     </div>
   );
 }

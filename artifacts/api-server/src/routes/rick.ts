@@ -32,6 +32,7 @@ import {
   markImplemented,
   getProposalsState,
 } from "../lib/rick-proposals";
+import { getRickAutonomousHeartbeat, listAutonomousInventions, RICK_AUTONOMOUS_CATEGORIES } from "../lib/rick-autonomous-loop";
 import {
   getProgram,
   startProgram,
@@ -100,6 +101,26 @@ router.post("/rick/proposals/:id/implemented", async (req, res) => {
     return res.json({ ok: true, proposal: p });
   } catch (err) {
     logger.error({ err }, "Rick: proposal implement error");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/rick/autonomous/heartbeat", (_req, res) => {
+  try {
+    return res.json({ ok: true, heartbeat: getRickAutonomousHeartbeat() });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/rick/autonomous/inventions", async (req, res) => {
+  try {
+    const cat = typeof req.query.category === "string" ? req.query.category : undefined;
+    const limit = req.query.limit ? Math.min(200, Math.max(1, parseInt(String(req.query.limit), 10) || 60)) : 60;
+    const data = await listAutonomousInventions({ category: cat, limit });
+    return res.json({ ok: true, ...data, categories: [...RICK_AUTONOMOUS_CATEGORIES] });
+  } catch (err) {
+    logger.error({ err }, "Rick: autonomous inventions list error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
 });

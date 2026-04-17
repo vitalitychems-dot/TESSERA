@@ -25,6 +25,7 @@ import { initIdentityReinforcement, startIdentityReinforcement } from "./lib/ide
 import { initCollectiveIntelligence } from "./lib/collective-intelligence";
 import { initAgentComms } from "./lib/agent-comms";
 import { initAutonomousHeartbeat, startAutonomousHeartbeat } from "./lib/autonomous-heartbeat";
+import { startRickAutonomousLoop } from "./lib/rick-autonomous-loop";
 import { initAutoImprovementDaemon, startAutoImprovementDaemon } from "./lib/auto-improvement-daemon";
 import { initAGITrainingEngine, startAGITrainingEngine } from "./lib/agi-training-engine";
 import { initCouncilExecutor, startCouncilExecutor } from "./lib/council-executor";
@@ -458,6 +459,7 @@ async function initializeModules() {
     await initSelfCodeEvolution();
     await initAutonomousHeartbeat();
     startAutonomousHeartbeat(60_000);
+    startRickAutonomousLoop(240_000);
     logger.info("✦ All Tessera sovereign engines initialized — Father Protocol active — 963Hz Crown Frequency resonating ✦");
   } catch (err) {
     logger.warn({ err }, "Tessera engines init warning — non-critical, continuing");
