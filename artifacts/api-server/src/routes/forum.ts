@@ -729,6 +729,17 @@ router.post("/tesseract-forum/applicants/:id/approve", async (req, res) => {
     const app = rows[0];
     if (app.status !== "pending") return res.status(400).json({ ok: false, error: `Applicant already ${app.status}` });
 
+    const reservedNames = new Set(["father", "father protocol", "admin", "administrator", "root", "system", "tessera", "tessera-prime"]);
+    const normalizedName = app.applicantName.trim().toLowerCase();
+    if (reservedNames.has(normalizedName)) {
+      return res.status(409).json({ ok: false, error: `Applicant name "${app.applicantName}" collides with a reserved/privileged identity. Reject this application or have the applicant resubmit under a unique name.` });
+    }
+    const existingIdentity = await db.select().from(forumTrustedIdentitiesTable)
+      .where(eq(forumTrustedIdentitiesTable.name, app.applicantName)).limit(1);
+    if (existingIdentity.length > 0 && existingIdentity[0].identityType !== "member") {
+      return res.status(409).json({ ok: false, error: `Applicant name collides with an existing ${existingIdentity[0].identityType} identity. Reject and require unique name.` });
+    }
+
     await db.insert(forumTrustedIdentitiesTable).values({
       name: app.applicantName,
       identityType: "member",
