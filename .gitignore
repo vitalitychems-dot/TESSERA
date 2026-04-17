@@ -58,3 +58,5 @@ venv/
 .cache/
 .local/
 attached_assets/Pasted-*.txt
+artifacts/api-server/.data/income-snapshots.json
+_evolutions/

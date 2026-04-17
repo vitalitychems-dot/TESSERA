@@ -92,6 +92,25 @@ router.get("/sacred-conference/agents", async (_req, res) => {
   return res.json({ agents: getConferenceAgents(), count: getConferenceAgents().length });
 });
 
+router.get("/sacred-conference/society", async (_req, res) => {
+  const { getFullSovereignSociety, getSocietyStats } = await import("../lib/sovereign-society");
+  return res.json({ stats: getSocietyStats(), members: getFullSovereignSociety() });
+});
+
+router.get("/sacred-conference/cycle/:cycleNumber/votes", async (req, res) => {
+  const session = getCurrentSession();
+  if (!session) return res.status(404).json({ error: "No session — run /api/sacred-conference/run first." });
+  const num = Number(req.params.cycleNumber);
+  const cycle = session.cycles.find(c => c.cycleNumber === num);
+  if (!cycle) return res.status(404).json({ error: `Cycle ${num} not found` });
+  return res.json({
+    cycleNumber: num,
+    voteSummary: cycle.voteSummary,
+    improvementBallots: cycle.improvementBallots,
+    inventionBallots:   cycle.inventionBallots,
+  });
+});
+
 router.get("/sacred-conference/themes", async (_req, res) => {
   return res.json({ themes: getCycleThemes() });
 });
