@@ -35,6 +35,9 @@ export default function PageTabs({ hubKey, title, subtitle, iconColor = "text-cy
   const [location] = useLocation();
 
   const matched = useMemo(() => {
+    const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+    const queryTab = params.get("tab");
+    if (queryTab && tabs.some(t => t.id === queryTab)) return queryTab;
     for (const t of tabs) {
       if (t.matchPaths?.some(p => location === p || location.startsWith(p + "/"))) return t.id;
     }
