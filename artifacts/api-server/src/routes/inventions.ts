@@ -816,15 +816,17 @@ function isSafeObjectPath(p: string): boolean {
   return true;
 }
 
-// Derive a stable fingerprint for the calling principal. This system has no
-// per-end-user identity — the only verified credential is the shared admin
-// token. We deliberately do NOT mix in client-supplied headers (e.g. an
-// inventor id) because they are unverified and trivially spoofable. The
-// principal is therefore admin-scope: any holder of the admin token is
-// considered the same writer for ACL purposes.
-function callerPrincipal(req: import("express").Request): string {
-  const token = (req.headers["x-admin-token"] as string | undefined)?.trim() || "";
-  return `admin:${createHash("sha256").update(token).digest("hex").slice(0, 32)}`;
+// Derive the ACL owner identity for an invention's uploaded model. This is
+// derived server-side from the invention's persisted `proposedBy` column —
+// NEVER from a client-supplied header — so two inventions with different
+// proposers always resolve to different owner principals, and the admin token
+// alone cannot replace another inventor's model. The admin token is still
+// required as the gating credential (only admins can act at all), but the
+// ACL owner stamped on the object is the proposer, which is what enforces
+// "the right inventor can replace this model" semantics.
+function inventorPrincipal(proposedBy: string | null | undefined, inventionId: string): string {
+  const raw = (proposedBy && proposedBy.trim()) || `invention:${inventionId}`;
+  return `proposer:${createHash("sha256").update(raw).digest("hex").slice(0, 32)}`;
 }
 
 // Lightweight admin-token guard: requires an x-admin-token header. If the
@@ -867,7 +869,7 @@ router.post("/inventions/:id/model/upload-url", async (req, res) => {
     if (!isSafeObjectPath(objectPath)) {
       return res.status(500).json({ ok: false, error: "Generated object path failed safety validation" });
     }
-    const principal = callerPrincipal(req);
+    const principal = inventorPrincipal(existing.proposedBy, id);
     rememberPendingUpload(objectPath, id, principal);
     return res.json({ ok: true, uploadURL, objectPath, contentType: contentType || "model/gltf-binary", inventionId: id });
   } catch (err) {
@@ -897,22 +899,30 @@ router.patch("/inventions/:id/model", async (req, res) => {
     }).from(inventionsTable).where(eq(inventionsTable.inventionId, id)).limit(1);
     if (!existing) return res.status(404).json({ ok: false, error: "Invention not found" });
 
+    // Resolve the proposer-bound principal. This is server-derived from the
+    // invention's `proposedBy` column and is what we use both for the pending-
+    // upload ledger key AND as the ACL owner stamped on the storage object.
+    // It is NOT derived from any client-supplied header, so an admin who is
+    // not the inventor of a given invention cannot impersonate that inventor.
+    const principal = inventorPrincipal(existing.proposedBy, id);
+
     // Authorization layer 1 (path provenance): the caller may only attach an
     // objectPath that THIS server minted for THIS invention via the matching
-    // presign call AND from the same caller principal (the validated admin
-    // token). This blocks arbitrary bucket-path attachment, cross-invention
-    // reuse, and snipe of another caller's freshly minted upload URL.
-    const principal = callerPrincipal(req);
+    // presign call. The pending entry is keyed by the proposer principal, so
+    // a path minted for invention A (proposer Alice) cannot be replayed
+    // against invention B (proposer Bob) even with the same admin token.
     if (objectPath && !consumePendingUpload(objectPath, id, principal)) {
-      return res.status(403).json({ ok: false, error: "objectPath was not issued to this caller for this invention, or has expired" });
+      return res.status(403).json({ ok: false, error: "objectPath was not issued for this invention, or has expired" });
     }
-    // Authorization layer 2 (object ownership ACL): load the freshly-uploaded
-    // object and enforce ACL semantics directly via canAccessObjectEntity.
+    // Authorization layer 2 (persisted ACL ownership): load the freshly-
+    // uploaded object and enforce ownership directly via canAccessObjectEntity.
     //   - First attach: the object has no policy yet, so we stamp one with
-    //     owner=principal and visibility=public.
-    //   - Re-attach / replace: a policy already exists. The caller must hold
-    //     WRITE permission per the persisted ACL (owner match) before we'll
-    //     swap the model. If a different principal owns the object, we 403.
+    //     owner=<proposer principal> and visibility=public.
+    //   - Re-attach / replace: a policy already exists. The caller's resolved
+    //     proposer principal must hold WRITE permission per the persisted
+    //     ACL (owner match) before we'll swap the model. If a different
+    //     proposer owns the object, we 403 — this is the "right inventor"
+    //     check enforced from durable storage metadata, not memory.
     if (objectPath) {
       try {
         const { ObjectStorageService } = await import("../lib/objectStorage");
