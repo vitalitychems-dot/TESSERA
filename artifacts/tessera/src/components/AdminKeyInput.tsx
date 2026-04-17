@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Key, LogOut, Unlock, Loader2, Check } from "lucide-react";
+import { Key, LogOut, Unlock, Loader2, Link2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/lib/adminContext";
 
@@ -14,7 +14,20 @@ export default function AdminKeyInput({ compact = false }: AdminKeyInputProps) {
   const [key, setKey] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleCopyLink = async () => {
+    const storedKey = localStorage.getItem("t9_sovereign_key");
+    if (!storedKey) return;
+    try {
+      const token = btoa(storedKey);
+      const url = `${window.location.origin}${window.location.pathname}#t=${encodeURIComponent(token)}`;
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {}
+  };
 
   const handleSubmit = async () => {
     const trimmed = key.trim();
@@ -61,14 +74,30 @@ export default function AdminKeyInput({ compact = false }: AdminKeyInputProps) {
               SOVEREIGN · ADMIN
             </span>
           </div>
-          <button
-            onClick={logout}
-            className="flex items-center gap-1 text-[10px] font-mono text-slate-500 hover:text-red-400 transition-colors shrink-0 px-1.5 py-0.5 rounded-md hover:bg-red-500/10"
-            data-testid="button-admin-logout"
-          >
-            <LogOut size={10} />
-            <span>Logout</span>
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={handleCopyLink}
+              className={cn(
+                "flex items-center gap-1 text-[10px] font-mono transition-colors px-1.5 py-0.5 rounded-md",
+                copied
+                  ? "text-violet-300 bg-violet-500/15"
+                  : "text-slate-500 hover:text-violet-400 hover:bg-violet-500/10"
+              )}
+              data-testid="button-admin-copy-link"
+              aria-label="Copy login link"
+            >
+              {copied ? <Check size={10} /> : <Link2 size={10} />}
+              <span>{copied ? "Copied!" : "Copy link"}</span>
+            </button>
+            <button
+              onClick={logout}
+              className="flex items-center gap-1 text-[10px] font-mono text-slate-500 hover:text-red-400 transition-colors px-1.5 py-0.5 rounded-md hover:bg-red-500/10"
+              data-testid="button-admin-logout"
+            >
+              <LogOut size={10} />
+              <span>Logout</span>
+            </button>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col gap-1.5">
