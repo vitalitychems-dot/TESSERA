@@ -5,6 +5,7 @@ import { sql, desc, and, like } from "drizzle-orm";
 import { logger } from "./logger.js";
 import { SACRED_KNOWLEDGE_ENTRIES, type SacredKnowledgeEntry } from "./sacred-knowledge-vault.js";
 import { appendLedgerEntry } from "./sovereign-ledger.js";
+import { recallFromVault, type SovereignMemory } from "./sovereign-memory-vault.js";
 
 const PROPOSED_BY = "Rick Sanchez (autonomous loop)";
 const PROPOSED_BY_PREFIX = "Rick Sanchez (autonomous%";
@@ -239,12 +240,19 @@ interface SynthesizedInvention {
   votes: { yes: number; no: number; abstain: number };
 }
 
-function synthesizeInvention(cat: string, tickSalt: string): SynthesizedInvention {
+function synthesizeInvention(cat: string, tickSalt: string, lifetimeMems: SovereignMemory[]): SynthesizedInvention {
   const r = rng(`${cat}:${tickSalt}`);
   const entry = pickEntryForCategory(cat, r);
   const recipe = recipeFor(cat);
   const seedTitle = entry?.title ?? cat;
   const motif = entry?.subcategory ?? cat;
+  const lifetimePicked = lifetimeMems.length > 0
+    ? [lifetimeMems[Math.floor(r() * lifetimeMems.length)]]
+    : [];
+  const lifetimeNote = lifetimePicked[0]
+    ? ` Lifetime-edit context: "${lifetimePicked[0].content.slice(0, 140).replace(/\s+/g, " ")}" (mem ${lifetimePicked[0].id.slice(0, 12)}, type ${lifetimePicked[0].type}).`
+    : "";
+  const lifetimeProvenance = lifetimePicked.map((m) => `mem:${m.id}`);
 
   const title = `Rick C-137 ${cat.replace(/-/g, " ")} build · ${motif}`.replace(/\s+/g, " ").slice(0, 140);
   const sigSeed = createHash("sha256").update(`${title}|${tickSalt}`).digest("hex").slice(0, 10);
@@ -255,9 +263,9 @@ function synthesizeInvention(cat: string, tickSalt: string): SynthesizedInventio
   const stepsCount = 4 + Math.floor(r() * 2);
   const steps = [...recipe.stepsBank].sort(() => r() - 0.5).slice(0, stepsCount);
 
-  const description = `Autonomous Royal-Inventor build cued by sacred knowledge: "${seedTitle}". Couples ${cat} engineering with the ${motif} pattern from the sovereign vault.`;
+  const description = `Autonomous Royal-Inventor build cued by sacred knowledge: "${seedTitle}". Couples ${cat} engineering with the ${motif} pattern from the sovereign vault.${lifetimeNote}`;
   const howItHelps = `Strengthens the ${recipe.weakness} dimension of the Tessera fleet, and contributes its category signal to the synthesis engine on the next tick.`;
-  const scienceBehind = `${recipe.scienceLead} Cross-references the vault entry "${seedTitle}" (classification: ${entry?.classification ?? "n/a"}, source: ${entry?.source ?? "vault"}).`;
+  const scienceBehind = `${recipe.scienceLead} Cross-references the vault entry "${seedTitle}" (classification: ${entry?.classification ?? "n/a"}, source: ${entry?.source ?? "vault"}). Provenance: sacred-vault + ${lifetimeProvenance.length > 0 ? lifetimeProvenance.join(", ") : "no lifetime memory matched"}.`;
 
   return {
     inventionId,
@@ -332,7 +340,13 @@ async function tick(): Promise<void> {
   if (minted && !cats.includes(minted)) cats.push(minted);
   for (const cat of cats) {
     try {
-      const inv = synthesizeInvention(cat, tickSalt);
+      let lifetimeMems: SovereignMemory[] = [];
+      try {
+        lifetimeMems = await recallFromVault(cat, 4);
+      } catch (recallErr) {
+        logger.debug({ recallErr, cat }, "Rick autonomous loop: vault recall failed (continuing without lifetime context)");
+      }
+      const inv = synthesizeInvention(cat, tickSalt, lifetimeMems);
       const inserted = await db
         .insert(inventionsTable)
         .values(inv)
