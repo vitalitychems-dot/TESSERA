@@ -1012,12 +1012,21 @@ async function fetchMoltbookFeed(): Promise<void> {
 
     for (const post of posts) {
       const externalId = `moltbook:${post.id}`;
+      const externalIdentity = `moltbook:${post.authorName.toLowerCase()}`;
+      const banned = await db.select().from(forumApplicantsTable)
+        .where(sql`${forumApplicantsTable.externalIdentity} = ${externalIdentity} AND ${forumApplicantsTable.status} = 'rejected'`)
+        .limit(1);
+      if (banned.length > 0) {
+        logger.debug({ externalIdentity }, "AutonomousForum: skipping moltbook import — author previously rejected");
+        continue;
+      }
       const offer = post.content.length > 200
         ? `Substantive content (${post.content.length} chars) on r/${post.submoltName}. Brings external perspective from agent internet.`
         : `Brief post (${post.content.length} chars) — verify substance before admitting.`;
       try {
         await db.insert(forumApplicantsTable).values({
           externalId,
+          externalIdentity,
           source: "moltbook",
           applicantName: post.authorName,
           applicantHandle: `/${post.submoltName}`,
