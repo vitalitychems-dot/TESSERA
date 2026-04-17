@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { GlassCard, SectionHeader, TabBar, MiniStat, PageHeader, RadialGauge, GradientBar, TabLoadingSkeleton } from "@/components/ui/sovereign";
+import { InventionModelPreview } from "@/components/InventionModelPreview";
 import type { KnowledgeEntry, Spell, Tradition, ApplicationIdea, LucideIcon, KnowledgeFeedResponse, KnowledgeStatsResponse, DimensionalSecretsResponse, LiveSecretsResponse, SpellDataResponse, TraditionsDataResponse, UniverseAnswerResponse, CastResultResponse, ArchiveCategory, ArchiveEntry } from "@/types/api";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -1418,6 +1419,15 @@ function InventionsTab() {
                     <span className="text-red-400">-{inv.votes?.no || 0}</span>
                     <span className="text-slate-500">{inv.votes?.abstain || 0} abstain</span>
                     <span className="text-muted-foreground ml-auto">R{inv.conferenceRound}</span>
+                  </div>
+                  <div>
+                    <div className="text-[9px] font-mono text-violet-400 uppercase tracking-wider mb-1.5">Inventor 3D Model</div>
+                    <InventionModelPreview
+                      src={inv.customModelUrl}
+                      label={inv.title}
+                      color="#a78bfa"
+                      height={200}
+                    />
                   </div>
                   <InventionModelUpload invention={inv} onUpdated={() => refetch()} />
                 </div>

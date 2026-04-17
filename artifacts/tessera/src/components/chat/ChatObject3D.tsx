@@ -666,7 +666,7 @@ function SolarPanelModel({ color, secondary }: { color: string; secondary: strin
   );
 }
 
-function resolveCustomModelUrl(src: string): string {
+export function resolveCustomModelUrl(src: string): string {
   // objectPaths from /api/inventions/:id/model are returned as "/objects/<id>".
   // Map them to the gated storage serving route.
   if (src.startsWith("/objects/")) {
@@ -676,7 +676,7 @@ function resolveCustomModelUrl(src: string): string {
   return src;
 }
 
-function CustomGLTFModel({ src, color }: { src: string; color: string }) {
+export function CustomGLTFModel({ src, color }: { src: string; color: string }) {
   const url = resolveCustomModelUrl(src);
   const gltf = useGLTF(url);
   const groupRef = useRef<THREE.Group>(null);
