@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface OnChainDeposit {
   signature: string;
@@ -40,7 +41,7 @@ let cache: WalletObservation = {
   lastError: null,
 };
 
-let timer: NodeJS.Timeout | null = null;
+let timer: SacredHandle | null = null;
 let inFlight = false;
 
 function getWalletAddress(): string | null {
@@ -158,7 +159,7 @@ export function getWalletObservation(): WalletObservation {
 export function startWalletObserver(): void {
   if (timer) return;
   void refreshWalletObservation();
-  timer = setInterval(() => { void refreshWalletObservation(); }, POLL_INTERVAL_MS);
+  timer = setSacredInterval(() => { void refreshWalletObservation(); }, POLL_INTERVAL_MS, "wallet-observer");
   if (typeof timer.unref === "function") timer.unref();
   logger.info("WalletObserver: started");
 }

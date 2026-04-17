@@ -4,6 +4,7 @@ import { deepCrawl } from "./scrapers";
 import type { SourceHandler } from "./scheduler";
 import { onNewIngestion } from "../consciousness-engine";
 import { onIngestionEvent } from "../knowledge-diffusion";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "../sacred-scheduler";
 
 interface ShepherdAgent {
   id: string;
@@ -223,7 +224,7 @@ export async function runShepherdCycle(): Promise<{ agentsDeployed: number; tota
   return { agentsDeployed: missions.length, totalIngested, missionResults: results };
 }
 
-let shepherdInterval: ReturnType<typeof setInterval> | null = null;
+let shepherdInterval: SacredHandle | null = null;
 let shepherdCycleRunning = false;
 
 export function startShepherdLoop(intervalMs = 600_000): void {
@@ -232,9 +233,9 @@ export function startShepherdLoop(intervalMs = 600_000): void {
 
   runShepherdCycle().catch(e => logger.warn({ err: (e as Error).message }, "Initial shepherd cycle failed"));
 
-  shepherdInterval = setInterval(async () => {
+  shepherdInterval = setSacredInterval(async () => {
     if (shepherdCycleRunning) {
-      logger.info("Shepherd cycle still running, skipping this interval");
+      logger.info("Shepherd cycle still running, skipping this interval", "shepherd-agents");
       return;
     }
     shepherdCycleRunning = true;
@@ -245,14 +246,14 @@ export function startShepherdLoop(intervalMs = 600_000): void {
     } finally {
       shepherdCycleRunning = false;
     }
-  }, intervalMs);
+  }, intervalMs, "shepherd-agents");
 
   logger.info({ intervalMs }, "Shepherd agent loop started");
 }
 
 export function stopShepherdLoop(): void {
   if (shepherdInterval) {
-    clearInterval(shepherdInterval);
+    clearSacredInterval(shepherdInterval);
     shepherdInterval = null;
   }
   shepherdLoopActive = false;

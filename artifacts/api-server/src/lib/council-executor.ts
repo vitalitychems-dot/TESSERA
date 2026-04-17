@@ -3,6 +3,7 @@ import { councilDecisionsTable, councilConfigTable, systemStateTable } from "@wo
 import { desc, eq } from "drizzle-orm";
 import { logger } from "./logger";
 import { markProposalImplemented } from "./consensus-engine";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface ExecutionResult {
   proposalId: string;
@@ -43,7 +44,7 @@ const DEFAULT_CONFIG: Record<string, unknown> = {
 
 const executionHistory: ExecutionResult[] = [];
 const executedProposalIds = new Set<string>();
-let executorInterval: ReturnType<typeof setInterval> | null = null;
+let executorInterval: SacredHandle | null = null;
 let autoProcessed = 0;
 let configLoaded = false;
 
@@ -185,17 +186,17 @@ export async function initCouncilExecutor(): Promise<void> {
 
 export function startCouncilExecutor(intervalMs = 300_000): void {
   if (executorInterval) return;
-  executorInterval = setInterval(async () => {
+  executorInterval = setSacredInterval(async () => {
     try {
       const n = await processApprovedDecisions();
-      if (n > 0) logger.info({ n }, "CouncilExecutor: auto-processed decisions");
+      if (n > 0) logger.info({ n }, "CouncilExecutor: auto-processed decisions", "council-executor");
     } catch (err) { logger.error({ err }, "CouncilExecutor: execution cycle error"); }
-  }, intervalMs);
+  }, intervalMs, "council-executor");
   logger.info({ intervalMs }, "CouncilExecutor: started");
 }
 
 export function stopCouncilExecutor(): void {
-  if (executorInterval) { clearInterval(executorInterval); executorInterval = null; }
+  if (executorInterval) { clearSacredInterval(executorInterval); executorInterval = null; }
 }
 
 export function getExecutorMetrics() {

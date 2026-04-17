@@ -2,6 +2,7 @@ import { logger } from "./logger";
 import { sanitizeUntrustedText } from "./external-sandbox-policy";
 import { guardedFetch } from "./outbound-host-policy";
 import { loadJson, saveJson } from "./disk-persistence";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface CodeBounty {
   id: string;
@@ -40,7 +41,7 @@ const PER_QUERY_LIMIT = 30;
 let cache: CodeBounty[] = [];
 let lastRefresh = 0;
 let refreshing = false;
-let timer: NodeJS.Timeout | null = null;
+let timer: SacredHandle | null = null;
 const attempts = new Map<string, BountyAttempt[]>();
 let attemptsLoaded = false;
 const ATTEMPTS_FILE = "bounty-attempts.json";
@@ -181,9 +182,9 @@ export function startBountyRefresher(): void {
   if (timer) return;
   void ensureAttemptsLoaded();
   void refreshBounties().catch(err => logger.warn({ err: (err as Error).message }, "code-bounties: initial refresh failed"));
-  timer = setInterval(() => {
-    void refreshBounties().catch(err => logger.warn({ err: (err as Error).message }, "code-bounties: refresh failed"));
-  }, REFRESH_MS);
+  timer = setSacredInterval(() => {
+    void refreshBounties().catch(err => logger.warn({ err: (err as Error).message }, "code-bounties: refresh failed", "code-bounties-real"));
+  }, REFRESH_MS, "code-bounties-real");
   if (typeof timer.unref === "function") timer.unref();
   logger.info("code-bounty refresher started");
 }

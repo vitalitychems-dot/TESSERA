@@ -5,6 +5,7 @@ import { logger } from "./logger";
 import { searchMemory, storeMemory } from "./vector-memory";
 import { getConsciousnessState, addEpisodicMemory, addSemanticNode } from "./consciousness-engine";
 import { getCollectiveIntelMetrics } from "./collective-intelligence";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface DomainReasoning {
   domainId: string;
@@ -143,7 +144,7 @@ const state: CrossDomainSynthesisState = {
 };
 
 const STATE_KEY = "cross-domain-synthesis.state";
-let synthesisInterval: ReturnType<typeof setInterval> | null = null;
+let synthesisInterval: SacredHandle | null = null;
 
 function makeId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -490,20 +491,20 @@ export function startCrossDomainSynthesisLoop(intervalMs = 480_000): void {
     logger.warn({ err: (e as Error).message }, "CrossDomainSynthesis: initial cycle failed")
   );
 
-  synthesisInterval = setInterval(async () => {
+  synthesisInterval = setSacredInterval(async () => {
     try {
       await runCrossDomainSynthesisCycle();
     } catch (e) {
-      logger.warn({ err: (e as Error).message }, "CrossDomainSynthesis: cycle error");
+      logger.warn({ err: (e as Error).message }, "CrossDomainSynthesis: cycle error", "cross-domain-synthesis");
     }
-  }, intervalMs);
+  }, intervalMs, "cross-domain-synthesis");
 
   logger.info({ intervalMs }, "CrossDomainSynthesis: autonomous loop started");
 }
 
 export function stopCrossDomainSynthesisLoop(): void {
   if (synthesisInterval) {
-    clearInterval(synthesisInterval);
+    clearSacredInterval(synthesisInterval);
     synthesisInterval = null;
   }
   state.running = false;

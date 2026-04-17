@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { systemStateTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface HeartbeatState {
   running: boolean;
@@ -101,7 +102,7 @@ const heartbeatState: HeartbeatState = {
   systemHealthScore: 0.98,
 };
 
-let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+let heartbeatInterval: SacredHandle | null = null;
 const STATE_KEY = "autonomous-heartbeat.state";
 let lastIntervalTimestamps: Record<string, number> = {};
 
@@ -380,14 +381,14 @@ export function startAutonomousHeartbeat(intervalMs = 60_000): void {
   heartbeatState.running = true;
   heartbeatState.startedAt = Date.now();
   runHeartbeatCycle().catch(() => {});
-  heartbeatInterval = setInterval(() => {
-    runHeartbeatCycle().catch(err => logger.error({ err }, "Heartbeat: cycle error"));
-  }, intervalMs);
+  heartbeatInterval = setSacredInterval(() => {
+    runHeartbeatCycle().catch(err => logger.error({ err }, "Heartbeat: cycle error", "autonomous-heartbeat"));
+  }, intervalMs, "autonomous-heartbeat");
   logger.info({ intervalMs, subsystems: Object.keys(heartbeatState.subsystemPulses).length }, "AutonomousHeartbeat: started with self-healing");
 }
 
 export function stopAutonomousHeartbeat(): void {
-  if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+  if (heartbeatInterval) { clearSacredInterval(heartbeatInterval); heartbeatInterval = null; }
   heartbeatState.running = false;
 }
 

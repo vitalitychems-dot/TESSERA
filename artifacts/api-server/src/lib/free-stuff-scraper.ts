@@ -1,6 +1,7 @@
 import { logger } from "./logger";
 import { sanitizeUntrustedText } from "./external-sandbox-policy";
 import { guardedFetch, isAllowedOutboundUrl } from "./outbound-host-policy";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface FreeFinding {
   id: string;
@@ -32,7 +33,7 @@ const MAX_PER_SOURCE = 25;
 let cache: FreeFinding[] = [];
 let lastRefresh = 0;
 let refreshing = false;
-let timer: NodeJS.Timeout | null = null;
+let timer: SacredHandle | null = null;
 
 interface RedditPostRaw {
   data: {
@@ -157,9 +158,9 @@ export function getFreeFindings(opts: { onlyValid?: boolean; limit?: number } = 
 export function startFreeStuffScraper(): void {
   if (timer) return;
   void refreshFreeFindings().catch(err => logger.warn({ err: (err as Error).message }, "free-stuff: initial refresh failed"));
-  timer = setInterval(() => {
-    void refreshFreeFindings().catch(err => logger.warn({ err: (err as Error).message }, "free-stuff: refresh failed"));
-  }, REFRESH_MS);
+  timer = setSacredInterval(() => {
+    void refreshFreeFindings().catch(err => logger.warn({ err: (err as Error).message }, "free-stuff: refresh failed", "free-stuff-scraper"));
+  }, REFRESH_MS, "free-stuff-scraper");
   if (typeof timer.unref === "function") timer.unref();
   logger.info("free-stuff scraper started");
 }

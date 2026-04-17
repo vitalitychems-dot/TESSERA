@@ -11,6 +11,7 @@ import { createProposal } from "./consensus-engine";
 import { spawnAgent, spawnMeeseeks } from "./agent-spawner";
 import { runDueIngestion, getSourceHandlers } from "./ingestion/scheduler";
 import { swarmGetPreferredHandler } from "./swarm-optimizer";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface ImprovementCycle {
   id: string;
@@ -99,7 +100,7 @@ const daemonState: DaemonState = {
   categories: {},
 };
 
-let daemonInterval: ReturnType<typeof setInterval> | null = null;
+let daemonInterval: SacredHandle | null = null;
 const STATE_KEY = "auto-improvement-daemon.state";
 let realCounts: Record<string, number> = {};
 
@@ -462,14 +463,14 @@ export function startAutoImprovementDaemon(intervalMs = 300_000): void {
   if (daemonInterval) return;
   daemonState.running = true;
   runImprovementCycle().catch(() => { });
-  daemonInterval = setInterval(() => {
-    runImprovementCycle().catch(err => logger.error({ err }, "ImprovementDaemon: cycle error"));
-  }, intervalMs);
+  daemonInterval = setSacredInterval(() => {
+    runImprovementCycle().catch(err => logger.error({ err }, "ImprovementDaemon: cycle error", "auto-improvement-daemon"));
+  }, intervalMs, "auto-improvement-daemon");
   logger.info({ intervalMs }, "AutoImprovementDaemon: started — tracking real system operations");
 }
 
 export function stopAutoImprovementDaemon(): void {
-  if (daemonInterval) { clearInterval(daemonInterval); daemonInterval = null; }
+  if (daemonInterval) { clearSacredInterval(daemonInterval); daemonInterval = null; }
   daemonState.running = false;
 }
 

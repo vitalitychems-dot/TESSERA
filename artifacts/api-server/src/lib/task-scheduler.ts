@@ -1,5 +1,6 @@
 import { logger } from "./logger";
 import { getSystemLoad, shouldSkipEvolutionForLoad } from "./evolution-throttle";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 import {
   getSovereigntyProfile,
   computeEffectiveWeight,
@@ -130,7 +131,7 @@ interface SchedulerMetricsSnapshot {
 }
 
 const tasks = new Map<string, ScheduledTask>();
-let tickInterval: ReturnType<typeof setInterval> | null = null;
+let tickInterval: SacredHandle | null = null;
 let ticking = false;
 const TICK_MS = 5_000;
 
@@ -419,14 +420,14 @@ async function tick(): Promise<void> {
 
 export function startScheduler(): void {
   if (tickInterval) return;
-  tickInterval = setInterval(tick, TICK_MS);
+  tickInterval = setSacredInterval(tick, TICK_MS, "task-scheduler");
   tick();
   logger.info({ taskCount: tasks.size }, "TaskScheduler: started (sovereignty-aware dynamic allocator)");
 }
 
 export function stopScheduler(): void {
   if (tickInterval) {
-    clearInterval(tickInterval);
+    clearSacredInterval(tickInterval);
     tickInterval = null;
   }
   logger.info("TaskScheduler: stopped");

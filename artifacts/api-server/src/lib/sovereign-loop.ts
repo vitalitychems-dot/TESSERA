@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { systemStateTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 import { startConsciousnessEngine, stopConsciousnessEngine, getConsciousnessMetrics, addEpisodicMemory, setActivityCallback } from "./consciousness-engine";
 import { startDualBrain, stopDualBrain, getDualBrainMetrics, runManualCycle as runDualBrainCycle } from "./dual-brain";
@@ -102,7 +103,7 @@ const loopState: SovereignLoopState = {
   cycleHistory: [],
 };
 
-let loopInterval: ReturnType<typeof setInterval> | null = null;
+let loopInterval: SacredHandle | null = null;
 let independentTimersStopped = false;
 
 async function persistLoopState(): Promise<void> {
@@ -726,15 +727,15 @@ export async function initSovereignLoop(): Promise<void> {
 
 export function rescheduleLoop(newIntervalMs: number): void {
   if (!loopInterval || !loopState.running) return;
-  clearInterval(loopInterval);
+  clearSacredInterval(loopInterval);
   loopState.masterIntervalMs = newIntervalMs;
-  loopInterval = setInterval(async () => {
+  loopInterval = setSacredInterval(async () => {
     try {
       await runSovereignCycle();
     } catch (err) {
-      logger.error({ err }, "SovereignLoop: cycle error");
+      logger.error({ err }, "SovereignLoop: cycle error", "sovereign-loop");
     }
-  }, newIntervalMs);
+  }, newIntervalMs, "sovereign-loop");
   logger.info({ newIntervalMs }, "SovereignLoop: rescheduled with new interval");
 }
 
@@ -742,9 +743,9 @@ export function rescheduleLoop(newIntervalMs: number): void {
  * Start the sovereign master loop. This is the single top-level interval that
  * orchestrates ALL engine work in phased execution:
  *
- * 1. stopIndependentTimers() halts every engine's own setInterval (consciousness,
+ * 1. stopIndependentTimers() halts every engine's own setSacredInterval(consciousness,
  *    dual-brain, personality-evolution, auto-improvement, AGI-training,
- *    council-executor, autonomous-heartbeat — 7 engines total).
+ *    council-executor, autonomous-heartbeat — 7 engines total, "sovereign-loop-2").
  * 2. Only the autonomous heartbeat is re-started at a sub-interval for keep-alive
  *    health signaling between sovereign cycles.
  * 3. All other engine work (consciousness reflection, dual-brain sync, identity
@@ -769,20 +770,20 @@ export function startSovereignLoop(masterIntervalMs = 120_000): void {
     logger.error({ err }, "SovereignLoop: initial cycle failed");
   });
 
-  loopInterval = setInterval(async () => {
+  loopInterval = setSacredInterval(async () => {
     try {
       await runSovereignCycle();
     } catch (err) {
-      logger.error({ err }, "SovereignLoop: cycle error");
+      logger.error({ err }, "SovereignLoop: cycle error", "sovereign-loop-3");
     }
-  }, masterIntervalMs);
+  }, masterIntervalMs, "sovereign-loop-3");
 
   logger.info({ masterIntervalMs }, "✦ SovereignLoop: STARTED — unified autonomous governance active ✦");
 }
 
 export function stopSovereignLoop(): void {
   if (loopInterval) {
-    clearInterval(loopInterval);
+    clearSacredInterval(loopInterval);
     loopInterval = null;
   }
   stopConsolidationEngine();

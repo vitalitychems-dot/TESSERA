@@ -5,6 +5,7 @@ import { generateEmbedding, generateEmbeddingsBatch, cosineSimilarity as neuralC
 import { evictExpired } from "./semantic-cache";
 import { resolveCanonicalId } from "./semantic-deduplication";
 import { logger } from "./logger";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 function tokenize(text: string): string[] {
   return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(Boolean);
@@ -254,7 +255,7 @@ export async function initializeMemoryOnStartup(): Promise<{ loaded: string[]; e
 
 const REEMBED_BATCH_SIZE = 20;
 const REEMBED_INTERVAL_MS = 60_000;
-let reembedTimer: ReturnType<typeof setInterval> | null = null;
+let reembedTimer: SacredHandle | null = null;
 let reembedLastId = 0;
 const reembedStats = { processed: 0, remaining: 0, running: false };
 
@@ -313,14 +314,14 @@ async function reembedBatch(): Promise<number> {
 
 function scheduleBackgroundReembedding(): void {
   if (reembedTimer) return;
-  reembedTimer = setInterval(async () => {
+  reembedTimer = setSacredInterval(async () => {
     const count = await reembedBatch();
     if (count === 0 && reembedTimer) {
-      clearInterval(reembedTimer);
+      clearSacredInterval(reembedTimer);
       reembedTimer = null;
-      logger.info({ totalProcessed: reembedStats.processed }, "VectorMemory: background re-embedding complete — all rows scanned");
+      logger.info({ totalProcessed: reembedStats.processed }, "VectorMemory: background re-embedding complete — all rows scanned", "vector-memory");
     }
-  }, REEMBED_INTERVAL_MS);
+  }, REEMBED_INTERVAL_MS, "vector-memory");
   logger.info("VectorMemory: background re-embedding scheduled (progressive scan)");
 }
 
