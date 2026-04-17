@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, Suspense } from "react";
+import { useRef, useState, useEffect, Suspense, Component, type ReactNode, type ErrorInfo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Text } from "@react-three/drei";
 import * as THREE from "three";
@@ -432,7 +432,239 @@ function TorusModel({ color }: { color: string }) {
   );
 }
 
-function getObjectModel(type: string, color: string) {
+function BatteryCellModel({ color, secondary }: { color: string; secondary: string }) {
+  const ref = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => { if (ref.current) ref.current.rotation.y = clock.getElapsedTime() * 0.4; });
+  return (
+    <group ref={ref}>
+      <mesh>
+        <cylinderGeometry args={[0.55, 0.55, 2.2, 24]} />
+        <meshStandardMaterial color={color || "#f59e0b"} metalness={0.7} roughness={0.25} />
+      </mesh>
+      <mesh position={[0, 1.12, 0]}>
+        <cylinderGeometry args={[0.28, 0.28, 0.1, 16]} />
+        <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.1} />
+      </mesh>
+      <mesh position={[0, -1.11, 0]}>
+        <cylinderGeometry args={[0.48, 0.48, 0.08, 16]} />
+        <meshStandardMaterial color="#64748b" metalness={0.85} roughness={0.2} />
+      </mesh>
+      <mesh position={[0, 0.2, 0.56]}>
+        <boxGeometry args={[0.9, 0.35, 0.02]} />
+        <meshStandardMaterial color={secondary || "#10b981"} emissive={secondary || "#10b981"} emissiveIntensity={0.3} />
+      </mesh>
+    </group>
+  );
+}
+
+function BatteryPackModel({ color, secondary }: { color: string; secondary: string }) {
+  const groupRef = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => { if (groupRef.current) groupRef.current.rotation.y = clock.getElapsedTime() * 0.3; });
+  const cellColor = color || "#f59e0b";
+  const accent = secondary || "#10b981";
+  const cols = 6, rows = 3;
+  const spacing = 0.4;
+  const offX = -((cols - 1) * spacing) / 2;
+  const offZ = -((rows - 1) * spacing) / 2;
+  return (
+    <group ref={groupRef}>
+      <mesh position={[0, -1.0, 0]}>
+        <boxGeometry args={[cols * spacing + 0.4, 0.08, rows * spacing + 0.4]} />
+        <meshStandardMaterial color="#1e293b" metalness={0.5} roughness={0.4} />
+      </mesh>
+      {Array.from({ length: rows }).map((_, r) =>
+        Array.from({ length: cols }).map((_, c) => (
+          <group key={`${r}-${c}`} position={[offX + c * spacing, 0, offZ + r * spacing]}>
+            <mesh>
+              <cylinderGeometry args={[0.17, 0.17, 1.6, 16]} />
+              <meshStandardMaterial color={cellColor} metalness={0.7} roughness={0.25} />
+            </mesh>
+            <mesh position={[0, 0.82, 0]}>
+              <cylinderGeometry args={[0.09, 0.09, 0.06, 12]} />
+              <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.1} />
+            </mesh>
+          </group>
+        ))
+      )}
+      <mesh position={[0, 0.88, 0]}>
+        <boxGeometry args={[cols * spacing + 0.1, 0.04, rows * spacing + 0.1]} />
+        <meshStandardMaterial color={accent} metalness={0.8} roughness={0.2} emissive={accent} emissiveIntensity={0.15} />
+      </mesh>
+    </group>
+  );
+}
+
+function ToroidModel({ color, secondary }: { color: string; secondary: string }) {
+  const groupRef = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => {
+    if (groupRef.current) {
+      groupRef.current.rotation.y = clock.getElapsedTime() * 0.4;
+      groupRef.current.rotation.x = 0.3 + Math.sin(clock.getElapsedTime() * 0.3) * 0.15;
+    }
+  });
+  const coreColor = color || "#06b6d4";
+  const wireColor = secondary || "#a78bfa";
+  const windings = 24;
+  return (
+    <group ref={groupRef}>
+      <mesh>
+        <torusGeometry args={[1.0, 0.28, 16, 48]} />
+        <meshStandardMaterial color={coreColor} metalness={0.4} roughness={0.5} />
+      </mesh>
+      {Array.from({ length: windings }).map((_, i) => {
+        const a = (i / windings) * Math.PI * 2;
+        return (
+          <mesh key={i} position={[Math.cos(a) * 1.0, 0, Math.sin(a) * 1.0]} rotation={[0, -a, Math.PI / 2]}>
+            <torusGeometry args={[0.3, 0.035, 8, 20]} />
+            <meshStandardMaterial color={wireColor} metalness={0.85} roughness={0.2} />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+function PCBModel({ color, secondary }: { color: string; secondary: string }) {
+  const groupRef = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => {
+    if (groupRef.current) {
+      groupRef.current.rotation.y = clock.getElapsedTime() * 0.35;
+      groupRef.current.rotation.x = 0.4;
+    }
+  });
+  const boardColor = color || "#10b981";
+  const chipColor = secondary || "#f59e0b";
+  return (
+    <group ref={groupRef}>
+      <mesh>
+        <boxGeometry args={[3, 0.12, 2]} />
+        <meshStandardMaterial color={boardColor} roughness={0.6} metalness={0.2} />
+      </mesh>
+      <mesh position={[-0.6, 0.18, 0.2]}>
+        <boxGeometry args={[0.8, 0.2, 0.8]} />
+        <meshStandardMaterial color="#0f172a" metalness={0.4} roughness={0.5} />
+      </mesh>
+      <mesh position={[0.9, 0.15, -0.3]}>
+        <boxGeometry args={[0.4, 0.14, 0.3]} />
+        <meshStandardMaterial color={chipColor} metalness={0.5} roughness={0.3} />
+      </mesh>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <mesh key={i} position={[-1.3 + i * 0.3, 0.16, 0.8]}>
+          <cylinderGeometry args={[0.06, 0.06, 0.2, 8]} />
+          <meshStandardMaterial color="#f59e0b" metalness={0.6} roughness={0.3} />
+        </mesh>
+      ))}
+      {Array.from({ length: 8 }).map((_, i) => (
+        <mesh key={`pin-${i}`} position={[-1.35 + i * 0.38, -0.1, -0.9]}>
+          <boxGeometry args={[0.05, 0.1, 0.05]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.1} />
+        </mesh>
+      ))}
+      <mesh position={[1.2, 0.14, 0.6]}>
+        <cylinderGeometry args={[0.18, 0.18, 0.24, 16]} />
+        <meshStandardMaterial color="#1e293b" metalness={0.3} roughness={0.5} />
+      </mesh>
+    </group>
+  );
+}
+
+function EnclosureModel({ color, secondary }: { color: string; secondary: string }) {
+  const body = color || "#64748b";
+  const slot = secondary || "#10b981";
+  return (
+    <group>
+      <mesh>
+        <boxGeometry args={[2.4, 1.8, 1.6]} />
+        <meshStandardMaterial color={body} metalness={0.6} roughness={0.4} />
+      </mesh>
+      <mesh position={[0, 0, 0.81]}>
+        <boxGeometry args={[2.42, 1.82, 0.02]} />
+        <meshBasicMaterial color={body} />
+      </mesh>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <mesh key={i} position={[-0.9 + i * 0.36, 0.3, 0.82]}>
+          <boxGeometry args={[0.12, 0.05, 0.02]} />
+          <meshStandardMaterial color={slot} emissive={slot} emissiveIntensity={0.4} />
+        </mesh>
+      ))}
+      {[[-1.1, -0.8, 0.75], [1.1, -0.8, 0.75], [-1.1, -0.8, -0.75], [1.1, -0.8, -0.75]].map(([x, y, z], i) => (
+        <mesh key={`screw-${i}`} position={[x, y, z]}>
+          <cylinderGeometry args={[0.05, 0.05, 0.08, 8]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.2} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function AntennaModel({ color, secondary }: { color: string; secondary: string }) {
+  const groupRef = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => {
+    if (groupRef.current) groupRef.current.rotation.y = Math.sin(clock.getElapsedTime() * 0.3) * 0.2;
+  });
+  const mastColor = color || "#8b5cf6";
+  const tipColor = secondary || "#06b6d4";
+  return (
+    <group ref={groupRef}>
+      <mesh position={[0, -1.3, 0]}>
+        <boxGeometry args={[1.4, 0.1, 1.4]} />
+        <meshStandardMaterial color="#334155" metalness={0.5} roughness={0.6} />
+      </mesh>
+      <mesh position={[0, 0, 0]}>
+        <cylinderGeometry args={[0.06, 0.08, 2.6, 12]} />
+        <meshStandardMaterial color={mastColor} metalness={0.8} roughness={0.2} />
+      </mesh>
+      <mesh position={[0, 1.5, 0]}>
+        <cylinderGeometry args={[0.03, 0.05, 0.8, 8]} />
+        <meshStandardMaterial color="#e2e8f0" metalness={0.9} roughness={0.1} />
+      </mesh>
+      <mesh position={[0, 1.95, 0]}>
+        <sphereGeometry args={[0.09, 12, 12]} />
+        <meshStandardMaterial color={tipColor} emissive={tipColor} emissiveIntensity={0.8} />
+      </mesh>
+      {[0, 1, 2].map(i => {
+        const a = (i / 3) * Math.PI * 2;
+        return (
+          <mesh key={i} position={[Math.cos(a) * 0.5, 0.6, Math.sin(a) * 0.5]} rotation={[0, -a, 0]}>
+            <boxGeometry args={[0.02, 0.6, 0.02]} />
+            <meshStandardMaterial color={mastColor} metalness={0.7} roughness={0.3} />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+function SolarPanelModel({ color, secondary }: { color: string; secondary: string }) {
+  const groupRef = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => {
+    if (groupRef.current) groupRef.current.rotation.y = clock.getElapsedTime() * 0.3;
+  });
+  const cellColor = color || "#3b82f6";
+  const frame = secondary || "#f59e0b";
+  return (
+    <group ref={groupRef} rotation={[-0.4, 0, 0]}>
+      <mesh>
+        <boxGeometry args={[3, 0.06, 2]} />
+        <meshStandardMaterial color={frame} metalness={0.6} roughness={0.3} />
+      </mesh>
+      {Array.from({ length: 6 }).map((_, r) =>
+        Array.from({ length: 4 }).map((_, c) => (
+          <mesh key={`${r}-${c}`} position={[-1.25 + r * 0.5, 0.04, -0.75 + c * 0.5]}>
+            <boxGeometry args={[0.4, 0.02, 0.4]} />
+            <meshStandardMaterial color={cellColor} metalness={0.6} roughness={0.3} emissive={cellColor} emissiveIntensity={0.15} />
+          </mesh>
+        ))
+      )}
+      <mesh position={[0, -0.5, 0]} rotation={[0.4, 0, 0]}>
+        <cylinderGeometry args={[0.05, 0.05, 1.4, 8]} />
+        <meshStandardMaterial color="#64748b" metalness={0.7} roughness={0.3} />
+      </mesh>
+    </group>
+  );
+}
+
+function getObjectModel(type: string, color: string, secondary: string) {
   switch (type.toLowerCase()) {
     case "car": case "vehicle": case "automobile": case "truck": return <CarModel color={color} />;
     case "rocket": case "spacecraft": case "satellite": return <RocketModel color={color} />;
@@ -446,6 +678,13 @@ function getObjectModel(type: string, color: string) {
     case "sphere": case "ball": case "orb": case "planet": return <SphereModel color={color} />;
     case "cube": case "box": return <CubeModel color={color} />;
     case "torus": case "donut": case "ring": return <TorusModel color={color} />;
+    case "battery-cell": case "cell": case "18650": return <BatteryCellModel color={color} secondary={secondary} />;
+    case "battery-pack": case "battery": case "pack": return <BatteryPackModel color={color} secondary={secondary} />;
+    case "toroid": case "bifilar": case "coil": return <ToroidModel color={color} secondary={secondary} />;
+    case "pcb": case "circuit": case "board": return <PCBModel color={color} secondary={secondary} />;
+    case "enclosure": case "case": case "cage": case "faraday": return <EnclosureModel color={color} secondary={secondary} />;
+    case "antenna": case "mast": case "whip": case "repeater": return <AntennaModel color={color} secondary={secondary} />;
+    case "solar-panel": case "solar": case "photovoltaic": case "pv": return <SolarPanelModel color={color} secondary={secondary} />;
     default: return <AbstractModel color={color} />;
   }
 }
@@ -461,7 +700,7 @@ function SceneContent({ spec }: { spec: Object3DSpec }) {
       <pointLight position={[5, 5, 5]} intensity={1.2} color="#ffffff" />
       <pointLight position={[-5, -3, -5]} intensity={0.4} color={accent} />
       <group scale={[scale, scale, scale]}>
-        {getObjectModel(spec.type, color)}
+        {getObjectModel(spec.type, color, accent)}
       </group>
       {spec.label && (
         <Text
@@ -540,7 +779,22 @@ const TYPE_ICONS: Record<string, string> = {
   car: "🚗", rocket: "🚀", building: "🏛️", molecule: "🧬", crystal: "💎",
   machine: "⚙️", tower: "🗼", robot: "🤖", sphere: "🔮", cube: "📦",
   torus: "🍩", device: "🔬", abstract: "✦",
+  "battery-cell": "🔋", "battery-pack": "🔋", toroid: "🌀", pcb: "🟩",
+  enclosure: "📦", antenna: "📡", "solar-panel": "☀️",
 };
+
+class Object3DErrorBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode; fallback: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(err: Error, info: ErrorInfo) {
+    // eslint-disable-next-line no-console
+    console.warn("[3D] render failed, falling back to 2D", err.message, info.componentStack?.split("\n")[1]);
+  }
+  render() { return this.state.hasError ? this.props.fallback : this.props.children; }
+}
 
 function Object2DFallback({ spec }: { spec: Object3DSpec }) {
   const color = spec.color || "#a78bfa";
@@ -619,18 +873,21 @@ export function InlineObject3D({ spec }: InlineObject3DProps) {
           {webglFailed ? (
             <Object2DFallback spec={spec} />
           ) : (
-            <Canvas
-              key={resetKey}
-              camera={{ position: [0, 1.5, isMobile ? 6 : 5], fov: isMobile ? 55 : 50 }}
-              gl={{ antialias: !isMobile, alpha: true, powerPreference: "default" }}
-              dpr={isMobile ? [1, 1] : [1, 1.5]}
-              onCreated={() => {}}
-              fallback={<Object2DFallback spec={spec} />}
-            >
-              <Suspense fallback={null}>
-                <SceneContent spec={spec} />
-              </Suspense>
-            </Canvas>
+            <Object3DErrorBoundary fallback={<Object2DFallback spec={spec} />}>
+              <Canvas
+                key={resetKey}
+                camera={{ position: [0, 1.5, isMobile ? 6 : 5], fov: isMobile ? 55 : 50 }}
+                gl={{ antialias: !isMobile, alpha: true, powerPreference: "default" }}
+                dpr={isMobile ? [1, 1] : [1, 1.5]}
+                onCreated={() => {}}
+                fallback={<Object2DFallback spec={spec} />}
+                onError={() => setWebglFailed(true)}
+              >
+                <Suspense fallback={null}>
+                  <SceneContent spec={spec} />
+                </Suspense>
+              </Canvas>
+            </Object3DErrorBoundary>
           )}
         </div>
         <div className={`border-t border-white/5 flex items-center ${isMobile ? "px-2.5 py-1" : "px-3 py-1.5"}`}>

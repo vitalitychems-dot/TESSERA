@@ -17,6 +17,8 @@ import { runCritiqueLoop } from "../lib/self-critique";
 import { classifyQuery } from "../lib/adaptive-router";
 import { hybridRetrieve, formatCitations } from "../lib/hybrid-retrieval";
 import { detectIntents, runToolLoop } from "../lib/tool-registry";
+import { injectInventionDiagrams } from "../lib/invention-3d";
+import { inventionsTable } from "@workspace/db/schema";
 import { db as feedbackDb } from "@workspace/db";
 import { modelRoutingLogTable } from "@workspace/db/schema";
 import * as vm from "vm";
@@ -865,6 +867,28 @@ router.post("/messages", async (req, res) => {
       if (citations) {
         finalContent = `${finalContent}\n\n---\n**Sources:**\n${citations}`;
       }
+    }
+
+    // ---- Auto-inject 3D diagrams for any invention mentioned in the reply ----
+    try {
+      const invRows = await db.select({
+        inventionId: inventionsTable.inventionId,
+        title: inventionsTable.title,
+        category: inventionsTable.category,
+        description: inventionsTable.description,
+        materials: inventionsTable.materials,
+        scienceBehind: inventionsTable.scienceBehind,
+      }).from(inventionsTable).orderBy(asc(inventionsTable.title)).limit(500);
+      finalContent = injectInventionDiagrams(finalContent, invRows.map(r => ({
+        inventionId: r.inventionId,
+        title: r.title,
+        category: r.category,
+        description: r.description,
+        materials: (r.materials as string[] | null) || [],
+        scienceBehind: r.scienceBehind,
+      })), { max: 3 });
+    } catch (err) {
+      logger.debug({ err: (err as Error).message }, "3D diagram injection skipped");
     }
 
     if (clientAborted) return res.end();
