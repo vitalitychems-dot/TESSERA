@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { createHash } from "node:crypto";
 import { db } from "@workspace/db";
 import { inventionsTable, type InsertInvention } from "@workspace/db/schema";
 import { desc, eq, and } from "drizzle-orm";
@@ -774,12 +775,14 @@ router.patch("/inventions/:id/vote", async (req, res) => {
 
 // Server-side ledger of pending invention model uploads. PATCH /model can only
 // attach an objectPath that was previously minted by THIS server for the
-// matching invention. Prevents callers from pointing inventions at — or
-// escalating ACLs of — arbitrary pre-existing private objects in the bucket.
-type PendingUpload = { inventionId: string; expiresAt: number };
+// matching invention by the SAME caller principal. Prevents callers from
+// pointing inventions at — or escalating ACLs of — arbitrary pre-existing
+// private objects in the bucket, and prevents one admin/inventor from sniping
+// another caller's freshly-minted upload URL.
+type PendingUpload = { inventionId: string; principal: string; expiresAt: number };
 const pendingInventionUploads = new Map<string, PendingUpload>();
 const PENDING_UPLOAD_TTL_MS = 60 * 60 * 1000; // 1 hour
-function rememberPendingUpload(objectPath: string, inventionId: string) {
+function rememberPendingUpload(objectPath: string, inventionId: string, principal: string) {
   // Sweep expired entries cheaply (cap memory).
   const now = Date.now();
   if (pendingInventionUploads.size > 5000) {
@@ -787,9 +790,9 @@ function rememberPendingUpload(objectPath: string, inventionId: string) {
       if (v.expiresAt < now) pendingInventionUploads.delete(k);
     }
   }
-  pendingInventionUploads.set(objectPath, { inventionId, expiresAt: now + PENDING_UPLOAD_TTL_MS });
+  pendingInventionUploads.set(objectPath, { inventionId, principal, expiresAt: now + PENDING_UPLOAD_TTL_MS });
 }
-function consumePendingUpload(objectPath: string, inventionId: string): boolean {
+function consumePendingUpload(objectPath: string, inventionId: string, principal: string): boolean {
   const entry = pendingInventionUploads.get(objectPath);
   if (!entry) return false;
   if (entry.expiresAt < Date.now()) {
@@ -797,8 +800,30 @@ function consumePendingUpload(objectPath: string, inventionId: string): boolean 
     return false;
   }
   if (entry.inventionId !== inventionId) return false;
+  if (entry.principal !== principal) return false;
   pendingInventionUploads.delete(objectPath);
   return true;
+}
+
+// Reject paths that try to traverse, contain empty segments, or include unsafe
+// characters. The route validator already enforces a /objects/ prefix; this
+// adds defense-in-depth before we hand the path to the storage layer.
+function isSafeObjectPath(p: string): boolean {
+  if (!p.startsWith("/objects/")) return false;
+  if (p.length > 512) return false;
+  if (p.includes("..") || p.includes("//") || p.includes("\\")) return false;
+  if (!/^\/objects\/[A-Za-z0-9._\-/]+$/.test(p)) return false;
+  return true;
+}
+
+// Derive a stable fingerprint for the calling principal. We don't have a real
+// per-user auth system here, so we bind a presigned upload to (a) the admin
+// token that minted it and (b) an optional inventor identifier supplied by the
+// client. PATCH must present the exact same pair.
+function callerPrincipal(req: import("express").Request, fallback?: string | null): string {
+  const token = (req.headers["x-admin-token"] as string | undefined)?.trim() || "";
+  const inventor = (req.headers["x-inventor-id"] as string | undefined)?.trim() || fallback || "";
+  return createHash("sha256").update(`${token}::${inventor}`).digest("hex");
 }
 
 // Lightweight admin-token guard: requires an x-admin-token header. If the
@@ -829,7 +854,8 @@ router.post("/inventions/:id/model/upload-url", async (req, res) => {
     if (!name || !/\.(glb|gltf)$/i.test(name)) {
       return res.status(400).json({ ok: false, error: "name must end in .glb or .gltf" });
     }
-    const [existing] = await db.select({ id: inventionsTable.id }).from(inventionsTable)
+    const [existing] = await db.select({ id: inventionsTable.id, proposedBy: inventionsTable.proposedBy })
+      .from(inventionsTable)
       .where(eq(inventionsTable.inventionId, id)).limit(1);
     if (!existing) return res.status(404).json({ ok: false, error: "Invention not found" });
 
@@ -837,7 +863,11 @@ router.post("/inventions/:id/model/upload-url", async (req, res) => {
     const svc = new ObjectStorageService();
     const uploadURL = await svc.getObjectEntityUploadURL();
     const objectPath = svc.normalizeObjectEntityPath(uploadURL);
-    rememberPendingUpload(objectPath, id);
+    if (!isSafeObjectPath(objectPath)) {
+      return res.status(500).json({ ok: false, error: "Generated object path failed safety validation" });
+    }
+    const principal = callerPrincipal(req, existing.proposedBy);
+    rememberPendingUpload(objectPath, id, principal);
     return res.json({ ok: true, uploadURL, objectPath, contentType: contentType || "model/gltf-binary", inventionId: id });
   } catch (err) {
     logger.error({ err }, "Failed to create invention model upload URL");
@@ -854,26 +884,38 @@ router.patch("/inventions/:id/model", async (req, res) => {
     }
     const { id } = req.params;
     const { objectPath } = (req.body || {}) as { objectPath?: string | null };
-    if (objectPath !== null && (!objectPath || typeof objectPath !== "string" || !objectPath.startsWith("/objects/"))) {
-      return res.status(400).json({ ok: false, error: "objectPath must start with /objects/ (or be null to clear)" });
+    if (objectPath !== null && (!objectPath || typeof objectPath !== "string" || !isSafeObjectPath(objectPath))) {
+      return res.status(400).json({ ok: false, error: "objectPath must be a safe /objects/... path (or null to clear)" });
     }
+    // Look up the invention so we can (a) confirm it exists and (b) bind ACL
+    // ownership to the recorded proposer rather than just the synthetic
+    // invention id.
+    const [existing] = await db.select({
+      id: inventionsTable.id,
+      proposedBy: inventionsTable.proposedBy,
+    }).from(inventionsTable).where(eq(inventionsTable.inventionId, id)).limit(1);
+    if (!existing) return res.status(404).json({ ok: false, error: "Invention not found" });
+
     // Authorization: the caller may only attach an objectPath that THIS server
-    // minted for THIS invention via the matching presign call. This prevents
-    // arbitrary bucket-path attachment and ACL escalation of pre-existing
-    // private objects.
-    if (objectPath && !consumePendingUpload(objectPath, id)) {
-      return res.status(403).json({ ok: false, error: "objectPath was not issued for this invention or has expired" });
+    // minted for THIS invention via the matching presign call AND from the
+    // same caller principal (admin token + optional inventor id). This blocks
+    // arbitrary bucket-path attachment, cross-invention reuse, and snipe of
+    // another inventor's freshly minted upload URL.
+    const principal = callerPrincipal(req, existing.proposedBy);
+    if (objectPath && !consumePendingUpload(objectPath, id, principal)) {
+      return res.status(403).json({ ok: false, error: "objectPath was not issued to this caller for this invention, or has expired" });
     }
     // Stamp an ACL policy on the freshly uploaded object so the gated serve
     // route at GET /storage/objects/:id will allow read. Inventor diagrams are
     // intentionally world-readable (they are embedded in the public chat),
-    // hence visibility="public".
+    // hence visibility="public". Owner is the proposer so future write/replace
+    // checks can be enforced server-side.
     if (objectPath) {
       try {
         const { ObjectStorageService } = await import("../lib/objectStorage");
         const svc = new ObjectStorageService();
         await svc.trySetObjectEntityAclPolicy(objectPath, {
-          owner: `invention:${id}`,
+          owner: existing.proposedBy || `invention:${id}`,
           visibility: "public",
         });
       } catch (aclErr) {
