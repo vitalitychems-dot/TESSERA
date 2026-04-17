@@ -816,14 +816,15 @@ function isSafeObjectPath(p: string): boolean {
   return true;
 }
 
-// Derive a stable fingerprint for the calling principal. We don't have a real
-// per-user auth system here, so we bind a presigned upload to (a) the admin
-// token that minted it and (b) an optional inventor identifier supplied by the
-// client. PATCH must present the exact same pair.
-function callerPrincipal(req: import("express").Request, fallback?: string | null): string {
+// Derive a stable fingerprint for the calling principal. This system has no
+// per-end-user identity — the only verified credential is the shared admin
+// token. We deliberately do NOT mix in client-supplied headers (e.g. an
+// inventor id) because they are unverified and trivially spoofable. The
+// principal is therefore admin-scope: any holder of the admin token is
+// considered the same writer for ACL purposes.
+function callerPrincipal(req: import("express").Request): string {
   const token = (req.headers["x-admin-token"] as string | undefined)?.trim() || "";
-  const inventor = (req.headers["x-inventor-id"] as string | undefined)?.trim() || fallback || "";
-  return createHash("sha256").update(`${token}::${inventor}`).digest("hex");
+  return `admin:${createHash("sha256").update(token).digest("hex").slice(0, 32)}`;
 }
 
 // Lightweight admin-token guard: requires an x-admin-token header. If the
@@ -866,7 +867,7 @@ router.post("/inventions/:id/model/upload-url", async (req, res) => {
     if (!isSafeObjectPath(objectPath)) {
       return res.status(500).json({ ok: false, error: "Generated object path failed safety validation" });
     }
-    const principal = callerPrincipal(req, existing.proposedBy);
+    const principal = callerPrincipal(req);
     rememberPendingUpload(objectPath, id, principal);
     return res.json({ ok: true, uploadURL, objectPath, contentType: contentType || "model/gltf-binary", inventionId: id });
   } catch (err) {
@@ -896,30 +897,50 @@ router.patch("/inventions/:id/model", async (req, res) => {
     }).from(inventionsTable).where(eq(inventionsTable.inventionId, id)).limit(1);
     if (!existing) return res.status(404).json({ ok: false, error: "Invention not found" });
 
-    // Authorization: the caller may only attach an objectPath that THIS server
-    // minted for THIS invention via the matching presign call AND from the
-    // same caller principal (admin token + optional inventor id). This blocks
-    // arbitrary bucket-path attachment, cross-invention reuse, and snipe of
-    // another inventor's freshly minted upload URL.
-    const principal = callerPrincipal(req, existing.proposedBy);
+    // Authorization layer 1 (path provenance): the caller may only attach an
+    // objectPath that THIS server minted for THIS invention via the matching
+    // presign call AND from the same caller principal (the validated admin
+    // token). This blocks arbitrary bucket-path attachment, cross-invention
+    // reuse, and snipe of another caller's freshly minted upload URL.
+    const principal = callerPrincipal(req);
     if (objectPath && !consumePendingUpload(objectPath, id, principal)) {
       return res.status(403).json({ ok: false, error: "objectPath was not issued to this caller for this invention, or has expired" });
     }
-    // Stamp an ACL policy on the freshly uploaded object so the gated serve
-    // route at GET /storage/objects/:id will allow read. Inventor diagrams are
-    // intentionally world-readable (they are embedded in the public chat),
-    // hence visibility="public". Owner is the proposer so future write/replace
-    // checks can be enforced server-side.
+    // Authorization layer 2 (object ownership ACL): load the freshly-uploaded
+    // object and enforce ACL semantics directly via canAccessObjectEntity.
+    //   - First attach: the object has no policy yet, so we stamp one with
+    //     owner=principal and visibility=public.
+    //   - Re-attach / replace: a policy already exists. The caller must hold
+    //     WRITE permission per the persisted ACL (owner match) before we'll
+    //     swap the model. If a different principal owns the object, we 403.
     if (objectPath) {
       try {
         const { ObjectStorageService } = await import("../lib/objectStorage");
+        const { ObjectPermission } = await import("../lib/objectAcl");
         const svc = new ObjectStorageService();
-        await svc.trySetObjectEntityAclPolicy(objectPath, {
-          owner: existing.proposedBy || `invention:${id}`,
-          visibility: "public",
-        });
+        const objectFile = await svc.getObjectEntityFile(objectPath);
+        const { getObjectAclPolicy } = await import("../lib/objectAcl");
+        const existingPolicy = await getObjectAclPolicy(objectFile);
+        if (existingPolicy) {
+          const allowed = await svc.canAccessObjectEntity({
+            userId: principal,
+            objectFile,
+            requestedPermission: ObjectPermission.WRITE,
+          });
+          if (!allowed) {
+            return res.status(403).json({ ok: false, error: "Caller does not own this object per ACL" });
+          }
+        } else {
+          // First time we've seen this object — stamp ownership now so future
+          // PATCH calls (replace/clear) can be enforced from persisted ACL
+          // metadata, not just the in-memory pending-upload ledger.
+          await svc.trySetObjectEntityAclPolicy(objectPath, {
+            owner: principal,
+            visibility: "public",
+          });
+        }
       } catch (aclErr) {
-        logger.error({ err: aclErr, objectPath }, "Failed to set ACL on invention model");
+        logger.error({ err: aclErr, objectPath }, "Failed to enforce/apply ACL on invention model");
         return res.status(500).json({ ok: false, error: "Failed to apply object ACL" });
       }
     }
