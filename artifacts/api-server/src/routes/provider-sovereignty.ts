@@ -3,7 +3,10 @@ import { logger } from "../lib/logger";
 import { getProviderConfigs, getAllProviderProfiles, initializeProviderProfiles } from "../lib/provider-registry";
 import { logProviderCall, getRecentProviderCalls, getTotalCallStats, getCallCountsByProvider } from "../lib/provider-call-logger";
 import { analyzeAllProviders, analyzeProvider, compareProvidersForPrompt } from "../lib/reverse-engineering-engine";
-import { computeSovereigntyStatus, runDryRun, getLatestSovereigntyMetrics } from "../lib/sovereignty-monitor";
+import {
+  computeSovereigntyStatus, runDryRun, getLatestSovereigntyMetrics,
+  enableHardDisconnect, disableHardDisconnect, getHardDisconnectStatus, runFullDryRunDetach,
+} from "../lib/sovereignty-monitor";
 import { db } from "@workspace/db";
 import { providerDiffsTable } from "@workspace/db";
 import { desc } from "drizzle-orm";
@@ -183,6 +186,40 @@ router.post("/provider-sovereignty/initialize", async (_req, res) => {
   } catch (err) {
     logger.error({ err }, "POST /provider-sovereignty/initialize failed");
     return res.status(500).json({ ok: false, error: "Failed to initialize" });
+  }
+});
+
+router.get("/provider-sovereignty/hard-disconnect", (_req, res) => {
+  return res.json({ ok: true, ...getHardDisconnectStatus() });
+});
+
+router.post("/provider-sovereignty/hard-disconnect/enable", (_req, res) => {
+  try {
+    const result = enableHardDisconnect();
+    return res.json({ ok: true, ...result, status: getHardDisconnectStatus() });
+  } catch (err) {
+    logger.error({ err }, "POST /provider-sovereignty/hard-disconnect/enable failed");
+    return res.status(500).json({ ok: false, error: "Failed to enable hard-disconnect" });
+  }
+});
+
+router.post("/provider-sovereignty/hard-disconnect/disable", (_req, res) => {
+  try {
+    const result = disableHardDisconnect();
+    return res.json({ ok: true, ...result, status: getHardDisconnectStatus() });
+  } catch (err) {
+    logger.error({ err }, "POST /provider-sovereignty/hard-disconnect/disable failed");
+    return res.status(500).json({ ok: false, error: "Failed to disable hard-disconnect" });
+  }
+});
+
+router.post("/provider-sovereignty/full-dry-run", async (_req, res) => {
+  try {
+    const result = await runFullDryRunDetach();
+    return res.json({ ok: true, ...result });
+  } catch (err) {
+    logger.error({ err }, "POST /provider-sovereignty/full-dry-run failed");
+    return res.status(500).json({ ok: false, error: "Failed to run full dry-run detach" });
   }
 });
 

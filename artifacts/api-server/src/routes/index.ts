@@ -67,6 +67,8 @@ import feedbackRouter from "./feedback";
 import storageRouter from "./storage";
 import incomeAndLeadsRouter from "./income-and-leads";
 import tesseraCodexRouter from "./tessera-codex";
+import localModelsRouter from "./local-models";
+import e2eSovereigntyRouter from "./e2e-sovereignty";
 import { startWalletObserver } from "../lib/wallet-observer";
 import { startFreeStuffScraper } from "../lib/free-stuff-scraper";
 import { startBountyRefresher } from "../lib/code-bounties-real";
@@ -143,6 +145,8 @@ router.use(realityAuditRouter);
 router.use(storageRouter);
 router.use(incomeAndLeadsRouter);
 router.use(tesseraCodexRouter);
+router.use(localModelsRouter);
+router.use(e2eSovereigntyRouter);
 
 startWalletObserver();
 startFreeStuffScraper();

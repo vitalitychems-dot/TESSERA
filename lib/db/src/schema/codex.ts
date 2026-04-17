@@ -131,3 +131,24 @@ export const insertNextFiveImprovementSchema = createInsertSchema(nextFiveImprov
 export type InsertNextFiveImprovement = z.infer<typeof insertNextFiveImprovementSchema>;
 export type NextFiveImprovementRow = typeof nextFiveImprovementsTable.$inferSelect;
 
+export const corpusAmendmentsTable = pgTable("corpus_amendments", {
+  id: serial("id").primaryKey(),
+  amendmentId: text("amendment_id").notNull().unique(),
+  kind: text("kind").notNull(),
+  findingId: text("finding_id"),
+  sessionId: text("session_id").notNull(),
+  targetIds: jsonb("target_ids").notNull().$type<string[]>().default([]),
+  payload: jsonb("payload").notNull().$type<Record<string, unknown>>().default({}),
+  ratifiedBy: jsonb("ratified_by").notNull().$type<string[]>().default([]),
+  votingRecord: jsonb("voting_record").$type<Record<string, string>>().default({}),
+  ledgerIndex: integer("ledger_index"),
+  ledgerHash: text("ledger_hash"),
+  appliedAt: timestamp("applied_at").notNull().defaultNow(),
+}, (t) => [
+  index("corpus_amend_kind_idx").on(t.kind),
+  index("corpus_amend_session_idx").on(t.sessionId),
+]);
+export const insertCorpusAmendmentSchema = createInsertSchema(corpusAmendmentsTable).omit({ id: true, appliedAt: true });
+export type InsertCorpusAmendment = z.infer<typeof insertCorpusAmendmentSchema>;
+export type CorpusAmendmentRow = typeof corpusAmendmentsTable.$inferSelect;
+
