@@ -761,15 +761,18 @@ function FullscreenView({ spec, onClose }: { spec: Object3DSpec; onClose: () => 
         </div>
       )}
       <div className="flex-1">
-        <Canvas
-          camera={{ position: [0, 1.5, isMobile ? 7 : 6], fov: isMobile ? 55 : 50 }}
-          gl={{ antialias: !isMobile, alpha: false, powerPreference: isMobile ? "default" : "high-performance" }}
-          dpr={isMobile ? [1, 1.5] : [1, 2]}
-        >
-          <color attach="background" args={["#030108"]} />
-          <fog attach="fog" args={["#030108", 20, 50]} />
-          <SceneContent spec={spec} />
-        </Canvas>
+        <Object3DErrorBoundary fallback={<Object2DFallback spec={spec} />}>
+          <Canvas
+            camera={{ position: [0, 1.5, isMobile ? 7 : 6], fov: isMobile ? 55 : 50 }}
+            gl={{ antialias: !isMobile, alpha: false, powerPreference: isMobile ? "default" : "high-performance" }}
+            dpr={isMobile ? [1, 1.5] : [1, 2]}
+            fallback={<Object2DFallback spec={spec} />}
+          >
+            <color attach="background" args={["#030108"]} />
+            <fog attach="fog" args={["#030108", 20, 50]} />
+            <SceneContent spec={spec} />
+          </Canvas>
+        </Object3DErrorBoundary>
       </div>
     </div>
   );
