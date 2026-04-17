@@ -1029,6 +1029,8 @@ async function autonomousTick() {
     }
 
     // 3. Vote: debating → approved (auto-majority) or rejected.
+    const { getTunable } = await import("../lib/system-tunables.js");
+    const minVotes = getTunable("consensusMinVotes");
     for (const inv of (byStatus.debating || []).slice(0, 3)) {
       const currentVotes = (inv.votes as { yes: number; no: number; abstain: number }) || { yes: 0, no: 0, abstain: 0 };
       // Simulate a batch of council votes weighted by feasibility.
@@ -1045,8 +1047,8 @@ async function autonomousTick() {
       const total = newVotes.yes + newVotes.no + newVotes.abstain;
       const approval = total > 0 ? newVotes.yes / total : 0;
       let nextStatus = inv.status;
-      if (total >= 30 && approval >= 2 / 3) nextStatus = "approved";
-      else if (total >= 30 && approval < 0.35) nextStatus = "rejected";
+      if (total >= minVotes && approval >= 2 / 3) nextStatus = "approved";
+      else if (total >= minVotes && approval < 0.35) nextStatus = "rejected";
       await db.update(inventionsTable).set({
         votes: newVotes,
         status: nextStatus,
@@ -1070,7 +1072,8 @@ async function autonomousTick() {
     }
 
     // 5. Progress: building → building + progress, eventually built.
-    for (const inv of (byStatus.building || []).slice(0, 5)) {
+    const buildsPerTick = getTunable("buildsPerTick");
+    for (const inv of (byStatus.building || []).slice(0, buildsPerTick)) {
       const cur = inv.buildProgress ?? 0;
       // Deterministic build step: 8 + (hash % 14) percent.
       const step = 8 + ((hashStringFNV(inv.title) + autoLoopState.ticks) % 14);
@@ -1088,6 +1091,22 @@ async function autonomousTick() {
           buildProgress: next,
           updatedAt: new Date(),
         }).where(eq(inventionsTable.id, inv.id));
+      }
+    }
+
+    // 6.5. Synthesis: every 10 ticks, combine all built inventions into live
+    //      system improvements + seed gap-closer proposals for weak categories.
+    if (autoLoopState.ticks % 10 === 0 && autoLoopState.ticks > 0) {
+      try {
+        const { synthesizeBuiltInventions } = await import("../lib/invention-synthesis.js");
+        const result = await synthesizeBuiltInventions({ applyChanges: true });
+        autoLoopState.generated += result.seededProposals.length;
+        pushEvent(
+          "synthesize",
+          `Synthesis #${result.id.slice(-6)}: combined ${result.totalBuiltInventions} built, applied ${result.tunableChanges.length} tunable change(s), seeded ${result.seededProposals.length} gap-closer(s).`,
+        );
+      } catch (err) {
+        logger.warn({ err }, "Autonomous synthesis tick failed");
       }
     }
 
