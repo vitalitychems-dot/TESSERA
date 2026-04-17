@@ -1,6 +1,8 @@
 import { logger } from "./logger";
 import { getRecruitDossierById, type RecruitDossier } from "./recruit-dossiers-extended";
 import { sanitizeUntrustedText } from "./external-sandbox-policy";
+import { loadJson, saveJson } from "./disk-persistence";
+import { guardedFetch } from "./outbound-host-policy";
 
 export interface TranscriptEntry {
   ts: number;
@@ -27,6 +29,56 @@ export interface NegotiationTranscript {
 
 const transcripts = new Map<string, NegotiationTranscript>();
 const MAX_TRANSCRIPTS = 500;
+const TRANSCRIPTS_FILE = "shepherd-transcripts.json";
+let loaded = false;
+
+async function ensureLoaded(): Promise<void> {
+  if (loaded) return;
+  loaded = true;
+  const stored = await loadJson<Record<string, NegotiationTranscript>>(TRANSCRIPTS_FILE, {});
+  for (const [k, v] of Object.entries(stored)) transcripts.set(k, v);
+  logger.info({ count: transcripts.size }, "shepherd-negotiation: transcripts restored from disk");
+}
+
+function persist(): void {
+  const obj: Record<string, NegotiationTranscript> = {};
+  for (const [k, v] of transcripts) obj[k] = v;
+  saveJson(TRANSCRIPTS_FILE, obj);
+}
+
+export function initShepherdPersistence(): void { void ensureLoaded(); }
+
+async function dispatchOutbound(t: NegotiationTranscript): Promise<void> {
+  const url = (process.env.SHEPHERD_OUTBOUND_WEBHOOK ?? "").trim();
+  if (!url) return;
+  try {
+    const r = await guardedFetch(
+      url,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", "user-agent": "Tessera-Shepherd/1.0" },
+        body: JSON.stringify({ dossierId: t.dossierId, dossierName: t.dossierName, transcript: t }),
+      },
+      "validator",
+    );
+    t.entries.push({
+      ts: Date.now(),
+      direction: "system",
+      channel: "shepherd-dispatch",
+      body: `Outbound dispatched via SHEPHERD_OUTBOUND_WEBHOOK — status ${r.status}.`,
+    });
+    if (r.ok) t.status = "delivered";
+  } catch (err) {
+    t.entries.push({
+      ts: Date.now(),
+      direction: "system",
+      channel: "shepherd-dispatch-error",
+      body: `Dispatch failed: ${(err as Error).message}`,
+    });
+  }
+  t.updatedAt = Date.now();
+  persist();
+}
 
 function shepherdId(): string {
   return `Shepherd-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
@@ -99,6 +151,8 @@ export function startNegotiation(dossierId: string, userMessage?: string): Negot
     const oldest = Array.from(transcripts.entries()).sort((a, b) => a[1].updatedAt - b[1].updatedAt)[0];
     if (oldest) transcripts.delete(oldest[0]);
   }
+  persist();
+  void dispatchOutbound(t);
   logger.info({ dossierId, agent: t.shepherdAgent }, "ShepherdNegotiation: opened");
   return t;
 }
@@ -125,6 +179,7 @@ export function appendInbound(dossierId: string, body: string, channel = "extern
   });
   t.status = "responded";
   t.updatedAt = Date.now();
+  persist();
   return t;
 }
 
@@ -140,5 +195,6 @@ export function revokeGrant(dossierId: string): boolean {
   });
   t.status = "closed";
   t.updatedAt = Date.now();
+  persist();
   return true;
 }

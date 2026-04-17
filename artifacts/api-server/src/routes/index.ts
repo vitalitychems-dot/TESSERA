@@ -69,6 +69,8 @@ import incomeAndLeadsRouter from "./income-and-leads";
 import { startWalletObserver } from "../lib/wallet-observer";
 import { startFreeStuffScraper } from "../lib/free-stuff-scraper";
 import { startBountyRefresher } from "../lib/code-bounties-real";
+import { startIncomeExecutor } from "../lib/income-executor";
+import { initShepherdPersistence } from "../lib/shepherd-negotiation";
 
 const router: IRouter = Router();
 
@@ -143,5 +145,7 @@ router.use(incomeAndLeadsRouter);
 startWalletObserver();
 startFreeStuffScraper();
 startBountyRefresher();
+startIncomeExecutor();
+initShepherdPersistence();
 
 export default router;

@@ -147,7 +147,7 @@ export default function IncomeWorkflowPage() {
                       <div className="text-[9px] text-slate-500 font-mono truncate">{d.signature}</div>
                     </div>
                     <div className="text-[9px] text-slate-500 font-mono shrink-0">
-                      {new Date(d.blockTime * 1000).toLocaleString()}
+                      {new Date(d.blockTime).toLocaleString()}
                     </div>
                     <ExternalLink size={10} className="text-slate-500 shrink-0" />
                   </a>
