@@ -1055,7 +1055,7 @@ async function runAgentPostVoting(cycle: number): Promise<void> {
     if (recentReplies.length === 0) return;
 
     const start = cycle % FORUM_AGENTS.length;
-    const voters = [...FORUM_AGENTS.slice(start), ...FORUM_AGENTS.slice(0, start)].slice(0, 6);
+    const voters = [...FORUM_AGENTS.slice(start), ...FORUM_AGENTS.slice(0, start)];
     let cast = 0;
     for (let i = 0; i < voters.length; i++) {
       const voter = voters[i];
