@@ -1112,13 +1112,15 @@ function ApodPanel({ item, index, total }: { item: ApodItem; index: number; tota
     }
   });
 
-  if (!texture) return null;
-
   return (
     <group position={[x, 15, z]} rotation={[0, yaw, 0]}>
       <mesh ref={meshRef}>
         <planeGeometry args={[16, 10]} />
-        <meshBasicMaterial map={texture} side={THREE.DoubleSide} transparent opacity={0.85} />
+        {texture ? (
+          <meshBasicMaterial map={texture} side={THREE.DoubleSide} transparent opacity={0.85} />
+        ) : (
+          <meshBasicMaterial color="#1e1b4b" side={THREE.DoubleSide} transparent opacity={0.4} />
+        )}
       </mesh>
       <SafeText
         position={[0, -6, 0]}
@@ -1347,7 +1349,7 @@ function SceneContent({ showDimensions, isMobile, apodItems, userZodiac, dimensi
       {showApod && apodItems.length > 0 && <ApodGallery items={apodItems} />}
       {showSacredOverlays && <FlowerOfLifeOverlay />}
       {showSacredOverlays && <MetatronsCubeOverlay />}
-      <Stars radius={250} depth={150} count={isMobile ? 2000 : 8000} factor={3.5} saturation={0.3} fade speed={0.4} />
+      <Stars radius={250} depth={150} count={isMobile ? (showApod ? 1500 : 600) : 8000} factor={3.5} saturation={0.3} fade speed={0.4} />
       <NebulaParticles />
       {moonPhase && (
         <FloatingInfoPanel position={isMobile ? [-22, 14, -10] : [-40, 22, -18]} title="Moon Phase" value={moonPhase} color="#94a3b8" isMobile={isMobile} />
