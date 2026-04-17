@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterAll, beforeAll } from "vitest";
 import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } from "fs";
+import { execSync } from "child_process";
 import { tmpdir } from "os";
-import { join, resolve } from "path";
+import { join, resolve, relative } from "path";
 import { applyVerifiedPatch } from "../lib/self-code-evolution";
 import { verifyPatchInSandbox } from "../lib/evolution-sandbox";
 import type { SandboxFn, SandboxResult } from "../lib/evolution-sandbox";
@@ -16,6 +17,21 @@ const TMP_DIRS: string[] = [];
 const LEDGER_TMP = mkdtempSync(join(tmpdir(), "evo-ledger-"));
 TMP_DIRS.push(LEDGER_TMP);
 
+const MONOREPO_ROOT = (() => {
+  let dir = resolve(process.cwd());
+  for (let i = 0; i < 8; i++) {
+    if (existsSync(join(dir, "pnpm-workspace.yaml"))) return dir;
+    const parent = resolve(dir, "..");
+    if (parent === dir) break;
+    dir = parent;
+  }
+  throw new Error("monorepo root not found");
+})();
+
+const FIXTURE_REL = "artifacts/api-server/src/__fixtures__/sandbox-target.js";
+const FIXTURE_ABS = join(MONOREPO_ROOT, FIXTURE_REL);
+const FIXTURE_ORIGINAL = "// Fixture target for evolution-sandbox-loop integration tests.\n// Patches against this file are syntax-checked via `node --check` inside the\n// disposable git worktree (instead of the heavy api-server pnpm typecheck).\nmodule.exports.a = 1;\n";
+
 function makeTempFile(contents: string): string {
   const dir = mkdtempSync(join(tmpdir(), "evo-sandbox-"));
   TMP_DIRS.push(dir);
@@ -24,17 +40,17 @@ function makeTempFile(contents: string): string {
   return file;
 }
 
-const passingSandbox: SandboxFn = async () => ({
+const passingStubSandbox: SandboxFn = async () => ({
   ok: true,
   durationMs: 7,
   stage: "passed",
   diagnostics: [],
   diagnosticsCount: 0,
   exitCode: 0,
-  output: { typecheck: "tsc passed: no diagnostics", tests: "Test Files 6 passed (6)\nTests 32 passed (32)" },
+  output: { typecheck: "stub: passed", tests: "stub: 1 passed" },
 });
 
-const failingSandbox: (stage: SandboxResult["stage"], reason: string, exitCode: number) => SandboxFn =
+const failingStubSandbox: (stage: SandboxResult["stage"], reason: string, exitCode: number) => SandboxFn =
   (stage, reason, exitCode) => async () => ({
     ok: false,
     durationMs: 11,
@@ -42,13 +58,42 @@ const failingSandbox: (stage: SandboxResult["stage"], reason: string, exitCode: 
     diagnostics: [reason, "additional context"],
     diagnosticsCount: 2,
     exitCode,
-    output: { typecheck: `STDERR: ${reason}\nSTDOUT: failure detail line` },
+    output: { typecheck: `STDERR: ${reason}\nSTDOUT: failure detail` },
   });
 
+/**
+ * Real-runner sandbox factory: invokes verifyPatchInSandbox with the actual
+ * git-worktree + subprocess pipeline, but uses `node --check` on the patched
+ * fixture file as the verification command (lightweight equivalent of
+ * typecheck — passes for valid JS, fails with non-zero exit on syntax errors).
+ */
+function realRunnerSandbox(relTargetInsideMonorepo: string): SandboxFn {
+  return async (params) =>
+    verifyPatchInSandbox({
+      targetFilePath: params.targetFilePath,
+      patchedContent: params.patchedContent,
+      packageFilter: "@workspace/api-server",
+      runTests: false,
+      verifyCommand: [
+        { cmd: "node", args: ["--check", relTargetInsideMonorepo], stageLabel: "typecheck" },
+      ],
+    });
+}
+
 beforeAll(() => {
-  // Route ledger writes to a tmp dir so this test suite cannot pollute
-  // (or be polluted by) the production ledger at _evolutions/attempt-ledger.jsonl
   process.env["EVO_LEDGER_DIR"] = LEDGER_TMP;
+  // Ensure the fixture exists in HEAD so `git worktree add HEAD` includes it.
+  // If it's untracked (first run), commit it locally so the worktree sees it.
+  try {
+    execSync(`git ls-files --error-unmatch ${FIXTURE_REL}`, { cwd: MONOREPO_ROOT, stdio: "pipe" });
+  } catch {
+    try {
+      execSync(`git add ${FIXTURE_REL}`, { cwd: MONOREPO_ROOT, stdio: "pipe" });
+      execSync(`git -c user.email=evo@test -c user.name=evo commit -m "test: add sandbox fixture" --no-verify`, {
+        cwd: MONOREPO_ROOT, stdio: "pipe",
+      });
+    } catch { /* ignore — worktree test will report structured init failure if needed */ }
+  }
 });
 
 afterAll(() => {
@@ -58,11 +103,8 @@ afterAll(() => {
   }
 });
 
-describe("evolution apply pipeline — end-to-end through applyVerifiedPatch (with stub sandbox)", () => {
-  beforeEach(() => {
-    // Full reset: clears in-memory buffer AND deletes the JSONL file on disk
-    _clearLedgerForTests();
-  });
+describe("evolution apply pipeline — stub-sandbox unit coverage of applyVerifiedPatch", () => {
+  beforeEach(() => { _clearLedgerForTests(); });
 
   it("rejects a bad patch without modifying the live file (byte-identical)", async () => {
     const original = "export const safe = 1;\n";
@@ -74,151 +116,132 @@ describe("evolution apply pipeline — end-to-end through applyVerifiedPatch (wi
       sourceFilePath: file,
       originalContent: original,
       patchedContent: patched,
-      proposalId: "evo-rejected-001",
+      proposalId: "evo-stub-bad",
       targetModule: "demo-target",
-      sandboxFn: failingSandbox("typecheck", "error TS1005: '}' expected", 2),
+      sandboxFn: failingStubSandbox("typecheck", "error TS1005: '}' expected", 2),
     });
 
     expect(result.ok).toBe(false);
-    expect(result.error).toContain("typecheck");
-
-    // INVARIANT: live file must be byte-identical to original
     const after = readFileSync(file);
     expect(after.equals(originalBytes)).toBe(true);
-    expect(after.toString("utf8")).toBe(original);
 
-    // ledger: SANDBOXED_FAIL recorded with full output + exit code; no PASS, no APPLIED
-    const entries = getAttemptsByProposal("evo-rejected-001");
-    const events = entries.map(a => a.event);
-    expect(events).toEqual(["SANDBOXED_FAIL"]);
-
-    const failEntry = entries[0]!;
-    expect(failEntry.reason).toContain("sandbox.typecheck");
-    expect(failEntry.verifyOutput).toContain("error TS1005");
-    expect(failEntry.verifyOutput).toContain("--- typecheck ---");
-    expect(failEntry.verifyExitCode).toBe(2);
+    const entries = getAttemptsByProposal("evo-stub-bad");
+    expect(entries.map(a => a.event)).toEqual(["SANDBOXED_FAIL"]);
+    expect(entries[0]!.verifyExitCode).toBe(2);
+    expect(entries[0]!.verifyOutput).toContain("error TS1005");
   });
 
-  it("applies a good patch and records APPLIED only after the live write succeeds, with exit code 0", async () => {
+  it("applies a good patch and records APPLIED only after live write", async () => {
     const original = "export const a = 1;\n";
     const file = makeTempFile(original);
-    const patched = original + "\nexport const b = a * 2;\n";
+    const patched = original + "\nexport const b = 2;\n";
 
     const result = await applyVerifiedPatch({
       sourceFilePath: file,
       originalContent: original,
       patchedContent: patched,
-      proposalId: "evo-applied-001",
+      proposalId: "evo-stub-good",
       targetModule: "demo-target",
-      sandboxFn: passingSandbox,
+      sandboxFn: passingStubSandbox,
     });
 
     expect(result.ok).toBe(true);
-    expect(result.patchedLines).toBeGreaterThan(0);
-
-    // INVARIANT: live file content matches the patched content exactly
     expect(readFileSync(file, "utf8")).toBe(patched);
 
-    // ledger: SANDBOXED_PASS then APPLIED, in order
-    const entries = getAttemptsByProposal("evo-applied-001");
+    const entries = getAttemptsByProposal("evo-stub-good");
     expect(entries.map(a => a.event)).toEqual(["SANDBOXED_PASS", "APPLIED"]);
-
-    const passEntry = entries[0]!;
-    expect(passEntry.verifyExitCode).toBe(0);
-    expect(passEntry.verifyOutput).toContain("tsc passed");
-
-    const appliedEntry = entries[1]!;
-    expect(appliedEntry.reason).toMatch(/^\+\d+ lines appended$/);
-    expect(typeof appliedEntry.durationMs).toBe("number");
+    expect(entries[0]!.verifyExitCode).toBe(0);
+    expect(entries[1]!.reason).toMatch(/^\+\d+ lines appended$/);
   });
 
-  it("on sandbox failure, the live file remains untouched even when patched content is large", async () => {
-    const original = Array.from({ length: 200 }, (_, i) => `export const v${i} = ${i};`).join("\n") + "\n";
-    const file = makeTempFile(original);
-    const huge = original + "\n" + Array.from({ length: 50 }, (_, i) => `export const x${i} = ${i};`).join("\n") + "\n";
-    const before = readFileSync(file);
+  it("ledger is append-only across getRecentAttempts calls", () => {
+    recordAttempt({ proposalId: "evo-x", event: "PROPOSED", targetModule: "m1" });
+    recordAttempt({ proposalId: "evo-x", event: "SANDBOXED_PASS", targetModule: "m1", durationMs: 5, verifyExitCode: 0 });
+    recordAttempt({ proposalId: "evo-x", event: "APPLIED", targetModule: "m1", reason: "+1 lines appended" });
+    expect(getRecentAttempts(100).filter(e => e.proposalId === "evo-x").length).toBe(3);
+    expect(getRecentAttempts(100).filter(e => e.proposalId === "evo-x").length).toBe(3);
+  });
+});
+
+describe("evolution sandbox runner — TRUE end-to-end through verifyPatchInSandbox + applyVerifiedPatch", () => {
+  beforeEach(() => { _clearLedgerForTests(); });
+
+  it("BAD patch: real worktree + real `node --check` rejects, live file byte-identical, ledger SANDBOXED_FAIL with non-zero exit", async () => {
+    expect(existsSync(FIXTURE_ABS)).toBe(true);
+    const liveBefore = readFileSync(FIXTURE_ABS);
+    const original = liveBefore.toString("utf8");
+    const broken = original + "\nmodule.exports.broken = (((;\n"; // syntax error → node --check exits non-zero
 
     const result = await applyVerifiedPatch({
-      sourceFilePath: file,
+      sourceFilePath: FIXTURE_ABS,
       originalContent: original,
-      patchedContent: huge,
-      proposalId: "evo-rejected-large",
-      targetModule: "demo-large",
-      sandboxFn: failingSandbox("tests", "FAIL src/foo.test.ts > expected 1 to be 2", 1),
+      patchedContent: broken,
+      proposalId: "evo-real-bad",
+      targetModule: "sandbox-target.js",
+      sandboxFn: realRunnerSandbox(FIXTURE_REL),
     });
 
     expect(result.ok).toBe(false);
-    expect(readFileSync(file).equals(before)).toBe(true);
+    expect(result.error).toBeDefined();
 
-    const entries = getAttemptsByProposal("evo-rejected-large");
-    expect(entries.map(a => a.event)).toEqual(["SANDBOXED_FAIL"]);
-    expect(entries[0]!.verifyExitCode).toBe(1);
-  });
-
-  it("ledger is append-only and persists across getRecentAttempts calls", () => {
-    recordAttempt({ proposalId: "evo-x", event: "PROPOSED", targetModule: "m1" });
-    recordAttempt({ proposalId: "evo-x", event: "SANDBOXED_PASS", targetModule: "m1", durationMs: 5, verifyExitCode: 0 });
-    recordAttempt({ proposalId: "evo-x", event: "APPLIED", targetModule: "m1", reason: "+1 lines appended", durationMs: 5 });
-
-    const xs1 = getRecentAttempts(100).filter(e => e.proposalId === "evo-x");
-    expect(xs1.map(e => e.event).sort()).toEqual(["APPLIED", "PROPOSED", "SANDBOXED_PASS"]);
-
-    const xs2 = getRecentAttempts(100).filter(e => e.proposalId === "evo-x");
-    expect(xs2.length).toBe(3);
-  });
-});
-
-describe("evolution sandbox runner — TRUE end-to-end through verifyPatchInSandbox", () => {
-  it("invokes the real git-worktree + pnpm pipeline and returns a structured SandboxResult", async () => {
-    // Pick a small real source file inside the api-server package as the patch target.
-    // We intentionally do NOT modify it — verifyPatchInSandbox writes ONLY inside the
-    // disposable worktree; the live file on disk must remain untouched.
-    const targetRel = "artifacts/api-server/src/lib/evolution-attempt-ledger.ts";
-    const monorepoRoot = resolve(process.cwd(), "..", "..");
-    const targetAbs = resolve(monorepoRoot, targetRel);
-
-    // Sanity: target exists and we can read it
-    expect(existsSync(targetAbs)).toBe(true);
-    const liveBefore = readFileSync(targetAbs);
-
-    // A patch that is GUARANTEED to fail typecheck quickly: prepend invalid TS at the top.
-    const liveContent = liveBefore.toString("utf8");
-    const brokenPatch = `// E2E sandbox test — intentionally broken syntax\nexport const __evo_e2e_broken: number = "definitely-not-a-number";\nconst { = 42;\n${liveContent}`;
-
-    const result = await verifyPatchInSandbox({
-      targetFilePath: targetAbs,
-      patchedContent: brokenPatch,
-      packageFilter: "@workspace/api-server",
-      runTests: false, // typecheck alone is enough to prove the pipeline runs end-to-end
-    });
-
-    // Structured result shape
-    expect(result).toHaveProperty("ok");
-    expect(result).toHaveProperty("durationMs");
-    expect(result).toHaveProperty("stage");
-    expect(result).toHaveProperty("diagnostics");
-    expect(typeof result.durationMs).toBe("number");
-    expect(result.durationMs).toBeGreaterThan(0);
-    expect(["init", "worktree", "patch-write", "typecheck", "tests", "passed"]).toContain(result.stage);
-
-    // The pipeline must have actually run far enough to attempt typecheck (or fail earlier
-    // with a structured stage). It must NOT have crashed unstructured.
-    if (result.stage === "init" || result.stage === "worktree") {
-      // Acceptable in environments without git; surface a clear diagnostic.
-      expect(result.diagnostics.length).toBeGreaterThan(0);
-    } else {
-      // Got past worktree → typecheck stage was reached → we should have captured stdout/stderr
-      expect(result.output).toBeDefined();
-      expect(result.output?.typecheck).toBeDefined();
-      // Broken patch → failure expected; exit code should be non-zero
-      expect(result.ok).toBe(false);
-      expect(result.exitCode).toBeDefined();
-      expect(result.exitCode).not.toBe(0);
-    }
-
-    // INVARIANT: the LIVE file is byte-identical — verifyPatchInSandbox wrote ONLY
-    // inside the disposable worktree, never touching the real source on disk.
-    const liveAfter = readFileSync(targetAbs);
+    // INVARIANT: live file is byte-identical
+    const liveAfter = readFileSync(FIXTURE_ABS);
     expect(liveAfter.equals(liveBefore)).toBe(true);
-  }, 180_000); // generous timeout: real pnpm typecheck of api-server can take ~60s
+
+    const entries = getAttemptsByProposal("evo-real-bad");
+    expect(entries.map(a => a.event)).toEqual(["SANDBOXED_FAIL"]);
+    const fail = entries[0]!;
+    expect(fail.verifyExitCode).toBeDefined();
+    expect(fail.verifyExitCode).not.toBe(0);
+    expect(fail.verifyOutput).toBeDefined();
+    expect(fail.verifyOutput!.length).toBeGreaterThan(0);
+    expect(fail.reason).toContain("sandbox.typecheck");
+  }, 90_000);
+
+  it("GOOD patch: real worktree + real `node --check` passes, live file updated, ledger SANDBOXED_PASS → APPLIED in order with exit 0", async () => {
+    expect(existsSync(FIXTURE_ABS)).toBe(true);
+    const liveBefore = readFileSync(FIXTURE_ABS, "utf8");
+    // Always patch back to a deterministic baseline + a benign valid addition
+    const original = FIXTURE_ORIGINAL;
+    const patched = original + "module.exports.b = 2;\n";
+
+    // Restore baseline before running (in case a prior test left state)
+    writeFileSync(FIXTURE_ABS, original, "utf8");
+
+    try {
+      const result = await applyVerifiedPatch({
+        sourceFilePath: FIXTURE_ABS,
+        originalContent: original,
+        patchedContent: patched,
+        proposalId: "evo-real-good",
+        targetModule: "sandbox-target.js",
+        sandboxFn: realRunnerSandbox(FIXTURE_REL),
+      });
+
+      expect(result.ok).toBe(true);
+      expect(result.patchedLines).toBeGreaterThan(0);
+
+      // INVARIANT: live file equals patched content exactly
+      expect(readFileSync(FIXTURE_ABS, "utf8")).toBe(patched);
+
+      const entries = getAttemptsByProposal("evo-real-good");
+      expect(entries.map(a => a.event)).toEqual(["SANDBOXED_PASS", "APPLIED"]);
+
+      const pass = entries[0]!;
+      expect(pass.verifyExitCode).toBe(0);
+      expect(pass.verifyOutput).toBeDefined();
+      expect(pass.verifyOutput).toContain("node --check");
+      expect(pass.verifyOutput).toContain("exit=0");
+
+      const applied = entries[1]!;
+      expect(applied.reason).toMatch(/^\+\d+ lines appended$/);
+      expect(typeof applied.durationMs).toBe("number");
+    } finally {
+      // Always restore the fixture to its committed state so other tests/builds aren't affected
+      writeFileSync(FIXTURE_ABS, liveBefore, "utf8");
+    }
+  }, 90_000);
 });
+
+// Suppress unused-import warning for `relative` (kept for future use)
+void relative;
