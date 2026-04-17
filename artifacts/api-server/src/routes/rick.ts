@@ -118,7 +118,13 @@ router.get("/rick/autonomous/inventions", async (req, res) => {
     const cat = typeof req.query.category === "string" ? req.query.category : undefined;
     const limit = req.query.limit ? Math.min(200, Math.max(1, parseInt(String(req.query.limit), 10) || 60)) : 60;
     const data = await listAutonomousInventions({ category: cat, limit });
-    return res.json({ ok: true, ...data, categories: [...RICK_AUTONOMOUS_CATEGORIES] });
+    const heartbeat = getRickAutonomousHeartbeat();
+    const dynamicCats = new Set<string>([
+      ...RICK_AUTONOMOUS_CATEGORIES,
+      ...(heartbeat.categories ?? []),
+      ...Object.keys(data.perCategory ?? {}),
+    ]);
+    return res.json({ ok: true, ...data, categories: Array.from(dynamicCats).sort() });
   } catch (err) {
     logger.error({ err }, "Rick: autonomous inventions list error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
