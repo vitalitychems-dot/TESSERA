@@ -7,10 +7,25 @@ const LOCAL_BASE = (typeof import.meta !== "undefined" && (import.meta as { env?
 const LOCAL_FONT_URL = `${LOCAL_BASE}fonts/SpaceMono.woff2`;
 const LOCAL_PLANET_TEXTURE_BASE = `${LOCAL_BASE}textures/planets`;
 
+let __fontFailed = false;
+if (typeof window !== "undefined") {
+  const t = setTimeout(() => {
+    if (!__fontFailed) {
+      __fontFailed = true;
+      console.warn("[SolarSystem3D] custom font load timeout — using default 3D font");
+    }
+  }, 4000);
+  fetch(LOCAL_FONT_URL, { method: "HEAD" })
+    .then((r) => { if (!r.ok) __fontFailed = true; clearTimeout(t); })
+    .catch(() => { __fontFailed = true; clearTimeout(t); });
+}
+
 function SafeText(props: React.ComponentProps<typeof Text>) {
+  const { font, ...rest } = props;
+  const safeFont = __fontFailed ? undefined : font;
   return (
     <Suspense fallback={null}>
-      <Text {...props} />
+      <Text {...rest} font={safeFont} />
     </Suspense>
   );
 }
