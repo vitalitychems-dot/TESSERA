@@ -5,6 +5,27 @@ import { HudPanel, HudMetric, PageHeader, GradientBar } from "@/components/ui/so
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 
+function NasaThumb({ nasaId, title, thumbnailUrl }: { nasaId: string; title: string; thumbnailUrl: string }) {
+  const [stage, setStage] = useState<"proxy" | "direct" | "fallback">("proxy");
+  if (stage === "fallback") {
+    return (
+      <div className="w-full aspect-square bg-slate-900 flex items-center justify-center text-slate-700 text-[9px] font-mono">
+        NO IMAGE
+      </div>
+    );
+  }
+  const src = stage === "proxy" ? `/api/universe/nasa-images/${nasaId}/proxy` : thumbnailUrl;
+  return (
+    <img
+      src={src}
+      alt={title}
+      className="w-full aspect-square object-cover bg-slate-900"
+      loading="lazy"
+      onError={() => setStage(s => (s === "proxy" ? "direct" : "fallback"))}
+    />
+  );
+}
+
 interface NasaImageItem {
   nasaId: string;
   title: string;
@@ -153,28 +174,7 @@ export default function CompressionLabPage() {
                   )}
                 >
                   {img.thumbnailUrl ? (
-                    <img
-                      src={`/api/universe/nasa-images/${img.nasaId}/proxy`}
-                      alt={img.title}
-                      className="w-full aspect-square object-cover bg-slate-900"
-                      loading="lazy"
-                      onError={(e) => {
-                        // Fall back to direct NASA thumbnail URL if proxy fails;
-                        // if THAT fails, swap in a placeholder tile so the
-                        // grid doesn't show broken-image icons.
-                        const el = e.currentTarget;
-                        if (el.dataset.fallback !== "direct" && img.thumbnailUrl) {
-                          el.dataset.fallback = "direct";
-                          el.src = img.thumbnailUrl;
-                        } else if (el.dataset.fallback !== "placeholder") {
-                          el.dataset.fallback = "placeholder";
-                          el.replaceWith(Object.assign(document.createElement("div"), {
-                            className: "w-full aspect-square bg-slate-900 flex items-center justify-center text-slate-700 text-[9px] font-mono",
-                            innerText: "NO IMAGE",
-                          }));
-                        }
-                      }}
-                    />
+                    <NasaThumb nasaId={img.nasaId} title={img.title} thumbnailUrl={img.thumbnailUrl} />
                   ) : (
                     <div className="w-full aspect-square bg-slate-900 flex items-center justify-center">
                       <HardDrive size={20} className="text-slate-700" />

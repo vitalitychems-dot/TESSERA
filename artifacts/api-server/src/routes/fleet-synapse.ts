@@ -79,10 +79,6 @@ router.get("/fleet-synapse/map", async (_req, res) => {
 
     const providerNodes = configs.map(cfg => buildNodeFromProvider(cfg, byProvider, recentCalls));
 
-    // Real fleet member identities from the agent-spawner registry. These are
-    // the actual sovereign agents (not provider proxies), each with its own id,
-    // archetype, mastered domains, and live activity. Without this the Fleet
-    // surface only shows providers, which is the bug flagged by review.
     const registryAgents = listAgents();
     const memberNodes = registryAgents.slice(0, 32).map(a => ({
       id: `agent::${a.id}`,
