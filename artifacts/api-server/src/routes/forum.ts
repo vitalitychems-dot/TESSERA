@@ -807,8 +807,10 @@ router.post("/tesseract-forum/topics/:id/vote", async (req, res) => {
     if (!topic) return res.status(404).json({ ok: false, error: "Topic not found" });
 
     const { vote, replyId, author } = req.body as { vote?: string; replyId?: number; author?: string };
-    const v = String(vote || "").trim().toLowerCase();
-    if (!["yes", "no", "abstain"].includes(v)) return res.status(400).json({ ok: false, error: "vote must be yes|no|abstain" });
+    const raw = String(vote || "").trim().toLowerCase();
+    const aliasMap: Record<string, string> = { yes: "up", no: "down", up: "up", down: "down", abstain: "abstain" };
+    const v = aliasMap[raw];
+    if (!v) return res.status(400).json({ ok: false, error: "vote must be up|down|abstain" });
 
     const resolved = await resolvePostingIdentity(author, keyHash, { topicId: id }, res);
     if (!resolved) return;
