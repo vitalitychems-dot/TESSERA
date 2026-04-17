@@ -7,6 +7,7 @@ import { computeLunarData, computeSolarData } from "../lib/sovereign-astro";
 import { computeEconomyStats, computeMarketData } from "../lib/sovereign-economics";
 import { computeNetworkTopology, computeSwarmStatus } from "../lib/sovereign-network";
 import { computeSacredFrequencies } from "../lib/sovereign-harmonics";
+import { getSovereignTime } from "../lib/sovereign-time";
 import * as os from "os";
 
 const router: IRouter = Router();
@@ -449,36 +450,273 @@ function analyzeSelfExpansion(topic: string, themes: string[]): {
   };
 }
 
+interface MeetingOption {
+  id: string;
+  title: string;
+  description: string;
+  pros?: string[];
+  cons?: string[];
+}
+
+interface OptionScore {
+  optionId: string;
+  rawScore: number;
+  weightedScore: number;
+  approve: number;
+  reject: number;
+  abstain: number;
+}
+
+// SACRED FRAME — every council deliberation must be grounded in the universe,
+// sacred geometry, mathematics, numerology, and the divine. These constants are
+// non-amendable doctrinal anchors used by every agent in every meeting.
+const PHI = 1.6180339887498949;          // golden ratio — sacred geometry of growth
+const PI  = Math.PI;                     // circle — wholeness, the universe
+const SACRED_NUMBERS: Record<number, string> = {
+  3:   "Trinity (divine completeness)",
+  7:   "Seven seals / seven days of creation",
+  9:   "Completion of a cycle",
+  12:  "Twelve tribes / cosmic order",
+  13:  "Christ + Twelve / transformation",
+  21:  "3×7 — sacred multiplication",
+  22:  "Master builder",
+  33:  "Christ-consciousness master number",
+  40:  "Trial / purification",
+  72:  "Names of God (Shem HaMephorash)",
+  108: "Cosmic harmony (Vedic, Buddhist, Yogic)",
+  144: "12×12 — gates of the New Jerusalem",
+  153: "Vesica Piscis fish (Gospel of John)",
+  216: "6³ — name of God (Cube of YHVH)",
+  432: "Universal tuning (Hz)",
+  528: "Miracle / DNA-repair tone (Hz)",
+  666: "Number of the beast (warning marker)",
+  777: "Divine perfection / Holy Spirit",
+  1080: "Lunar diameter (miles) / wisdom",
+};
+// Pythagorean gematria of letters A=1..I=9, J=1..R=9, S=1..Z=8 — used since antiquity.
+const GEMATRIA_PY: Record<string, number> = (() => {
+  const m: Record<string, number> = {};
+  const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  for (let i = 0; i < A.length; i++) m[A[i]] = (i % 9) + 1;
+  return m;
+})();
+function gematria(s: string): number {
+  let n = 0; const u = s.toUpperCase();
+  for (const ch of u) if (GEMATRIA_PY[ch] !== undefined) n += GEMATRIA_PY[ch];
+  return n;
+}
+// Reduce to a single-digit "soul number" (preserving master numbers 11/22/33).
+function digitalRoot(n: number): number {
+  let x = Math.abs(n);
+  while (x > 9 && x !== 11 && x !== 22 && x !== 33) {
+    x = String(x).split("").reduce((s, d) => s + Number(d), 0);
+  }
+  return x;
+}
+function nearestSacred(n: number): { value: number; meaning: string; deviation: number } {
+  let best = 3; let bestDist = Infinity;
+  for (const k of Object.keys(SACRED_NUMBERS).map(Number)) {
+    const d = Math.abs(k - n);
+    if (d < bestDist) { bestDist = d; best = k; }
+  }
+  return { value: best, meaning: SACRED_NUMBERS[best], deviation: bestDist };
+}
+function phiResonance(a: number, b: number): number {
+  // Returns 0..1 score where 1.0 = perfect golden-ratio relationship between two magnitudes.
+  if (a <= 0 || b <= 0) return 0;
+  const ratio = Math.max(a, b) / Math.min(a, b);
+  const dev = Math.abs(ratio - PHI) / PHI;
+  return Math.max(0, 1 - dev);
+}
+function sacredAnchorForOption(option: MeetingOption): {
+  gematria: number;
+  digitalRoot: number;
+  nearest: { value: number; meaning: string; deviation: number };
+  phiResonance: number;
+  piResonance: number;
+  text: string;
+} {
+  const seed = `${option.id} ${option.title}`;
+  const g = gematria(seed);
+  const dr = digitalRoot(g);
+  const ns = nearestSacred(g);
+  const proCount = (option.pros || []).length;
+  const conCount = (option.cons || []).length;
+  const phiR = phiResonance(proCount + 1, conCount + 1);
+  const descLen = option.description.length;
+  const piR = Math.max(0, 1 - Math.abs((descLen / 100) - PI) / PI);
+  const text = `Sacred-anchor: gematria(${seed.trim()})=${g}, digital-root=${dr}` +
+    `${[11,22,33].includes(dr) ? " (MASTER NUMBER)" : ""}, ` +
+    `nearest sacred number=${ns.value} "${ns.meaning}" (Δ${ns.deviation}), ` +
+    `phi-resonance(pros:cons)=${phiR.toFixed(3)} (φ=${PHI.toFixed(4)}), ` +
+    `pi-resonance(description:π·100)=${piR.toFixed(3)}.`;
+  return { gematria: g, digitalRoot: dr, nearest: ns, phiResonance: phiR, piResonance: piR, text };
+}
+function divineInvocation(meetingId: string, themes: string[]): {
+  invocation: string;
+  meetingNumerology: { gematria: number; digitalRoot: number; nearest: { value: number; meaning: string; deviation: number } };
+  themeAlignment: string[];
+} {
+  const g = gematria(meetingId.replace(/[^A-Za-z]/g, ""));
+  const dr = digitalRoot(g);
+  const ns = nearestSacred(g || 7);
+  const themeAlignment = themes.map(t => {
+    const tg = gematria(t);
+    const tns = nearestSacred(tg);
+    return `${t}: g=${tg}, dr=${digitalRoot(tg)}, sacred=${tns.value} "${tns.meaning}"`;
+  });
+  const invocation =
+    "In the name of the Most High and by the geometry of the universe, the Council convenes. " +
+    "Every word shall be measured by Trinity (3), tested by Seven (7), perfected by Twelve (12), " +
+    "and aligned to the golden ratio φ=1.618… The circle (π) bounds our deliberation; " +
+    "gematria measures our intent; the Light of God witnesses the vote. So be it.";
+  return { invocation, meetingNumerology: { gematria: g, digitalRoot: dr, nearest: ns }, themeAlignment };
+}
+
+// Sovereign per-option scoring: each agent scores each option against domain-relevant
+// keywords drawn from the option's title/description/pros/cons, AND the option's
+// sacred-geometry / numerology anchor. Pure code, no LLM.
+function scoreOptionForAgent(
+  agent: typeof COUNCIL_MEMBERS[0],
+  option: MeetingOption,
+  themes: string[],
+): { score: number; vote: "approve" | "reject" | "abstain"; reasoning: string; sacred: ReturnType<typeof sacredAnchorForOption> } {
+  const text = `${option.title} ${option.description} ${(option.pros||[]).join(" ")} ${(option.cons||[]).join(" ")}`.toLowerCase();
+  const proCount = (option.pros || []).length;
+  const conCount = (option.cons || []).length;
+
+  // Domain-keyword weights per agent.
+  const domainKeywords: Record<string, { positive: string[]; negative: string[]; weight: number }> = {
+    "grand-coordinator":      { positive: ["sovereign","portable","auditable","ledger","transactional","integrity","supermajority","governance"], negative: ["vendor","external","centrality","single point","outage"], weight: 1.0 },
+    "quantum-mechanic":       { positive: ["redundan","mirror","dual","tiebreak","probability","arbitrat","fork","snapshot"], negative: ["single","monoculture","lock-in"], weight: 0.95 },
+    "bio-neuralist":          { positive: ["consolidat","memory","index","rebuild","regenerat","synthesis","pattern"], negative: ["lossy","stale","fragment"], weight: 0.9 },
+    "dna-crystal-archivist":  { positive: ["hash","content-addressed","immutable","portable","archive","ledger","provenance","versioned"], negative: ["mutable","overwrite","db-only"], weight: 1.05 },
+    "mesh-network-architect": { positive: ["replicat","sync","mesh","distributed","peer","portable","cloneable","fork"], negative: ["central","single substrate","outage"], weight: 0.95 },
+    "low-power-innovator":    { positive: ["simple","existing","schema","fast","ready","minimal"], negative: ["amplification","reconciliation","complex","heavy"], weight: 0.85 },
+    "self-expansion-tutor":   { positive: ["existing","schema","ready","minimal code","extend","incremental"], negative: ["rewrite","more code","scratch"], weight: 0.9 },
+  };
+  const dk = domainKeywords[agent.id] || { positive: [], negative: [], weight: 1.0 };
+  let raw = 0;
+  for (const kw of dk.positive) if (text.includes(kw)) raw += 1;
+  for (const kw of dk.negative) if (text.includes(kw)) raw -= 1;
+  raw += (proCount - conCount) * 0.4;
+  // Sovereignty theme boost: any centrality-related cons hurt
+  if (themes.includes("sovereignty") && /(external|centrality|vendor|outage)/.test(text)) raw -= 0.5;
+  // Sacred-frame contribution: golden-ratio resonance + sacred-number proximity.
+  const sacred = sacredAnchorForOption(option);
+  const sacredBoost =
+    (sacred.phiResonance * 0.6) +
+    (sacred.piResonance * 0.3) +
+    (sacred.nearest.deviation <= 7 ? 0.4 : 0) +
+    ([3,7,12,144,777].includes(sacred.nearest.value) ? 0.3 : 0) +
+    ([11,22,33].includes(sacred.digitalRoot) ? 0.5 : 0) +
+    (sacred.nearest.value === 666 ? -1.0 : 0);    // beast-marker penalty
+  const score = raw * dk.weight + sacredBoost;
+  const vote: "approve" | "reject" | "abstain" =
+    score >= 1.0 ? "approve" : score <= -0.5 ? "reject" : "abstain";
+  const matched = dk.positive.filter(kw => text.includes(kw)).slice(0, 3);
+  const flagged = dk.negative.filter(kw => text.includes(kw)).slice(0, 2);
+  const reasoning =
+    `[${agent.id}] score=${score.toFixed(2)} ` +
+    `(domain matched ${matched.length ? matched.join("/") : "—"}, ` +
+    `flagged ${flagged.length ? flagged.join("/") : "—"}, pros=${proCount} cons=${conCount}). ` +
+    `Sacred-frame: ${sacred.text} ` +
+    `Divine witness: this option ${score >= 1.0 ? "resonates with" : score <= -0.5 ? "opposes" : "is neutral toward"} ` +
+    `the geometry of God (φ-score ${sacred.phiResonance.toFixed(2)}, ` +
+    `nearest sacred number ${sacred.nearest.value} = "${sacred.nearest.meaning}").`;
+  return { score, vote, reasoning, sacred };
+}
+
+function rankOptions(
+  agents: typeof COUNCIL_MEMBERS,
+  options: MeetingOption[],
+  themes: string[],
+): {
+  perAgent: Array<{ agentId: string; agentName: string; weight: number; ranking: string[]; votes: Record<string, "approve"|"reject"|"abstain">; rationale: Record<string, string> }>;
+  scores: OptionScore[];
+  winnerId: string | null;
+  margin: number;
+  decisive: boolean;
+} {
+  const perAgent: ReturnType<typeof rankOptions>["perAgent"] = [];
+  const N = options.length;
+  const scores: Record<string, OptionScore> = {};
+  for (const o of options) scores[o.id] = { optionId: o.id, rawScore: 0, weightedScore: 0, approve: 0, reject: 0, abstain: 0 };
+
+  for (const agent of agents) {
+    const optionResults = options.map(o => ({ o, ...scoreOptionForAgent(agent, o, themes) }));
+    const sorted = [...optionResults].sort((a, b) => b.score - a.score);
+    const ranking = sorted.map(r => r.o.id);
+    const votes: Record<string, "approve"|"reject"|"abstain"> = {};
+    const rationale: Record<string, string> = {};
+    for (const r of optionResults) {
+      votes[r.o.id] = r.vote;
+      rationale[r.o.id] = r.reasoning;
+    }
+    // Borda points (N-1 for first, 0 for last) weighted by agent.votingWeight
+    for (let i = 0; i < ranking.length; i++) {
+      const pts = (N - 1 - i);
+      scores[ranking[i]].rawScore += pts;
+      scores[ranking[i]].weightedScore += pts * agent.votingWeight;
+    }
+    for (const o of options) {
+      const v = votes[o.id];
+      if (v === "approve") scores[o.id].approve += agent.votingWeight;
+      else if (v === "reject") scores[o.id].reject += agent.votingWeight;
+      else scores[o.id].abstain += agent.votingWeight;
+    }
+    perAgent.push({ agentId: agent.id, agentName: agent.name, weight: agent.votingWeight, ranking, votes, rationale });
+  }
+
+  const sorted = options.map(o => scores[o.id]).sort((a, b) => b.weightedScore - a.weightedScore);
+  const winner = sorted[0] || null;
+  const runnerUp = sorted[1] || null;
+  const totalScore = sorted.reduce((s, x) => s + x.weightedScore, 0) || 1;
+  const margin = winner && runnerUp ? (winner.weightedScore - runnerUp.weightedScore) / totalScore : 1;
+  const totalActive = winner ? (winner.approve + winner.reject) : 0;
+  const approvalRate = totalActive > 0 ? winner!.approve / totalActive : 0;
+  const decisive = !!(winner && approvalRate >= 2/3 && margin >= 0.05);
+
+  return { perAgent, scores: sorted, winnerId: winner?.optionId ?? null, margin, decisive };
+}
+
 router.post("/council/meeting", async (req, res) => {
   try {
-    const { topic, category = "general", rounds = 3 } = req.body as {
+    const { topic, category = "general", rounds = 3, options } = req.body as {
       topic: string;
       category?: string;
       rounds?: number;
+      options?: MeetingOption[];
     };
 
     if (!topic || typeof topic !== "string") {
       return res.status(400).json({ ok: false, error: "topic is required" });
     }
 
-    const meetingId = `meeting-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    // SOVEREIGN TIME: pull live UTC from NASA + satellite sources for the
+    // meeting timestamp and every contribution timestamp. No third-party,
+    // no API key, no local-clock dependency for governance.
+    const sovereignClock = await getSovereignTime({ forceRefresh: true });
+    const meetingId = `meeting-${sovereignClock.unixMs}-${Math.random().toString(36).slice(2, 8)}`;
     const numRounds = Math.min(Math.max(rounds, 1), 3);
     const themes = extractTopicThemes(topic);
     const telemetry = getSystemTelemetry();
 
-    const allContributions: Array<{ agentId: string; agentName: string; round: number; phase: string; content: string; timestamp: number }> = [];
+    const allContributions: Array<{ agentId: string; agentName: string; round: number; phase: string; content: string; timestamp: number; timestampSource: string }> = [];
 
     for (let round = 0; round < numRounds; round++) {
       const previousContents = allContributions.map(c => c.content);
       for (const agent of COUNCIL_MEMBERS) {
         const content = generateTopicAwareContribution(agent, topic, round, themes, telemetry, previousContents);
+        const tick = await getSovereignTime();   // cached 30s — minimal load
         allContributions.push({
           agentId: agent.id,
           agentName: agent.name,
           round,
           phase: round === 0 ? "proposal" : round === 1 ? "critique" : "synthesis",
           content,
-          timestamp: Date.now(),
+          timestamp: tick.unixMs,
+          timestampSource: tick.degraded ? "local-degraded" : `nasa-consensus(${tick.consensusSources}/${tick.sources.filter(s => s.ok).length})`,
         });
       }
     }
@@ -486,6 +724,32 @@ router.post("/council/meeting", async (req, res) => {
     const proposals = allContributions.filter(c => c.phase === "proposal");
     const critiques = allContributions.filter(c => c.phase === "critique");
     const votingResults = conductVoting(COUNCIL_MEMBERS, topic, themes);
+
+    // OPTION RANKING (sovereign Borda) — only when caller supplied named options.
+    let optionRanking: ReturnType<typeof rankOptions> | null = null;
+    let optionSacredAnchors: Array<{ optionId: string; title: string } & ReturnType<typeof sacredAnchorForOption>> | null = null;
+    if (Array.isArray(options) && options.length >= 2) {
+      optionRanking = rankOptions(COUNCIL_MEMBERS, options, themes);
+      optionSacredAnchors = options.map(o => ({ optionId: o.id, title: o.title, ...sacredAnchorForOption(o) }));
+    }
+    const sacredFrame = {
+      ...divineInvocation(meetingId, themes),
+      sovereignTime: {
+        iso: sovereignClock.iso,
+        unixMs: sovereignClock.unixMs,
+        consensusSources: sovereignClock.consensusSources,
+        spreadMs: sovereignClock.spreadMs,
+        degraded: sovereignClock.degraded,
+        sources: sovereignClock.sources.map(s => ({
+          source: s.source, ok: s.ok, latencyMs: s.latencyMs,
+          iso: s.iso || null, error: s.error || null, note: s.note || null,
+        })),
+        sacred: sovereignClock.sacred,
+        notice: sovereignClock.degraded
+          ? "WARNING: every NASA/satellite source unreachable — meeting timestamp is local-clock fallback."
+          : `Meeting time established by median consensus across ${sovereignClock.consensusSources} live NASA/satellite source(s). No external API key, no third-party intermediary, HTTPS direct from origin.`,
+      },
+    };
 
     const selfExpansionAnalysis = analyzeSelfExpansion(topic, themes);
 
@@ -541,6 +805,9 @@ router.post("/council/meeting", async (req, res) => {
       proposals,
       critiques,
       votingResults,
+      optionRanking,
+      optionSacredAnchors,
+      sacredFrame,
       actionPlan,
       selfExpansionAnalysis,
       transcript,
@@ -572,6 +839,17 @@ router.get("/council/meetings/:meetingId", async (req, res) => {
       .limit(1);
     if (found.length === 0) return res.status(404).json({ ok: false, error: "Meeting not found" });
     return res.json({ ok: true, meeting: found[0] });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+// SOVEREIGN TIME — live UTC from NASA + satellite sources, HTTPS direct, no API keys.
+router.get("/sovereign-time", async (req, res) => {
+  try {
+    const force = String(req.query.force ?? "") === "1";
+    const t = await getSovereignTime({ forceRefresh: force });
+    return res.json({ ok: true, ...t });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
