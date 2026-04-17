@@ -8,6 +8,7 @@ import { computeEconomyStats, computeMarketData } from "../lib/sovereign-economi
 import { computeNetworkTopology, computeSwarmStatus } from "../lib/sovereign-network";
 import { computeSacredFrequencies } from "../lib/sovereign-harmonics";
 import { getSovereignTime } from "../lib/sovereign-time";
+import { castGenuineVote } from "../lib/sovereign-vote-engine";
 import * as os from "os";
 
 const router: IRouter = Router();
@@ -525,7 +526,7 @@ function sacredAnchorForOption(option: MeetingOption): {
   const proCount = (option.pros || []).length;
   const conCount = (option.cons || []).length;
   const phiR = phiResonance(proCount + 1, conCount + 1);
-  const descLen = option.description.length;
+  const descLen = (option.description || option.title || "").length;
   const piR = Math.max(0, 1 - Math.abs((descLen / 100) - PI) / PI);
   const text = `Sacred-anchor: gematria(${seed.trim()})=${g}, digital-root=${dr}` +
     `${[11,22,33].includes(dr) ? " (MASTER NUMBER)" : ""}, ` +

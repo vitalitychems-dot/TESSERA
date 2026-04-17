@@ -8,6 +8,7 @@ import { desc, eq } from "drizzle-orm";
 import { logger } from "./logger";
 import { createProposal } from "./consensus-engine";
 import { batchedCallLLMSafe } from "./llm-batcher";
+import { withCodexDirective } from "./codex-startup-directive";
 import { computeWorldState } from "./sovereign-economics";
 import { getRealityAudit } from "./reality-audit";
 
@@ -240,7 +241,7 @@ Return ONLY a JSON array of 5 objects. No markdown, no explanation.`;
   try {
     const raw = await batchedCallLLMSafe(
       [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: withCodexDirective(systemPrompt) },
         { role: "user", content: "Grand Council: deliberate and produce the next five improvements for Tessera Sovereign based on the audit data." },
       ],
       { maxTokens: 2000, timeoutMs: 20_000, expectsStructuredOutput: true },

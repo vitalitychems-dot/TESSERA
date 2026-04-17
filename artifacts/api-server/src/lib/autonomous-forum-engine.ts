@@ -5,6 +5,7 @@ import { logger } from "./logger";
 import { systemStateTable } from "@workspace/db/schema";
 import { isLLMAvailable } from "./llm-client";
 import { batchedCallLLM } from "./llm-batcher";
+import { withCodexDirective } from "./codex-startup-directive";
 import { syncTopicsToMoltbook, fetchMoltbookExternalPosts } from "./moltbook-bridge";
 import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
@@ -553,7 +554,7 @@ Write your reply as ${agent.name}:`;
 
   try {
     const reply = await batchedCallLLM(
-      [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
+      [{ role: "system", content: withCodexDirective(systemPrompt) }, { role: "user", content: userPrompt }],
       { maxTokens: 350, timeoutMs: 12_000 },
     );
     const trimmed = reply.trim();
