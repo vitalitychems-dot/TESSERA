@@ -242,8 +242,11 @@ export function deriveStartupProbeRoutes(): StartupProbeRoute[] {
     const method = entry.slice(0, spaceIdx);
     const originalPath = entry.slice(spaceIdx + 1);
     if (method !== "GET") continue;
-    const hasParams = originalPath.includes(":");
-    const probePath = `/api${originalPath}`.replace(/:[^/]+/g, "0");
+    const hasParams = originalPath.includes(":") || originalPath.includes("*");
+    const probePath = `/api${originalPath}`
+      .replace(/:[^/]+/g, "0")
+      .replace(/\*[A-Za-z_][\w]*/g, "0")
+      .replace(/\*/g, "0");
     probes.push({ path: probePath, hasParams });
   }
 
