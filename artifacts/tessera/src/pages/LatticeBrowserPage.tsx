@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Search, Globe2, Zap, Shield, Brain, Star, ExternalLink, RefreshCw } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL || "";
@@ -18,26 +19,31 @@ interface LatticeDomain {
 // Map a domain slug → an icon + color so the live entries from
 // /api/heartbeat/metrics render with consistent semantics. Anything not
 // in this map falls back to a neutral globe + slate color.
-const DOMAIN_PRESENTATION: Record<string, { icon: LatticeDomain["icon"]; color: string; category: string }> = {
-  consciousness: { icon: Brain, color: "violet", category: "science" },
-  sovereignty: { icon: Shield, color: "emerald", category: "governance" },
-  "sacred-geometry": { icon: Star, color: "amber", category: "mathematics" },
-  "grand-council": { icon: Globe2, color: "cyan", category: "governance" },
-  quantum: { icon: Zap, color: "blue", category: "technology" },
-  "agi-training": { icon: Brain, color: "purple", category: "education" },
-  universe: { icon: Globe2, color: "indigo", category: "science" },
-  lattice: { icon: Search, color: "pink", category: "knowledge" },
-  swarm: { icon: Star, color: "orange", category: "technology" },
-  emotional: { icon: Star, color: "rose", category: "psychology" },
-  truth: { icon: Shield, color: "teal", category: "ethics" },
-  hierarchy: { icon: Globe2, color: "slate", category: "governance" },
-  "token-economy": { icon: Zap, color: "amber", category: "governance" },
+// Each entry maps a heartbeat-reported slug to: legacy id (so detail
+// panels still light up), an in-app route (real clickable navigation
+// to the live agent surface), an icon, color, and category.
+const DOMAIN_PRESENTATION: Record<string, { id: string; href: string; icon: LatticeDomain["icon"]; color: string; category: string }> = {
+  consciousness: { id: "consciousness", href: "/consciousness", icon: Brain, color: "violet", category: "science" },
+  sovereignty: { id: "sovereignty", href: "/sovereignty", icon: Shield, color: "emerald", category: "governance" },
+  "sacred-geometry": { id: "sacred-geometry", href: "/sacred-geometry", icon: Star, color: "amber", category: "mathematics" },
+  "grand-council": { id: "grand-council", href: "/grand-council", icon: Globe2, color: "cyan", category: "governance" },
+  quantum: { id: "quantum-computing", href: "/quantum", icon: Zap, color: "blue", category: "technology" },
+  "agi-training": { id: "agi-training", href: "/agi-core", icon: Brain, color: "purple", category: "education" },
+  universe: { id: "universe-mechanics", href: "/universe", icon: Globe2, color: "indigo", category: "science" },
+  lattice: { id: "lattice-knowledge", href: "/lattice-browser", icon: Search, color: "pink", category: "knowledge" },
+  swarm: { id: "swarm-optimizer", href: "/swarm", icon: Star, color: "orange", category: "technology" },
+  emotional: { id: "emotional-intelligence", href: "/emotional", icon: Star, color: "rose", category: "psychology" },
+  truth: { id: "truthfulness", href: "/truthfulness", icon: Shield, color: "teal", category: "ethics" },
+  hierarchy: { id: "agent-hierarchy", href: "/agent-directory", icon: Globe2, color: "slate", category: "governance" },
+  "token-economy": { id: "token-economy", href: "/finance", icon: Zap, color: "amber", category: "governance" },
 };
 
-function presentDomain(raw: { domain: string; title: string; description: string }): LatticeDomain {
+interface PresentedDomain extends LatticeDomain { href: string }
+
+function presentDomain(raw: { domain: string; title: string; description: string }): PresentedDomain {
   const slug = raw.domain.split(".")[0];
-  const preset = DOMAIN_PRESENTATION[slug] ?? { icon: Globe2, color: "slate", category: "knowledge" };
-  return { id: slug, domain: raw.domain, title: raw.title, description: raw.description, icon: preset.icon, color: preset.color, category: preset.category };
+  const preset = DOMAIN_PRESENTATION[slug] ?? { id: slug, href: `/lattice-browser`, icon: Globe2, color: "slate", category: "knowledge" };
+  return { id: preset.id, domain: raw.domain, title: raw.title, description: raw.description, icon: preset.icon, color: preset.color, category: preset.category, href: preset.href };
 }
 
 const CATEGORIES = ["all", "science", "governance", "mathematics", "technology", "education", "knowledge", "psychology", "ethics"];
@@ -59,7 +65,8 @@ const COLOR_MAP: Record<string, string> = {
 export default function LatticeBrowserPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
-  const [selectedDomain, setSelectedDomain] = useState<LatticeDomain | null>(null);
+  const [selectedDomain, setSelectedDomain] = useState<PresentedDomain | null>(null);
+  const [, navigate] = useLocation();
 
   // Live lattice domains come from the heartbeat metrics endpoint, which
   // is the canonical source registered by the runtime (subsystems +
@@ -72,7 +79,7 @@ export default function LatticeBrowserPage() {
     queryFn: () => fetch(`${API}/api/heartbeat/metrics`).then(r => r.json()),
     refetchInterval: 30000,
   });
-  const liveDomains: LatticeDomain[] = (heartbeat?.data?.latticeDomains ?? []).map(presentDomain);
+  const liveDomains: PresentedDomain[] = (heartbeat?.data?.latticeDomains ?? []).map(presentDomain);
 
   const { data: universeMetrics } = useQuery({
     queryKey: ["universe-metrics"],
@@ -146,9 +153,14 @@ export default function LatticeBrowserPage() {
                 <div className="text-xs font-mono mt-0.5">{selectedDomain.domain}</div>
                 <div className="text-sm text-slate-300 mt-2">{selectedDomain.description}</div>
               </div>
-              <button onClick={() => setSelectedDomain(null)} className="text-xs bg-white/10 px-3 py-1.5 rounded-lg hover:bg-white/20 transition-all text-white">
-                Close
-              </button>
+              <div className="flex flex-col gap-2 items-end">
+                <button onClick={() => navigate(selectedDomain.href)} className="text-xs bg-pink-600/30 border border-pink-500/40 px-3 py-1.5 rounded-lg hover:bg-pink-600/50 transition-all text-pink-100 flex items-center gap-1" data-testid={`lattice-open-${selectedDomain.id}`}>
+                  <ExternalLink className="w-3 h-3" /> Open Live Page
+                </button>
+                <button onClick={() => setSelectedDomain(null)} className="text-xs bg-white/10 px-3 py-1.5 rounded-lg hover:bg-white/20 transition-all text-white">
+                  Close
+                </button>
+              </div>
             </div>
 
             {selectedDomain.id === "universe-mechanics" && (
@@ -211,17 +223,26 @@ export default function LatticeBrowserPage() {
             const colors = COLOR_MAP[domain.color] || COLOR_MAP.slate;
             const Icon = domain.icon;
             return (
-              <button key={domain.id} onClick={() => setSelectedDomain(domain)} className={`rounded-xl border p-4 text-left space-y-2 hover:opacity-90 transition-all ${colors}`}>
+              <div key={domain.id} className={`rounded-xl border p-4 space-y-2 hover:opacity-95 transition-all ${colors}`}>
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                  <button onClick={() => setSelectedDomain(domain)} className="flex items-center gap-2 text-left" data-testid={`lattice-domain-${domain.id}`}>
                     <Icon className="w-4 h-4" />
                     <div className="text-sm font-semibold text-white">{domain.title}</div>
-                  </div>
+                  </button>
                   <span className="text-xs px-2 py-0.5 bg-black/30 rounded-full text-slate-400 flex-shrink-0">{domain.category}</span>
                 </div>
                 <div className="text-xs text-slate-400 leading-relaxed">{domain.description}</div>
-                <div className="text-xs font-mono text-slate-500">{domain.domain}</div>
-              </button>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-xs font-mono text-slate-500 truncate">{domain.domain}</div>
+                  <button
+                    onClick={() => navigate(domain.href)}
+                    className="text-[10px] font-mono uppercase px-2 py-1 rounded-md bg-black/40 border border-white/10 text-white hover:bg-white/10 flex items-center gap-1 flex-shrink-0"
+                    data-testid={`lattice-visit-${domain.id}`}
+                  >
+                    Visit <ExternalLink className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              </div>
             );
           })}
         </div>
