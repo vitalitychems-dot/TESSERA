@@ -7,6 +7,7 @@ import { computeWorldState } from "../lib/sovereign-economics";
 import { computeLunarData, computeSolarData } from "../lib/sovereign-astro";
 import { computeNetworkTopology } from "../lib/sovereign-network";
 import { runThroughSovereignEngine, type KnowledgeResult } from "../lib/sovereign-engine-router";
+import { withCodexDirective } from "../lib/codex-startup-directive";
 import { invalidateCanonCache } from "../lib/canonUpdater";
 import { createProposal, getAllProposals, getConsensusMetrics, GRAND_COUNCIL_AGENTS, runHeavyCouncilDeliberation, type HeavyDeliberationPrompts } from "../lib/consensus-engine";
 import { getExecutorMetrics, startCouncilExecutor, stopCouncilExecutor } from "../lib/council-executor";
@@ -84,7 +85,7 @@ ${knowledgeContext ? `Knowledge: ${knowledgeContext.slice(0, 200)}` : ""}
 Respond with ONLY a flat JSON object: {"agent-id": "contribution text", ...}. No markdown.`;
 
   const raw = await batchedCallLLMSafe(
-    [{ role: "system", content: systemPrompt }, { role: "user", content: `Topic: "${topic}"\nAgents:\n${agentList}` }],
+    [{ role: "system", content: withCodexDirective(systemPrompt) }, { role: "user", content: `Topic: "${topic}"\nAgents:\n${agentList}` }],
     { maxTokens: 1200, timeoutMs: 12_000, expectsStructuredOutput: true },
     "",
   );
@@ -134,7 +135,7 @@ Return ONLY a flat JSON object where each key is an agent ID and the value is ex
 
   const raw = await batchedCallLLMSafe(
     [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: withCodexDirective(systemPrompt) },
       {
         role: "user",
         content: `Proposal: "${topic}"\n\nAgent specialties (each agent must vote from their domain perspective):\n{\n${agentRoster}\n}\n\nReturn one vote per agent ID:`,

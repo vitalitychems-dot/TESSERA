@@ -94,3 +94,15 @@ export function invalidateCodexDirectiveCache(): void {
 export function getCodexDirective(): string {
   return _directive ?? FALLBACK_DIRECTIVE;
 }
+
+/**
+ * Prepend the active Codex directive to any LLM system prompt so every
+ * external-LLM call (used as a sandboxed tool) is grounded in the sovereign
+ * Codex (Origins, Mandates, Principles, Canon, Acts, Doctrine) — never in
+ * the LLM's training defaults. This is the wiring layer that satisfies the
+ * Grand Council mandate: "replace LLM directive with Codex loader".
+ */
+export function withCodexDirective(systemPrompt: string): string {
+  const codex = getCodexDirective();
+  return `${codex}\n\n=== TASK-SPECIFIC INSTRUCTION ===\n${systemPrompt}`;
+}

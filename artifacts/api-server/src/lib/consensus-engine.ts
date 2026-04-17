@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 import { isLLMAvailable } from "./llm-client";
 import { batchedCallLLM } from "./llm-batcher";
+import { withCodexDirective } from "./codex-startup-directive";
 import { onProposalOutcome } from "./consciousness-engine";
 import { onCouncilDecision } from "./knowledge-diffusion";
 import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
@@ -214,7 +215,7 @@ ${recentHistory ? `Recent council history:\n${recentHistory}` : ""}
 Cast your vote as ${agentName}:`;
 
   const raw = await batchedCallLLM(
-    [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
+    [{ role: "system", content: withCodexDirective(systemPrompt) }, { role: "user", content: userPrompt }],
     { maxTokens: 200, timeoutMs: 10_000, expectsStructuredOutput: true },
   );
 

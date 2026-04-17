@@ -168,8 +168,7 @@ router.post("/session/end", async (req, res) => {
 
 router.get("/session/sealed-handoff", (_req, res) => {
   const sealed = lastSealedHandoff();
-  if (!sealed) return res.status(404).json({ ok: false, error: "no sealed handoff yet" });
-  res.json({ ok: true, sealed });
+  res.json({ ok: true, sealed: sealed ?? null });
 });
 
 // ── External tool sandbox / reverse-engineering corpus ──────────────────
