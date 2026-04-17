@@ -8,16 +8,16 @@ const RICK_PORTAL = "#22d3ee";
 const ROYAL_GOLD = "#f59e0b";
 const ROYAL_GOLD_DARK = "#d97706";
 
-interface RickInvention {
-  inventionName: string;
-  targetWeakness: string;
-  technicalApproach: string;
-  expectedImpact: string;
-  rickRationale: string;
-  systemMetricTargeted: string;
+interface AutonomousInventionUiRow {
+  inventionId: string;
+  title: string;
   category: string;
-  riskLevel: "low" | "medium" | "high";
-  estimatedImprovementPct: number;
+  description: string;
+  status: string;
+  feasibilityScore: number | null;
+  noveltyScore: number | null;
+  customModelUrl: string | null;
+  proposedAt: number;
 }
 
 interface CouncilResult {
@@ -135,19 +135,17 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeTab, setActiveTab] = useState<RickTabKey>(initialTab ?? "proposals");
-  const [submittedInventions, setSubmittedInventions] = useState<Record<number, CouncilResult>>({});
-  const [submittingIdx, setSubmittingIdx] = useState<number | null>(null);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { data: inventionsData, isLoading: invLoading, refetch: refetchInventions } = useQuery({
-    queryKey: ["/api/rick/inventions"],
+  const { data: autonomousData, isLoading: invLoading, refetch: refetchInventions } = useQuery({
+    queryKey: ["/api/rick/autonomous/inventions"],
     queryFn: async () => {
-      const r = await fetch("/api/rick/inventions");
-      return r.json() as Promise<{ ok: boolean; inventions: RickInvention[] }>;
+      const r = await fetch("/api/rick/autonomous/inventions?limit=120");
+      return r.json() as Promise<{ ok: boolean; rows: AutonomousInventionUiRow[]; perCategory: Record<string, number>; categories: string[] }>;
     },
-    refetchInterval: 60000,
+    refetchInterval: 30_000,
   });
 
   const { data: profileData } = useQuery({
@@ -338,25 +336,8 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
     }
   }
 
-  async function submitToCouncil(idx: number) {
-    setSubmittingIdx(idx);
-    try {
-      const r = await fetch(`/api/rick/inventions/${idx}/submit`, { method: "POST" });
-      const data = await r.json();
-      if (data.ok && data.councilResult) {
-        setSubmittedInventions(prev => ({ ...prev, [idx]: data.councilResult }));
-        refetchCouncilProposals();
-      }
-    } catch {}
-    finally { setSubmittingIdx(null); }
-  }
-
-  const inventions: RickInvention[] = inventionsData?.inventions || [];
+  const inventions: AutonomousInventionUiRow[] = autonomousData?.rows || [];
   const councilProposals: CouncilProposal[] = councilProposalsData?.proposals || [];
-
-  function findCouncilProposal(inv: RickInvention): CouncilProposal | undefined {
-    return councilProposals.find(p => p.title.includes(inv.inventionName) || inv.inventionName.includes(p.title));
-  }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -478,27 +459,18 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
             <div className="flex justify-center py-12"><PortalSpinner /></div>
           ) : inventions.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground text-sm font-mono">
-              No inventions available. *burp*
+              Autonomous loop is warming up — first inventions will appear shortly. *burp*
             </div>
           ) : (
             inventions.map((inv, idx) => {
-              const sessionResult = submittedInventions[idx];
-              const persistentProposal = findCouncilProposal(inv);
-              const result: CouncilResult | undefined = sessionResult ?? (persistentProposal ? {
-                proposalId: persistentProposal.id,
-                status: persistentProposal.status,
-                approvalRate: persistentProposal.approvalRate,
-                councilNote: persistentProposal.implementationNotes ?? `Grand Council voted on "${persistentProposal.title}" — ${persistentProposal.status} (${(persistentProposal.approvalRate * 100).toFixed(0)}% approval)`,
-              } : undefined);
               const isExpanded = expandedIdx === idx;
-              const riskColor = RISK_COLORS[inv.riskLevel] || "#888";
               const catIcon = CATEGORY_ICONS[inv.category] || "⚙️";
-
               return (
                 <div
-                  key={idx}
+                  key={inv.inventionId}
                   className="rounded-xl border overflow-hidden transition-all duration-200"
-                  style={{ borderColor: result ? (result.status === "approved" ? "#22c55e44" : "#ef444444") : `${RICK_GREEN}22`, background: "rgba(0,255,65,0.03)" }}
+                  style={{ borderColor: `${RICK_GREEN}22`, background: "rgba(0,255,65,0.03)" }}
+                  data-testid={`row-rick-invention-${inv.inventionId}`}
                 >
                   <div
                     className="flex items-start gap-3 p-4 cursor-pointer"
@@ -507,24 +479,20 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
                     <span className="text-xl shrink-0 mt-0.5">{catIcon}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold font-mono text-sm" style={{ color: RICK_GREEN }}>{inv.inventionName}</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded font-mono border" style={{ color: riskColor, borderColor: `${riskColor}40`, background: `${riskColor}10` }}>
-                          {inv.riskLevel}
-                        </span>
+                        <span className="font-bold font-mono text-sm" style={{ color: RICK_GREEN }}>{inv.title}</span>
                         <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-white/5 text-muted-foreground border border-white/10">
                           {inv.category}
                         </span>
-                        {result && (
-                          <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-mono border", result.status === "approved" ? "text-green-400 border-green-500/30 bg-green-500/10" : "text-red-400 border-red-500/30 bg-red-500/10")}>
-                            {result.status === "approved" ? <CheckCircle2 size={10} className="inline mr-1" /> : <XCircle size={10} className="inline mr-1" />}
-                            Council: {result.status}
-                          </span>
-                        )}
+                        <span className="text-[10px] px-1.5 py-0.5 rounded font-mono border text-muted-foreground" style={{ borderColor: `${RICK_GREEN}30`, background: `${RICK_GREEN}06` }}>
+                          {inv.status}
+                        </span>
                       </div>
                       <div className="text-[11px] text-muted-foreground font-mono mt-1">
-                        Targets: <span className="text-foreground/70">{inv.systemMetricTargeted}</span>
+                        Feasibility: <span className="text-foreground/70">{inv.feasibilityScore ?? "—"}</span>
                         <span className="mx-2">·</span>
-                        Est. improvement: <span style={{ color: RICK_GREEN }}>+{inv.estimatedImprovementPct}%</span>
+                        Novelty: <span style={{ color: RICK_GREEN }}>{inv.noveltyScore ?? "—"}</span>
+                        <span className="mx-2">·</span>
+                        <span className="text-foreground/60">{new Date(inv.proposedAt).toLocaleString()}</span>
                       </div>
                     </div>
                     <ChevronRight size={14} className={cn("shrink-0 text-muted-foreground transition-transform mt-1", isExpanded && "rotate-90")} />
@@ -532,39 +500,21 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
 
                   {isExpanded && (
                     <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: `${RICK_GREEN}10` }}>
-                      <div className="pt-3">
-                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Rick's Rationale</div>
-                        <p className="text-[11px] text-foreground/80 leading-relaxed italic font-mono">{inv.rickRationale}</p>
-                      </div>
-
-                      <div>
-                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Technical Approach</div>
-                        <p className="text-[11px] text-foreground/75 leading-relaxed font-mono">{inv.technicalApproach}</p>
-                      </div>
-
-                      <div>
-                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Expected Impact</div>
-                        <p className="text-[11px] font-mono" style={{ color: RICK_PORTAL }}>{inv.expectedImpact}</p>
-                      </div>
-
-                      {result ? (
-                        <div className="rounded-lg p-3 border" style={{ borderColor: result.status === "approved" ? "#22c55e40" : "#ef444440", background: result.status === "approved" ? "#22c55e10" : "#ef444410" }}>
-                          <div className="text-[10px] uppercase tracking-wider mb-1 font-mono" style={{ color: result.status === "approved" ? "#22c55e" : "#ef4444" }}>
-                            Council Decision · {(result.approvalRate * 100).toFixed(0)}% approval
-                          </div>
-                          <p className="text-[11px] font-mono text-foreground/80">{result.councilNote}</p>
-                          <div className="text-[10px] text-muted-foreground font-mono mt-1">ID: {result.proposalId.slice(0, 20)}…</div>
-                        </div>
-                      ) : (
-                        <div
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-mono border text-muted-foreground"
-                          style={{ borderColor: `${RICK_GREEN}30`, background: `${RICK_GREEN}06` }}
-                          data-testid={`autonomous-pending-${idx}`}
-                        >
-                          <Activity size={12} style={{ color: RICK_GREEN }} />
-                          Autonomous mode — Rick will queue this for Grand Council on the next tick.
+                      {inv.customModelUrl && (
+                        <div className="pt-3 flex justify-center">
+                          <img
+                            src={inv.customModelUrl}
+                            alt={`${inv.title} sigil`}
+                            className="w-40 h-40 object-contain rounded-lg border border-white/10 bg-black/40"
+                            loading="lazy"
+                            data-testid={`img-rick-invention-model-${inv.inventionId}`}
+                          />
                         </div>
                       )}
+                      <div>
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Description</div>
+                        <p className="text-[11px] text-foreground/80 leading-relaxed font-mono">{inv.description}</p>
+                      </div>
                     </div>
                   )}
                 </div>
