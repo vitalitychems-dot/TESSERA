@@ -112,6 +112,16 @@ export async function verifyPatchInSandbox(params: {
   patchedContent: string;
   packageFilter?: string;
   runTests?: boolean;
+  /**
+   * Optional custom verification commands to run inside the worktree
+   * INSTEAD OF the default `pnpm --filter <pkg> typecheck` + `... test`.
+   * Used by integration tests (and by callers that need a lighter-weight
+   * verifier than the full pnpm pipeline) to exercise the real
+   * worktree+subprocess pipeline without depending on the api-server's
+   * heavy typecheck script. Each command runs sequentially; the first
+   * non-zero exit short-circuits and is reported as a failure.
+   */
+  verifyCommand?: Array<{ cmd: string; args: string[]; timeoutMs?: number; stageLabel?: SandboxResult["stage"] }>;
 }): Promise<SandboxResult> {
   const start = Date.now();
 
@@ -190,6 +200,46 @@ export async function verifyPatchInSandbox(params: {
     const sandboxTarget = join(sandboxDir, relTarget);
     mkdirSync(dirname(sandboxTarget), { recursive: true });
     writeFileSync(sandboxTarget, params.patchedContent, "utf8");
+
+    // 4a. Custom verify commands (used by integration tests and lightweight verifiers)
+    if (params.verifyCommand && params.verifyCommand.length > 0) {
+      const collectedOutput: string[] = [];
+      for (const step of params.verifyCommand) {
+        stage = step.stageLabel ?? "typecheck";
+        const r = await runCmd(
+          sandboxDir,
+          step.cmd,
+          step.args,
+          step.timeoutMs ?? TIMEOUT_TYPECHECK_MS,
+          { EVO_SANDBOX_NESTED: "1" },
+        );
+        const out = (r.stderr + "\n" + r.stdout).slice(-2000);
+        collectedOutput.push(`$ ${step.cmd} ${step.args.join(" ")}\nexit=${r.exitCode}\n${out}`);
+        if (r.timedOut || r.exitCode !== 0) {
+          return {
+            ok: false,
+            durationMs: Date.now() - start,
+            stage,
+            diagnostics: [
+              r.timedOut ? `${step.cmd} timed out` : `${step.cmd} exit ${r.exitCode}`,
+              ...out.split("\n").slice(0, MAX_DIAGNOSTIC_LINES),
+            ],
+            diagnosticsCount: 1,
+            exitCode: r.exitCode,
+            output: { typecheck: collectedOutput.join("\n---\n") },
+          };
+        }
+      }
+      return {
+        ok: true,
+        durationMs: Date.now() - start,
+        stage: "passed",
+        diagnostics: [],
+        diagnosticsCount: 0,
+        exitCode: 0,
+        output: { typecheck: collectedOutput.join("\n---\n") },
+      };
+    }
 
     // 4. Typecheck
     stage = "typecheck";
