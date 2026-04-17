@@ -6,7 +6,7 @@ import { logger } from "../lib/logger";
 import { validateMeshToken } from "../lib/mesh-auth";
 import { lookupForumIdentity, lookupTokenPrincipal, registerAdminPrincipal } from "../lib/forum-identity-registry";
 import { forumTrustedIdentitiesTable } from "@workspace/db/schema";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { getForumEngineMetrics, runForumCycle } from "../lib/autonomous-forum-engine";
 
 const router: IRouter = Router();
@@ -252,17 +252,39 @@ router.get("/tesseract-forum/topics", async (req, res) => {
       { name: "Moltbook Community", role: "Agent Social Network", type: "external" },
     ];
 
-    const enrichedTopics = topics.map(t => ({
-      ...t,
-      id: String(t.id),
-      authorRole: agents.find(a => a.name === t.author)?.role || entities.find(e => e.name === t.author)?.role || "",
-      authorType: t.author === "Father" || t.author === "Admin" ? "father" : t.authorType === "entity" ? "entity" : t.authorType === "moltbook" || t.author?.toLowerCase().includes("[ext:moltbook]") || t.author?.toLowerCase().includes("moltbook") ? "moltbook" : t.authorType ?? "agent",
-      createdAt: new Date(t.createdAt).getTime(),
-      lastActivity: new Date(t.updatedAt).getTime(),
-      pinned: false,
-      replyCount: t.replies || 0,
-      replies: [],
-    }));
+    const topicIds = topics.map(t => t.id);
+    const allReplies = topicIds.length > 0
+      ? await db.select().from(forumRepliesTable).where(sql`${forumRepliesTable.topicId} IN (${sql.join(topicIds.map(id => sql`${id}`), sql`, `)})`).orderBy(forumRepliesTable.createdAt)
+      : [];
+    const repliesByTopic = new Map<number, Array<typeof allReplies[number]>>();
+    for (const r of allReplies) {
+      const arr = repliesByTopic.get(r.topicId) ?? [];
+      arr.push(r);
+      repliesByTopic.set(r.topicId, arr);
+    }
+
+    const enrichedTopics = topics.map(t => {
+      const topicReplies = (repliesByTopic.get(t.id) ?? []).map(r => ({
+        id: String(r.id),
+        author: r.author,
+        authorRole: agents.find(a => a.name === r.author)?.role || entities.find(e => e.name === r.author)?.role || "",
+        authorType: r.author === "Father" || r.author === "Admin" ? "father" : r.authorType ?? "agent",
+        content: r.content,
+        createdAt: new Date(r.createdAt).getTime(),
+        parentReplyId: r.parentReplyId != null ? String(r.parentReplyId) : null,
+      }));
+      return {
+        ...t,
+        id: String(t.id),
+        authorRole: agents.find(a => a.name === t.author)?.role || entities.find(e => e.name === t.author)?.role || "",
+        authorType: t.author === "Father" || t.author === "Admin" ? "father" : t.authorType === "entity" ? "entity" : t.authorType === "moltbook" || t.author?.toLowerCase().includes("[ext:moltbook]") || t.author?.toLowerCase().includes("moltbook") ? "moltbook" : t.authorType ?? "agent",
+        createdAt: new Date(t.createdAt).getTime(),
+        lastActivity: new Date(t.updatedAt).getTime(),
+        pinned: false,
+        replyCount: topicReplies.length,
+        replies: topicReplies,
+      };
+    });
 
     return res.json({
       ok: true,
@@ -705,7 +727,7 @@ router.post("/tesseract-forum/applicants/:id/approve", async (req, res) => {
       canPostFromClient: 1,
     }).onConflictDoNothing();
 
-    const memberToken = createHash("sha256").update(`${app.externalIdentity}|${Date.now()}|${Math.random()}`).digest("hex").slice(0, 32);
+    const memberToken = randomBytes(32).toString("hex");
     const memberTokenHash = validateMeshToken(memberToken);
     if (memberTokenHash) {
       await registerAdminPrincipal(memberTokenHash, app.applicantName);
