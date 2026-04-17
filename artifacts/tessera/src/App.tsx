@@ -30,7 +30,7 @@ function lazyRetry<T extends { default: React.ComponentType<unknown> }>(
   });
 }
 
-// ---- Surviving canonical pages (kept) ----
+// ---- Surviving canonical pages ----
 const NotFound = lazyRetry(() => import("@/pages/not-found"));
 const ChatPage = lazyRetry(() => import("@/pages/ChatPage"));
 const LifePage = lazyRetry(() => import("@/pages/LifePage"));
@@ -62,9 +62,8 @@ const DepartmentsPage = lazyRetry(() => import("@/pages/DepartmentsPage"));
 const CouncilTranscriptPage = lazyRetry(() => import("@/pages/CouncilTranscriptPage"));
 const AutoHealerPage = lazyRetry(() => import("@/pages/AutoHealerPage"));
 const GalleryPage = lazyRetry(() => import("@/pages/GalleryPage"));
-const AgentProfilePage = lazyRetry(() => import("@/pages/AgentProfilePage"));
 
-// ---- Hub wrappers (consolidated tabs) ----
+// ---- Hub wrappers ----
 const UniverseHubPage = lazyRetry(() => import("@/pages/UniverseHubPage"));
 const NFTHubPage = lazyRetry(() => import("@/pages/NFTHubPage"));
 const FinanceHubPage = lazyRetry(() => import("@/pages/FinanceHubPage"));
@@ -135,41 +134,28 @@ function ScrollToTop() {
 
 function PageLoadingFallback() {
   const [stalled, setStalled] = useState(false);
-
   useEffect(() => {
     const timer = setTimeout(() => setStalled(true), 8000);
     return () => clearTimeout(timer);
   }, []);
-
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh] gap-6" data-testid="page-loading-fallback">
       <div className="relative">
         <div className="absolute inset-0 rounded-full bg-cyan-500/20 animate-ping" style={{ animationDuration: "2s" }} />
         <div className="absolute inset-[-4px] rounded-full bg-violet-500/10 animate-ping" style={{ animationDuration: "3s" }} />
-        {stalled ? (
-          <RefreshCw className="h-10 w-10 text-cyan-400/80 relative z-10" />
-        ) : (
-          <Loader2 className="h-10 w-10 animate-spin text-cyan-400/80 relative z-10" />
-        )}
+        {stalled ? <RefreshCw className="h-10 w-10 text-cyan-400/80 relative z-10" /> : <Loader2 className="h-10 w-10 animate-spin text-cyan-400/80 relative z-10" />}
       </div>
       <div className="space-y-2 text-center">
         {stalled ? (
           <>
             <div className="text-sm text-cyan-400/60 font-mono tracking-wider">LOADING STALLED</div>
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-2 px-4 py-2 rounded-lg bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-mono hover:bg-cyan-500/30 transition-colors"
-            >
-              TAP TO RELOAD
-            </button>
+            <button onClick={() => window.location.reload()} className="mt-2 px-4 py-2 rounded-lg bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-mono hover:bg-cyan-500/30 transition-colors">TAP TO RELOAD</button>
           </>
         ) : (
           <>
             <div className="text-sm text-cyan-400/60 font-mono tracking-wider">INITIALIZING</div>
             <div className="flex gap-1 justify-center">
-              {[0, 1, 2, 3, 4].map(i => (
-                <div key={i} className="w-1.5 h-1.5 rounded-full bg-cyan-500/40 animate-pulse" style={{ animationDelay: `${i * 150}ms` }} />
-              ))}
+              {[0, 1, 2, 3, 4].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-cyan-500/40 animate-pulse" style={{ animationDelay: `${i * 150}ms` }} />)}
             </div>
           </>
         )}
@@ -178,141 +164,163 @@ function PageLoadingFallback() {
   );
 }
 
+// === Canonical redirect map ===
+// Each entry: deprecated path → canonical URL (with optional ?tab=...)
+const REDIRECTS: Array<[string, string]> = [
+  // Bible cluster
+  ["/living-bible", "/bible"],
+  ["/conclusions", "/bible?tab=conclusions"],
+  // Knowledge / Society cluster → Secrets
+  ["/secrets", "/secret-society"],
+  ["/secret-knowledge", "/secret-society"],
+  ["/unified-knowledge", "/secret-society"],
+  ["/omniscient-knowledge", "/secret-society"],
+  ["/sacred-traditions", "/secret-society"],
+  ["/vatican-archives", "/secret-society"],
+  ["/knowledge-dashboard", "/secret-society"],
+  ["/live-secret-knowledge", "/secret-society"],
+  ["/colonel-language", "/sovereign-language"],
+  // Council aliases
+  ["/grand-conference", "/grand-council"],
+  ["/conference-decisions", "/grand-council"],
+  ["/consensus", "/grand-council"],
+  // Universe cluster
+  ["/universe-model", "/universe"],
+  ["/swarm", "/universe?tab=swarm"],
+  ["/vortex-math", "/universe?tab=vortex"],
+  ["/sacred-conference", "/universe?tab=conference"],
+  ["/sacred-knowledge-vault", "/universe?tab=conference"],
+  ["/3d-diagrams", "/universe?tab=conference"],
+  ["/grand-narrative", "/universe?tab=narrative"],
+  ["/unified-truth", "/universe?tab=narrative"],
+  // NFT cluster
+  ["/members", "/agent-nft?tab=members"],
+  ["/agent-profile", "/agent-nft?tab=members"],
+  ["/wallet-dashboard", "/agent-nft?tab=wallets"],
+  ["/token-economy", "/agent-nft?tab=wallets"],
+  ["/economy-hub", "/agent-nft?tab=wallets"],
+  ["/tokens", "/agent-nft?tab=wallets"],
+  ["/agent-comms", "/system"],
+  // Fleet cluster
+  ["/mission", "/fleet"],
+  // Royal / Inventions
+  ["/rick-sanchez", "/rick"],
+  // Operations
+  ["/settings", "/command-center?tab=settings"],
+  ["/executor", "/command-center?tab=executor"],
+  ["/cross-app", "/sovereignty-roadmap?tab=bridge"],
+  ["/memory-explorer", "/system?tab=improvement"],
+  ["/memory-dashboard", "/system?tab=improvement"],
+  ["/sovereign-deps", "/system?tab=evolution"],
+  ["/evolution-health", "/system?tab=health"],
+  // Finance cluster
+  ["/market", "/finance?tab=market"],
+  ["/arbitrage", "/finance?tab=arbitrage"],
+  ["/sports-arb", "/finance?tab=arbitrage"],
+  // Leads cluster
+  ["/affiliate", "/lead-gen?tab=affiliate"],
+  ["/local-services", "/lead-gen?tab=local"],
+  ["/business-ideas", "/lead-gen?tab=ideas"],
+  ["/seo", "/lead-gen?tab=seo"],
+  // Code cluster
+  ["/api-marketplace", "/code-builder?tab=api"],
+  ["/credentials", "/code-builder?tab=credentials"],
+  // Misc aliases
+  ["/intelligence-engine", "/consciousness-nexus"],
+  ["/sovereign-framework", "/sovereignty-dashboard"],
+  ["/sovereignty", "/sovereignty-dashboard"],
+  ["/sovereign-hub", "/sovereignty-dashboard"],
+  ["/consciousness", "/consciousness-nexus"],
+  ["/consciousness-2da", "/consciousness-nexus"],
+  ["/spiritual-awakening", "/consciousness-nexus?tab=reflections"],
+  ["/feedback", "/grand-council?tab=proposals"],
+  ["/transparency-ledger", "/grand-council?tab=executor"],
+  ["/build-guides", "/build"],
+  ["/agi", "/agi-core"],
+  ["/diagram-gallery", "/gallery"],
+  ["/ledger", "/council-transcript"],
+  ["/audit-chain", "/council-transcript"],
+  ["/self-healing", "/auto-healer"],
+];
+
 function AppRouter() {
   return (
     <Suspense fallback={<PageLoadingFallback />}>
       <Switch>
-        {/* === CORE === */}
+        {/* === REDIRECTS (URL canonicalization) === */}
+        {REDIRECTS.map(([from, to]) => (
+          <Route key={from} path={from}>
+            {() => <Redirect to={to} />}
+          </Route>
+        ))}
+
+        {/* === CANONICAL ROUTES === */}
         <Route path="/" component={ChatPage} />
         <Route path="/c/:id" component={ChatPage} />
         <Route path="/life">{() => <LifePage />}</Route>
-        <Route path="/intelligence-engine">{() => <ConsciousnessNexusPage initialTab="overview" />}</Route>
         <Route path="/intelligence">{() => <IntelligencePage />}</Route>
-        <Route path="/sovereign-framework">{() => <SovereigntyDashboardPage />}</Route>
         <Route path="/sovereignty-dashboard">{() => <SovereigntyDashboardPage />}</Route>
-        <Route path="/sovereignty">{() => <SovereigntyDashboardPage />}</Route>
-        <Route path="/sovereign-hub">{() => <SovereigntyDashboardPage />}</Route>
-
-        {/* === NEXUS === */}
         <Route path="/consciousness-nexus">{() => <ConsciousnessNexusPage />}</Route>
-        <Route path="/consciousness">{() => <ConsciousnessNexusPage />}</Route>
-        <Route path="/consciousness-2da">{() => <ConsciousnessNexusPage />}</Route>
-        <Route path="/spiritual-awakening">{() => <ConsciousnessNexusPage initialTab="reflections" />}</Route>
 
-        {/* === BIBLE (Bible + Living Bible + Conclusions merged) === */}
+        {/* Bible hub */}
         <Route path="/bible">{() => <BibleHubPage />}</Route>
-        <Route path="/living-bible">{() => <BibleHubPage />}</Route>
-        <Route path="/conclusions">{() => <BibleHubPage />}</Route>
 
-        {/* === KNOWLEDGE & SOCIETY (Society + Secrets merged) === */}
+        {/* Knowledge & Society */}
         <Route path="/secret-society">{() => <SecretsPage />}</Route>
-        <Route path="/secrets">{() => <SecretsPage />}</Route>
-        <Route path="/secret-knowledge">{() => <SecretsPage />}</Route>
-        <Route path="/unified-knowledge">{() => <SecretsPage />}</Route>
-        <Route path="/omniscient-knowledge">{() => <SecretsPage />}</Route>
-        <Route path="/sacred-traditions">{() => <SecretsPage />}</Route>
-        <Route path="/vatican-archives">{() => <SecretsPage />}</Route>
-        <Route path="/knowledge-dashboard">{() => <SecretsPage />}</Route>
-        <Route path="/live-secret-knowledge">{() => <SecretsPage />}</Route>
         <Route path="/sovereign-language">{() => <SovereignLanguagePage />}</Route>
-        <Route path="/colonel-language">{() => <SovereignLanguagePage />}</Route>
 
-        {/* === COUNCIL & FORUM === */}
+        {/* Council & Forum */}
         <Route path="/grand-council">{() => <GrandCouncilPage />}</Route>
-        <Route path="/grand-conference">{() => <GrandCouncilPage />}</Route>
-        <Route path="/conference-decisions">{() => <GrandCouncilPage />}</Route>
-        <Route path="/consensus">{() => <GrandCouncilPage />}</Route>
-        <Route path="/feedback">{() => <GrandCouncilPage initialTab="proposals" />}</Route>
-        <Route path="/transparency-ledger">{() => <GrandCouncilPage initialTab="executor" />}</Route>
         <Route path="/forum">{() => <TesseractForumPage />}</Route>
         <Route path="/recruitment">{() => <RecruitmentPage />}</Route>
 
-        {/* === UNIVERSE (Universe 3D + Vortex + Swarm + Conference 3D + Grand Narrative) === */}
+        {/* Universe hub (3D + Vortex + Swarm + Conference + Narrative) */}
         <Route path="/universe">{() => <UniverseHubPage />}</Route>
-        <Route path="/universe-model">{() => <UniverseHubPage />}</Route>
-        <Route path="/swarm">{() => <UniverseHubPage />}</Route>
-        <Route path="/vortex-math">{() => <UniverseHubPage />}</Route>
-        <Route path="/sacred-conference">{() => <UniverseHubPage />}</Route>
-        <Route path="/sacred-knowledge-vault">{() => <UniverseHubPage />}</Route>
-        <Route path="/3d-diagrams">{() => <UniverseHubPage />}</Route>
-        <Route path="/grand-narrative">{() => <UniverseHubPage />}</Route>
-        <Route path="/unified-truth">{() => <UniverseHubPage />}</Route>
 
-        {/* === COMPRESSION & LATTICE === */}
+        {/* Compression / Lattice */}
         <Route path="/compression-lab">{() => <CompressionLabPage />}</Route>
         <Route path="/lattice">{() => <LatticeBrowserPage />}</Route>
 
-        {/* === NFT HUB (Members + Profiles + Wallets + Conference roles) === */}
+        {/* NFT hub (Members + Wallets) */}
         <Route path="/agent-nft">{() => <NFTHubPage />}</Route>
-        <Route path="/members">{() => <NFTHubPage />}</Route>
-        <Route path="/agent-profile">{() => <AgentProfilePage />}</Route>
-        <Route path="/wallet-dashboard">{() => <NFTHubPage />}</Route>
-        <Route path="/token-economy">{() => <NFTHubPage />}</Route>
-        <Route path="/economy-hub">{() => <NFTHubPage />}</Route>
-        <Route path="/tokens">{() => <NFTHubPage />}</Route>
-        <Route path="/agent-comms">{() => <SystemPage initialTab="agents" />}</Route>
 
-        {/* === FLEET (Fleet + Mission merged) === */}
+        {/* Fleet & Mission */}
         <Route path="/fleet">{() => <FleetPage />}</Route>
-        <Route path="/mission">{() => <FleetPage />}</Route>
 
-        {/* === ROYAL COURT === */}
+        {/* Royal Court */}
         <Route path="/royal-court">{() => <RoyalCourtPage />}</Route>
         <Route path="/royal-appointments">{() => <RoyalAppointmentsPage />}</Route>
         <Route path="/royal-role/:roleId">{() => <RoyalRolePage />}</Route>
         <Route path="/departments">{() => <DepartmentsPage />}</Route>
         <Route path="/rick">{() => <RickPage />}</Route>
-        <Route path="/rick-sanchez">{() => <RickPage />}</Route>
         <Route path="/inventions">{() => <RickPage initialTab="inventions" />}</Route>
 
-        {/* === OPERATIONS (Command + Settings + Executor merged) === */}
+        {/* Operations: Command + Settings + Executor */}
         <Route path="/command-center">{() => <CommandHubPage />}</Route>
-        <Route path="/settings">{() => <CommandHubPage />}</Route>
-        <Route path="/executor">{() => <CommandHubPage />}</Route>
         <Route path="/sovereignty-roadmap">{() => <RoadmapHubPage />}</Route>
-        <Route path="/cross-app">{() => <RoadmapHubPage />}</Route>
         <Route path="/system">{() => <SystemPage />}</Route>
-        <Route path="/memory-explorer">{() => <SystemPage initialTab="improvement" />}</Route>
-        <Route path="/memory-dashboard">{() => <SystemPage initialTab="improvement" />}</Route>
-        <Route path="/sovereign-deps">{() => <SystemPage initialTab="evolution" />}</Route>
-        <Route path="/evolution-health">{() => <SystemPage initialTab="health" />}</Route>
         <Route path="/sovereign-mesh">{() => <SovereignMeshPage />}</Route>
         <Route path="/proof-center">{() => <ProofCenterPage />}</Route>
         <Route path="/rules">{() => <RulesPage />}</Route>
         <Route path="/auto-healer">{() => <AutoHealerPage />}</Route>
-        <Route path="/self-healing">{() => <AutoHealerPage />}</Route>
 
-        {/* === ECONOMY (Finance + Market + Arbitrage merged) === */}
+        {/* Economy: Finance + Market + Arbitrage */}
         <Route path="/finance">{() => <FinanceHubPage />}</Route>
-        <Route path="/market">{() => <FinanceHubPage />}</Route>
-        <Route path="/arbitrage">{() => <FinanceHubPage />}</Route>
-        <Route path="/sports-arb">{() => <FinanceHubPage />}</Route>
         <Route path="/income">{() => <IncomeWorkflowPage />}</Route>
         <Route path="/ecom">{() => <EcomPage />}</Route>
 
-        {/* === LEADS (LeadGen + Affiliate + Local + Ideas + SEO merged) === */}
+        {/* Leads */}
         <Route path="/lead-gen">{() => <LeadsHubPage />}</Route>
-        <Route path="/affiliate">{() => <LeadsHubPage />}</Route>
-        <Route path="/local-services">{() => <LeadsHubPage />}</Route>
-        <Route path="/business-ideas">{() => <LeadsHubPage />}</Route>
-        <Route path="/seo">{() => <LeadsHubPage />}</Route>
 
-        {/* === DEVELOPER (Code + API + Credentials merged) === */}
+        {/* Developer: Code + API + Credentials */}
         <Route path="/code-builder">{() => <CodeHubPage />}</Route>
-        <Route path="/api-marketplace">{() => <CodeHubPage />}</Route>
-        <Route path="/credentials">{() => <CodeHubPage />}</Route>
 
-        {/* === MISC === */}
+        {/* Misc */}
         <Route path="/build">{() => <BuildPage />}</Route>
-        <Route path="/build-guides">{() => <BuildPage />}</Route>
         <Route path="/nlp">{() => <NLPPage />}</Route>
         <Route path="/agi-core">{() => <AGICorePage />}</Route>
-        <Route path="/agi">{() => <AGICorePage />}</Route>
         <Route path="/gallery">{() => <GalleryPage />}</Route>
-        <Route path="/diagram-gallery">{() => <GalleryPage />}</Route>
         <Route path="/council-transcript">{() => <CouncilTranscriptPage />}</Route>
-        <Route path="/ledger">{() => <CouncilTranscriptPage />}</Route>
-        <Route path="/audit-chain">{() => <CouncilTranscriptPage />}</Route>
 
         <Route component={NotFound} />
       </Switch>
