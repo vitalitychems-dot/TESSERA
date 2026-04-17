@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AdminProvider } from "@/lib/adminContext";
+import TesseractKeyGate from "@/components/TesseractKeyGate";
 import { MeshProvider } from "@/lib/meshContext";
 import { NLPGoalsProvider } from "@/lib/nlpGoalsContext";
 import { Component, type ErrorInfo, type ReactNode, useEffect, useRef, useState, lazy, Suspense } from "react";
@@ -343,6 +344,7 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AdminProvider>
+          <TesseractKeyGate>
           <MeshProvider>
           <NLPGoalsProvider>
           <TooltipProvider>
@@ -370,6 +372,7 @@ function App() {
           </TooltipProvider>
           </NLPGoalsProvider>
           </MeshProvider>
+          </TesseractKeyGate>
         </AdminProvider>
       </QueryClientProvider>
     </ErrorBoundary>
