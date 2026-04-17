@@ -70,6 +70,7 @@ import tesseraCodexRouter from "./tessera-codex";
 import localModelsRouter from "./local-models";
 import e2eSovereigntyRouter from "./e2e-sovereignty";
 import autonomousBuildRouter from "./autonomous-build";
+import sovereignDoctrineRouter from "./sovereign-doctrine";
 import { startAutonomousBuildCycleTimer } from "../lib/autonomous-build-cycle";
 import { startWalletObserver } from "../lib/wallet-observer";
 import { startFreeStuffScraper } from "../lib/free-stuff-scraper";
@@ -150,6 +151,7 @@ router.use(tesseraCodexRouter);
 router.use(localModelsRouter);
 router.use(e2eSovereigntyRouter);
 router.use(autonomousBuildRouter);
+router.use(sovereignDoctrineRouter);
 
 startWalletObserver();
 startAutonomousBuildCycleTimer();

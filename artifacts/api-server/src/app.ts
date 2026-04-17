@@ -63,9 +63,20 @@ export function setServerUnready(reason: string): void {
   logger.warn({ reason }, "Server readiness gate CLOSED — returning 503 until routes recover; watchdog will re-open gate when healthy");
 }
 
+// Routes that are pure functions with no startup dependencies — always
+// available even when the readiness gate is closed.
+const ALWAYS_OPEN_PREFIXES = [
+  "/api/sigil/",
+  "/api/session/",
+  "/api/external-tools/",
+  "/api/sacred-timing/",
+  "/api/health",
+];
+
 app.use((req: Request, res: Response, next: NextFunction) => {
   const isInternalProbe = req.headers[INTERNAL_PROBE_HEADER] === INTERNAL_PROBE_SECRET;
-  if (!serverReady && !isInternalProbe) {
+  const isAlwaysOpen = ALWAYS_OPEN_PREFIXES.some(p => req.path.startsWith(p));
+  if (!serverReady && !isInternalProbe && !isAlwaysOpen) {
     res.status(503).json({ ok: false, error: "Server is starting up — not yet ready for traffic" });
     return;
   }
