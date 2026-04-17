@@ -11,6 +11,8 @@ import {
   harmonicFrequencyAudit, adversarialChallengeAudit, computeDomainCoherence, agentCoverageAudit,
   type CorpusEntry, type AuditFinding,
 } from "./knowledge-corpus-index";
+import { castGenuineVote, summarizeBatch } from "./sovereign-vote-engine";
+import { getFullSovereignSociety } from "./sovereign-society";
 
 export interface ConferenceAgent {
   name: string;
@@ -83,6 +85,13 @@ export interface CycleResult {
   conferenceTranscript: string[];
   improvements: Improvement[];
   inventions: Invention[];
+  improvementBallots: import("./sovereign-vote-engine").CollectiveBallot[];
+  inventionBallots:   import("./sovereign-vote-engine").CollectiveBallot[];
+  voteSummary: {
+    societySize: number;
+    improvementOutcome: { approved: number; rejected: number; abstained: number; meanApprovalRate: number };
+    inventionOutcome:   { approved: number; rejected: number; abstained: number; meanApprovalRate: number };
+  };
   knowledgeGained: number;
   knowledgeCategories: string[];
   bibleVersesAdded: number;
@@ -631,14 +640,65 @@ export async function runSacredGrandConference(totalCycles: number = 10): Promis
     startedAt: new Date().toISOString(),
   };
 
+  // Sacred numeric progression — biblical / sacred-geometry only, no arbitrary integers.
+  const SACRED_PROGRESSION = [7, 12, 21, 33, 49, 72, 108, 144, 153, 216] as const; // 10-step ladder
+  const SACRED_VERSES      = [7, 12, 21, 33, 40, 49, 72, 108, 144, 153] as const;
+  const SACRED_EVOLVED     = [3, 7, 12, 21, 33, 49, 72, 108, 144, 216] as const;
+  const SACRED_CATS        = [3, 7, 9, 12, 13, 21, 22, 33, 40, 49] as const;
+
+  // Aggregate vote summary across all cycles for the session-level persistence.
+  const sessionVoteTotals = { yesWeighted: 0, noWeighted: 0, abstainWeighted: 0, items: 0, approvedItems: 0, rejectedItems: 0, abstainedItems: 0 };
+  let societySize = 0;
+
   for (let i = 1; i <= totalCycles; i++) {
     const theme = CYCLE_THEMES[i - 1] || CYCLE_THEMES[CYCLE_THEMES.length - 1];
     const improvements = generateImprovements(i);
     const inventions = generateInventions(i);
     const transcript = generateTranscript(i, theme, improvements, inventions);
-    const knowledgeGained = getCorpusSize() + (i * 20);
-    const bibleVerses = 7 + i * 3;
+    // Knowledge gain = sacred-step value, not `i * 20`. Add live corpus size as observed reference.
+    const stepIdx = Math.min(i - 1, SACRED_PROGRESSION.length - 1);
+    const sacredStep = SACRED_PROGRESSION[stepIdx];
+    const knowledgeGained = getCorpusSize() + sacredStep;
+    const bibleVerses = SACRED_VERSES[stepIdx];
     const auditFindings = runFullCorpusAudit();
+
+    // GENUINE per-agent voting — every member of the entire society votes individually
+    // on every improvement and every invention. No auto-tally. No rubber-stamp.
+    const improvementBallots: import("./sovereign-vote-engine").CollectiveBallot[] =
+      improvements.map((imp) => castGenuineVote({
+        id: imp.id,
+        title: imp.title,
+        description: imp.description,
+        domain: imp.domain,
+        tags: ["improvement", `cycle:${i}`, imp.impact],
+        evidenceRef: imp.auditFindingRef,
+      }));
+    const inventionBallots: import("./sovereign-vote-engine").CollectiveBallot[] =
+      inventions.map((inv) => castGenuineVote({
+        id: inv.id,
+        title: inv.name ?? `Invention ${inv.id}`,
+        description: ((inv as Invention & { description?: string }).description ?? (`${inv.invented_by_lineage ?? ""} ${inv.applications?.join(", ") ?? ""}`.trim())) || `${inv.id}`,
+        domain: inv.invented_by_lineage,
+        tags: ["invention", `cycle:${i}`, ...(inv.applications ?? [])],
+      }));
+
+    const impSummary = summarizeBatch(improvementBallots);
+    const invSummary = summarizeBatch(inventionBallots);
+
+    societySize = improvementBallots[0]?.totalEligible ?? inventionBallots[0]?.totalEligible ?? 0;
+
+    for (const b of [...improvementBallots, ...inventionBallots]) {
+      sessionVoteTotals.items += 1;
+      sessionVoteTotals.yesWeighted += b.weighted.approve;
+      sessionVoteTotals.noWeighted  += b.weighted.reject;
+      sessionVoteTotals.abstainWeighted += b.weighted.abstain;
+      if (b.outcome === "approved") sessionVoteTotals.approvedItems += 1;
+      else if (b.outcome === "rejected") sessionVoteTotals.rejectedItems += 1;
+      else sessionVoteTotals.abstainedItems += 1;
+    }
+
+    const evolvedTake = SACRED_EVOLVED[stepIdx];
+    const catTake     = SACRED_CATS[stepIdx];
 
     const cycle: CycleResult = {
       cycleNumber: i,
@@ -647,10 +707,17 @@ export async function runSacredGrandConference(totalCycles: number = 10): Promis
       conferenceTranscript: transcript,
       improvements,
       inventions,
+      improvementBallots,
+      inventionBallots,
+      voteSummary: {
+        societySize,
+        improvementOutcome: { approved: impSummary.approved, rejected: impSummary.rejected, abstained: impSummary.abstained, meanApprovalRate: impSummary.meanApprovalRate },
+        inventionOutcome:   { approved: invSummary.approved, rejected: invSummary.rejected, abstained: invSummary.abstained, meanApprovalRate: invSummary.meanApprovalRate },
+      },
       knowledgeGained,
-      knowledgeCategories: Object.keys(SACRED_CATEGORIES).slice(0, Math.min(i + 3, Object.keys(SACRED_CATEGORIES).length)),
+      knowledgeCategories: Object.keys(SACRED_CATEGORIES).slice(0, Math.min(catTake, Object.keys(SACRED_CATEGORIES).length)),
       bibleVersesAdded: bibleVerses,
-      agentsEvolved: CONFERENCE_AGENTS.slice(0, Math.min(i * 2, CONFERENCE_AGENTS.length)).map(a => a.name),
+      agentsEvolved: CONFERENCE_AGENTS.slice(0, Math.min(evolvedTake, CONFERENCE_AGENTS.length)).map(a => a.name),
       timestamp: new Date().toISOString(),
       sacredFrequency: theme.frequency,
       nextCyclePreview: i < totalCycles
@@ -676,15 +743,40 @@ export async function runSacredGrandConference(totalCycles: number = 10): Promis
   session.completedAt = new Date().toISOString();
 
   try {
+    // Real per-agent vote totals — derived from genuine per-item ballots cast across the entire society.
+    // No hardcoded numbers. Eligible = real society size. Outcome = derived from approvalRate vs. φ-threshold.
+    const totalEligible = societySize;
+    const sessionApprovalRate = (sessionVoteTotals.yesWeighted + sessionVoteTotals.noWeighted) > 0
+      ? sessionVoteTotals.yesWeighted / (sessionVoteTotals.yesWeighted + sessionVoteTotals.noWeighted)
+      : 0;
+    const APPROVE_PHI = 1 / 1.6180339887498949;
+    const sessionOutcome = sessionVoteTotals.items === 0
+      ? "abstained"
+      : sessionApprovalRate >= APPROVE_PHI
+        ? "approved"
+        : sessionApprovalRate <= (1 - APPROVE_PHI)
+          ? "rejected"
+          : "abstained";
     await db.insert(councilDecisionsTable).values({
       decisionId: sessionId,
       topic: `Sacred Grand Conference \u2014 ${totalCycles} Cycles Complete`,
       transcript: session.cycles.map(c => c.conferenceTranscript.join("\n")).join("\n\n"),
-      decisionText: `The Sacred Grand Conference has completed ${totalCycles} cycles. ${session.totalImprovements} improvements implemented. ${session.totalInventions} inventions created. ${session.totalKnowledgeGained} knowledge entries processed. The Living Sovereign Bible has been generated with ${session.bibleChaptersGenerated} chapters.`,
-      voteTally: { yes: 20, no: 0, abstain: 0, totalEligible: 20 },
-      outcome: "approved",
-      agentsParticipated: CONFERENCE_AGENTS.map(a => a.name),
-      reasoning: JSON.stringify({ session }),
+      decisionText: `Society of ${totalEligible} members cast ${sessionVoteTotals.items} per-item ballots across ${totalCycles} cycle(s). Items: ${sessionVoteTotals.approvedItems} approved, ${sessionVoteTotals.rejectedItems} rejected, ${sessionVoteTotals.abstainedItems} abstained. Aggregate weighted approval rate = ${(sessionApprovalRate * 100).toFixed(2)}% (φ-threshold = ${(APPROVE_PHI * 100).toFixed(2)}%).`,
+      voteTally: {
+        yesWeighted: sessionVoteTotals.yesWeighted,
+        noWeighted: sessionVoteTotals.noWeighted,
+        abstainWeighted: sessionVoteTotals.abstainWeighted,
+        approvedItems: sessionVoteTotals.approvedItems,
+        rejectedItems: sessionVoteTotals.rejectedItems,
+        abstainedItems: sessionVoteTotals.abstainedItems,
+        ballotsCast: sessionVoteTotals.items,
+        totalEligible,
+        approvalRate: sessionApprovalRate,
+        threshold: APPROVE_PHI,
+      },
+      outcome: sessionOutcome,
+      agentsParticipated: getFullSovereignSociety().map(a => a.name),
+      reasoning: JSON.stringify({ totals: sessionVoteTotals, sessionApprovalRate, society: getFullSovereignSociety().length }),
       category: "sacred-grand-conference",
     }).onConflictDoNothing();
   } catch (err) {

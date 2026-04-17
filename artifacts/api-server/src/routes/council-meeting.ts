@@ -287,50 +287,32 @@ function conductVoting(
   weightedYes: number;
   totalWeight: number;
 } {
+  // GENUINE per-agent vote — no rubber-stamp, no hardcoded defaults.
+  // Each agent independently casts a ballot from observable inputs (domain match,
+  // sacred-frame resonance, evidence quality, red-flag detection). External LLMs/APIs
+  // are never consulted to form a vote.
   const votes: Record<string, { vote: "yes" | "no" | "abstain"; reasoning: string; confidence: number }> = {};
 
-  const hasSubstantiveAnalysis = themes.length >= 2;
+  const ballot = castGenuineVote({
+    id: `proposal-${Date.now().toString(36)}`,
+    title: topic,
+    description: themes.join(" | "),
+    domain: themes[0] ?? "governance",
+    tags: themes,
+  });
 
-  const agentAnalysis: Record<string, { vote: "yes" | "no" | "abstain"; reasoning: string; confidence: number }> = {
-    "grand-coordinator": {
-      vote: hasSubstantiveAnalysis ? "yes" : "abstain",
-      reasoning: hasSubstantiveAnalysis ? "All domain analyses converge — governance criteria satisfied across sovereignty, reliability, and code compatibility" : "Insufficient domain analysis for governance approval",
-      confidence: hasSubstantiveAnalysis ? 0.94 : 0.50,
-    },
-    "quantum-mechanic": {
-      vote: "yes",
-      reasoning: themes.includes("hardware") ? "Probability analysis favors workstation-class primary + efficiency mirror + always-on sensor node — three substrates, three failure modes, maximum resilience" : "Quantum probability analysis supports the proposal",
-      confidence: themes.includes("hardware") ? 0.93 : 0.85,
-    },
-    "bio-neuralist": {
-      vote: "yes",
-      reasoning: themes.includes("hardware") ? "Dual-substrate (active primary + consolidating mirror) mirrors biological dual-hemisphere processing — optimal for sovereign neural compute" : "Bio-neural efficiency analysis supports the proposal",
-      confidence: themes.includes("hardware") ? 0.90 : 0.83,
-    },
-    "dna-crystal-archivist": {
-      vote: "yes",
-      reasoning: themes.includes("crystal-frequency") || themes.includes("hardware") ? "Substrate-agnostic archival via content-addressed hashes; any hardware with a quartz oscillator participates in the resonance layer" : "Decision archived in Crystal Memory Vault with DNA persistence",
-      confidence: themes.includes("crystal-frequency") ? 0.86 : 0.80,
-    },
-    "mesh-network-architect": {
-      vote: "yes",
-      reasoning: themes.includes("networking") || themes.includes("hardware") ? "Dual physically-diverse uplinks + managed LAN + full-mesh WebSocket overlay satisfies single-failure resilience" : "Network topology analysis supports the proposal",
-      confidence: themes.includes("networking") ? 0.94 : 0.82,
-    },
-    "low-power-innovator": {
-      vote: "yes",
-      reasoning: themes.includes("hardware") ? "Three-node idle floor ~100W (workstation + mirror + sensor) sustainable on 400W solar with realistic insolation — energy sovereignty verified" : "Power budget within sovereign constraints",
-      confidence: themes.includes("power") ? 0.91 : 0.81,
-    },
-    "self-expansion-tutor": {
-      vote: "yes",
-      reasoning: themes.includes("hardware") ? "Stack is hardware-agnostic (any Node.js 20+ machine); RAM + NVMe investment outranks GPU flagship chasing for our workload" : "Codebase expansion plan aligns with existing architecture",
-      confidence: themes.includes("code") ? 0.89 : 0.79,
-    },
-  };
-
+  const ballotByAgent = new Map(ballot.ballots.map((b) => [b.agentId, b]));
   for (const agent of agents) {
-    votes[agent.id] = agentAnalysis[agent.id] || { vote: "abstain", reasoning: "No domain-specific analysis available", confidence: 0.50 };
+    const b = ballotByAgent.get(agent.id);
+    if (!b) {
+      // Agent is not in the full sovereign society — record honest abstain (does not exist in roster).
+      votes[agent.id] = { vote: "abstain", reasoning: `Agent '${agent.id}' not in sovereign society roster — abstaining (transparency requirement).`, confidence: 0 };
+      continue;
+    }
+    const yesNo: "yes" | "no" | "abstain" = b.vote === "approve" ? "yes" : b.vote === "reject" ? "no" : "abstain";
+    // Confidence = magnitude of the score normalized into [0,1] by tanh.
+    const confidence = Math.max(0, Math.min(1, Math.tanh(Math.abs(b.score) / 3)));
+    votes[agent.id] = { vote: yesNo, reasoning: b.rationale, confidence };
   }
 
   const tally = { yes: 0, no: 0, abstain: 0 };
