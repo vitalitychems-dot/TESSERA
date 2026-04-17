@@ -9,6 +9,7 @@ export default function CodeHubPage() {
       iconColor="text-blue-400"
       tabs={[
         { id: "builder", label: "Code Builder", load: () => import("./CodeBuilderPage"), matchPaths: ["/code-builder"] },
+        { id: "api", label: "API Marketplace", load: () => import("./APIMarketplacePage"), matchPaths: ["/api-marketplace"] },
         { id: "credentials", label: "Credentials & Keys", load: () => import("./CredentialsPage"), matchPaths: ["/credentials"] },
       ]}
     />

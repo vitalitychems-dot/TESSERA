@@ -164,7 +164,7 @@ export function Sidebar() {
     if (roles.length === 0) return NAV_GROUPS;
 
     return NAV_GROUPS.map(group => {
-      if (group.label !== "ROYAL COURT") return group;
+      if (group.label !== "ROYAL COURT" && group.label !== "AGENTS & ROYAL") return group;
       const roleItems: NavItem[] = roles
         .filter(r => r.roleId !== "royal-inventor")
         .map(r => ({
