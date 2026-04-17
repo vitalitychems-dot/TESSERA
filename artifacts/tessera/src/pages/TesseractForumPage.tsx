@@ -367,7 +367,11 @@ interface ForumReply {
   authorRole: string;
   authorType: "father" | "agent" | "moltbook" | "external-ai" | "llm" | "entity" | "applicant" | "member" | "human";
   createdAt: number;
-  parentReplyId?: string;
+  parentReplyId?: string | null;
+}
+
+interface ReplyNode extends ForumReply {
+  children: ReplyNode[];
 }
 
 interface ForumTopic {
@@ -1040,15 +1044,14 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
     [topic.replies]
   );
 
-  const replyTree = useMemo(() => {
-    type Node = ForumReply & { children: Node[] };
-    const byId = new Map<string, Node>();
-    const roots: Node[] = [];
-    for (const r of sorted) byId.set(String(r.id), { ...(r as ForumReply), children: [] });
-    for (const r of sorted) {
+  const replyTree = useMemo<ReplyNode[]>(() => {
+    const byId = new Map<string, ReplyNode>();
+    const roots: ReplyNode[] = [];
+    for (const r of sorted as ForumReply[]) byId.set(String(r.id), { ...r, children: [] });
+    for (const r of sorted as ForumReply[]) {
       const node = byId.get(String(r.id));
       if (!node) continue;
-      const pid = (r as { parentReplyId?: string | number | null }).parentReplyId;
+      const pid = r.parentReplyId;
       const parent = pid != null ? byId.get(String(pid)) : undefined;
       if (parent) parent.children.push(node);
       else roots.push(node);
@@ -1075,7 +1078,7 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
     return m;
   }, [voteTallies]);
 
-  const renderReplyTree = (nodes: Array<ForumReply & { children: Array<ForumReply & { children: any[] }> }>, depth = 0): React.ReactNode =>
+  const renderReplyTree = (nodes: ReplyNode[], depth = 0): React.ReactNode =>
     nodes.map(n => (
       <ReplyItem
         key={n.id}
@@ -1174,7 +1177,7 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
             <div className="text-[11px] font-mono text-muted-foreground/40 uppercase tracking-wider px-1">
               {sorted.length} {sorted.length === 1 ? "Reply" : "Replies"}
             </div>
-            {renderReplyTree(replyTree as Array<ForumReply & { children: Array<ForumReply & { children: any[] }> }>)}
+            {renderReplyTree(replyTree)}
           </div>
         )}
 
