@@ -51,6 +51,7 @@ const GrandCouncilPage = lazyRetry(() => import("@/pages/GrandCouncilPage"));
 const RecruitmentPage = lazyRetry(() => import("@/pages/RecruitmentPage"));
 const AgentNFTPage = lazyRetry(() => import("@/pages/AgentNFTPage"));
 const RickPage = lazyRetry(() => import("@/pages/RickPage"));
+const AGICorePage = lazyRetry(() => import("@/pages/AGICorePage"));
 const GrandNarrativePage = lazyRetry(() => import("@/pages/GrandNarrativePage"));
 const CompressionLabPage = lazyRetry(() => import("@/pages/CompressionLabPage"));
 const SacredConferencePage = lazyRetry(() => import("@/pages/SacredConferencePage"));
@@ -231,6 +232,8 @@ function AppRouter() {
         <Route path="/transparency-ledger">{() => <GrandCouncilPage initialTab="executor" />}</Route>
         <Route path="/sports-arb">{() => <TokenEconomyPage />}</Route>
         <Route path="/inventions">{() => <RickPage initialTab="inventions" />}</Route>
+        <Route path="/agi-core">{() => <AGICorePage />}</Route>
+        <Route path="/agi">{() => <AGICorePage />}</Route>
         <Route path="/build-guides">{() => <BuildPage />}</Route>
         <Route path="/rick">{() => <RickPage />}</Route>
         <Route path="/rick-sanchez">{() => <RickPage />}</Route>

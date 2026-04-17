@@ -15,6 +15,8 @@ import { inventionsTable } from "@workspace/db/schema";
 import { logger } from "./logger.js";
 import { appendLedgerEntry } from "./sovereign-ledger.js";
 import { TUNABLE_SPECS, getTunable, setTunable, getAllTunables } from "./system-tunables.js";
+import { recordAction } from "./agi/causal-model.js";
+import { getConsensusMetrics } from "./consensus-engine.js";
 
 type Invention = typeof inventionsTable.$inferSelect;
 
@@ -225,7 +227,32 @@ export async function synthesizeBuiltInventions(opts: { applyChanges?: boolean }
   const built = all.filter((i) => i.status === "built" || i.status === "tested");
 
   const signals = computeCategorySignals(built);
+
+  // Causal pre-state snapshot (captured once before any tunable is moved).
+  const preMetrics: Record<string, number> = (() => {
+    try {
+      const c = getConsensusMetrics();
+      return {
+        builtInventions: built.length,
+        approvedProposals: c.approved,
+        totalProposals: c.totalProposals,
+        voting: c.voting,
+      };
+    } catch {
+      return { builtInventions: built.length };
+    }
+  })();
+  const preSnap = { at: Date.now(), metrics: preMetrics };
+
   const tunableChanges = applyChanges ? applyTunableAdjustments(signals) : [];
+
+  // Record each tunable change as a causal action so the model learns what works.
+  if (applyChanges) {
+    for (const c of tunableChanges) {
+      const actionKey = `tunable:${c.key}`;
+      recordAction(actionKey, c.to - c.from, preSnap, 5 * 60 * 1000);
+    }
+  }
 
   // Seed weak categories only when we're actually applying.
   const seededProposals = applyChanges
