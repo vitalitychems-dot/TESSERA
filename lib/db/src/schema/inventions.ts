@@ -25,6 +25,7 @@ export const inventionsTable = pgTable("inventions", {
   blueprint: text("blueprint"),
   supporters: jsonb("supporters").$type<string[]>().notNull().default([]),
   conferenceRound: integer("conference_round").notNull().default(1),
+  customModelUrl: text("custom_model_url"),
   proposedAt: timestamp("proposed_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (t) => [

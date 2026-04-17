@@ -64,6 +64,7 @@ import sovereignGrammarRouter from "./sovereign-grammar";
 import autoHealerRouter from "./auto-healer";
 import realityAuditRouter from "./reality-audit";
 import feedbackRouter from "./feedback";
+import storageRouter from "./storage";
 
 const router: IRouter = Router();
 
@@ -132,5 +133,6 @@ router.use(sovereignGrammarRouter);
 router.use(feedbackRouter);
 router.use(autoHealerRouter);
 router.use(realityAuditRouter);
+router.use(storageRouter);
 
 export default router;

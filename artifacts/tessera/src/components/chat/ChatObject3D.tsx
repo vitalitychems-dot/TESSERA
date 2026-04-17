@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, Suspense, Component, type ReactNode, type ErrorInfo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Text } from "@react-three/drei";
+import { OrbitControls, Text, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { Maximize2, X, RotateCcw } from "lucide-react";
 
@@ -21,6 +21,7 @@ export interface Object3DSpec {
   secondaryColor?: string;
   size?: number;
   detail?: string;
+  src?: string;
 }
 
 export function parse3DObjectBlocks(text: string): { text: string; objects: Object3DSpec[] } {
@@ -40,6 +41,7 @@ export function parse3DObjectBlocks(text: string): { text: string; objects: Obje
         secondaryColor: spec.secondary || spec.secondaryColor,
         size: spec.size ? parseFloat(spec.size) : undefined,
         detail: spec.detail,
+        src: spec.src,
       });
     }
     return "";
@@ -664,7 +666,54 @@ function SolarPanelModel({ color, secondary }: { color: string; secondary: strin
   );
 }
 
-function getObjectModel(type: string, color: string, secondary: string) {
+function resolveCustomModelUrl(src: string): string {
+  // objectPaths from /api/inventions/:id/model are returned as "/objects/<id>".
+  // Map them to the gated storage serving route.
+  if (src.startsWith("/objects/")) {
+    const base = import.meta.env.BASE_URL || "/";
+    return `${base.replace(/\/$/, "")}/api/storage${src}`.replace(/\/{2,}/g, "/");
+  }
+  return src;
+}
+
+function CustomGLTFModel({ src, color }: { src: string; color: string }) {
+  const url = resolveCustomModelUrl(src);
+  const gltf = useGLTF(url);
+  const groupRef = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => {
+    if (groupRef.current) groupRef.current.rotation.y = clock.getElapsedTime() * 0.3;
+  });
+  // Auto-fit: center and scale the loaded scene so it lives roughly within ±1.5.
+  const scene = gltf.scene;
+  const fitted = (() => {
+    const box = new THREE.Box3().setFromObject(scene);
+    const sizeVec = new THREE.Vector3();
+    box.getSize(sizeVec);
+    const maxDim = Math.max(sizeVec.x, sizeVec.y, sizeVec.z) || 1;
+    const target = 2.4;
+    const fitScale = target / maxDim;
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    return { fitScale, offset: center.multiplyScalar(-fitScale) };
+  })();
+  return (
+    <group ref={groupRef}>
+      <group position={[fitted.offset.x, fitted.offset.y, fitted.offset.z]} scale={[fitted.fitScale, fitted.fitScale, fitted.fitScale]}>
+        <primitive object={scene} />
+      </group>
+      {/* Subtle accent halo so the user knows the model is the inventor's upload. */}
+      <mesh>
+        <sphereGeometry args={[2.0, 16, 16]} />
+        <meshBasicMaterial color={color} transparent opacity={0.04} />
+      </mesh>
+    </group>
+  );
+}
+
+function getObjectModel(type: string, color: string, secondary: string, spec?: Object3DSpec) {
+  if ((type === "custom" || spec?.src) && spec?.src) {
+    return <CustomGLTFModel src={spec.src} color={color} />;
+  }
   switch (type.toLowerCase()) {
     case "car": case "vehicle": case "automobile": case "truck": return <CarModel color={color} />;
     case "rocket": case "spacecraft": case "satellite": return <RocketModel color={color} />;
@@ -700,7 +749,7 @@ function SceneContent({ spec }: { spec: Object3DSpec }) {
       <pointLight position={[5, 5, 5]} intensity={1.2} color="#ffffff" />
       <pointLight position={[-5, -3, -5]} intensity={0.4} color={accent} />
       <group scale={[scale, scale, scale]}>
-        {getObjectModel(spec.type, color, accent)}
+        {getObjectModel(spec.type, color, accent, spec)}
       </group>
       {spec.label && (
         <Text
@@ -784,6 +833,7 @@ const TYPE_ICONS: Record<string, string> = {
   torus: "🍩", device: "🔬", abstract: "✦",
   "battery-cell": "🔋", "battery-pack": "🔋", toroid: "🌀", pcb: "🟩",
   enclosure: "📦", antenna: "📡", "solar-panel": "☀️",
+  custom: "🧊",
 };
 
 class Object3DErrorBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, { hasError: boolean }> {
