@@ -2593,7 +2593,7 @@ function RickAutonomousHeartbeatStrip() {
         last tick {fmtAgoShort(hb.lastTickAt)} · cycles {hb.totalCycles} · built {hb.totalGenerated}
       </span>
       <div className="flex flex-wrap gap-1 ml-auto">
-        {hb.categories.slice(0, 8).map((c) => (
+        {hb.categories.map((c) => (
           <span key={c} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-foreground/70">
             {c} {hb.perCategoryGenerated[c] ?? 0}
           </span>
