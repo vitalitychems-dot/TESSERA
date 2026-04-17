@@ -247,7 +247,50 @@ router.get("/knowledge-corpus/audit", async (_req, res) => {
       },
     });
   } catch (err) {
+    logger.error({ err }, "Failed to run corpus audit");
     return res.status(500).json({ error: "Failed to run corpus audit" });
+  }
+});
+
+// POST /api/sacred-conference/apply-council-decisions
+// Reads the live audit, generates one ratified amendment per finding using the
+// council-approved fix template, persists each to corpus_amendments, refreshes
+// the in-memory corpus overlay, and seals one ledger entry summarizing all fixes.
+// Process-wide mutex: only one council session may mutate the corpus at a time.
+// Concurrent POSTs would otherwise read identical audit state, generate duplicate
+// amendments, and corrupt the in-memory corpus overlay.
+let _councilSessionInFlight = false;
+router.post("/apply-council-decisions", async (req, res) => {
+  if (_councilSessionInFlight) {
+    return res.status(409).json({
+      error: "Council session already in progress",
+      message: "Another /api/apply-council-decisions invocation is currently mutating the corpus. Retry after it completes.",
+    });
+  }
+  _councilSessionInFlight = true;
+  try {
+    const { applyCouncilDecisionsForCorpus } = await import("../lib/apply-council-decisions");
+    const maxIterations = Math.min(Math.max(Number(req.body?.iterations) || 5, 1), 10);
+    const passes: Awaited<ReturnType<typeof applyCouncilDecisionsForCorpus>>[] = [];
+    for (let i = 0; i < maxIterations; i++) {
+      const r = await applyCouncilDecisionsForCorpus();
+      passes.push(r);
+      // Stop only when audit is clear OR no amendments were emitted (idempotency
+      // confirmed). The audit returns top-5 gaps per pass, so finding count can
+      // stay flat even while real progress is being made — keep iterating.
+      if (r.afterAuditCount === 0 || r.amendments === 0) break;
+    }
+    return res.json({
+      passes,
+      iterations: passes.length,
+      initialFindings: passes[0]?.beforeAuditCount ?? 0,
+      finalFindings: passes[passes.length - 1]?.afterAuditCount ?? 0,
+      totalAmendments: passes.reduce((s, p) => s + p.amendments, 0),
+      converged: (passes[passes.length - 1]?.afterAuditCount ?? 1) === 0,
+    });
+  } catch (err) {
+    logger.error({ err }, "Failed to apply council decisions");
+    return res.status(500).json({ error: "Failed to apply council decisions", message: (err as Error).message });
   }
 });
 
