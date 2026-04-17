@@ -20,7 +20,7 @@ interface NavTab {
 const PRIMARY: NavTab[] = [
   { label: "Chat", href: "/", Icon: MessageSquare, match: (l) => l === "/" || l.startsWith("/c/"), color: "cyan" },
   { label: "Universe", href: "/universe", Icon: Globe2, match: (l) => l === "/universe", color: "violet" },
-  { label: "Council", href: "/grand-council", Icon: Gavel, match: (l) => l === "/grand-council" || l === "/forum" || l === "/recruitment", color: "amber" },
+  { label: "Council", href: "/grand-council", Icon: Gavel, match: (l) => l === "/grand-council" || l === "/forum" || l === "/recruitment" || l === "/agent-nft", color: "amber" },
   { label: "Finance", href: "/finance", Icon: DollarSign, match: (l) => l === "/finance" || l === "/income" || l === "/ecom" || l === "/lead-gen", color: "emerald" },
   { label: "More", href: "#more", Icon: MoreHorizontal, match: () => false, color: "slate" },
 ];
