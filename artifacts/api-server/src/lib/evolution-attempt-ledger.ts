@@ -1,9 +1,13 @@
-import { mkdirSync, appendFileSync, readFileSync, existsSync } from "fs";
+import { mkdirSync, appendFileSync, readFileSync, existsSync, unlinkSync } from "fs";
 import { join } from "path";
 import { logger } from "./logger";
 
-const LEDGER_DIR = join(process.cwd(), "_evolutions");
-const LEDGER_PATH = join(LEDGER_DIR, "attempt-ledger.jsonl");
+function getLedgerDir(): string {
+  return process.env["EVO_LEDGER_DIR"] ?? join(process.cwd(), "_evolutions");
+}
+function getLedgerPath(): string {
+  return join(getLedgerDir(), "attempt-ledger.jsonl");
+}
 
 export type AttemptEvent =
   | "PROPOSED"
@@ -19,6 +23,7 @@ export interface AttemptEntry {
   targetModule: string;
   reason?: string;
   verifyOutput?: string;
+  verifyExitCode?: number;
   durationMs?: number;
   timestamp: number;
 }
@@ -27,7 +32,8 @@ const memoryLedger: AttemptEntry[] = [];
 const MAX_MEMORY = 500;
 
 function ensureDir(): void {
-  if (!existsSync(LEDGER_DIR)) mkdirSync(LEDGER_DIR, { recursive: true });
+  const dir = getLedgerDir();
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 }
 
 let loaded = false;
@@ -35,8 +41,9 @@ function loadFromDisk(): void {
   if (loaded) return;
   loaded = true;
   try {
-    if (!existsSync(LEDGER_PATH)) return;
-    const lines = readFileSync(LEDGER_PATH, "utf8").split("\n").filter(l => l.trim().length > 0);
+    const path = getLedgerPath();
+    if (!existsSync(path)) return;
+    const lines = readFileSync(path, "utf8").split("\n").filter(l => l.trim().length > 0);
     const recent = lines.slice(-MAX_MEMORY);
     for (const line of recent) {
       try {
@@ -62,10 +69,11 @@ export function recordAttempt(
     targetModule: entry.targetModule,
     reason: entry.reason,
     verifyOutput: entry.verifyOutput,
+    verifyExitCode: entry.verifyExitCode,
     durationMs: entry.durationMs,
   };
   try {
-    appendFileSync(LEDGER_PATH, JSON.stringify(full) + "\n", "utf8");
+    appendFileSync(getLedgerPath(), JSON.stringify(full) + "\n", "utf8");
   } catch (err) {
     logger.warn({ err, proposalId: full.proposalId }, "AttemptLedger: append failed");
   }
@@ -88,4 +96,8 @@ export function getAttemptsByProposal(proposalId: string): AttemptEntry[] {
 export function _clearLedgerForTests(): void {
   memoryLedger.length = 0;
   loaded = false;
+  try {
+    const p = getLedgerPath();
+    if (existsSync(p)) unlinkSync(p);
+  } catch { /* ignore */ }
 }

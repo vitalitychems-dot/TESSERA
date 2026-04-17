@@ -132,13 +132,21 @@ export async function applyVerifiedPatch(params: {
     patchedContent: params.patchedContent,
   });
 
+  // Bounded full stdout/stderr excerpts (typecheck + tests) for ledger persistence
+  const fullOutputExcerpt = [
+    sandbox.output?.typecheck ? `--- typecheck ---\n${sandbox.output.typecheck}` : "",
+    sandbox.output?.tests ? `--- tests ---\n${sandbox.output.tests}` : "",
+    sandbox.diagnostics.length ? `--- diagnostics ---\n${sandbox.diagnostics.join("\n")}` : "",
+  ].filter(Boolean).join("\n").slice(-8000);
+
   if (!sandbox.ok) {
     recordAttempt({
       proposalId: params.proposalId,
       event: "SANDBOXED_FAIL",
       targetModule: params.targetModule,
       reason: `sandbox.${sandbox.stage}: ${sandbox.diagnostics[0] ?? "unknown"}`,
-      verifyOutput: sandbox.diagnostics.slice(0, 5).join("\n"),
+      verifyOutput: fullOutputExcerpt,
+      verifyExitCode: sandbox.exitCode,
       durationMs: sandbox.durationMs,
     });
     return {
@@ -152,6 +160,8 @@ export async function applyVerifiedPatch(params: {
     proposalId: params.proposalId,
     event: "SANDBOXED_PASS",
     targetModule: params.targetModule,
+    verifyOutput: fullOutputExcerpt,
+    verifyExitCode: sandbox.exitCode ?? 0,
     durationMs: sandbox.durationMs,
   });
 

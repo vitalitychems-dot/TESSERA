@@ -17,6 +17,7 @@ export interface SandboxResult {
   stage: "init" | "worktree" | "patch-write" | "typecheck" | "tests" | "passed";
   diagnostics: string[];
   diagnosticsCount: number;
+  exitCode?: number;
   output?: { typecheck?: string; tests?: string };
 }
 
@@ -157,6 +158,8 @@ export async function verifyPatchInSandbox(params: {
           (wt.stderr || wt.stdout).slice(-500),
         ],
         diagnosticsCount: 1,
+        exitCode: wt.exitCode,
+        output: { typecheck: (wt.stderr + "\n" + wt.stdout).slice(-2000) },
       };
     }
 
@@ -212,6 +215,7 @@ export async function verifyPatchInSandbox(params: {
           ...errorLines,
         ],
         diagnosticsCount: errorLines.length || 1,
+        exitCode: tc.exitCode,
         output: { typecheck: tcOutput },
       };
     }
@@ -242,6 +246,7 @@ export async function verifyPatchInSandbox(params: {
             ...failLines,
           ],
           diagnosticsCount: failLines.length || 1,
+          exitCode: tt.exitCode,
           output: { typecheck: tcOutput, tests: ttOutput },
         };
       }
@@ -253,6 +258,7 @@ export async function verifyPatchInSandbox(params: {
       stage: "passed",
       diagnostics: [],
       diagnosticsCount: 0,
+      exitCode: 0,
       output: { typecheck: tcOutput, tests: ttOutput || undefined },
     };
   } catch (err) {
