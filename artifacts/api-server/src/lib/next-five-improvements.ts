@@ -128,13 +128,11 @@ export async function getOrCreateNextFiveSession(): Promise<{
 }> {
   const allRows = await db
     .select()
-    .from(nextFiveImprovementsTable);
+    .from(nextFiveImprovementsTable)
+    .orderBy(desc(nextFiveImprovementsTable.createdAt));
 
   if (allRows.length >= 5) {
-    const latestSessionId = allRows
-      .map(r => r.sessionId)
-      .sort()
-      .reverse()[0];
+    const latestSessionId = allRows[0].sessionId;
     const latestSessionRows = allRows
       .filter(r => r.sessionId === latestSessionId)
       .sort((a, b) => a.rank - b.rank);
