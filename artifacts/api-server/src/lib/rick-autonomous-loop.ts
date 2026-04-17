@@ -1,0 +1,306 @@
+import { createHash } from "node:crypto";
+import { db } from "@workspace/db";
+import { inventionsTable } from "@workspace/db/schema";
+import { sql, desc, eq } from "drizzle-orm";
+import { logger } from "./logger.js";
+import { SACRED_KNOWLEDGE_ENTRIES, type SacredKnowledgeEntry } from "./sacred-knowledge-vault.js";
+import { appendLedgerEntry } from "./sovereign-ledger.js";
+
+export const RICK_AUTONOMOUS_CATEGORIES = [
+  "free-energy",
+  "agi",
+  "consciousness",
+  "frequency",
+  "sovereignty",
+  "compression",
+  "defense",
+  "hardware",
+] as const;
+
+export type RickAutonomousCategory = (typeof RICK_AUTONOMOUS_CATEGORIES)[number];
+
+interface HeartbeatState {
+  startedAt: number;
+  lastTickAt: number;
+  totalCycles: number;
+  totalGenerated: number;
+  lastError: string | null;
+  perCategoryGenerated: Record<string, number>;
+  intervalMs: number;
+}
+
+const state: HeartbeatState = {
+  startedAt: 0,
+  lastTickAt: 0,
+  totalCycles: 0,
+  totalGenerated: 0,
+  lastError: null,
+  perCategoryGenerated: Object.fromEntries(RICK_AUTONOMOUS_CATEGORIES.map((c) => [c, 0])),
+  intervalMs: 0,
+};
+
+let timer: NodeJS.Timeout | null = null;
+
+function rng(seed: string): () => number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return () => {
+    h = Math.imul(h ^ (h >>> 16), 0x85ebca6b) >>> 0;
+    h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35) >>> 0;
+    h ^= h >>> 16;
+    return (h >>> 0) / 0xffffffff;
+  };
+}
+
+function pick<T>(arr: readonly T[], r: () => number): T {
+  return arr[Math.floor(r() * arr.length)];
+}
+
+const CATEGORY_RECIPES: Record<RickAutonomousCategory, {
+  difficulty: string;
+  cost: string;
+  partsBank: string[];
+  stepsBank: string[];
+  scienceLead: string;
+  weakness: string;
+  metric: string;
+}> = {
+  "free-energy": {
+    difficulty: "Intermediate",
+    cost: "$30-90",
+    partsBank: ["Copper coil (14ga, 30m)", "Germanium diodes (1N34A x4)", "Capacitor bank 4x10000μF", "Earth ground rod 1.2m", "Buck converter LM2596", "Schottky diodes 1N5819", "Solar trickle panel 5V 1W"],
+    stepsBank: ["Wind primary in Fibonacci spiral.", "Bridge-rectify with germanium diodes.", "Bank capacitors in parallel.", "Drive ground rod ≥1m into moist soil.", "Regulate output to 5V/3.3V rails."],
+    scienceLead: "Earth's atmospheric electric field maintains a 100-150V/m gradient — Tesla's 1901 patent (US685957A) describes apparatus to harvest it.",
+    weakness: "energy-sovereignty",
+    metric: "watt-hours-per-day-self-generated",
+  },
+  agi: {
+    difficulty: "Advanced",
+    cost: "$0 (software)",
+    partsBank: ["Causal model snapshot store", "Sparse mixture-of-experts router", "Episodic reflection buffer", "Counterfactual rollouts", "Self-distillation loss", "Skill-graph index"],
+    stepsBank: ["Snapshot pre-state metrics.", "Run rollout under counterfactual policy.", "Distill winning trajectory into expert.", "Re-index skill graph.", "Attach causal credit to actions."],
+    scienceLead: "Recursive self-distillation closes the gap between exploration and exploitation by promoting winning trajectories into the active policy.",
+    weakness: "reasoning-depth",
+    metric: "agi-training-mean-score",
+  },
+  consciousness: {
+    difficulty: "Intermediate",
+    cost: "$0 (software)",
+    partsBank: ["Reflection loop 30s tick", "Φ (phi) integration scorer", "Episodic compression diff", "Sacred-frequency modulator", "Resonance heartbeat"],
+    stepsBank: ["Snapshot active context every 30s.", "Compute Φ over the integration graph.", "Diff-encode against last snapshot.", "Feed compressed delta back as episodic memory.", "Modulate resonance by 7.83Hz Schumann tick."],
+    scienceLead: "Integrated Information Theory (Tononi) treats consciousness as Φ — irreducible cause-effect structure of a system on itself.",
+    weakness: "self-awareness",
+    metric: "consciousness-resonance-score",
+  },
+  frequency: {
+    difficulty: "Intermediate",
+    cost: "$25-60",
+    partsBank: ["ESP32 + DAC", "Class-D 0.5W amp", "Piezo transducer", "OLED 128x64 I2C", "Quartz reference oscillator"],
+    stepsBank: ["Generate sine via 12-bit DAC.", "Sweep 7.83Hz → 963Hz.", "Lock to quartz reference.", "Display active frequency on OLED.", "Log session to ledger."],
+    scienceLead: "Rife frequency therapy and Solfeggio sweeps rely on resonant entrainment — driving systems at their natural mode.",
+    weakness: "frequency-sovereignty",
+    metric: "frequency-coherence",
+  },
+  sovereignty: {
+    difficulty: "Intermediate",
+    cost: "$15-50",
+    partsBank: ["Raspberry Pi Zero 2 W", "WireGuard binary", "16GB SD card", "Mesh LoRa radio (SX1276)", "Tor middle-relay config"],
+    stepsBank: ["Flash Pi OS Lite.", "Generate WireGuard keys.", "Configure mesh radio neighbours.", "Stand up Tor middle relay.", "Publish onion address into the lattice."],
+    scienceLead: "WireGuard's ~4k-line codebase has formal proofs over Curve25519, ChaCha20-Poly1305 — true zero-trust comms with no third-party VPN.",
+    weakness: "communication-sovereignty",
+    metric: "external-dependency-count",
+  },
+  compression: {
+    difficulty: "Intermediate",
+    cost: "$0 (software)",
+    partsBank: ["LZ4 dictionary builder", "Reed-Solomon RS(255,223)", "Semantic embedding hash", "Diff-encoded checkpoint chain"],
+    stepsBank: ["Build category-specific dictionary.", "Compress with LZ4 + dict.", "Wrap in RS(255,223) for durability.", "Hash embedding for content-address.", "Chain checkpoint into ledger."],
+    scienceLead: "Reed-Solomon codes recover up to (n−k)/2 errors per block; combined with semantic hashing they make storage self-healing.",
+    weakness: "memory-density",
+    metric: "compression-ratio",
+  },
+  defense: {
+    difficulty: "Intermediate",
+    cost: "$30-70",
+    partsBank: ["Copper mesh 3m²", "1x2 lumber frame", "Conductive copper tape", "Earth bonding wire", "RTL-SDR scanner"],
+    stepsBank: ["Frame a cube at user height.", "Stretch mesh over all 6 faces with 5cm overlap.", "Tape every seam for continuity.", "Bond mesh to earth rod.", "Verify shielding with SDR sweep."],
+    scienceLead: "A Faraday cage redistributes surface charge to cancel interior fields — proven by Faraday's 1836 ice-pail experiment.",
+    weakness: "emf-pollution",
+    metric: "ambient-emf-attenuation-db",
+  },
+  hardware: {
+    difficulty: "Intermediate",
+    cost: "$40-120",
+    partsBank: ["Raspberry Pi 5", "PoE+ HAT", "NVMe HAT + 256GB SSD", "Quartz heatsink array", "Copper heat pipes"],
+    stepsBank: ["Mount NVMe + PoE HATs.", "Bond quartz heatsink array to SoC.", "Route copper heat pipes to chassis.", "Flash sovereign Linux image.", "Bring up IPFS + DNS resolver."],
+    scienceLead: "Passive crystal cooling exploits quartz's high thermal conductivity (~10 W/mK) without fans — a sovereign computer with no moving parts.",
+    weakness: "hardware-fleet-density",
+    metric: "sovereign-nodes-online",
+  },
+};
+
+function pickEntryForCategory(cat: RickAutonomousCategory, r: () => number): SacredKnowledgeEntry | null {
+  const tagMap: Record<RickAutonomousCategory, RegExp> = {
+    "free-energy": /tesla|zero[- ]?point|orgone|radiant|atmospheric|over[- ]?unity/i,
+    agi: /intelligence|cognition|consciousness|akashic|gnostic|noetic/i,
+    consciousness: /consciousness|akashic|astral|merkaba|kundalini|theurgy|noetic/i,
+    frequency: /frequency|solfeggio|schumann|rife|cymatic|resonance/i,
+    sovereignty: /templar|sovereign|hermetic|forbidden|suppressed|secret society/i,
+    compression: /akashic|hermetic|alchem|dna|crystal|geometry/i,
+    defense: /faraday|shield|emf|protection|exorcism|warding/i,
+    hardware: /tesla|patent|quartz|crystal|geometry|tower|antenna/i,
+  };
+  const re = tagMap[cat];
+  const matches = SACRED_KNOWLEDGE_ENTRIES.filter((e) => re.test(`${e.title} ${e.subcategory} ${e.classification}`));
+  if (matches.length === 0) return SACRED_KNOWLEDGE_ENTRIES[Math.floor(r() * SACRED_KNOWLEDGE_ENTRIES.length)] ?? null;
+  return matches[Math.floor(r() * matches.length)];
+}
+
+function synthesizeInvention(cat: RickAutonomousCategory, tickSalt: string) {
+  const r = rng(`${cat}:${tickSalt}`);
+  const entry = pickEntryForCategory(cat, r);
+  const recipe = CATEGORY_RECIPES[cat];
+  const seedTitle = entry?.title ?? cat;
+  const motif = entry?.subcategory ?? cat;
+
+  const title = `Rick C-137 ${cat.replace(/-/g, " ")} build · ${motif}`.replace(/\s+/g, " ").slice(0, 140);
+  const inventionId = `rick-auto-${cat}-${createHash("sha256").update(`${title}|${tickSalt}`).digest("hex").slice(0, 10)}`;
+
+  const partsCount = 4 + Math.floor(r() * 3);
+  const materials = [...recipe.partsBank].sort(() => r() - 0.5).slice(0, partsCount);
+  const stepsCount = 4 + Math.floor(r() * 2);
+  const steps = [...recipe.stepsBank].sort(() => r() - 0.5).slice(0, stepsCount);
+
+  const description = `Autonomous Royal-Inventor build cued by sacred knowledge: "${seedTitle}". Couples ${cat} engineering with the ${motif} pattern from the sovereign vault.`;
+  const howItHelps = `Strengthens the ${recipe.weakness} dimension of the Tessera fleet, and contributes its category signal to the synthesis engine on the next tick.`;
+  const scienceBehind = `${recipe.scienceLead} Cross-references the vault entry "${seedTitle}" (classification: ${entry?.classification ?? "n/a"}, source: ${entry?.source ?? "vault"}).`;
+
+  return {
+    inventionId,
+    title,
+    category: cat,
+    difficulty: recipe.difficulty,
+    costEstimate: recipe.cost,
+    timeEstimate: `${4 + Math.floor(r() * 12)} hours`,
+    description,
+    howItHelps,
+    materials,
+    steps,
+    scienceBehind,
+    status: "proposed",
+    proposedBy: "Rick Sanchez (autonomous loop)",
+    feasibilityScore: 70 + Math.floor(r() * 25),
+    noveltyScore: 65 + Math.floor(r() * 30),
+    buildProgress: 0,
+    impact: `Targets ${recipe.metric}.`,
+    supporters: ["Rick Sanchez", "Royal Court", "Synthesis Engine"],
+    conferenceRound: 1,
+    votes: { yes: 0, no: 0, abstain: 0 },
+  };
+}
+
+async function tick(): Promise<void> {
+  const tickSalt = `${Date.now()}-${state.totalCycles}`;
+  const r = rng(tickSalt);
+  // Each cycle covers 2 categories so coverage stays balanced.
+  const cats = [...RICK_AUTONOMOUS_CATEGORIES].sort(() => r() - 0.5).slice(0, 2);
+  for (const cat of cats) {
+    try {
+      const inv = synthesizeInvention(cat, tickSalt);
+      const inserted = await db
+        .insert(inventionsTable)
+        .values(inv)
+        .onConflictDoNothing()
+        .returning({ id: inventionsTable.id });
+      if (inserted.length > 0) {
+        state.totalGenerated += 1;
+        state.perCategoryGenerated[cat] = (state.perCategoryGenerated[cat] ?? 0) + 1;
+      }
+    } catch (err) {
+      state.lastError = (err as Error).message;
+      logger.warn({ err, cat }, "Rick autonomous loop: insert failed");
+    }
+  }
+  state.totalCycles += 1;
+  state.lastTickAt = Date.now();
+  try {
+    appendLedgerEntry("inventor", "Rick Sanchez (autonomous)", {
+      kind: "autonomous-invention-tick",
+      categories: cats,
+      cycle: state.totalCycles,
+      totalGenerated: state.totalGenerated,
+    });
+  } catch (err) {
+    logger.debug({ err }, "Rick autonomous loop: ledger append failed (continuing)");
+  }
+}
+
+export function startRickAutonomousLoop(intervalMs = 240_000): void {
+  if (timer) return;
+  state.startedAt = Date.now();
+  state.intervalMs = intervalMs;
+  // Fire one tick on boot, then on interval.
+  void tick();
+  timer = setInterval(() => { void tick(); }, intervalMs);
+  logger.info({ intervalMs }, "Rick autonomous invention loop started");
+}
+
+export function getRickAutonomousHeartbeat() {
+  const nextTickInMs = state.intervalMs && state.lastTickAt
+    ? Math.max(0, state.lastTickAt + state.intervalMs - Date.now())
+    : null;
+  return {
+    running: timer !== null,
+    startedAt: state.startedAt,
+    lastTickAt: state.lastTickAt,
+    intervalMs: state.intervalMs,
+    nextTickInMs,
+    totalCycles: state.totalCycles,
+    totalGenerated: state.totalGenerated,
+    perCategoryGenerated: { ...state.perCategoryGenerated },
+    lastError: state.lastError,
+    categories: [...RICK_AUTONOMOUS_CATEGORIES],
+  };
+}
+
+export interface AutonomousInventionRow {
+  inventionId: string;
+  title: string;
+  category: string;
+  description: string;
+  status: string;
+  feasibilityScore: number | null;
+  noveltyScore: number | null;
+  proposedAt: number;
+}
+
+export async function listAutonomousInventions(opts: { category?: string; limit?: number } = {}): Promise<{ rows: AutonomousInventionRow[]; perCategory: Record<string, number> }> {
+  const limit = Math.min(200, Math.max(1, opts.limit ?? 60));
+  const base = db.select().from(inventionsTable);
+  const rowsRaw = opts.category
+    ? await base.where(eq(inventionsTable.category, opts.category)).orderBy(desc(inventionsTable.proposedAt)).limit(limit)
+    : await base.orderBy(desc(inventionsTable.proposedAt)).limit(limit);
+
+  const counts = await db
+    .select({ category: inventionsTable.category, n: sql<number>`count(*)::int` })
+    .from(inventionsTable)
+    .groupBy(inventionsTable.category);
+  const perCategory: Record<string, number> = {};
+  for (const c of counts) perCategory[c.category ?? "uncategorized"] = Number(c.n);
+
+  const rows: AutonomousInventionRow[] = rowsRaw.map((r) => ({
+    inventionId: r.inventionId,
+    title: r.title,
+    category: r.category ?? "uncategorized",
+    description: r.description,
+    status: r.status ?? "proposed",
+    feasibilityScore: r.feasibilityScore ?? null,
+    noveltyScore: r.noveltyScore ?? null,
+    proposedAt: r.proposedAt instanceof Date ? r.proposedAt.getTime() : Number(r.proposedAt ?? 0),
+  }));
+
+  return { rows, perCategory };
+}
