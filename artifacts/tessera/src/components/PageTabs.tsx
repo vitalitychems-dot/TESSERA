@@ -22,11 +22,12 @@ interface PageTabsProps {
 
 const lazyCache = new Map<string, LazyExoticComponent<ComponentType<any>>>();
 
-function getLazy(spec: PageTabSpec): LazyExoticComponent<ComponentType<any>> {
-  let c = lazyCache.get(spec.id);
+function getLazy(hubKey: string, spec: PageTabSpec): LazyExoticComponent<ComponentType<any>> {
+  const cacheKey = `${hubKey}:${spec.id}`;
+  let c = lazyCache.get(cacheKey);
   if (!c) {
     c = lazy(spec.load);
-    lazyCache.set(spec.id, c);
+    lazyCache.set(cacheKey, c);
   }
   return c;
 }
@@ -62,7 +63,7 @@ export default function PageTabs({ hubKey, title, subtitle, iconColor = "text-cy
 
   const ActiveComp = useMemo(() => {
     const spec = tabs.find(t => t.id === active) || tabs[0];
-    return spec ? getLazy(spec) : null;
+    return spec ? getLazy(hubKey, spec) : null;
   }, [active, tabs]);
 
   return (
