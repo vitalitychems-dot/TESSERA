@@ -48,6 +48,7 @@ import governanceConsensusRouter from "./governance-consensus";
 import systemRuntimeRouter from "./system-runtime";
 import rickRouter from "./rick";
 import universeRouter from "./universe";
+import doctrineIngestRouter from "./doctrine-ingest";
 import mandatesRouter from "./mandates";
 import archivesRouter from "./archives";
 import politicalDossiersRouter from "./political-dossiers";
@@ -152,6 +153,7 @@ router.use(localModelsRouter);
 router.use(e2eSovereigntyRouter);
 router.use(autonomousBuildRouter);
 router.use(sovereignDoctrineRouter);
+router.use(doctrineIngestRouter);
 
 startWalletObserver();
 startAutonomousBuildCycleTimer();
