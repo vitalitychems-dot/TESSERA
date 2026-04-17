@@ -1027,9 +1027,11 @@ async function runAgentPostVoting(cycle: number): Promise<void> {
     const start = cycle % FORUM_AGENTS.length;
     const voters = [...FORUM_AGENTS.slice(start), ...FORUM_AGENTS.slice(0, start)].slice(0, 6);
     let cast = 0;
-    for (const voter of voters) {
-      const target = recentReplies.find(r => r.author !== voter.name);
-      if (!target) continue;
+    for (let i = 0; i < voters.length; i++) {
+      const voter = voters[i];
+      const candidates = recentReplies.filter(r => r.author !== voter.name);
+      if (candidates.length === 0) continue;
+      const target = candidates[(start + i) % candidates.length];
       const vote = Math.random() < 0.75 ? "up" : "down";
       await db.delete(forumPostVotesTable).where(sql`
         ${forumPostVotesTable.topicId} = ${target.topicId}
