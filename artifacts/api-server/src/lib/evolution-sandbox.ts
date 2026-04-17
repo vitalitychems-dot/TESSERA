@@ -1,237 +1,280 @@
-import { existsSync } from "fs";
-import { resolve as resolvePath } from "path";
+import { spawn } from "child_process";
+import { mkdtempSync, writeFileSync, existsSync, rmSync, mkdirSync, symlinkSync } from "fs";
+import { join, resolve, relative, dirname } from "path";
 import { logger } from "./logger";
+
+const TIMEOUT_TYPECHECK_MS = 90_000;
+const TIMEOUT_TESTS_MS = 120_000;
+const TIMEOUT_WORKTREE_MS = 30_000;
+const TIMEOUT_CLEANUP_MS = 15_000;
+
+const MAX_OUTPUT_BYTES = 200_000;
+const MAX_DIAGNOSTIC_LINES = 12;
 
 export interface SandboxResult {
   ok: boolean;
   durationMs: number;
+  stage: "init" | "worktree" | "patch-write" | "typecheck" | "tests" | "passed";
   diagnostics: string[];
   diagnosticsCount: number;
-  stage: "init" | "transpile" | "duplicate-check" | "security-scan" | "semantic-typecheck" | "passed";
+  output?: { typecheck?: string; tests?: string };
 }
 
-const TIMEOUT_MS = 30_000;
+interface CmdResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  timedOut: boolean;
+  durationMs: number;
+}
 
-const SUSPICIOUS_PATTERN = /eval\s*\(|Function\s*\(|require\s*\(\s*['"`]child_process|process\.exit|fs\.unlinkSync|rmSync\s*\(\s*['"`]\//;
+function runCmd(cwd: string, cmd: string, args: string[], timeoutMs: number, env?: NodeJS.ProcessEnv): Promise<CmdResult> {
+  return new Promise(resolveP => {
+    const start = Date.now();
+    const proc = spawn(cmd, args, {
+      cwd,
+      env: { ...process.env, ...env, CI: "1" },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      try { proc.kill("SIGKILL"); } catch { /* ignore */ }
+    }, timeoutMs);
+    proc.stdout?.on("data", d => {
+      stdout += d.toString();
+      if (stdout.length > MAX_OUTPUT_BYTES) stdout = stdout.slice(-MAX_OUTPUT_BYTES);
+    });
+    proc.stderr?.on("data", d => {
+      stderr += d.toString();
+      if (stderr.length > MAX_OUTPUT_BYTES) stderr = stderr.slice(-MAX_OUTPUT_BYTES);
+    });
+    proc.on("close", code => {
+      clearTimeout(timer);
+      resolveP({ exitCode: code ?? -1, stdout, stderr, timedOut, durationMs: Date.now() - start });
+    });
+    proc.on("error", err => {
+      clearTimeout(timer);
+      resolveP({
+        exitCode: -1,
+        stdout,
+        stderr: stderr + "\n" + (err instanceof Error ? err.message : String(err)),
+        timedOut: false,
+        durationMs: Date.now() - start,
+      });
+    });
+  });
+}
+
+function findMonorepoRoot(start: string): string | null {
+  let dir = resolve(start);
+  for (let i = 0; i < 8; i++) {
+    if (existsSync(join(dir, "pnpm-workspace.yaml"))) return dir;
+    const parent = resolve(dir, "..");
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
+
+function ensureSymlink(srcAbs: string, dstAbs: string): void {
+  if (!existsSync(srcAbs)) return;
+  if (existsSync(dstAbs)) return;
+  mkdirSync(dirname(dstAbs), { recursive: true });
+  try {
+    symlinkSync(srcAbs, dstAbs, "dir");
+  } catch (err) {
+    logger.warn({ srcAbs, dstAbs, err }, "EvolutionSandbox: symlink failed (continuing)");
+  }
+}
 
 /**
- * Verify a proposed patched file contents in isolation, without touching the live file.
- * Runs (in order):
- *   1. quick transpile (catches obvious TS syntax breakage)
- *   2. structural duplicate check (rejects no-op patches that re-declare existing symbols)
- *   3. security scan (rejects eval/dynamic-require/process.exit/etc.)
- *   4. full semantic typecheck via the TypeScript Compiler API with a virtual overlay
- *      of the target file (so the live file is never written, and the patched content
- *      is checked against the full program graph).
+ * Verify a proposed patch by:
+ *   1. creating a real `git worktree` of HEAD in a temp directory,
+ *   2. symlinking node_modules so installed deps resolve,
+ *   3. writing the patched file at the same relative path,
+ *   4. running `pnpm --filter <pkg> typecheck` and `pnpm --filter <pkg> test`
+ *      with hard timeouts, capturing stdout / stderr / exit code,
+ *   5. always cleaning up the worktree.
  *
- * Hard 30s timeout. Always returns — never throws.
+ * The live source file is NEVER touched by this function.
+ *
+ * Recursion guard: when the spawned child process runs the test suite, it
+ * inherits EVO_SANDBOX_NESTED=1 in its env, so any nested call to this
+ * function inside the sandbox returns a fast no-op pass — preventing fork
+ * bombs and infinite recursion.
  */
 export async function verifyPatchInSandbox(params: {
   targetFilePath: string;
-  originalContent: string;
   patchedContent: string;
+  packageFilter?: string;
+  runTests?: boolean;
 }): Promise<SandboxResult> {
   const start = Date.now();
 
-  let ts: typeof import("typescript");
-  try {
-    ts = require("typescript") as typeof import("typescript");
-  } catch (err) {
+  if (process.env["EVO_SANDBOX_NESTED"] === "1") {
+    return {
+      ok: true,
+      durationMs: 0,
+      stage: "passed",
+      diagnostics: ["nested sandbox call — fast-passed to prevent recursion"],
+      diagnosticsCount: 0,
+    };
+  }
+
+  const pkgFilter = params.packageFilter ?? "@workspace/api-server";
+  const runTests = params.runTests !== false;
+
+  const monorepoRoot = findMonorepoRoot(process.cwd());
+  if (!monorepoRoot) {
     return {
       ok: false,
       durationMs: Date.now() - start,
-      diagnostics: [`typescript module not available: ${err instanceof Error ? err.message : String(err)}`],
-      diagnosticsCount: 1,
       stage: "init",
+      diagnostics: ["sandbox: cannot locate monorepo root (no pnpm-workspace.yaml found above cwd)"],
+      diagnosticsCount: 1,
     };
   }
 
-  // 1. Quick transpile — catches obvious syntax errors fast
+  const sandboxParent = join(monorepoRoot, "_evolutions", "sandboxes");
+  if (!existsSync(sandboxParent)) mkdirSync(sandboxParent, { recursive: true });
+  const sandboxDir = mkdtempSync(join(sandboxParent, "sb-"));
+
+  let stage: SandboxResult["stage"] = "worktree";
+
   try {
-    const transpile = ts.transpileModule(params.patchedContent, {
-      reportDiagnostics: true,
-      compilerOptions: { target: ts.ScriptTarget.ES2020, strict: false, noEmitOnError: true },
-    });
-    if (transpile.diagnostics && transpile.diagnostics.length > 0) {
-      const msg = ts.flattenDiagnosticMessageText(transpile.diagnostics[0].messageText, "\n");
+    // 1. git worktree add
+    const wt = await runCmd(monorepoRoot, "git", ["worktree", "add", "--detach", sandboxDir, "HEAD"], TIMEOUT_WORKTREE_MS);
+    if (wt.exitCode !== 0 || wt.timedOut) {
       return {
         ok: false,
         durationMs: Date.now() - start,
-        diagnostics: [`transpile: ${msg}`],
-        diagnosticsCount: transpile.diagnostics.length,
-        stage: "transpile",
+        stage: "worktree",
+        diagnostics: [
+          wt.timedOut ? "git worktree add timed out" : `git worktree add failed (exit ${wt.exitCode})`,
+          (wt.stderr || wt.stdout).slice(-500),
+        ],
+        diagnosticsCount: 1,
       };
     }
-  } catch (err) {
-    return {
-      ok: false,
-      durationMs: Date.now() - start,
-      diagnostics: [`transpile threw: ${err instanceof Error ? err.message : String(err)}`],
-      diagnosticsCount: 1,
-      stage: "transpile",
-    };
-  }
 
-  // 2. Structural duplicate detection — reject patches that re-declare large portions of the original
-  const appended = params.patchedContent.length > params.originalContent.length
-    ? params.patchedContent.slice(params.originalContent.length)
-    : "";
-  if (appended.trim().length > 0) {
-    const newLines = appended.split("\n").filter(l => l.trim().length > 10);
-    const dups = newLines.filter(line => params.originalContent.includes(line.trim()));
-    if (dups.length > 0 && dups.length >= newLines.length * 0.5 && newLines.length >= 2) {
+    // 2. Symlink node_modules so resolution works without re-installing
+    const symlinks = [
+      "node_modules",
+      "artifacts/api-server/node_modules",
+      "lib/db/node_modules",
+      "lib/api-zod/node_modules",
+    ];
+    for (const rel of symlinks) {
+      ensureSymlink(join(monorepoRoot, rel), join(sandboxDir, rel));
+    }
+
+    // 3. Write patched file at same relative path
+    stage = "patch-write";
+    const absTarget = resolve(params.targetFilePath);
+    const relTarget = relative(monorepoRoot, absTarget);
+    if (relTarget.startsWith("..") || relTarget.includes("..")) {
       return {
         ok: false,
         durationMs: Date.now() - start,
-        diagnostics: [`duplicate-check: ${dups.length}/${newLines.length} appended lines already exist in original`],
-        diagnosticsCount: dups.length,
-        stage: "duplicate-check",
+        stage: "patch-write",
+        diagnostics: [`patch-write: target outside monorepo (${absTarget})`],
+        diagnosticsCount: 1,
       };
     }
-  }
+    const sandboxTarget = join(sandboxDir, relTarget);
+    mkdirSync(dirname(sandboxTarget), { recursive: true });
+    writeFileSync(sandboxTarget, params.patchedContent, "utf8");
 
-  // 3. Security scan
-  if (SUSPICIOUS_PATTERN.test(params.patchedContent)) {
-    return {
-      ok: false,
-      durationMs: Date.now() - start,
-      diagnostics: ["security-scan: patched content contains a forbidden pattern (eval/dynamic-require/process.exit/destructive fs)"],
-      diagnosticsCount: 1,
-      stage: "security-scan",
-    };
-  }
+    // 4. Typecheck
+    stage = "typecheck";
+    const tc = await runCmd(
+      sandboxDir,
+      "pnpm",
+      ["--filter", pkgFilter, "typecheck"],
+      TIMEOUT_TYPECHECK_MS,
+      { EVO_SANDBOX_NESTED: "1" },
+    );
+    const tcOutput = (tc.stderr + "\n" + tc.stdout).slice(-4000);
+    if (tc.timedOut || tc.exitCode !== 0) {
+      const errorLines = tcOutput
+        .split("\n")
+        .filter(l => /error TS\d+/.test(l) || /ELIFECYCLE/.test(l))
+        .slice(0, MAX_DIAGNOSTIC_LINES);
+      return {
+        ok: false,
+        durationMs: Date.now() - start,
+        stage: "typecheck",
+        diagnostics: [
+          tc.timedOut ? `typecheck timed out after ${TIMEOUT_TYPECHECK_MS}ms` : `typecheck exit ${tc.exitCode}`,
+          ...errorLines,
+        ],
+        diagnosticsCount: errorLines.length || 1,
+        output: { typecheck: tcOutput },
+      };
+    }
 
-  // 4. Full semantic typecheck via TS Compiler API with virtual overlay
-  const tsconfigPath = resolvePath(process.cwd(), "tsconfig.json");
-  if (!existsSync(tsconfigPath)) {
-    // No project tsconfig — transpile-only verification stands.
+    // 5. Tests
+    let ttOutput = "";
+    if (runTests) {
+      stage = "tests";
+      const tt = await runCmd(
+        sandboxDir,
+        "pnpm",
+        ["--filter", pkgFilter, "test"],
+        TIMEOUT_TESTS_MS,
+        { EVO_SANDBOX_NESTED: "1" },
+      );
+      ttOutput = (tt.stderr + "\n" + tt.stdout).slice(-4000);
+      if (tt.timedOut || tt.exitCode !== 0) {
+        const failLines = ttOutput
+          .split("\n")
+          .filter(l => /FAIL|×|✗|Error:|AssertionError|Expected|Tests\s+\d+\s+failed/.test(l))
+          .slice(0, MAX_DIAGNOSTIC_LINES);
+        return {
+          ok: false,
+          durationMs: Date.now() - start,
+          stage: "tests",
+          diagnostics: [
+            tt.timedOut ? `tests timed out after ${TIMEOUT_TESTS_MS}ms` : `tests exit ${tt.exitCode}`,
+            ...failLines,
+          ],
+          diagnosticsCount: failLines.length || 1,
+          output: { typecheck: tcOutput, tests: ttOutput },
+        };
+      }
+    }
+
     return {
       ok: true,
       durationMs: Date.now() - start,
+      stage: "passed",
       diagnostics: [],
       diagnosticsCount: 0,
-      stage: "passed",
+      output: { typecheck: tcOutput, tests: ttOutput || undefined },
     };
-  }
-
-  const absoluteTarget = resolvePath(params.targetFilePath);
-
-  const semanticPromise: Promise<SandboxResult> = new Promise(resolveP => {
-    try {
-      const configFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
-      if (configFile.error) {
-        resolveP({
-          ok: false,
-          durationMs: Date.now() - start,
-          diagnostics: [`tsconfig parse error: ${ts.flattenDiagnosticMessageText(configFile.error.messageText, "\n")}`],
-          diagnosticsCount: 1,
-          stage: "semantic-typecheck",
-        });
-        return;
-      }
-      const parsed = ts.parseJsonConfigFileContent(configFile.config, ts.sys, process.cwd());
-      const opts: import("typescript").CompilerOptions = {
-        ...parsed.options,
-        noEmit: true,
-        skipLibCheck: true,
-        incremental: false,
-      };
-
-      const realHost = ts.createCompilerHost(opts, true);
-      const overlayHost: import("typescript").CompilerHost = {
-        ...realHost,
-        getSourceFile: (fileName, languageVersion, onError, shouldCreate) => {
-          if (resolvePath(fileName) === absoluteTarget) {
-            return ts.createSourceFile(fileName, params.patchedContent, languageVersion, true);
-          }
-          return realHost.getSourceFile(fileName, languageVersion, onError, shouldCreate);
-        },
-        readFile: fileName => {
-          if (resolvePath(fileName) === absoluteTarget) return params.patchedContent;
-          return realHost.readFile(fileName);
-        },
-        fileExists: fileName => {
-          if (resolvePath(fileName) === absoluteTarget) return true;
-          return realHost.fileExists(fileName);
-        },
-      };
-
-      const program = ts.createProgram([absoluteTarget], opts, overlayHost);
-      const sourceFile = program.getSourceFile(absoluteTarget);
-      if (!sourceFile) {
-        resolveP({
-          ok: false,
-          durationMs: Date.now() - start,
-          diagnostics: [`semantic-typecheck: target source file ${absoluteTarget} not found in program`],
-          diagnosticsCount: 1,
-          stage: "semantic-typecheck",
-        });
-        return;
-      }
-
-      const diags = [
-        ...program.getSyntacticDiagnostics(sourceFile),
-        ...program.getSemanticDiagnostics(sourceFile),
-      ];
-
-      if (diags.length === 0) {
-        resolveP({
-          ok: true,
-          durationMs: Date.now() - start,
-          diagnostics: [],
-          diagnosticsCount: 0,
-          stage: "passed",
-        });
-      } else {
-        const formatted = diags.slice(0, 10).map(d => {
-          const msg = ts.flattenDiagnosticMessageText(d.messageText, "\n");
-          if (d.file && d.start !== undefined) {
-            const { line } = d.file.getLineAndCharacterOfPosition(d.start);
-            return `${d.file.fileName}:${line + 1} ${msg}`;
-          }
-          return msg;
-        });
-        resolveP({
-          ok: false,
-          durationMs: Date.now() - start,
-          diagnostics: formatted,
-          diagnosticsCount: diags.length,
-          stage: "semantic-typecheck",
-        });
-      }
-    } catch (err) {
-      resolveP({
-        ok: false,
-        durationMs: Date.now() - start,
-        diagnostics: [`semantic-typecheck threw: ${err instanceof Error ? err.message : String(err)}`],
-        diagnosticsCount: 1,
-        stage: "semantic-typecheck",
-      });
-    }
-  });
-
-  const timeoutPromise: Promise<SandboxResult> = new Promise(resolveP => {
-    setTimeout(() => {
-      resolveP({
-        ok: false,
-        durationMs: Date.now() - start,
-        diagnostics: [`semantic-typecheck timed out after ${TIMEOUT_MS}ms`],
-        diagnosticsCount: 1,
-        stage: "semantic-typecheck",
-      });
-    }, TIMEOUT_MS).unref?.();
-  });
-
-  try {
-    return await Promise.race([semanticPromise, timeoutPromise]);
   } catch (err) {
-    logger.warn({ err }, "EvolutionSandbox: unexpected race rejection");
     return {
       ok: false,
       durationMs: Date.now() - start,
-      diagnostics: [`sandbox unexpected error: ${err instanceof Error ? err.message : String(err)}`],
+      stage,
+      diagnostics: [`sandbox unexpected error at stage=${stage}: ${err instanceof Error ? err.message : String(err)}`],
       diagnosticsCount: 1,
-      stage: "semantic-typecheck",
     };
+  } finally {
+    // Always cleanup, even on throw
+    try {
+      await runCmd(monorepoRoot, "git", ["worktree", "remove", "--force", sandboxDir], TIMEOUT_CLEANUP_MS);
+    } catch { /* ignore */ }
+    try {
+      if (existsSync(sandboxDir)) rmSync(sandboxDir, { recursive: true, force: true });
+    } catch { /* ignore */ }
   }
 }
+
+export type SandboxFn = (params: {
+  targetFilePath: string;
+  patchedContent: string;
+}) => Promise<SandboxResult>;

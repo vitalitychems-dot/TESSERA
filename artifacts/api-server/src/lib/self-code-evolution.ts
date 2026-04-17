@@ -5,7 +5,7 @@ import { createProposal } from "./consensus-engine";
 import { isLLMAvailable } from "./llm-client";
 import { batchedCallLLM } from "./llm-batcher";
 import { isModuleCoolingDown, recordEvolutionSuccess, recordEvolutionFailure, shouldSkipEvolutionForLoad } from "./evolution-throttle";
-import { verifyPatchInSandbox } from "./evolution-sandbox";
+import { verifyPatchInSandbox, type SandboxFn } from "./evolution-sandbox";
 import { recordAttempt } from "./evolution-attempt-ledger";
 
 const EVOLUTION_QUEUE_DIR = join(process.cwd(), "_evolutions");
@@ -34,10 +34,16 @@ function findSourceFilePath(targetModule: string): string | null {
   return null;
 }
 
+/**
+ * Production apply pipeline. Composes:
+ *   1. compute patched content (via LLM if available)
+ *   2. delegate to applyVerifiedPatch which gates on the sandbox
+ */
 async function applyPatchToSourceFile(
   targetModule: string,
   proposedChange: string,
   proposalId: string,
+  sandboxFn?: SandboxFn,
 ): Promise<{ sourceFilePath: string; backupPath: string; patchedLines: number }> {
   const sourceFilePath = findSourceFilePath(targetModule);
   if (!sourceFilePath) {
@@ -84,57 +90,113 @@ async function applyPatchToSourceFile(
   }
 
   const patchedContent = `${originalContent}\n${codeToAppend}\n`;
-
-  // Sandboxed verify (transpile + duplicate-check + security-scan + semantic-typecheck
-  // against a virtual overlay of the target file). LIVE FILE IS NEVER WRITTEN HERE.
-  const sandbox = await verifyPatchInSandbox({
-    targetFilePath: sourceFilePath,
+  const result = await applyVerifiedPatch({
+    sourceFilePath,
     originalContent,
     patchedContent,
+    proposalId,
+    targetModule,
+    sandboxFn,
+  });
+  if (!result.ok) {
+    throw new Error(result.error ?? "apply rejected");
+  }
+  return { sourceFilePath, backupPath, patchedLines: result.patchedLines };
+}
+
+/**
+ * Production apply gate. Given a proposed patched content for a live source
+ * file, runs the sandbox and only writes the live file if the sandbox passes.
+ *
+ * Ledger semantics:
+ *   - SANDBOXED_PASS recorded iff sandbox.ok
+ *   - APPLIED recorded iff live write + post-write byte-length verification succeed
+ *   - SANDBOXED_FAIL recorded on sandbox failure (live file untouched)
+ *   - REVERTED recorded if live write succeeds but post-write verification fails
+ *     (live file is restored from `originalContent` before recording)
+ *
+ * Always returns — never throws. Exported for end-to-end integration testing
+ * via injected `sandboxFn`.
+ */
+export async function applyVerifiedPatch(params: {
+  sourceFilePath: string;
+  originalContent: string;
+  patchedContent: string;
+  proposalId: string;
+  targetModule: string;
+  sandboxFn?: SandboxFn;
+}): Promise<{ ok: boolean; patchedLines: number; error?: string }> {
+  const sandboxRunner: SandboxFn = params.sandboxFn ?? (p => verifyPatchInSandbox(p));
+  const sandbox = await sandboxRunner({
+    targetFilePath: params.sourceFilePath,
+    patchedContent: params.patchedContent,
   });
 
   if (!sandbox.ok) {
     recordAttempt({
-      proposalId,
+      proposalId: params.proposalId,
       event: "SANDBOXED_FAIL",
-      targetModule,
+      targetModule: params.targetModule,
       reason: `sandbox.${sandbox.stage}: ${sandbox.diagnostics[0] ?? "unknown"}`,
       verifyOutput: sandbox.diagnostics.slice(0, 5).join("\n"),
       durationMs: sandbox.durationMs,
     });
-    throw new Error(`Sandbox verification failed at stage=${sandbox.stage}: ${sandbox.diagnostics[0] ?? "unknown"}`);
+    return {
+      ok: false,
+      patchedLines: 0,
+      error: `Sandbox verification failed at stage=${sandbox.stage}: ${sandbox.diagnostics[0] ?? "unknown"}`,
+    };
   }
 
   recordAttempt({
-    proposalId,
+    proposalId: params.proposalId,
     event: "SANDBOXED_PASS",
-    targetModule,
+    targetModule: params.targetModule,
     durationMs: sandbox.durationMs,
   });
 
   // Sandbox green → write live now (and only now).
-  writeFileSync(sourceFilePath, patchedContent, "utf8");
-  const written = readFileSync(sourceFilePath, "utf8");
-  if (written.length !== patchedContent.length) {
-    writeFileSync(sourceFilePath, originalContent, "utf8");
+  try {
+    writeFileSync(params.sourceFilePath, params.patchedContent, "utf8");
+  } catch (err) {
     recordAttempt({
-      proposalId,
+      proposalId: params.proposalId,
       event: "REVERTED",
-      targetModule,
-      reason: `post-write length mismatch (expected ${patchedContent.length}, got ${written.length})`,
+      targetModule: params.targetModule,
+      reason: `live write threw: ${err instanceof Error ? err.message : String(err)}`,
     });
-    throw new Error(`Post-write verification failed: length mismatch (expected ${patchedContent.length}, got ${written.length})`);
+    return { ok: false, patchedLines: 0, error: `live write failed: ${err instanceof Error ? err.message : String(err)}` };
   }
 
+  const written = readFileSync(params.sourceFilePath, "utf8");
+  if (written.length !== params.patchedContent.length) {
+    writeFileSync(params.sourceFilePath, params.originalContent, "utf8");
+    recordAttempt({
+      proposalId: params.proposalId,
+      event: "REVERTED",
+      targetModule: params.targetModule,
+      reason: `post-write length mismatch (expected ${params.patchedContent.length}, got ${written.length})`,
+    });
+    return {
+      ok: false,
+      patchedLines: 0,
+      error: `Post-write verification failed: length mismatch (expected ${params.patchedContent.length}, got ${written.length})`,
+    };
+  }
+
+  const appendedLineCount = (params.patchedContent.length - params.originalContent.length) > 0
+    ? params.patchedContent.slice(params.originalContent.length).split("\n").filter(l => l.trim()).length
+    : 0;
+
   recordAttempt({
-    proposalId,
+    proposalId: params.proposalId,
     event: "APPLIED",
-    targetModule,
-    reason: `+${codeToAppend.split("\n").filter(l => l.trim()).length} lines appended`,
+    targetModule: params.targetModule,
+    reason: `+${appendedLineCount} lines appended`,
     durationMs: sandbox.durationMs,
   });
 
-  return { sourceFilePath, backupPath, patchedLines: patchedContent.split("\n").length };
+  return { ok: true, patchedLines: params.patchedContent.split("\n").length };
 }
 
 function restoreSourceFromBackup(proposalId: string, targetModule: string): void {
