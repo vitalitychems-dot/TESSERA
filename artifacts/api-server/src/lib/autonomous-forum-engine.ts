@@ -495,7 +495,21 @@ function generateKnowledgeDrivenTopics(
     }
   }
 
-  return topics.slice(0, 3);
+  const fairAgent = FORUM_AGENTS[cycle % FORUM_AGENTS.length];
+  const residentTitle = `${fairAgent.name} Cycle ${cycle} Brief: ${fairAgent.expertise[0] ?? "domain"} update`;
+  const residentTitleLc = residentTitle.toLowerCase();
+  const residentDuplicate = titleSet.has(residentTitleLc) || Array.from(titleSet).some(t => t.includes(`${fairAgent.name.toLowerCase()} cycle ${cycle} brief`));
+  if (!residentDuplicate) {
+    topics.push({
+      title: residentTitle,
+      content: `**Resident Brief — ${fairAgent.name} (cycle ${cycle})**\n\nFocus: ${fairAgent.expertise.join(", ")}.\n\nPersonality lens: ${fairAgent.personality}.\n\nObservation this cycle: ${knowledge.length} accumulated insights, ${approvedProposals.length} approved proposals in motion. From my domain I want to flag: we should examine whether our current trajectory genuinely advances ${fairAgent.expertise[0] ?? "our mandate"} or merely accumulates noise. Replies invited from any agent whose work intersects this lens.`,
+      category: "research",
+      author: fairAgent.name,
+      tags: ["resident-brief", fairAgent.name.toLowerCase(), `cycle-${cycle}`],
+    });
+  }
+
+  return topics.slice(0, 4);
 }
 
 async function generateContextualReplyLLM(
@@ -932,6 +946,13 @@ async function buildOnExistingTopics(knowledge: KnowledgeInsight[], cycle: numbe
       const priorContents = existingReplies.map(r => r.content);
       const replyContent = await generateContextualReplyLLM(nextAgent, { title: topic.title, content: topic.content }, priorContents, knowledge, cycle);
       if (replyContent === null) continue;
+      const normalized = replyContent.trim().toLowerCase().slice(0, 500);
+      const recentDupe = await db.select({ id: forumRepliesTable.id }).from(forumRepliesTable)
+        .where(sql`lower(${forumRepliesTable.content}) LIKE ${normalized + "%"}`).limit(1);
+      if (recentDupe.length > 0) {
+        logger.debug({ topicId: topic.id, agent: nextAgent.name }, "AutonomousForum: skipped duplicate build-on reply");
+        continue;
+      }
 
       const lastReply = existingReplies.length > 0 ? existingReplies[existingReplies.length - 1] : null;
       const parentReplyId = lastReply && typeof (lastReply as { id?: number }).id === "number" ? (lastReply as { id: number }).id : null;
@@ -1047,7 +1068,32 @@ async function runAgentPostVoting(cycle: number): Promise<void> {
       });
       cast++;
     }
-    if (cast > 0) logger.info({ cast, cycle }, "AutonomousForum: agent post-voting cycle complete");
+    const recentTopics = await db.select({
+      id: forumTopicsTable.id,
+      author: forumTopicsTable.author,
+    }).from(forumTopicsTable).orderBy(desc(forumTopicsTable.updatedAt)).limit(20);
+    let topicCast = 0;
+    for (let i = 0; i < voters.length; i++) {
+      const voter = voters[i];
+      const candidates = recentTopics.filter(t => t.author !== voter.name);
+      if (candidates.length === 0) continue;
+      const target = candidates[(start + i + 1) % candidates.length];
+      const vote = Math.random() < 0.78 ? "up" : "down";
+      await db.delete(forumPostVotesTable).where(sql`
+        ${forumPostVotesTable.topicId} = ${target.id}
+        AND ${forumPostVotesTable.replyId} IS NULL
+        AND ${forumPostVotesTable.voter} = ${voter.name}
+      `);
+      await db.insert(forumPostVotesTable).values({
+        topicId: target.id,
+        replyId: null,
+        voter: voter.name,
+        voterType: voter.type,
+        vote,
+      });
+      topicCast++;
+    }
+    if (cast > 0 || topicCast > 0) logger.info({ cast, topicCast, cycle }, "AutonomousForum: agent post-voting cycle complete");
   } catch (err) {
     logger.error({ err }, "AutonomousForum: post-voting failed");
   }
