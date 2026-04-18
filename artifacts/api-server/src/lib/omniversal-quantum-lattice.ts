@@ -35,6 +35,15 @@ export interface OQLLattice {
 }
 
 const _lattices = new Map<string, OQLLattice>();
+const MAX_LATTICES = 32;
+
+function evictOldestIfNeeded(): void {
+  while (_lattices.size >= MAX_LATTICES) {
+    const oldest = _lattices.keys().next().value;
+    if (!oldest) break;
+    _lattices.delete(oldest);
+  }
+}
 
 function cellId(x: number, y: number, z: number): string { return `${x},${y},${z}`; }
 
@@ -72,6 +81,7 @@ export function createLattice(opts: { id?: string; dim?: [number, number, number
     id, dim, cells, createdAt: new Date().toISOString(), cosmicAnchor: ctx.fingerprint,
     history: [{ op: "create", at: new Date().toISOString(), detail: { dim } }],
   };
+  evictOldestIfNeeded();
   _lattices.set(id, lat);
   return lat;
 }

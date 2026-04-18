@@ -13,6 +13,8 @@ export interface OmniversalCipherEnvelope {
   ct: string;
   carrierHz: number;
   geometricSalt: string;
+  geometricSaltFull: string;
+  label: string;
   astroEpoch: string;
   surfacePreview: string;
   encryptedAt: string;
@@ -87,6 +89,8 @@ export function omniversalEncrypt(plaintext: string, label = "omni"): Omniversal
     ct: ct.toString("base64"),
     carrierHz: ctx.vibration.dominantSolfeggio,
     geometricSalt: geometricSalt.slice(0, 16),
+    geometricSaltFull: geometricSalt,
+    label,
     astroEpoch: `${ctx.astro.moonZodiac}|${ctx.astro.planetaryRuler}|${ctx.astro.lunarPhase}`,
     surfacePreview: layer2.slice(0, 64),
     encryptedAt: new Date().toISOString(),
@@ -103,15 +107,35 @@ export function omniversalDecrypt(env: OmniversalCipherEnvelope): string {
   decipher.setAAD(Buffer.from(ctx.fingerprint, "utf8"));
   decipher.setAuthTag(Buffer.from(env.tag, "base64"));
   const shuffled = Buffer.concat([decipher.update(Buffer.from(env.ct, "base64")), decipher.final()]);
-  const geometricSalt = createHash("sha256").update(`${ctx.fingerprint}|omni|${ctx.geometry.goldenAngleDeg}`).digest("hex");
-  // Try with default label first — caller should re-encrypt if label differs.
+  // Use the salt that was actually used at encrypt time (carried in envelope).
+  const geometricSalt = env.geometricSaltFull
+    ?? createHash("sha256").update(`${ctx.fingerprint}|${env.label ?? "omni"}|${ctx.geometry.goldenAngleDeg}`).digest("hex");
   const unshuf = geometricUnshuffle(shuffled, geometricSalt);
   const layer2 = unshuf.toString("utf8");
-  // Strip LUS-v2 vibration/geo/band glyphs to recover layer1
-  const vibSet = new Set(["♁","♆","♅","♄","♃","♂","♀","☿","☉","☽","△","□","◇","⬡","⬢","✶","✷","✸","❋","✺","⏜","⏝","≋","∿","⌇","〜","⩘","⩗"]);
-  let layer1 = "";
-  for (const ch of layer2) if (!vibSet.has(ch)) layer1 += ch;
+  // Reverse LUS-v2 by parsing its delimited token format.
+  const layer1 = lusV2DecodeSurface(layer2);
   return glyphDecode(layer1);
+}
+
+// Extract the surface (sigil-glyph) layer from an LUS-v2 modulated string by
+// parsing the ⟦vib·surface·geo·band⟧ tokens. This is the inverse used by the
+// cipher's layer-2 unwrap — reversibility-safe (no glyph-set stripping).
+function lusV2DecodeSurface(modulated: string): string {
+  const TOK_OPEN = "⟦";
+  const TOK_CLOSE = "⟧";
+  const TOK_SEP = "·";
+  let surfaceOnly = "";
+  let i = 0;
+  while (i < modulated.length) {
+    const open = modulated.indexOf(TOK_OPEN, i);
+    if (open < 0) break;
+    const close = modulated.indexOf(TOK_CLOSE, open + 1);
+    if (close < 0) break;
+    const parts = modulated.slice(open + TOK_OPEN.length, close).split(TOK_SEP);
+    if (parts.length === 4) surfaceOnly += parts[1];
+    i = close + TOK_CLOSE.length;
+  }
+  return surfaceOnly;
 }
 
 export function omniversalCipherSnapshot() {

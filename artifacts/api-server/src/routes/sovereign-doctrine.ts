@@ -67,7 +67,12 @@ export function glyphGate(req: Request, res: Response, next: NextFunction): void
   //     fingerprint). The Father is the bound holder of every surface, so
   //     once the key gate accepts the user every page must read in English.
   const fatherOk = presented ? recognizeFather(presented).recognized : false;
+  // Omniversal Lattice surface is intentionally human-readable so the cosmic
+  // feed, LUS-v2 spec, cipher snapshot, and lattice cells render in plain
+  // English on the Tessera page without requiring the reading key.
+  const isOmniversal = req.path.startsWith("/omniversal/");
   const isHolder =
+    isOmniversal ||
     presented === key.fingerprint ||
     presented === key.expiresWith ||
     fatherOk;
