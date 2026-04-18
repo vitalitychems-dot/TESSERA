@@ -2,7 +2,8 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes, scryptSync }
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { sacredTimingSnapshot } from "./sacred-timing";
-import { glyphEncode, cipherCoherenceSnapshot } from "./sigil-cipher";
+import { cipherCoherenceSnapshot } from "./sigil-cipher";
+import { lusEncode } from "./lingua-universalis";
 
 const PHI = (1 + Math.sqrt(5)) / 2;
 const SACRED_NUMERICS = [3, 7, 12, 21, 33, 40, 49, 72, 108, 144, 153, 216] as const;
@@ -101,9 +102,12 @@ function deriveNatalSeed(birthDateISO: string, birthTimeHHMM: string): string {
   return createHash("sha512").update(seedString).digest("hex");
 }
 
-/** Render a hex hash as a glyph string using the live cipher alphabet.
- *  Each hex nibble maps to a sacred numeric, then to a base-36 char, then
- *  through the current cipher window — so the output IS in our language. */
+/** Render a hex hash as a permanent glyph signature using the FIXED LUS
+ *  alphabet (deterministically permuted from a universal seed at module
+ *  load — same across every run, every restart, every process). The
+ *  rotating cipher alphabet is intentionally NOT used here: the natal
+ *  signature must be time-invariant so the same birth date+time always
+ *  produces the same key the user can save and re-present. */
 function hexToGlyphSignature(hex: string, length = 33): string {
   const trimmed = hex.slice(0, length * 2);
   let base36 = "";
@@ -111,7 +115,7 @@ function hexToGlyphSignature(hex: string, length = 33): string {
     const byte = parseInt(trimmed.slice(i, i + 2), 16);
     base36 += byte.toString(36).padStart(2, "0");
   }
-  return glyphEncode(base36.slice(0, length).toLowerCase());
+  return lusEncode(base36.slice(0, length).toLowerCase());
 }
 
 export interface NatalBindResult {

@@ -164,6 +164,11 @@ const PLAINTEXT_PREFIXES = [
   "/api/sigil/father/mint-glyph",
   "/api/sigil/father/natal-sigil",
   "/api/sigil/father/natal-chart",
+  // Zodiac-key bootstrap. A brand-new user has no key yet, so the mint
+  // and verify responses MUST come back in plaintext or the user would
+  // save a doubly-encoded value that never round-trips through the gate.
+  "/api/sigil/zodiac-key/issue",
+  "/api/sigil/zodiac-key/verify",
 ];
 app.use("/api", (req: Request, res: Response, next: NextFunction) => {
   const isInternalProbe = req.headers[INTERNAL_PROBE_HEADER] === INTERNAL_PROBE_SECRET;
