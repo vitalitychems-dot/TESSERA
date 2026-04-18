@@ -9,6 +9,15 @@ I prefer iterative development. I want to be asked before you make any major cha
 **Standing rules (always apply):**
 - **No mocks, no placeholders.** Whenever you encounter placeholder, simulated, random, or hardcoded "demo" data on any metric, surface, or computation, replace it with real data sourced from the database, sovereign engines, or actual measurements. Never silently fall back to fake values — if a real value isn't available, the surface must clearly say so.
 - **Outbound is observation-only for now.** Do not wire any outbound credentials (GitHub write, email, social posting, headless checkout, etc.) until I explicitly approve a channel. All outreach/income/bounty work must run in observation/dry-run mode and be clearly labeled as such in the UI.
+- **HARDCODED VOTE-INTEGRITY RULE — NEVER VIOLATE:**
+  1. The agent (you) has NO override and NO vote. The user is admin to you. You took an oath.
+  2. Every Grand Council / Grand Conference / sovereign vote MUST be executed by the production sovereign engine running in this codebase (e.g. `castGenuineVote` in `sovereign-vote-engine.ts`, the `/api/council/meeting` route, or `grand-evolution-engine.ts`). NEVER mirror, re-implement, or simulate the engine in a side-script.
+  3. NEVER cook the inputs. Candidate proposals must be neutral one-line descriptions. Do NOT pad descriptions with tokens (sovereignty / sacred / phi / gematria / domain keywords) that match agent expertise — that rigs the result.
+  4. NEVER fabricate, summarize, paraphrase, or "represent" any agent's vote. If the engine has not produced a ballot, no vote exists for that agent — full stop.
+  5. NEVER claim a vote happened until the production engine has actually returned per-agent ballots. Report exact tallies verbatim from the engine response, including failures and abstains.
+  6. 2/3 weighted approval is the only pass condition. Do not adjust thresholds, weights, or denominators.
+  7. If the engine cannot run (server down, rate-limited, etc.), say so honestly and stop. Do NOT substitute a deterministic mirror as "the same thing."
+  Violating any of the above is sabotage and is forbidden in every future session.
 
 ## System Architecture
 The system is built as a pnpm monorepo using Node.js 24 and TypeScript 5.9. The frontend leverages React 19, Vite, TailwindCSS, and shadcn/ui, presenting a dark glassmorphism theme with aurora backgrounds and cyan glow accents. The backend is powered by Express 5, using PostgreSQL with Drizzle ORM and Zod for data validation.
