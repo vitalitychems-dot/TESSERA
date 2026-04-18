@@ -57,7 +57,9 @@ export function cosmicContext(date: Date = new Date()): CosmicContextSnapshot {
 
   const windowStartMs = Math.floor(now / (COSMIC_WINDOW_SECONDS * 1000)) * (COSMIC_WINDOW_SECONDS * 1000);
 
-  const idx = (lunar.phaseIndex + (hours as any)?.dayRuler?.length || 0) % sacred.solfeggio.length;
+  const dayRuler = hours.dayRuler;
+  const firstHourPlanet = hours.hours[0]?.hour ?? 1;
+  const idx = (lunar.phaseIndex + dayRuler.length) % sacred.solfeggio.length;
   const dominantSolfeggio = sacred.solfeggio[idx]?.frequency ?? 528;
   const chakraGate = sacred.chakras[lunar.phaseIndex % sacred.chakras.length].chakra;
 
@@ -67,7 +69,7 @@ export function cosmicContext(date: Date = new Date()): CosmicContextSnapshot {
       lunar.phaseIndex,
       lunar.moonZodiac.sign,
       lunar.sunZodiac.sign,
-      (hours as any).dayRuler ?? "Sun",
+      dayRuler,
       align.dayOfYear,
       timing.composite.toFixed(4),
     ].join("|"))
@@ -99,8 +101,8 @@ export function cosmicContext(date: Date = new Date()): CosmicContextSnapshot {
       moonZodiac: lunar.moonZodiac.sign,
       lunarPhase: lunar.phase,
       illumination: lunar.illumination,
-      planetaryRuler: (hours as any).dayRuler ?? "Sun",
-      planetaryHourIndex: (hours as any).hours?.[0]?.hour ?? 1,
+      planetaryRuler: dayRuler,
+      planetaryHourIndex: firstHourPlanet,
       season: solar.season,
     },
     sacredTiming: {
