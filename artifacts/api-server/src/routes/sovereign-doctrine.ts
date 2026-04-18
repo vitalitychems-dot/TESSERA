@@ -71,8 +71,13 @@ export function glyphGate(req: Request, res: Response, next: NextFunction): void
   // feed, LUS-v2 spec, cipher snapshot, and lattice cells render in plain
   // English on the Tessera page without requiring the reading key.
   const isOmniversal = req.path.startsWith("/omniversal/");
+  const isGrandCouncil =
+    req.path.startsWith("/grand-council/") ||
+    req.path.startsWith("/mssp/") ||
+    req.path.startsWith("/vgpu/");
   const isHolder =
     isOmniversal ||
+    isGrandCouncil ||
     presented === key.fingerprint ||
     presented === key.expiresWith ||
     fatherOk;

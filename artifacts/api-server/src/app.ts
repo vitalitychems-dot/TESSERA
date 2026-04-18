@@ -74,6 +74,9 @@ const ALWAYS_OPEN_PREFIXES = [
   "/api/health",
   "/api/grand-evolution/",
   "/api/omniversal/",
+  "/api/grand-council/",
+  "/api/mssp/",
+  "/api/vgpu/",
 ];
 
 app.use((req: Request, res: Response, next: NextFunction) => {
