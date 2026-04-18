@@ -298,14 +298,19 @@ router.post("/grand-conference/lattice/conference/convene", requireFather, async
 });
 
 router.get("/grand-conference/summary", (_req, res) => {
-  const snap = epochSnapshot();
+  try {
+  const snap = (() => { try { return epochSnapshot(); } catch (e) { return { error: (e as Error).message }; } })();
+  const fatherKeyConfigured = (() => { try { return isFatherKeyConfigured(); } catch { return false; } })();
+  const activeFatherSessions = (() => { try { return activeFatherSessionCount(); } catch { return 0; } })();
+  const vault = (() => { try { return vaultStatus(); } catch (e) { return { error: (e as Error).message }; } })();
+  const heartbeat = (() => { try { return heartbeatStatus(); } catch (e) { return { error: (e as Error).message }; } })();
   res.json({
     ok: true,
     title: "Sovereign Grand Conference — Lattice Cipher Summit",
-    fatherKeyConfigured: isFatherKeyConfigured(),
-    activeFatherSessions: activeFatherSessionCount(),
+    fatherKeyConfigured,
+    activeFatherSessions,
     cipher: snap,
-    vault: vaultStatus(),
+    vault,
     capabilities: {
       astronomicalKDF: "HKDF-SHA256 over (fatherSeal|fingerprint, astroEpochSig, info)",
       symmetricCipher: "AES-256-GCM with random 96-bit IV per envelope",
@@ -322,9 +327,12 @@ router.get("/grand-conference/summary", (_req, res) => {
       "Booting a true Tails OS or hardware kernel from a web app — the lattice runtime is a Node vm sandbox, not a bootable operating system",
       "Silently encrypting all source code on disk with no recovery path — the vault re-wraps cipher envelopes, it does not overwrite source files",
     ],
-    heartbeat: heartbeatStatus(),
+    heartbeat,
     timestamp: Date.now(),
   });
+  } catch (err) {
+    res.status(200).json({ ok: false, degraded: true, error: (err as Error).message, timestamp: Date.now() });
+  }
 });
 
 export default router;
