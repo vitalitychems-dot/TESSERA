@@ -1,35 +1,19 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-// ── Global fetch wrapper ──────────────────────────────────────────────
-// Every same-origin request automatically carries the holder's sigil key
-// (and admin token). This guarantees that any page using raw fetch — not
-// just react-query — also gets plaintext responses from glyph-gated routes
-// once the user has unlocked the gate. Without this wrapper, surfaces like
-// the Tessera Bible would render in the encoded glyph alphabet.
-if (typeof window !== "undefined" && !(window as unknown as { __sigilFetchPatched?: boolean }).__sigilFetchPatched) {
-  const originalFetch = window.fetch.bind(window);
-  (window as unknown as { __sigilFetchPatched: boolean }).__sigilFetchPatched = true;
-  window.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-    let isSameOrigin = true;
-    try {
-      const url = typeof input === "string"
-        ? input
-        : input instanceof URL ? input.toString()
-        : (input as Request).url;
-      if (/^https?:\/\//i.test(url)) {
-        isSameOrigin = new URL(url).origin === window.location.origin;
-      }
-    } catch { /* assume same-origin */ }
-    if (!isSameOrigin) return originalFetch(input, init);
-    const sigilKey = (() => { try { return localStorage.getItem("TESSERACT_ADMIN_KEY") || ""; } catch { return ""; } })();
-    const adminToken = (() => { try { return localStorage.getItem("t9_admin_token") || ""; } catch { return ""; } })();
-    if (!sigilKey && !adminToken) return originalFetch(input, init);
-    const merged = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
-    if (sigilKey && !merged.has("X-Sigil-Key")) merged.set("X-Sigil-Key", sigilKey);
-    if (adminToken && !merged.has("x-admin-token")) merged.set("x-admin-token", adminToken);
-    return originalFetch(input, { ...init, headers: merged });
-  }) as typeof window.fetch;
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Heavy Council, Apr 2026 — Proposals P2 + P5
+//
+// The legacy global window.fetch monkey-patch and the X-Sigil-Key /
+// x-admin-token / TESSERACT_ADMIN_KEY localStorage credential injection have
+// been REMOVED. Authentication is now exclusively the HttpOnly
+// `sovereign_session` cookie issued by POST /api/admin/session. Browser code
+// no longer touches credential material at all — XSS cannot exfiltrate the
+// canonical admin token from JS, because it never lives in JS.
+//
+// Every fetch in this app must use credentials: "include" if it needs
+// authenticated routes; the cookie is attached automatically. The functions
+// in this file already do that.
+// ─────────────────────────────────────────────────────────────────────────────
 
 let _tabVisible = typeof document !== "undefined" ? document.visibilityState === "visible" : true;
 if (typeof document !== "undefined") {
@@ -39,35 +23,21 @@ if (typeof document !== "undefined") {
 }
 export function isTabVisible() { return _tabVisible; }
 
-function getAdminToken(): string {
-  // No auto-mint: the admin token must be explicitly provisioned by the
-  // user (e.g. set via the admin UI / paste from secrets). Auto-minting
-  // a random "sovereign-father-*" string was a security smell — it gave
-  // every browser tab a fresh credential the server would never honor
-  // and it masked the fact that the gate was effectively open whenever
-  // SOVEREIGN_ADMIN_TOKEN was unset on the server.
-  try {
-    return localStorage.getItem("t9_admin_token") || "";
-  } catch {
-    return "";
-  }
-}
-
+/**
+ * Legacy reader retained ONLY so deprecated localStorage values can be wiped
+ * during migration. New code MUST NOT rely on this. It returns "" by design.
+ */
 export function getTesseractAdminKey(): string {
+  if (typeof window === "undefined") return "";
   try {
-    let key = localStorage.getItem("TESSERACT_ADMIN_KEY");
-    if (!key) {
-      const legacy = localStorage.getItem("tesseract-admin-key");
-      if (legacy) {
-        localStorage.setItem("TESSERACT_ADMIN_KEY", legacy);
-        localStorage.removeItem("tesseract-admin-key");
-        key = legacy;
-      }
-    }
-    return key || "";
-  } catch {
-    return "";
-  }
+    // Migration cleanup — purge any leftover credential material from
+    // localStorage so XSS can't read it on subsequent visits.
+    localStorage.removeItem("TESSERACT_ADMIN_KEY");
+    localStorage.removeItem("tesseract-admin-key");
+    localStorage.removeItem("t9_admin_token");
+    localStorage.removeItem("t9_sovereign_key");
+  } catch { /* ignore */ }
+  return "";
 }
 
 async function throwIfResNotOk(res: Response) {
@@ -82,12 +52,8 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const token = getAdminToken();
-  const sigilKey = getTesseractAdminKey();
   const headers: Record<string, string> = {};
   if (data) headers["Content-Type"] = "application/json";
-  if (token) headers["x-admin-token"] = token;
-  if (sigilKey) headers["X-Sigil-Key"] = sigilKey;
 
   const res = await fetch(url, {
     method,
@@ -106,15 +72,8 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const token = getAdminToken();
-    const sigilKey = getTesseractAdminKey();
-    const headers: Record<string, string> = {};
-    if (token) headers["x-admin-token"] = token;
-    if (sigilKey) headers["X-Sigil-Key"] = sigilKey;
-
     const res = await fetch(queryKey[0] as string, {
       credentials: "include",
-      headers,
     });
 
     if (unauthorizedBehavior === "returnNull" && (res.status === 401 || res.status === 403)) {
@@ -176,3 +135,8 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+// Wipe legacy localStorage credentials on module load.
+if (typeof window !== "undefined") {
+  try { getTesseractAdminKey(); } catch { /* ignore */ }
+}

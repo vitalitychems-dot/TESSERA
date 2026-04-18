@@ -1,8 +1,8 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import router from "./routes";
-import { glyphGate } from "./routes/sovereign-doctrine";
 import type { IRouter } from "express";
 import { logger } from "./lib/logger";
 import { initFileIntegrity } from "./lib/file-integrity";
@@ -69,6 +69,9 @@ export function setServerUnready(reason: string): void {
 const ALWAYS_OPEN_PREFIXES = [
   "/api/sigil/",
   "/api/session/",
+  "/api/admin/session", // Heavy Council P9: gate must reach unlock during boot
+  "/api/admin/session/status",
+  "/api/admin/session/logout",
   "/api/external-tools/",
   "/api/sacred-timing/",
   "/api/health",
@@ -108,7 +111,8 @@ app.use(
     },
   }),
 );
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -141,6 +145,13 @@ app.use("/api", (_req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
+// ── GLYPH ENCODING — RETIRED FROM TRANSPORT (Heavy Council P8, Apr 2026) ──
+// Per Heavy Council vote (P8 — 100% specialist approval), the glyphGate
+// transport-layer encoder has been removed from /api responses. Sigil/glyph
+// rendering is now a frontend display concern. HTTP responses are plain JSON,
+// debuggable, OpenAPI-stable. The frontend may still render any text in sigil
+// view via a user-toggled display adapter — symbolic identity preserved,
+// debuggability restored. Deletion of the legacy code is staged in P10.
 // ── GLYPH-EVERYWHERE — sovereign-language layer ─────────────────────────
 // Per Grand Council ranking #2 ("GLYPH EVERYWHERE"): every /api response is
 // glyph-encoded by default. Callers reveal plaintext by presenting the active
@@ -186,12 +197,8 @@ const PLAINTEXT_PREFIXES = [
   "/api/grand-evolution/society",
   "/api/grand-evolution/directives",
 ];
-app.use("/api", (req: Request, res: Response, next: NextFunction) => {
-  const isInternalProbe = req.headers[INTERNAL_PROBE_HEADER] === INTERNAL_PROBE_SECRET;
-  const isPlaintext = PLAINTEXT_PREFIXES.some(p => ("/api" + req.path).startsWith(p));
-  if (isInternalProbe || isPlaintext) return next();
-  return glyphGate(req, res, next);
-});
+// Heavy Council P8: glyphGate is no longer mounted — /api responses are plain JSON.
+void PLAINTEXT_PREFIXES;
 app.use("/api", router);
 
 function registerModuleHandlers(): void {

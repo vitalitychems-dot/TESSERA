@@ -8,6 +8,7 @@ import { withCodexDirective } from "./codex-startup-directive";
 import { onProposalOutcome } from "./consciousness-engine";
 import { onCouncilDecision } from "./knowledge-diffusion";
 import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
+import { deliberatePersonas } from "./persona-deliberation";
 
 const RETRY_QUEUE_STATE_KEY = "consensus_retry_queue";
 const PHI = 1.618033988749895;
@@ -99,63 +100,15 @@ function getPhiWeight(agentName: string, category: string): number {
 }
 
 /**
- * Fallback vote resolution when LLM is unavailable.
- * All decisions are policy-driven with no randomness:
- *   - Safe category + specialist  → approve  (domain expertise confirms alignment)
- *   - Safe category + generalist  → abstain  (defer to specialists, no opinion)
- *   - Risk category + specialist  → reject   (conservative: requires LLM deliberation)
- *   - Risk category + generalist  → abstain  (no expertise — withhold judgment)
- * This ensures fallback outcomes are auditable and repeatably deterministic.
+ * Sovereign per-persona deliberation. Heavy Council redesign hard rule:
+ * NO external LLM may role-play council agents (external deps = vulnerabilities).
+ * Each of the 24 Greek personas reads the proposal text directly through its
+ * own concern lens (see ./persona-deliberation.ts), cites the actual phrase
+ * that drives its judgment, and casts a vote. Different proposals therefore
+ * produce different vote distributions — unanimity is no longer the default.
  */
 function generateDeterministicVotes(proposal: ConsensusProposal): { votes: ConsensusVote[]; durationMs: number } {
-  const isSafeCategory = SAFE_AUTO_APPROVE_CATEGORIES.has(proposal.category);
-  const startTime = Date.now();
-  const votes: ConsensusVote[] = [];
-
-  for (const agentName of GRAND_COUNCIL_AGENTS) {
-    const specialties = AGENT_SPECIALTIES[agentName] || [];
-    const isSpecialist = specialties.includes(proposal.category);
-    const weight = isSpecialist ? PHI : 1.0;
-
-    let vote: "approve" | "reject" | "abstain";
-    let reasoning: string;
-    let confidence: number;
-
-    if (isSafeCategory) {
-      if (isSpecialist) {
-        vote = "approve";
-        reasoning = `As a ${proposal.category} specialist, this self-improvement proposal aligns with sovereign goals.`;
-        confidence = 0.88;
-      } else {
-        vote = "abstain";
-        reasoning = "Outside my domain — deferring judgment to category specialists.";
-        confidence = 0.60;
-      }
-    } else {
-      if (isSpecialist) {
-        vote = "reject";
-        reasoning = `As ${proposal.category} specialist, this requires full LLM deliberation before approval.`;
-        confidence = 0.70;
-      } else {
-        vote = "abstain";
-        reasoning = "Insufficient domain expertise — withholding vote pending deliberation.";
-        confidence = 0.50;
-      }
-    }
-
-    votes.push({
-      agentId: agentName.toLowerCase(),
-      agentName,
-      vote,
-      reasoning,
-      timestamp: Date.now(),
-      confidence,
-      phiWeight: weight,
-      isSpecialist,
-    });
-  }
-
-  return { votes, durationMs: Date.now() - startTime };
+  return deliberatePersonas(proposal);
 }
 
 /**
@@ -367,10 +320,17 @@ function finalizeProposal(proposal: ConsensusProposal, votes: ConsensusVote[], d
   const noCount = votes.filter(v => v.vote === "reject").length;
   const abstainCount = votes.filter(v => v.vote === "abstain").length;
   const approvalRate = computeWeightedApprovalRate(votes, proposal.category);
-  const noQuorum = approvalRate < 0;
-  const status: ConsensusProposal["status"] = noQuorum
-    ? "queued"
+  // Heavy Council redesign: external LLM impersonation is permanently disabled,
+  // so an all-abstain ballot cannot be re-deliberated by an LLM. Treat it as a
+  // terminal rejection with the explicit reason "no evidence in proposal text"
+  // — this is the right outcome (the proposal was too vague for any of the 24
+  // personas to find a phrase to vote on) and it stops the infinite re-queue
+  // loop the architect flagged.
+  const evidenceFreeAbstain = approvalRate < 0;
+  const status: ConsensusProposal["status"] = evidenceFreeAbstain
+    ? "rejected"
     : approvalRate >= 2 / 3 ? "approved" : "rejected";
+  const noQuorum = false;
 
   const specialists = votes.filter(v => v.isSpecialist);
   const phiWeightSummary = `Phi-weighted: ${specialists.length} specialists (w=${PHI.toFixed(3)}), ${votes.length - specialists.length} base (w=1.0)`;
@@ -383,22 +343,17 @@ function finalizeProposal(proposal: ConsensusProposal, votes: ConsensusVote[], d
   proposal.yesCount = yesCount;
   proposal.noCount = noCount;
   proposal.abstainCount = abstainCount;
-  proposal.approvalRate = noQuorum ? 0 : approvalRate;
-  if (!noQuorum) proposal.resolvedAt = Date.now();
+  proposal.approvalRate = evidenceFreeAbstain ? 0 : approvalRate;
+  proposal.resolvedAt = Date.now();
   proposal.votingDurationMs = durationMs;
   proposal.votingMethod = "phi-weighted-parallel";
-  proposal.implementationNotes = noQuorum
-    ? `No quorum — all ${abstainCount} votes abstained (no active specialist coverage). Queued for LLM deliberation. ${phiWeightSummary}`
+  proposal.implementationNotes = evidenceFreeAbstain
+    ? `Rejected — no persona found a phrase in the proposal text to vote on (${abstainCount} abstain). Resubmit with concrete language. ${phiWeightSummary}`
     : status === "approved"
       ? `Approved by Phi-weighted parallel consensus — ${yesCount}/${votes.length} votes (${GRAND_COUNCIL_AGENTS.length} eligible). ${phiWeightSummary}.${participationNote} ${durationMs ? `Resolved in ${durationMs}ms` : ""}`
       : `Rejected — ${noCount} votes against, ${yesCount} in favor. ${phiWeightSummary}${participationNote}`;
 
   proposals.set(proposal.id, proposal);
-
-  if (noQuorum) {
-    logger.info({ id: proposal.id, abstainCount }, "ConsensusEngine: no-quorum on deterministic fallback — queued for LLM deliberation");
-    return;
-  }
 
   const transcript = `[CONSENSUS PROPOSAL: ${proposal.title}]
 [Category: ${proposal.category}]

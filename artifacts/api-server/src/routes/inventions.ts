@@ -830,11 +830,18 @@ function inventorPrincipal(proposedBy: string | null | undefined, inventionId: s
   return `proposer:${createHash("sha256").update(raw).digest("hex").slice(0, 32)}`;
 }
 
-// Admin-token guard: fail-closed. Requires SOVEREIGN_ADMIN_TOKEN to be
-// configured AND a matching x-admin-token header (constant-time compare).
+// Admin guard: fail-closed. Heavy Council P5 — accepts the new
+// `sovereign_session` HttpOnly cookie (preferred) or the legacy x-admin-token
+// header (deprecated, retained transitionally). Both paths run the same
+// constant-time check; both require an admin token to be configured on the
+// server (SOVEREIGN_ADMIN_TOKEN or legacy TESSERACT_ADMIN_KEY).
 async function requireInventorAuth(req: import("express").Request): Promise<boolean> {
-  const configured = process.env["SOVEREIGN_ADMIN_TOKEN"];
-  if (!configured || configured.length < 8) return false;
+  const { isAdminTokenConfigured, lookupSession, SESSION_COOKIE } = await import("../lib/sovereign-session");
+  if (!isAdminTokenConfigured()) return false;
+  const cookies = (req as import("express").Request & { cookies?: Record<string, string> }).cookies;
+  const cookieVal = cookies?.[SESSION_COOKIE];
+  if (cookieVal && lookupSession(cookieVal).valid) return true;
+  // Legacy header path — still works during migration.
   const token = (req.headers["x-admin-token"] as string | undefined)?.trim();
   if (!token || token.length < 8) return false;
   const { validateSovereignAdminToken } = await import("../lib/mesh-auth");
