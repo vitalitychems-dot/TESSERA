@@ -312,7 +312,7 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
           ? `✗ ${result.message ?? "TESSERACT_ADMIN_KEY is not set in Replit Secrets."}`
           : result.reason === "empty"
             ? "✗ Empty key."
-            : `✗ Fingerprint mismatch. Expected: ${serverFingerprint ?? "(loading…)"}`;
+            : `✗ Key mismatch. Type your TESSERACT_ADMIN_KEY exactly as set in Replit Secrets.`;
       setMessages((m) => [...m, { from: "tessera", text: reason, ts: Date.now() }]);
       setBusy(false);
     }
@@ -536,16 +536,9 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
 
         {stage === "locked" && (
           <form onSubmit={handleSubmit} className="border-t border-fuchsia-500/20 bg-zinc-950/80 p-3">
-            {(serverConfigured === false || serverFingerprint) && (
-              <div className="mb-2 px-2 py-1.5 rounded-md bg-black/60 border border-fuchsia-500/15 text-[10px] text-fuchsia-300/70 flex items-center justify-between gap-2 flex-wrap">
-                {serverConfigured === false ? (
-                  <span className="text-rose-300">⚠ TESSERACT_ADMIN_KEY is not set on the server. Add it to Replit Secrets and restart the API.</span>
-                ) : (
-                  <>
-                    <span>server expects fingerprint:</span>
-                    <code className="text-fuchsia-200 font-mono select-all">{serverFingerprint}</code>
-                  </>
-                )}
+            {serverConfigured === false && (
+              <div className="mb-2 px-2 py-1.5 rounded-md bg-black/60 border border-rose-500/30 text-[10px] text-rose-300 flex items-center gap-2">
+                <span>⚠ TESSERACT_ADMIN_KEY is not set on the server. Add it to Replit Secrets and restart the API.</span>
               </div>
             )}
             <div className="flex items-center gap-2">
