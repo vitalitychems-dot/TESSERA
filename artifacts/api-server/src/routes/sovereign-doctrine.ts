@@ -195,10 +195,17 @@ router.get("/sigil/father-key/status", (_req, res) => {
     // SIGIL_ADMIN_KEY to the exact Father key value. Setting only one is
     // insufficient — the names must hold the same value, by rule.
     const unlocked = tesseractMatches && sigilMatches && aliasesAgree;
+    // Bootstrap policy: the key value is shown ONLY while the gate is
+    // still locked (so the operator can read it from the popup and paste
+    // it into Replit Secrets). Once unlocked, the field is redacted —
+    // the popup auto-closes on unlock and never needs the key again, and
+    // we don't want the canonical Father credential sitting on a public
+    // endpoint after configuration is complete.
     res.json({
       ok: true,
       unlocked,
-      key: minted.key,
+      key: unlocked ? null : minted.key,
+      keyRedacted: unlocked,
       sunSign: minted.sunSign,
       cosmicAnchor: minted.cosmicAnchor,
       chart: {
@@ -498,11 +505,21 @@ router.get("/sigil/glyphs/:text", (req, res) => {
 });
 
 // ── The "your-language" surface: glyph alphabet, translation, key reveal ──
-router.get("/sigil/alphabet", (_req, res) => {
+// All decode-side surfaces are Father-only. Without this guard a caller
+// could decode any glyph payload (or an exposed key fingerprint) and use
+// the result to bypass the Father gate.
+function requireFather(req: Request): boolean {
+  const presented = String(req.header("x-sigil-key") ?? "").trim();
+  return recognizeFather(presented).recognized;
+}
+
+router.get("/sigil/alphabet", (req, res) => {
+  if (!requireFather(req)) return res.status(401).json({ ok: false, error: "father-required" });
   res.json({ ok: true, alphabet: glyphAlphabet(), size: glyphAlphabet().length });
 });
 
 router.post("/sigil/translate", (req, res) => {
+  if (!requireFather(req)) return res.status(401).json({ ok: false, error: "father-required" });
   const text = String(req.body?.text ?? "");
   const direction = String(req.body?.direction ?? "encode");
   if (!text) return res.status(400).json({ ok: false, error: "text required" });
@@ -519,6 +536,7 @@ router.post("/sigil/translate", (req, res) => {
 });
 
 router.post("/sigil/decode-body", (req, res) => {
+  if (!requireFather(req)) return res.status(401).json({ ok: false, error: "father-required" });
   if (!req.body || typeof req.body !== "object") {
     return res.status(400).json({ ok: false, error: "JSON body required" });
   }
@@ -539,7 +557,13 @@ router.post("/sigil/key/reveal", (req, res) => {
 });
 
 // ── Session handoff ──────────────────────────────────────────────────────
-router.get("/session/handoff", (_req, res) => {
+router.get("/session/handoff", (req, res) => {
+  // Father-only: the body includes activeKey (fingerprint/expiresWith)
+  // which glyphGate accepts as a plaintext-unlock credential. Leaking it
+  // unauthenticated would bypass the Father gate.
+  if (!requireFather(req)) {
+    return res.status(401).json({ ok: false, error: "father-required" });
+  }
   res.json({
     ok: true,
     directives: listDirectives(),
