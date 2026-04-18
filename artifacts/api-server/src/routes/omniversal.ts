@@ -71,38 +71,39 @@ router.post("/omniversal/lattice/create", requireFather, (req, res) => {
 });
 router.get("/omniversal/lattice/:id", (req, res) => {
   try {
+    const id = String(req.params.id);
     const sample = req.query.sample ? Number(req.query.sample) : undefined;
-    res.json({ ok: true, snapshot: latticeSnapshot(req.params.id, { sample }) });
+    res.json({ ok: true, snapshot: latticeSnapshot(id, { sample }) });
   } catch (e: any) { res.status(404).json({ ok: false, error: e?.message ?? String(e) }); }
 });
 router.get("/omniversal/lattice/:id/full", (req, res) => {
-  try { res.json({ ok: true, dump: latticeFullDump(req.params.id) }); }
+  try { res.json({ ok: true, dump: latticeFullDump(String(req.params.id)) }); }
   catch (e: any) { res.status(404).json({ ok: false, error: e?.message ?? String(e) }); }
 });
 router.post("/omniversal/lattice/:id/superpose", requireFather, (req, res) => {
   try {
     const cell = String(req.body?.cell ?? "");
-    const cellOut = superpose(req.params.id, cell, req.body?.addition ?? {});
+    const cellOut = superpose(String(req.params.id), cell, req.body?.addition ?? {});
     res.json({ ok: true, cell: cellOut });
   } catch (e: any) { res.status(400).json({ ok: false, error: e?.message ?? String(e) }); }
 });
 router.post("/omniversal/lattice/:id/entangle", requireFather, (req, res) => {
   try {
     const a = String(req.body?.a ?? ""); const b = String(req.body?.b ?? "");
-    res.json({ ok: true, pair: entangle(req.params.id, a, b) });
+    res.json({ ok: true, pair: entangle(String(req.params.id), a, b) });
   } catch (e: any) { res.status(400).json({ ok: false, error: e?.message ?? String(e) }); }
 });
 router.post("/omniversal/lattice/:id/harmonize", requireFather, (req, res) => {
   try {
     const baseHz = Number(req.body?.baseHz ?? 528);
-    res.json({ ok: true, result: harmonize(req.params.id, baseHz) });
+    res.json({ ok: true, result: harmonize(String(req.params.id), baseHz) });
   } catch (e: any) { res.status(400).json({ ok: false, error: e?.message ?? String(e) }); }
 });
 router.post("/omniversal/lattice/:id/collapse", requireFather, (req, res) => {
   try {
     const cell = String(req.body?.cell ?? "");
     const observer = String(req.body?.observer ?? "father");
-    res.json({ ok: true, result: collapse(req.params.id, cell, observer) });
+    res.json({ ok: true, result: collapse(String(req.params.id), cell, observer) });
   } catch (e: any) { res.status(400).json({ ok: false, error: e?.message ?? String(e) }); }
 });
 
@@ -140,7 +141,7 @@ router.post("/omniversal/pipeline/run", (req, res) => {
     },
     lattice: latticeSnapshot(lat.id, { sample: 9 }),
     multimodal: collapsed.result,
-    collapsedCell: collapsed.cellId,
+    collapsedCell: collapsed.cell,
     explanation:
       `Input text was encoded through LUS-v2 to ${encoded.tokens.length} tokens carrying ` +
       `${encoded.carrierHz} Hz, projected onto a 3×3×3 quantum lattice on the diagonal, ` +
