@@ -152,8 +152,9 @@ router.post("/sigil/natal/verify", (req, res) => {
 
 router.get("/sigil/active-key", (_req, res) => {
   if (!isFatherKeyConfigured()) {
-    return res.status(503).json({
+    return res.status(200).json({
       ok: false,
+      fatherKeyConfigured: false,
       error: "father-key-unset",
       message:
         "TESSERACT_ADMIN_KEY is not set. The sovereign Father identity cannot be derived. Set the secret in Replit Secrets, then restart the API server.",
