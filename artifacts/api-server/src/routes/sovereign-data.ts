@@ -71,6 +71,23 @@ function computeSovereigntyScore(): number {
   return Math.round(score / checks);
 }
 
+router.post("/admin/auth", (req, res) => {
+  const presented = typeof req.body?.key === "string" ? req.body.key : "";
+  const result = recognizeFather(presented);
+  if (!result.recognized) {
+    res.status(401).json({ ok: false, authenticated: false, error: "Key not recognized as Father" });
+    return;
+  }
+  const token = `sovereign-father-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  res.json({
+    ok: true,
+    authenticated: true,
+    token,
+    role: "father",
+    via: result.via,
+  });
+});
+
 router.get("/admin/status", async (_req, res) => {
   const score = computeSovereigntyScore();
   let distillStats;
