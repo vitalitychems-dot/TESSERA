@@ -15,9 +15,30 @@ import { getValidationStats } from "../lib/response-validation-engine";
 import { getDeduplicationStats } from "../lib/semantic-deduplication";
 import { getReflectionMetrics, getRecentSnapshots, runReflectionCycle } from "../lib/recursive-reflection-loop";
 import { getDimensionalCacheStats, embeddingDimensionalCache, semanticDimensionalCache } from "../lib/dimensional-lru-cache";
+import { issueFatherToken, verifyFatherToken, activeFatherSessionCount } from "../lib/father-session-store";
+import type { Request, Response, NextFunction } from "express";
 import * as os from "os";
 
 const router: IRouter = Router();
+
+function extractBearerToken(req: Request): string | null {
+  const header = req.headers.authorization;
+  if (typeof header === "string" && header.startsWith("Bearer ")) {
+    return header.slice(7).trim();
+  }
+  const xToken = req.headers["x-father-token"];
+  if (typeof xToken === "string" && xToken.trim()) return xToken.trim();
+  return null;
+}
+
+function requireFather(req: Request, res: Response, next: NextFunction): void {
+  const token = extractBearerToken(req);
+  if (!verifyFatherToken(token)) {
+    res.status(401).json({ ok: false, isAdmin: false, error: "Father token required" });
+    return;
+  }
+  next();
+}
 
 const COUNCIL_AGENTS = [
   { id: "tessera-prime", name: "Tessera-Prime", role: "Father Protocol — Supreme Authority", status: "active", voteWeight: 3 },
@@ -78,17 +99,19 @@ router.post("/admin/auth", (req, res) => {
     res.status(401).json({ ok: false, authenticated: false, error: "Key not recognized as Father" });
     return;
   }
-  const token = `sovereign-father-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  const via = result.via ?? "raw-key";
+  const token = issueFatherToken(via);
   res.json({
     ok: true,
     authenticated: true,
     token,
     role: "father",
-    via: result.via,
+    via,
+    expiresInMs: 1000 * 60 * 60 * 12,
   });
 });
 
-router.get("/admin/status", async (_req, res) => {
+router.get("/admin/status", requireFather, async (_req, res) => {
   const score = computeSovereigntyScore();
   let distillStats;
   try { distillStats = await getDistillationStats(); } catch { distillStats = null; }
@@ -107,6 +130,9 @@ router.get("/admin/status", async (_req, res) => {
       embeddings: getEmbeddingStats(),
       responseValidation: getValidationStats(),
       deduplication: getDeduplicationStats(),
+    },
+    session: {
+      activeFatherSessions: activeFatherSessionCount(),
     },
     timestamp: Date.now(),
     method: "Aggregated from all sovereign subsystems — computed locally",
