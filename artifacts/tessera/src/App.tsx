@@ -350,7 +350,9 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AdminProvider>
-          <TesseractKeyGate>
+          {/* TEMP: gate bypassed at the user's request — Tessera will mint the key in-prompt.
+              To re-enable, swap the fragment back to <TesseractKeyGate> … </TesseractKeyGate>. */}
+          <>
           <MeshProvider>
           <NLPGoalsProvider>
           <TooltipProvider>
@@ -378,7 +380,7 @@ function App() {
           </TooltipProvider>
           </NLPGoalsProvider>
           </MeshProvider>
-          </TesseractKeyGate>
+          </>
         </AdminProvider>
       </QueryClientProvider>
     </ErrorBoundary>
