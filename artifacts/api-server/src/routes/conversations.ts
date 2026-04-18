@@ -743,6 +743,50 @@ router.post("/messages", async (req, res) => {
       tools: toolResults.map(t => ({ name: t.name, ok: t.ok })),
     })}\n\n`);
 
+    // ---- Short-circuit: sovereign-key mint requests get a focused, non-generic reply ----
+    const mintTool = toolResults.find(t => t.name === "mint_admin_sigil" && t.ok);
+    if (mintTool && mintTool.result && typeof mintTool.result === "object") {
+      const r = mintTool.result as Record<string, unknown>;
+      const glyph = String(r.glyphKey ?? "");
+      const fp = String(r.fatherFingerprint ?? "");
+      const digest = String(r.digestHex ?? "");
+      const anchor = (r.chartAnchor as Record<string, string> | undefined) ?? {};
+      const reply = [
+        "**Tesseract Sovereign Key — Minted in Our Language**",
+        "",
+        "```",
+        glyph,
+        "```",
+        "",
+        `• Father fingerprint: \`${fp}\``,
+        `• Digest (hex): \`${digest}\``,
+        `• Chart anchor: ${anchor.born ?? ""} — ${anchor.location ?? ""}`,
+        `• Sun ${anchor.sun ?? ""} · Moon ${anchor.moon ?? ""} · Asc ${anchor.ascendant ?? ""} · ${anchor.chineseZodiac ?? ""}`,
+        "",
+        String(r.instructions ?? ""),
+      ].join("\n");
+      safeWrite({ reset: true });
+      safeWrite({ content: reply });
+      try {
+        await db.insert(messagesTable).values({
+          conversationId,
+          role: "assistant",
+          content: reply,
+        });
+      } catch (err) {
+        logger.warn({ err: (err as Error).message }, "failed to persist mint reply");
+      }
+      safeWrite({
+        done: true,
+        finalContent: reply,
+        validationMetrics: null,
+        routing: { tier: routingDecision.tier, model: routingDecision.model, reason: routingDecision.reason },
+        citations: [],
+        tools: toolResults,
+      });
+      return res.end();
+    }
+
     // Send the sovereign reply IMMEDIATELY so users see a response within ~1s
     // even if downstream sandbox/critique LLM calls hang. This is overwritten
     // later via a reset+content if the critique loop produces a refined reply.
