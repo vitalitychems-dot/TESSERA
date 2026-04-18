@@ -83,7 +83,7 @@ router.get("/reality-audit/snapshots/latest", async (_req, res) => {
   try {
     const snapshot = await getLatestAuditSnapshot();
     if (!snapshot) {
-      return res.json({ ok: true, snapshot: null, message: "No snapshots found — POST /api/reality-audit/snapshot to generate one." });
+      res.json({ ok: true, snapshot: null, message: "No snapshots found — POST /api/reality-audit/snapshot to generate one." }); return;
     }
     res.json({ ok: true, snapshot });
   } catch (err) {
@@ -95,7 +95,7 @@ router.get("/reality-audit/snapshots/:id/payload", async (req, res) => {
   try {
     const snapshots = await listAuditSnapshots(200);
     const snap = snapshots.find(s => s.snapshotId === req.params.id);
-    if (!snap) return res.status(404).json({ ok: false, error: "snapshot not found" });
+    if (!snap) { res.status(404).json({ ok: false, error: "snapshot not found" }); return; }
     const cwd = process.cwd();
     const root = cwd.includes("/artifacts/") ? path.resolve(cwd, "../..") : cwd;
     const jsonPath = path.join(root, "_evolutions", `reality-audit-${snap.snapshotId}.json`);

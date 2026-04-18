@@ -80,7 +80,7 @@ router.post("/admin/auth", (req, res) => {
     res.status(401).json({ ok: false, authenticated: false, error: "Key not recognized as Father" });
     return;
   }
-  const via = result.via ?? "raw-key";
+  const via: "fingerprint" | "raw-key" = "raw-key";
   const token = issueFatherToken(via);
   res.json({
     ok: true,

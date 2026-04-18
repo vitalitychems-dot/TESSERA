@@ -177,7 +177,7 @@ router.post("/father-key/redeem", (req, res) => {
     fingerprint,
     winnerId: rec.winnerId,
     approvalRatio: rec.approvalRate,
-    weighted: rec.weighted,
+    raw: rec.raw,
     totalEligible: rec.totalEligible,
     instruction:
       "Save this exact value into the TESSERACT_ADMIN_KEY secret. " +

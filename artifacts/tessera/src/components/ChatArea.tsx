@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Loader2, X, Copy, Check, Download, Zap, PhoneOff, Pause, Play, MessageSquare, Shield, Settings2, Bot, CheckCircle2, Search, Sparkles, Code, Database, Keyboard, Eye } from "lucide-react";
+import { Loader2, X, Copy, Check, Download, Zap, PhoneOff, Pause, Play, MessageSquare, Shield, Settings2, Bot, CheckCircle2, Search, Sparkles, Code, Database, Keyboard, Eye, Paperclip } from "lucide-react";
 import { NLPGoalsPanel } from "./chat/NLPGoalsPanel";
 import { type VirtuosoHandle } from "react-virtuoso";
 import ReactMarkdown from "react-markdown";

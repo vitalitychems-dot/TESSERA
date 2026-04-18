@@ -16,7 +16,7 @@ const router = Router();
 router.get("/agi/working-memory", (_req, res) => res.json({ ok: true, ...snapshotWorkingMemory() }));
 router.post("/agi/working-memory/observation", (req, res) => {
   const { source, topic, payload } = req.body || {};
-  if (!source || !topic) return res.status(400).json({ ok: false, error: "source + topic required" });
+  if (!source || !topic) { res.status(400).json({ ok: false, error: "source + topic required" }); return; }
   res.json({ ok: true, observation: recordObservation(source, topic, payload ?? {}) });
 });
 
@@ -32,7 +32,7 @@ router.get("/agi/bus/top", (req, res) => {
 });
 router.post("/agi/bus/publish", (req, res) => {
   const { from, topic, payload, priority } = req.body || {};
-  if (!from || !topic) return res.status(400).json({ ok: false, error: "from + topic required" });
+  if (!from || !topic) { res.status(400).json({ ok: false, error: "from + topic required" }); return; }
   res.json({ ok: true, message: publish(from, topic, payload ?? {}, priority) });
 });
 
@@ -42,7 +42,7 @@ router.get("/agi/causal/effects", (_req, res) => res.json({ ok: true, effects: a
 router.get("/agi/causal/predict/:actionKey", (req, res) => res.json({ ok: true, effects: predictedEffects(req.params.actionKey) }));
 router.get("/agi/causal/recommend", (req, res) => {
   const { action, metric, target } = req.query as Record<string, string>;
-  if (!action || !metric) return res.status(400).json({ ok: false, error: "action + metric required" });
+  if (!action || !metric) { res.status(400).json({ ok: false, error: "action + metric required" }); return; }
   res.json({ ok: true, recommendation: recommendDirection(action, metric, (target as "up" | "down") ?? "up") });
 });
 
@@ -66,14 +66,14 @@ async function gatherPlannerState() {
 
 router.post("/agi/plan", (req, res) => {
   const { goal } = req.body || {};
-  if (!goal) return res.status(400).json({ ok: false, error: "goal required" });
+  if (!goal) { res.status(400).json({ ok: false, error: "goal required" }); return; }
   const plan = createPlan(String(goal));
   res.json({ ok: true, plan });
 });
 router.get("/agi/plans", (_req, res) => res.json({ ok: true, plans: listPlans() }));
 router.get("/agi/plan/:id", async (req, res) => {
   const p = getPlan(req.params.id);
-  if (!p) return res.status(404).json({ ok: false, error: "plan not found" });
+  if (!p) { res.status(404).json({ ok: false, error: "plan not found" }); return; }
   const state = await gatherPlannerState();
   const evaluation = evaluatePlan(p, state);
   res.json({ ok: true, plan: p, state, evaluation });

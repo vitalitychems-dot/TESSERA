@@ -74,7 +74,7 @@ router.post("/training/full-cycle", async (req: Request, res: Response) => {
   if (req.body?.mode === "all") {
     requested = allHandlers.slice(0, MAX_SOURCES_PER_REQUEST);
   } else if (Array.isArray(req.body?.sources) && req.body.sources.length > 0) {
-    const dedup = Array.from(new Set(req.body.sources.map(String)));
+    const dedup: string[] = Array.from(new Set((req.body.sources as unknown[]).map(s => String(s))));
     requested = dedup.filter(s => handlerSet.has(s)).slice(0, MAX_SOURCES_PER_REQUEST);
     if (requested.length === 0) {
       res.status(400).json({ ok: false, error: "No requested sources match registered handlers" });

@@ -450,14 +450,14 @@ export default function SystemPage({ initialTab }: { initialTab?: SystemTab }) {
                 <SectionHeader icon={Zap} title="Quantum Tesseract State" color="blue" />
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
                   <MiniStat value={quantumMetrics.qubitCount} label="Qubits" color="blue" />
-                  <MiniStat value={quantumMetrics.entanglementPairs} label="Entangled Pairs" color="purple" />
+                  <MiniStat value={quantumMetrics.entanglementPairs} label="Entangled Pairs" color="violet" />
                   <MiniStat value={quantumMetrics.activeBridges} label="Dim. Bridges" color="cyan" />
                   <MiniStat value={quantumMetrics.dimensionalDepth} label="Dimensions" color="violet" />
                 </div>
                 <div className="text-[10px] text-slate-500 font-mono mt-3">Quantum Volume: {quantumMetrics.quantumVolume?.toLocaleString()} · Error Rate: {quantumMetrics.errorRate?.toFixed(4)}</div>
               </GlassCard>
               <GlassCard animate>
-                <SectionHeader icon={RefreshCw} title="Quantum Gates" color="purple" />
+                <SectionHeader icon={RefreshCw} title="Quantum Gates" color="violet" />
                 <div className="grid grid-cols-2 gap-2 mt-3">
                   {quantumMetrics.gates?.map((gate: any) => (
                     <div key={gate.symbol} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 hover:bg-white/[0.04] transition-all group">

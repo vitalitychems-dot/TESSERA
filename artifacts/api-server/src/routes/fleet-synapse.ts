@@ -92,9 +92,9 @@ router.get("/fleet-synapse/map", async (_req, res) => {
       synapseStrength: Math.min(1, (a.receivedPulses ?? 0) / 50),
       consciousnessLevel: Math.min(1, ((a.power ?? 0) + (a.receivedPulses ?? 0)) / 100),
       agentId: a.id,
-      archetype: a.archetype,
+      archetype: (a as any).archetype ?? a.specialization ?? "unknown",
       masteredDomains: a.masteredDomains ?? [],
-      capabilities: a.capabilities ?? [],
+      capabilities: (a as any).capabilities ?? [],
     }));
     const memberLinks = memberNodes.map(n => ({
       from: "tessera-prime",

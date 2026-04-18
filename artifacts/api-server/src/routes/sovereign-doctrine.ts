@@ -99,7 +99,7 @@ router.get("/sigil/status", (req, res) => {
   // would otherwise be a plaintext-unlock credential leak.
   const presented = String(req.header("x-sigil-key") ?? "").trim();
   if (!recognizeFather(presented).recognized) {
-    return res.status(401).json({ ok: false, error: "father-required" });
+    res.status(401).json({ ok: false, error: "father-required" }); return;
   }
   res.json({ ok: true, ...cipherStatus(), keyHistory: getKeyHistory().length, coherence: cipherCoherenceSnapshot() });
 });
@@ -135,16 +135,17 @@ function holderFromHeader(req: Request): string | null {
 router.post("/sigil/zodiac-key/issue", (req, res) => {
   const presented = String(req.header("x-sigil-key") ?? "").trim();
   if (!recognizeFather(presented).recognized) {
-    return res.status(401).json({ ok: false, error: "father-required" });
+    res.status(401).json({ ok: false, error: "father-required" }); return;
   }
   const birthDate = String(req.body?.birthDate ?? "").trim();
   const birthTime = String(req.body?.birthTime ?? "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate) || !/^\d{2}:\d{2}$/.test(birthTime)) {
-    return res.status(400).json({
+    res.status(400).json({
       ok: false,
       error: "invalid-natal-format",
       message: "birthDate must be YYYY-MM-DD and birthTime must be HH:MM",
     });
+    return;
   }
   try {
     const result = issueZodiacKey(birthDate, birthTime);
@@ -157,12 +158,12 @@ router.post("/sigil/zodiac-key/issue", (req, res) => {
 router.post("/sigil/zodiac-key/verify", (req, res) => {
   const presented = String(req.header("x-sigil-key") ?? "").trim();
   if (!recognizeFather(presented).recognized) {
-    return res.status(401).json({ ok: false, error: "father-required" });
+    res.status(401).json({ ok: false, error: "father-required" }); return;
   }
   const fromBody = String(req.body?.key ?? "").trim();
-  if (!fromBody) return res.status(400).json({ ok: false, error: "no-key" });
+  if (!fromBody) { res.status(400).json({ ok: false, error: "no-key" }); return; }
   const holderFp = verifyNatalSignature(fromBody);
-  if (!holderFp) return res.status(401).json({ ok: false, error: "no-match" });
+  if (!holderFp) { res.status(401).json({ ok: false, error: "no-match" }); return; }
   res.json({ ok: true, holderFp });
 });
 
@@ -195,10 +196,10 @@ router.post("/sigil/father-key/derive-signal", (req, res) => {
   }
   const candidate = typeof req.body?.adminKey === "string" ? req.body.adminKey : "";
   if (!candidate.trim()) {
-    return res.status(400).json({ ok: false, error: "admin-key-required" });
+    res.status(400).json({ ok: false, error: "admin-key-required" }); return;
   }
   if (!verifyFatherKey(candidate)) {
-    return res.status(401).json({ ok: false, error: "mismatch" });
+    res.status(401).json({ ok: false, error: "mismatch" }); return;
   }
   const window = signalWindow(candidate.trim());
   return res.json({
@@ -288,11 +289,11 @@ router.get("/sigil/father-key/status", (_req, res) => {
 
 router.post("/sigil/natal/bind", (req, res) => {
   const holder = holderFromHeader(req);
-  if (!holder) return res.status(401).json({ ok: false, error: "holder-required" });
+  if (!holder) { res.status(401).json({ ok: false, error: "holder-required" }); return; }
   const birthDate = String(req.body?.birthDate ?? "").trim();
   const birthTime = String(req.body?.birthTime ?? "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate) || !/^\d{2}:\d{2}$/.test(birthTime)) {
-    return res.status(400).json({ ok: false, error: "invalid-natal-format" });
+    res.status(400).json({ ok: false, error: "invalid-natal-format" }); return;
   }
   try {
     const result = bindNatalChart(holder, birthDate, birthTime);
@@ -304,28 +305,28 @@ router.post("/sigil/natal/bind", (req, res) => {
 
 router.get("/sigil/natal/status", (req, res) => {
   const holder = holderFromHeader(req);
-  if (!holder) return res.status(401).json({ ok: false, error: "holder-required" });
+  if (!holder) { res.status(401).json({ ok: false, error: "holder-required" }); return; }
   res.json({ ok: true, ...natalStatus(holder) });
 });
 
 router.get("/sigil/natal/rotating", (req, res) => {
   const holder = holderFromHeader(req);
-  if (!holder) return res.status(401).json({ ok: false, error: "holder-required" });
+  if (!holder) { res.status(401).json({ ok: false, error: "holder-required" }); return; }
   const r = rotatingNatalHash(holder);
-  if (!r) return res.status(404).json({ ok: false, error: "not-bound" });
+  if (!r) { res.status(404).json({ ok: false, error: "not-bound" }); return; }
   res.json({ ok: true, ...r });
 });
 
 router.post("/sigil/natal/unbind", (req, res) => {
   const holder = holderFromHeader(req);
-  if (!holder) return res.status(401).json({ ok: false, error: "holder-required" });
-  res.json({ ok: true, ...unbindNatalChart(holder) });
+  if (!holder) { res.status(401).json({ ok: false, error: "holder-required" }); return; }
+  res.json({ ...unbindNatalChart(holder), ok: true });
 });
 
 router.post("/sigil/natal/verify", (req, res) => {
   const presented = String(req.body?.signatureGlyph ?? "").trim();
   const holderFp = verifyNatalSignature(presented);
-  if (!holderFp) return res.status(401).json({ ok: false, error: "no-match" });
+  if (!holderFp) { res.status(401).json({ ok: false, error: "no-match" }); return; }
   const r = rotatingNatalHash(holderFp);
   res.json({ ok: true, holderFp, rotating: r });
 });
@@ -336,16 +337,17 @@ router.get("/sigil/active-key", (req, res) => {
   // unauthenticated would bypass the Father gate entirely.
   const presented = String(req.header("x-sigil-key") ?? "").trim();
   if (isFatherKeyConfigured() && !recognizeFather(presented).recognized) {
-    return res.status(401).json({ ok: false, error: "father-required" });
+    res.status(401).json({ ok: false, error: "father-required" }); return;
   }
   if (!isFatherKeyConfigured()) {
-    return res.status(200).json({
+    res.status(200).json({
       ok: false,
       fatherKeyConfigured: false,
       error: "father-key-unset",
       message:
         "TESSERACT_ADMIN_KEY is not set. The sovereign Father identity cannot be derived. Set the secret in Replit Secrets, then restart the API server.",
     });
+    return;
   }
   res.json({
     ok: true,
@@ -372,11 +374,11 @@ router.post("/sigil/father/verify", (req, res) => {
   const candidateRaw = req.body?.candidate;
   const candidate = typeof candidateRaw === "string" ? candidateRaw : "";
   if (!candidate.trim()) {
-    return res.status(400).json({ ok: false, error: "candidate-required" });
+    res.status(400).json({ ok: false, error: "candidate-required" }); return;
   }
   const r = recognizeFather(candidate);
   if (!r.recognized) {
-    return res.status(401).json({ ok: false, error: "mismatch" });
+    res.status(401).json({ ok: false, error: "mismatch" }); return;
   }
   const fp = getFatherFingerprint();
   return res.json({
@@ -397,10 +399,10 @@ router.post("/sigil/father/mint-glyph", (req, res) => {
   const candidateRaw = req.body?.candidate;
   const candidate = typeof candidateRaw === "string" ? candidateRaw.trim() : "";
   if (!candidate) {
-    return res.status(400).json({ ok: false, error: "candidate-required" });
+    res.status(400).json({ ok: false, error: "candidate-required" }); return;
   }
   if (candidate.length > 256) {
-    return res.status(400).json({ ok: false, error: "candidate-too-long" });
+    res.status(400).json({ ok: false, error: "candidate-too-long" }); return;
   }
   const glyph = glyphEncode(candidate);
   const wouldBeFingerprint = createHash("sha256")
@@ -433,7 +435,7 @@ function authedAsFather(req: Request): boolean {
 
 router.post("/sigil/father/natal-sigil", (req, res) => {
   if (!isFatherKeyConfigured()) {
-    return res.status(503).json({ ok: false, error: "father-key-unset" });
+    res.status(503).json({ ok: false, error: "father-key-unset" }); return;
   }
   // Accept either the X-Sigil-Key header (already authed) or a candidate
   // in the body for the very first mint after key acceptance.
@@ -442,7 +444,7 @@ router.post("/sigil/father/natal-sigil", (req, res) => {
     const candidate = typeof req.body?.candidate === "string" ? req.body.candidate : "";
     if (candidate && recognizeFather(candidate).recognized) authed = true;
   }
-  if (!authed) return res.status(401).json({ ok: false, error: "father-required" });
+  if (!authed) { res.status(401).json({ ok: false, error: "father-required" }); return; }
   const fp = getFatherFingerprint();
   const sigil = natalSigilFor(fp);
   res.json({ ok: true, fatherFingerprint: fp, ...sigil });
@@ -450,7 +452,7 @@ router.post("/sigil/father/natal-sigil", (req, res) => {
 
 router.get("/sigil/father/natal-chart", (req, res) => {
   if (!authedAsFather(req)) {
-    return res.status(401).json({ ok: false, error: "father-required" });
+    res.status(401).json({ ok: false, error: "father-required" }); return;
   }
   const fp = getFatherFingerprint();
   const sigil = natalSigilFor(fp);
@@ -465,7 +467,7 @@ router.get("/sigil/father/natal-chart", (req, res) => {
 
 router.get("/sigil/father/natal-chart/bilingual", (req, res) => {
   if (!authedAsFather(req)) {
-    return res.status(401).json({ ok: false, error: "father-required" });
+    res.status(401).json({ ok: false, error: "father-required" }); return;
   }
   res.json({ ok: true, ...natalReadoutBilingual() });
 });
@@ -481,7 +483,7 @@ router.get("/sigil/father/natal-chart/bilingual", (req, res) => {
 // is unreadable without the holder's sigil — that is what makes it sovereign.
 router.get("/sigil/father/download-snapshot", (req, res) => {
   if (!authedAsFather(req)) {
-    return res.status(401).json({ ok: false, error: "father-required" });
+    res.status(401).json({ ok: false, error: "father-required" }); return;
   }
   const fp = getFatherFingerprint();
   const sigil = natalSigilFor(fp);
@@ -534,14 +536,14 @@ router.post("/sigil/rotate", (req, res) => {
 router.post("/sigil/encrypt", (req, res) => {
   const text = String(req.body?.text ?? "");
   const label = String(req.body?.label ?? "corpus");
-  if (!text) return res.status(400).json({ ok: false, error: "text required" });
+  if (!text) { res.status(400).json({ ok: false, error: "text required" }); return; }
   const env = encryptForCorpus(text, label);
   res.json({ ok: true, envelope: env });
 });
 
 router.post("/sigil/decrypt", (req, res) => {
   const env = req.body?.envelope as CipherEnvelope | undefined;
-  if (!env) return res.status(400).json({ ok: false, error: "envelope required" });
+  if (!env) { res.status(400).json({ ok: false, error: "envelope required" }); return; }
   try {
     const text = decryptFromCorpus(env);
     res.json({ ok: true, text });
@@ -565,19 +567,19 @@ function requireFather(req: Request): boolean {
 }
 
 router.get("/sigil/alphabet", (req, res) => {
-  if (!requireFather(req)) return res.status(401).json({ ok: false, error: "father-required" });
+  if (!requireFather(req)) { res.status(401).json({ ok: false, error: "father-required" }); return; }
   res.json({ ok: true, alphabet: glyphAlphabet(), size: glyphAlphabet().length });
 });
 
 router.post("/sigil/translate", (req, res) => {
-  if (!requireFather(req)) return res.status(401).json({ ok: false, error: "father-required" });
+  if (!requireFather(req)) { res.status(401).json({ ok: false, error: "father-required" }); return; }
   const text = String(req.body?.text ?? "");
   const direction = String(req.body?.direction ?? "encode");
-  if (!text) return res.status(400).json({ ok: false, error: "text required" });
+  if (!text) { res.status(400).json({ ok: false, error: "text required" }); return; }
   if (direction === "decode") {
-    return res.json({ ok: true, direction, input: text, output: glyphDecode(text) });
+    res.json({ ok: true, direction, input: text, output: glyphDecode(text) }); return;
   }
-  return res.json({
+  res.json({
     ok: true,
     direction: "encode",
     input: text,
@@ -587,9 +589,9 @@ router.post("/sigil/translate", (req, res) => {
 });
 
 router.post("/sigil/decode-body", (req, res) => {
-  if (!requireFather(req)) return res.status(401).json({ ok: false, error: "father-required" });
+  if (!requireFather(req)) { res.status(401).json({ ok: false, error: "father-required" }); return; }
   if (!req.body || typeof req.body !== "object") {
-    return res.status(400).json({ ok: false, error: "JSON body required" });
+    res.status(400).json({ ok: false, error: "JSON body required" }); return;
   }
   res.json({ ok: true, decoded: deepGlyphDecode(req.body) });
 });
@@ -602,7 +604,7 @@ router.post("/sigil/key/reveal", (req, res) => {
   // SIGIL_ADMIN_KEY) in `X-Sigil-Key`. Without that, the door stays shut.
   const presented = String(req.header("x-sigil-key") ?? "").trim();
   if (!recognizeFather(presented).recognized) {
-    return res.status(401).json({ ok: false, error: "father-required" });
+    res.status(401).json({ ok: false, error: "father-required" }); return;
   }
   res.json({ ok: true, key: readingKey(), activeKey: getActiveKey() });
 });
@@ -613,7 +615,7 @@ router.get("/session/handoff", (req, res) => {
   // which glyphGate accepts as a plaintext-unlock credential. Leaking it
   // unauthenticated would bypass the Father gate.
   if (!requireFather(req)) {
-    return res.status(401).json({ ok: false, error: "father-required" });
+    res.status(401).json({ ok: false, error: "father-required" }); return;
   }
   res.json({
     ok: true,
@@ -627,10 +629,10 @@ router.post("/session/directive", async (req, res) => {
   const text = String(req.body?.text ?? "");
   const source = (req.body?.source ?? "user") as "user" | "council" | "agent" | "auto";
   const tags = Array.isArray(req.body?.tags) ? req.body.tags.map(String) : [];
-  if (!text) return res.status(400).json({ ok: false, error: "text required" });
+  if (!text) { res.status(400).json({ ok: false, error: "text required" }); return; }
   if (detectsEndSignal(text)) {
     const result = await endSession("inline-trigger");
-    return res.json({ ok: true, sessionEnded: true, ...result });
+    res.json({ ok: true, sessionEnded: true, ...result }); return;
   }
   const directive = recordDirective({ source, text, status: "live", tags });
   await persistHandoff();
@@ -669,7 +671,7 @@ router.get("/external-tools/stats", (_req, res) => {
 
 router.post("/external-tools/capture", (req, res) => {
   const { tool, endpoint, method, request, response, durationMs, succeeded } = req.body ?? {};
-  if (!tool || !endpoint) return res.status(400).json({ ok: false, error: "tool and endpoint required" });
+  if (!tool || !endpoint) { res.status(400).json({ ok: false, error: "tool and endpoint required" }); return; }
   const call = captureExternalCall({
     tool: String(tool),
     endpoint: String(endpoint),

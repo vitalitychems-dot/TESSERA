@@ -191,8 +191,10 @@ export default function SwarmVisualizationPage() {
         ))}
       </div>
 
-      <GlassCard className="p-4" style={{ height: 420 }}>
-        <SwarmCanvas agents={agents} running={running} />
+      <GlassCard className="p-4">
+        <div style={{ height: 420 }}>
+          <SwarmCanvas agents={agents} running={running} />
+        </div>
       </GlassCard>
 
       <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">

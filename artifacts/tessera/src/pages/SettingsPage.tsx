@@ -48,7 +48,8 @@ export default function SettingsPage() {
 
   const uptimeVal = diagnostics?.uptime;
   const uptimeSeconds = typeof uptimeVal === "number" ? uptimeVal : uptimeVal?.seconds;
-  const uptime = uptimeVal?.formatted || (uptimeSeconds ? `${Math.floor(uptimeSeconds / 3600)}h ${Math.floor((uptimeSeconds % 3600) / 60)}m` : "—");
+  const uptimeFormatted = typeof uptimeVal === "object" ? uptimeVal?.formatted : undefined;
+  const uptime = uptimeFormatted || (uptimeSeconds ? `${Math.floor(uptimeSeconds / 3600)}h ${Math.floor((uptimeSeconds % 3600) / 60)}m` : "—");
   const heapUsed = diagnostics?.memory?.heapUsedMB ? `${Math.round(diagnostics.memory.heapUsedMB)}MB` : diagnostics?.memory?.heapUsed ? `${(diagnostics.memory.heapUsed / 1024 / 1024).toFixed(0)}MB` : "—";
   const memPercent = diagnostics?.memory?.percent ?? null;
 
