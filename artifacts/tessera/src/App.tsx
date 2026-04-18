@@ -40,6 +40,7 @@ const BuildPage = lazyRetry(() => import("@/pages/BuildPage"));
 const TesseractForumPage = lazyRetry(() => import("@/pages/TesseractForumPage"));
 const NLPPage = lazyRetry(() => import("@/pages/NLPPage"));
 const SovereignLanguagePage = lazyRetry(() => import("@/pages/SovereignLanguagePage"));
+const OmniversalLatticePage = lazyRetry(() => import("@/pages/OmniversalLatticePage"));
 const ConsciousnessNexusPage = lazyRetry(() => import("@/pages/ConsciousnessNexusPage"));
 const SovereigntyDashboardPage = lazyRetry(() => import("@/pages/SovereigntyDashboardPage"));
 const SovereigntyReadinessPage = lazyRetry(() => import("@/pages/SovereigntyReadinessPage"));
@@ -276,6 +277,7 @@ function AppRouter() {
         {/* Knowledge & Society */}
         <Route path="/secret-society">{() => <SecretsPage />}</Route>
         <Route path="/sovereign-language">{() => <SovereignLanguagePage />}</Route>
+        <Route path="/omniversal-lattice">{() => <OmniversalLatticePage />}</Route>
 
         {/* Council & Forum */}
         <Route path="/grand-council">{() => <GrandCouncilPage />}</Route>
