@@ -145,6 +145,16 @@ export function issueSession(opts: IssueOpts): IssuedSession {
   }
 
   _store.set(rawId, rec);
+
+  // INTEG-3 (81% approval): warn the operator when saturation crosses 80%.
+  // Single log line per crossing — never logs the cookie or the raw id.
+  if (_store.size >= Math.floor(cap * 0.8)) {
+    // Use process.stderr so we don't pull a logger dependency into this leaf module.
+    process.stderr.write(
+      `[sovereign-session] WARN saturation: ${_store.size}/${cap} active sessions (≥80% of cap)\n`,
+    );
+  }
+
   return { signedId: signSessionId(rawId), expiresAt: rec.expiresAt, ttlMs };
 }
 

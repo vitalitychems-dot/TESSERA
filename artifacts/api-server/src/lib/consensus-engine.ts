@@ -444,6 +444,28 @@ export async function createProposal(paramsOrTitle: {
   const degraded = votes.length < Math.ceil(GRAND_COUNCIL_AGENTS.length * BFT_RESPONSE_THRESHOLD);
   finalizeProposal(proposal, votes, durationMs, degraded);
 
+  // INTEG-1 (84.7% approval): persist every terminal proposal to the
+  // append-only council ledger so ratifications survive restart.
+  if (proposal.status === "approved" || proposal.status === "rejected") {
+    try {
+      const { appendToLedger } = await import("./council-ledger");
+      appendToLedger({
+        id: proposal.id,
+        title: proposal.title,
+        category: String(proposal.category),
+        status: proposal.status,
+        approvalRate: proposal.approvalRate,
+        yesCount: proposal.yesCount,
+        noCount: proposal.noCount,
+        abstainCount: proposal.abstainCount,
+        createdAt: proposal.createdAt,
+        proposedBy: proposal.proposedBy,
+      });
+    } catch (err) {
+      logger.warn({ err, id: proposal.id }, "ConsensusEngine: ledger append failed (non-fatal)");
+    }
+  }
+
   if (proposal.status === "queued") {
     retryQueue.push(proposal);
     persistRetryQueue();

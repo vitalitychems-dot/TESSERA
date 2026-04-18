@@ -512,6 +512,20 @@ router.get("/council/proposals", (_req, res) => {
   return res.json({ ok: true, proposals, count: proposals.length });
 });
 
+// INTEG-2 (67.3% approval): durable ledger view. Returns the last N
+// terminal proposals from the on-disk append-only log so ratifications
+// survive a restart. Bounded page size, newest first, no credential leakage.
+router.get("/council/ledger", async (req, res) => {
+  try {
+    const { readLedger } = await import("../lib/council-ledger");
+    const limit = Math.max(1, Math.min(200, Number(req.query.limit ?? 50)));
+    const entries = await readLedger(limit);
+    return res.json({ ok: true, count: entries.length, entries });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
 router.get("/council/consensus", (_req, res) => {
   const metrics = getConsensusMetrics();
   const executorMetrics = getExecutorMetrics();

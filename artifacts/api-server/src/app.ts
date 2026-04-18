@@ -199,6 +199,19 @@ const PLAINTEXT_PREFIXES = [
 ];
 // Heavy Council P8: glyphGate is no longer mounted — /api responses are plain JSON.
 void PLAINTEXT_PREFIXES;
+
+// INTEG-4 (100% approval): defensive transport-security headers on every
+// /api response. No behavior change for honest callers; closes a class of
+// content-sniff / clickjacking / referrer-leak vectors. Reversible by
+// removing this middleware.
+app.use("/api", (_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
+  next();
+});
+
 app.use("/api", router);
 
 function registerModuleHandlers(): void {
