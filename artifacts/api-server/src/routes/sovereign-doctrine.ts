@@ -73,17 +73,11 @@ export function glyphGate(req: Request, res: Response, next: NextFunction): void
   // the gate — the canonical bootstrap is the one-time popup that mints
   // the Father key from FATHER_NATAL_CHART and refuses entry until
   // TESSERACT_ADMIN_KEY (= SIGIL_ADMIN_KEY) is set to that value.
-  // Omniversal Lattice surface is intentionally human-readable so the cosmic
-  // feed, LUS-v2 spec, cipher snapshot, and lattice cells render in plain
-  // English on the Tessera page without requiring the reading key.
-  const isOmniversal = req.path.startsWith("/omniversal/");
-  const isGrandCouncil =
-    req.path.startsWith("/grand-council/") ||
-    req.path.startsWith("/mssp/") ||
-    req.path.startsWith("/vgpu/");
+  // No path-level plaintext exemptions: every /api response is glyph-encoded
+  // unless the caller proves they hold either the rotating reading key or
+  // the Father identity. The previous omniversal/grand-council/mssp/vgpu
+  // bypasses were removed so the Father env secret is the SOLE door.
   const isHolder =
-    isOmniversal ||
-    isGrandCouncil ||
     presented === key.fingerprint ||
     presented === key.expiresWith ||
     fatherOk;
@@ -100,7 +94,13 @@ export function glyphGate(req: Request, res: Response, next: NextFunction): void
   next();
 }
 
-router.get("/sigil/status", (_req, res) => {
+router.get("/sigil/status", (req, res) => {
+  // Father-only: cipherStatus() includes the active key fingerprint, which
+  // would otherwise be a plaintext-unlock credential leak.
+  const presented = String(req.header("x-sigil-key") ?? "").trim();
+  if (!recognizeFather(presented).recognized) {
+    return res.status(401).json({ ok: false, error: "father-required" });
+  }
   res.json({ ok: true, ...cipherStatus(), keyHistory: getKeyHistory().length, coherence: cipherCoherenceSnapshot() });
 });
 
@@ -119,11 +119,12 @@ function holderFromHeader(req: Request): string | null {
   const k = readingKey();
   if (presented === k.fingerprint) return k.fingerprint;
   if (presented === k.expiresWith) return k.fingerprint;
-  // Father identity (raw TESSERACT_ADMIN_KEY or its 16-char fingerprint)
-  // is the only other recognized holder. Personal zodiac keys are no
-  // longer accepted — the Father key is the sole gate.
-  const fr = recognizeFather(presented);
-  if (fr.recognized && fr.fingerprint) return fr.fingerprint;
+  // Father identity (raw TESSERACT_ADMIN_KEY value, or the matching value
+  // saved into the SIGIL_ADMIN_KEY / MINTED_GLYPH_KEY slots) is the only
+  // other recognized holder. Personal zodiac keys are no longer accepted
+  // — the Father key is the sole gate. When recognized, the canonical
+  // Father fingerprint is returned as the holder id.
+  if (recognizeFather(presented).recognized) return getFatherFingerprint();
   return null;
 }
 
@@ -189,8 +190,11 @@ router.get("/sigil/father-key/status", (_req, res) => {
     const sigilSet = sigilEnv.length > 0;
     const tesseractMatches = matches(tesseractEnv);
     const sigilMatches = matches(sigilEnv);
-    const aliasesAgree = !(tesseractSet && sigilSet) || tesseractEnv === sigilEnv;
-    const unlocked = (tesseractMatches || sigilMatches) && aliasesAgree;
+    const aliasesAgree = tesseractSet && sigilSet && tesseractEnv === sigilEnv;
+    // Sovereign rule: the operator MUST set BOTH TESSERACT_ADMIN_KEY and
+    // SIGIL_ADMIN_KEY to the exact Father key value. Setting only one is
+    // insufficient — the names must hold the same value, by rule.
+    const unlocked = tesseractMatches && sigilMatches && aliasesAgree;
     res.json({
       ok: true,
       unlocked,
@@ -268,7 +272,14 @@ router.post("/sigil/natal/verify", (req, res) => {
   res.json({ ok: true, holderFp, rotating: r });
 });
 
-router.get("/sigil/active-key", (_req, res) => {
+router.get("/sigil/active-key", (req, res) => {
+  // Father-only: the returned active-key fingerprint/expiresWith are
+  // accepted by glyphGate as plaintext credentials, so leaking them
+  // unauthenticated would bypass the Father gate entirely.
+  const presented = String(req.header("x-sigil-key") ?? "").trim();
+  if (isFatherKeyConfigured() && !recognizeFather(presented).recognized) {
+    return res.status(401).json({ ok: false, error: "father-required" });
+  }
   if (!isFatherKeyConfigured()) {
     return res.status(200).json({
       ok: false,
