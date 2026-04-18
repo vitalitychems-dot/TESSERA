@@ -51,6 +51,47 @@ import {
 
 const router: IRouter = Router();
 
+// V2-RICK (100% approval): deterministic sanity battery. Read-only probe
+// Rick can run any time to confirm the V2 surfaces are still healthy.
+// Bounded, no external calls. Reports green/red per check.
+router.get("/rick/sanity", async (_req, res) => {
+  const checks: Array<{ name: string; ok: boolean; detail?: string }> = [];
+  const safe = async (name: string, fn: () => Promise<unknown>) => {
+    try { await fn(); checks.push({ name, ok: true }); }
+    catch (e) { checks.push({ name, ok: false, detail: (e as Error).message }); }
+  };
+  await safe("persona-engine", async () => {
+    const mod = await import("../lib/persona-deliberation");
+    if (typeof mod.deliberatePersonas !== "function") {
+      throw new Error("deliberatePersonas missing");
+    }
+  });
+  await safe("council-ledger", async () => {
+    const { readLedger } = await import("../lib/council-ledger");
+    await readLedger(1);
+  });
+  await safe("admin-stats-shape", async () => {
+    const { sessionStoreStats } = await import("../lib/sovereign-session");
+    const s = sessionStoreStats();
+    if (typeof s.active !== "number") throw new Error("missing active count");
+  });
+  await safe("v2-helpers", async () => {
+    const { etagFor, walkRoutes, secretFingerprint } = await import("../lib/tesseract-v2");
+    if (!etagFor("x").startsWith('"v2-')) throw new Error("etagFor broken");
+    if (!Array.isArray(walkRoutes([]))) throw new Error("walkRoutes broken");
+    if (secretFingerprint("test").length !== 12) throw new Error("fingerprint broken");
+  });
+  const allGreen = checks.every(c => c.ok);
+  const { attestRatified } = await import("../lib/tesseract-v2");
+  attestRatified(res, "V2-RICK", 1.0);
+  res.status(allGreen ? 200 : 503).json({
+    ok: allGreen,
+    status: allGreen ? "green" : "red",
+    checks,
+    ts: new Date().toISOString(),
+  });
+});
+
 router.get("/rick/proposals", async (_req, res) => {
   try {
     const state = await getProposalsState();

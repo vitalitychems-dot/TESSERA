@@ -18,6 +18,9 @@ import {
   DEFAULT_TTL_MS,
 } from "../lib/sovereign-session";
 import { fatherVerifyRateLimit, adminSessionRateLimit } from "../lib/father-verify-throttle";
+import { recordIngress, attestRatified, walkRoutes } from "../lib/tesseract-v2";
+import { requireAdminSession } from "../lib/sovereign-admin";
+import { createHash } from "node:crypto";
 import { logger } from "../lib/logger";
 
 const router: Router = Router();
@@ -99,7 +102,14 @@ function readCookie(req: Request): string | undefined {
 
 // POST /api/admin/session — { token } -> set cookie.
 router.post("/admin/session", adminSessionRateLimit, fatherVerifyRateLimit, requireSameOrigin, (req: Request, res: Response) => {
+  // V2-GAMMA: every endpoint mounted by a ratified council proposal carries
+  // its provenance header so callers can verify governance lineage.
+  attestRatified(res, "P1+IMPL-1+R3-4", 0.811);
+  const auditTail = (status: number, sessionHash?: string) =>
+    recordIngress({ ts: Date.now(), ip: ipOf(req), route: "POST /admin/session", status, sessionHash });
+
   if (!isAdminTokenConfigured()) {
+    auditTail(503);
     res.status(503).json({
       ok: false,
       error: "sovereign-unconfigured",
@@ -110,6 +120,7 @@ router.post("/admin/session", adminSessionRateLimit, fatherVerifyRateLimit, requ
   const presented = typeof req.body?.token === "string" ? req.body.token : "";
   if (!verifyAdminToken(presented)) {
     logger.warn({ ip: ipOf(req) }, "sovereign-session: token rejected");
+    auditTail(401);
     res.status(401).json({ ok: false, error: "invalid-token" });
     return;
   }
@@ -119,6 +130,8 @@ router.post("/admin/session", adminSessionRateLimit, fatherVerifyRateLimit, requ
     ttlMs: DEFAULT_TTL_MS,
   });
   setCookie(res, issued.signedId, issued.ttlMs);
+  // V2-ALPHA: log ingress with HASHED session id only — never the raw cookie.
+  auditTail(200, createHash("sha256").update(issued.signedId).digest("hex").slice(0, 16));
   res.status(200).json({ ok: true, authenticated: true, expiresAt: issued.expiresAt });
 });
 
@@ -154,7 +167,60 @@ router.get("/admin/session/status", (req: Request, res: Response) => {
 // session id or credential material. Safe to expose unauthenticated because
 // it leaks nothing usable.
 router.get("/admin/session/stats", (_req: Request, res: Response) => {
-  res.status(200).json({ ok: true, ...sessionStoreStats() });
+  // V2-PI (100% approval): expose process resource accounting alongside
+  // the session store stats so the operator can budget memory & uptime.
+  attestRatified(res, "V2-PI", 1.0);
+  const mem = process.memoryUsage();
+  res.status(200).json({
+    ok: true,
+    ...sessionStoreStats(),
+    process: {
+      uptimeSec: Math.round(process.uptime()),
+      rssMb: Math.round(mem.rss / 1024 / 1024),
+      heapUsedMb: Math.round(mem.heapUsed / 1024 / 1024),
+      heapTotalMb: Math.round(mem.heapTotal / 1024 / 1024),
+      pid: process.pid,
+      nodeVersion: process.version,
+    },
+  });
+});
+
+// V2-DELTA (100% approval): self-probe attack-surface scan. Walks the
+// express router and reports the mounted routes — read-only, no credential
+// material. Helps the operator audit what's actually exposed.
+// Post-review hardening: gated behind requireAdminSession because the route
+// list is sensitive attack-surface intelligence — only an authenticated
+// operator should see it.
+router.get("/admin/surface", requireAdminSession, (req: Request, res: Response) => {
+  attestRatified(res, "V2-DELTA", 1.0);
+  const app = req.app as any;
+  const stack = app?.router?.stack ?? app?._router?.stack ?? [];
+  // Bounded traversal: hard cap on visited nodes AND wall-clock budget so
+  // a pathological router can never amplify into CPU exhaustion.
+  const startNs = process.hrtime.bigint();
+  const NODE_BUDGET = 8192;
+  const TIME_BUDGET_NS = 50_000_000n; // 50ms
+  let visited = 0;
+  const truncatedRef = { value: false };
+  const safeWalk = (s: any[]): ReturnType<typeof walkRoutes> => {
+    const limited: any[] = [];
+    for (const layer of s) {
+      visited++;
+      if (visited > NODE_BUDGET || process.hrtime.bigint() - startNs > TIME_BUDGET_NS) {
+        truncatedRef.value = true;
+        break;
+      }
+      limited.push(layer);
+    }
+    return walkRoutes(limited);
+  };
+  const routes = safeWalk(stack);
+  res.status(200).json({
+    ok: true,
+    count: routes.length,
+    routes: routes.slice(0, 1024),
+    truncated: truncatedRef.value || routes.length > 1024,
+  });
 });
 
 // POST /api/admin/session/logout — clear cookie + revoke server-side.

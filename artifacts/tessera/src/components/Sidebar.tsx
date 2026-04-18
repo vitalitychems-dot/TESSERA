@@ -68,6 +68,7 @@ const NAV_GROUPS: NavGroup[] = [
     labelColor: "text-amber-400",
     items: [
       { title: "Grand Council", href: "/grand-council", icon: Crown, color: "yellow", dotColor: "bg-yellow-400", testId: "link-grand-council", matchFn: (loc) => loc === "/grand-council" },
+      { title: "Council Ledger", href: "/council-ledger", icon: Crown, color: "amber", dotColor: "bg-amber-400", testId: "link-council-ledger", matchFn: (loc) => loc === "/council-ledger" },
       { title: "Forum", href: "/forum", icon: MessageCircle, color: "violet", dotColor: "bg-violet-400", testId: "link-forum", matchFn: (loc) => loc === "/forum" },
       { title: "Recruitment", href: "/recruitment", icon: Rocket, color: "emerald", dotColor: "bg-emerald-400", testId: "link-recruitment", matchFn: (loc) => loc === "/recruitment" },
     ],
