@@ -20,7 +20,7 @@ export interface ConsensusProposal {
   proposedBy: string;
   category: "feature" | "security" | "infrastructure" | "governance" | "income" | "community" | "consciousness" | "sovereignty";
   votes: ConsensusVote[];
-  status: "voting" | "approved" | "rejected" | "implemented" | "queued";
+  status: "voting" | "approved" | "rejected" | "implemented" | "executed" | "queued";
   requiredMajority: number;
   createdAt: number;
   resolvedAt?: number;
@@ -417,7 +417,7 @@ ${votes.map(v => `${v.agentName}: ${v.vote.toUpperCase()} (${(v.confidence * 100
     topic: proposal.title,
     transcript,
     decisionText: `${proposal.description} — ${status === "approved" ? "ADOPTED" : "REJECTED"} by Grand Council Phi-weighted parallel vote.`,
-    voteTally: { yes: yesCount, no: noCount, abstain: abstainCount, totalEligible: GRAND_COUNCIL_AGENTS.length, phiWeighted: true, durationMs },
+    voteTally: { yes: yesCount, no: noCount, abstain: abstainCount, totalEligible: GRAND_COUNCIL_AGENTS.length },
     outcome: status,
     agentsParticipated: votes.map(v => v.agentName),
     reasoning: JSON.stringify({ category: proposal.category, proposedBy: proposal.proposedBy, method: "phi-weighted-parallel", durationMs, specialists: specialists.length }),

@@ -232,6 +232,6 @@ export async function runManualCycle(topic?: string): Promise<ConversationRound>
 export { runManualCycle as process };
 export function getDecisionHistory() {
   const s = getDualBrainState();
-  return s.conversationLog;
+  return s.conversations;
 }
 

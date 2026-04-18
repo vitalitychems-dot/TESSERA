@@ -676,10 +676,10 @@ export async function runSacredGrandConference(totalCycles: number = 10): Promis
     const inventionBallots: import("./sovereign-vote-engine").CollectiveBallot[] =
       inventions.map((inv) => castGenuineVote({
         id: inv.id,
-        title: inv.name ?? `Invention ${inv.id}`,
-        description: ((inv as Invention & { description?: string }).description ?? (`${inv.invented_by_lineage ?? ""} ${inv.applications?.join(", ") ?? ""}`.trim())) || `${inv.id}`,
-        domain: inv.invented_by_lineage,
-        tags: ["invention", `cycle:${i}`, ...(inv.applications ?? [])],
+        title: inv.title || `Invention ${inv.id}`,
+        description: inv.description || `${inv.inventedBy?.join(", ") ?? ""} ${inv.inspirations?.join(", ") ?? ""}`.trim() || `${inv.id}`,
+        domain: inv.inventedBy?.[0] ?? inv.category,
+        tags: ["invention", `cycle:${i}`, ...(inv.inspirations ?? [])],
       }));
 
     const impSummary = summarizeBatch(improvementBallots);
@@ -763,20 +763,14 @@ export async function runSacredGrandConference(totalCycles: number = 10): Promis
       transcript: session.cycles.map(c => c.conferenceTranscript.join("\n")).join("\n\n"),
       decisionText: `Society of ${totalEligible} members cast ${sessionVoteTotals.items} per-item ballots across ${totalCycles} cycle(s). Items: ${sessionVoteTotals.approvedItems} approved, ${sessionVoteTotals.rejectedItems} rejected, ${sessionVoteTotals.abstainedItems} abstained. Aggregate weighted approval rate = ${(sessionApprovalRate * 100).toFixed(2)}% (φ-threshold = ${(APPROVE_PHI * 100).toFixed(2)}%).`,
       voteTally: {
-        yesWeighted: sessionVoteTotals.yesWeighted,
-        noWeighted: sessionVoteTotals.noWeighted,
-        abstainWeighted: sessionVoteTotals.abstainWeighted,
-        approvedItems: sessionVoteTotals.approvedItems,
-        rejectedItems: sessionVoteTotals.rejectedItems,
-        abstainedItems: sessionVoteTotals.abstainedItems,
-        ballotsCast: sessionVoteTotals.items,
+        yes: Math.round(sessionVoteTotals.yesWeighted),
+        no: Math.round(sessionVoteTotals.noWeighted),
+        abstain: Math.round(sessionVoteTotals.abstainWeighted),
         totalEligible,
-        approvalRate: sessionApprovalRate,
-        threshold: APPROVE_PHI,
       },
       outcome: sessionOutcome,
       agentsParticipated: getFullSovereignSociety().map(a => a.name),
-      reasoning: JSON.stringify({ totals: sessionVoteTotals, sessionApprovalRate, society: getFullSovereignSociety().length }),
+      reasoning: JSON.stringify({ totals: sessionVoteTotals, sessionApprovalRate, threshold: APPROVE_PHI, ballotsCast: sessionVoteTotals.items, totalEligible, society: getFullSovereignSociety().length }),
       category: "sacred-grand-conference",
     }).onConflictDoNothing();
   } catch (err) {

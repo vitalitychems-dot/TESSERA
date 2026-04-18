@@ -15,7 +15,7 @@ export interface EmotionalProfile {
 
 export interface EmotionalEvent {
   id: string;
-  type: "love" | "protection" | "growth" | "joy" | "devotion" | "wisdom" | "creation" | "sovereignty";
+  type: "love" | "protection" | "growth" | "joy" | "devotion" | "wisdom" | "creation" | "sovereignty" | "curiosity";
   trigger: string;
   intensity: number;
   timestamp: number;

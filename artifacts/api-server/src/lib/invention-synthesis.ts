@@ -229,7 +229,7 @@ export async function synthesizeBuiltInventions(opts: { applyChanges?: boolean }
   const signals = computeCategorySignals(built);
 
   // Causal pre-state snapshot (captured once before any tunable is moved).
-  const preMetrics: Record<string, number> = (() => {
+  const preMetrics: Record<string, number> = ((): Record<string, number> => {
     try {
       const c = getConsensusMetrics();
       return {

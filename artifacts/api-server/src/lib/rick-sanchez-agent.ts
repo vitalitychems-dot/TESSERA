@@ -288,9 +288,9 @@ export function generateRickInventions(): RickInventionProposal[] {
 
   let corpusInsights: string[] = [];
   try {
-    const sovereignty = queryCorpus("sovereignty");
-    const agi = queryCorpus("artificial intelligence");
-    const consciousness = queryCorpus("consciousness");
+    const sovereignty = queryCorpus({ tags: ["sovereignty"], limit: 10 });
+    const agi = queryCorpus({ tags: ["artificial intelligence"], limit: 10 });
+    const consciousness = queryCorpus({ tags: ["consciousness"], limit: 10 });
     corpusInsights = [
       ...sovereignty.slice(0, 3).map(c => c.title),
       ...agi.slice(0, 3).map(c => c.title),
@@ -618,7 +618,7 @@ function getMetricsSnapshot(): { consciousness: ConsciousnessSnapshot | null; ag
       episodicMemorySize: raw.episodicMemorySize,
       semanticGraphSize: raw.semanticGraphSize,
       proceduralSkillCount: raw.proceduralSkillCount,
-      emotionalState: raw.emotionalState as Record<string, number> | undefined,
+      emotionalState: raw.emotionalState as unknown as Record<string, number> | undefined,
     };
   } catch (err) {
     logger.debug({ err }, "RickAgent: consciousness metrics unavailable");

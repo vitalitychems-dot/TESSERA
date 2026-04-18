@@ -121,7 +121,9 @@ const loopStrategy: HealingStrategy = {
       const { getHeartbeatMetrics, getHeartbeatState } = await import("./autonomous-heartbeat");
       const m = getHeartbeatMetrics();
       const state = getHeartbeatState();
-      const silent = (m.subsystems ?? []).filter((s: { name: string; lastPulseMs?: number; errorCount?: number }) => {
+      type Pulse = { name?: string; lastPulseMs?: number; errorCount?: number };
+      const subsystemList: Pulse[] = m.subsystems ? Object.entries(m.subsystems).map(([name, p]) => ({ name, ...(p as Pulse) })) : [];
+      const silent = subsystemList.filter((s) => {
         const age = Date.now() - (s.lastPulseMs ?? 0);
         return age > 5 * 60_000 && (s.errorCount ?? 0) > 2;
       });
@@ -130,7 +132,7 @@ const loopStrategy: HealingStrategy = {
           triggered: true,
           severity: "medium",
           detail: state.running ? `${silent.length} subsystem(s) silent > 5min with repeated errors.` : "Heartbeat loop not running.",
-          context: { silentNames: silent.map(s => s.name), running: state.running },
+          context: { silentNames: silent.map((s) => s.name), running: state.running },
         };
       }
     } catch {}

@@ -635,7 +635,7 @@ export function startDimensionalCacheMaintenance(): void {
   if (!tuneTimer) {
     tuneTimer = setSacredInterval(() => {
       try {
-        embeddingDimensionalCache.tuneCapacities({ minCapacity: 100, maxCapacity: 800, totalBudget: 3000 }, "dimensional-lru-cache");
+        embeddingDimensionalCache.tuneCapacities({ minCapacity: 100, maxCapacity: 800, totalBudget: 3000 });
         semanticDimensionalCache.tuneCapacities({ minCapacity: 75, maxCapacity: 600, totalBudget: 2000 });
       } catch (err) {
         logger.debug({ err: (err as Error).message }, "DimensionalLRUCache: tune error");
