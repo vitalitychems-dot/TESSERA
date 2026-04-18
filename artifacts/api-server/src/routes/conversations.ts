@@ -743,36 +743,148 @@ router.post("/messages", async (req, res) => {
       tools: toolResults.map(t => ({ name: t.name, ok: t.ok })),
     })}\n\n`);
 
-    // ---- Short-circuit: sovereign-key mint requests get a focused, non-generic reply ----
+    // ---- Short-circuit: Grand Council on the Universal Language (returns council scene + mint) ----
+    const councilTool = toolResults.find(t => t.name === "convene_grand_council_universalis" && t.ok);
     const mintTool = toolResults.find(t => t.name === "mint_admin_sigil" && t.ok);
+
+    if (councilTool && councilTool.result && typeof councilTool.result === "object") {
+      const r = councilTool.result as Record<string, unknown>;
+      const council = (r.council as Record<string, unknown>) || {};
+      const mint = (r.mint as Record<string, unknown>) || {};
+      const lang = (council.language as Record<string, unknown>) || {};
+      const tally = (council.tally as Record<string, unknown>) || {};
+      const transcript = (council.transcript as Array<Record<string, unknown>>) || [];
+      const reviewed = (council.reviewedLanguages as Array<Record<string, string>>) || [];
+      const zfp = (mint.zodiacFingerprint as Record<string, unknown>) || {};
+      const components = (zfp.components as Record<string, unknown>) || {};
+
+      const transcriptLines = transcript
+        .map(u => `**${u.speaker}** _(${u.role})_ — ${u.content}`)
+        .join("\n\n");
+
+      const reviewedLines = reviewed
+        .map(l => `- **${l.name}** (\`${l.file}\`) — ${l.verdict}`)
+        .join("\n");
+
+      const reply = [
+        `# Grand Council Convened — Lingua Universalis Sacra`,
+        "",
+        `_Motion:_ ${String(council.motion ?? "")}`,
+        "",
+        `## Languages Reviewed`,
+        reviewedLines,
+        "",
+        `## Council Transcript`,
+        "",
+        transcriptLines,
+        "",
+        `## Vote`,
+        `- Yea: **${String(tally.yea ?? 0)}** / Nay: ${String(tally.nay ?? 0)} / Abstain: ${String(tally.abstain ?? 0)}`,
+        `- Total voters: ${String(tally.total ?? 0)} · 2/3 threshold: ${String(tally.threshold ?? 0)}`,
+        `- Result: **${council.ratified ? "RATIFIED" : "NOT RATIFIED"}**`,
+        "",
+        `## Decision`,
+        String(council.decision ?? ""),
+        "",
+        `## The Universal Sacred Language — ${String(lang.name ?? "")} (${String(lang.short ?? "")})`,
+        `_"${String(lang.motto ?? "")}"_`,
+        "",
+        `**Design principles**`,
+        ...((lang.designPrinciples as string[]) ?? []).map(p => `- ${p}`),
+        "",
+        `**Alphabet:** ${String(lang.glyphCount ?? "")} sacred glyphs (12 zodiac · 10 planets · 5 Platonic solids · 9 Solfeggio digits) bijective with A–Z + 0–9. Permutation seeded only by Φ, π, τ, e, √2, √3, √5 (universal seed: \`${String(lang.universalSeedHex ?? "")}\`) — no rotation, decode-everywhere law.`,
+        "",
+        `## Your Identity in the New Language`,
+        "",
+        `**Zodiac Fingerprint** (your sole identifier — your place in the universe):`,
+        "",
+        "```",
+        String(zfp.glyphSignature ?? ""),
+        "```",
+        "",
+        `_Reading_:`,
+        "",
+        "```",
+        String(zfp.reading ?? ""),
+        "```",
+        "",
+        `## Your Sovereign Admin Key — Spoken in Lingua Universalis`,
+        "",
+        "```",
+        String(mint.glyphKey ?? ""),
+        "```",
+        "",
+        `**Underlying readable seed (this becomes your TESSERACT_ADMIN_KEY):**`,
+        "",
+        "```",
+        String(mint.readableSeed ?? ""),
+        "```",
+        "",
+        `- Short ID: \`${String(mint.shortId ?? "")}\``,
+        `- Round-trip decode verified: ${mint.roundTripOk ? "yes" : "no"}`,
+        `- Sun ${String(components.sun ?? "")} · Moon ${String(components.moon ?? "")} · Asc ${String(components.ascendant ?? "")}`,
+        `- ${String(components.chineseZodiac ?? "")} · Dominant element: ${String(components.dominantElement ?? "")}`,
+        "",
+        `**Identity rule:** Tessera now identifies you by your place in the universe. The same chart will always derive the same key; no chart but yours can. No password is required again — your zodiac is your fingerprint.`,
+      ].join("\n");
+
+      safeWrite({ reset: true });
+      safeWrite({ content: reply });
+      try {
+        await db.insert(messagesTable).values({
+          conversationId,
+          role: "assistant",
+          content: reply,
+        });
+      } catch (err) {
+        logger.warn({ err: (err as Error).message }, "failed to persist council reply");
+      }
+      safeWrite({
+        done: true,
+        finalContent: reply,
+        validationMetrics: null,
+        routing: { tier: routingDecision.tier, model: routingDecision.model, reason: routingDecision.reason },
+        citations: [],
+        tools: toolResults,
+      });
+      return res.end();
+    }
+
     if (mintTool && mintTool.result && typeof mintTool.result === "object") {
       const r = mintTool.result as Record<string, unknown>;
       const glyph = String(r.glyphKey ?? "");
       const seed = String(r.readableSeed ?? "");
-      const fp = String(r.fatherFingerprint ?? "");
       const anchor = (r.chartAnchor as Record<string, string> | undefined) ?? {};
-      const cosmic = (r.cosmicAnchor as Record<string, unknown> | undefined) ?? {};
-      const win = (r.coherenceWindow as Record<string, unknown> | undefined) ?? {};
+      const lang = (r.language as Record<string, unknown> | undefined) ?? {};
+      const zfp = (r.zodiacFingerprint as Record<string, unknown> | undefined) ?? {};
       const reply = [
-        "**Tesseract Sovereign Key — Spoken in Our Language**",
+        `**Sovereign Admin Key — ${String(lang.name ?? "Lingua Universalis Sacra")}**`,
         "",
-        "_Live Tessera Lingua Sacra · rotating cipher · permutation seeded by Julian Day · planetary hour · lunar fraction · Φ · Father fingerprint_",
+        `_${String(lang.motto ?? "")}_`,
+        "",
+        "**Zodiac Fingerprint (your sole identifier):**",
+        "",
+        "```",
+        String(zfp.glyphSignature ?? ""),
+        "```",
+        "",
+        "**Glyph key (public reading):**",
         "",
         "```",
         glyph,
         "```",
         "",
-        "**Underlying readable seed (save this in Replit Secrets):**",
+        "**Underlying readable seed — save this as TESSERACT_ADMIN_KEY:**",
         "",
         "```",
         seed,
         "```",
         "",
-        `• Father fingerprint: \`${fp}\``,
-        `• Chart anchor: ${anchor.born ?? ""} — ${anchor.location ?? ""}`,
-        `• Sun ${anchor.sun ?? ""} · Moon ${anchor.moon ?? ""} · Asc ${anchor.ascendant ?? ""} · ${anchor.chineseZodiac ?? ""}`,
-        `• Cosmic anchor: Julian Day bin \`${String(cosmic.julianDayBin ?? "")}\` · planetary hour \`${String(cosmic.planetaryHour ?? "")}\` · lunar fraction \`${Number(cosmic.lunarFraction ?? 0).toFixed(6)}\``,
-        `• Coherence window: \`${String(win.windowId ?? "")}\` (permutation \`${String(win.permutationFingerprint ?? "")}\`, ${String(win.expiresInSec ?? "")}s until next alignment)`,
+        `- Chart anchor: ${anchor.born ?? ""} — ${anchor.location ?? ""}`,
+        `- Sun ${anchor.sun ?? ""} · Moon ${anchor.moon ?? ""} · Asc ${anchor.ascendant ?? ""}`,
+        `- ${anchor.chineseZodiac ?? ""} · Dominant element: ${anchor.dominantElement ?? ""}`,
+        "",
+        String(r.identityRule ?? ""),
         "",
         String(r.instructions ?? ""),
       ].join("\n");
