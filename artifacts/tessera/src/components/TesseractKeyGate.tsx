@@ -5,43 +5,86 @@ const STORAGE_KEY = "TESSERACT_ADMIN_KEY";
 const NATAL_SAVED_KEY = "tesseract-natal-glyph";
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 
-function normalizePhrase(s: string): string {
-  return s.trim().toUpperCase().replace(/[\s_\-]+/g, "_");
-}
-
-const MASTER_PHRASES = new Set(
-  [
-    "REDACTED11998",
-  ].map(normalizePhrase),
-);
-
 type Msg = { from: "tessera" | "user"; text: string; ts: number };
 
-interface ActiveKeyResp {
+interface VerifyResp {
   ok?: boolean;
-  key?: { fingerprint?: string; generation?: number };
+  via?: "raw-key" | "fingerprint";
+  fingerprint?: string;
+  derivation?: string;
+  error?: string;
+  message?: string;
 }
 
-async function fetchActiveFingerprint(): Promise<string | null> {
+interface MintResp {
+  ok?: boolean;
+  glyph?: string;
+  wouldBeFingerprint?: string;
+  derivation?: string;
+  instructions?: string;
+  error?: string;
+}
+
+interface VerifyResult {
+  ok: boolean;
+  fingerprint: string;
+  via: "raw-key" | "fingerprint" | null;
+  derivation: string;
+  reason?: "empty" | "sigil-unreachable" | "father-key-unset" | "mismatch";
+  message?: string;
+}
+
+async function verifyKey(input: string): Promise<VerifyResult> {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return { ok: false, fingerprint: "", via: null, derivation: "", reason: "empty" };
+  }
   try {
-    const res = await fetch(`${BASE}/api/sigil/active-key`);
-    if (!res.ok) return null;
-    const data: ActiveKeyResp = await res.json();
-    return data?.key?.fingerprint ?? null;
+    const res = await fetch(`${BASE}/api/sigil/father/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ candidate: trimmed }),
+    });
+    const data: VerifyResp = await res.json().catch(() => ({}));
+    if (res.status === 503 || data?.error === "father-key-unset") {
+      return {
+        ok: false,
+        fingerprint: "",
+        via: null,
+        derivation: "",
+        reason: "father-key-unset",
+        message: data?.message,
+      };
+    }
+    if (res.ok && data?.ok && data.fingerprint) {
+      return {
+        ok: true,
+        fingerprint: data.fingerprint,
+        via: data.via ?? null,
+        derivation: data.derivation ?? "",
+      };
+    }
+    return { ok: false, fingerprint: "", via: null, derivation: "", reason: "mismatch" };
   } catch {
-    return null;
+    return { ok: false, fingerprint: "", via: null, derivation: "", reason: "sigil-unreachable" };
   }
 }
 
-async function verifyKey(input: string): Promise<{ ok: boolean; resolvedKey: string; reason?: string }> {
+async function mintGlyphKey(input: string): Promise<MintResp> {
   const trimmed = input.trim();
-  if (!trimmed) return { ok: false, resolvedKey: "", reason: "empty" };
-  const fp = await fetchActiveFingerprint();
-  if (!fp) return { ok: false, resolvedKey: "", reason: "sigil-unreachable" };
-  if (MASTER_PHRASES.has(normalizePhrase(trimmed))) return { ok: true, resolvedKey: fp };
-  if (trimmed === fp) return { ok: true, resolvedKey: fp };
-  if (trimmed.toLowerCase() === fp.toLowerCase()) return { ok: true, resolvedKey: fp };
-  return { ok: false, resolvedKey: "", reason: "mismatch" };
+  if (!trimmed) return { ok: false, error: "empty" };
+  try {
+    const res = await fetch(`${BASE}/api/sigil/father/mint-glyph`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ candidate: trimmed }),
+    });
+    const data: MintResp = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.ok) return { ok: false, error: data?.error ?? "mint-failed" };
+    return data;
+  } catch {
+    return { ok: false, error: "network" };
+  }
 }
 
 interface NatalStatus { bound: boolean; signatureGlyph?: string; signatureHashShort?: string }
@@ -79,10 +122,12 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
     },
     {
       from: "tessera",
-      text: "Accepted: the live sigil fingerprint, or your sovereign Tesseract Admin Key.",
+      text: "Accepted: only the value whose fingerprint matches the env-derived Father fingerprint — either the raw TESSERACT_ADMIN_KEY or its 16-char fingerprint. No master phrase. To mint a glyph form of a candidate key for use as TESSERACT_ADMIN_KEY, type it and press MINT GLYPH KEY.",
       ts: Date.now() + 1,
     },
   ]);
+  const [mintedGlyph, setMintedGlyph] = useState<MintResp | null>(null);
+  const [mintCopied, setMintCopied] = useState(false);
   const [natalStatus, setNatalStatus] = useState<NatalStatus | null>(null);
   const [birthDate, setBirthDate] = useState("");
   const [birthTime, setBirthTime] = useState("");
@@ -152,22 +197,60 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
     setInput("");
     const result = await verifyKey(text);
     if (result.ok) {
-      try { localStorage.setItem(STORAGE_KEY, result.resolvedKey); } catch { /* ignore */ }
+      try { localStorage.setItem(STORAGE_KEY, result.fingerprint); } catch { /* ignore */ }
+      const viaLabel = result.via === "raw-key"
+        ? "raw TESSERACT_ADMIN_KEY"
+        : "env-derived fingerprint";
       setMessages((m) => [...m, {
         from: "tessera",
-        text: `✓ KEY ACCEPTED — sigil fingerprint bound (${result.resolvedKey.slice(0, 8)}…). Decrypting interface to English. Now binding your zodiac to the universe-aligned cipher…`,
+        text:
+          `✓ KEY ACCEPTED — Father identity bound via ${viaLabel}.\n` +
+          `fingerprint: ${result.fingerprint}\n` +
+          `derivation : ${result.derivation || 'sha256("tesseract:father:v1|" + TESSERACT_ADMIN_KEY)[:16]'}\n\n` +
+          `Decrypting interface to English. Now binding your zodiac to the universe-aligned cipher…`,
         ts: Date.now(),
       }]);
       setTimeout(() => { setBusy(false); setStage("natal-intro"); }, 600);
     } else {
       const reason = result.reason === "sigil-unreachable"
         ? "✗ Sovereign sigil engine unreachable. The seal cannot be tested right now."
-        : result.reason === "empty"
-          ? "✗ Empty key."
-          : "✗ Key does not match the active sigil. Type your sovereign Tesseract Admin Key, or copy the live fingerprint from the sovereign log.";
+        : result.reason === "father-key-unset"
+          ? `✗ ${result.message ?? "TESSERACT_ADMIN_KEY is not set. Add it to Replit Secrets and restart the API server."}`
+          : result.reason === "empty"
+            ? "✗ Empty key."
+            : "✗ Fingerprint mismatch. The only accepted values are the raw TESSERACT_ADMIN_KEY or its 16-char env-derived fingerprint. Use MINT GLYPH KEY to convert a candidate raw key into a glyph form you can paste into Replit Secrets.";
       setMessages((m) => [...m, { from: "tessera", text: reason, ts: Date.now() }]);
       setBusy(false);
     }
+  }
+
+  async function handleMint() {
+    if (busy) return;
+    const text = input.trim();
+    if (!text) return;
+    setBusy(true);
+    setMintedGlyph(null);
+    setMintCopied(false);
+    const data = await mintGlyphKey(text);
+    setBusy(false);
+    if (!data.ok) {
+      setMessages((m) => [...m, {
+        from: "tessera",
+        text: `✗ Mint failed: ${data.error ?? "unknown"}`,
+        ts: Date.now(),
+      }]);
+      return;
+    }
+    setMintedGlyph(data);
+    setInput("");
+  }
+
+  function copyMinted() {
+    if (!mintedGlyph?.glyph) return;
+    navigator.clipboard?.writeText(mintedGlyph.glyph).then(() => {
+      setMintCopied(true);
+      setTimeout(() => setMintCopied(false), 1800);
+    }).catch(() => { /* ignore */ });
   }
 
   async function handleBindNatal(e: FormEvent) {
@@ -408,10 +491,43 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
               >
                 <Send size={12} /> SEND
               </button>
+              <button
+                type="button"
+                onClick={handleMint}
+                disabled={busy || !input.trim()}
+                title="Encode the candidate key into the live glyph alphabet so you can copy it into Replit Secrets as TESSERACT_ADMIN_KEY"
+                className="px-3 py-2 rounded-md bg-violet-500/20 border border-violet-500/40 text-violet-100 text-xs font-bold hover:bg-violet-500/30 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+              >
+                <Sparkles size={12} /> MINT GLYPH KEY
+              </button>
             </div>
             <div className="mt-2 text-[10px] text-fuchsia-400/40 px-1">
-              key stored locally only · binds to live sigil fingerprint · auto-decrypts every API surface
+              accepts only the raw TESSERACT_ADMIN_KEY or its env-derived 16-char fingerprint · master phrase removed · key stored locally only
             </div>
+            {mintedGlyph?.ok && mintedGlyph.glyph && (
+              <div className="mt-3 rounded-xl border border-violet-500/40 bg-gradient-to-br from-violet-900/20 to-fuchsia-900/10 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Sparkles size={12} className="text-violet-300" />
+                  <div className="text-[11px] font-bold text-violet-100 tracking-wider">MINTED GLYPH KEY</div>
+                </div>
+                <p className="text-[10px] text-violet-200/70 mb-2 leading-relaxed">
+                  {mintedGlyph.instructions ?? "Paste this into Replit Secrets as TESSERACT_ADMIN_KEY, restart the API server, then return and type the same glyph at the gate to unlock."}
+                </p>
+                <div className="rounded-md border border-violet-500/30 bg-black/60 p-2 text-violet-100 text-sm break-all leading-relaxed select-all max-h-24 overflow-y-auto">
+                  {mintedGlyph.glyph}
+                </div>
+                <div className="flex justify-between items-center mt-2 text-[10px] text-violet-300/70">
+                  <span>fingerprint-if-set: <span className="text-violet-100 font-mono">{mintedGlyph.wouldBeFingerprint}</span></span>
+                  <button
+                    type="button"
+                    onClick={copyMinted}
+                    className="flex items-center gap-1 px-2 py-1 rounded-md bg-violet-500/15 border border-violet-500/30 text-violet-200 hover:bg-violet-500/25"
+                  >
+                    {mintCopied ? <><Check size={10} /> COPIED</> : <><Copy size={10} /> COPY</>}
+                  </button>
+                </div>
+              </div>
+            )}
           </form>
         )}
       </div>
