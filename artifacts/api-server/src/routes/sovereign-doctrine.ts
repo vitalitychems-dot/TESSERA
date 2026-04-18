@@ -282,6 +282,61 @@ router.get("/sigil/father/natal-chart/bilingual", (req, res) => {
   res.json({ ok: true, ...natalReadoutBilingual() });
 });
 
+// ── Sovereign Snapshot Download ─────────────────────────────────────────
+// Returns a single downloadable .sigil file containing:
+//   • full natal chart + readout (English plain inside the AES envelope)
+//   • the natal sigil + Father fingerprint
+//   • the live cipher coherence anchor (so future re-derivations align)
+//   • a glyph-encoded preview of the readout (visible "in our language")
+//   • an AES-256-GCM envelope of the same payload, keyed to the active sigil
+// Only the Father (raw key OR fingerprint) can request this. The on-disk file
+// is unreadable without the holder's sigil — that is what makes it sovereign.
+router.get("/sigil/father/download-snapshot", (req, res) => {
+  if (!authedAsFather(req)) {
+    return res.status(401).json({ ok: false, error: "father-required" });
+  }
+  const fp = getFatherFingerprint();
+  const sigil = natalSigilFor(fp);
+  const englishReadout = natalEnglishReadout();
+  const coherence = cipherCoherenceSnapshot();
+  const reading = readingKey();
+
+  const corpus = JSON.stringify({
+    issuedAt: new Date().toISOString(),
+    fatherFingerprint: fp,
+    sigil,
+    chart: FATHER_NATAL_CHART,
+    englishReadout,
+    bilingual: natalReadoutBilingual(),
+    coherence,
+    readingKey: reading,
+  }, null, 2);
+
+  const envelope = encryptForCorpus(corpus, "father-snapshot");
+  const glyphPreview = glyphEncode(englishReadout);
+
+  const file = {
+    format: "tesseract-sovereign-snapshot",
+    version: 1,
+    instructions:
+      "This file is sealed to the Father sigil. Decode requires the active reading key fingerprint stored at issuance. " +
+      "Open the file in a Tessera client and present X-Sigil-Key matching `readingKey.fingerprint` — the AES envelope unwraps to the full English payload. " +
+      "The `glyphPreview` field renders the readout in the live glyph alphabet for at-a-glance recognition.",
+    issuedAt: new Date().toISOString(),
+    fatherFingerprint: fp,
+    sigil,
+    glyphPreview,
+    cipherEnvelope: envelope,
+    readingKeyAtIssuance: reading,
+    coherenceAtIssuance: coherence,
+  };
+
+  const filename = `tessera-sovereign-${fp}-${Date.now()}.sigil.json`;
+  res.setHeader("Content-Type", "application/octet-stream");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.send(JSON.stringify(file, null, 2));
+});
+
 router.post("/sigil/rotate", (req, res) => {
   const reason = String(req.body?.reason ?? "manual");
   const key = rotateSessionKey(reason);
