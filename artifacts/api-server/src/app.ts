@@ -178,6 +178,13 @@ const PLAINTEXT_PREFIXES = [
   // value into SIGIL_ADMIN_KEY, and validation (which derives the RAW signal)
   // can never match it.
   "/api/sigil/father-key/derive-signal",
+  // Sovereign vote inspection endpoints. The Father's reading-key cannot
+  // travel in an HTTP header (it contains non-ASCII glyphs), so the only
+  // way to read these results is to exempt them from glyph encoding.
+  "/api/grand-evolution/status",
+  "/api/grand-evolution/sessions",
+  "/api/grand-evolution/society",
+  "/api/grand-evolution/directives",
 ];
 app.use("/api", (req: Request, res: Response, next: NextFunction) => {
   const isInternalProbe = req.headers[INTERNAL_PROBE_HEADER] === INTERNAL_PROBE_SECRET;
