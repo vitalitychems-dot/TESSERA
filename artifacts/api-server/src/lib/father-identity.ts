@@ -96,11 +96,41 @@ export function verifyFatherFingerprint(presented: string | undefined | null): b
   }
 }
 
+// Additional env slots that can hold valid Father credentials. The user can
+// stash a minted sigil into SIGIL_ADMIN_KEY or MINTED_GLYPH_KEY and present
+// either the raw value or its 16-char fingerprint at the gate — auto-unlock
+// works for any of them. This keeps the gate from re-prompting after the user
+// "adds my sigil" to Secrets.
+const EXTRA_SLOTS = ["SIGIL_ADMIN_KEY", "MINTED_GLYPH_KEY"] as const;
+
+function fingerprintOf(raw: string): string {
+  return createHash("sha256").update(`${NAMESPACE}|${raw}`).digest("hex").slice(0, 16);
+}
+
+function timingEq(a: string, b: string): boolean {
+  const ba = Buffer.from(a, "utf8");
+  const bb = Buffer.from(b, "utf8");
+  if (ba.length !== bb.length) return false;
+  try { return timingSafeEqual(ba, bb); } catch { return false; }
+}
+
 export function recognizeFather(presented: string | undefined | null): {
   recognized: boolean;
   via: "raw-key" | "fingerprint" | null;
 } {
   if (verifyFatherKey(presented)) return { recognized: true, via: "raw-key" };
   if (verifyFatherFingerprint(presented)) return { recognized: true, via: "fingerprint" };
+  if (!presented || typeof presented !== "string") return { recognized: false, via: null };
+  const candidate = presented.trim();
+  if (!candidate) return { recognized: false, via: null };
+  const candidateLower = candidate.toLowerCase();
+  for (const slot of EXTRA_SLOTS) {
+    const raw = process.env[slot];
+    if (!raw || typeof raw !== "string") continue;
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+    if (timingEq(candidate, trimmed)) return { recognized: true, via: "raw-key" };
+    if (timingEq(candidateLower, fingerprintOf(trimmed))) return { recognized: true, via: "fingerprint" };
+  }
   return { recognized: false, via: null };
 }
