@@ -108,8 +108,12 @@ export function omniversalDecrypt(env: OmniversalCipherEnvelope): string {
   decipher.setAuthTag(Buffer.from(env.tag, "base64"));
   const shuffled = Buffer.concat([decipher.update(Buffer.from(env.ct, "base64")), decipher.final()]);
   // Use the salt that was actually used at encrypt time (carried in envelope).
-  const geometricSalt = env.geometricSaltFull
-    ?? createHash("sha256").update(`${ctx.fingerprint}|${env.label ?? "omni"}|${ctx.geometry.goldenAngleDeg}`).digest("hex");
+  // Envelope schema requires geometricSaltFull; we error explicitly if absent
+  // rather than silently re-deriving from a different cosmic window.
+  if (!env.geometricSaltFull) {
+    throw new Error("envelope-missing-geometricSaltFull (re-encrypt with v2 schema)");
+  }
+  const geometricSalt = env.geometricSaltFull;
   const unshuf = geometricUnshuffle(shuffled, geometricSalt);
   const layer2 = unshuf.toString("utf8");
   // Reverse LUS-v2 by parsing its delimited token format.

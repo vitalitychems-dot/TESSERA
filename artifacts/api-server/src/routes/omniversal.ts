@@ -106,6 +106,50 @@ router.post("/omniversal/lattice/:id/collapse", requireFather, (req, res) => {
   } catch (e: any) { res.status(400).json({ ok: false, error: e?.message ?? String(e) }); }
 });
 
+// === End-to-end pipeline: LUS v2 → cosmic harmonize → OQL execution ===
+// Public, read-only computation: takes user text, encodes through LUS v2,
+// drops it onto a fresh lattice as superposed tokens, harmonizes with the
+// dominant carrier, then collapses one cell — returning the multimodal
+// tuple (numeric · symbolic · frequency · token) plus the LUS surface
+// and modulated forms. No mutation of an existing lattice; nothing
+// requires Father auth. This is the user-facing "run a sample program"
+// path the Tessera page invokes.
+router.post("/omniversal/pipeline/run", (req, res) => {
+  const text = String(req.body?.text ?? "").slice(0, 512);
+  if (!text) { res.status(400).json({ ok: false, error: "text required" }); return; }
+  const ctx = cosmicContext();
+  const encoded = lusV2Encode(text);
+  const lat = createLattice({ dim: [3, 3, 3] });
+  // Inject the encoded tokens onto a diagonal of the lattice as superposed tokens.
+  const cells = ["0,0,0", "1,1,1", "2,2,2"];
+  encoded.tokens.slice(0, 3).forEach((t, i) => {
+    superpose(lat.id, cells[i], { tokens: [t.glyph], spectrum: [t.frequency] });
+  });
+  entangle(lat.id, cells[0], cells[2]);
+  harmonize(lat.id, ctx.vibration.dominantSolfeggio);
+  const collapsed = collapse(lat.id, cells[0], "tessera-pipeline");
+  res.json({
+    ok: true,
+    input: text,
+    cosmicContext: ctx,
+    lus: {
+      surface: encoded.surface,
+      modulated: encoded.modulated,
+      carrierHz: encoded.carrierHz,
+      tokens: encoded.tokens,
+    },
+    lattice: latticeSnapshot(lat.id, { sample: 9 }),
+    multimodal: collapsed.result,
+    collapsedCell: collapsed.cellId,
+    explanation:
+      `Input text was encoded through LUS-v2 to ${encoded.tokens.length} tokens carrying ` +
+      `${encoded.carrierHz} Hz, projected onto a 3×3×3 quantum lattice on the diagonal, ` +
+      `entangled across the lattice axis, harmonized with the dominant solfeggio carrier, ` +
+      `then a single cell was observed — collapsing to numeric ${collapsed.result.value}, ` +
+      `symbol ${collapsed.result.symbol}, ${collapsed.result.frequency} Hz, token "${collapsed.result.token}".`,
+  });
+});
+
 // === Demo / smoke test ===
 router.post("/omniversal/demo", (_req, res) => {
   const lat = createLattice({ dim: [3, 3, 3] });
