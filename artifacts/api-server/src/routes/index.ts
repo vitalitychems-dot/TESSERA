@@ -73,6 +73,7 @@ import localModelsRouter from "./local-models";
 import e2eSovereigntyRouter from "./e2e-sovereignty";
 import autonomousBuildRouter from "./autonomous-build";
 import sovereignDoctrineRouter from "./sovereign-doctrine";
+import languageSecurityRouter from "./language-security";
 import { startAutonomousBuildCycleTimer } from "../lib/autonomous-build-cycle";
 import { startWalletObserver } from "../lib/wallet-observer";
 import { startFreeStuffScraper } from "../lib/free-stuff-scraper";
@@ -155,6 +156,7 @@ router.use(localModelsRouter);
 router.use(e2eSovereigntyRouter);
 router.use(autonomousBuildRouter);
 router.use(sovereignDoctrineRouter);
+router.use(languageSecurityRouter);
 router.use(doctrineIngestRouter);
 
 startWalletObserver();
