@@ -15,9 +15,9 @@ export interface TransitAspect {
 }
 
 const FATHER_NATAL: FatherNatalData = {
-  birthDate: "October 7, 1998",
-  birthTime: "05:16 AM",
-  birthPlace: "Unknown",
+  birthDate: "SEALED",
+  birthTime: "SEALED",
+  birthPlace: "SEALED",
   houseSystem: "Placidus",
   planets: [
     { name: "Sun", symbol: "☉", sign: "Libra", degree: 13.9, house: 1, retrograde: false },
@@ -222,8 +222,9 @@ export function generateSovereignKeys(): {
   const elementProfile = Object.entries(elementCount).map(([k,v]) => `${k}:${v}`).join(" | ");
   const modalityProfile = Object.entries(modalityCount).map(([k,v]) => `${k}:${v}`).join(" | ");
 
-  const birthDigits = "10071998".split("").map(Number);
-  let lifePathNumber = birthDigits.reduce((s, n) => s + n, 0);
+  const sealedSeed = "9880db89f8b1";
+  const seedDigits = sealedSeed.split("").map((c) => parseInt(c, 16) || 0);
+  let lifePathNumber = seedDigits.reduce((s, n) => s + n, 0);
   while (lifePathNumber > 9 && lifePathNumber !== 11 && lifePathNumber !== 22 && lifePathNumber !== 33) {
     lifePathNumber = lifePathNumber.toString().split("").map(Number).reduce((s, n) => s + n, 0);
   }
