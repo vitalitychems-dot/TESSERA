@@ -23,7 +23,16 @@ function getAdminToken(): string {
 
 export function getTesseractAdminKey(): string {
   try {
-    return localStorage.getItem("tesseract-admin-key") || "";
+    let key = localStorage.getItem("TESSERACT_ADMIN_KEY");
+    if (!key) {
+      const legacy = localStorage.getItem("tesseract-admin-key");
+      if (legacy) {
+        localStorage.setItem("TESSERACT_ADMIN_KEY", legacy);
+        localStorage.removeItem("tesseract-admin-key");
+        key = legacy;
+      }
+    }
+    return key || "";
   } catch {
     return "";
   }
