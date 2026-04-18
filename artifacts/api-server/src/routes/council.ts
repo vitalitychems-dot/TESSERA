@@ -518,9 +518,12 @@ router.get("/council/proposals", (_req, res) => {
 router.get("/council/ledger", async (req, res) => {
   try {
     const { readLedger } = await import("../lib/council-ledger");
+    const { sendWithEtag, attestRatified } = await import("../lib/tesseract-v2");
     const limit = Math.max(1, Math.min(200, Number(req.query.limit ?? 50)));
     const entries = await readLedger(limit);
-    return res.json({ ok: true, count: entries.length, entries });
+    // V2-GAMMA + V2-BETA: attest provenance and serve with ETag/304.
+    attestRatified(res, "INTEG-2+V2-BETA", 1.0);
+    return sendWithEtag(req, res, { ok: true, count: entries.length, entries });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }

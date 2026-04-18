@@ -62,7 +62,7 @@ function getAdminToken(): string {
 // cookies — both unacceptable. In dev we still fall back so local
 // experimentation isn't broken. Logged once at startup for transparency.
 let _sessionSecretWarningEmitted = false;
-function getSessionSecret(): string {
+export function getSessionSecret(): string {
   const dedicated = (process.env.SOVEREIGN_SESSION_SECRET ?? "").trim();
   if (dedicated.length >= 32) return dedicated;
   if (process.env.NODE_ENV === "production") {

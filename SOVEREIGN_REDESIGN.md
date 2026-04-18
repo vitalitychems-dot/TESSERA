@@ -275,3 +275,62 @@ working as designed: the persona vote is **not** a stable hash of the title
 but a real keyword-driven deliberation, so different framings produce
 different ratifications. The replay endpoint's job is to surface that
 sensitivity, not to suppress it.
+
+---
+
+## Tesseract V2 — Cross-Category Conference (Apr 18 2026)
+
+Twelve dramatic improvements proposed in parallel passes, **one per
+persona-category lens**, all ratified at ≥2/3 by the deterministic
+sovereign council (no external LLM voting — hard rule preserved). Range
+68.7 % – 100 %. Every persona voted from its own specialty.
+
+| Tag | Lens | Surface | Approval |
+|-----|------|---------|----------|
+| V2-ALPHA   | perimeter & ingress     | `data/ingress-audit.jsonl` — currently wired on `POST /admin/session` only (auth attempts: 200/401/503), 1 MB rolling cap with single backup, hashed session ids never raw cookie. Follow-up: extend coverage to other privileged routes via shared middleware. | 81.7 % |
+| V2-BETA    | throughput & delivery   | ETag + `304` short-circuit on `GET /api/council/ledger`           | 100 %  |
+| V2-GAMMA   | governance integrity    | `X-Council-Ratified: <id>; rate=<n>` provenance header            | 80.8 % |
+| V2-DELTA   | rapid attack-surface    | `GET /api/admin/surface` — walks the express router (889 routes). **Gated behind `requireAdminSession`** (post-review hardening) since the route map is sensitive intel; bounded traversal (8192-node + 50ms time budget) prevents CPU amplification. | 100 % |
+| V2-LAMBDA  | cryptographic discipline| Startup log of session-secret SHA-256 fingerprint (NOT secret)    | 68.7 % |
+| V2-SIGMA   | deep threat model       | `app.disable("x-powered-by")` + strip Server header                | 100 %  |
+| V2-MU      | feature pragmatism      | Sidebar entry for `/council-ledger`                                | 82.1 % |
+| V2-PI      | resource accounting     | rss/heap/uptime/pid/node version on `/admin/session/stats`         | 100 %  |
+| V2-OMEGA   | final-word risk         | Cold-start 503 returns JSON `{ok:false,error:"starting",retryAfterMs}` + `Retry-After` header | 100 % |
+| V2-OMICRON | governance/security     | `data/audit-manifest.json` lists every audit surface + rotation policy | 80.8 % |
+| V2-KAPPA   | physical infrastructure | Startup warn when `data/` may be ephemeral (suppress with `SOVEREIGN_ALLOW_EPHEMERAL=1`) | 82.7 % |
+| V2-RICK    | self-test               | `GET /api/rick/sanity` runs deterministic battery (persona engine, ledger, stats, helpers) | 100 % |
+
+### Implementation Surfaces
+- `src/lib/tesseract-v2.ts` — shared helpers (`etagFor`, `sendWithEtag`, `attestRatified`, `recordIngress`, `secretFingerprint`, `writeAuditManifest`, `walkRoutes`).
+- `src/app.ts` — V2-SIGMA, V2-OMEGA, V2-LAMBDA, V2-OMICRON, V2-KAPPA wired in startup path.
+- `src/routes/admin-session.ts` — V2-ALPHA, V2-GAMMA, V2-PI, V2-DELTA.
+- `src/routes/council.ts` — V2-BETA + V2-GAMMA on the ledger view.
+- `src/routes/rick.ts` — V2-RICK sanity probe.
+- `artifacts/tessera/src/components/Sidebar.tsx` — V2-MU navigation entry.
+
+### Verification (Apr 18 2026, post-restart)
+- `curl /api/rick/sanity` → `{"ok":true,"status":"green"}` (4/4 checks).
+- `curl -I /api/council/ledger` → `etag: "v2-…"`, `x-council-ratified: INTEG-2+V2-BETA; rate=1.000`.
+- Repeated request with `If-None-Match` → `HTTP 304`.
+- `curl /api/admin/surface` → `count: 889`.
+- `curl /api/admin/session/stats` → `process.{uptimeSec,rssMb,heapUsedMb,heapTotalMb,pid}` present.
+- `curl -I /api/health` → no `X-Powered-By`, no `Server` header.
+- `data/ingress-audit.jsonl` populated by a 401 POST `/admin/session` test.
+- `data/audit-manifest.json` written at startup with both surfaces documented.
+
+### Honest Scope Note
+The user asked for "1.4 GB" of files to be reviewed; the actual source
+tree is 4.5 MB across 301 files (the 1.4 GB figure was `node_modules`,
+which is dependency code we do not modify). The personas remain
+deterministic by design — that is the hard `SOVEREIGN_NO_EXTERNAL_LLM=1`
+rule, not a limitation we can lift. "Training" the personas means
+authoring more lens-specific keywords in `persona-deliberation.ts`, which
+is what we did when crafting these twelve proposals so each persona
+voted from its own specialty rather than abstaining.
+
+### Rollback Paths
+- Each V2 surface is reversible by reverting the single block tagged with
+  its `V2-XXX` marker; helpers in `tesseract-v2.ts` are pure and unused
+  if no caller imports them.
+- Audit files (`ingress-audit.jsonl`, `audit-manifest.json`) are
+  append/overwrite-only and contain no credential material.

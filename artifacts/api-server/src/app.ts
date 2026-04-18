@@ -82,11 +82,24 @@ const ALWAYS_OPEN_PREFIXES = [
   "/api/vgpu/",
 ];
 
+// V2-SIGMA (100% approval): strip server identification from every response.
+app.disable("x-powered-by");
+app.use((_req, res, next) => { res.removeHeader("Server"); next(); });
+
 app.use((req: Request, res: Response, next: NextFunction) => {
   const isInternalProbe = req.headers[INTERNAL_PROBE_HEADER] === INTERNAL_PROBE_SECRET;
   const isAlwaysOpen = ALWAYS_OPEN_PREFIXES.some(p => req.path.startsWith(p));
   if (!serverReady && !isInternalProbe && !isAlwaysOpen) {
-    res.status(503).json({ ok: false, error: "Server is starting up — not yet ready for traffic" });
+    // V2-OMEGA (100% approval): graceful 503 with a retry hint so callers
+    // can back off cleanly instead of hammering during cold start.
+    const retryAfterMs = 3000;
+    res.setHeader("Retry-After", "3");
+    res.status(503).json({
+      ok: false,
+      error: "starting",
+      message: "Server is starting up — not yet ready for traffic",
+      retryAfterMs,
+    });
     return;
   }
   next();
@@ -455,6 +468,30 @@ async function initializeModules() {
   registerModuleInitFunction("swarm-optimizer", initSwarmOptimizer);
   registerModuleInitFunction("self-code-evolution", initSelfCodeEvolution);
   registerModuleHandlers();
+
+  // V2-LAMBDA (68.7% approval): publish a one-line cryptographic attestation
+  // of the active session-secret fingerprint (NOT the secret itself) so the
+  // operator can detect silent rotation drift.
+  // V2-OMICRON (80.8% approval): write the audit-surface manifest.
+  // V2-KAPPA (82.7% approval): warn if the audit data dir is on ephemeral
+  // storage and the operator hasn't acknowledged it.
+  try {
+    const { secretFingerprint, writeAuditManifest } = await import("./lib/tesseract-v2");
+    const { getSessionSecret } = await import("./lib/sovereign-session");
+    // V2-LAMBDA correction (post-review): use the SAME resolver the cookie
+    // signer uses, so the published fingerprint actually attests the bytes
+    // signing live cookies — no divergence from runtime precedence.
+    const fp = secretFingerprint(getSessionSecret());
+    logger.info({ secretFingerprint: fp }, "sovereign-session: secret fingerprint attestation (V2-LAMBDA)");
+    void writeAuditManifest();
+    if (!process.env.SOVEREIGN_ALLOW_EPHEMERAL && !process.env.REPLIT_DEPLOYMENT) {
+      logger.warn(
+        "tesseract-v2: data/ may be on ephemeral storage; set SOVEREIGN_ALLOW_EPHEMERAL=1 to acknowledge (V2-KAPPA)",
+      );
+    }
+  } catch (err) {
+    logger.warn({ err }, "tesseract-v2: startup attestation failed");
+  }
 
   // Heavy Council IMPL-2 (100% approval): periodic prune of expired
   // sovereign sessions. Default cadence 5 min. unref() so it never blocks
