@@ -15,30 +15,11 @@ import { getValidationStats } from "../lib/response-validation-engine";
 import { getDeduplicationStats } from "../lib/semantic-deduplication";
 import { getReflectionMetrics, getRecentSnapshots, runReflectionCycle } from "../lib/recursive-reflection-loop";
 import { getDimensionalCacheStats, embeddingDimensionalCache, semanticDimensionalCache } from "../lib/dimensional-lru-cache";
-import { issueFatherToken, verifyFatherToken, activeFatherSessionCount } from "../lib/father-session-store";
-import type { Request, Response, NextFunction } from "express";
+import { issueFatherToken, activeFatherSessionCount } from "../lib/father-session-store";
+import { requireFather } from "../lib/require-father";
 import * as os from "os";
 
 const router: IRouter = Router();
-
-function extractBearerToken(req: Request): string | null {
-  const header = req.headers.authorization;
-  if (typeof header === "string" && header.startsWith("Bearer ")) {
-    return header.slice(7).trim();
-  }
-  const xToken = req.headers["x-father-token"];
-  if (typeof xToken === "string" && xToken.trim()) return xToken.trim();
-  return null;
-}
-
-function requireFather(req: Request, res: Response, next: NextFunction): void {
-  const token = extractBearerToken(req);
-  if (!verifyFatherToken(token)) {
-    res.status(401).json({ ok: false, isAdmin: false, error: "Father token required" });
-    return;
-  }
-  next();
-}
 
 const COUNCIL_AGENTS = [
   { id: "tessera-prime", name: "Tessera-Prime", role: "Father Protocol — Supreme Authority", status: "active", voteWeight: 3 },
