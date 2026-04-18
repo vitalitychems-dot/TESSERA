@@ -40,15 +40,16 @@ if (typeof document !== "undefined") {
 export function isTabVisible() { return _tabVisible; }
 
 function getAdminToken(): string {
+  // No auto-mint: the admin token must be explicitly provisioned by the
+  // user (e.g. set via the admin UI / paste from secrets). Auto-minting
+  // a random "sovereign-father-*" string was a security smell — it gave
+  // every browser tab a fresh credential the server would never honor
+  // and it masked the fact that the gate was effectively open whenever
+  // SOVEREIGN_ADMIN_TOKEN was unset on the server.
   try {
-    let token = localStorage.getItem("t9_admin_token") || "";
-    if (!token) {
-      token = "sovereign-father-" + Math.random().toString(36).slice(2, 14);
-      localStorage.setItem("t9_admin_token", token);
-    }
-    return token;
+    return localStorage.getItem("t9_admin_token") || "";
   } catch {
-    return "sovereign-default-token";
+    return "";
   }
 }
 

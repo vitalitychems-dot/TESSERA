@@ -76,13 +76,13 @@ export function digitalRoot(n: number): number {
 }
 
 export function nearestSacred(n: number): { value: number; meaning: string; deviation: number } {
-  let best = SACRED_LADDER[0];
+  let best: number = SACRED_LADDER[0];
   let bestDist = Infinity;
   for (const k of SACRED_LADDER) {
     const d = Math.abs(k - n);
     if (d < bestDist) { bestDist = d; best = k; }
   }
-  return { value: best, meaning: SACRED_MEANING[best], deviation: bestDist };
+  return { value: best, meaning: SACRED_MEANING[best as keyof typeof SACRED_MEANING], deviation: bestDist };
 }
 
 export function phiResonance(a: number, b: number): number {

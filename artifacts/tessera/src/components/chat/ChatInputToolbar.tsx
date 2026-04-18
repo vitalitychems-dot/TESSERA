@@ -27,8 +27,8 @@ interface ChatInputToolbarProps {
   onTtsToggle: () => void;
   onVoiceSpeedToggle: () => void;
   onVoiceSpeedChange: (speed: number) => void;
-  onMicPressStart: () => void;
-  onMicPressEnd: () => void;
+  onMicPressStart: (e?: any) => void;
+  onMicPressEnd: (e?: any) => void;
   onStopStreaming: () => void;
 }
 

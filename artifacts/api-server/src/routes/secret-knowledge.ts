@@ -104,7 +104,7 @@ router.get("/secret-knowledge/all", async (_req, res) => {
       .limit(40);
 
     const seenIds = new Set<number>();
-    const allData = [];
+    const allData: Array<typeof declassifiedData[number]> = [];
     for (const item of declassifiedData) {
       if (!seenIds.has(item.id)) { seenIds.add(item.id); allData.push(item); }
     }
@@ -159,7 +159,7 @@ router.get("/secret-knowledge/all", async (_req, res) => {
           verified: true,
           source: "tessera-knowledge",
           sourceType: "core",
-          url: undefined,
+          url: null,
           tags: [key],
           classification: undefined,
           real: true,

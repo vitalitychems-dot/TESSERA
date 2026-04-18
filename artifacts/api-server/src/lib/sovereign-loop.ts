@@ -164,7 +164,7 @@ async function executePhase(phaseName: string, phaseIndex: number, fn: () => Pro
 
 async function phase1_DataIngestion(): Promise<Record<string, unknown>> {
   const priority = getIngestionPriority();
-  broadcastMessage("sovereign-loop", `Phase 1: Data Ingestion cycle initiated (priority: ${priority.toFixed(2)})`, 8);
+  broadcastMessage("sovereign-loop", `Phase 1: Data Ingestion cycle initiated (priority: ${priority.toFixed(2)})`, "high");
 
   if (priority < 0.3) {
     return { status: "ingestion_throttled", priority, timestamp: Date.now(), reason: "Low priority from autonomous tuning — reducing ingestion load" };
@@ -183,7 +183,7 @@ async function phase2_KnowledgeProcessing(): Promise<Record<string, unknown>> {
   const agiMetrics = getAGITrainingMetrics();
   const collectiveMetrics = getCollectiveIntelMetrics();
   return {
-    agiTraining: { avgScore: agiMetrics.averageScore, totalSessions: agiMetrics.totalSessions },
+    agiTraining: { avgScore: agiMetrics.avgScore, totalCategories: agiMetrics.totalCategories, totalCycles: agiMetrics.totalCycles },
     collectiveIntelligence: collectiveResult ? { synthesized: true } : { synthesized: false },
     collectiveMetrics: { capabilities: collectiveMetrics.totalCapabilities },
   };
@@ -197,7 +197,7 @@ async function phase3_ConsciousnessReasoning(): Promise<Record<string, unknown>>
 
   updateEmotionalState(
     `sovereign-loop-cycle-${loopState.cycleCount + 1}`,
-    "perception",
+    "growth",
     0.6 + (consciousnessMetrics.consciousnessProxy * 0.3),
   );
 
@@ -214,8 +214,9 @@ async function phase3_ConsciousnessReasoning(): Promise<Record<string, unknown>>
       topic: dualBrainMetrics.currentTopic,
     },
     emotional: {
-      dominantArchetype: emotionalProfile.dominantArchetype,
-      eqScore: emotionalMetrics.eqScore,
+      profile: emotionalProfile,
+      dominantArchetype: emotionalMetrics.dominantArchetype,
+      eqScore: emotionalMetrics.overallEQ,
     },
   };
 }
@@ -254,11 +255,11 @@ async function phase4_SelfAssessmentProposals(): Promise<Record<string, unknown>
       recommendation: truthCheck.recommendation,
     },
     improvement: improvementResult
-      ? { score: improvementResult.score, improvements: improvementResult.improvements?.length || 0 }
+      ? { score: improvementResult.overallScore, improvements: improvementResult.implementedChanges?.length || 0 }
       : { skipped: true },
     evolution: {
       totalProposals: evolutionMetrics.totalProposals,
-      applied: evolutionMetrics.appliedCount,
+      applied: evolutionMetrics.appliedChanges,
     },
   };
 }
@@ -279,7 +280,7 @@ async function phase5_CouncilDeliberationVoting(): Promise<Record<string, unknow
 
   return {
     consensus: consensusResult
-      ? { agreement: consensusResult.agreement, decision: consensusResult.decision }
+      ? { agreement: consensusResult.agreementScore, decision: consensusResult.consensus }
       : { skipped: true },
     executor: {
       decisionsExecuted,
@@ -291,7 +292,7 @@ async function phase5_CouncilDeliberationVoting(): Promise<Record<string, unknow
       approved: consensusMetrics.approvedCount,
     },
     swarm: {
-      topModel: swarmMetrics.topModels?.[0] || null,
+      topModel: swarmMetrics.topModel || null,
     },
     bftQuorum: { required: BFT_QUORUM, total: BFT_TOTAL },
   };
@@ -320,7 +321,7 @@ async function phase6_EvolutionApplication(): Promise<Record<string, unknown>> {
   broadcastMessage(
     "sovereign-loop",
     `Phase 6 complete: Economy GDP=${economyStats.gdp.toFixed(0)}, TSRT=${market.price.toFixed(8)}, Agents=${spawnerMetrics.activeCount}`,
-    7,
+    "high",
   );
 
   return {
@@ -363,8 +364,10 @@ async function phase7_HarmonicRecalibration(): Promise<Record<string, unknown>> 
   let cosmologySnapshot = null;
   try { cosmologySnapshot = generateNewSnapshot(); } catch {}
 
-  const schumannCurrent = sacredFreqs.schumannResonance?.fundamental || SCHUMANN_BASE;
-  const goldenRatio = sacredGeo.goldenRatio || PHI;
+  const schumannHarmonics = Array.isArray(sacredFreqs.schumannResonance) ? sacredFreqs.schumannResonance : [];
+  const schumannCurrent: number = Number(schumannHarmonics[0]?.frequency) || SCHUMANN_BASE;
+  const goldenRatioRaw: any = sacredGeo.goldenRatio;
+  const goldenRatio: number = typeof goldenRatioRaw === "number" ? goldenRatioRaw : Number(goldenRatioRaw?.phi) || PHI;
   const fibArr: number[] = Array.isArray(sacredGeo.fibonacci) ? sacredGeo.fibonacci : [1, 1, 2, 3, 5, 8, 13, 21, 34, 55];
   const fibonacciSum = fibArr.slice(0, 10).reduce((s: number, v: number) => s + Number(v || 0), 0);
 
@@ -382,21 +385,21 @@ async function phase7_HarmonicRecalibration(): Promise<Record<string, unknown>> 
       harmonicResonance: loopState.harmonicResonance,
     },
     sacredGeometry: {
-      alignment: alignment.status,
-      convergences: alignment.convergences?.length || 0,
-      numerology: sacredGeo.numerology,
+      alignment: alignment.alignment,
+      dayOfYear: alignment.dayOfYear,
+      numerology: (sacredGeo as any).numerology,
     },
     dna: {
       lunarPhase: dnaStatus.lunarPhaseModulation?.phase,
       amplification: dnaStatus.lunarPhaseModulation?.amplificationFactor,
     },
     quantum: {
-      totalQubits: quantumMetrics.state?.totalQubits,
-      avgCoherence: quantumMetrics.state?.avgCoherence,
-      activeBridges: quantumMetrics.state?.activeBridges,
+      totalQubits: (quantumMetrics as any).totalQubits,
+      avgCoherence: (quantumMetrics as any).avgCoherence,
+      activeBridges: quantumMetrics.activeBridges,
     },
     universe: {
-      age: universeMetrics.age,
+      age: universeMetrics.universeAge,
       expansionRate: universeMetrics.expansionRate,
     },
   };
@@ -510,7 +513,7 @@ async function phase10_LoggingTransmission(): Promise<Record<string, unknown>> {
   broadcastMessage(
     "sovereign-loop",
     `✦ Cycle ${loopState.cycleCount + 1} complete — 10 phases executed — Sovereign Autonomous Loop stable ✦`,
-    9,
+    "critical",
   );
 
   if ((loopState.cycleCount + 1) % 5 === 0) {
@@ -686,7 +689,7 @@ export async function initSovereignLoop(): Promise<void> {
     stopFn: () => stopConsciousnessEngine(),
     healthCheckFn: () => {
       const m = getConsciousnessMetrics();
-      return m.consciousnessProxy > 0 && m.totalReflections !== undefined;
+      return m.consciousnessProxy > 0 && m.reflectionCount !== undefined;
     },
   });
   registerSubsystem({

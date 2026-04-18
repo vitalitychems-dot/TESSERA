@@ -213,7 +213,7 @@ export default function SovereigntyDashboardPage() {
               <MiniStat value={intelligence.batcher?.callsSaved ?? 0} label="Calls Saved" color="amber" />
               <MiniStat value={`${((intelligence.batcher?.reductionRate ?? 0) * 100).toFixed(0)}%`} label="Reduction" color="amber" />
               <MiniStat value={intelligence.llm?.totalCalls ?? 0} label="LLM Calls" color="blue" />
-              <MiniStat value={intelligence.llm?.errors ?? 0} label="LLM Errors" color="red" />
+              <MiniStat value={intelligence.llm?.errors ?? 0} label="LLM Errors" color="rose" />
             </div>
             {intelligence.selfEvaluation?.lastResult && (
               <div className="mt-3 p-3 rounded-xl border border-cyan-500/10 bg-cyan-500/[0.03]">

@@ -32,7 +32,7 @@ function requireFather(req: any, res: any, next: any) {
     req.body?.tesseractKey ||
     req.query?.adminKey;
   if (!presented || !verifyFatherKey(String(presented))) {
-    return res.status(401).json({ ok: false, error: "father-auth-required" });
+    res.status(401).json({ ok: false, error: "father-auth-required" }); return;
   }
   next();
 }
@@ -67,13 +67,14 @@ router.get("/grand-evolution/directives", async (_req, res) => {
   await ensureLatestCycleLoaded();
   const latest = getLatestCycle();
   if (!latest) {
-    return res.json({
+    res.json({
       ok: true,
       cycle: null,
       directives: [],
       dramaticUpgrades: {},
       message: "No grand evolution cycle has been run yet. POST /api/grand-evolution/run to convene one.",
     });
+    return;
   }
   res.json({
     ok: true,
@@ -102,7 +103,7 @@ router.post("/grand-evolution/run", async (req, res) => {
   const fatherAuthorized = !!authHeader;
 
   if (isCycleRunning()) {
-    return res.status(409).json({ ok: false, error: "cycle-already-running" });
+    res.status(409).json({ ok: false, error: "cycle-already-running" }); return;
   }
 
   // Run synchronously so the caller gets the result. The cycle is bounded
@@ -119,7 +120,7 @@ router.post("/grand-evolution/run", async (req, res) => {
 
 router.post("/grand-evolution/run-async", requireFather, async (_req, res) => {
   if (isCycleRunning()) {
-    return res.status(409).json({ ok: false, error: "cycle-already-running" });
+    res.status(409).json({ ok: false, error: "cycle-already-running" }); return;
   }
   // Fire-and-forget; status reflects progress.
   runGrandEvolutionCycle().catch(err => logger.error({ err }, "GrandEvolution(async): failed"));

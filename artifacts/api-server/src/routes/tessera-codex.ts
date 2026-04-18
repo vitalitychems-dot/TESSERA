@@ -53,7 +53,7 @@ router.get("/codex/entries", async (_req, res) => {
 router.get("/codex/book/:bookId", async (req, res) => {
   const bookId = req.params.bookId as CodexBookId;
   if (!VALID_BOOKS.includes(bookId)) {
-    return res.status(400).json({ ok: false, error: `Invalid book. Must be one of: ${VALID_BOOKS.join(", ")}` });
+    res.status(400).json({ ok: false, error: `Invalid book. Must be one of: ${VALID_BOOKS.join(", ")}` }); return;
   }
   try {
     const entries = await getCodexBook(bookId);
@@ -66,7 +66,7 @@ router.get("/codex/book/:bookId", async (req, res) => {
 router.get("/codex/entry/:entryId", async (req, res) => {
   try {
     const entry = await getCodexEntry(req.params.entryId);
-    if (!entry) return res.status(404).json({ ok: false, error: "Entry not found" });
+    if (!entry) { res.status(404).json({ ok: false, error: "Entry not found" }); return; }
     const ratifications = await getRatifications(req.params.entryId);
     res.json({ ok: true, entry, ratifications });
   } catch (err) {
@@ -86,10 +86,10 @@ router.get("/codex/entry/:entryId/ratifications", async (req, res) => {
 router.post("/codex/amend", async (req, res) => {
   const { book, section, title, content, provenance, tags, ratifiedBy, proofLinks, sessionId } = req.body;
   if (!book || !section || !title || !content) {
-    return res.status(400).json({ ok: false, error: "book, section, title, content are required" });
+    res.status(400).json({ ok: false, error: "book, section, title, content are required" }); return;
   }
   if (!VALID_BOOKS.includes(book as CodexBookId)) {
-    return res.status(400).json({ ok: false, error: `Invalid book. Must be one of: ${VALID_BOOKS.join(", ")}` });
+    res.status(400).json({ ok: false, error: `Invalid book. Must be one of: ${VALID_BOOKS.join(", ")}` }); return;
   }
   try {
     const entry = await addCodexAmendment({
@@ -171,7 +171,7 @@ router.patch("/council/next-five/:rank/status", async (req, res) => {
   const { status, afterMetrics } = req.body;
   const valid = ["proposed", "ratified", "implemented", "verified"];
   if (!valid.includes(status)) {
-    return res.status(400).json({ ok: false, error: `status must be one of: ${valid.join(", ")}` });
+    res.status(400).json({ ok: false, error: `status must be one of: ${valid.join(", ")}` }); return;
   }
   try {
     await updateImprovementStatus(rank, status, afterMetrics);

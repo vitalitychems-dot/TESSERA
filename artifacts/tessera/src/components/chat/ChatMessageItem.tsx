@@ -60,7 +60,7 @@ function sanitizeMessageContent(content: string): string {
 }
 
 interface MessageItemProps {
-  msg: { id?: number; role: string; content: string; createdAt?: Date | string };
+  msg: { id?: number | string; role: string; content: string; createdAt?: Date | string };
   index: number;
   adminMode: boolean;
   tesseraMsgStyle: { wrapper: string; prose: string } | null;

@@ -196,7 +196,7 @@ router.get("/provider-sovereignty/hard-disconnect", (_req, res) => {
 router.post("/provider-sovereignty/hard-disconnect/enable", (_req, res) => {
   try {
     const result = enableHardDisconnect();
-    return res.json({ ok: true, ...result, status: getHardDisconnectStatus() });
+    return res.json({ ...result, ok: true, status: getHardDisconnectStatus() });
   } catch (err) {
     logger.error({ err }, "POST /provider-sovereignty/hard-disconnect/enable failed");
     return res.status(500).json({ ok: false, error: "Failed to enable hard-disconnect" });
@@ -206,7 +206,7 @@ router.post("/provider-sovereignty/hard-disconnect/enable", (_req, res) => {
 router.post("/provider-sovereignty/hard-disconnect/disable", (_req, res) => {
   try {
     const result = disableHardDisconnect();
-    return res.json({ ok: true, ...result, status: getHardDisconnectStatus() });
+    return res.json({ ...result, ok: true, status: getHardDisconnectStatus() });
   } catch (err) {
     logger.error({ err }, "POST /provider-sovereignty/hard-disconnect/disable failed");
     return res.status(500).json({ ok: false, error: "Failed to disable hard-disconnect" });

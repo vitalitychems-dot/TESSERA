@@ -222,6 +222,7 @@ function BuildDiagram3D({ diagram }: { diagram: any }) {
       animRef.current = requestAnimationFrame(animate);
       return () => cancelAnimationFrame(animRef.current);
     }
+    return undefined;
   }, [diagram, rotation, zoom, hoveredComponent, isDragging, project]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -483,8 +484,8 @@ function KnowledgeVaultTab() {
               <GlassCard
                 key={key}
                 className={`p-4 cursor-pointer transition-all hover:border-cyan-500/40 ${expandedCat === key ? "ring-1 ring-cyan-500/30" : ""}`}
-                onClick={() => setExpandedCat(expandedCat === key ? null : key)}
               >
+                <div onClick={() => setExpandedCat(expandedCat === key ? null : key)}>
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center ${colorClass}`}>
                     <Icon size={20} />
@@ -502,6 +503,7 @@ function KnowledgeVaultTab() {
                   {cat.subcategories.length > 4 && (
                     <span className="text-[9px] text-white/30">+{cat.subcategories.length - 4} more</span>
                   )}
+                </div>
                 </div>
               </GlassCard>
             );

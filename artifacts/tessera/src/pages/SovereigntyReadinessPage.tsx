@@ -57,7 +57,7 @@ function ScoreBar({ value, max = 100, color = "cyan" }: { value: number; max?: n
 }
 
 function Card({ title, icon: Icon, children, className = "" }: {
-  title: string; icon: React.ElementType; children: React.ReactNode; className?: string;
+  title: string; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode; className?: string;
 }) {
   return (
     <div className={`bg-slate-900/70 border border-slate-700/60 rounded-xl p-4 ${className}`}>

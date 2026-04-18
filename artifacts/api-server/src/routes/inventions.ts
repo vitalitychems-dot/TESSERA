@@ -830,19 +830,15 @@ function inventorPrincipal(proposedBy: string | null | undefined, inventionId: s
   return `proposer:${createHash("sha256").update(raw).digest("hex").slice(0, 32)}`;
 }
 
-// Lightweight admin-token guard: requires an x-admin-token header. If the
-// SOVEREIGN_ADMIN_TOKEN env secret is configured, the value must match it
-// exactly via constant-time comparison; otherwise any non-empty token is
-// accepted (matches the existing isAdminRequest pattern in conversations.ts).
+// Admin-token guard: fail-closed. Requires SOVEREIGN_ADMIN_TOKEN to be
+// configured AND a matching x-admin-token header (constant-time compare).
 async function requireInventorAuth(req: import("express").Request): Promise<boolean> {
+  const configured = process.env["SOVEREIGN_ADMIN_TOKEN"];
+  if (!configured || configured.length < 8) return false;
   const token = (req.headers["x-admin-token"] as string | undefined)?.trim();
   if (!token || token.length < 8) return false;
-  const configured = process.env["SOVEREIGN_ADMIN_TOKEN"];
-  if (configured && configured.length >= 8) {
-    const { validateSovereignAdminToken } = await import("../lib/mesh-auth");
-    return validateSovereignAdminToken(token);
-  }
-  return true;
+  const { validateSovereignAdminToken } = await import("../lib/mesh-auth");
+  return validateSovereignAdminToken(token);
 }
 
 // Request a presigned URL for uploading a custom 3D model (GLB/GLTF) to an

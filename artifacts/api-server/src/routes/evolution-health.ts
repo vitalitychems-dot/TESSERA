@@ -105,7 +105,7 @@ router.post("/evolution-health/pause/:moduleId", requireAuth, (req: Request, res
     pauseAllEvolution();
     res.json({ ok: true, message: "All evolution paused" });
   } else {
-    pauseModule(moduleId);
+    pauseModule(String(moduleId));
     res.json({ ok: true, message: `Module ${moduleId} paused` });
   }
 });
@@ -120,7 +120,7 @@ router.post("/evolution-health/resume/:moduleId", requireAuth, (req: Request, re
     resumeAllEvolution();
     res.json({ ok: true, message: "All evolution resumed" });
   } else {
-    resumeModule(moduleId);
+    resumeModule(String(moduleId));
     res.json({ ok: true, message: `Module ${moduleId} resumed` });
   }
 });
@@ -131,7 +131,7 @@ router.post("/evolution-health/reset/:moduleId", requireAuth, (req: Request, res
     res.status(400).json({ ok: false, error: "moduleId required" });
     return;
   }
-  resetModuleCooldown(moduleId);
+  resetModuleCooldown(String(moduleId));
   res.json({ ok: true, message: `Cooldown reset for ${moduleId}` });
 });
 
