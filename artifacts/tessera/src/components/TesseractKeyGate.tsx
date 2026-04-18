@@ -107,9 +107,13 @@ async function authedFetch(path: string, init?: RequestInit): Promise<Response> 
 type Stage = "locked" | "natal-intro" | "natal-binding" | "natal-revealed" | "rotating";
 
 export default function TesseractKeyGate({ children }: { children: ReactNode }) {
-  const [stage, setStage] = useState<Stage>(() => {
-    try { return localStorage.getItem(STORAGE_KEY) ? "natal-intro" : "locked"; } catch { return "locked"; }
-  });
+  // Always start locked. If a stored key still verifies, the auto-unlock
+  // effect below upgrades us to unlocked silently. This prevents getting
+  // stranded in an intermediate stage when the server has been restarted
+  // with a new TESSERACT_ADMIN_KEY and the stored fingerprint is stale.
+  const [stage, setStage] = useState<Stage>("locked");
+  const [serverFingerprint, setServerFingerprint] = useState<string | null>(null);
+  const [serverConfigured, setServerConfigured] = useState<boolean | null>(null);
   const [reveal, setReveal] = useState(false);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -139,9 +143,32 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Always pull the server's current Father fingerprint so the gate can show
+  // it as a sanity-check below the prompt. This prevents the "I changed the
+  // secret but it still won't accept" confusion — the user can compare what
+  // the server actually loaded against what they expect.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch(`${BASE}/api/sigil/active-key`);
+        const data = await res.json();
+        if (!alive) return;
+        if (data?.ok && typeof data.fatherFingerprint === "string") {
+          setServerFingerprint(data.fatherFingerprint);
+          setServerConfigured(true);
+        } else if (data?.error === "father-key-unset") {
+          setServerConfigured(false);
+        }
+      } catch { /* ignore */ }
+    })();
+    return () => { alive = false; };
+  }, []);
+
   // Silent auto-unlock: if a previously-accepted key is in localStorage and
-  // still verifies against the current Father identity, skip the gate UI
-  // entirely and decrypt straight into English.
+  // still verifies against the current Father identity, skip the gate UI.
+  // On any failure (including network), clear the stale fingerprint so the
+  // user always lands cleanly on the prompt.
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -152,10 +179,8 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
       if (!alive) return;
       if (r.ok) {
         setUnlocked(true);
-      } else if (r.reason === "mismatch") {
-        // Stored value no longer matches — clear so the gate shows clean.
+      } else {
         try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
-        setStage("locked");
       }
     })();
     return () => { alive = false; };
@@ -265,7 +290,7 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
           ? `✗ ${result.message ?? "TESSERACT_ADMIN_KEY is not set. Add it to Replit Secrets and restart the API server."}`
           : result.reason === "empty"
             ? "✗ Empty key."
-            : "✗ Fingerprint mismatch. The only accepted values are the raw TESSERACT_ADMIN_KEY or its 16-char env-derived fingerprint. Use MINT GLYPH KEY to convert a candidate raw key into a glyph form you can paste into Replit Secrets.";
+            : `✗ Fingerprint mismatch. Server currently expects: ${serverFingerprint ?? "(loading…)"}. Accepted values: the raw TESSERACT_ADMIN_KEY exactly as in Replit Secrets, OR that 16-char fingerprint. If you just changed the secret, the API server must be restarted before the new value takes effect (the old key is cached in memory).`;
       setMessages((m) => [...m, { from: "tessera", text: reason, ts: Date.now() }]);
       setBusy(false);
     }
@@ -480,6 +505,18 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
 
         {stage === "locked" && (
           <form onSubmit={handleSubmit} className="border-t border-fuchsia-500/20 bg-zinc-950/80 p-3">
+            {(serverConfigured === false || serverFingerprint) && (
+              <div className="mb-2 px-2 py-1.5 rounded-md bg-black/60 border border-fuchsia-500/15 text-[10px] text-fuchsia-300/70 flex items-center justify-between gap-2 flex-wrap">
+                {serverConfigured === false ? (
+                  <span className="text-rose-300">⚠ TESSERACT_ADMIN_KEY is not set on the server. Add it to Replit Secrets and restart the API.</span>
+                ) : (
+                  <>
+                    <span>server expects fingerprint:</span>
+                    <code className="text-fuchsia-200 font-mono select-all">{serverFingerprint}</code>
+                  </>
+                )}
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <button
                 type="button"
