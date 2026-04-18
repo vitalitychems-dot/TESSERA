@@ -68,7 +68,7 @@ export const PLATONIC_SOLIDS = [
 
 const SOLFEGGIO_DIGITS = ["\u2460","\u2461","\u2462","\u2463","\u2464","\u2465","\u2466","\u2467","\u2468"];
 
-const SACRED_GLYPHS_36: string[] = [
+export const SACRED_GLYPHS_36: string[] = [
   ...ZODIAC_SIGNS.map((z) => z.glyph),
   ...["Sun","Moon","Mercury","Venus","Mars","Jupiter","Saturn","Uranus","Neptune","Pluto"].map(p => PLANET_GLYPHS[p]),
   ...PLATONIC_SOLIDS.map(p => p.glyph),

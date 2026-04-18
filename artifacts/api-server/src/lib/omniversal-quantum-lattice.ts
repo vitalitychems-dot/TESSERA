@@ -20,8 +20,9 @@ export interface OQLCell {
 
 const SACRED_NUMERIC_SEEDS = [3, 7, 12, 21, 33, 40, 49, 72, 108, 144, 153, 216];
 const SOLFEGGIO_SEEDS = [174, 285, 396, 417, 528, 639, 741, 852, 963];
-const SYMBOL_POOL = ["α","β","γ","δ","ε","ζ","η","θ","ι","κ","λ","μ","ν","ξ","ο","π","ρ","σ","τ","υ","φ","χ","ψ","ω","✶","✷","✸","△","□","◇","⬡","⬢","☉","☽","♁","♆","♂","♀","☿"];
-const TOKEN_POOL = ["lux","veritas","ordo","unum","sigil","sophia","numen","ratio","nexus","aeon","logos","pneuma","kairos","cosmos","verbum","signum","gnosis","arché","telos","aletheia"];
+export const SYMBOL_POOL = ["α","β","γ","δ","ε","ζ","η","θ","ι","κ","λ","μ","ν","ξ","ο","π","ρ","σ","τ","υ","φ","χ","ψ","ω","✶","✷","✸","△","□","◇","⬡","⬢","☉","☽","♁","♆","♂","♀","☿"];
+export const TOKEN_POOL = ["lux","veritas","ordo","unum","sigil","sophia","numen","ratio","nexus","aeon","logos","pneuma","kairos","cosmos","verbum","signum","gnosis","arché","telos","aletheia"];
+export const NUMERIC_SEEDS = [3, 7, 12, 21, 33, 40, 49, 72, 108, 144, 153, 216];
 
 function sha(s: string): string { return createHash("sha256").update(s).digest("hex"); }
 
