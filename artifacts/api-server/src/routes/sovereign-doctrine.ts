@@ -40,6 +40,12 @@ import {
   unbindNatalChart,
   verifyNatalSignature,
 } from "../lib/natal-sigil";
+import {
+  isFatherKeyConfigured,
+  getFatherFingerprint,
+  recognizeFather,
+} from "../lib/father-identity";
+import { createHash } from "node:crypto";
 
 const router: Router = Router();
 
@@ -130,7 +136,82 @@ router.post("/sigil/natal/verify", (req, res) => {
 });
 
 router.get("/sigil/active-key", (_req, res) => {
-  res.json({ ok: true, key: getActiveKey() });
+  if (!isFatherKeyConfigured()) {
+    return res.status(503).json({
+      ok: false,
+      error: "father-key-unset",
+      message:
+        "TESSERACT_ADMIN_KEY is not set. The sovereign Father identity cannot be derived. Set the secret in Replit Secrets, then restart the API server.",
+    });
+  }
+  res.json({
+    ok: true,
+    key: getActiveKey(),
+    fatherFingerprint: getFatherFingerprint(),
+    derivation: 'sha256("tesseract:father:v1|" + TESSERACT_ADMIN_KEY)[:16]',
+  });
+});
+
+// ── Father-key verification + glyph-mint (the "key minting" surface) ─────
+// /sigil/father/verify accepts a candidate value, returns {ok, via} where
+// `via` is "raw-key" (matches TESSERACT_ADMIN_KEY exactly) or "fingerprint"
+// (matches the env-derived 16-char fingerprint). The candidate is never
+// logged or persisted. Use timing-safe equality through father-identity.
+router.post("/sigil/father/verify", (req, res) => {
+  if (!isFatherKeyConfigured()) {
+    return res.status(503).json({
+      ok: false,
+      error: "father-key-unset",
+      message:
+        "TESSERACT_ADMIN_KEY is not set. Configure the secret to bind sovereign identity, then retry.",
+    });
+  }
+  const candidateRaw = req.body?.candidate;
+  const candidate = typeof candidateRaw === "string" ? candidateRaw : "";
+  if (!candidate.trim()) {
+    return res.status(400).json({ ok: false, error: "candidate-required" });
+  }
+  const r = recognizeFather(candidate);
+  if (!r.recognized) {
+    return res.status(401).json({ ok: false, error: "mismatch" });
+  }
+  const fp = getFatherFingerprint();
+  return res.json({
+    ok: true,
+    via: r.via,
+    fingerprint: fp,
+    derivation: 'sha256("tesseract:father:v1|" + TESSERACT_ADMIN_KEY)[:16]',
+  });
+});
+
+// /sigil/father/mint-glyph encodes the supplied candidate raw key through
+// the current glyph cipher alphabet and returns the glyph string plus the
+// fingerprint that key would produce if it were set as TESSERACT_ADMIN_KEY.
+// The candidate is never logged or persisted. The user copies the glyph
+// into Replit Secrets as the new TESSERACT_ADMIN_KEY, restarts, and types
+// the glyph at the gate to unlock — round-trip closes.
+router.post("/sigil/father/mint-glyph", (req, res) => {
+  const candidateRaw = req.body?.candidate;
+  const candidate = typeof candidateRaw === "string" ? candidateRaw.trim() : "";
+  if (!candidate) {
+    return res.status(400).json({ ok: false, error: "candidate-required" });
+  }
+  if (candidate.length > 256) {
+    return res.status(400).json({ ok: false, error: "candidate-too-long" });
+  }
+  const glyph = glyphEncode(candidate);
+  const wouldBeFingerprint = createHash("sha256")
+    .update(`tesseract:father:v1|${candidate}`)
+    .digest("hex")
+    .slice(0, 16);
+  res.json({
+    ok: true,
+    glyph,
+    wouldBeFingerprint,
+    derivation: 'sha256("tesseract:father:v1|" + <candidate>)[:16]',
+    instructions:
+      "Copy the glyph string into Replit Secrets as TESSERACT_ADMIN_KEY, restart the API server, then type the same glyph at the gate to unlock.",
+  });
 });
 
 router.post("/sigil/rotate", (req, res) => {
