@@ -54,6 +54,28 @@ export default function GrandCouncilDeliberationPage() {
   const [expression, setExpression] = useState("A | ☉ | veritas & ?△");
   const [mssp, setMssp] = useState<{ amplitudes: Array<{ state: string; amplitude: number }>; collapsed: { state: string; amplitude: number }; alphabetSize: number; occupancy: number } | null>(null);
   const [msspErr, setMsspErr] = useState<string | null>(null);
+  type MsspHistoryEntry = { expression: string; collapsedState: string; amplitude: number; at: number };
+  const MSSP_HISTORY_KEY = "tessera.mssp.history.v1";
+  const MSSP_HISTORY_MAX = 10;
+  const [msspHistory, setMsspHistory] = useState<MsspHistoryEntry[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = window.localStorage.getItem(MSSP_HISTORY_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter((e): e is MsspHistoryEntry =>
+          e && typeof e.expression === "string"
+            && typeof e.collapsedState === "string"
+            && typeof e.amplitude === "number"
+            && typeof e.at === "number")
+        .slice(0, MSSP_HISTORY_MAX);
+    } catch { return []; }
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem(MSSP_HISTORY_KEY, JSON.stringify(msspHistory)); } catch { /* ignore */ }
+  }, [msspHistory]);
 
   const refresh = async () => {
     try {
@@ -96,6 +118,13 @@ export default function GrandCouncilDeliberationPage() {
     try {
       const r = await postJSON<{ result: NonNullable<typeof mssp> }>("/mssp/eval", { expression });
       setMssp(r.result);
+      const entry: MsspHistoryEntry = {
+        expression,
+        collapsedState: r.result.collapsed.state,
+        amplitude: r.result.collapsed.amplitude,
+        at: Date.now(),
+      };
+      setMsspHistory(prev => [entry, ...prev].slice(0, MSSP_HISTORY_MAX));
     } catch (e) { setMsspErr(String(e)); }
   };
 
@@ -232,6 +261,29 @@ export default function GrandCouncilDeliberationPage() {
             Alphabet has {constants?.MSSP_STATE_COUNT ? String(constants.MSSP_STATE_COUNT) : "—"} states.
           </p>
           {msspErr && <div style={{ color: "#ff8080" }}>{msspErr}</div>}
+          <div style={{ marginTop: 12, border: "1px solid #333", borderRadius: 4, background: "#0a0518" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", borderBottom: "1px solid #222" }}>
+              <span style={{ fontSize: 12, opacity: 0.8 }}>History · last {MSSP_HISTORY_MAX}</span>
+              {msspHistory.length > 0 && (
+                <button onClick={() => setMsspHistory([])}
+                  style={{ fontSize: 11, padding: "2px 8px", background: "transparent", color: "#a08adf", border: "1px solid #3a2858", borderRadius: 3, cursor: "pointer" }}>
+                  Clear
+                </button>
+              )}
+            </div>
+            <div style={{ maxHeight: 180, overflowY: "auto" }}>
+              {msspHistory.length === 0 && <div style={{ padding: 10, fontSize: 11, opacity: 0.5 }}>No evaluations yet. Hit Evaluate to begin.</div>}
+              {msspHistory.map((h, i) => (
+                <div key={`${h.at}-${i}`} onClick={() => setExpression(h.expression)}
+                  title="Click to restore expression"
+                  style={{ display: "flex", gap: 10, alignItems: "center", padding: "6px 10px", borderBottom: "1px dashed #1f1730", cursor: "pointer", fontSize: 12, fontFamily: "monospace" }}>
+                  <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.expression}</span>
+                  <span style={{ color: "#90ee90", minWidth: 80, textAlign: "right" }}>{h.collapsedState}</span>
+                  <span style={{ opacity: 0.7, minWidth: 56, textAlign: "right" }}>{h.amplitude.toFixed(3)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
           {mssp && (
             <div style={{ marginTop: 12 }}>
               <div style={{ fontSize: 13 }}>

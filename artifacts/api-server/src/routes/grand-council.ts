@@ -47,12 +47,12 @@ router.post("/grand-council/convene", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/grand-council/sessions", (_req, res) => {
-  res.json({ ok: true, sessions: listSessions() });
+router.get("/grand-council/sessions", async (_req, res) => {
+  res.json({ ok: true, sessions: await listSessions() });
 });
 
-router.get("/grand-council/sessions/:id", (req, res) => {
-  const s = getSession(String(req.params.id));
+router.get("/grand-council/sessions/:id", async (req, res) => {
+  const s = await getSession(String(req.params.id));
   if (!s) { res.status(404).json({ ok: false, error: "session not found" }); return; }
   res.json({ ok: true, session: s });
 });
