@@ -33,6 +33,7 @@ import {
 } from "./chat/ChatPanels";
 import { type UploadedFile } from "./chat/ChatFileComponents";
 import { ChatShortcutsModal } from "./chat/ChatKeyboardShortcuts";
+import { MyKeyRevealModal, isShowMyKeyCommand } from "./chat/MyKeyRevealModal";
 import { useChatCommandExecutor } from "./chat/useChatCommandExecutor";
 import { ChatDataCommandResult } from "./chat/ChatDataCommandResult";
 import { ChatVoiceModeOverlay } from "./chat/ChatVoiceModeOverlay";
@@ -127,6 +128,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [summitFeedOpen, setSummitFeedOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [keyRevealOpen, setKeyRevealOpen] = useState(false);
   const [historyNavIndex, setHistoryNavIndex] = useState(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
@@ -525,6 +527,14 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
     }
 
     const msgText = currentInput.trim();
+
+    // "show my key" / "give me my key" / "/my key" → open the LUS reveal modal.
+    // Adopted by the Grand Conference (Language & Security Summit).
+    if (isShowMyKeyCommand(msgText)) {
+      setKeyRevealOpen(true);
+      setInputBoth("");
+      return;
+    }
 
     if (isAdmin && msgText.length > 20) {
       const bulkKeyPattern = /([A-Z][A-Z0-9_]{2,40}(?:_API_KEY|_SECRET_KEY|_KEY|_TOKEN|_SECRET|_API|_PASSWORD))\s*[=:]\s*["']?([^\s"',}{]+)["']?/g;
@@ -1470,6 +1480,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
       </div>
 
       <ChatShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <MyKeyRevealModal open={keyRevealOpen} onClose={() => setKeyRevealOpen(false)} />
     </div>
   );
 }
