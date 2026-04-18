@@ -45,24 +45,26 @@ function useCodexStats() {
 }
 
 function useCodexBook(bookId: string) {
+  const valid = !!bookId && bookId !== "0" && bookId !== "undefined";
   return useQuery({
     queryKey: ["codex-book", bookId],
     queryFn: async () => {
       const r = await fetch(`${BASE}/api/codex/book/${bookId}`);
       return r.json();
     },
-    enabled: !!bookId,
+    enabled: valid,
   });
 }
 
 function useCodexEntry(entryId: string | null) {
+  const valid = !!entryId && entryId !== "0" && entryId !== "undefined";
   return useQuery({
     queryKey: ["codex-entry", entryId],
     queryFn: async () => {
       const r = await fetch(`${BASE}/api/codex/entry/${entryId}`);
       return r.json();
     },
-    enabled: !!entryId,
+    enabled: valid,
   });
 }
 
