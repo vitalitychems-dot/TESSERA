@@ -33,7 +33,7 @@ export const codexEntriesTable = pgTable("codex_entries", {
     votes: Record<string, string>;
     outcome: string;
     notes?: string;
-  }>().default(null),
+  }>(),
   proofLinks: jsonb("proof_links").$type<string[]>().default([]),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
