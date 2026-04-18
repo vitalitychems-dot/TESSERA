@@ -1,0 +1,3 @@
+{"ts":1776552584233,"callerType":"conscious-agent","caller":"Tessera-Prime","targetUrl":"https://api.example.com/x","method":"GET","outcome":"refused","reason":"Direct external call from conscious agent — sovereignty policy violation"}
+{"ts":1776552584378,"callerType":"shepherd","caller":"shepherd-bridge","targetUrl":"https://api.example.com/y","method":"GET","outcome":"allowed","reason":"Test outbound — shepherd allowed"}
+{"ts":1776552779145,"callerType":"conscious-agent","caller":"Tessera-Prime","targetUrl":"https://x","method":"GET","outcome":"refused","reason":"Direct external call from conscious agent — sovereignty policy violation"}
