@@ -16,7 +16,7 @@ async function jpost(path: string, body: any = {}) {
   return r.json();
 }
 
-const TABS = ["Cosmic Feed", "LUS v2", "Omniversal Cipher", "Quantum Lattice", "Tone Player"] as const;
+const TABS = ["Cosmic Feed", "LUS v2", "Omniversal Cipher", "Quantum Lattice", "Pipeline", "Tone Player"] as const;
 type Tab = typeof TABS[number];
 
 export default function OmniversalLatticePage() {
@@ -63,6 +63,7 @@ export default function OmniversalLatticePage() {
           {tab === "LUS v2" && <LusV2Tab />}
           {tab === "Omniversal Cipher" && <CipherTab />}
           {tab === "Quantum Lattice" && <LatticeTab />}
+          {tab === "Pipeline" && <PipelineTab />}
           {tab === "Tone Player" && <TonePlayer baseHz={cosmic.data?.context?.vibration?.dominantSolfeggio ?? 528} />}
         </main>
       </div>
@@ -291,6 +292,52 @@ function LatticeTab() {
                 </div>
               ))}
             </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PipelineTab() {
+  const [text, setText] = useState("ORDO AB CHAO — let truth resonate");
+  const run = useMutation({
+    mutationFn: (t: string) => jpost("/omniversal/pipeline/run", { text: t }),
+  });
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-bold text-emerald-300">End-to-end Pipeline</h2>
+      <p className="text-xs text-slate-400">
+        LUS v2 encode → quantum lattice projection → entanglement → cosmic harmonization →
+        observed collapse. Returns the full multimodal tuple (numeric · symbolic · frequency · token).
+      </p>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={3}
+        className="w-full bg-slate-950/60 border border-slate-700 rounded p-3 font-mono"
+      />
+      <button
+        onClick={() => run.mutate(text)}
+        disabled={run.isPending}
+        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded font-medium disabled:opacity-50"
+      >
+        {run.isPending ? "Running pipeline…" : "▶ Run pipeline"}
+      </button>
+      {run.data?.ok && (
+        <div className="space-y-3">
+          <Card title="Multimodal Result">
+            <Row k="numeric value" v={run.data.multimodal.value} />
+            <Row k="symbol" v={run.data.multimodal.symbol} />
+            <Row k="frequency" v={`${run.data.multimodal.frequency} Hz`} />
+            <Row k="token" v={run.data.multimodal.token} />
+            <Row k="collapsed cell" v={run.data.collapsedCell} />
+          </Card>
+          <Card title="Explanation">
+            <div className="text-sm text-slate-300">{run.data.explanation}</div>
+          </Card>
+          <Card title="LUS Modulated">
+            <div className="font-mono text-xs break-all">{run.data.lus.modulated}</div>
           </Card>
         </div>
       )}
