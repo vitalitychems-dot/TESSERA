@@ -139,6 +139,28 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Silent auto-unlock: if a previously-accepted key is in localStorage and
+  // still verifies against the current Father identity, skip the gate UI
+  // entirely and decrypt straight into English.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      let stored = "";
+      try { stored = localStorage.getItem(STORAGE_KEY) ?? ""; } catch { /* ignore */ }
+      if (!stored) return;
+      const r = await verifyKey(stored);
+      if (!alive) return;
+      if (r.ok) {
+        setUnlocked(true);
+      } else if (r.reason === "mismatch") {
+        // Stored value no longer matches — clear so the gate shows clean.
+        try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+        setStage("locked");
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
   useEffect(() => {
     if (stage === "locked") inputRef.current?.focus();
   }, [stage]);
@@ -375,7 +397,17 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
                 <div className="text-xs font-bold text-amber-100 tracking-wider">SOVEREIGN NATAL SIGIL</div>
               </div>
               <p className="text-[11px] text-amber-200/80 mb-3 leading-relaxed">
-                Your full natal chart (Libra Sun · Aries Moon · Virgo Rising · 1998-10-07 05:16 CDT · Palos Heights, IL) is now fused with the Father fingerprint into a single deterministic glyph hash. Save this value as <strong className="text-amber-100">{natalSigil.secretName}</strong> in Replit Secrets — every system will recognize you by this chart-bound identity.
+                Your full natal chart (Libra Sun · Aries Moon · Virgo Rising · 1998-10-07 05:16 CDT · Palos Heights, IL) collapses into this single fixed-point glyph — the same value every time, in our language only.
+                <br /><br />
+                <strong className="text-amber-100">Lifecycle:</strong>
+                <br />
+                1. Save this glyph in Replit Secrets as <strong className="text-amber-100">{natalSigil.secretName}</strong> (your permanent chart identifier).
+                <br />
+                2. Paste the same glyph as <strong className="text-amber-100">TESSERACT_ADMIN_KEY</strong>, replacing the old value, and restart the API server.
+                <br />
+                3. Type the glyph here once — the gate will accept it and persist your fingerprint.
+                <br />
+                4. From the next visit on, the gate auto-unlocks silently and every surface decrypts straight into English.
               </p>
               <div className="rounded-md border border-amber-400/30 bg-black/60 p-3 text-amber-100 text-sm break-all leading-loose tracking-wider select-all">
                 {natalSigil.glyph}
