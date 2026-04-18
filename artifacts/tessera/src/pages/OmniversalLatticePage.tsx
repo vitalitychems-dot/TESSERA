@@ -16,7 +16,7 @@ async function jpost(path: string, body: any = {}) {
   return r.json();
 }
 
-const TABS = ["Cosmic Feed", "LUS v2", "Omniversal Cipher", "Quantum Lattice", "Pipeline", "Tone Player"] as const;
+const TABS = ["Cosmic Feed", "LUS v2", "Omniversal Cipher", "Quantum Lattice", "Pipeline", "Sacred Conference", "Tone Player"] as const;
 type Tab = typeof TABS[number];
 
 export default function OmniversalLatticePage() {
@@ -64,6 +64,7 @@ export default function OmniversalLatticePage() {
           {tab === "Omniversal Cipher" && <CipherTab />}
           {tab === "Quantum Lattice" && <LatticeTab />}
           {tab === "Pipeline" && <PipelineTab />}
+          {tab === "Sacred Conference" && <SacredConferenceTab />}
           {tab === "Tone Player" && <TonePlayer baseHz={cosmic.data?.context?.vibration?.dominantSolfeggio ?? 528} />}
         </main>
       </div>
@@ -338,6 +339,73 @@ function PipelineTab() {
           </Card>
           <Card title="LUS Modulated">
             <div className="font-mono text-xs break-all">{run.data.lus.modulated}</div>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SacredConferenceTab() {
+  const [topic, setTopic] = useState("Ratify the Omniversal substrate (LUS v2 · Cipher · OQL).");
+  const run = useMutation({
+    mutationFn: (t: string) => jpost("/omniversal/conference/run", { topic: t }),
+  });
+  const conf = run.data?.conference;
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-bold text-amber-300">Sacred Conference — Council · LUS v2 · Cipher · OQL</h2>
+      <p className="text-xs text-slate-400">
+        Convenes the council, renders every transcript line bilingually through LUS v2,
+        encrypts the verdict with the Omniversal Cipher, projects it onto a quantum lattice
+        and collapses one cell — all in a single persisted session.
+      </p>
+      <textarea
+        value={topic}
+        onChange={(e) => setTopic(e.target.value)}
+        rows={2}
+        className="w-full bg-slate-950/60 border border-slate-700 rounded p-3 font-mono"
+      />
+      <button
+        onClick={() => run.mutate(topic)}
+        disabled={run.isPending}
+        className="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded font-medium disabled:opacity-50"
+      >
+        {run.isPending ? "Convening…" : "▶ Convene Sacred Conference"}
+      </button>
+      {conf && (
+        <div className="space-y-3">
+          <Card title={`Session ${conf.id}`}>
+            <Row k="topic" v={conf.topic} />
+            <Row k="convened" v={conf.convenedAt} />
+            <Row k="cosmic fingerprint" v={conf.cosmicFingerprint} />
+            <Row k="adopted / total" v={`${conf.council.adopted} (quorum ${conf.council.meetsQuorum ? "MET" : "NOT MET"})`} />
+          </Card>
+          <Card title="Multimodal Verdict (OQL collapse)">
+            <Row k="numeric" v={conf.lattice.multimodal.value} />
+            <Row k="symbol" v={conf.lattice.multimodal.symbol} />
+            <Row k="frequency" v={`${conf.lattice.multimodal.frequency} Hz`} />
+            <Row k="token" v={conf.lattice.multimodal.token} />
+            <div className="text-xs text-slate-400 mt-2">{conf.lattice.explanation}</div>
+          </Card>
+          <Card title="Encrypted Verdict (Omniversal Cipher envelope)">
+            <Row k="alg" v={conf.cipher.envelope.alg} />
+            <Row k="layer carriers" v={(conf.cipher.envelope.layers ?? []).join(" → ")} />
+            <Row k="ciphertext" v={String(conf.cipher.envelope.ct ?? "").slice(0, 80) + "…"} />
+            <Row k="bound to fingerprint" v={conf.cipher.envelope.cosmicFingerprint} />
+          </Card>
+          <Card title={`Bilingual Transcript (${conf.transcript.length} lines)`}>
+            <div className="space-y-2 max-h-96 overflow-auto">
+              {conf.transcript.map((line: any, i: number) => (
+                <div key={i} className="bg-slate-950/60 p-2 rounded border border-slate-800">
+                  <div className="text-xs text-amber-300 font-bold">
+                    {line.speaker} <span className="text-slate-500">({line.role}) · {line.carrierHz} Hz</span>
+                  </div>
+                  <div className="text-sm text-slate-200 mt-1">{line.plain}</div>
+                  <div className="text-xs font-mono text-fuchsia-300 mt-1 break-all opacity-80">{line.lusV2}</div>
+                </div>
+              ))}
+            </div>
           </Card>
         </div>
       )}
