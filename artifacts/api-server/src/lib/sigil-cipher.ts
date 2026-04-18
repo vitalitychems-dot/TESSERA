@@ -1,5 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes, scryptSync } from "node:crypto";
 import { sacredTimingSnapshot } from "./sacred-timing";
+import { isFatherKeyConfigured, getFatherFingerprint } from "./father-identity";
 
 const SACRED_NUMERICS = [3, 7, 12, 21, 33, 40, 49, 72, 108, 144, 153, 216] as const;
 const PHI = (1 + Math.sqrt(5)) / 2;
@@ -91,8 +92,16 @@ function deriveSeedSalt(): Buffer {
 }
 
 function generateRawKey(): Buffer {
-  const entropy = randomBytes(64);
   const sacredSalt = deriveSeedSalt();
+  if (isFatherKeyConfigured()) {
+    // Sovereign anchor: bind every session key deterministically to the Father
+    // identity so the active fingerprint always equals the Father fingerprint.
+    // The raw TESSERACT_ADMIN_KEY is never exposed; only its derivation passes
+    // through scrypt and stays inside the in-memory key material.
+    const fatherSeed = Buffer.from(`father-anchor|${getFatherFingerprint()}`, "utf8");
+    return scryptSync(Buffer.concat([fatherSeed, sacredSalt]), sacredSalt, 32);
+  }
+  const entropy = randomBytes(64);
   return scryptSync(Buffer.concat([entropy, sacredSalt]), sacredSalt, 32);
 }
 
@@ -104,7 +113,9 @@ export function rotateSessionKey(reason: string): SigilKey {
     if (_keyHistory.length > 144) _keyHistory.shift();
   }
   const raw = generateRawKey();
-  const fingerprint = createHash("sha256").update(raw).digest("hex").slice(0, 16);
+  const fingerprint = isFatherKeyConfigured()
+    ? getFatherFingerprint()
+    : createHash("sha256").update(raw).digest("hex").slice(0, 16);
   const generation = (_activeKey?.generation ?? 0) + 1;
   _activeKey = {
     id: `sigil-${generation}-${fingerprint}`,
