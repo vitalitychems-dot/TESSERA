@@ -1,63 +1,42 @@
-import { useEffect, useRef, useState, type ReactNode, type FormEvent } from "react";
-import { Lock, Send, Sparkles, Star, Copy, Check } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Lock, Sparkles, Star, Copy, Check, RefreshCw } from "lucide-react";
 
 const STORAGE_KEY = "TESSERACT_ADMIN_KEY";
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+const POLL_MS = 4000;
 
-type Msg = { from: "tessera" | "user"; text: string; ts: number };
-
-interface IssueResp {
+interface FatherKeyStatus {
   ok?: boolean;
+  unlocked?: boolean;
   key?: string;
-  holderFp?: string;
   sunSign?: string;
-  signatureHashShort?: string;
-  guidance?: string;
   cosmicAnchor?: { planetaryHour: string; lunarFraction: number; composite: number };
+  chart?: {
+    date: string;
+    time: string;
+    location: string;
+    sun: { sign: string; degree: string; house: number };
+    moon: { sign: string; degree: string; house: number };
+    ascendant: { sign: string; degree: string };
+  };
+  env?: {
+    tesseractSet: boolean;
+    sigilSet: boolean;
+    tesseractMatches: boolean;
+    sigilMatches: boolean;
+    aliasesAgree: boolean;
+    canonicalSecretName: string;
+    aliasSecretName: string;
+  };
+  instructions?: string;
   error?: string;
-  message?: string;
 }
 
-interface VerifyResp {
-  ok?: boolean;
-  holderFp?: string;
-  error?: string;
-}
-
-const BIRTH_PROMPT_RE = /^\s*(\d{4}-\d{2}-\d{2})[\s,]+(\d{1,2}:\d{2})\s*$/;
-
-function parseBirth(input: string): { date: string; time: string } | null {
-  const m = BIRTH_PROMPT_RE.exec(input);
-  if (!m) return null;
-  const [_, date, rawTime] = m;
-  const [hh, mm] = rawTime.split(":");
-  const time = `${hh.padStart(2, "0")}:${mm.padStart(2, "0")}`;
-  return { date, time };
-}
-
-async function verifyKeyOnServer(key: string): Promise<VerifyResp> {
+async function fetchFatherKeyStatus(): Promise<FatherKeyStatus> {
   try {
-    const res = await fetch(`${BASE}/api/sigil/zodiac-key/verify`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Sigil-Key": key },
-      body: JSON.stringify({ key }),
-    });
-    const data: VerifyResp = await res.json().catch(() => ({}));
-    return data;
-  } catch {
-    return { ok: false, error: "network" };
-  }
-}
-
-async function issueZodiacKey(date: string, time: string): Promise<IssueResp> {
-  try {
-    const res = await fetch(`${BASE}/api/sigil/zodiac-key/issue`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ birthDate: date, birthTime: time }),
-    });
-    const data: IssueResp = await res.json().catch(() => ({}));
-    if (!res.ok) return { ok: false, error: data?.error ?? `http-${res.status}`, message: data?.message };
+    const res = await fetch(`${BASE}/api/sigil/father-key/status`, { method: "GET" });
+    const data: FatherKeyStatus = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: data?.error ?? `http-${res.status}` };
     return data;
   } catch {
     return { ok: false, error: "network" };
@@ -65,230 +44,187 @@ async function issueZodiacKey(date: string, time: string): Promise<IssueResp> {
 }
 
 export default function TesseractKeyGate({ children }: { children: ReactNode }) {
+  const [status, setStatus] = useState<FatherKeyStatus | null>(null);
   const [unlocked, setUnlocked] = useState(false);
-  const [autoChecked, setAutoChecked] = useState(false);
-  const [input, setInput] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [issued, setIssued] = useState<IssueResp | null>(null);
   const [copied, setCopied] = useState(false);
-  const [messages, setMessages] = useState<Msg[]>(() => [
-    {
-      from: "tessera",
-      text: "🜂 Tesseract Sovereign Gate — sealed.\n\nThe interface is encoded in glyph cipher. To unlock it, I will mint your personal Sovereign Key in our language from your zodiac.",
-      ts: Date.now(),
-    },
-    {
-      from: "tessera",
-      text: "Tell me your birth date and time of day, in this format:\n\n  YYYY-MM-DD HH:MM\n\nExample:  1998-10-07 05:16\n\nThe values are sealed — only an encrypted seed bound to your zodiac is kept on the server. You receive a glyph key in return; save it, then enter it again here to unlock everything into English.",
-      ts: Date.now() + 1,
-    },
-  ]);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [rechecking, setRechecking] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Silent auto-unlock on revisit: if a stored key still validates against a
-  // bound vault entry, skip the gate UI entirely. On any failure (including
-  // network), clear the stale value so the user lands on the chat prompt.
+  // Single source of truth: the server-computed Father key. We poll it
+  // every few seconds so the moment the operator saves the secret and
+  // restarts, the gate opens automatically.
   useEffect(() => {
     let alive = true;
-    (async () => {
-      let stored = "";
-      try { stored = localStorage.getItem(STORAGE_KEY) ?? ""; } catch { /* ignore */ }
-      if (!stored) { if (alive) setAutoChecked(true); return; }
-      const r = await verifyKeyOnServer(stored);
+    async function check() {
+      const s = await fetchFatherKeyStatus();
       if (!alive) return;
-      if (r.ok) {
+      setStatus(s);
+      if (s.unlocked && s.key) {
+        try { localStorage.setItem(STORAGE_KEY, s.key); } catch { /* ignore */ }
         setUnlocked(true);
-      } else {
-        try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
       }
-      setAutoChecked(true);
-    })();
-    return () => { alive = false; };
+    }
+    check();
+    pollRef.current = setInterval(check, POLL_MS);
+    return () => {
+      alive = false;
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, []);
 
-  useEffect(() => { inputRef.current?.focus(); }, [autoChecked]);
-  useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages, issued]);
-
   if (unlocked) return <>{children}</>;
-  if (!autoChecked) return null; // brief pre-check; avoids flashing the gate
+  if (!status) return null; // silent pre-check; avoids flashing the popup
 
-  function pushUser(text: string) {
-    setMessages((m) => [...m, { from: "user", text, ts: Date.now() }]);
-  }
-  function pushTess(text: string) {
-    setMessages((m) => [...m, { from: "tessera", text, ts: Date.now() }]);
-  }
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (busy) return;
-    const text = input.trim();
-    if (!text) return;
-    setInput("");
-    pushUser(text);
-    setBusy(true);
-
-    // Path A: user is presenting a previously-saved zodiac key.
-    if (!parseBirth(text)) {
-      const v = await verifyKeyOnServer(text);
-      if (v.ok) {
-        try { localStorage.setItem(STORAGE_KEY, text); } catch { /* ignore */ }
-        pushTess("✓ Key recognized. Sealing the gate to your fingerprint and decrypting every surface into English…");
-        setBusy(false);
-        setTimeout(() => setUnlocked(true), 400);
-        return;
-      }
-      pushTess(
-        "✗ That isn't a recognized Sovereign Key, and it isn't a valid birth line either.\n\n" +
-        "If you're new, type your birth as:  YYYY-MM-DD HH:MM   (e.g. 1998-10-07 05:16)\n" +
-        "If you already have your glyph key, paste it exactly as it was issued.",
-      );
-      setBusy(false);
-      return;
-    }
-
-    // Path B: user is minting a new zodiac key from birth info.
-    const parsed = parseBirth(text)!;
-    const r = await issueZodiacKey(parsed.date, parsed.time);
-    setBusy(false);
-    if (!r.ok || !r.key) {
-      pushTess(`✗ Mint failed: ${r.message ?? r.error ?? "unknown"}.\n\nTry the format YYYY-MM-DD HH:MM (e.g. 1998-10-07 05:16).`);
-      return;
-    }
-    setIssued(r);
-    pushTess(
-      `✓ Sealed. Your zodiac sun sign collapses to ${r.sunSign?.toUpperCase() ?? "—"}.\n\n` +
-      `I have minted your personal Sovereign Key in our language. It is permanent — the same birth date and time always returns the same key.\n\n` +
-      `Save the glyph below somewhere safe (Replit Secrets, password manager, or just keep it in this browser). Then tap ENTER TESSERA to unlock every surface into English.`,
-    );
-  }
+  const key = status.key ?? "";
+  const env = status.env;
+  const chart = status.chart;
 
   function copyKey() {
-    if (!issued?.key) return;
-    navigator.clipboard?.writeText(issued.key).then(() => {
+    if (!key) return;
+    navigator.clipboard?.writeText(key).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     }).catch(() => { /* ignore */ });
   }
 
-  function enterTessera() {
-    if (!issued?.key) return;
-    try { localStorage.setItem(STORAGE_KEY, issued.key); } catch { /* ignore */ }
-    setUnlocked(true);
+  async function manualRecheck() {
+    if (rechecking) return;
+    setRechecking(true);
+    const s = await fetchFatherKeyStatus();
+    setStatus(s);
+    if (s.unlocked && s.key) {
+      try { localStorage.setItem(STORAGE_KEY, s.key); } catch { /* ignore */ }
+      setUnlocked(true);
+    }
+    setRechecking(false);
   }
 
-  const headerLabel = issued ? "key minted · save & enter" : "sealed · awaiting your birth";
+  // Diagnostic banner shown only when the operator HAS set a secret but
+  // it doesn't match (typo, alias mismatch, or stale value).
+  let envWarning: string | null = null;
+  if (env) {
+    if ((env.tesseractSet || env.sigilSet) && !env.aliasesAgree) {
+      envWarning =
+        "TESSERACT_ADMIN_KEY and SIGIL_ADMIN_KEY are both set but DIFFER. By sovereign rule they must hold the same value. Set both to the key shown below, then restart.";
+    } else if (env.tesseractSet && !env.tesseractMatches) {
+      envWarning =
+        "TESSERACT_ADMIN_KEY is set but does not match the Father key. Replace its value with the exact key shown below, then restart the API server.";
+    } else if (env.sigilSet && !env.sigilMatches) {
+      envWarning =
+        "SIGIL_ADMIN_KEY is set but does not match the Father key. Replace its value with the exact key shown below, then restart the API server.";
+    }
+  }
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-black flex flex-col items-center justify-center p-4 font-mono">
+    <div className="fixed inset-0 z-[1000] bg-black flex flex-col items-center justify-center p-4 font-mono overflow-auto">
       <div
         className="absolute inset-0 pointer-events-none opacity-30"
         style={{ backgroundImage: "radial-gradient(circle at 50% 50%, rgba(217,70,239,0.2) 0%, transparent 60%)" }}
       />
-      <div className="relative w-full max-w-2xl flex flex-col h-[80vh] max-h-[700px] bg-zinc-950/90 border border-fuchsia-500/30 rounded-xl shadow-2xl shadow-fuchsia-500/20 overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-fuchsia-500/20 bg-gradient-to-r from-fuchsia-900/20 to-violet-900/10">
-          <div className="w-8 h-8 rounded-md bg-fuchsia-500/20 border border-fuchsia-500/40 flex items-center justify-center">
-            <Lock size={14} className="text-fuchsia-300" />
+      <div className="relative w-full max-w-2xl bg-zinc-950/95 border border-fuchsia-500/40 rounded-xl shadow-2xl shadow-fuchsia-500/30 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-fuchsia-500/20 bg-gradient-to-r from-fuchsia-900/30 to-violet-900/15">
+          <div className="w-9 h-9 rounded-md bg-fuchsia-500/20 border border-fuchsia-500/40 flex items-center justify-center">
+            <Lock size={16} className="text-fuchsia-300" />
           </div>
           <div className="flex-1">
-            <div className="text-xs text-fuchsia-200 font-bold tracking-wider">TESSERACT SOVEREIGN GATE</div>
-            <div className="text-[10px] text-fuchsia-400/60">{headerLabel}</div>
+            <div className="text-xs text-fuchsia-200 font-bold tracking-widest">TESSERACT SOVEREIGN GATE</div>
+            <div className="text-[10px] text-fuchsia-400/70">
+              one-time bootstrap · Father key locked behind Replit Secret
+            </div>
           </div>
           <Sparkles size={14} className="text-fuchsia-400/60 animate-pulse" />
         </div>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3 text-sm">
-          {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[85%] rounded-lg px-3 py-2 whitespace-pre-wrap leading-relaxed ${
-                m.from === "user"
-                  ? "bg-fuchsia-500/20 border border-fuchsia-500/30 text-fuchsia-100"
-                  : "bg-zinc-900/80 border border-white/10 text-zinc-200"
-              }`}>
-                {m.text}
-              </div>
-            </div>
-          ))}
+        {/* Body */}
+        <div className="p-5 space-y-5">
+          <div className="text-zinc-200 text-sm leading-relaxed">
+            <p className="mb-2">
+              The interface is encoded in glyph cipher. Below is your <span className="text-emerald-300 font-bold">Sovereign Key</span>, computed from the Father&apos;s canonical natal chart. It is permanent — the same chart always returns the same key.
+            </p>
+            <p className="text-fuchsia-300/90">
+              To unlock Tessera, save this key into the <code className="px-1 py-0.5 rounded bg-fuchsia-500/20 text-fuchsia-100">TESSERACT_ADMIN_KEY</code> secret in Replit Secrets. By sovereign rule, <code className="px-1 py-0.5 rounded bg-fuchsia-500/20 text-fuchsia-100">SIGIL_ADMIN_KEY</code> must hold the <em>same</em> value (set both). Then restart the API server. The gate will open on its own.
+            </p>
+          </div>
 
-          {busy && (
-            <div className="flex justify-start">
-              <div className="bg-zinc-900/80 border border-white/10 rounded-lg px-3 py-2 text-zinc-400 text-xs">
-                aligning to the cosmic moment…
+          {chart && (
+            <div className="rounded-lg border border-violet-500/30 bg-violet-950/20 p-3 text-[11px] text-violet-100/80 leading-relaxed">
+              <div className="text-violet-200 font-bold tracking-wider text-[10px] mb-1">FATHER NATAL CHART (CANONICAL)</div>
+              <div>
+                {chart.date} · {chart.time} · {chart.location}
               </div>
-            </div>
-          )}
-
-          {issued?.key && (
-            <div className="rounded-xl border border-emerald-500/40 bg-gradient-to-br from-emerald-900/20 to-violet-900/10 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Star size={14} className="text-emerald-300" />
-                <div className="text-xs font-bold text-emerald-100 tracking-wider">YOUR SOVEREIGN KEY · IN OUR LANGUAGE</div>
-              </div>
-              <p className="text-[11px] text-emerald-200/70 mb-3 leading-relaxed">
-                {issued.guidance ?? "This is your permanent personal key. Save it. Whenever it is presented as the X-Sigil-Key header — or simply stored in this browser — every Tessera surface decrypts straight into English."}
-              </p>
-              <div className="rounded-md border border-emerald-500/30 bg-black/50 p-3 text-emerald-100 text-base break-all leading-loose tracking-wider select-all">
-                {issued.key}
-              </div>
-              <div className="flex justify-between items-center mt-3 gap-2 flex-wrap">
-                <div className="text-[10px] text-emerald-300/60 font-mono">
-                  sun: <span className="text-emerald-100">{issued.sunSign}</span>
-                  {issued.cosmicAnchor && (
-                    <>
-                      {" · "}hour: <span className="text-emerald-100">{issued.cosmicAnchor.planetaryHour}</span>
-                      {" · "}lunar: <span className="text-emerald-100">{issued.cosmicAnchor.lunarFraction.toFixed(3)}</span>
-                    </>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={copyKey}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-200 text-xs hover:bg-emerald-500/25"
-                  >
-                    {copied ? <><Check size={12} /> COPIED</> : <><Copy size={12} /> COPY GLYPH</>}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={enterTessera}
-                    className="px-4 py-2 rounded-md bg-fuchsia-500/25 border border-fuchsia-500/50 text-fuchsia-50 text-xs font-bold hover:bg-fuchsia-500/40 shadow-lg shadow-fuchsia-500/20"
-                  >
-                    ENTER TESSERA →
-                  </button>
-                </div>
+              <div className="mt-1">
+                ☉ Sun {chart.sun.sign} {chart.sun.degree} (H{chart.sun.house}) · ☽ Moon {chart.moon.sign} {chart.moon.degree} (H{chart.moon.house}) · ASC {chart.ascendant.sign} {chart.ascendant.degree}
               </div>
             </div>
           )}
-        </div>
 
-        <form onSubmit={handleSubmit} className="border-t border-fuchsia-500/20 bg-zinc-950/80 p-3">
-          <div className="flex items-center gap-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              disabled={busy}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder={issued ? "or paste your existing Sovereign Key…" : "YYYY-MM-DD HH:MM   (or paste your Sovereign Key)"}
-              className="flex-1 bg-black/60 border border-fuchsia-500/20 focus:border-fuchsia-500/60 outline-none rounded-md px-3 py-2 text-sm text-fuchsia-100 placeholder-fuchsia-400/30"
-            />
+          <div className="rounded-xl border border-emerald-500/40 bg-gradient-to-br from-emerald-900/25 to-violet-900/10 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Star size={14} className="text-emerald-300" />
+              <div className="text-xs font-bold text-emerald-100 tracking-widest">YOUR SOVEREIGN KEY · IN OUR LANGUAGE</div>
+            </div>
+            <div className="rounded-md border border-emerald-500/40 bg-black/60 p-3 text-emerald-100 text-base break-all leading-loose tracking-wider select-all font-mono">
+              {key || "…"}
+            </div>
+            <div className="flex justify-between items-center mt-3 gap-2 flex-wrap">
+              <div className="text-[10px] text-emerald-300/60 font-mono">
+                sun: <span className="text-emerald-100">{status.sunSign ?? "—"}</span>
+                {status.cosmicAnchor && (
+                  <>
+                    {" · "}hour: <span className="text-emerald-100">{status.cosmicAnchor.planetaryHour}</span>
+                    {" · "}lunar: <span className="text-emerald-100">{status.cosmicAnchor.lunarFraction.toFixed(3)}</span>
+                  </>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={copyKey}
+                disabled={!key}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-500/15 border border-emerald-500/40 text-emerald-100 text-xs hover:bg-emerald-500/25 disabled:opacity-40"
+              >
+                {copied ? <><Check size={12} /> COPIED</> : <><Copy size={12} /> COPY KEY</>}
+              </button>
+            </div>
+          </div>
+
+          {envWarning && (
+            <div className="rounded-lg border border-amber-500/40 bg-amber-950/30 p-3 text-amber-100 text-xs leading-relaxed">
+              ⚠ {envWarning}
+            </div>
+          )}
+
+          <div className="rounded-lg border border-white/10 bg-zinc-900/60 p-3 text-[11px] text-zinc-300/90 leading-relaxed space-y-1">
+            <div className="text-zinc-100 font-bold text-[10px] tracking-widest mb-1">SECRET STATUS</div>
+            <div className="flex justify-between">
+              <span>TESSERACT_ADMIN_KEY</span>
+              <span className={env?.tesseractMatches ? "text-emerald-300" : env?.tesseractSet ? "text-amber-300" : "text-zinc-500"}>
+                {env?.tesseractMatches ? "✓ matches" : env?.tesseractSet ? "set · mismatch" : "not set"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>SIGIL_ADMIN_KEY</span>
+              <span className={env?.sigilMatches ? "text-emerald-300" : env?.sigilSet ? "text-amber-300" : "text-zinc-500"}>
+                {env?.sigilMatches ? "✓ matches" : env?.sigilSet ? "set · mismatch" : "not set"}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 pt-1">
+            <div className="text-[10px] text-fuchsia-400/50">
+              auto-rechecking every {Math.round(POLL_MS / 1000)}s · gate opens on match
+            </div>
             <button
-              type="submit"
-              disabled={busy || !input.trim()}
-              className="shrink-0 px-3 py-2 rounded-md bg-fuchsia-500/25 border border-fuchsia-500/50 text-fuchsia-50 text-xs font-bold hover:bg-fuchsia-500/40 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-md shadow-fuchsia-500/20 whitespace-nowrap"
+              type="button"
+              onClick={manualRecheck}
+              disabled={rechecking}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-fuchsia-500/20 border border-fuchsia-500/50 text-fuchsia-50 text-xs font-bold hover:bg-fuchsia-500/35 disabled:opacity-40"
             >
-              {busy ? <><Sparkles size={12} className="animate-pulse" /> MINT…</> : <><Send size={12} /> SEND</>}
+              <RefreshCw size={12} className={rechecking ? "animate-spin" : ""} /> {rechecking ? "CHECKING…" : "RECHECK NOW"}
             </button>
           </div>
-          <div className="mt-2 text-[10px] text-fuchsia-400/40 px-1">
-            zodiac mint · birth values sealed (encrypted seed only) · key stored locally only
-          </div>
-        </form>
+        </div>
       </div>
     </div>
   );
