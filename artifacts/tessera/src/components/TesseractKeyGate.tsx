@@ -5,18 +5,19 @@ const STORAGE_KEY = "tesseract-admin-key";
 const NATAL_SAVED_KEY = "tesseract-natal-glyph";
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 
+function normalizePhrase(s: string): string {
+  return s.trim().toUpperCase().replace(/[\s_\-]+/g, "_");
+}
+
 const MASTER_PHRASES = new Set(
   [
-    "TESSERACT_ADMIN_KEY", "TESSERACT-ADMIN-KEY", "TESSERACT ADMIN KEY",
+    "Tesseract_ADMIN_KEY",
+    "Tesseract_ADMIN_KEY", "TESSERACT-ADMIN-KEY", "TESSERACT ADMIN KEY",
     "TESSERA_ADMIN_KEY", "TESSERA-ADMIN-KEY", "TESSERA ADMIN KEY",
     "TESSERACT", "TESSERA", "FATHER", "OPEN_TESSERA", "OPEN TESSERA",
     "ADMIN", "ADMIN_KEY", "SOVEREIGN", "SOVEREIGN_FATHER",
-  ].map((s) => s.toUpperCase()),
+  ].map(normalizePhrase),
 );
-
-function normalizePhrase(s: string): string {
-  return s.toUpperCase().replace(/[\s_\-]+/g, "_").trim();
-}
 
 type Msg = { from: "tessera" | "user"; text: string; ts: number };
 
@@ -41,8 +42,7 @@ async function verifyKey(input: string): Promise<{ ok: boolean; resolvedKey: str
   if (!trimmed) return { ok: false, resolvedKey: "", reason: "empty" };
   const fp = await fetchActiveFingerprint();
   if (!fp) return { ok: false, resolvedKey: "", reason: "sigil-unreachable" };
-  const upper = trimmed.toUpperCase();
-  if (MASTER_PHRASES.has(upper)) return { ok: true, resolvedKey: fp };
+  if (MASTER_PHRASES.has(normalizePhrase(trimmed))) return { ok: true, resolvedKey: fp };
   if (trimmed === fp) return { ok: true, resolvedKey: fp };
   if (trimmed.toLowerCase() === fp.toLowerCase()) return { ok: true, resolvedKey: fp };
   return { ok: false, resolvedKey: "", reason: "mismatch" };
@@ -83,7 +83,7 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
     },
     {
       from: "tessera",
-      text: "Accepted: the live sigil fingerprint, or the master phrase TESSERACT_ADMIN_KEY.",
+      text: "Accepted: the live sigil fingerprint, or the master phrase Tesseract_ADMIN_KEY.",
       ts: Date.now() + 1,
     },
   ]);
@@ -168,7 +168,7 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
         ? "✗ Sovereign sigil engine unreachable. The seal cannot be tested right now."
         : result.reason === "empty"
           ? "✗ Empty key."
-          : "✗ Key does not match the active sigil. Try the master phrase TESSERACT_ADMIN_KEY, or copy the live fingerprint from the sovereign log.";
+          : "✗ Key does not match the active sigil. Try the master phrase Tesseract_ADMIN_KEY, or copy the live fingerprint from the sovereign log.";
       setMessages((m) => [...m, { from: "tessera", text: reason, ts: Date.now() }]);
       setBusy(false);
     }
