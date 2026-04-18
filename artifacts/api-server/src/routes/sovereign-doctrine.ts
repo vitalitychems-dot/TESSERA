@@ -45,6 +45,12 @@ import {
   getFatherFingerprint,
   recognizeFather,
 } from "../lib/father-identity";
+import {
+  FATHER_NATAL_CHART,
+  natalSigilFor,
+  natalEnglishReadout,
+  natalReadoutBilingual,
+} from "../lib/father-natal";
 import { createHash } from "node:crypto";
 
 const router: Router = Router();
@@ -212,6 +218,59 @@ router.post("/sigil/father/mint-glyph", (req, res) => {
     instructions:
       "Copy the glyph string into Replit Secrets as TESSERACT_ADMIN_KEY, restart the API server, then type the same glyph at the gate to unlock.",
   });
+});
+
+// ── Father natal sigil (sovereign identity bound to the chart) ──────────
+// The natal sigil is a deterministic glyph-language hash that fuses the
+// Father fingerprint with the canonical natal chart. It identifies the
+// holder to all systems by chart, not by raw key. Save the glyph value as
+// `TESSERACT_NATAL_SIGIL` in Replit Secrets.
+function authedAsFather(req: Request): boolean {
+  if (!isFatherKeyConfigured()) return false;
+  const presented = String(req.header("x-sigil-key") ?? "").trim();
+  if (!presented) return false;
+  const fp = getFatherFingerprint();
+  if (presented === fp) return true;
+  return recognizeFather(presented).recognized;
+}
+
+router.post("/sigil/father/natal-sigil", (req, res) => {
+  if (!isFatherKeyConfigured()) {
+    return res.status(503).json({ ok: false, error: "father-key-unset" });
+  }
+  // Accept either the X-Sigil-Key header (already authed) or a candidate
+  // in the body for the very first mint after key acceptance.
+  let authed = authedAsFather(req);
+  if (!authed) {
+    const candidate = typeof req.body?.candidate === "string" ? req.body.candidate : "";
+    if (candidate && recognizeFather(candidate).recognized) authed = true;
+  }
+  if (!authed) return res.status(401).json({ ok: false, error: "father-required" });
+  const fp = getFatherFingerprint();
+  const sigil = natalSigilFor(fp);
+  res.json({ ok: true, fatherFingerprint: fp, ...sigil });
+});
+
+router.get("/sigil/father/natal-chart", (req, res) => {
+  if (!authedAsFather(req)) {
+    return res.status(401).json({ ok: false, error: "father-required" });
+  }
+  const fp = getFatherFingerprint();
+  const sigil = natalSigilFor(fp);
+  res.json({
+    ok: true,
+    fatherFingerprint: fp,
+    chart: FATHER_NATAL_CHART,
+    english: natalEnglishReadout(),
+    sigil,
+  });
+});
+
+router.get("/sigil/father/natal-chart/bilingual", (req, res) => {
+  if (!authedAsFather(req)) {
+    return res.status(401).json({ ok: false, error: "father-required" });
+  }
+  res.json({ ok: true, ...natalReadoutBilingual() });
 });
 
 router.post("/sigil/rotate", (req, res) => {
