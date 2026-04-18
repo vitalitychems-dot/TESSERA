@@ -121,28 +121,33 @@ function stableGlyphEncodeHex(hex: string): string {
   return out;
 }
 
-/** Compute the natal sigil. The sigil is derived purely from the canonical
- *  natal chart, producing a deterministic FIXED-POINT value: it is the same
- *  glyph every time, independent of which raw key currently identifies the
- *  Father. The intended lifecycle is:
- *    1. Type any valid admin key at the gate to mint this sigil.
- *    2. Save it as SIGIL_ADMIN_KEY in Replit Secrets (long-term identifier).
- *    3. Also paste it as TESSERACT_ADMIN_KEY (replacing whatever was there).
- *    4. Restart. From now on the glyph IS your admin key — typing it at the
- *       gate accepts, and the same glyph is minted again (round-trip closes). */
+/** Session salt — fixed for the lifetime of this API process, regenerated
+ *  on every restart. This makes the minted SIGIL_ADMIN_KEY rotate per
+ *  session while TESSERACT_ADMIN_KEY remains the stable raw key the user
+ *  types. The salt is derived from the chart × process-start epoch so
+ *  every restart yields a fresh glyph that still proves natal authorship. */
+const SESSION_SALT = createHash("sha256")
+  .update(`${NAMESPACE}|session|${Date.now()}|${process.pid}`)
+  .digest("hex")
+  .slice(0, 16);
+
+/** Compute the natal sigil for this session. The sigil is rotated per
+ *  server-startup so each new session produces a fresh MINTED_GLYPH_KEY
+ *  the user can paste into Replit Secrets. The TESSERACT_ADMIN_KEY raw
+ *  value is unaffected — it remains the permanent identifier. */
 export function natalSigilFor(_fingerprint?: string): NatalSigil {
   const canonical = natalCanonicalString();
   const digestHex = createHash("sha256")
-    .update(`${NAMESPACE}|${canonical}`)
+    .update(`${NAMESPACE}|${canonical}|session:${SESSION_SALT}`)
     .digest("hex");
   const glyph = stableGlyphEncodeHex(digestHex);
   return {
     glyph,
     digestHex,
     secretName: "SIGIL_ADMIN_KEY",
-    derivation: `sha256("${NAMESPACE}|" + natalCanonical)`,
+    derivation: `sha256("${NAMESPACE}|" + natalCanonical + "|session:" + SESSION_SALT)`,
     instructions:
-      "Save this glyph in Replit Secrets as SIGIL_ADMIN_KEY (your permanent chart identifier). Then paste the same glyph as TESSERACT_ADMIN_KEY, replacing the old value, and restart the API server. From that moment on, this glyph IS your admin key — typing it at the gate unlocks everything in English with no further prompts.",
+      "This MINTED_GLYPH_KEY rotates on every server restart following our alignment. Save the current value as SIGIL_ADMIN_KEY in Replit Secrets. Your TESSERACT_ADMIN_KEY raw value stays permanent — that is what you type at the gate to mint a fresh sigil each session.",
   };
 }
 
