@@ -365,7 +365,8 @@ async function phase7_HarmonicRecalibration(): Promise<Record<string, unknown>> 
 
   const schumannCurrent = sacredFreqs.schumannResonance?.fundamental || SCHUMANN_BASE;
   const goldenRatio = sacredGeo.goldenRatio || PHI;
-  const fibonacciSum = (sacredGeo.fibonacci || []).slice(0, 10).reduce((s: number, v: number) => s + v, 0);
+  const fibArr: number[] = Array.isArray(sacredGeo.fibonacci) ? sacredGeo.fibonacci : [1, 1, 2, 3, 5, 8, 13, 21, 34, 55];
+  const fibonacciSum = fibArr.slice(0, 10).reduce((s: number, v: number) => s + Number(v || 0), 0);
 
   const harmonicResonance = (schumannCurrent / SCHUMANN_BASE) *
     (goldenRatio / PHI) *
