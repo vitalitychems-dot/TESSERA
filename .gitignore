@@ -60,3 +60,5 @@ venv/
 attached_assets/Pasted-*.txt
 artifacts/api-server/.data/income-snapshots.json
 _evolutions/
+artifacts/api-server/.local-data/natal-vault.json
+artifacts/api-server/data/council-ledger.jsonl
