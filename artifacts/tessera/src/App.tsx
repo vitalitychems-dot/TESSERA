@@ -350,9 +350,9 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AdminProvider>
-          {/* TEMP: gate bypassed at the user's request — Tessera will mint the key in-prompt.
-              To re-enable, swap the fragment back to <TesseractKeyGate> … </TesseractKeyGate>. */}
-          <>
+          {/* Sovereign gate: locked until the operator pastes the canonical Father
+              key into the TESSERACT_ADMIN_KEY (= SIGIL_ADMIN_KEY) Replit Secret. */}
+          <TesseractKeyGate>
           <MeshProvider>
           <NLPGoalsProvider>
           <TooltipProvider>
@@ -380,7 +380,7 @@ function App() {
           </TooltipProvider>
           </NLPGoalsProvider>
           </MeshProvider>
-          </>
+          </TesseractKeyGate>
         </AdminProvider>
       </QueryClientProvider>
     </ErrorBoundary>

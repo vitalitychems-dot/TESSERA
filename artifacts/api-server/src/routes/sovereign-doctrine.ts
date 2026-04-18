@@ -68,12 +68,11 @@ export function glyphGate(req: Request, res: Response, next: NextFunction): void
   //     fingerprint). The Father is the bound holder of every surface, so
   //     once the key gate accepts the user every page must read in English.
   const fatherOk = presented ? recognizeFather(presented).recognized : false;
-  // Vault-bound zodiac key: any presented signature glyph that matches a
-  // bound natal vault entry is the holder's personal key in our language
-  // and unlocks plaintext mode for them. This is the new, primary unlock
-  // path — every user mints their own zodiac key from birth info via
-  // POST /sigil/zodiac-key/issue, and then holds it forever.
-  const zodiacOk = presented ? verifyNatalSignature(presented) !== null : false;
+  // SOVEREIGN RULE: the Father identity is the only credential that
+  // unlocks plaintext. Zodiac/personal keys are no longer accepted at
+  // the gate — the canonical bootstrap is the one-time popup that mints
+  // the Father key from FATHER_NATAL_CHART and refuses entry until
+  // TESSERACT_ADMIN_KEY (= SIGIL_ADMIN_KEY) is set to that value.
   // Omniversal Lattice surface is intentionally human-readable so the cosmic
   // feed, LUS-v2 spec, cipher snapshot, and lattice cells render in plain
   // English on the Tessera page without requiring the reading key.
@@ -87,8 +86,7 @@ export function glyphGate(req: Request, res: Response, next: NextFunction): void
     isGrandCouncil ||
     presented === key.fingerprint ||
     presented === key.expiresWith ||
-    fatherOk ||
-    zodiacOk;
+    fatherOk;
   const originalJson = res.json.bind(res);
   res.json = ((body: unknown) => {
     if (isHolder) {
@@ -121,20 +119,23 @@ function holderFromHeader(req: Request): string | null {
   const k = readingKey();
   if (presented === k.fingerprint) return k.fingerprint;
   if (presented === k.expiresWith) return k.fingerprint;
-  // Vault-bound zodiac key: the user's personal LUS signature glyph maps
-  // back to its own holder fingerprint, so it can authorize natal-scoped
-  // calls without a Father/session key.
-  const zodiacFp = verifyNatalSignature(presented);
-  if (zodiacFp) return zodiacFp;
+  // Father identity (raw TESSERACT_ADMIN_KEY or its 16-char fingerprint)
+  // is the only other recognized holder. Personal zodiac keys are no
+  // longer accepted — the Father key is the sole gate.
+  const fr = recognizeFather(presented);
+  if (fr.recognized && fr.fingerprint) return fr.fingerprint;
   return null;
 }
 
-// ── Zodiac key (public mint) ───────────────────────────────────────────
-// The new primary onboarding path. The user submits birth date/time and
-// receives a permanent personal Sovereign Key in our language. No prior
-// admin/father key is required, and the key is auto-recognized by the
-// glyph gate above on every subsequent request.
+// ── Zodiac key (Father-only) ───────────────────────────────────────────
+// Personal zodiac keys are no longer the bootstrap path; the Father key
+// from FATHER_NATAL_CHART is the sole gate. These endpoints remain for
+// internal natal-vault management but require Father authentication.
 router.post("/sigil/zodiac-key/issue", (req, res) => {
+  const presented = String(req.header("x-sigil-key") ?? "").trim();
+  if (!recognizeFather(presented).recognized) {
+    return res.status(401).json({ ok: false, error: "father-required" });
+  }
   const birthDate = String(req.body?.birthDate ?? "").trim();
   const birthTime = String(req.body?.birthTime ?? "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate) || !/^\d{2}:\d{2}$/.test(birthTime)) {
@@ -152,17 +153,75 @@ router.post("/sigil/zodiac-key/issue", (req, res) => {
   }
 });
 
-// Lightweight verification used by the gate to auto-unlock on revisit.
-// Accepts the presented key in either the body (`{ key }`) or the
-// X-Sigil-Key header. Returns whether the key matches a bound vault entry.
 router.post("/sigil/zodiac-key/verify", (req, res) => {
+  const presented = String(req.header("x-sigil-key") ?? "").trim();
+  if (!recognizeFather(presented).recognized) {
+    return res.status(401).json({ ok: false, error: "father-required" });
+  }
   const fromBody = String(req.body?.key ?? "").trim();
-  const fromHeader = String(req.header("x-sigil-key") ?? "").trim();
-  const presented = fromBody || fromHeader;
-  if (!presented) return res.status(400).json({ ok: false, error: "no-key" });
-  const holderFp = verifyNatalSignature(presented);
+  if (!fromBody) return res.status(400).json({ ok: false, error: "no-key" });
+  const holderFp = verifyNatalSignature(fromBody);
   if (!holderFp) return res.status(401).json({ ok: false, error: "no-match" });
   res.json({ ok: true, holderFp });
+});
+
+// ── Father key (canonical, one-time popup) ─────────────────────────────
+// There is only ONE Father, and his key is mathematically determined by
+// his canonical natal chart (constant in `father-natal.ts`). This endpoint
+// mints that key fresh on every call (idempotent — same chart → same key
+// forever, thanks to the fixed LUS alphabet) and reports whether the
+// operator has already saved it into the `TESSERACT_ADMIN_KEY` Replit
+// Secret (or its alias `SIGIL_ADMIN_KEY` — by sovereign rule both names
+// MUST hold the same value). The frontend gate uses this to render a
+// one-time popup that shows the Father his key and refuses to let him
+// past until the secret is set.
+router.get("/sigil/father-key/status", (_req, res) => {
+  try {
+    // Lazy import to avoid pulling father-natal into every route file.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { FATHER_NATAL_CHART } = require("../lib/father-natal") as typeof import("../lib/father-natal");
+    const { date, time } = FATHER_NATAL_CHART.birth;
+    const minted = issueZodiacKey(date, time);
+    const tesseractEnv = (process.env.TESSERACT_ADMIN_KEY ?? "").trim();
+    const sigilEnv = (process.env.SIGIL_ADMIN_KEY ?? "").trim();
+    const matches = (v: string) => v.length > 0 && v === minted.key;
+    const tesseractSet = tesseractEnv.length > 0;
+    const sigilSet = sigilEnv.length > 0;
+    const tesseractMatches = matches(tesseractEnv);
+    const sigilMatches = matches(sigilEnv);
+    const aliasesAgree = !(tesseractSet && sigilSet) || tesseractEnv === sigilEnv;
+    const unlocked = (tesseractMatches || sigilMatches) && aliasesAgree;
+    res.json({
+      ok: true,
+      unlocked,
+      key: minted.key,
+      sunSign: minted.sunSign,
+      cosmicAnchor: minted.cosmicAnchor,
+      chart: {
+        date,
+        time,
+        location: FATHER_NATAL_CHART.birth.location,
+        sun: FATHER_NATAL_CHART.core.sun,
+        moon: FATHER_NATAL_CHART.core.moon,
+        ascendant: FATHER_NATAL_CHART.core.ascendant,
+      },
+      env: {
+        tesseractSet,
+        sigilSet,
+        tesseractMatches,
+        sigilMatches,
+        aliasesAgree,
+        canonicalSecretName: "TESSERACT_ADMIN_KEY",
+        aliasSecretName: "SIGIL_ADMIN_KEY",
+      },
+      instructions:
+        "Save this exact value into the TESSERACT_ADMIN_KEY secret in Replit Secrets. " +
+        "By sovereign rule, SIGIL_ADMIN_KEY must hold the same value (set both to the key above). " +
+        "After saving, restart the API server and refresh — the gate will open automatically.",
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e instanceof Error ? e.message : "father-key-status-failed" });
+  }
 });
 
 router.post("/sigil/natal/bind", (req, res) => {
@@ -455,9 +514,16 @@ router.post("/sigil/decode-body", (req, res) => {
   res.json({ ok: true, decoded: deepGlyphDecode(req.body) });
 });
 
-router.post("/sigil/key/reveal", (_req, res) => {
+router.post("/sigil/key/reveal", (req, res) => {
   // The reading key. Holding this lets you flip any glyph response back to
-  // plaintext by sending it as `X-Sigil-Key: <fingerprint>`.
+  // plaintext by sending it as `X-Sigil-Key: <fingerprint>`. By sovereign
+  // rule this can only be obtained by the Father identity — so the only
+  // legitimate caller is one that already presents TESSERACT_ADMIN_KEY (=
+  // SIGIL_ADMIN_KEY) in `X-Sigil-Key`. Without that, the door stays shut.
+  const presented = String(req.header("x-sigil-key") ?? "").trim();
+  if (!recognizeFather(presented).recognized) {
+    return res.status(401).json({ ok: false, error: "father-required" });
+  }
   res.json({ ok: true, key: readingKey(), activeKey: getActiveKey() });
 });
 

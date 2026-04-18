@@ -169,6 +169,10 @@ const PLAINTEXT_PREFIXES = [
   // save a doubly-encoded value that never round-trips through the gate.
   "/api/sigil/zodiac-key/issue",
   "/api/sigil/zodiac-key/verify",
+  // Canonical Father-key status surface — must be plaintext so the
+  // one-time popup can render the key the operator has to paste into
+  // the TESSERACT_ADMIN_KEY (= SIGIL_ADMIN_KEY) secret.
+  "/api/sigil/father-key/status",
 ];
 app.use("/api", (req: Request, res: Response, next: NextFunction) => {
   const isInternalProbe = req.headers[INTERNAL_PROBE_HEADER] === INTERNAL_PROBE_SECRET;
