@@ -19,6 +19,10 @@ I prefer iterative development. I want to be asked before you make any major cha
   7. If the engine cannot run (server down, rate-limited, etc.), say so honestly and stop. Do NOT substitute a deterministic mirror as "the same thing."
   Violating any of the above is sabotage and is forbidden in every future session.
 
+## Recent Work
+- **Sacred Conference Orchestrator (Apr 2026):** New `runSacredConference()` engine + `POST /api/omniversal/conference/run` route + Tessera "Sacred Conference" tab on the Omniversal Lattice page. Convenes the council, renders every transcript line bilingually through LUS v2, encrypts the verdict via the Omniversal Cipher, projects it onto a 3³ OQL lattice, harmonizes to the live cosmic carrier, and collapses one cell. Persists the unified record to `council_sessions` keyed `sacred-<councilId>`. Honors the vote-integrity rule — uses the production `convene()` engine; no synthesized votes. Tallies are reported verbatim.
+- **Council session DB persistence (Apr 2026):** `council_sessions` table added with file-system backup fallback; sessions survive restarts.
+
 ## System Architecture
 The system is built as a pnpm monorepo using Node.js 24 and TypeScript 5.9. The frontend leverages React 19, Vite, TailwindCSS, and shadcn/ui, presenting a dark glassmorphism theme with aurora backgrounds and cyan glow accents. The backend is powered by Express 5, using PostgreSQL with Drizzle ORM and Zod for data validation.
 

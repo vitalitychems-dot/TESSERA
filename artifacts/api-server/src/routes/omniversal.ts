@@ -7,6 +7,7 @@ import {
   latticeSnapshot, latticeFullDump,
 } from "../lib/omniversal-quantum-lattice";
 import { isFatherKeyConfigured, getFatherFingerprint } from "../lib/father-identity";
+import { runSacredConference, getSacredConference } from "../lib/sacred-conference-orchestrator";
 
 const router: IRouter = Router();
 
@@ -149,6 +150,26 @@ router.post("/omniversal/pipeline/run", (req, res) => {
       `then a single cell was observed — collapsing to numeric ${collapsed.result.value}, ` +
       `symbol ${collapsed.result.symbol}, ${collapsed.result.frequency} Hz, token "${collapsed.result.token}".`,
   });
+});
+
+// === Sacred Conference (LUS v2 + Cipher + OQL end-to-end) ===
+// Convenes the council, renders every line bilingually through LUS v2,
+// encrypts the verdict with the Omniversal Cipher, and runs an OQL
+// computation on the verdict — all in one persisted transcript.
+router.post("/omniversal/conference/run", async (req, res) => {
+  try {
+    const topic = typeof req.body?.topic === "string" ? req.body.topic : undefined;
+    const seed = typeof req.body?.seed === "string" ? req.body.seed : undefined;
+    const result = await runSacredConference({ topic, seed });
+    res.json({ ok: true, conference: result });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e?.message ?? String(e) });
+  }
+});
+router.get("/omniversal/conference/:id", async (req, res) => {
+  const result = await getSacredConference(String(req.params.id));
+  if (!result) { res.status(404).json({ ok: false, error: "not found" }); return; }
+  res.json({ ok: true, conference: result });
 });
 
 // === Demo / smoke test ===
