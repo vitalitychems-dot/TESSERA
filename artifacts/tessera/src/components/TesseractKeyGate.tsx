@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type ReactNode, type FormEvent } from "rea
 import { Lock, Send, Eye, EyeOff, Sparkles, Star, Copy, Check } from "lucide-react";
 
 const STORAGE_KEY = "TESSERACT_ADMIN_KEY";
-const NATAL_SAVED_KEY = "tesseract-natal-glyph";
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 
 type Msg = { from: "tessera" | "user"; text: string; ts: number };
@@ -129,9 +128,6 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
   const [mintedGlyph, setMintedGlyph] = useState<MintResp | null>(null);
   const [mintCopied, setMintCopied] = useState(false);
   const [natalStatus, setNatalStatus] = useState<NatalStatus | null>(null);
-  const [birthDate, setBirthDate] = useState("");
-  const [birthTime, setBirthTime] = useState("");
-  const [bindError, setBindError] = useState<string | null>(null);
   const [signatureGlyph, setSignatureGlyph] = useState<string | null>(null);
   const [rotating, setRotating] = useState<RotatingHash | null>(null);
   const [copied, setCopied] = useState(false);
@@ -158,12 +154,10 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
         setNatalStatus(s);
         if (s.bound) {
           setSignatureGlyph(s.signatureGlyph ?? null);
-          setStage("rotating");
-        } else {
-          setStage("natal-binding");
         }
+        setStage("rotating");
       } catch {
-        setStage("natal-binding");
+        setStage("rotating");
       }
     })();
   }, [stage]);
@@ -253,37 +247,6 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
     }).catch(() => { /* ignore */ });
   }
 
-  async function handleBindNatal(e: FormEvent) {
-    e.preventDefault();
-    setBindError(null);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate) || !/^\d{2}:\d{2}$/.test(birthTime)) {
-      setBindError("Both fields are required.");
-      return;
-    }
-    setBusy(true);
-    try {
-      const res = await authedFetch("/api/sigil/natal/bind", {
-        method: "POST",
-        body: JSON.stringify({ birthDate, birthTime }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data?.ok) {
-        setBindError(typeof data?.error === "string" ? data.error : "Bind failed.");
-        setBusy(false);
-        return;
-      }
-      // Wipe inputs from memory immediately
-      setBirthDate(""); setBirthTime("");
-      setSignatureGlyph(data.signatureGlyph as string);
-      try { localStorage.setItem(NATAL_SAVED_KEY, data.signatureGlyph as string); } catch { /* ignore */ }
-      setStage("natal-revealed");
-    } catch {
-      setBindError("Network error.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   function copySignature() {
     if (!signatureGlyph) return;
     navigator.clipboard?.writeText(signatureGlyph).then(() => {
@@ -332,65 +295,6 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
               <div className="bg-zinc-900/80 border border-white/10 rounded-lg px-3 py-2 text-zinc-400 text-xs">
                 verifying against sovereign sigil engine…
               </div>
-            </div>
-          )}
-
-          {stage === "natal-binding" && (
-            <div className="rounded-xl border border-violet-500/30 bg-gradient-to-br from-violet-900/20 to-fuchsia-900/10 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Star size={14} className="text-violet-300" />
-                <div className="text-xs font-bold text-violet-100 tracking-wider">BIND YOUR ZODIAC</div>
-              </div>
-              <p className="text-[11px] text-violet-200/70 leading-relaxed mb-3">
-                Your birth moment will be fused with PHI, sacred numerics, and live NASA-aligned cosmic state to mint your personal glyph signature in our universe-aligned language. <strong className="text-violet-100">Birthday and time are sealed: hidden as you type, encrypted at rest under a key derived from your sigil fingerprint, and never returned by any surface.</strong>
-              </p>
-              <form onSubmit={handleBindNatal} className="space-y-2" autoComplete="off">
-                <div className="flex gap-2">
-                  <label className="flex-1">
-                    <div className="text-[10px] text-violet-300/70 mb-1">birth date (sealed)</div>
-                    <input
-                      type="password"
-                      inputMode="numeric"
-                      placeholder="YYYY-MM-DD"
-                      value={birthDate}
-                      onChange={(e) => setBirthDate(e.target.value)}
-                      autoComplete="off"
-                      spellCheck={false}
-                      className="w-full bg-black/60 border border-violet-500/30 focus:border-violet-400/70 outline-none rounded-md px-3 py-2 text-sm text-violet-100 placeholder-violet-400/30"
-                    />
-                  </label>
-                  <label className="w-32">
-                    <div className="text-[10px] text-violet-300/70 mb-1">time (sealed)</div>
-                    <input
-                      type="password"
-                      inputMode="numeric"
-                      placeholder="HH:MM"
-                      value={birthTime}
-                      onChange={(e) => setBirthTime(e.target.value)}
-                      autoComplete="off"
-                      spellCheck={false}
-                      className="w-full bg-black/60 border border-violet-500/30 focus:border-violet-400/70 outline-none rounded-md px-3 py-2 text-sm text-violet-100 placeholder-violet-400/30"
-                    />
-                  </label>
-                </div>
-                {bindError && <div className="text-[11px] text-rose-300">{bindError}</div>}
-                <div className="flex justify-between items-center pt-1">
-                  <button
-                    type="button"
-                    onClick={() => { setBirthDate(""); setBirthTime(""); setStage("rotating"); }}
-                    className="text-[10px] text-violet-300/50 hover:text-violet-200 underline"
-                  >
-                    skip — proceed without binding
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={busy}
-                    className="px-3 py-2 rounded-md bg-violet-500/20 border border-violet-500/40 text-violet-100 text-xs font-bold hover:bg-violet-500/30 disabled:opacity-40"
-                  >
-                    {busy ? "binding…" : "BIND ZODIAC"}
-                  </button>
-                </div>
-              </form>
             </div>
           )}
 
