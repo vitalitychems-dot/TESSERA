@@ -56,9 +56,25 @@ function getAdminToken(): string {
   return (process.env.TESSERACT_ADMIN_KEY ?? "").trim();
 }
 
+// R3-3 (77% approval): in production we REQUIRE a dedicated session secret.
+// Falling back to the admin token would mean every token rotation silently
+// invalidates every active operator cookie, AND a leaked token could forge
+// cookies — both unacceptable. In dev we still fall back so local
+// experimentation isn't broken. Logged once at startup for transparency.
+let _sessionSecretWarningEmitted = false;
 function getSessionSecret(): string {
   const dedicated = (process.env.SOVEREIGN_SESSION_SECRET ?? "").trim();
   if (dedicated.length >= 32) return dedicated;
+  if (process.env.NODE_ENV === "production") {
+    if (!_sessionSecretWarningEmitted) {
+      _sessionSecretWarningEmitted = true;
+      process.stderr.write(
+        "[sovereign-session] FATAL-LIKE production missing SOVEREIGN_SESSION_SECRET (≥32 chars). " +
+        "Cookie signing is DISABLED until configured. Set the secret and restart.\n",
+      );
+    }
+    return ""; // empty secret => signSessionId returns "" => issueSession effectively fails closed
+  }
   return getAdminToken();
 }
 

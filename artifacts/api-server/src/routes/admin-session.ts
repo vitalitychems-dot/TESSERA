@@ -54,6 +54,37 @@ function clearCookie(res: Response): void {
   res.setHeader("Set-Cookie", attrs.join("; "));
 }
 
+// R3-4 (73.8% approval): Origin allowlist as defense-in-depth on top of
+// SameSite=Strict. Honest browsers send Origin on POST; we accept same-host
+// or any host listed in SOVEREIGN_ALLOWED_ORIGINS (comma-separated). When
+// Origin is absent (e.g. curl, server-to-server) we permit it — the existing
+// token check still gates everything. This closes a CSRF vector without
+// breaking legitimate tooling.
+function originAllowed(req: Request): boolean {
+  const origin = req.headers.origin;
+  if (!origin || typeof origin !== "string") return true; // no Origin => not a browser CSRF vector
+  try {
+    const u = new URL(origin);
+    const host = req.headers.host;
+    if (host && u.host === host) return true;
+    const allowList = (process.env.SOVEREIGN_ALLOWED_ORIGINS ?? "")
+      .split(",").map((s) => s.trim()).filter(Boolean);
+    if (allowList.includes(origin) || allowList.includes(u.host)) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+function requireSameOrigin(req: Request, res: Response, next: () => void): void {
+  if (!originAllowed(req)) {
+    logger.warn({ origin: req.headers.origin, ip: ipOf(req) }, "admin-session: Origin rejected");
+    res.status(403).json({ ok: false, error: "origin-forbidden" });
+    return;
+  }
+  next();
+}
+
 function readCookie(req: Request): string | undefined {
   const fromParser = (req as Request & { cookies?: Record<string, string> }).cookies?.[SESSION_COOKIE];
   if (typeof fromParser === "string") return fromParser;
@@ -67,7 +98,7 @@ function readCookie(req: Request): string | undefined {
 }
 
 // POST /api/admin/session — { token } -> set cookie.
-router.post("/admin/session", adminSessionRateLimit, fatherVerifyRateLimit, (req: Request, res: Response) => {
+router.post("/admin/session", adminSessionRateLimit, fatherVerifyRateLimit, requireSameOrigin, (req: Request, res: Response) => {
   if (!isAdminTokenConfigured()) {
     res.status(503).json({
       ok: false,
@@ -127,7 +158,7 @@ router.get("/admin/session/stats", (_req: Request, res: Response) => {
 });
 
 // POST /api/admin/session/logout — clear cookie + revoke server-side.
-router.post("/admin/session/logout", (req: Request, res: Response) => {
+router.post("/admin/session/logout", requireSameOrigin, (req: Request, res: Response) => {
   const cookie = readCookie(req);
   revokeSession(cookie);
   clearCookie(res);

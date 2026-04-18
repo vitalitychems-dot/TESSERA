@@ -254,3 +254,24 @@ Before rotating any production secret (`TESSERACT_ADMIN_KEY`,
 The proposal must reach **≥ 2/3 weighted approval** before the operator
 changes the secret. The proposal id and approval rate are captured in the
 on-disk ledger (INTEG-1) so the rotation has a permanent audit record.
+
+---
+
+## Round 3 Conference (2026-04-18, third pass)
+
+| Proposal | Result | Impl |
+|---|---|---|
+| R3-1 Replay endpoint for drift detection | **approved 100%** | `GET /api/council/replay/:id` re-runs a ledger entry through the persona engine and reports `{original, replay, drift}` |
+| R3-2 Quorum guard for degraded vote counts | **rejected 50.4%** | council ruled no — respected |
+| R3-3 Decouple `SOVEREIGN_SESSION_SECRET` from admin token | **approved 77.0%** | production now requires a dedicated session secret; cookie signing fails-closed if absent |
+| R3-4 CSRF Origin allowlist on admin-session POST routes | **approved 73.8%** | `requireSameOrigin` middleware: same-host or `SOVEREIGN_ALLOWED_ORIGINS`; missing Origin permitted (curl, server-to-server) |
+| R3-5 Tessera UI ledger panel | **approved 100%** | `/council-ledger` route — read-only audit view, 30s auto-refresh |
+| R3-6 `__Host-` cookie prefix in production | **rejected 43.3%** | council ruled no — respected |
+
+### Drift-detection example
+A real replay against a previously-rejected proposal returned
+`approved 0.768` — `statusChanged=true, delta=+0.266`. This is the engine
+working as designed: the persona vote is **not** a stable hash of the title
+but a real keyword-driven deliberation, so different framings produce
+different ratifications. The replay endpoint's job is to surface that
+sensitivity, not to suppress it.

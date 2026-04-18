@@ -48,6 +48,7 @@ const SystemPage = lazyRetry(() => import("@/pages/SystemPage"));
 const LatticeBrowserPage = lazyRetry(() => import("@/pages/LatticeBrowserPage"));
 const HistoryPage = lazyRetry(() => import("@/pages/HistoryPage"));
 const GrandCouncilPage = lazyRetry(() => import("@/pages/GrandCouncilPage"));
+const CouncilLedgerPage = lazyRetry(() => import("@/pages/CouncilLedgerPage"));
 const GrandCouncilDeliberationPage = lazyRetry(() => import("@/pages/GrandCouncilDeliberationPage"));
 const GrandEvolutionPage = lazyRetry(() => import("@/pages/GrandEvolutionPage"));
 const RecruitmentPage = lazyRetry(() => import("@/pages/RecruitmentPage"));
@@ -283,6 +284,7 @@ function AppRouter() {
 
         {/* Council & Forum */}
         <Route path="/grand-council">{() => <GrandCouncilPage />}</Route>
+        <Route path="/council-ledger">{() => <CouncilLedgerPage />}</Route>
         <Route path="/council-vgpu">{() => <GrandCouncilDeliberationPage />}</Route>
         <Route path="/grand-evolution">{() => <GrandEvolutionPage />}</Route>
         <Route path="/forum">{() => <TesseractForumPage />}</Route>
