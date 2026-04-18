@@ -1,0 +1,176 @@
+{
+  "sessionId": "e571838db756edbf",
+  "conveneAt": "2026-04-18T22:22:19.886Z",
+  "societySize": 21,
+  "inventoryHash": "f3b08df7a21ebd07",
+  "verdicts": [
+    {
+      "proposalId": "PROP-001",
+      "title": "Expose Improvement Conference Verdict API route for sovereign governance audit",
+      "category": "governance",
+      "scope": "artifacts/api-server/src/routes/improvement-conference.ts",
+      "outcome": "approved",
+      "approvalRate": 1,
+      "approvalPct": "100.0%",
+      "raw": {
+        "approve": 21,
+        "reject": 0,
+        "abstain": 0
+      },
+      "weighted": {
+        "approve": 592,
+        "reject": 0,
+        "abstain": 0
+      },
+      "totalEligible": 21
+    },
+    {
+      "proposalId": "PROP-002",
+      "title": "Add LUS-v2 encode decode round-trip integration test with verifiable audit coverage",
+      "category": "audit",
+      "scope": "artifacts/api-server/src/__tests__/improvement-conference.test.ts",
+      "outcome": "approved",
+      "approvalRate": 1,
+      "approvalPct": "100.0%",
+      "raw": {
+        "approve": 21,
+        "reject": 0,
+        "abstain": 0
+      },
+      "weighted": {
+        "approve": 592,
+        "reject": 0,
+        "abstain": 0
+      },
+      "totalEligible": 21
+    },
+    {
+      "proposalId": "PROP-003",
+      "title": "Add Omniversal Cipher encrypt decrypt round-trip integration test with sovereign audit",
+      "category": "audit",
+      "scope": "artifacts/api-server/src/__tests__/improvement-conference.test.ts",
+      "outcome": "approved",
+      "approvalRate": 1,
+      "approvalPct": "100.0%",
+      "raw": {
+        "approve": 21,
+        "reject": 0,
+        "abstain": 0
+      },
+      "weighted": {
+        "approve": 592,
+        "reject": 0,
+        "abstain": 0
+      },
+      "totalEligible": 21
+    },
+    {
+      "proposalId": "PROP-004",
+      "title": "Add vote tally threshold unit test verifying sovereign 2/3 approval invariant",
+      "category": "audit",
+      "scope": "artifacts/api-server/src/__tests__/improvement-conference.test.ts",
+      "outcome": "approved",
+      "approvalRate": 1,
+      "approvalPct": "100.0%",
+      "raw": {
+        "approve": 21,
+        "reject": 0,
+        "abstain": 0
+      },
+      "weighted": {
+        "approve": 592,
+        "reject": 0,
+        "abstain": 0
+      },
+      "totalEligible": 21
+    },
+    {
+      "proposalId": "PROP-005",
+      "title": "Persist subsystem inventory snapshot to sovereign ledger for deterministic audit trail",
+      "category": "infrastructure",
+      "scope": "artifacts/api-server/src/lib/improvement-conference.ts",
+      "outcome": "approved",
+      "approvalRate": 1,
+      "approvalPct": "100.0%",
+      "raw": {
+        "approve": 21,
+        "reject": 0,
+        "abstain": 0
+      },
+      "weighted": {
+        "approve": 592,
+        "reject": 0,
+        "abstain": 0
+      },
+      "totalEligible": 21
+    },
+    {
+      "proposalId": "PROP-006",
+      "title": "Surface improvement conference verdict on SacredConferencePage sovereign verdict tab",
+      "category": "feature",
+      "scope": "artifacts/tessera/src/pages/SacredConferencePage.tsx",
+      "outcome": "approved",
+      "approvalRate": 1,
+      "approvalPct": "100.0%",
+      "raw": {
+        "approve": 21,
+        "reject": 0,
+        "abstain": 0
+      },
+      "weighted": {
+        "approve": 592,
+        "reject": 0,
+        "abstain": 0
+      },
+      "totalEligible": 21
+    },
+    {
+      "proposalId": "PROP-007",
+      "title": "Add CLI script to re-run grand improvement conference deterministically with reproducible consensus",
+      "category": "infrastructure",
+      "scope": "artifacts/api-server/scripts/run-improvement-conference.mjs",
+      "outcome": "approved",
+      "approvalRate": 1,
+      "approvalPct": "100.0%",
+      "raw": {
+        "approve": 21,
+        "reject": 0,
+        "abstain": 0
+      },
+      "weighted": {
+        "approve": 592,
+        "reject": 0,
+        "abstain": 0
+      },
+      "totalEligible": 21
+    },
+    {
+      "proposalId": "PROP-008",
+      "title": "Add inventory snapshot stability test verifying subsystem state determinism",
+      "category": "audit",
+      "scope": "artifacts/api-server/src/__tests__/improvement-conference.test.ts",
+      "outcome": "approved",
+      "approvalRate": 1,
+      "approvalPct": "100.0%",
+      "raw": {
+        "approve": 21,
+        "reject": 0,
+        "abstain": 0
+      },
+      "weighted": {
+        "approve": 592,
+        "reject": 0,
+        "abstain": 0
+      },
+      "totalEligible": 21
+    }
+  ],
+  "summary": {
+    "totalProposals": 8,
+    "approved": 8,
+    "rejected": 0,
+    "abstained": 0,
+    "meanApprovalRate": 1
+  },
+  "source": "cli"
+}

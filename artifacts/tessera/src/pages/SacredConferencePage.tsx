@@ -688,6 +688,7 @@ export default function SacredConferencePage() {
     { id: "bible", label: "Living Bible", icon: <BookOpen size={14} /> },
     { id: "diagrams", label: "3D Diagrams", icon: <Box size={14} /> },
     { id: "agents", label: "Conference Agents", icon: <Users size={14} /> },
+    { id: "verdict", label: "Improvement Verdict", icon: <Shield size={14} /> },
   ];
 
   return (
@@ -811,6 +812,130 @@ export default function SacredConferencePage() {
             ))}
           </div>
         </div>
+      )}
+
+      {activeTab === "verdict" && <ImprovementVerdictTab />}
+    </div>
+  );
+}
+
+function ImprovementVerdictTab() {
+  const verdictQuery = useQuery({
+    queryKey: ["improvement-verdict"],
+    queryFn: async () => {
+      const res = await apiFetch("/improvement-conference/verdict");
+      return res.session;
+    },
+    retry: 1,
+  });
+
+  const runMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiFetch("/improvement-conference/run", { method: "POST" });
+      return res.session;
+    },
+    onSuccess: () => verdictQuery.refetch(),
+  });
+
+  const session = verdictQuery.data ?? runMutation.data;
+
+  return (
+    <div className="space-y-4">
+      <SectionHeader icon={Shield} title="Grand Improvement Conference Verdict" badge="Deterministic φ-vote" />
+
+      <div className="flex gap-3 items-center">
+        <button
+          onClick={() => runMutation.mutate()}
+          disabled={runMutation.isPending}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-medium disabled:opacity-50 transition"
+        >
+          <RotateCcw size={14} className={runMutation.isPending ? "animate-spin" : ""} />
+          {runMutation.isPending ? "Running conference…" : session ? "Re-run conference" : "Convene now"}
+        </button>
+        {verdictQuery.isError && !session && (
+          <span className="text-amber-400 text-xs">No verdict yet — click Convene to run the conference.</span>
+        )}
+      </div>
+
+      {runMutation.isError && (
+        <div className="text-rose-400 text-xs bg-rose-500/10 rounded-lg p-3 border border-rose-500/20">
+          Conference run failed: {(runMutation.error as Error)?.message}
+        </div>
+      )}
+
+      {session && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <HudPanel className="text-center p-3">
+              <div className="text-2xl font-bold text-emerald-300">{session.summary?.approved}</div>
+              <div className="text-[10px] text-white/50 uppercase">Approved</div>
+            </HudPanel>
+            <HudPanel className="text-center p-3">
+              <div className="text-2xl font-bold text-rose-300">{session.summary?.rejected}</div>
+              <div className="text-[10px] text-white/50 uppercase">Rejected</div>
+            </HudPanel>
+            <HudPanel className="text-center p-3">
+              <div className="text-2xl font-bold text-cyan-300">{session.summary?.implementedCount}</div>
+              <div className="text-[10px] text-white/50 uppercase">Implemented</div>
+            </HudPanel>
+            <HudPanel className="text-center p-3">
+              <div className="text-2xl font-bold text-amber-300">
+                {((session.summary?.meanApprovalRate ?? 0) * 100).toFixed(0)}%
+              </div>
+              <div className="text-[10px] text-white/50 uppercase">Mean Approval</div>
+            </HudPanel>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 text-[10px] text-white/40">
+            <div>Session: <span className="text-white/60 font-mono">{session.sessionId}</span></div>
+            <div>Convened: <span className="text-white/60">{new Date(session.conveneAt).toLocaleString()}</span></div>
+            <div>Society: <span className="text-white/60">{session.societySize} members</span></div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-xs font-semibold text-white/60 uppercase tracking-wider">Proposal Verdicts</div>
+            {session.verdicts?.map((v: any) => (
+              <GlassCard key={v.proposalId} className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className={`mt-0.5 shrink-0 text-base ${v.outcome === "approved" ? "text-emerald-400" : v.outcome === "rejected" ? "text-rose-400" : "text-amber-400"}`}>
+                    {v.outcome === "approved" ? "✓" : v.outcome === "rejected" ? "✗" : "~"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-mono text-white/40">{v.proposalId}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${v.outcome === "approved" ? "bg-emerald-500/20 text-emerald-300" : v.outcome === "rejected" ? "bg-rose-500/20 text-rose-300" : "bg-amber-500/20 text-amber-300"}`}>
+                        {v.outcome.toUpperCase()}
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/40">{v.category}</span>
+                      {v.implemented && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300">IMPLEMENTED</span>
+                      )}
+                    </div>
+                    <div className="text-sm font-medium text-white/90 mt-1">{v.title}</div>
+                    <div className="text-[10px] text-white/40 mt-1 font-mono">{v.scope}</div>
+                    <div className="flex gap-4 mt-2 text-[10px] text-white/50">
+                      <span>Approval: <strong className="text-white/70">{v.approvalPct}</strong></span>
+                      <span>↑{v.raw?.approve} ↓{v.raw?.reject} ~{v.raw?.abstain}</span>
+                      {v.decisive && <span className="text-cyan-400">decisive</span>}
+                    </div>
+                    {v.implementationNote && (
+                      <div className="text-[10px] text-white/40 mt-1 italic">{v.implementationNote}</div>
+                    )}
+                  </div>
+                </div>
+              </GlassCard>
+            ))}
+          </div>
+
+          {session.transcript && (
+            <GlassCard className="p-4">
+              <div className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2">Conference Transcript</div>
+              <pre className="text-[10px] text-white/50 font-mono whitespace-pre-wrap leading-relaxed max-h-64 overflow-y-auto">
+                {session.transcript?.join("\n")}
+              </pre>
+            </GlassCard>
+          )}
+        </>
       )}
     </div>
   );

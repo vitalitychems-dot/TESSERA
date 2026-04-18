@@ -80,6 +80,7 @@ const ALWAYS_OPEN_PREFIXES = [
   "/api/grand-council/",
   "/api/mssp/",
   "/api/vgpu/",
+  "/api/improvement-conference/",
 ];
 
 // V2-SIGMA (100% approval): strip server identification from every response.
