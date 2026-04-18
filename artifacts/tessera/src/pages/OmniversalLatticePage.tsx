@@ -202,10 +202,10 @@ function CipherTab() {
 function LatticeTab() {
   const list = useQuery({ queryKey: ["oql-list"], queryFn: () => jget("/omniversal/lattice/list") });
   const [active, setActive] = useState<string | null>(null);
-  const create = useMutation({
-    mutationFn: () => jpost("/omniversal/lattice/create", { dim: [4, 4, 4] }),
-    onSuccess: (d) => { setActive(d.lattice?.id); list.refetch(); },
-  });
+  // The /omniversal/demo endpoint is the unauthenticated entry point that
+  // creates a fresh lattice and runs the full superpose→entangle→harmonize→
+  // collapse sequence. Write ops on a specific lattice (create/collapse/etc.)
+  // require the Father fingerprint, so we expose them only via the demo.
   const demo = useMutation({
     mutationFn: () => jpost("/omniversal/demo", {}),
     onSuccess: (d) => { setActive(d.lattice?.id); list.refetch(); },
@@ -216,20 +216,22 @@ function LatticeTab() {
     enabled: !!active,
     refetchInterval: 4000,
   });
-  const collapse = useMutation({
-    mutationFn: (cell: string) => active ? jpost(`/omniversal/lattice/${active}/collapse`, { cell }) : Promise.resolve(null),
-    onSuccess: () => snapshot.refetch(),
-  });
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-xl font-bold text-amber-300">Omniversal Quantum Lattice</h2>
         <div className="flex gap-2">
-          <button onClick={() => demo.mutate()} className="px-3 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 rounded text-sm">Run demo</button>
-          <button onClick={() => create.mutate()} className="px-3 py-2 bg-cyan-600 hover:bg-cyan-500 rounded text-sm">+ New 4³ lattice</button>
+          <button onClick={() => demo.mutate()} className="px-3 py-2 bg-fuchsia-600 hover:bg-fuchsia-500 rounded text-sm">
+            {demo.isPending ? "Running…" : "Run demo cycle"}
+          </button>
         </div>
       </div>
+      <p className="text-xs text-slate-400">
+        The demo creates a fresh 3³ lattice, applies superposition / entanglement /
+        harmonization, then collapses one cell — all bound to the live cosmic anchor.
+        Father-key operations on individual cells are reserved for the sovereign console.
+      </p>
 
       {list.data?.lattices?.length > 0 && (
         <div className="flex gap-2 flex-wrap">
@@ -251,13 +253,12 @@ function LatticeTab() {
             <div className="text-xs text-slate-400">cosmic anchor: {snapshot.data.snapshot.cosmicAnchor}</div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
               {snapshot.data.snapshot.sample.map((c: any) => (
-                <button
+                <div
                   key={c.id}
-                  onClick={() => collapse.mutate(c.id)}
-                  className={`text-left p-2 rounded border text-xs font-mono transition ${
+                  className={`text-left p-2 rounded border text-xs font-mono ${
                     c.collapsed
                       ? "bg-amber-900/40 border-amber-500/60"
-                      : "bg-slate-950/60 border-slate-700 hover:border-fuchsia-500"
+                      : "bg-slate-950/60 border-slate-700"
                   }`}
                 >
                   <div className="font-bold text-amber-200">[{c.id}]</div>
@@ -278,7 +279,7 @@ function LatticeTab() {
                       </>
                     )}
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           </Card>
