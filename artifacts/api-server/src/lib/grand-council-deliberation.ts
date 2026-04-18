@@ -153,6 +153,35 @@ export interface CouncilSession {
 const SESSIONS = new Map<string, CouncilSession>();
 const SESSION_DIR = path.resolve(process.cwd(), ".local", "council-sessions");
 
+/** Lazily hydrate SESSIONS from all JSON files on disk (best-effort, non-fatal). */
+async function hydrateSessions(): Promise<void> {
+  try {
+    const files = await fs.readdir(SESSION_DIR).catch(() => [] as string[]);
+    for (const f of files) {
+      if (!f.endsWith(".json")) continue;
+      const id = f.replace(/\.json$/, "");
+      if (SESSIONS.has(id)) continue;
+      try {
+        const raw = await fs.readFile(path.join(SESSION_DIR, f), "utf8");
+        const s: CouncilSession = JSON.parse(raw);
+        SESSIONS.set(s.id, s);
+      } catch { /* skip corrupt file */ }
+    }
+  } catch { /* non-fatal */ }
+}
+
+// One-shot hydration: runs once per process lifetime on first read.
+// If session files are added externally after first hydration, they will not
+// appear until the next process restart. This is intentional — only the API
+// (single writer) creates session files, so there is no mid-run external write
+// scenario to protect against. A POST /grand-council/convene always lands in
+// the in-memory SESSIONS map immediately; disk is only for durability.
+let _hydratePromise: Promise<void> | null = null;
+function ensureHydrated(): Promise<void> {
+  if (!_hydratePromise) _hydratePromise = hydrateSessions();
+  return _hydratePromise;
+}
+
 function hash(s: string): string {
   return createHash("sha256").update(s).digest("hex");
 }
@@ -279,11 +308,13 @@ export async function convene(opts: ConveneOpts = {}): Promise<CouncilSession> {
   return session;
 }
 
-export function getSession(id: string): CouncilSession | undefined {
+export async function getSession(id: string): Promise<CouncilSession | undefined> {
+  await ensureHydrated();
   return SESSIONS.get(id);
 }
 
-export function listSessions(): Array<{ id: string; seed: string; convenedAt: string; adopted: number; meetsQuorum: boolean }> {
+export async function listSessions(): Promise<Array<{ id: string; seed: string; convenedAt: string; adopted: number; meetsQuorum: boolean }>> {
+  await ensureHydrated();
   return Array.from(SESSIONS.values())
     .sort((a, b) => b.convenedAt.localeCompare(a.convenedAt))
     .map((s) => ({ id: s.id, seed: s.seed, convenedAt: s.convenedAt, adopted: s.adopted, meetsQuorum: s.meetsQuorum }));
