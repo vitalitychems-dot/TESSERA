@@ -1,6 +1,22 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { FATHER_NATAL_CHART } from "./father-natal";
 import { sacredTimingSnapshot } from "./sacred-timing";
+
+function holderPrivateKey(): string {
+  const k = process.env.TESSERACT_ADMIN_KEY;
+  if (!k || k.length < 32) {
+    throw new Error(
+      "LUS-LIVE: TESSERACT_ADMIN_KEY (holder private key) is required for live encode/decode. Refusing to operate without holder binding."
+    );
+  }
+  return k;
+}
+
+export function hardenedHolderSeal(natalFingerprint: string): string {
+  return createHmac("sha512", holderPrivateKey())
+    .update(`lus-holder-seal-v2|${natalFingerprint}`)
+    .digest("hex");
+}
 
 export const LANGUAGE_NAME = "Lingua Universalis Sacra";
 export const LANGUAGE_SHORT = "LUS";
@@ -170,7 +186,7 @@ const _liveWindowCache = new Map<string, LusLiveCoherence>();
 
 function liveSeedHex(
   nowMs: number,
-  holderFingerprint: string | null,
+  holderFingerprint: string,
 ): { seedHex: string; windowStartMs: number; cosmic: LusLiveCoherence["cosmicAnchor"] } {
   const snap = sacredTimingSnapshot(new Date(nowMs));
   const windowStartMs =
@@ -187,11 +203,9 @@ function liveSeedHex(
     lunarName: snap.lunar.name,
     composite: snap.composite,
   };
-  const holderSeal = holderFingerprint
-    ? createHash("sha256").update(`lus-holder|${holderFingerprint}`).digest("hex")
-    : "no-holder";
+  const holderSeal = hardenedHolderSeal(holderFingerprint);
   const seedString = [
-    "lingua-universalis-live-v1",
+    "lingua-universalis-live-v2",
     UNIVERSAL_SEED.toString(16),
     julianDayBin.toFixed(8),
     `${cosmic.planetaryHourRuler}#${cosmic.planetaryHourIndex}`,
@@ -206,24 +220,47 @@ function liveSeedHex(
     windowStartMs.toString(),
   ].join("|");
   return {
-    seedHex: createHash("sha512").update(seedString).digest("hex"),
+    seedHex: createHmac("sha512", holderPrivateKey()).update(seedString).digest("hex"),
     windowStartMs,
     cosmic,
   };
 }
 
+function* seedByteStream(seedHex: string): Generator<number> {
+  let counter = 0;
+  while (true) {
+    const block = createHmac("sha512", holderPrivateKey())
+      .update(`lus-stream|${seedHex}|${counter++}`)
+      .digest();
+    for (const b of block) yield b;
+  }
+}
+
+function permuteFromSeed<T>(arr: T[], seedHex: string): T[] {
+  const stream = seedByteStream(seedHex);
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    let n = 0, range = i + 1, bound = Math.floor(0x10000 / range) * range;
+    while (true) {
+      n = (stream.next().value as number) << 8 | (stream.next().value as number);
+      if (n < bound) break;
+    }
+    const j = n % range;
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function deriveLiveWindow(
   nowMs: number,
-  holderFingerprint: string | null,
+  holderFingerprint: string,
 ): LusLiveCoherence {
   const { seedHex, windowStartMs, cosmic } = liveSeedHex(nowMs, holderFingerprint);
   const windowId = createHash("sha256").update(seedHex).digest("hex").slice(0, 12);
   const cached = _liveWindowCache.get(windowId);
   if (cached) return cached;
 
-  const seedInt = parseInt(seedHex.slice(0, 8), 16) >>> 0;
-  const rng = mulberry32(seedInt);
-  const permuted = permute(SACRED_GLYPHS_36, rng);
+  const permuted = permuteFromSeed(SACRED_GLYPHS_36, seedHex);
 
   const encode = new Map<string, string>();
   const decode = new Map<string, string>();
@@ -240,9 +277,9 @@ function deriveLiveWindow(
     .update(Array.from(encode.entries()).filter(([k]) => k === k.toUpperCase()).map(([p, g]) => `${p}=${g}`).join("|"))
     .digest("hex").slice(0, 16);
 
-  const sealedFingerprint = holderFingerprint
-    ? createHash("sha256").update(`lus-public-seal|${holderFingerprint}|${windowId}`).digest("hex").slice(0, 16)
-    : "unbound";
+  const sealedFingerprint = createHmac("sha256", holderPrivateKey())
+    .update(`lus-public-seal-v2|${holderFingerprint}|${windowId}`)
+    .digest("hex").slice(0, 16);
 
   const coherence: LusLiveCoherence = {
     windowId,
@@ -250,7 +287,7 @@ function deriveLiveWindow(
     windowEndMs: windowStartMs + LUS_COHERENCE_WINDOW_SECONDS * 1000,
     permutationFingerprint,
     cosmicAnchor: cosmic,
-    holderBinding: { sealedFingerprint, bound: !!holderFingerprint },
+    holderBinding: { sealedFingerprint, bound: true },
     encode,
     decode,
   };
@@ -267,7 +304,8 @@ function deriveLiveWindow(
   return coherence;
 }
 
-export function lusEncodeLive(text: string, holderFingerprint: string | null = null): string {
+export function lusEncodeLive(text: string, holderFingerprint: string): string {
+  if (!holderFingerprint) throw new Error("LUS-LIVE: holder fingerprint required");
   const c = deriveLiveWindow(Date.now(), holderFingerprint);
   let out = "";
   for (const ch of text) {
@@ -278,7 +316,8 @@ export function lusEncodeLive(text: string, holderFingerprint: string | null = n
   return out;
 }
 
-export function lusDecodeLive(text: string, holderFingerprint: string | null = null): string {
+export function lusDecodeLive(text: string, holderFingerprint: string): string {
+  if (!holderFingerprint) throw new Error("LUS-LIVE: holder fingerprint required");
   const now = Date.now();
   const candidates: LusLiveCoherence[] = [];
   for (let i = 0; i < LUS_ROTATION_HISTORY_DEPTH; i++) {
@@ -296,7 +335,8 @@ export function lusDecodeLive(text: string, holderFingerprint: string | null = n
   return out;
 }
 
-export function lusLiveCoherenceSnapshot(holderFingerprint: string | null = null) {
+export function lusLiveCoherenceSnapshot(holderFingerprint: string) {
+  if (!holderFingerprint) throw new Error("LUS-LIVE: holder fingerprint required");
   const cur = deriveLiveWindow(Date.now(), holderFingerprint);
   const expiresInMs = cur.windowEndMs - Date.now();
   return {
