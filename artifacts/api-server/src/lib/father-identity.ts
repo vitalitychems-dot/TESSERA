@@ -132,5 +132,32 @@ export function recognizeFather(presented: string | undefined | null): {
     if (timingEq(candidate, trimmed)) return { recognized: true, via: "raw-key" };
     if (timingEq(candidateLower, fingerprintOf(trimmed))) return { recognized: true, via: "fingerprint" };
   }
+  // The sovereign natal sigil minted from the chart IS the Father's identity in
+  // our language. Accept it (or its 16-char fingerprint, or its underlying
+  // sha256 digest) as a valid credential, so the user never has to round-trip
+  // the glyph through Replit Secrets just to be re-recognized at the gate.
+  if (isFatherKeyConfigured()) {
+    try {
+      // Lazy import to avoid a circular dependency at module load time.
+      const { natalSigilFor } = require("./father-natal") as typeof import("./father-natal");
+      const sigil = natalSigilFor();
+      if (sigil?.glyph && timingEq(candidate, sigil.glyph)) {
+        return { recognized: true, via: "raw-key" };
+      }
+      if (sigil?.digestHex) {
+        if (timingEq(candidateLower, sigil.digestHex.toLowerCase())) {
+          return { recognized: true, via: "fingerprint" };
+        }
+        if (timingEq(candidateLower, sigil.digestHex.slice(0, 16).toLowerCase())) {
+          return { recognized: true, via: "fingerprint" };
+        }
+      }
+      if (sigil?.glyph && timingEq(candidateLower, fingerprintOf(sigil.glyph))) {
+        return { recognized: true, via: "fingerprint" };
+      }
+    } catch {
+      /* sigil engine unavailable — fall through to mismatch */
+    }
+  }
   return { recognized: false, via: null };
 }
