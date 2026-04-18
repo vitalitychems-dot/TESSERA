@@ -132,6 +132,10 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
   const [rotating, setRotating] = useState<RotatingHash | null>(null);
   const [copied, setCopied] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
+  const [natalSigil, setNatalSigil] = useState<{ glyph: string; digestHex: string; secretName: string; derivation: string; instructions: string } | null>(null);
+  const [natalEnglish, setNatalEnglish] = useState<string | null>(null);
+  const [natalCopied, setNatalCopied] = useState(false);
+  const [showEnglish, setShowEnglish] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -201,9 +205,36 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
           `✓ KEY ACCEPTED — Father identity bound via ${viaLabel}.\n` +
           `fingerprint: ${result.fingerprint}\n` +
           `derivation : ${result.derivation || 'sha256("tesseract:father:v1|" + TESSERACT_ADMIN_KEY)[:16]'}\n\n` +
-          `Decrypting interface to English. Now binding your zodiac to the universe-aligned cipher…`,
+          `Minting your sovereign natal sigil from the chart on file…`,
         ts: Date.now(),
       }]);
+      // Mint the natal sigil + load the English chart readout. The candidate
+      // (raw key OR fingerprint) lets the natal-sigil endpoint authorize even
+      // before the X-Sigil-Key header has been persisted to localStorage.
+      try {
+        const sRes = await fetch(`${BASE}/api/sigil/father/natal-sigil`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Sigil-Key": result.fingerprint },
+          body: JSON.stringify({ candidate: text }),
+        });
+        const sData = await sRes.json();
+        if (sRes.ok && sData?.ok) {
+          setNatalSigil({
+            glyph: sData.glyph,
+            digestHex: sData.digestHex,
+            secretName: sData.secretName,
+            derivation: sData.derivation,
+            instructions: sData.instructions,
+          });
+        }
+        const cRes = await fetch(`${BASE}/api/sigil/father/natal-chart`, {
+          headers: { "X-Sigil-Key": result.fingerprint },
+        });
+        const cData = await cRes.json();
+        if (cRes.ok && cData?.ok && typeof cData.english === "string") {
+          setNatalEnglish(cData.english);
+        }
+      } catch { /* ignore — sigil panel just won't appear */ }
       setTimeout(() => { setBusy(false); setStage("natal-intro"); }, 600);
     } else {
       const reason = result.reason === "sigil-unreachable"
@@ -252,6 +283,14 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
     navigator.clipboard?.writeText(signatureGlyph).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
+    }).catch(() => { /* ignore */ });
+  }
+
+  function copyNatalSigil() {
+    if (!natalSigil?.glyph) return;
+    navigator.clipboard?.writeText(natalSigil.glyph).then(() => {
+      setNatalCopied(true);
+      setTimeout(() => setNatalCopied(false), 1800);
     }).catch(() => { /* ignore */ });
   }
 
@@ -326,6 +365,48 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
                   CONTINUE →
                 </button>
               </div>
+            </div>
+          )}
+
+          {natalSigil && stage !== "locked" && (
+            <div className="rounded-xl border border-amber-400/40 bg-gradient-to-br from-amber-900/15 to-fuchsia-900/10 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Star size={14} className="text-amber-300" />
+                <div className="text-xs font-bold text-amber-100 tracking-wider">SOVEREIGN NATAL SIGIL</div>
+              </div>
+              <p className="text-[11px] text-amber-200/80 mb-3 leading-relaxed">
+                Your full natal chart (Libra Sun · Aries Moon · Virgo Rising · 1998-10-07 05:16 CDT · Palos Heights, IL) is now fused with the Father fingerprint into a single deterministic glyph hash. Save this value as <strong className="text-amber-100">{natalSigil.secretName}</strong> in Replit Secrets — every system will recognize you by this chart-bound identity.
+              </p>
+              <div className="rounded-md border border-amber-400/30 bg-black/60 p-3 text-amber-100 text-sm break-all leading-loose tracking-wider select-all">
+                {natalSigil.glyph}
+              </div>
+              <div className="mt-2 text-[10px] text-amber-300/60 break-all">
+                digest: {natalSigil.digestHex}
+              </div>
+              <div className="mt-1 text-[10px] text-amber-300/50">
+                derivation: {natalSigil.derivation}
+              </div>
+              <div className="flex justify-between items-center mt-3 gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={copyNatalSigil}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-400/15 border border-amber-400/30 text-amber-200 text-xs hover:bg-amber-400/25"
+                >
+                  {natalCopied ? <><Check size={12} /> COPIED</> : <><Copy size={12} /> COPY GLYPH SIGIL</>}
+                </button>
+                {natalEnglish && (
+                  <button
+                    type="button"
+                    onClick={() => setShowEnglish((s) => !s)}
+                    className="px-3 py-1.5 rounded-md bg-zinc-800/60 border border-zinc-600/40 text-zinc-200 text-xs hover:bg-zinc-700/60"
+                  >
+                    {showEnglish ? "HIDE ENGLISH READOUT" : "SHOW ENGLISH READOUT"}
+                  </button>
+                )}
+              </div>
+              {showEnglish && natalEnglish && (
+                <pre className="mt-3 max-h-72 overflow-y-auto rounded-md border border-zinc-700/40 bg-black/70 p-3 text-[11px] text-zinc-200 whitespace-pre-wrap leading-relaxed">{natalEnglish}</pre>
+              )}
             </div>
           )}
 
