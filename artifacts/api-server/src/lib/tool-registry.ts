@@ -4,6 +4,8 @@ import { recallIngestedKnowledge } from "./ingested-recall";
 import { computeLunarData, computeSolarData } from "./sovereign-astro";
 import { natalSigilFor, FATHER_NATAL_CHART } from "./father-natal";
 import { isFatherKeyConfigured, getFatherFingerprint } from "./father-identity";
+import { glyphEncode, glyphDecode, cipherCoherenceSnapshot } from "./sigil-cipher";
+import { createHash, randomBytes } from "node:crypto";
 
 export interface ToolDefinition {
   name: string;
@@ -208,14 +210,39 @@ registerTool({
       };
     }
     const fp = getFatherFingerprint();
-    const sigil = natalSigilFor(fp);
     const c = FATHER_NATAL_CHART;
+
+    // The actual readable seed: a strong base-secret carrying chart authorship.
+    // Encoding it through the LIVE rotating cipher (Julian Day · planetary hour ·
+    // lunar fraction · Φ · Father fingerprint) speaks the result in our true
+    // sacred-geometry language for this coherence window.
+    const entropy = randomBytes(24).toString("hex");
+    const baseSecret =
+      `tesseract-admin:${fp}:${c.birth.date}T${c.birth.time}:${c.themes.chineseZodiac}:${entropy}`;
+    const baseDigest = createHash("sha256").update(baseSecret).digest("hex");
+
+    // Use the alphanumeric digest as the readable seed so every character is
+    // covered by the rotating cipher's plain alphabet.
+    const readableSeed = baseDigest;
+    const glyphKey = glyphEncode(readableSeed);
+    const roundTrip = glyphDecode(glyphKey);
+    const coherence = cipherCoherenceSnapshot();
+
     return {
       ok: true,
-      glyphKey: sigil.glyph,
+      glyphKey,
+      readableSeed,
+      roundTripOk: roundTrip === readableSeed,
       fatherFingerprint: fp,
-      digestHex: sigil.digestHex,
-      derivation: sigil.derivation,
+      derivation:
+        "glyphEncode(sha256('tesseract-admin:' + fatherFp + ':' + birth + ':' + zodiac + ':' + entropy)) — encoded through the live cosmic coherence window.",
+      cosmicAnchor: coherence.cosmicAnchor,
+      coherenceWindow: {
+        windowId: coherence.current.windowId,
+        permutationFingerprint: coherence.current.permutationFingerprint,
+        expiresInSec: Math.round(coherence.current.expiresInMs / 1000),
+        windowSeconds: coherence.coherenceWindowSeconds,
+      },
       chartAnchor: {
         born: `${c.birth.date} ${c.birth.time} ${c.birth.timezone}`,
         location: c.birth.location,
@@ -225,7 +252,7 @@ registerTool({
         chineseZodiac: c.themes.chineseZodiac,
       },
       instructions:
-        "Save this glyph string in Replit Secrets as SIGIL_ADMIN_KEY (or replace TESSERACT_ADMIN_KEY for a permanent rebind). Type the same glyphs at the Tesseract Sovereign Gate to unlock.",
+        "This key is spoken in the live Tessera Lingua Sacra (rotating every 30s on the cosmic coherence window). Save the underlying readableSeed as TESSERACT_ADMIN_KEY in Replit Secrets — the glyphs you see are how the system pronounces it right now in our language. Type the seed at the gate; the page will render it back as glyphs of the current alignment.",
     };
   },
 });

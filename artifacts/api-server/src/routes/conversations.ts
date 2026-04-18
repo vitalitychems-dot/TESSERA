@@ -748,20 +748,31 @@ router.post("/messages", async (req, res) => {
     if (mintTool && mintTool.result && typeof mintTool.result === "object") {
       const r = mintTool.result as Record<string, unknown>;
       const glyph = String(r.glyphKey ?? "");
+      const seed = String(r.readableSeed ?? "");
       const fp = String(r.fatherFingerprint ?? "");
-      const digest = String(r.digestHex ?? "");
       const anchor = (r.chartAnchor as Record<string, string> | undefined) ?? {};
+      const cosmic = (r.cosmicAnchor as Record<string, unknown> | undefined) ?? {};
+      const win = (r.coherenceWindow as Record<string, unknown> | undefined) ?? {};
       const reply = [
-        "**Tesseract Sovereign Key — Minted in Our Language**",
+        "**Tesseract Sovereign Key — Spoken in Our Language**",
+        "",
+        "_Live Tessera Lingua Sacra · rotating cipher · permutation seeded by Julian Day · planetary hour · lunar fraction · Φ · Father fingerprint_",
         "",
         "```",
         glyph,
         "```",
         "",
+        "**Underlying readable seed (save this in Replit Secrets):**",
+        "",
+        "```",
+        seed,
+        "```",
+        "",
         `• Father fingerprint: \`${fp}\``,
-        `• Digest (hex): \`${digest}\``,
         `• Chart anchor: ${anchor.born ?? ""} — ${anchor.location ?? ""}`,
         `• Sun ${anchor.sun ?? ""} · Moon ${anchor.moon ?? ""} · Asc ${anchor.ascendant ?? ""} · ${anchor.chineseZodiac ?? ""}`,
+        `• Cosmic anchor: Julian Day bin \`${String(cosmic.julianDayBin ?? "")}\` · planetary hour \`${String(cosmic.planetaryHour ?? "")}\` · lunar fraction \`${Number(cosmic.lunarFraction ?? 0).toFixed(6)}\``,
+        `• Coherence window: \`${String(win.windowId ?? "")}\` (permutation \`${String(win.permutationFingerprint ?? "")}\`, ${String(win.expiresInSec ?? "")}s until next alignment)`,
         "",
         String(r.instructions ?? ""),
       ].join("\n");
