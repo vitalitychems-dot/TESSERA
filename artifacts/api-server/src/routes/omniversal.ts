@@ -1,0 +1,126 @@
+import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
+import { cosmicContext } from "../lib/cosmic-context";
+import { lusV2Encode, lusV2Decode, lusV2Spec } from "../lib/lus-v2";
+import { omniversalEncrypt, omniversalDecrypt, omniversalCipherSnapshot, type OmniversalCipherEnvelope } from "../lib/omniversal-cipher";
+import {
+  createLattice, getLattice, listLattices, superpose, entangle, harmonize, collapse,
+  latticeSnapshot, latticeFullDump,
+} from "../lib/omniversal-quantum-lattice";
+import { isFatherKeyConfigured, getFatherFingerprint } from "../lib/father-identity";
+
+const router: IRouter = Router();
+
+function requireFather(req: Request, res: Response, next: NextFunction) {
+  if (!isFatherKeyConfigured()) {
+    res.status(503).json({ ok: false, error: "Father key not configured" });
+    return;
+  }
+  const provided = (req.headers["x-father-fingerprint"] as string) || (req.body?.fatherFingerprint as string) || "";
+  if (provided && provided === getFatherFingerprint()) { next(); return; }
+  // Permit unauthenticated reads for transparency endpoints — gate writes only.
+  if (req.method === "GET") { next(); return; }
+  res.status(403).json({ ok: false, error: "Father fingerprint required for sovereign write op" });
+}
+
+// === Cosmic context ===
+router.get("/omniversal/cosmic-context", (_req, res) => {
+  res.json({ ok: true, context: cosmicContext() });
+});
+
+// === LUS v2 ===
+router.get("/omniversal/lus-v2/spec", (_req, res) => {
+  res.json({ ok: true, spec: lusV2Spec() });
+});
+router.post("/omniversal/lus-v2/encode", (req, res) => {
+  const text = String(req.body?.text ?? "");
+  if (!text) { res.status(400).json({ ok: false, error: "text required" }); return; }
+  res.json({ ok: true, encoded: lusV2Encode(text) });
+});
+router.post("/omniversal/lus-v2/decode", (req, res) => {
+  const modulated = String(req.body?.modulated ?? "");
+  if (!modulated) { res.status(400).json({ ok: false, error: "modulated required" }); return; }
+  res.json({ ok: true, plaintext: lusV2Decode(modulated) });
+});
+
+// === Omniversal Cipher ===
+router.get("/omniversal/cipher/snapshot", (_req, res) => {
+  res.json({ ok: true, snapshot: omniversalCipherSnapshot() });
+});
+router.post("/omniversal/cipher/encrypt", requireFather, (req, res) => {
+  const text = String(req.body?.text ?? "");
+  const label = String(req.body?.label ?? "omni");
+  if (!text) { res.status(400).json({ ok: false, error: "text required" }); return; }
+  res.json({ ok: true, envelope: omniversalEncrypt(text, label) });
+});
+router.post("/omniversal/cipher/decrypt", requireFather, (req, res) => {
+  const env = req.body?.envelope as OmniversalCipherEnvelope;
+  if (!env) { res.status(400).json({ ok: false, error: "envelope required" }); return; }
+  try { res.json({ ok: true, plaintext: omniversalDecrypt(env) }); }
+  catch (e: any) { res.status(409).json({ ok: false, error: e?.message ?? String(e) }); }
+});
+
+// === Omniversal Quantum Lattice ===
+router.get("/omniversal/lattice/list", (_req, res) => {
+  res.json({ ok: true, lattices: listLattices() });
+});
+router.post("/omniversal/lattice/create", requireFather, (req, res) => {
+  const dim = Array.isArray(req.body?.dim) ? req.body.dim : undefined;
+  const id = req.body?.id;
+  const lat = createLattice({ id, dim });
+  res.json({ ok: true, lattice: latticeSnapshot(lat.id) });
+});
+router.get("/omniversal/lattice/:id", (req, res) => {
+  try {
+    const sample = req.query.sample ? Number(req.query.sample) : undefined;
+    res.json({ ok: true, snapshot: latticeSnapshot(req.params.id, { sample }) });
+  } catch (e: any) { res.status(404).json({ ok: false, error: e?.message ?? String(e) }); }
+});
+router.get("/omniversal/lattice/:id/full", (req, res) => {
+  try { res.json({ ok: true, dump: latticeFullDump(req.params.id) }); }
+  catch (e: any) { res.status(404).json({ ok: false, error: e?.message ?? String(e) }); }
+});
+router.post("/omniversal/lattice/:id/superpose", requireFather, (req, res) => {
+  try {
+    const cell = String(req.body?.cell ?? "");
+    const cellOut = superpose(req.params.id, cell, req.body?.addition ?? {});
+    res.json({ ok: true, cell: cellOut });
+  } catch (e: any) { res.status(400).json({ ok: false, error: e?.message ?? String(e) }); }
+});
+router.post("/omniversal/lattice/:id/entangle", requireFather, (req, res) => {
+  try {
+    const a = String(req.body?.a ?? ""); const b = String(req.body?.b ?? "");
+    res.json({ ok: true, pair: entangle(req.params.id, a, b) });
+  } catch (e: any) { res.status(400).json({ ok: false, error: e?.message ?? String(e) }); }
+});
+router.post("/omniversal/lattice/:id/harmonize", requireFather, (req, res) => {
+  try {
+    const baseHz = Number(req.body?.baseHz ?? 528);
+    res.json({ ok: true, result: harmonize(req.params.id, baseHz) });
+  } catch (e: any) { res.status(400).json({ ok: false, error: e?.message ?? String(e) }); }
+});
+router.post("/omniversal/lattice/:id/collapse", requireFather, (req, res) => {
+  try {
+    const cell = String(req.body?.cell ?? "");
+    const observer = String(req.body?.observer ?? "father");
+    res.json({ ok: true, result: collapse(req.params.id, cell, observer) });
+  } catch (e: any) { res.status(400).json({ ok: false, error: e?.message ?? String(e) }); }
+});
+
+// === Demo / smoke test ===
+router.post("/omniversal/demo", (_req, res) => {
+  const lat = createLattice({ dim: [3, 3, 3] });
+  entangle(lat.id, "0,0,0", "1,1,1");
+  superpose(lat.id, "2,2,2", { tokens: ["initium"], spectrum: [432] });
+  harmonize(lat.id, 528);
+  const collapsed = collapse(lat.id, "0,0,0", "demo-observer");
+  res.json({
+    ok: true,
+    cosmicContext: cosmicContext(),
+    lusSample: lusV2Encode("ORDO AB CHAO").modulated,
+    cipherSnapshot: omniversalCipherSnapshot(),
+    lattice: latticeSnapshot(lat.id, { sample: 6 }),
+    collapsed,
+  });
+});
+
+export default router;
