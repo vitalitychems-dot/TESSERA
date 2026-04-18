@@ -22,7 +22,15 @@ import { getSocietyStats } from "../lib/sovereign-society";
 
 function requireFather(req: any, res: any, next: any) {
   if (!isFatherKeyConfigured()) return next(); // open mode
-  const presented = req.headers["x-tesseract-key"] || req.headers["x-father-key"];
+  // Headers, body, and query are all accepted. Glyph-based canonical keys
+  // contain non-ASCII codepoints which some HTTP intermediaries strip from
+  // headers, so a body/query fallback keeps the gate usable from any client.
+  const presented =
+    req.headers["x-tesseract-key"] ||
+    req.headers["x-father-key"] ||
+    req.body?.adminKey ||
+    req.body?.tesseractKey ||
+    req.query?.adminKey;
   if (!presented || !verifyFatherKey(String(presented))) {
     return res.status(401).json({ ok: false, error: "father-auth-required" });
   }
