@@ -235,7 +235,7 @@ export function startShepherdLoop(intervalMs = 600_000): void {
 
   shepherdInterval = setSacredInterval(async () => {
     if (shepherdCycleRunning) {
-      logger.info("Shepherd cycle still running, skipping this interval", "shepherd-agents");
+      logger.info({ source: "shepherd-agents" }, "Shepherd cycle still running, skipping this interval");
       return;
     }
     shepherdCycleRunning = true;

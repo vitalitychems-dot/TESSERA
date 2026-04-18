@@ -432,8 +432,9 @@ export async function generateProposals(): Promise<{ proposals: RickProposal[]; 
     proposals: store.proposals.slice(),
     generated: fresh.length,
     preserved: preserved.length,
+    archived: 0,
     llmRejectedByTruth: llmRejectedCount,
-  };
+  } as { proposals: typeof store.proposals; generated: number; preserved: number; archived: number; llmRejectedByTruth: number };
 }
 
 export async function approveProposal(id: string): Promise<RickProposal | null> {

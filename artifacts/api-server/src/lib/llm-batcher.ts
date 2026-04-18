@@ -162,7 +162,7 @@ function groupRequests(batch: QueuedRequest[]): RequestGroup[] {
       ) {
         let similarity = 0;
         if (batch[i].embedding && batch[j].embedding) {
-          similarity = cosineSimilarity(batch[i].embedding, batch[j].embedding);
+          similarity = cosineSimilarity(batch[i].embedding!, batch[j].embedding!);
         } else {
           similarity = tokenJaccard(batch[i].userContent, batch[j].userContent);
         }

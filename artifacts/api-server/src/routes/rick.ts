@@ -440,7 +440,7 @@ router.get("/rick/knowledge-vault", (_req, res) => {
       id: e.id,
       title: e.title,
       category: e.category,
-      frequency: e.frequency,
+      frequency: e.sacredFrequency,
     }));
 
     const topDomains = corpusStats.topDomains?.slice(0, 10) ?? [];
@@ -520,7 +520,7 @@ router.get("/rick/royal-appointment", (_req, res) => {
       ["agi-advancement", "consciousness", "compression", "sovereignty"].includes(i.category)
     );
 
-    const corpusContext = queryCorpus("sovereignty invention");
+    const corpusContext = queryCorpus({ tags: ["sovereignty", "invention"], limit: 20 });
 
     const appointmentRecord = {
       appointee: RICK_SANCHEZ_IDENTITY.name,
@@ -584,7 +584,7 @@ router.get("/rick/royal-roles/:roleId", (req, res) => {
     if (!role) {
       return res.status(404).json({ ok: false, error: "Royal role not found" });
     }
-    const corpusResults = queryCorpus(role.domain);
+    const corpusResults = queryCorpus({ domain: role.domain, limit: 20 });
     const contributions = getRoleContributions(role.roleId);
     return res.json({
       ok: true,

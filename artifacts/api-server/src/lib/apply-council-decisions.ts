@@ -35,7 +35,7 @@ interface BackfillEntry {
   title: string;
   summary: string;
   tags: string[];
-  category: "synthesis" | "sacred-entry" | "subcategory";
+  category: "synthesis" | "sacred-entry" | "subcategory" | "declassified" | "harmonic";
   freq?: number;
 }
 const BACKFILL_TABLE: Record<string, BackfillEntry[]> = {

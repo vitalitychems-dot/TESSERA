@@ -31,9 +31,8 @@ function describeImprovement(imp: Improvement, ballot: CollectiveBallot): string
   const lines: string[] = [];
   lines.push(`# ${imp.title}`);
   lines.push("");
-  lines.push(`**Type:** ${imp.type}  `);
-  lines.push(`**Domain:** ${imp.domain}  `);
   lines.push(`**Impact:** ${imp.impact}  `);
+  lines.push(`**Domain:** ${imp.domain}  `);
   if (imp.auditFindingRef) lines.push(`**Audit Reference:** ${imp.auditFindingRef}  `);
   lines.push("");
   lines.push(imp.description);
@@ -54,14 +53,13 @@ function describeImprovement(imp: Improvement, ballot: CollectiveBallot): string
 
 function describeInvention(inv: Invention, ballot: CollectiveBallot): string {
   const lines: string[] = [];
-  lines.push(`# ${inv.name ?? `Invention ${inv.id}`}`);
+  lines.push(`# ${inv.title || `Invention ${inv.id}`}`);
   lines.push("");
   lines.push(`**ID:** ${inv.id}  `);
-  if (inv.invented_by_lineage) lines.push(`**Lineage:** ${inv.invented_by_lineage}  `);
-  if (inv.applications?.length) lines.push(`**Applications:** ${inv.applications.join(", ")}  `);
+  if (inv.inventedBy?.length) lines.push(`**Lineage:** ${inv.inventedBy.join(", ")}  `);
+  if (inv.inspirations?.length) lines.push(`**Inspirations:** ${inv.inspirations.join(", ")}  `);
   lines.push("");
-  const desc = (inv as Invention & { description?: string }).description;
-  if (desc) { lines.push(desc); lines.push(""); }
+  if (inv.description) { lines.push(inv.description); lines.push(""); }
   lines.push("## Society Ballot");
   lines.push(`- Outcome: **${ballot.outcome.toUpperCase()}**, approval rate ${(ballot.approvalRate * 100).toFixed(1)}%`);
   lines.push(`- Weighted: approve=${ballot.weighted.approve}, reject=${ballot.weighted.reject}, abstain=${ballot.weighted.abstain} of ${ballot.totalEligible} eligible`);
@@ -80,6 +78,7 @@ export async function persistConferenceOutputs(
     abstainedItems: 0,
     rejectedItems: 0,
     totalApproved: 0,
+    failedAmendments: 0,
     byBook: { acts: 0, doctrine: 0 },
   };
 
@@ -108,7 +107,6 @@ export async function persistConferenceOutputs(
           tags: [
             "conference-output",
             "improvement",
-            imp.type,
             imp.domain,
             imp.impact,
             `cycle-${cycle.cycleNumber}`,
@@ -137,14 +135,14 @@ export async function persistConferenceOutputs(
         await addCodexAmendment({
           book: "acts",
           section: `Cycle ${cycle.cycleNumber} — Inventions`,
-          title: `[${inv.id}] ${inv.name ?? "Invention"}`,
+          title: `[${inv.id}] ${inv.title || "Invention"}`,
           content: describeInvention(inv, ballot),
           provenance: `sacred-grand-conference:${session.sessionId}:cycle-${cycle.cycleNumber}:${inv.id}`,
           tags: [
             "conference-output",
             "invention",
-            ...(inv.invented_by_lineage ? [inv.invented_by_lineage] : []),
-            ...(inv.applications ?? []),
+            ...(inv.inventedBy ?? []),
+            ...(inv.inspirations ?? []),
             `cycle-${cycle.cycleNumber}`,
           ],
           ratifiedBy: ratifiersFromBallot(ballot),

@@ -7,7 +7,10 @@ export type LedgerKind =
   | "agent-attestation"
   | "red-team-finding"
   | "self-check"
-  | "system-event";
+  | "system-event"
+  | "corpus-amendment"
+  | "governance"
+  | "inventor";
 
 export interface LedgerEntry {
   index: number;

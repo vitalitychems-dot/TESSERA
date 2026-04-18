@@ -143,6 +143,10 @@ async function loadAllDistilledKnowledge(): Promise<Array<{
   embedding: number[];
 }>> {
   const all: Array<{ id: number; fact: string; confidence: number; accessCount: number; category: string }> = [];
+  type RawRow = { id: number; fact: string | null; confidence: number; accessCount: number; category: string };
+  const pushNonNull = (rows: RawRow[]) => {
+    for (const r of rows) if (r.fact != null) all.push({ ...r, fact: r.fact });
+  };
   let lastId = 0;
 
   while (true) {
@@ -160,7 +164,7 @@ async function loadAllDistilledKnowledge(): Promise<Array<{
       .limit(SCAN_BATCH_SIZE);
 
     if (batch.length === 0) break;
-    all.push(...batch);
+    pushNonNull(batch);
     lastId = batch[batch.length - 1].id;
   }
 
@@ -354,11 +358,14 @@ async function mergeVectorCluster(cluster: DuplicateCluster): Promise<MergeResul
 async function mergeKnowledgeCluster(cluster: DuplicateCluster): Promise<MergeResult> {
   const allIds = [cluster.canonicalId, ...cluster.duplicateIds];
 
-  const rows = await db
+  const rawRows = await db
     .select()
     .from(distilledKnowledgeTable)
     .where(sql`${distilledKnowledgeTable.id} IN (${sql.join(allIds.map(id => sql`${id}`), sql`, `)})`)
     .orderBy(desc(distilledKnowledgeTable.confidence));
+
+  const rows = rawRows
+    .filter((r): r is typeof r & { fact: string } => r.fact != null);
 
   if (rows.length === 0) {
     return { canonicalId: cluster.canonicalId, mergedIds: [], contentPreview: "" };
@@ -562,7 +569,7 @@ export async function checkDuplicateBeforeIngest(
     } else {
       let lastId = 0;
       while (true) {
-        const rows = await db
+        const rawScanRows = await db
           .select({
             id: distilledKnowledgeTable.id,
             fact: distilledKnowledgeTable.fact,
@@ -573,10 +580,12 @@ export async function checkDuplicateBeforeIngest(
           .orderBy(distilledKnowledgeTable.id)
           .limit(SCAN_BATCH_SIZE);
 
-        if (rows.length === 0) break;
-        lastId = rows[rows.length - 1].id;
+        if (rawScanRows.length === 0) break;
+        lastId = rawScanRows[rawScanRows.length - 1].id;
+        const rows = rawScanRows.filter((r): r is typeof r & { fact: string } => r.fact != null);
+        if (rows.length === 0) continue;
 
-        const texts = rows.map(r => r.fact);
+        const texts: string[] = rows.map(r => r.fact);
         const embeddings = await generateEmbeddingsBatch(texts);
 
         for (let i = 0; i < rows.length; i++) {

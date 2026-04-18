@@ -222,6 +222,5 @@ export function createCircuit(name?: string) {
 export { applyQuantumGate as applyGate };
 export { measureAllQubits as measureAll };
 export function listCircuits() {
-  const qs = getQuantumState();
-  return [{ id: "sovereign-circuit", name: "Sovereign Quantum Circuit", qubits: (qs.qubits || []).length }];
+  return [{ id: "sovereign-circuit", name: "Sovereign Quantum Circuit", qubits: qubits.size }];
 }

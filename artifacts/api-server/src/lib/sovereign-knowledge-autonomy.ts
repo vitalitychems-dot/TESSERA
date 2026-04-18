@@ -345,7 +345,8 @@ async function crossReferenceVerification(domain: string): Promise<VerificationR
       .limit(10);
 
     for (const item of recentItems.slice(0, 5)) {
-      const relatedMemories = await searchMemory(item.title, 10);
+      const itemTitle = item.title ?? "";
+      const relatedMemories = await searchMemory(itemTitle, 10);
       const confirming = relatedMemories.filter(m => m.score > 0.3).length;
       const conflicting = relatedMemories.filter(m => m.score > 0.1 && m.score <= 0.15).length;
 
@@ -357,7 +358,7 @@ async function crossReferenceVerification(domain: string): Promise<VerificationR
 
       results.push({
         claimId: makeId("claim"),
-        claim: item.title,
+        claim: itemTitle,
         domain,
         sourcesChecked: relatedMemories.length,
         sourcesConfirming: confirming,

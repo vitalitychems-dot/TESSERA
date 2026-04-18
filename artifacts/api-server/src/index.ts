@@ -392,7 +392,7 @@ async function runPostBindHealthProbe(port: number): Promise<void> {
         const { getConsensusMetrics } = await import("./lib/consensus-engine.js");
         const { snapshotWorkingMemory } = await import("./lib/agi/working-memory.js");
         const { getAllTunables } = await import("./lib/system-tunables.js");
-        startMetacognitionLoop(60_000, () => {
+        startMetacognitionLoop(60_000, (): Record<string, number> => {
           try {
             const c = getConsensusMetrics();
             const wm = snapshotWorkingMemory();

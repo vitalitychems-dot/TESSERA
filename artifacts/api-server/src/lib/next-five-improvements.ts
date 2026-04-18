@@ -281,10 +281,10 @@ Return ONLY a JSON array of 5 objects. No markdown, no explanation.`;
 
   const ratifiedCandidates = voteResults
     .filter(r => r.bftResult.approved)
-    .map((r, i) => ({ ...r.candidate, rank: i + 1, status: "ratified" as const, voteRecord: r.bftResult.votes }));
+    .map((r, i) => ({ ...r.candidate, rank: i + 1, status: "ratified" as const, voteRecord: (r.bftResult.votes ?? {}) as Record<string, string> }));
 
   if (ratifiedCandidates.length === 0) {
-    ratifiedCandidates.push(...improvements.map((c, i) => ({ ...c, rank: i + 1, status: "ratified" as const })));
+    ratifiedCandidates.push(...improvements.map((c, i) => ({ ...c, rank: i + 1, status: "ratified" as const, voteRecord: {} as Record<string, string> })));
   }
 
   const beforeMetrics = await captureCurrentMetrics();

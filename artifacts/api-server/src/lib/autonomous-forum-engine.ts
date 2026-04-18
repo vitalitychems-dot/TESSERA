@@ -807,7 +807,7 @@ async function postTopicWithReplies(topic: DiscussionTopic, knowledge: Knowledge
       const h = norm(replyContent);
       if (seenHashes.has(h)) continue;
       seenHashes.add(h);
-      const [insertedReply] = await db.insert(forumRepliesTable).values({
+      const [insertedReply]: Array<{ id: number }> = await db.insert(forumRepliesTable).values({
         topicId: inserted.id,
         parentReplyId: lastReplyId,
         content: replyContent,
