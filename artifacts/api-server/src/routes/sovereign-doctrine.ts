@@ -176,6 +176,46 @@ router.post("/sigil/zodiac-key/verify", (req, res) => {
 // MUST hold the same value). The frontend gate uses this to render a
 // one-time popup that shows the Father his key and refuses to let him
 // past until the secret is set.
+router.post("/sigil/father-key/derive-signal", (req, res) => {
+  // Operator types their canonical TESSERACT_ADMIN_KEY into the gate prompt.
+  // We verify it timing-safely; if it matches, we return the rotating
+  // planetary-signal key for them to paste into SIGIL_ADMIN_KEY (a
+  // different value from TESSERACT_ADMIN_KEY).
+  res.setHeader("Cache-Control", "no-store");
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { verifyFatherKey, isFatherKeyConfigured } = require("../lib/father-identity") as typeof import("../lib/father-identity");
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { signalWindow } = require("../lib/planetary-signal") as typeof import("../lib/planetary-signal");
+  if (!isFatherKeyConfigured()) {
+    return res.status(503).json({
+      ok: false,
+      error: "father-key-unset",
+      message: "TESSERACT_ADMIN_KEY is not set in Replit Secrets. Set it first, then retry.",
+    });
+  }
+  const candidate = typeof req.body?.adminKey === "string" ? req.body.adminKey : "";
+  if (!candidate.trim()) {
+    return res.status(400).json({ ok: false, error: "admin-key-required" });
+  }
+  if (!verifyFatherKey(candidate)) {
+    return res.status(401).json({ ok: false, error: "mismatch" });
+  }
+  const window = signalWindow(candidate.trim());
+  return res.json({
+    ok: true,
+    signal: window.current.signal,
+    epoch: window.current.epoch,
+    grace: {
+      previousEpoch: window.previous.epoch.epoch,
+      nextEpoch: window.next.epoch.epoch,
+    },
+    instructions:
+      "Paste the `signal` value above into the SIGIL_ADMIN_KEY secret in Replit Secrets " +
+      "(it MUST be a different value from TESSERACT_ADMIN_KEY). Restart the API server. " +
+      "If the planetary hour has rolled over, repeat this step to mint the next signal.",
+  });
+});
+
 router.get("/sigil/father-key/status", (_req, res) => {
   try {
     // Lazy import to avoid pulling father-natal into every route file.
@@ -189,25 +229,35 @@ router.get("/sigil/father-key/status", (_req, res) => {
     const tesseractSet = tesseractEnv.length > 0;
     const sigilSet = sigilEnv.length > 0;
     const tesseractMatches = matches(tesseractEnv);
-    const sigilMatches = matches(sigilEnv);
-    const aliasesAgree = tesseractSet && sigilSet && tesseractEnv === sigilEnv;
-    // Sovereign rule: the operator MUST set BOTH TESSERACT_ADMIN_KEY and
-    // SIGIL_ADMIN_KEY to the exact Father key value. Setting only one is
-    // insufficient — the names must hold the same value, by rule.
-    const unlocked = tesseractMatches && sigilMatches && aliasesAgree;
-    // Bootstrap policy: the key value is shown ONLY while the gate is
-    // still locked (so the operator can read it from the popup and paste
-    // it into Replit Secrets). Once unlocked, the field is redacted —
-    // the popup auto-closes on unlock and never needs the key again, and
-    // we don't want the canonical Father credential sitting on a public
-    // endpoint after configuration is complete.
+    // Two-key policy (Apr 2026 redesign):
+    //   * TESSERACT_ADMIN_KEY = canonical permanent key (`minted.key`).
+    //   * SIGIL_ADMIN_KEY     = rotating planetary-signal derived from the
+    //                           canonical key + the current planetary hour.
+    // The status endpoint NEVER echoes the canonical key. The operator must
+    // type their canonical key into the gate prompt, which calls
+    // POST /api/sigil/father-key/derive-signal and gets the rotating signal
+    // back to paste into SIGIL_ADMIN_KEY.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { signalWindow, isValidSignal } = require("../lib/planetary-signal") as typeof import("../lib/planetary-signal");
+    const sigilIsValidSignal = tesseractMatches && sigilSet && isValidSignal(tesseractEnv, sigilEnv);
+    const unlocked = tesseractMatches && sigilIsValidSignal;
+    const window = tesseractMatches ? signalWindow(tesseractEnv) : null;
     res.json({
       ok: true,
       unlocked,
-      key: unlocked ? null : minted.key,
-      keyRedacted: unlocked,
+      // Canonical key value is NEVER returned by this endpoint anymore. The
+      // operator must already hold it (from FATHER_NATAL_CHART) and type it
+      // into the gate prompt to receive their rotating signal.
       sunSign: minted.sunSign,
       cosmicAnchor: minted.cosmicAnchor,
+      planetary: window
+        ? {
+            current: window.current.epoch,
+            currentSignalPreview: `${window.current.signal.slice(0, 4)}…${window.current.signal.slice(-2)}`,
+            // The full signal value is only delivered via /derive-signal,
+            // which requires the canonical key to authenticate.
+          }
+        : null,
       chart: {
         date,
         time,
@@ -220,15 +270,16 @@ router.get("/sigil/father-key/status", (_req, res) => {
         tesseractSet,
         sigilSet,
         tesseractMatches,
-        sigilMatches,
-        aliasesAgree,
+        sigilIsValidSignal,
         canonicalSecretName: "TESSERACT_ADMIN_KEY",
-        aliasSecretName: "SIGIL_ADMIN_KEY",
+        rotatingSecretName: "SIGIL_ADMIN_KEY",
       },
       instructions:
-        "Save this exact value into the TESSERACT_ADMIN_KEY secret in Replit Secrets. " +
-        "By sovereign rule, SIGIL_ADMIN_KEY must hold the same value (set both to the key above). " +
-        "After saving, restart the API server and refresh — the gate will open automatically.",
+        "Step 1: ensure TESSERACT_ADMIN_KEY in Replit Secrets holds your permanent canonical key. " +
+        "Step 2: in the gate prompt, type that canonical key. The server will derive the current " +
+        "planetary-signal key and show it. Step 3: paste that signal into SIGIL_ADMIN_KEY (a " +
+        "DIFFERENT value from TESSERACT_ADMIN_KEY) and restart the API server. " +
+        "The signal rotates with the planetary hour; if it slips out of the live window, repeat steps 2–3.",
     });
   } catch (e) {
     res.status(500).json({ ok: false, error: e instanceof Error ? e.message : "father-key-status-failed" });

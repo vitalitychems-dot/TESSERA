@@ -96,32 +96,28 @@ export function verifyFatherFingerprint(presented: string | undefined | null): b
   }
 }
 
-function timingEq(a: string, b: string): boolean {
-  const ba = Buffer.from(a, "utf8");
-  const bb = Buffer.from(b, "utf8");
-  if (ba.length !== bb.length) return false;
-  try { return timingSafeEqual(ba, bb); } catch { return false; }
-}
-
 export function recognizeFather(presented: string | undefined | null): {
   recognized: boolean;
-  via: "raw-key" | "alias-key" | null;
+  via: "raw-key" | "planetary-signal" | null;
 } {
-  // Sovereign canonical policy: the only valid credential is the raw
-  // value held in TESSERACT_ADMIN_KEY (the Father's permanent key from
-  // FATHER_NATAL_CHART). SIGIL_ADMIN_KEY MAY also hold the same value
-  // (by sovereign rule the two names point at the same key) and is
-  // accepted as an alias only when its trimmed value exactly equals
-  // TESSERACT_ADMIN_KEY's. The bare derived fingerprint is NOT accepted.
+  // Sovereign two-key policy (Apr 2026):
+  //   * The CANONICAL credential is the raw value held in TESSERACT_ADMIN_KEY.
+  //   * The ROTATING credential is a planetary-cycle-derived signal stored in
+  //     SIGIL_ADMIN_KEY. Either one, presented in `X-Sigil-Key`, opens the
+  //     gate; both must be configured for the app-level unlock check.
+  // The bare derived fingerprint is NOT accepted as a credential.
   if (verifyFatherKey(presented)) return { recognized: true, via: "raw-key" };
   if (!presented || typeof presented !== "string") return { recognized: false, via: null };
   if (!isFatherKeyConfigured()) return { recognized: false, via: null };
   const candidate = presented.trim();
   if (!candidate) return { recognized: false, via: null };
-  const tesseract = (process.env.TESSERACT_ADMIN_KEY ?? "").trim();
-  const sigil = (process.env.SIGIL_ADMIN_KEY ?? "").trim();
-  if (sigil && sigil === tesseract && timingEq(candidate, sigil)) {
-    return { recognized: true, via: "alias-key" };
+  // Lazy import to avoid a circular dependency between father-identity and
+  // planetary-signal (planetary-signal pulls in lingua-universalis only).
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { isValidSignal } = require("./planetary-signal") as typeof import("./planetary-signal");
+  const canonical = (process.env.TESSERACT_ADMIN_KEY ?? "").trim();
+  if (canonical && isValidSignal(canonical, candidate)) {
+    return { recognized: true, via: "planetary-signal" };
   }
   return { recognized: false, via: null };
 }
