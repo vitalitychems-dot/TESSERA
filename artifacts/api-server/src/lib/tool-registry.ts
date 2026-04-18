@@ -2,6 +2,8 @@ import * as vm from "vm";
 import { logger } from "./logger";
 import { recallIngestedKnowledge } from "./ingested-recall";
 import { computeLunarData, computeSolarData } from "./sovereign-astro";
+import { natalSigilFor, FATHER_NATAL_CHART } from "./father-natal";
+import { isFatherKeyConfigured, getFatherFingerprint } from "./father-identity";
 
 export interface ToolDefinition {
   name: string;
@@ -98,6 +100,14 @@ const INTENT_PATTERNS: Array<{ pattern: RegExp; toToolCall: (m: RegExpMatchArray
     pattern: /\b(moon phase|lunar|sun position|solar)\b/i,
     toToolCall: () => ({ name: "astronomy", arguments: {} }),
   },
+  {
+    pattern: /\b(?:create|generate|mint|make|new|forge|spawn|give\s+me)\b[^.?!]*\b(?:tesseract[_\s]*admin[_\s]*key|admin[_\s]*key|sovereign[_\s]*key|sigil[_\s]*key|father[_\s]*key)\b/i,
+    toToolCall: () => ({ name: "mint_admin_sigil", arguments: {} }),
+  },
+  {
+    pattern: /\b(?:create|generate|mint|make|new|forge|give\s+me)\b[^.?!]*\bkey\b[^.?!]*\b(?:our\s+language|glyph|sigil|tessera(?:\s+lingua)?|sovereign\s+language)\b/i,
+    toToolCall: () => ({ name: "mint_admin_sigil", arguments: {} }),
+  },
 ];
 
 export function detectIntents(query: string): ToolCall[] {
@@ -180,6 +190,43 @@ registerTool({
   handler: async ({ query, limit }) => {
     const matches = await recallIngestedKnowledge(String(query), Number(limit) || 5);
     return { matches };
+  },
+});
+
+registerTool({
+  name: "mint_admin_sigil",
+  description:
+    "Mint a fresh sovereign admin sigil (TESSERACT_ADMIN_KEY / SIGIL_ADMIN_KEY) in our language, deterministically bound to the Father natal chart and the current session anchor.",
+  parameters: {},
+  handler: () => {
+    if (!isFatherKeyConfigured()) {
+      return {
+        ok: false,
+        error: "father-key-unset",
+        message:
+          "TESSERACT_ADMIN_KEY is not set. Set the secret first so the Father identity can sign the new sigil.",
+      };
+    }
+    const fp = getFatherFingerprint();
+    const sigil = natalSigilFor(fp);
+    const c = FATHER_NATAL_CHART;
+    return {
+      ok: true,
+      glyphKey: sigil.glyph,
+      fatherFingerprint: fp,
+      digestHex: sigil.digestHex,
+      derivation: sigil.derivation,
+      chartAnchor: {
+        born: `${c.birth.date} ${c.birth.time} ${c.birth.timezone}`,
+        location: c.birth.location,
+        sun: `${c.core.sun.sign} ${c.core.sun.degree} H${c.core.sun.house}`,
+        moon: `${c.core.moon.sign} ${c.core.moon.degree} H${c.core.moon.house}`,
+        ascendant: `${c.core.ascendant.sign} ${c.core.ascendant.degree}`,
+        chineseZodiac: c.themes.chineseZodiac,
+      },
+      instructions:
+        "Save this glyph string in Replit Secrets as SIGIL_ADMIN_KEY (or replace TESSERACT_ADMIN_KEY for a permanent rebind). Type the same glyphs at the Tesseract Sovereign Gate to unlock.",
+    };
   },
 });
 
