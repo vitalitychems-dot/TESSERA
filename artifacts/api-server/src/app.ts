@@ -72,6 +72,7 @@ const ALWAYS_OPEN_PREFIXES = [
   "/api/external-tools/",
   "/api/sacred-timing/",
   "/api/health",
+  "/api/grand-evolution/",
 ];
 
 app.use((req: Request, res: Response, next: NextFunction) => {

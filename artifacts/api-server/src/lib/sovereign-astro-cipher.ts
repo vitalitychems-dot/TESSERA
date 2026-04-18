@@ -220,6 +220,16 @@ export function macForEpoch(message: string): { epochId: string; mac: string } {
 }
 
 export function epochSnapshot() {
+  if (!isFatherKeyConfigured()) {
+    return {
+      current: null,
+      history: [],
+      historyDepth: 0,
+      fatherKeyConfigured: false,
+      method:
+        "HKDF(SHA-256, ikm=fatherSeal|fingerprint, salt=astroEpochSig, info=tesseract:astro-cipher:v1) → AES-256-GCM",
+    };
+  }
   ensureFreshEpoch();
   return {
     current: _current!.epoch,
