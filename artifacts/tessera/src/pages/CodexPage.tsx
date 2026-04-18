@@ -68,7 +68,7 @@ function useCodexEntry(entryId: string | null) {
 
 function SovereignDoctrinePanel() {
   const [adminKey, setAdminKey] = useState<string>(() => {
-    try { return localStorage.getItem("tesseract-admin-key") ?? ""; } catch { return ""; }
+    try { return localStorage.getItem("TESSERACT_ADMIN_KEY") ?? ""; } catch { return ""; }
   });
   const [savedKey, setSavedKey] = useState<string>(adminKey);
 
@@ -98,12 +98,12 @@ function SovereignDoctrinePanel() {
   const handoffPlaintext = handoff.data && typeof handoff.data?.directives !== "undefined" && Array.isArray(handoff.data.directives);
 
   function applyKey() {
-    try { localStorage.setItem("tesseract-admin-key", adminKey); } catch {}
+    try { localStorage.setItem("TESSERACT_ADMIN_KEY", adminKey); } catch {}
     setSavedKey(adminKey);
   }
   function useFingerprintAsKey() {
     setAdminKey(fp);
-    try { localStorage.setItem("tesseract-admin-key", fp); } catch {}
+    try { localStorage.setItem("TESSERACT_ADMIN_KEY", fp); } catch {}
     setSavedKey(fp);
   }
 

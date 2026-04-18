@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode, type FormEvent } from "react";
 import { Lock, Send, Eye, EyeOff, Sparkles, Star, Copy, Check } from "lucide-react";
 
-const STORAGE_KEY = "tesseract-admin-key";
+const STORAGE_KEY = "TESSERACT_ADMIN_KEY";
 const NATAL_SAVED_KEY = "tesseract-natal-glyph";
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 

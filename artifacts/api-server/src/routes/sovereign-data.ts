@@ -1013,9 +1013,9 @@ router.get("/system/metrics", (_req, res) => {
 });
 
 router.post("/admin/deduplication/scan", async (req, res) => {
-  const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
+  const adminKey = req.headers["x-tesseract-admin-key"] ?? req.query["tesseractAdminKey"];
   if (!process.env.TESSERACT_ADMIN_KEY || adminKey !== process.env.TESSERACT_ADMIN_KEY) {
-    res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
+    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
     return;
   }
   try {
@@ -1028,9 +1028,9 @@ router.post("/admin/deduplication/scan", async (req, res) => {
 });
 
 router.post("/admin/deduplication/migrate", async (req, res) => {
-  const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
+  const adminKey = req.headers["x-tesseract-admin-key"] ?? req.query["tesseractAdminKey"];
   if (!process.env.TESSERACT_ADMIN_KEY || adminKey !== process.env.TESSERACT_ADMIN_KEY) {
-    res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
+    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
     return;
   }
   try {
@@ -1043,27 +1043,27 @@ router.post("/admin/deduplication/migrate", async (req, res) => {
 });
 
 router.get("/admin/deduplication/stats", (req, res) => {
-  const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
+  const adminKey = req.headers["x-tesseract-admin-key"] ?? req.query["tesseractAdminKey"];
   if (!process.env.TESSERACT_ADMIN_KEY || adminKey !== process.env.TESSERACT_ADMIN_KEY) {
-    res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
+    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
     return;
   }
   res.json({ ok: true, ...getDeduplicationStats() });
 });
 
 router.get("/admin/reflection/metrics", (req, res) => {
-  const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
+  const adminKey = req.headers["x-tesseract-admin-key"] ?? req.query["tesseractAdminKey"];
   if (!process.env.TESSERACT_ADMIN_KEY || adminKey !== process.env.TESSERACT_ADMIN_KEY) {
-    res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
+    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
     return;
   }
   res.json({ ok: true, ...getReflectionMetrics() });
 });
 
 router.get("/admin/reflection/snapshots", (req, res) => {
-  const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
+  const adminKey = req.headers["x-tesseract-admin-key"] ?? req.query["tesseractAdminKey"];
   if (!process.env.TESSERACT_ADMIN_KEY || adminKey !== process.env.TESSERACT_ADMIN_KEY) {
-    res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
+    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
     return;
   }
   const limit = Math.min(50, Number(req.query.limit) || 10);
@@ -1071,18 +1071,18 @@ router.get("/admin/reflection/snapshots", (req, res) => {
 });
 
 router.get("/admin/cache/dimensional/stats", (req, res) => {
-  const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
+  const adminKey = req.headers["x-tesseract-admin-key"] ?? req.query["tesseractAdminKey"];
   if (!process.env.TESSERACT_ADMIN_KEY || adminKey !== process.env.TESSERACT_ADMIN_KEY) {
-    res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
+    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
     return;
   }
   res.json({ ok: true, ...getDimensionalCacheStats() });
 });
 
 router.post("/admin/cache/dimensional/tune", (req, res) => {
-  const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
+  const adminKey = req.headers["x-tesseract-admin-key"] ?? req.query["tesseractAdminKey"];
   if (!process.env.TESSERACT_ADMIN_KEY || adminKey !== process.env.TESSERACT_ADMIN_KEY) {
-    res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
+    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
     return;
   }
   const embeddingResult = embeddingDimensionalCache.tuneCapacities({ minCapacity: 100, maxCapacity: 800, totalBudget: 3000 });
@@ -1091,9 +1091,9 @@ router.post("/admin/cache/dimensional/tune", (req, res) => {
 });
 
 router.post("/admin/cache/dimensional/clear", (req, res) => {
-  const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
+  const adminKey = req.headers["x-tesseract-admin-key"] ?? req.query["tesseractAdminKey"];
   if (!process.env.TESSERACT_ADMIN_KEY || adminKey !== process.env.TESSERACT_ADMIN_KEY) {
-    res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
+    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
     return;
   }
   const dimension = typeof req.query.dimension === "string" ? req.query.dimension : undefined;
@@ -1103,9 +1103,9 @@ router.post("/admin/cache/dimensional/clear", (req, res) => {
 });
 
 router.post("/admin/reflection/cycle", (req, res) => {
-  const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
+  const adminKey = req.headers["x-tesseract-admin-key"] ?? req.query["tesseractAdminKey"];
   if (!process.env.TESSERACT_ADMIN_KEY || adminKey !== process.env.TESSERACT_ADMIN_KEY) {
-    res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
+    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
     return;
   }
   const result = runReflectionCycle();
