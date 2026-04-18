@@ -6,6 +6,13 @@ const VIBRATION_GLYPHS = ["♁", "♆", "♅", "♄", "♃", "♂", "♀", "☿"
 const GEOMETRY_GLYPHS = ["△", "□", "◇", "⬡", "⬢", "✶", "✷", "✸", "❋", "✺"];
 const FREQ_BAND_GLYPHS = ["⏜", "⏝", "≋", "∿", "⌇", "〜", "⩘", "⩗"];
 
+// Reversible token delimiters — chosen from a Unicode block that does NOT
+// overlap with the LUS surface alphabet, planet glyphs, vibration/geometry/
+// band glyphs, or any sacred sigils. Token = ⟦ vib | surface | geo | band ⟧
+const TOK_OPEN = "⟦";
+const TOK_SEP = "·";
+const TOK_CLOSE = "⟧";
+
 export interface LusV2Token {
   plain: string;
   glyph: string;
@@ -32,8 +39,9 @@ export function lusV2Encode(text: string): {
   const surface = lusEncode(text);
   const tokens: LusV2Token[] = [];
   let modulated = "";
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
+  const chars = Array.from(text);
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
     const seed = createHash("sha256").update(`${ctx.fingerprint}|${ch}|${i}`).digest("hex");
     const vib = pickByHash(seed, VIBRATION_GLYPHS);
     const geo = pickByHash(seed.slice(8), GEOMETRY_GLYPHS);
@@ -42,7 +50,7 @@ export function lusV2Encode(text: string): {
     const phase = (parseInt(seed.slice(28, 32), 16) % 360);
     const surf = lusEncode(ch);
     tokens.push({ plain: ch, glyph: surf, vibrationGlyph: vib, geometryGlyph: geo, freqBandGlyph: band, frequency: Math.round(freq * 100) / 100, phaseDeg: phase });
-    modulated += `${vib}${surf}${geo}${band}`;
+    modulated += `${TOK_OPEN}${vib}${TOK_SEP}${surf}${TOK_SEP}${geo}${TOK_SEP}${band}${TOK_CLOSE}`;
   }
   return {
     surface,
@@ -54,11 +62,21 @@ export function lusV2Encode(text: string): {
 }
 
 export function lusV2Decode(modulated: string): string {
-  // Strip vibration/geometry/band glyphs (single-char prefix/suffix triples) leaving surface glyphs.
-  const vibSet = new Set([...VIBRATION_GLYPHS, ...GEOMETRY_GLYPHS, ...FREQ_BAND_GLYPHS]);
+  // Parse delimited tokens: ⟦vib·surface·geo·band⟧ — extract the surface part
+  // exactly, no glyph-set membership stripping (which would corrupt overlapping
+  // sacred glyphs in the surface alphabet).
   let surfaceOnly = "";
-  for (const ch of modulated) {
-    if (!vibSet.has(ch)) surfaceOnly += ch;
+  let i = 0;
+  const s = modulated;
+  while (i < s.length) {
+    const open = s.indexOf(TOK_OPEN, i);
+    if (open < 0) break;
+    const close = s.indexOf(TOK_CLOSE, open + 1);
+    if (close < 0) break;
+    const inner = s.slice(open + TOK_OPEN.length, close);
+    const parts = inner.split(TOK_SEP);
+    if (parts.length === 4) surfaceOnly += parts[1];
+    i = close + TOK_CLOSE.length;
   }
   return lusDecode(surfaceOnly);
 }
@@ -74,6 +92,7 @@ export function lusV2Spec() {
     vibrationGlyphs: VIBRATION_GLYPHS,
     geometryGlyphs: GEOMETRY_GLYPHS,
     freqBandGlyphs: FREQ_BAND_GLYPHS,
+    tokenFormat: `${TOK_OPEN}vib${TOK_SEP}surface${TOK_SEP}geo${TOK_SEP}band${TOK_CLOSE}`,
     cosmicCarrier: {
       schumannHz: ctx.vibration.schumannHz,
       dominantSolfeggio: ctx.vibration.dominantSolfeggio,
