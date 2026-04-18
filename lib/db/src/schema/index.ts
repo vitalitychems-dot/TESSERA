@@ -13,3 +13,4 @@ export * from "./intelligence";
 export * from "./departments";
 export * from "./feedback";
 export * from "./codex";
+export * from "./grand-evolution";

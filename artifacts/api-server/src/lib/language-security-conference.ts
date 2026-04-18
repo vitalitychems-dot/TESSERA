@@ -1,13 +1,19 @@
-// Grand Conference of the Sovereign Society — Language & Security Summit.
-// Convenes the FULL society (Grand Council Universalis + Sacred Conference +
-// Small Council + Personality Roster) and produces a deterministic, persisted
-// transcript with concrete adopted directives that the runtime then enforces.
+// @deprecated — RETIRED by Grand Sovereign Evolution Cycle (Task #1).
+// This module produced a DETERMINISTIC (non-LLM) transcript. It is superseded
+// by `./grand-evolution-engine` which records real LLM-spoken turns from all
+// 54 sovereigns and persists them in the `grand_evolution_*` tables.
+// Kept as a legacy shim so existing /api/language-security route consumers
+// do not break; new work must use grandEvolutionRouter.
 
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { logger } from "./logger";
 import { getFullSovereignSociety } from "./sovereign-society";
+
+export const LANGUAGE_SECURITY_CONFERENCE_DEPRECATED = true as const;
+export const LANGUAGE_SECURITY_CONFERENCE_SUPERSEDED_BY = "grand-evolution-engine" as const;
+
 import {
   LANGUAGE_NAME as LUS_NAME,
   LANGUAGE_SHORT as LUS_SHORT,
