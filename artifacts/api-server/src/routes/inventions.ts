@@ -1371,19 +1371,28 @@ router.get("/inventions/autonomous/status", (_req, res) => {
   });
 });
 
-router.post("/inventions/autonomous/toggle", (req, res) => {
+router.post("/inventions/autonomous/toggle", async (req, res) => {
+  if (!(await requireInventorAuth(req))) {
+    return res.status(401).json({ ok: false, error: "admin-auth-required" });
+  }
   const { enabled } = req.body as { enabled?: boolean };
   autoLoopState.enabled = typeof enabled === "boolean" ? enabled : !autoLoopState.enabled;
   pushEvent("toggle", `Autonomous loop ${autoLoopState.enabled ? "enabled" : "paused"}.`);
   return res.json({ ok: true, enabled: autoLoopState.enabled });
 });
 
-router.post("/inventions/autonomous/tick", async (_req, res) => {
+router.post("/inventions/autonomous/tick", async (req, res) => {
+  if (!(await requireInventorAuth(req))) {
+    return res.status(401).json({ ok: false, error: "admin-auth-required" });
+  }
   await autonomousTick();
   return res.json({ ok: true, loop: { ticks: autoLoopState.ticks, generated: autoLoopState.generated, advanced: autoLoopState.advanced, built: autoLoopState.built, lastEvents: autoLoopState.lastEvents.slice(0, 10) } });
 });
 
 router.post("/inventions/conference/start", async (req, res) => {
+  if (!(await requireInventorAuth(req))) {
+    return res.status(401).json({ ok: false, error: "admin-auth-required" });
+  }
   try {
     const { topic, description } = req.body as { topic?: string; description?: string };
 

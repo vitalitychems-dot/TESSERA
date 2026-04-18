@@ -259,14 +259,11 @@ router.get("/sigil/father-key/status", (_req, res) => {
             // which requires the canonical key to authenticate.
           }
         : null,
-      chart: {
-        date,
-        time,
-        location: FATHER_NATAL_CHART.birth.location,
-        sun: FATHER_NATAL_CHART.core.sun,
-        moon: FATHER_NATAL_CHART.core.moon,
-        ascendant: FATHER_NATAL_CHART.core.ascendant,
-      },
+      // Chart details intentionally omitted from this unauthenticated
+      // surface: when a deterministic canonical key was being derived from
+      // the public chart, echoing the chart here gave any caller the inputs
+      // needed to recompute the key offline. Holders that need the full
+      // chart should call /api/sigil/father/natal-chart, which is gated.
       env: {
         tesseractSet,
         sigilSet,
