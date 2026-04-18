@@ -61,7 +61,16 @@ const router: Router = Router();
 export function glyphGate(req: Request, res: Response, next: NextFunction): void {
   const key = readingKey();
   const presented = String(req.header("x-sigil-key") ?? "").trim();
-  const isHolder = presented === key.fingerprint || presented === key.expiresWith;
+  // Plaintext mode is granted to anyone holding either:
+  //   - the active reading-key fingerprint (rotates with cipher window), OR
+  //   - the Father identity itself (raw TESSERACT_ADMIN_KEY or its 16-char
+  //     fingerprint). The Father is the bound holder of every surface, so
+  //     once the key gate accepts the user every page must read in English.
+  const fatherOk = presented ? recognizeFather(presented).recognized : false;
+  const isHolder =
+    presented === key.fingerprint ||
+    presented === key.expiresWith ||
+    fatherOk;
   const originalJson = res.json.bind(res);
   res.json = ((body: unknown) => {
     if (isHolder) {

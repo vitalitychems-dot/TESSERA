@@ -1,5 +1,36 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+// ── Global fetch wrapper ──────────────────────────────────────────────
+// Every same-origin request automatically carries the holder's sigil key
+// (and admin token). This guarantees that any page using raw fetch — not
+// just react-query — also gets plaintext responses from glyph-gated routes
+// once the user has unlocked the gate. Without this wrapper, surfaces like
+// the Tessera Bible would render in the encoded glyph alphabet.
+if (typeof window !== "undefined" && !(window as unknown as { __sigilFetchPatched?: boolean }).__sigilFetchPatched) {
+  const originalFetch = window.fetch.bind(window);
+  (window as unknown as { __sigilFetchPatched: boolean }).__sigilFetchPatched = true;
+  window.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    let isSameOrigin = true;
+    try {
+      const url = typeof input === "string"
+        ? input
+        : input instanceof URL ? input.toString()
+        : (input as Request).url;
+      if (/^https?:\/\//i.test(url)) {
+        isSameOrigin = new URL(url).origin === window.location.origin;
+      }
+    } catch { /* assume same-origin */ }
+    if (!isSameOrigin) return originalFetch(input, init);
+    const sigilKey = (() => { try { return localStorage.getItem("TESSERACT_ADMIN_KEY") || ""; } catch { return ""; } })();
+    const adminToken = (() => { try { return localStorage.getItem("t9_admin_token") || ""; } catch { return ""; } })();
+    if (!sigilKey && !adminToken) return originalFetch(input, init);
+    const merged = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+    if (sigilKey && !merged.has("X-Sigil-Key")) merged.set("X-Sigil-Key", sigilKey);
+    if (adminToken && !merged.has("x-admin-token")) merged.set("x-admin-token", adminToken);
+    return originalFetch(input, { ...init, headers: merged });
+  }) as typeof window.fetch;
+}
+
 let _tabVisible = typeof document !== "undefined" ? document.visibilityState === "visible" : true;
 if (typeof document !== "undefined") {
   document.addEventListener("visibilitychange", () => {
