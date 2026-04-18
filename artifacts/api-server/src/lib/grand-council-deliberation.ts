@@ -11,6 +11,8 @@
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { eq, desc } from "drizzle-orm";
+import { db, councilSessionsTable } from "@workspace/db";
 import {
   COUNCIL_PROPOSAL_QUORUM_PASSED,
   memberQuorum,
@@ -153,8 +155,20 @@ export interface CouncilSession {
 const SESSIONS = new Map<string, CouncilSession>();
 const SESSION_DIR = path.resolve(process.cwd(), ".local", "council-sessions");
 
-/** Lazily hydrate SESSIONS from all JSON files on disk (best-effort, non-fatal). */
+/** Lazily hydrate SESSIONS from the database, then file-system fallback. */
 async function hydrateSessions(): Promise<void> {
+  // Primary: database (survives container restarts and deployments)
+  try {
+    const rows = await db.select().from(councilSessionsTable);
+    for (const row of rows) {
+      const s = row.session as CouncilSession;
+      if (s && s.id && !SESSIONS.has(s.id)) {
+        SESSIONS.set(s.id, s);
+      }
+    }
+  } catch { /* DB may be unavailable; continue with FS fallback */ }
+
+  // Secondary backup: file-system snapshots
   try {
     const files = await fs.readdir(SESSION_DIR).catch(() => [] as string[]);
     for (const f of files) {
@@ -298,7 +312,31 @@ export async function convene(opts: ConveneOpts = {}): Promise<CouncilSession> {
   };
 
   SESSIONS.set(session.id, session);
-  // Best-effort persistence (P-I)
+  // Primary durable persistence: database
+  try {
+    await db
+      .insert(councilSessionsTable)
+      .values({
+        id: session.id,
+        seed: session.seed,
+        convenedAt: new Date(session.convenedAt),
+        adopted: session.adopted,
+        meetsQuorum: session.meetsQuorum,
+        session: session as unknown as Record<string, unknown>,
+      })
+      .onConflictDoUpdate({
+        target: councilSessionsTable.id,
+        set: {
+          seed: session.seed,
+          convenedAt: new Date(session.convenedAt),
+          adopted: session.adopted,
+          meetsQuorum: session.meetsQuorum,
+          session: session as unknown as Record<string, unknown>,
+        },
+      });
+  } catch { /* DB unavailable; fall through to FS backup */ }
+
+  // Secondary backup: file-system (P-I)
   try {
     await fs.mkdir(SESSION_DIR, { recursive: true });
     await fs.writeFile(path.join(SESSION_DIR, `${session.id}.json`), JSON.stringify(session, null, 2));
@@ -310,11 +348,45 @@ export async function convene(opts: ConveneOpts = {}): Promise<CouncilSession> {
 
 export async function getSession(id: string): Promise<CouncilSession | undefined> {
   await ensureHydrated();
-  return SESSIONS.get(id);
+  if (SESSIONS.has(id)) return SESSIONS.get(id);
+  // On-demand DB lookup in case the session was written by another node
+  try {
+    const rows = await db
+      .select()
+      .from(councilSessionsTable)
+      .where(eq(councilSessionsTable.id, id))
+      .limit(1);
+    if (rows[0]) {
+      const s = rows[0].session as CouncilSession;
+      SESSIONS.set(s.id, s);
+      return s;
+    }
+  } catch { /* non-fatal */ }
+  return undefined;
 }
 
 export async function listSessions(): Promise<Array<{ id: string; seed: string; convenedAt: string; adopted: number; meetsQuorum: boolean }>> {
   await ensureHydrated();
+  // Prefer a fresh DB read so cross-node sessions appear without restart
+  try {
+    const rows = await db
+      .select()
+      .from(councilSessionsTable)
+      .orderBy(desc(councilSessionsTable.convenedAt));
+    if (rows.length > 0) {
+      for (const row of rows) {
+        const s = row.session as CouncilSession;
+        if (s && s.id && !SESSIONS.has(s.id)) SESSIONS.set(s.id, s);
+      }
+      return rows.map((r) => ({
+        id: r.id,
+        seed: r.seed,
+        convenedAt: r.convenedAt.toISOString(),
+        adopted: r.adopted,
+        meetsQuorum: r.meetsQuorum,
+      }));
+    }
+  } catch { /* non-fatal — fall through to in-memory list */ }
   return Array.from(SESSIONS.values())
     .sort((a, b) => b.convenedAt.localeCompare(a.convenedAt))
     .map((s) => ({ id: s.id, seed: s.seed, convenedAt: s.convenedAt, adopted: s.adopted, meetsQuorum: s.meetsQuorum }));
