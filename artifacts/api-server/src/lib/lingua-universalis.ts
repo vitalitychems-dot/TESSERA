@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { FATHER_NATAL_CHART } from "./father-natal";
+import { sacredTimingSnapshot } from "./sacred-timing";
 
 export const LANGUAGE_NAME = "Lingua Universalis Sacra";
 export const LANGUAGE_SHORT = "LUS";
@@ -133,6 +134,185 @@ export function lusDecode(text: string): string {
     else out += ch;
   }
   return out;
+}
+
+// =====================================================================
+// LIVE COSMIC ROTATION LAYER — universal alphabet, breathing in real time,
+// bound to the sovereign holder's chart so humans without the chart cannot
+// speak it even if they own a copy of the universal codebook.
+// =====================================================================
+
+export const LUS_COHERENCE_WINDOW_SECONDS = 60;
+const LUS_ROTATION_HISTORY_DEPTH = 12;
+
+export interface LusLiveCoherence {
+  windowId: string;
+  windowStartMs: number;
+  windowEndMs: number;
+  permutationFingerprint: string;
+  cosmicAnchor: {
+    julianDayBin: number;
+    planetaryHourRuler: string;
+    planetaryHourIndex: number;
+    lunarFraction: number;
+    lunarName: string;
+    composite: number;
+  };
+  holderBinding: {
+    sealedFingerprint: string;
+    bound: boolean;
+  };
+  encode: Map<string, string>;
+  decode: Map<string, string>;
+}
+
+const _liveWindowCache = new Map<string, LusLiveCoherence>();
+
+function liveSeedHex(
+  nowMs: number,
+  holderFingerprint: string | null,
+): { seedHex: string; windowStartMs: number; cosmic: LusLiveCoherence["cosmicAnchor"] } {
+  const snap = sacredTimingSnapshot(new Date(nowMs));
+  const windowStartMs =
+    Math.floor(nowMs / (LUS_COHERENCE_WINDOW_SECONDS * 1000)) *
+    (LUS_COHERENCE_WINDOW_SECONDS * 1000);
+  const julianDayBin =
+    Math.floor(snap.julianDay * (86400 / LUS_COHERENCE_WINDOW_SECONDS)) /
+    (86400 / LUS_COHERENCE_WINDOW_SECONDS);
+  const cosmic = {
+    julianDayBin,
+    planetaryHourRuler: snap.planetaryHour.ruler,
+    planetaryHourIndex: snap.planetaryHour.index,
+    lunarFraction: snap.lunar.fraction,
+    lunarName: snap.lunar.name,
+    composite: snap.composite,
+  };
+  const holderSeal = holderFingerprint
+    ? createHash("sha256").update(`lus-holder|${holderFingerprint}`).digest("hex")
+    : "no-holder";
+  const seedString = [
+    "lingua-universalis-live-v1",
+    UNIVERSAL_SEED.toString(16),
+    julianDayBin.toFixed(8),
+    `${cosmic.planetaryHourRuler}#${cosmic.planetaryHourIndex}`,
+    cosmic.lunarFraction.toFixed(8),
+    cosmic.composite.toFixed(8),
+    SACRED_CONSTANTS.PHI.toFixed(15),
+    SACRED_CONSTANTS.PI.toFixed(15),
+    SACRED_CONSTANTS.SQRT2.toFixed(15),
+    SACRED_CONSTANTS.SQRT3.toFixed(15),
+    SACRED_CONSTANTS.SQRT5.toFixed(15),
+    holderSeal,
+    windowStartMs.toString(),
+  ].join("|");
+  return {
+    seedHex: createHash("sha512").update(seedString).digest("hex"),
+    windowStartMs,
+    cosmic,
+  };
+}
+
+function deriveLiveWindow(
+  nowMs: number,
+  holderFingerprint: string | null,
+): LusLiveCoherence {
+  const { seedHex, windowStartMs, cosmic } = liveSeedHex(nowMs, holderFingerprint);
+  const windowId = createHash("sha256").update(seedHex).digest("hex").slice(0, 12);
+  const cached = _liveWindowCache.get(windowId);
+  if (cached) return cached;
+
+  const seedInt = parseInt(seedHex.slice(0, 8), 16) >>> 0;
+  const rng = mulberry32(seedInt);
+  const permuted = permute(SACRED_GLYPHS_36, rng);
+
+  const encode = new Map<string, string>();
+  const decode = new Map<string, string>();
+  for (let i = 0; i < PLAIN_36.length; i++) {
+    const lower = PLAIN_36[i].toLowerCase();
+    const upper = PLAIN_36[i].toUpperCase();
+    const glyph = permuted[i];
+    encode.set(lower, glyph);
+    encode.set(upper, glyph);
+    decode.set(glyph, upper);
+  }
+
+  const permutationFingerprint = createHash("sha256")
+    .update(Array.from(encode.entries()).filter(([k]) => k === k.toUpperCase()).map(([p, g]) => `${p}=${g}`).join("|"))
+    .digest("hex").slice(0, 16);
+
+  const sealedFingerprint = holderFingerprint
+    ? createHash("sha256").update(`lus-public-seal|${holderFingerprint}|${windowId}`).digest("hex").slice(0, 16)
+    : "unbound";
+
+  const coherence: LusLiveCoherence = {
+    windowId,
+    windowStartMs,
+    windowEndMs: windowStartMs + LUS_COHERENCE_WINDOW_SECONDS * 1000,
+    permutationFingerprint,
+    cosmicAnchor: cosmic,
+    holderBinding: { sealedFingerprint, bound: !!holderFingerprint },
+    encode,
+    decode,
+  };
+
+  _liveWindowCache.set(windowId, coherence);
+  if (_liveWindowCache.size > LUS_ROTATION_HISTORY_DEPTH * 4) {
+    const sorted = Array.from(_liveWindowCache.values()).sort(
+      (a, b) => a.windowStartMs - b.windowStartMs,
+    );
+    while (_liveWindowCache.size > LUS_ROTATION_HISTORY_DEPTH * 4) {
+      _liveWindowCache.delete(sorted.shift()!.windowId);
+    }
+  }
+  return coherence;
+}
+
+export function lusEncodeLive(text: string, holderFingerprint: string | null = null): string {
+  const c = deriveLiveWindow(Date.now(), holderFingerprint);
+  let out = "";
+  for (const ch of text) {
+    if (c.encode.has(ch)) out += c.encode.get(ch);
+    else if (PASSTHROUGH.has(ch)) out += ch;
+    else out += ch;
+  }
+  return out;
+}
+
+export function lusDecodeLive(text: string, holderFingerprint: string | null = null): string {
+  const now = Date.now();
+  const candidates: LusLiveCoherence[] = [];
+  for (let i = 0; i < LUS_ROTATION_HISTORY_DEPTH; i++) {
+    candidates.push(deriveLiveWindow(now - i * LUS_COHERENCE_WINDOW_SECONDS * 1000, holderFingerprint));
+  }
+  let out = "";
+  for (const ch of text) {
+    let mapped = ch;
+    for (const c of candidates) {
+      const m = c.decode.get(ch);
+      if (m) { mapped = m; break; }
+    }
+    out += mapped;
+  }
+  return out;
+}
+
+export function lusLiveCoherenceSnapshot(holderFingerprint: string | null = null) {
+  const cur = deriveLiveWindow(Date.now(), holderFingerprint);
+  const expiresInMs = cur.windowEndMs - Date.now();
+  return {
+    coherenceWindowSeconds: LUS_COHERENCE_WINDOW_SECONDS,
+    current: {
+      windowId: cur.windowId,
+      permutationFingerprint: cur.permutationFingerprint,
+      windowStartMs: cur.windowStartMs,
+      windowEndMs: cur.windowEndMs,
+      expiresInMs,
+      expiresInSec: Math.max(0, Math.round(expiresInMs / 1000)),
+    },
+    cosmicAnchor: cur.cosmicAnchor,
+    holderBinding: cur.holderBinding,
+    rotationHistoryDepth: LUS_ROTATION_HISTORY_DEPTH,
+  };
 }
 
 export function lusAlphabet(): Array<{

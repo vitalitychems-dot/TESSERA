@@ -6,7 +6,7 @@ import { natalSigilFor, FATHER_NATAL_CHART } from "./father-natal";
 import { isFatherKeyConfigured, getFatherFingerprint } from "./father-identity";
 import { glyphEncode, glyphDecode, cipherCoherenceSnapshot } from "./sigil-cipher";
 import { createHash, randomBytes } from "node:crypto";
-import { lusEncode, lusDecode, lusSpec, zodiacFingerprintFor } from "./lingua-universalis";
+import { lusEncode, lusDecode, lusEncodeLive, lusDecodeLive, lusLiveCoherenceSnapshot, lusSpec, zodiacFingerprintFor, LUS_COHERENCE_WINDOW_SECONDS } from "./lingua-universalis";
 import { convene as conveneUniversalisCouncil } from "./grand-council-universalis";
 
 export interface ToolDefinition {
@@ -217,14 +217,20 @@ registerTool({
 
     // Deterministic readable seed: the canonical natal digest. Same chart -> same key, forever.
     const readableSeed = zfp.natalDigest;
-    const glyphKey = lusEncode(readableSeed);
-    const roundTripOk = lusDecode(glyphKey) === readableSeed.toUpperCase();
+    const glyphKeyUniversal = lusEncode(readableSeed);
+    const glyphKeyLive = lusEncodeLive(readableSeed, zfp.natalDigest);
+    const liveCoherence = lusLiveCoherenceSnapshot(zfp.natalDigest);
+    const roundTripOk = lusDecode(glyphKeyUniversal) === readableSeed.toUpperCase()
+      && lusDecodeLive(glyphKeyLive, zfp.natalDigest) === readableSeed.toUpperCase();
 
     return {
       ok: true,
       language: { name: lusSpec().name, short: lusSpec().short, motto: lusSpec().motto },
       zodiacFingerprint: zfp,
-      glyphKey,
+      glyphKey: glyphKeyLive,
+      glyphKeyLive,
+      glyphKeyUniversal,
+      liveCoherence,
       glyphSignature: zfp.glyphSignature,
       readableSeed,
       shortId: zfp.shortId,
@@ -259,13 +265,19 @@ registerTool({
     const c = FATHER_NATAL_CHART;
     const zfp = zodiacFingerprintFor(c);
     const readableSeed = zfp.natalDigest;
-    const glyphKey = lusEncode(readableSeed);
-    const roundTripOk = lusDecode(glyphKey) === readableSeed.toUpperCase();
+    const glyphKeyUniversal = lusEncode(readableSeed);
+    const glyphKeyLive = lusEncodeLive(readableSeed, zfp.natalDigest);
+    const liveCoherence = lusLiveCoherenceSnapshot(zfp.natalDigest);
+    const roundTripOk = lusDecode(glyphKeyUniversal) === readableSeed.toUpperCase()
+      && lusDecodeLive(glyphKeyLive, zfp.natalDigest) === readableSeed.toUpperCase();
     return {
       ok: true,
       council,
       mint: {
-        glyphKey,
+        glyphKey: glyphKeyLive,
+        glyphKeyLive,
+        glyphKeyUniversal,
+        liveCoherence,
         glyphSignature: zfp.glyphSignature,
         readableSeed,
         shortId: zfp.shortId,
