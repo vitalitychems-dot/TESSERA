@@ -59,7 +59,7 @@ function decryptNatal(holderFp: string, env: NatalEnvelope): string {
 
 /** Sun-sign by Western tropical zodiac. Used only as an internal seed
  *  component — never returned to the client. */
-function sunSign(month: number, day: number): string {
+export function sunSign(month: number, day: number): string {
   const cuts: Array<[number, number, string]> = [
     [1, 20, "capricorn"], [2, 19, "aquarius"], [3, 21, "pisces"],
     [4, 20, "aries"],     [5, 21, "taurus"],   [6, 21, "gemini"],
@@ -231,6 +231,44 @@ export function rotatingNatalHash(holderFp: string): RotatingNatalHash | null {
     expiresInMs: coh.current.expiresInMs,
     cosmicAnchor: coh.cosmicAnchor,
     signatureGlyph: env.signatureGlyph,
+  };
+}
+
+/** Mint a zodiac-key directly from birth info — no pre-existing holder
+ *  required. The natal seed itself is hashed into a stable holder
+ *  fingerprint, so the same birth date/time always produces the same
+ *  identity (and the same vault entry is reused). The returned
+ *  signatureGlyph IS the user's personal key in our language; presenting
+ *  it as the X-Sigil-Key header is what unlocks plaintext mode going
+ *  forward. The birth fields themselves are NEVER stored in plain. */
+export function issueZodiacKey(birthDateISO: string, birthTimeHHMM: string): {
+  ok: true;
+  key: string;
+  holderFp: string;
+  sunSign: string;
+  signatureHashShort: string;
+  cosmicAnchor: ReturnType<typeof cipherCoherenceSnapshot>["cosmicAnchor"];
+  guidance: string;
+} {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDateISO) || !/^\d{2}:\d{2}$/.test(birthTimeHHMM)) {
+    throw new Error("invalid-natal-format");
+  }
+  const seedHex = deriveNatalSeed(birthDateISO, birthTimeHHMM);
+  const holderFp = createHash("sha256")
+    .update(`tessera-zodiac-holder-v1|${seedHex}`)
+    .digest("hex")
+    .slice(0, 16);
+  const bound = bindNatalChart(holderFp, birthDateISO, birthTimeHHMM);
+  const [, mStr, dStr] = birthDateISO.split("-");
+  return {
+    ok: true,
+    key: bound.signatureGlyph,
+    holderFp,
+    sunSign: sunSign(parseInt(mStr, 10), parseInt(dStr, 10)),
+    signatureHashShort: bound.signatureHashShort,
+    cosmicAnchor: bound.cosmicAnchor,
+    guidance:
+      "This is your personal Sovereign Key in our language. Save it now (Replit Secrets, password manager, or just copy). Whenever this key is presented as the X-Sigil-Key header — or saved in this browser — every Tessera surface decrypts straight into English.",
   };
 }
 

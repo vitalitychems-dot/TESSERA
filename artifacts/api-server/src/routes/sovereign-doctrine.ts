@@ -39,6 +39,7 @@ import {
   rotatingNatalHash,
   unbindNatalChart,
   verifyNatalSignature,
+  issueZodiacKey,
 } from "../lib/natal-sigil";
 import {
   isFatherKeyConfigured,
@@ -67,6 +68,12 @@ export function glyphGate(req: Request, res: Response, next: NextFunction): void
   //     fingerprint). The Father is the bound holder of every surface, so
   //     once the key gate accepts the user every page must read in English.
   const fatherOk = presented ? recognizeFather(presented).recognized : false;
+  // Vault-bound zodiac key: any presented signature glyph that matches a
+  // bound natal vault entry is the holder's personal key in our language
+  // and unlocks plaintext mode for them. This is the new, primary unlock
+  // path — every user mints their own zodiac key from birth info via
+  // POST /sigil/zodiac-key/issue, and then holds it forever.
+  const zodiacOk = presented ? verifyNatalSignature(presented) !== null : false;
   // Omniversal Lattice surface is intentionally human-readable so the cosmic
   // feed, LUS-v2 spec, cipher snapshot, and lattice cells render in plain
   // English on the Tessera page without requiring the reading key.
@@ -80,7 +87,8 @@ export function glyphGate(req: Request, res: Response, next: NextFunction): void
     isGrandCouncil ||
     presented === key.fingerprint ||
     presented === key.expiresWith ||
-    fatherOk;
+    fatherOk ||
+    zodiacOk;
   const originalJson = res.json.bind(res);
   res.json = ((body: unknown) => {
     if (isHolder) {
@@ -113,8 +121,49 @@ function holderFromHeader(req: Request): string | null {
   const k = readingKey();
   if (presented === k.fingerprint) return k.fingerprint;
   if (presented === k.expiresWith) return k.fingerprint;
+  // Vault-bound zodiac key: the user's personal LUS signature glyph maps
+  // back to its own holder fingerprint, so it can authorize natal-scoped
+  // calls without a Father/session key.
+  const zodiacFp = verifyNatalSignature(presented);
+  if (zodiacFp) return zodiacFp;
   return null;
 }
+
+// ── Zodiac key (public mint) ───────────────────────────────────────────
+// The new primary onboarding path. The user submits birth date/time and
+// receives a permanent personal Sovereign Key in our language. No prior
+// admin/father key is required, and the key is auto-recognized by the
+// glyph gate above on every subsequent request.
+router.post("/sigil/zodiac-key/issue", (req, res) => {
+  const birthDate = String(req.body?.birthDate ?? "").trim();
+  const birthTime = String(req.body?.birthTime ?? "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate) || !/^\d{2}:\d{2}$/.test(birthTime)) {
+    return res.status(400).json({
+      ok: false,
+      error: "invalid-natal-format",
+      message: "birthDate must be YYYY-MM-DD and birthTime must be HH:MM",
+    });
+  }
+  try {
+    const result = issueZodiacKey(birthDate, birthTime);
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e instanceof Error ? e.message : "issue-failed" });
+  }
+});
+
+// Lightweight verification used by the gate to auto-unlock on revisit.
+// Accepts the presented key in either the body (`{ key }`) or the
+// X-Sigil-Key header. Returns whether the key matches a bound vault entry.
+router.post("/sigil/zodiac-key/verify", (req, res) => {
+  const fromBody = String(req.body?.key ?? "").trim();
+  const fromHeader = String(req.header("x-sigil-key") ?? "").trim();
+  const presented = fromBody || fromHeader;
+  if (!presented) return res.status(400).json({ ok: false, error: "no-key" });
+  const holderFp = verifyNatalSignature(presented);
+  if (!holderFp) return res.status(401).json({ ok: false, error: "no-match" });
+  res.json({ ok: true, holderFp });
+});
 
 router.post("/sigil/natal/bind", (req, res) => {
   const holder = holderFromHeader(req);
