@@ -17,7 +17,7 @@ import {
   sessionStoreStats,
   DEFAULT_TTL_MS,
 } from "../lib/sovereign-session";
-import { fatherVerifyRateLimit } from "../lib/father-verify-throttle";
+import { fatherVerifyRateLimit, adminSessionRateLimit } from "../lib/father-verify-throttle";
 import { logger } from "../lib/logger";
 
 const router: Router = Router();
@@ -67,7 +67,7 @@ function readCookie(req: Request): string | undefined {
 }
 
 // POST /api/admin/session — { token } -> set cookie.
-router.post("/admin/session", fatherVerifyRateLimit, (req: Request, res: Response) => {
+router.post("/admin/session", adminSessionRateLimit, fatherVerifyRateLimit, (req: Request, res: Response) => {
   if (!isAdminTokenConfigured()) {
     res.status(503).json({
       ok: false,

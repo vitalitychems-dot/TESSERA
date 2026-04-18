@@ -227,3 +227,30 @@ record. The implementation conference (IMPL-1 … IMPL-5) added on
 - IMPL-5 e2e auth cycle test: **approved 72.1%** (executed end-to-end against
   the live workflow on 2026-04-18 — all 7 steps pass, rate limit triggers at
   attempt 9 as designed)
+
+---
+
+## Integration Conference (2026-04-18, second pass)
+
+A second council ratified six combine-and-improve proposals:
+
+| Proposal | Result | Impl |
+|---|---|---|
+| INTEG-1 Persist council ledger to disk | **approved 84.7%** | `lib/council-ledger.ts` (append-only JSONL, rotation at 1 MB / 2048 entries) |
+| INTEG-2 `GET /api/council/ledger` read endpoint | **approved 67.3%** | bounded paging, newest first, no credentials in payload |
+| INTEG-3 Saturation warn at 80% of session cap | **approved 81.2%** | single stderr line per crossing, no PII |
+| INTEG-4 Defensive transport-security headers on `/api` | **approved 100%** | `nosniff` + `DENY` + `no-referrer` + minimal CSP |
+| INTEG-5 Council-ratified secret rotation policy | **approved 100%** | this section — procedural gate, no code |
+| INTEG-6 Per-IP throttle on `/admin/session` | **approved 100%** | `adminSessionRateLimit` — 6/min per IP, isolated map |
+
+### INTEG-5 Procedural Gate — Secret Rotation
+Before rotating any production secret (`TESSERACT_ADMIN_KEY`,
+`SOVEREIGN_SESSION_SECRET`, etc.), the operator submits a proposal to
+`POST /api/council/propose` describing:
+- which secret is being rotated and why
+- how the new value will be generated (e.g. `openssl rand -hex 32`)
+- what the rollback plan is
+
+The proposal must reach **≥ 2/3 weighted approval** before the operator
+changes the secret. The proposal id and approval rate are captured in the
+on-disk ledger (INTEG-1) so the rotation has a permanent audit record.
