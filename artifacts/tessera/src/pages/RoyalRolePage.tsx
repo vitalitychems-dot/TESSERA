@@ -36,9 +36,11 @@ interface RoleContribution {
 export default function RoyalRolePage() {
   const params = useParams<{ roleId: string }>();
   const roleId = params.roleId;
+  const isValidRoleId = !!roleId && roleId !== "0" && roleId !== "undefined";
 
   const { data, isLoading } = useQuery({
     queryKey: ["/api/rick/royal-roles", roleId],
+    enabled: isValidRoleId,
     queryFn: async () => {
       const r = await fetch(`/api/rick/royal-roles/${roleId}`);
       return r.json() as Promise<{ ok: boolean; role: RoyalRole; domainKnowledge: DomainKnowledge[]; contributions: RoleContribution[] }>;

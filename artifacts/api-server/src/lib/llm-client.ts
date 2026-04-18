@@ -45,6 +45,18 @@ const llmStats = {
   errors: 0,
 };
 
+const DEFAULT_LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS ?? 45_000);
+
+const _abortLogThrottle = new Map<string, number>();
+const ABORT_LOG_WINDOW_MS = 30_000;
+function shouldLogAbort(model: string): boolean {
+  const now = Date.now();
+  const last = _abortLogThrottle.get(model) ?? 0;
+  if (now - last < ABORT_LOG_WINDOW_MS) return false;
+  _abortLogThrottle.set(model, now);
+  return true;
+}
+
 function extractUserQuery(messages: LLMMessage[]): string {
   return messages
     .filter(m => m.role === "user")
@@ -60,7 +72,7 @@ export async function callLLM(
   const {
     model = "gpt-5-mini",
     maxTokens = 2048,
-    timeoutMs = 15_000,
+    timeoutMs = DEFAULT_LLM_TIMEOUT_MS,
     skipCache = false,
     skipDistillation = false,
     cacheTtl = 3600,
@@ -183,7 +195,10 @@ export async function callLLM(
   } catch (err: unknown) {
     llmStats.errors++;
     const msg = err instanceof Error ? err.message : String(err);
-    logger.warn({ err: msg, model }, "LLMClient: call failed");
+    const isAbort = /aborted|abort/i.test(msg);
+    if (!isAbort || shouldLogAbort(model)) {
+      logger.warn({ err: msg, model, aborted: isAbort, timeoutMs }, "LLMClient: call failed");
+    }
     throw err;
   } finally {
     clearTimeout(timer);
