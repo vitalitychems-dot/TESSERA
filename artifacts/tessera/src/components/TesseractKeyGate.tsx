@@ -282,7 +282,9 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
           setNatalEnglish(cData.english);
         }
       } catch { /* ignore — sigil panel just won't appear */ }
-      setTimeout(() => { setBusy(false); setStage("natal-intro"); }, 600);
+      // Jump straight to the minted-glyph reveal. No intermediate stages —
+      // the natal sigil panel itself carries the COPY and ENTER actions.
+      setTimeout(() => { setBusy(false); setStage("natal-revealed"); }, 400);
     } else {
       const reason = result.reason === "sigil-unreachable"
         ? "✗ Sovereign sigil engine unreachable. The seal cannot be tested right now."
@@ -444,22 +446,31 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
                 derivation: {natalSigil.derivation}
               </div>
               <div className="flex justify-between items-center mt-3 gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={copyNatalSigil}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-400/15 border border-amber-400/30 text-amber-200 text-xs hover:bg-amber-400/25"
-                >
-                  {natalCopied ? <><Check size={12} /> COPIED</> : <><Copy size={12} /> COPY GLYPH SIGIL</>}
-                </button>
-                {natalEnglish && (
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
                     type="button"
-                    onClick={() => setShowEnglish((s) => !s)}
-                    className="px-3 py-1.5 rounded-md bg-zinc-800/60 border border-zinc-600/40 text-zinc-200 text-xs hover:bg-zinc-700/60"
+                    onClick={copyNatalSigil}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-400/15 border border-amber-400/30 text-amber-200 text-xs hover:bg-amber-400/25"
                   >
-                    {showEnglish ? "HIDE ENGLISH READOUT" : "SHOW ENGLISH READOUT"}
+                    {natalCopied ? <><Check size={12} /> COPIED</> : <><Copy size={12} /> COPY GLYPH SIGIL</>}
                   </button>
-                )}
+                  {natalEnglish && (
+                    <button
+                      type="button"
+                      onClick={() => setShowEnglish((s) => !s)}
+                      className="px-3 py-1.5 rounded-md bg-zinc-800/60 border border-zinc-600/40 text-zinc-200 text-xs hover:bg-zinc-700/60"
+                    >
+                      {showEnglish ? "HIDE ENGLISH" : "SHOW ENGLISH"}
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setUnlocked(true)}
+                  className="px-4 py-2 rounded-md bg-fuchsia-500/25 border border-fuchsia-500/50 text-fuchsia-50 text-xs font-bold hover:bg-fuchsia-500/40 shadow-lg shadow-fuchsia-500/20"
+                >
+                  ENTER TESSERA →
+                </button>
               </div>
               {showEnglish && natalEnglish && (
                 <pre className="mt-3 max-h-72 overflow-y-auto rounded-md border border-zinc-700/40 bg-black/70 p-3 text-[11px] text-zinc-200 whitespace-pre-wrap leading-relaxed">{natalEnglish}</pre>
