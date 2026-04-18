@@ -125,7 +125,7 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
     },
     {
       from: "tessera",
-      text: "Accepted: only the value whose fingerprint matches the env-derived Father fingerprint — either the raw TESSERACT_ADMIN_KEY or its 16-char fingerprint. No master phrase. To mint a glyph form of a candidate key for use as TESSERACT_ADMIN_KEY, type it and press MINT GLYPH KEY.",
+      text: "Type your TESSERACT_ADMIN_KEY and press SEND. The moment the key is accepted, your sovereign natal sigil is auto-minted from the chart — copy it into Replit Secrets as SIGIL_ADMIN_KEY (or MINTED_GLYPH_KEY), then tap ENTER TESSERA to land in the app. From the next visit on, the gate auto-unlocks silently.",
       ts: Date.now() + 1,
     },
   ]);
@@ -552,22 +552,14 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
               <button
                 type="submit"
                 disabled={busy || !input.trim()}
-                className="px-3 py-2 rounded-md bg-fuchsia-500/20 border border-fuchsia-500/40 text-fuchsia-200 text-xs font-bold hover:bg-fuchsia-500/30 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                title="Submit your TESSERACT_ADMIN_KEY — the sigil mints automatically on acceptance"
+                className="px-4 py-2 rounded-md bg-fuchsia-500/25 border border-fuchsia-500/50 text-fuchsia-50 text-xs font-bold hover:bg-fuchsia-500/40 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-md shadow-fuchsia-500/20"
               >
-                <Send size={12} /> SEND
-              </button>
-              <button
-                type="button"
-                onClick={handleMint}
-                disabled={busy || !input.trim()}
-                title="Encode the candidate key into the live glyph alphabet so you can copy it into Replit Secrets as TESSERACT_ADMIN_KEY"
-                className="px-3 py-2 rounded-md bg-violet-500/20 border border-violet-500/40 text-violet-100 text-xs font-bold hover:bg-violet-500/30 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
-              >
-                <Sparkles size={12} /> MINT GLYPH KEY
+                {busy ? <><Sparkles size={12} className="animate-pulse" /> MINTING…</> : <><Send size={12} /> SEND &amp; MINT SIGIL</>}
               </button>
             </div>
             <div className="mt-2 text-[10px] text-fuchsia-400/40 px-1">
-              accepts only the raw TESSERACT_ADMIN_KEY or its env-derived 16-char fingerprint · master phrase removed · key stored locally only
+              one-step gate · sigil auto-mints on key acceptance · key stored locally only
             </div>
             {mintedGlyph?.ok && mintedGlyph.glyph && (
               <div className="mt-3 rounded-xl border border-violet-500/40 bg-gradient-to-br from-violet-900/20 to-fuchsia-900/10 p-3">
