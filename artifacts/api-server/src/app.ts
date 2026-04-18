@@ -150,6 +150,15 @@ const PLAINTEXT_PREFIXES = [
   "/api/sigil/translate",
   "/api/sigil/decode-body",
   "/api/sigil/status",
+  // Father bootstrap surfaces — these must return plaintext so the gate
+  // can read the real fingerprint and the real natal sigil glyph that
+  // the user is told to paste into SIGIL_ADMIN_KEY. Encoding them here
+  // would produce a value that never matches what the server expects,
+  // and the user could never enter.
+  "/api/sigil/father/verify",
+  "/api/sigil/father/mint-glyph",
+  "/api/sigil/father/natal-sigil",
+  "/api/sigil/father/natal-chart",
 ];
 app.use("/api", (req: Request, res: Response, next: NextFunction) => {
   const isInternalProbe = req.headers[INTERNAL_PROBE_HEADER] === INTERNAL_PROBE_SECRET;
