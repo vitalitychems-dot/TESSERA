@@ -1,297 +1,304 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Lock, Sparkles, Copy, Check, RefreshCw, KeyRound } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 
-const STORAGE_KEY = "TESSERACT_ADMIN_KEY";
-const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
-const POLL_MS = 4000;
+// ─────────────────────────────────────────────────────────────────────────────
+// Heavy Council, Apr 2026 — Proposals P1, P2, P5, P6, P11
+//
+// Single-credential, finite-state entry. The operator presents ONE token.
+// The server returns an HttpOnly cookie. Browser code never touches the
+// canonical token after submission. Four UI states, one CTA per state, plus
+// a recovery runbook drawer.
+// ─────────────────────────────────────────────────────────────────────────────
 
-interface FatherKeyStatus {
-  ok?: boolean;
-  unlocked?: boolean;
-  sunSign?: string;
-  cosmicAnchor?: { planetaryHour: string; lunarFraction: number; composite: number };
-  planetary?: { current: { epoch: string; ruler: string; index: number; hourStart: string; hourEnd: string }; currentSignalPreview: string } | null;
-  chart?: {
-    date: string;
-    time: string;
-    location: string;
-    sun: { sign: string; degree: string; house: number };
-    moon: { sign: string; degree: string; house: number };
-    ascendant: { sign: string; degree: string };
-  };
-  env?: {
-    tesseractSet: boolean;
-    sigilSet: boolean;
-    tesseractMatches: boolean;
-    sigilIsValidSignal: boolean;
-    canonicalSecretName: string;
-    rotatingSecretName: string;
-  };
-  instructions?: string;
-  error?: string;
+const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/?$/, "/");
+
+type GateState =
+  | { kind: "loading" }
+  | { kind: "unconfigured" }
+  | { kind: "locked"; reason?: string }
+  | { kind: "submitting" }
+  | { kind: "invalid"; reason?: string }
+  | { kind: "rate-limited"; retryAfterMs: number }
+  | { kind: "expired" }
+  | { kind: "unlocked"; expiresAt: number };
+
+interface StatusResponse {
+  ok: boolean;
+  configured: boolean;
+  authenticated: boolean;
+  expiresAt?: number;
+  reason?: string;
 }
 
-interface DeriveResp {
-  ok?: boolean;
-  signal?: string;
-  epoch?: { epoch: string; ruler: string; index: number; hourStart: string; hourEnd: string };
-  grace?: { previousEpoch: string; nextEpoch: string };
-  error?: string;
-}
-
-async function fetchStatus(): Promise<FatherKeyStatus> {
+async function fetchStatus(): Promise<StatusResponse | null> {
   try {
-    const res = await fetch(`${BASE}/api/sigil/father-key/status`, { method: "GET" });
-    const data: FatherKeyStatus = await res.json().catch(() => ({}));
-    if (!res.ok) return { ok: false, error: data?.error ?? `http-${res.status}` };
-    return data;
-  } catch {
-    return { ok: false, error: "network" };
-  }
-}
-
-async function deriveSignal(adminKey: string): Promise<DeriveResp> {
-  try {
-    const res = await fetch(`${BASE}/api/sigil/father-key/derive-signal`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ adminKey }),
+    const res = await fetch(`${BASE}api/admin/session/status`, {
+      credentials: "include",
+      cache: "no-store",
     });
-    const data: DeriveResp = await res.json().catch(() => ({}));
-    if (!res.ok) return { ok: false, error: data?.error ?? `http-${res.status}` };
-    return data;
+    if (!res.ok) return null;
+    return (await res.json()) as StatusResponse;
   } catch {
-    return { ok: false, error: "network" };
+    return null;
   }
+}
+
+async function postUnlock(token: string): Promise<{ ok: true; expiresAt: number } | { ok: false; status: number; body: unknown }> {
+  const res = await fetch(`${BASE}api/admin/session`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+  let body: unknown = null;
+  try { body = await res.json(); } catch { /* ignore */ }
+  if (res.ok) {
+    const b = body as { expiresAt?: number };
+    return { ok: true, expiresAt: b.expiresAt ?? Date.now() + 8 * 3600 * 1000 };
+  }
+  return { ok: false, status: res.status, body };
+}
+
+async function postLogout(): Promise<void> {
+  try {
+    await fetch(`${BASE}api/admin/session/logout`, { method: "POST", credentials: "include" });
+  } catch { /* ignore */ }
+}
+
+function classifyStatus(s: StatusResponse | null): GateState {
+  if (!s) return { kind: "locked", reason: "network" };
+  if (!s.configured) return { kind: "unconfigured" };
+  if (s.authenticated && s.expiresAt) return { kind: "unlocked", expiresAt: s.expiresAt };
+  if (s.reason === "expired") return { kind: "expired" };
+  return { kind: "locked", reason: s.reason };
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        try { await navigator.clipboard.writeText(text); setDone(true); setTimeout(() => setDone(false), 1500); } catch { /* ignore */ }
+      }}
+      className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-amber-500/40 text-amber-200 hover:bg-amber-500/10"
+    >
+      {done ? "copied" : "copy"}
+    </button>
+  );
+}
+
+function RecoveryPanel() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-6 border-t border-zinc-800 pt-4">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="text-xs text-zinc-400 hover:text-zinc-200"
+      >
+        {open ? "▾" : "▸"} Can't unlock? Recovery runbook
+      </button>
+      {open && (
+        <ol className="mt-3 space-y-3 text-xs text-zinc-300">
+          <li>
+            <div className="font-semibold text-zinc-100">1. Generate a new token</div>
+            <div className="mt-1 flex items-center gap-2">
+              <code className="flex-1 px-2 py-1 rounded bg-black/40 font-mono text-emerald-300 text-[11px]">openssl rand -base64 48 | tr -d '\n'</code>
+              <CopyButton text={"openssl rand -base64 48 | tr -d '\\n'"} />
+            </div>
+          </li>
+          <li>
+            <div className="font-semibold text-zinc-100">2. Save it in Replit Secrets</div>
+            <div className="mt-1 text-zinc-400">
+              Set the secret <code className="px-1 py-0.5 rounded bg-black/40 text-amber-200">SOVEREIGN_ADMIN_TOKEN</code> to the value from step 1.
+              The legacy <code className="px-1 py-0.5 rounded bg-black/40 text-amber-200">TESSERACT_ADMIN_KEY</code> is still accepted as a fallback during migration.
+            </div>
+          </li>
+          <li>
+            <div className="font-semibold text-zinc-100">3. Restart the API workflow</div>
+            <div className="mt-1 text-zinc-400">In the workspace, restart <code className="px-1 py-0.5 rounded bg-black/40">artifacts/api-server: API Server</code>.</div>
+          </li>
+          <li>
+            <div className="font-semibold text-zinc-100">4. Verify the gate</div>
+            <div className="mt-1 flex items-center gap-2">
+              <code className="flex-1 px-2 py-1 rounded bg-black/40 font-mono text-emerald-300 text-[11px]">curl -sS $REPLIT_DEV_DOMAIN/api/admin/session/status</code>
+              <CopyButton text={"curl -sS $REPLIT_DEV_DOMAIN/api/admin/session/status"} />
+            </div>
+            <div className="mt-1 text-zinc-400">Should return <code>{"{\"configured\":true,\"authenticated\":false}"}</code>. Then unlock here.</div>
+          </li>
+        </ol>
+      )}
+    </div>
+  );
+}
+
+function Frame({ tone, title, body }: { tone: "amber" | "rose" | "emerald" | "zinc"; title: string; body: ReactNode }) {
+  const ring = {
+    amber: "ring-amber-500/40 from-amber-950/30 to-zinc-950",
+    rose: "ring-rose-500/40 from-rose-950/30 to-zinc-950",
+    emerald: "ring-emerald-500/40 from-emerald-950/30 to-zinc-950",
+    zinc: "ring-zinc-700/50 from-zinc-900/30 to-zinc-950",
+  }[tone];
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-sm p-6">
+      <div className={`w-full max-w-xl rounded-2xl ring-1 ${ring} bg-gradient-to-br p-6 shadow-2xl`}>
+        <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>
+        {body}
+        <RecoveryPanel />
+      </div>
+    </div>
+  );
 }
 
 export default function TesseractKeyGate({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<FatherKeyStatus | null>(null);
-  const [unlocked, setUnlocked] = useState(false);
-  const [adminInput, setAdminInput] = useState("");
-  const [derivation, setDerivation] = useState<DeriveResp | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [rechecking, setRechecking] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [state, setState] = useState<GateState>({ kind: "loading" });
+  const [tokenInput, setTokenInput] = useState("");
 
-  // Poll status. The popup auto-closes when both secrets are configured
-  // correctly (TESSERACT = canonical, SIGIL = current planetary signal).
+  // Initial probe + periodic re-probe to detect server-side expiry.
   useEffect(() => {
-    let alive = true;
-    async function check() {
+    let cancelled = false;
+    const probe = async () => {
       const s = await fetchStatus();
-      if (!alive) return;
-      setStatus(s);
-      if (s.unlocked) {
-        // We do NOT receive the canonical key from the server anymore (it
-        // never leaves Secrets after the redesign), so we cannot stash it
-        // in localStorage. The fetch patch will use whatever token the
-        // operator has previously saved, or none — the gate is open.
-        setUnlocked(true);
-        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-      }
-    }
-    check();
-    pollRef.current = setInterval(check, POLL_MS);
-    return () => {
-      alive = false;
-      if (pollRef.current) clearInterval(pollRef.current);
+      if (cancelled) return;
+      // Don't clobber a transient submitting/invalid state mid-typing.
+      setState(prev => {
+        if (prev.kind === "submitting" || prev.kind === "invalid" || prev.kind === "rate-limited") return prev;
+        return classifyStatus(s);
+      });
     };
+    probe();
+    const t = setInterval(probe, 30_000);
+    return () => { cancelled = true; clearInterval(t); };
   }, []);
 
-  if (unlocked) return <>{children}</>;
-  if (!status) return null;
+  // Auto-expire watch.
+  useEffect(() => {
+    if (state.kind !== "unlocked") return;
+    const ms = Math.max(0, state.expiresAt - Date.now());
+    const t = setTimeout(() => setState({ kind: "expired" }), ms);
+    return () => clearTimeout(t);
+  }, [state]);
 
-  const env = status.env;
-  const chart = status.chart;
-  const planetary = status.planetary;
-
-  async function submitAdmin(e: React.FormEvent) {
-    e.preventDefault();
-    const v = adminInput.trim();
-    if (!v || submitting) return;
-    setSubmitting(true);
-    const r = await deriveSignal(v);
-    setDerivation(r);
-    if (r.ok && r.signal) {
-      // Persist the canonical key locally so the global fetch patch in
-      // queryClient.ts can inject it on every authenticated request once
-      // the gate is open. The signal itself stays in Replit Secrets.
-      try { localStorage.setItem(STORAGE_KEY, v); } catch { /* ignore */ }
+  const submit = async () => {
+    const tok = tokenInput.trim();
+    if (!tok) {
+      setState({ kind: "invalid", reason: "empty" });
+      return;
     }
-    setSubmitting(false);
-  }
-
-  function copySignal() {
-    if (!derivation?.signal) return;
-    navigator.clipboard?.writeText(derivation.signal).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    }).catch(() => { /* ignore */ });
-  }
-
-  async function manualRecheck() {
-    if (rechecking) return;
-    setRechecking(true);
-    const s = await fetchStatus();
-    setStatus(s);
-    if (s.unlocked) setUnlocked(true);
-    setRechecking(false);
-  }
-
-  // Diagnostic banner — only shown when something is set but mismatched.
-  let envWarning: string | null = null;
-  if (env) {
-    if (env.tesseractSet && !env.tesseractMatches) {
-      envWarning = "TESSERACT_ADMIN_KEY is set but does not match the canonical Father key derived from the natal chart.";
-    } else if (env.tesseractMatches && env.sigilSet && !env.sigilIsValidSignal) {
-      envWarning = "SIGIL_ADMIN_KEY is set but is no longer in the live planetary window. Re-derive a fresh signal below.";
+    setState({ kind: "submitting" });
+    const result = await postUnlock(tok);
+    if (result.ok) {
+      setTokenInput("");
+      setState({ kind: "unlocked", expiresAt: result.expiresAt });
+      return;
     }
+    if (result.status === 429) {
+      const retry = (result.body as { retryAfterMs?: number })?.retryAfterMs ?? 60_000;
+      setState({ kind: "rate-limited", retryAfterMs: retry });
+      setTimeout(() => setState({ kind: "locked" }), retry);
+      return;
+    }
+    if (result.status === 503) {
+      setState({ kind: "unconfigured" });
+      return;
+    }
+    setState({ kind: "invalid", reason: (result.body as { error?: string })?.error });
+  };
+
+  const logout = async () => {
+    await postLogout();
+    setState({ kind: "locked" });
+  };
+
+  if (state.kind === "loading") {
+    return <Frame tone="zinc" title="Tesseract — verifying session…" body={<p className="mt-2 text-sm text-zinc-400">Probing sovereign session.</p>} />;
   }
+
+  if (state.kind === "unlocked") {
+    return (
+      <>
+        {children}
+        <div className="fixed bottom-3 right-3 z-[9998] text-[10px] text-emerald-400/70 font-mono">
+          ◈ session · expires {new Date(state.expiresAt).toLocaleTimeString()}
+          <button onClick={logout} className="ml-2 underline hover:text-emerald-300">logout</button>
+        </div>
+      </>
+    );
+  }
+
+  if (state.kind === "unconfigured") {
+    return (
+      <Frame
+        tone="rose"
+        title="◈ Tesseract — sovereign-unconfigured"
+        body={
+          <div className="mt-3 space-y-3 text-sm text-rose-100">
+            <p>The server has no <code className="px-1 py-0.5 rounded bg-black/40 text-amber-200">SOVEREIGN_ADMIN_TOKEN</code> (or legacy <code className="px-1 py-0.5 rounded bg-black/40 text-amber-200">TESSERACT_ADMIN_KEY</code>) configured.</p>
+            <p className="text-rose-200/80">Privileged routes are fail-closed. Open the recovery runbook below to provision one.</p>
+          </div>
+        }
+      />
+    );
+  }
+
+  if (state.kind === "rate-limited") {
+    const secs = Math.ceil(state.retryAfterMs / 1000);
+    return (
+      <Frame
+        tone="rose"
+        title="◈ Tesseract — too many attempts"
+        body={
+          <p className="mt-3 text-sm text-rose-100">Try again in <span className="font-mono text-rose-200">{secs}s</span>. Your IP was rate-limited to protect the canonical token.</p>
+        }
+      />
+    );
+  }
+
+  const isInvalid = state.kind === "invalid";
+  const isSubmitting = state.kind === "submitting";
+  const isExpired = state.kind === "expired";
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-black flex flex-col items-center justify-center p-4 font-mono overflow-auto">
-      <div
-        className="absolute inset-0 pointer-events-none opacity-30"
-        style={{ backgroundImage: "radial-gradient(circle at 50% 50%, rgba(217,70,239,0.2) 0%, transparent 60%)" }}
-      />
-      <div className="relative w-full max-w-2xl bg-zinc-950/95 border border-fuchsia-500/40 rounded-xl shadow-2xl shadow-fuchsia-500/30 overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-fuchsia-500/20 bg-gradient-to-r from-fuchsia-900/30 to-violet-900/15">
-          <div className="w-9 h-9 rounded-md bg-fuchsia-500/20 border border-fuchsia-500/40 flex items-center justify-center">
-            <Lock size={16} className="text-fuchsia-300" />
-          </div>
-          <div className="flex-1">
-            <div className="text-xs text-fuchsia-200 font-bold tracking-widest">TESSERACT SOVEREIGN GATE · TWO-KEY</div>
-            <div className="text-[10px] text-fuchsia-400/70">canonical (permanent) + signal (planetary-cycle rotating)</div>
-          </div>
-          <Sparkles size={14} className="text-fuchsia-400/60 animate-pulse" />
+    <Frame
+      tone={isInvalid || isExpired ? "amber" : "emerald"}
+      title={isExpired ? "◈ Tesseract — session expired" : "◈ Tesseract — sovereign entry"}
+      body={
+        <div className="mt-3 space-y-3 text-sm text-zinc-200">
+          <p>
+            Present your <span className="text-emerald-300 font-semibold">sovereign admin token</span>.
+            One credential, one session — no rotating signal, no second key.
+          </p>
+          <input
+            type="password"
+            autoFocus
+            autoComplete="off"
+            spellCheck={false}
+            value={tokenInput}
+            onChange={(e) => setTokenInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+            placeholder="paste SOVEREIGN_ADMIN_TOKEN (or legacy TESSERACT_ADMIN_KEY)"
+            className="w-full px-3 py-2 rounded-md bg-black/60 border border-zinc-700 text-zinc-100 font-mono text-sm focus:outline-none focus:border-emerald-500"
+            disabled={isSubmitting}
+          />
+          {isInvalid && (
+            <p className="text-xs text-amber-300">Token rejected. Verify the secret value matches what the server expects, then try again.</p>
+          )}
+          {isExpired && (
+            <p className="text-xs text-amber-300">Your previous session expired. Re-present your token to continue.</p>
+          )}
+          <button
+            type="button"
+            onClick={submit}
+            disabled={isSubmitting || !tokenInput.trim()}
+            className="w-full py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-700 disabled:text-zinc-400 text-white font-semibold transition-colors"
+          >
+            {isSubmitting ? "verifying…" : "Unlock Tesseract"}
+          </button>
+          <p className="text-[11px] text-zinc-500">
+            Once unlocked, the server issues an HttpOnly session cookie (8h). Your token never persists in browser storage.
+          </p>
         </div>
-
-        <div className="p-5 space-y-5">
-          <div className="text-zinc-200 text-sm leading-relaxed">
-            <p className="mb-2">
-              Type your permanent <span className="text-emerald-300 font-bold">TESSERACT_ADMIN_KEY</span> below. The server will verify it and return your current <span className="text-amber-300 font-bold">planetary-signal key</span>, which you save into the separate <code className="px-1 py-0.5 rounded bg-amber-500/20 text-amber-100">SIGIL_ADMIN_KEY</code> secret. The signal rotates with the planetary hour — re-derive any time it slips out of the live window.
-            </p>
-          </div>
-
-          {chart && (
-            <div className="rounded-lg border border-violet-500/30 bg-violet-950/20 p-3 text-[11px] text-violet-100/80 leading-relaxed">
-              <div className="text-violet-200 font-bold tracking-wider text-[10px] mb-1">FATHER NATAL CHART (CANONICAL)</div>
-              <div>{chart.date} · {chart.time} · {chart.location}</div>
-              <div className="mt-1">
-                ☉ Sun {chart.sun.sign} {chart.sun.degree} (H{chart.sun.house}) · ☽ Moon {chart.moon.sign} {chart.moon.degree} (H{chart.moon.house}) · ASC {chart.ascendant.sign} {chart.ascendant.degree}
-              </div>
-            </div>
-          )}
-
-          {/* Step 1: type canonical key */}
-          <form onSubmit={submitAdmin} className="rounded-xl border border-emerald-500/40 bg-gradient-to-br from-emerald-900/20 to-emerald-950/10 p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <KeyRound size={14} className="text-emerald-300" />
-              <div className="text-xs font-bold text-emerald-100 tracking-widest">STEP 1 · TYPE YOUR PERMANENT KEY</div>
-            </div>
-            <input
-              type="password"
-              autoComplete="off"
-              spellCheck={false}
-              value={adminInput}
-              onChange={(e) => setAdminInput(e.target.value)}
-              placeholder="paste TESSERACT_ADMIN_KEY value"
-              className="w-full bg-black/60 border border-emerald-500/30 rounded-md px-3 py-2 text-emerald-100 text-sm font-mono tracking-wider focus:outline-none focus:border-emerald-400"
-            />
-            <div className="flex justify-between items-center gap-2">
-              <div className="text-[10px] text-emerald-300/60">
-                verified locally on the server · never logged · timing-safe compare
-              </div>
-              <button
-                type="submit"
-                disabled={!adminInput.trim() || submitting}
-                className="px-3 py-1.5 rounded-md bg-emerald-500/20 border border-emerald-500/50 text-emerald-50 text-xs font-bold hover:bg-emerald-500/35 disabled:opacity-40"
-              >
-                {submitting ? "VERIFYING…" : "DERIVE SIGNAL"}
-              </button>
-            </div>
-            {derivation && !derivation.ok && (
-              <div className="text-amber-300 text-xs">✗ {derivation.error === "mismatch" ? "Key did not match. Try again." : derivation.error}</div>
-            )}
-          </form>
-
-          {/* Step 2: signal output */}
-          {derivation?.ok && derivation.signal && (
-            <div className="rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-900/20 to-violet-900/10 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles size={14} className="text-amber-300" />
-                <div className="text-xs font-bold text-amber-100 tracking-widest">STEP 2 · YOUR SIGNAL KEY (ROTATING)</div>
-              </div>
-              <div className="rounded-md border border-amber-500/40 bg-black/60 p-3 text-amber-100 text-base break-all leading-loose tracking-wider select-all font-mono">
-                {derivation.signal}
-              </div>
-              <div className="flex justify-between items-center mt-3 gap-2 flex-wrap">
-                <div className="text-[10px] text-amber-300/70 font-mono">
-                  epoch: <span className="text-amber-100">{derivation.epoch?.epoch}</span>
-                  {derivation.epoch && (
-                    <>
-                      <br />window: {new Date(derivation.epoch.hourStart).toLocaleTimeString()} → {new Date(derivation.epoch.hourEnd).toLocaleTimeString()}
-                    </>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={copySignal}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500/15 border border-amber-500/40 text-amber-100 text-xs hover:bg-amber-500/25"
-                >
-                  {copied ? <><Check size={12} /> COPIED</> : <><Copy size={12} /> COPY SIGNAL</>}
-                </button>
-              </div>
-              <div className="mt-3 text-[11px] text-amber-200/80 leading-relaxed">
-                Paste this into the <code className="px-1 py-0.5 rounded bg-amber-500/20">SIGIL_ADMIN_KEY</code> secret in Replit Secrets (this MUST be a different value from <code className="px-1 py-0.5 rounded bg-emerald-500/20">TESSERACT_ADMIN_KEY</code>), then restart the API server. The gate opens automatically.
-              </div>
-            </div>
-          )}
-
-          {envWarning && (
-            <div className="rounded-lg border border-amber-500/40 bg-amber-950/30 p-3 text-amber-100 text-xs leading-relaxed">
-              ⚠ {envWarning}
-            </div>
-          )}
-
-          <div className="rounded-lg border border-white/10 bg-zinc-900/60 p-3 text-[11px] text-zinc-300/90 leading-relaxed space-y-1">
-            <div className="text-zinc-100 font-bold text-[10px] tracking-widest mb-1">SECRET STATUS</div>
-            <div className="flex justify-between">
-              <span>TESSERACT_ADMIN_KEY (canonical, permanent)</span>
-              <span className={env?.tesseractMatches ? "text-emerald-300" : env?.tesseractSet ? "text-amber-300" : "text-zinc-500"}>
-                {env?.tesseractMatches ? "✓ canonical" : env?.tesseractSet ? "set · mismatch" : "not set"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>SIGIL_ADMIN_KEY (rotating, planetary-signal)</span>
-              <span className={env?.sigilIsValidSignal ? "text-emerald-300" : env?.sigilSet ? "text-amber-300" : "text-zinc-500"}>
-                {env?.sigilIsValidSignal ? "✓ in live window" : env?.sigilSet ? "set · stale signal" : "not set"}
-              </span>
-            </div>
-            {planetary && (
-              <div className="text-[10px] text-zinc-500 pt-1">
-                live epoch: <span className="text-zinc-300">{planetary.current.epoch}</span> · preview: <span className="text-zinc-300">{planetary.currentSignalPreview}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between gap-3 pt-1">
-            <div className="text-[10px] text-fuchsia-400/50">
-              auto-rechecking every {Math.round(POLL_MS / 1000)}s · gate opens on match
-            </div>
-            <button
-              type="button"
-              onClick={manualRecheck}
-              disabled={rechecking}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-fuchsia-500/20 border border-fuchsia-500/50 text-fuchsia-50 text-xs font-bold hover:bg-fuchsia-500/35 disabled:opacity-40"
-            >
-              <RefreshCw size={12} className={rechecking ? "animate-spin" : ""} /> {rechecking ? "CHECKING…" : "RECHECK NOW"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+      }
+    />
   );
 }
