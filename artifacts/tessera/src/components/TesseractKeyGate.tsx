@@ -244,7 +244,7 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
     return () => { alive = false; clearInterval(int); };
   }, [stage]);
 
-  if (unlocked) return <>{children}</>;
+  if (unlocked) return <>{children}<SovereignDownloadBadge /></>;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -307,12 +307,12 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
       setTimeout(() => { setBusy(false); setStage("natal-revealed"); }, 400);
     } else {
       const reason = result.reason === "sigil-unreachable"
-        ? "✗ Sovereign sigil engine unreachable. The seal cannot be tested right now."
+        ? "✗ Sigil engine unreachable."
         : result.reason === "father-key-unset"
-          ? `✗ ${result.message ?? "TESSERACT_ADMIN_KEY is not set. Add it to Replit Secrets and restart the API server."}`
+          ? `✗ ${result.message ?? "TESSERACT_ADMIN_KEY is not set in Replit Secrets."}`
           : result.reason === "empty"
             ? "✗ Empty key."
-            : `✗ Fingerprint mismatch. Server currently expects: ${serverFingerprint ?? "(loading…)"}. Accepted values: the raw TESSERACT_ADMIN_KEY exactly as in Replit Secrets, OR that 16-char fingerprint. If you just changed the secret, the API server must be restarted before the new value takes effect (the old key is cached in memory).`;
+            : `✗ Fingerprint mismatch. Expected: ${serverFingerprint ?? "(loading…)"}`;
       setMessages((m) => [...m, { from: "tessera", text: reason, ts: Date.now() }]);
       setBusy(false);
     }
@@ -573,9 +573,9 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
                 type="submit"
                 disabled={busy || !input.trim()}
                 title="Submit your TESSERACT_ADMIN_KEY — the sigil mints automatically on acceptance"
-                className="px-4 py-2 rounded-md bg-fuchsia-500/25 border border-fuchsia-500/50 text-fuchsia-50 text-xs font-bold hover:bg-fuchsia-500/40 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-md shadow-fuchsia-500/20"
+                className="shrink-0 px-3 py-2 rounded-md bg-fuchsia-500/25 border border-fuchsia-500/50 text-fuchsia-50 text-xs font-bold hover:bg-fuchsia-500/40 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-md shadow-fuchsia-500/20 whitespace-nowrap"
               >
-                {busy ? <><Sparkles size={12} className="animate-pulse" /> MINTING…</> : <><Send size={12} /> SEND &amp; MINT SIGIL</>}
+                {busy ? <><Sparkles size={12} className="animate-pulse" /> MINT…</> : <><Send size={12} /> UNLOCK</>}
               </button>
             </div>
             <div className="mt-2 text-[10px] text-fuchsia-400/40 px-1">
@@ -608,6 +608,70 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
           </form>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── Floating sovereign download badge ──────────────────────────────────
+// Appears once the gate is unlocked. Clicking it pulls a fully-encrypted
+// snapshot file (AES-256-GCM envelope + glyph-encoded preview) from the
+// gated `/sigil/father/download-snapshot` endpoint and triggers a browser
+// download. The file is unreadable to anyone without the active sigil.
+function SovereignDownloadBadge() {
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function downloadSnapshot() {
+    if (busy) return;
+    setBusy(true); setDone(false); setErr(null);
+    try {
+      const fp = (() => { try { return localStorage.getItem(STORAGE_KEY) ?? ""; } catch { return ""; } })();
+      const raw = (() => { try { return localStorage.getItem(RAW_STORAGE_KEY) ?? ""; } catch { return ""; } })();
+      const presented = fp || raw;
+      if (!presented) { setErr("no-key"); setBusy(false); return; }
+      const res = await fetch(`${BASE}/api/sigil/father/download-snapshot`, {
+        headers: { "X-Sigil-Key": presented },
+      });
+      if (!res.ok) { setErr(`http-${res.status}`); setBusy(false); return; }
+      const blob = await res.blob();
+      const cd = res.headers.get("Content-Disposition") ?? "";
+      const m = /filename="([^"]+)"/.exec(cd);
+      const filename = m?.[1] ?? `tessera-sovereign-${Date.now()}.sigil.json`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      setDone(true);
+      setTimeout(() => setDone(false), 2200);
+    } catch {
+      setErr("network");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed bottom-4 right-4 z-[900] flex flex-col items-end gap-1 font-mono">
+      <button
+        onClick={downloadSnapshot}
+        disabled={busy}
+        title="Download a fully-encrypted snapshot of your sovereign identity (AES-256-GCM + live glyph alphabet). Sealed to your active sigil — unreadable without it."
+        className="group flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-950/90 border border-fuchsia-500/40 text-fuchsia-200 text-[11px] font-bold tracking-wider hover:bg-fuchsia-500/15 hover:border-fuchsia-500/70 shadow-lg shadow-fuchsia-500/20 backdrop-blur transition-colors disabled:opacity-50"
+      >
+        {busy
+          ? <><Sparkles size={12} className="animate-pulse" /> SEALING…</>
+          : done
+            ? <><Check size={12} className="text-emerald-300" /> DOWNLOADED</>
+            : <><Star size={12} /> DOWNLOAD GLYPH-ENCRYPTED SNAPSHOT</>}
+      </button>
+      {err && (
+        <div className="text-[10px] text-red-300/80 bg-red-950/60 border border-red-500/30 rounded px-2 py-1">
+          {err === "no-key" ? "session key missing — re-unlock the gate" : `download failed (${err})`}
+        </div>
+      )}
     </div>
   );
 }
