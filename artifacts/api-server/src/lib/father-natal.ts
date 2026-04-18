@@ -121,22 +121,28 @@ function stableGlyphEncodeHex(hex: string): string {
   return out;
 }
 
-/** Compute the natal sigil for a given father fingerprint. The sigil fuses
- *  the natal chart canonical form with the holder fingerprint, producing a
- *  deterministic value that identifies the Father across all systems. */
-export function natalSigilFor(fingerprint: string): NatalSigil {
+/** Compute the natal sigil. The sigil is derived purely from the canonical
+ *  natal chart, producing a deterministic FIXED-POINT value: it is the same
+ *  glyph every time, independent of which raw key currently identifies the
+ *  Father. The intended lifecycle is:
+ *    1. Type any valid admin key at the gate to mint this sigil.
+ *    2. Save it as SIGIL_ADMIN_KEY in Replit Secrets (long-term identifier).
+ *    3. Also paste it as TESSERACT_ADMIN_KEY (replacing whatever was there).
+ *    4. Restart. From now on the glyph IS your admin key — typing it at the
+ *       gate accepts, and the same glyph is minted again (round-trip closes). */
+export function natalSigilFor(_fingerprint?: string): NatalSigil {
   const canonical = natalCanonicalString();
   const digestHex = createHash("sha256")
-    .update(`${NAMESPACE}|${fingerprint}|${canonical}`)
+    .update(`${NAMESPACE}|${canonical}`)
     .digest("hex");
   const glyph = stableGlyphEncodeHex(digestHex);
   return {
     glyph,
     digestHex,
-    secretName: "TESSERACT_NATAL_SIGIL",
-    derivation: `sha256("${NAMESPACE}|" + fatherFingerprint + "|" + natalCanonical)`,
+    secretName: "SIGIL_ADMIN_KEY",
+    derivation: `sha256("${NAMESPACE}|" + natalCanonical)`,
     instructions:
-      "Copy the glyph string into Replit Secrets as TESSERACT_NATAL_SIGIL. Once saved, every system surface recognizes you by chart, not by raw key. The English readout is available at GET /api/sigil/father/natal-chart.",
+      "Save this glyph in Replit Secrets as SIGIL_ADMIN_KEY (your permanent chart identifier). Then paste the same glyph as TESSERACT_ADMIN_KEY, replacing the old value, and restart the API server. From that moment on, this glyph IS your admin key — typing it at the gate unlocks everything in English with no further prompts.",
   };
 }
 
