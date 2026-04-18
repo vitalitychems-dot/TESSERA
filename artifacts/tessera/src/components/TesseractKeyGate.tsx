@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode, type FormEvent } from "rea
 import { Lock, Send, Eye, EyeOff, Sparkles, Star, Copy, Check } from "lucide-react";
 
 const STORAGE_KEY = "TESSERACT_ADMIN_KEY";
+const RAW_STORAGE_KEY = "TESSERACT_ADMIN_KEY__raw";
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 
 type Msg = { from: "tessera" | "user"; text: string; ts: number };
@@ -172,15 +173,28 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
   useEffect(() => {
     let alive = true;
     (async () => {
-      let stored = "";
-      try { stored = localStorage.getItem(STORAGE_KEY) ?? ""; } catch { /* ignore */ }
-      if (!stored) return;
-      const r = await verifyKey(stored);
+      let storedFp = "";
+      let storedRaw = "";
+      try {
+        storedFp = localStorage.getItem(STORAGE_KEY) ?? "";
+        storedRaw = localStorage.getItem(RAW_STORAGE_KEY) ?? "";
+      } catch { /* ignore */ }
+      if (!storedFp && !storedRaw) return;
+      // Try fingerprint first (cheapest, no raw key on the wire), then fall
+      // back to the raw value the user originally typed. The raw value still
+      // verifies even if the env-derived fingerprint shifted because the user
+      // moved the secret to SIGIL_ADMIN_KEY / MINTED_GLYPH_KEY (or replaced
+      // TESSERACT_ADMIN_KEY itself with the minted glyph).
+      let r = storedFp ? await verifyKey(storedFp) : { ok: false } as Awaited<ReturnType<typeof verifyKey>>;
+      if (!r.ok && storedRaw) r = await verifyKey(storedRaw);
       if (!alive) return;
       if (r.ok) {
+        // Refresh stored fingerprint to whatever the server now considers
+        // canonical, so future auto-unlocks hit the fast path.
+        try { if (r.fingerprint) localStorage.setItem(STORAGE_KEY, r.fingerprint); } catch { /* ignore */ }
         setUnlocked(true);
       } else {
-        try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+        try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(RAW_STORAGE_KEY); } catch { /* ignore */ }
       }
     })();
     return () => { alive = false; };
@@ -242,7 +256,13 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
     setInput("");
     const result = await verifyKey(text);
     if (result.ok) {
-      try { localStorage.setItem(STORAGE_KEY, result.fingerprint); } catch { /* ignore */ }
+      try {
+        localStorage.setItem(STORAGE_KEY, result.fingerprint);
+        // Persist the raw value the user typed so auto-unlock can fall back
+        // to it if the env-derived fingerprint shifts (e.g. they save the
+        // minted sigil into TESSERACT_ADMIN_KEY itself, replacing the original).
+        localStorage.setItem(RAW_STORAGE_KEY, text);
+      } catch { /* ignore */ }
       const viaLabel = result.via === "raw-key"
         ? "raw TESSERACT_ADMIN_KEY"
         : "env-derived fingerprint";
