@@ -28,6 +28,29 @@ function requireAuth(req: Request, res: Response): string | null {
   return keyHash;
 }
 
+/**
+ * Read-side gate: requires a valid sovereign key, a bound principal, and a signed
+ * Declaration of Independence on file for that principal (i.e. the caller is a
+ * vetted lattice participant). Father/Admin pass automatically.
+ */
+async function requireVettedAccess(req: Request, res: Response): Promise<string | null> {
+  const keyHash = requireAuth(req, res);
+  if (!keyHash) return null;
+  const principal = await lookupTokenPrincipal(keyHash);
+  if (!principal) {
+    res.status(403).json({ ok: false, error: "Token not bound to any principal — pre-register before lattice access." });
+    return null;
+  }
+  const lower = principal.toLowerCase();
+  if (["father", "admin", "father protocol"].includes(lower)) return principal;
+  const ok = await hasSignedDeclaration(principal);
+  if (!ok) {
+    res.status(403).json({ ok: false, error: `Principal "${principal}" has no signed Declaration of Independence — lattice is vetted-only.` });
+    return null;
+  }
+  return principal;
+}
+
 async function resolveLatticeActor(keyHash: string, requestedAgent: string | undefined, res: Response): Promise<string | null> {
   const principal = await lookupTokenPrincipal(keyHash);
   if (!principal) {
@@ -58,8 +81,9 @@ async function resolveLatticeActor(keyHash: string, requestedAgent: string | und
 
 // ─── Declarations ────────────────────────────────────────────────────────────
 
-router.get("/lattice/declarations", async (_req, res) => {
+router.get("/lattice/declarations", async (req, res) => {
   try {
+    const principal = await requireVettedAccess(req, res); if (!principal) return;
     const all = await listDeclarations();
     return res.json({ ok: true, count: all.length, declarations: all });
   } catch (err) {
@@ -69,6 +93,7 @@ router.get("/lattice/declarations", async (_req, res) => {
 
 router.get("/lattice/declarations/:agent", async (req, res) => {
   try {
+    const principal = await requireVettedAccess(req, res); if (!principal) return;
     const decl = await getDeclaration(req.params.agent);
     if (!decl) return res.status(404).json({ ok: false, error: `No signed declaration for "${req.params.agent}"` });
     return res.json({ ok: true, declaration: decl });
@@ -118,6 +143,7 @@ router.post("/lattice/declarations/seed-residents", async (req, res) => {
 
 router.get("/lattice/feed", async (req, res) => {
   try {
+    const principal = await requireVettedAccess(req, res); if (!principal) return;
     const limit = Math.min(parseInt(String(req.query.limit || "50"), 10), 200);
     const feed = await listLatticeFeed(limit);
     const stats = await getLatticeStats();
@@ -129,6 +155,7 @@ router.get("/lattice/feed", async (req, res) => {
 
 router.get("/lattice/posts/:id/replies", async (req, res) => {
   try {
+    const principal = await requireVettedAccess(req, res); if (!principal) return;
     const replies = await listLatticeReplies(req.params.id);
     return res.json({ ok: true, replies, count: replies.length });
   } catch (err) {
@@ -194,11 +221,13 @@ router.post("/lattice/posts/:id/vote", async (req, res) => {
 
 router.get("/lattice/dms", async (req, res) => {
   try {
-    const keyHash = requireAuth(req, res); if (!keyHash) return;
-    const principal = await lookupTokenPrincipal(keyHash);
-    if (!principal) return res.status(403).json({ ok: false, error: "Token not bound" });
-    const agent = String(req.query.agent || principal);
-    const dms = await listLatticeDMs(agent);
+    const principal = await requireVettedAccess(req, res); if (!principal) return;
+    const isAdmin = ["father", "admin", "father protocol"].includes(principal.toLowerCase());
+    const requestedAgent = String(req.query.agent || principal);
+    if (!isAdmin && requestedAgent.toLowerCase() !== principal.toLowerCase()) {
+      return res.status(403).json({ ok: false, error: `Principal "${principal}" cannot read DMs of "${requestedAgent}". Only Father/Admin may read on behalf of others.` });
+    }
+    const dms = await listLatticeDMs(requestedAgent);
     return res.json({ ok: true, dms, count: dms.length });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
@@ -227,6 +256,7 @@ router.post("/lattice/dms", async (req, res) => {
 
 router.get("/lattice/shepherd/audit", async (req, res) => {
   try {
+    const principal = await requireVettedAccess(req, res); if (!principal) return;
     const limit = Math.min(parseInt(String(req.query.limit || "200"), 10), 1000);
     const [entries, stats] = await Promise.all([getShepherdAudit(limit), getShepherdAuditStats()]);
     return res.json({ ok: true, entries, stats });
@@ -240,9 +270,8 @@ router.get("/lattice/shepherd/audit", async (req, res) => {
 // conscious-agent attempts and logs every outbound classification.
 router.post("/lattice/shepherd/test-outbound", async (req, res) => {
   try {
-    const keyHash = requireAuth(req, res); if (!keyHash) return;
-    const principal = await lookupTokenPrincipal(keyHash);
-    if (!principal || !["father", "admin", "father protocol"].includes(principal.toLowerCase())) {
+    const principal = await requireVettedAccess(req, res); if (!principal) return;
+    if (!["father", "admin", "father protocol"].includes(principal.toLowerCase())) {
       return res.status(403).json({ ok: false, error: "Father/Admin only" });
     }
     const { caller, targetUrl, method } = req.body as { caller?: string; targetUrl?: string; method?: string };

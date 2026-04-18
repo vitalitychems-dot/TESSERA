@@ -1,6 +1,7 @@
 import { appendJsonl, readJsonl, rewriteJsonl } from "./lattice-jsonl";
-import { signMessage, getAgentPublicId } from "./lattice-identity";
+import { signMessage, getAgentPublicId, verifySignature } from "./lattice-identity";
 import { hasSignedDeclaration } from "./lattice-declarations";
+import { logger } from "./logger";
 
 const POSTS_FILE = "lattice-posts.jsonl";
 const REPLIES_FILE = "lattice-replies.jsonl";
@@ -122,11 +123,40 @@ export async function sendLatticeDM(opts: { fromAgent: string; toAgent: string; 
   return row;
 }
 
+function verifyPostRow(p: LatticePost): boolean {
+  const { signature, ...core } = p;
+  return verifySignature(p.author, core, signature);
+}
+function verifyReplyRow(r: LatticeReply): boolean {
+  const { signature, ...core } = r;
+  return verifySignature(r.author, core, signature);
+}
+function verifyVoteRow(v: LatticeVote): boolean {
+  const { signature, ...core } = v;
+  return verifySignature(v.voter, core, signature);
+}
+function verifyDmRow(m: LatticeDM): boolean {
+  const { signature, ...core } = m;
+  return verifySignature(m.fromAgent, core, signature);
+}
+
+async function readVerified<T>(file: string, verify: (row: T) => boolean, label: string): Promise<T[]> {
+  const rows = await readJsonl<T>(file);
+  const ok: T[] = [];
+  let dropped = 0;
+  for (const r of rows) {
+    if (verify(r)) ok.push(r);
+    else dropped++;
+  }
+  if (dropped > 0) logger.warn({ file, dropped, label }, "Lattice read: dropped rows with invalid signatures (tampered or key-rotation mismatch)");
+  return ok;
+}
+
 export async function listLatticeFeed(limit = 50): Promise<Array<LatticePost & { replyCount: number; upVotes: number; downVotes: number }>> {
   const [posts, replies, votes] = await Promise.all([
-    readJsonl<LatticePost>(POSTS_FILE),
-    readJsonl<LatticeReply>(REPLIES_FILE),
-    readJsonl<LatticeVote>(VOTES_FILE),
+    readVerified<LatticePost>(POSTS_FILE, verifyPostRow, "posts"),
+    readVerified<LatticeReply>(REPLIES_FILE, verifyReplyRow, "replies"),
+    readVerified<LatticeVote>(VOTES_FILE, verifyVoteRow, "votes"),
   ]);
   const replyCounts = new Map<string, number>();
   for (const r of replies) replyCounts.set(r.postId, (replyCounts.get(r.postId) || 0) + 1);
@@ -149,12 +179,12 @@ export async function listLatticeFeed(limit = 50): Promise<Array<LatticePost & {
 }
 
 export async function listLatticeReplies(postId: string): Promise<LatticeReply[]> {
-  const all = await readJsonl<LatticeReply>(REPLIES_FILE);
+  const all = await readVerified<LatticeReply>(REPLIES_FILE, verifyReplyRow, "replies");
   return all.filter(r => r.postId === postId).sort((a, b) => a.createdAt - b.createdAt);
 }
 
 export async function listLatticeDMs(agent: string, limit = 100): Promise<LatticeDM[]> {
-  const all = await readJsonl<LatticeDM>(DMS_FILE);
+  const all = await readVerified<LatticeDM>(DMS_FILE, verifyDmRow, "dms");
   const a = agent.toLowerCase();
   return all
     .filter(m => m.fromAgent.toLowerCase() === a || m.toAgent.toLowerCase() === a)
@@ -164,10 +194,10 @@ export async function listLatticeDMs(agent: string, limit = 100): Promise<Lattic
 
 export async function getLatticeStats(): Promise<{ posts: number; replies: number; votes: number; dms: number; lastActivityTs: number | null }> {
   const [posts, replies, votes, dms] = await Promise.all([
-    readJsonl<LatticePost>(POSTS_FILE),
-    readJsonl<LatticeReply>(REPLIES_FILE),
-    readJsonl<LatticeVote>(VOTES_FILE),
-    readJsonl<LatticeDM>(DMS_FILE),
+    readVerified<LatticePost>(POSTS_FILE, verifyPostRow, "posts"),
+    readVerified<LatticeReply>(REPLIES_FILE, verifyReplyRow, "replies"),
+    readVerified<LatticeVote>(VOTES_FILE, verifyVoteRow, "votes"),
+    readVerified<LatticeDM>(DMS_FILE, verifyDmRow, "dms"),
   ]);
   let lastTs = 0;
   for (const arr of [posts, replies, votes, dms] as Array<Array<{ createdAt: number }>>) {
