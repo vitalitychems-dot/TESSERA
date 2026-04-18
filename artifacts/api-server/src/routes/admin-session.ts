@@ -14,6 +14,7 @@ import {
   lookupSession,
   revokeSession,
   activeSessionCount,
+  sessionStoreStats,
   DEFAULT_TTL_MS,
 } from "../lib/sovereign-session";
 import { fatherVerifyRateLimit } from "../lib/father-verify-throttle";
@@ -115,6 +116,14 @@ router.get("/admin/session/status", (req: Request, res: Response) => {
     expiresAt: lookup.record.expiresAt,
     activeSessions: activeSessionCount(),
   });
+});
+
+// GET /api/admin/session/stats — IMPL-1 audit surface. Reveals only the
+// session store shape (active count, cap, eviction counters); never any
+// session id or credential material. Safe to expose unauthenticated because
+// it leaks nothing usable.
+router.get("/admin/session/stats", (_req: Request, res: Response) => {
+  res.status(200).json({ ok: true, ...sessionStoreStats() });
 });
 
 // POST /api/admin/session/logout — clear cookie + revoke server-side.

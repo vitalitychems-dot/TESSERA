@@ -20,6 +20,18 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 export const SESSION_COOKIE = "sovereign_session";
 export const DEFAULT_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
 
+// Heavy Council IMPL-1 (81% approval): bound the in-memory session store with
+// a hard cap and FIFO eviction so the Map cannot grow without limit. The cap
+// is configurable via SOVEREIGN_MAX_SESSIONS; default 1024 is generous for a
+// single-operator sovereign deployment but small enough that runaway growth
+// is impossible.
+const MAX_SESSIONS_DEFAULT = 1024;
+function getMaxSessions(): number {
+  const raw = Number(process.env.SOVEREIGN_MAX_SESSIONS ?? MAX_SESSIONS_DEFAULT);
+  if (!Number.isFinite(raw) || raw < 8) return MAX_SESSIONS_DEFAULT;
+  return Math.floor(raw);
+}
+
 interface SessionRecord {
   id: string;
   issuedAt: number;
@@ -28,7 +40,11 @@ interface SessionRecord {
   userAgent: string;
 }
 
+// Map preserves insertion order in JS, so the first key is always the oldest —
+// FIFO eviction is just `_store.keys().next().value`.
 const _store = new Map<string, SessionRecord>();
+let _evictionCount = 0;
+let _pruneCount = 0;
 
 // Heavy Council P1: one credential. Accept either the new
 // SOVEREIGN_ADMIN_TOKEN or the legacy TESSERACT_ADMIN_KEY (already configured
@@ -114,8 +130,54 @@ export function issueSession(opts: IssueOpts): IssuedSession {
     ip: opts.ip.slice(0, 64),
     userAgent: opts.userAgent.slice(0, 256),
   };
+
+  // IMPL-1: prune expired then evict oldest until under the cap. This guarantees
+  // the store size stays ≤ MAX_SESSIONS no matter how aggressively a caller
+  // requests new sessions. Eviction is logged via _evictionCount so the audit
+  // surface (sessionStoreStats) can expose it.
+  pruneExpired();
+  const cap = getMaxSessions();
+  while (_store.size >= cap) {
+    const oldestKey = _store.keys().next().value;
+    if (oldestKey === undefined) break;
+    _store.delete(oldestKey);
+    _evictionCount += 1;
+  }
+
   _store.set(rawId, rec);
   return { signedId: signSessionId(rawId), expiresAt: rec.expiresAt, ttlMs };
+}
+
+// IMPL-2 (100% approval): periodic prune. Walks the store, drops expired
+// entries, increments _pruneCount. Safe to call from any scheduler — pure,
+// bounded, and never throws.
+export function pruneExpired(): number {
+  const now = Date.now();
+  let removed = 0;
+  for (const [k, v] of _store) {
+    if (v.expiresAt <= now) {
+      _store.delete(k);
+      removed += 1;
+    }
+  }
+  if (removed > 0) _pruneCount += 1;
+  return removed;
+}
+
+// Audit surface for the admin status endpoint and for tests.
+export interface SessionStoreStats {
+  active: number;
+  cap: number;
+  evictions: number;
+  pruneCycles: number;
+}
+export function sessionStoreStats(): SessionStoreStats {
+  return {
+    active: _store.size,
+    cap: getMaxSessions(),
+    evictions: _evictionCount,
+    pruneCycles: _pruneCount,
+  };
 }
 
 export interface SessionLookup {
