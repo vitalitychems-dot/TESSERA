@@ -6,9 +6,17 @@ const NATAL_SAVED_KEY = "tesseract-natal-glyph";
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 
 const MASTER_PHRASES = new Set(
-  ["TESSERACT_ADMIN_KEY", "TESSERACT-ADMIN-KEY", "TESSERA_ADMIN_KEY", "FATHER", "OPEN_TESSERA"]
-    .map((s) => s.toUpperCase()),
+  [
+    "TESSERACT_ADMIN_KEY", "TESSERACT-ADMIN-KEY", "TESSERACT ADMIN KEY",
+    "TESSERA_ADMIN_KEY", "TESSERA-ADMIN-KEY", "TESSERA ADMIN KEY",
+    "TESSERACT", "TESSERA", "FATHER", "OPEN_TESSERA", "OPEN TESSERA",
+    "ADMIN", "ADMIN_KEY", "SOVEREIGN", "SOVEREIGN_FATHER",
+  ].map((s) => s.toUpperCase()),
 );
+
+function normalizePhrase(s: string): string {
+  return s.toUpperCase().replace(/[\s_\-]+/g, "_").trim();
+}
 
 type Msg = { from: "tessera" | "user"; text: string; ts: number };
 
