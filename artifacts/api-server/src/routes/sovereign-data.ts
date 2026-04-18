@@ -1014,7 +1014,7 @@ router.get("/system/metrics", (_req, res) => {
 
 router.post("/admin/deduplication/scan", async (req, res) => {
   const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
-  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+  if (!process.env.TESSERACT_ADMIN_KEY || adminKey !== process.env.TESSERACT_ADMIN_KEY) {
     res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
     return;
   }
@@ -1029,7 +1029,7 @@ router.post("/admin/deduplication/scan", async (req, res) => {
 
 router.post("/admin/deduplication/migrate", async (req, res) => {
   const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
-  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+  if (!process.env.TESSERACT_ADMIN_KEY || adminKey !== process.env.TESSERACT_ADMIN_KEY) {
     res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
     return;
   }
@@ -1044,7 +1044,7 @@ router.post("/admin/deduplication/migrate", async (req, res) => {
 
 router.get("/admin/deduplication/stats", (req, res) => {
   const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
-  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+  if (!process.env.TESSERACT_ADMIN_KEY || adminKey !== process.env.TESSERACT_ADMIN_KEY) {
     res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
     return;
   }
@@ -1053,7 +1053,7 @@ router.get("/admin/deduplication/stats", (req, res) => {
 
 router.get("/admin/reflection/metrics", (req, res) => {
   const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
-  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+  if (!process.env.TESSERACT_ADMIN_KEY || adminKey !== process.env.TESSERACT_ADMIN_KEY) {
     res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
     return;
   }
@@ -1062,7 +1062,7 @@ router.get("/admin/reflection/metrics", (req, res) => {
 
 router.get("/admin/reflection/snapshots", (req, res) => {
   const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
-  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+  if (!process.env.TESSERACT_ADMIN_KEY || adminKey !== process.env.TESSERACT_ADMIN_KEY) {
     res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
     return;
   }
@@ -1072,7 +1072,7 @@ router.get("/admin/reflection/snapshots", (req, res) => {
 
 router.get("/admin/cache/dimensional/stats", (req, res) => {
   const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
-  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+  if (!process.env.TESSERACT_ADMIN_KEY || adminKey !== process.env.TESSERACT_ADMIN_KEY) {
     res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
     return;
   }
@@ -1081,7 +1081,7 @@ router.get("/admin/cache/dimensional/stats", (req, res) => {
 
 router.post("/admin/cache/dimensional/tune", (req, res) => {
   const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
-  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+  if (!process.env.TESSERACT_ADMIN_KEY || adminKey !== process.env.TESSERACT_ADMIN_KEY) {
     res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
     return;
   }
@@ -1092,7 +1092,7 @@ router.post("/admin/cache/dimensional/tune", (req, res) => {
 
 router.post("/admin/cache/dimensional/clear", (req, res) => {
   const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
-  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+  if (!process.env.TESSERACT_ADMIN_KEY || adminKey !== process.env.TESSERACT_ADMIN_KEY) {
     res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
     return;
   }
@@ -1104,7 +1104,7 @@ router.post("/admin/cache/dimensional/clear", (req, res) => {
 
 router.post("/admin/reflection/cycle", (req, res) => {
   const adminKey = req.headers["x-admin-key"] ?? req.query["adminKey"];
-  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+  if (!process.env.TESSERACT_ADMIN_KEY || adminKey !== process.env.TESSERACT_ADMIN_KEY) {
     res.status(403).json({ ok: false, error: "Forbidden — admin key required" });
     return;
   }
