@@ -1,5 +1,5 @@
-import { memo, Suspense } from "react";
-import { Copy, Check, RefreshCw, Volume2, ThumbsUp, ThumbsDown } from "lucide-react";
+import { memo, Suspense, useState, useCallback } from "react";
+import { Copy, Check, RefreshCw, Volume2, ThumbsUp, ThumbsDown, Languages } from "lucide-react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -205,6 +205,30 @@ export const ChatMessageItem = memo(function ChatMessageItem({
 const AssistantMessage = memo(function AssistantMessage({
   msg, index, tesseraMsgStyle, copiedId, messageReactions, setCopiedId, onReaction, onRegenerate,
 }: Omit<MessageItemProps, "adminMode">) {
+  const [englishOverride, setEnglishOverride] = useState<string | null>(null);
+  const [translating, setTranslating] = useState(false);
+  const toggleEnglish = useCallback(async () => {
+    if (englishOverride !== null) { setEnglishOverride(null); return; }
+    if (translating) return;
+    setTranslating(true);
+    try {
+      const r = await fetch("/api/sigil/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: msg.content, direction: "decode" }),
+      });
+      const data = await r.json();
+      if (data?.ok && typeof data.output === "string" && data.output.trim()) {
+        setEnglishOverride(data.output);
+      } else {
+        setEnglishOverride(msg.content);
+      }
+    } catch {
+      setEnglishOverride(msg.content);
+    } finally {
+      setTranslating(false);
+    }
+  }, [englishOverride, translating, msg.content]);
   const parsedAgent = parseAgentFromMsg(msg.content);
   const agentHz = parsedAgent ? getAgentHz(parsedAgent.name) : getAgentHz("tessera");
   const hzColor = agentHz && agentHz >= 852
@@ -215,7 +239,8 @@ const AssistantMessage = memo(function AssistantMessage({
     ? "text-cyan-300 border-cyan-400/30 bg-cyan-500/10"
     : "text-amber-300 border-amber-400/30 bg-amber-500/10";
 
-  const sanitized = sanitizeMessageContent(msg.content);
+  const sourceText = englishOverride ?? msg.content;
+  const sanitized = sanitizeMessageContent(sourceText);
   const execBlocks = parseCodeExecutionBlocks(sanitized);
   const strippedExec = stripCodeExecutionBlocks(sanitized);
   const { text: after3d, objects: explicit3DObjects } = parse3DObjectBlocks(strippedExec);
@@ -281,12 +306,28 @@ const AssistantMessage = memo(function AssistantMessage({
           );
         })()}
         <button
-          onClick={() => copyToClipboard(msg.content, setCopiedId, `ai-${msg.id || index}`)}
+          onClick={() => copyToClipboard(sourceText, setCopiedId, `ai-${msg.id || index}`)}
           className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-white hover:bg-white/5 transition-all"
           title="Copy"
           data-testid={`button-copy-ai-${msg.id || index}`}
         >
           {copiedId === `ai-${msg.id || index}` ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
+        </button>
+        <button
+          onClick={toggleEnglish}
+          disabled={translating}
+          className={cn(
+            "p-1.5 rounded-lg transition-all flex items-center gap-1",
+            englishOverride !== null
+              ? "text-amber-300 bg-amber-400/10"
+              : "text-muted-foreground/40 hover:text-amber-300 hover:bg-white/5",
+            translating && "opacity-50 cursor-wait"
+          )}
+          title={englishOverride !== null ? "Show original glyphs" : "Decrypt to English"}
+          data-testid={`button-english-${msg.id || index}`}
+        >
+          <Languages size={13} />
+          <span className="text-[9px] font-bold tracking-wider">{englishOverride !== null ? "GLYPH" : "EN"}</span>
         </button>
         <button
           onClick={() => onRegenerate(index)}
