@@ -443,6 +443,25 @@ async function initializeModules() {
   registerModuleInitFunction("self-code-evolution", initSelfCodeEvolution);
   registerModuleHandlers();
 
+  // Heavy Council IMPL-2 (100% approval): periodic prune of expired
+  // sovereign sessions. Default cadence 5 min. unref() so it never blocks
+  // a clean shutdown. Bounded, deterministic, no external calls.
+  try {
+    const { pruneExpired } = await import("./lib/sovereign-session");
+    const intervalMs = Math.max(60_000, Number(process.env.SOVEREIGN_SESSION_PRUNE_MS ?? 5 * 60_000));
+    const timer = setInterval(() => {
+      try {
+        const removed = pruneExpired();
+        if (removed > 0) logger.info({ removed }, "sovereign-session: prune cycle evicted expired entries");
+      } catch (err) {
+        logger.warn({ err }, "sovereign-session: prune cycle failed");
+      }
+    }, intervalMs);
+    if (typeof timer.unref === "function") timer.unref();
+  } catch (err) {
+    logger.warn({ err }, "sovereign-session: periodic prune not started");
+  }
+
   try {
     await db.select().from(dataSourcesTable).limit(1);
     logger.info("Pre-init DB connectivity confirmed");

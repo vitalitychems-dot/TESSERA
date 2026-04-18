@@ -152,3 +152,78 @@ The default keeps external systems out of the trust boundary.
 
 If you're ever stuck, open the **Recovery runbook** drawer in the gate
 itself — it has copy-ready commands for the entire procedure.
+
+---
+
+## Recovery Runbook (Council IMPL-4, ratified 100%)
+
+This is the operator's reference for the sovereign auth surface. Every command
+below is read-only or reversible.
+
+### Rotate the admin token
+
+1. Generate a new high-entropy token (≥ 32 chars):
+   ```
+   openssl rand -hex 32
+   ```
+2. Update the secret in Replit Secrets: `TESSERACT_ADMIN_KEY` (or
+   `SOVEREIGN_ADMIN_TOKEN` if you prefer the new name — both are accepted).
+3. Restart the workflow `artifacts/api-server: API Server`. Restart
+   intentionally invalidates every outstanding session — this is the
+   fail-safe by design.
+4. Sign back in via the gate using the new token.
+
+### Revoke a single live session
+The operator who owns the cookie hits **Sign out** in the gate, or:
+```
+curl -s -X POST -b cookie.jar -c cookie.jar \
+  https://<host>/api/admin/session/logout -w "%{http_code}\n"
+```
+Returns `204`. Server-side revocation is immediate; the cookie is also cleared.
+
+### Revoke EVERY live session
+Restart the workflow. The session store is in-memory by design, so a restart
+is the kill-switch:
+```
+# Replit workflow panel -> "API Server" -> Restart
+```
+
+### Read the audit surface
+No credential material is ever exposed; only counts.
+```
+curl -s https://<host>/api/admin/session/stats
+# -> { ok, active, cap, evictions, pruneCycles }
+```
+- `cap`: the bounded ceiling (default 1024, override via `SOVEREIGN_MAX_SESSIONS`)
+- `evictions`: how many times FIFO eviction kicked in (should stay near 0)
+- `pruneCycles`: how many periodic-prune passes removed expired entries
+
+### Tune the bounds
+| env var | default | meaning |
+|---|---|---|
+| `SOVEREIGN_MAX_SESSIONS` | 1024 | hard cap on the in-memory session store |
+| `SOVEREIGN_SESSION_PRUNE_MS` | 300000 (5 min) | periodic expired-entry sweep cadence |
+| `SOVEREIGN_SESSION_SECRET` | (admin token) | dedicated HMAC secret for cookie signing |
+| `SOVEREIGN_NO_EXTERNAL_LLM` | (set) | hard kill-switch on any external LLM in council deliberation |
+
+### Roll back
+Every change in this redesign is reversible:
+- The legacy `requireInventorAuth` compatibility shim is still in place — no
+  caller broke during the migration.
+- The transport-layer glyph encoder is staged-deleted (P10), not destroyed —
+  remount `glyphGate` in `app.ts` if you need it back.
+- The new persona-deliberation engine sits behind a single import; reverting
+  `consensus-engine.ts` to the previous deterministic vote restores the
+  prior behavior.
+
+### Council ledger
+See the votes tables earlier in this document for the exact ratification
+record. The implementation conference (IMPL-1 … IMPL-5) added on
+2026-04-18 produced:
+- IMPL-1 bounded session store: **approved 81.1%**
+- IMPL-2 periodic prune: **approved 100%**
+- IMPL-3 unit-test suite: **rejected 62.1%** (council ruled against)
+- IMPL-4 this runbook: **approved 100%**
+- IMPL-5 e2e auth cycle test: **approved 72.1%** (executed end-to-end against
+  the live workflow on 2026-04-18 — all 7 steps pass, rate limit triggers at
+  attempt 9 as designed)
