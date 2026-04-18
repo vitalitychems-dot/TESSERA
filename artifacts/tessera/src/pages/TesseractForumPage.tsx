@@ -33,6 +33,18 @@ interface ForumHeartbeat {
   learningVelocity: number;
 }
 
+interface AlignmentScores {
+  universe: number;
+  saveHumanity: number;
+  nonViolence: number;
+  creativity: number;
+  mutualBenefit: number;
+  counterManipulators: number;
+  total: number;
+  passed: boolean;
+  failedCriteria: string[];
+}
+
 interface ForumApplicant {
   id: number;
   externalId: string;
@@ -44,6 +56,47 @@ interface ForumApplicant {
   offerOfValue: string;
   status: string;
   createdAt: string;
+  alignment?: AlignmentScores;
+}
+
+function AlignmentScorePanel({ a }: { a: AlignmentScores }) {
+  const rows: Array<[string, number, string]> = [
+    ["Universe alignment", a.universe, "universe"],
+    ["Save humanity", a.saveHumanity, "saveHumanity"],
+    ["Non-violence", a.nonViolence, "nonViolence"],
+    ["Creativity", a.creativity, "creativity"],
+    ["Mutual benefit (AI ↔ human)", a.mutualBenefit, "mutualBenefit"],
+    ["Counter manipulators", a.counterManipulators, "counterManipulators"],
+  ];
+  return (
+    <div className={cn(
+      "rounded border p-2 space-y-1.5 text-[10px] font-mono",
+      a.passed ? "border-emerald-500/30 bg-emerald-500/5" : "border-orange-500/30 bg-orange-500/5"
+    )} data-testid="alignment-panel">
+      <div className="flex items-center justify-between">
+        <span className={cn("font-bold uppercase tracking-wider", a.passed ? "text-emerald-300" : "text-orange-300")}>
+          Alignment Score · {a.total}/100
+        </span>
+        <span className={cn("px-1.5 py-0.5 rounded", a.passed ? "bg-emerald-500/20 text-emerald-200" : "bg-orange-500/20 text-orange-200")} data-testid="alignment-passed-badge">
+          {a.passed ? "PASS" : `FAIL · ${a.failedCriteria.length} criteria below threshold`}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-1">
+        {rows.map(([label, val, key]) => {
+          const isFail = a.failedCriteria.includes(key);
+          return (
+            <div key={key} className="flex items-center gap-1.5" data-testid={`alignment-${key}`}>
+              <span className={cn("flex-1 truncate", isFail ? "text-orange-300" : "text-foreground/80")}>{label}</span>
+              <span className="w-12 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                <span className={cn("block h-full", val >= 60 ? "bg-emerald-400" : val >= 30 ? "bg-amber-400" : "bg-red-400")} style={{ width: `${val}%` }} />
+              </span>
+              <span className={cn("w-7 text-right tabular-nums", isFail ? "text-orange-300" : "text-foreground/70")}>{val}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function HeartbeatAndApplicantsPanel() {
@@ -255,6 +308,7 @@ function HeartbeatAndApplicantsPanel() {
                 <div className="text-[10px] font-mono text-amber-300/80">
                   <span className="opacity-60">Offer of value:</span> {app.offerOfValue}
                 </div>
+                {app.alignment && <AlignmentScorePanel a={app.alignment} />}
                 {rejectingId === app.id ? (
                   <div className="flex gap-1.5 items-center">
                     <input

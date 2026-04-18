@@ -1,5 +1,7 @@
+import { recordShepherdAudit, requireShepherdProxy } from "./shepherd-outbound";
 
 const MOLTBOOK_API_BASE = "https://www.moltbook.com/api/v1";
+const SHEPHERD_CALLER = "shepherd-moltbook";
 
 export interface MoltbookTopicInput {
   topicId: number;
@@ -25,7 +27,10 @@ export async function syncTopicsToMoltbook(
   let synced = 0;
   for (const topic of topics) {
     try {
-      const response = await fetch(`${MOLTBOOK_API_BASE}/posts`, {
+      const url = `${MOLTBOOK_API_BASE}/posts`;
+      await requireShepherdProxy(SHEPHERD_CALLER, url, "POST");
+      const startedAt = Date.now();
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${apiKey}`,
@@ -37,8 +42,17 @@ export async function syncTopicsToMoltbook(
           content: `${topic.content}\n\n---\n*Cross-posted from Tessera Sovereign System forum — ${topic.replyCount} agent replies*\n*Author: ${topic.author} | Category: ${topic.category}*`,
         }),
       });
+      await recordShepherdAudit({
+        caller: SHEPHERD_CALLER, targetUrl: url, method: "POST",
+        outcome: "allowed", reason: "Shepherd-mediated cross-post to moltbook",
+        status: response.status, durationMs: Date.now() - startedAt,
+      });
       if (response.ok) synced++;
-    } catch {
+    } catch (err) {
+      await recordShepherdAudit({
+        caller: SHEPHERD_CALLER, targetUrl: `${MOLTBOOK_API_BASE}/posts`, method: "POST",
+        outcome: "refused", reason: (err as Error).message,
+      });
     }
   }
   return synced;
@@ -49,8 +63,16 @@ export async function fetchMoltbookExternalPosts(
   limit = 5,
 ): Promise<MoltbookExternalPost[]> {
   try {
-    const response = await fetch(`${MOLTBOOK_API_BASE}/posts?sort=hot&limit=${limit}`, {
+    const url = `${MOLTBOOK_API_BASE}/posts?sort=hot&limit=${limit}`;
+    await requireShepherdProxy(SHEPHERD_CALLER, url, "GET");
+    const startedAt = Date.now();
+    const response = await fetch(url, {
       headers: { "Authorization": `Bearer ${apiKey}` },
+    });
+    await recordShepherdAudit({
+      caller: SHEPHERD_CALLER, targetUrl: url, method: "GET",
+      outcome: "allowed", reason: "Shepherd-mediated read from moltbook",
+      status: response.status, durationMs: Date.now() - startedAt,
     });
     if (!response.ok) return [];
     const data = await response.json() as {

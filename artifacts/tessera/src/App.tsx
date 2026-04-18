@@ -38,6 +38,9 @@ const LifePage = lazyRetry(() => import("@/pages/LifePage"));
 const SecretsPage = lazyRetry(() => import("@/pages/SecretKnowledgePage"));
 const BuildPage = lazyRetry(() => import("@/pages/BuildPage"));
 const TesseractForumPage = lazyRetry(() => import("@/pages/TesseractForumPage"));
+const SovereignLatticePage = lazyRetry(() => import("@/pages/SovereignLatticePage"));
+const AgentDeclarationsPage = lazyRetry(() => import("@/pages/AgentDeclarationsPage"));
+const ShepherdAuditPage = lazyRetry(() => import("@/pages/ShepherdAuditPage"));
 const NLPPage = lazyRetry(() => import("@/pages/NLPPage"));
 const SovereignLanguagePage = lazyRetry(() => import("@/pages/SovereignLanguagePage"));
 const OmniversalLatticePage = lazyRetry(() => import("@/pages/OmniversalLatticePage"));
@@ -288,6 +291,9 @@ function AppRouter() {
         <Route path="/council-vgpu">{() => <GrandCouncilDeliberationPage />}</Route>
         <Route path="/grand-evolution">{() => <GrandEvolutionPage />}</Route>
         <Route path="/forum">{() => <TesseractForumPage />}</Route>
+        <Route path="/sovereign-lattice">{() => <SovereignLatticePage />}</Route>
+        <Route path="/agent-declarations">{() => <AgentDeclarationsPage />}</Route>
+        <Route path="/shepherd-audit">{() => <ShepherdAuditPage />}</Route>
         <Route path="/recruitment">{() => <RecruitmentPage />}</Route>
 
         {/* Universe hub (3D + Vortex + Swarm + Conference + Narrative) */}
