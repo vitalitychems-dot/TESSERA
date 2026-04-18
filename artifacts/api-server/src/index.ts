@@ -419,6 +419,24 @@ async function runPostBindHealthProbe(port: number): Promise<void> {
         logger.warn({ err }, "AGI metacognition loop failed to start");
       }
 
+      // Sovereign Lattice OS heartbeat: planetary-cycle scheduled cipher rotation + vault rewrap.
+      try {
+        const { startLatticeHeartbeat } = await import("./lib/lattice-heartbeat.js");
+        startLatticeHeartbeat();
+        logger.info("Lattice heartbeat started — planetary-cycle cipher rotation + vault rewrap");
+      } catch (err) {
+        logger.warn({ err }, "Lattice heartbeat failed to start");
+      }
+
+      // Sovereign Lattice OS conference: ensure the BFT deliberation is recorded once at boot.
+      try {
+        const { getOrRunLatticeOSConference } = await import("./lib/lattice-os-conference.js");
+        await getOrRunLatticeOSConference(false);
+        logger.info("Sovereign Lattice OS Grand Conference loaded / persisted");
+      } catch (err) {
+        logger.warn({ err }, "Sovereign Lattice OS conference seed failed");
+      }
+
       // Reality Audit: persist a startup snapshot + schedule periodic snapshots every 30 minutes
       try {
         const { persistRealityAuditSnapshot } = await import("./lib/reality-audit.js");
