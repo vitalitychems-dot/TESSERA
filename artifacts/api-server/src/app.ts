@@ -173,6 +173,11 @@ const PLAINTEXT_PREFIXES = [
   // one-time popup can render the key the operator has to paste into
   // the TESSERACT_ADMIN_KEY (= SIGIL_ADMIN_KEY) secret.
   "/api/sigil/father-key/status",
+  // Rotating-signal derivation must be plaintext too. Otherwise the response
+  // signal gets glyph-encoded on its way out, the operator pastes the encoded
+  // value into SIGIL_ADMIN_KEY, and validation (which derives the RAW signal)
+  // can never match it.
+  "/api/sigil/father-key/derive-signal",
 ];
 app.use("/api", (req: Request, res: Response, next: NextFunction) => {
   const isInternalProbe = req.headers[INTERNAL_PROBE_HEADER] === INTERNAL_PROBE_SECRET;
