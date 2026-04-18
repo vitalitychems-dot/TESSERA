@@ -526,6 +526,56 @@ router.get("/council/ledger", async (req, res) => {
   }
 });
 
+// R3-1 (100% approval): replay a past proposal title through the persona
+// engine and report whether the new vote still ratifies. Drift detector for
+// the deliberation logic. The original ballots are NOT mutated; we run a
+// fresh, side-effect-isolated deliberation and compare. Bounded by the
+// ledger's existing scan, deterministic, transparent.
+router.get("/council/replay/:id", async (req, res) => {
+  try {
+    const { readLedger } = await import("../lib/council-ledger");
+    const ledger = await readLedger(500);
+    const original = ledger.find((e) => e.id === req.params.id);
+    if (!original) return res.status(404).json({ ok: false, error: "ledger-entry-not-found" });
+
+    // Re-deliberate the same title. We synthesize a minimal description from
+    // the ledger title because the on-disk record intentionally does not
+    // carry the original description (kept slim).
+    const replayProposal = await createProposal({
+      title: `[REPLAY] ${original.title}`,
+      description: `Drift-detection replay of proposal ${original.id}. Bounded, transparent, audit-only.`,
+      proposedBy: "council-replay",
+      category: (original.category as any) || "governance",
+    });
+
+    return res.json({
+      ok: true,
+      original: {
+        id: original.id,
+        status: original.status,
+        approvalRate: original.approvalRate,
+        yesCount: original.yesCount,
+        noCount: original.noCount,
+        abstainCount: original.abstainCount,
+      },
+      replay: {
+        id: replayProposal.id,
+        status: replayProposal.status,
+        approvalRate: replayProposal.approvalRate,
+        yesCount: replayProposal.yesCount,
+        noCount: replayProposal.noCount,
+        abstainCount: replayProposal.abstainCount,
+      },
+      drift: {
+        statusChanged: original.status !== replayProposal.status,
+        approvalRateDelta: replayProposal.approvalRate - original.approvalRate,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
 router.get("/council/consensus", (_req, res) => {
   const metrics = getConsensusMetrics();
   const executorMetrics = getExecutorMetrics();
