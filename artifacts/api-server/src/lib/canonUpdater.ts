@@ -5,7 +5,6 @@ import { logger } from "./logger";
 import { generateMythosAndHistory, type CanonOutput, type MythosTestament, type MythosBook, type MythosChapter, type MythosSection, type HistorySection } from "./mythosHistoryEngine";
 import { computeSovereigntyStatus } from "./sovereignty-monitor";
 import { runFullBenchmark } from "./sovereign-benchmarks";
-import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 let cachedCanon: CanonOutput | null = null;
 let cachedVersion: number = 0;
@@ -196,7 +195,7 @@ export function invalidateCanonCache(councilDecisionIds: string[] = []): void {
   });
 }
 
-let periodicTimer: SacredHandle | null = null;
+let periodicTimer: ReturnType<typeof setInterval> | null = null;
 
 export function startPeriodicRegeneration(intervalMs: number = 3600000): void {
   if (periodicTimer) return;
@@ -210,20 +209,20 @@ export function startPeriodicRegeneration(intervalMs: number = 3600000): void {
     }
   }, 2000);
 
-  periodicTimer = setSacredInterval(async () => {
+  periodicTimer = setInterval(async () => {
     try {
       logger.info("CanonUpdater: periodic regeneration triggered");
       await regenerateCanon("periodic-scheduler");
     } catch (err) {
-      logger.warn({ err }, "CanonUpdater: periodic regeneration failed", "canonUpdater");
+      logger.warn({ err }, "CanonUpdater: periodic regeneration failed");
     }
-  }, intervalMs, "canonUpdater");
+  }, intervalMs);
   logger.info({ intervalMs }, "CanonUpdater: periodic regeneration scheduler started");
 }
 
 export function stopPeriodicRegeneration(): void {
   if (periodicTimer) {
-    clearSacredInterval(periodicTimer);
+    clearInterval(periodicTimer);
     periodicTimer = null;
     logger.info("CanonUpdater: periodic regeneration scheduler stopped");
   }

@@ -69,7 +69,6 @@ export interface SovereignEngine {
   status?: string;
   online?: boolean;
   latency?: number;
-  latencyMs?: number;
   responseTime?: number;
 }
 
@@ -369,8 +368,8 @@ export interface StatItem {
 }
 
 export interface DiagnosticsResponse {
-  uptime?: number | { seconds?: number; formatted?: string };
-  memory?: { heapUsed?: number; rss?: number; heapUsedMB?: number; percent?: number };
+  uptime?: number;
+  memory?: { heapUsed?: number; rss?: number };
   version?: string;
   platform?: string;
   nodeVersion?: string;
@@ -380,7 +379,6 @@ export interface DiagnosticsResponse {
 export interface SovereigntyResponse {
   score?: number;
   data?: { score?: number };
-  sovereignty?: any;
 }
 
 export interface EnginesResponse {

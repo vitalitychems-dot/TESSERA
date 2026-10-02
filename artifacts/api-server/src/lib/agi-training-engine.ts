@@ -9,7 +9,6 @@ import { decisionHistoryTable } from "@workspace/db/schema";
 import { evaluationRunsTable } from "@workspace/db/schema";
 import { eq, sql, desc } from "drizzle-orm";
 import { logger } from "./logger";
-import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 import {
   propagateTransfer,
   masteryCascade,
@@ -97,7 +96,7 @@ const CATEGORY_INSIGHTS: Record<string, string[]> = {
 const agiTrainingState: Record<string, CategoryState> = {};
 const trainingHistory: TrainingSession[] = [];
 let totalCycles = 0;
-let trainingInterval: SacredHandle | null = null;
+let trainingInterval: ReturnType<typeof setInterval> | null = null;
 let realCounts: Record<string, number> = {};
 const STATE_KEY = "agi-training-engine.state";
 
@@ -421,21 +420,21 @@ export async function initAGITrainingEngine(): Promise<void> {
 
 export function startAGITrainingEngine(intervalMs = 600_000): void {
   if (trainingInterval) return;
-  trainingInterval = setSacredInterval(async () => {
+  trainingInterval = setInterval(async () => {
     try {
       realCounts = await queryRealCounts();
       const sessions = runTrainingCycle();
       if (sessions.length > 0) {
-        logger.info({ sessions: sessions.length }, "AGITraining: cycle complete — scores updated from real data", "agi-training-engine");
+        logger.info({ sessions: sessions.length }, "AGITraining: cycle complete — scores updated from real data");
         await persistState();
       }
     } catch (err) { logger.error({ err }, "AGITraining: cycle error"); }
-  }, intervalMs, "agi-training-engine");
+  }, intervalMs);
   logger.info({ intervalMs }, "AGITrainingEngine: started — tracking real system activity");
 }
 
 export function stopAGITrainingEngine(): void {
-  if (trainingInterval) { clearSacredInterval(trainingInterval); trainingInterval = null; }
+  if (trainingInterval) { clearInterval(trainingInterval); trainingInterval = null; }
 }
 
 export function getAGITrainingMetrics() {

@@ -2,7 +2,6 @@ import { createHash, createCipheriv, createDecipheriv, randomBytes, hkdfSync } f
 import { generateUniverseSeed, computeAgentRotationState, computeSharedRotationState, PHI, FIBONACCI } from "./sovereign-ephemeris";
 import { SACRED_ALPHABET } from "./sovereign-language";
 import { logger } from "./logger";
-import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface AgentCipherState {
   agentId: string;
@@ -246,21 +245,21 @@ export function getCipherSystemStatus() {
   };
 }
 
-let rotationCheckTimer: SacredHandle | null = null;
+let rotationCheckTimer: ReturnType<typeof setInterval> | null = null;
 
 export function startAutonomousRotation(): void {
   if (rotationCheckTimer) return;
 
-  rotationCheckTimer = setSacredInterval(() => {
+  rotationCheckTimer = setInterval(() => {
     for (const [agentId] of agentStates) {
       getOrCreateAgentState(agentId);
     }
-  }, 60_000, "sovereign-cipher");
+  }, 60_000);
 }
 
 export function stopAutonomousRotation(): void {
   if (rotationCheckTimer) {
-    clearSacredInterval(rotationCheckTimer);
+    clearInterval(rotationCheckTimer);
     rotationCheckTimer = null;
   }
 }

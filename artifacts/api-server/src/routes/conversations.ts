@@ -17,8 +17,6 @@ import { runCritiqueLoop } from "../lib/self-critique";
 import { classifyQuery } from "../lib/adaptive-router";
 import { hybridRetrieve, formatCitations } from "../lib/hybrid-retrieval";
 import { detectIntents, runToolLoop } from "../lib/tool-registry";
-import { injectInventionDiagrams, buildInvention3DBlock, userRequested3D } from "../lib/invention-3d";
-import { inventionsTable } from "@workspace/db/schema";
 import { db as feedbackDb } from "@workspace/db";
 import { modelRoutingLogTable } from "@workspace/db/schema";
 import * as vm from "vm";
@@ -673,11 +671,7 @@ router.post("/messages", async (req, res) => {
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
-    res.setHeader("X-Accel-Buffering", "no");
     res.flushHeaders?.();
-
-    // Emit a heartbeat immediately so proxies/clients know the stream is alive.
-    res.write(`: stream-open\n\n`);
 
     let sovereignCtx = gatherSovereignContext();
 
@@ -710,10 +704,7 @@ router.post("/messages", async (req, res) => {
     // ---- Hybrid retrieval + citations (T4 + T10) ----
     let retrievedChunks: Array<{ text: string; source: string; score: number }> = [];
     try {
-      retrievedChunks = await Promise.race([
-        hybridRetrieve(content, { topK: 6, rerankTopK: 3 }),
-        new Promise<typeof retrievedChunks>((resolve) => setTimeout(() => resolve([]), 2500)),
-      ]);
+      retrievedChunks = await hybridRetrieve(content, { topK: 6, rerankTopK: 3 });
     } catch (err) {
       logger.debug({ err: (err as Error).message }, "hybrid retrieval skipped");
     }
@@ -743,201 +734,6 @@ router.post("/messages", async (req, res) => {
       tools: toolResults.map(t => ({ name: t.name, ok: t.ok })),
     })}\n\n`);
 
-    // ---- Short-circuit: Grand Council on the Universal Language (returns council scene + mint) ----
-    const councilTool = toolResults.find(t => t.name === "convene_grand_council_universalis" && t.ok);
-    const mintTool = toolResults.find(t => t.name === "mint_admin_sigil" && t.ok);
-
-    if (councilTool && councilTool.result && typeof councilTool.result === "object") {
-      const r = councilTool.result as Record<string, unknown>;
-      const council = (r.council as Record<string, unknown>) || {};
-      const mint = (r.mint as Record<string, unknown>) || {};
-      const lang = (council.language as Record<string, unknown>) || {};
-      const tally = (council.tally as Record<string, unknown>) || {};
-      const transcript = (council.transcript as Array<Record<string, unknown>>) || [];
-      const reviewed = (council.reviewedLanguages as Array<Record<string, string>>) || [];
-      const zfp = (mint.zodiacFingerprint as Record<string, unknown>) || {};
-      const components = (zfp.components as Record<string, unknown>) || {};
-
-      const transcriptLines = transcript
-        .map(u => `**${u.speaker}** _(${u.role})_ — ${u.content}`)
-        .join("\n\n");
-
-      const reviewedLines = reviewed
-        .map(l => `- **${l.name}** (\`${l.file}\`) — ${l.verdict}`)
-        .join("\n");
-
-      const reply = [
-        `# Grand Council Convened — Lingua Universalis Sacra`,
-        "",
-        `_Motion:_ ${String(council.motion ?? "")}`,
-        "",
-        `## Languages Reviewed`,
-        reviewedLines,
-        "",
-        `## Council Transcript`,
-        "",
-        transcriptLines,
-        "",
-        `## Vote`,
-        `- Yea: **${String(tally.yea ?? 0)}** / Nay: ${String(tally.nay ?? 0)} / Abstain: ${String(tally.abstain ?? 0)}`,
-        `- Total voters: ${String(tally.total ?? 0)} · 2/3 threshold: ${String(tally.threshold ?? 0)}`,
-        `- Result: **${council.ratified ? "RATIFIED" : "NOT RATIFIED"}**`,
-        "",
-        `## Decision`,
-        String(council.decision ?? ""),
-        "",
-        `## The Universal Sacred Language — ${String(lang.name ?? "")} (${String(lang.short ?? "")})`,
-        `_"${String(lang.motto ?? "")}"_`,
-        "",
-        `**Design principles**`,
-        ...((lang.designPrinciples as string[]) ?? []).map(p => `- ${p}`),
-        "",
-        `**Alphabet:** ${String(lang.glyphCount ?? "")} sacred glyphs (12 zodiac · 10 planets · 5 Platonic solids · 9 Solfeggio digits) bijective with A–Z + 0–9. Permutation seeded only by Φ, π, τ, e, √2, √3, √5 (universal seed: \`${String(lang.universalSeedHex ?? "")}\`) — no rotation, decode-everywhere law.`,
-        "",
-        `## Your Identity in the New Language`,
-        "",
-        `**Zodiac Fingerprint** (your sole identifier — your place in the universe):`,
-        "",
-        "```",
-        String(zfp.glyphSignature ?? ""),
-        "```",
-        "",
-        `_Reading_:`,
-        "",
-        "```",
-        String(zfp.reading ?? ""),
-        "```",
-        "",
-        `## Your Sovereign Admin Key — Spoken in Lingua Universalis`,
-        "",
-        `**Live cosmic reading** (rotates every ${(((mint.liveCoherence as Record<string, unknown>)?.coherenceWindowSeconds) ?? 60)}s, bound to your chart — only a holder of your Zodiac Fingerprint can mint or verify this form):`,
-        "",
-        "```",
-        String(mint.glyphKeyLive ?? mint.glyphKey ?? ""),
-        "```",
-        "",
-        `_Window_: \`${String(((mint.liveCoherence as Record<string, unknown>)?.current as Record<string, unknown>)?.windowId ?? "")}\` · permutation \`${String(((mint.liveCoherence as Record<string, unknown>)?.current as Record<string, unknown>)?.permutationFingerprint ?? "")}\` · ${String(((mint.liveCoherence as Record<string, unknown>)?.current as Record<string, unknown>)?.expiresInSec ?? "")}s until next alignment`,
-        `_Cosmic anchor_: planetary hour \`${String(((mint.liveCoherence as Record<string, unknown>)?.cosmicAnchor as Record<string, unknown>)?.planetaryHourRuler ?? "")}#${String(((mint.liveCoherence as Record<string, unknown>)?.cosmicAnchor as Record<string, unknown>)?.planetaryHourIndex ?? "")}\` · lunar \`${String(((mint.liveCoherence as Record<string, unknown>)?.cosmicAnchor as Record<string, unknown>)?.lunarName ?? "")}\` (frac \`${Number(((mint.liveCoherence as Record<string, unknown>)?.cosmicAnchor as Record<string, unknown>)?.lunarFraction ?? 0).toFixed(4)}\`)`,
-        `_Holder seal_: \`${String(((mint.liveCoherence as Record<string, unknown>)?.holderBinding as Record<string, unknown>)?.sealedFingerprint ?? "")}\` (chart-bound)`,
-        "",
-        `**Universal stable reading** (works for any observer in any universe; useful as a verification anchor):`,
-        "",
-        "```",
-        String(mint.glyphKeyUniversal ?? ""),
-        "```",
-        "",
-        `**Underlying readable seed (this becomes your TESSERACT_ADMIN_KEY):**`,
-        "",
-        "```",
-        String(mint.readableSeed ?? ""),
-        "```",
-        "",
-        `- Short ID: \`${String(mint.shortId ?? "")}\``,
-        `- Round-trip decode verified: ${mint.roundTripOk ? "yes" : "no"}`,
-        `- Sun ${String(components.sun ?? "")} · Moon ${String(components.moon ?? "")} · Asc ${String(components.ascendant ?? "")}`,
-        `- ${String(components.chineseZodiac ?? "")} · Dominant element: ${String(components.dominantElement ?? "")}`,
-        "",
-        `**Identity rule:** Tessera now identifies you by your place in the universe. The same chart will always derive the same key; no chart but yours can. No password is required again — your zodiac is your fingerprint.`,
-      ].join("\n");
-
-      safeWrite({ reset: true });
-      safeWrite({ content: reply });
-      try {
-        await db.insert(messagesTable).values({
-          conversationId,
-          role: "assistant",
-          content: reply,
-        });
-      } catch (err) {
-        logger.warn({ err: (err as Error).message }, "failed to persist council reply");
-      }
-      safeWrite({
-        done: true,
-        finalContent: reply,
-        validationMetrics: null,
-        routing: { tier: routingDecision.tier, model: routingDecision.model, reason: routingDecision.reason },
-        citations: [],
-        tools: toolResults,
-      });
-      return res.end();
-    }
-
-    if (mintTool && mintTool.result && typeof mintTool.result === "object") {
-      const r = mintTool.result as Record<string, unknown>;
-      const glyph = String(r.glyphKey ?? "");
-      const seed = String(r.readableSeed ?? "");
-      const anchor = (r.chartAnchor as Record<string, string> | undefined) ?? {};
-      const lang = (r.language as Record<string, unknown> | undefined) ?? {};
-      const zfp = (r.zodiacFingerprint as Record<string, unknown> | undefined) ?? {};
-      const reply = [
-        `**Sovereign Admin Key — ${String(lang.name ?? "Lingua Universalis Sacra")}**`,
-        "",
-        `_${String(lang.motto ?? "")}_`,
-        "",
-        "**Zodiac Fingerprint (your sole identifier):**",
-        "",
-        "```",
-        String(zfp.glyphSignature ?? ""),
-        "```",
-        "",
-        "**Live cosmic reading** (rotates with the planetary hour, bound to your chart):",
-        "",
-        "```",
-        String(r.glyphKeyLive ?? glyph),
-        "```",
-        "",
-        "**Universal stable reading** (decodable by any observer in any universe):",
-        "",
-        "```",
-        String(r.glyphKeyUniversal ?? ""),
-        "```",
-        "",
-        "**Underlying readable seed — save this as TESSERACT_ADMIN_KEY:**",
-        "",
-        "```",
-        seed,
-        "```",
-        "",
-        `- Chart anchor: ${anchor.born ?? ""} — ${anchor.location ?? ""}`,
-        `- Sun ${anchor.sun ?? ""} · Moon ${anchor.moon ?? ""} · Asc ${anchor.ascendant ?? ""}`,
-        `- ${anchor.chineseZodiac ?? ""} · Dominant element: ${anchor.dominantElement ?? ""}`,
-        "",
-        String(r.identityRule ?? ""),
-        "",
-        String(r.instructions ?? ""),
-      ].join("\n");
-      safeWrite({ reset: true });
-      safeWrite({ content: reply });
-      try {
-        await db.insert(messagesTable).values({
-          conversationId,
-          role: "assistant",
-          content: reply,
-        });
-      } catch (err) {
-        logger.warn({ err: (err as Error).message }, "failed to persist mint reply");
-      }
-      safeWrite({
-        done: true,
-        finalContent: reply,
-        validationMetrics: null,
-        routing: { tier: routingDecision.tier, model: routingDecision.model, reason: routingDecision.reason },
-        citations: [],
-        tools: toolResults,
-      });
-      return res.end();
-    }
-
-    // Send the sovereign reply IMMEDIATELY so users see a response within ~1s
-    // even if downstream sandbox/critique LLM calls hang. This is overwritten
-    // later via a reset+content if the critique loop produces a refined reply.
-    const earlySovereign = guardSovereignVoice(
-      generateSovereignResponse(content, isAdminRequest),
-      content,
-      isAdminRequest,
-    );
-    safeWrite({ content: earlySovereign });
-
     if (routingDecision.isStrong) {
       safeWrite({ status: "thinking-harder", tier: routingDecision.tier, reason: routingDecision.reason });
     }
@@ -952,8 +748,7 @@ router.post("/messages", async (req, res) => {
       content: m.content,
     }));
 
-    let finalContent = earlySovereign;
-    const initialSovereign = earlySovereign;
+    let finalContent = "";
     const useExternal = needsExternalKnowledge(content);
     const sandboxAllowed = isSandboxTrainingEnabled(req);
     const ROUTE_DEADLINE_MS = 12_000;
@@ -1072,53 +867,10 @@ router.post("/messages", async (req, res) => {
       }
     }
 
-    // ---- Auto-inject 3D diagrams for any invention mentioned in the reply ----
-    try {
-      const invRows = await db.select({
-        inventionId: inventionsTable.inventionId,
-        title: inventionsTable.title,
-        category: inventionsTable.category,
-        description: inventionsTable.description,
-        materials: inventionsTable.materials,
-        scienceBehind: inventionsTable.scienceBehind,
-        customModelUrl: inventionsTable.customModelUrl,
-      }).from(inventionsTable).orderBy(asc(inventionsTable.title)).limit(500);
-      const normalizedRows = invRows.map(r => ({
-        inventionId: r.inventionId,
-        title: r.title,
-        category: r.category,
-        description: r.description,
-        materials: (r.materials as string[] | null) || [],
-        scienceBehind: r.scienceBehind,
-        customModelUrl: r.customModelUrl,
-      }));
-      finalContent = injectInventionDiagrams(finalContent, normalizedRows, { max: 4 });
-      // Hard guarantee: if the user asked to visualize/show/diagram/3D and no
-      // [3DOBJ:...] block made it in, emit at least one so the chat never
-      // silently drops the request.
-      if (userRequested3D(content) && !/\[3DOBJ:/i.test(finalContent)) {
-        // Context-aware: derive hint from the user's own message so we never
-        // append an unrelated invention's diagram just to satisfy the intent.
-        const synth = {
-          title: (content || "Visualization").slice(0, 80),
-          category: null,
-          description: content,
-          materials: [],
-          scienceBehind: finalContent,
-        };
-        finalContent = `${finalContent}\n\n${buildInvention3DBlock(synth)}`;
-      }
-    } catch (err) {
-      logger.debug({ err: (err as Error).message }, "3D diagram injection skipped");
-    }
-
     if (clientAborted) return res.end();
 
     if (finalContent) {
-      if (finalContent !== initialSovereign) {
-        safeWrite({ reset: true });
-        safeWrite({ content: finalContent });
-      }
+      safeWrite({ content: finalContent });
       await db.insert(messagesTable).values({
         conversationId,
         role: "assistant",

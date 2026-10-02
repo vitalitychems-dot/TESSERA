@@ -1,7 +1,6 @@
 import { WebSocket } from "ws";
 import { createHash } from "crypto";
 import { logger } from "./logger";
-import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface MeshSession {
   sessionId: string;
@@ -31,7 +30,7 @@ const meshSessions = new Map<string, Map<string, MeshSession>>();
 const HEARTBEAT_INTERVAL_MS = 15_000;
 const SESSION_TIMEOUT_MS = 45_000;
 
-let heartbeatTimer: SacredHandle | null = null;
+let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 
 function hashKey(key: string): string {
   return createHash("sha256").update(key).digest("hex");
@@ -207,13 +206,13 @@ export function broadcastToKeyHash(sovereignKeyHash: string, message: object, ex
 
 export function startMeshHeartbeatMonitor(): void {
   if (heartbeatTimer) return;
-  heartbeatTimer = setSacredInterval(runHeartbeatCheck, HEARTBEAT_INTERVAL_MS, "session-mesh");
+  heartbeatTimer = setInterval(runHeartbeatCheck, HEARTBEAT_INTERVAL_MS);
   logger.info({ intervalMs: HEARTBEAT_INTERVAL_MS }, "Mesh heartbeat monitor started");
 }
 
 export function stopMeshHeartbeatMonitor(): void {
   if (heartbeatTimer) {
-    clearSacredInterval(heartbeatTimer);
+    clearInterval(heartbeatTimer);
     heartbeatTimer = null;
   }
 }

@@ -1,5 +1,4 @@
 import { logger } from "./logger";
-import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 interface CacheEntry<T> {
   key: string;
@@ -628,38 +627,38 @@ for (const [domain, cfg] of Object.entries(DOMAIN_TTL_OVERRIDES)) {
   semanticDimensionalCache.configureDimension(domain, cfg);
 }
 
-let tuneTimer: SacredHandle | null = null;
-let pruneTimer: SacredHandle | null = null;
+let tuneTimer: ReturnType<typeof setInterval> | null = null;
+let pruneTimer: ReturnType<typeof setInterval> | null = null;
 
 export function startDimensionalCacheMaintenance(): void {
   if (!tuneTimer) {
-    tuneTimer = setSacredInterval(() => {
+    tuneTimer = setInterval(() => {
       try {
         embeddingDimensionalCache.tuneCapacities({ minCapacity: 100, maxCapacity: 800, totalBudget: 3000 });
         semanticDimensionalCache.tuneCapacities({ minCapacity: 75, maxCapacity: 600, totalBudget: 2000 });
       } catch (err) {
         logger.debug({ err: (err as Error).message }, "DimensionalLRUCache: tune error");
       }
-    }, 300_000, "dimensional-lru-cache");
+    }, 300_000);
   }
   if (!pruneTimer) {
-    pruneTimer = setSacredInterval(() => {
+    pruneTimer = setInterval(() => {
       try {
         const e = embeddingDimensionalCache.pruneExpired();
         const s = semanticDimensionalCache.pruneExpired();
         if (e + s > 0) {
-          logger.debug({ embeddingPruned: e, semanticPruned: s }, "DimensionalLRUCache: TTL pruning", "dimensional-lru-cache-2");
+          logger.debug({ embeddingPruned: e, semanticPruned: s }, "DimensionalLRUCache: TTL pruning");
         }
       } catch (err) {
         logger.debug({ err: (err as Error).message }, "DimensionalLRUCache: prune error");
       }
-    }, 60_000, "dimensional-lru-cache-2");
+    }, 60_000);
   }
 }
 
 export function stopDimensionalCacheMaintenance(): void {
-  if (tuneTimer) { clearSacredInterval(tuneTimer); tuneTimer = null; }
-  if (pruneTimer) { clearSacredInterval(pruneTimer); pruneTimer = null; }
+  if (tuneTimer) { clearInterval(tuneTimer); tuneTimer = null; }
+  if (pruneTimer) { clearInterval(pruneTimer); pruneTimer = null; }
 }
 
 export function getDimensionalCacheStats() {

@@ -1,5 +1,4 @@
 import { hkdfSync, randomBytes } from "crypto";
-import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface LatticeBand {
   bandId: string;
@@ -56,7 +55,7 @@ const bands: Map<string, LatticeBand> = new Map(
   BAND_DEFINITIONS.map(def => [def.bandId, buildBand(def)])
 );
 
-let rotationTimer: SacredHandle | null = null;
+let rotationTimer: ReturnType<typeof setInterval> | null = null;
 
 function rotateBand(bandId: string): void {
   const band = bands.get(bandId);
@@ -73,19 +72,19 @@ function rotateBand(bandId: string): void {
 export function startBandRotationScheduler(): void {
   if (rotationTimer) return;
 
-  rotationTimer = setSacredInterval(() => {
+  rotationTimer = setInterval(() => {
     const now = Date.now();
     for (const band of bands.values()) {
       if (now >= band.nextRotationAt) {
         rotateBand(band.bandId);
       }
     }
-  }, 30_000, "lattice-frequency-bands");
+  }, 30_000);
 }
 
 export function stopBandRotationScheduler(): void {
   if (rotationTimer) {
-    clearSacredInterval(rotationTimer);
+    clearInterval(rotationTimer);
     rotationTimer = null;
   }
 }

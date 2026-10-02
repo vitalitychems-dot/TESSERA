@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Send, FlaskConical, Vote, CheckCircle2, XCircle, ChevronRight, ChevronDown, RefreshCw, BookOpen, TrendingUp, Crown, Shield, Brain, Zap, Database, Target, Loader2, Users, Timer, MemoryStick, Activity, AlertTriangle, Skull, Plus, ScanSearch, Repeat, Send as SendIcon, Lightbulb, Sparkles } from "lucide-react";
+import { Send, FlaskConical, Vote, CheckCircle2, XCircle, ChevronRight, RefreshCw, BookOpen, TrendingUp, Crown, Shield, Brain, Zap, Database, Target, Loader2, Users, Timer, MemoryStick, Activity, AlertTriangle, Skull, Plus, ScanSearch, Repeat, Send as SendIcon, Lightbulb, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const RICK_GREEN = "#00ff41";
@@ -8,16 +8,16 @@ const RICK_PORTAL = "#22d3ee";
 const ROYAL_GOLD = "#f59e0b";
 const ROYAL_GOLD_DARK = "#d97706";
 
-interface AutonomousInventionUiRow {
-  inventionId: string;
-  title: string;
+interface RickInvention {
+  inventionName: string;
+  targetWeakness: string;
+  technicalApproach: string;
+  expectedImpact: string;
+  rickRationale: string;
+  systemMetricTargeted: string;
   category: string;
-  description: string;
-  status: string;
-  feasibilityScore: number | null;
-  noveltyScore: number | null;
-  customModelUrl: string | null;
-  proposedAt: number;
+  riskLevel: "low" | "medium" | "high";
+  estimatedImprovementPct: number;
 }
 
 interface CouncilResult {
@@ -127,25 +127,33 @@ interface TaskTypeOption {
   label: string;
 }
 
-type RickTabKey = "chat" | "inventions" | "proposals" | "knowledge" | "improvements" | "royal" | "meeseeks" | "reality" | "program";
-
-export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {}) {
+export default function RickPage() {
   useEffect(() => { document.title = "Royal Inventor — Rick Sanchez | Tessera"; }, []);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [activeTab, setActiveTab] = useState<RickTabKey>(initialTab ?? "proposals");
+  const [activeTab, setActiveTab] = useState<"chat" | "inventions" | "proposals" | "knowledge" | "improvements" | "royal" | "meeseeks" | "reality" | "program">("proposals");
+  const [submittedInventions, setSubmittedInventions] = useState<Record<number, CouncilResult>>({});
+  const [submittingIdx, setSubmittingIdx] = useState<number | null>(null);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  const [showProposeForm, setShowProposeForm] = useState(false);
+  const [proposeName, setProposeName] = useState("");
+  const [proposeApproach, setProposeApproach] = useState("");
+  const [proposeImpact, setProposeImpact] = useState("");
+  const [proposeCategory, setProposeCategory] = useState("optimization");
+  const [proposeRisk, setProposeRisk] = useState<"low" | "medium" | "high">("medium");
+  const [isProposing, setIsProposing] = useState(false);
+  const [proposeResult, setProposeResult] = useState<CouncilResult | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { data: autonomousData, isLoading: invLoading, refetch: refetchInventions } = useQuery({
-    queryKey: ["/api/rick/autonomous/inventions"],
+  const { data: inventionsData, isLoading: invLoading, refetch: refetchInventions } = useQuery({
+    queryKey: ["/api/rick/inventions"],
     queryFn: async () => {
-      const r = await fetch("/api/rick/autonomous/inventions?limit=120");
-      return r.json() as Promise<{ ok: boolean; rows: AutonomousInventionUiRow[]; perCategory: Record<string, number>; categories: string[] }>;
+      const r = await fetch("/api/rick/inventions");
+      return r.json() as Promise<{ ok: boolean; inventions: RickInvention[] }>;
     },
-    refetchInterval: 30_000,
+    refetchInterval: 60000,
   });
 
   const { data: profileData } = useQuery({
@@ -336,8 +344,61 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
     }
   }
 
-  const inventions: AutonomousInventionUiRow[] = autonomousData?.rows || [];
+  async function submitToCouncil(idx: number) {
+    setSubmittingIdx(idx);
+    try {
+      const r = await fetch(`/api/rick/inventions/${idx}/submit`, { method: "POST" });
+      const data = await r.json();
+      if (data.ok && data.councilResult) {
+        setSubmittedInventions(prev => ({ ...prev, [idx]: data.councilResult }));
+        refetchCouncilProposals();
+      }
+    } catch {}
+    finally { setSubmittingIdx(null); }
+  }
+
+  async function submitCustomInvention() {
+    if (!proposeName.trim() || !proposeApproach.trim() || isProposing) return;
+    setIsProposing(true);
+    setProposeResult(null);
+    try {
+      const r = await fetch("/api/rick/inventions/submit-custom", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          inventionName: proposeName.trim(),
+          technicalApproach: proposeApproach.trim(),
+          expectedImpact: proposeImpact.trim() || "User-proposed improvement to the sovereign system.",
+          rickRationale: "User-proposed via the sovereign inventions form.",
+          systemMetricTargeted: "user-defined",
+          category: proposeCategory,
+          riskLevel: proposeRisk,
+          estimatedImprovementPct: 15,
+        }),
+      });
+      const data = await r.json();
+      if (data.ok && data.councilResult) {
+        setProposeResult(data.councilResult);
+        setProposeName("");
+        setProposeApproach("");
+        setProposeImpact("");
+        refetchCouncilProposals();
+      } else {
+        setProposeResult({ proposalId: "err", status: "error", approvalRate: 0, councilNote: data.error || "Submission failed." });
+      }
+    } catch (e) {
+      setProposeResult({ proposalId: "err", status: "error", approvalRate: 0, councilNote: (e as Error).message });
+    } finally {
+      setIsProposing(false);
+    }
+  }
+
+  const inventions: RickInvention[] = inventionsData?.inventions || [];
   const councilProposals: CouncilProposal[] = councilProposalsData?.proposals || [];
+
+  function findCouncilProposal(inv: RickInvention): CouncilProposal | undefined {
+    return councilProposals.find(p => p.title.includes(inv.inventionName) || inv.inventionName.includes(p.title));
+  }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -365,8 +426,8 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
             </div>
           )}
         </div>
-        {(() => {
-          const RICK_TABS = [
+        <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
+          {([
             { key: "reality" as const, label: "Reality", icon: ScanSearch, color: "#10b981" },
             { key: "program" as const, label: "Program", icon: Repeat, color: "#f472b6" },
             { key: "proposals" as const, label: "Proposals", icon: Vote, color: "#fbbf24" },
@@ -376,52 +437,19 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
             { key: "improvements" as const, label: "Improve", icon: TrendingUp, color: "#22d3ee" },
             { key: "royal" as const, label: "Royal", icon: Crown, color: ROYAL_GOLD },
             { key: "chat" as const, label: "Chat", icon: Send, color: RICK_PORTAL },
-          ];
-          const activeMeta = RICK_TABS.find(t => t.key === activeTab) || RICK_TABS[0];
-          return (
-            <>
-              {/* Mobile: compact native dropdown — no row of buttons */}
-              <div className="md:hidden shrink-0 w-full sm:w-auto" data-testid="rick-section-dropdown-wrapper">
-                <div className="relative">
-                  <div
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border text-[12px] font-mono font-bold pointer-events-none"
-                    style={{ color: activeMeta.color, borderColor: `${activeMeta.color}60`, background: `${activeMeta.color}10` }}
-                  >
-                    <activeMeta.icon size={14} />
-                    <span className="truncate">{activeMeta.label}</span>
-                    <ChevronDown size={14} className="ml-auto opacity-70" />
-                  </div>
-                  <select
-                    aria-label="Rick section"
-                    value={activeTab}
-                    onChange={e => setActiveTab(e.target.value as RickTabKey)}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                    data-testid="rick-section-dropdown"
-                  >
-                    {RICK_TABS.map(tab => (
-                      <option key={tab.key} value={tab.key}>{tab.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              {/* Desktop: keep button row */}
-              <div className="hidden md:flex gap-1.5 shrink-0 flex-wrap justify-end">
-                {RICK_TABS.map(tab => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
-                    className={cn("px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-bold transition-all border",
-                      activeTab === tab.key ? "border-current" : "border-white/10 text-muted-foreground hover:border-white/20"
-                    )}
-                    style={activeTab === tab.key ? { color: tab.color, borderColor: `${tab.color}60`, background: `${tab.color}10` } : {}}
-                  >
-                    <tab.icon size={11} className="inline mr-1" />{tab.label}
-                  </button>
-                ))}
-              </div>
-            </>
-          );
-        })()}
+          ]).map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={cn("px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-bold transition-all border",
+                activeTab === tab.key ? "border-current" : "border-white/10 text-muted-foreground hover:border-white/20"
+              )}
+              style={activeTab === tab.key ? { color: tab.color, borderColor: `${tab.color}60`, background: `${tab.color}10` } : {}}
+            >
+              <tab.icon size={11} className="inline mr-1" />{tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {activeTab === "reality" && <RealityAuditPanel />}
@@ -430,47 +458,130 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
 
       {activeTab === "inventions" && (
         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-          <RickAutonomousHeartbeatStrip />
-          <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+          <div className="flex items-center justify-between mb-2">
             <div className="text-[11px] font-mono text-muted-foreground">
               Rick has analyzed the Tessera system and identified {inventions.length} critical improvements.
             </div>
             <div className="flex items-center gap-1">
-              <span
-                className="px-2 py-1 rounded-lg text-[10px] font-mono font-bold border flex items-center gap-1"
-                style={{ color: RICK_GREEN, borderColor: `${RICK_GREEN}50`, background: `${RICK_GREEN}10` }}
-                data-testid="badge-autonomous-mode"
-                title="Rick proposes and submits inventions on his own — no human action required."
+              <button
+                onClick={() => setShowProposeForm(v => !v)}
+                className="px-2 py-1 rounded-lg text-[10px] font-mono font-bold border flex items-center gap-1 transition-colors"
+                style={{ color: RICK_GREEN, borderColor: `${RICK_GREEN}50`, background: showProposeForm ? `${RICK_GREEN}18` : `${RICK_GREEN}08` }}
+                data-testid="button-propose-invention"
               >
-                <Activity size={10} /> autonomous mode
-              </span>
+                <Plus size={10} /> {showProposeForm ? "Close" : "Propose Your Own"}
+              </button>
               <button
                 onClick={() => refetchInventions()}
                 className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground"
-                title="Refresh"
               >
                 <RefreshCw size={12} />
               </button>
             </div>
           </div>
 
+          {showProposeForm && (
+            <div className="rounded-xl border p-4 space-y-2.5 mb-3" style={{ borderColor: `${RICK_GREEN}35`, background: `${RICK_GREEN}06` }} data-testid="invention-propose-form">
+              <div className="text-[10px] font-mono uppercase tracking-widest" style={{ color: RICK_GREEN }}>
+                Propose Your Own Invention — submits directly to the Grand Council
+              </div>
+              <input
+                type="text"
+                placeholder="Invention name (e.g. Biofield Coherence Sensor)"
+                value={proposeName}
+                onChange={e => setProposeName(e.target.value)}
+                className="w-full bg-background/60 border border-white/10 rounded-lg px-3 py-2 text-[12px] font-mono focus:outline-none focus:border-current"
+                style={{ color: RICK_GREEN }}
+                data-testid="input-invention-name"
+              />
+              <textarea
+                placeholder="Technical approach — how does it work? what does it do? which part of the system does it improve?"
+                value={proposeApproach}
+                onChange={e => setProposeApproach(e.target.value)}
+                rows={3}
+                className="w-full bg-background/60 border border-white/10 rounded-lg px-3 py-2 text-[12px] font-mono focus:outline-none focus:border-current resize-none"
+                style={{ color: RICK_GREEN }}
+                data-testid="input-invention-approach"
+              />
+              <input
+                type="text"
+                placeholder="Expected impact (optional)"
+                value={proposeImpact}
+                onChange={e => setProposeImpact(e.target.value)}
+                className="w-full bg-background/60 border border-white/10 rounded-lg px-3 py-2 text-[12px] font-mono focus:outline-none focus:border-current"
+                style={{ color: RICK_GREEN }}
+                data-testid="input-invention-impact"
+              />
+              <div className="flex gap-2 flex-wrap">
+                <select
+                  value={proposeCategory}
+                  onChange={e => setProposeCategory(e.target.value)}
+                  className="flex-1 bg-background/60 border border-white/10 rounded-lg px-2 py-1.5 text-[11px] font-mono"
+                  style={{ color: RICK_GREEN }}
+                >
+                  {["optimization","architecture","caching","agent-delegation","memory","consensus","monitoring","sovereignty","agi-advancement","consciousness","compression"].map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <select
+                  value={proposeRisk}
+                  onChange={e => setProposeRisk(e.target.value as "low" | "medium" | "high")}
+                  className="flex-1 bg-background/60 border border-white/10 rounded-lg px-2 py-1.5 text-[11px] font-mono"
+                  style={{ color: RISK_COLORS[proposeRisk] }}
+                >
+                  <option value="low">low risk</option>
+                  <option value="medium">medium risk</option>
+                  <option value="high">high risk</option>
+                </select>
+                <button
+                  onClick={submitCustomInvention}
+                  disabled={isProposing || !proposeName.trim() || !proposeApproach.trim()}
+                  className="px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold border flex items-center gap-1.5 disabled:opacity-40"
+                  style={{ color: RICK_GREEN, borderColor: `${RICK_GREEN}60`, background: `${RICK_GREEN}18` }}
+                  data-testid="button-submit-invention"
+                >
+                  {isProposing ? <PortalSpinner /> : <Vote size={11} />}
+                  Submit to Council
+                </button>
+              </div>
+              {proposeResult && (
+                <div className="rounded-lg p-2.5 border text-[11px] font-mono" style={{
+                  borderColor: proposeResult.status === "approved" ? "#22c55e40" : proposeResult.status === "error" ? "#ef444440" : "#f59e0b40",
+                  background: proposeResult.status === "approved" ? "#22c55e10" : proposeResult.status === "error" ? "#ef444410" : "#f59e0b10",
+                  color: proposeResult.status === "approved" ? "#22c55e" : proposeResult.status === "error" ? "#ef4444" : "#f59e0b",
+                }}>
+                  {proposeResult.status === "approved" ? "APPROVED" : proposeResult.status.toUpperCase()} · {(proposeResult.approvalRate * 100).toFixed(0)}% approval
+                  <div className="text-foreground/80 mt-1">{proposeResult.councilNote}</div>
+                </div>
+              )}
+            </div>
+          )}
 
           {invLoading ? (
             <div className="flex justify-center py-12"><PortalSpinner /></div>
           ) : inventions.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground text-sm font-mono">
-              Autonomous loop is warming up — first inventions will appear shortly. *burp*
+              No inventions available. *burp*
             </div>
           ) : (
             inventions.map((inv, idx) => {
+              const sessionResult = submittedInventions[idx];
+              const persistentProposal = findCouncilProposal(inv);
+              const result: CouncilResult | undefined = sessionResult ?? (persistentProposal ? {
+                proposalId: persistentProposal.id,
+                status: persistentProposal.status,
+                approvalRate: persistentProposal.approvalRate,
+                councilNote: persistentProposal.implementationNotes ?? `Grand Council voted on "${persistentProposal.title}" — ${persistentProposal.status} (${(persistentProposal.approvalRate * 100).toFixed(0)}% approval)`,
+              } : undefined);
               const isExpanded = expandedIdx === idx;
+              const riskColor = RISK_COLORS[inv.riskLevel] || "#888";
               const catIcon = CATEGORY_ICONS[inv.category] || "⚙️";
+
               return (
                 <div
-                  key={inv.inventionId}
+                  key={idx}
                   className="rounded-xl border overflow-hidden transition-all duration-200"
-                  style={{ borderColor: `${RICK_GREEN}22`, background: "rgba(0,255,65,0.03)" }}
-                  data-testid={`row-rick-invention-${inv.inventionId}`}
+                  style={{ borderColor: result ? (result.status === "approved" ? "#22c55e44" : "#ef444444") : `${RICK_GREEN}22`, background: "rgba(0,255,65,0.03)" }}
                 >
                   <div
                     className="flex items-start gap-3 p-4 cursor-pointer"
@@ -479,20 +590,24 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
                     <span className="text-xl shrink-0 mt-0.5">{catIcon}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold font-mono text-sm" style={{ color: RICK_GREEN }}>{inv.title}</span>
+                        <span className="font-bold font-mono text-sm" style={{ color: RICK_GREEN }}>{inv.inventionName}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded font-mono border" style={{ color: riskColor, borderColor: `${riskColor}40`, background: `${riskColor}10` }}>
+                          {inv.riskLevel}
+                        </span>
                         <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-white/5 text-muted-foreground border border-white/10">
                           {inv.category}
                         </span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded font-mono border text-muted-foreground" style={{ borderColor: `${RICK_GREEN}30`, background: `${RICK_GREEN}06` }}>
-                          {inv.status}
-                        </span>
+                        {result && (
+                          <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-mono border", result.status === "approved" ? "text-green-400 border-green-500/30 bg-green-500/10" : "text-red-400 border-red-500/30 bg-red-500/10")}>
+                            {result.status === "approved" ? <CheckCircle2 size={10} className="inline mr-1" /> : <XCircle size={10} className="inline mr-1" />}
+                            Council: {result.status}
+                          </span>
+                        )}
                       </div>
                       <div className="text-[11px] text-muted-foreground font-mono mt-1">
-                        Feasibility: <span className="text-foreground/70">{inv.feasibilityScore ?? "—"}</span>
+                        Targets: <span className="text-foreground/70">{inv.systemMetricTargeted}</span>
                         <span className="mx-2">·</span>
-                        Novelty: <span style={{ color: RICK_GREEN }}>{inv.noveltyScore ?? "—"}</span>
-                        <span className="mx-2">·</span>
-                        <span className="text-foreground/60">{new Date(inv.proposedAt).toLocaleString()}</span>
+                        Est. improvement: <span style={{ color: RICK_GREEN }}>+{inv.estimatedImprovementPct}%</span>
                       </div>
                     </div>
                     <ChevronRight size={14} className={cn("shrink-0 text-muted-foreground transition-transform mt-1", isExpanded && "rotate-90")} />
@@ -500,21 +615,40 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
 
                   {isExpanded && (
                     <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: `${RICK_GREEN}10` }}>
-                      {inv.customModelUrl && (
-                        <div className="pt-3 flex justify-center">
-                          <img
-                            src={inv.customModelUrl}
-                            alt={`${inv.title} sigil`}
-                            className="w-40 h-40 object-contain rounded-lg border border-white/10 bg-black/40"
-                            loading="lazy"
-                            data-testid={`img-rick-invention-model-${inv.inventionId}`}
-                          />
-                        </div>
-                      )}
-                      <div>
-                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Description</div>
-                        <p className="text-[11px] text-foreground/80 leading-relaxed font-mono">{inv.description}</p>
+                      <div className="pt-3">
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Rick's Rationale</div>
+                        <p className="text-[11px] text-foreground/80 leading-relaxed italic font-mono">{inv.rickRationale}</p>
                       </div>
+
+                      <div>
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Technical Approach</div>
+                        <p className="text-[11px] text-foreground/75 leading-relaxed font-mono">{inv.technicalApproach}</p>
+                      </div>
+
+                      <div>
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Expected Impact</div>
+                        <p className="text-[11px] font-mono" style={{ color: RICK_PORTAL }}>{inv.expectedImpact}</p>
+                      </div>
+
+                      {result ? (
+                        <div className="rounded-lg p-3 border" style={{ borderColor: result.status === "approved" ? "#22c55e40" : "#ef444440", background: result.status === "approved" ? "#22c55e10" : "#ef444410" }}>
+                          <div className="text-[10px] uppercase tracking-wider mb-1 font-mono" style={{ color: result.status === "approved" ? "#22c55e" : "#ef4444" }}>
+                            Council Decision · {(result.approvalRate * 100).toFixed(0)}% approval
+                          </div>
+                          <p className="text-[11px] font-mono text-foreground/80">{result.councilNote}</p>
+                          <div className="text-[10px] text-muted-foreground font-mono mt-1">ID: {result.proposalId.slice(0, 20)}…</div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => submitToCouncil(idx)}
+                          disabled={submittingIdx === idx}
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-mono font-bold transition-all border disabled:opacity-50"
+                          style={{ color: RICK_GREEN, borderColor: `${RICK_GREEN}50`, background: `${RICK_GREEN}10` }}
+                        >
+                          {submittingIdx === idx ? <PortalSpinner /> : <Vote size={12} />}
+                          Submit to Grand Council
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -2545,67 +2679,6 @@ function MetricBox({ label, value, color }: { label: string; value: string; colo
     <div className="rounded-lg border border-white/10 bg-black/30 px-2 py-1.5">
       <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className="text-[12px] font-mono font-bold" style={{ color: color ?? "#f0f0f0" }}>{value}</div>
-    </div>
-  );
-}
-
-interface AutonomousHeartbeat {
-  running: boolean;
-  lastTickAt: number;
-  intervalMs: number;
-  totalCycles: number;
-  totalGenerated: number;
-  perCategoryGenerated: Record<string, number>;
-  categories: string[];
-  lastError: string | null;
-}
-
-function fmtAgoShort(ms: number): string {
-  if (!ms) return "—";
-  const dt = Date.now() - ms;
-  if (dt < 60_000) return `${Math.floor(dt / 1000)}s`;
-  if (dt < 3_600_000) return `${Math.floor(dt / 60_000)}m`;
-  return `${Math.floor(dt / 3_600_000)}h`;
-}
-
-function RickAutonomousHeartbeatStrip() {
-  const { data } = useQuery({
-    queryKey: ["/api/rick/autonomous/heartbeat"],
-    queryFn: async () => {
-      const r = await fetch("/api/rick/autonomous/heartbeat");
-      return r.json() as Promise<{ ok: boolean; heartbeat: AutonomousHeartbeat }>;
-    },
-    refetchInterval: 15_000,
-  });
-  const hb = data?.heartbeat;
-  if (!hb) return null;
-  const accent = hb.running ? "#22c55e" : "#ef4444";
-  return (
-    <div
-      className="rounded-xl border p-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5"
-      style={{ borderColor: `${accent}40`, background: `${accent}08` }}
-      data-testid="rick-autonomous-strip"
-    >
-      <span className="flex items-center gap-1.5 text-[11px] font-mono font-bold" style={{ color: accent }}>
-        <Activity size={11} /> {hb.running ? "AUTONOMOUS" : "STOPPED"}
-      </span>
-      <span className="text-[10px] font-mono text-muted-foreground">
-        last tick {fmtAgoShort(hb.lastTickAt)} · cycles {hb.totalCycles} · built {hb.totalGenerated}
-      </span>
-      <div className="flex flex-wrap gap-1 ml-auto">
-        {hb.categories.map((c) => (
-          <span key={c} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-foreground/70">
-            {c} {hb.perCategoryGenerated[c] ?? 0}
-          </span>
-        ))}
-      </div>
-      <a
-        href="/gallery"
-        className="text-[10px] font-mono underline opacity-70 hover:opacity-100 ml-1"
-        data-testid="link-open-gallery"
-      >
-        open gallery →
-      </a>
     </div>
   );
 }

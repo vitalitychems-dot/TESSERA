@@ -1,1 +1,0 @@
-- [GitHub shell authentication](github-shell-auth.md) — the GitHub App connector’s REST auth doesn’t authenticate Git pushes or Git LFS.

@@ -11,7 +11,7 @@ interface MoltAgent {
 }
 
 interface ChatMessage {
-  id?: number | string;
+  id?: number;
   role: string;
   content: string;
   createdAt?: Date | string;
@@ -27,7 +27,7 @@ interface ChatMessageListProps {
   chatError: string | null;
   streamingContent: string;
   thinkingElapsedMs: number;
-  tesseractMode: boolean;
+  tesseractMode: string | null;
   swarmAgents: any[];
   swarmComms: any[];
   agentComms: any[];

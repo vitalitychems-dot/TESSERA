@@ -54,22 +54,9 @@ router.get("/sacred-conference/status", async (_req, res) => {
 router.post("/sacred-conference/run", async (req, res) => {
   try {
     const cycles = Math.min(Math.max(Number(req.body?.cycles) || 10, 1), 10);
-    const persist = req.body?.persist !== false; // default true
-    logger.info({ cycles, persist }, "Running Sacred Grand Conference");
+    logger.info({ cycles }, "Running Sacred Grand Conference");
     const session = await runSacredGrandConference(cycles);
-    let persistence: import("../lib/conference-persistence").PersistResult | null = null;
-    let persistenceError: string | null = null;
-    if (persist) {
-      const { persistConferenceOutputs } = await import("../lib/conference-persistence");
-      try {
-        persistence = await persistConferenceOutputs(session);
-      } catch (err) {
-        persistenceError = (err as Error).message ?? String(err);
-        logger.error({ err }, "persistConferenceOutputs failed (session still returned)");
-      }
-    }
-    const httpStatus = persistenceError || (persistence && persistence.failedAmendments > 0) ? 207 : 200;
-    return res.status(httpStatus).json({ ...session, persistence, persistenceError });
+    return res.json(session);
   } catch (err) {
     logger.error({ err }, "Failed to run sacred conference");
     return res.status(500).json({ error: "Failed to run conference" });
@@ -103,25 +90,6 @@ router.get("/sacred-conference/cycle/:cycleNumber", async (req, res) => {
 
 router.get("/sacred-conference/agents", async (_req, res) => {
   return res.json({ agents: getConferenceAgents(), count: getConferenceAgents().length });
-});
-
-router.get("/sacred-conference/society", async (_req, res) => {
-  const { getFullSovereignSociety, getSocietyStats } = await import("../lib/sovereign-society");
-  return res.json({ stats: getSocietyStats(), members: getFullSovereignSociety() });
-});
-
-router.get("/sacred-conference/cycle/:cycleNumber/votes", async (req, res) => {
-  const session = getCurrentSession();
-  if (!session) return res.status(404).json({ error: "No session — run /api/sacred-conference/run first." });
-  const num = Number(req.params.cycleNumber);
-  const cycle = session.cycles.find(c => c.cycleNumber === num);
-  if (!cycle) return res.status(404).json({ error: `Cycle ${num} not found` });
-  return res.json({
-    cycleNumber: num,
-    voteSummary: cycle.voteSummary,
-    improvementBallots: cycle.improvementBallots,
-    inventionBallots:   cycle.inventionBallots,
-  });
 });
 
 router.get("/sacred-conference/themes", async (_req, res) => {
@@ -247,50 +215,7 @@ router.get("/knowledge-corpus/audit", async (_req, res) => {
       },
     });
   } catch (err) {
-    logger.error({ err }, "Failed to run corpus audit");
     return res.status(500).json({ error: "Failed to run corpus audit" });
-  }
-});
-
-// POST /api/sacred-conference/apply-council-decisions
-// Reads the live audit, generates one ratified amendment per finding using the
-// council-approved fix template, persists each to corpus_amendments, refreshes
-// the in-memory corpus overlay, and seals one ledger entry summarizing all fixes.
-// Process-wide mutex: only one council session may mutate the corpus at a time.
-// Concurrent POSTs would otherwise read identical audit state, generate duplicate
-// amendments, and corrupt the in-memory corpus overlay.
-let _councilSessionInFlight = false;
-router.post("/apply-council-decisions", async (req, res) => {
-  if (_councilSessionInFlight) {
-    return res.status(409).json({
-      error: "Council session already in progress",
-      message: "Another /api/apply-council-decisions invocation is currently mutating the corpus. Retry after it completes.",
-    });
-  }
-  _councilSessionInFlight = true;
-  try {
-    const { applyCouncilDecisionsForCorpus } = await import("../lib/apply-council-decisions");
-    const maxIterations = Math.min(Math.max(Number(req.body?.iterations) || 5, 1), 10);
-    const passes: Awaited<ReturnType<typeof applyCouncilDecisionsForCorpus>>[] = [];
-    for (let i = 0; i < maxIterations; i++) {
-      const r = await applyCouncilDecisionsForCorpus();
-      passes.push(r);
-      // Stop only when audit is clear OR no amendments were emitted (idempotency
-      // confirmed). The audit returns top-5 gaps per pass, so finding count can
-      // stay flat even while real progress is being made — keep iterating.
-      if (r.afterAuditCount === 0 || r.amendments === 0) break;
-    }
-    return res.json({
-      passes,
-      iterations: passes.length,
-      initialFindings: passes[0]?.beforeAuditCount ?? 0,
-      finalFindings: passes[passes.length - 1]?.afterAuditCount ?? 0,
-      totalAmendments: passes.reduce((s, p) => s + p.amendments, 0),
-      converged: (passes[passes.length - 1]?.afterAuditCount ?? 1) === 0,
-    });
-  } catch (err) {
-    logger.error({ err }, "Failed to apply council decisions");
-    return res.status(500).json({ error: "Failed to apply council decisions", message: (err as Error).message });
   }
 });
 

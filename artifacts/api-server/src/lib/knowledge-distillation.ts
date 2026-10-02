@@ -177,8 +177,7 @@ export async function lookupKnowledge(
       let fact = r.fact;
       if (fact === null && r.canonicalId != null) {
         // Canonical-authoritative read: try portal-jump O(1) cache first.
-        const portalEntry = portalJumpResolve(r.canonicalId);
-        fact = portalEntry?.fact ?? null;
+        fact = portalJumpResolve(r.canonicalId) ?? null;
         if (fact === null) {
           // Cold cache: fall back to DB canonical table.
           try {

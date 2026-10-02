@@ -6,8 +6,6 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { GlassCard, SectionHeader, TabBar, MiniStat, PageHeader, RadialGauge, GradientBar, TabLoadingSkeleton } from "@/components/ui/sovereign";
-import { InventionModelPreview } from "@/components/InventionModelPreview";
-import SourcedSecretsPanel from "@/components/SourcedSecretsPanel";
 import type { KnowledgeEntry, Spell, Tradition, ApplicationIdea, LucideIcon, KnowledgeFeedResponse, KnowledgeStatsResponse, DimensionalSecretsResponse, LiveSecretsResponse, SpellDataResponse, TraditionsDataResponse, UniverseAnswerResponse, CastResultResponse, ArchiveCategory, ArchiveEntry } from "@/types/api";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -311,15 +309,6 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
         </div>
 
         <TabBar tabs={mainTabs} activeTab={mainTab} onChange={id => setMainTab(id as MainTab)} color="violet" />
-
-        {/* Sourced secrets: real declassified/esoteric passages with source
-            citations, identical to the Bible "Sourced Secrets" surface so
-            Society/Secrets shares the meaningful-secret pipeline. */}
-        <SourcedSecretsPanel
-          title="Sourced Secrets — Real Disclosures"
-          subtitle="Drawn from the same ingested corpus that powers the Bible. Every passage links to its real source."
-          limit={12}
-        />
 
         {conclusionText && mainTab === "knowledge" && (
           <GlassCard glow="violet" animate>
@@ -1135,114 +1124,6 @@ interface Invention {
   conferenceRound: number;
   votes: { yes: number; no: number; abstain: number };
   proposedAt: string;
-  customModelUrl?: string | null;
-}
-
-function InventionModelUpload({ invention, onUpdated }: { invention: Invention; onUpdated: () => void }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleFile = async (file: File) => {
-    setError(null);
-    if (!/\.(glb|gltf)$/i.test(file.name)) {
-      setError("File must be .glb or .gltf");
-      return;
-    }
-    if (file.size > 50 * 1024 * 1024) {
-      setError("File must be under 50MB");
-      return;
-    }
-    setBusy(true);
-    try {
-      const presign = await apiRequest("POST", `/api/inventions/${invention.inventionId}/model/upload-url`, {
-        name: file.name,
-        contentType: file.type || "model/gltf-binary",
-      }).then(r => r.json());
-      if (!presign?.ok) throw new Error(presign?.error || "Failed to get upload URL");
-
-      const putRes = await fetch(presign.uploadURL, {
-        method: "PUT",
-        headers: { "Content-Type": file.type || "model/gltf-binary" },
-        body: file,
-      });
-      if (!putRes.ok) throw new Error(`Upload failed (${putRes.status})`);
-
-      const saved = await apiRequest("PATCH", `/api/inventions/${invention.inventionId}/model`, {
-        objectPath: presign.objectPath,
-      }).then(r => r.json());
-      if (!saved?.ok) throw new Error(saved?.error || "Failed to attach model");
-      onUpdated();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setBusy(false);
-      if (inputRef.current) inputRef.current.value = "";
-    }
-  };
-
-  const handleClear = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const saved = await apiRequest("PATCH", `/api/inventions/${invention.inventionId}/model`, {
-        objectPath: null,
-      }).then(r => r.json());
-      if (!saved?.ok) throw new Error(saved?.error || "Failed to clear model");
-      onUpdated();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-2.5 space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <FlaskConical size={12} className="text-violet-400 shrink-0" />
-          <span className="text-[10px] font-mono uppercase tracking-wider text-violet-400">Custom 3D Model</span>
-        </div>
-        {invention.customModelUrl && (
-          <span className="text-[9px] font-mono text-emerald-400 truncate" title={invention.customModelUrl}>
-            ✓ uploaded
-          </span>
-        )}
-      </div>
-      <p className="text-[10px] text-muted-foreground leading-relaxed">
-        Upload a GLB/GLTF of your CAD model. It will replace the auto-generated diagram in chat with full rotate/zoom/fullscreen controls.
-      </p>
-      <input
-        ref={inputRef}
-        type="file"
-        accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) handleFile(f);
-        }}
-      />
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => inputRef.current?.click()}
-          disabled={busy}
-          className="flex-1 px-2.5 py-1.5 rounded-md bg-violet-500/20 border border-violet-500/30 text-[10px] font-mono text-violet-300 hover:bg-violet-500/30 active:scale-95 transition-all disabled:opacity-50"
-        >
-          {busy ? "Working..." : invention.customModelUrl ? "Replace 3D Model" : "Upload 3D Model (GLB/GLTF)"}
-        </button>
-        {invention.customModelUrl && !busy && (
-          <button
-            onClick={handleClear}
-            className="px-2.5 py-1.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-mono text-muted-foreground hover:bg-white/10"
-          >
-            Remove
-          </button>
-        )}
-      </div>
-      {error && <p className="text-[10px] text-red-400 font-mono">{error}</p>}
-    </div>
-  );
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -1430,16 +1311,6 @@ function InventionsTab() {
                     <span className="text-slate-500">{inv.votes?.abstain || 0} abstain</span>
                     <span className="text-muted-foreground ml-auto">R{inv.conferenceRound}</span>
                   </div>
-                  <div>
-                    <div className="text-[9px] font-mono text-violet-400 uppercase tracking-wider mb-1.5">Inventor 3D Model</div>
-                    <InventionModelPreview
-                      src={inv.customModelUrl}
-                      label={inv.title}
-                      color="#a78bfa"
-                      height={200}
-                    />
-                  </div>
-                  <InventionModelUpload invention={inv} onUpdated={() => refetch()} />
                 </div>
               )}
             </GlassCard>

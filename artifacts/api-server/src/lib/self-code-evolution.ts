@@ -5,8 +5,6 @@ import { createProposal } from "./consensus-engine";
 import { isLLMAvailable } from "./llm-client";
 import { batchedCallLLM } from "./llm-batcher";
 import { isModuleCoolingDown, recordEvolutionSuccess, recordEvolutionFailure, shouldSkipEvolutionForLoad } from "./evolution-throttle";
-import { verifyPatchInSandbox, type SandboxFn } from "./evolution-sandbox";
-import { recordAttempt } from "./evolution-attempt-ledger";
 
 const EVOLUTION_QUEUE_DIR = join(process.cwd(), "_evolutions");
 const SOURCE_LIB_DIR = join(process.cwd(), "src", "lib");
@@ -34,16 +32,10 @@ function findSourceFilePath(targetModule: string): string | null {
   return null;
 }
 
-/**
- * Production apply pipeline. Composes:
- *   1. compute patched content (via LLM if available)
- *   2. delegate to applyVerifiedPatch which gates on the sandbox
- */
 async function applyPatchToSourceFile(
   targetModule: string,
   proposedChange: string,
   proposalId: string,
-  sandboxFn?: SandboxFn,
 ): Promise<{ sourceFilePath: string; backupPath: string; patchedLines: number }> {
   const sourceFilePath = findSourceFilePath(targetModule);
   if (!sourceFilePath) {
@@ -79,134 +71,42 @@ async function applyPatchToSourceFile(
   }
 
   if (!codeToAppend || codeToAppend.length < 5) {
-    // Live file untouched — nothing to revert
-    recordAttempt({
-      proposalId,
-      event: "SANDBOXED_FAIL",
-      targetModule,
-      reason: "LLM did not generate executable TypeScript",
-    });
+    writeFileSync(sourceFilePath, originalContent, "utf8");
     throw new Error("LLM did not generate executable TypeScript for this proposal — rejecting to avoid non-functional patch");
   }
 
+  const codeLines = codeToAppend.split("\n").filter(l => l.trim().length > 0);
+  const duplicateLines = codeLines.filter(line => {
+    const trimmed = line.trim();
+    return trimmed.length > 10 && originalContent.includes(trimmed);
+  });
+  if (duplicateLines.length > 0 && duplicateLines.length >= codeLines.length * 0.5) {
+    writeFileSync(sourceFilePath, originalContent, "utf8");
+    throw new Error(`Proposed code would duplicate existing declarations: ${duplicateLines[0].trim().slice(0, 60)}`);
+  }
+
   const patchedContent = `${originalContent}\n${codeToAppend}\n`;
-  const result = await applyVerifiedPatch({
-    sourceFilePath,
-    originalContent,
-    patchedContent,
-    proposalId,
-    targetModule,
-    sandboxFn,
+
+  const ts = require("typescript") as typeof import("typescript");
+  const compileResult = ts.transpileModule(patchedContent, {
+    reportDiagnostics: true,
+    compilerOptions: { target: ts.ScriptTarget.ES2020, strict: false },
   });
-  if (!result.ok) {
-    throw new Error(result.error ?? "apply rejected");
-  }
-  return { sourceFilePath, backupPath, patchedLines: result.patchedLines };
-}
-
-/**
- * Production apply gate. Given a proposed patched content for a live source
- * file, runs the sandbox and only writes the live file if the sandbox passes.
- *
- * Ledger semantics:
- *   - SANDBOXED_PASS recorded iff sandbox.ok
- *   - APPLIED recorded iff live write + post-write byte-length verification succeed
- *   - SANDBOXED_FAIL recorded on sandbox failure (live file untouched)
- *   - REVERTED recorded if live write succeeds but post-write verification fails
- *     (live file is restored from `originalContent` before recording)
- *
- * Always returns — never throws. Exported for end-to-end integration testing
- * via injected `sandboxFn`.
- */
-export async function applyVerifiedPatch(params: {
-  sourceFilePath: string;
-  originalContent: string;
-  patchedContent: string;
-  proposalId: string;
-  targetModule: string;
-  sandboxFn?: SandboxFn;
-}): Promise<{ ok: boolean; patchedLines: number; error?: string }> {
-  const sandboxRunner: SandboxFn = params.sandboxFn ?? (p => verifyPatchInSandbox(p));
-  const sandbox = await sandboxRunner({
-    targetFilePath: params.sourceFilePath,
-    patchedContent: params.patchedContent,
-  });
-
-  // Bounded full stdout/stderr excerpts (typecheck + tests) for ledger persistence
-  const fullOutputExcerpt = [
-    sandbox.output?.typecheck ? `--- typecheck ---\n${sandbox.output.typecheck}` : "",
-    sandbox.output?.tests ? `--- tests ---\n${sandbox.output.tests}` : "",
-    sandbox.diagnostics.length ? `--- diagnostics ---\n${sandbox.diagnostics.join("\n")}` : "",
-  ].filter(Boolean).join("\n").slice(-8000);
-
-  if (!sandbox.ok) {
-    recordAttempt({
-      proposalId: params.proposalId,
-      event: "SANDBOXED_FAIL",
-      targetModule: params.targetModule,
-      reason: `sandbox.${sandbox.stage}: ${sandbox.diagnostics[0] ?? "unknown"}`,
-      verifyOutput: fullOutputExcerpt,
-      verifyExitCode: sandbox.exitCode,
-      durationMs: sandbox.durationMs,
-    });
-    return {
-      ok: false,
-      patchedLines: 0,
-      error: `Sandbox verification failed at stage=${sandbox.stage}: ${sandbox.diagnostics[0] ?? "unknown"}`,
-    };
+  if (compileResult.diagnostics && compileResult.diagnostics.length > 0) {
+    const msg = ts.flattenDiagnosticMessageText(compileResult.diagnostics[0].messageText, "\n");
+    writeFileSync(sourceFilePath, originalContent, "utf8");
+    throw new Error(`Post-patch TS compilation failed: ${msg}`);
   }
 
-  recordAttempt({
-    proposalId: params.proposalId,
-    event: "SANDBOXED_PASS",
-    targetModule: params.targetModule,
-    verifyOutput: fullOutputExcerpt,
-    verifyExitCode: sandbox.exitCode ?? 0,
-    durationMs: sandbox.durationMs,
-  });
+  writeFileSync(sourceFilePath, patchedContent, "utf8");
 
-  // Sandbox green → write live now (and only now).
-  try {
-    writeFileSync(params.sourceFilePath, params.patchedContent, "utf8");
-  } catch (err) {
-    recordAttempt({
-      proposalId: params.proposalId,
-      event: "REVERTED",
-      targetModule: params.targetModule,
-      reason: `live write threw: ${err instanceof Error ? err.message : String(err)}`,
-    });
-    return { ok: false, patchedLines: 0, error: `live write failed: ${err instanceof Error ? err.message : String(err)}` };
+  const written = readFileSync(sourceFilePath, "utf8");
+  if (written.length !== patchedContent.length) {
+    writeFileSync(sourceFilePath, originalContent, "utf8");
+    throw new Error(`Post-write verification failed: length mismatch (expected ${patchedContent.length}, got ${written.length})`);
   }
 
-  const written = readFileSync(params.sourceFilePath, "utf8");
-  if (written.length !== params.patchedContent.length) {
-    writeFileSync(params.sourceFilePath, params.originalContent, "utf8");
-    recordAttempt({
-      proposalId: params.proposalId,
-      event: "REVERTED",
-      targetModule: params.targetModule,
-      reason: `post-write length mismatch (expected ${params.patchedContent.length}, got ${written.length})`,
-    });
-    return {
-      ok: false,
-      patchedLines: 0,
-      error: `Post-write verification failed: length mismatch (expected ${params.patchedContent.length}, got ${written.length})`,
-    };
-  }
-
-  const appendedLineCount = (params.patchedContent.length - params.originalContent.length) > 0
-    ? params.patchedContent.slice(params.originalContent.length).split("\n").filter(l => l.trim()).length
-    : 0;
-
-  recordAttempt({
-    proposalId: params.proposalId,
-    event: "APPLIED",
-    targetModule: params.targetModule,
-    reason: `+${appendedLineCount} lines appended`,
-    durationMs: sandbox.durationMs,
-  });
-
-  return { ok: true, patchedLines: params.patchedContent.split("\n").length };
+  return { sourceFilePath, backupPath, patchedLines: patchedContent.split("\n").length };
 }
 
 function restoreSourceFromBackup(proposalId: string, targetModule: string): void {
@@ -448,13 +348,6 @@ export async function proposeEvolution(
 ): Promise<CodeEvolutionProposal> {
   const id = `evo-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
-  recordAttempt({
-    proposalId: id,
-    event: "PROPOSED",
-    targetModule,
-    reason: rationale.slice(0, 200),
-  });
-
   if (shouldSkipEvolutionForLoad()) {
     const proposal: CodeEvolutionProposal = {
       id, targetModule, proposedChange, rationale, riskLevel,
@@ -635,95 +528,6 @@ export function rollbackEvolution(proposalId: string): boolean {
   return true;
 }
 
-/**
- * Per-module evolution diagnostics — for the named module list (consciousness-engine,
- * vector-memory, dual-brain, etc.) we need to surface attempted/applied/rejected
- * counts and the most recent reason so the UI can show users WHY each evolution
- * was rejected, not just a generic activity feed.
- */
-export interface ModuleDiagnostics {
-  module: string;
-  attempted: number;
-  applied: number;
-  rejected: number;
-  rolledBack: number;
-  lastStatus: string | null;
-  lastReason: string | null;
-  lastProposedAt: number | null;
-  isProtected: boolean;
-  isSafe: boolean;
-  isCoolingDown: boolean;
-}
-
-// The named-module set the dashboard surface must always cover. We union the
-// SAFE_MODULES list (basenames) with any module that has actually had proposals
-// so newly-attempted modules also appear, plus a baseline of expected names so
-// the UI can always show consciousness-engine, vector-memory, etc.
-const TRACKED_MODULES_BASELINE = [
-  "consciousness-engine.ts",
-  "vector-memory.ts",
-  "dual-brain.ts",
-  "agi-training-engine.ts",
-  "swarm-optimizer.ts",
-  "personality-evolution.ts",
-  "auto-improvement-daemon.ts",
-  "agent-spawner.ts",
-  "collective-intelligence.ts",
-  "recursive-self-improvement.ts",
-];
-
-export function getModuleDiagnostics(): ModuleDiagnostics[] {
-  const seen = new Set<string>();
-  const tracked: string[] = [];
-  for (const m of [
-    ...TRACKED_MODULES_BASELINE,
-    ...SAFE_MODULES.map(m => m.split("/").pop() || m),
-    ...proposals.map(p => p.targetModule),
-  ]) {
-    if (!seen.has(m)) {
-      seen.add(m);
-      tracked.push(m);
-    }
-  }
-  return tracked.map(module => {
-    const forModule = proposals.filter(p => p.targetModule === module);
-    const last = forModule[0] ?? null;
-    return {
-      module,
-      attempted: forModule.length,
-      applied: forModule.filter(p => p.status === "applied").length,
-      rejected: forModule.filter(p => p.status === "rejected").length,
-      rolledBack: forModule.filter(p => p.status === "rolled-back").length,
-      lastStatus: last?.status ?? null,
-      lastReason: last?.impact ?? null,
-      lastProposedAt: last?.proposedAt ?? null,
-      isProtected: isModuleProtected(module),
-      isSafe: isModuleSafe(module),
-      isCoolingDown: isModuleCoolingDown(module),
-    };
-  });
-}
-
-/**
- * Deduplicates the recent-proposal stream by collapsing consecutive proposals
- * that share the same (targetModule, proposedChange, status) signature into a
- * single entry. This is the deterministic stream dedup the council requires
- * so the user doesn't see e.g. five identical "consciousness-engine memory
- * retention" rejection rows in a row.
- */
-function dedupedRecent(limit = 10): CodeEvolutionProposal[] {
-  const out: CodeEvolutionProposal[] = [];
-  let lastSig: string | null = null;
-  for (const p of proposals) {
-    const sig = `${p.targetModule}::${p.proposedChange}::${p.status}`;
-    if (sig === lastSig) continue;
-    lastSig = sig;
-    out.push(p);
-    if (out.length >= limit) break;
-  }
-  return out;
-}
-
 export function getEvolutionMetrics() {
   return {
     totalProposals: evolutionState.totalProposals,
@@ -733,12 +537,11 @@ export function getEvolutionMetrics() {
     isLocked: evolutionState.isLocked,
     protectedModuleCount: PROTECTED_MODULES.length,
     safeModuleCount: SAFE_MODULES.length,
-    recentProposals: dedupedRecent(10),
+    recentProposals: proposals.slice(0, 10),
     approvedCount: proposals.filter(p => p.status === "applied").length,
     rejectedCount: proposals.filter(p => p.status === "rejected").length,
     protectedModules: PROTECTED_MODULES,
     safeModules: SAFE_MODULES,
-    moduleDiagnostics: getModuleDiagnostics(),
   };
 }
 

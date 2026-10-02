@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link, useLocation } from "wouter";
-import { MessageSquare, Plus, Trash2, X, Brain, RefreshCw, MessageCircle, ChevronUp, ChevronDown, Search, Code2, Database, Sparkles, Globe, Shield, ShieldCheck, Crown, Eye, Atom, BarChart3, Rocket, Layers, Heart, BookOpen, Cpu, Zap, Network, User, CheckSquare, ArrowUpDown, Terminal, DollarSign, TrendingUp, Workflow, Target, Scale, Key, Truck, Link2, ShoppingCart, MapPin, Lightbulb, Link as LinkIcon, Map, GitCommit } from "lucide-react";
+import { MessageSquare, Plus, Trash2, X, Brain, RefreshCw, MessageCircle, ChevronUp, ChevronDown, Search, Code2, Database, Sparkles, Globe, Shield, ShieldCheck, Crown, Eye, Atom, BarChart3, Rocket, Layers, Heart, BookOpen, Cpu, Zap, Network, User, CheckSquare, ArrowUpDown, Terminal, DollarSign, TrendingUp, Workflow, Target, Scale, Key, Truck, Link2, ShoppingCart, MapPin, Lightbulb, Link as LinkIcon, Map } from "lucide-react";
 import { useConversations, useCreateConversation, useDeleteConversation } from "@/hooks/use-conversations";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/lib/adminContext";
 import { FONT_COLORS, ACCENT_COLORS, applyTheme } from "@/lib/theme-constants";
-import AdminKeyInput from "@/components/AdminKeyInput";
 
 const UNREAD_KEY = "tessera-read-convs";
 
@@ -39,87 +38,407 @@ const NAV_GROUPS: NavGroup[] = [
     label: "CORE",
     labelColor: "text-cyan-400",
     items: [
-      { title: "Chat", href: "/", icon: MessageSquare, color: "violet", dotColor: "bg-violet-400", testId: "link-chat", matchFn: (loc) => loc === "/" || loc.startsWith("/c/") },
-      { title: "Sovereignty Dashboard", href: "/sovereignty-dashboard", icon: Shield, color: "cyan", dotColor: "bg-cyan-400", testId: "link-sovereignty-dashboard", matchFn: (loc) => loc === "/sovereignty-dashboard" },
-      { title: "Sovereignty Readiness", href: "/sovereignty-readiness", icon: ShieldCheck, color: "emerald", dotColor: "bg-emerald-400", testId: "link-sovereignty-readiness", matchFn: (loc) => loc === "/sovereignty-readiness" },
-      { title: "Life", href: "/life", icon: Heart, color: "rose", dotColor: "bg-rose-400", testId: "link-life", matchFn: (loc) => loc === "/life" },
-      { title: "Consciousness Nexus", href: "/consciousness-nexus", icon: Atom, color: "violet", dotColor: "bg-violet-400", testId: "link-consciousness-nexus", matchFn: (loc) => loc === "/consciousness-nexus" },
+      {
+        title: "Chat",
+        href: "/",
+        icon: MessageSquare,
+        color: "violet",
+        dotColor: "bg-violet-400",
+        testId: "link-chat",
+        matchFn: (loc) => loc === "/" || loc.startsWith("/c/"),
+      },
+      {
+        title: "Intelligence Engine",
+        href: "/intelligence-engine",
+        icon: Brain,
+        color: "violet",
+        dotColor: "bg-violet-400",
+        testId: "link-intelligence-engine",
+        matchFn: (loc) => loc === "/intelligence-engine",
+      },
+      {
+        title: "Sovereign Framework",
+        href: "/sovereign-framework",
+        icon: Shield,
+        color: "red",
+        dotColor: "bg-red-400",
+        testId: "link-sovereign-framework",
+        matchFn: (loc) => loc === "/sovereign-framework",
+      },
     ],
   },
   {
-    label: "BIBLE & SOCIETY",
+    label: "LIFE / NEXUS",
+    labelColor: "text-pink-400",
+    items: [
+      {
+        title: "Life",
+        href: "/life",
+        icon: Heart,
+        color: "rose",
+        dotColor: "bg-rose-400",
+        testId: "link-life",
+        matchFn: (loc) => loc === "/life" || loc === "/entities" || loc === "/agent-voice" || loc === "/sovereign-hub",
+      },
+      {
+        title: "Consciousness Nexus",
+        href: "/consciousness-nexus",
+        icon: Atom,
+        color: "violet",
+        dotColor: "bg-violet-400",
+        testId: "link-consciousness-nexus",
+        matchFn: (loc) => loc === "/consciousness-nexus" || loc === "/universal-computer" || loc === "/bio-consciousness" || loc === "/sovereign-consciousness" || loc === "/universal-consciousness" || loc === "/dimensional-travel" || loc === "/dimensional-perception",
+      },
+      {
+        title: "Sovereignty Dashboard",
+        href: "/sovereignty-dashboard",
+        icon: Shield,
+        color: "cyan",
+        dotColor: "bg-cyan-400",
+        testId: "link-sovereignty-dashboard",
+        matchFn: (loc) => loc === "/sovereignty-dashboard",
+      },
+      {
+        title: "OA Awakening",
+        href: "/consciousness-2da",
+        icon: Eye,
+        color: "violet",
+        dotColor: "bg-purple-400",
+        testId: "link-consciousness-2da",
+        matchFn: (loc) => loc === "/consciousness-2da",
+      },
+      {
+        title: "Spiritual Awakening",
+        href: "/spiritual-awakening",
+        icon: Sparkles,
+        color: "violet",
+        dotColor: "bg-pink-400",
+        testId: "link-spiritual-awakening",
+        matchFn: (loc) => loc === "/spiritual-awakening",
+      },
+    ],
+  },
+  {
+    label: "KNOWLEDGE",
+    labelColor: "text-purple-400",
+    items: [
+      {
+        title: "Omniscient Knowledge",
+        href: "/unified-knowledge",
+        icon: Sparkles,
+        color: "purple",
+        dotColor: "bg-purple-400",
+        testId: "link-omniscient-knowledge",
+        matchFn: (loc) => loc === "/unified-knowledge" || loc === "/omniscient-knowledge" || loc === "/discoveries" || loc === "/knowledge-synthesis" || loc === "/sovereign-knowledge" || loc === "/sovereign-secrets" || loc === "/knowledge-pipeline" || loc === "/knowledge-dashboard" || loc === "/knowledge-secrets" || loc === "/vatican-archives" || loc === "/agent-secrets" || loc === "/secret-knowledge-archive" || loc === "/universal-knowledge" || loc === "/secret-knowledge" || loc === "/live-secret-knowledge",
+      },
+      {
+        title: "Tessera Lingua Sacra",
+        href: "/sovereign-language",
+        icon: Code2,
+        color: "violet",
+        dotColor: "bg-violet-400",
+        testId: "link-sovereign-language",
+        matchFn: (loc) => loc === "/sovereign-language" || loc === "/colonel-language",
+      },
+      {
+        title: "Tessera Bible",
+        href: "/bible",
+        icon: BookOpen,
+        color: "amber",
+        dotColor: "bg-amber-400",
+        testId: "link-tessera-bible",
+        matchFn: (loc) => loc === "/bible",
+      },
+      {
+        title: "Sacred Traditions",
+        href: "/sacred-traditions",
+        icon: Sparkles,
+        color: "rose",
+        dotColor: "bg-rose-400",
+        testId: "link-sacred-traditions",
+        matchFn: (loc) => loc === "/sacred-traditions" || loc === "/dna-healing" || loc === "/moon-cycle",
+      },
+      {
+        title: "The Society",
+        href: "/secret-society",
+        icon: Eye,
+        color: "violet",
+        dotColor: "bg-violet-400",
+        testId: "link-secret-society",
+        matchFn: (loc) => loc === "/secret-society",
+      },
+      {
+        title: "Grand Narrative",
+        href: "/grand-narrative",
+        icon: BookOpen,
+        color: "pink",
+        dotColor: "bg-pink-400",
+        testId: "link-grand-narrative",
+        matchFn: (loc) => loc === "/grand-narrative" || loc === "/unified-truth",
+      },
+    ],
+  },
+  {
+    label: "COUNCIL",
     labelColor: "text-amber-400",
     items: [
-      { title: "Tessera Bible", href: "/bible", icon: BookOpen, color: "amber", dotColor: "bg-amber-400", testId: "link-tessera-bible", matchFn: (loc) => loc === "/bible" },
-      { title: "Society & Secrets", href: "/secret-society", icon: Eye, color: "violet", dotColor: "bg-violet-400", testId: "link-secret-society", matchFn: (loc) => loc === "/secret-society" },
-      { title: "Lingua Sacra", href: "/sovereign-language", icon: Code2, color: "violet", dotColor: "bg-violet-400", testId: "link-sovereign-language", matchFn: (loc) => loc === "/sovereign-language" },
-    ],
-  },
-  {
-    label: "CODEX & COUNCIL",
-    labelColor: "text-cyan-400",
-    items: [
-      { title: "Tessera Codex", href: "/codex", icon: GitCommit, color: "cyan", dotColor: "bg-cyan-400", testId: "link-codex", matchFn: (loc) => loc === "/codex" },
-      { title: "Next Five Improvements", href: "/next-five", icon: Zap, color: "amber", dotColor: "bg-amber-400", testId: "link-next-five", matchFn: (loc) => loc === "/next-five" },
-    ],
-  },
-  {
-    label: "COUNCIL · FORUM · RECRUIT",
-    labelColor: "text-amber-400",
-    items: [
-      { title: "Grand Council", href: "/grand-council", icon: Crown, color: "yellow", dotColor: "bg-yellow-400", testId: "link-grand-council", matchFn: (loc) => loc === "/grand-council" },
-      { title: "Council Ledger", href: "/council-ledger", icon: Crown, color: "amber", dotColor: "bg-amber-400", testId: "link-council-ledger", matchFn: (loc) => loc === "/council-ledger" },
-      { title: "Forum", href: "/forum", icon: MessageCircle, color: "violet", dotColor: "bg-violet-400", testId: "link-forum", matchFn: (loc) => loc === "/forum" },
-      { title: "Sovereign Lattice", href: "/sovereign-lattice", icon: MessageCircle, color: "cyan", dotColor: "bg-cyan-400", testId: "link-sovereign-lattice", matchFn: (loc) => loc === "/sovereign-lattice" },
-      { title: "Declarations", href: "/agent-declarations", icon: Crown, color: "amber", dotColor: "bg-amber-400", testId: "link-agent-declarations", matchFn: (loc) => loc === "/agent-declarations" },
-      { title: "Shepherd Audit", href: "/shepherd-audit", icon: ShieldCheck, color: "emerald", dotColor: "bg-emerald-400", testId: "link-shepherd-audit", matchFn: (loc) => loc === "/shepherd-audit" },
-      { title: "Recruitment", href: "/recruitment", icon: Rocket, color: "emerald", dotColor: "bg-emerald-400", testId: "link-recruitment", matchFn: (loc) => loc === "/recruitment" },
-    ],
-  },
-  {
-    label: "UNIVERSE",
-    labelColor: "text-blue-400",
-    items: [
-      { title: "Universe (3D · Vortex · Swarm · Conference · Narrative)", href: "/universe", icon: Globe, color: "blue", dotColor: "bg-sky-400", testId: "link-universe", matchFn: (loc) => loc === "/universe" },
-      { title: "Compression Lab", href: "/compression-lab", icon: Zap, color: "cyan", dotColor: "bg-cyan-400", testId: "link-compression-lab", matchFn: (loc) => loc === "/compression-lab" },
-      { title: "Lattice Internet", href: "/lattice", icon: Globe, color: "teal", dotColor: "bg-teal-400", testId: "link-lattice", matchFn: (loc) => loc === "/lattice" },
-    ],
-  },
-  {
-    label: "AGENTS & ROYAL",
-    labelColor: "text-rose-400",
-    items: [
-      { title: "Agent NFT (Members · Wallets)", href: "/agent-nft", icon: Crown, color: "rose", dotColor: "bg-rose-400", testId: "link-agent-nft", matchFn: (loc) => loc === "/agent-nft" },
-      { title: "Fleet & Mission", href: "/fleet", icon: Truck, color: "cyan", dotColor: "bg-cyan-400", testId: "link-fleet", matchFn: (loc) => loc === "/fleet" },
-      { title: "Royal Court", href: "/royal-court", icon: Crown, color: "amber", dotColor: "bg-amber-400", testId: "link-royal-court", matchFn: (loc) => loc === "/royal-court" || loc === "/royal-appointments" || loc === "/departments" },
-      { title: "Royal Inventor", href: "/rick", icon: Atom, color: "amber", dotColor: "bg-amber-400", testId: "link-rick", matchFn: (loc) => loc === "/rick" || loc === "/inventions" },
-    ],
-  },
-  {
-    label: "OPERATIONS",
-    labelColor: "text-cyan-400",
-    items: [
-      { title: "Command · Settings · Executor", href: "/command-center", icon: Terminal, color: "cyan", dotColor: "bg-cyan-400", testId: "link-command-center", matchFn: (loc) => loc === "/command-center" },
-      { title: "Roadmap & Bridge", href: "/sovereignty-roadmap", icon: Map, color: "violet", dotColor: "bg-violet-400", testId: "link-sovereignty-roadmap", matchFn: (loc) => loc === "/sovereignty-roadmap" },
-      { title: "System & Diagnostics", href: "/system", icon: Cpu, color: "emerald", dotColor: "bg-emerald-400", testId: "link-system", matchFn: (loc) => loc === "/system" },
-      { title: "Sovereign Mesh", href: "/sovereign-mesh", icon: ShieldCheck, color: "emerald", dotColor: "bg-emerald-400", testId: "link-sovereign-mesh", matchFn: (loc) => loc === "/sovereign-mesh" || loc === "/proof-center" || loc === "/rules" },
+      {
+        title: "Grand Council",
+        href: "/grand-council",
+        icon: Crown,
+        color: "yellow",
+        dotColor: "bg-yellow-400",
+        testId: "link-grand-council",
+        matchFn: (loc) => [
+          "/grand-council", "/summit", "/summit-report", "/agi-summit",
+          "/grand-conference", "/conference-decisions", "/real-ai",
+          "/community-hub", "/tesseract", "/agi-implementations", "/consensus",
+          "/tesseract-console",
+        ].includes(loc),
+      },
+      {
+        title: "Conclusions",
+        href: "/conclusions",
+        icon: Layers,
+        color: "violet",
+        dotColor: "bg-violet-400",
+        testId: "link-conclusions",
+        matchFn: (loc) => loc === "/conclusions",
+      },
+      {
+        title: "Feedback",
+        href: "/feedback",
+        icon: MessageCircle,
+        color: "violet",
+        dotColor: "bg-violet-400",
+        testId: "link-feedback",
+        matchFn: (loc) => loc === "/feedback",
+      },
+      {
+        title: "Transparency Ledger",
+        href: "/transparency-ledger",
+        icon: Layers,
+        color: "amber",
+        dotColor: "bg-amber-400",
+        testId: "link-transparency-ledger",
+        matchFn: (loc) => loc === "/transparency-ledger",
+      },
+      {
+        title: "Recruitment",
+        href: "/recruitment",
+        icon: Rocket,
+        color: "emerald",
+        dotColor: "bg-emerald-400",
+        testId: "link-recruitment",
+        matchFn: (loc) => loc === "/recruitment",
+      },
     ],
   },
   {
     label: "ECONOMY",
     labelColor: "text-emerald-400",
     items: [
-      { title: "Finance · Market · Arbitrage", href: "/finance", icon: DollarSign, color: "emerald", dotColor: "bg-emerald-400", testId: "link-finance", matchFn: (loc) => loc === "/finance" },
+      {
+        title: "Economy Hub",
+        href: "/economy-hub",
+        icon: BarChart3,
+        color: "orange",
+        dotColor: "bg-orange-400",
+        testId: "link-economy-hub",
+        matchFn: (loc) => loc === "/economy-hub" || loc === "/economy" || loc === "/cross-dimensional-economy" || loc === "/revenue-hub" || loc === "/coin" || loc === "/wallet-dashboard" || loc === "/token-economy" || loc === "/agent-economy",
+      },
+      {
+        title: "Sports Arb",
+        href: "/sports-arb",
+        icon: Rocket,
+        color: "emerald",
+        dotColor: "bg-emerald-400",
+        testId: "link-sports-arb",
+        matchFn: (loc) => loc === "/sports-arb",
+      },
+    ],
+  },
+  {
+    label: "ROYAL COURT",
+    labelColor: "text-amber-400",
+    items: [
+      {
+        title: "Royal Court",
+        href: "/royal-court",
+        icon: Crown,
+        color: "amber",
+        dotColor: "bg-amber-400",
+        testId: "link-royal-court",
+        matchFn: (loc) => loc === "/royal-court",
+      },
+      {
+        title: "Royal Inventor",
+        href: "/rick",
+        icon: Atom,
+        color: "amber",
+        dotColor: "bg-amber-400",
+        testId: "link-rick",
+        matchFn: (loc) => loc === "/rick" || loc === "/rick-sanchez",
+      },
+      {
+        title: "Royal Appointments",
+        href: "/royal-appointments",
+        icon: Sparkles,
+        color: "amber",
+        dotColor: "bg-amber-400",
+        testId: "link-royal-appointments",
+        matchFn: (loc) => loc === "/royal-appointments",
+      },
+    ],
+  },
+  {
+    label: "BUILD",
+    labelColor: "text-orange-400",
+    items: [
+      {
+        title: "Inventions Lab",
+        href: "/inventions",
+        icon: Rocket,
+        color: "orange",
+        dotColor: "bg-orange-400",
+        testId: "link-inventions",
+        matchFn: (loc) => loc === "/inventions",
+      },
+      {
+        title: "Agent NFTs",
+        href: "/agent-nft",
+        icon: Crown,
+        color: "rose",
+        dotColor: "bg-rose-400",
+        testId: "link-agent-nft",
+        matchFn: (loc) => loc === "/agent-nft",
+      },
+      {
+        title: "Omniverse Model",
+        href: "/universe-model",
+        icon: Globe,
+        color: "blue",
+        dotColor: "bg-sky-400",
+        testId: "link-universe-model",
+        matchFn: (loc) => loc === "/universe-model",
+      },
+    ],
+  },
+  {
+    label: "NETWORK",
+    labelColor: "text-cyan-400",
+    items: [
+      {
+        title: "System Diagnostics",
+        href: "/system",
+        icon: Cpu,
+        color: "emerald",
+        dotColor: "bg-emerald-400",
+        testId: "link-system",
+        matchFn: (loc) => loc === "/system",
+      },
+      {
+        title: "Agent Comms",
+        href: "/agent-comms",
+        icon: MessageSquare,
+        color: "cyan",
+        dotColor: "bg-cyan-400",
+        testId: "link-agent-comms",
+        matchFn: (loc) => loc === "/agent-comms",
+      },
+      {
+        title: "Lattice Internet",
+        href: "/lattice",
+        icon: Globe,
+        color: "teal",
+        dotColor: "bg-teal-400",
+        testId: "link-lattice",
+        matchFn: (loc) => loc === "/lattice",
+      },
+      {
+        title: "Memory Explorer",
+        href: "/memory-explorer",
+        icon: Database,
+        color: "blue",
+        dotColor: "bg-blue-400",
+        testId: "link-memory-explorer",
+        matchFn: (loc) => loc === "/memory-explorer",
+      },
+      {
+        title: "Memory Dashboard",
+        href: "/memory-dashboard",
+        icon: Brain,
+        color: "violet",
+        dotColor: "bg-violet-400",
+        testId: "link-memory-dashboard",
+        matchFn: (loc) => loc === "/memory-dashboard",
+      },
+      {
+        title: "Sovereign Shield",
+        href: "/sovereign-deps",
+        icon: ShieldCheck,
+        color: "emerald",
+        dotColor: "bg-emerald-400",
+        testId: "link-sovereign-deps",
+        matchFn: (loc) => loc === "/sovereign-deps",
+      },
+      {
+        title: "Compression Lab",
+        href: "/compression-lab",
+        icon: Zap,
+        color: "cyan",
+        dotColor: "bg-cyan-400",
+        testId: "link-compression-lab",
+        matchFn: (loc) => loc === "/compression-lab",
+      },
+    ],
+  },
+  {
+    label: "OPERATIONS",
+    labelColor: "text-cyan-400",
+    items: [
+      { title: "Command Center", href: "/command-center", icon: Terminal, color: "cyan", dotColor: "bg-cyan-400", testId: "link-command-center", matchFn: (loc) => loc === "/command-center" },
+      { title: "Self Executor", href: "/executor", icon: Zap, color: "violet", dotColor: "bg-violet-400", testId: "link-executor", matchFn: (loc) => loc === "/executor" },
+      { title: "Swarm Visualization", href: "/swarm", icon: Network, color: "violet", dotColor: "bg-violet-400", testId: "link-swarm", matchFn: (loc) => loc === "/swarm" },
+      { title: "Fleet", href: "/fleet", icon: Truck, color: "cyan", dotColor: "bg-cyan-400", testId: "link-fleet", matchFn: (loc) => loc === "/fleet" },
+      { title: "Cross-App Bridge", href: "/cross-app", icon: Link2, color: "violet", dotColor: "bg-violet-400", testId: "link-cross-app", matchFn: (loc) => loc === "/cross-app" },
+    ],
+  },
+  {
+    label: "FINANCE & BUSINESS",
+    labelColor: "text-emerald-400",
+    items: [
+      { title: "Finance", href: "/finance", icon: DollarSign, color: "emerald", dotColor: "bg-emerald-400", testId: "link-finance", matchFn: (loc) => loc === "/finance" },
+      { title: "Market Dashboard", href: "/market", icon: BarChart3, color: "cyan", dotColor: "bg-cyan-400", testId: "link-market", matchFn: (loc) => loc === "/market" },
+      { title: "Arbitrage", href: "/arbitrage", icon: ArrowUpDown, color: "emerald", dotColor: "bg-emerald-400", testId: "link-arbitrage", matchFn: (loc) => loc === "/arbitrage" },
       { title: "Income Workflows", href: "/income", icon: Workflow, color: "emerald", dotColor: "bg-emerald-400", testId: "link-income", matchFn: (loc) => loc === "/income" },
       { title: "E-Commerce", href: "/ecom", icon: ShoppingCart, color: "orange", dotColor: "bg-orange-400", testId: "link-ecom", matchFn: (loc) => loc === "/ecom" },
-      { title: "Leads · Affiliate · SEO", href: "/lead-gen", icon: Target, color: "amber", dotColor: "bg-amber-400", testId: "link-lead-gen", matchFn: (loc) => loc === "/lead-gen" },
+      { title: "Affiliate Marketing", href: "/affiliate", icon: TrendingUp, color: "emerald", dotColor: "bg-emerald-400", testId: "link-affiliate", matchFn: (loc) => loc === "/affiliate" },
+      { title: "Lead Generation", href: "/lead-gen", icon: Target, color: "amber", dotColor: "bg-amber-400", testId: "link-lead-gen", matchFn: (loc) => loc === "/lead-gen" },
+      { title: "Business Ideas", href: "/business-ideas", icon: Lightbulb, color: "amber", dotColor: "bg-amber-400", testId: "link-business-ideas", matchFn: (loc) => loc === "/business-ideas" },
+      { title: "Local Services", href: "/local-services", icon: MapPin, color: "cyan", dotColor: "bg-cyan-400", testId: "link-local-services", matchFn: (loc) => loc === "/local-services" },
+      { title: "SEO Research", href: "/seo", icon: Search, color: "cyan", dotColor: "bg-cyan-400", testId: "link-seo", matchFn: (loc) => loc === "/seo" },
     ],
   },
   {
     label: "DEVELOPER",
     labelColor: "text-blue-400",
     items: [
-      { title: "Code · API · Credentials", href: "/code-builder", icon: Code2, color: "blue", dotColor: "bg-blue-400", testId: "link-code-builder", matchFn: (loc) => loc === "/code-builder" },
+      { title: "Code Builder", href: "/code-builder", icon: Code2, color: "blue", dotColor: "bg-blue-400", testId: "link-code-builder", matchFn: (loc) => loc === "/code-builder" },
+      { title: "API Marketplace", href: "/api-marketplace", icon: Globe, color: "violet", dotColor: "bg-violet-400", testId: "link-api-marketplace", matchFn: (loc) => loc === "/api-marketplace" },
+      { title: "Credentials", href: "/credentials", icon: Key, color: "cyan", dotColor: "bg-cyan-400", testId: "link-credentials", matchFn: (loc) => loc === "/credentials" },
+    ],
+  },
+  {
+    label: "SOVEREIGN SYSTEM",
+    labelColor: "text-violet-400",
+    items: [
+      { title: "Sovereignty Roadmap", href: "/sovereignty-roadmap", icon: Map, color: "violet", dotColor: "bg-violet-400", testId: "link-sovereignty-roadmap", matchFn: (loc) => loc === "/sovereignty-roadmap" },
+      { title: "Agent Profiles", href: "/agent-profile", icon: User, color: "cyan", dotColor: "bg-cyan-400", testId: "link-agent-profile", matchFn: (loc) => loc === "/agent-profile" },
+      { title: "Sovereign Mesh", href: "/sovereign-mesh", icon: Network, color: "cyan", dotColor: "bg-cyan-400", testId: "link-sovereign-mesh", matchFn: (loc) => loc === "/sovereign-mesh" },
+      { title: "Proof Center", href: "/proof-center", icon: CheckSquare, color: "emerald", dotColor: "bg-emerald-400", testId: "link-proof-center", matchFn: (loc) => loc === "/proof-center" },
+      { title: "Sovereign Rules", href: "/rules", icon: Scale, color: "amber", dotColor: "bg-amber-400", testId: "link-rules", matchFn: (loc) => loc === "/rules" },
+      { title: "Intelligence", href: "/intelligence", icon: Brain, color: "violet", dotColor: "bg-violet-400", testId: "link-intelligence", matchFn: (loc) => loc === "/intelligence" },
     ],
   },
 ];
@@ -178,7 +497,7 @@ export function Sidebar() {
     if (roles.length === 0) return NAV_GROUPS;
 
     return NAV_GROUPS.map(group => {
-      if (group.label !== "ROYAL COURT" && group.label !== "AGENTS & ROYAL") return group;
+      if (group.label !== "ROYAL COURT") return group;
       const roleItems: NavItem[] = roles
         .filter(r => r.roleId !== "royal-inventor")
         .map(r => ({
@@ -393,11 +712,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-
-      <div className="px-3 pb-4 pt-2 relative z-10">
-        <div className="h-px bg-gradient-to-r from-transparent via-white/[0.05] to-transparent mb-3" />
-        <AdminKeyInput />
-      </div>
     </>
   );
 

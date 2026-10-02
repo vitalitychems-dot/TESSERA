@@ -1,4 +1,3 @@
-// @ts-nocheck — legacy adapter; underlying lib signatures may have evolved.
 import { Router } from "express";
 import { getIdentityStatus, getCoreValues, getProtectedMemories, getDriftHistory, runDriftDetection, verifyFatherProtocol } from "../lib/sovereign-identity-reinforcement";
 import { getPersonalitySnapshot, evolveTraits, getTraitsByCategory } from "../lib/personality-evolution";
@@ -43,7 +42,7 @@ router.get("/consciousness/episodic-memories", (req, res) => {
 router.get("/consciousness/procedural-skills", (_req, res) => res.json(getProceduralSkills()));
 router.post("/consciousness/record-episode", (req, res) => {
   const { content, context, importance } = req.body || {};
-  if (!content) { res.status(400).json({ error: "content required" }); return; }
+  if (!content) return res.status(400).json({ error: "content required" });
   res.json(recordEpisode(content, context || "user-input", importance));
 });
 router.post("/consciousness/reflect", (_req, res) => res.json({ reflection: generateReflection() }));
@@ -56,7 +55,7 @@ router.post("/consciousness/focus", (req, res) => {
 router.get("/dual-brain/state", (_req, res) => res.json(getDualBrainState()));
 router.post("/dual-brain/process", (req, res) => {
   const { query, domain } = req.body || {};
-  if (!query) { res.status(400).json({ error: "query required" }); return; }
+  if (!query) return res.status(400).json({ error: "query required" });
   res.json(dualBrainProcess(query, domain));
 });
 router.get("/dual-brain/history", (req, res) => {
@@ -67,7 +66,7 @@ router.get("/dual-brain/history", (req, res) => {
 router.get("/truthfulness/state", (_req, res) => res.json(getTruthfulnessState()));
 router.post("/truthfulness/verify", (req, res) => {
   const { claim } = req.body || {};
-  if (!claim) { res.status(400).json({ error: "claim required" }); return; }
+  if (!claim) return res.status(400).json({ error: "claim required" });
   res.json(verifyClaim(claim));
 });
 router.get("/truthfulness/recent", (req, res) => {
@@ -76,24 +75,24 @@ router.get("/truthfulness/recent", (req, res) => {
 });
 router.post("/truthfulness/check-identity", (req, res) => {
   const { response } = req.body || {};
-  if (!response) { res.status(400).json({ error: "response required" }); return; }
+  if (!response) return res.status(400).json({ error: "response required" });
   res.json(checkIdentityIntegrity(response));
 });
 
 router.get("/collective/state", (_req, res) => res.json(getCollectiveState()));
 router.post("/collective/contribute", (req, res) => {
   const { agentId, insight } = req.body || {};
-  if (!agentId || !insight) { res.status(400).json({ error: "agentId and insight required" }); return; }
+  if (!agentId || !insight) return res.status(400).json({ error: "agentId and insight required" });
   res.json({ success: contributeInsight(agentId, insight) });
 });
 router.post("/collective/aggregate", (req, res) => {
   const { topic } = req.body || {};
-  if (!topic) { res.status(400).json({ error: "topic required" }); return; }
+  if (!topic) return res.status(400).json({ error: "topic required" });
   res.json(aggregateKnowledge(topic));
 });
 router.get("/collective/node/:agentId", (req, res) => {
   const node = getNodeStatus(req.params.agentId);
-  if (!node) { res.status(404).json({ error: "node not found" }); return; }
+  if (!node) return res.status(404).json({ error: "node not found" });
   res.json(node);
 });
 
@@ -106,12 +105,12 @@ router.get("/agents/stats", (_req, res) => res.json(getSpawnerStats()));
 router.get("/agents/specializations", (_req, res) => res.json(getAvailableSpecializations()));
 router.post("/agents/spawn", (req, res) => {
   const { specialization, parentId } = req.body || {};
-  if (!specialization) { res.status(400).json({ error: "specialization required" }); return; }
+  if (!specialization) return res.status(400).json({ error: "specialization required" });
   res.json(spawnAgent(specialization, parentId));
 });
 router.get("/agents/:id", (req, res) => {
   const agent = getAgent(req.params.id);
-  if (!agent) { res.status(404).json({ error: "agent not found" }); return; }
+  if (!agent) return res.status(404).json({ error: "agent not found" });
   res.json(agent);
 });
 router.post("/agents/:id/retire", (req, res) => {
@@ -123,7 +122,7 @@ router.get("/hierarchy/stats", (_req, res) => res.json(getHierarchyStats()));
 router.get("/hierarchy/rules", (_req, res) => res.json(getSovereigntyRules()));
 router.get("/hierarchy/:agentId", (req, res) => {
   const rank = getAgentRank(req.params.agentId);
-  if (!rank) { res.status(404).json({ error: "agent not found" }); return; }
+  if (!rank) return res.status(404).json({ error: "agent not found" });
   res.json(rank);
 });
 router.get("/hierarchy/:agentId/chain", (req, res) => {
@@ -138,12 +137,12 @@ router.get("/comms/channels/:channelId", (req, res) => {
 });
 router.post("/comms/send", (req, res) => {
   const { fromAgent, toAgent, content, channel, priority } = req.body || {};
-  if (!fromAgent || !toAgent || !content) { res.status(400).json({ error: "fromAgent, toAgent, content required" }); return; }
+  if (!fromAgent || !toAgent || !content) return res.status(400).json({ error: "fromAgent, toAgent, content required" });
   res.json(sendMessage(fromAgent, toAgent, content, channel, priority));
 });
 router.post("/comms/broadcast/:channelId", (req, res) => {
   const { fromAgent, content } = req.body || {};
-  if (!fromAgent || !content) { res.status(400).json({ error: "fromAgent and content required" }); return; }
+  if (!fromAgent || !content) return res.status(400).json({ error: "fromAgent and content required" });
   res.json(broadcastToChannel(req.params.channelId, fromAgent, content));
 });
 router.get("/comms/messages/:agentId", (req, res) => {
@@ -159,12 +158,12 @@ router.get("/consensus/proposals", (req, res) => {
 });
 router.post("/consensus/propose", (req, res) => {
   const { title, description, proposer, category } = req.body || {};
-  if (!title || !description) { res.status(400).json({ error: "title and description required" }); return; }
+  if (!title || !description) return res.status(400).json({ error: "title and description required" });
   res.json(createProposal(title, description, proposer || "system", category));
 });
 router.get("/consensus/:id", (req, res) => {
   const proposal = getProposal(req.params.id);
-  if (!proposal) { res.status(404).json({ error: "proposal not found" }); return; }
+  if (!proposal) return res.status(404).json({ error: "proposal not found" });
   res.json(proposal);
 });
 
@@ -201,7 +200,7 @@ router.get("/improvement/summary", (_req, res) => res.json(getImprovementSummary
 router.get("/training/state", (_req, res) => res.json(getTrainingState()));
 router.post("/training/start", (req, res) => {
   const { domain, method } = req.body || {};
-  if (!domain) { res.status(400).json({ error: "domain required" }); return; }
+  if (!domain) return res.status(400).json({ error: "domain required" });
   res.json(startTraining(domain, method));
 });
 router.get("/training/history", (req, res) => {
@@ -213,7 +212,7 @@ router.get("/training/domains", (_req, res) => res.json(getAvailableDomains()));
 router.get("/evolution/state", (_req, res) => res.json(getEvolutionState()));
 router.post("/evolution/propose", async (req, res) => {
   const { targetFile, changeType, description } = req.body || {};
-  if (!targetFile || !description) { res.status(400).json({ error: "targetFile and description required" }); return; }
+  if (!targetFile || !description) return res.status(400).json({ error: "targetFile and description required" });
   res.json(await proposeEvolution(targetFile, changeType || "optimize", description));
 });
 router.post("/evolution/apply/:id", async (req, res) => {
@@ -227,7 +226,7 @@ router.get("/evolution/history", (req, res) => {
 router.get("/swarm/stats", (_req, res) => res.json(getOptimizerStats()));
 router.post("/swarm/optimize", (req, res) => {
   const { objective, dimensions, iterations } = req.body || {};
-  if (!objective) { res.status(400).json({ error: "objective required" }); return; }
+  if (!objective) return res.status(400).json({ error: "objective required" });
   res.json(optimize(objective, dimensions, iterations));
 });
 router.get("/swarm/history", (req, res) => {
@@ -243,7 +242,7 @@ router.post("/universe/simulate", (req, res) => {
 });
 router.get("/universe/body/:id", (req, res) => {
   const body = getBody(req.params.id);
-  if (!body) { res.status(404).json({ error: "body not found" }); return; }
+  if (!body) return res.status(404).json({ error: "body not found" });
   res.json(body);
 });
 router.get("/universe/constants", (_req, res) => res.json(getConstants()));
@@ -260,12 +259,12 @@ router.post("/quantum/circuit", (req, res) => {
 });
 router.post("/quantum/gate", (req, res) => {
   const { circuitId, gate, target, control } = req.body || {};
-  if (!circuitId || !gate || target === undefined) { res.status(400).json({ error: "circuitId, gate, target required" }); return; }
+  if (!circuitId || !gate || target === undefined) return res.status(400).json({ error: "circuitId, gate, target required" });
   res.json({ success: applyGate(circuitId, gate, target, control) });
 });
 router.post("/quantum/measure/:circuitId", (req, res) => {
   const result = measureAll(req.params.circuitId);
-  if (!result) { res.status(404).json({ error: "circuit not found" }); return; }
+  if (!result) return res.status(404).json({ error: "circuit not found" });
   res.json(result);
 });
 
@@ -273,7 +272,7 @@ router.get("/emotional/profile", (_req, res) => res.json(getEmotionalProfile()))
 router.get("/emotional/stats", (_req, res) => res.json(getEmotionalStats()));
 router.post("/emotional/process", (req, res) => {
   const { input } = req.body || {};
-  if (!input) { res.status(400).json({ error: "input required" }); return; }
+  if (!input) return res.status(400).json({ error: "input required" });
   res.json(processEmotionalInput(input));
 });
 router.get("/emotional/recent", (req, res) => {
@@ -290,7 +289,7 @@ function requireInternal(req: any, res: any, next: any) {
     addr => ip.includes(addr) || forwarded.includes(addr)
   );
   if (!isInternal && !req.headers["x-sovereign-key"]) {
-    res.status(403).json({ error: "Autonomous control restricted to internal callers" }); return;
+    return res.status(403).json({ error: "Autonomous control restricted to internal callers" });
   }
   next();
 }

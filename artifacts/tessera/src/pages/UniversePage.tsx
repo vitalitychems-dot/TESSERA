@@ -258,7 +258,7 @@ export default function UniversePage() {
   const userZodiac = useMemo(() => {
     const birthDate = chartData?.chart?.birthDate;
     if (birthDate) return getZodiacFromBirthDate(birthDate);
-    return null;
+    return getZodiacFromBirthDate("1998-10-07");
   }, [chartData]);
 
   const activeTransits = useMemo(() => {

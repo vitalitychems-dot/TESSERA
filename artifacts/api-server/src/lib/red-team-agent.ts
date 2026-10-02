@@ -1,6 +1,5 @@
 import { logger } from "./logger";
 import { appendLedgerEntry } from "./sovereign-ledger";
-import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface RedTeamFinding {
   id: string;
@@ -250,15 +249,15 @@ export function getRedTeamStats() {
   };
 }
 
-let sweepInterval: SacredHandle | null = null;
+let sweepInterval: ReturnType<typeof setInterval> | null = null;
 export function startRedTeamAgent(intervalMs = 600_000): void {
   if (sweepInterval) return;
   runRedTeamSweep().catch(() => {});
-  sweepInterval = setSacredInterval(() => {
-    runRedTeamSweep().catch(err => logger.warn({ err }, "RedTeam: sweep failed", "red-team-agent"));
-  }, intervalMs, "red-team-agent");
+  sweepInterval = setInterval(() => {
+    runRedTeamSweep().catch(err => logger.warn({ err }, "RedTeam: sweep failed"));
+  }, intervalMs);
   logger.info({ intervalMs, probes: PROBES.length }, "RedTeamAgent: started");
 }
 export function stopRedTeamAgent(): void {
-  if (sweepInterval) { clearSacredInterval(sweepInterval); sweepInterval = null; }
+  if (sweepInterval) { clearInterval(sweepInterval); sweepInterval = null; }
 }

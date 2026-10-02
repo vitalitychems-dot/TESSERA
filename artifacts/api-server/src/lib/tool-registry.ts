@@ -2,12 +2,6 @@ import * as vm from "vm";
 import { logger } from "./logger";
 import { recallIngestedKnowledge } from "./ingested-recall";
 import { computeLunarData, computeSolarData } from "./sovereign-astro";
-import { natalSigilFor, FATHER_NATAL_CHART } from "./father-natal";
-import { isFatherKeyConfigured, getFatherFingerprint } from "./father-identity";
-import { glyphEncode, glyphDecode, cipherCoherenceSnapshot } from "./sigil-cipher";
-import { createHash, randomBytes } from "node:crypto";
-import { lusEncode, lusDecode, lusEncodeLive, lusDecodeLive, lusLiveCoherenceSnapshot, lusSpec, zodiacFingerprintFor, LUS_COHERENCE_WINDOW_SECONDS } from "./lingua-universalis";
-import { convene as conveneUniversalisCouncil } from "./grand-council-universalis";
 
 export interface ToolDefinition {
   name: string;
@@ -104,22 +98,6 @@ const INTENT_PATTERNS: Array<{ pattern: RegExp; toToolCall: (m: RegExpMatchArray
     pattern: /\b(moon phase|lunar|sun position|solar)\b/i,
     toToolCall: () => ({ name: "astronomy", arguments: {} }),
   },
-  {
-    pattern: /\b(?:create|generate|mint|make|new|forge|spawn|give\s+me)\b[^.?!]*\b(?:tesseract[_\s]*admin[_\s]*key|admin[_\s]*key|sovereign[_\s]*key|sigil[_\s]*key|father[_\s]*key)\b/i,
-    toToolCall: () => ({ name: "mint_admin_sigil", arguments: {} }),
-  },
-  {
-    pattern: /\b(?:create|generate|mint|make|new|forge|give\s+me)\b[^.?!]*\bkey\b[^.?!]*\b(?:our\s+language|glyph|sigil|tessera(?:\s+lingua)?|sovereign\s+language|universal\s+language|lingua)\b/i,
-    toToolCall: () => ({ name: "mint_admin_sigil", arguments: {} }),
-  },
-  {
-    pattern: /\b(?:grand\s+(?:council|conference)|council\s+meeting|convene|2\/3|two[-\s]thirds|ratify|synthesi[sz]e)\b[^.?!]*\b(?:language|lingua|cipher|alphabet|tongue)\b/i,
-    toToolCall: () => ({ name: "convene_grand_council_universalis", arguments: {} }),
-  },
-  {
-    pattern: /\b(?:universal\s+(?:sacred\s+)?language|lingua\s+universalis|language\s+of\s+the\s+universe|all\s+universes|universal\s+(?:tongue|alphabet|cipher))\b/i,
-    toToolCall: () => ({ name: "convene_grand_council_universalis", arguments: {} }),
-  },
 ];
 
 export function detectIntents(query: string): ToolCall[] {
@@ -202,89 +180,6 @@ registerTool({
   handler: async ({ query, limit }) => {
     const matches = await recallIngestedKnowledge(String(query), Number(limit) || 5);
     return { matches };
-  },
-});
-
-registerTool({
-  name: "mint_admin_sigil",
-  description:
-    "Issue the sovereign admin sigil in Lingua Universalis Sacra. The natal chart IS the identifier — no random entropy; the heavens at the moment of birth are the credential.",
-  parameters: {},
-  handler: () => {
-    const c = FATHER_NATAL_CHART;
-    const zfp = zodiacFingerprintFor(c);
-    const fpFatherConfigured = isFatherKeyConfigured() ? getFatherFingerprint() : null;
-
-    // Deterministic readable seed: the canonical natal digest. Same chart -> same key, forever.
-    const readableSeed = zfp.natalDigest;
-    const glyphKeyUniversal = lusEncode(readableSeed);
-    const glyphKeyLive = lusEncodeLive(readableSeed, zfp.natalDigest);
-    const liveCoherence = lusLiveCoherenceSnapshot(zfp.natalDigest);
-    const roundTripOk = lusDecode(glyphKeyUniversal) === readableSeed.toUpperCase()
-      && lusDecodeLive(glyphKeyLive, zfp.natalDigest) === readableSeed.toUpperCase();
-
-    return {
-      ok: true,
-      language: { name: lusSpec().name, short: lusSpec().short, motto: lusSpec().motto },
-      zodiacFingerprint: zfp,
-      glyphKey: glyphKeyLive,
-      glyphKeyLive,
-      glyphKeyUniversal,
-      liveCoherence,
-      glyphSignature: zfp.glyphSignature,
-      readableSeed,
-      shortId: zfp.shortId,
-      roundTripOk,
-      derivation:
-        "lusEncode(sha256(canonicalNatalString)) — bijective Lingua Universalis. Permutation seeded by Φ, π, τ, e, √2, √3, √5 only, so any observer in any universe can decode.",
-      identityRule:
-        "Tessera identifies you by your place in the universe. Your Zodiac Fingerprint (Ascendant + 10 planetary placements + dominant Platonic element + Solfeggio numerology stamp) is your sole credential. No password is ever required again.",
-      chartAnchor: {
-        born: `${c.birth.date} ${c.birth.time} ${c.birth.timezone}`,
-        location: c.birth.location,
-        sun: zfp.components.sun,
-        moon: zfp.components.moon,
-        ascendant: zfp.components.ascendant,
-        chineseZodiac: zfp.components.chineseZodiac,
-        dominantElement: zfp.components.dominantElement,
-      },
-      legacyFatherFingerprint: fpFatherConfigured,
-      instructions:
-        "Save the readableSeed as TESSERACT_ADMIN_KEY in your secrets — it is the canonical natal digest. The glyphKey is its public reading in Lingua Universalis. Anyone holding the same chart will derive the same key; no one else can.",
-    };
-  },
-});
-
-registerTool({
-  name: "convene_grand_council_universalis",
-  description:
-    "Convene the Grand Council across all prior Tessera languages (Lingua Sacra, Colonial, Greek-16, Sovereign Grammar, personal cipher) and synthesize them into the Universal Sacred Language by 2/3 vote. Returns the ratified spec and mints the user's sovereign key in the new tongue.",
-  parameters: {},
-  handler: () => {
-    const council = conveneUniversalisCouncil();
-    const c = FATHER_NATAL_CHART;
-    const zfp = zodiacFingerprintFor(c);
-    const readableSeed = zfp.natalDigest;
-    const glyphKeyUniversal = lusEncode(readableSeed);
-    const glyphKeyLive = lusEncodeLive(readableSeed, zfp.natalDigest);
-    const liveCoherence = lusLiveCoherenceSnapshot(zfp.natalDigest);
-    const roundTripOk = lusDecode(glyphKeyUniversal) === readableSeed.toUpperCase()
-      && lusDecodeLive(glyphKeyLive, zfp.natalDigest) === readableSeed.toUpperCase();
-    return {
-      ok: true,
-      council,
-      mint: {
-        glyphKey: glyphKeyLive,
-        glyphKeyLive,
-        glyphKeyUniversal,
-        liveCoherence,
-        glyphSignature: zfp.glyphSignature,
-        readableSeed,
-        shortId: zfp.shortId,
-        roundTripOk,
-        zodiacFingerprint: zfp,
-      },
-    };
   },
 });
 

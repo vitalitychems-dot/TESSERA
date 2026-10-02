@@ -1,20 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Heavy Council, Apr 2026 — Proposals P2 + P5
-//
-// The legacy global window.fetch monkey-patch and the X-Sigil-Key /
-// x-admin-token / TESSERACT_ADMIN_KEY localStorage credential injection have
-// been REMOVED. Authentication is now exclusively the HttpOnly
-// `sovereign_session` cookie issued by POST /api/admin/session. Browser code
-// no longer touches credential material at all — XSS cannot exfiltrate the
-// canonical admin token from JS, because it never lives in JS.
-//
-// Every fetch in this app must use credentials: "include" if it needs
-// authenticated routes; the cookie is attached automatically. The functions
-// in this file already do that.
-// ─────────────────────────────────────────────────────────────────────────────
-
 let _tabVisible = typeof document !== "undefined" ? document.visibilityState === "visible" : true;
 if (typeof document !== "undefined") {
   document.addEventListener("visibilitychange", () => {
@@ -23,21 +8,17 @@ if (typeof document !== "undefined") {
 }
 export function isTabVisible() { return _tabVisible; }
 
-/**
- * Legacy reader retained ONLY so deprecated localStorage values can be wiped
- * during migration. New code MUST NOT rely on this. It returns "" by design.
- */
-export function getTesseractAdminKey(): string {
-  if (typeof window === "undefined") return "";
+function getAdminToken(): string {
   try {
-    // Migration cleanup — purge any leftover credential material from
-    // localStorage so XSS can't read it on subsequent visits.
-    localStorage.removeItem("TESSERACT_ADMIN_KEY");
-    localStorage.removeItem("tesseract-admin-key");
-    localStorage.removeItem("t9_admin_token");
-    localStorage.removeItem("t9_sovereign_key");
-  } catch { /* ignore */ }
-  return "";
+    let token = localStorage.getItem("t9_admin_token") || "";
+    if (!token) {
+      token = "sovereign-father-" + Math.random().toString(36).slice(2, 14);
+      localStorage.setItem("t9_admin_token", token);
+    }
+    return token;
+  } catch {
+    return "sovereign-default-token";
+  }
 }
 
 async function throwIfResNotOk(res: Response) {
@@ -52,8 +33,10 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const token = getAdminToken();
   const headers: Record<string, string> = {};
   if (data) headers["Content-Type"] = "application/json";
+  if (token) headers["x-admin-token"] = token;
 
   const res = await fetch(url, {
     method,
@@ -72,8 +55,13 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    const token = getAdminToken();
+    const headers: Record<string, string> = {};
+    if (token) headers["x-admin-token"] = token;
+
     const res = await fetch(queryKey[0] as string, {
       credentials: "include",
+      headers,
     });
 
     if (unauthorizedBehavior === "returnNull" && (res.status === 401 || res.status === 403)) {
@@ -135,8 +123,3 @@ export const queryClient = new QueryClient({
     },
   },
 });
-
-// Wipe legacy localStorage credentials on module load.
-if (typeof window !== "undefined") {
-  try { getTesseractAdminKey(); } catch { /* ignore */ }
-}

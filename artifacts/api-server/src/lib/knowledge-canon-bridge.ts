@@ -3,10 +3,9 @@ import { ingestedDataTable } from "@workspace/db/schema";
 import { desc, gt, sql } from "drizzle-orm";
 import { logger } from "./logger";
 import { regenerateCanon } from "./canonUpdater";
-import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 let lastBridgeCheckAt = new Date();
-let bridgeInterval: SacredHandle | null = null;
+let bridgeInterval: ReturnType<typeof setInterval> | null = null;
 let cumulativeNewItems = 0;
 let bridgeRunning = false;
 const REGEN_THRESHOLD = 25;
@@ -51,9 +50,9 @@ async function checkAndBridge(): Promise<void> {
 export function startKnowledgeToCanonBridge(intervalMs = 900_000): void {
   if (bridgeInterval) return;
 
-  bridgeInterval = setSacredInterval(() => {
-    checkAndBridge().catch(e => logger.warn({ err: (e as Error).message }, "Bridge cycle error", "knowledge-canon-bridge"));
-  }, intervalMs, "knowledge-canon-bridge");
+  bridgeInterval = setInterval(() => {
+    checkAndBridge().catch(e => logger.warn({ err: (e as Error).message }, "Bridge cycle error"));
+  }, intervalMs);
 
   setTimeout(() => {
     checkAndBridge().catch(() => {});
@@ -64,7 +63,7 @@ export function startKnowledgeToCanonBridge(intervalMs = 900_000): void {
 
 export function stopKnowledgeToCanonBridge(): void {
   if (bridgeInterval) {
-    clearSacredInterval(bridgeInterval);
+    clearInterval(bridgeInterval);
     bridgeInterval = null;
   }
 }

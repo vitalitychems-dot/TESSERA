@@ -37,7 +37,7 @@ router.get("/universe/nasa-images/:nasaId/proxy", async (req, res) => {
     const { nasaId } = req.params;
     const result = await fetchNasaImageAsBuffer(nasaId);
     if (!result) {
-      res.status(404).json({ ok: false, error: "Image not found or unavailable" }); return;
+      return res.status(404).json({ ok: false, error: "Image not found or unavailable" });
     }
     const safeContentType = result.contentType.startsWith("image/") ? result.contentType : "image/jpeg";
     res.set("Content-Type", safeContentType);
@@ -61,7 +61,7 @@ router.post("/universe/compression-lab/compress", async (req, res) => {
     if (nasaId) {
       const result = await fetchNasaImageAsBuffer(nasaId);
       if (!result) {
-        res.status(404).json({ ok: false, error: "NASA image not found" }); return;
+        return res.status(404).json({ ok: false, error: "NASA image not found" });
       }
       imageBuffer = result.buffer;
       sourceLabel = `NASA Image: ${nasaId}`;
@@ -69,7 +69,7 @@ router.post("/universe/compression-lab/compress", async (req, res) => {
       imageBuffer = Buffer.from(rawBase64, "base64");
       sourceLabel = "User-provided data";
     } else {
-      res.status(400).json({ ok: false, error: "Provide nasaId or rawBase64" }); return;
+      return res.status(400).json({ ok: false, error: "Provide nasaId or rawBase64" });
     }
 
     const maxBytes = 512 * 1024;
@@ -109,7 +109,7 @@ router.post("/universe/compression-lab/round-trip", async (req, res) => {
     if (nasaId) {
       const result = await fetchNasaImageAsBuffer(nasaId);
       if (!result) {
-        res.status(404).json({ ok: false, error: "NASA image not found" }); return;
+        return res.status(404).json({ ok: false, error: "NASA image not found" });
       }
       imageBuffer = result.buffer;
       sourceLabel = `NASA Image: ${nasaId}`;
@@ -117,7 +117,7 @@ router.post("/universe/compression-lab/round-trip", async (req, res) => {
       imageBuffer = Buffer.from(rawBase64, "base64");
       sourceLabel = "User-provided data";
     } else {
-      res.status(400).json({ ok: false, error: "Provide nasaId or rawBase64" }); return;
+      return res.status(400).json({ ok: false, error: "Provide nasaId or rawBase64" });
     }
 
     const maxBytes = 256 * 1024;

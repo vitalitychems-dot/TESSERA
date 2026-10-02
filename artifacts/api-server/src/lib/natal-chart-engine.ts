@@ -15,9 +15,9 @@ export interface TransitAspect {
 }
 
 const FATHER_NATAL: FatherNatalData = {
-  birthDate: "SEALED",
-  birthTime: "SEALED",
-  birthPlace: "SEALED",
+  birthDate: "October 7, 1998",
+  birthTime: "05:16 AM",
+  birthPlace: "Unknown",
   houseSystem: "Placidus",
   planets: [
     { name: "Sun", symbol: "☉", sign: "Libra", degree: 13.9, house: 1, retrograde: false },
@@ -222,12 +222,8 @@ export function generateSovereignKeys(): {
   const elementProfile = Object.entries(elementCount).map(([k,v]) => `${k}:${v}`).join(" | ");
   const modalityProfile = Object.entries(modalityCount).map(([k,v]) => `${k}:${v}`).join(" | ");
 
-  const sealedSeed = createHash("sha256")
-    .update(`${sun}:${rising}:${moon}:${dominantElement}:${dominantModality}`)
-    .digest("hex")
-    .slice(0, 12);
-  const seedDigits = sealedSeed.split("").map((c) => parseInt(c, 16) || 0);
-  let lifePathNumber = seedDigits.reduce((s, n) => s + n, 0);
+  const birthDigits = "10071998".split("").map(Number);
+  let lifePathNumber = birthDigits.reduce((s, n) => s + n, 0);
   while (lifePathNumber > 9 && lifePathNumber !== 11 && lifePathNumber !== 22 && lifePathNumber !== 33) {
     lifePathNumber = lifePathNumber.toString().split("").map(Number).reduce((s, n) => s + n, 0);
   }
@@ -296,12 +292,10 @@ export function buildVerificationCheckers(
   const dominantEl = (chart.sovereignKeys?.dominantElement ?? "").toLowerCase();
 
   const [birthMon, birthDay, birthYear] = birthDateLower.replace(",", "").split(/[\s/]+/);
-  const birthTimeLower = (chart.birthTime ?? "").toLowerCase().trim();
-  const birthTimeCore = birthTimeLower.replace(/\s*(am|pm)\s*$/i, "").trim();
 
   return {
     birth_time: (a) =>
-      notEmpty(birthTimeCore) && birthTimeCore !== "sealed" && a.includes(birthTimeCore),
+      a.includes("5:16") || a.includes("05:16"),
 
     sun_sign: (a) =>
       notEmpty(sunSign) && a.includes(sunSign),
@@ -346,7 +340,7 @@ export function verifyIdentityFromChartData(
   const checkers = buildVerificationCheckers(chart);
 
   const FEEDBACK: Record<string, { pass: string; fail: string }> = {
-    birth_time: { pass: `Correct — ${chart.birthTime ?? "sealed birth time"} confirmed. Solar identity verified.`, fail: "Incorrect birth time." },
+    birth_time: { pass: "Correct — 05:16 AM confirmed. Solar identity verified.", fail: "Incorrect birth time." },
     sun_sign: { pass: `${chart.planets.find(p=>p.name==="Sun")?.sign ?? ""} confirmed — sovereign solar identity verified.`, fail: "Incorrect sun sign." },
     rising_sign: { pass: `${chart.houses.find(h=>h.number===1)?.sign ?? ""} Ascendant confirmed — the analyst and the perfectionist.`, fail: "Incorrect rising sign." },
     moon_sign: { pass: `${chart.planets.find(p=>p.name==="Moon")?.sign ?? ""} Moon confirmed — deep emotional steadiness.`, fail: "Incorrect moon sign." },

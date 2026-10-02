@@ -84,9 +84,9 @@ router.get("/swarm/status", (_req, res) => {
       consensusBuilt: swarmMetrics.consensusCount,
     },
     heartbeat: {
-      cycleCount: heartbeat.cycleCount,
+      totalBeats: heartbeat.totalBeats,
       systemHealth: heartbeat.systemHealthScore,
-      uptime: heartbeat.uptime,
+      uptimeHours: heartbeat.uptimeHours,
     },
     capabilities: ["PLAN", "EXECUTE", "REFLECT", "IMPROVE", "METACOGNITION", "BFT_CONSENSUS", "SELF_EVOLUTION", "TRUTHFULNESS"],
     timestamp: Date.now(),

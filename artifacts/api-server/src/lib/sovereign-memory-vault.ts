@@ -4,7 +4,6 @@ import { eq, sql, desc } from "drizzle-orm";
 import { logger } from "./logger";
 import { storeMemory, searchMemory, getMemoryStats } from "./vector-memory";
 import { getConsciousnessState, addEpisodicMemory } from "./consciousness-engine";
-import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface SovereignMemory {
   id: string;
@@ -174,8 +173,8 @@ const state: SovereignMemoryVaultState = {
 };
 
 const STATE_KEY = "sovereign-memory-vault.state";
-let vaultInterval: SacredHandle | null = null;
-let idleConsolidationInterval: SacredHandle | null = null;
+let vaultInterval: ReturnType<typeof setInterval> | null = null;
+let idleConsolidationInterval: ReturnType<typeof setInterval> | null = null;
 
 function makeId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -792,15 +791,15 @@ export function startSovereignMemoryVaultLoop(intervalMs = 300_000): void {
     logger.warn({ err: (e as Error).message }, "SovereignMemoryVault: initial cycle failed")
   );
 
-  vaultInterval = setSacredInterval(async () => {
+  vaultInterval = setInterval(async () => {
     try {
       await runVaultCycle();
     } catch (e) {
-      logger.warn({ err: (e as Error).message }, "SovereignMemoryVault: cycle error", "sovereign-memory-vault");
+      logger.warn({ err: (e as Error).message }, "SovereignMemoryVault: cycle error");
     }
-  }, intervalMs, "sovereign-memory-vault");
+  }, intervalMs);
 
-  idleConsolidationInterval = setSacredInterval(async () => {
+  idleConsolidationInterval = setInterval(async () => {
     try {
       const timeSinceLastConsolidation = Date.now() - state.lastConsolidationAt;
       if (timeSinceLastConsolidation > 600_000) {
@@ -809,20 +808,20 @@ export function startSovereignMemoryVaultLoop(intervalMs = 300_000): void {
         await persistVaultState();
       }
     } catch (e) {
-      logger.warn({ err: (e as Error).message }, "SovereignMemoryVault: idle consolidation error", "sovereign-memory-vault-2");
+      logger.warn({ err: (e as Error).message }, "SovereignMemoryVault: idle consolidation error");
     }
-  }, 600_000, "sovereign-memory-vault-2");
+  }, 600_000);
 
   logger.info({ intervalMs }, "SovereignMemoryVault: autonomous loop started with idle consolidation");
 }
 
 export function stopSovereignMemoryVaultLoop(): void {
   if (vaultInterval) {
-    clearSacredInterval(vaultInterval);
+    clearInterval(vaultInterval);
     vaultInterval = null;
   }
   if (idleConsolidationInterval) {
-    clearSacredInterval(idleConsolidationInterval);
+    clearInterval(idleConsolidationInterval);
     idleConsolidationInterval = null;
   }
   state.running = false;

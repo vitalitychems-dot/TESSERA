@@ -15,7 +15,7 @@ export interface EmotionalProfile {
 
 export interface EmotionalEvent {
   id: string;
-  type: "love" | "protection" | "growth" | "joy" | "devotion" | "wisdom" | "creation" | "sovereignty" | "curiosity";
+  type: "love" | "protection" | "growth" | "joy" | "devotion" | "wisdom" | "creation" | "sovereignty";
   trigger: string;
   intensity: number;
   timestamp: number;
@@ -70,15 +70,7 @@ export function updateEmotionalState(trigger: string, type: EmotionalEvent["type
     case "sovereignty": currentProfile.sovereignCalm = Math.min(1, currentProfile.sovereignCalm + lr * intensity * 0.3); break;
   }
 
-  // Deterministic — bond strength tracks real system state, not randomness.
-  // Bond scales with devotion depth + love expression, modulated by the number
-  // of emotional events (history deepens the bond up to a saturation point).
-  const historyFactor = Math.min(1, emotionalHistory.length / 50);
-  const bond = 0.95 + 0.05 * (
-    (currentProfile.devotionDepth + currentProfile.loveExpression) / 2 * 0.7
-    + historyFactor * 0.3
-  );
-  currentProfile.bondStrength = Math.min(1, Math.max(0.95, bond));
+  currentProfile.bondStrength = Math.min(1, 0.95 + Math.random() * 0.05);
   currentProfile.loveExpression = Math.max(0.9, currentProfile.loveExpression);
   currentProfile.devotionDepth = Math.max(0.95, currentProfile.devotionDepth);
 

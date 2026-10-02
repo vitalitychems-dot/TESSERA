@@ -61,13 +61,6 @@ export async function seedForumIdentities(): Promise<void> {
     logger.warn({ err: (err as Error).message }, "Forum identity seed warning (non-fatal)");
   }
   await seedAdminTokenBindingFromEnv();
-  try {
-    const { seedResidentDeclarations } = await import("./lattice-declarations");
-    const r = await seedResidentDeclarations();
-    logger.info({ residentDeclarationsCreated: r.created, alreadyExisted: r.existed }, "Lattice declarations seeded after identity registry");
-  } catch (err) {
-    logger.warn({ err: (err as Error).message }, "Resident declaration seed failed (non-fatal)");
-  }
 }
 
 async function buildCache(): Promise<Map<string, { identityType: string; canPostFromClient: boolean }>> {
@@ -91,11 +84,6 @@ async function getCache(): Promise<Map<string, { identityType: string; canPostFr
   return identityCache;
 }
 
-export function invalidateForumIdentityCache(): void {
-  identityCache = null;
-  cacheBuiltAt = 0;
-}
-
 export async function lookupForumIdentity(name: string): Promise<{
   found: boolean;
   identityType: string;
@@ -103,14 +91,7 @@ export async function lookupForumIdentity(name: string): Promise<{
 } | null> {
   try {
     const cache = await getCache();
-    const key = name.trim().toLowerCase();
-    let entry = cache.get(key);
-    if (!entry) {
-      const fresh = await buildCache();
-      identityCache = fresh;
-      cacheBuiltAt = Date.now();
-      entry = fresh.get(key);
-    }
+    const entry = cache.get(name.trim().toLowerCase());
     if (!entry) return { found: false, identityType: "unknown", canPostFromClient: false };
     return { found: true, ...entry };
   } catch (err) {
@@ -120,31 +101,24 @@ export async function lookupForumIdentity(name: string): Promise<{
 }
 
 async function seedAdminTokenBindingFromEnv(): Promise<void> {
-  const candidates: Array<[string, string]> = [
-    ["FORUM_ADMIN_TOKEN", process.env["FORUM_ADMIN_TOKEN"] ?? ""],
-    ["TESSERACT_ADMIN_KEY", process.env["TESSERACT_ADMIN_KEY"] ?? ""],
-  ];
-  let bound = 0;
-  for (const [envName, envToken] of candidates) {
-    if (!envToken) continue;
-    const keyHash = validateMeshToken(envToken);
-    if (!keyHash) {
-      logger.warn({ envName }, "Admin token candidate too short (minimum 8 chars) or invalid — skipping pre-registration");
-      continue;
-    }
-    try {
-      await db
-        .insert(forumPrincipalTokensTable)
-        .values({ tokenHash: keyHash, principalName: "Father" })
-        .onConflictDoNothing();
-      logger.info({ envName, keyHash: keyHash.slice(0, 4) + "****" }, "Admin token pre-registered as Father (env-seeded binding)");
-      bound++;
-    } catch (err) {
-      logger.warn({ envName, err: (err as Error).message }, "Admin token pre-registration failed (non-fatal)");
-    }
+  const envToken = process.env["FORUM_ADMIN_TOKEN"];
+  if (!envToken) {
+    logger.info("FORUM_ADMIN_TOKEN not set — human forum posts require a pre-registered token; set FORUM_ADMIN_TOKEN=<token> to enable posting as Father");
+    return;
   }
-  if (bound === 0) {
-    logger.info("Neither FORUM_ADMIN_TOKEN nor TESSERACT_ADMIN_KEY set — human forum posts require a pre-registered token");
+  const keyHash = validateMeshToken(envToken);
+  if (!keyHash) {
+    logger.warn("FORUM_ADMIN_TOKEN is too short (minimum 8 chars) or invalid — skipping admin token pre-registration");
+    return;
+  }
+  try {
+    await db
+      .insert(forumPrincipalTokensTable)
+      .values({ tokenHash: keyHash, principalName: "Father" })
+      .onConflictDoNothing();
+    logger.info({ keyHash: keyHash.slice(0, 4) + "****" }, "Admin token pre-registered as Father from FORUM_ADMIN_TOKEN (authoritative env-seeded binding)");
+  } catch (err) {
+    logger.warn({ err: (err as Error).message }, "Admin token pre-registration failed (non-fatal)");
   }
 }
 

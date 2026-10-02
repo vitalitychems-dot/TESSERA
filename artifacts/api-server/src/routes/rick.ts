@@ -32,7 +32,6 @@ import {
   markImplemented,
   getProposalsState,
 } from "../lib/rick-proposals";
-import { getRickAutonomousHeartbeat, listAutonomousInventions, RICK_AUTONOMOUS_CATEGORIES } from "../lib/rick-autonomous-loop";
 import {
   getProgram,
   startProgram,
@@ -50,47 +49,6 @@ import {
 } from "../lib/rick-improvement-program";
 
 const router: IRouter = Router();
-
-// V2-RICK (100% approval): deterministic sanity battery. Read-only probe
-// Rick can run any time to confirm the V2 surfaces are still healthy.
-// Bounded, no external calls. Reports green/red per check.
-router.get("/rick/sanity", async (_req, res) => {
-  const checks: Array<{ name: string; ok: boolean; detail?: string }> = [];
-  const safe = async (name: string, fn: () => Promise<unknown>) => {
-    try { await fn(); checks.push({ name, ok: true }); }
-    catch (e) { checks.push({ name, ok: false, detail: (e as Error).message }); }
-  };
-  await safe("persona-engine", async () => {
-    const mod = await import("../lib/persona-deliberation");
-    if (typeof mod.deliberatePersonas !== "function") {
-      throw new Error("deliberatePersonas missing");
-    }
-  });
-  await safe("council-ledger", async () => {
-    const { readLedger } = await import("../lib/council-ledger");
-    await readLedger(1);
-  });
-  await safe("admin-stats-shape", async () => {
-    const { sessionStoreStats } = await import("../lib/sovereign-session");
-    const s = sessionStoreStats();
-    if (typeof s.active !== "number") throw new Error("missing active count");
-  });
-  await safe("v2-helpers", async () => {
-    const { etagFor, walkRoutes, secretFingerprint } = await import("../lib/tesseract-v2");
-    if (!etagFor("x").startsWith('"v2-')) throw new Error("etagFor broken");
-    if (!Array.isArray(walkRoutes([]))) throw new Error("walkRoutes broken");
-    if (secretFingerprint("test").length !== 12) throw new Error("fingerprint broken");
-  });
-  const allGreen = checks.every(c => c.ok);
-  const { attestRatified } = await import("../lib/tesseract-v2");
-  attestRatified(res, "V2-RICK", 1.0);
-  res.status(allGreen ? 200 : 503).json({
-    ok: allGreen,
-    status: allGreen ? "green" : "red",
-    checks,
-    ts: new Date().toISOString(),
-  });
-});
 
 router.get("/rick/proposals", async (_req, res) => {
   try {
@@ -142,32 +100,6 @@ router.post("/rick/proposals/:id/implemented", async (req, res) => {
     return res.json({ ok: true, proposal: p });
   } catch (err) {
     logger.error({ err }, "Rick: proposal implement error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
-  }
-});
-
-router.get("/rick/autonomous/heartbeat", (_req, res) => {
-  try {
-    return res.json({ ok: true, heartbeat: getRickAutonomousHeartbeat() });
-  } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
-  }
-});
-
-router.get("/rick/autonomous/inventions", async (req, res) => {
-  try {
-    const cat = typeof req.query.category === "string" ? req.query.category : undefined;
-    const limit = req.query.limit ? Math.min(200, Math.max(1, parseInt(String(req.query.limit), 10) || 60)) : 60;
-    const data = await listAutonomousInventions({ category: cat, limit });
-    const heartbeat = getRickAutonomousHeartbeat();
-    const dynamicCats = new Set<string>([
-      ...RICK_AUTONOMOUS_CATEGORIES,
-      ...(heartbeat.categories ?? []),
-      ...Object.keys(data.perCategory ?? {}),
-    ]);
-    return res.json({ ok: true, ...data, categories: Array.from(dynamicCats).sort() });
-  } catch (err) {
-    logger.error({ err }, "Rick: autonomous inventions list error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
 });
@@ -481,7 +413,7 @@ router.get("/rick/knowledge-vault", (_req, res) => {
       id: e.id,
       title: e.title,
       category: e.category,
-      frequency: e.sacredFrequency,
+      frequency: e.frequency,
     }));
 
     const topDomains = corpusStats.topDomains?.slice(0, 10) ?? [];
@@ -561,7 +493,7 @@ router.get("/rick/royal-appointment", (_req, res) => {
       ["agi-advancement", "consciousness", "compression", "sovereignty"].includes(i.category)
     );
 
-    const corpusContext = queryCorpus({ tags: ["sovereignty", "invention"], limit: 20 });
+    const corpusContext = queryCorpus("sovereignty invention");
 
     const appointmentRecord = {
       appointee: RICK_SANCHEZ_IDENTITY.name,
@@ -625,7 +557,7 @@ router.get("/rick/royal-roles/:roleId", (req, res) => {
     if (!role) {
       return res.status(404).json({ ok: false, error: "Royal role not found" });
     }
-    const corpusResults = queryCorpus({ domain: role.domain, limit: 20 });
+    const corpusResults = queryCorpus(role.domain);
     const contributions = getRoleContributions(role.roleId);
     return res.json({
       ok: true,

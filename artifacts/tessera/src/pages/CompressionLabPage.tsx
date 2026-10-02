@@ -5,27 +5,6 @@ import { HudPanel, HudMetric, PageHeader, GradientBar } from "@/components/ui/so
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 
-function NasaThumb({ nasaId, title, thumbnailUrl }: { nasaId: string; title: string; thumbnailUrl: string }) {
-  const [stage, setStage] = useState<"proxy" | "direct" | "fallback">("proxy");
-  if (stage === "fallback") {
-    return (
-      <div className="w-full aspect-square bg-slate-900 flex items-center justify-center text-slate-700 text-[9px] font-mono">
-        NO IMAGE
-      </div>
-    );
-  }
-  const src = stage === "proxy" ? `/api/universe/nasa-images/${nasaId}/proxy` : thumbnailUrl;
-  return (
-    <img
-      src={src}
-      alt={title}
-      className="w-full aspect-square object-cover bg-slate-900"
-      loading="lazy"
-      onError={() => setStage(s => (s === "proxy" ? "direct" : "fallback"))}
-    />
-  );
-}
-
 interface NasaImageItem {
   nasaId: string;
   title: string;
@@ -174,7 +153,12 @@ export default function CompressionLabPage() {
                   )}
                 >
                   {img.thumbnailUrl ? (
-                    <NasaThumb nasaId={img.nasaId} title={img.title} thumbnailUrl={img.thumbnailUrl} />
+                    <img
+                      src={`/api/universe/nasa-images/${img.nasaId}/proxy`}
+                      alt={img.title}
+                      className="w-full aspect-square object-cover"
+                      loading="lazy"
+                    />
                   ) : (
                     <div className="w-full aspect-square bg-slate-900 flex items-center justify-center">
                       <HardDrive size={20} className="text-slate-700" />
@@ -204,17 +188,7 @@ export default function CompressionLabPage() {
               <img
                 src={`/api/universe/nasa-images/${selectedImage.nasaId}/proxy`}
                 alt={selectedImage.title}
-                className="w-full h-full object-cover bg-slate-900"
-                onError={(e) => {
-                  const el = e.currentTarget;
-                  if (el.dataset.fallback !== "direct" && selectedImage.thumbnailUrl) {
-                    el.dataset.fallback = "direct";
-                    el.src = selectedImage.thumbnailUrl;
-                  } else if (el.dataset.fallback !== "placeholder") {
-                    el.dataset.fallback = "placeholder";
-                    el.style.display = "none";
-                  }
-                }}
+                className="w-full h-full object-cover"
               />
             </div>
             <div className="flex-1 min-w-0">

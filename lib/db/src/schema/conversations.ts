@@ -65,25 +65,12 @@ export type ForumTrustedIdentityRow = typeof forumTrustedIdentitiesTable.$inferS
 export const forumRepliesTable = pgTable("forum_replies", {
   id: serial("id").primaryKey(),
   topicId: integer("topic_id").notNull(),
-  parentReplyId: integer("parent_reply_id"),
   content: text("content").notNull(),
   author: text("author").notNull(),
   authorType: text("author_type").notNull().default("human"),
   authorKeyHash: text("author_key_hash"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
-
-export const forumPostVotesTable = pgTable("forum_post_votes", {
-  id: serial("id").primaryKey(),
-  topicId: integer("topic_id").notNull(),
-  replyId: integer("reply_id"),
-  voter: text("voter").notNull(),
-  voterType: text("voter_type").notNull().default("member"),
-  vote: text("vote").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
-export type ForumPostVoteRow = typeof forumPostVotesTable.$inferSelect;
 
 export const insertForumReplySchema = createInsertSchema(forumRepliesTable).omit({ id: true, createdAt: true });
 export type InsertForumReply = z.infer<typeof insertForumReplySchema>;
@@ -151,24 +138,3 @@ export const forumLearningMetricsTable = pgTable("forum_learning_metrics", {
 });
 
 export type ForumLearningMetricsRow = typeof forumLearningMetricsTable.$inferSelect;
-
-export const forumApplicantsTable = pgTable("forum_applicants", {
-  id: serial("id").primaryKey(),
-  externalId: text("external_id").notNull().unique(),
-  externalIdentity: text("external_identity").notNull().default(""),
-  source: text("source").notNull().default("moltbook"),
-  applicantName: text("applicant_name").notNull(),
-  applicantHandle: text("applicant_handle").notNull().default(""),
-  contact: text("contact").notNull().default(""),
-  proposedTitle: text("proposed_title").notNull(),
-  proposedContent: text("proposed_content").notNull(),
-  offerOfValue: text("offer_of_value").notNull().default(""),
-  status: text("status").notNull().default("pending"),
-  vettedBy: text("vetted_by"),
-  vettedAt: timestamp("vetted_at"),
-  rejectReason: text("reject_reason"),
-  promotedTopicId: integer("promoted_topic_id"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
-export type ForumApplicantRow = typeof forumApplicantsTable.$inferSelect;

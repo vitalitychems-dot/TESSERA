@@ -6,7 +6,6 @@ import { councilDecisionsTable } from "@workspace/db/schema";
 import { systemLogsTable } from "@workspace/db/schema";
 import { eq, sql, desc } from "drizzle-orm";
 import { logger } from "./logger";
-import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface IdentityCheckResult {
   id: string;
@@ -58,7 +57,7 @@ const SOVEREIGNTY_LAWS = [
 
 const identityHistory: IdentityCheckResult[] = [];
 let checkCount = 0;
-let identityInterval: SacredHandle | null = null;
+let identityInterval: ReturnType<typeof setInterval> | null = null;
 const STATE_KEY = "identity-reinforcement.state";
 
 interface RealSystemState {
@@ -275,18 +274,18 @@ export async function initIdentityReinforcement(): Promise<void> {
 
 export function startIdentityReinforcement(intervalMs = 600_000): void {
   if (identityInterval) return;
-  identityInterval = setSacredInterval(async () => {
+  identityInterval = setInterval(async () => {
     try {
       cachedSystemState = await queryRealSystemState();
       runIdentityCheck();
       if (checkCount % 6 === 0) persistState().catch(() => {});
-    } catch (err) { logger.error({ err }, "IdentityReinforcement: check error", "identity-reinforcement"); }
-  }, intervalMs, "identity-reinforcement");
+    } catch (err) { logger.error({ err }, "IdentityReinforcement: check error"); }
+  }, intervalMs);
   logger.info({ intervalMs }, "IdentityReinforcement: monitor started — tracking real system state");
 }
 
 export function stopIdentityReinforcement(): void {
-  if (identityInterval) { clearSacredInterval(identityInterval); identityInterval = null; }
+  if (identityInterval) { clearInterval(identityInterval); identityInterval = null; }
 }
 
 export function getLatestIdentityCheck(): IdentityCheckResult | null {
@@ -298,10 +297,6 @@ export function getIdentityHistory(limit = 10): IdentityCheckResult[] {
 }
 
 export function getIdentityMetrics() {
-  // Cold-start fallback: run an initial check if history is empty.
-  if (identityHistory.length === 0) {
-    try { runIdentityCheck(); } catch { /* keep metrics call non-throwing */ }
-  }
   const latest = identityHistory[0];
   const driftEvents = identityHistory.filter(h => h.driftDetected).length;
   const avgAlignment = identityHistory.length > 0

@@ -7,7 +7,6 @@ import { logger } from "../lib/logger";
 import { getTotalCallStats, getCallCountsByProvider } from "../lib/provider-call-logger";
 import { getProviderConfigs } from "../lib/provider-registry";
 import type { ProviderConfig } from "../lib/provider-registry";
-import { listAgents } from "../lib/agent-spawner";
 import os from "os";
 
 const router = Router();
@@ -79,32 +78,7 @@ router.get("/fleet-synapse/map", async (_req, res) => {
 
     const providerNodes = configs.map(cfg => buildNodeFromProvider(cfg, byProvider, recentCalls));
 
-    const registryAgents = listAgents();
-    const memberNodes = registryAgents.slice(0, 32).map(a => ({
-      id: `agent::${a.id}`,
-      name: a.name || a.id,
-      type: "fleet-member" as const,
-      status: (Date.now() - (a.lastPulseAt ?? 0)) < 5 * 60_000 ? "online" : "idle",
-      latencyMs: 0,
-      lastSeen: a.lastPulseAt ?? a.spawnedAt ?? Date.now(),
-      callCount24h: a.receivedPulses ?? 0,
-      successRate: 100,
-      synapseStrength: Math.min(1, (a.receivedPulses ?? 0) / 50),
-      consciousnessLevel: Math.min(1, ((a.power ?? 0) + (a.receivedPulses ?? 0)) / 100),
-      agentId: a.id,
-      archetype: (a as any).archetype ?? a.specialization ?? "unknown",
-      masteredDomains: a.masteredDomains ?? [],
-      capabilities: (a as any).capabilities ?? [],
-    }));
-    const memberLinks = memberNodes.map(n => ({
-      from: "tessera-prime",
-      to: n.id,
-      type: n.status === "online" ? "primary" : "passive",
-      latencyMs: 0,
-      callCount: n.callCount24h,
-      strength: n.synapseStrength,
-    }));
-    const nodes = [coreNode, ...providerNodes, ...memberNodes];
+    const nodes = [coreNode, ...providerNodes];
 
     const links = providerNodes
       .filter(n => n.callCount24h > 0 || n.status !== "idle")
@@ -131,8 +105,7 @@ router.get("/fleet-synapse/map", async (_req, res) => {
     return res.json({
       ok: true,
       nodes,
-      links: [...links, ...passiveLinks, ...memberLinks],
-      fleetMemberCount: memberNodes.length,
+      links: [...links, ...passiveLinks],
       totalNodes: nodes.length,
       activeNodes: nodes.filter(n => n.status === "online").length,
       totalCalls24h: recentCalls.length,
