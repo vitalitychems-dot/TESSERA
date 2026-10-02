@@ -1,1 +1,1 @@
-- [Consolidation scope](consolidation-scope.md) — Grok-ready supersedes TX; combine repo/branch contributions, summarize non-UI images, and retain sources until sign-off.
+- [Consolidation scope](consolidation-scope.md) — Grok-ready final, TX staging; shared agent review and owner-approved original-file preservation are required before deletion.
