@@ -1,0 +1,1 @@
+- [Consolidation scope](consolidation-scope.md) — Grok-ready supersedes TX; combine repo/branch contributions, summarize non-UI images, and retain sources until sign-off.
