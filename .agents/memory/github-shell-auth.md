@@ -3,8 +3,10 @@ name: GitHub shell authentication
 description: Distinguishes GitHub App REST access from HTTPS Git and Git LFS authentication in this Repl.
 ---
 
-The GitHub App connector authenticates requests sent through `proxyFetch` to the GitHub REST API. It does not provide credentials to `git push` or Git LFS. For shell pushes, use Replit's Git pane/provider authentication or a separate repository-scoped PAT stored through Replit Secrets.
+The GitHub App connector authenticates requests sent through `proxyFetch` to the GitHub REST API, but not `git push` or Git LFS. Replit's Git pane supports source-code pushes but does not natively support Git LFS. A separate repository-scoped credential is required for shell Git/LFS operations.
 
-**Why:** The connected GitHub API could read repository metadata and reported push permission, while HTTPS Git operations independently failed authentication. `gh auth status` was also unauthenticated.
+For this project, exclude runtime/audit data, workspace notes, agent files, and attached screenshots from public uploads. Never publish the full working tree as a substitute for the curated snapshot. Keep repository visibility private until the clean tree and LFS transfer are verified and the user explicitly approves republication.
 
-**How to apply:** Before attempting large or LFS pushes, confirm a Git transport credential is available independently of the connector. Never extract connector credentials or place a token in project files or chat.
+**Why:** A Git-pane-synced commit included files that were explicitly meant to stay out of the public repository, while the shell push independently failed authentication.
+
+**How to apply:** Build and verify an explicit upload snapshot, confirm the remote tree contains only approved paths, and verify the LFS object itself—not just its pointer—before changing visibility. Never extract connector credentials or place a token in project files or chat.
