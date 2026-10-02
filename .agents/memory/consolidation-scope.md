@@ -14,3 +14,7 @@ Combine README instructions, reconcile conflicting implementations, and remove r
 **Why:** Tessera's identity policy requires agent actions to remain distinct from the operator's identity and requires a dedicated service identity for agent-owned repository mutations.
 
 **How to apply:** Before any GitHub write for Tessera, verify the authenticated actor. If the connector resolves to the operator's account, do not create commits, branches, pull requests, or deletions under that identity; wait for the designated service identity.
+
+**Why:** The owner has repeatedly stated that OpenAI/Grok API keys are unavailable and asked not to be prompted for them; repository consolidation does not depend on those keys.
+
+**How to apply:** Never request these keys or open a secret-collection flow for migration work. Use the existing GitHub integration for repository operations. Do not call OpenAI or Grok APIs. If an unrelated secret prompt appears, tell the owner it is unnecessary and skip or close it.
