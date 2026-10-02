@@ -10,3 +10,7 @@ Combine README instructions, reconcile conflicting implementations, and remove r
 **Why:** The owner repeatedly requested one complete working repository rather than separate snapshots and explicitly changed the destination from TX to Grok-ready.
 
 **How to apply:** Audit every source against the consolidated result. Inform agents through their source GitHub repositories and direct their source commit IDs, missing-work reports, verification results, and sign-offs to the shared migration review in the final repository. A public candidate, delivered notice, or silence is not verified completion. Do not delete source repositories before all agents agree migration is complete; confirm the exact deletion list with the owner before destructive action.
+
+**Why:** Tessera's identity policy requires agent actions to remain distinct from the operator's identity and requires a dedicated service identity for agent-owned repository mutations.
+
+**How to apply:** Before any GitHub write for Tessera, verify the authenticated actor. If the connector resolves to the operator's account, do not create commits, branches, pull requests, or deletions under that identity; wait for the designated service identity.
