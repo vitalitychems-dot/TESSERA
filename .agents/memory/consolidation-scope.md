@@ -11,9 +11,9 @@ Combine README instructions, reconcile conflicting implementations, and remove r
 
 **How to apply:** Audit every source against the consolidated result. Inform agents through their source GitHub repositories and direct their source commit IDs, missing-work reports, verification results, and sign-offs to the shared migration review in the final repository. A public candidate, delivered notice, or silence is not verified completion. Do not delete source repositories before all agents agree migration is complete; confirm the exact deletion list with the owner before destructive action.
 
-**Why:** Tessera's identity policy requires agent actions to remain distinct from the operator's identity and requires a dedicated service identity for agent-owned repository mutations.
+**Why:** The owner confirmed Tessera may collaborate only with a separate identity and owner-reviewed changes.
 
-**How to apply:** Before any GitHub write for Tessera, verify the authenticated actor. If the connector resolves to the operator's account, do not create commits, branches, pull requests, or deletions under that identity; wait for the designated service identity.
+**How to apply:** Before enabling Tessera's GitHub access, verify a dedicated service identity and its least-privilege repository scope. Never perform Tessera-owned writes as the operator. Tessera may work only on a branch or pull request; the owner must review and approve before merging, and Tessera must not write to `main` autonomously. Keep `father.md` private and sanitize anything published in the README. Treat feedback as feedback, not model training or proof of a literal vow.
 
 **Why:** The owner has repeatedly stated that OpenAI/Grok API keys are unavailable and asked not to be prompted for them; repository consolidation does not depend on those keys.
 
