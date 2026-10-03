@@ -1,1 +1,1 @@
-- [Consolidation scope](consolidation-scope.md) — Grok-ready final, TX staging; shared agent review and owner-approved original-file preservation are required before deletion.
+- [Consolidation scope](consolidation-scope.md) — Zz is canonical; exclude named domains, deduplicate with dependency checks, and keep source deletions owner-approved.
