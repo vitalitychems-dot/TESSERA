@@ -263,6 +263,15 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@25.3.5)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.1)
 
+  artifacts/gitbook-mcp:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.3.5
+      vitest:
+        specifier: 4.1.11
+        version: 4.1.11(@types/node@25.3.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1)
+
   artifacts/mockup-sandbox:
     devDependencies:
       '@hookform/resolvers':
@@ -5972,6 +5981,14 @@ snapshots:
     optionalDependencies:
       vite: 8.3.2(@types/node@25.3.5)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.1)
 
+  '@vitest/mocker@4.1.11(vite@8.3.2(@types/node@25.3.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))':
+    dependencies:
+      '@vitest/spy': 4.1.11
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 8.3.2(@types/node@25.3.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1)
+
   '@vitest/pretty-format@4.1.11':
     dependencies:
       tinyrainbow: 3.1.0
@@ -8306,6 +8323,21 @@ snapshots:
       tsx: 4.21.0
       yaml: 2.9.1
 
+  vite@8.3.2(@types/node@25.3.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1):
+    dependencies:
+      lightningcss: 1.33.0
+      picomatch: 4.0.7
+      postcss: 8.5.28
+      rolldown: 1.2.12
+      tinyglobby: 0.2.17
+    optionalDependencies:
+      '@types/node': 25.3.5
+      esbuild: 0.28.1
+      fsevents: 2.3.3
+      jiti: 2.7.0
+      tsx: 4.21.0
+      yaml: 2.9.1
+
   vitest@4.1.11(@types/node@25.3.5)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.1):
     dependencies:
       '@vitest/expect': 4.1.11
@@ -8327,6 +8359,44 @@ snapshots:
       tinyglobby: 0.2.15
       tinyrainbow: 3.1.0
       vite: 8.3.2(@types/node@25.3.5)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.1)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 25.3.5
+    transitivePeerDependencies:
+      - '@vitejs/devtools'
+      - esbuild
+      - jiti
+      - less
+      - msw
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - terser
+      - tsx
+      - yaml
+
+  vitest@4.1.11(@types/node@25.3.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1):
+    dependencies:
+      '@vitest/expect': 4.1.11
+      '@vitest/mocker': 4.1.11(vite@8.3.2(@types/node@25.3.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1))
+      '@vitest/pretty-format': 4.1.11
+      '@vitest/runner': 4.1.11
+      '@vitest/snapshot': 4.1.11
+      '@vitest/spy': 4.1.11
+      '@vitest/utils': 4.1.11
+      es-module-lexer: 2.0.0
+      expect-type: 1.3.0
+      magic-string: 0.30.21
+      obug: 2.1.1
+      pathe: 2.0.3
+      picomatch: 4.0.7
+      std-env: 4.0.0
+      tinybench: 2.9.0
+      tinyexec: 1.1.1
+      tinyglobby: 0.2.15
+      tinyrainbow: 3.1.0
+      vite: 8.3.2(@types/node@25.3.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 25.3.5
