@@ -9,7 +9,8 @@
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "eval": "node --enable-source-maps ./dist/cli/run-eval.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:memory": "vitest run src/__tests__/learning-memory.test.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",
