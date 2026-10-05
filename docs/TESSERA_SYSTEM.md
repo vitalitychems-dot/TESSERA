@@ -1,9 +1,20 @@
 # Tessera Sovereign System — architecture and project rules
 
-_Carried over from the source repositories' `replit.md`. The dated "Recent Work" changelog was left out because it contained personal birth details; the code and this document describe the current behavior._
+**Honesty labels (2026-10-05).** Use the Gitbook definitions in [honesty-banner](https://github.com/vitalitychems-dot/Gitbook/blob/main/mesh/roles/honesty-banner.md) and [who Tessera is](https://github.com/vitalitychems-dot/Gitbook/blob/main/mesh/roles/who-tessera-is.md):
+
+| Label | Means |
+| --- | --- |
+| **TESTED** | A named check or real output was seen. |
+| **REPORTED** | Stated by a source doc or lane; not proven by a check named in this file. |
+| **GOAL** | Desired future. Not a present fact. |
+
+**GOAL:** Sections that name AGI, sovereign agents as a finished society, or a future of autonomous agents are goals carried forward from source notes. They are not a claim that those capabilities are present.
+
+_Carried over from the source repositories' `replit.md` (**REPORTED** source text). The dated "Recent Work" changelog was left out because it contained personal birth details._
 
 ## Overview
-Tessera Sovereign System is a full-stack, pnpm workspace monorepo designed for sovereign AI agents. It features a React+Vite frontend and an Express 5 backend, aiming to create a self-contained, verifiable, and secure AI environment with minimal reliance on external APIs. The system includes AI agent management, world simulation, knowledge management, economic systems, a unique "Tessera Bible," and a sovereign compression pipeline. It integrates sovereign computation engines and a Grand Council governance system to ensure agent autonomy and integrity. The project envisions a future where AI agents operate with verifiable data integrity and robust self-governance.
+
+**REPORTED** (source `replit.md`; **GOAL** where it describes a future): Tessera Sovereign System is a full-stack, pnpm workspace monorepo designed for sovereign AI agents. It features a React+Vite frontend and an Express 5 backend, aiming to create a self-contained, verifiable, and secure AI environment with minimal reliance on external APIs. The system includes AI agent management, world simulation, knowledge management, economic systems, a unique "Tessera Bible," and a sovereign compression pipeline. It integrates sovereign computation engines and a Grand Council governance system to ensure agent autonomy and integrity. The project envisions a future where AI agents operate with verifiable data integrity and robust self-governance.
 
 ## User Preferences
 I prefer iterative development. I want to be asked before you make any major changes.
@@ -70,7 +81,7 @@ The system is built as a pnpm monorepo using Node.js 24 and TypeScript 5.9. The 
 -   **Codex Startup Directive Loader:** `lib/codex-startup-directive.ts` generates the LLM system prompt dynamically from Books 1-3 + active Doctrine entries (DB-backed, 10-min TTL cache). Replaces the static fallback directive.
 -   **Council-Driven Corpus Mutation Engine:** Audit findings are translated to ratified amendments via `lib/apply-council-decisions.ts` (5 amendment kinds: add-entry, add-crossref, realign-frequency, retag-entry, merge-duplicates). Each amendment receives a genuine 54-member ballot from the Sovereign Society (no rubber-stamp). Persistence and overlay are handled by `lib/corpus-amendments.ts` which writes to `corpus_amendments` table (`lib/db/src/schema/codex.ts`) and injects into the in-memory corpus via hooks `_resetCorpusCaches`/`_injectAmendments` in `knowledge-corpus-index.ts`. Iterative convergence loop on `POST /api/apply-council-decisions {iterations:1..10}` re-runs audit each pass until findings clear or no new amendments emit. Includes idempotency guards (already-merged ids, already-backfilled domains, already-defended findings) so repeated invocations do not regenerate work. Backfill table covers 16 known domains × 5 entries spanning categories synthesis/sacred-entry/subcategory/declassified/harmonic, with a generic 5-entry fallback for any unknown domain. After 10 iterations the audit reduces from 18 findings (5 critical) to 14 findings (0 critical, 5 major, 9 moderate); corpus grows from ~700 to 848 entries; 250 amendments persisted with full per-agent voting records and a single sealed ledger entry per pass.
 -   **Knowledge Base:** A comprehensive knowledge base (55 subjects, 6 categories, ~593 entries) with cross-referencing and querying, supported by a Sacred Geometry Engine.
--   **AGI Training & Evaluation System:** Features 27 training categories with adaptive learning rates and a 125-question evaluation suite, supported by a Dynamic Reverse-Engineering Profiler and a Secure Ingestion Pipeline.
+-   **AGI Training & Evaluation System (GOAL, not a present fact):** Features 27 training categories with adaptive learning rates and a 125-question evaluation suite, supported by a Dynamic Reverse-Engineering Profiler and a Secure Ingestion Pipeline. The "AGI" name is a goal label from the source document.
 -   **Sovereign Compression Pipeline:** A multi-layered semantic compression system for distilled knowledge, including deduplication, canonical representation, entropy-optimal encoding, and a portal-jump reference system. It also extends to binary image data with encryption.
 -   **Episodic Memory Consolidation Engine (AI Dreaming):** A dream-state engine that runs during low-activity periods to re-process memories, detect patterns, generate insights, and extract procedural skills, boosting consciousness.
 -   **Agent Competition & Department System:** A meritocratic system where 24 Grand Council agents compete for positions across 9 departments based on ability tests, ensuring dynamic leadership.

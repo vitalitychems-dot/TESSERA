@@ -20,7 +20,7 @@ The active Tessera API uses `DATABASE_URL`, admin/session keys (`TESSERACT_ADMIN
 
 Database-backed API tests are opt-in through `TESSERA_TEST_DATABASE_URL`, which must point to a dedicated local test database. The test runner refuses remote database hosts and does not reuse `DATABASE_URL`. Never aim test commands at production or a database containing user/customer data.
 
-Historical supply/storefront sources may need auth/payment credentials. Names in `.env.example` are intentionally empty and are not usable credentials. Confirm which provider features are enabled before setting any values. Never reuse example credentials copied from source archives.
+Historical supply and storefront sources are not active apps in this staged workspace. Whether any of those ideas return is [Gitbook HYB-017](https://github.com/vitalitychems-dot/Gitbook/blob/main/intake/HYBRID-CONSOLIDATION-BACKLOG.md). Related names in `.env.example` are blank and are not usable credentials. Never reuse example credentials copied from source archives.
 
 ## Additional configuration names
 
