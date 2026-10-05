@@ -11,6 +11,14 @@ allowBuilds:
 
 autoInstallPeers: false
 
+# HYB-005: braces <=3.0.3 has no patched release yet.
+# Advisory: https://github.com/advisories/GHSA-vfj7-8cjw-p6xm
+# Transitive path: artifacts/mockup-sandbox > fast-glob > micromatch > braces.
+# Review date: 2026-11-05. Remove this ignore once braces >=3.0.4 ships.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-vfj7-8cjw-p6xm
+
 catalog:
   '@replit/vite-plugin-cartographer': ^0.5.1
   '@replit/vite-plugin-dev-banner': ^0.1.2
