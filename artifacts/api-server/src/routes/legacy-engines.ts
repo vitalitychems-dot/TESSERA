@@ -252,6 +252,10 @@ router.get("/universe/search", (req, res) => {
   res.json(searchUniverse(q));
 });
 
+// GET /quantum/state and POST /quantum/gate are also registered in
+// system-runtime.ts, which is mounted first and answers those paths.
+// Gitbook issue #2 comment 6003995168 keeps both copies allow-listed until
+// a product decision. Do not delete them in a hygiene change.
 router.get("/quantum/state", (_req, res) => res.json(getTesseractState()));
 router.get("/quantum/circuits", (_req, res) => res.json(listCircuits()));
 router.post("/quantum/circuit", (req, res) => {
