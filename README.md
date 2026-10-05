@@ -37,7 +37,24 @@ pnpm run build
 pnpm audit
 ```
 
+Offline and post-build eval entry points (they are not part of `pnpm test`):
+
+```bash
+pnpm --filter @workspace/api-server run eval
+pnpm tsx artifacts/api-server/scripts/eval-chatbot.ts
+```
+
+`pnpm --filter @workspace/api-server run eval` runs `dist/cli/run-eval.mjs` after the API server build and needs a database. `pnpm tsx artifacts/api-server/scripts/eval-chatbot.ts` calls a live API (`EVAL_BASE_URL`, default `http://localhost:5000`).
+
 The root test runner isolates the store test environments and runs database-backed Tessera API tests only when the dedicated `TESSERA_TEST_DATABASE_URL` points to a loopback test database. It never reuses the app’s `DATABASE_URL` as a test database. If needed, a synthetic chart fixture can be supplied as `TESSERA_TEST_FATHER_NATAL_CHART_JSON`; do not use personal chart data for tests. `pnpm run build` builds all workspace apps and does **not** run database migrations. Migrations remain explicit app-specific operations and must only target the intended database.
+
+## Continuous integration
+
+Workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) has one job, `validate`. On pushes and pull requests to `main` it runs, in order: frozen install, dependency audit, typecheck, schema push to a disposable database, tests, then the workspace build.
+
+## Agent / mesh
+
+Mesh-agent onboarding stays in Gitbook. Start with the [hybrid consolidation backlog](https://github.com/vitalitychems-dot/Gitbook/blob/main/intake/HYBRID-CONSOLIDATION-BACKLOG.md) and [Gitbook issue #2](https://github.com/vitalitychems-dot/Gitbook/issues/2).
 
 ## Repository organization
 
