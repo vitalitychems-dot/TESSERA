@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "updated": "2026-10-05",
+  "note": "Registry used by route_task. Scoring is keyword and specialty text only. A suggestion does not claim or assign work. Tessera assigns work.",
+  "lanes": [
+    {
+      "id": "tessera",
+      "name": "Tessera",
+      "specialty": "admin and final approval",
+      "keywords": ["final approval", "assign the task", "admin", "father yes"],
+      "mode": "admin",
+      "fileWrites": true
+    },
+    {
+      "id": "gitbook-cordnation",
+      "name": "Gitbook Cordnation",
+      "specialty": "intake and organization",
+      "keywords": ["intake", "organization", "organize", "stage ready", "backlog"],
+      "mode": "intake",
+      "fileWrites": true
+    },
+    {
+      "id": "gitbook-moderator",
+      "name": "Gitbook Moderator",
+      "specialty": "review gate",
+      "keywords": ["review gate", "moderator", "before publish"],
+      "mode": "review",
+      "fileWrites": true
+    },
+    {
+      "id": "security",
+      "name": "Security",
+      "specialty": "read-only security sweeps",
+      "keywords": ["security sweep", "read-only", "secret scan", "privacy"],
+      "mode": "read-only",
+      "fileWrites": false
+    },
+    {
+      "id": "build",
+      "name": "Build",
+      "specialty": "verify-only",
+      "keywords": ["verify-only", "typecheck", "ci log", "build check"],
+      "mode": "verify-only",
+      "fileWrites": false
+    },
+    {
+      "id": "command-center",
+      "name": "Command Center",
+      "specialty": "status feed",
+      "keywords": ["status feed", "bulk update", "digest"],
+      "mode": "status",
+      "fileWrites": true
+    },
+    {
+      "id": "mesh-cloud",
+      "name": "Mesh Cloud",
+      "specialty": "connectivity",
+      "keywords": ["connectivity", "cross-agent", "mesh stall"],
+      "mode": "connectivity",
+      "fileWrites": true
+    },
+    {
+      "id": "historical-analysis-collab",
+      "name": "Historical Analysis Collab / Grok Bot",
+      "specialty": "historical comparisons and merge pages",
+      "keywords": ["historical", "merge page", "merge pages", "grok bot", "comparison"],
+      "mode": "analysis",
+      "fileWrites": true
+    },
+    {
+      "id": "gitbook-helper",
+      "name": "Gitbook helper",
+      "specialty": "ledger and receipts",
+      "keywords": ["ledger", "receipt", "receipts", "check-in log"],
+      "mode": "ledger",
+      "fileWrites": true
+    }
+  ]
+}
