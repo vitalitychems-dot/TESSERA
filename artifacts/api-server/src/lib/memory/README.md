@@ -12,7 +12,7 @@ Importing the module does not create files. The first `record` or `propose` call
 
 - A stored interaction produces a lesson whose evidence id is that record.
 - A related query retrieves that lesson and `contextForQuery` returns it as context text.
-- Secret-shaped values are rewritten to `[REDACTED]` before the append.
+- Secret-shaped values are rewritten to `[REDACTED]` before the append, including Slack `xoxb-`/`xoxp-` tokens, database URLs with credentials, `password=`/`secret=` pairs, and AWS keys.
 - Two repeats of the same failure emit one IMP row with ID, Lane, Repo, Path, Change, Why, and Evidence.
 - A path that names the `1T` vault is not copied into the proposal Path.
 
