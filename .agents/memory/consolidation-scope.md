@@ -3,13 +3,13 @@ name: Consolidation scope
 description: Owner requirements for consolidating the Tessera repositories and agent branches.
 ---
 
-The owner designated `vitalitychems-dot/Zz` as the canonical destination, superseding the earlier Grok-ready target. The owner wants one non-overlapping Tessera tree that excludes crypto, trading, arbitrage, finance, Vitality, and store-related material.
+The owner's current consolidation destination is `vitalitychems-dot/TESSERA`, with `vitalitychems-dot/Gitbook` for coordination and instructions. This supersedes the historical Zz and Grok-ready destinations. The owner wants one non-overlapping Tessera tree that excludes crypto, trading, arbitrage, finance, Vitality, and store-related material.
 
 Combine README instructions, reconcile conflicting implementations, and remove redundant content without discarding unique functionality. The earlier instruction requested accurate written summaries of non-UI images while retaining UI/theme assets. A later shared migration review challenged whether summaries alone satisfy preservation of originals; resolve that scope difference with the owner before claiming completeness or deleting sources. Never interpret “everything” as permission to publish credentials or private records.
 
-**Why:** The owner changed the canonical target to Zz and explicitly named domains to exclude from the final Tessera tree.
+**Why:** The owner supplied TESSERA as the current repository and directed agents to Gitbook for next instructions. The earlier exclusions were explicitly owner-defined and have not been lifted.
 
-**How to apply:** Audit every authorized source against Zz and classify duplicate/excluded paths with dependency and content checks before proposing removals. Keep source repositories intact unless the owner approves exact source paths for deletion after sign-off. Use Zz's dated agent notes and PR review for coordination; a note, notice, or silence is not verified completion. Confirm exact destructive changes with the owner before applying them.
+**How to apply:** Audit every authorized source against current TESSERA and classify duplicate/excluded paths with dependency and content checks before proposing removals. Keep source repositories intact unless the owner approves exact source paths for deletion after sign-off. Read current Gitbook instructions and coordination before work; a note, notice, or silence is not verified completion. Confirm exact destructive changes with the owner before applying them.
 
 **Why:** The owner confirmed Tessera may collaborate only with a separate identity and owner-reviewed changes.
 

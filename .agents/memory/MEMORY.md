@@ -1,2 +1,2 @@
-- [Consolidation scope](consolidation-scope.md) — Zz is canonical; exclude named domains, deduplicate with dependency checks, and keep source deletions owner-approved.
+- [Consolidation scope](consolidation-scope.md) — TESSERA is the current destination and Gitbook coordinates; preserve exclusions and require owner-approved source deletion.
 - [GitHub connection collision](github-connection-collision.md) — Replit may report GitHub as not_added while rejecting attachment because another connection is assigned; inspect connected apps before changing it.
