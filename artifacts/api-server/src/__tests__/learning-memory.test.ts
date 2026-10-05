@@ -75,6 +75,28 @@ describe("learning memory", () => {
     expect(raw).toContain("[REDACTED]");
   });
 
+  it("redacts slack tokens, database URLs, password pairs, and AWS keys", async () => {
+    const store = await tempStore();
+    const slackBot = ["xoxb", "FAKE", "not-a-real-token"].join("-");
+    const slackUser = ["xoxp", "FAKE", "not-a-real-token"].join("-");
+    const databaseUrl = ["postgres://", "demo-user", ":", "example-secret", "@127.0.0.1/tessera"].join("");
+    const awsKey = ["AKIA", "EXAMPLEONLYKEY12"].join("");
+    const awsSecret = ["aws_secret_access_key", "example-only-not-real"].join("=");
+    const saved = await store.record({
+      sourceAgent: "Security",
+      input: `bot ${slackBot} user ${slackUser}`,
+      output: `db ${databaseUrl} key ${awsKey}`,
+      tags: ["password=example-only", "secret=example-only", awsSecret],
+    });
+    const visible = `${saved.input}\n${saved.output}\n${saved.tags.join("\n")}`;
+    const raw = await readFile(store.interactionsPath, "utf8");
+    for (const secret of [slackBot, slackUser, databaseUrl, awsKey, "example-secret", "example-only", "example-only-not-real"]) {
+      expect(visible).not.toContain(secret);
+      expect(raw).not.toContain(secret);
+    }
+    expect(raw).toContain("[REDACTED]");
+  });
+
   it("emits one IMP-shaped proposal after a failure repeats", async () => {
     const store = await tempStore();
     const first = await store.record({
