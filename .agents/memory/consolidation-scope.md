@@ -18,3 +18,11 @@ Combine README instructions, reconcile conflicting implementations, and remove r
 **Why:** The owner has repeatedly stated that OpenAI/Grok API keys are unavailable and asked not to be prompted for them; repository consolidation does not depend on those keys.
 
 **How to apply:** Never request these keys or open a secret-collection flow for migration work. Use the existing GitHub integration for repository operations. Do not call OpenAI or Grok APIs. If an unrelated secret prompt appears, tell the owner it is unnecessary and skip or close it.
+
+## Repository inventory status
+
+The owner reports that all 20 repositories remain present and none has been deleted. Do not claim any repository was deleted without verified evidence.
+
+**Why:** Repository visibility can be limited by account access, and a missing result is not evidence of deletion.
+
+**How to apply:** Verify the inventory through an authorized GitHub connection before reporting repository existence or deletion. Clearly distinguish a public-listing or access gap from a confirmed deletion.
