@@ -25,6 +25,47 @@ vi.mock("../lib/autonomous-wiring", () => ({
   },
 }));
 
+vi.mock("@workspace/db", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  const offlineQuery = () => {
+    const promise = Promise.reject(new Error("probe-db-offline"));
+    promise.catch(() => {});
+    const chain: {
+      from: () => typeof chain;
+      where: () => typeof chain;
+      orderBy: () => typeof chain;
+      limit: () => typeof chain;
+      values: () => typeof chain;
+      returning: () => typeof chain;
+      set: () => typeof chain;
+      then: Promise<never>["then"];
+      catch: Promise<never>["catch"];
+      finally: Promise<never>["finally"];
+    } = {
+      from: () => chain,
+      where: () => chain,
+      orderBy: () => chain,
+      limit: () => chain,
+      values: () => chain,
+      returning: () => chain,
+      set: () => chain,
+      then: promise.then.bind(promise),
+      catch: promise.catch.bind(promise),
+      finally: promise.finally.bind(promise),
+    };
+    return chain;
+  };
+  return {
+    ...actual,
+    db: {
+      select: offlineQuery,
+      insert: offlineQuery,
+      update: offlineQuery,
+      delete: offlineQuery,
+    },
+  };
+});
+
 /**
  * HYB-012 ruling allow-list. Exactly the two collisions named in
  * https://github.com/vitalitychems-dot/Gitbook/issues/2#issuecomment-6003995168
@@ -187,6 +228,11 @@ describe("HYB-012 route inventory", () => {
     expect(hidden).toBe(allowListSurplus);
   });
 
+  it("records the registration total", () => {
+    console.info(`[route-inventory] registration total=${registrations.length}`);
+    expect(registrations.length).toBe(925);
+  });
+
   it("allow-lists exactly the current duplicates, including the two ruling entries", () => {
     expect(RULING_NAMED_DUPLICATES).toHaveLength(2);
     expect(RULING_NAMED_DUPLICATES.map(registrationKey)).toEqual([
@@ -291,5 +337,120 @@ describe("HYB-012 quantum mount order", () => {
       ok: false,
       error: "qubitId and gate are required",
     });
+  });
+});
+
+describe("HYB-012 non-quantum duplicate response shapes", () => {
+  beforeAll(async () => {
+    ensureRouteImportCanLoad();
+    const loaders = [
+      () => import("../routes/sovereign-engines"),
+      () => import("../routes/governance-consensus"),
+      () => import("../routes/system-runtime"),
+      () => import("../routes/improvement"),
+      () => import("../routes/legacy-engines"),
+      () => import("../routes/universe"),
+    ];
+    const parent = express.Router();
+    for (const load of loaders) {
+      parent.use((await load()).default);
+    }
+    const app = express();
+    app.use(express.json());
+    app.use("/api", parent);
+    server = createServer(app);
+    await new Promise<void>((resolve) => {
+      server?.listen(0, "127.0.0.1", () => resolve());
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("no test server address");
+    baseUrl = `http://127.0.0.1:${address.port}`;
+  });
+
+  afterAll(async () => {
+    if (server) {
+      await new Promise<void>((resolve, reject) => {
+        server?.close((error) => (error ? reject(error) : resolve()));
+      });
+      server = undefined;
+    }
+    restoreDatabaseUrl();
+  });
+
+  it("GET /api/consciousness/state answers with the sovereign-engines wrapper", async () => {
+    const response = await request("GET", "/api/consciousness/state");
+    expect(response.status).toBe(200);
+    const body = response.json as { ok?: boolean; data?: { cycleCount?: number; currentFocus?: unknown } };
+    expect(body.ok).toBe(true);
+    expect(typeof body.data?.cycleCount).toBe("number");
+    expect(body.data?.currentFocus).toBeDefined();
+  });
+
+  it("GET /api/consensus/proposals answers with the governance-consensus wrapper", async () => {
+    const response = await request("GET", "/api/consensus/proposals");
+    expect(response.status).toBe(200);
+    const body = response.json as { ok?: boolean; data?: unknown; count?: number };
+    expect(body.ok).toBe(true);
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.count).toBe((body.data as unknown[]).length);
+  });
+
+  it("GET /api/dual-brain/state answers with the sovereign-engines wrapper", async () => {
+    const response = await request("GET", "/api/dual-brain/state");
+    expect(response.status).toBe(200);
+    const body = response.json as { ok?: boolean; data?: { running?: unknown; totalRounds?: unknown } };
+    expect(body.ok).toBe(true);
+    expect(typeof body.data?.running).toBe("boolean");
+    expect(typeof body.data?.totalRounds).toBe("number");
+  });
+
+  it("GET /api/emotional/profile answers with the sovereign-engines wrapper", async () => {
+    const response = await request("GET", "/api/emotional/profile");
+    expect(response.status).toBe(200);
+    const body = response.json as { ok?: boolean; data?: { profile?: unknown; summary?: unknown } };
+    expect(body.ok).toBe(true);
+    expect(body.data?.profile).toBeTypeOf("object");
+    expect(typeof body.data?.summary).toBe("string");
+  });
+
+  it("GET /api/universe/metrics answers with the system-runtime data field", async () => {
+    const response = await request("GET", "/api/universe/metrics");
+    expect(response.status).toBe(200);
+    const body = response.json as { ok?: boolean; data?: { universeAge?: unknown }; metrics?: unknown };
+    expect(body.ok).toBe(true);
+    expect(typeof body.data?.universeAge).toBe("string");
+    expect(body.metrics).toBeUndefined();
+  });
+
+  it("POST /api/consensus/propose keeps the governance-consensus validation contract", async () => {
+    const response = await request("POST", "/api/consensus/propose", {});
+    expect(response.status).toBe(400);
+    expect(response.json).toEqual({
+      ok: false,
+      error: "title and description are required",
+    });
+  });
+
+  it("POST /api/improvement/cycle keeps the improvement.ts error envelope when the database is offline", async () => {
+    const response = await request("POST", "/api/improvement/cycle", {});
+    expect(response.status).toBe(500);
+    expect(response.json).toEqual({
+      ok: false,
+      error: "probe-db-offline",
+    });
+  });
+
+  it("POST /api/universe/simulate keeps the system-runtime contract", async () => {
+    const rejected = await request("POST", "/api/universe/simulate", { type: "not-a-type" });
+    expect(rejected.status).toBe(400);
+    const rejectedBody = rejected.json as { ok?: boolean; error?: string };
+    expect(rejectedBody.ok).toBe(false);
+    expect(rejectedBody.error).toContain("type must be one of:");
+
+    const accepted = await request("POST", "/api/universe/simulate", { type: "quantum" });
+    expect(accepted.status).toBe(200);
+    const acceptedBody = accepted.json as { ok?: boolean; data?: { type?: string } };
+    expect(acceptedBody.ok).toBe(true);
+    expect(acceptedBody.data?.type).toBe("quantum");
   });
 });
