@@ -54,11 +54,10 @@ delete isolatedEnv.TESSERA_TEST_DATABASE_URL;
 delete isolatedEnv.TESSERA_TEST_FATHER_NATAL_CHART_JSON;
 
 let failures = 0;
-for (const [label, selector, script] of [
-  ["Suite safety policy", "@workspace/scripts", "test"],
-  ["Tessera learning memory", "@workspace/api-server", "test:memory"],
+for (const [label, selector] of [
+  ["Suite safety policy", "@workspace/scripts"],
 ]) {
-  failures += await runWorkspaceTest(label, selector, { ...isolatedEnv }, script);
+  failures += await runWorkspaceTest(label, selector, { ...isolatedEnv });
 }
 
 const testDatabaseUrl = localTestValue("TESSERA_TEST_DATABASE_URL").trim();
@@ -87,6 +86,13 @@ if (!testDatabaseUrl) {
   };
   failures += await runWorkspaceTest("Tessera API (local test database)", "@workspace/api-server", apiEnv);
 }
+
+failures += await runWorkspaceTest(
+  "Tessera learning memory",
+  "@workspace/api-server",
+  { ...isolatedEnv },
+  "test:memory",
+);
 
 if (failures > 0) {
   console.error(`\n[test] ${failures} workspace test command(s) failed.`);
