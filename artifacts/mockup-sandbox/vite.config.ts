@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, type PluginOption } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
@@ -27,20 +27,28 @@ if (!basePath) {
   );
 }
 
+// Some Replit/Tailwind plugins publish Vite-compatible runtime objects with
+// slightly different bundled Vite type identities. Keep the runtime plugins
+// intact while normalizing their public config type at this workspace boundary.
+const asPluginOption = (plugin: unknown): PluginOption =>
+  plugin as PluginOption;
+
 export default defineConfig({
   base: basePath,
   plugins: [
     mockupPreviewPlugin(),
     react(),
-    tailwindcss(),
-    runtimeErrorOverlay(),
+    asPluginOption(tailwindcss()),
+    asPluginOption(runtimeErrorOverlay()),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
           await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer({
-              root: path.resolve(import.meta.dirname, ".."),
-            }),
+            asPluginOption(
+              m.cartographer({
+                root: path.resolve(import.meta.dirname, ".."),
+              }),
+            ),
           ),
         ]
       : []),
