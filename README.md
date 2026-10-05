@@ -60,6 +60,7 @@ Mesh-agent onboarding stays in Gitbook. Start with the [hybrid consolidation bac
 
 - `lib/` — shared workspace libraries.
 - `artifacts/` — active Tessera web/API and UI-preview apps.
+- `artifacts/gitbook-mcp` — MCP and local HTTP connector for the private Gitbook docs repo. Connection steps are in that package README.
 - `modal/` and `scripts/` — GPU tasks and suite utilities.
 - `archives/source-variants/` and `archives/drive-export/` — reviewed historical code/text variants that are not active workspace packages by default.
 - `docs/` — project map, secrets guidance, image-to-text transcriptions, provenance, deduplication, and validation records.
