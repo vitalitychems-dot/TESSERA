@@ -43,6 +43,7 @@ The root test runner isolates the store test environments and runs database-back
 
 - `lib/` — shared workspace libraries.
 - `artifacts/` — active Tessera web/API and UI-preview apps.
+- `artifacts/api-server/src/lib/memory/` — append-only retrieval memory. It stores interactions, distills lessons, and proposes IMP rows. It does not train model weights.
 - `modal/` and `scripts/` — GPU tasks and suite utilities.
 - `archives/source-variants/` and `archives/drive-export/` — reviewed historical code/text variants that are not active workspace packages by default.
 - `docs/` — project map, secrets guidance, image-to-text transcriptions, provenance, deduplication, and validation records.

@@ -29,12 +29,12 @@ function localTestValue(name) {
   }
 }
 
-function runWorkspaceTest(label, selector, env) {
+function runWorkspaceTest(label, selector, env, script = "test") {
   return new Promise((resolve) => {
     console.log(`\n[test] ${label}`);
     const child = spawn(
       packageManager,
-      ["--filter", selector, "run", "test"],
+      ["--filter", selector, "run", script],
       { cwd: root, env, stdio: "inherit" },
     );
     child.once("error", (error) => {
@@ -54,10 +54,11 @@ delete isolatedEnv.TESSERA_TEST_DATABASE_URL;
 delete isolatedEnv.TESSERA_TEST_FATHER_NATAL_CHART_JSON;
 
 let failures = 0;
-for (const [label, selector] of [
-  ["Suite safety policy", "@workspace/scripts"],
+for (const [label, selector, script] of [
+  ["Suite safety policy", "@workspace/scripts", "test"],
+  ["Tessera learning memory", "@workspace/api-server", "test:memory"],
 ]) {
-  failures += await runWorkspaceTest(label, selector, { ...isolatedEnv });
+  failures += await runWorkspaceTest(label, selector, { ...isolatedEnv }, script);
 }
 
 const testDatabaseUrl = localTestValue("TESSERA_TEST_DATABASE_URL").trim();
