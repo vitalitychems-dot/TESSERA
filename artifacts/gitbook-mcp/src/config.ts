@@ -18,8 +18,16 @@ export interface GitbookConfig {
   agentsFile: string;
 }
 
-function readEnv(name: string): string {
-  return (process.env[name] ?? "").trim();
+const LOOPBACK_HTTP_HOSTS = new Set(["127.0.0.1", "::1", "localhost"]);
+
+/** HTTP may bind only to loopback. Any other GITBOOK_HTTP_HOST refuses to start. */
+export function assertLoopbackHttpHost(host: string): void {
+  const normalized = host.trim().toLowerCase();
+  if (!LOOPBACK_HTTP_HOSTS.has(normalized)) {
+    throw new Error(
+      `GITBOOK_HTTP_HOST must be loopback (127.0.0.1, ::1, or localhost). Refusing to start with "${host}".`,
+    );
+  }
 }
 
 export function agentsFilePath(): string {
@@ -37,6 +45,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): GitbookConfig 
   if (!Number.isInteger(httpPort) || httpPort < 0 || httpPort > 65535) {
     throw new Error("GITBOOK_HTTP_PORT must be an integer from 0 to 65535");
   }
+  const httpHost = (env.GITBOOK_HTTP_HOST ?? "127.0.0.1").trim() || "127.0.0.1";
+  assertLoopbackHttpHost(httpHost);
   return {
     token: (env.GITBOOK_GITHUB_TOKEN ?? "").trim(),
     apiBase: ((env.GITBOOK_GITHUB_API ?? "https://api.github.com").trim() || "https://api.github.com").replace(/\/$/, ""),
@@ -46,7 +56,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): GitbookConfig 
     boardIssue,
     handoffPath: (env.GITBOOK_HANDOFF_PATH ?? "mesh/HANDOFF.md").trim() || "mesh/HANDOFF.md",
     agentLane: (env.GITBOOK_AGENT_LANE ?? "").trim() || undefined,
-    httpHost: (env.GITBOOK_HTTP_HOST ?? "127.0.0.1").trim() || "127.0.0.1",
+    httpHost,
     httpPort,
     agentsFile: agentsFilePath(),
   };

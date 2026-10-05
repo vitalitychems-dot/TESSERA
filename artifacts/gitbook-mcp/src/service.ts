@@ -140,11 +140,30 @@ export function createGitbookService(options: GitbookServiceOptions) {
   const repo = options.repo;
 
   function assertFileWrite(explicitLane: string | undefined): void {
-    const laneId = explicitLane?.trim() || options.agentLane;
-    const lane = findLane(lanes, laneId);
-    if (lane && lane.fileWrites === false) {
+    const rawEnvLane = options.agentLane?.trim() ?? "";
+    if (!rawEnvLane) {
       throw new Error(
-        `${lane.name} is ${lane.mode} and cannot open draft pull requests or change files through this connector`,
+        "GITBOOK_AGENT_LANE is not set. This process is read-only and cannot open draft pull requests.",
+      );
+    }
+    const envLane = findLane(lanes, rawEnvLane);
+    if (!envLane) {
+      throw new Error(
+        `GITBOOK_AGENT_LANE "${rawEnvLane}" is not a lane in agents.json. File changes are denied.`,
+      );
+    }
+    const requested = explicitLane?.trim();
+    if (requested) {
+      const requestedLane = findLane(lanes, requested);
+      if (!requestedLane || requestedLane.id !== envLane.id) {
+        throw new Error(
+          `lane "${requested}" cannot override GITBOOK_AGENT_LANE ${envLane.id}. A per-call lane cannot escalate this process.`,
+        );
+      }
+    }
+    if (envLane.fileWrites === false) {
+      throw new Error(
+        `${envLane.name} is ${envLane.mode} and cannot open draft pull requests or change files through this connector`,
       );
     }
   }
@@ -671,7 +690,10 @@ export const TOOL_DEFINITIONS = [
       properties: {
         agent: { type: "string" },
         note: { type: "string" },
-        lane: { type: "string" },
+        lane: {
+          type: "string",
+          description: "Must match GITBOOK_AGENT_LANE. It cannot override or escalate the process lane.",
+        },
       },
       required: ["agent", "note"],
       additionalProperties: false,
@@ -686,7 +708,10 @@ export const TOOL_DEFINITIONS = [
         path: { type: "string" },
         content: { type: "string" },
         summary: { type: "string" },
-        lane: { type: "string" },
+        lane: {
+          type: "string",
+          description: "Must match GITBOOK_AGENT_LANE. It cannot override or escalate the process lane.",
+        },
       },
       required: ["path", "content", "summary"],
       additionalProperties: false,

@@ -23,7 +23,7 @@ File changes (`write_handoff`, `propose_page_change`) always open a **draft pull
 | `recent_changes` | Latest `main` commits and open pull requests. |
 | `route_task` | Score `agents.json` by keyword and specialty. Ties break by registry order. No match falls back to Tessera with `fallback: true`. |
 
-Security and Build are marked `fileWrites: false` in `agents.json`. If `GITBOOK_AGENT_LANE` is `security` or `build`, or the call passes that `lane`, draft pull requests are refused. Board comments stay available so a sweep can still be reported.
+`GITBOOK_AGENT_LANE` is the only lane that can authorize a draft pull request. Lane names match `agents.json` without regard to case. A per-call `lane` argument cannot override or escalate that env lane, and an unknown lane is denied. When `GITBOOK_AGENT_LANE` is empty, the process is read-only and creates no pull requests. Security and Build stay `fileWrites: false`, so they cannot open draft pull requests. Board comments stay available so a sweep can still be reported.
 
 ## Environment
 
@@ -36,8 +36,8 @@ Security and Build are marked `fileWrites: false` in `agents.json`. If `GITBOOK_
 | `GITBOOK_DEFAULT_BRANCH` | `main` | Branch used for reads and as the pull request base. |
 | `GITBOOK_BOARD_ISSUE` | `2` | Coordination board issue. |
 | `GITBOOK_HANDOFF_PATH` | `mesh/HANDOFF.md` | Handoff page. |
-| `GITBOOK_AGENT_LANE` | empty | Lane id from `agents.json`. Set this to `security` or `build` to refuse file writes. |
-| `GITBOOK_HTTP_HOST` | `127.0.0.1` | HTTP bind address. Keep this on loopback. |
+| `GITBOOK_AGENT_LANE` | empty | Lane id from `agents.json`. Empty is read-only: no draft pull requests. A tool `lane` argument cannot raise this. |
+| `GITBOOK_HTTP_HOST` | `127.0.0.1` | HTTP bind address. Only `127.0.0.1`, `::1`, or `localhost`. Any other value refuses to start. |
 | `GITBOOK_HTTP_PORT` | `8787` | HTTP port. |
 
 `route_task` works without a token. Every other tool returns a clear error until `GITBOOK_GITHUB_TOKEN` is set.
@@ -89,7 +89,7 @@ A security sweep config adds the lane and still uses the same command:
 GITBOOK_GITHUB_TOKEN="***" pnpm --filter @workspace/gitbook-mcp run start:http
 ```
 
-`start:http` runs `node dist/http.js` and listens on `127.0.0.1:8787` unless the host and port variables say otherwise.
+`start:http` runs `node dist/http.js` and listens on `127.0.0.1:8787`. `GITBOOK_HTTP_HOST` may be `127.0.0.1`, `::1`, or `localhost`. `0.0.0.0` and every other host refuse to start.
 
 | Method | Path | Body or query |
 | --- | --- | --- |
