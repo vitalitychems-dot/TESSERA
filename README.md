@@ -63,6 +63,7 @@ Mesh-agent onboarding stays in Gitbook. Start with the [hybrid consolidation bac
 - `modal/` and `scripts/` — GPU tasks and suite utilities.
 - `archives/source-variants/` and `archives/drive-export/` — reviewed historical code/text variants that are not active workspace packages by default.
 - `docs/` — project map, secrets guidance, image-to-text transcriptions, provenance, deduplication, and validation records.
+- `artifacts/api-server/src/lib/memory/` — append-only retrieval memory. It stores interactions, distills lessons, and proposes IMP rows. It does not train model weights.
 
 The source repository and Drive inputs are listed in [`docs/migration-review/source-manifest.csv`](docs/migration-review/source-manifest.csv). Current unmerged branch and open-PR gaps are disclosed in [`docs/migration-review/SOURCE-BRANCH-REVIEW.md`](docs/migration-review/SOURCE-BRANCH-REVIEW.md); not every branch-only payload is represented as merged. The protected `1T` vault was deliberately not inspected or copied. This repo uses fresh Git history; it does not import or replace original histories, branches, open reviews, or forks. All original source repositories remain unchanged. See the [consolidation record](docs/CONSOLIDATION.md) and [migration review](docs/migration-review/README.md).
 

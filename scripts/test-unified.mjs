@@ -29,12 +29,12 @@ function localTestValue(name) {
   }
 }
 
-function runWorkspaceTest(label, selector, env) {
+function runWorkspaceTest(label, selector, env, script = "test") {
   return new Promise((resolve) => {
     console.log(`\n[test] ${label}`);
     const child = spawn(
       packageManager,
-      ["--filter", selector, "run", "test"],
+      ["--filter", selector, "run", script],
       { cwd: root, env, stdio: "inherit" },
     );
     child.once("error", (error) => {
@@ -86,6 +86,13 @@ if (!testDatabaseUrl) {
   };
   failures += await runWorkspaceTest("Tessera API (local test database)", "@workspace/api-server", apiEnv);
 }
+
+failures += await runWorkspaceTest(
+  "Tessera learning memory",
+  "@workspace/api-server",
+  { ...isolatedEnv },
+  "test:memory",
+);
 
 if (failures > 0) {
   console.error(`\n[test] ${failures} workspace test command(s) failed.`);
