@@ -1,6 +1,14 @@
 # Validation report — Tessera Unified
 
-**Checked:** 2026-10-02, against the current local tree before the next public push.
+**Checked:** 2026-10-02, against the local tree before the next public push. The sections below are that dated report. The tip reconciliation that follows them is the 2026-10-05 reading of `main`.
+
+## Tip reconciliation (2026-10-05)
+
+The 2026-10-02 checks below stay as the historical record. They do not describe the tip:
+
+- **Advisories.** The 2026-10-02 line "0 high advisories" predates the unpatched transitive `braces` advisory. Tip `main` ignores only [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) in `pnpm-workspace.yaml` (`auditConfig.ignoreGhsas`, review date 2026-11-05). See [`docs/VALIDATION-STATUS.md`](../VALIDATION-STATUS.md).
+- **GitHub-hosted CI.** The 2026-10-02 line that CI "has not yet run on GitHub" is historical. Actions run [37382015797](https://github.com/vitalitychems-dot/TESSERA/actions/runs/37382015797) on commit `5c1137faeb7714482add93c2d6876396f34f1a03` completed successfully (`ci.yml` job `validate`).
+- **Apps and test totals.** The 2026-10-02 build and test lines include Vitality Supply and the storefront (437 passed). Those apps are not in the tip Applications table (`tessera`, `api-server`, `mockup-sandbox` only). The green CI log for that run reports the API vitest result as 99 passed and 1 skipped.
 
 ## Environment and dependency checks
 
