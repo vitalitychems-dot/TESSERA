@@ -180,6 +180,7 @@ export function routeTask(description: string, lanes: Lane[]): RouteDecision {
 }
 
 export function findLane(lanes: Lane[], laneId: string | undefined): Lane | undefined {
-  if (!laneId) return undefined;
-  return lanes.find((lane) => lane.id === laneId);
+  const wanted = laneId?.trim().toLowerCase();
+  if (!wanted) return undefined;
+  return lanes.find((lane) => lane.id.toLowerCase() === wanted);
 }

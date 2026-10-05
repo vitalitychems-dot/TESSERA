@@ -1,6 +1,8 @@
 import type { Server } from "node:http";
 import { afterEach, describe, expect, it } from "vitest";
+import { loadConfig } from "./config.js";
 import { createGitHubClient, type FetchLike } from "./github.js";
+import { startHttpServer } from "./http.js";
 import { createHttpServer } from "./http-server.js";
 import { encodeMessage, handleMcpMessage, takeFrames } from "./mcp-session.js";
 import { loadLanes } from "./routing.js";
@@ -294,7 +296,7 @@ describe("github tools", () => {
         return { body: { number: 9, html_url: "https://github.test/pull/9", draft: true } };
       }
       return { status: 404, body: { message: `${method} ${url.pathname}` } };
-    });
+    }, "tessera");
     const handoff = await service.readHandoff();
     expect(handoff.content).toContain("ORIGINAL handoff");
     const result = await service.writeHandoff("Build", "Verified the connector.");
@@ -326,7 +328,7 @@ describe("github tools", () => {
       if (method === "POST" && url.pathname.endsWith("/pulls")) return { body: { number: 4, draft: false } };
       if (method === "PATCH" && url.pathname.endsWith("/pulls/4")) return { body: { number: 4, state: "closed" } };
       return { status: 404, body: { message: url.pathname } };
-    });
+    }, "tessera");
     await expect(service.proposePageChange("mesh/roles.md", "# Roles\nUpdated\n", "Update roles")).rejects.toThrow(/closed/);
   });
 
@@ -340,7 +342,7 @@ describe("github tools", () => {
         return { body: { number: 4, html_url: "https://github.test/pull/4", draft: true } };
       }
       return { status: 404, body: { message: url.pathname } };
-    });
+    }, "tessera");
     const result = await service.proposePageChange("mesh/roles.md", "# Roles\nUpdated", "Update roles");
     expect(result).toMatchObject({
       commitSha: "new-sha",
@@ -394,6 +396,22 @@ describe("github tools", () => {
     await expect(service.proposePageChange("README.md", "nope", "nope")).rejects.toThrow(/read-only/);
     await expect(service.writeHandoff("Security", "report")).rejects.toThrow(/read-only/);
     expect(calls).toHaveLength(0);
+  });
+
+  it("does not let a per-call lane override or escalate GITBOOK_AGENT_LANE", async () => {
+    const security = serviceFrom(() => ({ body: {} }), "security");
+    await expect(security.service.proposePageChange("README.md", "nope", "nope", "tessera")).rejects.toThrow(/cannot override/);
+    await expect(security.service.writeHandoff("Security", "report", "Security")).rejects.toThrow(/read-only/);
+    expect(security.calls).toHaveLength(0);
+
+    const build = serviceFrom(() => ({ body: {} }), "build");
+    await expect(build.service.proposePageChange("README.md", "nope", "nope", "nonexistent")).rejects.toThrow(/cannot override/);
+    await expect(build.service.writeHandoff("Build", "report", "nonexistent")).rejects.toThrow(/cannot override/);
+    expect(build.calls).toHaveLength(0);
+
+    const unset = serviceFrom(() => ({ body: {} }));
+    await expect(unset.service.proposePageChange("README.md", "nope", "nope", "tessera")).rejects.toThrow(/read-only/);
+    expect(unset.calls).toHaveLength(0);
   });
 
   it("does not call GitHub for routing when the token is absent", async () => {
@@ -488,6 +506,25 @@ describe("http and mcp transports", () => {
     const result = called?.result as { isError: boolean; content: Array<{ text: string }> };
     expect(result.isError).toBe(false);
     expect(JSON.parse(result.content[0]?.text ?? "{}")).toMatchObject({ laneId: "gitbook-helper" });
+  });
+
+  it("refuses to start when GITBOOK_HTTP_HOST is not loopback", () => {
+    const previous = process.env.GITBOOK_HTTP_HOST;
+    process.env.GITBOOK_HTTP_HOST = "0.0.0.0";
+    let started: Server | undefined;
+    try {
+      expect(() => {
+        started = startHttpServer();
+      }).toThrow(/Refusing to start/);
+      expect(() => loadConfig()).toThrow(/0\.0\.0\.0/);
+    } finally {
+      started?.close();
+      if (previous === undefined) delete process.env.GITBOOK_HTTP_HOST;
+      else process.env.GITBOOK_HTTP_HOST = previous;
+    }
+    expect(loadConfig({ GITBOOK_HTTP_HOST: "127.0.0.1" }).httpHost).toBe("127.0.0.1");
+    expect(loadConfig({ GITBOOK_HTTP_HOST: "localhost" }).httpHost).toBe("localhost");
+    expect(loadConfig({ GITBOOK_HTTP_HOST: "::1" }).httpHost).toBe("::1");
   });
 
   it("decodes a split Content-Length frame", () => {
