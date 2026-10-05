@@ -1,6 +1,8 @@
 # Consolidation and integration record — Tessera Unified
 
-**Status:** Public consolidated repository; integration changes and validation recorded for the 2026-10-02 update.
+**Status (historical, 2026-10-02):** This record was written when the tree was described as a public consolidated repository. The destination that this staged tree tracks is the private repository `vitalitychems-dot/TESSERA`, not `tessera-unified`.
+
+**Note (2026-10-05):** HYB-005's braces ignore (`auditConfig.ignoreGhsas` for GHSA-vfj7-8cjw-p6xm, review date 2026-11-05) and the HYB-012 route inventory are on `main`. GitHub Actions run [37382015797](https://github.com/vitalitychems-dot/TESSERA/actions/runs/37382015797) is green on `5c1137faeb7714482add93c2d6876396f34f1a03`.
 
 ## Scope and source snapshots
 
@@ -38,7 +40,7 @@ No live credential values are intentionally included. `.env.example` contains bl
 
 ## Validation and source cleanup status
 
-Current build/test, full dependency-audit, and local smoke-check results are recorded in [`migration-review/VALIDATION.md`](migration-review/VALIDATION.md). The consolidated repository is public at `https://github.com/vitalitychems-dot/tessera-unified`.
+Current build/test, full dependency-audit, and local smoke-check results are recorded in [`migration-review/VALIDATION.md`](migration-review/VALIDATION.md). The 2026-10-02 publication URL `https://github.com/vitalitychems-dot/tessera-unified` is historical. This tree's repository is the private `https://github.com/vitalitychems-dot/TESSERA`.
 
 All original source repositories remain untouched and were **not deleted**. Branch-only work, open PRs, owner/agent sign-offs, and unresolved source-scope discrepancies are not silently treated as merged. The protected `1T` repo was not inspected. Deleting old repositories is a separate irreversible cleanup action and requires the exact target list and confirmation after source-owner review.
 
