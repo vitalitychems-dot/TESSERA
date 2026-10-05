@@ -9,7 +9,8 @@
     "build": "node scripts/build-unified.mjs",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
-    "test": "node scripts/test-unified.mjs"
+    "test": "node scripts/test-unified.mjs",
+    "merge-gate": "node scripts/historical-merge-gate.mjs"
   },
   "private": true,
   "devDependencies": {

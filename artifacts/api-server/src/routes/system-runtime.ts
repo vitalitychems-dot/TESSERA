@@ -50,6 +50,10 @@ router.get("/quantum/metrics", (_req: Request, res: Response) => {
   res.json({ ok: true, data: getQuantumMetrics() });
 });
 
+// GET /quantum/state and POST /quantum/gate are also registered in
+// legacy-engines.ts. This router is mounted first, so these handlers win.
+// Gitbook issue #2 comment 6003995168 keeps both copies allow-listed until
+// a product decision. Do not delete them in a hygiene change.
 router.get("/quantum/state", (_req: Request, res: Response) => {
   res.json({
     ok: true,

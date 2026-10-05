@@ -6,7 +6,8 @@ packages:
   - scripts
 
 allowBuilds:
-  core-js: set this to true or false
+  # Explicit deny: the previous value was the pnpm placeholder string, not a boolean.
+  core-js: false
   esbuild: true
 
 autoInstallPeers: false
