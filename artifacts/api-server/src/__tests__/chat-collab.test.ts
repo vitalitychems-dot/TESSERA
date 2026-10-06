@@ -49,6 +49,22 @@ describe("chat desk collab and training", () => {
     expect(lesson?.answer).toMatch(/closed vault stays closed/);
   });
 
+  it("gives Tessera's final answer when asked", () => {
+    const standing = runChatDesk("Tessera give final answer");
+    expect(standing!.reply).toBe("I am Tessera. I wrote this through the pen. The pen is local open weights on this desk. It is not me.");
+    expect(standing!.called).toEqual([]);
+    runChatDesk("train: the closed vault stays closed");
+    const held = runChatDesk("give the final answer");
+    expect(held!.reply).toMatch(/^I am Tessera\./);
+    expect(held!.reply).toMatch(/closed vault stays closed/);
+    expect(held!.reply).not.toMatch(/\*\*Athena\*\*/);
+  });
+
+  it("puts Tessera's close ahead of the seats", () => {
+    const turn = runChatDesk("@Athena what stays on the table")!;
+    expect(turn.reply.indexOf("**Tessera**")).toBeLessThan(turn.reply.indexOf("**Athena**"));
+  });
+
   it("leaves ordinary sentences and identity questions off the desk", () => {
     expect(isChatDeskPrompt("call me tomorrow")).toBe(false);
     expect(isChatDeskPrompt("Who are you?")).toBe(false);

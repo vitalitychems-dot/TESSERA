@@ -186,6 +186,7 @@ export const COMMAND_HINTS = [
   { cmd: "@Athena [question]", desc: "Call a member if that seat is available" },
   { cmd: "collab [question]", desc: "Available agents sit, then Tessera closes" },
   { cmd: "train: [lesson]", desc: "Train the chamber on one lesson" },
+  { cmd: "Tessera give final answer", desc: "Tessera closes" },
 ];
 
 export const MSG_STYLES: Record<string, { wrapper: string; prose: string }> = {
