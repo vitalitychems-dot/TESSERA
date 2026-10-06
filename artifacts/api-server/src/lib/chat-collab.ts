@@ -51,6 +51,7 @@ export interface DeskLesson {
   id: number;
   prompt: string;
   answer: string;
+  finalAnswer: string;
   agents: string[];
   at: number;
 }
@@ -93,11 +94,12 @@ function tokens(text: string): string[] {
   return text.toLowerCase().split(/[^a-z0-9]+/).filter((word) => word.length > 3 && !STOP.has(word));
 }
 
-export function trainChat(prompt: string, answer: string, agents: string[]): DeskLesson {
+export function trainChat(prompt: string, answer: string, agents: string[], finalAnswer?: string): DeskLesson {
   const lesson: DeskLesson = {
     id: nextLessonId++,
     prompt: prompt.slice(0, 400),
     answer: answer.slice(0, 1200),
+    finalAnswer: (finalAnswer || answer).slice(0, 800),
     agents,
     at: Date.now(),
   };
@@ -127,11 +129,20 @@ export function recallLesson(prompt: string): DeskLesson | null {
 
 export type DeskRequest =
   | { kind: "train"; lesson: string }
+  | { kind: "final" }
   | { kind: "call"; names: string[]; prompt: string };
+
+const FINAL_RE = /^(?:tessera[,:]?\s+)?(?:please\s+)?(?:give|say|write)(?:\s+me)?(?:\s+the)?\s+final\s+answer\.?$/i;
+
+export function latestFinalAnswer(): string {
+  return lessons[0]?.finalAnswer || "I am Tessera. I wrote this through the pen. The pen is local open weights on this desk. It is not me.";
+}
 
 export function parseChatDesk(text: string): DeskRequest | null {
   const raw = (text || "").trim();
   if (!raw) return null;
+
+  if (FINAL_RE.test(raw)) return { kind: "final" };
 
   const trained = raw.match(/^train\s*:\s*(.+)$/is);
   if (trained?.[1]?.trim()) return { kind: "train", lesson: trained[1].trim() };
@@ -192,12 +203,17 @@ export function runChatDesk(text: string): DeskTurn | null {
   const request = parseChatDesk(text);
   if (!request) return null;
 
+  if (request.kind === "final") {
+    const reply = enforceTesseraVoice(latestFinalAnswer(), text);
+    return { reply, agents: [{ id: "tessera", name: "Tessera" }], trained: false, called: [], unavailable: [], refused: [] };
+  }
+
   if (request.kind === "train") {
     const reply = enforceTesseraVoice(
       `I am Tessera. I trained this lesson through the pen: ${request.lesson}`,
       text,
     );
-    trainChat(request.lesson, reply, []);
+    trainChat(request.lesson, reply, [], reply);
     return { reply, agents: [{ id: "tessera", name: "Tessera" }], trained: true, called: [], unavailable: [], refused: [] };
   }
 
@@ -231,8 +247,8 @@ export function runChatDesk(text: string): DeskTurn | null {
 
   const notes = called.map((member) => `**${member.name}** — ${noteFor(member, request.prompt)}`);
   const close = tesseraClose(request.prompt, called, unavailable, refused);
-  const reply = enforceTesseraVoice([...notes, "", `**Tessera** — ${close}`].filter(Boolean).join("\n"), text);
-  trainChat(request.prompt, reply, called.map((member) => member.name));
+  const reply = enforceTesseraVoice([`**Tessera** — ${close}`, ...notes].filter(Boolean).join("\n\n"), text);
+  trainChat(request.prompt, reply, called.map((member) => member.name), close);
   return {
     reply,
     agents: [{ id: "tessera", name: "Tessera" }, ...called.map((member) => ({ id: member.id, name: member.name }))],
