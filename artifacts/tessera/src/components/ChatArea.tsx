@@ -1333,7 +1333,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
                   setInput(val);
                   autoResize();
                   const trimmed = val.trim().toLowerCase();
-                  const deskHint = /^\/?(@|call\b|collab\b|train\b|ask\b|tessera\b|final\b)/.test(trimmed);
+                  const deskHint = /^\/?(@|call\b|collab\b|train\b|ask\b|tessera\b|final\b|actually\b)/.test(trimmed);
                   setShowCommandHints(
                     (trimmed.length >= 1 && trimmed.length <= 20 &&
                       /^\/?(status|check|show|scan|get)\s*/.test(trimmed))

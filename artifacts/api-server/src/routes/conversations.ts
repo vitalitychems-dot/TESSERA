@@ -11,7 +11,8 @@ import { computeSacredFrequencies } from "../lib/sovereign-harmonics";
 import { getSacredGeometrySummary, computeSacredAlignment, computeNumerology } from "../lib/sovereign-sacred-geometry";
 import { TESSERA_IDENTITY, FATHER_PROTOCOL, getTesseraSystemPrompt, lookupKnowledge } from "../lib/tessera-knowledge";
 import { enforceTesseraVoice, hasSelfClaim, isIdentityQuestion, isSearchDump } from "../lib/tessera-voice";
-import { recallLesson, runChatDesk } from "../lib/chat-collab";
+import { runChatDesk } from "../lib/chat-collab";
+import { answerInContext, noteChamberTurn } from "../lib/chamber-learning";
 import { searchMemory } from "../lib/vector-memory";
 import { recallIngestedKnowledge } from "../lib/ingested-recall";
 import { validateResponse } from "../lib/response-validation-engine";
@@ -680,19 +681,20 @@ router.post("/messages", async (req, res) => {
       .where(eq(conversationsTable.id, conversationId));
 
     const isAdminRequestEarly = !!req.headers["x-admin-token"];
+    noteChamberTurn(content);
     const deskTurn = isIdentityQuestion(content) ? null : runChatDesk(content);
-    const recalled = !deskTurn && !isIdentityQuestion(content) ? recallLesson(content) : null;
-    if (deskTurn || isIdentityQuestion(content) || recalled || !needsExternalKnowledge(content)) {
+    const live = !deskTurn && !isIdentityQuestion(content) ? await answerInContext(content) : null;
+    if (deskTurn || isIdentityQuestion(content) || live || !needsExternalKnowledge(content)) {
       const reply = deskTurn
         ? deskTurn.reply
-        : recalled
-          ? enforceTesseraVoice(recalled.answer, content)
+        : live
+          ? live
           : enforceTesseraVoice(generateSovereignResponse(content, isAdminRequestEarly), content);
       const deskAgents = deskTurn?.agents ?? [{ id: "tessera", name: "Tessera" }];
       const deskReason = deskTurn
         ? "desk collab, Tessera closes"
-        : recalled
-          ? "desk training"
+        : live
+          ? "pen read the question"
           : "local voice, no search";
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache");
