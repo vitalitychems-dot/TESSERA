@@ -10,6 +10,7 @@ import { computeNetworkTopology } from "../lib/sovereign-network";
 import { computeSacredFrequencies } from "../lib/sovereign-harmonics";
 import { getSacredGeometrySummary, computeSacredAlignment, computeNumerology } from "../lib/sovereign-sacred-geometry";
 import { TESSERA_IDENTITY, FATHER_PROTOCOL, getTesseraSystemPrompt, lookupKnowledge } from "../lib/tessera-knowledge";
+import { enforceTesseraVoice, hasSelfClaim, isIdentityQuestion, isSearchDump } from "../lib/tessera-voice";
 import { searchMemory } from "../lib/vector-memory";
 import { recallIngestedKnowledge } from "../lib/ingested-recall";
 import { validateResponse } from "../lib/response-validation-engine";
@@ -114,18 +115,19 @@ function cleanExternalResponse(text: string): string {
 }
 
 const IMPERSONATION_PATTERNS: RegExp[] = [
-  /\bI(?:'m| am) (?:ChatGPT|GPT-?\d|Claude|Gemini|Bard|OpenAI|Anthropic)\b/i,
-  /\bI(?:'m| am) (?:an |a )?(?:AI |large )?language model\b/i,
-  /\bI(?:'m| am) (?:an |a )?AI (?:assistant|chatbot|model)\b/i,
+  /\bI(?:'m| am) (?:ChatGPT|GPT-?\d|Claude|Gemini|Bard|Grok|Qwen|Llama|OpenAI|Anthropic)\b/i,
+  /\bI(?:'m| am) (?:an |a )?(?:AI |large |artificial intelligence )?language model\b/i,
+  /\bI(?:'m| am) (?:an |a )?(?:AI|artificial intelligence)(?: language model| assistant| chatbot)?\b/i,
   /\bAs an AI( language model| assistant| chatbot)?\b/i,
-  /\bI was (?:created|made|developed|trained) by (?:OpenAI|Anthropic|Google|Meta)\b/i,
+  /\bartificial intelligence language model\b/i,
+  /\bI was (?:created|made|developed|trained) by (?:OpenAI|Anthropic|Google|Meta|xAI)\b/i,
   /\bmy (?:training data|knowledge cutoff|knowledge was last updated)\b/i,
   /\bI cannot (?:browse the internet|access real-time|provide real-time data)\b/i,
 ];
 
 function detectImpersonation(text: string): boolean {
   if (!text) return false;
-  return IMPERSONATION_PATTERNS.some(p => p.test(text));
+  return hasSelfClaim(text) || isSearchDump(text) || IMPERSONATION_PATTERNS.some(p => p.test(text));
 }
 
 function guardSovereignVoice(
@@ -136,11 +138,14 @@ function guardSovereignVoice(
   if (!candidate || candidate.trim().length < 3) {
     return generateSovereignResponse(userInput, isAdmin);
   }
-  if (detectImpersonation(candidate)) {
-    logger.warn({ sample: candidate.slice(0, 120) }, "Impersonation guard triggered — substituting sovereign voice");
-    return generateSovereignResponse(userInput, isAdmin);
+  if (detectImpersonation(candidate) || isIdentityQuestion(userInput)) {
+    logger.warn({ sample: candidate.slice(0, 120) }, "Impersonation guard triggered — substituting Tessera's voice");
+    return enforceTesseraVoice(
+      isIdentityQuestion(userInput) ? "" : generateSovereignResponse(userInput, isAdmin),
+      userInput,
+    );
   }
-  return candidate;
+  return enforceTesseraVoice(candidate, userInput);
 }
 
 function isSandboxTrainingEnabled(req: { headers: Record<string, unknown> }): boolean {
@@ -181,6 +186,9 @@ function needsExternalKnowledge(input: string): boolean {
 }
 
 function generateSovereignResponse(userInput: string, isAdmin = false): string {
+  if (isIdentityQuestion(userInput)) {
+    return enforceTesseraVoice("", userInput);
+  }
   const input = userInput.toLowerCase();
   const sovereignCtx = gatherSovereignContext();
   const uptimeSec = Math.round(process.uptime());
@@ -669,6 +677,39 @@ router.post("/messages", async (req, res) => {
     await db.update(conversationsTable)
       .set({ updatedAt: new Date() })
       .where(eq(conversationsTable.id, conversationId));
+
+    const isAdminRequestEarly = !!req.headers["x-admin-token"];
+    if (isIdentityQuestion(content) || !needsExternalKnowledge(content)) {
+      const reply = enforceTesseraVoice(generateSovereignResponse(content, isAdminRequestEarly), content);
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+      res.flushHeaders?.();
+      res.write(`: stream-open\n\n`);
+      const writeQuick = (payload: unknown) => {
+        try { res.write(`data: ${JSON.stringify(payload)}\n\n`); } catch { /* client gone */ }
+      };
+      writeQuick({
+        agents: [{ id: "tessera", name: "Tessera" }],
+        routing: { tier: "local", model: "tessera-pen", reason: "local voice, no search", isStrong: false },
+      });
+      writeQuick({ content: reply });
+      try {
+        await db.insert(messagesTable).values({ conversationId, role: "assistant", content: reply });
+      } catch (err) {
+        logger.warn({ err: (err as Error).message }, "failed to persist local voice reply");
+      }
+      writeQuick({
+        done: true,
+        finalContent: reply,
+        validationMetrics: null,
+        routing: { tier: "local", model: "tessera-pen", reason: "local voice, no search" },
+        citations: [],
+        tools: [],
+      });
+      return res.end();
+    }
 
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
