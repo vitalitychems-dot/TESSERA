@@ -63,6 +63,15 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     capabilities: ["chat", "real-time", "analysis"],
   },
   {
+    id: "glm5",
+    name: "GLM-5 (opt-in Pen instrument)",
+    isExternal: true,
+    type: "proxy",
+    tier: 2,
+    models: ["GLM-5", "GLM-5.1", "GLM-5.2", "GLM-5.3", "GLM-5.3-Flash"],
+    capabilities: ["chat", "reasoning", "coding", "long-context", "open-weights"],
+  },
+  {
     id: "groq",
     name: "Groq",
     isExternal: true,
