@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { logger } from "../lib/logger";
 import { getLocalModelManager, type LocalAdapterType } from "../lib/local-model-manager";
+import { enforceTesseraVoice, PEN_SYSTEM } from "../lib/tessera-voice";
 
 const router = Router();
 
@@ -39,8 +40,13 @@ router.post("/local-models/chat", async (req, res) => {
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ ok: false, error: "messages[] is required" });
     }
+    const userText = [...messages].reverse().find((m: { role?: string }) => m?.role === "user")?.content ?? "";
+    const hasSystem = messages.some((m: { role?: string }) => m?.role === "system");
+    const guarded = hasSystem
+      ? messages
+      : [{ role: "system", content: PEN_SYSTEM }, ...messages];
     const manager = getLocalModelManager();
-    const result = await manager.chat(messages, {
+    const result = await manager.chat(guarded, {
       maxTokens: maxTokens ?? 512,
       temperature: temperature ?? 0.7,
       preferAdapter: preferAdapter as LocalAdapterType | undefined,
@@ -48,6 +54,7 @@ router.post("/local-models/chat", async (req, res) => {
     if (!result) {
       return res.status(503).json({ ok: false, error: "No local models available. Deploy Ollama or another adapter." });
     }
+    result.text = enforceTesseraVoice(result.text, String(userText));
     return res.json({ ok: true, ...result });
   } catch (err) {
     logger.error({ err }, "POST /local-models/chat failed");

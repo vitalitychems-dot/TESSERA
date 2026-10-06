@@ -1,3 +1,5 @@
+import { presentAssistantText } from "@/lib/tessera-voice";
+
 export const AGENT_FREQUENCIES: Record<string, number> = {
   "paraclete": 852, "brahman-all": 963, "aletheia": 963, "melchizedek": 963,
   "thoth-calculus": 285, "metatron": 963, "sophia": 528, "iris": 741,
@@ -197,7 +199,7 @@ export const MSG_STYLES: Record<string, { wrapper: string; prose: string }> = {
 
 export function sanitizeMessageContent(content: string): string {
   if (!content) return content;
-  let cleaned = content;
+  let cleaned = presentAssistantText(content);
   try {
     const trimmed = cleaned.trim();
     if (trimmed.startsWith("[{") && trimmed.endsWith("}]")) {

@@ -644,8 +644,9 @@ function HyperdimensionalBackground() {
   };
 
   const isUniversePage = location === "/universe" || location === "/universe-model";
+  const isChamber = location === "/" || location.startsWith("/c/");
 
-  if (isUniversePage) {
+  if (isUniversePage || isChamber) {
     return StaticFallback;
   }
 

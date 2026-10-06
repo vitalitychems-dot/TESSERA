@@ -42,6 +42,8 @@ import { ChatSummitFeedPanel } from "./chat/ChatSummitFeedPanel";
 import { ChatMessageList } from "./chat/ChatMessageList";
 import { ChatInputToolbar } from "./chat/ChatInputToolbar";
 import { ChatFileUploadArea } from "./chat/ChatFileUploadArea";
+import { ChamberActions, ChamberBar } from "./chat/ChamberBar";
+import { presentAssistantText } from "@/lib/tessera-voice";
 
 export function ChatArea({ conversationId }: { conversationId: number }) {
   const [currentLocation, setLocation] = useLocation();
@@ -1021,6 +1023,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
       onDragLeave={() => setIsDragOver(false)}
       onDrop={handleDrop}
     >
+      <ChamberBar streaming={isStreaming} />
       {adminMode && (
         <div className="flex items-center justify-center gap-2 py-1.5 px-4 bg-violet-950/50 border-b border-violet-500/30 backdrop-blur-sm z-10" data-testid="admin-mode-bar">
           <Shield size={12} className="text-violet-500" />
@@ -1373,7 +1376,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
                 placeholder={
                   isAdmin ? "Sovereign command..." :
                   colonelPhase === "hash_accepted" ? "Enter your sovereign key..." :
-                  "Message Tessera..."
+                  "Speak with Tessera"
                 }
                 style={
                   adminMode
@@ -1477,6 +1480,18 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
             />
           </div>
         </form>
+        <ChamberActions
+          lastReply={(() => {
+            const last = [...messages].reverse().find((m) => m.role === "assistant");
+            const shown = streamingContent || (last ? last.content : "");
+            return shown ? presentAssistantText(shown) : "";
+          })()}
+          onCopyReply={() => {
+            const last = [...messages].reverse().find((m) => m.role === "assistant");
+            const shown = streamingContent || (last ? last.content : "");
+            if (shown) copyToClipboard(presentAssistantText(shown), setCopiedId, "chamber-reply");
+          }}
+        />
       </div>
 
       <ChatShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />

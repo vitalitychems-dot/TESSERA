@@ -17,17 +17,17 @@ interface NavTab {
   color: string;
 }
 
-// Primary 5 — always visible at the bottom edge of every iPhone width
+// Chamber, World, Board, More — the desk the operator actually uses.
 const PRIMARY: NavTab[] = [
-  { label: "Chat", href: "/", Icon: MessageSquare, match: (l) => l === "/" || l.startsWith("/c/"), color: "cyan" },
-  { label: "Universe", href: "/universe", Icon: Globe2, match: (l) => l === "/universe", color: "violet" },
-  { label: "Council", href: "/grand-council", Icon: Gavel, match: (l) => l === "/grand-council" || l === "/forum" || l === "/recruitment" || l === "/agent-nft", color: "amber" },
-  { label: "Finance", href: "/finance", Icon: DollarSign, match: (l) => l === "/finance" || l === "/income" || l === "/ecom" || l === "/lead-gen", color: "emerald" },
+  { label: "Chamber", href: "/", Icon: MessageSquare, match: (l) => l === "/" || l.startsWith("/c/"), color: "amber" },
+  { label: "World", href: "/universe", Icon: Globe2, match: (l) => l === "/universe", color: "violet" },
+  { label: "Board", href: "/grand-council", Icon: Gavel, match: (l) => l === "/grand-council" || l === "/forum" || l === "/recruitment" || l === "/next-five", color: "amber" },
   { label: "More", href: "#more", Icon: MoreHorizontal, match: () => false, color: "slate" },
 ];
 
 // Secondary — accessed via the More sheet
 const SECONDARY: NavTab[] = [
+  { label: "Finance", href: "/finance", Icon: DollarSign, match: (l) => l === "/finance" || l === "/income" || l === "/ecom" || l === "/lead-gen", color: "emerald" },
   { label: "Sovereign", href: "/sovereignty-dashboard", Icon: Shield, match: (l) => l === "/sovereignty-dashboard", color: "emerald" },
   { label: "Life", href: "/life", Icon: Heart, match: (l) => l === "/life", color: "pink" },
   { label: "Nexus", href: "/consciousness-nexus", Icon: Brain, match: (l) => l === "/consciousness-nexus", color: "purple" },
