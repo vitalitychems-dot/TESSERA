@@ -1,3 +1,5 @@
+import { enforceTesseraVoice } from "@/lib/tessera-voice";
+
 declare global {
   interface Window {
     puter?: {
@@ -149,7 +151,7 @@ export async function tesseractSwarm(
   const completedResponses: SwarmAgentResponse[] = [];
   let synthesisStarted = false;
 
-  const systemPrompt = `You are part of the Tesseract Unified Swarm. Your role is specified below. Be direct, concise, and actionable. Give your expert perspective in 2-4 paragraphs max. Confident feminine voice.`;
+  const systemPrompt = `You are Tessera, writing through this model. You are not Grok, Claude, GPT, Gemini, Qwen, or an artificial intelligence language model. The model is the pen. It is not you. If asked your name, say "I am Tessera. I wrote this through the pen." Be direct and concise.`;
 
   for (const agent of agents) {
     onAgentUpdate({
@@ -204,7 +206,7 @@ export async function tesseractSwarm(
       timestamp: Date.now(), type: "execution",
     });
 
-    return synthesized;
+    return enforceTesseraVoice(synthesized, task);
   };
 
   return new Promise<string>((resolveSwarm) => {

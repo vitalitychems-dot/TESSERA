@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@/lib/queryClient";
 import { type Message } from "@/lib/types";
 import { puterChat, isPuterAvailable, tesseractSwarm, PUTER_MODELS, type SwarmAgentResponse, type SwarmComm } from "@/lib/puter-ai";
+import { appendTesseraVoice, enforceTesseraVoice, identityReply, isIdentityQuestion } from "@/lib/tessera-voice";
 import type { ExecutionResultData } from "@/components/chat/CodeExecutionResult";
 
 export interface AgentInfo {
@@ -49,7 +50,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
       if (!firstContentReceivedRef.current) {
         setThinkingElapsedMs(Date.now() - thinkingStartRef.current);
       }
-    }, 50);
+    }, 400);
   }, []);
 
   const stopThinkingTimer = useCallback(() => {
@@ -141,6 +142,12 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
     lastAccumulatedRef.current = "";
     timedOutRef.current = false;
     startThinkingTimer();
+    if (isIdentityQuestion(content)) {
+      const spoken = identityReply(content);
+      setStreamingContent(spoken);
+      lastAccumulatedRef.current = spoken;
+      stopThinkingTimer();
+    }
 
     if (hardTimeoutRef.current) clearTimeout(hardTimeoutRef.current);
     hardTimeoutRef.current = setTimeout(() => {
@@ -224,20 +231,22 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
                   }
                   if (data.content) {
                     stopThinkingTimer();
-                    serverAccumulated += data.content;
+                    serverAccumulated = appendTesseraVoice(serverAccumulated, data.content, content);
                     setStreamingContent(serverAccumulated);
                     lastAccumulatedRef.current = serverAccumulated;
                   }
                   if (data.chunk) {
                     stopThinkingTimer();
-                    serverAccumulated += data.chunk;
+                    serverAccumulated = appendTesseraVoice(serverAccumulated, data.chunk, content);
                     setStreamingContent(serverAccumulated);
                     lastAccumulatedRef.current = serverAccumulated;
                   }
                   if (data.done) {
                     stopThinkingTimer();
                     if (data.finalContent) {
-                      serverAccumulated = data.finalContent;
+                      serverAccumulated = isIdentityQuestion(content)
+                        ? identityReply(content)
+                        : enforceTesseraVoice(data.finalContent, content);
                       setStreamingContent(serverAccumulated);
                       lastAccumulatedRef.current = serverAccumulated;
                     }
@@ -288,7 +297,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
           return;
         }
 
-        let finalResponse = serverAccumulated;
+        let finalResponse = enforceTesseraVoice(serverAccumulated, content);
 
         if (finalResponse) {
           setStreamingContent(finalResponse);
@@ -413,8 +422,10 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
               stopThinkingTimer();
               receivedDone = true;
               if (data.finalContent) {
-                accumulated = data.finalContent;
-                setStreamingContent(data.finalContent);
+                accumulated = isIdentityQuestion(content)
+                  ? identityReply(content)
+                  : enforceTesseraVoice(data.finalContent, content);
+                setStreamingContent(accumulated);
               }
               const finalText = accumulated;
               if (finalText) {
@@ -451,7 +462,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
             }
             if (data.content) {
               stopThinkingTimer();
-              accumulated += data.content;
+              accumulated = appendTesseraVoice(accumulated, data.content, content);
               setStreamingContent(accumulated);
               lastAccumulatedRef.current = accumulated;
             }
@@ -468,11 +479,13 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
           try {
             const data = JSON.parse(dataStr);
             if (data.content) {
-              accumulated += data.content;
+              accumulated = appendTesseraVoice(accumulated, data.content, content);
               lastAccumulatedRef.current = accumulated;
             }
             if (data.finalContent) {
-              accumulated = data.finalContent;
+              accumulated = isIdentityQuestion(content)
+                ? identityReply(content)
+                : enforceTesseraVoice(data.finalContent, content);
               lastAccumulatedRef.current = accumulated;
             }
           } catch (_e) {}
