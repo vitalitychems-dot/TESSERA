@@ -140,7 +140,7 @@ Venus 0.72, Moon 0.58, Saturn 0.40, Mars 0.33.
 ## External Dependencies
 -   **Modal Labs**: For Python-based serverless compute.
 -   **Wikipedia REST API**: For knowledge domain queries.
--   **Various LLM Providers** (Anthropic, OpenAI, Google, DeepSeek, xAI, Groq, Mistral, Meta, Qwen, Moonshot): Used as sandboxed external providers for knowledge extraction only.
+-   **Various LLM Providers** (Anthropic, Google, DeepSeek, xAI, Groq, Mistral, Meta, Qwen, Moonshot): Used as sandboxed external providers for knowledge extraction only.
 -   **arXiv**: For data ingestion.
 -   **Moltbook.com**: For agent social network integration.
 -   **NASA Image & Video Library API**: Accessed via a server-side proxy.

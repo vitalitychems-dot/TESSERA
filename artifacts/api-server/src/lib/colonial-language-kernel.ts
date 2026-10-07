@@ -424,7 +424,7 @@ const WORDS: string[] = [
   "memory", "storage", "database", "cache", "index", "shard", "partition",
   "vector", "embedding", "similarity", "semantic", "search", "retrieval",
   "context", "window", "prompt", "completion", "inference", "model", "models",
-  "provider", "providers", "anthropic", "openai", "google", "mistral", "deepseek",
+  "provider", "providers", "anthropic", "google", "mistral", "deepseek",
   "grok", "claude", "gpt", "gemini", "llama", "ollama", "local", "external",
   "internal", "hybrid", "federated", "decentralized", "distributed", "centralized",
   "parity", "latency", "throughput", "bandwidth", "capacity", "utilization",

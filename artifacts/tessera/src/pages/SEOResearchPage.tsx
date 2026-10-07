@@ -26,7 +26,6 @@ const KEYWORDS: Keyword[] = [
 ];
 
 const COMPETITORS = [
-  { domain: "openai.com", authority: 94, keywords: 142000, traffic: "280M/mo" },
   { domain: "anthropic.com", authority: 82, keywords: 48000, traffic: "45M/mo" },
   { domain: "huggingface.co", authority: 88, keywords: 89000, traffic: "120M/mo" },
   { domain: "tessera.sovereign", authority: 42, keywords: 8400, traffic: "2.1M/mo" },

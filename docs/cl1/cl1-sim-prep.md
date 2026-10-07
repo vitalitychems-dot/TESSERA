@@ -17,7 +17,7 @@ Split into two independent lanes. Do not conflate them.
 **Host class:** ordinary cloud/local **GPU** machine (not CL1).  
 **Size note:** ~320B MoE / ~18B active — needs serious GPU memory/bandwidth.  
 **Serve via:** vLLM **or** SGLang **or** NIM  
-**API shape:** OpenAI-compatible **`/v1`** (chat/completions)  
+**API shape:** chat-completions **`/v1`**  
 **Tessera wiring:** pen slot may point at that base URL behind a flag, **default OFF**  
 **Flip:** only after smoke tests pass and status is **TESTED** (Build + Security evidence + Father yes)
 
@@ -25,7 +25,7 @@ Split into two independent lanes. Do not conflate them.
 
 - [ ] Confirm host is a normal GPU box (not Cortical Labs CL1 hardware)
 - [ ] Download/serve `zai-org/GLM-5.3-Flash` with vLLM, SGLang, or NIM (pick one; record which)
-- [ ] Expose OpenAI-compat `/v1` on a private URL (no secrets in git; URL via secret manager / private env only)
+- [ ] Expose chat-completions `/v1` on a private URL (no secrets in git; URL via secret manager / private env only)
 - [ ] Point Tessera pen slot at that URL behind feature flag, **default OFF**
 - [ ] Smoke tests: health, one chat completion, refusal/honesty banner still correct, no claim that GLM is live while flag is OFF
 - [ ] Build + Security mark **TESTED**; instrument line may then change from “live pen = xAI/Grok”

@@ -34,7 +34,7 @@ The 2026-10-02 checks below stay as the historical record. They do not describe 
 
 ## Credential and privacy checks
 
-- A value-redacted high-confidence scan found no GitHub/AWS/Stripe/OpenAI/Google/Slack token patterns or private-key headers. Thirteen generic key-assignment matches were classified as environment/example placeholders; no candidate values were printed. This is a pattern scan, not a guarantee that historical credentials have been purged.
+- A value-redacted high-confidence scan found no GitHub/AWS/Stripe/Google/Slack token patterns or private-key headers. Thirteen generic key-assignment matches were classified as environment/example placeholders; no candidate values were printed. This is a pattern scan, not a guarantee that historical credentials have been purged.
 - `.env.example` values are blank; populated environment files and common key/credential files are ignored. `.env.local` is not tracked.
 - Existing public business-contact fields remain unchanged as previously approved; they are not runtime keys. Rotate any credential that may have appeared in older public source or history.
 - Browser profile/session data, runtime databases, unreviewed user-pasted content, path-level personal-media inventories, and protected `1T` vault content were not staged.

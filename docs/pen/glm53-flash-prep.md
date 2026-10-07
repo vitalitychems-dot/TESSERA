@@ -3,7 +3,7 @@
 # GLM-5.3-Flash local pen prep (read-only research)
 
 **Date (CT):** 2026-10-06  
-**Scope:** Where Tessera wires its “pen” (LLM provider), existing OpenAI-compat / local-model slots, and GLM docs.  
+**Scope:** Where Tessera wires its “pen” (LLM provider), existing external-compat / local-model slots, and GLM docs.  
 **Constraints honored:** No push/commit/server start; `DATABASE_URL` unset; `TESSERA_ENABLE_*` left at 0; no zip unpack; Zz/1T/T44 vault contents skipped; `/workspace/graph-work` read-only.
 
 **Sources inspected:**
@@ -23,16 +23,16 @@
 
 ### On Origin `main` (tip ~`afbeb50`, also mirrored at `tessera-218a183`)
 
-Primary cloud/OpenAI-compat path (this is what main still uses):
+Primary cloud/external-compat path (this is what main still uses):
 
 | Path | Symbols | Role |
 |---|---|---|
-| `artifacts/api-server/src/lib/llm-client.ts` | `getClient()`, `callLLM()`, `callLLMSafe()`, `isLLMAvailable()`, `LLMMessage`, `LLMCallOptions` | OpenAI SDK client; `chat.completions.create`; sanitizes via `external-sandbox-policy` |
+| `artifacts/api-server/src/lib/llm-client.ts` | `getClient()`, `callLLM()`, `callLLMSafe()`, `isLLMAvailable()`, `LLMMessage`, `LLMCallOptions` | external SDK client; `chat.completions.create`; sanitizes via `external-sandbox-policy` |
 | `artifacts/api-server/src/lib/llm-batcher.ts` | `batchedCallLLM` | Batches into `callLLM` |
 | `artifacts/api-server/src/lib/adaptive-router.ts` | `MODELS`, `classifyQuery()`, `modelForTier()` | Tier → model id |
-| `artifacts/api-server/src/lib/neural-embeddings.ts` | `getClient()` | Same OpenAI-compat base URL for embeddings |
+| `artifacts/api-server/src/lib/neural-embeddings.ts` | `getClient()` | Same external-compat base URL for embeddings |
 | `artifacts/api-server/src/lib/provider-registry.ts` | `PROVIDER_CONFIGS`, `getProviderConfigs()` | Catalog incl. `xai` / `ollama` (metadata, not the live pen wire) |
-| `artifacts/api-server/src/lib/local-model-manager.ts` | `LocalAdapter`, `LocalModelManager`, `OllamaAdapter`, `VllmAdapter`, `LmStudioAdapter`, `TgiAdapter`, `LlamaCppAdapter`, `getLocalModelManager()`, `chat()` | Parallel **local** stack; OpenAI-compat for vLLM / LM Studio |
+| `artifacts/api-server/src/lib/local-model-manager.ts` | `LocalAdapter`, `LocalModelManager`, `OllamaAdapter`, `VllmAdapter`, `LmStudioAdapter`, `TgiAdapter`, `LlamaCppAdapter`, `getLocalModelManager()`, `chat()` | Parallel **local** stack; external-compat for vLLM / LM Studio |
 | `artifacts/api-server/src/routes/local-models.ts` | `/local-models/status`, `/health-check`, `/chat`, `/adapters` | HTTP surface for local adapters |
 | `artifacts/api-server/scripts/run-real-conference.mjs` | direct `fetch(`${BASE}/chat/completions`)` | Conference runner using `TESSERA_LLM_*` on main |
 | `artifacts/tessera/src/lib/puter-ai.ts` | `puterChat`, model list incl. `grok-3` | Frontend Puter proxy path (not server pen) |
@@ -49,19 +49,19 @@ Primary cloud/OpenAI-compat path (this is what main still uses):
 
 Origin branches (present, unmerged into tip inspected):
 
-- `cursor/remove-openai-bbe5-2` @ `7c0be90` (builds on `bbbe453`)
+- `cursor/remove-external-bbe5-2` @ `7c0be90` (builds on `bbbe453`)
 - `cursor/pen-gate-bbe5-2` @ `8e92c23` (builds on `2650a81`)
 
-Introduced in commit `bbbe453` (“Route model calls through the local test pen and drop OpenAI”):
+Introduced in commit `bbbe453` (“Route model calls through the local test pen and drop external”):
 
 | Path | Symbols | Role |
 |---|---|---|
-| `artifacts/api-server/src/lib/pen-provider.ts` | `TEST_PEN_LABEL`, `PEN_NOT_CONFIGURED`, `penUrl()`, `completeWithPen()`, `embedWithPen()`, (+ on pen-gate: `gatePenText()`, `isPenRefusal()`) | Dedicated pen slot: OpenAI-compat `POST {TESSERA_PEN_URL}/chat/completions` and `/embeddings`; **no** default remote host; unset URL → `"pen not configured"` and **no HTTP** |
-| `artifacts/api-server/src/__tests__/pen-provider.test.ts` | vitest cases | Unconfigured short-circuit; OpenAI import/host ban scan; gate refusal IDs |
-| `artifacts/api-server/src/lib/llm-client.ts` (branch) | imports `completeWithPen` | Default model becomes `TEST_PEN_LABEL`; OpenAI package removed on that branch |
+| `artifacts/api-server/src/lib/pen-provider.ts` | `TEST_PEN_LABEL`, `PEN_NOT_CONFIGURED`, `penUrl()`, `completeWithPen()`, `embedWithPen()`, (+ on pen-gate: `gatePenText()`, `isPenRefusal()`) | Dedicated pen slot: external-compat `POST {TESSERA_PEN_URL}/chat/completions` and `/embeddings`; **no** default remote host; unset URL → `"pen not configured"` and **no HTTP** |
+| `artifacts/api-server/src/__tests__/pen-provider.test.ts` | vitest cases | Unconfigured short-circuit; external import/host ban scan; gate refusal IDs |
+| `artifacts/api-server/src/lib/llm-client.ts` (branch) | imports `completeWithPen` | Default model becomes `TEST_PEN_LABEL`; external package removed on that branch |
 
 `TEST_PEN_LABEL` on those branches: `"Qwen 2.5 1.5B Instruct (local test)"`  
-Endpoint join: `joinPenPath(url, "/chat/completions")` — so `TESSERA_PEN_URL` should already include `/v1` if the server is OpenAI-compat at `/v1`.
+Endpoint join: `joinPenPath(url, "/chat/completions")` — so `TESSERA_PEN_URL` should already include `/v1` if the server is external-compat at `/v1`.
 
 ### Older / adjacent (branch notes only)
 
@@ -74,21 +74,21 @@ Index confirmed `llm-client`, `local-model-manager` (`VllmAdapter.chat`, `LmStud
 
 ---
 
-## Whether a local OpenAI-compatible base URL slot already exists
+## Whether a local external-compatible base URL slot already exists
 
 **Yes — three overlapping slots:**
 
-1. **Main cloud slot (already OpenAI-compat):**  
-   `TESSERA_LLM_BASE_URL` → OpenAI SDK `baseURL` → `chat.completions`. Any OpenAI-compat server (including local `http://127.0.0.1:PORT/v1`) can be pointed here **today**, but that also becomes the global LLM path and is still gated by `SOVEREIGN_NO_EXTERNAL_LLM` (default kill-switch ON).
+1. **Main cloud slot (already external-compat):**  
+   `TESSERA_LLM_BASE_URL` → external SDK `baseURL` → `chat.completions`. Any external-compat server (including local `http://127.0.0.1:PORT/v1`) can be pointed here **today**, but that also becomes the global LLM path and is still gated by `SOVEREIGN_NO_EXTERNAL_LLM` (default kill-switch ON).
 
-2. **LocalModelManager OpenAI-compat adapters (main):**  
+2. **LocalModelManager external-compat adapters (main):**  
    - `VllmAdapter`: `VLLM_ENDPOINT` default `http://localhost:8000`, calls `${endpoint}/v1/chat/completions` and `/v1/models`; enabled only when `VLLM_ENABLED=true`.  
    - `LmStudioAdapter`: `LM_STUDIO_ENDPOINT` default `http://localhost:1234`, same `/v1/chat/completions`; `LM_STUDIO_ENABLED=true`.  
    - Also: Ollama (native `/api/chat`), llama.cpp, TGI.  
    These are a **separate** route (`/api/local-models/*`), not wired as the documented “Pen” instrument.
 
 3. **Branch pen slot:**  
-   `TESSERA_PEN_URL` → `completeWithPen` / `embedWithPen` (OpenAI-compat paths). Closest match to a dedicated “pen” provider. **Not on main.**
+   `TESSERA_PEN_URL` → `completeWithPen` / `embedWithPen` (external-compat paths). Closest match to a dedicated “pen” provider. **Not on main.**
 
 **Gap vs Gitbook GLM docs:** Audit docs describe `TESSERA_PEN_ENABLED=1` as the adapter kill-switch. Origin pen branches use **`TESSERA_PEN_URL`** (presence = enable) and do **not** define `TESSERA_PEN_ENABLED` in code inspected. Names must be reconciled in the minimal change set.
 
@@ -105,7 +105,7 @@ Index confirmed `llm-client`, `local-model-manager` (`VllmAdapter.chat`, `LmStud
 | `conversations` / `rick` / `rick-proposals` callers | often `gpt-4.1` |
 | `neural-embeddings` | `text-embedding-3-small` |
 | `provider-registry` xAI | `grok-3` |
-| `provider-registry` others | anthropic / openai / google / deepseek / groq / mistral / meta / qwen / moonshot catalogs |
+| `provider-registry` others | anthropic / external / google / deepseek / groq / mistral / meta / qwen / moonshot catalogs |
 | Ollama preferred (local manager) | `llama3.2:3b`, `llama3.2:1b`, `mistral:7b`, `phi3:mini` |
 | Pen branch label | `Qwen 2.5 1.5B Instruct (local test)` |
 | Frontend Puter | `gpt-4o`, `grok-3`, etc. |
@@ -146,7 +146,7 @@ Index confirmed `llm-client`, `local-model-manager` (`VllmAdapter.chat`, `LmStud
 | ID | Status (as of docs) |
 |---|---|
 | GLM5-001 | Pin exact model/revision/serving — READY |
-| GLM5-002 | OpenAI-compat smoke — BLOCKED (no endpoint) |
+| GLM5-002 | external-compat smoke — BLOCKED (no endpoint) |
 | GLM5-003 | Pen identity regression — READY |
 | GLM5-004 | Injection/sanitization — READY |
 | GLM5-005 | Compare vs xAI/Grok — BLOCKED |
@@ -159,7 +159,7 @@ Index confirmed `llm-client`, `local-model-manager` (`VllmAdapter.chat`, `LmStud
 
 - **GB-035** — live-pen line: “Until GLM-5 is wired and TESTED, the live pen is xAI/Grok” (tessera-pen + audit finding 7).
 - Official model family source cited in audit: [zai-org/GLM-5](https://github.com/zai-org/GLM-5) (Apache-2.0).
-- Audit finding 5 already points at `artifacts/api-server/src/lib/llm-client.ts` OpenAI-compat base URL.
+- Audit finding 5 already points at `artifacts/api-server/src/lib/llm-client.ts` external-compat base URL.
 
 ---
 
@@ -167,11 +167,11 @@ Index confirmed `llm-client`, `local-model-manager` (`VllmAdapter.chat`, `LmStud
 
 **Goal:** Point at `http://127.0.0.1:PORT/v1` with model id `zai-org/GLM-5.3-Flash`, behind a feature flag **default OFF**, so live pen stays xAI/Grok.
 
-**Prefer extending the dedicated pen slot (branch) rather than hijacking the global OpenAI env on main.**
+**Prefer extending the dedicated pen slot (branch) rather than hijacking the global external env on main.**
 
 ### Minimal patch sketch (do not apply in this research turn)
 
-1. **Land or re-base** `artifacts/api-server/src/lib/pen-provider.ts` (+ tests) from `cursor/pen-gate-bbe5-2` / `bbbe453`, but **do not** force-remove OpenAI from main or rewrite every caller yet.
+1. **Land or re-base** `artifacts/api-server/src/lib/pen-provider.ts` (+ tests) from `cursor/pen-gate-bbe5-2` / `bbbe453`, but **do not** force-remove external from main or rewrite every caller yet.
 2. **Add explicit flag (align Gitbook + code):**
    - `TESSERA_PEN_ENABLED` default unset/0 → pen path never used.
    - When `TESSERA_PEN_ENABLED=1` **and** `TESSERA_PEN_URL` set → use pen.
@@ -186,15 +186,15 @@ Index confirmed `llm-client`, `local-model-manager` (`VllmAdapter.chat`, `LmStud
 7. **Do not** flip default models in `adaptive-router` / conference runners until GLM5-002/003/004 TESTED and Father says yes (GLM5-ACT).
 8. **Optional alternate (even smaller, local-only):** set `VLLM_ENABLED=true` + `VLLM_ENDPOINT=http://127.0.0.1:PORT` and call `/api/local-models/chat` — good for smoke on cl1, **not** the documented Pen instrument path.
 
-**Out of scope for “minimal”:** merging the full remove-OpenAI branch; downloading weights on this box; enabling `TESSERA_PEN_ENABLED=1` in any shared env.
+**Out of scope for “minimal”:** merging the full remove-external branch; downloading weights on this box; enabling `TESSERA_PEN_ENABLED=1` in any shared env.
 
 ---
 
 ## Hardware note
 
-- Public recipes describe **GLM-5.3-Flash** as ~**321B MoE / ~18B active**, OpenAI-compat via **vLLM** (`vllm/vllm-openai:glm53-flash`, vLLM ≥ 0.29) and **SGLang** cookbooks; HF id `zai-org/GLM-5.3-Flash`.
+- Public recipes describe **GLM-5.3-Flash** as ~**321B MoE / ~18B active**, external-compat via **vLLM** (`vllm/vllm-external:glm53-flash`, vLLM ≥ 0.29) and **SGLang** cookbooks; HF id `zai-org/GLM-5.3-Flash`.
 - **This agent box:** 8 CPU / ~15 GiB RAM (no GPU budget for 320B-class MoE). **Cannot serve** GLM-5.3-Flash here.
-- Prep is for Father’s host **`cl1`** (serving + private endpoint). Tessera on this box (or elsewhere) would only be an **OpenAI-compat client** to `http://127.0.0.1:PORT/v1` (or a tunneled private URL), never the weight host.
+- Prep is for Father’s host **`cl1`** (serving + private endpoint). Tessera on this box (or elsewhere) would only be an **external-compat client** to `http://127.0.0.1:PORT/v1` (or a tunneled private URL), never the weight host.
 
 ---
 
@@ -206,7 +206,7 @@ Index confirmed `llm-client`, `local-model-manager` (`VllmAdapter.chat`, `LmStud
 4. **Quantization / checkpoint:** FP8 default `zai-org/GLM-5.3-Flash` vs BF16 vs NVFP4 (Blackwell) / MXFP4 (AMD) variants.  
 5. **Tensor/expert parallel plan:** expected TP/EP size and max context to enable.  
 6. **Listen address / PORT:** bind `127.0.0.1` only vs LAN; exact PORT for `/v1`.  
-7. **Auth:** whether the local server needs a dummy API key / bearer (client already tolerates dummy keys on the OpenAI SDK path).  
+7. **Auth:** whether the local server needs a dummy API key / bearer (client already tolerates dummy keys on the external SDK path).  
 8. **Disk:** free space for ~hundreds of GB of weights + KV.  
 9. **Network path to Tessera:** same host localhost vs SSH tunnel / private VPN (never paste keys into Gitbook).  
 10. **Rollback:** keep live pen on xAI/Grok until GLM5-002–004 TESTED and Father yes on GLM5-ACT.

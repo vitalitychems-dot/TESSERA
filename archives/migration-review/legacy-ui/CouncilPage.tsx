@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import {
-  Crown, Users, Brain, Globe, Shield, Zap, ChevronDown, ChevronUp, Loader2,
+  Crown, Users, Globe, Shield, Zap, ChevronDown, ChevronUp, Loader2,
   CheckCircle2, Clock, BarChart3, Radio, MessageCircle, Activity,
   Star, Vote, Eye, Sparkles, FileCheck, AlertTriangle, Network,
   Server, Wifi, Database, Cpu, Signal, Command, Terminal
@@ -11,7 +11,6 @@ const GrandCouncilPage = lazy(() => import("./GrandCouncilPage"));
 const GrandConferencePage = lazy(() => import("./GrandConferencePage"));
 const ConclusionsPage = lazy(() => import("./ConclusionsPage"));
 const ConsensusPage = lazy(() => import("./ConsensusPage"));
-const AGISummitPage = lazy(() => import("./AGISummitPage"));
 const SummitPage = lazy(() => import("./SummitPage"));
 const SummitReportPage = lazy(() => import("./SummitReportPage"));
 const ConferenceDecisionsPage = lazy(() => import("./ConferenceDecisionsPage"));
@@ -70,10 +69,6 @@ export default function CouncilPage() {
 
       <Section title="Grand Conference" icon={Users} iconColor="text-cyan-400" badge="AUTO">
         <Suspense fallback={<Loading />}><GrandConferencePage embedded /></Suspense>
-      </Section>
-
-      <Section title="AGI Summit" icon={Brain} iconColor="text-violet-400">
-        <Suspense fallback={<Loading />}><AGISummitPage embedded /></Suspense>
       </Section>
 
       <Section title="Summit" icon={Star} iconColor="text-amber-400">
