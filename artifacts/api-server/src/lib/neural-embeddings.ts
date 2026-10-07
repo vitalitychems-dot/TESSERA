@@ -1,36 +1,6 @@
 import { logger } from "./logger";
 import { embeddingDimensionalCache } from "./dimensional-lru-cache";
-
-interface EmbeddingResponse {
-  data?: Array<{ index?: number; embedding?: number[] }>;
-}
-
-function integrationEndpoint(): { baseURL: string; apiKey: string } {
-  const raw = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? "_DUMMY_API_KEY_";
-  if (!raw) {
-    throw new Error("AI_INTEGRATIONS_OPENAI_BASE_URL not set");
-  }
-  return { baseURL: raw.replace(/\/+$/, ""), apiKey };
-}
-
-async function postEmbeddings(input: string | string[], signal: AbortSignal): Promise<EmbeddingResponse> {
-  const { baseURL, apiKey } = integrationEndpoint();
-  const response = await fetch(`${baseURL}/embeddings`, {
-    method: "POST",
-    signal,
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ model: "text-embedding-3-small", input }),
-  });
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(`embedding request failed (${response.status}) ${detail.slice(0, 300)}`.trim());
-  }
-  return (await response.json()) as EmbeddingResponse;
-}
+import { tesseraEmbeddings } from "./tessera-llm-http";
 
 const EMBEDDING_DIM = 256;
 const MAX_BATCH_SIZE = 20;
@@ -151,7 +121,10 @@ export async function generateEmbedding(text: string, dimension: string = "gener
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    const response = await postEmbeddings(text.slice(0, 8000), controller.signal);
+    const response = await tesseraEmbeddings(
+      { model: "text-embedding-3-small", input: text.slice(0, 8000) },
+      controller.signal,
+    );
     clearTimeout(timer);
 
     const vec = response.data?.[0]?.embedding;
@@ -202,11 +175,14 @@ export async function generateEmbeddingsBatch(texts: string[], dimension: string
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 15_000);
 
-      const response = await postEmbeddings(batchTexts, controller.signal);
+      const response = await tesseraEmbeddings(
+        { model: "text-embedding-3-small", input: batchTexts },
+        controller.signal,
+      );
       clearTimeout(timer);
 
       const rows = response.data;
-      if (!rows) throw new Error("embedding response missing data");
+      if (!rows) throw new Error("Tessera LLM embeddings response missing data");
       embeddings = [...rows]
         .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
         .map((row) => row.embedding);

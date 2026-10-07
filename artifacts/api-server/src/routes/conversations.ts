@@ -440,8 +440,8 @@ async function sandboxExtractKnowledge(
   messages: Array<{ role: string; content: string }>,
   sovereignCtx: string,
 ): Promise<string | null> {
-  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  const baseURL = process.env.TESSERA_LLM_BASE_URL;
+  const apiKey = process.env.TESSERA_LLM_API_KEY;
   if (!baseURL || !apiKey) return null;
 
   const sandboxSystem = `${SANDBOX_EXTRACTION_PROMPT}\n\n[SOVEREIGN CONTEXT — for factual grounding only]\n${sovereignCtx}`;
@@ -500,8 +500,8 @@ async function _deprecated_sandboxExtractKnowledgeStreaming(
   sovereignCtx: string,
   onChunk: (text: string) => void,
 ): Promise<string | null> {
-  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  const baseURL = process.env.TESSERA_LLM_BASE_URL;
+  const apiKey = process.env.TESSERA_LLM_API_KEY;
   if (!baseURL || !apiKey) return null;
 
   const streamUrl = `${baseURL}/chat/completions`;
