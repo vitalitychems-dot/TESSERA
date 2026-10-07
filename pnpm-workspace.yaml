@@ -152,3 +152,12 @@ overrides:
   rollup>@rollup/rollup-win32-ia32-msvc: '-'
   rollup>@rollup/rollup-win32-x64-gnu: '-'
   rollup>@rollup/rollup-win32-x64-msvc: '-'
+  # Security floors: pnpm audit failures on main (2026-10-07, run 37549671019).
+  # proxy-addr: GHSA-jqcg-44mw-7w3h (critical, IP spoofing) via express.
+  proxy-addr: ^2.0.8
+  # source-map-js: GHSA-68fv-2mgg-jv7q (high, event-loop DoS) via vite/postcss.
+  source-map-js: ^1.2.2
+  # postcss-selector-parser: GHSA-rj75-hqrm-r3gf (moderate, CPU exhaustion) via @tailwindcss/typography.
+  postcss-selector-parser: ^7.1.6
+  # fast-copy: GHSA-jggr-w7fw-pc2j (moderate, stack exhaustion) via pino-pretty.
+  fast-copy: ^4.1.0
