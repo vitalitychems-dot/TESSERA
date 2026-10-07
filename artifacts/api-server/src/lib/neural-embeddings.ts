@@ -1,19 +1,35 @@
-import OpenAI from "openai";
 import { logger } from "./logger";
 import { embeddingDimensionalCache } from "./dimensional-lru-cache";
 
-let _client: OpenAI | null = null;
+interface EmbeddingResponse {
+  data?: Array<{ index?: number; embedding?: number[] }>;
+}
 
-function getClient(): OpenAI {
-  if (!_client) {
-    const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? "_DUMMY_API_KEY_";
-    if (!baseURL) {
-      throw new Error("AI_INTEGRATIONS_OPENAI_BASE_URL not set");
-    }
-    _client = new OpenAI({ baseURL, apiKey });
+function integrationEndpoint(): { baseURL: string; apiKey: string } {
+  const raw = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? "_DUMMY_API_KEY_";
+  if (!raw) {
+    throw new Error("AI_INTEGRATIONS_OPENAI_BASE_URL not set");
   }
-  return _client;
+  return { baseURL: raw.replace(/\/+$/, ""), apiKey };
+}
+
+async function postEmbeddings(input: string | string[], signal: AbortSignal): Promise<EmbeddingResponse> {
+  const { baseURL, apiKey } = integrationEndpoint();
+  const response = await fetch(`${baseURL}/embeddings`, {
+    method: "POST",
+    signal,
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ model: "text-embedding-3-small", input }),
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`embedding request failed (${response.status}) ${detail.slice(0, 300)}`.trim());
+  }
+  return (await response.json()) as EmbeddingResponse;
 }
 
 const EMBEDDING_DIM = 256;
@@ -132,17 +148,13 @@ export async function generateEmbedding(text: string, dimension: string = "gener
   const timeoutMs = Math.round(10_000 * Math.min(neuralPreference, 2.0));
 
   try {
-    const client = getClient();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    const response = await client.embeddings.create(
-      { model: "text-embedding-3-small", input: text.slice(0, 8000) },
-      { signal: controller.signal as AbortSignal },
-    );
+    const response = await postEmbeddings(text.slice(0, 8000), controller.signal);
     clearTimeout(timer);
 
-    const vec = response.data[0]?.embedding;
+    const vec = response.data?.[0]?.embedding;
     if (vec && vec.length > 0) {
       embeddingMetrics.neuralCalls++;
       embeddingDimensionalCache.set(key, { vec, ts: Date.now() }, dimension);
@@ -184,22 +196,20 @@ export async function generateEmbeddingsBatch(texts: string[], dimension: string
 
   for (const batch of batches) {
     const batchTexts = batch.map(idx => texts[idx].slice(0, 8000));
-    let embeddings: number[][] | null = null;
+    let embeddings: Array<number[] | undefined> | null = null;
 
     try {
-      const client = getClient();
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 15_000);
 
-      const response = await client.embeddings.create(
-        { model: "text-embedding-3-small", input: batchTexts },
-        { signal: controller.signal as AbortSignal },
-      );
+      const response = await postEmbeddings(batchTexts, controller.signal);
       clearTimeout(timer);
 
-      embeddings = response.data
-        .sort((a, b) => a.index - b.index)
-        .map(d => d.embedding);
+      const rows = response.data;
+      if (!rows) throw new Error("embedding response missing data");
+      embeddings = [...rows]
+        .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+        .map((row) => row.embedding);
     } catch (err) {
       logger.debug({ err: (err as Error).message, batchSize: batch.length }, "NeuralEmbeddings: batch API call failed");
     }

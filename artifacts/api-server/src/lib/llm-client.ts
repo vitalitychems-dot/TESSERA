@@ -1,21 +1,44 @@
-import OpenAI from "openai";
 import { logger } from "./logger";
 import { lookupCache, storeInCache, getCacheStats } from "./semantic-cache";
 import { lookupKnowledge, distillFromResponse } from "./knowledge-distillation";
 import { applyDreamToMessages } from "./dream-prompt-bridge";
 
-let _client: OpenAI | null = null;
+interface ChatCompletionResult {
+  choices?: Array<{ message?: { content?: string | null } }>;
+}
 
-function getClient(): OpenAI {
-  if (!_client) {
-    const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? "_DUMMY_API_KEY_";
-    if (!baseURL) {
-      throw new Error("AI_INTEGRATIONS_OPENAI_BASE_URL not set");
-    }
-    _client = new OpenAI({ baseURL, apiKey });
+function integrationEndpoint(): { baseURL: string; apiKey: string } {
+  const raw = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? "_DUMMY_API_KEY_";
+  if (!raw) {
+    throw new Error("AI_INTEGRATIONS_OPENAI_BASE_URL not set");
   }
-  return _client;
+  return { baseURL: raw.replace(/\/+$/, ""), apiKey };
+}
+
+async function postChatCompletion(
+  body: {
+    model: string;
+    max_completion_tokens: number;
+    messages: LLMMessage[];
+  },
+  signal: AbortSignal,
+): Promise<ChatCompletionResult> {
+  const { baseURL, apiKey } = integrationEndpoint();
+  const response = await fetch(`${baseURL}/chat/completions`, {
+    method: "POST",
+    signal,
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`chat completion failed (${response.status}) ${detail.slice(0, 300)}`.trim());
+  }
+  return (await response.json()) as ChatCompletionResult;
 }
 
 export interface LLMMessage {
@@ -152,16 +175,15 @@ export async function callLLM(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const client = getClient();
-    const response = await client.chat.completions.create(
+    const response = await postChatCompletion(
       {
         model,
         max_completion_tokens: maxTokens,
         messages: canonicalMessages,
       },
-      { signal: controller.signal as AbortSignal }
+      controller.signal,
     );
-    const rawResult = response.choices[0]?.message?.content ?? "";
+    const rawResult = response.choices?.[0]?.message?.content ?? "";
 
     // SOVEREIGN POLICY: external LLM outputs are UNTRUSTED. Sanitize at the ingress
     // boundary so forbidden patterns (override/admin/eval/etc.) are redacted before
