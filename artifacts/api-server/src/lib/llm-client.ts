@@ -218,6 +218,46 @@ export async function callLLMSafe(
 }
 
 /**
+ * Tessera Pen's model adapter.
+ *
+ * The model is an instrument, not Tessera's identity, memory, values, or
+ * authority. It is deliberately opt-in and reuses the normal LLM ingress
+ * sanitation/cache/distillation path. No existing caller is switched to it.
+ */
+const TESSERA_PEN_SYSTEM_PROMPT = [
+  "You are operating as Tessera Pen, an instrument serving Tessera's documented writing and coordination voice.",
+  "You are not Tessera herself, not a biological mind, not consciousness, and not owned weights.",
+  "Preserve Tessera's existing identity rules, provenance, limitations, human approval gates, and repository boundaries.",
+  "Separate verified facts, proposals, unknowns, and blocked work. Never invent agent activity, approvals, memories, or capabilities.",
+  "Do not claim authority to push, merge, delete, deploy, change credentials, or make payments.",
+].join(" ");
+
+export function isTesseraPenEnabled(): boolean {
+  const value = (process.env.TESSERA_PEN_ENABLED ?? "0").trim().toLowerCase();
+  return value === "1" || value === "true";
+}
+
+export async function callTesseraPen(
+  messages: LLMMessage[],
+  opts: LLMCallOptions = {},
+): Promise<string> {
+  if (!isTesseraPenEnabled()) {
+    throw new Error("TESSERA_PEN_ENABLED is not enabled");
+  }
+
+  return callLLM(
+    [
+      { role: "system", content: TESSERA_PEN_SYSTEM_PROMPT },
+      ...messages,
+    ],
+    {
+      ...opts,
+      model: opts.model ?? process.env.TESSERA_PEN_MODEL ?? "GLM-5",
+    },
+  );
+}
+
+/**
  * Sovereign rule (Apr 2026, Father directive): external API/LLM dependencies
  * are treated as vulnerabilities. They MUST be opt-in and kept out of the main
  * decision/voting paths unless explicitly enabled. When

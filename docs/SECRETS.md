@@ -24,4 +24,6 @@ Historical supply and storefront sources are not active apps in this staged work
 
 ## Additional configuration names
 
-The code also uses non-secret settings, including `PORT`, `BASE_PATH`, `VITE_API_URL`, `OLLAMA_ENDPOINT`, `VLLM_ENDPOINT`, `LLM_TIMEOUT_MS`, `SITEMAP_LASTMOD`, and `REPL_ID`. Consult the app code for optional feature-specific settings; add new values to a secret manager or deployment settings, not to committed configuration.
+The code also uses non-secret settings, including `PORT`, `BASE_PATH`, `VITE_API_URL`, `OLLAMA_ENDPOINT`, `VLLM_ENDPOINT`, `LLM_TIMEOUT_MS`, `SITEMAP_LASTMOD`, and `REPL_ID`. The opt-in Tessera Pen adapter also recognizes `TESSERA_PEN_ENABLED` and `TESSERA_PEN_MODEL`; it is disabled by default and does not change existing model callers. Consult the app code for optional feature-specific settings; add new values to a secret manager or deployment settings, not to committed configuration.
+
+For GLM-5, use the existing OpenAI-compatible integration settings with a private serving endpoint. Do not commit `AI_INTEGRATIONS_OPENAI_API_KEY`, expose it through `VITE_*`, or enable the Pen adapter in a public deployment without a reviewed endpoint, timeout, sanitation, and approval configuration. See the Gitbook [GLM-5 Pen integration contract](https://github.com/vitalitychems-dot/Gitbook/blob/main/brain-consciousness/GLM5-PEN-INTEGRATION.md).
