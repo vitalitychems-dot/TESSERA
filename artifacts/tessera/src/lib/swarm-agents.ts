@@ -652,7 +652,7 @@ export function buildRoutingGraph(agents: AgentBase[]): RoutingGraph {
     agent.agentId && meta.edges.push({ to: agent.agentId, weight: 0.5, latencyMs: 50, bandwidth: 50 });
   }
 
-  const providers = ["Anthropic", "OpenAI", "Google", "Mistral", "xAI", "DeepSeek"];
+  const providers = ["Anthropic", "Google", "Mistral", "xAI", "DeepSeek"];
   for (const provider of providers) {
     const providerNode: RoutingNode = {
       id: `provider-${provider.toLowerCase()}`,

@@ -221,7 +221,7 @@ const WORDS: string[] = [
   "complete", "failed", "dispatched", "scheduled", "running", "initialized",
   "memory", "storage", "database", "cache", "index", "shard", "vector",
   "embedding", "similarity", "semantic", "search", "retrieval", "context",
-  "prompt", "completion", "inference", "model", "provider", "anthropic", "openai",
+  "prompt", "completion", "inference", "model", "provider", "anthropic",
   "google", "mistral", "deepseek", "claude", "gpt", "gemini", "local", "external",
   "internal", "federated", "decentralized", "distributed", "latency", "throughput",
   "bandwidth", "capacity", "cpu", "gpu", "compute", "efficiency", "performance",

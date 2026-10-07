@@ -694,7 +694,7 @@ export async function convene(opts: ConveneOptions = {}): Promise<ConvenedSessio
           role: "speaker",
           text: r.text,
           model: r.model,
-          adapter: "openai-modelfarm",
+          adapter: "modelfarm",
           latencyMs: r.latencyMs,
           tokenCount: r.tokens,
           promptHash: r.promptHash,

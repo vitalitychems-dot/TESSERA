@@ -1,7 +1,7 @@
 import { logger } from "./logger";
 import { appendLedgerEntry } from "./sovereign-ledger";
 
-export type UntrustedSource = "external-llm" | "openai" | "anthropic" | "gemini" | "web" | "rss" | "arxiv" | "wikipedia" | "nasa" | "reddit";
+export type UntrustedSource = "external-llm" | "anthropic" | "gemini" | "web" | "rss" | "arxiv" | "wikipedia" | "nasa" | "reddit";
 
 export interface QuarantinedPayload<T = unknown> {
   source: UntrustedSource;
