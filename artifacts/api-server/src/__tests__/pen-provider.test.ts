@@ -16,15 +16,15 @@ const classAPaths = [
 ];
 
 describe("pen provider", () => {
-  const originalBase = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-  const originalKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  const originalBase = process.env.TESSERA_PEN_URL;
+  const originalKey = process.env.TESSERA_PEN_API_KEY;
   let server: Server | undefined;
 
   afterEach(async () => {
-    if (originalBase === undefined) delete process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-    else process.env.AI_INTEGRATIONS_OPENAI_BASE_URL = originalBase;
-    if (originalKey === undefined) delete process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-    else process.env.AI_INTEGRATIONS_OPENAI_API_KEY = originalKey;
+    if (originalBase === undefined) delete process.env.TESSERA_PEN_URL;
+    else process.env.TESSERA_PEN_URL = originalBase;
+    if (originalKey === undefined) delete process.env.TESSERA_PEN_API_KEY;
+    else process.env.TESSERA_PEN_API_KEY = originalKey;
     if (!server) return;
     const closing = server;
     server = undefined;
@@ -34,14 +34,14 @@ describe("pen provider", () => {
   });
 
   it("does not call the network when the base URL is unset", async () => {
-    delete process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+    delete process.env.TESSERA_PEN_URL;
     await expect(
       penChatCompletion({
         model: "m",
         max_completion_tokens: 8,
         messages: [{ role: "user", content: "hi" }],
       }),
-    ).rejects.toThrow("AI_INTEGRATIONS_OPENAI_BASE_URL not set");
+    ).rejects.toThrow("pen not configured");
   });
 
   it("posts chat completions and embeddings without the OpenAI SDK", async () => {
@@ -80,8 +80,8 @@ describe("pen provider", () => {
     });
     const address = server.address();
     if (!address || typeof address === "string") throw new Error("no test server address");
-    process.env.AI_INTEGRATIONS_OPENAI_BASE_URL = `http://127.0.0.1:${address.port}/`;
-    process.env.AI_INTEGRATIONS_OPENAI_API_KEY = "test-key";
+    process.env.TESSERA_PEN_URL = `http://127.0.0.1:${address.port}/`;
+    process.env.TESSERA_PEN_API_KEY = "test-key";
 
     const chat = await penChatCompletion({
       model: "GLM-5",
@@ -102,10 +102,12 @@ describe("pen provider", () => {
   it("has zero Class A SDK imports and caret dependencies", () => {
     const bannedImport = ["import OpenAI from", '"openai"'].join(" ");
     const bannedDep = ['"openai":', '"^'].join(" ");
+    const staleSlot = ["AI_INTEGRATIONS_", "OPENAI_"].join("");
     for (const path of classAPaths) {
       const text = readFileSync(path, "utf8");
       expect(text.includes(bannedImport)).toBe(false);
       expect(text.includes(bannedDep)).toBe(false);
+      expect(text.includes(staleSlot)).toBe(false);
     }
   });
 });
