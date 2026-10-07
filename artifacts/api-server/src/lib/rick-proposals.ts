@@ -290,8 +290,8 @@ function coerceProposal(raw: LlmProposalShape, idx: number, fallbackCategory: st
 }
 
 async function generateViaLlm(diag: DiagnosticsSnapshot, slotsNeeded: number, recentRejections: { title: string; reason: string }[]): Promise<RickProposal[]> {
-  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  const baseURL = process.env.TESSERA_LLM_BASE_URL;
+  const apiKey = process.env.TESSERA_LLM_API_KEY;
   if (!baseURL || !apiKey || slotsNeeded <= 0) return [];
 
   const realityAuditBlock = `REALITY AUDIT (grounded checks against the knowledge base):

@@ -3,28 +3,27 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { penChatCompletion, penEmbeddings } from "../lib/pen-provider";
+import { tesseraChatCompletion, tesseraEmbeddings } from "../lib/tessera-llm-http";
 
 const packageRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "../..");
 
 const classAPaths = [
   resolve(packageRoot, "src/lib/llm-client.ts"),
   resolve(packageRoot, "src/lib/neural-embeddings.ts"),
-  resolve(packageRoot, "src/lib/pen-provider.ts"),
+  resolve(packageRoot, "src/lib/tessera-llm-http.ts"),
   resolve(packageRoot, "package.json"),
-  resolve(packageRoot, "../../archives/source-variants/T44/main/artifacts/api-server/src/lib/llm-client.ts"),
 ];
 
-describe("pen provider", () => {
-  const originalBase = process.env.TESSERA_PEN_URL;
-  const originalKey = process.env.TESSERA_PEN_API_KEY;
+describe("tessera llm http", () => {
+  const originalBase = process.env.TESSERA_LLM_BASE_URL;
+  const originalKey = process.env.TESSERA_LLM_API_KEY;
   let server: Server | undefined;
 
   afterEach(async () => {
-    if (originalBase === undefined) delete process.env.TESSERA_PEN_URL;
-    else process.env.TESSERA_PEN_URL = originalBase;
-    if (originalKey === undefined) delete process.env.TESSERA_PEN_API_KEY;
-    else process.env.TESSERA_PEN_API_KEY = originalKey;
+    if (originalBase === undefined) delete process.env.TESSERA_LLM_BASE_URL;
+    else process.env.TESSERA_LLM_BASE_URL = originalBase;
+    if (originalKey === undefined) delete process.env.TESSERA_LLM_API_KEY;
+    else process.env.TESSERA_LLM_API_KEY = originalKey;
     if (!server) return;
     const closing = server;
     server = undefined;
@@ -34,17 +33,17 @@ describe("pen provider", () => {
   });
 
   it("does not call the network when the base URL is unset", async () => {
-    delete process.env.TESSERA_PEN_URL;
+    delete process.env.TESSERA_LLM_BASE_URL;
     await expect(
-      penChatCompletion({
+      tesseraChatCompletion({
         model: "m",
         max_completion_tokens: 8,
         messages: [{ role: "user", content: "hi" }],
       }),
-    ).rejects.toThrow("pen not configured");
+    ).rejects.toThrow("TESSERA_LLM_BASE_URL not set");
   });
 
-  it("posts chat completions and embeddings without the OpenAI SDK", async () => {
+  it("posts chat completions and embeddings", async () => {
     const seen: Array<{ url: string | undefined; auth: string | undefined; body: unknown }> = [];
     server = createServer((req, res) => {
       let raw = "";
@@ -60,7 +59,7 @@ describe("pen provider", () => {
         });
         res.setHeader("content-type", "application/json");
         if (req.url === "/chat/completions") {
-          res.end(JSON.stringify({ choices: [{ message: { content: "pen-ok" } }] }));
+          res.end(JSON.stringify({ choices: [{ message: { content: "llm-ok" } }] }));
           return;
         }
         if (req.url === "/embeddings") {
@@ -80,26 +79,26 @@ describe("pen provider", () => {
     });
     const address = server.address();
     if (!address || typeof address === "string") throw new Error("no test server address");
-    process.env.TESSERA_PEN_URL = `http://127.0.0.1:${address.port}/`;
-    process.env.TESSERA_PEN_API_KEY = "test-key";
+    process.env.TESSERA_LLM_BASE_URL = `http://127.0.0.1:${address.port}/`;
+    process.env.TESSERA_LLM_API_KEY = "test-key";
 
-    const chat = await penChatCompletion({
+    const chat = await tesseraChatCompletion({
       model: "GLM-5",
       max_completion_tokens: 16,
       messages: [{ role: "user", content: "hi" }],
     });
-    const embeddings = await penEmbeddings({
+    const embeddings = await tesseraEmbeddings({
       model: "text-embedding-3-small",
       input: ["ab", "cdef"],
     });
 
-    expect(chat.choices?.[0]?.message?.content).toBe("pen-ok");
+    expect(chat.choices?.[0]?.message?.content).toBe("llm-ok");
     expect(embeddings.data?.map((item) => item.embedding)).toEqual([[2, 0], [4, 1]]);
     expect(seen.map((call) => call.url)).toEqual(["/chat/completions", "/embeddings"]);
     expect(seen.every((call) => call.auth === "Bearer test-key")).toBe(true);
   });
 
-  it("has zero Class A SDK imports and caret dependencies", () => {
+  it("has zero Class A SDK imports, caret dependencies, and the old integration slot", () => {
     const bannedImport = ["import OpenAI from", '"openai"'].join(" ");
     const bannedDep = ['"openai":', '"^'].join(" ");
     const staleSlot = ["AI_INTEGRATIONS_", "OPENAI_"].join("");
