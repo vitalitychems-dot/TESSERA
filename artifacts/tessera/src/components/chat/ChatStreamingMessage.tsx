@@ -8,6 +8,7 @@ import { ColorizedText } from "./ChatColorizedText";
 import { TesseractSwarmPanel, AgentActivityPanel, ActiveAgentsBadges, ThinkingRepoBlocks } from "./ChatPanels";
 import { CodeExecutionResult, type ExecutionResultData } from "./CodeExecutionResult";
 import type { AgentInfo, AgentComm } from "@/hooks/use-chat";
+import { presentAssistantText } from "@/lib/tessera-voice";
 
 interface StreamingMessageProps {
   streamingContent: string;
@@ -23,9 +24,7 @@ interface StreamingMessageProps {
 
 function sanitizeStreamingContent(content: string): string {
   if (!content) return content;
-  let cleaned = content;
-  cleaned = cleaned.replace(/\n{4,}/g, "\n\n\n");
-  return cleaned.trim();
+  return presentAssistantText(content).replace(/\n{4,}/g, "\n\n\n").trim();
 }
 
 function estimateTokens(text: string): number {

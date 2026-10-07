@@ -306,7 +306,7 @@ const AssistantMessage = memo(function AssistantMessage({
           );
         })()}
         <button
-          onClick={() => copyToClipboard(sourceText, setCopiedId, `ai-${msg.id || index}`)}
+          onClick={() => copyToClipboard(sanitized, setCopiedId, `ai-${msg.id || index}`)}
           className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-white hover:bg-white/5 transition-all"
           title="Copy"
           data-testid={`button-copy-ai-${msg.id || index}`}
