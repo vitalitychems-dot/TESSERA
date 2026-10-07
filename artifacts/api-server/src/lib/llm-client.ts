@@ -2,7 +2,7 @@ import { logger } from "./logger";
 import { lookupCache, storeInCache, getCacheStats } from "./semantic-cache";
 import { lookupKnowledge, distillFromResponse } from "./knowledge-distillation";
 import { applyDreamToMessages } from "./dream-prompt-bridge";
-import { penChatCompletion } from "./pen-provider";
+import { tesseraChatCompletion } from "./tessera-llm-http";
 
 export interface LLMMessage {
   role: "system" | "user" | "assistant";
@@ -138,7 +138,7 @@ export async function callLLM(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await penChatCompletion(
+    const response = await tesseraChatCompletion(
       {
         model,
         max_completion_tokens: maxTokens,
@@ -250,12 +250,12 @@ export async function callTesseraPen(
  * deployments), this function returns false — forcing all consumers
  * (consensus engine, sovereign loops, autonomous forum, etc.) onto their
  * internal deterministic paths. To opt-in for non-critical enrichment, set
- * `SOVEREIGN_NO_EXTERNAL_LLM=0` AND `TESSERA_PEN_URL=<url>`.
+ * `SOVEREIGN_NO_EXTERNAL_LLM=0` AND `TESSERA_LLM_BASE_URL=<url>`.
  */
 export function isLLMAvailable(): boolean {
   const killed = (process.env.SOVEREIGN_NO_EXTERNAL_LLM ?? "1").trim();
   if (killed === "1" || killed.toLowerCase() === "true") return false;
-  return !!process.env.TESSERA_PEN_URL;
+  return !!process.env.TESSERA_LLM_BASE_URL;
 }
 
 export function getLLMStats() {

@@ -1,6 +1,6 @@
 import { logger } from "./logger";
 import { embeddingDimensionalCache } from "./dimensional-lru-cache";
-import { penEmbeddings } from "./pen-provider";
+import { tesseraEmbeddings } from "./tessera-llm-http";
 
 const EMBEDDING_DIM = 256;
 const MAX_BATCH_SIZE = 20;
@@ -121,7 +121,7 @@ export async function generateEmbedding(text: string, dimension: string = "gener
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    const response = await penEmbeddings(
+    const response = await tesseraEmbeddings(
       { model: "text-embedding-3-small", input: text.slice(0, 8000) },
       controller.signal,
     );
@@ -175,7 +175,7 @@ export async function generateEmbeddingsBatch(texts: string[], dimension: string
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 15_000);
 
-      const response = await penEmbeddings(
+      const response = await tesseraEmbeddings(
         { model: "text-embedding-3-small", input: batchTexts },
         controller.signal,
       );
@@ -183,7 +183,7 @@ export async function generateEmbeddingsBatch(texts: string[], dimension: string
 
       const data = response.data;
       if (!data) {
-        throw new Error("Pen provider embeddings response missing data");
+        throw new Error("Tessera LLM embeddings response missing data");
       }
       embeddings = data
         .toSorted((a, b) => (a.index ?? 0) - (b.index ?? 0))

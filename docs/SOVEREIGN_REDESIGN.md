@@ -125,7 +125,7 @@ preserved as a per-surface user toggle rather than a wire-format coercion.
 sovereign loops, autonomous forum, and grand evolution engines all fall
 back to their internal deterministic paths. To opt in for non-critical
 enrichment on a specific deployment, set
-`SOVEREIGN_NO_EXTERNAL_LLM=0` *and* `AI_INTEGRATIONS_OPENAI_BASE_URL`.
+`SOVEREIGN_NO_EXTERNAL_LLM=0` *and* `TESSERA_LLM_BASE_URL`.
 The default keeps external systems out of the trust boundary.
 
 ## Files of record

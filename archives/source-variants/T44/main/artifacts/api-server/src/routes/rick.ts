@@ -232,8 +232,8 @@ router.post("/rick/chat", async (req, res) => {
       return res.status(400).json({ ok: false, error: "messages array required" });
     }
 
-    const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+    const baseURL = process.env.TESSERA_LLM_BASE_URL;
+    const apiKey = process.env.TESSERA_LLM_API_KEY;
 
     const rickSystemPrompt = getRickSystemPrompt();
 
