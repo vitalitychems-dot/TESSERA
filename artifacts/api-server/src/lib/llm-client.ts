@@ -1,22 +1,8 @@
-import OpenAI from "openai";
 import { logger } from "./logger";
 import { lookupCache, storeInCache, getCacheStats } from "./semantic-cache";
 import { lookupKnowledge, distillFromResponse } from "./knowledge-distillation";
 import { applyDreamToMessages } from "./dream-prompt-bridge";
-
-let _client: OpenAI | null = null;
-
-function getClient(): OpenAI {
-  if (!_client) {
-    const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? "_DUMMY_API_KEY_";
-    if (!baseURL) {
-      throw new Error("AI_INTEGRATIONS_OPENAI_BASE_URL not set");
-    }
-    _client = new OpenAI({ baseURL, apiKey });
-  }
-  return _client;
-}
+import { penChatCompletion } from "./pen-provider";
 
 export interface LLMMessage {
   role: "system" | "user" | "assistant";
@@ -152,14 +138,13 @@ export async function callLLM(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const client = getClient();
-    const response = await client.chat.completions.create(
+    const response = await penChatCompletion(
       {
         model,
         max_completion_tokens: maxTokens,
         messages: canonicalMessages,
       },
-      { signal: controller.signal as AbortSignal }
+      controller.signal,
     );
     const rawResult = response.choices[0]?.message?.content ?? "";
 

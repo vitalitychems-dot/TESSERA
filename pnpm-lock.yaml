@@ -216,9 +216,6 @@ importers:
       google-auth-library:
         specifier: ^10.6.2
         version: 10.6.2
-      openai:
-        specifier: ^6.34.0
-        version: 6.34.0(ws@8.22.0)(zod@3.25.76)
       pino:
         specifier: ^9.14.0
         version: 9.14.0
@@ -3461,18 +3458,6 @@ packages:
 
   once@1.4.0:
     resolution: {integrity: sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==}
-
-  openai@6.34.0:
-    resolution: {integrity: sha512-yEr2jdGf4tVFYG6ohmr3pF6VJuveP0EA/sS8TBx+4Eq5NT10alu5zg2dmxMXMgqpihRDQlFGpRt2XwsGj+Fyxw==}
-    hasBin: true
-    peerDependencies:
-      ws: ^8.18.0
-      zod: ^3.25 || ^4.0
-    peerDependenciesMeta:
-      ws:
-        optional: true
-      zod:
-        optional: true
 
   orval@8.39.0:
     resolution: {integrity: sha512-QHMA1sYzmUCAh5CJN3t/s+/JfphIM8JUjShi1oRhhX4YDk59nAnl/lDXMSMWprw0kFmZJs3HTnYBInLW4CafyQ==}
@@ -7409,11 +7394,6 @@ snapshots:
   once@1.4.0:
     dependencies:
       wrappy: 1.0.2
-
-  openai@6.34.0(ws@8.22.0)(zod@3.25.76):
-    optionalDependencies:
-      ws: 8.22.0
-      zod: 3.25.76
 
   orval@8.39.0(@tanstack/react-query@5.90.21(react@19.1.0))(prettier@3.8.1)(typescript@5.9.3)(zod@4.6.5):
     dependencies:
