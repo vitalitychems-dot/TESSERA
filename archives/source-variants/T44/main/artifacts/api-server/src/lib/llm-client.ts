@@ -15,10 +15,10 @@ async function penChatCompletion(
   },
   signal: AbortSignal,
 ): Promise<PenChatCompletionResponse> {
-  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL?.replace(/\/$/, "");
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? "_DUMMY_API_KEY_";
+  const baseURL = process.env.TESSERA_PEN_URL?.replace(/\/$/, "");
+  const apiKey = process.env.TESSERA_PEN_API_KEY ?? "_DUMMY_API_KEY_";
   if (!baseURL) {
-    throw new Error("AI_INTEGRATIONS_OPENAI_BASE_URL not set");
+    throw new Error("pen not configured");
   }
   const response = await fetch(`${baseURL}/chat/completions`, {
     method: "POST",
@@ -220,7 +220,7 @@ export async function callLLMSafe(
 }
 
 export function isLLMAvailable(): boolean {
-  return !!process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+  return !!process.env.TESSERA_PEN_URL;
 }
 
 export function getLLMStats() {

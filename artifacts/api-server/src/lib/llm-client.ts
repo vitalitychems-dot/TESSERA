@@ -250,12 +250,12 @@ export async function callTesseraPen(
  * deployments), this function returns false — forcing all consumers
  * (consensus engine, sovereign loops, autonomous forum, etc.) onto their
  * internal deterministic paths. To opt-in for non-critical enrichment, set
- * `SOVEREIGN_NO_EXTERNAL_LLM=0` AND `AI_INTEGRATIONS_OPENAI_BASE_URL=<url>`.
+ * `SOVEREIGN_NO_EXTERNAL_LLM=0` AND `TESSERA_PEN_URL=<url>`.
  */
 export function isLLMAvailable(): boolean {
   const killed = (process.env.SOVEREIGN_NO_EXTERNAL_LLM ?? "1").trim();
   if (killed === "1" || killed.toLowerCase() === "true") return false;
-  return !!process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+  return !!process.env.TESSERA_PEN_URL;
 }
 
 export function getLLMStats() {

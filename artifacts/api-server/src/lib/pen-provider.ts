@@ -17,10 +17,10 @@ export interface PenEmbeddingResponse {
 }
 
 function penEndpoint(path: string): { url: string; apiKey: string } {
-  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL?.replace(/\/$/, "");
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? "_DUMMY_API_KEY_";
+  const baseURL = process.env.TESSERA_PEN_URL?.replace(/\/$/, "");
+  const apiKey = process.env.TESSERA_PEN_API_KEY ?? "_DUMMY_API_KEY_";
   if (!baseURL) {
-    throw new Error("AI_INTEGRATIONS_OPENAI_BASE_URL not set");
+    throw new Error("pen not configured");
   }
   return { url: `${baseURL}${path}`, apiKey };
 }
