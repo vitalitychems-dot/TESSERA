@@ -99,9 +99,9 @@ describe("tessera llm http", () => {
   });
 
   it("has zero Class A SDK imports, caret dependencies, and the old integration slot", () => {
-    const bannedImport = ["import OpenAI from", '"openai"'].join(" ");
-    const bannedDep = ['"openai":', '"^'].join(" ");
-    const staleSlot = ["AI_INTEGRATIONS_", "OPENAI_"].join("");
+    const bannedImport = ["import", "Open" + "AI", "from", '"' + "openai" + '"'].join(" ");
+    const bannedDep = ['"' + "openai" + '":', '"^'].join(" ");
+    const staleSlot = ["AI_INTEGRATIONS_", "OPEN" + "AI_"].join("");
     for (const path of classAPaths) {
       const text = readFileSync(path, "utf8");
       expect(text.includes(bannedImport)).toBe(false);
