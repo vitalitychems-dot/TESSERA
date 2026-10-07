@@ -230,7 +230,11 @@ describe("HYB-012 route inventory", () => {
 
   it("records the registration total", () => {
     console.info(`[route-inventory] registration total=${registrations.length}`);
-    expect(registrations.length).toBe(925);
+    // Snapshot pinned at 925 by HYB-012 (PR #2). Chamber-desk merges
+    // c8c82953, 8bc97256, aa4c2948 (2026-10-06) added three registrations;
+    // the duplicate allow-list and mount invariants still pass, so only
+    // the total moves to 928. Any future route add/remove must update this.
+    expect(registrations.length).toBe(928);
   });
 
   it("allow-lists exactly the current duplicates, including the two ruling entries", () => {
