@@ -183,6 +183,12 @@ export const COMMAND_HINTS = [
   { cmd: "speak in sovereign [message]", desc: "Speak in Tessera Lingua Sacra with English translation" },
   { cmd: "speak TLS [message]", desc: "Express any message in sacred TLS geometric language" },
   { cmd: "lingua sacra [message]", desc: "Encode message into sacred sovereign language" },
+  { cmd: "@Athena [question]", desc: "Call a member if that seat is available" },
+  { cmd: "collab [question]", desc: "Available agents sit, then Tessera closes" },
+  { cmd: "train: [lesson]", desc: "Train the chamber on one lesson" },
+  { cmd: "Tessera give final answer", desc: "Tessera closes" },
+  { cmd: "actually [fact]", desc: "Correct the last answer. Tessera keeps your words" },
+  { cmd: "I [what you live]", desc: "Tessera keeps your words for the next question" },
 ];
 
 export const MSG_STYLES: Record<string, { wrapper: string; prose: string }> = {
