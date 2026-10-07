@@ -117,12 +117,12 @@ function cleanExternalResponse(text: string): string {
 }
 
 const IMPERSONATION_PATTERNS: RegExp[] = [
-  /\bI(?:'m| am) (?:ChatGPT|GPT-?\d|Claude|Gemini|Bard|Grok|Qwen|Llama|OpenAI|Anthropic)\b/i,
+  /\bI(?:'m| am) (?:ChatGPT|GPT-?\d|Claude|Gemini|Bard|Grok|Qwen|Llama|Anthropic)\b/i,
   /\bI(?:'m| am) (?:an |a )?(?:AI |large |artificial intelligence )?language model\b/i,
   /\bI(?:'m| am) (?:an |a )?(?:AI|artificial intelligence)(?: language model| assistant| chatbot)?\b/i,
   /\bAs an AI( language model| assistant| chatbot)?\b/i,
   /\bartificial intelligence language model\b/i,
-  /\bI was (?:created|made|developed|trained) by (?:OpenAI|Anthropic|Google|Meta|xAI)\b/i,
+  /\bI was (?:created|made|developed|trained) by (?:Anthropic|Google|Meta|xAI)\b/i,
   /\bmy (?:training data|knowledge cutoff|knowledge was last updated)\b/i,
   /\bI cannot (?:browse the internet|access real-time|provide real-time data)\b/i,
 ];

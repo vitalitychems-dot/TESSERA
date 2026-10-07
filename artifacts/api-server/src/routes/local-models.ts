@@ -90,7 +90,7 @@ router.get("/local-models/adapters", (_req, res) => {
         name: "vLLM",
         defaultEndpoint: "http://localhost:8000",
         status: "stub",
-        description: "vLLM OpenAI-compatible server. Requires CUDA GPU. `python -m vllm.entrypoints.openai.api_server --model <model>`.",
+        description: "vLLM compatible server. Requires CUDA GPU. Serve the chosen model on the local endpoint.",
         envVar: "VLLM_ENDPOINT",
         enableVar: "VLLM_ENABLED=true",
         docs: "https://github.com/vllm-project/vllm",

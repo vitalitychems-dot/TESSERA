@@ -25,9 +25,9 @@ const PUBLISHED_BENCHMARK_SCORES: Record<string, Record<string, number | null>> 
   "MT-Bench":       { "GPT-4": 9.0,  "GPT-4o": 9.3,  "Claude 3.5 Sonnet": 9.5,  "Gemini Pro": 8.9,  "Llama 3 70B": 8.3,  "Mistral Large": 8.2 },
 };
 const BENCHMARK_SOURCES: Record<string, { citation: string; url: string; retrievedAt: string }> = {
-  "MMLU":         { citation: "Hendrycks et al. (2021) Measuring Massive Multitask Language Understanding. Scores from OpenAI/Anthropic/Google model cards.", url: "https://arxiv.org/abs/2009.03300", retrievedAt: "2025-06" },
-  "HumanEval":    { citation: "Chen et al. (2021) Evaluating Large Language Models Trained on Code. Scores from OpenAI/Anthropic/Google model cards.", url: "https://arxiv.org/abs/2107.03374", retrievedAt: "2025-06" },
-  "GSM8K":        { citation: "Cobbe et al. (2021) Training Verifiers to Solve Math Word Problems. Scores from OpenAI/Anthropic/Google model cards.", url: "https://arxiv.org/abs/2110.14168", retrievedAt: "2025-06" },
+  "MMLU":         { citation: "Hendrycks et al. (2021) Measuring Massive Multitask Language Understanding. Scores from Anthropic/Google model cards.", url: "https://arxiv.org/abs/2009.03300", retrievedAt: "2025-06" },
+  "HumanEval":    { citation: "Chen et al. (2021) Evaluating Large Language Models Trained on Code. Scores from Anthropic/Google model cards.", url: "https://arxiv.org/abs/2107.03374", retrievedAt: "2025-06" },
+  "GSM8K":        { citation: "Cobbe et al. (2021) Training Verifiers to Solve Math Word Problems. Scores from Anthropic/Google model cards.", url: "https://arxiv.org/abs/2110.14168", retrievedAt: "2025-06" },
   "ARC Challenge":{ citation: "Clark et al. (2018) Think you have Solved Question Answering? AI2 Reasoning Challenge. Scores from vendor model cards.", url: "https://arxiv.org/abs/1803.05457", retrievedAt: "2025-06" },
   "HellaSwag":    { citation: "Zellers et al. (2019) HellaSwag: Can a Machine Really Finish Your Sentence? Scores from vendor model cards.", url: "https://arxiv.org/abs/1905.07830", retrievedAt: "2025-06" },
   "MT-Bench":     { citation: "Zheng et al. (2023) Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena. LMSYS Chatbot Arena leaderboard.", url: "https://arxiv.org/abs/2306.05685", retrievedAt: "2025-06" },
@@ -458,9 +458,9 @@ function buildAGIResult(suite: EvalSuite, callStats: Awaited<ReturnType<typeof g
 
   const externalDependencyAudit = [
     {
-      name: "External LLM APIs (OpenAI, Anthropic, etc.)",
+      name: "External LLM APIs (Anthropic, etc.)",
       category: "llm_inference" as const,
-      configured: profiles.some(p => ["openai", "anthropic", "xai"].includes(p.providerId)),
+      configured: profiles.some(p => ["anthropic", "xai"].includes(p.providerId)),
       functionalityDependent: ["AI responses", "Embeddings", "Code generation"],
       sovereigntyImpact: "critical" as const,
       sovereignAlternative: "Ollama + local model (LLaMA 3, Mistral)",
