@@ -21,13 +21,6 @@ export interface ExternalRequestResult {
 
 const BUILTIN_ALLOWED: string[] = [];
 
-if (process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
-  try {
-    const aiHost = new URL(process.env.AI_INTEGRATIONS_OPENAI_BASE_URL).hostname;
-    BUILTIN_ALLOWED.push(aiHost);
-  } catch {}
-}
-
 const SOVEREIGN_DOMAINS: string[] = [
   "images-api.nasa.gov",
   "images-assets.nasa.gov",

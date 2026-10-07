@@ -28,10 +28,10 @@ const SPEC = {
   Chi:["infrastructure","security"], Psi:["feature","community"], Omega:["security","infrastructure"],
 };
 
-const BASE = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-const KEY = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+const BASE = process.env.TESSERA_LLM_BASE_URL;
+const KEY = process.env.TESSERA_LLM_API_KEY;
 const MODEL = process.env.CONFERENCE_MODEL || "gpt-5-mini";
-if (!BASE || !KEY) { console.error("Missing AI_INTEGRATIONS_OPENAI_* env"); process.exit(2); }
+if (!BASE || !KEY) { console.error("Missing TESSERA_LLM_* env"); process.exit(2); }
 if (!process.env.DATABASE_URL) { console.error("Missing DATABASE_URL"); process.exit(2); }
 
 function sacredGeometryWeight(name, cat) {
