@@ -3,44 +3,6 @@ import { lookupCache, storeInCache, getCacheStats } from "./semantic-cache";
 import { lookupKnowledge, distillFromResponse } from "./knowledge-distillation";
 import { applyDreamToMessages } from "./dream-prompt-bridge";
 
-interface ChatCompletionResult {
-  choices?: Array<{ message?: { content?: string | null } }>;
-}
-
-function integrationEndpoint(): { baseURL: string; apiKey: string } {
-  const raw = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? "_DUMMY_API_KEY_";
-  if (!raw) {
-    throw new Error("AI_INTEGRATIONS_OPENAI_BASE_URL not set");
-  }
-  return { baseURL: raw.replace(/\/+$/, ""), apiKey };
-}
-
-async function postChatCompletion(
-  body: {
-    model: string;
-    max_completion_tokens: number;
-    messages: LLMMessage[];
-  },
-  signal: AbortSignal,
-): Promise<ChatCompletionResult> {
-  const { baseURL, apiKey } = integrationEndpoint();
-  const response = await fetch(`${baseURL}/chat/completions`, {
-    method: "POST",
-    signal,
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(`chat completion failed (${response.status}) ${detail.slice(0, 300)}`.trim());
-  }
-  return (await response.json()) as ChatCompletionResult;
-}
-
 export interface LLMMessage {
   role: "system" | "user" | "assistant";
   content: string;
@@ -82,8 +44,6 @@ export async function callLLM(
 ): Promise<string> {
   const {
     model = "gpt-5-mini",
-    maxTokens = 2048,
-    timeoutMs = 15_000,
     skipCache = false,
     skipDistillation = false,
     cacheTtl = 3600,
@@ -159,57 +119,9 @@ export async function callLLM(
     return result;
   }
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await postChatCompletion(
-      {
-        model,
-        max_completion_tokens: maxTokens,
-        messages: canonicalMessages,
-      },
-      controller.signal,
-    );
-    const rawResult = response.choices?.[0]?.message?.content ?? "";
-
-    // SOVEREIGN POLICY: external LLM outputs are UNTRUSTED. Sanitize at the ingress
-    // boundary so forbidden patterns (override/admin/eval/etc.) are redacted before
-    // the content propagates into distillation, cache, or downstream engines.
-    let result = rawResult;
-    if (rawResult.length > 0) {
-      try {
-        const { sanitizeUntrustedText, extractLessonsFromUntrusted } = await import("./external-sandbox-policy");
-        const sanitization = sanitizeUntrustedText(rawResult, 50_000);
-        result = sanitization.sanitized;
-        if (sanitization.flags.length > 0 && sanitization.flags.some(f => f.startsWith("forbidden:"))) {
-          logger.warn({ flags: sanitization.flags, model }, "LLMClient: redacted forbidden patterns from untrusted LLM output");
-        }
-        if (result.length > 50 && userQuery.length > 0) {
-          extractLessonsFromUntrusted("external-llm", userQuery.slice(0, 80), result);
-        }
-      } catch {}
-    }
-
-    if (!skipCache && result.length > 0) {
-      storeInCache(messages, model, result, cacheTtl).catch(() => {});
-    }
-
-    if (!skipDistillation && result.length > 50) {
-      distillFromResponse(result, userQuery.slice(0, 500)).then(count => {
-        if (count > 0) llmStats.distilled += count;
-      }).catch(() => {});
-    }
-
-    return result;
-  } catch (err: unknown) {
-    llmStats.errors++;
-    const msg = err instanceof Error ? err.message : String(err);
-    logger.warn({ err: msg, model }, "LLMClient: call failed");
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
+  llmStats.errors++;
+  logger.warn({ model }, "LLMClient: external SDK client removed");
+  throw new Error("External LLM client is removed");
 }
 
 export async function callLLMSafe(
@@ -225,7 +137,7 @@ export async function callLLMSafe(
 }
 
 export function isLLMAvailable(): boolean {
-  return !!process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+  return false;
 }
 
 export function getLLMStats() {
