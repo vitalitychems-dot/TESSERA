@@ -1,20 +1,6 @@
-import OpenAI from "openai";
 import { logger } from "./logger";
 import { embeddingDimensionalCache } from "./dimensional-lru-cache";
-
-let _client: OpenAI | null = null;
-
-function getClient(): OpenAI {
-  if (!_client) {
-    const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? "_DUMMY_API_KEY_";
-    if (!baseURL) {
-      throw new Error("AI_INTEGRATIONS_OPENAI_BASE_URL not set");
-    }
-    _client = new OpenAI({ baseURL, apiKey });
-  }
-  return _client;
-}
+import { penEmbeddings } from "./pen-provider";
 
 const EMBEDDING_DIM = 256;
 const MAX_BATCH_SIZE = 20;
@@ -132,13 +118,12 @@ export async function generateEmbedding(text: string, dimension: string = "gener
   const timeoutMs = Math.round(10_000 * Math.min(neuralPreference, 2.0));
 
   try {
-    const client = getClient();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    const response = await client.embeddings.create(
+    const response = await penEmbeddings(
       { model: "text-embedding-3-small", input: text.slice(0, 8000) },
-      { signal: controller.signal as AbortSignal },
+      controller.signal,
     );
     clearTimeout(timer);
 
@@ -184,21 +169,24 @@ export async function generateEmbeddingsBatch(texts: string[], dimension: string
 
   for (const batch of batches) {
     const batchTexts = batch.map(idx => texts[idx].slice(0, 8000));
-    let embeddings: number[][] | null = null;
+    let embeddings: Array<number[] | undefined> | null = null;
 
     try {
-      const client = getClient();
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 15_000);
 
-      const response = await client.embeddings.create(
+      const response = await penEmbeddings(
         { model: "text-embedding-3-small", input: batchTexts },
-        { signal: controller.signal as AbortSignal },
+        controller.signal,
       );
       clearTimeout(timer);
 
-      embeddings = response.data
-        .sort((a, b) => a.index - b.index)
+      const data = response.data;
+      if (!data) {
+        throw new Error("Pen provider embeddings response missing data");
+      }
+      embeddings = data
+        .toSorted((a, b) => (a.index ?? 0) - (b.index ?? 0))
         .map(d => d.embedding);
     } catch (err) {
       logger.debug({ err: (err as Error).message, batchSize: batch.length }, "NeuralEmbeddings: batch API call failed");
