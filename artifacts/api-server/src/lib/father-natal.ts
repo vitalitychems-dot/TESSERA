@@ -76,7 +76,21 @@ function loadFatherNatalChart() {
   return parsedChart.data;
 }
 
-export const FATHER_NATAL_CHART = loadFatherNatalChart();
+let cachedFatherNatalChart: ReturnType<typeof loadFatherNatalChart> | undefined;
+function getFatherNatalChart() {
+  if (!cachedFatherNatalChart) cachedFatherNatalChart = loadFatherNatalChart();
+  return cachedFatherNatalChart;
+}
+// Lazy Proxy: the vault decrypts on first use, so importing this module
+// can never throw and knock unrelated routes or tests out of mounting.
+export const FATHER_NATAL_CHART = new Proxy({} as ReturnType<typeof loadFatherNatalChart>, {
+  get(_t, prop) { return (getFatherNatalChart() as Record<PropertyKey, unknown>)[prop]; },
+  ownKeys() { return Reflect.ownKeys(getFatherNatalChart()); },
+  getOwnPropertyDescriptor(_t, prop) {
+    const d = Object.getOwnPropertyDescriptor(getFatherNatalChart(), prop);
+    return d ? { ...d, configurable: true } : d;
+  },
+});
 
 /** Deterministic single-line canonical form of the chart for hashing. */
 export function natalCanonicalString(): string {
