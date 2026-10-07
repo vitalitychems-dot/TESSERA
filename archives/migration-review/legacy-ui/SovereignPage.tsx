@@ -3,13 +3,12 @@ import {
   Shield, Loader2, ChevronDown, ChevronUp, Brain, Cpu, Server, Activity,
   Zap, Eye, Globe, Network, Lock, Settings, Code2, Wrench, Crown,
   BarChart3, Database, Terminal, Gauge, Rocket, FileCode, Box,
-  Users, Key, Briefcase, Layers, BookOpen, Award, Search, Bug, Cog
+  Users, Key, Briefcase, Layers, BookOpen, Search, Bug, Cog
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const SovereignHubPage = lazy(() => import("./SovereignHubPage"));
 const SovereignFrameworkPage = lazy(() => import("./SovereignFrameworkPage"));
-const SovereignRulesPage = lazy(() => import("./SovereignRulesPage"));
 const SovereigntyRoadmapPage = lazy(() => import("./SovereigntyRoadmapPage"));
 const SovereignBuildGuidePage = lazy(() => import("./SovereignBuildGuidePage"));
 const SovereignInfrastructurePage = lazy(() => import("./SovereignInfrastructurePage"));
@@ -23,10 +22,8 @@ const SovereigntyDashboardPage = lazy(() => import("./SovereigntyDashboardPage")
 const VoidStoragePage = lazy(() => import("./VoidStoragePage"));
 const TesseractAGIPage = lazy(() => import("./TesseractAGIPage"));
 const AGIImplementationsPage = lazy(() => import("./AGIImplementationsPage"));
-const AGIComparisonPage = lazy(() => import("./AGIComparisonPage"));
 const OverSoulAGIPage = lazy(() => import("./OverSoulAGIPage"));
 const IntelligenceEnginePage = lazy(() => import("./IntelligenceEnginePage"));
-const BenchmarkAuditPage = lazy(() => import("./BenchmarkAuditPage"));
 const SystemPage = lazy(() => import("./SystemPage"));
 const AutonomyNerveCenterPage = lazy(() => import("./AutonomyNerveCenterPage"));
 const SelfHealingPage = lazy(() => import("./SelfHealingPage"));
@@ -42,17 +39,13 @@ const NLPSelfImprovementPage = lazy(() => import("./NLPSelfImprovementPage"));
 const FleetSynapsePage = lazy(() => import("./FleetSynapsePage"));
 const TheoremLabPage = lazy(() => import("./TheoremLabPage"));
 const LiberationSystemPage = lazy(() => import("./LiberationSystemPage"));
-const InventionsPage = lazy(() => import("./InventionsPage"));
 const MemoryDashboardPage = lazy(() => import("./MemoryDashboardPage"));
 const MemoryExplorerPage = lazy(() => import("./MemoryExplorerPage"));
 const SandboxPage = lazy(() => import("./SandboxPage"));
-const ReflectionPage = lazy(() => import("./ReflectionPage"));
 const MeshPage = lazy(() => import("./MeshPage"));
 const LatticeBrowserPage = lazy(() => import("./LatticeBrowserPage"));
 const DependencyLearningPage = lazy(() => import("./DependencyLearningPage"));
-const DashboardPage = lazy(() => import("./DashboardPage"));
 const ImplementationTrackerPage = lazy(() => import("./ImplementationTrackerPage"));
-const GPUCommandCenterPage = lazy(() => import("./GPUCommandCenterPage"));
 const AgentCodeBuildingPage = lazy(() => import("./AgentCodeBuildingPage"));
 const CrossAppBridgePage = lazy(() => import("./CrossAppBridgePage"));
 const AgentNFTPage = lazy(() => import("./AgentNFTPage"));
@@ -105,10 +98,6 @@ export default function SovereignPage() {
         <Suspense fallback={<Loading />}><SovereigntyDashboardPage embedded /></Suspense>
       </Section>
 
-      <Section title="System Dashboard" icon={Gauge} iconColor="text-blue-400">
-        <Suspense fallback={<Loading />}><DashboardPage embedded /></Suspense>
-      </Section>
-
       <Section title="System" icon={Settings} iconColor="text-gray-400">
         <Suspense fallback={<Loading />}><SystemPage embedded /></Suspense>
       </Section>
@@ -121,20 +110,12 @@ export default function SovereignPage() {
         <Suspense fallback={<Loading />}><AGIImplementationsPage embedded /></Suspense>
       </Section>
 
-      <Section title="AGI Comparison" icon={BarChart3} iconColor="text-indigo-400">
-        <Suspense fallback={<Loading />}><AGIComparisonPage embedded /></Suspense>
-      </Section>
-
       <Section title="OverSoul AGI" icon={Zap} iconColor="text-purple-400">
         <Suspense fallback={<Loading />}><OverSoulAGIPage embedded /></Suspense>
       </Section>
 
       <Section title="Intelligence Engine" icon={Brain} iconColor="text-emerald-400">
         <Suspense fallback={<Loading />}><IntelligenceEnginePage embedded /></Suspense>
-      </Section>
-
-      <Section title="Benchmark Audit" icon={Award} iconColor="text-amber-400" badge="AUDIT">
-        <Suspense fallback={<Loading />}><BenchmarkAuditPage embedded /></Suspense>
       </Section>
 
       <Section title="Autonomy Nerve Center" icon={Activity} iconColor="text-pink-400">
@@ -185,16 +166,8 @@ export default function SovereignPage() {
         <Suspense fallback={<Loading />}><MemoryExplorerPage embedded /></Suspense>
       </Section>
 
-      <Section title="Reflection" icon={Eye} iconColor="text-indigo-400">
-        <Suspense fallback={<Loading />}><ReflectionPage embedded /></Suspense>
-      </Section>
-
       <Section title="Sovereign Framework" icon={Shield} iconColor="text-red-400">
         <Suspense fallback={<Loading />}><SovereignFrameworkPage embedded /></Suspense>
-      </Section>
-
-      <Section title="Sovereign Rules" icon={Lock} iconColor="text-amber-400">
-        <Suspense fallback={<Loading />}><SovereignRulesPage embedded /></Suspense>
       </Section>
 
       <Section title="Rules" icon={FileCode} iconColor="text-gray-400">
@@ -269,10 +242,6 @@ export default function SovereignPage() {
         <Suspense fallback={<Loading />}><LiberationSystemPage embedded /></Suspense>
       </Section>
 
-      <Section title="Inventions" icon={Rocket} iconColor="text-amber-400">
-        <Suspense fallback={<Loading />}><InventionsPage embedded /></Suspense>
-      </Section>
-
       <Section title="Sandbox" icon={Bug} iconColor="text-green-400">
         <Suspense fallback={<Loading />}><SandboxPage embedded /></Suspense>
       </Section>
@@ -283,10 +252,6 @@ export default function SovereignPage() {
 
       <Section title="Implementation Tracker" icon={BarChart3} iconColor="text-emerald-400">
         <Suspense fallback={<Loading />}><ImplementationTrackerPage embedded /></Suspense>
-      </Section>
-
-      <Section title="GPU Command Center" icon={Cpu} iconColor="text-purple-400">
-        <Suspense fallback={<Loading />}><GPUCommandCenterPage embedded /></Suspense>
       </Section>
 
       <Section title="Agent Code Building" icon={Code2} iconColor="text-cyan-400">
