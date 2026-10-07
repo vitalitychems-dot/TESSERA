@@ -61,7 +61,6 @@ const AGENT_NODES: GraphNode[] = [
 
 const PROVIDER_NODES: GraphNode[] = [
   { id: "provider-anthropic", label: "Anthropic", type: "provider", load: 0, capacity: 50, latencyMs: 1200, errorRate: 0.01, reliabilityScore: 99, capabilityScore: 95, isExternal: true },
-  { id: "provider-openai", label: "OpenAI", type: "provider", load: 0, capacity: 50, latencyMs: 1100, errorRate: 0.01, reliabilityScore: 99, capabilityScore: 93, isExternal: true },
   { id: "provider-google", label: "Google", type: "provider", load: 0, capacity: 50, latencyMs: 900, errorRate: 0.015, reliabilityScore: 97, capabilityScore: 90, isExternal: true },
   { id: "provider-deepseek", label: "DeepSeek", type: "provider", load: 0, capacity: 50, latencyMs: 1300, errorRate: 0.02, reliabilityScore: 94, capabilityScore: 82, isExternal: true },
   { id: "provider-mistral", label: "Mistral", type: "provider", load: 0, capacity: 50, latencyMs: 1000, errorRate: 0.02, reliabilityScore: 95, capabilityScore: 78, isExternal: true },
@@ -79,10 +78,9 @@ const BASE_EDGES: Array<Omit<GraphEdge, "weight">> = [
   { from: "swarm-coordinator", to: "routing-agent", latencyMs: 5, bandwidth: 100, reliability: 0.99 },
   { from: "swarm-coordinator", to: "meta-agent", latencyMs: 3, bandwidth: 200, reliability: 1.0 },
   { from: "math-agent", to: "provider-deepseek", latencyMs: 1300, bandwidth: 50, reliability: 0.94 },
-  { from: "math-agent", to: "provider-openai", latencyMs: 1100, bandwidth: 50, reliability: 0.99 },
   { from: "physics-agent", to: "provider-google", latencyMs: 900, bandwidth: 50, reliability: 0.97 },
   { from: "symbolic-agent", to: "provider-anthropic", latencyMs: 1200, bandwidth: 50, reliability: 0.99 },
-  { from: "retrieval-agent", to: "provider-openai", latencyMs: 1100, bandwidth: 50, reliability: 0.99 },
+  { from: "retrieval-agent", to: "provider-anthropic", latencyMs: 1200, bandwidth: 50, reliability: 0.99 },
   { from: "planning-agent", to: "provider-xai", latencyMs: 1400, bandwidth: 50, reliability: 0.92 },
   { from: "architecture-agent", to: "provider-anthropic", latencyMs: 1200, bandwidth: 50, reliability: 0.99 },
   { from: "routing-agent", to: "provider-mistral", latencyMs: 1000, bandwidth: 50, reliability: 0.95 },
