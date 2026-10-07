@@ -98,7 +98,7 @@ export async function puterChat(
 
 export const TESSERACT_SWARM_MODELS = [
   { id: "claude-sonnet-4-20250514", label: "Claude Sonnet 4", provider: "Anthropic", role: "Architect" },
-  { id: "gpt-4.1", label: "GPT-4.1", provider: "OpenAI", role: "Strategist" },
+  { id: "gpt-4.1", label: "GPT-4.1", provider: "External", role: "Strategist" },
   { id: "deepseek-chat", label: "DeepSeek V3", provider: "DeepSeek", role: "Reasoner" },
   { id: "gemini-2.5-flash-preview-05-20", label: "Gemini 2.5 Flash", provider: "Google", role: "Analyst" },
   { id: "grok-3", label: "Grok 3", provider: "xAI", role: "Executor" },

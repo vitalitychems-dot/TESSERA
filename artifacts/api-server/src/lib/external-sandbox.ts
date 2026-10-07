@@ -7,7 +7,7 @@
  * prior rules):
  *
  *   EVERY external resource — including but not limited to:
- *     • External LLMs (OpenAI, Anthropic, Gemini, OpenRouter, Modelfarm)
+ *     • External LLMs (Anthropic, Gemini, OpenRouter, Modelfarm)
  *     • External APIs (NASA, weather, finance, search, maps, anything HTTP)
  *     • External tools (CLIs, MCP servers, plugins)
  *     • External code repositories (GitHub, GitLab, npm registry beyond

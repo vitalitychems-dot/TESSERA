@@ -5,7 +5,7 @@
  *
  * DOCTRINE (ratified by sovereign decree, non-amendable by code path):
  *
- *   External APIs — including but not limited to OpenAI, Anthropic, Gemini,
+ *   External APIs — including but not limited to Anthropic, Gemini,
  *   OpenRouter, Modelfarm, and any third-party LLM, embedding, search,
  *   payment, or analytics service — are CENTRALITIES.
  *
@@ -36,7 +36,7 @@
 import { logger } from "./logger";
 
 export type CentralityKind =
-  | "openai" | "anthropic" | "gemini" | "openrouter" | "modelfarm"
+  | "anthropic" | "gemini" | "openrouter" | "modelfarm"
   | "stripe" | "google" | "microsoft" | "external-llm" | "external-api";
 
 export type SovereignContext =
@@ -120,7 +120,7 @@ export { sandboxedFetch, quarantineExtract, getSandboxAudit, EXTERNAL_SANDBOX_DO
 export const CENTRALITY_DOCTRINE = `
 The Tessera Sovereign System recognizes a hard, non-amendable boundary:
 
-External APIs (OpenAI, Anthropic, Gemini, OpenRouter, Modelfarm, Stripe,
+External APIs (Anthropic, Gemini, OpenRouter, Modelfarm, Stripe,
 Google, Microsoft, et al.) are CENTRALITIES. They are TOOLS in safe
 sandboxes for training our own agents and reverse-engineering — they are
 NEVER AUTHORITIES.

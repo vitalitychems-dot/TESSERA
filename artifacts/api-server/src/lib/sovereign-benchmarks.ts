@@ -644,7 +644,7 @@ function verifySovereigntyProperties(): BenchmarkTest[] {
     maxScore: 20,
     latencyMs: 0,
     evidence: "All sovereign engines (astro, economics, network, harmonics) run without LLM calls. Council deliberation uses deterministic multi-agent analysis, not external AI.",
-    method: "Architecture review — no OpenAI/Anthropic calls in core computation paths",
+    method: "Architecture review — no external vendor calls in core computation paths",
   });
 
   const hasInternalDb = true;

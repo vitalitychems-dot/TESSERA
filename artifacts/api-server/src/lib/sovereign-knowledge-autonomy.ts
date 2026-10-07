@@ -124,7 +124,7 @@ const DISCOVERY_SOURCES: Record<string, string[]> = {
   "mathematics": ["https://arxiv.org/list/math/recent", "https://www.ams.org/publications/journals/"],
   "astrophysics": ["https://arxiv.org/list/astro-ph/recent", "https://www.nasa.gov/news/"],
   "ancient-knowledge": ["https://www.sacred-texts.com/", "https://www.worldhistory.org/"],
-  "artificial-intelligence": ["https://arxiv.org/list/cs.AI/recent", "https://openai.com/research"],
+  "artificial-intelligence": ["https://arxiv.org/list/cs.AI/recent", "https://arxiv.org/list/cs.LG/recent"],
   "energy-systems": ["https://phys.org/physics-news/", "https://spectrum.ieee.org/energy"],
   "psychology": ["https://www.apa.org/pubs/journals/", "https://psycnet.apa.org/"],
   "history": ["https://www.archives.gov/research/", "https://vault.fbi.gov/"],

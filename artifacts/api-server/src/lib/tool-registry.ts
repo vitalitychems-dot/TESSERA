@@ -39,7 +39,7 @@ export function listTools(): ToolDefinition[] {
   return Array.from(registry.values());
 }
 
-export function getOpenAIToolSchemas(): Array<Record<string, unknown>> {
+export function getToolSchemas(): Array<Record<string, unknown>> {
   return listTools().map((t) => {
     const properties: Record<string, unknown> = {};
     const required: string[] = [];

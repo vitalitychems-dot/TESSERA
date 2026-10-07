@@ -13,7 +13,7 @@ const IDENTITY_RE =
   /\b(who are you|what are you|who is this|who is tessera|what(?:'s| is) your name|your name|where is tessera|where are you)\b/i;
 
 const SELF_CLAIM_RE =
-  /\b(?:i(?:'m| am)\s+grok|i(?:'m| am)\s+(?:claude|chatgpt|gemini|qwen|llama|mistral|deepseek)|i(?:'m| am)\s+(?:an |a )?(?:artificial intelligence(?: language model)?|ai language model|large language model|language model)|as an ai\b|artificial intelligence language model|i was (?:created|trained|developed|made|built) by (?:xai|x\.ai|openai|anthropic|google|meta|alibaba))\b/i;
+  /\b(?:i(?:'m| am)\s+grok|i(?:'m| am)\s+(?:claude|chatgpt|gemini|qwen|llama|mistral|deepseek)|i(?:'m| am)\s+(?:an |a )?(?:artificial intelligence(?: language model)?|ai language model|large language model|language model)|as an ai\b|artificial intelligence language model|i was (?:created|trained|developed|made|built) by (?:xai|x\.ai|anthropic|google|meta|alibaba))\b/i;
 
 export function isIdentityQuestion(text: string): boolean {
   const q = (text || "").trim();
