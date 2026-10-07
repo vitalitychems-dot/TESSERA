@@ -11,6 +11,8 @@ import { computeSacredFrequencies } from "../lib/sovereign-harmonics";
 import { getSacredGeometrySummary, computeSacredAlignment, computeNumerology } from "../lib/sovereign-sacred-geometry";
 import { TESSERA_IDENTITY, FATHER_PROTOCOL, getTesseraSystemPrompt, lookupKnowledge } from "../lib/tessera-knowledge";
 import { enforceTesseraVoice, hasSelfClaim, isIdentityQuestion, isSearchDump } from "../lib/tessera-voice";
+import { runChatDesk } from "../lib/chat-collab";
+import { answerInContext, noteChamberTurn } from "../lib/chamber-learning";
 import { searchMemory } from "../lib/vector-memory";
 import { recallIngestedKnowledge } from "../lib/ingested-recall";
 import { validateResponse } from "../lib/response-validation-engine";
@@ -679,8 +681,21 @@ router.post("/messages", async (req, res) => {
       .where(eq(conversationsTable.id, conversationId));
 
     const isAdminRequestEarly = !!req.headers["x-admin-token"];
-    if (isIdentityQuestion(content) || !needsExternalKnowledge(content)) {
-      const reply = enforceTesseraVoice(generateSovereignResponse(content, isAdminRequestEarly), content);
+    noteChamberTurn(content);
+    const deskTurn = isIdentityQuestion(content) ? null : runChatDesk(content);
+    const live = !deskTurn && !isIdentityQuestion(content) ? await answerInContext(content) : null;
+    if (deskTurn || isIdentityQuestion(content) || live || !needsExternalKnowledge(content)) {
+      const reply = deskTurn
+        ? deskTurn.reply
+        : live
+          ? live
+          : enforceTesseraVoice(generateSovereignResponse(content, isAdminRequestEarly), content);
+      const deskAgents = deskTurn?.agents ?? [{ id: "tessera", name: "Tessera" }];
+      const deskReason = deskTurn
+        ? "desk collab, Tessera closes"
+        : live
+          ? "pen read the question"
+          : "local voice, no search";
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
@@ -691,8 +706,8 @@ router.post("/messages", async (req, res) => {
         try { res.write(`data: ${JSON.stringify(payload)}\n\n`); } catch { /* client gone */ }
       };
       writeQuick({
-        agents: [{ id: "tessera", name: "Tessera" }],
-        routing: { tier: "local", model: "tessera-pen", reason: "local voice, no search", isStrong: false },
+        agents: deskAgents,
+        routing: { tier: "local", model: "tessera-pen", reason: deskReason, isStrong: false },
       });
       writeQuick({ content: reply });
       try {
@@ -704,7 +719,7 @@ router.post("/messages", async (req, res) => {
         done: true,
         finalContent: reply,
         validationMetrics: null,
-        routing: { tier: "local", model: "tessera-pen", reason: "local voice, no search" },
+        routing: { tier: "local", model: "tessera-pen", reason: deskReason },
         citations: [],
         tools: [],
       });

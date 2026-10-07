@@ -1333,9 +1333,11 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
                   setInput(val);
                   autoResize();
                   const trimmed = val.trim().toLowerCase();
+                  const deskHint = /^\/?(@|call\b|collab\b|train\b|ask\b|tessera\b|final\b|actually\b)/.test(trimmed);
                   setShowCommandHints(
-                    trimmed.length >= 1 && trimmed.length <= 20 &&
-                    /^\/?(status|check|show|scan|get)\s*/.test(trimmed)
+                    (trimmed.length >= 1 && trimmed.length <= 20 &&
+                      /^\/?(status|check|show|scan|get)\s*/.test(trimmed))
+                    || (deskHint && trimmed.length <= 48)
                   );
                   if (savedAdminKey && savedAdminKey.length > 4 && val.trim() === savedAdminKey.trim()) {
                     setInputIsAdminKey(true);
