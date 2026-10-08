@@ -23,22 +23,9 @@
 
 ### On Origin `main` (tip ~`afbeb50`, also mirrored at `tessera-218a183`)
 
-Primary cloud/OpenAI-compat path (this is what main still uses):
+Primary cloud path on main is `callLLM` in `artifacts/api-server/src/lib/llm-client.ts` (Tessera HTTP via `tessera-llm-http.ts`, sanitized by `external-sandbox-policy`). Rick, conversations, and rick-proposals post through `secureExternalWrapper.ts` (`secureExternalFetch` / `secureExternalStreamingFetch` inside `runWithShepherdContext`). Local adapters stay in `local-model-manager.ts` and `routes/local-models.ts`. The conference runner uses `TESSERA_LLM_*`. Frontend Puter paths are `puter-ai.ts` and `swarm-agents.ts`.
 
-| Path | Symbols | Role |
-|---|---|---|
-| `artifacts/api-server/src/lib/llm-client.ts` | `getClient()`, `callLLM()`, `callLLMSafe()`, `isLLMAvailable()`, `LLMMessage`, `LLMCallOptions` | OpenAI SDK client; `chat.completions.create`; sanitizes via `external-sandbox-policy` |
-| `artifacts/api-server/src/lib/llm-batcher.ts` | `batchedCallLLM` | Batches into `callLLM` |
-| `artifacts/api-server/src/lib/adaptive-router.ts` | `MODELS`, `classifyQuery()`, `modelForTier()` | Tier → model id |
-| `artifacts/api-server/src/lib/neural-embeddings.ts` | `getClient()` | Same OpenAI-compat base URL for embeddings |
-| `artifacts/api-server/src/lib/provider-registry.ts` | `PROVIDER_CONFIGS`, `getProviderConfigs()` | Catalog incl. `xai` / `ollama` (metadata, not the live pen wire) |
-| `artifacts/api-server/src/lib/local-model-manager.ts` | `LocalAdapter`, `LocalModelManager`, `OllamaAdapter`, `VllmAdapter`, `LmStudioAdapter`, `TgiAdapter`, `LlamaCppAdapter`, `getLocalModelManager()`, `chat()` | Parallel **local** stack; OpenAI-compat for vLLM / LM Studio |
-| `artifacts/api-server/src/routes/local-models.ts` | `/local-models/status`, `/health-check`, `/chat`, `/adapters` | HTTP surface for local adapters |
-| `artifacts/api-server/scripts/run-real-conference.mjs` | direct `fetch(`${BASE}/chat/completions`)` | Conference runner using `TESSERA_LLM_*` on main |
-| `artifacts/tessera/src/lib/puter-ai.ts` | `puterChat`, model list incl. `grok-3` | Frontend Puter proxy path (not server pen) |
-| `artifacts/tessera/src/lib/swarm-agents.ts` | swarm agents with `grok-3` | Frontend multi-agent via Puter |
-
-`llm-client.getClient()` (main):
+`callLLM` (main):
 
 - `baseURL` is `TESSERA_LLM_BASE_URL`. Unset → throw `TESSERA_LLM_BASE_URL not set`, and no HTTP.
 - `apiKey` is `TESSERA_LLM_API_KEY`. Unset or whitespace → throw `TESSERA_LLM_API_KEY not set`. There is no dummy key, and no `Authorization` bearer header unless the trimmed key is non-empty.
@@ -79,7 +66,7 @@ Index confirmed `llm-client`, `local-model-manager` (`VllmAdapter.chat`, `LmStud
 **Yes — three overlapping slots:**
 
 1. **Main cloud slot (already OpenAI-compat):**  
-   `TESSERA_LLM_BASE_URL` → OpenAI SDK `baseURL` → `chat.completions`. Any OpenAI-compat server (including local `http://127.0.0.1:PORT/v1`) can be pointed here **today**, but that also becomes the global LLM path and is still gated by `SOVEREIGN_NO_EXTERNAL_LLM` (default kill-switch ON).
+   `TESSERA_LLM_BASE_URL` → Tessera HTTP `chat/completions` (`callLLM`, and the guarded fetch path for rick / conversations / rick-proposals). Any compatible server (including local `http://127.0.0.1:PORT/v1`) can be pointed here **today**, but that also becomes the global LLM path and is still gated by `SOVEREIGN_NO_EXTERNAL_LLM` (default kill-switch ON) for `isLLMAvailable` consumers.
 
 2. **LocalModelManager OpenAI-compat adapters (main):**  
    - `VllmAdapter`: `VLLM_ENDPOINT` default `http://localhost:8000`, calls `${endpoint}/v1/chat/completions` and `/v1/models`; enabled only when `VLLM_ENABLED=true`.  
@@ -90,7 +77,7 @@ Index confirmed `llm-client`, `local-model-manager` (`VllmAdapter.chat`, `LmStud
 3. **Branch pen slot:**  
    `TESSERA_PEN_URL` → `completeWithPen` / `embedWithPen` (OpenAI-compat paths). Closest match to a dedicated “pen” provider. **Not on main.**
 
-**Gap vs Gitbook GLM docs:** Audit docs describe `TESSERA_PEN_ENABLED=1` as the adapter kill-switch. Origin pen branches use **`TESSERA_PEN_URL`** (presence = enable) and do **not** define `TESSERA_PEN_ENABLED` in code inspected. Names must be reconciled in the minimal change set.
+**Code gate:** `TESSERA_PEN_ENABLED` is a code gate on main in `artifacts/api-server/src/lib/llm-client.ts`. `isTesseraPenEnabled()` treats an unset value as `"0"` and returns true only for `"1"` or `"true"`. `callTesseraPen` throws `TESSERA_PEN_ENABLED is not enabled` when the gate is off and does not switch existing callers. Pen-provider branches still select the endpoint with `TESSERA_PEN_URL`.
 
 ---
 
@@ -102,10 +89,9 @@ Index confirmed `llm-client`, `local-model-manager` (`VllmAdapter.chat`, `LmStud
 |---|---|
 | `callLLM` (main) | no default; requires `TESSERA_LLM_MODEL` or an explicit model, else throw |
 | `adaptive-router` tiers | same env; `classifyQuery` uses the label `Tessera` when unset and does not call HTTP; `modelForTier` throws if unset |
-| `conversations` / `rick` / `rick-proposals` callers | `tesseraChatCompletion`; missing base URL, key, or model returns the local fallback and makes no HTTP |
+| `conversations` / `rick` / `rick-proposals` callers | guarded `secureExternalFetch` / `secureExternalStreamingFetch` inside `runWithShepherdContext`; `/rick/chat` streams when `stream=true`; proposals send `temperature` and JSON `response_format`; missing base URL, key, or model makes no HTTP |
 | `neural-embeddings` | `TESSERA_EMBED_MODEL`; unset uses the local fallback and makes no HTTP |
 | `provider-registry` xAI | `grok-3` |
-| `provider-registry` others | anthropic / openai / google / deepseek / groq / mistral / meta / qwen / moonshot catalogs |
 | Ollama preferred (local manager) | `llama3.2:3b`, `llama3.2:1b`, `mistral:7b`, `phi3:mini` |
 | Pen branch label | `Qwen 2.5 1.5B Instruct (local test)` |
 | Frontend Puter | catalog ids such as `grok-3`; retrieval agent reads `import.meta.env.VITE_TESSERA_LLM_MODEL` and fails closed when that value is empty |
@@ -117,7 +103,7 @@ Index confirmed `llm-client`, `local-model-manager` (`VllmAdapter.chat`, `LmStud
 `TESSERA_LLM_BASE_URL`, `TESSERA_LLM_API_KEY`, `TESSERA_LLM_MODEL`, `TESSERA_EMBED_MODEL`, `VITE_TESSERA_LLM_MODEL`, `SOVEREIGN_NO_EXTERNAL_LLM`, `LLM_TIMEOUT_MS`, `CONFERENCE_MODEL`,  
 `OLLAMA_ENDPOINT`, `LLAMA_CPP_ENDPOINT`, `LLAMA_CPP_ENABLED`, `VLLM_ENDPOINT`, `VLLM_ENABLED`, `LM_STUDIO_ENDPOINT`, `LM_STUDIO_ENABLED`, `TGI_ENDPOINT`, `TGI_ENABLED`,  
 `TESSERA_PEN_URL` (pen branches / `.env.example` on those commits),  
-`TESSERA_PEN_ENABLED` (**documented in Gitbook GLM5 audit / AGI-06 protocol; not found as a code gate on Origin main or pen-provider.ts**),  
+`TESSERA_PEN_ENABLED` (code gate in `llm-client.ts`: `isTesseraPenEnabled()` / `callTesseraPen()`; default `"0"`, on for `"1"` or `"true"`; existing callers are not switched),  
 `TESSERA_XAI_API_KEY`, `TESSERA_XAI_MODEL` (simulation / archive helpers),  
 `XAI_API_KEY` (storefront skill docs under imports).
 
@@ -180,7 +166,7 @@ Index confirmed `llm-client`, `local-model-manager` (`VllmAdapter.chat`, `LmStud
    - `TESSERA_PEN_URL=http://127.0.0.1:PORT/v1` (PORT chosen on cl1)
    - `TESSERA_PEN_MODEL=zai-org/GLM-5.3-Flash` (replace hard-coded `TEST_PEN_LABEL` when this provider is selected)
    - Optional: `TESSERA_PEN_PROVIDER=glm53-flash` vs `qwen-local-test`
-4. **Wire one seam only:** In `callLLM` (or a thin `resolvePen()`), if flag ON → `completeWithPen` with model id above; else → current `getClient()` path. Keep `external-sandbox-policy` sanitization on both.
+4. **Wire one seam only:** In `callLLM` (or a thin `resolvePen()`), if flag ON → `completeWithPen` with model id above; else → the existing Tessera HTTP path. Keep `external-sandbox-policy` sanitization on both.
 5. **`.env.example`:** document `TESSERA_PEN_ENABLED=`, `TESSERA_PEN_URL=`, `TESSERA_PEN_MODEL=` (blank). Do **not** change live deployment secrets.
 6. **Tests:** extend `pen-provider.test.ts` — flag off ⇒ no fetch; flag on + URL ⇒ posts to `/chat/completions` with model `zai-org/GLM-5.3-Flash`; refusal gate still runs.
 7. **Do not** flip default models in `adaptive-router` / conference runners until GLM5-002/003/004 TESTED and Father says yes (GLM5-ACT).
@@ -206,10 +192,9 @@ Index confirmed `llm-client`, `local-model-manager` (`VllmAdapter.chat`, `LmStud
 4. **Quantization / checkpoint:** FP8 default `zai-org/GLM-5.3-Flash` vs BF16 vs NVFP4 (Blackwell) / MXFP4 (AMD) variants.  
 5. **Tensor/expert parallel plan:** expected TP/EP size and max context to enable.  
 6. **Listen address / PORT:** bind `127.0.0.1` only vs LAN; exact PORT for `/v1`.  
-7. **Auth:** whether the local server needs a dummy API key / bearer (client already tolerates dummy keys on the OpenAI SDK path).  
-8. **Disk:** free space for ~hundreds of GB of weights + KV.  
-9. **Network path to Tessera:** same host localhost vs SSH tunnel / private VPN (never paste keys into Gitbook).  
-10. **Rollback:** keep live pen on xAI/Grok until GLM5-002–004 TESTED and Father yes on GLM5-ACT.
+7. **Disk:** free space for ~hundreds of GB of weights + KV.  
+8. **Network path to Tessera:** same host localhost vs SSH tunnel / private VPN (never paste keys into Gitbook).  
+9. **Rollback:** keep live pen on xAI/Grok until GLM5-002–004 TESTED and Father yes on GLM5-ACT.
 
 ---
 
