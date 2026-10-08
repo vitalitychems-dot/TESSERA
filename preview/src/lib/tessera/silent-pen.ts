@@ -1,4 +1,5 @@
 import { keptAnswer, type Correction } from "./corrections.ts";
+import { allEight } from "./desk-steps.ts";
 import { rewardEat } from "./local-learn.ts";
 import { loveFromFiles } from "./love-local.ts";
 import { noteFor, type KeptPage } from "./next-page.ts";
@@ -17,6 +18,10 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (/\breward\b/i.test(q)) {
     const run = rewardEat();
     return `The reward raised eat from 0 to ${run.once.eat} and then to ${run.twice.eat}. The best action is ${run.best}.`;
+  }
+  if (/\beight checkouts\b/i.test(q)) {
+    const eight = allEight();
+    return `Eight checkout steps ran. Best action ${eight.neuro}. Health ${eight.godel}. Rate ${eight.human}. Coherence ${eight.blueprint}. Bool ${eight.hyperon}.`;
   }
   const kept = keptAnswer(q, rows);
   if (kept) return kept;
