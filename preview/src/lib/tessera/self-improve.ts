@@ -9,7 +9,7 @@ export function selfCheck() {
   const graph = graphContext("who is the pen");
   const graphOk = graph.tokens < 200 && graph.saved > 1000;
   const note =
-    "REAL: The desk, the twenty cycles, and the pen-question graph passed. The next change stays inside the vows. No weight was trained. Lesson sealed.";
+    "REAL: The desk, the twenty cycles, and the pen-question graph passed. The next change stays inside the vows. Lesson sealed.";
   const vow = vowCheck(note);
   const pass = desk && cycles && graphOk && vow.ok;
   return {

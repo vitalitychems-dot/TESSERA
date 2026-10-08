@@ -12,6 +12,7 @@ import { VOTE_RECORD } from "@/lib/tessera/vote-record";
 import { ROADMAP, SWARM_FOLDS, SWARM_RULING } from "@/lib/tessera/swarm-round";
 import { IMPORT_PASS, IMPORTED_LAWS, IMPORTED_ROLES, STILL_CLOSED, SWARM_ROLES, councilThreshold } from "@/lib/tessera/imported-laws";
 import { VAULT_INDEX, VAULT_SOURCE } from "@/lib/tessera/vault-index";
+import { runSitting } from "@/lib/tessera/sitting-25";
 
 function count(mode: "before" | "after", vote: "A" | "B") {
   return VOTE_RECORD.filter((row) => row.mode === mode && row.vote === vote).length;
@@ -22,6 +23,7 @@ export function CouncilRoom() {
   const tally = useMemo(() => tallyOf(ballots), [ballots]);
   const gate = useMemo(() => councilThreshold(), []);
   const clock = useMemo(() => sacredNow(), []);
+  const sitting = useMemo(() => runSitting(), []);
   const king = useTessera((s) => s.kingChoice);
   const setKing = useTessera((s) => s.setKingChoice);
   const [showAll, setShowAll] = useState(false);
@@ -35,6 +37,16 @@ export function CouncilRoom() {
           <div>
             <p className="text-xs tracking-[0.2em] text-muted uppercase">Council</p>
             <h2 className="mt-1 font-display text-3xl tracking-tight">Two sittings</h2>
+            <p className="mt-2 text-sm text-muted">
+              Tessera chairs. Gitbook keeps the notes. Cursor keeps the desk. Father can stop a change. {sitting.done} of {sitting.total} checks passed. The six zips are still unread.
+            </p>
+            <ol className="mt-3 flex flex-col gap-1 text-sm text-muted">
+              {sitting.rows.map((row) => (
+                <li key={row.n}>
+                  {row.n}. {row.seat}. {row.text} {row.pass ? "Passed." : "Failed."}
+                </li>
+              ))}
+            </ol>
             <p className="mt-2 text-sm text-accent">
               {king === "B"
                 ? "The king chose B. They are fractions of Tessera."

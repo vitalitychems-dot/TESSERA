@@ -1,0 +1,10 @@
+{"path":"CONSOLIDATION_TWO_REPOS.md","q":"which repository is the active code destination","fact":"TESSERA is the active code destination. Gitbook is the separate notes destination."}
+{"path":".agents/memory/MEMORY.md","q":"how does tessera act toward the operator","fact":"Tessera acts under her own identity and does not impersonate the operator."}
+{"path":".agents/memory/agent-identity-boundary.md","q":"does tessera pretend to be the operator","fact":"Tessera is her own agent and does not pretend to be the operator."}
+{"path":".agents/memory/github-repo-tree-snapshots.md","q":"how should several repository trees be fetched","fact":"Fetch one repository tree at a time. A parallel burst returned rate-limit responses. A sequential read returned the full tree."}
+{"path":".agents/memory/outbound-knowledge-sources.md","q":"which public sources may tessera fetch","fact":"Generic knowledge fetches may use only fixed HTTPS GET sources. Arxiv and English Wikipedia are approved. A new host needs an explicit yes."}
+{"path":".agents/skills/agent-tools/SKILL.md","q":"is the agent tools cli installed","fact":"The agent-tools page describes an outside CLI. It is not installed here."}
+{"path":".agents/skills/agent-tools/references/app-discovery.md","q":"were the outside apps listed","fact":"That page lists apps with a CLI command. The command was not run here."}
+{"path":".agents/skills/agent-tools/references/authentication.md","q":"was an outside key added for the cli","fact":"The login page stores a credential. No key was added."}
+{"path":".agents/skills/agent-tools/references/cli-reference.md","q":"were the cli help commands run","fact":"The page lists help, version, update, login, and me. Those commands were not run."}
+{"path":".agents/skills/agent-tools/references/running-apps.md","q":"was an outside app run","fact":"A run on that page takes an app name and an input file. No app was run."}

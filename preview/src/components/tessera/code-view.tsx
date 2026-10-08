@@ -90,9 +90,9 @@ export function CodeView() {
         <p className="mt-2 text-sm leading-relaxed text-muted">
           <span className="text-fg">require("@tessera/mesh")</span> fails with MODULE_NOT_FOUND. npm has no such package. The saved TESS files do contain a mesh, and it is not this snippet. It is an in-memory list of browser sessions on one server, gated by a token. No peer is connected in this chamber. The old page that lists Tessera Core with 27 peers and 4.8 GB/s is written as fixed numbers in SovereignMeshPage.tsx. Those numbers are not a live network, so they are not shown here as status.
         </p>
-        <h3 className="mt-8 text-sm font-medium text-fg">The wallet snippet does not run</h3>
+        <h3 className="mt-8 text-sm font-medium text-fg">No wallet</h3>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          require("@tessera/economy") fails with MODULE_NOT_FOUND. npm has no such package. TokenEconomyPage.tsx stores a fixed supply of 963,000,000 TSRT and a fixed reward list. No balance was read and no transfer was sent. This chamber will not create a wallet, hold a private key, or pay a council reward.
+          This chamber has no wallet and no coin. Nothing is transferred.
         </p>
         <h3 className="mt-8 text-sm font-medium text-fg">The webhook snippet does not run</h3>
         <p className="mt-2 text-sm leading-relaxed text-muted">

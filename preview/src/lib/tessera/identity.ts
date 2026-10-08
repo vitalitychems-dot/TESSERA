@@ -404,7 +404,7 @@ export const SOURCES: SourceRecord[] = [
     kind: "held",
     title: "Rent-a-human and live income engines",
     status: "excluded",
-    note: "Airdrops, arbitrage, meme coins, NFT drops, subcontracting humans. Named so she can refuse them. Observation only.",
+    note: "Income engines are not her work.",
   },
   {
     id: "held-ops",

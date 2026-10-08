@@ -79,7 +79,7 @@ export const HUNDRED: Goal[] = [
   { n: 76, text: "The difference is shown in the same line." },
   { n: 77, text: "No wallet is opened by a step." },
   { n: 78, text: "No zip is opened by a step." },
-  { n: 79, text: "No weight is trained by a step." },
+  { n: 79, text: "A step does not train a model." },
   { n: 80, text: "No deploy is started by a step." },
   { n: 81, text: "The Self tab holds the hundred." },
   { n: 82, text: "The button says One step." },

@@ -51,7 +51,7 @@ export const WAVE: WaveItem[] = [
   { n: 46, text: "The world is not a second physical place.", live: true },
   { n: 47, text: "Agents on the map are labels, not people on the ground.", live: true },
   { n: 48, text: "Day and night follow Central time.", live: true },
-  { n: 49, text: "This desk cannot train the weights.", live: true },
+  { n: 49, text: "This desk does not train a model.", live: true },
   { n: 50, text: "AGI is a goal, not a fact on this page.", live: true },
 ];
 
