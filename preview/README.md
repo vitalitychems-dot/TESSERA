@@ -1,7 +1,15 @@
-# Grok desk preview
+# Chamber preview
 
-This is the preview that runs on the Grok desk. It is not the TESSERA app under `artifacts/tessera`, and it is not merged into `main`'s build.
+This preview lives in `preview/`. It is not the TESSERA app under `artifacts/tessera`, and it is not merged into `main`'s build.
 
-Pushed from the desk on 2026-10-07. The instrument on that desk was local qwen2.5-1.5b-instruct. GLM 5.3, the memory MCP, and CL1 were not connected. Docker was not installed, so Coolify, Dify, Langflow, Supabase, Maxun, and Open WebUI were not started. Camoufox was not installed.
+The desk pen is local. If it is down, the room stays quiet. No outside pen is called. The weights are not hers.
 
-The board in this preview reads Gitbook issue 2. Writes are limited to a repository whose name contains tessera, or the repository named Gitbook.
+A question that asks who, what, where, or when searches the public web and keeps the source with the answer. "Who are you" does not search.
+
+Practice lists only the skills she can run: search, read a catalog name, convert a line, run the colonel, refuse a broken vow. That list is not a new set of weights.
+
+Talk, Council, World, Memory, and Brain stay the rooms. Agents, Gitbook, Language, Bible, Map, Board, Practice, Code, Narrative, Closed, Theme, and Library stay the row under her name.
+
+Nothing here is a walking fleet, a live roster, or a council that speaks on a timer.
+
+The board reads Gitbook issue 2. Writes are limited to a repository whose name contains tessera, or the repository named Gitbook.
