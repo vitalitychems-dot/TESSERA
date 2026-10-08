@@ -91,11 +91,6 @@ const DEP_KNOWLEDGE: Record<string, { patterns: string[]; capabilities: string[]
     capabilities: ["Fast structured logging", "Multiple transports", "Child loggers", "Log levels", "Pretty printing"],
     apiSurface: ["pino()", "logger.info()", "logger.error()", "logger.warn()", "logger.debug()", "logger.child()", "logger.level"],
   },
-  "openai": {
-    patterns: ["Chat completion pattern", "Streaming pattern", "Function calling pattern", "Embedding pattern"],
-    capabilities: ["Chat completions", "Text embeddings", "Image generation", "Speech to text", "Function calling", "Streaming"],
-    apiSurface: ["new OpenAI()", "client.chat.completions.create()", "client.embeddings.create()", "client.images.generate()", "model", "messages", "stream"],
-  },
   "zod": {
     patterns: ["Schema validation", "Type inference", "Error handling", "Transformation"],
     capabilities: ["Runtime type validation", "TypeScript type inference", "Schema composition", "Error messages", "Transformations"],
