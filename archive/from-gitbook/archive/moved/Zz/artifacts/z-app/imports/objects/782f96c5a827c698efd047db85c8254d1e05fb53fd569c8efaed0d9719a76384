@@ -1,0 +1,259 @@
+import { o as __toESM } from "../_runtime.mjs";
+import { C as require_jsx_runtime, U as require_react, y as Link } from "../_libs/@tanstack/react-router+[...].mjs";
+import { n as BUSINESS } from "./pricing-Bvwp02Vi.mjs";
+import { C as formatPrice, j as saveWholesaleLead } from "./use-lab-credit-mL5HM6FJ.mjs";
+import { n as SiteHeader } from "./site-header-Dl38Q0EW.mjs";
+import { t as SiteFooter } from "./site-footer-w4rLOUoS.mjs";
+import { n as WHOLESALE_TIERS, s as wholesaleSheet } from "./wholesale-tiers-g55m-rFS.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/wholesale-B2ceBt4B.js
+var import_react = /* @__PURE__ */ __toESM(require_react());
+var import_jsx_runtime = require_jsx_runtime();
+function WholesalePage() {
+	const rows = wholesaleSheet().slice(0, 24);
+	const [sent, setSent] = (0, import_react.useState)(false);
+	const [err, setErr] = (0, import_react.useState)(null);
+	const [form, setForm] = (0, import_react.useState)({
+		name: "",
+		company: "",
+		email: "",
+		phone: "",
+		budget: "10 vials",
+		notes: ""
+	});
+	const submit = async (e) => {
+		e.preventDefault();
+		setErr(null);
+		const res = await saveWholesaleLead({ data: form });
+		if (res.ok) setSent(true);
+		else setErr(res.error ?? "Could not send. Email us directly.");
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "min-h-dvh bg-bg text-fg",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteHeader, { active: "wholesale" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
+				className: "mx-auto max-w-5xl px-4 pt-8 pb-20 sm:px-6",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "font-mono text-xs tracking-widest text-primary uppercase",
+						children: "Lab procurement"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+						className: "font-display mt-2 text-4xl font-semibold tracking-wide uppercase",
+						children: "Wholesale consult"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "mt-3 max-w-2xl text-sm leading-relaxed text-muted",
+						children: [
+							"Single-SKU lots starting at 10 vials. Rates drop at 50 and 100. Research use only — not for human or animal use. We reply from ",
+							BUSINESS.email,
+							"."
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "mt-8 grid gap-3 sm:grid-cols-3",
+						children: WHOLESALE_TIERS.map((t) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "rounded-md border border-border bg-surface p-4",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+									className: "font-display text-2xl font-semibold text-primary",
+									children: [t.qty, "+"]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "mt-1 text-sm text-fg",
+									children: t.label
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+									className: "mt-2 text-xs text-muted",
+									children: [Math.round(t.off * 100), "% under catalog"]
+								})
+							]
+						}, t.qty))
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "mt-10 overflow-x-auto rounded-md border border-border",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+							className: "w-full min-w-[640px] text-left text-sm",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", {
+								className: "bg-overlay font-mono text-[10px] tracking-widest text-muted uppercase",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+										className: "px-3 py-2",
+										children: "Compound"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+										className: "px-3 py-2",
+										children: "Qty"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+										className: "px-3 py-2",
+										children: "Catalog"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+										className: "px-3 py-2",
+										children: "10"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+										className: "px-3 py-2",
+										children: "50"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+										className: "px-3 py-2",
+										children: "100"
+									})
+								] })
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", { children: rows.map((r) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+								className: "border-t border-border",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+										className: "px-3 py-2 font-medium",
+										children: r.name
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+										className: "px-3 py-2 font-mono text-xs",
+										children: r.dose
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+										className: "px-3 py-2 text-muted",
+										children: formatPrice(r.retail)
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+										className: "px-3 py-2 text-primary",
+										children: formatPrice(r.t10)
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+										className: "px-3 py-2 text-primary",
+										children: formatPrice(r.t50)
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+										className: "px-3 py-2 text-primary",
+										children: formatPrice(r.t100)
+									})
+								]
+							}, `${r.name}-${r.dose}`)) })]
+						})
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "mt-2 text-[11px] text-faint",
+						children: "Sample of the catalog. Full SKU sheet sent after consult. Prices exclude shipping."
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+						className: "mt-12 rounded-lg border border-primary/40 bg-surface p-6",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+							className: "font-display text-2xl font-semibold tracking-wide uppercase",
+							children: "Request a consult"
+						}), sent ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+							className: "mt-4 text-sm text-primary",
+							children: [
+								"Received. We will reply to ",
+								form.email,
+								" from ",
+								BUSINESS.email,
+								"."
+							]
+						}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
+							className: "mt-6 grid gap-3 sm:grid-cols-2",
+							onSubmit: submit,
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+									required: true,
+									placeholder: "Name",
+									value: form.name,
+									onChange: (e) => setForm({
+										...form,
+										name: e.target.value
+									}),
+									className: "input-field"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+									placeholder: "Company / lab (if applicable)",
+									value: form.company,
+									onChange: (e) => setForm({
+										...form,
+										company: e.target.value
+									}),
+									className: "input-field"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+									required: true,
+									type: "email",
+									placeholder: "Email",
+									value: form.email,
+									onChange: (e) => setForm({
+										...form,
+										email: e.target.value
+									}),
+									className: "input-field"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+									placeholder: "Phone",
+									value: form.phone,
+									onChange: (e) => setForm({
+										...form,
+										phone: e.target.value
+									}),
+									className: "input-field"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("select", {
+									value: form.budget,
+									onChange: (e) => setForm({
+										...form,
+										budget: e.target.value
+									}),
+									className: "input-field sm:col-span-2",
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", { children: "10 vials" }),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", { children: "50 vials" }),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", { children: "100 vials" }),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", { children: "Mixed SKU / not sure" })
+									]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("textarea", {
+									placeholder: "Compounds, cadence, notes",
+									value: form.notes,
+									onChange: (e) => setForm({
+										...form,
+										notes: e.target.value
+									}),
+									className: "input-field min-h-24 sm:col-span-2"
+								}),
+								err && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "text-sm text-red-400 sm:col-span-2",
+									children: err
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									type: "submit",
+									className: "btn-primary sm:col-span-2",
+									children: "Send wholesale request"
+								})
+							]
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "mt-6 text-sm text-muted",
+						children: [
+							"Prefer email?",
+							" ",
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
+								className: "text-primary hover:underline",
+								href: `mailto:${BUSINESS.email}`,
+								children: BUSINESS.email
+							}),
+							". Or",
+							" ",
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
+								to: "/affiliates",
+								className: "text-primary hover:underline",
+								children: "become an affiliate"
+							}),
+							"."
+						]
+					})
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteFooter, {})
+		]
+	});
+}
+//#endregion
+export { WholesalePage as component };

@@ -1,0 +1,177 @@
+//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-BJBj5Cwn.js
+var tsrStartManifest = () => ({ routes: {
+	__root__: {
+		filePath: "/workspace/src/routes/__root.tsx",
+		children: [
+			"/",
+			"/account",
+			"/admin",
+			"/affiliates",
+			"/checkout",
+			"/contact",
+			"/login",
+			"/subscriptions",
+			"/testing",
+			"/wholesale",
+			"/legal/privacy",
+			"/legal/research-use",
+			"/legal/returns",
+			"/legal/terms",
+			"/product/$id",
+			"/api/auth/$"
+		],
+		preloads: [
+			"/assets/index-x-oBT1q4.js",
+			"/assets/rolldown-runtime-hePW80VL.js",
+			"/assets/client-D9440YHn.js",
+			"/assets/use-lab-credit-C_7pgCxb.js",
+			"/assets/legal-D-GIwrOq.js"
+		],
+		scripts: [{ attrs: {
+			type: "module",
+			async: !0,
+			src: "/assets/index-x-oBT1q4.js"
+		} }]
+	},
+	"/": {
+		filePath: "/workspace/src/routes/index.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/routes-RWaLuMdQ.js",
+			"/assets/file-check-2-Bd63S1Ch.js",
+			"/assets/truck-Dcbm5DC7.js",
+			"/assets/site-header-okJDvNar.js",
+			"/assets/site-footer-DJA73ltb.js",
+			"/assets/product-card-Czc3Vhtl.js"
+		]
+	},
+	"/account": {
+		filePath: "/workspace/src/routes/account.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/account-Zy4IJGdA.js",
+			"/assets/site-header-okJDvNar.js",
+			"/assets/site-footer-DJA73ltb.js"
+		]
+	},
+	"/admin": {
+		filePath: "/workspace/src/routes/admin.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/admin-BVxhvoQt.js",
+			"/assets/site-header-okJDvNar.js",
+			"/assets/wholesale-tiers-OOTSA-Es.js"
+		]
+	},
+	"/affiliates": {
+		filePath: "/workspace/src/routes/affiliates.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/affiliates-DdBHVHT6.js",
+			"/assets/site-header-okJDvNar.js",
+			"/assets/site-footer-DJA73ltb.js"
+		]
+	},
+	"/checkout": {
+		filePath: "/workspace/src/routes/checkout.tsx",
+		children: void 0,
+		preloads: ["/assets/checkout-DhAYDzat.js", "/assets/site-header-okJDvNar.js"]
+	},
+	"/contact": {
+		filePath: "/workspace/src/routes/contact.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/contact-CLij5tCn.js",
+			"/assets/site-header-okJDvNar.js",
+			"/assets/site-footer-DJA73ltb.js"
+		]
+	},
+	"/login": {
+		filePath: "/workspace/src/routes/login.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/login-CGF4LPAw.js",
+			"/assets/site-header-okJDvNar.js",
+			"/assets/site-footer-DJA73ltb.js"
+		]
+	},
+	"/subscriptions": {
+		filePath: "/workspace/src/routes/subscriptions.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/subscriptions-DO3Lmu1q.js",
+			"/assets/site-header-okJDvNar.js",
+			"/assets/site-footer-DJA73ltb.js"
+		]
+	},
+	"/testing": {
+		filePath: "/workspace/src/routes/testing.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/testing-C0ig_7Bi.js",
+			"/assets/file-check-2-Bd63S1Ch.js",
+			"/assets/truck-Dcbm5DC7.js",
+			"/assets/site-header-okJDvNar.js",
+			"/assets/site-footer-DJA73ltb.js"
+		]
+	},
+	"/wholesale": {
+		filePath: "/workspace/src/routes/wholesale.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/wholesale-C2ijf36l.js",
+			"/assets/site-header-okJDvNar.js",
+			"/assets/site-footer-DJA73ltb.js",
+			"/assets/wholesale-tiers-OOTSA-Es.js"
+		]
+	},
+	"/legal/privacy": {
+		filePath: "/workspace/src/routes/legal.privacy.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/legal.privacy-BNWy7oqb.js",
+			"/assets/site-header-okJDvNar.js",
+			"/assets/site-footer-DJA73ltb.js"
+		]
+	},
+	"/legal/research-use": {
+		filePath: "/workspace/src/routes/legal.research-use.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/legal.research-use-BJV-YbOu.js",
+			"/assets/site-header-okJDvNar.js",
+			"/assets/site-footer-DJA73ltb.js"
+		]
+	},
+	"/legal/returns": {
+		filePath: "/workspace/src/routes/legal.returns.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/legal.returns-Ccn4ak0l.js",
+			"/assets/site-header-okJDvNar.js",
+			"/assets/site-footer-DJA73ltb.js"
+		]
+	},
+	"/legal/terms": {
+		filePath: "/workspace/src/routes/legal.terms.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/legal.terms-B6kIf-me.js",
+			"/assets/site-header-okJDvNar.js",
+			"/assets/site-footer-DJA73ltb.js"
+		]
+	},
+	"/product/$id": {
+		filePath: "/workspace/src/routes/product.$id.tsx",
+		children: void 0,
+		preloads: [
+			"/assets/product._id-IEgUDNxW.js",
+			"/assets/file-check-2-Bd63S1Ch.js",
+			"/assets/site-header-okJDvNar.js",
+			"/assets/site-footer-DJA73ltb.js",
+			"/assets/product-card-Czc3Vhtl.js"
+		]
+	}
+} });
+//#endregion
+export { tsrStartManifest };

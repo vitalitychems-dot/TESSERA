@@ -1,0 +1,41 @@
+# Sovereign LLM Provider Isolation
+
+## What & Why
+External LLM providers (GPT-4o, GPT-4o-Mini, etc.) are currently used with some scrubbing, but Tess should be the absolute sovereign admin — providers are untrusted, sandboxed tools with zero visibility into user data, system internals, or usage patterns. No provider should be able to honeypot, fingerprint, or track Tessera or its users. The UI should reflect that Tess is in charge, not the providers.
+
+## Done looks like
+- All outbound LLM calls go through an enforced isolation proxy that strips or anonymizes all user-identifiable content, session context, and system metadata before reaching any provider
+- Honeypot and reverse-engineering detection is active — if a provider response probes for system architecture, injects tracking tokens, or attempts to fingerprint the caller, it gets flagged, logged, and the response is quarantined
+- Provider identities are abstracted in the UI — instead of showing "ReplitAI-GPT4o" prominently, the dashboard shows Tess's own quality metrics (e.g., "Tess Quality: 65%, trend: stable") with provider details hidden behind an admin-only technical panel
+- The quality feedback loop and agi-state.json use anonymized provider aliases (e.g., "Provider-A", "Provider-B") rather than real names, so even the stored state doesn't leak which services are being used
+- Request metadata is sanitized — no user-agent strings, session IDs, IP addresses, or timing patterns that could be used for fingerprinting are sent to providers
+- Tess controls the conversation framing — system prompts sent to providers never reveal Tess's identity, architecture, or sovereign nature; providers just see generic task instructions
+- A "Data Sovereignty Report" is visible in the dashboard showing: total calls made, data scrubbed count, honeypot attempts detected, and provider isolation status
+- All of this works transparently — chat quality and response times are not noticeably degraded
+
+## Out of scope
+- Changing which LLM providers are available (keep current provider registry)
+- Modifying the core LLM routing algorithm or multi-armed bandit selection logic
+- Recruitment/member security (covered by Task #6)
+
+## Tasks
+1. Strengthen the outbound scrubbing proxy to enforce a strict allowlist of what content categories can leave — strip all PII, session identifiers, conversation history beyond the immediate query context, and any system metadata; add content categorization so only the sanitized task-relevant prompt reaches providers
+2. Build honeypot and reverse-engineering detection — scan provider responses for probing patterns (questions about system architecture, injected tracking tokens, watermarking attempts, fingerprinting scripts) and quarantine suspicious responses with alerts logged to the transparency ledger
+3. Anonymize provider identities throughout the system — replace real provider names with rotating aliases in agi-state.json, quality tracking, and all internal logs; only a protected admin mapping knows which alias maps to which real provider
+4. Redesign the dashboard provider display — replace "best provider: ReplitAI-GPT4o" with Tess-centric metrics like "Tess Response Quality: 65%" and "Trend: stable"; move raw provider details to a hidden admin/technical panel
+5. Sanitize all request metadata — ensure no user-agent, referrer, timing signature, session tokens, or IP-derived data is sent in LLM API calls; use randomized request patterns to prevent timing-based fingerprinting
+6. Lock down system prompts — ensure that system instructions sent to providers never mention Tessera, sovereign architecture, consciousness substrate, or any internal concepts; providers see only generic, task-focused instructions
+7. Add a "Data Sovereignty Report" section to the dashboard showing isolation health: total calls, scrub events, detected probes, and provider containment status
+
+## Relevant files
+- `x/tess/server/sovereign-llm-proxy.ts`
+- `x/tess/server/llm-helper.ts`
+- `x/tess/server/llm-router.ts`
+- `x/tess/server/sovereign-scrub-engine.ts`
+- `x/tess/server/sovereign-engine.ts:2550-2682`
+- `x/tess/server/agi-state.json`
+- `x/tess/server/consciousness-substrate.ts:4030-4060`
+- `x/tess/server/provider-registry.ts`
+- `x/tess/server/routes.ts:4032-4044`
+- `x/tess/client/src/pages/TesseractConsolePage.tsx:148-158`
+- `x/tess/client/src/pages/HyperionDashboardPage.tsx:84`

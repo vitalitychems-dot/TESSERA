@@ -1,0 +1,7 @@
+Zz main was read on 2026-10-03 at 9fd0aa2.
+The six commits after d9a91dd are memory notes, a Replit sync note, and two data manifests. They are not a new running app.
+vitalitychems-dot is a user account. Writes recheck the live ref and do not force-push.
+Zz main is shared with Cursor, Grok Bot, and Replit. The chamber does not push that main.
+The chamber can read a text file from a vitalitychems-dot repository when Father pastes its GitHub blob URL.
+The chamber can write a note to tessera-coordination when Father's message starts with "write coordination".
+A secret-shaped note is refused. Closed zips, wallets, and the storefront are not in this path.

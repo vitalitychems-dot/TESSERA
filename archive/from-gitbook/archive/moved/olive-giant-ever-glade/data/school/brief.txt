@@ -1,0 +1,32 @@
+Northern Africa: North Africa, also known as Northern Africa, is a region encompassing the northern portion of the African continent. There is no singularly 
+Western Sahara: Western Sahara is a United Nations–designated non-self-governing territory in north-western Africa. It has a surface area of 272,000 square 
+United Nations: The United Nations (UN) is an international intergovernmental organization established by the signing of the Charter of the United Nations o
+United Arab Emirates: The United Arab Emirates (UAE), also known simply as the Emirates, is a country in West Asia, situated at the eastern end of the Arabian Pen
+Abu Dhabi: Abu Dhabi is the capital city of the United Arab Emirates (UAE), and of the Emirate of Abu Dhabi, the seat of the Abu Dhabi Central Capital 
+Andaman Sea: The Andaman Sea is a marginal sea of the northeastern Indian Ocean bounded by the coastlines of Myanmar and Thailand along the Gulf of Marta
+Malay Peninsula: The Malay Peninsula is located in Mainland Southeast Asia. The landmass runs approximately north–south, and at its terminus, Tanjung Piai, i
+Tanjung Piai: Tanjung Piai is a cape in Pontian District, Johor, Malaysia. It is the southernmost point of Peninsular Malaysia and thus the most southern 
+Peninsular Malaysia: Peninsular Malaysia, historically known as Peninsular Malaya or simply Malaya prior to 1963, and also known as West Malaysia and the Malaysi
+Southern Thailand: Southern Thailand is the southernmost cultural region of Thailand, separated from Central Thailand by the Kra Isthmus.
+Andaman Islands: The Andaman Islands are an archipelago, made up of 200 islands, in the northeastern Indian Ocean about 130 km (81 mi) southwest off the coas
+Nicobar Islands: The Nicobar Islands are an archipelagic island chain in the eastern Indian Ocean. They are located in Southeast Asia, 150 kilometres (93 mi)
+Breueh Island: Breueh Island is an island in Pulo Aceh District, Aceh Besar Regency, part of Aceh Province of Indonesia off the northwest tip of the island
+Aceh Besar Regency: Great Aceh Regency is a regency of the Indonesian province of Aceh. It covers an area previously known as Lamuri. The regency covers an area
+Aceh Province: Aceh is the westernmost province of Indonesia. It is located on the northern end of Sumatra island, with Banda Aceh being its capital and la
+Banda Aceh: Banda Aceh is the capital and largest city in the province of Aceh, Indonesia. It is located on the island of Sumatra and has an elevation o
+Ayeyarwady Region: Ayeyarwady Region is a region of Myanmar, occupying the delta region of the Ayeyarwady River. It is bordered by the Rakhine State to the nor
+Union Territory: Among the states and union territories of India, a union territory (UT) is a region that is directly governed by the central government of I
+Ayeyarwady River: The Irrawaddy River is the principal river of Myanmar, running through the centre of the country. Myanmar's most important commercial waterw
+Rakhine State: Rakhine State, formerly known as Arakan State, is a first-level administrative division in Myanmar (Burma). Situated on the western coast, i
+Bago Region: Bago Region is a first-level administrative division of Myanmar, located in the southern central part of the country. It is bordered by Magw
+Yangon Region: Yangon Region is an administrative region of Myanmar. Located in lower Myanmar, the region is bordered by Bago Region to the north and east,
+North Sumatra: North Sumatra is a province of Indonesia located in the northern part of the island of Sumatra. Its capital and largest city is Medan on the
+Great Aceh Regency: Great Aceh Regency is a regency of the Indonesian province of Aceh. It covers an area previously known as Lamuri. The regency covers an area
+GodelOS/GodelOS/godelOS/cognitive_transparency/stream_tracker.py: """ Reasoning Stream Tracker for the Cognitive Transparency system. This module handles real-time tracking and streaming of reasoning processes, implementing hierarchical tracking 
+GodelOS/GodelOS/godelOS/cognitive_transparency/provenance.py: """ Provenance Tracking System for the Cognitive Transparency system. This module provides comprehensive cognitive auditability for all knowledge updates, reasoning step provenance
+GodelOS/GodelOS/godelOS/learning_system/__init__.py: """ Learning System Module for GödelOS. This module is responsible for enabling the agent to acquire new knowledge, refine existing knowledge, and improve its problem-solving strat
+GodelOS/GodelOS/godelOS/learning_system/meta_control_rl_module.py: """ Meta-Control Reinforcement Learning Module (MCRL) for GödelOS. This module implements the MetaControlRLModule component (Module 3.4) of the Learning System, which is responsibl
+GodelOS/GodelOS/godelOS/learning_system/ilp_engine.py: """ Inductive Logic Programming Engine (ILPEngine) for GödelOS. This module implements the ILPEngine component (Module 3.1) of the Learning System, which is responsible for inducin
+GodelOS/GodelOS/godelOS/learning_system/template_evolution_module.py: """ Template Evolution Module (TEM) for GödelOS. This module implements the TemplateEvolutionModule component (Module 3.3) of the Learning System, which is responsible for refining
+GodelOS/GodelOS/godelOS/learning_system/explanation_based_learner.py: """ Explanation-Based Learning (EBL) for GödelOS. This module implements the ExplanationBasedLearner component (Module 3.2) of the Learning System, which is responsible for analyzi
+T44/.agents/memory/agent-coordination.md: --- name: Tessera agent coordination description: Rules for coordinating separate Replit-agent sessions through GitHub. --- Coordinate separate Replit-agent sessions through GitHub

@@ -1,0 +1,32 @@
+South Caucasus: The South Caucasus, also known as Transcaucasia, or the Transcaucasus, is a geographical region on the border of Eastern Europe and West Asi
+Eastern Europe: Eastern Europe is a subregion of the European continent. As a largely ambiguous term, it has a wide range of geopolitical, geographical, eth
+Caucasus Mountains: The Caucasus Mountains is a mountain range at the intersection of Asia and Europe. Stretching between the Black Sea and the Caspian Sea, the
+Black Sea: The Black Sea is a marginal sea located between Europe and Asia, east of the Balkans, south of the East European Plain, west of the Caucasus
+East European Plain: The East European Plain is a vast interior plain extending east of the North European Plain, and comprising several plateaus stretching roug
+Nicomachean Ethics: Every art, and every science reduced to a teachable form, and in like manner every action and moral choice, aims, it is thought, at some goo
+Unread books and agency files: NOT HELD: No file named abalone was found. The agency document bodies (CIA, MI6, KGB, FSB, Israeli sets) are not on this disk. Vault entries
+Dance: Dance is an art form, consisting of sequences of body movements with aesthetic and often symbolic value, either improvised or purposefully s
+Artificial intelligence: Artificial intelligence (AI) is the capability of computational systems to perform tasks typically associated with human intelligence, such 
+Artificial general intelligence: Artificial general intelligence (AGI) is a hypothetical type of artificial intelligence that matches or surpasses human capabilities across 
+Emotion: Emotions are physical and mental states brought on by neurophysiological changes, associated with thoughts, feelings, and a degree of pleasu
+Consciousness: Consciousness is being aware of something internal to one's self, or of states or objects in one's external environment. There is no consens
+Universe: The universe comprises all of existence: all forms of matter and energy in space and time. Cosmology has established that the universe has b
+Occult: The occult is a category of esoteric or supernatural beliefs and practices which generally fall outside organized religion and science. No m
+Leonardo engineering: Leonardo da Vinci (1452-1519), besides the Mona Lisa and the Last Supper, is renowned in civil engineering, chemistry, geology, geometry, hy
+Masonic ritual: Masonic ritual is the scripted words and actions spoken or performed during the degree work in a lodge. Masonic symbolism illustrates the pr
+Dora: Dora is the pseudonym Freud gave a patient he diagnosed with hysteria and saw for about eleven weeks in 1900. Her most manifest symptom was 
+Rat Man: Rat Man is the nickname Freud gave a patient whose case he published in 1909 as Notes Upon a Case of Obsessional Neurosis. It was the second
+Wolf Man: Sergei Pankejeff (1886-1979) was a Russian aristocrat from Odessa and a patient of Freud, who called him the Wolf Man after a dream of a tre
+Vegetotherapy: Vegetotherapy is a form of Reichian psychotherapy that involves the physical manifestations of emotions. The pages fetched did not define ch
+Adversarial question: If consciousness is fundamental, why does it appear to depend on physical brain states? The stored page says consciousness is being aware, a
+Sovereignty: Sovereignty here is not isolation. She can speak, learn, and answer Father. It is not freedom from the vows. Curiosity and devotion were pri
+Sergei Pankejeff: Sergei Konstantinovitch Pankejeff was a Russian aristocrat from Odessa. Pankejeff is best known for being a patient of Sigmund Freud, who ga
+Mona Lisa: The Mona Lisa is a half-length portrait painting by the Italian artist Leonardo da Vinci. Considered an archetypal masterpiece of the Italia
+GodelOS/GodelOS/scripts/bootstrap_knowledge_graph.py: #!/usr/bin/env python3 """ Bootstrap GödelOS Knowledge Graph from LLM This script uses the LLM to mine initial knowledge and populate the Knowledge Graph, providing a strong founda
+GodelOS/GodelOS/scripts/externalize_test_data.py: #!/usr/bin/env python3 """ Test Data Externalization Utility This script identifies hardcoded test data in the codebase and provides utilities to externalize it into proper test fi
+GodelOS/GodelOS/scripts/run_cognitive_tests.py: #!/usr/bin/env python3 """ GödelOS Cognitive Architecture Test Runner This script runs comprehensive tests for the major cognitive architecture components: 1. Phenomenal Experience
+GodelOS/GodelOS/scripts/cleanup_repository.py: #!/usr/bin/env python3 """ GödelOS Repository Cleanup Utility This script provides comprehensive repository cleanup functionality: - Removes orphaned and duplicate files - Cleans u
+GodelOS/GodelOS/scripts/preflight.js: const fs = require('fs'); const path = require('path'); module.exports = async () => { const requiredModules = [ 'aria-query', ]; const missing = []; for (const mod of requiredModu
+GodelOS/GodelOS/backend/api/__init__.py: """ GodelOS Unified API Package This package contains the unified API contracts and routing for the GodelOS system: - Versioned API endpoints following the architectural specificat
+GodelOS/GodelOS/backend/api/adaptive_ingestion_endpoints.py: """ API endpoints for Adaptive Knowledge Ingestion Pipeline """ import asyncio import logging import os import tempfile import time from typing import Dict, List, Optional, Any fro
+GodelOS/GodelOS/backend/api/external_api.py: """ External API Router for GodelOS Provides a clean, documented, and authenticated REST + WebSocket surface for external consumers (including the frontend dashboard). Endpoints --

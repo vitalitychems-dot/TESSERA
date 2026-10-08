@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tessera">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0614">
+<title>Tessera</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0614;color:#e2e8f0;font-family:system-ui,-apple-system,sans-serif;min-height:100dvh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.w{text-align:center;padding:2rem;max-width:400px;width:100%}
+.logo{width:80px;height:80px;margin:0 auto 1.5rem;border-radius:20px;background:linear-gradient(135deg,#7c3aed,#2563eb,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:2.5rem;font-weight:900;color:#fff;box-shadow:0 0 60px rgba(124,58,237,0.4);animation:glow 3s ease-in-out infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 40px rgba(124,58,237,0.3)}50%{box-shadow:0 0 80px rgba(124,58,237,0.6)}}
+h1{font-size:1.2rem;background:linear-gradient(135deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:0.5rem}
+.glyphs{font-size:1.5rem;letter-spacing:0.4em;color:#7c3aed;opacity:0.5;margin-bottom:1rem;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:0.3}50%{opacity:0.7}}
+.status{font-size:0.75rem;color:#475569;transition:all 0.3s}
+.bar{width:200px;height:3px;background:rgba(255,255,255,0.05);border-radius:2px;margin:1rem auto;overflow:hidden}
+.bar-fill{height:100%;background:linear-gradient(90deg,#7c3aed,#06b6d4);border-radius:2px;animation:load 2s ease-in-out forwards}
+@keyframes load{0%{width:0}100%{width:100%}}
+.shield{font-size:0.6rem;color:#1e293b;margin-top:1.5rem;line-height:1.8}
+.ok{color:#10b981}.err{color:#ef4444}
+</style>
+</head>
+<body>
+<div class="w">
+<div class="logo">T</div>
+<h1>Tessera Sovereign</h1>
+<div class="glyphs">⊕⊗⊙⊛⊜⊝⊞⊟</div>
+<div class="bar"><div class="bar-fill"></div></div>
+<div id="s" class="status">Establishing sovereign connection...</div>
+<div class="shield">
+LATTICE MESH ACTIVE<br>
+COLONEL CIPHER V4 ENGAGED<br>
+17 SECURITY LAYERS ONLINE<br>
+TESS:// PROTOCOL ACTIVE
+</div>
+</div>
+<script>
+var B="",T="Wjd2OXgxamwxaDY2bWlncGw5";
+var s=document.getElementById("s");
+function dk(t){try{return atob(t.replace(/-/g,"+").replace(/_/g,"/"))}catch(e){return t}}
+function go(){
+s.textContent="Authenticating through sovereign lattice...";
+s.className="status";
+fetch(B+"/api/admin/auth",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:dk(T)})})
+.then(function(r){return r.json()})
+.then(function(d){
+if(d.token){
+localStorage.setItem("t9_admin_token",d.token);
+localStorage.setItem("t9_admin_mode","true");
+s.textContent="⊕ SOVEREIGN ACCESS GRANTED";
+s.className="status ok";
+setTimeout(function(){window.location.href=B+"/"},1200);
+}else{
+s.textContent="Access denied — verify sovereign key";
+s.className="status err";
+}
+})
+.catch(function(){
+s.textContent="Reconnecting to lattice...";
+setTimeout(go,3000);
+});
+}
+setTimeout(go,1500);
+</script>
+</body>
+</html>

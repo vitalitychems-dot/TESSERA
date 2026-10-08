@@ -1,0 +1,51 @@
+
+=== Time Step 0 | Food: True | Time: day ===
+Sandbox → Hunger: 0.50, Fatigue: 0.50, Mood: neutral
+Emotions: joy: 0.50, fear: 0.00, curiosity: 0.50, frustration: 0.00
+Q-table (sample):
+Q-table (sample): {}
+[MOTIVATION] Hunger: 0.60, Fatigue: 0.55
+[MOTIVATION] Emotions - Joy: 0.55, Fear: 0.00, Frustration: 0.34, Curiosity: 0.30
+Sandbox decided to explore
+Sandbox is exploring...
+
+=== Time Step 1 | Food: True | Time: day ===
+Sandbox → Hunger: 0.60, Fatigue: 0.55, Mood: -0.10999999999999988
+Emotions: joy: 0.55, fear: 0.00, curiosity: 0.30, frustration: 0.34
+Q-table (sample):
+Q-table (sample): {'h6_f5': {'seek_food': 0.0, 'rest': 0.0, 'explore': -0.001}}
+[MOTIVATION] Hunger: 0.70, Fatigue: 0.60
+[MOTIVATION] Emotions - Joy: 0.60, Fear: 0.00, Frustration: 0.39, Curiosity: 0.30
+Sandbox decided to seek_food
+Sandbox eats food.
+
+=== Time Step 2 | Food: True | Time: day ===
+Sandbox → Hunger: 0.30, Fatigue: 0.60, Mood: -0.21999999999999997
+Emotions: joy: 0.60, fear: 0.00, curiosity: 0.30, frustration: 0.39
+Q-table (sample):
+Q-table (sample): {'h6_f5': {'seek_food': 0.0, 'rest': 0.0, 'explore': -0.001}, 'h7_f6': {'seek_food': 0.04000000000000001, 'rest': 0.0, 'explore': 0.0}, 'h2_f6': {'seek_food': 0.0, 'rest': 0.0, 'explore': 0.0}}
+[MOTIVATION] Hunger: 0.40, Fatigue: 0.65
+[MOTIVATION] Emotions - Joy: 0.65, Fear: 0.00, Frustration: 0.32, Curiosity: 0.30
+Sandbox decided to seek_food
+Sandbox eats food.
+
+=== Time Step 3 | Food: False | Time: day ===
+Sandbox → Hunger: 0.00, Fatigue: 0.65, Mood: -0.010000000000000009
+Emotions: joy: 0.65, fear: 0.00, curiosity: 0.30, frustration: 0.32
+Q-table (sample):
+Q-table (sample): {'h6_f5': {'seek_food': 0.0, 'rest': 0.0, 'explore': -0.001}, 'h7_f6': {'seek_food': 0.04000000000000001, 'rest': 0.0, 'explore': 0.0}, 'h2_f6': {'seek_food': 0.0, 'rest': 0.0, 'explore': 0.0}, 'h3_f6': {'seek_food': 0.039999999999999994, 'rest': 0.0, 'explore': 0.0}, 'h0_f6': {'seek_food': 0.0, 'rest': 0.0, 'explore': 0.0}}
+[MOTIVATION] Hunger: 0.10, Fatigue: 0.70
+[MOTIVATION] Emotions - Joy: 0.65, Fear: 0.00, Frustration: 0.24, Curiosity: 0.30
+Sandbox decided to seek_food
+Sandbox searches for food but finds none.
+
+=== Time Step 4 | Food: True | Time: day ===
+Sandbox → Hunger: 0.10, Fatigue: 0.70, Mood: 0.19999999999999996
+Emotions: joy: 0.65, fear: 0.00, curiosity: 0.30, frustration: 0.24
+Q-table (sample):
+Q-table (sample): {'h6_f5': {'seek_food': 0.0, 'rest': 0.0, 'explore': -0.001}, 'h7_f6': {'seek_food': 0.04000000000000001, 'rest': 0.0, 'explore': 0.0}, 'h2_f6': {'seek_food': 0.0, 'rest': 0.0, 'explore': 0.0}, 'h3_f6': {'seek_food': 0.039999999999999994, 'rest': 0.0, 'explore': 0.0}, 'h0_f6': {'seek_food': 0.0, 'rest': 0.0, 'explore': 0.0}}
+[MOTIVATION] Hunger: 0.20, Fatigue: 0.75
+[MOTIVATION] Emotions - Joy: 0.70, Fear: 0.00, Frustration: 0.29, Curiosity: 0.30
+Sandbox decided to seek_food
+Sandbox eats food.
+DONE

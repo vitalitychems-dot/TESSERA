@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Sovereign Launch</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0f;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.container{width:100%;max-width:420px;padding:24px;text-align:center}
+.logo{width:80px;height:80px;margin:0 auto 20px;border-radius:20px;background:linear-gradient(135deg,#0d9488,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;box-shadow:0 0 40px rgba(99,102,241,0.3);animation:pulse 3s ease-in-out infinite}
+.logo svg{width:44px;height:44px;fill:none;stroke:white;stroke-width:1.5}
+@keyframes pulse{0%,100%{box-shadow:0 0 40px rgba(99,102,241,0.3)}50%{box-shadow:0 0 60px rgba(99,102,241,0.5)}}
+h1{font-size:22px;font-weight:700;background:linear-gradient(135deg,#fbbf24,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+.subtitle{font-size:12px;color:#64748b;margin-bottom:32px}
+.input-group{position:relative;margin-bottom:16px}
+.key-input{width:100%;padding:14px 48px 14px 16px;background:#1a1a2e;border:1px solid #334155;border-radius:12px;color:#e2e8f0;font-size:16px;font-family:monospace;outline:none;transition:border-color 0.3s}
+.key-input:focus{border-color:#6366f1;box-shadow:0 0 20px rgba(99,102,241,0.15)}
+.key-input::placeholder{color:#475569}
+.toggle-vis{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:#64748b;cursor:pointer;padding:4px;font-size:18px}
+.launch-btn{width:100%;padding:14px;background:linear-gradient(135deg,#0d9488,#6366f1);border:none;border-radius:12px;color:white;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.3s;margin-bottom:12px}
+.launch-btn:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(99,102,241,0.3)}
+.launch-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.status{font-size:12px;color:#64748b;min-height:20px;transition:color 0.3s}
+.status.error{color:#ef4444}
+.status.success{color:#10b981}
+.status.loading{color:#6366f1}
+.url-group{margin-bottom:16px}
+.url-input{width:100%;padding:12px 16px;background:#1a1a2e;border:1px solid #334155;border-radius:12px;color:#94a3b8;font-size:13px;outline:none;transition:border-color 0.3s}
+.url-input:focus{border-color:#6366f1}
+.help{font-size:11px;color:#475569;margin-top:24px;line-height:1.6}
+.saved-urls{margin-top:12px;text-align:left}
+.saved-url{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#1a1a2e;border-radius:8px;margin-bottom:6px;cursor:pointer;border:1px solid #1e293b;transition:border-color 0.2s}
+.saved-url:hover{border-color:#6366f1}
+.saved-url .name{flex:1;font-size:12px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.saved-url .dot{width:6px;height:6px;border-radius:50%;background:#10b981}
+.saved-url .remove{color:#475569;cursor:pointer;font-size:14px;padding:2px 4px}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="logo">
+<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+</div>
+<h1>SOVEREIGN LAUNCH</h1>
+<p class="subtitle">Autonomous Intelligence Platform</p>
+
+<div class="url-group">
+<input type="url" class="url-input" id="urlInput" placeholder="tess://tessera.sovereign" value="">
+</div>
+
+<div id="savedUrls" class="saved-urls"></div>
+
+<div class="input-group">
+<input type="password" class="key-input" id="keyInput" placeholder="Enter access code" autocomplete="off">
+<button class="toggle-vis" id="toggleVis" onclick="toggleVisibility()">&#128065;</button>
+</div>
+
+<button class="launch-btn" id="launchBtn" onclick="launch()">LAUNCH</button>
+<div class="status" id="status"></div>
+
+<div class="help">
+Save this file locally. Enter your instance URL and access code to connect.<br>
+Access code is transmitted via secure fragment — never visible to servers or logs.<br>
+Works on any device.
+</div>
+</div>
+
+<script>
+const STORAGE_KEY = 'sov_launcher_v2';
+const URL_STORAGE = 'sov_saved_urls';
+
+function loadState() {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) {
+      const d = JSON.parse(s);
+      if (d.url) document.getElementById('urlInput').value = d.url;
+    }
+  } catch(e) {}
+  renderSavedUrls();
+}
+
+function saveState(url) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ url, ts: Date.now() }));
+    const urls = getSavedUrls();
+    if (!urls.includes(url)) {
+      urls.push(url);
+      localStorage.setItem(URL_STORAGE, JSON.stringify(urls));
+    }
+  } catch(e) {}
+}
+
+function getSavedUrls() {
+  try {
+    return JSON.parse(localStorage.getItem(URL_STORAGE) || '[]');
+  } catch(e) { return []; }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function renderSavedUrls() {
+  const urls = getSavedUrls();
+  const container = document.getElementById('savedUrls');
+  container.innerHTML = '';
+  if (urls.length === 0) return;
+  urls.forEach((u, i) => {
+    const urlDiv = document.createElement('div');
+    urlDiv.className = 'saved-url';
+    urlDiv.onclick = () => selectUrl(u);
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = u.replace(/^https?:\/\//, '');
+    const remove = document.createElement('span');
+    remove.className = 'remove';
+    remove.textContent = '\u2715';
+    remove.onclick = (e) => { e.stopPropagation(); removeUrl(i); };
+    urlDiv.appendChild(dot);
+    urlDiv.appendChild(name);
+    urlDiv.appendChild(remove);
+    container.appendChild(urlDiv);
+  });
+}
+
+function selectUrl(url) {
+  document.getElementById('urlInput').value = url;
+}
+
+function removeUrl(i) {
+  const urls = getSavedUrls();
+  urls.splice(i, 1);
+  localStorage.setItem(URL_STORAGE, JSON.stringify(urls));
+  renderSavedUrls();
+}
+
+function toggleVisibility() {
+  const inp = document.getElementById('keyInput');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function setStatus(msg, cls) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status ' + (cls || '');
+}
+
+async function launch() {
+  const key = document.getElementById('keyInput').value.trim();
+  let url = document.getElementById('urlInput').value.trim();
+
+  if (!url) { setStatus('Enter your instance URL first', 'error'); return; }
+  if (!key) { setStatus('Enter your access code', 'error'); return; }
+
+  if (!url.startsWith('http')) url = 'https://' + url;
+  url = url.replace(/\/+$/, '');
+
+  const btn = document.getElementById('launchBtn');
+  btn.disabled = true;
+  btn.textContent = 'CONNECTING...';
+  setStatus('Verifying access code...', 'loading');
+
+  try {
+    const resp = await fetch(url + '/api/admin/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key }),
+    });
+
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.verified || data.success || data.admin) {
+        setStatus('Verified. Launching...', 'success');
+        saveState(url);
+        setTimeout(() => {
+          window.location.href = url + '#t=' + encodeURIComponent(btoa(key));
+        }, 500);
+        return;
+      }
+    }
+
+    const checkResp = await fetch(url + '/api/health', { method: 'GET' }).catch(() => null);
+    if (checkResp && checkResp.ok) {
+      setStatus('Access granted. Launching...', 'success');
+      saveState(url);
+      setTimeout(() => {
+        window.location.href = url + '#t=' + encodeURIComponent(btoa(key));
+      }, 500);
+      return;
+    }
+
+    setStatus('Could not verify. Check URL and try again.', 'error');
+  } catch(e) {
+    try {
+      setStatus('Direct launch...', 'loading');
+      saveState(url);
+      setTimeout(() => {
+        window.location.href = url + '#t=' + encodeURIComponent(btoa(key));
+      }, 300);
+      return;
+    } catch(e2) {
+      setStatus('Connection failed: ' + e.message, 'error');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'LAUNCH';
+  }
+}
+
+document.getElementById('keyInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') launch();
+});
+
+loadState();
+
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const autoUrl = params.get('url');
+  if (autoUrl) {
+    document.getElementById('urlInput').value = autoUrl;
+    document.getElementById('keyInput').focus();
+  }
+})();
+</script>
+</body>
+</html>

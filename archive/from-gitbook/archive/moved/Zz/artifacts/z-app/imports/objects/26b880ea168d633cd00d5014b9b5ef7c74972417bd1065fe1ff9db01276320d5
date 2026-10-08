@@ -1,0 +1,38 @@
+import { C as require_jsx_runtime } from "../_libs/@tanstack/react-router+[...].mjs";
+import { n as SiteHeader } from "./site-header-Dl38Q0EW.mjs";
+import { l as RUO_LONG } from "./router-CinrLZb2.mjs";
+import { t as SiteFooter } from "./site-footer-w4rLOUoS.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/legal.research-use-BYUhLaO8.js
+var import_jsx_runtime = require_jsx_runtime();
+function Page() {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(LegalShell, {
+		title: "Research use policy",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: RUO_LONG }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "By placing an order you represent that you are 21 years of age or older, that you are purchasing as a qualified researcher or on behalf of a laboratory, and that the materials will be used only for lawful in-vitro, analytical, or laboratory research." }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "We may cancel any order that appears intended for human use, veterinary use, resale as a consumer product, or any use that would cause the materials to be treated as a drug under the Federal Food, Drug, and Cosmetic Act." }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "No information on this site is medical advice. Product copy describes laboratory context only. Nothing here is an instruction for administration, dosing, or clinical application." })
+		]
+	});
+}
+function LegalShell({ title, children }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "min-h-dvh bg-bg text-fg",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteHeader, {}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
+				className: "mx-auto max-w-2xl px-6 pt-8 pb-20",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+					className: "font-display text-4xl font-semibold tracking-wide uppercase",
+					children: title
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-8 space-y-4 text-sm leading-relaxed text-muted",
+					children
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteFooter, {})
+		]
+	});
+}
+//#endregion
+export { Page as component };

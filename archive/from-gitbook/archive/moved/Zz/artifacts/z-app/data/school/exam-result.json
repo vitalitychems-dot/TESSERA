@@ -1,0 +1,63 @@
+{
+  "firstPassed": 11,
+  "passed": 11,
+  "total": 11,
+  "rows": [
+    {
+      "q": "Who founded the Academy in Athens?",
+      "line": "1. Plato",
+      "pass": true
+    },
+    {
+      "q": "In the page we read, Hades is king of what, and whose son?",
+      "line": "2. underworld; Cronus and Rhea",
+      "pass": true
+    },
+    {
+      "q": "What did Einstein receive the 1921 Nobel Prize for, in the page we read?",
+      "line": "3. law of the photoelectric effect",
+      "pass": true
+    },
+    {
+      "q": "Which school did Aristotle found, and where?",
+      "line": "4. Peripatetic school; Lyceum in Athens",
+      "pass": true
+    },
+    {
+      "q": "What electricity system is Tesla known for in the page we read?",
+      "line": "5. modern alternating current (AC) electricity supply system",
+      "pass": true
+    },
+    {
+      "q": "What book by Plato did the Gutenberg excerpt name?",
+      "line": "6. The Republic",
+      "pass": true
+    },
+    {
+      "q": "What is Leonardo known for besides painting, in the page we read?",
+      "line": "7. his notebooks",
+      "pass": true
+    },
+    {
+      "q": "Character Analysis was written in what year, and by whom?",
+      "line": "8. 1933; Wilhelm Reich",
+      "pass": true
+    },
+    {
+      "q": "What did Freud found, in the page we read?",
+      "line": "9. psychoanalysis",
+      "pass": true
+    },
+    {
+      "q": "What purpose of Freemasonry did the page name?",
+      "line": "10. charity",
+      "pass": true
+    },
+    {
+      "q": "The High Renaissance page says the period ended with whose death?",
+      "line": "11. Raphael",
+      "pass": true
+    }
+  ],
+  "missed": []
+}
