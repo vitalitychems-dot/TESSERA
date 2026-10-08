@@ -85,10 +85,11 @@ describe("sigil auth urgent", () => {
     return `${SESSION_COOKIE}=${issued.signedId}`;
   }
 
-  async function send(method: "GET" | "POST", path: string, init?: { cookie?: string; sigilKey?: string; body?: unknown }): Promise<Response> {
+  async function send(method: "GET" | "POST", path: string, init?: { cookie?: string; sigilKey?: string; fatherFingerprint?: string; body?: unknown }): Promise<Response> {
     const headers = new Headers();
     if (init?.cookie !== undefined) headers.set("cookie", init.cookie);
     if (init?.sigilKey !== undefined) headers.set("x-sigil-key", init.sigilKey);
+    if (init?.fatherFingerprint !== undefined) headers.set("x-father-fingerprint", init.fatherFingerprint);
     if (init?.body !== undefined) headers.set("content-type", "application/json");
     return fetch(`${baseUrl}${path}`, {
       method,
@@ -297,6 +298,160 @@ describe("sigil auth urgent", () => {
       expect(noteRedeemAttempt(`synthetic-ip-${attempt}`)).toBe(true);
     }
     expect(noteRedeemAttempt("synthetic-ip-overflow")).toBe(false);
+  });
+
+  it("returns 401 for session end, sealed handoff, decrypt, and mark without a session", async () => {
+    const fingerprint = presentedFingerprint();
+    const expiresWith = readingKey().expiresWith;
+    const routes: Array<{ method: "GET" | "POST"; path: string; body?: unknown }> = [
+      { method: "POST", path: "/session/directive", body: { text: "replit end session" } },
+      { method: "GET", path: "/session/sealed-handoff" },
+      { method: "POST", path: "/sigil/decrypt", body: { envelope: { v: 1 } } },
+      { method: "POST", path: "/session/mark", body: { position: "synthetic" } },
+    ];
+    for (const route of routes) {
+      const response = await send(route.method, route.path, {
+        sigilKey: fingerprint,
+        body: route.body,
+      });
+      expect(response.status).toBe(401);
+      const body = await response.json();
+      expect(body).toMatchObject({ ok: false, error: "unauthenticated" });
+      expect(containsCredential(body, fingerprint)).toBe(false);
+      expect(containsCredential(body, expiresWith)).toBe(false);
+    }
+  });
+
+  it("strips embedded credentials from session handoff responses", async () => {
+    const fingerprint = presentedFingerprint();
+    const directive = await send("POST", "/session/directive", {
+      cookie: ownerCookie(),
+      body: { text: "replit end session" },
+    });
+    expect(directive.status).toBe(200);
+    const directiveBody = await directive.json();
+    expect(containsCredential(directiveBody, fingerprint)).toBe(false);
+    expect(containsCredential(directiveBody, readingKey().expiresWith)).toBe(false);
+    expect(containsKey(directiveBody, "keyId")).toBe(false);
+    expect(containsKey(directiveBody, "previousKeyId")).toBe(false);
+    expect(containsKey(directiveBody, "sigilFingerprint")).toBe(false);
+
+    const sealed = await send("GET", "/session/sealed-handoff", { cookie: ownerCookie() });
+    expect(sealed.status).toBe(200);
+    const sealedBody = await sealed.json();
+    expect(containsCredential(sealedBody, fingerprint)).toBe(false);
+    expect(containsCredential(sealedBody, readingKey().expiresWith)).toBe(false);
+
+    const mark = await send("POST", "/session/mark", {
+      cookie: ownerCookie(),
+      body: { position: "synthetic-position", detail: `synthetic ${fingerprint} ${readingKey().expiresWith}` },
+    });
+    expect(mark.status).toBe(200);
+    const markBody = await mark.json();
+    expect(containsCredential(markBody, fingerprint)).toBe(false);
+    expect(containsCredential(markBody, readingKey().expiresWith)).toBe(false);
+  });
+
+  it("strips embedded credentials from sigil decrypt", async () => {
+    const fingerprint = presentedFingerprint();
+    const expiresWith = readingKey().expiresWith;
+    const issued = await send("POST", "/sigil/encrypt", {
+      cookie: ownerCookie(),
+      body: { text: `synthetic-prefix-${fingerprint}-and-${expiresWith}-suffix`, label: "synthetic" },
+    });
+    expect(issued.status).toBe(200);
+    const issuedBody = await issued.json() as { envelope: unknown };
+    const decrypted = await send("POST", "/sigil/decrypt", {
+      cookie: ownerCookie(),
+      body: { envelope: issuedBody.envelope },
+    });
+    expect(decrypted.status).toBe(200);
+    const body = await decrypted.json();
+    expect(containsCredential(body, fingerprint)).toBe(false);
+    expect(containsCredential(body, expiresWith)).toBe(false);
+  });
+
+  it("rejects a fingerprint header or body on omniversal writes", async () => {
+    const fingerprint = presentedFingerprint();
+    const routes = [
+      { path: "/omniversal/cipher/encrypt", body: { text: "synthetic", fatherFingerprint: fingerprint } },
+      { path: "/omniversal/cipher/decrypt", body: { envelope: { v: 2 }, fatherFingerprint: fingerprint } },
+      { path: "/omniversal/lattice/create", body: { fatherFingerprint: fingerprint } },
+      { path: "/omniversal/lattice/synthetic/superpose", body: { cell: "0,0,0", fatherFingerprint: fingerprint } },
+      { path: "/omniversal/lattice/synthetic/entangle", body: { a: "0,0,0", b: "1,1,1", fatherFingerprint: fingerprint } },
+      { path: "/omniversal/lattice/synthetic/harmonize", body: { fatherFingerprint: fingerprint } },
+      { path: "/omniversal/lattice/synthetic/collapse", body: { cell: "0,0,0", fatherFingerprint: fingerprint } },
+    ];
+    for (const route of routes) {
+      const response = await send("POST", route.path, {
+        fatherFingerprint: fingerprint,
+        body: route.body,
+      });
+      expect(response.status).toBe(401);
+      const body = await response.json();
+      expect(body).toMatchObject({ ok: false, error: "unauthenticated" });
+      expect(containsCredential(body, fingerprint)).toBe(false);
+      expect(containsCredential(body, readingKey().expiresWith)).toBe(false);
+    }
+  });
+
+  it("strips embedded credentials from omniversal responses", async () => {
+    const fingerprint = presentedFingerprint();
+    const expiresWith = readingKey().expiresWith;
+    const embedded = `synthetic-${fingerprint}-${expiresWith}`;
+
+    for (const route of [
+      { method: "GET" as const, path: "/omniversal/cipher/snapshot" },
+      { method: "POST" as const, path: "/omniversal/demo", body: {} },
+      { method: "POST" as const, path: "/omniversal/pipeline/run", body: { text: "synthetic" } },
+    ]) {
+      const response = await send(route.method, route.path, { body: route.body });
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(containsCredential(body, fingerprint)).toBe(false);
+      expect(containsCredential(body, expiresWith)).toBe(false);
+      expect(containsKey(body, "sigilFingerprint")).toBe(false);
+    }
+
+    const encrypted = await send("POST", "/omniversal/cipher/encrypt", {
+      cookie: ownerCookie(),
+      body: { text: embedded, label: "synthetic" },
+    });
+    expect(encrypted.status).toBe(200);
+    const encryptedBody = await encrypted.json() as { envelope: unknown };
+    expect(containsCredential(encryptedBody, fingerprint)).toBe(false);
+    expect(containsCredential(encryptedBody, expiresWith)).toBe(false);
+
+    const decrypted = await send("POST", "/omniversal/cipher/decrypt", {
+      cookie: ownerCookie(),
+      body: { envelope: encryptedBody.envelope },
+    });
+    expect(decrypted.status).toBe(200);
+    const decryptedBody = await decrypted.json();
+    expect(containsCredential(decryptedBody, fingerprint)).toBe(false);
+    expect(containsCredential(decryptedBody, expiresWith)).toBe(false);
+
+    const created = await send("POST", "/omniversal/lattice/create", {
+      cookie: ownerCookie(),
+      body: { id: "synthetic-lattice" },
+    });
+    expect(created.status).toBe(200);
+    const createdBody = await created.json();
+    expect(containsCredential(createdBody, fingerprint)).toBe(false);
+    expect(containsCredential(createdBody, expiresWith)).toBe(false);
+
+    for (const route of [
+      { path: "/omniversal/lattice/synthetic-lattice/superpose", body: { cell: "0,0,0", addition: { note: embedded } } },
+      { path: "/omniversal/lattice/synthetic-lattice/entangle", body: { a: "0,0,0", b: "1,1,1" } },
+      { path: "/omniversal/lattice/synthetic-lattice/harmonize", body: { baseHz: 528 } },
+      { path: "/omniversal/lattice/synthetic-lattice/collapse", body: { cell: "0,0,0", observer: embedded } },
+    ]) {
+      const response = await send("POST", route.path, { cookie: ownerCookie(), body: route.body });
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(containsCredential(body, fingerprint)).toBe(false);
+      expect(containsCredential(body, expiresWith)).toBe(false);
+    }
   });
 });
 

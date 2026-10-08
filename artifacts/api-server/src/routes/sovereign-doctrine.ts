@@ -70,9 +70,18 @@ function readingKeySecrets(): Set<string> {
   return new Set([key.fingerprint, key.expiresWith]);
 }
 
-/** Drop sigilFingerprint and any string equal to the active reading-key fingerprint or expiresWith. */
+const DROPPED_CREDENTIAL_KEYS = new Set(["sigilFingerprint", "keyId", "previousKeyId"]);
+
+function stringContainsSecret(value: string, secrets: Set<string>): boolean {
+  for (const secret of secrets) {
+    if (secret.length > 0 && value.includes(secret)) return true;
+  }
+  return false;
+}
+
+/** Drop credential field names and any string that contains the active reading-key fingerprint or expiresWith. */
 export function withoutSigilFingerprint(value: unknown, secrets: Set<string> = readingKeySecrets()): unknown {
-  if (typeof value === "string") return secrets.has(value) ? undefined : value;
+  if (typeof value === "string") return stringContainsSecret(value, secrets) ? undefined : value;
   if (Array.isArray(value)) {
     return value.flatMap((item) => {
       const next = withoutSigilFingerprint(item, secrets);
@@ -83,7 +92,7 @@ export function withoutSigilFingerprint(value: unknown, secrets: Set<string> = r
   if (!value || typeof value !== "object") return value;
   const out: Record<string, unknown> = {};
   for (const [key, child] of Object.entries(value)) {
-    if (key === "sigilFingerprint") continue;
+    if (DROPPED_CREDENTIAL_KEYS.has(key)) continue;
     const next = withoutSigilFingerprint(child, secrets);
     if (next === undefined) continue;
     out[key] = next;
@@ -421,12 +430,12 @@ router.post("/sigil/encrypt", requireAdminSession, (req, res) => {
   res.json({ ok: true, envelope: env });
 });
 
-router.post("/sigil/decrypt", (req, res) => {
+router.post("/sigil/decrypt", requireAdminSession, (req, res) => {
   const env = req.body?.envelope as CipherEnvelope | undefined;
   if (!env) { res.status(400).json({ ok: false, error: "envelope required" }); return; }
   try {
     const text = decryptFromCorpus(env);
-    res.json({ ok: true, text });
+    res.json(withoutSigilFingerprint({ ok: true, text }));
   } catch (e) {
     res.status(409).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
   }
@@ -503,7 +512,7 @@ router.get("/session/handoff", requireAdminSession, (req, res) => {
   });
 });
 
-router.post("/session/directive", async (req, res) => {
+router.post("/session/directive", requireAdminSession, async (req, res) => {
   const text = String(req.body?.text ?? "");
   const source = (req.body?.source ?? "user") as "user" | "council" | "agent" | "auto";
   const tags = Array.isArray(req.body?.tags) ? req.body.tags.map(String) : [];
@@ -514,16 +523,16 @@ router.post("/session/directive", async (req, res) => {
   }
   const directive = recordDirective({ source, text, status: "live", tags });
   await persistHandoff();
-  res.json({ ok: true, directive });
+  res.json(withoutSigilFingerprint({ ok: true, directive }));
 });
 
-router.post("/session/mark", async (req, res) => {
+router.post("/session/mark", requireAdminSession, async (req, res) => {
   const position = String(req.body?.position ?? "unspecified");
   const detail = String(req.body?.detail ?? "");
   const filesTouched = Array.isArray(req.body?.filesTouched) ? req.body.filesTouched.map(String) : [];
   const mark = recordPosition({ position, detail, filesTouched });
   const handoff = await persistHandoff();
-  res.json({ ok: true, mark, handoff });
+  res.json(withoutSigilFingerprint({ ok: true, mark, handoff }));
 });
 
 router.post("/session/end", requireAdminSession, async (req, res) => {
@@ -532,7 +541,7 @@ router.post("/session/end", requireAdminSession, async (req, res) => {
   res.json(withoutSigilFingerprint({ ok: true, ...result, sealedHandoffPreview: result.sealedHandoff.glyphSeal }));
 });
 
-router.get("/session/sealed-handoff", (_req, res) => {
+router.get("/session/sealed-handoff", requireAdminSession, (_req, res) => {
   const sealed = lastSealedHandoff();
   res.json(withoutSigilFingerprint({ ok: true, sealed: sealed ?? null }));
 });

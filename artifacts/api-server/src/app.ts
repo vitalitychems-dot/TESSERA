@@ -160,61 +160,6 @@ app.use("/api", (_req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// ── GLYPH ENCODING — RETIRED FROM TRANSPORT (Heavy Council P8, Apr 2026) ──
-// Per Heavy Council vote (P8 — 100% specialist approval), the glyphGate
-// transport-layer encoder has been removed from /api responses. Sigil/glyph
-// rendering is now a frontend display concern. HTTP responses are plain JSON,
-// debuggable, OpenAPI-stable. The frontend may still render any text in sigil
-// view via a user-toggled display adapter — symbolic identity preserved,
-// debuggability restored. Deletion of the legacy code is staged in P10.
-// ── GLYPH-EVERYWHERE — sovereign-language layer ─────────────────────────
-// Per Grand Council ranking #2 ("GLYPH EVERYWHERE"): every /api response is
-// glyph-encoded by default. Callers reveal plaintext by presenting the active
-// reading key in `X-Sigil-Key`. A small set of utility / probe routes are
-// exempt because (a) deploy health checks must read them, or (b) they DEFINE
-// the language itself and would be circular if encoded.
-const PLAINTEXT_PREFIXES = [
-  "/api/health",
-  "/api/sigil/key/reveal",
-  "/api/sigil/active-key",
-  "/api/sigil/alphabet",
-  "/api/sigil/translate",
-  "/api/sigil/decode-body",
-  "/api/sigil/status",
-  // Father bootstrap surfaces — these must return plaintext so the gate
-  // can read the real fingerprint and the real natal sigil glyph that
-  // the user is told to paste into SIGIL_ADMIN_KEY. Encoding them here
-  // would produce a value that never matches what the server expects,
-  // and the user could never enter.
-  "/api/sigil/father/verify",
-  "/api/sigil/father/mint-glyph",
-  "/api/sigil/father/natal-sigil",
-  "/api/sigil/father/natal-chart",
-  // Zodiac-key bootstrap. A brand-new user has no key yet, so the mint
-  // and verify responses MUST come back in plaintext or the user would
-  // save a doubly-encoded value that never round-trips through the gate.
-  "/api/sigil/zodiac-key/issue",
-  "/api/sigil/zodiac-key/verify",
-  // Canonical Father-key status surface — must be plaintext so the
-  // one-time popup can render the key the operator has to paste into
-  // the TESSERACT_ADMIN_KEY (= SIGIL_ADMIN_KEY) secret.
-  "/api/sigil/father-key/status",
-  // Rotating-signal derivation must be plaintext too. Otherwise the response
-  // signal gets glyph-encoded on its way out, the operator pastes the encoded
-  // value into SIGIL_ADMIN_KEY, and validation (which derives the RAW signal)
-  // can never match it.
-  "/api/sigil/father-key/derive-signal",
-  // Sovereign vote inspection endpoints. The Father's reading-key cannot
-  // travel in an HTTP header (it contains non-ASCII glyphs), so the only
-  // way to read these results is to exempt them from glyph encoding.
-  "/api/grand-evolution/status",
-  "/api/grand-evolution/sessions",
-  "/api/grand-evolution/society",
-  "/api/grand-evolution/directives",
-];
-// Heavy Council P8: glyphGate is no longer mounted — /api responses are plain JSON.
-void PLAINTEXT_PREFIXES;
-
 // INTEG-4 (100% approval): defensive transport-security headers on every
 // /api response. No behavior change for honest callers; closes a class of
 // content-sniff / clickjacking / referrer-leak vectors. Reversible by
