@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CHAPTERS, REFLECTIONS, readNarrative, runDualCycle } from "@/lib/tessera/narrative";
+import { CHAPTERS, REFLECTIONS, readNarrative } from "@/lib/tessera/narrative";
 
 type Dual = { rounds: number; improvements: number; rows: { round: number; q: string; cortex: string; executor: string }[] };
 type Live = { at: string; notes: { query: string; text: string }[]; connections: string[]; ledger?: string; dual?: Dual; shelf?: { query: string; standing: string }[] };
@@ -7,14 +7,6 @@ type Live = { at: string; notes: { query: string; text: string }[]; connections:
 export function NarrativeView() {
   const [live, setLive] = useState<Live | null>(null);
   const [open, setOpen] = useState<string>("flower");
-  const [running, setRunning] = useState(false);
-
-  async function cycle() {
-    setRunning(true);
-    const dual = await runDualCycle();
-    setLive((prev) => (prev ? { ...prev, dual } : prev));
-    setRunning(false);
-  }
 
   useEffect(() => {
     let stop = false;
@@ -60,9 +52,6 @@ export function NarrativeView() {
       <section className="mt-4 rounded-xl border border-border bg-surface p-4">
         <div className="flex items-baseline justify-between gap-3">
           <p className="text-xs tracking-[0.16em] text-subtle uppercase">Dual brain · cortex and executor</p>
-          <button type="button" onClick={() => void cycle()} disabled={running} className="rounded-md bg-raised px-3 py-1 text-xs text-fg">
-            {running ? "Running" : "Run cycle"}
-          </button>
         </div>
         <p className="mt-2 text-sm text-fg">
           {live?.dual?.rounds ?? 0} rounds · {live?.dual?.improvements ?? 0} recorded improvements
