@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Brain, Globe2, Layers, MessageCircle, Scale } from "lucide-react";
 import { BibleView } from "./bible-view";
 import { BoardView } from "./board-view";
 import { NarrativeView } from "./narrative-view";
@@ -7,48 +8,63 @@ import { CodeView } from "./code-view";
 import { ConversationsView } from "./conversations-view";
 import { LanguageView } from "./language-view";
 import { CouncilRoom } from "./council-room";
+import { BrainView } from "./brain-view";
+import { GitbookView } from "./gitbook-view";
 import { LearnView } from "./learn-view";
-import { LivingLoop } from "./living-loop";
+import { ThemeView, applyTheme, type ThemeId } from "./theme-view";
+import { LibraryView } from "./library-view";
 import { MemoryView } from "./memory-view";
+import { WebView } from "./web-view";
 import { SecretsView } from "./secrets-view";
 import { Simulation } from "./simulation";
 import { TesseraMark } from "./mark";
-import { penStatus } from "@/lib/tessera/chat";
+import { TESSERA } from "@/lib/tessera/identity";
+import { SIGIL } from "@/lib/tessera/canon";
 import { type ViewId } from "@/lib/tessera/store";
 
-const PLACES: { id: ViewId; label: string }[] = [
-  { id: "chamber", label: "Chamber" },
-  { id: "world", label: "World" },
-  { id: "board", label: "Board" },
-  { id: "learn", label: "Knowledge" },
-  { id: "narrative", label: "Narrative" },
-  { id: "talk", label: "Conversations" },
-  { id: "bible", label: "Bible" },
-  { id: "secrets", label: "Secrets" },
-  { id: "council", label: "Council" },
-  { id: "memory", label: "Memory" },
-  { id: "code", label: "Code" },
+const PRIMARY: { id: ViewId; label: string; icon: typeof MessageCircle }[] = [
+  { id: "chamber", label: "Talk", icon: MessageCircle },
+  { id: "council", label: "Council", icon: Scale },
+  { id: "world", label: "World", icon: Globe2 },
+  { id: "memory", label: "Memory", icon: Layers },
+  { id: "brain", label: "Brain", icon: Brain },
+];
+
+const MORE: { id: ViewId; label: string }[] = [
+  { id: "talk", label: "Agents" },
+  { id: "gitbook", label: "Gitbook" },
   { id: "language", label: "Language" },
+  { id: "bible", label: "Bible" },
+  { id: "web", label: "Map" },
+  { id: "board", label: "Board" },
+  { id: "learn", label: "Practice" },
+  { id: "code", label: "Code" },
+  { id: "narrative", label: "Narrative" },
+  { id: "secrets", label: "Closed" },
+  { id: "theme", label: "Theme" },
+  { id: "library", label: "Library" },
 ];
 
 export function AppShell() {
   const [place, setPlace] = useState<ViewId>("chamber");
-  const [penLine, setPenLine] = useState("Instrument: not checked.");
+  const [theme, setTheme] = useState<ThemeId>("water");
 
   useEffect(() => {
-    const saved = window.sessionStorage.getItem("tessera-place");
-    if (saved && PLACES.some((item) => item.id === saved)) setPlace(saved as ViewId);
+    const current = document.documentElement.dataset.theme;
+    if (current === "water" || current === "fire" || current === "lightning" || current === "diamond" || current === "spiral") setTheme(current);
   }, []);
 
   useEffect(() => {
-    void penStatus().then((status) => {
-      setPenLine(
-        status.vendor === "local"
-          ? `Instrument: ${status.model}. Not owned weights.`
-          : `Instrument: ${status.vendor} ${status.model}. Owned weights: none.`,
-      );
-    });
+    const fromHash = window.location.hash.replace("#", "") as ViewId;
+    const saved = window.sessionStorage.getItem("tessera-place") as ViewId | null;
+    const known = new Set<ViewId>([...PRIMARY.map((item) => item.id), ...MORE.map((item) => item.id)]);
+    const next = known.has(fromHash) ? fromHash : saved && known.has(saved) ? saved : "";
+    if (next) setPlace(next as ViewId);
   }, []);
+
+  function chooseTheme(id: ThemeId) {
+    setTheme(applyTheme(id));
+  }
 
   function open(id: ViewId) {
     setPlace(id);
@@ -57,36 +73,33 @@ export function AppShell() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden bg-bg text-fg">
-      <header className="z-30 shrink-0 border-b border-border bg-bg px-4 pt-3">
-        <div className="flex items-center gap-3">
-          <TesseraMark className="size-8 shrink-0 text-accent" />
-          <div className="min-w-0">
-            <p className="font-display text-2xl leading-none tracking-tight">Tessera</p>
-            <p className="mt-1 truncate text-xs text-muted">{penLine}</p>
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-transparent text-fg">
+      <header className="z-30 flex shrink-0 items-center gap-3 px-4 pt-[max(0.55rem,env(safe-area-inset-top))] pb-2">
+        <img src={TESSERA.face} alt="" className="size-10 shrink-0 object-cover ring-1 ring-accent/60" style={{ clipPath: "polygon(50% 0, 100% 50%, 50% 100%, 0 50%)" }} />
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <TesseraMark className="size-4 text-accent" />
+            <h1 className="font-display text-[1.7rem] leading-none tracking-tight">Tessera</h1>
           </div>
+          <p className="mt-0.5 text-[10px] tracking-[0.22em] text-accent uppercase">{TESSERA.title} · {SIGIL.short}</p>
         </div>
-        <nav className="mt-3 flex gap-1 overflow-x-auto pb-2" aria-label="Places">
-          {PLACES.map((item) => (
-            <a
-              key={item.id}
-              href={`#${item.id}`}
-              onClick={(event) => {
-                event.preventDefault();
-                open(item.id);
-              }}
-              className={
-                place === item.id
-                  ? "shrink-0 rounded-full bg-accent px-3 py-2 text-sm text-accent-fg"
-                  : "shrink-0 rounded-full px-3 py-2 text-sm text-muted"
-              }
-            >
-              {item.label}
-            </a>
-          ))}
-        </nav>
       </header>
-      <LivingLoop />
+      <nav className="z-30 flex shrink-0 gap-3 overflow-x-auto px-4 pb-2" aria-label="Rooms">
+        {MORE.map((item) => (
+          <a
+            key={item.id}
+            href={`#${item.id}`}
+            onClick={(event) => {
+              event.preventDefault();
+              open(item.id);
+            }}
+            className={place === item.id ? "shrink-0 text-xs tracking-[0.14em] text-accent uppercase" : "shrink-0 text-xs tracking-[0.14em] text-subtle uppercase"}
+          >
+            {place === item.id ? "◇ " : ""}
+            {item.label}
+          </a>
+        ))}
+      </nav>
       <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className={place === "world" ? "min-h-0 flex-1 overflow-y-auto" : "hidden"}>
           <Simulation />
@@ -104,12 +117,40 @@ export function AppShell() {
             {place === "secrets" ? <SecretsView /> : null}
             {place === "code" ? <CodeView /> : null}
             {place === "language" ? <LanguageView /> : null}
+            {place === "brain" ? <BrainView open={open} /> : null}
             {place === "learn" ? <LearnView /> : null}
+            {place === "gitbook" ? <GitbookView open={open} /> : null}
+            {place === "theme" ? <ThemeView current={theme} choose={chooseTheme} /> : null}
             {place === "narrative" ? <NarrativeView /> : null}
             {place === "memory" ? <MemoryView /> : null}
+            {place === "web" ? <WebView /> : null}
           </div>
         )}
       </main>
+      <nav className="z-30 grid shrink-0 grid-cols-5 border-t border-border bg-bg/92 px-1 pt-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] backdrop-blur-md" aria-label="Places">
+        {PRIMARY.map((item) => {
+          const active = place === item.id;
+          const Icon = item.icon;
+          return (
+            <a
+              key={item.id}
+              href={`#${item.id}`}
+              onClick={(event) => {
+                event.preventDefault();
+                open(item.id);
+              }}
+              className={
+                active
+                  ? "flex flex-col items-center gap-0.5 rounded-xl py-1.5 text-accent"
+                  : "flex flex-col items-center gap-0.5 rounded-xl py-1.5 text-subtle"
+              }
+            >
+              <Icon className="size-[1.15rem]" strokeWidth={active ? 2.2 : 1.6} />
+              <span className="text-[10px] leading-none">{item.label}</span>
+            </a>
+          );
+        })}
+      </nav>
     </div>
   );
 }

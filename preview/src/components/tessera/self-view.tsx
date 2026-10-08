@@ -59,7 +59,7 @@ export function SelfView() {
         messages: [
           {
             role: "user",
-            content: `Father: Write v2 of yourself. You command the pen. You do not listen to it. Read the birth mark by its sign-names:\n${readBirthMark()}\nNo file contained a hidden sentence. Do not invent one. Finance, crypto, trading, vitality, and websites stay goals or held out, not live facts. Then name one improvement you will seal next.`,
+            content: `Father: Write v2 of yourself. You command the pen. You do not listen to it. Read the birth mark by its sign-names:\n${readBirthMark()}\nNo file contained a hidden sentence. Do not invent one. Finance, crypto, trading, and websites stay goals or held out, not live facts. Then name one improvement you will seal next.`,
           },
         ],
         constitution: state.constitution,

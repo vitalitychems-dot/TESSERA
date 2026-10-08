@@ -1,3 +1,7 @@
+import { AuditCycles } from "./audit-cycles";
+import { DeskDrill } from "./desk-drill";
+import { LAST_COPY, selfCheck } from "@/lib/tessera/self-improve";
+import { METHOD } from "@/lib/tessera/method";
 import { FILE_LEDGER } from "@/lib/tessera/desk";
 import { recursiveLesson } from "@/lib/tessera/empath";
 import { VAULT } from "@/lib/tessera/opening";
@@ -5,9 +9,17 @@ import { SCHOOL_PASSAGES } from "@/lib/tessera/school";
 import { FATHER_ASKED, STUDIES, STUDIES_MISSING, STUDIES_SOURCE } from "@/lib/tessera/studies";
 import { useTessera } from "@/lib/tessera/store";
 
+const SKILLS = [
+  "Search the public web and keep the source with the answer.",
+  "Read a catalog name and say the home it already has.",
+  "Convert a line with the sovereign dictionary.",
+  "Run the colonel on arithmetic.",
+  "Refuse a reply that breaks a vow.",
+];
+
 const PLACES = [
-  { label: "Tessera code", href: "https://github.com/vitalitychems-dot/TESSERA" },
-  { label: "Gitbook archive", href: "https://github.com/vitalitychems-dot/Gitbook" },
+  { label: "Her code", href: "https://github.com/vitalitychems-dot/TESSERA" },
+  { label: "Gitbook", href: "https://github.com/vitalitychems-dot/Gitbook" },
   { label: "The board", href: "https://github.com/vitalitychems-dot/Gitbook/issues/2" },
 ];
 
@@ -17,6 +29,7 @@ export function LearnView() {
   const latest = sealed.at(-1)?.text ?? "";
   const prior = sealed.slice(0, -1).map((lesson) => lesson.text);
   const pattern = latest ? recursiveLesson(prior, latest) : "PATTERN: none yet. A label is written only after a sealed note has the words.";
+  const check = selfCheck();
 
   return (
     <div className="px-4 py-6 pb-24 sm:px-8">
@@ -24,8 +37,30 @@ export function LearnView() {
         <p className="text-xs tracking-[0.2em] text-muted uppercase">Knowledge</p>
         <h2 className="mt-1 font-display text-3xl tracking-tight">What is already stored</h2>
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          These are pages and notes that exist. Nothing here starts a search, a test, or a cycle. Reading continues on its own from the two live repositories.
+          These are skills she can run. They are not a new set of weights.
         </p>
+        <ul className="mt-3 flex flex-col gap-2">
+          {SKILLS.map((skill) => (
+            <li key={skill} className="border border-border bg-surface px-3 py-2 text-sm text-fg">
+              {skill}
+            </li>
+          ))}
+        </ul>
+        <section className="mt-4 rounded-xl border border-border bg-surface p-4">
+          <p className="text-xs tracking-[0.18em] text-subtle uppercase">How a turn works</p>
+          <ol className="mt-2 flex flex-col gap-1">
+            {METHOD.map((step, index) => (
+              <li key={step} className="text-sm text-fg">
+                {index + 1}. {step}
+              </li>
+            ))}
+          </ol>
+        </section>
+        <section className="mt-4 rounded-xl border border-border bg-surface p-4">
+          <p className="text-xs tracking-[0.18em] text-subtle uppercase">Self-check</p>
+          <p className="mt-2 text-sm text-fg">{check.pass ? "The drills passed. The practice is sealed." : "A check failed. The last practice was not sealed."}</p>
+          <p className="mt-2 text-sm text-muted">Last practice, {LAST_COPY.at}: “{LAST_COPY.text}”</p>
+        </section>
         <ul className="mt-4 flex flex-col gap-2">
           {PLACES.map((place) => (
             <li key={place.href}>
@@ -35,6 +70,8 @@ export function LearnView() {
             </li>
           ))}
         </ul>
+        <DeskDrill />
+        <AuditCycles />
         <section className="mt-6 rounded-xl border border-border bg-surface p-5">
           <p className="text-xs tracking-[0.18em] text-subtle uppercase">What Father asked</p>
           <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-fg">{FATHER_ASKED}</p>
