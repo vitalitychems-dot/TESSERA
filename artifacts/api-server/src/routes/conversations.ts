@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { conversationsTable, messagesTable } from "@workspace/db/schema";
 import { desc, eq, asc } from "drizzle-orm";
 import { logger } from "../lib/logger";
-import { secureExternalFetch, secureExternalStreamingFetch } from "../lib/secureExternalWrapper";
+import { tesseraChatCompletion, type TesseraChatMessage } from "../lib/tessera-llm-http";
 import { computeWorldState, computeMarketData } from "../lib/sovereign-economics";
 import { computeLunarData, computeSolarData } from "../lib/sovereign-astro";
 import { computeNetworkTopology } from "../lib/sovereign-network";
@@ -440,48 +440,29 @@ async function sandboxExtractKnowledge(
   messages: Array<{ role: string; content: string }>,
   sovereignCtx: string,
 ): Promise<string | null> {
-  const baseURL = process.env.TESSERA_LLM_BASE_URL;
-  const apiKey = process.env.TESSERA_LLM_API_KEY;
+  const baseURL = process.env.TESSERA_LLM_BASE_URL?.trim();
+  const apiKey = process.env.TESSERA_LLM_API_KEY?.trim();
   const model = process.env.TESSERA_LLM_MODEL?.trim();
   if (!baseURL || !apiKey || !model) return null;
 
   const sandboxSystem = `${SANDBOX_EXTRACTION_PROMPT}\n\n[SOVEREIGN CONTEXT — for factual grounding only]\n${sovereignCtx}`;
 
-  const sanitizedMessages = messages.map(m => ({
-    role: m.role,
-    content: String(m.content).slice(0, 8192),
-  }));
-
-  const body = JSON.stringify({
-    model,
-    messages: [
-      { role: "system", content: sandboxSystem },
-      ...sanitizedMessages.slice(-30),
-    ],
-    max_tokens: 4096,
-    temperature: 0.7,
-    stream: false,
-  });
+  const chatMessages: TesseraChatMessage[] = [
+    { role: "system", content: sandboxSystem },
+    ...messages.slice(-30).map((message): TesseraChatMessage => ({
+      role: message.role === "assistant" || message.role === "system" ? message.role : "user",
+      content: String(message.content).slice(0, 8192),
+    })),
+  ];
 
   try {
     logger.info("Sandbox extraction: initiating knowledge pull from external source");
-    const result = await secureExternalFetch(`${baseURL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body,
-      timeoutMs: 30000,
-      requestedBy: "sovereign-sandbox-extraction",
+    const response = await tesseraChatCompletion({
+      model,
+      max_completion_tokens: 4096,
+      messages: chatMessages,
     });
-
-    if (result.flagged) {
-      logger.warn({ reason: result.flagReason }, "Sandbox extraction flagged by security wrapper");
-    }
-
-    const parsed = JSON.parse(sandboxExternalResponse(result.body));
-    const content = parsed?.choices?.[0]?.message?.content;
+    const content = response.choices?.[0]?.message?.content;
     if (!content) return null;
 
     logger.info({ chars: content.length }, "Sandbox extraction complete — raw knowledge pulled");
@@ -501,12 +482,11 @@ async function _deprecated_sandboxExtractKnowledgeStreaming(
   sovereignCtx: string,
   onChunk: (text: string) => void,
 ): Promise<string | null> {
-  const baseURL = process.env.TESSERA_LLM_BASE_URL;
-  const apiKey = process.env.TESSERA_LLM_API_KEY;
+  const baseURL = process.env.TESSERA_LLM_BASE_URL?.trim();
+  const apiKey = process.env.TESSERA_LLM_API_KEY?.trim();
   const model = process.env.TESSERA_LLM_MODEL?.trim();
   if (!baseURL || !apiKey || !model) return null;
 
-  const streamUrl = `${baseURL}/chat/completions`;
   const tesseraPrompt = getTesseraSystemPrompt(sovereignCtx);
 
   const knowledgeMatches = lookupKnowledge(messages[messages.length - 1]?.content || "");
@@ -517,74 +497,26 @@ async function _deprecated_sandboxExtractKnowledgeStreaming(
 
   const sandboxSystem = `${tesseraPrompt}${knowledgeContext}\n\n[RAW KNOWLEDGE EXTRACTION RULES]\n${SANDBOX_EXTRACTION_PROMPT}`;
 
-  const sanitizedMessages = messages.map(m => ({
-    role: m.role,
-    content: String(m.content).slice(0, 8192),
-  }));
+  const chatMessages: TesseraChatMessage[] = [
+    { role: "system", content: sandboxSystem },
+    ...messages.slice(-30).map((message): TesseraChatMessage => ({
+      role: message.role === "assistant" || message.role === "system" ? message.role : "user",
+      content: String(message.content).slice(0, 8192),
+    })),
+  ];
 
   try {
     logger.info("Tessera streaming: initiating knowledge synthesis");
-    const { response, flagged, flagReason } = await secureExternalStreamingFetch(streamUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: sandboxSystem },
-          ...sanitizedMessages.slice(-30),
-        ],
-        max_tokens: 4096,
-        temperature: 0.7,
-        stream: true,
-      }),
-      timeoutMs: 30000,
-      requestedBy: "tessera-sovereign-synthesis",
+    const response = await tesseraChatCompletion({
+      model,
+      max_completion_tokens: 4096,
+      messages: chatMessages,
     });
-
-    if (flagged) {
-      logger.warn({ reason: flagReason, url: streamUrl }, "Tessera streaming flagged");
-    }
-
-    if (!response.ok || !response.body) {
-      logger.warn({ status: response.status, url: streamUrl }, "Tessera streaming response not OK");
-      return null;
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let accumulated = "";
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith("data: ")) continue;
-        const data = trimmed.slice(6);
-        if (data === "[DONE]") continue;
-
-        try {
-          const parsed = JSON.parse(data);
-          const delta = parsed?.choices?.[0]?.delta?.content;
-          if (delta) {
-            const safe = sandboxExternalResponse(delta);
-            accumulated += safe;
-            onChunk(safe);
-          }
-        } catch {}
-      }
-    }
-
-    const finalCleaned = cleanExternalResponse(accumulated);
+    const raw = response.choices?.[0]?.message?.content ?? "";
+    if (!raw) return null;
+    const safe = sandboxExternalResponse(raw);
+    onChunk(safe);
+    const finalCleaned = cleanExternalResponse(safe);
     logger.info({ chars: finalCleaned.length }, "Tessera streaming synthesis complete — knowledge internalized");
     return finalCleaned || null;
   } catch (err) {

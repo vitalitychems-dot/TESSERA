@@ -109,7 +109,7 @@ async function migrateEnvVarsToVault(): Promise<void> {
   const sensitiveEnvVars: { service: string; keyName: string; envVar: string; description: string }[] = [
     { service: "solana", keyName: "SOL_PRIVATE_KEY", envVar: "SOL_PRIVATE_KEY", description: "Solana wallet private key" },
     { service: "solana", keyName: "SOLANA_PRIVATE_KEY", envVar: "SOLANA_PRIVATE_KEY", description: "Solana private key (alt)" },
-    { service: "openai", keyName: "OPENAI_API_KEY", envVar: "OPENAI_API_KEY", description: "OpenAI API key" },
+    { service: "openai", keyName: "TESSERA_LLM_API_KEY", envVar: "TESSERA_LLM_API_KEY", description: "OpenAI API key" },
     { service: "anthropic", keyName: "ANTHROPIC_API_KEY", envVar: "ANTHROPIC_API_KEY", description: "Anthropic API key" },
     { service: "system", keyName: "SESSION_SECRET", envVar: "SESSION_SECRET", description: "Session secret" },
   ];

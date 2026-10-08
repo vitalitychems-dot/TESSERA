@@ -123,7 +123,7 @@ function scanForDataExposure(): SecurityTestSuite["dataExposure"] {
 
   const sensitiveEnvVars = [
     "TESSERACT_ADMIN_KEY", "SOL_WALLET",
-    "FATHER_NAME", "SOVEREIGN_ALIAS", "OPENAI_API_KEY", "DEEPSEEK_API_KEY",
+    "FATHER_NAME", "SOVEREIGN_ALIAS", "TESSERA_LLM_API_KEY", "DEEPSEEK_API_KEY",
     "SHOPIFY_SHARED_SECRET", "SHOPIFY_ACCESS_TOKEN"
   ];
 

@@ -576,7 +576,7 @@ router.get("/sovereignty/geometry", async (_req, res) => {
     if (routes.length === 0) {
       routes.push({
         routeId: "default-route",
-        routeName: "coordinator → retrieval-agent → provider-openai",
+        routeName: "coordinator → retrieval-agent → provider-anthropic",
         topology: "hierarchical-DAG",
         geometryType: "Dijkstra",
         pathOptimization: "shortest-path",

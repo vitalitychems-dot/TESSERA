@@ -331,7 +331,7 @@ const PROVIDER_HEALTH_ENDPOINTS: Record<string, string> = {
   sambanova: "https://api.sambanova.ai/v1",
   cerebras: "https://api.cerebras.ai/v1",
   deepseek: "https://api.deepseek.com/v1",
-  openai: "https://api.openai.com/v1",
+  openai: "https://TESSERA_LLM_BASE_URL/v1",
   cohere: "https://api.cohere.com/compatibility/v1",
 };
 

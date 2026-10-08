@@ -103,7 +103,7 @@ Index confirmed `llm-client`, `local-model-manager` (`VllmAdapter.chat`, `LmStud
 | `callLLM` default (main) | `TESSERA_LLM_MODEL` |
 | `adaptive-router` tiers | `TESSERA_LLM_MODEL`, `TESSERA_LLM_MODEL`, `TESSERA_LLM_MODEL` |
 | `conversations` / `rick` / `rick-proposals` callers | often `TESSERA_LLM_MODEL` |
-| `neural-embeddings` | `text-embedding-3-small` |
+| `neural-embeddings` | `TESSERA_EMBED_MODEL` |
 | `provider-registry` xAI | `grok-3` |
 | `provider-registry` others | anthropic / openai / google / deepseek / groq / mistral / meta / qwen / moonshot catalogs |
 | Ollama preferred (local manager) | `llama3.2:3b`, `llama3.2:1b`, `mistral:7b`, `phi3:mini` |

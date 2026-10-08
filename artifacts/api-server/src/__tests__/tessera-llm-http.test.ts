@@ -55,6 +55,18 @@ describe("tessera llm http", () => {
     ).rejects.toThrow("TESSERA_LLM_API_KEY not set");
   });
 
+  it("does not call the network when the API key is blank", async () => {
+    process.env.TESSERA_LLM_BASE_URL = "http://127.0.0.1:9";
+    process.env.TESSERA_LLM_API_KEY = "   ";
+    await expect(
+      tesseraChatCompletion({
+        model: "m",
+        max_completion_tokens: 8,
+        messages: [{ role: "user", content: "hi" }],
+      }),
+    ).rejects.toThrow("TESSERA_LLM_API_KEY not set");
+  });
+
   it("posts chat completions and embeddings", async () => {
     const seen: Array<{ url: string | undefined; auth: string | undefined; body: unknown }> = [];
     server = createServer((req, res) => {
@@ -100,7 +112,7 @@ describe("tessera llm http", () => {
       messages: [{ role: "user", content: "hi" }],
     });
     const embeddings = await tesseraEmbeddings({
-      model: "text-embedding-3-small",
+      model: "embed",
       input: ["ab", "cdef"],
     });
 
