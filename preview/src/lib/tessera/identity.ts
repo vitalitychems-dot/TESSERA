@@ -110,6 +110,14 @@ export const RESEARCH_REPOS = [
   "youngbryan97/aura",
   "Zae-Project/brain-emulation",
   "opencog/opencog",
+  "Panniantong/Agent-Reach",
+  "JuliusBrussee/caveman",
+  "obra/superpowers",
+  "mksglu/context-mode",
+  "colbymchenry/codegraph",
+  "NVIDIA/OpenShell",
+  "heygen-com/hyperframes",
+  "mvschwarz/openrig",
 ] as const;
 
 export const SOURCES: SourceRecord[] = [
