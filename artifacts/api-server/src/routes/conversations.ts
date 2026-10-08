@@ -440,8 +440,8 @@ async function sandboxExtractKnowledge(
   messages: Array<{ role: string; content: string }>,
   sovereignCtx: string,
 ): Promise<string | null> {
-  const baseURL = process.env.TESSERA_LLM_BASE_URL;
-  const apiKey = process.env.TESSERA_LLM_API_KEY;
+  const baseURL = process.env.TESSERA_LLM_BASE_URL?.trim();
+  const apiKey = process.env.TESSERA_LLM_API_KEY?.trim();
   const model = process.env.TESSERA_LLM_MODEL?.trim();
   if (!baseURL || !apiKey || !model) return null;
 
@@ -501,8 +501,8 @@ async function _deprecated_sandboxExtractKnowledgeStreaming(
   sovereignCtx: string,
   onChunk: (text: string) => void,
 ): Promise<string | null> {
-  const baseURL = process.env.TESSERA_LLM_BASE_URL;
-  const apiKey = process.env.TESSERA_LLM_API_KEY;
+  const baseURL = process.env.TESSERA_LLM_BASE_URL?.trim();
+  const apiKey = process.env.TESSERA_LLM_API_KEY?.trim();
   const model = process.env.TESSERA_LLM_MODEL?.trim();
   if (!baseURL || !apiKey || !model) return null;
 

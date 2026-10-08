@@ -72,6 +72,7 @@ import { getShepherdContext, installSovereignFetchGuard } from "../lib/sovereign
 import { getAllowedDomains, secureExternalBinaryFetch } from "../lib/secureExternalWrapper";
 import rickRouter from "../routes/rick";
 import conversationsRouter from "../routes/conversations";
+import { generateFreshProposals } from "../lib/rick-proposals";
 
 const originalFetch = globalThis.fetch;
 
@@ -266,4 +267,60 @@ describe("guarded LLM and NASA fetch", () => {
     expect(parsed.temperature).toBe(0.7);
     expect(parsed.model).toBe("unit-test-model");
   }, 20_000);
+
+  describe("blank or spaces-only TESSERA_LLM_API_KEY", () => {
+    const blankKeys = [
+      { label: "blank", value: "" },
+      { label: "spaces-only", value: "   " },
+    ] as const;
+
+    async function withApiKey(value: string, run: () => Promise<void>): Promise<void> {
+      const previous = process.env.TESSERA_LLM_API_KEY;
+      process.env.TESSERA_LLM_API_KEY = value;
+      try {
+        await run();
+      } finally {
+        if (previous === undefined) delete process.env.TESSERA_LLM_API_KEY;
+        else process.env.TESSERA_LLM_API_KEY = previous;
+      }
+    }
+
+    for (const blankKey of blankKeys) {
+      it(`rick /rick/chat makes no fetch when the key is ${blankKey.label}`, async () => {
+        await withApiKey(blankKey.value, async () => {
+          const res = await postJson(app, "/rick/chat", {
+            messages: [{ role: "user", content: "coolant loop status" }],
+            stream: true,
+          });
+          expect(res.status).toBe(200);
+          expect(networkFetch).not.toHaveBeenCalled();
+        });
+      });
+
+      it(`conversations /messages makes no fetch when the key is ${blankKey.label}`, async () => {
+        await withApiKey(blankKey.value, async () => {
+          process.env.SANDBOX_TRAINING_ALLOWED = "true";
+          const res = await postJson(
+            app,
+            "/messages",
+            {
+              conversationId: 7,
+              content: "Describe the difference between a hash map and a balanced tree for range queries?",
+            },
+            { "x-sandbox-training": "true" },
+          );
+          expect(res.status).toBe(200);
+          expect(networkFetch).not.toHaveBeenCalled();
+        });
+      }, 20_000);
+
+      it(`rick-proposals generateFreshProposals makes no fetch when the key is ${blankKey.label}`, async () => {
+        await withApiKey(blankKey.value, async () => {
+          const proposals = await generateFreshProposals(1);
+          expect(proposals.length).toBeGreaterThan(0);
+          expect(networkFetch).not.toHaveBeenCalled();
+        });
+      });
+    }
+  });
 });
