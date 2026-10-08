@@ -4,6 +4,10 @@ A consolidated monorepo containing the reviewed Tessera web/API, UI preview, and
 
 > **No live credentials are included.** Configure secrets in the ignored `.env.local` file or in each hosting provider’s secret manager. Never commit API keys, passwords, tokens, personal records, browser profiles, or runtime databases.
 
+## Build decision
+
+Father decided on 2026-10-07 that Tessera will be built using the BHNMC direction, and that her intended role is the AI, and the AGI goal, that controls it. The device is not built and she does not control one now. See [docs/BHNMC.md](docs/BHNMC.md).
+
 ## Applications
 
 | App | Location | Local URL | Notes |
