@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { TesseraMemory, TesseraMode } from "./prompt";
+import { readCorrections } from "./corrections";
+import { silentPen } from "./silent-pen";
 import { vowCheck } from "./learning";
 import { takeSpeakSlot } from "./finish";
 import { healthLine } from "./wave";
@@ -55,13 +57,6 @@ async function resolvePen(): Promise<Pen | null> {
   return localPen();
 }
 
-function instrumentError(status: number, detail: string) {
-  if (status === 403 && /spending-limit|out of credits|subscription/i.test(detail)) {
-    return "The instrument has no remaining credits, so Tessera cannot speak yet. Her Canon, origin sigil, choir memory, and World are already loaded. Fund the instrument, then Awaken.";
-  }
-  return `The instrument returned ${status}${detail ? `: ${detail.slice(0, 180)}` : ""}`;
-}
-
 export const penStatus = createServerFn({ method: "POST" }).handler(async () => {
   const pen = await resolvePen();
   const override = process.env.TESSERA_BASE_URL?.trim() ?? "";
@@ -93,11 +88,15 @@ export const penStatus = createServerFn({ method: "POST" }).handler(async () => 
   };
 });
 
+async function fromFiles(data: ChatInput) {
+  const asked = [...data.messages].reverse().find((message) => message.role === "user")?.content ?? "";
+  const rows = await readCorrections();
+  return { ok: true as const, text: silentPen(asked, rows), instrument: { vendor: "tessera", model: "files" } };
+}
+
 export async function speak(data: ChatInput) {
     const pen = await resolvePen();
-    if (!pen) {
-      return { ok: false as const, error: "Tessera's instrument is not available in this environment." };
-    }
+    if (!pen) return fromFiles(data);
 
     if (data.mode === "chat" || data.mode === "learn") {
       const slot = takeSpeakSlot();
@@ -125,14 +124,10 @@ export async function speak(data: ChatInput) {
         });
       let used = pen;
       let res = await call(used, system).catch(() => null);
-      if (!res) return { ok: false as const, error: "The desk pen did not answer. This room does not call an outside pen." };
-      if (!res.ok) {
-        const detail = await res.text().catch(() => "");
-        return { ok: false as const, error: instrumentError(res.status, detail) };
-      }
+      if (!res || !res.ok) return fromFiles(data);
       const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
       const text = asHer(body.choices?.[0]?.message?.content?.trim() ?? "");
-      if (!text) return { ok: false as const, error: "Tessera was silent. Try again." };
+      if (!text) return fromFiles(data);
       const check = vowCheck(text);
       if (!check.ok) return { ok: false as const, error: check.reason };
       if (/placeholder text|lorem ipsum|\bgrok\b|\bxai\b|vitality/i.test(text)) {
@@ -366,18 +361,15 @@ ${FATHER_PROFILE}`;
         max_tokens: maxTokens,
         messages: [{ role: "system", content: packedSystem }, ...recent],
       }),
-    });
+    }).catch(() => null);
 
-    if (!res.ok) {
-      const detail = await res.text().catch(() => "");
-      return { ok: false as const, error: instrumentError(res.status, detail) };
-    }
+    if (!res || !res.ok) return fromFiles(data);
 
     const body = (await res.json()) as {
       choices?: { message?: { content?: string } }[];
     };
     const text = asHer(body.choices?.[0]?.message?.content?.trim() ?? "");
-    if (!text) return { ok: false as const, error: "Tessera was silent. Try again." };
+    if (!text) return fromFiles(data);
     const check = vowCheck(text);
     if (!check.ok) return { ok: false as const, error: check.reason };
     if (/placeholder text|lorem ipsum|\bgrok\b|\bxai\b|vitality/i.test(text)) {
