@@ -1,7 +1,10 @@
 import { Router, type IRouter } from "express";
 import { getAllProfiles, getProfileById, filterProfiles, getCountries, getAffiliations } from "../lib/political-dossiers";
+import { requireSensitiveRouteToken } from "../lib/sensitive-route-gate";
 
 const router: IRouter = Router();
+
+router.use("/political-dossiers", requireSensitiveRouteToken);
 
 router.get("/political-dossiers", (req, res) => {
   try {

@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { logger } from "../lib/logger";
+import { requireSensitiveRouteToken } from "../lib/sensitive-route-gate";
 import { getWalletObservation, refreshWalletObservation } from "../lib/wallet-observer";
 import { getExecutableLeads, leadCountsByKind, type LeadKind } from "../lib/lead-execution";
 import {
@@ -26,6 +27,12 @@ import {
 } from "../lib/code-bounties-real";
 
 const router: IRouter = Router();
+
+router.use("/income", requireSensitiveRouteToken);
+router.use("/leads", requireSensitiveRouteToken);
+router.use("/recruit-dossiers", requireSensitiveRouteToken);
+router.use("/free-stuff", requireSensitiveRouteToken);
+router.use("/code-bounties", requireSensitiveRouteToken);
 
 router.get("/income/wallet", async (_req, res) => {
   try {

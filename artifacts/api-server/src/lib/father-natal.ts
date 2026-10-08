@@ -55,7 +55,9 @@ const fatherNatalChartSchema = z.object({
   }),
 });
 
-function loadFatherNatalChart() {
+export type FatherNatalChart = z.infer<typeof fatherNatalChartSchema>;
+
+function loadFatherNatalChart(): FatherNatalChart {
   const raw = process.env.FATHER_NATAL_CHART_JSON;
   if (!raw) {
     throw new Error("Missing required Replit Secret: FATHER_NATAL_CHART_JSON");
@@ -74,6 +76,15 @@ function loadFatherNatalChart() {
   }
 
   return parsedChart.data;
+}
+
+/** Fresh read of FATHER_NATAL_CHART_JSON. Blank-after-trim is treated as unset. */
+export function readFatherNatalChart(): FatherNatalChart {
+  const raw = process.env.FATHER_NATAL_CHART_JSON;
+  if (raw === undefined || raw.trim() === "") {
+    throw new Error("Missing required Replit Secret: FATHER_NATAL_CHART_JSON");
+  }
+  return loadFatherNatalChart();
 }
 
 let cachedFatherNatalChart: ReturnType<typeof loadFatherNatalChart> | undefined;
