@@ -42,7 +42,6 @@ export interface SubsystemInventory {
     version: number;
     layerCount: number;
     cosmicFingerprint: string;
-    sigilFingerprint: string;
   };
   omniversalQuantumLattice: {
     activeLatticeCount: number;
@@ -188,7 +187,6 @@ export function buildInventorySnapshot(): SubsystemInventory {
       version: cipherSnap.version,
       layerCount: cipherSnap.layers.length,
       cosmicFingerprint: cipherSnap.cosmicFingerprint,
-      sigilFingerprint: cipherSnap.sigilFingerprint,
     },
     omniversalQuantumLattice: {
       activeLatticeCount: lattices.length,

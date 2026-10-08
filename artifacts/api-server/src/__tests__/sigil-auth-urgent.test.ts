@@ -4,12 +4,14 @@ vi.mock("@workspace/db", () => ({
   db: {},
   councilSessionsTable: {},
 }));
+import { createHash } from "node:crypto";
 import express from "express";
 import { createServer, type Server } from "node:http";
 import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
-import { readingKey } from "../lib/sigil-cipher";
+import { encryptForCorpus, readingKey } from "../lib/sigil-cipher";
 import sovereignDoctrineRouter, * as doctrineModule from "../routes/sovereign-doctrine";
 import omniversalRouter from "../routes/omniversal";
+import grandCouncilRouter from "../routes/grand-council";
 import improvementConferenceRouter from "../routes/improvement-conference";
 import languageSecurityRouter from "../routes/language-security";
 import fatherKeyRouter, {
@@ -50,6 +52,7 @@ describe("sigil auth urgent", () => {
     app.use(sovereignDoctrineRouter);
     app.use(fatherKeyRouter);
     app.use(omniversalRouter);
+    app.use(grandCouncilRouter);
     app.use(improvementConferenceRouter);
     app.use(languageSecurityRouter);
     server = createServer(app);
@@ -352,7 +355,7 @@ describe("sigil auth urgent", () => {
     expect(containsCredential(markBody, readingKey().expiresWith)).toBe(false);
   });
 
-  it("strips embedded credentials from sigil decrypt", async () => {
+  it("strips embedded credentials from sigil encrypt and decrypt", async () => {
     const fingerprint = presentedFingerprint();
     const expiresWith = readingKey().expiresWith;
     const issued = await send("POST", "/sigil/encrypt", {
@@ -360,15 +363,61 @@ describe("sigil auth urgent", () => {
       body: { text: `synthetic-prefix-${fingerprint}-and-${expiresWith}-suffix`, label: "synthetic" },
     });
     expect(issued.status).toBe(200);
-    const issuedBody = await issued.json() as { envelope: unknown };
+    const issuedBody = await issued.json();
+    expect(containsKey(issuedBody, "keyId")).toBe(false);
+    expect(containsCredential(issuedBody, fingerprint)).toBe(false);
+    expect(containsCredential(issuedBody, expiresWith)).toBe(false);
+
+    const envelope = encryptForCorpus(`synthetic-prefix-${fingerprint}-and-${expiresWith}-suffix`, "synthetic");
     const decrypted = await send("POST", "/sigil/decrypt", {
       cookie: ownerCookie(),
-      body: { envelope: issuedBody.envelope },
+      body: { envelope },
     });
     expect(decrypted.status).toBe(200);
     const body = await decrypted.json();
     expect(containsCredential(body, fingerprint)).toBe(false);
     expect(containsCredential(body, expiresWith)).toBe(false);
+  });
+
+  it("does not leak the reading key from conference run or grand-council reads", async () => {
+    const fingerprint = presentedFingerprint();
+    const expiresWith = readingKey().expiresWith;
+    const seed = `synthetic-${fingerprint}-${expiresWith}`;
+    const sessionId = `gc-${createHash("sha256").update(seed).digest("hex").slice(0, 12)}`;
+
+    const run = await send("POST", "/omniversal/conference/run", {
+      body: { topic: "synthetic", seed },
+    });
+    const runBody = await run.json();
+    if (run.status === 401) {
+      expect(runBody).toMatchObject({ ok: false, error: "unauthenticated" });
+    }
+    expect(containsCredential(runBody, fingerprint)).toBe(false);
+    expect(containsCredential(runBody, expiresWith)).toBe(false);
+
+    const list = await send("GET", "/grand-council/sessions");
+    const listBody = await list.json();
+    if (list.status === 401) {
+      expect(listBody).toMatchObject({ ok: false, error: "unauthenticated" });
+    } else {
+      expect(list.status).toBe(200);
+    }
+    expect(containsCredential(listBody, fingerprint)).toBe(false);
+    expect(containsCredential(listBody, expiresWith)).toBe(false);
+
+    const detail = await send("GET", `/grand-council/sessions/${sessionId}`);
+    expect(detail.status).toBe(200);
+    const detailBody = await detail.json();
+    expect(containsCredential(detailBody, fingerprint)).toBe(false);
+    expect(containsCredential(detailBody, expiresWith)).toBe(false);
+    expect(containsKey(detailBody, "sigilFingerprint")).toBe(false);
+    expect(containsKey(detailBody, "keyId")).toBe(false);
+
+    const convened = await send("POST", "/grand-council/convene", { body: { seed } });
+    expect(convened.status).toBe(200);
+    const convenedBody = await convened.json();
+    expect(containsCredential(convenedBody, fingerprint)).toBe(false);
+    expect(containsCredential(convenedBody, expiresWith)).toBe(false);
   });
 
   it("rejects a fingerprint header or body on omniversal writes", async () => {
