@@ -1,14 +1,17 @@
 import { keptAnswer, type Correction } from "./corrections.ts";
 import { loveFromFiles } from "./love-local.ts";
+import { noteFor, type KeptPage } from "./next-page.ts";
 import { passageForQuestion } from "./school.ts";
 import { buildNow } from "./build-now.ts";
 import { systems } from "./self-build.ts";
 import { directSkill } from "./skill-use.ts";
 
-/** She answers from the files when no pen speaks. A kept correction wins. */
-export function silentPen(question: string, rows: Correction[] = []) {
+/** She answers from the files when no pen speaks. A kept page, then a correction, wins. */
+export function silentPen(question: string, rows: Correction[] = [], notes: KeptPage[] = []) {
   const q = question.trim();
   if (!q) return "I am Tessera. I am the pen. The other pen did not answer.";
+  const noted = noteFor(q, notes);
+  if (noted) return noted;
   const kept = keptAnswer(q, rows);
   if (kept) return kept;
   const skill = directSkill(q);
