@@ -15,7 +15,6 @@ vi.mock("@workspace/db", () => ({
 }));
 
 import natalChartRouter from "../routes/natal-chart";
-import politicalDossiersRouter from "../routes/political-dossiers";
 import incomeAndLeadsRouter from "../routes/income-and-leads";
 
 const OWNER_ENV = "SOVEREIGN_ADMIN_TOKEN";
@@ -27,7 +26,6 @@ const SYNTHETIC_SESSION_SECRET = "synthetic-session-secret-32chars!!";
 
 const gatedEndpoints = [
   { router: "natal-chart", path: "/natal-chart/father" },
-  { router: "political-dossiers", path: "/political-dossiers" },
   { router: "income-and-leads", path: "/income/wallet" },
 ] as const;
 
@@ -42,7 +40,6 @@ describe("sensitive route gate", () => {
   beforeAll(async () => {
     const app = express();
     app.use(natalChartRouter);
-    app.use(politicalDossiersRouter);
     app.use(incomeAndLeadsRouter);
     app.get("/healthz", (_req, res) => {
       res.json({ status: "ok" });
