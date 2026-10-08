@@ -2,83 +2,141 @@
 /**
  * Opt-in cleanup for rows saved before Privacy E.
  *
- * Does not run unless --apply is passed. Does not set DATABASE_URL.
- * Father runs this later; agents and CI must not.
- *
- * With --apply:
- *   - Rewrites data/improvement-conference-verdict.json transcript lines that
- *     still contain the pre-change "sigil: " plus an 8-hex prefix.
- *   - If the operator environment already has DATABASE_URL, walks council
- *     session JSON and deletes sigilFingerprint fields. If DATABASE_URL is
- *     unset, the database pass is skipped.
+ * Paths are resolved from this file, not process.cwd().
+ * Default is a dry-run that prints counts only. No values are printed.
+ * --apply writes a backup first, then rewrites. Any run waits on Father.
+ * Do not execute this from CI or an agent. Do not set DATABASE_URL here.
  */
 
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = join(SCRIPT_DIR, "..", "..", "..");
+const VERDICT_PATH = join(REPO_ROOT, "data", "improvement-conference-verdict.json");
+const VERDICT_BACKUP = `${VERDICT_PATH}.bak`;
+const DB_PACKAGE = join(REPO_ROOT, "lib", "db", "package.json");
+const COUNCIL_BACKUP = join(REPO_ROOT, "data", "council-sessions.privacy-e.bak.json");
 const APPLY = process.argv.includes("--apply");
-const VERDICT_PATH = join(process.cwd(), "data", "improvement-conference-verdict.json");
 const SIGIL_PREFIX = /, sigil: [0-9a-fA-F]{8}…/g;
 
-function stripTranscriptLine(line) {
-  return line.replace(SIGIL_PREFIX, "");
+const CREDENTIAL_KEYS = new Set([
+  "sigilfingerprint",
+  "keyid",
+  "previouskeyid",
+  "expireswith",
+  "handle",
+  "replitreaderfingerprint",
+  "fingerprintshort",
+  "fingerprintultrashort",
+  "digesthex",
+  "fatherfingerprint",
+  "wouldbefingerprint",
+  "sealedseed",
+  "identityhash",
+  "primarycode",
+  "rotatinghash",
+  "rotatinghashshort",
+  "rotatingglyph",
+  "signaturehash",
+  "signaturehashshort",
+  "signatureglyph",
+]);
+
+function emptyCounts() {
+  return { credentialFields: 0, transcriptLines: 0 };
 }
 
-function stripSigilFingerprint(value) {
-  if (Array.isArray(value)) return value.map(stripSigilFingerprint);
-  if (!value || typeof value !== "object") {
-    return typeof value === "string" ? stripTranscriptLine(value) : value;
+function stripValue(value, counts) {
+  if (Array.isArray(value)) return value.map((item) => stripValue(item, counts));
+  if (typeof value === "string") {
+    const next = value.replace(SIGIL_PREFIX, "");
+    if (next !== value) counts.transcriptLines += 1;
+    return next;
   }
+  if (!value || typeof value !== "object") return value;
   const out = {};
   for (const [key, child] of Object.entries(value)) {
-    if (key === "sigilFingerprint") continue;
-    out[key] = stripSigilFingerprint(child);
+    if (CREDENTIAL_KEYS.has(key.toLowerCase())) {
+      counts.credentialFields += 1;
+      continue;
+    }
+    out[key] = stripValue(child, counts);
   }
   return out;
 }
 
-if (!APPLY) {
-  process.stdout.write(
-    "Opt-in only. Pass --apply to rewrite stored conference rows. " +
-      "No files or database were touched. Waiting on Father.\n",
-  );
-  process.exit(0);
+function verdictCounts() {
+  if (!existsSync(VERDICT_PATH)) return null;
+  const parsed = JSON.parse(readFileSync(VERDICT_PATH, "utf8"));
+  const counts = emptyCounts();
+  const next = stripValue(parsed, counts);
+  return { counts, next, changed: counts.credentialFields > 0 || counts.transcriptLines > 0 };
 }
 
-let filesChanged = 0;
-if (existsSync(VERDICT_PATH)) {
-  const parsed = JSON.parse(readFileSync(VERDICT_PATH, "utf8"));
-  writeFileSync(VERDICT_PATH, JSON.stringify(stripSigilFingerprint(parsed), null, 2));
-  filesChanged += 1;
-  process.stdout.write(`rewrote ${VERDICT_PATH}\n`);
-} else {
-  process.stdout.write(`no verdict file at ${VERDICT_PATH}\n`);
-}
+const verdict = verdictCounts();
+const lines = [
+  APPLY ? "apply" : "dry-run",
+  "counts only; no values",
+  `verdictFile: ${verdict ? "present" : "absent"}`,
+  `verdictCredentialFields: ${verdict ? verdict.counts.credentialFields : 0}`,
+  `verdictTranscriptLines: ${verdict ? verdict.counts.transcriptLines : 0}`,
+];
 
 const databaseUrl = (process.env.DATABASE_URL ?? "").trim();
 if (!databaseUrl) {
-  process.stdout.write("DATABASE_URL is unset. Council session rows were not read.\n");
+  lines.push("councilSessions: skipped, DATABASE_URL unset");
+  process.stdout.write(`${lines.join("\n")}\n`);
+  if (!APPLY) process.exit(0);
+  if (verdict?.changed) {
+    copyFileSync(VERDICT_PATH, VERDICT_BACKUP);
+    writeFileSync(VERDICT_PATH, JSON.stringify(verdict.next, null, 2));
+    process.stdout.write("verdictBackup: written\nverdictRewrite: 1\n");
+  }
   process.exit(0);
 }
 
-const { createRequire } = await import("node:module");
-const require = createRequire(join(process.cwd(), "lib/db/package.json"));
+const require = createRequire(DB_PACKAGE);
 const pg = require("pg");
 const client = new pg.Client({ connectionString: databaseUrl });
 await client.connect();
 try {
   const found = await client.query("SELECT id, session FROM council_sessions");
-  let rowsChanged = 0;
+  let rowsWithCredentialFields = 0;
+  const pending = [];
   for (const row of found.rows) {
-    const next = stripSigilFingerprint(row.session);
-    if (JSON.stringify(next) === JSON.stringify(row.session)) continue;
-    await client.query("UPDATE council_sessions SET session = $2::jsonb WHERE id = $1", [
-      row.id,
-      JSON.stringify(next),
-    ]);
-    rowsChanged += 1;
+    const counts = emptyCounts();
+    const next = stripValue(row.session, counts);
+    if (counts.credentialFields === 0 && counts.transcriptLines === 0) continue;
+    rowsWithCredentialFields += 1;
+    pending.push({ id: row.id, session: row.session, next });
   }
-  process.stdout.write(`council session rows updated: ${rowsChanged} of ${found.rows.length}; verdict files: ${filesChanged}\n`);
+  lines.push(`councilSessionsScanned: ${found.rows.length}`);
+  lines.push(`councilRowsWithCredentialFields: ${rowsWithCredentialFields}`);
+  process.stdout.write(`${lines.join("\n")}\n`);
+  if (!APPLY) process.exit(0);
+
+  if (verdict?.changed) {
+    copyFileSync(VERDICT_PATH, VERDICT_BACKUP);
+    writeFileSync(VERDICT_PATH, JSON.stringify(verdict.next, null, 2));
+    process.stdout.write("verdictBackup: written\nverdictRewrite: 1\n");
+  }
+  if (pending.length > 0) {
+    mkdirSync(dirname(COUNCIL_BACKUP), { recursive: true });
+    writeFileSync(
+      COUNCIL_BACKUP,
+      JSON.stringify(pending.map((row) => ({ id: row.id, session: row.session }))),
+    );
+    for (const row of pending) {
+      await client.query("UPDATE council_sessions SET session = $2::jsonb WHERE id = $1", [
+        row.id,
+        JSON.stringify(row.next),
+      ]);
+    }
+    process.stdout.write(`councilBackup: written\ncouncilRowsUpdated: ${pending.length}\n`);
+  }
 } finally {
   await client.end();
 }

@@ -6,13 +6,24 @@ import type { Request, Response, NextFunction } from "express";
 
 const WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 10;
+const FATHER_GLOBAL_MAX = 100;
+const FATHER_MAX_IPS = 4096;
 
 const _hits = new Map<string, number[]>();
+const _fatherGlobalHits: number[] = [];
 
 function ipOf(req: Request): string {
   // req.ip follows the app trust-proxy hop count. The first X-Forwarded-For
   // entry is client-controlled and must not key a limiter.
   return req.ip || req.socket.remoteAddress || "unknown";
+}
+
+function evictOldest(map: Map<string, number[]>, maxIps: number): void {
+  while (map.size > maxIps) {
+    const oldest = map.keys().next().value;
+    if (oldest === undefined) break;
+    map.delete(oldest);
+  }
 }
 
 function prune(now: number): void {
@@ -21,26 +32,38 @@ function prune(now: number): void {
     if (filtered.length === 0) _hits.delete(ip);
     else _hits.set(ip, filtered);
   }
+  evictOldest(_hits, FATHER_MAX_IPS);
+  const globalHits = _fatherGlobalHits.filter((t) => now - t < WINDOW_MS);
+  _fatherGlobalHits.length = 0;
+  _fatherGlobalHits.push(...globalHits);
 }
 
 export function fatherVerifyRateLimit(req: Request, res: Response, next: NextFunction): void {
   const now = Date.now();
-  if (Math.random() < 0.05) prune(now);
+  prune(now);
   const ip = ipOf(req);
-  const arr = (_hits.get(ip) ?? []).filter((t) => now - t < WINDOW_MS);
-  if (arr.length >= MAX_PER_WINDOW) {
-    const retryAfterMs = WINDOW_MS - (now - arr[0]);
+  const arr = _hits.get(ip) ?? [];
+  const retry = (limit: number, oldest: number, scope: string) => {
+    const retryAfterMs = WINDOW_MS - (now - oldest);
     res.setHeader("Retry-After", Math.max(1, Math.ceil(retryAfterMs / 1000)).toString());
     res.status(429).json({
       ok: false,
       error: "rate-limited",
-      message: `Father verification is rate-limited to ${MAX_PER_WINDOW} attempts per minute per IP.`,
+      message: `Father verification is rate-limited to ${limit} attempts per minute ${scope}.`,
       retryAfterMs,
     });
+  };
+  if (arr.length >= MAX_PER_WINDOW) {
+    retry(MAX_PER_WINDOW, arr[0], "per IP");
+    return;
+  }
+  if (_fatherGlobalHits.length >= FATHER_GLOBAL_MAX) {
+    retry(FATHER_GLOBAL_MAX, _fatherGlobalHits[0], "globally");
     return;
   }
   arr.push(now);
   _hits.set(ip, arr);
+  _fatherGlobalHits.push(now);
   next();
 }
 
@@ -112,17 +135,27 @@ export function adminSessionRateLimit(req: Request, res: Response, next: NextFun
 const WRITE_WINDOW_MS = 60_000;
 const WRITE_IP_MAX = 6;
 const WRITE_GLOBAL_MAX = 30;
+const WRITE_MAX_IPS = 4096;
 const _writeHits = new Map<string, number[]>();
 const _writeGlobalHits: number[] = [];
 
-export function publicWriteRateLimit(req: Request, res: Response, next: NextFunction): void {
-  const now = Date.now();
-  const ip = ipOf(req);
-  const arr = (_writeHits.get(ip) ?? []).filter((t) => now - t < WRITE_WINDOW_MS);
+function pruneWrites(now: number): void {
+  for (const [ip, arr] of _writeHits) {
+    const filtered = arr.filter((t) => now - t < WRITE_WINDOW_MS);
+    if (filtered.length === 0) _writeHits.delete(ip);
+    else _writeHits.set(ip, filtered);
+  }
+  evictOldest(_writeHits, WRITE_MAX_IPS);
   const globalHits = _writeGlobalHits.filter((t) => now - t < WRITE_WINDOW_MS);
   _writeGlobalHits.length = 0;
   _writeGlobalHits.push(...globalHits);
-  if (arr.length === 0) _writeHits.delete(ip);
+}
+
+export function publicWriteRateLimit(req: Request, res: Response, next: NextFunction): void {
+  const now = Date.now();
+  pruneWrites(now);
+  const ip = ipOf(req);
+  const arr = _writeHits.get(ip) ?? [];
   const limited = arr.length >= WRITE_IP_MAX || _writeGlobalHits.length >= WRITE_GLOBAL_MAX;
   if (limited) {
     const oldest = arr.length >= WRITE_IP_MAX ? arr[0] : _writeGlobalHits[0];

@@ -7,6 +7,7 @@ import {
   setAutoHealerEnabled,
 } from "../lib/auto-healer";
 import { validateSovereignAdminToken } from "../lib/mesh-auth";
+import { adminSessionRateLimit } from "../lib/father-verify-throttle";
 
 const router: IRouter = Router();
 
@@ -40,12 +41,12 @@ router.get("/auto-healer/strategies", (_req, res) => {
   res.json({ ok: true, strategies: listStrategies() });
 });
 
-router.post("/auto-healer/sweep", requireSovereignAuth, async (_req, res) => {
+router.post("/auto-healer/sweep", adminSessionRateLimit, requireSovereignAuth, async (_req, res) => {
   const incidents = await runHealingSweep({ manual: true });
   res.json({ ok: true, incidents, stats: getHealingStats() });
 });
 
-router.post("/auto-healer/enabled", requireSovereignAuth, (req, res) => {
+router.post("/auto-healer/enabled", adminSessionRateLimit, requireSovereignAuth, (req, res) => {
   const on = Boolean(req.body?.enabled);
   setAutoHealerEnabled(on);
   res.json({ ok: true, enabled: on });

@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { getMeshStats, getGroupSessions, getGroupSharedState } from "../lib/session-mesh";
 import { validateMeshToken } from "../lib/mesh-auth";
+import { adminSessionRateLimit } from "../lib/father-verify-throttle";
 
 const router: IRouter = Router();
 
@@ -15,7 +16,7 @@ function requireMeshAuth(req: Request, res: Response, next: () => void): void {
   next();
 }
 
-router.get("/mesh/stats", requireMeshAuth, (_req, res) => {
+router.get("/mesh/stats", adminSessionRateLimit, requireMeshAuth, (_req, res) => {
   try {
     const stats = getMeshStats();
     return res.json({ ok: true, ...stats });
@@ -24,7 +25,7 @@ router.get("/mesh/stats", requireMeshAuth, (_req, res) => {
   }
 });
 
-router.get("/mesh/sessions/:keyHash", requireMeshAuth, (req, res) => {
+router.get("/mesh/sessions/:keyHash", adminSessionRateLimit, requireMeshAuth, (req, res) => {
   try {
     const rawToken = req.headers["x-admin-token"];
     const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
