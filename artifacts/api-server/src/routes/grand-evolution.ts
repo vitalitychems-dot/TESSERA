@@ -1,4 +1,4 @@
-import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
+import { Router, type IRouter, type Request, type RequestHandler, type Response, type NextFunction } from "express";
 import { logger } from "../lib/logger";
 import { rawKeyFailRateLimit } from "../lib/father-verify-throttle";
 import {
@@ -8,11 +8,7 @@ import {
   isCycleRunning,
 } from "../lib/grand-evolution-cycle";
 import { verifyFatherKey, isFatherKeyConfigured } from "../lib/father-identity";
-import {
-  requireAdminSession,
-  resolveFatherAuthorization,
-  type AdminRequest,
-} from "../lib/sovereign-admin";
+import { requireAdminSession, resolveFatherAuthorization } from "../lib/sovereign-admin";
 import {
   convene,
   subscribeToSession,
@@ -40,7 +36,7 @@ function requireFather(req: Request, res: Response, next: NextFunction): void {
 }
 
 /** Owner cookie via requireAdminSession, or a verified x-tesseract-admin-key. */
-function requireEvolutionSessionRead(req: AdminRequest, res: Response, next: NextFunction): void {
+const requireEvolutionSessionRead: RequestHandler = (req, res, next) => {
   if ((process.env.TESSERACT_ADMIN_KEY ?? "").trim().length < 16) {
     res.status(503).json({
       ok: false,
@@ -76,7 +72,7 @@ function requireEvolutionSessionRead(req: AdminRequest, res: Response, next: Nex
     }
   }
   requireAdminSession(req, res, next);
-}
+};
 
 const router: IRouter = Router();
 
@@ -182,7 +178,7 @@ router.get("/grand-evolution/sessions", requireEvolutionSessionRead, async (_req
 });
 
 router.get("/grand-evolution/sessions/:id", requireEvolutionSessionRead, async (req, res) => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   const [turns, directives, benchmarks, audit] = await Promise.all([
     getSessionTurns(id),
     getSessionDirectives(id),
@@ -219,7 +215,7 @@ router.post("/grand-evolution/convene", rawKeyFailRateLimit, async (req, res) =>
 });
 
 router.get("/grand-evolution/sessions/:id/stream", requireEvolutionSessionRead, (req, res) => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
