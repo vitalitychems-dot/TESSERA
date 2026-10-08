@@ -5,7 +5,7 @@
 // — never silently open. No credential material logged.
 
 import type { Request, Response, NextFunction } from "express";
-import { SESSION_COOKIE, lookupSession, isAdminTokenConfigured } from "./sovereign-session";
+import { SESSION_COOKIE, lookupSession, isAdminTokenConfigured, verifyAdminToken } from "./sovereign-session";
 import { logger } from "./logger";
 
 export interface AdminRequest extends Request {
@@ -42,6 +42,37 @@ export function decideOwnerSession(req: Request): OwnerSessionDecision {
     return { ok: false, status: 401, error: "unauthenticated", reason: lookup.reason };
   }
   return { ok: true, issuedAt: lookup.record.issuedAt, expiresAt: lookup.record.expiresAt };
+}
+
+const ADMIN_KEY_MIN_LENGTH = 16;
+
+export type FatherAuthorization =
+  | { fatherAuthorized: true }
+  | { fatherAuthorized: false; reason: "absent" | "rejected" | "unconfigured" };
+
+/**
+ * fatherAuthorized is true only after verifyAdminToken (minimum length, then
+ * timingSafeEqual against TESSERACT_ADMIN_KEY) or a valid owner session.
+ * A present header that fails that check is rejected. Header presence alone
+ * is never enough. A missing header with no session is absent, not rejected.
+ */
+export function resolveFatherAuthorization(req: Request): FatherAuthorization {
+  const configured = (process.env.TESSERACT_ADMIN_KEY ?? "").trim();
+  const raw = req.header("x-tesseract-admin-key");
+  const headerPresent = typeof raw === "string";
+  if (!configured) {
+    if (headerPresent) return { fatherAuthorized: false, reason: "unconfigured" };
+    return { fatherAuthorized: false, reason: "absent" };
+  }
+  if (headerPresent) {
+    const presented = raw.trim();
+    if (presented.length >= ADMIN_KEY_MIN_LENGTH && verifyAdminToken(presented)) {
+      return { fatherAuthorized: true };
+    }
+    return { fatherAuthorized: false, reason: "rejected" };
+  }
+  if (decideOwnerSession(req).ok) return { fatherAuthorized: true };
+  return { fatherAuthorized: false, reason: "absent" };
 }
 
 export function requireAdminSession(req: AdminRequest, res: Response, next: NextFunction): void {

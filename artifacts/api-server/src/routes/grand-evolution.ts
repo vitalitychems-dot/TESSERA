@@ -8,6 +8,7 @@ import {
   isCycleRunning,
 } from "../lib/grand-evolution-cycle";
 import { verifyFatherKey, isFatherKeyConfigured } from "../lib/father-identity";
+import { resolveFatherAuthorization } from "../lib/sovereign-admin";
 import {
   convene,
   subscribeToSession,
@@ -92,26 +93,28 @@ router.get("/grand-evolution/directives", async (_req, res) => {
   });
 });
 
-router.post("/grand-evolution/run", async (req, res) => {
-  // Father auth is preferred but the cycle is also runnable on a fresh
-  // workspace where the Father key has not yet been set. We accept the
-  // request in either mode but record which.
-  const authHeader = req.headers["x-tesseract-key"] || req.headers["x-father-key"];
-  const fatherAuthorized = !!authHeader;
+router.post("/grand-evolution/run", rawKeyFailRateLimit, async (req, res) => {
+  if (!(process.env.TESSERACT_ADMIN_KEY ?? "").trim()) {
+    res.status(503).json({ ok: false, error: "sovereign-unconfigured" });
+    return;
+  }
+  const auth = resolveFatherAuthorization(req);
+  if (!auth.fatherAuthorized) {
+    res.status(401).json({ ok: false, error: "father-auth-required" });
+    return;
+  }
 
   if (isCycleRunning()) {
     res.status(409).json({ ok: false, error: "cycle-already-running" }); return;
   }
 
-  // Run synchronously so the caller gets the result. The cycle is bounded
-  // by the per-proposal LLM timeout in the consensus engine.
   try {
-    logger.info({ fatherAuthorized }, "GrandEvolution: cycle requested");
+    logger.info({ fatherAuthorized: true }, "GrandEvolution: cycle requested");
     const result = await runGrandEvolutionCycle();
-    res.json({ ok: true, fatherAuthorized, cycle: result });
+    res.json({ ok: true, fatherAuthorized: true, cycle: result });
   } catch (err) {
     logger.error({ err }, "GrandEvolution: cycle failed");
-    res.status(500).json({ ok: false, error: (err as Error).message });
+    res.status(500).json({ ok: false, error: "grand-evolution-failed" });
   }
 });
 
@@ -146,20 +149,29 @@ router.get("/grand-evolution/sessions/:id", async (req, res) => {
   res.json({ ok: true, data: { sessionId: id, turns, directives, benchmarks, audit } });
 });
 
-router.post("/grand-evolution/convene", async (req, res) => {
+router.post("/grand-evolution/convene", rawKeyFailRateLimit, async (req, res) => {
+  if (!(process.env.TESSERACT_ADMIN_KEY ?? "").trim()) {
+    res.status(503).json({ ok: false, error: "sovereign-unconfigured" });
+    return;
+  }
+  const auth = resolveFatherAuthorization(req);
+  if (!auth.fatherAuthorized) {
+    res.status(401).json({ ok: false, error: "father-auth-required" });
+    return;
+  }
+
   const mode = (req.body?.mode === "full" ? "full" : "smoke") as EvolutionMode;
   const topic = typeof req.body?.topic === "string" ? req.body.topic : undefined;
   const smokeSpeakers = typeof req.body?.smokeSpeakers === "number" ? req.body.smokeSpeakers : undefined;
-
+  const rounds = typeof req.body?.rounds === "number" ? req.body.rounds : undefined;
   const startedAt = new Date().toISOString();
-  const promise = convene({ mode, topic, smokeSpeakers });
-  promise.catch(err => logger.error({ err }, "grand-evolution convene failed"));
 
   try {
-    const session = await promise;
-    res.json({ ok: true, data: { startedAt, session } });
+    const session = await convene({ mode, topic, smokeSpeakers, rounds });
+    res.json({ ok: true, fatherAuthorized: true, data: { startedAt, session } });
   } catch (err) {
-    res.status(500).json({ ok: false, error: (err as Error).message });
+    logger.error({ err }, "grand-evolution convene failed");
+    res.status(500).json({ ok: false, error: "grand-evolution-failed" });
   }
 });
 

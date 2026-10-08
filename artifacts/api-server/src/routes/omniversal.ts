@@ -13,17 +13,6 @@ import { runSacredConference, getSacredConference } from "../lib/sacred-conferen
 
 const router: IRouter = Router();
 
-function omitSurfacePreview(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map((item) => omitSurfacePreview(item));
-  if (!value || typeof value !== "object") return value;
-  const out: Record<string, unknown> = {};
-  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
-    if (key === "surfacePreview") continue;
-    out[key] = omitSurfacePreview(child);
-  }
-  return out;
-}
-
 // === Cosmic context ===
 router.get("/omniversal/cosmic-context", (_req, res) => {
   res.json({ ok: true, context: cosmicContext() });
@@ -162,7 +151,7 @@ router.post("/omniversal/conference/run", publicWriteRateLimit, async (req, res)
     const topic = typeof req.body?.topic === "string" ? req.body.topic : undefined;
     const seed = typeof req.body?.seed === "string" ? req.body.seed : undefined;
     const result = await runSacredConference({ topic, seed });
-    res.json(omitSurfacePreview(withoutSigilFingerprint({ ok: true, conference: result })));
+    res.json(withoutSigilFingerprint({ ok: true, conference: result }));
   } catch (e: any) {
     res.status(500).json({ ok: false, error: e?.message ?? String(e) });
   }
@@ -170,7 +159,7 @@ router.post("/omniversal/conference/run", publicWriteRateLimit, async (req, res)
 router.get("/omniversal/conference/:id", async (req, res) => {
   const result = await getSacredConference(String(req.params.id));
   if (!result) { res.status(404).json({ ok: false, error: "not found" }); return; }
-  res.json(omitSurfacePreview(withoutSigilFingerprint({ ok: true, conference: result })));
+  res.json(withoutSigilFingerprint({ ok: true, conference: result }));
 });
 
 // === Demo / smoke test ===
