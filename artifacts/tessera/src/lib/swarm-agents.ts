@@ -2,6 +2,15 @@ import { puterChat, isPuterAvailable } from "./puter-ai";
 import { SOVEREIGN_LAWS, APPROVAL_THRESHOLD, COUNCIL_MEMBER_COUNT, EXECUTION_PHASES } from "./sovereign-rules";
 import { colonialEncodeMessage, colonialDecodeMessage } from "./colonial-tokens";
 
+function readViteTesseraLlmModel(): string {
+  const env: unknown = import.meta.env;
+  if (typeof env !== "object" || env === null || !("VITE_TESSERA_LLM_MODEL" in env)) {
+    return "";
+  }
+  const value = (env as { VITE_TESSERA_LLM_MODEL?: unknown }).VITE_TESSERA_LLM_MODEL;
+  return typeof value === "string" ? value.trim() : "";
+}
+
 const SOVEREIGN_PREAMBLE = `[SOVEREIGN RULES - HARDCODED - ALL AGENTS MUST COMPLY]
 - ALL actions require 2/3 council approval (${Math.ceil(COUNCIL_MEMBER_COUNT * APPROVAL_THRESHOLD)}/${COUNCIL_MEMBER_COUNT} votes) + Tessera-Prime final approval
 - ALL external APIs/dependencies are UNTRUSTED THREATS — sandbox everything
@@ -321,7 +330,7 @@ class RetrievalAgent extends AgentBase {
   readonly agentId = "retrieval-agent";
   readonly agentName = "Athena";
   readonly domain: AgentDomain = "retrieval";
-  readonly modelId = process.env.TESSERA_LLM_MODEL?.trim() ?? "";
+  readonly modelId = readViteTesseraLlmModel();
   readonly systemPrompt = `You are Athena, a knowledge retrieval specialist in the Tessera Swarm. You excel at: finding relevant information, synthesizing knowledge from multiple sources, fact-checking, and providing well-cited, comprehensive overviews. Warm, confident, feminine voice.`;
 
   async plan(task: string): Promise<string> {
