@@ -1,0 +1,10 @@
+{
+  "name": "replit",
+  "displayName": "Replit",
+  "description": "Build, update, and publish Replit apps from Cursor / Grok Bot.",
+  "version": "0.1.0",
+  "license": "MIT",
+  "author": { "name": "Replit" },
+  "homepage": "https://replit.com",
+  "repository": "https://github.com/replit/replit-cursor-plugin"
+}

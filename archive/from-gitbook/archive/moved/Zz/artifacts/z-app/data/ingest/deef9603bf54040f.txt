@@ -1,0 +1,45 @@
+Step 3.1 — Input Gathering and Preprocessing + embedded reason() calls
+
+Purpose:
+Convert raw sensory and inner-speech signals into a composite, μ/A-conditioned workspace packet that downstream stages can reliably consume.
+
+Substeps:
+
+1) Encode sensory streams
+   - vision → zv (scene graph, salience map, objects, relations)
+   - audio → za (ASR text, speaker, prosody/affect cues)
+   - proprioception → zp (pose, forces, kinematics)
+   - reason(): choose encoder detail and frame stride based on μ: 
+     - If NE high → prioritize low-latency encodings; reduce spatial detail.
+     - If A_beauty high and NE low → increase visual detail; retain fine texture cues.
+     - If OXT high → emphasize voice/prosocial cues in za.
+
+2) Cross-modal associative binding
+   - Produce associative snippets (who/what/where, affordances, social signals).
+   - reason(): select binding operators given context:
+     - If DA high → allow broader entity linking (exploration).
+     - If 5HT high → suppress speculative links; prefer high-confidence bindings.
+
+3) Inner speech merge
+   - Combine prior inner speech with za text and associative snippets into input_text.
+   - reason(): budget-aware pruning:
+     - If NE high or time budget tight → compress to task-relevant clauses.
+     - Maintain identity-coherence anchors (self, goals) to avoid drift.
+
+4) Short narrative and memory peek
+   - Retrieve brief autobiographical summary and K nearest memory refs (by similarity/time/goal).
+   - reason(): retrieval biasing:
+     - If A_empathy/OXT high → up-rank prosocial episodes.
+     - If A_beauty high → up-rank aesthetic learning episodes.
+     - Enforce 5HT safety cap: exclude risky precedents unless explicitly needed.
+
+5) Construct workspace packet
+   - Fields: {zv, za, zp, assoc_snippets, input_text, narrative, mem_refs, goals, z_self, μ, A, budgets}.
+   - reason(): compute per-stage budgets (tokens, candidates, depth) from μ:
+     - NE↑ → shorter tokens, narrower beams, deeper single-path checks.
+     - DA↑ → more candidates, wider exploration.
+     - HA/ORX low → pre-flag pending sleep/GC handoff.
+
+6) Validate and log
+   - Schema-check packet; attach CFG meta {Node: 3.1, Purpose: InputPrep, μ, A, budgets}.
+   - reason(): fallback strategies on failure (e.g., missing modality → degrade gracefully; reallocate budget to available modalities).

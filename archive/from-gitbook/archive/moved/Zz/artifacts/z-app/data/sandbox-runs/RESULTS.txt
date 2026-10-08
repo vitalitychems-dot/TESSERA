@@ -1,0 +1,11 @@
+Workaround on 2026-10-02. Still a user-and-network namespace, not a virtual machine.
+
+NeuroConscious ran five steps after a wrapper supplied thirst=0.5, which their caller omits. The actions were explore, seek food, seek food, seek food, seek food. Their files were not edited.
+Our neuron was compiled with rustc and no crates. It printed fires=1.
+Brain-Cog's neuron file imports PyTorch, which is not installed, so their spike code was not run. The compiled stand-in above is the replacement.
+Hyperon's compiled module is still missing. The local pattern match remains the replacement.
+HumanBrain's crates were not downloaded. The compiled neuron is the replacement.
+BrainSimII still has no .NET runtime. The local link step remains the replacement.
+The blueprint repository still has no program.
+The memory project was not started, because it asks for an OpenAI key, Redis, and Postgres.
+GodelOS imported. Its server was not started.

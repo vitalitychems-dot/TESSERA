@@ -1,0 +1,30 @@
+import { C as require_jsx_runtime } from "../_libs/@tanstack/react-router+[...].mjs";
+import { n as SiteHeader } from "./site-header-Dl38Q0EW.mjs";
+import { t as SiteFooter } from "./site-footer-w4rLOUoS.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/legal.privacy-Q-cbP_2p.js
+var import_jsx_runtime = require_jsx_runtime();
+function Page() {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "min-h-dvh bg-bg text-fg",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteHeader, {}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
+				className: "mx-auto max-w-2xl px-6 pt-8 pb-20",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+					className: "font-display text-4xl font-semibold tracking-wide uppercase",
+					children: "Privacy"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-8 space-y-4 text-sm leading-relaxed text-muted",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "We collect the contact, shipping, and payment details required to fulfill a research order, plus limited device data needed to operate the storefront (cart contents, age gate acknowledgment)." }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Order data is used to pack, ship, support, and prevent prohibited use. We do not sell personal information. Payment details are handled through the checkout session and are not stored on this storefront after the order is placed." }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "You may request access or deletion of account-style records by contacting support. We retain transaction records as required for tax, fraud, and compliance review." })
+					]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteFooter, {})
+		]
+	});
+}
+//#endregion
+export { Page as component };

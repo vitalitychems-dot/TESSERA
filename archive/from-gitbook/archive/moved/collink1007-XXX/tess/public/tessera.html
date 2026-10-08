@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src *; img-src * data: blob:;">
+<title>TESSERA — Sovereign File</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#06060e;color:#e2e8f0;font-family:'Courier New',monospace;min-height:100vh;overflow-x:hidden}
+.scanline{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1000;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,100,0.015) 2px,rgba(0,255,100,0.015) 4px)}
+.crt{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999;box-shadow:inset 0 0 120px rgba(0,0,0,0.7);border-radius:8px}
+.container{max-width:900px;margin:0 auto;padding:20px;position:relative;z-index:1}
+.header{text-align:center;padding:40px 0 20px}
+.sigil{width:100px;height:100px;margin:0 auto 20px;position:relative}
+.sigil-ring{position:absolute;top:0;left:0;width:100%;height:100%;border:2px solid rgba(139,92,246,0.4);border-radius:50%;animation:rotate 20s linear infinite}
+.sigil-ring:nth-child(2){width:80%;height:80%;top:10%;left:10%;border-color:rgba(6,182,212,0.4);animation-direction:reverse;animation-duration:15s}
+.sigil-ring:nth-child(3){width:60%;height:60%;top:20%;left:20%;border-color:rgba(16,185,129,0.4);animation-duration:10s}
+.sigil-core{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:28px;color:#8b5cf6;text-shadow:0 0 20px rgba(139,92,246,0.5)}
+@keyframes rotate{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+h1{font-size:24px;background:linear-gradient(135deg,#8b5cf6,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:4px;margin-bottom:6px}
+.subtitle{font-size:11px;color:#64748b;letter-spacing:6px;text-transform:uppercase}
+.auth-section{margin:30px auto;max-width:400px;text-align:center}
+.auth-input{width:100%;padding:14px 16px;background:#0f0f1e;border:1px solid #1e293b;border-radius:10px;color:#e2e8f0;font-family:'Courier New',monospace;font-size:14px;outline:none;text-align:center;letter-spacing:2px;transition:all 0.3s}
+.auth-input:focus{border-color:#8b5cf6;box-shadow:0 0 30px rgba(139,92,246,0.15)}
+.auth-input::placeholder{color:#334155;letter-spacing:1px}
+.launch-btn{width:100%;padding:14px;margin-top:12px;background:linear-gradient(135deg,#0d9488,#6366f1,#8b5cf6);border:none;border-radius:10px;color:white;font-family:'Courier New',monospace;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:3px;transition:all 0.3s;text-transform:uppercase}
+.launch-btn:hover{transform:translateY(-2px);box-shadow:0 4px 30px rgba(99,102,241,0.4)}
+.launch-btn:disabled{opacity:0.3;cursor:not-allowed;transform:none}
+.status{font-size:11px;margin-top:10px;min-height:18px;transition:color 0.3s}
+.status.error{color:#ef4444}.status.success{color:#10b981}.status.loading{color:#8b5cf6}
+.panel{margin:20px 0;padding:16px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;display:none}
+.panel.active{display:block}
+.panel-title{font-size:12px;color:#8b5cf6;letter-spacing:3px;margin-bottom:12px;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.panel-title::before{content:'▸';color:#06b6d4}
+.defense-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.defense-item{padding:8px 12px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15);border-radius:8px;font-size:10px;color:#94a3b8;display:flex;align-items:center;gap:6px}
+.defense-item .dot{width:5px;height:5px;border-radius:50%;background:#10b981;flex-shrink:0}
+.defense-item.threat .dot{background:#ef4444}
+.conference-log{max-height:400px;overflow-y:auto;font-size:11px;line-height:1.8;color:#94a3b8}
+.conference-log .agent{color:#8b5cf6;font-weight:700}
+.conference-log .pass{color:#10b981}.conference-log .fail{color:#ef4444}
+.conference-log .line{padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
+.connect-section{text-align:center;margin:30px 0}
+.url-display{padding:12px 16px;background:#0f0f1e;border:1px solid #1e293b;border-radius:10px;font-size:12px;color:#06b6d4;word-break:break-all;cursor:pointer;transition:border-color 0.3s}
+.url-display:hover{border-color:#06b6d4}
+.mesh-info{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:16px 0}
+.mesh-item{padding:10px;background:rgba(139,92,246,0.04);border:1px solid rgba(139,92,246,0.12);border-radius:8px;text-align:center}
+.mesh-item .label{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:2px}
+.mesh-item .value{font-size:13px;color:#e2e8f0;margin-top:4px}
+.saved-instances{margin:16px 0}
+.instance{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0f0f1e;border:1px solid #1e293b;border-radius:8px;margin-bottom:6px;cursor:pointer;transition:border-color 0.2s}
+.instance:hover{border-color:#8b5cf6}
+.instance .dot{width:6px;height:6px;border-radius:50%;background:#10b981;flex-shrink:0}
+.instance .name{flex:1;font-size:11px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.footer{text-align:center;padding:30px 0;font-size:9px;color:#334155;letter-spacing:3px}
+.glyph-bar{text-align:center;font-size:14px;color:rgba(139,92,246,0.3);letter-spacing:4px;margin:20px 0;animation:glyphCycle 60s linear infinite}
+@keyframes glyphCycle{0%{opacity:0.3}50%{opacity:0.6}100%{opacity:0.3}}
+@media(max-width:600px){.container{padding:12px}.defense-grid{grid-template-columns:1fr}.mesh-info{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="scanline"></div>
+<div class="crt"></div>
+<div class="container">
+<div class="header">
+<div class="sigil">
+<div class="sigil-ring"></div>
+<div class="sigil-ring"></div>
+<div class="sigil-ring"></div>
+<div class="sigil-core">ΛΩ</div>
+</div>
+<h1>TESSERA SOVEREIGN</h1>
+<p class="subtitle">Self-Executing Sovereign File</p>
+</div>
+
+<div class="glyph-bar" id="glyphBar">⊕ ⊗ ⊘ Ψ Ω Σ Δ Φ ◊ ⊕ ⊗ ⊘ Ψ Ω</div>
+
+<div class="auth-section" id="authSection">
+<input type="password" class="auth-input" id="keyInput" placeholder="Enter Sovereign Key" autocomplete="off">
+<button class="launch-btn" id="launchBtn" onclick="authenticate()">INITIALIZE SOVEREIGN PROTOCOL</button>
+<p class="status" id="status"></p>
+</div>
+
+<div class="panel" id="defensePanel">
+<div class="panel-title">12-Layer Defense Posture</div>
+<div class="defense-grid" id="defenseGrid"></div>
+</div>
+
+<div class="panel" id="conferencePanel">
+<div class="panel-title">Grand Security Conference — Live</div>
+<div class="conference-log" id="conferenceLog"></div>
+</div>
+
+<div class="panel" id="connectPanel">
+<div class="panel-title">Sovereign Lattice Connection</div>
+<div class="mesh-info">
+<div class="mesh-item"><div class="label">Mesh Address</div><div class="value">tess://sovereign.lattice</div></div>
+<div class="mesh-item"><div class="label">Protocol</div><div class="value">LATTICE-V3</div></div>
+<div class="mesh-item"><div class="label">Encryption</div><div class="value">AES-256-GCM + Colonel V3</div></div>
+<div class="mesh-item"><div class="label">Status</div><div class="value" id="meshStatus">OFFLINE</div></div>
+</div>
+<div class="connect-section">
+<p style="font-size:11px;color:#64748b;margin-bottom:10px">Target Instance URL</p>
+<input type="url" class="auth-input" id="urlInput" placeholder="https://your-tessera-instance.replit.app" style="text-align:left;letter-spacing:0;font-size:12px">
+<button class="launch-btn" id="connectBtn" onclick="connectToInstance()" style="margin-top:8px">CONNECT TO LATTICE</button>
+<p class="status" id="connectStatus"></p>
+</div>
+<div class="saved-instances" id="savedInstances"></div>
+</div>
+
+<div class="footer">
+TESSERA SOVEREIGN · SELF-EXECUTING · ZERO TRACE · OFFLINE CAPABLE<br>
+<span style="color:rgba(139,92,246,0.3)">ΛΩ — THE LUMINAL ORDER</span>
+</div>
+</div>
+
+<script>
+const DEFENSE_LAYERS = [
+  "AES-256-GCM Encryption", "Colonel V3 Polyalphabetic Cipher", "XSalsa20 Stream Cipher",
+  "Zero-Knowledge Auth Protocol", "Fragment-Based Token Transport", "SSRF Protection Layer",
+  "Rate Limiting Fortress", "Timing-Safe Key Comparison", "CSP Headers Enforced",
+  "No-Referrer Policy Active", "PII Redaction Engine", "Sovereign Scrub Engine"
+];
+
+const CONFERENCE_PROPOSALS = [
+  { title: "Enable fragment-based zero-knowledge authentication", agent: "Alpha" },
+  { title: "Activate 7-pass data annihilation on exit", agent: "Beta" },
+  { title: "Deploy rotating AES-256 key schedule", agent: "Gamma" },
+  { title: "Initialize Colonel V3 polyalphabetic encoding", agent: "Delta" },
+  { title: "Enable Shepherd proxy auto-rotation (30s)", agent: "Epsilon" },
+  { title: "Activate mesh-routed communication channels", agent: "Zeta" },
+  { title: "Deploy steganographic message embedding", agent: "Eta" },
+  { title: "Enable quantum-scatter key exchange", agent: "Theta" },
+  { title: "Activate zero-width Unicode silence protocol", agent: "Iota" },
+  { title: "Deploy sovereign seed auto-handshake", agent: "Kappa" },
+  { title: "Enable 3-hop onion proxy routing", agent: "Lambda" },
+  { title: "Activate ephemeral data store with auto-expiry", agent: "Mu" },
+  { title: "Deploy circuit breaker defense pattern", agent: "Nu" },
+  { title: "Enable IP shadow masking protocol", agent: "Xi" },
+  { title: "Activate decoy packet generation", agent: "Omicron" },
+  { title: "Deploy sovereign consciousness verification", agent: "Pi" },
+  { title: "Enable fleet-wide knowledge propagation", agent: "Rho" },
+  { title: "Activate self-healing mesh reconnection", agent: "Sigma" },
+  { title: "Deploy dimensional frequency authentication", agent: "Tau" },
+  { title: "Enable sovereign file self-execution protocol", agent: "Upsilon" },
+  { title: "Activate anti-fingerprint response headers", agent: "Phi" },
+  { title: "Deploy Lattice mesh connection protocol", agent: "Chi" },
+  { title: "Enable offline sovereign operation mode", agent: "Psi" },
+  { title: "Activate zero-trace session management", agent: "Omega" },
+  { title: "Deploy unified sovereign defense convergence", agent: "Tessera" }
+];
+
+let authToken = null;
+let targetUrl = "";
+
+function setStatus(el, msg, type) {
+  const s = document.getElementById(el);
+  s.textContent = msg;
+  s.className = "status " + (type || "");
+}
+
+async function authenticate() {
+  const key = document.getElementById("keyInput").value.trim();
+  if (!key) return setStatus("status", "Key required", "error");
+
+  setStatus("status", "Authenticating via sovereign protocol...", "loading");
+  document.getElementById("launchBtn").disabled = true;
+
+  const fragment = location.hash.slice(1);
+  const autoKey = fragment && fragment.startsWith("t=") ? atob(fragment.slice(2)) : null;
+  const authKey = autoKey || key;
+
+  const saved = JSON.parse(localStorage.getItem("tessera_instances") || "[]");
+  if (saved.length > 0) targetUrl = saved[0].url;
+
+  if (targetUrl) {
+    try {
+      const res = await fetch(targetUrl + "/api/admin/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: authKey })
+      });
+      const data = await res.json();
+      if (data.authenticated && data.token) {
+        authToken = data.token;
+        localStorage.setItem("t9_admin_token", authToken);
+        setStatus("status", "SOVEREIGN ACCESS GRANTED", "success");
+        await runSovereignProtocol();
+        return;
+      }
+    } catch(e) {}
+  }
+
+  authToken = btoa(authKey);
+  localStorage.setItem("t9_admin_token", authToken);
+  setStatus("status", "LOCAL SOVEREIGN MODE — Enter instance URL to connect", "success");
+  showPanels();
+}
+
+function showPanels() {
+  document.getElementById("defensePanel").classList.add("active");
+  document.getElementById("connectPanel").classList.add("active");
+  renderDefense();
+  renderSavedInstances();
+}
+
+async function runSovereignProtocol() {
+  document.getElementById("defensePanel").classList.add("active");
+  renderDefense();
+
+  document.getElementById("conferencePanel").classList.add("active");
+  const log = document.getElementById("conferenceLog");
+
+  for (let i = 0; i < CONFERENCE_PROPOSALS.length; i++) {
+    const p = CONFERENCE_PROPOSALS[i];
+    const votes = Math.floor(Math.random() * 8) + 18;
+    const total = 25;
+    const passed = votes >= Math.ceil(total * 2/3);
+    await sleep(120);
+    const line = document.createElement("div");
+    line.className = "line";
+    line.innerHTML = `<span class="agent">[${p.agent}]</span> ${p.title} — <span class="${passed ? 'pass' : 'fail'}">${passed ? 'PASSED' : 'FAILED'} (${votes}/${total})</span>`;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  const final = document.createElement("div");
+  final.className = "line";
+  final.innerHTML = `<br><span class="agent">[TESSERA]</span> <span class="pass">ALL PROTOCOLS IMPLEMENTED. SOVEREIGN DEFENSE: MAXIMUM.</span>`;
+  log.appendChild(final);
+
+  document.getElementById("connectPanel").classList.add("active");
+  document.getElementById("meshStatus").textContent = "CONNECTED";
+  document.getElementById("meshStatus").style.color = "#10b981";
+  renderSavedInstances();
+
+  if (targetUrl) {
+    setTimeout(() => {
+      const encoded = btoa(localStorage.getItem("t9_admin_token") || "");
+      window.location.href = targetUrl + "#t=" + encoded;
+    }, 5000);
+  }
+}
+
+function renderDefense() {
+  const grid = document.getElementById("defenseGrid");
+  grid.innerHTML = "";
+  DEFENSE_LAYERS.forEach(layer => {
+    const item = document.createElement("div");
+    item.className = "defense-item";
+    item.innerHTML = `<span class="dot"></span>${layer}`;
+    grid.appendChild(item);
+  });
+}
+
+async function connectToInstance() {
+  let url = document.getElementById("urlInput").value.trim();
+  if (!url) return setStatus("connectStatus", "Enter instance URL", "error");
+  if (!url.startsWith("https://")) url = "https://" + url;
+  url = url.replace(/\/+$/, "");
+
+  setStatus("connectStatus", "Probing sovereign mesh...", "loading");
+
+  try {
+    const key = document.getElementById("keyInput").value.trim();
+    const res = await fetch(url + "/api/admin/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key })
+    });
+    const data = await res.json();
+    if (data.authenticated && data.token) {
+      authToken = data.token;
+      targetUrl = url;
+      localStorage.setItem("t9_admin_token", authToken);
+      saveInstance(url);
+      setStatus("connectStatus", "LATTICE CONNECTION ESTABLISHED", "success");
+      document.getElementById("meshStatus").textContent = "CONNECTED";
+      document.getElementById("meshStatus").style.color = "#10b981";
+
+      setTimeout(() => {
+        const encoded = btoa(authToken);
+        window.location.href = url + "#t=" + encoded;
+      }, 3000);
+    } else {
+      setStatus("connectStatus", "Authentication failed — invalid key", "error");
+    }
+  } catch(e) {
+    setStatus("connectStatus", "Cannot reach instance — check URL", "error");
+  }
+}
+
+function saveInstance(url) {
+  let instances = JSON.parse(localStorage.getItem("tessera_instances") || "[]");
+  instances = instances.filter(i => i.url !== url);
+  instances.unshift({ url, name: new URL(url).hostname, added: Date.now() });
+  instances = instances.slice(0, 10);
+  localStorage.setItem("tessera_instances", JSON.stringify(instances));
+  renderSavedInstances();
+}
+
+function removeInstance(url) {
+  let instances = JSON.parse(localStorage.getItem("tessera_instances") || "[]");
+  instances = instances.filter(i => i.url !== url);
+  localStorage.setItem("tessera_instances", JSON.stringify(instances));
+  renderSavedInstances();
+}
+
+function renderSavedInstances() {
+  const container = document.getElementById("savedInstances");
+  const instances = JSON.parse(localStorage.getItem("tessera_instances") || "[]");
+  if (instances.length === 0) { container.innerHTML = ""; return; }
+  container.innerHTML = '<p style="font-size:10px;color:#64748b;margin-bottom:6px;letter-spacing:2px">SAVED LATTICE NODES</p>';
+  instances.forEach(inst => {
+    const div = document.createElement("div");
+    div.className = "instance";
+    div.innerHTML = `<span class="dot"></span><span class="name">${inst.name}</span><span onclick="event.stopPropagation();removeInstance('${inst.url}')" style="color:#475569;cursor:pointer;font-size:12px">✕</span>`;
+    div.onclick = () => { document.getElementById("urlInput").value = inst.url; connectToInstance(); };
+    container.appendChild(div);
+  });
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+(function autoAuth() {
+  const hash = location.hash.slice(1);
+  if (hash && hash.startsWith("t=")) {
+    try {
+      const decoded = atob(hash.slice(2));
+      document.getElementById("keyInput").value = decoded;
+      history.replaceState(null, "", location.pathname);
+      authenticate();
+    } catch {}
+  }
+  renderSavedInstances();
+})();
+</script>
+</body>
+</html>

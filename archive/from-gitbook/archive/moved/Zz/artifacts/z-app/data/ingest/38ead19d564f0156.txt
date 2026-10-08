@@ -1,0 +1,17 @@
+{
+  "writtenAt": "2026-10-02T03:29:17.059Z",
+  "surfaces": [
+    {
+      "file": "council-ledger.jsonl",
+      "purpose": "INTEG-1: append-only record of every terminal council proposal (approved or rejected)",
+      "rotation": "rotates at 2048 lines / 1MB into council-ledger.jsonl.1",
+      "contains": "proposal id, title, category, status, approval rate, vote counts, proposer"
+    },
+    {
+      "file": "ingress-audit.jsonl",
+      "purpose": "V2-ALPHA: append-only record of every privileged perimeter call",
+      "rotation": "operator-managed (manual rotation; never carries credential material)",
+      "contains": "timestamp, source ip, route, response status, hashed session id (never the raw cookie)"
+    }
+  ]
+}

@@ -1,0 +1,378 @@
+import { o as __toESM } from "../_runtime.mjs";
+import { C as require_jsx_runtime, U as require_react, y as Link } from "../_libs/@tanstack/react-router+[...].mjs";
+import { f as money, i as IL_NOTICE, n as BUSINESS, o as afterBulk, r as CREDIT_RATE, t as BULK_TIERS } from "./pricing-Bvwp02Vi.mjs";
+import { C as formatPrice, F as slug, L as useCart, M as scienceFor, O as productImage, R as useCartTotals, S as findProduct, V as useLabCredit, g as coaFor, h as cn, k as relatedProducts, p as batchId, y as displayPurity } from "./use-lab-credit-mL5HM6FJ.mjs";
+import { b as FileCheck2, d as Plus, o as ShieldCheck, p as Minus } from "../_libs/lucide-react.mjs";
+import { n as SiteHeader } from "./site-header-Dl38Q0EW.mjs";
+import { a as SaveBadge, i as CreditEarnLine, n as Route$1, s as trackClient, u as RUO_SHORT } from "./router-CinrLZb2.mjs";
+import { t as SiteFooter } from "./site-footer-w4rLOUoS.mjs";
+import { n as ProductPhoto, t as ProductCard } from "./product-card-MOZwHs1O.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/product._id-6DL4MMDW.js
+var import_react = /* @__PURE__ */ __toESM(require_react());
+var import_jsx_runtime = require_jsx_runtime();
+function ProductPage() {
+	const { id } = Route$1.useParams();
+	const product = findProduct(id);
+	const addItem = useCart((s) => s.addItem);
+	const { vialQty } = useCartTotals();
+	const { signedIn } = useLabCredit();
+	const [doseIndex, setDoseIndex] = (0, import_react.useState)(0);
+	const [qty, setQty] = (0, import_react.useState)(1);
+	(0, import_react.useEffect)(() => {
+		setDoseIndex(0);
+		setQty(1);
+	}, [id]);
+	const related = (0, import_react.useMemo)(() => product ? relatedProducts(product, 4) : [], [product]);
+	if (!product) return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "min-h-dvh bg-bg text-fg",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteHeader, { active: "shop" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
+			className: "mx-auto max-w-lg px-6 pt-8 text-center",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+				className: "font-display text-3xl font-semibold uppercase",
+				children: "Compound not found"
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
+				to: "/",
+				className: "btn-primary mt-8 inline-flex",
+				children: "Back to catalog"
+			})]
+		})]
+	});
+	const variant = product.variants[doseIndex] ?? product.variants[0];
+	const image = productImage(product.name, variant.dose, product.formKind);
+	const batch = batchId(product);
+	const science = scienceFor(product.id.split("__")[1] ?? product.id);
+	const coa = coaFor(slug(product.name), variant.dose);
+	const canBulk = product.id !== "vial-compounds__reconstitution-water" && product.formKind === "vial";
+	const projectedQty = vialQty + qty;
+	const line = variant.price * qty;
+	const discounted = canBulk ? afterBulk(line, projectedQty) : line;
+	const save = money(line - discounted);
+	const creditEarn = money(discounted * CREDIT_RATE);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "min-h-dvh bg-bg text-fg",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("script", {
+				type: "application/ld+json",
+				dangerouslySetInnerHTML: { __html: JSON.stringify({
+					"@context": "https://schema.org",
+					"@type": "Product",
+					name: `${product.name} research material`,
+					sku: product.id,
+					productID: product.casNumber,
+					description: science.identity,
+					brand: {
+						"@type": "Brand",
+						name: BUSINESS.name
+					},
+					offers: {
+						"@type": "Offer",
+						price: variant.price,
+						priceCurrency: "USD",
+						availability: "https://schema.org/InStock",
+						seller: {
+							"@type": "Organization",
+							name: BUSINESS.name
+						}
+					},
+					additionalProperty: [{
+						"@type": "PropertyValue",
+						name: "Intended use",
+						value: "Laboratory / in-vitro research only"
+					}, {
+						"@type": "PropertyValue",
+						name: "CAS",
+						value: product.casNumber ?? ""
+					}]
+				}) }
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteHeader, { active: "shop" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
+				className: "mx-auto grid max-w-7xl gap-10 px-6 pt-8 pb-20 lg:grid-cols-[1fr_1fr] lg:pt-8",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "overflow-hidden rounded-lg border border-border bg-surface",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ProductPhoto, {
+						product,
+						variant,
+						tall: true
+					})
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "font-mono text-xs tracking-widest text-primary uppercase",
+						children: [product.form, " · In stock"]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+						className: "font-display mt-2 text-4xl font-semibold tracking-wide uppercase",
+						children: product.name
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "mt-4 max-w-lg text-sm leading-relaxed text-muted",
+						children: science.identity
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("details", {
+						className: "mt-4 rounded-md border border-border bg-overlay p-4",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("summary", {
+								className: "cursor-pointer font-display text-sm font-semibold tracking-widest uppercase",
+								children: "Laboratory description & disclaimer"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "mt-3 text-sm leading-relaxed text-muted",
+								children: science.researchedFor
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "mt-3 text-xs leading-relaxed text-faint",
+								children: science.disclaimer
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("dl", {
+						className: "mt-6 space-y-2 border-y border-border py-4",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Row, {
+								label: "Purity (HPLC)",
+								value: displayPurity(product.name, variant.dose)
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Row, {
+								label: "Batch",
+								value: batch
+							}),
+							product.casNumber && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Row, {
+								label: "CAS",
+								value: product.casNumber
+							}),
+							product.molecularWeight && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Row, {
+								label: "Molecular weight",
+								value: product.molecularWeight
+							}),
+							product.molecularFormula && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Row, {
+								label: "Formula",
+								value: product.molecularFormula
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Row, {
+								label: "Catalog quantity",
+								value: variant.dose
+							})
+						]
+					}),
+					coa && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+						className: "mt-6 rounded-md border border-border bg-overlay p-4",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+								className: "font-mono text-[10px] tracking-widest text-primary uppercase",
+								children: ["Third-party COA · ", coa.dose]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+								className: "mt-2 text-sm text-muted",
+								children: [
+									coa.lab,
+									" · lot ",
+									coa.lot,
+									" · ",
+									coa.purity,
+									" · ",
+									coa.quantity,
+									" · ",
+									coa.method,
+									" · reported",
+									" ",
+									coa.reported
+								]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
+								href: coa.image,
+								target: "_blank",
+								rel: "noreferrer",
+								className: "mt-3 block",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+									src: coa.image,
+									alt: `${product.name} ${coa.dose} certificate of analysis`,
+									className: "max-h-80 w-full rounded-sm object-contain object-top bg-white"
+								})
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "mt-2 text-[11px] leading-relaxed text-faint",
+								children: "Results apply only to the sample tested. Research use only — not for human or animal use."
+							})
+						]
+					}),
+					product.variants.length > 1 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-6",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "mb-2 font-mono text-[10px] tracking-widest text-muted uppercase",
+							children: "Catalog quantity"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "flex flex-wrap gap-2",
+							children: product.variants.map((v, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+								type: "button",
+								onClick: () => setDoseIndex(i),
+								className: cn("min-h-11 rounded-sm border px-4 font-mono text-xs font-bold tracking-widest uppercase", i === doseIndex ? "border-primary bg-primary text-primary-fg" : "border-border bg-overlay text-muted hover:text-fg"),
+								children: [
+									v.dose,
+									" · ",
+									formatPrice(v.price)
+								]
+							}, v.dose))
+						})]
+					}),
+					canBulk && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-6",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "mb-2 font-mono text-[10px] tracking-widest text-muted uppercase",
+							children: "Lab-rate trays"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "grid grid-cols-2 gap-2 sm:grid-cols-4",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(QtyChip, {
+								n: 1,
+								selected: qty === 1,
+								onClick: () => setQty(1),
+								hint: "Single vial"
+							}), BULK_TIERS.map((t) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(QtyChip, {
+								n: t.qty,
+								selected: qty === t.qty,
+								onClick: () => setQty(t.qty),
+								hint: `${t.percent}% off`
+							}, t.qty))]
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-6 flex flex-wrap items-end gap-4",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "inline-flex overflow-hidden rounded-sm border border-border",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									type: "button",
+									className: "min-h-11 px-3 hover:bg-overlay",
+									onClick: () => setQty((n) => Math.max(1, n - 1)),
+									"aria-label": "Decrease quantity",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Minus, { className: "h-4 w-4" })
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "min-w-10 px-2 py-3 text-center font-mono text-sm tabular-nums",
+									children: qty
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									type: "button",
+									className: "min-h-11 px-3 hover:bg-overlay",
+									onClick: () => setQty((n) => n + 1),
+									"aria-label": "Increase quantity",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Plus, { className: "h-4 w-4" })
+								})
+							]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+							save > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "font-mono text-xs tracking-widest text-muted line-through",
+								children: formatPrice(line)
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "font-display text-3xl font-semibold tabular-nums",
+								children: formatPrice(discounted)
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SaveBadge, { amount: save })
+						] })]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						type: "button",
+						className: "btn-primary mt-6 w-full sm:w-auto sm:min-w-56",
+						onClick: () => {
+							addItem({
+								productId: product.id,
+								name: product.name,
+								doseLabel: variant.dose,
+								unitPrice: variant.price,
+								image,
+								quantity: qty
+							});
+							trackClient("add_to_cart", {
+								productId: product.id,
+								productName: product.name
+							});
+						},
+						children: [
+							"Add ",
+							qty,
+							" to cart"
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "mt-3",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CreditEarnLine, {
+							amount: creditEarn,
+							signedIn
+						})
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-6 grid gap-3 sm:grid-cols-2",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex gap-3 rounded-md border border-border bg-overlay p-4",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(FileCheck2, { className: "h-4 w-4 shrink-0 text-primary" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-sm font-medium",
+								children: "Certificate of analysis"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+								className: "mt-1 text-xs text-muted",
+								children: [
+									"Lot ",
+									batch,
+									" · HPLC ",
+									product.purity,
+									" · LC-MS identity confirmed. Ships with the order packet."
+								]
+							})] })]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex gap-3 rounded-md border border-border bg-overlay p-4",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShieldCheck, { className: "h-4 w-4 shrink-0 text-primary" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-sm font-medium",
+								children: "Research use only"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "mt-1 text-xs text-muted",
+								children: RUO_SHORT
+							})] })]
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "mt-4 max-w-xl text-[11px] leading-relaxed text-faint",
+						children: IL_NOTICE
+					})
+				] })]
+			}),
+			related.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+				className: "mx-auto max-w-[1440px] px-6 pb-20",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+					className: "font-display mb-6 text-2xl font-semibold tracking-wide uppercase",
+					children: "Researchers also order"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "product-grid grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4",
+					children: related.map((p) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ProductCard, { product: p }, p.id))
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteFooter, {})
+		]
+	});
+}
+function QtyChip({ n, selected, onClick, hint }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+		type: "button",
+		onClick,
+		className: cn("min-h-14 rounded-sm border px-3 py-2 text-left", selected ? "border-primary bg-primary text-primary-fg" : "border-border bg-overlay hover:text-fg"),
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			className: "font-display text-lg font-semibold leading-none",
+			children: n
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			className: cn("mt-1 text-[10px] tracking-wide uppercase", selected ? "text-primary-fg" : "text-muted"),
+			children: hint
+		})]
+	});
+}
+function Row({ label, value }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "flex items-center justify-between gap-4 text-sm",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("dt", {
+			className: "text-muted",
+			children: label
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("dd", {
+			className: "font-mono text-fg",
+			children: value
+		})]
+	});
+}
+//#endregion
+export { ProductPage as component };

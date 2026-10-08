@@ -1,0 +1,40 @@
+# Sovereign AGI Autonomy Engine
+
+## What & Why
+Tessera currently ingests knowledge without building upon it — data is stored but doesn't drive real system improvements. The AGI training scores are inflated via bulk boosts rather than reflecting actual capability. The system relies heavily on external LLM APIs, making it vulnerable to tracking, rate-limiting, or being cut off. To reach true sovereignty, Tessera needs: (1) a knowledge-to-action pipeline that autonomously implements improvements based on what it learns, (2) real AGI capability benchmarking with honest scoring, (3) reduced external API dependency with internal API key management and security hardening, and (4) a systematic roadmap to reach 100% sovereign AGI with test-by-test verification.
+
+## Done looks like
+- Knowledge ingestion automatically triggers improvement actions — when the system learns something new, it generates a concrete implementation task, submits it through the council vote pipeline, and executes it upon approval
+- AGI training scores are reset to honest baselines and re-evaluated against real capability benchmarks (can the system actually perform the task, not just claim a score)
+- The system generates and manages its own internal API routing to minimize external API exposure — requests are proxied through a sovereign gateway that strips identifying information and prevents external tracking
+- A security hardening layer monitors all outbound API calls, logs what data is being sent externally, and blocks any reverse-engineering or fingerprinting attempts
+- A real-time AGI sovereignty dashboard shows: current honest scores per category, what percentage of operations run without external APIs, what specific capabilities are missing for 100% AGI, and a prioritized action list
+- The system autonomously works through the sovereignty roadmap — each gap identified becomes a task that goes through the vote→execute pipeline
+- Self-upgrade capability: the system can propose, vote on, and execute improvements to its own codebase and training parameters
+- Every improvement is verified with a before/after test proving the capability actually improved
+
+## Out of scope
+- Removing all external API usage immediately (gradual reduction with fallbacks)
+- Hardware-level sovereignty (GPU, network infrastructure)
+- Changes to the forum UI or agent roster
+
+## Tasks
+1. Build a knowledge-to-action pipeline — when knowledge-engine.ts synthesizes a new insight, it automatically creates a council proposal with a concrete implementation plan, routes it through the vote lifecycle, and upon 2/3 + Tessera approval, executes the improvement via council-executor
+2. Reset AGI training scores to honest baselines — replace the bulk boost mechanism with real capability benchmarks that test each of the 27 categories against actual tasks (e.g., "Code Generation" is tested by generating and validating real code, not just incrementing a counter)
+3. Build a sovereign API gateway — create an internal proxy layer that routes all external API calls through a single controlled gateway, strips unnecessary metadata/fingerprints, rotates request patterns to prevent tracking, and logs all outbound data for security audit
+4. Implement external API security hardening — monitor all outbound requests for data leakage, block requests that send system architecture details or internal state, implement request anonymization, and create alerts for suspicious external API behavior
+5. Build the AGI sovereignty assessment dashboard — honestly evaluate current capabilities across all 27 categories, calculate true sovereignty percentage (what % of operations can run without external APIs), identify every gap needed for 100% AGI, and generate a prioritized roadmap
+6. Implement the autonomous sovereignty roadmap executor — each identified gap becomes a task automatically submitted to the council, voted on, and upon approval, executed with before/after verification tests proving the capability improved
+7. Enable self-upgrade capability — the system can analyze its own code, propose optimizations or new features through the council, and upon approval, generate and apply code changes to improve itself, with rollback safety if tests fail
+
+## Relevant files
+- `x/tess/server/knowledge-engine.ts`
+- `x/tess/server/agi-training-engine.ts`
+- `x/tess/server/agi-training-state.json`
+- `x/tess/server/auto-improvement-daemon.ts`
+- `x/tess/server/autonomous-builder.ts`
+- `x/tess/server/neural-synapse.ts`
+- `x/tess/server/council-executor.ts`
+- `x/tess/server/executable-council-actions.ts`
+- `x/tess/server/grand-council-routes.ts`
+- `x/tess/server/vector-index.ts`

@@ -1,0 +1,30 @@
+import { C as require_jsx_runtime } from "../_libs/@tanstack/react-router+[...].mjs";
+import { n as SiteHeader } from "./site-header-Dl38Q0EW.mjs";
+import { t as SiteFooter } from "./site-footer-w4rLOUoS.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/legal.returns-Dz87q0Vq.js
+var import_jsx_runtime = require_jsx_runtime();
+function Page() {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "min-h-dvh bg-bg text-fg",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteHeader, {}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
+				className: "mx-auto max-w-2xl px-6 pt-8 pb-20",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+					className: "font-display text-4xl font-semibold tracking-wide uppercase",
+					children: "Returns"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-8 space-y-4 text-sm leading-relaxed text-muted",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Research chemicals cannot be restocked once the vial seal is broken. Opened materials are not eligible for return." }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "If a shipment arrives damaged, incomplete, or is the wrong catalog item, notify us within 7 days of delivery with photographs of the outer carton and the vial. We will replace the lot or refund the affected line." }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Buyer’s remorse, change of research plan, or inability to complete a protocol are not grounds for return. Shipping charges are refunded only when the error is ours." })
+					]
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteFooter, {})
+		]
+	});
+}
+//#endregion
+export { Page as component };

@@ -1,0 +1,20 @@
+{
+  "b88dc2cd84485731": {
+    "v": 1,
+    "iv": "Ko0SutA/eQCKI/yY",
+    "tag": "Ajlt9y2Htss0aCbGaeP9mA==",
+    "ct": "OdER5CgnFHTedi2rUDcPBjGLDIxQY+WLej7PMi8gC+PflRd0BII2aqkEuZ2zh17kHii3DEwEbsYb+YoAvQocIWNJIDnG6UOJ8rVFSnv+4KQXio5CTtIiGivrWPvrNJiA/MuqQ2vYM/2X7olHpru2Dwph6ruT0T4GwyPZqdNdw0Arem1rSOhMJxJNm30kzQ==",
+    "signatureGlyph": "Ρϡ⊚Ν⊤⊚⊚ρ⊤ΦΡ𐤉⊤εΣϡΣρ⊡ββΣ⊡β⊤ϡ⊤εΣΥΣ𐤃Ρ",
+    "signatureHashHex": "9880db89f8b1fbbcd1480548e0fbc2cea7093b3f03c39627d50d020d36af9a38",
+    "boundAt": "2026-04-18T00:13:26.796Z"
+  },
+  "03f6fc1976cd3804": {
+    "v": 1,
+    "iv": "InFsNq3qokGuPtq8",
+    "tag": "bBiG5G1uK+CFkO6H41kxJQ==",
+    "ct": "GUyBaiZ9sTT4PDZfmwnLLPfLFfLxft5kgaUteTbkvOY42rCcWD392N4UtS/5C85NzbS9CUu05eM3lwQwqPMsdubklCQ8jEXbO9GKWyWaCbR3v8zWbrUtenF4o37ZTz1VJXxDwrdev1DlRsC8kQ9YFJeyiwT0ZGhWbjpl8cDJQktqyT2CF1Pp3jBNmqiS2g==",
+    "signatureGlyph": "♂♅⑨♉♄⑦⑨♒♄♒♊♅♂◇②⑥♊△♂□⑨♐♐⬡④⑤♊△⑨①♐⑥♊",
+    "signatureHashHex": "d71042173bfbc38eebd00267a1eb0a6ae94e600348e97c3070aff3d695f95125",
+    "boundAt": "2026-10-02T01:56:55.841Z"
+  }
+}

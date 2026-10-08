@@ -1,0 +1,16 @@
+ConsciousnessStateRow
+EpisodicMemoryRow
+InsertConsciousnessState
+InsertEpisodicMemory
+InsertProceduralSkill
+InsertSemanticNode
+ProceduralSkillRow
+SemanticNodeRow
+consciousness_episodic_memory
+consciousness_procedural_memory
+consciousness_semantic_graph
+consciousness_state
+insertConsciousnessStateSchema
+insertEpisodicMemorySchema
+insertProceduralSkillSchema
+insertSemanticNodeSchema

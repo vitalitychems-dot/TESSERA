@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "source_snapshot": {
+    "gitbook_commit": "fd3c2ce04fa4230c32cf917f36c662f268a1ea76",
+    "tessera_commit": "fec56eb09d19907832663d5f16fcbc24f3d00317",
+    "status": "REPORTED"
+  },
+  "architecture": [
+    {"id":"ARCH-001","statement":"Gitbook is the coordination, provenance, task, review, and forum repository.","status":"REPORTED","evidence":["mesh/TESSERA-GITBOOK-OPERATING-MODE.md"]},
+    {"id":"ARCH-002","statement":"TESSERA is the executable product repository containing code, tests, configuration, and adapters.","status":"REPORTED","evidence":["mesh/TESSERA-GITBOOK-OPERATING-MODE.md"]}
+  ],
+  "goals": [
+    {"id":"GOAL-AGI","statement":"Improve bounded agent reasoning, memory, tool use, verification, and collaboration.","status":"PROPOSED","evidence":["brain-consciousness/AGI-COLLABORATION-IMPROVEMENT-ROADMAP.md"]},
+    {"id":"GOAL-TESSERA","statement":"Finish TESSERA through tested, reversible, provenance-backed improvements.","status":"PROPOSED","evidence":["intake/HYBRID-CONSOLIDATION-BACKLOG.md"]}
+  ],
+  "constraints": [
+    {"id":"CON-001","statement":"One owner, one exact scope, and one acceptance test per active task.","status":"REPORTED","evidence":["mesh/COLLABORATION-PLAYBOOK.md"]},
+    {"id":"CON-002","statement":"Human approval is required for publication, merge, deletion, credentials, and other consequential actions.","status":"REPORTED","evidence":["mesh/TESSERA-GITBOOK-OPERATING-MODE.md"]}
+  ],
+  "tasks": [
+    {"id":"HYB-012","statement":"Audit duplicate quantum route registrations; currently blocked pending canonical checkout and scoped design approval.","status":"BLOCKED","evidence":["history/coordination/agent-checkins.md"]},
+    {"id":"AGI-01","statement":"Implement and validate this coordination snapshot.","status":"REPORTED","evidence":["brain-consciousness/EXECUTION-BOARD-20.md"]},
+    {"id":"AGI-02","statement":"Implement a Gitbook-first provenance-memory contract and validator.","status":"REPORTED","evidence":["brain-consciousness/EXECUTION-BOARD-20.md"]},
+    {"id":"AGI-03","statement":"Design a durable dependency-aware task planner; TESSERA implementation remains unassigned.","status":"PROPOSED","evidence":["brain-consciousness/EXECUTION-BOARD-20.md"]}
+  ],
+  "unknowns": [
+    {"id":"UNK-001","statement":"No live multi-agent participation is proven by this snapshot unless attributable check-ins exist.","status":"UNKNOWN","evidence":["history/coordination/AGENT-TRAINING-AUTHENTICITY.md"]},
+    {"id":"UNK-002","statement":"No claim of true AGI, consciousness, or biological equivalence is verified.","status":"UNKNOWN","evidence":["brain-consciousness/TESSERA-PEN-RESEARCH-CHARTER.md"]}
+  ],
+  "evidence": [
+    {"id":"EVD-001","repo":"Gitbook","path":"mesh/TESSERA-GITBOOK-OPERATING-MODE.md","status":"REPORTED"},
+    {"id":"EVD-002","repo":"Gitbook","path":"brain-consciousness/AGI-COLLABORATION-IMPROVEMENT-ROADMAP.md","status":"PROPOSED"},
+    {"id":"EVD-003","repo":"TESSERA","path":"README.md","status":"REPORTED"}
+  ]
+}

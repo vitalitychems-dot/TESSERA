@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/tmp/tessera-sb/run_neuro.py", line 13, in <module>
+    action = agent.think()
+  File "/workspace/data/checkouts/NeuroConscious/agent/base_agent.py", line 58, in think
+    self.state.update(delta_time=delta)
+  File "/workspace/data/checkouts/NeuroConscious/core/state.py", line 15, in update
+    self.mood = self.mood_strategy.calculate_mood(self.hunger, self.fatigue)
+TypeError: BasicMoodStrategy.calculate_mood() missing 1 required positional argument: 'thirst'

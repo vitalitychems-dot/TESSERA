@@ -1,0 +1,2061 @@
+import { o as __toESM } from "../_runtime.mjs";
+import { C as require_jsx_runtime, U as require_react, y as Link } from "../_libs/@tanstack/react-router+[...].mjs";
+import { i as IL_NOTICE, l as formatAddress, n as BUSINESS, r as CREDIT_RATE, u as isAdminEmail } from "./pricing-Bvwp02Vi.mjs";
+import { B as useCurrentUserState, C as formatPrice, T as loadAdminDashboard, v as createPromoCode } from "./use-lab-credit-mL5HM6FJ.mjs";
+import { n as SiteHeader, r as UserButton, t as RedirectToSignIn } from "./site-header-Dl38Q0EW.mjs";
+import { i as OUTREACH_EMAIL, n as BACKLINK_TARGETS, r as LONG_TAIL_KEYWORDS, t as AD_ANGLES } from "./growth-Ck3287Q9.mjs";
+import { a as pnlSummary, i as pnlSheet, o as profitTone, r as marginTone, t as AFFILIATE_CREDIT_BASE } from "./wholesale-tiers-g55m-rFS.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/admin-BRGsMA4A.js
+var import_react = /* @__PURE__ */ __toESM(require_react());
+var import_jsx_runtime = require_jsx_runtime();
+var FORMS = [
+	{
+		id: "vial",
+		label: "Vials"
+	},
+	{
+		id: "all",
+		label: "All forms"
+	},
+	{
+		id: "capsule",
+		label: "Capsules"
+	},
+	{
+		id: "spray",
+		label: "Sprays"
+	},
+	{
+		id: "liquid",
+		label: "Liquids"
+	},
+	{
+		id: "topical",
+		label: "Topicals"
+	}
+];
+function heat(tone) {
+	if (tone === "profit") return "bg-profit/15 text-profit";
+	if (tone === "warn") return "bg-warn/15 text-warn";
+	return "bg-loss/15 text-loss";
+}
+function Kpi$2({ label, value, hint }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "rounded-md border border-border bg-surface px-4 py-3",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "font-mono text-[10px] tracking-widest text-muted uppercase",
+				children: label
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "font-display mt-1 text-2xl font-semibold tracking-wide",
+				children: value
+			}),
+			hint ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-1 text-xs text-muted",
+				children: hint
+			}) : null
+		]
+	});
+}
+function pct$1(n) {
+	return `${(n * 100).toFixed(1)}%`;
+}
+function Money({ n, tone }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+		className: tone ? `rounded-sm px-1.5 py-0.5 font-mono text-xs ${heat(tone)}` : "font-mono text-xs",
+		children: formatPrice(n)
+	});
+}
+function MarginBadge({ n }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+		className: `inline-flex min-w-16 items-center justify-center rounded-sm px-2 py-1 font-display text-lg font-semibold tracking-wide ${heat(marginTone(n))}`,
+		children: pct$1(n)
+	});
+}
+function AdminPnl() {
+	const all = (0, import_react.useMemo)(() => pnlSheet(), []);
+	const [form, setForm] = (0, import_react.useState)("vial");
+	const [q, setQ] = (0, import_react.useState)("");
+	const [view, setView] = (0, import_react.useState)("sheet");
+	const rows = (0, import_react.useMemo)(() => {
+		const t = q.trim().toLowerCase();
+		return all.filter((r) => {
+			if (form !== "all" && r.formKind !== form) return false;
+			if (t && !`${r.name} ${r.dose} ${r.form}`.toLowerCase().includes(t)) return false;
+			return true;
+		});
+	}, [
+		all,
+		form,
+		q
+	]);
+	const sum = pnlSummary(rows);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "mt-8 space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "grid gap-3 sm:grid-cols-2 lg:grid-cols-4",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Kpi$2, {
+						label: "Avg retail margin",
+						value: `${Math.round(sum.avgMargin * 100)}%`,
+						hint: `${sum.count} SKUs · ${formatPrice(sum.avgRetail)} / bottle`
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Kpi$2, {
+						label: "You keep @ 10 vials",
+						value: formatPrice(sum.avg10),
+						hint: "Per bottle after Integrity −15% restock"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Kpi$2, {
+						label: "You keep @ 50 vials",
+						value: formatPrice(sum.avg50),
+						hint: "Per bottle after Integrity −20% restock"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Kpi$2, {
+						label: "You keep @ 100 vials",
+						value: formatPrice(sum.avg100),
+						hint: "Per bottle after Integrity −30% restock"
+					})
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "rounded-md border border-border bg-surface p-4 text-sm leading-relaxed text-muted",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "font-display text-fg tracking-wide uppercase",
+						children: "Credits stay in the catalog"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "mt-2",
+						children: [
+							"Affiliate payout is ",
+							AFFILIATE_CREDIT_BASE,
+							"% in ",
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "text-fg",
+								children: "reward credits"
+							}),
+							", never cash. Buyers save ",
+							5,
+							"% at checkout. Signed-in labs bank",
+							" ",
+							Math.round(CREDIT_RATE * 100),
+							"% of merchandise as credit on the next order. Both only spend here — so a referred sale funds another restock instead of leaving the business."
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-3 flex flex-wrap gap-4 text-xs",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: `rounded-sm px-1.5 py-0.5 ${heat("profit")}`,
+								children: "Green"
+							}), " ≥ 48% margin / ≥ $8 wholesale"] }),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: `rounded-sm px-1.5 py-0.5 ${heat("warn")}`,
+								children: "Amber"
+							}), " 32–47% / $5–$8"] }),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: `rounded-sm px-1.5 py-0.5 ${heat("loss")}`,
+								children: "Red"
+							}), " thin — traffic hook or raise"] })
+						]
+					})
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "flex flex-wrap items-center gap-2",
+				children: [
+					FORMS.map((f) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						onClick: () => setForm(f.id),
+						className: form === f.id ? "btn-primary" : "min-h-11 rounded-sm border border-border px-3 font-display text-xs font-semibold tracking-widest uppercase",
+						children: f.label
+					}, f.id)),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						onClick: () => setView("sheet"),
+						className: view === "sheet" ? "btn-primary ml-auto" : "ml-auto min-h-11 rounded-sm border border-border px-3 font-display text-xs font-semibold tracking-widest uppercase",
+						children: "Cost vs sell"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						onClick: () => setView("loop"),
+						className: view === "loop" ? "btn-primary" : "min-h-11 rounded-sm border border-border px-3 font-display text-xs font-semibold tracking-widest uppercase",
+						children: "Affiliate + rewards"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+						className: "input-field min-h-11 min-w-[200px] flex-1",
+						placeholder: "Find a compound",
+						value: q,
+						onChange: (e) => setQ(e.target.value)
+					})
+				]
+			}),
+			view === "sheet" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CostTable, { rows }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LoopTable, { rows })
+		]
+	});
+}
+function CostTable({ rows }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "overflow-x-auto rounded-md border border-border",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+			className: "w-full min-w-[980px] text-left text-sm",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", {
+				className: "sticky top-0 bg-overlay font-mono text-[10px] tracking-widest text-muted uppercase",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "px-3 py-3",
+						children: "Product"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "px-3 py-3",
+						children: "Your % margin"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "px-3 py-3",
+						children: "You pay"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "px-3 py-3",
+						children: "You charge"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "px-3 py-3",
+						children: "Profit $"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "px-3 py-3",
+						children: "10 vials % / $"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "px-3 py-3",
+						children: "50 vials % / $"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "px-3 py-3",
+						children: "100 vials % / $"
+					})
+				] })
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", { children: rows.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+				colSpan: 8,
+				className: "px-4 py-10 text-muted",
+				children: "Nothing matches."
+			}) }) : rows.map((r) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+				className: "border-t border-border",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+						className: "px-3 py-2",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "font-medium",
+							children: r.name
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+							className: "font-mono text-[10px] text-muted uppercase",
+							children: [
+								r.dose,
+								" · ",
+								r.formKind
+							]
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+						className: "px-3 py-2",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MarginBadge, { n: r.margin })
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+						className: "px-3 py-2 font-mono text-xs",
+						children: formatPrice(r.cost)
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+						className: "px-3 py-2 font-mono text-xs",
+						children: formatPrice(r.sell)
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+						className: "px-3 py-2",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Money, {
+							n: r.profit,
+							tone: marginTone(r.margin)
+						})
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(WsCell, { band: r.ws?.q10 }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(WsCell, { band: r.ws?.q50 }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(WsCell, { band: r.ws?.q100 })
+				]
+			}, r.key)) })]
+		})
+	});
+}
+function WsCell({ band }) {
+	if (!band) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+		className: "px-3 py-2 text-xs text-muted",
+		children: "—"
+	});
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+		className: "px-3 py-2",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+				className: `rounded-sm px-1.5 py-0.5 font-display text-sm font-semibold ${heat(marginTone(band.margin))}`,
+				children: pct$1(band.margin)
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+				className: "mt-1",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Money, {
+					n: band.profit,
+					tone: profitTone(band.profit)
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "text-muted",
+					children: " / bottle"
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+				className: "mt-1 font-mono text-[10px] text-muted",
+				children: [
+					"charge ",
+					formatPrice(band.unit),
+					" · pay ",
+					formatPrice(band.yourCost),
+					" · lot ",
+					formatPrice(band.lot)
+				]
+			})
+		]
+	});
+}
+function LoopTable({ rows }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "overflow-x-auto rounded-md border border-border",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+			className: "w-full min-w-[920px] text-left text-sm",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", {
+				className: "sticky top-0 bg-overlay font-mono text-[10px] tracking-widest text-muted uppercase",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "px-3 py-3",
+						children: "Product"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "px-3 py-3",
+						children: "Your % margin"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "px-3 py-3",
+						children: "Retail cash"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "px-3 py-3",
+						children: "Affiliate sale cash"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "px-3 py-3",
+						children: "Credit parked"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "px-3 py-3",
+						children: "2-order affiliate loop"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "px-3 py-3",
+						children: "5% reward banked"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						className: "px-3 py-3",
+						children: "2-order reward loop"
+					})
+				] })
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", { children: rows.map((r) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+				className: "border-t border-border",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+						className: "px-3 py-2",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "font-medium",
+							children: r.name
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+							className: "font-mono text-[10px] text-muted uppercase",
+							children: [
+								r.dose,
+								" · pay ",
+								formatPrice(r.cost),
+								" · charge ",
+								formatPrice(r.sell)
+							]
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+						className: "px-3 py-2",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MarginBadge, { n: r.margin })
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+						className: "px-3 py-2",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Money, {
+							n: r.profit,
+							tone: marginTone(r.margin)
+						})
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+						className: "px-3 py-2",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Money, {
+							n: r.affCash,
+							tone: r.affCash >= 8 ? "profit" : r.affCash >= 4 ? "warn" : "loss"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+							className: "mt-1 text-[10px] text-muted",
+							children: [
+								"Buyer ",
+								5,
+								"% off. You do not pay cash commission."
+							]
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+						className: "px-3 py-2",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "font-mono text-xs text-primary",
+							children: formatPrice(r.affCredit)
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+							className: "mt-1 text-[10px] text-muted",
+							children: [AFFILIATE_CREDIT_BASE, "% store credit — must restock here to spend it."]
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+						className: "px-3 py-2",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Money, {
+							n: r.affLoop,
+							tone: r.affLoop >= 20 ? "profit" : r.affLoop >= 10 ? "warn" : "loss"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "mt-1 text-[10px] text-muted",
+							children: "This sale + their credit restock."
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+						className: "px-3 py-2 font-mono text-xs",
+						children: formatPrice(r.rewardCredit)
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+						className: "px-3 py-2",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Money, {
+							n: r.rewardLoop,
+							tone: r.rewardLoop >= 20 ? "profit" : "warn"
+						})
+					})
+				]
+			}, r.key)) })]
+		})
+	});
+}
+/** Drag against gross margin: card fees, refunds, unused reward credits. */
+var FEE_DRAG = .029;
+var REFUND_DRAG = .04;
+var CREDIT_LEAK = .02;
+function contributionMargin(gross) {
+	return Math.max(.12, gross - FEE_DRAG - REFUND_DRAG - CREDIT_LEAK);
+}
+/** $500 → 0, $100k → 1. Larger checks unlock better investor terms. */
+function checkCurve(amount) {
+	const t = Math.log10(Math.max(250, amount) / 500) / Math.log10(200);
+	return Math.min(1, Math.max(0, t));
+}
+var INCENTIVES = [
+	{
+		at: 2500,
+		label: "Weekly spend + ROAS report",
+		extraSharePts: 0
+	},
+	{
+		at: 1e4,
+		label: "+2 pts investor share for 90 days · monthly call",
+		extraSharePts: 2
+	},
+	{
+		at: 25e3,
+		label: "+3 pts year-one share · most-favored-nation vs later checks",
+		extraSharePts: 3
+	},
+	{
+		at: 75e3,
+		label: "+5 pts year-one share · first look on new SKUs · quarterly review",
+		extraSharePts: 5
+	}
+];
+function incentivesFor(amount) {
+	return INCENTIVES.filter((i) => amount >= i.at);
+}
+function extraShare(amount) {
+	return ([...INCENTIVES].reverse().find((i) => amount >= i.at && i.extraSharePts > 0)?.extraSharePts ?? 0) / 100;
+}
+function money(n) {
+	return Math.round(n * 100) / 100;
+}
+function catalogEconomics() {
+	const rows = pnlSheet().filter((r) => r.formKind === "vial");
+	const sum = pnlSummary(rows);
+	const aov = rows.length ? rows.reduce((s, r) => s + r.sell, 0) / rows.length : 109;
+	return {
+		grossMargin: sum.avgMargin || .55,
+		aov,
+		skuCount: rows.length
+	};
+}
+function priceDeal(input) {
+	const amount = Math.max(0, input.amount || 0);
+	const roas = Math.max(0, input.roas || 0);
+	const gross = Math.min(.9, Math.max(.15, input.grossMargin || .55));
+	const cm = contributionMargin(gross);
+	const deploy = Math.max(1, Math.round(input.deployMonths || 3));
+	const horizon = Math.max(deploy, Math.round(input.horizonMonths || 12));
+	const recycle = Boolean(input.recycle);
+	const curve = checkCurve(amount);
+	const share = .2 + .18 * curve;
+	const yearOneShare = Math.min(.45, share + extraShare(amount));
+	const multiple = 1.35 + .9 * curve;
+	const returnCap = money(amount * multiple);
+	const netPerAdDollar = roas * cm - 1;
+	const { aov } = catalogEconomics();
+	const months = [];
+	let investorCum = 0;
+	let companyCum = 0;
+	const monthlySpend = amount > 0 ? amount / deploy : 0;
+	let extraSpend = 0;
+	for (let m = 1; m <= horizon; m++) {
+		const spend = (m <= deploy ? monthlySpend : 0) + extraSpend;
+		extraSpend = 0;
+		const revenue = spend * roas;
+		const cogs = revenue * (1 - cm);
+		const net = revenue - cogs - spend;
+		let stage = "loss";
+		let inv = 0;
+		let co = 0;
+		if (net <= 0) {
+			co = net;
+			companyCum += net;
+		} else if (investorCum < amount) {
+			stage = "return";
+			inv = net * Math.min(.8, yearOneShare + .12);
+			co = net - inv;
+			if (investorCum + inv > amount) {
+				const over = investorCum + inv - amount;
+				inv -= over;
+				co += over;
+			}
+			investorCum += inv;
+			companyCum += co;
+		} else if (investorCum < returnCap) {
+			stage = "preferred";
+			inv = net * (m <= 12 ? yearOneShare : share);
+			if (investorCum + inv > returnCap) {
+				const over = investorCum + inv - returnCap;
+				inv -= over;
+			}
+			co = net - inv;
+			investorCum += inv;
+			companyCum += co;
+		} else {
+			stage = "trail";
+			inv = net * (share / 2);
+			co = net - inv;
+			investorCum += inv;
+			companyCum += co;
+		}
+		if (recycle && co > 0 && m < horizon) {
+			extraSpend = co * .5;
+			co *= .5;
+			companyCum -= extraSpend;
+		}
+		months.push({
+			month: m,
+			spend: money(spend),
+			revenue: money(revenue),
+			cogs: money(cogs),
+			net: money(net),
+			investor: money(inv),
+			company: money(co),
+			investorCum: money(investorCum),
+			companyCum: money(companyCum),
+			stage
+		});
+	}
+	const monthsTo1x = months.find((r) => r.investorCum >= amount - .5)?.month ?? null;
+	const monthsToCap = months.find((r) => r.investorCum >= returnCap - .5)?.month ?? null;
+	const investorYear = months[Math.min(11, months.length - 1)]?.investorCum ?? 0;
+	const companyYear = months[Math.min(11, months.length - 1)]?.companyCum ?? 0;
+	const investorRoi = amount > 0 ? investorYear / amount - 1 : 0;
+	const irrHint = amount > 0 && monthsTo1x ? Math.pow(1 + Math.max(0, investorRoi), 1) - 1 : investorRoi;
+	return {
+		amount,
+		roas,
+		grossMargin: gross,
+		cm,
+		breakevenRoas: cm > 0 ? 1 / cm : 9,
+		share,
+		yearOneShare,
+		multiple,
+		returnCap,
+		netPerAdDollar,
+		cycleProfit: money(amount * netPerAdDollar),
+		incentives: incentivesFor(amount),
+		months,
+		investorYear: money(investorYear),
+		companyYear: money(companyYear),
+		monthsTo1x,
+		monthsToCap,
+		investorRoi,
+		irrHint,
+		aov,
+		orders: aov > 0 ? Math.round(amount * roas / aov) : 0
+	};
+}
+function scenarioTable(base) {
+	return [
+		2.2,
+		3,
+		4
+	].map((roas) => {
+		const d = priceDeal({
+			...base,
+			roas
+		});
+		return {
+			roas,
+			label: roas === 2.2 ? "Conservative" : roas === 3 ? "Base" : "Upside",
+			investorYear: d.investorYear,
+			companyYear: d.companyYear,
+			roi: d.investorRoi,
+			monthsTo1x: d.monthsTo1x
+		};
+	});
+}
+function termSheetText(deal) {
+	const pct = (n) => `${(n * 100).toFixed(1)}%`;
+	return [
+		`DRAFT — NOT AN OFFER TO SELL SECURITIES`,
+		`${BUSINESS.legalName} — Ad-spend participation term sheet`,
+		`${BUSINESS.street}, ${BUSINESS.unit}, ${BUSINESS.city}, ${BUSINESS.region} ${BUSINESS.postal}`,
+		``,
+		`Check size: ${deal.amount.toLocaleString("en-US", {
+			style: "currency",
+			currency: "USD"
+		})}`,
+		`Use of proceeds: 100% third-party media (search / native / compliant placements). No salaries, no inventory.`,
+		`Horizon: 12 months, with a preferred return cap of ${deal.multiple.toFixed(2)}× ($${deal.returnCap.toLocaleString("en-US")}).`,
+		``,
+		`Economics (from live catalog margin ${(deal.grossMargin * 100).toFixed(1)}% less card/refund drag → ${(deal.cm * 100).toFixed(1)}% contribution):`,
+		`• Modeled ROAS ${deal.roas.toFixed(2)}×. Break-even ROAS ${deal.breakevenRoas.toFixed(2)}×.`,
+		`• Until invested capital is returned: investor ${pct(Math.min(.8, deal.yearOneShare + .12))} of ad-attributed net profit.`,
+		`• Then until ${deal.multiple.toFixed(2)}×: investor ${pct(deal.yearOneShare)} (year one), ${pct(deal.share)} after.`,
+		`• After the cap: investor share steps to ${pct(deal.share / 2)}.`,
+		``,
+		`Incentives at this check:`,
+		...deal.incentives.length ? deal.incentives.map((i) => `• ${i.label}`) : [`• Standard weekly ROAS report`],
+		``,
+		`Attribution: last-click + UTM on the funded campaigns only. Organic, wholesale, and affiliate codes are excluded.`,
+		`Advertising: research-use-only. No human-use, dosing, or disease claims. Platforms may reject or ban peptide ads.`,
+		`This draft is for discussion with counsel. Illinois and federal securities laws may apply. Not a solicitation.`
+	].join("\n");
+}
+var SUBS = [
+	{
+		id: "calc",
+		label: "ROI calculator"
+	},
+	{
+		id: "proforma",
+		label: "12-month proforma"
+	},
+	{
+		id: "terms",
+		label: "Term sheet"
+	},
+	{
+		id: "forms",
+		label: "Legal forms"
+	},
+	{
+		id: "grok",
+		label: "Grok desk"
+	}
+];
+function pct(n) {
+	return `${(n * 100).toFixed(1)}%`;
+}
+function Kpi$1({ label, value, hint }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "rounded-md border border-border bg-surface px-4 py-3",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "font-mono text-[10px] tracking-widest text-muted uppercase",
+				children: label
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "font-display mt-1 text-2xl font-semibold tracking-wide",
+				children: value
+			}),
+			hint ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-1 text-xs text-muted",
+				children: hint
+			}) : null
+		]
+	});
+}
+function Field({ label, value, onChange, step, min, prefix, suffix }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+		className: "text-xs tracking-widest text-muted uppercase",
+		children: [label, /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "mt-1 flex items-center gap-2",
+			children: [
+				prefix ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "text-muted",
+					children: prefix
+				}) : null,
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+					className: "input-field",
+					type: "number",
+					min: min ?? 0,
+					step: step ?? 1,
+					value: Number.isFinite(value) ? value : 0,
+					onChange: (e) => onChange(Number(e.target.value))
+				}),
+				suffix ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "text-muted",
+					children: suffix
+				}) : null
+			]
+		})]
+	});
+}
+function AdminInvestors() {
+	const econ = (0, import_react.useMemo)(() => catalogEconomics(), []);
+	const [sub, setSub] = (0, import_react.useState)("calc");
+	const [amount, setAmount] = (0, import_react.useState)(1e4);
+	const [roas, setRoas] = (0, import_react.useState)(3);
+	const [gross, setGross] = (0, import_react.useState)(Math.round(econ.grossMargin * 1e3) / 10);
+	const [deploy, setDeploy] = (0, import_react.useState)(3);
+	const [horizon, setHorizon] = (0, import_react.useState)(12);
+	const [recycle, setRecycle] = (0, import_react.useState)(true);
+	const input = {
+		amount: Math.max(0, amount || 0),
+		roas: Math.max(0, roas || 0),
+		grossMargin: (gross || 0) / 100,
+		deployMonths: deploy,
+		horizonMonths: horizon,
+		recycle
+	};
+	const deal = (0, import_react.useMemo)(() => priceDeal(input), [
+		amount,
+		roas,
+		gross,
+		deploy,
+		horizon,
+		recycle
+	]);
+	const scenarios = (0, import_react.useMemo)(() => scenarioTable(input), [
+		amount,
+		roas,
+		gross,
+		deploy,
+		horizon,
+		recycle
+	]);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "mt-8 space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "font-mono text-xs tracking-widest text-primary uppercase",
+					children: "Investor desk"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+					className: "font-display mt-1 text-3xl font-semibold uppercase",
+					children: "Ad-spend participation"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					className: "mt-2 max-w-3xl text-sm leading-relaxed text-muted",
+					children: [
+						"Investors fund media. They are paid from ad-attributed profit only — not equity, not inventory. Terms get better as the check gets larger. Live math uses your catalog margin (",
+						pct(econ.grossMargin),
+						" blended on ",
+						econ.skuCount,
+						" vials). Drafts for counsel — not an offer to sell securities."
+					]
+				})
+			] }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "flex flex-wrap gap-2",
+				children: SUBS.map((s) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					onClick: () => setSub(s.id),
+					className: sub === s.id ? "btn-primary" : "min-h-11 rounded-sm border border-border px-3 font-display text-xs font-semibold tracking-widest uppercase",
+					children: s.label
+				}, s.id))
+			}),
+			sub === "calc" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Calculator, {
+				amount,
+				setAmount,
+				roas,
+				setRoas,
+				gross,
+				setGross,
+				deploy,
+				setDeploy,
+				horizon,
+				setHorizon,
+				recycle,
+				setRecycle,
+				deal,
+				scenarios
+			}),
+			sub === "proforma" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Proforma, { deal }),
+			sub === "terms" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TermSheet, { deal }),
+			sub === "forms" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LegalForms, { deal }),
+			sub === "grok" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(GrokDesk, { deal })
+		]
+	});
+}
+function Calculator({ amount, setAmount, roas, setRoas, gross, setGross, deploy, setDeploy, horizon, setHorizon, recycle, setRecycle, deal, scenarios }) {
+	const thin = deal.netPerAdDollar <= 0;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-6",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "grid gap-3 md:grid-cols-2 lg:grid-cols-5",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
+						label: "Investment $",
+						value: amount,
+						onChange: setAmount,
+						step: 500,
+						prefix: "$"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
+						label: "Modeled ROAS",
+						value: roas,
+						onChange: setRoas,
+						step: .1,
+						suffix: "×"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
+						label: "Gross margin %",
+						value: gross,
+						onChange: setGross,
+						step: .1,
+						suffix: "%"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
+						label: "Deploy over (months)",
+						value: deploy,
+						onChange: setDeploy,
+						min: 1
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
+						label: "Horizon (months)",
+						value: horizon,
+						onChange: setHorizon,
+						min: 1
+					})
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+				className: "flex min-h-11 items-center gap-3 text-sm",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+					type: "checkbox",
+					checked: recycle,
+					onChange: (e) => setRecycle(e.target.checked)
+				}), "Recycle 50% of your monthly share back into ads (needed for 1× on a single wallet)"]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "grid gap-3 sm:grid-cols-2 lg:grid-cols-4",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Kpi$1, {
+						label: "Offer this check",
+						value: `${pct(deal.yearOneShare)} share`,
+						hint: `Base ${pct(deal.share)} · cap ${deal.multiple.toFixed(2)}×`
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Kpi$1, {
+						label: "Investor 12-mo cash",
+						value: formatPrice(deal.investorYear),
+						hint: deal.monthsTo1x ? `~${pct(deal.investorRoi)} ROI · 1× in month ${deal.monthsTo1x}` : "Does not return 1× in this horizon"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Kpi$1, {
+						label: "You keep 12-mo",
+						value: formatPrice(deal.companyYear),
+						hint: `Contribution ${pct(deal.cm)} after fees/refunds`
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Kpi$1, {
+						label: "Break-even ROAS",
+						value: `${deal.breakevenRoas.toFixed(2)}×`,
+						hint: thin ? "This ROAS loses money — raise ROAS or do not take the check" : `${formatPrice(deal.cycleProfit)} net on the media wallet`
+					})
+				]
+			}),
+			thin ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+				className: "rounded-md border border-loss/40 bg-loss/10 px-4 py-3 text-sm text-loss",
+				children: [
+					"At ",
+					deal.roas.toFixed(2),
+					"× ROAS and ",
+					pct(deal.cm),
+					" contribution, ads do not cover themselves. Do not offer a profit share until modeled ROAS is above ",
+					deal.breakevenRoas.toFixed(2),
+					"×."
+				]
+			}) : null,
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "rounded-md border border-border bg-surface p-4",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "font-display tracking-wide uppercase",
+						children: ["What to offer at ", formatPrice(deal.amount)]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
+						className: "mt-3 space-y-2 text-sm text-muted",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [
+								"Until capital is back: investor gets",
+								" ",
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "text-fg",
+									children: pct(Math.min(.8, deal.yearOneShare + .12))
+								}),
+								" of ad-attributed net (you keep a slice so you stay in the game)."
+							] }),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [
+								"Then until ",
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+									className: "text-fg",
+									children: [deal.multiple.toFixed(2), "×"]
+								}),
+								" (",
+								formatPrice(deal.returnCap),
+								"): investor ",
+								pct(deal.yearOneShare),
+								" in year one."
+							] }),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [
+								"After the cap, share steps to ",
+								pct(deal.share / 2),
+								" so you recapture margin."
+							] }),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [
+								"Modeled orders on this wallet: ~",
+								deal.orders,
+								" at ",
+								formatPrice(deal.aov),
+								" average vial."
+							] })
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-4",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "font-mono text-[10px] tracking-widest text-muted uppercase",
+							children: "Incentives that unlock"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mt-2 flex flex-wrap gap-2",
+							children: INCENTIVES.map((i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+								className: deal.amount >= i.at ? "rounded-sm border border-profit/40 bg-profit/15 px-2 py-1 text-xs text-profit" : "rounded-sm border border-border px-2 py-1 text-xs text-muted",
+								children: [
+									formatPrice(i.at),
+									"+ · ",
+									i.label
+								]
+							}, i.at))
+						})]
+					})
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "overflow-x-auto rounded-md border border-border",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+					className: "w-full min-w-[640px] text-left text-sm",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", {
+						className: "bg-overlay font-mono text-[10px] tracking-widest text-muted uppercase",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "px-3 py-2",
+								children: "Scenario"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "px-3 py-2",
+								children: "ROAS"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "px-3 py-2",
+								children: "Investor 12-mo"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "px-3 py-2",
+								children: "Your 12-mo"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "px-3 py-2",
+								children: "Investor ROI"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								className: "px-3 py-2",
+								children: "Months to 1×"
+							})
+						] })
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", { children: scenarios.map((s) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+						className: `border-t border-border ${s.roas === deal.roas ? "bg-overlay" : ""}`,
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: "px-3 py-2",
+								children: s.label
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+								className: "px-3 py-2 font-mono",
+								children: [s.roas.toFixed(1), "×"]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: "px-3 py-2 font-mono",
+								children: formatPrice(s.investorYear)
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: "px-3 py-2 font-mono",
+								children: formatPrice(s.companyYear)
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: "px-3 py-2 font-mono",
+								children: pct(s.roi)
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: "px-3 py-2",
+								children: s.monthsTo1x ?? "—"
+							})
+						]
+					}, s.roas)) })]
+				})
+			})
+		]
+	});
+}
+function Proforma({ deal }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-4",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+			className: "text-sm text-muted",
+			children: [
+				"One-shot wallet: the check is spent over ",
+				deal.months.filter((m) => m.spend > 0).length,
+				" ",
+				"months. No refill. Organic and wholesale are excluded."
+			]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "overflow-x-auto rounded-md border border-border",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+				className: "w-full min-w-[880px] text-left text-sm",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", {
+					className: "sticky top-0 bg-overlay font-mono text-[10px] tracking-widest text-muted uppercase",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+							className: "px-3 py-2",
+							children: "Mo"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+							className: "px-3 py-2",
+							children: "Ad spend"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+							className: "px-3 py-2",
+							children: "Revenue"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+							className: "px-3 py-2",
+							children: "COGS + drag"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+							className: "px-3 py-2",
+							children: "Net after ads"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+							className: "px-3 py-2",
+							children: "To investor"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+							className: "px-3 py-2",
+							children: "You keep"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+							className: "px-3 py-2",
+							children: "Investor cum"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+							className: "px-3 py-2",
+							children: "Stage"
+						})
+					] })
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", { children: deal.months.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+					className: "border-t border-border",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: "px-3 py-2 font-mono",
+							children: m.month
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: "px-3 py-2 font-mono",
+							children: formatPrice(m.spend)
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: "px-3 py-2 font-mono",
+							children: formatPrice(m.revenue)
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: "px-3 py-2 font-mono",
+							children: formatPrice(m.cogs)
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: "px-3 py-2 font-mono",
+							children: formatPrice(m.net)
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: "px-3 py-2 font-mono text-profit",
+							children: formatPrice(m.investor)
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: "px-3 py-2 font-mono",
+							children: formatPrice(m.company)
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: "px-3 py-2 font-mono",
+							children: formatPrice(m.investorCum)
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							className: "px-3 py-2 text-xs uppercase text-muted",
+							children: m.stage
+						})
+					]
+				}, m.month)) })]
+			})
+		})]
+	});
+}
+function TermSheet({ deal }) {
+	const text = termSheetText(deal);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-4",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "flex flex-wrap gap-2",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+				type: "button",
+				className: "btn-primary",
+				onClick: () => navigator.clipboard.writeText(text),
+				children: "Copy draft"
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "self-center text-xs text-muted",
+				children: "Send to counsel before anyone signs. Updates live with the calculator."
+			})]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pre", {
+			className: "overflow-x-auto whitespace-pre-wrap rounded-md border border-border bg-surface p-5 font-mono text-xs leading-relaxed text-fg",
+			children: text
+		})]
+	});
+}
+function LegalForms({ deal }) {
+	const blocks = [
+		{
+			title: "Not an offer · Illinois securities",
+			body: `This desk models a private ad-spend participation. It is not a prospectus, not investment advice, and not an offer to sell a security. Under the Howey test a profit-share funded by others can be a security. Illinois Securities Law of 1953 and federal Reg D (506(b) / 506(c)) may apply. Use a securities lawyer in Illinois before taking money. ${BUSINESS.legalName}, ${formatAddress()}.`
+		},
+		{
+			title: "Risk factors (give this to every prospect)",
+			body: `Capital is spent on ads and can go to zero. Meta, Google, and native networks often reject or ban research-peptide creative. Accounts can shut overnight. Modeled ROAS ${deal.roas.toFixed(1)}× is an assumption, not a track record. Refunds, chargebacks, COGS inflation, and shipping all hit contribution. There is no guaranteed return, no FDIC, no equity, no board seat unless separately agreed. Research-use-only advertising: ${IL_NOTICE}`
+		},
+		{
+			title: "Accredited investor questionnaire (draft)",
+			body: `Name / entity / email / phone. Residency. Check one: (a) individual income over $200,000 ($300,000 with spouse) in each of the last two years and a reasonable expectation this year; (b) individual net worth over $1,000,000 excluding primary residence; (c) entity with >$5,000,000 assets; (d) not accredited (stop — do not take the check under 506(c)). Signature, date, “I understand I may lose the entire amount.” Have counsel stamp this.`
+		},
+		{
+			title: "Use of proceeds",
+			body: `100% of ${formatPrice(deal.amount)} is a prepaid media wallet for ${BUSINESS.name} catalog campaigns. No founder salary, no inventory restock, no debt paydown from this wallet. Unspent media at month ${deal.months.length} is either returned or rolled by written consent.`
+		},
+		{
+			title: "Advertising compliance (bind the investor)",
+			body: `Investor may not run their own ads. All creative is RUO: no human use, no dosing, no before/after bodies, no disease claims. Investor social posts must match site disclaimers. Breach = pause of share and takedown.`
+		},
+		{
+			title: "Subscription / PPM cover note",
+			body: `If counsel classifies this as a security: Reg D 506(b) (no general solicitation, preexisting relationship) is the usual path for a first check. 506(c) allows advertising only to verified accredited investors. File Form D with the SEC and notice with the Illinois Secretary of State. This app does not file anything.`
+		}
+	];
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "grid gap-4 md:grid-cols-2",
+		children: blocks.map((b) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
+			className: "rounded-md border border-border bg-surface p-5",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+				className: "font-display text-lg font-semibold tracking-wide uppercase",
+				children: b.title
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-3 text-sm leading-relaxed text-muted",
+				children: b.body
+			})]
+		}, b.title))
+	});
+}
+function grokReply(q, deal) {
+	const t = q.toLowerCase();
+	if (!t.trim()) return "Type a check size question — share, months to 1×, risks, or Illinois filings.";
+	if (/howey|security|sec|illegal/.test(t)) return "A profit share funded by someone else’s money can be a security under Howey. This desk is a model, not a filing. Use Illinois counsel, likely Reg D 506(b) if you already know the person. Do not post this as a public investment ad.";
+	if (/ban|meta|facebook|google|ads policy/.test(t)) return "Peptide ads get rejected. Model a conservative 2.2× ROAS and keep a second channel (native, email, affiliates). If the ad account dies, the wallet stops — that is the #1 risk factor to print on the term sheet.";
+	if (/offer|share|%|percent|give them/.test(t)) return `At ${formatPrice(deal.amount)} offer ${pct(deal.yearOneShare)} of ad-attributed net in year one, ${pct(Math.min(.8, deal.yearOneShare + .12))} until 1× is back, cap at ${deal.multiple.toFixed(2)}× (${formatPrice(deal.returnCap)}). Bigger checks raise the cap and the share automatically.`;
+	if (/1x|payback|month|return/.test(t)) return deal.monthsTo1x ? `Modeled 1× in month ${deal.monthsTo1x} at ${deal.roas.toFixed(1)}× ROAS. 12-month investor cash ${formatPrice(deal.investorYear)} (${pct(deal.investorRoi)}). You keep ${formatPrice(deal.companyYear)}.` : `This horizon does not return 1×. Raise ROAS above ${deal.breakevenRoas.toFixed(2)}× or do not take the check.`;
+	if (/margin|profit|cogs/.test(t)) return `Catalog gross ${pct(deal.grossMargin)}. After card fees, refunds, and unused credits, contribution is ${pct(deal.cm)}. Break-even ROAS is ${deal.breakevenRoas.toFixed(2)}×. Net per ad dollar at ${deal.roas.toFixed(1)}× is ${deal.netPerAdDollar.toFixed(2)}.`;
+	return `Live deal: ${formatPrice(deal.amount)} at ${deal.roas.toFixed(1)}× ROAS → investor ${pct(deal.yearOneShare)} year one, ${deal.multiple.toFixed(2)}× cap, 12-mo investor ${formatPrice(deal.investorYear)}, you ${formatPrice(deal.companyYear)}. Ask about share, payback, bans, or Illinois filings. Connect a Grok API key later to replace this desk brain.`;
+}
+function GrokDesk({ deal }) {
+	const [q, setQ] = (0, import_react.useState)("What should I offer on this check?");
+	const [log, setLog] = (0, import_react.useState)([{
+		role: "grok",
+		text: grokReply("offer", deal)
+	}]);
+	const [key, setKey] = (0, import_react.useState)("");
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "grid gap-4 lg:grid-cols-3",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "rounded-md border border-border bg-surface p-4 lg:col-span-2",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "max-h-96 space-y-3 overflow-y-auto",
+				children: log.map((m, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: m.role === "you" ? "text-right" : "",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "font-mono text-[10px] tracking-widest text-muted uppercase",
+						children: m.role
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "mt-1 inline-block max-w-xl rounded-md border border-border px-3 py-2 text-left text-sm leading-relaxed",
+						children: m.text
+					})]
+				}, i))
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
+				className: "mt-4 flex gap-2",
+				onSubmit: (e) => {
+					e.preventDefault();
+					const text = q.trim();
+					if (!text) return;
+					setLog((l) => [
+						...l,
+						{
+							role: "you",
+							text
+						},
+						{
+							role: "grok",
+							text: grokReply(text, deal)
+						}
+					]);
+					setQ("");
+				},
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+					className: "input-field flex-1",
+					value: q,
+					onChange: (e) => setQ(e.target.value),
+					placeholder: "Ask what to offer, payback, or filings"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "submit",
+					className: "btn-primary",
+					children: "Ask"
+				})]
+			})]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("aside", {
+			className: "rounded-md border border-border bg-surface p-4 text-sm text-muted",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "font-display text-fg tracking-wide uppercase",
+					children: "Connect Grok"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-2 leading-relaxed",
+					children: "Desk brain uses your live P&L and this calculator. Paste an xAI API key when you want full Grok on the same numbers — stored only in this browser."
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+					className: "input-field mt-3",
+					type: "password",
+					placeholder: "xAI API key (optional)",
+					value: key,
+					onChange: (e) => {
+						setKey(e.target.value);
+						try {
+							sessionStorage.setItem("vs-xai-key", e.target.value);
+						} catch {}
+					}
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-3 text-xs",
+					children: key ? "Key held in session. Wire the live Grok call when you are ready." : "No key yet — local desk is live."
+				})
+			]
+		})]
+	});
+}
+function Admin() {
+	const { user, isPending } = useCurrentUserState();
+	const [tab, setTab] = (0, import_react.useState)("live");
+	const [dash, setDash] = (0, import_react.useState)(null);
+	const [error, setError] = (0, import_react.useState)(null);
+	const [newCode, setNewCode] = (0, import_react.useState)({
+		code: "",
+		kind: "affiliate",
+		percent: 12.5,
+		partner: "",
+		label: ""
+	});
+	const [codeMsg, setCodeMsg] = (0, import_react.useState)(null);
+	(0, import_react.useEffect)(() => {
+		if (!user || !isAdminEmail(user.primaryEmail)) return;
+		let cancelled = false;
+		const pull = () => {
+			loadAdminDashboard().then((d) => {
+				if (!cancelled) {
+					setDash(d);
+					setError(null);
+				}
+			}).catch((e) => {
+				if (!cancelled) setError(e.message);
+			});
+		};
+		pull();
+		const t = setInterval(pull, 2e4);
+		return () => {
+			cancelled = true;
+			clearInterval(t);
+		};
+	}, [user]);
+	if (isPending) return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "min-h-dvh bg-bg text-fg",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteHeader, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "px-6 pt-8 text-sm text-muted",
+			children: "Loading staff session…"
+		})]
+	});
+	if (!user) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RedirectToSignIn, {});
+	if (!isAdminEmail(user.primaryEmail)) return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "min-h-dvh bg-bg text-fg",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteHeader, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
+			className: "mx-auto max-w-lg px-6 pt-8",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+					className: "font-display text-3xl font-semibold uppercase",
+					children: "Staff only"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					className: "mt-4 text-sm text-muted",
+					children: [
+						"Sign in with ",
+						BUSINESS.email,
+						". Sign out of any other account first."
+					]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-6",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(UserButton, {})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
+					to: "/login",
+					className: "btn-primary mt-8 inline-flex",
+					children: "Staff sign in"
+				})
+			]
+		})]
+	});
+	const k = dash?.kpis;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "min-h-dvh bg-bg text-fg",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteHeader, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
+			className: "mx-auto max-w-7xl px-6 pt-32 pb-20",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex flex-wrap items-end justify-between gap-4",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "font-mono text-xs tracking-widest text-primary uppercase",
+							children: "Live operator desk"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+							className: "font-display mt-2 text-4xl font-semibold tracking-wide uppercase",
+							children: "Analytics"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+							className: "mt-2 text-sm text-muted",
+							children: [
+								BUSINESS.name,
+								" · ",
+								formatAddress(),
+								" · live desk"
+							]
+						})
+					] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(UserButton, {})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-8 flex flex-wrap gap-2",
+					children: [
+						["live", "Live funnel"],
+						["customers", "Customers"],
+						["subs", "Subscribers"],
+						["affiliates", "Affiliates"],
+						["ads", "Ads & SEO"],
+						["margins", "P&L sheet"],
+						["investors", "Investors"],
+						["grok", "Grok optimizer"]
+					].map(([id, label]) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						onClick: () => setTab(id),
+						className: tab === id ? "btn-primary" : "min-h-11 rounded-sm border border-border px-4 font-display text-xs font-semibold tracking-widest uppercase",
+						children: label
+					}, id))
+				}),
+				error ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-6 text-sm text-red-400",
+					children: error
+				}) : null,
+				tab === "live" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-8 grid grid-cols-2 gap-3 md:grid-cols-4",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Kpi, {
+								label: "Sessions",
+								value: k ? String(k.sessions) : "—"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Kpi, {
+								label: "Product views",
+								value: k ? String(k.productViews) : "—"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Kpi, {
+								label: "Adds to cart",
+								value: k ? String(k.addToCarts) : "—"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Kpi, {
+								label: "Orders / conversion",
+								value: k ? `${k.orders} · ${(k.conversion * 100).toFixed(1)}%` : "—"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Kpi, {
+								label: "Checkouts started",
+								value: k ? String(k.checkouts) : "—"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Kpi, {
+								label: "Revenue",
+								value: k ? formatPrice(k.revenue) : "—"
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+						className: "mt-10",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+							className: "font-display text-2xl font-semibold uppercase",
+							children: "Do this next"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mt-4 grid gap-3 md:grid-cols-2",
+							children: (dash?.tips ?? []).map((t) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "rounded-lg border border-border bg-surface p-5",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "font-display font-semibold tracking-wide uppercase",
+									children: t.title
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "mt-2 text-sm leading-relaxed text-muted",
+									children: t.body
+								})]
+							}, t.title))
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-10 grid gap-8 md:grid-cols-2",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(List, {
+							title: "Most viewed",
+							rows: dash?.topViewed ?? []
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(List, {
+							title: "Most added / purchased",
+							rows: dash?.topPurchased ?? []
+						})]
+					})
+				] }),
+				tab === "customers" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-8 space-y-8",
+					children: [(dash?.credits ?? []).length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "overflow-x-auto rounded-lg border border-border",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+							className: "w-full min-w-[480px] text-left text-sm",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", {
+								className: "bg-overlay font-mono text-[10px] tracking-widest text-muted uppercase",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+									className: "px-4 py-3",
+									children: "Account"
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+									className: "px-4 py-3",
+									children: "Reward credits (next order)"
+								})] })
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", { children: dash.credits.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+								className: "border-t border-border",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+									className: "px-4 py-3",
+									children: c.email ?? c.user_id
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+									className: "px-4 py-3",
+									children: formatPrice(c.balance)
+								})]
+							}, c.user_id)) })]
+						})
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+						className: "w-full min-w-[720px] text-left text-sm",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", {
+							className: "bg-overlay font-mono text-[10px] tracking-widest text-muted uppercase",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+									className: "px-4 py-3",
+									children: "Order"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+									className: "px-4 py-3",
+									children: "Name"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+									className: "px-4 py-3",
+									children: "Email"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+									className: "px-4 py-3",
+									children: "Ship to"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+									className: "px-4 py-3",
+									children: "Code"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+									className: "px-4 py-3",
+									children: "Total"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+									className: "px-4 py-3",
+									children: "Credit"
+								})
+							] })
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", { children: (dash?.orders ?? []).length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							colSpan: 7,
+							className: "px-4 py-10 text-muted",
+							children: "No laboratory orders yet. They appear here as soon as checkout completes."
+						}) }) : dash.orders.map((o) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+							className: "border-t border-border",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+									className: "px-4 py-3 font-mono text-xs",
+									children: o.id
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+									className: "px-4 py-3",
+									children: [
+										o.first_name,
+										" ",
+										o.last_name,
+										o.lab ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: "block text-xs text-muted",
+											children: o.lab
+										}) : null
+									]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+									className: "px-4 py-3",
+									children: o.email
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+									className: "px-4 py-3 text-muted",
+									children: [
+										o.address,
+										", ",
+										o.city,
+										" ",
+										o.region,
+										" ",
+										o.postal
+									]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+									className: "px-4 py-3 font-mono text-xs",
+									children: o.promo_code ?? "—"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+									className: "px-4 py-3",
+									children: formatPrice(o.total)
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+									className: "px-4 py-3 text-xs text-muted",
+									children: [o.credit_applied ? `−${formatPrice(Number(o.credit_applied))}` : "—", o.credit_earned ? ` · banked ${formatPrice(Number(o.credit_earned))}` : ""]
+								})
+							]
+						}, o.id)) })]
+					})]
+				}),
+				tab === "subs" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-8 overflow-x-auto rounded-lg border border-border",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+						className: "w-full min-w-[520px] text-left text-sm",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", {
+							className: "bg-overlay font-mono text-[10px] tracking-widest text-muted uppercase",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+									className: "px-4 py-3",
+									children: "Email"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+									className: "px-4 py-3",
+									children: "Name"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+									className: "px-4 py-3",
+									children: "Set"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+									className: "px-4 py-3",
+									children: "Cadence"
+								})
+							] })
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", { children: (dash?.subscribers ?? []).length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+							colSpan: 4,
+							className: "px-4 py-10 text-muted",
+							children: "No research-set subscribers yet."
+						}) }) : dash.subscribers.map((s) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+							className: "border-t border-border",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+									className: "px-4 py-3",
+									children: s.email
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+									className: "px-4 py-3",
+									children: s.name ?? "—"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+									className: "px-4 py-3",
+									children: s.set_name ?? "—"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+									className: "px-4 py-3 uppercase",
+									children: s.cadence ?? "—"
+								})
+							]
+						}, s.id)) })]
+					})
+				}),
+				tab === "affiliates" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-8 space-y-8",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
+						className: "grid gap-3 rounded-lg border border-border bg-surface p-5 md:grid-cols-5",
+						onSubmit: async (e) => {
+							e.preventDefault();
+							setCodeMsg(null);
+							try {
+								const r = await createPromoCode({ data: {
+									code: newCode.code,
+									kind: newCode.kind,
+									percent: newCode.percent,
+									partner: newCode.partner,
+									label: newCode.label
+								} });
+								if (!r.ok) {
+									setCodeMsg(r.error ?? "Could not save code.");
+									return;
+								}
+								setCodeMsg(`${r.code} saved.`);
+								setNewCode({
+									code: "",
+									kind: "affiliate",
+									percent: 10,
+									partner: "",
+									label: ""
+								});
+								const d = await loadAdminDashboard();
+								setDash(d);
+							} catch (err) {
+								setCodeMsg(err instanceof Error ? err.message : "Could not save code.");
+							}
+						},
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+								className: "text-xs tracking-widest text-muted uppercase md:col-span-1",
+								children: ["Code", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+									className: "input-field mt-1",
+									value: newCode.code,
+									onChange: (e) => setNewCode({
+										...newCode,
+										code: e.target.value.toUpperCase()
+									}),
+									placeholder: "LAB10",
+									required: true
+								})]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+								className: "text-xs tracking-widest text-muted uppercase",
+								children: ["Kind", /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("select", {
+									className: "input-field mt-1",
+									value: newCode.kind,
+									onChange: (e) => setNewCode({
+										...newCode,
+										kind: e.target.value
+									}),
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+										value: "affiliate",
+										children: "Affiliate"
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("option", {
+										value: "promo",
+										children: "Promo"
+									})]
+								})]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+								className: "text-xs tracking-widest text-muted uppercase",
+								children: ["Percent", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+									className: "input-field mt-1",
+									type: "number",
+									min: 1,
+									max: 40,
+									step: .5,
+									value: newCode.percent,
+									onChange: (e) => setNewCode({
+										...newCode,
+										percent: Number(e.target.value)
+									})
+								})]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+								className: "text-xs tracking-widest text-muted uppercase",
+								children: ["Partner", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+									className: "input-field mt-1",
+									value: newCode.partner,
+									onChange: (e) => setNewCode({
+										...newCode,
+										partner: e.target.value
+									}),
+									placeholder: "Lab name"
+								})]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "flex items-end",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									type: "submit",
+									className: "btn-primary w-full",
+									children: "Save code"
+								})
+							}),
+							codeMsg ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-sm text-primary md:col-span-5",
+								children: codeMsg
+							}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-xs text-muted md:col-span-5",
+								children: "Share as vitalitysupply.org/?ref=CODE — redemptions land in this table."
+							})
+						]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "overflow-x-auto rounded-lg border border-border",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+							className: "w-full min-w-[640px] text-left text-sm",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", {
+								className: "bg-overlay font-mono text-[10px] tracking-widest text-muted uppercase",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+										className: "px-4 py-3",
+										children: "Code"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+										className: "px-4 py-3",
+										children: "Kind"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+										className: "px-4 py-3",
+										children: "Partner"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+										className: "px-4 py-3",
+										children: "Off"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+										className: "px-4 py-3",
+										children: "Uses"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+										className: "px-4 py-3",
+										children: "GMV"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+										className: "px-4 py-3",
+										children: "Discount"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+										className: "px-4 py-3",
+										children: "Commission owed"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+										className: "px-4 py-3",
+										children: "You keep"
+									})
+								] })
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", { children: (dash?.affiliates ?? []).length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								colSpan: 9,
+								className: "px-4 py-10 text-muted",
+								children: "No promo or affiliate codes yet."
+							}) }) : dash.affiliates.map((a) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+								className: "border-t border-border",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+										className: "px-4 py-3 font-mono",
+										children: a.code
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+										className: "px-4 py-3 uppercase",
+										children: a.kind
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+										className: "px-4 py-3",
+										children: a.partner ?? a.label ?? "—"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+										className: "px-4 py-3",
+										children: [a.percent, "%"]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+										className: "px-4 py-3",
+										children: a.uses
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+										className: "px-4 py-3",
+										children: formatPrice(a.gmv)
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+										className: "px-4 py-3",
+										children: formatPrice(a.revenue)
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+										className: "px-4 py-3",
+										children: formatPrice(a.commission)
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+										className: "px-4 py-3",
+										children: formatPrice(a.net)
+									})
+								]
+							}, a.code)) })]
+						})
+					})]
+				}),
+				tab === "margins" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AdminPnl, {}),
+				tab === "investors" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AdminInvestors, {}),
+				tab === "grok" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-8 space-y-6",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "max-w-3xl text-sm leading-relaxed text-muted",
+							children: "The optimizer reads live views, carts, and orders while this desk is open. It reorders bestsellers automatically. It will not write medical claims or remove the research-use attestation."
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "grid gap-3 md:grid-cols-2",
+							children: (dash?.grok?.actions ?? []).map((a) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "rounded-lg border border-border bg-surface p-5",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+										className: "font-mono text-[10px] tracking-widest text-primary uppercase",
+										children: a.applied ? "Applied" : "Needs you"
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+										className: "font-display mt-2 font-semibold tracking-wide uppercase",
+										children: a.title
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+										className: "mt-2 text-sm leading-relaxed text-muted",
+										children: a.body
+									})
+								]
+							}, a.title))
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "overflow-x-auto rounded-lg border border-border",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+								className: "w-full min-w-[560px] text-left text-sm",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", {
+									className: "bg-overlay font-mono text-[10px] tracking-widest text-muted uppercase",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+											className: "px-4 py-3",
+											children: "Compound"
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+											className: "px-4 py-3",
+											children: "Views"
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+											className: "px-4 py-3",
+											children: "Carts"
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+											className: "px-4 py-3",
+											children: "Buys"
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+											className: "px-4 py-3",
+											children: "Score"
+										})
+									] })
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", { children: (dash?.grok?.merch ?? []).length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tr", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+									colSpan: 5,
+									className: "px-4 py-10 text-muted",
+									children: "Waiting for traffic. Browse the catalog and add to cart to teach it."
+								}) }) : dash.grok.merch.map((r) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+									className: "border-t border-border",
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+											className: "px-4 py-3",
+											children: r.productName
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+											className: "px-4 py-3",
+											children: r.views
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+											className: "px-4 py-3",
+											children: r.carts
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+											className: "px-4 py-3",
+											children: r.purchases
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+											className: "px-4 py-3 font-mono",
+											children: r.score
+										})
+									]
+								}, r.productId)) })]
+							})
+						})
+					]
+				}),
+				tab === "ads" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-8 space-y-10",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+							className: "rounded-lg border border-border bg-surface p-6",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+									className: "font-display text-xl font-semibold uppercase",
+									children: "First bestseller ad"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "mt-2 text-sm text-muted",
+									children: "Square 1080 — the format Meta / native that converts in this niche: black studio, one vial, HPLC, RUO, no bodies. Download and upload to the ad account."
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+									src: "/ads/sema-hero.jpg?v=9",
+									alt: "Semaglutide research-use ad",
+									className: "mt-4 max-h-80 rounded-md border border-border object-contain"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
+									href: "/ads/sema-hero.jpg",
+									download: "vitality-semaglutide-5mg-ad.jpg",
+									className: "btn-primary mt-4 inline-flex",
+									children: "Download 1080×1080"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "mt-3 font-mono text-xs text-muted",
+									children: "Primary text: HPLC-documented Semaglutide 5 mg · $69.99 · Research use only. Not for human consumption. 21+ laboratories."
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "max-w-3xl text-sm leading-relaxed text-muted",
+							children: "Competitors that convert (Peptide Sciences–style catalogs) win on HPLC/COA language, CAS pages, and research-intent search — not “weight loss peptide” ads, which Google and Meta reject and which would also be illegal consumer-drug advertising. Copy below is RUO-compliant. I cannot place ads or buy backlinks from here; paste this into your ad accounts and outreach."
+						}),
+						AD_ANGLES.map((a) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+							className: "rounded-lg border border-border bg-surface p-6",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+									className: "font-display text-xl font-semibold uppercase",
+									children: a.channel
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "mt-2 text-sm text-muted",
+									children: a.note
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+									className: "mt-4 space-y-1 text-sm",
+									children: a.headlines.map((h) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", {
+										className: "font-medium",
+										children: h
+									}, h))
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "mt-3 space-y-2 text-sm text-muted",
+									children: a.descriptions.map((d) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: d }, d))
+								})
+							]
+						}, a.channel)),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+							className: "font-display text-xl font-semibold uppercase",
+							children: "Long-tail keywords"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mt-3 flex flex-wrap gap-2",
+							children: LONG_TAIL_KEYWORDS.map((kword) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "rounded-sm border border-border bg-overlay px-2 py-1 font-mono text-xs",
+								children: kword
+							}, kword))
+						})] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+								className: "font-display text-xl font-semibold uppercase",
+								children: "High-DA / DR backlink targets"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "mt-4 grid gap-3 md:grid-cols-2",
+								children: BACKLINK_TARGETS.map((b) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "rounded-lg border border-border p-5",
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+											className: "font-display font-semibold uppercase",
+											children: b.type
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+											className: "mt-2 text-sm text-muted",
+											children: b.why
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+											className: "mt-2 text-sm",
+											children: b.pitch
+										})
+									]
+								}, b.type))
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("pre", {
+								className: "mt-6 overflow-x-auto rounded-lg border border-border bg-overlay p-4 text-xs leading-relaxed whitespace-pre-wrap",
+								children: OUTREACH_EMAIL
+							})
+						] })
+					]
+				})
+			]
+		})]
+	});
+}
+function Kpi({ label, value }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "rounded-lg border border-border bg-surface p-4",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			className: "font-mono text-[10px] tracking-widest text-muted uppercase",
+			children: label
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			className: "font-display mt-2 text-2xl font-semibold",
+			children: value
+		})]
+	});
+}
+function List({ title, rows }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "rounded-lg border border-border bg-surface p-5",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+			className: "font-display text-lg font-semibold uppercase",
+			children: title
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+			className: "mt-3 space-y-2 text-sm",
+			children: rows.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", {
+				className: "text-muted",
+				children: "Waiting for traffic."
+			}) : rows.map((r) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+				className: "flex justify-between gap-3",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: r.name }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "font-mono text-muted",
+					children: r.n
+				})]
+			}, r.name))
+		})]
+	});
+}
+//#endregion
+export { Admin as component };

@@ -1,0 +1,149 @@
+import { r as CREDIT_RATE } from "./pricing-Bvwp02Vi.mjs";
+import { a as OFFERS, o as PRODUCTS } from "./use-lab-credit-mL5HM6FJ.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/wholesale-tiers-g55m-rFS.js
+var AFFILIATE_CREDIT_BASE = 12.5;
+/** Lab wholesale: MOQ 10 vials of one SKU. Always below retail, always above cost. */
+var WHOLESALE_TIERS = [
+	{
+		qty: 10,
+		off: .16,
+		minProfit: 8,
+		label: "10 vials · −16%"
+	},
+	{
+		qty: 50,
+		off: .22,
+		minProfit: 6,
+		label: "50 vials · −22%"
+	},
+	{
+		qty: 100,
+		off: .28,
+		minProfit: 5,
+		label: "100 vials · −28%"
+	}
+];
+/** What Integrity charges you when you restock that many bottles of one SKU. */
+var INTEGRITY_KIT_OFF = {
+	10: .15,
+	50: .2,
+	100: .3
+};
+function roundHalf(n) {
+	return Math.round(n * 2) / 2;
+}
+function money(n) {
+	return Math.round(n * 100) / 100;
+}
+function wholesaleUnit(cost, retail, qty) {
+	const tier = qty >= 100 ? WHOLESALE_TIERS[2] : qty >= 50 ? WHOLESALE_TIERS[1] : WHOLESALE_TIERS[0];
+	const fromRetail = retail * (1 - tier.off);
+	const floor = cost + tier.minProfit;
+	let p = Math.max(floor, fromRetail);
+	if (p >= retail * .92) p = retail * .9;
+	if (p < cost + 4) p = cost + 4;
+	return roundHalf(p);
+}
+function integrityUnitCost(cost, qty) {
+	return money(cost * (1 - (INTEGRITY_KIT_OFF[qty] ?? 0)));
+}
+function wholesaleSheet() {
+	return pnlSheet().filter((r) => r.ws).map((r) => ({
+		name: r.name,
+		dose: r.dose,
+		cost: r.cost,
+		retail: r.sell,
+		t10: r.ws.q10.unit,
+		t50: r.ws.q50.unit,
+		t100: r.ws.q100.unit,
+		p10: r.ws.q10.profit,
+		p50: r.ws.q50.profit,
+		p100: r.ws.q100.profit
+	}));
+}
+function band(cost, sell, qty) {
+	const unit = wholesaleUnit(cost, sell, qty);
+	const yourCost = integrityUnitCost(cost, qty);
+	const profit = money(unit - yourCost);
+	return {
+		unit,
+		yourCost,
+		profit,
+		lot: money(profit * qty),
+		margin: unit <= 0 ? 0 : profit / unit
+	};
+}
+function pnlSheet() {
+	const seen = /* @__PURE__ */ new Set();
+	const rows = [];
+	for (const p of PRODUCTS) {
+		const offers = OFFERS[`${p.formKind}:${p.id.split("__")[1]}`] ?? [];
+		for (const o of offers) {
+			const key = `${p.id}|${o.dose}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+			const profit = money(o.sell - o.cost);
+			const margin = o.sell <= 0 ? 0 : profit / o.sell;
+			const merchAff = money(o.sell * (1 - 5 / 100));
+			const affCash = money(merchAff - o.cost);
+			const affCredit = money(merchAff * AFFILIATE_CREDIT_BASE / 100);
+			const restockCash = money(Math.max(0, o.sell - affCredit) - o.cost);
+			const rewardCredit = money(o.sell * CREDIT_RATE);
+			const rewardLoop = money(profit + (o.sell - rewardCredit - o.cost));
+			rows.push({
+				key,
+				name: p.name,
+				form: p.form,
+				formKind: p.formKind,
+				dose: o.dose,
+				cost: o.cost,
+				sell: o.sell,
+				profit,
+				margin,
+				ws: p.formKind === "vial" ? {
+					q10: band(o.cost, o.sell, 10),
+					q50: band(o.cost, o.sell, 50),
+					q100: band(o.cost, o.sell, 100)
+				} : null,
+				affCash,
+				affCredit,
+				affLoop: money(affCash + restockCash),
+				rewardCredit,
+				rewardLoop
+			});
+		}
+	}
+	return rows.sort((a, b) => b.profit - a.profit || a.name.localeCompare(b.name));
+}
+function pnlSummary(rows) {
+	if (!rows.length) return {
+		avgMargin: 0,
+		avgRetail: 0,
+		avg10: 0,
+		avg50: 0,
+		avg100: 0,
+		count: 0
+	};
+	const vials = rows.filter((r) => r.ws);
+	const avg = (xs) => xs.length ? xs.reduce((s, n) => s + n, 0) / xs.length : 0;
+	return {
+		count: rows.length,
+		avgMargin: avg(rows.map((r) => r.margin)),
+		avgRetail: avg(rows.map((r) => r.profit)),
+		avg10: avg(vials.map((r) => r.ws.q10.profit)),
+		avg50: avg(vials.map((r) => r.ws.q50.profit)),
+		avg100: avg(vials.map((r) => r.ws.q100.profit))
+	};
+}
+function marginTone(margin) {
+	if (margin >= .48) return "profit";
+	if (margin >= .32) return "warn";
+	return "loss";
+}
+function profitTone(profit) {
+	if (profit >= 8) return "profit";
+	if (profit >= 5) return "warn";
+	return "loss";
+}
+//#endregion
+export { pnlSummary as a, pnlSheet as i, WHOLESALE_TIERS as n, profitTone as o, marginTone as r, wholesaleSheet as s, AFFILIATE_CREDIT_BASE as t };

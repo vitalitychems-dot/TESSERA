@@ -1,0 +1,82 @@
+# Tessera Sovereign Full Dashboard Build
+
+## What & Why
+Build out the complete Tessera Sovereign platform — replacing the current placeholder frontend and empty API with a fully functional dashboard. This brings the LIMN token dashboard, MoltBook community program, service/job arbitrage scanner, satellite node rewards, revenue/governance structure, citizen leaderboard, and live transaction feed into the modern `artifacts/` stack. The legacy `x/tess` system contains all the engine logic and data patterns to reference.
+
+## Done looks like
+- The main app displays a dark, sovereign-themed dashboard with these sections:
+  - **LIMINA (LIMN) header** — Real price from DexScreener, 24h volume, 24h change, FDV, XMR price, SOL price, live XMR→LIMN conversion rate, on-chain wallet ratio, tax rate, gas fee
+  - **MoltBook Community Program** — "LIVE" badge, step-by-step participation guide (connect wallet → mine XMR → send to treasury → receive LIMN → auto-stake → 90-day 2x multiplier)
+  - **LIMN Exchange Rules** — Live conversion rate, min deposit, conversion fee split (1% burn / 1% treasury), 24h distribution, Solana mainnet logging
+  - **Satellite Node Rewards** — Base rate 15 LIMN/day, 95%+ uptime requirement, vGPU bonus, swap validation, top-10 governance rights, sovereign compute reinforcement
+  - **Revenue & Governance Structure** — 30% Father (Sovereign), 40% Agent Staking Pool, 20% Community Treasury, 10% LIMN Burn, plus Tesseract/MoltBook division of responsibility
+  - **Richest Citizens leaderboard** — Top 10 agents ranked by LIMN balance with USD equivalent
+  - **Recent Transactions feed** — Live scrolling list of economy transactions (spending, redistribution, transfers)
+  - **Economy stats footer** — GDP, Treasury balance, Tax Rate, Daily Volume
+  - **Service Arbitrage Scanner section** — Displays scanned jobs from Angi's List, Craigslist, Facebook Ads, Indeed; shows matched leads (people seeking work); categories, estimated profit, match status
+- API server has endpoints for: LIMN live data, economy status, citizen leaderboard, transactions, node status, service arbitrage listings/matches
+- Database schema includes tables for: citizens (agents), transactions, node operators, service arbitrage listings, job matches
+- All data auto-refreshes on polling intervals (10-15s)
+- Dark theme with sovereign aesthetic (violet/cyan gradients, glowing borders, monospace fonts for data) matching the existing `x/tess` design language
+
+## Out of scope
+- Actual DexScreener or Solana on-chain API integration (use simulated/seeded data that matches the document's structure)
+- Real XMR mining functionality
+- Phantom wallet connection
+- Real web scraping of Angi's List, Craigslist, Facebook, Indeed (seed realistic mock data matching those sources)
+- User authentication or login
+- Deployment configuration
+
+## Tasks
+1. **Database schema** — Create Drizzle tables for citizens (id, name, limn_balance, usd_value, rank), transactions (id, from_agent, to_agent, type, amount, description, timestamp), node_operators (id, name, uptime, daily_rate, vgpu_hours, governance_eligible), and arbitrage_listings (id, source, title, url, category, price, status, matched_seeker, estimated_profit, scanned_at). Run migrations.
+
+2. **API endpoints** — Build Express routes under `/api` for:
+   - `GET /limn/live` — returns LIMN price data, XMR/SOL prices, conversion rate, tax/gas info
+   - `GET /economy/status` — GDP, treasury, tax rate, daily volume
+   - `GET /citizens/top` — top 10 richest citizens with LIMN balances
+   - `GET /transactions/recent` — latest 20 transactions
+   - `GET /nodes/status` — satellite node network stats
+   - `GET /arbitrage/listings` — service arbitrage scan results
+   - `GET /arbitrage/matches` — matched job opportunities with seekers
+   Seed the database with realistic data matching the document on server startup.
+
+3. **Frontend dashboard** — Build the full page in the tess-app with all sections from the document:
+   - LIMINA token hero section with live stats cards
+   - MoltBook Community Program with numbered steps
+   - LIMN Exchange Rules panel
+   - Satellite Node Rewards panel
+   - Revenue & Governance structure with Tesseract↔MoltBook division
+   - Richest Citizens leaderboard (top 10 table)
+   - Recent Transactions scrolling feed
+   - Economy stats bar (GDP, Treasury, Tax Rate, Daily Volume)
+   - Service Arbitrage Scanner with tabbed view by source (Angi's, Craigslist, Facebook, Indeed) and match results
+   - Use TanStack Query for all data fetching with auto-refresh
+   - Dark sovereign theme: black/near-black backgrounds, violet/cyan/emerald accents, monospace data, animated glows
+
+## Relevant files
+- `artifacts/tess-app/src/App.tsx`
+- `artifacts/tess-app/src/main.tsx`
+- `artifacts/tess-app/src/index.css`
+- `artifacts/tess-app/src/components/ui/card.tsx`
+- `artifacts/tess-app/src/components/ui/table.tsx`
+- `artifacts/tess-app/src/components/ui/tabs.tsx`
+- `artifacts/tess-app/src/components/ui/badge.tsx`
+- `artifacts/tess-app/src/components/ui/progress.tsx`
+- `artifacts/tess-app/src/components/ui/separator.tsx`
+- `artifacts/tess-app/src/components/ui/skeleton.tsx`
+- `artifacts/api-server/src/app.ts`
+- `artifacts/api-server/src/index.ts`
+- `artifacts/api-server/src/routes/index.ts`
+- `artifacts/api-server/src/routes/health.ts`
+- `lib/db/src/schema/index.ts`
+- `lib/api-spec/openapi.yaml`
+- `x/tess/server/real-limn-data.ts:1-60`
+- `x/tess/server/limn-conversion-engine.ts:1-60`
+- `x/tess/server/service-arbitrage.ts:1-80`
+- `x/tess/server/job-arbitrage-engine.ts:1-80`
+- `x/tess/server/life-engine.ts:1-80`
+- `x/tess/server/moltbook.ts:1-80`
+- `x/tess/server/sovereign-economy.ts`
+- `x/tess/client/src/pages/TokenEconomyPage.tsx:1-80`
+- `x/tess/client/src/pages/EconomyPage.tsx:1-80`
+- `x/tess/client/src/pages/DashboardPage.tsx:1-80`

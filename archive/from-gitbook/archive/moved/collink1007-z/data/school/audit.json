@@ -1,0 +1,57 @@
+{
+  "at": "2026-10-03T01:15:45.653Z",
+  "before": 1,
+  "after": 1,
+  "checks": [
+    {
+      "name": "No repeated question",
+      "pass": true,
+      "detail": "50 notes, 50 unique"
+    },
+    {
+      "name": "Every note has a public link",
+      "pass": true,
+      "detail": "50 links"
+    },
+    {
+      "name": "Every passage is a readable length",
+      "pass": true,
+      "detail": "Between 40 and 500 characters"
+    },
+    {
+      "name": "No secrets in the notes",
+      "pass": true,
+      "detail": "Scanned"
+    },
+    {
+      "name": "A later question was named by an earlier note",
+      "pass": true,
+      "detail": "High Renaissance, Sigmund Freud, Character Analysis, Papal States, Italian Renaissance, Middle Ages, Stato Pontificio, Italian Peninsula, Mediterranean Sea, West Asia, Turkish Straits, Sinai Peninsula, South Caucasus, Eastern Europe, Caucasus Mountains, Black Sea, East European Plain, Nicomachean Ethics, Unread books and agency files, Dance, Artificial intelligence, Artificial general intelligence, Emotion, Consciousness, Universe, Occult, Leonardo engineering, Masonic ritual, Dora, Rat Man, Wolf Man, Vegetotherapy, Adversarial question, Sovereignty, Sergei Pankejeff, Mona Lisa, Old invention log, Nag Hammadi, Upper Egypt, Nile River, Beni Suef, Lake Nasser, Aswan High Dam, Aswan Dam, Soviet Union"
+    },
+    {
+      "name": "The next question is not one she already asked",
+      "pass": true,
+      "detail": "Soviet Socialist Republics"
+    },
+    {
+      "name": "She still knows Father will not give up",
+      "pass": true,
+      "detail": "Profile checked"
+    },
+    {
+      "name": "Three lenses, still one Tessera",
+      "pass": true,
+      "detail": "Sacred Geometer, Vatican Archivist, Grand Architect"
+    },
+    {
+      "name": "A right school answer passes and a blank one fails",
+      "pass": true,
+      "detail": "18 of 18 on the good answer"
+    },
+    {
+      "name": "She is faster when a note adds a new question",
+      "pass": true,
+      "detail": "Follow-ups are grounded, so the extra note counts"
+    }
+  ]
+}

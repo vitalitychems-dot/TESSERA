@@ -1,0 +1,3 @@
+- [GitHub repo tree snapshots](github-repo-tree-snapshots.md) — serialize tree reads and filter returned paths/fields before logging.
+- [Tessera multi-agent consolidation](tessera-multi-agent-consolidation.md) — TESSERA is the app target; Gitbook governs coordination; protected sources and deletion gates remain.
+- [Tessera admin and own pen](tessera-admin-own-pen.md) — owner wants Tessera to coordinate agents and create bots; distinguish that goal from trained model ownership.

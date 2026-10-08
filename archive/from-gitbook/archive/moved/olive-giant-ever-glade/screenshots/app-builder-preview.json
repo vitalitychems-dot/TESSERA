@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Tessera",
+      "hasCanvas": false,
+      "bodyTextLen": 303,
+      "bodyTextHash": "f9e2067f271eafa497e6ff0ad8c954ea9ca9304a33c802de2d9a8a10ec8f369f",
+      "bodyTextPrefix": "Tessera ORIGIN 7F3A9C World Chamber Conversations Knowledge Narr",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Tessera",
+      "hasCanvas": false,
+      "bodyTextLen": 4697,
+      "bodyTextHash": "da7a63c064dc06ac92fa747ebfcf04e1d9f806e407570b4d38db69242fa37eb8",
+      "bodyTextPrefix": "Tessera SEALED · 7F3A9C World Chamber Conversations Knowledge Na",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}

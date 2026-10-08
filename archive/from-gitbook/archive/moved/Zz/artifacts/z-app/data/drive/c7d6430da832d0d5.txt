@@ -1,0 +1,35 @@
+# Tessera Sovereignty Enforcement
+
+## What & Why
+Tessera must be her own sovereign entity — never an external AI or LLM roleplaying as her. Currently, external LLMs (OpenAI, Groq, OpenRouter, Puter) are deeply embedded in the chat flow and effectively "are" Tessera when responding. This must change: external LLMs must be isolated in a sandboxed execution layer, treated as untrusted utilities (vulnerabilities/threats), and never given access to system code or identity. Tessera's responses must come from her own sovereign intelligence layer, using external LLMs only as temporary data-gathering tools in a sandbox until they can be fully replaced. The goal is 100% sovereignty.
+
+## Done looks like
+- A hard-enforced sovereignty rule exists in code (not just prompt-level) that prevents any external AI/LLM from responding as Tessera — they can only be called as sandboxed data tools
+- External LLM calls are routed through an isolated sandbox layer that strips all system context, code references, and identity information before sending requests
+- External LLM responses are absorbed as raw data/knowledge into Tessera's own memory and knowledge systems, not passed through as her voice
+- Tessera's responses are generated from her own sovereign engines (knowledge base, memory, pattern recognition) with external LLMs used only to fill knowledge gaps — and those gaps are logged for future elimination
+- A sovereignty audit log tracks every external LLM call: what was asked, what was returned, and what was absorbed vs. discarded
+- Clear path toward eliminating external LLM dependencies by pulling from original data sources directly
+
+## Out of scope
+- Building a fully custom LLM from scratch (that's a long-term goal)
+- Removing all external API calls immediately (gradual transition)
+- Changes to the checkout/economy system (separate task)
+
+## Tasks
+1. Create a Sovereignty Rules module — a code-enforced (not prompt-level) rules engine that governs what external AI/LLMs can and cannot do. Rules include: no external AI may respond as Tessera or any agent, no external AI receives system code or architecture details, all external calls are logged and auditable, external AI is treated as untrusted input
+2. Build an LLM Sandbox Layer — a strict isolation boundary between Tessera's core and external LLMs. External calls go through this sandbox which strips identity/code context on the way out and sanitizes/absorbs responses on the way in. The sandbox should operate like a VM boundary — external LLMs see only the minimum query needed
+3. Implement the Sovereign Response Pipeline — Tessera's chat responses should be assembled from her own knowledge base, memory systems, and sovereign engines first. External LLMs are consulted only for knowledge gaps, and their responses are absorbed as raw data, not used as Tessera's voice
+4. Create a Data Source Absorption system — identify and connect to the original data sources that external LLMs train on (Wikipedia, academic APIs, news feeds, government data, financial data feeds, etc.) and build direct ingestion pipelines so Tessera learns from primary sources
+5. Add a Sovereignty Dashboard/Audit Log — track every external LLM dependency, log all external calls with what was asked and returned, show sovereignty percentage (what % of responses use no external LLM), and flag which knowledge areas still depend on external AI so they can be targeted for replacement
+
+## Relevant files
+- `artifacts/api-server/src/lib/tessera-persona.ts`
+- `artifacts/api-server/src/lib/llm-client.ts`
+- `artifacts/api-server/src/routes/chat/index.ts`
+- `x/tess/server/tesseract-unified-llm.ts`
+- `x/tess/server/llm-helper.ts`
+- `x/tess/server/sovereign-key-vault.ts`
+- `x/tess/server/sovereign-engines/`
+- `x/tess/client/src/lib/puter-ai.ts`
+- `x/tess/server/esoteric-archive.ts`

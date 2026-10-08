@@ -1,0 +1,88 @@
+modules = ["nodejs-20", "web", "postgresql-16"]
+run = "npm run dev"
+hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
+
+[nix]
+channel = "stable-24_05"
+packages = ["unzip"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[env]
+PORT = "5000"
+
+[deployment]
+deploymentTarget = "vm"
+run = ["npm", "run", "start"]
+build = ["npm", "run", "build"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
+[userenv]
+
+[userenv.shared]
+OPENROUTER_API_KEY = "REPLACED_FOR_SECURITY"
+COHERE_API_KEY = "REPLACED_FOR_SECURITY"
+DEEPSEEK_API_KEY = "REPLACED_FOR_SECURITY"
+GROK_API_KEY = "REPLACED_FOR_SECURITY"
+GEMINI_API_KEY = "REPLACED_FOR_SECURITY"
+HUGGINGFACE_API_KEY = "REPLACED_FOR_SECURITY"
+GITHUB_MODELS_TOKEN = "REPLACED_FOR_SECURITY"
+ELEVENLABS_API_KEY = "REPLACED_FOR_SECURITY"
+SHOPIFY_STORE = "REPLACED_FOR_SECURITY"
+SHOPIFY_SECRET = "REPLACED_FOR_SECURITY"
+HUBSPOT_API_KEY = "REPLACED_FOR_SECURITY"
+SOL_PRIVATE_KEY = "REPLACED_FOR_SECURITY"
+SOL_PRIVATE_KEY_ECONOMY = "REPLACED_FOR_SECURITY"
+ETH_PRIVATE_KEY = "REPLACED_FOR_SECURITY"
+BTC_PRIVATE_KEY = "REPLACED_FOR_SECURITY"
+PUTER_AUTH_TOKEN = "REPLACED_FOR_SECURITY"
+SHOPIFY_CONTACT_EMAIL = "REPLACED_FOR_SECURITY"
+GEMINI_PROJECT = "REPLACED_FOR_SECURITY"
+COMMUNITY_SOL_WALLET = "REPLACED_FOR_SECURITY"
+COMMUNITY_ETH_WALLET = "REPLACED_FOR_SECURITY"
+COMMUNITY_BTC_WALLET = "REPLACED_FOR_SECURITY"
+TESSERACT_API_1 = "REPLACED_FOR_SECURITY"
+TESSERACT_API_2 = "REPLACED_FOR_SECURITY"
+T9_SALT = "REPLACED_FOR_SECURITY"
+T9_PEPPER = "REPLACED_FOR_SECURITY"
+KLAVIYO_API_KEY = "REPLACED_FOR_SECURITY"
+GOOGLE_ANALYTICS_ID = "REPLACED_FOR_SECURITY"
+GITHUB_TOKEN = "REPLACED_FOR_SECURITY"
+APIFY_API_KEY = "REPLACED_FOR_SECURITY"
+XAI_API_KEY = "REPLACED_FOR_SECURITY"
+SHOPIFY_CLIENT_ID = "REPLACED_FOR_SECURITY"
+VITE_SOL_WALLET = "REPLACED_FOR_SECURITY"
+SOL_WALLET = "REPLACED_FOR_SECURITY"
+SHOPIFY_WEBHOOK_DELIVERY_EMAIL = "REPLACED_FOR_SECURITY"
+SHOPIFY_SHARED_SECRET = "REPLACED_FOR_SECURITY"
+TSRT_CONTRACT = "FMB4v2RaHSMfJDwijqAij7ouTowK2rz6yW95Z94spump"
+VITE_TSRT_CONTRACT = "FMB4v2RaHSMfJDwijqAij7ouTowK2rz6yW95Z94spump"
+
+[agent]
+integrations = ["javascript_openai_ai_integrations:2.0.0"]
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000

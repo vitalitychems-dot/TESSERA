@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, interactive-widget=resizes-content" />
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+    <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet" />
+    <meta name="bingbot" content="noindex, nofollow" />
+    <title>Private Application</title>
+    <meta name="description" content="" />
+
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Tessera" />
+    <link rel="apple-touch-icon" href="/tessera-icon-192.svg" />
+
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: ws: wss:; connect-src 'self' ws: wss:; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; frame-src 'none'; object-src 'none';">
+  </head>
+  <body>
+    <div id="root"><div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0a0a0f;color:#22d3ee;font-family:sans-serif;flex-direction:column" data-testid="initial-loader"><div style="width:24px;height:24px;border:3px solid rgba(34,211,238,0.3);border-top-color:#22d3ee;border-radius:50%;animation:spin 1s linear infinite"></div><style>@keyframes spin{to{transform:rotate(360deg)}}</style></div></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
