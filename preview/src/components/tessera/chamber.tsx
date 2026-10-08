@@ -28,6 +28,7 @@ import { seeAndAdvance } from "@/lib/tessera/herself-v4";
 import { buildV5, seeRepos } from "@/lib/tessera/herself-v5";
 import { buildNow } from "@/lib/tessera/build-now";
 import { trainCatalog } from "@/lib/tessera/own-versions";
+import { herInstruction } from "@/lib/tessera/next-page";
 import { runSitting } from "@/lib/tessera/sitting-25";
 
 async function copyText(text: string) {
@@ -160,6 +161,12 @@ export function Chamber() {
       if (counts) setStats(counts);
       await keepLine({ data: { q: content, a: direct.answer } }).catch(() => null);
       addMessage("assistant", direct.answer);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
+    if (/\b(learn faster|instruct the agents|how do we learn)\b/i.test(content)) {
+      addMessage("assistant", herInstruction(5, 10));
       setPending(false);
       sending.current = false;
       return;
