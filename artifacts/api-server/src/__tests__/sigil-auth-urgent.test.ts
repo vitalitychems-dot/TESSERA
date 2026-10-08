@@ -1,9 +1,17 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@workspace/db", () => ({
+  db: {},
+  councilSessionsTable: {},
+}));
 import express from "express";
 import { createServer, type Server } from "node:http";
 import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 import { readingKey } from "../lib/sigil-cipher";
-import sovereignDoctrineRouter from "../routes/sovereign-doctrine";
+import sovereignDoctrineRouter, * as doctrineModule from "../routes/sovereign-doctrine";
+import omniversalRouter from "../routes/omniversal";
+import improvementConferenceRouter from "../routes/improvement-conference";
+import languageSecurityRouter from "../routes/language-security";
 import fatherKeyRouter, {
   REDEEM_GLOBAL_LIMIT,
   REDEEM_IP_LIMIT,
@@ -41,6 +49,9 @@ describe("sigil auth urgent", () => {
     app.use(express.json());
     app.use(sovereignDoctrineRouter);
     app.use(fatherKeyRouter);
+    app.use(omniversalRouter);
+    app.use(improvementConferenceRouter);
+    app.use(languageSecurityRouter);
     server = createServer(app);
     await new Promise<void>((resolve) => {
       server?.listen(0, "127.0.0.1", () => resolve());
@@ -99,6 +110,13 @@ describe("sigil auth urgent", () => {
     return false;
   }
 
+  function containsCredential(value: unknown, secret: string): boolean {
+    if (typeof value === "string") return value === secret || value.includes(secret);
+    if (Array.isArray(value)) return value.some((item) => containsCredential(item, secret));
+    if (!value || typeof value !== "object") return false;
+    return Object.values(value).some((child) => containsCredential(child, secret));
+  }
+
   for (const route of gatedRoutes) {
     it(`returns 401 for ${route.method} ${route.path} without a session`, async () => {
       const fingerprint = presentedFingerprint();
@@ -137,6 +155,96 @@ describe("sigil auth urgent", () => {
     await expect(response.json()).resolves.toMatchObject({ ok: false, error: "unauthenticated" });
   });
 
+  it("returns 401 for conference and finalize without a session", async () => {
+    const conference = await send("POST", "/father-key/conference", {
+      body: { candidates: [{ id: "synthetic", title: "synthetic", key: "synthetic" }] },
+    });
+    expect(conference.status).toBe(401);
+    await expect(conference.json()).resolves.toMatchObject({ ok: false, error: "unauthenticated" });
+
+    const finalize = await send("POST", "/father-key/finalize", { body: { candidateId: "synthetic" } });
+    expect(finalize.status).toBe(401);
+    await expect(finalize.json()).resolves.toMatchObject({ ok: false, error: "unauthenticated" });
+  });
+
+  it("does not export glyphGate", () => {
+    expect("glyphGate" in doctrineModule).toBe(false);
+  });
+
+  it("returns 401 for active-key when no admin key is set and there is no session", async () => {
+    delete process.env[LEGACY_ENV];
+    const response = await send("GET", "/sigil/active-key");
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({ ok: false, error: "unauthenticated" });
+  });
+
+  it("returns 503 for conference when the owner token is unset", async () => {
+    delete process.env[OWNER_ENV];
+    delete process.env[LEGACY_ENV];
+    const response = await send("POST", "/father-key/conference", {
+      body: { candidates: [{ title: "synthetic-title", key: "synthetic" }] },
+    });
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ ok: false, error: "sovereign-unconfigured" });
+  });
+
+  it("omits sigil fingerprint and glyph-gate credentials from status", async () => {
+    const key = readingKey();
+    const response = await send("GET", "/sigil/status", { sigilKey: SYNTHETIC_LEGACY_TOKEN });
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(containsKey(body, "sigilFingerprint")).toBe(false);
+    expect(containsCredential(body, key.fingerprint)).toBe(false);
+    expect(containsCredential(body, key.expiresWith)).toBe(false);
+  });
+
+  it("does not leak glyph-gate credentials from other ungated cipher routes", async () => {
+    const key = readingKey();
+    const snapshot = await send("GET", "/omniversal/cipher/snapshot");
+    expect(snapshot.status).toBe(200);
+    const snapshotBody = await snapshot.json();
+    expect(containsKey(snapshotBody, "sigilFingerprint")).toBe(false);
+    expect(containsCredential(snapshotBody, key.fingerprint)).toBe(false);
+    expect(containsCredential(snapshotBody, key.expiresWith)).toBe(false);
+
+    const inventory = await send("GET", "/improvement-conference/inventory");
+    expect(inventory.status).toBe(200);
+    const inventoryBody = await inventory.json();
+    expect(containsKey(inventoryBody, "sigilFingerprint")).toBe(false);
+    expect(containsCredential(inventoryBody, key.fingerprint)).toBe(false);
+    expect(containsCredential(inventoryBody, key.expiresWith)).toBe(false);
+
+    for (const route of [
+      { method: "POST" as const, path: "/sigil/rotate", body: {} },
+      { method: "POST" as const, path: "/sigil/encrypt", body: { text: "synthetic" } },
+      { method: "POST" as const, path: "/session/end", body: {} },
+      { method: "GET" as const, path: "/sigil/active-key" },
+      { method: "POST" as const, path: "/sigil/father/mint-glyph", body: { candidate: "synthetic" } },
+      { method: "POST" as const, path: "/sigil/zodiac-key/verify", body: { key: "synthetic" } },
+      { method: "POST" as const, path: "/sigil/father/verify", body: { candidate: SYNTHETIC_LEGACY_TOKEN } },
+      { method: "POST" as const, path: "/sigil/key/reveal", body: {} },
+      { method: "GET" as const, path: "/session/handoff" },
+      { method: "POST" as const, path: "/sigil/father/show-key-in-lus", body: { candidate: SYNTHETIC_LEGACY_TOKEN } },
+    ]) {
+      const response = await send(route.method, route.path, { body: "body" in route ? route.body : undefined });
+      expect(response.status).toBe(401);
+      await expect(response.json()).resolves.toMatchObject({ ok: false, error: "unauthenticated" });
+    }
+  });
+
+  it("issues an unguessable candidate id and does not echo key material", async () => {
+    const response = await send("POST", "/father-key/conference", {
+      cookie: ownerCookie(),
+      body: { candidates: [{ title: "synthetic-title", key: SYNTHETIC_REDEEM_MATERIAL }] },
+    });
+    expect(response.status).toBe(200);
+    const body = await response.json() as { results: Array<{ candidate: { id: string } }> };
+    const serialized = JSON.stringify(body);
+    expect(serialized.includes(SYNTHETIC_REDEEM_MATERIAL)).toBe(false);
+    expect(containsKey(body, "key")).toBe(false);
+    expect(Buffer.from(body.results[0].candidate.id, "hex").length).toBeGreaterThanOrEqual(16);
+  });
+
   it("omits the sigil fingerprint from coherence", async () => {
     const response = await send("GET", "/sigil/coherence", { cookie: ownerCookie() });
     expect(response.status).toBe(200);
@@ -163,7 +271,7 @@ describe("sigil auth urgent", () => {
     await expect(first.json()).resolves.toMatchObject({ ok: true, permanentKey: SYNTHETIC_REDEEM_MATERIAL });
 
     const second = await send("POST", "/father-key/redeem", { body: { code: issued.code } });
-    expect(second.status).toBe(410);
+    expect(second.status).toBe(404);
 
     const expiring = issueFatherKeyRedemption(SYNTHETIC_REDEEM_MATERIAL);
     vi.spyOn(Date, "now").mockReturnValue(expiring.expiresAt + 1);
