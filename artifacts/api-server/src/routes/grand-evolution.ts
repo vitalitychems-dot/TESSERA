@@ -8,7 +8,11 @@ import {
   isCycleRunning,
 } from "../lib/grand-evolution-cycle";
 import { verifyFatherKey, isFatherKeyConfigured } from "../lib/father-identity";
-import { resolveFatherAuthorization } from "../lib/sovereign-admin";
+import {
+  requireAdminSession,
+  resolveFatherAuthorization,
+  type AdminRequest,
+} from "../lib/sovereign-admin";
 import {
   convene,
   subscribeToSession,
@@ -33,6 +37,45 @@ function requireFather(req: Request, res: Response, next: NextFunction): void {
     return;
   }
   next();
+}
+
+/** Owner cookie via requireAdminSession, or a verified x-tesseract-admin-key. */
+function requireEvolutionSessionRead(req: AdminRequest, res: Response, next: NextFunction): void {
+  if ((process.env.TESSERACT_ADMIN_KEY ?? "").trim().length < 16) {
+    res.status(503).json({
+      ok: false,
+      error: "sovereign-unconfigured",
+      message: "TESSERACT_ADMIN_KEY is not configured. Privileged surfaces are fail-closed.",
+    });
+    return;
+  }
+  const header = req.header("x-tesseract-admin-key");
+  if (typeof header === "string") {
+    const auth = resolveFatherAuthorization(req);
+    if (auth.fatherAuthorized) {
+      next();
+      return;
+    }
+    switch (auth.reason) {
+      case "unconfigured":
+        res.status(503).json({
+          ok: false,
+          error: "sovereign-unconfigured",
+          message: "TESSERACT_ADMIN_KEY is not configured. Privileged surfaces are fail-closed.",
+        });
+        return;
+      case "rejected":
+      case "absent":
+        res.status(401).json({ ok: false, error: "unauthenticated", reason: auth.reason });
+        return;
+      default: {
+        const unreachable: never = auth.reason;
+        res.status(401).json({ ok: false, error: "unauthenticated", reason: unreachable });
+        return;
+      }
+    }
+  }
+  requireAdminSession(req, res, next);
 }
 
 const router: IRouter = Router();
@@ -133,12 +176,12 @@ router.get("/grand-evolution/society", (_req, res) => {
   res.json({ ok: true, data: { ...getSocietyStats(), anchor: societyAnchor() } });
 });
 
-router.get("/grand-evolution/sessions", async (_req, res) => {
+router.get("/grand-evolution/sessions", requireEvolutionSessionRead, async (_req, res) => {
   const sessions = await listSessions(50);
   res.json({ ok: true, data: { sessions } });
 });
 
-router.get("/grand-evolution/sessions/:id", async (req, res) => {
+router.get("/grand-evolution/sessions/:id", requireEvolutionSessionRead, async (req, res) => {
   const id = req.params.id;
   const [turns, directives, benchmarks, audit] = await Promise.all([
     getSessionTurns(id),
@@ -175,7 +218,7 @@ router.post("/grand-evolution/convene", rawKeyFailRateLimit, async (req, res) =>
   }
 });
 
-router.get("/grand-evolution/sessions/:id/stream", (req, res) => {
+router.get("/grand-evolution/sessions/:id/stream", requireEvolutionSessionRead, (req, res) => {
   const id = req.params.id;
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");

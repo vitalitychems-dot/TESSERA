@@ -15,12 +15,12 @@ vi.mock("../lib/grand-evolution-cycle", () => ({
 
 vi.mock("../lib/grand-evolution-engine", () => ({
   convene: vi.fn(async () => ({ sessionId: "synthetic-session" })),
-  subscribeToSession: () => ({ unsubscribe: () => undefined, backlog: [] }),
-  listSessions: async () => [],
-  getSessionTurns: async () => [],
-  getSessionDirectives: async () => [],
-  getSessionBenchmarks: async () => [],
-  getSessionAuditSummary: async () => ({}),
+  subscribeToSession: vi.fn(() => ({ unsubscribe: () => undefined, backlog: [] })),
+  listSessions: vi.fn(async () => []),
+  getSessionTurns: vi.fn(async () => []),
+  getSessionDirectives: vi.fn(async () => []),
+  getSessionBenchmarks: vi.fn(async () => []),
+  getSessionAuditSummary: vi.fn(async () => ({})),
   societyAnchor: () => "synthetic-anchor",
 }));
 
@@ -28,7 +28,15 @@ import express from "express";
 import { createServer, type Server } from "node:http";
 import { registerSession, removeSession } from "../lib/session-mesh";
 import { runGrandEvolutionCycle } from "../lib/grand-evolution-cycle";
-import { convene } from "../lib/grand-evolution-engine";
+import {
+  convene,
+  getSessionAuditSummary,
+  getSessionBenchmarks,
+  getSessionDirectives,
+  getSessionTurns,
+  listSessions,
+  subscribeToSession,
+} from "../lib/grand-evolution-engine";
 import meshRouter from "../routes/mesh";
 import adminSessionRouter from "../routes/admin-session";
 import sovereignDataRouter from "../routes/sovereign-data";
@@ -189,6 +197,37 @@ describe("privacy e limiters and admin key sources", () => {
     expect(wrongBody.fatherAuthorized).not.toBe(true);
     expect(convene).not.toHaveBeenCalled();
     expect(runGrandEvolutionCycle).not.toHaveBeenCalled();
+  });
+
+  it("rejects anonymous grand-evolution session reads before the handlers run", async () => {
+    vi.mocked(listSessions).mockClear();
+    vi.mocked(getSessionTurns).mockClear();
+    vi.mocked(getSessionDirectives).mockClear();
+    vi.mocked(getSessionBenchmarks).mockClear();
+    vi.mocked(getSessionAuditSummary).mockClear();
+    vi.mocked(subscribeToSession).mockClear();
+
+    const paths = [
+      "/grand-evolution/sessions",
+      "/grand-evolution/sessions/synthetic-session",
+      "/grand-evolution/sessions/synthetic-session/stream",
+    ];
+    for (const path of paths) {
+      const response = await fetch(`${baseUrl}${path}`, {
+        headers: { "x-forwarded-for": "203.0.113.80" },
+      });
+      expect(response.status).toBe(401);
+      const body = await response.json() as { ok?: boolean; error?: string };
+      expect(body.ok).toBe(false);
+      expect(body.error).toBe("unauthenticated");
+    }
+
+    expect(listSessions).not.toHaveBeenCalled();
+    expect(getSessionTurns).not.toHaveBeenCalled();
+    expect(getSessionDirectives).not.toHaveBeenCalled();
+    expect(getSessionBenchmarks).not.toHaveBeenCalled();
+    expect(getSessionAuditSummary).not.toHaveBeenCalled();
+    expect(subscribeToSession).not.toHaveBeenCalled();
   });
 
   it("rate-limits failed mesh session attempts on their own bucket", async () => {
