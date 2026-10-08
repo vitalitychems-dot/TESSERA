@@ -1,7 +1,10 @@
 import { Router, type IRouter } from "express";
 import { getAllProfiles, getProfileById, filterProfiles, getCountries, getAffiliations } from "../lib/political-dossiers";
+import { requireAdminSession } from "../lib/sovereign-admin";
 
 const router: IRouter = Router();
+
+router.use("/political-dossiers", requireAdminSession);
 
 router.get("/political-dossiers", (req, res) => {
   try {
