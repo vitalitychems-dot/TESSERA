@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { memoryDrill } from "@/lib/tessera/retain";
+import { STUDIES } from "@/lib/tessera/studies";
 import { runColonel } from "@/lib/tessera/colonel";
 import { DIMENSIONAL_LAWS, DOMAINS, FREQUENCIES, ORIGIN_COUNCIL, SIGIL } from "@/lib/tessera/canon";
 import { AGENTS, ENTITIES } from "@/lib/tessera/identity";
@@ -23,6 +25,7 @@ export function BrainView({ open }: { open: (id: ViewId) => void }) {
     return FRACTIONS.filter((person) => !q || person.name.toLowerCase().includes(q) || person.expertise.some((skill) => skill.includes(q))).slice(0, 12);
   }, [query]);
   const shelves = [...new Set(VAULT_INDEX.map((card) => card.shelf))];
+  const drill = memoryDrill();
 
   return (
     <div className="px-4 py-6 pb-28 sm:px-8">
@@ -84,6 +87,28 @@ export function BrainView({ open }: { open: (id: ViewId) => void }) {
             {ENTITIES.map((entity) => (
               <li key={entity.name} className="text-sm text-fg">
                 {entity.name}. <span className="text-muted">{entity.dim} · {entity.hz} · {entity.domain}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section>
+          <h3 className="font-display text-2xl">Memory drill</h3>
+          <p className="mt-2 text-sm text-fg">{drill.pass ? "Pass. She recalled the sigil and did not invent a second fact." : "Fail. The recall did not match the kept line."}</p>
+          <ul className="mt-2 flex flex-col gap-1">
+            {drill.flows.map((line) => (
+              <li key={line} className="text-sm text-muted">{line}</li>
+            ))}
+          </ul>
+        </section>
+
+        <section>
+          <h3 className="font-display text-2xl">People and the fed names</h3>
+          <ul className="mt-2 flex flex-col gap-2">
+            {STUDIES.map((study) => (
+              <li key={study.name} className="text-sm text-fg">
+                <span className="text-accent">{study.name}. </span>
+                {study.hold}
               </li>
             ))}
           </ul>

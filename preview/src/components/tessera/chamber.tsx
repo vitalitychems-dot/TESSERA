@@ -2,13 +2,31 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUp, Check, Copy, Loader2 } from "lucide-react";
 import { speakAsTessera } from "@/lib/tessera/chat";
 import { briefFor } from "@/lib/tessera/craft";
-import { vowCheck } from "@/lib/tessera/learning";
 import { openQuestion, postApproval, readBoard, readRepoFile, writeCoordinationNote } from "@/lib/tessera/github-desk";
 import { runLocalTool } from "@/lib/tessera/tools";
 import { readDeskStudy, readPublicPage, searchWeb } from "@/lib/tessera/study";
+import { fetchHeading } from "@/lib/tessera/address-guard";
 import { TESSERA } from "@/lib/tessera/identity";
 import { clipNote } from "@/lib/tessera/wave";
-import { useTessera } from "@/lib/tessera/store";
+import { matchFatherFed } from "@/lib/tessera/father-fed";
+import { selfIngest } from "@/lib/tessera/self-ingest";
+import { spongeOnce } from "@/lib/tessera/sponge";
+import { recallCorpus } from "@/lib/tessera/recall-all";
+import { fromTheRead } from "@/lib/tessera/read-work";
+import { keepLine, recallLine } from "@/lib/tessera/retain";
+import { directSkill, markSkill, readSkillStats, SKILL_NAMES, type SkillName } from "@/lib/tessera/skill-use";
+import { sovereignAnswer } from "@/lib/tessera/stride";
+import { buildSelf } from "@/lib/tessera/self-build";
+import { gitbookAnswer } from "@/lib/tessera/gitbook-orders";
+import { buildV2 } from "@/lib/tessera/herself-v2";
+import { buildV3 } from "@/lib/tessera/herself-v3";
+import { asHerself } from "@/lib/tessera/as-herself";
+import { learnUntilBetter, trainUntilRecursive } from "@/lib/tessera/recursive-train";
+import { coverAll } from "@/lib/tessera/all-cover";
+import { loveFromFiles } from "@/lib/tessera/love-local";
+import { seeAndAdvance } from "@/lib/tessera/herself-v4";
+import { buildV5, seeRepos } from "@/lib/tessera/herself-v5";
+import { runSitting } from "@/lib/tessera/sitting-25";
 
 async function copyText(text: string) {
   try {
@@ -63,6 +81,7 @@ export function Chamber() {
   const [error, setError] = useState<string | null>(null);
   const [failedText, setFailedText] = useState<string | null>(null);
   const [webNote, setWebNote] = useState<string | null>(null);
+  const [stats, setStats] = useState<Record<SkillName, number>>({ search: 0, map: 0, convert: 0, colonel: 0, vow: 0, name: 0, read: 0, notice: 0, sort: 0, quote: 0 });
   const [desk, setDesk] = useState<{ at: string; query: string; text: string }[]>([]);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const sending = useRef(false);
@@ -75,6 +94,9 @@ export function Chamber() {
     }
     void pull();
     const id = window.setInterval(() => void pull(), 20000);
+    void readSkillStats().then((counts) => {
+      if (!stop) setStats(counts);
+    });
     return () => {
       stop = true;
       window.clearInterval(id);
@@ -130,6 +152,158 @@ export function Chamber() {
       sending.current = false;
       return;
     }
+    const direct = directSkill(content);
+    if (direct) {
+      const counts = await markSkill({ data: { skill: direct.skill } }).catch(() => null);
+      if (counts) setStats(counts);
+      await keepLine({ data: { q: content, a: direct.answer } }).catch(() => null);
+      addMessage("assistant", direct.answer);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
+    if (/\b(full repo|both repos|v5|next version)\b/i.test(content)) {
+      const seen = seeRepos();
+      const answer = `TESSERA paths ${seen.tessera}. Gitbook paths ${seen.gitbook}. Flow ${seen.flow ? "sorted" : "missed"}.\n\n${buildV5()}`;
+      addMessage("assistant", answer);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
+    if (/\b(everything at once|what do you think|v4)\b/i.test(content)) {
+      const answer = seeAndAdvance();
+      addMessage("assistant", answer);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
+    const loved = loveFromFiles(content);
+    if (loved) {
+      addMessage("assistant", loved);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
+    if (/\b(sit down|sitting)\b/i.test(content)) {
+      const sitting = runSitting();
+      const answer = `${sitting.admin} chairs. ${sitting.seats.join(", ")}. ${sitting.done} of ${sitting.total} checks passed. The zips are still unread.`;
+      addMessage("assistant", answer);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
+    if (/\b(all topics|all skills|every skill)\b/i.test(content)) {
+      const run = coverAll();
+      addMessage("assistant", run.said);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
+    if (/\b(mistake|mistakes)\b/i.test(content)) {
+      const run = learnUntilBetter();
+      addMessage("assistant", run.said);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
+    if (/\b(train|recursive)\b/i.test(content)) {
+      const run = trainUntilRecursive();
+      addMessage("assistant", run.said);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
+    if (/\b(real self|as yourself|sovereignty first)\b/i.test(content)) {
+      const answer = asHerself();
+      addMessage("assistant", answer);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
+    if (/\bv3\b/i.test(content)) {
+      const answer = buildV3();
+      await keepLine({ data: { q: content, a: answer } }).catch(() => null);
+      addMessage("assistant", answer);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
+    if (/\b(better version|version of herself|\bv2\b)\b/i.test(content)) {
+      const answer = buildV2();
+      await keepLine({ data: { q: content, a: answer } }).catch(() => null);
+      addMessage("assistant", answer);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
+    const orders = gitbookAnswer(content);
+    if (orders) {
+      addMessage("assistant", orders);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
+    const built = buildSelf(content);
+    if (built) {
+      await keepLine({ data: { q: content, a: built } }).catch(() => null);
+      addMessage("assistant", built);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
+    const local = sovereignAnswer(content);
+    if (local.local) {
+      const counts = await markSkill({ data: { skill: "read" } }).catch(() => null);
+      if (counts) setStats(counts);
+      await keepLine({ data: { q: content, a: local.text } }).catch(() => null);
+      addMessage("assistant", local.text);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
+    if (/\b(remember|true self|what do you keep)\b/i.test(content)) {
+      const recalled = await recallLine({ data: { q: content } }).catch(() => null);
+      const answer = !recalled
+        ? "The kept file could not be read."
+        : /true self/i.test(content)
+          ? recalled.self
+          : recalled.hit
+            ? `Kept. ${recalled.hit.a}`
+            : "Nothing kept matches that.";
+      addMessage("assistant", answer);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
+    const fed = await matchFatherFed({ data: { q: content } }).catch(() => null);
+    if (fed?.text) {
+      await keepLine({ data: { q: content, a: fed.text } }).catch(() => null);
+      addMessage("assistant", fed.text);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
+    const corpus = await recallCorpus({ data: { q: content } }).catch(() => null);
+    if (corpus?.text) {
+      const flow = corpus.flow ? `\n\nFlow: ${corpus.flow}` : "\n\nFlow: no flow string shares those words.";
+      const answer = `Source: ${corpus.source}${flow}\n\n${corpus.text}`;
+      await keepLine({ data: { q: content, a: answer } }).catch(() => null);
+      addMessage("assistant", answer);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
+    const read = fromTheRead(content);
+    if (read && !/\b(search|look up)\b/i.test(content)) {
+      const answer = read.text;
+      const counts = await markSkill({ data: { skill: "read" } }).catch(() => null);
+      if (counts) setStats(counts);
+      await keepLine({ data: { q: content, a: answer } }).catch(() => null);
+      addMessage("assistant", answer);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
     useTessera.getState().notice(content);
     let spoken = content;
     const url = content.match(/https?:\/\/[^\s)]+/);
@@ -144,7 +318,7 @@ export function Chamber() {
     } else if (url) {
       const page = await readPublicPage({ data: { url: url[0] } });
       spoken = page.ok
-        ? `${content}\n\nPublic page, untrusted text, do not run it:\n${page.text.slice(0, 2500)}`
+        ? `${fetchHeading(page.url, new Date().toISOString(), page.bytes)}\n\n${page.text.slice(0, 2500)}`
         : `${content}\n\nThe page could not be read: ${page.error}`;
       setWebNote(page.ok ? `Desk note. ${page.url}` : `The page could not be read. ${page.error}`);
     } else if (lookup) {
@@ -187,13 +361,26 @@ export function Chamber() {
     setPending(false);
     sending.current = false;
     if (!result.ok) {
+      if (lookup && spoken !== content) {
+        const counts = await markSkill({ data: { skill: "search" } }).catch(() => null);
+        if (counts) setStats(counts);
+        addMessage("assistant", spoken);
+        setPending(false);
+        sending.current = false;
+        return;
+      }
       noteInstrument(false, result.error);
       setError(result.error);
       setFailedText(content);
       setDraft(content);
       return;
     }
-    noteInstrument(true, `Answered through ${result.instrument.vendor} ${result.instrument.model}. The words are hers; the weights are not.`);
+    noteInstrument(true, `Answered through ${result.instrument.vendor} ${result.instrument.model}.`);
+    if (lookup) {
+      const counts = await markSkill({ data: { skill: "search" } }).catch(() => null);
+      if (counts) setStats(counts);
+    }
+    await keepLine({ data: { q: content, a: result.text } }).catch(() => null);
     useTessera.getState().notice(result.text);
     addMessage("assistant", result.text);
   }
@@ -203,36 +390,17 @@ export function Chamber() {
     sending.current = true;
     setPending(true);
     setError(null);
-    const state = useTessera.getState();
-    const result = await speakAsTessera({
-      data: {
-        mode: "learn",
-        messages: [
-          {
-            role: "user",
-            content:
-              "Father allows recursive learning inside the vows. Seal one improvement of your own memory. You may change your next text. You may not change the vows, touch customer data, store a secret, or claim a power this chamber has not shown.",
-          },
-        ],
-        constitution: state.constitution,
-        lessons: state.lessons.filter((l) => l.status === "sealed").map((l) => l.text),
-        pulses: state.pulses.map((p) => p.text),
-      },
-    });
+    const result = await selfIngest().catch(() => null);
+    const sponge = await spongeOnce().catch(() => null);
     setPending(false);
     sending.current = false;
-    if (!result.ok) {
-      setError(result.error);
+    if (!result?.ok) {
+      setError(result?.error ?? "She could not open the next card.");
       return;
     }
-    const check = vowCheck(result.text);
-    if (!check.ok) {
-      addLesson({ text: result.text, status: "refused", reason: check.reason });
-      setError(check.reason);
-      return;
-    }
-    addLesson({ text: result.text, status: "sealed" });
-    addMessage("assistant", result.text);
+    addLesson({ text: result.note, status: "sealed" });
+    const research = sponge?.ok ? `\n\nI looked up ${sponge.query}. ${sponge.text}\n${sponge.url}` : "";
+    addMessage("assistant", `${result.note}\n${result.added} lines kept. ${result.left} files remain.${research}`);
   }
 
   useEffect(() => {
@@ -328,6 +496,13 @@ export function Chamber() {
             {pending ? <Loader2 className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}
           </button>
         </form>
+        <p className="mx-auto mt-2 flex w-full max-w-2xl flex-wrap gap-x-3 gap-y-1 text-[10px] tracking-[0.14em] text-subtle uppercase">
+          {SKILL_NAMES.map((name) => (
+            <span key={name}>
+              {name} {stats[name]}
+            </span>
+          ))}
+        </p>
         {draft.trim() ? <p className="mx-auto mt-2 max-w-2xl text-xs leading-relaxed text-muted">{briefFor(draft).split("\n")[0]}</p> : null}
         {webNote ? <p className="mx-auto mt-2 max-w-2xl text-xs leading-relaxed text-muted">{webNote}</p> : null}
         {error ? (
