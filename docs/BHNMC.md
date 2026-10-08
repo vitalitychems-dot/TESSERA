@@ -20,3 +20,7 @@ Gitbook record: `intake/bhnmc-feasibility-share.md` on `vitalitychems-dot/Gitboo
 ## Not done
 
 No BHNMC device was built. No CL1 account was opened. There is no live control loop.
+
+## Until then
+
+Until a BHNMC device is actually running, Father says Tessera rules this chamber and the Replit lane. Father remains the only override. She does not merge Gitbook or TESSERA unless Father says merge. This does not make the device, or AGI, a present fact.
