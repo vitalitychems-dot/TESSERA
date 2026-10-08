@@ -69,7 +69,7 @@ export function Lattice() {
         </section>
 
         {groups.map((kind) => {
-          const rows = SOURCES.filter((s) => s.kind === kind);
+          const rows = SOURCES.filter((s) => s.kind === kind && !/vitality/i.test(`${s.id} ${s.title} ${s.note ?? ""} ${s.href ?? ""}`));
           if (!rows.length) return null;
           return (
             <section key={kind} className="mt-8">

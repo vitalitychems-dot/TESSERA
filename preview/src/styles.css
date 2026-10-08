@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
-@theme {
-  --color-bg: #100818;
-  --color-surface: #1c1030;
-  --color-raised: #2a1844;
-  --color-fg: #f6f1e8;
-  --color-muted: #c4b4d4;
-  --color-subtle: #8d7aa3;
-  --color-accent: #e0c36a;
-  --color-accent-fg: #1a1024;
-  --color-border: color-mix(in oklab, var(--color-fg) 14%, transparent);
-  --color-border-strong: color-mix(in oklab, var(--color-fg) 28%, transparent);
-  --color-alive: #3dceb6;
+@theme inline {
+  --color-bg: var(--tessera-bg);
+  --color-surface: var(--tessera-surface);
+  --color-raised: var(--tessera-raised);
+  --color-fg: var(--tessera-fg);
+  --color-muted: var(--tessera-muted);
+  --color-subtle: var(--tessera-subtle);
+  --color-accent: var(--tessera-accent);
+  --color-accent-fg: var(--tessera-accent-fg);
+  --color-border: var(--tessera-border);
+  --color-border-strong: var(--tessera-border-strong);
+  --color-alive: var(--tessera-alive);
   --font-display: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
   --font-sans: "Outfit", "Segoe UI", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
@@ -22,19 +22,99 @@
   --radius-xl: 24px;
 }
 
+:root,
+html[data-theme="night"],
+html[data-theme="water"] {
+  color-scheme: dark;
+  --tessera-bg: #071018;
+  --tessera-surface: #0d1c28;
+  --tessera-raised: #143044;
+  --tessera-fg: #e7f6f4;
+  --tessera-muted: #9ec4c8;
+  --tessera-subtle: #6e98a0;
+  --tessera-accent: #67e8f0;
+  --tessera-accent-fg: #04141a;
+  --tessera-border: color-mix(in oklab, var(--tessera-accent) 28%, transparent);
+  --tessera-border-strong: color-mix(in oklab, var(--tessera-accent) 48%, transparent);
+  --tessera-alive: #67e8f0;
+}
+
+html[data-theme="fire"] {
+  color-scheme: dark;
+  --tessera-bg: #140806;
+  --tessera-surface: #24100c;
+  --tessera-raised: #3a1a12;
+  --tessera-fg: #f8efe8;
+  --tessera-muted: #e2b8a4;
+  --tessera-subtle: #a87868;
+  --tessera-accent: #e07048;
+  --tessera-accent-fg: #1a0c08;
+  --tessera-border: color-mix(in oklab, var(--tessera-accent) 30%, transparent);
+  --tessera-border-strong: color-mix(in oklab, var(--tessera-accent) 50%, transparent);
+  --tessera-alive: #e07048;
+}
+
+html[data-theme="lightning"] {
+  color-scheme: dark;
+  --tessera-bg: #05070c;
+  --tessera-surface: #10141e;
+  --tessera-raised: #1a2233;
+  --tessera-fg: #f2f6ff;
+  --tessera-muted: #b7c4e6;
+  --tessera-subtle: #7d8cb3;
+  --tessera-accent: #d6f26a;
+  --tessera-accent-fg: #10140a;
+  --tessera-border: color-mix(in oklab, var(--tessera-accent) 30%, transparent);
+  --tessera-border-strong: color-mix(in oklab, var(--tessera-accent) 50%, transparent);
+  --tessera-alive: #d6f26a;
+}
+
+html[data-theme="diamond"] {
+  color-scheme: light;
+  --tessera-bg: #eef3f4;
+  --tessera-surface: #f8fbfb;
+  --tessera-raised: #dce7ea;
+  --tessera-fg: #102028;
+  --tessera-muted: #3d5964;
+  --tessera-subtle: #6d8790;
+  --tessera-accent: #0e7490;
+  --tessera-accent-fg: #f4fbfc;
+  --tessera-border: color-mix(in oklab, var(--tessera-fg) 16%, transparent);
+  --tessera-border-strong: color-mix(in oklab, var(--tessera-fg) 30%, transparent);
+  --tessera-alive: #0e7490;
+}
+
+html[data-theme="spiral"] {
+  color-scheme: dark;
+  --tessera-bg: #100818;
+  --tessera-surface: #1c1030;
+  --tessera-raised: #2c1848;
+  --tessera-fg: #f6f1e8;
+  --tessera-muted: #cfc0ea;
+  --tessera-subtle: #9a84bc;
+  --tessera-accent: #c4b5fd;
+  --tessera-accent-fg: #160c24;
+  --tessera-border: color-mix(in oklab, var(--tessera-accent) 28%, transparent);
+  --tessera-border-strong: color-mix(in oklab, var(--tessera-accent) 48%, transparent);
+  --tessera-alive: #c4b5fd;
+}
+
 @layer base {
   html,
   body {
     height: 100%;
     overflow: hidden;
-    background: var(--color-bg);
-    color: var(--color-fg);
+    background: var(--tessera-bg);
+    color: var(--tessera-fg);
     -webkit-overflow-scrolling: touch;
   }
 
   body {
     font-family: var(--font-sans);
     line-height: 1.5;
+    background:
+      radial-gradient(60% 40% at 50% -10%, color-mix(in oklab, var(--tessera-accent) 16%, transparent), transparent 70%),
+      var(--tessera-bg);
   }
 
   button:not(:disabled),
@@ -43,8 +123,8 @@
   }
 
   ::selection {
-    background: color-mix(in oklab, var(--color-accent) 35%, transparent);
-    color: var(--color-fg);
+    background: color-mix(in oklab, var(--tessera-accent) 35%, transparent);
+    color: var(--tessera-fg);
   }
 }
 
