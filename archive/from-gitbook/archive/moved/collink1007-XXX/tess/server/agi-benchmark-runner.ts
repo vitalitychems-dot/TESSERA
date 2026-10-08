@@ -50,7 +50,7 @@ const BENCHMARK_DEFINITIONS = [
     measure: () => {
       // Measure actual reasoning: can we solve 5-step problems?
       const factors = [
-        process.env.TESSERA_LLM_API_KEY ? 25 : 0,
+        process.env.AI_INTEGRATIONS_OPENAI_API_KEY ? 25 : 0,
         process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY ? 25 : 0,
         20, // Base reasoning from rule engine
         15, // Pattern matching capability

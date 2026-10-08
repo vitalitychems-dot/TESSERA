@@ -81,7 +81,7 @@ TSRT_CONTRACT = "FMB4v2RaHSMfJDwijqAij7ouTowK2rz6yW95Z94spump"
 VITE_TSRT_CONTRACT = "FMB4v2RaHSMfJDwijqAij7ouTowK2rz6yW95Z94spump"
 
 [agent]
-integrations = ["javascript_tessera_llm_integrations:2.0.0"]
+integrations = ["javascript_openai_ai_integrations:2.0.0"]
 
 [postMerge]
 path = "scripts/post-merge.sh"

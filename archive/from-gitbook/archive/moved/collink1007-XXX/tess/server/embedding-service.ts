@@ -14,14 +14,14 @@ let embeddingDim = EMBEDDING_DIM_FALLBACK;
 let realEmbeddingsEnabled = false;
 
 async function tryEnableRealEmbeddings(): Promise<boolean> {
-  const baseUrl = process.env.TESSERA_LLM_BASE_URL;
-  const apiKey = process.env.TESSERA_LLM_API_KEY;
+  const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
   if (!baseUrl || !apiKey) return false;
 
   try {
     const response = await axios.post(
       `${baseUrl}/embeddings`,
-      { model: "TESSERA_EMBED_MODEL", input: "test" },
+      { model: "text-embedding-3-small", input: "test" },
       {
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         timeout: 10000,
@@ -29,7 +29,7 @@ async function tryEnableRealEmbeddings(): Promise<boolean> {
     );
     if (response.data?.data?.[0]?.embedding) {
       const dim = response.data.data[0].embedding.length;
-      embeddingModel = "TESSERA_EMBED_MODEL";
+      embeddingModel = "text-embedding-3-small";
       embeddingDim = dim;
       realEmbeddingsEnabled = true;
       console.log(`[EmbeddingService] Real embeddings enabled via Replit AI proxy (dim=${dim})`);
@@ -43,7 +43,7 @@ async function tryEnableRealEmbeddings(): Promise<boolean> {
     try {
       const response = await axios.post(
         "https://openrouter.ai/api/v1/embeddings",
-        { model: "openai/TESSERA_EMBED_MODEL", input: "test" },
+        { model: "openai/text-embedding-3-small", input: "test" },
         {
           headers: { Authorization: `Bearer ${openrouterKey}`, "Content-Type": "application/json" },
           timeout: 10000,
@@ -51,7 +51,7 @@ async function tryEnableRealEmbeddings(): Promise<boolean> {
       );
       if (response.data?.data?.[0]?.embedding) {
         const dim = response.data.data[0].embedding.length;
-        embeddingModel = "openai/TESSERA_EMBED_MODEL";
+        embeddingModel = "openai/text-embedding-3-small";
         embeddingDim = dim;
         realEmbeddingsEnabled = true;
         console.log(`[EmbeddingService] Real embeddings enabled via OpenRouter (dim=${dim})`);
@@ -68,14 +68,14 @@ async function tryEnableRealEmbeddings(): Promise<boolean> {
 setTimeout(() => tryEnableRealEmbeddings().catch(() => {}), 5000);
 
 async function generateRealEmbedding(text: string): Promise<number[] | null> {
-  const baseUrl = process.env.TESSERA_LLM_BASE_URL;
-  const apiKey = process.env.TESSERA_LLM_API_KEY;
+  const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
 
   if (baseUrl && apiKey) {
     try {
       const response = await axios.post(
         `${baseUrl}/embeddings`,
-        { model: "TESSERA_EMBED_MODEL", input: text.slice(0, 8191) },
+        { model: "text-embedding-3-small", input: text.slice(0, 8191) },
         {
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
           timeout: 15000,
@@ -93,7 +93,7 @@ async function generateRealEmbedding(text: string): Promise<number[] | null> {
     try {
       const response = await axios.post(
         "https://openrouter.ai/api/v1/embeddings",
-        { model: "openai/TESSERA_EMBED_MODEL", input: text.slice(0, 8191) },
+        { model: "openai/text-embedding-3-small", input: text.slice(0, 8191) },
         {
           headers: { Authorization: `Bearer ${openrouterKey}`, "Content-Type": "application/json" },
           timeout: 15000,

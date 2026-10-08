@@ -587,7 +587,7 @@ export function CredentialCard({ template, savedServices, onSave, onDelete }: {
 }
 
 const LLM_PROVIDERS = [
-  { id: "openai", label: "OpenAI", keyName: "TESSERA_LLM_API_KEY", prefix: "sk-", color: "text-emerald-400" },
+  { id: "openai", label: "OpenAI", keyName: "OPENAI_API_KEY", prefix: "sk-", color: "text-emerald-400" },
   { id: "anthropic", label: "Anthropic Claude", keyName: "ANTHROPIC_API_KEY", prefix: "sk-ant-", color: "text-amber-400" },
   { id: "deepseek", label: "DeepSeek", keyName: "DEEPSEEK_API_KEY", prefix: "sk-", color: "text-teal-400" },
   { id: "cohere", label: "Cohere", keyName: "COHERE_API_KEY", prefix: "", color: "text-orange-400" },

@@ -517,20 +517,20 @@ async function _callLLMSimpleInner(prompt: string, maxTokens: number, options: a
   const deepseekKey = getProviderApiKey("deepseek");
   const githubKey = process.env.GITHUB_TOKEN || process.env.GITHUB_MODELS_TOKEN;
 
-  const replitAIKey = process.env.TESSERA_LLM_API_KEY;
-  const replitAIBase = process.env.TESSERA_LLM_BASE_URL || "https://openrouter.ai/api/v1";
+  const replitAIKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  const replitAIBase = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://openrouter.ai/api/v1";
 
   const providers: { name: string; url: string; model: string; key: string | undefined }[] = [
     {
       name: "ReplitAI-GPT4o",
       url: `${replitAIBase}/chat/completions`,
-      model: "TESSERA_LLM_MODEL",
+      model: "gpt-4o",
       key: replitAIKey,
     },
     {
       name: "ReplitAI-GPT4oMini",
       url: `${replitAIBase}/chat/completions`,
-      model: "TESSERA_LLM_MODEL",
+      model: "gpt-4o-mini",
       key: replitAIKey,
     },
     {

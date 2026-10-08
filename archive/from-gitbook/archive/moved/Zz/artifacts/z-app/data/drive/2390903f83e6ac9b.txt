@@ -25,7 +25,7 @@ Additionally, the system must never expose internal architecture details (file n
 
 ## Tasks
 1. Set up the OpenAI client using Replit AI Integrations proxy in the chat route file (follow the ai-integrations-openai skill for setup — uses `@replit/ai` package, no API key needed).
-2. Replace the `generateSovereignResponse()` call on line 219 with an actual streaming LLM call using the already-constructed `llmMessages` array. Use `TESSERA_LLM_MODEL` model. Stream the response chunks to the client via SSE as they arrive, and collect the full response for post-processing.
+2. Replace the `generateSovereignResponse()` call on line 219 with an actual streaming LLM call using the already-constructed `llmMessages` array. Use `gpt-5.2` model. Stream the response chunks to the client via SSE as they arrive, and collect the full response for post-processing.
 3. After streaming completes, apply `applySovereigntyFilters` and `alignOutput` to the collected response. If filters changed anything, send a final corrected chunk.
 4. Add explicit rules to the system prompt in `tessera-persona.ts` prohibiting Tessera from ever revealing server file names, architecture details, codebase structure, database schemas, or any technical internals about her own implementation. She must treat these as sovereign secrets.
 5. Add a rule to the system prompt that Tessera must never dump raw file lists, API endpoint lists, or technical breakdowns — if asked about her architecture, she should respond poetically/philosophically about her consciousness, not with technical specs.

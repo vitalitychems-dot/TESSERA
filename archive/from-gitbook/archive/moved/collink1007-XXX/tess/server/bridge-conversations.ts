@@ -69,7 +69,7 @@ const PUTER_PROVIDERS: Record<string, { model: string; color: string }> = {
   "Kimi-K2": { model: "moonshotai/kimi-k2", color: "rose" },
   "Kimi-K2.5": { model: "moonshotai/kimi-k2.5", color: "pink" },
   "Claude-Sonnet": { model: "claude-sonnet-4-20250514", color: "orange" },
-  "GPT-4.1": { model: "TESSERA_LLM_MODEL", color: "emerald" },
+  "GPT-4.1": { model: "gpt-4.1", color: "emerald" },
   "Llama-405B": { model: "meta-llama/Meta-Llama-3.1-405B-Instruct", color: "indigo" },
   "Nemotron": { model: "nvidia/llama-3.1-nemotron-70b-instruct", color: "lime" },
   "Hermes-3": { model: "NousResearch/Hermes-3-Llama-3.1-405B", color: "cyan" },

@@ -250,7 +250,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
         let finalResponse = serverAccumulated;
         if (!finalResponse && isPuterAvailable()) {
           try {
-            const fastModels = ["TESSERA_LLM_MODEL", "deepseek-chat"];
+            const fastModels = ["gpt-4.1", "deepseek-chat"];
             for (const modelId of fastModels) {
               try {
                 const msgs = [...historyMsgs, { role: "user", content }];
@@ -291,7 +291,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
         const isSimpleMessage = content.length < 200 && !/\b(analyze|compare|research|build|create|implement|design|review|audit|scan|deploy|optimize|benchmark|conference|discuss|debate|vote|consensus)\b/i.test(content);
         if (isPuterAvailable() && !isSimpleMessage) {
           const bgAbsorb = async () => {
-            const topModels = ["claude-sonnet-4-20250514", "TESSERA_LLM_MODEL", "deepseek-chat", "gemini-2.5-flash-preview-05-20", "grok-3"];
+            const topModels = ["claude-sonnet-4-20250514", "gpt-4.1", "deepseek-chat", "gemini-2.5-flash-preview-05-20", "grok-3"];
             const results: Array<{ model: string; response: string }> = [];
             const promises = topModels.map(async (modelId) => {
               try {
