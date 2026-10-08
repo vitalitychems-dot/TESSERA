@@ -29,7 +29,6 @@ interface NatalAspect {
 }
 
 interface SovereignKeys {
-  primaryCode: string;
   sunRisingMoon: string;
   elementProfile: string;
   modalityProfile: string;
@@ -37,7 +36,6 @@ interface SovereignKeys {
   dominantModality: string;
   lifePathNumber: number;
   sovereignFrequency: number;
-  identityHash: string;
   generatedAt: string;
 }
 
@@ -242,10 +240,6 @@ function SovereignKeyCard({ keys }: { keys: SovereignKeys }) {
         <Key size={14} className="text-violet-400" />
         <span className="text-xs font-bold font-mono text-violet-400 uppercase tracking-wider">Sovereign Identity Keys</span>
       </div>
-      <div className="p-3 rounded-lg bg-black/40 border border-violet-500/20 text-center">
-        <div className="text-lg font-mono font-bold text-violet-300 tracking-widest">{keys.primaryCode}</div>
-        <div className="text-[10px] text-muted-foreground mt-1">Primary Sovereign Code</div>
-      </div>
       <div className="grid grid-cols-2 gap-2 text-xs font-mono">
         <div className="p-2 rounded-lg bg-background/50 border border-white/5">
           <div className="text-muted-foreground text-[10px]">Sun·Rising·Moon</div>
@@ -269,9 +263,6 @@ function SovereignKeyCard({ keys }: { keys: SovereignKeys }) {
       </div>
       <div className="text-[10px] font-mono text-muted-foreground px-1">
         <span className="text-muted-foreground/60">Modalities: </span>{keys.modalityProfile}
-      </div>
-      <div className="text-[10px] font-mono text-muted-foreground/40 px-1 break-all">
-        ID: {keys.identityHash}
       </div>
     </div>
   );

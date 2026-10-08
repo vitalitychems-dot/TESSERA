@@ -7,6 +7,7 @@ import {
   setAutoHealerEnabled,
 } from "../lib/auto-healer";
 import { validateSovereignAdminToken } from "../lib/mesh-auth";
+import { rawKeyFailRateLimit } from "../lib/father-verify-throttle";
 
 const router: IRouter = Router();
 
@@ -15,7 +16,7 @@ function requireSovereignAuth(req: Request, res: Response, next: NextFunction): 
   const rawToken = req.headers["x-admin-token"];
   const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
   if (!validateSovereignAdminToken(token)) {
-    res.status(401).json({ ok: false, error: "Valid SOVEREIGN_ADMIN_TOKEN required — manual healing is privileged" });
+    res.status(401).json({ ok: false, error: "Valid TESSERACT_ADMIN_KEY required — manual healing is privileged" });
     return;
   }
   const now = Date.now();
@@ -40,12 +41,12 @@ router.get("/auto-healer/strategies", (_req, res) => {
   res.json({ ok: true, strategies: listStrategies() });
 });
 
-router.post("/auto-healer/sweep", requireSovereignAuth, async (_req, res) => {
+router.post("/auto-healer/sweep", rawKeyFailRateLimit, requireSovereignAuth, async (_req, res) => {
   const incidents = await runHealingSweep({ manual: true });
   res.json({ ok: true, incidents, stats: getHealingStats() });
 });
 
-router.post("/auto-healer/enabled", requireSovereignAuth, (req, res) => {
+router.post("/auto-healer/enabled", rawKeyFailRateLimit, requireSovereignAuth, (req, res) => {
   const on = Boolean(req.body?.enabled);
   setAutoHealerEnabled(on);
   res.json({ ok: true, enabled: on });

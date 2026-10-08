@@ -44,7 +44,6 @@ export interface NatalAspect {
 }
 
 export interface SovereignKeys {
-  primaryCode: string;
   sunRisingMoon: string;
   elementProfile: string;
   modalityProfile: string;
@@ -52,7 +51,6 @@ export interface SovereignKeys {
   dominantModality: string;
   lifePathNumber: number;
   sovereignFrequency: number;
-  identityHash: string;
   generatedAt: string;
 }
 

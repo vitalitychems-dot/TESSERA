@@ -54,9 +54,9 @@ describe("sensitive route gate", () => {
   });
 
   beforeEach(() => {
-    process.env[OWNER_ENV] = SYNTHETIC_OWNER_TOKEN;
+    delete process.env[OWNER_ENV];
+    process.env[LEGACY_ENV] = SYNTHETIC_OWNER_TOKEN;
     process.env[SESSION_ENV] = SYNTHETIC_SESSION_SECRET;
-    delete process.env[LEGACY_ENV];
     delete process.env[CHART_ENV];
   });
 
@@ -119,8 +119,8 @@ describe("sensitive route gate", () => {
   }
 
   it("refuses when the owner token env var is blank after trim", async () => {
-    process.env[OWNER_ENV] = "   ";
-    delete process.env[LEGACY_ENV];
+    delete process.env[OWNER_ENV];
+    process.env[LEGACY_ENV] = "   ";
     const response = await get("/natal-chart/father", `${SESSION_COOKIE}=synthetic-cookie`);
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({ ok: false, error: "sovereign-unconfigured" });

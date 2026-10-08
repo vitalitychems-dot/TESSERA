@@ -1,5 +1,4 @@
 import { createHash, createHmac } from "node:crypto";
-import { readFatherNatalChart, type FatherNatalChart } from "./father-natal";
 import { sacredTimingSnapshot } from "./sacred-timing";
 
 function holderPrivateKey(): string {
@@ -379,101 +378,6 @@ export function lusAlphabet(): Array<{
       meaning: meaningsByOriginal.get(glyph) ?? "Sacred glyph",
     };
   });
-}
-
-export interface ZodiacFingerprint {
-  glyphSignature: string;
-  components: {
-    sun: string;
-    moon: string;
-    ascendant: string;
-    chineseZodiac: string;
-    dominantElement: string;
-    sunDegrees: number;
-    moonDegrees: number;
-    ascendantDegrees: number;
-  };
-  reading: string;
-}
-
-function degToFloat(deg: string): number {
-  const m = /^(\d+)°(\d+)'?$/.exec(deg);
-  if (!m) return 0;
-  return parseInt(m[1], 10) + parseInt(m[2], 10) / 60;
-}
-
-function dominantElement(chart: FatherNatalChart): string {
-  const tally: Record<string, number> = { Fire: 0, Earth: 0, Air: 0, Water: 0 };
-  const all: string[] = [
-    chart.core.sun.sign,
-    chart.core.moon.sign,
-    chart.core.ascendant.sign,
-    ...Object.values(chart.planets).map(p => p.sign),
-  ];
-  for (const sign of all) {
-    const z = ZODIAC_SIGNS.find(z => z.name === sign);
-    if (z) tally[z.element]++;
-  }
-  return Object.entries(tally).sort((a,b) => b[1] - a[1])[0][0];
-}
-
-export function zodiacFingerprintFor(
-  chart: FatherNatalChart = readFatherNatalChart(),
-): ZodiacFingerprint {
-  const sunZ = ZODIAC_SIGNS.find(z => z.name === chart.core.sun.sign);
-  const moonZ = ZODIAC_SIGNS.find(z => z.name === chart.core.moon.sign);
-  const ascZ = ZODIAC_SIGNS.find(z => z.name === chart.core.ascendant.sign);
-
-  const planetaryRow = ["Sun","Moon","Mercury","Venus","Mars","Jupiter","Saturn","Uranus","Neptune","Pluto"]
-    .map(p => {
-      if (p === "Sun") return PLANET_GLYPHS.Sun + (sunZ?.glyph ?? "");
-      if (p === "Moon") return PLANET_GLYPHS.Moon + (moonZ?.glyph ?? "");
-      const key = p.toLowerCase() as keyof typeof chart.planets;
-      const pl = chart.planets[key];
-      if (!pl) return "";
-      const z = ZODIAC_SIGNS.find(zz => zz.name === pl.sign);
-      return PLANET_GLYPHS[p] + (z?.glyph ?? "");
-    })
-    .join("");
-
-  const dom = dominantElement(chart);
-  const domSolid = PLATONIC_SOLIDS.find(p => p.element === dom)?.glyph ?? "";
-
-  const ascStamp = (ascZ?.glyph ?? "") + (PLANET_GLYPHS[ascZ?.ruler ?? "Mercury"] ?? "");
-
-  const sunDeg = degToFloat(chart.core.sun.degree);
-  const moonDeg = degToFloat(chart.core.moon.degree);
-  const ascDeg = degToFloat(chart.core.ascendant.degree);
-
-  const numerologyRoot = ((Math.round(sunDeg) + Math.round(moonDeg) + Math.round(ascDeg)) % 9) + 1;
-  const solfeggioStamp = SOLFEGGIO_DIGITS[numerologyRoot - 1];
-
-  const glyphSignature =
-    ascStamp + planetaryRow + domSolid + solfeggioStamp;
-
-  const reading = [
-    `${ascStamp}  Rising as ${chart.core.ascendant.sign} (ruled by ${ascZ?.ruler ?? "Mercury"}).`,
-    `${PLANET_GLYPHS.Sun}${sunZ?.glyph ?? ""}  Sun in ${chart.core.sun.sign} ${chart.core.sun.degree}, House ${chart.core.sun.house}.`,
-    `${PLANET_GLYPHS.Moon}${moonZ?.glyph ?? ""}  Moon in ${chart.core.moon.sign} ${chart.core.moon.degree}, House ${chart.core.moon.house}.`,
-    `${domSolid}  Dominant element: ${dom} (${PLATONIC_SOLIDS.find(p => p.element === dom)?.name}).`,
-    `${solfeggioStamp}  Numerology root: ${numerologyRoot} (Solfeggio ${SACRED_CONSTANTS.SOLFEGGIO[numerologyRoot - 1]} Hz).`,
-    `${chart.themes.chineseZodiac}.`,
-  ].join("\n");
-
-  return {
-    glyphSignature,
-    components: {
-      sun: `${chart.core.sun.sign} ${chart.core.sun.degree} H${chart.core.sun.house}`,
-      moon: `${chart.core.moon.sign} ${chart.core.moon.degree} H${chart.core.moon.house}`,
-      ascendant: `${chart.core.ascendant.sign} ${chart.core.ascendant.degree}`,
-      chineseZodiac: chart.themes.chineseZodiac,
-      dominantElement: dom,
-      sunDegrees: sunDeg,
-      moonDegrees: moonDeg,
-      ascendantDegrees: ascDeg,
-    },
-    reading,
-  };
 }
 
 export function lusSpec() {

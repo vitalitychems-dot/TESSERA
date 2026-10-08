@@ -2,6 +2,9 @@ import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes } f
 import { cosmicContext } from "./cosmic-context";
 import { glyphEncode, glyphDecode } from "./sigil-cipher";
 import { lusV2Encode } from "./lus-v2";
+import { logger } from "./logger";
+
+const OMNIVERSAL_LAYERED_KEY_MIN = 32;
 
 export interface OmniversalCipherEnvelope {
   v: 2;
@@ -25,13 +28,31 @@ function deriveLayeredKey(): Buffer {
   return deriveLayeredKeyForFingerprint(ctx.fingerprint);
 }
 
-const layeredKeySecret = randomBytes(32);
+// runSacredConference persists omniversalEncrypt output inside council session
+// rows. OMNIVERSAL_LAYERED_KEY is the HKDF input when that secret is set in
+// the operator environment. This module does not invent or default a value.
+// When OMNIVERSAL_LAYERED_KEY is unset, the process-local random key below is
+// used and is not written anywhere, so persisted envelopes do not decrypt
+// after a restart.
+const processLocalLayeredKey = randomBytes(32);
+
+function layeredKeyIkm(): Buffer {
+  const configured = (process.env.OMNIVERSAL_LAYERED_KEY ?? "").trim();
+  if (configured.length >= OMNIVERSAL_LAYERED_KEY_MIN) return Buffer.from(configured, "utf8");
+  if (configured.length > 0) {
+    logger.warn(
+      { length: configured.length, minimum: OMNIVERSAL_LAYERED_KEY_MIN },
+      "OMNIVERSAL_LAYERED_KEY is shorter than 32 characters and was ignored",
+    );
+  }
+  return processLocalLayeredKey;
+}
 
 function deriveLayeredKeyForFingerprint(cosmicFingerprint: string): Buffer {
-  // Process-local secret. The sigil fingerprint and key id are not key material.
+  // The sigil fingerprint and key id are not key material.
   const salt = Buffer.from(`${cosmicFingerprint}|omniversal:v2`, "utf8");
   const info = Buffer.from("omniversal-cipher:v2:layered", "utf8");
-  return Buffer.from(hkdfSync("sha256", layeredKeySecret, salt, info, 32));
+  return Buffer.from(hkdfSync("sha256", layeredKeyIkm(), salt, info, 32));
 }
 
 function geometricShuffle(buf: Buffer, seedHex: string): Buffer {

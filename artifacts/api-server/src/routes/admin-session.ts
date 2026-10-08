@@ -26,8 +26,8 @@ import { logger } from "../lib/logger";
 const router: Router = Router();
 
 function ipOf(req: Request): string {
-  const xfwd = req.headers["x-forwarded-for"];
-  if (typeof xfwd === "string" && xfwd.length > 0) return xfwd.split(",")[0].trim();
+  // req.ip follows the app trust-proxy hop count. The first X-Forwarded-For
+  // entry is client-controlled and is not a rate-limit or audit key.
   return req.ip || req.socket.remoteAddress || "unknown";
 }
 
@@ -113,7 +113,7 @@ router.post("/admin/session", adminSessionRateLimit, fatherVerifyRateLimit, requ
     res.status(503).json({
       ok: false,
       error: "sovereign-unconfigured",
-      message: "SOVEREIGN_ADMIN_TOKEN is not configured. Set it in Replit Secrets and restart the API workflow.",
+      message: "TESSERACT_ADMIN_KEY is not configured. Set it in Replit Secrets and restart the API workflow.",
     });
     return;
   }

@@ -12,13 +12,9 @@ function getRawAdminKey(): string {
   return k.trim();
 }
 
-/** Admin key material from the environment only. Never reads chart or birth fields. */
+/** Admin key material from TESSERACT_ADMIN_KEY only. Never reads chart or birth fields. */
 export function readAdminKeyMaterial(): string {
-  const legacy = (process.env.TESSERACT_ADMIN_KEY ?? "").trim();
-  if (legacy) return legacy;
-  const owner = (process.env.SOVEREIGN_ADMIN_TOKEN ?? "").trim();
-  if (owner) return owner;
-  throw new NotConfiguredError("admin key is not configured");
+  return getRawAdminKey();
 }
 
 export function isFatherKeyConfigured(): boolean {
