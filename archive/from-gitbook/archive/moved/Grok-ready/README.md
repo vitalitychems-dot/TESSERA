@@ -40,7 +40,7 @@ Secrets and environment variables (set them in your secret manager, never in cod
 - `DATABASE_URL`: PostgreSQL connection string.
 - `FATHER_NATAL_CHART_JSON` (required): the owner chart used to derive the Father key. The API refuses to start without it, by design, so no personal birth data is stored in the repository. The expected structure is the zod schema in `artifacts/api-server/src/lib/father-natal.ts`.
 - `TESSERACT_ADMIN_KEY`, `SIGIL_ADMIN_KEY`, `SOVEREIGN_ADMIN_TOKEN`, `SESSION_SECRET`: admin and session credentials.
-- `AI_INTEGRATIONS_OPENAI_BASE_URL` / `AI_INTEGRATIONS_OPENAI_API_KEY`: optional LLM access for chat and conference features. When it's unavailable, those features fail explicitly instead of producing canned text.
+- `TESSERA_LLM_BASE_URL` / `TESSERA_LLM_API_KEY`: optional LLM access for chat and conference features. When it's unavailable, those features fail explicitly instead of producing canned text.
 - `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET`: optional Modal GPU jobs.
 
 Runtime stores (`artifacts/api-server/data/`, `.sovereign-data/`, `.local-data/`, `_evolutions/`) are created at run time and are git-ignored.

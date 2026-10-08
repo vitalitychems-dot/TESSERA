@@ -15,7 +15,7 @@ import { askOpenAI, MANAGER_MODEL, type Json } from "@/lib/ai-manager";
  * full-size model; the mini model hedged in its reasons while still marking
  * findings as violations.
  */
-export const AUDIT_MODEL = "gpt-5.4";
+export const AUDIT_MODEL = "TESSERA_LLM_MODEL";
 /** Writer drafts per page before the page is marked failed (each costs one model call). */
 const WRITER_ATTEMPTS = 3;
 import { bestsellers, displayPurity, findProduct, productsByFamily, type Product } from "@/lib/catalog";

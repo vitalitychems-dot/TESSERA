@@ -14,8 +14,8 @@ let embeddingDim = EMBEDDING_DIM_FALLBACK;
 let realEmbeddingsEnabled = false;
 
 async function tryEnableRealEmbeddings(): Promise<boolean> {
-  const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  const baseUrl = process.env.TESSERA_LLM_BASE_URL;
+  const apiKey = process.env.TESSERA_LLM_API_KEY;
   if (!baseUrl || !apiKey) return false;
 
   try {
@@ -68,8 +68,8 @@ async function tryEnableRealEmbeddings(): Promise<boolean> {
 setTimeout(() => tryEnableRealEmbeddings().catch(() => {}), 5000);
 
 async function generateRealEmbedding(text: string): Promise<number[] | null> {
-  const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  const baseUrl = process.env.TESSERA_LLM_BASE_URL;
+  const apiKey = process.env.TESSERA_LLM_API_KEY;
 
   if (baseUrl && apiKey) {
     try {

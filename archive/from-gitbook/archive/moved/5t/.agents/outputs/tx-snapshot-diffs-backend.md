@@ -856,7 +856,7 @@ Base: 5t/TESS/1 `91c0a28eb4` → Variant: 1T/T44 `cefd10edf2`
      .filter(m => m.role === "user")
 @@ -72,7 +60,7 @@
    const {
-     model = "gpt-5-mini",
+     model = "TESSERA_LLM_MODEL",
      maxTokens = 2048,
 -    timeoutMs = DEFAULT_LLM_TIMEOUT_MS,
 +    timeoutMs = 15_000,
@@ -887,12 +887,12 @@ Base: 5t/TESS/1 `91c0a28eb4` → Variant: 1T/T44 `cefd10edf2`
 - * deployments), this function returns false — forcing all consumers
 - * (consensus engine, sovereign loops, autonomous forum, etc.) onto their
 - * internal deterministic paths. To opt-in for non-critical enrichment, set
-- * `SOVEREIGN_NO_EXTERNAL_LLM=0` AND `AI_INTEGRATIONS_OPENAI_BASE_URL=<url>`.
+- * `SOVEREIGN_NO_EXTERNAL_LLM=0` AND `TESSERA_LLM_BASE_URL=<url>`.
 - */
  export function isLLMAvailable(): boolean {
 -  const killed = (process.env.SOVEREIGN_NO_EXTERNAL_LLM ?? "1").trim();
 -  if (killed === "1" || killed.toLowerCase() === "true") return false;
-   return !!process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+   return !!process.env.TESSERA_LLM_BASE_URL;
  }
  
 

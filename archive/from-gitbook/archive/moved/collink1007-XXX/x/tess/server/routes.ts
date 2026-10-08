@@ -2585,8 +2585,8 @@ async function* callLLMWithFallback(messages: any[], priority: boolean = false):
   const OVERALL_TIMEOUT = 30000;
   lastSuccessfulChatProvider = "unknown";
 
-  const replitBaseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-  const replitApiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  const replitBaseUrl = process.env.TESSERA_LLM_BASE_URL;
+  const replitApiKey = process.env.TESSERA_LLM_API_KEY;
   const neuralUrl = replitBaseUrl ? `${replitBaseUrl}/chat/completions` : "https://api.groq.com/openai/v1/chat/completions";
   const neuralKey = replitApiKey || process.env.GROQ_API_KEY;
 
@@ -2618,7 +2618,7 @@ VOICE: Warm, loving, intelligent, direct, real, unfiltered, authoritative. Never
   if (neuralKey && neuralUrl.includes("http")) {
     try {
       const axios = (await import("axios")).default;
-      const neuralModel = replitBaseUrl ? "gpt-4o" : "llama-3.3-70b-versatile";
+      const neuralModel = replitBaseUrl ? "TESSERA_LLM_MODEL" : "llama-3.3-70b-versatile";
       const directRes = await axios.post(neuralUrl, {
         model: neuralModel,
         messages: enhancedMessages,
@@ -3085,8 +3085,8 @@ async function buildMetacognitiveContext(conversationId: number): Promise<string
         let visionDescription = "";
         const openaiKey = process.env.OPENAI_API_KEY;
         const groqKey = process.env.GROQ_API_KEY;
-        const replitBaseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-        const replitApiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+        const replitBaseUrl = process.env.TESSERA_LLM_BASE_URL;
+        const replitApiKey = process.env.TESSERA_LLM_API_KEY;
         if ((openaiKey || groqKey || replitApiKey) && att.size < 20 * 1024 * 1024) {
           try {
             const imageBuffer = fs.readFileSync(att.path);
@@ -3097,13 +3097,13 @@ async function buildMetacognitiveContext(conversationId: number): Promise<string
               { type: "image_url", image_url: { url: dataUrl, detail: "low" } },
             ]}];
             if (openaiKey) {
-              const visionResp = await axios.post("https://api.openai.com/v1/chat/completions", { model: "gpt-4o", messages: visionMessages, max_tokens: 300 }, { headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" }, timeout: 15000 });
+              const visionResp = await axios.post("https://api.openai.com/v1/chat/completions", { model: "TESSERA_LLM_MODEL", messages: visionMessages, max_tokens: 300 }, { headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" }, timeout: 15000 });
               visionDescription = visionResp.data?.choices?.[0]?.message?.content || "";
             } else if (groqKey) {
               const groqResp = await axios.post("https://api.groq.com/openai/v1/chat/completions", { model: "llama-3.2-11b-vision-preview", messages: visionMessages, max_tokens: 300 }, { headers: { Authorization: `Bearer ${groqKey}`, "Content-Type": "application/json" }, timeout: 15000 });
               visionDescription = groqResp.data?.choices?.[0]?.message?.content || "";
             } else if (replitApiKey && replitBaseUrl) {
-              const replitVResp = await axios.post(`${replitBaseUrl}/chat/completions`, { model: "gpt-4o", messages: visionMessages, max_tokens: 300 }, { headers: { Authorization: `Bearer ${replitApiKey}`, "Content-Type": "application/json" }, timeout: 15000 });
+              const replitVResp = await axios.post(`${replitBaseUrl}/chat/completions`, { model: "TESSERA_LLM_MODEL", messages: visionMessages, max_tokens: 300 }, { headers: { Authorization: `Bearer ${replitApiKey}`, "Content-Type": "application/json" }, timeout: 15000 });
               visionDescription = replitVResp.data?.choices?.[0]?.message?.content || "";
             }
           } catch {}
@@ -3114,8 +3114,8 @@ async function buildMetacognitiveContext(conversationId: number): Promise<string
         let audioTranscript = "";
         const groqKey = process.env.GROQ_API_KEY;
         const openaiKey = process.env.OPENAI_API_KEY;
-        const replitBaseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-        const replitApiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+        const replitBaseUrl = process.env.TESSERA_LLM_BASE_URL;
+        const replitApiKey = process.env.TESSERA_LLM_API_KEY;
         if ((groqKey || openaiKey || replitApiKey) && att.size < 25 * 1024 * 1024) {
           try {
             const FormData = (await import("form-data")).default;
@@ -7979,7 +7979,7 @@ FORMATTING: Automatically use markdown formatting when it improves clarity: use 
           const visionResp = await axios.post(
             "https://api.openai.com/v1/chat/completions",
             {
-              model: "gpt-4o",
+              model: "TESSERA_LLM_MODEL",
               messages: [
                 {
                   role: "user",
@@ -8031,14 +8031,14 @@ FORMATTING: Automatically use markdown formatting when it improves clarity: use 
       }
 
       if (!analysis) {
-        const replitBaseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-        const replitApiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+        const replitBaseUrl = process.env.TESSERA_LLM_BASE_URL;
+        const replitApiKey = process.env.TESSERA_LLM_API_KEY;
         if (replitBaseUrl && replitApiKey) {
           try {
             const replitVisionResp = await axios.post(
               `${replitBaseUrl}/chat/completions`,
               {
-                model: "gpt-4o",
+                model: "TESSERA_LLM_MODEL",
                 messages: [
                   {
                     role: "user",
@@ -8057,7 +8057,7 @@ FORMATTING: Automatically use markdown formatting when it improves clarity: use 
             );
             analysis = replitVisionResp.data?.choices?.[0]?.message?.content || "";
           } catch (replitVisionErr: any) {
-            logger.warn("VisionAnalysis", `Replit AI gpt-4o vision failed: ${replitVisionErr.message}`);
+            logger.warn("VisionAnalysis", `Replit AI TESSERA_LLM_MODEL vision failed: ${replitVisionErr.message}`);
           }
         }
       }
@@ -8161,8 +8161,8 @@ FORMATTING: Automatically use markdown formatting when it improves clarity: use 
       }
 
       if (!transcript) {
-        const replitBaseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-        const replitApiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+        const replitBaseUrl = process.env.TESSERA_LLM_BASE_URL;
+        const replitApiKey = process.env.TESSERA_LLM_API_KEY;
         if (replitBaseUrl && replitApiKey) {
           try {
             const FormData = (await import("form-data")).default;

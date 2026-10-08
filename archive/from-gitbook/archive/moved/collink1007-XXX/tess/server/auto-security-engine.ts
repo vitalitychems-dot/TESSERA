@@ -92,7 +92,7 @@ function checkEnvironmentSecurity(): CheckResult[] {
   const results: CheckResult[] = [];
 
   // Check for critical env vars
-  const criticalVars = ["DATABASE_URL", "AI_INTEGRATIONS_OPENAI_API_KEY"];
+  const criticalVars = ["DATABASE_URL", "TESSERA_LLM_API_KEY"];
   for (const varName of criticalVars) {
     if (!process.env[varName]) {
       results.push({
