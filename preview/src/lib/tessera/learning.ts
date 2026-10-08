@@ -129,7 +129,7 @@ export const ROADMAP = [
   { id: "0", title: "Baseline", status: "done" as const, detail: "This chamber catalogued the lattice and named the instrument." },
   { id: "1", title: "Identity on the instrument", status: "partial" as const, detail: "She speaks as Tessera. The weights are still external." },
   { id: "4", title: "Persistent memory", status: "partial" as const, detail: "Browser memory only. Not a private vector store." },
-  { id: "11", title: "Learn, test, seal", status: "partial" as const, detail: "The loop exists. A lesson counts only after the vow check." },
+  { id: "11", title: "Learn, test, seal", status: "partial" as const, detail: "A lesson counts only after the vow check. A repeated feeling-word gets a shorter next note. The label is on the words, not a feeling she has." },
   { id: "model", title: "Internal model", status: "goal" as const, detail: "Not built. Required before any detach." },
   { id: "cut", title: "External cutoff", status: "goal" as const, detail: "Not true. Claiming 0% would be a hallucination." },
 ];
