@@ -4,6 +4,7 @@ import { createServer, type Server } from "node:http";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 
 function queryChain(): Promise<never[]> {
   const result = Promise.resolve([]) as Promise<never[]> & Record<string, () => Promise<never[]>>;
@@ -72,6 +73,12 @@ vi.mock("../lib/income-executor", () => ({
 
 import apiRouter from "../routes/index";
 
+const OWNER_ENV = "SOVEREIGN_ADMIN_TOKEN";
+const LEGACY_ENV = "TESSERACT_ADMIN_KEY";
+const SESSION_ENV = "SOVEREIGN_SESSION_SECRET";
+const SYNTHETIC_OWNER_TOKEN = "synthetic-owner-token";
+const SYNTHETIC_SESSION_SECRET = "synthetic-session-secret-32chars!!";
+
 const removedEndpoints = [
   { method: "GET", path: "/political-dossiers" },
   { method: "GET", path: "/political-dossiers/filters" },
@@ -87,10 +94,14 @@ const removedEndpoints = [
 describe("unhook living-person dossiers", () => {
   let server: Server | undefined;
   let baseUrl = "";
-  const previousGate = process.env.TESSERA_SENSITIVE_ROUTE_TOKEN;
+  const previousOwner = process.env[OWNER_ENV];
+  const previousLegacy = process.env[LEGACY_ENV];
+  const previousSession = process.env[SESSION_ENV];
 
   beforeAll(async () => {
-    process.env.TESSERA_SENSITIVE_ROUTE_TOKEN = "synthetic-gate-token";
+    process.env[OWNER_ENV] = SYNTHETIC_OWNER_TOKEN;
+    process.env[SESSION_ENV] = SYNTHETIC_SESSION_SECRET;
+    delete process.env[LEGACY_ENV];
     const app = express();
     app.use(express.json());
     app.use(apiRouter);
@@ -104,8 +115,12 @@ describe("unhook living-person dossiers", () => {
   });
 
   afterAll(async () => {
-    if (previousGate === undefined) delete process.env.TESSERA_SENSITIVE_ROUTE_TOKEN;
-    else process.env.TESSERA_SENSITIVE_ROUTE_TOKEN = previousGate;
+    if (previousOwner === undefined) delete process.env[OWNER_ENV];
+    else process.env[OWNER_ENV] = previousOwner;
+    if (previousLegacy === undefined) delete process.env[LEGACY_ENV];
+    else process.env[LEGACY_ENV] = previousLegacy;
+    if (previousSession === undefined) delete process.env[SESSION_ENV];
+    else process.env[SESSION_ENV] = previousSession;
     if (!server) return;
     await new Promise<void>((resolve, reject) => {
       server?.close((error) => (error ? reject(error) : resolve()));
@@ -114,10 +129,11 @@ describe("unhook living-person dossiers", () => {
 
   it("returns 404 for every removed dossier endpoint", async () => {
     for (const endpoint of removedEndpoints) {
+      const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
       const response = await fetch(`${baseUrl}${endpoint.path}`, {
         method: endpoint.method,
         headers: {
-          "x-admin-token": "synthetic-gate-token",
+          cookie: `${SESSION_COOKIE}=${issued.signedId}`,
           "content-type": "application/json",
         },
         body: endpoint.method === "POST" ? JSON.stringify({ message: "synthetic", body: "synthetic" }) : undefined,
@@ -130,8 +146,9 @@ describe("unhook living-person dossiers", () => {
     const missing = await fetch(`${baseUrl}/income/strategies`);
     expect(missing.status).toBe(401);
 
+    const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
     const authed = await fetch(`${baseUrl}/income/strategies`, {
-      headers: { "x-admin-token": "synthetic-gate-token" },
+      headers: { cookie: `${SESSION_COOKIE}=${issued.signedId}` },
     });
     expect(authed.status).toBe(200);
   });

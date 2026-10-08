@@ -11,11 +11,11 @@ import {
   computeCurrentTransits,
 } from "../lib/natal-chart-engine";
 import { logger } from "../lib/logger";
-import { requireSensitiveRouteToken } from "../lib/sensitive-route-gate";
+import { requireAdminSession } from "../lib/sovereign-admin";
 
 const router: IRouter = Router();
 
-router.use("/natal-chart", requireSensitiveRouteToken);
+router.use("/natal-chart", requireAdminSession);
 
 function sendNatalError(res: Response, err: unknown) {
   if (err instanceof NatalChartNotConfiguredError) {
