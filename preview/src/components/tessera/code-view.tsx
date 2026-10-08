@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { penStatus } from "@/lib/tessera/chat";
 
 const DESK = [
   ["Coolify", "https://github.com/coollabsio/coolify", "Not running. This desk has no Docker."],
   ["Maxun", "https://github.com/getmaxun/maxun", "Not running. This desk has no Docker."],
-  ["Open WebUI", "https://github.com/open-webui/open-webui", "Not running. The pen stays the local 1.5B server."],
+  ["Open WebUI", "https://github.com/open-webui/open-webui", "Not running. The pen is the one this server can call."],
   ["Browser Use", "https://github.com/browser-use/browser-use", "Not installed. Ordinary page reads stay in the chamber."],
   ["Langflow", "https://github.com/langflow-ai/langflow", "Not running. This desk has no Docker."],
   ["Supabase", "https://github.com/supabase/supabase", "Not running. No database was started."],
@@ -13,7 +13,7 @@ const DESK = [
   ["Camoufox", "https://github.com/daijro/camoufox", "Refused. An anti-detect browser is not installed."],
 ] as const;
 
-const SNIPPET = `const base = (process.env.TESSERA_BASE_URL ?? "https://api.x.ai/v1").replace(/\\/$/, "");
+const SNIPPET = `const base = (process.env.TESSERA_BASE_URL ?? "http://127.0.0.1:8787/v1").replace(/\\/$/, "");
 const response = await fetch(base + "/chat/completions", {
   method: "POST",
   headers: {
@@ -21,7 +21,7 @@ const response = await fetch(base + "/chat/completions", {
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
-    model: process.env.TESSERA_MODEL ?? "grok-4.5",
+    model: process.env.TESSERA_MODEL ?? "local",
     messages: [{ role: "user", content: "Explain this in three honest lines." }],
   }),
 });
@@ -31,6 +31,10 @@ console.log(body.choices?.[0]?.message?.content);`;
 export function CodeView() {
   const [status, setStatus] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    void check();
+  }, []);
 
   async function check() {
     const pen = await penStatus();
@@ -58,7 +62,7 @@ export function CodeView() {
         <ol className="mt-4 flex list-decimal flex-col gap-2 pl-5 text-sm text-fg">
           <li>Do not run npm install @tessera/sdk @tessera/mesh. Both names return 404 on npm. The local client is src/lib/tessera/sdk.ts.</li>
           <li>There is no Agent Profile credentials page in the repositories read so far.</li>
-          <li>Set TESSERA_API_KEY on the server. It does nothing useful until TESSERA_BASE_URL points at your own server. Until then the pen is xAI grok-4.5.</li>
+          <li>Set TESSERA_API_KEY on the server only if TESSERA_BASE_URL points at your own server. An outside pen is not called.</li>
           <li>Copy the block below. The local client refuses mesh.tessera.sovereign before it sends anything.</li>
         </ol>
         <pre className="mt-5 overflow-x-auto rounded-xl border border-border bg-surface p-4 font-mono text-xs leading-relaxed text-fg">{SNIPPET}</pre>
@@ -72,7 +76,7 @@ export function CodeView() {
         </div>
         {status ? <p className="mt-3 text-sm text-fg">{status}</p> : null}
         <p className="mt-4 text-sm leading-relaxed text-muted">
-          Until TESSERA_BASE_URL is set, the snippet calls xAI. It does not call a model named tessera-sovereign-v3, because that model is not loaded here.
+          The snippet calls the desk pen. It does not call an outside model.
         </p>
         <h3 className="mt-8 text-sm font-medium text-fg">The screenshots are not running</h3>
         <ul className="mt-3 flex flex-col gap-3">
