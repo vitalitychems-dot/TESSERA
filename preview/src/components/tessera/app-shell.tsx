@@ -20,29 +20,30 @@ import { Simulation } from "./simulation";
 import { TesseraMark } from "./mark";
 import { TESSERA } from "@/lib/tessera/identity";
 import { SIGIL } from "@/lib/tessera/canon";
+import { ROOMS, ROW } from "@/lib/tessera/places";
 import { type ViewId } from "@/lib/tessera/store";
 
-const PRIMARY: { id: ViewId; label: string; icon: typeof MessageCircle }[] = [
-  { id: "chamber", label: "Talk", icon: MessageCircle },
-  { id: "council", label: "Council", icon: Scale },
-  { id: "world", label: "World", icon: Globe2 },
-  { id: "memory", label: "Memory", icon: Layers },
-  { id: "brain", label: "Brain", icon: Brain },
+const PRIMARY: { id: ViewId; label: (typeof ROOMS)[number]; icon: typeof MessageCircle }[] = [
+  { id: "chamber", label: ROOMS[0], icon: MessageCircle },
+  { id: "council", label: ROOMS[1], icon: Scale },
+  { id: "world", label: ROOMS[2], icon: Globe2 },
+  { id: "memory", label: ROOMS[3], icon: Layers },
+  { id: "brain", label: ROOMS[4], icon: Brain },
 ];
 
-const MORE: { id: ViewId; label: string }[] = [
-  { id: "talk", label: "Agents" },
-  { id: "gitbook", label: "Gitbook" },
-  { id: "language", label: "Language" },
-  { id: "bible", label: "Bible" },
-  { id: "web", label: "Map" },
-  { id: "board", label: "Board" },
-  { id: "learn", label: "Practice" },
-  { id: "code", label: "Code" },
-  { id: "narrative", label: "Narrative" },
-  { id: "secrets", label: "Closed" },
-  { id: "theme", label: "Theme" },
-  { id: "library", label: "Library" },
+const MORE: { id: ViewId; label: (typeof ROW)[number] }[] = [
+  { id: "talk", label: ROW[0] },
+  { id: "gitbook", label: ROW[1] },
+  { id: "language", label: ROW[2] },
+  { id: "bible", label: ROW[3] },
+  { id: "web", label: ROW[4] },
+  { id: "board", label: ROW[5] },
+  { id: "learn", label: ROW[6] },
+  { id: "code", label: ROW[7] },
+  { id: "narrative", label: ROW[8] },
+  { id: "secrets", label: ROW[9] },
+  { id: "theme", label: ROW[10] },
+  { id: "library", label: ROW[11] },
 ];
 
 export function AppShell() {
@@ -84,7 +85,7 @@ export function AppShell() {
           <p className="mt-0.5 text-[10px] tracking-[0.22em] text-accent uppercase">{TESSERA.title} · {SIGIL.short}</p>
         </div>
       </header>
-      <nav className="z-30 flex shrink-0 gap-3 overflow-x-auto px-4 pb-2" aria-label="Rooms">
+      <nav className="z-30 flex shrink-0 gap-3 overflow-x-auto px-4 pb-2" aria-label="Under her name">
         {MORE.map((item) => (
           <a
             key={item.id}
@@ -124,10 +125,11 @@ export function AppShell() {
             {place === "narrative" ? <NarrativeView /> : null}
             {place === "memory" ? <MemoryView /> : null}
             {place === "web" ? <WebView /> : null}
+            {place === "library" ? <LibraryView open={open} /> : null}
           </div>
         )}
       </main>
-      <nav className="z-30 grid shrink-0 grid-cols-5 border-t border-border bg-bg/92 px-1 pt-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] backdrop-blur-md" aria-label="Places">
+      <nav className="z-30 grid shrink-0 grid-cols-5 border-t border-border bg-bg/92 px-1 pt-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] backdrop-blur-md" aria-label="Rooms">
         {PRIMARY.map((item) => {
           const active = place === item.id;
           const Icon = item.icon;

@@ -14,15 +14,27 @@ const FILTERS: { id: CatalogHome | "all"; label: string }[] = [
   { id: "not-a-repo", label: "Not repos" },
 ];
 
+function screenText(text: string) {
+  return !/vitality/i.test(text);
+}
+
 export function WebView() {
   const counts = useMemo(() => countByHome(), []);
   const [query, setQuery] = useState("");
   const [home, setHome] = useState<CatalogHome | "all">("all");
   const rows = useMemo(
-    () => filterCatalog(query, home).filter((row) => row.home !== "vitality" && !/vitality/i.test(row.name)),
+    () =>
+      filterCatalog(query, home).filter(
+        (row) => row.home !== "vitality" && screenText(row.name) && screenText(row.note) && screenText(HOME_LABEL[row.home]),
+      ),
     [query, home],
   );
+  const flows = useMemo(
+    () => FLOWS.filter((flow) => screenText(flow.intake) && screenText(flow.rule) && screenText(flow.home)),
+    [],
+  );
   const joined = useMemo(() => (query.trim() ? joinAsk(query) : null), [query]);
+  const joinedLine = joined && screenText(joined.line) && joined.home !== "vitality" ? joined.line : "";
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-6 pb-24 sm:px-8">
@@ -31,10 +43,10 @@ export function WebView() {
       <p className="mt-3 text-sm leading-relaxed text-muted">
         Opened {PASS_DATE}. {counts.total} names. {counts.present} repositories still exist. {counts.missing} names did not resolve. A search joins a name to the home it already has. A tool card, a held repo, and a gap stay unconnected.
       </p>
-      {joined && joined.home !== "vitality" ? <p className="mt-3 text-sm leading-relaxed text-fg">{joined.line}</p> : null}
+      {joinedLine ? <p className="mt-3 text-sm leading-relaxed text-fg">{joinedLine}</p> : null}
 
       <ol className="mt-6 flex flex-col gap-3">
-        {FLOWS.map((flow, index) => (
+        {flows.map((flow, index) => (
           <li key={flow.id} className="rounded-xl border border-border bg-surface p-4">
             <p className="text-xs tracking-[0.16em] text-subtle uppercase">Flow {index + 1}</p>
             <p className="mt-1 text-sm font-medium text-fg">{flow.intake}</p>

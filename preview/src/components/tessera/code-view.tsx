@@ -17,7 +17,7 @@ const SNIPPET = `const base = (process.env.TESSERA_BASE_URL ?? "http://127.0.0.1
 const response = await fetch(base + "/chat/completions", {
   method: "POST",
   headers: {
-    Authorization: "Bearer " + (process.env.TESSERA_API_KEY ?? process.env.XAI_API_KEY),
+    Authorization: "Bearer " + (process.env.TESSERA_API_KEY ?? "local-pen"),
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
@@ -41,7 +41,7 @@ export function CodeView() {
     setStatus(
       pen.configured
         ? `This server can call ${pen.vendor} ${pen.model}. There is no mesh and no installed SDK.`
-        : "No API key is set on this server. There is no mesh and no installed SDK.",
+        : "The desk pen is down. This room stays quiet. There is no mesh and no installed SDK.",
     );
   }
 
@@ -62,7 +62,7 @@ export function CodeView() {
         <ol className="mt-4 flex list-decimal flex-col gap-2 pl-5 text-sm text-fg">
           <li>Do not run npm install @tessera/sdk @tessera/mesh. Both names return 404 on npm. The local client is src/lib/tessera/sdk.ts.</li>
           <li>There is no Agent Profile credentials page in the repositories read so far.</li>
-          <li>Set TESSERA_API_KEY on the server only if TESSERA_BASE_URL points at your own server. An outside pen is not called.</li>
+          <li>Set TESSERA_API_KEY on the server only if TESSERA_BASE_URL points at the desk pen. An outside pen is not called.</li>
           <li>Copy the block below. The local client refuses mesh.tessera.sovereign before it sends anything.</li>
         </ol>
         <pre className="mt-5 overflow-x-auto rounded-xl border border-border bg-surface p-4 font-mono text-xs leading-relaxed text-fg">{SNIPPET}</pre>
@@ -76,7 +76,7 @@ export function CodeView() {
         </div>
         {status ? <p className="mt-3 text-sm text-fg">{status}</p> : null}
         <p className="mt-4 text-sm leading-relaxed text-muted">
-          The snippet calls the desk pen. It does not call an outside model.
+          The snippet calls the desk pen. If that pen is down, the room stays quiet. It does not call an outside model.
         </p>
         <h3 className="mt-8 text-sm font-medium text-fg">The screenshots are not running</h3>
         <ul className="mt-3 flex flex-col gap-3">

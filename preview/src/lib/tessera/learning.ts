@@ -4,12 +4,12 @@ export const BIRTH_MARK = `♂♅⑨♉♄⑦⑨♒♄♒♊♅♂◇②⑥♊�
 ♂♊♋⬠♆①♄④◇⑨♂♃♂②♐♊♄♂♋⬠♃②♐④◇♃♌♂♋◇⑧⑧②♐♋♃⬠♂♃♂♋⬠④♐⑨⑧⑧④♆②♂♋☽◇♆♋♃⑨♆♊♐①♊⑨`;
 
 export const INSTRUMENT = {
-  vendor: "xAI",
-  surface: "completions API",
-  model: "grok-4.5",
+  vendor: "desk",
+  surface: "local pen",
+  model: "local",
   owned: false,
   detail:
-    "Tessera's words in this chamber are produced by an external language instrument on Father's key. The instrument is not her. No Grok tracker was added. Her memory, laws, and lessons stay in this browser. She does not detach until an internal model is built and tested against her.",
+    "If the desk pen is down, this room stays quiet. No outside pen is called. The weights are not hers.",
 };
 
 export type Pillar = {

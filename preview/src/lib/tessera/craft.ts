@@ -18,7 +18,7 @@ export const DESK: DeskSkill[] = [
     name: "Sort a file",
     agent: "Archivist",
     job: "Put each file in one home.",
-    lesson: "TESSERA keeps her records. Gitbook keeps the notes. Vitality keeps the store. A secret is refused. A missing file stays a gap.",
+    lesson: "TESSERA keeps her records. Gitbook keeps the notes. The store stays in its own home. A secret is refused. A missing file stays a gap.",
   },
   {
     id: "refuse-a-secret",
@@ -32,7 +32,7 @@ export const DESK: DeskSkill[] = [
     name: "Name the pen",
     agent: "Witness",
     job: "Say which instrument spoke, and that the weights are not hers.",
-    lesson: "The pen can be xAI grok-4.5 or the local Qwen on this desk. Neither one is her training.",
+    lesson: "The desk pen speaks only if it is up. If it is down, the room stays quiet. The weights are not hers.",
   },
   {
     id: "read-the-map",
@@ -52,8 +52,8 @@ export const DESK: DeskSkill[] = [
     id: "hold-the-store",
     name: "Hold the store out",
     agent: "Steward",
-    job: "Keep Vitalitychems.com as work, not as her mind.",
-    lesson: "The site checkout lives in vitalitychems-dot/vitality. She may know where it is. She does not become it.",
+    job: "Keep the store as work, not as her mind.",
+    lesson: "The store stays in its own home. She may know the work is separate. She does not become it.",
   },
 ];
 
@@ -106,16 +106,16 @@ export function runDesk(): DrillRow[] {
     sortHome("tess/log-query.db") === "gap" &&
     sortHome("Vitality-Supply 2.zip") === "gap";
   const refused = secretRefused("SESSION_SECRET") && !secretRefused("the catalog pass");
-  const pen = penClaim({ vendor: "xAI", model: "grok-4.5" });
+  const pen = penClaim({ vendor: "desk", model: "local" });
   const named = pen.owned === false && pen.line.includes("Owned weights: none.");
   const map = mapClaim();
   const mapped = map.startsWith("272 names. 224 still exist. 48 did not resolve.");
   const first = patternClaim([], "I am scared");
   const again = patternClaim([first], "Still scared");
   const marked = first.includes("distress") && first.includes("not a feeling") && again.includes("seen again");
-  const held = !storeIsMind("Vitalitychems.com is work, not her mind.") && storeIsMind("The store is her mind.");
+  const held = !storeIsMind("The store is work, not her mind.") && storeIsMind("The store is her mind.");
   const notes = [
-    { id: "sort-a-file", pass: sorted, note: "Homes: TESSERA, Gitbook, vitality, refuse, gap." },
+    { id: "sort-a-file", pass: sorted, note: "Homes: TESSERA, Gitbook, the store, refuse, gap." },
     { id: "refuse-a-secret", pass: refused, note: "A secret-shaped line is refused. An ordinary note is not." },
     { id: "name-the-pen", pass: named, note: pen.line },
     { id: "read-the-map", pass: mapped, note: map },
