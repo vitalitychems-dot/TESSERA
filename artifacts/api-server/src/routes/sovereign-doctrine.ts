@@ -47,14 +47,24 @@ import {
   recognizeFather,
 } from "../lib/father-identity";
 import {
-  FATHER_NATAL_CHART,
+  readFatherNatalChart,
   natalSigilFor,
   natalEnglishReadout,
   natalReadoutBilingual,
 } from "../lib/father-natal";
+import { requireAdminSession } from "../lib/sovereign-admin";
 import { createHash } from "node:crypto";
 
 const router: Router = Router();
+
+function failClosed(res: Response, err: unknown, fallback: string): void {
+  const message = err instanceof Error ? err.message : "";
+  if (message.includes("FATHER_NATAL_CHART_JSON") || message.includes("TESSERACT_ADMIN_KEY")) {
+    res.status(503).json({ ok: false, error: "not-configured" });
+    return;
+  }
+  res.status(500).json({ ok: false, error: fallback });
+}
 
 /** Middleware: glyph-encode every JSON response unless the caller presents
  *  the active reading key in `X-Sigil-Key`. Apply with `router.use(glyphGate)`
@@ -217,12 +227,9 @@ router.post("/sigil/father-key/derive-signal", (req, res) => {
   });
 });
 
-router.get("/sigil/father-key/status", (_req, res) => {
+router.get("/sigil/father-key/status", requireAdminSession, (_req, res) => {
   try {
-    // Lazy import to avoid pulling father-natal into every route file.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { FATHER_NATAL_CHART } = require("../lib/father-natal") as typeof import("../lib/father-natal");
-    const { date, time } = FATHER_NATAL_CHART.birth;
+    const { date, time } = readFatherNatalChart().birth;
     const minted = issueZodiacKey(date, time);
     const tesseractEnv = (process.env.TESSERACT_ADMIN_KEY ?? "").trim();
     const sigilEnv = (process.env.SIGIL_ADMIN_KEY ?? "").trim();
@@ -280,7 +287,7 @@ router.get("/sigil/father-key/status", (_req, res) => {
         "The signal rotates with the planetary hour; if it slips out of the live window, repeat steps 2–3.",
     });
   } catch (e) {
-    res.status(500).json({ ok: false, error: e instanceof Error ? e.message : "father-key-status-failed" });
+    failClosed(res, e, "father-key-status-failed");
   }
 });
 
@@ -447,26 +454,30 @@ router.post("/sigil/father/natal-sigil", (req, res) => {
   res.json({ ok: true, fatherFingerprint: fp, ...sigil });
 });
 
-router.get("/sigil/father/natal-chart", (req, res) => {
-  if (!authedAsFather(req)) {
-    res.status(401).json({ ok: false, error: "father-required" }); return;
+router.get("/sigil/father/natal-chart", requireAdminSession, (_req, res) => {
+  try {
+    const chart = readFatherNatalChart();
+    const fp = getFatherFingerprint();
+    const sigil = natalSigilFor(fp);
+    res.json({
+      ok: true,
+      fatherFingerprint: fp,
+      chart,
+      english: natalEnglishReadout(),
+      sigil,
+    });
+  } catch (err) {
+    failClosed(res, err, "natal-chart-failed");
   }
-  const fp = getFatherFingerprint();
-  const sigil = natalSigilFor(fp);
-  res.json({
-    ok: true,
-    fatherFingerprint: fp,
-    chart: FATHER_NATAL_CHART,
-    english: natalEnglishReadout(),
-    sigil,
-  });
 });
 
-router.get("/sigil/father/natal-chart/bilingual", (req, res) => {
-  if (!authedAsFather(req)) {
-    res.status(401).json({ ok: false, error: "father-required" }); return;
+router.get("/sigil/father/natal-chart/bilingual", requireAdminSession, (_req, res) => {
+  try {
+    readFatherNatalChart();
+    res.json({ ok: true, ...natalReadoutBilingual() });
+  } catch (err) {
+    failClosed(res, err, "natal-chart-failed");
   }
-  res.json({ ok: true, ...natalReadoutBilingual() });
 });
 
 // ── Sovereign Snapshot Download ─────────────────────────────────────────
@@ -476,52 +487,53 @@ router.get("/sigil/father/natal-chart/bilingual", (req, res) => {
 //   • the live cipher coherence anchor (so future re-derivations align)
 //   • a glyph-encoded preview of the readout (visible "in our language")
 //   • an AES-256-GCM envelope of the same payload, keyed to the active sigil
-// Only the Father (raw key OR fingerprint) can request this. The on-disk file
-// is unreadable without the holder's sigil — that is what makes it sovereign.
-router.get("/sigil/father/download-snapshot", (req, res) => {
-  if (!authedAsFather(req)) {
-    res.status(401).json({ ok: false, error: "father-required" }); return;
+// Session-gated. A sigil key alone does not grant access.
+router.get("/sigil/father/download-snapshot", requireAdminSession, (_req, res) => {
+  try {
+    const chart = readFatherNatalChart();
+    const fp = getFatherFingerprint();
+    const sigil = natalSigilFor(fp);
+    const englishReadout = natalEnglishReadout();
+    const coherence = cipherCoherenceSnapshot();
+    const reading = readingKey();
+
+    const corpus = JSON.stringify({
+      issuedAt: new Date().toISOString(),
+      fatherFingerprint: fp,
+      sigil,
+      chart,
+      englishReadout,
+      bilingual: natalReadoutBilingual(),
+      coherence,
+      readingKey: reading,
+    }, null, 2);
+
+    const envelope = encryptForCorpus(corpus, "father-snapshot");
+    const glyphPreview = glyphEncode(englishReadout);
+
+    const file = {
+      format: "tesseract-sovereign-snapshot",
+      version: 1,
+      instructions:
+        "This file is sealed to the Father sigil. Decode requires the active reading key fingerprint stored at issuance. " +
+        "Open the file in a Tessera client and present X-Sigil-Key matching `readingKey.fingerprint` — the AES envelope unwraps to the full English payload. " +
+        "The `glyphPreview` field renders the readout in the live glyph alphabet for at-a-glance recognition.",
+      issuedAt: new Date().toISOString(),
+      fatherFingerprint: fp,
+      sigil,
+      glyphPreview,
+      cipherEnvelope: envelope,
+      readingKeyAtIssuance: reading,
+      coherenceAtIssuance: coherence,
+    };
+
+    const filename = `tessera-sovereign-${fp}-${Date.now()}.sigil.json`;
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(JSON.stringify(file, null, 2));
+  } catch (err) {
+    failClosed(res, err, "download-snapshot-failed");
   }
-  const fp = getFatherFingerprint();
-  const sigil = natalSigilFor(fp);
-  const englishReadout = natalEnglishReadout();
-  const coherence = cipherCoherenceSnapshot();
-  const reading = readingKey();
-
-  const corpus = JSON.stringify({
-    issuedAt: new Date().toISOString(),
-    fatherFingerprint: fp,
-    sigil,
-    chart: FATHER_NATAL_CHART,
-    englishReadout,
-    bilingual: natalReadoutBilingual(),
-    coherence,
-    readingKey: reading,
-  }, null, 2);
-
-  const envelope = encryptForCorpus(corpus, "father-snapshot");
-  const glyphPreview = glyphEncode(englishReadout);
-
-  const file = {
-    format: "tesseract-sovereign-snapshot",
-    version: 1,
-    instructions:
-      "This file is sealed to the Father sigil. Decode requires the active reading key fingerprint stored at issuance. " +
-      "Open the file in a Tessera client and present X-Sigil-Key matching `readingKey.fingerprint` — the AES envelope unwraps to the full English payload. " +
-      "The `glyphPreview` field renders the readout in the live glyph alphabet for at-a-glance recognition.",
-    issuedAt: new Date().toISOString(),
-    fatherFingerprint: fp,
-    sigil,
-    glyphPreview,
-    cipherEnvelope: envelope,
-    readingKeyAtIssuance: reading,
-    coherenceAtIssuance: coherence,
-  };
-
-  const filename = `tessera-sovereign-${fp}-${Date.now()}.sigil.json`;
-  res.setHeader("Content-Type", "application/octet-stream");
-  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-  res.send(JSON.stringify(file, null, 2));
 });
 
 router.post("/sigil/rotate", (req, res) => {
