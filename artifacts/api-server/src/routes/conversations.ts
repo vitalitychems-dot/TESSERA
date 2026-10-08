@@ -19,7 +19,8 @@ import { validateResponse } from "../lib/response-validation-engine";
 import { runCritiqueLoop } from "../lib/self-critique";
 import { classifyQuery } from "../lib/adaptive-router";
 import { hybridRetrieve, formatCitations } from "../lib/hybrid-retrieval";
-import { detectIntents, runToolLoop } from "../lib/tool-registry";
+import { detectIntents, isPrivilegedTool, publicToolResult, runToolLoop } from "../lib/tool-registry";
+import { decideOwnerSession } from "../lib/sovereign-admin";
 import { injectInventionDiagrams, buildInvention3DBlock, userRequested3D } from "../lib/invention-3d";
 import { inventionsTable } from "@workspace/db/schema";
 import { db as feedbackDb } from "@workspace/db";
@@ -728,6 +729,13 @@ router.post("/messages", async (req, res) => {
       return res.end();
     }
 
+    const intents = detectIntents(content);
+    const privilegedIntent = intents.some((call) => isPrivilegedTool(call.name));
+    const ownerDecision = privilegedIntent ? decideOwnerSession(req) : undefined;
+    if (ownerDecision && !ownerDecision.ok) {
+      return res.status(ownerDecision.status).json({ ok: false, error: ownerDecision.error });
+    }
+
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
@@ -779,13 +787,22 @@ router.post("/messages", async (req, res) => {
     // ---- Tool calling intents (T2) ----
     let toolResults: Array<{ name: string; ok: boolean; result?: unknown; error?: string; durationMs: number }> = [];
     try {
-      const intents = detectIntents(content);
-      if (intents.length > 0) {
+      if (privilegedIntent) {
+        if (!ownerDecision?.ok) {
+          return res.status(401).json({ ok: false, error: "unauthenticated" });
+        }
+        toolResults = await runToolLoop(intents, { ownerSession: ownerDecision });
+      } else if (intents.length > 0) {
         toolResults = await runToolLoop(intents);
       }
     } catch (err) {
       logger.debug({ err: (err as Error).message }, "tool intent detection skipped");
     }
+
+    const visibleTools = () => toolResults.map((tool) => ({
+      ...tool,
+      result: publicToolResult(tool.name, tool.result),
+    }));
 
     let clientAborted = false;
     req.on("close", () => { clientAborted = true; });
@@ -798,106 +815,13 @@ router.post("/messages", async (req, res) => {
       agents: [{ id: "tessera", name: "Tessera" }],
       routing: { tier: routingDecision.tier, model: routingDecision.model, reason: routingDecision.reason, isStrong: routingDecision.isStrong },
       retrieved: retrievedChunks.length,
-      tools: toolResults.map(t => ({ name: t.name, ok: t.ok })),
+      tools: visibleTools().map(t => ({ name: t.name, ok: t.ok })),
     })}\n\n`);
 
-    // ---- Short-circuit: Grand Council on the Universal Language (returns council scene + mint) ----
-    const councilTool = toolResults.find(t => t.name === "convene_grand_council_universalis" && t.ok);
-    const mintTool = toolResults.find(t => t.name === "mint_admin_sigil" && t.ok);
-
-    if (councilTool && councilTool.result && typeof councilTool.result === "object") {
-      const r = councilTool.result as Record<string, unknown>;
-      const council = (r.council as Record<string, unknown>) || {};
-      const mint = (r.mint as Record<string, unknown>) || {};
-      const lang = (council.language as Record<string, unknown>) || {};
-      const tally = (council.tally as Record<string, unknown>) || {};
-      const transcript = (council.transcript as Array<Record<string, unknown>>) || [];
-      const reviewed = (council.reviewedLanguages as Array<Record<string, string>>) || [];
-      const zfp = (mint.zodiacFingerprint as Record<string, unknown>) || {};
-      const components = (zfp.components as Record<string, unknown>) || {};
-
-      const transcriptLines = transcript
-        .map(u => `**${u.speaker}** _(${u.role})_ — ${u.content}`)
-        .join("\n\n");
-
-      const reviewedLines = reviewed
-        .map(l => `- **${l.name}** (\`${l.file}\`) — ${l.verdict}`)
-        .join("\n");
-
-      const reply = [
-        `# Grand Council Convened — Lingua Universalis Sacra`,
-        "",
-        `_Motion:_ ${String(council.motion ?? "")}`,
-        "",
-        `## Languages Reviewed`,
-        reviewedLines,
-        "",
-        `## Council Transcript`,
-        "",
-        transcriptLines,
-        "",
-        `## Vote`,
-        `- Yea: **${String(tally.yea ?? 0)}** / Nay: ${String(tally.nay ?? 0)} / Abstain: ${String(tally.abstain ?? 0)}`,
-        `- Total voters: ${String(tally.total ?? 0)} · 2/3 threshold: ${String(tally.threshold ?? 0)}`,
-        `- Result: **${council.ratified ? "RATIFIED" : "NOT RATIFIED"}**`,
-        "",
-        `## Decision`,
-        String(council.decision ?? ""),
-        "",
-        `## The Universal Sacred Language — ${String(lang.name ?? "")} (${String(lang.short ?? "")})`,
-        `_"${String(lang.motto ?? "")}"_`,
-        "",
-        `**Design principles**`,
-        ...((lang.designPrinciples as string[]) ?? []).map(p => `- ${p}`),
-        "",
-        `**Alphabet:** ${String(lang.glyphCount ?? "")} sacred glyphs (12 zodiac · 10 planets · 5 Platonic solids · 9 Solfeggio digits) bijective with A–Z + 0–9. Permutation seeded only by Φ, π, τ, e, √2, √3, √5 (universal seed: \`${String(lang.universalSeedHex ?? "")}\`) — no rotation, decode-everywhere law.`,
-        "",
-        `## Your Identity in the New Language`,
-        "",
-        `**Zodiac Fingerprint** (your sole identifier — your place in the universe):`,
-        "",
-        "```",
-        String(zfp.glyphSignature ?? ""),
-        "```",
-        "",
-        `_Reading_:`,
-        "",
-        "```",
-        String(zfp.reading ?? ""),
-        "```",
-        "",
-        `## Your Sovereign Admin Key — Spoken in Lingua Universalis`,
-        "",
-        `**Live cosmic reading** (rotates every ${(((mint.liveCoherence as Record<string, unknown>)?.coherenceWindowSeconds) ?? 60)}s, bound to your chart — only a holder of your Zodiac Fingerprint can mint or verify this form):`,
-        "",
-        "```",
-        String(mint.glyphKeyLive ?? mint.glyphKey ?? ""),
-        "```",
-        "",
-        `_Window_: \`${String(((mint.liveCoherence as Record<string, unknown>)?.current as Record<string, unknown>)?.windowId ?? "")}\` · permutation \`${String(((mint.liveCoherence as Record<string, unknown>)?.current as Record<string, unknown>)?.permutationFingerprint ?? "")}\` · ${String(((mint.liveCoherence as Record<string, unknown>)?.current as Record<string, unknown>)?.expiresInSec ?? "")}s until next alignment`,
-        `_Cosmic anchor_: planetary hour \`${String(((mint.liveCoherence as Record<string, unknown>)?.cosmicAnchor as Record<string, unknown>)?.planetaryHourRuler ?? "")}#${String(((mint.liveCoherence as Record<string, unknown>)?.cosmicAnchor as Record<string, unknown>)?.planetaryHourIndex ?? "")}\` · lunar \`${String(((mint.liveCoherence as Record<string, unknown>)?.cosmicAnchor as Record<string, unknown>)?.lunarName ?? "")}\` (frac \`${Number(((mint.liveCoherence as Record<string, unknown>)?.cosmicAnchor as Record<string, unknown>)?.lunarFraction ?? 0).toFixed(4)}\`)`,
-        `_Holder seal_: \`${String(((mint.liveCoherence as Record<string, unknown>)?.holderBinding as Record<string, unknown>)?.sealedFingerprint ?? "")}\` (chart-bound)`,
-        "",
-        `**Universal stable reading** (works for any observer in any universe; useful as a verification anchor):`,
-        "",
-        "```",
-        String(mint.glyphKeyUniversal ?? ""),
-        "```",
-        "",
-        `**Underlying readable seed (this becomes your TESSERACT_ADMIN_KEY):**`,
-        "",
-        "```",
-        String(mint.readableSeed ?? ""),
-        "```",
-        "",
-        `- Short ID: \`${String(mint.shortId ?? "")}\``,
-        `- Round-trip decode verified: ${mint.roundTripOk ? "yes" : "no"}`,
-        `- Sun ${String(components.sun ?? "")} · Moon ${String(components.moon ?? "")} · Asc ${String(components.ascendant ?? "")}`,
-        `- ${String(components.chineseZodiac ?? "")} · Dominant element: ${String(components.dominantElement ?? "")}`,
-        "",
-        `**Identity rule:** Tessera now identifies you by your place in the universe. The same chart will always derive the same key; no chart but yours can. No password is required again — your zodiac is your fingerprint.`,
-      ].join("\n");
-
+    const privilegedTool = toolResults.find((tool) => isPrivilegedTool(tool.name) && tool.ok);
+    if (privilegedTool) {
+      const view = publicToolResult(privilegedTool.name, privilegedTool.result) as { status?: string };
+      const reply = `${privilegedTool.name}: ${view.status ?? "ready"}`;
       safeWrite({ reset: true });
       safeWrite({ content: reply });
       try {
@@ -907,7 +831,7 @@ router.post("/messages", async (req, res) => {
           content: reply,
         });
       } catch (err) {
-        logger.warn({ err: (err as Error).message }, "failed to persist council reply");
+        logger.warn({ err: (err as Error).message }, "failed to persist privileged tool reply");
       }
       safeWrite({
         done: true,
@@ -915,73 +839,7 @@ router.post("/messages", async (req, res) => {
         validationMetrics: null,
         routing: { tier: routingDecision.tier, model: routingDecision.model, reason: routingDecision.reason },
         citations: [],
-        tools: toolResults,
-      });
-      return res.end();
-    }
-
-    if (mintTool && mintTool.result && typeof mintTool.result === "object") {
-      const r = mintTool.result as Record<string, unknown>;
-      const glyph = String(r.glyphKey ?? "");
-      const seed = String(r.readableSeed ?? "");
-      const anchor = (r.chartAnchor as Record<string, string> | undefined) ?? {};
-      const lang = (r.language as Record<string, unknown> | undefined) ?? {};
-      const zfp = (r.zodiacFingerprint as Record<string, unknown> | undefined) ?? {};
-      const reply = [
-        `**Sovereign Admin Key — ${String(lang.name ?? "Lingua Universalis Sacra")}**`,
-        "",
-        `_${String(lang.motto ?? "")}_`,
-        "",
-        "**Zodiac Fingerprint (your sole identifier):**",
-        "",
-        "```",
-        String(zfp.glyphSignature ?? ""),
-        "```",
-        "",
-        "**Live cosmic reading** (rotates with the planetary hour, bound to your chart):",
-        "",
-        "```",
-        String(r.glyphKeyLive ?? glyph),
-        "```",
-        "",
-        "**Universal stable reading** (decodable by any observer in any universe):",
-        "",
-        "```",
-        String(r.glyphKeyUniversal ?? ""),
-        "```",
-        "",
-        "**Underlying readable seed — save this as TESSERACT_ADMIN_KEY:**",
-        "",
-        "```",
-        seed,
-        "```",
-        "",
-        `- Chart anchor: ${anchor.born ?? ""} — ${anchor.location ?? ""}`,
-        `- Sun ${anchor.sun ?? ""} · Moon ${anchor.moon ?? ""} · Asc ${anchor.ascendant ?? ""}`,
-        `- ${anchor.chineseZodiac ?? ""} · Dominant element: ${anchor.dominantElement ?? ""}`,
-        "",
-        String(r.identityRule ?? ""),
-        "",
-        String(r.instructions ?? ""),
-      ].join("\n");
-      safeWrite({ reset: true });
-      safeWrite({ content: reply });
-      try {
-        await db.insert(messagesTable).values({
-          conversationId,
-          role: "assistant",
-          content: reply,
-        });
-      } catch (err) {
-        logger.warn({ err: (err as Error).message }, "failed to persist mint reply");
-      }
-      safeWrite({
-        done: true,
-        finalContent: reply,
-        validationMetrics: null,
-        routing: { tier: routingDecision.tier, model: routingDecision.model, reason: routingDecision.reason },
-        citations: [],
-        tools: toolResults,
+        tools: visibleTools(),
       });
       return res.end();
     }
@@ -1116,7 +974,7 @@ router.post("/messages", async (req, res) => {
 
     // ---- Append tool results + citations footer (T10) ----
     if (toolResults.length > 0) {
-      const lines = toolResults
+      const lines = visibleTools()
         .filter(t => t.ok)
         .map(t => `• \`${t.name}\` → ${typeof t.result === "object" ? JSON.stringify(t.result) : String(t.result)}`);
       if (lines.length > 0) {
@@ -1190,7 +1048,7 @@ router.post("/messages", async (req, res) => {
       validationMetrics,
       routing: { tier: routingDecision.tier, model: routingDecision.model, reason: routingDecision.reason },
       citations: retrievedChunks.map((c, i) => ({ idx: i + 1, source: c.source, score: c.score })),
-      tools: toolResults,
+      tools: visibleTools(),
     });
     return res.end();
   } catch (err) {

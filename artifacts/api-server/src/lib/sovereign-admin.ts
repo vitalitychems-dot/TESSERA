@@ -26,8 +26,32 @@ function readCookie(req: Request, name: string): string | undefined {
   return undefined;
 }
 
-export function requireAdminSession(req: AdminRequest, res: Response, next: NextFunction): void {
+export type OwnerSessionDecision =
+  | { ok: true; issuedAt: number; expiresAt: number }
+  | { ok: false; status: 401; error: "unauthenticated"; reason?: string }
+  | { ok: false; status: 503; error: "sovereign-unconfigured" };
+
+/** Same fail-closed check as requireAdminSession, without writing a response. */
+export function decideOwnerSession(req: Request): OwnerSessionDecision {
   if (!isAdminTokenConfigured()) {
+    return { ok: false, status: 503, error: "sovereign-unconfigured" };
+  }
+  const cookie = readCookie(req, SESSION_COOKIE);
+  const lookup = lookupSession(cookie);
+  if (!lookup.valid || !lookup.record) {
+    return { ok: false, status: 401, error: "unauthenticated", reason: lookup.reason };
+  }
+  return { ok: true, issuedAt: lookup.record.issuedAt, expiresAt: lookup.record.expiresAt };
+}
+
+export function requireAdminSession(req: AdminRequest, res: Response, next: NextFunction): void {
+  const decision = decideOwnerSession(req);
+  if (!decision.ok) {
+    if (decision.status === 401) {
+      logger.warn({ path: req.path, reason: decision.reason }, "admin-session denied");
+      res.status(401).json({ ok: false, error: "unauthenticated", reason: decision.reason ?? "unknown" });
+      return;
+    }
     res.status(503).json({
       ok: false,
       error: "sovereign-unconfigured",
@@ -35,13 +59,6 @@ export function requireAdminSession(req: AdminRequest, res: Response, next: Next
     });
     return;
   }
-  const cookie = readCookie(req, SESSION_COOKIE);
-  const lookup = lookupSession(cookie);
-  if (!lookup.valid || !lookup.record) {
-    logger.warn({ path: req.path, reason: lookup.reason }, "admin-session denied");
-    res.status(401).json({ ok: false, error: "unauthenticated", reason: lookup.reason ?? "unknown" });
-    return;
-  }
-  req.adminSession = { issuedAt: lookup.record.issuedAt, expiresAt: lookup.record.expiresAt };
+  req.adminSession = { issuedAt: decision.issuedAt, expiresAt: decision.expiresAt };
   next();
 }
