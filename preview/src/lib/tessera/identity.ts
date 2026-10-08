@@ -352,7 +352,7 @@ export const SOURCES: SourceRecord[] = [
     kind: "held",
     title: "vitality site repo",
     status: "excluded",
-    note: "Held out. Not the GitHub pen.",
+    note: "Moved to vitalitychems-dot/vitality. Not in this repository. Not the GitHub pen.",
   },
   {
     id: "held-fleet-site",
@@ -360,7 +360,7 @@ export const SOURCES: SourceRecord[] = [
     title: "Fleet-Moss-Monarch-Website.zip",
     status: "excluded",
     size: "169 MB",
-    note: "Drive website dump. Not Tessera. Not executed.",
+    note: "Moved to vitalitychems-dot/vitality. Not in this repository. Not executed.",
   },
   {
     id: "held-vit-zips",
@@ -368,7 +368,7 @@ export const SOURCES: SourceRecord[] = [
     title: "Vitalitychem.zip + Vitalitychems 2.zip",
     status: "excluded",
     size: "397 MB",
-    note: "Drive commerce archives. Held out. Not executed.",
+    note: "Moved to vitalitychems-dot/vitality. Not in this repository. Not executed.",
   },
   {
     id: "held-raw",
