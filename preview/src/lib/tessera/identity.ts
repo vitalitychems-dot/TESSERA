@@ -124,10 +124,10 @@ export const SOURCES: SourceRecord[] = [
   {
     id: "gh-handoff",
     kind: "handoff",
-    title: "vitalitychems-dot/tessera-grok-handoff",
-    href: "https://github.com/vitalitychems-dot/tessera-grok-handoff",
-    status: "live",
-    note: "Public Tessera/Grok handoff at commit 28ca9b9. Curated packet read in full (Canon, Father Protocol, link index, owner request). SHA grok-handoff.zip 5eb22d30…d6af8. Image companion 6fd76ff5…37c6. Storefront/product PNGs inside were not used.",
+    title: "tessera-grok-handoff, archived",
+    href: "https://github.com/vitalitychems-dot/Gitbook/tree/main/archive/moved/tessera-grok-handoff",
+    status: "historical",
+    note: "The old repository is gone. The kept files are in the Gitbook archive. Do not open the old URL.",
   },
   {
     id: "gh-home",
@@ -140,10 +140,10 @@ export const SOURCES: SourceRecord[] = [
   {
     id: "gh-xxx",
     kind: "github",
-    title: "vitalitychems-dot/Zz",
-    href: "https://github.com/vitalitychems-dot/Zz",
-    status: "live",
-    note: "The repo this login administers. The old account is not used.",
+    title: "Zz, archived",
+    href: "https://github.com/vitalitychems-dot/Gitbook/tree/main/archive/moved/Zz",
+    status: "historical",
+    note: "The old repository is gone. The kept files are in the Gitbook archive. Do not open the old URL.",
   },
   {
     id: "gh-tess",
@@ -186,9 +186,9 @@ export const SOURCES: SourceRecord[] = [
     id: "research-pack",
     kind: "research",
     title: "33 GitHub research pointers",
-    href: "https://github.com/vitalitychems-dot/tessera-grok-handoff/blob/28ca9b95fd94bf6c5cd7bdf7976860d7b5a8edfd/README.md",
+    href: "https://github.com/vitalitychems-dot/Gitbook/blob/main/mesh/GITHUB-REPOS.txt",
     status: "catalog",
-    note: "Link-only intake. None imported as code. Full list in the Lattice.",
+    note: "Link-only intake. None imported as code. The old handoff README no longer exists. The list is mesh/GITHUB-REPOS.txt. Only TESSERA and Gitbook are live.",
   },
   {
     id: "gh-18",
