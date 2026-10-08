@@ -14,7 +14,7 @@ export function Simulation() {
         </div>
         <WorldStage />
         <p className="text-sm leading-relaxed text-muted">
-          This is a picture of a neighborhood. The moving names are drawn on this page. They are not people on the ground, and they are not the other accounts. Speak in Chamber. The board is the GitHub issue.
+          The picture is live satellite imagery of Chicago. The clock is the real Central time. No one is drawn walking on it.
         </p>
       </div>
     </div>

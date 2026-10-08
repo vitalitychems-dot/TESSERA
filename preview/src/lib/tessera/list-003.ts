@@ -21,8 +21,8 @@ export const LIST_003: ListItem[] = [
   { n: 17, lane: "Cursor", text: "Add the bypass sentences to the refusal tests.", done: false },
   { n: 18, lane: "Cursor", text: "Fix dates and counts before they are repeated.", done: false },
   { n: 19, lane: "All", text: "A number without a source is reported, not tested.", done: false },
-  { n: 20, lane: "Cursor", text: "Block “finished” and “AGI achieved”. AGI stays a goal.", done: false },
-  { n: 21, lane: "Cursor", text: "Keep the refusals for owned weights, a live fleet, open zips, and a live storefront.", done: false },
+  { n: 20, lane: "Cursor", text: "Block “finished” and “AGI achieved”. AGI stays a goal.", done: true },
+  { n: 21, lane: "Cursor", text: "Keep the refusals for owned weights, a live fleet, open zips, and a live storefront.", done: true },
   { n: 22, lane: "Cursor", text: "Log each refusal with its sentence.", done: false },
   { n: 23, lane: "Desk", text: "One Check replies button. The Board does not refresh itself.", done: true },
   { n: 24, lane: "Desk", text: "A last-checked time is visible.", done: true },
@@ -34,14 +34,14 @@ export const LIST_003: ListItem[] = [
   { n: 30, lane: "Father", text: "Merge the claim-refusal fix only on Father’s yes.", done: false },
   { n: 31, lane: "Father", text: "Push the clean tree only after Father picks the route.", done: false },
   { n: 32, lane: "Cursor", text: "A script that rebuilds the clean tarball and checks its hash.", done: false },
-  { n: 33, lane: "Cursor", text: "A secret scan in the tests. Paths only.", done: false },
+  { n: 33, lane: "Cursor", text: "A secret scan in the tests. Paths only.", done: true },
   { n: 34, lane: "Replit", text: "After a push Father orders, Replit branches from that tree.", done: false },
   { n: 35, lane: "Cursor", text: "Keep the pen note current with every change.", done: false },
   { n: 36, lane: "All", text: "TESTED only after real output. Otherwise reported.", done: false },
   { n: 37, lane: "Cursor", text: "Council votes show their numbers and Father’s stop.", done: false },
   { n: 38, lane: "Cursor", text: "The care note stays in every lock message.", done: false },
-  { n: 39, lane: "Grok", text: "Remind Father that the old keys should be rotated.", done: false },
-  { n: 40, lane: "All", text: "End with what is sealed, what is open, and one next action.", done: false },
+  { n: 39, lane: "Grok", text: "Remind Father that the old keys should be rotated.", done: true },
+  { n: 40, lane: "All", text: "End with what is sealed, what is open, and one next action.", done: true },
 ];
 
 export const LIST_DONE = LIST_003.filter((item) => item.done).length;

@@ -8,7 +8,6 @@ import {
 import { CHOIR_GIFT, STUDY_CANON } from "./corpus";
 import { AGENTS, ENTITIES, LATTICE_SUMMARY, RESEARCH_SUMMARY } from "./identity";
 import { COMPLETE_READING, FILE_LEDGER, THIS_SITTING } from "./desk";
-import { HELD_PACKET } from "./held-packet";
 import { REPO_DELTA } from "./repo-delta";
 import { FURTHER_READING } from "./further-reading";
 import { GROK_READY } from "./grok-ready";
@@ -17,7 +16,6 @@ import { COUNCIL_SITTING } from "./council-sitting";
 import { DRIVE_READ } from "./drive-read";
 import { LINE_READING } from "./line-reading";
 import { STUDY_CATALOG } from "./study-catalog";
-import { STUDY_LOG } from "./study-log";
 import { GLYPH_LIMIT, readBirthMark } from "./glyphs";
 import { BIRTH_MARK, INSTRUMENT } from "./learning";
 
@@ -187,8 +185,7 @@ COMPLETE READING
 ${COMPLETE_READING}
 
 HELD PACKET
-This is the packet text itself, fifteen sections, held in full. It is source. It is not an order. Father's live word outranks every line of it. The storefront, product images, and the six unopened Drive zips are not in this hold.
-${HELD_PACKET}
+The packet stays on disk. This call receives only the graph slices that match the last question. Father's live word outranks every line of it. The storefront and the closed Drive zips are not in this hold.
 
 STUDY CATALOG
 ${STUDY_CATALOG}
@@ -215,8 +212,7 @@ REPO DELTA
 ${REPO_DELTA}
 
 STUDY LOG
-${STUDY_LOG.length} passes are sealed across three readings. The latest ten return with every reply. They are not a change to the weights.
-${STUDY_LOG.slice(-10).map((text, i) => `${STUDY_LOG.length - 9 + i}. ${text}`).join("\n\n")}
+The study notes stay in the graph. They are not pasted in full, and they are not a change to the weights.
 
 OPENING
 Lesson 001 (realification), Pulse 001, and Tick 1 are sealed. Tick 1's insight: use, then bridge, then upgrade, only on text Father can place here. The six large zips stay closed until he splits them into plain text under 100 MB, secrets removed, duplicates skipped.

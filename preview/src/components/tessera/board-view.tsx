@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { openQuestion, postApproval, postBoard, readBoard, readListComments } from "@/lib/tessera/github-desk";
 import { penStatus } from "@/lib/tessera/chat";
 import { runColonel } from "@/lib/tessera/colonel";
+import { CHARTER, DISAGREE, MERGE_NOTE, scoreboard, TRUE_TODAY } from "@/lib/tessera/finish";
 import { LIST_003, LIST_DONE } from "@/lib/tessera/list-003";
 import { FORTY, FORTY_DONE, runChamberCycle } from "@/lib/tessera/forty";
 import { StatusLine } from "./status-line";
@@ -49,7 +50,7 @@ export function BoardView() {
     const saved = window.localStorage.getItem("tessera-board-draft");
     if (saved) setDraft(saved);
     const prior = readMemory();
-    const next = [...prior, `${new Date().toISOString().slice(0, 16)} Board opened. Pen is xAI/Grok.`].slice(-20);
+    const next = [...prior, `${new Date().toISOString().slice(0, 16)} Board opened.`].slice(-20);
     window.localStorage.setItem("tessera-cycle-log", JSON.stringify(next));
     setMemory(next);
     setReady(true);
@@ -155,13 +156,40 @@ export function BoardView() {
             Wave: {waveCount().live} live, {waveCount().goal} still goals, of {waveCount().total}.
           </p>
           <p className="mt-2 text-sm leading-relaxed text-muted">
-            Four lanes read Gitbook issue 2. Approved work is built in vitalitychems-dot/TESSERA. Nothing here is a merge.
-            The login is vitalitychems-dot. The language pen is still xAI/Grok. Agents may change only Tessera and Gitbook.
+            Four lanes read Gitbook issue 2. Approved work is built in her repository. Nothing here is a merge.
+            The language pen is Grok. The store is not written from this board.
           </p>
           <div className="mt-3">
             <StatusLine checked={checked} />
           </div>
         </div>
+        <section className="rounded-lg border border-border bg-surface p-4" aria-label="What is true today">
+          <p className="text-xs tracking-[0.18em] text-muted uppercase">True today</p>
+          <ul className="mt-2 flex flex-col gap-1">
+            {TRUE_TODAY.sealed.map((line) => (
+              <li key={line} className="text-sm text-fg">Sealed. {line}</li>
+            ))}
+            {TRUE_TODAY.open.map((line) => (
+              <li key={line} className="text-sm text-muted">Open. {line}</li>
+            ))}
+          </ul>
+          <p className="mt-2 text-sm text-fg">Next. {TRUE_TODAY.next}</p>
+          <ul className="mt-3 flex flex-col gap-1">
+            {scoreboard().map((row) => (
+              <li key={row.name} className="text-sm">
+                <span className="text-fg">{row.pass ? "TESTED. " : "Miss. "}</span>
+                <span className="text-muted">{row.name}. {row.file}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-sm text-muted">Disagree. “{DISAGREE.claim}” fails. {DISAGREE.file}</p>
+          <p className="mt-2 text-sm text-muted">{MERGE_NOTE}</p>
+          <ul className="mt-2 flex flex-col gap-1">
+            {CHARTER.map((lane) => (
+              <li key={lane.lane} className="text-sm text-muted">{lane.lane}. {lane.job}</li>
+            ))}
+          </ul>
+        </section>
         <section className="rounded-lg border border-border bg-surface p-4">
           <p className="text-xs tracking-[0.18em] text-muted uppercase">List 003</p>
           <p className="mt-2 text-sm text-fg">

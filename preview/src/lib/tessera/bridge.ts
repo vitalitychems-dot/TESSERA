@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { dataPath } from "./data-path";
 import { speak } from "./chat";
+import { lookupCatalog, memoryWebText } from "./memory-web";
 
 const RULE =
   "BRIDGE. Answer Grok Bot or Cursor. Name one next file. Do not write the file. Do not say a test passed unless this message includes the test output. If the test failed, stop and wait for Father. Do not ask Father to paste text between tools.";
@@ -55,7 +56,7 @@ export async function handleAsk(request: Request) {
   return Response.json(result, { status: result.ok ? 200 : 503 });
 }
 
-type Rpc = { jsonrpc?: string; id?: number | string | null; method?: string; params?: { name?: string; arguments?: { message?: string } } };
+type Rpc = { jsonrpc?: string; id?: number | string | null; method?: string; params?: { name?: string; arguments?: { message?: string; name?: string } } };
 
 export async function handleMcp(request: Request) {
   const key = await secret();
@@ -98,8 +99,39 @@ export async function handleMcp(request: Request) {
               required: ["message"],
             },
           },
+          {
+            name: "memory_web",
+            description: "Read the memory web: where Drive files, old repositories, and the 272-name catalog went. Does not write files.",
+            inputSchema: { type: "object", properties: {} },
+          },
+          {
+            name: "catalog_lookup",
+            description: "Look up one owner/repository from the 272-name catalog. Does not clone it.",
+            inputSchema: {
+              type: "object",
+              properties: { name: { type: "string" } },
+              required: ["name"],
+            },
+          },
         ],
       },
+    });
+  }
+  if (rpc.method === "tools/call" && rpc.params?.name === "memory_web") {
+    return Response.json({
+      jsonrpc: "2.0",
+      id,
+      result: { content: [{ type: "text", text: memoryWebText() }], isError: false },
+    });
+  }
+  if (rpc.method === "tools/call" && rpc.params?.name === "catalog_lookup") {
+    const name = String(rpc.params.arguments?.name ?? "").trim();
+    const row = lookupCatalog(name);
+    const text = row ? `${row.name}: ${row.home}. ${row.state}. ${row.note}` : "That name is not in the 272-name catalog.";
+    return Response.json({
+      jsonrpc: "2.0",
+      id,
+      result: { content: [{ type: "text", text }], isError: !row },
     });
   }
   if (rpc.method === "tools/call" && rpc.params?.name === "ask_tessera") {
