@@ -39,12 +39,12 @@ import {
   rotatingNatalHash,
   unbindNatalChart,
   verifyNatalSignature,
-  issueZodiacKey,
 } from "../lib/natal-sigil";
 import {
   isFatherKeyConfigured,
   getFatherFingerprint,
   recognizeFather,
+  readAdminKeyMaterial,
 } from "../lib/father-identity";
 import {
   readFatherNatalChart,
@@ -53,13 +53,13 @@ import {
   natalReadoutBilingual,
 } from "../lib/father-natal";
 import { requireAdminSession } from "../lib/sovereign-admin";
+import { NotConfiguredError } from "../lib/not-configured";
 import { createHash } from "node:crypto";
 
 const router: Router = Router();
 
 function failClosed(res: Response, err: unknown, fallback: string): void {
-  const message = err instanceof Error ? err.message : "";
-  if (message.includes("FATHER_NATAL_CHART_JSON") || message.includes("TESSERACT_ADMIN_KEY")) {
+  if (err instanceof NotConfiguredError) {
     res.status(503).json({ ok: false, error: "not-configured" });
     return;
   }
@@ -80,9 +80,7 @@ export function glyphGate(req: Request, res: Response, next: NextFunction): void
   const fatherOk = presented ? recognizeFather(presented).recognized : false;
   // SOVEREIGN RULE: the Father identity is the only credential that
   // unlocks plaintext. Zodiac/personal keys are no longer accepted at
-  // the gate — the canonical bootstrap is the one-time popup that mints
-  // the Father key from FATHER_NATAL_CHART and refuses entry until
-  // TESSERACT_ADMIN_KEY (= SIGIL_ADMIN_KEY) is set to that value.
+  // the gate. The admin secret comes from the environment only.
   // No path-level plaintext exemptions: every /api response is glyph-encoded
   // unless the caller proves they hold either the rotating reading key or
   // the Father identity. The previous omniversal/grand-council/mssp/vgpu
@@ -139,30 +137,9 @@ function holderFromHeader(req: Request): string | null {
 }
 
 // ── Zodiac key (Father-only) ───────────────────────────────────────────
-// Personal zodiac keys are no longer the bootstrap path; the Father key
-// from FATHER_NATAL_CHART is the sole gate. These endpoints remain for
-// internal natal-vault management but require Father authentication.
-router.post("/sigil/zodiac-key/issue", (req, res) => {
-  const presented = String(req.header("x-sigil-key") ?? "").trim();
-  if (!recognizeFather(presented).recognized) {
-    res.status(401).json({ ok: false, error: "father-required" }); return;
-  }
-  const birthDate = String(req.body?.birthDate ?? "").trim();
-  const birthTime = String(req.body?.birthTime ?? "").trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate) || !/^\d{2}:\d{2}$/.test(birthTime)) {
-    res.status(400).json({
-      ok: false,
-      error: "invalid-natal-format",
-      message: "birthDate must be YYYY-MM-DD and birthTime must be HH:MM",
-    });
-    return;
-  }
-  try {
-    const result = issueZodiacKey(birthDate, birthTime);
-    res.json(result);
-  } catch (e) {
-    res.status(400).json({ ok: false, error: e instanceof Error ? e.message : "issue-failed" });
-  }
+// Issuing a key from birth fields is closed. The route fails closed.
+router.post("/sigil/zodiac-key/issue", (_req, res) => {
+  failClosed(res, new NotConfiguredError("zodiac key issue does not derive a key"), "issue-failed");
 });
 
 router.post("/sigil/zodiac-key/verify", (req, res) => {
@@ -177,16 +154,8 @@ router.post("/sigil/zodiac-key/verify", (req, res) => {
   res.json({ ok: true, holderFp });
 });
 
-// ── Father key (canonical, one-time popup) ─────────────────────────────
-// There is only ONE Father, and his key is mathematically determined by
-// his canonical natal chart (constant in `father-natal.ts`). This endpoint
-// mints that key fresh on every call (idempotent — same chart → same key
-// forever, thanks to the fixed LUS alphabet) and reports whether the
-// operator has already saved it into the `TESSERACT_ADMIN_KEY` Replit
-// Secret (or its alias `SIGIL_ADMIN_KEY` — by sovereign rule both names
-// MUST hold the same value). The frontend gate uses this to render a
-// one-time popup that shows the Father his key and refuses to let him
-// past until the secret is set.
+// Father-key status reports whether the admin secret is configured.
+// It does not derive a key from chart or birth fields.
 router.post("/sigil/father-key/derive-signal", (req, res) => {
   // Operator types their canonical TESSERACT_ADMIN_KEY into the gate prompt.
   // We verify it timing-safely; if it matches, we return the rotating
@@ -228,67 +197,16 @@ router.post("/sigil/father-key/derive-signal", (req, res) => {
 });
 
 router.get("/sigil/father-key/status", requireAdminSession, (_req, res) => {
-  try {
-    const { date, time } = readFatherNatalChart().birth;
-    const minted = issueZodiacKey(date, time);
-    const tesseractEnv = (process.env.TESSERACT_ADMIN_KEY ?? "").trim();
-    const sigilEnv = (process.env.SIGIL_ADMIN_KEY ?? "").trim();
-    const matches = (v: string) => v.length > 0 && v === minted.key;
-    const tesseractSet = tesseractEnv.length > 0;
-    const sigilSet = sigilEnv.length > 0;
-    const tesseractMatches = matches(tesseractEnv);
-    // Two-key policy (Apr 2026 redesign):
-    //   * TESSERACT_ADMIN_KEY = canonical permanent key (`minted.key`).
-    //   * SIGIL_ADMIN_KEY     = rotating planetary-signal derived from the
-    //                           canonical key + the current planetary hour.
-    // The status endpoint NEVER echoes the canonical key. The operator must
-    // type their canonical key into the gate prompt, which calls
-    // POST /api/sigil/father-key/derive-signal and gets the rotating signal
-    // back to paste into SIGIL_ADMIN_KEY.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { signalWindow, isValidSignal } = require("../lib/planetary-signal") as typeof import("../lib/planetary-signal");
-    const sigilIsValidSignal = tesseractMatches && sigilSet && isValidSignal(tesseractEnv, sigilEnv);
-    const unlocked = tesseractMatches && sigilIsValidSignal;
-    const window = tesseractMatches ? signalWindow(tesseractEnv) : null;
-    res.json({
-      ok: true,
-      unlocked,
-      // Canonical key value is NEVER returned by this endpoint anymore. The
-      // operator must already hold it (from FATHER_NATAL_CHART) and type it
-      // into the gate prompt to receive their rotating signal.
-      sunSign: minted.sunSign,
-      cosmicAnchor: minted.cosmicAnchor,
-      planetary: window
-        ? {
-            current: window.current.epoch,
-            currentSignalPreview: `${window.current.signal.slice(0, 4)}…${window.current.signal.slice(-2)}`,
-            // The full signal value is only delivered via /derive-signal,
-            // which requires the canonical key to authenticate.
-          }
-        : null,
-      // Chart details intentionally omitted from this unauthenticated
-      // surface: when a deterministic canonical key was being derived from
-      // the public chart, echoing the chart here gave any caller the inputs
-      // needed to recompute the key offline. Holders that need the full
-      // chart should call /api/sigil/father/natal-chart, which is gated.
-      env: {
-        tesseractSet,
-        sigilSet,
-        tesseractMatches,
-        sigilIsValidSignal,
-        canonicalSecretName: "TESSERACT_ADMIN_KEY",
-        rotatingSecretName: "SIGIL_ADMIN_KEY",
-      },
-      instructions:
-        "Step 1: ensure TESSERACT_ADMIN_KEY in Replit Secrets holds your permanent canonical key. " +
-        "Step 2: in the gate prompt, type that canonical key. The server will derive the current " +
-        "planetary-signal key and show it. Step 3: paste that signal into SIGIL_ADMIN_KEY (a " +
-        "DIFFERENT value from TESSERACT_ADMIN_KEY) and restart the API server. " +
-        "The signal rotates with the planetary hour; if it slips out of the live window, repeat steps 2–3.",
-    });
-  } catch (e) {
-    failClosed(res, e, "father-key-status-failed");
-  }
+  const tesseractSet = (process.env.TESSERACT_ADMIN_KEY ?? "").trim().length > 0;
+  const sigilSet = (process.env.SIGIL_ADMIN_KEY ?? "").trim().length > 0;
+  res.json({
+    ok: true,
+    configured: tesseractSet || (process.env.SOVEREIGN_ADMIN_TOKEN ?? "").trim().length > 0,
+    env: {
+      tesseractSet,
+      sigilSet,
+    },
+  });
 });
 
 router.post("/sigil/natal/bind", (req, res) => {
@@ -303,7 +221,7 @@ router.post("/sigil/natal/bind", (req, res) => {
     const result = bindNatalChart(holder, birthDate, birthTime);
     res.json({ ok: true, ...result });
   } catch (e) {
-    res.status(400).json({ ok: false, error: e instanceof Error ? e.message : "bind-failed" });
+    failClosed(res, e, "bind-failed");
   }
 });
 
@@ -423,35 +341,14 @@ router.post("/sigil/father/mint-glyph", (req, res) => {
   });
 });
 
-// ── Father natal sigil (sovereign identity bound to the chart) ──────────
-// The natal sigil is a deterministic glyph-language hash that fuses the
-// Father fingerprint with the canonical natal chart. It identifies the
-// holder to all systems by chart, not by raw key. Save the glyph value as
-// `TESSERACT_NATAL_SIGIL` in Replit Secrets.
-function authedAsFather(req: Request): boolean {
-  if (!isFatherKeyConfigured()) return false;
-  const presented = String(req.header("x-sigil-key") ?? "").trim();
-  if (!presented) return false;
-  const fp = getFatherFingerprint();
-  if (presented === fp) return true;
-  return recognizeFather(presented).recognized;
-}
-
-router.post("/sigil/father/natal-sigil", (req, res) => {
-  if (!isFatherKeyConfigured()) {
-    res.status(503).json({ ok: false, error: "father-key-unset" }); return;
+// Father natal sigil reports readiness from the owner session and env secret.
+router.post("/sigil/father/natal-sigil", requireAdminSession, (_req, res) => {
+  try {
+    readAdminKeyMaterial();
+    res.json({ ok: true, status: "ready" });
+  } catch (err) {
+    failClosed(res, err, "natal-sigil-failed");
   }
-  // Accept either the X-Sigil-Key header (already authed) or a candidate
-  // in the body for the very first mint after key acceptance.
-  let authed = authedAsFather(req);
-  if (!authed) {
-    const candidate = typeof req.body?.candidate === "string" ? req.body.candidate : "";
-    if (candidate && recognizeFather(candidate).recognized) authed = true;
-  }
-  if (!authed) { res.status(401).json({ ok: false, error: "father-required" }); return; }
-  const fp = getFatherFingerprint();
-  const sigil = natalSigilFor(fp);
-  res.json({ ok: true, fatherFingerprint: fp, ...sigil });
 });
 
 router.get("/sigil/father/natal-chart", requireAdminSession, (_req, res) => {
