@@ -13,6 +13,7 @@ const PATTERNS = {
   nameSignObject: /\{\s*name:\s*["'][^"']+["'][^}]*sign:\s*["']/g,
   identityFns: /function verifyIdentity\b|function getIdentityQuestions\b|function buildVerificationCheckers\b/g,
   identityRoutes: /identity\/questions|identity\/verify/g,
+  chartDerivedKey: /issueZodiacKey|deriveNatalSeed|\bnatalDigest\b|readableSeed/g,
   placementLongitude: new RegExp(
     [
       String.raw`\b(?:asc(?:endant)?(?:lon|longitude)?|mc(?:lon|longitude)?|midheaven(?:lon|longitude)?|(?:sun|moon|mercury|venus|mars|jupiter|saturn|uranus|neptune|pluto|lilith|node|house)(?:\d+)?(?:lon|longitude))\b\s*[:=]\s*-?\d+(?:\.\d+)?`,
@@ -31,6 +32,7 @@ const ZERO_COUNTS: Record<keyof typeof PATTERNS, number> = {
   identityFns: 0,
   identityRoutes: 0,
   placementLongitude: 0,
+  chartDerivedKey: 0,
 };
 
 function walk(dir: string, out: string[] = []): string[] {
