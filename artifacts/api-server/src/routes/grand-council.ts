@@ -31,10 +31,13 @@ function dropCipherEnvelope(value: unknown): unknown {
   const source = value as Record<string, unknown>;
   const out: Record<string, unknown> = {};
   for (const [key, child] of Object.entries(source)) {
-    if (key === "cipher" && child && typeof child === "object" && !Array.isArray(child)) {
-      const cipher = { ...(child as Record<string, unknown>) };
-      delete cipher.envelope;
-      out.cipher = dropCipherEnvelope(cipher);
+    if (key.toLowerCase() === "cipher" && child && typeof child === "object" && !Array.isArray(child)) {
+      const cipher: Record<string, unknown> = {};
+      for (const [cipherKey, cipherChild] of Object.entries(child as Record<string, unknown>)) {
+        if (cipherKey.toLowerCase() === "envelope") continue;
+        cipher[cipherKey] = dropCipherEnvelope(cipherChild);
+      }
+      out[key] = cipher;
       continue;
     }
     out[key] = dropCipherEnvelope(child);

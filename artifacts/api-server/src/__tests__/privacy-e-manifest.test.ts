@@ -76,4 +76,28 @@ describe("repo manifest secret skip", () => {
     expect(rendered).not.toContain("token.txt");
     expect(manifest.map((entry) => entry.path)).toEqual([publicName]);
   });
+
+  it("skips local data, vault, and ingest directories", async () => {
+    const root = mkdtempSync(join(tmpdir(), "privacy-e-manifest-skip-"));
+    dirs.push(root);
+    const marker = "synthetic-vault-marker-do-not-emit";
+    const publicName = "notes.txt";
+    writeFileSync(join(root, publicName), "synthetic-public-note");
+    for (const name of [".local-data", "data", ".sovereign-data", "ingest", "natal-vault", "natal-vault-extra"]) {
+      mkdirSync(join(root, name));
+      writeFileSync(join(root, name, "row.txt"), marker);
+    }
+    writeFileSync(join(root, "natal-vault.json"), marker);
+
+    const manifest = await buildRepoManifest(root);
+    const rendered = JSON.stringify(manifest);
+    const parts = manifest.flatMap((entry) => entry.path.split("/"));
+    expect(rendered).not.toContain(marker);
+    expect(parts).not.toContain(".local-data");
+    expect(parts).not.toContain("data");
+    expect(parts).not.toContain(".sovereign-data");
+    expect(parts).not.toContain("ingest");
+    expect(parts.some((part) => part.toLowerCase().startsWith("natal-vault"))).toBe(false);
+    expect(manifest.map((entry) => entry.path)).toEqual([publicName]);
+  });
 });
