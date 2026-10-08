@@ -16,11 +16,22 @@ export interface TesseraEmbeddingResponse {
   data?: TesseraEmbeddingItem[];
 }
 
+export function resolveTesseraLlmModel(explicit?: string): string {
+  const model = explicit?.trim() || process.env.TESSERA_LLM_MODEL?.trim();
+  if (!model) {
+    throw new Error("TESSERA_LLM_MODEL not set");
+  }
+  return model;
+}
+
 function llmEndpoint(path: string): { url: string; apiKey: string } {
   const baseURL = process.env.TESSERA_LLM_BASE_URL?.replace(/\/$/, "");
-  const apiKey = process.env.TESSERA_LLM_API_KEY ?? "_DUMMY_API_KEY_";
   if (!baseURL) {
     throw new Error("TESSERA_LLM_BASE_URL not set");
+  }
+  const apiKey = process.env.TESSERA_LLM_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error("TESSERA_LLM_API_KEY not set");
   }
   return { url: `${baseURL}${path}`, apiKey };
 }

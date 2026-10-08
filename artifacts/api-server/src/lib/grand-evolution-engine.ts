@@ -32,6 +32,7 @@ import {
 import { eq, asc } from "drizzle-orm";
 import { logger } from "./logger";
 import { callLLM } from "./llm-client";
+import { resolveTesseraLlmModel } from "./tessera-llm-http";
 import {
   getFullSovereignSociety,
   getSocietyStats,
@@ -263,6 +264,7 @@ async function callMember(opts: SpeakerCallOptions): Promise<{ text: string; lat
   const user = (ROUND_PROMPTS[round] ?? ROUND_PROMPTS[1])(topic, priorDigest);
   const promptHash = createHash("sha256").update(sys + "\n" + user).digest("hex").slice(0, 16);
 
+  const model = resolveTesseraLlmModel();
   const start = Date.now();
   // Real LLM call with bounded retry on rate-limit / transient empties.
   // Hard invariant preserved: we never emit synthetic text — we only retry
@@ -278,7 +280,7 @@ async function callMember(opts: SpeakerCallOptions): Promise<{ text: string; lat
           { role: "user", content: user },
         ],
         {
-          model: "gpt-5-mini",
+          model,
           maxTokens: opts.maxTokens ?? 320,
           temperature: opts.temperature ?? 0.7,
           timeoutMs: 30_000,
@@ -306,7 +308,7 @@ async function callMember(opts: SpeakerCallOptions): Promise<{ text: string; lat
     text: trimmed,
     latencyMs,
     tokens: Math.ceil(trimmed.length / 4),
-    model: "gpt-5-mini",
+    model,
     promptHash,
     responseHash,
   };
@@ -405,7 +407,7 @@ Provide AT LEAST 6 specific path-targeted rules covering: any synthetic/canned-t
       { role: "user", content: user },
     ],
     {
-      model: "gpt-5-mini",
+      model: resolveTesseraLlmModel(),
       maxTokens: 1200,
       temperature: 0.2,
       timeoutMs: 30_000,
@@ -480,7 +482,7 @@ Produce AT LEAST 15 directives with exactly 5 marked isDramatic=true (one per dr
   const text = await callLLM(
     [{ role: "system", content: sys }, { role: "user", content: user }],
     {
-      model: "gpt-5-mini",
+      model: resolveTesseraLlmModel(),
       maxTokens: 2400,
       temperature: 0.3,
       timeoutMs: 45_000,

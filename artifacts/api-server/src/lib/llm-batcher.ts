@@ -1,4 +1,5 @@
 import { callLLM, LLMMessage, LLMCallOptions } from "./llm-client";
+import { resolveTesseraLlmModel } from "./tessera-llm-http";
 import { logger } from "./logger";
 import { generateEmbedding, cosineSimilarity } from "./neural-embeddings";
 import * as crypto from "crypto";
@@ -105,10 +106,18 @@ function requiresStructuredOutput(req: QueuedRequest): boolean {
   return /\bjson\b|flat.*object|return.*only|no markdown|schema|parseable/i.test(allContent);
 }
 
+function resolvedBatchModel(explicit?: string): string | undefined {
+  try {
+    return resolveTesseraLlmModel(explicit);
+  } catch {
+    return undefined;
+  }
+}
+
 function areRequestsMergeable(a: QueuedRequest, b: QueuedRequest): boolean {
-  const modelA = a.opts.model ?? "gpt-5-mini";
-  const modelB = b.opts.model ?? "gpt-5-mini";
-  if (modelA !== modelB) return false;
+  const modelA = resolvedBatchModel(a.opts.model);
+  const modelB = resolvedBatchModel(b.opts.model);
+  if (!modelA || !modelB || modelA !== modelB) return false;
 
   if (requiresStructuredOutput(a) || requiresStructuredOutput(b)) return false;
 
@@ -258,8 +267,13 @@ function scheduleBatch(): void {
 }
 
 export function batchedCallLLM(messages: LLMMessage[], opts: LLMCallOptions = {}): Promise<string> {
+  let model: string;
+  try {
+    model = resolveTesseraLlmModel(opts.model);
+  } catch (err) {
+    return Promise.reject(err);
+  }
   batchStats.totalBatched++;
-  const model = opts.model ?? "gpt-5-mini";
   const hash = hashRequest(messages, model, opts);
   const userContent = extractUserContent(messages);
 
