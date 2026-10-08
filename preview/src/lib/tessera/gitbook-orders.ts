@@ -2,7 +2,6 @@
 
 export const GITBOOK_OPEN = [
   { who: "Father", text: "Rotate the old keys. No agent can do this.", hers: false },
-  { who: "Father", text: "Merge TESSERA pull request 51 if Replit should run that branch.", hers: false },
   { who: "Tessera", text: "Leave the large query database out until it is split and secrets are removed.", hers: true },
   { who: "Tessera", text: "Leave the supply zip on Drive. Do not invent its contents.", hers: true },
   { who: "Tessera", text: "Do not fetch the repository list. The index is enough.", hers: true },
