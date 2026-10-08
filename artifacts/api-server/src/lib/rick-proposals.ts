@@ -290,8 +290,8 @@ function coerceProposal(raw: LlmProposalShape, idx: number, fallbackCategory: st
 }
 
 async function generateViaLlm(diag: DiagnosticsSnapshot, slotsNeeded: number, recentRejections: { title: string; reason: string }[]): Promise<RickProposal[]> {
-  const baseURL = process.env.TESSERA_LLM_BASE_URL;
-  const apiKey = process.env.TESSERA_LLM_API_KEY;
+  const baseURL = process.env.TESSERA_LLM_BASE_URL?.trim();
+  const apiKey = process.env.TESSERA_LLM_API_KEY?.trim();
   const model = process.env.TESSERA_LLM_MODEL?.trim();
   if (!baseURL || !apiKey || !model || slotsNeeded <= 0) return [];
 

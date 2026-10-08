@@ -273,8 +273,8 @@ router.post("/rick/chat", async (req, res) => {
       return res.status(400).json({ ok: false, error: "messages array required" });
     }
 
-    const baseURL = process.env.TESSERA_LLM_BASE_URL;
-    const apiKey = process.env.TESSERA_LLM_API_KEY;
+    const baseURL = process.env.TESSERA_LLM_BASE_URL?.trim();
+    const apiKey = process.env.TESSERA_LLM_API_KEY?.trim();
     const model = process.env.TESSERA_LLM_MODEL?.trim();
 
     const rickSystemPrompt = getRickSystemPrompt();
