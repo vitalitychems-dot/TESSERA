@@ -2,7 +2,7 @@ import { logger } from "./logger";
 import { lookupCache, storeInCache, getCacheStats } from "./semantic-cache";
 import { lookupKnowledge, distillFromResponse } from "./knowledge-distillation";
 import { applyDreamToMessages } from "./dream-prompt-bridge";
-import { tesseraChatCompletion } from "./tessera-llm-http";
+import { resolveTesseraLlmModel, tesseraChatCompletion } from "./tessera-llm-http";
 
 export interface LLMMessage {
   role: "system" | "user" | "assistant";
@@ -55,8 +55,8 @@ export async function callLLM(
   messages: LLMMessage[],
   opts: LLMCallOptions = {}
 ): Promise<string> {
+  const model = resolveTesseraLlmModel(opts.model);
   const {
-    model = "gpt-5-mini",
     maxTokens = 2048,
     timeoutMs = DEFAULT_LLM_TIMEOUT_MS,
     skipCache = false,

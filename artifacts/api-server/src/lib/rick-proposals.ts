@@ -290,9 +290,10 @@ function coerceProposal(raw: LlmProposalShape, idx: number, fallbackCategory: st
 }
 
 async function generateViaLlm(diag: DiagnosticsSnapshot, slotsNeeded: number, recentRejections: { title: string; reason: string }[]): Promise<RickProposal[]> {
-  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-  if (!baseURL || !apiKey || slotsNeeded <= 0) return [];
+  const baseURL = process.env.TESSERA_LLM_BASE_URL;
+  const apiKey = process.env.TESSERA_LLM_API_KEY;
+  const model = process.env.TESSERA_LLM_MODEL?.trim();
+  if (!baseURL || !apiKey || !model || slotsNeeded <= 0) return [];
 
   const realityAuditBlock = `REALITY AUDIT (grounded checks against the knowledge base):
 - Grounding rate of recent claims: ${(diag.truthGroundingRate * 100).toFixed(1)}%
@@ -330,7 +331,7 @@ No prose, no code fences.`;
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "gpt-4.1",
+        model,
         messages: [
           { role: "system", content: getRickSystemPrompt() },
           { role: "user", content: userPrompt },

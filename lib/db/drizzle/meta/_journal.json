@@ -71,6 +71,13 @@
       "when": 1776470000000,
       "tag": "0009_codex",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776566400000,
+      "tag": "0010_semantic_cache_model_default",
+      "breakpoints": true
     }
   ]
 }

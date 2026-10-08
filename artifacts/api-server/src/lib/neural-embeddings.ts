@@ -108,7 +108,8 @@ export async function generateEmbedding(text: string, dimension: string = "gener
     return cached.value.vec;
   }
 
-  if (neuralPreference < 0.3) {
+  const embedModel = process.env.TESSERA_EMBED_MODEL?.trim();
+  if (neuralPreference < 0.3 || !embedModel) {
     embeddingMetrics.fallbackCalls++;
     const fallback = localFallbackEmbedding(text);
     embeddingDimensionalCache.set(key, { vec: fallback, ts: Date.now() }, dimension);
@@ -122,7 +123,7 @@ export async function generateEmbedding(text: string, dimension: string = "gener
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     const response = await tesseraEmbeddings(
-      { model: "text-embedding-3-small", input: text.slice(0, 8000) },
+      { model: embedModel, input: text.slice(0, 8000) },
       controller.signal,
     );
     clearTimeout(timer);
@@ -162,6 +163,17 @@ export async function generateEmbeddingsBatch(texts: string[], dimension: string
 
   if (uncachedIndices.length === 0) return results;
 
+  const embedModel = process.env.TESSERA_EMBED_MODEL?.trim();
+  if (!embedModel) {
+    for (const origIdx of uncachedIndices) {
+      const vec = localFallbackEmbedding(texts[origIdx]);
+      results[origIdx] = vec;
+      embeddingMetrics.fallbackCalls++;
+      embeddingDimensionalCache.set(hashText(texts[origIdx]), { vec, ts: Date.now() }, dimension);
+    }
+    return results;
+  }
+
   const batches: number[][] = [];
   for (let i = 0; i < uncachedIndices.length; i += MAX_BATCH_SIZE) {
     batches.push(uncachedIndices.slice(i, i + MAX_BATCH_SIZE));
@@ -176,7 +188,7 @@ export async function generateEmbeddingsBatch(texts: string[], dimension: string
       const timer = setTimeout(() => controller.abort(), 15_000);
 
       const response = await tesseraEmbeddings(
-        { model: "text-embedding-3-small", input: batchTexts },
+        { model: embedModel, input: batchTexts },
         controller.signal,
       );
       clearTimeout(timer);

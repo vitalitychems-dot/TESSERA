@@ -21,9 +21,9 @@ export interface ExternalRequestResult {
 
 const BUILTIN_ALLOWED: string[] = [];
 
-if (process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
+if (process.env.TESSERA_LLM_BASE_URL) {
   try {
-    const aiHost = new URL(process.env.AI_INTEGRATIONS_OPENAI_BASE_URL).hostname;
+    const aiHost = new URL(process.env.TESSERA_LLM_BASE_URL).hostname;
     BUILTIN_ALLOWED.push(aiHost);
   } catch {}
 }

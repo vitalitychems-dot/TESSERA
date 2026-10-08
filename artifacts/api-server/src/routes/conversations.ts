@@ -440,9 +440,10 @@ async function sandboxExtractKnowledge(
   messages: Array<{ role: string; content: string }>,
   sovereignCtx: string,
 ): Promise<string | null> {
-  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-  if (!baseURL || !apiKey) return null;
+  const baseURL = process.env.TESSERA_LLM_BASE_URL;
+  const apiKey = process.env.TESSERA_LLM_API_KEY;
+  const model = process.env.TESSERA_LLM_MODEL?.trim();
+  if (!baseURL || !apiKey || !model) return null;
 
   const sandboxSystem = `${SANDBOX_EXTRACTION_PROMPT}\n\n[SOVEREIGN CONTEXT — for factual grounding only]\n${sovereignCtx}`;
 
@@ -452,7 +453,7 @@ async function sandboxExtractKnowledge(
   }));
 
   const body = JSON.stringify({
-    model: "gpt-4.1",
+    model,
     messages: [
       { role: "system", content: sandboxSystem },
       ...sanitizedMessages.slice(-30),
@@ -500,9 +501,10 @@ async function _deprecated_sandboxExtractKnowledgeStreaming(
   sovereignCtx: string,
   onChunk: (text: string) => void,
 ): Promise<string | null> {
-  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-  if (!baseURL || !apiKey) return null;
+  const baseURL = process.env.TESSERA_LLM_BASE_URL;
+  const apiKey = process.env.TESSERA_LLM_API_KEY;
+  const model = process.env.TESSERA_LLM_MODEL?.trim();
+  if (!baseURL || !apiKey || !model) return null;
 
   const streamUrl = `${baseURL}/chat/completions`;
   const tesseraPrompt = getTesseraSystemPrompt(sovereignCtx);
@@ -529,7 +531,7 @@ async function _deprecated_sandboxExtractKnowledgeStreaming(
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4.1",
+        model,
         messages: [
           { role: "system", content: sandboxSystem },
           ...sanitizedMessages.slice(-30),
