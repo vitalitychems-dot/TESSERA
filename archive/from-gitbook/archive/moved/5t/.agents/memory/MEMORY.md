@@ -1,0 +1,2 @@
+- [Outbound knowledge sources](outbound-knowledge-sources.md) — Keep generic knowledge fetching limited to fixed, credential-free sources; new hosts require explicit approval.
+- [Tessera consolidation gate](tessera-consolidation-gate.md) — Account for every distinct contribution; exclusions need review, and old repos stay until explicit sign-off and owner approval.

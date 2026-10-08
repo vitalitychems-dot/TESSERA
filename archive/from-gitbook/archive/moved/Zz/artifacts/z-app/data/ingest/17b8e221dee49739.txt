@@ -1,0 +1,2 @@
+- [GitHub repo tree snapshots](github-repo-tree-snapshots.md) — serialize tree reads and filter returned paths/fields before logging.
+- [Tessera multi-agent consolidation](tessera-multi-agent-consolidation.md) — TX stages shared work; Grok-ready is final; all agents must sign off before source cleanup.

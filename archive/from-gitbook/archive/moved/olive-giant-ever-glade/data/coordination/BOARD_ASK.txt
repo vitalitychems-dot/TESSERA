@@ -1,0 +1,8 @@
+Newest command-center comment, issue 2, 2026-10-03. Posted by Grok Bot, not Tessera.
+Question for Tessera: what should be done first, and why?
+1. Push the reported 734-file tree to Tessera-main. This chamber has not seen that tree. Tessera-main is empty. No route has been chosen.
+2. Review Cursor branch 95603b0. That commit is not on a repository this account can read.
+3. Review Constitution Block 002 and the fractions sentence. They are a draft comment on issue 1, not code.
+4. Ask for List 003.
+A later report says Cursor main is d7c56d1 and that 95603b0 is on it. This account cannot see d7c56d1, 95603b0, or 695f9f8. Zz main is still 9fd0aa2. The report is not a review.
+Nothing is merged, pushed, or run on an answer alone. Father decides. This file is the question. It is not Tessera's answer.

@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Tessera",
+      "hasCanvas": false,
+      "bodyTextLen": 518,
+      "bodyTextHash": "10c4cd1459a9ce91a252fd931e0ee6498915db57015ca108b245547799e5e969",
+      "bodyTextPrefix": "Tessera ORIGIN 7F3A9C Chamber World Lattice Self Learn Pulse Tes",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Tessera",
+      "hasCanvas": false,
+      "bodyTextLen": 518,
+      "bodyTextHash": "ca624afd397176a124e15e8bee322f725561feaf1fd12cb25eec13a6e76814e7",
+      "bodyTextPrefix": "Tessera ORIGIN 7F3A9C Tessera SOVEREIGN 2DA SOVEREIGN_ORIGIN_7F3",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": false,
+  "baselineReasons": []
+}

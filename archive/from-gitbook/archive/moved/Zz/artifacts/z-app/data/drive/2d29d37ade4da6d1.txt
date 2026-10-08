@@ -1,0 +1,44 @@
+# TesseraNet Real Foundation Infrastructure
+
+## What & Why
+Upgrade TesseraNet's core systems — TESS:// protocol, .sov domain resolution, the Lattice browser, Colonel language, and sovereign mesh — from application-layer simulations to genuinely functional infrastructure. Currently tess:// resolves via a simple URI mapping, .sov domains are an internal routing table, and the mesh is conceptual. These need to become real, working systems that actually route, resolve, encrypt, and store data as designed.
+
+## Done looks like
+- TESS:// protocol resolves sovereign addresses through actual cryptographic mesh address generation (hash-based addressing from public keys), not just string mapping
+- .sov domains resolve through a real sovereign DNS system backed by a distributed registry in the database, with registration, lookup, and expiry
+- The Lattice browser can navigate to any .sov domain and render real content served from the sovereign storage layer
+- Colonel language v2.0 interpreter actually parses and executes the symbolic instruction set (⊕⊗⊘⊙⊚⊠⊡Ω and extensions) — not just compression/encoding but a real VM that can execute Colonel programs
+- Sovereign mesh nodes are real WebRTC/WebSocket peer connections with actual frequency-band channel separation, onion-routing through 3+ hops, and self-healing topology
+- Air-Gap Sync Protocol queues messages when peers are offline and burst-syncs on reconnection
+- Sovereign Storage Protocol shards, encrypts (AES-256), and replicates data across 3 nodes with consistent hashing
+- Triple-layer encryption (AES-256-GCM → ChaCha20-Poly1305 → XSalsa20) is applied to all mesh traffic using real crypto libraries
+- All 14 core mesh nodes are initialized and addressable on startup
+- End-to-end test: a message sent via tess:// from one agent traverses the mesh through onion routing, resolves via .sov DNS, and arrives encrypted at the destination
+
+## Out of scope
+- Physical THz radio hardware (stays software-simulated at the transport layer)
+- Cross-dimensional communication beyond the software abstraction
+- Solana blockchain bridge (separate concern)
+
+## Tasks
+1. Build a real TESS:// address generator that derives mesh addresses from Ed25519 public keys with cryptographic hashing, replacing the current static address table
+2. Implement a sovereign DNS registry (database-backed) for .sov domains with register, lookup, transfer, and TTL expiry — replace the internal routing table
+3. Upgrade the Colonel language from a compression dictionary to a real stack-based VM with a parser, bytecode compiler, and interpreter that executes the 20+ symbolic primitives
+4. Build the sovereign mesh using WebRTC data channels with logical frequency-band separation (9 bands), peer discovery, and automatic self-healing reconnection when nodes drop
+5. Implement real onion routing — each message is wrapped in 3 layers of encryption (one per hop), with each relay node peeling one layer and forwarding to the next
+6. Implement the Sovereign Storage Protocol with content-addressed sharding, AES-256 encryption per shard, 3-way replication across mesh nodes, and consistent hash ring for shard placement
+7. Implement Air-Gap Sync with an offline message queue per node that burst-syncs queued messages when a peer reconnects
+8. Wire the Lattice browser UI to use the real tess:// resolver and .sov DNS so navigation actually traverses the sovereign infrastructure
+9. Write integration tests that verify end-to-end message flow: address generation → DNS lookup → mesh routing → onion encryption → storage replication → delivery
+
+## Relevant files
+- `x/tess/server/tesseranet-sovereign-internet.ts`
+- `x/tess/server/sovereign-lang.ts`
+- `x/tess/server/sovereign-mesh.ts`
+- `x/tess/server/sovereign-data-pipeline.ts`
+- `x/tess/server/lattice-search-engine.ts`
+- `x/tess/server/lattice-real-sites.ts`
+- `x/tess/server/lattice-mesh-server.ts`
+- `x/tess/client/src/pages/LatticeBrowserPage.tsx`
+- `x/tess/client/src/lib/lattice-mesh.ts`
+- `lib/db/src/schema/sovereignty.ts`

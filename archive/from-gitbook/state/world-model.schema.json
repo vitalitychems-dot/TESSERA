@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Tessera Gitbook coordination world model",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "source_snapshot", "architecture", "goals", "constraints", "tasks", "unknowns", "evidence"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "source_snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gitbook_commit", "tessera_commit", "status"],
+      "properties": {
+        "gitbook_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "tessera_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "status": {"enum": ["TESTED", "REPORTED", "PROPOSED", "UNKNOWN"]}
+      }
+    },
+    "architecture": {"type": "array", "items": {"type": "object", "required": ["id", "statement", "status", "evidence"], "properties": {"id": {"type": "string"}, "statement": {"type": "string"}, "status": {"enum": ["TESTED", "REPORTED", "PROPOSED", "UNKNOWN"]}, "evidence": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": false}},
+    "goals": {"type": "array", "items": {"$ref": "#/$defs/record"}},
+    "constraints": {"type": "array", "items": {"$ref": "#/$defs/record"}},
+    "tasks": {"type": "array", "items": {"$ref": "#/$defs/record"}},
+    "unknowns": {"type": "array", "items": {"$ref": "#/$defs/record"}},
+    "evidence": {"type": "array", "items": {"type": "object", "required": ["id", "repo", "path", "status"], "properties": {"id": {"type": "string"}, "repo": {"enum": ["Gitbook", "TESSERA"]}, "path": {"type": "string", "pattern": "^(?!/)(?!.*\\.\\.).+$"}, "status": {"enum": ["TESTED", "REPORTED", "PROPOSED", "UNKNOWN"]}}, "additionalProperties": false}}
+  },
+  "$defs": {"record": {"type": "object", "required": ["id", "statement", "status", "evidence"], "properties": {"id": {"type": "string"}, "statement": {"type": "string"}, "status": {"enum": ["TESTED", "REPORTED", "PROPOSED", "BLOCKED", "UNKNOWN"]}, "evidence": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": false}}
+}

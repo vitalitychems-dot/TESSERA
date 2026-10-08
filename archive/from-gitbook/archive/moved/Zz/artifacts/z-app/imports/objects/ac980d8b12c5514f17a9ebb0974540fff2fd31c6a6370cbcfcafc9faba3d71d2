@@ -1,0 +1,281 @@
+import { o as __toESM } from "../_runtime.mjs";
+import { C as require_jsx_runtime, U as require_react, y as Link } from "../_libs/@tanstack/react-router+[...].mjs";
+import { n as BUSINESS } from "./pricing-Bvwp02Vi.mjs";
+import { d as SOCIAL_PROOF, f as TRUST_POINTS, h as cn, m as bestsellers, r as FAQ, s as PRODUCT_GRID, x as filterProducts } from "./use-lab-credit-mL5HM6FJ.mjs";
+import { S as BadgeCheck, b as FileCheck2, r as Truck, s as ShieldAlert, u as Quote, y as FlaskConical } from "../_libs/lucide-react.mjs";
+import { n as SiteHeader } from "./site-header-Dl38Q0EW.mjs";
+import { l as RUO_LONG } from "./router-CinrLZb2.mjs";
+import { t as SiteFooter } from "./site-footer-w4rLOUoS.mjs";
+import { t as ProductCard } from "./product-card-MOZwHs1O.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-BYuc_m9I.js
+var import_react = /* @__PURE__ */ __toESM(require_react());
+var import_jsx_runtime = require_jsx_runtime();
+function SocialProof() {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
+		className: "border-y border-border bg-bg-elevated px-6 py-16",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "mx-auto max-w-7xl",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "font-mono text-xs tracking-widest text-primary uppercase",
+					children: "From research accounts"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+					className: "font-display mt-2 text-3xl font-semibold tracking-wide uppercase",
+					children: "Service, documentation, dispatch"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-3 max-w-2xl text-sm text-muted",
+					children: "Quotes below are about documentation and fulfillment — not about using these materials in people or animals. We do not collect or display outcome stories."
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-8 grid gap-4 md:grid-cols-2",
+					children: SOCIAL_PROOF.map((s) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("figure", {
+						className: "rounded-lg border border-border bg-surface p-6",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Quote, { className: "h-4 w-4 text-primary" }),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("blockquote", {
+								className: "mt-3 text-sm leading-relaxed",
+								children: s.quote
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("figcaption", {
+								className: "mt-4 font-mono text-[10px] tracking-widest text-muted uppercase",
+								children: s.attrib
+							})
+						]
+					}, s.attrib))
+				})
+			]
+		})
+	});
+}
+var TABS = [
+	{
+		id: "all",
+		label: "All"
+	},
+	{
+		id: "bestsellers",
+		label: "Top sellers"
+	},
+	{
+		id: "vial",
+		label: "Vials"
+	},
+	{
+		id: "capsule",
+		label: "Capsules"
+	},
+	{
+		id: "topical",
+		label: "Topicals"
+	},
+	{
+		id: "liquid",
+		label: "Liquids"
+	},
+	{
+		id: "spray",
+		label: "Aqueous sprays"
+	}
+];
+var FAQ_JSON_LD = JSON.stringify({
+	"@context": "https://schema.org",
+	"@type": "FAQPage",
+	mainEntity: FAQ.map((item) => ({
+		"@type": "Question",
+		name: item.q,
+		acceptedAnswer: {
+			"@type": "Answer",
+			text: item.a
+		}
+	}))
+}).replace(/</g, "\\u003c");
+function Home() {
+	const [tab, setTab] = (0, import_react.useState)("bestsellers");
+	const [query, setQuery] = (0, import_react.useState)("");
+	const [openFaq, setOpenFaq] = (0, import_react.useState)(0);
+	const filtered = (0, import_react.useMemo)(() => {
+		const q = query.trim();
+		if (tab === "bestsellers" && !q) return bestsellers(8);
+		let list = filterProducts({
+			family: "all",
+			form: "all",
+			min: 0,
+			max: Infinity,
+			query: q
+		});
+		if (!q) {
+			if (tab === "vial") list = list.filter((p) => p.category === "vial-compounds");
+			else if (tab === "capsule") list = list.filter((p) => p.formKind === "capsule");
+			else if (tab === "topical") list = list.filter((p) => p.formKind === "topical");
+			else if (tab === "liquid") list = list.filter((p) => p.formKind === "liquid");
+			else if (tab === "spray") list = list.filter((p) => p.formKind === "spray");
+		}
+		return list.sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name));
+	}, [tab, query]);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "min-h-dvh bg-bg text-fg",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("script", {
+				type: "application/ld+json",
+				dangerouslySetInnerHTML: { __html: FAQ_JSON_LD }
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("script", {
+				type: "application/ld+json",
+				dangerouslySetInnerHTML: { __html: JSON.stringify({
+					"@context": "https://schema.org",
+					"@type": "Organization",
+					name: BUSINESS.name,
+					url: "https://vitalitychems.com",
+					email: BUSINESS.email,
+					telephone: "+17797174445",
+					address: {
+						"@type": "PostalAddress",
+						streetAddress: `${BUSINESS.street}, ${BUSINESS.unit}`,
+						addressLocality: BUSINESS.city,
+						addressRegion: BUSINESS.region,
+						postalCode: BUSINESS.postal,
+						addressCountry: "US"
+					},
+					description: "HPLC-documented research peptides sold strictly for laboratory and in-vitro use. Not a pharmacy. Not for human consumption."
+				}) }
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteHeader, {
+				active: "shop",
+				subnav: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "border-b border-border bg-bg px-3 py-1.5 sm:px-6",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "scrollbar-none mx-auto flex max-w-[1440px] gap-1.5 overflow-x-auto overscroll-contain [touch-action:pan-x]",
+						children: TABS.map((t) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CatChip, {
+							label: t.label,
+							active: tab === t.id && !query.trim(),
+							onClick: () => {
+								setQuery("");
+								setTab(t.id);
+							}
+						}, t.id))
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mx-auto mt-1 flex max-w-[1440px] flex-wrap gap-x-4 gap-y-1 text-[11px] tracking-widest text-muted uppercase",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
+								to: "/wholesale",
+								className: "hover:text-primary",
+								children: "Wholesale"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
+								to: "/affiliates",
+								className: "hover:text-primary",
+								children: "Affiliates"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: "hover:text-primary",
+								onClick: () => window.dispatchEvent(new Event("vs:open-welcome")),
+								children: "10% first order"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
+								to: "/subscriptions",
+								className: "hover:text-primary",
+								children: "Lab restock"
+							})
+						]
+					})]
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+				className: "sr-only",
+				children: "Vitality Chems research peptides — highest-demand compounds"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
+				id: "catalog",
+				className: "px-3 py-2 sm:px-6",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mx-auto max-w-[1440px] space-y-2",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
+							className: "sr-only",
+							children: [filtered.length, " research compounds"]
+						}),
+						tab === "spray" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "text-[11px] leading-relaxed text-muted",
+							children: "Aqueous spray presentations for laboratory handling of solutions — not for administration to people or animals."
+						}),
+						filtered.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "text-sm text-muted",
+							children: "No compounds match that search."
+						}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: PRODUCT_GRID,
+							children: filtered.map((p, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ProductCard, {
+								product: p,
+								priority: i < 4
+							}, p.id))
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex items-start gap-3 rounded-md border border-border bg-overlay px-4 py-3 text-muted",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ShieldAlert, { className: "mt-0.5 h-4 w-4 shrink-0 text-primary" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-xs leading-relaxed",
+								children: RUO_LONG
+							})]
+						})
+					]
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
+				className: "border-y border-border bg-bg-elevated",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mx-auto grid max-w-[1440px] grid-cols-2 gap-px md:grid-cols-4",
+					children: TRUST_POINTS.map((t, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "flex items-center gap-2 px-3 py-3",
+						children: [i === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BadgeCheck, { className: "mt-0.5 h-4 w-4 shrink-0 text-primary" }) : i === 1 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FileCheck2, { className: "mt-0.5 h-4 w-4 shrink-0 text-primary" }) : i === 2 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Truck, { className: "mt-0.5 h-4 w-4 shrink-0 text-primary" }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FlaskConical, { className: "mt-0.5 h-4 w-4 shrink-0 text-primary" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "font-display text-xs font-semibold tracking-wide uppercase",
+							children: t.title
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "hidden text-[11px] leading-snug text-muted lg:block",
+							children: t.body
+						})] })]
+					}, t.title))
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SocialProof, {}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+				className: "mx-auto max-w-3xl px-6 py-24",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+					className: "font-display mb-6 text-3xl font-semibold tracking-wide uppercase",
+					children: "FAQ"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "space-y-2",
+					children: FAQ.map((item, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "overflow-hidden rounded-md border border-border bg-surface",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							type: "button",
+							className: "flex min-h-12 w-full items-center justify-between px-5 py-4 text-left",
+							onClick: () => setOpenFaq(openFaq === i ? null : i),
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "pr-4 font-medium",
+								children: item.q
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "text-muted",
+								children: openFaq === i ? "–" : "+"
+							})]
+						}), openFaq === i && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "px-5 pb-4 text-sm leading-relaxed text-muted",
+							children: item.a
+						})]
+					}, item.q))
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteFooter, {})
+		]
+	});
+}
+function CatChip({ label, active, onClick }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+		type: "button",
+		onClick,
+		className: cn("shrink-0 rounded-full px-2.5 py-1.5 font-display text-[10px] font-semibold tracking-widest whitespace-nowrap uppercase transition-colors sm:text-xs min-h-9", active ? "bg-primary text-primary-fg" : "border border-border bg-overlay text-muted hover:text-fg"),
+		children: label
+	});
+}
+//#endregion
+export { Home as component };

@@ -1,0 +1,10 @@
+NeuroConscious: 64 files. Top folders: .github, .idea, agent, config, core, environment, tests, utils, visualization. Title: 🧠 NeuroConscious: Artificial Consciousness Engine.
+Brain-Cog: 721 files. Top folders: braincog, docs, documents, examples. Title: BrainCog.
+GodelOS: 929 files. Top folders: .github, .jq, .ticket, artifacts, backend, demo-data, docs, examples, godelOS, metacognition_modules, pulls, scripts. Title: 🧠 GödelOS v0.2 Beta — Consciousness Operating System for LLMs.
+hyperon-experimental: 296 files. Top folders: .github, c, docs, hyperon-atom, hyperon-common, hyperon-macros, hyperon-space, integration_tests, lib, python, repl. Title: Overview.
+HumanBrain: 159 files. Top folders: crates, docs, examples, paper, papers, src. Title: HumanBrain: World-Class Anatomically Realistic Human Brain Simulator.
+BrainSimII: 732 files. Top folders: .github, AutomatedTests, BrainSimulator, CSEngineTest, CppEngineTest, CsEngineTest, GetVersionInfo, Installer, NeuronEngine, NeuronEngineWrapper, NeuronServer, SetupFirewall. Title: BrainSimII.
+artificial-consciousness-blueprint: 46 files. Top folders: data, docs, ideas, logs, src, steps. Title: 🧠 Artificial Consciousness Research Blueprint.
+artificial-consciousness-ai: 298 files. Top folders: data, logs, scripts, src. Title: ACI (Artificial Consciousness AI) - Persistent Memory System.
+
+What she may use: the thirst workaround, the compiled neuron, the local pattern match, the local memory note, and the link step. What she may not do: start their servers, ask for an OpenAI key, download HumanBrain's crates, or treat their consciousness claims as her own. Reading these notes does not change the model weights.
