@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { logger } from "../lib/logger";
 import { recognizeFather, verifyFatherKey } from "../lib/father-identity";
-import { adminSessionRateLimit } from "../lib/father-verify-throttle";
+import { rawKeyFailRateLimit } from "../lib/father-verify-throttle";
 import { computeLunarData, computeSolarData, computePlanetaryHours } from "../lib/sovereign-astro";
 import { computeAgentEconomics, computeEconomyStats, computeMarketData, computeTaxHistory } from "../lib/sovereign-economics";
 import { computeSacredFrequencies, computeDNAHealingStatus, computeSacredTraditions } from "../lib/sovereign-harmonics";
@@ -74,7 +74,7 @@ function computeSovereigntyScore(): number {
   return Math.round(score / checks);
 }
 
-router.post("/admin/auth", adminSessionRateLimit, (req, res) => {
+router.post("/admin/auth", rawKeyFailRateLimit, (req, res) => {
   const presented = typeof req.body?.key === "string" ? req.body.key : "";
   const result = recognizeFather(presented);
   if (!result.recognized) {
@@ -1042,7 +1042,15 @@ function dedupAdminKey(req: { header(name: string): string | undefined }): strin
   return req.header("x-tesseract-admin-key") ?? "";
 }
 
-router.post("/admin/deduplication/scan", adminSessionRateLimit, async (req, res) => {
+function rejectUnlessAdminKey(req: { header(name: string): string | undefined }, res: { status(code: number): { json(body: unknown): void } }): boolean {
+  if (!verifyFatherKey(dedupAdminKey(req))) {
+    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
+    return false;
+  }
+  return true;
+}
+
+router.post("/admin/deduplication/scan", rawKeyFailRateLimit, async (req, res) => {
   if (!verifyFatherKey(dedupAdminKey(req))) {
     res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
     return;
@@ -1056,7 +1064,7 @@ router.post("/admin/deduplication/scan", adminSessionRateLimit, async (req, res)
   }
 });
 
-router.post("/admin/deduplication/migrate", adminSessionRateLimit, async (req, res) => {
+router.post("/admin/deduplication/migrate", rawKeyFailRateLimit, async (req, res) => {
   if (!verifyFatherKey(dedupAdminKey(req))) {
     res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
     return;
@@ -1070,7 +1078,7 @@ router.post("/admin/deduplication/migrate", adminSessionRateLimit, async (req, r
   }
 });
 
-router.get("/admin/deduplication/stats", adminSessionRateLimit, (req, res) => {
+router.get("/admin/deduplication/stats", rawKeyFailRateLimit, (req, res) => {
   if (!verifyFatherKey(dedupAdminKey(req))) {
     res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
     return;
@@ -1078,63 +1086,39 @@ router.get("/admin/deduplication/stats", adminSessionRateLimit, (req, res) => {
   res.json({ ok: true, ...getDeduplicationStats() });
 });
 
-router.get("/admin/reflection/metrics", (req, res) => {
-  const adminKey = req.headers["x-tesseract-admin-key"] ?? req.query["tesseractAdminKey"];
-  if (!recognizeFather(typeof adminKey === "string" ? adminKey : Array.isArray(adminKey) ? String(adminKey[0]) : "").recognized) {
-    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
-    return;
-  }
+router.get("/admin/reflection/metrics", rawKeyFailRateLimit, (req, res) => {
+  if (!rejectUnlessAdminKey(req, res)) return;
   res.json({ ok: true, ...getReflectionMetrics() });
 });
 
-router.get("/admin/reflection/snapshots", (req, res) => {
-  const adminKey = req.headers["x-tesseract-admin-key"] ?? req.query["tesseractAdminKey"];
-  if (!recognizeFather(typeof adminKey === "string" ? adminKey : Array.isArray(adminKey) ? String(adminKey[0]) : "").recognized) {
-    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
-    return;
-  }
+router.get("/admin/reflection/snapshots", rawKeyFailRateLimit, (req, res) => {
+  if (!rejectUnlessAdminKey(req, res)) return;
   const limit = Math.min(50, Number(req.query.limit) || 10);
   res.json({ ok: true, snapshots: getRecentSnapshots(limit) });
 });
 
-router.get("/admin/cache/dimensional/stats", (req, res) => {
-  const adminKey = req.headers["x-tesseract-admin-key"] ?? req.query["tesseractAdminKey"];
-  if (!recognizeFather(typeof adminKey === "string" ? adminKey : Array.isArray(adminKey) ? String(adminKey[0]) : "").recognized) {
-    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
-    return;
-  }
+router.get("/admin/cache/dimensional/stats", rawKeyFailRateLimit, (req, res) => {
+  if (!rejectUnlessAdminKey(req, res)) return;
   res.json({ ok: true, ...getDimensionalCacheStats() });
 });
 
-router.post("/admin/cache/dimensional/tune", (req, res) => {
-  const adminKey = req.headers["x-tesseract-admin-key"] ?? req.query["tesseractAdminKey"];
-  if (!recognizeFather(typeof adminKey === "string" ? adminKey : Array.isArray(adminKey) ? String(adminKey[0]) : "").recognized) {
-    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
-    return;
-  }
+router.post("/admin/cache/dimensional/tune", rawKeyFailRateLimit, (req, res) => {
+  if (!rejectUnlessAdminKey(req, res)) return;
   const embeddingResult = embeddingDimensionalCache.tuneCapacities({ minCapacity: 100, maxCapacity: 800, totalBudget: 3000 });
   const semanticResult = semanticDimensionalCache.tuneCapacities({ minCapacity: 75, maxCapacity: 600, totalBudget: 2000 });
   res.json({ ok: true, embedding: embeddingResult, semantic: semanticResult });
 });
 
-router.post("/admin/cache/dimensional/clear", (req, res) => {
-  const adminKey = req.headers["x-tesseract-admin-key"] ?? req.query["tesseractAdminKey"];
-  if (!recognizeFather(typeof adminKey === "string" ? adminKey : Array.isArray(adminKey) ? String(adminKey[0]) : "").recognized) {
-    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
-    return;
-  }
+router.post("/admin/cache/dimensional/clear", rawKeyFailRateLimit, (req, res) => {
+  if (!rejectUnlessAdminKey(req, res)) return;
   const dimension = typeof req.query.dimension === "string" ? req.query.dimension : undefined;
   embeddingDimensionalCache.clear(dimension);
   semanticDimensionalCache.clear(dimension);
   res.json({ ok: true, cleared: dimension ?? "all" });
 });
 
-router.post("/admin/reflection/cycle", (req, res) => {
-  const adminKey = req.headers["x-tesseract-admin-key"] ?? req.query["tesseractAdminKey"];
-  if (!recognizeFather(typeof adminKey === "string" ? adminKey : Array.isArray(adminKey) ? String(adminKey[0]) : "").recognized) {
-    res.status(403).json({ ok: false, error: "Forbidden — TESSERACT_ADMIN_KEY required" });
-    return;
-  }
+router.post("/admin/reflection/cycle", rawKeyFailRateLimit, (req, res) => {
+  if (!rejectUnlessAdminKey(req, res)) return;
   const result = runReflectionCycle();
   res.json({
     ok: true,

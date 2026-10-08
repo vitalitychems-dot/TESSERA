@@ -5,12 +5,16 @@ const conferenceInsert = vi.hoisted(() =>
     throw new Error("synthetic-db-unavailable");
   }),
 );
+const savedConferences = vi.hoisted(() => [] as Array<{ id?: string; session?: unknown }>);
 
 vi.mock("@workspace/db", () => ({
   db: {
     insert: () => ({
-      values: (row: unknown) => {
-        const run = () => conferenceInsert(row);
+      values: (row: { id?: string; session?: unknown }) => {
+        const run = () => {
+          savedConferences.push(row);
+          return conferenceInsert(row);
+        };
         return {
           onConflictDoUpdate: () => run(),
           then: (
@@ -20,8 +24,15 @@ vi.mock("@workspace/db", () => ({
         };
       },
     }),
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          limit: async () => savedConferences,
+        }),
+      }),
+    }),
   },
-  councilSessionsTable: {},
+  councilSessionsTable: { id: "id" },
 }));
 
 import { createHash } from "node:crypto";
@@ -96,6 +107,7 @@ describe("sigil auth urgent", () => {
     process.env[SESSION_ENV] = SYNTHETIC_SESSION_SECRET;
     clearFatherKeyRedeemState();
     conferenceInsert.mockReset();
+    savedConferences.length = 0;
     conferenceInsert.mockImplementation(async () => {
       throw new Error("synthetic-db-unavailable");
     });
@@ -588,6 +600,13 @@ describe("sigil auth urgent", () => {
     expect(publicRow.note).toBe("0000000000000000");
     expect(containsKey(publicRow, "SigilFingerprint")).toBe(false);
     expect(containsKey(publicRow, "digestHex")).toBe(false);
+
+    const mixed = doctrineModule.withoutSigilFingerprint({
+      sigilFingerprint: "aabbccddeeff0011",
+      note: "seen AABBCCDDEEFF0011",
+    }) as Record<string, unknown>;
+    expect(mixed.note).toBeUndefined();
+    expect(containsKey(mixed, "sigilFingerprint")).toBe(false);
   });
 
   it("requires an owner session for translate encode and decode", async () => {
@@ -632,6 +651,14 @@ describe("sigil auth urgent", () => {
     expect(containsCredential(body, fingerprint)).toBe(false);
     expect(containsKey(body, "sigilFingerprint")).toBe(false);
     expect(containsKey(body, "handle")).toBe(false);
+    expect(containsKey(body, "surfacePreview")).toBe(false);
+
+    const conferenceId = (body.conference as { id?: string } | undefined)?.id;
+    expect(typeof conferenceId).toBe("string");
+    const fetched = await send("GET", `/omniversal/conference/${conferenceId}`);
+    expect(fetched.status).toBe(200);
+    const fetchedBody = await fetched.json();
+    expect(containsKey(fetchedBody, "surfacePreview")).toBe(false);
   });
 
   it("rate-limits anonymous council writes", async () => {
@@ -662,6 +689,18 @@ describe("sigil auth urgent", () => {
       headers: { "x-forwarded-for": spoofed },
     });
     expect(blocked.status).toBe(429);
+
+    let sawLimit = false;
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const response = await fetch(`${baseUrl}/sigil/status`);
+      if (response.status === 429) sawLimit = true;
+    }
+    expect(sawLimit).toBe(true);
+    const reveal = await send("POST", "/sigil/father/show-key-in-lus", {
+      cookie: ownerCookie(),
+      body: { candidate: SYNTHETIC_LEGACY_TOKEN },
+    });
+    expect(reveal.status).not.toBe(429);
   });
 });
 

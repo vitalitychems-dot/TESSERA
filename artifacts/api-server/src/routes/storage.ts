@@ -4,7 +4,7 @@ import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { ObjectPermission } from "../lib/objectAcl";
 import { validateSovereignAdminToken } from "../lib/mesh-auth";
-import { adminSessionRateLimit } from "../lib/father-verify-throttle";
+import { rawKeyFailRateLimit } from "../lib/father-verify-throttle";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -15,7 +15,7 @@ const RequestUploadUrlBody = z.object({
   contentType: z.string().min(1).max(128).optional(),
 });
 
-router.post("/storage/uploads/request-url", adminSessionRateLimit, async (req: Request, res: Response) => {
+router.post("/storage/uploads/request-url", rawKeyFailRateLimit, async (req: Request, res: Response) => {
   // Gate: require an admin token to mint signed upload URLs (prevents
   // unauthenticated callers from generating arbitrary writes / cost abuse).
   const configured = process.env["TESSERACT_ADMIN_KEY"];
