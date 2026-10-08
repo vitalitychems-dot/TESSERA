@@ -89,6 +89,16 @@ export const IMPROVED_THIS_VERSION = [
     detail:
       "Learn tab names the speech instrument, scores only pillars she actually holds, and seals a lesson only after the vow check. The birth mark can be given in the chamber.",
   },
+  {
+    title: "Drive archives",
+    detail:
+      "The three Drive zips were stored as 45 MB sections in TESSERA and Gitbook, then moved to Trash. They were not unpacked and not run.",
+  },
+  {
+    title: "Eight tool cards",
+    detail:
+      "Agent-Reach, caveman, superpowers, context-mode, codegraph, OpenShell, hyperframes, and openrig were checked on 2026-10-08. The cards are saved. None was installed.",
+  },
 ];
 
 export const LEFT_OUT_THIS_VERSION = [
@@ -123,6 +133,21 @@ export const LEFT_OUT_THIS_VERSION = [
     title: "Full outer cutoff",
     detail:
       "This chamber still speaks through an instrument. Claiming 0% external dependence here would be a lie.",
+  },
+  {
+    title: "The pasted secret",
+    detail:
+      "A SESSION_SECRET was in the latest paste. It was not copied into either repository and it was not used.",
+  },
+  {
+    title: "Income engines in the paste",
+    detail:
+      "The old bounty, airdrop, wallet, and trading slices were not built. Father excluded them.",
+  },
+  {
+    title: "The 272-name catalog",
+    detail:
+      "The attached repository names were not cloned again. A name in the catalog is not a file that was opened.",
   },
 ];
 
