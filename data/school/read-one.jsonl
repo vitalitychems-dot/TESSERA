@@ -8,3 +8,8 @@
 {"path":".agents/skills/agent-tools/references/authentication.md","q":"was an outside key added for the cli","fact":"The login page stores a credential. No key was added."}
 {"path":".agents/skills/agent-tools/references/cli-reference.md","q":"were the cli help commands run","fact":"The page lists help, version, update, login, and me. Those commands were not run."}
 {"path":".agents/skills/agent-tools/references/running-apps.md","q":"was an outside app run","fact":"A run on that page takes an app name and an input file. No app was run."}
+{"path":".agents/skills/audit-website/README.md","q":"what is the audit website page","fact":"The audit-website page names an outside website-audit CLI. It is not installed here."}
+{"path":".agents/skills/audit-website/SKILL.md","q":"is the squirrel cli installed","fact":"That skill asks for a squirrel CLI. The CLI is not installed here."}
+{"path":".agents/skills/audit-website/references/OUTPUT-FORMAT.md","q":"was a website audit report produced","fact":"The page describes a compact report format. No report was produced here."}
+{"path":".agents/skills/better-auth-best-practices/SKILL.md","q":"was the outside auth library configured","fact":"The page describes an outside authentication library. It was not configured here."}
+{"path":".agents/skills/brainstorming/SKILL.md","q":"what does the brainstorming page require first","fact":"The page says to ask questions before a creative change."}
