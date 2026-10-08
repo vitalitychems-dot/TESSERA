@@ -87,3 +87,4 @@ service-account*.json
 .nitro
 .vercel
 .turbo
+.codebase-memory/

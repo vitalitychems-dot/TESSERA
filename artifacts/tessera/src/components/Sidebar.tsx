@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link, useLocation } from "wouter";
-import { MessageSquare, Plus, Trash2, X, Brain, RefreshCw, MessageCircle, ChevronUp, ChevronDown, Search, Code2, Database, Sparkles, Globe, Shield, ShieldCheck, Crown, Eye, Atom, BarChart3, Rocket, Layers, Heart, BookOpen, Cpu, Zap, Network, User, CheckSquare, ArrowUpDown, Terminal, DollarSign, TrendingUp, Workflow, Target, Scale, Key, Truck, Link2, ShoppingCart, MapPin, Lightbulb, Link as LinkIcon, Map, GitCommit } from "lucide-react";
+import { MessageSquare, Plus, Trash2, X, Brain, RefreshCw, MessageCircle, ChevronUp, ChevronDown, Search, Code2, Database, Sparkles, Globe, Shield, ShieldCheck, Crown, Eye, Atom, BarChart3, Layers, Heart, BookOpen, Cpu, Zap, Network, User, CheckSquare, ArrowUpDown, Terminal, DollarSign, TrendingUp, Workflow, Target, Scale, Key, Truck, Link2, ShoppingCart, MapPin, Lightbulb, Link as LinkIcon, Map, GitCommit } from "lucide-react";
 import { useConversations, useCreateConversation, useDeleteConversation } from "@/hooks/use-conversations";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -73,7 +73,6 @@ const NAV_GROUPS: NavGroup[] = [
       { title: "Sovereign Lattice", href: "/sovereign-lattice", icon: MessageCircle, color: "cyan", dotColor: "bg-cyan-400", testId: "link-sovereign-lattice", matchFn: (loc) => loc === "/sovereign-lattice" },
       { title: "Declarations", href: "/agent-declarations", icon: Crown, color: "amber", dotColor: "bg-amber-400", testId: "link-agent-declarations", matchFn: (loc) => loc === "/agent-declarations" },
       { title: "Shepherd Audit", href: "/shepherd-audit", icon: ShieldCheck, color: "emerald", dotColor: "bg-emerald-400", testId: "link-shepherd-audit", matchFn: (loc) => loc === "/shepherd-audit" },
-      { title: "Recruitment", href: "/recruitment", icon: Rocket, color: "emerald", dotColor: "bg-emerald-400", testId: "link-recruitment", matchFn: (loc) => loc === "/recruitment" },
     ],
   },
   {

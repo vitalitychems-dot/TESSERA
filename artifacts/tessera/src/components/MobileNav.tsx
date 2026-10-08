@@ -4,7 +4,7 @@ import {
   MessageSquare, Brain, Globe2, DollarSign, MoreHorizontal, X,
   Heart, Shield, BookOpen, Eye, Gavel, MessageCircle, Hexagon,
   Truck, Skull, Terminal, Map, Code2, Workflow, Target, ShoppingCart,
-  Search, Zap, UserPlus, Cpu, Crown, GitCommit,
+  Search, Zap, Cpu, Crown, GitCommit,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AdminKeyInput from "@/components/AdminKeyInput";
@@ -21,7 +21,7 @@ interface NavTab {
 const PRIMARY: NavTab[] = [
   { label: "Chamber", href: "/", Icon: MessageSquare, match: (l) => l === "/" || l.startsWith("/c/"), color: "amber" },
   { label: "World", href: "/universe", Icon: Globe2, match: (l) => l === "/universe", color: "violet" },
-  { label: "Board", href: "/grand-council", Icon: Gavel, match: (l) => l === "/grand-council" || l === "/forum" || l === "/recruitment" || l === "/next-five", color: "amber" },
+  { label: "Board", href: "/grand-council", Icon: Gavel, match: (l) => l === "/grand-council" || l === "/forum" || l === "/next-five", color: "amber" },
   { label: "More", href: "#more", Icon: MoreHorizontal, match: () => false, color: "slate" },
 ];
 
@@ -34,7 +34,6 @@ const SECONDARY: NavTab[] = [
   { label: "Bible", href: "/bible", Icon: BookOpen, match: (l) => l === "/bible", color: "amber" },
   { label: "Society", href: "/secret-society", Icon: Eye, match: (l) => l === "/secret-society", color: "purple" },
   { label: "Forum", href: "/forum", Icon: MessageCircle, match: (l) => l === "/forum", color: "cyan" },
-  { label: "Recruit", href: "/recruitment", Icon: UserPlus, match: (l) => l === "/recruitment", color: "rose" },
   { label: "Compress", href: "/compression-lab", Icon: Zap, match: (l) => l === "/compression-lab", color: "cyan" },
   { label: "Lattice", href: "/lattice", Icon: Search, match: (l) => l === "/lattice", color: "violet" },
   { label: "NFT", href: "/agent-nft", Icon: Hexagon, match: (l) => l === "/agent-nft", color: "rose" },

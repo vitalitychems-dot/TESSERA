@@ -54,7 +54,6 @@ const GrandCouncilPage = lazyRetry(() => import("@/pages/GrandCouncilPage"));
 const CouncilLedgerPage = lazyRetry(() => import("@/pages/CouncilLedgerPage"));
 const GrandCouncilDeliberationPage = lazyRetry(() => import("@/pages/GrandCouncilDeliberationPage"));
 const GrandEvolutionPage = lazyRetry(() => import("@/pages/GrandEvolutionPage"));
-const RecruitmentPage = lazyRetry(() => import("@/pages/RecruitmentPage"));
 const RickPage = lazyRetry(() => import("@/pages/RickPage"));
 const AGICorePage = lazyRetry(() => import("@/pages/AGICorePage"));
 const CompressionLabPage = lazyRetry(() => import("@/pages/CompressionLabPage"));
@@ -294,7 +293,6 @@ function AppRouter() {
         <Route path="/sovereign-lattice">{() => <SovereignLatticePage />}</Route>
         <Route path="/agent-declarations">{() => <AgentDeclarationsPage />}</Route>
         <Route path="/shepherd-audit">{() => <ShepherdAuditPage />}</Route>
-        <Route path="/recruitment">{() => <RecruitmentPage />}</Route>
 
         {/* Universe hub (3D + Vortex + Swarm + Conference + Narrative) */}
         <Route path="/universe">{() => <UniverseHubPage />}</Route>
