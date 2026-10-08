@@ -8,7 +8,7 @@
  * - On pass, issues a one-time temporary redemption code that the user can
  *   redeem once for the permanent key text (TESSERACT_ADMIN_KEY value).
  */
-import { Router } from "express";
+import { Router, type Request } from "express";
 import { randomBytes, createHash } from "node:crypto";
 import { castGenuineVote } from "../lib/sovereign-vote-engine";
 import { getFullSovereignSociety } from "../lib/sovereign-society";
@@ -47,11 +47,65 @@ let LAST_CONFERENCE: ConferenceMemo | null = null;
 const CONF_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 const REDEMPTIONS = new Map<string, RedemptionRecord>();
-const TTL_MS = 30 * 60 * 1000; // 30 minutes
+export const REDEEM_TTL_MS = 10 * 60 * 1000;
+export const REDEEM_RATE_WINDOW_MS = 10 * 60 * 1000;
+export const REDEEM_IP_LIMIT = 8;
+export const REDEEM_GLOBAL_LIMIT = 20;
+
+const ipHits = new Map<string, number[]>();
+const globalHits: number[] = [];
+
+function pruneHits(hits: number[], now: number): number[] {
+  return hits.filter((at) => now - at < REDEEM_RATE_WINDOW_MS);
+}
+
+export function noteRedeemAttempt(ip: string): boolean {
+  const now = Date.now();
+  const nextGlobal = pruneHits(globalHits, now);
+  globalHits.length = 0;
+  globalHits.push(...nextGlobal);
+  const nextIp = pruneHits(ipHits.get(ip) ?? [], now);
+  if (globalHits.length >= REDEEM_GLOBAL_LIMIT || nextIp.length >= REDEEM_IP_LIMIT) {
+    ipHits.set(ip, nextIp);
+    return false;
+  }
+  nextIp.push(now);
+  globalHits.push(now);
+  ipHits.set(ip, nextIp);
+  return true;
+}
+
+export function clearFatherKeyRedeemState(): void {
+  REDEMPTIONS.clear();
+  ipHits.clear();
+  globalHits.length = 0;
+}
 
 function issueTempCode(): string {
-  // 6-byte → 12-hex code, easy to type, with TES- prefix for clarity
-  return "TES-" + randomBytes(3).toString("hex").toUpperCase();
+  return randomBytes(32).toString("hex");
+}
+
+export function issueFatherKeyRedemption(permanentKey: string): { code: string; expiresAt: number } {
+  const code = issueTempCode();
+  const expiresAt = Date.now() + REDEEM_TTL_MS;
+  REDEMPTIONS.set(code, {
+    code,
+    permanentKey,
+    winnerId: "issued",
+    approvalRate: 0,
+    raw: { approve: 0, reject: 0, abstain: 0 },
+    totalEligible: 0,
+    expiresAt,
+    redeemed: false,
+    redeemedAt: null,
+    issuedAt: Date.now(),
+    finalizedBy: "council-2of3",
+  });
+  return { code, expiresAt };
+}
+
+function clientIp(req: Request): string {
+  return req.ip || req.socket.remoteAddress || "unknown";
 }
 
 router.post("/father-key/conference", async (req, res) => {
@@ -107,7 +161,7 @@ router.post("/father-key/conference", async (req, res) => {
         approvalRate: winner.rawApproveRatio_2of3,
         raw: winner.raw,
         totalEligible: winner.totalEligible,
-        expiresAt: Date.now() + TTL_MS,
+        expiresAt: Date.now() + REDEEM_TTL_MS,
         redeemed: false,
         redeemedAt: null,
         issuedAt: Date.now(),
@@ -155,7 +209,10 @@ router.post("/father-key/conference", async (req, res) => {
 });
 
 router.post("/father-key/redeem", (req, res) => {
-  const codeRaw = (req.body?.code ?? "").toString().trim().toUpperCase();
+  if (!noteRedeemAttempt(clientIp(req))) {
+    return res.status(429).json({ ok: false, error: "rate-limited" });
+  }
+  const codeRaw = (req.body?.code ?? "").toString().trim().toLowerCase();
   if (!codeRaw) return res.status(400).json({ ok: false, error: "code is required" });
 
   const rec = REDEMPTIONS.get(codeRaw);
@@ -212,7 +269,7 @@ router.post("/father-key/finalize", (req, res) => {
     approvalRate: c.totalEligible > 0 ? c.rawApprove / c.totalEligible : 0,
     raw: { approve: c.rawApprove, reject: 0, abstain: c.totalEligible - c.rawApprove },
     totalEligible: c.totalEligible,
-    expiresAt: Date.now() + TTL_MS,
+    expiresAt: Date.now() + REDEEM_TTL_MS,
     redeemed: false,
     redeemedAt: null,
     issuedAt: Date.now(),

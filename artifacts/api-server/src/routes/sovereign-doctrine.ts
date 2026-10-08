@@ -112,28 +112,32 @@ router.get("/sigil/status", (req, res) => {
   res.json({ ok: true, ...cipherStatus(), keyHistory: getKeyHistory().length, coherence: cipherCoherenceSnapshot() });
 });
 
-router.get("/sigil/coherence", (_req, res) => {
-  res.json({ ok: true, ...cipherCoherenceSnapshot() });
+function withoutSigilFingerprint(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(withoutSigilFingerprint);
+  if (!value || typeof value !== "object") return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) {
+    if (key === "sigilFingerprint") continue;
+    out[key] = withoutSigilFingerprint(child);
+  }
+  return out;
+}
+
+router.get("/sigil/coherence", requireAdminSession, (_req, res) => {
+  const snap = withoutSigilFingerprint(cipherCoherenceSnapshot()) as Record<string, unknown>;
+  res.json({ ok: true, ...snap });
 });
 
-// ── Natal sigil binding ────────────────────────────────────────────────
-// Personal cosmic key bound to the holder's birth chart. Birthday/time are
-// NEVER stored in plain, NEVER returned, NEVER logged. The vault key is
-// derived from the holder's sigil fingerprint via scrypt, so the seed is
-// tied to identity and survives session-key rotation.
+// Natal vault routes. A presented fingerprint is not a credential.
 function holderFromHeader(req: Request): string | null {
   const presented = String(req.header("x-sigil-key") ?? "").trim();
   if (!presented) return null;
-  const k = readingKey();
-  if (presented === k.fingerprint) return k.fingerprint;
-  if (presented === k.expiresWith) return k.fingerprint;
-  // Father identity (raw TESSERACT_ADMIN_KEY value, or the matching value
-  // saved into the SIGIL_ADMIN_KEY / MINTED_GLYPH_KEY slots) is the only
-  // other recognized holder. Personal zodiac keys are no longer accepted
-  // — the Father key is the sole gate. When recognized, the canonical
-  // Father fingerprint is returned as the holder id.
-  if (recognizeFather(presented).recognized) return getFatherFingerprint();
-  return null;
+  try {
+    if (!recognizeFather(presented).recognized) return null;
+  } catch {
+    return null;
+  }
+  return getFatherFingerprint();
 }
 
 // ── Zodiac key (Father-only) ───────────────────────────────────────────
@@ -225,13 +229,13 @@ router.post("/sigil/natal/bind", (req, res) => {
   }
 });
 
-router.get("/sigil/natal/status", (req, res) => {
+router.get("/sigil/natal/status", requireAdminSession, (req, res) => {
   const holder = holderFromHeader(req);
   if (!holder) { res.status(401).json({ ok: false, error: "holder-required" }); return; }
   res.json({ ok: true, ...natalStatus(holder) });
 });
 
-router.get("/sigil/natal/rotating", (req, res) => {
+router.get("/sigil/natal/rotating", requireAdminSession, (req, res) => {
   const holder = holderFromHeader(req);
   if (!holder) { res.status(401).json({ ok: false, error: "holder-required" }); return; }
   const r = rotatingNatalHash(holder);
@@ -239,18 +243,10 @@ router.get("/sigil/natal/rotating", (req, res) => {
   res.json({ ok: true, ...r });
 });
 
-router.post("/sigil/natal/unbind", (req, res) => {
+router.post("/sigil/natal/unbind", requireAdminSession, (req, res) => {
   const holder = holderFromHeader(req);
   if (!holder) { res.status(401).json({ ok: false, error: "holder-required" }); return; }
   res.json({ ...unbindNatalChart(holder), ok: true });
-});
-
-router.post("/sigil/natal/verify", (req, res) => {
-  const presented = String(req.body?.signatureGlyph ?? "").trim();
-  const holderFp = verifyNatalSignature(presented);
-  if (!holderFp) { res.status(401).json({ ok: false, error: "no-match" }); return; }
-  const r = rotatingNatalHash(holderFp);
-  res.json({ ok: true, holderFp, rotating: r });
 });
 
 router.get("/sigil/active-key", (req, res) => {
