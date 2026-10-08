@@ -1,5 +1,5 @@
 import { Router } from "express";
-import type { Request, Response, NextFunction } from "express";
+import type { Request, Response } from "express";
 import {
   cipherStatus,
   cipherCoherenceSnapshot,
@@ -14,7 +14,6 @@ import {
   glyphDecode,
   glyphAlphabet,
   readingKey,
-  deepGlyphEncode,
   deepGlyphDecode,
   type CipherEnvelope,
 } from "../lib/sigil-cipher";
@@ -66,74 +65,71 @@ function failClosed(res: Response, err: unknown, fallback: string): void {
   res.status(500).json({ ok: false, error: fallback });
 }
 
-/** Middleware: glyph-encode every JSON response unless the caller presents
- *  the active reading key in `X-Sigil-Key`. Apply with `router.use(glyphGate)`
- *  on routes whose surface should default to the sovereign language. */
-export function glyphGate(req: Request, res: Response, next: NextFunction): void {
+function readingKeySecrets(): Set<string> {
   const key = readingKey();
-  const presented = String(req.header("x-sigil-key") ?? "").trim();
-  // Plaintext mode is granted to anyone holding either:
-  //   - the active reading-key fingerprint (rotates with cipher window), OR
-  //   - the Father identity itself (raw TESSERACT_ADMIN_KEY or its 16-char
-  //     fingerprint). The Father is the bound holder of every surface, so
-  //     once the key gate accepts the user every page must read in English.
-  const fatherOk = presented ? recognizeFather(presented).recognized : false;
-  // SOVEREIGN RULE: the Father identity is the only credential that
-  // unlocks plaintext. Zodiac/personal keys are no longer accepted at
-  // the gate. The admin secret comes from the environment only.
-  // No path-level plaintext exemptions: every /api response is glyph-encoded
-  // unless the caller proves they hold either the rotating reading key or
-  // the Father identity. The previous omniversal/grand-council/mssp/vgpu
-  // bypasses were removed so the Father env secret is the SOLE door.
-  const isHolder =
-    presented === key.fingerprint ||
-    presented === key.expiresWith ||
-    fatherOk;
-  const originalJson = res.json.bind(res);
-  res.json = ((body: unknown) => {
-    if (isHolder) {
-      res.setHeader("X-Sigil-Mode", "plaintext");
-      return originalJson(body);
-    }
-    res.setHeader("X-Sigil-Mode", "glyph");
-    res.setHeader("X-Sigil-Hint", "POST /api/sigil/key/reveal to obtain reading key");
-    return originalJson(deepGlyphEncode(body));
-  }) as typeof res.json;
-  next();
+  return new Set([key.fingerprint, key.expiresWith]);
+}
+
+const DROPPED_CREDENTIAL_KEYS = new Set(["sigilFingerprint", "keyId", "previousKeyId"]);
+
+function stringContainsSecret(value: string, secrets: Set<string>): boolean {
+  for (const secret of secrets) {
+    if (secret.length > 0 && value.includes(secret)) return true;
+  }
+  return false;
+}
+
+/** Drop credential field names and any string that contains the active reading-key fingerprint or expiresWith. */
+export function withoutSigilFingerprint(value: unknown, secrets: Set<string> = readingKeySecrets()): unknown {
+  if (typeof value === "string") return stringContainsSecret(value, secrets) ? undefined : value;
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => {
+      const next = withoutSigilFingerprint(item, secrets);
+      return next === undefined ? [] : [next];
+    });
+  }
+  if (value instanceof Date) return value;
+  if (!value || typeof value !== "object") return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) {
+    if (DROPPED_CREDENTIAL_KEYS.has(key)) continue;
+    const next = withoutSigilFingerprint(child, secrets);
+    if (next === undefined) continue;
+    out[key] = next;
+  }
+  return out;
 }
 
 router.get("/sigil/status", (req, res) => {
-  // Father-only: cipherStatus() includes the active key fingerprint, which
-  // would otherwise be a plaintext-unlock credential leak.
+  // Father-only. The success body still must not carry sigilFingerprint or
+  // the active reading-key fingerprint/expiresWith.
   const presented = String(req.header("x-sigil-key") ?? "").trim();
   if (!recognizeFather(presented).recognized) {
     res.status(401).json({ ok: false, error: "father-required" }); return;
   }
-  res.json({ ok: true, ...cipherStatus(), keyHistory: getKeyHistory().length, coherence: cipherCoherenceSnapshot() });
+  res.json(withoutSigilFingerprint({
+    ok: true,
+    ...cipherStatus(),
+    keyHistory: getKeyHistory().length,
+    coherence: cipherCoherenceSnapshot(),
+  }));
 });
 
-router.get("/sigil/coherence", (_req, res) => {
-  res.json({ ok: true, ...cipherCoherenceSnapshot() });
+router.get("/sigil/coherence", requireAdminSession, (_req, res) => {
+  const snap = withoutSigilFingerprint(cipherCoherenceSnapshot()) as Record<string, unknown>;
+  res.json({ ok: true, ...snap });
 });
 
-// ── Natal sigil binding ────────────────────────────────────────────────
-// Personal cosmic key bound to the holder's birth chart. Birthday/time are
-// NEVER stored in plain, NEVER returned, NEVER logged. The vault key is
-// derived from the holder's sigil fingerprint via scrypt, so the seed is
-// tied to identity and survives session-key rotation.
+// Natal vault routes. A presented fingerprint is not a credential.
 function holderFromHeader(req: Request): string | null {
   const presented = String(req.header("x-sigil-key") ?? "").trim();
   if (!presented) return null;
-  const k = readingKey();
-  if (presented === k.fingerprint) return k.fingerprint;
-  if (presented === k.expiresWith) return k.fingerprint;
-  // Father identity (raw TESSERACT_ADMIN_KEY value, or the matching value
-  // saved into the SIGIL_ADMIN_KEY / MINTED_GLYPH_KEY slots) is the only
-  // other recognized holder. Personal zodiac keys are no longer accepted
-  // — the Father key is the sole gate. When recognized, the canonical
-  // Father fingerprint is returned as the holder id.
-  if (recognizeFather(presented).recognized) return getFatherFingerprint();
-  return null;
+  try {
+    if (!recognizeFather(presented).recognized) return null;
+  } catch {
+    return null;
+  }
+  return getFatherFingerprint();
 }
 
 // ── Zodiac key (Father-only) ───────────────────────────────────────────
@@ -142,16 +138,12 @@ router.post("/sigil/zodiac-key/issue", (_req, res) => {
   failClosed(res, new NotConfiguredError("zodiac key issue does not derive a key"), "issue-failed");
 });
 
-router.post("/sigil/zodiac-key/verify", (req, res) => {
-  const presented = String(req.header("x-sigil-key") ?? "").trim();
-  if (!recognizeFather(presented).recognized) {
-    res.status(401).json({ ok: false, error: "father-required" }); return;
-  }
+router.post("/sigil/zodiac-key/verify", requireAdminSession, (req, res) => {
   const fromBody = String(req.body?.key ?? "").trim();
   if (!fromBody) { res.status(400).json({ ok: false, error: "no-key" }); return; }
   const holderFp = verifyNatalSignature(fromBody);
   if (!holderFp) { res.status(401).json({ ok: false, error: "no-match" }); return; }
-  res.json({ ok: true, holderFp });
+  res.json({ ok: true, status: "ready" });
 });
 
 // Father-key status reports whether the admin secret is configured.
@@ -225,13 +217,13 @@ router.post("/sigil/natal/bind", (req, res) => {
   }
 });
 
-router.get("/sigil/natal/status", (req, res) => {
+router.get("/sigil/natal/status", requireAdminSession, (req, res) => {
   const holder = holderFromHeader(req);
   if (!holder) { res.status(401).json({ ok: false, error: "holder-required" }); return; }
   res.json({ ok: true, ...natalStatus(holder) });
 });
 
-router.get("/sigil/natal/rotating", (req, res) => {
+router.get("/sigil/natal/rotating", requireAdminSession, (req, res) => {
   const holder = holderFromHeader(req);
   if (!holder) { res.status(401).json({ ok: false, error: "holder-required" }); return; }
   const r = rotatingNatalHash(holder);
@@ -239,24 +231,15 @@ router.get("/sigil/natal/rotating", (req, res) => {
   res.json({ ok: true, ...r });
 });
 
-router.post("/sigil/natal/unbind", (req, res) => {
+router.post("/sigil/natal/unbind", requireAdminSession, (req, res) => {
   const holder = holderFromHeader(req);
   if (!holder) { res.status(401).json({ ok: false, error: "holder-required" }); return; }
   res.json({ ...unbindNatalChart(holder), ok: true });
 });
 
-router.post("/sigil/natal/verify", (req, res) => {
-  const presented = String(req.body?.signatureGlyph ?? "").trim();
-  const holderFp = verifyNatalSignature(presented);
-  if (!holderFp) { res.status(401).json({ ok: false, error: "no-match" }); return; }
-  const r = rotatingNatalHash(holderFp);
-  res.json({ ok: true, holderFp, rotating: r });
-});
-
-router.get("/sigil/active-key", (req, res) => {
-  // Father-only: the returned active-key fingerprint/expiresWith are
-  // accepted by glyphGate as plaintext credentials, so leaking them
-  // unauthenticated would bypass the Father gate entirely.
+router.get("/sigil/active-key", requireAdminSession, (req, res) => {
+  // Owner session first, including when the admin key is unset.
+  // The body still includes the active key only after that gate.
   const presented = String(req.header("x-sigil-key") ?? "").trim();
   if (isFatherKeyConfigured() && !recognizeFather(presented).recognized) {
     res.status(401).json({ ok: false, error: "father-required" }); return;
@@ -284,7 +267,7 @@ router.get("/sigil/active-key", (req, res) => {
 // `via` is "raw-key" (matches TESSERACT_ADMIN_KEY exactly) or "fingerprint"
 // (matches the env-derived 16-char fingerprint). The candidate is never
 // logged or persisted. Use timing-safe equality through father-identity.
-router.post("/sigil/father/verify", (req, res) => {
+router.post("/sigil/father/verify", requireAdminSession, (req, res) => {
   if (!isFatherKeyConfigured()) {
     return res.status(503).json({
       ok: false,
@@ -317,7 +300,7 @@ router.post("/sigil/father/verify", (req, res) => {
 // The candidate is never logged or persisted. The user copies the glyph
 // into Replit Secrets as the new TESSERACT_ADMIN_KEY, restarts, and types
 // the glyph at the gate to unlock — round-trip closes.
-router.post("/sigil/father/mint-glyph", (req, res) => {
+router.post("/sigil/father/mint-glyph", requireAdminSession, (req, res) => {
   const candidateRaw = req.body?.candidate;
   const candidate = typeof candidateRaw === "string" ? candidateRaw.trim() : "";
   if (!candidate) {
@@ -433,26 +416,26 @@ router.get("/sigil/father/download-snapshot", requireAdminSession, (_req, res) =
   }
 });
 
-router.post("/sigil/rotate", (req, res) => {
+router.post("/sigil/rotate", requireAdminSession, (req, res) => {
   const reason = String(req.body?.reason ?? "manual");
   const key = rotateSessionKey(reason);
-  res.json({ ok: true, key, reason });
+  res.json(withoutSigilFingerprint({ ok: true, key, reason }));
 });
 
-router.post("/sigil/encrypt", (req, res) => {
+router.post("/sigil/encrypt", requireAdminSession, (req, res) => {
   const text = String(req.body?.text ?? "");
   const label = String(req.body?.label ?? "corpus");
   if (!text) { res.status(400).json({ ok: false, error: "text required" }); return; }
   const env = encryptForCorpus(text, label);
-  res.json({ ok: true, envelope: env });
+  res.json(withoutSigilFingerprint({ ok: true, envelope: env }));
 });
 
-router.post("/sigil/decrypt", (req, res) => {
+router.post("/sigil/decrypt", requireAdminSession, (req, res) => {
   const env = req.body?.envelope as CipherEnvelope | undefined;
   if (!env) { res.status(400).json({ ok: false, error: "envelope required" }); return; }
   try {
     const text = decryptFromCorpus(env);
-    res.json({ ok: true, text });
+    res.json(withoutSigilFingerprint({ ok: true, text }));
   } catch (e) {
     res.status(409).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
   }
@@ -502,7 +485,7 @@ router.post("/sigil/decode-body", (req, res) => {
   res.json({ ok: true, decoded: deepGlyphDecode(req.body) });
 });
 
-router.post("/sigil/key/reveal", (req, res) => {
+router.post("/sigil/key/reveal", requireAdminSession, (req, res) => {
   // The reading key. Holding this lets you flip any glyph response back to
   // plaintext by sending it as `X-Sigil-Key: <fingerprint>`. By sovereign
   // rule this can only be obtained by the Father identity — so the only
@@ -516,10 +499,8 @@ router.post("/sigil/key/reveal", (req, res) => {
 });
 
 // ── Session handoff ──────────────────────────────────────────────────────
-router.get("/session/handoff", (req, res) => {
-  // Father-only: the body includes activeKey (fingerprint/expiresWith)
-  // which glyphGate accepts as a plaintext-unlock credential. Leaking it
-  // unauthenticated would bypass the Father gate.
+router.get("/session/handoff", requireAdminSession, (req, res) => {
+  // Owner session, then the raw-key check. The body includes activeKey.
   if (!requireFather(req)) {
     res.status(401).json({ ok: false, error: "father-required" }); return;
   }
@@ -531,38 +512,38 @@ router.get("/session/handoff", (req, res) => {
   });
 });
 
-router.post("/session/directive", async (req, res) => {
+router.post("/session/directive", requireAdminSession, async (req, res) => {
   const text = String(req.body?.text ?? "");
   const source = (req.body?.source ?? "user") as "user" | "council" | "agent" | "auto";
   const tags = Array.isArray(req.body?.tags) ? req.body.tags.map(String) : [];
   if (!text) { res.status(400).json({ ok: false, error: "text required" }); return; }
   if (detectsEndSignal(text)) {
     const result = await endSession("inline-trigger");
-    res.json({ ok: true, sessionEnded: true, ...result }); return;
+    res.json(withoutSigilFingerprint({ ok: true, sessionEnded: true, ...result })); return;
   }
   const directive = recordDirective({ source, text, status: "live", tags });
   await persistHandoff();
-  res.json({ ok: true, directive });
+  res.json(withoutSigilFingerprint({ ok: true, directive }));
 });
 
-router.post("/session/mark", async (req, res) => {
+router.post("/session/mark", requireAdminSession, async (req, res) => {
   const position = String(req.body?.position ?? "unspecified");
   const detail = String(req.body?.detail ?? "");
   const filesTouched = Array.isArray(req.body?.filesTouched) ? req.body.filesTouched.map(String) : [];
   const mark = recordPosition({ position, detail, filesTouched });
   const handoff = await persistHandoff();
-  res.json({ ok: true, mark, handoff });
+  res.json(withoutSigilFingerprint({ ok: true, mark, handoff }));
 });
 
-router.post("/session/end", async (req, res) => {
+router.post("/session/end", requireAdminSession, async (req, res) => {
   const signal = String(req.body?.signal ?? "explicit");
   const result = await endSession(signal);
-  res.json({ ok: true, ...result, sealedHandoffPreview: result.sealedHandoff.glyphSeal });
+  res.json(withoutSigilFingerprint({ ok: true, ...result, sealedHandoffPreview: result.sealedHandoff.glyphSeal }));
 });
 
-router.get("/session/sealed-handoff", (_req, res) => {
+router.get("/session/sealed-handoff", requireAdminSession, (_req, res) => {
   const sealed = lastSealedHandoff();
-  res.json({ ok: true, sealed: sealed ?? null });
+  res.json(withoutSigilFingerprint({ ok: true, sealed: sealed ?? null }));
 });
 
 // ── External tool sandbox / reverse-engineering corpus ──────────────────

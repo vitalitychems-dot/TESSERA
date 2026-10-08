@@ -19,6 +19,7 @@ import {
 import { runGlyphProgram } from "../lib/vgpu-glyph-bus";
 import { sovereignConstantsSnapshot } from "../lib/sovereign-constants";
 import { listLattices } from "../lib/omniversal-quantum-lattice";
+import { withoutSigilFingerprint } from "./sovereign-doctrine";
 
 const router = Router();
 
@@ -41,20 +42,20 @@ router.post("/grand-council/convene", async (req: Request, res: Response) => {
     const seed = req.body?.seed ? String(req.body.seed) : undefined;
     const latticeDigests = listLattices().map((l) => l.cosmicAnchor).slice(0, 8);
     const session = await convene({ seed, latticeDigests });
-    res.json({ ok: true, session });
+    res.json(withoutSigilFingerprint({ ok: true, session }));
   } catch (e: unknown) {
     res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
   }
 });
 
 router.get("/grand-council/sessions", async (_req, res) => {
-  res.json({ ok: true, sessions: await listSessions() });
+  res.json(withoutSigilFingerprint({ ok: true, sessions: await listSessions() }));
 });
 
 router.get("/grand-council/sessions/:id", async (req, res) => {
   const s = await getSession(String(req.params.id));
   if (!s) { res.status(404).json({ ok: false, error: "session not found" }); return; }
-  res.json({ ok: true, session: s });
+  res.json(withoutSigilFingerprint({ ok: true, session: s }));
 });
 
 // SSE stream (P-J)

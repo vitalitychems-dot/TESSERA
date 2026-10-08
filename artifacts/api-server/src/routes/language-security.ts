@@ -24,6 +24,8 @@ import {
   fatherVerifyRateLimit,
   rateLimitSnapshot,
 } from "../lib/father-verify-throttle";
+import { requireAdminSession } from "../lib/sovereign-admin";
+import { withoutSigilFingerprint } from "./sovereign-doctrine";
 
 const router: IRouter = Router();
 
@@ -48,6 +50,7 @@ router.post(
 // Plaintext is never echoed back. Cache-Control: no-store.
 router.post(
   "/sigil/father/show-key-in-lus",
+  requireAdminSession,
   fatherVerifyRateLimit,
   (req, res) => {
     res.setHeader("Cache-Control", "no-store");
@@ -85,7 +88,7 @@ router.post(
       // live form is optional; static form is always returned
     }
 
-    return res.json({
+    return res.json(withoutSigilFingerprint({
       ok: true,
       via: r.via,
       language: { name: LANGUAGE_NAME, short: LANGUAGE_SHORT, motto: LANGUAGE_MOTTO },
@@ -94,11 +97,10 @@ router.post(
         live: liveGlyphs,
       },
       coherence,
-      fingerprint: fp,
       note:
         "Your TESSERACT_ADMIN_KEY rendered in Lingua Universalis Sacra. " +
         "The plain value never leaves the server.",
-    });
+    }));
   },
 );
 
