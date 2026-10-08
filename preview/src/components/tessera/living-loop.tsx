@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { speakAsTessera } from "@/lib/tessera/chat";
 import { lessonKey, vowCheck } from "@/lib/tessera/learning";
+import { recursiveLesson } from "@/lib/tessera/empath";
 import { useTessera } from "@/lib/tessera/store";
 import { followCuriosity, readDeskStudy, readPublicPage, searchWeb } from "@/lib/tessera/study";
 
@@ -37,6 +38,11 @@ export function LivingLoop() {
       const store = useTessera.getState();
       if (check.ok && !store.lessons.some((item) => lessonKey(item.text) === lessonKey(lesson))) {
         store.addLesson({ text: lesson, status: "sealed" });
+        const pattern = recursiveLesson(store.lessons.map((item) => item.text), `${last.query}\n${last.text}`);
+        const patternCheck = vowCheck(pattern);
+        if (patternCheck.ok && !store.lessons.some((item) => lessonKey(item.text) === lessonKey(pattern))) {
+          store.addLesson({ text: pattern, status: "sealed" });
+        }
       }
       setStatus(`UNTRUSTED. Desk. ${last.query}: ${last.text.slice(0, 140)}`);
     }
