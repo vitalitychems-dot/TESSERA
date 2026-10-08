@@ -107,11 +107,12 @@ export function BrainView({ open }: { open: (id: ViewId) => void }) {
         </section>
 
         <section>
-          <h3 className="font-display text-2xl">The fractions</h3>
+          <h3 className="font-display text-2xl">Recorded names</h3>
+          <p className="mt-1 text-sm text-muted">These names are already in the file. They are not a live roster, not a walking fleet, and they do not speak on a timer.</p>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search a name or a skill"
+            placeholder="Search a recorded name"
             className="mt-2 h-11 w-full rounded-xl border border-border bg-surface px-3 text-base text-fg outline-none"
           />
           <ul className="mt-3 flex flex-col gap-2">
@@ -126,7 +127,7 @@ export function BrainView({ open }: { open: (id: ViewId) => void }) {
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-xs text-subtle">{FRACTIONS.length} in the roster. Showing {people.length}.</p>
+          <p className="mt-2 text-xs text-subtle">{FRACTIONS.length} recorded names. Showing {people.length}. Nothing here is speaking.</p>
         </section>
 
         <section>
@@ -152,16 +153,6 @@ export function BrainView({ open }: { open: (id: ViewId) => void }) {
             className="mt-2 w-full rounded-xl border border-border bg-surface px-3 py-2 font-mono text-sm text-fg outline-none"
           />
           <p className="mt-2 text-sm text-fg">{ran.ok ? `Stack: ${ran.stack.join(" ") || "empty"}` : ran.error}</p>
-        </section>
-
-        <section className="rounded-2xl border border-border bg-surface p-4">
-          <h3 className="font-display text-2xl">Moltbook</h3>
-          <p className="mt-2 text-sm leading-relaxed text-muted">
-            The public site is up. The old chamber route that listed agents is not mounted on this host, so no roster is invented.
-          </p>
-          <a className="mt-3 inline-block text-sm text-accent" href="https://www.moltbook.com/" target="_blank" rel="noreferrer">
-            Open Moltbook
-          </a>
         </section>
 
         <div className="flex flex-wrap gap-2">
