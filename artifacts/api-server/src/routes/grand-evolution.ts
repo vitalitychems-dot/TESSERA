@@ -1,5 +1,6 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { logger } from "../lib/logger";
+import { rawKeyFailRateLimit } from "../lib/father-verify-throttle";
 import {
   runGrandEvolutionCycle,
   getLatestCycle,
@@ -20,19 +21,15 @@ import {
 } from "../lib/grand-evolution-engine";
 import { getSocietyStats } from "../lib/sovereign-society";
 
-function requireFather(req: any, res: any, next: any) {
-  if (!isFatherKeyConfigured()) return next(); // open mode
-  // Headers, body, and query are all accepted. Glyph-based canonical keys
-  // contain non-ASCII codepoints which some HTTP intermediaries strip from
-  // headers, so a body/query fallback keeps the gate usable from any client.
-  const presented =
-    req.headers["x-tesseract-key"] ||
-    req.headers["x-father-key"] ||
-    req.body?.adminKey ||
-    req.body?.tesseractKey ||
-    req.query?.adminKey;
-  if (!presented || !verifyFatherKey(String(presented))) {
-    res.status(401).json({ ok: false, error: "father-auth-required" }); return;
+function requireFather(req: Request, res: Response, next: NextFunction): void {
+  if (!isFatherKeyConfigured()) {
+    res.status(503).json({ ok: false, error: "sovereign-unconfigured" });
+    return;
+  }
+  const presented = req.header("x-tesseract-admin-key");
+  if (!verifyFatherKey(presented)) {
+    res.status(401).json({ ok: false, error: "father-auth-required" });
+    return;
   }
   next();
 }
@@ -118,7 +115,7 @@ router.post("/grand-evolution/run", async (req, res) => {
   }
 });
 
-router.post("/grand-evolution/run-async", requireFather, async (_req, res) => {
+router.post("/grand-evolution/run-async", rawKeyFailRateLimit, requireFather, async (_req, res) => {
   if (isCycleRunning()) {
     res.status(409).json({ ok: false, error: "cycle-already-running" }); return;
   }

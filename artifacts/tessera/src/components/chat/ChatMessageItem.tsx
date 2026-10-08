@@ -214,9 +214,11 @@ const AssistantMessage = memo(function AssistantMessage({
     try {
       const r = await fetch("/api/sigil/translate", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: msg.content, direction: "decode" }),
       });
+      if (r.status === 401) return;
       const data = await r.json();
       if (data?.ok && typeof data.output === "string" && data.output.trim()) {
         setEnglishOverride(data.output);

@@ -20,6 +20,7 @@ import { runGlyphProgram } from "../lib/vgpu-glyph-bus";
 import { sovereignConstantsSnapshot } from "../lib/sovereign-constants";
 import { listLattices } from "../lib/omniversal-quantum-lattice";
 import { withoutSigilFingerprint } from "./sovereign-doctrine";
+import { publicWriteRateLimit } from "../lib/father-verify-throttle";
 
 const router = Router();
 
@@ -37,7 +38,7 @@ router.get("/grand-council/proposals", (_req, res) => {
 });
 
 // === Council deliberation ===
-router.post("/grand-council/convene", async (req: Request, res: Response) => {
+router.post("/grand-council/convene", publicWriteRateLimit, async (req: Request, res: Response) => {
   try {
     const seed = req.body?.seed ? String(req.body.seed) : undefined;
     const latticeDigests = listLattices().map((l) => l.cosmicAnchor).slice(0, 8);
@@ -69,7 +70,7 @@ router.get("/grand-council/stream", (_req, res) => {
   res.flushHeaders?.();
   res.write(`event: hello\ndata: ${JSON.stringify({ ts: new Date().toISOString() })}\n\n`);
   const unsub = subscribe((event, payload) => {
-    res.write(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
+    res.write(`event: ${event}\ndata: ${JSON.stringify(withoutSigilFingerprint(payload))}\n\n`);
   });
   const ka = setInterval(() => res.write(`: keepalive ${Date.now()}\n\n`), 15000);
   _req.on("close", () => { unsub(); clearInterval(ka); });

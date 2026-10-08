@@ -4,6 +4,7 @@ import { db, type NatalAspect } from "@workspace/db";
 import { natalChartTable } from "@workspace/db/schema";
 import {
   generateSovereignKeys,
+  publicSovereignKeys,
   getFatherNatalChart,
   getLifeAreaGuidance,
   getPlanetInterpretations,
@@ -61,10 +62,13 @@ router.get("/natal-chart/father", async (_req, res) => {
     if (!row) {
       return res.json({ ok: true, identity: "Father", chart, source: "configured-secret" });
     }
+    const sovereignKeys = row.sovereignKeys && typeof row.sovereignKeys === "object"
+      ? publicSovereignKeys(row.sovereignKeys as unknown as Record<string, unknown>)
+      : row.sovereignKeys;
     return res.json({
       ok: true,
       identity: "Father",
-      chart: { ...row, ascendant: chart.ascendant },
+      chart: { ...row, sovereignKeys, ascendant: chart.ascendant },
       source: "database",
     });
   } catch (err) {
@@ -81,9 +85,12 @@ router.get("/natal-chart/father/sovereign-keys", async (_req, res) => {
       .where(eq(natalChartTable.identity, "Father"))
       .limit(1);
 
-    const sovereignKeys = row?.sovereignKeys
-      ? { ...(row.sovereignKeys as ReturnType<typeof generateSovereignKeys>), generatedAt: new Date().toISOString() }
-      : keys;
+    const stored = row?.sovereignKeys && typeof row.sovereignKeys === "object"
+      ? publicSovereignKeys(row.sovereignKeys as unknown as Record<string, unknown>)
+      : null;
+    const sovereignKeys = stored
+      ? { ...stored, generatedAt: new Date().toISOString() }
+      : publicSovereignKeys(keys);
 
     return res.json({
       ok: true,

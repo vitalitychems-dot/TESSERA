@@ -1,7 +1,7 @@
 // requireAdminSession middleware — the ONE gate (Heavy Council, P5/P12).
 //
 // Reads sovereign_session cookie, validates HMAC + TTL, attaches session info
-// to req. If SOVEREIGN_ADMIN_TOKEN is unset, returns 503 'sovereign-unconfigured'
+// to req. If TESSERACT_ADMIN_KEY is unset, returns 503 'sovereign-unconfigured'
 // — never silently open. No credential material logged.
 
 import type { Request, Response, NextFunction } from "express";
@@ -55,7 +55,7 @@ export function requireAdminSession(req: AdminRequest, res: Response, next: Next
     res.status(503).json({
       ok: false,
       error: "sovereign-unconfigured",
-      message: "SOVEREIGN_ADMIN_TOKEN is not configured. Privileged surfaces are fail-closed.",
+      message: "TESSERACT_ADMIN_KEY is not configured. Privileged surfaces are fail-closed.",
     });
     return;
   }

@@ -62,6 +62,7 @@ export function gematria(text: string): number {
 
 export interface SigilKey {
   id: string;
+  handle: string;
   generation: number;
   createdAt: Date;
   rotatedAt: Date | null;
@@ -119,6 +120,9 @@ export function rotateSessionKey(reason: string): SigilKey {
   const generation = (_activeKey?.generation ?? 0) + 1;
   _activeKey = {
     id: `sigil-${generation}-${fingerprint}`,
+    // Opaque lookup handle. Not derived from the fingerprint, so a stripped
+    // envelope can still decrypt.
+    handle: `h${randomBytes(16).toString("hex")}`,
     generation,
     createdAt: new Date(),
     rotatedAt: null,
@@ -157,6 +161,7 @@ export interface CipherEnvelope {
   v: 1;
   alg: "aes-256-gcm";
   keyId: string;
+  handle?: string;
   iv: string;
   tag: string;
   ct: string;
@@ -178,6 +183,7 @@ export function encryptForCorpus(plaintext: string, label = "corpus"): CipherEnv
     v: 1,
     alg: "aes-256-gcm",
     keyId: _activeKey!.id,
+    handle: _activeKey!.handle,
     iv: iv.toString("base64"),
     tag: tag.toString("base64"),
     ct: ct.toString("base64"),
@@ -187,12 +193,17 @@ export function encryptForCorpus(plaintext: string, label = "corpus"): CipherEnv
   };
 }
 
+function matchesEnvelope(key: SigilKeyMaterial, env: CipherEnvelope): boolean {
+  if (env.handle && key.handle === env.handle) return true;
+  return key.id === env.keyId;
+}
+
 export function decryptFromCorpus(env: CipherEnvelope): string {
   const key =
-    _activeKey?.id === env.keyId
+    _activeKey && matchesEnvelope(_activeKey, env)
       ? _activeKey
-      : _keyHistory.find((k) => k.id === env.keyId);
-  if (!key) throw new Error(`Sigil key ${env.keyId} not available — sealed or rotated out`);
+      : _keyHistory.find((k) => matchesEnvelope(k, env));
+  if (!key) throw new Error("Sigil key not available — sealed or rotated out");
   const decipher = createDecipheriv("aes-256-gcm", key.raw, Buffer.from(env.iv, "base64"));
   decipher.setAuthTag(Buffer.from(env.tag, "base64"));
   const pt = Buffer.concat([
