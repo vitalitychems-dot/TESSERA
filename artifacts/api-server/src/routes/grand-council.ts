@@ -21,8 +21,36 @@ import { sovereignConstantsSnapshot } from "../lib/sovereign-constants";
 import { listLattices } from "../lib/omniversal-quantum-lattice";
 import { withoutSigilFingerprint } from "./sovereign-doctrine";
 import { publicWriteRateLimit } from "../lib/father-verify-throttle";
+import { decideOwnerSession, resolveFatherAuthorization } from "../lib/sovereign-admin";
 
 const router = Router();
+
+function dropCipherEnvelope(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(dropCipherEnvelope);
+  if (!value || typeof value !== "object") return value;
+  const source = value as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(source)) {
+    if (key.toLowerCase() === "cipher" && child && typeof child === "object" && !Array.isArray(child)) {
+      const cipher: Record<string, unknown> = {};
+      for (const [cipherKey, cipherChild] of Object.entries(child as Record<string, unknown>)) {
+        if (cipherKey.toLowerCase() === "envelope") continue;
+        cipher[cipherKey] = dropCipherEnvelope(cipherChild);
+      }
+      out[key] = cipher;
+      continue;
+    }
+    out[key] = dropCipherEnvelope(child);
+  }
+  return out;
+}
+
+/** Anonymous council reads omit cipher.envelope. Owner reads keep it, still without surfacePreview. */
+function presentCouncilRead(req: Request, payload: unknown): unknown {
+  const stripped = withoutSigilFingerprint(payload);
+  if (decideOwnerSession(req).ok) return stripped;
+  return dropCipherEnvelope(stripped);
+}
 
 // === Sovereign constants & roster (P-F) ===
 router.get("/grand-council/constants", (_req, res) => {
@@ -39,28 +67,48 @@ router.get("/grand-council/proposals", (_req, res) => {
 
 // === Council deliberation ===
 router.post("/grand-council/convene", publicWriteRateLimit, async (req: Request, res: Response) => {
+  const auth = resolveFatherAuthorization(req);
+  let fatherAuthorized = false;
+  if (auth.fatherAuthorized) {
+    fatherAuthorized = true;
+  } else {
+    switch (auth.reason) {
+      case "absent":
+        break;
+      case "rejected":
+      case "unconfigured":
+        res.status(401).json({ ok: false, error: "father-auth-required" });
+        return;
+      default: {
+        const unreachable: never = auth.reason;
+        res.status(401).json({ ok: false, error: "father-auth-required" });
+        void unreachable;
+        return;
+      }
+    }
+  }
   try {
     const seed = req.body?.seed ? String(req.body.seed) : undefined;
     const latticeDigests = listLattices().map((l) => l.cosmicAnchor).slice(0, 8);
     const session = await convene({ seed, latticeDigests });
-    res.json(withoutSigilFingerprint({ ok: true, session }));
+    res.json(presentCouncilRead(req, { ok: true, fatherAuthorized, session }));
   } catch (e: unknown) {
     res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
   }
 });
 
-router.get("/grand-council/sessions", async (_req, res) => {
-  res.json(withoutSigilFingerprint({ ok: true, sessions: await listSessions() }));
+router.get("/grand-council/sessions", async (req, res) => {
+  res.json(presentCouncilRead(req, { ok: true, sessions: await listSessions() }));
 });
 
 router.get("/grand-council/sessions/:id", async (req, res) => {
   const s = await getSession(String(req.params.id));
   if (!s) { res.status(404).json({ ok: false, error: "session not found" }); return; }
-  res.json(withoutSigilFingerprint({ ok: true, session: s }));
+  res.json(presentCouncilRead(req, { ok: true, session: s }));
 });
 
 // SSE stream (P-J)
-router.get("/grand-council/stream", (_req, res) => {
+router.get("/grand-council/stream", (req, res) => {
   res.set({
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache, no-transform",
@@ -70,10 +118,10 @@ router.get("/grand-council/stream", (_req, res) => {
   res.flushHeaders?.();
   res.write(`event: hello\ndata: ${JSON.stringify({ ts: new Date().toISOString() })}\n\n`);
   const unsub = subscribe((event, payload) => {
-    res.write(`event: ${event}\ndata: ${JSON.stringify(withoutSigilFingerprint(payload))}\n\n`);
+    res.write(`event: ${event}\ndata: ${JSON.stringify(presentCouncilRead(req, payload))}\n\n`);
   });
   const ka = setInterval(() => res.write(`: keepalive ${Date.now()}\n\n`), 15000);
-  _req.on("close", () => { unsub(); clearInterval(ka); });
+  req.on("close", () => { unsub(); clearInterval(ka); });
 });
 
 // === MSSP ===

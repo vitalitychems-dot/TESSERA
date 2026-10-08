@@ -13,7 +13,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -49,6 +49,7 @@ const CREDENTIAL_KEYS = new Set([
   "signaturehash",
   "signaturehashshort",
   "signatureglyph",
+  "surfacepreview",
 ]);
 
 function dataDir() {
@@ -107,14 +108,14 @@ function assertIgnored(path) {
   }
 }
 
-function backupDestination(stem) {
+export function nextBackupPath(dir, stem) {
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   let n = 0;
-  let candidate = join(DATA_DIR, `${stem}.${stamp}.bak`);
+  let candidate = join(dir, `${stem}.${stamp}.bak`);
   while (existsSync(candidate)) {
     n += 1;
-    if (n > 50) fail(BACKUP_REFUSED);
-    candidate = join(DATA_DIR, `${stem}.${stamp}.${n}.bak`);
+    if (n > 50) throw new BackupRefusedError();
+    candidate = join(dir, `${stem}.${stamp}.${n}.bak`);
   }
   assertIgnored(candidate);
   return candidate;
@@ -137,7 +138,7 @@ function writeVerdict(verdict) {
   if (!verdict?.changed) return;
   let backup;
   try {
-    backup = backupDestination("improvement-conference-verdict.json");
+    backup = nextBackupPath(DATA_DIR, "improvement-conference-verdict.json");
     mkdirSync(dirname(backup), { recursive: true });
     copyFileSync(VERDICT_PATH, backup);
     writeFileSync(VERDICT_PATH, JSON.stringify(verdict.next, null, 2));
@@ -147,79 +148,103 @@ function writeVerdict(verdict) {
   process.stdout.write("verdictBackup: written\nverdictRewrite: 1\n");
 }
 
-const verdict = readVerdict();
-const lines = [
-  APPLY ? "apply" : "dry-run",
-  "counts only; no values",
-  `verdictFile: ${verdict ? "present" : "absent"}`,
-  `verdictCredentialFields: ${verdict ? verdict.counts.credentialFields : 0}`,
-  `verdictTranscriptLines: ${verdict ? verdict.counts.transcriptLines : 0}`,
-];
-
-if (!APPLY) {
-  lines.push("councilSessions: skipped in dry-run");
-  process.stdout.write(`${lines.join("\n")}\n`);
-  process.exit(0);
-}
-
-writeVerdict(verdict);
-
-const databaseUrl = (process.env.DATABASE_URL ?? "").trim();
-if (!databaseUrl) {
-  lines.push("councilSessions: skipped, DATABASE_URL unset");
-  process.stdout.write(`${lines.join("\n")}\n`);
-  process.exit(0);
-}
-
-const require = createRequire(DB_PACKAGE);
-try {
-  const pg = require("pg");
-  const client = new pg.Client({ connectionString: databaseUrl });
-  await client.connect();
+export async function applyCouncilPass(client, dir) {
+  await client.query("BEGIN");
   try {
-    await client.query("BEGIN");
+    const found = await client.query("SELECT id, session FROM council_sessions");
+    let rowsWithCredentialFields = 0;
+    const pending = [];
+    for (const row of found.rows) {
+      const counts = emptyCounts();
+      const next = stripValue(row.session, counts);
+      if (counts.credentialFields === 0 && counts.transcriptLines === 0) continue;
+      rowsWithCredentialFields += 1;
+      pending.push({ id: row.id, session: row.session, next });
+    }
+    if (pending.length > 0) {
+      const backup = nextBackupPath(dir, "council-sessions.privacy-e");
+      mkdirSync(dirname(backup), { recursive: true });
+      writeFileSync(
+        backup,
+        JSON.stringify(pending.map((row) => ({ id: row.id, session: row.session }))),
+      );
+      for (const row of pending) {
+        await client.query("UPDATE council_sessions SET session = $2::jsonb WHERE id = $1", [
+          row.id,
+          JSON.stringify(row.next),
+        ]);
+      }
+      process.stdout.write(`councilBackup: written\ncouncilRowsUpdated: ${pending.length}\n`);
+    }
+    await client.query("COMMIT");
+    return { scanned: found.rows.length, rowsWithCredentialFields };
+  } catch (err) {
     try {
-      const found = await client.query("SELECT id, session FROM council_sessions");
-      let rowsWithCredentialFields = 0;
-      const pending = [];
-      for (const row of found.rows) {
-        const counts = emptyCounts();
-        const next = stripValue(row.session, counts);
-        if (counts.credentialFields === 0 && counts.transcriptLines === 0) continue;
-        rowsWithCredentialFields += 1;
-        pending.push({ id: row.id, session: row.session, next });
-      }
-      if (pending.length > 0) {
-        const backup = backupDestination("council-sessions.privacy-e");
-        mkdirSync(dirname(backup), { recursive: true });
-        writeFileSync(
-          backup,
-          JSON.stringify(pending.map((row) => ({ id: row.id, session: row.session }))),
-        );
-        for (const row of pending) {
-          await client.query("UPDATE council_sessions SET session = $2::jsonb WHERE id = $1", [
-            row.id,
-            JSON.stringify(row.next),
-          ]);
-        }
-        process.stdout.write(`councilBackup: written\ncouncilRowsUpdated: ${pending.length}\n`);
-      }
-      await client.query("COMMIT");
-      lines.push(`councilSessionsScanned: ${found.rows.length}`);
-      lines.push(`councilRowsWithCredentialFields: ${rowsWithCredentialFields}`);
+      await client.query("ROLLBACK");
+    } catch {
+      // The fixed message below is the only failure text.
+    }
+    if (err instanceof BackupRefusedError) throw err;
+    throw new Error(DATABASE_PASS_FAILED);
+  }
+}
+
+function invokedDirectly() {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+
+async function main() {
+  const verdict = readVerdict();
+  const lines = [
+    APPLY ? "apply" : "dry-run",
+    "counts only; no values",
+    `verdictFile: ${verdict ? "present" : "absent"}`,
+    `verdictCredentialFields: ${verdict ? verdict.counts.credentialFields : 0}`,
+    `verdictTranscriptLines: ${verdict ? verdict.counts.transcriptLines : 0}`,
+  ];
+
+  if (!APPLY) {
+    lines.push("councilSessions: skipped in dry-run");
+    process.stdout.write(`${lines.join("\n")}\n`);
+    process.exit(0);
+  }
+
+  writeVerdict(verdict);
+
+  const databaseUrl = (process.env.DATABASE_URL ?? "").trim();
+  if (!databaseUrl) {
+    lines.push("councilSessions: skipped, DATABASE_URL unset");
+    process.stdout.write(`${lines.join("\n")}\n`);
+    process.exit(0);
+  }
+
+  const require = createRequire(DB_PACKAGE);
+  try {
+    const pg = require("pg");
+    const client = new pg.Client({ connectionString: databaseUrl });
+    await client.connect();
+    try {
+      const stats = await applyCouncilPass(client, DATA_DIR);
+      lines.push(`councilSessionsScanned: ${stats.scanned}`);
+      lines.push(`councilRowsWithCredentialFields: ${stats.rowsWithCredentialFields}`);
       process.stdout.write(`${lines.join("\n")}\n`);
     } catch (err) {
-      try {
-        await client.query("ROLLBACK");
-      } catch {
-        // The fixed message below is the only failure text.
-      }
       if (err instanceof BackupRefusedError) fail(BACKUP_REFUSED);
       fail(DATABASE_PASS_FAILED);
+    } finally {
+      await client.end();
     }
-  } finally {
-    await client.end();
+  } catch {
+    fail(DATABASE_PASS_FAILED);
   }
-} catch {
-  fail(DATABASE_PASS_FAILED);
+}
+
+if (invokedDirectly()) {
+  await main();
 }

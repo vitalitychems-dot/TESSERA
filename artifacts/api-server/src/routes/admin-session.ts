@@ -17,7 +17,7 @@ import {
   sessionStoreStats,
   DEFAULT_TTL_MS,
 } from "../lib/sovereign-session";
-import { fatherVerifyRateLimit, adminSessionRateLimit } from "../lib/father-verify-throttle";
+import { adminSessionRateLimit } from "../lib/father-verify-throttle";
 import { recordIngress, attestRatified, walkRoutes } from "../lib/tesseract-v2";
 import { requireAdminSession } from "../lib/sovereign-admin";
 import { createHash } from "node:crypto";
@@ -101,7 +101,7 @@ function readCookie(req: Request): string | undefined {
 }
 
 // POST /api/admin/session — { token } -> set cookie.
-router.post("/admin/session", adminSessionRateLimit, fatherVerifyRateLimit, requireSameOrigin, (req: Request, res: Response) => {
+router.post("/admin/session", adminSessionRateLimit, requireSameOrigin, (req: Request, res: Response) => {
   // V2-GAMMA: every endpoint mounted by a ratified council proposal carries
   // its provenance header so callers can verify governance lineage.
   attestRatified(res, "P1+IMPL-1+R3-4", 0.811);
