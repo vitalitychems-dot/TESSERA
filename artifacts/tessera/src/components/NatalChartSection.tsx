@@ -131,7 +131,36 @@ const HOUSE_MEANINGS: Record<number, string> = {
   10: "Career & Public Life", 11: "Community & Visions", 12: "Hidden Realm & Spirit",
 };
 
-function ChartWheel({ planets, houses }: { planets: NatalPlanet[]; houses: NatalHouse[] }) {
+const SIGN_ORDER = [
+  "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+  "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces",
+] as const;
+
+function eclipticLongitude(sign: string, degree: number): number | null {
+  const index = SIGN_ORDER.indexOf(sign as (typeof SIGN_ORDER)[number]);
+  if (index < 0 || !Number.isFinite(degree)) return null;
+  return index * 30 + degree;
+}
+
+function ascendantLongitude(
+  ascendant: { sign?: string; degree?: unknown } | null | undefined,
+): number | null {
+  if (!ascendant || typeof ascendant.sign !== "string") return null;
+  if (typeof ascendant.degree !== "number" && typeof ascendant.degree !== "string") return null;
+  if (typeof ascendant.degree === "string" && ascendant.degree.trim() === "") return null;
+  const degree = typeof ascendant.degree === "number" ? ascendant.degree : Number(ascendant.degree);
+  return eclipticLongitude(ascendant.sign, degree);
+}
+
+function ChartWheel({
+  planets,
+  houses,
+  ascendant,
+}: {
+  planets: NatalPlanet[];
+  houses: NatalHouse[];
+  ascendant?: { sign: string; degree: number } | null;
+}) {
   const cx = 120, cy = 120, r = 100, rInner = 60;
 
   function polarToXY(deg: number, radius: number) {
@@ -139,12 +168,10 @@ function ChartWheel({ planets, houses }: { planets: NatalPlanet[]; houses: Natal
     return { x: cx + radius * Math.cos(rad), y: cy + radius * Math.sin(rad) };
   }
 
-  function signToStartDeg(sign: string, degree: number) {
-    const SIGNS = ["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"];
-    return SIGNS.indexOf(sign) * 30 + degree;
+  const ascLon = ascendantLongitude(ascendant);
+  if (ascLon === null) {
+    return <p className="py-8 text-center text-xs font-mono text-muted-foreground">unavailable</p>;
   }
-
-  const ascLon = signToStartDeg("Virgo", 23.9);
 
   return (
     <svg viewBox="0 0 240 240" className="w-full max-w-[280px] mx-auto">
@@ -153,7 +180,9 @@ function ChartWheel({ planets, houses }: { planets: NatalPlanet[]; houses: Natal
       <circle cx={cx} cy={cy} r={r - 16} fill="none" stroke="#27272a" strokeWidth="0.5" />
 
       {houses.map((h) => {
-        const startDeg = signToStartDeg(h.sign, h.degree) - ascLon;
+        const cusp = eclipticLongitude(h.sign, h.degree);
+        if (cusp === null) return null;
+        const startDeg = cusp - ascLon;
         const pt1 = polarToXY(startDeg, rInner);
         const pt2 = polarToXY(startDeg, r);
         const isAngle = !!h.label;
@@ -185,7 +214,9 @@ function ChartWheel({ planets, houses }: { planets: NatalPlanet[]; houses: Natal
       })}
 
       {planets.map((p) => {
-        const pLon = signToStartDeg(p.sign, p.degree) - ascLon;
+        const longitude = eclipticLongitude(p.sign, p.degree);
+        if (longitude === null) return null;
+        const pLon = longitude - ascLon;
         const pt = polarToXY(pLon, (r + rInner) / 2 - 2);
         const hex = PLANET_HEX[p.name] ?? "#a1a1aa";
         return (
@@ -395,6 +426,7 @@ export default function NatalChartSection() {
       aspects: NatalAspect[];
       birthDate: string;
       birthTime: string;
+      ascendant?: { sign: string; degree: number };
     };
   }>({
     queryKey: ["/api/natal-chart/father"],
@@ -460,7 +492,7 @@ export default function NatalChartSection() {
           <div className="px-4 pb-4 space-y-4 border-t border-white/5 pt-4">
             <div className="flex flex-col sm:flex-row gap-4 items-center">
               <div className="w-full sm:w-auto">
-                <ChartWheel planets={chart.planets} houses={chart.houses} />
+                <ChartWheel planets={chart.planets} houses={chart.houses} ascendant={chart.ascendant ?? null} />
               </div>
               <div className="flex-1 w-full">
                 <div className="text-xs font-mono text-muted-foreground mb-2 uppercase tracking-wider">Planetary Placements</div>
