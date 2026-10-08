@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { BibleView } from "./bible-view";
 import { BoardView } from "./board-view";
+import { GitbookView } from "./gitbook-view";
 import { NarrativeView } from "./narrative-view";
 import { Chamber } from "./chamber";
 import { CodeView } from "./code-view";
@@ -20,6 +21,7 @@ const PLACES: { id: ViewId; label: string }[] = [
   { id: "chamber", label: "Chamber" },
   { id: "world", label: "World" },
   { id: "board", label: "Board" },
+  { id: "gitbook", label: "Gitbook" },
   { id: "learn", label: "Knowledge" },
   { id: "narrative", label: "Narrative" },
   { id: "talk", label: "Conversations" },
@@ -107,6 +109,7 @@ export function AppShell() {
             {place === "learn" ? <LearnView /> : null}
             {place === "narrative" ? <NarrativeView /> : null}
             {place === "memory" ? <MemoryView /> : null}
+            {place === "gitbook" ? <GitbookView /> : null}
           </div>
         )}
       </main>
