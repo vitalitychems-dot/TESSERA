@@ -81,16 +81,7 @@ wss.on("connection", (ws, req) => {
   let sovereignKeyHash: string | null = null;
   let registered = false;
 
-  const url = new URL(req.url || "/", `http://${req.headers.host}`);
-  const tokenParam = url.searchParams.get("token");
   const userAgent = req.headers["user-agent"] || "";
-
-  if (tokenParam) {
-    const keyHash = validateMeshToken(tokenParam);
-    if (keyHash) {
-      sovereignKeyHash = keyHash;
-    }
-  }
 
   ws.on("message", (raw) => {
     try {

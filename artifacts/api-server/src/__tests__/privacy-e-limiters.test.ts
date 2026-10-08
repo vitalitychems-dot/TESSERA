@@ -13,9 +13,30 @@ vi.mock("../lib/grand-evolution-cycle", () => ({
   isCycleRunning: () => false,
 }));
 
+vi.mock("../lib/grand-evolution-engine", () => ({
+  convene: vi.fn(async () => ({ sessionId: "synthetic-session" })),
+  subscribeToSession: vi.fn(() => ({ unsubscribe: () => undefined, backlog: [] })),
+  listSessions: vi.fn(async () => []),
+  getSessionTurns: vi.fn(async () => []),
+  getSessionDirectives: vi.fn(async () => []),
+  getSessionBenchmarks: vi.fn(async () => []),
+  getSessionAuditSummary: vi.fn(async () => ({})),
+  societyAnchor: () => "synthetic-anchor",
+}));
+
 import express from "express";
 import { createServer, type Server } from "node:http";
 import { registerSession, removeSession } from "../lib/session-mesh";
+import { runGrandEvolutionCycle } from "../lib/grand-evolution-cycle";
+import {
+  convene,
+  getSessionAuditSummary,
+  getSessionBenchmarks,
+  getSessionDirectives,
+  getSessionTurns,
+  listSessions,
+  subscribeToSession,
+} from "../lib/grand-evolution-engine";
 import meshRouter from "../routes/mesh";
 import adminSessionRouter from "../routes/admin-session";
 import sovereignDataRouter from "../routes/sovereign-data";
@@ -115,6 +136,98 @@ describe("privacy e limiters and admin key sources", () => {
       headers: { "x-tesseract-admin-key": ADMIN_KEY },
     });
     expect(fromHeader.status).toBe(200);
+  });
+
+  it("does not run the grand-evolution cycle for a wrong admin key", async () => {
+    vi.mocked(runGrandEvolutionCycle).mockClear();
+    const wrong = await fetch(`${baseUrl}/grand-evolution/run`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-for": "203.0.113.60",
+        "x-tesseract-admin-key": "wrong-synthetic-admin-key",
+      },
+      body: "{}",
+    });
+    expect(wrong.status).toBe(401);
+    const wrongBody = await wrong.json() as { fatherAuthorized?: boolean };
+    expect(wrongBody.fatherAuthorized).not.toBe(true);
+    expect(runGrandEvolutionCycle).not.toHaveBeenCalled();
+
+    const unsetKey = process.env.TESSERACT_ADMIN_KEY;
+    delete process.env.TESSERACT_ADMIN_KEY;
+    const unset = await fetch(`${baseUrl}/grand-evolution/run`, {
+      method: "POST",
+      headers: { "x-forwarded-for": "203.0.113.61" },
+    });
+    expect(unset.status).toBe(503);
+    expect(runGrandEvolutionCycle).not.toHaveBeenCalled();
+    if (unsetKey === undefined) delete process.env.TESSERACT_ADMIN_KEY;
+    else process.env.TESSERACT_ADMIN_KEY = unsetKey;
+  });
+
+  it("does not run the grand-evolution cycle for an anonymous request", async () => {
+    vi.mocked(runGrandEvolutionCycle).mockClear();
+    const anonymous = await fetch(`${baseUrl}/grand-evolution/run`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-for": "203.0.113.62",
+      },
+      body: "{}",
+    });
+    expect(anonymous.status).toBe(401);
+    expect(runGrandEvolutionCycle).not.toHaveBeenCalled();
+  });
+
+  it("does not convene grand evolution for a wrong admin key", async () => {
+    vi.mocked(convene).mockClear();
+    vi.mocked(runGrandEvolutionCycle).mockClear();
+    const wrong = await fetch(`${baseUrl}/grand-evolution/convene`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-for": "203.0.113.70",
+        "x-tesseract-admin-key": "wrong-synthetic-admin-key",
+      },
+      body: JSON.stringify({ mode: "full", smokeSpeakers: 10000, rounds: 100 }),
+    });
+    expect(wrong.status).toBe(401);
+    const wrongBody = await wrong.json() as { fatherAuthorized?: boolean };
+    expect(wrongBody.fatherAuthorized).not.toBe(true);
+    expect(convene).not.toHaveBeenCalled();
+    expect(runGrandEvolutionCycle).not.toHaveBeenCalled();
+  });
+
+  it("rejects anonymous grand-evolution session reads before the handlers run", async () => {
+    vi.mocked(listSessions).mockClear();
+    vi.mocked(getSessionTurns).mockClear();
+    vi.mocked(getSessionDirectives).mockClear();
+    vi.mocked(getSessionBenchmarks).mockClear();
+    vi.mocked(getSessionAuditSummary).mockClear();
+    vi.mocked(subscribeToSession).mockClear();
+
+    const paths = [
+      "/grand-evolution/sessions",
+      "/grand-evolution/sessions/synthetic-session",
+      "/grand-evolution/sessions/synthetic-session/stream",
+    ];
+    for (const path of paths) {
+      const response = await fetch(`${baseUrl}${path}`, {
+        headers: { "x-forwarded-for": "203.0.113.80" },
+      });
+      expect(response.status).toBe(401);
+      const body = await response.json() as { ok?: boolean; error?: string };
+      expect(body.ok).toBe(false);
+      expect(body.error).toBe("unauthenticated");
+    }
+
+    expect(listSessions).not.toHaveBeenCalled();
+    expect(getSessionTurns).not.toHaveBeenCalled();
+    expect(getSessionDirectives).not.toHaveBeenCalled();
+    expect(getSessionBenchmarks).not.toHaveBeenCalled();
+    expect(getSessionAuditSummary).not.toHaveBeenCalled();
+    expect(subscribeToSession).not.toHaveBeenCalled();
   });
 
   it("rate-limits failed mesh session attempts on their own bucket", async () => {

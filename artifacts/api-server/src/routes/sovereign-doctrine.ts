@@ -159,7 +159,7 @@ function stripValue(value: unknown, secrets: Set<string>): unknown {
   if (!value || typeof value !== "object") return value;
   const out: Record<string, unknown> = {};
   for (const [key, child] of Object.entries(value)) {
-    if (isDroppedCredentialKey(key)) continue;
+    if (isDroppedCredentialKey(key) || key.toLowerCase() === "surfacepreview") continue;
     const next = stripValue(child, secrets);
     if (next === undefined) continue;
     out[key] = next;
@@ -167,7 +167,7 @@ function stripValue(value: unknown, secrets: Set<string>): unknown {
   return out;
 }
 
-/** Drop credential field names and any string that contains a known fingerprint. */
+/** Drop credential field names, surfacePreview, and any string that contains a known fingerprint. */
 export function withoutSigilFingerprint(value: unknown, secrets: Set<string> = readingKeySecrets()): unknown {
   const merged = new Set(secrets);
   collectCredentialSecrets(value, merged);

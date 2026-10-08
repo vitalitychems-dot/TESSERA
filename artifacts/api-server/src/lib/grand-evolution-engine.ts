@@ -18,9 +18,9 @@
  *     succeeded; otherwise the entire run is marked failed and surfaced.
  */
 
-import { promises as fs, statSync } from "node:fs";
-import { join, relative, extname, basename } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
+import { buildRepoManifest, type ManifestFile } from "./repo-manifest";
+import { clampEvolutionFanout } from "./grand-evolution-limits";
 import { db } from "@workspace/db";
 import {
   grandEvolutionSessionsTable,
@@ -51,12 +51,7 @@ export type DirectiveCategory =
   | "agi-benchmarks"
   | "general";
 
-export interface ManifestFile {
-  path: string;
-  kind: string;
-  sizeBytes: number;
-  contentHash: string;
-}
+export type { ManifestFile } from "./repo-manifest";
 
 export interface ConferenceTurn {
   turnIndex: number;
@@ -133,97 +128,7 @@ export interface ConvenedSession {
   error?: string;
 }
 
-// ─── Manifest walker ──────────────────────────────────────────────────────
-
-const REPO_ROOT = process.cwd();
-const SKIP_DIRS = new Set([
-  "node_modules",
-  ".git",
-  ".pnpm-store",
-  ".cache",
-  "dist",
-  "build",
-  ".next",
-  ".turbo",
-  ".local",
-  "tsconfig.tsbuildinfo",
-  ".venv",
-  "venv",
-  ".pytest_cache",
-  ".mypy_cache",
-  "__pycache__",
-  "coverage",
-  ".vite",
-]);
-const SKIP_EXT = new Set([".lock", ".log", ".tsbuildinfo"]);
-const MAX_HASH_BYTES = 64 * 1024; // hash first 64KB for speed
-
-function classifyKind(path: string): string {
-  const ext = extname(path).toLowerCase();
-  if ([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"].includes(ext)) return "code";
-  if ([".json", ".jsonc", ".yaml", ".yml", ".toml"].includes(ext)) return "config";
-  if ([".md", ".mdx", ".txt"].includes(ext)) return "doc";
-  if ([".sql"].includes(ext)) return "schema";
-  if ([".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico", ".pdf"].includes(ext)) return "asset";
-  if ([".zip", ".tar", ".gz", ".tgz", ".bz2", ".rar", ".7z"].includes(ext)) return "archive";
-  if ([".css", ".scss", ".sass", ".less"].includes(ext)) return "style";
-  if ([".html", ".htm"].includes(ext)) return "markup";
-  if ([".sh", ".bash", ".zsh"].includes(ext)) return "script";
-  if ([".py"].includes(ext)) return "code-py";
-  return "misc";
-}
-
-async function hashHead(path: string, sizeBytes: number): Promise<string> {
-  try {
-    const fh = await fs.open(path, "r");
-    try {
-      const len = Math.min(sizeBytes, MAX_HASH_BYTES);
-      const buf = Buffer.alloc(len);
-      await fh.read(buf, 0, len, 0);
-      return createHash("sha256").update(buf).digest("hex").slice(0, 32);
-    } finally {
-      await fh.close();
-    }
-  } catch {
-    return "";
-  }
-}
-
-export async function buildRepoManifest(rootDir = REPO_ROOT): Promise<ManifestFile[]> {
-  const out: ManifestFile[] = [];
-  async function walk(dir: string) {
-    let entries: import("node:fs").Dirent[];
-    try {
-      entries = await fs.readdir(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const ent of entries) {
-      if (SKIP_DIRS.has(ent.name)) continue;
-      const full = join(dir, ent.name);
-      if (ent.isDirectory()) {
-        await walk(full);
-      } else if (ent.isFile()) {
-        const ext = extname(ent.name).toLowerCase();
-        if (SKIP_EXT.has(ext)) continue;
-        let st;
-        try { st = await fs.stat(full); } catch { continue; }
-        const kind = classifyKind(ent.name);
-        const hash = kind === "asset" || kind === "archive" || st.size > 5 * 1024 * 1024
-          ? `size:${st.size}`
-          : await hashHead(full, st.size);
-        out.push({
-          path: relative(rootDir, full),
-          kind,
-          sizeBytes: st.size,
-          contentHash: hash,
-        });
-      }
-    }
-  }
-  await walk(rootDir);
-  return out;
-}
+export { buildRepoManifest } from "./repo-manifest";
 
 // ─── LLM speaker primitive ────────────────────────────────────────────────
 
@@ -618,11 +523,14 @@ export async function convene(opts: ConveneOptions = {}): Promise<ConvenedSessio
   const sessionId = `ge-${Date.now()}-${randomUUID().slice(0, 8)}`;
   const mode: EvolutionMode = opts.mode ?? "smoke";
   const topic = opts.topic ?? "Grand Sovereign Evolution Cycle — full-system audit and dramatic upgrades across security, efficiency, processing, intelligence, and AGI benchmarks.";
-  const rounds = opts.rounds ?? 3;
+  const fanout = clampEvolutionFanout({
+    mode,
+    smokeSpeakers: opts.smokeSpeakers,
+    rounds: opts.rounds,
+  });
+  const rounds = fanout.rounds;
   const society = getFullSovereignSociety();
-  const speakers = mode === "full"
-    ? society
-    : society.slice(0, Math.min(opts.smokeSpeakers ?? 7, society.length));
+  const speakers = society.slice(0, Math.min(fanout.speakers, society.length));
 
   const session: ConvenedSession = {
     sessionId,

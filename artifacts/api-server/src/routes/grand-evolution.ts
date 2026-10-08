@@ -1,4 +1,4 @@
-import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
+import { Router, type IRouter, type Request, type RequestHandler, type Response, type NextFunction } from "express";
 import { logger } from "../lib/logger";
 import { rawKeyFailRateLimit } from "../lib/father-verify-throttle";
 import {
@@ -8,6 +8,7 @@ import {
   isCycleRunning,
 } from "../lib/grand-evolution-cycle";
 import { verifyFatherKey, isFatherKeyConfigured } from "../lib/father-identity";
+import { requireAdminSession, resolveFatherAuthorization } from "../lib/sovereign-admin";
 import {
   convene,
   subscribeToSession,
@@ -33,6 +34,45 @@ function requireFather(req: Request, res: Response, next: NextFunction): void {
   }
   next();
 }
+
+/** Owner cookie via requireAdminSession, or a verified x-tesseract-admin-key. */
+const requireEvolutionSessionRead: RequestHandler = (req, res, next) => {
+  if ((process.env.TESSERACT_ADMIN_KEY ?? "").trim().length < 16) {
+    res.status(503).json({
+      ok: false,
+      error: "sovereign-unconfigured",
+      message: "TESSERACT_ADMIN_KEY is not configured. Privileged surfaces are fail-closed.",
+    });
+    return;
+  }
+  const header = req.header("x-tesseract-admin-key");
+  if (typeof header === "string") {
+    const auth = resolveFatherAuthorization(req);
+    if (auth.fatherAuthorized) {
+      next();
+      return;
+    }
+    switch (auth.reason) {
+      case "unconfigured":
+        res.status(503).json({
+          ok: false,
+          error: "sovereign-unconfigured",
+          message: "TESSERACT_ADMIN_KEY is not configured. Privileged surfaces are fail-closed.",
+        });
+        return;
+      case "rejected":
+      case "absent":
+        res.status(401).json({ ok: false, error: "unauthenticated", reason: auth.reason });
+        return;
+      default: {
+        const unreachable: never = auth.reason;
+        res.status(401).json({ ok: false, error: "unauthenticated", reason: unreachable });
+        return;
+      }
+    }
+  }
+  requireAdminSession(req, res, next);
+};
 
 const router: IRouter = Router();
 
@@ -92,26 +132,28 @@ router.get("/grand-evolution/directives", async (_req, res) => {
   });
 });
 
-router.post("/grand-evolution/run", async (req, res) => {
-  // Father auth is preferred but the cycle is also runnable on a fresh
-  // workspace where the Father key has not yet been set. We accept the
-  // request in either mode but record which.
-  const authHeader = req.headers["x-tesseract-key"] || req.headers["x-father-key"];
-  const fatherAuthorized = !!authHeader;
+router.post("/grand-evolution/run", rawKeyFailRateLimit, async (req, res) => {
+  if (!(process.env.TESSERACT_ADMIN_KEY ?? "").trim()) {
+    res.status(503).json({ ok: false, error: "sovereign-unconfigured" });
+    return;
+  }
+  const auth = resolveFatherAuthorization(req);
+  if (!auth.fatherAuthorized) {
+    res.status(401).json({ ok: false, error: "father-auth-required" });
+    return;
+  }
 
   if (isCycleRunning()) {
     res.status(409).json({ ok: false, error: "cycle-already-running" }); return;
   }
 
-  // Run synchronously so the caller gets the result. The cycle is bounded
-  // by the per-proposal LLM timeout in the consensus engine.
   try {
-    logger.info({ fatherAuthorized }, "GrandEvolution: cycle requested");
+    logger.info({ fatherAuthorized: true }, "GrandEvolution: cycle requested");
     const result = await runGrandEvolutionCycle();
-    res.json({ ok: true, fatherAuthorized, cycle: result });
+    res.json({ ok: true, fatherAuthorized: true, cycle: result });
   } catch (err) {
     logger.error({ err }, "GrandEvolution: cycle failed");
-    res.status(500).json({ ok: false, error: (err as Error).message });
+    res.status(500).json({ ok: false, error: "grand-evolution-failed" });
   }
 });
 
@@ -130,13 +172,13 @@ router.get("/grand-evolution/society", (_req, res) => {
   res.json({ ok: true, data: { ...getSocietyStats(), anchor: societyAnchor() } });
 });
 
-router.get("/grand-evolution/sessions", async (_req, res) => {
+router.get("/grand-evolution/sessions", requireEvolutionSessionRead, async (_req, res) => {
   const sessions = await listSessions(50);
   res.json({ ok: true, data: { sessions } });
 });
 
-router.get("/grand-evolution/sessions/:id", async (req, res) => {
-  const id = req.params.id;
+router.get("/grand-evolution/sessions/:id", requireEvolutionSessionRead, async (req, res) => {
+  const id = String(req.params.id);
   const [turns, directives, benchmarks, audit] = await Promise.all([
     getSessionTurns(id),
     getSessionDirectives(id),
@@ -146,25 +188,34 @@ router.get("/grand-evolution/sessions/:id", async (req, res) => {
   res.json({ ok: true, data: { sessionId: id, turns, directives, benchmarks, audit } });
 });
 
-router.post("/grand-evolution/convene", async (req, res) => {
+router.post("/grand-evolution/convene", rawKeyFailRateLimit, async (req, res) => {
+  if (!(process.env.TESSERACT_ADMIN_KEY ?? "").trim()) {
+    res.status(503).json({ ok: false, error: "sovereign-unconfigured" });
+    return;
+  }
+  const auth = resolveFatherAuthorization(req);
+  if (!auth.fatherAuthorized) {
+    res.status(401).json({ ok: false, error: "father-auth-required" });
+    return;
+  }
+
   const mode = (req.body?.mode === "full" ? "full" : "smoke") as EvolutionMode;
   const topic = typeof req.body?.topic === "string" ? req.body.topic : undefined;
   const smokeSpeakers = typeof req.body?.smokeSpeakers === "number" ? req.body.smokeSpeakers : undefined;
-
+  const rounds = typeof req.body?.rounds === "number" ? req.body.rounds : undefined;
   const startedAt = new Date().toISOString();
-  const promise = convene({ mode, topic, smokeSpeakers });
-  promise.catch(err => logger.error({ err }, "grand-evolution convene failed"));
 
   try {
-    const session = await promise;
-    res.json({ ok: true, data: { startedAt, session } });
+    const session = await convene({ mode, topic, smokeSpeakers, rounds });
+    res.json({ ok: true, fatherAuthorized: true, data: { startedAt, session } });
   } catch (err) {
-    res.status(500).json({ ok: false, error: (err as Error).message });
+    logger.error({ err }, "grand-evolution convene failed");
+    res.status(500).json({ ok: false, error: "grand-evolution-failed" });
   }
 });
 
-router.get("/grand-evolution/sessions/:id/stream", (req, res) => {
-  const id = req.params.id;
+router.get("/grand-evolution/sessions/:id/stream", requireEvolutionSessionRead, (req, res) => {
+  const id = String(req.params.id);
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");

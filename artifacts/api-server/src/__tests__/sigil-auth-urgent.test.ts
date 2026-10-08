@@ -44,6 +44,8 @@ import { readingKey } from "../lib/sigil-cipher";
 import sovereignDoctrineRouter, * as doctrineModule from "../routes/sovereign-doctrine";
 import omniversalRouter from "../routes/omniversal";
 import grandCouncilRouter from "../routes/grand-council";
+import * as councilDeliberation from "../lib/grand-council-deliberation";
+import adminSessionRouter from "../routes/admin-session";
 import improvementConferenceRouter from "../routes/improvement-conference";
 import languageSecurityRouter from "../routes/language-security";
 import legacyEnginesRouter from "../routes/legacy-engines";
@@ -89,6 +91,7 @@ describe("sigil auth urgent", () => {
     app.use(fatherKeyRouter);
     app.use(omniversalRouter);
     app.use(grandCouncilRouter);
+    app.use(adminSessionRouter);
     app.use(improvementConferenceRouter);
     app.use(languageSecurityRouter);
     app.use(legacyEnginesRouter);
@@ -609,6 +612,21 @@ describe("sigil auth urgent", () => {
     expect(containsKey(mixed, "sigilFingerprint")).toBe(false);
   });
 
+  it("drops surfacePreview keys regardless of case", () => {
+    const upper = "synthetic-surface-upper";
+    const lower = "synthetic-surface-lower";
+    const stripped = doctrineModule.withoutSigilFingerprint({
+      SurfacePreview: upper,
+      surfacepreview: lower,
+      note: `kept ${upper} and ${lower}`,
+      label: "synthetic-kept",
+    }) as Record<string, unknown>;
+    expect(containsKey(stripped, "SurfacePreview")).toBe(false);
+    expect(containsKey(stripped, "surfacepreview")).toBe(false);
+    expect(stripped.note).toBe(`kept ${upper} and ${lower}`);
+    expect(stripped.label).toBe("synthetic-kept");
+  });
+
   it("requires an owner session for translate encode and decode", async () => {
     for (const direction of ["encode", "decode"]) {
       const response = await send("POST", "/sigil/translate", {
@@ -652,6 +670,17 @@ describe("sigil auth urgent", () => {
     expect(containsKey(body, "sigilFingerprint")).toBe(false);
     expect(containsKey(body, "handle")).toBe(false);
     expect(containsKey(body, "surfacePreview")).toBe(false);
+    expect(containsKey(body, "envelope")).toBe(true);
+    const storedPreview = savedConferences
+      .map((row) => findSurfacePreview(row.session))
+      .find((value) => value.length > 0) ?? "";
+    expect(storedPreview.length).toBeGreaterThan(0);
+    expect(JSON.stringify(body)).not.toContain(storedPreview);
+    const sacredIndex = savedConferences.findIndex((row) => findSurfacePreview(row.session) === storedPreview);
+    if (sacredIndex > 0) {
+      const [sacred] = savedConferences.splice(sacredIndex, 1);
+      savedConferences.unshift(sacred);
+    }
 
     const conferenceId = (body.conference as { id?: string } | undefined)?.id;
     expect(typeof conferenceId).toBe("string");
@@ -659,6 +688,110 @@ describe("sigil auth urgent", () => {
     expect(fetched.status).toBe(200);
     const fetchedBody = await fetched.json();
     expect(containsKey(fetchedBody, "surfacePreview")).toBe(false);
+    expect(containsKey(fetchedBody, "envelope")).toBe(true);
+    expect(JSON.stringify(fetchedBody)).not.toContain(storedPreview);
+  });
+
+  it("omits the cipher envelope from an anonymous sacred conference session read", async () => {
+    conferenceInsert.mockImplementation(async () => undefined);
+    const response = await send("POST", "/omniversal/conference/run", {
+      body: { topic: "synthetic-sacred-topic", seed: "synthetic-seed" },
+    });
+    expect(response.status).toBe(200);
+    const storedPreview = savedConferences
+      .map((row) => findSurfacePreview(row.session))
+      .find((value) => value.length > 0) ?? "";
+    expect(storedPreview.length).toBeGreaterThan(0);
+    const sacredIndex = savedConferences.findIndex((row) => findSurfacePreview(row.session) === storedPreview);
+    expect(sacredIndex).toBeGreaterThanOrEqual(0);
+    const sacred = savedConferences[sacredIndex];
+    if (sacredIndex > 0) {
+      savedConferences.splice(sacredIndex, 1);
+      savedConferences.unshift(sacred);
+    }
+    expect(typeof sacred?.id).toBe("string");
+    const fetched = await send("GET", `/grand-council/sessions/${sacred?.id}`);
+    expect(fetched.status).toBe(200);
+    const body = await fetched.json() as { session?: { topic?: string } };
+    expect(body.session?.topic).toBe("synthetic-sacred-topic");
+    expect(containsKey(body, "surfacePreview")).toBe(false);
+    expect(containsKey(body, "envelope")).toBe(false);
+    expect(JSON.stringify(body)).not.toContain(storedPreview);
+  });
+
+  it("omits a stored surfacePreview from a council session read", async () => {
+    const preview = "synthetic-surface-preview-value";
+    const spy = vi.spyOn(councilDeliberation, "getSession").mockResolvedValue({
+      id: "synthetic-session",
+      cipher: { envelope: { surfacePreview: preview, label: "synthetic" } },
+    } as unknown as Awaited<ReturnType<typeof councilDeliberation.getSession>>);
+    try {
+      const response = await send("GET", "/grand-council/sessions/synthetic-session");
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(containsKey(body, "surfacePreview")).toBe(false);
+      expect(containsKey(body, "envelope")).toBe(false);
+      expect(JSON.stringify(body)).not.toContain(preview);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("omits mixed-case cipher envelopes from an anonymous council read", async () => {
+    const preview = "synthetic-mixed-case-preview";
+    const spy = vi.spyOn(councilDeliberation, "getSession").mockResolvedValue({
+      id: "synthetic-mixed-case",
+      topic: "synthetic-mixed-topic",
+      Cipher: {
+        ENVELOPE: { SurfacePreview: preview, label: "synthetic" },
+        snapshot: "synthetic-kept",
+      },
+    } as unknown as Awaited<ReturnType<typeof councilDeliberation.getSession>>);
+    try {
+      const response = await send("GET", "/grand-council/sessions/synthetic-mixed-case");
+      expect(response.status).toBe(200);
+      const body = await response.json() as {
+        session?: { topic?: string; Cipher?: { snapshot?: string } };
+      };
+      expect(body.session?.topic).toBe("synthetic-mixed-topic");
+      expect(containsKey(body, "ENVELOPE")).toBe(false);
+      expect(containsKey(body, "envelope")).toBe(false);
+      expect(containsKey(body, "SurfacePreview")).toBe(false);
+      expect(containsKey(body, "surfacepreview")).toBe(false);
+      expect(JSON.stringify(body)).not.toContain(preview);
+      expect(body.session?.Cipher?.snapshot).toBe("synthetic-kept");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("keeps council convene open without a header and rejects a wrong admin key", async () => {
+    const open = await fetch(`${baseUrl}/grand-council/convene`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-for": "203.0.113.40",
+      },
+      body: JSON.stringify({ seed: "synthetic-open-convene" }),
+    });
+    expect(open.status).toBe(200);
+    const openBody = await open.json() as { fatherAuthorized?: boolean; session?: { id?: string } };
+    expect(openBody.fatherAuthorized).toBe(false);
+    expect(typeof openBody.session?.id).toBe("string");
+
+    const wrong = await fetch(`${baseUrl}/grand-council/convene`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-for": "203.0.113.41",
+        "x-tesseract-admin-key": "wrong-synthetic-admin-key",
+      },
+      body: JSON.stringify({ seed: "synthetic-wrong-convene" }),
+    });
+    expect(wrong.status).toBe(401);
+    const wrongBody = await wrong.json() as { fatherAuthorized?: boolean; session?: unknown };
+    expect(wrongBody.fatherAuthorized).not.toBe(true);
+    expect(wrongBody.session).toBeUndefined();
   });
 
   it("rate-limits anonymous council writes", async () => {
@@ -701,8 +834,32 @@ describe("sigil auth urgent", () => {
       body: { candidate: SYNTHETIC_LEGACY_TOKEN },
     });
     expect(reveal.status).not.toBe(429);
+    const login = await fetch(`${baseUrl}/admin/session`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token: "wrong-synthetic-token" }),
+    });
+    expect(login.status).toBe(401);
   });
 });
+
+function findSurfacePreview(value: unknown): string {
+  if (!value || typeof value !== "object") return "";
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findSurfacePreview(item);
+      if (found) return found;
+    }
+    return "";
+  }
+  const record = value as Record<string, unknown>;
+  if (typeof record.surfacePreview === "string") return record.surfacePreview;
+  for (const child of Object.values(record)) {
+    const found = findSurfacePreview(child);
+    if (found) return found;
+  }
+  return "";
+}
 
 function restore(name: string, value: string | undefined) {
   if (value === undefined) delete process.env[name];
