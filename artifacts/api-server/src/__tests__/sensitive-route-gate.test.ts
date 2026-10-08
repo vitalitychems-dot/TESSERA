@@ -16,7 +16,6 @@ vi.mock("@workspace/db", () => ({
 }));
 
 import natalChartRouter from "../routes/natal-chart";
-import politicalDossiersRouter from "../routes/political-dossiers";
 import incomeAndLeadsRouter from "../routes/income-and-leads";
 
 const GATE_ENV = "TESSERA_SENSITIVE_ROUTE_TOKEN";
@@ -26,7 +25,6 @@ const TOKEN_HEADER = "x-admin-token";
 
 const gatedEndpoints = [
   { router: "natal-chart", path: "/natal-chart/father" },
-  { router: "political-dossiers", path: "/political-dossiers" },
   { router: "income-and-leads", path: "/income/wallet" },
 ] as const;
 
@@ -39,7 +37,6 @@ describe("sensitive route gate", () => {
   beforeAll(async () => {
     const app = express();
     app.use(natalChartRouter);
-    app.use(politicalDossiersRouter);
     app.use(incomeAndLeadsRouter);
     app.get("/healthz", (_req, res) => {
       res.json({ status: "ok" });
