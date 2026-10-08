@@ -4,11 +4,13 @@ vi.mock("@workspace/db", () => ({
   db: {},
   councilSessionsTable: {},
 }));
+
 import { createHash } from "node:crypto";
+import { promises as fsPromises } from "node:fs";
 import express from "express";
 import { createServer, type Server } from "node:http";
 import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
-import { encryptForCorpus, readingKey } from "../lib/sigil-cipher";
+import { readingKey } from "../lib/sigil-cipher";
 import sovereignDoctrineRouter, * as doctrineModule from "../routes/sovereign-doctrine";
 import omniversalRouter from "../routes/omniversal";
 import grandCouncilRouter from "../routes/grand-council";
@@ -47,7 +49,10 @@ describe("sigil auth urgent", () => {
   const previousSession = process.env[SESSION_ENV];
 
   beforeAll(async () => {
+    vi.spyOn(fsPromises, "mkdir").mockResolvedValue(undefined);
+    vi.spyOn(fsPromises, "writeFile").mockResolvedValue(undefined);
     const app = express();
+    app.set("trust proxy", 1);
     app.use(express.json());
     app.use(sovereignDoctrineRouter);
     app.use(fatherKeyRouter);
@@ -142,12 +147,16 @@ describe("sigil auth urgent", () => {
     expect(headerOnly.status).toBe(401);
     await expect(headerOnly.json()).resolves.toMatchObject({ ok: false, error: "holder-required" });
 
-    const bodyOnly = await send("POST", "/sigil/natal/unbind", {
+    const withHolder = await send("POST", "/sigil/natal/unbind", {
       cookie: ownerCookie(),
+      sigilKey: SYNTHETIC_LEGACY_TOKEN,
       body: { signatureGlyph: fingerprint, fingerprint },
     });
-    expect(bodyOnly.status).toBe(401);
-    await expect(bodyOnly.json()).resolves.toMatchObject({ ok: false, error: "holder-required" });
+    expect(withHolder.status).toBe(200);
+    const withHolderBody = await withHolder.json();
+    expect(containsCredential(withHolderBody, fingerprint)).toBe(false);
+    expect(containsKey(withHolderBody, "fingerprint")).toBe(false);
+    expect(containsKey(withHolderBody, "signatureGlyph")).toBe(false);
   });
 
   it("returns 401 for natal-sigil when only X-Sigil-Key is presented", async () => {
@@ -175,11 +184,18 @@ describe("sigil auth urgent", () => {
     expect("glyphGate" in doctrineModule).toBe(false);
   });
 
-  it("returns 401 for active-key when no admin key is set and there is no session", async () => {
-    delete process.env[LEGACY_ENV];
+  it("returns 401 for active-key without a session when the admin key is set", async () => {
     const response = await send("GET", "/sigil/active-key");
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toMatchObject({ ok: false, error: "unauthenticated" });
+  });
+
+  it("does not accept SOVEREIGN_ADMIN_TOKEN as the admin key", async () => {
+    delete process.env[LEGACY_ENV];
+    process.env[OWNER_ENV] = SYNTHETIC_OWNER_TOKEN;
+    const response = await send("GET", "/sigil/active-key");
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ ok: false, error: "sovereign-unconfigured" });
   });
 
   it("returns 503 for conference when the owner token is unset", async () => {
@@ -297,6 +313,13 @@ describe("sigil auth urgent", () => {
     await expect(limited.json()).resolves.toMatchObject({ ok: false, error: "rate-limited" });
 
     clearFatherKeyRedeemState();
+    for (let attempt = 0; attempt < REDEEM_IP_LIMIT; attempt += 1) {
+      expect(noteRedeemAttempt("synthetic-ip-single")).toBe(true);
+    }
+    expect(noteRedeemAttempt("synthetic-ip-single")).toBe(false);
+    expect(noteRedeemAttempt("synthetic-ip-other")).toBe(true);
+
+    clearFatherKeyRedeemState();
     for (let attempt = 0; attempt < REDEEM_GLOBAL_LIMIT; attempt += 1) {
       expect(noteRedeemAttempt(`synthetic-ip-${attempt}`)).toBe(true);
     }
@@ -360,21 +383,23 @@ describe("sigil auth urgent", () => {
     const expiresWith = readingKey().expiresWith;
     const issued = await send("POST", "/sigil/encrypt", {
       cookie: ownerCookie(),
-      body: { text: `synthetic-prefix-${fingerprint}-and-${expiresWith}-suffix`, label: "synthetic" },
+      body: { text: "synthetic-corpus", label: "synthetic" },
     });
     expect(issued.status).toBe(200);
-    const issuedBody = await issued.json();
+    const issuedBody = await issued.json() as { envelope?: { handle?: string; keyId?: string } };
     expect(containsKey(issuedBody, "keyId")).toBe(false);
     expect(containsCredential(issuedBody, fingerprint)).toBe(false);
     expect(containsCredential(issuedBody, expiresWith)).toBe(false);
+    expect(typeof issuedBody.envelope?.handle).toBe("string");
+    expect(issuedBody.envelope?.handle?.startsWith("h")).toBe(true);
 
-    const envelope = encryptForCorpus(`synthetic-prefix-${fingerprint}-and-${expiresWith}-suffix`, "synthetic");
     const decrypted = await send("POST", "/sigil/decrypt", {
       cookie: ownerCookie(),
-      body: { envelope },
+      body: { envelope: issuedBody.envelope },
     });
     expect(decrypted.status).toBe(200);
     const body = await decrypted.json();
+    expect(body).toMatchObject({ ok: true, text: "synthetic-corpus" });
     expect(containsCredential(body, fingerprint)).toBe(false);
     expect(containsCredential(body, expiresWith)).toBe(false);
   });
@@ -388,20 +413,14 @@ describe("sigil auth urgent", () => {
     const run = await send("POST", "/omniversal/conference/run", {
       body: { topic: "synthetic", seed },
     });
+    expect(run.status).toBe(500);
     const runBody = await run.json();
-    if (run.status === 401) {
-      expect(runBody).toMatchObject({ ok: false, error: "unauthenticated" });
-    }
     expect(containsCredential(runBody, fingerprint)).toBe(false);
     expect(containsCredential(runBody, expiresWith)).toBe(false);
 
     const list = await send("GET", "/grand-council/sessions");
+    expect(list.status).toBe(200);
     const listBody = await list.json();
-    if (list.status === 401) {
-      expect(listBody).toMatchObject({ ok: false, error: "unauthenticated" });
-    } else {
-      expect(list.status).toBe(200);
-    }
     expect(containsCredential(listBody, fingerprint)).toBe(false);
     expect(containsCredential(listBody, expiresWith)).toBe(false);
 
@@ -501,6 +520,50 @@ describe("sigil auth urgent", () => {
       expect(containsCredential(body, fingerprint)).toBe(false);
       expect(containsCredential(body, expiresWith)).toBe(false);
     }
+  });
+
+  it("does not return the planetary signal without an owner session", async () => {
+    const response = await send("POST", "/sigil/father-key/derive-signal", {
+      body: { adminKey: SYNTHETIC_LEGACY_TOKEN },
+    });
+    expect(response.status).toBe(401);
+    const body = await response.json() as Record<string, unknown>;
+    expect(body).toMatchObject({ ok: false, error: "unauthenticated" });
+    expect(body).not.toHaveProperty("signal");
+  });
+
+  it("strips a synthetic fingerprint from an old conference row", () => {
+    const synthetic = "f00dfeedc0ffee00";
+    const row = {
+      id: "synthetic-old-conference",
+      sigilFingerprint: synthetic,
+      keyId: `sigil-2-${synthetic}`,
+      cosmicFingerprint: "abc123abc123abc1",
+      transcript: [`Omniversal Cipher: v2, 4 layers, sigil: ${synthetic.slice(0, 8)}…`],
+      note: `embedded ${synthetic}`,
+    };
+    const stripped = doctrineModule.withoutSigilFingerprint(row) as Record<string, unknown>;
+    expect(containsKey(stripped, "sigilFingerprint")).toBe(false);
+    expect(containsKey(stripped, "keyId")).toBe(false);
+    expect(JSON.stringify(stripped)).not.toContain(synthetic);
+    expect(JSON.stringify(stripped)).not.toContain(synthetic.slice(0, 8));
+    expect(stripped.cosmicFingerprint).toBe("abc123abc123abc1");
+    expect(stripped.id).toBe("synthetic-old-conference");
+  });
+
+  it("keys father verify on the proxy-observed address", async () => {
+    const first = "198.51.100.8, 203.0.113.9";
+    const spoofed = "198.51.100.20, 203.0.113.9";
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const response = await fetch(`${baseUrl}/sigil/status`, {
+        headers: { "x-forwarded-for": first },
+      });
+      expect(response.status).toBe(200);
+    }
+    const blocked = await fetch(`${baseUrl}/sigil/status`, {
+      headers: { "x-forwarded-for": spoofed },
+    });
+    expect(blocked.status).toBe(429);
   });
 });
 

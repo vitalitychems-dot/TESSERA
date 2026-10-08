@@ -50,6 +50,10 @@ import { initAutonomousForumEngine, startAutonomousForumLoop } from "./lib/auton
 import { initSovereignLoop, startSovereignLoop } from "./lib/sovereign-loop";
 
 const app: Express = express();
+// One edge hop terminates TLS in front of this process. req.ip is the
+// address that hop observed. A client-supplied first X-Forwarded-For entry
+// is not trusted.
+app.set("trust proxy", 1);
 
 let serverReady = false;
 

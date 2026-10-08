@@ -16,10 +16,10 @@ const RequestUploadUrlBody = z.object({
 router.post("/storage/uploads/request-url", async (req: Request, res: Response) => {
   // Gate: require an admin token to mint signed upload URLs (prevents
   // unauthenticated callers from generating arbitrary writes / cost abuse).
-  const configured = process.env["SOVEREIGN_ADMIN_TOKEN"];
+  const configured = process.env["TESSERACT_ADMIN_KEY"];
   if (!configured || configured.length < 8) {
     res.status(503).json({
-      error: "SOVEREIGN_ADMIN_TOKEN is not configured. Storage upload URLs are disabled until the secret is set.",
+      error: "TESSERACT_ADMIN_KEY is not configured. Storage upload URLs are disabled until the secret is set.",
     });
     return;
   }

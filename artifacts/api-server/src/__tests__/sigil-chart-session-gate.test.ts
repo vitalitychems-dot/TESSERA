@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import express from "express";
 import { createServer, type Server } from "node:http";
 import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
+import { generateSovereignKeys } from "../lib/natal-chart-engine";
 import sovereignDoctrineRouter from "../routes/sovereign-doctrine";
 
 const OWNER_ENV = "SOVEREIGN_ADMIN_TOKEN";
@@ -62,9 +63,9 @@ describe("sigil chart session gate", () => {
   });
 
   beforeEach(() => {
-    process.env[OWNER_ENV] = SYNTHETIC_OWNER_TOKEN;
+    delete process.env[OWNER_ENV];
+    process.env[LEGACY_ENV] = SYNTHETIC_OWNER_TOKEN;
     process.env[SESSION_ENV] = SYNTHETIC_SESSION_SECRET;
-    delete process.env[LEGACY_ENV];
     delete process.env[CHART_ENV];
   });
 
@@ -96,16 +97,24 @@ describe("sigil chart session gate", () => {
       it("returns 401 when no owner session is presented", async () => {
         const response = await get(path, { sigilKey: "synthetic-sigil-key" });
         expect(response.status).toBe(401);
-        await expect(response.json()).resolves.toMatchObject({ ok: false, error: "unauthenticated" });
+        await expect(response.json()).resolves.toMatchObject({
+          ok: false,
+          error: "unauthenticated",
+          reason: "no-cookie",
+        });
       });
 
-      it("returns 401 when the owner session is wrong", async () => {
+      it("returns 401 when the owner session signature is wrong", async () => {
         const response = await get(path, {
           cookie: `${SESSION_COOKIE}=wrong-synthetic-session`,
           sigilKey: "synthetic-sigil-key",
         });
         expect(response.status).toBe(401);
-        await expect(response.json()).resolves.toMatchObject({ ok: false, error: "unauthenticated" });
+        await expect(response.json()).resolves.toMatchObject({
+          ok: false,
+          error: "unauthenticated",
+          reason: "bad-signature",
+        });
       });
 
       it("returns 503 when the owner token is unset", async () => {
@@ -120,14 +129,50 @@ describe("sigil chart session gate", () => {
       });
 
       it("returns 503 when the chart env is unset", async () => {
-        if (path === "/sigil/father-key/status") return;
         delete process.env[CHART_ENV];
         const response = await get(path, { cookie: ownerCookie() });
+        if (path === "/sigil/father-key/status") {
+          expect(response.status).toBe(200);
+          const body = await response.json() as Record<string, unknown>;
+          expect(body).toMatchObject({ ok: true, configured: true });
+          expect(body).not.toHaveProperty("digestHex");
+          expect(body).not.toHaveProperty("identityHash");
+          expect(body).not.toHaveProperty("primaryCode");
+          expect(body).not.toHaveProperty("sealedSeed");
+          return;
+        }
         expect(response.status).toBe(503);
         await expect(response.json()).resolves.toMatchObject({ ok: false, error: "not-configured" });
       });
     });
   }
+
+  it("rejects a chart fixture that does not match the schema and accepts a synthetic one", async () => {
+    process.env[CHART_ENV] = JSON.stringify({ marker: "not-a-chart" });
+    const invalid = await get("/sigil/father/natal-chart", { cookie: ownerCookie() });
+    expect(invalid.status).toBe(503);
+    await expect(invalid.json()).resolves.toMatchObject({ ok: false, error: "not-configured" });
+
+    process.env[CHART_ENV] = syntheticChartFixture();
+    const keys = generateSovereignKeys();
+    expect(keys).not.toHaveProperty("sealedSeed");
+    expect(keys).not.toHaveProperty("identityHash");
+    expect(keys).not.toHaveProperty("primaryCode");
+    const valid = await get("/sigil/father/natal-chart", { cookie: ownerCookie() });
+    expect(valid.status).toBe(200);
+    const body = await valid.json() as Record<string, unknown>;
+    expect(body.ok).toBe(true);
+    expect(JSON.stringify(body)).not.toContain("digestHex");
+    expect(body).not.toHaveProperty("fatherFingerprint");
+
+    const download = await get("/sigil/father/download-snapshot", { cookie: ownerCookie() });
+    expect(download.status).toBe(200);
+    const disposition = download.headers.get("content-disposition") ?? "";
+    expect(disposition).toMatch(/filename="tessera-sovereign-\d+\.sigil\.json"/);
+    const file = await download.json() as Record<string, unknown>;
+    expect(JSON.stringify(file)).not.toContain("digestHex");
+    expect(file).not.toHaveProperty("fatherFingerprint");
+  });
 
   it("finds no chart literals in tool-registry or lingua-universalis", () => {
     const counts: Record<keyof typeof CHART_LITERALS, number> = {
@@ -141,8 +186,8 @@ describe("sigil chart session gate", () => {
 
     for (const file of chartSources) {
       const text = readFileSync(file, "utf8");
-      const expectsChartRead = file.endsWith("lingua-universalis.ts");
-      expect(text.includes("readFatherNatalChart("), file).toBe(expectsChartRead);
+      expect(text.includes("readFatherNatalChart("), file).toBe(false);
+      expect(text.includes("zodiacFingerprintFor"), file).toBe(false);
       for (const key of Object.keys(CHART_LITERALS) as Array<keyof typeof CHART_LITERALS>) {
         const pattern = new RegExp(CHART_LITERALS[key].source, CHART_LITERALS[key].flags);
         counts[key] += text.match(pattern)?.length ?? 0;
@@ -159,6 +204,43 @@ describe("sigil chart session gate", () => {
     });
   });
 });
+
+function syntheticChartFixture(): string {
+  const body = { sign: "Aries", degree: "0", house: 1 };
+  return JSON.stringify({
+    birth: {
+      date: "1111-01-01",
+      time: "00:00",
+      location: "Fixture",
+      timezone: "UTC",
+      houseSystem: "fixture",
+    },
+    core: {
+      sun: body,
+      moon: body,
+      ascendant: { sign: "Aries", degree: "0" },
+    },
+    planets: {
+      mercury: body,
+      venus: body,
+      mars: body,
+      jupiter: body,
+      saturn: body,
+      uranus: body,
+      neptune: body,
+      pluto: body,
+    },
+    nodes: { northNode: body },
+    aspects: ["fixture"],
+    themes: {
+      dominance: "fixture",
+      rising: "fixture",
+      moonSign: "fixture",
+      houseConcentration: ["fixture"],
+      chineseZodiac: "fixture",
+    },
+  });
+}
 
 function restore(name: string, value: string | undefined) {
   if (value === undefined) delete process.env[name];

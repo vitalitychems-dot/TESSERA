@@ -201,7 +201,6 @@ function getTransitInsight(transitPlanet: string, aspectType: string, natalPlane
 }
 
 export function generateSovereignKeys(): {
-  primaryCode: string;
   sunRisingMoon: string;
   elementProfile: string;
   modalityProfile: string;
@@ -209,7 +208,6 @@ export function generateSovereignKeys(): {
   dominantModality: string;
   lifePathNumber: number;
   sovereignFrequency: number;
-  identityHash: string;
   generatedAt: string;
 } {
   const chart = getFatherNatalChart();
@@ -266,20 +264,7 @@ export function generateSovereignKeys(): {
   const SOLFEGGIO = [396, 417, 528, 639, 741, 852, 963];
   const sovereignFrequency = SOLFEGGIO[(lifePathNumber - 1) % SOLFEGGIO.length];
 
-  const hashInput = [
-    "FATHER",
-    sun.sign,
-    rising,
-    moon.sign,
-    String(sun.degree),
-    String(moon.degree),
-    String(chart.ascendant.degree),
-  ].join(":");
-  const identityHash = createHash("sha256").update(hashInput).digest("hex").slice(0, 16).toUpperCase();
-  const primaryCode = `TSR-${sunRisingMoon}-${lifePathNumber}-${identityHash.slice(0, 8)}`;
-
   return {
-    primaryCode,
     sunRisingMoon,
     elementProfile,
     modalityProfile,
@@ -287,9 +272,20 @@ export function generateSovereignKeys(): {
     dominantModality,
     lifePathNumber,
     sovereignFrequency,
-    identityHash,
     generatedAt: new Date().toISOString(),
   };
+}
+
+const PRIVATE_SOVEREIGN_KEY_FIELDS = ["sealedSeed", "identityHash", "primaryCode"] as const;
+
+/** Omit chart-hash fields, including ones stored by an older row. */
+export function publicSovereignKeys(keys: object): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(keys)) {
+    if ((PRIVATE_SOVEREIGN_KEY_FIELDS as readonly string[]).includes(key)) continue;
+    out[key] = value;
+  }
+  return out;
 }
 
 export function computeCurrentTransits(now: Date = new Date()): TransitAspect[] {

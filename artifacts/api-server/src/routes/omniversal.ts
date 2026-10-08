@@ -8,6 +8,7 @@ import {
 } from "../lib/omniversal-quantum-lattice";
 import { requireAdminSession } from "../lib/sovereign-admin";
 import { withoutSigilFingerprint } from "./sovereign-doctrine";
+import { publicWriteRateLimit } from "../lib/father-verify-throttle";
 import { runSacredConference, getSacredConference } from "../lib/sacred-conference-orchestrator";
 
 const router: IRouter = Router();
@@ -145,7 +146,7 @@ router.post("/omniversal/pipeline/run", (req, res) => {
 // Convenes the council, renders every line bilingually through LUS v2,
 // encrypts the verdict with the Omniversal Cipher, and runs an OQL
 // computation on the verdict — all in one persisted transcript.
-router.post("/omniversal/conference/run", async (req, res) => {
+router.post("/omniversal/conference/run", publicWriteRateLimit, async (req, res) => {
   try {
     const topic = typeof req.body?.topic === "string" ? req.body.topic : undefined;
     const seed = typeof req.body?.seed === "string" ? req.body.seed : undefined;

@@ -1,17 +1,17 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Sovereign Session — minted by Heavy Council (Apr 2026), proposals P1/P2/P9.
 //
-// One credential, one session, no rotation theatre. The operator presents a
-// single high-entropy SOVEREIGN_ADMIN_TOKEN once; the server issues an
-// HMAC-signed opaque session id, stored in an HttpOnly cookie. All privileged
-// routes accept ONLY this cookie via requireAdminSession.
+// One credential, one session, no rotation theatre. The operator presents
+// TESSERACT_ADMIN_KEY once; the server issues an HMAC-signed opaque session
+// id, stored in an HttpOnly cookie. All privileged routes accept ONLY this
+// cookie via requireAdminSession.
 //
 // Design rules:
 //   * Zero external dependencies; node:crypto only.
 //   * Constant-time comparisons for token AND session id checks.
 //   * Sessions kept in-memory; restart invalidates everything (fail-safe).
 //   * No credential material is ever written to logs.
-//   * If SOVEREIGN_ADMIN_TOKEN is unset, every privileged path is 503 — never
+//   * If TESSERACT_ADMIN_KEY is unset, every privileged path is 503 — never
 //     accidentally open.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -46,13 +46,8 @@ const _store = new Map<string, SessionRecord>();
 let _evictionCount = 0;
 let _pruneCount = 0;
 
-// Heavy Council P1: one credential. Accept either the new
-// SOVEREIGN_ADMIN_TOKEN or the legacy TESSERACT_ADMIN_KEY (already configured
-// in this deployment) so migration is zero-touch for the operator. The legacy
-// alias may be removed in a future rotation.
+// One admin secret: TESSERACT_ADMIN_KEY. No second env var is consulted.
 function getAdminToken(): string {
-  const next = (process.env.SOVEREIGN_ADMIN_TOKEN ?? "").trim();
-  if (next.length > 0) return next;
   return (process.env.TESSERACT_ADMIN_KEY ?? "").trim();
 }
 

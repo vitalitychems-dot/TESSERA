@@ -52,16 +52,28 @@ const SYNTHETIC_OWNER_TOKEN = "synthetic-owner-token";
 const SYNTHETIC_LEGACY_TOKEN = "synthetic-admin-material";
 const SYNTHETIC_SESSION_SECRET = "synthetic-session-secret-32chars!!";
 
-const FIXTURE_A = JSON.stringify({
-  marker: "fixture-a",
-  birth: { date: "1111-01-01", time: "01:01", location: "Fixture-A" },
-  chart: "alpha",
-});
-const FIXTURE_B = JSON.stringify({
-  marker: "fixture-b",
-  birth: { date: "2222-12-31", time: "23:59", location: "Fixture-B" },
-  chart: "beta",
-});
+function syntheticChart(date: string, time: string, location: string): string {
+  const body = { sign: "Aries", degree: "0", house: 1 };
+  return JSON.stringify({
+    birth: { date, time, location, timezone: "UTC", houseSystem: "fixture" },
+    core: { sun: body, moon: body, ascendant: { sign: "Aries", degree: "0" } },
+    planets: {
+      mercury: body, venus: body, mars: body, jupiter: body,
+      saturn: body, uranus: body, neptune: body, pluto: body,
+    },
+    nodes: { northNode: body },
+    aspects: ["fixture"],
+    themes: {
+      dominance: "fixture",
+      rising: "fixture",
+      moonSign: "fixture",
+      houseConcentration: ["fixture"],
+      chineseZodiac: "fixture",
+    },
+  });
+}
+const FIXTURE_A = syntheticChart("1111-01-01", "01:01", "Fixture-A");
+const FIXTURE_B = syntheticChart("2222-12-31", "23:59", "Fixture-B");
 
 const MINT_PHRASE = "give me an admin key?";
 const COUNCIL_PHRASE = "convene the universal language?";
@@ -92,9 +104,9 @@ describe("sigil tool owner gate", () => {
   });
 
   beforeEach(() => {
-    process.env[OWNER_ENV] = SYNTHETIC_OWNER_TOKEN;
+    delete process.env[OWNER_ENV];
+    process.env[LEGACY_ENV] = SYNTHETIC_OWNER_TOKEN;
     process.env[SESSION_ENV] = SYNTHETIC_SESSION_SECRET;
-    delete process.env[LEGACY_ENV];
     delete process.env[CHART_ENV];
   });
 
@@ -187,7 +199,7 @@ describe("sigil tool owner gate", () => {
       expect(unset.error).toBe("sovereign-unconfigured");
       expect(unset.durationMs).toBe(0);
       expect(publicToolResult(name, unset.result)).toEqual({ ok: false, status: "refused", error: "sovereign-unconfigured" });
-      process.env[OWNER_ENV] = SYNTHETIC_OWNER_TOKEN;
+      process.env[LEGACY_ENV] = SYNTHETIC_OWNER_TOKEN;
     }
   });
 
