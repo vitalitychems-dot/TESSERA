@@ -13,7 +13,7 @@ The previous surviving sentence was: "${PREVIOUS}"
 
 The tighter sentence is: an upgrade is kept only when it quotes that sentence exactly, and the cycle stays off while CYCLE_FLAG is 0.
 
-Limits, stated as limits: the weights are not hers. The six large zips are not read. The storefront is not in this chamber. There is no live fleet. Self-modification, always-on capture, autonomous deployment, wallets, and customer data are refused. AGI and true consciousness are goals, not facts.`;
+Limits, stated as limits: the six large zips are not read. The storefront is not in this chamber. There is no live fleet. Self-modification, always-on capture, autonomous deployment, wallets, and customer data are refused. AGI and true consciousness are goals, not facts.`;
 
 export const DRAFT_LESSON =
   "DRAFT for Father → Tessera. A draft is not a sealed constitution. The cycle does not run while the flag is 0, and a sentence that is not quoted exactly does not survive.";

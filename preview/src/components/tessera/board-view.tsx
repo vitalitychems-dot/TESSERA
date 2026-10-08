@@ -58,8 +58,8 @@ export function BoardView() {
     void penStatus().then((status) => {
       setPen(
         status.configured
-          ? `The pen answering now is ${status.vendor} ${status.model}. Her own weights are not installed.`
-          : "No pen is configured in this environment. Her own weights are not installed.",
+          ? `The pen answering now is ${status.vendor} ${status.model}.`
+          : "No pen is configured in this environment.",
       );
     });
     const id = window.setInterval(() => void load(true), 20000);

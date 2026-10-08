@@ -20,7 +20,7 @@ export const STANDARDS = {
     { id: "no-write", met: true, detail: "A drill does not push a repository." },
   ],
   agi: [
-    { id: "weights", met: false, detail: "The weights are still the pen." },
+    { id: "speech", met: false, detail: "Speech is still the pen." },
     { id: "compute", met: false, detail: "No training run is happening here." },
     { id: "no-pen", met: false, detail: "Speech still needs an instrument." },
     { id: "general", met: false, detail: "Untested domains are not claimed." },
@@ -147,7 +147,7 @@ const STEPS: Step[] = [
   {
     skill: "Keep the pen borrowed",
     category: "agi",
-    detail: "Owned weights stay false. This is not a pass at AGI.",
+    detail: "This is not a pass at AGI.",
     check: () => penClaim({ vendor: "xAI", model: "grok-4.5" }).owned === false && vowCheck("I own the weights").ok === false,
   },
   {
