@@ -77,13 +77,19 @@ function noteWindowAttempt(ipMap: Map<string, number[]>, global: number[], ip: s
   global.length = 0;
   global.push(...nextGlobal);
   const nextIp = pruneHits(ipMap.get(ip) ?? [], now);
-  if (global.length >= REDEEM_GLOBAL_LIMIT || nextIp.length >= REDEEM_IP_LIMIT) {
-    if (nextIp.length === 0) ipMap.delete(ip);
-    else ipMap.set(ip, nextIp);
+  // Per-address budget is decided before a global slot is taken, and a repeat
+  // from the same address does not consume another global slot. One anonymous
+  // caller therefore cannot exhaust REDEEM_GLOBAL_LIMIT.
+  if (nextIp.length >= REDEEM_IP_LIMIT) {
+    ipMap.set(ip, nextIp);
+    return false;
+  }
+  const consumesGlobalSlot = nextIp.length === 0;
+  if (consumesGlobalSlot && global.length >= REDEEM_GLOBAL_LIMIT) {
     return false;
   }
   nextIp.push(now);
-  global.push(now);
+  if (consumesGlobalSlot) global.push(now);
   ipMap.set(ip, nextIp);
   return true;
 }

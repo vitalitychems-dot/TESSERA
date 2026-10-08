@@ -110,8 +110,7 @@ function RecoveryPanel() {
           <li>
             <div className="font-semibold text-zinc-100">2. Save it in Replit Secrets</div>
             <div className="mt-1 text-zinc-400">
-              Set the secret <code className="px-1 py-0.5 rounded bg-black/40 text-amber-200">SOVEREIGN_ADMIN_TOKEN</code> to the value from step 1.
-              The legacy <code className="px-1 py-0.5 rounded bg-black/40 text-amber-200">TESSERACT_ADMIN_KEY</code> is still accepted as a fallback during migration.
+              Set the secret <code className="px-1 py-0.5 rounded bg-black/40 text-amber-200">TESSERACT_ADMIN_KEY</code> to the value from step 1.
             </div>
           </li>
           <li>
@@ -233,7 +232,7 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
         title="◈ Tesseract — sovereign-unconfigured"
         body={
           <div className="mt-3 space-y-3 text-sm text-rose-100">
-            <p>The server has no <code className="px-1 py-0.5 rounded bg-black/40 text-amber-200">SOVEREIGN_ADMIN_TOKEN</code> (or legacy <code className="px-1 py-0.5 rounded bg-black/40 text-amber-200">TESSERACT_ADMIN_KEY</code>) configured.</p>
+            <p>The server has no <code className="px-1 py-0.5 rounded bg-black/40 text-amber-200">TESSERACT_ADMIN_KEY</code> configured.</p>
             <p className="text-rose-200/80">Privileged routes are fail-closed. Open the recovery runbook below to provision one.</p>
           </div>
         }
@@ -276,7 +275,7 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
             value={tokenInput}
             onChange={(e) => setTokenInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
-            placeholder="paste SOVEREIGN_ADMIN_TOKEN (or legacy TESSERACT_ADMIN_KEY)"
+            placeholder="paste TESSERACT_ADMIN_KEY"
             className="w-full px-3 py-2 rounded-md bg-black/60 border border-zinc-700 text-zinc-100 font-mono text-sm focus:outline-none focus:border-emerald-500"
             disabled={isSubmitting}
           />

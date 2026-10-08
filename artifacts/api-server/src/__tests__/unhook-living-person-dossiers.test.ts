@@ -99,9 +99,9 @@ describe("unhook living-person dossiers", () => {
   const previousSession = process.env[SESSION_ENV];
 
   beforeAll(async () => {
-    process.env[OWNER_ENV] = SYNTHETIC_OWNER_TOKEN;
+    delete process.env[OWNER_ENV];
+    process.env[LEGACY_ENV] = SYNTHETIC_OWNER_TOKEN;
     process.env[SESSION_ENV] = SYNTHETIC_SESSION_SECRET;
-    delete process.env[LEGACY_ENV];
     const app = express();
     app.use(express.json());
     app.use(apiRouter);

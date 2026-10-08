@@ -834,7 +834,7 @@ function inventorPrincipal(proposedBy: string | null | undefined, inventionId: s
 // `sovereign_session` HttpOnly cookie (preferred) or the legacy x-admin-token
 // header (deprecated, retained transitionally). Both paths run the same
 // constant-time check; both require an admin token to be configured on the
-// server (SOVEREIGN_ADMIN_TOKEN or legacy TESSERACT_ADMIN_KEY).
+// server (TESSERACT_ADMIN_KEY only).
 async function requireInventorAuth(req: import("express").Request): Promise<boolean> {
   const { isAdminTokenConfigured, lookupSession, SESSION_COOKIE, verifyAdminToken } = await import("../lib/sovereign-session");
   if (!isAdminTokenConfigured()) return false;

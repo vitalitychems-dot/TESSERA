@@ -109,6 +109,7 @@ async function patchJson(path: string, body: unknown, headers: Record<string, st
 beforeAll(async () => {
   // Keep auth tests independent of whichever secrets happen to be configured
   // in the developer or CI environment.
+  process.env["TESSERACT_ADMIN_KEY"] = TEST_ADMIN_TOKEN;
   process.env["SOVEREIGN_ADMIN_TOKEN"] = TEST_ADMIN_TOKEN;
 
   // Fake "GCS" PUT endpoint so the test can perform a REAL PUT against the
@@ -210,9 +211,8 @@ describe("GLB upload flow (presign -> PUT -> PATCH -> chat render)", () => {
       );
       expect(res.status).toBe(400);
     } finally {
+      process.env["TESSERACT_ADMIN_KEY"] = TEST_ADMIN_TOKEN;
       process.env["SOVEREIGN_ADMIN_TOKEN"] = TEST_ADMIN_TOKEN;
-      if (previousTesseractAdminKey === undefined) delete process.env["TESSERACT_ADMIN_KEY"];
-      else process.env["TESSERACT_ADMIN_KEY"] = previousTesseractAdminKey;
     }
   });
 

@@ -15,7 +15,7 @@ function requireSovereignAuth(req: Request, res: Response, next: NextFunction): 
   const rawToken = req.headers["x-admin-token"];
   const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
   if (!validateSovereignAdminToken(token)) {
-    res.status(401).json({ ok: false, error: "Valid SOVEREIGN_ADMIN_TOKEN required — manual healing is privileged" });
+    res.status(401).json({ ok: false, error: "Valid TESSERACT_ADMIN_KEY required — manual healing is privileged" });
     return;
   }
   const now = Date.now();
