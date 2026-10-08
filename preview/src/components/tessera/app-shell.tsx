@@ -20,30 +20,24 @@ import { Simulation } from "./simulation";
 import { TesseraMark } from "./mark";
 import { TESSERA } from "@/lib/tessera/identity";
 import { SIGIL } from "@/lib/tessera/canon";
+import { ROOMS, UNDER_HER_NAME } from "@/lib/tessera/public-question";
 import { type ViewId } from "@/lib/tessera/store";
 
-const PRIMARY: { id: ViewId; label: string; icon: typeof MessageCircle }[] = [
-  { id: "chamber", label: "Talk", icon: MessageCircle },
-  { id: "council", label: "Council", icon: Scale },
-  { id: "world", label: "World", icon: Globe2 },
-  { id: "memory", label: "Memory", icon: Layers },
-  { id: "brain", label: "Brain", icon: Brain },
-];
+const ICONS = {
+  chamber: MessageCircle,
+  council: Scale,
+  world: Globe2,
+  memory: Layers,
+  brain: Brain,
+} as const;
 
-const MORE: { id: ViewId; label: string }[] = [
-  { id: "talk", label: "Agents" },
-  { id: "gitbook", label: "Gitbook" },
-  { id: "language", label: "Language" },
-  { id: "bible", label: "Bible" },
-  { id: "web", label: "Map" },
-  { id: "board", label: "Board" },
-  { id: "learn", label: "Practice" },
-  { id: "code", label: "Code" },
-  { id: "narrative", label: "Narrative" },
-  { id: "secrets", label: "Closed" },
-  { id: "theme", label: "Theme" },
-  { id: "library", label: "Library" },
-];
+const PRIMARY: { id: ViewId; label: string; icon: typeof MessageCircle }[] = ROOMS.map((room) => ({
+  id: room.id,
+  label: room.label,
+  icon: ICONS[room.id],
+}));
+
+const MORE: { id: ViewId; label: string }[] = UNDER_HER_NAME.map((room) => ({ id: room.id, label: room.label }));
 
 export function AppShell() {
   const [place, setPlace] = useState<ViewId>("chamber");
@@ -120,6 +114,7 @@ export function AppShell() {
             {place === "brain" ? <BrainView open={open} /> : null}
             {place === "learn" ? <LearnView /> : null}
             {place === "gitbook" ? <GitbookView open={open} /> : null}
+            {place === "library" ? <LibraryView open={open} /> : null}
             {place === "theme" ? <ThemeView current={theme} choose={chooseTheme} /> : null}
             {place === "narrative" ? <NarrativeView /> : null}
             {place === "memory" ? <MemoryView /> : null}

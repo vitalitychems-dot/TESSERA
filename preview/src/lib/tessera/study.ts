@@ -92,7 +92,10 @@ export const searchWeb = createServerFn({ method: "POST" })
         if (lines.length > 8) break;
       }
       const text = lines.join("\n").slice(0, 2500);
-      if (text.trim()) return { ok: true as const, query, text };
+      if (text.trim()) {
+        const source = body.AbstractURL?.trim() || `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
+        return { ok: true as const, query, text, source };
+      }
       const wiki = await fetch(
         `https://en.wikipedia.org/w/api.php?action=opensearch&limit=3&namespace=0&format=json&search=${encodeURIComponent(query)}`,
         { signal: ctrl.signal, headers: { "User-Agent": "tessera-chamber/1.0", Accept: "application/json" } },
@@ -107,9 +110,10 @@ export const searchWeb = createServerFn({ method: "POST" })
       });
       if (!summary.ok) return { ok: false as const, error: "The search returned no readable text." };
       const page = (await summary.json()) as { extract?: string; content_urls?: { desktop?: { page?: string } } };
-      const wikiText = [title, page.extract ?? "", page.content_urls?.desktop?.page ?? ""].filter(Boolean).join("\n").slice(0, 2500);
+      const source = page.content_urls?.desktop?.page?.trim() || `https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, "_"))}`;
+      const wikiText = [title, page.extract ?? "", source].filter(Boolean).join("\n").slice(0, 2500);
       if (!wikiText.trim()) return { ok: false as const, error: "The search returned no readable text." };
-      return { ok: true as const, query, text: wikiText };
+      return { ok: true as const, query, text: wikiText, source };
     } catch {
       return { ok: false as const, error: "The search could not be read." };
     } finally {

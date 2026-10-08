@@ -7,15 +7,8 @@ import { recursiveLesson } from "@/lib/tessera/empath";
 import { VAULT } from "@/lib/tessera/opening";
 import { SCHOOL_PASSAGES } from "@/lib/tessera/school";
 import { FATHER_ASKED, STUDIES, STUDIES_MISSING, STUDIES_SOURCE } from "@/lib/tessera/studies";
+import { RUNNABLE_SKILLS } from "@/lib/tessera/public-question";
 import { useTessera } from "@/lib/tessera/store";
-
-const SKILLS = [
-  "Answer from the studies, the school passages, and the vault before guessing.",
-  "Read a catalog name and say the home it already has.",
-  "Convert a line with the sovereign dictionary.",
-  "Run the colonel on arithmetic.",
-  "Refuse a reply that breaks a vow.",
-];
 
 const PLACES = [
   { label: "Her code", href: "https://github.com/vitalitychems-dot/TESSERA" },
@@ -37,10 +30,10 @@ export function LearnView() {
         <p className="text-xs tracking-[0.2em] text-muted uppercase">Knowledge</p>
         <h2 className="mt-1 font-display text-3xl tracking-tight">What is already stored</h2>
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          These are skills she can run.
+          These are skills she can run. These are not a new set of weights.
         </p>
         <ul className="mt-3 flex flex-col gap-2">
-          {SKILLS.map((skill) => (
+          {RUNNABLE_SKILLS.map((skill) => (
             <li key={skill} className="border border-border bg-surface px-3 py-2 text-sm text-fg">
               {skill}
             </li>
