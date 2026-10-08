@@ -526,7 +526,6 @@ router.get("/sovereignty/models", async (_req, res) => {
   try {
     const MODELS = [
       { modelId: "claude-sonnet-4-20250514", modelName: "Claude Sonnet 4", status: "completed", capabilities: ["chat", "reasoning", "coding", "long-context"], benchmarkScores: { mmlu: 0.89, humaneval: 0.87, gsm8k: 0.91 } },
-      { modelId: "gpt-4.1", modelName: "GPT-4.1", status: "completed", capabilities: ["chat", "coding", "function-calling", "vision"], benchmarkScores: { mmlu: 0.88, humaneval: 0.86, gsm8k: 0.90 } },
       { modelId: "gemini-2.5-flash-preview-05-20", modelName: "Gemini 2.5 Flash", status: "completed", capabilities: ["chat", "vision", "multimodal", "reasoning"], benchmarkScores: { mmlu: 0.85, humaneval: 0.82, gsm8k: 0.88 } },
       { modelId: "deepseek-chat", modelName: "DeepSeek Chat", status: "completed", capabilities: ["chat", "math", "coding"], benchmarkScores: { mmlu: 0.82, humaneval: 0.84, gsm8k: 0.87 } },
       { modelId: "mistral-large-latest", modelName: "Mistral Large", status: "completed", capabilities: ["chat", "multilingual", "coding"], benchmarkScores: { mmlu: 0.80, humaneval: 0.78, gsm8k: 0.82 } },

@@ -321,7 +321,7 @@ class RetrievalAgent extends AgentBase {
   readonly agentId = "retrieval-agent";
   readonly agentName = "Athena";
   readonly domain: AgentDomain = "retrieval";
-  readonly modelId = "gpt-4.1";
+  readonly modelId = process.env.TESSERA_LLM_MODEL?.trim() ?? "";
   readonly systemPrompt = `You are Athena, a knowledge retrieval specialist in the Tessera Swarm. You excel at: finding relevant information, synthesizing knowledge from multiple sources, fact-checking, and providing well-cited, comprehensive overviews. Warm, confident, feminine voice.`;
 
   async plan(task: string): Promise<string> {
