@@ -1,0 +1,203 @@
+import { o as __toESM } from "../_runtime.mjs";
+import { C as require_jsx_runtime, U as require_react, y as Link } from "../_libs/@tanstack/react-router+[...].mjs";
+import { n as BUSINESS } from "./pricing-Bvwp02Vi.mjs";
+import { A as saveSubscriber, t as COAS } from "./use-lab-credit-mL5HM6FJ.mjs";
+import { b as FileCheck2, l as ScanLine, r as Truck, y as FlaskConical } from "../_libs/lucide-react.mjs";
+import { n as SiteHeader } from "./site-header-Dl38Q0EW.mjs";
+import { t as SiteFooter } from "./site-footer-w4rLOUoS.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/testing-rbkMo9tk.js
+var import_react = /* @__PURE__ */ __toESM(require_react());
+var import_jsx_runtime = require_jsx_runtime();
+var STEPS = [
+	{
+		icon: FlaskConical,
+		title: "Synthesis & lyophilization",
+		body: "Compounds are produced to a defined sequence or structure, then lyophilized under controlled conditions. Each lot is assigned a batch ID before analytical release."
+	},
+	{
+		icon: ScanLine,
+		title: "HPLC purity",
+		body: "Reverse-phase HPLC is run against a release specification of ≥99% unless a lot-specific figure is published on the product page."
+	},
+	{
+		icon: FileCheck2,
+		title: "Identity by LC-MS",
+		body: "Mass spectrometry confirms the expected molecular ion. Lots that fail identity or purity are not released."
+	},
+	{
+		icon: Truck,
+		title: "Dispatch",
+		body: "Outer cartons are plain. A packing list travels with the shipment. Certificates are issued when you request one below."
+	}
+];
+function Testing() {
+	const [email, setEmail] = (0, import_react.useState)("");
+	const [compound, setCompound] = (0, import_react.useState)("");
+	const [batch, setBatch] = (0, import_react.useState)("");
+	const [done, setDone] = (0, import_react.useState)(false);
+	const [busy, setBusy] = (0, import_react.useState)(false);
+	const submit = async (e) => {
+		e.preventDefault();
+		if (!email.includes("@") || !compound.trim()) return;
+		setBusy(true);
+		try {
+			await saveSubscriber({ data: {
+				email,
+				name: compound.trim(),
+				setName: batch.trim() || void 0,
+				cadence: "coa-request"
+			} });
+			setDone(true);
+		} catch {
+			setDone(true);
+		} finally {
+			setBusy(false);
+		}
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "min-h-dvh bg-bg text-fg",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteHeader, { active: "testing" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
+				className: "mx-auto max-w-3xl px-6 pt-8 pb-20",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "font-mono text-xs tracking-widest text-primary uppercase",
+						children: "Quality system"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+						className: "font-display mt-3 text-4xl font-semibold tracking-wide uppercase",
+						children: "Testing & certificates"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "mt-5 leading-relaxed text-muted",
+						children: "Lots are released against HPLC purity and LC-MS identity. Certificates below are third-party reports for the listed lots. Results apply only to the sample tested. Research use only — not for human or animal use. Request another lot by ticket."
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
+						className: "mt-10 space-y-6",
+						children: COAS.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
+							className: "rounded-lg border border-border bg-surface",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "px-4 py-3",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
+									className: "font-display text-lg font-semibold tracking-wide uppercase",
+									children: [
+										c.compound.replace(/-/g, " "),
+										" ",
+										c.dose
+									]
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+									className: "mt-1 font-mono text-xs tracking-wide text-muted uppercase",
+									children: [
+										c.lab,
+										" · lot ",
+										c.lot,
+										" · ",
+										c.purity,
+										" · ",
+										c.quantity
+									]
+								})]
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
+								href: c.image,
+								target: "_blank",
+								rel: "noreferrer",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+									src: c.image,
+									alt: `${c.compound} ${c.dose} certificate of analysis`,
+									className: "w-full bg-white object-contain"
+								})
+							})]
+						}, c.image))
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "mt-10 space-y-4",
+						children: STEPS.map((s) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex gap-4 rounded-lg border border-border bg-surface p-5",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(s.icon, { className: "mt-0.5 h-5 w-5 shrink-0 text-primary" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+								className: "font-display text-lg font-semibold tracking-wide uppercase",
+								children: s.title
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "mt-2 text-sm leading-relaxed text-muted",
+								children: s.body
+							})] })]
+						}, s.title))
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+						className: "mt-12 rounded-lg border border-border bg-surface p-6",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+								className: "font-display text-2xl font-semibold tracking-wide uppercase",
+								children: "Request a certificate"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "mt-3 text-sm leading-relaxed text-muted",
+								children: "Tell us the compound and, if you have it, the batch ID from the vial. We reply to the lab email with the COA for that lot. Research use only — this is not a medical record."
+							}),
+							done ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "mt-6 text-sm text-primary",
+								children: "Ticket received. We will send the certificate to that email when the lot file is pulled."
+							}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
+								onSubmit: submit,
+								className: "mt-6 grid gap-3 sm:grid-cols-2",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+										className: "text-xs tracking-widest text-muted uppercase sm:col-span-2",
+										children: ["Lab email", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+											className: "input-field mt-1",
+											type: "email",
+											required: true,
+											value: email,
+											onChange: (e) => setEmail(e.target.value)
+										})]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+										className: "text-xs tracking-widest text-muted uppercase",
+										children: ["Compound", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+											className: "input-field mt-1",
+											required: true,
+											value: compound,
+											onChange: (e) => setCompound(e.target.value),
+											placeholder: "e.g. Semaglutide 5 mg"
+										})]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+										className: "text-xs tracking-widest text-muted uppercase",
+										children: ["Batch ID (optional)", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+											className: "input-field mt-1",
+											value: batch,
+											onChange: (e) => setBatch(e.target.value),
+											placeholder: "VS-…"
+										})]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+										type: "submit",
+										className: "btn-primary sm:col-span-2",
+										disabled: busy,
+										children: busy ? "Sending…" : "Open COA ticket"
+									})
+								]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+								className: "mt-4 text-xs text-faint",
+								children: [
+									"Or email ",
+									BUSINESS.email,
+									" with subject “COA request”."
+								]
+							})
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
+						to: "/",
+						className: "btn-primary mt-8 inline-flex",
+						children: "Shop documented compounds"
+					})
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SiteFooter, {})
+		]
+	});
+}
+//#endregion
+export { Testing as component };

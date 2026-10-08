@@ -1,0 +1,72 @@
+{
+  "config": {
+    "ociTenancy": "",
+    "ociCompartment": "",
+    "ociRegion": "us-ashburn-1",
+    "bucketName": "tesseract-phoenix-payloads",
+    "containerImage": "phoenix-shadow:latest",
+    "subnetId": "",
+    "encryptionKeyHex": "eb017894...",
+    "proxyUrl": ""
+  },
+  "missions": [
+    {
+      "id": "phx-mms8ba4u-9f389a",
+      "status": "completed",
+      "taskUrl": "https://pump.fun/coin/REDACTED",
+      "createdAt": 1773607837710,
+      "fingerprint": {
+        "viewportWidth": 1720,
+        "viewportHeight": 996,
+        "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
+        "timezone": "Asia/Tokyo",
+        "locale": "en-US",
+        "proxyRegion": "us-east"
+      },
+      "payloadId": "payload-phx-mms8ba4u-9f389a",
+      "dataSize": 628,
+      "scanUrl": "data:application/json;base64,Uk9iVmx4MnpVS3VUVUFHSkhrajg3em04ZlhMdjZBeU4rV2VnSDN1TzdDNnlNK0Zaby9mekhMaWQrVm84MHFzazkzTVZsZkQ0WENa...",
+      "completedAt": 1773607837861,
+      "expiresAt": 1773608137861
+    },
+    {
+      "id": "phx-mms8bdoz-fb92e8",
+      "status": "completed",
+      "taskUrl": "https://pump.fun/coin/REDACTED",
+      "createdAt": 1773607842323,
+      "fingerprint": {
+        "viewportWidth": 1848,
+        "viewportHeight": 914,
+        "userAgent": "Mozilla/5.0 (iPad; CPU OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+        "timezone": "America/Denver",
+        "locale": "fr-FR",
+        "proxyRegion": "ap-northeast"
+      },
+      "payloadId": "payload-phx-mms8bdoz-fb92e8",
+      "dataSize": 636,
+      "scanUrl": "data:application/json;base64,RDA1Rm1MMlZGbkZOWFZtMFI0WjlHY2x4eUJmUVlubjJ6Q2VkSi9kbU15MHZHc21ld0dtL3NMUkE2eGd6VllQTkZlNWhkeU91b2Fp...",
+      "completedAt": 1773607842454,
+      "expiresAt": 1773608142454
+    },
+    {
+      "id": "phx-mmsak9h2-554e40",
+      "status": "completed",
+      "taskUrl": "https://api.ipify.org?format=json",
+      "createdAt": 1773611615990,
+      "fingerprint": {
+        "viewportWidth": 1836,
+        "viewportHeight": 1053,
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
+        "timezone": "Asia/Tokyo",
+        "locale": "en-AU",
+        "proxyRegion": "eu-west"
+      },
+      "payloadId": "payload-phx-mmsak9h2-554e40",
+      "dataSize": 640,
+      "scanUrl": "data:application/json;base64,d2FZT2tBdmIvNXd0S3BDUGNBTUhGK3VpSmtyS2ZHb2JJRjVUZUZnbVk0d1JHbmtPeXFQWGRjVWh5ZkVMME9CTS9JWDdZMnV6Vmcx...",
+      "completedAt": 1773611616139,
+      "expiresAt": 1773611916139
+    }
+  ],
+  "lastSaved": 1773611616139
+}

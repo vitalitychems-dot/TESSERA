@@ -1,0 +1,53 @@
+## Replit — Round 1
+
+These are proposals only. **No tests were run.** Nothing has been posted to GitHub or changed in the repository.
+
+1. **Add search across conversations**
+   - **Reason:** Make older conversations easier to find without opening them one by one.
+   - **Test (proposed, not run):** Search for a phrase in a title and message, open the matching result, and check empty-result behavior.
+   - **Undo:** Remove the search interface and indexing code; leave conversation data unchanged.
+
+2. **Add a command palette for moving between views**
+   - **Reason:** Let people reach existing views quickly without navigating through multiple menus.
+   - **Test (proposed, not run):** Open it by keyboard and mouse, filter the view list, navigate to a result, and confirm Escape closes it.
+   - **Undo:** Remove the palette and its shortcut; keep existing navigation.
+
+3. **Preserve a separate draft for each conversation**
+   - **Reason:** Avoid losing unfinished messages when switching conversations or refreshing.
+   - **Test (proposed, not run):** Draft messages in two conversations, switch between them, refresh, and confirm drafts stay with the right conversation.
+   - **Undo:** Remove draft persistence and clear only saved draft data; keep sent messages intact.
+
+4. **Make failed sends recoverable**
+   - **Reason:** A temporary network error should not force someone to retype a message.
+   - **Test (proposed, not run):** Simulate a failed send, check the message remains available to retry, then simulate a successful retry.
+   - **Undo:** Revert the send-state and retry UI changes; retain the existing send behavior.
+
+5. **Add pin and archive controls to conversation lists**
+   - **Reason:** Help people keep active conversations visible and move inactive ones out of the way.
+   - **Test (proposed, not run):** Pin a conversation, archive and restore another, refresh, and confirm the list state is consistent.
+   - **Undo:** Remove pin/archive controls and restore the prior list behavior without deleting conversations.
+
+6. **Improve the mobile navigation layout**
+   - **Reason:** Make the existing views usable on narrow screens without crowding the main content.
+   - **Test (proposed, not run):** Check the navigation and key actions at phone and tablet widths, including opening and closing the menu by touch and keyboard.
+   - **Undo:** Revert the responsive layout changes; preserve desktop navigation.
+
+7. **Improve keyboard and screen-reader navigation**
+   - **Reason:** Make the main navigation and conversation controls usable without a mouse.
+   - **Test (proposed, not run):** Navigate the main views using only a keyboard and verify focus order, visible focus, labels, and heading structure.
+   - **Undo:** Revert the accessibility-specific changes while retaining unrelated UI updates.
+
+8. **Add useful empty states to existing views**
+   - **Reason:** Explain what a view is for and what action is available when it has no content.
+   - **Test (proposed, not run):** Check each empty view, confirm its action leads to the correct place, and confirm populated views are unchanged.
+   - **Undo:** Remove the new empty-state content and restore the prior blank-state rendering.
+
+9. **Show a “new since last visit” indicator for conversations**
+   - **Reason:** Help people notice conversations that have changed since they last checked.
+   - **Test (proposed, not run):** Update a conversation, check its indicator, open it, refresh, and confirm the indicator clears according to the chosen rule.
+   - **Undo:** Remove the indicator and its tracking state; do not remove conversation content.
+
+10. **Restore the last selected view after refresh**
+    - **Reason:** Reduce the effort of returning to the part of the app someone was using.
+    - **Test (proposed, not run):** Visit different views, refresh each one, and confirm the app returns to the expected view without breaking direct links.
+    - **Undo:** Remove the saved-view state and return to the default landing view after refresh.

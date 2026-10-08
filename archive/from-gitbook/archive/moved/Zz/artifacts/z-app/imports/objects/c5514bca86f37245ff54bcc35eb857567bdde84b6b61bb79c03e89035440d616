@@ -1,0 +1,145 @@
+import { n as createMiddleware } from "./ssr.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/pricing-Bvwp02Vi.js
+/**
+* Auth middleware for server functions — the standard way to get the caller's
+* verified user id. When deployed the session cookie is same-origin and rides
+* along automatically. In the live preview the client also forwards the bearer
+* token (partitioned cookies) via the `.client` hook below — call sites do not
+* thread it themselves.
+*
+*   import { createServerFn } from "@tanstack/react-start";
+*   import { getSql } from "@/lib/db";
+*   import { authMiddleware } from "@/lib/auth/middleware";
+*
+*   export const listTodos = createServerFn({ method: "GET" })
+*     .middleware([authMiddleware])
+*     .handler(async ({ context }) => {
+*       const sql = await getSql();
+*       return sql`select * from todos where user_id = ${context.userId}`;
+*     });
+*
+* Signed out with auth on (live preview included) -> throws `UnauthorizedError`
+* (see `verify.server.ts`). With auth disabled (`VITE_AUTH_ENABLED=false`, the
+* shipped default) it resolves the shared dev user — but throws instead when a
+* `DATABASE_URL` is also set, so an app without sign-in must not use this at
+* all. On the auth-on path, use it on every server function that touches
+* per-user data and scope every query by `context.userId`.
+*/
+var authMiddleware = createMiddleware({ type: "function" }).client(async ({ next }) => {
+	const { getBearerToken } = await import("./client-CVqXY6bk.mjs").then((n) => n.n).then((n) => n.n);
+	return next({ sendContext: { bearerToken: getBearerToken() ?? void 0 } });
+}).server(async ({ next, context }) => {
+	const { assertSameSiteRequest } = await import("./isolation.server-CGNg1r0B.mjs");
+	const { requireUserId } = await import("./verify.server-1-pItN8v.mjs");
+	assertSameSiteRequest();
+	return next({ context: { userId: await requireUserId(context.bearerToken) } });
+});
+var BUSINESS = {
+	name: "Vitality Chems",
+	legalName: "Vitality Supply",
+	email: "Vitalitysupply@icloud.com",
+	phone: "7797174445",
+	phoneDisplay: "(779) 717-4445",
+	phoneHref: "tel:+17797174445",
+	emailHref: "mailto:Vitalitysupply@icloud.com",
+	street: "2045 W Grand Ave",
+	unit: "Unit B",
+	city: "Chicago",
+	region: "IL",
+	postal: "60612",
+	country: "United States",
+	hours: "Mon–Fri 9:00 AM–5:00 PM CT",
+	domain: "vitalitychems.com"
+};
+var ADMIN_EMAIL = "vitalitysupply@icloud.com";
+function isAdminEmail(email) {
+	return (email ?? "").trim().toLowerCase() === ADMIN_EMAIL;
+}
+function formatAddress(multiline = false) {
+	const line1 = `${BUSINESS.street}, ${BUSINESS.unit}`;
+	const line2 = `${BUSINESS.city}, ${BUSINESS.region} ${BUSINESS.postal}`;
+	return multiline ? `${line1}\n${line2}` : `${line1}, ${line2}`;
+}
+var IL_NOTICE = "Illinois and federal notice: this material is a research chemical supplied to qualified laboratories. It is not a drug, not a compounded preparation, and not a dietary supplement under the Illinois Food, Drug and Cosmetic Act or the Federal Food, Drug, and Cosmetic Act. Vitality Supply is not a pharmacy and is not licensed to dispense medication. Nothing on this page is a claim that the material diagnoses, treats, cures, or prevents any disease, or is suitable for use in or on humans or animals.";
+var KNOWN_PROMOS = {
+	CRYPTO8: {
+		percent: 8,
+		kind: "promo",
+		label: "Crypto settlement"
+	},
+	RESEARCH10: {
+		percent: 10,
+		kind: "promo",
+		label: "Research account"
+	},
+	WELCOME10: {
+		percent: 10,
+		kind: "promo",
+		label: "First order"
+	},
+	LAB10: {
+		percent: 10,
+		kind: "affiliate",
+		label: "Lab partner"
+	},
+	AFF12: {
+		percent: 12.5,
+		kind: "affiliate",
+		label: "Affiliate 12.5%"
+	},
+	PARTNER: {
+		percent: 12.5,
+		kind: "affiliate",
+		label: "Partner 12.5%"
+	},
+	PARTNER2025: {
+		percent: 12.5,
+		kind: "affiliate",
+		label: "2025 partner"
+	}
+};
+function knownPromo(code) {
+	const c = code.trim().toUpperCase();
+	const known = KNOWN_PROMOS[c];
+	if (!known) return null;
+	return {
+		code: c,
+		...known
+	};
+}
+var BULK_TIERS = [
+	{
+		qty: 3,
+		percent: 8,
+		label: "3-vial lab rate"
+	},
+	{
+		qty: 5,
+		percent: 12,
+		label: "5-vial bench rate"
+	},
+	{
+		qty: 10,
+		percent: 18,
+		label: "10-vial inventory rate"
+	}
+];
+var CREDIT_RATE = .05;
+function bulkFor(qty) {
+	let hit = null;
+	for (const t of BULK_TIERS) if (qty >= t.qty) hit = t;
+	return hit;
+}
+function nextBulk(qty) {
+	return BULK_TIERS.find((t) => t.qty > qty) ?? null;
+}
+function money(n) {
+	return Math.round(n * 100) / 100;
+}
+function afterBulk(amount, qty) {
+	const b = bulkFor(qty);
+	if (!b) return money(amount);
+	return money(amount * (1 - b.percent / 100));
+}
+//#endregion
+export { KNOWN_PROMOS as a, bulkFor as c, knownPromo as d, money as f, IL_NOTICE as i, formatAddress as l, BUSINESS as n, afterBulk as o, nextBulk as p, CREDIT_RATE as r, authMiddleware as s, BULK_TIERS as t, isAdminEmail as u };

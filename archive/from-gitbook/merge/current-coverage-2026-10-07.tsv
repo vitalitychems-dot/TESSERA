@@ -1,0 +1,13 @@
+repo	branch	tracked_blobs	covered_blobs	uncovered_blobs	coverage_pct	delete_candidate	truncated
+1	main	913	705	208	77.22	False	False
+5t	main	1319	1078	241	81.73	False	False
+Grok-ready	main	1293	1251	42	96.75	False	False
+Run-Z-app		0	0	0	100.0	True	False
+Run-Z-app2		0	0	0	100.0	True	False
+T44	main	1277	1054	223	82.54	False	False
+TESS	main	1297	1077	220	83.04	False	False
+Zz	main	8752	2824	5928	32.27	False	False
+olive-giant-ever-glade	cycle/chamber-text	4319	2067	2252	47.86	False	False
+tessera-complete-archives	main	316	4	312	1.27	False	False
+tessera-grok-handoff	main	29	3	26	10.34	False	False
+tessera-grok-handoff-complete	main	328	12	316	3.66	False	False
