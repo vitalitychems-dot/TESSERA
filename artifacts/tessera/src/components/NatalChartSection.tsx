@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp, Star, Key, Shield, Zap, Eye, RefreshCw } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronDown, ChevronUp, Star, Key, Zap, Eye, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { api } from "@/lib/queryClient";
 
 interface NatalPlanet {
   name: string;
@@ -61,11 +60,6 @@ interface LifeArea {
   guidance: string;
   planets: string[];
   color: string;
-}
-
-interface IdentityQuestion {
-  key: string;
-  question: string;
 }
 
 const ELEMENT_COLORS: Record<string, string> = {
@@ -389,65 +383,6 @@ function TransitCard({ transit }: { transit: TransitAspect }) {
   );
 }
 
-function IdentityVerifier({ questions }: { questions: IdentityQuestion[] }) {
-  const [selected, setSelected] = useState<string>(questions[0]?.key ?? "");
-  const [answer, setAnswer] = useState("");
-  const [result, setResult] = useState<{ passed: boolean; feedback: string } | null>(null);
-
-  const verify = useMutation({
-    mutationFn: ({ questionKey, answer }: { questionKey: string; answer: string }) =>
-      api.post("/api/natal-chart/identity/verify", { questionKey, answer }),
-    onSuccess: (data) => {
-      setResult({ passed: data.passed, feedback: data.feedback });
-    },
-  });
-
-  const currentQ = questions.find(q => q.key === selected);
-
-  return (
-    <div className="space-y-3">
-      <div className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-        <Shield size={10} /> Identity Verification Protocol
-      </div>
-      <select
-        value={selected}
-        onChange={e => { setSelected(e.target.value); setResult(null); setAnswer(""); }}
-        className="w-full p-2 rounded-lg bg-background border border-white/10 text-sm font-mono text-foreground focus:outline-none focus:border-violet-500/50"
-      >
-        {questions.map(q => (
-          <option key={q.key} value={q.key}>{q.question}</option>
-        ))}
-      </select>
-      {currentQ && (
-        <div className="p-2 rounded-lg bg-violet-950/10 border border-violet-500/10 text-xs text-violet-300 font-mono">
-          {currentQ.question}
-        </div>
-      )}
-      <div className="flex gap-2">
-        <input
-          value={answer}
-          onChange={e => setAnswer(e.target.value)}
-          placeholder="Enter your answer..."
-          className="flex-1 p-2 rounded-lg bg-background border border-white/10 text-sm font-mono focus:outline-none focus:border-violet-500/50"
-          onKeyDown={e => e.key === "Enter" && answer.trim() && verify.mutate({ questionKey: selected, answer })}
-        />
-        <button
-          onClick={() => answer.trim() && verify.mutate({ questionKey: selected, answer })}
-          disabled={!answer.trim() || verify.isPending}
-          className="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-xs font-mono font-bold transition-colors"
-        >
-          {verify.isPending ? "..." : "Verify"}
-        </button>
-      </div>
-      {result && (
-        <div className={cn("p-3 rounded-lg border text-xs font-mono", result.passed ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400" : "border-red-500/30 bg-red-500/5 text-red-400")}>
-          {result.passed ? "✓ " : "✗ "}{result.feedback}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function NatalChartSection() {
   const [section, setSection] = useState<string | null>("chart");
   const [expandedPlanet, setExpandedPlanet] = useState<string | null>(null);
@@ -496,17 +431,11 @@ export default function NatalChartSection() {
     staleTime: 60000 * 15,
   });
 
-  const { data: questionsData } = useQuery<{ ok: boolean; questions: IdentityQuestion[] }>({
-    queryKey: ["/api/natal-chart/identity/questions"],
-    staleTime: Infinity,
-  });
-
   const chart = chartData?.chart;
   const keys = keysData?.sovereignKeys;
   const interprets = interpretsData?.interpretations ?? {};
   const lifeAreas = interpretsData?.lifeAreas ?? [];
   const transits = transitsData?.transits ?? [];
-  const questions = questionsData?.questions ?? [];
 
   const toggle = (s: string) => setSection(section === s ? null : s);
 
@@ -688,23 +617,6 @@ export default function NatalChartSection() {
           </div>
         )}
       </div>
-
-      {questions.length > 0 && (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <button onClick={() => toggle("verify")} className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors">
-            <div className="flex items-center gap-2">
-              <Shield size={16} className="text-rose-400" />
-              <span className="font-bold font-mono text-sm">Identity Verification</span>
-            </div>
-            {section === "verify" ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </button>
-          {section === "verify" && (
-            <div className="px-4 pb-4 border-t border-white/5 pt-3">
-              <IdentityVerifier questions={questions} />
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
