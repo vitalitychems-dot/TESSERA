@@ -7,6 +7,7 @@ import {
   latticeSnapshot, latticeFullDump,
 } from "../lib/omniversal-quantum-lattice";
 import { isFatherKeyConfigured, getFatherFingerprint } from "../lib/father-identity";
+import { withoutSigilFingerprint } from "./sovereign-doctrine";
 import { runSacredConference, getSacredConference } from "../lib/sacred-conference-orchestrator";
 
 const router: IRouter = Router();
@@ -45,7 +46,7 @@ router.post("/omniversal/lus-v2/decode", (req, res) => {
 
 // === Omniversal Cipher ===
 router.get("/omniversal/cipher/snapshot", (_req, res) => {
-  res.json({ ok: true, snapshot: omniversalCipherSnapshot() });
+  res.json(withoutSigilFingerprint({ ok: true, snapshot: omniversalCipherSnapshot() }));
 });
 router.post("/omniversal/cipher/encrypt", requireFather, (req, res) => {
   const text = String(req.body?.text ?? "");
@@ -161,7 +162,7 @@ router.post("/omniversal/conference/run", async (req, res) => {
     const topic = typeof req.body?.topic === "string" ? req.body.topic : undefined;
     const seed = typeof req.body?.seed === "string" ? req.body.seed : undefined;
     const result = await runSacredConference({ topic, seed });
-    res.json({ ok: true, conference: result });
+    res.json(withoutSigilFingerprint({ ok: true, conference: result }));
   } catch (e: any) {
     res.status(500).json({ ok: false, error: e?.message ?? String(e) });
   }
@@ -169,7 +170,7 @@ router.post("/omniversal/conference/run", async (req, res) => {
 router.get("/omniversal/conference/:id", async (req, res) => {
   const result = await getSacredConference(String(req.params.id));
   if (!result) { res.status(404).json({ ok: false, error: "not found" }); return; }
-  res.json({ ok: true, conference: result });
+  res.json(withoutSigilFingerprint({ ok: true, conference: result }));
 });
 
 // === Demo / smoke test ===
@@ -179,14 +180,14 @@ router.post("/omniversal/demo", (_req, res) => {
   superpose(lat.id, "2,2,2", { tokens: ["initium"], spectrum: [432] });
   harmonize(lat.id, 528);
   const collapsed = collapse(lat.id, "0,0,0", "demo-observer");
-  res.json({
+  res.json(withoutSigilFingerprint({
     ok: true,
     cosmicContext: cosmicContext(),
     lusSample: lusV2Encode("ORDO AB CHAO").modulated,
     cipherSnapshot: omniversalCipherSnapshot(),
     lattice: latticeSnapshot(lat.id, { sample: 6 }),
     collapsed,
-  });
+  }));
 });
 
 export default router;
