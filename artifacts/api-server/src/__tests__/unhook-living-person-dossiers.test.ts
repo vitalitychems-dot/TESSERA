@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import express from "express";
 import { createServer, type Server } from "node:http";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
@@ -159,9 +159,21 @@ describe("unhook living-person dossiers", () => {
     expect(files).not.toContain("political-dossiers.ts");
     for (const name of files) {
       const source = readFileSync(join(routesDir, name), "utf8");
-      expect(source, name).not.toMatch(/from ["'][^"']*political-dossiers["']/);
-      expect(source, name).not.toMatch(/from ["'][^"']*recruit-dossiers-extended["']/);
+      expect(source, name).not.toMatch(/political-dossiers/);
+      expect(source, name).not.toMatch(/recruit-dossiers/);
       expect(source, name).not.toMatch(/from ["'][^"']*shepherd-negotiation["']/);
+    }
+  });
+
+  it("no longer has the living-person dossier modules", () => {
+    const libDir = fileURLToPath(new URL("../lib/", import.meta.url));
+    const removed = [
+      "political-dossiers.ts",
+      "recruit-dossiers-extended.ts",
+      "shepherd-negotiation.ts",
+    ];
+    for (const name of removed) {
+      expect(existsSync(join(libDir, name)), name).toBe(false);
     }
   });
 });
