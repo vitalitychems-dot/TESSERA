@@ -34,16 +34,16 @@ Primary cloud/OpenAI-compat path (this is what main still uses):
 | `artifacts/api-server/src/lib/provider-registry.ts` | `PROVIDER_CONFIGS`, `getProviderConfigs()` | Catalog incl. `xai` / `ollama` (metadata, not the live pen wire) |
 | `artifacts/api-server/src/lib/local-model-manager.ts` | `LocalAdapter`, `LocalModelManager`, `OllamaAdapter`, `VllmAdapter`, `LmStudioAdapter`, `TgiAdapter`, `LlamaCppAdapter`, `getLocalModelManager()`, `chat()` | Parallel **local** stack; OpenAI-compat for vLLM / LM Studio |
 | `artifacts/api-server/src/routes/local-models.ts` | `/local-models/status`, `/health-check`, `/chat`, `/adapters` | HTTP surface for local adapters |
-| `artifacts/api-server/scripts/run-real-conference.mjs` | direct `fetch(`${BASE}/chat/completions`)` | Conference runner using `AI_INTEGRATIONS_OPENAI_*` on main |
+| `artifacts/api-server/scripts/run-real-conference.mjs` | direct `fetch(`${BASE}/chat/completions`)` | Conference runner using `TESSERA_LLM_*` on main |
 | `artifacts/tessera/src/lib/puter-ai.ts` | `puterChat`, model list incl. `grok-3` | Frontend Puter proxy path (not server pen) |
 | `artifacts/tessera/src/lib/swarm-agents.ts` | swarm agents with `grok-3` | Frontend multi-agent via Puter |
 
 `llm-client.getClient()` (main):
 
-- `baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL` (required)
-- `apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? "_DUMMY_API_KEY_"`
-- Default model in `callLLM`: `"gpt-5-mini"`
-- Gate: `isLLMAvailable()` false when `SOVEREIGN_NO_EXTERNAL_LLM` is `"1"`/`true` (default `"1"`)
+- `baseURL` is `TESSERA_LLM_BASE_URL`. Unset → throw `TESSERA_LLM_BASE_URL not set`, and no HTTP.
+- `apiKey` is `TESSERA_LLM_API_KEY`. Unset or whitespace → throw `TESSERA_LLM_API_KEY not set`. There is no dummy key, and no `Authorization` bearer header unless the trimmed key is non-empty.
+- `callLLM` uses an explicit model argument or `TESSERA_LLM_MODEL`. Unset → throw `TESSERA_LLM_MODEL not set`. There is no baked-in model-name default.
+- Gate: `isLLMAvailable()` is false when `SOVEREIGN_NO_EXTERNAL_LLM` is `"1"`/`true` (default `"1"`), and also false unless `TESSERA_LLM_BASE_URL`, `TESSERA_LLM_API_KEY`, and `TESSERA_LLM_MODEL` are all non-empty.
 
 ### Pen-provider branch work (NOT on `main`)
 
@@ -79,7 +79,7 @@ Index confirmed `llm-client`, `local-model-manager` (`VllmAdapter.chat`, `LmStud
 **Yes — three overlapping slots:**
 
 1. **Main cloud slot (already OpenAI-compat):**  
-   `AI_INTEGRATIONS_OPENAI_BASE_URL` → OpenAI SDK `baseURL` → `chat.completions`. Any OpenAI-compat server (including local `http://127.0.0.1:PORT/v1`) can be pointed here **today**, but that also becomes the global LLM path and is still gated by `SOVEREIGN_NO_EXTERNAL_LLM` (default kill-switch ON).
+   `TESSERA_LLM_BASE_URL` → OpenAI SDK `baseURL` → `chat.completions`. Any OpenAI-compat server (including local `http://127.0.0.1:PORT/v1`) can be pointed here **today**, but that also becomes the global LLM path and is still gated by `SOVEREIGN_NO_EXTERNAL_LLM` (default kill-switch ON).
 
 2. **LocalModelManager OpenAI-compat adapters (main):**  
    - `VllmAdapter`: `VLLM_ENDPOINT` default `http://localhost:8000`, calls `${endpoint}/v1/chat/completions` and `/v1/models`; enabled only when `VLLM_ENABLED=true`.  
@@ -100,21 +100,21 @@ Index confirmed `llm-client`, `local-model-manager` (`VllmAdapter.chat`, `LmStud
 
 | Location | IDs |
 |---|---|
-| `callLLM` default (main) | `gpt-5-mini` |
-| `adaptive-router` tiers | `gpt-5-nano`, `gpt-5-mini`, `gpt-5` |
-| `conversations` / `rick` / `rick-proposals` callers | often `gpt-4.1` |
-| `neural-embeddings` | `text-embedding-3-small` |
+| `callLLM` (main) | no default; requires `TESSERA_LLM_MODEL` or an explicit model, else throw |
+| `adaptive-router` tiers | same env; `classifyQuery` uses the label `Tessera` when unset and does not call HTTP; `modelForTier` throws if unset |
+| `conversations` / `rick` / `rick-proposals` callers | `tesseraChatCompletion`; missing base URL, key, or model returns the local fallback and makes no HTTP |
+| `neural-embeddings` | `TESSERA_EMBED_MODEL`; unset uses the local fallback and makes no HTTP |
 | `provider-registry` xAI | `grok-3` |
 | `provider-registry` others | anthropic / openai / google / deepseek / groq / mistral / meta / qwen / moonshot catalogs |
 | Ollama preferred (local manager) | `llama3.2:3b`, `llama3.2:1b`, `mistral:7b`, `phi3:mini` |
 | Pen branch label | `Qwen 2.5 1.5B Instruct (local test)` |
-| Frontend Puter | `gpt-4o`, `grok-3`, etc. |
+| Frontend Puter | catalog ids such as `grok-3`; retrieval agent reads `import.meta.env.VITE_TESSERA_LLM_MODEL` and fails closed when that value is empty |
 | Simulation helper (archives) | `TESSERA_XAI_MODEL` (test-only name) |
 
 ### Env var **names** (no values)
 
 **LLM / pen / local (code-referenced):**  
-`AI_INTEGRATIONS_OPENAI_BASE_URL`, `AI_INTEGRATIONS_OPENAI_API_KEY`, `SOVEREIGN_NO_EXTERNAL_LLM`, `LLM_TIMEOUT_MS`, `CONFERENCE_MODEL`,  
+`TESSERA_LLM_BASE_URL`, `TESSERA_LLM_API_KEY`, `TESSERA_LLM_MODEL`, `TESSERA_EMBED_MODEL`, `VITE_TESSERA_LLM_MODEL`, `SOVEREIGN_NO_EXTERNAL_LLM`, `LLM_TIMEOUT_MS`, `CONFERENCE_MODEL`,  
 `OLLAMA_ENDPOINT`, `LLAMA_CPP_ENDPOINT`, `LLAMA_CPP_ENABLED`, `VLLM_ENDPOINT`, `VLLM_ENABLED`, `LM_STUDIO_ENDPOINT`, `LM_STUDIO_ENABLED`, `TGI_ENDPOINT`, `TGI_ENABLED`,  
 `TESSERA_PEN_URL` (pen branches / `.env.example` on those commits),  
 `TESSERA_PEN_ENABLED` (**documented in Gitbook GLM5 audit / AGI-06 protocol; not found as a code gate on Origin main or pen-provider.ts**),  

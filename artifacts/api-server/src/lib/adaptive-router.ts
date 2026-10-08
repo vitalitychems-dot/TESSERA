@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import { resolveTesseraLlmModel } from "./tessera-llm-http";
 
 export type ModelTier = "fast" | "balanced" | "strong" | "reasoning";
 
@@ -10,12 +11,13 @@ export interface RoutingDecision {
   estimatedTokens: number;
 }
 
-const MODELS: Record<ModelTier, string> = {
-  fast: "gpt-5-nano",
-  balanced: "gpt-5-mini",
-  strong: "gpt-5",
-  reasoning: "o4-mini",
-};
+function modelForDecision(): string {
+  try {
+    return resolveTesseraLlmModel();
+  } catch {
+    return "Tessera";
+  }
+}
 
 const STRONG_TRIGGERS = [
   /\b(prove|proof|derive|theorem|lemma)\b/i,
@@ -61,7 +63,7 @@ export function classifyQuery(input: string, opts?: { hasContext?: boolean; isAd
 
   const decision: RoutingDecision = {
     tier,
-    model: MODELS[tier],
+    model: modelForDecision(),
     reason,
     isStrong: tier === "strong" || tier === "reasoning",
     estimatedTokens: tokens,
@@ -70,6 +72,6 @@ export function classifyQuery(input: string, opts?: { hasContext?: boolean; isAd
   return decision;
 }
 
-export function modelForTier(tier: ModelTier): string {
-  return MODELS[tier];
+export function modelForTier(_tier: ModelTier): string {
+  return resolveTesseraLlmModel();
 }
