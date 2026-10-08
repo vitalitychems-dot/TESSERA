@@ -20,4 +20,4 @@ Use the Gitbook repository for:
 
 From a clean clone, run the checks documented in `README.md` and record actual results in Gitbook. Do not claim a live deployment, model training, provider call, or successful migration without evidence. Do not commit credentials, private runtime data, customer records, or unreviewed archives.
 
-Historical source repositories remain unchanged until the owner approves an exact deletion manifest. The final state is intended to contain exactly these two active repositories: `TESSERA` and `Gitbook`.
+The other owner repositories were deleted on 2026-10-08 after their unique blobs were copied to Gitbook `archive/moved/`. The account now contains exactly `TESSERA` and `Gitbook`. See `docs/LAYOUT.md`.
