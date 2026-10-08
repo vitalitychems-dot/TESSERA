@@ -367,7 +367,7 @@ export async function runGrandEvolutionCycle(): Promise<EvolutionCycleResult> {
       `Ratified at ≥2/3 supermajority: ${ratifiedCount}.`,
       `Sealed and marked implemented: ${implementedCount}.`,
       `Dramatic upgrades: ${Object.values(dramaticUpgrades).filter(Boolean).length}/5 categories.`,
-      `LLM-backed deliberation: ${llmEnabled ? "ENABLED (real per-agent ballots via gpt-5-mini)" : "DISABLED — fell back to deterministic sovereign voting"}.`,
+      `LLM-backed deliberation: ${llmEnabled ? "ENABLED (real per-agent ballots via TESSERA_LLM_MODEL)" : "DISABLED — fell back to deterministic sovereign voting"}.`,
       `Duration: ${Math.round(durationMs / 1000)}s.`,
     ].join("\n");
 

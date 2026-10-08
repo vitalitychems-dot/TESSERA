@@ -27,15 +27,6 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     capabilities: ["chat", "reasoning", "coding", "analysis", "long-context"],
   },
   {
-    id: "openai",
-    name: "OpenAI",
-    isExternal: true,
-    type: "cloud",
-    tier: 2,
-    models: ["gpt-4o", "gpt-4.1", "gpt-4o-mini"],
-    capabilities: ["chat", "coding", "function-calling", "vision", "embeddings"],
-  },
-  {
     id: "google",
     name: "Google",
     isExternal: true,

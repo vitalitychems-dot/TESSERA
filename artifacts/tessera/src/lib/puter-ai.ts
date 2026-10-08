@@ -48,10 +48,13 @@ export function isPuterAvailable(): boolean {
 
 export async function puterChat(
   messages: { role: string; content: string }[],
-  model: string = "gpt-4o",
+  model: string,
   onChunk?: (text: string) => void,
   abortSignal?: AbortSignal
 ): Promise<string> {
+  if (!model.trim()) {
+    throw new Error("TESSERA_LLM_MODEL not set");
+  }
   if (!isPuterAvailable()) {
     throw new Error("Puter.js not loaded");
   }
@@ -98,7 +101,6 @@ export async function puterChat(
 
 export const TESSERACT_SWARM_MODELS = [
   { id: "claude-sonnet-4-20250514", label: "Claude Sonnet 4", provider: "Anthropic", role: "Architect" },
-  { id: "gpt-4.1", label: "GPT-4.1", provider: "OpenAI", role: "Strategist" },
   { id: "deepseek-chat", label: "DeepSeek V3", provider: "DeepSeek", role: "Reasoner" },
   { id: "gemini-2.5-flash-preview-05-20", label: "Gemini 2.5 Flash", provider: "Google", role: "Analyst" },
   { id: "grok-3", label: "Grok 3", provider: "xAI", role: "Executor" },
@@ -292,8 +294,11 @@ export async function tesseractSwarm(
 
 export async function puterChatServerSide(
   messages: { role: string; content: string }[],
-  model: string = "gpt-4o"
+  model: string
 ): Promise<string> {
+  if (!model.trim()) {
+    throw new Error("TESSERA_LLM_MODEL not set");
+  }
   const res = await fetch("/api/puter-proxy-chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
