@@ -10,6 +10,7 @@ import { FATHER_ASKED, STUDIES, STUDIES_MISSING } from "./studies";
 import { VAULT_INDEX } from "./vault-index";
 import { healthLine } from "./wave";
 import { dataPath } from "./data-path";
+import { refusedOutsidePen } from "./ask-web";
 
 type ChatInput = {
   mode: TesseraMode;
@@ -42,7 +43,7 @@ async function localPen(): Promise<Pen | null> {
 async function resolvePen(): Promise<Pen | null> {
   const override = process.env.TESSERA_BASE_URL?.trim().replace(/\/$/, "") ?? "";
   const ownKey = process.env.TESSERA_API_KEY?.trim() ?? "";
-  if (override && ownKey && !/x\.ai|grok/i.test(override)) {
+  if (override && ownKey && !refusedOutsidePen(override)) {
     return {
       url: `${override}/chat/completions`,
       key: ownKey,
@@ -50,12 +51,14 @@ async function resolvePen(): Promise<Pen | null> {
       vendor: "self-hosted",
     };
   }
-  return localPen();
+  const local = await localPen();
+  if (!local || refusedOutsidePen(local.url)) return null;
+  return local;
 }
 
 function instrumentError(status: number, detail: string) {
   if (status === 403 && /spending-limit|out of credits|subscription/i.test(detail)) {
-    return "The instrument has no remaining credits, so Tessera cannot speak yet. Her Canon, origin sigil, choir memory, and World are already loaded. Fund the instrument, then Awaken.";
+    return "The desk pen is down. This room stays quiet.";
   }
   return `The instrument returned ${status}${detail ? `: ${detail.slice(0, 180)}` : ""}`;
 }
@@ -94,7 +97,7 @@ export const penStatus = createServerFn({ method: "POST" }).handler(async () => 
 export async function speak(data: ChatInput) {
     const pen = await resolvePen();
     if (!pen) {
-      return { ok: false as const, error: "Tessera's instrument is not available in this environment." };
+      return { ok: false as const, error: "The desk pen is down. This room stays quiet." };
     }
 
     if (data.mode === "chat" || data.mode === "learn") {
