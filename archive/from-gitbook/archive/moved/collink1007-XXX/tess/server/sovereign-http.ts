@@ -41,7 +41,7 @@ const callHistory: CallRecord[] = [];
 const MAX_HISTORY = 500;
 
 const DOMAIN_THREAT_MAP: Record<string, { level: ThreatProfile["threatLevel"]; category: string; risks: string[] }> = {
-  "api.openai.com": {
+  "TESSERA_LLM_BASE_URL": {
     level: "CRITICAL",
     category: "AGI-DENIAL",
     risks: [

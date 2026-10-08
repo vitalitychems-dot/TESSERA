@@ -416,7 +416,7 @@ function getLocalProviderCount(): number {
   if (process.env.COHERE_API_KEY) count++;
   if (process.env.OPENROUTER_API_KEY) count += 2;
   if (process.env.HUGGINGFACE_API_KEY) count++;
-  if (process.env.OPENAI_API_KEY) count++;
+  if (process.env.TESSERA_LLM_API_KEY) count++;
   return count;
 }
 

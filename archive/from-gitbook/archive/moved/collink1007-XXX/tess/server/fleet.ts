@@ -927,7 +927,7 @@ export function handleUnificationRequest(request: any): any {
   const envKeys: Array<{ provider: string; maskedKey: string }> = [];
   const keyMappings: Record<string, string> = {
     OPENROUTER_API_KEY: "openrouter",
-    OPENAI_API_KEY: "openai",
+    TESSERA_LLM_API_KEY: "openai",
     DEEPSEEK_API_KEY: "deepseek",
     GEMINI_API_KEY: "gemini",
     GROK_API_KEY: "grok",

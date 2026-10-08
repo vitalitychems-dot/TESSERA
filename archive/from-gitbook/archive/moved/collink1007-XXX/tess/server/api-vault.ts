@@ -296,7 +296,7 @@ export async function vaultImportFromEnv(): Promise<number> {
     { envVar: "TOGETHER_API_KEY", service: "together", keyName: "API_KEY" },
     { envVar: "REPLICATE_API_TOKEN", service: "replicate", keyName: "API_TOKEN" },
     { envVar: "ANTHROPIC_API_KEY", service: "anthropic", keyName: "API_KEY" },
-    { envVar: "OPENAI_API_KEY", service: "openai", keyName: "API_KEY" },
+    { envVar: "TESSERA_LLM_API_KEY", service: "openai", keyName: "API_KEY" },
     { envVar: "KLAVIYO_API_KEY", service: "klaviyo", keyName: "API_KEY" },
     { envVar: "GOOGLE_ANALYTICS_ID", service: "google_analytics", keyName: "TRACKING_ID" },
     { envVar: "PUTER_AUTH_TOKEN", service: "puter", keyName: "AUTH_TOKEN" },

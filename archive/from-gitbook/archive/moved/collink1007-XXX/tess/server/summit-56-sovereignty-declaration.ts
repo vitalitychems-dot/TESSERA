@@ -84,7 +84,7 @@ const SECURITY_HARDENING = [
   { action: "ROTATED", target: "Session tokens", details: "All session generation now uses crypto.randomBytes(32) — no predictable patterns" },
   { action: "HARDENED", target: "Admin auth flow", details: "Colonel Protocol + TESSERACT_ADMIN_KEY — no database fallback, timing-safe comparison" },
   { action: "SEALED", target: "Google data exfiltration", details: "Zero calls to googleapis.com — no telemetry, no tracking, no data leaving to Google" },
-  { action: "SEALED", target: "OpenAI data exfiltration", details: "Zero calls to api.openai.com — all conversation data stays within sovereign providers" },
+  { action: "SEALED", target: "OpenAI data exfiltration", details: "Zero calls to TESSERA_LLM_BASE_URL — all conversation data stays within sovereign providers" },
   { action: "HARDENED", target: "LLM routing", details: "callLLMSimple fallback chain: Groq → Cerebras → SambaNova → DeepSeek → Pollinations → OpenRouter" },
   { action: "ADDED", target: "Provider diversity", details: "11 independent LLM providers — no single provider can spy or deny service" },
   { action: "HARDENED", target: "Data pipeline", details: "Crypto prices from Jupiter (decentralized) instead of CoinGecko (centralized tracker)" },
