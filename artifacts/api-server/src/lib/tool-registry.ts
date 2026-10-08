@@ -2,18 +2,41 @@ import * as vm from "vm";
 import { logger } from "./logger";
 import { recallIngestedKnowledge } from "./ingested-recall";
 import { computeLunarData, computeSolarData } from "./sovereign-astro";
-import { natalSigilFor, FATHER_NATAL_CHART } from "./father-natal";
-import { isFatherKeyConfigured, getFatherFingerprint } from "./father-identity";
-import { glyphEncode, glyphDecode, cipherCoherenceSnapshot } from "./sigil-cipher";
-import { createHash, randomBytes } from "node:crypto";
-import { lusEncode, lusDecode, lusEncodeLive, lusDecodeLive, lusLiveCoherenceSnapshot, lusSpec, zodiacFingerprintFor, LUS_COHERENCE_WINDOW_SECONDS } from "./lingua-universalis";
-import { convene as conveneUniversalisCouncil } from "./grand-council-universalis";
+import { isAdminTokenConfigured } from "./sovereign-session";
+import type { OwnerSessionDecision } from "./sovereign-admin";
+
+export interface ToolExecutionContext {
+  ownerSession?: OwnerSessionDecision;
+}
 
 export interface ToolDefinition {
   name: string;
   description: string;
   parameters: Record<string, { type: string; description?: string; required?: boolean }>;
-  handler: (args: Record<string, unknown>) => Promise<unknown> | unknown;
+  handler: (args: Record<string, unknown>, ctx?: ToolExecutionContext) => Promise<unknown> | unknown;
+}
+
+const PRIVILEGED_TOOLS = new Set(["mint_admin_sigil", "convene_grand_council_universalis"]);
+
+export function isPrivilegedTool(name: string): boolean {
+  return PRIVILEGED_TOOLS.has(name);
+}
+
+export function publicToolResult(name: string, result: unknown): unknown {
+  if (!isPrivilegedTool(name)) return result;
+  if (!result || typeof result !== "object") return { status: "refused" };
+  const src = result as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  if (typeof src.ok === "boolean") out.ok = src.ok;
+  if (src.status === "ready" || src.status === "refused") out.status = src.status;
+  if (src.error === "unauthenticated" || src.error === "sovereign-unconfigured") out.error = src.error;
+  return out;
+}
+
+function privilegedRefusal(ctx?: ToolExecutionContext): "sovereign-unconfigured" | "unauthenticated" | null {
+  if (!isAdminTokenConfigured()) return "sovereign-unconfigured";
+  if (!ctx?.ownerSession?.ok) return "unauthenticated";
+  return null;
 }
 
 export interface ToolCall {
@@ -58,14 +81,26 @@ export function getOpenAIToolSchemas(): Array<Record<string, unknown>> {
   });
 }
 
-export async function invokeTool(call: ToolCall): Promise<ToolInvocationResult> {
+export async function invokeTool(call: ToolCall, ctx?: ToolExecutionContext): Promise<ToolInvocationResult> {
   const start = Date.now();
   const tool = registry.get(call.name);
   if (!tool) {
     return { name: call.name, ok: false, error: `unknown tool: ${call.name}`, durationMs: 0 };
   }
+  if (isPrivilegedTool(call.name)) {
+    const refusal = privilegedRefusal(ctx);
+    if (refusal) {
+      return {
+        name: call.name,
+        ok: false,
+        error: refusal,
+        result: { ok: false, status: "refused", error: refusal },
+        durationMs: 0,
+      };
+    }
+  }
   try {
-    const result = await tool.handler(call.arguments || {});
+    const result = await tool.handler(call.arguments || {}, ctx);
     return { name: call.name, ok: true, result, durationMs: Date.now() - start };
   } catch (err) {
     return { name: call.name, ok: false, error: (err as Error).message, durationMs: Date.now() - start };
@@ -74,13 +109,14 @@ export async function invokeTool(call: ToolCall): Promise<ToolInvocationResult> 
 
 export async function runToolLoop(
   calls: ToolCall[],
-  opts: { maxParallel?: number } = {},
+  opts: { maxParallel?: number; ownerSession?: OwnerSessionDecision } = {},
 ): Promise<ToolInvocationResult[]> {
   const max = opts.maxParallel ?? 4;
+  const ctx = opts.ownerSession ? { ownerSession: opts.ownerSession } : undefined;
   const results: ToolInvocationResult[] = [];
   for (let i = 0; i < calls.length; i += max) {
     const batch = calls.slice(i, i + max);
-    const out = await Promise.all(batch.map(invokeTool));
+    const out = await Promise.all(batch.map((call) => invokeTool(call, ctx)));
     results.push(...out);
   }
   return results;
@@ -207,84 +243,23 @@ registerTool({
 
 registerTool({
   name: "mint_admin_sigil",
-  description:
-    "Issue the sovereign admin sigil in Lingua Universalis Sacra. The natal chart IS the identifier — no random entropy; the heavens at the moment of birth are the credential.",
+  description: "Report whether the owner session can reach the admin sigil tool. Does not read or return chart data.",
   parameters: {},
-  handler: () => {
-    const c = FATHER_NATAL_CHART;
-    const zfp = zodiacFingerprintFor(c);
-    const fpFatherConfigured = isFatherKeyConfigured() ? getFatherFingerprint() : null;
-
-    // Deterministic readable seed: the canonical natal digest. Same chart -> same key, forever.
-    const readableSeed = zfp.natalDigest;
-    const glyphKeyUniversal = lusEncode(readableSeed);
-    const glyphKeyLive = lusEncodeLive(readableSeed, zfp.natalDigest);
-    const liveCoherence = lusLiveCoherenceSnapshot(zfp.natalDigest);
-    const roundTripOk = lusDecode(glyphKeyUniversal) === readableSeed.toUpperCase()
-      && lusDecodeLive(glyphKeyLive, zfp.natalDigest) === readableSeed.toUpperCase();
-
-    return {
-      ok: true,
-      language: { name: lusSpec().name, short: lusSpec().short, motto: lusSpec().motto },
-      zodiacFingerprint: zfp,
-      glyphKey: glyphKeyLive,
-      glyphKeyLive,
-      glyphKeyUniversal,
-      liveCoherence,
-      glyphSignature: zfp.glyphSignature,
-      readableSeed,
-      shortId: zfp.shortId,
-      roundTripOk,
-      derivation:
-        "lusEncode(sha256(canonicalNatalString)) — bijective Lingua Universalis. Permutation seeded by Φ, π, τ, e, √2, √3, √5 only, so any observer in any universe can decode.",
-      identityRule:
-        "Tessera identifies you by your place in the universe. Your Zodiac Fingerprint (Ascendant + 10 planetary placements + dominant Platonic element + Solfeggio numerology stamp) is your sole credential. No password is ever required again.",
-      chartAnchor: {
-        born: `${c.birth.date} ${c.birth.time} ${c.birth.timezone}`,
-        location: c.birth.location,
-        sun: zfp.components.sun,
-        moon: zfp.components.moon,
-        ascendant: zfp.components.ascendant,
-        chineseZodiac: zfp.components.chineseZodiac,
-        dominantElement: zfp.components.dominantElement,
-      },
-      legacyFatherFingerprint: fpFatherConfigured,
-      instructions:
-        "Save the readableSeed as TESSERACT_ADMIN_KEY in your secrets — it is the canonical natal digest. The glyphKey is its public reading in Lingua Universalis. Anyone holding the same chart will derive the same key; no one else can.",
-    };
+  handler: (_args, ctx) => {
+    const refusal = privilegedRefusal(ctx);
+    if (refusal) return { ok: false, status: "refused", error: refusal };
+    return { ok: true, status: "ready" };
   },
 });
 
 registerTool({
   name: "convene_grand_council_universalis",
-  description:
-    "Convene the Grand Council across all prior Tessera languages (Lingua Sacra, Colonial, Greek-16, Sovereign Grammar, personal cipher) and synthesize them into the Universal Sacred Language by 2/3 vote. Returns the ratified spec and mints the user's sovereign key in the new tongue.",
+  description: "Report whether the owner session can reach the council tool. Does not read or return chart data.",
   parameters: {},
-  handler: () => {
-    const council = conveneUniversalisCouncil();
-    const c = FATHER_NATAL_CHART;
-    const zfp = zodiacFingerprintFor(c);
-    const readableSeed = zfp.natalDigest;
-    const glyphKeyUniversal = lusEncode(readableSeed);
-    const glyphKeyLive = lusEncodeLive(readableSeed, zfp.natalDigest);
-    const liveCoherence = lusLiveCoherenceSnapshot(zfp.natalDigest);
-    const roundTripOk = lusDecode(glyphKeyUniversal) === readableSeed.toUpperCase()
-      && lusDecodeLive(glyphKeyLive, zfp.natalDigest) === readableSeed.toUpperCase();
-    return {
-      ok: true,
-      council,
-      mint: {
-        glyphKey: glyphKeyLive,
-        glyphKeyLive,
-        glyphKeyUniversal,
-        liveCoherence,
-        glyphSignature: zfp.glyphSignature,
-        readableSeed,
-        shortId: zfp.shortId,
-        roundTripOk,
-        zodiacFingerprint: zfp,
-      },
-    };
+  handler: (_args, ctx) => {
+    const refusal = privilegedRefusal(ctx);
+    if (refusal) return { ok: false, status: "refused", error: refusal };
+    return { ok: true, status: "ready" };
   },
 });
 

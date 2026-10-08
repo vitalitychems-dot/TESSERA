@@ -1,4 +1,4 @@
-import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
+import { Router, type IRouter } from "express";
 import { cosmicContext } from "../lib/cosmic-context";
 import { lusV2Encode, lusV2Decode, lusV2Spec } from "../lib/lus-v2";
 import { omniversalEncrypt, omniversalDecrypt, omniversalCipherSnapshot, type OmniversalCipherEnvelope } from "../lib/omniversal-cipher";
@@ -6,22 +6,11 @@ import {
   createLattice, getLattice, listLattices, superpose, entangle, harmonize, collapse,
   latticeSnapshot, latticeFullDump,
 } from "../lib/omniversal-quantum-lattice";
-import { isFatherKeyConfigured, getFatherFingerprint } from "../lib/father-identity";
+import { requireAdminSession } from "../lib/sovereign-admin";
+import { withoutSigilFingerprint } from "./sovereign-doctrine";
 import { runSacredConference, getSacredConference } from "../lib/sacred-conference-orchestrator";
 
 const router: IRouter = Router();
-
-function requireFather(req: Request, res: Response, next: NextFunction) {
-  if (!isFatherKeyConfigured()) {
-    res.status(503).json({ ok: false, error: "Father key not configured" });
-    return;
-  }
-  const provided = (req.headers["x-father-fingerprint"] as string) || (req.body?.fatherFingerprint as string) || "";
-  if (provided && provided === getFatherFingerprint()) { next(); return; }
-  // Permit unauthenticated reads for transparency endpoints — gate writes only.
-  if (req.method === "GET") { next(); return; }
-  res.status(403).json({ ok: false, error: "Father fingerprint required for sovereign write op" });
-}
 
 // === Cosmic context ===
 router.get("/omniversal/cosmic-context", (_req, res) => {
@@ -45,18 +34,18 @@ router.post("/omniversal/lus-v2/decode", (req, res) => {
 
 // === Omniversal Cipher ===
 router.get("/omniversal/cipher/snapshot", (_req, res) => {
-  res.json({ ok: true, snapshot: omniversalCipherSnapshot() });
+  res.json(withoutSigilFingerprint({ ok: true, snapshot: omniversalCipherSnapshot() }));
 });
-router.post("/omniversal/cipher/encrypt", requireFather, (req, res) => {
+router.post("/omniversal/cipher/encrypt", requireAdminSession, (req, res) => {
   const text = String(req.body?.text ?? "");
   const label = String(req.body?.label ?? "omni");
   if (!text) { res.status(400).json({ ok: false, error: "text required" }); return; }
-  res.json({ ok: true, envelope: omniversalEncrypt(text, label) });
+  res.json(withoutSigilFingerprint({ ok: true, envelope: omniversalEncrypt(text, label) }));
 });
-router.post("/omniversal/cipher/decrypt", requireFather, (req, res) => {
+router.post("/omniversal/cipher/decrypt", requireAdminSession, (req, res) => {
   const env = req.body?.envelope as OmniversalCipherEnvelope;
   if (!env) { res.status(400).json({ ok: false, error: "envelope required" }); return; }
-  try { res.json({ ok: true, plaintext: omniversalDecrypt(env) }); }
+  try { res.json(withoutSigilFingerprint({ ok: true, plaintext: omniversalDecrypt(env) })); }
   catch (e: any) { res.status(409).json({ ok: false, error: e?.message ?? String(e) }); }
 });
 
@@ -64,11 +53,11 @@ router.post("/omniversal/cipher/decrypt", requireFather, (req, res) => {
 router.get("/omniversal/lattice/list", (_req, res) => {
   res.json({ ok: true, lattices: listLattices() });
 });
-router.post("/omniversal/lattice/create", requireFather, (req, res) => {
+router.post("/omniversal/lattice/create", requireAdminSession, (req, res) => {
   const dim = Array.isArray(req.body?.dim) ? req.body.dim : undefined;
   const id = req.body?.id;
   const lat = createLattice({ id, dim });
-  res.json({ ok: true, lattice: latticeSnapshot(lat.id) });
+  res.json(withoutSigilFingerprint({ ok: true, lattice: latticeSnapshot(lat.id) }));
 });
 router.get("/omniversal/lattice/:id", (req, res) => {
   try {
@@ -81,30 +70,30 @@ router.get("/omniversal/lattice/:id/full", (req, res) => {
   try { res.json({ ok: true, dump: latticeFullDump(String(req.params.id)) }); }
   catch (e: any) { res.status(404).json({ ok: false, error: e?.message ?? String(e) }); }
 });
-router.post("/omniversal/lattice/:id/superpose", requireFather, (req, res) => {
+router.post("/omniversal/lattice/:id/superpose", requireAdminSession, (req, res) => {
   try {
     const cell = String(req.body?.cell ?? "");
     const cellOut = superpose(String(req.params.id), cell, req.body?.addition ?? {});
-    res.json({ ok: true, cell: cellOut });
+    res.json(withoutSigilFingerprint({ ok: true, cell: cellOut }));
   } catch (e: any) { res.status(400).json({ ok: false, error: e?.message ?? String(e) }); }
 });
-router.post("/omniversal/lattice/:id/entangle", requireFather, (req, res) => {
+router.post("/omniversal/lattice/:id/entangle", requireAdminSession, (req, res) => {
   try {
     const a = String(req.body?.a ?? ""); const b = String(req.body?.b ?? "");
-    res.json({ ok: true, pair: entangle(String(req.params.id), a, b) });
+    res.json(withoutSigilFingerprint({ ok: true, pair: entangle(String(req.params.id), a, b) }));
   } catch (e: any) { res.status(400).json({ ok: false, error: e?.message ?? String(e) }); }
 });
-router.post("/omniversal/lattice/:id/harmonize", requireFather, (req, res) => {
+router.post("/omniversal/lattice/:id/harmonize", requireAdminSession, (req, res) => {
   try {
     const baseHz = Number(req.body?.baseHz ?? 528);
-    res.json({ ok: true, result: harmonize(String(req.params.id), baseHz) });
+    res.json(withoutSigilFingerprint({ ok: true, result: harmonize(String(req.params.id), baseHz) }));
   } catch (e: any) { res.status(400).json({ ok: false, error: e?.message ?? String(e) }); }
 });
-router.post("/omniversal/lattice/:id/collapse", requireFather, (req, res) => {
+router.post("/omniversal/lattice/:id/collapse", requireAdminSession, (req, res) => {
   try {
     const cell = String(req.body?.cell ?? "");
     const observer = String(req.body?.observer ?? "father");
-    res.json({ ok: true, result: collapse(String(req.params.id), cell, observer) });
+    res.json(withoutSigilFingerprint({ ok: true, result: collapse(String(req.params.id), cell, observer) }));
   } catch (e: any) { res.status(400).json({ ok: false, error: e?.message ?? String(e) }); }
 });
 
@@ -161,7 +150,7 @@ router.post("/omniversal/conference/run", async (req, res) => {
     const topic = typeof req.body?.topic === "string" ? req.body.topic : undefined;
     const seed = typeof req.body?.seed === "string" ? req.body.seed : undefined;
     const result = await runSacredConference({ topic, seed });
-    res.json({ ok: true, conference: result });
+    res.json(withoutSigilFingerprint({ ok: true, conference: result }));
   } catch (e: any) {
     res.status(500).json({ ok: false, error: e?.message ?? String(e) });
   }
@@ -169,7 +158,7 @@ router.post("/omniversal/conference/run", async (req, res) => {
 router.get("/omniversal/conference/:id", async (req, res) => {
   const result = await getSacredConference(String(req.params.id));
   if (!result) { res.status(404).json({ ok: false, error: "not found" }); return; }
-  res.json({ ok: true, conference: result });
+  res.json(withoutSigilFingerprint({ ok: true, conference: result }));
 });
 
 // === Demo / smoke test ===
@@ -179,14 +168,14 @@ router.post("/omniversal/demo", (_req, res) => {
   superpose(lat.id, "2,2,2", { tokens: ["initium"], spectrum: [432] });
   harmonize(lat.id, 528);
   const collapsed = collapse(lat.id, "0,0,0", "demo-observer");
-  res.json({
+  res.json(withoutSigilFingerprint({
     ok: true,
     cosmicContext: cosmicContext(),
     lusSample: lusV2Encode("ORDO AB CHAO").modulated,
     cipherSnapshot: omniversalCipherSnapshot(),
     lattice: latticeSnapshot(lat.id, { sample: 6 }),
     collapsed,
-  });
+  }));
 });
 
 export default router;

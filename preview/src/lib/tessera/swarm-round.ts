@@ -15,8 +15,8 @@ export const SWARM_FOLDS = [
 
 export const ROADMAP = [
   { phase: "0 Baseline", state: "partial", detail: "This chamber is the structure. Heads were checked. Nothing was restarted." },
-  { phase: "1 Internal model", state: "goal", detail: "Speech is still the pen. No weights were trained." },
-  { phase: "2 Absorb text", state: "partial", detail: "Public pages and this paste can be read. Model weights are not downloaded." },
+  { phase: "1 Internal model", state: "goal", detail: "Speech is still the pen." },
+  { phase: "2 Absorb text", state: "partial", detail: "Public pages and this paste can be read." },
   { phase: "3 Live data", state: "partial", detail: "Web search and public GitHub pages. No scraping fleet." },
   { phase: "4 Cut external speech", state: "goal", detail: "A cutoff has not been run. Zero external dependency is not true." },
   { phase: "5 Recursive loop", state: "partial", detail: "The page loop and the task copies exist. They stop when the page closes." },

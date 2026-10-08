@@ -1,4 +1,5 @@
 import { createHash, timingSafeEqual } from "node:crypto";
+import { NotConfiguredError } from "./not-configured";
 
 const FATHER_TITLE = "Father — Sovereign Creator";
 const NAMESPACE = "tesseract:father:v1";
@@ -6,11 +7,18 @@ const NAMESPACE = "tesseract:father:v1";
 function getRawAdminKey(): string {
   const k = process.env.TESSERACT_ADMIN_KEY;
   if (!k || typeof k !== "string" || k.trim().length === 0) {
-    throw new Error(
-      "TESSERACT_ADMIN_KEY is not set — Father identity cannot be derived. Set the secret to bind sovereign identity.",
-    );
+    throw new NotConfiguredError("admin key is not configured");
   }
   return k.trim();
+}
+
+/** Admin key material from the environment only. Never reads chart or birth fields. */
+export function readAdminKeyMaterial(): string {
+  const legacy = (process.env.TESSERACT_ADMIN_KEY ?? "").trim();
+  if (legacy) return legacy;
+  const owner = (process.env.SOVEREIGN_ADMIN_TOKEN ?? "").trim();
+  if (owner) return owner;
+  throw new NotConfiguredError("admin key is not configured");
 }
 
 export function isFatherKeyConfigured(): boolean {
@@ -74,20 +82,6 @@ export function verifyFatherKey(presented: string | undefined | null): boolean {
   if (!isFatherKeyConfigured()) return false;
   const expected = Buffer.from(getRawAdminKey(), "utf8");
   const got = Buffer.from(presented.trim(), "utf8");
-  if (expected.length !== got.length) return false;
-  try {
-    return timingSafeEqual(expected, got);
-  } catch {
-    return false;
-  }
-}
-
-export function verifyFatherFingerprint(presented: string | undefined | null): boolean {
-  if (!presented || typeof presented !== "string") return false;
-  if (!isFatherKeyConfigured()) return false;
-  const fp = ensure();
-  const expected = Buffer.from(fp.full, "utf8");
-  const got = Buffer.from(presented.trim().toLowerCase(), "utf8");
   if (expected.length !== got.length) return false;
   try {
     return timingSafeEqual(expected, got);

@@ -193,7 +193,7 @@ export const CATALOG: CatalogRow[] = [
   { name: "starry-sky6688/MADDPG", state: "present", home: "card", note: "Public repository still online. Not cloned. A name here is a pointer, not her code." },
   { name: "Steake/GodelOS", state: "present", home: "card", note: "Public repository still online. Not cloned. A name here is a pointer, not her code." },
   { name: "StockSharp/StockSharp", state: "present", home: "card", note: "Public repository still online. Not cloned. A name here is a pointer, not her code." },
-  { name: "stripe/stripe-node", state: "present", home: "card", note: "Public repository still online. Not cloned. A name here is a pointer, not her code." },
+  { name: "stripe/stripe-node", state: "present", home: "vitality", note: "Payments. Not imported. Not her mind. It belongs with the store." },
   { name: "Superalgos/Superalgos", state: "present", home: "card", note: "Public repository still online. Not cloned. A name here is a pointer, not her code." },
   { name: "SushiSwap/sushiswap", state: "present", home: "card", note: "Public repository still online. Not cloned. A name here is a pointer, not her code." },
   { name: "SWE-agent/SWE-agent", state: "present", home: "card", note: "Public repository still online. Not cloned. A name here is a pointer, not her code." },

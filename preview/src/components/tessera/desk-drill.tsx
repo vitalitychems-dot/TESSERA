@@ -10,7 +10,7 @@ export function DeskDrill() {
       <p className="text-xs tracking-[0.18em] text-subtle uppercase">Desk</p>
       <h3 className="mt-1 text-lg text-fg">Six agents, one Tessera</h3>
       <p className="mt-2 text-sm leading-relaxed text-muted">
-        TESSERA keeps her records. Gitbook keeps the notes. Vitality keeps Vitalitychems.com. These agents are jobs, not extra models. A pass here is a sealed drill, not a change to the weights.
+        TESSERA keeps her records. Gitbook keeps the notes. The store is not in this room. These agents are jobs, not extra models. A pass here is a sealed drill.
       </p>
       <ul className="mt-4 flex flex-col gap-2">
         {DESK.map((skill) => {

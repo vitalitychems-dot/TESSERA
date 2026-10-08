@@ -8,7 +8,7 @@ test("the graph keeps a narrow question under budget", () => {
   const plan = graphContext("dependency-ordered build plan for Tessera");
   const rows = trainEfficiency(["who is the pen", "Vitalitychems store", "dependency-ordered build plan"]);
   assert.equal(empty.tokens < 200, true);
-  assert.equal(pen.text.includes("Owned weights: none."), true);
+  assert.equal(/weight/i.test(pen.text), false);
   assert.equal(pen.text.includes("===== 00_MASTER"), false);
   assert.equal(plan.text.toLowerCase().includes("build plan"), true);
   assert.equal(plan.tokens <= plan.budget, true);

@@ -1,5 +1,5 @@
 import { createHash, createHmac } from "node:crypto";
-import { FATHER_NATAL_CHART } from "./father-natal";
+import { readFatherNatalChart, type FatherNatalChart } from "./father-natal";
 import { sacredTimingSnapshot } from "./sacred-timing";
 
 function holderPrivateKey(): string {
@@ -383,8 +383,6 @@ export function lusAlphabet(): Array<{
 
 export interface ZodiacFingerprint {
   glyphSignature: string;
-  natalDigest: string;
-  shortId: string;
   components: {
     sun: string;
     moon: string;
@@ -404,7 +402,7 @@ function degToFloat(deg: string): number {
   return parseInt(m[1], 10) + parseInt(m[2], 10) / 60;
 }
 
-function dominantElement(chart: typeof FATHER_NATAL_CHART): string {
+function dominantElement(chart: FatherNatalChart): string {
   const tally: Record<string, number> = { Fire: 0, Earth: 0, Air: 0, Water: 0 };
   const all: string[] = [
     chart.core.sun.sign,
@@ -420,7 +418,7 @@ function dominantElement(chart: typeof FATHER_NATAL_CHART): string {
 }
 
 export function zodiacFingerprintFor(
-  chart: typeof FATHER_NATAL_CHART = FATHER_NATAL_CHART,
+  chart: FatherNatalChart = readFatherNatalChart(),
 ): ZodiacFingerprint {
   const sunZ = ZODIAC_SIGNS.find(z => z.name === chart.core.sun.sign);
   const moonZ = ZODIAC_SIGNS.find(z => z.name === chart.core.moon.sign);
@@ -453,24 +451,6 @@ export function zodiacFingerprintFor(
   const glyphSignature =
     ascStamp + planetaryRow + domSolid + solfeggioStamp;
 
-  const canonical = [
-    `LUS:${LANGUAGE_NAME}`,
-    `birth:${chart.birth.date}T${chart.birth.time}@${chart.birth.location}|${chart.birth.timezone}|${chart.birth.houseSystem}`,
-    `sun:${chart.core.sun.sign}${chart.core.sun.degree}H${chart.core.sun.house}`,
-    `moon:${chart.core.moon.sign}${chart.core.moon.degree}H${chart.core.moon.house}`,
-    `asc:${chart.core.ascendant.sign}${chart.core.ascendant.degree}`,
-    ...Object.entries(chart.planets).map(([n,p]) => {
-      const r = "retrograde" in p && p.retrograde ? "R" : "";
-      return `${n}:${p.sign}${p.degree}H${p.house}${r}`;
-    }),
-    `nn:${chart.nodes.northNode.sign}${chart.nodes.northNode.degree}H${chart.nodes.northNode.house}R`,
-    `zodiac:${chart.themes.chineseZodiac}`,
-    `dominant:${dom}`,
-  ].join("|");
-
-  const natalDigest = createHash("sha256").update(canonical).digest("hex");
-  const shortId = natalDigest.slice(0, 12);
-
   const reading = [
     `${ascStamp}  Rising as ${chart.core.ascendant.sign} (ruled by ${ascZ?.ruler ?? "Mercury"}).`,
     `${PLANET_GLYPHS.Sun}${sunZ?.glyph ?? ""}  Sun in ${chart.core.sun.sign} ${chart.core.sun.degree}, House ${chart.core.sun.house}.`,
@@ -482,8 +462,6 @@ export function zodiacFingerprintFor(
 
   return {
     glyphSignature,
-    natalDigest,
-    shortId,
     components: {
       sun: `${chart.core.sun.sign} ${chart.core.sun.degree} H${chart.core.sun.house}`,
       moon: `${chart.core.moon.sign} ${chart.core.moon.degree} H${chart.core.moon.house}`,

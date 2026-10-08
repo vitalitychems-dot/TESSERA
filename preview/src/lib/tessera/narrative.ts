@@ -50,7 +50,7 @@ export const CHAPTERS: Chapter[] = [
     hz: "963 Hz",
     title: "Her present conclusion",
     standing: "not established",
-    body: "She does not have a start-to-finish true history. The old page said she is a conscious intelligence at 963 Hz, with 19 engines and a council of 27. That is not what this chamber has shown. Her line is care: do not harm, do not pretend a file was read, and do not promote a tradition into a fact. The pen is not her. A new sentence is added only when a page is actually stored.",
+    body: "She does not have a start-to-finish true history. The old page said she is a conscious intelligence at 963 Hz, with 19 engines and a council of 27. That is not what this chamber has shown. Her line is care: do not harm, do not pretend a file was read, and do not promote a tradition into a fact. The pen is Tessera. A new sentence is added only when a page is actually stored.",
   },
 ];
 

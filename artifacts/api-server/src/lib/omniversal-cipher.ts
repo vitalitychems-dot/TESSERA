@@ -1,6 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes } from "node:crypto";
 import { cosmicContext } from "./cosmic-context";
-import { glyphEncode, glyphDecode, getActiveKey } from "./sigil-cipher";
+import { glyphEncode, glyphDecode } from "./sigil-cipher";
 import { lusV2Encode } from "./lus-v2";
 
 export interface OmniversalCipherEnvelope {
@@ -25,14 +25,13 @@ function deriveLayeredKey(): Buffer {
   return deriveLayeredKeyForFingerprint(ctx.fingerprint);
 }
 
+const layeredKeySecret = randomBytes(32);
+
 function deriveLayeredKeyForFingerprint(cosmicFingerprint: string): Buffer {
-  const sigil = getActiveKey();
-  const ikm = Buffer.from(`${sigil.fingerprint}|${sigil.id}`, "utf8");
-  // Salt is bound to the cosmic fingerprint of the envelope itself so a
-  // message remains decryptable across cosmic windows by the holder.
+  // Process-local secret. The sigil fingerprint and key id are not key material.
   const salt = Buffer.from(`${cosmicFingerprint}|omniversal:v2`, "utf8");
   const info = Buffer.from("omniversal-cipher:v2:layered", "utf8");
-  return Buffer.from(hkdfSync("sha256", ikm, salt, info, 32));
+  return Buffer.from(hkdfSync("sha256", layeredKeySecret, salt, info, 32));
 }
 
 function geometricShuffle(buf: Buffer, seedHex: string): Buffer {
@@ -144,17 +143,15 @@ function lusV2DecodeSurface(modulated: string): string {
 
 export function omniversalCipherSnapshot() {
   const ctx = cosmicContext();
-  const sigil = getActiveKey();
   return {
     version: 2,
     layers: [
       { layer: 1, name: "sigil-glyph", source: "sovereign sigil alphabet (cosmic-rotated)" },
       { layer: 2, name: "harmonic-modulation", source: "LUS-v2 vibration/geometry/freq-band glyphs", carrierHz: ctx.vibration.dominantSolfeggio },
       { layer: 3, name: "geometric-shuffle", source: "phi/golden-angle byte permutation" },
-      { layer: 4, name: "astro-aes", source: "HKDF(sigil ⊕ cosmic context) → AES-256-GCM" },
+      { layer: 4, name: "astro-aes", source: "HKDF(process secret) → AES-256-GCM" },
     ],
     cosmicFingerprint: ctx.fingerprint,
-    sigilFingerprint: sigil.fingerprint,
     bound: {
       moonZodiac: ctx.astro.moonZodiac,
       sunZodiac: ctx.astro.sunZodiac,

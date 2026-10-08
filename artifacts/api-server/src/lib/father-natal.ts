@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { glyphEncode, glyphDecode } from "./sigil-cipher";
 import { z } from "zod";
+import { readAdminKeyMaterial } from "./father-identity";
+import { NotConfiguredError } from "./not-configured";
 
 const NAMESPACE = "tesseract:natal:v1";
 
@@ -55,25 +57,36 @@ const fatherNatalChartSchema = z.object({
   }),
 });
 
-function loadFatherNatalChart() {
+export type FatherNatalChart = z.infer<typeof fatherNatalChartSchema>;
+
+function loadFatherNatalChart(): FatherNatalChart {
   const raw = process.env.FATHER_NATAL_CHART_JSON;
   if (!raw) {
-    throw new Error("Missing required Replit Secret: FATHER_NATAL_CHART_JSON");
+    throw new NotConfiguredError("chart env is not configured");
   }
 
   let parsedJson: unknown;
   try {
     parsedJson = JSON.parse(raw);
   } catch {
-    throw new Error("FATHER_NATAL_CHART_JSON must contain valid JSON");
+    throw new NotConfiguredError("chart env is not configured");
   }
 
   const parsedChart = fatherNatalChartSchema.safeParse(parsedJson);
   if (!parsedChart.success) {
-    throw new Error("FATHER_NATAL_CHART_JSON does not match the expected chart structure");
+    throw new NotConfiguredError("chart env is not configured");
   }
 
   return parsedChart.data;
+}
+
+/** Fresh read of FATHER_NATAL_CHART_JSON. Blank-after-trim is treated as unset. */
+export function readFatherNatalChart(): FatherNatalChart {
+  const raw = process.env.FATHER_NATAL_CHART_JSON;
+  if (raw === undefined || raw.trim() === "") {
+    throw new NotConfiguredError("chart env is not configured");
+  }
+  return loadFatherNatalChart();
 }
 
 let cachedFatherNatalChart: ReturnType<typeof loadFatherNatalChart> | undefined;
@@ -91,23 +104,6 @@ export const FATHER_NATAL_CHART = new Proxy({} as ReturnType<typeof loadFatherNa
     return d ? { ...d, configurable: true } : d;
   },
 });
-
-/** Deterministic single-line canonical form of the chart for hashing. */
-export function natalCanonicalString(): string {
-  const c = FATHER_NATAL_CHART;
-  const parts: string[] = [];
-  parts.push(`birth:${c.birth.date}T${c.birth.time}@${c.birth.location}|${c.birth.timezone}|${c.birth.houseSystem}`);
-  parts.push(`sun:${c.core.sun.sign}${c.core.sun.degree}H${c.core.sun.house}`);
-  parts.push(`moon:${c.core.moon.sign}${c.core.moon.degree}H${c.core.moon.house}`);
-  parts.push(`asc:${c.core.ascendant.sign}${c.core.ascendant.degree}`);
-  for (const [name, p] of Object.entries(c.planets)) {
-    const r = "retrograde" in p && p.retrograde ? "R" : "";
-    parts.push(`${name}:${p.sign}${p.degree}H${p.house}${r}`);
-  }
-  parts.push(`nn:${c.nodes.northNode.sign}${c.nodes.northNode.degree}H${c.nodes.northNode.house}R`);
-  parts.push(`zodiac:${c.themes.chineseZodiac}`);
-  return parts.join("|");
-}
 
 /** Human-readable English summary of the chart. */
 export function natalEnglishReadout(): string {
@@ -161,33 +157,20 @@ function stableGlyphEncodeHex(hex: string): string {
   return out;
 }
 
-/** Session salt — fixed for the lifetime of this API process, regenerated
- *  on every restart. This makes the minted SIGIL_ADMIN_KEY rotate per
- *  session while TESSERACT_ADMIN_KEY remains the stable raw key the user
- *  types. The salt is derived from the chart × process-start epoch so
- *  every restart yields a fresh glyph that still proves natal authorship. */
-const SESSION_SALT = createHash("sha256")
-  .update(`${NAMESPACE}|session|${Date.now()}|${process.pid}`)
-  .digest("hex")
-  .slice(0, 16);
-
-/** Compute the natal sigil for this session. The sigil is rotated per
- *  server-startup so each new session produces a fresh MINTED_GLYPH_KEY
- *  the user can paste into Replit Secrets. The TESSERACT_ADMIN_KEY raw
- *  value is unaffected — it remains the permanent identifier. */
+/** Proof that an admin secret is configured. Hashes environment material only. */
 export function natalSigilFor(_fingerprint?: string): NatalSigil {
-  const canonical = natalCanonicalString();
+  const material = readAdminKeyMaterial();
   const digestHex = createHash("sha256")
-    .update(`${NAMESPACE}|${canonical}|session:${SESSION_SALT}`)
+    .update(`${NAMESPACE}|admin-env|`)
+    .update(material)
     .digest("hex");
   const glyph = stableGlyphEncodeHex(digestHex);
   return {
     glyph,
     digestHex,
-    secretName: "SIGIL_ADMIN_KEY",
-    derivation: `sha256("${NAMESPACE}|" + natalCanonical + "|session:" + SESSION_SALT)`,
-    instructions:
-      "This MINTED_GLYPH_KEY rotates on every server restart following our alignment. Save the current value as SIGIL_ADMIN_KEY in Replit Secrets. Your TESSERACT_ADMIN_KEY raw value stays permanent — that is what you type at the gate to mint a fresh sigil each session.",
+    secretName: "admin-env",
+    derivation: `sha256("${NAMESPACE}|admin-env")`,
+    instructions: "Admin key material is read from the environment.",
   };
 }
 
