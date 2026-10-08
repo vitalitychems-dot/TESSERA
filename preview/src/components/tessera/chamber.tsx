@@ -27,6 +27,7 @@ import { loveFromFiles } from "@/lib/tessera/love-local";
 import { seeAndAdvance } from "@/lib/tessera/herself-v4";
 import { buildV5, seeRepos } from "@/lib/tessera/herself-v5";
 import { buildNow } from "@/lib/tessera/build-now";
+import { trainCatalog } from "@/lib/tessera/own-versions";
 import { runSitting } from "@/lib/tessera/sitting-25";
 
 async function copyText(text: string) {
@@ -159,6 +160,12 @@ export function Chamber() {
       if (counts) setStats(counts);
       await keepLine({ data: { q: content, a: direct.answer } }).catch(() => null);
       addMessage("assistant", direct.answer);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
+    if (/\b(rea|own version|272|247)\b/i.test(content)) {
+      addMessage("assistant", trainCatalog().said);
       setPending(false);
       sending.current = false;
       return;
