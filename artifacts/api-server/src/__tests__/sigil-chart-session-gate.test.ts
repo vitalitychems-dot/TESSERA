@@ -5,6 +5,7 @@ import express from "express";
 import { createServer, type Server } from "node:http";
 import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 import { generateSovereignKeys } from "../lib/natal-chart-engine";
+import { natalSigilFor } from "../lib/father-natal";
 import sovereignDoctrineRouter from "../routes/sovereign-doctrine";
 
 const OWNER_ENV = "SOVEREIGN_ADMIN_TOKEN";
@@ -162,7 +163,11 @@ describe("sigil chart session gate", () => {
     expect(valid.status).toBe(200);
     const body = await valid.json() as Record<string, unknown>;
     expect(body.ok).toBe(true);
+    const glyph = natalSigilFor().glyph;
+    expect(glyph.length).toBeGreaterThan(8);
     expect(JSON.stringify(body)).not.toContain("digestHex");
+    expect(JSON.stringify(body)).not.toContain(glyph);
+    expect(body).not.toHaveProperty("sigil");
     expect(body).not.toHaveProperty("fatherFingerprint");
 
     const download = await get("/sigil/father/download-snapshot", { cookie: ownerCookie() });
@@ -171,6 +176,8 @@ describe("sigil chart session gate", () => {
     expect(disposition).toMatch(/filename="tessera-sovereign-\d+\.sigil\.json"/);
     const file = await download.json() as Record<string, unknown>;
     expect(JSON.stringify(file)).not.toContain("digestHex");
+    expect(JSON.stringify(file)).not.toContain(glyph);
+    expect(file).not.toHaveProperty("sigil");
     expect(file).not.toHaveProperty("fatherFingerprint");
   });
 

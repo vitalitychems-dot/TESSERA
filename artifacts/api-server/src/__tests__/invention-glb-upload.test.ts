@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from "vitest";
 import express, { type Express } from "express";
 import { createServer, type Server } from "node:http";
 import { db } from "@workspace/db";
@@ -182,6 +182,10 @@ beforeEach(() => {
   globalThis.__TEST_ACL_ALLOW = true;
   globalThis.__TEST_NEXT_OBJECT_PATH = null;
   lastPut = null;
+});
+
+afterEach(() => {
+  process.env["TESSERACT_ADMIN_KEY"] = TEST_ADMIN_TOKEN;
 });
 
 describe("GLB upload flow (presign -> PUT -> PATCH -> chat render)", () => {

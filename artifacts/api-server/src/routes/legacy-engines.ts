@@ -20,6 +20,7 @@ import { getUniverseState, simulateStep, getBody, getConstants, searchUniverse }
 import { getTesseractState, createCircuit, applyGate, measureAll, listCircuits } from "../lib/quantum-tesseract";
 import { getEmotionalProfile, processEmotionalInput, getEmotionalStats, getRecentResponses } from "../lib/emotional-intelligence";
 import { startAutonomousOperation, stopAutonomousOperation, getAutonomousStatus } from "../lib/autonomous-wiring";
+import { requireAdminSession } from "../lib/sovereign-admin";
 
 const router = Router();
 
@@ -287,23 +288,11 @@ router.get("/emotional/recent", (req, res) => {
 
 router.get("/autonomous/status", (_req, res) => res.json(getAutonomousStatus()));
 
-function requireInternal(req: any, res: any, next: any) {
-  const forwarded = req.headers["x-forwarded-for"] || "";
-  const ip = req.ip || req.socket?.remoteAddress || "";
-  const isInternal = ["127.0.0.1", "::1", "::ffff:127.0.0.1", "localhost"].some(
-    addr => ip.includes(addr) || forwarded.includes(addr)
-  );
-  if (!isInternal && !req.headers["x-sovereign-key"]) {
-    res.status(403).json({ error: "Autonomous control restricted to internal callers" }); return;
-  }
-  next();
-}
-
-router.post("/autonomous/start", requireInternal, (_req, res) => {
+router.post("/autonomous/start", requireAdminSession, (_req, res) => {
   startAutonomousOperation();
   res.json({ status: "started", ...getAutonomousStatus() });
 });
-router.post("/autonomous/stop", requireInternal, (_req, res) => {
+router.post("/autonomous/stop", requireAdminSession, (_req, res) => {
   stopAutonomousOperation();
   res.json({ status: "stopped", ...getAutonomousStatus() });
 });

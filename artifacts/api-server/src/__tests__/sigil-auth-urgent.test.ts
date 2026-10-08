@@ -1,7 +1,26 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+const conferenceInsert = vi.hoisted(() =>
+  vi.fn(async (_row: unknown): Promise<void> => {
+    throw new Error("synthetic-db-unavailable");
+  }),
+);
+
 vi.mock("@workspace/db", () => ({
-  db: {},
+  db: {
+    insert: () => ({
+      values: (row: unknown) => {
+        const run = () => conferenceInsert(row);
+        return {
+          onConflictDoUpdate: () => run(),
+          then: (
+            onFulfilled: (value: unknown) => unknown,
+            onRejected?: (reason: unknown) => unknown,
+          ) => Promise.resolve().then(run).then(onFulfilled, onRejected),
+        };
+      },
+    }),
+  },
   councilSessionsTable: {},
 }));
 
@@ -16,6 +35,7 @@ import omniversalRouter from "../routes/omniversal";
 import grandCouncilRouter from "../routes/grand-council";
 import improvementConferenceRouter from "../routes/improvement-conference";
 import languageSecurityRouter from "../routes/language-security";
+import legacyEnginesRouter from "../routes/legacy-engines";
 import fatherKeyRouter, {
   REDEEM_GLOBAL_LIMIT,
   REDEEM_IP_LIMIT,
@@ -60,6 +80,7 @@ describe("sigil auth urgent", () => {
     app.use(grandCouncilRouter);
     app.use(improvementConferenceRouter);
     app.use(languageSecurityRouter);
+    app.use(legacyEnginesRouter);
     server = createServer(app);
     await new Promise<void>((resolve) => {
       server?.listen(0, "127.0.0.1", () => resolve());
@@ -74,6 +95,10 @@ describe("sigil auth urgent", () => {
     process.env[LEGACY_ENV] = SYNTHETIC_LEGACY_TOKEN;
     process.env[SESSION_ENV] = SYNTHETIC_SESSION_SECRET;
     clearFatherKeyRedeemState();
+    conferenceInsert.mockReset();
+    conferenceInsert.mockImplementation(async () => {
+      throw new Error("synthetic-db-unavailable");
+    });
   });
 
   afterAll(async () => {
@@ -214,6 +239,8 @@ describe("sigil auth urgent", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(containsKey(body, "sigilFingerprint")).toBe(false);
+    expect(containsKey(body, "handle")).toBe(false);
+    expect(containsKey(body, "replitReaderFingerprint")).toBe(false);
     expect(containsCredential(body, key.fingerprint)).toBe(false);
     expect(containsCredential(body, key.expiresWith)).toBe(false);
   });
@@ -549,6 +576,77 @@ describe("sigil auth urgent", () => {
     expect(JSON.stringify(stripped)).not.toContain(synthetic.slice(0, 8));
     expect(stripped.cosmicFingerprint).toBe("abc123abc123abc1");
     expect(stripped.id).toBe("synthetic-old-conference");
+
+    const publicRow = doctrineModule.withoutSigilFingerprint({
+      fingerprint: "abc123abc123abc1",
+      SigilFingerprint: synthetic,
+      sigilFingerprint: "",
+      digestHex: "0000000000000000",
+      note: "0000000000000000",
+    }) as Record<string, unknown>;
+    expect(publicRow.fingerprint).toBe("abc123abc123abc1");
+    expect(publicRow.note).toBe("0000000000000000");
+    expect(containsKey(publicRow, "SigilFingerprint")).toBe(false);
+    expect(containsKey(publicRow, "digestHex")).toBe(false);
+  });
+
+  it("requires an owner session for translate encode and decode", async () => {
+    for (const direction of ["encode", "decode"]) {
+      const response = await send("POST", "/sigil/translate", {
+        body: { text: "synthetic", direction },
+      });
+      expect(response.status).toBe(401);
+    }
+    const authed = await send("POST", "/sigil/translate", {
+      cookie: ownerCookie(),
+      body: { text: "synthetic", direction: "encode" },
+    });
+    expect(authed.status).toBe(200);
+  });
+
+  it("rejects loopback forwarding and a bogus sovereign-key header on autonomous control", async () => {
+    const forwarded = await fetch(`${baseUrl}/autonomous/start`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-forwarded-for": "127.0.0.1" },
+      body: "{}",
+    });
+    expect(forwarded.status).toBe(401);
+    const header = await fetch(`${baseUrl}/autonomous/stop`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-sovereign-key": "bogus-synthetic-key" },
+      body: "{}",
+    });
+    expect(header.status).toBe(401);
+  });
+
+  it("returns a stripped conference when the save succeeds", async () => {
+    conferenceInsert.mockImplementation(async () => undefined);
+    const fingerprint = presentedFingerprint();
+    const response = await send("POST", "/omniversal/conference/run", {
+      body: { topic: "synthetic", seed: "synthetic-seed" },
+    });
+    expect(response.status).toBe(200);
+    const body = await response.json() as { ok?: boolean; conference?: { cosmicFingerprint?: string } };
+    expect(body.ok).toBe(true);
+    expect(typeof body.conference?.cosmicFingerprint).toBe("string");
+    expect(containsCredential(body, fingerprint)).toBe(false);
+    expect(containsKey(body, "sigilFingerprint")).toBe(false);
+    expect(containsKey(body, "handle")).toBe(false);
+  });
+
+  it("rate-limits anonymous council writes", async () => {
+    let limited = false;
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const response = await send("POST", "/grand-council/convene", {
+        body: { seed: `synthetic-write-${attempt}` },
+      });
+      if (response.status === 429) {
+        limited = true;
+        break;
+      }
+      expect(response.status).toBe(200);
+    }
+    expect(limited).toBe(true);
   });
 
   it("keys father verify on the proxy-observed address", async () => {

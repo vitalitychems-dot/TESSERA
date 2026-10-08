@@ -2,6 +2,9 @@ import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes } f
 import { cosmicContext } from "./cosmic-context";
 import { glyphEncode, glyphDecode } from "./sigil-cipher";
 import { lusV2Encode } from "./lus-v2";
+import { logger } from "./logger";
+
+const OMNIVERSAL_LAYERED_KEY_MIN = 32;
 
 export interface OmniversalCipherEnvelope {
   v: 2;
@@ -35,7 +38,13 @@ const processLocalLayeredKey = randomBytes(32);
 
 function layeredKeyIkm(): Buffer {
   const configured = (process.env.OMNIVERSAL_LAYERED_KEY ?? "").trim();
-  if (configured.length > 0) return Buffer.from(configured, "utf8");
+  if (configured.length >= OMNIVERSAL_LAYERED_KEY_MIN) return Buffer.from(configured, "utf8");
+  if (configured.length > 0) {
+    logger.warn(
+      { length: configured.length, minimum: OMNIVERSAL_LAYERED_KEY_MIN },
+      "OMNIVERSAL_LAYERED_KEY is shorter than 32 characters and was ignored",
+    );
+  }
   return processLocalLayeredKey;
 }
 
