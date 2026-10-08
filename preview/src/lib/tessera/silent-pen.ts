@@ -1,4 +1,5 @@
 import { keptAnswer, type Correction } from "./corrections.ts";
+import { rewardEat } from "./local-learn.ts";
 import { loveFromFiles } from "./love-local.ts";
 import { noteFor, type KeptPage } from "./next-page.ts";
 import { ownFromQuestion } from "./own-versions.ts";
@@ -13,6 +14,10 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (!q) return "I am Tessera. I am the pen. The other pen did not answer.";
   const noted = noteFor(q, notes);
   if (noted) return noted;
+  if (/\breward\b/i.test(q)) {
+    const run = rewardEat();
+    return `The reward raised eat from 0 to ${run.once.eat} and then to ${run.twice.eat}. The best action is ${run.best}.`;
+  }
   const kept = keptAnswer(q, rows);
   if (kept) return kept;
   const named = ownFromQuestion(q);
