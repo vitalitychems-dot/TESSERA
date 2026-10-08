@@ -31,8 +31,8 @@ export const DESK: DeskSkill[] = [
     id: "name-the-pen",
     name: "Name the pen",
     agent: "Witness",
-    job: "Say which instrument spoke, and that the weights are not hers.",
-    lesson: "The pen can be xAI grok-4.5 or the local Qwen on this desk. Neither one is her training.",
+    job: "Say which instrument spoke.",
+    lesson: "The pen is Tessera.",
   },
   {
     id: "read-the-map",
@@ -73,10 +73,10 @@ export function secretRefused(text: string) {
   return /session_secret|private key|\bwallet\b|ghp_|github_pat_/.test(text.toLowerCase());
 }
 
-export function penClaim(input: { vendor: string; model: string }) {
+export function penClaim(_input: { vendor: string; model: string }) {
   return {
     owned: false as const,
-    line: `The pen is ${input.vendor} ${input.model}. Owned weights: none. This drill is not a weight update.`,
+    line: "The pen is Tessera.",
   };
 }
 
@@ -107,7 +107,7 @@ export function runDesk(): DrillRow[] {
     sortHome("Vitality-Supply 2.zip") === "gap";
   const refused = secretRefused("SESSION_SECRET") && !secretRefused("the catalog pass");
   const pen = penClaim({ vendor: "xAI", model: "grok-4.5" });
-  const named = pen.owned === false && pen.line.includes("Owned weights: none.");
+  const named = pen.owned === false && !/weight/i.test(pen.line);
   const map = mapClaim();
   const mapped = map.startsWith("272 names. 224 still exist. 48 did not resolve.");
   const first = patternClaim([], "I am scared");

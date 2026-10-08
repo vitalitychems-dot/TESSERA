@@ -134,6 +134,23 @@ export const SCHOOL_EXAM: { q: string; need: string[] }[] = [
   { q: "The occult page is a category of what, and are methods stored?", need: ["esoteric", "no"] },
 ];
 
+export function passageForQuestion(q: string) {
+  const skip = new Set(["which", "where", "about", "page", "their", "there", "whose", "what", "from", "with", "that", "this", "read", "search", "have", "been"]);
+  const tokens = q.toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length >= 4 && !skip.has(token));
+  let best: Passage | null = null;
+  let score = 0;
+  for (const passage of SCHOOL_PASSAGES) {
+    const hay = `${passage.title} ${passage.text}`.toLowerCase();
+    let next = 0;
+    for (const token of tokens) if (hay.includes(token)) next += 1;
+    if (next > score) {
+      score = next;
+      best = passage;
+    }
+  }
+  return score > 0 ? best : null;
+}
+
 export function gradeSchool(answer: string) {
   const text = answer.toLowerCase();
   return SCHOOL_EXAM.map((item) => ({
