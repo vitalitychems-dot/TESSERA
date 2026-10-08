@@ -17,11 +17,11 @@ test("the next page is a new text file, then that file is skipped", async () => 
     .trim()
     .split("\n")
     .map((line) => JSON.parse(line) as KeptPage);
-  assert.equal(notes.length, 3);
-  assert.equal(notes[2].path, ".agents/memory/agent-identity-boundary.md");
-  const q = "does tessera pretend to be the operator";
-  assert.equal(noteFor(q, notes), notes[2].fact);
-  assert.equal(silentPen(q, [], notes), "Tessera is her own agent and does not pretend to be the operator.");
+  assert.equal(notes.length, 4);
+  assert.equal(notes[3].path, ".agents/memory/github-repo-tree-snapshots.md");
+  const q = "how should several repository trees be fetched";
+  assert.equal(noteFor(q, notes), notes[3].fact);
+  assert.equal(silentPen(q, [], notes), "Fetch one repository tree at a time. A parallel burst returned rate-limit responses. A sequential read returned the full tree.");
   const tree = (await readFile(dataPath("school", "tessera-tree.txt"), "utf8")).trim().split("\n");
   const third = nextUnread(tree, notes.map((note) => note.path));
   assert.notEqual(third, notes[0].path);
