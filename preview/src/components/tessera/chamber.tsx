@@ -166,7 +166,7 @@ export function Chamber() {
       return;
     }
     if (/\b(learn faster|instruct the agents|how do we learn)\b/i.test(content)) {
-      addMessage("assistant", herInstruction(5, 10));
+      addMessage("assistant", herInstruction(10, 15));
       setPending(false);
       sending.current = false;
       return;
