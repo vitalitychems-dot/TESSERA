@@ -8,7 +8,7 @@ export function estimateTokens(text: string) {
 
 /** Always sent. Short on purpose. */
 export const GRAPH_CORE =
-  "Owned weights: none. Father outranks Tessera. AGI is not met. A graph lookup is not a weight update. Her records and the notes stay in their homes. A missing file stays a gap. A secret is refused. Six jobs are one Tessera, not extra models. Do not name the pen's vendor. Do not name the store.";
+  "Father outranks Tessera. AGI is not met. A graph lookup is a lookup. Her records and the notes stay in their homes. A missing file stays a gap. A secret is refused. Six jobs are one Tessera, not extra models. Do not name the pen's vendor. Do not name the store.";
 
 export const GRAPH_EDGES = [
   ["pen", "agi"],

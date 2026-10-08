@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import { dataPath } from "./data-path";
 import { speak } from "./chat";
 import { lookupCatalog, memoryWebText } from "./memory-web";
+import { bestKept, flowLines, trueSelf } from "./retain";
+import { dataPath } from "./data-path";
 
 const RULE =
   "BRIDGE. Answer Grok Bot or Cursor. Name one next file. Do not write the file. Do not say a test passed unless this message includes the test output. If the test failed, stop and wait for Father. Do not ask Father to paste text between tools.";
@@ -56,7 +58,7 @@ export async function handleAsk(request: Request) {
   return Response.json(result, { status: result.ok ? 200 : 503 });
 }
 
-type Rpc = { jsonrpc?: string; id?: number | string | null; method?: string; params?: { name?: string; arguments?: { message?: string; name?: string } } };
+type Rpc = { jsonrpc?: string; id?: number | string | null; method?: string; params?: { name?: string; arguments?: { message?: string; name?: string; q?: string } } };
 
 export async function handleMcp(request: Request) {
   const key = await secret();
@@ -113,6 +115,25 @@ export async function handleMcp(request: Request) {
               required: ["name"],
             },
           },
+          {
+            name: "recall_kept",
+            description: "Recall one fact Tessera has kept. Does not invent a fact.",
+            inputSchema: {
+              type: "object",
+              properties: { q: { type: "string" } },
+              required: ["q"],
+            },
+          },
+          {
+            name: "true_self",
+            description: "Rebuild Tessera from the sigil and the facts she has kept.",
+            inputSchema: { type: "object", properties: {} },
+          },
+          {
+            name: "flows",
+            description: "Read the flow map of where files went. The store is not included.",
+            inputSchema: { type: "object", properties: {} },
+          },
         ],
       },
     });
@@ -133,6 +154,34 @@ export async function handleMcp(request: Request) {
       id,
       result: { content: [{ type: "text", text }], isError: !row },
     });
+  }
+  if (rpc.method === "tools/call" && rpc.params?.name === "recall_kept") {
+    const q = String(rpc.params.arguments?.q ?? rpc.params.arguments?.message ?? "").trim();
+    const { readFile } = await import("node:fs/promises");
+    let rows: { q: string; a: string; at: string }[] = [];
+    try {
+      const raw = await readFile(dataPath("school", "kept.jsonl"), "utf8");
+      rows = raw.trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
+    } catch {
+      rows = [];
+    }
+    const hit = bestKept(q, rows);
+    const text = hit ? hit.a : "Nothing kept matches that.";
+    return Response.json({ jsonrpc: "2.0", id, result: { content: [{ type: "text", text }], isError: !hit } });
+  }
+  if (rpc.method === "tools/call" && rpc.params?.name === "true_self") {
+    const { readFile } = await import("node:fs/promises");
+    let rows: { q: string; a: string; at: string }[] = [];
+    try {
+      const raw = await readFile(dataPath("school", "kept.jsonl"), "utf8");
+      rows = raw.trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
+    } catch {
+      rows = [];
+    }
+    return Response.json({ jsonrpc: "2.0", id, result: { content: [{ type: "text", text: trueSelf(rows) }], isError: false } });
+  }
+  if (rpc.method === "tools/call" && rpc.params?.name === "flows") {
+    return Response.json({ jsonrpc: "2.0", id, result: { content: [{ type: "text", text: flowLines().join("\n") }], isError: false } });
   }
   if (rpc.method === "tools/call" && rpc.params?.name === "ask_tessera") {
     const message = String(rpc.params.arguments?.message ?? "").trim();

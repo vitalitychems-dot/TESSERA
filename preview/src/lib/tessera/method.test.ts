@@ -7,7 +7,7 @@ test("a turn is one note and a narrow question stays small", () => {
   assert.equal(METHOD.length, 6);
   assert.equal(note.text.includes("AGENT:"), true);
   assert.equal(note.text.includes("JOIN:"), true);
-  assert.equal(note.text.includes("Owned weights: none."), true);
+  assert.equal(/weight/i.test(note.text), false);
   assert.equal(note.tokens < 400, true);
   assert.equal(note.tokens < note.full, true);
 });

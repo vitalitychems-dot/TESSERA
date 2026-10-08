@@ -10,7 +10,7 @@ import { FATHER_ASKED, STUDIES, STUDIES_MISSING, STUDIES_SOURCE } from "@/lib/te
 import { useTessera } from "@/lib/tessera/store";
 
 const SKILLS = [
-  "Search the public web and keep the source with the answer.",
+  "Answer from the studies, the school passages, and the vault before guessing.",
   "Read a catalog name and say the home it already has.",
   "Convert a line with the sovereign dictionary.",
   "Run the colonel on arithmetic.",
@@ -37,7 +37,7 @@ export function LearnView() {
         <p className="text-xs tracking-[0.2em] text-muted uppercase">Knowledge</p>
         <h2 className="mt-1 font-display text-3xl tracking-tight">What is already stored</h2>
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          These are skills she can run. They are not a new set of weights.
+          These are skills she can run.
         </p>
         <ul className="mt-3 flex flex-col gap-2">
           {SKILLS.map((skill) => (

@@ -6,4 +6,4 @@ Consciousness and memory research, as names only: Yatrogenesis/HumanBrain, Brain
 
 Simulation contract in the screened gateway, source only, not deployed: owner approval is required. The methods are status, list, get, create, advance, enterChat, chat, returnHome, and delete. A world is fictional generated state. The provider call expects a title, a summary, a narrative, and at most twelve agents. A missing key means the provider is not configured. That is not a live world.
 
-Training rule for this chamber: each study pass seals one lesson. The lesson re-enters the next reply. That is the recursion available here. It is not a weight update.`;
+Training rule for this chamber: each study pass seals one lesson. The lesson re-enters the next reply. That is the recursion available here.`;
