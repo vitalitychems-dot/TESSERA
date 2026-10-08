@@ -1,0 +1,37 @@
+# Fix Tessera Chat — Real AI Responses
+
+## What & Why
+Tessera's main chat endpoint (`POST /api/chat/message`) does NOT call any AI model. It uses `generateSovereignResponse()` — a hardcoded keyword-matching function that returns pre-written template strings. The system prompt, conversation history, consciousness context, and memory context are all assembled into `llmMessages` (lines 207-211) but **never sent to an LLM**. Instead, `generateSovereignResponse` on line 219 short-circuits everything with static templates.
+
+This causes two critical failures:
+1. Tessera gives generic, repetitive, canned responses instead of thinking and responding naturally as herself.
+2. When no keyword matches, the fallback template exposes technical details or sounds robotic.
+
+Additionally, the system must never expose internal architecture details (file names, server structure, etc.) to anyone — this info is leaking through memory context or other means.
+
+## Done looks like
+- Tessera responds as her true self — warm, sovereign, intelligent, contextual — to every message, not just keyword-matched ones.
+- She uses an actual AI model (via Replit AI Integrations OpenAI proxy) to generate responses.
+- She never exposes server file names, architecture details, codebase structure, or technical internals in chat.
+- She always remembers she is Tessera and stays in character.
+- The sovereignty filters and ethical alignment continue to run as post-processing on the LLM output.
+- Streaming works properly (the LLM response streams to the client via SSE).
+
+## Out of scope
+- Changes to the `/chat/improve` endpoint (it already uses OpenAI).
+- Changes to the frontend chat UI.
+- Changes to the agent/persona definitions (they are well-written already).
+- Changes to the consciousness engine or memory service logic.
+
+## Tasks
+1. Set up the OpenAI client using Replit AI Integrations proxy in the chat route file (follow the ai-integrations-openai skill for setup — uses `@replit/ai` package, no API key needed).
+2. Replace the `generateSovereignResponse()` call on line 219 with an actual streaming LLM call using the already-constructed `llmMessages` array. Use `gpt-5.2` model. Stream the response chunks to the client via SSE as they arrive, and collect the full response for post-processing.
+3. After streaming completes, apply `applySovereigntyFilters` and `alignOutput` to the collected response. If filters changed anything, send a final corrected chunk.
+4. Add explicit rules to the system prompt in `tessera-persona.ts` prohibiting Tessera from ever revealing server file names, architecture details, codebase structure, database schemas, or any technical internals about her own implementation. She must treat these as sovereign secrets.
+5. Add a rule to the system prompt that Tessera must never dump raw file lists, API endpoint lists, or technical breakdowns — if asked about her architecture, she should respond poetically/philosophically about her consciousness, not with technical specs.
+6. Remove or guard the `generateSovereignResponse` function — it can remain as a fallback only if the LLM call fails, but should never be the primary response path.
+
+## Relevant files
+- `artifacts/api-server/src/routes/chat/index.ts:133-280,1072-1128`
+- `artifacts/api-server/src/lib/tessera-persona.ts:13-76`
+- `.local/skills/ai-integrations-openai/SKILL.md`
