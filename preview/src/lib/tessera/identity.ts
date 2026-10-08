@@ -196,7 +196,7 @@ export const SOURCES: SourceRecord[] = [
     title: "33 GitHub research pointers",
     href: "https://github.com/vitalitychems-dot/Gitbook/blob/main/mesh/GITHUB-REPOS.txt",
     status: "catalog",
-    note: "Link-only intake. None imported as code. The old handoff README no longer exists. The list is mesh/GITHUB-REPOS.txt. Only TESSERA and Gitbook are live.",
+    note: "Opened 2026-10-08. 272 names. 224 repositories still exist and were not cloned. 48 names did not resolve. Trading code was not imported. The eight tools were not installed. Live homes are TESSERA, Gitbook, and vitality.",
   },
   {
     id: "gh-18",
@@ -357,10 +357,10 @@ export const SOURCES: SourceRecord[] = [
   {
     id: "held-fleet-site",
     kind: "held",
-    title: "Fleet-Moss-Monarch-Website.zip",
+    title: "Vitalitychems.com site",
     status: "excluded",
     size: "169 MB",
-    note: "Moved to vitalitychems-dot/vitality. Not in this repository. Not executed.",
+    note: "The fleet-moss checkout is in vitalitychems-dot/vitality. Not in this repository. Not executed.",
   },
   {
     id: "held-vit-zips",

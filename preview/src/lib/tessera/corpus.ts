@@ -147,7 +147,7 @@ export const LEFT_OUT_THIS_VERSION = [
   {
     title: "The 272-name catalog",
     detail:
-      "The attached repository names were not cloned again. A name in the catalog is not a file that was opened.",
+      "Opened 2026-10-08. 224 repositories still exist and were not cloned. 48 names did not resolve. Trading code was not imported. The eight tools were not installed. The map is the Web tab.",
   },
 ];
 
