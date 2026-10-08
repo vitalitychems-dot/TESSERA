@@ -15,12 +15,12 @@ test("one pass keeps more than one page and the next path is new", async () => {
     .trim()
     .split("\n")
     .map((line) => JSON.parse(line) as KeptPage);
-  const before = 5;
-  assert.equal(notes.length, 10);
+  const before = 10;
+  assert.equal(notes.length, 15);
   assert.equal(notes.length - before > 1, true);
-  const q = "was an outside app run";
-  assert.equal(noteFor(q, notes), notes[9].fact);
-  assert.equal(silentPen(q, [], notes), "A run on that page takes an app name and an input file. No app was run.");
+  const q = "what does the brainstorming page require first";
+  assert.equal(noteFor(q, notes), notes[14].fact);
+  assert.equal(silentPen(q, [], notes), "The page says to ask questions before a creative change.");
   const tree = (await readFile(dataPath("school", "tessera-tree.txt"), "utf8")).trim().split("\n");
   const after = nextUnread(
     tree,
@@ -32,7 +32,7 @@ test("one pass keeps more than one page and the next path is new", async () => {
   );
   assert.match(after, /\.(md|txt)$/);
   const told = herInstruction(before, notes.length);
-  assert.match(told, /from 5 to 10/);
+  assert.match(told, /from 10 to 15/);
   assert.match(told, /more than one unread text page/);
   assert.match(told, /Do not fetch trees in parallel/);
 });
