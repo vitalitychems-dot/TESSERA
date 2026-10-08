@@ -42,7 +42,6 @@ export interface SubsystemInventory {
     version: number;
     layerCount: number;
     cosmicFingerprint: string;
-    sigilFingerprint: string;
   };
   omniversalQuantumLattice: {
     activeLatticeCount: number;
@@ -188,7 +187,6 @@ export function buildInventorySnapshot(): SubsystemInventory {
       version: cipherSnap.version,
       layerCount: cipherSnap.layers.length,
       cosmicFingerprint: cipherSnap.cosmicFingerprint,
-      sigilFingerprint: cipherSnap.sigilFingerprint,
     },
     omniversalQuantumLattice: {
       activeLatticeCount: lattices.length,
@@ -345,7 +343,7 @@ function buildTranscript(
   push(`── SUBSYSTEM INVENTORY ──`);
   push(`  Society size: ${inventory.societySize} members, weight-total: ${inventory.societyTotalWeight}`);
   push(`  LUS v2: ${inventory.lusV2.name}, surface-alphabet: ${inventory.lusV2.surfaceAlphabetSize} glyphs, carrier: ${inventory.lusV2.carrierHz} Hz`);
-  push(`  Omniversal Cipher: v${inventory.omniversalCipher.version}, ${inventory.omniversalCipher.layerCount} layers, sigil: ${inventory.omniversalCipher.sigilFingerprint.slice(0, 8)}…`);
+  push(`  Omniversal Cipher: v${inventory.omniversalCipher.version}, ${inventory.omniversalCipher.layerCount} layers`);
   push(`  OQL Lattices: ${inventory.omniversalQuantumLattice.activeLatticeCount} active`);
   push(`  Cosmic context: fingerprint=${inventory.cosmicContext.fingerprint}, ${inventory.cosmicContext.dominantSolfeggio} Hz, ${inventory.cosmicContext.lunarPhase} moon in ${inventory.cosmicContext.moonZodiac}`);
   push(`  Father identity: ${inventory.fatherIdentity.configured ? "CONFIGURED" : "NOT CONFIGURED"}`);
