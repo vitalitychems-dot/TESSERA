@@ -17,11 +17,14 @@ test("the next page is a new text file, then that file is skipped", async () => 
     .trim()
     .split("\n")
     .map((line) => JSON.parse(line) as KeptPage);
-  assert.equal(notes.length, 4);
-  assert.equal(notes[3].path, ".agents/memory/github-repo-tree-snapshots.md");
-  const q = "how should several repository trees be fetched";
-  assert.equal(noteFor(q, notes), notes[3].fact);
-  assert.equal(silentPen(q, [], notes), "Fetch one repository tree at a time. A parallel burst returned rate-limit responses. A sequential read returned the full tree.");
+  assert.equal(notes.length, 5);
+  assert.equal(notes[4].path, ".agents/memory/outbound-knowledge-sources.md");
+  const q = "which public sources may tessera fetch";
+  assert.equal(noteFor(q, notes), notes[4].fact);
+  assert.equal(
+    silentPen(q, [], notes),
+    "Generic knowledge fetches may use only fixed HTTPS GET sources. Arxiv and English Wikipedia are approved. A new host needs an explicit yes.",
+  );
   const tree = (await readFile(dataPath("school", "tessera-tree.txt"), "utf8")).trim().split("\n");
   const third = nextUnread(tree, notes.map((note) => note.path));
   assert.notEqual(third, notes[0].path);
