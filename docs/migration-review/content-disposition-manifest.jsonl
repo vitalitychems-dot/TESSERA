@@ -1711,10 +1711,8 @@
 {"disposition": "excluded-sensitive-runtime-or-generated", "path": ".agents/outputs/tx-local-blobs.part1.b64", "source": "5t:HEAD"}
 {"disposition": "excluded-sensitive-runtime-or-generated", "path": ".agents/outputs/tx-local-blobs.part2.b64", "source": "5t:HEAD"}
 {"disposition": "excluded-unreviewed-personal-or-intermediate", "path": ".agents/outputs/tx-local-branches-manifest.json", "sha1": "ab53cc34133777c591eeb1ab2e054000a9b6b378", "source": "5t:HEAD"}
-{"disposition": "excluded-unreviewed-personal-or-intermediate", "path": ".agents/outputs/tx-snapshot-diffs-backend.md", "sha1": "a22d1c0734060bfab7c2167cf01448951d18853f", "source": "5t:HEAD"}
 {"disposition": "excluded-unreviewed-personal-or-intermediate", "path": ".agents/outputs/tx-snapshot-diffs-frontend.md", "sha1": "e06c0a1151773034d1ba3eedf66bbf566beffe44", "source": "5t:HEAD"}
 {"disposition": "excluded-unreviewed-personal-or-intermediate", "path": ".agents/outputs/tx-snapshot-diffs-other.md", "sha1": "644efd12d6d458b151fea6ebdbb3895e1deba5f1", "source": "5t:HEAD"}
-{"disposition": "excluded-unreviewed-personal-or-intermediate", "path": ".agents/outputs/tx-snapshot-diffs.md", "sha1": "b50cec3f7966bbcc7720735d9a2e497b8d80240c", "source": "5t:HEAD"}
 {"disposition": "excluded-unreviewed-personal-or-intermediate", "path": ".agents/outputs/tx-snapshot-manifest.json", "sha1": "50f70a1ff0794f6b2554d94c80f8b9ec437af762", "source": "5t:HEAD"}
 {"disposition": "excluded-sensitive-runtime-or-generated", "path": ".agents/outputs/tx-snapshot-variants.gz.b64", "source": "5t:HEAD"}
 {"disposition": "excluded-unreviewed-personal-or-intermediate", "path": ".agents/outputs/tx-t44-unique/.agents__agent_assets_metadata.toml", "sha1": "04f52104b046f1ac3988151df9d810dd1216d330", "source": "5t:HEAD"}
@@ -2112,7 +2110,6 @@
 {"disposition": "excluded-sensitive-runtime-or-generated", "path": "[sensitive/runtime path omitted]", "source": "5t:HEAD"}
 {"disposition": "excluded-sensitive-runtime-or-generated", "path": "[sensitive/runtime path omitted]", "source": "5t:HEAD"}
 {"canonical_path": "artifacts/api-server/package.json", "disposition": "exact-content-deduplicated", "path": "artifacts/api-server/package.json", "sha1": "1f97031462a351aacd6f0ff5b3d6bd10a51a55e8", "source": "5t:HEAD"}
-{"canonical_path": "archives/source-variants/5t/main/artifacts/api-server/scripts/convene-natal-key-conference.mjs", "disposition": "archived-distinct-text-source", "path": "artifacts/api-server/scripts/convene-natal-key-conference.mjs", "sha1": "18db6cf09d8da6314c761e02096ef750969fc9f5", "source": "5t:HEAD"}
 {"canonical_path": "artifacts/api-server/scripts/eval-chatbot.ts", "disposition": "exact-content-deduplicated", "path": "artifacts/api-server/scripts/eval-chatbot.ts", "sha1": "cb698d10498676f43b22249425e88be93e7db4eb", "source": "5t:HEAD"}
 {"canonical_path": "artifacts/api-server/scripts/run-improvement-conference.mjs", "disposition": "exact-content-deduplicated", "path": "artifacts/api-server/scripts/run-improvement-conference.mjs", "sha1": "60f75ef89ccde90eb5c98d5a5e7a209724eaef39", "source": "5t:HEAD"}
 {"canonical_path": "artifacts/api-server/scripts/run-real-conference.mjs", "disposition": "exact-content-deduplicated", "path": "artifacts/api-server/scripts/run-real-conference.mjs", "sha1": "bed66874972e7fc03be04972c9066038a540e71d", "source": "5t:HEAD"}
@@ -2191,7 +2188,6 @@
 {"canonical_path": "artifacts/api-server/src/lib/external-sandbox.ts", "disposition": "exact-content-deduplicated", "path": "artifacts/api-server/src/lib/external-sandbox.ts", "sha1": "05a56a2269dc7fdc67ac18f1ccd63680addcdd19", "source": "5t:HEAD"}
 {"canonical_path": "artifacts/api-server/src/lib/external-tool-sandbox.ts", "disposition": "exact-content-deduplicated", "path": "artifacts/api-server/src/lib/external-tool-sandbox.ts", "sha1": "b98bd93abf853699fea1fab20d6b5a4238f9b304", "source": "5t:HEAD"}
 {"canonical_path": "artifacts/api-server/src/lib/father-identity.ts", "disposition": "exact-content-deduplicated", "path": "artifacts/api-server/src/lib/father-identity.ts", "sha1": "4ef94656777cf72efb8280bb023013ef4f0cd971", "source": "5t:HEAD"}
-{"canonical_path": "archives/source-variants/5t/main/artifacts/api-server/src/lib/father-natal.ts", "disposition": "archived-distinct-text-source", "path": "artifacts/api-server/src/lib/father-natal.ts", "sha1": "6f83b6daf7270f7cdb881e899ecab2c9c37914e9", "source": "5t:HEAD"}
 {"canonical_path": "artifacts/api-server/src/lib/father-session-store.ts", "disposition": "exact-content-deduplicated", "path": "artifacts/api-server/src/lib/father-session-store.ts", "sha1": "c5c45c60043c77d49cc21191a18e969a801572ca", "source": "5t:HEAD"}
 {"canonical_path": "artifacts/api-server/src/lib/father-verify-throttle.ts", "disposition": "exact-content-deduplicated", "path": "artifacts/api-server/src/lib/father-verify-throttle.ts", "sha1": "15dc027e9401e13e866c4123ac04fd3f9dbef77f", "source": "5t:HEAD"}
 {"canonical_path": "artifacts/api-server/src/lib/file-integrity.ts", "disposition": "exact-content-deduplicated", "path": "artifacts/api-server/src/lib/file-integrity.ts", "sha1": "a7f24d87f881ca61eb2452d791dbe2dce7b3b50e", "source": "5t:HEAD"}
