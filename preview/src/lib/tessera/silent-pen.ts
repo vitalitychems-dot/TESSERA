@@ -1,6 +1,7 @@
 import { keptAnswer, type Correction } from "./corrections.ts";
 import { loveFromFiles } from "./love-local.ts";
 import { noteFor, type KeptPage } from "./next-page.ts";
+import { ownFromQuestion } from "./own-versions.ts";
 import { passageForQuestion } from "./school.ts";
 import { buildNow } from "./build-now.ts";
 import { systems } from "./self-build.ts";
@@ -14,6 +15,8 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (noted) return noted;
   const kept = keptAnswer(q, rows);
   if (kept) return kept;
+  const named = ownFromQuestion(q);
+  if (named) return named.text;
   const skill = directSkill(q);
   if (skill) return skill.answer;
   const love = loveFromFiles(q);
