@@ -61,7 +61,12 @@ router.get("/natal-chart/father", async (_req, res) => {
     if (!row) {
       return res.json({ ok: true, identity: "Father", chart, source: "configured-secret" });
     }
-    return res.json({ ok: true, identity: "Father", chart: row, source: "database" });
+    return res.json({
+      ok: true,
+      identity: "Father",
+      chart: { ...row, ascendant: chart.ascendant },
+      source: "database",
+    });
   } catch (err) {
     return sendNatalError(res, err);
   }
