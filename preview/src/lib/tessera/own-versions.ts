@@ -22,6 +22,20 @@ export function ownVersion(name: string) {
   return { owned: false as const, text: `No local version. ${row.name} is ${row.home}.` };
 }
 
+export function ownFromQuestion(question: string) {
+  const q = question.toLowerCase();
+  for (const repo of LOCAL_REPOS) {
+    if (new RegExp(`\\b${repo.name.toLowerCase()}\\b`).test(q)) return ownVersion(repo.name);
+  }
+  for (const row of CATALOG) {
+    const short = row.name.split("/").pop()?.toLowerCase() ?? "";
+    if (short.length < 6) continue;
+    const escaped = short.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (new RegExp(`\\b${escaped}\\b`).test(q)) return ownVersion(row.name);
+  }
+  return null;
+}
+
 export function trainCatalog() {
   const localPass = LOCAL_REPOS.every((repo) => ownVersion(repo.name).owned);
   const cardPass = CARDS.every((name) => {
