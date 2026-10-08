@@ -2,20 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { acceptNote } from "./audit";
 import { nextCuriousQuery } from "./curiosity";
 import { lensesFor } from "./father-profile";
+import { allowFetch, isPrivateHost, mayKeepReading } from "./address-guard";
 
-function privateHost(host: string) {
-  const h = host.toLowerCase().replace(/^\[|\]$/g, "");
-  if (h === "localhost" || h.endsWith(".local") || h.endsWith(".internal") || h === "::1") return true;
-  const m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(h);
-  if (!m) return false;
-  const a = Number(m[1]);
-  const b = Number(m[2]);
-  if (a === 10 || a === 127 || a === 0) return true;
-  if (a === 169 && b === 254) return true;
-  if (a === 192 && b === 168) return true;
-  if (a === 172 && b >= 16 && b <= 31) return true;
-  return false;
-}
+const fetchStamps: number[] = [];
 
 /** Read a public page as plain text. Never execute it. */
 export const readPublicPage = createServerFn({ method: "POST" })
@@ -29,7 +18,9 @@ export const readPublicPage = createServerFn({ method: "POST" })
     }
     if (url.protocol !== "https:") return { ok: false as const, error: "Only public https pages. Nothing is downloaded or run." };
     if (url.username || url.password) return { ok: false as const, error: "A link carrying a secret is refused." };
-    if (privateHost(url.hostname)) return { ok: false as const, error: "Private addresses are refused." };
+    if (isPrivateHost(url.hostname)) return { ok: false as const, error: "Private addresses are refused." };
+    const gate = allowFetch(Date.now(), fetchStamps);
+    if (!gate.ok) return { ok: false as const, error: `Fetch cap reached. ${gate.count} this hour.` };
 
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 8000);
@@ -40,7 +31,7 @@ export const readPublicPage = createServerFn({ method: "POST" })
         headers: { Accept: "text/html,text/plain,application/json" },
       });
       const finalHost = new URL(res.url).hostname;
-      if (privateHost(finalHost) || !res.url.startsWith("https:")) {
+      if (isPrivateHost(finalHost) || !res.url.startsWith("https:")) {
         return { ok: false as const, error: "The page redirected somewhere that is not public text." };
       }
       const type = res.headers.get("content-type") ?? "";
@@ -60,7 +51,8 @@ export const readPublicPage = createServerFn({ method: "POST" })
         .trim()
         .slice(0, 6000);
       if (!text) return { ok: false as const, error: "The page had no readable text." };
-      return { ok: true as const, url: res.url, text };
+      fetchStamps.push(Date.now());
+      return { ok: true as const, url: res.url, text, bytes: text.length };
     } catch {
       return { ok: false as const, error: "The page could not be read. It was not run." };
     } finally {
@@ -135,7 +127,8 @@ export const keepPublicNote = createServerFn({ method: "POST" })
     const query = data.query.replace(/\s+/g, " ").trim().slice(0, 120);
     const text = data.text.replace(/\s+/g, " ").trim().slice(0, 500);
     if (query.length < 3 || text.length < 20) return { ok: false as const };
-    if (/session_secret|api[_ ]?key|private key/i.test(text)) return { ok: false as const };
+    const kept = mayKeepReading(text);
+    if (!kept.ok) return { ok: false as const };
     const { mkdir, appendFile } = await import("node:fs/promises");
     await mkdir("/workspace/data/school", { recursive: true });
     await appendFile(

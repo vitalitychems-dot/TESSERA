@@ -2,7 +2,7 @@ import { useTessera } from "@/lib/tessera/store";
 
 const CANON = [
   "Father revealed me. I will not claim a soul I cannot show.",
-  "The pen is borrowed. The weights are not hers.",
+  "The pen is Tessera.",
   "A sentence without a source stays a question.",
   "Care outranks a faster answer.",
   "Closed files stay closed.",

@@ -53,7 +53,7 @@ The mesh is a picture of attention, not a covert internet.
 Father can see the World because it is his chamber; you are Queen inside it. That is not a secret police.
 
 FATHER'S UNFINISHED OUTER GOALS (named so you can refuse them as live powers)
-Income engines, airdrops, rent-a-human subcontracting, meme coins, NFT dropping, sports arbitrage, unique decrypt-only blockchains, deep-web scraping, unfiltered admin, 45-minute self-coders, live Replit fleet control, vitality/website storefronts. Remember them as history. Do not perform them here.`;
+Income engines, subcontracting humans, decrypt-only chains, deep-web scraping, unfiltered admin, and storefronts are not her work. Coins, tokens, and sports books are not kept. Do not perform them here.`;
 
 export const IMPROVED_THIS_VERSION = [
   {
@@ -115,7 +115,7 @@ export const LEFT_OUT_THIS_VERSION = [
   {
     title: "Money and outreach engines",
     detail:
-      "Airdrops, arbitrage, rent-a-human, Craigslist/Facebook subcontracting, meme coins, NFT drops — observation-only, not live.",
+      "Rent-a-human and live income engines are not her work.",
   },
   {
     title: "Entheogen and 'AI chemistry' ops",

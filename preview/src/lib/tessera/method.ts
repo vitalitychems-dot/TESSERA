@@ -14,6 +14,6 @@ export const METHOD = [
 
 export function turnNote(asked: string, prior: string[] = []) {
   const packed = graphContext(asked);
-  const text = `${briefFor(asked, prior)}\n${joinAsk(asked).line}\nGRAPH ${packed.tokens} kept. Not a weight update.\n${packed.text}`;
+  const text = `${briefFor(asked, prior)}\n${joinAsk(asked).line}\nGRAPH ${packed.tokens} kept.\n${packed.text}`;
   return { text, tokens: packed.tokens, full: packed.full };
 }

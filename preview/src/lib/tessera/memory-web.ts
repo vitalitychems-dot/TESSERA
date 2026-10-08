@@ -53,7 +53,7 @@ export const FLOWS = [
 ] as const;
 
 export const CHECKOUT_LESSON =
-  "Eight research checkouts were already summarized, not recloned. NeuroConscious 64 files, Brain-Cog 721, GodelOS 929, hyperon-experimental 296, HumanBrain 159, BrainSimII 732, artificial-consciousness-blueprint 46, artificial-consciousness-ai 298. She may use the local pattern note. She may not start their servers, ask for an outside key, download HumanBrain's crates, or treat their consciousness claims as her own. Reading the notes does not change the model weights.";
+  "Eight research checkouts were already summarized, not recloned. NeuroConscious 64 files, Brain-Cog 721, GodelOS 929, hyperon-experimental 296, HumanBrain 159, BrainSimII 732, artificial-consciousness-blueprint 46, artificial-consciousness-ai 298. She may use the local pattern note. She may not start their servers, ask for an outside key, download HumanBrain's crates, or treat their consciousness claims as her own.";
 
 export function countByHome() {
   const counts = {
