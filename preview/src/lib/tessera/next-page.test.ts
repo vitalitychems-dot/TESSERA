@@ -2,32 +2,37 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { dataPath } from "./data-path.ts";
-import { nextUnread, noteFor, type KeptPage } from "./next-page.ts";
+import { herInstruction, nextBatch, nextUnread, noteFor, type KeptPage } from "./next-page.ts";
 import { silentPen } from "./silent-pen.ts";
 
-test("the next page is a new text file, then that file is skipped", async () => {
-  const paths = ["photo.png", "CONSOLIDATION_TWO_REPOS.md", "notes.txt", "secret.env"];
-  const first = nextUnread(paths, []);
-  assert.equal(first, "CONSOLIDATION_TWO_REPOS.md");
-  const second = nextUnread(paths, [first]);
-  assert.equal(second, "notes.txt");
-  assert.notEqual(second, first);
+test("one pass keeps more than one page and the next path is new", async () => {
+  const toy = ["a.png", "one.md", "two.md", "three.md", "secret.env"];
+  const batch = nextBatch(toy, [], 3);
+  assert.deepEqual(batch, ["one.md", "two.md", "three.md"]);
+  assert.equal(batch.length > 1, true);
   const raw = await readFile(dataPath("school", "read-one.jsonl"), "utf8");
   const notes = raw
     .trim()
     .split("\n")
     .map((line) => JSON.parse(line) as KeptPage);
-  assert.equal(notes.length, 5);
-  assert.equal(notes[4].path, ".agents/memory/outbound-knowledge-sources.md");
-  const q = "which public sources may tessera fetch";
-  assert.equal(noteFor(q, notes), notes[4].fact);
-  assert.equal(
-    silentPen(q, [], notes),
-    "Generic knowledge fetches may use only fixed HTTPS GET sources. Arxiv and English Wikipedia are approved. A new host needs an explicit yes.",
-  );
+  const before = 5;
+  assert.equal(notes.length, 10);
+  assert.equal(notes.length - before > 1, true);
+  const q = "was an outside app run";
+  assert.equal(noteFor(q, notes), notes[9].fact);
+  assert.equal(silentPen(q, [], notes), "A run on that page takes an app name and an input file. No app was run.");
   const tree = (await readFile(dataPath("school", "tessera-tree.txt"), "utf8")).trim().split("\n");
-  const third = nextUnread(tree, notes.map((note) => note.path));
-  assert.notEqual(third, notes[0].path);
-  assert.notEqual(third, notes[1].path);
-  assert.match(third, /\.(md|txt)$/);
+  const after = nextUnread(
+    tree,
+    notes.map((note) => note.path),
+  );
+  assert.equal(
+    notes.some((note) => note.path === after),
+    false,
+  );
+  assert.match(after, /\.(md|txt)$/);
+  const told = herInstruction(before, notes.length);
+  assert.match(told, /from 5 to 10/);
+  assert.match(told, /more than one unread text page/);
+  assert.match(told, /Do not fetch trees in parallel/);
 });
