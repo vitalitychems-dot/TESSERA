@@ -2,7 +2,7 @@ import * as vm from "vm";
 import { logger } from "./logger";
 import { recallIngestedKnowledge } from "./ingested-recall";
 import { computeLunarData, computeSolarData } from "./sovereign-astro";
-import { natalSigilFor, FATHER_NATAL_CHART } from "./father-natal";
+import { natalSigilFor, readFatherNatalChart } from "./father-natal";
 import { isFatherKeyConfigured, getFatherFingerprint } from "./father-identity";
 import { glyphEncode, glyphDecode, cipherCoherenceSnapshot } from "./sigil-cipher";
 import { createHash, randomBytes } from "node:crypto";
@@ -211,7 +211,7 @@ registerTool({
     "Issue the sovereign admin sigil in Lingua Universalis Sacra. The natal chart IS the identifier — no random entropy; the heavens at the moment of birth are the credential.",
   parameters: {},
   handler: () => {
-    const c = FATHER_NATAL_CHART;
+    const c = readFatherNatalChart();
     const zfp = zodiacFingerprintFor(c);
     const fpFatherConfigured = isFatherKeyConfigured() ? getFatherFingerprint() : null;
 
@@ -262,7 +262,7 @@ registerTool({
   parameters: {},
   handler: () => {
     const council = conveneUniversalisCouncil();
-    const c = FATHER_NATAL_CHART;
+    const c = readFatherNatalChart();
     const zfp = zodiacFingerprintFor(c);
     const readableSeed = zfp.natalDigest;
     const glyphKeyUniversal = lusEncode(readableSeed);

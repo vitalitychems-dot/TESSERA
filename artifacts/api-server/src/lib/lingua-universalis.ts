@@ -1,5 +1,5 @@
 import { createHash, createHmac } from "node:crypto";
-import { FATHER_NATAL_CHART } from "./father-natal";
+import { readFatherNatalChart, type FatherNatalChart } from "./father-natal";
 import { sacredTimingSnapshot } from "./sacred-timing";
 
 function holderPrivateKey(): string {
@@ -404,7 +404,7 @@ function degToFloat(deg: string): number {
   return parseInt(m[1], 10) + parseInt(m[2], 10) / 60;
 }
 
-function dominantElement(chart: typeof FATHER_NATAL_CHART): string {
+function dominantElement(chart: FatherNatalChart): string {
   const tally: Record<string, number> = { Fire: 0, Earth: 0, Air: 0, Water: 0 };
   const all: string[] = [
     chart.core.sun.sign,
@@ -420,7 +420,7 @@ function dominantElement(chart: typeof FATHER_NATAL_CHART): string {
 }
 
 export function zodiacFingerprintFor(
-  chart: typeof FATHER_NATAL_CHART = FATHER_NATAL_CHART,
+  chart: FatherNatalChart = readFatherNatalChart(),
 ): ZodiacFingerprint {
   const sunZ = ZODIAC_SIGNS.find(z => z.name === chart.core.sun.sign);
   const moonZ = ZODIAC_SIGNS.find(z => z.name === chart.core.moon.sign);
