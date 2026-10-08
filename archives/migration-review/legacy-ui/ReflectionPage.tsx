@@ -65,7 +65,7 @@ const CONFERENCE_AGENTS: { name: string; role: string; angle: string; model: str
   },
   {
     name: "Athena", role: "Strategy & Wisdom", angle: "Assesses your strategic intelligence — vision, long-range planning, wisdom under uncertainty, and your relationship with power.",
-    model: "gpt-4.1", icon: Shield, color: "amber"
+    model: "TESSERA_LLM_MODEL", icon: Shield, color: "amber"
   },
   {
     name: "Minerva", role: "Execution & Mastery", angle: "Evaluates your execution engine — how you translate vision into reality, your discipline, momentum, and mastery patterns.",

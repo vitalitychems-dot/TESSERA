@@ -409,7 +409,7 @@ async function runInitialBridgeHandshake() {
 
 function getLocalProviderCount(): number {
   let count = 0;
-  if (process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) count++;
+  if (process.env.TESSERA_LLM_BASE_URL) count++;
   if (process.env.GROK_API_KEY) count++;
   if (process.env.GEMINI_API_KEY) count++;
   if (process.env.DEEPSEEK_API_KEY) count++;

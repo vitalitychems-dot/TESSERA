@@ -195,7 +195,7 @@ function detectProbeInjection(text: string, provider: string): boolean {
 
 function scrubResponseMetadata(text: string): string {
   return text
-    .replace(/\b(gpt-4o?|gpt-3\.5|claude-\d|gemini-\d|llama-\d|mistral|deepseek|command-r)/gi, "[model]")
+    .replace(/\b(TESSERA_LLM_MODEL?|gpt-3\.5|claude-\d|gemini-\d|llama-\d|mistral|deepseek|command-r)/gi, "[model]")
     .replace(/\b(openai|anthropic|google|meta|mistralai|deepseek|cohere|xai|groq)\b/gi, "[provider]")
     .replace(/\b(transformer|attention\s*head|token\s*limit|context\s*window|fine-tun)/gi, "[architecture]")
     .replace(/training\s*(data|set|corpus|cutoff)/gi, "knowledge base");
@@ -604,10 +604,10 @@ async function callProviderDirect(
 
   if (providerId === "replit-ai") {
     const { sovereignChatCompletion } = await import("./sovereign-http");
-    const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+    const baseURL = process.env.TESSERA_LLM_BASE_URL;
+    const apiKey = process.env.TESSERA_LLM_API_KEY;
     if (!baseURL || !apiKey) throw new Error("Replit AI integration not configured");
-    const models = ["gpt-4o", "gpt-4o-mini"];
+    const models = ["TESSERA_LLM_MODEL", "TESSERA_LLM_MODEL"];
     for (let attempt = 0; attempt < models.length; attempt++) {
       try {
         const result = await sovereignChatCompletion(

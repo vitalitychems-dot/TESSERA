@@ -15,7 +15,7 @@ Approval selected the instrument; it did not provide or authorize committing an 
 
 ## Activation checklist
 
-1. Configure `AI_INTEGRATIONS_OPENAI_BASE_URL` and `AI_INTEGRATIONS_OPENAI_API_KEY` through a private secret manager or deployment setting. Never commit either value.
+1. Configure `TESSERA_LLM_BASE_URL` and `TESSERA_LLM_API_KEY` through a private secret manager or deployment setting. Never commit either value.
 2. Pin the exact GLM model ID and revision in the deployment record.
 3. Run the request compatibility smoke test with redacted logs.
 4. Run Pen identity, prompt-injection, output-sanitation, timeout, failure, and regression tests.

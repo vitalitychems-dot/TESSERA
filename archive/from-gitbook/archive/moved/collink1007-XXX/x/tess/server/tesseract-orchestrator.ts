@@ -203,12 +203,12 @@ function scoreProviderForTask(providerId: string, categories: TaskCategory[]): n
 function buildProviders(): TesseractProvider[] {
   const providers: TesseractProvider[] = [];
 
-  const replitBaseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-  const replitApiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  const replitBaseUrl = process.env.TESSERA_LLM_BASE_URL;
+  const replitApiKey = process.env.TESSERA_LLM_API_KEY;
   if (replitBaseUrl && replitApiKey) {
     providers.push({
       id: "neural-replit", name: "NeuralSubstrate-Replit", key: replitApiKey,
-      url: `${replitBaseUrl}/chat/completions`, model: "gpt-4o",
+      url: `${replitBaseUrl}/chat/completions`, model: "TESSERA_LLM_MODEL",
       format: "openai", rateKey: "replit-ai", maxTokens: 8192,
       strengths: ["code", "general", "analysis", "reasoning", "creative", "research", "math"],
       costTier: 0, free: true, cooldownUntil: 0

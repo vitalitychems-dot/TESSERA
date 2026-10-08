@@ -72,7 +72,7 @@ The project is structured as a pnpm workspace monorepo.
 ## External Dependencies
 
 - **PostgreSQL:** Primary database.
-- **Replit AI Integrations:** OpenAI-compatible proxy for AI functionalities (`AI_INTEGRATIONS_OPENAI_BASE_URL`).
+- **Replit AI Integrations:** OpenAI-compatible proxy for AI functionalities (`TESSERA_LLM_BASE_URL`).
 - **Nodemailer/SMTP:** For real email delivery in the secure outreach engine.
 - **SendGrid API:** For email alerts (with SMTP fallback).
 - **Twitter API v2:** For posting and engagement tracking (`server/twitter-poster.ts`).
