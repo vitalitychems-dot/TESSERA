@@ -143,7 +143,7 @@ function diagnoseSystemErrors(): DiagnosticFinding[] {
     system: "Domain Resolution / Infrastructure",
     error: "System was using Sovereign-specific domain references (SOVEREIGN_DEV_DOMAIN, SOVEREIGN_DOMAINS, modelfarm.tessera.ai) as fallbacks",
     rootCause: "Legacy code paths still referenced Sovereign infrastructure for domain resolution, LLM provider routing, and fleet communication. This created a dependency on an external platform for core functionality.",
-    fix: "IMPLEMENTED: All Sovereign domain references removed from server code. getSovereignDomain() now uses SOVEREIGN_DOMAIN → LATTICE_DOMAIN → request host → localhost fallback chain. Provider registry replaced 'sovereign-ai' with 'sovereign-lattice' provider using TESSERA_LLM_BASE_URL. Fleet, swarm-bridge, fleet-monitor, and fleet-synapse all use sovereign lattice addressing exclusively.",
+    fix: "IMPLEMENTED: All Sovereign domain references removed from server code. getSovereignDomain() now uses SOVEREIGN_DOMAIN → LATTICE_DOMAIN → request host → localhost fallback chain. Provider registry replaced 'sovereign-ai' with 'sovereign-lattice' provider using AI_INTEGRATIONS_OPENAI_BASE_URL. Fleet, swarm-bridge, fleet-monitor, and fleet-synapse all use sovereign lattice addressing exclusively.",
     status: "fixed",
     fixedAt: Date.now(),
   });
@@ -230,7 +230,7 @@ function generateResolutions(diagnostics: DiagnosticFinding[]): ConferenceSessio
     },
     {
       title: "RESOLUTION 6: Sovereign Provider Registry",
-      description: "LLM provider registry now uses 'sovereign-lattice' as primary provider instead of 'sovereign-ai'. Routes through TESSERA_LLM_BASE_URL with TESSERA_LLM_API_KEY. Fallback chain: sovereign-lattice → puter providers → gemini → openrouter → deepseek → cohere.",
+      description: "LLM provider registry now uses 'sovereign-lattice' as primary provider instead of 'sovereign-ai'. Routes through AI_INTEGRATIONS_OPENAI_BASE_URL with AI_INTEGRATIONS_OPENAI_API_KEY. Fallback chain: sovereign-lattice → puter providers → gemini → openrouter → deepseek → cohere.",
       implemented: true,
       implementedAt: Date.now(),
     },
@@ -250,7 +250,7 @@ function generateLatticeActions(diagnostics: DiagnosticFinding[]): ConferenceSes
     { action: "DOMAIN_MIGRATION", target: "server/fleet-synapse.ts", result: "Replaced SOVEREIGN_DEV_DOMAIN with LATTICE_DOMAIN in Tessera Prime node URL", timestamp: now },
     { action: "DOMAIN_MIGRATION", target: "server/swarm-bridge.ts", result: "Replaced SOVEREIGN_DEV_DOMAIN with LATTICE_DOMAIN in LOCAL_URL and registerWithNode()", timestamp: now },
     { action: "DOMAIN_MIGRATION", target: "server/fleet-monitor.ts", result: "Replaced SOVEREIGN_DEV_DOMAIN with LATTICE_DOMAIN in KEEP_ALIVE_URLS", timestamp: now },
-    { action: "PROVIDER_MIGRATION", target: "server/provider-registry.ts", result: "Replaced 'sovereign-ai' (modelfarm.tessera.ai) with 'sovereign-lattice' (TESSERA_LLM_BASE_URL)", timestamp: now },
+    { action: "PROVIDER_MIGRATION", target: "server/provider-registry.ts", result: "Replaced 'sovereign-ai' (modelfarm.tessera.ai) with 'sovereign-lattice' (AI_INTEGRATIONS_OPENAI_BASE_URL)", timestamp: now },
     { action: "MEMORY_OPTIMIZATION", target: "server/self-heal-monitor.ts", result: "Memory threshold alerts configured. GC triggered on high memory. Non-critical tasks paused at 80%+", timestamp: now },
     { action: "ERROR_HANDLING", target: "server/income-engine.ts", result: "GitHub 401 errors now trigger graceful fallback to alternative income sources instead of repeated failed retries", timestamp: now },
     { action: "ERROR_HANDLING", target: "server/pumpfun-trading-bot.ts", result: "400 errors (client errors) now skip retries. Only 5xx errors trigger retry logic. Circuit breaker trips after 3 consecutive failures.", timestamp: now },

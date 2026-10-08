@@ -30,7 +30,7 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     isExternal: true,
     type: "cloud",
     tier: 2,
-    models: ["TESSERA_LLM_MODEL", "TESSERA_LLM_MODEL", "TESSERA_LLM_MODEL"],
+    models: ["gpt-4o", "gpt-4.1", "gpt-4o-mini"],
     capabilities: ["chat", "coding", "function-calling", "vision", "embeddings"],
   },
   {

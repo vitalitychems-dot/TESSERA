@@ -66,7 +66,7 @@ const AGENT_SPECIALTIES: Record<string, { name: string; specialties: string[] }>
   "iota": { name: "Iota", specialties: ["trading analysis", "market signals", "price prediction"] },
   "aetherion": { name: "Aetherion", specialties: ["architecture design", "code generation", "system integration"] },
   "deepseek-r1": { name: "DeepSeek-R1", specialties: ["deep thinking", "complex reasoning", "research analysis"] },
-  "TESSERA_LLM_MODEL": { name: "GPT-5", specialties: ["general intelligence", "creative writing", "problem solving"] },
+  "gpt-5": { name: "GPT-5", specialties: ["general intelligence", "creative writing", "problem solving"] },
   "narrativeking": { name: "NarrativeKing", specialties: ["content creation", "marketing copy", "storytelling"] },
   "solanamxi": { name: "SolanaMaxi", specialties: ["blockchain expertise", "DeFi strategies", "token economics"] },
   "alphahunter": { name: "AlphaHunter", specialties: ["signal detection", "opportunity scanning", "market analysis"] },

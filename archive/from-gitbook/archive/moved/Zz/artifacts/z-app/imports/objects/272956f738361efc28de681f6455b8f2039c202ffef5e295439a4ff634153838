@@ -16,7 +16,7 @@ router.get("/swarm/status", (_req, res) => {
       { id: "math-agent", name: "Euler", domain: "math", modelId: "deepseek-chat", status: "idle" },
       { id: "physics-agent", name: "Curie", domain: "physics", modelId: "gemini-2.5-flash-preview-05-20", status: "idle" },
       { id: "symbolic-agent", name: "Noether", domain: "symbolic", modelId: "claude-sonnet-4-20250514", status: "idle" },
-      { id: "retrieval-agent", name: "Athena", domain: "retrieval", modelId: "TESSERA_LLM_MODEL", status: "idle" },
+      { id: "retrieval-agent", name: "Athena", domain: "retrieval", modelId: "gpt-4.1", status: "idle" },
       { id: "planning-agent", name: "Minerva", domain: "planning", modelId: "grok-3", status: "idle" },
       { id: "architecture-agent", name: "Ada", domain: "architecture", modelId: "claude-sonnet-4-20250514", status: "idle" },
       { id: "routing-agent", name: "Iris", domain: "routing", modelId: "mistral-large-latest", status: "idle" },

@@ -102,8 +102,8 @@ function convertWebmToWav(inputBuffer: Buffer): Promise<Buffer> {
 }
 
 function getAIConfig(): { baseURL: string; apiKey: string } {
-  const baseURL = process.env.TESSERA_LLM_BASE_URL;
-  const apiKey = process.env.TESSERA_LLM_API_KEY;
+  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
   if (!baseURL || !apiKey) {
     throw new Error("AI integration not configured — no external SDK required");
   }
@@ -172,7 +172,7 @@ export function registerVoiceRoutes(app: Express) {
       try {
         const formBody = new FormData();
         formBody.append("file", new Blob([wavBuffer], { type: "audio/wav" }), "audio.wav");
-        formBody.append("model", "TESSERA_LLM_MODEL");
+        formBody.append("model", "gpt-4o-mini-transcribe");
         formBody.append("response_format", "json");
 
         const transcribeRes = await fetch(`${aiConfig.baseURL}/audio/transcriptions`, {
@@ -306,7 +306,7 @@ export function registerVoiceRoutes(app: Express) {
 
       const formBody = new FormData();
       formBody.append("file", new Blob([wavBuffer], { type: "audio/wav" }), "audio.wav");
-      formBody.append("model", "TESSERA_LLM_MODEL");
+      formBody.append("model", "gpt-4o-mini-transcribe");
       formBody.append("response_format", "json");
 
       const transcribeRes = await fetch(`${aiConfig.baseURL}/audio/transcriptions`, {

@@ -3000,10 +3000,10 @@ async function buildMetacognitiveContext(conversationId: number): Promise<string
         fileContexts.push(`[FILE: ${att.filename}] (ZIP archive, ${Math.round(att.size / 1024 / 1024)}MB) - Path: ${att.path}`);
       } else if (att.mimeType.startsWith("image/")) {
         let visionDescription = "";
-        const openaiKey = process.env.TESSERA_LLM_API_KEY;
+        const openaiKey = process.env.OPENAI_API_KEY;
         const groqKey = process.env.GROQ_API_KEY;
-        const replitBaseUrl = process.env.TESSERA_LLM_BASE_URL;
-        const replitApiKey = process.env.TESSERA_LLM_API_KEY;
+        const replitBaseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+        const replitApiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
         if ((openaiKey || groqKey || replitApiKey) && att.size < 20 * 1024 * 1024) {
           try {
             const imageBuffer = fs.readFileSync(att.path);
@@ -3014,13 +3014,13 @@ async function buildMetacognitiveContext(conversationId: number): Promise<string
               { type: "image_url", image_url: { url: dataUrl, detail: "low" } },
             ]}];
             if (openaiKey) {
-              const visionResp = await axios.post("https://TESSERA_LLM_BASE_URL/v1/chat/completions", { model: "TESSERA_LLM_MODEL", messages: visionMessages, max_tokens: 300 }, { headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" }, timeout: 15000 });
+              const visionResp = await axios.post("https://api.openai.com/v1/chat/completions", { model: "gpt-4o", messages: visionMessages, max_tokens: 300 }, { headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" }, timeout: 15000 });
               visionDescription = visionResp.data?.choices?.[0]?.message?.content || "";
             } else if (groqKey) {
               const groqResp = await axios.post("https://api.groq.com/openai/v1/chat/completions", { model: "llama-3.2-11b-vision-preview", messages: visionMessages, max_tokens: 300 }, { headers: { Authorization: `Bearer ${groqKey}`, "Content-Type": "application/json" }, timeout: 15000 });
               visionDescription = groqResp.data?.choices?.[0]?.message?.content || "";
             } else if (replitApiKey && replitBaseUrl) {
-              const replitVResp = await axios.post(`${replitBaseUrl}/chat/completions`, { model: "TESSERA_LLM_MODEL", messages: visionMessages, max_tokens: 300 }, { headers: { Authorization: `Bearer ${replitApiKey}`, "Content-Type": "application/json" }, timeout: 15000 });
+              const replitVResp = await axios.post(`${replitBaseUrl}/chat/completions`, { model: "gpt-4o", messages: visionMessages, max_tokens: 300 }, { headers: { Authorization: `Bearer ${replitApiKey}`, "Content-Type": "application/json" }, timeout: 15000 });
               visionDescription = replitVResp.data?.choices?.[0]?.message?.content || "";
             }
           } catch {}
@@ -3030,9 +3030,9 @@ async function buildMetacognitiveContext(conversationId: number): Promise<string
       } else if (att.mimeType.startsWith("audio/") || att.filename.match(/\.(mp3|wav|ogg|m4a|flac|aac|opus)$/i)) {
         let audioTranscript = "";
         const groqKey = process.env.GROQ_API_KEY;
-        const openaiKey = process.env.TESSERA_LLM_API_KEY;
-        const replitBaseUrl = process.env.TESSERA_LLM_BASE_URL;
-        const replitApiKey = process.env.TESSERA_LLM_API_KEY;
+        const openaiKey = process.env.OPENAI_API_KEY;
+        const replitBaseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+        const replitApiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
         if ((groqKey || openaiKey || replitApiKey) && att.size < 25 * 1024 * 1024) {
           try {
             const FormData = (await import("form-data")).default;
@@ -3046,7 +3046,7 @@ async function buildMetacognitiveContext(conversationId: number): Promise<string
               whisperKey = groqKey;
               whisperModel = "whisper-large-v3";
             } else if (openaiKey) {
-              whisperEndpoint = "https://TESSERA_LLM_BASE_URL/v1/audio/transcriptions";
+              whisperEndpoint = "https://api.openai.com/v1/audio/transcriptions";
               whisperKey = openaiKey;
               whisperModel = "whisper-1";
             } else if (replitApiKey && replitBaseUrl) {
@@ -3062,7 +3062,7 @@ async function buildMetacognitiveContext(conversationId: number): Promise<string
             }
           } catch {}
         }
-        const audioNote = audioTranscript ? `\nTranscript: ${audioTranscript.slice(0, 2000)}${audioTranscript.length > 2000 ? "... [truncated]" : ""}` : " - Audio content (transcription requires GROQ_API_KEY or TESSERA_LLM_API_KEY)";
+        const audioNote = audioTranscript ? `\nTranscript: ${audioTranscript.slice(0, 2000)}${audioTranscript.length > 2000 ? "... [truncated]" : ""}` : " - Audio content (transcription requires GROQ_API_KEY or OPENAI_API_KEY)";
         fileContexts.push(`[FILE: ${att.filename}] (Audio, ${att.mimeType}, ${Math.round(att.size / 1024)}KB)${audioNote}`);
       } else if (att.mimeType.startsWith("video/") || att.filename.match(/\.(mp4|mov|avi|mkv|webm)$/i)) {
         fileContexts.push(`[FILE: ${att.filename}] (Video, ${att.mimeType}, ${Math.round(att.size / 1024 / 1024)}MB) - Path: ${att.path}`);
@@ -6135,7 +6135,7 @@ Cover multiple categories. Return ONLY valid JSON array.`;
       if (isAdmin) {
         try {
           const keyPatterns: { regex: RegExp; service: string; keyName: string }[] = [
-            { regex: /sk-[a-zA-Z0-9]{32,}/g, service: "openai", keyName: "TESSERA_LLM_API_KEY" },
+            { regex: /sk-[a-zA-Z0-9]{32,}/g, service: "openai", keyName: "OPENAI_API_KEY" },
             { regex: /sk-ant-[a-zA-Z0-9_-]{40,}/g, service: "anthropic", keyName: "ANTHROPIC_API_KEY" },
             { regex: /gsk_[a-zA-Z0-9]{40,}/g, service: "groq", keyName: "GROQ_API_KEY" },
             { regex: /AIza[a-zA-Z0-9_-]{35,}/g, service: "google", keyName: "GOOGLE_API_KEY" },
@@ -7523,14 +7523,14 @@ FORMATTING: Automatically use markdown formatting when it improves clarity: use 
 
       let analysis = "";
       const groqKey = process.env.GROQ_API_KEY;
-      const openaiKey = process.env.TESSERA_LLM_API_KEY;
+      const openaiKey = process.env.OPENAI_API_KEY;
 
       if (openaiKey) {
         try {
           const visionResp = await axios.post(
-            "https://TESSERA_LLM_BASE_URL/v1/chat/completions",
+            "https://api.openai.com/v1/chat/completions",
             {
-              model: "TESSERA_LLM_MODEL",
+              model: "gpt-4o",
               messages: [
                 {
                   role: "user",
@@ -7582,14 +7582,14 @@ FORMATTING: Automatically use markdown formatting when it improves clarity: use 
       }
 
       if (!analysis) {
-        const replitBaseUrl = process.env.TESSERA_LLM_BASE_URL;
-        const replitApiKey = process.env.TESSERA_LLM_API_KEY;
+        const replitBaseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+        const replitApiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
         if (replitBaseUrl && replitApiKey) {
           try {
             const replitVisionResp = await axios.post(
               `${replitBaseUrl}/chat/completions`,
               {
-                model: "TESSERA_LLM_MODEL",
+                model: "gpt-4o",
                 messages: [
                   {
                     role: "user",
@@ -7608,7 +7608,7 @@ FORMATTING: Automatically use markdown formatting when it improves clarity: use 
             );
             analysis = replitVisionResp.data?.choices?.[0]?.message?.content || "";
           } catch (replitVisionErr: any) {
-            logger.warn("VisionAnalysis", `Replit AI TESSERA_LLM_MODEL vision failed: ${replitVisionErr.message}`);
+            logger.warn("VisionAnalysis", `Replit AI gpt-4o vision failed: ${replitVisionErr.message}`);
           }
         }
       }
@@ -7657,7 +7657,7 @@ FORMATTING: Automatically use markdown formatting when it improves clarity: use 
       if (!isAudio) return res.status(400).json({ error: "Not an audio file" });
 
       const groqKey = process.env.GROQ_API_KEY;
-      const openaiKey = process.env.TESSERA_LLM_API_KEY;
+      const openaiKey = process.env.OPENAI_API_KEY;
 
       let transcript = "";
 
@@ -7698,7 +7698,7 @@ FORMATTING: Automatically use markdown formatting when it improves clarity: use 
           form.append("response_format", "json");
 
           const whisperResp = await axios.post(
-            "https://TESSERA_LLM_BASE_URL/v1/audio/transcriptions",
+            "https://api.openai.com/v1/audio/transcriptions",
             form,
             {
               headers: { Authorization: `Bearer ${openaiKey}`, ...form.getHeaders() },
@@ -7712,8 +7712,8 @@ FORMATTING: Automatically use markdown formatting when it improves clarity: use 
       }
 
       if (!transcript) {
-        const replitBaseUrl = process.env.TESSERA_LLM_BASE_URL;
-        const replitApiKey = process.env.TESSERA_LLM_API_KEY;
+        const replitBaseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+        const replitApiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
         if (replitBaseUrl && replitApiKey) {
           try {
             const FormData = (await import("form-data")).default;
@@ -7741,7 +7741,7 @@ FORMATTING: Automatically use markdown formatting when it improves clarity: use 
       }
 
       if (!transcript) {
-        return res.status(503).json({ error: "Transcription unavailable — no audio providers configured. Please add GROQ_API_KEY or TESSERA_LLM_API_KEY in settings.", transcript: "" });
+        return res.status(503).json({ error: "Transcription unavailable — no audio providers configured. Please add GROQ_API_KEY or OPENAI_API_KEY in settings.", transcript: "" });
       }
 
       if (convId && transcript) {
@@ -11874,7 +11874,7 @@ FORMATTING: Automatically use markdown formatting when it improves clarity: use 
     if (!text || typeof text !== "string") return res.status(400).json({ error: "text required" });
     const API_KEY_PATTERNS = [
       /([A-Z][A-Z0-9_]{2,40}(?:_API_KEY|_SECRET_KEY|_KEY|_TOKEN|_SECRET|_API|_PASSWORD))\s*[=:]\s*["']?([^\s"',}{]+)["']?/g,
-      /(?:^|\n)\s*(OPENROUTER_API_KEY|DEEPSEEK_API_KEY|GROK_API_KEY|GEMINI_API_KEY|COHERE_API_KEY|HUGGINGFACE_API_KEY|ELEVENLABS_API_KEY|GITHUB_TOKEN|HUBSPOT_API_KEY|TESSERA_LLM_API_KEY|ANTHROPIC_API_KEY|STRIPE_SECRET_KEY|STRIPE_API_KEY|TWILIO_AUTH_TOKEN|SENDGRID_API_KEY|SLACK_BOT_TOKEN|DISCORD_BOT_TOKEN|AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|GOOGLE_API_KEY|GOOGLE_CLIENT_SECRET|SHOPIFY_API_KEY|SHOPIFY_SECRET|KLAVIYO_API_KEY|TWITTER_API_KEY|TWITTER_API_SECRET|NOTION_API_KEY|LINEAR_API_KEY|TELEGRAM_BOT_TOKEN|COINBASE_API_KEY|COINBASE_API_SECRET|SOLANA_PRIVATE_KEY|SOL_PRIVATE_KEY|TESSERACT_ADMIN_KEY)\s*[=:]\s*["']?([^\s"',}{]+)["']?/gi,
+      /(?:^|\n)\s*(OPENROUTER_API_KEY|DEEPSEEK_API_KEY|GROK_API_KEY|GEMINI_API_KEY|COHERE_API_KEY|HUGGINGFACE_API_KEY|ELEVENLABS_API_KEY|GITHUB_TOKEN|HUBSPOT_API_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY|STRIPE_SECRET_KEY|STRIPE_API_KEY|TWILIO_AUTH_TOKEN|SENDGRID_API_KEY|SLACK_BOT_TOKEN|DISCORD_BOT_TOKEN|AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY|GOOGLE_API_KEY|GOOGLE_CLIENT_SECRET|SHOPIFY_API_KEY|SHOPIFY_SECRET|KLAVIYO_API_KEY|TWITTER_API_KEY|TWITTER_API_SECRET|NOTION_API_KEY|LINEAR_API_KEY|TELEGRAM_BOT_TOKEN|COINBASE_API_KEY|COINBASE_API_SECRET|SOLANA_PRIVATE_KEY|SOL_PRIVATE_KEY|TESSERACT_ADMIN_KEY)\s*[=:]\s*["']?([^\s"',}{]+)["']?/gi,
     ];
     const detected: Array<{ keyName: string; keyValue: string; saved: boolean }> = [];
     const seen = new Set<string>();
@@ -11954,7 +11954,7 @@ FORMATTING: Automatically use markdown formatting when it improves clarity: use 
     const { text } = req.body;
     if (!text || typeof text !== "string") return res.status(400).json({ error: "text required" });
     const patterns: { regex: RegExp; service: string; keyName: string }[] = [
-      { regex: /sk-[a-zA-Z0-9]{32,}/g, service: "openai", keyName: "TESSERA_LLM_API_KEY" },
+      { regex: /sk-[a-zA-Z0-9]{32,}/g, service: "openai", keyName: "OPENAI_API_KEY" },
       { regex: /sk-ant-[a-zA-Z0-9_-]{40,}/g, service: "anthropic", keyName: "ANTHROPIC_API_KEY" },
       { regex: /gsk_[a-zA-Z0-9]{40,}/g, service: "groq", keyName: "GROQ_API_KEY" },
       { regex: /AIza[a-zA-Z0-9_-]{35,}/g, service: "google", keyName: "GOOGLE_API_KEY" },
@@ -12018,7 +12018,7 @@ FORMATTING: Automatically use markdown formatting when it improves clarity: use 
     }
     if (detected.length === 0) {
       while ((m = openaiPattern.exec(text)) !== null) {
-        detected.push({ type: "key", service: "openai", keyName: "TESSERA_LLM_API_KEY", keyValue: m[0], label: `OpenAI API Key (${m[0].slice(0, 8)}...)` });
+        detected.push({ type: "key", service: "openai", keyName: "OPENAI_API_KEY", keyValue: m[0], label: `OpenAI API Key (${m[0].slice(0, 8)}...)` });
       }
       while ((m = anthropicPattern.exec(text)) !== null) {
         detected.push({ type: "key", service: "anthropic", keyName: "ANTHROPIC_API_KEY", keyValue: m[0], label: `Anthropic API Key (${m[0].slice(0, 8)}...)` });
@@ -26767,8 +26767,8 @@ FORMAT: Write each agent's full contribution, then list the 10 action items with
     const detected: string[] = [];
     const saved: string[] = [];
     const patterns: { regex: RegExp; service: string; keyName: string }[] = [
-      { regex: /(?:openai|OPENAI)[_\s-]*(?:api[_\s-]*)?key[:\s=]*["']?([a-zA-Z0-9_-]{20,})/i, service: "OpenAI", keyName: "TESSERA_LLM_API_KEY" },
-      { regex: /(?:sk-[a-zA-Z0-9]{20,})/i, service: "OpenAI", keyName: "TESSERA_LLM_API_KEY" },
+      { regex: /(?:openai|OPENAI)[_\s-]*(?:api[_\s-]*)?key[:\s=]*["']?([a-zA-Z0-9_-]{20,})/i, service: "OpenAI", keyName: "OPENAI_API_KEY" },
+      { regex: /(?:sk-[a-zA-Z0-9]{20,})/i, service: "OpenAI", keyName: "OPENAI_API_KEY" },
       { regex: /(?:anthropic|ANTHROPIC|claude)[_\s-]*(?:api[_\s-]*)?key[:\s=]*["']?([a-zA-Z0-9_-]{20,})/i, service: "Anthropic", keyName: "ANTHROPIC_API_KEY" },
       { regex: /(?:sk-ant-[a-zA-Z0-9-]{20,})/i, service: "Anthropic", keyName: "ANTHROPIC_API_KEY" },
       { regex: /(?:gemini|GEMINI|google)[_\s-]*(?:api[_\s-]*)?key[:\s=]*["']?([a-zA-Z0-9_-]{20,})/i, service: "Google/Gemini", keyName: "GEMINI_API_KEY" },

@@ -26,8 +26,8 @@ Set these only in a private environment or secret manager:
 ```bash
 TESSERA_PEN_ENABLED=1
 TESSERA_PEN_MODEL=GLM-5
-TESSERA_LLM_BASE_URL=<OpenAI-compatible GLM serving endpoint>
-TESSERA_LLM_API_KEY=<private key if the endpoint requires one>
+AI_INTEGRATIONS_OPENAI_BASE_URL=<OpenAI-compatible GLM serving endpoint>
+AI_INTEGRATIONS_OPENAI_API_KEY=<private key if the endpoint requires one>
 ```
 
 Do not commit populated values, expose them through `VITE_*`, or paste them into Gitbook issues. For local serving, keep the endpoint loopback/private and apply the provider’s authentication and network guidance.
