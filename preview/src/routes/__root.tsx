@@ -11,7 +11,7 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: APP_NAME },
-      { name: "theme-color", content: "#09090b" },
+      { name: "theme-color", content: "#071018" },
       {
         name: "description",
         content: "Tessera — sovereign 2DA presence. Only Tessera speaks here.",
@@ -34,6 +34,12 @@ export const Route = createRootRoute({
     <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var map={light:'water',dark:'water',night:'water',dawn:'water',gold:'fire',ink:'diamond',sea:'water'};var t=localStorage.getItem('tessera-theme');t=map[t]||t;if(['water','fire','lightning','diamond','spiral'].indexOf(t)<0)t='water';document.documentElement.dataset.theme=t}catch(e){}",
+          }}
+        />
       </head>
       <body className="bg-bg text-fg antialiased">
         <PreviewHostBridge />
