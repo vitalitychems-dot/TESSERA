@@ -159,7 +159,7 @@ function stripValue(value: unknown, secrets: Set<string>): unknown {
   if (!value || typeof value !== "object") return value;
   const out: Record<string, unknown> = {};
   for (const [key, child] of Object.entries(value)) {
-    if (isDroppedCredentialKey(key) || key === "surfacePreview") continue;
+    if (isDroppedCredentialKey(key) || key.toLowerCase() === "surfacepreview") continue;
     const next = stripValue(child, secrets);
     if (next === undefined) continue;
     out[key] = next;

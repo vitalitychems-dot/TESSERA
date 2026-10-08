@@ -30,6 +30,10 @@ const SKIP_DIRS = new Set([
   "secrets",
   "credentials",
   ".ssh",
+  ".local-data",
+  "data",
+  ".sovereign-data",
+  "ingest",
 ]);
 const SKIP_EXT = new Set([".lock", ".log", ".tsbuildinfo"]);
 const MAX_HASH_BYTES = 64 * 1024;
@@ -44,6 +48,12 @@ export function isSecretManifestEntry(name: string, relPath = name): boolean {
   if (base.includes("secret") || base.includes("credential")) return true;
   const parts = relPath.replace(/\\/g, "/").toLowerCase().split("/");
   return parts.some((part) => part === "secrets" || part === "credentials" || part === ".ssh");
+}
+
+function isSkippedManifestName(name: string): boolean {
+  const lower = name.toLowerCase();
+  if (SKIP_DIRS.has(name) || SKIP_DIRS.has(lower)) return true;
+  return lower.startsWith("natal-vault");
 }
 
 function classifyKind(path: string): string {
@@ -87,7 +97,7 @@ export async function buildRepoManifest(rootDir = process.cwd()): Promise<Manife
       return;
     }
     for (const ent of entries) {
-      if (SKIP_DIRS.has(ent.name) || isSecretManifestEntry(ent.name)) continue;
+      if (isSkippedManifestName(ent.name) || isSecretManifestEntry(ent.name)) continue;
       const full = join(dir, ent.name);
       const rel = relative(rootDir, full);
       if (isSecretManifestEntry(ent.name, rel)) continue;

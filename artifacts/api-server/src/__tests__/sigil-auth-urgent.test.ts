@@ -612,6 +612,21 @@ describe("sigil auth urgent", () => {
     expect(containsKey(mixed, "sigilFingerprint")).toBe(false);
   });
 
+  it("drops surfacePreview keys regardless of case", () => {
+    const upper = "synthetic-surface-upper";
+    const lower = "synthetic-surface-lower";
+    const stripped = doctrineModule.withoutSigilFingerprint({
+      SurfacePreview: upper,
+      surfacepreview: lower,
+      note: `kept ${upper} and ${lower}`,
+      label: "synthetic-kept",
+    }) as Record<string, unknown>;
+    expect(containsKey(stripped, "SurfacePreview")).toBe(false);
+    expect(containsKey(stripped, "surfacepreview")).toBe(false);
+    expect(stripped.note).toBe(`kept ${upper} and ${lower}`);
+    expect(stripped.label).toBe("synthetic-kept");
+  });
+
   it("requires an owner session for translate encode and decode", async () => {
     for (const direction of ["encode", "decode"]) {
       const response = await send("POST", "/sigil/translate", {
@@ -717,6 +732,34 @@ describe("sigil auth urgent", () => {
       expect(containsKey(body, "surfacePreview")).toBe(false);
       expect(containsKey(body, "envelope")).toBe(false);
       expect(JSON.stringify(body)).not.toContain(preview);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("omits mixed-case cipher envelopes from an anonymous council read", async () => {
+    const preview = "synthetic-mixed-case-preview";
+    const spy = vi.spyOn(councilDeliberation, "getSession").mockResolvedValue({
+      id: "synthetic-mixed-case",
+      topic: "synthetic-mixed-topic",
+      Cipher: {
+        ENVELOPE: { SurfacePreview: preview, label: "synthetic" },
+        snapshot: "synthetic-kept",
+      },
+    } as unknown as Awaited<ReturnType<typeof councilDeliberation.getSession>>);
+    try {
+      const response = await send("GET", "/grand-council/sessions/synthetic-mixed-case");
+      expect(response.status).toBe(200);
+      const body = await response.json() as {
+        session?: { topic?: string; Cipher?: { snapshot?: string } };
+      };
+      expect(body.session?.topic).toBe("synthetic-mixed-topic");
+      expect(containsKey(body, "ENVELOPE")).toBe(false);
+      expect(containsKey(body, "envelope")).toBe(false);
+      expect(containsKey(body, "SurfacePreview")).toBe(false);
+      expect(containsKey(body, "surfacepreview")).toBe(false);
+      expect(JSON.stringify(body)).not.toContain(preview);
+      expect(body.session?.Cipher?.snapshot).toBe("synthetic-kept");
     } finally {
       spy.mockRestore();
     }
