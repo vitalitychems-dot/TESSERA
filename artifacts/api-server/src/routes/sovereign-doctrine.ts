@@ -427,7 +427,7 @@ router.post("/sigil/encrypt", requireAdminSession, (req, res) => {
   const label = String(req.body?.label ?? "corpus");
   if (!text) { res.status(400).json({ ok: false, error: "text required" }); return; }
   const env = encryptForCorpus(text, label);
-  res.json({ ok: true, envelope: env });
+  res.json(withoutSigilFingerprint({ ok: true, envelope: env }));
 });
 
 router.post("/sigil/decrypt", requireAdminSession, (req, res) => {

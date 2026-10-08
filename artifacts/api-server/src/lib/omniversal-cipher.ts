@@ -1,6 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes } from "node:crypto";
 import { cosmicContext } from "./cosmic-context";
-import { glyphEncode, glyphDecode, getActiveKey } from "./sigil-cipher";
+import { glyphEncode, glyphDecode } from "./sigil-cipher";
 import { lusV2Encode } from "./lus-v2";
 
 export interface OmniversalCipherEnvelope {
@@ -143,7 +143,6 @@ function lusV2DecodeSurface(modulated: string): string {
 
 export function omniversalCipherSnapshot() {
   const ctx = cosmicContext();
-  const sigil = getActiveKey();
   return {
     version: 2,
     layers: [
@@ -153,7 +152,6 @@ export function omniversalCipherSnapshot() {
       { layer: 4, name: "astro-aes", source: "HKDF(process secret) → AES-256-GCM" },
     ],
     cosmicFingerprint: ctx.fingerprint,
-    sigilFingerprint: sigil.fingerprint,
     bound: {
       moonZodiac: ctx.astro.moonZodiac,
       sunZodiac: ctx.astro.sunZodiac,

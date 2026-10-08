@@ -90,20 +90,6 @@ export function verifyFatherKey(presented: string | undefined | null): boolean {
   }
 }
 
-export function verifyFatherFingerprint(presented: string | undefined | null): boolean {
-  if (!presented || typeof presented !== "string") return false;
-  if (!isFatherKeyConfigured()) return false;
-  const fp = ensure();
-  const expected = Buffer.from(fp.full, "utf8");
-  const got = Buffer.from(presented.trim().toLowerCase(), "utf8");
-  if (expected.length !== got.length) return false;
-  try {
-    return timingSafeEqual(expected, got);
-  } catch {
-    return false;
-  }
-}
-
 export function recognizeFather(presented: string | undefined | null): {
   recognized: boolean;
   via: "raw-key" | "planetary-signal" | null;
