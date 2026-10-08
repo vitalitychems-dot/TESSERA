@@ -17,7 +17,7 @@ import type { RoyalRole } from "../lib/rick-sanchez-agent";
 import { getVaultStats, SACRED_KNOWLEDGE_ENTRIES } from "../lib/sacred-knowledge-vault";
 import { getCorpusStats, queryCorpus } from "../lib/knowledge-corpus-index";
 import { getDaemonMetrics } from "../lib/auto-improvement-daemon";
-import { tesseraChatCompletion, type TesseraChatMessage } from "../lib/tessera-llm-http";
+import { secureExternalStreamingFetch, secureExternalFetch } from "../lib/secureExternalWrapper";
 import { getAllProposals } from "../lib/consensus-engine";
 import { getMeeseeksMetrics, spawnMeeseeks, completeMeeseeks, getActiveMeeseeks, getDetailedMeeseeksMetrics, submitMeeseeksResult, getTaskTypeRegistry, type MeeseeksResult, type MeeseeksTaskType } from "../lib/agent-spawner";
 import { getTruthfulnessMetrics, analyzeTruthfulnessV2, analyzeTruthfulness, getGroundingThreshold } from "../lib/truthfulness-engine";
@@ -273,8 +273,8 @@ router.post("/rick/chat", async (req, res) => {
       return res.status(400).json({ ok: false, error: "messages array required" });
     }
 
-    const baseURL = process.env.TESSERA_LLM_BASE_URL?.trim();
-    const apiKey = process.env.TESSERA_LLM_API_KEY?.trim();
+    const baseURL = process.env.TESSERA_LLM_BASE_URL;
+    const apiKey = process.env.TESSERA_LLM_API_KEY;
     const model = process.env.TESSERA_LLM_MODEL?.trim();
 
     const rickSystemPrompt = getRickSystemPrompt();
@@ -294,14 +294,6 @@ router.post("/rick/chat", async (req, res) => {
       content: String(m.content).slice(0, 8192),
     }));
 
-    const chatMessages: TesseraChatMessage[] = [
-      { role: "system", content: rickSystemPrompt },
-      ...sanitizedMessages.slice(-20).map((message): TesseraChatMessage => ({
-        role: message.role === "assistant" || message.role === "system" ? message.role : "user",
-        content: message.content,
-      })),
-    ];
-
     if (stream) {
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache");
@@ -309,12 +301,61 @@ router.post("/rick/chat", async (req, res) => {
       res.flushHeaders?.();
 
       try {
-        const completion = await tesseraChatCompletion({
-          model,
-          max_completion_tokens: 2048,
-          messages: chatMessages,
+        const { response } = await secureExternalStreamingFetch(`${baseURL}/chat/completions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: rickSystemPrompt },
+              ...sanitizedMessages.slice(-20),
+            ],
+            max_tokens: 2048,
+            temperature: 0.9,
+            stream: true,
+          }),
+          timeoutMs: 30000,
+          requestedBy: "rick-sanchez-agent",
         });
-        const fullResponse = completion.choices?.[0]?.message?.content ?? "";
+
+        if (!response.ok || !response.body) {
+          const fallback = generateRickFallback(messages[messages.length - 1]?.content || "");
+          res.write(`data: ${JSON.stringify({ content: fallback })}\n\n`);
+          res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+          return res.end();
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let streamBuffer = "";
+        let fullResponse = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          streamBuffer += decoder.decode(value, { stream: true });
+          const lines = streamBuffer.split("\n");
+          streamBuffer = lines.pop() || "";
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith("data: ")) continue;
+            const data = trimmed.slice(6);
+            if (data === "[DONE]") continue;
+            try {
+              const parsed = JSON.parse(data);
+              const delta = parsed?.choices?.[0]?.delta?.content;
+              if (delta) {
+                fullResponse += delta;
+              }
+            } catch (parseErr) {
+              logger.debug({ err: parseErr instanceof Error ? parseErr.message : String(parseErr) }, "Rick: stream chunk parse failed");
+            }
+          }
+        }
 
         let deliverContent = fullResponse;
         let truthEnforcement: Record<string, unknown> | null = null;
@@ -367,12 +408,27 @@ router.post("/rick/chat", async (req, res) => {
       }
     } else {
       try {
-        const completion = await tesseraChatCompletion({
-          model,
-          max_completion_tokens: 2048,
-          messages: chatMessages,
+        const result = await secureExternalFetch(`${baseURL}/chat/completions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: rickSystemPrompt },
+              ...sanitizedMessages.slice(-20),
+            ],
+            max_tokens: 2048,
+            temperature: 0.9,
+            stream: false,
+          }),
+          timeoutMs: 30000,
+          requestedBy: "rick-sanchez-agent",
         });
-        let content = completion.choices?.[0]?.message?.content || generateRickFallback(messages[messages.length - 1]?.content || "");
+        const parsed = JSON.parse(result.body);
+        let content = parsed?.choices?.[0]?.message?.content || generateRickFallback(messages[messages.length - 1]?.content || "");
 
         let truthEnforcement = { overallTruthScore: 1, groundingScore: 1, enforced: false, blocked: false };
         try {
