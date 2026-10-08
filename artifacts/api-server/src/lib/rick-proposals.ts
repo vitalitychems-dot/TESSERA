@@ -7,7 +7,7 @@ import { getAGITrainingMetrics } from "./agi-training-engine";
 import { getTruthfulnessMetrics } from "./truthfulness-engine";
 import { getMeeseeksMetrics } from "./agent-spawner";
 import { getRickSystemPrompt } from "./rick-sanchez-agent";
-import { tesseraChatCompletion } from "./tessera-llm-http";
+import { secureExternalFetch } from "./secureExternalWrapper";
 import { analyzeTruthfulness } from "./truthfulness-engine";
 
 export type ProposalState = "pending-review" | "approved" | "rejected" | "implemented";
@@ -327,15 +327,24 @@ Return ONLY a JSON object of the form: {"proposals": [{title, problem, evidence:
 No prose, no code fences.`;
 
   try {
-    const response = await tesseraChatCompletion({
-      model,
-      max_completion_tokens: 2400,
-      messages: [
-        { role: "system", content: getRickSystemPrompt() },
-        { role: "user", content: userPrompt },
-      ],
+    const result = await secureExternalFetch(`${baseURL}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: getRickSystemPrompt() },
+          { role: "user", content: userPrompt },
+        ],
+        max_tokens: 2400,
+        temperature: 0.5,
+        response_format: { type: "json_object" },
+      }),
+      timeoutMs: 45000,
+      requestedBy: "rick-proposals",
     });
-    const content = response.choices?.[0]?.message?.content;
+    const parsed = JSON.parse(result.body);
+    const content = parsed?.choices?.[0]?.message?.content;
     if (typeof content !== "string") return [];
     const obj = JSON.parse(content);
     const arr = Array.isArray(obj?.proposals) ? obj.proposals : [];
