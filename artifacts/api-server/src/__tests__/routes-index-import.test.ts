@@ -7,7 +7,6 @@ const starters = vi.hoisted(() => ({
   startFreeStuffScraper: vi.fn(),
   startBountyRefresher: vi.fn(),
   startIncomeExecutor: vi.fn(),
-  initShepherdPersistence: vi.fn(),
 }));
 
 vi.mock("../lib/autonomous-wiring", () => ({
@@ -47,12 +46,6 @@ vi.mock("../lib/code-bounties-real", () => ({
 vi.mock("../lib/income-executor", () => ({
   startIncomeExecutor(): void {
     starters.startIncomeExecutor();
-  },
-}));
-
-vi.mock("../lib/shepherd-negotiation", () => ({
-  initShepherdPersistence(): void {
-    starters.initShepherdPersistence();
   },
 }));
 
@@ -105,7 +98,6 @@ describe("routes/index import", () => {
     expect(starters.startFreeStuffScraper).toHaveBeenCalledTimes(1);
     expect(starters.startBountyRefresher).toHaveBeenCalledTimes(1);
     expect(starters.startIncomeExecutor).toHaveBeenCalledTimes(1);
-    expect(starters.initShepherdPersistence).toHaveBeenCalledTimes(1);
     expect(starters.startAutonomousOperation).toHaveBeenCalled();
   }, 120_000);
 });
