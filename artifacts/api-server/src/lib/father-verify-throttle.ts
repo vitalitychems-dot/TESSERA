@@ -3,6 +3,7 @@
 // In-process, zero deps, no candidate values logged.
 
 import type { Request, Response, NextFunction } from "express";
+import { decideOwnerSession } from "./sovereign-admin";
 
 const WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 10;
@@ -39,6 +40,13 @@ function prune(now: number): void {
 }
 
 export function fatherVerifyRateLimit(req: Request, res: Response, next: NextFunction): void {
+  // Anonymous /sigil/status and the owner key-reveal share this middleware.
+  // A valid owner session uses its own path so a status flood cannot fill
+  // the global bucket and block show-key-in-lus.
+  if (decideOwnerSession(req).ok) {
+    next();
+    return;
+  }
   const now = Date.now();
   prune(now);
   const ip = ipOf(req);
@@ -72,9 +80,8 @@ export function rateLimitSnapshot(): { window: number; max: number; activeIps: n
   return { window: WINDOW_MS, max: MAX_PER_WINDOW, activeIps: _hits.size };
 }
 
-// INTEG-6 (100% approval): a stricter, isolated per-IP throttle for the
-// admin/session unlock surface. Separate Map so a noisy origin on this
-// route cannot exhaust the global Father-verify budget for everyone else.
+// Login only. Storage, mesh, dedup, and the other raw-key routes must not
+// share this counter: Settings polls /mesh/stats and would lock the owner out.
 // Bounded by ADMIN_SESSION_MAX_IPS to avoid unbounded memory growth.
 const ADMIN_SESSION_WINDOW_MS = 60_000;
 const ADMIN_SESSION_MAX = 6;
@@ -127,6 +134,62 @@ export function adminSessionRateLimit(req: Request, res: Response, next: NextFun
   arr.push(now);
   _adminHits.set(ip, arr);
   _adminGlobalHits.push(now);
+  next();
+}
+
+// Failed attempts on raw-key admin routes. Successful authenticated requests
+// do not consume budget. Separate from the login counter above.
+const RAW_KEY_WINDOW_MS = 60_000;
+const RAW_KEY_IP_MAX = 6;
+const RAW_KEY_GLOBAL_MAX = 30;
+const RAW_KEY_MAX_IPS = 4096;
+const _rawHits = new Map<string, number[]>();
+const _rawGlobalHits: number[] = [];
+
+function pruneRaw(now: number): void {
+  for (const [ip, arr] of _rawHits) {
+    const filtered = arr.filter((t) => now - t < RAW_KEY_WINDOW_MS);
+    if (filtered.length === 0) _rawHits.delete(ip);
+    else _rawHits.set(ip, filtered);
+  }
+  evictOldest(_rawHits, RAW_KEY_MAX_IPS);
+  const globalHits = _rawGlobalHits.filter((t) => now - t < RAW_KEY_WINDOW_MS);
+  _rawGlobalHits.length = 0;
+  _rawGlobalHits.push(...globalHits);
+}
+
+export function rawKeyFailRateLimit(req: Request, res: Response, next: NextFunction): void {
+  const now = Date.now();
+  pruneRaw(now);
+  const ip = ipOf(req);
+  const arr = _rawHits.get(ip) ?? [];
+  const retry = (limit: number, oldest: number, scope: string) => {
+    const retryAfterMs = RAW_KEY_WINDOW_MS - (now - oldest);
+    res.setHeader("Retry-After", Math.max(1, Math.ceil(retryAfterMs / 1000)).toString());
+    res.status(429).json({
+      ok: false,
+      error: "rate-limited",
+      message: `Raw-key admin routes are rate-limited to ${limit} failed attempts per minute ${scope}.`,
+      retryAfterMs,
+    });
+  };
+  if (arr.length >= RAW_KEY_IP_MAX) {
+    retry(RAW_KEY_IP_MAX, arr[0], "per IP");
+    return;
+  }
+  if (_rawGlobalHits.length >= RAW_KEY_GLOBAL_MAX) {
+    retry(RAW_KEY_GLOBAL_MAX, _rawGlobalHits[0], "globally");
+    return;
+  }
+  res.on("finish", () => {
+    if (res.statusCode !== 401 && res.statusCode !== 403) return;
+    const t = Date.now();
+    const current = _rawHits.get(ip) ?? [];
+    current.push(t);
+    _rawHits.set(ip, current);
+    _rawGlobalHits.push(t);
+    evictOldest(_rawHits, RAW_KEY_MAX_IPS);
+  });
   next();
 }
 

@@ -121,8 +121,9 @@ function rememberSecret(into: Set<string>, secret: string): void {
 }
 
 function stringContainsSecret(value: string, secrets: Set<string>): boolean {
+  const haystack = value.toLowerCase();
   for (const secret of secrets) {
-    if (isUsableSecret(secret) && value.includes(secret)) return true;
+    if (isUsableSecret(secret) && haystack.includes(secret.toLowerCase())) return true;
   }
   return false;
 }
