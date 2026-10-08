@@ -7,7 +7,7 @@ export const semanticCacheTable = pgTable("semantic_cache", {
   promptText: text("prompt_text").notNull(),
   embedding: jsonb("embedding").$type<number[]>().default([]),
   response: text("response").notNull(),
-  model: text("model").notNull().default("gpt-5-mini"),
+  model: text("model").notNull().default("Tessera"),
   hitCount: integer("hit_count").notNull().default(0),
   ttlSeconds: integer("ttl_seconds").notNull().default(3600),
   createdAt: timestamp("created_at").notNull().defaultNow(),

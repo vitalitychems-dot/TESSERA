@@ -19,30 +19,15 @@ export interface ExternalRequestResult {
   flagReason?: string;
 }
 
-const BUILTIN_ALLOWED: string[] = [];
+const ALLOWED_DOMAINS: string[] = [];
 
-if (process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
+const tesseraLlmBaseUrl = process.env.TESSERA_LLM_BASE_URL?.trim();
+if (tesseraLlmBaseUrl) {
   try {
-    const aiHost = new URL(process.env.AI_INTEGRATIONS_OPENAI_BASE_URL).hostname;
-    BUILTIN_ALLOWED.push(aiHost);
+    const aiHost = new URL(tesseraLlmBaseUrl).hostname;
+    if (aiHost) ALLOWED_DOMAINS.push(aiHost);
   } catch {}
 }
-
-const SOVEREIGN_DOMAINS: string[] = [
-  "images-api.nasa.gov",
-  "images-assets.nasa.gov",
-  "images-orig.nasa.gov",
-  "api.nasa.gov",
-];
-
-const ALLOWED_DOMAINS: string[] = [
-  ...BUILTIN_ALLOWED,
-  ...SOVEREIGN_DOMAINS,
-  ...(process.env.ALLOWED_EXTERNAL_DOMAINS ?? "")
-    .split(",")
-    .map((d) => d.trim())
-    .filter(Boolean),
-];
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 

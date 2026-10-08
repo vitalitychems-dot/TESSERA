@@ -7,7 +7,7 @@ import { getAGITrainingMetrics } from "./agi-training-engine";
 import { getTruthfulnessMetrics } from "./truthfulness-engine";
 import { getMeeseeksMetrics } from "./agent-spawner";
 import { getRickSystemPrompt } from "./rick-sanchez-agent";
-import { secureExternalFetch } from "./secureExternalWrapper";
+import { tesseraChatCompletion } from "./tessera-llm-http";
 import { analyzeTruthfulness } from "./truthfulness-engine";
 
 export type ProposalState = "pending-review" | "approved" | "rejected" | "implemented";
@@ -290,9 +290,10 @@ function coerceProposal(raw: LlmProposalShape, idx: number, fallbackCategory: st
 }
 
 async function generateViaLlm(diag: DiagnosticsSnapshot, slotsNeeded: number, recentRejections: { title: string; reason: string }[]): Promise<RickProposal[]> {
-  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-  if (!baseURL || !apiKey || slotsNeeded <= 0) return [];
+  const baseURL = process.env.TESSERA_LLM_BASE_URL?.trim();
+  const apiKey = process.env.TESSERA_LLM_API_KEY?.trim();
+  const model = process.env.TESSERA_LLM_MODEL?.trim();
+  if (!baseURL || !apiKey || !model || slotsNeeded <= 0) return [];
 
   const realityAuditBlock = `REALITY AUDIT (grounded checks against the knowledge base):
 - Grounding rate of recent claims: ${(diag.truthGroundingRate * 100).toFixed(1)}%
@@ -326,24 +327,15 @@ Return ONLY a JSON object of the form: {"proposals": [{title, problem, evidence:
 No prose, no code fences.`;
 
   try {
-    const result = await secureExternalFetch(`${baseURL}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: "gpt-4.1",
-        messages: [
-          { role: "system", content: getRickSystemPrompt() },
-          { role: "user", content: userPrompt },
-        ],
-        max_tokens: 2400,
-        temperature: 0.5,
-        response_format: { type: "json_object" },
-      }),
-      timeoutMs: 45000,
-      requestedBy: "rick-proposals",
+    const response = await tesseraChatCompletion({
+      model,
+      max_completion_tokens: 2400,
+      messages: [
+        { role: "system", content: getRickSystemPrompt() },
+        { role: "user", content: userPrompt },
+      ],
     });
-    const parsed = JSON.parse(result.body);
-    const content = parsed?.choices?.[0]?.message?.content;
+    const content = response.choices?.[0]?.message?.content;
     if (typeof content !== "string") return [];
     const obj = JSON.parse(content);
     const arr = Array.isArray(obj?.proposals) ? obj.proposals : [];
