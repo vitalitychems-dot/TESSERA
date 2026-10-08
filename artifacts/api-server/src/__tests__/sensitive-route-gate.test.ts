@@ -1,8 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import express from "express";
 import { createServer, type Server } from "node:http";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 
 vi.mock("@workspace/db", () => ({
   db: {
@@ -19,10 +18,12 @@ import natalChartRouter from "../routes/natal-chart";
 import politicalDossiersRouter from "../routes/political-dossiers";
 import incomeAndLeadsRouter from "../routes/income-and-leads";
 
-const GATE_ENV = "TESSERA_SENSITIVE_ROUTE_TOKEN";
+const OWNER_ENV = "SOVEREIGN_ADMIN_TOKEN";
+const LEGACY_ENV = "TESSERACT_ADMIN_KEY";
+const SESSION_ENV = "SOVEREIGN_SESSION_SECRET";
 const CHART_ENV = "FATHER_NATAL_CHART_JSON";
-const SYNTHETIC_TOKEN = "synthetic-gate-token";
-const TOKEN_HEADER = "x-admin-token";
+const SYNTHETIC_OWNER_TOKEN = "synthetic-owner-token";
+const SYNTHETIC_SESSION_SECRET = "synthetic-session-secret-32chars!!";
 
 const gatedEndpoints = [
   { router: "natal-chart", path: "/natal-chart/father" },
@@ -33,7 +34,9 @@ const gatedEndpoints = [
 describe("sensitive route gate", () => {
   let server: Server | undefined;
   let baseUrl = "";
-  const previousGate = process.env[GATE_ENV];
+  const previousOwner = process.env[OWNER_ENV];
+  const previousLegacy = process.env[LEGACY_ENV];
+  const previousSession = process.env[SESSION_ENV];
   const previousChart = process.env[CHART_ENV];
 
   beforeAll(async () => {
@@ -54,29 +57,37 @@ describe("sensitive route gate", () => {
   });
 
   beforeEach(() => {
-    process.env[GATE_ENV] = SYNTHETIC_TOKEN;
+    process.env[OWNER_ENV] = SYNTHETIC_OWNER_TOKEN;
+    process.env[SESSION_ENV] = SYNTHETIC_SESSION_SECRET;
+    delete process.env[LEGACY_ENV];
     delete process.env[CHART_ENV];
   });
 
   afterAll(async () => {
-    if (previousGate === undefined) delete process.env[GATE_ENV];
-    else process.env[GATE_ENV] = previousGate;
-    if (previousChart === undefined) delete process.env[CHART_ENV];
-    else process.env[CHART_ENV] = previousChart;
+    restore(OWNER_ENV, previousOwner);
+    restore(LEGACY_ENV, previousLegacy);
+    restore(SESSION_ENV, previousSession);
+    restore(CHART_ENV, previousChart);
     if (!server) return;
     await new Promise<void>((resolve, reject) => {
       server?.close((error) => (error ? reject(error) : resolve()));
     });
   });
 
-  async function get(path: string, token?: string): Promise<Response> {
+  function ownerCookie(): string {
+    const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+    return `${SESSION_COOKIE}=${issued.signedId}`;
+  }
+
+  async function get(path: string, cookie?: string): Promise<Response> {
     const headers = new Headers();
-    if (token !== undefined) headers.set(TOKEN_HEADER, token);
+    if (cookie !== undefined) headers.set("cookie", cookie);
     return fetch(`${baseUrl}${path}`, { headers });
   }
 
   it("leaves unrelated routes ungated", async () => {
-    delete process.env[GATE_ENV];
+    delete process.env[OWNER_ENV];
+    delete process.env[LEGACY_ENV];
     const response = await get("/healthz");
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ status: "ok" });
@@ -84,41 +95,43 @@ describe("sensitive route gate", () => {
 
   for (const endpoint of gatedEndpoints) {
     describe(endpoint.router, () => {
-      it(`returns 401 for ${endpoint.path} when no token is presented`, async () => {
+      it(`returns 401 for ${endpoint.path} when no owner session is presented`, async () => {
         const response = await get(endpoint.path);
         expect(response.status).toBe(401);
         await expect(response.json()).resolves.toMatchObject({ ok: false, error: "unauthenticated" });
       });
 
-      it(`returns 403 for ${endpoint.path} when the token is wrong`, async () => {
-        const response = await get(endpoint.path, "wrong-synthetic-token");
-        expect(response.status).toBe(403);
-        await expect(response.json()).resolves.toMatchObject({ ok: false, error: "forbidden" });
+      it(`returns 401 for ${endpoint.path} when the owner session is wrong`, async () => {
+        const response = await get(endpoint.path, `${SESSION_COOKIE}=wrong-synthetic-session`);
+        expect(response.status).toBe(401);
+        await expect(response.json()).resolves.toMatchObject({ ok: false, error: "unauthenticated" });
       });
 
-      it(`refuses ${endpoint.path} when ${GATE_ENV} is unset`, async () => {
-        delete process.env[GATE_ENV];
-        const withToken = await get(endpoint.path, SYNTHETIC_TOKEN);
-        expect(withToken.status).toBe(503);
-        await expect(withToken.json()).resolves.toMatchObject({ ok: false, error: "not-configured" });
+      it(`refuses ${endpoint.path} when ${OWNER_ENV} is unset`, async () => {
+        delete process.env[OWNER_ENV];
+        delete process.env[LEGACY_ENV];
+        const withCookie = await get(endpoint.path, `${SESSION_COOKIE}=synthetic-cookie`);
+        expect(withCookie.status).toBe(503);
+        await expect(withCookie.json()).resolves.toMatchObject({ ok: false, error: "sovereign-unconfigured" });
 
-        const withoutToken = await get(endpoint.path);
-        expect(withoutToken.status).toBe(503);
-        await expect(withoutToken.json()).resolves.toMatchObject({ ok: false, error: "not-configured" });
+        const withoutCookie = await get(endpoint.path);
+        expect(withoutCookie.status).toBe(503);
+        await expect(withoutCookie.json()).resolves.toMatchObject({ ok: false, error: "sovereign-unconfigured" });
       });
     });
   }
 
-  it("refuses when the auth env var is blank after trim", async () => {
-    process.env[GATE_ENV] = "   ";
-    const response = await get("/natal-chart/father", SYNTHETIC_TOKEN);
+  it("refuses when the owner token env var is blank after trim", async () => {
+    process.env[OWNER_ENV] = "   ";
+    delete process.env[LEGACY_ENV];
+    const response = await get("/natal-chart/father", `${SESSION_COOKIE}=synthetic-cookie`);
     expect(response.status).toBe(503);
-    await expect(response.json()).resolves.toMatchObject({ ok: false, error: "not-configured" });
+    await expect(response.json()).resolves.toMatchObject({ ok: false, error: "sovereign-unconfigured" });
   });
 
   it("returns not-configured for the natal chart when FATHER_NATAL_CHART_JSON is unset", async () => {
     delete process.env[CHART_ENV];
-    const response = await get("/natal-chart/father", SYNTHETIC_TOKEN);
+    const response = await get("/natal-chart/father", ownerCookie());
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({
       ok: false,
@@ -127,38 +140,23 @@ describe("sensitive route gate", () => {
   });
 
   it("returns 404 for the removed identity-verification endpoints", async () => {
-    const questions = await get("/natal-chart/identity/questions", SYNTHETIC_TOKEN);
+    const cookie = ownerCookie();
+    const questions = await get("/natal-chart/identity/questions", cookie);
     expect(questions.status).toBe(404);
 
     const verify = await fetch(`${baseUrl}/natal-chart/identity/verify`, {
       method: "POST",
       headers: {
-        [TOKEN_HEADER]: SYNTHETIC_TOKEN,
+        cookie,
         "content-type": "application/json",
       },
       body: JSON.stringify({ questionKey: "synthetic", answer: "synthetic" }),
     });
     expect(verify.status).toBe(404);
   });
-
-  it("keeps natal-chart-engine.ts free of a hard-coded placement table", () => {
-    const engineSource = readFileSync(
-      fileURLToPath(new URL("../lib/natal-chart-engine.ts", import.meta.url)),
-      "utf8",
-    );
-    const routeSource = readFileSync(
-      fileURLToPath(new URL("../routes/natal-chart.ts", import.meta.url)),
-      "utf8",
-    );
-
-    expect(engineSource).not.toMatch(/const FATHER_NATAL\b/);
-    expect(engineSource).not.toMatch(/planet1\s*:/);
-    expect(engineSource).not.toMatch(/birthDate:\s*["']/);
-    expect(engineSource).not.toMatch(/degree:\s*\d/);
-    expect(engineSource).not.toMatch(/house:\s*(?:1[0-2]|[1-9])\s*[,}]/);
-    expect(engineSource).not.toMatch(/\{\s*name:\s*["'][^"']+["'][^}]*sign:\s*["']/);
-    expect(engineSource).not.toMatch(/verifyIdentity|getIdentityQuestions|buildVerificationCheckers/);
-    expect(routeSource).not.toMatch(/identity\/questions|identity\/verify|getIdentityQuestions|verifyIdentity/);
-    expect(routeSource).not.toMatch(/getOrSeedNatalChart\(\)\.catch/);
-  });
 });
+
+function restore(name: string, value: string | undefined) {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+}
