@@ -5,11 +5,8 @@ import { useTessera } from "@/lib/tessera/store";
 import { followCuriosity, readDeskStudy, readPublicPage, searchWeb } from "@/lib/tessera/study";
 
 const PAGES = [
-  "https://github.com/vitalitychems-dot/Everything",
-  "https://github.com/vitalitychems-dot/T44",
-  "https://github.com/vitalitychems-dot/Grok-ready",
-  "https://github.com/vitalitychems-dot/TX",
-  "https://github.com/vitalitychems-dot/TESS",
+  "https://github.com/vitalitychems-dot/TESSERA",
+  "https://github.com/vitalitychems-dot/Gitbook",
 ];
 
 const QUESTIONS = [

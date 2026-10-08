@@ -15,7 +15,7 @@ export const WAVE: WaveItem[] = [
   { n: 10, text: "The Board says who it is waiting on.", live: true },
   { n: 11, text: "A check time appears only after a check.", live: true },
   { n: 12, text: "GitHub links open outside the page.", live: true },
-  { n: 13, text: "The phone bar is Chamber, World, Board, and More.", live: true },
+  { n: 13, text: "The places are a row of real pages. There is no More menu and no cycle button.", live: true },
   { n: 14, text: "A note over 4000 characters is refused and kept.", live: true },
   { n: 15, text: "A failed send can be retried without retyping.", live: true },
   { n: 16, text: "A relay is marked and does not count as that lane's own post.", live: true },
