@@ -3,20 +3,6 @@ import { logger } from "../lib/logger";
 import { requireAdminSession } from "../lib/sovereign-admin";
 import { getWalletObservation, refreshWalletObservation } from "../lib/wallet-observer";
 import { getExecutableLeads, leadCountsByKind, type LeadKind } from "../lib/lead-execution";
-import {
-  getAllRecruitDossiers,
-  getRecruitDossierById,
-  getRecruitCategories,
-  getRecruitCountries,
-  type RecruitCategory,
-} from "../lib/recruit-dossiers-extended";
-import {
-  startNegotiation,
-  getTranscript,
-  listTranscripts,
-  appendInbound,
-  revokeGrant,
-} from "../lib/shepherd-negotiation";
 import { getFreeFindings, refreshFreeFindings } from "../lib/free-stuff-scraper";
 import {
   getBounties,
@@ -30,7 +16,6 @@ const router: IRouter = Router();
 
 router.use("/income", requireAdminSession);
 router.use("/leads", requireAdminSession);
-router.use("/recruit-dossiers", requireAdminSession);
 router.use("/free-stuff", requireAdminSession);
 router.use("/code-bounties", requireAdminSession);
 
@@ -112,57 +97,6 @@ router.get("/leads/feed", async (req, res) => {
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
-});
-
-router.get("/recruit-dossiers", (req, res) => {
-  try {
-    const category = typeof req.query.category === "string" ? (req.query.category as RecruitCategory) : undefined;
-    const country = typeof req.query.country === "string" ? req.query.country : undefined;
-    const minScore = req.query.minScore ? Number(req.query.minScore) : undefined;
-    const maxScore = req.query.maxScore ? Number(req.query.maxScore) : undefined;
-    const dossiers = getAllRecruitDossiers({ category, country, minScore, maxScore });
-    const transcripts = listTranscripts(500);
-    const transcriptByDossier = new Map(transcripts.map(t => [t.dossierId, t]));
-    return res.json({
-      ok: true,
-      dossiers: dossiers.map(d => ({ ...d, transcriptStatus: transcriptByDossier.get(d.id)?.status ?? null })),
-      total: dossiers.length,
-      categories: getRecruitCategories(),
-      countries: getRecruitCountries(),
-    });
-  } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
-  }
-});
-
-router.get("/recruit-dossiers/:id", (req, res) => {
-  const d = getRecruitDossierById(req.params.id);
-  if (!d) return res.status(404).json({ ok: false, error: "Dossier not found" });
-  return res.json({ ok: true, dossier: d, transcript: getTranscript(req.params.id) ?? null });
-});
-
-router.post("/recruit-dossiers/:id/shepherd-contact", (req, res) => {
-  try {
-    const { message } = req.body as { message?: string };
-    const t = startNegotiation(req.params.id, message);
-    return res.json({ ok: true, transcript: t });
-  } catch (err) {
-    return res.status(404).json({ ok: false, error: (err as Error).message });
-  }
-});
-
-router.post("/recruit-dossiers/:id/inbound", (req, res) => {
-  const { body, channel } = req.body as { body?: string; channel?: string };
-  if (!body) return res.status(400).json({ ok: false, error: "body required" });
-  const t = appendInbound(req.params.id, body, channel);
-  if (!t) return res.status(404).json({ ok: false, error: "no open negotiation" });
-  return res.json({ ok: true, transcript: t });
-});
-
-router.post("/recruit-dossiers/:id/revoke", (req, res) => {
-  const ok = revokeGrant(req.params.id);
-  if (!ok) return res.status(404).json({ ok: false, error: "no negotiation" });
-  return res.json({ ok: true, transcript: getTranscript(req.params.id) });
 });
 
 router.get("/free-stuff", async (req, res) => {

@@ -232,9 +232,10 @@ describe("HYB-012 route inventory", () => {
     console.info(`[route-inventory] registration total=${registrations.length}`);
     // Snapshot pinned at 925 by HYB-012 (PR #2). Chamber-desk merges
     // c8c82953, 8bc97256, aa4c2948 (2026-10-06) added three registrations.
-    // Removing natal identity verification (questions + verify) drops two,
-    // so the total is 926. Any future route add/remove must update this.
-    expect(registrations.length).toBe(926);
+    // Natal identity verification removed two registrations. Unhooking the
+    // political-dossier and recruit-dossier routes removes nine more.
+    // The total is 917. Any future route add/remove must update this.
+    expect(registrations.length).toBe(917);
   });
 
   it("allow-lists exactly the current duplicates, including the two ruling entries", () => {
