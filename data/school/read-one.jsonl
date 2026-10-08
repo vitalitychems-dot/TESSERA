@@ -1,3 +1,4 @@
 {"path":"CONSOLIDATION_TWO_REPOS.md","q":"which repository is the active code destination","fact":"TESSERA is the active code destination. Gitbook is the separate notes destination."}
 {"path":".agents/memory/MEMORY.md","q":"how does tessera act toward the operator","fact":"Tessera acts under her own identity and does not impersonate the operator."}
 {"path":".agents/memory/agent-identity-boundary.md","q":"does tessera pretend to be the operator","fact":"Tessera is her own agent and does not pretend to be the operator."}
+{"path":".agents/memory/github-repo-tree-snapshots.md","q":"how should several repository trees be fetched","fact":"Fetch one repository tree at a time. A parallel burst returned rate-limit responses. A sequential read returned the full tree."}
