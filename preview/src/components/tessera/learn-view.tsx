@@ -1,4 +1,5 @@
 import { FILE_LEDGER } from "@/lib/tessera/desk";
+import { recursiveLesson } from "@/lib/tessera/empath";
 import { VAULT } from "@/lib/tessera/opening";
 import { SCHOOL_PASSAGES } from "@/lib/tessera/school";
 import { FATHER_ASKED, STUDIES, STUDIES_MISSING, STUDIES_SOURCE } from "@/lib/tessera/studies";
@@ -13,6 +14,9 @@ const PLACES = [
 export function LearnView() {
   const lessons = useTessera((state) => state.lessons);
   const sealed = lessons.filter((lesson) => lesson.status === "sealed");
+  const latest = sealed.at(-1)?.text ?? "";
+  const prior = sealed.slice(0, -1).map((lesson) => lesson.text);
+  const pattern = latest ? recursiveLesson(prior, latest) : "PATTERN: none yet. A label is written only after a sealed note has the words.";
 
   return (
     <div className="px-4 py-6 pb-24 sm:px-8">
@@ -77,6 +81,10 @@ export function LearnView() {
           </ul>
         </section>
         <h3 className="mt-8 text-xs font-medium tracking-[0.18em] text-subtle uppercase">Sealed, {sealed.length}</h3>
+        <section className="mt-3 rounded-xl border border-border bg-surface p-4">
+          <p className="text-xs tracking-[0.18em] text-subtle uppercase">Pattern from the last note</p>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-fg">{pattern}</p>
+        </section>
         <ul className="mt-3 flex max-h-[32rem] flex-col gap-2 overflow-y-auto">
           {sealed
             .slice(-12)
