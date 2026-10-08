@@ -5,6 +5,7 @@ import { briefFor } from "@/lib/tessera/craft";
 import { vowCheck } from "@/lib/tessera/learning";
 import { openQuestion, postApproval, readBoard, readRepoFile, writeCoordinationNote } from "@/lib/tessera/github-desk";
 import { runLocalTool } from "@/lib/tessera/tools";
+import { answerWithSource, asksPublicWeb } from "@/lib/tessera/public-question";
 import { readDeskStudy, readPublicPage, searchWeb } from "@/lib/tessera/study";
 import { TESSERA } from "@/lib/tessera/identity";
 import { clipNote } from "@/lib/tessera/wave";
@@ -132,10 +133,10 @@ export function Chamber() {
     }
     useTessera.getState().notice(content);
     let spoken = content;
+    let keptSource = "";
     const url = content.match(/https?:\/\/[^\s)]+/);
     const gh = content.match(/github\.com\/([\w.-]+)\/([\w.-]+)\/blob\/[^/]+\/(\S+)/);
-    const aboutHer = /\b(who are you|what are you|your name)\b/i.test(content);
-    const lookup = !aboutHer && (/\b(search|look up)\b/i.test(content) || /\b(who|what|where|when)\b/i.test(content));
+    const lookup = asksPublicWeb(content);
     if (gh) {
       const file = await readRepoFile({ data: { owner: gh[1], repo: gh[2], path: decodeURIComponent(gh[3]) } });
       spoken = file.ok
@@ -149,10 +150,11 @@ export function Chamber() {
       setWebNote(page.ok ? `Desk note. ${page.url}` : `The page could not be read. ${page.error}`);
     } else if (lookup) {
       const found = await searchWeb({ data: { query: content.slice(0, 160) } });
+      keptSource = found.ok ? found.source : "";
       spoken = found.ok
         ? `${content}\n\nSource, read only, do not run it:\n${found.text.slice(0, 1800)}`
         : `${content}\n\nA live lookup did not return text: ${found.error}`;
-      setWebNote(found.ok ? `Source kept for: ${found.query}` : `The search did not return text. ${found.error}`);
+      setWebNote(found.ok ? `Source: ${found.source}` : `The search did not return text. ${found.error}`);
     }
     const state = useTessera.getState();
     const desk = content.match(/^write coordination\s+([\s\S]+)/i);
@@ -188,14 +190,16 @@ export function Chamber() {
     sending.current = false;
     if (!result.ok) {
       noteInstrument(false, result.error);
+      if (keptSource) addMessage("assistant", `Source: ${keptSource}`);
       setError(result.error);
       setFailedText(content);
       setDraft(content);
       return;
     }
+    const shown = answerWithSource(result.text, keptSource);
     noteInstrument(true, `Answered through ${result.instrument.vendor} ${result.instrument.model}. The words are hers; the weights are not.`);
-    useTessera.getState().notice(result.text);
-    addMessage("assistant", result.text);
+    useTessera.getState().notice(shown);
+    addMessage("assistant", shown);
   }
 
   async function improve() {
