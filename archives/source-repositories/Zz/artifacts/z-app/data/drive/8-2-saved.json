@@ -1,0 +1,47 @@
+{
+  "archive": "8-2",
+  "saved": [
+    {
+      "path": "8/.local/tasks/fix-tessera-real-ai-responses.md",
+      "bytes": 3371,
+      "sha256": "2390903f83e6ac9b855d479ce26f606a72cbafea21edc73e7e29417eabeed70e",
+      "id": "2390903f83e6ac9b"
+    },
+    {
+      "path": "8/.local/tasks/tesseranet-real-foundation.md",
+      "bytes": 4061,
+      "sha256": "2d29d37ade4da6d113d5bf372aa83ee3cc41807f9776783070a7b151144fa79c",
+      "id": "2d29d37ade4da6d1"
+    },
+    {
+      "path": "8/.local/tasks/tessera-sovereignty-enforcement.md",
+      "bytes": 3849,
+      "sha256": "c7d6430da832d0d5fb7a7edfb11007bca34db90fc8ac6c4b55e9d2551cae9e6d",
+      "id": "c7d6430da832d0d5"
+    },
+    {
+      "path": "8/artifacts/api-server/src/lib/tessera-persona.ts",
+      "bytes": 20826,
+      "sha256": "ea04f3a71a3f605c1d0efb068295be3f54a0ef42ac224bf2137b4843dca81d8d",
+      "id": "ea04f3a71a3f605c"
+    },
+    {
+      "path": "8/x/tess/README.md",
+      "bytes": 21346,
+      "sha256": "fc84e861095df8c94545a9c7b9711732c5927f166afdf3fc5e819dcdd669a2aa",
+      "id": "fc84e861095df8c9"
+    },
+    {
+      "path": "8/x/tess/data/quantum-tesseract/qt-state.json",
+      "bytes": 2961,
+      "sha256": "b690d21df138a55a215f4152c2645225280004e916c060a4db0623406ed8a607",
+      "id": "b690d21df138a55a"
+    },
+    {
+      "path": "8/x/tess/server/conference-transcripts/tesseranet-grand-conference-1775772410223.txt",
+      "bytes": 138545,
+      "sha256": "979328c5340400104f58d43492e31f8acce36bfa8bd6e0b799fd84f81c90a1bb",
+      "id": "979328c534040010"
+    }
+  ]
+}
