@@ -73,18 +73,17 @@ vi.mock("@workspace/db", () => ({
   },
 }));
 
-const databaseUrlBefore = process.env.DATABASE_URL;
-
 describe("routes/index import does not start background jobs", () => {
   afterAll(() => {
     vi.useRealTimers();
   });
 
-  it("calls none of the five starters and does not set DATABASE_URL", async () => {
+  it("calls none of the five starters and leaves DATABASE_URL unset", async () => {
+    expect(process.env.DATABASE_URL).toBeUndefined();
     vi.useFakeTimers();
     const routes = await import("../routes/index");
     vi.clearAllTimers();
-    expect(process.env.DATABASE_URL).toBe(databaseUrlBefore);
+    expect(process.env.DATABASE_URL).toBeUndefined();
     expect(routes.default).toBeTypeOf("function");
     expect(starters.startWalletObserver).toHaveBeenCalledTimes(0);
     expect(starters.startAutonomousBuildCycleTimer).toHaveBeenCalledTimes(0);
