@@ -369,13 +369,15 @@ describe("privacy e limiters and admin key sources", () => {
     expect(societyText).not.toContain("reasoning");
   });
 
-  it("rate-limits failed grand-evolution session reads on their own bucket", async () => {
+  it("rate-limits failed grand-evolution session reads on the raw-key count shared with /run, /convene, and /run-async", async () => {
     vi.mocked(listSessions).mockClear();
+    vi.mocked(runGrandEvolutionCycle).mockClear();
+    const ip = "203.0.113.86";
     let limited = false;
     for (let attempt = 0; attempt < 8; attempt += 1) {
       const response = await fetch(`${baseUrl}/grand-evolution/sessions`, {
         headers: {
-          "x-forwarded-for": "203.0.113.86",
+          "x-forwarded-for": ip,
           "x-tesseract-admin-key": "wrong-synthetic-admin-key",
         },
       });
@@ -387,5 +389,78 @@ describe("privacy e limiters and admin key sources", () => {
     }
     expect(limited).toBe(true);
     expect(listSessions).not.toHaveBeenCalled();
+    const shared = await fetch(`${baseUrl}/grand-evolution/run`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-for": ip,
+        "x-tesseract-admin-key": "wrong-synthetic-admin-key",
+      },
+      body: "{}",
+    });
+    expect(shared.status).toBe(429);
+    expect(runGrandEvolutionCycle).not.toHaveBeenCalled();
+  });
+
+  it("does not spend the raw-key budget on owner-cookie or headerless session reads", async () => {
+    vi.mocked(listSessions).mockClear();
+    const ip = "203.0.113.90";
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const wrong = await fetch(`${baseUrl}/grand-evolution/sessions`, {
+        headers: {
+          "x-forwarded-for": ip,
+          "x-tesseract-admin-key": "wrong-synthetic-admin-key",
+        },
+      });
+      expect(wrong.status).toBe(401);
+    }
+    const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+    const owner = await fetch(`${baseUrl}/grand-evolution/sessions`, {
+      headers: {
+        "x-forwarded-for": ip,
+        cookie: `${SESSION_COOKIE}=${issued.signedId}`,
+      },
+    });
+    expect(owner.status).toBe(200);
+    expect(listSessions).toHaveBeenCalledTimes(1);
+
+    const anonymousIp = "203.0.113.91";
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const anonymous = await fetch(`${baseUrl}/grand-evolution/sessions`, {
+        headers: { "x-forwarded-for": anonymousIp },
+      });
+      expect(anonymous.status).toBe(401);
+    }
+    expect(listSessions).toHaveBeenCalledTimes(1);
+  });
+
+  it("rate-limits a wrong key on directives and never rate-limits a headerless read", async () => {
+    vi.mocked(ensureLatestCycleLoaded).mockClear();
+    const wrongIp = "203.0.113.92";
+    let limited = false;
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const response = await fetch(`${baseUrl}/grand-evolution/directives`, {
+        headers: {
+          "x-forwarded-for": wrongIp,
+          "x-tesseract-admin-key": "wrong-synthetic-admin-key",
+        },
+      });
+      if (response.status === 429) {
+        limited = true;
+        break;
+      }
+      expect(response.status).toBe(401);
+    }
+    expect(limited).toBe(true);
+    expect(ensureLatestCycleLoaded).not.toHaveBeenCalled();
+
+    const anonymousIp = "203.0.113.93";
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const anonymous = await fetch(`${baseUrl}/grand-evolution/directives`, {
+        headers: { "x-forwarded-for": anonymousIp },
+      });
+      expect(anonymous.status).toBe(401);
+    }
+    expect(ensureLatestCycleLoaded).not.toHaveBeenCalled();
   });
 });
