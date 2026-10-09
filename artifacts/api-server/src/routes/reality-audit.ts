@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Response } from "express";
 import { promises as fs } from "fs";
 import path from "path";
 import { getRealityAudit, getRealityFlag } from "../lib/reality-audit";
@@ -8,29 +8,21 @@ import {
   listAuditSnapshots,
 } from "../lib/reality-audit-snapshot";
 import { logger } from "../lib/logger";
+import { requireAdminSession } from "../lib/sovereign-admin";
 
 const router: IRouter = Router();
 
-function requireAdmin(req: import("express").Request, res: import("express").Response): boolean {
-  const token = process.env["ADMIN_TOKEN"];
-  if (!token) return true;
-  const header = req.header("x-admin-token") ?? "";
-  if (header !== token) {
-    res.status(403).json({ ok: false, error: "Admin token required" });
-    return false;
-  }
-  return true;
+function failAudit(res: Response, err: unknown, event: string): void {
+  logger.error({ err }, event);
+  res.status(500).json({ ok: false, error: "reality-audit-failed" });
 }
 
 router.get("/reality-audit", async (_req, res) => {
   try {
     const audit = await getRealityAudit();
     res.json({ ok: true, ...audit });
-    runAndPersistAuditSnapshot().catch(err => {
-      logger.warn({ err }, "Background audit snapshot persistence failed");
-    });
   } catch (err) {
-    res.status(500).json({ ok: false, error: (err as Error).message });
+    failAudit(res, err, "reality-audit read failed");
   }
 });
 
@@ -50,7 +42,7 @@ router.get("/reality-audit/summary", async (_req, res) => {
       })),
     });
   } catch (err) {
-    res.status(500).json({ ok: false, error: (err as Error).message });
+    failAudit(res, err, "reality-audit summary failed");
   }
 });
 
@@ -59,14 +51,12 @@ router.get("/reality-audit/flag/:id", (req, res) => {
   res.json({ ok: true, id: req.params.id, flag });
 });
 
-router.post("/reality-audit/snapshot", async (req, res) => {
-  if (!requireAdmin(req, res)) return;
+router.post("/reality-audit/snapshot", requireAdminSession, async (_req, res) => {
   try {
     const snapshot = await runAndPersistAuditSnapshot();
     res.json({ ok: true, snapshot });
   } catch (err) {
-    logger.error({ err }, "reality-audit snapshot failed");
-    res.status(500).json({ ok: false, error: (err as Error).message });
+    failAudit(res, err, "reality-audit snapshot failed");
   }
 });
 
@@ -75,7 +65,7 @@ router.get("/reality-audit/snapshots", async (_req, res) => {
     const snapshots = await listAuditSnapshots();
     res.json({ ok: true, snapshots, count: snapshots.length });
   } catch (err) {
-    res.status(500).json({ ok: false, error: (err as Error).message });
+    failAudit(res, err, "reality-audit snapshot list failed");
   }
 });
 
@@ -87,7 +77,7 @@ router.get("/reality-audit/snapshots/latest", async (_req, res) => {
     }
     res.json({ ok: true, snapshot });
   } catch (err) {
-    res.status(500).json({ ok: false, error: (err as Error).message });
+    failAudit(res, err, "reality-audit latest snapshot failed");
   }
 });
 
@@ -106,7 +96,7 @@ router.get("/reality-audit/snapshots/:id/payload", async (req, res) => {
       res.json({ ok: true, snapshot: snap, note: "JSON file not on disk — returning DB record" });
     }
   } catch (err) {
-    res.status(500).json({ ok: false, error: (err as Error).message });
+    failAudit(res, err, "reality-audit snapshot payload failed");
   }
 });
 
