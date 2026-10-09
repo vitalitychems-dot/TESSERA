@@ -24,7 +24,7 @@ export default function SovereigntyDashboardPage() {
 
   const { data: proposals, refetch: refetchProposals } = useQuery({
     queryKey: ["consensus-proposals"],
-    queryFn: () => fetch(`${API}/api/consensus/proposals`).then(r => r.json()).then(d => d.data),
+    queryFn: () => fetch(`${API}/api/consensus/proposals`, { credentials: "include" }).then(r => r.json()).then(d => d.data),
     refetchInterval: 60000,
   });
 
@@ -36,7 +36,7 @@ export default function SovereigntyDashboardPage() {
 
   const { data: heartbeatMetrics } = useQuery({
     queryKey: ["heartbeat-metrics"],
-    queryFn: () => fetch(`${API}/api/heartbeat/metrics`).then(r => r.json()).then(d => d.data),
+    queryFn: () => fetch(`${API}/api/heartbeat/metrics`, { credentials: "include" }).then(r => r.json()).then(d => d.data),
     refetchInterval: 15000,
   });
 
@@ -88,7 +88,7 @@ export default function SovereigntyDashboardPage() {
 
   const proposeMutation = useMutation({
     mutationFn: (body: typeof newProposal) =>
-      fetch(`${API}/api/consensus/propose`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, proposedBy: "Father" }) }).then(r => r.json()),
+      fetch(`${API}/api/consensus/propose`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, proposedBy: "Father" }) }).then(r => r.json()),
     onSuccess: () => {
       setShowForm(false);
       setNewProposal({ title: "", description: "", category: "governance" });

@@ -17,7 +17,7 @@ export default function ConsciousnessNexusPage({ initialTab }: { initialTab?: "o
 
   const { data: state } = useQuery({
     queryKey: ["consciousness-state"],
-    queryFn: () => fetch(`${API}/api/consciousness/state`).then(r => r.json()).then(d => d.data),
+    queryFn: () => fetch(`${API}/api/consciousness/state`, { credentials: "include" }).then(r => r.json()).then(d => d.data),
     refetchInterval: 30000,
   });
 
@@ -29,7 +29,7 @@ export default function ConsciousnessNexusPage({ initialTab }: { initialTab?: "o
 
   const { data: dualBrain } = useQuery({
     queryKey: ["dual-brain-state"],
-    queryFn: () => fetch(`${API}/api/dual-brain/state`).then(r => r.json()).then(d => d.data),
+    queryFn: () => fetch(`${API}/api/dual-brain/state`, { credentials: "include" }).then(r => r.json()).then(d => d.data),
     refetchInterval: 60000,
     enabled: activeTab === "dual-brain",
   });

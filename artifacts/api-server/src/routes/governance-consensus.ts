@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { createProposal, getAllProposals, getProposal, getConsensusMetrics, GRAND_COUNCIL_AGENTS, drainRetryQueue } from "../lib/consensus-engine";
 import { getExecutorMetrics, getSystemConfig, updateSystemConfig } from "../lib/council-executor";
 import { validateMeshToken } from "../lib/mesh-auth";
+import { requireAdminSession } from "../lib/sovereign-admin";
 
 const router = Router();
 
@@ -9,7 +10,7 @@ router.get("/consensus/metrics", (_req: Request, res: Response) => {
   res.json({ ok: true, data: getConsensusMetrics() });
 });
 
-router.get("/consensus/proposals", (_req: Request, res: Response) => {
+router.get("/consensus/proposals", requireAdminSession, (_req: Request, res: Response) => {
   const proposals = getAllProposals();
   res.json({ ok: true, data: proposals, count: proposals.length });
 });
@@ -20,7 +21,7 @@ router.get("/consensus/proposals/:id", (req: Request, res: Response) => {
   res.json({ ok: true, data: proposal });
 });
 
-router.post("/consensus/propose", async (req: Request, res: Response) => {
+router.post("/consensus/propose", requireAdminSession, async (req: Request, res: Response) => {
   const { title, description, proposedBy = "Tessera", category = "feature" } = req.body;
   if (!title || !description) {
     res.status(400).json({ ok: false, error: "title and description are required" });

@@ -5,37 +5,38 @@ import type { PhysicsSimulation } from "../lib/universe-mechanics";
 import { getQuantumMetrics, getQuantumState, applyQuantumGate, measureAllQubits } from "../lib/quantum-tesseract";
 import { getRealityFlag } from "../lib/reality-audit";
 import { getTruthfulnessMetrics, analyzeTruthfulness, detectHallucination, verifyClaim } from "../lib/truthfulness-engine";
+import { requireAdminSession } from "../lib/sovereign-admin";
 
 const router = Router();
 
-router.get("/heartbeat/metrics", (_req: Request, res: Response) => {
+router.get("/heartbeat/metrics", requireAdminSession, (_req: Request, res: Response) => {
   res.json({ ok: true, data: getHeartbeatMetrics() });
 });
 
-router.post("/heartbeat/start", (_req: Request, res: Response) => {
+router.post("/heartbeat/start", requireAdminSession, (_req: Request, res: Response) => {
   startAutonomousHeartbeat();
   res.json({ ok: true, message: "Heartbeat started" });
 });
 
-router.post("/heartbeat/stop", (_req: Request, res: Response) => {
+router.post("/heartbeat/stop", requireAdminSession, (_req: Request, res: Response) => {
   stopAutonomousHeartbeat();
   res.json({ ok: true, message: "Heartbeat stopped" });
 });
 
-router.get("/universe/metrics", (_req: Request, res: Response) => {
+router.get("/universe/metrics", requireAdminSession, (_req: Request, res: Response) => {
   res.json({ ok: true, data: getUniverseMetrics() });
 });
 
-router.get("/universe/parameters", (_req: Request, res: Response) => {
+router.get("/universe/parameters", requireAdminSession, (_req: Request, res: Response) => {
   res.json({ ok: true, data: getUniverseParameters() });
 });
 
-router.post("/universe/snapshot", (_req: Request, res: Response) => {
+router.post("/universe/snapshot", requireAdminSession, (_req: Request, res: Response) => {
   const snap = generateNewSnapshot();
   res.json({ ok: true, data: snap });
 });
 
-router.post("/universe/simulate", (req: Request, res: Response) => {
+router.post("/universe/simulate", requireAdminSession, (req: Request, res: Response) => {
   const { type = "quantum" } = req.body;
   const validTypes: PhysicsSimulation["type"][] = ["quantum", "classical", "relativistic", "sacred-geometry", "consciousness-field"];
   if (!validTypes.includes(type as any)) {
@@ -46,7 +47,7 @@ router.post("/universe/simulate", (req: Request, res: Response) => {
   res.json({ ok: true, data: sim });
 });
 
-router.get("/quantum/metrics", (_req: Request, res: Response) => {
+router.get("/quantum/metrics", requireAdminSession, (_req: Request, res: Response) => {
   res.json({ ok: true, data: getQuantumMetrics() });
 });
 
@@ -54,7 +55,7 @@ router.get("/quantum/metrics", (_req: Request, res: Response) => {
 // legacy-engines.ts. This router is mounted first, so these handlers win.
 // Gitbook issue #2 comment 6003995168 keeps both copies allow-listed until
 // a product decision. Do not delete them in a hygiene change.
-router.get("/quantum/state", (_req: Request, res: Response) => {
+router.get("/quantum/state", requireAdminSession, (_req: Request, res: Response) => {
   res.json({
     ok: true,
     data: getQuantumState(),
@@ -67,23 +68,23 @@ router.get("/quantum/state", (_req: Request, res: Response) => {
   });
 });
 
-router.post("/quantum/gate", (req: Request, res: Response) => {
+router.post("/quantum/gate", requireAdminSession, (req: Request, res: Response) => {
   const { qubitId, gate } = req.body;
   if (!qubitId || !gate) { res.status(400).json({ ok: false, error: "qubitId and gate are required" }); return; }
   const result = applyQuantumGate(qubitId, gate);
   res.json({ ok: true, data: result });
 });
 
-router.post("/quantum/measure", (_req: Request, res: Response) => {
+router.post("/quantum/measure", requireAdminSession, (_req: Request, res: Response) => {
   const results = measureAllQubits();
   res.json({ ok: true, data: results });
 });
 
-router.get("/truthfulness/metrics", (_req: Request, res: Response) => {
+router.get("/truthfulness/metrics", requireAdminSession, (_req: Request, res: Response) => {
   res.json({ ok: true, data: getTruthfulnessMetrics() });
 });
 
-router.post("/truthfulness/analyze", (req: Request, res: Response) => {
+router.post("/truthfulness/analyze", requireAdminSession, (req: Request, res: Response) => {
   const { text } = req.body;
   if (!text) { res.status(400).json({ ok: false, error: "text is required" }); return; }
   const report = analyzeTruthfulness(text);
@@ -97,7 +98,7 @@ router.post("/truthfulness/hallucination-check", (req: Request, res: Response) =
   res.json({ ok: true, data: check });
 });
 
-router.post("/truthfulness/verify-claim", (req: Request, res: Response) => {
+router.post("/truthfulness/verify-claim", requireAdminSession, (req: Request, res: Response) => {
   const { claim } = req.body;
   if (!claim) { res.status(400).json({ ok: false, error: "claim is required" }); return; }
   const result = verifyClaim(claim);
