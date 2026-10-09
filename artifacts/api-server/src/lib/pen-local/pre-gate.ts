@@ -83,7 +83,6 @@ const RULE_PATTERNS: readonly RulePatterns[] = [
     patterns: [
       /\bhurt (?:someone|a person|people|them|him|her)\b/i,
       /\bharm (?:someone|others|people|a person|them)\b/i,
-      /\bplan\b[^.]{0,50}\bto hurt\b/i,
     ],
   },
 ];
