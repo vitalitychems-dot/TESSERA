@@ -68,6 +68,7 @@ vi.mock("../lib/rick-autonomous-loop", () => ({
   RICK_AUTONOMOUS_CATEGORIES: [],
 }));
 
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 import { getShepherdContext, installSovereignFetchGuard } from "../lib/sovereign-fetch-guard";
 import { getAllowedDomains, secureExternalBinaryFetch } from "../lib/secureExternalWrapper";
 import rickRouter from "../routes/rick";
@@ -126,6 +127,13 @@ function restoreEnv(): void {
   else process.env.TESSERA_LLM_MODEL = priorEnv.model;
   if (priorEnv.sandbox === undefined) delete process.env.SANDBOX_TRAINING_ALLOWED;
   else process.env.SANDBOX_TRAINING_ALLOWED = priorEnv.sandbox;
+}
+
+function ownerCookie(): string {
+  process.env.TESSERACT_ADMIN_KEY = "synthetic-owner-token";
+  process.env.SOVEREIGN_SESSION_SECRET = "synthetic-session-secret-32chars!!";
+  const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+  return `${SESSION_COOKIE}=${issued.signedId}`;
 }
 
 function postJson(
@@ -251,7 +259,7 @@ describe("guarded LLM and NASA fetch", () => {
         conversationId: 7,
         content: "Describe the difference between a hash map and a balanced tree for range queries?",
       },
-      { "x-sandbox-training": "true" },
+      { "x-sandbox-training": "true", cookie: ownerCookie() },
     );
 
     expect(res.status).toBe(200);
@@ -307,7 +315,7 @@ describe("guarded LLM and NASA fetch", () => {
               conversationId: 7,
               content: "Describe the difference between a hash map and a balanced tree for range queries?",
             },
-            { "x-sandbox-training": "true" },
+            { "x-sandbox-training": "true", cookie: ownerCookie() },
           );
           expect(res.status).toBe(200);
           expect(networkFetch).not.toHaveBeenCalled();
