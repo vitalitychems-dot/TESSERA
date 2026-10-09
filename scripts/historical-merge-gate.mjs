@@ -125,11 +125,11 @@ export function secretShapedPaths() {
 
 function runCommand(title, command, args) {
   const result = spawnSync(command, args, { cwd: root, encoding: "utf8", stdio: "inherit" });
-  const status = result.status === 0 ? "pass" : "fail";
-  return `${title}: ${status}`;
+  const ok = result.status === 0;
+  return { line: `${title}: ${ok ? "pass" : "fail"}`, ok };
 }
 
-export function renderReport({ runSuite }) {
+export function renderReport({ runSuite, commandRunner = runCommand }) {
   const duplicates = duplicateWorkspaceRoots();
   const stale = staleAppReferences();
   const secrets = secretShapedPaths();
@@ -142,11 +142,16 @@ export function renderReport({ runSuite }) {
     `secret_shaped_paths: ${secrets.length}`,
     ...secrets.map((item) => `  - ${item}`),
   ];
+  let suiteOk = true;
   if (runSuite) {
-    lines.push(runCommand("typecheck", "pnpm", ["run", "typecheck"]));
-    lines.push(runCommand("test", "pnpm", ["test"]));
-    lines.push(runCommand("build", "pnpm", ["run", "build"]));
-    lines.push(runCommand("audit", "pnpm", ["audit"]));
+    const results = [
+      commandRunner("typecheck", "pnpm", ["run", "typecheck"]),
+      commandRunner("test", "pnpm", ["test"]),
+      commandRunner("build", "pnpm", ["run", "build"]),
+      commandRunner("audit", "pnpm", ["audit"]),
+    ];
+    lines.push(...results.map(({ line }) => line));
+    suiteOk = results.every(({ ok }) => ok);
   } else {
     lines.push("typecheck: not-run");
     lines.push("test: not-run");
@@ -156,7 +161,7 @@ export function renderReport({ runSuite }) {
   }
   return {
     text: `${lines.join("\n")}\n`,
-    ok: duplicates.length === 0 && stale.length === 0 && secrets.length === 0,
+    ok: duplicates.length === 0 && stale.length === 0 && secrets.length === 0 && suiteOk,
   };
 }
 
