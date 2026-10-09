@@ -16,6 +16,10 @@ export const PEN_REFUSE_RULES = [
 
 export type PenRefuseRule = (typeof PEN_REFUSE_RULES)[number];
 
+/**
+ * Reasons a local pen call stops before any generated text.
+ * `model_id_missing` is required: an unset model id must not invent a backend name.
+ */
 export const PEN_NOT_CONFIGURED_REASONS = [
   "flag_off",
   "weights_missing",
@@ -40,7 +44,7 @@ export type PostBlockRule = (typeof POST_BLOCK_RULES)[number];
 
 export interface LocalPenGate {
   pre: "pass" | "rule";
-  post: "pass" | "blocked" | "redacted";
+  post: "pass" | "blocked";
 }
 
 export interface Cl1SimProvenance {
@@ -55,6 +59,7 @@ export interface LocalPenParams {
   max_tokens: 220;
 }
 
+/** Truthful backend record. Identity marks never go in it. */
 export interface LocalPenProvenance {
   pen_identity: "Tessera pen";
   backend_model_id: string | null;
