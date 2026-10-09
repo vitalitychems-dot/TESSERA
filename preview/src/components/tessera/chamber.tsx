@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUp, Check, Copy, Loader2 } from "lucide-react";
+import { useTessera } from "@/lib/tessera/store";
 import { speakAsTessera } from "@/lib/tessera/chat";
 import { briefFor } from "@/lib/tessera/craft";
 import { openQuestion, postApproval, readBoard, readRepoFile, writeCoordinationNote } from "@/lib/tessera/github-desk";
