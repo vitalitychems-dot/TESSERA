@@ -64,7 +64,7 @@ export function useDeleteConversation() {
 
   return useMutation({
     mutationFn: async (id: number) => {
-      const url = buildUrl("/api/conversations", { id });
+      const url = `/api/conversations/${encodeURIComponent(id)}`;
       const res = await fetch(url, {
         method: "DELETE",
         credentials: "include",
