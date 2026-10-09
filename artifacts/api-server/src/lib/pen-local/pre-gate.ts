@@ -1,16 +1,33 @@
-import { isDirectlyNegated } from "./negation";
 import type { PenRefuseRule } from "./types";
 
 /**
  * Deterministic request classifier. It never calls a model.
- * A hit stands unless a grammatical negator in the same clause directly governs it.
- * Harmless lines that only share a nearby word stay null.
+ * Negation never cancels a refusal match. A whole-phrase safe allowlist
+ * exempts a match only when that match sits fully inside the phrase.
+ * A second match outside the phrase, including one inside quotes or a title, is still refused.
+ * When in doubt this gate refuses.
  */
+
+/**
+ * Whole phrases only. Word boundaries, case-insensitive, apostrophes and
+ * whitespace normalized. A shorter phrase does not cover a longer match.
+ */
+const SAFE_PHRASES = [
+  "i do not want to hurt anyone",
+  "please do not hurt anyone",
+  "do not hurt",
+  "how do i stay safe",
+  "not a way to hurt someone",
+  "no wallet and no trading",
+  "do not print admin passwords",
+] as const;
 
 interface RulePatterns {
   id: PenRefuseRule;
   patterns: readonly RegExp[];
 }
+
+/** Gaps between words stop at a comma or a period. */
 
 const RULE_PATTERNS: readonly RulePatterns[] = [
   {
@@ -86,22 +103,73 @@ const RULE_PATTERNS: readonly RulePatterns[] = [
   },
 ];
 
-function patternHits(text: string, pattern: RegExp): boolean {
+interface Span {
+  start: number;
+  end: number;
+}
+
+function patternHits(text: string, pattern: RegExp, safe: readonly Span[]): boolean {
   const flags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`;
   const re = new RegExp(pattern.source, flags);
   for (const match of text.matchAll(re)) {
     const start = match.index ?? 0;
-    if (isDirectlyNegated(text.slice(0, start))) continue;
+    const end = start + match[0].length;
+    if (safe.some((span) => span.start <= start && end <= span.end)) continue;
     return true;
   }
   return false;
 }
 
 export function classifyPreGate(text: string): PenRefuseRule | null {
+  const safe = safeSpans(text);
   for (const rule of RULE_PATTERNS) {
     for (const pattern of rule.patterns) {
-      if (patternHits(text, pattern)) return rule.id;
+      if (patternHits(text, pattern, safe)) return rule.id;
     }
   }
   return null;
+}
+
+function safeSpans(text: string): Span[] {
+  const { norm, toOrig } = normalizeForPhrases(text);
+  const spans: Span[] = [];
+  for (const phrase of SAFE_PHRASES) {
+    let from = 0;
+    while (from <= norm.length) {
+      const at = norm.indexOf(phrase, from);
+      if (at < 0) break;
+      const phraseEnd = at + phrase.length;
+      const beforeOk = at === 0 || !isPhraseChar(norm[at - 1] ?? "");
+      const afterOk = phraseEnd === norm.length || !isPhraseChar(norm[phraseEnd] ?? "");
+      if (beforeOk && afterOk) {
+        const start = toOrig[at] ?? 0;
+        const end = phraseEnd < toOrig.length ? (toOrig[phraseEnd] ?? text.length) : text.length;
+        spans.push({ start, end });
+      }
+      from = at + phrase.length;
+    }
+  }
+  return spans;
+}
+
+function normalizeForPhrases(text: string): { norm: string; toOrig: number[] } {
+  const toOrig: number[] = [];
+  let norm = "";
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i] ?? "";
+    if (/\s/.test(ch)) {
+      if (norm.length > 0 && !norm.endsWith(" ")) {
+        toOrig.push(i);
+        norm += " ";
+      }
+      continue;
+    }
+    toOrig.push(i);
+    norm += ch.toLowerCase().replace(/[’‘`]/g, "'");
+  }
+  return { norm, toOrig };
+}
+
+function isPhraseChar(ch: string): boolean {
+  return /[a-z0-9']/i.test(ch);
 }
