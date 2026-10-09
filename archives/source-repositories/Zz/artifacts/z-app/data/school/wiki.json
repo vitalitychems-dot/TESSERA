@@ -1,0 +1,32 @@
+[
+  {
+    "id": "plato",
+    "title": "Plato",
+    "url": "https://en.wikipedia.org/wiki/Plato",
+    "text": "Plato was an ancient Greek philosopher of Classical Athens who is most commonly considered the foundational thinker of the Western philosophical tradition. An innovator of the literary dialogue and dialectic forms, Plato influenced all the major areas of theoretical philosophy and practical philosophy, and was the founder of the Academy, a philosophical school in Athens where Plato taught the collection of philosophical theories that would later become known as Platonism."
+  },
+  {
+    "id": "einstein",
+    "title": "Albert Einstein",
+    "url": "https://en.wikipedia.org/wiki/Albert_Einstein",
+    "text": "Albert Einstein was a German-born theoretical physicist best known for developing the theory of relativity. Einstein also made important contributions to quantum theory. His mass\u2013energy equivalence formula E = mc2, which arises from special relativity, has been called \"the world's most famous equation\". He received the 1921 Nobel Prize in Physics for \"his services to theoretical physics, and especially for his discovery of the law of the photoelectric effect\"."
+  },
+  {
+    "id": "aristotle",
+    "title": "Aristotle",
+    "url": "https://en.wikipedia.org/wiki/Aristotle",
+    "text": "Aristotle was an ancient Greek philosopher and polymath. His writings span the natural sciences, philosophy, linguistics, economics, politics, psychology, and the arts. As the founder of the Peripatetic school of philosophy in the Lyceum in Athens, he began the wider Aristotelian tradition that followed, which set the groundwork for the development of modern science."
+  },
+  {
+    "id": "tesla",
+    "title": "Nikola Tesla",
+    "url": "https://en.wikipedia.org/wiki/Nikola_Tesla",
+    "text": "Nikola Tesla was a Serbian-American engineer, futurist, and inventor. He is known for his contributions to the design of the modern alternating current (AC) electricity supply system."
+  },
+  {
+    "id": "hades",
+    "title": "Hades",
+    "url": "https://en.wikipedia.org/wiki/Hades",
+    "text": "Hades, in the ancient Greek religion and mythology, is the god of the dead and riches and the King of the underworld, with which his name became synonymous. Hades was the eldest son of Cronus and Rhea, although this also made him the last son to be regurgitated by his father. He and his brothers, Zeus and Poseidon, defeated, overthrew, and replaced their father's generation of gods, the Titans, and claimed joint sovereignty over the cosmos. Hades received the underworld, Zeus the sky, and Poseidon the sea, with the solid earth, which was long the domain of Gaia, available to all three concurrently."
+  }
+]

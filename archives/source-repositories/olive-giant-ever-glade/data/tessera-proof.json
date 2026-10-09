@@ -1,0 +1,164 @@
+[
+  {
+    "at": "2026-10-02T21:50:29.852Z",
+    "target": "Grok-ready",
+    "ok": false,
+    "detail": "HTTP 403"
+  },
+  {
+    "at": "2026-10-02T21:50:29.860Z",
+    "target": "T44",
+    "ok": true,
+    "detail": "57a6365 committed 2026-10-02T19:08:44Z"
+  },
+  {
+    "at": "2026-10-02T21:50:32.887Z",
+    "target": "1T",
+    "ok": false,
+    "detail": "HTTP 403"
+  },
+  {
+    "at": "2026-10-02T21:50:32.892Z",
+    "target": "TX",
+    "ok": true,
+    "detail": "901df69 committed 2026-10-02T11:54:37Z"
+  },
+  {
+    "at": "2026-10-02T21:50:35.824Z",
+    "target": "TESS",
+    "ok": false,
+    "detail": "HTTP 403"
+  },
+  {
+    "at": "2026-10-02T21:50:35.827Z",
+    "target": "Grok-ready",
+    "ok": true,
+    "detail": "3cdd0ac committed 2026-10-02T12:39:00Z"
+  },
+  {
+    "at": "2026-10-02T21:50:39.020Z",
+    "target": "T44",
+    "ok": false,
+    "detail": "HTTP 403"
+  },
+  {
+    "at": "2026-10-02T21:50:39.022Z",
+    "target": "1T",
+    "ok": true,
+    "detail": "3072d13 committed 2026-10-02T20:02:42Z"
+  },
+  {
+    "at": "2026-10-02T21:50:41.942Z",
+    "target": "TX",
+    "ok": false,
+    "detail": "HTTP 403"
+  },
+  {
+    "at": "2026-10-02T21:50:41.944Z",
+    "target": "TESS",
+    "ok": true,
+    "detail": "5bc2333 committed 2026-10-02T03:59:11Z"
+  },
+  {
+    "at": "2026-10-02T21:50:45.167Z",
+    "target": "T44",
+    "ok": true,
+    "detail": "57a6365 committed 2026-10-02T19:08:44Z"
+  },
+  {
+    "at": "2026-10-02T21:50:48.010Z",
+    "target": "1T",
+    "ok": false,
+    "detail": "HTTP 403"
+  },
+  {
+    "at": "2026-10-02T21:50:48.012Z",
+    "target": "TX",
+    "ok": true,
+    "detail": "901df69 committed 2026-10-02T11:54:37Z"
+  },
+  {
+    "at": "2026-10-02T21:52:56.432Z",
+    "target": "T44",
+    "ok": true,
+    "detail": "57a6365 committed 2026-10-02T19:08:44Z"
+  },
+  {
+    "at": "2026-10-02T21:52:56.420Z",
+    "target": "Grok-ready",
+    "ok": true,
+    "detail": "3cdd0ac committed 2026-10-02T12:39:00Z"
+  },
+  {
+    "at": "2026-10-02T21:53:03.093Z",
+    "target": "1T",
+    "ok": false,
+    "detail": "HTTP 403"
+  },
+  {
+    "at": "2026-10-02T21:53:03.095Z",
+    "target": "TX",
+    "ok": false,
+    "detail": "HTTP 403"
+  },
+  {
+    "at": "2026-10-02T21:53:06.215Z",
+    "target": "TESS",
+    "ok": false,
+    "detail": "HTTP 403"
+  },
+  {
+    "at": "2026-10-02T21:53:06.216Z",
+    "target": "Grok-ready",
+    "ok": false,
+    "detail": "HTTP 403"
+  },
+  {
+    "at": "2026-10-02T21:53:09.385Z",
+    "target": "T44",
+    "ok": false,
+    "detail": "HTTP 403"
+  },
+  {
+    "at": "2026-10-02T21:53:09.387Z",
+    "target": "1T",
+    "ok": false,
+    "detail": "HTTP 403"
+  },
+  {
+    "at": "2026-10-02T21:53:12.322Z",
+    "target": "TX",
+    "ok": false,
+    "detail": "HTTP 403"
+  },
+  {
+    "at": "2026-10-02T21:53:12.341Z",
+    "target": "TESS",
+    "ok": false,
+    "detail": "HTTP 403"
+  },
+  {
+    "at": "2026-10-03T01:15:24.639Z",
+    "target": "T44",
+    "ok": false,
+    "detail": "HTTP 403"
+  },
+  {
+    "at": "2026-10-03T01:15:24.638Z",
+    "target": "Grok-ready",
+    "ok": true,
+    "detail": "3cdd0ac committed 2026-10-02T12:39:00Z"
+  },
+  {
+    "at": "2026-10-03T18:10:10.483Z",
+    "target": "T44",
+    "ok": true,
+    "detail": "9a1c3d7 committed 2026-10-03T16:48:49Z"
+  },
+  {
+    "at": "2026-10-03T18:10:10.479Z",
+    "target": "Grok-ready",
+    "ok": true,
+    "detail": "9e3fbca committed 2026-10-03T16:02:16Z"
+  }
+]

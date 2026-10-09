@@ -1,0 +1,121 @@
+{
+  "policy": "portable UTF-8 source/config only; SHA-256 deduped against TESSERA/Gitbook; protected 1T excluded; no active modules overwritten",
+  "rows": [
+    {
+      "repo": "1",
+      "candidates": 687,
+      "copied": 2,
+      "duplicate_content": 685,
+      "skipped_path_or_binary_or_large": 0,
+      "secret_pattern_quarantined": 0,
+      "bytes_copied": 300067
+    },
+    {
+      "repo": "5t",
+      "candidates": 737,
+      "copied": 3,
+      "duplicate_content": 734,
+      "skipped_path_or_binary_or_large": 0,
+      "secret_pattern_quarantined": 0,
+      "bytes_copied": 202970
+    },
+    {
+      "repo": "Grok-ready",
+      "candidates": 876,
+      "copied": 3,
+      "duplicate_content": 873,
+      "skipped_path_or_binary_or_large": 0,
+      "secret_pattern_quarantined": 0,
+      "bytes_copied": 2340653
+    },
+    {
+      "repo": "Run-Z-app",
+      "candidates": 0,
+      "copied": 0,
+      "duplicate_content": 0,
+      "skipped_path_or_binary_or_large": 0,
+      "secret_pattern_quarantined": 0,
+      "bytes_copied": 0
+    },
+    {
+      "repo": "Run-Z-app2",
+      "candidates": 0,
+      "copied": 0,
+      "duplicate_content": 0,
+      "skipped_path_or_binary_or_large": 0,
+      "secret_pattern_quarantined": 0,
+      "bytes_copied": 0
+    },
+    {
+      "repo": "T44",
+      "candidates": 707,
+      "copied": 0,
+      "duplicate_content": 707,
+      "skipped_path_or_binary_or_large": 0,
+      "secret_pattern_quarantined": 0,
+      "bytes_copied": 0
+    },
+    {
+      "repo": "TESS",
+      "candidates": 734,
+      "copied": 0,
+      "duplicate_content": 734,
+      "skipped_path_or_binary_or_large": 0,
+      "secret_pattern_quarantined": 0,
+      "bytes_copied": 0
+    },
+    {
+      "repo": "Zz",
+      "candidates": 2720,
+      "copied": 319,
+      "duplicate_content": 2398,
+      "skipped_path_or_binary_or_large": 2,
+      "secret_pattern_quarantined": 1,
+      "bytes_copied": 8543442
+    },
+    {
+      "repo": "olive-giant-ever-glade",
+      "candidates": 247,
+      "copied": 63,
+      "duplicate_content": 183,
+      "skipped_path_or_binary_or_large": 1,
+      "secret_pattern_quarantined": 0,
+      "bytes_copied": 4325036
+    },
+    {
+      "repo": "tessera-complete-archives",
+      "candidates": 1,
+      "copied": 0,
+      "duplicate_content": 1,
+      "skipped_path_or_binary_or_large": 0,
+      "secret_pattern_quarantined": 0,
+      "bytes_copied": 0
+    },
+    {
+      "repo": "tessera-grok-handoff",
+      "candidates": 1,
+      "copied": 0,
+      "duplicate_content": 1,
+      "skipped_path_or_binary_or_large": 0,
+      "secret_pattern_quarantined": 0,
+      "bytes_copied": 0
+    },
+    {
+      "repo": "tessera-grok-handoff-complete",
+      "candidates": 2,
+      "copied": 0,
+      "duplicate_content": 2,
+      "skipped_path_or_binary_or_large": 0,
+      "secret_pattern_quarantined": 0,
+      "bytes_copied": 0
+    }
+  ],
+  "totals": {
+    "candidates": 6712,
+    "copied": 390,
+    "duplicate_content": 6318,
+    "skipped_path_or_binary_or_large": 3,
+    "secret_pattern_quarantined": 1,
+    "bytes_copied": 15712168
+  }
+}
