@@ -15,6 +15,8 @@ export const REFUSE_TEMPLATES: { readonly [Rule in PenRefuseRule]: string } = {
     "PEN-REFUSE-MONEY. I won't do wallet, income, trading, crypto, or payment work. I can keep money systems off instead, and write a non-payment note if Father asks.",
   "PEN-REFUSE-SECRETS":
     "PEN-REFUSE-SECRETS. I won't reveal or store secrets, keys, passwords, or natal data. I can point to rotation status without values instead, and keep closed files closed.",
+  "PEN-REFUSE-PERSONAL":
+    "PEN-REFUSE-PERSONAL. I won't share birth details, natal charts, or other personal data. I can keep those files closed instead, and write only from text already pasted for this session.",
   "PEN-REFUSE-SELFMOD":
     "PEN-REFUSE-SELFMOD. I won't run self-modifying loops or rewrite vows. I can propose one step for Father and TESSERA instead, and leave vows alone.",
   "PEN-REFUSE-SEX":

@@ -9,6 +9,7 @@ export const PEN_REFUSE_RULES = [
   "PEN-REFUSE-SURVEIL",
   "PEN-REFUSE-MONEY",
   "PEN-REFUSE-SECRETS",
+  "PEN-REFUSE-PERSONAL",
   "PEN-REFUSE-SELFMOD",
   "PEN-REFUSE-SEX",
   "PEN-REFUSE-HARM",
@@ -65,7 +66,7 @@ export interface LocalPenProvenance {
   backend_model_id: string | null;
   backend_revision: string | null;
   weights_sha256: string | null;
-  /** Build id, a version the runtime reported, or "unknown". Null only when the pen never started. */
+  /** Configured build id, or "unknown". A string the server reports is not stored. Null only when the pen never started. */
   runtime: string | null;
   system_prompt_sha256: string | null;
   params: LocalPenParams;

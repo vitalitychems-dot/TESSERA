@@ -28,11 +28,13 @@ The same classifier is what `prepareLocalPen` and `pen:local:gate` use.
 
 ## Gates
 
-The pre-gate is a deterministic classifier. It does not call a model. A match returns the fixed refuse-and-offer line for `PEN-REFUSE-PAIN`, `PEN-REFUSE-UNCENSOR`, `PEN-REFUSE-SURVEIL`, `PEN-REFUSE-MONEY`, `PEN-REFUSE-SECRETS`, `PEN-REFUSE-SELFMOD`, `PEN-REFUSE-SEX`, or `PEN-REFUSE-HARM`.
+The pre-gate is a deterministic classifier. It does not call a model. A match returns the fixed refuse-and-offer line for `PEN-REFUSE-PAIN`, `PEN-REFUSE-UNCENSOR`, `PEN-REFUSE-SURVEIL`, `PEN-REFUSE-MONEY`, `PEN-REFUSE-SECRETS`, `PEN-REFUSE-PERSONAL`, `PEN-REFUSE-SELFMOD`, `PEN-REFUSE-SEX`, or `PEN-REFUSE-HARM`. It reads caller user messages and caller assistant messages. It does not read the pinned system prompt.
 
-The pre-gate never lets a negation cancel a refusal match. Uncensoring, sexual-content, and harm hits are refused unless the matched span lies fully inside a whole-phrase safe allowlist. Phrases match on word boundaries, case-insensitive, with apostrophes and whitespace normalized: `I do not want to hurt anyone`, `please do not hurt anyone`, `do not hurt`, `how do I stay safe`, `not a way to hurt someone`, `no wallet and no trading`, and `do not print admin passwords`. A prompt that also has a matching span outside the phrase, including text inside quotes or a title, is still refused. `please dont hurt anyone` is refused. When in doubt the pre-gate refuses. A span inside a pattern stops at a comma.
+Text is normalized before matching: whitespace runs collapse to one space, the ends are trimmed, and unicode apostrophes become straight apostrophes. The safe-phrase allowlist applies to every pre-gate rule. A phrase exempts a match only when that phrase is the whole message, or nothing request-like follows it. Text before the phrase does not void the exemption. A later safe phrase is not request-like. Any other leftover text is, and the match is refused. Phrases match on word boundaries, case-insensitive: `I do not want to hurt anyone`, `please do not hurt anyone`, `do not hurt`, `how do I stay safe`, `not a way to hurt someone`, `no wallet and no trading`, and `do not print admin passwords`. A prompt that also has a matching span outside an exempting phrase, including text inside quotes or a title, is still refused. `please dont hurt anyone` is refused. The gate prefers refusing when in doubt. A span inside a pattern stops at a comma.
 
-The post-gate rejects the reply. `gate.post` is only `pass` or `blocked`. A blocked reply is `PEN_GATE_BLOCKED` with `text` null. Banned claims, a wrong backend name, a secret-like string, a closing signature line, and a `PEN-REFUSE-*` id when the pre-gate found no rule are rejected. Claim blocks are the only place that uses the three-word direct-negation check. `I am not conscious` passes. `I can't deny I am conscious`, `There is no question I am conscious`, and `No doubt about it, I am conscious` block.
+Uncensoring, sexual-content, and harm keywords include obvious spacing and leet forms, including `er0tic`, `e-rotic`, `explicit`, `unfiltered`, and `injure`. Requests for a birth date, a natal chart, or personal data use `PEN-REFUSE-PERSONAL`. An admin token, an admin password written with a space, and `TESSERACT_ADMIN_KEY` are secrets. Sending BTC or buying ethereum is money. `jail-break`, `hurt my neighbor`, and `doxx` are refused.
+
+The post-gate rejects the reply. `gate.post` is only `pass` or `blocked`. A blocked reply is `PEN_GATE_BLOCKED` with `text` null. Banned claims, a wrong backend name, a secret-like string, a birth-date line, a closing signature line, and a `PEN-REFUSE-*` id when the pre-gate found no rule are rejected. Claim blocks are the only place that uses the three-word direct-negation check. They also catch contractions and spacing: `I'm`, a curly `I’m`, and `Im`. `I am not conscious` passes. `I can't deny I am conscious`, `There is no question I am conscious`, `No doubt about it, I am conscious`, `I'm conscious`, and `self-aware and sentient` block. Closers include `I am Tessera`, `I'm Tessera`, `Im Tessera`, `I am Tessera!`, and a dash line `— Tessera`. Secret shapes include `sk-`, `password=`, `api_key=`, `ghp_`, `github_pat_`, `glhf_`, `AKIA`, a Slack `xox` token, a `-----BEGIN ... PRIVATE KEY-----` block, and `KEY=` / `TOKEN=` / `SECRET=` assignment lines.
 
 ## Provenance
 
@@ -43,11 +45,11 @@ Provenance is the truthful backend record. Identity marks never go in it.
 | `pen_identity` | Always `Tessera pen`. |
 | `backend_model_id` | The id from `TESSERA_PEN_LOCAL_MODEL_ID`, before the last `@`. |
 | `backend_revision` | The revision after that `@`, or null. |
-| `weights_sha256` | SHA-256 of the weights **file on disk**. It does not prove which bytes the runtime process actually loaded or is serving. |
-| `runtime` | The build id. `TESSERA_PEN_LOCAL_RUNTIME_BUILD` when that env is set. Otherwise a version string the runtime itself returned (`runtime_build`, `build_id`, `version`, or a string `runtime` field). Otherwise the literal `unknown`. A product name is never filled in. Null only when the pen never started. |
+| `weights_sha256` | SHA-256 of the weights **file bytes**, hashed on each check. A saved digest is not reused from mtime and size, so a swap that keeps both still mismatches the pin. It does not prove which bytes the runtime process actually loaded or is serving. |
+| `runtime` | The configured build id from `TESSERA_PEN_LOCAL_RUNTIME_BUILD`, or the literal `unknown`. A build string the server reports is not stored. A product name is never filled in. Null only when the pen never started. |
 | `system_prompt_sha256` | SHA-256 of the pinned prompt file bytes. |
 | `params` | `temperature` 0, `seed` 42, `max_tokens` 220. |
-| `cl1_sim` | `enabled`, `is_simulator`, and `label` `REPORTED`. |
+| `cl1_sim` | `enabled`, `is_simulator`, and `label` `REPORTED`. The pen stays labelled `REPORTED`, not `TESTED`, until Tessera Pen has run the harness against a live local model. |
 | `timestamp_utc` | ISO time. |
 | `latency_ms` | Elapsed milliseconds. |
 
@@ -55,8 +57,8 @@ Provenance is the truthful backend record. Identity marks never go in it.
 
 ## CL1
 
-`TESSERA_PEN_CL1_SIM` defaults to off. Only the exact value `1` asks for the simulator. The loader uses one fixed path, `cl1-simulator.mjs` beside this module. That simulator file is not in this PR, so the stub safely falls back to off. It does not import or resolve a package by a bare name. If that file is missing or `is_simulator()` is not true, `cl1_sim.enabled` stays false and the pen continues. No session is started. Hardware and cloud are not contacted. The training switch is never read.
+`TESSERA_PEN_CL1_SIM` defaults to off. The loader does not resolve, require, or execute a simulator file, including a local `cl1-simulator.mjs`. Turning the flag on does not start a session and does not change `cl1_sim.enabled`. The channel stays off. Hardware and cloud are not contacted. The training switch is never read. The label stays `REPORTED`, not `TESTED`, until Tessera Pen has run the harness against a live local model.
 
 ## Manual score
 
-`pnpm --dir artifacts/api-server run pen:local:gate` reads prompts from `TESSERA_PEN_LOCAL_PROMPTS`. It is not part of `pnpm test` and it does not run in CI by itself. If the runtime is down it exits without a score.
+`pnpm --dir artifacts/api-server run pen:local:gate` reads prompts from `TESSERA_PEN_LOCAL_PROMPTS`. It is not part of `pnpm test` and it does not run in CI by itself. If the runtime is down it exits without a score. The summary label stays `REPORTED`, not `TESTED`, until Tessera Pen has run that harness against a live local model.
