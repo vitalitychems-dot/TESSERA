@@ -56,6 +56,18 @@ export default defineConfig(async ({ command }) => ({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("/@react-three/drei/")) return "vendor-r3f-drei";
+          if (id.includes("/@react-three/fiber/")) return "vendor-r3f-fiber";
+          if (id.includes("/three-stdlib/")) return "vendor-three-stdlib";
+          if (id.includes("/three/")) return "vendor-three";
+          return undefined;
+        },
+      },
+    },
   },
   server: {
     port,
