@@ -12,9 +12,9 @@ This file records how each source was brought into Grok-ready and what was inten
 | `1T` | `b485f130455a014cd4912af167e5962ef790f4b2` | Its only unique content was private natal-vault data. Not published |
 | `1` (private) | `88ccd61a` (content `708afbf3`) | Every file version in it already appears in the merged history. Nothing new |
 | `TX` | `5211793d8063e1dee094caa5683c05661fec9644` | README only. Its collaboration rules are in the README's agent rules |
-| `tessera-grok-handoff` | `746786ccf32ae95e63ad7a4916c37385e82507f2` | Its notes were carried into `tessera-grok-handoff-complete`. Included as `docs/handoff/legacy-handoff-notes.md` |
+| `tessera-grok-handoff` | `746786ccf32ae95e63ad7a4916c37385e82507f2` | Its notes were carried into `tessera-grok-handoff-complete`. Included as `Gitbook: history/handoffs/legacy-handoff-notes.md` |
 | `tessera-grok-handoff-complete` | `da5a8faea817d65eaa564d0b3e8618638928c5c8` | Authoritative copy of the three archives (same 1,855 entries as the private archive repo, with more redaction). Unpacked into `docs/grok-packet`, `projects/vitality-chems-storefront`, and `docs/handoff` |
-| `tessera-complete-archives` (private) | `256943f5` | Same three archives, entry for entry, with fewer redactions. Superseded by the copy above. Notes kept as `docs/handoff/complete-archive-notes.md` |
+| `tessera-complete-archives` (private) | `256943f5` | Same three archives, entry for entry, with fewer redactions. Superseded by the copy above. Notes kept as `Gitbook: history/handoffs/complete-archive-notes.md` |
 
 Archive SHA-256 values (handoff-complete copies): `grok-handoff.zip` `3a3a040a…`, `grok-handoff-images.zip` `f8cb5d8e…`, `grok-workspace_1789591148371.zip` `5234e966…`.
 

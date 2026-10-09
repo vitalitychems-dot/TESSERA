@@ -4,11 +4,11 @@ This directory documents the public consolidated monorepo and its reviewed sourc
 
 ## Manifests and reports
 
-- [`source-manifest.csv`](source-manifest.csv): inspected GitHub repositories, selected refs/commits, and dispositions.
+- `Gitbook: merge/source-manifest.csv`: inspected GitHub repositories, selected refs/commits, and dispositions.
 - [`SOURCE-BRANCH-REVIEW.md`](SOURCE-BRANCH-REVIEW.md): current branch heads, unmerged source deltas, open PRs, and explicit exclusions.
 - [`content-disposition-manifest.jsonl`](content-disposition-manifest.jsonl): source-path-to-canonical-path mappings, exact-content deduplication, and exclusion/OCR dispositions. Sensitive/private/runtime paths are masked.
-- [`redundancy-ledger.csv`](redundancy-ledger.csv): SHA-256 ledger of removed handoff copies, shared-path links, and structural/attribution duplicates intentionally retained with reasons.
-- [`../image-text/ocr.jsonl`](../image-text/ocr.jsonl): deduplicated OCR results with source/hash provenance from safe image inputs.
+- `Gitbook: merge/redundancy-ledger.csv`: SHA-256 ledger of removed handoff copies, shared-path links, and structural/attribution duplicates intentionally retained with reasons.
+- `Gitbook: review/image-text/ocr.jsonl`: deduplicated OCR results with source/hash provenance from safe image inputs.
 - [`raw-media-inventory-summary.json`](raw-media-inventory-summary.json): aggregate historical media totals only; filename-bearing per-file inventories are not staged.
 - [`VALIDATION.md`](VALIDATION.md): root build, typecheck, tests, dev smoke test, deduplication, and security scope.
 
