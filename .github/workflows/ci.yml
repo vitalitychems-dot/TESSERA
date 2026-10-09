@@ -38,6 +38,8 @@ jobs:
           cache: pnpm
       - name: Install frozen workspace
         run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Check historical merge boundaries
+        run: pnpm run merge-gate
       - name: Audit all dependencies
         run: pnpm audit
       - name: Typecheck all applications and libraries

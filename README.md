@@ -39,6 +39,8 @@ pnpm run typecheck
 pnpm test
 pnpm run build
 pnpm audit
+pnpm run merge-gate       # fast path/duplicate/secret-shaped-path checks
+pnpm run merge-gate:full  # runs the gate plus typecheck, tests, build, and audit
 ```
 
 Offline and post-build eval entry points (they are not part of `pnpm test`):
