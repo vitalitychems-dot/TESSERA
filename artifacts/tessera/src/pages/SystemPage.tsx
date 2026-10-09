@@ -12,7 +12,7 @@ const API = import.meta.env.VITE_API_URL || "";
 type SystemTab = "agi" | "improvement" | "evolution" | "quantum" | "agents" | "health";
 
 async function fetchApi<T = any>(url: string): Promise<T> {
-  const res = await fetch(url);
+  const res = await fetch(url, { credentials: "include" });
   if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
   const json = await res.json();
   return json.data;

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import express, { type Router } from "express";
 import { createServer, type Server } from "node:http";
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 import {
   collapsedRouteKeyCount,
   duplicateRoutes,
@@ -189,11 +190,43 @@ function restoreDatabaseUrl(): void {
 
 let server: Server | undefined;
 let baseUrl = "";
+let ownerCookieHeader = "";
+const ADMIN_KEY_ENV = "TESSERACT_ADMIN_KEY";
+const SESSION_SECRET_ENV = "SOVEREIGN_SESSION_SECRET";
+const SYNTHETIC_ADMIN_KEY = "synthetic-admin-key";
+const SYNTHETIC_SESSION_SECRET = "synthetic-session-secret-32chars!!";
+let savedAdminKey: string | undefined;
+let savedSessionSecret: string | undefined;
+let ownerEnvInstalled = false;
+
+function installSyntheticOwnerEnv(): void {
+  if (ownerEnvInstalled) return;
+  savedAdminKey = process.env[ADMIN_KEY_ENV];
+  savedSessionSecret = process.env[SESSION_SECRET_ENV];
+  process.env[ADMIN_KEY_ENV] = SYNTHETIC_ADMIN_KEY;
+  process.env[SESSION_SECRET_ENV] = SYNTHETIC_SESSION_SECRET;
+  const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+  ownerCookieHeader = `${SESSION_COOKIE}=${issued.signedId}`;
+  ownerEnvInstalled = true;
+}
+
+function restoreSyntheticOwnerEnv(): void {
+  if (!ownerEnvInstalled) return;
+  if (savedAdminKey === undefined) delete process.env[ADMIN_KEY_ENV];
+  else process.env[ADMIN_KEY_ENV] = savedAdminKey;
+  if (savedSessionSecret === undefined) delete process.env[SESSION_SECRET_ENV];
+  else process.env[SESSION_SECRET_ENV] = savedSessionSecret;
+  ownerCookieHeader = "";
+  ownerEnvInstalled = false;
+}
 
 async function request(method: string, path: string, body?: unknown): Promise<{ status: number; json: unknown }> {
+  const headers = new Headers();
+  if (body !== undefined) headers.set("content-type", "application/json");
+  if (ownerCookieHeader) headers.set("cookie", ownerCookieHeader);
   const response = await fetch(`${baseUrl}${path}`, {
     method,
-    headers: body === undefined ? undefined : { "content-type": "application/json" },
+    headers,
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   return { status: response.status, json: await response.json() };
@@ -276,6 +309,7 @@ describe("HYB-012 route inventory", () => {
 
 describe("HYB-012 quantum mount order", () => {
   beforeAll(async () => {
+    installSyntheticOwnerEnv();
     ensureRouteImportCanLoad();
     const registrations = listRouteRegistrations();
     const owners = duplicateRoutes(registrations).find(
@@ -314,6 +348,7 @@ describe("HYB-012 quantum mount order", () => {
       });
     }
     restoreDatabaseUrl();
+    restoreSyntheticOwnerEnv();
   });
 
   it("GET /api/quantum/state answers with the system-runtime shape", async () => {
@@ -348,6 +383,7 @@ describe("HYB-012 quantum mount order", () => {
 
 describe("HYB-012 non-quantum duplicate response shapes", () => {
   beforeAll(async () => {
+    installSyntheticOwnerEnv();
     ensureRouteImportCanLoad();
     const loaders = [
       () => import("../routes/sovereign-engines"),
@@ -381,6 +417,7 @@ describe("HYB-012 non-quantum duplicate response shapes", () => {
       server = undefined;
     }
     restoreDatabaseUrl();
+    restoreSyntheticOwnerEnv();
   });
 
   it("GET /api/consciousness/state answers with the sovereign-engines wrapper", async () => {
@@ -437,13 +474,14 @@ describe("HYB-012 non-quantum duplicate response shapes", () => {
     });
   });
 
-  it("POST /api/improvement/cycle keeps the improvement.ts error envelope when the database is offline", async () => {
+  it("POST /api/improvement/cycle keeps a generic improvement.ts error envelope when the database is offline", async () => {
     const response = await request("POST", "/api/improvement/cycle", {});
     expect(response.status).toBe(500);
     expect(response.json).toEqual({
       ok: false,
-      error: "probe-db-offline",
+      error: "Improvement cycle failed",
     });
+    expect(JSON.stringify(response.json)).not.toContain("probe-db-offline");
   });
 
   it("POST /api/universe/simulate keeps the system-runtime contract", async () => {

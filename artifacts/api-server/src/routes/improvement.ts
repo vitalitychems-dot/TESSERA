@@ -9,6 +9,7 @@ import {
 } from "@workspace/db/schema";
 import { desc, gte, count, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { requireAdminSession } from "../lib/sovereign-admin";
 import { computeSovereigntyStatus } from "../lib/sovereignty-monitor";
 import { getTotalCallStats } from "../lib/provider-call-logger";
 import { getDaemonMetrics, startAutoImprovementDaemon, stopAutoImprovementDaemon } from "../lib/auto-improvement-daemon";
@@ -168,7 +169,7 @@ async function computeRealSovereigntyScore(): Promise<number> {
   return Math.min(100, Math.round(baseScore + localBonus + activeBonus + perfBonus));
 }
 
-router.post("/improvement/cycle", async (req, res) => {
+router.post("/improvement/cycle", requireAdminSession, async (req, res) => {
   try {
     const cycleId = `cycle-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -231,9 +232,12 @@ router.post("/improvement/cycle", async (req, res) => {
       sovereigntyDelta: Math.round((sovereigntyScoreAfter - sovereigntyScoreBefore) * 10) / 10,
       cycle: inserted,
     });
-  } catch (err) {
-    logger.error({ err }, "Improvement cycle failed");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+  } catch (err: unknown) {
+    logger.error(
+      { name: err instanceof Error ? err.name : "Error" },
+      "Improvement cycle failed",
+    );
+    return res.status(500).json({ ok: false, error: "Improvement cycle failed" });
   }
 });
 

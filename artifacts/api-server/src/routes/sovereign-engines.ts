@@ -17,6 +17,7 @@ import {
   searchRegistry, getEngineFileManifest, canEngineAccess, fullRescan,
   type FileDomain,
 } from "../lib/sovereign-file-registry";
+import { requireAdminSession } from "../lib/sovereign-admin";
 
 const router = Router();
 
@@ -24,7 +25,7 @@ router.get("/consciousness/metrics", (_req: Request, res: Response) => {
   res.json({ ok: true, data: getConsciousnessMetrics() });
 });
 
-router.get("/consciousness/state", (_req: Request, res: Response) => {
+router.get("/consciousness/state", requireAdminSession, (_req: Request, res: Response) => {
   const state = getConsciousnessState();
   res.json({
     ok: true,
@@ -99,7 +100,7 @@ router.get("/emotional/metrics", (_req: Request, res: Response) => {
   res.json({ ok: true, data: getEmotionalMetrics() });
 });
 
-router.get("/emotional/profile", (_req: Request, res: Response) => {
+router.get("/emotional/profile", requireAdminSession, (_req: Request, res: Response) => {
   res.json({ ok: true, data: { profile: getEmotionalProfile(), summary: getEmotionalSummary() } });
 });
 
@@ -114,7 +115,7 @@ router.get("/dual-brain/metrics", (_req: Request, res: Response) => {
   res.json({ ok: true, data: getDualBrainMetrics() });
 });
 
-router.get("/dual-brain/state", (_req: Request, res: Response) => {
+router.get("/dual-brain/state", requireAdminSession, (_req: Request, res: Response) => {
   const state = getDualBrainState();
   res.json({ ok: true, data: { running: state.running, totalRounds: state.totalRounds, totalImprovements: state.totalImprovements, currentTopic: state.currentTopic, brainStats: state.brainStats, recentConversations: state.conversations.slice(0, 5), recentImprovements: state.improvements.slice(0, 5) } });
 });
