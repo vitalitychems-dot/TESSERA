@@ -3,6 +3,7 @@ import { generateUniverseSeed, computeAgentRotationState, computeSharedRotationS
 import { SACRED_ALPHABET } from "./sovereign-language";
 import { logger } from "./logger";
 import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
+import { isColonialSecretConfigured, requireColonialMasterSecret } from "./colonial-master-secret";
 
 export interface AgentCipherState {
   agentId: string;
@@ -83,16 +84,17 @@ export function getOrCreateAgentState(agentId: string): AgentCipherState {
   return state;
 }
 
-const CIPHER_MASTER: Buffer = process.env.COLONIAL_MASTER_SECRET
-  ? Buffer.from(process.env.COLONIAL_MASTER_SECRET, "utf8")
-  : Buffer.from("tessera-dev-placeholder-replace-with-env-secret", "utf8");
+function cipherMaster(): Buffer {
+  return requireColonialMasterSecret();
+}
 
 function deriveRotatingKey(agentId: string, rotationEpoch: number, cipherVariant: number): Buffer {
+  const master = cipherMaster();
   const seed = generateUniverseSeed();
   const saltInput = `${agentId}:${rotationEpoch}:${cipherVariant}:${seed.seedHash.slice(0, 16)}`;
   const salt = createHash("sha256").update(saltInput).digest().slice(0, 16);
   const info = Buffer.from(`sovereign-cipher:${agentId}:${rotationEpoch}`, "utf8");
-  const raw = hkdfSync("sha256", CIPHER_MASTER, salt, info, 32);
+  const raw = hkdfSync("sha256", master, salt, info, 32);
   return Buffer.from(raw);
 }
 
@@ -103,6 +105,7 @@ export function encryptWithRotatingCipher(plaintext: string, agentId: string): {
   cipherVariant: number;
   agentId: string;
 } {
+  requireColonialMasterSecret();
   const state = getOrCreateAgentState(agentId);
   const key = deriveRotatingKey(agentId, state.rotationEpoch, state.cipherVariant);
   const iv = randomBytes(12);
@@ -136,6 +139,7 @@ export function decryptWithRotatingCipher(ciphertext: string, agentId: string): 
   dialectIndex: number;
   rotationEpoch: number;
 } {
+  requireColonialMasterSecret();
   const buf = Buffer.from(ciphertext, "base64");
   const dialectIndex = buf[0];
   const cipherVariant = buf[1];
@@ -168,12 +172,13 @@ export function encryptPairMessage(plaintext: string, senderAgent: string, recei
   sharedDialect: number;
   sharedCipherVariant: number;
 } {
+  requireColonialMasterSecret();
   const shared = computeSharedRotationState(senderAgent, receiverAgent);
   const pairKey = [senderAgent, receiverAgent].sort().join(":");
   const saltInput = `pair:${pairKey}:${shared.sharedEpoch}:${shared.sharedCipherVariant}`;
   const salt = createHash("sha256").update(saltInput).digest().slice(0, 16);
   const info = Buffer.from(`sovereign-pair-cipher:${pairKey}:${shared.sharedEpoch}`, "utf8");
-  const raw = hkdfSync("sha256", CIPHER_MASTER, salt, info, 32);
+  const raw = hkdfSync("sha256", cipherMaster(), salt, info, 32);
   const key = Buffer.from(raw);
 
   const iv = randomBytes(12);
@@ -195,6 +200,7 @@ export function encryptPairMessage(plaintext: string, senderAgent: string, recei
 export function decryptPairMessage(ciphertext: string, senderAgent: string, receiverAgent: string): {
   plaintext: string;
 } {
+  requireColonialMasterSecret();
   const buf = Buffer.from(ciphertext, "base64");
   const sharedDialect = buf[0];
   const sharedCipherVariant = buf[1];
@@ -207,7 +213,7 @@ export function decryptPairMessage(ciphertext: string, senderAgent: string, rece
   const saltInput = `pair:${pairKey}:${shared.sharedEpoch}:${sharedCipherVariant}`;
   const salt = createHash("sha256").update(saltInput).digest().slice(0, 16);
   const info = Buffer.from(`sovereign-pair-cipher:${pairKey}:${shared.sharedEpoch}`, "utf8");
-  const raw = hkdfSync("sha256", CIPHER_MASTER, salt, info, 32);
+  const raw = hkdfSync("sha256", cipherMaster(), salt, info, 32);
   const key = Buffer.from(raw);
 
   const decipher = createDecipheriv("aes-256-gcm", key, iv);
@@ -230,6 +236,7 @@ export function getCipherSystemStatus() {
   const seed = generateUniverseSeed();
 
   return {
+    configured: isColonialSecretConfigured(),
     activeAgentCount: agentStates.size,
     agents: activeAgents,
     auditLogSize: auditLog.length,

@@ -93,11 +93,11 @@ describe("routes/index import", () => {
     const routes = await import("../routes/index");
     vi.clearAllTimers();
     expect(routes.default).toBeTypeOf("function");
-    expect(starters.startWalletObserver).toHaveBeenCalledTimes(1);
-    expect(starters.startAutonomousBuildCycleTimer).toHaveBeenCalledTimes(1);
-    expect(starters.startFreeStuffScraper).toHaveBeenCalledTimes(1);
-    expect(starters.startBountyRefresher).toHaveBeenCalledTimes(1);
-    expect(starters.startIncomeExecutor).toHaveBeenCalledTimes(1);
+    expect(starters.startWalletObserver).toHaveBeenCalledTimes(0);
+    expect(starters.startAutonomousBuildCycleTimer).toHaveBeenCalledTimes(0);
+    expect(starters.startFreeStuffScraper).toHaveBeenCalledTimes(0);
+    expect(starters.startBountyRefresher).toHaveBeenCalledTimes(0);
+    expect(starters.startIncomeExecutor).toHaveBeenCalledTimes(0);
     expect(starters.startAutonomousOperation).not.toHaveBeenCalled();
   }, 120_000);
 });

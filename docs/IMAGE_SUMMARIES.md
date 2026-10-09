@@ -6264,9 +6264,9 @@ Screenshot of GitHub's repository switcher listing `1T`, `tessera-grok-handoff`,
 1320×1031, 110,542 bytes, sha256 `8ffbe09291756f6f`; 1 identical copy elsewhere
 - also: tessera-grok-handoff-complete screenshot supplement — `source-screenshot-supplement/03-evidence/IMG_2552_1790876458294.jpeg`
 
-Screenshot supplied with the earlier Grok handoff. Its legible text is transcribed in `docs/handoff/source-screenshot-supplement/02-visible-text-transcript.md`, and the six ZIP names and approximate sizes it shows are listed in `01-archive-inventory.csv`. Those six ZIPs were never provided and are not part of this repository.
+Screenshot supplied with the earlier Grok handoff. Its legible text is transcribed in `Gitbook: review/source-screenshot-supplement/02-visible-text-transcript.md`, and the six ZIP names and approximate sizes it shows are listed in `Gitbook: review/source-screenshot-supplement/01-archive-inventory.csv`. Those six ZIPs were never provided and are not part of this repository.
 
 ### `source-screenshot-supplement/03-evidence/IMG_2553_1790876458294.png`
 1320×2868, 930,778 bytes, sha256 `2bd13bea091d97ff`
 
-Screenshot supplied with the earlier Grok handoff. Its legible text is transcribed in `docs/handoff/source-screenshot-supplement/02-visible-text-transcript.md`, and the six ZIP names and approximate sizes it shows are listed in `01-archive-inventory.csv`. Those six ZIPs were never provided and are not part of this repository.
+Screenshot supplied with the earlier Grok handoff. Its legible text is transcribed in `Gitbook: review/source-screenshot-supplement/02-visible-text-transcript.md`, and the six ZIP names and approximate sizes it shows are listed in `Gitbook: review/source-screenshot-supplement/01-archive-inventory.csv`. Those six ZIPs were never provided and are not part of this repository.

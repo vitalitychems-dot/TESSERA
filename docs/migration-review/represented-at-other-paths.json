@@ -2149,12 +2149,12 @@
     },
     {
       "source": "archives/handoffs/tessera-grok-handoff-complete/repository/complete-archive-notes.md",
-      "canonical": "docs/handoff/complete-archive-notes.md",
+      "canonical": "gitbook:history/handoffs/complete-archive-notes.md",
       "sha": "09ace08cfe27aba3b2c615ada927875743a556a7"
     },
     {
       "source": "archives/handoffs/tessera-grok-handoff-complete/repository/legacy-handoff-notes.md",
-      "canonical": "docs/handoff/legacy-handoff-notes.md",
+      "canonical": "gitbook:history/handoffs/legacy-handoff-notes.md",
       "sha": "ec73241358bebb9c4cba303eba1032d64a36b630"
     },
     {
@@ -2164,22 +2164,22 @@
     },
     {
       "source": "archives/handoffs/tessera-grok-handoff-complete/repository/source-screenshot-supplement/00-START-HERE.md",
-      "canonical": "docs/handoff/source-screenshot-supplement/00-START-HERE.md",
+      "canonical": "gitbook:review/source-screenshot-supplement/00-START-HERE.md",
       "sha": "86a05cee827d69c9f59e786fc2fa0f877ad42286"
     },
     {
       "source": "archives/handoffs/tessera-grok-handoff-complete/repository/source-screenshot-supplement/01-archive-inventory.csv",
-      "canonical": "docs/handoff/source-screenshot-supplement/01-archive-inventory.csv",
+      "canonical": "gitbook:review/source-screenshot-supplement/01-archive-inventory.csv",
       "sha": "ae72ed4225e98504964566d92c6f8d76ecb59c17"
     },
     {
       "source": "archives/handoffs/tessera-grok-handoff-complete/repository/source-screenshot-supplement/02-visible-text-transcript.md",
-      "canonical": "docs/handoff/source-screenshot-supplement/02-visible-text-transcript.md",
+      "canonical": "gitbook:review/source-screenshot-supplement/02-visible-text-transcript.md",
       "sha": "6f92dc33d763a13b8ba596c4e29cd60bcff43474"
     },
     {
       "source": "archives/handoffs/tessera-grok-handoff-complete/repository/source-screenshot-supplement/SHA256SUMS.txt",
-      "canonical": "docs/handoff/source-screenshot-supplement/SHA256SUMS.txt",
+      "canonical": "gitbook:review/source-screenshot-supplement/SHA256SUMS.txt",
       "sha": "d6a298aa4a84687888c36a2fa3dcf162bc9c6870"
     },
     {
