@@ -81,6 +81,7 @@ import autonomousBuildRouter from "./autonomous-build";
 import sovereignDoctrineRouter from "./sovereign-doctrine";
 import languageSecurityRouter from "./language-security";
 import improvementConferenceRouter from "./improvement-conference";
+import { isDbConfigured } from "@workspace/db";
 import { startAutonomousBuildCycleTimer } from "../lib/autonomous-build-cycle";
 import { startWalletObserver } from "../lib/wallet-observer";
 import { startFreeStuffScraper } from "../lib/free-stuff-scraper";
@@ -175,11 +176,13 @@ router.use(languageSecurityRouter);
 router.use(improvementConferenceRouter);
 router.use(doctrineIngestRouter);
 
-startWalletObserver();
-startAutonomousBuildCycleTimer();
-startFreeStuffScraper();
-startBountyRefresher();
-startIncomeExecutor();
+if (isDbConfigured()) {
+  startWalletObserver();
+  startAutonomousBuildCycleTimer();
+  startFreeStuffScraper();
+  startBountyRefresher();
+  startIncomeExecutor();
+}
 router.use(discoveriesRouter);
 router.use(trainingRouter);
 router.use(knowledgeSynthesisRouter);
