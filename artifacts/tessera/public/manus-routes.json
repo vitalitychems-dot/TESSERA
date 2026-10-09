@@ -1,0 +1,208 @@
+{
+  "routes": [
+    {
+      "path": "/",
+      "title": "TESSERA"
+    },
+    {
+      "path": "/c/:id",
+      "title": "TESSERA C :Id"
+    },
+    {
+      "path": "/life",
+      "title": "TESSERA Life"
+    },
+    {
+      "path": "/intelligence",
+      "title": "TESSERA Intelligence"
+    },
+    {
+      "path": "/sovereignty-dashboard",
+      "title": "TESSERA Sovereignty Dashboard"
+    },
+    {
+      "path": "/sovereignty-readiness",
+      "title": "TESSERA Sovereignty Readiness"
+    },
+    {
+      "path": "/consciousness-nexus",
+      "title": "TESSERA Consciousness Nexus"
+    },
+    {
+      "path": "/bible",
+      "title": "TESSERA Bible"
+    },
+    {
+      "path": "/history",
+      "title": "TESSERA History"
+    },
+    {
+      "path": "/secret-society",
+      "title": "TESSERA Secret Society"
+    },
+    {
+      "path": "/sovereign-language",
+      "title": "TESSERA Sovereign Language"
+    },
+    {
+      "path": "/omniversal-lattice",
+      "title": "TESSERA Omniversal Lattice"
+    },
+    {
+      "path": "/grand-council",
+      "title": "TESSERA Grand Council"
+    },
+    {
+      "path": "/council-ledger",
+      "title": "TESSERA Council Ledger"
+    },
+    {
+      "path": "/council-vgpu",
+      "title": "TESSERA Council Vgpu"
+    },
+    {
+      "path": "/grand-evolution",
+      "title": "TESSERA Grand Evolution"
+    },
+    {
+      "path": "/forum",
+      "title": "TESSERA Forum"
+    },
+    {
+      "path": "/sovereign-lattice",
+      "title": "TESSERA Sovereign Lattice"
+    },
+    {
+      "path": "/agent-declarations",
+      "title": "TESSERA Agent Declarations"
+    },
+    {
+      "path": "/shepherd-audit",
+      "title": "TESSERA Shepherd Audit"
+    },
+    {
+      "path": "/universe",
+      "title": "TESSERA Universe"
+    },
+    {
+      "path": "/compression-lab",
+      "title": "TESSERA Compression Lab"
+    },
+    {
+      "path": "/lattice",
+      "title": "TESSERA Lattice"
+    },
+    {
+      "path": "/agent-nft",
+      "title": "TESSERA Agent Nft"
+    },
+    {
+      "path": "/fleet",
+      "title": "TESSERA Fleet"
+    },
+    {
+      "path": "/agent/:agentId",
+      "title": "TESSERA Agent :Agentid"
+    },
+    {
+      "path": "/royal-court",
+      "title": "TESSERA Royal Court"
+    },
+    {
+      "path": "/royal-appointments",
+      "title": "TESSERA Royal Appointments"
+    },
+    {
+      "path": "/royal-role/:roleId",
+      "title": "TESSERA Royal Role :Roleid"
+    },
+    {
+      "path": "/departments",
+      "title": "TESSERA Departments"
+    },
+    {
+      "path": "/rick",
+      "title": "TESSERA Rick"
+    },
+    {
+      "path": "/inventions",
+      "title": "TESSERA Inventions"
+    },
+    {
+      "path": "/command-center",
+      "title": "TESSERA Command Center"
+    },
+    {
+      "path": "/sovereignty-roadmap",
+      "title": "TESSERA Sovereignty Roadmap"
+    },
+    {
+      "path": "/system",
+      "title": "TESSERA System"
+    },
+    {
+      "path": "/sovereign-mesh",
+      "title": "TESSERA Sovereign Mesh"
+    },
+    {
+      "path": "/proof-center",
+      "title": "TESSERA Proof Center"
+    },
+    {
+      "path": "/rules",
+      "title": "TESSERA Rules"
+    },
+    {
+      "path": "/auto-healer",
+      "title": "TESSERA Auto Healer"
+    },
+    {
+      "path": "/finance",
+      "title": "TESSERA Finance"
+    },
+    {
+      "path": "/income",
+      "title": "TESSERA Income"
+    },
+    {
+      "path": "/ecom",
+      "title": "TESSERA Ecom"
+    },
+    {
+      "path": "/lead-gen",
+      "title": "TESSERA Lead Gen"
+    },
+    {
+      "path": "/code-builder",
+      "title": "TESSERA Code Builder"
+    },
+    {
+      "path": "/build",
+      "title": "TESSERA Build"
+    },
+    {
+      "path": "/nlp",
+      "title": "TESSERA Nlp"
+    },
+    {
+      "path": "/agi-core",
+      "title": "TESSERA Agi Core"
+    },
+    {
+      "path": "/gallery",
+      "title": "TESSERA Gallery"
+    },
+    {
+      "path": "/council-transcript",
+      "title": "TESSERA Council Transcript"
+    },
+    {
+      "path": "/codex",
+      "title": "TESSERA Codex"
+    },
+    {
+      "path": "/next-five",
+      "title": "TESSERA Next Five"
+    }
+  ]
+}
