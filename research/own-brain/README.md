@@ -10,15 +10,24 @@ python3 -m unittest -v test_lif.py
 python3 scale_ladder.py
 ```
 
-The scale runner tests 10,000, 100,000, and 1,000,000 synapses when they fit the local safety cap, and reports 10,000,000 and 100,000,000 as `BLOCKED` when their conservative estimate exceeds the cap. Override the cap only for a controlled local experiment with `OWN_BRAIN_MEMORY_CAP_BYTES`; never treat a blocked rung as a completed target.
+The scale runner uses a packed CSR-like representation for large graphs. The default 512 MiB safety cap fails closed before allocation when the conservative peak estimate exceeds the budget. A larger run requires an explicit local override, for example:
+
+```bash
+OWN_BRAIN_MEMORY_CAP_BYTES=1073741824 python3 scale_ladder.py
+```
+
+An override is a measured resource decision, not a bypass: actual peak RSS is recorded and results must remain deterministic. Never treat a blocked rung as a completed target.
 
 ## Phase 1 guarantees
 
 - Seeded XorShift32 generator; no network/API calls.
-- Sparse synapse lists with explicit weights.
+- Sparse synapse lists for the reference path and packed CSR-like arrays for scale runs.
 - LIF leak, threshold, reset, and refractory handling.
 - Exact replay test for identical configuration and input.
+- Packed path must match the reference trace on a seeded fixture.
 - Invalid configuration and input shape rejection.
 - No STDP, self-modification, external dependency, or product-memory write.
 
-The next promotion candidate is BC-013 scale reporting. Learning rules and memory adapters remain separate gates.
+## Latest measured result
+
+With the default 512 MiB cap, S0–S2 complete and S3/S4 block before allocation. With an explicit 1 GiB cap, S3 (10 million synapses) completed at 576,499,712 bytes peak RSS and S4 remained blocked. These are measurements of this sandbox run, not universal hardware limits.
