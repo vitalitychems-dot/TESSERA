@@ -106,7 +106,7 @@ export type LoopbackPostResult =
   | { kind: "down" }
   | { kind: "bad_payload" }
   | { kind: "not_found" }
-  | { kind: "ok"; text: string; reportedBuild: string | null };
+  | { kind: "ok"; text: string };
 
 const FETCH_HEADERS = {
   Accept: "application/json",
@@ -152,7 +152,7 @@ export async function postLoopback(
   }
   const text = readModelText(payload);
   if (text === null) return { kind: "bad_payload" };
-  return { kind: "ok", text, reportedBuild: readReportedBuild(payload) };
+  return { kind: "ok", text };
 }
 
 async function discardBody(response: Response): Promise<void> {
@@ -185,16 +185,6 @@ export async function probeLoopback(url: URL, timeoutMs: number): Promise<"up" |
 
 function isRedirectStatus(status: number): boolean {
   return status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
-}
-
-function readReportedBuild(payload: unknown): string | null {
-  if (typeof payload !== "object" || payload === null) return null;
-  const record = payload as Record<string, unknown>;
-  for (const key of ["runtime_build", "build_id", "version", "runtime"] as const) {
-    const value = record[key];
-    if (typeof value === "string" && value.trim().length > 0) return value.trim();
-  }
-  return null;
 }
 
 function readModelText(payload: unknown): string | null {
