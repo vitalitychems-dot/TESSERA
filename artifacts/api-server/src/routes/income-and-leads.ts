@@ -6,7 +6,6 @@ import { getExecutableLeads, leadCountsByKind, type LeadKind } from "../lib/lead
 import { getFreeFindings, refreshFreeFindings } from "../lib/free-stuff-scraper";
 import {
   getBounties,
-  refreshBounties,
   recordAttempt,
   getAttempts,
   type BountyAttempt,
@@ -19,14 +18,12 @@ router.use("/leads", requireAdminSession);
 router.use("/free-stuff", requireAdminSession);
 router.use("/code-bounties", requireAdminSession);
 
-router.get("/income/wallet", async (_req, res) => {
-  try {
-    const obs = getWalletObservation();
-    if (obs.lastObservedAt === 0) await refreshWalletObservation();
-    return res.json({ ok: true, observation: getWalletObservation() });
-  } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+router.get("/income/wallet", (_req, res) => {
+  const obs = getWalletObservation();
+  if (obs.lastObservedAt === 0) {
+    return res.json({ ok: true, disabled: true, observation: obs });
   }
+  return res.json({ ok: true, observation: obs });
 });
 
 router.post("/income/wallet/refresh", async (_req, res) => {
@@ -40,15 +37,21 @@ router.post("/income/wallet/refresh", async (_req, res) => {
 
 router.get("/income/strategies", (_req, res) => {
   const obs = getWalletObservation();
-  const walletReady = obs.configured && !obs.lastError;
+  const observerOff = obs.lastObservedAt === 0;
+  const walletReady = !observerOff && obs.configured && !obs.lastError;
+  const bountiesOff = getBounties().lastRefresh === 0;
   const strategies = [
     {
       id: "wallet-deposits",
       name: "Direct on-chain deposits",
       kind: "passive",
-      status: walletReady ? "active" : "needs-config",
+      status: observerOff ? "disabled" : walletReady ? "active" : "needs-config",
       description: "Any SOL sent to the configured sovereign wallet is recorded as confirmed income with the on-chain signature.",
-      requirement: walletReady ? null : "Set SOVEREIGN_WALLET_ADDRESS environment variable.",
+      requirement: observerOff
+        ? "Wallet observer is not running."
+        : walletReady
+          ? null
+          : "Set SOVEREIGN_WALLET_ADDRESS environment variable.",
     },
     {
       id: "affiliate-leads",
@@ -70,13 +73,18 @@ router.get("/income/strategies", (_req, res) => {
       id: "code-bounties",
       name: "Public code bounties",
       kind: "active",
-      status: "available",
+      status: bountiesOff ? "disabled" : "available",
       description: "Live GitHub issues labelled bounty are listed in the Code Bounties feed; attempts are recorded.",
-      requirement: process.env.GITHUB_TOKEN ? null : "Optional: set GITHUB_TOKEN to raise GitHub API rate limit.",
+      requirement: bountiesOff
+        ? "Bounty refresher is not running."
+        : process.env.GITHUB_TOKEN
+          ? null
+          : "Optional: set GITHUB_TOKEN to raise GitHub API rate limit.",
     },
   ];
   return res.json({
     ok: true,
+    disabled: observerOff,
     walletReady,
     confirmedIncome: {
       asset: "SOL",
@@ -105,9 +113,7 @@ router.get("/free-stuff", async (req, res) => {
     const limit = req.query.limit ? Math.min(200, Math.max(1, parseInt(String(req.query.limit), 10) || 80)) : 80;
     const data = getFreeFindings({ onlyValid, limit });
     if (data.findings.length === 0 && data.lastRefresh === 0) {
-      await refreshFreeFindings();
-      const next = getFreeFindings({ onlyValid, limit });
-      return res.json({ ok: true, ...next });
+      return res.json({ ok: true, disabled: true, ...data });
     }
     return res.json({ ok: true, ...data });
   } catch (err) {
@@ -131,8 +137,7 @@ router.get("/code-bounties", async (req, res) => {
     const limit = req.query.limit ? Math.min(200, Math.max(1, parseInt(String(req.query.limit), 10) || 60)) : 60;
     const data = getBounties({ withReward, limit });
     if (data.bounties.length === 0 && data.lastRefresh === 0) {
-      await refreshBounties();
-      return res.json({ ok: true, ...getBounties({ withReward, limit }) });
+      return res.json({ ok: true, disabled: true, ...data });
     }
     return res.json({ ok: true, ...data });
   } catch (err) {
