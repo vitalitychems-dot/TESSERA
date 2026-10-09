@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Send, Loader2, Mic, MicOff, Paperclip, Square, Volume2, VolumeX, Network, Radio, Activity } from "lucide-react";
+import { Send, Mic, MicOff, Square, Volume2, VolumeX, Network, Radio, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChatFontColorPicker } from "./ChatFontColorPicker";
 import { ChatVoiceSpeedControl } from "./ChatVoiceSpeedControl";
@@ -9,7 +9,6 @@ interface ChatInputToolbarProps {
   isStreaming: boolean;
   isSending: boolean;
   isRecording: boolean;
-  isUploading: boolean;
   isSpeaking: boolean;
   ttsEnabled: boolean;
   latticeOpen: boolean;
@@ -18,7 +17,6 @@ interface ChatInputToolbarProps {
   localFontColor: string;
   globalVoiceSpeed: number;
   voiceSpeedSliderOpen: boolean;
-  onAttachClick: () => void;
   onSummitClick: () => void;
   onLatticeClick: () => void;
   onLiveClick: () => void;
@@ -33,10 +31,10 @@ interface ChatInputToolbarProps {
 }
 
 export const ChatInputToolbar = memo(function ChatInputToolbar({
-  input, isStreaming, isSending, isRecording, isUploading,
+  input, isStreaming, isSending, isRecording,
   isSpeaking, ttsEnabled, latticeOpen, summitFeedOpen, themeOpen,
   localFontColor, globalVoiceSpeed, voiceSpeedSliderOpen,
-  onAttachClick, onSummitClick, onLatticeClick, onLiveClick,
+  onSummitClick, onLatticeClick, onLiveClick,
   onFontColorToggle, onFontColorChange, onTtsToggle,
   onVoiceSpeedToggle, onVoiceSpeedChange,
   onMicPressStart, onMicPressEnd, onStopStreaming,
@@ -44,17 +42,6 @@ export const ChatInputToolbar = memo(function ChatInputToolbar({
   return (
     <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between">
       <div className="flex items-center gap-1">
-        <button
-          type="button"
-          onClick={onAttachClick}
-          disabled={isUploading}
-          className="h-10 w-10 flex items-center justify-center rounded-full text-gray-500 hover:text-white hover:bg-white/[0.06] transition-all"
-          title="Attach images, audio, or files"
-          data-testid="button-attach"
-        >
-          {isUploading ? <Loader2 size={18} className="animate-spin" /> : <Paperclip size={18} />}
-        </button>
-
         <button
           type="button"
           onClick={onSummitClick}

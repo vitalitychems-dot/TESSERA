@@ -4,7 +4,6 @@ import { dataPath } from "./data-path";
 import { speak } from "./chat";
 import { lookupCatalog, memoryWebText } from "./memory-web";
 import { bestKept, flowLines, trueSelf } from "./retain";
-import { dataPath } from "./data-path";
 
 const RULE =
   "BRIDGE. Answer Grok Bot or Cursor. Name one next file. Do not write the file. Do not say a test passed unless this message includes the test output. If the test failed, stop and wait for Father. Do not ask Father to paste text between tools.";
