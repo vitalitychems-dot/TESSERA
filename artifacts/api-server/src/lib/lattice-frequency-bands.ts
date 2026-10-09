@@ -81,7 +81,7 @@ export function startBandRotationScheduler(): void {
 
   rotationTimer = setSacredInterval(() => {
     const now = Date.now();
-    for (const band of bands.values()) {
+    for (const band of bandRuntime.values()) {
       if (now >= band.nextRotationAt) {
         rotateBand(band.bandId);
       }
