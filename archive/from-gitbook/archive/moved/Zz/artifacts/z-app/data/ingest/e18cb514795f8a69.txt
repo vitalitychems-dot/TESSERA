@@ -1,5 +1,0 @@
-{
-  "description": "Test fixtures for G\u00f6delOS",
-  "fixtures": {},
-  "last_updated": "auto-generated"
-}
