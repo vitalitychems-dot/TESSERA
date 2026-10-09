@@ -1,4 +1,29 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
+import express from "express";
+
+const probes = vi.hoisted(() => {
+  const outbound = vi.fn();
+  const originalFetch = globalThis.fetch.bind(globalThis);
+  globalThis.fetch = (async () => {
+    outbound();
+    throw new Error("outbound fetch blocked");
+  }) as typeof fetch;
+  const dbCalls = {
+    select: vi.fn(() => {
+      throw new Error("database must not be used");
+    }),
+    insert: vi.fn(() => {
+      throw new Error("database must not be used");
+    }),
+    update: vi.fn(() => {
+      throw new Error("database must not be used");
+    }),
+    delete: vi.fn(() => {
+      throw new Error("database must not be used");
+    }),
+  };
+  return { outbound, originalFetch, dbCalls };
+});
 
 const starters = vi.hoisted(() => ({
   startWalletObserver: vi.fn(),
@@ -57,38 +82,37 @@ vi.mock("pg", () => ({
 }));
 
 vi.mock("@workspace/db", () => ({
-  db: {
-    select() {
-      throw new Error("database must not be used");
-    },
-    insert() {
-      throw new Error("database must not be used");
-    },
-    update() {
-      throw new Error("database must not be used");
-    },
-    delete() {
-      throw new Error("database must not be used");
-    },
-  },
+  db: probes.dbCalls,
+}));
+
+vi.mock("../routes/inventions", () => ({
+  default: express.Router(),
+}));
+
+vi.mock("../routes/ontology", () => ({
+  default: express.Router(),
 }));
 
 describe("routes/index import does not start background jobs", () => {
   afterAll(() => {
+    globalThis.fetch = probes.originalFetch;
     vi.useRealTimers();
   });
 
-  it("calls none of the five starters and leaves DATABASE_URL unset", async () => {
-    expect(process.env.DATABASE_URL).toBeUndefined();
+  it("calls none of the five starters and makes no database or outbound calls", async () => {
     vi.useFakeTimers();
     const routes = await import("../routes/index");
     vi.clearAllTimers();
-    expect(process.env.DATABASE_URL).toBeUndefined();
     expect(routes.default).toBeTypeOf("function");
     expect(starters.startWalletObserver).toHaveBeenCalledTimes(0);
     expect(starters.startAutonomousBuildCycleTimer).toHaveBeenCalledTimes(0);
     expect(starters.startFreeStuffScraper).toHaveBeenCalledTimes(0);
     expect(starters.startBountyRefresher).toHaveBeenCalledTimes(0);
     expect(starters.startIncomeExecutor).toHaveBeenCalledTimes(0);
+    expect(probes.dbCalls.select).toHaveBeenCalledTimes(0);
+    expect(probes.dbCalls.insert).toHaveBeenCalledTimes(0);
+    expect(probes.dbCalls.update).toHaveBeenCalledTimes(0);
+    expect(probes.dbCalls.delete).toHaveBeenCalledTimes(0);
+    expect(probes.outbound).toHaveBeenCalledTimes(0);
   }, 120_000);
 });

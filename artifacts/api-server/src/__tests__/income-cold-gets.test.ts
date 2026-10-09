@@ -3,6 +3,45 @@ import express from "express";
 import { createServer, type Server } from "node:http";
 import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 
+const probes = vi.hoisted(() => {
+  const outbound = vi.fn();
+  const originalFetch = globalThis.fetch.bind(globalThis);
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === "string"
+      ? input
+      : input instanceof URL
+        ? input.href
+        : input.url;
+    let loopback = false;
+    try {
+      const host = new URL(url).hostname;
+      loopback = host === "127.0.0.1" || host === "localhost";
+    } catch {
+      loopback = false;
+    }
+    if (!loopback) {
+      outbound();
+      throw new Error("outbound fetch blocked");
+    }
+    return originalFetch(input, init);
+  }) as typeof fetch;
+  const dbCalls = {
+    select: vi.fn(() => {
+      throw new Error("database must not be used");
+    }),
+    insert: vi.fn(() => {
+      throw new Error("database must not be used");
+    }),
+    update: vi.fn(() => {
+      throw new Error("database must not be used");
+    }),
+    delete: vi.fn(() => {
+      throw new Error("database must not be used");
+    }),
+  };
+  return { outbound, originalFetch, dbCalls };
+});
+
 const refreshers = vi.hoisted(() => ({
   refreshWalletObservation: vi.fn(async () => {
     throw new Error("refreshWalletObservation must not run");
@@ -66,20 +105,7 @@ vi.mock("pg", () => ({
 }));
 
 vi.mock("@workspace/db", () => ({
-  db: {
-    select() {
-      throw new Error("database must not be used");
-    },
-    insert() {
-      throw new Error("database must not be used");
-    },
-    update() {
-      throw new Error("database must not be used");
-    },
-    delete() {
-      throw new Error("database must not be used");
-    },
-  },
+  db: probes.dbCalls,
 }));
 
 import incomeAndLeadsRouter from "../routes/income-and-leads";
@@ -96,7 +122,6 @@ describe("cold income reads do not refresh", () => {
   const previousSession = process.env[SESSION_ENV];
 
   beforeAll(async () => {
-    expect(process.env.DATABASE_URL).toBeUndefined();
     process.env[LEGACY_ENV] = SYNTHETIC_OWNER_TOKEN;
     process.env[SESSION_ENV] = SYNTHETIC_SESSION_SECRET;
     const app = express();
@@ -112,6 +137,7 @@ describe("cold income reads do not refresh", () => {
   });
 
   afterAll(async () => {
+    globalThis.fetch = probes.originalFetch;
     if (previousLegacy === undefined) delete process.env[LEGACY_ENV];
     else process.env[LEGACY_ENV] = previousLegacy;
     if (previousSession === undefined) delete process.env[SESSION_ENV];
@@ -122,8 +148,7 @@ describe("cold income reads do not refresh", () => {
     });
   });
 
-  it("returns disabled empty payloads without calling the refresh functions", async () => {
-    expect(process.env.DATABASE_URL).toBeUndefined();
+  it("returns disabled empty payloads without refresh, database, or outbound calls", async () => {
     const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
     const headers = { cookie: `${SESSION_COOKIE}=${issued.signedId}` };
 
@@ -165,6 +190,10 @@ describe("cold income reads do not refresh", () => {
     expect(refreshers.refreshWalletObservation).toHaveBeenCalledTimes(0);
     expect(refreshers.refreshFreeFindings).toHaveBeenCalledTimes(0);
     expect(refreshers.refreshBounties).toHaveBeenCalledTimes(0);
-    expect(process.env.DATABASE_URL).toBeUndefined();
+    expect(probes.dbCalls.select).toHaveBeenCalledTimes(0);
+    expect(probes.dbCalls.insert).toHaveBeenCalledTimes(0);
+    expect(probes.dbCalls.update).toHaveBeenCalledTimes(0);
+    expect(probes.dbCalls.delete).toHaveBeenCalledTimes(0);
+    expect(probes.outbound).toHaveBeenCalledTimes(0);
   });
 });
