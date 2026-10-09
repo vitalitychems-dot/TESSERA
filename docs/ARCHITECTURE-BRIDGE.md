@@ -1,6 +1,6 @@
 # Architecture bridge map
 
-Base: `49474360264aefbe993729db8fa0cd470e7892dd` (merge of pull request #62).
+Read base: `49474360264aefbe993729db8fa0cd470e7892dd` (merge of pull request #62). This pull request targets `main` at `5628e4222cfa4e1fb3b5f9ac6f11af5654aaeeee`. Line citations were read on `49474360` unless a sentence says they were re-checked on `main`.
 This file is a map of how the live pieces call each other. It is the first step toward a Tessera that runs sovereign, local, with no hosted API, and free of charge. Nothing in this pull request changes code, flags, or data.
 
 **Verified** means the line was read, or an importer search was run, on this commit.
@@ -20,9 +20,9 @@ Root scripts (`package.json`):
 
 | Script | Mechanism | File |
 |---|---|---|
-| `dev` | subprocess `node scripts/dev-unified.mjs` | `package.json:7` |
-| `build` | subprocess `node scripts/build-unified.mjs` | `package.json:8` |
-| `typecheck:libs` | `tsc --build` using `tsconfig.json` project references | `package.json:9`, `tsconfig.json:4-15` |
+| `dev` | subprocess `node scripts/dev-unified.mjs` | `package.json:8` |
+| `build` | subprocess `node scripts/build-unified.mjs` | `package.json:9` |
+| `typecheck:libs` | `tsc --build` using `tsconfig.json` project references | `package.json:10`, `tsconfig.json:4-15` |
 
 `tsconfig.json` references only `lib/db`, `lib/api-client-react`, and `lib/api-zod`.
 
@@ -39,7 +39,7 @@ Root scripts (`package.json`):
 Package dependency edges (verified from each `package.json`):
 
 - `@workspace/api-server` depends on `@workspace/api-zod` and `@workspace/db` (`artifacts/api-server/package.json:18-19`). HTTP stack is `express` and `ws`. No `axios`. No hosted-model SDK in `dependencies`.
-- `@workspace/tessera` depends on `@workspace/api-client-react` (`artifacts/tessera/package.json:51`). A search of `artifacts/tessera/src` found **no** import of that package. The UI calls `fetch("/api/...")` itself.
+- `@workspace/tessera` depends on `@workspace/api-client-react` (`artifacts/tessera/package.json:52`). A search of `artifacts/tessera/src` found **no** import of that package. The UI calls `fetch("/api/...")` itself.
 - `@workspace/db` uses `pg` and reads `DATABASE_URL` at process start (`lib/db/src/index.ts:7-13`).
 - `@workspace/api-spec` generates the React client and the Zod package via Orval (`lib/api-spec/orval.config.ts:16-39`).
 - `@workspace/api-zod` is imported by the API health route only (`artifacts/api-server/src/routes/health.ts:2`) plus its test.
@@ -47,7 +47,7 @@ Package dependency edges (verified from each `package.json`):
 ## Slice A — `artifacts/api-server`
 
 **Owner:** Build + Security review.
-**Verified size:** 384 files (372 `.ts`). Planning notes said about 346. This commit is larger. Layout: `src/routes` 86 files, `src/lib` 204 files in that directory listing, `src/__tests__` 38 files.
+**Verified size:** 384 files (372 `.ts`). Planning notes said about 346. This commit is larger. Layout: `src/routes` 86 files, `src/lib` 204 files in that directory listing, `src/__tests__` 39 files.
 
 ### Process entry
 
@@ -151,7 +151,7 @@ Package dependency edges (verified from each `package.json`):
 | 90 | `training` | 184 |
 | 91 | `knowledge-synthesis` | 185 |
 
-Side effects at import of `routes/index.ts` (not HTTP): `startAutonomousBuildCycleTimer` (line 84), `startWalletObserver` (85), `startFreeStuffScraper` (86), `startBountyRefresher` (87), `startIncomeExecutor` (88).
+Side effects run at the `start*()` calls in `routes/index.ts:178-182` (re-checked on `49474360` and on `main` `5628e422`): `startWalletObserver()` (`:178`), `startAutonomousBuildCycleTimer()` (`:179`), `startFreeStuffScraper()` (`:180`), `startBountyRefresher()` (`:181`), `startIncomeExecutor()` (`:182`).
 
 `src/app.ts:48` starts the sovereign memory vault loop. `src/app.ts:238-251` declares RSS and open-data seed URLs (Hacker News, arXiv, NASA, USGS, data.gov, World Bank, UN SDG).
 
@@ -186,7 +186,7 @@ Mechanism is HTTP `fetch` to `/api/...`, with optional `VITE_API_URL` prefix, pl
 | Pages such as `SecretKnowledgePage.tsx`, `LifePage.tsx`, `SystemPage.tsx` | `/api/*` routes | `fetch` / `apiRequest` | Examples: `SecretKnowledgePage.tsx:160-171`, `LifePage.tsx:104`, `SystemPage.tsx:10` and `26-39` |
 | `use-chat.ts` | Puter browser SDK, not the API Pen | import `puterChat` | `artifacts/tessera/src/hooks/use-chat.ts:5` |
 | `swarm-agents.ts` | `puterChat` | import and call | `artifacts/tessera/src/lib/swarm-agents.ts:1`, calls from line 199 onward |
-| Declared dependency `@workspace/api-client-react` | generated client | **no importer** | `package.json:51`; search of `src` returned no matches |
+| Declared dependency `@workspace/api-client-react` | generated client | **no importer** | `artifacts/tessera/package.json:52`; search of `src` returned no matches |
 
 `SystemPage.tsx:10` reads `import.meta.env.VITE_API_URL`. The unified runner sets that to the API port (`scripts/dev-unified.mjs:33`).
 
@@ -228,6 +228,8 @@ Mechanism is HTTP `fetch` to `/api/...`, with optional `VITE_API_URL` prefix, pl
 
 **Owner:** Tessera Pen + Build interfaces.
 **Verified size:** `lib/` 52 files, `scripts/` 13 files, `modal/` 4 files.
+
+Once pull requests #64 and #65 merge, the Modal rows, the `MODAL_*` row, the diagram node, and the `scripts/` count of 13 go stale.
 
 ### Libraries
 
@@ -297,12 +299,12 @@ Planning notes said 386 files. This checkout is larger because `archive/from-git
 | Name | Files |
 |---|---|
 | `Zz` | 4749 |
-| `collink1007-XXX` | 915 |
+| archive nest B | 915 |
 | `tessera-grok-handoff-complete` | 315 |
 | `tessera-complete-archives` | 312 |
 | `olive-giant-ever-glade` | 123 |
-| `collink1007-amber-flame-tiger-sand` | 37 |
-| `collink1007-z` | 29 |
+| archive nest C | 37 |
+| archive nest D | 29 |
 | `tessera-grok-handoff` | 26 |
 | `5t` | 20 |
 | `1` | 19 |
@@ -389,7 +391,7 @@ Live memory code (contents of `data/` and archive brain files were not opened):
 | `artifacts/api-server/src/lib/sovereign-memory-vault.ts` | Boot loop | Yes. `app.ts:48`. Also `routes/mandates.ts:5`, `routes/knowledge-health.ts:4`. |
 | `lib/db/src/schema/memory.ts` | Tables | Yes, through `@workspace/db/schema`. |
 | `artifacts/api-server/src/lib/memory/index.ts` | Learning-memory helper | **Tests only.** Importer: `src/__tests__/learning-memory.test.ts`. |
-| `artifacts/api-server/src/lib/agi/working-memory.ts` | AGI working memory | **No importers.** |
+| `artifacts/api-server/src/lib/agi/working-memory.ts` | AGI working memory | **Imported.** `routes/agi.ts:2`. Also `index.ts:387` (dynamic `import`), `agi/agent-bus.ts:10`, `agi/goal-planner.ts:13`, `agi/metacognition.ts:15`. Re-checked on read base `49474360` and on `main` `5628e422`. |
 | `preview/src/lib/tessera/memory-web.ts` | Catalog and flow text | Yes, from `bridge.ts:6` and MCP `memory_web` / `catalog_lookup`. |
 | `preview/src/components/tessera/memory-view.tsx` | Chamber UI | Present. Not an API client. |
 | `.agents/memory/` | 4 markdown notes | Agent notes, not the runtime. |
@@ -421,7 +423,7 @@ A hosted call means the runtime asks a model or another outside service to compu
 | `batchedCallLLM` | `llm-batcher.ts` → `callLLM` | Same | `llm-batcher.ts:1`, `196` | Same as `callLLM` |
 | Callers of `batchedCallLLM` / `isLLMAvailable` | consensus, forum, self-code, council, next-five, engine router | Same | `consensus-engine.ts:5-6`, `288`; `autonomous-forum-engine.ts:6-7`, `524`; `self-code-evolution.ts:5-6`, `60`; `sovereign-engine-router.ts:6`; `council.ts:15`; `next-five-improvements.ts:10` | Off unless the kill switch is cleared |
 | `tesseraEmbeddings` | `neural-embeddings.ts` uses the HTTP helper directly, not `callTesseraPen` | `TESSERA_EMBED_MODEL` against `{TESSERA_LLM_BASE_URL}/embeddings` | `neural-embeddings.ts:111-127`, `166-192`; `tessera-llm-http.ts:68-72` | If the env model is unset, `localFallbackEmbedding` runs (`neural-embeddings.ts:112-116`) |
-| Local adapters | `LocalModelManager` | Loopback HTTP, not a hosted vendor | `local-model-manager.ts:59`, `91`, `133`, `153`, `187`, `210`, `247`, `270`, `307`, `334` | Ollama registered enabled (`:382`). llama.cpp, vLLM, LM Studio, and TGI start disabled unless `LLAMA_CPP_ENABLED`, `VLLM_ENABLED`, `LM_STUDIO_ENABLED`, `TGI_ENABLED` equal `true` (`:387-399`). Endpoints `OLLAMA_ENDPOINT` default `http://localhost:11434` (`:373`). Route `POST /local-models/chat` is `routes/local-models.ts:37`. |
+| Local adapters | `LocalModelManager` | Loopback HTTP, not a hosted vendor | `local-model-manager.ts:59`, `91`, `133`, `153`, `187`, `210`, `247`, `270`, `307`, `334` | Ollama registered enabled (`:382`). llama.cpp, vLLM, LM Studio, and TGI start disabled unless `LLAMA_CPP_ENABLED`, `VLLM_ENABLED`, `LM_STUDIO_ENABLED`, `TGI_ENABLED` equal `true` (`:387-402`). Endpoints `OLLAMA_ENDPOINT` default `http://localhost:11434` (`:373`). Route `POST /local-models/chat` is `routes/local-models.ts:37`. |
 | Preview chamber pen | `resolvePen` / `silentPen` | Loopback slot or a non-matching self-hosted URL. Fallback is files. | `chat.ts:30-58`, `109-111`; `silent-pen.ts:13` | Separate from `callTesseraPen`. Not the API Pen interface. |
 
 `grand-evolution-engine.ts` calls `callLLM` (`:34`, `:182`, `:309`, `:387`), so those generations sit behind `llm-client`. They still do not sit behind `callTesseraPen`.
@@ -516,14 +518,16 @@ Provider URL builders (called through `safeFetch`, so the `fetch(` line is `safe
 - Wikipedia `wikipedia-provider.ts:24`, also dynamic import from `chamber-learning.ts:330-331`
 - arXiv `arxiv-provider.ts:16`
 - NASA `nasa-provider.ts:32`, `:113`, `:171` and `ingestion/apis.ts:12`
-- Reddit provider `reddit-provider.ts:32` (**no importers** of the module)
-- RSS provider `rss-provider.ts` (**no importers**)
+- Reddit provider `reddit-provider.ts:32` (**no importers** of the module; re-checked on `main` `5628e422`, where the only hit is a path string in `sovereign-file-registry.ts:178`)
+- RSS provider `rss-provider.ts` (**no importers**; re-checked on `main` `5628e422`, where the only hit is a path string in `sovereign-file-registry.ts:179`)
 - Dataset hosts in `ingestion/datasets.ts:6`, `:40`, `:75`, `:117`, `:143`, `:179` (data.gov, opendatasoft, World Bank, UN, GitHub, Our World in Data)
 - Seed list `app.ts:238-251`
 
 `sovereign-fetch-guard.ts` patches global `fetch` at boot (`index.ts:1-2`). Direct `fetch` still executes, but the guard can reject it. Tests assert rejection of untrusted hosts (`sovereign-fetch-guard.test.ts:32`). That is a policy wrapper, not a Pen adapter.
 
 ### Key and token env names on the runtime path
+
+If this document is ever made public or mirrored, redact the key-reader file:line columns in the table below first.
 
 Tests and `.agents/skills` are omitted. Counts are reads in the file, not distinct call sites across the whole repo.
 
@@ -577,7 +581,7 @@ Tests and `.agents/skills` are omitted. Counts are reads in the file, not distin
 
 `FATHER_NATAL_CHART_JSON` is read at `src/lib/father-natal.ts:63` and `:85` and `natal-chart-engine.ts:121`. The chart payload was not opened.
 
-`.env.example` also names `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `REPLIT_CONNECTORS_HOSTNAME`, `PRIVATE` object paths via other files (`PRIVATE_OBJECT_DIR` at `objectStorage.ts:63`). A source search of `artifacts/api-server/src` for `STRIPE_SECRET_KEY` was not a call site in the files opened for this map. **Unverified** whether Stripe is invoked anywhere outside `.env.example`.
+`.env.example` names `STRIPE_SECRET_KEY` at line 27 and `STRIPE_WEBHOOK_SECRET` at line 28, and names `REPLIT_CONNECTORS_HOSTNAME` at line 30. `PRIVATE_OBJECT_DIR` is a separate read at `objectStorage.ts:63`. A name search of this checkout outside `archive/` and `archives/` found those two Stripe names only in `.env.example`.
 
 ## 3. Web-answer paths that can become local catalog and Memory MCP
 
@@ -604,23 +608,23 @@ Importer search: relative `from "..."` edges under `artifacts/api-server/src`, w
 | Pair or module | Evidence | Compete rank (propose only) |
 |---|---|---|
 | `callTesseraPen` vs Rick `secureExternalStreamingFetch` vs conversation `secureExternalFetch` vs preview `resolvePen` vs `sdk.ts` vs `puter-ai.ts` | Pen function has no callers. Rick and conversations call the HTTP helper's shape directly. Preview has its own resolver. `sdk.ts` and `puterChatServerSide` have no importers. Puter **is** imported by `use-chat.ts`. | 1. Preview `silentPen` / `fromFiles` for the chamber. 2. `LocalModelManager` for `/api` chat. 3. `callTesseraPen` if a hosted instrument is ever enabled, flag stays `0`. 4. Rick and conversation sandbox must call that same function or not call out. 5. Puter and `sdk.ts` lose. |
-| `safe-fetch.ts` + `secureExternalWrapper.ts` + `outbound-host-policy.ts` + `sovereign-fetch-guard.ts` vs `external-sandbox.ts` vs `centrality-boundary.ts` | The four guards are imported (`index.ts:1`, provider files, `code-bounties-real.ts:3`). `external-sandbox.ts` `sandboxedFetch` is imported by `sovereign-time.ts:23`. `centrality-boundary.ts` re-exports that function (`centrality-boundary.ts:117`) and has **zero** importers. | Keep the four guards plus `external-sandbox.ts` for the sovereign-time path. `centrality-boundary.ts` loses until something imports it. Direct `fetch` in Rick, Moltbook, and the local-model manager still bypasses `sandboxedFetch`. |
-| `vector-memory.ts` + `routes/memory.ts` vs `sovereign-memory-vault.ts` vs `lib/memory/index.ts` vs `agi/working-memory.ts` vs preview `memory-web.ts` | Vault is started from `app.ts:48`. `lib/memory` is test-only. `working-memory.ts` is imported by `routes/agi.ts:2` (an earlier scan missed the `.js` specifier). Preview memory web does not call the API. | 1. `memory-web.ts` for catalog answers with no network. 2. `routes/memory.ts` for stored rows. 3. `routes/agi.ts` working memory stays on the AGI route. 4. Vault stays a writer until a later review shows it duplicates search. 5. Test-only `lib/memory` loses for production wiring. |
+| `safe-fetch.ts` + `secureExternalWrapper.ts` + `outbound-host-policy.ts` + `sovereign-fetch-guard.ts` vs `external-sandbox.ts` vs `centrality-boundary.ts` | The four guards are imported (`index.ts:1`, provider files, `code-bounties-real.ts:3`). `external-sandbox.ts` `sandboxedFetch` is imported by `sovereign-time.ts:23`. `centrality-boundary.ts` re-exports that function (`centrality-boundary.ts:117`) and has **zero** importers. Re-checked on `main` `5628e422`: the only hit is a comment inside `centrality-boundary.ts:133`. | Keep the four guards plus `external-sandbox.ts` for the sovereign-time path. `centrality-boundary.ts` loses until something imports it. Direct `fetch` in Rick, Moltbook, and the local-model manager still bypasses `sandboxedFetch`. |
+| `vector-memory.ts` + `routes/memory.ts` vs `sovereign-memory-vault.ts` vs `lib/memory/index.ts` vs `agi/working-memory.ts` vs preview `memory-web.ts` | Vault is started from `app.ts:48`. `lib/memory` is test-only. `working-memory.ts` is imported by `routes/agi.ts:2`, `index.ts:387`, `agi/agent-bus.ts:10`, `agi/goal-planner.ts:13`, and `agi/metacognition.ts:15` (re-checked on `main` `5628e422`; an earlier scan missed the `.js` specifier). Preview memory web does not call the API. | 1. `memory-web.ts` for catalog answers with no network. 2. `routes/memory.ts` for stored rows. 3. `routes/agi.ts` working memory stays on the AGI route. 4. Vault stays a writer until a later review shows it duplicates search. 5. Test-only `lib/memory` loses for production wiring. |
 | `lib/doctrine-ingest.ts` (route `doctrine-ingest.ts`) vs `lib/doctrine-ingestion.ts` (route `tessera-codex.ts`) | Different function names (`ingestExternalDoctrines` vs `ingestDoctrineDocuments`). They do not import each other. | **Unverified** that they persist the same rows. Keep both until a later read of their writes. Do not rank a deletion yet. |
 | `artifacts/api-server/src/lib/tessera-voice.ts` vs `artifacts/tessera/src/lib/tessera-voice.ts` | Both contain the same refusal regex (server `:23`, web `:16`). | Server module wins as the source of truth. The web copy should become a thin caller. |
-| `@workspace/api-client-react` vs hand-written `fetch("/api/...")` | Dependency in `artifacts/tessera/package.json:51`. Zero imports under `src`. | Hand-written fetch is what runs. Generated client loses until a page imports it. Do not generate a second client. |
+| `@workspace/api-client-react` vs hand-written `fetch("/api/...")` | Dependency in `artifacts/tessera/package.json:52`. Zero imports under `src`. | Hand-written fetch is what runs. Generated client loses until a page imports it. Do not generate a second client. |
 | `puterChatServerSide` → `/api/puter-proxy-chat` | Only definition at `puter-ai.ts:295`. No route in the API tree. | Dead. Loses to `/local-models/chat`. |
 | `preview/src/lib/tessera/sdk.ts` `TesseraClient` | No importer. `CodeBuilderPage.tsx:12` shows a string that imports `@tessera/sdk`, which is not a workspace package. | Dead display client. Loses to `chat.ts` `resolvePen`. |
-| `providers/reddit-provider.ts`, `providers/rss-provider.ts` | Zero importers after resolving `.js` specifiers. `sovereign-file-registry.ts:178-179` names the paths as strings, which is not an import. Wikipedia, arXiv, and NASA providers do have importers. | Reddit and RSS modules lose. The live three stay until Section 3 replaces them. |
-| `prompt-builder.ts` | Zero importers. It only type-imports `llm-client`. | Loses. |
+| `providers/reddit-provider.ts`, `providers/rss-provider.ts` | Zero importers after resolving `.js` specifiers. Re-checked on `main` `5628e422`: `sovereign-file-registry.ts:178-179` names the paths as strings, which is not an import. Wikipedia, arXiv, and NASA providers do have importers. | Reddit and RSS modules lose. The live three stay until Section 3 replaces them. |
+| `prompt-builder.ts` | Zero importers. It only type-imports `llm-client`. Re-checked on `main` `5628e422`: no matches. | Loses. |
 | `agi/agent-bus.ts`, `agi/causal-model.ts`, `agi/goal-planner.ts`, `agi/metacognition.ts`, `agi/working-memory.ts` | Imported by `routes/agi.ts:2-6`. A first pass that ignored `.js` suffixes marked them dead. That pass was wrong. | Keep. They are on the mounted AGI route. |
 | `invention-synthesis.ts` (lib) | Imported by `routes/invention-synthesis.ts:7`. | Keep with that route. |
 | `system-tunables.ts` | Imported by `routes/agi.ts:11`, `routes/invention-synthesis.ts:8`, `index.ts:388`, and the AGI lib modules. | Keep. |
-| `moltbook-sandbox-test.ts` | Zero importers. The boundary test reads `moltbook-bridge.ts` as a path string (`src/__tests__/moltbook-sandbox-boundary.test.ts:5`). | The test file wins. `moltbook-sandbox-test.ts` loses. |
-| `centrality-boundary.ts`, `grand-council-universalis.ts` | Zero importers. `grand-council-deliberation.ts:4` mentions the universalis file in a comment, which is not an import. | Both lose until a route imports them. |
+| `moltbook-sandbox-test.ts` | Zero importers. The boundary test reads `moltbook-bridge.ts` as a path string (`src/__tests__/moltbook-sandbox-boundary.test.ts:5`). Re-checked on `main` `5628e422`: no matches. | The test file wins. `moltbook-sandbox-test.ts` loses. |
+| `centrality-boundary.ts`, `grand-council-universalis.ts` | `centrality-boundary.ts` has zero importers. Re-checked on `main` `5628e422`: the only hit is a comment inside `centrality-boundary.ts:133`. `grand-council-universalis.ts` had zero importers on the read base. `grand-council-deliberation.ts:4` mentions that file in a comment, which is not an import. | Both lose until a route imports them. |
 | `lib/v2/*` (`absorption-sponge`, `affect-compass`, `evidence-lens`, `scenario-sandbox`, `source-graph-sync`, `usage-ledger`) | Importers are only `__tests__`. | Not on the request path. Lose for production wiring. Keep the tests until Father chooses. |
 | `scripts/dev-unified.mjs` "UI preview sandbox" vs `preview/` | The script starts `@workspace/mockup-sandbox` (`:37-43`). `preview/` has no `package.json` and is not in `pnpm-workspace.yaml`. | They are different apps that share a nickname. Do not merge the directories in one step. Mockup stays the Vite sandbox. `preview/` stays the chamber. |
-| Nested `archive/from-gitbook/archive/moved/Zz` (4749 files) and `collink1007-XXX` (915) vs live `artifacts/` + `lib/` | Directory counts only. No content compare. | Live tree at `4947436` wins. Nested trees are inventory batches for a later yes. Nothing deleted here. |
+| Nested `archive/from-gitbook/archive/moved/Zz` (4749 files) and archive nest B (915) vs live `artifacts/` + `lib/` | Directory counts only. No content compare. | Live tree at `4947436` wins. Nested trees are inventory batches for a later yes. Nothing deleted here. |
 | `archives/source-variants/T44` (57) and `archive/.../moved/T44` (2) and `moved/1T` (6) | Names and counts only. Not opened. | Same rule. Live tree wins. Those directories stay listed, unread, until a separate yes. |
 
 ## 5. Diagram
@@ -708,7 +712,7 @@ Small pull requests, each pinned to an exact base SHA. Duplicates follow the com
 6. **Dead-module batch, still no delete.** A review PR lists the zero-importer files from Section 4 with the compete rank. Father's yes is required before any removal. First proposals: `reddit-provider.ts`, `rss-provider.ts`, `prompt-builder.ts`, `centrality-boundary.ts`, `grand-council-universalis.ts`, `moltbook-sandbox-test.ts`, preview `sdk.ts`, and `puterChatServerSide`. The `agi/*` modules stay; `routes/agi.ts:2-6` imports them.
 7. **Generated client.** Either import `@workspace/api-client-react` from one page or stop declaring it. One PR, one choice.
 8. **Gitbook MCP stays a side process.** Do not fold it into the API server until a loopback URL is the only bridge and `GITBOOK_GITHUB_TOKEN` remains env-only.
-9. **Archive batches.** One directory name per PR, counts from Section D, content hash against the live tree, compete winner is `4947436` live files. `Zz`, then `collink1007-XXX`, then the handoff zips. `1T` and `T44` stay unread until a separate yes. No delete in the map PR.
+9. **Archive batches.** One directory name per PR, counts from Section D, content hash against the live tree, compete winner is `4947436` live files. `Zz`, then archive nest B, then the handoff zips. `1T` and `T44` stay unread until a separate yes. No delete in the map PR.
 
 ## Top risks this map is here to sequence
 
@@ -719,6 +723,6 @@ Small pull requests, each pinned to an exact base SHA. Duplicates follow the com
 5. Two pen resolvers (`callTesseraPen` and preview `resolvePen`) and an unimported `TesseraClient` disagree about the default model.
 6. `@workspace/api-client-react` is a declared bridge with no importer, while pages `fetch` by hand.
 7. `sovereign-memory-vault`, `vector-memory`, and preview `memory-web` are three memories.
-8. `centrality-boundary.ts` restates the sandbox rule and has no importers. `sandboxedFetch` runs from `sovereign-time.ts:23`, while Rick, Moltbook, and the local-model manager call `fetch` on their own.
+8. `centrality-boundary.ts` restates the sandbox rule and has no importers (re-checked on `main` `5628e422`). `sandboxedFetch` runs from `sovereign-time.ts:23`, while Rick, Moltbook, and the local-model manager call `fetch` on their own.
 9. Modal and gitbook-mcp leave the process by cloud SDK and GitHub HTTPS, and neither is behind the API guard.
-10. Archive nests (`Zz` 4749 files, `collink1007-XXX` 915) can be mistaken for the live server. The live server is `artifacts/api-server` at this SHA.
+10. Archive nests (`Zz` 4749 files, archive nest B 915) can be mistaken for the live server. The live server is `artifacts/api-server` at this SHA.
