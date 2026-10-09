@@ -13,7 +13,7 @@ import sys
 import time
 from pathlib import Path
 
-from lif import LIFConfig, SparseLIFNetwork, seeded_currents
+from lif import LIFConfig, PackedSparseLIFNetwork, seeded_currents
 
 RUNG_SYNAPSES = (10_000, 100_000, 1_000_000, 10_000_000, 100_000_000)
 MEMORY_CAP_BYTES = int(os.environ.get("OWN_BRAIN_MEMORY_CAP_BYTES", str(512 * 1024 * 1024)))
@@ -25,8 +25,11 @@ def config_for(synapses: int) -> LIFConfig:
 
 
 def estimate_bytes(config: LIFConfig) -> int:
-    # Python object overhead estimate intentionally errs high for safety.
-    return config.neurons * 80 + config.synapses * 72 + config.neurons * 16
+    # Packed construction temporarily holds source/weight/target staging arrays;
+    # this errs high so a permitted rung cannot silently OOM the sandbox.
+    # Includes the temporary source/weight/target staging arrays and packed
+    # arrays held together during construction; validate before allocation.
+    return config.neurons * 96 + config.synapses * 60 + config.neurons * 16
 
 
 def run_rung(synapses: int) -> dict:
@@ -44,7 +47,7 @@ def run_rung(synapses: int) -> dict:
         return {**base, "status": "BLOCKED", "reason": "estimated peak memory exceeds local safety cap"}
     started = time.perf_counter()
     currents = seeded_currents(config)
-    network = SparseLIFNetwork(config)
+    network = PackedSparseLIFNetwork(config)
     trace = network.run(currents)
     elapsed = time.perf_counter() - started
     encoded = json.dumps(trace, separators=(",", ":")).encode()
@@ -57,7 +60,7 @@ def run_rung(synapses: int) -> dict:
         "throughput_synapses_per_second": round(synapses * config.steps / max(elapsed, 1e-9), 2),
         "peak_rss_bytes": peak,
         "trace_sha256": hashlib.sha256(encoded).hexdigest(),
-        "deterministic_replay": trace == SparseLIFNetwork(config).run(currents),
+        "deterministic_replay": trace == PackedSparseLIFNetwork(config).run(currents),
     }
 
 
@@ -71,7 +74,7 @@ def main() -> int:
         "results": results,
         "limitations": [
             "software simulator only; no biological hardware or CL1 interface",
-            "estimated memory is a safety gate for blocked rungs, not a claim of hardware maximum",
+            "packed storage reduces overhead but the memory/time safety gate remains active",
             "no learning rule or product-memory write is enabled in Phase 1",
         ],
     }

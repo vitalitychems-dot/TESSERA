@@ -1,6 +1,6 @@
 import unittest
 
-from lif import ConfigError, LIFConfig, SparseLIFNetwork, seeded_currents
+from lif import ConfigError, LIFConfig, PackedSparseLIFNetwork, SparseLIFNetwork, seeded_currents
 
 
 class LIFTests(unittest.TestCase):
@@ -34,6 +34,14 @@ class LIFTests(unittest.TestCase):
     def test_invalid_config_is_rejected(self):
         with self.assertRaises(ConfigError):
             SparseLIFNetwork(LIFConfig(neurons=1, synapses=2))
+
+    def test_packed_network_matches_reference_trace(self):
+        config = LIFConfig(neurons=24, synapses=80, steps=10, seed=19)
+        currents = seeded_currents(config)
+        self.assertEqual(
+            SparseLIFNetwork(config).run(currents),
+            PackedSparseLIFNetwork(config).run(currents),
+        )
 
 
 if __name__ == "__main__":
