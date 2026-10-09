@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Loader2, X, Copy, Check, Download, Zap, PhoneOff, Pause, Play, MessageSquare, Shield, Settings2, Bot, CheckCircle2, Search, Sparkles, Code, Database, Keyboard, Eye, Paperclip } from "lucide-react";
+import { Loader2, X, Copy, Check, Download, Zap, PhoneOff, Pause, Play, MessageSquare, Shield, Settings2, Bot, CheckCircle2, Search, Sparkles, Code, Database, Keyboard, Eye } from "lucide-react";
 import { NLPGoalsPanel } from "./chat/NLPGoalsPanel";
 import { type VirtuosoHandle } from "react-virtuoso";
 import ReactMarkdown from "react-markdown";
@@ -58,9 +58,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   }, []);
   const [isRecording, setIsRecording] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -139,7 +136,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   const tesseractMode = true;
   const { isAdmin, authenticate, stealthMode, toggleStealth, adminMode, savedAdminKey, saveAdminKey } = useAdmin();
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -928,70 +924,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
     });
   }, []);
 
-  const handleFileUpload = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    setIsUploading(true);
-    setUploadError(null);
-    const formData = new FormData();
-    const fileNames: string[] = [];
-    const fileTypes: string[] = [];
-    for (let i = 0; i < files.length; i++) {
-      formData.append("files", files[i]);
-      fileNames.push(files[i].name);
-      fileTypes.push(files[i].type || "");
-    }
-    try {
-      const res = await fetch(`/api/conversations/${conversationId}/upload`, {
-        method: "POST",
-        body: formData,
-      });
-      if (res.ok) {
-        const saved = await res.json();
-        setUploadedFiles(prev => [...prev, ...saved]);
-
-        const imageFiles = saved.filter((f: UploadedFile) => f.mimeType.startsWith("image/"));
-        const audioFiles = saved.filter((f: UploadedFile) => f.mimeType.startsWith("audio/") || f.filename.match(/\.(mp3|wav|ogg|m4a|flac|aac|opus|webm)$/i));
-        const otherFiles = saved.filter((f: UploadedFile) => !f.mimeType.startsWith("image/") && !f.mimeType.startsWith("audio/") && !f.filename.match(/\.(mp3|wav|ogg|m4a|flac|aac|opus|webm)$/i));
-
-        let summary = "";
-        if (imageFiles.length > 0 && audioFiles.length === 0 && otherFiles.length === 0) {
-          if (imageFiles.length === 1) {
-            summary = `I've uploaded an image: "${imageFiles[0].filename}". Please analyze this image and describe what you see in detail.`;
-          } else {
-            summary = `I've uploaded ${imageFiles.length} images: ${imageFiles.map((f: UploadedFile) => `"${f.filename}"`).join(", ")}. Please analyze these images and describe what you see.`;
-          }
-        } else if (audioFiles.length > 0 && imageFiles.length === 0 && otherFiles.length === 0) {
-          if (audioFiles.length === 1) {
-            summary = `I've uploaded an audio file: "${audioFiles[0].filename}". Please transcribe and analyze this audio content.`;
-          } else {
-            summary = `I've uploaded ${audioFiles.length} audio files: ${audioFiles.map((f: UploadedFile) => `"${f.filename}"`).join(", ")}. Please transcribe and analyze these audio files.`;
-          }
-        } else if (fileNames.length === 1) {
-          summary = `I've uploaded "${fileNames[0]}" for you to analyze.`;
-        } else {
-          summary = `I've uploaded ${fileNames.length} files: ${fileNames.join(", ")}. Please analyze them.`;
-        }
-
-        sendMessage(summary);
-      } else {
-        const errData = await res.json().catch(() => ({ message: "Upload failed" }));
-        setUploadError(errData.message || `Upload failed (${res.status})`);
-        setTimeout(() => setUploadError(null), 8000);
-      }
-    } catch (err: any) {
-      setUploadError(err.message || "Network error during upload");
-      setTimeout(() => setUploadError(null), 8000);
-    }
-    setIsUploading(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    handleFileUpload(e.dataTransfer.files);
-  };
-
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -1014,15 +946,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   }
 
   return (
-    <div
-      className={cn(
-        "flex-1 flex flex-col relative overflow-hidden min-h-0",
-        isDragOver && "ring-2 ring-cyan-500 ring-inset"
-      )}
-      onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-      onDragLeave={() => setIsDragOver(false)}
-      onDrop={handleDrop}
-    >
+    <div className="flex-1 flex flex-col relative overflow-hidden min-h-0">
       <ChamberBar streaming={isStreaming} />
       {adminMode && (
         <div className="flex items-center justify-center gap-2 py-1.5 px-4 bg-violet-950/50 border-b border-violet-500/30 backdrop-blur-sm z-10" data-testid="admin-mode-bar">
@@ -1032,25 +956,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
           <span className="text-[11px] text-violet-500/70 font-mono">Tessera Direct • Unrestricted • Internal Access</span>
         </div>
       )}
-      <AnimatePresence>
-        {isDragOver && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          >
-            <div className="text-center p-8 rounded-2xl border-2 border-dashed border-cyan-500/50">
-              <Paperclip size={48} className="mx-auto text-cyan-400 mb-3" />
-              <p className="text-cyan-400 font-mono text-lg">Drop files for Tessera</p>
-              <p className="text-muted-foreground text-sm mt-1">Images · Audio · Documents · Code</p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-
-
       <AnimatePresence>
         {voiceMode && (
           <ChatVoiceModeOverlay
@@ -1174,9 +1079,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
       <div className="px-4 pb-[max(5rem,calc(4rem+env(safe-area-inset-bottom)))] pt-2 z-10 flex-shrink-0 backdrop-blur-md chat-input-bg" data-testid="chat-input-container">
         <ChatFileUploadArea
           uploadedFiles={uploadedFiles}
-          uploadError={uploadError}
           conversationId={conversationId}
-          onSetUploadError={setUploadError}
           onSetInput={(val) => setInputBoth(val)}
           currentInput={input}
         />
@@ -1257,16 +1160,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
         </AnimatePresence>
 
         <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/*,audio/*,video/*,.pdf,.txt,.md,.json,.csv,.js,.ts,.tsx,.jsx,.py,.html,.css,.yaml,.yml,.xml,.sql,.sh,.env,.log,.zip,.wav,.mp3,.ogg,.m4a,.flac,.aac,.opus,.webm"
-            className="hidden"
-            onChange={(e) => handleFileUpload(e.target.files)}
-            data-testid="input-file-upload"
-          />
-
           <div className={cn(
             "relative rounded-[28px] transition-all duration-300 border border-white/[0.08] bg-white/[0.04]",
             input && "border-white/[0.14] bg-white/[0.06]"
@@ -1455,7 +1348,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
               isStreaming={isStreaming}
               isSending={isSending}
               isRecording={isRecording}
-              isUploading={isUploading}
               isSpeaking={isSpeaking}
               ttsEnabled={ttsEnabled}
               latticeOpen={latticeOpen}
@@ -1464,7 +1356,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
               localFontColor={localFontColor}
               globalVoiceSpeed={globalVoiceSpeed}
               voiceSpeedSliderOpen={voiceSpeedSliderOpen}
-              onAttachClick={() => fileInputRef.current?.click()}
               onSummitClick={() => { setInputBoth("/summit "); textareaRef.current?.focus(); }}
               onLatticeClick={() => { setLatticeOpen(!latticeOpen); setMoltAgentOpen(false); setThemeOpen(false); setSummitFeedOpen(false); }}
               onLiveClick={() => { setSummitFeedOpen(v => !v); setLatticeOpen(false); setMoltAgentOpen(false); setThemeOpen(false); }}
