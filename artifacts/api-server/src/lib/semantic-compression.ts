@@ -1,4 +1,4 @@
-import { db, isDbConfigured } from "@workspace/db";
+import { db } from "@workspace/db";
 import { distilledKnowledgeTable, knowledgeCanonicalTable, compressionRunTable } from "@workspace/db/schema";
 import { eq, sql, desc, gt, inArray, ne, isNotNull, and } from "drizzle-orm";
 import { generateEmbedding, generateEmbeddingsBatch, cosineSimilarity } from "./neural-embeddings";
@@ -832,7 +832,7 @@ export async function loadPortalJumpTableFromDb(): Promise<number> {
 }
 
 // Auto-warm on module load when a database is configured.
-if (isDbConfigured()) {
+if (process.env.DATABASE_URL) {
   setImmediate(() => {
     loadPortalJumpTableFromDb().catch(err => {
       logger.debug({ err: (err as Error).message }, "SemanticCompression: startup hydration error (non-fatal)");

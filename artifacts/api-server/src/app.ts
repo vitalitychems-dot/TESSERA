@@ -17,7 +17,7 @@ import { startShepherdLoop } from "./lib/ingestion/shepherd-agents";
 import { startKnowledgeToCanonBridge } from "./lib/knowledge-canon-bridge";
 import { sovereigntyEnforcementMiddleware } from "./lib/provider-registry";
 import { runDependencyScan } from "./lib/dependency-scanner";
-import { db, isDbConfigured } from "@workspace/db";
+import { db } from "@workspace/db";
 import {
   dbUnavailableErrorHandler,
   rejectWhenDatabaseNotConfigured,
@@ -451,7 +451,7 @@ async function runStartupHealthCheck(): Promise<void> {
 }
 
 async function initializeModules() {
-  if (!isDbConfigured()) {
+  if (!process.env.DATABASE_URL) {
     logger.warn("Database is not configured — skipping database startup, schedulers, and DB-backed loops");
     return;
   }

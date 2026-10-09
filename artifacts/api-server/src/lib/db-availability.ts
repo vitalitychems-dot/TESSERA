@@ -1,5 +1,5 @@
 import type { ErrorRequestHandler, Request, RequestHandler, Response } from "express";
-import { DbUnavailableError, isDbConfigured } from "@workspace/db";
+import { DbUnavailableError } from "@workspace/db";
 
 export const DATABASE_NOT_CONFIGURED_BODY = {
   error: "database not configured",
@@ -24,7 +24,7 @@ export function isDbUnavailableError(err: unknown): boolean {
 }
 
 export const rejectWhenDatabaseNotConfigured: RequestHandler = (req, res, next) => {
-  if (isDbConfigured()) {
+  if (process.env.DATABASE_URL) {
     next();
     return;
   }
@@ -43,7 +43,7 @@ function isUnavailableBody(body: unknown): boolean {
 }
 
 export function rewriteDatabaseUnavailableJson(res: Response): void {
-  if (isDbConfigured()) return;
+  if (process.env.DATABASE_URL) return;
   const originalJson = res.json.bind(res);
   res.json = ((body?: unknown) => {
     if (res.statusCode >= 500 && isUnavailableBody(body)) {

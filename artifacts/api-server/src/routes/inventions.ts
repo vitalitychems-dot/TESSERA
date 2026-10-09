@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { createHash } from "node:crypto";
-import { db, isDbConfigured } from "@workspace/db";
+import { db } from "@workspace/db";
 import { inventionsTable, pinnedDiagramsTable, insertPinnedDiagramSchema, type InsertInvention } from "@workspace/db/schema";
 import { desc, eq, and } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
@@ -591,7 +591,7 @@ async function seedInventionsIfEmpty(): Promise<void> {
   }
 }
 
-if (isDbConfigured()) {
+if (process.env.DATABASE_URL) {
   seedInventionsIfEmpty();
 }
 
@@ -1360,7 +1360,7 @@ function startAutoLoop() {
   // Kick off an initial tick after seed delay.
   setTimeout(() => { autonomousTick().catch(() => {}); }, 10_000);
 }
-if (isDbConfigured()) {
+if (process.env.DATABASE_URL) {
   startAutoLoop();
 }
 
