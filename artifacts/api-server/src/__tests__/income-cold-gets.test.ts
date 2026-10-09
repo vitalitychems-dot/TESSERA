@@ -6,7 +6,7 @@ import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 const probes = vi.hoisted(() => {
   const outbound = vi.fn();
   const originalFetch = globalThis.fetch.bind(globalThis);
-  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+  globalThis.fetch = (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
     const url = typeof input === "string"
       ? input
       : input instanceof URL
