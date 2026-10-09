@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { logger } from "../lib/logger";
 import {
   convene,
   getSession,
@@ -92,8 +93,9 @@ router.post("/grand-council/convene", publicWriteRateLimit, async (req: Request,
     const latticeDigests = listLattices().map((l) => l.cosmicAnchor).slice(0, 8);
     const session = await convene({ seed, latticeDigests });
     res.json(presentCouncilRead(req, { ok: true, fatherAuthorized, session }));
-  } catch (e: unknown) {
-    res.status(500).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+  } catch (err: unknown) {
+    logger.error({ err }, "grand-council convene failed");
+    res.status(500).json({ ok: false, error: "grand-council-failed" });
   }
 });
 

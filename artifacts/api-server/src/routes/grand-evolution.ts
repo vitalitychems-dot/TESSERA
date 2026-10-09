@@ -1,14 +1,15 @@
 import { Router, type IRouter, type Request, type RequestHandler, type Response, type NextFunction } from "express";
 import { logger } from "../lib/logger";
-import { rawKeyFailRateLimit } from "../lib/father-verify-throttle";
+import { rawKeyFailRateLimitIfKeyHeader } from "../lib/father-verify-throttle";
 import {
   runGrandEvolutionCycle,
   getLatestCycle,
   ensureLatestCycleLoaded,
   isCycleRunning,
 } from "../lib/grand-evolution-cycle";
-import { verifyFatherKey, isFatherKeyConfigured } from "../lib/father-identity";
+import { verifyFatherKey } from "../lib/father-identity";
 import { requireAdminSession, resolveFatherAuthorization } from "../lib/sovereign-admin";
+import { isAdminTokenConfigured } from "../lib/sovereign-session";
 import {
   convene,
   subscribeToSession,
@@ -23,7 +24,7 @@ import {
 import { getSocietyStats } from "../lib/sovereign-society";
 
 function requireFather(req: Request, res: Response, next: NextFunction): void {
-  if (!isFatherKeyConfigured()) {
+  if (!isAdminTokenConfigured()) {
     res.status(503).json({ ok: false, error: "sovereign-unconfigured" });
     return;
   }
@@ -37,7 +38,7 @@ function requireFather(req: Request, res: Response, next: NextFunction): void {
 
 /** Owner cookie via requireAdminSession, or a verified x-tesseract-admin-key. */
 const requireEvolutionSessionRead: RequestHandler = (req, res, next) => {
-  if ((process.env.TESSERACT_ADMIN_KEY ?? "").trim().length < 16) {
+  if (!isAdminTokenConfigured()) {
     res.status(503).json({
       ok: false,
       error: "sovereign-unconfigured",
@@ -100,7 +101,7 @@ router.get("/grand-evolution/status", async (_req, res) => {
   });
 });
 
-router.get("/grand-evolution/directives", async (_req, res) => {
+router.get("/grand-evolution/directives", rawKeyFailRateLimitIfKeyHeader, requireEvolutionSessionRead, async (_req, res) => {
   await ensureLatestCycleLoaded();
   const latest = getLatestCycle();
   if (!latest) {
@@ -132,8 +133,8 @@ router.get("/grand-evolution/directives", async (_req, res) => {
   });
 });
 
-router.post("/grand-evolution/run", rawKeyFailRateLimit, async (req, res) => {
-  if (!(process.env.TESSERACT_ADMIN_KEY ?? "").trim()) {
+router.post("/grand-evolution/run", rawKeyFailRateLimitIfKeyHeader, async (req, res) => {
+  if (!isAdminTokenConfigured()) {
     res.status(503).json({ ok: false, error: "sovereign-unconfigured" });
     return;
   }
@@ -157,7 +158,7 @@ router.post("/grand-evolution/run", rawKeyFailRateLimit, async (req, res) => {
   }
 });
 
-router.post("/grand-evolution/run-async", rawKeyFailRateLimit, requireFather, async (_req, res) => {
+router.post("/grand-evolution/run-async", rawKeyFailRateLimitIfKeyHeader, requireFather, async (_req, res) => {
   if (isCycleRunning()) {
     res.status(409).json({ ok: false, error: "cycle-already-running" }); return;
   }
@@ -172,12 +173,12 @@ router.get("/grand-evolution/society", (_req, res) => {
   res.json({ ok: true, data: { ...getSocietyStats(), anchor: societyAnchor() } });
 });
 
-router.get("/grand-evolution/sessions", requireEvolutionSessionRead, async (_req, res) => {
+router.get("/grand-evolution/sessions", rawKeyFailRateLimitIfKeyHeader, requireEvolutionSessionRead, async (_req, res) => {
   const sessions = await listSessions(50);
   res.json({ ok: true, data: { sessions } });
 });
 
-router.get("/grand-evolution/sessions/:id", requireEvolutionSessionRead, async (req, res) => {
+router.get("/grand-evolution/sessions/:id", rawKeyFailRateLimitIfKeyHeader, requireEvolutionSessionRead, async (req, res) => {
   const id = String(req.params.id);
   const [turns, directives, benchmarks, audit] = await Promise.all([
     getSessionTurns(id),
@@ -188,8 +189,8 @@ router.get("/grand-evolution/sessions/:id", requireEvolutionSessionRead, async (
   res.json({ ok: true, data: { sessionId: id, turns, directives, benchmarks, audit } });
 });
 
-router.post("/grand-evolution/convene", rawKeyFailRateLimit, async (req, res) => {
-  if (!(process.env.TESSERACT_ADMIN_KEY ?? "").trim()) {
+router.post("/grand-evolution/convene", rawKeyFailRateLimitIfKeyHeader, async (req, res) => {
+  if (!isAdminTokenConfigured()) {
     res.status(503).json({ ok: false, error: "sovereign-unconfigured" });
     return;
   }
@@ -214,7 +215,7 @@ router.post("/grand-evolution/convene", rawKeyFailRateLimit, async (req, res) =>
   }
 });
 
-router.get("/grand-evolution/sessions/:id/stream", requireEvolutionSessionRead, (req, res) => {
+router.get("/grand-evolution/sessions/:id/stream", rawKeyFailRateLimitIfKeyHeader, requireEvolutionSessionRead, (req, res) => {
   const id = String(req.params.id);
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
