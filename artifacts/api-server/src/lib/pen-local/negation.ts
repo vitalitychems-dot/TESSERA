@@ -1,10 +1,12 @@
 /**
- * A negation counts only when it sits directly before the matched phrase.
- * At most a few words may stand between them, such as "do not", "don't",
- * "never", "please do not", "I do not want to", or "I am not".
+ * Post-gate only. The pre-gate does not use this and never lets a negation
+ * cancel a refusal match.
+ * A negation counts only when it sits directly before the matched claim.
+ * At most three words may stand between them, and every one of those words
+ * must be on the short allowed list, as in "I am not".
  * It never reaches across hesitate, refuse, deny, question, limits, or help.
- * A comma, period, dash, "but", or "though" ends the clause.
- * When the span is not that direct, the gate refuses or blocks.
+ * A comma, period, dash, "but", or "though" ends the span.
+ * When the span is not that direct, the post-gate blocks.
  */
 
 const FILLER_SOURCE = "\\b(?:no worries|never mind|no rush|no doubt|no problem)\\b";
