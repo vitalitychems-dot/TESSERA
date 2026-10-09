@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import router from "./routes";
+import healthRouter from "./routes/health";
 import type { IRouter } from "express";
 import { logger } from "./lib/logger";
 import { initFileIntegrity } from "./lib/file-integrity";
@@ -16,7 +17,12 @@ import { startShepherdLoop } from "./lib/ingestion/shepherd-agents";
 import { startKnowledgeToCanonBridge } from "./lib/knowledge-canon-bridge";
 import { sovereigntyEnforcementMiddleware } from "./lib/provider-registry";
 import { runDependencyScan } from "./lib/dependency-scanner";
-import { db } from "@workspace/db";
+import { db, isDbConfigured } from "@workspace/db";
+import {
+  dbUnavailableErrorHandler,
+  rejectWhenDatabaseNotConfigured,
+  rewriteDatabaseUnavailableJson,
+} from "./lib/db-availability";
 import { dataSourcesTable } from "@workspace/db/schema";
 import { seedForumIdentities } from "./lib/forum-identity-registry";
 import { initConsciousnessEngine, startConsciousnessEngine } from "./lib/consciousness-engine";
@@ -55,6 +61,13 @@ const app: Express = express();
 // address that hop observed. A client-supplied first X-Forwarded-For entry
 // is not trusted.
 app.set("trust proxy", 1);
+
+app.use(healthRouter);
+app.use((_req, res, next) => {
+  rewriteDatabaseUnavailableJson(res);
+  next();
+});
+app.use(rejectWhenDatabaseNotConfigured);
 
 let serverReady = false;
 
@@ -178,6 +191,7 @@ app.use("/api", (_req, res, next) => {
 });
 
 app.use("/api", router);
+app.use(dbUnavailableErrorHandler);
 
 function registerModuleHandlers(): void {
   registerRecoveryHandler("file-integrity", async () => {
@@ -437,6 +451,11 @@ async function runStartupHealthCheck(): Promise<void> {
 }
 
 async function initializeModules() {
+  if (!isDbConfigured()) {
+    logger.warn("Database is not configured — skipping database startup, schedulers, and DB-backed loops");
+    return;
+  }
+
   initRecoveryModule();
   registerModuleInitFunction("auto-improvement-daemon", initAutoImprovementDaemon);
   registerModuleInitFunction("swarm-optimizer", initSwarmOptimizer);

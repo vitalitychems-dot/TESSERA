@@ -24,7 +24,7 @@ import {
   INTERNAL_PROBE_HEADER,
   INTERNAL_PROBE_SECRET,
 } from "./lib/auto-recovery";
-import { db } from "@workspace/db";
+import { db, isDbConfigured } from "@workspace/db";
 import { swarmTasksTable, decisionHistoryTable } from "@workspace/db/schema";
 import { desc } from "drizzle-orm";
 
@@ -103,7 +103,8 @@ wss.on("connection", (ws, req) => {
           const peerState = getGroupSharedState(sovereignKeyHash);
           const peers = getGroupSessions(sovereignKeyHash);
 
-          Promise.all([
+          const recentState = isDbConfigured()
+            ? Promise.all([
             db.select({
               taskId: swarmTasksTable.taskId,
               task: swarmTasksTable.task,
@@ -120,7 +121,10 @@ wss.on("connection", (ws, req) => {
               significance: decisionHistoryTable.significance,
               decidedAt: decisionHistoryTable.decidedAt,
             }).from(decisionHistoryTable).orderBy(desc(decisionHistoryTable.decidedAt)).limit(5),
-          ]).then(([recentTasks, recentDecisions]) => {
+          ])
+            : Promise.resolve([[], []] as [unknown[], unknown[]]);
+
+          recentState.then(([recentTasks, recentDecisions]) => {
             if (ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify({
                 type: "mesh:registered",
@@ -367,6 +371,11 @@ async function runPostBindHealthProbe(port: number): Promise<void> {
     server.listen(port, async () => {
       setActualPort(port);
       logger.info({ port }, "Server listening with WebSocket mesh enabled");
+      if (!isDbConfigured()) {
+        logger.warn("Database is not configured — opening readiness gate without database probes or DB startup hooks");
+        setServerReady();
+        return;
+      }
       await runPostBindHealthProbe(port);
 
       // Preload Tessera Codex directive so it's available synchronously in the chat system prompt

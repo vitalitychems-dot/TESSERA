@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db } from "@workspace/db";
+import { db, isDbConfigured } from "@workspace/db";
 import { ontologyEntriesTable } from "@workspace/db/schema";
 import { desc, eq, and, like, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
@@ -217,7 +217,9 @@ async function seedOntologiesIfEmpty(): Promise<void> {
   }
 }
 
-seedOntologiesIfEmpty().catch(() => {});
+if (isDbConfigured()) {
+  seedOntologiesIfEmpty().catch(() => {});
+}
 
 router.get("/ontology/domains", async (_req, res) => {
   try {
