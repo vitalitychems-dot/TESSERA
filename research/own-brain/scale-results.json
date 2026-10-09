@@ -1,0 +1,78 @@
+{
+  "program": "TESSERA own-brain Phase 1/2 local simulator",
+  "python": "3.12.3",
+  "platform": "linux",
+  "memory_cap_bytes": 536870912,
+  "results": [
+    {
+      "rung": "S0",
+      "synapses": 10000,
+      "neurons": 1000,
+      "seed": 20261009,
+      "estimated_bytes": 816000,
+      "memory_cap_bytes": 536870912,
+      "status": "TESTED",
+      "elapsed_seconds": 0.034287,
+      "spikes": 540,
+      "throughput_synapses_per_second": 2333232.02,
+      "peak_rss_bytes": 20090880,
+      "trace_sha256": "19bb7d2086696842c3885b81255e974d5469ac6ca531260c16983a361bbaf865",
+      "deterministic_replay": true
+    },
+    {
+      "rung": "S1",
+      "synapses": 100000,
+      "neurons": 10000,
+      "seed": 20261009,
+      "estimated_bytes": 8160000,
+      "memory_cap_bytes": 536870912,
+      "status": "TESTED",
+      "elapsed_seconds": 0.491847,
+      "spikes": 5302,
+      "throughput_synapses_per_second": 1626523.66,
+      "peak_rss_bytes": 39358464,
+      "trace_sha256": "5483661c4950657893aa625dc9012b90720723419cb6da36bf29f3e95dea2d3e",
+      "deterministic_replay": true
+    },
+    {
+      "rung": "S2",
+      "synapses": 1000000,
+      "neurons": 10000,
+      "seed": 20261009,
+      "estimated_bytes": 72960000,
+      "memory_cap_bytes": 536870912,
+      "status": "TESTED",
+      "elapsed_seconds": 3.861824,
+      "spikes": 5778,
+      "throughput_synapses_per_second": 2071560.21,
+      "peak_rss_bytes": 177864704,
+      "trace_sha256": "105fd1b54f1f8987e560235b513a996144b15f8d31e2270a49ef132215e6c27f",
+      "deterministic_replay": true
+    },
+    {
+      "rung": "S3",
+      "synapses": 10000000,
+      "neurons": 10000,
+      "seed": 20261009,
+      "estimated_bytes": 720960000,
+      "memory_cap_bytes": 536870912,
+      "status": "BLOCKED",
+      "reason": "estimated peak memory exceeds local safety cap"
+    },
+    {
+      "rung": "S4",
+      "synapses": 100000000,
+      "neurons": 10000,
+      "seed": 20261009,
+      "estimated_bytes": 7200960000,
+      "memory_cap_bytes": 536870912,
+      "status": "BLOCKED",
+      "reason": "estimated peak memory exceeds local safety cap"
+    }
+  ],
+  "limitations": [
+    "software simulator only; no biological hardware or CL1 interface",
+    "estimated memory is a safety gate for blocked rungs, not a claim of hardware maximum",
+    "no learning rule or product-memory write is enabled in Phase 1"
+  ]
+}
