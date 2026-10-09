@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { rawKeyFailRateLimit } from "../lib/father-verify-throttle";
 
 function callLimiter(ip: string) {
-  const listeners: Array<() => void> = [];
+  const listenersByEvent: Record<string, Array<() => void>> = {};
   const res = {
     statusCode: 200,
     body: undefined as unknown,
@@ -19,11 +19,11 @@ function callLimiter(ip: string) {
       return this;
     },
     on(event: string, fn: () => void) {
-      if (event === "finish") listeners.push(fn);
+      (listenersByEvent[event] ??= []).push(fn);
       return this;
     },
-    finish() {
-      for (const fn of listeners) fn();
+    emit(event: string) {
+      for (const fn of listenersByEvent[event] ?? []) fn();
     },
   };
   let continued = false;
@@ -52,12 +52,12 @@ describe("raw key fail limiter reserve", () => {
 
     for (const call of held) {
       call.res.statusCode = 200;
-      call.res.finish();
+      call.res.emit("finish");
     }
     const afterRefund = callLimiter(ip);
     expect(afterRefund.continued).toBe(true);
     afterRefund.res.statusCode = 200;
-    afterRefund.res.finish();
+    afterRefund.res.emit("finish");
   });
 
   it("keeps 401 and 403 responses and refunds other statuses", () => {
@@ -66,17 +66,37 @@ describe("raw key fail limiter reserve", () => {
       const call = callLimiter(ip);
       expect(call.continued).toBe(true);
       call.res.statusCode = 200;
-      call.res.finish();
+      call.res.emit("finish");
     }
 
     for (let i = 0; i < 6; i += 1) {
       const call = callLimiter(ip);
       expect(call.continued).toBe(true);
       call.res.statusCode = i === 0 ? 403 : 401;
-      call.res.finish();
+      call.res.emit("finish");
     }
     const denied = callLimiter(ip);
     expect(denied.continued).toBe(false);
     expect(denied.res.statusCode).toBe(429);
+  });
+
+  it("refunds a reserved slot when the response closes without finishing", () => {
+    const ip = "198.51.100.22";
+    const held = [];
+    for (let i = 0; i < 6; i += 1) {
+      const call = callLimiter(ip);
+      expect(call.continued).toBe(true);
+      held.push(call);
+    }
+    expect(callLimiter(ip).continued).toBe(false);
+
+    held[0].res.statusCode = 200;
+    held[0].res.emit("close");
+    const released = callLimiter(ip);
+    expect(released.continued).toBe(true);
+
+    released.res.statusCode = 401;
+    released.res.emit("close");
+    expect(callLimiter(ip).continued).toBe(false);
   });
 });

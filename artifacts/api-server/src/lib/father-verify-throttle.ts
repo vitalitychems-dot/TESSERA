@@ -141,6 +141,8 @@ export function adminSessionRateLimit(req: Request, res: Response, next: NextFun
 // do not consume budget. Separate from the login counter above.
 // A slot is reserved before next() and refunded unless the response is 401
 // or 403, so overlapping failures cannot all pass the window check.
+// finish and close share one settlement so an aborted stream does not hold
+// the slot for the rest of the window.
 const RAW_KEY_WINDOW_MS = 60_000;
 const RAW_KEY_IP_MAX = 6;
 const RAW_KEY_GLOBAL_MAX = 30;
@@ -201,13 +203,24 @@ export function rawKeyFailRateLimit(req: Request, res: Response, next: NextFunct
   _rawGlobalHits.push(stamp);
   evictOldest(_rawHits, RAW_KEY_MAX_IPS);
   let settled = false;
-  res.on("finish", () => {
+  const settle = () => {
     if (settled) return;
     settled = true;
     if (res.statusCode === 401 || res.statusCode === 403) return;
     releaseRawStamp(ip, stamp);
-  });
+  };
+  res.on("finish", settle);
+  res.on("close", settle);
   next();
+}
+
+/** Counts a failed raw key only when x-tesseract-admin-key is present. */
+export function rawKeyFailRateLimitIfKeyHeader(req: Request, res: Response, next: NextFunction): void {
+  if (typeof req.header("x-tesseract-admin-key") !== "string") {
+    next();
+    return;
+  }
+  rawKeyFailRateLimit(req, res, next);
 }
 
 // Anonymous DB/disk writes (sacred conference run, grand-council convene).
