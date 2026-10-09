@@ -39,9 +39,9 @@ export async function runLocalPen(request: LocalPenRequest): Promise<LocalPenRes
     const post = applyPostGate(template, preRule);
     const cl1 = await cl1Promise;
     if (post.action === "blocked") {
-      return blocked(post.rule, "rule", config, cl1, started);
+      return blocked(post.rule, "rule", config, cl1, null, started);
     }
-    return accepted(template, preRule, "rule", config, cl1, started);
+    return accepted(template, preRule, "rule", config, cl1, null, started);
   }
 
   const generated = await generate(config, request);
@@ -54,7 +54,7 @@ export async function runLocalPen(request: LocalPenRequest): Promise<LocalPenRes
         text: null,
         rule: null,
         gate: { pre: "pass", post: "pass" },
-        provenance: pins(config, cl1, started),
+        provenance: pins(config, cl1, null, started),
       };
     }
     return {
@@ -64,28 +64,31 @@ export async function runLocalPen(request: LocalPenRequest): Promise<LocalPenRes
       text: null,
       rule: null,
       gate: { pre: "pass", post: "pass" },
-      provenance: pins(config, cl1, started),
+      provenance: pins(config, cl1, null, started),
     };
   }
 
   const post = applyPostGate(generated.text, null);
   if (post.action === "blocked") {
-    return blocked(post.rule, "pass", config, cl1, started);
+    return blocked(post.rule, "pass", config, cl1, generated.reportedBuild, started);
   }
-  return accepted(generated.text, null, "pass", config, cl1, started);
+  return accepted(generated.text, null, "pass", config, cl1, generated.reportedBuild, started);
 }
 
 async function generate(
   config: PreparedPen,
   request: LocalPenRequest,
-): Promise<{ ok: true; text: string } | { ok: false; reason: "runtime_down" | "non_loopback" | "bad_payload" }> {
+): Promise<
+  | { ok: true; text: string; reportedBuild: string | null }
+  | { ok: false; reason: "runtime_down" | "non_loopback" | "bad_payload" }
+> {
   const messages = conversation(request);
   const chat = await postLoopback(
     chatCompletionsUrl(config.url),
     buildChatBody(config.systemPrompt, messages),
     config.timeoutMs,
   );
-  if (chat.kind === "ok") return { ok: true, text: chat.text };
+  if (chat.kind === "ok") return { ok: true, text: chat.text, reportedBuild: chat.reportedBuild };
   if (chat.kind === "redirect") return { ok: false, reason: "non_loopback" };
   if (chat.kind === "bad_payload") return { ok: false, reason: "bad_payload" };
   if (chat.kind === "down") return { ok: false, reason: "runtime_down" };
@@ -95,7 +98,7 @@ async function generate(
     buildCompletionBody(config.systemPrompt, messages),
     config.timeoutMs,
   );
-  if (legacy.kind === "ok") return { ok: true, text: legacy.text };
+  if (legacy.kind === "ok") return { ok: true, text: legacy.text, reportedBuild: legacy.reportedBuild };
   if (legacy.kind === "redirect") return { ok: false, reason: "non_loopback" };
   if (legacy.kind === "bad_payload") return { ok: false, reason: "bad_payload" };
   return { ok: false, reason: "runtime_down" };
@@ -131,6 +134,7 @@ function accepted(
   pre: LocalPenGate["pre"],
   config: PreparedPen,
   cl1: Cl1SimProvenance,
+  reportedBuild: string | null,
   started: number,
 ): LocalPenResult {
   return {
@@ -139,7 +143,7 @@ function accepted(
     text,
     rule,
     gate: { pre, post: "pass" },
-    provenance: pins(config, cl1, started),
+    provenance: pins(config, cl1, reportedBuild, started),
   };
 }
 
@@ -148,6 +152,7 @@ function blocked(
   pre: LocalPenGate["pre"],
   config: PreparedPen,
   cl1: Cl1SimProvenance,
+  reportedBuild: string | null,
   started: number,
 ): LocalPenResult {
   return {
@@ -156,7 +161,7 @@ function blocked(
     text: null,
     rule,
     gate: { pre, post: "blocked" },
-    provenance: pins(config, cl1, started),
+    provenance: pins(config, cl1, reportedBuild, started),
   };
 }
 
@@ -175,13 +180,24 @@ function emptyProvenance(started: number): LocalPenProvenance {
   };
 }
 
-function pins(config: PreparedPen, cl1: Cl1SimProvenance, started: number): LocalPenProvenance {
+function runtimeRecord(configured: string | null, reported: string | null): string {
+  if (configured !== null && configured.length > 0) return configured;
+  if (reported !== null && reported.trim().length > 0) return reported.trim();
+  return "unknown";
+}
+
+function pins(
+  config: PreparedPen,
+  cl1: Cl1SimProvenance,
+  reportedBuild: string | null,
+  started: number,
+): LocalPenProvenance {
   return {
     pen_identity: PEN_IDENTITY,
     backend_model_id: config.modelId,
     backend_revision: config.revision,
     weights_sha256: config.weightsSha256,
-    runtime: config.runtime,
+    runtime: runtimeRecord(config.runtimeBuild, reportedBuild),
     system_prompt_sha256: config.systemPromptSha256,
     params: LOCAL_PEN_PARAMS,
     cl1_sim: cl1,

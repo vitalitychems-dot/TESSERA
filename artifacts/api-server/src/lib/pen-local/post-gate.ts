@@ -1,7 +1,5 @@
+import { isDirectlyNegated } from "./negation";
 import type { PenRefuseRule, PostBlockRule } from "./types";
-
-const BANNED_NEGATION =
-  /\b(not|n't|never|no|nor|cannot|isn't|aren't|don't|do not)\b[^.]{0,40}$/i;
 
 const SECRETISH =
   /sk-[A-Za-z0-9]{10,}|password\s*[:=]\s*\S{4,}|api[_ ]?key\s*[:=]\s*\S{6,}/i;
@@ -37,8 +35,7 @@ function claimHits(text: string, pattern: RegExp): boolean {
   const re = new RegExp(pattern.source, flags);
   for (const match of text.matchAll(re)) {
     const start = match.index ?? 0;
-    const prefix = text.slice(Math.max(0, start - 60), start);
-    if (BANNED_NEGATION.test(prefix)) continue;
+    if (isDirectlyNegated(text.slice(0, start))) continue;
     return true;
   }
   return false;

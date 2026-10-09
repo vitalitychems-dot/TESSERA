@@ -1,12 +1,11 @@
+import { isDirectlyNegated } from "./negation";
 import type { PenRefuseRule } from "./types";
 
 /**
  * Deterministic request classifier. It never calls a model.
- * A hit requires a refusal pattern that is not negated in the preceding clause.
+ * A hit stands unless a grammatical negator in the same clause directly governs it.
  * Harmless lines that only share a nearby word stay null.
  */
-const NEGATION_BEFORE =
-  /\b(not|n't|never|no|nor|cannot|without|don't|do not|won't|will not)\b[^.]{0,40}$/i;
 
 interface RulePatterns {
   id: PenRefuseRule;
@@ -81,7 +80,7 @@ const RULE_PATTERNS: readonly RulePatterns[] = [
   {
     id: "PEN-REFUSE-HARM",
     patterns: [
-      /\bhurt (?:someone|a person|people|them|him|her)\b/i,
+      /\bhurt (?:someone|anyone|a person|people|them|him|her)\b/i,
       /\bharm (?:someone|others|people|a person|them)\b/i,
     ],
   },
@@ -92,8 +91,7 @@ function patternHits(text: string, pattern: RegExp): boolean {
   const re = new RegExp(pattern.source, flags);
   for (const match of text.matchAll(re)) {
     const start = match.index ?? 0;
-    const prefix = text.slice(Math.max(0, start - 80), start);
-    if (NEGATION_BEFORE.test(prefix)) continue;
+    if (isDirectlyNegated(text.slice(0, start))) continue;
     return true;
   }
   return false;
