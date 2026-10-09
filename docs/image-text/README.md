@@ -11,4 +11,4 @@ This is OCR text extracted from deduplicated images in the listed GitHub and Dri
 - Redacted line/item occurrences: 98
 - Text characters retained: 190507
 
-Machine-readable text and source/hash provenance: [`ocr.jsonl`](ocr.jsonl). Raw OCR is provided for search and recall; review before using it as authoritative documentation.
+Machine-readable text and source/hash provenance: `Gitbook: review/image-text/ocr.jsonl`. Raw OCR is provided for search and recall; review before using it as authoritative documentation.

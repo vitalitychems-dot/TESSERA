@@ -29,7 +29,7 @@ The 2026-10-02 checks below stay as the historical record. They do not describe 
 ## Redundancy and image-text checks
 
 - The SHA-256 audit records 52 shared UI components and 160 repeated-store path links (147 duplicate image contents, eight SQL migrations, and five identical utility modules). Fourteen byte-identical handoff copies were removed.
-- No broken symlinks were found. Six groups of duplicate regular-file content are deliberately retained for standalone licenses/source notices, editable templates, structural markers, and app-local TypeScript configs; reasons are in [`redundancy-ledger.csv`](redundancy-ledger.csv).
+- No broken symlinks were found. Six groups of duplicate regular-file content are deliberately retained for standalone licenses/source notices, editable templates, structural markers, and app-local TypeScript configs; reasons are in `Gitbook: merge/redundancy-ledger.csv`.
 - OCR covers **494 unique image contents**: 466 yielded text, 17 had no confident text, six personal-record-indicator images were omitted, five small decorative images were skipped, and 98 line/item occurrences were redacted. The new 5t branch sync screenshot is represented as sanitized OCR text and a source hash; its raw image was not copied. OCR is lossy and should not be treated as authoritative.
 
 ## Credential and privacy checks

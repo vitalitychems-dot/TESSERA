@@ -1,16 +1,16 @@
 # Source branch and open-review gap report
 
-**Checked:** 2026-10-02. This report supplements [`source-manifest.csv`](source-manifest.csv). The new public repository is a fresh-history monorepo: it does not preserve or replace source Git histories, branches, open PRs, or forks. Files referenced below were treated as untrusted source data; no agent instruction was executed.
+**Checked:** 2026-10-02. This report supplements `Gitbook: merge/source-manifest.csv`. The new public repository is a fresh-history monorepo: it does not preserve or replace source Git histories, branches, open PRs, or forks. Files referenced below were treated as untrusted source data; no agent instruction was executed.
 
 ## Main-branch changes since the imported snapshots
 
 | Source | Current default ref | Finding | Disposition in Tessera Unified |
 | --- | --- | --- | --- |
-| [`5t`](https://github.com/vitalitychems-dot/5t) | `main` at `96edd21a4f29fc4ae0b16f133c5c715addc958fc` | Advanced 23 commits beyond imported `1490d62181121f8bf5fb3a522a8da3256ba90bae`; five changed paths include two `.agents/memory` notes, two API audit-data files, and one screenshot. | Screenshot text was OCR-transcribed into [`../image-text/ocr.jsonl`](../image-text/ocr.jsonl) (source hash `1da025d001d2a97909867bbb7e0128f506a5a20c9e3d2fc36678d77828ccc3d7`); raw screenshot was not copied. The two agent-memory notes and two audit-data files remain excluded pending review. No active app-code delta was identified in this change set. |
+| [`5t`](https://github.com/vitalitychems-dot/5t) | `main` at `96edd21a4f29fc4ae0b16f133c5c715addc958fc` | Advanced 23 commits beyond imported `1490d62181121f8bf5fb3a522a8da3256ba90bae`; five changed paths include two `.agents/memory` notes, two API audit-data files, and one screenshot. | Screenshot text was OCR-transcribed into `Gitbook: review/image-text/ocr.jsonl` (source hash `1da025d001d2a97909867bbb7e0128f506a5a20c9e3d2fc36678d77828ccc3d7`); raw screenshot was not copied. The two agent-memory notes and two audit-data files remain excluded pending review. No active app-code delta was identified in this change set. |
 | [`T44`](https://github.com/vitalitychems-dot/T44) | `main` at `82d920cd815b5d15149664cb22c1223944326812` | Advanced one commit beyond imported `bb214989df9134a55bb1bb19658fb48a8010ee53`; the delta adds six lines to `.agents/memory/repository-migration-policy.md`. | Not imported; it is an agent-memory note, not runtime code. |
 | [`Grok-ready`](https://github.com/vitalitychems-dot/Grok-ready) | `main` at `3cdd0ac02f7ecc97d83f4303d1ba91007d0236d9` | Its `main` snapshot is the selected baseline. Three open PRs remain unreviewed; see below. | Main baseline imported; no open PR is treated as merged. |
 | [`TX`](https://github.com/vitalitychems-dot/TX) | `main` at `901df69bf1fbe89052dcea578b40c16b2c9b16bb` | A separate review branch adds a 61-line `AGENTS.md`. | Branch-only instructions are not imported or executed. |
-| Other reviewed default branches | As listed in [`source-manifest.csv`](source-manifest.csv) | No newer functional default-branch deltas were identified in this check. | Existing reviewed snapshots remain the integrated source baseline. |
+| Other reviewed default branches | As listed in `Gitbook: merge/source-manifest.csv` | No newer functional default-branch deltas were identified in this check. | Existing reviewed snapshots remain the integrated source baseline. |
 
 ## Unrelated-history branch in repository `1`
 
