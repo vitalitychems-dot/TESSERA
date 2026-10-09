@@ -26,3 +26,11 @@ The owner reports that all 20 repositories remain present and none has been dele
 **Why:** Repository visibility can be limited by account access, and a missing result is not evidence of deletion.
 
 **How to apply:** Verify the inventory through an authorized GitHub connection before reporting repository existence or deletion. Clearly distinguish a public-listing or access gap from a confirmed deletion.
+
+## Tessera V2 navigation
+
+The owner approved a V2 redesign of the existing Tessera app: retain unique destinations, group desktop navigation, use **Chat**, **Knowledge**, **System**, and searchable **More** on mobile, and merge only route entries verified to reach the same page and state. The System Engine has four approved groups: **Capability**, **Learning**, **Operations**, and **Architecture**.
+
+**Why:** The current mobile navigation exposes dozens of destinations and some routes are aliases or intentionally open different inner tabs; decluttering must not break unique functions or deep links.
+
+**How to apply:** Use a shared route/navigation registry, preserve old URLs and their intended states, and test all in-scope routes on desktop and mobile before removing visible entries.
