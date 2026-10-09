@@ -214,8 +214,16 @@ export function rawKeyFailRateLimit(req: Request, res: Response, next: NextFunct
   next();
 }
 
-/** Counts a failed raw key only when x-tesseract-admin-key is present. */
+/**
+ * Counts a failed raw key only when x-tesseract-admin-key is present.
+ * A valid owner session skips the limiter, same as fatherVerifyRateLimit,
+ * even if that header is also present.
+ */
 export function rawKeyFailRateLimitIfKeyHeader(req: Request, res: Response, next: NextFunction): void {
+  if (decideOwnerSession(req).ok) {
+    next();
+    return;
+  }
   if (typeof req.header("x-tesseract-admin-key") !== "string") {
     next();
     return;

@@ -463,4 +463,30 @@ describe("privacy e limiters and admin key sources", () => {
     }
     expect(ensureLatestCycleLoaded).not.toHaveBeenCalled();
   });
+
+  it("does not spend a raw-key slot when an owner cookie is sent with an admin-key header", async () => {
+    vi.mocked(listSessions).mockClear();
+    const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+    const ip = "203.0.113.94";
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const response = await fetch(`${baseUrl}/grand-evolution/sessions`, {
+        headers: {
+          "x-forwarded-for": ip,
+          cookie: `${SESSION_COOKIE}=${issued.signedId}`,
+          "x-tesseract-admin-key": "wrong-synthetic-admin-key",
+        },
+      });
+      expect(response.status).toBe(401);
+    }
+    expect(listSessions).not.toHaveBeenCalled();
+
+    const untouched = await fetch(`${baseUrl}/grand-evolution/sessions`, {
+      headers: {
+        "x-forwarded-for": ip,
+        "x-tesseract-admin-key": "wrong-synthetic-admin-key",
+      },
+    });
+    expect(untouched.status).toBe(401);
+    expect(listSessions).not.toHaveBeenCalled();
+  });
 });
