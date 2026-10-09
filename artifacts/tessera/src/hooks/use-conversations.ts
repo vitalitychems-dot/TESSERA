@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl } from "@/lib/queryClient";
 import { type Conversation, type InsertConversation } from "@/lib/types";
 import { useLocation } from "wouter";
 
@@ -26,7 +25,7 @@ export function useConversation(id: number | null) {
     queryKey: ["/api/conversations", id],
     queryFn: async () => {
       if (!id) return null;
-      const url = buildUrl("/api/conversations", { id });
+      const url = `/api/conversations/${encodeURIComponent(id)}`;
       const res = await fetch(url, { credentials: "include" });
       if (res.status === 404) return null;
       if (!res.ok) throw new Error("Failed to fetch conversation");

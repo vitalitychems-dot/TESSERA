@@ -20,7 +20,7 @@ import { runCritiqueLoop } from "../lib/self-critique";
 import { classifyQuery } from "../lib/adaptive-router";
 import { hybridRetrieve, formatCitations } from "../lib/hybrid-retrieval";
 import { detectIntents, isPrivilegedTool, publicToolResult, runToolLoop } from "../lib/tool-registry";
-import { decideOwnerSession } from "../lib/sovereign-admin";
+import { decideOwnerSession, requireAdminSession } from "../lib/sovereign-admin";
 import { injectInventionDiagrams, buildInvention3DBlock, userRequested3D } from "../lib/invention-3d";
 import { inventionsTable } from "@workspace/db/schema";
 import { db as feedbackDb } from "@workspace/db";
@@ -633,16 +633,17 @@ router.post("/conversations", async (req, res) => {
   }
 });
 
-router.delete("/conversations/:id", async (req, res) => {
+router.delete("/conversations/:id", requireAdminSession, async (req, res) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     await db.delete(messagesTable).where(eq(messagesTable.conversationId, id));
     await db.delete(conversationsTable).where(eq(conversationsTable.id, id));
     return res.json({ ok: true });
   } catch (err) {
-    logger.error({ err }, "Failed to delete conversation");
-    return res.status(500).json({ error: (err as Error).message });
+    const name = err instanceof Error ? err.name : "Error";
+    logger.error({ name }, "Failed to delete conversation");
+    return res.status(500).json({ ok: false, error: "conversation-delete-failed" });
   }
 });
 
@@ -1080,9 +1081,9 @@ router.post("/conversations/:id/puter-save", async (req, res) => {
   }
 });
 
-router.post("/conversations/:id/save-partial", async (req, res) => {
+router.post("/conversations/:id/save-partial", requireAdminSession, async (req, res) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     const { content } = req.body;
     if (content) {
