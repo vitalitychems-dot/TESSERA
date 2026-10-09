@@ -111,7 +111,7 @@ export function notConfiguredMessage(reason: PenNotConfiguredReason): string {
     case "hash_mismatch":
       return "Weights hash does not match TESSERA_PEN_LOCAL_SHA256. Nothing was generated.";
     case "non_loopback":
-      return "TESSERA_PEN_LOCAL_URL must be plain http on 127.0.0.1, ::1, or localhost, with no userinfo and no redirect. Nothing was sent.";
+      return "TESSERA_PEN_LOCAL_URL must be plain http to the literal host 127.0.0.1 or [::1], with no userinfo and no redirect. Nothing was sent.";
     case "runtime_down":
       return "The local pen runtime is not up. Start the loopback server and re-run. No score was produced.";
     case "system_prompt_missing":

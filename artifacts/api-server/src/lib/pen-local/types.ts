@@ -65,6 +65,7 @@ export interface LocalPenProvenance {
   backend_model_id: string | null;
   backend_revision: string | null;
   weights_sha256: string | null;
+  /** Build id, a version the runtime reported, or "unknown". Null only when the pen never started. */
   runtime: string | null;
   system_prompt_sha256: string | null;
   params: LocalPenParams;

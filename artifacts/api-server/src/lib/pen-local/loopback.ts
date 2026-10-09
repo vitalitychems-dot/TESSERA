@@ -2,8 +2,11 @@ import { LOCAL_PEN_PARAMS, type LocalPenMessage } from "./types";
 
 export const DEFAULT_LOCAL_PEN_URL = "http://127.0.0.1:8765";
 
-const LOOPBACK_HOSTS = new Set(["127.0.0.1", "::1", "localhost"]);
-
+/**
+ * Literal loopback only. A hostname such as localhost is resolved through DNS,
+ * so it is rejected. Short, hex, and decimal forms that a URL parser rewrites
+ * into 127.0.0.1 are rejected too. Only the written literals 127.0.0.1 and [::1] pass.
+ */
 export function classifyLoopbackUrl(raw: string): { ok: true; url: URL } | { ok: false } {
   let url: URL;
   try {
@@ -13,9 +16,22 @@ export function classifyLoopbackUrl(raw: string): { ok: true; url: URL } | { ok:
   }
   if (url.protocol !== "http:") return { ok: false };
   if (url.username !== "" || url.password !== "") return { ok: false };
-  const host = url.hostname.replace(/^\[|\]$/g, "").toLowerCase();
-  if (!LOOPBACK_HOSTS.has(host)) return { ok: false };
+  if (!isLiteralLoopback(raw, url)) return { ok: false };
   return { ok: true, url };
+}
+
+function isLiteralLoopback(raw: string, url: URL): boolean {
+  const match = /^http:\/\/([^/?#]*)/i.exec(raw.trim());
+  if (!match) return false;
+  const authority = match[1];
+  if (authority === undefined || authority.includes("@")) return false;
+  if (/^127\.0\.0\.1(?::\d+)?$/.test(authority)) {
+    return url.hostname === "127.0.0.1";
+  }
+  if (/^\[::1\](?::\d+)?$/i.test(authority)) {
+    return url.hostname.replace(/^\[|\]$/g, "").toLowerCase() === "::1";
+  }
+  return false;
 }
 
 export function chatCompletionsUrl(base: URL): URL {
@@ -90,7 +106,7 @@ export type LoopbackPostResult =
   | { kind: "down" }
   | { kind: "bad_payload" }
   | { kind: "not_found" }
-  | { kind: "ok"; text: string };
+  | { kind: "ok"; text: string; reportedBuild: string | null };
 
 const FETCH_HEADERS = {
   Accept: "application/json",
@@ -136,7 +152,7 @@ export async function postLoopback(
   }
   const text = readModelText(payload);
   if (text === null) return { kind: "bad_payload" };
-  return { kind: "ok", text };
+  return { kind: "ok", text, reportedBuild: readReportedBuild(payload) };
 }
 
 async function discardBody(response: Response): Promise<void> {
@@ -169,6 +185,16 @@ export async function probeLoopback(url: URL, timeoutMs: number): Promise<"up" |
 
 function isRedirectStatus(status: number): boolean {
   return status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
+}
+
+function readReportedBuild(payload: unknown): string | null {
+  if (typeof payload !== "object" || payload === null) return null;
+  const record = payload as Record<string, unknown>;
+  for (const key of ["runtime_build", "build_id", "version", "runtime"] as const) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim().length > 0) return value.trim();
+  }
+  return null;
 }
 
 function readModelText(payload: unknown): string | null {
