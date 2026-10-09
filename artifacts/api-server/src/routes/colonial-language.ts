@@ -19,6 +19,11 @@ import {
   recordEncodedFile,
   recordExternalHandshake,
 } from "../lib/grand-conference";
+import {
+  colonialSecretFailure,
+  colonialSecretUnavailableBody,
+  isColonialSecretConfigured,
+} from "../lib/colonial-master-secret";
 
 const router: IRouter = Router();
 
@@ -66,6 +71,11 @@ router.post("/colonel/compress-encrypt", (req, res) => {
     recordEncodedFile();
     return res.json({ ok: true, ...result });
   } catch (err) {
+    const failure = colonialSecretFailure(err);
+    if (failure) {
+      logger.error("colonial secret not configured");
+      return res.status(failure.status).json(failure.body);
+    }
     logger.error({ err }, "colonel/compress-encrypt error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
@@ -122,6 +132,9 @@ router.get("/sovereignty/colonial-language/conference", async (_req, res) => {
 // ─── GET /api/sovereignty/colonial-language/status ───────────────────────────
 router.get("/sovereignty/colonial-language/status", (_req, res) => {
   try {
+    if (!isColonialSecretConfigured()) {
+      return res.status(503).json(colonialSecretUnavailableBody());
+    }
     const bandStatus = getBandStatus();
     updateLatticeStatus(bandStatus.totalRotations);
 
@@ -147,6 +160,11 @@ router.get("/sovereignty/colonial-language/status", (_req, res) => {
       },
     });
   } catch (err) {
+    const failure = colonialSecretFailure(err);
+    if (failure) {
+      logger.error("colonial secret not configured");
+      return res.status(failure.status).json(failure.body);
+    }
     logger.error({ err }, "sovereignty/colonial-language/status error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
@@ -155,6 +173,9 @@ router.get("/sovereignty/colonial-language/status", (_req, res) => {
 // ─── GET /api/sovereignty/colonial-language/lattice-frequencies ──────────────
 router.get("/sovereignty/colonial-language/lattice-frequencies", (_req, res) => {
   try {
+    if (!isColonialSecretConfigured()) {
+      return res.status(503).json(colonialSecretUnavailableBody());
+    }
     const { bands, totalRotations, activeBands } = getBandStatus();
     return res.json({
       ok: true,
@@ -166,6 +187,11 @@ router.get("/sovereignty/colonial-language/lattice-frequencies", (_req, res) => 
       },
     });
   } catch (err) {
+    const failure = colonialSecretFailure(err);
+    if (failure) {
+      logger.error("colonial secret not configured");
+      return res.status(failure.status).json(failure.body);
+    }
     logger.error({ err }, "sovereignty/colonial-language/lattice-frequencies error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
@@ -174,10 +200,18 @@ router.get("/sovereignty/colonial-language/lattice-frequencies", (_req, res) => 
 // ─── POST /api/sovereignty/colonial-language/rotate ──────────────────────────
 router.post("/sovereignty/colonial-language/rotate", (_req, res) => {
   try {
+    if (!isColonialSecretConfigured()) {
+      return res.status(503).json(colonialSecretUnavailableBody());
+    }
     forceRotateAllBands();
-    const status = getBandStatus();
-    return res.json({ ok: true, message: "All lattice bands rotated", ...status });
+    const { bands, totalRotations, activeBands } = getBandStatus();
+    return res.json({ ok: true, message: "All lattice bands rotated", bands, totalRotations, activeBands });
   } catch (err) {
+    const failure = colonialSecretFailure(err);
+    if (failure) {
+      logger.error("colonial secret not configured");
+      return res.status(failure.status).json(failure.body);
+    }
     logger.error({ err }, "sovereignty/colonial-language/rotate error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }

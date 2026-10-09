@@ -4,6 +4,7 @@ import { getUniverseMetrics } from "../lib/universe-mechanics";
 import { TESSERA_SUBJECTS } from "../lib/tessera-knowledge";
 import { computeSacredGeometry } from "../lib/sovereign-sacred-geometry";
 import { sovereignBinaryPipeline, sovereignBinaryDecrypt, sovereignBinaryRoundTrip } from "../lib/sovereign-kernel";
+import { colonialSecretFailure } from "../lib/colonial-master-secret";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -94,6 +95,12 @@ router.post("/universe/compression-lab/compress", async (req, res) => {
       encryptedPreview: compressed.data.slice(0, 120) + "...",
     });
   } catch (err) {
+    const failure = colonialSecretFailure(err);
+    if (failure) {
+      logger.error("colonial secret not configured");
+      res.status(failure.status).json(failure.body);
+      return;
+    }
     logger.error({ err }, "Compression lab compress failed");
     res.status(500).json({ ok: false, error: "Compression pipeline failed" });
   }
@@ -139,6 +146,12 @@ router.post("/universe/compression-lab/round-trip", async (req, res) => {
       pipeline: "Sovereign Kernel v1 — Pixel-Compress → Brotli-9 → AES-256-GCM → Decrypt → Decompress → Verify",
     });
   } catch (err) {
+    const failure = colonialSecretFailure(err);
+    if (failure) {
+      logger.error("colonial secret not configured");
+      res.status(failure.status).json(failure.body);
+      return;
+    }
     logger.error({ err }, "Compression lab round-trip failed");
     res.status(500).json({ ok: false, error: "Round-trip verification failed" });
   }
