@@ -88,3 +88,9 @@ service-account*.json
 .vercel
 .turbo
 .codebase-memory/
+
+# Local trees that should not be added
+.grok/
+**/data/ingest/
+**/Zz/
+**/natal-vault*

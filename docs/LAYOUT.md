@@ -17,6 +17,6 @@ Status: REPORTED. This is the map after the source repositories were moved. It i
 
 ## The other repository
 
-`vitalitychems-dot/Gitbook` holds instructions, the board, and `archive/moved/`. That archive is the only remaining copy of files that were not already in this repository. Do not delete it as a duplicate. A scan on 2026-10-08 found zero blobs that exist in both `archive/moved` and this repository.
+`vitalitychems-dot/Gitbook` holds instructions, the board, and `archive/moved/`. That archive is the only remaining copy of files that were not already in this repository. Do not delete it as a duplicate. The `Zz` tree (about 4,761 files) is shared between this repository's `archive` and Gitbook's `archive/moved`, so there is one copy to decide on, not two.
 
 The old source repositories were deleted after that move. This file replaces the earlier line that said those repositories were still unchanged.
