@@ -2,11 +2,13 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 
-const hashCache = new Map<string, string>();
+/**
+ * The pin is a content hash of the file bytes.
+ * mtime and size are not a cache key: a swap that keeps both still rehashes.
+ */
 let computations = 0;
 
 export function clearWeightsHashCache(): void {
-  hashCache.clear();
   computations = 0;
 }
 
@@ -19,14 +21,8 @@ export async function sha256File(filePath: string): Promise<string> {
   if (!info.isFile()) {
     throw Object.assign(new Error("weights path is not a file"), { code: "ENOTFILE" });
   }
-  const key = `${filePath}\0${info.mtimeMs}\0${info.size}`;
-  const cached = hashCache.get(key);
-  if (cached !== undefined) return cached;
-
   computations += 1;
-  const digest = await streamSha256(filePath);
-  hashCache.set(key, digest);
-  return digest;
+  return streamSha256(filePath);
 }
 
 async function streamSha256(filePath: string): Promise<string> {
