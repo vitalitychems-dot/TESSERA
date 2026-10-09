@@ -65,6 +65,9 @@ vi.mock("../lib/free-stuff-scraper", () => ({
 
 vi.mock("../lib/code-bounties-real", () => ({
   startBountyRefresher(): void {},
+  getBounties() {
+    return { bounties: [], lastRefresh: 0, attemptsCount: 0 };
+  },
 }));
 
 vi.mock("../lib/income-executor", () => ({
