@@ -184,8 +184,8 @@ Mechanism is HTTP `fetch` to `/api/...`, with optional `VITE_API_URL` prefix, pl
 | `websocket.ts` `connect` | same host `/ws` | browser `WebSocket` | `artifacts/tessera/src/lib/websocket.ts:16-20` |
 | API `index.ts` | that socket | `WebSocketServer` path `/ws` | `artifacts/api-server/src/index.ts:77` |
 | Pages such as `SecretKnowledgePage.tsx`, `LifePage.tsx`, `SystemPage.tsx` | `/api/*` routes | `fetch` / `apiRequest` | Examples: `SecretKnowledgePage.tsx:160-171`, `LifePage.tsx:104`, `SystemPage.tsx:10` and `26-39` |
-| `use-chat.ts` | Puter browser SDK, not the API Pen | import `puterChat` | `artifacts/tessera/src/hooks/use-chat.ts:5` |
-| `swarm-agents.ts` | `puterChat` | import and call | `artifacts/tessera/src/lib/swarm-agents.ts:1`, calls from line 199 onward |
+| `use-chat.ts` | `isPuterAvailable()` only | import `puterChat`; call `isPuterAvailable()` | `artifacts/tessera/src/hooks/use-chat.ts:5`, `:594`. Re-checked on `main` `5628e422`. The hook does not call `puterChat`. |
+| `swarm-agents.ts` | `puterChat` | import and call | `artifacts/tessera/src/lib/swarm-agents.ts:1`. First hosted-model call is `puterChat` at `:199` (re-checked on `main` `5628e422`). |
 | Declared dependency `@workspace/api-client-react` | generated client | **no importer** | `artifacts/tessera/package.json:52`; search of `src` returned no matches |
 
 `SystemPage.tsx:10` reads `import.meta.env.VITE_API_URL`. The unified runner sets that to the API port (`scripts/dev-unified.mjs:33`).
@@ -434,7 +434,7 @@ A hosted call means the runtime asks a model or another outside service to compu
 |---|---|---|---|
 | Rick chat stream | `secureExternalStreamingFetch` to `{TESSERA_LLM_BASE_URL}/chat/completions` | `routes/rick.ts:276-278`, `304` | Reads the three LLM env vars itself. Does not call `callLLM` or `callTesseraPen`. Fallback text if env is empty (`:282-289`). |
 | Conversation sandbox extract | `secureExternalFetch` to the same path | `routes/conversations.ts:444-469` | Same bypass. Streaming twin `_deprecated_sandboxExtractKnowledgeStreaming` at `:500` and `:528` is marked unused in the comment at `:496-497`. |
-| Browser Puter chat | `window.puter.ai.chat` | `puter-ai.ts:49-70`. Called from `use-chat.ts:5` and `swarm-agents.ts:199` onward | Model list in `puter-ai.ts:16-43` names Anthropic, Groq, Mistral, Qwen, DeepSeek, Google, Meta, Moonshot, xAI, NVIDIA, Nous, Cohere, Microsoft, Perplexity. Not the Tessera Pen adapter. |
+| Browser Puter chat | `window.puter.ai.chat` | `puter-ai.ts:49-70`. `use-chat.ts:5` imports `puterChat` and `:594` calls `isPuterAvailable()`. The hosted call is `swarm-agents.ts:199` (re-checked on `main` `5628e422`). | Model list in `puter-ai.ts:16-43` names Anthropic, Groq, Mistral, Qwen, DeepSeek, Google, Meta, Moonshot, xAI, NVIDIA, Nous, Cohere, Microsoft, Perplexity. Not the Tessera Pen adapter. |
 | `puterChatServerSide` | `fetch("/api/puter-proxy-chat")` | `puter-ai.ts:295-306` | **No importer.** No matching route in `artifacts/api-server`. Dead. |
 | Preview `TesseraClient` | `fetch` `{baseUrl}/chat/completions` with a hardcoded model string `grok-4.5` | `sdk.ts:39-46` | **No importer.** Not the Pen adapter. Residual hosted model name. |
 | Preview code-view snippet | A string shown in the UI names `TESSERA_API_KEY` and `XAI_API_KEY` | `preview/src/components/tessera/code-view.tsx:16-20` | Display string, not a server `process.env` read. Residual name. |
@@ -596,7 +596,7 @@ These answer a question by leaving the machine. Each can be replaced by the cata
 | `app.ts:238-251` ingestion seeds | RSS and open-data hosts | Stop the seed list; read `ingested-recall.ts` / memory route for rows already stored |
 | `free-stuff-scraper.ts` | Reddit | Not a knowledge answer. Leave it out of the local brain. |
 | `client.server.ts:149` | Connector `call-tool` | Preview MCP `tools/list` in `bridge.ts:89` is the local tool list |
-| `use-chat.ts` → `puterChat` | Puter-hosted models | `POST /local-models/chat` or preview `fromFiles` |
+| `swarm-agents.ts:199` `puterChat` | Puter-hosted models | `POST /local-models/chat` or preview `fromFiles`. `use-chat.ts` imports `puterChat` and calls `isPuterAvailable()` (`:594`); it does not call the SDK. |
 | `routes/rick.ts:304` and `routes/conversations.ts:469` | Env LLM base URL | `isLLMAvailable()` is already false by default. The missing piece is to stop the direct `secureExternal*` calls from being reachable when the Pen flag is `0`. |
 
 Memory MCP in this checkout is the preview route `POST /api/tessera/mcp`, not `artifacts/gitbook-mcp`. Gitbook MCP is a GitHub writer. They share the MCP framing and they are different processes.
@@ -607,7 +607,7 @@ Importer search: relative `from "..."` edges under `artifacts/api-server/src`, w
 
 | Pair or module | Evidence | Compete rank (propose only) |
 |---|---|---|
-| `callTesseraPen` vs Rick `secureExternalStreamingFetch` vs conversation `secureExternalFetch` vs preview `resolvePen` vs `sdk.ts` vs `puter-ai.ts` | Pen function has no callers. Rick and conversations call the HTTP helper's shape directly. Preview has its own resolver. `sdk.ts` and `puterChatServerSide` have no importers. Puter **is** imported by `use-chat.ts`. | 1. Preview `silentPen` / `fromFiles` for the chamber. 2. `LocalModelManager` for `/api` chat. 3. `callTesseraPen` if a hosted instrument is ever enabled, flag stays `0`. 4. Rick and conversation sandbox must call that same function or not call out. 5. Puter and `sdk.ts` lose. |
+| `callTesseraPen` vs Rick `secureExternalStreamingFetch` vs conversation `secureExternalFetch` vs preview `resolvePen` vs `sdk.ts` vs `puter-ai.ts` | Pen function has no callers. Rick and conversations call the HTTP helper's shape directly. Preview has its own resolver. `sdk.ts` and `puterChatServerSide` have no importers. `use-chat.ts:5` imports `puterChat` and `:594` calls `isPuterAvailable()`. The hosted call is `swarm-agents.ts:199` (re-checked on `main` `5628e422`). | 1. Preview `silentPen` / `fromFiles` for the chamber. 2. `LocalModelManager` for `/api` chat. 3. `callTesseraPen` if a hosted instrument is ever enabled, flag stays `0`. 4. Rick and conversation sandbox must call that same function or not call out. 5. Puter and `sdk.ts` lose. |
 | `safe-fetch.ts` + `secureExternalWrapper.ts` + `outbound-host-policy.ts` + `sovereign-fetch-guard.ts` vs `external-sandbox.ts` vs `centrality-boundary.ts` | The four guards are imported (`index.ts:1`, provider files, `code-bounties-real.ts:3`). `external-sandbox.ts` `sandboxedFetch` is imported by `sovereign-time.ts:23`. `centrality-boundary.ts` re-exports that function (`centrality-boundary.ts:117`) and has **zero** importers. Re-checked on `main` `5628e422`: the only hit is a comment inside `centrality-boundary.ts:133`. | Keep the four guards plus `external-sandbox.ts` for the sovereign-time path. `centrality-boundary.ts` loses until something imports it. Direct `fetch` in Rick, Moltbook, and the local-model manager still bypasses `sandboxedFetch`. |
 | `vector-memory.ts` + `routes/memory.ts` vs `sovereign-memory-vault.ts` vs `lib/memory/index.ts` vs `agi/working-memory.ts` vs preview `memory-web.ts` | Vault is started from `app.ts:48`. `lib/memory` is test-only. `working-memory.ts` is imported by `routes/agi.ts:2`, `index.ts:387`, `agi/agent-bus.ts:10`, `agi/goal-planner.ts:13`, and `agi/metacognition.ts:15` (re-checked on `main` `5628e422`; an earlier scan missed the `.js` specifier). Preview memory web does not call the API. | 1. `memory-web.ts` for catalog answers with no network. 2. `routes/memory.ts` for stored rows. 3. `routes/agi.ts` working memory stays on the AGI route. 4. Vault stays a writer until a later review shows it duplicates search. 5. Test-only `lib/memory` loses for production wiring. |
 | `lib/doctrine-ingest.ts` (route `doctrine-ingest.ts`) vs `lib/doctrine-ingestion.ts` (route `tessera-codex.ts`) | Different function names (`ingestExternalDoctrines` vs `ingestDoctrineDocuments`). They do not import each other. | **Unverified** that they persist the same rows. Keep both until a later read of their writes. Do not rank a deletion yet. |
@@ -717,7 +717,7 @@ Small pull requests, each pinned to an exact base SHA. Duplicates follow the com
 ## Top risks this map is here to sequence
 
 1. Rick and the conversation sandbox can `fetch` a hosted chat URL without going through `callTesseraPen`.
-2. The Tessera web chat hook calls the Puter browser SDK, which names many hosted models and is not the Pen.
+2. `use-chat.ts` imports `puterChat` and calls `isPuterAvailable()` (`:5`, `:594`). The hosted-model call is `puterChat` in `swarm-agents.ts:199` (re-checked on `main` `5628e422`). That path is not the Pen.
 3. `TESSERA_LLM_API_KEY`, `MOLTBOOK_API_KEY`, `NASA_API_KEY`, `GITHUB_TOKEN`, `GITBOOK_GITHUB_TOKEN`, `GROK_CONNECTOR_ACCESS_TOKEN`, and `GROK_AUTH_CLIENT_SECRET` are read on runtime paths.
 4. Preview Wikipedia `fetch` and the API Wikipedia/arXiv/NASA providers answer from the network even though a local catalog and a memory route already exist.
 5. Two pen resolvers (`callTesseraPen` and preview `resolvePen`) and an unimported `TesseraClient` disagree about the default model.
