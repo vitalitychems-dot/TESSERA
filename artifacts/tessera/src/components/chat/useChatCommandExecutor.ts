@@ -108,11 +108,13 @@ export function useChatCommandExecutor(callbacks: CommandCallbacks) {
               fetch(`/api/conversations/${conversationId}/puter-save`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify({ content: msgText, role: "user" }),
               }).catch(() => {});
               fetch(`/api/conversations/${conversationId}/puter-save`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify({ content: formatted, role: "assistant" }),
               }).then(() => {
                 queryClient.invalidateQueries({ queryKey: [`/api/conversations/${conversationId}/messages`] });

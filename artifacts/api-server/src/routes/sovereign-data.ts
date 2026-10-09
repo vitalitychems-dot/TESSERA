@@ -18,6 +18,7 @@ import { getReflectionMetrics, getRecentSnapshots, runReflectionCycle } from "..
 import { getDimensionalCacheStats, embeddingDimensionalCache, semanticDimensionalCache } from "../lib/dimensional-lru-cache";
 import { issueFatherToken, activeFatherSessionCount } from "../lib/father-session-store";
 import { requireFather } from "../lib/require-father";
+import { requireAdminSession } from "../lib/sovereign-admin";
 import * as os from "os";
 
 const router: IRouter = Router();
@@ -612,7 +613,7 @@ router.get("/love-protocol/stats", (_req, res) => {
   res.json({ ok: true, totalMessages: 0, activeAgents: economy.totalAgents, loveIndex: Math.round(economy.avgHappiness) });
 });
 
-router.get("/conversations/:id/attachments", (req, res) => {
+router.get("/conversations/:id/attachments", requireAdminSession, (_req, res) => {
   res.json({ ok: true, attachments: [] });
 });
 
