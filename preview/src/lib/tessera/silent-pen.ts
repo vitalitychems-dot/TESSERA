@@ -1,5 +1,6 @@
 import { keptAnswer, type Correction } from "./corrections.ts";
 import { allEight } from "./desk-steps.ts";
+import { batch50, selector, sequence } from "./batch-50.ts";
 import { rewardEat } from "./local-learn.ts";
 import { loveFromFiles } from "./love-local.ts";
 import { noteFor, type KeptPage } from "./next-page.ts";
@@ -22,6 +23,10 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (/\beight checkouts\b/i.test(q)) {
     const eight = allEight();
     return `Eight checkout steps ran. Best action ${eight.neuro}. Health ${eight.godel}. Rate ${eight.human}. Coherence ${eight.blueprint}. Bool ${eight.hyperon}.`;
+  }
+  if (/\bbatch of 50\b/i.test(q)) {
+    const rows = batch50();
+    return `Fifty catalog repos were read from GitHub. A sequence of yes then no is ${sequence([true, false]) ? "success" : "failure"}. A selector of no then yes is ${selector([false, true]) ? "success" : "failure"}. ${rows.length} records. No other program from that batch was written.`;
   }
   const kept = keptAnswer(q, rows);
   if (kept) return kept;
