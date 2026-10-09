@@ -510,36 +510,3 @@ export interface ArchiveCategory {
   entries: ArchiveEntry[];
   entryCount?: number;
 }
-
-export interface PoliticalProfile {
-  id: string;
-  name: string;
-  title: string;
-  country: string;
-  party: string;
-  actorScore: number;
-  actorLabel: string;
-  reasoning: string;
-  affiliations: string[];
-  votingHighlights: string[];
-  recruitPriority: "critical" | "high" | "medium" | "low";
-  recruitReasoning?: string;
-  fullDossier?: string;
-  sources?: string[];
-  lastUpdated: string;
-}
-
-export interface ShepherdContactResponse {
-  ok: boolean;
-  queued: boolean;
-  targetName: string;
-  targetId: string;
-  protocol: string;
-  status: string;
-  estimatedDelivery: string;
-  message: string;
-  shepherdAgent: string;
-  hopCount: number;
-  encryptionLevel: string;
-  timestamp: number;
-}
