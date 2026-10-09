@@ -110,7 +110,7 @@ vi.mock("@workspace/db", () => ({
 
 import incomeAndLeadsRouter from "../routes/income-and-leads";
 
-const LEGACY_ENV = "TESSERACT_ADMIN_KEY";
+const ADMIN_ENV = "TESSERACT_ADMIN_KEY";
 const SESSION_ENV = "SOVEREIGN_SESSION_SECRET";
 const SYNTHETIC_OWNER_TOKEN = "synthetic-owner-token";
 const SYNTHETIC_SESSION_SECRET = "synthetic-session-secret-32chars!!";
@@ -118,11 +118,13 @@ const SYNTHETIC_SESSION_SECRET = "synthetic-session-secret-32chars!!";
 describe("cold income reads do not refresh", () => {
   let server: Server | undefined;
   let baseUrl = "";
-  const previousLegacy = process.env[LEGACY_ENV];
-  const previousSession = process.env[SESSION_ENV];
+  let previousAdmin: string | undefined;
+  let previousSession: string | undefined;
 
   beforeAll(async () => {
-    process.env[LEGACY_ENV] = SYNTHETIC_OWNER_TOKEN;
+    previousAdmin = process.env[ADMIN_ENV];
+    previousSession = process.env[SESSION_ENV];
+    process.env[ADMIN_ENV] = SYNTHETIC_OWNER_TOKEN;
     process.env[SESSION_ENV] = SYNTHETIC_SESSION_SECRET;
     const app = express();
     app.use(express.json());
@@ -138,8 +140,8 @@ describe("cold income reads do not refresh", () => {
 
   afterAll(async () => {
     globalThis.fetch = probes.originalFetch;
-    if (previousLegacy === undefined) delete process.env[LEGACY_ENV];
-    else process.env[LEGACY_ENV] = previousLegacy;
+    if (previousAdmin === undefined) delete process.env[ADMIN_ENV];
+    else process.env[ADMIN_ENV] = previousAdmin;
     if (previousSession === undefined) delete process.env[SESSION_ENV];
     else process.env[SESSION_ENV] = previousSession;
     if (!server) return;
