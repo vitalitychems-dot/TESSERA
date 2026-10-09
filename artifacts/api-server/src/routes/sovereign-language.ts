@@ -101,6 +101,11 @@ router.get("/sovereign-language/sovereign-layer/verify", (_req, res) => {
       },
     });
   } catch (err) {
+    const failure = colonialSecretFailure(err);
+    if (failure) {
+      logger.error("colonial secret not configured");
+      return res.status(failure.status).json(failure.body);
+    }
     logger.error({ err }, "sovereign-language/sovereign-layer/verify error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }

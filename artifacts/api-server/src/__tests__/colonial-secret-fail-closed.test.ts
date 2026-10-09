@@ -218,6 +218,7 @@ describe("colonial master secret fail closed", () => {
 
   it("returns 503 with a generic body from routes that need the secret", async () => {
     const cases = [
+      { method: "GET", path: "/api/sovereign-language/sovereign-layer/verify" },
       { method: "POST", path: "/api/sovereign-language/cipher/encrypt", body: { text: "payload", agentId: "agent-a" } },
       { method: "POST", path: "/api/sovereign-language/cipher/pair-encrypt", body: { text: "payload", senderAgent: "agent-a", receiverAgent: "agent-b" } },
       { method: "POST", path: "/api/sovereign-language/encrypt", body: { text: "payload" } },
