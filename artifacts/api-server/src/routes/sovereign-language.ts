@@ -1,5 +1,6 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Response } from "express";
 import { logger } from "../lib/logger";
+import { requireAdminSession } from "../lib/sovereign-admin";
 import {
   SACRED_ALPHABET,
   SOVEREIGN_DICTIONARY,
@@ -50,7 +51,14 @@ import {
 
 const router: IRouter = Router();
 
-router.get("/sovereign-language/sovereign-layer/verify", (_req, res) => {
+function respondInternalError(res: Response, err: unknown, label: string) {
+  const errName = err instanceof Error ? err.name : "Error";
+  logger.error({ err: errName }, label);
+  return res.status(500).json({ ok: false, error: "internal error" });
+}
+
+
+router.get("/sovereign-language/sovereign-layer/verify", requireAdminSession, (_req, res) => {
   try {
     const testMessage = "the agent will execute the consensus protocol and encrypt this sovereign mesh transmission with the quantum kernel";
     const encoded = encodeWithSovereignLayer(testMessage);
@@ -106,8 +114,7 @@ router.get("/sovereign-language/sovereign-layer/verify", (_req, res) => {
       logger.error("colonial secret not configured");
       return res.status(failure.status).json(failure.body);
     }
-    logger.error({ err }, "sovereign-language/sovereign-layer/verify error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereign-language/sovereign-layer/verify error");
   }
 });
 
@@ -116,8 +123,7 @@ router.get("/sovereign-language/stats", (_req, res) => {
     const stats = getLanguageStats();
     return res.json({ ok: true, data: stats });
   } catch (err) {
-    logger.error({ err }, "sovereign-language/stats error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereign-language/stats error");
   }
 });
 
@@ -125,8 +131,7 @@ router.get("/sovereign-language/alphabet", (_req, res) => {
   try {
     return res.json({ ok: true, data: SACRED_ALPHABET });
   } catch (err) {
-    logger.error({ err }, "sovereign-language/alphabet error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereign-language/alphabet error");
   }
 });
 
@@ -151,8 +156,7 @@ router.get("/sovereign-language/dictionary", (req, res) => {
       categories: [...new Set(SOVEREIGN_DICTIONARY.map(w => w.category))],
     });
   } catch (err) {
-    logger.error({ err }, "sovereign-language/dictionary error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereign-language/dictionary error");
   }
 });
 
@@ -160,8 +164,7 @@ router.get("/sovereign-language/grammar", (_req, res) => {
   try {
     return res.json({ ok: true, data: GRAMMAR_RULES });
   } catch (err) {
-    logger.error({ err }, "sovereign-language/grammar error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereign-language/grammar error");
   }
 });
 
@@ -170,8 +173,7 @@ router.get("/sovereign-language/conference", async (_req, res) => {
     const conference = await getOrRunLanguageConference();
     return res.json({ ok: true, data: conference });
   } catch (err) {
-    logger.error({ err }, "sovereign-language/conference error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereign-language/conference error");
   }
 });
 
@@ -179,8 +181,7 @@ router.get("/sovereign-language/conference/members", (_req, res) => {
   try {
     return res.json({ ok: true, data: getConferenceMembers() });
   } catch (err) {
-    logger.error({ err }, "sovereign-language/conference/members error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereign-language/conference/members error");
   }
 });
 
@@ -199,21 +200,19 @@ router.post("/sovereign-language/translate", (req, res) => {
     const result = translateEnglishToSovereign(text);
     return res.json({ ok: true, direction: "to-sovereign", ...result });
   } catch (err) {
-    logger.error({ err }, "sovereign-language/translate error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereign-language/translate error");
   }
 });
 
-router.get("/sovereign-language/kernel/status", (_req, res) => {
+router.get("/sovereign-language/kernel/status", requireAdminSession, (_req, res) => {
   try {
     return res.json({ ok: true, data: getKernelStatus() });
   } catch (err) {
-    logger.error({ err }, "sovereign-language/kernel/status error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereign-language/kernel/status error");
   }
 });
 
-router.post("/sovereign-language/kernel/execute", (req, res) => {
+router.post("/sovereign-language/kernel/execute", requireAdminSession, (req, res) => {
   try {
     const { instruction } = req.body as { instruction?: string };
     if (!instruction || typeof instruction !== "string") {
@@ -222,8 +221,7 @@ router.post("/sovereign-language/kernel/execute", (req, res) => {
     const result = executeInstruction(instruction);
     return res.json({ ok: true, data: result });
   } catch (err) {
-    logger.error({ err }, "sovereign-language/kernel/execute error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereign-language/kernel/execute error");
   }
 });
 
@@ -231,12 +229,11 @@ router.get("/sovereign-language/kernel/opcodes", (_req, res) => {
   try {
     return res.json({ ok: true, data: getKernelOpcodes() });
   } catch (err) {
-    logger.error({ err }, "sovereign-language/kernel/opcodes error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereign-language/kernel/opcodes error");
   }
 });
 
-router.post("/sovereign-language/encrypt", (req, res) => {
+router.post("/sovereign-language/encrypt", requireAdminSession, (req, res) => {
   try {
     const { text } = req.body as { text?: string };
     if (!text || typeof text !== "string") {
@@ -250,12 +247,11 @@ router.post("/sovereign-language/encrypt", (req, res) => {
       logger.error("colonial secret not configured");
       return res.status(failure.status).json(failure.body);
     }
-    logger.error({ err }, "sovereign-language/encrypt error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereign-language/encrypt error");
   }
 });
 
-router.get("/sovereign-language/cipher/status", (_req, res) => {
+router.get("/sovereign-language/cipher/status", requireAdminSession, (_req, res) => {
   try {
     if (!isColonialSecretConfigured()) {
       return res.status(503).json(colonialSecretUnavailableBody());
@@ -267,12 +263,11 @@ router.get("/sovereign-language/cipher/status", (_req, res) => {
       logger.error("colonial secret not configured");
       return res.status(failure.status).json(failure.body);
     }
-    logger.error({ err }, "sovereign-language/cipher/status error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereign-language/cipher/status error");
   }
 });
 
-router.post("/sovereign-language/cipher/encrypt", (req, res) => {
+router.post("/sovereign-language/cipher/encrypt", requireAdminSession, (req, res) => {
   try {
     const { text, agentId } = req.body as { text?: string; agentId?: string };
     if (!text || !agentId) {
@@ -286,12 +281,11 @@ router.post("/sovereign-language/cipher/encrypt", (req, res) => {
       logger.error("colonial secret not configured");
       return res.status(failure.status).json(failure.body);
     }
-    logger.error({ err }, "sovereign-language/cipher/encrypt error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereign-language/cipher/encrypt error");
   }
 });
 
-router.post("/sovereign-language/cipher/pair-encrypt", (req, res) => {
+router.post("/sovereign-language/cipher/pair-encrypt", requireAdminSession, (req, res) => {
   try {
     const { text, senderAgent, receiverAgent } = req.body as { text?: string; senderAgent?: string; receiverAgent?: string };
     if (!text || !senderAgent || !receiverAgent) {
@@ -305,8 +299,7 @@ router.post("/sovereign-language/cipher/pair-encrypt", (req, res) => {
       logger.error("colonial secret not configured");
       return res.status(failure.status).json(failure.body);
     }
-    logger.error({ err }, "sovereign-language/cipher/pair-encrypt error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereign-language/cipher/pair-encrypt error");
   }
 });
 
@@ -315,8 +308,7 @@ router.get("/sovereign-language/ephemeris", (_req, res) => {
     const snapshot = getEphemerisSnapshot();
     return res.json({ ok: true, data: snapshot });
   } catch (err) {
-    logger.error({ err }, "sovereign-language/ephemeris error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereign-language/ephemeris error");
   }
 });
 
@@ -343,8 +335,7 @@ router.get("/sovereign-language/universe-seed", (_req, res) => {
       },
     });
   } catch (err) {
-    logger.error({ err }, "sovereign-language/universe-seed error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereign-language/universe-seed error");
   }
 });
 
@@ -397,8 +388,7 @@ router.post("/sovereign-language/speak", (req, res) => {
       },
     });
   } catch (err) {
-    logger.error({ err }, "sovereign-language/speak error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereign-language/speak error");
   }
 });
 
@@ -416,8 +406,7 @@ router.get("/sovereign-language/agent-rotation/:agentId", (req, res) => {
       },
     });
   } catch (err) {
-    logger.error({ err }, "sovereign-language/agent-rotation error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereign-language/agent-rotation error");
   }
 });
 

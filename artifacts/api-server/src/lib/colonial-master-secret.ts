@@ -3,6 +3,7 @@
  * and the other colonial encrypt paths. Minimum length is 32 characters.
  * A missing or short value is not configured. This module never supplies a
  * fallback, a random substitute, or an environment-flag bypass.
+ * The old hardcoded colonial fallback is in git history, so treat anything encrypted under it as plaintext.
  */
 
 export const COLONIAL_SECRET_MIN_LENGTH = 32;
