@@ -27,7 +27,7 @@ interface IncomeStrategy {
   id: string;
   name: string;
   kind: "passive" | "active";
-  status: "active" | "available" | "needs-config";
+  status: "active" | "available" | "needs-config" | "disabled";
   description: string;
   requirement: string | null;
 }
@@ -44,11 +44,22 @@ interface WalletResp {
   observation: WalletObservation;
 }
 
-const STATUS_BADGE: Record<IncomeStrategy["status"], string> = {
-  active: "text-emerald-400 bg-emerald-500/10 border-emerald-500/25",
-  available: "text-cyan-400 bg-cyan-500/10 border-cyan-500/25",
-  "needs-config": "text-amber-400 bg-amber-500/10 border-amber-500/25",
+const STATUS_BADGE: Record<IncomeStrategy["status"], { className: string; label: string }> = {
+  active: { className: "text-emerald-400 bg-emerald-500/10 border-emerald-500/25", label: "active" },
+  available: { className: "text-cyan-400 bg-cyan-500/10 border-cyan-500/25", label: "available" },
+  "needs-config": { className: "text-amber-400 bg-amber-500/10 border-amber-500/25", label: "needs config" },
+  disabled: { className: "text-slate-400 bg-slate-500/10 border-slate-500/25", label: "Off" },
 };
+
+const FALLBACK_BADGE = { className: "text-slate-400 bg-slate-500/10 border-slate-500/25", label: "unknown" };
+
+function strategyStatusView(status: string): { className: string; label: string } {
+  if (Object.prototype.hasOwnProperty.call(STATUS_BADGE, status)) {
+    return STATUS_BADGE[status as IncomeStrategy["status"]];
+  }
+  const label = status.replace(/-/g, " ").trim();
+  return { className: FALLBACK_BADGE.className, label: label.length > 0 ? label : FALLBACK_BADGE.label };
+}
 
 export default function IncomeWorkflowPage() {
   useEffect(() => { document.title = "Income | Tessera"; }, []);
@@ -160,12 +171,15 @@ export default function IncomeWorkflowPage() {
 
       <div className="text-[10px] text-slate-500 font-mono tracking-widest">REVENUE STRATEGIES</div>
       <div className="space-y-2">
-        {strategies.map(s => (
-          <GlassCard key={s.id} className={cn("p-3 border", STATUS_BADGE[s.status].split(" ").pop())}>
+        {strategies.map(s => {
+          const badge = strategyStatusView(String(s.status ?? ""));
+          const borderTone = badge.className.split(" ").pop() ?? "";
+          return (
+          <GlassCard key={s.id} className={cn("p-3 border", borderTone)}>
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="text-sm font-semibold text-white">{s.name}</span>
-              <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full border font-mono uppercase", STATUS_BADGE[s.status])}>
-                {s.status.replace("-", " ")}
+              <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full border font-mono uppercase", badge.className)}>
+                {badge.label}
               </span>
               <span className="text-[9px] text-slate-600 font-mono">{s.kind}</span>
             </div>
@@ -174,7 +188,8 @@ export default function IncomeWorkflowPage() {
               <p className="text-[10px] text-amber-300 mt-1 font-mono">⚠ {s.requirement}</p>
             )}
           </GlassCard>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
