@@ -98,6 +98,6 @@ describe("routes/index import", () => {
     expect(starters.startFreeStuffScraper).toHaveBeenCalledTimes(1);
     expect(starters.startBountyRefresher).toHaveBeenCalledTimes(1);
     expect(starters.startIncomeExecutor).toHaveBeenCalledTimes(1);
-    expect(starters.startAutonomousOperation).toHaveBeenCalled();
+    expect(starters.startAutonomousOperation).not.toHaveBeenCalled();
   }, 120_000);
 });
