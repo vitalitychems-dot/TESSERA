@@ -42,6 +42,11 @@ import {
   sovereignLayerEncode,
   getSovereignOverlayMap,
 } from "../lib/colonial-language-kernel";
+import {
+  colonialSecretFailure,
+  colonialSecretUnavailableBody,
+  isColonialSecretConfigured,
+} from "../lib/colonial-master-secret";
 
 const router: IRouter = Router();
 
@@ -96,6 +101,11 @@ router.get("/sovereign-language/sovereign-layer/verify", (_req, res) => {
       },
     });
   } catch (err) {
+    const failure = colonialSecretFailure(err);
+    if (failure) {
+      logger.error("colonial secret not configured");
+      return res.status(failure.status).json(failure.body);
+    }
     logger.error({ err }, "sovereign-language/sovereign-layer/verify error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
@@ -235,6 +245,11 @@ router.post("/sovereign-language/encrypt", (req, res) => {
     const result = sovereignFullPipeline(text);
     return res.json({ ok: true, data: result });
   } catch (err) {
+    const failure = colonialSecretFailure(err);
+    if (failure) {
+      logger.error("colonial secret not configured");
+      return res.status(failure.status).json(failure.body);
+    }
     logger.error({ err }, "sovereign-language/encrypt error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
@@ -242,8 +257,16 @@ router.post("/sovereign-language/encrypt", (req, res) => {
 
 router.get("/sovereign-language/cipher/status", (_req, res) => {
   try {
+    if (!isColonialSecretConfigured()) {
+      return res.status(503).json(colonialSecretUnavailableBody());
+    }
     return res.json({ ok: true, data: getCipherSystemStatus() });
   } catch (err) {
+    const failure = colonialSecretFailure(err);
+    if (failure) {
+      logger.error("colonial secret not configured");
+      return res.status(failure.status).json(failure.body);
+    }
     logger.error({ err }, "sovereign-language/cipher/status error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
@@ -258,6 +281,11 @@ router.post("/sovereign-language/cipher/encrypt", (req, res) => {
     const result = encryptWithRotatingCipher(text, agentId);
     return res.json({ ok: true, data: result });
   } catch (err) {
+    const failure = colonialSecretFailure(err);
+    if (failure) {
+      logger.error("colonial secret not configured");
+      return res.status(failure.status).json(failure.body);
+    }
     logger.error({ err }, "sovereign-language/cipher/encrypt error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
@@ -272,6 +300,11 @@ router.post("/sovereign-language/cipher/pair-encrypt", (req, res) => {
     const result = encryptPairMessage(text, senderAgent, receiverAgent);
     return res.json({ ok: true, data: result });
   } catch (err) {
+    const failure = colonialSecretFailure(err);
+    if (failure) {
+      logger.error("colonial secret not configured");
+      return res.status(failure.status).json(failure.body);
+    }
     logger.error({ err }, "sovereign-language/cipher/pair-encrypt error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }

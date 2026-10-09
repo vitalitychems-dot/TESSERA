@@ -1,5 +1,6 @@
 import { createCipheriv, createDecipheriv, randomBytes, createHash, hkdfSync } from "crypto";
 import { brotliCompressSync, brotliDecompressSync, constants as zlibConstants } from "zlib";
+import { requireColonialMasterSecret } from "./colonial-master-secret";
 
 const MAGIC = Buffer.from("CLN\x04");
 const PUA_PHRASE_BASE = 0xe000;
@@ -617,20 +618,15 @@ export function xorDecode(encoded: string): string {
 
 // ─── QUANTUM PIPELINE (tokenize → brotli → AES-256-GCM) ─────────────────────
 
-// Load master secret from environment — never hardcode in production.
-// Falls back to a non-secret dev sentinel so devs know the key is missing.
-const MASTER_SECRET: Buffer = process.env.COLONIAL_MASTER_SECRET
-  ? Buffer.from(process.env.COLONIAL_MASTER_SECRET, "utf8")
-  : Buffer.from("tessera-dev-placeholder-replace-with-env-secret", "utf8");
-
 /**
  * Derive a 32-byte AES key using HKDF-SHA256 from the master secret.
  * @param info  — context/purpose label (binds key to a specific use)
  * @param salt  — per-operation random salt (caller provides or generates)
  */
 export function deriveKey(info: string, salt?: Buffer): Buffer {
+  const master = requireColonialMasterSecret();
   const saltBuf = salt ?? randomBytes(16);
-  const raw = hkdfSync("sha256", MASTER_SECRET, saltBuf, Buffer.from(`colonial-language-v4:${info}`, "utf8"), 32);
+  const raw = hkdfSync("sha256", master, saltBuf, Buffer.from(`colonial-language-v4:${info}`, "utf8"), 32);
   return Buffer.from(raw);
 }
 
@@ -835,12 +831,13 @@ export function deriveAgentCipherKey(agentId: string, sessionNonce?: string): {
   keyId: string;
   salt: Buffer;
 } {
+  const master = requireColonialMasterSecret();
   const nonce = sessionNonce ?? randomBytes(16).toString("hex");
   const keyId = `ack-${agentId}-${nonce.slice(0, 8)}`;
   const salt = Buffer.from(nonce, "utf8");
   const raw = hkdfSync(
     "sha256",
-    MASTER_SECRET,
+    master,
     salt,
     Buffer.from(`colonial-language-v4:agent:${agentId}`, "utf8"),
     32,

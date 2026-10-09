@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   pixelCompress,
   pixelDecompress,
@@ -7,7 +7,23 @@ import {
   sovereignBinaryRoundTrip,
 } from "../lib/sovereign-kernel";
 
+const SYNTHETIC_COLONIAL_SECRET = "synthetic-colonial-secret-32xxxx";
+
 describe("Sovereign Compression Pipeline", () => {
+  let hadSecret = false;
+  let previousSecret: string | undefined;
+
+  beforeEach(() => {
+    hadSecret = Object.prototype.hasOwnProperty.call(process.env, "COLONIAL_MASTER_SECRET");
+    previousSecret = process.env.COLONIAL_MASTER_SECRET;
+    process.env.COLONIAL_MASTER_SECRET = SYNTHETIC_COLONIAL_SECRET;
+  });
+
+  afterEach(() => {
+    if (hadSecret) process.env.COLONIAL_MASTER_SECRET = previousSecret;
+    else delete process.env.COLONIAL_MASTER_SECRET;
+  });
+
   it("pixel compress and decompress round-trip with small binary data", () => {
     const original = Buffer.from([0, 1, 127, 128, 254, 255, 42, 99]);
     const compressed = pixelCompress(original);
