@@ -20,6 +20,16 @@ test("static historical merge gate is clean and names every section", () => {
   }
 });
 
+test("a failed full-suite command fails the gate", () => {
+  const report = renderReport({
+    runSuite: true,
+    commandRunner: (title) => ({ line: `${title}: fail`, ok: false }),
+  });
+  assert.equal(report.ok, false, report.text);
+  assert.match(report.text, /typecheck: fail/);
+  assert.match(report.text, /audit: fail/);
+});
+
 test("cli exits 0 for the static report", () => {
   const script = fileURLToPath(new URL("./historical-merge-gate.mjs", import.meta.url));
   const result = spawnSync(process.execPath, [script], { encoding: "utf8" });
