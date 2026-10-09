@@ -19,7 +19,7 @@ function ipOf(req: Request): string {
   return req.ip || req.socket.remoteAddress || "unknown";
 }
 
-function evictOldest(map: Map<string, number[]>, maxIps: number): void {
+function evictOldest<T>(map: Map<string, T[]>, maxIps: number): void {
   while (map.size > maxIps) {
     const oldest = map.keys().next().value;
     if (oldest === undefined) break;
@@ -139,23 +139,37 @@ export function adminSessionRateLimit(req: Request, res: Response, next: NextFun
 
 // Failed attempts on raw-key admin routes. Successful authenticated requests
 // do not consume budget. Separate from the login counter above.
+// A slot is reserved before next() and refunded unless the response is 401
+// or 403, so overlapping failures cannot all pass the window check.
 const RAW_KEY_WINDOW_MS = 60_000;
 const RAW_KEY_IP_MAX = 6;
 const RAW_KEY_GLOBAL_MAX = 30;
 const RAW_KEY_MAX_IPS = 4096;
-const _rawHits = new Map<string, number[]>();
-const _rawGlobalHits: number[] = [];
+type RawStamp = { at: number };
+const _rawHits = new Map<string, RawStamp[]>();
+const _rawGlobalHits: RawStamp[] = [];
 
 function pruneRaw(now: number): void {
   for (const [ip, arr] of _rawHits) {
-    const filtered = arr.filter((t) => now - t < RAW_KEY_WINDOW_MS);
+    const filtered = arr.filter((hit) => now - hit.at < RAW_KEY_WINDOW_MS);
     if (filtered.length === 0) _rawHits.delete(ip);
     else _rawHits.set(ip, filtered);
   }
   evictOldest(_rawHits, RAW_KEY_MAX_IPS);
-  const globalHits = _rawGlobalHits.filter((t) => now - t < RAW_KEY_WINDOW_MS);
+  const globalHits = _rawGlobalHits.filter((hit) => now - hit.at < RAW_KEY_WINDOW_MS);
   _rawGlobalHits.length = 0;
   _rawGlobalHits.push(...globalHits);
+}
+
+function releaseRawStamp(ip: string, stamp: RawStamp): void {
+  const current = _rawHits.get(ip);
+  if (current) {
+    const idx = current.indexOf(stamp);
+    if (idx >= 0) current.splice(idx, 1);
+    if (current.length === 0) _rawHits.delete(ip);
+  }
+  const globalIdx = _rawGlobalHits.indexOf(stamp);
+  if (globalIdx >= 0) _rawGlobalHits.splice(globalIdx, 1);
 }
 
 export function rawKeyFailRateLimit(req: Request, res: Response, next: NextFunction): void {
@@ -174,21 +188,24 @@ export function rawKeyFailRateLimit(req: Request, res: Response, next: NextFunct
     });
   };
   if (arr.length >= RAW_KEY_IP_MAX) {
-    retry(RAW_KEY_IP_MAX, arr[0], "per IP");
+    retry(RAW_KEY_IP_MAX, arr[0].at, "per IP");
     return;
   }
   if (_rawGlobalHits.length >= RAW_KEY_GLOBAL_MAX) {
-    retry(RAW_KEY_GLOBAL_MAX, _rawGlobalHits[0], "globally");
+    retry(RAW_KEY_GLOBAL_MAX, _rawGlobalHits[0].at, "globally");
     return;
   }
+  const stamp: RawStamp = { at: now };
+  arr.push(stamp);
+  _rawHits.set(ip, arr);
+  _rawGlobalHits.push(stamp);
+  evictOldest(_rawHits, RAW_KEY_MAX_IPS);
+  let settled = false;
   res.on("finish", () => {
-    if (res.statusCode !== 401 && res.statusCode !== 403) return;
-    const t = Date.now();
-    const current = _rawHits.get(ip) ?? [];
-    current.push(t);
-    _rawHits.set(ip, current);
-    _rawGlobalHits.push(t);
-    evictOldest(_rawHits, RAW_KEY_MAX_IPS);
+    if (settled) return;
+    settled = true;
+    if (res.statusCode === 401 || res.statusCode === 403) return;
+    releaseRawStamp(ip, stamp);
   });
   next();
 }
