@@ -1,22 +1,19 @@
 import { createRequire } from "node:module";
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { disabledCl1, type Cl1SimProvenance } from "./types";
 
-const SIMULATOR_MODULE_NAME = "cl";
-
 /**
- * Optional simulator channel. This file does not depend on cl-sdk.
- * A missing module, a failed load, or is_simulator() other than true
- * leaves the channel off. The pen still replies.
- * No session is started, and this module does not train or contact hardware or cloud.
+ * Optional simulator channel. The only path is this file beside the module.
+ * A missing file, a failed load, or is_simulator() other than true leaves the channel off.
+ * The pen still replies. No session is started, and this module does not train
+ * or contact hardware or cloud.
  */
+const SIMULATOR_FILE = fileURLToPath(new URL("./cl1-simulator.mjs", import.meta.url));
+
 export async function attachCl1Sim(flagOn: boolean): Promise<Cl1SimProvenance> {
   if (!flagOn) return disabledCl1();
-  const resolved = resolveOptionalModule(SIMULATOR_MODULE_NAME);
-  if (resolved === null) return disabledCl1();
   try {
-    const loaded: unknown = await import(pathToFileURL(resolved).href);
+    const loaded: unknown = createRequire(import.meta.url)(SIMULATOR_FILE);
     const isSimulator = readIsSimulator(loaded);
     if (isSimulator !== true) {
       return { enabled: false, is_simulator: isSimulator, label: "REPORTED" };
@@ -25,23 +22,6 @@ export async function attachCl1Sim(flagOn: boolean): Promise<Cl1SimProvenance> {
   } catch {
     return disabledCl1();
   }
-}
-
-function resolveOptionalModule(moduleName: string): string | null {
-  for (const anchor of moduleAnchors()) {
-    try {
-      return createRequire(anchor).resolve(moduleName);
-    } catch {
-      continue;
-    }
-  }
-  return null;
-}
-
-function moduleAnchors(): string[] {
-  const anchors = [import.meta.url, pathToFileURL(join(process.cwd(), "package.json")).href];
-  anchors.push(pathToFileURL(join(process.cwd(), "artifacts", "api-server", "package.json")).href);
-  return anchors;
 }
 
 function readIsSimulator(loaded: unknown): boolean | null {

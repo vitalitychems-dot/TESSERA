@@ -5,14 +5,14 @@ import type { PenNotConfiguredReason } from "./types";
 import { pinMatches, sha256File } from "./weights";
 
 export const DEFAULT_TIMEOUT_MS = 30_000;
-export const DEFAULT_RUNTIME = "llama.cpp";
 
 export interface PreparedPen {
   weightsPath: string;
   weightsSha256: string;
   modelId: string;
   revision: string | null;
-  runtime: string;
+  /** Configured build id. Null when the env is unset. Never a guessed product name. */
+  runtimeBuild: string | null;
   url: URL;
   timeoutMs: number;
   systemPrompt: string;
@@ -62,7 +62,7 @@ export async function prepareLocalPen(env: NodeJS.ProcessEnv = process.env): Pro
   }
   if (!pinMatches(digest, pin)) return { ok: false, reason: "hash_mismatch" };
 
-  const runtime = env.TESSERA_PEN_LOCAL_RUNTIME?.trim() || DEFAULT_RUNTIME;
+  const runtimeBuild = env.TESSERA_PEN_LOCAL_RUNTIME_BUILD?.trim() ?? "";
   return {
     ok: true,
     config: {
@@ -70,7 +70,7 @@ export async function prepareLocalPen(env: NodeJS.ProcessEnv = process.env): Pro
       weightsSha256: digest,
       modelId: parsed.id,
       revision: parsed.revision,
-      runtime,
+      runtimeBuild: runtimeBuild.length > 0 ? runtimeBuild : null,
       url: classified.url,
       timeoutMs: readTimeout(env.TESSERA_PEN_LOCAL_TIMEOUT_MS),
       systemPrompt,

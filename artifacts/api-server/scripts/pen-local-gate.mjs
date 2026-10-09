@@ -1,3 +1,4 @@
+// Bundles the local pen gate. The URL check accepts only literal http://127.0.0.1 and http://[::1].
 import { build } from "esbuild";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -17,7 +18,6 @@ const result = await build({
   target: "node22",
   write: false,
   logLevel: "silent",
-  external: ["cl"],
 });
 
 const output = result.outputFiles[0];
