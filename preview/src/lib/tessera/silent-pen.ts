@@ -1,6 +1,7 @@
 import { keptAnswer, type Correction } from "./corrections.ts";
 import { allEight } from "./desk-steps.ts";
 import { batch50, selector, sequence } from "./batch-50.ts";
+import { batch2, leakyStep, warmupLr } from "./batch-2.ts";
 import { rewardEat } from "./local-learn.ts";
 import { loveFromFiles } from "./love-local.ts";
 import { noteFor, type KeptPage } from "./next-page.ts";
@@ -23,6 +24,10 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (/\beight checkouts\b/i.test(q)) {
     const eight = allEight();
     return `Eight checkout steps ran. Best action ${eight.neuro}. Health ${eight.godel}. Rate ${eight.human}. Coherence ${eight.blueprint}. Bool ${eight.hyperon}.`;
+  }
+  if (/\bsecond batch\b/i.test(q)) {
+    const rows = batch2();
+    return `The second fifty were read. Warmup at the halfway epoch is ${warmupLr(0.1, 5, 10, 1)}. A leak of one half keeps ${leakyStep(1, 0, 0.5)}. ${rows.length} records. Three source steps run. The other programs in that batch were not written.`;
   }
   if (/\bbatch of 50\b/i.test(q)) {
     const rows = batch50();
