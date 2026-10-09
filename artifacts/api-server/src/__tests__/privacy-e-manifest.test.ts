@@ -100,4 +100,21 @@ describe("repo manifest secret skip", () => {
     expect(parts.some((part) => part.toLowerCase().startsWith("natal-vault"))).toBe(false);
     expect(manifest.map((entry) => entry.path)).toEqual([publicName]);
   });
+
+  it("skips a nested INGEST directory", async () => {
+    const root = mkdtempSync(join(tmpdir(), "privacy-e-manifest-deep-"));
+    dirs.push(root);
+    const marker = "synthetic-deep-ingest-marker-do-not-emit";
+    mkdirSync(join(root, "deep", "INGEST"), { recursive: true });
+    writeFileSync(join(root, "deep", "INGEST", "row.txt"), marker);
+    mkdirSync(join(root, "deep", "keep"), { recursive: true });
+    writeFileSync(join(root, "deep", "keep", "visible.txt"), "synthetic-visible-note");
+
+    const manifest = await buildRepoManifest(root);
+    const rendered = JSON.stringify(manifest);
+    const paths = manifest.map((entry) => entry.path.replace(/\\/g, "/"));
+    expect(rendered).not.toContain(marker);
+    expect(paths.some((entry) => entry.toLowerCase().includes("ingest"))).toBe(false);
+    expect(paths).toContain("deep/keep/visible.txt");
+  });
 });

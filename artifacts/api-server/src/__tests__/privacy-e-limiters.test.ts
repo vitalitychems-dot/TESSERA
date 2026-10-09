@@ -27,7 +27,8 @@ vi.mock("../lib/grand-evolution-engine", () => ({
 import express from "express";
 import { createServer, type Server } from "node:http";
 import { registerSession, removeSession } from "../lib/session-mesh";
-import { runGrandEvolutionCycle } from "../lib/grand-evolution-cycle";
+import { ensureLatestCycleLoaded, runGrandEvolutionCycle } from "../lib/grand-evolution-cycle";
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 import {
   convene,
   getSessionAuditSummary,
@@ -249,5 +250,142 @@ describe("privacy e limiters and admin key sources", () => {
       body: JSON.stringify({ token: "wrong-synthetic-token" }),
     });
     expect(login.status).toBe(401);
+  });
+
+  it("returns 503 for session reads, run, and convene when the admin key is unset or shorter than 16", async () => {
+    vi.mocked(runGrandEvolutionCycle).mockClear();
+    vi.mocked(convene).mockClear();
+    vi.mocked(listSessions).mockClear();
+    vi.mocked(subscribeToSession).mockClear();
+    const previous = process.env.TESSERACT_ADMIN_KEY;
+    const calls = [
+      ["/grand-evolution/sessions", "GET"],
+      ["/grand-evolution/sessions/synthetic-session", "GET"],
+      ["/grand-evolution/sessions/synthetic-session/stream", "GET"],
+      ["/grand-evolution/run", "POST"],
+      ["/grand-evolution/convene", "POST"],
+      ["/grand-evolution/run-async", "POST"],
+    ] as const;
+    try {
+      for (const value of [undefined, "short-key"] as const) {
+        if (value === undefined) delete process.env.TESSERACT_ADMIN_KEY;
+        else process.env.TESSERACT_ADMIN_KEY = value;
+        for (const [path, method] of calls) {
+          const response = await fetch(`${baseUrl}${path}`, {
+            method,
+            headers: {
+              "content-type": "application/json",
+              "x-forwarded-for": "203.0.113.81",
+            },
+            body: method === "POST" ? "{}" : undefined,
+          });
+          expect(response.status, `${method} ${path} key=${value ?? "unset"}`).toBe(503);
+          const body = await response.json() as { error?: string };
+          expect(body.error).toBe("sovereign-unconfigured");
+        }
+      }
+    } finally {
+      if (previous === undefined) delete process.env.TESSERACT_ADMIN_KEY;
+      else process.env.TESSERACT_ADMIN_KEY = previous;
+    }
+    expect(runGrandEvolutionCycle).not.toHaveBeenCalled();
+    expect(convene).not.toHaveBeenCalled();
+    expect(listSessions).not.toHaveBeenCalled();
+    expect(subscribeToSession).not.toHaveBeenCalled();
+  });
+
+  it("rejects a wrong admin key on grand-evolution session reads", async () => {
+    vi.mocked(listSessions).mockClear();
+    vi.mocked(getSessionTurns).mockClear();
+    vi.mocked(subscribeToSession).mockClear();
+    const paths = [
+      "/grand-evolution/sessions",
+      "/grand-evolution/sessions/synthetic-session",
+      "/grand-evolution/sessions/synthetic-session/stream",
+    ];
+    for (const path of paths) {
+      const response = await fetch(`${baseUrl}${path}`, {
+        headers: {
+          "x-forwarded-for": "203.0.113.82",
+          "x-tesseract-admin-key": "wrong-synthetic-admin-key",
+        },
+      });
+      expect(response.status).toBe(401);
+      const body = await response.json() as { ok?: boolean; error?: string };
+      expect(body.ok).toBe(false);
+      expect(body.error).toBe("unauthenticated");
+    }
+    expect(listSessions).not.toHaveBeenCalled();
+    expect(getSessionTurns).not.toHaveBeenCalled();
+    expect(subscribeToSession).not.toHaveBeenCalled();
+  });
+
+  it("allows an owner cookie to read grand-evolution sessions", async () => {
+    vi.mocked(listSessions).mockClear();
+    const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+    const response = await fetch(`${baseUrl}/grand-evolution/sessions`, {
+      headers: {
+        cookie: `${SESSION_COOKIE}=${issued.signedId}`,
+        "x-forwarded-for": "203.0.113.83",
+      },
+    });
+    expect(response.status).toBe(200);
+    const body = await response.json() as { ok?: boolean; data?: { sessions?: unknown[] } };
+    expect(body.ok).toBe(true);
+    expect(Array.isArray(body.data?.sessions)).toBe(true);
+    expect(listSessions).toHaveBeenCalled();
+  });
+
+  it("gates directive reads and leaves status and society anonymous", async () => {
+    vi.mocked(ensureLatestCycleLoaded).mockClear();
+    const anonymous = await fetch(`${baseUrl}/grand-evolution/directives`, {
+      headers: { "x-forwarded-for": "203.0.113.84" },
+    });
+    expect(anonymous.status).toBe(401);
+    expect(ensureLatestCycleLoaded).not.toHaveBeenCalled();
+
+    const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+    const owner = await fetch(`${baseUrl}/grand-evolution/directives`, {
+      headers: {
+        cookie: `${SESSION_COOKIE}=${issued.signedId}`,
+        "x-forwarded-for": "203.0.113.85",
+      },
+    });
+    expect(owner.status).toBe(200);
+    const ownerBody = await owner.json() as { ok?: boolean; directives?: unknown };
+    expect(ownerBody.ok).toBe(true);
+    expect(ownerBody.directives).toEqual([]);
+    expect(ensureLatestCycleLoaded).toHaveBeenCalled();
+
+    const status = await fetch(`${baseUrl}/grand-evolution/status`, {
+      headers: { "x-forwarded-for": "203.0.113.85" },
+    });
+    expect(status.status).toBe(200);
+    const society = await fetch(`${baseUrl}/grand-evolution/society`, {
+      headers: { "x-forwarded-for": "203.0.113.85" },
+    });
+    expect(society.status).toBe(200);
+    const societyText = await society.text();
+    expect(societyText).not.toContain("reasoning");
+  });
+
+  it("rate-limits failed grand-evolution session reads on their own bucket", async () => {
+    vi.mocked(listSessions).mockClear();
+    let limited = false;
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const response = await fetch(`${baseUrl}/grand-evolution/sessions`, {
+        headers: {
+          "x-forwarded-for": "203.0.113.86",
+          "x-tesseract-admin-key": "wrong-synthetic-admin-key",
+        },
+      });
+      if (response.status === 429) {
+        limited = true;
+        break;
+      }
+      expect(response.status).toBe(401);
+    }
+    expect(limited).toBe(true);
+    expect(listSessions).not.toHaveBeenCalled();
   });
 });
