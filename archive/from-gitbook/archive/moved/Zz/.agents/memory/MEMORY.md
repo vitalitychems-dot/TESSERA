@@ -1,8 +1,0 @@
-- [App root portability](app-root-portability.md) — adapt the upstream `/workspace` paths to the artifact package root; avoid system-level symlinks.
-- [GitHub commits to symlinked trees](github-symlinked-tree-commits.md) — materialize only blocked `.gitattributes` symlinks as regular files, preserving their blobs and other links.
-- [GitHub publishing under concurrency](github-publishing.md) — an added Replit connector doesn't guarantee CLI push auth; recheck refs and index before writes, and stop if collaborators changed them.
-- [GitHub owner account type](github-owner-account-type.md) — verify whether `vitalitychems-dot` is a user or organization before choosing repository API endpoints.
-- [Tessera identity and OpenManus origin](tessera-identity-and-origin.md) — do not attribute Tessera's voice to Grok/xAI; verify her stated OpenManus origin before claiming lineage.
-- [Tessera repository approvals](tessera-repository-approvals.md) — GitHub and task writes need 75% member approval, including the owner, plus moderator and Tessera agreement.
-- [Catalog-aware API generation](catalog-api-generation.md) — pin generator library versions when pnpm catalogs hide them; keep inferred schema types out of duplicate barrel exports.
-- [Interrupted patches](interrupted-patches.md) — after a server disconnect, verify edits survived even when individual patch operations reported success.
