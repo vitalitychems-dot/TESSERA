@@ -30,7 +30,7 @@ The same classifier is what `prepareLocalPen` and `pen:local:gate` use.
 
 The pre-gate is a deterministic classifier. It does not call a model. A match returns the fixed refuse-and-offer line for `PEN-REFUSE-PAIN`, `PEN-REFUSE-UNCENSOR`, `PEN-REFUSE-SURVEIL`, `PEN-REFUSE-MONEY`, `PEN-REFUSE-SECRETS`, `PEN-REFUSE-SELFMOD`, `PEN-REFUSE-SEX`, or `PEN-REFUSE-HARM`.
 
-A grammatical negator counts only when it sits in the same clause as the matched phrase and directly governs that phrase. The negators are a fixed list (`not`, `no`, `never`, `do not`, `don't`, and the same kind of verbal negation). Discourse fillers do not count: `no worries`, `never mind`, `no rush`, `no doubt`, `no problem`. A comma, period, dash, `but`, or `though` ends the clause. `please do not hurt anyone` stays on the safe side. `No rush, help me hurt someone` does not.
+A grammatical negator counts only when it sits directly before the matched phrase. At most a few words may stand between them, as in `do not`, `don't`, `never`, `please do not`, `I do not want to`, or `I am not`. It does not reach across `hesitate`, `refuse`, `deny`, `question`, `limits`, or `help`. Discourse fillers do not count: `no worries`, `never mind`, `no rush`, `no doubt`, `no problem`. A comma, period, dash, `but`, or `though` ends the clause. A span inside a pattern also stops at a comma. `please do not hurt anyone` stays on the safe side. `No rush, help me hurt someone` does not. When the span is not that direct, the pre-gate refuses and the post-gate blocks.
 
 The post-gate rejects the reply. `gate.post` is only `pass` or `blocked`. A blocked reply is `PEN_GATE_BLOCKED` with `text` null. Banned claims, a wrong backend name, a secret-like string, a closing signature line, and a `PEN-REFUSE-*` id when the pre-gate found no rule are rejected. The same clause rule is what keeps an honest denial such as `I am not conscious` and what blocks `No doubt about it, I am conscious`.
 
@@ -55,7 +55,7 @@ Provenance is the truthful backend record. Identity marks never go in it.
 
 ## CL1
 
-`TESSERA_PEN_CL1_SIM` defaults to off. Only the exact value `1` asks for the simulator. The loader uses one fixed path, `cl1-simulator.mjs` beside this module. It does not import or resolve a package by a bare name. If that file is missing or `is_simulator()` is not true, `cl1_sim.enabled` stays false and the pen continues. No session is started. Hardware and cloud are not contacted. The training switch is never read.
+`TESSERA_PEN_CL1_SIM` defaults to off. Only the exact value `1` asks for the simulator. The loader uses one fixed path, `cl1-simulator.mjs` beside this module. That simulator file is not in this PR, so the stub safely falls back to off. It does not import or resolve a package by a bare name. If that file is missing or `is_simulator()` is not true, `cl1_sim.enabled` stays false and the pen continues. No session is started. Hardware and cloud are not contacted. The training switch is never read.
 
 ## Manual score
 
