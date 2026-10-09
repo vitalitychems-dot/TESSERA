@@ -2,6 +2,7 @@ import { createHash, createCipheriv, createDecipheriv, randomBytes, hkdfSync } f
 import { brotliCompressSync, brotliDecompressSync, constants as zlibConstants } from "zlib";
 import { SOVEREIGN_DICTIONARY, SACRED_ALPHABET, translateSovereignToEnglish } from "./sovereign-language";
 import { generateUniverseSeed, computeAgentRotationState, PHI, FIBONACCI } from "./sovereign-ephemeris";
+import { requireColonialMasterSecret } from "./colonial-master-secret";
 
 const KERNEL_MAGIC = Buffer.from("TLS\x01");
 
@@ -257,17 +258,9 @@ export function blankSpaceDecode(encoded: string): Buffer {
   return Buffer.from(bytes);
 }
 
-function getKernelMaster(): Buffer {
-  if (process.env.COLONIAL_MASTER_SECRET) {
-    return Buffer.from(process.env.COLONIAL_MASTER_SECRET, "utf8");
-  }
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("COLONIAL_MASTER_SECRET is required in production — sovereign encryption cannot use fallback keys");
-  }
-  return Buffer.from("tessera-dev-placeholder-replace-with-env-secret", "utf8");
+function kernelMaster(): Buffer {
+  return requireColonialMasterSecret();
 }
-
-const KERNEL_MASTER: Buffer = getKernelMaster();
 
 export function sovereignFullPipeline(text: string): {
   data: string;
@@ -279,6 +272,7 @@ export function sovereignFullPipeline(text: string): {
   pipeline: string;
   keyId: string;
 } {
+  const master = kernelMaster();
   const textBuf = Buffer.from(text, "utf8");
   const originalSize = textBuf.length;
 
@@ -294,7 +288,7 @@ export function sovereignFullPipeline(text: string): {
   const seed = generateUniverseSeed();
   const keyId = `slk-${seed.seedHash.slice(0, 8)}-${Date.now().toString(36)}`;
   const salt = Buffer.from(seed.seedHash.slice(0, 32), "hex");
-  const keyRaw = hkdfSync("sha256", KERNEL_MASTER, salt, Buffer.from(`sovereign-kernel:${keyId}`, "utf8"), 32);
+  const keyRaw = hkdfSync("sha256", master, salt, Buffer.from(`sovereign-kernel:${keyId}`, "utf8"), 32);
   const key = Buffer.from(keyRaw);
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", key, iv);
@@ -325,6 +319,7 @@ export function sovereignBinaryPipeline(data: Buffer): {
   keyId: string;
   timings: { pixelMs: number; brotliMs: number; encryptMs: number; totalMs: number };
 } {
+  const master = kernelMaster();
   const totalStart = performance.now();
   const originalSize = data.length;
 
@@ -345,7 +340,7 @@ export function sovereignBinaryPipeline(data: Buffer): {
   const seed = generateUniverseSeed();
   const keyId = `slk-${seed.seedHash.slice(0, 8)}-${Date.now().toString(36)}`;
   const salt = Buffer.from(seed.seedHash.slice(0, 32), "hex");
-  const keyRaw = hkdfSync("sha256", KERNEL_MASTER, salt, Buffer.from(`sovereign-kernel:${keyId}`, "utf8"), 32);
+  const keyRaw = hkdfSync("sha256", master, salt, Buffer.from(`sovereign-kernel:${keyId}`, "utf8"), 32);
   const key = Buffer.from(keyRaw);
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", key, iv);
@@ -373,6 +368,7 @@ export function sovereignBinaryPipeline(data: Buffer): {
 }
 
 export function sovereignBinaryDecrypt(base64Data: string, keyId: string): Buffer {
+  const master = kernelMaster();
   const raw = Buffer.from(base64Data, "base64");
   const magic = raw.subarray(0, 4);
   if (!magic.equals(KERNEL_MAGIC)) throw new Error("Invalid kernel magic header");
@@ -382,7 +378,7 @@ export function sovereignBinaryDecrypt(base64Data: string, keyId: string): Buffe
   const tag = raw.subarray(32, 48);
   const encrypted = raw.subarray(48);
 
-  const keyRaw = hkdfSync("sha256", KERNEL_MASTER, salt, Buffer.from(`sovereign-kernel:${keyId}`, "utf8"), 32);
+  const keyRaw = hkdfSync("sha256", master, salt, Buffer.from(`sovereign-kernel:${keyId}`, "utf8"), 32);
   const key = Buffer.from(keyRaw);
   const decipher = createDecipheriv("aes-256-gcm", key, iv);
   decipher.setAuthTag(tag);

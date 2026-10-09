@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { logger } from "../lib/logger";
 import { cosmicContext } from "../lib/cosmic-context";
 import { lusV2Encode, lusV2Decode, lusV2Spec } from "../lib/lus-v2";
 import { omniversalEncrypt, omniversalDecrypt, omniversalCipherSnapshot, type OmniversalCipherEnvelope } from "../lib/omniversal-cipher";
@@ -152,8 +153,9 @@ router.post("/omniversal/conference/run", publicWriteRateLimit, async (req, res)
     const seed = typeof req.body?.seed === "string" ? req.body.seed : undefined;
     const result = await runSacredConference({ topic, seed });
     res.json(withoutSigilFingerprint({ ok: true, conference: result }));
-  } catch (e: any) {
-    res.status(500).json({ ok: false, error: e?.message ?? String(e) });
+  } catch (err: unknown) {
+    logger.error({ err }, "omniversal conference run failed");
+    res.status(500).json({ ok: false, error: "conference-failed" });
   }
 });
 router.get("/omniversal/conference/:id", async (req, res) => {
