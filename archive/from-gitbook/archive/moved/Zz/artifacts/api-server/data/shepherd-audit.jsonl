@@ -1,2 +1,0 @@
-{"ts":1791308140490,"callerType":"system","caller":"system","targetUrl":"https://connectors.replit.com/api/v2/proxy/repos/vitalitychems-dot/TESSERA","method":"GET","outcome":"allowed","reason":"Explicit owner-requested workspace connection","status":200,"durationMs":1227}
-{"ts":1791308141079,"callerType":"system","caller":"system","targetUrl":"https://connectors.replit.com/api/v2/proxy/repos/vitalitychems-dot/TESSERA/pulls?state=open&per_page=30","method":"GET","outcome":"allowed","reason":"Explicit owner-requested workspace connection","status":200,"durationMs":1537}
