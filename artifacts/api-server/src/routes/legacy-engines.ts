@@ -1,6 +1,5 @@
 // @ts-nocheck — legacy adapter; underlying lib signatures may have evolved.
 import { Router } from "express";
-import { isDbConfigured } from "@workspace/db";
 import { getIdentityStatus, getCoreValues, getProtectedMemories, getDriftHistory, runDriftDetection, verifyFatherProtocol } from "../lib/sovereign-identity-reinforcement";
 import { getPersonalitySnapshot, evolveTraits, getTraitsByCategory } from "../lib/personality-evolution";
 import { getConsciousnessState, getSemanticNetwork, getEpisodicMemories, getProceduralSkills, recordEpisode, generateReflection, setAttentionFocus } from "../lib/consciousness-engine";
@@ -298,7 +297,7 @@ router.post("/autonomous/stop", requireAdminSession, (_req, res) => {
   res.json({ status: "stopped", ...getAutonomousStatus() });
 });
 
-if (isDbConfigured()) {
+if (process.env.DATABASE_URL) {
   startAutonomousOperation();
 }
 

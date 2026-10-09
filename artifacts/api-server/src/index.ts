@@ -24,7 +24,7 @@ import {
   INTERNAL_PROBE_HEADER,
   INTERNAL_PROBE_SECRET,
 } from "./lib/auto-recovery";
-import { db, isDbConfigured } from "@workspace/db";
+import { db } from "@workspace/db";
 import { swarmTasksTable, decisionHistoryTable } from "@workspace/db/schema";
 import { desc } from "drizzle-orm";
 
@@ -103,7 +103,7 @@ wss.on("connection", (ws, req) => {
           const peerState = getGroupSharedState(sovereignKeyHash);
           const peers = getGroupSessions(sovereignKeyHash);
 
-          const recentState = isDbConfigured()
+          const recentState = process.env.DATABASE_URL
             ? Promise.all([
             db.select({
               taskId: swarmTasksTable.taskId,
@@ -371,7 +371,7 @@ async function runPostBindHealthProbe(port: number): Promise<void> {
     server.listen(port, async () => {
       setActualPort(port);
       logger.info({ port }, "Server listening with WebSocket mesh enabled");
-      if (!isDbConfigured()) {
+      if (!process.env.DATABASE_URL) {
         logger.warn("Database is not configured — opening readiness gate without database probes or DB startup hooks");
         setServerReady();
         return;
