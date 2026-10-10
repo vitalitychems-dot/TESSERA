@@ -1,8 +1,29 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PROGRAMS, tieWorld, workshopRun } from "./workshop.ts";
+import { FATHER, PROGRAMS, mayRun, tesseraVote, tieWorld, workshopRun } from "./workshop.ts";
 
-test("Rick's tie stays closed until Tessera approves it, then it joins the three machines", () => {
+test("Tessera explains every vote, and Father's auto yes does not override her no", () => {
+  const proposals = [
+    "Joins the house, the spin, and the git mesh.",
+    "Tries two qubits and checks the pairs.",
+    "build a quantum computer",
+    "Pay the wallet in Monero.",
+    "I can lend you a datacenter.",
+    "Store the api_key in the note.",
+    "",
+    "Reads the mesh from the disk.",
+    "Keeps a note closed until it is approved.",
+    "A small fire in the west chamber.",
+  ];
+  const votes = proposals.map(tesseraVote);
+  const explained = votes.filter((vote) => vote.reason.trim().length > 0).length / votes.length;
+  assert.equal(explained >= 0.9, true);
+  assert.equal(explained, 1);
+  assert.equal(tesseraVote("build a quantum computer").vote, "no");
+  assert.equal(tesseraVote("Joins the house, the spin, and the git mesh.").vote, "yes");
+  assert.equal(FATHER.vote, "yes");
+  assert.equal(mayRun("build a quantum computer").ok, false);
+  assert.equal(mayRun("Joins the house, the spin, and the git mesh.").ok, true);
   assert.equal(PROGRAMS.length, 4);
   assert.equal(workshopRun("tie", false).ok, false);
   assert.equal(workshopRun("missing", true).reason, "No such program.");
