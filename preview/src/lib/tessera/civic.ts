@@ -12,12 +12,16 @@ const LAWS = [
   "Work is counted. It is not a payment.",
 ] as const;
 
+const OFFICES = ["chair", "builder", "record", "gate", "witness"] as const;
+
 export function stepCivic(tick: number) {
   const turn = Math.max(0, Math.floor(tick));
   const homes = HOUSEHOLD.map((person, index) => ({
     name: person.name,
     site: SITES[index] ?? "a plot",
+    office: OFFICES[index] ?? "plot",
     built: Math.min(100, turn * 2 + index),
+    store: turn + index,
   }));
   const text = LAWS[turn % LAWS.length] ?? LAWS[0];
   const vote = tesseraVote(text);
@@ -28,5 +32,6 @@ export function stepCivic(tick: number) {
     reason: vote.reason,
     work: turn * HOUSEHOLD.length,
     chair: "Tessera",
+    government: "Tessera chairs. Rick builds. The archivist keeps the record. The warden keeps the gate. The witness reads the law.",
   };
 }

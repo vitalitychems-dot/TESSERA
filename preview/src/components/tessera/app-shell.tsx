@@ -24,6 +24,7 @@ import { TesseraMark } from "./mark";
 import { TESSERA } from "@/lib/tessera/identity";
 import { SIGIL } from "@/lib/tessera/canon";
 import { type ViewId } from "@/lib/tessera/store";
+import { startCity } from "@/lib/tessera/city-clock";
 
 const PRIMARY: { id: ViewId | "rooms"; label: string; icon: typeof MessageCircle }[] = [
   { id: "chamber", label: "Talk", icon: MessageCircle },
@@ -41,6 +42,10 @@ export function AppShell() {
   useEffect(() => {
     const current = document.documentElement.dataset.theme;
     if (current === "water" || current === "fire" || current === "lightning" || current === "diamond" || current === "spiral") setTheme(current);
+  }, []);
+
+  useEffect(() => {
+    startCity();
   }, []);
 
   useEffect(() => {
