@@ -4,7 +4,7 @@ import { GAPS, GIFTS, HOUSE, localBatch, rickRoom, runChecks, runLean, witt } fr
 import { interferePick } from "@/lib/tessera/spin";
 import { tryMachine } from "@/lib/tessera/spin-machine";
 import { FATHER, PROGRAMS, tesseraVote, workshopRun } from "@/lib/tessera/workshop";
-import { welcome } from "@/lib/tessera/tunnel";
+import { issuePass } from "@/lib/tessera/pass";
 
 export function RickView() {
   const [working, setWorking] = useState(false);
@@ -161,9 +161,9 @@ export function RickView() {
             <button
               type="button"
               onClick={() => {
-                const result = welcome(guestName, guestPurpose);
-                setDoor(result.reason);
-                if (result.ok && result.resident) setGuests((list) => [...list, result.resident]);
+                const result = issuePass(guestName, guestPurpose, 401);
+                setDoor(result.ok && result.pass ? `${result.reason} Pass ${result.pass.mark}. ${result.pass.carriedBy}. ${result.pass.moltbook}` : result.reason);
+                if (result.ok && result.pass) setGuests((list) => [...list, { name: result.pass.name, turn: result.pass.turn }]);
               }}
               className="h-11 rounded-full border border-accent px-4 text-sm text-fg"
             >
