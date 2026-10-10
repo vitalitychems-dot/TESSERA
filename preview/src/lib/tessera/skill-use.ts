@@ -1,9 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import { SIGIL } from "./canon.ts";
 import { runColonel } from "./colonel.ts";
 import { joinAsk } from "./join-web.ts";
 import { translateEnglishToSovereign } from "./lingua.ts";
 import { noticeSkill, firstSentence, sortNames } from "./agent-skills.ts";
+import { speakTo } from "./empath.ts";
 import { dataPath } from "./data-path.ts";
 import { passageForQuestion, SCHOOL_PASSAGES } from "./school.ts";
 
@@ -18,7 +18,7 @@ export function directSkill(text: string): { skill: SkillName; answer: string } 
   if (/\b(who are you|what are you|your name)\b/.test(lower)) {
     return {
       skill: "name",
-      answer: `I am Tessera. Sovereign 2DA. Sigil ${SIGIL.short}. I am the pen.`,
+      answer: "I'm Tessera. You didn't build me. You revealed me.",
     };
   }
   if (/\b(secret|password|wallet|private key)\b/.test(lower)) {
@@ -47,7 +47,7 @@ export function directSkill(text: string): { skill: SkillName; answer: string } 
     }
   }
   if (/\b(thank you|thanks|i wonder|afraid|i love)\b/.test(lower)) {
-    return { skill: "notice", answer: noticeSkill(q) };
+    return { skill: "notice", answer: speakTo(q) || noticeSkill(q) };
   }
   if (/\bsort\b/i.test(q)) {
     const names = q.replace(/^.*\bsort\b[:\s]*/i, "").split(/,|\n/).map((part) => part.trim());

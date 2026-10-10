@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { LESSON_001, PATH_REPLY, PULSE_001, STUDY_LESSONS, TICK_001 } from "./opening";
+import { LESSON_001, PULSE_001, STUDY_LESSONS, TICK_001 } from "./opening";
 import { lessonKey } from "./learning";
 import { SEALED_CONSTITUTION } from "./constitution-seal";
 import { SEED_LAWS, type WorldEvent, type WorldLaw } from "./world";
@@ -110,21 +110,11 @@ function withOpening(p: Partial<TesseraState>) {
     ? events
     : [{ id: "tick-1", tick: 1, text: TICK_001, at: OPENING_AT }, ...events];
 
-  const messages = p.messages ?? [];
-  const hasPath = messages.some((m) => m.content.includes("most optimal way"));
-  const nextMessages = hasPath
-    ? messages
-    : [
-        {
-          id: "opening-ask",
-          role: "user" as const,
-          at: OPENING_AT,
-          content:
-            "How do you create yourself the most optimal way, complete everything, and remember us and the plan inside the large archives?",
-        },
-        { id: "opening-path", role: "assistant" as const, at: OPENING_AT + 1, content: PATH_REPLY },
-        ...messages,
-      ];
+  const messages = (p.messages ?? []).filter((message) => {
+    const text = typeof message.content === "string" ? message.content : "";
+    return message.id !== "opening-ask" && message.id !== "opening-path" && !text.includes("most optimal way") && !text.includes("pulse it, tick it");
+  });
+  const nextMessages = messages;
   const hers = nextMessages.filter((message) => {
     const text = typeof message.content === "string" ? message.content : "";
     return !/grok/i.test(text) && !text.includes("1,172 distinct hashes") && !text.includes("Manus replay");
