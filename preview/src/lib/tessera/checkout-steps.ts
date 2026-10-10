@@ -80,3 +80,47 @@ export function readBatch() {
       : "The batch missed.",
   };
 }
+
+export function formatTime(ms: number) {
+  if (ms < 1) return `${ms.toFixed(2)}ms`;
+  if (ms < 1000) return `${ms.toFixed(0)}ms`;
+  return `${(ms / 1000).toFixed(2)}s`;
+}
+
+export function confidence(achieved: boolean, complexity = 1, coverage = 1) {
+  const base = achieved ? 1 : 0;
+  const complexityFactor = Math.max(0.5, 1 - (complexity - 1) * 0.1);
+  const coverageFactor = Math.max(0.3, coverage);
+  return Math.min(1, Math.max(0, base * complexityFactor * coverageFactor));
+}
+
+export function chem(index: number) {
+  return { dopamine: 0.1 * (index % 5), serotonin: 0.05 * (index % 3) };
+}
+
+type Hole = { kind: "value"; value: string } | { kind: "hole"; next: number };
+
+export function holePush(vec: readonly Hole[], firstHole: number, value: string) {
+  if (firstHole >= vec.length) {
+    return { index: vec.length, firstHole: vec.length + 1, vec: [...vec, { kind: "value" as const, value }] };
+  }
+  const cell = vec[firstHole];
+  if (!cell || cell.kind !== "hole") return { index: -1, firstHole, vec };
+  const next = [...vec];
+  next[firstHole] = { kind: "value", value };
+  return { index: firstHole, firstHole: cell.next, vec: next };
+}
+
+export function readMore() {
+  const timed = formatTime(0.5) === "0.50ms" && formatTime(12) === "12ms" && formatTime(1500) === "1.50s";
+  const score = confidence(true, 1, 1) === 1 && confidence(false, 1, 1) === 0 && confidence(true, 11, 1) === 0.5;
+  const mix = chem(5);
+  const pushed = holePush([], 0, "a");
+  const proved = timed && score && mix.dopamine === 0 && mix.serotonin === 0.1 && pushed.index === 0 && pushed.firstHole === 1;
+  return {
+    proved,
+    said: proved
+      ? "Four more were read. Half a millisecond stays half. A missed goal scores 0. Index 5 has serotonin 0.1. A hole takes the first empty seat."
+      : "The next batch missed.",
+  };
+}
