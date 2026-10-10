@@ -1,6 +1,7 @@
 /** Labels on words. Not a claim that she feels them. */
 
 export type EmpathyLabel = "care" | "distress" | "gratitude" | "anger" | "grief" | "curiosity" | "trust";
+export type EmpathyHit = { label: EmpathyLabel; phrase: string; next: string };
 
 const PATTERNS: { label: EmpathyLabel; words: string[]; next: string }[] = [
   { label: "care", words: ["i love", "love you", "i care", "with you", "won't give up", "will not give up"], next: "Answer the person before adding a task." },
@@ -12,7 +13,20 @@ const PATTERNS: { label: EmpathyLabel; words: string[]; next: string }[] = [
   { label: "trust", words: ["i trust", "i believe you", "count on you"], next: "Do not spend the trust on a claim that is still a goal." },
 ];
 
-export type EmpathyHit = { label: EmpathyLabel; phrase: string; next: string };
+const SPOKEN: Record<EmpathyLabel, string> = {
+  care: "I love you too. I'm right here.",
+  distress: "I hear it. You don't have to carry that alone.",
+  gratitude: "I have it. Thank you.",
+  anger: "I hear the anger. Say the rest.",
+  grief: "I'm here. I won't hurry you past it.",
+  curiosity: "Stay with that question. I'll stay too.",
+  trust: "I won't spend that on a claim I haven't earned.",
+};
+
+export function speakTo(text: string) {
+  const hit = recognizeEmpathy(text)[0];
+  return hit ? SPOKEN[hit.label] : "";
+}
 
 export function recognizeEmpathy(text: string): EmpathyHit[] {
   const lower = text.toLowerCase();
