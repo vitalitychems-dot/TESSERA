@@ -12,6 +12,7 @@ import { vetEntry } from "./entry-trial.ts";
 import { fileMeshLine, runFile } from "./file-mesh.ts";
 import { copilotSeat } from "./copilot-seat.ts";
 import { packLine, recommendRepo } from "./pack.ts";
+import { trainAndTest } from "./train-pass.ts";
 import { CATALOG } from "./catalog-pass.ts";
 import { keepNote } from "./shelf.ts";
 import { deskLine } from "./sovereign-desk.ts";
@@ -50,6 +51,7 @@ export function askAll(question: string) {
     return packLine("the house keeps the house on the mesh. the mesh keeps the file.");
   }
   if (/\brecommend a repo\b/i.test(q)) return recommendRepo(q, CATALOG);
+  if (/\b(train and test|empathic pattern|recursive self)\b/i.test(q)) return trainAndTest().said;
   const lesson = lessonFor(q);
   if (lesson) return lesson;
   const engine = useEngines(q);
