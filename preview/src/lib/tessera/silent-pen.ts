@@ -2,6 +2,7 @@ import { keptAnswer, type Correction } from "./corrections.ts";
 import { allEight } from "./desk-steps.ts";
 import { batch50, selector, sequence } from "./batch-50.ts";
 import { batch2, leakyStep, warmupLr } from "./batch-2.ts";
+import { batch3, manhattan } from "./batch-3.ts";
 import { rewardEat } from "./local-learn.ts";
 import { loveFromFiles } from "./love-local.ts";
 import { noteFor, type KeptPage } from "./next-page.ts";
@@ -24,6 +25,11 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (/\beight checkouts\b/i.test(q)) {
     const eight = allEight();
     return `Eight checkout steps ran. Best action ${eight.neuro}. Health ${eight.godel}. Rate ${eight.human}. Coherence ${eight.blueprint}. Bool ${eight.hyperon}.`;
+  }
+  if (/\bthird batch\b/i.test(q)) {
+    const rows = batch3();
+    const held = rows.filter((row) => row.held).length;
+    return `The third fifty were read. A step of 3 by 4 is ${manhattan(3, 4)} by the city-block distance. ${held} trading names were not imported. The path distances run. The other programs in that batch were not written.`;
   }
   if (/\bsecond batch\b/i.test(q)) {
     const rows = batch2();
