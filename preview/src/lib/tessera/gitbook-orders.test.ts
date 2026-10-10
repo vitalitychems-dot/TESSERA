@@ -8,7 +8,8 @@ test("payments stay with the store and her next work is the Gitbook list", () =>
   assert.equal(lookupCatalog("stripe/stripe-node")?.home, "vitality");
   assert.equal(combinedUse("stripe/stripe-node"), "Store. Not her mind.");
   const orders = herOrders();
-  assert.equal(orders.length, 6);
+  assert.equal(orders.length, 8);
   assert.match(gitbookAnswer("what should we build"), /Do not invent/);
+  assert.match(orders.join("\n"), /first module answers/);
   assert.equal(/stripe|seo|checkout/i.test(orders.join(" ")), false);
 });
