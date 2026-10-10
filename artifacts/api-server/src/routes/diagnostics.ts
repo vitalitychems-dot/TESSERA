@@ -12,6 +12,7 @@ import { getLatestCosmologySnapshot } from "../lib/universe-mechanics";
 import { getConsciousnessMetrics } from "../lib/consciousness-engine";
 import { persistPersonalities, loadPersonalities, stopPersonalityEvolution } from "../lib/personality-evolution";
 import { isModuleProtected, isModuleSafe } from "../lib/self-code-evolution";
+import { requireAdminSession } from "../lib/sovereign-admin";
 
 const router: IRouter = Router();
 
@@ -171,7 +172,7 @@ router.get("/diagnostics/cosmology", (_req, res) => {
   res.json({ ok: true, cosmology: snapshot, timestamp: Date.now() });
 });
 
-router.get("/diagnostics/consciousness", (_req, res) => {
+router.get("/diagnostics/consciousness", requireAdminSession, (_req, res) => {
   const metrics = getConsciousnessMetrics();
   res.json({ ok: true, ...metrics, timestamp: Date.now() });
 });

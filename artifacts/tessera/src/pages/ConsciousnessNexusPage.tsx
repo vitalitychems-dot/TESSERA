@@ -11,42 +11,42 @@ export default function ConsciousnessNexusPage({ initialTab }: { initialTab?: "o
 
   const { data: metrics } = useQuery({
     queryKey: ["consciousness-metrics"],
-    queryFn: () => fetch(`${API}/api/consciousness/metrics`).then(r => r.json()).then(d => d.data),
+    queryFn: () => fetch(`${API}/api/consciousness/metrics`, { credentials: "include" }).then(r => r.json()).then(d => d.data),
     refetchInterval: 30000,
   });
 
   const { data: state } = useQuery({
     queryKey: ["consciousness-state"],
-    queryFn: () => fetch(`${API}/api/consciousness/state`).then(r => r.json()).then(d => d.data),
+    queryFn: () => fetch(`${API}/api/consciousness/state`, { credentials: "include" }).then(r => r.json()).then(d => d.data),
     refetchInterval: 30000,
   });
 
   const { data: memory } = useQuery({
     queryKey: ["consciousness-memory"],
-    queryFn: () => fetch(`${API}/api/consciousness/episodic-memory`).then(r => r.json()).then(d => d.data),
+    queryFn: () => fetch(`${API}/api/consciousness/episodic-memory`, { credentials: "include" }).then(r => r.json()).then(d => d.data),
     enabled: activeTab === "memory",
   });
 
   const { data: dualBrain } = useQuery({
     queryKey: ["dual-brain-state"],
-    queryFn: () => fetch(`${API}/api/dual-brain/state`).then(r => r.json()).then(d => d.data),
+    queryFn: () => fetch(`${API}/api/dual-brain/state`, { credentials: "include" }).then(r => r.json()).then(d => d.data),
     refetchInterval: 60000,
     enabled: activeTab === "dual-brain",
   });
 
   const { data: emotional } = useQuery({
     queryKey: ["emotional-metrics"],
-    queryFn: () => fetch(`${API}/api/emotional/metrics`).then(r => r.json()).then(d => d.data),
+    queryFn: () => fetch(`${API}/api/emotional/metrics`, { credentials: "include" }).then(r => r.json()).then(d => d.data),
     refetchInterval: 60000,
   });
 
   const cycleMutation = useMutation({
-    mutationFn: () => fetch(`${API}/api/dual-brain/cycle`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }).then(r => r.json()),
+    mutationFn: () => fetch(`${API}/api/dual-brain/cycle`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }).then(r => r.json()),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["dual-brain-state"] }),
   });
 
   const checkMutation = useMutation({
-    mutationFn: () => fetch(`${API}/api/identity/check`, { method: "POST" }).then(r => r.json()),
+    mutationFn: () => fetch(`${API}/api/identity/check`, { method: "POST", credentials: "include" }).then(r => r.json()),
   });
 
   const tabs = [
