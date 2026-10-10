@@ -5,6 +5,7 @@ import { batch2, leakyStep, warmupLr } from "./batch-2.ts";
 import { batch3, manhattan } from "./batch-3.ts";
 import { topRanking } from "./whiten.ts";
 import { rankTasks } from "./sovereign-desk.ts";
+import { twoThirds } from "./rick-loop.ts";
 import { rewardEat } from "./local-learn.ts";
 import { loveFromFiles } from "./love-local.ts";
 import { noteFor, type KeptPage } from "./next-page.ts";
@@ -27,6 +28,10 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (/\beight checkouts\b/i.test(q)) {
     const eight = allEight();
     return `Eight checkout steps ran. Best action ${eight.neuro}. Health ${eight.godel}. Rate ${eight.human}. Coherence ${eight.blueprint}. Bool ${eight.hyperon}.`;
+  }
+  if (/\b(rick loop|second ten|out of the box)\b/i.test(q)) {
+    const passed = twoThirds(2, 3);
+    return `Two of three is a quorum: ${passed ? "yes" : "no"}. The second ten run: due, quorum, once, split, conflict, budget, sources, sweep, mistake, and handoff. Rick is a seat for a runnable idea, not a measured percentage.`;
   }
   if (/\b(sovereign desk|plumbus|priority queue)\b/i.test(q)) {
     const first = rankTasks([
