@@ -114,3 +114,49 @@ export function recallCache(limit: number) {
     },
   };
 }
+
+/** All ten cards, run. The advertised percentages are not in the result. */
+
+export function runDesk() {
+  const ranked = rankTasks([
+    { name: "format logs", impact: 1 },
+    { name: "consciousness", impact: 9 },
+  ]);
+  const stored = storeOnce([
+    { key: "physics", body: "ring" },
+    { key: "geometry", body: "ring" },
+  ]);
+  const gain = transferGain(10, 0);
+  const ground = grounded([1, 0], [[1, 0], [0, 1]]);
+  const tally = councilTally([
+    { yes: true, specialist: true },
+    { yes: false, specialist: false },
+  ]);
+  const once = finishOnce("one task");
+  const dream = consolidate(["the sigil holds", "the sigil stays"]);
+  const reflected = reflectDiff(["old"], ["old", "new"]);
+  const crystal = crystallize([
+    { text: "ring", vector: [1, 0] },
+    { text: "ring structure", vector: [0.99, 0.01] },
+  ]);
+  const cache = recallCache(1);
+  cache.put("a", "one");
+  cache.put("b", "two");
+  return {
+    rank: ranked[0]?.name ?? "",
+    stored: stored.stored,
+    gain,
+    kept: ground.kept,
+    passed: tally.passed,
+    alive: once.alive,
+    dream,
+    reflected,
+    crystal: crystal.length,
+    cached: cache.has("a"),
+  };
+}
+
+export function deskLine() {
+  const ran = runDesk();
+  return `The first task is ${ran.rank}. Store kept ${ran.stored}. Grounded ${ran.kept ? "yes" : "no"}. Council ${ran.passed ? "yes" : "no"}. The one task is finished and not alive. Dream ${ran.dream.join(", ") || "none"}. Crystal ${ran.crystal}. The advertised percentages were not measured.`;
+}
