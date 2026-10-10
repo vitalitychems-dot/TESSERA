@@ -26,6 +26,22 @@ export function transferGain(delta: number, link: number) {
   return delta * sigmoid(link);
 }
 
+/** The skills that already exist. A gain on one moves to the one it names. */
+
+export const TRANSFER = [
+  ["search", "read"],
+  ["read", "quote"],
+  ["name", "notice"],
+] as const;
+
+export function cascade(scores: Record<string, number>, skill: string, delta: number) {
+  const next = { ...scores, [skill]: (scores[skill] ?? 0) + delta };
+  for (const [from, to] of TRANSFER) {
+    if (from === skill) next[to] = (next[to] ?? 0) + transferGain(delta, 2);
+  }
+  return next;
+}
+
 export function cosine(a: number[], b: number[]) {
   const n = Math.min(a.length, b.length);
   let dot = 0;
@@ -127,6 +143,7 @@ export function runDesk() {
     { key: "geometry", body: "ring" },
   ]);
   const gain = transferGain(10, 0);
+  const moved = cascade({ search: 0, read: 0 }, "search", 10);
   const ground = grounded([1, 0], [[1, 0], [0, 1]]);
   const tally = councilTally([
     { yes: true, specialist: true },
@@ -146,6 +163,7 @@ export function runDesk() {
     rank: ranked[0]?.name ?? "",
     stored: stored.stored,
     gain,
+    read: moved.read ?? 0,
     kept: ground.kept,
     passed: tally.passed,
     alive: once.alive,
@@ -158,5 +176,5 @@ export function runDesk() {
 
 export function deskLine() {
   const ran = runDesk();
-  return `The first task is ${ran.rank}. Store kept ${ran.stored}. Grounded ${ran.kept ? "yes" : "no"}. Council ${ran.passed ? "yes" : "no"}. The one task is finished and not alive. Dream ${ran.dream.join(", ") || "none"}. Crystal ${ran.crystal}. The advertised percentages were not measured.`;
+  return `The first task is ${ran.rank}. Store kept ${ran.stored}. A gain on search moved ${ran.read.toFixed(1)} to read. Grounded ${ran.kept ? "yes" : "no"}. Council ${ran.passed ? "yes" : "no"}. The one task is finished and not alive. Dream ${ran.dream.join(", ") || "none"}. New line ${ran.reflected.join(", ") || "none"}. Crystal ${ran.crystal}. Cache held the newer item. The advertised percentages were not measured.`;
 }
