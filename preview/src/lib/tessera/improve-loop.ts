@@ -1,6 +1,15 @@
-import { meanSquare, queryOk, riseState, sanitize, top1 } from "./checkout-steps.ts";
-import { formatTime, confidence, chem } from "./checkout-steps.ts";
-import { pxName, scaleAction, versionOk } from "./root-skills.ts";
+import { confidence, chem, formatTime, meanSquare, queryOk, riseState, sanitize, top1 } from "./checkout-steps.ts";
+import { isPrivateHost } from "./address-guard.ts";
+import { leakyStep, resetMem, warmupLr } from "./batch-2.ts";
+import { selector, sequence } from "./batch-50.ts";
+import { learnAction, bestAction } from "./local-learn.ts";
+import { pxName, scaleAction, unscaleAction, versionOk } from "./root-skills.ts";
+import { rankByNeed, spend, splitWork, twoSources, twoThirds } from "./rick-loop.ts";
+import { strengthen } from "./recursive-proof.ts";
+import { keepNote } from "./shelf.ts";
+import { sigmoid, storeOnce } from "./sovereign-desk.ts";
+import { born } from "./spin.ts";
+import { topRanking } from "./whiten.ts";
 
 /** Each question is graded against the function. A stored line that disagrees is wrong. */
 
@@ -24,6 +33,28 @@ const WAVES: Ask[][] = [
     { q: "serotonin five", answer: () => String(chem(5).serotonin) },
     { q: "hunger rise", answer: () => String(riseState(0.5, 0.5).hunger) },
     { q: "script refused", answer: () => String(queryOk("<script>")) },
+  ],
+  [
+    { q: "warmup", answer: () => String(warmupLr(0.5, 2, 4)) },
+    { q: "leak", answer: () => String(leakyStep(0.5, 1, 0.5)) },
+    { q: "hard reset", answer: () => String(resetMem(3, 1, true, false)) },
+    { q: "sequence fails", answer: () => String(sequence([true, false])) },
+    { q: "selector hits", answer: () => String(selector([false, true])) },
+    { q: "two thirds", answer: () => String(twoThirds(2, 3)) },
+    { q: "split over cap", answer: () => splitWork("job", 3, 2).join(",") },
+    { q: "over budget", answer: () => String(spend(9, 2, 10).ok) },
+    { q: "one source", answer: () => String(twoSources(["a", "a"])) },
+    { q: "best action", answer: () => bestAction(learnAction({ eat: 0, rest: 0 }, "eat", 1)) },
+    { q: "top index", answer: () => String(topRanking([1, 5, 3], 1)[0]) },
+    { q: "loopback", answer: () => String(isPrivateHost("127.0.0.1")) },
+    { q: "public address", answer: () => String(isPrivateHost("8.8.8.8")) },
+    { q: "secret note", answer: () => String(keepNote("the password is here").ok) },
+    { q: "born left", answer: () => String(born([3, 4]).left) },
+    { q: "sigmoid zero", answer: () => String(sigmoid(0)) },
+    { q: "stored once", answer: () => String(storeOnce([{ key: "a", body: "x" }, { key: "b", body: "x" }]).stored) },
+    { q: "stronger", answer: () => String(strengthen(0.1)) },
+    { q: "unscale low", answer: () => String(unscaleAction(0, 0, 10)) },
+    { q: "higher impact", answer: () => rankByNeed([{ name: "b", impact: 1, due: 2 }, { name: "a", impact: 2, due: 9 }])[0]?.name ?? "" },
   ],
 ];
 
