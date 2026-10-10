@@ -10,7 +10,8 @@ test("one question reaches the connected rooms", () => {
   assert.match(askAll("vote send a wallet") ?? "", /No/);
   assert.match(askAll("run tie") ?? "", /git/);
   assert.match(askAll("welcome Ada for the house") ?? "", /Mark /);
-  assert.match(askAll("github") ?? "", /TESSERA/);
+  assert.match(askAll("plumbus") ?? "", /The first task is consciousness/);
+  assert.match(askAll("plumbus") ?? "", /were not measured/);
   assert.match(askAll("what files") ?? "", /files are in this chamber/);
   assert.match(askAll("where do they live") ?? "", /one hall/);
   assert.match(askAll("contact cursor on gitbook") ?? "", /issue 2/);
