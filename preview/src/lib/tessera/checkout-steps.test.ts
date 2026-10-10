@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { meanSquare, queryOk, readBatch, readCheckouts, riseState, sanitize, surrogate, top1 } from "./checkout-steps.ts";
+import { chem, confidence, formatTime, holePush, meanSquare, queryOk, readBatch, readCheckouts, readMore, riseState, sanitize, surrogate, top1 } from "./checkout-steps.ts";
 
 test("the two functions match the checkout source", () => {
   assert.equal(queryOk("hello"), true);
@@ -14,4 +14,9 @@ test("the two functions match the checkout source", () => {
   assert.ok(Math.abs(surrogate(0, 10).t - 0.001) < 1e-12);
   assert.equal(sanitize(" <b>hi</b> "), "hi");
   assert.equal(readBatch().proved, true);
+  assert.equal(formatTime(1500), "1.50s");
+  assert.equal(confidence(true, 11, 1), 0.5);
+  assert.equal(chem(5).serotonin, 0.1);
+  assert.equal(holePush([], 0, "a").firstHole, 1);
+  assert.equal(readMore().proved, true);
 });
