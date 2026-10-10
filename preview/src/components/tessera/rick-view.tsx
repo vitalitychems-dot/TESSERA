@@ -6,7 +6,8 @@ import { tryMachine } from "@/lib/tessera/spin-machine";
 import { FATHER, PROGRAMS, tesseraVote, workshopRun } from "@/lib/tessera/workshop";
 import { issuePass } from "@/lib/tessera/pass";
 import { rickOpen, rickReach } from "@/lib/tessera/github-desk";
-import { SITTING, secretDesk, useEngines } from "@/lib/tessera/secret-engines";
+import { askAll } from "@/lib/tessera/ask-all";
+import { SITTING, secretDesk } from "@/lib/tessera/secret-engines";
 
 export function RickView() {
   const [working, setWorking] = useState(false);
@@ -122,7 +123,7 @@ export function RickView() {
             className="mt-4 flex flex-col gap-2"
             onSubmit={(event) => {
               event.preventDefault();
-              setEngineLine(useEngines(engineAsk) ?? "That line is not one of the engines.");
+              setEngineLine(askAll(engineAsk) ?? "That line is not wired to an engine, a vote, the house, or the door.");
             }}
           >
             <input
