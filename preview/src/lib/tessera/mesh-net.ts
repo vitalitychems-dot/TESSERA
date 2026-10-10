@@ -26,6 +26,12 @@ export const MESH = {
       run: "node admit.mjs",
       does: "Keeps a note closed until it is approved.",
     },
+    {
+      name: "carry",
+      path: "projects/carry",
+      run: "node carry.mjs",
+      does: "Reads the mesh index from disk and checks that it needs no web.",
+    },
   ],
 } as const;
 
