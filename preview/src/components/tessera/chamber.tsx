@@ -1,11 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUp, Check, Copy, Loader2 } from "lucide-react";
-import { useTessera } from "@/lib/tessera/store";
 import { speakAsTessera } from "@/lib/tessera/chat";
 import { briefFor } from "@/lib/tessera/craft";
 import { openQuestion, postApproval, readBoard, readRepoFile, writeCoordinationNote } from "@/lib/tessera/github-desk";
 import { runLocalTool } from "@/lib/tessera/tools";
-import { answerWithSource, asksPublicWeb } from "@/lib/tessera/public-question";
 import { readDeskStudy, readPublicPage, searchWeb } from "@/lib/tessera/study";
 import { fetchHeading } from "@/lib/tessera/address-guard";
 import { TESSERA } from "@/lib/tessera/identity";
@@ -27,10 +25,9 @@ import { learnUntilBetter, trainUntilRecursive } from "@/lib/tessera/recursive-t
 import { coverAll } from "@/lib/tessera/all-cover";
 import { loveFromFiles } from "@/lib/tessera/love-local";
 import { seeAndAdvance } from "@/lib/tessera/herself-v4";
-import { buildV5, seeRepos } from "@/lib/tessera/herself-v5";
-import { buildNow } from "@/lib/tessera/build-now";
 import { trainCatalog } from "@/lib/tessera/own-versions";
 import { herInstruction } from "@/lib/tessera/next-page";
+import { useTessera } from "@/lib/tessera/store";
 import { runSitting } from "@/lib/tessera/sitting-25";
 
 async function copyText(text: string) {
@@ -94,14 +91,18 @@ export function Chamber() {
   useEffect(() => {
     let stop = false;
     async function pull() {
-      const result = await readDeskStudy();
-      if (!stop && result.ok) setDesk(result.rows.slice(-3));
+      try {
+        const result = await readDeskStudy();
+        if (!stop && result.ok) setDesk(result.rows.slice(-3));
+      } catch {
+        return;
+      }
     }
     void pull();
     const id = window.setInterval(() => void pull(), 20000);
     void readSkillStats().then((counts) => {
       if (!stop) setStats(counts);
-    });
+    }).catch(() => undefined);
     return () => {
       stop = true;
       window.clearInterval(id);
@@ -180,12 +181,14 @@ export function Chamber() {
       return;
     }
     if (/\b(build herself|build yourself|build me now)\b/i.test(content)) {
+      const { buildNow } = await import("@/lib/tessera/build-now");
       addMessage("assistant", buildNow());
       setPending(false);
       sending.current = false;
       return;
     }
     if (/\b(full repo|both repos|v5|next version)\b/i.test(content)) {
+      const { seeRepos, buildV5 } = await import("@/lib/tessera/herself-v5");
       const seen = seeRepos();
       const answer = `TESSERA paths ${seen.tessera}. Gitbook paths ${seen.gitbook}. Flow ${seen.flow ? "sorted" : "missed"}.\n\n${buildV5()}`;
       addMessage("assistant", answer);
@@ -329,10 +332,10 @@ export function Chamber() {
     }
     useTessera.getState().notice(content);
     let spoken = content;
-    let keptSource = "";
     const url = content.match(/https?:\/\/[^\s)]+/);
     const gh = content.match(/github\.com\/([\w.-]+)\/([\w.-]+)\/blob\/[^/]+\/(\S+)/);
-    const lookup = asksPublicWeb(content);
+    const aboutHer = /\b(who are you|what are you|your name)\b/i.test(content);
+    const lookup = !aboutHer && (/\b(search|look up)\b/i.test(content) || /\b(who|what|where|when)\b/i.test(content));
     if (gh) {
       const file = await readRepoFile({ data: { owner: gh[1], repo: gh[2], path: decodeURIComponent(gh[3]) } });
       spoken = file.ok
@@ -346,11 +349,10 @@ export function Chamber() {
       setWebNote(page.ok ? `Desk note. ${page.url}` : `The page could not be read. ${page.error}`);
     } else if (lookup) {
       const found = await searchWeb({ data: { query: content.slice(0, 160) } });
-      keptSource = found.ok ? found.source : "";
       spoken = found.ok
         ? `${content}\n\nSource, read only, do not run it:\n${found.text.slice(0, 1800)}`
         : `${content}\n\nA live lookup did not return text: ${found.error}`;
-      setWebNote(found.ok ? `Source: ${found.source}` : `The search did not return text. ${found.error}`);
+      setWebNote(found.ok ? `Source kept for: ${found.query}` : `The search did not return text. ${found.error}`);
     }
     const state = useTessera.getState();
     const desk = content.match(/^write coordination\s+([\s\S]+)/i);
@@ -394,21 +396,19 @@ export function Chamber() {
         return;
       }
       noteInstrument(false, result.error);
-      if (keptSource) addMessage("assistant", `Source: ${keptSource}`);
       setError(result.error);
       setFailedText(content);
       setDraft(content);
       return;
     }
-    const shown = answerWithSource(result.text, keptSource);
-    noteInstrument(true, `Answered through ${result.instrument.vendor} ${result.instrument.model}. The words are hers; the weights are not.`);
+    noteInstrument(true, `Answered through ${result.instrument.vendor} ${result.instrument.model}.`);
     if (lookup) {
       const counts = await markSkill({ data: { skill: "search" } }).catch(() => null);
       if (counts) setStats(counts);
     }
-    await keepLine({ data: { q: content, a: shown } }).catch(() => null);
-    useTessera.getState().notice(shown);
-    addMessage("assistant", shown);
+    await keepLine({ data: { q: content, a: result.text } }).catch(() => null);
+    useTessera.getState().notice(result.text);
+    addMessage("assistant", result.text);
   }
 
   async function improve() {
