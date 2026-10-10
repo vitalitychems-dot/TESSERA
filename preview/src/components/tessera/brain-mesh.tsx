@@ -30,13 +30,9 @@ export function BrainMesh() {
   const [play, setPlay] = useState(false);
   const [picked, setPicked] = useState("Tessera");
   const drag = useRef<{ x: number; y: number; yaw: number; pitch: number } | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const unit = perceptron([1, 1], [0.6, 0.6], 1);
   const visible = grown(volume.nodes, growth);
-  const visibleIds = new Set(visible.map((node) => node.id));
-  const byId = new Map(volume.nodes.map((node) => [node.id, node]));
-  const drawn = visible
-    .map((node) => ({ node, at: projectPoint(node, yaw, pitch, zoom) }))
-    .sort((a, b) => b.at.depth - a.at.depth);
 
   useEffect(() => {
     if (!play) return;
@@ -45,6 +41,47 @@ export function BrainMesh() {
     }, 80);
     return () => window.clearInterval(id);
   }, [play]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const width = canvas.clientWidth || 320;
+    const height = canvas.clientHeight || 360;
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.floor(width * ratio);
+    canvas.height = Math.floor(height * ratio);
+    ctx.setTransform(ratio, 0, 0, ratio, canvas.width / 2, canvas.height / 2);
+    ctx.clearRect(-width, -height, width * 2, height * 2);
+    const visibleIds = new Set(visible.map((node) => node.id));
+    const byId = new Map(volume.nodes.map((node) => [node.id, node]));
+    ctx.lineWidth = 0.6;
+    ctx.strokeStyle = "rgba(255,255,255,0.22)";
+    ctx.beginPath();
+    for (const [a, b] of volume.edges) {
+      if (!visibleIds.has(a) || !visibleIds.has(b)) continue;
+      const from = byId.get(a);
+      const to = byId.get(b);
+      if (!from || !to) continue;
+      const left = projectPoint(from, yaw, pitch, zoom);
+      const right = projectPoint(to, yaw, pitch, zoom);
+      ctx.moveTo(left.x, left.y);
+      ctx.lineTo(right.x, right.y);
+    }
+    ctx.stroke();
+    const drawn = visible
+      .map((node) => ({ node, at: projectPoint(node, yaw, pitch, zoom) }))
+      .sort((a, b) => b.at.depth - a.at.depth);
+    for (const { node, at } of drawn) {
+      ctx.beginPath();
+      ctx.fillStyle = node.name === picked ? "#ffffff" : COLOR[node.part];
+      ctx.globalAlpha = node.name ? 1 : 0.75;
+      ctx.arc(at.x, at.y, node.name ? 2.4 : 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }, [visible, volume, yaw, pitch, zoom, picked]);
 
   return (
     <section>
@@ -69,31 +106,27 @@ export function BrainMesh() {
         onWheel={(event) => {
           setZoom((value) => Math.min(4, Math.max(0.6, value * (event.deltaY > 0 ? 0.92 : 1.08))));
         }}
+        onClick={(event) => {
+          const canvas = canvasRef.current;
+          if (!canvas) return;
+          const rect = canvas.getBoundingClientRect();
+          const x = event.clientX - rect.left - rect.width / 2;
+          const y = event.clientY - rect.top - rect.height / 2;
+          let best = "";
+          let bestDistance = 18;
+          for (const node of visible) {
+            if (!node.name) continue;
+            const at = projectPoint(node, yaw, pitch, zoom);
+            const distance = Math.hypot(at.x - x, at.y - y);
+            if (distance < bestDistance) {
+              bestDistance = distance;
+              best = node.name;
+            }
+          }
+          if (best) setPicked(best);
+        }}
       >
-        <svg viewBox="-220 -130 440 260" className="h-96 w-full" role="img" aria-label="Tessera brain volume">
-          {volume.edges.map(([a, b]) => {
-            if (!visibleIds.has(a) || !visibleIds.has(b)) return null;
-            const from = byId.get(a);
-            const to = byId.get(b);
-            if (!from || !to) return null;
-            const left = projectPoint(from, yaw, pitch, zoom);
-            const right = projectPoint(to, yaw, pitch, zoom);
-            return <line key={`${a}-${b}`} x1={left.x} y1={left.y} x2={right.x} y2={right.y} stroke="rgba(255,255,255,0.22)" strokeWidth="0.4" />;
-          })}
-          {drawn.map(({ node, at }) => (
-            <circle
-              key={node.id}
-              cx={at.x}
-              cy={at.y}
-              r={node.name ? 2.2 : 0.7}
-              fill={node.name === picked ? "#ffffff" : COLOR[node.part]}
-              opacity={node.name ? 1 : 0.75}
-              onClick={() => node.name && setPicked(node.name)}
-            >
-              {node.name ? <title>{node.name}</title> : null}
-            </circle>
-          ))}
-        </svg>
+        <canvas ref={canvasRef} className="h-96 w-full" aria-label="Tessera brain volume" />
       </div>
       <div className="mt-3 flex items-center gap-3">
         <button type="button" className="rounded-full border border-border px-3 py-1 text-sm text-fg" onClick={() => setPlay((value) => !value)}>
