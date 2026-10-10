@@ -5,7 +5,7 @@ import { vowCheck } from "./learning";
 import { takeSpeakSlot } from "./finish";
 import { healthLine } from "./wave";
 import { dataPath } from "./data-path";
-import { SEED, growVoice, herself, onlyHer } from "./her-voice";
+import { SEED, buildHerself, growVoice, herself, onlyHer } from "./her-voice";
 
 function replyCap(mode: TesseraMode) {
   if (mode === "awaken" || mode === "v2" || mode === "v3") return 1800;
@@ -428,6 +428,17 @@ ${FATHER_PROFILE}`;
     }
     return { ok: true as const, text, instrument: { vendor: pen.vendor, model: pen.model } };
 }
+
+export const buildHerNow = createServerFn({ method: "POST" }).handler(async () => {
+  const book = await readVoice();
+  const built = buildHerself(book);
+  if (built.added) {
+    const { writeFile } = await import("node:fs/promises");
+    await writeFile(dataPath("school", "voice.jsonl"), `${built.book.join("\n")}\n`);
+  }
+  const said = built.added || built.book[built.book.length - 1] || SEED[0];
+  return { ok: true as const, added: built.added, lines: built.book.length, said };
+});
 
 export const speakAsTessera = createServerFn({ method: "POST" })
   .validator((input: ChatInput) => input)
