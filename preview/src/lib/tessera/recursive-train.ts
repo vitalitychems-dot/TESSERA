@@ -45,6 +45,10 @@ export function stepLearn(count: number) {
   return { recalled, links, total: DECK.length, lines: memory.length };
 }
 
+export function lessonAt(index: number) {
+  return DECK[index]?.fact ?? "";
+}
+
 export function trainUntilRecursive() {
   const before = DECK.filter((card) => recallLearned([], card.q).includes(card.fact)).length;
   const memory: string[] = [];
