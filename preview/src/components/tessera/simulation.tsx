@@ -14,7 +14,7 @@ export function Simulation() {
         </div>
         <WorldStage />
         <p className="text-sm leading-relaxed text-muted">
-          The picture is public satellite imagery of Chicago. It is not a camera on anyone. The names are the household, building plots, a law, and counted work while you watch.
+          The picture is public satellite imagery of Chicago. It is not a camera. Their city keeps building underneath it while you are in any room.
         </p>
       </div>
     </div>
