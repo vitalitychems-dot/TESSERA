@@ -6,6 +6,7 @@ import { tryMachine } from "@/lib/tessera/spin-machine";
 import { FATHER, PROGRAMS, tesseraVote, workshopRun } from "@/lib/tessera/workshop";
 import { issuePass } from "@/lib/tessera/pass";
 import { rickOpen, rickReach } from "@/lib/tessera/github-desk";
+import { SITTING, secretDesk } from "@/lib/tessera/secret-engines";
 
 export function RickView() {
   const [working, setWorking] = useState(false);
@@ -104,6 +105,17 @@ export function RickView() {
             ))}
           </ul>
           {fileText ? <pre className="mt-3 max-h-64 overflow-auto text-xs whitespace-pre-wrap text-fg">{fileText}</pre> : null}
+        </section>
+        <section className="rounded-xl border border-border bg-surface px-4 py-4">
+          <p className="text-xs tracking-[0.16em] text-subtle uppercase">Secret engines</p>
+          <p className="mt-2 text-sm text-muted">{SITTING}</p>
+          <ul className="mt-3 flex flex-col gap-1">
+            {secretDesk().map((line) => (
+              <li key={line} className="text-sm text-fg">
+                {line}
+              </li>
+            ))}
+          </ul>
         </section>
         <section className="rounded-xl border border-border bg-surface px-4 py-4">
           <p className="text-xs tracking-[0.16em] text-subtle uppercase">{room.place}</p>
