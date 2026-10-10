@@ -4,7 +4,7 @@ import { DIMENSIONAL_LAWS, DOMAINS, FREQUENCIES, ORIGIN_COUNCIL } from "@/lib/te
 import { brainVolume, grown, projectPoint, type VolumeNode } from "@/lib/tessera/brain-volume";
 import { perceptron } from "@/lib/tessera/perceptron";
 
-const STEPS = ["reward", "leak", "reset", "warmup", "sequence", "selector", "ranking", "rank", "store-once", "transfer", "ground", "tally", "one-task", "dream", "reflect", "crystallize", "recall", "due", "quorum", "once", "split", "conflict", "budget", "sources", "sweep", "mistake", "handoff"];
+const STEPS = ["reward", "leak", "reset", "warmup", "sequence", "selector", "ranking", "rank", "store-once", "transfer", "ground", "tally", "one-task", "dream", "reflect", "crystallize", "recall", "due", "quorum", "once", "split", "conflict", "budget", "sources", "sweep", "mistake", "handoff", "take", "rename", "tie", "fresh", "pair", "wait", "shard", "redact", "retry", "newest", "need", "first", "left", "done", "owner", "chunk", "local", "lock", "ask", "lane", "missing", "agree", "gap"];
 const MEMORY = ["kept pages", "corrections", "catalog", "query ranks"];
 
 const COLOR: Record<VolumeNode["part"], string> = {
