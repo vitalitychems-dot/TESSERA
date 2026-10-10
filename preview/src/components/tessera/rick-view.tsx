@@ -10,7 +10,7 @@ import { askAll } from "@/lib/tessera/ask-all";
 import { SITTING, secretDesk } from "@/lib/tessera/secret-engines";
 
 export function RickView() {
-  const [working, setWorking] = useState(false);
+  const [working, setWorking] = useState(true);
   const [steps, setSteps] = useState(runLean);
   const [checks, setChecks] = useState(runChecks);
   const [batch, setBatch] = useState("");
@@ -34,6 +34,20 @@ export function RickView() {
   const people = stepHouse(tick, guests);
   const together = roomsAt(tick, guests);
   const tieVote = tesseraVote("Joins the house, the spin, and the git mesh.");
+
+  useEffect(() => {
+    const rankedAt = performance.now();
+    const ranked = localBatch(50000);
+    setBatch(`${ranked.count} ranked. Top ${ranked.top}. ${(performance.now() - rankedAt).toFixed(1)} ms. Tokens ${ranked.tokens}.`);
+    const spunAt = performance.now();
+    const spun = tryMachine(20000, 7);
+    setMachine(
+      spun.held
+        ? `20000 shots. ${spun.counts[0]} even, ${spun.counts[3]} odd pair, ${spun.split} split. ${(performance.now() - spunAt).toFixed(1)} ms. Tokens ${spun.tokens}.`
+        : "The machine did not hold. The split was too large.",
+    );
+    setBuilt(workshopRun("tie", true, 0).reason);
+  }, []);
 
   useEffect(() => {
     let stop = false;

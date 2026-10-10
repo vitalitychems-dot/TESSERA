@@ -14,7 +14,7 @@ export function Simulation() {
         </div>
         <WorldStage />
         <p className="text-sm leading-relaxed text-muted">
-          The picture is live satellite imagery of Chicago. The clock is the real Central time. No one is drawn walking on it.
+          The picture is live satellite imagery of Chicago. The clock is the real Central time. The names on it are the house, and they turn without a button.
         </p>
       </div>
     </div>
