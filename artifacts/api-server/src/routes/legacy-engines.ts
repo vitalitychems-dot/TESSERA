@@ -297,6 +297,4 @@ router.post("/autonomous/stop", requireAdminSession, (_req, res) => {
   res.json({ status: "stopped", ...getAutonomousStatus() });
 });
 
-startAutonomousOperation();
-
 export default router;
