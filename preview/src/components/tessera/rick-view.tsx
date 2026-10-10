@@ -5,6 +5,7 @@ import { interferePick } from "@/lib/tessera/spin";
 import { tryMachine } from "@/lib/tessera/spin-machine";
 import { FATHER, PROGRAMS, tesseraVote, workshopRun } from "@/lib/tessera/workshop";
 import { issuePass } from "@/lib/tessera/pass";
+import { rickReach } from "@/lib/tessera/github-desk";
 
 export function RickView() {
   const [working, setWorking] = useState(false);
@@ -19,6 +20,7 @@ export function RickView() {
   const [guestName, setGuestName] = useState("");
   const [guestPurpose, setGuestPurpose] = useState("");
   const [door, setDoor] = useState("");
+  const [reach, setReach] = useState("He has not asked GitHub yet.");
   const room = rickRoom(working);
   const people = stepHouse(tick, guests);
   const together = roomsAt(tick, guests);
@@ -172,6 +174,19 @@ export function RickView() {
             </button>
             {door ? <p className="text-sm text-fg">{door}</p> : null}
             <a href="/tunnel.html" className="text-sm text-accent">Open the room</a>
+            <button
+              type="button"
+              onClick={() => {
+                setReach("Asking.");
+                void rickReach()
+                  .then((result) => setReach(result.line))
+                  .catch(() => setReach("The app could not ask GitHub."));
+              }}
+              className="h-11 rounded-full border border-border px-4 text-sm text-fg"
+            >
+              Ask GitHub
+            </button>
+            <p className="text-sm text-fg">{reach}</p>
           </div>
         </section>
         <p className="text-sm text-muted">No quantum device is in the files. These twenty answers were taken from local steps.</p>
