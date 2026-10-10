@@ -4,6 +4,7 @@ import { queryWikipedia, type WikipediaSummary } from "./providers/wikipedia-pro
 import { queryArxiv, type ArxivPaper } from "./providers/arxiv-provider";
 import { getOptimalModel, type OptimizerCategory } from "./swarm-optimizer";
 import { batchedCallLLM } from "./llm-batcher";
+import { withCodexDirective } from "./codex-startup-directive";
 import { recallIngestedKnowledge } from "./ingested-recall";
 import { searchMemory } from "./vector-memory";
 import { injectStimulus } from "./consciousness-engine";
@@ -491,7 +492,7 @@ async function handleLLMDomain(domain: string, query: string): Promise<DomainRes
 
   const analysis = await batchedCallLLM(
     [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: withCodexDirective(systemPrompt) },
       { role: "user", content: userPrompt },
     ],
     { maxTokens: 1024, timeoutMs: 15_000, skipBatcher: true },

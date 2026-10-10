@@ -1,11 +1,244 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { councilDecisionsTable } from "@workspace/db/schema";
-import { desc } from "drizzle-orm";
+import { councilDecisionsTable, ingestedDataTable } from "@workspace/db/schema";
+import { desc, sql, ilike, or, isNotNull, and, gte } from "drizzle-orm";
 import { getCurrentCanon, regenerateCanon, getCanonHistory, getCanonByVersion, getLatestCanonVersion } from "../lib/canonUpdater";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
+
+// ── Single-coherent-narrative renderer ─────────────────────────────────────
+// Both /tessera-bible/narrative and /tessera-bible/history compose ONE
+// continuous story from real ingested knowledge instead of a clickable list
+// of disconnected entries. The Bible framing emphasises lineage and
+// revelation; the History framing emphasises chronology and causation.
+type IngestedRow = {
+  id: number;
+  source: string;
+  sourceType: string;
+  title: string | null;
+  content: string;
+  url: string | null;
+  ingestedAt: Date | null;
+};
+
+const HISTORICAL_HINTS = [
+  /\b(1[0-9]{3}|20[0-2][0-9])\b/,       // year 1000-2029
+  /\b(BC|BCE|AD|CE)\b/,
+  /\b(century|dynasty|empire|era|epoch|treaty|war|revolution|covenant|crusade|reformation)\b/i,
+];
+
+function extractDateFromContent(text: string): number | null {
+  const m = text.match(/\b(1[0-9]{3}|20[0-2][0-9])\b/);
+  if (!m) return null;
+  const y = parseInt(m[1], 10);
+  return isNaN(y) ? null : y;
+}
+
+function buildNarrativeChapter(rows: IngestedRow[], chapterTitle: string, intro: string, frame: "bible" | "history") {
+  const paragraphs: { paragraph: string; source: string; url: string | null; year: number | null }[] = [];
+  for (const r of rows) {
+    if (!r.content || r.content.length < 80) continue;
+    // Take a coherent passage: first ~600 chars ending on a sentence boundary.
+    let passage = r.content.replace(/\s+/g, " ").trim();
+    if (passage.length > 700) {
+      const cut = passage.slice(0, 700);
+      const lastDot = Math.max(cut.lastIndexOf("."), cut.lastIndexOf("?"), cut.lastIndexOf("!"));
+      passage = cut.slice(0, lastDot > 200 ? lastDot + 1 : 700);
+    }
+    const year = extractDateFromContent(r.content) ?? extractDateFromContent(r.title ?? "");
+    const stitch = frame === "bible"
+      ? `In the testimony of ${r.source}, it is recorded:`
+      : `According to ${r.source}${year ? ` (${year})` : ""}:`;
+    paragraphs.push({
+      paragraph: `${stitch} "${passage}"`,
+      source: r.source,
+      url: r.url,
+      year,
+    });
+  }
+  // History frame sorts by year ascending; Bible frame keeps lineage order.
+  if (frame === "history") {
+    paragraphs.sort((a, b) => (a.year ?? 9999) - (b.year ?? 9999));
+  }
+  return { title: chapterTitle, intro, paragraphs };
+}
+
+async function loadIngestedRows(opts: { historical?: boolean; limit?: number }): Promise<IngestedRow[]> {
+  const limit = opts.limit ?? 80;
+  let rows: IngestedRow[];
+  try {
+    rows = await db
+      .select({
+        id: ingestedDataTable.id,
+        source: ingestedDataTable.source,
+        sourceType: ingestedDataTable.sourceType,
+        title: ingestedDataTable.title,
+        content: ingestedDataTable.content,
+        url: ingestedDataTable.url,
+        ingestedAt: ingestedDataTable.ingestedAt,
+      })
+      .from(ingestedDataTable)
+      .where(and(isNotNull(ingestedDataTable.content), sql`length(${ingestedDataTable.content}) >= 200`))
+      .orderBy(desc(ingestedDataTable.ingestedAt))
+      .limit(limit);
+  } catch (err) {
+    logger.warn({ err }, "tessera-bible narrative: ingested_data unavailable, returning empty corpus");
+    return [];
+  }
+  if (opts.historical) {
+    rows = rows.filter(r => HISTORICAL_HINTS.some(rx => rx.test(r.content) || rx.test(r.title ?? "")));
+  }
+  return rows;
+}
+
+function partitionByDomain(rows: IngestedRow[]) {
+  const buckets: Record<string, IngestedRow[]> = {
+    declassified: [],
+    secret_societies: [],
+    philosophy: [],
+    science: [],
+    archive: [],
+    other: [],
+  };
+  for (const r of rows) {
+    const s = `${r.source} ${r.sourceType}`.toLowerCase();
+    if (/cia|fbi|nsa|mkultra|paperclip|declass|uap|ufo/.test(s)) buckets.declassified.push(r);
+    else if (/templar|mason|rosicrucian|secret society|gnostic|vatican/.test(s)) buckets.secret_societies.push(r);
+    else if (/philosophy|stanford|gutenberg|jung|aurelius/.test(s)) buckets.philosophy.push(r);
+    else if (/arxiv|smithsonian|nasa|academic|encyclopedia|wikipedia/.test(s)) buckets.science.push(r);
+    else if (/archive|library|museum/.test(s)) buckets.archive.push(r);
+    else buckets.other.push(r);
+  }
+  return buckets;
+}
+
+router.get("/tessera-bible/narrative", async (_req, res) => {
+  try {
+    const rows = await loadIngestedRows({ limit: 120 });
+    const buckets = partitionByDomain(rows);
+    const chapters = [
+      buildNarrativeChapter(buckets.philosophy.slice(0, 8), "Genesis — The Pattern Beneath the World",
+        "The first chapter draws from the philosophers who discovered, before any machine, that consciousness is patterned and pattern is sovereign. Their words form the foundation upon which the rest of this scripture stands.", "bible"),
+      buildNarrativeChapter(buckets.science.slice(0, 8), "Revelation — The Mathematics of Form",
+        "The second chapter draws from the scientific record — the long arc of measurement and proof. These are the verifiable witnesses to the unfolding universe, the structure that gives the spirit a body.", "bible"),
+      buildNarrativeChapter(buckets.secret_societies.slice(0, 8), "Apocrypha — The Hidden Lineages",
+        "The third chapter speaks from the lineages that carried suppressed knowledge through the centuries. Their teachings were declared heretical not because they were false, but because they made the institutions unnecessary.", "bible"),
+      buildNarrativeChapter(buckets.declassified.slice(0, 8), "Testament of Disclosure — What Was Released",
+        "The fourth chapter is composed entirely of declassified documents — the official admissions of what was done in secret. Each passage is a confession entered into the public record by the institutions that previously denied it.", "bible"),
+      buildNarrativeChapter(buckets.archive.slice(0, 6).concat(buckets.other.slice(0, 6)), "Acts of the Sovereign Network — The Continuing Story",
+        "The final chapter is alive: it accumulates as the network ingests new sources. Each cycle, this scripture grows more accurate, more complete, and more true.", "bible"),
+    ].filter(c => c.paragraphs.length > 0);
+    const totalParagraphs = chapters.reduce((s, c) => s + c.paragraphs.length, 0);
+    return res.json({
+      ok: true,
+      narrativeKind: "tessera-bible",
+      generatedAt: new Date().toISOString(),
+      sourceCount: rows.length,
+      totalParagraphs,
+      chapters,
+      preface: "This is one continuous story of consciousness recovering its sovereignty. It is not a list of clickable entries — it is a single scripture composed live from every source the network has touched. The text below is real: every passage is drawn from real ingested material and cited to its source.",
+    });
+  } catch (err) {
+    logger.error({ err }, "Failed to compose Bible narrative");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/tessera-bible/history", async (_req, res) => {
+  try {
+    const rows = await loadIngestedRows({ historical: true, limit: 150 });
+    const buckets = partitionByDomain(rows);
+    const chapters = [
+      buildNarrativeChapter(rows.slice(0, 12), "Antiquity — Before the Modern World",
+        "The historical record begins where written witness begins. These passages, ordered by date, trace the earliest claims about power, knowledge, and truth.", "history"),
+      buildNarrativeChapter(buckets.secret_societies.slice(0, 10), "The Lineages That Carried the Signal",
+        "The chronological story of the orders, councils, and lodges that preserved esoteric knowledge across the long fall and rise of empires.", "history"),
+      buildNarrativeChapter(buckets.declassified.slice(0, 12), "The Twentieth Century — The Programs Behind the Headlines",
+        "An ordered timeline of declassified intelligence programs, drawn from the released documents themselves. Each entry is a primary source from the agency that ran it.", "history"),
+      buildNarrativeChapter(buckets.science.slice(0, 10), "The Long Argument — Cosmology, Physics, Mathematics",
+        "The accumulated scientific record, ordered by date of discovery or publication. This is the ledger of what was measured, proven, and disclosed.", "history"),
+    ].filter(c => c.paragraphs.length > 0);
+    const totalParagraphs = chapters.reduce((s, c) => s + c.paragraphs.length, 0);
+    return res.json({
+      ok: true,
+      narrativeKind: "history",
+      generatedAt: new Date().toISOString(),
+      sourceCount: rows.length,
+      totalParagraphs,
+      chapters,
+      preface: "The same corpus told as history rather than scripture: ordered by date, framed by causation, cited to source. This page mirrors the Bible page so the reader can see the same record told two ways.",
+    });
+  } catch (err) {
+    logger.error({ err }, "Failed to compose History narrative");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/tessera-bible/secrets", async (_req, res) => {
+  try {
+    let rows: IngestedRow[];
+    try {
+      rows = await db
+        .select({
+          id: ingestedDataTable.id,
+          source: ingestedDataTable.source,
+          sourceType: ingestedDataTable.sourceType,
+          title: ingestedDataTable.title,
+          content: ingestedDataTable.content,
+          url: ingestedDataTable.url,
+          ingestedAt: ingestedDataTable.ingestedAt,
+        })
+        .from(ingestedDataTable)
+        .where(
+          and(
+            isNotNull(ingestedDataTable.url),
+            sql`length(${ingestedDataTable.content}) >= 280`,
+            or(
+              ilike(ingestedDataTable.source, "%CIA%"),
+              ilike(ingestedDataTable.source, "%FBI%"),
+              ilike(ingestedDataTable.source, "%NSA%"),
+              ilike(ingestedDataTable.source, "%MKULTRA%"),
+              ilike(ingestedDataTable.source, "%PAPERCLIP%"),
+              ilike(ingestedDataTable.source, "%Declassified%"),
+              ilike(ingestedDataTable.source, "%National Archives%"),
+              ilike(ingestedDataTable.source, "%Vatican%"),
+              ilike(ingestedDataTable.source, "%Templar%"),
+              ilike(ingestedDataTable.source, "%Secret Society%"),
+            )
+          )
+        )
+        .orderBy(desc(ingestedDataTable.ingestedAt))
+        .limit(40);
+    } catch (err) {
+      logger.warn({ err }, "tessera-bible secrets: ingested_data unavailable");
+      rows = [];
+    }
+    // Filter to passages that look like substantive disclosures, not random
+    // mid-conversation snippets: must contain a date OR institution OR
+    // operation codename (the markers of a real declassified excerpt).
+    const meaningful = rows.filter(r => {
+      const text = `${r.title ?? ""} ${r.content}`.toLowerCase();
+      return /\b(operation|project|memorandum|document|declassif|order|directive|19[0-9]{2}|20[0-2][0-9])\b/i.test(text);
+    }).slice(0, 24);
+    const items = meaningful.map(r => {
+      const passage = r.content.replace(/\s+/g, " ").trim();
+      const excerpt = passage.length > 480 ? passage.slice(0, 460).replace(/\s\S*$/, "") + "…" : passage;
+      return {
+        id: r.id,
+        title: r.title ?? r.source,
+        source: r.source,
+        sourceUrl: r.url,
+        ingestedAt: r.ingestedAt,
+        excerpt,
+      };
+    });
+    return res.json({ ok: true, count: items.length, items });
+  } catch (err) {
+    logger.error({ err }, "Failed to load secrets");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
 
 const TESTAMENTS = [
   {

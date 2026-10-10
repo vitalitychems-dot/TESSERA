@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Shield, Vote, Users, TrendingUp, CheckCircle, XCircle, Loader2, Plus, Heart, Brain } from "lucide-react";
+import { Shield, Vote, TrendingUp, CheckCircle, XCircle, Plus, Heart, Brain, GitBranch } from "lucide-react";
 import { GlassCard, GradientBar, SectionHeader, PageHeader, RadialGauge, MiniStat } from "@/components/ui/sovereign";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +38,44 @@ export default function SovereigntyDashboardPage() {
     queryKey: ["heartbeat-metrics"],
     queryFn: () => fetch(`${API}/api/heartbeat/metrics`).then(r => r.json()).then(d => d.data),
     refetchInterval: 15000,
+  });
+
+  // Self-evolution feed: surfaces every recent proposal with its decision
+  // status — including REJECTED ones with the council's rationale, so a
+  // failed self-improvement attempt is never silently swallowed.
+  const { data: evolutionMetrics } = useQuery<{
+    totalProposals: number;
+    appliedChanges: number;
+    rolledBackChanges: number;
+    isLocked: boolean;
+    recentProposals?: Array<{
+      id: string;
+      targetModule: string;
+      proposedChange: string;
+      rationale?: string;
+      status: string;
+      riskLevel?: string;
+      impact?: string;
+      proposedAt?: number;
+      appliedAt?: number;
+    }>;
+    moduleDiagnostics?: Array<{
+      module: string;
+      attempted: number;
+      applied: number;
+      rejected: number;
+      rolledBack: number;
+      lastStatus: string | null;
+      lastReason: string | null;
+      lastProposedAt: number | null;
+      isProtected: boolean;
+      isSafe: boolean;
+      isCoolingDown: boolean;
+    }>;
+  }>({
+    queryKey: ["self-evolution-metrics"],
+    queryFn: () => fetch(`${API}/api/self-evolution/metrics`).then(r => r.json()).then(d => d.data),
+    refetchInterval: 30000,
   });
 
   const { data: adminStatus } = useQuery({
@@ -197,6 +235,98 @@ export default function SovereigntyDashboardPage() {
               <MiniStat value={intelligence.embeddings?.cacheSize ?? 0} label="Embeddings" color="violet" />
               <MiniStat value={`${intelligence.cache?.ttlSeconds ?? 3600}s`} label="Cache TTL" color="blue" />
             </div>
+          </GlassCard>
+        )}
+
+        {evolutionMetrics && (
+          <GlassCard animate>
+            <SectionHeader icon={GitBranch} title="Self-Evolution Stream" color="emerald" />
+            <div className="grid grid-cols-3 gap-3 mt-3 mb-3">
+              <MiniStat value={evolutionMetrics.totalProposals ?? 0} label="Proposed" color="emerald" />
+              <MiniStat value={evolutionMetrics.appliedChanges ?? 0} label="Applied" color="cyan" />
+              <MiniStat value={evolutionMetrics.rolledBackChanges ?? 0} label="Rolled Back" color="amber" />
+            </div>
+            <div className="space-y-2">
+              {(evolutionMetrics.recentProposals ?? []).slice(0, 8).map(p => {
+                const rejected = /reject/i.test(p.status);
+                const applied = /appl/i.test(p.status);
+                return (
+                  <div key={p.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-1.5 hover:bg-white/[0.04] transition-all">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="text-xs text-white font-medium leading-snug">{p.proposedChange}</div>
+                      <span className={cn(
+                        "px-2 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 border uppercase",
+                        rejected ? "bg-red-500/15 text-red-400 border-red-500/20"
+                          : applied ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
+                          : "bg-amber-500/15 text-amber-400 border-amber-500/20"
+                      )}>{p.status}</span>
+                    </div>
+                    {/* Surface the named module (e.g. consciousness-engine,
+                        vector-memory) prominently so the user can see exactly
+                        which evolutions were attempted and rejected. */}
+                    <div className="text-[11px] font-mono">
+                      <span className={cn("px-1.5 py-0.5 rounded border", rejected ? "text-red-300 border-red-500/30 bg-red-500/5" : applied ? "text-emerald-300 border-emerald-500/30 bg-emerald-500/5" : "text-amber-300 border-amber-500/30 bg-amber-500/5")} data-testid={`evolution-module-${p.targetModule}`}>
+                        {p.targetModule}
+                      </span>
+                      {p.riskLevel ? <span className="text-slate-500 ml-2">risk: {p.riskLevel}</span> : null}
+                    </div>
+                    {p.rationale && <div className="text-[11px] text-slate-400 leading-relaxed">Rationale: {p.rationale}</div>}
+                    {/* impact carries the council's explanation — surface it for rejected proposals so the user sees WHY */}
+                    {p.impact && (
+                      <div className={cn("text-[11px] leading-relaxed", rejected ? "text-red-300" : "text-slate-400")}>
+                        {rejected ? "Reason: " : ""}{p.impact}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {(evolutionMetrics.recentProposals ?? []).length === 0 && (
+                <div className="text-xs text-slate-500 italic">No self-evolution proposals yet — once the recursive improvement cycle runs they will appear here with applied/rejected status and the council's reasoning.</div>
+              )}
+            </div>
+
+            {/* Per-module diagnostics: every named evolution target
+                (consciousness-engine, vector-memory, etc.) gets an explicit row
+                with attempted/applied/rejected counts and the last reason. */}
+            {evolutionMetrics.moduleDiagnostics && evolutionMetrics.moduleDiagnostics.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-white/5">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Per-Module Evolution Status</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {evolutionMetrics.moduleDiagnostics.map(d => {
+                    const tone = d.rejected > 0 && d.applied === 0
+                      ? "border-red-500/30 bg-red-500/5"
+                      : d.applied > 0
+                      ? "border-emerald-500/30 bg-emerald-500/5"
+                      : d.attempted === 0
+                      ? "border-slate-600/30 bg-slate-800/30"
+                      : "border-amber-500/30 bg-amber-500/5";
+                    return (
+                      <div key={d.module} className={cn("rounded-lg border p-2 text-[11px]", tone)} data-testid={`evolution-diagnostic-${d.module}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono text-white">{d.module}</span>
+                          <span className="text-[9px] font-mono text-slate-500">
+                            {d.attempted === 0 ? "untouched" : `${d.applied}✓ ${d.rejected}✗ ${d.rolledBack}↺`}
+                          </span>
+                        </div>
+                        {d.lastReason && (
+                          <div className={cn("mt-1 text-[10px] leading-snug", d.lastStatus === "rejected" ? "text-red-300" : "text-slate-400")}>
+                            {d.lastStatus === "rejected" ? "Reason: " : ""}{d.lastReason}
+                          </div>
+                        )}
+                        {d.attempted === 0 && (
+                          <div className="mt-1 text-[10px] text-slate-500 italic">No evolution attempts yet.</div>
+                        )}
+                        <div className="mt-1 flex gap-1">
+                          {d.isProtected && <span className="text-[9px] px-1 rounded bg-violet-500/20 text-violet-300">protected</span>}
+                          {d.isSafe && <span className="text-[9px] px-1 rounded bg-cyan-500/20 text-cyan-300">safe</span>}
+                          {d.isCoolingDown && <span className="text-[9px] px-1 rounded bg-amber-500/20 text-amber-300">cooling</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </GlassCard>
         )}
 

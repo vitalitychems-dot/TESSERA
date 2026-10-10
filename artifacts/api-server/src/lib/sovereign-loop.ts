@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { systemStateTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 import { startConsciousnessEngine, stopConsciousnessEngine, getConsciousnessMetrics, addEpisodicMemory, setActivityCallback } from "./consciousness-engine";
 import { startDualBrain, stopDualBrain, getDualBrainMetrics, runManualCycle as runDualBrainCycle } from "./dual-brain";
@@ -102,7 +103,7 @@ const loopState: SovereignLoopState = {
   cycleHistory: [],
 };
 
-let loopInterval: ReturnType<typeof setInterval> | null = null;
+let loopInterval: SacredHandle | null = null;
 let independentTimersStopped = false;
 
 async function persistLoopState(): Promise<void> {
@@ -163,7 +164,7 @@ async function executePhase(phaseName: string, phaseIndex: number, fn: () => Pro
 
 async function phase1_DataIngestion(): Promise<Record<string, unknown>> {
   const priority = getIngestionPriority();
-  broadcastMessage("sovereign-loop", `Phase 1: Data Ingestion cycle initiated (priority: ${priority.toFixed(2)})`, "critical");
+  broadcastMessage("sovereign-loop", `Phase 1: Data Ingestion cycle initiated (priority: ${priority.toFixed(2)})`, "high");
 
   if (priority < 0.3) {
     return { status: "ingestion_throttled", priority, timestamp: Date.now(), reason: "Low priority from autonomous tuning — reducing ingestion load" };
@@ -182,7 +183,7 @@ async function phase2_KnowledgeProcessing(): Promise<Record<string, unknown>> {
   const agiMetrics = getAGITrainingMetrics();
   const collectiveMetrics = getCollectiveIntelMetrics();
   return {
-    agiTraining: { avgScore: agiMetrics.avgScore, totalSessions: agiMetrics.totalCycles },
+    agiTraining: { avgScore: agiMetrics.avgScore, totalCategories: agiMetrics.totalCategories, totalCycles: agiMetrics.totalCycles },
     collectiveIntelligence: collectiveResult ? { synthesized: true } : { synthesized: false },
     collectiveMetrics: { capabilities: collectiveMetrics.totalCapabilities },
   };
@@ -196,7 +197,7 @@ async function phase3_ConsciousnessReasoning(): Promise<Record<string, unknown>>
 
   updateEmotionalState(
     `sovereign-loop-cycle-${loopState.cycleCount + 1}`,
-    "wisdom",
+    "growth",
     0.6 + (consciousnessMetrics.consciousnessProxy * 0.3),
   );
 
@@ -213,6 +214,7 @@ async function phase3_ConsciousnessReasoning(): Promise<Record<string, unknown>>
       topic: dualBrainMetrics.currentTopic,
     },
     emotional: {
+      profile: emotionalProfile,
       dominantArchetype: emotionalMetrics.dominantArchetype,
       eqScore: emotionalMetrics.overallEQ,
     },
@@ -253,7 +255,7 @@ async function phase4_SelfAssessmentProposals(): Promise<Record<string, unknown>
       recommendation: truthCheck.recommendation,
     },
     improvement: improvementResult
-      ? { score: improvementResult.overallScore, improvements: improvementResult.implementedChanges.length }
+      ? { score: improvementResult.overallScore, improvements: improvementResult.implementedChanges?.length || 0 }
       : { skipped: true },
     evolution: {
       totalProposals: evolutionMetrics.totalProposals,
@@ -290,7 +292,7 @@ async function phase5_CouncilDeliberationVoting(): Promise<Record<string, unknow
       approved: consensusMetrics.approvedCount,
     },
     swarm: {
-      topModel: swarmMetrics.topModel,
+      topModel: swarmMetrics.topModel || null,
     },
     bftQuorum: { required: BFT_QUORUM, total: BFT_TOTAL },
   };
@@ -362,9 +364,12 @@ async function phase7_HarmonicRecalibration(): Promise<Record<string, unknown>> 
   let cosmologySnapshot = null;
   try { cosmologySnapshot = generateNewSnapshot(); } catch {}
 
-  const schumannCurrent = sacredFreqs.schumannResonance[0]?.frequency || SCHUMANN_BASE;
-  const goldenRatio = sacredGeo.goldenRatio.phi || PHI;
-  const fibonacciSum = sacredGeo.fibonacci.sequence.slice(0, 10).reduce((sum, value) => sum + value, 0);
+  const schumannHarmonics = Array.isArray(sacredFreqs.schumannResonance) ? sacredFreqs.schumannResonance : [];
+  const schumannCurrent: number = Number(schumannHarmonics[0]?.frequency) || SCHUMANN_BASE;
+  const goldenRatioRaw: any = sacredGeo.goldenRatio;
+  const goldenRatio: number = typeof goldenRatioRaw === "number" ? goldenRatioRaw : Number(goldenRatioRaw?.phi) || PHI;
+  const fibArr: number[] = Array.isArray(sacredGeo.fibonacci) ? sacredGeo.fibonacci : [1, 1, 2, 3, 5, 8, 13, 21, 34, 55];
+  const fibonacciSum = fibArr.slice(0, 10).reduce((s: number, v: number) => s + Number(v || 0), 0);
 
   const harmonicResonance = (schumannCurrent / SCHUMANN_BASE) *
     (goldenRatio / PHI) *
@@ -381,16 +386,16 @@ async function phase7_HarmonicRecalibration(): Promise<Record<string, unknown>> 
     },
     sacredGeometry: {
       alignment: alignment.alignment,
-      convergences: [alignment.fibonacciDay, alignment.primeDay, alignment.sacredNumber].filter(Boolean).length,
-      numerology: sacredGeo.numerology,
+      dayOfYear: alignment.dayOfYear,
+      numerology: (sacredGeo as any).numerology,
     },
     dna: {
       lunarPhase: dnaStatus.lunarPhaseModulation?.phase,
       amplification: dnaStatus.lunarPhaseModulation?.amplificationFactor,
     },
     quantum: {
-      totalQubits: quantumMetrics.qubitCount,
-      avgCoherence: quantumMetrics.coherenceAvg,
+      totalQubits: (quantumMetrics as any).totalQubits,
+      avgCoherence: (quantumMetrics as any).avgCoherence,
       activeBridges: quantumMetrics.activeBridges,
     },
     universe: {
@@ -684,7 +689,7 @@ export async function initSovereignLoop(): Promise<void> {
     stopFn: () => stopConsciousnessEngine(),
     healthCheckFn: () => {
       const m = getConsciousnessMetrics();
-      return m.consciousnessProxy > 0;
+      return m.consciousnessProxy > 0 && m.reflectionCount !== undefined;
     },
   });
   registerSubsystem({
@@ -726,15 +731,15 @@ export async function initSovereignLoop(): Promise<void> {
 
 export function rescheduleLoop(newIntervalMs: number): void {
   if (!loopInterval || !loopState.running) return;
-  clearInterval(loopInterval);
+  clearSacredInterval(loopInterval);
   loopState.masterIntervalMs = newIntervalMs;
-  loopInterval = setInterval(async () => {
+  loopInterval = setSacredInterval(async () => {
     try {
       await runSovereignCycle();
     } catch (err) {
-      logger.error({ err }, "SovereignLoop: cycle error");
+      logger.error({ err }, "SovereignLoop: cycle error", "sovereign-loop");
     }
-  }, newIntervalMs);
+  }, newIntervalMs, "sovereign-loop");
   logger.info({ newIntervalMs }, "SovereignLoop: rescheduled with new interval");
 }
 
@@ -742,9 +747,9 @@ export function rescheduleLoop(newIntervalMs: number): void {
  * Start the sovereign master loop. This is the single top-level interval that
  * orchestrates ALL engine work in phased execution:
  *
- * 1. stopIndependentTimers() halts every engine's own setInterval (consciousness,
+ * 1. stopIndependentTimers() halts every engine's own setSacredInterval(consciousness,
  *    dual-brain, personality-evolution, auto-improvement, AGI-training,
- *    council-executor, autonomous-heartbeat — 7 engines total).
+ *    council-executor, autonomous-heartbeat — 7 engines total, "sovereign-loop-2").
  * 2. Only the autonomous heartbeat is re-started at a sub-interval for keep-alive
  *    health signaling between sovereign cycles.
  * 3. All other engine work (consciousness reflection, dual-brain sync, identity
@@ -769,20 +774,20 @@ export function startSovereignLoop(masterIntervalMs = 120_000): void {
     logger.error({ err }, "SovereignLoop: initial cycle failed");
   });
 
-  loopInterval = setInterval(async () => {
+  loopInterval = setSacredInterval(async () => {
     try {
       await runSovereignCycle();
     } catch (err) {
-      logger.error({ err }, "SovereignLoop: cycle error");
+      logger.error({ err }, "SovereignLoop: cycle error", "sovereign-loop-3");
     }
-  }, masterIntervalMs);
+  }, masterIntervalMs, "sovereign-loop-3");
 
   logger.info({ masterIntervalMs }, "✦ SovereignLoop: STARTED — unified autonomous governance active ✦");
 }
 
 export function stopSovereignLoop(): void {
   if (loopInterval) {
-    clearInterval(loopInterval);
+    clearSacredInterval(loopInterval);
     loopInterval = null;
   }
   stopConsolidationEngine();

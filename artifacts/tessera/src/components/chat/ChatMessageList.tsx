@@ -11,7 +11,7 @@ interface MoltAgent {
 }
 
 interface ChatMessage {
-  id?: string | number;
+  id?: number | string;
   role: string;
   content: string;
   createdAt?: Date | string;

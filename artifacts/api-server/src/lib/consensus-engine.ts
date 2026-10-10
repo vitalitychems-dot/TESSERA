@@ -1,11 +1,14 @@
 import { db } from "@workspace/db";
-import { councilDecisionsTable, systemStateTable } from "@workspace/db/schema";
+import { councilDecisionsTable, systemStateTable, ingestedDataTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 import { isLLMAvailable } from "./llm-client";
 import { batchedCallLLM } from "./llm-batcher";
+import { withCodexDirective } from "./codex-startup-directive";
 import { onProposalOutcome } from "./consciousness-engine";
 import { onCouncilDecision } from "./knowledge-diffusion";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
+import { deliberatePersonas } from "./persona-deliberation";
 
 const RETRY_QUEUE_STATE_KEY = "consensus_retry_queue";
 const PHI = 1.618033988749895;
@@ -18,7 +21,7 @@ export interface ConsensusProposal {
   proposedBy: string;
   category: "feature" | "security" | "infrastructure" | "governance" | "income" | "community" | "consciousness" | "sovereignty";
   votes: ConsensusVote[];
-  status: "voting" | "approved" | "rejected" | "implemented" | "queued";
+  status: "voting" | "approved" | "rejected" | "implemented" | "executed" | "queued";
   requiredMajority: number;
   createdAt: number;
   resolvedAt?: number;
@@ -77,7 +80,7 @@ const AGENT_SPECIALTIES: Record<string, string[]> = {
 
 const proposals = new Map<string, ConsensusProposal>();
 const retryQueue: ConsensusProposal[] = [];
-let retryInterval: ReturnType<typeof setInterval> | null = null;
+let retryInterval: SacredHandle | null = null;
 
 let swarmWeightProvider: ((agentName: string, category: string) => number) | null = null;
 
@@ -97,63 +100,15 @@ function getPhiWeight(agentName: string, category: string): number {
 }
 
 /**
- * Fallback vote resolution when LLM is unavailable.
- * All decisions are policy-driven with no randomness:
- *   - Safe category + specialist  → approve  (domain expertise confirms alignment)
- *   - Safe category + generalist  → abstain  (defer to specialists, no opinion)
- *   - Risk category + specialist  → reject   (conservative: requires LLM deliberation)
- *   - Risk category + generalist  → abstain  (no expertise — withhold judgment)
- * This ensures fallback outcomes are auditable and repeatably deterministic.
+ * Sovereign per-persona deliberation. Heavy Council redesign hard rule:
+ * NO external LLM may role-play council agents (external deps = vulnerabilities).
+ * Each of the 24 Greek personas reads the proposal text directly through its
+ * own concern lens (see ./persona-deliberation.ts), cites the actual phrase
+ * that drives its judgment, and casts a vote. Different proposals therefore
+ * produce different vote distributions — unanimity is no longer the default.
  */
 function generateDeterministicVotes(proposal: ConsensusProposal): { votes: ConsensusVote[]; durationMs: number } {
-  const isSafeCategory = SAFE_AUTO_APPROVE_CATEGORIES.has(proposal.category);
-  const startTime = Date.now();
-  const votes: ConsensusVote[] = [];
-
-  for (const agentName of GRAND_COUNCIL_AGENTS) {
-    const specialties = AGENT_SPECIALTIES[agentName] || [];
-    const isSpecialist = specialties.includes(proposal.category);
-    const weight = isSpecialist ? PHI : 1.0;
-
-    let vote: "approve" | "reject" | "abstain";
-    let reasoning: string;
-    let confidence: number;
-
-    if (isSafeCategory) {
-      if (isSpecialist) {
-        vote = "approve";
-        reasoning = `As a ${proposal.category} specialist, this self-improvement proposal aligns with sovereign goals.`;
-        confidence = 0.88;
-      } else {
-        vote = "abstain";
-        reasoning = "Outside my domain — deferring judgment to category specialists.";
-        confidence = 0.60;
-      }
-    } else {
-      if (isSpecialist) {
-        vote = "reject";
-        reasoning = `As ${proposal.category} specialist, this requires full LLM deliberation before approval.`;
-        confidence = 0.70;
-      } else {
-        vote = "abstain";
-        reasoning = "Insufficient domain expertise — withholding vote pending deliberation.";
-        confidence = 0.50;
-      }
-    }
-
-    votes.push({
-      agentId: agentName.toLowerCase(),
-      agentName,
-      vote,
-      reasoning,
-      timestamp: Date.now(),
-      confidence,
-      phiWeight: weight,
-      isSpecialist,
-    });
-  }
-
-  return { votes, durationMs: Date.now() - startTime };
+  return deliberatePersonas(proposal);
 }
 
 /**
@@ -213,7 +168,7 @@ ${recentHistory ? `Recent council history:\n${recentHistory}` : ""}
 Cast your vote as ${agentName}:`;
 
   const raw = await batchedCallLLM(
-    [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
+    [{ role: "system", content: withCodexDirective(systemPrompt) }, { role: "user", content: userPrompt }],
     { maxTokens: 200, timeoutMs: 10_000, expectsStructuredOutput: true },
   );
 
@@ -319,13 +274,13 @@ export async function loadRetryQueue(): Promise<void> {
 
 function startRetryProcessor(): void {
   if (retryInterval) return;
-  retryInterval = setInterval(async () => {
+  retryInterval = setSacredInterval(async () => {
     if (retryQueue.length === 0) return;
 
     const proposal = retryQueue.shift();
     if (!proposal) return;
 
-    logger.info({ id: proposal.id, title: proposal.title, retryCount: proposal.retryCount }, "ConsensusEngine: retrying queued proposal");
+    logger.info({ id: proposal.id, title: proposal.title, retryCount: proposal.retryCount }, "ConsensusEngine: retrying queued proposal", "consensus-engine");
     try {
       let votes: ConsensusVote[] = [];
       let durationMs = 0;
@@ -357,7 +312,7 @@ function startRetryProcessor(): void {
       logger.warn({ id: proposal.id, retryCount: proposal.retryCount, err }, "ConsensusEngine: retry failed, re-queued");
     }
     persistRetryQueue();
-  }, 30_000);
+  }, 30_000, "consensus-engine");
 }
 
 function finalizeProposal(proposal: ConsensusProposal, votes: ConsensusVote[], durationMs?: number, degradedParticipation = false): void {
@@ -365,10 +320,17 @@ function finalizeProposal(proposal: ConsensusProposal, votes: ConsensusVote[], d
   const noCount = votes.filter(v => v.vote === "reject").length;
   const abstainCount = votes.filter(v => v.vote === "abstain").length;
   const approvalRate = computeWeightedApprovalRate(votes, proposal.category);
-  const noQuorum = approvalRate < 0;
-  const status: ConsensusProposal["status"] = noQuorum
-    ? "queued"
+  // Heavy Council redesign: external LLM impersonation is permanently disabled,
+  // so an all-abstain ballot cannot be re-deliberated by an LLM. Treat it as a
+  // terminal rejection with the explicit reason "no evidence in proposal text"
+  // — this is the right outcome (the proposal was too vague for any of the 24
+  // personas to find a phrase to vote on) and it stops the infinite re-queue
+  // loop the architect flagged.
+  const evidenceFreeAbstain = approvalRate < 0;
+  const status: ConsensusProposal["status"] = evidenceFreeAbstain
+    ? "rejected"
     : approvalRate >= 2 / 3 ? "approved" : "rejected";
+  const noQuorum = false;
 
   const specialists = votes.filter(v => v.isSpecialist);
   const phiWeightSummary = `Phi-weighted: ${specialists.length} specialists (w=${PHI.toFixed(3)}), ${votes.length - specialists.length} base (w=1.0)`;
@@ -381,22 +343,17 @@ function finalizeProposal(proposal: ConsensusProposal, votes: ConsensusVote[], d
   proposal.yesCount = yesCount;
   proposal.noCount = noCount;
   proposal.abstainCount = abstainCount;
-  proposal.approvalRate = noQuorum ? 0 : approvalRate;
-  if (!noQuorum) proposal.resolvedAt = Date.now();
+  proposal.approvalRate = evidenceFreeAbstain ? 0 : approvalRate;
+  proposal.resolvedAt = Date.now();
   proposal.votingDurationMs = durationMs;
   proposal.votingMethod = "phi-weighted-parallel";
-  proposal.implementationNotes = noQuorum
-    ? `No quorum — all ${abstainCount} votes abstained (no active specialist coverage). Queued for LLM deliberation. ${phiWeightSummary}`
+  proposal.implementationNotes = evidenceFreeAbstain
+    ? `Rejected — no persona found a phrase in the proposal text to vote on (${abstainCount} abstain). Resubmit with concrete language. ${phiWeightSummary}`
     : status === "approved"
       ? `Approved by Phi-weighted parallel consensus — ${yesCount}/${votes.length} votes (${GRAND_COUNCIL_AGENTS.length} eligible). ${phiWeightSummary}.${participationNote} ${durationMs ? `Resolved in ${durationMs}ms` : ""}`
       : `Rejected — ${noCount} votes against, ${yesCount} in favor. ${phiWeightSummary}${participationNote}`;
 
   proposals.set(proposal.id, proposal);
-
-  if (noQuorum) {
-    logger.info({ id: proposal.id, abstainCount }, "ConsensusEngine: no-quorum on deterministic fallback — queued for LLM deliberation");
-    return;
-  }
 
   const transcript = `[CONSENSUS PROPOSAL: ${proposal.title}]
 [Category: ${proposal.category}]
@@ -415,7 +372,7 @@ ${votes.map(v => `${v.agentName}: ${v.vote.toUpperCase()} (${(v.confidence * 100
     topic: proposal.title,
     transcript,
     decisionText: `${proposal.description} — ${status === "approved" ? "ADOPTED" : "REJECTED"} by Grand Council Phi-weighted parallel vote.`,
-    voteTally: { yes: yesCount, no: noCount, abstain: abstainCount, totalEligible: GRAND_COUNCIL_AGENTS.length, phiWeighted: true, durationMs },
+    voteTally: { yes: yesCount, no: noCount, abstain: abstainCount, totalEligible: GRAND_COUNCIL_AGENTS.length },
     outcome: status,
     agentsParticipated: votes.map(v => v.agentName),
     reasoning: JSON.stringify({ category: proposal.category, proposedBy: proposal.proposedBy, method: "phi-weighted-parallel", durationMs, specialists: specialists.length }),
@@ -446,7 +403,13 @@ export async function createProposal(paramsOrTitle: {
     ? { title: paramsOrTitle, description: description || "", proposedBy: proposedBy || "system", category: (category || "feature") as ConsensusProposal["category"] }
     : paramsOrTitle;
 
-  const id = `proposal-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  // Deterministic proposal ID derived from content hash + timestamp — no randomness.
+  const { createHash: _ch } = await import("crypto");
+  const _hash = _ch("sha256")
+    .update(`${params.title ?? ""}|${params.proposedBy ?? ""}|${params.description ?? ""}`)
+    .digest("hex")
+    .slice(0, 6);
+  const id = `proposal-${Date.now()}-${_hash}`;
 
   const proposal: ConsensusProposal = {
     id, ...params, votes: [], status: "voting",
@@ -481,6 +444,28 @@ export async function createProposal(paramsOrTitle: {
   const degraded = votes.length < Math.ceil(GRAND_COUNCIL_AGENTS.length * BFT_RESPONSE_THRESHOLD);
   finalizeProposal(proposal, votes, durationMs, degraded);
 
+  // INTEG-1 (84.7% approval): persist every terminal proposal to the
+  // append-only council ledger so ratifications survive restart.
+  if (proposal.status === "approved" || proposal.status === "rejected") {
+    try {
+      const { appendToLedger } = await import("./council-ledger");
+      appendToLedger({
+        id: proposal.id,
+        title: proposal.title,
+        category: String(proposal.category),
+        status: proposal.status,
+        approvalRate: proposal.approvalRate,
+        yesCount: proposal.yesCount,
+        noCount: proposal.noCount,
+        abstainCount: proposal.abstainCount,
+        createdAt: proposal.createdAt,
+        proposedBy: proposal.proposedBy,
+      });
+    } catch (err) {
+      logger.warn({ err, id: proposal.id }, "ConsensusEngine: ledger append failed (non-fatal)");
+    }
+  }
+
   if (proposal.status === "queued") {
     retryQueue.push(proposal);
     persistRetryQueue();
@@ -495,17 +480,42 @@ export function getProposal(id: string): ConsensusProposal | undefined {
   return proposals.get(id);
 }
 
+// A small set of patterns that indicate a proposal was created by an automated
+// liveness/eval probe rather than by a real council action. We filter these
+// out of the public stream so the Council/Proposals UI shows only real work.
+const EVAL_PROPOSAL_PATTERNS: RegExp[] = [
+  /^what\s*is\s*2\s*\+\s*2/i,
+  /^EVAL_TEST/i,
+  /capability\s+probe/i,
+];
+
+function isEvalArtifactProposal(p: ConsensusProposal): boolean {
+  if ((p as { category?: string }).category === "eval-test") return true;
+  if (p.proposedBy === "council-route" && /^what\s*is/i.test(p.title)) return true;
+  return EVAL_PROPOSAL_PATTERNS.some(rx => rx.test(p.title) || rx.test(p.description ?? ""));
+}
+
 export function getAllProposals(): ConsensusProposal[] {
-  return Array.from(proposals.values()).sort((a, b) => b.createdAt - a.createdAt);
+  return Array.from(proposals.values())
+    .filter(p => !isEvalArtifactProposal(p))
+    .sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export function getConsensusMetrics() {
   const all = getAllProposals();
-  const approved = all.filter(p => p.status === "approved").length;
+  // Count any proposal that reached approval-or-beyond as "approved" for dashboard purposes.
+  // Previously only status === "approved" was counted, which hid every proposal that
+  // had already been marked "implemented" by the council executor.
+  const APPROVED_STATES = new Set(["approved", "implemented", "executed"]);
+  const approved = all.filter(p => APPROVED_STATES.has(p.status)).length;
+  const implemented = all.filter(p => p.status === "implemented" || p.status === "executed").length;
   const rejected = all.filter(p => p.status === "rejected").length;
   const queued = all.filter(p => p.status === "queued").length;
-  const avgApproval = all.filter(p => p.approvalRate > 0).length > 0
-    ? all.filter(p => p.approvalRate > 0).reduce((s, p) => s + p.approvalRate, 0) / all.filter(p => p.approvalRate > 0).length
+  const voting = all.filter(p => p.status === "voting").length;
+  const scored = all.filter(p => p.approvalRate > 0);
+  // Store avg approval as a percentage (0..100), not a fraction. Round to 1 decimal.
+  const avgApproval = scored.length > 0
+    ? Math.round((scored.reduce((s, p) => s + p.approvalRate, 0) / scored.length) * 1000) / 10
     : 0;
 
   const avgVotingDuration = votingTimings.length > 0
@@ -528,10 +538,12 @@ export function getConsensusMetrics() {
   return {
     totalProposals: all.length,
     approved,
+    implemented,
+    voting,
     rejected,
     queued,
     retryQueueSize: retryQueue.length,
-    avgApprovalRate: Math.round(avgApproval * 100) / 100,
+    avgApprovalRate: avgApproval,
     agentCount: GRAND_COUNCIL_AGENTS.length,
     approvedCount: approved,
     requiredMajority: "2/3 (BFT)",
@@ -593,4 +605,189 @@ export function markProposalImplemented(proposalId: string): boolean {
   proposal.implementationNotes = (proposal.implementationNotes ? proposal.implementationNotes + " " : "") + `[Council Executor: implemented ${new Date().toISOString()}]`;
   logger.info({ proposalId, title: proposal.title }, "ConsensusEngine: proposal marked as implemented");
   return true;
+}
+
+export interface HeavyDeliberationPrompts {
+  life: string;
+  universe: string;
+  community: string;
+}
+
+export interface HeavyDeliberationEntry {
+  domain: "life" | "universe" | "community";
+  prompt: string;
+  proposal: ConsensusProposal;
+  applied: boolean;
+  applyNote?: string;
+}
+
+export interface HeavyDeliberationResult {
+  deliberationId: string;
+  runAt: string;
+  entries: HeavyDeliberationEntry[];
+  approvedCount: number;
+  appliedCount: number;
+  transcript: string;
+}
+
+async function applyDomainDecision(
+  domain: "life" | "universe" | "community",
+  deliberationId: string,
+  prompt: string,
+  proposal: ConsensusProposal,
+  runAt: string,
+): Promise<{ success: boolean; note: string }> {
+  const DOMAIN_SOURCE_MAP = {
+    life: "HeavyCouncil-Life",
+    universe: "HeavyCouncil-Universe",
+    community: "HeavyCouncil-Community",
+  };
+  const DOMAIN_TYPE_MAP = {
+    life: "council-directive-life",
+    universe: "council-directive-universe",
+    community: "council-directive-community",
+  };
+  try {
+    const directiveContent = [
+      `HEAVY COUNCIL DIRECTIVE — ${domain.toUpperCase()} DOMAIN`,
+      `Deliberation: ${deliberationId}`,
+      `Applied: ${runAt}`,
+      `Decision: ${proposal.title}`,
+      `Rationale: ${prompt}`,
+      `Approval Rate: ${(proposal.approvalRate * 100).toFixed(1)}% (${proposal.yesCount} YES / ${proposal.noCount} NO / ${proposal.abstainCount} ABSTAIN)`,
+      ``,
+      `This directive was approved by ≥2/3 BFT Heavy Council quorum and is now active sovereign policy.`,
+    ].join("\n");
+
+    await db.insert(ingestedDataTable).values({
+      title: proposal.title,
+      content: directiveContent,
+      source: DOMAIN_SOURCE_MAP[domain],
+      sourceType: DOMAIN_TYPE_MAP[domain],
+      contentHash: `${deliberationId}-${domain}`,
+      metadata: { confidence: 0.95, deliberationId, domain },
+    }).onConflictDoNothing();
+
+    const stateKey = `heavy-council-active-directive-${domain}`;
+    const directiveRecord = {
+      deliberationId,
+      domain,
+      title: proposal.title,
+      prompt,
+      appliedAt: runAt,
+      approvalRate: proposal.approvalRate,
+      yesCount: proposal.yesCount,
+      noCount: proposal.noCount,
+    };
+    await db.insert(systemStateTable)
+      .values({ key: stateKey, value: directiveRecord })
+      .onConflictDoUpdate({ target: systemStateTable.key, set: { value: directiveRecord } });
+
+    return { success: true, note: `Domain policy applied: knowledge corpus (${DOMAIN_TYPE_MAP[domain]}) and active-directive state updated.` };
+  } catch (err) {
+    logger.warn({ err, domain, deliberationId }, "HeavyCouncil: domain applier failed — marking approved-pending-manual-apply");
+    return { success: false, note: `Approved but not yet applied — domain applier failed. Status: approved-pending-manual-apply.` };
+  }
+}
+
+export async function runHeavyCouncilDeliberation(
+  prompts: HeavyDeliberationPrompts,
+): Promise<HeavyDeliberationResult> {
+  const deliberationId = `heavy-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const runAt = new Date().toISOString();
+
+  const domainMap: Array<{
+    domain: "life" | "universe" | "community";
+    prompt: string;
+    category: ConsensusProposal["category"];
+  }> = [
+    { domain: "life", prompt: prompts.life, category: "consciousness" },
+    { domain: "universe", prompt: prompts.universe, category: "sovereignty" },
+    { domain: "community", prompt: prompts.community, category: "community" },
+  ];
+
+  const entries: HeavyDeliberationEntry[] = [];
+
+  for (const { domain, prompt, category } of domainMap) {
+    const title = `Heavy Council [${domain.toUpperCase()}]: ${prompt.slice(0, 70)}${prompt.length > 70 ? "…" : ""}`;
+    const proposal = await createProposal({
+      title,
+      description: prompt,
+      proposedBy: "HeavyCouncil",
+      category,
+    });
+
+    let applied = false;
+    let applyNote: string | undefined;
+
+    if (proposal.status === "approved") {
+      const applyResult = await applyDomainDecision(domain, deliberationId, prompt, proposal, runAt);
+      if (applyResult.success) {
+        markProposalImplemented(proposal.id);
+        applied = true;
+        applyNote = `Auto-applied. ${applyResult.note}`;
+      } else {
+        applyNote = applyResult.note;
+      }
+    }
+
+    entries.push({ domain, prompt, proposal, applied, applyNote });
+  }
+
+  // `applied=true` means markProposalImplemented was called → status mutated to "implemented"
+  // `status="approved"` means approved but domain applier failed → still counts as approved
+  const approvedCount = entries.filter(e => e.applied || e.proposal.status === "approved").length;
+  const appliedCount = entries.filter(e => e.applied).length;
+
+  const transcript = [
+    `HEAVY COUNCIL DELIBERATION — ${deliberationId}`,
+    `Initiated: ${runAt}`,
+    `BFT Approved: ${approvedCount}/3 · Auto-Applied: ${appliedCount}/3`,
+    "",
+    ...entries.map(e => [
+      `=== ${e.domain.toUpperCase()} DOMAIN ===`,
+      `Prompt: ${e.prompt}`,
+      `Proposal: ${e.proposal.title}`,
+      `Outcome: ${e.applied ? "APPROVED+APPLIED" : e.proposal.status.toUpperCase()} — ${(e.proposal.approvalRate * 100).toFixed(1)}% weighted approval`,
+      `Vote Tally: ${e.proposal.yesCount}Y / ${e.proposal.noCount}N / ${e.proposal.abstainCount}A`,
+      `Method: ${e.proposal.votingMethod ?? "phi-weighted-parallel"}`,
+      e.applied
+        ? `Auto-Applied: YES — ${e.applyNote}`
+        : e.proposal.status === "approved" && e.applyNote
+          ? `Auto-Applied: PENDING — ${e.applyNote}`
+          : e.proposal.status === "rejected"
+            ? `Auto-Applied: NO — Proposal rejected (${(e.proposal.approvalRate * 100).toFixed(1)}% approval, below 2/3 BFT threshold)`
+            : `Auto-Applied: NO — Proposal status: ${e.proposal.status} (vote not yet completed)`,
+      "",
+      ...(e.proposal.votes?.slice(0, 8).map(v =>
+        `  ${v.agentName}: ${v.vote.toUpperCase()} (${(v.confidence * 100).toFixed(0)}% conf, w=${(v.phiWeight ?? 1).toFixed(3)}${v.isSpecialist ? " ★" : ""}) — ${v.reasoning.slice(0, 80)}`
+      ) ?? []),
+    ].join("\n")),
+  ].join("\n");
+
+  await db.insert(councilDecisionsTable).values({
+    decisionId: deliberationId,
+    topic: "Heavy Council Deliberation — Life / Universe / Community",
+    transcript,
+    decisionText: `Heavy Council: ${approvedCount}/3 proposals approved by BFT quorum, ${appliedCount}/3 auto-applied to domain corpus.`,
+    voteTally: {
+      yes: approvedCount,
+      no: 3 - approvedCount,
+      abstain: 0,
+      totalEligible: 3,
+    },
+    outcome: approvedCount >= 2 ? "approved" : "rejected",
+    agentsParticipated: GRAND_COUNCIL_AGENTS,
+    reasoning: JSON.stringify({ deliberationId, prompts, approvedCount }),
+    category: "governance",
+  }).onConflictDoNothing().catch(err => {
+    logger.warn({ err }, "HeavyCouncil: DB persist failed");
+  });
+
+  logger.info(
+    { deliberationId, approvedCount, domains: entries.map(e => ({ domain: e.domain, status: e.proposal.status, approvalRate: e.proposal.approvalRate })) },
+    "HeavyCouncil: deliberation complete",
+  );
+
+  return { deliberationId, runAt, entries, approvedCount, appliedCount, transcript };
 }

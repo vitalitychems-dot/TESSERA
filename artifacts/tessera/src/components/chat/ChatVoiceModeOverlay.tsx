@@ -17,8 +17,8 @@ interface ChatVoiceModeOverlayProps {
   voicePaused: boolean;
   replyMode: ReplyMode;
   voiceSettingsOpen: boolean;
-  onMicPressStart: () => void;
-  onMicPressEnd: () => void;
+  onMicPressStart: (e?: any) => void;
+  onMicPressEnd: (e?: any) => void;
   onToggleVoicePause: () => void;
   onExitVoiceMode: () => void;
   onToggleReplyMode: () => void;

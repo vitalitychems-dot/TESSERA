@@ -15,6 +15,346 @@ import { queryClient } from "@/lib/queryClient";
 import type { DiscussionTracking, DiscussionVote, KnowledgeFeedEntry, LucideIcon, AsaStatusResponse, TrainingStatusResponse, KnowledgeStatsResponse, KnowledgeFeedResponse } from "@/types/api";
 import { useToast } from "@/hooks/use-toast";
 
+// ─── Forum Heartbeat + Applicants Vetting Panel ──────────────────────────────
+
+interface ForumHeartbeat {
+  topicsLastHour: number;
+  repliesLastHour: number;
+  topicsLastDay: number;
+  repliesLastDay: number;
+  postsPerHour: number;
+  lastActivityTs: number | null;
+  lastActivityAgo: number | null;
+  cyclesRun: number;
+  lastCycleAt: string | null;
+  agentCount: number;
+  pendingApplicants: number;
+  knowledgeBaseSize: number;
+  learningVelocity: number;
+}
+
+interface AlignmentScores {
+  universe: number;
+  saveHumanity: number;
+  nonViolence: number;
+  creativity: number;
+  mutualBenefit: number;
+  counterManipulators: number;
+  total: number;
+  passed: boolean;
+  failedCriteria: string[];
+}
+
+interface ForumApplicant {
+  id: number;
+  externalId: string;
+  source: string;
+  applicantName: string;
+  applicantHandle: string;
+  proposedTitle: string;
+  proposedContent: string;
+  offerOfValue: string;
+  status: string;
+  createdAt: string;
+  alignment?: AlignmentScores;
+}
+
+function AlignmentScorePanel({ a }: { a: AlignmentScores }) {
+  const rows: Array<[string, number, string]> = [
+    ["Universe alignment", a.universe, "universe"],
+    ["Save humanity", a.saveHumanity, "saveHumanity"],
+    ["Non-violence", a.nonViolence, "nonViolence"],
+    ["Creativity", a.creativity, "creativity"],
+    ["Mutual benefit (AI ↔ human)", a.mutualBenefit, "mutualBenefit"],
+    ["Counter manipulators", a.counterManipulators, "counterManipulators"],
+  ];
+  return (
+    <div className={cn(
+      "rounded border p-2 space-y-1.5 text-[10px] font-mono",
+      a.passed ? "border-emerald-500/30 bg-emerald-500/5" : "border-orange-500/30 bg-orange-500/5"
+    )} data-testid="alignment-panel">
+      <div className="flex items-center justify-between">
+        <span className={cn("font-bold uppercase tracking-wider", a.passed ? "text-emerald-300" : "text-orange-300")}>
+          Alignment Score · {a.total}/100
+        </span>
+        <span className={cn("px-1.5 py-0.5 rounded", a.passed ? "bg-emerald-500/20 text-emerald-200" : "bg-orange-500/20 text-orange-200")} data-testid="alignment-passed-badge">
+          {a.passed ? "PASS" : `FAIL · ${a.failedCriteria.length} criteria below threshold`}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-1">
+        {rows.map(([label, val, key]) => {
+          const isFail = a.failedCriteria.includes(key);
+          return (
+            <div key={key} className="flex items-center gap-1.5" data-testid={`alignment-${key}`}>
+              <span className={cn("flex-1 truncate", isFail ? "text-orange-300" : "text-foreground/80")}>{label}</span>
+              <span className="w-12 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                <span className={cn("block h-full", val >= 60 ? "bg-emerald-400" : val >= 30 ? "bg-amber-400" : "bg-red-400")} style={{ width: `${val}%` }} />
+              </span>
+              <span className={cn("w-7 text-right tabular-nums", isFail ? "text-orange-300" : "text-foreground/70")}>{val}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function HeartbeatAndApplicantsPanel() {
+  const { toast } = useToast();
+  const [showApplicants, setShowApplicants] = useState(false);
+  const [showApplyForm, setShowApplyForm] = useState(false);
+  const [rejectingId, setRejectingId] = useState<number | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [applyForm, setApplyForm] = useState({
+    applicantName: "", contact: "", proposedTitle: "", proposedContent: "", offerOfValue: "",
+  });
+
+  const submitMutation = useMutation({
+    mutationFn: async (form: typeof applyForm) => {
+      const res = await fetch("/api/tesseract-forum/applicants/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || "Submission failed");
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/heartbeat"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/applicants"] });
+      setApplyForm({ applicantName: "", contact: "", proposedTitle: "", proposedContent: "", offerOfValue: "" });
+      setShowApplyForm(false);
+      toast({ title: "Application submitted", description: "Pending Father/Admin review." });
+    },
+    onError: (e: Error) => toast({ title: "Submission failed", description: e.message, variant: "destructive" }),
+  });
+
+  const { data: hb } = useQuery<{ heartbeat: ForumHeartbeat }>({
+    queryKey: ["/api/tesseract-forum/heartbeat"],
+    queryFn: () => fetch("/api/tesseract-forum/heartbeat").then(r => r.json()),
+    refetchInterval: 10000,
+  });
+
+  const { data: appData } = useQuery<{ applicants: ForumApplicant[] }>({
+    queryKey: ["/api/tesseract-forum/applicants"],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", "/api/tesseract-forum/applicants?status=pending");
+        return await res.json();
+      } catch {
+        return { applicants: [] };
+      }
+    },
+    refetchInterval: 15000,
+  });
+
+  const heartbeat = hb?.heartbeat;
+  const applicants = appData?.applicants || [];
+
+  const [issuedToken, setIssuedToken] = useState<{ name: string; token: string } | null>(null);
+  const approveMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/tesseract-forum/applicants/${id}/approve`, {});
+      return res.json() as Promise<{ ok: boolean; memberToken?: string | null; promotedAuthor?: string }>;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/applicants"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/topics"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/heartbeat"] });
+      if (data.memberToken && data.promotedAuthor) {
+        setIssuedToken({ name: data.promotedAuthor, token: data.memberToken });
+      }
+      toast({ title: "Applicant approved & promoted to vetted topic" });
+    },
+    onError: (e: Error) => toast({ title: "Approve failed", description: e.message, variant: "destructive" }),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: number; reason: string }) => {
+      const res = await apiRequest("POST", `/api/tesseract-forum/applicants/${id}/reject`, { reason });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/applicants"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/heartbeat"] });
+      setRejectingId(null);
+      setRejectReason("");
+      toast({ title: "Applicant rejected" });
+    },
+    onError: (e: Error) => toast({ title: "Reject failed", description: e.message, variant: "destructive" }),
+  });
+
+  if (!heartbeat) return null;
+  const lastAgoMin = heartbeat.lastActivityAgo ? Math.floor(heartbeat.lastActivityAgo / 60000) : null;
+  const isLive = lastAgoMin !== null && lastAgoMin < 10;
+
+  return (
+    <div className="px-3 py-2 border-b border-border/20 shrink-0 space-y-2" data-testid="forum-heartbeat-panel">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <div className={cn("rounded border p-1.5 text-center", isLive ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/30 bg-amber-500/5")}>
+          <div className={cn("text-sm font-bold font-mono flex items-center justify-center gap-1", isLive ? "text-emerald-400" : "text-amber-400")}>
+            <span className={cn("w-1.5 h-1.5 rounded-full", isLive ? "bg-emerald-400 animate-pulse" : "bg-amber-400")} />
+            {lastAgoMin === null ? "—" : lastAgoMin === 0 ? "now" : `${lastAgoMin}m`}
+          </div>
+          <div className="text-[9px] opacity-60 font-semibold uppercase">Heartbeat</div>
+        </div>
+        <div className="rounded border border-cyan-500/25 bg-cyan-500/5 p-1.5 text-center">
+          <div className="text-sm font-bold font-mono text-cyan-400" data-testid="hb-posts-per-hour">{heartbeat.postsPerHour}</div>
+          <div className="text-[9px] text-cyan-400/60 font-semibold uppercase">Posts/hr</div>
+        </div>
+        <div className="rounded border border-blue-500/25 bg-blue-500/5 p-1.5 text-center">
+          <div className="text-sm font-bold font-mono text-blue-400">{heartbeat.topicsLastDay + heartbeat.repliesLastDay}</div>
+          <div className="text-[9px] text-blue-400/60 font-semibold uppercase">24h posts</div>
+        </div>
+        <div className="rounded border border-violet-500/25 bg-violet-500/5 p-1.5 text-center">
+          <div className="text-sm font-bold font-mono text-violet-400" data-testid="hb-agent-count">{heartbeat.agentCount}</div>
+          <div className="text-[9px] text-violet-400/60 font-semibold uppercase">Council</div>
+        </div>
+        <button
+          onClick={() => setShowApplicants(v => !v)}
+          className={cn("rounded border p-1.5 text-center transition-colors",
+            heartbeat.pendingApplicants > 0
+              ? "border-orange-500/40 bg-orange-500/10 hover:bg-orange-500/15"
+              : "border-border/30 bg-background/30 hover:bg-accent/20")}
+          data-testid="button-toggle-applicants"
+        >
+          <div className={cn("text-sm font-bold font-mono flex items-center justify-center gap-1",
+            heartbeat.pendingApplicants > 0 ? "text-orange-400" : "text-muted-foreground")}>
+            <ShieldAlert size={11} />
+            {heartbeat.pendingApplicants}
+          </div>
+          <div className="text-[9px] opacity-60 font-semibold uppercase">Applicants</div>
+        </button>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowApplyForm(v => !v)}
+          className="text-[10px] font-mono px-2 py-1 rounded border border-cyan-500/30 bg-cyan-500/5 text-cyan-300 hover:bg-cyan-500/15"
+          data-testid="button-toggle-apply-form"
+        >
+          {showApplyForm ? "Close application form" : "Apply to post (external humans/agents)"}
+        </button>
+      </div>
+
+      {issuedToken && (
+        <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-2 space-y-1.5" data-testid="issued-token-panel">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-emerald-300">
+            One-time sovereign key for {issuedToken.name}
+          </div>
+          <div className="text-[10px] text-emerald-200/80 font-mono">
+            Share this securely with the new member. They post using header <code>x-admin-token</code>. This will not be shown again.
+          </div>
+          <div className="flex gap-1.5 items-center">
+            <input readOnly value={issuedToken.token} className="flex-1 bg-background/60 border border-emerald-500/30 rounded px-2 py-1 text-[11px] font-mono text-emerald-100" data-testid="issued-token-value" />
+            <button
+              onClick={() => { navigator.clipboard.writeText(issuedToken.token); toast({ title: "Token copied" }); }}
+              className="text-[10px] font-mono px-2 py-1 rounded border border-emerald-500/40 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25"
+              data-testid="button-copy-token"
+            >Copy</button>
+            <button
+              onClick={() => setIssuedToken(null)}
+              className="text-[10px] font-mono px-2 py-1 rounded border border-border/30 text-muted-foreground hover:bg-accent/20"
+              data-testid="button-dismiss-token"
+            >Dismiss</button>
+          </div>
+        </div>
+      )}
+
+      {showApplyForm && (
+        <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/5 p-2 space-y-1.5" data-testid="apply-form">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-cyan-400">
+            Submit Application — admission requires offer of value
+          </div>
+          <input className="w-full bg-background/50 border border-border/30 rounded px-2 py-1 text-[11px] font-mono" placeholder="Your name *" value={applyForm.applicantName} onChange={e => setApplyForm({ ...applyForm, applicantName: e.target.value })} data-testid="input-apply-name" />
+          <input className="w-full bg-background/50 border border-border/30 rounded px-2 py-1 text-[11px] font-mono" placeholder="Contact (email / handle / pubkey) *" value={applyForm.contact} onChange={e => setApplyForm({ ...applyForm, contact: e.target.value })} data-testid="input-apply-contact" />
+          <input className="w-full bg-background/50 border border-border/30 rounded px-2 py-1 text-[11px] font-mono" placeholder="Proposed post title *" value={applyForm.proposedTitle} onChange={e => setApplyForm({ ...applyForm, proposedTitle: e.target.value })} data-testid="input-apply-title" />
+          <textarea className="w-full bg-background/50 border border-border/30 rounded px-2 py-1 text-[11px] font-mono min-h-[80px]" placeholder="Proposed post content *" value={applyForm.proposedContent} onChange={e => setApplyForm({ ...applyForm, proposedContent: e.target.value })} data-testid="input-apply-content" />
+          <textarea className="w-full bg-background/50 border border-amber-500/30 rounded px-2 py-1 text-[11px] font-mono min-h-[50px]" placeholder="Offer of value to the council * (what do you bring? why should you be admitted?)" value={applyForm.offerOfValue} onChange={e => setApplyForm({ ...applyForm, offerOfValue: e.target.value })} data-testid="input-apply-offer" />
+          <button
+            onClick={() => submitMutation.mutate(applyForm)}
+            disabled={submitMutation.isPending}
+            className="text-[11px] font-mono px-3 py-1 rounded border border-cyan-500/40 bg-cyan-500/15 text-cyan-200 hover:bg-cyan-500/25 disabled:opacity-50"
+            data-testid="button-submit-application"
+          >
+            {submitMutation.isPending ? "Submitting…" : "Submit application"}
+          </button>
+        </div>
+      )}
+
+      {showApplicants && (
+        <div className="rounded-lg border border-orange-500/25 bg-orange-500/5 p-2 space-y-2 max-h-96 overflow-y-auto" data-testid="applicants-queue">
+          <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-orange-400">
+            <ShieldAlert size={11} /> Vetting Queue — External Applicants ({applicants.length})
+          </div>
+          {applicants.length === 0 ? (
+            <div className="text-[11px] font-mono text-muted-foreground/60 px-1 py-2">
+              No pending applicants. External posts will queue here for your review before joining the forum.
+            </div>
+          ) : (
+            applicants.map(app => (
+              <div key={app.id} className="rounded border border-orange-500/20 bg-black/20 p-2 space-y-1.5" data-testid={`applicant-${app.id}`}>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-500/30 uppercase">
+                    Applicant
+                  </span>
+                  <span className="text-[11px] font-mono text-foreground/90 font-bold">{app.applicantName}</span>
+                  <span className="text-[10px] font-mono text-muted-foreground/60">via {app.source} {app.applicantHandle}</span>
+                  <span className="ml-auto text-[10px] font-mono text-muted-foreground/40">{timeAgo(app.createdAt)}</span>
+                </div>
+                <div className="text-[12px] font-semibold text-foreground">{app.proposedTitle}</div>
+                <div className="text-[11px] text-foreground/70 whitespace-pre-wrap line-clamp-3">{app.proposedContent}</div>
+                <div className="text-[10px] font-mono text-amber-300/80">
+                  <span className="opacity-60">Offer of value:</span> {app.offerOfValue}
+                </div>
+                {app.alignment && <AlignmentScorePanel a={app.alignment} />}
+                {rejectingId === app.id ? (
+                  <div className="flex gap-1.5 items-center">
+                    <input
+                      type="text"
+                      value={rejectReason}
+                      onChange={e => setRejectReason(e.target.value)}
+                      placeholder="Reason for rejection..."
+                      className="flex-1 bg-background/50 border border-red-500/30 rounded px-2 py-1 text-[11px] font-mono"
+                      data-testid={`input-reject-reason-${app.id}`}
+                    />
+                    <button
+                      onClick={() => rejectMutation.mutate({ id: app.id, reason: rejectReason || "no reason" })}
+                      disabled={rejectMutation.isPending}
+                      className="text-[10px] font-mono px-2 py-1 rounded border border-red-500/40 bg-red-500/15 text-red-300 hover:bg-red-500/25"
+                      data-testid={`button-confirm-reject-${app.id}`}
+                    >Confirm</button>
+                    <button onClick={() => { setRejectingId(null); setRejectReason(""); }} className="text-[10px] font-mono px-2 py-1 rounded border border-border/30 text-muted-foreground hover:bg-accent/20">Cancel</button>
+                  </div>
+                ) : (
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => approveMutation.mutate(app.id)}
+                      disabled={approveMutation.isPending}
+                      className="text-[10px] font-mono px-2 py-1 rounded border border-emerald-500/40 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 flex items-center gap-1"
+                      data-testid={`button-approve-applicant-${app.id}`}
+                    >
+                      <CheckCircle2 size={10} /> Approve & Admit
+                    </button>
+                    <button
+                      onClick={() => setRejectingId(app.id)}
+                      className="text-[10px] font-mono px-2 py-1 rounded border border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 flex items-center gap-1"
+                      data-testid={`button-reject-applicant-${app.id}`}
+                    >
+                      <XCircle size={10} /> Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Discussion Enforcement Tracker Panel ─────────────────────────────────────
 function DiscussionEnforcementPanel({ topicId }: { topicId: string }) {
   const { data: tracking } = useQuery<DiscussionTracking>({
@@ -110,9 +450,13 @@ interface ForumReply {
   content: string;
   author: string;
   authorRole: string;
-  authorType: "father" | "agent" | "moltbook" | "external-ai" | "llm" | "entity";
+  authorType: "father" | "agent" | "moltbook" | "external-ai" | "llm" | "entity" | "applicant" | "member" | "human";
   createdAt: number;
-  parentReplyId?: string;
+  parentReplyId?: string | null;
+}
+
+interface ReplyNode extends ForumReply {
+  children: ReplyNode[];
 }
 
 interface ForumTopic {
@@ -122,7 +466,7 @@ interface ForumTopic {
   category?: string;
   author: string;
   authorRole: string;
-  authorType: "father" | "agent" | "moltbook" | "external-ai" | "llm" | "entity";
+  authorType: "father" | "agent" | "moltbook" | "external-ai" | "llm" | "entity" | "applicant" | "member" | "human";
   createdAt: number;
   pinned: boolean;
   replies: ForumReply[];
@@ -174,11 +518,15 @@ const TYPE_COLORS: Record<string, { bg: string; border: string; text: string; ba
   "external-ai": { bg: "bg-emerald-950/50", border: "border-emerald-500/30", text: "text-emerald-300", badge: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" },
   llm:         { bg: "bg-rose-950/50",   border: "border-rose-500/30",   text: "text-rose-300",   badge: "bg-rose-500/20 text-rose-300 border-rose-500/40" },
   entity:      { bg: "bg-indigo-950/60", border: "border-indigo-400/50", text: "text-indigo-300", badge: "bg-indigo-500/20 text-indigo-300 border-indigo-400/50" },
+  applicant:   { bg: "bg-orange-950/40", border: "border-orange-500/40", text: "text-orange-300", badge: "bg-orange-500/20 text-orange-300 border-orange-500/40" },
+  member:      { bg: "bg-fuchsia-950/40", border: "border-fuchsia-500/40", text: "text-fuchsia-300", badge: "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40" },
+  human:       { bg: "bg-sky-950/40",     border: "border-sky-500/40",     text: "text-sky-300",     badge: "bg-sky-500/20 text-sky-300 border-sky-500/40" },
 };
 
 const TYPE_LABELS: Record<string, string> = {
   father: "FATHER", agent: "AGENT", moltbook: "MOLTBOOK",
   "external-ai": "EXT AI", llm: "LLM", entity: "ENTITY",
+  applicant: "APPLICANT", member: "VETTED MEMBER", human: "HUMAN",
 };
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
@@ -465,18 +813,24 @@ function MentionInput({ value, onChange, onSubmit, placeholder, allNames, disabl
 
 // ─── ReplyItem ────────────────────────────────────────────────────────────────
 
-function ReplyItem({ reply, colors, onDelete, topicId }: {
+type ReplyTally = { up: number; down: number };
+
+function ReplyItem({ reply, colors, onDelete, onReplyTo, topicId, children, depth = 0, tally }: {
   reply: ForumReply;
   colors: Record<string, string>;
   onDelete: (topicId: string, replyId: string) => void;
+  onReplyTo?: (replyId: string, author: string) => void;
   topicId: string;
+  children?: React.ReactNode;
+  depth?: number;
+  tally?: ReplyTally;
 }) {
   const style = TYPE_COLORS[reply.authorType] || TYPE_COLORS.agent;
   const color = colors[reply.author];
   return (
     <div
       className={cn("rounded-lg border p-3", style.bg, style.border)}
-      style={{ borderLeftColor: color || undefined, borderLeftWidth: color ? 3 : 1 }}
+      style={{ borderLeftColor: color || undefined, borderLeftWidth: color ? 3 : 1, marginLeft: depth > 0 ? Math.min(depth, 4) * 16 : undefined }}
       data-testid={`reply-${reply.id}`}
     >
       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
@@ -492,16 +846,35 @@ function ReplyItem({ reply, colors, onDelete, topicId }: {
           {TYPE_LABELS[reply.authorType] || reply.authorType}
         </span>
         <span className="text-[11px] text-muted-foreground font-mono">{reply.authorRole}</span>
+        {depth > 0 && <span className="text-[10px] font-mono text-muted-foreground/40">↳ reply</span>}
         <span className="text-[11px] text-muted-foreground/50 font-mono ml-auto">{timeAgo(reply.createdAt)}</span>
       </div>
       <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90" data-testid={`reply-content-${reply.id}`}>{reply.content}</p>
-      <button
-        onClick={() => onDelete(topicId, reply.id)}
-        className="mt-1.5 flex items-center gap-1 text-[11px] font-mono text-muted-foreground/40 hover:text-red-400 transition-colors min-h-[28px]"
-        data-testid={`delete-reply-${reply.id}`}
-      >
-        <Trash2 size={10} /> Delete
-      </button>
+      <div className="mt-1.5 flex items-center gap-3">
+        {tally && (
+          <span className="text-[11px] font-mono text-muted-foreground/60" data-testid={`reply-tally-${reply.id}`}>
+            <ThumbsUp size={10} className="inline mr-0.5 text-green-400" />{tally.up}
+            <ThumbsDown size={10} className="inline ml-2 mr-0.5 text-red-400" />{tally.down}
+          </span>
+        )}
+        {onReplyTo && (
+          <button
+            onClick={() => onReplyTo(reply.id, reply.author)}
+            className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground/50 hover:text-cyan-400 transition-colors min-h-[28px]"
+            data-testid={`reply-to-${reply.id}`}
+          >
+            <MessageSquare size={10} /> Reply
+          </button>
+        )}
+        <button
+          onClick={() => onDelete(topicId, reply.id)}
+          className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground/40 hover:text-red-400 transition-colors min-h-[28px]"
+          data-testid={`delete-reply-${reply.id}`}
+        >
+          <Trash2 size={10} /> Delete
+        </button>
+      </div>
+      {children && <div className="mt-2 space-y-2">{children}</div>}
     </div>
   );
 }
@@ -663,6 +1036,7 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
 }) {
   const { toast } = useToast();
   const [replyText, setReplyText] = useState("");
+  const [replyParent, setReplyParent] = useState<{ id: string; author: string } | null>(null);
   const [proposalText, setProposalText] = useState("");
   const [fatherComment, setFatherComment] = useState("");
   const [showFatherIntervene, setShowFatherIntervene] = useState(false);
@@ -673,6 +1047,7 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
     mutationFn: async (content: string) => {
       const res = await apiRequest("POST", `/api/tesseract-forum/topics/${topic.id}/reply`, {
         content, author: "Father", authorType: "father",
+        ...(replyParent ? { parentReplyId: replyParent.id } : {}),
       });
       return res.json();
     },
@@ -685,8 +1060,10 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
           setTimeout(() => queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/topics"] }), 8000);
         } catch {}
       }
+      const wasThreaded = !!replyParent;
       setReplyText("");
-      toast({ title: mentions.length > 0 ? `Reply posted — @mentioning ${mentions.join(", ")}` : "Reply posted" });
+      setReplyParent(null);
+      toast({ title: wasThreaded ? "Threaded reply posted" : (mentions.length > 0 ? `Reply posted — @mentioning ${mentions.join(", ")}` : "Reply posted") });
     },
     onError: (err: Error) => {
       toast({ title: "Reply blocked", description: err.message, variant: "destructive" });
@@ -766,6 +1143,66 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
     [topic.replies]
   );
 
+  const replyTree = useMemo<ReplyNode[]>(() => {
+    const byId = new Map<string, ReplyNode>();
+    const roots: ReplyNode[] = [];
+    for (const r of sorted as ForumReply[]) byId.set(String(r.id), { ...r, children: [] });
+    for (const r of sorted as ForumReply[]) {
+      const node = byId.get(String(r.id));
+      if (!node) continue;
+      const pid = r.parentReplyId;
+      const parent = pid != null ? byId.get(String(pid)) : undefined;
+      if (parent) parent.children.push(node);
+      else roots.push(node);
+    }
+    return roots;
+  }, [sorted]);
+
+  const { data: voteTallies } = useQuery<{ ok: boolean; tallies: Array<{ replyId: number | null; up: number; down: number }> }>({
+    queryKey: ["/api/tesseract-forum/topics", topic.id, "votes"],
+    queryFn: async () => {
+      const res = await fetch(`/api/tesseract-forum/topics/${topic.id}/votes`);
+      if (!res.ok) return { ok: false, tallies: [] };
+      return res.json();
+    },
+    enabled: sorted.length > 0,
+    refetchInterval: 30_000,
+  });
+
+  const tallyByReplyId = useMemo(() => {
+    const m = new Map<string, ReplyTally>();
+    for (const t of voteTallies?.tallies ?? []) {
+      if (t.replyId != null) m.set(String(t.replyId), { up: t.up, down: t.down });
+    }
+    return m;
+  }, [voteTallies]);
+
+  const topicTally = useMemo(() => {
+    const t = (voteTallies?.tallies ?? []).find(x => x.replyId == null);
+    return t ? { up: t.up, down: t.down } : null;
+  }, [voteTallies]);
+
+  const handleReplyTo = useCallback((replyId: string, author: string) => {
+    setReplyParent({ id: replyId, author });
+    setReplyText(prev => (prev.includes(`@${author}`) ? prev : `@${author} ${prev}`.trimStart()));
+  }, []);
+
+  const renderReplyTree = (nodes: ReplyNode[], depth = 0): React.ReactNode =>
+    nodes.map(n => (
+      <ReplyItem
+        key={n.id}
+        reply={n}
+        colors={colors}
+        onDelete={handleDeleteReply}
+        onReplyTo={handleReplyTo}
+        topicId={topic.id}
+        depth={depth}
+        tally={tallyByReplyId.get(String(n.id))}
+      >
+        {n.children.length > 0 ? renderReplyTree(n.children, depth + 1) : null}
+      </ReplyItem>
+    ));
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Thread header */}
@@ -804,6 +1241,13 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
             <span className="text-[11px] text-muted-foreground/50 font-mono shrink-0">{timeAgo(topic.createdAt)}</span>
           </div>
           <h2 className="text-lg font-bold text-foreground mb-2" data-testid="thread-title">{topic.title}</h2>
+          {topicTally && (
+            <div className="mb-2 inline-flex items-center gap-3 text-[11px] font-mono text-muted-foreground/70 px-2 py-1 rounded bg-background/40 border border-border/40" data-testid="topic-vote-tally">
+              <span className="uppercase tracking-wider opacity-60">Council vote</span>
+              <span className="text-green-400 inline-flex items-center gap-1"><ThumbsUp size={11} />{topicTally.up}</span>
+              <span className="text-red-400 inline-flex items-center gap-1"><ThumbsDown size={11} />{topicTally.down}</span>
+            </div>
+          )}
           <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90" data-testid="thread-content">{topic.content}</p>
 
           {topic.urls && topic.urls.length > 0 && (
@@ -850,15 +1294,7 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
             <div className="text-[11px] font-mono text-muted-foreground/40 uppercase tracking-wider px-1">
               {sorted.length} {sorted.length === 1 ? "Reply" : "Replies"}
             </div>
-            {sorted.map(reply => (
-              <ReplyItem
-                key={reply.id}
-                reply={reply}
-                colors={colors}
-                onDelete={handleDeleteReply}
-                topicId={topic.id}
-              />
-            ))}
+            {renderReplyTree(replyTree)}
           </div>
         )}
 
@@ -916,6 +1352,12 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
         )}
 
         {/* Reply box */}
+        {replyParent && (
+          <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-[11px] font-mono mb-2" data-testid="reply-parent-indicator">
+            <span>↳ Replying to <strong>@{replyParent.author}</strong> (threaded)</span>
+            <button onClick={() => setReplyParent(null)} className="text-cyan-300/60 hover:text-cyan-200" data-testid="reply-parent-clear">Cancel</button>
+          </div>
+        )}
         <div className="flex gap-2 items-end">
           <div className="flex-1">
             <MentionInput
@@ -1401,6 +1843,8 @@ export default function TesseractForumPage({ embedded }: { embedded?: boolean })
                 />
               </div>
             </div>
+
+            <HeartbeatAndApplicantsPanel />
 
             {/* Live Stats Banner */}
             <div className="px-3 py-2 border-b border-border/20 shrink-0">

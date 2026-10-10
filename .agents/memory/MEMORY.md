@@ -1,3 +1,1 @@
-- [Consolidation and learning scope](consolidation-scope.md) — Repository consolidation keeps its exclusions; Tessera's authorized learning corpus includes all non-private domains.
-- [GitHub connection collision](github-connection-collision.md) — Replit may report GitHub as not_added while rejecting attachment because another connection is assigned; inspect connected apps before changing it.
-- [Graph storage boundary](graph-storage-boundary.md) — Prefer GitHub for suitable versioned mesh/knowledge data and selectively sync only needed partitions to Replit's live runtime.
+- [GitHub shell authentication](github-shell-auth.md) — the GitHub App connector’s REST auth doesn’t authenticate Git pushes or Git LFS.

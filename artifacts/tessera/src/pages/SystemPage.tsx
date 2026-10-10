@@ -1,290 +1,522 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Activity, Cpu, Database, GitBranch, Pause, Play, Shield, Zap, Clock, AlertTriangle, CheckCircle2, Network, CircleHelp, Orbit, Layers3, RefreshCw } from "lucide-react";
-import { GlassCard, SectionHeader, PageHeader, MiniStat, TabLoadingSkeleton } from "@/components/ui/sovereign";
+import { Cpu, Activity, Database, Zap, GitBranch, RefreshCw, TrendingUp, Star, Shield, Pause, Play, AlertTriangle, CheckCircle2, Clock, History, XCircle } from "lucide-react";
+import { GlassCard, GradientBar, SectionHeader, TabBar, PageHeader, RadialGauge, MiniStat, HeroStat, TabLoadingSkeleton } from "@/components/ui/sovereign";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { QueryErrorFallback } from "@/components/ui/QueryErrorFallback";
 import { cn } from "@/lib/utils";
 import { queryClient } from "@/lib/queryClient";
-import type { SystemDestination } from "@/lib/navigation-registry";
 
 const API = import.meta.env.VITE_API_URL || "";
-type LegacyTab = "agi" | "improvement" | "evolution" | "quantum" | "agents" | "health";
-type SystemTab = SystemDestination;
-type Metrics = Record<string, any>;
 
-const tabForLegacy: Record<LegacyTab, SystemTab> = {
-  agi: "learning", improvement: "learning", evolution: "learning",
-  quantum: "architecture", agents: "operations", health: "operations",
-};
-const subsectionForLegacy: Partial<Record<LegacyTab, string>> = {
-  agi: "training-activity", improvement: "improvement-activity",
-  evolution: "self-evolution", agents: "agents-runtime", health: "evolution-health",
-  quantum: "quantum-architecture",
-};
-async function fetchApi<T = Metrics>(url: string): Promise<T> {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`API ${response.status}: ${response.statusText}`);
-  const json = await response.json();
+type SystemTab = "agi" | "improvement" | "evolution" | "quantum" | "agents" | "health";
+
+async function fetchApi<T = any>(url: string): Promise<T> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
+  const json = await res.json();
   return json.data;
 }
-function MetricQueryState({ loading, error, retry, label }: { loading: boolean; error: unknown; retry: () => void; label: string }) {
-  if (loading) return <TabLoadingSkeleton />;
-  if (error) return <QueryErrorFallback error={error as Error} onRetry={retry} label={label} />;
-  return null;
-}
-function DataLine({ label, value }: { label: string; value: unknown }) {
-  if (value === undefined || value === null || value === "") return null;
-  return <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-white/[0.05] py-2 last:border-0">
-    <span className="text-xs text-slate-400">{label}</span><span className="font-mono text-xs text-slate-200">{String(value)}</span>
-  </div>;
-}
 
-export default function SystemPage({ initialTab }: { initialTab?: LegacyTab }) {
-  const mappedInitial = initialTab ? tabForLegacy[initialTab] : "capability";
-  const [activeTab, setActiveTab] = useState<SystemTab>(mappedInitial);
-  const scrolledToInitial = useRef(false);
-  const initialSection = initialTab ? subsectionForLegacy[initialTab] : undefined;
+export default function SystemPage({ initialTab }: { initialTab?: SystemTab }) {
+  const [activeTab, setActiveTab] = useState<SystemTab>(initialTab || "agi");
 
-  const agi = useQuery({ queryKey: ["agi-metrics"], queryFn: () => fetchApi(`${API}/api/agi-training/metrics`), refetchInterval: 15000, enabled: activeTab === "learning" });
-  const improvement = useQuery({ queryKey: ["improvement-metrics"], queryFn: () => fetchApi(`${API}/api/auto-improvement/metrics`), refetchInterval: 60000, enabled: activeTab === "learning" });
-  const evolution = useQuery({ queryKey: ["evolution-metrics"], queryFn: () => fetchApi(`${API}/api/self-evolution/metrics`), refetchInterval: 60000, enabled: activeTab === "learning" });
-  const health = useQuery({ queryKey: ["evolution-health"], queryFn: () => fetchApi(`${API}/api/evolution-health`), refetchInterval: 10000, enabled: activeTab === "operations" });
-  const agents = useQuery({ queryKey: ["spawner-metrics"], queryFn: () => fetchApi(`${API}/api/agent-spawner/metrics`), refetchInterval: 30000, enabled: activeTab === "operations" });
-  const quantum = useQuery({ queryKey: ["quantum-metrics"], queryFn: () => fetchApi(`${API}/api/quantum/metrics`), refetchInterval: 60000, enabled: activeTab === "architecture" });
-  const tabs = useMemo(() => [
-    { id: "capability", label: "Capability" },
-    { id: "learning", label: "Learning" },
-    { id: "operations", label: "Operations" },
-    { id: "architecture", label: "Architecture" },
-  ], []);
-  useEffect(() => {
-    setActiveTab(initialTab ? tabForLegacy[initialTab] : "capability");
-    scrolledToInitial.current = false;
-  }, [initialTab]);
-  useEffect(() => {
-    if (!initialSection || scrolledToInitial.current) return;
-    const target = document.getElementById(initialSection);
-    if (!target) return;
-    scrolledToInitial.current = true;
-    requestAnimationFrame(() => target.scrollIntoView({ block: "start" }));
-  }, [initialSection, activeTab, agi.isSuccess, improvement.isSuccess, evolution.isSuccess, health.isSuccess, agents.isSuccess, quantum.isSuccess]);
-
-  const mutateHealth = (action: "pause" | "resume" | "reset", moduleId: string) => fetch(
-    `${API}/api/evolution-health/${action}/${moduleId}`,
-    { method: "POST", headers: { "x-admin-token": localStorage.getItem("t9_admin_token") || "" } },
-  ).then(async (response) => {
-    if (!response.ok) throw new Error(`Health control failed (${response.status})`);
-    return response.json();
+  const { data: agiMetrics, error: agiError, refetch: refetchAgi } = useQuery({
+    queryKey: ["agi-metrics"],
+    queryFn: () => fetchApi(`${API}/api/agi-training/metrics`),
+    refetchInterval: 15000,
   });
-  const pause = useMutation({ mutationFn: (id: string) => mutateHealth("pause", id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["evolution-health"] }) });
-  const resume = useMutation({ mutationFn: (id: string) => mutateHealth("resume", id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["evolution-health"] }) });
-  const reset = useMutation({ mutationFn: (id: string) => mutateHealth("reset", id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["evolution-health"] }) });
-  const mutationError = pause.error || resume.error || reset.error;
-  const inFlight = pause.isPending || resume.isPending || reset.isPending;
 
-  return <main className="min-h-[100dvh] bg-gradient-to-b from-[#02010a] to-[#080518] px-4 py-5 md:p-6 pb-24">
-    <div className="max-w-5xl mx-auto space-y-5 sovereign-stagger">
-      <PageHeader title="System Engine" subtitle="Evidence, learning activity, operations, and architecture" gradient="bg-gradient-to-r from-cyan-300 via-sky-300 to-violet-300" />
-      <nav aria-label="System Engine sections" className="grid grid-cols-2 gap-1 rounded-xl border border-white/[0.06] bg-white/[0.03] p-1 md:grid-cols-4" data-testid="system-engine-tabs">
-        {tabs.map((tab) => {
-          const selected = activeTab === tab.id;
-          return <button key={tab.id} type="button" aria-current={selected ? "page" : undefined}
-            onClick={() => setActiveTab(tab.id as SystemTab)}
-            className={cn("min-h-10 rounded-lg px-2 py-2 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300 md:px-4",
-              selected ? "bg-gradient-to-r from-cyan-600 to-cyan-500 text-white shadow-[0_0_12px_rgba(6,182,212,0.25)]" : "text-slate-400 hover:bg-white/[0.06] hover:text-white")}
-            data-testid={`system-tab-${tab.id}`}>{tab.label}</button>;
-        })}
-      </nav>
+  const { data: improvementMetrics, error: improvementError, refetch: refetchImprovement } = useQuery({
+    queryKey: ["improvement-metrics"],
+    queryFn: () => fetchApi(`${API}/api/auto-improvement/metrics`),
+    refetchInterval: 60000,
+    enabled: activeTab === "improvement",
+  });
 
-      {activeTab === "capability" && <SectionErrorBoundary name="Capability">
-        <GlassCard glow="cyan" animate>
-          <div className="flex items-start gap-4">
-            <div className="p-3 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.06]"><CircleHelp className="w-5 h-5 text-cyan-300" /></div>
-            <div className="min-w-0">
-              <SectionHeader icon={Activity} title="Evaluation evidence" color="cyan" />
-              <div className="mt-4 text-lg font-semibold text-cyan-100" data-testid="status-capability-not-evaluated">Not evaluated</div>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
-                No category-aligned evaluation result, sample count, or evaluation timestamp is exposed by the available System Engine metrics. Activity counts and count-derived training indicators are not capability measurements.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2 text-[10px] font-mono uppercase tracking-wider text-slate-500">
-                <span className="rounded-full border border-white/[0.08] px-2.5 py-1">Evaluation source: unavailable</span>
-                <span className="rounded-full border border-white/[0.08] px-2.5 py-1">No score inferred</span>
-              </div>
-            </div>
+  const { data: evolutionMetrics, error: evolutionError, refetch: refetchEvolution } = useQuery({
+    queryKey: ["evolution-metrics"],
+    queryFn: () => fetchApi(`${API}/api/self-evolution/metrics`),
+    refetchInterval: 60000,
+    enabled: activeTab === "evolution",
+  });
+
+  const { data: quantumMetrics, error: quantumError, refetch: refetchQuantum } = useQuery({
+    queryKey: ["quantum-metrics"],
+    queryFn: () => fetchApi(`${API}/api/quantum/metrics`),
+    refetchInterval: 60000,
+    enabled: activeTab === "quantum",
+  });
+
+  const { data: agentMetrics, error: agentError, refetch: refetchAgents } = useQuery({
+    queryKey: ["spawner-metrics"],
+    queryFn: () => fetchApi(`${API}/api/agent-spawner/metrics`),
+    refetchInterval: 30000,
+    enabled: activeTab === "agents",
+  });
+
+  const { data: healthData, error: healthError, refetch: refetchHealth } = useQuery({
+    queryKey: ["evolution-health"],
+    queryFn: () => fetchApi(`${API}/api/evolution-health`),
+    refetchInterval: 10000,
+    enabled: activeTab === "health",
+  });
+
+  const { data: attemptsData } = useQuery({
+    queryKey: ["evolution-attempts"],
+    queryFn: () =>
+      fetch(`${API}/api/evolution-health/attempts?limit=30`, {
+        headers: { "x-admin-token": localStorage.getItem("t9_admin_token") || "" },
+      })
+        .then(r => (r.ok ? r.json() : { ok: false, data: { attempts: [], counts: {}, total: 0 } }))
+        .then(j => j.data ?? { attempts: [], counts: {}, total: 0 }),
+    refetchInterval: 10000,
+    enabled: activeTab === "health",
+  });
+
+  const pauseMutation = useMutation({
+    mutationFn: (moduleId: string) =>
+      fetch(`${API}/api/evolution-health/pause/${moduleId}`, { method: "POST", headers: { "x-admin-token": localStorage.getItem("t9_admin_token") || "" } }).then(r => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["evolution-health"] });
+    },
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: (moduleId: string) =>
+      fetch(`${API}/api/evolution-health/resume/${moduleId}`, { method: "POST", headers: { "x-admin-token": localStorage.getItem("t9_admin_token") || "" } }).then(r => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["evolution-health"] });
+    },
+  });
+
+  const resetMutation = useMutation({
+    mutationFn: (moduleId: string) =>
+      fetch(`${API}/api/evolution-health/reset/${moduleId}`, { method: "POST", headers: { "x-admin-token": localStorage.getItem("t9_admin_token") || "" } }).then(r => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["evolution-health"] });
+    },
+  });
+
+  const tabs = [
+    { id: "agi", label: "AGI Training" },
+    { id: "improvement", label: "Improvement" },
+    { id: "evolution", label: "Self-Evolution" },
+    { id: "health", label: "Evo Health" },
+    { id: "quantum", label: "Quantum" },
+    { id: "agents", label: "Agents" },
+  ] as const;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-[#02010a] to-[#080518] p-4 md:p-6 pb-24">
+      <div className="max-w-4xl mx-auto space-y-6 sovereign-stagger">
+        <PageHeader
+          title="System Engine"
+          subtitle="AGI Training · Self-Improvement · Quantum Architecture · Agent Network"
+          gradient="bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400"
+        />
+
+        {agiMetrics && activeTab === "agi" && (
+          <div className="flex items-center justify-center gap-6 md:gap-10">
+            <RadialGauge value={agiMetrics.avgScore ?? 0} label="Avg Score" sublabel="%" color="cyan" size={110} strokeWidth={10} />
+            <RadialGauge value={agiMetrics.sovereignMastery ?? 0} max={20} label="Sovereign" color="violet" size={90} strokeWidth={8} />
+            <RadialGauge value={agiMetrics.totalCycles ?? 0} max={100} label="Total Cycles" color="emerald" size={90} strokeWidth={8} />
           </div>
-        </GlassCard>
-      </SectionErrorBoundary>}
+        )}
 
-      {activeTab === "learning" && <SectionErrorBoundary name="Learning">
-        <div className="space-y-4">
-          <MetricQueryState loading={agi.isLoading || improvement.isLoading || evolution.isLoading} error={agi.error || improvement.error || evolution.error}
-            retry={() => { void agi.refetch(); void improvement.refetch(); void evolution.refetch(); }} label="Learning activity" />
-          {(agi.data || improvement.data || evolution.data) && <>
-            <GlassCard glow="cyan" animate>
-              <div id="training-activity" className="scroll-mt-4">
-                <SectionHeader icon={Cpu} title="AGI Training activity" color="cyan" />
-                <p className="text-[11px] text-slate-500 mt-1">Source: GET /api/agi-training/metrics · operational counters, not evaluation evidence</p>
-                <div className="grid grid-cols-2 gap-3 mt-4 md:grid-cols-3">
-                  <MiniStat value={agi.data?.totalCycles ?? "—"} label="Training cycles · count" color="cyan" />
-                  <MiniStat value={agi.data?.totalCategories ?? "—"} label="Configured categories · count" color="violet" />
-                  <MiniStat value={agi.data?.dataSourceCounts ? Object.values(agi.data.dataSourceCounts as Record<string, number>).reduce((sum, value) => sum + Number(value || 0), 0) : "—"} label="Source records · aggregate count" color="emerald" />
-                </div>
-                {agi.data?.dataSourceCounts && <div className="mt-4 border-t border-white/[0.06] pt-2">
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Reported source counts</p>
-                  {Object.entries(agi.data.dataSourceCounts as Record<string, number>).map(([source, count]) => <DataLine key={source} label={`${source} · records`} value={count} />)}
-                </div>}
-                <p className="text-[10px] text-slate-600 mt-3">The API does not expose an observation timestamp for these counters.</p>
-              </div>
-            </GlassCard>
-            <GlassCard glow="emerald" animate>
-              <div id="improvement-activity" className="scroll-mt-4">
-                <SectionHeader icon={Activity} title="Auto-Improvement" color="emerald" />
-                <p className="text-[11px] text-slate-500 mt-1">Source: GET /api/auto-improvement/metrics · activity totals</p>
-                <div className="grid grid-cols-2 gap-3 mt-4 md:grid-cols-3">
-                  <MiniStat value={improvement.data?.totalCycles ?? "—"} label="Daemon cycles · count" color="emerald" />
-                  <MiniStat value={improvement.data?.totalImprovements ?? "—"} label="Recorded improvements · count" color="cyan" />
-                  <MiniStat value={improvement.data?.categoryCount ?? "—"} label="Tracked categories · count" color="violet" />
-                </div>
-                {improvement.data?.lastCycleAt && <p className="text-[10px] text-slate-500 font-mono mt-3">Last cycle reported: {new Date(improvement.data.lastCycleAt).toLocaleString()}</p>}
-                <div className="mt-4 space-y-2">
-                  {(improvement.data?.recentImprovements ?? []).length ? (improvement.data?.recentImprovements ?? []).map((item: Metrics, index: number) => <div key={item.id ?? index} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
-                    <p className="text-xs text-slate-200">{item.description}</p>
-                    {item.impact !== undefined && <p className="text-[10px] font-mono text-emerald-300 mt-1">Reported impact field: {String(item.impact)}</p>}
-                  </div>) : <p className="text-xs text-slate-500 py-2">No recent improvements returned.</p>}
-                </div>
-              </div>
-            </GlassCard>
-            <GlassCard glow="violet" animate>
-              <div id="self-evolution" className="scroll-mt-4">
-                <SectionHeader icon={GitBranch} title="Self-Evolution proposals" color="violet" />
-                <p className="text-[11px] text-slate-500 mt-1">Source: GET /api/self-evolution/metrics · proposal and protected-module counts</p>
-                <div className="grid grid-cols-2 gap-3 mt-4 md:grid-cols-4">
-                  <MiniStat value={evolution.data?.totalProposals ?? "—"} label="Proposals · count" color="violet" />
-                  <MiniStat value={evolution.data?.approvedCount ?? "—"} label="Applied · count" color="emerald" />
-                  <MiniStat value={evolution.data?.rejectedCount ?? "—"} label="Rejected · count" color="rose" />
-                  <MiniStat value={evolution.data?.protectedModuleCount ?? "—"} label="Protected modules · count" color="cyan" />
-                </div>
-                {evolution.data?.lastEvolutionAt && <p className="text-[10px] text-slate-500 font-mono mt-3">Last evolution reported: {new Date(evolution.data.lastEvolutionAt).toLocaleString()}</p>}
-                <div className="space-y-2 mt-4">
-                  {(evolution.data?.recentProposals ?? []).length ? (evolution.data?.recentProposals ?? []).map((proposal: Metrics, index: number) => <div key={proposal.id ?? index} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
-                    <div className="flex justify-between gap-3"><span className="text-xs text-slate-100">{proposal.targetModule}</span><span className="text-[10px] uppercase text-slate-400">{proposal.status}</span></div>
-                    <p className="text-xs text-slate-400 mt-1">{proposal.proposedChange}</p>
-                    {proposal.rationale && <p className="text-[10px] text-slate-500 mt-1">{proposal.rationale}</p>}
-                  </div>) : <p className="text-xs text-slate-500 py-2">No recent proposals returned.</p>}
-                </div>
-              </div>
-            </GlassCard>
-          </>}
-        </div>
-      </SectionErrorBoundary>}
+        <TabBar tabs={tabs} activeTab={activeTab} onChange={(id: string) => setActiveTab(id as SystemTab)} color="cyan" />
 
-      {activeTab === "operations" && <SectionErrorBoundary name="Operations">
-        <div className="space-y-4">
-          <MetricQueryState loading={health.isLoading || agents.isLoading} error={health.error || agents.error}
-            retry={() => { void health.refetch(); void agents.refetch(); }} label="System operations" />
-          {(health.data || agents.data) && <>
-            {health.data && <div id="evolution-health" className="scroll-mt-4 space-y-4">
-              <GlassCard glow="cyan" animate>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div><SectionHeader icon={Shield} title="Evolution Health" color="cyan" /><p className="text-[11px] text-slate-500 mt-1">Source: GET /api/evolution-health · health and throttle telemetry</p></div>
-                  <button type="button" disabled={inFlight} onClick={() => health.refetch()} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-white/10 px-3 text-xs text-slate-300 hover:bg-white/[0.05] disabled:opacity-50" data-testid="button-refresh-evolution-health"><RefreshCw size={13} />Refresh</button>
-                </div>
-                {health.data.improvement && <div className="grid grid-cols-2 gap-3 mt-4 md:grid-cols-3">
-                  <MiniStat value={health.data.improvement.overallCodeHealth ?? "—"} label="Code health · reported %" color="emerald" />
-                  <MiniStat value={health.data.improvement.patches?.successRate ?? "—"} label="Patch success · reported %" color="cyan" />
-                  <MiniStat value={health.data.improvement.testing?.passRate ?? "—"} label="Test pass · reported %" color="violet" />
-                  <MiniStat value={health.data.improvement.improvementCycles ?? "—"} label="Improvement cycles · count" color="amber" />
-                </div>}
-                <p className="text-[10px] text-slate-600 mt-3">Observation timestamp is not provided by this endpoint.</p>
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {health.data.throttle?.globalPaused
-                    ? <button type="button" disabled={inFlight} onClick={() => resume.mutate("_all")} className="min-h-10 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 text-xs text-emerald-300 disabled:opacity-50" data-testid="button-resume-all"><Play size={13} className="inline mr-1.5" />Resume all</button>
-                    : <button type="button" disabled={inFlight} onClick={() => pause.mutate("_all")} className="min-h-10 rounded-lg border border-amber-400/20 bg-amber-400/10 px-3 text-xs text-amber-300 disabled:opacity-50" data-testid="button-pause-all"><Pause size={13} className="inline mr-1.5" />Pause all</button>}
-                  {mutationError && <span role="alert" className="self-center text-xs text-rose-300">Control request failed. Check authorization and retry.</span>}
+        {activeTab === "agi" && !agiMetrics && !agiError && (
+          <TabLoadingSkeleton />
+        )}
+        {activeTab === "agi" && !agiMetrics && agiError && (
+          <QueryErrorFallback error={agiError as Error} onRetry={() => refetchAgi()} label="AGI Training" />
+        )}
+        {activeTab === "agi" && agiMetrics && (
+          <SectionErrorBoundary name="AGI Training">
+            <div className="space-y-4 sovereign-stagger">
+              <GlassCard glow="amber" animate>
+                <SectionHeader icon={Star} title="Top AGI Categories" color="amber" />
+                <div className="space-y-2.5 mt-3">
+                  {agiMetrics.topCategories?.map((cat: any) => (
+                    <div key={cat.category} className="flex items-center gap-2.5">
+                      <div className="flex-1 min-w-0">
+                        <GradientBar label={cat.category} value={cat.score} color="dynamic" rightLabel={cat.score.toFixed(1)} />
+                      </div>
+                      <span className={cn("text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 border font-medium", cat.masteryLevel === "sovereign" ? "bg-violet-500/15 text-violet-400 border-violet-500/20" : cat.masteryLevel === "expert" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : "bg-slate-500/15 text-slate-400 border-slate-500/20")}>
+                        {cat.masteryLevel}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </GlassCard>
-              {health.data.throttle?.modules?.length > 0 && <GlassCard animate>
-                <SectionHeader icon={Activity} title="Throttle modules" color="violet" />
-                <div className="space-y-2 mt-3">{health.data.throttle.modules.map((module: Metrics) => <div key={module.moduleId} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0"><div className="flex items-center gap-2 text-xs text-slate-100"><span>{module.paused ? <Pause size={13} className="text-amber-300" /> : module.cooldownRemainingMs > 0 ? <Clock size={13} className="text-orange-300" /> : module.consecutiveFailures > 0 ? <AlertTriangle size={13} className="text-amber-300" /> : <CheckCircle2 size={13} className="text-emerald-300" />}</span>{module.moduleId}</div>
-                      <p className="text-[10px] text-slate-500 mt-1">{module.totalSuccesses} successes · {module.totalFailures} failures · {module.successRate}% reported success</p>
-                      {module.cooldownRemainingMs > 0 && <p className="text-[10px] text-orange-300 mt-1">Cooldown remaining: {Math.ceil(module.cooldownRemainingMs / 1000)} seconds</p>}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {module.consecutiveFailures > 0 && <button type="button" disabled={inFlight} onClick={() => reset.mutate(module.moduleId)} className="min-h-10 rounded-md border border-cyan-400/20 px-3 text-xs text-cyan-200 disabled:opacity-50" data-testid={`button-reset-module-${module.moduleId}`}>Reset</button>}
-                      <button type="button" disabled={inFlight} onClick={() => (module.paused ? resume : pause).mutate(module.moduleId)} className="min-h-10 rounded-md border border-white/10 px-3 text-xs text-slate-200 disabled:opacity-50" data-testid={`${module.paused ? "button-resume" : "button-pause"}-module-${module.moduleId}`}>{module.paused ? "Resume" : "Pause"}</button>
-                    </div>
-                  </div>
-                </div>)}</div>
-              </GlassCard>}
               <GlassCard animate>
-                <SectionHeader icon={Database} title="Scheduler" color="blue" />
-                <p className="text-[11px] text-slate-500 mt-1">Source: GET /api/evolution-health · scheduler counters</p>
-                <div className="grid grid-cols-2 gap-3 mt-4 md:grid-cols-3">
-                  <MiniStat value={health.data.scheduler?.totalTasks ?? "—"} label="Scheduled tasks · count" color="blue" />
-                  <MiniStat value={health.data.scheduler?.activeTasks ?? "—"} label="Active tasks · count" color="emerald" />
-                  <MiniStat value={health.data.scheduler?.runningNow ?? "—"} label="Currently running · count" color="cyan" />
+                <SectionHeader icon={Cpu} title="All Categories" color="cyan" />
+                <div className="space-y-2.5 mt-3">
+                  {agiMetrics.categoryStates && Object.entries(agiMetrics.categoryStates as Record<string, { score: number; masteryLevel: string; sessions: number }>).map(([cat, state]) => (
+                    <GradientBar key={cat} label={`${cat} (${state.sessions} sessions)`} value={state.score} color="dynamic" rightLabel={state.score.toFixed(1)} />
+                  ))}
                 </div>
               </GlassCard>
-            </div>}
-            {agents.data && <GlassCard glow="violet" animate>
-              <div id="agents-runtime" className="scroll-mt-4">
-                <SectionHeader icon={Network} title="Agent runtime" color="violet" />
-                <p className="text-[11px] text-slate-500 mt-1">Source: GET /api/agent-spawner/metrics · spawn runtime counters</p>
-                <div className="grid grid-cols-2 gap-3 mt-4 md:grid-cols-3">
-                  <MiniStat value={agents.data.totalSpawned ?? "—"} label="Spawned · agents" color="emerald" />
-                  <MiniStat value={agents.data.activeCount ?? "—"} label="Active · agents" color="cyan" />
-                  <MiniStat value={agents.data.generationCount ?? "—"} label="Generation · count" color="violet" />
-                </div>
-                <p className="text-[10px] text-slate-600 mt-3">The API does not expose an observation timestamp.</p>
-                <div className="space-y-2 mt-4">
-                  {(agents.data.activeAgents ?? []).length ? agents.data.activeAgents.map((agent: Metrics, index: number) => <div key={agent.id ?? index} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
-                    <div className="flex justify-between gap-3 text-xs"><span className="text-slate-100">{agent.name}</span><span className="font-mono text-slate-500">Generation {agent.generation}</span></div>
-                    {agent.role && <p className="text-[10px] text-slate-400 mt-1">{agent.role}</p>}
-                  </div>) : <p className="text-xs text-slate-500 py-2">No active agents returned.</p>}
-                </div>
-              </div>
-            </GlassCard>}
-          </>}
-        </div>
-      </SectionErrorBoundary>}
+            </div>
+          </SectionErrorBoundary>
+        )}
 
-      {activeTab === "architecture" && <SectionErrorBoundary name="Architecture">
-        <div className="space-y-4">
-          <MetricQueryState loading={quantum.isLoading} error={quantum.error} retry={() => quantum.refetch()} label="Quantum architecture" />
-          <GlassCard glow="violet" animate>
-            <SectionHeader icon={Layers3} title="Architecture evidence" color="violet" />
-            <p className="text-xs leading-relaxed text-slate-400 mt-3">This screen does not claim model-weight ownership, dedicated hardware, distributed inference, or production training. No supporting deployment evidence is exposed here; those capabilities remain unverified.</p>
-            <div className="grid grid-cols-1 gap-2 mt-4 sm:grid-cols-3">
-              {[["Model ownership", "Unverified"], ["Dedicated accelerator hardware", "Unverified"], ["Distributed inference", "Unverified"]].map(([label, status]) => <div key={label} className="rounded-lg border border-amber-400/10 bg-amber-400/[0.03] p-3"><p className="text-xs text-slate-300">{label}</p><p className="text-[10px] uppercase tracking-widest text-amber-300 mt-1">{status}</p></div>)}
+        {activeTab === "improvement" && !improvementMetrics && !improvementError && (
+          <TabLoadingSkeleton />
+        )}
+        {activeTab === "improvement" && !improvementMetrics && improvementError && (
+          <QueryErrorFallback error={improvementError as Error} onRetry={() => refetchImprovement()} label="Improvement" />
+        )}
+        {activeTab === "improvement" && improvementMetrics && (
+          <SectionErrorBoundary name="Improvement">
+            <div className="space-y-4 sovereign-stagger">
+              <GlassCard glow="emerald" animate>
+                <SectionHeader icon={TrendingUp} title="Auto-Improvement Daemon" color="emerald" />
+                <div className="grid grid-cols-3 gap-4 mt-3">
+                  <MiniStat value={improvementMetrics.totalCycles} label="Cycles" color="emerald" />
+                  <MiniStat value={improvementMetrics.totalImprovements} label="Improvements" color="cyan" />
+                  <MiniStat value={`${improvementMetrics.overallSystemScorePct?.toFixed(1)}%`} label="System Score" color="violet" />
+                </div>
+              </GlassCard>
+              <GlassCard animate>
+                <SectionHeader icon={Activity} title="Category Scores" color="blue" />
+                <div className="space-y-2.5 mt-3">
+                  {improvementMetrics.categories && Object.entries(improvementMetrics.categories as Record<string, { score: number; sessions: number }>)
+                    .sort(([, a], [, b]) => b.score - a.score)
+                    .map(([cat, state]) => (
+                      <GradientBar key={cat} label={`${cat} (${state.sessions} sessions)`} value={state.score} color="dynamic" rightLabel={state.score.toFixed(1)} />
+                    ))}
+                </div>
+              </GlassCard>
+              <GlassCard animate>
+                <SectionHeader icon={Zap} title="Recent Improvements" color="amber" />
+                <div className="space-y-2 mt-3">
+                  {improvementMetrics.recentImprovements?.map((imp: any, i: number) => (
+                    <div key={i} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-xs hover:bg-white/[0.04] transition-all">
+                      <div className="text-white leading-relaxed">{imp.description}</div>
+                      <div className="text-emerald-400 font-mono font-bold mt-1">+{(imp.impact * 100).toFixed(2)}%</div>
+                    </div>
+                  ))}
+                </div>
+              </GlassCard>
             </div>
-          </GlassCard>
-          {quantum.data && <GlassCard glow="blue" animate>
-            <div id="quantum-architecture" className="scroll-mt-4">
-              <SectionHeader icon={Orbit} title="Quantum subsystem" color="blue" />
-              <p className="text-[11px] text-slate-400 mt-1">Source: GET /api/quantum/metrics · simulated subsystem state, not physical quantum hardware telemetry</p>
-              <div className="grid grid-cols-2 gap-3 mt-4 md:grid-cols-4">
-                <MiniStat value={quantum.data.qubitCount ?? "—"} label="Simulated qubits · count" color="blue" />
-                <MiniStat value={quantum.data.entanglementPairs ?? "—"} label="Simulated entangled pairs · count" color="violet" />
-                <MiniStat value={quantum.data.activeBridges ?? "—"} label="Active bridge records · count" color="cyan" />
-                <MiniStat value={quantum.data.dimensionalDepth ?? "—"} label="Configured dimensional depth" color="amber" />
-              </div>
-              <div className="mt-4 border-t border-white/[0.06] pt-3">
-                <DataLine label="Quantum volume · model-derived" value={quantum.data.quantumVolume} />
-                <DataLine label="Error rate · model-derived" value={quantum.data.errorRate} />
-                <DataLine label="Gates applied · counter" value={quantum.data.gatesApplied} />
-              </div>
-              {quantum.data.gates?.length > 0 && <div className="mt-4"><p className="text-[10px] uppercase tracking-wider text-slate-500 mb-2">Defined simulation gates</p><div className="grid grid-cols-2 gap-2">
-                {quantum.data.gates.map((gate: Metrics) => <div key={gate.symbol} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3"><span className="font-mono text-sm text-violet-300">{gate.symbol}</span><p className="text-xs text-slate-200 mt-1">{gate.name}</p><p className="text-[10px] text-slate-500 mt-1">{gate.description}</p></div>)}
-              </div></div>}
-              {quantum.data.bridges?.length > 0 && <div className="mt-4"><p className="text-[10px] uppercase tracking-wider text-slate-500 mb-2">Modeled bridges</p><div className="space-y-2">{quantum.data.bridges.slice(0, 5).map((bridge: Metrics) => <div key={bridge.id} className="flex items-center gap-2 rounded-lg border border-white/[0.05] p-2 text-xs"><span className={cn("w-2 h-2 rounded-full", bridge.active ? "bg-emerald-400" : "bg-slate-500")} /><span className="text-slate-300">Dimension {bridge.dimA} ↔ {bridge.dimB}</span><span className="ml-auto text-slate-500 font-mono">Fidelity field {bridge.fidelity}</span></div>)}</div></div>}
-              <p className="text-[10px] text-slate-600 mt-4">Reported values describe software simulation/state. No external hardware source or observation timestamp is supplied.</p>
+          </SectionErrorBoundary>
+        )}
+
+        {activeTab === "evolution" && !evolutionMetrics && !evolutionError && (
+          <TabLoadingSkeleton />
+        )}
+        {activeTab === "evolution" && !evolutionMetrics && evolutionError && (
+          <QueryErrorFallback error={evolutionError as Error} onRetry={() => refetchEvolution()} label="Self-Evolution" />
+        )}
+        {activeTab === "evolution" && evolutionMetrics && (
+          <SectionErrorBoundary name="Self-Evolution">
+            <div className="space-y-4 sovereign-stagger">
+              <GlassCard glow="violet" animate>
+                <SectionHeader icon={GitBranch} title="Self-Code Evolution" color="violet" />
+                <div className="grid grid-cols-3 gap-4 mt-3">
+                  <MiniStat value={evolutionMetrics.totalProposals} label="Proposals" color="violet" />
+                  <MiniStat value={evolutionMetrics.approvedCount} label="Applied" color="emerald" />
+                  <MiniStat value={evolutionMetrics.rejectedCount} label="Rejected" color="rose" />
+                </div>
+                <div className="text-[10px] text-slate-500 mt-3 font-mono">Protected modules: {evolutionMetrics.protectedModuleCount}</div>
+                <div className="space-y-2 mt-3">
+                  {evolutionMetrics.recentProposals?.map((p: any, i: number) => (
+                    <div key={p.id || i} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-1 hover:bg-white/[0.04] transition-all">
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="text-xs text-white font-medium">{p.targetModule}</div>
+                        <span className={cn("text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 border", p.status === "applied" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : p.status === "rejected" ? "bg-red-500/15 text-red-400 border-red-500/20" : "bg-slate-500/15 text-slate-400 border-slate-500/20")}>{p.status}</span>
+                      </div>
+                      <div className="text-xs text-slate-400">{p.proposedChange}</div>
+                      <div className="text-[10px] text-slate-500">{p.rationale?.slice(0, 80)}</div>
+                    </div>
+                  ))}
+                </div>
+              </GlassCard>
             </div>
-          </GlassCard>}
-        </div>
-      </SectionErrorBoundary>}
+          </SectionErrorBoundary>
+        )}
+
+        {activeTab === "health" && !healthData && !healthError && (
+          <TabLoadingSkeleton />
+        )}
+        {activeTab === "health" && !healthData && healthError && (
+          <QueryErrorFallback error={healthError as Error} onRetry={() => refetchHealth()} label="Evolution Health" />
+        )}
+        {activeTab === "health" && (
+          <SectionErrorBoundary name="Evolution Health">
+            <div className="space-y-4 sovereign-stagger">
+              {healthData && (
+                <>
+                  <div className="flex items-center justify-center gap-6 md:gap-10">
+                    <RadialGauge
+                      value={healthData.improvement?.overallCodeHealth ?? 0}
+                      label="Code Health"
+                      sublabel="%"
+                      color="emerald"
+                      size={110}
+                      strokeWidth={10}
+                    />
+                    <RadialGauge
+                      value={healthData.improvement?.patches?.successRate ?? 0}
+                      label="Patch Success"
+                      sublabel="%"
+                      color="cyan"
+                      size={90}
+                      strokeWidth={8}
+                    />
+                    <RadialGauge
+                      value={healthData.improvement?.testing?.passRate ?? 0}
+                      label="Test Pass"
+                      sublabel="%"
+                      color="violet"
+                      size={90}
+                      strokeWidth={8}
+                    />
+                  </div>
+
+                  <GlassCard glow="cyan" animate>
+                    <div className="flex items-center justify-between">
+                      <SectionHeader icon={Shield} title="Evolution Throttle" color="cyan" />
+                      <div className="flex items-center gap-2">
+                        {healthData.throttle?.globalPaused ? (
+                          <button
+                            onClick={() => resumeMutation.mutate("_all")}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs hover:bg-emerald-500/20 transition-colors"
+                          >
+                            <Play className="w-3 h-3" />
+                            Resume All
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => pauseMutation.mutate("_all")}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs hover:bg-amber-500/20 transition-colors"
+                          >
+                            <Pause className="w-3 h-3" />
+                            Pause All
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 mt-3">
+                      <MiniStat value={healthData.throttle?.totalModulesTracked ?? 0} label="Tracked" color="cyan" />
+                      <MiniStat value={healthData.throttle?.totalModulesCoolingDown ?? 0} label="Cooling" color="amber" />
+                      <MiniStat value={healthData.throttle?.globalPaused ? "Yes" : "No"} label="Global Pause" color={healthData.throttle?.globalPaused ? "rose" : "emerald"} />
+                    </div>
+                  </GlassCard>
+
+                  {healthData.throttle?.modules?.length > 0 && (
+                    <GlassCard animate>
+                      <SectionHeader icon={Activity} title="Per-Module Status" color="violet" />
+                      <div className="space-y-2 mt-3">
+                        {healthData.throttle.modules.map((m: any) => (
+                          <div key={m.moduleId} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 hover:bg-white/[0.04] transition-all">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                {m.paused ? (
+                                  <Pause className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                ) : m.cooldownRemainingMs > 0 ? (
+                                  <Clock className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+                                ) : m.consecutiveFailures > 0 ? (
+                                  <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+                                ) : (
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                )}
+                                <span className="text-xs text-white font-medium truncate">{m.moduleId}</span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className={cn("text-[10px] font-mono", m.successRate >= 80 ? "text-emerald-400" : m.successRate >= 50 ? "text-amber-400" : "text-red-400")}>
+                                  {m.successRate}% ok
+                                </span>
+                                {m.consecutiveFailures > 0 && (
+                                  <button
+                                    onClick={() => resetMutation.mutate(m.moduleId)}
+                                    className="px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[10px] hover:bg-cyan-500/20 transition-colors"
+                                  >
+                                    Reset
+                                  </button>
+                                )}
+                                {m.paused ? (
+                                  <button
+                                    onClick={() => resumeMutation.mutate(m.moduleId)}
+                                    className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] hover:bg-emerald-500/20 transition-colors"
+                                  >
+                                    Resume
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => pauseMutation.mutate(m.moduleId)}
+                                    className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] hover:bg-amber-500/20 transition-colors"
+                                  >
+                                    Pause
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 mt-1.5 text-[10px] text-slate-500 font-mono">
+                              <span>{m.totalSuccesses} ok / {m.totalFailures} fail</span>
+                              {m.consecutiveFailures > 0 && (
+                                <span className="text-amber-400">{m.consecutiveFailures} consecutive fails</span>
+                              )}
+                              {m.cooldownRemainingMs > 0 && (
+                                <span className="text-orange-400">cooldown: {Math.ceil(m.cooldownRemainingMs / 1000)}s</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </GlassCard>
+                  )}
+
+                  <GlassCard animate>
+                    <SectionHeader icon={Database} title="Scheduler" color="blue" />
+                    <div className="grid grid-cols-3 gap-4 mt-3">
+                      <MiniStat value={healthData.scheduler?.totalTasks ?? 0} label="Tasks" color="blue" />
+                      <MiniStat value={healthData.scheduler?.activeTasks ?? 0} label="Active" color="emerald" />
+                      <MiniStat value={healthData.scheduler?.runningNow ?? 0} label="Running" color="cyan" />
+                    </div>
+                  </GlassCard>
+
+                  <GlassCard glow="amber" animate>
+                    <SectionHeader icon={History} title="Self-Evolution Attempt Ledger" color="amber" />
+                    <div className="grid grid-cols-5 gap-2 mt-3">
+                      <MiniStat value={attemptsData?.counts?.PROPOSED ?? 0} label="Proposed" color="cyan" />
+                      <MiniStat value={attemptsData?.counts?.SANDBOXED_PASS ?? 0} label="Sandbox OK" color="emerald" />
+                      <MiniStat value={attemptsData?.counts?.SANDBOXED_FAIL ?? 0} label="Sandbox Fail" color="amber" />
+                      <MiniStat value={attemptsData?.counts?.APPLIED ?? 0} label="Applied" color="violet" />
+                      <MiniStat value={attemptsData?.counts?.REVERTED ?? 0} label="Reverted" color="rose" />
+                    </div>
+                    <div className="space-y-2 mt-3 max-h-96 overflow-y-auto">
+                      {attemptsData?.attempts?.length ? attemptsData.attempts.map((a: any) => (
+                        <div key={a.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5 hover:bg-white/[0.04] transition-all">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              {a.event === "APPLIED" ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                              ) : a.event === "SANDBOXED_PASS" ? (
+                                <Shield className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                              ) : a.event === "SANDBOXED_FAIL" ? (
+                                <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                              ) : a.event === "REVERTED" ? (
+                                <XCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                              ) : (
+                                <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              )}
+                              <span className="text-[11px] text-white font-mono truncate">{a.targetModule}</span>
+                              <span className={cn(
+                                "text-[9px] px-1.5 py-0.5 rounded border font-medium shrink-0",
+                                a.event === "APPLIED" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" :
+                                a.event === "SANDBOXED_PASS" ? "bg-cyan-500/15 text-cyan-400 border-cyan-500/20" :
+                                a.event === "SANDBOXED_FAIL" ? "bg-amber-500/15 text-amber-400 border-amber-500/20" :
+                                a.event === "REVERTED" ? "bg-rose-500/15 text-rose-400 border-rose-500/20" :
+                                "bg-slate-500/15 text-slate-400 border-slate-500/20"
+                              )}>{a.event}</span>
+                            </div>
+                            <span className="text-[10px] text-slate-500 font-mono shrink-0">
+                              {a.durationMs != null ? `${a.durationMs}ms` : ""}
+                            </span>
+                          </div>
+                          {a.reason && (
+                            <div className="text-[10px] text-slate-400 mt-1 truncate">{a.reason}</div>
+                          )}
+                          {a.verifyOutput && (
+                            <div className="text-[10px] text-rose-400/80 mt-0.5 font-mono truncate">{a.verifyOutput.split("\n")[0]}</div>
+                          )}
+                        </div>
+                      )) : (
+                        <div className="text-[11px] text-slate-500 text-center py-4">
+                          No attempts yet. Set <span className="font-mono text-slate-400">t9_admin_token</span> in localStorage to view ledger.
+                        </div>
+                      )}
+                    </div>
+                  </GlassCard>
+                </>
+              )}
+            </div>
+          </SectionErrorBoundary>
+        )}
+
+        {activeTab === "quantum" && !quantumMetrics && !quantumError && (
+          <TabLoadingSkeleton />
+        )}
+        {activeTab === "quantum" && !quantumMetrics && quantumError && (
+          <QueryErrorFallback error={quantumError as Error} onRetry={() => refetchQuantum()} label="Quantum" />
+        )}
+        {activeTab === "quantum" && quantumMetrics && (
+          <SectionErrorBoundary name="Quantum">
+            <div className="space-y-4 sovereign-stagger">
+              <GlassCard glow="blue" animate>
+                <SectionHeader icon={Zap} title="Quantum Tesseract State" color="blue" />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
+                  <MiniStat value={quantumMetrics.qubitCount} label="Qubits" color="blue" />
+                  <MiniStat value={quantumMetrics.entanglementPairs} label="Entangled Pairs" color="violet" />
+                  <MiniStat value={quantumMetrics.activeBridges} label="Dim. Bridges" color="cyan" />
+                  <MiniStat value={quantumMetrics.dimensionalDepth} label="Dimensions" color="violet" />
+                </div>
+                <div className="text-[10px] text-slate-500 font-mono mt-3">Quantum Volume: {quantumMetrics.quantumVolume?.toLocaleString()} · Error Rate: {quantumMetrics.errorRate?.toFixed(4)}</div>
+              </GlassCard>
+              <GlassCard animate>
+                <SectionHeader icon={RefreshCw} title="Quantum Gates" color="violet" />
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  {quantumMetrics.gates?.map((gate: any) => (
+                    <div key={gate.symbol} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 hover:bg-white/[0.04] transition-all group">
+                      <div className="text-sm font-bold text-purple-400 font-mono group-hover:text-purple-300 transition-colors">{gate.symbol}</div>
+                      <div className="text-xs text-white mt-0.5">{gate.name}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">{gate.description}</div>
+                    </div>
+                  ))}
+                </div>
+              </GlassCard>
+              <GlassCard animate>
+                <SectionHeader icon={Database} title="Interdimensional Bridges" color="blue" />
+                <div className="space-y-2 mt-3">
+                  {quantumMetrics.bridges?.slice(0, 5).map((b: any) => (
+                    <div key={b.id} className="flex items-center gap-2.5 text-xs p-2 rounded-xl hover:bg-white/[0.03] transition-all">
+                      <div className={cn("w-2 h-2 rounded-full flex-shrink-0", b.active ? "bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.5)]" : "bg-slate-500")} />
+                      <span className="text-white font-medium">Dim {b.dimA} ↔ Dim {b.dimB}</span>
+                      <GradientBar value={b.fidelity * 100} color="blue" showValue={false} height="h-1" className="flex-1" />
+                      <span className="text-slate-400 font-mono">{(b.fidelity * 100).toFixed(1)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </GlassCard>
+            </div>
+          </SectionErrorBoundary>
+        )}
+
+        {activeTab === "agents" && !agentMetrics && !agentError && (
+          <TabLoadingSkeleton />
+        )}
+        {activeTab === "agents" && !agentMetrics && agentError && (
+          <QueryErrorFallback error={agentError as Error} onRetry={() => refetchAgents()} label="Agents" />
+        )}
+        {activeTab === "agents" && agentMetrics && (
+          <SectionErrorBoundary name="Agents">
+            <div className="space-y-4 sovereign-stagger">
+              <div className="grid grid-cols-3 gap-3">
+                <HeroStat icon={Cpu} value={agentMetrics.totalSpawned} label="Total Spawned" color="emerald" />
+                <HeroStat icon={Activity} value={agentMetrics.activeCount} label="Active" color="cyan" />
+                <HeroStat icon={Zap} value={agentMetrics.generationCount} label="Generation" color="violet" />
+              </div>
+              <GlassCard animate>
+                <SectionHeader icon={Cpu} title="Active Agents" color="emerald" />
+                <div className="space-y-2 mt-3">
+                  {agentMetrics.activeAgents?.map((a: any) => (
+                    <div key={a.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 space-y-1 hover:bg-white/[0.04] transition-all">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-white font-medium">{a.name}</span>
+                        <span className="text-slate-500 font-mono">Gen {a.generation} · Power {a.power}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400">{a.role}</div>
+                    </div>
+                  ))}
+                </div>
+              </GlassCard>
+            </div>
+          </SectionErrorBoundary>
+        )}
+      </div>
     </div>
-  </main>;
+  );
 }

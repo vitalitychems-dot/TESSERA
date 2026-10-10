@@ -47,17 +47,16 @@ export default function SettingsPage() {
   }
 
   const uptimeVal = diagnostics?.uptime;
-  const uptimeSeconds = uptimeVal?.seconds ?? 0;
-  const uptime = uptimeVal?.formatted ?? (uptimeSeconds ? `${Math.floor(uptimeSeconds / 3600)}h ${Math.floor((uptimeSeconds % 3600) / 60)}m` : "—");
-  const heapUsed = diagnostics?.memory?.heapUsedMB != null
-    ? `${diagnostics.memory.heapUsedMB}MB`
-    : "—";
+  const uptimeSeconds = typeof uptimeVal === "number" ? uptimeVal : uptimeVal?.seconds;
+  const uptimeFormatted = typeof uptimeVal === "object" ? uptimeVal?.formatted : undefined;
+  const uptime = uptimeFormatted || (uptimeSeconds ? `${Math.floor(uptimeSeconds / 3600)}h ${Math.floor((uptimeSeconds % 3600) / 60)}m` : "—");
+  const heapUsed = diagnostics?.memory?.heapUsedMB ? `${Math.round(diagnostics.memory.heapUsedMB)}MB` : diagnostics?.memory?.heapUsed ? `${(diagnostics.memory.heapUsed / 1024 / 1024).toFixed(0)}MB` : "—";
   const memPercent = diagnostics?.memory?.percent ?? null;
 
   const rawEngines = engines?.engines || engines?.data || {};
   const engineList = Array.isArray(rawEngines) ? rawEngines : Object.entries(rawEngines).map(([name, val]: [string, any]) => ({ name, engine: name, ...val }));
-  const sovereigntyData = sovereignty?.sovereignty;
-  const sovereigntyScore = sovereigntyData?.overallScore ?? sovereignty?.score ?? 0;
+  const sovereigntyData = sovereignty?.sovereignty || sovereignty;
+  const sovereigntyScore = sovereigntyData?.overallScore ?? sovereignty?.score ?? sovereignty?.data?.score ?? 0;
   const scoreNum = typeof sovereigntyScore === "number" ? sovereigntyScore : parseFloat(sovereigntyScore) || 0;
 
   return (
@@ -116,7 +115,7 @@ export default function SettingsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-bold font-mono group-hover:text-white transition-colors">{e.name || e.engine}</div>
                   </div>
-                  <div className="text-[10px] text-slate-500 font-mono">{e.latency?.toFixed(2) || e.responseTime || "—"}ms</div>
+                  <div className="text-[10px] text-slate-500 font-mono">{e.latencyMs?.toFixed(2) || e.latency || e.responseTime || "—"}ms</div>
                   <div className={cn("text-[9px] px-2 py-0.5 rounded-full border font-medium", e.status === "active" || e.online ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" : "text-red-400 bg-red-500/10 border-red-500/20")}>
                     {e.status || (e.online ? "active" : "offline")}
                   </div>

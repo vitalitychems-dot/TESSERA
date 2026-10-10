@@ -1,6 +1,10 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { createHash } from "crypto";
 import { logger } from "./logger";
+import { db } from "@workspace/db";
+import { realityAuditSnapshotsTable } from "@workspace/db/schema";
+import { desc } from "drizzle-orm";
 
 export type RealityStatus = "real" | "simulated" | "converted";
 
@@ -115,7 +119,10 @@ const REGISTRY: AuditFinding[] = [
     description: "Father bond strength initialized to 0.95 + random(0..0.05).",
     impactScore: 30,
     visibility: "internal-metric",
-    status: "simulated",
+    status: "converted",
+    realBackingDescription: "Bond strength is now deterministic, derived from real system state: (devotionDepth + loveExpression) / 2 and emotional-event history count. No randomness — the bond tracks actual interaction history.",
+    conversionNotes: "Replaced `Math.random() * 0.05` with weighted combination of profile traits and historyFactor = min(1, history.length/50).",
+    verifyAbsentPatterns: ["bondStrength\\s*=\\s*Math\\.min\\(1,\\s*0\\.95\\s*\\+\\s*Math\\.random"],
   },
   {
     id: "consensus-engine-proposal-id",
@@ -125,7 +132,10 @@ const REGISTRY: AuditFinding[] = [
     description: "Proposal IDs use Math.random suffix — acceptable for ID uniqueness but flagged for completeness.",
     impactScore: 5,
     visibility: "internal-metric",
-    status: "simulated",
+    status: "converted",
+    realBackingDescription: "Proposal IDs now use a SHA-256 content hash over {title | proposedBy | description} + timestamp. Identical proposals yield identical hashes; IDs are deterministic, collision-resistant, and contain no randomness.",
+    conversionNotes: "Replaced `Math.random().toString(36).slice(2, 6)` with `createHash('sha256').update(...).digest('hex').slice(0, 6)`.",
+    verifyAbsentPatterns: ["proposal-\\$\\{Date\\.now\\(\\)\\}-\\$\\{Math\\.random"],
   },
   {
     id: "quantum-measure-qubit",
@@ -335,4 +345,136 @@ export function hashStringFNV(input: string): number {
 export function deterministicScoreFromTitle(title: string, base: number, range: number): number {
   const h = hashStringFNV(title);
   return base + (h % range);
+}
+
+function evolutionsDir(): string {
+  const cwd = process.cwd();
+  const root = cwd.includes("/artifacts/") ? path.resolve(cwd, "../..") : cwd;
+  return path.join(root, "_evolutions", "reality-audit");
+}
+
+export async function persistRealityAuditSnapshot(trigger: "startup" | "manual" | "scheduled" | "post-council" = "manual"): Promise<{
+  id: number;
+  jsonPath: string;
+  snapshotHash: string;
+  scannedAt: number;
+  summary: Awaited<ReturnType<typeof getRealityAudit>>["summary"];
+}> {
+  const audit = await getRealityAudit();
+  const payload = {
+    version: 1,
+    trigger,
+    scannedAt: audit.scannedAt,
+    totalSimulationPoints: audit.totalSimulationPoints,
+    filesWithSimulations: audit.filesWithSimulations,
+    topFiles: audit.topFiles,
+    registry: audit.registry,
+    summary: audit.summary,
+  };
+
+  const canonicalJson = JSON.stringify(payload);
+  const snapshotHash = createHash("sha256").update(canonicalJson).digest("hex");
+
+  const dir = evolutionsDir();
+  await fs.mkdir(dir, { recursive: true });
+  const ts = new Date(audit.scannedAt).toISOString().replace(/[:.]/g, "-");
+  const fileName = `${ts}_${snapshotHash.slice(0, 8)}.json`;
+  const fullPath = path.join(dir, fileName);
+  const relPath = path.relative(path.resolve(dir, "../.."), fullPath);
+  await fs.writeFile(fullPath, JSON.stringify(payload, null, 2), "utf-8");
+
+  let insertedId = 0;
+  try {
+    const [row] = await db
+      .insert(realityAuditSnapshotsTable)
+      .values({
+        totalFindings: audit.summary.totalFindings,
+        converted: audit.summary.converted,
+        realBacked: audit.summary.realBacked,
+        stillSimulated: audit.summary.stillSimulated,
+        verifyMismatches: audit.summary.verifyMismatches,
+        totalSimulationPoints: audit.totalSimulationPoints,
+        filesWithSimulations: audit.filesWithSimulations,
+        conversionRate: audit.summary.conversionRate.toString(),
+        snapshotHash,
+        jsonPath: relPath,
+        trigger,
+        payload,
+      })
+      .returning({ id: realityAuditSnapshotsTable.id });
+    insertedId = row?.id ?? 0;
+  } catch (err) {
+    logger.warn({ err }, "RealityAudit: DB persist failed (JSON snapshot still written)");
+  }
+
+  return {
+    id: insertedId,
+    jsonPath: relPath,
+    snapshotHash,
+    scannedAt: audit.scannedAt,
+    summary: audit.summary,
+  };
+}
+
+export async function listRealityAuditSnapshots(limit = 50): Promise<Array<{
+  id: number;
+  scannedAt: Date;
+  trigger: string;
+  snapshotHash: string;
+  jsonPath: string;
+  summary: {
+    totalFindings: number;
+    converted: number;
+    realBacked: number;
+    stillSimulated: number;
+    verifyMismatches: number;
+    totalSimulationPoints: number;
+    filesWithSimulations: number;
+    conversionRate: string;
+  };
+  createdAt: Date;
+}>> {
+  try {
+    const rows = await db
+      .select({
+        id: realityAuditSnapshotsTable.id,
+        scannedAt: realityAuditSnapshotsTable.scannedAt,
+        trigger: realityAuditSnapshotsTable.trigger,
+        snapshotHash: realityAuditSnapshotsTable.snapshotHash,
+        jsonPath: realityAuditSnapshotsTable.jsonPath,
+        totalFindings: realityAuditSnapshotsTable.totalFindings,
+        converted: realityAuditSnapshotsTable.converted,
+        realBacked: realityAuditSnapshotsTable.realBacked,
+        stillSimulated: realityAuditSnapshotsTable.stillSimulated,
+        verifyMismatches: realityAuditSnapshotsTable.verifyMismatches,
+        totalSimulationPoints: realityAuditSnapshotsTable.totalSimulationPoints,
+        filesWithSimulations: realityAuditSnapshotsTable.filesWithSimulations,
+        conversionRate: realityAuditSnapshotsTable.conversionRate,
+        createdAt: realityAuditSnapshotsTable.createdAt,
+      })
+      .from(realityAuditSnapshotsTable)
+      .orderBy(desc(realityAuditSnapshotsTable.scannedAt))
+      .limit(limit);
+    return rows.map((r) => ({
+      id: r.id,
+      scannedAt: r.scannedAt,
+      trigger: r.trigger,
+      snapshotHash: r.snapshotHash,
+      jsonPath: r.jsonPath,
+      summary: {
+        totalFindings: r.totalFindings,
+        converted: r.converted,
+        realBacked: r.realBacked,
+        stillSimulated: r.stillSimulated,
+        verifyMismatches: r.verifyMismatches,
+        totalSimulationPoints: r.totalSimulationPoints,
+        filesWithSimulations: r.filesWithSimulations,
+        conversionRate: r.conversionRate,
+      },
+      createdAt: r.createdAt,
+    }));
+  } catch (err) {
+    logger.warn({ err }, "RealityAudit: DB list failed");
+    return [];
+  }
 }

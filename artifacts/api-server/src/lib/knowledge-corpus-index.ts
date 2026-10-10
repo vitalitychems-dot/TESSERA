@@ -399,8 +399,57 @@ let _corpus: CorpusEntry[] | null = null;
 let _domainMap: Map<string, CorpusEntry[]> | null = null;
 let _crossRefs: CrossReference[] | null = null;
 
+interface AmendmentBundle {
+  addEntries: CorpusEntry[];
+  addRefs: CrossReference[];
+  freqRealign: Map<string, number>;
+  tagAdds: Map<string, Set<string>>;
+  mergeMap: Map<string, { keptId: string; titleSuffix: string }>;
+}
+let _pendingAmendments: AmendmentBundle | null = null;
+
+export function _resetCorpusCaches(): void {
+  _corpus = null;
+  _domainMap = null;
+  _crossRefs = null;
+}
+
+export function _injectAmendments(bundle: AmendmentBundle): void {
+  _pendingAmendments = bundle;
+  _resetCorpusCaches();
+}
+
+function applyAmendmentsToBase(base: CorpusEntry[]): CorpusEntry[] {
+  if (!_pendingAmendments) return base;
+  const a = _pendingAmendments;
+  let out = base.map(e => ({ ...e, tags: [...e.tags] }));
+  // merge-duplicates: drop merged entries, append disambiguation suffix to the kept entry's title
+  const droppedMerged = new Set<string>();
+  for (const mergedId of a.mergeMap.keys()) droppedMerged.add(mergedId);
+  out = out.filter(e => !droppedMerged.has(e.id));
+  // realign-frequency
+  for (const e of out) {
+    const f = a.freqRealign.get(e.id);
+    if (typeof f === "number") e.frequency = f;
+  }
+  // retag-entry: extend tags for every entry in target domain
+  for (const e of out) {
+    const adds = a.tagAdds.get(e.domain);
+    if (adds) for (const t of adds) if (!e.tags.includes(t)) e.tags.push(t);
+  }
+  // add-entry: append new entries (skip duplicates by id)
+  const existingIds = new Set(out.map(e => e.id));
+  for (const ne of a.addEntries) {
+    if (!existingIds.has(ne.id)) {
+      out.push({ ...ne, tags: [...ne.tags] });
+      existingIds.add(ne.id);
+    }
+  }
+  return out;
+}
+
 export function getCorpus(): CorpusEntry[] {
-  if (!_corpus) _corpus = buildFullCorpus();
+  if (!_corpus) _corpus = applyAmendmentsToBase(buildFullCorpus());
   return _corpus;
 }
 
@@ -466,6 +515,9 @@ export function getCrossReferences(): CrossReference[] {
     if (refs.length > 5000) break;
   }
 
+  if (_pendingAmendments) {
+    for (const r of _pendingAmendments.addRefs) refs.push(r);
+  }
   _crossRefs = refs;
   return refs;
 }

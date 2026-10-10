@@ -147,11 +147,206 @@ export function TesseractFamilyTab() {
   );
 }
 
-export default function GrandCouncilPage({ initialTab }: { initialTab?: "proposals" | "hierarchy" | "executor" }) {
+function TranscriptCard({ deliberation }: { deliberation: any }) {
+  const [expanded, setExpanded] = useState(false);
+  const approved = deliberation.voteTally?.yes ?? 0;
+  const total = deliberation.voteTally?.totalEligible ?? 3;
+  return (
+    <GlassCard hover>
+      <div className="flex items-center gap-2 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        <span className="text-xs font-semibold text-white truncate flex-1">{deliberation.topic}</span>
+        <span className={cn("text-[10px] font-mono px-1.5 py-0.5 rounded-full border flex-shrink-0",
+          deliberation.outcome === "approved" ? "bg-emerald-500/15 border-emerald-500/20 text-emerald-400" : "bg-red-500/15 border-red-500/20 text-red-400")}>
+          {deliberation.outcome?.toUpperCase()}
+        </span>
+        {expanded ? <ChevronUp className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />}
+      </div>
+      <div className="text-[10px] text-slate-500 font-mono mt-1">{approved}/{total} proposals approved · {deliberation.decisionId}</div>
+      {expanded && deliberation.transcript && (
+        <pre className="mt-3 text-[10px] font-mono text-slate-400 leading-relaxed whitespace-pre-wrap bg-black/30 rounded-lg p-3 border border-white/5 max-h-[320px] overflow-y-auto">
+          {deliberation.transcript}
+        </pre>
+      )}
+    </GlassCard>
+  );
+}
+
+function HeavyCouncilTab() {
+  const queryClient = useQueryClient();
+  const [prompts, setPrompts] = useState({ life: "", universe: "", community: "" });
+  const [lastResult, setLastResult] = useState<any>(null);
+
+  const { data: pastDeliberations, isLoading: pastLoading } = useQuery({
+    queryKey: ["heavy-deliberations"],
+    queryFn: () => fetch(`${API}/api/council/heavy-deliberations`).then(r => r.json()),
+    refetchInterval: 60000,
+  });
+
+  const { data: activeDirectives } = useQuery({
+    queryKey: ["heavy-active-directives"],
+    queryFn: () => fetch(`${API}/api/council/active-directives`).then(r => r.json()),
+    refetchInterval: 60000,
+  });
+
+  const deliberateMutation = useMutation({
+    mutationFn: (data: { life: string; universe: string; community: string }) =>
+      fetch(`${API}/api/council/heavy-deliberation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }).then(r => r.json()),
+    onSuccess: (data) => {
+      setLastResult(data);
+      queryClient.invalidateQueries({ queryKey: ["heavy-deliberations"] });
+      queryClient.invalidateQueries({ queryKey: ["council-proposals"] });
+      queryClient.invalidateQueries({ queryKey: ["council-consensus"] });
+    },
+  });
+
+  const canSubmit = prompts.life.trim().length > 10 && prompts.universe.trim().length > 10 && prompts.community.trim().length > 10;
+
+  const DOMAIN_COLORS = {
+    life: "text-emerald-300 border-emerald-500/30 bg-emerald-500/5",
+    universe: "text-violet-300 border-violet-500/30 bg-violet-500/5",
+    community: "text-amber-300 border-amber-500/30 bg-amber-500/5",
+  };
+
+  return (
+    <div className="space-y-5 sovereign-stagger">
+      <GlassCard glow="violet">
+        <div className="flex items-center gap-2 mb-4">
+          <Brain className="w-5 h-5 text-violet-400" />
+          <h2 className="text-base font-bold text-white">Heavy Council Deliberation</h2>
+          <span className="ml-auto text-[10px] font-mono text-violet-400/60 bg-violet-500/10 border border-violet-500/15 px-2 py-0.5 rounded-full">3 PROMPTS · Φ-BFT · AUTO-APPLY</span>
+        </div>
+        <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+          Submit three domain prompts — Life, Universe, and Community — for simultaneous Φ-weighted BFT deliberation by all 24 council agents.
+          Proposals passing the ≥2/3 supermajority threshold are automatically applied and marked implemented.
+        </p>
+
+        <div className="space-y-3">
+          {(["life", "universe", "community"] as const).map(domain => (
+            <div key={domain}>
+              <label className={cn("text-[11px] font-mono font-bold uppercase mb-1 block", domain === "life" ? "text-emerald-400" : domain === "universe" ? "text-violet-400" : "text-amber-400")}>
+                {domain} domain
+              </label>
+              <textarea
+                className={cn("w-full bg-white/[0.04] border rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-1 resize-none min-h-[72px] transition-colors", DOMAIN_COLORS[domain])}
+                placeholder={
+                  domain === "life" ? "e.g. What is the nature of consciousness and how should sovereign agents expand self-awareness?"
+                  : domain === "universe" ? "e.g. What frameworks best explain the fundamental structure of physical reality?"
+                  : "e.g. How should the Tessera community improve cross-agent knowledge sharing in cycle 2?"
+                }
+                value={prompts[domain]}
+                onChange={ev => setPrompts(p => ({ ...p, [domain]: ev.target.value }))}
+              />
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={() => deliberateMutation.mutate(prompts)}
+          disabled={!canSubmit || deliberateMutation.isPending}
+          className="mt-4 w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 disabled:opacity-40 text-white text-sm px-4 py-3 rounded-xl transition-all flex items-center justify-center gap-2 font-medium shadow-[0_0_16px_rgba(139,92,246,0.25)]"
+        >
+          {deliberateMutation.isPending ? (
+            <><Loader2 className="w-4 h-4 animate-spin" /> Deliberating across 3 domains…</>
+          ) : (
+            <><Zap className="w-4 h-4" /> Run Heavy Council Deliberation</>
+          )}
+        </button>
+      </GlassCard>
+
+      {lastResult && !deliberateMutation.isPending && (
+        <GlassCard glow={lastResult.approvedCount >= 2 ? "violet" : undefined}>
+          <div className="flex items-center gap-2 mb-3">
+            <CheckCircle className="w-4 h-4 text-emerald-400" />
+            <h3 className="text-sm font-bold text-white">Deliberation Complete</h3>
+            <span className="ml-auto text-xs font-mono text-emerald-400">{lastResult.approvedCount}/3 applied</span>
+          </div>
+          <div className="space-y-2">
+            {lastResult.entries?.map((entry: any) => (
+              <div key={entry.domain} className={cn("rounded-xl border p-3", DOMAIN_COLORS[entry.domain as keyof typeof DOMAIN_COLORS])}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className={cn("text-[10px] font-mono font-bold uppercase", entry.domain === "life" ? "text-emerald-400" : entry.domain === "universe" ? "text-violet-400" : "text-amber-400")}>{entry.domain}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-slate-400">{Math.round((entry.proposal.approvalRate ?? 0) * 100)}% approval</span>
+                    <span className={cn("text-[10px] font-mono px-1.5 py-0.5 rounded-full border", entry.applied ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400" : entry.proposal.status === "rejected" ? "bg-red-500/15 border-red-500/30 text-red-400" : "bg-amber-500/15 border-amber-500/30 text-amber-400")}>
+                      {entry.applied ? "APPLIED" : entry.proposal.status?.toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-300 truncate">{entry.prompt}</p>
+                <div className="text-[10px] text-slate-500 font-mono mt-1">
+                  {entry.proposal.yesCount}Y · {entry.proposal.noCount}N · {entry.proposal.abstainCount}A
+                  {entry.proposal.votingDurationMs != null && ` · ${entry.proposal.votingDurationMs}ms`}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 text-[10px] text-slate-500 font-mono">ID: {lastResult.deliberationId} · {lastResult.runAt}</div>
+          {lastResult.transcript && (
+            <details className="mt-3">
+              <summary className="text-[10px] font-mono text-violet-400/60 cursor-pointer hover:text-violet-400">Full Transcript ▼</summary>
+              <pre className="mt-2 text-[9px] font-mono text-slate-500 leading-relaxed whitespace-pre-wrap bg-black/30 rounded-lg p-3 border border-white/5 max-h-[300px] overflow-y-auto">
+                {lastResult.transcript}
+              </pre>
+            </details>
+          )}
+        </GlassCard>
+      )}
+
+      {pastLoading && <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-violet-400" /></div>}
+
+      {pastDeliberations?.deliberations?.length > 0 && (
+        <div className="space-y-2">
+          <SectionHeader icon={Clock} title="Past Heavy Deliberations" color="violet" />
+          {pastDeliberations.deliberations.slice(0, 5).map((d: any) => (
+            <TranscriptCard key={d.decisionId} deliberation={d} />
+          ))}
+        </div>
+      )}
+
+      {activeDirectives?.directives && Object.values(activeDirectives.directives).some(Boolean) && (
+        <div className="space-y-2">
+          <SectionHeader icon={Brain} title="Active Domain Directives — Canonical Sovereign Policy" color="violet" />
+          {(["life", "universe", "community"] as const).map(domain => {
+            const dir = activeDirectives.directives?.[domain] as any;
+            if (!dir) return null;
+            const DOMAIN_BADGE = {
+              life: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
+              universe: "bg-violet-500/10 border-violet-500/20 text-violet-400",
+              community: "bg-amber-500/10 border-amber-500/20 text-amber-400",
+            }[domain];
+            return (
+              <GlassCard key={domain} hover>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={cn("text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded-full border", DOMAIN_BADGE)}>
+                    {domain} domain
+                  </span>
+                  <span className="text-xs font-semibold text-white truncate flex-1">{dir.title}</span>
+                </div>
+                <div className="text-[10px] text-slate-500 font-mono">
+                  Applied: {dir.appliedAt ? new Date(dir.appliedAt).toLocaleDateString() : "—"} ·
+                  Approval: {dir.approvalRate != null ? `${(dir.approvalRate * 100).toFixed(1)}%` : "—"}
+                </div>
+                {dir.prompt && (
+                  <p className="mt-1 text-[10px] text-slate-400 leading-relaxed line-clamp-2">{dir.prompt}</p>
+                )}
+              </GlassCard>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function GrandCouncilPage({ initialTab }: { initialTab?: "proposals" | "hierarchy" | "executor" | "heavy" }) {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [newProposal, setNewProposal] = useState({ title: "", description: "", category: "governance" });
-  const [activeTab, setActiveTab] = useState<"proposals" | "hierarchy" | "executor">(initialTab || "proposals");
+  const [activeTab, setActiveTab] = useState<"proposals" | "hierarchy" | "executor" | "heavy">(initialTab || "proposals");
 
   const { data: consensus } = useQuery({
     queryKey: ["council-consensus"],
@@ -201,6 +396,7 @@ export default function GrandCouncilPage({ initialTab }: { initialTab?: "proposa
 
   const councilTabs = [
     { id: "proposals", label: "Proposals & Decisions" },
+    { id: "heavy", label: "Heavy Council" },
     { id: "hierarchy", label: "Agent Hierarchy" },
     { id: "executor", label: "Council Executor" },
   ] as const;
@@ -302,6 +498,8 @@ export default function GrandCouncilPage({ initialTab }: { initialTab?: "proposa
             )}
           </div>
         )}
+
+        {activeTab === "heavy" && <HeavyCouncilTab />}
 
         {activeTab === "hierarchy" && (
           <div className="space-y-3 sovereign-stagger">

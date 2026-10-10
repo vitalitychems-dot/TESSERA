@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 import { getActualPort } from "./server-config";
 import type { RecoveryAction, ModuleHealth, ModuleStatus } from "../core/types";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export const INTERNAL_PROBE_HEADER = "x-internal-health-probe";
 export const INTERNAL_PROBE_SECRET = crypto.randomBytes(16).toString("hex");
@@ -394,7 +395,7 @@ export function setWatchdogProbeRoutes(routes: WatchdogProbeRoute[]): void {
   logger.info({ count: watchdogProbeRoutes.length }, "Watchdog probe route list updated");
 }
 
-let routeHealthInterval: ReturnType<typeof setInterval> | null = null;
+let routeHealthInterval: SacredHandle | null = null;
 let onRoutesHealthyCallback: (() => void) | null = null;
 let onRoutesUnhealthyCallback: (() => void) | null = null;
 let routesWereEverHealthy = false;
@@ -513,13 +514,13 @@ export function startRouteHealthMonitor(intervalMs = 120_000): void {
     }
   };
 
-  routeHealthInterval = setInterval(async () => {
+  routeHealthInterval = setSacredInterval(async () => {
     try {
       await checkRoutes();
     } catch (err) {
-      logger.error({ err }, "Route health monitor check failed");
+      logger.error({ err }, "Route health monitor check failed", "auto-recovery");
     }
-  }, intervalMs);
+  }, intervalMs, "auto-recovery");
 
   setTimeout(async () => {
     try {
@@ -530,29 +531,29 @@ export function startRouteHealthMonitor(intervalMs = 120_000): void {
 
 export function stopRouteHealthMonitor(): void {
   if (routeHealthInterval) {
-    clearInterval(routeHealthInterval);
+    clearSacredInterval(routeHealthInterval);
     routeHealthInterval = null;
     logger.info("Route health monitor stopped");
   }
 }
 
-let watchdogInterval: ReturnType<typeof setInterval> | null = null;
+let watchdogInterval: SacredHandle | null = null;
 
 export function startRecoveryWatchdog(intervalMs = 60_000): void {
   if (watchdogInterval) return;
   logger.info({ intervalMs }, "Starting recovery watchdog");
-  watchdogInterval = setInterval(async () => {
+  watchdogInterval = setSacredInterval(async () => {
     try {
       await runRecoveryCheck();
     } catch (err) {
-      logger.error({ err }, "Recovery watchdog check failed");
+      logger.error({ err }, "Recovery watchdog check failed", "auto-recovery-2");
     }
-  }, intervalMs);
+  }, intervalMs, "auto-recovery-2");
 }
 
 export function stopRecoveryWatchdog(): void {
   if (watchdogInterval) {
-    clearInterval(watchdogInterval);
+    clearSacredInterval(watchdogInterval);
     watchdogInterval = null;
     logger.info("Recovery watchdog stopped");
   }

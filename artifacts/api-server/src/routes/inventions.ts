@@ -1,9 +1,12 @@
 import { Router, type IRouter } from "express";
+import { createHash } from "node:crypto";
 import { db } from "@workspace/db";
-import { inventionsTable, type InsertInvention } from "@workspace/db/schema";
+import { inventionsTable, pinnedDiagramsTable, insertPinnedDiagramSchema, type InsertInvention } from "@workspace/db/schema";
 import { desc, eq, and } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
 import { logger } from "../lib/logger";
 import { hashStringFNV, getRealityFlag } from "../lib/reality-audit";
+import { buildInvention3DBlock, buildInvention3DBlocks } from "../lib/invention-3d";
 
 const router: IRouter = Router();
 
@@ -605,9 +608,27 @@ router.get("/inventions", async (req, res) => {
     const categories = [...new Set(allInventions.map(i => i.category))];
     const statuses = [...new Set(allInventions.map(i => i.status))];
 
+    const inventionsWithDiagrams = filtered.map((inv) => {
+      const input = {
+        title: inv.title,
+        category: inv.category,
+        description: inv.description,
+        materials: (inv.materials as string[] | null) || [],
+        steps: ((inv as { steps?: string[] | null }).steps as string[] | null) || [],
+        scienceBehind: (inv as { scienceBehind?: string | null }).scienceBehind ?? null,
+        customModelUrl: (inv as { customModelUrl?: string | null }).customModelUrl ?? null,
+      };
+      const diagram3dBlocks = buildInvention3DBlocks(input, { max: 4 });
+      return {
+        ...inv,
+        diagram3d: diagram3dBlocks[0],
+        diagram3dBlocks,
+      };
+    });
+
     return res.json({
       ok: true,
-      inventions: filtered,
+      inventions: inventionsWithDiagrams,
       count: filtered.length,
       total: allInventions.length,
       categories,
@@ -659,7 +680,18 @@ router.get("/inventions/:id", async (req, res) => {
     const { id } = req.params;
     const found = await db.select().from(inventionsTable).where(eq(inventionsTable.inventionId, id)).limit(1);
     if (found.length === 0) return res.status(404).json({ ok: false, error: "Invention not found" });
-    return res.json({ ok: true, invention: found[0] });
+    const inv = found[0] as typeof found[0] & { materials?: string[] | null; steps?: string[] | null };
+    const input = {
+      title: inv.title,
+      category: inv.category,
+      description: inv.description,
+      materials: (inv.materials as string[] | null) || [],
+      steps: (inv.steps as string[] | null) || [],
+      scienceBehind: (inv as { scienceBehind?: string | null }).scienceBehind ?? null,
+      customModelUrl: (inv as { customModelUrl?: string | null }).customModelUrl ?? null,
+    };
+    const diagram3dBlocks = buildInvention3DBlocks(input, { max: 4 });
+    return res.json({ ok: true, invention: inv, diagram3d: diagram3dBlocks[0], diagram3dBlocks });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
@@ -738,6 +770,189 @@ router.patch("/inventions/:id/vote", async (req, res) => {
 
     return res.json({ ok: true, invention: updated, votes: newVotes, newStatus });
   } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+// Server-side ledger of pending invention model uploads. The presign call
+// commits the intended ACL owner here; PATCH later stamps that exact owner
+// onto the object once it exists in storage. (GCS cannot set ACL metadata
+// before an object is created, so the presign decision is recorded in this
+// ledger and applied at first attach — the owner identity is fixed at
+// presign time, not at PATCH time.)
+type PendingUpload = { inventionId: string; principal: string; expiresAt: number };
+const pendingInventionUploads = new Map<string, PendingUpload>();
+const PENDING_UPLOAD_TTL_MS = 60 * 60 * 1000; // 1 hour
+function rememberPendingUpload(objectPath: string, inventionId: string, principal: string) {
+  // Sweep expired entries cheaply (cap memory).
+  const now = Date.now();
+  if (pendingInventionUploads.size > 5000) {
+    for (const [k, v] of pendingInventionUploads) {
+      if (v.expiresAt < now) pendingInventionUploads.delete(k);
+    }
+  }
+  pendingInventionUploads.set(objectPath, { inventionId, principal, expiresAt: now + PENDING_UPLOAD_TTL_MS });
+}
+function consumePendingUpload(objectPath: string, inventionId: string, principal: string): PendingUpload | null {
+  const entry = pendingInventionUploads.get(objectPath);
+  if (!entry) return null;
+  if (entry.expiresAt < Date.now()) {
+    pendingInventionUploads.delete(objectPath);
+    return null;
+  }
+  if (entry.inventionId !== inventionId) return null;
+  if (entry.principal !== principal) return null;
+  pendingInventionUploads.delete(objectPath);
+  return entry;
+}
+
+// Reject paths that try to traverse, contain empty segments, or include unsafe
+// characters. The route validator already enforces a /objects/ prefix; this
+// adds defense-in-depth before we hand the path to the storage layer.
+function isSafeObjectPath(p: string): boolean {
+  if (!p.startsWith("/objects/")) return false;
+  if (p.length > 512) return false;
+  if (p.includes("..") || p.includes("//") || p.includes("\\")) return false;
+  if (!/^\/objects\/[A-Za-z0-9._\-/]+$/.test(p)) return false;
+  return true;
+}
+
+// Derive the ACL owner identity for an invention's uploaded model. This is
+// derived server-side from the invention's persisted `proposedBy` column —
+// NEVER from a client-supplied header — so two inventions with different
+// proposers always resolve to different owner principals, and the admin token
+// alone cannot replace another inventor's model. The admin token is still
+// required as the gating credential (only admins can act at all), but the
+// ACL owner stamped on the object is the proposer, which is what enforces
+// "the right inventor can replace this model" semantics.
+function inventorPrincipal(proposedBy: string | null | undefined, inventionId: string): string {
+  const raw = (proposedBy && proposedBy.trim()) || `invention:${inventionId}`;
+  return `proposer:${createHash("sha256").update(raw).digest("hex").slice(0, 32)}`;
+}
+
+// Admin guard: fail-closed. Heavy Council P5 — accepts the new
+// `sovereign_session` HttpOnly cookie (preferred) or the legacy x-admin-token
+// header (deprecated, retained transitionally). Both paths run the same
+// constant-time check; both require an admin token to be configured on the
+// server (SOVEREIGN_ADMIN_TOKEN or legacy TESSERACT_ADMIN_KEY).
+async function requireInventorAuth(req: import("express").Request): Promise<boolean> {
+  const { isAdminTokenConfigured, lookupSession, SESSION_COOKIE } = await import("../lib/sovereign-session");
+  if (!isAdminTokenConfigured()) return false;
+  const cookies = (req as import("express").Request & { cookies?: Record<string, string> }).cookies;
+  const cookieVal = cookies?.[SESSION_COOKIE];
+  if (cookieVal && lookupSession(cookieVal).valid) return true;
+  // Legacy header path — still works during migration.
+  const token = (req.headers["x-admin-token"] as string | undefined)?.trim();
+  if (!token || token.length < 8) return false;
+  const { validateSovereignAdminToken } = await import("../lib/mesh-auth");
+  return validateSovereignAdminToken(token);
+}
+
+// Request a presigned URL for uploading a custom 3D model (GLB/GLTF) to an
+// invention. Client then PUTs the file directly to the returned URL, then
+// PATCHes /inventions/:id/model with the returned objectPath.
+router.post("/inventions/:id/model/upload-url", async (req, res) => {
+  try {
+    if (!(await requireInventorAuth(req))) {
+      return res.status(401).json({ ok: false, error: "Admin token required to upload invention models" });
+    }
+    const { id } = req.params;
+    const { name, contentType } = (req.body || {}) as { name?: string; contentType?: string };
+    if (!name || !/\.(glb|gltf)$/i.test(name)) {
+      return res.status(400).json({ ok: false, error: "name must end in .glb or .gltf" });
+    }
+    const [existing] = await db.select({ id: inventionsTable.id, proposedBy: inventionsTable.proposedBy })
+      .from(inventionsTable)
+      .where(eq(inventionsTable.inventionId, id)).limit(1);
+    if (!existing) return res.status(404).json({ ok: false, error: "Invention not found" });
+
+    const { ObjectStorageService } = await import("../lib/objectStorage");
+    const svc = new ObjectStorageService();
+    const uploadURL = await svc.getObjectEntityUploadURL();
+    const objectPath = svc.normalizeObjectEntityPath(uploadURL);
+    if (!isSafeObjectPath(objectPath)) {
+      return res.status(500).json({ ok: false, error: "Generated object path failed safety validation" });
+    }
+    const principal = inventorPrincipal(existing.proposedBy, id);
+    rememberPendingUpload(objectPath, id, principal);
+    return res.json({ ok: true, uploadURL, objectPath, contentType: contentType || "model/gltf-binary", inventionId: id });
+  } catch (err) {
+    logger.error({ err }, "Failed to create invention model upload URL");
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+// Save the uploaded GLB/GLTF object path on the invention so it can be rendered
+// in chat with a [3DOBJ:type="custom" src="..."] block.
+router.patch("/inventions/:id/model", async (req, res) => {
+  try {
+    if (!(await requireInventorAuth(req))) {
+      return res.status(401).json({ ok: false, error: "Admin token required to modify invention models" });
+    }
+    const { id } = req.params;
+    const { objectPath } = (req.body || {}) as { objectPath?: string | null };
+    if (objectPath !== null && (!objectPath || typeof objectPath !== "string" || !isSafeObjectPath(objectPath))) {
+      return res.status(400).json({ ok: false, error: "objectPath must be a safe /objects/... path (or null to clear)" });
+    }
+    // Look up the invention so we can (a) confirm it exists and (b) bind ACL
+    // ownership to the recorded proposer rather than just the synthetic
+    // invention id.
+    const [existing] = await db.select({
+      id: inventionsTable.id,
+      proposedBy: inventionsTable.proposedBy,
+    }).from(inventionsTable).where(eq(inventionsTable.inventionId, id)).limit(1);
+    if (!existing) return res.status(404).json({ ok: false, error: "Invention not found" });
+
+    // Caller's resolved proposer principal (server-derived from DB, never
+    // from a client header).
+    const principal = inventorPrincipal(existing.proposedBy, id);
+
+    // Layer 1 — path provenance: must match a presign minted for THIS
+    // invention with THIS proposer principal. Returns the pending entry
+    // (carrying the principal that was committed at presign time).
+    const pending = objectPath ? consumePendingUpload(objectPath, id, principal) : null;
+    if (objectPath && !pending) {
+      return res.status(403).json({ ok: false, error: "objectPath was not issued for this invention, or has expired" });
+    }
+    // Layer 2 — persisted ACL ownership: enforce via canAccessObjectEntity.
+    // First attach stamps owner=<presign principal>; replace requires WRITE
+    // per the existing policy (owner match). The owner stamped is the one
+    // committed at presign time (pending.principal), not recomputed here.
+    if (objectPath && pending) {
+      try {
+        const { ObjectStorageService } = await import("../lib/objectStorage");
+        const { ObjectPermission, getObjectAclPolicy } = await import("../lib/objectAcl");
+        const svc = new ObjectStorageService();
+        const objectFile = await svc.getObjectEntityFile(objectPath);
+        const existingPolicy = await getObjectAclPolicy(objectFile);
+        if (existingPolicy) {
+          const allowed = await svc.canAccessObjectEntity({
+            userId: pending.principal,
+            objectFile,
+            requestedPermission: ObjectPermission.WRITE,
+          });
+          if (!allowed) {
+            return res.status(403).json({ ok: false, error: "Caller does not own this object per ACL" });
+          }
+        } else {
+          await svc.trySetObjectEntityAclPolicy(objectPath, {
+            owner: pending.principal,
+            visibility: "public",
+          });
+        }
+      } catch (aclErr) {
+        logger.error({ err: aclErr, objectPath }, "Failed to enforce/apply ACL on invention model");
+        return res.status(500).json({ ok: false, error: "Failed to apply object ACL" });
+      }
+    }
+    const [updated] = await db.update(inventionsTable)
+      .set({ customModelUrl: objectPath, updatedAt: new Date() })
+      .where(eq(inventionsTable.inventionId, id))
+      .returning();
+    if (!updated) return res.status(404).json({ ok: false, error: "Invention not found" });
+    return res.json({ ok: true, invention: updated });
+  } catch (err) {
+    logger.error({ err }, "Failed to set invention custom model");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
 });
@@ -1029,6 +1244,8 @@ async function autonomousTick() {
     }
 
     // 3. Vote: debating → approved (auto-majority) or rejected.
+    const { getTunable } = await import("../lib/system-tunables.js");
+    const minVotes = getTunable("consensusMinVotes");
     for (const inv of (byStatus.debating || []).slice(0, 3)) {
       const currentVotes = (inv.votes as { yes: number; no: number; abstain: number }) || { yes: 0, no: 0, abstain: 0 };
       // Simulate a batch of council votes weighted by feasibility.
@@ -1045,8 +1262,8 @@ async function autonomousTick() {
       const total = newVotes.yes + newVotes.no + newVotes.abstain;
       const approval = total > 0 ? newVotes.yes / total : 0;
       let nextStatus = inv.status;
-      if (total >= 30 && approval >= 2 / 3) nextStatus = "approved";
-      else if (total >= 30 && approval < 0.35) nextStatus = "rejected";
+      if (total >= minVotes && approval >= 2 / 3) nextStatus = "approved";
+      else if (total >= minVotes && approval < 0.35) nextStatus = "rejected";
       await db.update(inventionsTable).set({
         votes: newVotes,
         status: nextStatus,
@@ -1070,7 +1287,8 @@ async function autonomousTick() {
     }
 
     // 5. Progress: building → building + progress, eventually built.
-    for (const inv of (byStatus.building || []).slice(0, 5)) {
+    const buildsPerTick = getTunable("buildsPerTick");
+    for (const inv of (byStatus.building || []).slice(0, buildsPerTick)) {
       const cur = inv.buildProgress ?? 0;
       // Deterministic build step: 8 + (hash % 14) percent.
       const step = 8 + ((hashStringFNV(inv.title) + autoLoopState.ticks) % 14);
@@ -1088,6 +1306,22 @@ async function autonomousTick() {
           buildProgress: next,
           updatedAt: new Date(),
         }).where(eq(inventionsTable.id, inv.id));
+      }
+    }
+
+    // 6.5. Synthesis: every 10 ticks, combine all built inventions into live
+    //      system improvements + seed gap-closer proposals for weak categories.
+    if (autoLoopState.ticks % 10 === 0 && autoLoopState.ticks > 0) {
+      try {
+        const { synthesizeBuiltInventions } = await import("../lib/invention-synthesis.js");
+        const result = await synthesizeBuiltInventions({ applyChanges: true });
+        autoLoopState.generated += result.seededProposals.length;
+        pushEvent(
+          "synthesize",
+          `Synthesis #${result.id.slice(-6)}: combined ${result.totalBuiltInventions} built, applied ${result.tunableChanges.length} tunable change(s), seeded ${result.seededProposals.length} gap-closer(s).`,
+        );
+      } catch (err) {
+        logger.warn({ err }, "Autonomous synthesis tick failed");
       }
     }
 
@@ -1144,19 +1378,28 @@ router.get("/inventions/autonomous/status", (_req, res) => {
   });
 });
 
-router.post("/inventions/autonomous/toggle", (req, res) => {
+router.post("/inventions/autonomous/toggle", async (req, res) => {
+  if (!(await requireInventorAuth(req))) {
+    return res.status(401).json({ ok: false, error: "admin-auth-required" });
+  }
   const { enabled } = req.body as { enabled?: boolean };
   autoLoopState.enabled = typeof enabled === "boolean" ? enabled : !autoLoopState.enabled;
   pushEvent("toggle", `Autonomous loop ${autoLoopState.enabled ? "enabled" : "paused"}.`);
   return res.json({ ok: true, enabled: autoLoopState.enabled });
 });
 
-router.post("/inventions/autonomous/tick", async (_req, res) => {
+router.post("/inventions/autonomous/tick", async (req, res) => {
+  if (!(await requireInventorAuth(req))) {
+    return res.status(401).json({ ok: false, error: "admin-auth-required" });
+  }
   await autonomousTick();
   return res.json({ ok: true, loop: { ticks: autoLoopState.ticks, generated: autoLoopState.generated, advanced: autoLoopState.advanced, built: autoLoopState.built, lastEvents: autoLoopState.lastEvents.slice(0, 10) } });
 });
 
 router.post("/inventions/conference/start", async (req, res) => {
+  if (!(await requireInventorAuth(req))) {
+    return res.status(401).json({ ok: false, error: "admin-auth-required" });
+  }
   try {
     const { topic, description } = req.body as { topic?: string; description?: string };
 
@@ -1176,6 +1419,74 @@ router.post("/inventions/conference/start", async (req, res) => {
       inventionsInDebate: debatingInventions.length,
       topic: topic || "Grand Inventions Conference",
     });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.get("/pinned-diagrams", async (req, res) => {
+  try {
+    const { userId } = req.query as { userId?: string };
+    const baseQuery = db.select().from(pinnedDiagramsTable);
+    const rows = userId
+      ? await baseQuery.where(eq(pinnedDiagramsTable.userId, userId)).orderBy(desc(pinnedDiagramsTable.createdAt))
+      : await baseQuery.orderBy(desc(pinnedDiagramsTable.createdAt));
+    return res.json({ ok: true, diagrams: rows });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.post("/pinned-diagrams", async (req, res) => {
+  try {
+    const body = req.body ?? {};
+    const payload = {
+      diagramId: typeof body.diagramId === "string" && body.diagramId.length > 0 ? body.diagramId : randomUUID(),
+      userId: typeof body.userId === "string" ? body.userId : null,
+      type: typeof body.type === "string" && body.type.length > 0 ? body.type : "abstract",
+      label: typeof body.label === "string" ? body.label : "",
+      color: typeof body.color === "string" ? body.color : null,
+      secondaryColor: typeof body.secondaryColor === "string" ? body.secondaryColor : null,
+      size: typeof body.size === "number" && Number.isFinite(body.size) ? body.size : null,
+      detail: typeof body.detail === "string" ? body.detail : null,
+      note: typeof body.note === "string" ? body.note : null,
+      sourceMessageId: typeof body.sourceMessageId === "string" ? body.sourceMessageId : null,
+    };
+    const parsed = insertPinnedDiagramSchema.safeParse(payload);
+    if (!parsed.success) {
+      return res.status(400).json({ ok: false, error: "Invalid pinned diagram payload", issues: parsed.error.issues });
+    }
+    const [row] = await db.insert(pinnedDiagramsTable).values(parsed.data).returning();
+    return res.json({ ok: true, diagram: row });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.patch("/pinned-diagrams/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isFinite(id)) return res.status(400).json({ ok: false, error: "Invalid id" });
+    const body = req.body ?? {};
+    const updates: Record<string, unknown> = {};
+    if (typeof body.label === "string") updates.label = body.label;
+    if (typeof body.note === "string") updates.note = body.note;
+    if (Object.keys(updates).length === 0) return res.status(400).json({ ok: false, error: "No updatable fields" });
+    const [row] = await db.update(pinnedDiagramsTable).set(updates).where(eq(pinnedDiagramsTable.id, id)).returning();
+    if (!row) return res.status(404).json({ ok: false, error: "Not found" });
+    return res.json({ ok: true, diagram: row });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: (err as Error).message });
+  }
+});
+
+router.delete("/pinned-diagrams/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isFinite(id)) return res.status(400).json({ ok: false, error: "Invalid id" });
+    const [row] = await db.delete(pinnedDiagramsTable).where(eq(pinnedDiagramsTable.id, id)).returning();
+    if (!row) return res.status(404).json({ ok: false, error: "Not found" });
+    return res.json({ ok: true, deleted: row });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }

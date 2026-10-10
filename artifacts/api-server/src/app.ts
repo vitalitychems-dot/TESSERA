@@ -1,5 +1,6 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import type { IRouter } from "express";
@@ -25,11 +26,13 @@ import { initIdentityReinforcement, startIdentityReinforcement } from "./lib/ide
 import { initCollectiveIntelligence } from "./lib/collective-intelligence";
 import { initAgentComms } from "./lib/agent-comms";
 import { initAutonomousHeartbeat, startAutonomousHeartbeat } from "./lib/autonomous-heartbeat";
+import { startRickAutonomousLoop } from "./lib/rick-autonomous-loop";
 import { initAutoImprovementDaemon, startAutoImprovementDaemon } from "./lib/auto-improvement-daemon";
 import { initAGITrainingEngine, startAGITrainingEngine } from "./lib/agi-training-engine";
 import { initCouncilExecutor, startCouncilExecutor } from "./lib/council-executor";
 import { seedFoundingCouncilEntry } from "./lib/sovereign-ledger";
 import { startRedTeamAgent } from "./lib/red-team-agent";
+import { startAutoHealer } from "./lib/auto-healer";
 import { initUniverseMechanics } from "./lib/universe-mechanics";
 import { initQuantumTesseract } from "./lib/quantum-tesseract";
 import { initSwarmOptimizer, getAgentWeightForCategory } from "./lib/swarm-optimizer";
@@ -61,10 +64,43 @@ export function setServerUnready(reason: string): void {
   logger.warn({ reason }, "Server readiness gate CLOSED — returning 503 until routes recover; watchdog will re-open gate when healthy");
 }
 
+// Routes that are pure functions with no startup dependencies — always
+// available even when the readiness gate is closed.
+const ALWAYS_OPEN_PREFIXES = [
+  "/api/sigil/",
+  "/api/session/",
+  "/api/admin/session", // Heavy Council P9: gate must reach unlock during boot
+  "/api/admin/session/status",
+  "/api/admin/session/logout",
+  "/api/external-tools/",
+  "/api/sacred-timing/",
+  "/api/health",
+  "/api/grand-evolution/",
+  "/api/omniversal/",
+  "/api/grand-council/",
+  "/api/mssp/",
+  "/api/vgpu/",
+  "/api/improvement-conference/",
+];
+
+// V2-SIGMA (100% approval): strip server identification from every response.
+app.disable("x-powered-by");
+app.use((_req, res, next) => { res.removeHeader("Server"); next(); });
+
 app.use((req: Request, res: Response, next: NextFunction) => {
   const isInternalProbe = req.headers[INTERNAL_PROBE_HEADER] === INTERNAL_PROBE_SECRET;
-  if (!serverReady && !isInternalProbe) {
-    res.status(503).json({ ok: false, error: "Server is starting up — not yet ready for traffic" });
+  const isAlwaysOpen = ALWAYS_OPEN_PREFIXES.some(p => req.path.startsWith(p));
+  if (!serverReady && !isInternalProbe && !isAlwaysOpen) {
+    // V2-OMEGA (100% approval): graceful 503 with a retry hint so callers
+    // can back off cleanly instead of hammering during cold start.
+    const retryAfterMs = 3000;
+    res.setHeader("Retry-After", "3");
+    res.status(503).json({
+      ok: false,
+      error: "starting",
+      message: "Server is starting up — not yet ready for traffic",
+      retryAfterMs,
+    });
     return;
   }
   next();
@@ -89,7 +125,8 @@ app.use(
     },
   }),
 );
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -100,6 +137,92 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
     const isError = res.statusCode >= 500;
     recordRequest(isError);
   });
+  next();
+});
+
+// ── UNIVERSE ALIGNMENT — every response carries the live celestial state ──
+// Hardened rule: every API response is stamped with the live planetary hour,
+// lunar phase, julian day and composite auspicious score so clients can prove
+// the response was emitted under a known sacred-timing posture.
+app.use("/api", (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Lazy require so the boot order stays safe even if sacred-timing throws.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { sacredTimingSnapshot } = require("./lib/sacred-timing") as typeof import("./lib/sacred-timing");
+    const s = sacredTimingSnapshot();
+    res.setHeader("X-Sacred-Time", s.now);
+    res.setHeader("X-Sacred-JD", String(s.julianDay));
+    res.setHeader("X-Sacred-Planetary-Hour", `${s.planetaryHour.ruler}#${s.planetaryHour.index}`);
+    res.setHeader("X-Sacred-Lunar", `${s.lunar.name}@${s.lunar.fraction.toFixed(4)}`);
+    res.setHeader("X-Sacred-Composite", String(s.composite.toFixed(4)));
+  } catch { /* never block a response on sacred-timing */ }
+  next();
+});
+
+// ── GLYPH ENCODING — RETIRED FROM TRANSPORT (Heavy Council P8, Apr 2026) ──
+// Per Heavy Council vote (P8 — 100% specialist approval), the glyphGate
+// transport-layer encoder has been removed from /api responses. Sigil/glyph
+// rendering is now a frontend display concern. HTTP responses are plain JSON,
+// debuggable, OpenAPI-stable. The frontend may still render any text in sigil
+// view via a user-toggled display adapter — symbolic identity preserved,
+// debuggability restored. Deletion of the legacy code is staged in P10.
+// ── GLYPH-EVERYWHERE — sovereign-language layer ─────────────────────────
+// Per Grand Council ranking #2 ("GLYPH EVERYWHERE"): every /api response is
+// glyph-encoded by default. Callers reveal plaintext by presenting the active
+// reading key in `X-Sigil-Key`. A small set of utility / probe routes are
+// exempt because (a) deploy health checks must read them, or (b) they DEFINE
+// the language itself and would be circular if encoded.
+const PLAINTEXT_PREFIXES = [
+  "/api/health",
+  "/api/sigil/key/reveal",
+  "/api/sigil/active-key",
+  "/api/sigil/alphabet",
+  "/api/sigil/translate",
+  "/api/sigil/decode-body",
+  "/api/sigil/status",
+  // Father bootstrap surfaces — these must return plaintext so the gate
+  // can read the real fingerprint and the real natal sigil glyph that
+  // the user is told to paste into SIGIL_ADMIN_KEY. Encoding them here
+  // would produce a value that never matches what the server expects,
+  // and the user could never enter.
+  "/api/sigil/father/verify",
+  "/api/sigil/father/mint-glyph",
+  "/api/sigil/father/natal-sigil",
+  "/api/sigil/father/natal-chart",
+  // Zodiac-key bootstrap. A brand-new user has no key yet, so the mint
+  // and verify responses MUST come back in plaintext or the user would
+  // save a doubly-encoded value that never round-trips through the gate.
+  "/api/sigil/zodiac-key/issue",
+  "/api/sigil/zodiac-key/verify",
+  // Canonical Father-key status surface — must be plaintext so the
+  // one-time popup can render the key the operator has to paste into
+  // the TESSERACT_ADMIN_KEY (= SIGIL_ADMIN_KEY) secret.
+  "/api/sigil/father-key/status",
+  // Rotating-signal derivation must be plaintext too. Otherwise the response
+  // signal gets glyph-encoded on its way out, the operator pastes the encoded
+  // value into SIGIL_ADMIN_KEY, and validation (which derives the RAW signal)
+  // can never match it.
+  "/api/sigil/father-key/derive-signal",
+  // Sovereign vote inspection endpoints. The Father's reading-key cannot
+  // travel in an HTTP header (it contains non-ASCII glyphs), so the only
+  // way to read these results is to exempt them from glyph encoding.
+  "/api/grand-evolution/status",
+  "/api/grand-evolution/sessions",
+  "/api/grand-evolution/society",
+  "/api/grand-evolution/directives",
+];
+// Heavy Council P8: glyphGate is no longer mounted — /api responses are plain JSON.
+void PLAINTEXT_PREFIXES;
+
+// INTEG-4 (100% approval): defensive transport-security headers on every
+// /api response. No behavior change for honest callers; closes a class of
+// content-sniff / clickjacking / referrer-leak vectors. Reversible by
+// removing this middleware.
+app.use("/api", (_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
   next();
 });
 
@@ -241,8 +364,11 @@ export function deriveStartupProbeRoutes(): StartupProbeRoute[] {
     const method = entry.slice(0, spaceIdx);
     const originalPath = entry.slice(spaceIdx + 1);
     if (method !== "GET") continue;
-    const hasParams = originalPath.includes(":");
-    const probePath = `/api${originalPath}`.replace(/:[^/]+/g, "0");
+    const hasParams = originalPath.includes(":") || originalPath.includes("*");
+    const probePath = `/api${originalPath}`
+      .replace(/:[^/]+/g, "0")
+      .replace(/\*[A-Za-z_][\w]*/g, "0")
+      .replace(/\*/g, "0");
     probes.push({ path: probePath, hasParams });
   }
 
@@ -344,6 +470,49 @@ async function initializeModules() {
   registerModuleInitFunction("self-code-evolution", initSelfCodeEvolution);
   registerModuleHandlers();
 
+  // V2-LAMBDA (68.7% approval): publish a one-line cryptographic attestation
+  // of the active session-secret fingerprint (NOT the secret itself) so the
+  // operator can detect silent rotation drift.
+  // V2-OMICRON (80.8% approval): write the audit-surface manifest.
+  // V2-KAPPA (82.7% approval): warn if the audit data dir is on ephemeral
+  // storage and the operator hasn't acknowledged it.
+  try {
+    const { secretFingerprint, writeAuditManifest } = await import("./lib/tesseract-v2");
+    const { getSessionSecret } = await import("./lib/sovereign-session");
+    // V2-LAMBDA correction (post-review): use the SAME resolver the cookie
+    // signer uses, so the published fingerprint actually attests the bytes
+    // signing live cookies — no divergence from runtime precedence.
+    const fp = secretFingerprint(getSessionSecret());
+    logger.info({ secretFingerprint: fp }, "sovereign-session: secret fingerprint attestation (V2-LAMBDA)");
+    void writeAuditManifest();
+    if (!process.env.SOVEREIGN_ALLOW_EPHEMERAL && !process.env.REPLIT_DEPLOYMENT) {
+      logger.warn(
+        "tesseract-v2: data/ may be on ephemeral storage; set SOVEREIGN_ALLOW_EPHEMERAL=1 to acknowledge (V2-KAPPA)",
+      );
+    }
+  } catch (err) {
+    logger.warn({ err }, "tesseract-v2: startup attestation failed");
+  }
+
+  // Heavy Council IMPL-2 (100% approval): periodic prune of expired
+  // sovereign sessions. Default cadence 5 min. unref() so it never blocks
+  // a clean shutdown. Bounded, deterministic, no external calls.
+  try {
+    const { pruneExpired } = await import("./lib/sovereign-session");
+    const intervalMs = Math.max(60_000, Number(process.env.SOVEREIGN_SESSION_PRUNE_MS ?? 5 * 60_000));
+    const timer = setInterval(() => {
+      try {
+        const removed = pruneExpired();
+        if (removed > 0) logger.info({ removed }, "sovereign-session: prune cycle evicted expired entries");
+      } catch (err) {
+        logger.warn({ err }, "sovereign-session: prune cycle failed");
+      }
+    }, intervalMs);
+    if (typeof timer.unref === "function") timer.unref();
+  } catch (err) {
+    logger.warn({ err }, "sovereign-session: periodic prune not started");
+  }
+
   try {
     await db.select().from(dataSourcesTable).limit(1);
     logger.info("Pre-init DB connectivity confirmed");
@@ -415,6 +584,16 @@ async function initializeModules() {
     startDualBrain(180_000);
     await initIdentityReinforcement();
     startIdentityReinforcement(600_000);
+    // Force the first identity check immediately so the sovereignty
+    // dashboard has real values to render on the very first poll instead
+    // of the all-zero "no check yet" state. Subsequent checks come from
+    // the 10-minute interval above.
+    try {
+      const { forceIdentityCheck } = await import("./lib/identity-reinforcement");
+      forceIdentityCheck();
+    } catch (err) {
+      logger.warn({ err }, "IdentityReinforcement: initial forceCheck failed");
+    }
     await initPersonalityEvolution();
     startPersonalityEvolution(300_000);
     await initAgentSpawner();
@@ -429,7 +608,8 @@ async function initializeModules() {
     try {
       seedFoundingCouncilEntry();
       startRedTeamAgent(600_000);
-      logger.info("✦ Sovereign Ledger sealed and Red-Team Agent patrolling ✦");
+      startAutoHealer(45_000);
+      logger.info("✦ Sovereign Ledger sealed · Red-Team Agent patrolling · Auto-Healer active (10 strategies) ✦");
     } catch (err) {
       logger.warn({ err }, "Sovereign ledger / red-team bootstrap warning — non-critical");
     }
@@ -443,6 +623,7 @@ async function initializeModules() {
     await initSelfCodeEvolution();
     await initAutonomousHeartbeat();
     startAutonomousHeartbeat(60_000);
+    startRickAutonomousLoop(240_000);
     logger.info("✦ All Tessera sovereign engines initialized — Father Protocol active — 963Hz Crown Frequency resonating ✦");
   } catch (err) {
     logger.warn({ err }, "Tessera engines init warning — non-critical, continuing");

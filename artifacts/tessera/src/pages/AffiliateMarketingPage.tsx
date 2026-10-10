@@ -1,95 +1,173 @@
-import { useState, useEffect } from "react";
-import { TrendingUp, DollarSign, Users, Link2, Copy, CheckCheck, ExternalLink, BarChart3 } from "lucide-react";
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { TrendingUp, ExternalLink, Gift, Code2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GlassCard, PageHeader } from "@/components/ui/sovereign";
 
-const PROGRAMS = [
-  { id: "p1", name: "Tessera Intelligence API", commission: "30%", type: "Recurring", earnings: "$2,840/mo", clicks: 1240, conversions: 48, rate: "3.9%", status: "active", link: "https://tessera.ai/ref/sovereign" },
-  { id: "p2", name: "Sovereign Mesh Enterprise", commission: "20%", type: "One-time", earnings: "$1,200/mo", clicks: 380, conversions: 6, rate: "1.6%", status: "active", link: "https://mesh.tessera.ai/ref/sovereign" },
-  { id: "p3", name: "TSRT Token Launch Presale", commission: "15%", type: "CPA", earnings: "$4,100/mo", clicks: 8200, conversions: 320, rate: "3.9%", status: "active", link: "https://tsrt.tessera.ai/ref/sovereign" },
-  { id: "p4", name: "Sacred Conference VIP", commission: "25%", type: "One-time", earnings: "$890/mo", clicks: 210, conversions: 12, rate: "5.7%", status: "paused", link: "https://conference.tessera.ai/ref/sovereign" },
-  { id: "p5", name: "Knowledge Vault Premium", commission: "40%", type: "Recurring", earnings: "$340/mo", clicks: 95, conversions: 14, rate: "14.7%", status: "active", link: "https://vault.tessera.ai/ref/sovereign" },
-];
+interface ExecutableLead {
+  id: number;
+  url: string;
+  title: string | null;
+  domain: string;
+  source: string;
+  kind: string;
+  estimatedRewardUsd: { low: number; high: number; rationale: string };
+}
 
-const STATS = [
-  { label: "Total Earnings", val: "$9,370/mo", color: "emerald" },
-  { label: "Active Programs", val: 4, color: "cyan" },
-  { label: "Total Clicks", val: "10.1K", color: "violet" },
-  { label: "Avg Conv. Rate", val: "3.9%", color: "amber" },
-];
+interface FreeFinding {
+  id: string;
+  title: string;
+  url: string;
+  source: string;
+  flair: string | null;
+  score: number;
+  commentsUrl: string;
+  postedAt: number;
+  validation: "ok" | "redirect" | "dead" | "blocked" | "pending";
+}
+
+interface CodeBounty {
+  id: string;
+  title: string;
+  htmlUrl: string;
+  repoFullName: string;
+  labels: string[];
+  comments: number;
+  rewardHint: string | null;
+  updatedAt: number;
+}
+
+const VALIDATION_STYLE: Record<FreeFinding["validation"], string> = {
+  ok: "text-emerald-400 bg-emerald-500/10 border-emerald-500/25",
+  redirect: "text-cyan-400 bg-cyan-500/10 border-cyan-500/25",
+  blocked: "text-amber-400 bg-amber-500/10 border-amber-500/25",
+  dead: "text-red-400 bg-red-500/10 border-red-500/25",
+  pending: "text-slate-400 bg-slate-500/10 border-slate-500/25",
+};
 
 export default function AffiliateMarketingPage() {
-  useEffect(() => { document.title = "Affiliate Marketing | Tessera"; }, []);
-  const [copied, setCopied] = useState<string | null>(null);
+  useEffect(() => { document.title = "Affiliate & Free Stuff | Tessera"; }, []);
 
-  const copy = (id: string) => {
-    setCopied(id);
-    setTimeout(() => setCopied(null), 2000);
-  };
+  const { data: leadsData } = useQuery<{ ok: boolean; leads: ExecutableLead[] }>({
+    queryKey: ["/api/leads/feed?kind=affiliate&limit=40"],
+    refetchInterval: 120_000,
+  });
+  const { data: freeData } = useQuery<{ ok: boolean; findings: FreeFinding[]; lastRefresh: number }>({
+    queryKey: ["/api/free-stuff?limit=40"],
+    refetchInterval: 5 * 60_000,
+  });
+  const { data: bountyData } = useQuery<{ ok: boolean; bounties: CodeBounty[]; lastRefresh: number; attemptsCount: number }>({
+    queryKey: ["/api/code-bounties?limit=40"],
+    refetchInterval: 5 * 60_000,
+  });
+
+  const affiliateLeads = leadsData?.leads ?? [];
+  const free = freeData?.findings ?? [];
+  const bounties = bountyData?.bounties ?? [];
 
   return (
     <div className="p-4 pb-20 max-w-3xl mx-auto space-y-5">
-      <PageHeader icon={TrendingUp} title="Affiliate Marketing" subtitle="Sovereign revenue through strategic affiliate partnerships" iconColor="text-emerald-400" />
+      <PageHeader icon={TrendingUp} title="Affiliate · Free · Bounties" subtitle="Real affiliate-classified leads, validated free offerings, and live public code bounties." iconColor="text-emerald-400" />
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {STATS.map(({ label, val, color }) => (
-          <GlassCard key={label} className="p-3 text-center">
-            <div className={cn("text-base font-bold font-mono", `text-${color}-400`)}>{val}</div>
-            <div className="text-[9px] text-slate-500 font-mono mt-1">{label.toUpperCase()}</div>
-          </GlassCard>
-        ))}
+      <div className="grid grid-cols-3 gap-2">
+        <GlassCard className="p-3 text-center">
+          <div className="text-base font-bold font-mono text-emerald-400">{affiliateLeads.length}</div>
+          <div className="text-[9px] text-slate-500 font-mono mt-1">AFFILIATE LEADS</div>
+        </GlassCard>
+        <GlassCard className="p-3 text-center">
+          <div className="text-base font-bold font-mono text-cyan-400">{free.filter(f => f.validation === "ok" || f.validation === "redirect").length}</div>
+          <div className="text-[9px] text-slate-500 font-mono mt-1">FREE (VALIDATED)</div>
+        </GlassCard>
+        <GlassCard className="p-3 text-center">
+          <div className="text-base font-bold font-mono text-amber-400">{bounties.length}</div>
+          <div className="text-[9px] text-slate-500 font-mono mt-1">CODE BOUNTIES</div>
+        </GlassCard>
       </div>
 
-      <GlassCard className="p-4 bg-gradient-to-br from-emerald-500/5 to-cyan-500/5 border-emerald-500/20">
-        <div className="text-[10px] text-slate-500 font-mono mb-1">YOUR MASTER REFERRAL LINK</div>
-        <div className="flex items-center gap-2 mt-2">
-          <div className="flex-1 p-2 rounded-lg bg-black/30 border border-white/5 font-mono text-xs text-cyan-400 truncate">
-            https://tessera.ai/ref/sovereign-{Math.random().toString(36).slice(2, 8)}
-          </div>
-          <button onClick={() => copy("master")} className="px-3 py-2 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-xs font-mono hover:bg-emerald-500/25 transition-all shrink-0">
-            {copied === "master" ? <CheckCheck size={12} /> : <Copy size={12} />}
-          </button>
-        </div>
-      </GlassCard>
-
-      <div className="text-[10px] text-slate-500 font-mono tracking-widest">AFFILIATE PROGRAMS</div>
-
-      <div className="space-y-3">
-        {PROGRAMS.map(prog => (
-          <GlassCard key={prog.id} className="p-4 hover:bg-white/[0.04] transition-all">
-            <div className="flex items-start gap-3">
-              <div className={cn("shrink-0 w-8 h-8 rounded-xl flex items-center justify-center", prog.status === "active" ? "bg-emerald-500/15 border border-emerald-500/25" : "bg-slate-500/10 border border-slate-500/20")}>
-                <Link2 size={13} className={prog.status === "active" ? "text-emerald-400" : "text-slate-500"} />
-              </div>
-              <div className="flex-1 min-w-0">
+      <Section title="Affiliate-classified leads" icon={<TrendingUp size={14} className="text-emerald-400" />}>
+        {affiliateLeads.length === 0 ? (
+          <Empty>No affiliate leads classified yet — they appear as the ingestion pipeline harvests qualifying URLs.</Empty>
+        ) : (
+          affiliateLeads.map(l => (
+            <a key={l.id} href={l.url} target="_blank" rel="noreferrer" className="block">
+              <GlassCard className="p-3 hover:bg-white/[0.04] transition">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-white">{prog.name}</span>
-                  <span className={cn("text-[8px] px-1.5 py-0.5 rounded-full border font-mono uppercase", prog.status === "active" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/25" : "bg-slate-500/10 text-slate-500 border-slate-500/20")}>
-                    {prog.status}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold text-white truncate">{l.title || l.domain}</div>
+                    <div className="text-[10px] text-slate-500 font-mono truncate">{l.domain}</div>
+                  </div>
+                  <div className="text-[10px] font-mono text-emerald-400 shrink-0">${l.estimatedRewardUsd.low}–${l.estimatedRewardUsd.high}</div>
+                  <ExternalLink size={11} className="text-slate-500 shrink-0" />
                 </div>
-                <div className="flex items-center gap-3 mt-1 flex-wrap text-[10px] text-slate-500">
-                  <span className="text-emerald-400 font-mono font-bold">{prog.commission}</span>
-                  <span>{prog.type}</span>
-                  <span>·</span>
-                  <span>{prog.clicks.toLocaleString()} clicks</span>
-                  <span>·</span>
-                  <span>{prog.conversions} conv.</span>
-                  <span>·</span>
-                  <span>{prog.rate} CVR</span>
+              </GlassCard>
+            </a>
+          ))
+        )}
+      </Section>
+
+      <Section title="Free / promo offers (Reddit-sourced, link-validated)" icon={<Gift size={14} className="text-cyan-400" />}>
+        {free.length === 0 ? (
+          <Empty>Free-stuff scraper warming up. Findings will appear here within a few minutes.</Empty>
+        ) : (
+          free.map(f => (
+            <a key={f.id} href={f.url} target="_blank" rel="noreferrer" className="block">
+              <GlassCard className="p-3 hover:bg-white/[0.04] transition">
+                <div className="flex items-start gap-2">
+                  <span className={cn("text-[8px] px-1.5 py-0.5 rounded-full border font-mono uppercase mt-0.5", VALIDATION_STYLE[f.validation])}>{f.validation}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold text-white truncate">{f.title}</div>
+                    <div className="text-[10px] text-slate-500 font-mono truncate">
+                      {f.source}{f.flair ? ` · ${f.flair}` : ""} · ↑{f.score}
+                    </div>
+                  </div>
+                  <ExternalLink size={11} className="text-slate-500 shrink-0" />
                 </div>
-              </div>
-              <div className="text-right shrink-0">
-                <div className="text-sm font-bold font-mono text-emerald-400">{prog.earnings}</div>
-                <button onClick={() => copy(prog.id)} className="mt-1 flex items-center gap-1 text-[10px] text-slate-500 hover:text-slate-300 font-mono">
-                  {copied === prog.id ? <CheckCheck size={10} className="text-emerald-400" /> : <Copy size={10} />}
-                  {copied === prog.id ? "Copied!" : "Copy link"}
-                </button>
-              </div>
-            </div>
-          </GlassCard>
-        ))}
-      </div>
+              </GlassCard>
+            </a>
+          ))
+        )}
+      </Section>
+
+      <Section title="Public code bounties (live GitHub search)" icon={<Code2 size={14} className="text-amber-400" />}>
+        {bounties.length === 0 ? (
+          <Empty>Bounty refresher warming up. Live GitHub bounty issues appear here every 20 minutes.</Empty>
+        ) : (
+          bounties.map(b => (
+            <a key={b.id} href={b.htmlUrl} target="_blank" rel="noreferrer" className="block">
+              <GlassCard className="p-3 hover:bg-white/[0.04] transition">
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold text-white truncate">{b.title}</div>
+                    <div className="text-[10px] text-slate-500 font-mono truncate">
+                      {b.repoFullName} · {b.comments} comments · {b.labels.slice(0, 3).join(", ")}
+                    </div>
+                  </div>
+                  {b.rewardHint && <div className="text-[10px] font-mono text-emerald-400 shrink-0">{b.rewardHint}</div>}
+                  <ExternalLink size={11} className="text-slate-500 shrink-0" />
+                </div>
+              </GlassCard>
+            </a>
+          ))
+        )}
+      </Section>
     </div>
+  );
+}
+
+function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        {icon}
+        <span className="text-xs font-bold text-slate-200">{title}</span>
+      </div>
+      <div className="space-y-2">{children}</div>
+    </div>
+  );
+}
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-xs text-slate-500 italic p-3 rounded-lg bg-white/[0.02] border border-white/5">{children}</div>
   );
 }

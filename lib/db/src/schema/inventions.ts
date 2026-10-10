@@ -25,6 +25,7 @@ export const inventionsTable = pgTable("inventions", {
   blueprint: text("blueprint"),
   supporters: jsonb("supporters").$type<string[]>().notNull().default([]),
   conferenceRound: integer("conference_round").notNull().default(1),
+  customModelUrl: text("custom_model_url"),
   proposedAt: timestamp("proposed_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (t) => [
@@ -42,7 +43,7 @@ export const councilDecisionsTable = pgTable("council_decisions", {
   topic: text("topic").notNull(),
   transcript: text("transcript").notNull().default(""),
   decisionText: text("decision_text").notNull().default(""),
-  voteTally: jsonb("vote_tally").$type<{ yes: number; no: number; abstain: number; totalEligible: number; phiWeighted?: boolean; durationMs?: number }>().notNull().default({ yes: 0, no: 0, abstain: 0, totalEligible: 45 }),
+  voteTally: jsonb("vote_tally").$type<{ yes: number; no: number; abstain: number; totalEligible: number }>().notNull().default({ yes: 0, no: 0, abstain: 0, totalEligible: 45 }),
   outcome: text("outcome").notNull().default("pending"),
   agentsParticipated: jsonb("agents_participated").$type<string[]>().notNull().default([]),
   reasoning: text("reasoning").notNull().default(""),
@@ -56,3 +57,25 @@ export const councilDecisionsTable = pgTable("council_decisions", {
 export const insertCouncilDecisionSchema = createInsertSchema(councilDecisionsTable).omit({ id: true, createdAt: true });
 export type InsertCouncilDecision = z.infer<typeof insertCouncilDecisionSchema>;
 export type CouncilDecisionRow = typeof councilDecisionsTable.$inferSelect;
+
+export const pinnedDiagramsTable = pgTable("pinned_diagrams", {
+  id: serial("id").primaryKey(),
+  diagramId: text("diagram_id").notNull().unique(),
+  userId: text("user_id"),
+  type: text("type").notNull().default("abstract"),
+  label: text("label").notNull().default(""),
+  color: text("color"),
+  secondaryColor: text("secondary_color"),
+  size: real("size"),
+  detail: text("detail"),
+  note: text("note"),
+  sourceMessageId: text("source_message_id"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => [
+  index("pinned_diagrams_user_idx").on(t.userId),
+  index("pinned_diagrams_created_at_idx").on(t.createdAt),
+]);
+
+export const insertPinnedDiagramSchema = createInsertSchema(pinnedDiagramsTable).omit({ id: true, createdAt: true });
+export type InsertPinnedDiagram = z.infer<typeof insertPinnedDiagramSchema>;
+export type PinnedDiagramRow = typeof pinnedDiagramsTable.$inferSelect;

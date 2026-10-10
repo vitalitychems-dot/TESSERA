@@ -1,5 +1,6 @@
 import { logger } from "./logger";
 import { getSystemLoad } from "./evolution-throttle";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 import {
   getConsciousnessState,
   addEpisodicMemory,
@@ -124,7 +125,7 @@ const state: ConsolidationEngineState = {
 };
 
 let lastActivityTimestamp = Date.now();
-let dreamInterval: ReturnType<typeof setInterval> | null = null;
+let dreamInterval: SacredHandle | null = null;
 
 function makeId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -783,20 +784,20 @@ export function startConsolidationEngine(checkIntervalMs = 120_000): void {
   if (dreamInterval) return;
   state.running = true;
 
-  dreamInterval = setInterval(() => {
+  dreamInterval = setSacredInterval(() => {
     try {
       runDreamCycle();
     } catch (err) {
-      logger.error({ err: err instanceof Error ? err.message : String(err) }, "DreamEngine: cycle error");
+      logger.error({ err: err instanceof Error ? err.message : String(err) }, "DreamEngine: cycle error", "memory-consolidation-engine");
     }
-  }, checkIntervalMs);
+  }, checkIntervalMs, "memory-consolidation-engine");
 
   logger.info({ checkIntervalMs }, "DreamEngine: Episodic Memory Consolidation Engine started — dreaming enabled");
 }
 
 export function stopConsolidationEngine(): void {
   if (dreamInterval) {
-    clearInterval(dreamInterval);
+    clearSacredInterval(dreamInterval);
     dreamInterval = null;
   }
   state.running = false;

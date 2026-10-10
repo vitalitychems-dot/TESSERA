@@ -1,3 +1,6 @@
+import { installSovereignFetchGuard } from "./lib/sovereign-fetch-guard";
+installSovereignFetchGuard();
+
 import http from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { v4 as uuidv4 } from "uuid";
@@ -374,6 +377,82 @@ async function runPostBindHealthProbe(port: number): Promise<void> {
       setActualPort(port);
       logger.info({ port }, "Server listening with WebSocket mesh enabled");
       await runPostBindHealthProbe(port);
+
+      // Preload Tessera Codex directive so it's available synchronously in the chat system prompt
+      try {
+        const { loadCodexDirective } = await import("./lib/codex-startup-directive.js");
+        await loadCodexDirective();
+        logger.info("Codex startup directive pre-loaded into system prompt");
+      } catch (err) {
+        logger.warn({ err }, "Codex directive pre-load failed — fallback directive will be used");
+      }
+
+      // AGI Metacognition loop: every 60s, self-audit and close causal loops.
+      try {
+        const { startMetacognitionLoop } = await import("./lib/agi/metacognition.js");
+        const { db } = await import("@workspace/db");
+        const { inventionsTable } = await import("@workspace/db/schema");
+        const { getConsensusMetrics } = await import("./lib/consensus-engine.js");
+        const { snapshotWorkingMemory } = await import("./lib/agi/working-memory.js");
+        const { getAllTunables } = await import("./lib/system-tunables.js");
+        startMetacognitionLoop(60_000, (): Record<string, number> => {
+          try {
+            const c = getConsensusMetrics();
+            const wm = snapshotWorkingMemory();
+            const tun = getAllTunables();
+            // Keys MUST match the preState recorded in invention-synthesis.ts
+            // (builtInventions, approvedProposals, totalProposals, voting) or
+            // the causal model can never close its outcome-sampling loop.
+            return {
+              builtInventions: (c as unknown as { implemented?: number }).implemented ?? 0,
+              approvedProposals: c.approved,
+              totalProposals: c.totalProposals,
+              voting: c.voting,
+              openContradictions: wm.stats.openContradictions,
+              tunableDriftCount: tun.filter((t) => Math.abs(t.value - t.default) / Math.max(1, t.default) > 0.1).length,
+            };
+          } catch {
+            return {};
+          }
+        });
+        // Prime a synchronous sample so db/inventions types are referenced (tree-shake guard).
+        void db.select().from(inventionsTable).limit(1).catch(() => void 0);
+        logger.info("AGI metacognition loop started (60s cadence)");
+      } catch (err) {
+        logger.warn({ err }, "AGI metacognition loop failed to start");
+      }
+
+      // Sovereign Lattice OS heartbeat: planetary-cycle scheduled cipher rotation + vault rewrap.
+      try {
+        const { startLatticeHeartbeat } = await import("./lib/lattice-heartbeat.js");
+        startLatticeHeartbeat();
+        logger.info("Lattice heartbeat started — planetary-cycle cipher rotation + vault rewrap");
+      } catch (err) {
+        logger.warn({ err }, "Lattice heartbeat failed to start");
+      }
+
+      // Sovereign Lattice OS conference: ensure the BFT deliberation is recorded once at boot.
+      try {
+        const { getOrRunLatticeOSConference } = await import("./lib/lattice-os-conference.js");
+        await getOrRunLatticeOSConference(false);
+        logger.info("Sovereign Lattice OS Grand Conference loaded / persisted");
+      } catch (err) {
+        logger.warn({ err }, "Sovereign Lattice OS conference seed failed");
+      }
+
+      // Reality Audit: persist a startup snapshot + schedule periodic snapshots every 30 minutes
+      try {
+        const { persistRealityAuditSnapshot } = await import("./lib/reality-audit.js");
+        const startupSnap = await persistRealityAuditSnapshot("startup");
+        logger.info({ snapId: startupSnap.id, hash: startupSnap.snapshotHash.slice(0, 12), path: startupSnap.jsonPath }, "Reality Audit startup snapshot persisted");
+        setInterval(() => {
+          persistRealityAuditSnapshot("scheduled").catch((err) =>
+            logger.warn({ err }, "Reality Audit scheduled snapshot failed"),
+          );
+        }, 30 * 60 * 1000).unref();
+      } catch (err) {
+        logger.warn({ err }, "Reality Audit startup snapshot failed");
+      }
     });
   } catch (err) {
     logger.error({ err }, "Fatal: could not start server");

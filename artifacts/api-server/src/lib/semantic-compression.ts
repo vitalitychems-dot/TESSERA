@@ -11,8 +11,7 @@ const MIN_PHRASE_FREQ = 3;
 const MAX_DICT_ENTRIES = 512;
 const RATE_LIMIT_MS = 30_000;
 
-type FactRow = typeof distilledKnowledgeTable.$inferSelect;
-type NonNullFactRow = Omit<FactRow, "fact"> & { fact: string };
+type FactRow = Omit<typeof distilledKnowledgeTable.$inferSelect, "fact"> & { fact: string };
 
 // In-memory O(1) portal-jump: canonicalId -> entry; backed by domain index.
 
@@ -174,15 +173,15 @@ function dictionaryToPairs(dict: EntropyDictionary): Array<{ phrase: string; tok
 // Phase 2 clusters unmatched new facts among themselves.
 
 interface DeduplicationGroup {
-  representative: NonNullFactRow;
-  members: NonNullFactRow[];
+  representative: FactRow;
+  members: FactRow[];
   domains: string[];
   avgConfidence: number;
   matchedCanonicalId: number | null;
 }
 
 async function semanticDeduplicationPass(
-  facts: NonNullFactRow[],
+  facts: FactRow[],
   existingCanonicals: Map<number, { embedding: number[]; domains: string[] }>,
 ): Promise<DeduplicationGroup[]> {
   if (facts.length === 0) return [];
@@ -234,7 +233,7 @@ async function semanticDeduplicationPass(
     if (assigned[i]) continue;
     const embI = embeddings[i];
 
-    const group: NonNullFactRow[] = [facts[i]];
+    const group: FactRow[] = [facts[i]];
     assigned[i] = 1;
 
     if (embI && embI.length > 0) {
@@ -471,8 +470,7 @@ export async function runCompressionPipeline(opts: {
       .from(distilledKnowledgeTable)
       .where(and(gt(distilledKnowledgeTable.confidence, minConf), isNotNull(distilledKnowledgeTable.fact)))
       .orderBy(desc(distilledKnowledgeTable.confidence))
-      .limit(5000))
-      .filter((row): row is NonNullFactRow => row.fact !== null);
+      .limit(5000)) as FactRow[];
 
     if (allFacts.length === 0) {
       const empty = buildEmptyMetrics(runId, startMs);
@@ -684,17 +682,16 @@ export async function compressNewFacts(factTexts: string[], category: string): P
 
   let rows: FactRow[] = [];
   try {
-    rows = await db
+    rows = (await db
       .select()
       .from(distilledKnowledgeTable)
-      .where(inArray(distilledKnowledgeTable.fact, factTexts.slice(0, 100)))
-      .limit(factTexts.length);
+      .where(and(inArray(distilledKnowledgeTable.fact, factTexts.slice(0, 100)), isNotNull(distilledKnowledgeTable.fact)))
+      .limit(factTexts.length)) as FactRow[];
   } catch (err) {
     logger.debug({ err: (err as Error).message }, "SemanticCompression: incremental fact lookup failed");
   }
 
-  const nonNullRows = rows.filter((row): row is NonNullFactRow => row.fact !== null);
-  if (nonNullRows.length === 0) return;
+  if (rows.length === 0) return;
 
   const existingCanonicals = new Map<number, { embedding: number[]; domains: string[] }>();
   for (const [id, entry] of portalJumpTable) {
@@ -706,7 +703,7 @@ export async function compressNewFacts(factTexts: string[], category: string): P
   dictCache.set(incrementalRunId, globalDictionary);
 
   try {
-    const groups = await semanticDeduplicationPass(nonNullRows, existingCanonicals);
+    const groups = await semanticDeduplicationPass(rows, existingCanonicals);
     for (const group of groups) {
       // Explicitly merge the ingestion-time category into each group's domains.
       // This ensures cross-domain pointer links are added even when a fact already

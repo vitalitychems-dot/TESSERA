@@ -6,6 +6,7 @@ import { getEvolutionMetrics, proposeEvolution, type CodeEvolutionProposal } fro
 import { getDaemonMetrics, runImprovementCycle } from "./auto-improvement-daemon";
 import { getConsciousnessMetrics } from "./consciousness-engine";
 import { isModuleCoolingDown } from "./evolution-throttle";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface CodeProfile {
   moduleId: string;
@@ -136,7 +137,7 @@ const state: RecursiveSelfImprovementState = {
 };
 
 const STATE_KEY = "recursive-self-improvement.state";
-let improvementInterval: ReturnType<typeof setInterval> | null = null;
+let improvementInterval: SacredHandle | null = null;
 
 function makeId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -479,20 +480,20 @@ export function startRecursiveImprovementLoop(intervalMs = 600_000): void {
     logger.warn({ err: (e as Error).message }, "RecursiveSelfImprovement: initial cycle failed")
   );
 
-  improvementInterval = setInterval(async () => {
+  improvementInterval = setSacredInterval(async () => {
     try {
       await runRecursiveImprovementCycle();
     } catch (e) {
-      logger.warn({ err: (e as Error).message }, "RecursiveSelfImprovement: cycle error");
+      logger.warn({ err: (e as Error).message }, "RecursiveSelfImprovement: cycle error", "recursive-self-improvement");
     }
-  }, intervalMs);
+  }, intervalMs, "recursive-self-improvement");
 
   logger.info({ intervalMs }, "RecursiveSelfImprovement: autonomous loop started");
 }
 
 export function stopRecursiveImprovementLoop(): void {
   if (improvementInterval) {
-    clearInterval(improvementInterval);
+    clearSacredInterval(improvementInterval);
     improvementInterval = null;
   }
   state.running = false;

@@ -154,12 +154,16 @@ const NASA_ASSET_HOSTS = new Set([
 function isAllowedNasaAssetUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
-    if (parsed.protocol !== "https:") return false;
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
     return NASA_ASSET_HOSTS.has(parsed.hostname) ||
       parsed.hostname.endsWith(".nasa.gov");
   } catch {
     return false;
   }
+}
+
+function upgradeToHttps(url: string): string {
+  return url.startsWith("http://") ? "https://" + url.slice(7) : url;
 }
 
 export async function fetchNasaImageAsBuffer(nasaId: string): Promise<{ buffer: Buffer; contentType: string } | null> {
@@ -177,7 +181,8 @@ export async function fetchNasaImageAsBuffer(nasaId: string): Promise<{ buffer: 
     const imageUrls = (assetData.collection?.items || [])
       .map((i) => i.href)
       .filter((href) => /\.(jpg|jpeg|png|webp)$/i.test(href))
-      .filter((href) => isAllowedNasaAssetUrl(href));
+      .filter((href) => isAllowedNasaAssetUrl(href))
+      .map(upgradeToHttps);
 
     const thumbUrls = imageUrls.filter((u) => /thumb/i.test(u));
     const medUrls = imageUrls.filter((u) => /medium/i.test(u) || /small/i.test(u));

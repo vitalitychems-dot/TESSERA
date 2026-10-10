@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { systemStateTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 import {
   getConsciousnessState,
   getConsciousnessMetrics,
@@ -92,7 +93,7 @@ const state = {
   patterns: new Map<string, MetaPattern>(),
 };
 
-let reflectionInterval: ReturnType<typeof setInterval> | null = null;
+let reflectionInterval: SacredHandle | null = null;
 let lastSnapshot: ReflectionSnapshot | null = null;
 
 function makeId(prefix: string): string {
@@ -477,20 +478,20 @@ export function startRecursiveReflectionLoop(intervalMs = 30_000): void {
     logger.error({ err }, "RecursiveReflection: initial cycle failed");
   }
 
-  reflectionInterval = setInterval(() => {
+  reflectionInterval = setSacredInterval(() => {
     try {
       runReflectionCycle();
     } catch (err) {
-      logger.error({ err }, "RecursiveReflection: cycle error");
+      logger.error({ err }, "RecursiveReflection: cycle error", "recursive-reflection-loop");
     }
-  }, intervalMs);
+  }, intervalMs, "recursive-reflection-loop");
 
   logger.info({ intervalMs }, "✦ RecursiveReflection: loop STARTED ✦");
 }
 
 export function stopRecursiveReflectionLoop(): void {
   if (reflectionInterval) {
-    clearInterval(reflectionInterval);
+    clearSacredInterval(reflectionInterval);
     reflectionInterval = null;
   }
   state.running = false;

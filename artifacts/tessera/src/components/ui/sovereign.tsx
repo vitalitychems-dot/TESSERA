@@ -96,16 +96,12 @@ export function GlassCard({
   glow,
   hover = true,
   animate = false,
-  onClick,
-  style,
 }: {
   children: React.ReactNode;
   className?: string;
   glow?: "cyan" | "violet" | "emerald" | "amber" | "pink" | "blue" | "rose";
   hover?: boolean;
   animate?: boolean;
-  onClick?: React.MouseEventHandler<HTMLDivElement>;
-  style?: React.CSSProperties;
 }) {
   const glowColors: Record<string, string> = {
     cyan: "shadow-[0_0_20px_rgba(6,182,212,0.08)] border-cyan-500/20",
@@ -118,16 +114,6 @@ export function GlassCard({
   };
   return (
     <div
-      onClick={onClick}
-      onKeyDown={event => {
-        if (onClick && (event.key === "Enter" || event.key === " ")) {
-          event.preventDefault();
-          event.currentTarget.click();
-        }
-      }}
-      role={onClick ? "button" : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      style={style}
       className={cn(
         "rounded-2xl border backdrop-blur-xl bg-white/[0.03] p-4",
         glow ? glowColors[glow] : "border-white/[0.08]",
@@ -482,23 +468,35 @@ export function TabBar({
 export function PageHeader({
   title,
   subtitle,
-  gradient = "bg-gradient-to-r from-cyan-300 via-sky-300 to-violet-300",
+  gradient,
   quote,
   icon: Icon,
-  iconColor = "text-cyan-400",
+  iconColor,
 }: {
   title: string;
   subtitle?: string;
   gradient?: string;
   quote?: string;
-  icon?: LucideIcon;
+  icon?: React.ComponentType<{ size?: number; className?: string }>;
   iconColor?: string;
 }) {
+  if (Icon) {
+    return (
+      <div className="flex items-center gap-3 relative">
+        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center bg-white/[0.04] border border-white/10", iconColor || "text-cyan-400")}>
+          <Icon size={20} className={iconColor || "text-cyan-400"} />
+        </div>
+        <div className="min-w-0">
+          <h1 className={cn("text-lg md:text-xl font-bold font-mono truncate", iconColor || "text-cyan-400")}>{title}</h1>
+          {subtitle && <p className="text-slate-500 text-[11px] font-mono tracking-wide truncate">{subtitle}</p>}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="text-center space-y-2 relative">
       <div className="absolute inset-0 -top-8 sovereign-page-glow opacity-30 pointer-events-none" />
-      {Icon && <Icon className={cn("mx-auto h-5 w-5", iconColor)} aria-hidden="true" />}
-      <h1 className={cn("text-3xl md:text-4xl font-bold bg-clip-text text-transparent", gradient)}>
+      <h1 className={cn("text-3xl md:text-4xl font-bold bg-clip-text text-transparent", gradient || "bg-gradient-to-r from-cyan-400 to-violet-400")}>
         {title}
       </h1>
       {subtitle && <p className="text-slate-500 text-xs font-mono tracking-wide">{subtitle}</p>}

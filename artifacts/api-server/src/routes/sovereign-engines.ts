@@ -152,37 +152,31 @@ router.get("/file-registry/domain/:domain", (req: Request, res: Response) => {
 });
 
 router.get("/file-registry/engine/:engineName", (req: Request, res: Response) => {
-  const rawEngineName = req.params.engineName;
-  const engineName = Array.isArray(rawEngineName) ? rawEngineName[0] : rawEngineName;
-  if (!engineName) { res.status(400).json({ ok: false, error: "Engine name required" }); return; }
+  const engineName = String(req.params.engineName);
   const manifest = getEngineFileManifest(engineName);
   res.json({ ok: true, data: manifest });
 });
 
 router.get("/file-registry/engine/:engineName/files", (req: Request, res: Response) => {
-  const rawEngineName = req.params.engineName;
-  const engineName = Array.isArray(rawEngineName) ? rawEngineName[0] : rawEngineName;
-  if (!engineName) { res.status(400).json({ ok: false, error: "Engine name required" }); return; }
+  const engineName = String(req.params.engineName);
   const entries = queryByEngine(engineName);
   res.json({ ok: true, engine: engineName, totalFiles: entries.length, entries });
 });
 
-router.get("/file-registry/search", (req: Request, res: Response): void => {
+router.get("/file-registry/search", (req: Request, res: Response) => {
   const pattern = (req.query.q as string) || "";
   if (!pattern) {
-    res.status(400).json({ ok: false, error: "Query parameter 'q' is required" });
-    return;
+    res.status(400).json({ ok: false, error: "Query parameter 'q' is required" }); return;
   }
   const entries = searchRegistry(pattern);
   res.json({ ok: true, pattern, totalFiles: entries.length, entries });
 });
 
-router.get("/file-registry/access-check", (req: Request, res: Response): void => {
+router.get("/file-registry/access-check", (req: Request, res: Response) => {
   const engine = req.query.engine as string;
   const file = req.query.file as string;
   if (!engine || !file) {
-    res.status(400).json({ ok: false, error: "Both 'engine' and 'file' query parameters required" });
-    return;
+    res.status(400).json({ ok: false, error: "Both 'engine' and 'file' query parameters required" }); return;
   }
   const result = canEngineAccess(engine, file);
   res.json({ ok: true, ...result });

@@ -104,7 +104,7 @@ router.get("/secret-knowledge/all", async (_req, res) => {
       .limit(40);
 
     const seenIds = new Set<number>();
-    const allData: (typeof declassifiedData)[number][] = [];
+    const allData: Array<typeof declassifiedData[number]> = [];
     for (const item of declassifiedData) {
       if (!seenIds.has(item.id)) { seenIds.add(item.id); allData.push(item); }
     }

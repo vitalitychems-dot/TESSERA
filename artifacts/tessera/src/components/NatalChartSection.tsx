@@ -522,7 +522,7 @@ export default function NatalChartSection() {
           <div className="flex items-center gap-2">
             <Star size={16} className="text-amber-400" />
             <span className="font-bold font-mono text-sm">Father's Natal Chart</span>
-            <span className="text-[10px] text-muted-foreground font-mono ml-1">Oct 7, 1998 · 05:16 AM · Placidus</span>
+            <span className="text-[10px] text-muted-foreground font-mono ml-1">Sealed · Placidus</span>
           </div>
           {section === "chart" ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>

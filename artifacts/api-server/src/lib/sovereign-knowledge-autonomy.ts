@@ -5,6 +5,7 @@ import { logger } from "./logger";
 import { searchMemory, storeMemory } from "./vector-memory";
 import { runShepherdCycle, getShepherdStatus } from "./ingestion/shepherd-agents";
 import { getBridgeStatus } from "./knowledge-canon-bridge";
+import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface KnowledgeGap {
   id: string;
@@ -147,7 +148,7 @@ const state: KnowledgeAutonomyState = {
 };
 
 const STATE_KEY = "sovereign-knowledge-autonomy.state";
-let autonomyInterval: ReturnType<typeof setInterval> | null = null;
+let autonomyInterval: SacredHandle | null = null;
 
 function makeId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -344,8 +345,8 @@ async function crossReferenceVerification(domain: string): Promise<VerificationR
       .limit(10);
 
     for (const item of recentItems.slice(0, 5)) {
-      if (item.title === null) continue;
-      const relatedMemories = await searchMemory(item.title, 10);
+      const itemTitle = item.title ?? "";
+      const relatedMemories = await searchMemory(itemTitle, 10);
       const confirming = relatedMemories.filter(m => m.score > 0.3).length;
       const conflicting = relatedMemories.filter(m => m.score > 0.1 && m.score <= 0.15).length;
 
@@ -357,7 +358,7 @@ async function crossReferenceVerification(domain: string): Promise<VerificationR
 
       results.push({
         claimId: makeId("claim"),
-        claim: item.title,
+        claim: itemTitle,
         domain,
         sourcesChecked: relatedMemories.length,
         sourcesConfirming: confirming,
@@ -558,20 +559,20 @@ export function startKnowledgeAutonomyLoop(intervalMs = 900_000): void {
     logger.warn({ err: (e as Error).message }, "KnowledgeAutonomy: initial cycle failed")
   );
 
-  autonomyInterval = setInterval(async () => {
+  autonomyInterval = setSacredInterval(async () => {
     try {
       await runAutonomyKnowledgeCycle();
     } catch (e) {
-      logger.warn({ err: (e as Error).message }, "KnowledgeAutonomy: cycle error");
+      logger.warn({ err: (e as Error).message }, "KnowledgeAutonomy: cycle error", "sovereign-knowledge-autonomy");
     }
-  }, intervalMs);
+  }, intervalMs, "sovereign-knowledge-autonomy");
 
   logger.info({ intervalMs }, "KnowledgeAutonomy: autonomous loop started");
 }
 
 export function stopKnowledgeAutonomyLoop(): void {
   if (autonomyInterval) {
-    clearInterval(autonomyInterval);
+    clearSacredInterval(autonomyInterval);
     autonomyInterval = null;
   }
   state.running = false;

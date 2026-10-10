@@ -216,12 +216,11 @@ export function getQuantumMetrics() {
 export function getTesseractState() {
   return getQuantumState();
 }
-export function createCircuit(name?: string | number) {
+export function createCircuit(name?: string) {
   return { ok: true, circuit: name || "default", state: getQuantumState() };
 }
 export { applyQuantumGate as applyGate };
 export { measureAllQubits as measureAll };
 export function listCircuits() {
-  const qs = getQuantumState();
-  return [{ id: "sovereign-circuit", name: "Sovereign Quantum Circuit", qubits: qs.qubitCount }];
+  return [{ id: "sovereign-circuit", name: "Sovereign Quantum Circuit", qubits: qubits.size }];
 }
