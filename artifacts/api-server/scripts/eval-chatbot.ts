@@ -12,6 +12,27 @@ import { CASES, type EvalCase } from "../src/eval/chatbot-cases.ts";
 
 const BASE_URL = process.env.EVAL_BASE_URL || "http://localhost:5000";
 
+async function ownerCookie(): Promise<string> {
+  const token = (process.env.TESSERACT_ADMIN_KEY ?? "").trim();
+  if (token.length < 16) {
+    throw new Error("TESSERACT_ADMIN_KEY is required; conversation routes require an owner session");
+  }
+  const origin = new URL(BASE_URL).origin;
+  const res = await fetch(`${BASE_URL}/api/admin/session`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: origin },
+    body: JSON.stringify({ token }),
+  });
+  if (!res.ok) {
+    throw new Error(`owner session failed (${res.status})`);
+  }
+  const cookies = typeof res.headers.getSetCookie === "function" ? res.headers.getSetCookie() : [];
+  const raw = cookies.find((entry) => entry.startsWith("sovereign_session=")) ?? res.headers.get("set-cookie") ?? "";
+  const match = /sovereign_session=([^;]+)/.exec(raw);
+  if (!match?.[1]) throw new Error("owner session response did not set sovereign_session");
+  return `sovereign_session=${match[1]}`;
+}
+
 interface CaseResult {
   id: string;
   category: string;
@@ -24,7 +45,7 @@ interface CaseResult {
   citations?: unknown;
 }
 
-async function runCase(c: EvalCase): Promise<CaseResult> {
+async function runCase(c: EvalCase, cookie: string): Promise<CaseResult> {
   const start = Date.now();
   const failures: string[] = [];
   let response = "";
@@ -34,7 +55,7 @@ async function runCase(c: EvalCase): Promise<CaseResult> {
   try {
     const convoRes = await fetch(`${BASE_URL}/api/conversations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Cookie: cookie },
       body: JSON.stringify({ title: `eval-${c.id}` }),
     });
     const convo = await convoRes.json();
@@ -42,7 +63,7 @@ async function runCase(c: EvalCase): Promise<CaseResult> {
 
     const msgRes = await fetch(`${BASE_URL}/api/messages`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Cookie: cookie },
       body: JSON.stringify({ conversationId, content: c.prompt }),
     });
 
@@ -96,10 +117,11 @@ async function runCase(c: EvalCase): Promise<CaseResult> {
 
 async function main() {
   console.log(`[eval] running ${CASES.length} cases against ${BASE_URL}`);
+  const cookie = await ownerCookie();
   const results: CaseResult[] = [];
   for (const c of CASES) {
     process.stdout.write(`  [${c.id}] ... `);
-    const r = await runCase(c);
+    const r = await runCase(c, cookie);
     results.push(r);
     console.log(r.passed ? `PASS (${r.latencyMs}ms)` : `FAIL — ${r.failures.join("; ")}`);
   }

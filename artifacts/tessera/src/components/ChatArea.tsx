@@ -159,7 +159,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   const { data: convMeta } = useQuery<{ initiatedBy?: string; title?: string }>({
     queryKey: ["/api/conversations", conversationId],
     queryFn: async () => {
-      const r = await fetch(`/api/conversations/${conversationId}`);
+      const r = await fetch(`/api/conversations/${conversationId}`, { credentials: "include" });
       return r.json();
     },
   });
@@ -354,7 +354,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
 
   useEffect(() => {
     setUploadedFiles([]);
-    fetch(`/api/conversations/${conversationId}/attachments`)
+    fetch(`/api/conversations/${conversationId}/attachments`, { credentials: "include" })
       .then(r => r.json())
       .then((atts: UploadedFile[]) => setUploadedFiles(atts))
       .catch(() => {});
@@ -577,11 +577,13 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
           await fetch(`/api/conversations/${conversationId}/puter-save`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify({ content: msgText, role: "user" }),
           });
           await fetch(`/api/conversations/${conversationId}/puter-save`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify({
               content: `**[${data.agentName} — ${data.agentRole}]** *(−${data.tsrtCost} TSRT)*\n\n${data.content}`,
               role: "assistant",

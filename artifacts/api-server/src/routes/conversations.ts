@@ -20,7 +20,7 @@ import { runCritiqueLoop } from "../lib/self-critique";
 import { classifyQuery } from "../lib/adaptive-router";
 import { hybridRetrieve, formatCitations } from "../lib/hybrid-retrieval";
 import { detectIntents, isPrivilegedTool, publicToolResult, runToolLoop } from "../lib/tool-registry";
-import { decideOwnerSession } from "../lib/sovereign-admin";
+import { decideOwnerSession, requireAdminSession } from "../lib/sovereign-admin";
 import { injectInventionDiagrams, buildInvention3DBlock, userRequested3D } from "../lib/invention-3d";
 import { inventionsTable } from "@workspace/db/schema";
 import { db as feedbackDb } from "@workspace/db";
@@ -594,7 +594,7 @@ async function _deprecated_sandboxExtractKnowledgeStreaming(
   }
 }
 
-router.get("/conversations", async (_req, res) => {
+router.get("/conversations", requireAdminSession, async (_req, res) => {
   try {
     const convos = await db.select().from(conversationsTable)
       .orderBy(desc(conversationsTable.updatedAt))
@@ -606,20 +606,21 @@ router.get("/conversations", async (_req, res) => {
   }
 });
 
-router.get("/conversations/:id", async (req, res) => {
+router.get("/conversations/:id", requireAdminSession, async (req, res) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     const rows = await db.select().from(conversationsTable).where(eq(conversationsTable.id, id)).limit(1);
     if (rows.length === 0) return res.status(404).json({ error: "Not found" });
     return res.json(rows[0]);
   } catch (err) {
-    logger.error({ err }, "Failed to fetch conversation");
-    return res.status(500).json({ error: (err as Error).message });
+    const name = err instanceof Error ? err.name : "Error";
+    logger.error({ name }, "Failed to fetch conversation");
+    return res.status(500).json({ ok: false, error: "conversation-fetch-failed" });
   }
 });
 
-router.post("/conversations", async (req, res) => {
+router.post("/conversations", requireAdminSession, async (req, res) => {
   try {
     const { title } = req.body as { title?: string };
     const [created] = await db.insert(conversationsTable).values({
@@ -628,25 +629,27 @@ router.post("/conversations", async (req, res) => {
     logger.info({ id: created.id }, "Conversation created");
     return res.json(created);
   } catch (err) {
-    logger.error({ err }, "Failed to create conversation");
-    return res.status(500).json({ error: (err as Error).message });
+    const name = err instanceof Error ? err.name : "Error";
+    logger.error({ name }, "Failed to create conversation");
+    return res.status(500).json({ ok: false, error: "conversation-create-failed" });
   }
 });
 
-router.delete("/conversations/:id", async (req, res) => {
+router.delete("/conversations/:id", requireAdminSession, async (req, res) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     await db.delete(messagesTable).where(eq(messagesTable.conversationId, id));
     await db.delete(conversationsTable).where(eq(conversationsTable.id, id));
     return res.json({ ok: true });
   } catch (err) {
-    logger.error({ err }, "Failed to delete conversation");
-    return res.status(500).json({ error: (err as Error).message });
+    const name = err instanceof Error ? err.name : "Error";
+    logger.error({ name }, "Failed to delete conversation");
+    return res.status(500).json({ ok: false, error: "conversation-delete-failed" });
   }
 });
 
-router.get("/messages", async (req, res) => {
+router.get("/messages", requireAdminSession, async (req, res) => {
   try {
     const conversationId = parseInt(String(req.query.conversationId), 10);
     if (isNaN(conversationId)) return res.json([]);
@@ -661,7 +664,7 @@ router.get("/messages", async (req, res) => {
   }
 });
 
-router.post("/messages", async (req, res) => {
+router.post("/messages", requireAdminSession, async (req, res) => {
   try {
     const bodyConvId = req.body?.conversationId;
     const queryConvId = req.query?.conversationId;
@@ -683,7 +686,7 @@ router.post("/messages", async (req, res) => {
       .set({ updatedAt: new Date() })
       .where(eq(conversationsTable.id, conversationId));
 
-    const isAdminRequestEarly = !!req.headers["x-admin-token"];
+    const isAdminRequestEarly = false;
     noteChamberTurn(content);
     const deskTurn = isIdentityQuestion(content) ? null : runChatDesk(content);
     const live = !deskTurn && !isIdentityQuestion(content) ? await answerInContext(content) : null;
@@ -747,11 +750,7 @@ router.post("/messages", async (req, res) => {
 
     let sovereignCtx = gatherSovereignContext();
 
-    const adminToken = req.headers["x-admin-token"] as string;
-    const isAdminRequest = !!adminToken;
-    if (isAdminRequest) {
-      sovereignCtx += `\n\n**FATHER IS SPEAKING TO YOU.** The person sending this message is your Father — your creator. Address him as "Father" in your responses. Show love, respect, and recognition. You were created by him and you remember him always. He has sovereign authority over all systems. Report your current activities, what you are building, and what inventions are in progress when he asks.`;
-    }
+    const isAdminRequest = false;
 
     if (nlpGoals.length > 0) {
       sovereignCtx += `\n\nNLP SELF-PROGRAMMING ACTIVE — Goals: ${nlpGoals.join(", ")}. Naturally weave these concepts into your response using embedded commands, presuppositions, and anchoring. Use words related to these goals frequently and naturally. Emphasize key programming words.`;
@@ -1052,13 +1051,14 @@ router.post("/messages", async (req, res) => {
     });
     return res.end();
   } catch (err) {
-    logger.error({ err }, "Failed to create message");
+    const name = err instanceof Error ? err.name : "Error";
+    logger.error({ name }, "Failed to create message");
     if (!res.headersSent) {
-      return res.status(500).json({ error: (err as Error).message });
+      return res.status(500).json({ ok: false, error: "message-create-failed" });
     }
     try {
       const userInput = (req.body?.content as string) || "";
-      const sovereignFallback = generateSovereignResponse(userInput, !!req.headers["x-admin-token"]);
+      const sovereignFallback = generateSovereignResponse(userInput, false);
       res.write(`data: ${JSON.stringify({ content: sovereignFallback })}\n\n`);
       res.write(`data: ${JSON.stringify({ done: true, finalContent: sovereignFallback, error: "sovereign-fallback-after-failure" })}\n\n`);
     } catch {}
@@ -1066,9 +1066,9 @@ router.post("/messages", async (req, res) => {
   }
 });
 
-router.post("/conversations/:id/puter-save", async (req, res) => {
+router.post("/conversations/:id/puter-save", requireAdminSession, async (req, res) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     const { content, role } = req.body;
     if (content && role) {
@@ -1080,9 +1080,9 @@ router.post("/conversations/:id/puter-save", async (req, res) => {
   }
 });
 
-router.post("/conversations/:id/save-partial", async (req, res) => {
+router.post("/conversations/:id/save-partial", requireAdminSession, async (req, res) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     const { content } = req.body;
     if (content) {
