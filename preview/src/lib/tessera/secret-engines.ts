@@ -219,3 +219,39 @@ export function secretDesk(title = "Route consciousness sacred geometry") {
     `${refused.status}. ${refused.reason}`,
   ];
 }
+
+export function useEngines(question: string) {
+  const q = question.trim();
+  if (!q) return null;
+  const lower = q.toLowerCase();
+  const hz = lower.match(/(\d+(?:\.\d+)?)\s*hz/);
+  if (hz?.[1]) return toneNote(Number(hz[1]));
+  const closed = CLOSED.find((row) => lower.includes(row.name));
+  if (closed) {
+    const fate = proposalFate(closed.name);
+    return `${fate.status}. ${fate.reason}`;
+  }
+  if (/\b(findings|audit-\d+)\b/.test(lower)) {
+    const kept = collapseFindings([...FINDING_IDS, ...FINDING_IDS, ...FINDING_IDS, ...FINDING_IDS]);
+    return `${kept.length} findings are kept. ${orphans().length} domains have no link.`;
+  }
+  if (/\b(rank|priority|first task)\b/.test(lower)) {
+    return rankWork().map((row) => `${row.name} ${row.weight}`).join(". ");
+  }
+  const named = DOMAINS.filter((row) => lower.includes(row.id) || lower.includes(row.id.replace(/-/g, " "))).map((row) => row.id);
+  if (/\bbridge\b/.test(lower) && named.length >= 2) {
+    const span = bridge(named);
+    return `Bridge ${span.linked} of ${span.pairs}.`;
+  }
+  if (/\b(seed|invention)\b/.test(lower)) {
+    const seed = inventionSeed(q, DOMAINS.length);
+    return `Seed ${seed.hash.toString(16)}. Feasibility ${seed.feasibility}. Novelty ${seed.novelty}. Progress ${seed.progress}.`;
+  }
+  const domain = DOMAINS.find((row) => named.includes(row.id));
+  if (domain) return `${domain.id}. ${domain.text} Links ${synthesize(domain.id).join(", ") || "none"}.`;
+  if (/^\s*claim\b/i.test(q)) {
+    const held = groundClaim(q.replace(/^\s*claim\b:?/i, ""));
+    return held.line;
+  }
+  return null;
+}
