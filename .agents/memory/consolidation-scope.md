@@ -17,7 +17,7 @@ Combine README instructions, reconcile conflicting implementations, and remove r
 
 ## Tessera learning corpus
 
-The owner approved an ongoing learning corpus from non-private TESSERA workspace files and accessible `vitalitychems-dot/TESSERA`, `vitalitychems-dot/Gitbook`, and `reconurge/flowsint` repository content. Include Crypto, Trading, Arbitrage, Finance, Vitality, and Store topics for learning only; this does not change the separate repository-consolidation exclusions. Exclude credentials, secrets, private vaults, and personal-data files. Source intake is read-only, incremental hourly with a manual refresh, and should preserve provenance. Tessera-authored work and teaching records remain distinguishable from source material; new conclusions are cited drafts requiring review.
+The owner approved an ongoing learning corpus from non-private TESSERA workspace files and accessible `vitalitychems-dot/TESSERA`, `vitalitychems-dot/Gitbook`, and `reconurge/flowsint` repository content. Include Crypto, Trading, Arbitrage, Finance, Vitality, and Store topics for learning only; this does not change the separate repository-consolidation exclusions. Exclude credentials, secrets, private vaults, and personal-data files. Source intake is read-only, incremental hourly with a manual refresh, and should preserve provenance. Tessera-authored work and teaching records remain distinguishable from source material; new conclusions are cited drafts requiring review. The owner also approved ingesting the two supplied Knowledge UI screenshots as attributed sources: visible UI details are evidence of what the app displayed, but claims in that UI remain unverified until supported by primary sources.
 
 **Why:** The owner explicitly expanded Tessera's learning scope beyond the narrower subject exclusions used for repository consolidation, while retaining privacy and review boundaries.
 
@@ -37,8 +37,8 @@ The owner reports that all 20 repositories remain present and none has been dele
 
 ## Tessera V2 navigation
 
-The owner approved a V2 redesign of the existing Tessera app: retain unique destinations, group desktop navigation, use **Chat**, **Knowledge**, **System**, and searchable **More** on mobile, and merge only route entries verified to reach the same page and state. The System Engine has four approved groups: **Capability**, **Learning**, **Operations**, and **Architecture**.
+The owner approved a V2 redesign of the existing Tessera app: retain unique destinations, group desktop navigation, use **Chat**, **Knowledge**, **System**, and searchable **More** on mobile, and merge only route entries verified to reach the same page and state. The System Engine has four approved groups: **Capability**, **Learning**, **Operations**, and **Architecture**. Within Knowledge, use one `/unified-knowledge` destination with Overview, Knowledge, Truth & History, Bible, and Brain views; absorb existing tabs into those views while preserving distinct functions and old deep links. Use contextual filters instead of repeated nested destination tabs.
 
-**Why:** The current mobile navigation exposes dozens of destinations and some routes are aliases or intentionally open different inner tabs; decluttering must not break unique functions or deep links.
+**Why:** The current mobile navigation exposes dozens of destinations and some routes are aliases or intentionally open different inner tabs; decluttering must not break unique functions or deep links. The Knowledge screen also repeats related destinations, categories, and workflow states at different navigation levels.
 
-**How to apply:** Use a shared route/navigation registry, preserve old URLs and their intended states, and test all in-scope routes on desktop and mobile before removing visible entries.
+**How to apply:** Use a shared route/navigation registry, preserve old URLs and their intended states, and test all in-scope routes on desktop and mobile before removing visible entries. Keep workflow statuses and archive categories as filters within their collections, derive their counts from live data, and never collapse routes that lead to distinct inner states.
