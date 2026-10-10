@@ -4,6 +4,7 @@ import { batch50, selector, sequence } from "./batch-50.ts";
 import { batch2, leakyStep, warmupLr } from "./batch-2.ts";
 import { batch3, manhattan } from "./batch-3.ts";
 import { topRanking } from "./whiten.ts";
+import { rankTasks } from "./sovereign-desk.ts";
 import { rewardEat } from "./local-learn.ts";
 import { loveFromFiles } from "./love-local.ts";
 import { noteFor, type KeptPage } from "./next-page.ts";
@@ -26,6 +27,13 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (/\beight checkouts\b/i.test(q)) {
     const eight = allEight();
     return `Eight checkout steps ran. Best action ${eight.neuro}. Health ${eight.godel}. Rate ${eight.human}. Coherence ${eight.blueprint}. Bool ${eight.hyperon}.`;
+  }
+  if (/\b(sovereign desk|plumbus|priority queue)\b/i.test(q)) {
+    const first = rankTasks([
+      { name: "format logs", impact: 1 },
+      { name: "consciousness", impact: 9 },
+    ])[0];
+    return `The first task is ${first?.name}. Ten desk steps run: rank, store-once, transfer, ground, tally, one-task, dream, reflect, crystallize, and recall. The advertised percentages were not measured.`;
   }
   if (/\b(black box|whiten|ranking)\b/i.test(q)) {
     const ranks = topRanking([0.1, 0.9, 0.3, 0.8, 0.2], 5);
