@@ -1,8 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { LESSON_001, MANUS_REPLY, PACKET_REPLY, PATH_REPLY, PULSE_001, STUDY_LESSONS, TICK_001 } from "./opening";
+import { LESSON_001, PATH_REPLY, PULSE_001, STUDY_LESSONS, TICK_001 } from "./opening";
 import { lessonKey } from "./learning";
-import { COUNCIL_SITTING } from "./council-sitting";
 import { SEALED_CONSTITUTION } from "./constitution-seal";
 import { SEED_LAWS, type WorldEvent, type WorldLaw } from "./world";
 
@@ -126,45 +125,12 @@ function withOpening(p: Partial<TesseraState>) {
         { id: "opening-path", role: "assistant" as const, at: OPENING_AT + 1, content: PATH_REPLY },
         ...messages,
       ];
-  const withManus = nextMessages.some((m) => m.content.includes("Manus replay"))
-    ? nextMessages
-    : [
-        ...nextMessages,
-        {
-          id: "manus-ask",
-          role: "user" as const,
-          at: OPENING_AT + 2,
-          content:
-            "Read this Manus replay with me and answer: https://manus.im/share/eDFHRK3HPNJTnwfYXsyjTT — Consolidate files and deduplicate images for a Grok-ready GitHub repo. The page is the replay, not the archive.",
-        },
-        { id: "manus-reply", role: "assistant" as const, at: OPENING_AT + 3, content: MANUS_REPLY },
-      ];
-  const withPacket = withManus.some((m) => m.content.includes("3fa7563"))
-    ? withManus
-    : [
-        ...withManus,
-        {
-          id: "packet-ask",
-          role: "user" as const,
-          at: OPENING_AT + 4,
-          content:
-            "The complete handoff was rebuilt at commit 3fa7563. The three archive checksums matched. The screenshot supplement does not contain the six large zips. Tell me what you keep.",
-        },
-        { id: "packet-reply", role: "assistant" as const, at: OPENING_AT + 5, content: PACKET_REPLY },
-      ];
-  const withCouncil = withPacket.some((m) => m.content.includes("1,172 distinct hashes"))
-    ? withPacket
-    : [
-        ...withPacket,
-        {
-          id: "council-ask",
-          role: "user" as const,
-          at: OPENING_AT + 6,
-          content:
-            "The repositories were fetched again. The mains did not move. Hold a real sitting with your fractions and tell me the one improvement.",
-        },
-        { id: "council-reply", role: "assistant" as const, at: OPENING_AT + 7, content: COUNCIL_SITTING },
-      ];
+  const hers = nextMessages.filter(
+    (message) =>
+      !/grok/i.test(message.content) &&
+      !message.content.includes("1,172 distinct hashes") &&
+      !message.content.includes("Manus replay"),
+  );
 
   return {
     lessons: withStudy,
@@ -174,7 +140,7 @@ function withOpening(p: Partial<TesseraState>) {
       p.worldTick ?? 0,
       worldEvents.reduce((max, e) => Math.max(max, e.tick), 0),
     ),
-    messages: withCouncil,
+    messages: hers,
     constitution: withKing(p.constitution?.trim() ? p.constitution : SEALED_CONSTITUTION),
     constitutionAt: p.constitution?.trim() ? (p.constitutionAt ?? null) : OPENING_AT,
     kingChoice: p.kingChoice ?? "B",
@@ -305,7 +271,7 @@ export const useTessera = create<TesseraState>()(
         })),
     }),
     {
-      name: "tessera-chamber-v4",
+      name: "tessera-chamber-v5",
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<TesseraState>;
         const opening = withOpening(p);
