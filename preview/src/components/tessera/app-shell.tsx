@@ -13,6 +13,7 @@ import { GitbookView } from "./gitbook-view";
 import { GitbookAiView } from "./gitbook-ai-view";
 import { LearnView } from "./learn-view";
 import { ThemeView, applyTheme, type ThemeId } from "./theme-view";
+import { RickView } from "./rick-view";
 import { LibraryView } from "./library-view";
 import { MemoryView } from "./memory-view";
 import { WebView } from "./web-view";
@@ -44,6 +45,7 @@ const MORE: { id: ViewId; label: string }[] = [
   { id: "narrative", label: "Narrative" },
   { id: "secrets", label: "Closed" },
   { id: "theme", label: "Theme" },
+  { id: "rick", label: "Rick" },
   { id: "library", label: "Library" },
 ];
 
@@ -134,6 +136,7 @@ export function AppShell() {
             {place === "gitbook" ? <GitbookView open={open} /> : null}
             {place === "gitbookai" ? <GitbookAiView /> : null}
             {place === "theme" ? <ThemeView current={theme} choose={chooseTheme} /> : null}
+            {place === "rick" ? <RickView /> : null}
             {place === "narrative" ? <NarrativeView /> : null}
             {place === "memory" ? <MemoryView /> : null}
             {place === "web" ? <WebView /> : null}
