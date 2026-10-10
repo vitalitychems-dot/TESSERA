@@ -2,6 +2,7 @@ import { CATALOG } from "./catalog-pass.ts";
 import { readBatch, readCheckouts, readImported, readMore } from "./checkout-steps.ts";
 import { readSparse } from "./sparse-read.ts";
 import { connect, LOCAL_REPOS } from "./stride.ts";
+import { fileFor } from "./repo-ledger.ts";
 
 const CARDS = [
   "activepieces/activepieces",
@@ -21,7 +22,7 @@ export function ownVersion(name: string) {
   if (local) return { owned: true as const, text: connect(local) };
   const row = CATALOG.find((item) => item.name.toLowerCase() === q || item.name.toLowerCase().endsWith(`/${short}`));
   if (!row) return { owned: false as const, text: `${name} is not in the catalog.` };
-  return { owned: false as const, text: `No local version. ${row.name} is ${row.home}.` };
+  return { owned: false as const, text: `No local version. ${row.name} is ${row.home}. ${fileFor(row.name)}` };
 }
 
 export function ownFromQuestion(question: string) {

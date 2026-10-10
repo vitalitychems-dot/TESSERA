@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { REPO_LEDGER, ledgerCount, ledgerLine } from "./repo-ledger.ts";
+import { REPO_LEDGER, fileFor, ledgerCount, ledgerLine } from "./repo-ledger.ts";
 
 test("every catalog name is counted once, and a known file is the one the API returned", () => {
   const count = ledgerCount();
@@ -11,4 +11,6 @@ test("every catalog name is counted once, and a known file is the one the API re
   assert.equal(REPO_LEDGER.find((row) => row.name === "Brain-Cog-Lab/sgad")?.file, "global_v.py");
   assert.equal(REPO_LEDGER.find((row) => row.name === "Calamari/BehaviorTree.js")?.file, "");
   assert.match(ledgerLine(), /81 have a small source file at the root/);
+  assert.match(fileFor("appwrite"), /mongo-init.js/);
+  assert.match(fileFor("collink1007/Vitalitychems"), /not found/);
 });

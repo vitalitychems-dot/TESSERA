@@ -11,6 +11,7 @@ test("eight local notes are hers and a card is not a rewritten program", () => {
   assert.equal(run.cards, 192);
   assert.equal(ownVersion("GodelOS").owned, true);
   assert.match(ownVersion("activepieces/activepieces").text, /No local version/);
+  assert.match(ownVersion("appwrite/appwrite").text, /mongo-init.js/);
   assert.match(silentPen("what about GodelOS"), /server was not started/);
   assert.match(silentPen("ollama/ollama"), /No local version/);
   assert.equal(ownFromQuestion("what hue is the ink"), null);
