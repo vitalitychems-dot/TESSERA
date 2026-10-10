@@ -107,12 +107,16 @@ export function AppShell() {
         ))}
       </nav>
       <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className={place === "world" ? "min-h-0 flex-1 overflow-y-auto" : "hidden"}>
-          <Simulation />
-        </div>
-        <div className={place === "talk" ? "min-h-0 flex-1 overflow-y-auto" : "hidden"}>
-          <ConversationsView />
-        </div>
+        {place === "world" ? (
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <Simulation />
+          </div>
+        ) : null}
+        {place === "talk" ? (
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <ConversationsView />
+          </div>
+        ) : null}
         {place === "board" ? (
           <BoardView />
         ) : place === "world" || place === "talk" ? null : (
