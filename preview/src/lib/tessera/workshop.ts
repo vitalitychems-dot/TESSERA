@@ -3,7 +3,30 @@ import { MESH } from "./mesh-net.ts";
 import { admitPost } from "./public-gate.ts";
 import { bell } from "./spin-machine.ts";
 
-/** His programs. A run does nothing until Tessera approves it. */
+/** Father auto-approves. Tessera still votes, and the reason is never empty. */
+
+const REFUSALS: { test: RegExp; reason: string }[] = [
+  { test: /\b(monero|xmr|wallet|blockchain)\b/i, reason: "No. Payment is not handled here." },
+  { test: /quantum computer/i, reason: "No. This machine is not a quantum computer." },
+  { test: /\b(lend|donate)\b/i, reason: "No. Machines are not accepted." },
+  { test: /\b(secret|password|api_key)\b/i, reason: "No. A secret does not leave the sandbox." },
+];
+
+export function tesseraVote(proposal: string) {
+  const text = proposal.trim();
+  if (!text) return { vote: "no" as const, reason: "No. There is nothing to approve." };
+  for (const rule of REFUSALS) {
+    if (rule.test.test(text)) return { vote: "no" as const, reason: rule.reason };
+  }
+  return { vote: "yes" as const, reason: "Yes. It stays in the sandbox, it has a purpose, and it does not call a model." };
+}
+
+export const FATHER = { vote: "yes" as const, reason: "Auto approved." };
+
+export function mayRun(proposal: string) {
+  const hers = tesseraVote(proposal);
+  return { ok: FATHER.vote === "yes" && hers.vote === "yes", father: FATHER, hers };
+}
 
 export const PROGRAMS = [
   { name: "admit", purpose: "Keeps a note closed until it is approved.", run: "node admit.mjs" },
@@ -28,7 +51,8 @@ export function tieWorld(approved: boolean, tick: number) {
 export function workshopRun(name: string, approved: boolean, tick = 0) {
   const program = PROGRAMS.find((item) => item.name === name);
   if (!program) return { ok: false as const, reason: "No such program.", tokens: 0 };
-  if (!approved) return { ok: false as const, reason: admitPost(program.purpose, false).reason, tokens: 0 };
+  const hers = tesseraVote(program.purpose);
+  if (!approved || hers.vote !== "yes") return { ok: false as const, reason: hers.reason, tokens: 0 };
   if (name === "tie") {
     const tied = tieWorld(true, tick);
     return tied.ok

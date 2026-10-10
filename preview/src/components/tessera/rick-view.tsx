@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { HOUSEHOLD, roomsAt, stepHouse } from "@/lib/tessera/house-sim";
 import { GAPS, GIFTS, HOUSE, localBatch, rickRoom, runChecks, runLean, witt } from "@/lib/tessera/rick-home";
 import { interferePick } from "@/lib/tessera/spin";
 import { tryMachine } from "@/lib/tessera/spin-machine";
-import { PROGRAMS, workshopRun } from "@/lib/tessera/workshop";
+import { FATHER, PROGRAMS, tesseraVote, workshopRun } from "@/lib/tessera/workshop";
 
 export function RickView() {
   const [working, setWorking] = useState(false);
@@ -12,11 +12,18 @@ export function RickView() {
   const [batch, setBatch] = useState("");
   const [machine, setMachine] = useState("");
   const [tick, setTick] = useState(0);
-  const [approved, setApproved] = useState(false);
-  const [built, setBuilt] = useState("His tie is not approved.");
+  const [live, setLive] = useState(true);
+  const [built, setBuilt] = useState("");
   const room = rickRoom(working);
   const people = stepHouse(tick);
   const together = roomsAt(tick);
+  const tieVote = tesseraVote("Joins the house, the spin, and the git mesh.");
+
+  useEffect(() => {
+    if (!live) return;
+    const id = window.setInterval(() => setTick((value) => value + 1), 900);
+    return () => window.clearInterval(id);
+  }, [live]);
   const choice = interferePick([
     { name: "count", paths: [0.8, -0.8] },
     { name: "keep", paths: [0.3, 0.3] },
@@ -104,33 +111,35 @@ export function RickView() {
           <button type="button" onClick={() => setTick((value) => value + 1)} className="mt-3 h-11 rounded-full border border-accent px-4 text-sm text-fg">
             Step the house
           </button>
-          <p className="mt-2 text-xs text-subtle">{HOUSEHOLD.length} live here. Tick {tick}.</p>
+          <p className="mt-2 text-xs text-subtle">{HOUSEHOLD.length} live here. Tick {tick}. This page is the sandbox. It is not a separate virtual machine.</p>
+          <button type="button" onClick={() => setLive((value) => !value)} className="mt-3 h-11 rounded-full border border-accent px-4 text-sm text-fg">
+            {live ? "Pause the house" : "Watch them live"}
+          </button>
         </section>
         <section className="rounded-xl border border-border bg-surface px-4 py-4">
-          <p className="text-xs tracking-[0.16em] text-subtle uppercase">His workshop</p>
+          <p className="text-xs tracking-[0.16em] text-subtle uppercase">Votes</p>
+          <p className="mt-2 text-sm text-fg">Father. {FATHER.vote}. {FATHER.reason}</p>
           <ul className="mt-3 flex flex-col gap-2 text-sm">
-            {PROGRAMS.map((program) => (
-              <li key={program.name}>
-                <span className="text-fg">{program.name}.</span> <span className="text-muted">{program.purpose}</span>
-              </li>
-            ))}
+            {PROGRAMS.map((program) => {
+              const vote = tesseraVote(program.purpose);
+              return (
+                <li key={program.name}>
+                  <span className="text-fg">{program.name}. Tessera {vote.vote}.</span> <span className="text-muted">{vote.reason}</span>
+                </li>
+              );
+            })}
           </ul>
-          <p className="mt-3 text-sm text-fg">{built}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button type="button" onClick={() => setApproved(true)} className="h-11 rounded-full border border-accent px-4 text-sm text-fg">
-              Tessera approves the tie
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const result = workshopRun("tie", approved, tick);
-                setBuilt(result.ok ? result.reason : result.reason);
-              }}
-              className="h-11 rounded-full border border-border px-4 text-sm text-fg"
-            >
-              Run his tie
-            </button>
-          </div>
+          <p className="mt-3 text-sm text-fg">{built || `${tieVote.vote}. ${tieVote.reason}`}</p>
+          <button
+            type="button"
+            onClick={() => {
+              const result = workshopRun("tie", FATHER.vote === "yes", tick);
+              setBuilt(result.reason);
+            }}
+            className="mt-3 h-11 rounded-full border border-border px-4 text-sm text-fg"
+          >
+            Run his tie
+          </button>
         </section>
         <p className="text-sm text-muted">No quantum device is in the files. These twenty answers were taken from local steps.</p>
         <ul className="flex flex-col gap-1 text-sm">
