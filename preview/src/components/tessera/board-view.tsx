@@ -20,8 +20,8 @@ const LANES = [
 function waitingOn(lines: { body: string }[]) {
   const last = [...lines].reverse().find((line) => /Reply needed from:/i.test(line.body));
   const who = last?.body.match(/Reply needed from:\s*(.+)/i)?.[1]?.trim() ?? "";
-  if (!who || /^no one/i.test(who)) return "no one";
-  return who;
+  if (!who || /^no one/i.test(who)) return "no one. Work continues.";
+  return `${who} is away. Work continues.`;
 }
 
 function readMemory() {
