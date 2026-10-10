@@ -56,6 +56,12 @@ export const MESH = {
       run: "node live.mjs",
       does: "Serves the room as a page on the machine that runs it.",
     },
+    {
+      name: "shift",
+      path: "projects/shift",
+      run: "node shift.mjs",
+      does: "Times the local jobs and keeps the fastest first.",
+    },
   ],
 } as const;
 
