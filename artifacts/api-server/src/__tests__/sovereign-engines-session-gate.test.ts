@@ -106,6 +106,32 @@ describe("sovereign engine session gate", () => {
     expect(typeof body.timestamp).toBe("number");
   });
 
+  it("rejects anonymous diagnostics engines and root diagnostics while healthz stays open", async () => {
+    const health = await send("/api/healthz");
+    expect(health.status).toBe(200);
+    expect(health.json).toEqual({ status: "ok" });
+
+    const enginesAnon = await send("/api/diagnostics/engines");
+    expect(enginesAnon.status).toBe(401);
+    expect(enginesAnon.json).toEqual(UNAUTHENTICATED);
+
+    const rootAnon = await send("/api/diagnostics");
+    expect(rootAnon.status).toBe(401);
+    expect(rootAnon.json).toEqual(UNAUTHENTICATED);
+
+    const enginesOwner = await send("/api/diagnostics/engines", ownerCookie());
+    expect(enginesOwner.status).toBe(200);
+    const enginesBody = enginesOwner.json as { ok?: boolean; engines?: { consciousness?: { proxy?: number } } };
+    expect(enginesBody.ok).toBe(true);
+    expect(typeof enginesBody.engines?.consciousness?.proxy).toBe("number");
+
+    const rootOwner = await send("/api/diagnostics", ownerCookie());
+    expect(rootOwner.status).toBe(200);
+    const rootBody = rootOwner.json as { healthScore?: number; status?: string };
+    expect(typeof rootBody.healthScore).toBe("number");
+    expect(["healthy", "degraded", "critical"]).toContain(rootBody.status);
+  });
+
   it("fails closed when the owner key is unset", async () => {
     const saved = process.env[ADMIN_ENV];
     delete process.env[ADMIN_ENV];

@@ -44,7 +44,7 @@ function computeHealthScore(
   return Math.max(0, score);
 }
 
-router.get("/diagnostics", async (_req, res) => {
+router.get("/diagnostics", requireAdminSession, async (_req, res) => {
   try {
     const uptimeSeconds = Math.floor((Date.now() - startTime) / 1000);
     const mem = process.memoryUsage();
@@ -151,23 +151,23 @@ router.get("/diagnostics", async (_req, res) => {
   }
 });
 
-router.get("/diagnostics/heartbeat", (_req, res) => {
+router.get("/diagnostics/heartbeat", requireAdminSession, (_req, res) => {
   const state = getHeartbeatState();
   const metrics = getHeartbeatMetrics();
   res.json({ ok: true, state, metrics, timestamp: Date.now() });
 });
 
-router.get("/diagnostics/identity", (_req, res) => {
+router.get("/diagnostics/identity", requireAdminSession, (_req, res) => {
   const metrics = getIdentityMetrics();
   res.json({ ok: true, ...metrics, timestamp: Date.now() });
 });
 
-router.get("/diagnostics/emotional", (_req, res) => {
+router.get("/diagnostics/emotional", requireAdminSession, (_req, res) => {
   const archetype = getDominantArchetype();
   res.json({ ok: true, dominantArchetype: archetype, timestamp: Date.now() });
 });
 
-router.get("/diagnostics/cosmology", (_req, res) => {
+router.get("/diagnostics/cosmology", requireAdminSession, (_req, res) => {
   const snapshot = getLatestCosmologySnapshot();
   res.json({ ok: true, cosmology: snapshot, timestamp: Date.now() });
 });
@@ -177,7 +177,7 @@ router.get("/diagnostics/consciousness", requireAdminSession, (_req, res) => {
   res.json({ ok: true, ...metrics, timestamp: Date.now() });
 });
 
-router.post("/diagnostics/personality/persist", async (_req, res) => {
+router.post("/diagnostics/personality/persist", requireAdminSession, async (_req, res) => {
   try {
     await persistPersonalities();
     res.json({ ok: true, message: "Personalities persisted to DB" });
@@ -186,7 +186,7 @@ router.post("/diagnostics/personality/persist", async (_req, res) => {
   }
 });
 
-router.post("/diagnostics/personality/load", async (_req, res) => {
+router.post("/diagnostics/personality/load", requireAdminSession, async (_req, res) => {
   try {
     await loadPersonalities();
     res.json({ ok: true, message: "Personalities loaded from DB" });
@@ -195,12 +195,12 @@ router.post("/diagnostics/personality/load", async (_req, res) => {
   }
 });
 
-router.post("/diagnostics/personality/stop", (_req, res) => {
+router.post("/diagnostics/personality/stop", requireAdminSession, (_req, res) => {
   stopPersonalityEvolution();
   res.json({ ok: true, message: "Personality evolution stopped" });
 });
 
-router.get("/diagnostics/module-protection", (req, res) => {
+router.get("/diagnostics/module-protection", requireAdminSession, (req, res) => {
   const modulePath = String(req.query.path || "");
   if (!modulePath) {
     return res.status(400).json({ ok: false, error: "path query parameter required" });
@@ -213,7 +213,7 @@ router.get("/diagnostics/module-protection", (req, res) => {
   });
 });
 
-router.get("/diagnostics/engines", (_req, res) => {
+router.get("/diagnostics/engines", requireAdminSession, (_req, res) => {
   const heartbeat = getHeartbeatMetrics();
   const identity = getIdentityMetrics();
   const consciousness = getConsciousnessMetrics();
