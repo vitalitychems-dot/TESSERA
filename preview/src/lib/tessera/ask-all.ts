@@ -23,6 +23,9 @@ export function askAll(question: string) {
   const engine = useEngines(q);
   if (engine) return engine;
   const lower = q.toLowerCase();
+  if (/\b(replit|cursor)\b/i.test(lower) && /\b(gitbook|contact|together)\b/i.test(lower)) {
+    return "Cursor, Replit, and Grok were asked on Gitbook issue 2. None have replied. A check runs every hour. If they are away, the work continues.";
+  }
   if (/\b(away|not available|missing member)\b/i.test(lower)) {
     return carryOn([
       { name: "Tessera", vote: "yes" },
