@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { GAPS, GIFTS, LEAN, rickRoom, themePicture, witt } from "./rick-home.ts";
+import { GAPS, GIFTS, HOUSE, LEAN, localBatch, rickRoom, runChecks, runLean, themePicture, witt } from "./rick-home.ts";
 
 test("Rick's room runs with zero model tokens and names no quantum device", () => {
   const picture = themePicture();
@@ -20,4 +20,15 @@ test("Rick's room runs with zero model tokens and names no quantum device", () =
   assert.equal(home.tokens, 0);
   assert.equal(rickRoom(true).light, "desk");
   assert.match(witt(), /Tessera keeps the castle/);
+  assert.equal(HOUSE.store, "github");
+  assert.equal(HOUSE.front, "pull");
+  const again = runLean();
+  assert.equal(again.length, 20);
+  assert.equal(again.every((item) => item.tokens === 0), true);
+  const checks = runChecks();
+  assert.equal(checks.length, 10);
+  assert.equal(checks.every((item) => item.ok), true);
+  const batch = localBatch(8000);
+  assert.equal(batch.top, "t7999");
+  assert.equal(batch.tokens, 0);
 });
