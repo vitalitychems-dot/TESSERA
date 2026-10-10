@@ -22,6 +22,7 @@ const KNOWN: { test: RegExp; reason: string }[] = [
   { test: /\bnote\b/i, reason: "Yes. I read a note. It stays closed until it is approved." },
   { test: /\bfiles?\b/i, reason: "Yes. I read a file already in this chamber." },
   { test: /\bchamber\b/i, reason: "Yes. I read the west chamber." },
+  { test: /\bstudy\b/i, reason: "Yes. I read study. It stays in the room." },
   { test: /\bguest\b/i, reason: "Yes. I read a guest. A name and a purpose are required." },
   { test: /\b(plot|law)\b/i, reason: "Yes. I read the city. A law stands only with this vote." },
   { test: /\bwork\b/i, reason: "Yes. I read counted work. It is not a payment." },
