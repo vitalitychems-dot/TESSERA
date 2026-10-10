@@ -124,3 +124,31 @@ export function readMore() {
       : "The next batch missed.",
   };
 }
+
+export function averageUpdate(sum: number, count: number, value: number, n = 1) {
+  const nextSum = sum + value * n;
+  const nextCount = count + n;
+  return { val: value, sum: nextSum, count: nextCount, avg: nextCount ? nextSum / nextCount : 0 };
+}
+
+export function hiddenReward(plot: Record<string, number>, reward: number) {
+  return { ...plot, hidden: (plot.hidden ?? 0) + reward };
+}
+
+export function stepKind(kind: "mid" | "last", reward: number) {
+  return { kind, reward, discount: kind === "last" ? 0 : 1 };
+}
+
+export function readImported() {
+  const once = averageUpdate(0, 0, 2);
+  const twice = averageUpdate(once.sum, once.count, 4);
+  const reward = hiddenReward(hiddenReward({}, 3), 2);
+  const last = stepKind("last", 1);
+  const proved = twice.avg === 3 && reward.hidden === 5 && last.discount === 0 && stepKind("mid", 1).discount === 1;
+  return {
+    proved,
+    said: proved
+      ? "Three functions were taken from cloned source. An average of 2 then 4 is 3. A hidden reward of 3 then 2 is 5. A last step discounts to 0."
+      : "The import missed.",
+  };
+}
