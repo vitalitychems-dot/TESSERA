@@ -27,7 +27,7 @@ export type InstrumentNote = {
   at: number;
 };
 
-export type ViewId = "board" | "chamber" | "world" | "lattice" | "self" | "learn" | "pulse" | "memory" | "council" | "code" | "language" | "talk" | "narrative" | "bible" | "secrets" | "web" | "library" | "gitbook" | "gitbookai" | "theme" | "brain";
+export type ViewId = "board" | "chamber" | "world" | "lattice" | "self" | "learn" | "pulse" | "memory" | "council" | "code" | "language" | "talk" | "narrative" | "bible" | "secrets" | "web" | "library" | "gitbook" | "gitbookai" | "theme" | "brain" | "rick";
 
 type TesseraState = {
   view: ViewId;
