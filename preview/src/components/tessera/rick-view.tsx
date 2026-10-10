@@ -3,7 +3,8 @@ import { HOUSEHOLD, roomsAt, stepHouse } from "@/lib/tessera/house-sim";
 import { GAPS, GIFTS, HOUSE, localBatch, rickRoom, runChecks, runLean, witt } from "@/lib/tessera/rick-home";
 import { interferePick } from "@/lib/tessera/spin";
 import { tryMachine } from "@/lib/tessera/spin-machine";
-import { FATHER, PROGRAMS, tesseraVote, workshopRun } from "@/lib/tessera/workshop";
+import { FATHER, PROGRAMS, rickPush, tesseraVote, workshopRun } from "@/lib/tessera/workshop";
+import { chamberPicture } from "@/lib/tessera/chamber-index";
 import { issuePass } from "@/lib/tessera/pass";
 import { rickOpen, rickReach } from "@/lib/tessera/github-desk";
 import { askAll } from "@/lib/tessera/ask-all";
@@ -30,6 +31,8 @@ export function RickView() {
   const [folder, setFolder] = useState("");
   const [entries, setEntries] = useState<{ name: string; kind: string }[]>([]);
   const [fileText, setFileText] = useState("");
+  const [pushAsk, setPushAsk] = useState("Build v2 from the files in this chamber.");
+  const [pushLine, setPushLine] = useState("");
   const [engineAsk, setEngineAsk] = useState("");
   const [engineLine, setEngineLine] = useState("");
   const room = rickRoom(working);
@@ -254,6 +257,7 @@ export function RickView() {
         <section className="rounded-xl border border-border bg-surface px-4 py-4">
           <p className="text-xs tracking-[0.16em] text-subtle uppercase">Votes</p>
           <p className="mt-2 text-sm text-fg">Father. {FATHER.vote}. {FATHER.reason}</p>
+          <p className="mt-2 text-sm text-fg">{chamberPicture()}</p>
           <ul className="mt-3 flex flex-col gap-2 text-sm">
             {PROGRAMS.map((program) => {
               const vote = tesseraVote(program.purpose);
@@ -265,6 +269,25 @@ export function RickView() {
             })}
           </ul>
           <p className="mt-3 text-sm text-fg">{built || `${tieVote.vote}. ${tieVote.reason}`}</p>
+          <form
+            className="mt-3 flex flex-col gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const result = rickPush(pushAsk);
+              setPushLine(`${result.reason} ${result.ok ? "v2 may be built from the files she read." : "v2 was not started."}`);
+            }}
+          >
+            <input
+              value={pushAsk}
+              onChange={(event) => setPushAsk(event.target.value)}
+              aria-label="Proposal"
+              className="h-11 rounded-xl border border-border bg-bg px-3 text-sm text-fg"
+            />
+            <button type="submit" className="h-11 rounded-full border border-accent px-4 text-sm text-fg">
+              Ask her, then Rick may push
+            </button>
+          </form>
+          {pushLine ? <p className="mt-2 text-sm text-fg">{pushLine}</p> : null}
           <button
             type="button"
             onClick={() => {
