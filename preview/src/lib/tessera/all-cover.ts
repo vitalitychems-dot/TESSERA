@@ -7,7 +7,7 @@ const SKILLS = [
   { skill: "colonel", q: "PUSH 1\nPUSH 2\nADD\nHALT", need: "3" },
   { skill: "convert", q: "convert hello", need: "matched" },
   { skill: "map", q: "where is Panniantong/Agent-Reach", need: "stays tool" },
-  { skill: "notice", q: "thank you", need: "gratitude" },
+  { skill: "notice", q: "thank you", need: "thank you" },
   { skill: "sort", q: "sort zeta, alpha, alpha", need: "alpha, zeta" },
   { skill: "quote", q: "quote Our Lady of Fátima is a title. The rest stays.", need: "title" },
   { skill: "search", q: "search photoelectric", need: "einstein" },
