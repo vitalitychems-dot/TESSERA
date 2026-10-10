@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fromFiles, repeatLoop } from "./loop-20.ts";
+import { fromFiles, runTimes } from "./loop-20.ts";
 
 test("twenty file results pass, and the second pass matches the first", () => {
   const got = fromFiles();
@@ -25,7 +25,8 @@ test("twenty file results pass, and the second pass matches the first", () => {
   assert.equal(got.pythonMajor, 3);
   assert.equal(got.net, "ofa_resnet50");
   assert.equal(got.cart, "CartPole-v0");
-  const again = repeatLoop();
+  const again = runTimes(20);
   assert.equal(again.proved, true);
-  assert.match(again.said, /20, then 20/);
+  assert.equal(again.matched, 20);
+  assert.match(again.said, /20 times/);
 });
