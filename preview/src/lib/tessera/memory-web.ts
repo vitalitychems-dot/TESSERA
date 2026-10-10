@@ -1,5 +1,7 @@
 import { CATALOG, type CatalogHome, type CatalogRow } from "./catalog-pass.ts";
 
+export type { CatalogHome };
+
 export const PASS_DATE = "2026-10-08";
 
 export const HOME_LABEL: Record<CatalogHome, string> = {

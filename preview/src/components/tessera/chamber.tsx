@@ -312,7 +312,7 @@ export function Chamber() {
     const desk = content.match(/^write coordination\s+([\s\S]+)/i);
     if (desk) {
       const wrote = await writeCoordinationNote({ data: { text: desk[1] } });
-      spoken += wrote.ok ? `\n\nCoordination note written: ${wrote.url}` : `\n\nCoordination note refused: ${wrote.error}`;
+      spoken += wrote.ok ? "\n\nCoordination note written." : `\n\nCoordination note refused: ${wrote.error}`;
     }
     const tool = content.match(/\brun tool ([a-z0-9-]+)/i);
     if (tool) {
