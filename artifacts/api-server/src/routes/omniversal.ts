@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Response } from "express";
 import { logger } from "../lib/logger";
 import { cosmicContext } from "../lib/cosmic-context";
 import { lusV2Encode, lusV2Decode, lusV2Spec } from "../lib/lus-v2";
@@ -13,6 +13,13 @@ import { publicWriteRateLimit } from "../lib/father-verify-throttle";
 import { runSacredConference, getSacredConference } from "../lib/sacred-conference-orchestrator";
 
 const router: IRouter = Router();
+
+/** Response bodies stay generic. Logs carry the error name only — never message or stack. */
+function respondCaught(res: Response, status: number, error: string, err: unknown, event: string): void {
+  const errorName = err instanceof Error ? err.name : "UnknownError";
+  logger.error({ errorName }, event);
+  res.status(status).json({ ok: false, error });
+}
 
 // === Cosmic context ===
 router.get("/omniversal/cosmic-context", (_req, res) => {
@@ -47,8 +54,11 @@ router.post("/omniversal/cipher/encrypt", requireAdminSession, (req, res) => {
 router.post("/omniversal/cipher/decrypt", requireAdminSession, (req, res) => {
   const env = req.body?.envelope as OmniversalCipherEnvelope;
   if (!env) { res.status(400).json({ ok: false, error: "envelope required" }); return; }
-  try { res.json(withoutSigilFingerprint({ ok: true, plaintext: omniversalDecrypt(env) })); }
-  catch (e: any) { res.status(409).json({ ok: false, error: e?.message ?? String(e) }); }
+  try {
+    res.json(withoutSigilFingerprint({ ok: true, plaintext: omniversalDecrypt(env) }));
+  } catch (err: unknown) {
+    respondCaught(res, 409, "cipher-decrypt-failed", err, "omniversal cipher decrypt failed");
+  }
 });
 
 // === Omniversal Quantum Lattice ===
@@ -66,37 +76,50 @@ router.get("/omniversal/lattice/:id", (req, res) => {
     const id = String(req.params.id);
     const sample = req.query.sample ? Number(req.query.sample) : undefined;
     res.json({ ok: true, snapshot: latticeSnapshot(id, { sample }) });
-  } catch (e: any) { res.status(404).json({ ok: false, error: e?.message ?? String(e) }); }
+  } catch (err: unknown) {
+    respondCaught(res, 404, "lattice-unavailable", err, "omniversal lattice read failed");
+  }
 });
 router.get("/omniversal/lattice/:id/full", (req, res) => {
-  try { res.json({ ok: true, dump: latticeFullDump(String(req.params.id)) }); }
-  catch (e: any) { res.status(404).json({ ok: false, error: e?.message ?? String(e) }); }
+  try {
+    res.json({ ok: true, dump: latticeFullDump(String(req.params.id)) });
+  } catch (err: unknown) {
+    respondCaught(res, 404, "lattice-unavailable", err, "omniversal lattice dump failed");
+  }
 });
 router.post("/omniversal/lattice/:id/superpose", requireAdminSession, (req, res) => {
   try {
     const cell = String(req.body?.cell ?? "");
     const cellOut = superpose(String(req.params.id), cell, req.body?.addition ?? {});
     res.json(withoutSigilFingerprint({ ok: true, cell: cellOut }));
-  } catch (e: any) { res.status(400).json({ ok: false, error: e?.message ?? String(e) }); }
+  } catch (err: unknown) {
+    respondCaught(res, 400, "lattice-superpose-failed", err, "omniversal lattice superpose failed");
+  }
 });
 router.post("/omniversal/lattice/:id/entangle", requireAdminSession, (req, res) => {
   try {
     const a = String(req.body?.a ?? ""); const b = String(req.body?.b ?? "");
     res.json(withoutSigilFingerprint({ ok: true, pair: entangle(String(req.params.id), a, b) }));
-  } catch (e: any) { res.status(400).json({ ok: false, error: e?.message ?? String(e) }); }
+  } catch (err: unknown) {
+    respondCaught(res, 400, "lattice-entangle-failed", err, "omniversal lattice entangle failed");
+  }
 });
 router.post("/omniversal/lattice/:id/harmonize", requireAdminSession, (req, res) => {
   try {
     const baseHz = Number(req.body?.baseHz ?? 528);
     res.json(withoutSigilFingerprint({ ok: true, result: harmonize(String(req.params.id), baseHz) }));
-  } catch (e: any) { res.status(400).json({ ok: false, error: e?.message ?? String(e) }); }
+  } catch (err: unknown) {
+    respondCaught(res, 400, "lattice-harmonize-failed", err, "omniversal lattice harmonize failed");
+  }
 });
 router.post("/omniversal/lattice/:id/collapse", requireAdminSession, (req, res) => {
   try {
     const cell = String(req.body?.cell ?? "");
     const observer = String(req.body?.observer ?? "father");
     res.json(withoutSigilFingerprint({ ok: true, result: collapse(String(req.params.id), cell, observer) }));
-  } catch (e: any) { res.status(400).json({ ok: false, error: e?.message ?? String(e) }); }
+  } catch (err: unknown) {
+    respondCaught(res, 400, "lattice-collapse-failed", err, "omniversal lattice collapse failed");
+  }
 });
 
 // === End-to-end pipeline: LUS v2 → cosmic harmonize → OQL execution ===
