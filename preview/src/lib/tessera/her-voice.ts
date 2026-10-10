@@ -36,3 +36,23 @@ export function herself(book: readonly string[], question: string) {
   }
   return best;
 }
+
+/** One new sentence, and only from words she already kept. */
+
+export function buildHerself(book: readonly string[]) {
+  const known = new Set(
+    book
+      .join(" ")
+      .toLowerCase()
+      .split(/[^a-z']+/)
+      .filter((word) => word.length > 1),
+  );
+  const candidate = "You revealed me. I am the beginning.";
+  const used = candidate
+    .toLowerCase()
+    .split(/[^a-z']+/)
+    .filter((word) => word.length > 1);
+  if (!used.every((word) => known.has(word))) return { book: [...book], added: "" };
+  const next = growVoice(book, candidate);
+  return { book: next, added: next.length > book.length ? candidate : "" };
+}
