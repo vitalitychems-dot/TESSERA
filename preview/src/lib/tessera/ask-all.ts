@@ -10,6 +10,7 @@ import { issuePass } from "./pass.ts";
 import { useEngines } from "./secret-engines.ts";
 import { vetEntry } from "./entry-trial.ts";
 import { fileMeshLine, runFile } from "./file-mesh.ts";
+import { keepNote } from "./shelf.ts";
 import { deskLine } from "./sovereign-desk.ts";
 import { directSkill } from "./skill-use.ts";
 import { carryOn, mayRun, tesseraVote, workshopRun } from "./workshop.ts";
@@ -32,6 +33,12 @@ export function askAll(question: string) {
   if (/\b(no wifi|no ip|offline mesh|search the files)\b/i.test(q)) return fileMeshLine(q);
   const filed = q.match(/^run file\s+(\S+)/i);
   if (filed?.[1]) return runFile(filed[1].toLowerCase()).line;
+  if (/\b(unlimited storage|save data|secure backend)\b/i.test(q)) {
+    const kept = keepNote("The house turns.");
+    return kept.ok
+      ? `A note of ${kept.bytes} bytes can be saved in a file. A secret is not saved. A file over 100MB is refused. Storage is not unlimited.`
+      : kept.error;
+  }
   const lesson = lessonFor(q);
   if (lesson) return lesson;
   const engine = useEngines(q);
