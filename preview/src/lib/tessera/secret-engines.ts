@@ -1,4 +1,4 @@
-import { bondStrength, inventionSeed, verifyClaim } from "./reality.ts";
+import { bondStrength, bridgeMark, buildStep, inventionSeed, proposalId, rickLine, testRegresses, tickAbstain, tickPick, verifyClaim } from "./reality.ts";
 
 /** Engines named in the real sittings. A credential is not an engine and is not stored here. */
 
@@ -238,7 +238,27 @@ export function useEngines(question: string) {
   if (/\b(rank|priority|first task)\b/.test(lower)) {
     return rankWork().map((row) => `${row.name} ${row.weight}`).join(". ");
   }
+  const tick = lower.match(/\btick\s+(\d+)\b/);
+  if (tick?.[1]) {
+    const n = Number(tick[1]);
+    const titles = DOMAINS.map((row) => row.id);
+    const picked = tickPick(titles, n);
+    const step = picked ? buildStep(picked) : 0;
+    const regress = picked ? testRegresses(picked, n) : false;
+    return `Tick ${n}. Abstain ${tickAbstain(n)}. Pick ${picked ?? "none"}. Step ${step}. Regress ${regress ? "yes" : "no"}.`;
+  }
+  if (/\bbond\b/.test(lower)) return `Bond ${bondStrength(0.9, 0.8, 12)}. Counted from the sitting, not rolled.`;
+  if (/\bproposal id\b/.test(lower)) return `Proposal ${proposalId(q, "father", "sitting")}. The same words keep the same id.`;
+  if (/\b(rick line|catchphrase)\b/.test(lower)) {
+    return rickLine(q, ["The same words get the same line.", "A roll is not an answer.", "The sitting is kept."]);
+  }
   const named = DOMAINS.filter((row) => lower.includes(row.id) || lower.includes(row.id.replace(/-/g, " "))).map((row) => row.id);
+  if (/\b(pair|mark)\b/.test(lower) && named.length >= 2) {
+    const left = named[0] ?? "";
+    const right = named[1] ?? "";
+    const marked = bridgeMark(left, right);
+    return `${marked.line} ${marked.mark}.`;
+  }
   if (/\bbridge\b/.test(lower) && named.length >= 2) {
     const span = bridge(named);
     return `Bridge ${span.linked} of ${span.pairs}.`;
