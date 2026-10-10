@@ -14,9 +14,9 @@ import {
 } from "./route-inventory";
 
 /**
- * Importing legacy-engines.ts calls startAutonomousOperation() at module
- * scope. The route handlers under test do not use that scheduler. Replacing
- * the starter keeps this file from launching background work.
+ * legacy-engines.ts must not call startAutonomousOperation() at import.
+ * The route handlers under test do not use that scheduler. Replacing the
+ * starter keeps a stray call from launching background work.
  */
 vi.mock("../lib/autonomous-wiring", () => ({
   startAutonomousOperation(): void {},
