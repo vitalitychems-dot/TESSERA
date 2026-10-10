@@ -31,6 +31,13 @@ export function recallLearned(memory: string[], query: string) {
   return score > 0 ? best : "";
 }
 
+export function recallExact(memory: string[], query: string) {
+  const key = `${query.toLowerCase()} =`;
+  const exact = [...memory].reverse().find((line) => line.toLowerCase().startsWith(key));
+  if (exact) return exact;
+  return recallLearned(memory, query);
+}
+
 export function stepLearn(count: number) {
   const taken = DECK.slice(0, Math.max(0, Math.min(count, DECK.length)));
   const memory: string[] = [];

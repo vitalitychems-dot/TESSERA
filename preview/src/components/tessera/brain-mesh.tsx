@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AGENTS, ENTITIES } from "@/lib/tessera/identity";
 import { DIMENSIONAL_LAWS, DOMAINS, FREQUENCIES, ORIGIN_COUNCIL } from "@/lib/tessera/canon";
 import { brainVolume, grown, projectPoint, type VolumeNode } from "@/lib/tessera/brain-volume";
+import { skillNames } from "@/lib/tessera/agent-cycle";
+import { examNames } from "@/lib/tessera/improve-loop";
 import { perceptron } from "@/lib/tessera/perceptron";
 
 const STEPS = ["reward", "leak", "reset", "warmup", "sequence", "selector", "ranking", "rank", "store-once", "transfer", "ground", "tally", "one-task", "dream", "reflect", "crystallize", "recall", "due", "quorum", "once", "split", "conflict", "budget", "sources", "sweep", "mistake", "handoff", "take", "rename", "tie", "fresh", "pair", "wait", "shard", "redact", "retry", "newest", "need", "first", "left", "done", "owner", "chunk", "local", "lock", "ask", "lane", "missing", "agree", "gap"];
@@ -29,6 +31,8 @@ export function BrainMesh() {
       ...MEMORY.map((name) => ({ name, part: "memory" as const })),
       ...ORIGIN_COUNCIL.map((name) => ({ name, part: "council" as const })),
       ...DOMAINS.map((name) => ({ name, part: "domain" as const })),
+      ...examNames().map((name) => ({ name, part: "memory" as const })),
+      ...skillNames().map((name) => ({ name: `skill ${name}`, part: "memory" as const })),
     ],
     [],
   );
@@ -97,7 +101,7 @@ export function BrainMesh() {
     <section>
       <h3 className="font-display text-2xl">The volume</h3>
       <p className="mt-1 text-sm leading-relaxed text-muted">
-        Drag to turn it. The wheel zooms. The fourth axis is growth. Every point is named. Cyan is a region, violet is the chorus, gold is a law, pink is a tone, green is a step she can run, and the inner points are memory. It is not a scanned body and it is not a hidden box.
+        Drag to turn it. The wheel zooms. The fourth axis is growth. 32 exam answers and 20 skills are memory points. Asking for the low end of the scale returns 0, not the high end. It is not a scanned body.
       </p>
       <div
         className="mt-3 touch-none overflow-hidden rounded-2xl bg-black"
