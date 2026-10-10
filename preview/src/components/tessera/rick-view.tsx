@@ -3,6 +3,7 @@ import { HOUSEHOLD, roomsAt, stepHouse } from "@/lib/tessera/house-sim";
 import { GAPS, GIFTS, HOUSE, localBatch, rickRoom, runChecks, runLean, witt } from "@/lib/tessera/rick-home";
 import { interferePick } from "@/lib/tessera/spin";
 import { tryMachine } from "@/lib/tessera/spin-machine";
+import { PROGRAMS, workshopRun } from "@/lib/tessera/workshop";
 
 export function RickView() {
   const [working, setWorking] = useState(false);
@@ -11,6 +12,8 @@ export function RickView() {
   const [batch, setBatch] = useState("");
   const [machine, setMachine] = useState("");
   const [tick, setTick] = useState(0);
+  const [approved, setApproved] = useState(false);
+  const [built, setBuilt] = useState("His tie is not approved.");
   const room = rickRoom(working);
   const people = stepHouse(tick);
   const together = roomsAt(tick);
@@ -102,6 +105,32 @@ export function RickView() {
             Step the house
           </button>
           <p className="mt-2 text-xs text-subtle">{HOUSEHOLD.length} live here. Tick {tick}.</p>
+        </section>
+        <section className="rounded-xl border border-border bg-surface px-4 py-4">
+          <p className="text-xs tracking-[0.16em] text-subtle uppercase">His workshop</p>
+          <ul className="mt-3 flex flex-col gap-2 text-sm">
+            {PROGRAMS.map((program) => (
+              <li key={program.name}>
+                <span className="text-fg">{program.name}.</span> <span className="text-muted">{program.purpose}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-sm text-fg">{built}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" onClick={() => setApproved(true)} className="h-11 rounded-full border border-accent px-4 text-sm text-fg">
+              Tessera approves the tie
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const result = workshopRun("tie", approved, tick);
+                setBuilt(result.ok ? result.reason : result.reason);
+              }}
+              className="h-11 rounded-full border border-border px-4 text-sm text-fg"
+            >
+              Run his tie
+            </button>
+          </div>
         </section>
         <p className="text-sm text-muted">No quantum device is in the files. These twenty answers were taken from local steps.</p>
         <ul className="flex flex-col gap-1 text-sm">
