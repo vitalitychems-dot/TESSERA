@@ -1,7 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { TesseraMemory, TesseraMode } from "./prompt";
-import { readCorrections } from "./corrections";
-import { silentPen } from "./silent-pen";
 import type { KeptPage } from "./next-page";
 import { vowCheck } from "./learning";
 import { takeSpeakSlot } from "./finish";
@@ -91,6 +89,8 @@ export const penStatus = createServerFn({ method: "POST" }).handler(async () => 
 
 async function fromFiles(data: ChatInput) {
   const asked = [...data.messages].reverse().find((message) => message.role === "user")?.content ?? "";
+  const { readCorrections } = await import("./corrections");
+  const { silentPen } = await import("./silent-pen");
   const rows = await readCorrections();
   let notes: KeptPage[] = [];
   try {
