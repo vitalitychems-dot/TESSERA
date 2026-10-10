@@ -147,7 +147,7 @@ export default function MobileNav() {
             className={cn("min-h-14 flex flex-col items-center justify-center gap-1 touch-manipulation focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-cyan-300", isKnowledge || openDirectory === "knowledge" ? "text-violet-200" : "text-slate-500")} data-testid="mobile-tab-knowledge">
             <BookOpen size={18} /><span className="text-[10px]">Knowledge</span>
           </button>
-          <button type="button" onClick={() => { if (!isSystem) setLocation("/system"); }} aria-current={isSystem ? "page" : undefined} aria-label="System"
+           <button type="button" onClick={() => { if (location !== "/system") setLocation("/system"); }} aria-current={isSystem ? "page" : undefined} aria-label="System"
             className={cn("min-h-14 flex flex-col items-center justify-center gap-1 touch-manipulation focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-cyan-300", isSystem ? "text-cyan-200" : "text-slate-500")} data-testid="mobile-tab-system">
             <Cpu size={18} /><span className="text-[10px]">System</span>
           </button>

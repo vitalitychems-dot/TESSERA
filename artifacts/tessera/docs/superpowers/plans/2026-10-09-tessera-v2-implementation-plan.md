@@ -1,7 +1,7 @@
 # Tessera V2 implementation plan
 
 **Design:** `../specs/2026-10-09-tessera-evidence-gitbook-hybrid-design.md`  
-**Status:** Plan prepared; no application implementation started.
+**Status:** Local navigation and System Engine changes are implemented. The app build passes; typecheck reports 47 errors in other files. Gitbook/remote work is still blocked on authorized GitHub access, and automated UI tests are not configured.
 
 ## Goal
 
@@ -58,9 +58,9 @@ Implement the approved Tessera V2 navigation and evidence design locally. Preser
 
 ### 6. Verify locally and prepare remote work only when unblocked
 
-- Run workspace typecheck and build:
-  - `pnpm run typecheck`
-  - `pnpm run build`
+- Run Tessera typecheck and build:
+  - `pnpm --filter @workspace/tessera run typecheck`
+  - `PORT=5000 BASE_PATH=/ pnpm --filter @workspace/tessera run build`
 - Run API tests:
   - `pnpm --filter @workspace/api-server test`
 - Add or configure focused front-end tests for registry mapping, duplicate classification, mobile directory search, and deep-link selection.
