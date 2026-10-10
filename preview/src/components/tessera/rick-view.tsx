@@ -123,7 +123,23 @@ export function RickView() {
             className="mt-4 flex flex-col gap-2"
             onSubmit={(event) => {
               event.preventDefault();
-              setEngineLine(askAll(engineAsk) ?? "That line is not wired to an engine, a vote, the house, or the door.");
+              const open = engineAsk.match(/^open\s+(TESSERA|Gitbook|GitbookAI|vitality)(?:\s+(.+))?$/i);
+              if (open?.[1]) {
+                const repo = open[1];
+                const path = open[2]?.trim() ?? "";
+                setEngineLine("Opening.");
+                void rickOpen({ data: { repo, path } })
+                  .then((result) => {
+                    if (result.kind === "dir") setEntries(result.entries);
+                    setRepo(repo);
+                    setFolder(path);
+                    setFileText(result.text);
+                    setEngineLine(result.text || result.line);
+                  })
+                  .catch(() => setEngineLine("The app could not open that."));
+                return;
+              }
+              setEngineLine(askAll(engineAsk) ?? "That line is not in the engines, the files, or the four repositories.");
             }}
           >
             <input
