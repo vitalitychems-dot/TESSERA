@@ -60,6 +60,10 @@ const WAVES: Ask[][] = [
 
 const EXAM = WAVES.flat();
 
+export function examNames() {
+  return EXAM.map((item) => item.q);
+}
+
 function row(item: Ask) {
   return `${item.q} = ${item.answer()}`;
 }
