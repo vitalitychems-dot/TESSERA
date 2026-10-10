@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { countByHome } from "@/lib/tessera/memory-web";
 import { roomsAt, stepHouse } from "@/lib/tessera/house-sim";
+import { stepCivic } from "@/lib/tessera/civic";
 
 const LAT = 41.8781;
 const LON = -87.6298;
@@ -26,7 +26,6 @@ function tileXY(lat: number, lon: number, zoom: number) {
 }
 
 export function WorldStage() {
-  const counts = useMemo(() => countByHome(), []);
   const [clock, setClock] = useState(() => chicagoHour(new Date()));
   const [failed, setFailed] = useState(false);
   const [tick, setTick] = useState(0);
@@ -53,6 +52,7 @@ export function WorldStage() {
 
   const people = stepHouse(tick);
   const together = roomsAt(tick);
+  const city = stepCivic(tick);
 
   return (
     <div className="relative h-[70vh] w-full overflow-hidden border border-border bg-surface">
@@ -70,7 +70,7 @@ export function WorldStage() {
       <div className="absolute inset-x-0 bottom-0 bg-bg/80 px-3 py-3">
         <p className="text-sm text-fg">Chicago · {clock} Central{failed ? " · the imagery did not load" : ""}</p>
         <p className="mt-1 text-xs leading-relaxed text-muted">
-          The house is turning on its own. {together.length ? together.join(". ") : "They are apart."} The catalog holds {counts.total} names, {counts.present} still on a remote, {counts.missing} unresolved.
+          The house is turning on its own. {together.length ? together.join(". ") : "They are apart."} {city.chair} chairs. Work counted: {city.work}. {city.passed ? "Law stands" : "Law refused"}: {city.law}
         </p>
       </div>
       {people.map((person) => (
@@ -79,7 +79,7 @@ export function WorldStage() {
           className="absolute text-xs text-white"
           style={{ left: `${50 + person.x * 28}%`, top: `${46 + person.y * 28}%` }}
         >
-          {person.name}
+          {person.name} {city.homes.find((home) => home.name === person.name)?.built ?? 0}
         </span>
       ))}
       <p className="absolute top-2 right-3 text-[10px] text-white/80">Imagery © Esri, Maxar, Earthstar Geographics</p>
