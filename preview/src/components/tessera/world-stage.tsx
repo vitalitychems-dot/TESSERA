@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { roomsAt, stepHouse } from "@/lib/tessera/house-sim";
 import { stepCivic } from "@/lib/tessera/civic";
 import { watchCity } from "@/lib/tessera/city-clock";
+import { moveCamera, roomLayout } from "@/lib/tessera/room-world";
 
 const LAT = 41.8781;
 const LON = -87.6298;
@@ -30,6 +31,8 @@ export function WorldStage() {
   const [clock, setClock] = useState(() => chicagoHour(new Date()));
   const [failed, setFailed] = useState(false);
   const [tick, setTick] = useState(0);
+  const [camera, setCamera] = useState({ x: 0, y: 0, zoom: 1 });
+  const drag = useRef<{ x: number; y: number } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const origin = useMemo(() => tileXY(LAT, LON, ZOOM), []);
   const tiles = useMemo(() => {
@@ -56,6 +59,7 @@ export function WorldStage() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const rooms = stepCivic(tick).homes.map((home, index) => roomLayout(home.name, index));
     const draw = () => {
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
@@ -65,26 +69,36 @@ export function WorldStage() {
       const pen = canvas.getContext("2d");
       if (!pen) return;
       pen.setTransform(ratio, 0, 0, ratio, 0, 0);
-      pen.clearRect(0, 0, width, height);
-      city.homes.forEach((home, index) => {
-        const x = 24 + index * ((width - 48) / city.homes.length);
-        const h = 12 + home.built;
-        pen.fillStyle = "#7FDBFF";
-        pen.fillRect(x, height - 16 - h, 28, h);
+      pen.fillStyle = "#101418";
+      pen.fillRect(0, 0, width, height);
+      pen.save();
+      pen.translate(width / 2, height / 2);
+      pen.scale(camera.zoom, camera.zoom);
+      pen.translate(-camera.x, -camera.y);
+      for (const room of rooms) {
+        pen.strokeStyle = "#7FDBFF";
+        pen.strokeRect(room.x, 16, 210, 140);
         pen.fillStyle = "#e8eef2";
-        pen.font = "11px sans-serif";
-        pen.fillText(home.name, x, 16);
-      });
+        pen.font = "12px sans-serif";
+        pen.fillText(room.name, room.x + 8, 32);
+        for (const thing of room.things) {
+          pen.fillStyle = thing.thing === "computer" ? "#9dffce" : "#243040";
+          pen.fillRect(thing.x, thing.y + 20, 40, 22);
+          pen.fillStyle = "#e8eef2";
+          pen.font = "10px sans-serif";
+          pen.fillText(thing.thing, thing.x, thing.y + 16);
+        }
+      }
+      pen.restore();
     };
-    let frame = 0;
+    let frameId = 0;
     const loop = () => {
-      frame += 1;
-      if (frame % 2 === 0) draw();
+      draw();
       frameId = window.requestAnimationFrame(loop);
     };
-    let frameId = window.requestAnimationFrame(loop);
+    frameId = window.requestAnimationFrame(loop);
     return () => window.cancelAnimationFrame(frameId);
-  }, [tick]);
+  }, [camera, tick]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -118,12 +132,38 @@ export function WorldStage() {
       <p className="absolute top-2 right-3 text-[10px] text-white/80">Imagery © Esri, Maxar, Earthstar Geographics</p>
     </div>
     <div className="border border-border bg-bg px-3 py-3">
-      <p className="text-sm text-fg">Their city, from above. Turn {tick}. It keeps building on every room.</p>
-      <canvas ref={canvasRef} className="mt-2 h-40 w-full bg-surface" aria-label="Their city from above" />
+      <p className="text-sm text-fg">A 2D camera on their rooms. Drag to look. Turn {tick}. Zoom {camera.zoom.toFixed(1)}.</p>
+      <canvas
+        ref={canvasRef}
+        className="mt-2 h-56 w-full touch-none bg-surface"
+        aria-label="2D camera on their rooms"
+        onPointerDown={(event) => {
+          drag.current = { x: event.clientX, y: event.clientY };
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={(event) => {
+          if (!drag.current) return;
+          const dx = (drag.current.x - event.clientX) / camera.zoom;
+          const dy = (drag.current.y - event.clientY) / camera.zoom;
+          drag.current = { x: event.clientX, y: event.clientY };
+          setCamera((current) => moveCamera(current, dx, dy));
+        }}
+        onPointerUp={() => {
+          drag.current = null;
+        }}
+      />
+      <div className="mt-2 flex gap-2">
+        <button type="button" className="h-11 rounded-full border border-border px-4 text-sm text-fg" onClick={() => setCamera((current) => moveCamera(current, 0, 0, 1.2))}>
+          Closer
+        </button>
+        <button type="button" className="h-11 rounded-full border border-border px-4 text-sm text-fg" onClick={() => setCamera((current) => moveCamera(current, 180, 0))}>
+          Next room
+        </button>
+      </div>
       <ul className="mt-2 flex flex-col gap-1">
         {city.homes.map((home) => (
           <li key={home.name} className="text-xs text-muted">
-            {home.name}, {home.office}, {home.site}, built {home.built}, store {home.store}
+            {home.name}, {home.office}. A computer, a desk, a lamp, a book, a door, a chair, a window, and a clock.
           </li>
         ))}
       </ul>
