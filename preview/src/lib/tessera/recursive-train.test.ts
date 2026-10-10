@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { learnUntilBetter, stepLearn, trainUntilRecursive } from "./recursive-train.ts";
+import { learnUntilBetter, recallExact, recallLearned, stepLearn, trainUntilRecursive } from "./recursive-train.ts";
 
 test("a second pass answers from the lesson the first pass kept", () => {
   const run = trainUntilRecursive();
@@ -26,4 +26,11 @@ test("links appear only after a fact is kept, and a fifth step adds nothing", ()
   assert.equal(done.links.length, 3);
   assert.deepEqual(stepLearn(5), done);
 });
+
+test("an exact key beats a line that only shares the word scale", () => {
+  const memory = ["scale high = 10", "scale low = 0"];
+  assert.equal(recallLearned(memory, "scale low"), "scale high = 10");
+  assert.equal(recallExact(memory, "scale low"), "scale low = 0");
+});
+
 
