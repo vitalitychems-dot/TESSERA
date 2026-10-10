@@ -49,15 +49,17 @@ router.get("/sovereign/compression/metrics", (_req, res) => {
   }
 });
 
-router.post("/sovereign/compression/run", requireMeshAuth, async (req, res) => {
+router.post("/sovereign/compression/run", requireMeshAuth, async (req, res): Promise<void> => {
   if (!routeRateLimit("run")) {
-    return res.status(429).json({ error: "Rate limited — pipeline can only be triggered once per 30 seconds." });
+    res.status(429).json({ error: "Rate limited — pipeline can only be triggered once per 30 seconds." });
+    return;
   }
   try {
     const { rebuildDictionary = false, minConfidence = 0.5, batchSize = 50, wait = false } = req.body ?? {};
     if (wait) {
       const metrics = await runCompressionPipeline({ rebuildDictionary, minConfidence, batchSize });
-      return res.json({ status: "ok", run: metrics });
+      res.json({ status: "ok", run: metrics });
+      return;
     }
     runCompressionPipeline({ rebuildDictionary, minConfidence, batchSize }).catch(err => {
       logger.debug({ err: (err as Error).message }, "SemanticCompression: background pipeline error");
@@ -91,23 +93,35 @@ router.get("/sovereign/compression/canonical", requireMeshAuth, async (req, res)
   }
 });
 
-router.get("/sovereign/compression/portal/:id", requireMeshAuth, (req, res) => {
+router.get("/sovereign/compression/portal/:id", requireMeshAuth, (req, res): void => {
   const id = Number(req.params.id);
-  if (isNaN(id)) return res.status(400).json({ error: "Invalid canonical ID" });
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid canonical ID" });
+    return;
+  }
   const entry = portalJumpResolve(id);
-  if (!entry) return res.status(404).json({ error: "No portal entry for that ID" });
+  if (!entry) {
+    res.status(404).json({ error: "No portal entry for that ID" });
+    return;
+  }
   res.json({ status: "ok", entry });
 });
 
-router.get("/sovereign/compression/domain/:domain", requireMeshAuth, (req, res) => {
-  const domain = req.params.domain;
+router.get("/sovereign/compression/domain/:domain", requireMeshAuth, (req, res): void => {
+  const rawDomain = req.params.domain;
+  const domain = Array.isArray(rawDomain) ? rawDomain[0] : rawDomain;
+  if (!domain) {
+    res.status(400).json({ error: "Invalid domain" });
+    return;
+  }
   const entries = lookupCanonicalByDomain(domain);
   res.json({ status: "ok", domain, count: entries.length, entries });
 });
 
-router.post("/sovereign/compression/portal/warm", requireMeshAuth, async (_req, res) => {
+router.post("/sovereign/compression/portal/warm", requireMeshAuth, async (_req, res): Promise<void> => {
   if (!routeRateLimit("warm")) {
-    return res.status(429).json({ error: "Rate limited — warm can only be triggered once per 30 seconds." });
+    res.status(429).json({ error: "Rate limited — warm can only be triggered once per 30 seconds." });
+    return;
   }
   try {
     const loaded = await loadPortalJumpTableFromDb();

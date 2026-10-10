@@ -80,7 +80,8 @@ router.get("/evolution-health/scheduler", (_req: Request, res: Response) => {
 });
 
 router.post("/evolution-health/pause/:moduleId", requireAuth, (req: Request, res: Response) => {
-  const moduleId = req.params.moduleId;
+  const rawModuleId = req.params.moduleId;
+  const moduleId = Array.isArray(rawModuleId) ? rawModuleId[0] : rawModuleId;
   if (!moduleId) {
     res.status(400).json({ ok: false, error: "moduleId required" });
     return;
@@ -95,7 +96,8 @@ router.post("/evolution-health/pause/:moduleId", requireAuth, (req: Request, res
 });
 
 router.post("/evolution-health/resume/:moduleId", requireAuth, (req: Request, res: Response) => {
-  const moduleId = req.params.moduleId;
+  const rawModuleId = req.params.moduleId;
+  const moduleId = Array.isArray(rawModuleId) ? rawModuleId[0] : rawModuleId;
   if (!moduleId) {
     res.status(400).json({ ok: false, error: "moduleId required" });
     return;
@@ -110,7 +112,8 @@ router.post("/evolution-health/resume/:moduleId", requireAuth, (req: Request, re
 });
 
 router.post("/evolution-health/reset/:moduleId", requireAuth, (req: Request, res: Response) => {
-  const moduleId = req.params.moduleId;
+  const rawModuleId = req.params.moduleId;
+  const moduleId = Array.isArray(rawModuleId) ? rawModuleId[0] : rawModuleId;
   if (!moduleId) {
     res.status(400).json({ ok: false, error: "moduleId required" });
     return;

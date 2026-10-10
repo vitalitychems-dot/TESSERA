@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Loader2, X, Copy, Check, Download, Zap, PhoneOff, Pause, Play, MessageSquare, Shield, Settings2, Bot, CheckCircle2, Search, Sparkles, Code, Database, Keyboard, Eye } from "lucide-react";
+import { Loader2, X, Copy, Check, Download, Zap, PhoneOff, Pause, Play, MessageSquare, Shield, Settings2, Bot, CheckCircle2, Search, Sparkles, Code, Database, Keyboard, Eye, Paperclip } from "lucide-react";
 import { NLPGoalsPanel } from "./chat/NLPGoalsPanel";
 import { type VirtuosoHandle } from "react-virtuoso";
 import ReactMarkdown from "react-markdown";
@@ -819,8 +819,8 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
     });
   }, [isSpeaking, messages, startSpeechRecognition, stopSpeechRecognition]);
 
-  const handleMicPressStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
+  const handleMicPressStart = useCallback((e?: React.MouseEvent | React.TouchEvent) => {
+    e?.preventDefault();
     if (isRecordingRef.current) {
       stopSpeechRecognition();
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
@@ -845,7 +845,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
     toggleVoiceRef.current?.();
   }, [detachWindowReleaseListeners, stopSpeechRecognition]);
 
-  const handleMicPressEnd = useCallback((_e: React.MouseEvent | React.TouchEvent) => {
+  const handleMicPressEnd = useCallback((_e?: React.MouseEvent | React.TouchEvent) => {
     // Click-to-toggle mode: end handler is a no-op; toggling happens in handleMicPressStart.
   }, []);
 

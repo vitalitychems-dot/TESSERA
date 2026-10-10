@@ -30,14 +30,13 @@ router.post("/identity/drift-check", (_req, res) => res.json(runDriftDetection()
 router.get("/identity/father-protocol", (_req, res) => res.json(verifyFatherProtocol()));
 
 router.get("/personality/snapshot", (_req, res) => res.json(getPersonalitySnapshot()));
-router.post("/personality/evolve", (req, res) => res.json(evolveTraits(req.body?.signal)));
+router.post("/personality/evolve", (_req, res) => res.json(evolveTraits()));
 router.get("/personality/traits/:category", (req, res) => res.json(getTraitsByCategory(req.params.category)));
 
 router.get("/consciousness/state", (_req, res) => res.json(getConsciousnessState()));
 router.get("/consciousness/semantic-network", (_req, res) => res.json(getSemanticNetwork()));
 router.get("/consciousness/episodic-memories", (req, res) => {
-  const limit = parseInt(req.query.limit as string) || 20;
-  res.json(getEpisodicMemories(limit));
+  res.json(getEpisodicMemories());
 });
 router.get("/consciousness/procedural-skills", (_req, res) => res.json(getProceduralSkills()));
 router.post("/consciousness/record-episode", (req, res): void => {
@@ -46,12 +45,12 @@ router.post("/consciousness/record-episode", (req, res): void => {
     res.status(400).json({ error: "content required" });
     return;
   }
-  res.json(recordEpisode(content, context || "user-input", importance));
+  res.json(recordEpisode(content));
 });
 router.post("/consciousness/reflect", (_req, res) => res.json({ reflection: generateReflection() }));
 router.post("/consciousness/focus", (req, res) => {
   const { target, intensity } = req.body || {};
-  setAttentionFocus(target || "general", intensity);
+  setAttentionFocus(target || "general");
   res.json({ success: true });
 });
 
@@ -62,11 +61,10 @@ router.post("/dual-brain/process", (req, res): void => {
     res.status(400).json({ error: "query required" });
     return;
   }
-  res.json(dualBrainProcess(query, domain));
+  res.json(dualBrainProcess(query));
 });
 router.get("/dual-brain/history", (req, res) => {
-  const limit = parseInt(req.query.limit as string) || 10;
-  res.json(getDecisionHistory(limit));
+  res.json(getDecisionHistory());
 });
 
 router.get("/truthfulness/state", (_req, res) => res.json(getTruthfulnessState()));
@@ -79,8 +77,7 @@ router.post("/truthfulness/verify", (req, res): void => {
   res.json(verifyClaim(claim));
 });
 router.get("/truthfulness/recent", (req, res) => {
-  const limit = parseInt(req.query.limit as string) || 10;
-  res.json(getRecentVerifications(limit));
+  res.json(getRecentVerifications());
 });
 router.post("/truthfulness/check-identity", (req, res): void => {
   const { response } = req.body || {};
@@ -88,7 +85,7 @@ router.post("/truthfulness/check-identity", (req, res): void => {
     res.status(400).json({ error: "response required" });
     return;
   }
-  res.json(checkIdentityIntegrity(response));
+  res.json(checkIdentityIntegrity());
 });
 
 router.get("/collective/state", (_req, res) => res.json(getCollectiveState()));
@@ -98,7 +95,7 @@ router.post("/collective/contribute", (req, res): void => {
     res.status(400).json({ error: "agentId and insight required" });
     return;
   }
-  res.json({ success: contributeInsight(agentId, insight) });
+  res.json({ success: contributeInsight({ agentId, capability: insight }) });
 });
 router.post("/collective/aggregate", (req, res): void => {
   const { topic } = req.body || {};
@@ -106,10 +103,10 @@ router.post("/collective/aggregate", (req, res): void => {
     res.status(400).json({ error: "topic required" });
     return;
   }
-  res.json(aggregateKnowledge(topic));
+  res.json(aggregateKnowledge());
 });
 router.get("/collective/node/:agentId", (req, res): void => {
-  const node = getNodeStatus(req.params.agentId);
+  const node = getNodeStatus();
   if (!node) {
     res.status(404).json({ error: "node not found" });
     return;
@@ -120,7 +117,7 @@ router.get("/collective/node/:agentId", (req, res): void => {
 router.get("/agents/list", (req, res) => {
   const status = req.query.status as string | undefined;
   const specialization = req.query.specialization as string | undefined;
-  res.json(listAgents({ status, specialization }));
+  res.json(listAgents());
 });
 router.get("/agents/stats", (_req, res) => res.json(getSpawnerStats()));
 router.get("/agents/specializations", (_req, res) => res.json(getAvailableSpecializations()));
@@ -156,7 +153,7 @@ router.get("/hierarchy/:agentId", (req, res): void => {
   res.json(rank);
 });
 router.get("/hierarchy/:agentId/chain", (req, res) => {
-  res.json(getChainOfCommand(req.params.agentId));
+  res.json(getChainOfCommand());
 });
 
 router.get("/comms/stats", (_req, res) => res.json(getCommsStats()));
@@ -182,15 +179,14 @@ router.post("/comms/broadcast/:channelId", (req, res): void => {
   res.json(broadcastToChannel(req.params.channelId, fromAgent, content));
 });
 router.get("/comms/messages/:agentId", (req, res) => {
-  const limit = parseInt(req.query.limit as string) || 20;
-  res.json(getMessages(req.params.agentId, limit));
+  res.json(getMessages(req.params.agentId));
 });
 
 router.get("/consensus/stats", (_req, res) => res.json(getConsensusStats()));
 router.get("/consensus/proposals", (req, res) => {
   const status = req.query.status as string | undefined;
   const category = req.query.category as string | undefined;
-  res.json(listProposals({ status, category }));
+  res.json(listProposals());
 });
 router.post("/consensus/propose", (req, res): void => {
   const { title, description, proposer, category } = req.body || {};
@@ -211,8 +207,7 @@ router.get("/consensus/:id", (req, res): void => {
 
 router.get("/executor/status", (_req, res) => res.json(getExecutorStatus()));
 router.get("/executor/log", (req, res) => {
-  const limit = parseInt(req.query.limit as string) || 20;
-  res.json(getExecutionLog(limit));
+  res.json(getExecutionLog());
 });
 router.post("/executor/sweep", (_req, res) => res.json(sweepAndExecute()));
 router.post("/executor/auto-execute", (req, res) => {
@@ -223,8 +218,7 @@ router.post("/executor/auto-execute", (req, res) => {
 router.get("/heartbeat/status", (_req, res) => res.json(getHeartbeatStatus()));
 router.post("/heartbeat/pulse", (_req, res) => res.json(generatePulse()));
 router.get("/heartbeat/history", (req, res) => {
-  const limit = parseInt(req.query.limit as string) || 20;
-  res.json(getPulseHistory(limit));
+  res.json(getPulseHistory());
 });
 router.post("/heartbeat/autonomous-mode", (req, res) => {
   setAutonomousMode(req.body?.enabled !== false);
@@ -232,10 +226,9 @@ router.post("/heartbeat/autonomous-mode", (req, res) => {
 });
 
 router.get("/improvement/state", (_req, res) => res.json(getDaemonState()));
-router.post("/improvement/cycle", (req, res) => res.json(runImprovementCycle(req.body?.focus)));
-router.get("/improvement/history", (req, res) => {
-  const limit = parseInt(req.query.limit as string) || 10;
-  res.json(getCycleHistory(limit));
+router.post("/improvement/cycle", (_req, res) => res.json(runImprovementCycle()));
+router.get("/improvement/history", (_req, res) => {
+  res.json(getCycleHistory());
 });
 router.get("/improvement/summary", (_req, res) => res.json(getImprovementSummary()));
 
@@ -246,11 +239,10 @@ router.post("/training/start", (req, res): void => {
     res.status(400).json({ error: "domain required" });
     return;
   }
-  res.json(startTraining(domain, method));
+  res.json(startTraining(domain));
 });
 router.get("/training/history", (req, res) => {
-  const limit = parseInt(req.query.limit as string) || 10;
-  res.json(getSessionHistory(limit));
+  res.json(getSessionHistory());
 });
 router.get("/training/domains", (_req, res) => res.json(getAvailableDomains()));
 
@@ -267,8 +259,7 @@ router.post("/evolution/apply/:id", async (req, res): Promise<void> => {
   res.json({ success: await applyEvolution(req.params.id) });
 });
 router.get("/evolution/history", (req, res) => {
-  const limit = parseInt(req.query.limit as string) || 10;
-  res.json(getEvolutionHistory(limit));
+  res.json(getEvolutionHistory());
 });
 
 router.get("/swarm/stats", (_req, res) => res.json(getOptimizerStats()));
@@ -278,18 +269,22 @@ router.post("/swarm/optimize", (req, res): void => {
     res.status(400).json({ error: "objective required" });
     return;
   }
-  res.json(optimize(objective, dimensions, iterations));
+  const selectedObjective = getAvailableObjectives().find((candidate) => candidate === objective);
+  if (!selectedObjective) {
+    res.status(400).json({ error: "unsupported objective" });
+    return;
+  }
+  res.json(optimize(selectedObjective));
 });
 router.get("/swarm/history", (req, res) => {
-  const limit = parseInt(req.query.limit as string) || 10;
-  res.json(getOptimizationHistory(limit));
+  res.json(getOptimizationHistory());
 });
 router.get("/swarm/objectives", (_req, res) => res.json(getAvailableObjectives()));
 
 router.get("/universe/state", (_req, res) => res.json(getUniverseState()));
 router.post("/universe/simulate", (req, res) => {
   const dt = parseFloat(req.body?.dt) || 86400;
-  res.json(simulateStep(dt));
+  res.json(simulateStep(String(dt)));
 });
 router.get("/universe/body/:id", (req, res): void => {
   const body = getBody(req.params.id);
@@ -317,10 +312,10 @@ router.post("/quantum/gate", (req, res): void => {
     res.status(400).json({ error: "circuitId, gate, target required" });
     return;
   }
-  res.json({ success: applyGate(circuitId, gate, target, control) });
+  res.json({ success: applyGate(circuitId, gate) });
 });
 router.post("/quantum/measure/:circuitId", (req, res): void => {
-  const result = measureAll(req.params.circuitId);
+  const result = measureAll();
   if (!result) {
     res.status(404).json({ error: "circuit not found" });
     return;
@@ -338,9 +333,8 @@ router.post("/emotional/process", (req, res): void => {
   }
   res.json(processEmotionalInput(input));
 });
-router.get("/emotional/recent", (req, res) => {
-  const limit = parseInt(req.query.limit as string) || 10;
-  res.json(getRecentResponses(limit));
+router.get("/emotional/recent", (_req, res) => {
+  res.json(getRecentResponses());
 });
 
 router.get("/autonomous/status", (_req, res) => res.json(getAutonomousStatus()));

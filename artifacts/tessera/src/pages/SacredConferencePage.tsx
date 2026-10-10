@@ -222,6 +222,7 @@ function BuildDiagram3D({ diagram }: { diagram: any }) {
       animRef.current = requestAnimationFrame(animate);
       return () => cancelAnimationFrame(animRef.current);
     }
+    return;
   }, [diagram, rotation, zoom, hoveredComponent, isDragging, project]);
 
   const handleMouseDown = (e: React.MouseEvent) => {

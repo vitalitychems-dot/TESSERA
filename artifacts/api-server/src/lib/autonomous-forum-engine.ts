@@ -590,8 +590,8 @@ async function loadState(): Promise<void> {
 async function saveState(): Promise<void> {
   try {
     await db.insert(systemStateTable)
-      .values({ key: STATE_KEY, value: state as Record<string, unknown> })
-      .onConflictDoUpdate({ target: systemStateTable.key, set: { value: state as Record<string, unknown>, updatedAt: new Date() } });
+      .values({ key: STATE_KEY, value: { ...state } })
+      .onConflictDoUpdate({ target: systemStateTable.key, set: { value: { ...state } } });
   } catch {}
 }
 

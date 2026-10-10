@@ -96,12 +96,16 @@ export function GlassCard({
   glow,
   hover = true,
   animate = false,
+  onClick,
+  style,
 }: {
   children: React.ReactNode;
   className?: string;
   glow?: "cyan" | "violet" | "emerald" | "amber" | "pink" | "blue" | "rose";
   hover?: boolean;
   animate?: boolean;
+  onClick?: React.MouseEventHandler<HTMLDivElement>;
+  style?: React.CSSProperties;
 }) {
   const glowColors: Record<string, string> = {
     cyan: "shadow-[0_0_20px_rgba(6,182,212,0.08)] border-cyan-500/20",
@@ -114,6 +118,16 @@ export function GlassCard({
   };
   return (
     <div
+      onClick={onClick}
+      onKeyDown={event => {
+        if (onClick && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          event.currentTarget.click();
+        }
+      }}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      style={style}
       className={cn(
         "rounded-2xl border backdrop-blur-xl bg-white/[0.03] p-4",
         glow ? glowColors[glow] : "border-white/[0.08]",
@@ -468,21 +482,26 @@ export function TabBar({
 export function PageHeader({
   title,
   subtitle,
-  gradient,
+  gradient = "bg-gradient-to-r from-cyan-300 via-sky-300 to-violet-300",
   quote,
+  icon: Icon,
+  iconColor = "text-cyan-400",
 }: {
   title: string;
-  subtitle: string;
-  gradient: string;
+  subtitle?: string;
+  gradient?: string;
   quote?: string;
+  icon?: LucideIcon;
+  iconColor?: string;
 }) {
   return (
     <div className="text-center space-y-2 relative">
       <div className="absolute inset-0 -top-8 sovereign-page-glow opacity-30 pointer-events-none" />
+      {Icon && <Icon className={cn("mx-auto h-5 w-5", iconColor)} aria-hidden="true" />}
       <h1 className={cn("text-3xl md:text-4xl font-bold bg-clip-text text-transparent", gradient)}>
         {title}
       </h1>
-      <p className="text-slate-500 text-xs font-mono tracking-wide">{subtitle}</p>
+      {subtitle && <p className="text-slate-500 text-xs font-mono tracking-wide">{subtitle}</p>}
       {quote && <p className="text-xs text-white/40 italic max-w-xl mx-auto">"{quote}"</p>}
     </div>
   );

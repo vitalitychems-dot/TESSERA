@@ -160,7 +160,7 @@ async function loadAllDistilledKnowledge(): Promise<Array<{
       .limit(SCAN_BATCH_SIZE);
 
     if (batch.length === 0) break;
-    all.push(...batch);
+    all.push(...batch.filter((row): row is typeof row & { fact: string } => row.fact !== null));
     lastId = batch[batch.length - 1].id;
   }
 
@@ -360,16 +360,17 @@ async function mergeKnowledgeCluster(cluster: DuplicateCluster): Promise<MergeRe
     .where(sql`${distilledKnowledgeTable.id} IN (${sql.join(allIds.map(id => sql`${id}`), sql`, `)})`)
     .orderBy(desc(distilledKnowledgeTable.confidence));
 
-  if (rows.length === 0) {
+  const rowsWithFacts = rows.filter((row): row is typeof row & { fact: string } => row.fact !== null);
+  if (rowsWithFacts.length === 0) {
     return { canonicalId: cluster.canonicalId, mergedIds: [], contentPreview: "" };
   }
 
-  const canonical = rows[0];
-  const duplicateRows = rows.filter(r => r.id !== canonical.id);
-  const longestFact = rows.reduce((a, b) => a.fact.length >= b.fact.length ? a : b);
-  const maxConfidence = Math.max(...rows.map(r => r.confidence));
-  const totalAccess = rows.reduce((sum, r) => sum + r.accessCount, 0);
-  const anyVerified = rows.some(r => r.verified);
+  const canonical = rowsWithFacts[0];
+  const duplicateRows = rowsWithFacts.filter(r => r.id !== canonical.id);
+  const longestFact = rowsWithFacts.reduce((a, b) => a.fact.length >= b.fact.length ? a : b);
+  const maxConfidence = Math.max(...rowsWithFacts.map(r => r.confidence));
+  const totalAccess = rowsWithFacts.reduce((sum, r) => sum + r.accessCount, 0);
+  const anyVerified = rowsWithFacts.some(r => r.verified);
 
   let storageSaved = 0;
   await db.transaction(async (tx) => {
@@ -576,14 +577,15 @@ export async function checkDuplicateBeforeIngest(
         if (rows.length === 0) break;
         lastId = rows[rows.length - 1].id;
 
-        const texts = rows.map(r => r.fact);
+        const rowsWithFacts = rows.filter((row): row is typeof row & { fact: string } => row.fact !== null);
+        const texts = rowsWithFacts.map(r => r.fact);
         const embeddings = await generateEmbeddingsBatch(texts);
 
-        for (let i = 0; i < rows.length; i++) {
+        for (let i = 0; i < rowsWithFacts.length; i++) {
           if (!embeddings[i] || embeddings[i].length === 0) continue;
           const sim = cosineSimilarity(newEmbedding, embeddings[i]);
           if (sim >= SIMILARITY_THRESHOLD) {
-            const bestFact = content.length > rows[i].fact.length ? content : rows[i].fact;
+            const bestFact = content.length > rowsWithFacts[i].fact.length ? content : rowsWithFacts[i].fact;
             await db
               .update(distilledKnowledgeTable)
               .set({

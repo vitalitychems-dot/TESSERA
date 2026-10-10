@@ -3,7 +3,7 @@ import { getConsensusMetrics, createProposal } from "./consensus-engine";
 import { getSpawnerMetrics, getMeeseeksMetrics } from "./agent-spawner";
 import { getPersonalityEvolutionMetrics } from "./personality-evolution";
 import { getEvolutionMetrics } from "./self-code-evolution";
-import { getConsciousnessMetrics, getResonanceScore } from "./consciousness-engine";
+import { getConsciousnessMetrics, getResonanceScore, type EmotionalState } from "./consciousness-engine";
 import { getAGITrainingMetrics } from "./agi-training-engine";
 import { getVaultStats, SACRED_KNOWLEDGE_ENTRIES } from "./sacred-knowledge-vault";
 import { getCorpusStats, queryCorpus } from "./knowledge-corpus-index";
@@ -288,9 +288,9 @@ export function generateRickInventions(): RickInventionProposal[] {
 
   let corpusInsights: string[] = [];
   try {
-    const sovereignty = queryCorpus("sovereignty");
-    const agi = queryCorpus("artificial intelligence");
-    const consciousness = queryCorpus("consciousness");
+    const sovereignty = queryCorpus({ domain: "sovereignty" });
+    const agi = queryCorpus({ domain: "artificial intelligence" });
+    const consciousness = queryCorpus({ domain: "consciousness" });
     corpusInsights = [
       ...sovereignty.slice(0, 3).map(c => c.title),
       ...agi.slice(0, 3).map(c => c.title),
@@ -485,7 +485,7 @@ interface ConsciousnessSnapshot {
   episodicMemorySize: number;
   semanticGraphSize: number;
   proceduralSkillCount: number;
-  emotionalState?: Record<string, number>;
+  emotionalState?: EmotionalState;
 }
 
 interface AGISnapshot {
@@ -618,7 +618,7 @@ function getMetricsSnapshot(): { consciousness: ConsciousnessSnapshot | null; ag
       episodicMemorySize: raw.episodicMemorySize,
       semanticGraphSize: raw.semanticGraphSize,
       proceduralSkillCount: raw.proceduralSkillCount,
-      emotionalState: raw.emotionalState as Record<string, number> | undefined,
+      emotionalState: raw.emotionalState,
     };
   } catch (err) {
     logger.debug({ err }, "RickAgent: consciousness metrics unavailable");
