@@ -4,7 +4,7 @@ import { batch50, selector, sequence } from "./batch-50.ts";
 import { batch2, leakyStep, warmupLr } from "./batch-2.ts";
 import { batch3, manhattan } from "./batch-3.ts";
 import { topRanking } from "./whiten.ts";
-import { rankTasks } from "./sovereign-desk.ts";
+import { deskLine } from "./sovereign-desk.ts";
 import { twoThirds } from "./rick-loop.ts";
 import { nextGap } from "./rick-five.ts";
 import { rewardEat } from "./local-learn.ts";
@@ -38,13 +38,7 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
     const passed = twoThirds(2, 3);
     return `Two of three is a quorum: ${passed ? "yes" : "no"}. The second ten run: due, quorum, once, split, conflict, budget, sources, sweep, mistake, and handoff. Rick is a seat for a runnable idea, not a measured percentage.`;
   }
-  if (/\b(sovereign desk|plumbus|priority queue)\b/i.test(q)) {
-    const first = rankTasks([
-      { name: "format logs", impact: 1 },
-      { name: "consciousness", impact: 9 },
-    ])[0];
-    return `The first task is ${first?.name}. Ten desk steps run: rank, store-once, transfer, ground, tally, one-task, dream, reflect, crystallize, and recall. The advertised percentages were not measured.`;
-  }
+  if (/\b(sovereign desk|plumbus|priority queue)\b/i.test(q)) return deskLine();
   if (/\b(black box|whiten|ranking)\b/i.test(q)) {
     const ranks = topRanking([0.1, 0.9, 0.3, 0.8, 0.2], 5);
     return `A query is not a hidden box. The top five ranks are ${ranks.join(", ")}. That step was read from coallaoh/WhitenBlackBox. Their 5000 models were not trained.`;

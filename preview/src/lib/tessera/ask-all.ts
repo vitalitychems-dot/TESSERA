@@ -7,6 +7,7 @@ import { loveFromFiles } from "./love-local.ts";
 import { ownFromQuestion } from "./own-versions.ts";
 import { issuePass } from "./pass.ts";
 import { useEngines } from "./secret-engines.ts";
+import { deskLine } from "./sovereign-desk.ts";
 import { directSkill } from "./skill-use.ts";
 import { carryOn, mayRun, tesseraVote, workshopRun } from "./workshop.ts";
 
@@ -63,6 +64,7 @@ export function askAll(question: string) {
   if (/\b(repos|repositories|github)\b/i.test(lower)) {
     return "GitHub is vitalitychems-dot. TESSERA, Gitbook, GitbookAI, and vitality. Ask open TESSERA and a path. The token stays on the server.";
   }
+  if (/\b(sovereign desk|plumbus|priority queue)\b/i.test(lower)) return deskLine();
   const skill = directSkill(q);
   if (skill) return skill.answer;
   const owned = ownFromQuestion(q);

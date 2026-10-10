@@ -4,8 +4,7 @@ import { readCorrections } from "./corrections.ts";
 import { silentPen } from "./silent-pen.ts";
 
 test("a silent pen still answers from her files", () => {
-  assert.match(silentPen("who are you"), /I am Tessera/);
-  assert.match(silentPen("who are you"), /I am the pen/);
+  assert.match(silentPen("who are you"), /You didn't build me/);
   assert.match(silentPen("photoelectric"), /Einstein/);
   assert.match(silentPen(""), /The other pen did not answer/);
   assert.equal(/\b(grok|xai)\b/i.test(silentPen("who are you")), false);

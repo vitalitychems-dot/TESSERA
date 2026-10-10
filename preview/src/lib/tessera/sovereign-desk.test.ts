@@ -11,6 +11,7 @@ import {
   rankTasks,
   recallCache,
   reflectDiff,
+  runDesk,
   sigmoid,
   storeOnce,
   transferGain,
@@ -68,4 +69,14 @@ test("the ten desk steps run and the merge keeps the longer text", () => {
   cache.put("c", "three");
   assert.equal(cache.has("b"), false);
   assert.equal(cache.has("a"), true);
+  const ran = runDesk();
+  assert.equal(ran.rank, "consciousness");
+  assert.equal(ran.stored, 1);
+  assert.equal(ran.kept, true);
+  assert.equal(ran.passed, true);
+  assert.equal(ran.alive, false);
+  assert.deepEqual(ran.dream, ["sigil"]);
+  assert.deepEqual(ran.reflected, ["new"]);
+  assert.equal(ran.crystal, 1);
+  assert.equal(ran.cached, false);
 });
