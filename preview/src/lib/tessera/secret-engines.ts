@@ -263,7 +263,7 @@ export function useEngines(question: string) {
     const span = bridge(named);
     return `Bridge ${span.linked} of ${span.pairs}.`;
   }
-  if (/\b(seed|invention)\b/.test(lower)) {
+  if (/\bseed\b/.test(lower) || /^invention\s+\S+/.test(lower)) {
     const seed = inventionSeed(q, DOMAINS.length);
     return `Seed ${seed.hash.toString(16)}. Feasibility ${seed.feasibility}. Novelty ${seed.novelty}. Progress ${seed.progress}.`;
   }
