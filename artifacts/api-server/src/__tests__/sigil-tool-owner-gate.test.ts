@@ -153,7 +153,7 @@ describe("sigil tool owner gate", () => {
         const body = await response.text();
         expect(body).not.toMatch(FORBIDDEN);
         const parsed = JSON.parse(body) as { ok?: boolean; error?: string };
-        expect(parsed).toEqual({ ok: false, error: "unauthenticated" });
+        expect(parsed).toEqual({ ok: false, error: "unauthenticated", reason: "no-cookie" });
       });
 
       it("returns 503 and does not run the tool when the owner token is unset", async () => {
@@ -162,8 +162,12 @@ describe("sigil tool owner gate", () => {
         const response = await post("/messages", { conversationId: 1, content: phrase }, `${SESSION_COOKIE}=synthetic-cookie`);
         expect(response.status).toBe(503);
         const body = await response.text();
-        expect(body).not.toMatch(FORBIDDEN);
-        expect(JSON.parse(body)).toEqual({ ok: false, error: "sovereign-unconfigured" });
+        expect(body).not.toMatch(/readableSeed|chartAnchor|birthDate|birthTime|natalDigest|issueZodiacKey|deriveNatalSeed|1111-01-01|2222-12-31|Fixture-A|Fixture-B/i);
+        expect(JSON.parse(body)).toEqual({
+          ok: false,
+          error: "sovereign-unconfigured",
+          message: "TESSERACT_ADMIN_KEY is not configured. Privileged surfaces are fail-closed.",
+        });
       });
 
       it("returns a ready status with no chart, birth, or key fields when the session is valid", async () => {
