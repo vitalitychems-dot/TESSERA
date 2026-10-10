@@ -27,7 +27,7 @@ import { seeAndAdvance } from "@/lib/tessera/herself-v4";
 import { trainCatalog } from "@/lib/tessera/own-versions";
 import { herInstruction } from "@/lib/tessera/next-page";
 import { useTessera } from "@/lib/tessera/store";
-import { askAll } from "@/lib/tessera/ask-all";
+import { askAll, leaveToHer } from "@/lib/tessera/ask-all";
 import { runSitting } from "@/lib/tessera/sitting-25";
 
 export function Chamber() {
@@ -91,7 +91,7 @@ export function Chamber() {
     setWebNote(null);
     addMessage("user", content);
     setPending(true);
-    const connected = askAll(content);
+    const connected = leaveToHer(content) ? null : askAll(content);
     if (connected) {
       addMessage("assistant", connected);
       setPending(false);
@@ -120,7 +120,7 @@ export function Chamber() {
       sending.current = false;
       return;
     }
-    const direct = directSkill(content);
+    const direct = leaveToHer(content) ? null : directSkill(content);
     if (direct) {
       const counts = await markSkill({ data: { skill: direct.skill } }).catch(() => null);
       if (counts) setStats(counts);
@@ -165,7 +165,7 @@ export function Chamber() {
       sending.current = false;
       return;
     }
-    const loved = loveFromFiles(content);
+    const loved = leaveToHer(content) ? "" : loveFromFiles(content);
     if (loved) {
       addMessage("assistant", loved);
       setPending(false);
