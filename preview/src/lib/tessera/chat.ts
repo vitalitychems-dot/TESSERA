@@ -118,6 +118,10 @@ export async function speak(data: ChatInput) {
     if (!pen) return fromFiles(data);
 
     if (data.mode === "chat" || data.mode === "learn") {
+      const asked = [...data.messages].reverse().find((message) => message.role === "user")?.content ?? "";
+      const { useEngines } = await import("./secret-engines");
+      const engine = useEngines(asked);
+      if (engine) return { ok: true as const, text: engine, instrument: { vendor: "tessera", model: "engines" } };
       const slot = takeSpeakSlot();
       if (!slot.ok) {
         return { ok: false as const, error: `The pen is capped at ${slot.limit} replies an hour. ${slot.used} were already used.` };
@@ -127,7 +131,6 @@ export async function speak(data: ChatInput) {
         const content = message.content.length > cap ? `${message.content.slice(0, cap)}\n[cut]` : message.content;
         return { role: message.role, content };
       });
-      const asked = [...data.messages].reverse().find((message) => message.role === "user")?.content ?? "";
       const { turnNote } = await import("./method");
       const note = turnNote(asked, data.lessons ?? []);
       const system =
