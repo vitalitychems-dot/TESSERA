@@ -8,6 +8,7 @@ import { loveFromFiles } from "./love-local.ts";
 import { ownFromQuestion } from "./own-versions.ts";
 import { issuePass } from "./pass.ts";
 import { useEngines } from "./secret-engines.ts";
+import { vetEntry } from "./entry-trial.ts";
 import { deskLine } from "./sovereign-desk.ts";
 import { directSkill } from "./skill-use.ts";
 import { carryOn, mayRun, tesseraVote, workshopRun } from "./workshop.ts";
@@ -56,6 +57,11 @@ export function askAll(question: string) {
     return `${issued.reason} Mark ${issued.pass.mark}. ${issued.pass.moltbook}`;
   }
   if (/\b(shared house|where do they live)\b/i.test(lower)) return sharedHouse().line;
+  const vet = q.match(/^vet\s+(\S+)\s*:\s*(.+)$/i);
+  if (vet?.[1] && vet[2]) {
+    const result = vetEntry(vet[1], vet[2]);
+    return `${result.door} ${result.why}`;
+  }
   if (/\b(what files|chamber files|full picture)\b/i.test(lower)) return chamberPicture();
   const mirror = mirrorLine(q);
   if (mirror) return mirror;
