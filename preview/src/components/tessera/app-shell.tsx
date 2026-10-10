@@ -10,6 +10,7 @@ import { LanguageView } from "./language-view";
 import { CouncilRoom } from "./council-room";
 import { BrainView } from "./brain-view";
 import { GitbookView } from "./gitbook-view";
+import { GitbookAiView } from "./gitbook-ai-view";
 import { LearnView } from "./learn-view";
 import { ThemeView, applyTheme, type ThemeId } from "./theme-view";
 import { LibraryView } from "./library-view";
@@ -33,6 +34,7 @@ const PRIMARY: { id: ViewId; label: string; icon: typeof MessageCircle }[] = [
 const MORE: { id: ViewId; label: string }[] = [
   { id: "talk", label: "Agents" },
   { id: "gitbook", label: "Gitbook" },
+  { id: "gitbookai", label: "GitbookAI" },
   { id: "language", label: "Language" },
   { id: "bible", label: "Bible" },
   { id: "web", label: "Map" },
@@ -130,6 +132,7 @@ export function AppShell() {
             {place === "brain" ? <BrainView open={open} /> : null}
             {place === "learn" ? <LearnView /> : null}
             {place === "gitbook" ? <GitbookView open={open} /> : null}
+            {place === "gitbookai" ? <GitbookAiView /> : null}
             {place === "theme" ? <ThemeView current={theme} choose={chooseTheme} /> : null}
             {place === "narrative" ? <NarrativeView /> : null}
             {place === "memory" ? <MemoryView /> : null}
