@@ -27,7 +27,10 @@ router.get("/departments/metrics", async (_req: Request, res: Response) => {
 
 router.get("/departments/:id", async (req: Request, res: Response) => {
   try {
-    const dept = await getDepartment(req.params.id);
+    const rawId = req.params.id;
+    const id = Array.isArray(rawId) ? rawId[0] : rawId;
+    if (!id) { res.status(400).json({ ok: false, error: "Department ID required" }); return; }
+    const dept = await getDepartment(id);
     if (!dept) { res.status(404).json({ ok: false, error: "Department not found" }); return; }
     res.json({ ok: true, data: dept });
   } catch (err) {

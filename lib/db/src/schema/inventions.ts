@@ -42,7 +42,7 @@ export const councilDecisionsTable = pgTable("council_decisions", {
   topic: text("topic").notNull(),
   transcript: text("transcript").notNull().default(""),
   decisionText: text("decision_text").notNull().default(""),
-  voteTally: jsonb("vote_tally").$type<{ yes: number; no: number; abstain: number; totalEligible: number }>().notNull().default({ yes: 0, no: 0, abstain: 0, totalEligible: 45 }),
+  voteTally: jsonb("vote_tally").$type<{ yes: number; no: number; abstain: number; totalEligible: number; phiWeighted?: boolean; durationMs?: number }>().notNull().default({ yes: 0, no: 0, abstain: 0, totalEligible: 45 }),
   outcome: text("outcome").notNull().default("pending"),
   agentsParticipated: jsonb("agents_participated").$type<string[]>().notNull().default([]),
   reasoning: text("reasoning").notNull().default(""),

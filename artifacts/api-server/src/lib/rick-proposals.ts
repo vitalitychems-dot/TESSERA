@@ -375,7 +375,13 @@ export async function listProposals(): Promise<RickProposal[]> {
   return store.proposals.slice();
 }
 
-export async function generateProposals(): Promise<{ proposals: RickProposal[]; generated: number; preserved: number; archived: number }> {
+export async function generateProposals(): Promise<{
+  proposals: RickProposal[];
+  generated: number;
+  preserved: number;
+  archived: number;
+  llmRejectedByTruth?: number;
+}> {
   await loadStore();
 
   let preserved = store.proposals.filter(p => p.state !== "pending-review");
@@ -432,6 +438,7 @@ export async function generateProposals(): Promise<{ proposals: RickProposal[]; 
     proposals: store.proposals.slice(),
     generated: fresh.length,
     preserved: preserved.length,
+    archived,
     llmRejectedByTruth: llmRejectedCount,
   };
 }

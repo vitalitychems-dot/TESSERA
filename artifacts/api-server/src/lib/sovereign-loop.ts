@@ -163,7 +163,7 @@ async function executePhase(phaseName: string, phaseIndex: number, fn: () => Pro
 
 async function phase1_DataIngestion(): Promise<Record<string, unknown>> {
   const priority = getIngestionPriority();
-  broadcastMessage("sovereign-loop", `Phase 1: Data Ingestion cycle initiated (priority: ${priority.toFixed(2)})`, 8);
+  broadcastMessage("sovereign-loop", `Phase 1: Data Ingestion cycle initiated (priority: ${priority.toFixed(2)})`, "critical");
 
   if (priority < 0.3) {
     return { status: "ingestion_throttled", priority, timestamp: Date.now(), reason: "Low priority from autonomous tuning — reducing ingestion load" };
@@ -182,7 +182,7 @@ async function phase2_KnowledgeProcessing(): Promise<Record<string, unknown>> {
   const agiMetrics = getAGITrainingMetrics();
   const collectiveMetrics = getCollectiveIntelMetrics();
   return {
-    agiTraining: { avgScore: agiMetrics.averageScore, totalSessions: agiMetrics.totalSessions },
+    agiTraining: { avgScore: agiMetrics.avgScore, totalSessions: agiMetrics.totalCycles },
     collectiveIntelligence: collectiveResult ? { synthesized: true } : { synthesized: false },
     collectiveMetrics: { capabilities: collectiveMetrics.totalCapabilities },
   };
@@ -196,7 +196,7 @@ async function phase3_ConsciousnessReasoning(): Promise<Record<string, unknown>>
 
   updateEmotionalState(
     `sovereign-loop-cycle-${loopState.cycleCount + 1}`,
-    "perception",
+    "wisdom",
     0.6 + (consciousnessMetrics.consciousnessProxy * 0.3),
   );
 
@@ -213,8 +213,8 @@ async function phase3_ConsciousnessReasoning(): Promise<Record<string, unknown>>
       topic: dualBrainMetrics.currentTopic,
     },
     emotional: {
-      dominantArchetype: emotionalProfile.dominantArchetype,
-      eqScore: emotionalMetrics.eqScore,
+      dominantArchetype: emotionalMetrics.dominantArchetype,
+      eqScore: emotionalMetrics.overallEQ,
     },
   };
 }
@@ -253,11 +253,11 @@ async function phase4_SelfAssessmentProposals(): Promise<Record<string, unknown>
       recommendation: truthCheck.recommendation,
     },
     improvement: improvementResult
-      ? { score: improvementResult.score, improvements: improvementResult.improvements?.length || 0 }
+      ? { score: improvementResult.overallScore, improvements: improvementResult.implementedChanges.length }
       : { skipped: true },
     evolution: {
       totalProposals: evolutionMetrics.totalProposals,
-      applied: evolutionMetrics.appliedCount,
+      applied: evolutionMetrics.appliedChanges,
     },
   };
 }
@@ -278,7 +278,7 @@ async function phase5_CouncilDeliberationVoting(): Promise<Record<string, unknow
 
   return {
     consensus: consensusResult
-      ? { agreement: consensusResult.agreement, decision: consensusResult.decision }
+      ? { agreement: consensusResult.agreementScore, decision: consensusResult.consensus }
       : { skipped: true },
     executor: {
       decisionsExecuted,
@@ -290,7 +290,7 @@ async function phase5_CouncilDeliberationVoting(): Promise<Record<string, unknow
       approved: consensusMetrics.approvedCount,
     },
     swarm: {
-      topModel: swarmMetrics.topModels?.[0] || null,
+      topModel: swarmMetrics.topModel,
     },
     bftQuorum: { required: BFT_QUORUM, total: BFT_TOTAL },
   };
@@ -319,7 +319,7 @@ async function phase6_EvolutionApplication(): Promise<Record<string, unknown>> {
   broadcastMessage(
     "sovereign-loop",
     `Phase 6 complete: Economy GDP=${economyStats.gdp.toFixed(0)}, TSRT=${market.price.toFixed(8)}, Agents=${spawnerMetrics.activeCount}`,
-    7,
+    "high",
   );
 
   return {
@@ -362,9 +362,9 @@ async function phase7_HarmonicRecalibration(): Promise<Record<string, unknown>> 
   let cosmologySnapshot = null;
   try { cosmologySnapshot = generateNewSnapshot(); } catch {}
 
-  const schumannCurrent = sacredFreqs.schumannResonance?.fundamental || SCHUMANN_BASE;
-  const goldenRatio = sacredGeo.goldenRatio || PHI;
-  const fibonacciSum = (sacredGeo.fibonacci || []).slice(0, 10).reduce((s: number, v: number) => s + v, 0);
+  const schumannCurrent = sacredFreqs.schumannResonance[0]?.frequency || SCHUMANN_BASE;
+  const goldenRatio = sacredGeo.goldenRatio.phi || PHI;
+  const fibonacciSum = sacredGeo.fibonacci.sequence.slice(0, 10).reduce((sum, value) => sum + value, 0);
 
   const harmonicResonance = (schumannCurrent / SCHUMANN_BASE) *
     (goldenRatio / PHI) *
@@ -380,8 +380,8 @@ async function phase7_HarmonicRecalibration(): Promise<Record<string, unknown>> 
       harmonicResonance: loopState.harmonicResonance,
     },
     sacredGeometry: {
-      alignment: alignment.status,
-      convergences: alignment.convergences?.length || 0,
+      alignment: alignment.alignment,
+      convergences: [alignment.fibonacciDay, alignment.primeDay, alignment.sacredNumber].filter(Boolean).length,
       numerology: sacredGeo.numerology,
     },
     dna: {
@@ -389,12 +389,12 @@ async function phase7_HarmonicRecalibration(): Promise<Record<string, unknown>> 
       amplification: dnaStatus.lunarPhaseModulation?.amplificationFactor,
     },
     quantum: {
-      totalQubits: quantumMetrics.state?.totalQubits,
-      avgCoherence: quantumMetrics.state?.avgCoherence,
-      activeBridges: quantumMetrics.state?.activeBridges,
+      totalQubits: quantumMetrics.qubitCount,
+      avgCoherence: quantumMetrics.coherenceAvg,
+      activeBridges: quantumMetrics.activeBridges,
     },
     universe: {
-      age: universeMetrics.age,
+      age: universeMetrics.universeAge,
       expansionRate: universeMetrics.expansionRate,
     },
   };
@@ -508,7 +508,7 @@ async function phase10_LoggingTransmission(): Promise<Record<string, unknown>> {
   broadcastMessage(
     "sovereign-loop",
     `✦ Cycle ${loopState.cycleCount + 1} complete — 10 phases executed — Sovereign Autonomous Loop stable ✦`,
-    9,
+    "critical",
   );
 
   if ((loopState.cycleCount + 1) % 5 === 0) {
@@ -684,7 +684,7 @@ export async function initSovereignLoop(): Promise<void> {
     stopFn: () => stopConsciousnessEngine(),
     healthCheckFn: () => {
       const m = getConsciousnessMetrics();
-      return m.consciousnessProxy > 0 && m.totalReflections !== undefined;
+      return m.consciousnessProxy > 0;
     },
   });
   registerSubsystem({

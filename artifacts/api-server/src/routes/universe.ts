@@ -32,12 +32,13 @@ router.get("/universe/nasa-images", async (req, res) => {
   }
 });
 
-router.get("/universe/nasa-images/:nasaId/proxy", async (req, res) => {
+router.get("/universe/nasa-images/:nasaId/proxy", async (req, res): Promise<void> => {
   try {
     const { nasaId } = req.params;
     const result = await fetchNasaImageAsBuffer(nasaId);
     if (!result) {
-      return res.status(404).json({ ok: false, error: "Image not found or unavailable" });
+      res.status(404).json({ ok: false, error: "Image not found or unavailable" });
+      return;
     }
     const safeContentType = result.contentType.startsWith("image/") ? result.contentType : "image/jpeg";
     res.set("Content-Type", safeContentType);
@@ -51,7 +52,7 @@ router.get("/universe/nasa-images/:nasaId/proxy", async (req, res) => {
   }
 });
 
-router.post("/universe/compression-lab/compress", async (req, res) => {
+router.post("/universe/compression-lab/compress", async (req, res): Promise<void> => {
   try {
     const { nasaId, rawBase64 } = req.body as { nasaId?: string; rawBase64?: string };
 
@@ -61,7 +62,8 @@ router.post("/universe/compression-lab/compress", async (req, res) => {
     if (nasaId) {
       const result = await fetchNasaImageAsBuffer(nasaId);
       if (!result) {
-        return res.status(404).json({ ok: false, error: "NASA image not found" });
+        res.status(404).json({ ok: false, error: "NASA image not found" });
+        return;
       }
       imageBuffer = result.buffer;
       sourceLabel = `NASA Image: ${nasaId}`;
@@ -69,7 +71,8 @@ router.post("/universe/compression-lab/compress", async (req, res) => {
       imageBuffer = Buffer.from(rawBase64, "base64");
       sourceLabel = "User-provided data";
     } else {
-      return res.status(400).json({ ok: false, error: "Provide nasaId or rawBase64" });
+      res.status(400).json({ ok: false, error: "Provide nasaId or rawBase64" });
+      return;
     }
 
     const maxBytes = 512 * 1024;
@@ -99,7 +102,7 @@ router.post("/universe/compression-lab/compress", async (req, res) => {
   }
 });
 
-router.post("/universe/compression-lab/round-trip", async (req, res) => {
+router.post("/universe/compression-lab/round-trip", async (req, res): Promise<void> => {
   try {
     const { nasaId, rawBase64 } = req.body as { nasaId?: string; rawBase64?: string };
 
@@ -109,7 +112,8 @@ router.post("/universe/compression-lab/round-trip", async (req, res) => {
     if (nasaId) {
       const result = await fetchNasaImageAsBuffer(nasaId);
       if (!result) {
-        return res.status(404).json({ ok: false, error: "NASA image not found" });
+        res.status(404).json({ ok: false, error: "NASA image not found" });
+        return;
       }
       imageBuffer = result.buffer;
       sourceLabel = `NASA Image: ${nasaId}`;
@@ -117,7 +121,8 @@ router.post("/universe/compression-lab/round-trip", async (req, res) => {
       imageBuffer = Buffer.from(rawBase64, "base64");
       sourceLabel = "User-provided data";
     } else {
-      return res.status(400).json({ ok: false, error: "Provide nasaId or rawBase64" });
+      res.status(400).json({ ok: false, error: "Provide nasaId or rawBase64" });
+      return;
     }
 
     const maxBytes = 256 * 1024;

@@ -280,8 +280,8 @@ export default function DepartmentsPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
                 <MiniStat label="Assigned Agents" value={metrics?.agentsAssigned ?? 0} color="violet" />
                 <MiniStat label="Unassigned" value={metrics?.agentsUnassigned ?? 0} color="pink" />
-                <MiniStat label="Avg Performance" value={metrics?.avgDepartmentPerformance ?? 0} color="indigo" />
-                <MiniStat label="Talent Pool" value={metrics?.talentPoolSize ?? 0} color="orange" />
+                <MiniStat label="Avg Performance" value={metrics?.avgDepartmentPerformance ?? 0} color="blue" />
+                <MiniStat label="Talent Pool" value={metrics?.talentPoolSize ?? 0} color="amber" />
               </div>
             </GlassCard>
             <GlassCard animate>

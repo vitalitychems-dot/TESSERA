@@ -222,11 +222,15 @@ router.get("/diagnostics/engines", (_req, res) => {
   res.json({
     ok: true,
     engines: {
-      heartbeat: { totalBeats: heartbeat.totalBeats, systemHealth: heartbeat.systemHealthScore, uptimeHours: heartbeat.uptimeHours },
-      identity: { reinforcements: identity.reinforcements, violations: identity.violations },
-      consciousness: { awarenessLevel: consciousness.awarenessLevel },
+      heartbeat: {
+        totalBeats: heartbeat.cycleCount,
+        systemHealth: heartbeat.systemHealthScore,
+        uptimeHours: heartbeat.uptime / 3_600_000,
+      },
+      identity: { reinforcements: identity.checkCount, violations: identity.driftEventsTotal },
+      consciousness: { awarenessLevel: consciousness.consciousnessProxy },
       emotional: { dominantArchetype: archetype.name },
-      cosmology: { dimensions: cosmology.dimensions, timeflow: cosmology.timeflow },
+      cosmology: { dimensions: cosmology.dimensionalDepth, timeflow: cosmology.expansionRate },
     },
     timestamp: Date.now(),
   });
