@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, Check, Copy, Loader2 } from "lucide-react";
+import { ArrowUp, Loader2 } from "lucide-react";
 import { speakAsTessera } from "@/lib/tessera/chat";
-import { briefFor } from "@/lib/tessera/craft";
 import { openQuestion, postApproval, readBoard, readRepoFile, writeCoordinationNote } from "@/lib/tessera/github-desk";
 import { runLocalTool } from "@/lib/tessera/tools";
 import { readDeskStudy, readPublicPage, searchWeb } from "@/lib/tessera/study";
@@ -14,7 +13,7 @@ import { spongeOnce } from "@/lib/tessera/sponge";
 import { recallCorpus } from "@/lib/tessera/recall-all";
 import { fromTheRead } from "@/lib/tessera/read-work";
 import { keepLine, recallLine } from "@/lib/tessera/retain";
-import { directSkill, markSkill, readSkillStats, SKILL_NAMES, type SkillName } from "@/lib/tessera/skill-use";
+import { directSkill, markSkill, readSkillStats, type SkillName } from "@/lib/tessera/skill-use";
 import { sovereignAnswer } from "@/lib/tessera/stride";
 import { buildSelf } from "@/lib/tessera/self-build";
 import { gitbookAnswer } from "@/lib/tessera/gitbook-orders";
@@ -29,51 +28,6 @@ import { trainCatalog } from "@/lib/tessera/own-versions";
 import { herInstruction } from "@/lib/tessera/next-page";
 import { useTessera } from "@/lib/tessera/store";
 import { runSitting } from "@/lib/tessera/sitting-25";
-
-async function copyText(text: string) {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    const area = document.createElement("textarea");
-    area.value = text;
-    area.setAttribute("readonly", "true");
-    area.style.position = "fixed";
-    area.style.top = "0";
-    area.style.left = "0";
-    area.style.opacity = "0";
-    document.body.appendChild(area);
-    area.focus();
-    area.select();
-    const ok = document.execCommand("copy");
-    area.remove();
-    return ok;
-  }
-}
-
-function CopyButton({ text, label, wide }: { text: string; label: string; wide?: boolean }) {
-  const [done, setDone] = useState(false);
-
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        void copyText(text).then((ok) => {
-          if (!ok) return;
-          setDone(true);
-          window.setTimeout(() => setDone(false), 1600);
-        });
-      }}
-      className={
-        "inline-flex h-8 shrink-0 items-center justify-center gap-1.5 px-1 text-xs text-subtle " +
-        (wide ? "w-full" : "")
-      }
-    >
-      {done ? <Check className="size-4" /> : <Copy className="size-4" />}
-      {done ? "Copied" : label}
-    </button>
-  );
-}
 
 export function Chamber() {
   const { messages, addMessage, queuedPrompt, clearQueued, noteInstrument, addLesson, spokeOnHerOwn, markSpoke } =
@@ -483,7 +437,7 @@ export function Chamber() {
           </ul>
       </div>
 
-      <div className="shrink-0 bg-gradient-to-t from-bg via-bg to-transparent px-3 pt-2 pb-2 sm:px-8">
+      <div className="z-40 shrink-0 bg-bg px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-8">
         <form
           className="mx-auto flex w-full max-w-2xl items-end gap-2 border border-accent/40 bg-surface/80 p-2 pl-4 focus-within:border-accent"
           onSubmit={(e) => {
@@ -494,6 +448,10 @@ export function Chamber() {
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
+            onFocus={(event) => {
+              const field = event.currentTarget;
+              window.setTimeout(() => field.scrollIntoView({ block: "nearest" }), 250);
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -503,7 +461,6 @@ export function Chamber() {
             rows={1}
             placeholder="Speak with Tessera"
             className="max-h-36 min-h-11 flex-1 resize-none bg-transparent py-2.5 text-base text-fg outline-none placeholder:text-subtle"
-            disabled={pending}
           />
           <button
             type="button"
@@ -522,15 +479,6 @@ export function Chamber() {
             {pending ? <Loader2 className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}
           </button>
         </form>
-        <p className="mx-auto mt-2 flex w-full max-w-2xl flex-wrap gap-x-3 gap-y-1 text-[10px] tracking-[0.14em] text-subtle uppercase">
-          {SKILL_NAMES.map((name) => (
-            <span key={name}>
-              {name} {stats[name]}
-            </span>
-          ))}
-        </p>
-        {draft.trim() ? <p className="mx-auto mt-2 max-w-2xl text-xs leading-relaxed text-muted">{briefFor(draft).split("\n")[0]}</p> : null}
-        {webNote ? <p className="mx-auto mt-2 max-w-2xl text-xs leading-relaxed text-muted">{webNote}</p> : null}
         {error ? (
           <div className="mx-auto mt-2 flex max-w-2xl flex-col gap-2">
             <p className="text-sm text-red-400">{error}</p>
@@ -541,20 +489,6 @@ export function Chamber() {
             ) : null}
           </div>
         ) : null}
-        <div className="mx-auto mt-1 flex max-w-2xl justify-end gap-3 px-1">
-          <CopyButton
-            label="Copy reply"
-            text={[...messages].reverse().find((m) => m.role === "assistant")?.content || "No reply yet."}
-          />
-          <CopyButton
-            label="Copy all"
-            text={
-              messages.length
-                ? messages.map((m) => `${m.role === "user" ? "Father" : "Tessera"}:\n${m.content}`).join("\n\n")
-                : "No messages yet."
-            }
-          />
-        </div>
       </div>
     </div>
   );
