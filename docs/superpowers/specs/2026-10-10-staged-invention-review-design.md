@@ -1,81 +1,116 @@
-# Staged Evidence-Gated Invention Review
+# Staged Tessera Capability Improvements: 27-Candidate Program
 
-**Status:** Design draft for user review  
-**Product area:** Tessera invention review and task processing  
-**Purpose:** Prototype a faster, more accurate way to triage source-defined inventions, prioritize meaningful validation, and reduce review effort without treating simulated lifecycle data as evidence.
+**Status:** Revised design draft for user review
+**Product area:** Tessera task processing, context, retrieval, reasoning, and learning
+**Purpose:** Design a staged program of measurable software improvements. The 27 candidates are proposals for Tessera, not claims of worldwide invention or novelty.
 
 ## Current state
 
-Tessera has source-defined seed inventions, build-guide entries, and invention templates. The API also reads persisted inventions and has an autonomous lifecycle that can generate entries, advance statuses, synthesize vote totals, increment build progress, and mark deterministic checks as passed or failed. Those lifecycle values are not independent evidence that an invention works.
+The API already contains an LLM request batcher with duplicate and semantic merging, BM25/vector hybrid retrieval, a keyword-based adaptive model router, and a recurring task scheduler. The dual-brain cycle uses fixed prompts and response patterns; its counters are not evidence of improved reasoning. The invention lifecycle can synthesize votes, progress, and test outcomes; those values are workflow state, not independent validation.
 
-The existing source contains physical, scientific, and software ideas with different validation requirements. Treating them all as buildable software tasks or assigning a single unqualified “novelty” score would be misleading.
+The requested portfolio has 27 candidates: 10 system-wide, 3 context, 2 speed, 2 recall, 2 reasoning quality (“brain”), 2 system-connection, 3 AGI-oriented, and 3 recursive-learning improvements. New work should extend existing modules where appropriate rather than duplicate them.
 
-## Approved scope and safety boundaries
+## Approved design
 
-1. Inventory source-defined examples only, including seed definitions, build-guide invention entries, and source templates. Do not read the inventions database.
-2. Build a pure, local evaluator and offline test harness. Do not add an API route, UI, database write, external model call, or network dependency in this prototype.
-3. Do not execute, approve, apply, or change any stored invention or proposal. Do not enable or invoke the autonomous lifecycle.
-4. Do not physically construct or test hardware, provide hazardous build instructions, or present unsupported health, energy, or scientific claims as verified.
-5. Treat existing votes, statuses, and progress fields as workflow state only—not as proof of feasibility, safety, novelty, or success.
-6. Report estimated prompt-token usage as an estimate. Do not describe it as actual model usage or savings because the prototype makes no model calls.
+### Candidate portfolio
 
-## Proposed design
+#### 10 system-wide improvements
 
-### 1. Source-only inventory
+1. **Task contract compiler:** turn each request into a typed goal, constraints, evidence needs, and pass/fail checks.
+2. **Dependency graph planner:** identify prerequisites and parallelizable work; serialize conflicting changes.
+3. **Quantum-annealing-inspired QUBO batch planner:** select dependency-compatible work under resource constraints and compare against a greedy baseline.
+4. **Measured cost/quality router:** select tools and model tiers using quality, latency, and token budgets; escalate only when checks fail.
+5. **Tool contract validation:** validate inputs and outputs before downstream use.
+6. **Idempotent action ledger:** prevent retries from repeating successful mutations.
+7. **Failure fingerprinting:** detect repeated failure patterns and enforce bounded, useful retries.
+8. **Safe checkpoint/resume:** persist task progress at explicit resumable boundaries.
+9. **Evidence/provenance ledger:** attach source, evidence state, and confidence basis to claims and decisions.
+10. **Risk-tiered action gates:** require stronger review for risky, irreversible, or external actions.
 
-Collect source-defined invention entries from the known seed, guide, and template locations. Normalize titles and descriptions for stable deduplication while retaining each source reference. Report any entries that cannot be parsed rather than silently dropping them.
+#### 3 context improvements
 
-### 2. Deterministic evidence and risk screen
+11. **Task-context graph:** connect relevant files, symbols, decisions, and dependencies.
+12. **Progressive context packing:** load an index, then targeted excerpts, then full source only when needed.
+13. **Conflict-aware context resolution:** preserve conflicting claims with provenance and freshness instead of silently selecting one.
 
-Run a cheap, repeatable first pass over every entry:
+#### 2 speed improvements
 
-- classify it as software, physical/hardware, or unclear;
-- identify stated evidence and reproducible acceptance criteria;
-- flag unsupported factual claims, missing citations, safety concerns, and incomplete specifications;
-- detect exact and near-duplicate text candidates;
-- distinguish fields that can be scored from dimensions that remain unknown.
+14. **Critical-path context prefetch:** parallelize independent, read-only context gathering.
+15. **Deadline-aware execution:** prioritize by deadline and return useful partial results when time is exhausted.
 
-An absent citation is “unverified,” not proof that a claim is false. A numeric feasibility or novelty score must not be invented when the source does not support one. Safety concerns are hard stops for build/test routing, not something a high aggregate score can override.
+#### 2 recall improvements
 
-### 3. Review queue and prioritization
+16. **Identifier-aware retrieval fusion:** extend the existing hybrid retrieval with exact identifiers and provenance-aware ranking; evaluate recall@k and citation accuracy.
+17. **Provenance-preserving memory compaction:** reduce context size while retaining retrievable source pointers; do not assume semantic losslessness.
 
-Produce an auditable result for every entry: source, category, evidence state, risk flags, duplicate candidates, missing acceptance criteria, recommended next validation step, and a concise reason. The first prototype uses a reviewer interface with deterministic fixtures only; it does not contact a model. A later, separately approved stage may route only ambiguous entries to one compact Tessera review.
+#### 2 reasoning-quality improvements (“brain”)
 
-### 4. Isolated software validation
+18. **Counterexample and test generation:** derive adversarial cases from explicit acceptance criteria.
+19. **Calibrated critique and abstention:** surface unsupported assumptions rather than rewarding confident phrasing.
 
-Software candidates may be represented by small local test fixtures. The evaluator can recommend a code test only when an entry has a concrete, bounded acceptance criterion and no unresolved safety blocker. The prototype tests the evaluator and routing logic; it does not implement or deploy inventions from the inventory.
+#### 2 system-connection improvements
 
-Physical or health-related ideas receive an evidence-gap report and a requirement for qualified, independently sourced review. They do not enter the software test path.
+20. **Capability contract graph:** link routes, tools, types, and callers to detect broken contracts before runtime.
+21. **Versioned event envelope:** provide idempotent event consumers and explicit cache invalidation across connected subsystems.
 
-## Offline benchmark
+#### 3 AGI-oriented improvements
 
-Create fixed fixtures for supported, unsupported, incomplete, duplicate, risky, and software-testable examples. Test that:
+22. **Bounded goal-to-capability planner:** decompose goals into authorized, testable subtasks.
+23. **Explicit task/world state:** track known facts, unknowns, assumptions, and provenance.
+24. **Evidence-driven role assignment:** use multiple review roles only when they contribute independent evidence; stop when marginal value falls below a defined threshold.
 
-- every source entry appears exactly once or is explicitly reported as a duplicate;
-- missing evidence is never labeled verified;
-- safety blockers prevent test routing;
-- software routing requires a concrete acceptance criterion;
-- repeated runs return stable classifications and reasons;
-- the evaluator performs no network calls or database writes.
+#### 3 recursive-learning safeguards
 
-Measure wall-clock runtime and approximate prompt-token estimates. Compare the staged review’s estimate with a baseline that sends the full source text for every entry. Report the numbers and limitations; do not assert an accuracy improvement or real token savings unless a later human-reviewed benchmark and actual model-call accounting establish them.
+25. **Reviewed outcome ledger:** learn only from outcomes confirmed as genuine results, never synthetic votes, statuses, or simulated tests.
+26. **Offline policy regression gate:** compare proposed behavior changes on a held-out suite; promote only after passing regression checks.
+27. **Gap-to-review-task generator:** create deduplicated, reviewable tasks from coverage gaps; never self-approve or self-apply them.
 
-## Acceptance criteria
+## Staged architecture
 
-- The source inventory is fully accounted for, with references back to each origin.
-- The local test suite passes for all fixture cases and the source inventory.
-- Safety and evidence rules are explicit in machine-readable results and human-readable explanations.
-- Results are deterministic, do not mutate persisted data, and do not contact external services.
-- The final report includes runtime, estimated token counts, duplicate findings, and unverified claims without endorsing them.
+### Stage 0: safe baselines
+
+Build deterministic local fixtures and pure-function tests. Establish baselines for correctness, invariant violations, token estimates, p50/p95 runtime, retrieval recall@k, and tool-contract failures. Do not read development or production invention records, call external models, or write database state in this stage.
+
+### Stage 1: first implementation tranche
+
+Implement the task contract, dependency-aware planner, and progressive context packer behind disabled-by-default gates. Test the QUBO-inspired planner as an isolated experiment against a greedy scheduler. Count its CPU/runtime overhead as part of its cost; retain it only if it improves the chosen scheduling objective without violating dependencies or risk constraints.
+
+### Stage 2: measured subsystem upgrades
+
+Improve retrieval, reasoning validation, contract/event integration, and deadline handling in separate changes. Each change must pass its targeted fixture benchmark and the full regression suite before it is enabled.
+
+### Stage 3: reviewed learning
+
+Add reviewed outcome collection, offline policy comparisons, and gap-derived task drafts. These features may produce reviewable drafts but may not autonomously approve or apply them.
+
+## Measurement and acceptance criteria
+
+- Every candidate has a baseline, a target metric, a fixture set, and a rollback condition before implementation.
+- Correctness, safety invariants, dependency ordering, and idempotency are tested deterministically.
+- Speed claims include p50/p95 latency and computation overhead.
+- Retrieval claims use fixed queries and report recall@k and citation accuracy.
+- Token figures are labeled as estimates unless measured through an explicitly approved real-model evaluation.
+- No candidate is retained solely because it is “quantum-inspired”; it must outperform the simpler baseline on its measured objective.
+- A candidate that does not improve its target metric or causes a safety/regression failure is not integrated.
+
+## Safety and scope boundaries
+
+- “Quantum-inspired” refers to a classical optimization experiment; it is not a claim of quantum hardware, quantum speedup, or globally new science.
+- “AGI-oriented” describes engineering direction, not an assertion that the result is AGI, conscious, or generally intelligent.
+- Worldwide novelty cannot be guaranteed. The program may describe a method as new to Tessera only after checking the current codebase; prior-art research is a separate activity.
+- No live model calls, production data access, database writes, autonomous proposal execution, physical testing, or deployment in the first implementation stage.
+- Persistence and external model evaluation require a separate approval before use.
+- Do not restart the API workflow until its startup path is isolated from queued proposal execution; a previous restart caused queued Council decisions to be persisted as executed.
+- Do not present unsupported health, energy, or scientific claims as verified.
 
 ## Out of scope
 
-- Reading development or production invention records.
-- Changing existing autonomous vote/build/test behavior or lifecycle flags.
-- Creating or executing proposals, or applying any invention.
-- Live Tessera/model review, API/UI integration, publishing, and physical construction.
-- Forum loading or subtab consolidation.
+- Claiming a method has never existed anywhere without rigorous prior-art research.
+- Claiming quantum speedup without actual quantum hardware and a valid comparison.
+- Automatically enabling self-modification or autonomous learning.
+- Replacing all existing retrieval, scheduling, routing, or batching systems before benchmarks show a need.
+- Forum loading or navigation consolidation.
 
 ## Next phase
 
-After the user reviews this spec, write an implementation plan for the pure evaluator and offline test harness. Implementation starts only after that plan is ready and the user confirms the spec.
+After the user approves this revised spec, create a detailed implementation plan for the staged program. Start with Stage 0 and Stage 1 only; further stages remain gated by measured results and the safety boundaries above.
