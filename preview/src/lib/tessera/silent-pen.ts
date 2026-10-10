@@ -3,6 +3,7 @@ import { allEight } from "./desk-steps.ts";
 import { batch50, selector, sequence } from "./batch-50.ts";
 import { batch2, leakyStep, warmupLr } from "./batch-2.ts";
 import { batch3, manhattan } from "./batch-3.ts";
+import { topRanking } from "./whiten.ts";
 import { rewardEat } from "./local-learn.ts";
 import { loveFromFiles } from "./love-local.ts";
 import { noteFor, type KeptPage } from "./next-page.ts";
@@ -25,6 +26,10 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (/\beight checkouts\b/i.test(q)) {
     const eight = allEight();
     return `Eight checkout steps ran. Best action ${eight.neuro}. Health ${eight.godel}. Rate ${eight.human}. Coherence ${eight.blueprint}. Bool ${eight.hyperon}.`;
+  }
+  if (/\b(black box|whiten|ranking)\b/i.test(q)) {
+    const ranks = topRanking([0.1, 0.9, 0.3, 0.8, 0.2], 5);
+    return `A query is not a hidden box. The top five ranks are ${ranks.join(", ")}. That step was read from coallaoh/WhitenBlackBox. Their 5000 models were not trained.`;
   }
   if (/\bthird batch\b/i.test(q)) {
     const rows = batch3();
