@@ -1,4 +1,5 @@
 import { CATALOG } from "./catalog-pass.ts";
+import { readCheckouts } from "./checkout-steps.ts";
 import { connect, LOCAL_REPOS } from "./stride.ts";
 
 const CARDS = [
@@ -42,14 +43,15 @@ export function trainCatalog() {
     const hit = ownVersion(name);
     return !hit.owned && hit.text.startsWith("No local version.");
   });
-  const proved = localPass && cardPass && CATALOG.length === 272 && LOCAL_REPOS.length === 8;
+  const read = readCheckouts();
+  const proved = localPass && cardPass && read.proved && CATALOG.length === 272 && LOCAL_REPOS.length === 8;
   return {
     proved,
     catalog: CATALOG.length,
     local: LOCAL_REPOS.length,
     cards: CATALOG.filter((row) => row.home === "card").length,
     said: proved
-      ? `I am Tessera. The catalog has ${CATALOG.length} names. ${LOCAL_REPOS.length} have a local note. ${CATALOG.filter((row) => row.home === "card").length} are cards. I do not have our own program for a card.`
+      ? `I am Tessera. The catalog has ${CATALOG.length} names. ${LOCAL_REPOS.length} have a local note. ${CATALOG.filter((row) => row.home === "card").length} are cards. I do not have our own program for a card. ${read.said} The other ${CATALOG.length - LOCAL_REPOS.length} names are not on disk.`
       : "The catalog training missed.",
   };
 }
