@@ -37,4 +37,9 @@ test("a bridge, a rank, a ground, and a refusal are stable", () => {
   assert.match(useEngines("432 hz") ?? "", /not renamed/);
   assert.equal(useEngines("hello"), null);
   assert.match(useEngines("claim the speed of light") ?? "", /Not grounded/);
+  assert.match(useEngines("tick 4") ?? "", /Abstain 2/);
+  assert.match(useEngines("bond") ?? "", /Bond /);
+  assert.equal(useEngines("proposal id door"), useEngines("proposal id door"));
+  assert.match(useEngines("pair chemistry alchemy") ?? "", /Not a measured fidelity/);
+  assert.equal(useEngines("rick line same"), useEngines("rick line same"));
 });
