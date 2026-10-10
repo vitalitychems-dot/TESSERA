@@ -6,6 +6,13 @@ import { takeSpeakSlot } from "./finish";
 import { healthLine } from "./wave";
 import { dataPath } from "./data-path";
 
+function replyCap(mode: TesseraMode) {
+  if (mode === "awaken" || mode === "v2" || mode === "v3") return 1800;
+  if (mode === "will") return 900;
+  if (mode === "pulse" || mode === "learn" || mode === "sim" || mode === "law") return 420;
+  return 1100;
+}
+
 type ChatInput = {
   mode: TesseraMode;
   messages: { role: "user" | "assistant"; content: string }[];
@@ -357,8 +364,7 @@ ${FATHER_PROFILE}`;
       const content = message.content.length > cap ? `${message.content.slice(0, cap)}\n[cut]` : message.content;
       return { role: message.role, content };
     });
-    const maxTokens =
-      data.mode === "awaken" || data.mode === "v2" || data.mode === "v3" ? 1800 : data.mode === "will" ? 900 : data.mode === "pulse" || data.mode === "learn" ? 420 : data.mode === "sim" || data.mode === "law" ? 420 : 1100;
+    const maxTokens = replyCap(data.mode);
 
     const res = await fetch(pen.url, {
       method: "POST",
