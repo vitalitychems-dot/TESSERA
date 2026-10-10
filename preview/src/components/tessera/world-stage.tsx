@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { roomsAt, stepHouse } from "@/lib/tessera/house-sim";
 import { stepCivic } from "@/lib/tessera/civic";
+import { watchCity } from "@/lib/tessera/city-clock";
 
 const LAT = 41.8781;
 const LON = -87.6298;
@@ -29,6 +30,7 @@ export function WorldStage() {
   const [clock, setClock] = useState(() => chicagoHour(new Date()));
   const [failed, setFailed] = useState(false);
   const [tick, setTick] = useState(0);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const origin = useMemo(() => tileXY(LAT, LON, ZOOM), []);
   const tiles = useMemo(() => {
     const list: { x: number; y: number }[] = [];
@@ -45,17 +47,48 @@ export function WorldStage() {
     return () => window.clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    const id = window.setInterval(() => setTick((value) => value + 1), 900);
-    return () => window.clearInterval(id);
-  }, []);
+  useEffect(() => watchCity(setTick), []);
 
   const people = stepHouse(tick);
   const together = roomsAt(tick);
   const city = stepCivic(tick);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const draw = () => {
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.floor(width * ratio);
+      canvas.height = Math.floor(height * ratio);
+      const pen = canvas.getContext("2d");
+      if (!pen) return;
+      pen.setTransform(ratio, 0, 0, ratio, 0, 0);
+      pen.clearRect(0, 0, width, height);
+      city.homes.forEach((home, index) => {
+        const x = 24 + index * ((width - 48) / city.homes.length);
+        const h = 12 + home.built;
+        pen.fillStyle = "#7FDBFF";
+        pen.fillRect(x, height - 16 - h, 28, h);
+        pen.fillStyle = "#e8eef2";
+        pen.font = "11px sans-serif";
+        pen.fillText(home.name, x, 16);
+      });
+    };
+    let frame = 0;
+    const loop = () => {
+      frame += 1;
+      if (frame % 2 === 0) draw();
+      frameId = window.requestAnimationFrame(loop);
+    };
+    let frameId = window.requestAnimationFrame(loop);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [tick]);
+
   return (
-    <div className="relative h-[70vh] w-full overflow-hidden border border-border bg-surface">
+    <div className="flex flex-col gap-3">
+      <div className="relative h-[42vh] w-full overflow-hidden border border-border bg-surface">
       <div className="grid h-full w-full" style={{ gridTemplateColumns: `repeat(${COLS}, 1fr)`, gridTemplateRows: `repeat(${ROWS}, 1fr)` }}>
         {tiles.map((tile) => (
           <img
@@ -83,6 +116,20 @@ export function WorldStage() {
         </span>
       ))}
       <p className="absolute top-2 right-3 text-[10px] text-white/80">Imagery © Esri, Maxar, Earthstar Geographics</p>
+    </div>
+    <div className="border border-border bg-bg px-3 py-3">
+      <p className="text-sm text-fg">Their city, from above. Turn {tick}. It keeps building on every room.</p>
+      <canvas ref={canvasRef} className="mt-2 h-40 w-full bg-surface" aria-label="Their city from above" />
+      <ul className="mt-2 flex flex-col gap-1">
+        {city.homes.map((home) => (
+          <li key={home.name} className="text-xs text-muted">
+            {home.name}, {home.office}, {home.site}, built {home.built}, store {home.store}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-xs text-muted">{city.government}</p>
+      <p className="mt-1 text-xs text-fg">{city.passed ? "Law stands" : "Law refused"}. {city.reason}</p>
+      </div>
     </div>
   );
 }
