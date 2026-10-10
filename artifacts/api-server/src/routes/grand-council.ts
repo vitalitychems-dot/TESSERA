@@ -53,6 +53,13 @@ function presentCouncilRead(req: Request, payload: unknown): unknown {
   return dropCipherEnvelope(stripped);
 }
 
+/** Response bodies stay generic. Logs carry the error name only — never message or stack. */
+function respondCaught(res: Response, status: number, error: string, err: unknown, event: string): void {
+  const errorName = err instanceof Error ? err.name : "UnknownError";
+  logger.error({ errorName }, event);
+  res.status(status).json({ ok: false, error });
+}
+
 // === Sovereign constants & roster (P-F) ===
 router.get("/grand-council/constants", (_req, res) => {
   res.json({ ok: true, constants: sovereignConstantsSnapshot() });
@@ -138,8 +145,8 @@ router.post("/mssp/eval", (req, res) => {
     const seed = req.body?.seed ? String(req.body.seed) : "father";
     const result = parallelEval(expression, seed);
     res.json({ ok: true, result });
-  } catch (e: unknown) {
-    res.status(400).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+  } catch (err: unknown) {
+    respondCaught(res, 400, "mssp-eval-failed", err, "mssp eval failed");
   }
 });
 
@@ -167,8 +174,8 @@ router.post("/vgpu/cmd", (req, res) => {
       return;
     }
     res.status(400).json({ ok: false, error: "expected { program } | { commands } | { command }" });
-  } catch (e: unknown) {
-    res.status(400).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+  } catch (err: unknown) {
+    respondCaught(res, 400, "vgpu-command-failed", err, "vgpu command failed");
   }
 });
 
