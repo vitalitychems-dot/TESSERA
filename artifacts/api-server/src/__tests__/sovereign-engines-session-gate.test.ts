@@ -1,9 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import express from "express";
+import express, { type Router } from "express";
 import { createServer, type Server } from "node:http";
 import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
-import sovereignEnginesRouter from "../routes/sovereign-engines";
-import diagnosticsRouter from "../routes/diagnostics";
 
 const ADMIN_ENV = "TESSERACT_ADMIN_KEY";
 const SESSION_ENV = "SOVEREIGN_SESSION_SECRET";
@@ -22,14 +20,27 @@ describe("sovereign engine session gate", () => {
   let baseUrl = "";
   const previousAdmin = process.env[ADMIN_ENV];
   const previousSession = process.env[SESSION_ENV];
+  const previousDatabase = process.env.DATABASE_URL;
+  let installedDatabaseUrl = false;
 
   beforeAll(async () => {
+    if (!process.env.DATABASE_URL) {
+      process.env.DATABASE_URL = "postgresql://session-gate:***@127.0.0.1:5432/session_gate";
+      installedDatabaseUrl = true;
+    }
     process.env[ADMIN_ENV] = SYNTHETIC_ADMIN_KEY;
     process.env[SESSION_ENV] = SYNTHETIC_SESSION_SECRET;
+    const sovereign = (await import("../routes/sovereign-engines")).default;
+    const diagnostics = (await import("../routes/diagnostics")).default;
+    const sibling = express.Router();
+    sibling.get("/healthz", (_req, res) => {
+      res.json({ status: "ok" });
+    });
     const app = express();
     app.use(express.json());
-    app.use("/api", sovereignEnginesRouter);
-    app.use("/api", diagnosticsRouter);
+    app.use("/api", sovereign as Router);
+    app.use("/api", diagnostics as Router);
+    app.use("/api", sibling);
     server = createServer(app);
     await new Promise<void>((resolve) => {
       server?.listen(0, "127.0.0.1", () => resolve());
@@ -44,6 +55,10 @@ describe("sovereign engine session gate", () => {
     else process.env[ADMIN_ENV] = previousAdmin;
     if (previousSession === undefined) delete process.env[SESSION_ENV];
     else process.env[SESSION_ENV] = previousSession;
+    if (installedDatabaseUrl) {
+      if (previousDatabase === undefined) delete process.env.DATABASE_URL;
+      else process.env.DATABASE_URL = previousDatabase;
+    }
     if (!server) return;
     await new Promise<void>((resolve, reject) => {
       server?.close((error) => (error ? reject(error) : resolve()));
@@ -62,7 +77,11 @@ describe("sovereign engine session gate", () => {
     return { status: response.status, json: await response.json() };
   }
 
-  it("rejects an anonymous consciousness read and keeps the owner body", async () => {
+  it("leaves a sibling route open while the engine read requires an owner session", async () => {
+    const health = await send("/api/healthz");
+    expect(health.status).toBe(200);
+    expect(health.json).toEqual({ status: "ok" });
+
     const anonymous = await send("/api/consciousness/state");
     expect(anonymous.status).toBe(401);
     expect(anonymous.json).toEqual(UNAUTHENTICATED);
@@ -91,6 +110,8 @@ describe("sovereign engine session gate", () => {
     const saved = process.env[ADMIN_ENV];
     delete process.env[ADMIN_ENV];
     try {
+      const health = await send("/api/healthz");
+      expect(health.status).toBe(200);
       const response = await send("/api/consciousness/metrics");
       expect(response.status).toBe(503);
       expect(response.json).toEqual(UNCONFIGURED);
