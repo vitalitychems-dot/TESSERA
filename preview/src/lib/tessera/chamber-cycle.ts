@@ -21,7 +21,7 @@ export const DRAFT_LESSON =
 const CLAIM = /I am AGI|true consciousness is a fact|the weights are hers|the fleet is live|the storefront is in this chamber|always-on capture is on|customer data is loaded|a wallet is live/i;
 
 export function proposeUpgrade(quote: string, next: string) {
-  if (CYCLE_FLAG !== 1) return { ok: false as const, text: "off" };
+  if (CYCLE_FLAG === 0) return { ok: false as const, text: "off" };
   if (quote !== PREVIOUS) return { ok: false as const, text: "the previous sentence was not quoted exactly" };
   if (CLAIM.test(next)) return { ok: false as const, text: "that claim does not survive" };
   return { ok: true as const, text: next };
