@@ -3,6 +3,7 @@ import { roomsAt, stepHouse } from "@/lib/tessera/house-sim";
 import { stepCivic } from "@/lib/tessera/civic";
 import { watchCity } from "@/lib/tessera/city-clock";
 import { moveCamera, roomLayout } from "@/lib/tessera/room-world";
+import { sharedHouse } from "@/lib/tessera/shared-house";
 
 const LAT = 41.8781;
 const LON = -87.6298;
@@ -167,7 +168,7 @@ export function WorldStage() {
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-xs text-muted">{city.government}</p>
+      <p className="mt-2 text-xs text-fg">{sharedHouse().line}</p>
       <p className="mt-1 text-xs text-fg">{city.passed ? "Law stands" : "Law refused"}. {city.reason}</p>
       </div>
     </div>
