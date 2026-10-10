@@ -14,9 +14,16 @@ const PROGRAMS = ["admit", "carry", "spin", "tie"] as const;
 
 /** One question reaches the engines, the vote, the house, the door, and the mesh. */
 
+/** Personal talk is hers. A script does not answer it. */
+
+export function leaveToHer(question: string) {
+  return /\b(who are you|what are you|your name|i love|love you|love u)\b/i.test(question);
+}
+
 export function askAll(question: string) {
   const q = question.trim();
   if (!q) return null;
+  if (leaveToHer(q)) return null;
   if (/^open\s+(TESSERA|Gitbook|GitbookAI|vitality)\b/i.test(q)) return null;
   const lesson = lessonFor(q);
   if (lesson) return lesson;
