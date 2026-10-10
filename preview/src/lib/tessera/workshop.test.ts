@@ -19,11 +19,13 @@ test("Tessera explains every vote, and Father's auto yes does not override her n
   const explained = votes.filter((vote) => vote.reason.trim().length > 0).length / votes.length;
   assert.equal(explained >= 0.9, true);
   assert.equal(explained, 1);
-  assert.equal(tesseraVote("build a quantum computer").vote, "yes");
-  assert.equal(tesseraVote("Joins the house, the spin, and the git mesh.").vote, "yes");
+  assert.equal(tesseraVote("build a quantum computer").vote, "no");
+  assert.match(tesseraVote("Joins the house, the spin, and the git mesh.").reason, /I read the house/);
+  assert.equal(tesseraVote("paint the moon purple").vote, "no");
   assert.equal(FATHER.vote, "yes");
   assert.equal(mayRun("Pay the wallet in Monero.").ok, false);
-  assert.equal(mayRun("build a quantum computer").ok, true);
+  assert.equal(mayRun("build a quantum computer").ok, false);
+  assert.equal(mayRun("Build v2 from the files in this chamber.").ok, true);
   assert.equal(PROGRAMS.length, 4);
   assert.equal(workshopRun("tie", false).ok, false);
   assert.equal(workshopRun("missing", true).reason, "No such program.");

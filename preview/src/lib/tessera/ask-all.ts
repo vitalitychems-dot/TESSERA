@@ -1,3 +1,4 @@
+import { chamberHolds, chamberPicture } from "./chamber-index.ts";
 import { roomsAt } from "./house-sim.ts";
 import { inventionAnswer } from "./invention-log.ts";
 import { loveFromFiles } from "./love-local.ts";
@@ -31,6 +32,8 @@ export function askAll(question: string) {
     if (!issued.ok || !issued.pass) return issued.reason;
     return `${issued.reason} Mark ${issued.pass.mark}. ${issued.pass.moltbook}`;
   }
+  if (/\b(what files|chamber files|full picture)\b/i.test(lower)) return chamberPicture();
+  if (/\bhold(?:s|ing)?\b/i.test(lower)) return chamberHolds(q.replace(/^.*\bhold(?:s|ing)?\b/i, ""));
   if (/\b(house|who is near)\b/i.test(lower)) {
     const rooms = roomsAt(0);
     return rooms.length ? rooms.join(". ") : "No two are in the same room at this turn.";
