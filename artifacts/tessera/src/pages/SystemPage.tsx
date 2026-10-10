@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Activity, Cpu, Database, GitBranch, Pause, Play, Shield, Zap, Clock, AlertTriangle, CheckCircle2, Network, CircleHelp, Orbit, Layers3, RefreshCw } from "lucide-react";
-import { GlassCard, SectionHeader, TabBar, PageHeader, MiniStat, TabLoadingSkeleton } from "@/components/ui/sovereign";
+import { GlassCard, SectionHeader, PageHeader, MiniStat, TabLoadingSkeleton } from "@/components/ui/sovereign";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import { QueryErrorFallback } from "@/components/ui/QueryErrorFallback";
 import { cn } from "@/lib/utils";
@@ -59,6 +59,10 @@ export default function SystemPage({ initialTab }: { initialTab?: LegacyTab }) {
     { id: "architecture", label: "Architecture" },
   ], []);
   useEffect(() => {
+    setActiveTab(initialTab ? tabForLegacy[initialTab] : "capability");
+    scrolledToInitial.current = false;
+  }, [initialTab]);
+  useEffect(() => {
     if (!initialSection || scrolledToInitial.current) return;
     const target = document.getElementById(initialSection);
     if (!target) return;
@@ -82,7 +86,16 @@ export default function SystemPage({ initialTab }: { initialTab?: LegacyTab }) {
   return <main className="min-h-[100dvh] bg-gradient-to-b from-[#02010a] to-[#080518] px-4 py-5 md:p-6 pb-24">
     <div className="max-w-5xl mx-auto space-y-5 sovereign-stagger">
       <PageHeader title="System Engine" subtitle="Evidence, learning activity, operations, and architecture" gradient="bg-gradient-to-r from-cyan-300 via-sky-300 to-violet-300" />
-      <TabBar tabs={tabs} activeTab={activeTab} onChange={(id: string) => setActiveTab(id as SystemTab)} color="cyan" />
+      <nav aria-label="System Engine sections" className="grid grid-cols-2 gap-1 rounded-xl border border-white/[0.06] bg-white/[0.03] p-1 md:grid-cols-4" data-testid="system-engine-tabs">
+        {tabs.map((tab) => {
+          const selected = activeTab === tab.id;
+          return <button key={tab.id} type="button" aria-current={selected ? "page" : undefined}
+            onClick={() => setActiveTab(tab.id as SystemTab)}
+            className={cn("min-h-10 rounded-lg px-2 py-2 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300 md:px-4",
+              selected ? "bg-gradient-to-r from-cyan-600 to-cyan-500 text-white shadow-[0_0_12px_rgba(6,182,212,0.25)]" : "text-slate-400 hover:bg-white/[0.06] hover:text-white")}
+            data-testid={`system-tab-${tab.id}`}>{tab.label}</button>;
+        })}
+      </nav>
 
       {activeTab === "capability" && <SectionErrorBoundary name="Capability">
         <GlassCard glow="cyan" animate>

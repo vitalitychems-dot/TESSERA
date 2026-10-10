@@ -9,6 +9,7 @@ import { NLPGoalsProvider } from "@/lib/nlpGoalsContext";
 import { Component, type ErrorInfo, type ReactNode, useEffect, useRef, useState, lazy, Suspense } from "react";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import MobileNav from "@/components/MobileNav";
+import { Sidebar } from "@/components/Sidebar";
 import ActiveCommandsOverlay from "@/components/ActiveCommandsOverlay";
 import MeshStatusBadge from "@/components/MeshStatusBadge";
 import HyperdimensionalBackground from "@/components/HyperdimensionalBackground";
@@ -304,21 +305,24 @@ function App() {
               <SectionErrorBoundary name="Background" compact>
                 <HyperdimensionalBackground />
               </SectionErrorBoundary>
-              <div className="flex flex-col h-dvh w-full overflow-hidden" style={{ position: "relative", zIndex: 2 }}>
-                <Toaster />
-                <SectionErrorBoundary name="Status Badge" compact>
-                  <div className="fixed top-2 right-2 z-50">
-                    <MeshStatusBadge />
+              <div className="flex h-dvh w-full overflow-hidden" style={{ position: "relative", zIndex: 2 }}>
+                <Sidebar />
+                <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+                  <Toaster />
+                  <SectionErrorBoundary name="Status Badge" compact>
+                    <div className="fixed top-2 right-2 z-50">
+                      <MeshStatusBadge />
+                    </div>
+                  </SectionErrorBoundary>
+                  <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden" data-scroll-container style={{ paddingBottom: "calc(56px + env(safe-area-inset-bottom, 0px))", WebkitOverflowScrolling: "touch" }}>
+                    <ScrollToTop />
+                    <AppRouter />
                   </div>
-                </SectionErrorBoundary>
-                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden" data-scroll-container style={{ paddingBottom: "calc(56px + env(safe-area-inset-bottom, 0px))", WebkitOverflowScrolling: "touch" }}>
-                  <ScrollToTop />
-                  <AppRouter />
+                  <SectionErrorBoundary name="Commands" compact>
+                    <ActiveCommandsOverlay />
+                  </SectionErrorBoundary>
+                  <MobileNav />
                 </div>
-                <SectionErrorBoundary name="Commands" compact>
-                  <ActiveCommandsOverlay />
-                </SectionErrorBoundary>
-                <MobileNav />
               </div>
             </WouterRouter>
           </TooltipProvider>
