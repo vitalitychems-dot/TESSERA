@@ -40,6 +40,19 @@ export function liveCount(nodes = liveNodes()) {
   return { total: nodes.length, known, missing: nodes.length - known };
 }
 
+export function hitNode(x: number, y: number, nodes: readonly { id: string; x: number; y: number }[], radius = 18) {
+  let best = "";
+  let nearest = radius;
+  for (const node of nodes) {
+    const distance = Math.hypot(node.x - x, node.y - y);
+    if (distance <= nearest) {
+      nearest = distance;
+      best = node.id;
+    }
+  }
+  return best;
+}
+
 export const LESSON_SPOTS = [
   { id: "l0", label: "Academy", x: 45, y: 560 },
   { id: "l1", label: "Nobel", x: 135, y: 560 },
