@@ -6,7 +6,7 @@ import { tryMachine } from "@/lib/tessera/spin-machine";
 import { FATHER, PROGRAMS, tesseraVote, workshopRun } from "@/lib/tessera/workshop";
 import { issuePass } from "@/lib/tessera/pass";
 import { rickOpen, rickReach } from "@/lib/tessera/github-desk";
-import { SITTING, secretDesk } from "@/lib/tessera/secret-engines";
+import { SITTING, secretDesk, useEngines } from "@/lib/tessera/secret-engines";
 
 export function RickView() {
   const [working, setWorking] = useState(false);
@@ -27,6 +27,8 @@ export function RickView() {
   const [folder, setFolder] = useState("");
   const [entries, setEntries] = useState<{ name: string; kind: string }[]>([]);
   const [fileText, setFileText] = useState("");
+  const [engineAsk, setEngineAsk] = useState("");
+  const [engineLine, setEngineLine] = useState("");
   const room = rickRoom(working);
   const people = stepHouse(tick, guests);
   const together = roomsAt(tick, guests);
@@ -116,6 +118,24 @@ export function RickView() {
               </li>
             ))}
           </ul>
+          <form
+            className="mt-4 flex flex-col gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setEngineLine(useEngines(engineAsk) ?? "That line is not one of the engines.");
+            }}
+          >
+            <input
+              value={engineAsk}
+              onChange={(event) => setEngineAsk(event.target.value)}
+              placeholder="A domain, a tone, a claim, or a title"
+              className="h-11 rounded-xl border border-border bg-bg px-3 text-sm text-fg"
+            />
+            <button type="submit" className="h-11 rounded-full border border-accent px-4 text-sm text-fg">
+              Use it
+            </button>
+          </form>
+          {engineLine ? <p className="mt-2 text-sm text-fg">{engineLine}</p> : null}
         </section>
         <section className="rounded-xl border border-border bg-surface px-4 py-4">
           <p className="text-xs tracking-[0.16em] text-subtle uppercase">{room.place}</p>

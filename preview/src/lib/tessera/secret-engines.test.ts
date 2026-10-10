@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { alignTone, bridge, collapseFindings, FINDING_IDS, groundClaim, holdCouncil, orphans, proposalFate, rankWork, secretDesk, synthesize } from "./secret-engines.ts";
+import { alignTone, bridge, collapseFindings, FINDING_IDS, groundClaim, holdCouncil, orphans, proposalFate, rankWork, secretDesk, synthesize, useEngines } from "./secret-engines.ts";
 
 test("the secret engines repeat a real sitting", () => {
   assert.deepEqual(secretDesk(), secretDesk());
@@ -33,4 +33,8 @@ test("a bridge, a rank, a ground, and a refusal are stable", () => {
   assert.equal(groundClaim("nervous systems").domain, "neuroscience");
   assert.equal(proposalFate("sacred-geometry try-catch").status, "rejected");
   assert.equal(proposalFate("a new door").status, "open");
+  assert.match(useEngines("what is chemistry") ?? "", /substances/);
+  assert.match(useEngines("432 hz") ?? "", /not renamed/);
+  assert.equal(useEngines("hello"), null);
+  assert.match(useEngines("claim the speed of light") ?? "", /Not grounded/);
 });
