@@ -30,6 +30,7 @@ import { sovereignBinaryPipeline, sovereignBinaryDecrypt } from "../lib/sovereig
 import colonialLanguageRouter from "../routes/colonial-language";
 import sovereignLanguageRouter from "../routes/sovereign-language";
 import universeRouter from "../routes/universe";
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 
 vi.mock("@workspace/db", () => ({
   db: {},
@@ -38,6 +39,8 @@ vi.mock("@workspace/db", () => ({
 const AT_MINIMUM = "synthetic-colonial-secret-32xxxx";
 const OTHER_SECRET = "synthetic-colonial-secret-32yyyy";
 const TOO_SHORT = "synthetic-colonial-secret-short";
+const SYNTHETIC_ADMIN_KEY = "synthetic-admin-key-16";
+const SYNTHETIC_SESSION_SECRET = "synthetic-session-secret-32chars!!";
 const FALLBACK_LITERAL_LENGTH = 47;
 const REPO_ROOT = fileURLToPath(new URL("../../../../", import.meta.url));
 const SKIP_DIRS = new Set([
@@ -61,6 +64,24 @@ async function withColonialSecret<T>(value: string | undefined, run: () => Promi
   } finally {
     if (had) process.env.COLONIAL_MASTER_SECRET = previous;
     else delete process.env.COLONIAL_MASTER_SECRET;
+  }
+}
+
+async function withOwnerSession<T>(run: (cookie: string) => Promise<T>): Promise<T> {
+  const hadAdmin = Object.prototype.hasOwnProperty.call(process.env, "TESSERACT_ADMIN_KEY");
+  const previousAdmin = process.env.TESSERACT_ADMIN_KEY;
+  const hadSession = Object.prototype.hasOwnProperty.call(process.env, "SOVEREIGN_SESSION_SECRET");
+  const previousSession = process.env.SOVEREIGN_SESSION_SECRET;
+  process.env.TESSERACT_ADMIN_KEY = SYNTHETIC_ADMIN_KEY;
+  process.env.SOVEREIGN_SESSION_SECRET = SYNTHETIC_SESSION_SECRET;
+  try {
+    const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+    return await run(`${SESSION_COOKIE}=${issued.signedId}`);
+  } finally {
+    if (hadAdmin) process.env.TESSERACT_ADMIN_KEY = previousAdmin;
+    else delete process.env.TESSERACT_ADMIN_KEY;
+    if (hadSession) process.env.SOVEREIGN_SESSION_SECRET = previousSession;
+    else delete process.env.SOVEREIGN_SESSION_SECRET;
   }
 }
 
@@ -231,34 +252,40 @@ describe("colonial master secret fail closed", () => {
       { method: "POST", path: "/api/universe/compression-lab/round-trip", body: { rawBase64: Buffer.from("payload").toString("base64") } },
     ];
     for (const secret of [undefined, TOO_SHORT] as const) {
-    await withColonialSecret(secret, async () => {
-      for (const item of cases) {
-        const response = await fetch(`${baseUrl}${item.path}`, {
-          method: item.method,
-          headers: item.body ? { "content-type": "application/json" } : undefined,
-          body: item.body ? JSON.stringify(item.body) : undefined,
+      await withColonialSecret(secret, async () => {
+        await withOwnerSession(async (cookie) => {
+          for (const item of cases) {
+            const headers: Record<string, string> = { cookie };
+            if (item.body) headers["content-type"] = "application/json";
+            const response = await fetch(`${baseUrl}${item.path}`, {
+              method: item.method,
+              headers,
+              body: item.body ? JSON.stringify(item.body) : undefined,
+            });
+            const json: unknown = await response.json();
+            expect(response.status, item.path).toBe(503);
+            expect(json, item.path).toEqual(colonialSecretUnavailableBody());
+            const serialized = JSON.stringify(json);
+            expect(serialized.includes(TOO_SHORT), item.path).toBe(false);
+            expect(serialized.includes("length"), item.path).toBe(false);
+          }
         });
-        const json: unknown = await response.json();
-        expect(response.status, item.path).toBe(503);
-        expect(json, item.path).toEqual(colonialSecretUnavailableBody());
-        const serialized = JSON.stringify(json);
-        expect(serialized.includes(TOO_SHORT), item.path).toBe(false);
-        expect(serialized.includes("length"), item.path).toBe(false);
-      }
-    });
+      });
     }
   });
 
   it("serves cipher encrypt when a synthetic secret is configured", async () => {
     await withColonialSecret(AT_MINIMUM, async () => {
-      const response = await fetch(`${baseUrl}/api/sovereign-language/cipher/encrypt`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: "synthetic-payload", agentId: "agent-a" }),
+      await withOwnerSession(async (cookie) => {
+        const response = await fetch(`${baseUrl}/api/sovereign-language/cipher/encrypt`, {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie },
+          body: JSON.stringify({ text: "synthetic-payload", agentId: "agent-a" }),
+        });
+        const json: unknown = await response.json();
+        expect(response.status).toBe(200);
+        expect(JSON.stringify(json).includes(AT_MINIMUM)).toBe(false);
       });
-      const json: unknown = await response.json();
-      expect(response.status).toBe(200);
-      expect(JSON.stringify(json).includes(AT_MINIMUM)).toBe(false);
     });
   });
 

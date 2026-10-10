@@ -13,7 +13,7 @@ function useApi<T>(path: string) {
   return useQuery<T>({
     queryKey: [path],
     queryFn: async () => {
-      const res = await fetch(`${API}${path}`);
+      const res = await fetch(`${API}${path}`, { credentials: "include" });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error || "API error");
       return json.data ?? json;
@@ -347,6 +347,7 @@ function TranslatorTab() {
       const res = await fetch(`${API}/sovereign-language/encrypt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ text: input }),
       });
       return res.json();
@@ -470,6 +471,7 @@ function KernelConsoleTab() {
       const res = await fetch(`${API}/sovereign-language/kernel/execute`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ instruction }),
       });
       return res.json();

@@ -1,5 +1,6 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Response } from "express";
 import { logger } from "../lib/logger";
+import { requireAdminSession } from "../lib/sovereign-admin";
 import {
   getKernelStats,
   compressLegacy,
@@ -27,14 +28,20 @@ import {
 
 const router: IRouter = Router();
 
+function respondInternalError(res: Response, err: unknown, label: string) {
+  const errName = err instanceof Error ? err.name : "Error";
+  logger.error({ err: errName }, label);
+  return res.status(500).json({ ok: false, error: "internal error" });
+}
+
+
 // ─── GET /api/colonel/stats ───────────────────────────────────────────────────
 router.get("/colonel/stats", (_req, res) => {
   try {
     const stats = getKernelStats();
     return res.json({ ok: true, ...stats });
   } catch (err) {
-    logger.error({ err }, "colonel/stats error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "colonel/stats error");
   }
 });
 
@@ -52,13 +59,12 @@ router.post("/colonel/compress", (req, res) => {
     recordEncodedFile();
     return res.json({ ok: true, ...result });
   } catch (err) {
-    logger.error({ err }, "colonel/compress error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "colonel/compress error");
   }
 });
 
 // ─── POST /api/colonel/compress-encrypt ──────────────────────────────────────
-router.post("/colonel/compress-encrypt", (req, res) => {
+router.post("/colonel/compress-encrypt", requireAdminSession, (req, res) => {
   try {
     const { text } = req.body as { text?: string };
     if (!text || typeof text !== "string") {
@@ -76,8 +82,7 @@ router.post("/colonel/compress-encrypt", (req, res) => {
       logger.error("colonial secret not configured");
       return res.status(failure.status).json(failure.body);
     }
-    logger.error({ err }, "colonel/compress-encrypt error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "colonel/compress-encrypt error");
   }
 });
 
@@ -99,8 +104,7 @@ router.post("/colonel/translate", (req, res) => {
     recordExternalHandshake(true);
     return res.json({ ok: true, direction: "to", ...result });
   } catch (err) {
-    logger.error({ err }, "colonel/translate error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "colonel/translate error");
   }
 });
 
@@ -124,13 +128,12 @@ router.get("/sovereignty/colonial-language/conference", async (_req, res) => {
       },
     });
   } catch (err) {
-    logger.error({ err }, "sovereignty/colonial-language/conference error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereignty/colonial-language/conference error");
   }
 });
 
 // ─── GET /api/sovereignty/colonial-language/status ───────────────────────────
-router.get("/sovereignty/colonial-language/status", (_req, res) => {
+router.get("/sovereignty/colonial-language/status", requireAdminSession, (_req, res) => {
   try {
     if (!isColonialSecretConfigured()) {
       return res.status(503).json(colonialSecretUnavailableBody());
@@ -165,13 +168,12 @@ router.get("/sovereignty/colonial-language/status", (_req, res) => {
       logger.error("colonial secret not configured");
       return res.status(failure.status).json(failure.body);
     }
-    logger.error({ err }, "sovereignty/colonial-language/status error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereignty/colonial-language/status error");
   }
 });
 
 // ─── GET /api/sovereignty/colonial-language/lattice-frequencies ──────────────
-router.get("/sovereignty/colonial-language/lattice-frequencies", (_req, res) => {
+router.get("/sovereignty/colonial-language/lattice-frequencies", requireAdminSession, (_req, res) => {
   try {
     if (!isColonialSecretConfigured()) {
       return res.status(503).json(colonialSecretUnavailableBody());
@@ -192,13 +194,12 @@ router.get("/sovereignty/colonial-language/lattice-frequencies", (_req, res) => 
       logger.error("colonial secret not configured");
       return res.status(failure.status).json(failure.body);
     }
-    logger.error({ err }, "sovereignty/colonial-language/lattice-frequencies error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereignty/colonial-language/lattice-frequencies error");
   }
 });
 
 // ─── POST /api/sovereignty/colonial-language/rotate ──────────────────────────
-router.post("/sovereignty/colonial-language/rotate", (_req, res) => {
+router.post("/sovereignty/colonial-language/rotate", requireAdminSession, (_req, res) => {
   try {
     if (!isColonialSecretConfigured()) {
       return res.status(503).json(colonialSecretUnavailableBody());
@@ -212,8 +213,7 @@ router.post("/sovereignty/colonial-language/rotate", (_req, res) => {
       logger.error("colonial secret not configured");
       return res.status(failure.status).json(failure.body);
     }
-    logger.error({ err }, "sovereignty/colonial-language/rotate error");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternalError(res, err, "sovereignty/colonial-language/rotate error");
   }
 });
 
