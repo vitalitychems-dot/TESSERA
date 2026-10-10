@@ -1,4 +1,4 @@
-/** A two-qubit state on this machine. Not a quantum computer. */
+/** A two-qubit state she can run. */
 
 const S = Math.SQRT1_2;
 

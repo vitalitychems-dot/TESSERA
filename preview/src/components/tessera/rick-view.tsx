@@ -94,7 +94,7 @@ export function RickView() {
         <section className="rounded-xl border border-border bg-surface px-4 py-4">
           <p className="text-xs tracking-[0.16em] text-subtle uppercase">The house</p>
           <p className="mt-2 text-sm text-muted">
-            A turn on this machine, not a quantum computer. Opposite paths cancel, so Rick keeps {choice.name}. A count of those paths would have tied.
+            A turn. Opposite paths cancel, so Rick keeps {choice.name}. A count of those paths would have tied.
           </p>
           <div className="relative mx-auto mt-4 h-56 w-full max-w-sm">
             {people.map((person) => (
@@ -111,7 +111,7 @@ export function RickView() {
           <button type="button" onClick={() => setTick((value) => value + 1)} className="mt-3 h-11 rounded-full border border-accent px-4 text-sm text-fg">
             Step the house
           </button>
-          <p className="mt-2 text-xs text-subtle">{HOUSEHOLD.length} live here. Tick {tick}. This page is the sandbox. It is not a separate virtual machine.</p>
+          <p className="mt-2 text-xs text-subtle">{HOUSEHOLD.length} live here. Tick {tick}.</p>
           <button type="button" onClick={() => setLive((value) => !value)} className="mt-3 h-11 rounded-full border border-accent px-4 text-sm text-fg">
             {live ? "Pause the house" : "Watch them live"}
           </button>
