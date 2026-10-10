@@ -12,10 +12,12 @@ test("the smallest source file is chosen and a large one is left", () => {
   ]);
   assert.equal(picked?.name, "a.js");
   assert.equal(pickSmallest([{ name: "big.py", size: 90000, type: "file" }]), null);
+  assert.equal(pickSmallest([{ name: "commitlint.config.js", size: 67, type: "file" }]), null);
   assert.equal(branchCase("selector").optOut, true);
   assert.equal(branchCase("sequence").optOut, false);
   const cell = configCell();
   assert.equal(cell.read(), null);
   assert.equal(cell.init(2), 2);
   assert.equal(readSparse().proved, true);
+  assert.match(readSparse().said, /Five had a small source file/);
 });
