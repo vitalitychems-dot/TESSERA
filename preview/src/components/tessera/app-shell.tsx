@@ -13,6 +13,7 @@ import { GitbookView } from "./gitbook-view";
 import { GitbookAiView } from "./gitbook-ai-view";
 import { LearnView } from "./learn-view";
 import { ThemeView, applyTheme, type ThemeId } from "./theme-view";
+import { LiveView } from "./live-view";
 import { RickView } from "./rick-view";
 import { RoomsSheet, ROOMS } from "./rooms-sheet";
 import { LibraryView } from "./library-view";
@@ -115,6 +116,7 @@ export function AppShell() {
             {place === "gitbookai" ? <GitbookAiView /> : null}
             {place === "theme" ? <ThemeView current={theme} choose={chooseTheme} /> : null}
             {place === "rick" ? <RickView /> : null}
+            {place === "live" ? <LiveView /> : null}
             {place === "narrative" ? <NarrativeView /> : null}
             {place === "memory" ? <MemoryView /> : null}
             {place === "web" ? <WebView /> : null}
