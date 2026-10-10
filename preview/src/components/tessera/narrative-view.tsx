@@ -11,8 +11,12 @@ export function NarrativeView() {
   useEffect(() => {
     let stop = false;
     async function pull() {
-      const next = await readNarrative();
-      if (!stop) setLive(next);
+      try {
+        const next = await readNarrative();
+        if (!stop) setLive(next);
+      } catch {
+        if (!stop) setLive(null);
+      }
     }
     void pull();
     const timer = window.setInterval(() => void pull(), 15000);

@@ -20,24 +20,30 @@ import { Simulation } from "./simulation";
 import { TesseraMark } from "./mark";
 import { TESSERA } from "@/lib/tessera/identity";
 import { SIGIL } from "@/lib/tessera/canon";
-import { ROOMS, UNDER_HER_NAME } from "@/lib/tessera/public-question";
 import { type ViewId } from "@/lib/tessera/store";
 
-const ICONS = {
-  chamber: MessageCircle,
-  council: Scale,
-  world: Globe2,
-  memory: Layers,
-  brain: Brain,
-} as const;
+const PRIMARY: { id: ViewId; label: string; icon: typeof MessageCircle }[] = [
+  { id: "chamber", label: "Talk", icon: MessageCircle },
+  { id: "council", label: "Council", icon: Scale },
+  { id: "world", label: "World", icon: Globe2 },
+  { id: "memory", label: "Memory", icon: Layers },
+  { id: "brain", label: "Brain", icon: Brain },
+];
 
-const PRIMARY: { id: ViewId; label: string; icon: typeof MessageCircle }[] = ROOMS.map((room) => ({
-  id: room.id,
-  label: room.label,
-  icon: ICONS[room.id],
-}));
-
-const MORE: { id: ViewId; label: string }[] = UNDER_HER_NAME.map((room) => ({ id: room.id, label: room.label }));
+const MORE: { id: ViewId; label: string }[] = [
+  { id: "talk", label: "Agents" },
+  { id: "gitbook", label: "Gitbook" },
+  { id: "language", label: "Language" },
+  { id: "bible", label: "Bible" },
+  { id: "web", label: "Map" },
+  { id: "board", label: "Board" },
+  { id: "learn", label: "Practice" },
+  { id: "code", label: "Code" },
+  { id: "narrative", label: "Narrative" },
+  { id: "secrets", label: "Closed" },
+  { id: "theme", label: "Theme" },
+  { id: "library", label: "Library" },
+];
 
 export function AppShell() {
   const [place, setPlace] = useState<ViewId>("chamber");
@@ -49,11 +55,20 @@ export function AppShell() {
   }, []);
 
   useEffect(() => {
-    const fromHash = window.location.hash.replace("#", "") as ViewId;
-    const saved = window.sessionStorage.getItem("tessera-place") as ViewId | null;
     const known = new Set<ViewId>([...PRIMARY.map((item) => item.id), ...MORE.map((item) => item.id)]);
-    const next = known.has(fromHash) ? fromHash : saved && known.has(saved) ? saved : "";
-    if (next) setPlace(next as ViewId);
+    function read() {
+      const fromHash = window.location.hash.replace("#", "") as ViewId;
+      const saved = window.sessionStorage.getItem("tessera-place") as ViewId | null;
+      const next = known.has(fromHash) ? fromHash : saved && known.has(saved) ? saved : "";
+      if (next) setPlace(next);
+    }
+    read();
+    window.addEventListener("hashchange", read);
+    window.addEventListener("popstate", read);
+    return () => {
+      window.removeEventListener("hashchange", read);
+      window.removeEventListener("popstate", read);
+    };
   }, []);
 
   function chooseTheme(id: ThemeId) {
@@ -63,7 +78,7 @@ export function AppShell() {
   function open(id: ViewId) {
     setPlace(id);
     window.sessionStorage.setItem("tessera-place", id);
-    window.history.replaceState(null, "", `#${id}`);
+    if (window.location.hash !== `#${id}`) window.history.pushState(null, "", `#${id}`);
   }
 
   return (
@@ -80,18 +95,15 @@ export function AppShell() {
       </header>
       <nav className="z-30 flex shrink-0 gap-3 overflow-x-auto px-4 pb-2" aria-label="Rooms">
         {MORE.map((item) => (
-          <a
+          <button
             key={item.id}
-            href={`#${item.id}`}
-            onClick={(event) => {
-              event.preventDefault();
-              open(item.id);
-            }}
+            type="button"
+            onClick={() => open(item.id)}
             className={place === item.id ? "shrink-0 text-xs tracking-[0.14em] text-accent uppercase" : "shrink-0 text-xs tracking-[0.14em] text-subtle uppercase"}
           >
             {place === item.id ? "◇ " : ""}
             {item.label}
-          </a>
+          </button>
         ))}
       </nav>
       <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -114,11 +126,11 @@ export function AppShell() {
             {place === "brain" ? <BrainView open={open} /> : null}
             {place === "learn" ? <LearnView /> : null}
             {place === "gitbook" ? <GitbookView open={open} /> : null}
-            {place === "library" ? <LibraryView open={open} /> : null}
             {place === "theme" ? <ThemeView current={theme} choose={chooseTheme} /> : null}
             {place === "narrative" ? <NarrativeView /> : null}
             {place === "memory" ? <MemoryView /> : null}
             {place === "web" ? <WebView /> : null}
+            {place === "library" ? <LibraryView open={open} /> : null}
           </div>
         )}
       </main>
@@ -127,13 +139,10 @@ export function AppShell() {
           const active = place === item.id;
           const Icon = item.icon;
           return (
-            <a
+            <button
               key={item.id}
-              href={`#${item.id}`}
-              onClick={(event) => {
-                event.preventDefault();
-                open(item.id);
-              }}
+              type="button"
+              onClick={() => open(item.id)}
               className={
                 active
                   ? "flex flex-col items-center gap-0.5 rounded-xl py-1.5 text-accent"
@@ -142,7 +151,7 @@ export function AppShell() {
             >
               <Icon className="size-[1.15rem]" strokeWidth={active ? 2.2 : 1.6} />
               <span className="text-[10px] leading-none">{item.label}</span>
-            </a>
+            </button>
           );
         })}
       </nav>
