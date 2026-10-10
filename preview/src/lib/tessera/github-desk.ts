@@ -250,17 +250,59 @@ export const postBoard = createServerFn({ method: "POST" })
     }
   });
 
-export const rickReach = createServerFn({ method: "POST" }).handler(async () => {
+const HIS = new Set(["TESSERA", "Gitbook", "GitbookAI", "vitality", "2"]);
+
+async function ghJson(path: string) {
   const token = await githubToken();
-  if (!token) {
-    return { ok: false as const, line: "The app does not hold the GitHub connection. The chat does. Nothing was copied into the page." };
+  if (!token) return { ok: false as const, status: 0, data: null };
+  const res = await fetch(`https://api.github.com${path}`, {
+    headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${token}`, "User-Agent": "tessera-chamber" },
+  });
+  if (!res.ok) return { ok: false as const, status: res.status, data: null };
+  return { ok: true as const, status: res.status, data: await res.json() };
+}
+
+export const rickReach = createServerFn({ method: "POST" }).handler(async () => {
+  const user = await ghJson("/user");
+  if (!user.ok || !user.data) {
+    return { ok: false as const, login: "", repos: [] as { name: string; private: boolean }[], line: "The app could not use the GitHub login." };
   }
-  const headers = { Accept: "application/vnd.github+json", Authorization: `Bearer ${token}`, "User-Agent": "tessera-chamber" };
-  const user = await fetch("https://api.github.com/user", { headers });
-  if (!user.ok) return { ok: false as const, line: `GitHub refused the app. ${user.status}.` };
-  const who = (await user.json()) as { login?: string };
-  const repos = await fetch("https://api.github.com/user/repos?per_page=8&sort=updated", { headers });
-  const names = repos.ok ? ((await repos.json()) as { name?: string }[]).flatMap((row) => (row.name ? [row.name] : [])) : [];
-  return { ok: true as const, line: `${who.login ?? "github"}. ${names.join(", ")}.` };
+  const who = user.data as { login?: string };
+  const repos = await ghJson("/user/repos?per_page=20&sort=updated&affiliation=owner");
+  const list = Array.isArray(repos.data)
+    ? (repos.data as { name?: string; private?: boolean }[]).flatMap((row) =>
+        row.name && HIS.has(row.name) ? [{ name: row.name, private: Boolean(row.private) }] : [],
+      )
+    : [];
+  return { ok: true as const, login: who.login ?? "", repos: list, line: `${who.login ?? "github"}. ${list.map((row) => row.name).join(", ")}.` };
 });
+
+export const rickOpen = createServerFn({ method: "POST" })
+  .validator((input: { repo?: string; path?: string }) => ({
+    repo: typeof input?.repo === "string" ? input.repo : "",
+    path: typeof input?.path === "string" ? input.path : "",
+  }))
+  .handler(async ({ data }) => {
+    if (!HIS.has(data.repo)) return { ok: false as const, kind: "no" as const, line: "That repository is not his.", entries: [] as { name: string; kind: string }[], text: "" };
+    const path = data.path.replace(/^\/+/, "").replace(/\.\./g, "");
+    const target = path
+      ? `/repos/vitalitychems-dot/${encodeURIComponent(data.repo)}/contents/${path.split("/").map(encodeURIComponent).join("/")}`
+      : `/repos/vitalitychems-dot/${encodeURIComponent(data.repo)}/contents`;
+    const opened = await ghJson(target);
+    if (!opened.ok || !opened.data) {
+      return { ok: false as const, kind: "no" as const, line: `Could not open ${data.repo}. ${opened.status}.`, entries: [], text: "" };
+    }
+    if (Array.isArray(opened.data)) {
+      const entries = (opened.data as { name?: string; type?: string }[])
+        .slice(0, 40)
+        .flatMap((row) => (row.name ? [{ name: row.name, kind: row.type === "dir" ? "dir" : "file" }] : []));
+      return { ok: true as const, kind: "dir" as const, line: path || data.repo, entries, text: "" };
+    }
+    const file = opened.data as { content?: string; encoding?: string; size?: number; name?: string };
+    if ((file.size ?? 0) > 80_000) return { ok: true as const, kind: "file" as const, line: file.name ?? path, entries: [], text: "That file is too large to bring into the room." };
+    const raw = file.encoding === "base64" && file.content ? Buffer.from(file.content.replace(/\n/g, ""), "base64").toString("utf8") : "";
+    const text = SECRET.test(raw) ? "A secret is in that file. It was not brought into the room." : raw.slice(0, 1800);
+    return { ok: true as const, kind: "file" as const, line: file.name ?? path, entries: [], text };
+  });
+
 
