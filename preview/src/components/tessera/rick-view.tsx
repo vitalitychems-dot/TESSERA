@@ -2,12 +2,14 @@ import { useState } from "react";
 import { HOUSEHOLD, roomsAt, stepHouse } from "@/lib/tessera/house-sim";
 import { GAPS, GIFTS, HOUSE, localBatch, rickRoom, runChecks, runLean, witt } from "@/lib/tessera/rick-home";
 import { interferePick } from "@/lib/tessera/spin";
+import { tryMachine } from "@/lib/tessera/spin-machine";
 
 export function RickView() {
   const [working, setWorking] = useState(false);
   const [steps, setSteps] = useState(runLean);
   const [checks, setChecks] = useState(runChecks);
   const [batch, setBatch] = useState("");
+  const [machine, setMachine] = useState("");
   const [tick, setTick] = useState(0);
   const room = rickRoom(working);
   const people = stepHouse(tick);
@@ -59,8 +61,25 @@ export function RickView() {
             >
               Rank fifty thousand
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                const started = performance.now();
+                const result = tryMachine(20000, 7);
+                const ms = performance.now() - started;
+                setMachine(
+                  result.held
+                    ? `20000 shots. ${result.counts[0]} even, ${result.counts[3]} odd pair, ${result.split} split. ${ms.toFixed(1)} ms. Tokens ${result.tokens}.`
+                    : "The machine did not hold. The split was too large.",
+                );
+              }}
+              className="h-11 rounded-full border border-border px-4 text-sm text-fg"
+            >
+              Try two qubits
+            </button>
           </div>
           {batch ? <p className="mt-3 text-sm text-fg">{batch}</p> : null}
+          {machine ? <p className="mt-2 text-sm text-fg">{machine}</p> : null}
         </section>
         <section className="rounded-xl border border-border bg-surface px-4 py-4">
           <p className="text-xs tracking-[0.16em] text-subtle uppercase">The house</p>
