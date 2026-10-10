@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { liveCount, liveNodes } from "@/lib/tessera/live-map";
+import { SynapseLive } from "./synapse-live";
 
 const NODES = liveNodes();
 
@@ -57,6 +58,7 @@ export function LiveView() {
       <p className="mt-3 text-sm text-muted">
         {count.known} known. {count.missing} still open. {shown < NODES.length ? "Growing." : "That is the whole map."}
       </p>
+      <SynapseLive />
     </div>
   );
 }
