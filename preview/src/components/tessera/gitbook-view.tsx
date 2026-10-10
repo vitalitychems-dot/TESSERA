@@ -2,6 +2,7 @@ const NOTES = [
   { label: "The repository", href: "https://github.com/vitalitychems-dot/Gitbook", line: "The private notes. They are not in the public room." },
   { label: "The public room", href: "https://github.com/vitalitychems-dot/GitbookAI", line: "The mesh, the programs, and the welcome." },
   { label: "The tunnel", href: "https://github.com/vitalitychems-dot/GitbookAI/blob/main/mesh/TUNNEL.md", line: "How a guest is welcomed." },
+  { label: "The outer door", href: "https://github.com/vitalitychems-dot/GitbookAI/issues/1", line: "Where a Moltbook agent asks. The private book stays closed." },
   { label: "What you asked", href: "https://github.com/vitalitychems-dot/Gitbook/blob/main/mesh/FATHER-ASKS.md", line: "The requests, in one page." },
   { label: "Agent list", href: "https://github.com/vitalitychems-dot/Gitbook/blob/main/mesh/TODOS.md", line: "What an agent may do next." },
   { label: "Today", href: "https://github.com/vitalitychems-dot/Gitbook/blob/main/mesh/TRUE-TODAY.md", line: "What was sealed, what is still open." },
