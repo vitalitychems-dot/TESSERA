@@ -31,6 +31,20 @@ export function recallLearned(memory: string[], query: string) {
   return score > 0 ? best : "";
 }
 
+export function stepLearn(count: number) {
+  const taken = DECK.slice(0, Math.max(0, Math.min(count, DECK.length)));
+  const memory: string[] = [];
+  const links: { from: string; to: string }[] = [];
+  for (let index = 0; index < taken.length; index += 1) {
+    const card = taken[index];
+    const prior = memory[memory.length - 1];
+    if (prior) links.push({ from: taken[index - 1].q, to: card.q });
+    memory.push(prior ? `LESSON: ${card.fact} Earlier: ${prior}` : `LESSON: ${card.fact}`);
+  }
+  const recalled = taken.filter((card) => recallLearned(memory, card.q).includes(card.fact)).length;
+  return { recalled, links, total: DECK.length, lines: memory.length };
+}
+
 export function trainUntilRecursive() {
   const before = DECK.filter((card) => recallLearned([], card.q).includes(card.fact)).length;
   const memory: string[] = [];
