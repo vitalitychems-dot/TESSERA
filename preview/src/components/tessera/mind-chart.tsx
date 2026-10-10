@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { hitNode, LESSON_SPOTS, liveCount, liveEdges, liveNodes } from "@/lib/tessera/live-map";
 import { lessonAt, stepLearn } from "@/lib/tessera/recursive-train";
-import { curiosityPath } from "@/lib/tessera/curiosity";
+import { rickPath } from "@/lib/tessera/curiosity";
 import { synapseSteps } from "@/lib/tessera/recursive-proof";
 
 const BOARD = liveNodes();
@@ -25,7 +25,7 @@ export function MindChart() {
   const learn = stepLearn(step);
   const hops = synapseSteps();
   const synapses = hops[Math.min(hop, hops.length - 1)] ?? [];
-  const curiosity = curiosityPath();
+  const curiosity = rickPath();
   const topic = curiosity.path[Math.min(pickedTopic, curiosity.path.length - 1)];
   const visible = BOARD.slice(0, shown);
   const lessons = LESSON_SPOTS.slice(0, step);
@@ -150,8 +150,8 @@ export function MindChart() {
         {count.known} known. {count.missing} still open. Recalled {learn.recalled} of {learn.total}.{" "}
         {synapses.map((link) => `${link.from} → ${link.to} ${link.weight.toFixed(2)}`).join(". ")}.
         {hop >= hops.length ? " A miss did not move the first synapse." : " The synapse is still learning."}{" "}
-        {topic ? `She picked ${topic.category}: ${topic.fact}` : ""}
-        {pickedTopic >= curiosity.path.length ? " She stopped. Screen and media have no local fact." : ""} Drag the chart. Tap a node.
+        {topic ? `Rick picked ${topic.category}: ${topic.fact}` : ""}
+        {pickedTopic >= curiosity.path.length ? " Four keeps cover six questions. Screen and media stay empty." : ""} Drag the chart. Tap a node.
       </p>
     </div>
   );
