@@ -1,2 +1,2 @@
-- [Consolidation scope](consolidation-scope.md) — TESSERA is the current destination and Gitbook coordinates; preserve exclusions and require owner-approved source deletion.
+- [Consolidation and learning scope](consolidation-scope.md) — Repository consolidation keeps its exclusions; Tessera's authorized learning corpus includes all non-private domains.
 - [GitHub connection collision](github-connection-collision.md) — Replit may report GitHub as not_added while rejecting attachment because another connection is assigned; inspect connected apps before changing it.
