@@ -37,7 +37,7 @@ export function BrainMesh() {
   const [pitch, setPitch] = useState(0.35);
   const [zoom, setZoom] = useState(1.4);
   const [growth, setGrowth] = useState(1);
-  const [play, setPlay] = useState(false);
+  const [play, setPlay] = useState(true);
   const [picked, setPicked] = useState("Tessera");
   const drag = useRef<{ x: number; y: number; yaw: number; pitch: number } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
