@@ -284,6 +284,18 @@ export function ledgerCount() {
   return { total: REPO_LEDGER.length, picked, empty: asked - picked, missing, held, nota };
 }
 
+export function fileFor(name: string) {
+  const q = name.trim().toLowerCase();
+  const short = q.split("/").pop() ?? q;
+  const row = REPO_LEDGER.find((item) => item.name.toLowerCase() === q || item.name.toLowerCase().endsWith(`/${short}`));
+  if (!row) return `${name} is not in the ledger.`;
+  if (row.file) return `${row.name} keeps ${row.file} at the root. The rest of the tree was not read.`;
+  if (row.why === "held") return `${row.name} was held and not opened.`;
+  if (row.why === "HTTPError") return `${row.name} was not found.`;
+  if (row.why === "not-a-repo") return `${row.name} is not a repository.`;
+  return `${row.name} has no small source file at the root.`;
+}
+
 export function ledgerLine() {
   const count = ledgerCount();
   const sum = count.picked + count.empty + count.missing + count.held + count.nota;
