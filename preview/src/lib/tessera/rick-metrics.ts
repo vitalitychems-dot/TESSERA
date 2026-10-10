@@ -2,7 +2,7 @@
 
 export type MetricRow = { name: string; before: number; after: number; pct: number; same: boolean };
 
-const N = 400;
+const N = 250;
 const ROWS = Array.from({ length: 2000 }, (_, i) => ({ id: `k${i}`, n: i }));
 const WORDS = ROWS.map((row) => row.id);
 const NEEDLE = "k1500";
@@ -29,7 +29,7 @@ function row(name: string, slow: () => unknown, fast: () => unknown, times = N):
     before: before.ms,
     after: after.ms,
     pct: pct(before.ms, after.ms),
-    same: JSON.stringify(before.last) === JSON.stringify(after.last),
+    same: before.last === after.last,
   };
 }
 
@@ -45,16 +45,17 @@ export function measureMetrics(): MetricRow[] {
   const numbers = ROWS.map((item) => item.n);
   const window = 40;
   const text = WORDS.join(" ");
-  const pattern = /k1500/;
   const compiled = /k1500/;
-  const cache = new Map<number, number>();
   const fib = (n: number): number => (n < 2 ? n : fib(n - 1) + fib(n - 2));
-  const fibFast = (n: number): number => {
-    const hit = cache.get(n);
-    if (hit !== undefined) return hit;
-    const value = n < 2 ? n : fibFast(n - 1) + fibFast(n - 2);
-    cache.set(n, value);
-    return value;
+  const fibFast = (n: number) => {
+    let left = 0;
+    let right = 1;
+    for (let i = 0; i < n; i += 1) {
+      const next = left + right;
+      left = right;
+      right = next;
+    }
+    return left;
   };
   const lowered = WORDS.map((word) => word.toLowerCase());
   const counts = new Map<string, number>();
@@ -68,7 +69,7 @@ export function measureMetrics(): MetricRow[] {
       const out: string[] = [];
       for (const word of WORDS) if (!out.includes(word)) out.push(word);
       return out.length;
-    }, () => new Set(WORDS).size, 20),
+    }, () => new Set(WORDS).size, 12),
     row("top", () => [...numbers].sort((a, b) => b - a)[4], () => {
       let first = -1;
       let second = -1;
