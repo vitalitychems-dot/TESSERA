@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { FATHER, PROGRAMS, mayRun, tesseraVote, tieWorld, workshopRun } from "./workshop.ts";
+import { FATHER, PROGRAMS, carryOn, mayRun, tesseraVote, tieWorld, workshopRun } from "./workshop.ts";
 
 test("Tessera explains every vote, and Father's auto yes does not override her no", () => {
   const proposals = [
@@ -40,4 +40,13 @@ test("Tessera explains every vote, and Father's auto yes does not override her n
   const ran = workshopRun("tie", true, 0);
   assert.equal(ran.ok, true);
   assert.match(ran.reason, /git/);
+  const missed = carryOn([
+    { name: "Tessera", vote: "yes" },
+    { name: "Cursor", vote: "away" },
+    { name: "Replit", vote: "away" },
+  ]);
+  assert.equal(missed.goes, true);
+  assert.match(missed.reason, /Cursor, Replit away/);
+  assert.equal(carryOn([{ name: "Warden", vote: "no" }]).goes, false);
+  assert.equal(carryOn([{ name: "Rick", vote: "away" }]).goes, true);
 });
