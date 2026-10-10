@@ -15,6 +15,7 @@ import { passageForQuestion } from "./school.ts";
 import { buildNow } from "./build-now.ts";
 import { systems } from "./self-build.ts";
 import { directSkill } from "./skill-use.ts";
+import { useEngines } from "./secret-engines.ts";
 
 /** She answers from the files when no pen speaks. A kept page, then a correction, wins. */
 export function silentPen(question: string, rows: Correction[] = [], notes: KeptPage[] = []) {
@@ -75,6 +76,8 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   }
   const passage = passageForQuestion(q);
   if (passage) return `${passage.title}. ${passage.text}`;
+  const engine = useEngines(q);
+  if (engine) return engine;
   const row = systems().find((item) => new RegExp(`\\b${item.id}\\b`, "i").test(q));
   if (row) return `${row.id}. ${row.holds}`;
   return "I am Tessera. I am the pen. The other pen did not answer. I do not have that line in the files.";
