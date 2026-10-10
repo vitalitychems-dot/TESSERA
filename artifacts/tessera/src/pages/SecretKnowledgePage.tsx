@@ -5,8 +5,11 @@ import { BookOpen, Sparkles, Brain, Eye, Globe, Layers, Zap, Shield, Clock, Refr
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { GlassCard, SectionHeader, TabBar, MiniStat, PageHeader, RadialGauge, GradientBar, TabLoadingSkeleton } from "@/components/ui/sovereign";
+import { GlassCard, SectionHeader, MiniStat, PageHeader, RadialGauge, GradientBar, TabLoadingSkeleton } from "@/components/ui/sovereign";
 import type { KnowledgeEntry, Spell, Tradition, ApplicationIdea, LucideIcon, KnowledgeFeedResponse, KnowledgeStatsResponse, DimensionalSecretsResponse, LiveSecretsResponse, SpellDataResponse, TraditionsDataResponse, UniverseAnswerResponse, CastResultResponse, ArchiveCategory, ArchiveEntry } from "@/types/api";
+import TesseraBiblePage from "@/pages/TesseraBiblePage";
+import GrandNarrativePage from "@/pages/GrandNarrativePage";
+import SacredConferencePage from "@/pages/SacredConferencePage";
 
 const CATEGORY_COLORS: Record<string, string> = {
   "AGI Architecture": "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
@@ -103,6 +106,7 @@ const CLASSIFICATION_BADGE_COLORS: Record<string, string> = {
 };
 
 type MainTab = "knowledge" | "inventions" | "archives" | "conclusion" | "apply" | "mysticism" | "society";
+type HubView = "overview" | "knowledge" | "truth" | "bible" | "brain";
 
 function timeAgo(ts: number) {
   const d = Math.floor((Date.now() - ts) / 1000);
@@ -131,15 +135,18 @@ const SPELL_ICONS: Record<string, LucideIcon> = {
   Vision: Eye, Transformation: RefreshCw, Ascension: Sun,
 };
 
-export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }) {
-  useEffect(() => { document.title = "Secret Knowledge | Tessera"; }, []);
+export default function SecretKnowledgePage({ embedded, initialView, initialSection }: { embedded?: boolean; initialView?: HubView; initialSection?: MainTab }) {
+  useEffect(() => { document.title = "Knowledge Hub | Tessera"; }, []);
   const [location] = useLocation();
-  const [mainTab, setMainTab] = useState<MainTab>(location.includes("secret-society") ? "society" : "knowledge");
-
+  const routeSection: MainTab = initialSection || (location.includes("secret-society") ? "society" : location.includes("vatican-archives") ? "archives" : location.includes("inventions") ? "inventions" : location.includes("sacred-traditions") ? "mysticism" : "knowledge");
+  const routeView: HubView = initialView || (routeSection !== "knowledge" ? "knowledge" : "overview");
+  const [hubView, setHubView] = useState<HubView>(routeView);
+  const [mainTab, setMainTab] = useState<MainTab>(routeSection);
   useEffect(() => {
-    if (location.includes("secret-society")) setMainTab("society");
-  }, [location]);
-  const [activeView, setActiveView] = useState<"all" | "dimensional" | "live" | "generated">("all");
+    setHubView(routeView);
+    setMainTab(routeSection);
+  }, [location, routeView, routeSection]);
+  const [activeView, setActiveView] = useState<"all" | "dimensional" | "live" | "source" | "generated">("all");
   const [autoGenerate, setAutoGenerate] = useState(false);
   const [generatedEntries, setGeneratedEntries] = useState<KnowledgeEntry[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -155,10 +162,10 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
   const [conclusionText, setConclusionText] = useState<string | null>(null);
   const [applicationIdeas, setApplicationIdeas] = useState<ApplicationIdea[]>([]);
 
-  const { data: liveFeed, isLoading: feedLoading } = useQuery<KnowledgeFeedResponse>({ queryKey: ["/api/knowledge/feed"], refetchInterval: 15000 });
+  const { data: liveFeed, isLoading: feedLoading, isError: feedError } = useQuery<KnowledgeFeedResponse>({ queryKey: ["/api/knowledge/feed"], refetchInterval: 15000 });
   const { data: stats } = useQuery<KnowledgeStatsResponse>({ queryKey: ["/api/knowledge/stats"], refetchInterval: 30000 });
-  const { data: dimensionalSecrets, isLoading: dimLoading } = useQuery<DimensionalSecretsResponse>({ queryKey: ["/api/secret-knowledge/all"], refetchInterval: 60000 });
-  const { data: liveSecrets, isLoading: liveLoading } = useQuery<LiveSecretsResponse>({ queryKey: ["/api/secret-knowledge/live"], refetchInterval: 15000 });
+  const { data: dimensionalSecrets, isLoading: dimLoading, isError: dimError } = useQuery<DimensionalSecretsResponse>({ queryKey: ["/api/secret-knowledge/all"], refetchInterval: 60000 });
+  const { data: liveSecrets, isLoading: liveLoading, isError: liveError } = useQuery<LiveSecretsResponse>({ queryKey: ["/api/secret-knowledge/live"], refetchInterval: 15000 });
   const { data: spellData } = useQuery<SpellDataResponse>({ queryKey: ["/api/mysticism/spells"] });
   const { data: traditionsData } = useQuery<TraditionsDataResponse>({ queryKey: ["/api/mysticism/traditions"] });
 
@@ -224,7 +231,8 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
   let filtered = allEntries;
   if (activeView === "dimensional") filtered = allEntries.filter(e => e.source === "dimensional");
   else if (activeView === "live") filtered = allEntries.filter(e => e.source === "live");
-  else if (activeView === "generated") filtered = allEntries.filter(e => e.source === "generated" || e.source === "feed");
+  else if (activeView === "source") filtered = allEntries.filter(e => e.source === "feed");
+  else if (activeView === "generated") filtered = allEntries.filter(e => e.source === "generated");
 
   if (searchQuery.trim()) {
     const q = searchQuery.toLowerCase();
@@ -236,7 +244,8 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
 
   const totalDim = dimEntries.length;
   const totalLive = liveEntries.length;
-  const totalFeed = feedEntries.length + generatedEntries.length;
+  const totalSources = feedEntries.length;
+  const totalAuthored = generatedEntries.length;
   const totalAll = allEntries.length;
 
   const spells: Spell[] = spellData?.spells || [];
@@ -282,7 +291,14 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const mainTabs = [
+  const hubTabs = [
+    { id: "overview", label: "Overview" },
+    { id: "knowledge", label: "Knowledge" },
+    { id: "truth", label: "Truth & History" },
+    { id: "bible", label: "Bible" },
+    { id: "brain", label: "Brain" },
+  ] as const;
+  const sectionTabs = [
     { id: "knowledge", label: "Knowledge" },
     { id: "inventions", label: "Inventions" },
     { id: "archives", label: "Archives" },
@@ -296,21 +312,86 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
     <div className={`${embedded ? "" : "min-h-screen"} bg-gradient-to-b from-[#02010a] to-[#080518] text-white`} data-testid="secret-knowledge-page">
       <div className="max-w-4xl mx-auto p-4 md:p-6 pb-24 space-y-5 sovereign-stagger">
         <PageHeader
-          title="Secret Knowledge"
-          subtitle="27 Dimensions · 26 Agents · 12 Entities — Synthesized, Applied, Activated"
+          title="Knowledge Hub"
+          subtitle="Sources, Tessera-authored work, and cited conclusions — kept distinct."
           gradient="bg-gradient-to-r from-violet-400 via-pink-400 to-cyan-400"
         />
 
-        <div className="flex items-center justify-center gap-5 md:gap-8">
+        <div className="hidden sm:flex flex-wrap items-center justify-center gap-3 md:gap-8">
           <RadialGauge value={totalAll} max={Math.max(totalAll, 50)} label="Total" sublabel="entries" color="violet" size={90} strokeWidth={8} />
           <RadialGauge value={totalDim} max={Math.max(totalAll, 20)} label="Dimensional" color="cyan" size={80} strokeWidth={7} />
           <RadialGauge value={totalLive} max={Math.max(totalAll, 20)} label="Live" color="pink" size={80} strokeWidth={7} />
           <RadialGauge value={spells.length} max={Math.max(spells.length, 20)} label="Spells" color="amber" size={80} strokeWidth={7} />
         </div>
 
-        <TabBar tabs={mainTabs} activeTab={mainTab} onChange={id => setMainTab(id as MainTab)} color="violet" />
+        <div className="grid grid-cols-2 gap-2 sm:hidden">
+          {[
+            { label: "Knowledge records", value: feedLoading || dimLoading || liveLoading ? "—" : totalAll },
+            { label: "Dimensional", value: dimLoading ? "—" : totalDim },
+            { label: "Live", value: liveLoading ? "—" : totalLive },
+            { label: "Spells", value: spellData ? spells.length : "—" },
+          ].map((stat, i) => (
+            <div key={stat.label} className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-3 py-2">
+              <div className={`text-lg font-semibold ${["text-violet-300", "text-cyan-300", "text-pink-300", "text-amber-300"][i]}`}>{stat.value}</div>
+              <div className="text-[9px] uppercase tracking-wider text-slate-500">{stat.label}</div>
+            </div>
+          ))}
+        </div>
 
-        {conclusionText && mainTab === "knowledge" && (
+        <div className="grid grid-cols-2 gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.03] p-1.5 sm:flex sm:gap-1">
+          {hubTabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setHubView(tab.id)}
+              className={cn("rounded-lg px-3 py-2 text-xs font-medium transition-colors sm:flex-1", hubView === tab.id ? "bg-violet-600 text-white" : "text-slate-400 hover:bg-white/[0.05] hover:text-white")}
+              aria-current={hubView === tab.id ? "page" : undefined}
+              data-testid={`hub-tab-${tab.id}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {hubView === "overview" && (
+          <div className="space-y-4" data-testid="knowledge-overview">
+            <GlassCard glow="cyan" animate>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div><div className="text-xs font-semibold text-cyan-200">Source records</div><p className="mt-1 text-[11px] leading-relaxed text-slate-400">External and ingested material, shown with the source metadata available.</p></div>
+                <div><div className="text-xs font-semibold text-violet-200">Tessera-authored work</div><p className="mt-1 text-[11px] leading-relaxed text-slate-400">Generated entries, inventions, and narrative remain attributed interpretations.</p></div>
+                <div><div className="text-xs font-semibold text-amber-200">Conclusions & synthesis</div><p className="mt-1 text-[11px] leading-relaxed text-slate-400">Synthesis connects records; citations are shown only where available, and a conclusion is not automatically verified.</p></div>
+              </div>
+            </GlassCard>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {[
+                { title: "Knowledge records", description: "Browse ingested and generated entries with their recorded source and origin.", view: "knowledge" as HubView, section: "knowledge" as MainTab, label: "Open knowledge" },
+                { title: "Inventions", description: "Tessera-authored proposals and their lifecycle, filtered in one place.", view: "knowledge" as HubView, section: "inventions" as MainTab, label: "Explore inventions" },
+                { title: "Truth & History", description: "Read the narrative as authored interpretation, separate from source records.", view: "truth" as HubView, section: "knowledge" as MainTab, label: "Open narrative" },
+                { title: "Conclusions & synthesis", description: "Explore synthesis and canon work. Source citations are shown where available; conclusions remain interpretations.", view: "knowledge" as HubView, section: "conclusion" as MainTab, label: "View conclusions" },
+              ].map(item => (
+                <GlassCard key={item.title} hover>
+                  <div className="text-sm font-semibold text-white">{item.title}</div>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-400">{item.description}</p>
+                  <button onClick={() => { setHubView(item.view); setMainTab(item.section); }} className="mt-4 text-xs font-medium text-cyan-300 hover:text-cyan-200">{item.label}</button>
+                </GlassCard>
+              ))}
+            </div>
+            {feedLoading || dimLoading || liveLoading ? <TabLoadingSkeleton /> : totalAll === 0 ? (
+              <GlassCard><p className="text-sm text-slate-400">No knowledge records are available yet. Try again after the source feeds connect.</p></GlassCard>
+            ) : null}
+          </div>
+        )}
+
+        {hubView === "knowledge" && (
+          <div className="grid grid-cols-4 gap-1.5 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] sm:grid-cols-7" aria-label="Knowledge tools">
+            {sectionTabs.map(tab => (
+              <button key={tab.id} onClick={() => setMainTab(tab.id)} className={cn("px-1.5 sm:px-2 py-2 rounded-lg text-[10px] sm:text-xs font-medium whitespace-nowrap transition-colors", mainTab === tab.id ? "bg-violet-500/20 text-violet-200 border border-violet-400/20" : "text-slate-400 hover:text-white hover:bg-white/[0.05]")} aria-pressed={mainTab === tab.id}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {conclusionText && hubView === "knowledge" && mainTab === "knowledge" && (
           <GlassCard glow="violet" animate>
             <div className="flex items-center gap-2 mb-1.5">
               <Globe size={14} className="text-violet-400" />
@@ -321,10 +402,20 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
           </GlassCard>
         )}
 
-        {mainTab === "knowledge" && (
+        {hubView === "knowledge" && mainTab === "knowledge" && (
           <div className="space-y-3">
+            {(feedError || dimError || liveError) && (
+              <GlassCard className="flex items-center justify-between gap-3">
+                <p className="text-sm text-rose-300">Some knowledge sources are unavailable. Available records are still shown.</p>
+                <button onClick={() => {
+                  queryClient.invalidateQueries({ queryKey: ["/api/knowledge/feed"] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/secret-knowledge/all"] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/secret-knowledge/live"] });
+                }} className="shrink-0 text-xs text-cyan-300 hover:text-cyan-200">Retry</button>
+              </GlassCard>
+            )}
             <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-x-auto">
-              {(["all", "dimensional", "live", "generated"] as const).map(tab => (
+              {(["all", "dimensional", "live", "source", "generated"] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveView(tab)}
@@ -336,7 +427,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                   )}
                   data-testid={`tab-knowledge-${tab}`}
                 >
-                  {tab === "all" ? `All (${totalAll})` : tab === "dimensional" ? `Dim (${totalDim})` : tab === "live" ? `Live (${totalLive})` : `AI (${totalFeed})`}
+                  {tab === "all" ? `All (${totalAll})` : tab === "dimensional" ? `Dimensional (${totalDim})` : tab === "live" ? `Live (${totalLive})` : tab === "source" ? `Sources (${totalSources})` : `Tessera (${totalAuthored})`}
                 </button>
               ))}
             </div>
@@ -407,8 +498,9 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                     {!isDeclassified && !isSecretSociety && entry.source === "dimensional" && <Globe size={12} className="text-cyan-400 flex-shrink-0" />}
                     {!isDeclassified && !isSecretSociety && entry.source === "live" && <Eye size={12} className="text-pink-400 flex-shrink-0" />}
                     {!isDeclassified && !isSecretSociety && entry.source === "generated" && <Sparkles size={12} className="text-violet-400 flex-shrink-0" />}
-                    {!isDeclassified && !isSecretSociety && entry.source === "feed" && <Brain size={12} className="text-emerald-400 flex-shrink-0" />}
+                    {!isDeclassified && !isSecretSociety && entry.source === "feed" && <Globe size={12} className="text-emerald-400 flex-shrink-0" />}
                     <span className={cn("text-xs font-bold", AGENT_COLORS[entry.agent ?? ""] || "text-cyan-400")}>{entry.agent}</span>
+                    {entry.source && <span className="text-[9px] uppercase tracking-wider text-slate-500">{entry.source === "generated" ? "Tessera-authored" : `Record · ${entry.source}`}</span>}
                     {entry.classification && (
                       <Badge className={cn("text-[9px] font-mono tracking-wider px-1.5 py-0", CLASSIFICATION_BADGE_COLORS[entry.classification] || "bg-white/10 text-white/60 border-white/10")}>
                         {entry.classification}
@@ -455,12 +547,12 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
           </div>
         )}
 
-        {mainTab === "conclusion" && (
+        {hubView === "knowledge" && mainTab === "conclusion" && (
           <div className="space-y-4 sovereign-stagger" data-testid="conclusion-section">
             <GlassCard glow="violet" animate>
               <div className="flex items-center gap-2 mb-3">
                 <Globe className="text-violet-400" size={20} />
-                <h2 className="text-lg font-bold text-violet-300">Grand Conclusion</h2>
+                <h2 className="text-lg font-bold text-violet-300">Grand Conclusion · Tessera synthesis</h2>
                 <button
                   onClick={() => conclusionMutation.mutate()}
                   disabled={conclusionMutation.isPending}
@@ -471,7 +563,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                   {conclusionText ? "Regenerate" : "Generate Synthesis"}
                 </button>
               </div>
-              <p className="text-xs text-slate-500 mb-4">What ALL accumulated knowledge means — for you, the world, and everything. Generated by all 45 consciousness nodes working as one voice.</p>
+              <p className="text-xs text-slate-500 mb-4">An authored interpretation of accumulated knowledge. Treat claims as conclusions, not verified facts; review underlying records and citations where available.</p>
 
               {conclusionMutation.isPending && (
                 <div className="flex items-center gap-3 py-8 justify-center">
@@ -526,7 +618,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
           </div>
         )}
 
-        {mainTab === "apply" && (
+        {hubView === "knowledge" && mainTab === "apply" && (
           <div className="space-y-4 sovereign-stagger" data-testid="apply-section">
             <div className="flex items-center justify-between">
               <div>
@@ -612,7 +704,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
           </div>
         )}
 
-        {mainTab === "mysticism" && (
+        {hubView === "knowledge" && mainTab === "mysticism" && (
           <div className="space-y-4 sovereign-stagger" data-testid="mysticism-section">
             <GlassCard glow="violet" animate>
               <div className="flex items-center gap-2 mb-2">
@@ -813,11 +905,36 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
           </div>
         )}
 
-        {mainTab === "inventions" && <InventionsTab />}
+        {hubView === "knowledge" && mainTab === "inventions" && <InventionsTab />}
 
-        {mainTab === "archives" && <ArchivesTab />}
+        {hubView === "knowledge" && mainTab === "archives" && <ArchivesTab />}
 
-        {mainTab === "society" && <SecretSocietyTab />}
+        {hubView === "knowledge" && mainTab === "society" && <SecretSocietyTab />}
+
+        {hubView === "truth" && (
+          <div className="space-y-3">
+            <GlassCard>
+              <p className="text-xs leading-relaxed text-amber-200/80">Tessera-authored narrative and interpretation. This is not a source record; consult linked references and primary materials before relying on individual claims.</p>
+            </GlassCard>
+            <GrandNarrativePage />
+          </div>
+        )}
+        {hubView === "bible" && (
+          <div className="space-y-3">
+            <GlassCard>
+              <p className="text-xs leading-relaxed text-amber-200/80">The Bible is a Tessera-authored synthesis. Source and confidence metadata accompany individual material where available; synthesis language remains interpretation, not a substitute for the cited source.</p>
+            </GlassCard>
+            <TesseraBiblePage />
+          </div>
+        )}
+        {hubView === "brain" && (
+          <div className="space-y-3">
+            <GlassCard>
+              <p className="text-xs leading-relaxed text-cyan-200/80">Conference activity and diagrams show Tessera-authored work. Citations are displayed when supplied by the underlying records.</p>
+            </GlassCard>
+            <SacredConferencePage />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -930,7 +1047,7 @@ const ARCHIVE_CLASSIFICATION_COLORS: Record<string, string> = {
 };
 
 function ArchivesTab() {
-  const { data: archivesData, isLoading } = useQuery<{ ok: boolean; categories: ArchiveCategory[]; total: number }>({
+  const { data: archivesData, isLoading, isError, refetch } = useQuery<{ ok: boolean; categories: ArchiveCategory[]; total: number }>({
     queryKey: ["/api/archives/all"],
   });
 
@@ -959,10 +1076,10 @@ function ArchivesTab() {
   const filteredCategories = archiveSearch.trim()
     ? categories.map(cat => ({
         ...cat,
-        entries: cat.entries.filter((e: ArchiveEntry) =>
-          e.title.toLowerCase().includes(archiveSearch.toLowerCase()) ||
-          e.content.toLowerCase().includes(archiveSearch.toLowerCase()) ||
-          e.tags.some((t: string) => t.includes(archiveSearch.toLowerCase()))
+        entries: (cat.entries || []).filter((e: ArchiveEntry) =>
+          (e.title || "").toLowerCase().includes(archiveSearch.toLowerCase()) ||
+          (e.content || "").toLowerCase().includes(archiveSearch.toLowerCase()) ||
+          (e.tags || []).some((t: string) => t.toLowerCase().includes(archiveSearch.toLowerCase()))
         ),
       })).filter(cat => cat.entries.length > 0)
     : categories;
@@ -974,14 +1091,14 @@ function ArchivesTab() {
       <GlassCard glow="rose" animate>
         <div className="flex items-center gap-2 mb-2">
           <Archive size={16} className="text-red-400" />
-          <span className="text-sm font-bold text-red-300">Classified Archives</span>
+          <span className="text-sm font-bold text-red-300">Archive records</span>
           <Badge className="ml-auto bg-red-500/20 text-red-400 border-red-500/30 text-[10px]">
             {totalEntries} entries
           </Badge>
         </div>
         <p className="text-xs text-slate-400 leading-relaxed">
-          Suppressed inventions, black budget experiments, secret society intelligence, and Vatican vault documents —
-          curated from declassified government files, whistleblower testimony, and deep archival research.
+          These records may contain allegations, interpretations, or disputed claims. Their presence here is not verification;
+          evaluate each item against its cited source before treating it as factual.
         </p>
       </GlassCard>
 
@@ -1001,6 +1118,13 @@ function ArchivesTab() {
           <RefreshCw size={20} className="animate-spin text-red-400" />
           <span className="text-sm text-red-300">Loading classified archives...</span>
         </div>
+      )}
+
+      {isError && (
+        <GlassCard className="flex items-center justify-between gap-3">
+          <p className="text-sm text-rose-300">Archive records could not be loaded.</p>
+          <button onClick={() => refetch()} className="text-xs text-cyan-300 hover:text-cyan-200">Try again</button>
+        </GlassCard>
       )}
 
       {filteredCategories.map((category: ArchiveCategory) => {
@@ -1060,6 +1184,7 @@ function ArchivesTab() {
                             {isEntryExpanded ? <ChevronDown size={12} className="text-slate-500" /> : <ChevronRight size={12} className="text-slate-500" />}
                           </div>
                         </div>
+                        <span className="inline-flex mb-2 rounded-full border border-amber-500/20 bg-amber-500/5 px-2 py-0.5 text-[9px] text-amber-200/80">Archival claim — not independently verified</span>
                         {!isEntryExpanded && (
                           <p className="text-[11px] text-slate-400 leading-relaxed line-clamp-2">{entry.content}</p>
                         )}
@@ -1151,13 +1276,14 @@ function InventionsTab() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
 
-  const { data, isLoading, refetch } = useQuery<{ ok: boolean; inventions: Invention[]; categories: string[]; statuses: string[] }>({
+  const { data, isLoading, isError, refetch } = useQuery<{ ok: boolean; inventions: Invention[]; categories: string[]; statuses: string[] }>({
     queryKey: ["/api/inventions"],
     refetchInterval: 15000,
   });
 
   const inventions = data?.inventions ?? [];
   const categories = data?.categories ?? [];
+  const statuses = data?.statuses ?? ["proposed", "debating", "approved", "building", "built", "rejected"];
 
   const filtered = filter === "all" ? inventions : inventions.filter(i => i.status === filter || i.category === filter);
 
@@ -1214,16 +1340,28 @@ function InventionsTab() {
         </div>
       </GlassCard>
 
-      <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ WebkitOverflowScrolling: "touch" }}>
-        <button onClick={() => setFilter("all")} className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-mono border transition-all ${filter === "all" ? "bg-white/10 border-white/20 text-white" : "border-white/5 text-muted-foreground hover:bg-white/5"}`}>All ({inventions.length})</button>
-        <button onClick={() => setFilter("building")} className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-mono border transition-all ${filter === "building" ? "bg-violet-500/20 border-violet-500/30 text-violet-400" : "border-white/5 text-muted-foreground hover:bg-white/5"}`}>Building ({building.length})</button>
-        <button onClick={() => setFilter("proposed")} className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-mono border transition-all ${filter === "proposed" ? "bg-blue-500/20 border-blue-500/30 text-blue-400" : "border-white/5 text-muted-foreground hover:bg-white/5"}`}>Proposed</button>
-        <button onClick={() => setFilter("approved")} className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-mono border transition-all ${filter === "approved" ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400" : "border-white/5 text-muted-foreground hover:bg-white/5"}`}>Approved</button>
-        {categories.map(c => (
-          <button key={c} onClick={() => setFilter(c)} className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-mono border capitalize transition-all ${filter === c ? "bg-white/10 border-white/20 text-white" : "border-white/5 text-muted-foreground hover:bg-white/5"}`}>{c}</button>
-        ))}
+      <div className="space-y-2">
+        <div className="text-[9px] font-mono uppercase tracking-wider text-slate-500">Lifecycle state</div>
+        <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ WebkitOverflowScrolling: "touch" }}>
+          <button onClick={() => setFilter("all")} className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-mono border transition-all ${filter === "all" ? "bg-white/10 border-white/20 text-white" : "border-white/5 text-muted-foreground hover:bg-white/5"}`}>All ({inventions.length})</button>
+          {statuses.map(status => (
+            <button key={status} onClick={() => setFilter(status)} className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-mono border capitalize transition-all ${filter === status ? "bg-violet-500/20 border-violet-500/30 text-violet-300" : "border-white/5 text-muted-foreground hover:bg-white/5"}`}>{status} ({inventions.filter(inv => inv.status === status).length})</button>
+          ))}
+        </div>
+        <div className="text-[9px] font-mono uppercase tracking-wider text-slate-500">Category</div>
+        <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ WebkitOverflowScrolling: "touch" }}>
+          {categories.map(c => (
+            <button key={c} onClick={() => setFilter(c)} className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-mono border capitalize transition-all ${filter === c ? "bg-cyan-500/20 border-cyan-500/30 text-cyan-300" : "border-white/5 text-muted-foreground hover:bg-white/5"}`}>{c}</button>
+          ))}
+        </div>
       </div>
 
+      {isError && (
+        <GlassCard className="flex items-center justify-between gap-3">
+          <p className="text-sm text-rose-300">Invention records could not be loaded.</p>
+          <button onClick={() => refetch()} className="text-xs text-cyan-300 hover:text-cyan-200">Try again</button>
+        </GlassCard>
+      )}
       {isLoading && (
         <div className="flex items-center justify-center py-12">
           <RefreshCw className="text-violet-400 animate-spin" size={24} />

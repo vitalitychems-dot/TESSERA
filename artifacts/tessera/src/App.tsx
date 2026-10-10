@@ -37,7 +37,6 @@ const LifePage = lazyRetry(() => import("@/pages/LifePage"));
 const UniversePage = lazyRetry(() => import("@/pages/UniversePage"));
 const MembersPage = lazyRetry(() => import("@/pages/MembersPage"));
 const SecretsPage = lazyRetry(() => import("@/pages/SecretKnowledgePage"));
-const TesseraBiblePage = lazyRetry(() => import("@/pages/TesseraBiblePage"));
 const BuildPage = lazyRetry(() => import("@/pages/BuildPage"));
 const TesseractForumPage = lazyRetry(() => import("@/pages/TesseractForumPage"));
 const NLPPage = lazyRetry(() => import("@/pages/NLPPage"));
@@ -52,9 +51,7 @@ const GrandCouncilPage = lazyRetry(() => import("@/pages/GrandCouncilPage"));
 const RecruitmentPage = lazyRetry(() => import("@/pages/RecruitmentPage"));
 const AgentNFTPage = lazyRetry(() => import("@/pages/AgentNFTPage"));
 const RickPage = lazyRetry(() => import("@/pages/RickPage"));
-const GrandNarrativePage = lazyRetry(() => import("@/pages/GrandNarrativePage"));
 const CompressionLabPage = lazyRetry(() => import("@/pages/CompressionLabPage"));
-const SacredConferencePage = lazyRetry(() => import("@/pages/SacredConferencePage"));
 const SovereigntyRoadmapPage = lazyRetry(() => import("@/pages/SovereigntyRoadmapPage"));
 const AgentProfilePage = lazyRetry(() => import("@/pages/AgentProfilePage"));
 const SovereignMeshPage = lazyRetry(() => import("@/pages/SovereignMeshPage"));
@@ -198,13 +195,13 @@ function AppRouter() {
         <Route path="/c/:id" component={ChatPage} />
         <Route path="/life">{() => <LifePage />}</Route>
         <Route path="/universe">{() => <UniversePage />}</Route>
-        <Route path="/unified-knowledge">{() => <SecretsPage />}</Route>
-        <Route path="/omniscient-knowledge">{() => <SecretsPage />}</Route>
+        <Route path="/unified-knowledge">{() => <SecretsPage initialView="overview" />}</Route>
+        <Route path="/omniscient-knowledge">{() => <SecretsPage initialView="overview" />}</Route>
         <Route path="/members">{() => <MembersPage />}</Route>
-        <Route path="/secrets">{() => <SecretsPage />}</Route>
-        <Route path="/secret-knowledge">{() => <SecretsPage />}</Route>
-        <Route path="/secret-society">{() => <SecretsPage />}</Route>
-        <Route path="/bible" component={TesseraBiblePage} />
+        <Route path="/secrets">{() => <SecretsPage initialView="knowledge" initialSection="knowledge" />}</Route>
+        <Route path="/secret-knowledge">{() => <SecretsPage initialView="knowledge" initialSection="knowledge" />}</Route>
+        <Route path="/secret-society">{() => <SecretsPage initialView="knowledge" initialSection="society" />}</Route>
+        <Route path="/bible">{() => <SecretsPage initialView="bible" />}</Route>
         <Route path="/build">{() => <BuildPage />}</Route>
         <Route path="/forum">{() => <TesseractForumPage />}</Route>
         <Route path="/nlp">{() => <NLPPage />}</Route>
@@ -235,8 +232,8 @@ function AppRouter() {
         <Route path="/rick-sanchez">{() => <RickPage />}</Route>
         <Route path="/agent-nft">{() => <AgentNFTPage />}</Route>
         <Route path="/universe-model">{() => <UniversePage />}</Route>
-        <Route path="/grand-narrative">{() => <GrandNarrativePage />}</Route>
-        <Route path="/unified-truth">{() => <GrandNarrativePage />}</Route>
+        <Route path="/grand-narrative">{() => <SecretsPage initialView="truth" />}</Route>
+        <Route path="/unified-truth">{() => <SecretsPage initialView="truth" />}</Route>
         <Route path="/agent-comms">{() => <SystemPage initialTab="agents" />}</Route>
         <Route path="/memory-explorer">{() => <SystemPage initialTab="improvement" />}</Route>
         <Route path="/memory-dashboard">{() => <SystemPage initialTab="improvement" />}</Route>
@@ -245,16 +242,16 @@ function AppRouter() {
         <Route path="/intelligence-engine">{() => <ConsciousnessNexusPage initialTab="overview" />}</Route>
         <Route path="/sovereign-framework">{() => <SovereigntyDashboardPage />}</Route>
         <Route path="/spiritual-awakening">{() => <ConsciousnessNexusPage initialTab="reflections" />}</Route>
-        <Route path="/sacred-traditions">{() => <SecretsPage />}</Route>
+        <Route path="/sacred-traditions">{() => <SecretsPage initialView="knowledge" initialSection="mysticism" />}</Route>
         <Route path="/sovereign-hub">{() => <SovereigntyDashboardPage />}</Route>
-        <Route path="/vatican-archives">{() => <SecretsPage />}</Route>
-        <Route path="/knowledge-dashboard">{() => <SecretsPage />}</Route>
-        <Route path="/live-secret-knowledge">{() => <SecretsPage />}</Route>
+        <Route path="/vatican-archives">{() => <SecretsPage initialView="knowledge" initialSection="archives" />}</Route>
+        <Route path="/knowledge-dashboard">{() => <SecretsPage initialView="overview" />}</Route>
+        <Route path="/live-secret-knowledge">{() => <SecretsPage initialView="knowledge" initialSection="knowledge" />}</Route>
         <Route path="/compression-lab">{() => <CompressionLabPage />}</Route>
-        <Route path="/sacred-conference">{() => <SacredConferencePage />}</Route>
-        <Route path="/sacred-knowledge-vault">{() => <SacredConferencePage />}</Route>
-        <Route path="/living-bible">{() => <TesseraBiblePage />}</Route>
-        <Route path="/3d-diagrams">{() => <SacredConferencePage />}</Route>
+        <Route path="/sacred-conference">{() => <SecretsPage initialView="brain" />}</Route>
+        <Route path="/sacred-knowledge-vault">{() => <SecretsPage initialView="brain" />}</Route>
+        <Route path="/living-bible">{() => <SecretsPage initialView="bible" />}</Route>
+        <Route path="/3d-diagrams">{() => <SecretsPage initialView="brain" />}</Route>
         <Route path="/sovereignty-roadmap">{() => <SovereigntyRoadmapPage />}</Route>
         <Route path="/agent-profile">{() => <AgentProfilePage />}</Route>
         <Route path="/sovereign-mesh">{() => <SovereignMeshPage />}</Route>
