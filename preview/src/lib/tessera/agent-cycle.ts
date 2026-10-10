@@ -33,6 +33,10 @@ const JOBS: { say: string; skill: string; ok: () => boolean }[] = [
   { say: "does the vote pass", skill: "vote", ok: () => twoThirds(2, 3) === true && twoThirds(1, 3) === false },
 ];
 
+export function skillNames() {
+  return JOBS.map((job) => job.skill);
+}
+
 export function chooseSkill(say: string) {
   const text = say.toLowerCase();
   return JOBS.find((job) => text === job.say)?.skill ?? "none";
