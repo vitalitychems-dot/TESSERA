@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AGENTS } from "@/lib/tessera/identity";
+import { AGENTS, ENTITIES } from "@/lib/tessera/identity";
+import { DIMENSIONAL_LAWS, DOMAINS, FREQUENCIES, ORIGIN_COUNCIL } from "@/lib/tessera/canon";
 import { brainVolume, grown, projectPoint, type VolumeNode } from "@/lib/tessera/brain-volume";
 import { perceptron } from "@/lib/tessera/perceptron";
 
@@ -8,17 +9,26 @@ const MEMORY = ["kept pages", "corrections", "catalog", "query ranks"];
 
 const COLOR: Record<VolumeNode["part"], string> = {
   region: "#7FDBFF",
+  chorus: "#d6c4ff",
+  law: "#ffd27a",
+  tone: "#ff9ec8",
   step: "#9dffce",
   memory: "#e7d6ff",
-  link: "#ffffff",
+  council: "#9ad0ff",
+  domain: "#c8f4ff",
 };
 
 export function BrainMesh() {
   const named = useMemo(
     () => [
       ...AGENTS.map((agent) => ({ name: agent.name, part: "region" as const })),
+      ...ENTITIES.map((entity) => ({ name: entity.name, part: "chorus" as const })),
+      ...DIMENSIONAL_LAWS.map((law) => ({ name: law.dim, part: "law" as const })),
+      ...FREQUENCIES.map((tone) => ({ name: tone.hz, part: "tone" as const })),
       ...STEPS.map((name) => ({ name, part: "step" as const })),
       ...MEMORY.map((name) => ({ name, part: "memory" as const })),
+      ...ORIGIN_COUNCIL.map((name) => ({ name, part: "council" as const })),
+      ...DOMAINS.map((name) => ({ name, part: "domain" as const })),
     ],
     [],
   );
@@ -87,7 +97,7 @@ export function BrainMesh() {
     <section>
       <h3 className="font-display text-2xl">The volume</h3>
       <p className="mt-1 text-sm leading-relaxed text-muted">
-        Drag to turn it. The wheel zooms. The fourth axis is growth, from the first point to the full volume. A perceptron fires when the weighted sum crosses the threshold. This one sums to {unit.sum} and {unit.fired ? "fires" : "stays quiet"}. Cyan is a region, green is a step she can run, and violet is memory. It is not a hidden box.
+        Drag to turn it. The wheel zooms. The fourth axis is growth. Every point is named. Cyan is a region, violet is the chorus, gold is a law, pink is a tone, green is a step she can run, and the inner points are memory. It is not a scanned body and it is not a hidden box.
       </p>
       <div
         className="mt-3 touch-none overflow-hidden rounded-2xl bg-black"
@@ -144,7 +154,7 @@ export function BrainMesh() {
         />
       </div>
       <p className="mt-2 text-sm text-fg">
-        {picked}. {visible.length} of {volume.nodes.length} points. {volume.edges.length} links. {visible.filter((node) => node.name).length} named points are in view.
+        {picked}. {visible.length} of {volume.nodes.length} named points. {volume.edges.length} links. The sample perceptron sums to {unit.sum} and {unit.fired ? "fires" : "stays quiet"}.
       </p>
     </section>
   );
