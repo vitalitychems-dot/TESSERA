@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { gitbookNote } from "./gitbook-note";
 import { dataPath } from "./data-path";
 import { repeatedFirstLine } from "./duplicate-guard";
 import { writeRefusal } from "./repo-guard";
@@ -306,5 +307,31 @@ export const rickOpen = createServerFn({ method: "POST" })
     path: typeof input?.path === "string" ? input.path : "",
   }))
   .handler(async ({ data }) => openRepoContents(data.repo, data.path));
+
+export { gitbookNote } from "./gitbook-note";
+
+export const readGitbook = createServerFn({ method: "POST" }).handler(async () => {
+  const notes: { user: string; at: string; body: string }[] = [];
+  for (let page = 1; page <= 4; page += 1) {
+    const result = await ghJson(`/repos/vitalitychems-dot/Gitbook/issues/2/comments?per_page=100&page=${page}`);
+    if (!result.ok || !Array.isArray(result.data)) {
+      if (notes.length > 0) break;
+      return { ok: false as const, error: `Gitbook issue 2 could not be read. ${result.status}.`, notes, files: [] as { name: string; href: string }[] };
+    }
+    for (const row of result.data as { user?: { login?: string }; created_at?: string; body?: string }[]) {
+      notes.push({ user: row.user?.login ?? "github", at: row.created_at ?? "", body: gitbookNote(row.body ?? "") });
+    }
+    if (result.data.length < 100) break;
+  }
+  const mesh = await ghJson("/repos/vitalitychems-dot/Gitbook/contents/mesh");
+  const files = Array.isArray(mesh.data)
+    ? (mesh.data as { name?: string; html_url?: string; type?: string }[]).flatMap((row) =>
+        row.name && row.type === "file"
+          ? [{ name: row.name, href: row.html_url ?? `https://github.com/vitalitychems-dot/Gitbook/blob/main/mesh/${row.name}` }]
+          : [],
+      )
+    : [];
+  return { ok: true as const, error: "", notes: notes.slice(-8), files };
+});
 
 
