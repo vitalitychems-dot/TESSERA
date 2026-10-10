@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   PHI,
+  cascade,
   consolidate,
   councilTally,
   cosine,
@@ -37,6 +38,9 @@ test("the ten desk steps run and the merge keeps the longer text", () => {
 
   assert.ok(Math.abs(sigmoid(0) - 0.5) < 1e-9);
   assert.ok(transferGain(10, 0) > 4 && transferGain(10, 0) < 6);
+  const moved = cascade({ search: 0, read: 0 }, "search", 10);
+  assert.equal(moved.search, 10);
+  assert.ok((moved.read ?? 0) > 8 && (moved.read ?? 0) < 10);
 
   assert.equal(cosine([1, 0], [1, 0]), 1);
   assert.equal(cosine([1, 0], [0, 1]), 0);
