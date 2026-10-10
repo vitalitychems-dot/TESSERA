@@ -11,6 +11,7 @@ test("one question reaches the connected rooms", () => {
   assert.match(askAll("github") ?? "", /TESSERA/);
   assert.match(askAll("what files") ?? "", /files are in this chamber/);
   assert.match(askAll("where do they live") ?? "", /one hall/);
+  assert.match(askAll("Cursor is away") ?? "", /Work continues/);
   assert.match(askAll("holds civic") ?? "", /civic\.ts/);
   assert.match(askAll("inventions") ?? "", /1367/);
   assert.match(askAll("ollama") ?? "", /ollama/i);

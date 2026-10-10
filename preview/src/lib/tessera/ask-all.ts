@@ -7,7 +7,7 @@ import { ownFromQuestion } from "./own-versions.ts";
 import { issuePass } from "./pass.ts";
 import { useEngines } from "./secret-engines.ts";
 import { directSkill } from "./skill-use.ts";
-import { mayRun, tesseraVote, workshopRun } from "./workshop.ts";
+import { carryOn, mayRun, tesseraVote, workshopRun } from "./workshop.ts";
 
 const PROGRAMS = ["admit", "carry", "spin", "tie"] as const;
 
@@ -20,6 +20,13 @@ export function askAll(question: string) {
   const engine = useEngines(q);
   if (engine) return engine;
   const lower = q.toLowerCase();
+  if (/\b(away|not available|missing member)\b/i.test(lower)) {
+    return carryOn([
+      { name: "Tessera", vote: "yes" },
+      { name: "Cursor", vote: "away" },
+      { name: "Replit", vote: "away" },
+    ]).reason;
+  }
   if (/^\s*(vote|approve)\b/i.test(q)) {
     const vote = tesseraVote(q);
     const run = mayRun(q);
@@ -34,6 +41,7 @@ export function askAll(question: string) {
     return `${issued.reason} Mark ${issued.pass.mark}. ${issued.pass.moltbook}`;
   }
   if (/\b(shared house|where do they live)\b/i.test(lower)) return sharedHouse().line;
+  if (/\b(what files|chamber files|full picture)\b/i.test(lower)) return chamberPicture();
   if (/\bhold(?:s|ing)?\b/i.test(lower)) return chamberHolds(q.replace(/^.*\bhold(?:s|ing)?\b/i, ""));
   if (/\b(house|who is near)\b/i.test(lower)) {
     const rooms = roomsAt(0);

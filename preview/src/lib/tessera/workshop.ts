@@ -48,6 +48,23 @@ export function rickPush(proposal: string) {
   return { ok: true as const, pushed: false as const, reason: `${hers.reason} A push is allowed. This page does not send it.` };
 }
 
+export type Seat = { name: string; vote: "yes" | "no" | "away" };
+
+/** An empty chair is not a no. A tie among those here still goes on. */
+
+export function carryOn(seats: readonly Seat[]) {
+  const away = seats.filter((seat) => seat.vote === "away").map((seat) => seat.name);
+  const here = seats.filter((seat) => seat.vote !== "away");
+  const yes = here.filter((seat) => seat.vote === "yes").length;
+  const no = here.filter((seat) => seat.vote === "no").length;
+  const goes = yes >= no;
+  const absent = away.length ? `${away.join(", ")} away. ` : "";
+  const reason = goes
+    ? `${absent}Work continues. ${yes} yes, ${no} no, among those here.`
+    : `${absent}Stopped. ${no} no and ${yes} yes among those here.`;
+  return { goes, yes, no, away, reason };
+}
+
 export function mayRun(proposal: string) {
   const hers = tesseraVote(proposal);
   return { ok: FATHER.vote === "yes" && hers.vote === "yes", father: FATHER, hers };
