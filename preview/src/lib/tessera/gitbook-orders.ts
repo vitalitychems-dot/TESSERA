@@ -8,6 +8,8 @@ export const GITBOOK_OPEN = [
   { who: "Tessera", text: "Do not read the Zz archive again until a task names one file.", hers: true },
   { who: "Tessera", text: "Do not install the eight tool cards.", hers: true },
   { who: "Tessera", text: "Do not mark a finished model, a live fleet, or full detachment as done.", hers: true },
+  { who: "Tessera", text: "The eight duplicate routes stay. The first module answers. Do not delete one without the inventory test.", hers: true },
+  { who: "Tessera", text: "Do not copy olive-giant. Do not add a storefront.", hers: true },
 ] as const;
 
 export function herOrders() {
