@@ -3,7 +3,8 @@ import test from "node:test";
 import { askAll } from "./ask-all.ts";
 
 test("one question reaches the connected rooms", () => {
-  assert.match(askAll("what is chemistry") ?? "", /substances/);
+  assert.match(askAll("who founded the academy") ?? "", /Plato/);
+  assert.equal(askAll("who founded the academy")?.includes("Aristotle"), false);
   assert.match(askAll("vote open the door") ?? "", /I read it/);
   assert.match(askAll("vote send a wallet") ?? "", /No/);
   assert.match(askAll("run tie") ?? "", /git/);
