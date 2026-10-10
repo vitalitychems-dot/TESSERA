@@ -143,8 +143,9 @@ export function Chamber() {
       return;
     }
     if (/\b(build herself|build yourself|build me now)\b/i.test(content)) {
-      const { buildNow } = await import("@/lib/tessera/build-now");
-      addMessage("assistant", buildNow());
+      const { buildHerNow } = await import("@/lib/tessera/chat");
+      const built = await buildHerNow().catch(() => null);
+      addMessage("assistant", built?.said ?? "I did not add a line.");
       setPending(false);
       sending.current = false;
       return;
