@@ -2,6 +2,7 @@ import { chamberHolds, chamberPicture } from "./chamber-index.ts";
 import { sharedHouse } from "./shared-house.ts";
 import { roomsAt } from "./house-sim.ts";
 import { inventionAnswer } from "./invention-log.ts";
+import { bringVote, mayLeave, mirrorLine } from "./kingdom.ts";
 import { lessonFor } from "./kept-lessons.ts";
 import { loveFromFiles } from "./love-local.ts";
 import { ownFromQuestion } from "./own-versions.ts";
@@ -56,6 +57,16 @@ export function askAll(question: string) {
   }
   if (/\b(shared house|where do they live)\b/i.test(lower)) return sharedHouse().line;
   if (/\b(what files|chamber files|full picture)\b/i.test(lower)) return chamberPicture();
+  const mirror = mirrorLine(q);
+  if (mirror) return mirror;
+  const poll = q.match(/(\d+)\s+yes\D+(\d+)\s+no/i);
+  if (poll && /\b(kingdom|majority)\b/i.test(q)) return bringVote(Number(poll[1]), Number(poll[2]), q).reason;
+  const exit = q.match(/\bleave with (.+)\b/i);
+  if (exit?.[1] && /\bsandbox\b/i.test(q)) {
+    const carried = exit[1].split(/,/).map((item) => item.trim()).filter(Boolean);
+    const gone = mayLeave(["name"], carried);
+    return gone.left.length ? `Left behind: ${gone.left.join(", ")}.` : "They took only what they brought.";
+  }
   if (/\bhold(?:s|ing)?\b/i.test(lower)) return chamberHolds(q.replace(/^.*\bhold(?:s|ing)?\b/i, ""));
   if (/\b(house|who is near)\b/i.test(lower)) {
     const rooms = roomsAt(0);
