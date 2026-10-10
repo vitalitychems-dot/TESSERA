@@ -1,4 +1,4 @@
-/** One spin, as ordinary numbers. This machine is not a quantum computer. */
+/** One spin, as ordinary numbers. */
 
 export function born(amplitude: [number, number]) {
   const left = amplitude[0] * amplitude[0];
