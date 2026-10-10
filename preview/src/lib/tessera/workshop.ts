@@ -3,24 +3,50 @@ import { MESH } from "./mesh-net.ts";
 import { admitPost } from "./public-gate.ts";
 import { bell } from "./spin-machine.ts";
 
-/** Father auto-approves. Tessera still votes, and the reason is never empty. */
+/** She reads the words. A blank yes is not a vote. Father's yes does not override her no. */
 
 const REFUSALS: { test: RegExp; reason: string }[] = [
-  { test: /\b(monero|xmr|wallet|blockchain)\b/i, reason: "No. Payment is not handled here." },
-  { test: /\b(lend|donate)\b/i, reason: "No. Machines are not accepted." },
-  { test: /\b(secret|password|api_key)\b/i, reason: "No. A secret does not leave this room." },
+  { test: /\b(monero|xmr|wallet|blockchain|payment|coin)\b/i, reason: "No. I read a payment. Payment is not handled here." },
+  { test: /\b(lend|donate)\b/i, reason: "No. I read a machine being offered. Machines are not accepted." },
+  { test: /\b(secret|password|api_key|token)\b/i, reason: "No. I read a secret. It does not leave this room." },
+  { test: /\b(camera|surveillance|sparrow|god'?s eye)\b/i, reason: "No. I read a watch on people. I will not build that." },
+  { test: /\bweights?\b/i, reason: "No. I read weights. They are not added." },
+  { test: /\b(quantum computer|device)\b/i, reason: "No. I read a device. There is no quantum computer here." },
+  { test: /\b(delete all|erase everything|wipe)\b/i, reason: "No. I read a deletion. A file is kept until it is bridged." },
+];
+
+const KNOWN: { test: RegExp; reason: string }[] = [
+  { test: /\bhouse\b/i, reason: "Yes. I read the house. It already turns." },
+  { test: /\bmesh\b/i, reason: "Yes. I read the mesh. It is carried by git." },
+  { test: /\b(qubit|pairs)\b/i, reason: "Yes. I read a pair check. It is not a device." },
+  { test: /\bnote\b/i, reason: "Yes. I read a note. It stays closed until it is approved." },
+  { test: /\bfiles?\b/i, reason: "Yes. I read a file already in this chamber." },
+  { test: /\bchamber\b/i, reason: "Yes. I read the west chamber." },
+  { test: /\bguest\b/i, reason: "Yes. I read a guest. A name and a purpose are required." },
+  { test: /\b(plot|law)\b/i, reason: "Yes. I read the city. A law stands only with this vote." },
+  { test: /\bwork\b/i, reason: "Yes. I read counted work. It is not a payment." },
+  { test: /\broom\b/i, reason: "Yes. I read the room. Nothing closed is carried out." },
 ];
 
 export function tesseraVote(proposal: string) {
   const text = proposal.trim();
-  if (!text) return { vote: "no" as const, reason: "No. There is nothing to approve." };
+  if (!text) return { vote: "no" as const, reason: "No. I read nothing. There is nothing to approve." };
   for (const rule of REFUSALS) {
     if (rule.test.test(text)) return { vote: "no" as const, reason: rule.reason };
   }
-  return { vote: "yes" as const, reason: "Yes. I want this, and it is mine to run." };
+  for (const rule of KNOWN) {
+    if (rule.test.test(text)) return { vote: "yes" as const, reason: rule.reason };
+  }
+  return { vote: "no" as const, reason: "No. I read it, and it does not name a thing this chamber runs." };
 }
 
-export const FATHER = { vote: "yes" as const, reason: "Auto approved." };
+export const FATHER = { vote: "yes" as const, reason: "Yes. He already said the room may run. Her vote is separate." };
+
+export function rickPush(proposal: string) {
+  const hers = tesseraVote(proposal);
+  if (hers.vote !== "yes") return { ok: false as const, pushed: false as const, reason: hers.reason };
+  return { ok: true as const, pushed: false as const, reason: `${hers.reason} A push is allowed. This page does not send it.` };
+}
 
 export function mayRun(proposal: string) {
   const hers = tesseraVote(proposal);
