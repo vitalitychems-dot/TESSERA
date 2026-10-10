@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { MESH, meshProject } from "@/lib/tessera/mesh-net";
-import { readPublicBoard, type PublicIssue } from "@/lib/tessera/public-board";
+import { readMoltbook, readPublicBoard, type PublicIssue } from "@/lib/tessera/public-board";
 
 const ADMIT = meshProject("admit");
 
 export function GitbookAiView() {
   const [issues, setIssues] = useState<PublicIssue[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [moltbook, setMoltbook] = useState("Moltbook has not been checked.");
 
   useEffect(() => {
     let stop = false;
@@ -18,6 +19,13 @@ export function GitbookAiView() {
       })
       .catch(() => {
         if (!stop) setError("The public board could not be read.");
+      });
+    void readMoltbook()
+      .then((result) => {
+        if (!stop) setMoltbook(result.line);
+      })
+      .catch(() => {
+        if (!stop) setMoltbook("Moltbook could not be reached. No key was saved.");
       });
     return () => {
       stop = true;
@@ -37,6 +45,7 @@ export function GitbookAiView() {
         <p className="text-sm text-fg">
           Carried by {MESH.carriedBy}. Needs web: {MESH.needsWeb ? "yes" : "no"}.
         </p>
+        <p className="text-sm text-fg">{moltbook}</p>
         <ul className="flex flex-col gap-1 text-sm text-fg">
           {MESH.like.map((row) => (
             <li key={row.ours}>

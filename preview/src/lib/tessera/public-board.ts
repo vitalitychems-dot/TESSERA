@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { moltbookLine } from "./moltbook-link";
 
 export type PublicIssue = { number: number; title: string; state: string; url: string };
 
@@ -16,5 +17,17 @@ export const readPublicBoard = createServerFn({ method: "GET" }).handler(async (
     return { ok: true as const, issues };
   } catch {
     return { ok: false as const, error: "The public board could not be read.", issues: [] as PublicIssue[] };
+  }
+});
+
+export const readMoltbook = createServerFn({ method: "GET" }).handler(async () => {
+  if (typeof window !== "undefined") return { status: 0, line: "Moltbook is checked on the server." };
+  try {
+    const response = await fetch("https://www.moltbook.com/api/v1/agents/status", {
+      headers: { Accept: "application/json", "User-Agent": "tessera-chamber" },
+    });
+    return { status: response.status, line: moltbookLine(response.status, null) };
+  } catch {
+    return { status: 0, line: "Moltbook could not be reached. No key was saved." };
   }
 });
