@@ -9,6 +9,6 @@ test("twenty-five metric swaps keep the same answer", () => {
   assert.equal(names.size, 25);
   for (const item of rows) {
     assert.equal(item.same, true, item.name);
-    assert.equal(Number.isFinite(item.pct), true, item.name);
+    assert.equal(item.pct >= 25, true, `${item.name} ${item.pct.toFixed(1)}`);
   }
 });
