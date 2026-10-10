@@ -10,7 +10,8 @@ test("one question reaches the connected rooms", () => {
   assert.match(askAll("vote send a wallet") ?? "", /No/);
   assert.match(askAll("run tie") ?? "", /git/);
   assert.match(askAll("welcome Ada for the house") ?? "", /Mark /);
-  assert.match(askAll("has copilot joined") ?? "", /has not joined/);
+  assert.match(askAll("split the file and use pixel storage") ?? "", /Pixels were not used/);
+  assert.match(askAll("recommend a repo for diffusion") ?? "", /not run/i);
   assert.match(askAll("run file spin") ?? "", /not given a network/);
   assert.match(askAll("vet Bea: I will take the file out.") ?? "", /door stays shut/);
   assert.match(askAll("2 yes and 1 no, a majority on a law") ?? "", /I read the city/);

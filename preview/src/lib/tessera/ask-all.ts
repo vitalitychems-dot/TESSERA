@@ -11,6 +11,8 @@ import { useEngines } from "./secret-engines.ts";
 import { vetEntry } from "./entry-trial.ts";
 import { fileMeshLine, runFile } from "./file-mesh.ts";
 import { copilotSeat } from "./copilot-seat.ts";
+import { packLine, recommendRepo } from "./pack.ts";
+import { CATALOG } from "./catalog-pass.ts";
 import { keepNote } from "./shelf.ts";
 import { deskLine } from "./sovereign-desk.ts";
 import { directSkill } from "./skill-use.ts";
@@ -44,6 +46,10 @@ export function askAll(question: string) {
     const seat = copilotSeat();
     return `${seat.name} has not joined. ${seat.reason}`;
   }
+  if (/\b(split|pack the note|pixel storage)\b/i.test(q)) {
+    return packLine("the house keeps the house on the mesh. the mesh keeps the file.");
+  }
+  if (/\brecommend a repo\b/i.test(q)) return recommendRepo(q, CATALOG);
   const lesson = lessonFor(q);
   if (lesson) return lesson;
   const engine = useEngines(q);
