@@ -1,0 +1,78 @@
+<h2>How should Tessera V2 group its system tabs?</h2>
+<p class="subtitle">Choose a structure that gives every metric one clear home and reduces repeated information.</p>
+
+<div class="cards">
+  <div class="card" data-choice="four-focused" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">SYSTEM ENGINE · V2</div>
+        <div class="mockup-body">
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-bottom:12px">
+            <div style="background:#164e63;color:#cffafe;border-radius:8px;padding:7px 3px;text-align:center;font-size:10px">Capability</div>
+            <div style="background:#27213c;color:#ddd6fe;border-radius:8px;padding:7px 3px;text-align:center;font-size:10px">Learning</div>
+            <div style="background:#142c2a;color:#a7f3d0;border-radius:8px;padding:7px 3px;text-align:center;font-size:10px">Operations</div>
+            <div style="background:#28203d;color:#e9d5ff;border-radius:8px;padding:7px 3px;text-align:center;font-size:10px">Architecture</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div class="placeholder" style="padding:12px">Evaluation results<br><small>scope · sample · date</small></div>
+            <div class="placeholder" style="padding:12px">Training + improvement</div>
+            <div class="placeholder" style="padding:12px">Health + active agents</div>
+            <div class="placeholder" style="padding:12px">Quantum / simulated state</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Four focused tabs <span class="label">Recommended</span></h3>
+      <p>Capability · Learning · Operations · Architecture. Training, improvement, and evolution share a home; health and agents share a home.</p>
+      <p><strong>Trade-off:</strong> reorganizes the current six-tab navigation.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="three-workflows" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">SYSTEM ENGINE · V2</div>
+        <div class="mockup-body">
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-bottom:12px">
+            <div style="background:#164e63;color:#cffafe;border-radius:8px;padding:8px 4px;text-align:center;font-size:11px">Measure</div>
+            <div style="background:#27213c;color:#ddd6fe;border-radius:8px;padding:8px 4px;text-align:center;font-size:11px">Improve</div>
+            <div style="background:#142c2a;color:#a7f3d0;border-radius:8px;padding:8px 4px;text-align:center;font-size:11px">Operate</div>
+          </div>
+          <div class="placeholder" style="padding:12px;margin-bottom:6px">Measure: validated evaluations only</div>
+          <div class="placeholder" style="padding:12px;margin-bottom:6px">Improve: training, proposals, outcomes</div>
+          <div class="placeholder" style="padding:12px">Operate: agents, health, architecture</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Three workflow tabs</h3>
+      <p>Measure · Improve · Operate. Groups the system around what it measures, changes, and runs.</p>
+      <p><strong>Trade-off:</strong> fewer destinations, but Operations combines more distinct details.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="keep-six" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">SYSTEM ENGINE · V2</div>
+        <div class="mockup-body">
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-bottom:6px">
+            <div class="mock-button">AGI Training</div>
+            <div class="mock-button">Improvement</div>
+            <div class="mock-button">Self-Evolution</div>
+            <div class="mock-button">Evo Health</div>
+            <div class="mock-button">Quantum</div>
+            <div class="mock-button">Agents</div>
+          </div>
+          <div class="placeholder" style="padding:14px">One shared summary; detail appears only in its owning tab.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Keep all six tabs</h3>
+      <p>Retain the current labels and destinations, but assign each metric to one tab and remove duplicate summaries.</p>
+      <p><strong>Trade-off:</strong> least disruption, with more top-level navigation to manage.</p>
+    </div>
+  </div>
+</div>
