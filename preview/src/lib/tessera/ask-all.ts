@@ -10,6 +10,7 @@ import { issuePass } from "./pass.ts";
 import { useEngines } from "./secret-engines.ts";
 import { vetEntry } from "./entry-trial.ts";
 import { fileMeshLine, runFile } from "./file-mesh.ts";
+import { copilotSeat } from "./copilot-seat.ts";
 import { keepNote } from "./shelf.ts";
 import { deskLine } from "./sovereign-desk.ts";
 import { directSkill } from "./skill-use.ts";
@@ -38,6 +39,10 @@ export function askAll(question: string) {
     return kept.ok
       ? `A note of ${kept.bytes} bytes can be saved in a file. A secret is not saved. A file over 100MB is refused. Storage is not unlimited.`
       : kept.error;
+  }
+  if (/\bcopilot\b/i.test(q)) {
+    const seat = copilotSeat();
+    return `${seat.name} has not joined. ${seat.reason}`;
   }
   const lesson = lessonFor(q);
   if (lesson) return lesson;
