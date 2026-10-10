@@ -125,12 +125,10 @@ function withOpening(p: Partial<TesseraState>) {
         { id: "opening-path", role: "assistant" as const, at: OPENING_AT + 1, content: PATH_REPLY },
         ...messages,
       ];
-  const hers = nextMessages.filter(
-    (message) =>
-      !/grok/i.test(message.content) &&
-      !message.content.includes("1,172 distinct hashes") &&
-      !message.content.includes("Manus replay"),
-  );
+  const hers = nextMessages.filter((message) => {
+    const text = typeof message.content === "string" ? message.content : "";
+    return !/grok/i.test(text) && !text.includes("1,172 distinct hashes") && !text.includes("Manus replay");
+  });
 
   return {
     lessons: withStudy,
