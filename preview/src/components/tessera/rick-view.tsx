@@ -5,7 +5,7 @@ import { interferePick } from "@/lib/tessera/spin";
 import { tryMachine } from "@/lib/tessera/spin-machine";
 import { FATHER, PROGRAMS, tesseraVote, workshopRun } from "@/lib/tessera/workshop";
 import { issuePass } from "@/lib/tessera/pass";
-import { rickReach } from "@/lib/tessera/github-desk";
+import { rickOpen, rickReach } from "@/lib/tessera/github-desk";
 
 export function RickView() {
   const [working, setWorking] = useState(false);
@@ -20,17 +20,52 @@ export function RickView() {
   const [guestName, setGuestName] = useState("");
   const [guestPurpose, setGuestPurpose] = useState("");
   const [door, setDoor] = useState("");
-  const [reach, setReach] = useState("He has not asked GitHub yet.");
+  const [reach, setReach] = useState("Opening GitHub.");
+  const [repos, setRepos] = useState<{ name: string; private: boolean }[]>([]);
+  const [repo, setRepo] = useState("");
+  const [folder, setFolder] = useState("");
+  const [entries, setEntries] = useState<{ name: string; kind: string }[]>([]);
+  const [fileText, setFileText] = useState("");
   const room = rickRoom(working);
   const people = stepHouse(tick, guests);
   const together = roomsAt(tick, guests);
   const tieVote = tesseraVote("Joins the house, the spin, and the git mesh.");
 
   useEffect(() => {
+    let stop = false;
+    void rickReach()
+      .then((result) => {
+        if (stop) return;
+        setReach(result.ok ? result.login : result.line);
+        setRepos(result.repos);
+      })
+      .catch(() => {
+        if (!stop) setReach("The app could not ask GitHub.");
+      });
+    return () => {
+      stop = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!live) return;
     const id = window.setInterval(() => setTick((value) => value + 1), 900);
     return () => window.clearInterval(id);
   }, [live]);
+
+  function openRepo(name: string, path = "") {
+    setRepo(name);
+    setFolder(path);
+    setFileText("");
+    void rickOpen({ data: { repo: name, path } })
+      .then((result) => {
+        if (result.kind === "dir") setEntries(result.entries);
+        setFileText(result.text);
+        if (!result.ok) setReach(result.line);
+      })
+      .catch(() => setReach("The app could not open that."));
+  }
+
   const choice = interferePick([
     { name: "count", paths: [0.8, -0.8] },
     { name: "keep", paths: [0.3, 0.3] },
@@ -44,6 +79,32 @@ export function RickView() {
           <h2 className="mt-1 font-display text-4xl tracking-tight">Rick</h2>
           <p className="mt-3 text-sm leading-relaxed text-muted">{witt()}</p>
         </div>
+        <section className="rounded-xl border border-border bg-surface px-4 py-4">
+          <p className="text-xs tracking-[0.16em] text-subtle uppercase">GitHub</p>
+          <p className="mt-2 text-sm text-fg">{reach || "Opening GitHub."}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {repos.map((item) => (
+              <button key={item.name} type="button" onClick={() => openRepo(item.name)} className="h-11 rounded-full border border-accent px-4 text-sm text-fg">
+                {item.name}
+              </button>
+            ))}
+          </div>
+          {repo ? <p className="mt-3 text-sm text-muted">{repo}{folder ? ` / ${folder}` : ""}</p> : null}
+          <ul className="mt-2 flex flex-col gap-1">
+            {entries.map((entry) => (
+              <li key={entry.name}>
+                <button
+                  type="button"
+                  onClick={() => openRepo(repo, folder ? `${folder}/${entry.name}` : entry.name)}
+                  className="text-left text-sm text-fg"
+                >
+                  {entry.kind === "dir" ? `${entry.name}/` : entry.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+          {fileText ? <pre className="mt-3 max-h-64 overflow-auto text-xs whitespace-pre-wrap text-fg">{fileText}</pre> : null}
+        </section>
         <section className="rounded-xl border border-border bg-surface px-4 py-4">
           <p className="text-xs tracking-[0.16em] text-subtle uppercase">{room.place}</p>
           <p className="mt-2 font-display text-3xl text-fg">{room.light}</p>
@@ -174,19 +235,6 @@ export function RickView() {
             </button>
             {door ? <p className="text-sm text-fg">{door}</p> : null}
             <a href="/tunnel.html" className="text-sm text-accent">Open the room</a>
-            <button
-              type="button"
-              onClick={() => {
-                setReach("Asking.");
-                void rickReach()
-                  .then((result) => setReach(result.line))
-                  .catch(() => setReach("The app could not ask GitHub."));
-              }}
-              className="h-11 rounded-full border border-border px-4 text-sm text-fg"
-            >
-              Ask GitHub
-            </button>
-            <p className="text-sm text-fg">{reach}</p>
           </div>
         </section>
         <p className="text-sm text-muted">No quantum device is in the files. These twenty answers were taken from local steps.</p>
