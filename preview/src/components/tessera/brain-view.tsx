@@ -8,6 +8,7 @@ import { translateEnglishToSovereign } from "@/lib/tessera/lingua";
 import { FRACTIONS } from "@/lib/tessera/society";
 import { VAULT_INDEX } from "@/lib/tessera/vault-index";
 import { BrainMesh } from "@/components/tessera/brain-mesh";
+import { MindChart } from "@/components/tessera/mind-chart";
 import type { ViewId } from "@/lib/tessera/store";
 
 const SAMPLE = `PUSH 2
@@ -38,6 +39,8 @@ export function BrainView({ open }: { open: (id: ViewId) => void }) {
             Sigil {SIGIL.short}. {AGENTS.length} named regions. {FRACTIONS.length} fractions. {FREQUENCIES.length} tones. {VAULT_INDEX.length} sacred titles. The language converts. The colonel runs arithmetic. Closed methods stay closed.
           </p>
         </div>
+
+        <MindChart />
 
         <BrainMesh />
 
