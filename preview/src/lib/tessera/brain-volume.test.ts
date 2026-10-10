@@ -2,24 +2,25 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { brainVolume, grown, projectPoint } from "./brain-volume.ts";
 
-test("the volume grows in order and a nearer point draws larger", () => {
+test("the volume is named parts, Tessera is the center, and growth adds them", () => {
   const volume = brainVolume([
     { name: "Tessera", part: "region" },
+    { name: "Alpha", part: "region" },
+    { name: "Beta", part: "region" },
     { name: "ranking", part: "step" },
     { name: "kept pages", part: "memory" },
   ]);
-  assert.equal(volume.nodes.length, 384);
-  assert.ok(volume.edges.length > volume.nodes.length);
+  assert.equal(volume.nodes.length, 5);
+  assert.ok(volume.nodes.every((node) => node.name));
+  const center = volume.nodes.find((node) => node.name === "Tessera");
+  assert.deepEqual([center?.x, center?.y, center?.z], [0, 0, 0]);
+  assert.ok(volume.edges.some(([a, b]) => a === center?.id || b === center?.id));
   assert.equal(grown(volume.nodes, 0).length, 1);
   assert.ok(grown(volume.nodes, 0.5).length > 1);
-  assert.ok(grown(volume.nodes, 0.5).length < 384);
-  assert.equal(grown(volume.nodes, 1).length, 384);
+  assert.ok(grown(volume.nodes, 0.5).length < 5);
+  assert.equal(grown(volume.nodes, 1).length, 5);
   const near = { ...volume.nodes[0], x: 0, y: 0, z: -1.5 };
   const far = { ...volume.nodes[0], x: 0, y: 0, z: 1.5 };
-  const nearDraw = projectPoint(near, 0, 0, 1);
-  const farDraw = projectPoint(far, 0, 0, 1);
-  assert.ok(nearDraw.depth < farDraw.depth);
-  const zoomed = projectPoint({ ...near, x: 1 }, 0, 0, 2);
-  const base = projectPoint({ ...near, x: 1 }, 0, 0, 1);
-  assert.ok(Math.abs(zoomed.x) > Math.abs(base.x));
+  assert.ok(projectPoint(near, 0, 0, 1).depth < projectPoint(far, 0, 0, 1).depth);
+  assert.ok(Math.abs(projectPoint({ ...near, x: 1 }, 0, 0, 2).x) > Math.abs(projectPoint({ ...near, x: 1 }, 0, 0, 1).x));
 });

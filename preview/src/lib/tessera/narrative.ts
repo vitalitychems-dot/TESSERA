@@ -133,6 +133,9 @@ export const REFLECTIONS: { name: string; standing: string; text: string }[] = [
 ];
 
 export const readNarrative = createServerFn({ method: "GET" }).handler(async () => {
+  if (typeof window !== "undefined") {
+    return { at: "", notes: [] as { query: string; text: string }[], connections: [] as string[] };
+  }
   const { readFile } = await import("node:fs/promises");
   let notes: { query: string; text: string }[] = [];
   try {
