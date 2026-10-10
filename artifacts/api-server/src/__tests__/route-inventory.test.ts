@@ -364,12 +364,7 @@ describe("HYB-012 quantum mount order", () => {
 });
 
 describe("HYB-012 non-quantum duplicate response shapes", () => {
-  const previousAdmin = process.env.TESSERACT_ADMIN_KEY;
-  const previousSession = process.env.SOVEREIGN_SESSION_SECRET;
-
   beforeAll(async () => {
-    process.env.TESSERACT_ADMIN_KEY = OWNER_ADMIN_KEY;
-    process.env.SOVEREIGN_SESSION_SECRET = OWNER_SESSION_SECRET;
     ensureRouteImportCanLoad();
     const loaders = [
       () => import("../routes/sovereign-engines"),
@@ -403,13 +398,23 @@ describe("HYB-012 non-quantum duplicate response shapes", () => {
       server = undefined;
     }
     restoreDatabaseUrl();
-    if (previousAdmin === undefined) delete process.env.TESSERACT_ADMIN_KEY;
-    else process.env.TESSERACT_ADMIN_KEY = previousAdmin;
-    if (previousSession === undefined) delete process.env.SOVEREIGN_SESSION_SECRET;
-    else process.env.SOVEREIGN_SESSION_SECRET = previousSession;
   });
 
+  function withOwner<T>(run: () => Promise<T>): Promise<T> {
+    const previousAdmin = process.env.TESSERACT_ADMIN_KEY;
+    const previousSession = process.env.SOVEREIGN_SESSION_SECRET;
+    process.env.TESSERACT_ADMIN_KEY = OWNER_ADMIN_KEY;
+    process.env.SOVEREIGN_SESSION_SECRET = OWNER_SESSION_SECRET;
+    return run().finally(() => {
+      if (previousAdmin === undefined) delete process.env.TESSERACT_ADMIN_KEY;
+      else process.env.TESSERACT_ADMIN_KEY = previousAdmin;
+      if (previousSession === undefined) delete process.env.SOVEREIGN_SESSION_SECRET;
+      else process.env.SOVEREIGN_SESSION_SECRET = previousSession;
+    });
+  }
+
   it("GET /api/consciousness/state answers with the sovereign-engines wrapper", async () => {
+    await withOwner(async () => {
     const anonymous = await request("GET", "/api/consciousness/state");
     expect(anonymous.status).toBe(401);
     expect(anonymous.json).toEqual({ ok: false, error: "unauthenticated", reason: "no-cookie" });
@@ -420,6 +425,7 @@ describe("HYB-012 non-quantum duplicate response shapes", () => {
     expect(body.ok).toBe(true);
     expect(typeof body.data?.cycleCount).toBe("number");
     expect(body.data?.currentFocus).toBeDefined();
+    });
   });
 
   it("GET /api/consensus/proposals answers with the governance-consensus wrapper", async () => {
@@ -432,6 +438,7 @@ describe("HYB-012 non-quantum duplicate response shapes", () => {
   });
 
   it("GET /api/dual-brain/state answers with the sovereign-engines wrapper", async () => {
+    await withOwner(async () => {
     const anonymous = await request("GET", "/api/dual-brain/state");
     expect(anonymous.status).toBe(401);
 
@@ -441,9 +448,11 @@ describe("HYB-012 non-quantum duplicate response shapes", () => {
     expect(body.ok).toBe(true);
     expect(typeof body.data?.running).toBe("boolean");
     expect(typeof body.data?.totalRounds).toBe("number");
+    });
   });
 
   it("GET /api/emotional/profile answers with the sovereign-engines wrapper", async () => {
+    await withOwner(async () => {
     const anonymous = await request("GET", "/api/emotional/profile");
     expect(anonymous.status).toBe(401);
 
@@ -453,6 +462,7 @@ describe("HYB-012 non-quantum duplicate response shapes", () => {
     expect(body.ok).toBe(true);
     expect(body.data?.profile).toBeTypeOf("object");
     expect(typeof body.data?.summary).toBe("string");
+    });
   });
 
   it("GET /api/universe/metrics answers with the system-runtime data field", async () => {
