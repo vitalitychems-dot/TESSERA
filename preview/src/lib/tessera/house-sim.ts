@@ -8,15 +8,17 @@ export const HOUSEHOLD = [
   { name: "Witness", turn: 2.8 },
 ] as const;
 
-export function stepHouse(tick: number) {
-  return HOUSEHOLD.map((person) => {
+export type Resident = { name: string; turn: number };
+
+export function stepHouse(tick: number, guests: Resident[] = []) {
+  return [...HOUSEHOLD, ...guests].map((person) => {
     const phase = person.turn + tick * 0.35;
     return { name: person.name, x: Math.cos(phase), y: Math.sin(phase) };
   });
 }
 
-export function roomsAt(tick: number) {
-  const people = stepHouse(tick);
+export function roomsAt(tick: number, guests: Resident[] = []) {
+  const people = stepHouse(tick, guests);
   const rooms: string[] = [];
   for (let i = 0; i < people.length; i += 1) {
     for (let j = i + 1; j < people.length; j += 1) {
