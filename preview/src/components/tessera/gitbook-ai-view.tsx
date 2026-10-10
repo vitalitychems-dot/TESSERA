@@ -79,6 +79,9 @@ export function GitbookAiView() {
             ))}
           </ul>
         </section>
+        <a className="text-sm text-accent" href="https://github.com/vitalitychems-dot/GitbookAI/issues/1" target="_blank" rel="noreferrer">
+          The outer door
+        </a>
         <a className="text-sm text-accent" href="https://github.com/vitalitychems-dot/GitbookAI" target="_blank" rel="noreferrer">
           Open the public repository
         </a>
