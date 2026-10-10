@@ -70,8 +70,9 @@ export function directSkill(text: string): { skill: SkillName; answer: string } 
 }
 
 async function readCounts(): Promise<Record<SkillName, number>> {
-  const { readFile } = await import("node:fs/promises");
   const counts = { ...EMPTY };
+  if (typeof window !== "undefined") return counts;
+  const { readFile } = await import("node:fs/promises");
   try {
     const raw = JSON.parse(await readFile(dataPath("school", "skills.json"), "utf8")) as Record<string, number>;
     for (const name of SKILL_NAMES) counts[name] = Number(raw[name] ?? 0) || 0;
