@@ -4,7 +4,7 @@ import { DIMENSIONAL_LAWS, DOMAINS, FREQUENCIES, ORIGIN_COUNCIL } from "@/lib/te
 import { brainVolume, grown, projectPoint, type VolumeNode } from "@/lib/tessera/brain-volume";
 import { perceptron } from "@/lib/tessera/perceptron";
 
-const STEPS = ["reward", "leak", "reset", "warmup", "sequence", "selector", "ranking"];
+const STEPS = ["reward", "leak", "reset", "warmup", "sequence", "selector", "ranking", "rank", "store-once", "transfer", "ground", "tally", "one-task", "dream", "reflect", "crystallize", "recall"];
 const MEMORY = ["kept pages", "corrections", "catalog", "query ranks"];
 
 const COLOR: Record<VolumeNode["part"], string> = {
