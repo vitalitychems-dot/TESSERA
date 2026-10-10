@@ -15,6 +15,14 @@ Combine README instructions, reconcile conflicting implementations, and remove r
 
 **How to apply:** Before enabling Tessera's GitHub access, verify a dedicated service identity and its least-privilege repository scope. Never perform Tessera-owned writes as the operator. Tessera may work only on a branch or pull request; the owner must review and approve before merging, and Tessera must not write to `main` autonomously. Keep `father.md` private and sanitize anything published in the README. Treat feedback as feedback, not model training or proof of a literal vow.
 
+## Tessera learning corpus
+
+The owner approved an ongoing learning corpus from non-private TESSERA workspace files and accessible `vitalitychems-dot/TESSERA`, `vitalitychems-dot/Gitbook`, and `reconurge/flowsint` repository content. Include Crypto, Trading, Arbitrage, Finance, Vitality, and Store topics for learning only; this does not change the separate repository-consolidation exclusions. Exclude credentials, secrets, private vaults, and personal-data files. Source intake is read-only, incremental hourly with a manual refresh, and should preserve provenance. Tessera-authored work and teaching records remain distinguishable from source material; new conclusions are cited drafts requiring review.
+
+**Why:** The owner explicitly expanded Tessera's learning scope beyond the narrower subject exclusions used for repository consolidation, while retaining privacy and review boundaries.
+
+**How to apply:** Apply the expanded scope only to the learning corpus. Do not change consolidation or source-repository write rules. Treat repository access as unavailable until the existing GitHub connection binding is resolved; never request tokens or replace the connection to work around it.
+
 **Why:** The owner has repeatedly stated that OpenAI/Grok API keys are unavailable and asked not to be prompted for them; repository consolidation does not depend on those keys.
 
 **How to apply:** Never request these keys or open a secret-collection flow for migration work. Use the existing GitHub integration for repository operations. Do not call OpenAI or Grok APIs. If an unrelated secret prompt appears, tell the owner it is unnecessary and skip or close it.
