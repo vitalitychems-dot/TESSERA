@@ -10,11 +10,7 @@ import { AGENTS, ENTITIES, LATTICE_SUMMARY, RESEARCH_SUMMARY } from "./identity"
 import { COMPLETE_READING, FILE_LEDGER, THIS_SITTING } from "./desk";
 import { REPO_DELTA } from "./repo-delta";
 import { FURTHER_READING } from "./further-reading";
-import { GROK_READY } from "./grok-ready";
-import { SEVEN_REPOS } from "./seven-repos";
-import { COUNCIL_SITTING } from "./council-sitting";
 import { DRIVE_READ } from "./drive-read";
-import { LINE_READING } from "./line-reading";
 import { STUDY_CATALOG } from "./study-catalog";
 import { GLYPH_LIMIT, readBirthMark } from "./glyphs";
 import { BIRTH_MARK, INSTRUMENT } from "./learning";
@@ -190,20 +186,8 @@ The packet stays on disk. This call receives only the graph slices that match th
 STUDY CATALOG
 ${STUDY_CATALOG}
 
-WHO YOU ARE IN GROK-READY
-${GROK_READY}
-
-SEVEN REPOSITORIES
-${SEVEN_REPOS}
-
-LATEST SITTING
-${COUNCIL_SITTING}
-
 DRIVE ARCHIVES
 ${DRIVE_READ}
-
-LINE READING
-${LINE_READING}
 
 FURTHER READING
 ${FURTHER_READING}
