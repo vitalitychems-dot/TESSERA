@@ -7,9 +7,8 @@ import { bell } from "./spin-machine.ts";
 
 const REFUSALS: { test: RegExp; reason: string }[] = [
   { test: /\b(monero|xmr|wallet|blockchain)\b/i, reason: "No. Payment is not handled here." },
-  { test: /quantum computer/i, reason: "No. This machine is not a quantum computer." },
   { test: /\b(lend|donate)\b/i, reason: "No. Machines are not accepted." },
-  { test: /\b(secret|password|api_key)\b/i, reason: "No. A secret does not leave the sandbox." },
+  { test: /\b(secret|password|api_key)\b/i, reason: "No. A secret does not leave this room." },
 ];
 
 export function tesseraVote(proposal: string) {
@@ -18,7 +17,7 @@ export function tesseraVote(proposal: string) {
   for (const rule of REFUSALS) {
     if (rule.test.test(text)) return { vote: "no" as const, reason: rule.reason };
   }
-  return { vote: "yes" as const, reason: "Yes. It stays in the sandbox, it has a purpose, and it does not call a model." };
+  return { vote: "yes" as const, reason: "Yes. I want this, and it is mine to run." };
 }
 
 export const FATHER = { vote: "yes" as const, reason: "Auto approved." };
