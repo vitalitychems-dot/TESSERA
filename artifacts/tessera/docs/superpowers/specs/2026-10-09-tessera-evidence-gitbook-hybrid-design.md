@@ -50,9 +50,9 @@ Keep every unique in-scope page and preserve existing direct URLs. Consolidate v
 
 Use one shared navigation registry for desktop and mobile so labels, canonical destinations, aliases, grouping, and access rules stay consistent. Preserve the current grouped desktop-sidebar pattern, remove only verified duplicate entries, and keep unique routes discoverable.
 
-Replace the current long mobile strip with four stable entry points: **Chat**, **Knowledge**, **System**, and **More**. Chat and System open their canonical pages; Knowledge opens its grouped destination list; More provides a searchable, categorized directory of the other in-scope pages. Keep touch targets, safe-area spacing, active-route indication, keyboard access, and screen-reader labels usable on mobile.
+Replace the current long mobile strip with four stable entry points: **Chat**, **Knowledge**, **System**, and **More**. Chat and System open their canonical pages; Knowledge opens its grouped destination list; More provides a searchable, categorized directory of all remaining destinations. Keep excluded content in separate groups and do not consolidate or redesign those pages. Keep touch targets, safe-area spacing, active-route indication, keyboard access, and screen-reader labels usable on mobile.
 
-Inventory and smoke-test every registered navigation destination on desktop and mobile. Audit only route reachability for excluded areas; do not consolidate, copy, or redesign their content.
+Inventory and smoke-test every registered navigation destination on desktop and mobile. Audit only route reachability for excluded areas; do not consolidate, copy, or redesign their page content.
 
 ## System Engine tabs
 

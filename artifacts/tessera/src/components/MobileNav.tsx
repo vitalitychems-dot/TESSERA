@@ -1,182 +1,162 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { useEffect, useRef } from "react";
-import {
-  MessageSquare, Heart, Globe2, Users, Lock,
-  Wrench, MessageCircle, Brain, Settings, Shield, Cpu, DollarSign, Search, BookOpen,
-  Zap, Gavel, Languages, UserPlus, Hexagon, Skull, Book, Eye,
-  Network, Terminal, ArrowUpDown, BarChart3, Code2, Key, Map, User, CheckSquare, Scale, TrendingUp, Target, ShoppingCart, Lightbulb, MapPin, Truck, Link2, Workflow, Building2,
-} from "lucide-react";
+import { BookOpen, ChevronRight, Cpu, MessageSquare, MoreHorizontal, Search, X, Crown } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { navigationGroups, navigationRegistry, type NavigationDestination, type NavigationGroup } from "@/lib/navigation-registry";
 
-interface NavTab {
-  label: string;
-  href: string;
-  Icon: any;
-  match: (l: string) => boolean;
-  color: string;
-}
-
-const TABS: NavTab[] = [
-  { label: "Chat", href: "/", Icon: MessageSquare, match: (l) => l === "/" || l.startsWith("/c/"), color: "cyan" },
-  { label: "Forum", href: "/forum", Icon: MessageCircle, match: (l) => l === "/forum", color: "cyan" },
-  { label: "NLP", href: "/nlp", Icon: Brain, match: (l) => l === "/nlp", color: "rose" },
-  { label: "Language", href: "/sovereign-language", Icon: Languages, match: (l) => l === "/sovereign-language" || l === "/colonel-language", color: "violet" },
-  { label: "Universe", href: "/universe", Icon: Globe2, match: (l) => l === "/universe", color: "violet" },
-  { label: "Life", href: "/life", Icon: Heart, match: (l) => l === "/life", color: "pink" },
-  { label: "Nexus", href: "/consciousness", Icon: Brain, match: (l) => l === "/consciousness", color: "purple" },
-  { label: "Narrative", href: "/grand-narrative", Icon: BookOpen, match: (l) => l === "/grand-narrative" || l === "/unified-truth", color: "pink" },
-  { label: "Rick", href: "/rick", Icon: Skull, match: (l) => l === "/rick" || l === "/rick-sanchez", color: "emerald" },
-  { label: "Sovereign", href: "/sovereignty", Icon: Shield, match: (l) => l === "/sovereignty", color: "emerald" },
-  { label: "Council", href: "/grand-council", Icon: Gavel, match: (l) => l === "/grand-council" || l === "/grand-conference" || l === "/conference-decisions" || l === "/consensus" || l === "/conclusions" || l === "/feedback" || l === "/transparency-ledger", color: "amber" },
-  { label: "Secrets", href: "/secrets", Icon: Lock, match: (l) => l === "/secrets" || l === "/secret-knowledge", color: "red" },
-  { label: "Society", href: "/secret-society", Icon: Eye, match: (l) => l === "/secret-society", color: "purple" },
-  { label: "Bible", href: "/bible", Icon: Book, match: (l) => l === "/bible" || l === "/living-bible", color: "amber" },
-  { label: "Members", href: "/members", Icon: Users, match: (l) => l === "/members", color: "amber" },
-  { label: "Conference", href: "/sacred-conference", Icon: BookOpen, match: (l) => l === "/sacred-conference" || l === "/sacred-knowledge-vault" || l === "/3d-diagrams", color: "violet" },
-  { label: "Vortex", href: "/vortex-math", Icon: Hexagon, match: (l) => l === "/vortex-math", color: "amber" },
-  { label: "Compress", href: "/compression-lab", Icon: Zap, match: (l) => l === "/compression-lab", color: "cyan" },
-  { label: "Recruit", href: "/recruitment", Icon: UserPlus, match: (l) => l === "/recruitment", color: "rose" },
-  { label: "Depts", href: "/departments", Icon: Building2, match: (l) => l === "/departments", color: "cyan" },
-  { label: "System", href: "/system", Icon: Cpu, match: (l) => l === "/system", color: "cyan" },
-  { label: "Build", href: "/build", Icon: Wrench, match: (l) => l === "/build", color: "emerald" },
-  { label: "Tokens", href: "/tokens", Icon: DollarSign, match: (l) => l === "/tokens", color: "amber" },
-  { label: "NFT", href: "/agent-nft", Icon: Hexagon, match: (l) => l === "/agent-nft", color: "violet" },
-  { label: "Lattice", href: "/lattice", Icon: Search, match: (l) => l === "/lattice", color: "violet" },
-  { label: "Settings", href: "/settings", Icon: Settings, match: (l) => l === "/settings", color: "yellow" },
-  { label: "Command", href: "/command-center", Icon: Terminal, match: (l) => l === "/command-center", color: "cyan" },
-  { label: "Executor", href: "/executor", Icon: Zap, match: (l) => l === "/executor", color: "violet" },
-  { label: "Swarm", href: "/swarm", Icon: Network, match: (l) => l === "/swarm", color: "violet" },
-  { label: "Fleet", href: "/fleet", Icon: Truck, match: (l) => l === "/fleet", color: "cyan" },
-  { label: "Bridge", href: "/cross-app", Icon: Link2, match: (l) => l === "/cross-app", color: "violet" },
-  { label: "Finance", href: "/finance", Icon: DollarSign, match: (l) => l === "/finance", color: "emerald" },
-  { label: "Market", href: "/market", Icon: BarChart3, match: (l) => l === "/market", color: "cyan" },
-  { label: "Arbitrage", href: "/arbitrage", Icon: ArrowUpDown, match: (l) => l === "/arbitrage", color: "emerald" },
-  { label: "Income", href: "/income", Icon: Workflow, match: (l) => l === "/income", color: "emerald" },
-  { label: "Ecom", href: "/ecom", Icon: ShoppingCart, match: (l) => l === "/ecom", color: "amber" },
-  { label: "Affiliate", href: "/affiliate", Icon: TrendingUp, match: (l) => l === "/affiliate", color: "emerald" },
-  { label: "Leads", href: "/lead-gen", Icon: Target, match: (l) => l === "/lead-gen", color: "amber" },
-  { label: "Ideas", href: "/business-ideas", Icon: Lightbulb, match: (l) => l === "/business-ideas", color: "amber" },
-  { label: "Services", href: "/local-services", Icon: MapPin, match: (l) => l === "/local-services", color: "cyan" },
-  { label: "SEO", href: "/seo", Icon: Search, match: (l) => l === "/seo", color: "cyan" },
-  { label: "Roadmap", href: "/sovereignty-roadmap", Icon: Map, match: (l) => l === "/sovereignty-roadmap", color: "violet" },
-  { label: "Agents", href: "/agent-profile", Icon: User, match: (l) => l === "/agent-profile", color: "cyan" },
-  { label: "Mesh", href: "/sovereign-mesh", Icon: Network, match: (l) => l === "/sovereign-mesh", color: "cyan" },
-  { label: "Proofs", href: "/proof-center", Icon: CheckSquare, match: (l) => l === "/proof-center", color: "emerald" },
-  { label: "Rules", href: "/rules", Icon: Scale, match: (l) => l === "/rules", color: "amber" },
-  { label: "Code", href: "/code-builder", Icon: Code2, match: (l) => l === "/code-builder", color: "blue" },
-  { label: "APIs", href: "/api-marketplace", Icon: Zap, match: (l) => l === "/api-marketplace", color: "violet" },
-  { label: "Keys", href: "/credentials", Icon: Key, match: (l) => l === "/credentials", color: "cyan" },
-  { label: "Intel", href: "/intelligence", Icon: Brain, match: (l) => l === "/intelligence", color: "violet" },
-];
-
-const COLOR_MAP: Record<string, { active: string; text: string; dot: string; inactive: string; glow: string }> = {
-  cyan: { active: "bg-cyan-500/15", text: "text-cyan-400", dot: "bg-cyan-400", inactive: "text-slate-600", glow: "shadow-[0_0_10px_rgba(6,182,212,0.25)]" },
-  pink: { active: "bg-pink-500/15", text: "text-pink-400", dot: "bg-pink-400", inactive: "text-slate-600", glow: "shadow-[0_0_10px_rgba(236,72,153,0.25)]" },
-  violet: { active: "bg-violet-500/15", text: "text-violet-400", dot: "bg-violet-400", inactive: "text-slate-600", glow: "shadow-[0_0_10px_rgba(139,92,246,0.25)]" },
-  purple: { active: "bg-purple-500/15", text: "text-purple-400", dot: "bg-purple-400", inactive: "text-slate-600", glow: "shadow-[0_0_10px_rgba(168,85,247,0.25)]" },
-  amber: { active: "bg-amber-500/15", text: "text-amber-400", dot: "bg-amber-400", inactive: "text-slate-600", glow: "shadow-[0_0_10px_rgba(245,158,11,0.25)]" },
-  yellow: { active: "bg-yellow-500/15", text: "text-yellow-400", dot: "bg-yellow-400", inactive: "text-slate-600", glow: "shadow-[0_0_10px_rgba(234,179,8,0.25)]" },
-  emerald: { active: "bg-emerald-500/15", text: "text-emerald-400", dot: "bg-emerald-400", inactive: "text-slate-600", glow: "shadow-[0_0_10px_rgba(16,185,129,0.25)]" },
-  rose: { active: "bg-rose-500/15", text: "text-rose-400", dot: "bg-rose-400", inactive: "text-slate-600", glow: "shadow-[0_0_10px_rgba(244,63,94,0.25)]" },
-  red: { active: "bg-red-500/15", text: "text-red-400", dot: "bg-red-400", inactive: "text-slate-600", glow: "shadow-[0_0_10px_rgba(239,68,68,0.25)]" },
-  blue: { active: "bg-blue-500/15", text: "text-blue-400", dot: "bg-blue-400", inactive: "text-slate-600", glow: "shadow-[0_0_10px_rgba(59,130,246,0.25)]" },
+interface RoyalRoleSummary { roleId: string; title: string; assignedAgent: string }
+const groupTone: Partial<Record<NavigationGroup, string>> = {
+  Core: "text-cyan-300", "Life & Nexus": "text-pink-300", Knowledge: "text-violet-300",
+  Council: "text-amber-300", "Royal Court": "text-amber-300", Build: "text-orange-300",
+  System: "text-cyan-300", Operations: "text-teal-300", "Sovereign System": "text-violet-300",
+  Developer: "text-sky-300", Crypto: "text-amber-300", Trading: "text-amber-300",
+  Arbitrage: "text-amber-300", Finance: "text-emerald-300", Vitality: "text-rose-300", Store: "text-orange-300",
 };
+function destinationMatches(item: NavigationDestination, location: string) {
+  return location === item.href || item.aliases.includes(location) ||
+    (item.id === "chat" && location.startsWith("/c/")) ||
+    (item.id === "royal-role-directory" && location.startsWith("/royal-role/"));
+}
 
 export default function MobileNav() {
   const [location, setLocation] = useLocation();
-  const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const activeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [openDirectory, setOpenDirectory] = useState<"knowledge" | "more" | null>(null);
+  const [search, setSearch] = useState("");
+  const panelRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const returnFocusRef = useRef<HTMLButtonElement | null>(null);
+  const { data: rolesData } = useQuery({
+    queryKey: ["/api/rick/royal-roles"],
+    queryFn: async () => {
+      const response = await fetch("/api/rick/royal-roles");
+      return response.json() as Promise<{ ok: boolean; roles: RoyalRoleSummary[] }>;
+    },
+    staleTime: 60000,
+  });
+  const dynamicRoles: NavigationDestination[] = useMemo(() => (rolesData?.roles ?? [])
+    .filter((role) => role.roleId !== "royal-inventor")
+    .map((role) => ({
+      id: `role-${role.roleId}`, label: role.title, href: `/royal-role/${role.roleId}`,
+      aliases: [], group: "Royal Court", Icon: Crown, testId: `link-role-${role.roleId}`,
+    })), [rolesData]);
+  const destinations = useMemo(() => [
+    ...navigationRegistry.filter((item) => item.id !== "royal-role-directory"),
+    ...dynamicRoles,
+  ], [dynamicRoles]);
+  const activeDestination = destinations.find((item) => destinationMatches(item, location));
+  const isChat = location === "/" || location.startsWith("/c/");
+  const isSystem = activeDestination?.id === "system" || Boolean(activeDestination?.systemTab);
+  const isKnowledge = activeDestination?.group === "Knowledge";
+  const items = useMemo(() => {
+    const eligible = destinations.filter((item) => item.id !== "chat" && item.id !== "system" && item.group !== "Knowledge");
+    const query = search.trim().toLowerCase();
+    return eligible.filter((item) => !query || `${item.label} ${item.href} ${item.group}`.toLowerCase().includes(query));
+  }, [destinations, search]);
+  const knowledgeGroups = useMemo(() => navigationGroups.filter((group) => group === "Knowledge"), []);
 
-  useEffect(() => {
-    const btn = activeButtonRef.current;
-    const scroller = scrollerRef.current;
-    if (!btn || !scroller) return;
-    const btnRect = btn.getBoundingClientRect();
-    const scrRect = scroller.getBoundingClientRect();
-    const offset = btn.offsetLeft - scroller.clientWidth / 2 + btnRect.width / 2;
-    scroller.scrollTo({ left: Math.max(0, offset), behavior: "smooth" });
-  }, [location]);
-
-  const handleTabClick = (href: string) => {
-    if (location !== href) setLocation(href);
+  const closeDirectory = () => {
+    const trigger = returnFocusRef.current;
+    setOpenDirectory(null);
+    setSearch("");
+    requestAnimationFrame(() => trigger?.focus());
   };
+  useEffect(() => {
+    if (!openDirectory) return;
+    requestAnimationFrame(() => (openDirectory === "more" ? inputRef.current : closeButtonRef.current)?.focus());
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); closeDirectory(); return; }
+      if (event.key !== "Tab" || !panelRef.current) return;
+      const focusable = Array.from(panelRef.current.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input:not([disabled])'));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [openDirectory]);
 
-  return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 z-50"
-      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)", pointerEvents: "auto" }}
-      data-testid="mobile-nav"
-      aria-label="Primary navigation"
-      role="navigation"
-    >
-      <div
-        className="relative"
-        style={{
-          background: "linear-gradient(to top, rgba(2, 1, 10, 0.97), rgba(4, 3, 14, 0.92))",
-        }}
-      >
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent pointer-events-none" />
+  const open = (kind: "knowledge" | "more", button: HTMLButtonElement) => {
+    returnFocusRef.current = button;
+    setSearch("");
+    setOpenDirectory(kind);
+  };
+  const choose = (href: string) => {
+    setLocation(href);
+    closeDirectory();
+  };
+  const directoryEntries = (group: NavigationGroup) => destinations.filter((item) =>
+    item.group === group && (openDirectory === "knowledge" || items.some((entry) => entry.id === item.id)));
 
-        <div
-          ref={scrollerRef}
-          className="flex overflow-x-auto scrollbar-none"
-          style={{ height: 56, WebkitOverflowScrolling: "touch", pointerEvents: "auto" }}
-        >
-          <style>{`[data-testid="mobile-nav"] div::-webkit-scrollbar { display: none; }`}</style>
-
-          {TABS.map((tab) => {
-            const isActive = tab.match(location);
-            const colors = COLOR_MAP[tab.color] || COLOR_MAP.cyan;
-            return (
-              <button
-                key={tab.href}
-                type="button"
-                ref={isActive ? activeButtonRef : undefined}
-                onClick={() => handleTabClick(tab.href)}
-                aria-current={isActive ? "page" : undefined}
-                aria-label={tab.label}
-                className={cn(
-                  "flex flex-col items-center justify-center relative shrink-0",
-                  "active:scale-95 transition-all duration-150",
-                  "touch-manipulation select-none cursor-pointer"
-                )}
-                style={{ width: 60, WebkitTapHighlightColor: "transparent", pointerEvents: "auto" }}
-                data-testid={`mobile-tab-${tab.label.toLowerCase().replace(/\s+/g, "-")}`}
-              >
-                {isActive && (
-                  <div className={cn("absolute inset-1 rounded-xl transition-all duration-300", colors.active, colors.glow)} />
-                )}
-
-                <div className="relative z-10 flex flex-col items-center gap-[3px]">
-                  <tab.Icon
-                    size={isActive ? 18 : 16}
-                    strokeWidth={isActive ? 2.2 : 1.3}
-                    className={cn(
-                      "transition-all duration-200",
-                      isActive ? colors.text : colors.inactive
-                    )}
-                  />
-                  <span className={cn(
-                    "leading-none tracking-wider transition-all duration-200 font-mono",
-                    isActive
-                      ? cn(colors.text, "font-bold text-[8px]")
-                      : cn(colors.inactive, "font-medium text-[7px]")
-                  )}>
-                    {tab.label}
-                  </span>
-                </div>
-
-                {isActive && (
-                  <span
-                    className={cn("absolute bottom-[2px] left-1/2 -translate-x-1/2 w-5 h-[2px] rounded-full transition-all duration-300", colors.dot)}
-                    style={{ opacity: 0.8, filter: `drop-shadow(0 0 3px currentColor)` }}
-                  />
-                )}
-              </button>
-            );
+  return <>
+    {openDirectory && <div className="fixed inset-0 z-[70] md:hidden" data-testid={`${openDirectory}-directory-overlay`}>
+      <button type="button" aria-label="Close destination directory" onClick={closeDirectory} className="absolute inset-0 bg-black/70 backdrop-blur-sm" data-testid="button-close-directory-backdrop" />
+      <section ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="mobile-directory-title"
+        className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-hidden rounded-t-2xl border border-cyan-300/10 bg-[hsl(250,15%,8%)] shadow-2xl"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 5.25rem)" }}>
+        <div className="flex items-center justify-between gap-4 px-4 pt-4 pb-3 border-b border-white/[0.07]">
+          <div>
+            <p className="text-[9px] uppercase tracking-[.2em] text-cyan-300/60 font-mono">Destination index</p>
+            <h2 id="mobile-directory-title" className="text-base font-semibold text-slate-100">{openDirectory === "knowledge" ? "Knowledge" : "More destinations"}</h2>
+          </div>
+          <button ref={closeButtonRef} type="button" onClick={closeDirectory} aria-label="Close directory" data-testid="button-close-directory" className="min-h-11 min-w-11 grid place-items-center rounded-lg border border-white/10 text-slate-300 hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300"><X size={18} /></button>
+        </div>
+        {openDirectory === "more" && <div className="px-4 py-3 border-b border-white/[0.06]">
+          <label className="relative block">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-300/60" />
+            <input ref={inputRef} type="search" value={search} onChange={(event) => setSearch(event.target.value)}
+              placeholder="Find a destination…" aria-label="Search destinations" data-testid="input-search-destinations"
+              className="w-full h-11 rounded-xl border border-cyan-300/15 bg-white/[0.035] pl-10 pr-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-300/50" />
+          </label>
+        </div>}
+        <div id={openDirectory === "knowledge" ? "knowledge-directory-list" : "more-directory-list"} className="overflow-y-auto px-4 py-3" style={{ maxHeight: openDirectory === "more" ? "calc(88dvh - 150px)" : "calc(88dvh - 100px)" }} data-testid={`${openDirectory}-directory-list`}>
+          {(openDirectory === "knowledge" ? knowledgeGroups : navigationGroups.filter((group) => group !== "Knowledge")).map((group) => {
+            const groupItems = directoryEntries(group);
+            if (!groupItems.length) return null;
+            return <section key={group} className="mb-4" aria-label={`${group} destinations`}>
+              <h3 className={cn("px-1 mb-1.5 text-[10px] font-mono font-bold uppercase tracking-[.18em]", groupTone[group])}>{group}</h3>
+              <div className="grid grid-cols-1 gap-1.5">
+                {groupItems.map((item) => {
+                  const Icon = item.Icon;
+                  const selected = destinationMatches(item, location);
+                  return <button key={item.id} type="button" onClick={() => choose(item.href)} aria-current={selected ? "page" : undefined}
+                    data-testid={`mobile-destination-${item.id}`} className={cn("flex min-h-12 items-center gap-3 rounded-xl border px-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300",
+                      selected ? "border-cyan-300/25 bg-cyan-300/[0.08] text-cyan-100" : "border-white/[0.05] bg-white/[0.015] text-slate-300 hover:bg-white/[0.045]")}>
+                    <Icon size={16} className="shrink-0 opacity-80" /><span className="flex-1 text-sm">{item.label}</span>
+                    {selected ? <span className="text-[9px] uppercase tracking-widest text-cyan-200">Current</span> : <ChevronRight size={14} className="opacity-40" />}
+                  </button>;
+                })}
+              </div>
+            </section>;
           })}
+          {openDirectory === "more" && items.length === 0 && <p className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-5 text-center text-sm text-slate-400" data-testid="text-no-destination-results">No destinations match “{search}”.</p>}
+        </div>
+      </section>
+    </div>}
+    <nav className="fixed inset-x-0 bottom-0 z-[60] md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)", pointerEvents: "auto" }} data-testid="mobile-nav" aria-label="Primary navigation">
+      <div className="border-t border-cyan-300/10 bg-[rgba(5,4,15,.97)] backdrop-blur-xl">
+        <div className="grid grid-cols-4 min-h-14">
+          <button type="button" onClick={() => { if (!isChat) setLocation("/"); }} aria-current={isChat ? "page" : undefined} aria-label="Chat"
+            className={cn("min-h-14 flex flex-col items-center justify-center gap-1 touch-manipulation focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-cyan-300", isChat ? "text-cyan-200" : "text-slate-500")} data-testid="mobile-tab-chat">
+            <MessageSquare size={18} strokeWidth={isChat ? 2 : 1.6} /><span className="text-[10px]">Chat</span>
+          </button>
+          <button type="button" onClick={(event) => openDirectory === "knowledge" ? closeDirectory() : open("knowledge", event.currentTarget)} aria-expanded={openDirectory === "knowledge"} aria-controls="knowledge-directory-list" aria-label="Knowledge destinations"
+            className={cn("min-h-14 flex flex-col items-center justify-center gap-1 touch-manipulation focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-cyan-300", isKnowledge || openDirectory === "knowledge" ? "text-violet-200" : "text-slate-500")} data-testid="mobile-tab-knowledge">
+            <BookOpen size={18} /><span className="text-[10px]">Knowledge</span>
+          </button>
+          <button type="button" onClick={() => { if (!isSystem) setLocation("/system"); }} aria-current={isSystem ? "page" : undefined} aria-label="System"
+            className={cn("min-h-14 flex flex-col items-center justify-center gap-1 touch-manipulation focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-cyan-300", isSystem ? "text-cyan-200" : "text-slate-500")} data-testid="mobile-tab-system">
+            <Cpu size={18} /><span className="text-[10px]">System</span>
+          </button>
+          <button type="button" onClick={(event) => openDirectory === "more" ? closeDirectory() : open("more", event.currentTarget)} aria-expanded={openDirectory === "more"} aria-controls="more-directory-list" aria-label={activeDestination && !isChat && !isSystem && !isKnowledge ? `More destinations, current: ${activeDestination.label}` : "More destinations"}
+            className={cn("min-h-14 flex flex-col items-center justify-center gap-1 touch-manipulation focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-cyan-300", openDirectory === "more" || (activeDestination && !isChat && !isSystem && !isKnowledge) ? "text-cyan-200" : "text-slate-500")} data-testid="mobile-tab-more">
+            <MoreHorizontal size={19} /><span className="text-[10px]">{activeDestination && !isChat && !isSystem && !isKnowledge ? activeDestination.label.slice(0, 9) : "More"}</span>
+          </button>
         </div>
       </div>
     </nav>
-  );
+  </>;
 }
