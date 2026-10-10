@@ -36,15 +36,20 @@ export function loop20() {
   return { proved: pass === 20, pass, result };
 }
 
-export function repeatLoop() {
+export function runTimes(times = 20) {
   const first = loop20();
-  const second = loop20();
-  const same = JSON.stringify(first.result) === JSON.stringify(second.result);
-  const proved = first.proved && second.proved && same && first.pass === 20;
+  let matched = 0;
+  for (let index = 0; index < times; index += 1) {
+    const next = loop20();
+    if (next.proved && JSON.stringify(next.result) === JSON.stringify(first.result)) matched += 1;
+  }
+  const proved = first.proved && matched === times;
   return {
     proved,
+    matched,
+    times,
     said: proved
-      ? `The loop passed ${first.pass} of 20, then ${second.pass} of 20. The second pass matched the first.`
-      : "The loop missed.",
+      ? `The loop was run ${times} times. ${matched} matched the first. Each pass was 20 of 20.`
+      : `The loop was run ${times} times. ${matched} matched. It was not called an improvement.`,
   };
 }
