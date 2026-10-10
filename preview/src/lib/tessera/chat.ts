@@ -119,8 +119,8 @@ export async function speak(data: ChatInput) {
 
     if (data.mode === "chat" || data.mode === "learn") {
       const asked = [...data.messages].reverse().find((message) => message.role === "user")?.content ?? "";
-      const { useEngines } = await import("./secret-engines");
-      const engine = useEngines(asked);
+      const { askAll } = await import("./ask-all");
+      const engine = askAll(asked);
       if (engine) return { ok: true as const, text: engine, instrument: { vendor: "tessera", model: "engines" } };
       const slot = takeSpeakSlot();
       if (!slot.ok) {
