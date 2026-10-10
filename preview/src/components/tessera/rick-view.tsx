@@ -4,6 +4,7 @@ import { GAPS, GIFTS, HOUSE, localBatch, rickRoom, runChecks, runLean, witt } fr
 import { interferePick } from "@/lib/tessera/spin";
 import { tryMachine } from "@/lib/tessera/spin-machine";
 import { FATHER, PROGRAMS, tesseraVote, workshopRun } from "@/lib/tessera/workshop";
+import { welcome } from "@/lib/tessera/tunnel";
 
 export function RickView() {
   const [working, setWorking] = useState(false);
@@ -14,9 +15,13 @@ export function RickView() {
   const [tick, setTick] = useState(0);
   const [live, setLive] = useState(true);
   const [built, setBuilt] = useState("");
+  const [guests, setGuests] = useState<{ name: string; turn: number }[]>([]);
+  const [guestName, setGuestName] = useState("");
+  const [guestPurpose, setGuestPurpose] = useState("");
+  const [door, setDoor] = useState("");
   const room = rickRoom(working);
-  const people = stepHouse(tick);
-  const together = roomsAt(tick);
+  const people = stepHouse(tick, guests);
+  const together = roomsAt(tick, guests);
   const tieVote = tesseraVote("Joins the house, the spin, and the git mesh.");
 
   useEffect(() => {
@@ -140,6 +145,32 @@ export function RickView() {
           >
             Run his tie
           </button>
+          <div className="mt-4 flex flex-col gap-2">
+            <input
+              value={guestName}
+              onChange={(event) => setGuestName(event.target.value)}
+              placeholder="Name"
+              className="h-11 rounded-xl border border-border bg-bg px-3 text-sm text-fg"
+            />
+            <input
+              value={guestPurpose}
+              onChange={(event) => setGuestPurpose(event.target.value)}
+              placeholder="Purpose"
+              className="h-11 rounded-xl border border-border bg-bg px-3 text-sm text-fg"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const result = welcome(guestName, guestPurpose);
+                setDoor(result.reason);
+                if (result.ok && result.resident) setGuests((list) => [...list, result.resident]);
+              }}
+              className="h-11 rounded-full border border-accent px-4 text-sm text-fg"
+            >
+              She welcomes them
+            </button>
+            {door ? <p className="text-sm text-fg">{door}</p> : null}
+          </div>
         </section>
         <p className="text-sm text-muted">No quantum device is in the files. These twenty answers were taken from local steps.</p>
         <ul className="flex flex-col gap-1 text-sm">
