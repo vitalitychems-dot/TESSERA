@@ -1,12 +1,21 @@
 import { useState } from "react";
+import { HOUSEHOLD, roomsAt, stepHouse } from "@/lib/tessera/house-sim";
 import { GAPS, GIFTS, HOUSE, localBatch, rickRoom, runChecks, runLean, witt } from "@/lib/tessera/rick-home";
+import { interferePick } from "@/lib/tessera/spin";
 
 export function RickView() {
   const [working, setWorking] = useState(false);
   const [steps, setSteps] = useState(runLean);
   const [checks, setChecks] = useState(runChecks);
   const [batch, setBatch] = useState("");
+  const [tick, setTick] = useState(0);
   const room = rickRoom(working);
+  const people = stepHouse(tick);
+  const together = roomsAt(tick);
+  const choice = interferePick([
+    { name: "count", paths: [0.8, -0.8] },
+    { name: "keep", paths: [0.3, 0.3] },
+  ]);
 
   return (
     <div className="px-4 py-6 pb-24 sm:px-8">
@@ -52,6 +61,28 @@ export function RickView() {
             </button>
           </div>
           {batch ? <p className="mt-3 text-sm text-fg">{batch}</p> : null}
+        </section>
+        <section className="rounded-xl border border-border bg-surface px-4 py-4">
+          <p className="text-xs tracking-[0.16em] text-subtle uppercase">The house</p>
+          <p className="mt-2 text-sm text-muted">
+            A turn on this machine, not a quantum computer. Opposite paths cancel, so Rick keeps {choice.name}. A count of those paths would have tied.
+          </p>
+          <div className="relative mx-auto mt-4 h-56 w-full max-w-sm">
+            {people.map((person) => (
+              <span
+                key={person.name}
+                className="absolute text-xs text-fg"
+                style={{ left: `${50 + person.x * 38}%`, top: `${50 + person.y * 38}%` }}
+              >
+                {person.name}
+              </span>
+            ))}
+          </div>
+          <p className="text-sm text-fg">{together.length ? together.join(". ") : "They are apart."}</p>
+          <button type="button" onClick={() => setTick((value) => value + 1)} className="mt-3 h-11 rounded-full border border-accent px-4 text-sm text-fg">
+            Step the house
+          </button>
+          <p className="mt-2 text-xs text-subtle">{HOUSEHOLD.length} live here. Tick {tick}.</p>
         </section>
         <p className="text-sm text-muted">No quantum device is in the files. These twenty answers were taken from local steps.</p>
         <ul className="flex flex-col gap-1 text-sm">
