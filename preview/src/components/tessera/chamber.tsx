@@ -27,6 +27,7 @@ import { seeAndAdvance } from "@/lib/tessera/herself-v4";
 import { trainCatalog } from "@/lib/tessera/own-versions";
 import { herInstruction } from "@/lib/tessera/next-page";
 import { useTessera } from "@/lib/tessera/store";
+import { askAll } from "@/lib/tessera/ask-all";
 import { runSitting } from "@/lib/tessera/sitting-25";
 
 export function Chamber() {
@@ -90,6 +91,13 @@ export function Chamber() {
     setWebNote(null);
     addMessage("user", content);
     setPending(true);
+    const connected = askAll(content);
+    if (connected) {
+      addMessage("assistant", connected);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
     if (/^(yes|yes to all|no)$/i.test(content)) {
       const board = await readBoard();
       const question = board.ok ? openQuestion(board.lines) : null;
@@ -321,20 +329,25 @@ export function Chamber() {
     }
     const history = state.messages.map((m) => ({ role: m.role, content: m.content }));
     if (history.length > 0) history[history.length - 1] = { role: "user", content: spoken };
-    const result = await speakAsTessera({
-      data: {
-        mode: "chat",
-        messages: history,
-        constitution: state.constitution,
-        pulses: state.pulses.map((p) => p.text),
-        lessons: state.lessons.filter((l) => l.status === "sealed").map((l) => l.text),
-        world: {
-          tick: state.worldTick,
-          events: state.worldEvents.slice(-4).map((e) => `Tick ${e.tick}: ${e.text}`),
-          laws: state.laws.map((l) => `${l.title}: ${l.body}`),
+    const result = await Promise.race([
+      speakAsTessera({
+        data: {
+          mode: "chat",
+          messages: history,
+          constitution: state.constitution,
+          pulses: state.pulses.map((p) => p.text),
+          lessons: state.lessons.filter((l) => l.status === "sealed").map((l) => l.text),
+          world: {
+            tick: state.worldTick,
+            events: state.worldEvents.slice(-4).map((e) => `Tick ${e.tick}: ${e.text}`),
+            laws: state.laws.map((l) => `${l.title}: ${l.body}`),
+          },
         },
-      },
-    }).catch((error: unknown) => ({
+      }),
+      new Promise<{ ok: false; error: string }>((resolve) => {
+        window.setTimeout(() => resolve({ ok: false, error: "The pen took too long. Your words stayed." }), 12000);
+      }),
+    ]).catch((error: unknown) => ({
       ok: false as const,
       error: error instanceof Error && /aborted|timeout/i.test(error.message) ? "The pen took too long. Your words stayed." : error instanceof Error ? error.message : "The pen did not answer.",
     }));
@@ -439,7 +452,7 @@ export function Chamber() {
 
       <div className="z-40 shrink-0 bg-bg px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-8">
         <form
-          className="mx-auto flex w-full max-w-2xl items-end gap-2 border border-accent/40 bg-surface/80 p-2 pl-4 focus-within:border-accent"
+          className="mx-auto flex w-full max-w-2xl items-end gap-2 border border-accent/40 bg-bg p-2 pl-4"
           onSubmit={(e) => {
             e.preventDefault();
             void send();
@@ -447,10 +460,11 @@ export function Chamber() {
         >
           <textarea
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onFocus={(event) => {
-              const field = event.currentTarget;
-              window.setTimeout(() => field.scrollIntoView({ block: "nearest" }), 250);
+            onChange={(e) => {
+              setDraft(e.target.value);
+              const field = e.currentTarget;
+              field.style.height = "44px";
+              field.style.height = `${Math.min(field.scrollHeight, 120)}px`;
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -460,7 +474,7 @@ export function Chamber() {
             }}
             rows={1}
             placeholder="Speak with Tessera"
-            className="max-h-36 min-h-11 flex-1 resize-none bg-transparent py-2.5 text-base text-fg outline-none placeholder:text-subtle"
+            className="h-11 max-h-[120px] min-h-11 flex-1 resize-none overflow-y-auto bg-bg py-2.5 text-base leading-6 text-fg outline-none placeholder:text-subtle"
           />
           <button
             type="button"
