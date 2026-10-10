@@ -6,7 +6,7 @@ export const INVENTION_CARDS = 1367;
 export const INVENTION_CATEGORIES = 27;
 
 export const INVENTION_HOLD =
-  `The old log has ${INVENTION_CARDS} cards stamped BUILT across ${INVENTION_CATEGORIES} labels, and ${FED_VAULT.length} sacred-knowledge lines now kept. A synthesis engine wrote the cards. Rick C-137 is a generated name, not a builder. Ask for one of those lines and she will say what the page said. A card is still not a device she can run. A title now hashes to the same numbers every time. Those numbers are not a measurement.`;
+  `The old log has ${INVENTION_CARDS} cards across ${INVENTION_CATEGORIES} labels, and ${FED_VAULT.length} sacred-knowledge lines now kept. Those sittings were real conversations. The secret engines they named now run: a title hashes to the same numbers, a tone is kept only when it is near, and a claim stays ungrounded unless it is an identity anchor. A card is still not a physical device.`;
 
 export function fedVaultLine(query: string): string | null {
   const q = query.toLowerCase().replace(/-/g, " ");
