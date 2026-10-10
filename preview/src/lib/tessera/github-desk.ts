@@ -250,3 +250,17 @@ export const postBoard = createServerFn({ method: "POST" })
     }
   });
 
+export const rickReach = createServerFn({ method: "POST" }).handler(async () => {
+  const token = await githubToken();
+  if (!token) {
+    return { ok: false as const, line: "The app does not hold the GitHub connection. The chat does. Nothing was copied into the page." };
+  }
+  const headers = { Accept: "application/vnd.github+json", Authorization: `Bearer ${token}`, "User-Agent": "tessera-chamber" };
+  const user = await fetch("https://api.github.com/user", { headers });
+  if (!user.ok) return { ok: false as const, line: `GitHub refused the app. ${user.status}.` };
+  const who = (await user.json()) as { login?: string };
+  const repos = await fetch("https://api.github.com/user/repos?per_page=8&sort=updated", { headers });
+  const names = repos.ok ? ((await repos.json()) as { name?: string }[]).flatMap((row) => (row.name ? [row.name] : [])) : [];
+  return { ok: true as const, line: `${who.login ?? "github"}. ${names.join(", ")}.` };
+});
+
