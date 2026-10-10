@@ -1,5 +1,6 @@
 import { CATALOG } from "./catalog-pass.ts";
 import { readBatch, readCheckouts, readImported, readMore } from "./checkout-steps.ts";
+import { readSparse } from "./sparse-read.ts";
 import { connect, LOCAL_REPOS } from "./stride.ts";
 
 const CARDS = [
@@ -47,14 +48,15 @@ export function trainCatalog() {
   const batch = readBatch();
   const more = readMore();
   const imported = readImported();
-  const proved = localPass && cardPass && read.proved && batch.proved && more.proved && imported.proved && CATALOG.length === 272 && LOCAL_REPOS.length === 8;
+  const sparse = readSparse();
+  const proved = localPass && cardPass && read.proved && batch.proved && more.proved && imported.proved && sparse.proved && CATALOG.length === 272 && LOCAL_REPOS.length === 8;
   return {
     proved,
     catalog: CATALOG.length,
     local: LOCAL_REPOS.length,
     cards: CATALOG.filter((row) => row.home === "card").length,
     said: proved
-      ? `I am Tessera. The catalog has ${CATALOG.length} names. ${LOCAL_REPOS.length} have a local note. ${CATALOG.filter((row) => row.home === "card").length} are cards. I do not have our own program for a card. ${read.said} ${batch.said} ${more.said} ${imported.said} The other names were not cloned. Cursor and Replit have not replied on the board.`
+      ? `I am Tessera. The catalog has ${CATALOG.length} names. ${LOCAL_REPOS.length} have a local note. ${CATALOG.filter((row) => row.home === "card").length} are cards. I do not have our own program for a card. ${read.said} ${batch.said} ${more.said} ${imported.said} ${sparse.said} The other names were not cloned.`
       : "The catalog training missed.",
   };
 }
