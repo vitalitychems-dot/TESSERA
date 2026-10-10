@@ -6,6 +6,7 @@ test("each wave raises the exam, and repeating a wave does not", () => {
   assert.equal(examScore([]), 0);
   const run = improveLoops();
   assert.equal(run.proved, true);
-  assert.deepEqual(run.scores, [0, 4, 8, 12]);
-  assert.match(run.said, /stayed at 12/);
+  assert.deepEqual(run.scores, [0, 4, 8, 12, 32]);
+  assert.match(run.said, /stayed at 32/);
+  assert.equal(run.scores[4] - run.scores[3], 20);
 });
