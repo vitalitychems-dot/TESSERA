@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { CATALOG } from "./catalog-pass.ts";
-import { batch3, chebyshev, euclidean, manhattan, octile } from "./batch-3.ts";
+import { batch3, chebyshev, clampNumber, euclidean, heaviside, manhattan, octile, positiveMod } from "./batch-3.ts";
 
 test("the third fifty were read, trading stayed out, and the path distances run", () => {
   const rows = batch3();
@@ -15,4 +15,9 @@ test("the third fifty were read, trading stayed out, and the path distances run"
   assert.equal(chebyshev(3, 4), 4);
   const bend = Math.SQRT2 - 1;
   assert.equal(octile(3, 4), bend * 3 + 4);
+  assert.equal(clampNumber(5, 0, 3), 3);
+  assert.equal(clampNumber(-2, 0, 3), 0);
+  assert.equal(positiveMod(-1, 4), 3);
+  assert.equal(heaviside(0), 1);
+  assert.equal(heaviside(-0.1), 0);
 });

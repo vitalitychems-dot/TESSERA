@@ -32,3 +32,17 @@ export function octile(dx: number, dy: number) {
   const bend = Math.SQRT2 - 1;
   return dx < dy ? bend * dx + dy : bend * dy + dx;
 }
+
+/** Clamp and positive modulus. Read from spacejack/carphysics2d public/js/GMath.js. */
+export function clampNumber(n: number, min: number, max: number) {
+  return Math.min(Math.max(n, min), max);
+}
+
+export function positiveMod(n: number, m: number) {
+  return ((n % m) + m) % m;
+}
+
+/** Step is 1 at zero and above, otherwise 0. Read from pkuxmq/OTTT-SNN modules/surrogate.py heaviside. */
+export function heaviside(x: number) {
+  return x >= 0 ? 1 : 0;
+}
