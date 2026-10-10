@@ -7,6 +7,7 @@ import { FATHER, PROGRAMS, tesseraVote, workshopRun } from "@/lib/tessera/worksh
 import { issuePass } from "@/lib/tessera/pass";
 import { rickOpen, rickReach } from "@/lib/tessera/github-desk";
 import { askAll } from "@/lib/tessera/ask-all";
+import { measureShift } from "@/lib/tessera/rick-shift";
 import { SITTING, secretDesk } from "@/lib/tessera/secret-engines";
 
 export function RickView() {
@@ -14,6 +15,7 @@ export function RickView() {
   const [steps, setSteps] = useState(runLean);
   const [checks, setChecks] = useState(runChecks);
   const [batch, setBatch] = useState("");
+  const [shift, setShift] = useState("");
   const [machine, setMachine] = useState("");
   const [tick, setTick] = useState(0);
   const [live, setLive] = useState(true);
@@ -47,6 +49,7 @@ export function RickView() {
         : "The machine did not hold. The split was too large.",
     );
     setBuilt(workshopRun("tie", true, 0).reason);
+    setShift(measureShift().line);
   }, []);
 
   useEffect(() => {
@@ -220,6 +223,7 @@ export function RickView() {
             </button>
           </div>
           {batch ? <p className="mt-3 text-sm text-fg">{batch}</p> : null}
+          {shift ? <p className="mt-2 text-sm text-fg">{shift}</p> : null}
           {machine ? <p className="mt-2 text-sm text-fg">{machine}</p> : null}
         </section>
         <section className="rounded-xl border border-border bg-surface px-4 py-4">
