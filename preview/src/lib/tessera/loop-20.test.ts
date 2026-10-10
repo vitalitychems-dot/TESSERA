@@ -1,0 +1,31 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { fromFiles, repeatLoop } from "./loop-20.ts";
+
+test("twenty file results pass, and the second pass matches the first", () => {
+  const got = fromFiles();
+  assert.equal(Object.keys(got).length, 20);
+  assert.equal(got.globs, 2);
+  assert.equal(got.license, "Apache-2.0");
+  assert.equal(got.skipUnlessFull, true);
+  assert.equal(got.path, "/repo:old");
+  assert.equal(got.actionNames, "seek_food,rest,explore");
+  assert.equal(got.steps, 1000);
+  assert.equal(got.marker, "requires_full_build");
+  assert.equal(got.startWhenMissing, false);
+  assert.equal(got.model, "not started");
+  assert.equal(got.threshold, 1);
+  assert.equal(got.reset, 0);
+  assert.equal(got.fill, 128);
+  assert.equal(got.swizzle, "xyzw");
+  assert.equal(got.py, "a.py");
+  assert.equal(got.reuseVenv, true);
+  assert.equal(got.docs, "dirhtml");
+  assert.equal(got.log, "a");
+  assert.equal(got.pythonMajor, 3);
+  assert.equal(got.net, "ofa_resnet50");
+  assert.equal(got.cart, "CartPole-v0");
+  const again = repeatLoop();
+  assert.equal(again.proved, true);
+  assert.match(again.said, /20, then 20/);
+});
