@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { readFile } from "node:fs/promises";
 import { dataPath } from "./data-path";
 
 export type HeldFile = {

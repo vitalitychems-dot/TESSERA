@@ -165,7 +165,8 @@ async function refuseRepeat(body: string) {
     const result = await githubApi("/repos/vitalitychems-dot/Gitbook/issues/2/comments");
     if (!result.ok) return "The duplicate guard could not read Gitbook issue 2, so the comment was not posted.";
     const existing = JSON.parse(result.text) as { body?: string }[];
-    if (repeatedFirstLine(existing, body)) return "That first line is already on the board. The comment was not posted.";
+    const bodies = existing.flatMap((row) => (typeof row.body === "string" ? [{ body: row.body }] : []));
+    if (repeatedFirstLine(bodies, body)) return "That first line is already on the board. The comment was not posted.";
   } catch {
     return "The duplicate guard could not read the board, so the comment was not posted.";
   }
@@ -175,13 +176,14 @@ async function refuseRepeat(body: string) {
 export function openQuestion(lines: { id?: number; body: string }[]) {
   let closedAt = -1;
   let found: { id: number; index: number } | null = null;
-  lines.forEach((line, index) => {
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
     if (/^Father:\s*(YES|NO)\b/m.test(line.body)) closedAt = index;
     const lane = /^Lane: (Cursor|Grok Bot)/m.test(line.body);
     const asks = /^Question: .+/m.test(line.body) && /Need: yes or no/m.test(line.body);
     if (lane && asks && line.id) found = { id: line.id, index };
-  });
-  if (!found || found.index <= closedAt) return null;
+  }
+  if (found === null || found.index <= closedAt) return null;
   return found;
 }
 

@@ -32,6 +32,30 @@ export const MESH = {
       run: "node carry.mjs",
       does: "Reads the mesh index from disk and checks that it needs no web.",
     },
+    {
+      name: "spin",
+      path: "projects/spin",
+      run: "node spin.mjs",
+      does: "Tries two qubits and checks the pairs.",
+    },
+    {
+      name: "tie",
+      path: "projects/tie",
+      run: "node tie.mjs --approved",
+      does: "Joins the house, the spin, and the git mesh after she approves it.",
+    },
+    {
+      name: "pass",
+      path: "projects/pass",
+      run: "node pass.mjs --name=Ada --purpose=to study the light",
+      does: "Writes a git pass for a welcomed guest.",
+    },
+    {
+      name: "live",
+      path: "projects/live",
+      run: "node live.mjs",
+      does: "Serves the room as a page on the machine that runs it.",
+    },
   ],
 } as const;
 
