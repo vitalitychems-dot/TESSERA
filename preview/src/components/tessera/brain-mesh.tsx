@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { AGENTS } from "@/lib/tessera/identity";
 import { brainMesh, perceptron } from "@/lib/tessera/perceptron";
 
-const STEPS = ["reward", "leak", "reset", "warmup", "sequence", "selector"];
+const STEPS = ["reward", "leak", "reset", "warmup", "sequence", "selector", "ranking"];
 
 export function BrainMesh() {
   const mesh = useMemo(() => brainMesh([...AGENTS.map((agent) => agent.name), ...STEPS]), []);
