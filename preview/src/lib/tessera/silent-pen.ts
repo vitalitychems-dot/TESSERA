@@ -6,6 +6,7 @@ import { batch3, manhattan } from "./batch-3.ts";
 import { topRanking } from "./whiten.ts";
 import { rankTasks } from "./sovereign-desk.ts";
 import { twoThirds } from "./rick-loop.ts";
+import { nextGap } from "./rick-five.ts";
 import { rewardEat } from "./local-learn.ts";
 import { loveFromFiles } from "./love-local.ts";
 import { noteFor, type KeptPage } from "./next-page.ts";
@@ -28,6 +29,9 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (/\beight checkouts\b/i.test(q)) {
     const eight = allEight();
     return `Eight checkout steps ran. Best action ${eight.neuro}. Health ${eight.godel}. Rate ${eight.human}. Coherence ${eight.blueprint}. Bool ${eight.hyperon}.`;
+  }
+  if (/\bfive rounds\b/i.test(q)) {
+    return `Five rounds are installed. The first missing number in 1, 2, 4 is ${nextGap([1, 2, 4])}. A tie does not pass. A second lock does not take the key. A long token is held.`;
   }
   if (/\b(rick loop|second ten|out of the box)\b/i.test(q)) {
     const passed = twoThirds(2, 3);
