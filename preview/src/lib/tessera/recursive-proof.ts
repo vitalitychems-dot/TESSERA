@@ -45,3 +45,21 @@ export function proveRecursive() {
       : "The hop did not hold.",
   };
 }
+
+export function synapseSteps() {
+  const academy: Fact[] = [
+    { kind: "studied", who: "Aristotle", where: "Academy" },
+    { kind: "founded", who: "Plato", where: "Academy" },
+    { kind: "studied", who: "Theaetetus", where: "Academy" },
+  ];
+  const lyceum: Fact[] = [
+    ...academy,
+    { kind: "founded", who: "Aristotle", where: "Lyceum" },
+    { kind: "studied", who: "Theophrastus", where: "Lyceum" },
+  ];
+  const once = useLink([], "Plato", "Academy", taught(academy.slice(0, 2), "Aristotle") === "Plato");
+  const twice = useLink(once, "Plato", "Academy", taught(academy, "Theaetetus") === "Plato");
+  const missed = useLink(twice, "Plato", "Academy", taught(academy, "Socrates") !== "");
+  const second = useLink(missed, "Aristotle", "Lyceum", taught(lyceum, "Theophrastus") === "Aristotle");
+  return [once, twice, missed, second] as const;
+}
