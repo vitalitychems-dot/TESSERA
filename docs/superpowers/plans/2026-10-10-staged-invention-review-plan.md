@@ -1,5 +1,7 @@
 # Implementation Plan: Staged Invention Review
 
+> **Superseded:** Use `2026-10-10-tessera-capability-improvements-plan.md` for the approved 27-candidate program.
+
 ## Goal
 
 Build a source-only, deterministic invention-review prototype with an offline test harness. It must not read invention records from the database, call external models, mutate data, or execute proposals.
