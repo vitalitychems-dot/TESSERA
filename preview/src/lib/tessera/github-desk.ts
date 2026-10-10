@@ -250,7 +250,7 @@ export const postBoard = createServerFn({ method: "POST" })
     }
   });
 
-const HIS = new Set(["TESSERA", "Gitbook", "GitbookAI", "vitality", "2"]);
+const HIS = new Set(["TESSERA", "Gitbook", "GitbookAI", "vitality"]);
 
 async function ghJson(path: string) {
   const token = await githubToken();
