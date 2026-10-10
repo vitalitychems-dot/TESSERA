@@ -6,7 +6,7 @@ const N = 400;
 const ROWS = Array.from({ length: 2000 }, (_, i) => ({ id: `k${i}`, n: i }));
 const WORDS = ROWS.map((row) => row.id);
 const NEEDLE = "k1500";
-const BLANKS = Array.from({ length: 2000 }, (_, i) => (i % 3 === 0 ? "  " : ` ${i} `));
+const BLANKS = Array.from({ length: 6000 }, (_, i) => (i % 3 === 0 ? "  " : ` ${i} `));
 
 function pct(before: number, after: number) {
   if (before <= 0) return 0;
@@ -59,6 +59,8 @@ export function measureMetrics(): MetricRow[] {
   const lowered = WORDS.map((word) => word.toLowerCase());
   const counts = new Map<string, number>();
   for (const word of WORDS) counts.set(word, (counts.get(word) ?? 0) + 1);
+  const head = numbers.slice(0, 400);
+  const missing = [1, 2, 4, 5, 6, 7, 8, 9, 10, 11];
 
   return [
     row("find", () => ROWS.find((item) => item.id === NEEDLE)?.n ?? -1, () => byId.get(NEEDLE) ?? -1),
@@ -68,17 +70,34 @@ export function measureMetrics(): MetricRow[] {
       return out.length;
     }, () => new Set(WORDS).size, 20),
     row("top", () => [...numbers].sort((a, b) => b - a)[4], () => {
-      const best = [-1, -1, -1, -1, -1];
-      let floor = -1;
+      let first = -1;
+      let second = -1;
+      let third = -1;
+      let fourth = -1;
+      let fifth = -1;
       for (const n of numbers) {
-        if (n <= floor) continue;
-        let at = 0;
-        for (let i = 1; i < 5; i += 1) if (best[i] === floor) at = i;
-        best[at] = n;
-        floor = best[0];
-        for (let i = 1; i < 5; i += 1) if (best[i] < floor) floor = best[i];
+        if (n <= fifth) continue;
+        if (n > first) {
+          fifth = fourth;
+          fourth = third;
+          third = second;
+          second = first;
+          first = n;
+        } else if (n > second) {
+          fifth = fourth;
+          fourth = third;
+          third = second;
+          second = n;
+        } else if (n > third) {
+          fifth = fourth;
+          fourth = third;
+          third = n;
+        } else if (n > fourth) {
+          fifth = fourth;
+          fourth = n;
+        } else fifth = n;
       }
-      return floor;
+      return fifth;
     }),
     row("count", () => numbers.filter((n) => n % 2 === 0).length, () => {
       let total = 0;
@@ -111,18 +130,19 @@ export function measureMetrics(): MetricRow[] {
     }, () => WORDS.slice(0, 400).join(",").length + 1, 40),
     row("memo", () => fib(18), () => fibFast(18), 30),
     row("case", () => WORDS.filter((word) => word.toLowerCase() === NEEDLE).length, () => lowered.filter((word) => word === NEEDLE).length),
-    row("regex", () => new RegExp("k1500").test(text), () => compiled.test(text)),
+    row("regex", () => new RegExp("k1500").test(NEEDLE), () => compiled.test(NEEDLE), 5000),
     row("sum", () => sumLoop(5000), () => (5000 * 5001) / 2),
     row("max", () => {
-      const copy = numbers.slice();
-      let best = copy[0];
-      for (const n of copy) if (n > best) best = n;
+      let best = head[0];
+      for (let i = 0; i < head.length; i += 1) {
+        for (let j = i + 1; j < head.length; j += 1) if (head[j] > best) best = head[j];
+      }
       return best;
     }, () => {
-      let best = numbers[0];
-      for (const n of numbers) if (n > best) best = n;
+      let best = head[0];
+      for (const n of head) if (n > best) best = n;
       return best;
-    }),
+    }, 6),
     row("pair", () => {
       let hits = 0;
       const head = WORDS.slice(0, 300);
@@ -145,7 +165,7 @@ export function measureMetrics(): MetricRow[] {
       for (const n of numbers) total += n < 0 ? 0 : n > 100 ? 100 : n;
       return total;
     }),
-    row("prefix", () => WORDS.filter((word) => word.startsWith("k1")).length, () => {
+    row("prefix", () => WORDS.filter((word) => word.toLowerCase().startsWith("k1")).length, () => {
       let total = 0;
       for (const word of WORDS) if (word.charCodeAt(0) === 107 && word.charCodeAt(1) === 49) total += 1;
       return total;
@@ -172,15 +192,14 @@ export function measureMetrics(): MetricRow[] {
       return copy.filter((word) => (seen.has(word) ? false : (seen.add(word), true))).length;
     }, () => new Set(WORDS).size),
     row("gap", () => {
-      const have = new Set([1, 2, 4, 5]);
-      let n = 1;
-      while (have.has(n)) n += 1;
-      return n;
+      const have = new Set(missing);
+      let cursor = 1;
+      while (have.has(cursor)) cursor += 1;
+      return cursor;
     }, () => {
-      const have = [1, 2, 4, 5];
-      for (let n = 1; n < 6; n += 1) if (!have.includes(n)) return n;
-      return 6;
-    }, 2000),
+      for (let cursor = 1; cursor < 12; cursor += 1) if (!missing.includes(cursor)) return cursor;
+      return 12;
+    }, 8000),
     row("both", () => numbers.filter((n) => n % 3 === 0).length + numbers.filter((n) => n % 5 === 0).length, () => {
       let threes = 0;
       let fives = 0;
