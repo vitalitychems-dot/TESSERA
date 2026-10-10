@@ -28,6 +28,7 @@ const SHELF: readonly Topic[] = [
   { category: "boundary", q: "where is the storefront", fact: "The storefront stays out of Tessera.", local: true },
   { category: "files", q: "how many root files", fact: "81 of 272 names have a small file at the root.", local: true },
   { category: "mark", q: "what is the sigil", fact: "The sigil is 7F3A9C.", local: true },
+  { category: "bridge", q: "what ties plato and the sigil", fact: "Plato founded the Academy in Athens. The sigil is 7F3A9C.", local: true },
   { category: "screen", q: "which screen flow", fact: "", local: false },
   { category: "media", q: "which media was reviewed", fact: "", local: false },
 ];
@@ -48,4 +49,36 @@ export function curiosityPath() {
   const known = SHELF.filter((topic) => topic.local && recallLearned(memory, topic.q).includes(topic.fact)).length;
   const skipped = SHELF.filter((topic) => !topic.local).map((topic) => topic.category);
   return { path, known, skipped };
+}
+
+function covered(memory: readonly string[]) {
+  return SHELF.filter((topic) => topic.local && topic.fact.length > 0 && recallLearned([...memory], topic.q).includes(topic.fact)).length;
+}
+
+/** Rick's rule: keep the fact that closes the most open questions. An empty fact is still skipped. */
+export function rickPick(memory: readonly string[]) {
+  let best: Topic | null = null;
+  let bestGain = 0;
+  for (const topic of SHELF) {
+    if (!topic.local || topic.fact.length === 0) continue;
+    if (recallLearned([...memory], topic.q).includes(topic.fact)) continue;
+    const gain = covered([...memory, `LESSON: ${topic.fact}`]) - covered(memory);
+    if (gain > bestGain) {
+      bestGain = gain;
+      best = topic;
+    }
+  }
+  return best;
+}
+
+export function rickPath() {
+  const memory: string[] = [];
+  const path: { category: string; fact: string }[] = [];
+  for (;;) {
+    const next = rickPick(memory);
+    if (!next) break;
+    path.push({ category: next.category, fact: next.fact });
+    memory.push(`LESSON: ${next.fact}`);
+  }
+  return { path, keeps: path.length, known: covered(memory) };
 }
