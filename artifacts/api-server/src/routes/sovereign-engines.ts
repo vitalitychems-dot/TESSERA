@@ -17,8 +17,11 @@ import {
   searchRegistry, getEngineFileManifest, canEngineAccess, fullRescan,
   type FileDomain,
 } from "../lib/sovereign-file-registry";
+import { requireAdminSession } from "../lib/sovereign-admin";
 
 const router = Router();
+
+router.use(requireAdminSession);
 
 router.get("/consciousness/metrics", (_req: Request, res: Response) => {
   res.json({ ok: true, data: getConsciousnessMetrics() });

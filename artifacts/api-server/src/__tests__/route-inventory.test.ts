@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import express, { type Router } from "express";
 import { createServer, type Server } from "node:http";
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 import {
   collapsedRouteKeyCount,
   duplicateRoutes,
@@ -190,13 +191,29 @@ function restoreDatabaseUrl(): void {
 let server: Server | undefined;
 let baseUrl = "";
 
-async function request(method: string, path: string, body?: unknown): Promise<{ status: number; json: unknown }> {
+async function request(
+  method: string,
+  path: string,
+  body?: unknown,
+  cookie?: string,
+): Promise<{ status: number; json: unknown }> {
+  const headers = new Headers();
+  if (body !== undefined) headers.set("content-type", "application/json");
+  if (cookie !== undefined) headers.set("cookie", cookie);
   const response = await fetch(`${baseUrl}${path}`, {
     method,
-    headers: body === undefined ? undefined : { "content-type": "application/json" },
+    headers,
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   return { status: response.status, json: await response.json() };
+}
+
+const OWNER_ADMIN_KEY = "synthetic-owner-token";
+const OWNER_SESSION_SECRET = "synthetic-session-secret-32chars!!";
+
+function ownerCookie(): string {
+  const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+  return `${SESSION_COOKIE}=${issued.signedId}`;
 }
 
 describe("HYB-012 route inventory", () => {
@@ -347,7 +364,12 @@ describe("HYB-012 quantum mount order", () => {
 });
 
 describe("HYB-012 non-quantum duplicate response shapes", () => {
+  const previousAdmin = process.env.TESSERACT_ADMIN_KEY;
+  const previousSession = process.env.SOVEREIGN_SESSION_SECRET;
+
   beforeAll(async () => {
+    process.env.TESSERACT_ADMIN_KEY = OWNER_ADMIN_KEY;
+    process.env.SOVEREIGN_SESSION_SECRET = OWNER_SESSION_SECRET;
     ensureRouteImportCanLoad();
     const loaders = [
       () => import("../routes/sovereign-engines"),
@@ -381,10 +403,18 @@ describe("HYB-012 non-quantum duplicate response shapes", () => {
       server = undefined;
     }
     restoreDatabaseUrl();
+    if (previousAdmin === undefined) delete process.env.TESSERACT_ADMIN_KEY;
+    else process.env.TESSERACT_ADMIN_KEY = previousAdmin;
+    if (previousSession === undefined) delete process.env.SOVEREIGN_SESSION_SECRET;
+    else process.env.SOVEREIGN_SESSION_SECRET = previousSession;
   });
 
   it("GET /api/consciousness/state answers with the sovereign-engines wrapper", async () => {
-    const response = await request("GET", "/api/consciousness/state");
+    const anonymous = await request("GET", "/api/consciousness/state");
+    expect(anonymous.status).toBe(401);
+    expect(anonymous.json).toEqual({ ok: false, error: "unauthenticated", reason: "no-cookie" });
+
+    const response = await request("GET", "/api/consciousness/state", undefined, ownerCookie());
     expect(response.status).toBe(200);
     const body = response.json as { ok?: boolean; data?: { cycleCount?: number; currentFocus?: unknown } };
     expect(body.ok).toBe(true);
@@ -402,7 +432,10 @@ describe("HYB-012 non-quantum duplicate response shapes", () => {
   });
 
   it("GET /api/dual-brain/state answers with the sovereign-engines wrapper", async () => {
-    const response = await request("GET", "/api/dual-brain/state");
+    const anonymous = await request("GET", "/api/dual-brain/state");
+    expect(anonymous.status).toBe(401);
+
+    const response = await request("GET", "/api/dual-brain/state", undefined, ownerCookie());
     expect(response.status).toBe(200);
     const body = response.json as { ok?: boolean; data?: { running?: unknown; totalRounds?: unknown } };
     expect(body.ok).toBe(true);
@@ -411,7 +444,10 @@ describe("HYB-012 non-quantum duplicate response shapes", () => {
   });
 
   it("GET /api/emotional/profile answers with the sovereign-engines wrapper", async () => {
-    const response = await request("GET", "/api/emotional/profile");
+    const anonymous = await request("GET", "/api/emotional/profile");
+    expect(anonymous.status).toBe(401);
+
+    const response = await request("GET", "/api/emotional/profile", undefined, ownerCookie());
     expect(response.status).toBe(200);
     const body = response.json as { ok?: boolean; data?: { profile?: unknown; summary?: unknown } };
     expect(body.ok).toBe(true);
