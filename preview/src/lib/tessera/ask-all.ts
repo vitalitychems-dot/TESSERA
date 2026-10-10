@@ -2,6 +2,7 @@ import { chamberHolds, chamberPicture } from "./chamber-index.ts";
 import { sharedHouse } from "./shared-house.ts";
 import { roomsAt } from "./house-sim.ts";
 import { inventionAnswer } from "./invention-log.ts";
+import { lessonFor } from "./kept-lessons.ts";
 import { loveFromFiles } from "./love-local.ts";
 import { ownFromQuestion } from "./own-versions.ts";
 import { issuePass } from "./pass.ts";
@@ -17,6 +18,8 @@ export function askAll(question: string) {
   const q = question.trim();
   if (!q) return null;
   if (/^open\s+(TESSERA|Gitbook|GitbookAI|vitality)\b/i.test(q)) return null;
+  const lesson = lessonFor(q);
+  if (lesson) return lesson;
   const engine = useEngines(q);
   if (engine) return engine;
   const lower = q.toLowerCase();
