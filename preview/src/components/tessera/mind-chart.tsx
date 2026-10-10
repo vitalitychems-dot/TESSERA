@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { hitNode, LESSON_SPOTS, liveCount, liveEdges, liveNodes } from "@/lib/tessera/live-map";
 import { lessonAt, stepLearn } from "@/lib/tessera/recursive-train";
+import { synapseSteps } from "@/lib/tessera/recursive-proof";
 
 const BOARD = liveNodes();
 const BY_ID = new Map(BOARD.map((node) => [node.id, node]));
@@ -13,12 +14,15 @@ function curve(x1: number, y1: number, x2: number, y2: number) {
 export function MindChart() {
   const [shown, setShown] = useState(1);
   const [step, setStep] = useState(0);
+  const [hop, setHop] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [picked, setPicked] = useState("role");
   const svgRef = useRef<SVGSVGElement>(null);
   const drag = useRef<{ x: number; y: number; panX: number; panY: number; moved: boolean } | null>(null);
   const learn = stepLearn(step);
+  const hops = synapseSteps();
+  const synapses = hops[Math.min(hop, hops.length - 1)] ?? [];
   const visible = BOARD.slice(0, shown);
   const lessons = LESSON_SPOTS.slice(0, step);
   const count = liveCount(visible);
@@ -32,8 +36,12 @@ export function MindChart() {
       const timer = window.setTimeout(() => setStep((value) => value + 1), 650);
       return () => window.clearTimeout(timer);
     }
+    if (hop < hops.length) {
+      const timer = window.setTimeout(() => setHop((value) => value + 1), 650);
+      return () => window.clearTimeout(timer);
+    }
     return undefined;
-  }, [shown, step, learn.total]);
+  }, [shown, step, learn.total, hop, hops.length]);
 
   function point(event: React.PointerEvent) {
     const rect = svgRef.current?.getBoundingClientRect();
@@ -131,8 +139,9 @@ export function MindChart() {
       </svg>
       <p className="text-sm text-fg">{selectedText}</p>
       <p className="mt-1 text-sm text-muted">
-        {count.known} known. {count.missing} still open. Recalled {learn.recalled} of {learn.total}. Links {learn.links.length}. Drag the chart. Tap a node.
-        {step >= learn.total && shown >= BOARD.length ? " A further step adds no link." : " Growing."}
+        {count.known} known. {count.missing} still open. Recalled {learn.recalled} of {learn.total}.{" "}
+        {synapses.map((link) => `${link.from} → ${link.to} ${link.weight.toFixed(2)}`).join(". ")}.
+        {hop >= hops.length ? " A miss did not move the first synapse." : " The synapse is still learning."} Drag the chart. Tap a node.
       </p>
     </div>
   );
