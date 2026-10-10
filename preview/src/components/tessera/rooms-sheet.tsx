@@ -8,6 +8,7 @@ export const ROOMS: { id: ViewId; group: string; label: string; line: string }[]
   { id: "world", group: "With her", label: "World", line: "The neighborhood as it moves." },
   { id: "rick", group: "With her", label: "Rick", line: "The west chamber, the house, and a welcome." },
   { id: "brain", group: "Mind", label: "Brain", line: "What she is growing." },
+  { id: "live", group: "Mind", label: "Live", line: "The facts as they appear." },
   { id: "memory", group: "Mind", label: "Memory", line: "What she already holds." },
   { id: "library", group: "Mind", label: "Library", line: "The shelf she can open." },
   { id: "theme", group: "Mind", label: "Theme", line: "Water, fire, lightning, diamond, spiral." },
