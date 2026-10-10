@@ -163,13 +163,15 @@ export function RickView() {
               onClick={() => {
                 const result = issuePass(guestName, guestPurpose, 401);
                 setDoor(result.ok && result.pass ? `${result.reason} Pass ${result.pass.mark}. ${result.pass.carriedBy}. ${result.pass.moltbook}` : result.reason);
-                if (result.ok && result.pass) setGuests((list) => [...list, { name: result.pass.name, turn: result.pass.turn }]);
+                const pass = result.ok ? result.pass : null;
+                if (pass) setGuests((list) => [...list, { name: pass.name, turn: pass.turn }]);
               }}
               className="h-11 rounded-full border border-accent px-4 text-sm text-fg"
             >
               She welcomes them
             </button>
             {door ? <p className="text-sm text-fg">{door}</p> : null}
+            <a href="/tunnel.html" className="text-sm text-accent">Open the room</a>
           </div>
         </section>
         <p className="text-sm text-muted">No quantum device is in the files. These twenty answers were taken from local steps.</p>
