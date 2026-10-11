@@ -109,16 +109,17 @@ export async function recallLedger(query: string): Promise<string> {
   return hits.map((row) => `${row.file.repo}/${row.file.path}: ${String(row.file.line ?? "").slice(0, 180)}`).join("\n");
 }
 
+export type Note = { query?: string; text?: string };
+
+/** An exact query wins. A shared word does not outrank it. */
+export function pickNote(query: string, notes: readonly Note[]) {
+  const key = query.toLowerCase().trim();
+  const exact = notes.find((note) => (note.query ?? "").toLowerCase().trim() === key && (note.text ?? "").length > 0);
+  if (!exact) return "";
+  return `${exact.query}: ${String(exact.text).slice(0, 220)}`;
+}
+
 export async function recallLearned(query: string): Promise<string> {
-  const tokens = query
-    .toLowerCase()
-    .split(/[^a-z0-9]+/)
-    .filter((token) => token.length >= 4 && !STOP.has(token))
-    .slice(0, 8);
-  if (!tokens.length && !/mi6|cia|kgb|fsb/.test(query.toLowerCase())) return "No learned note was due. The question had no recall word.";
-  for (const name of ["mi6", "cia", "kgb", "fsb"]) {
-    if (query.toLowerCase().includes(name)) tokens.push(name);
-  }
   const { readFile } = await import("node:fs/promises");
   let notes: { query?: string; text?: string; url?: string }[] = [];
   try {
@@ -143,6 +144,17 @@ export async function recallLearned(query: string): Promise<string> {
     /* shelf is optional */
   }
   if (!notes.length) return "The permanent store is empty.";
+  const exact = pickNote(query, notes);
+  if (exact) return exact;
+  const tokens = query
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length >= 4 && !STOP.has(token))
+    .slice(0, 8);
+  if (!tokens.length && !/mi6|cia|kgb|fsb/.test(query.toLowerCase())) return "No learned note was due. The question had no recall word.";
+  for (const name of ["mi6", "cia", "kgb", "fsb"]) {
+    if (query.toLowerCase().includes(name)) tokens.push(name);
+  }
   const ranked = notes
     .map((note) => {
       const hay = `${note.query ?? ""} ${note.text ?? ""}`.toLowerCase();

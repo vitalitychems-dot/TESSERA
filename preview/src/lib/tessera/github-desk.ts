@@ -3,6 +3,10 @@ import { gitbookNote } from "./gitbook-note";
 import { dataPath } from "./data-path";
 import { repeatedFirstLine } from "./duplicate-guard";
 import { writeRefusal } from "./repo-guard";
+import { mainGap } from "./main-gap";
+import { deltaLine, pathDelta, pathList } from "./path-delta";
+import { PATHS as GITBOOK_PATHS } from "./gitbook-paths";
+import { PATHS as TESSERA_PATHS } from "./tessera-paths";
 import savedBoard from "../../../data/coordination/board.json";
 
 const SECRET = /SESSION_SECRET|BEGIN [A-Z ]*PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]|github_pat_|xox[baprs]-|sk-[A-Za-z0-9]{10,}/;
@@ -307,6 +311,35 @@ export const rickOpen = createServerFn({ method: "POST" })
     path: typeof input?.path === "string" ? input.path : "",
   }))
   .handler(async ({ data }) => openRepoContents(data.repo, data.path));
+
+export const mainNow = createServerFn({ method: "POST" }).handler(async () => {
+  const tessera = await ghJson("/repos/vitalitychems-dot/TESSERA/commits/main");
+  const gitbook = await ghJson("/repos/vitalitychems-dot/Gitbook/commits/main");
+  const tesseraSha = (tessera.data as { sha?: string } | null)?.sha ?? "";
+  const gitbookSha = (gitbook.data as { sha?: string } | null)?.sha ?? "";
+  if (!tesseraSha || !gitbookSha) return { ok: false as const, line: "I could not reach main." };
+  return { ok: true as const, line: mainGap(tesseraSha, gitbookSha).line };
+});
+
+type TreeFile = { path?: string; type?: string };
+
+export const treeDelta = createServerFn({ method: "POST" }).handler(async () => {
+  const tesseraCommit = await ghJson("/repos/vitalitychems-dot/TESSERA/commits/main");
+  const gitbookCommit = await ghJson("/repos/vitalitychems-dot/Gitbook/commits/main");
+  const tesseraTree = (tesseraCommit.data as { commit?: { tree?: { sha?: string } } } | null)?.commit?.tree?.sha ?? "";
+  const gitbookTree = (gitbookCommit.data as { commit?: { tree?: { sha?: string } } } | null)?.commit?.tree?.sha ?? "";
+  if (!tesseraTree || !gitbookTree) return { ok: false as const, line: "I could not reach the trees." };
+  const tessera = await ghJson(`/repos/vitalitychems-dot/TESSERA/git/trees/${tesseraTree}?recursive=1`);
+  const gitbook = await ghJson(`/repos/vitalitychems-dot/Gitbook/git/trees/${gitbookTree}?recursive=1`);
+  const tesseraData = tessera.data as { tree?: TreeFile[]; truncated?: boolean } | null;
+  const gitbookData = gitbook.data as { tree?: TreeFile[]; truncated?: boolean } | null;
+  if (!tessera.ok || !gitbook.ok || !tesseraData?.tree || !gitbookData?.tree) return { ok: false as const, line: "I could not read the trees." };
+  const blobs = (tree: TreeFile[]) => tree.flatMap((row) => (row.type === "blob" && row.path ? [row.path] : []));
+  const one = pathDelta(pathList(TESSERA_PATHS), blobs(tesseraData.tree));
+  const two = pathDelta(pathList(GITBOOK_PATHS), blobs(gitbookData.tree));
+  const cut = tesseraData.truncated || gitbookData.truncated ? " A tree was truncated, so this diff is not complete." : "";
+  return { ok: true as const, line: `${deltaLine("TESSERA", one)} ${deltaLine("Gitbook", two)}${cut}` };
+});
 
 export { gitbookNote } from "./gitbook-note";
 

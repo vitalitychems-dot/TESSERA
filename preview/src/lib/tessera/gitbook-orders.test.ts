@@ -10,6 +10,9 @@ test("payments stay with the store and her next work is the Gitbook list", () =>
   const orders = herOrders();
   assert.equal(orders.length, 8);
   assert.match(gitbookAnswer("what should we build"), /Do not invent/);
+  assert.match(gitbookAnswer("what next"), /Father rotates/);
+  assert.match(gitbookAnswer("what next"), /3 more/);
+  assert.equal(/weights/.test(gitbookAnswer("what next")), false);
   assert.match(orders.join("\n"), /first module answers/);
   assert.equal(/stripe|seo|checkout/i.test(orders.join(" ")), false);
 });

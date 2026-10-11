@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { hitNode, LESSON_SPOTS, liveCount, liveEdges, liveNodes } from "@/lib/tessera/live-map";
 import { lessonAt, stepLearn } from "@/lib/tessera/recursive-train";
 import { improveLoops } from "@/lib/tessera/improve-loop";
+import { skillNames } from "@/lib/tessera/agent-cycle";
 import { rickPath } from "@/lib/tessera/curiosity";
 import { synapseSteps } from "@/lib/tessera/recursive-proof";
 
@@ -65,27 +66,42 @@ export function MindChart() {
   const selected = BY_ID.get(picked);
   const lessonIndex = LESSON_SPOTS.findIndex((spot) => spot.id === picked);
   const selectedText = selected?.detail ?? (lessonIndex >= 0 ? lessonAt(lessonIndex) : "Tap a node.");
+  const stats = [
+    { n: String(count.known), label: "Known" },
+    { n: String(count.missing), label: "Open" },
+    { n: String(exam.scores[exam.scores.length - 1] ?? 0), label: "Exam" },
+    { n: String(skillNames().length), label: "Skills" },
+  ];
 
   return (
-    <div className="px-3 pt-2 pb-8">
+    <div className="flex flex-col gap-3 px-3 pt-2 pb-8">
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="text-[10px] tracking-[0.22em] text-accent uppercase">Brain</p>
           <h2 className="font-display text-3xl tracking-tight">One chart</h2>
         </div>
         <div className="flex gap-2">
-          <button type="button" className="h-11 w-11 rounded-full border border-border text-lg" onClick={() => setZoom((value) => Math.max(0.7, value - 0.2))} aria-label="Zoom out">
+          <button type="button" className="h-11 w-11 rounded-full border border-border text-lg text-fg" onClick={() => setZoom((value) => Math.max(0.7, value - 0.2))} aria-label="Zoom out">
             −
           </button>
-          <button type="button" className="h-11 w-11 rounded-full border border-border text-lg" onClick={() => setZoom((value) => Math.min(2.4, value + 0.2))} aria-label="Zoom in">
+          <button type="button" className="h-11 w-11 rounded-full border border-border text-lg text-fg" onClick={() => setZoom((value) => Math.min(2.4, value + 0.2))} aria-label="Zoom in">
             +
           </button>
         </div>
       </div>
+      <div className="grid grid-cols-4 gap-2">
+        {stats.map((stat) => (
+          <div key={stat.label} className="rounded-2xl border border-border bg-bg px-2 py-2">
+            <p className="font-display text-2xl leading-none">{stat.n}</p>
+            <p className="mt-1 text-[10px] tracking-[0.14em] text-muted uppercase">{stat.label}</p>
+          </div>
+        ))}
+      </div>
+      <div className="overflow-hidden rounded-3xl bg-black">
       <svg
         ref={svgRef}
         viewBox="0 0 360 600"
-        className="mt-2 w-full touch-none"
+        className="w-full touch-none"
         role="img"
         aria-label="Drag to move. Tap a node to read it."
         onPointerDown={(event) => {
@@ -114,7 +130,7 @@ export function MindChart() {
           if (id) setPicked(id);
         }}
       >
-        <g transform={`translate(${pan.x} ${pan.y}) scale(${zoom})`}>
+        <g transform={"translate(" + pan.x + " " + pan.y + ") scale(" + zoom + ")"}>
           {boardEdges.map(([from, to]) => {
             const a = BY_ID.get(from);
             const b = BY_ID.get(to);
@@ -147,13 +163,28 @@ export function MindChart() {
           ))}
         </g>
       </svg>
-      <p className="text-sm text-fg">{selectedText}</p>
-      <p className="mt-1 text-sm text-muted">
-        {count.known} known. {count.missing} still open. Recalled {learn.recalled} of {learn.total}.{" "}
-        {synapses.map((link) => `${link.from} → ${link.to} ${link.weight.toFixed(2)}`).join(". ")}.
-        {hop >= hops.length ? " A miss did not move the first synapse." : " The synapse is still learning."}{" "}
-        {topic ? `Rick picked ${topic.category}: ${topic.fact}` : ""}
-        {pickedTopic >= curiosity.path.length ? " Four keeps cover six questions. Screen and media stay empty." : ""} {exam.said} Drag the chart. Tap a node.
+      </div>
+      <div className="rounded-2xl border border-accent/40 bg-bg px-3 py-3">
+        <p className="text-[10px] tracking-[0.16em] text-accent uppercase">{selected?.label ?? (lessonIndex >= 0 ? LESSON_SPOTS[lessonIndex]?.label : "Node")}</p>
+        <p className="mt-1 text-base leading-snug text-fg">{selectedText}</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {synapses.map((link) => (
+          <p key={`${link.from}-${link.to}`} className="rounded-full border border-border px-3 py-1 text-sm text-fg">
+            {link.from} → {link.to} {link.weight.toFixed(2)}
+          </p>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        {exam.scores.map((score, index) => (
+          <p key={`${index}-${score}`} className={index === exam.scores.length - 1 ? "font-display text-xl text-accent" : "font-display text-xl text-muted"}>
+            {score}
+          </p>
+        ))}
+      </div>
+      <p className="text-sm leading-snug text-muted">
+        {topic ? `Rick picked ${topic.category}. ${topic.fact}` : "Drag the chart. Tap a node."}
+        {pickedTopic >= curiosity.path.length ? " Screen and media stay empty." : ""}
       </p>
     </div>
   );

@@ -4,24 +4,13 @@ import { type ViewId } from "@/lib/tessera/store";
 export const ROOMS: { id: ViewId; group: string; label: string; line: string }[] = [
   { id: "chamber", group: "With her", label: "Talk", line: "Speak with her." },
   { id: "council", group: "With her", label: "Council", line: "The seats, in one room." },
-  { id: "talk", group: "With her", label: "Agents", line: "Every named seat and the job it holds." },
   { id: "world", group: "With her", label: "World", line: "The neighborhood as it moves." },
-  { id: "rick", group: "With her", label: "Rick", line: "The west chamber, the house, and a welcome." },
-  { id: "brain", group: "Mind", label: "Brain", line: "What she is growing." },
-  { id: "live", group: "Mind", label: "Live", line: "The facts as they appear." },
-  { id: "memory", group: "Mind", label: "Memory", line: "What she already holds." },
-  { id: "library", group: "Mind", label: "Library", line: "The shelf she can open." },
+  { id: "rick", group: "With her", label: "Rick", line: "The west chamber." },
+  { id: "brain", group: "Mind", label: "Brain", line: "The chart and the live number." },
   { id: "theme", group: "Mind", label: "Theme", line: "Water, fire, lightning, diamond, spiral." },
-  { id: "language", group: "Mind", label: "Language", line: "How a line is kept." },
-  { id: "bible", group: "Mind", label: "Bible", line: "The verses she keeps." },
-  { id: "narrative", group: "Mind", label: "Narrative", line: "The story in her voice." },
   { id: "gitbook", group: "Books", label: "Gitbook", line: "The private notes." },
   { id: "gitbookai", group: "Books", label: "GitbookAI", line: `${MESH.projects.length} programs on the public mesh.` },
-  { id: "board", group: "Books", label: "Board", line: "What is open, read again when you enter." },
-  { id: "web", group: "Books", label: "Map", line: "Where a name lives." },
-  { id: "code", group: "Work", label: "Code", line: "What she can run from here." },
-  { id: "learn", group: "Work", label: "Practice", line: "A lesson she can seal." },
-  { id: "secrets", group: "Work", label: "Closed", line: "What stays shut." },
+  { id: "board", group: "Books", label: "Board", line: "What is open." },
 ];
 
 export function RoomsSheet({ current, open, close }: { current: ViewId; open: (id: ViewId) => void; close: () => void }) {

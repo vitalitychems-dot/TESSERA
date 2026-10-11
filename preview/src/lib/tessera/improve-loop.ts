@@ -1,7 +1,7 @@
 import { confidence, chem, formatTime, meanSquare, queryOk, riseState, sanitize, top1 } from "./checkout-steps.ts";
 import { isPrivateHost } from "./address-guard.ts";
-import { leakyStep, resetMem, warmupLr } from "./batch-2.ts";
-import { selector, sequence } from "./batch-50.ts";
+import { leakyStep, resetMem, warmupLr } from "./sched.ts";
+import { selector, sequence } from "./tree-steps.ts";
 import { learnAction, bestAction } from "./local-learn.ts";
 import { pxName, scaleAction, unscaleAction, versionOk } from "./root-skills.ts";
 import { rankByNeed, spend, splitWork, twoSources, twoThirds } from "./rick-loop.ts";

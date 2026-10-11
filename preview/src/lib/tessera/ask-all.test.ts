@@ -22,8 +22,11 @@ test("one question reaches the connected rooms", () => {
   assert.match(askAll("contact cursor on gitbook") ?? "", /issue 2/);
   assert.match(askAll("Cursor is away") ?? "", /Work continues/);
   assert.match(askAll("holds civic") ?? "", /civic\.ts/);
+  assert.match(askAll("rotate the keys") ?? "", /Father/);
   assert.match(askAll("inventions") ?? "", /1367/);
   assert.match(askAll("ollama") ?? "", /ollama/i);
+  assert.match(askAll("help") ?? "", /I am not AGI/);
+  assert.match(askAll("what can you do") ?? "", /272/);
   assert.equal(askAll("hello"), null);
   assert.equal(askAll("vote send a wallet")?.includes("SESSION_SECRET"), false);
 });

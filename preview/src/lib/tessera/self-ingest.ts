@@ -33,6 +33,10 @@ export function ingestNote(file: string, added: number, next: string) {
   return `REAL: I ingested ${file}. ${added} lines. Next I open ${next}. I stopped at ${LINE_CAP} lines so memory is not overloaded. Lesson sealed.`;
 }
 
+export function cardAllowed(name: string) {
+  return !/\b(secret|password|weights?)|\.env|\b1T\b|private key/i.test(name);
+}
+
 export const selfIngest = createServerFn({ method: "POST" }).handler(async () => {
   const { readFile, appendFile, writeFile, mkdir, readdir } = await import("node:fs/promises");
   const path = await import("node:path");
@@ -74,6 +78,10 @@ export const selfIngest = createServerFn({ method: "POST" }).handler(async () =>
   const pending = files.filter((file) => !seen.has(file));
   const file = pending[0];
   if (!file) return { ok: false as const, error: "Every text file in the ingest folder has been opened." };
+  if (!cardAllowed(path.basename(file))) {
+    await appendFile(dataPath("school", "ingested.txt"), `${file}\n`);
+    return { ok: false as const, error: "The next card is a secret. I stopped." };
+  }
   const text = await readFile(file, "utf8").catch(() => "");
   const lines = proseLines(text).filter((line) => !indexed.has(file) || true);
   const fresh = lines.slice(0, LINE_CAP);
