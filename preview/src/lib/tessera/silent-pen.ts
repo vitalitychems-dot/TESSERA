@@ -1,6 +1,7 @@
 import { keptAnswer, type Correction } from "./corrections.ts";
 import { allEight } from "./desk-steps.ts";
-import { batch50, selector, sequence } from "./batch-50.ts";
+import { batch50 } from "./batch-50.ts";
+import { selector, sequence } from "./tree-steps.ts";
 import { batch2, leakyStep, warmupLr } from "./batch-2.ts";
 import { batch3, manhattan } from "./batch-3.ts";
 import { topRanking } from "./whiten.ts";

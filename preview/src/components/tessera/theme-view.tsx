@@ -1,3 +1,5 @@
+import { knownTheme, THEME_IDS, type ThemeId } from "@/lib/tessera/themes";
+
 export const THEMES = [
   { id: "water", label: "Water", line: "Navy garment. Cyan field." },
   { id: "fire", label: "Fire", line: "What she keeps alight." },
@@ -6,40 +8,60 @@ export const THEMES = [
   { id: "spiral", label: "Spiral", line: "Return higher." },
 ] as const;
 
-export type ThemeId = (typeof THEMES)[number]["id"];
+export type { ThemeId };
 
 export function applyTheme(id: string) {
-  const next = THEMES.some((theme) => theme.id === id) ? id : "water";
+  const next = knownTheme(id);
   document.documentElement.dataset.theme = next;
   window.localStorage.setItem("tessera-theme", next);
-  return next as ThemeId;
+  const chip = document.querySelector('meta[name="theme-color"]');
+  if (chip) chip.setAttribute("content", getComputedStyle(document.documentElement).getPropertyValue("--tessera-bg").trim());
+  return next;
 }
 
 export function ThemeView({ current, choose }: { current: string; choose: (id: ThemeId) => void }) {
+  const on = knownTheme(current);
   return (
     <div className="px-4 py-6 pb-24 sm:px-8">
       <div className="mx-auto w-full max-w-2xl">
         <p className="text-xs tracking-[0.2em] text-muted uppercase">Theme</p>
         <h2 className="mt-1 font-display text-4xl tracking-tight">Her marks</h2>
-        <p className="mt-3 text-sm leading-relaxed text-muted">Fire, water, lightning, diamond, spiral. Taken from the sigil. The words stay hers.</p>
-        <ul className="mt-5 flex flex-col gap-3">
-          {THEMES.map((theme) => (
-            <li key={theme.id}>
-              <button
-                type="button"
-                onClick={() => choose(theme.id)}
-                className={
-                  current === theme.id
-                    ? "flex min-h-14 w-full items-center justify-between border border-accent bg-surface px-4 py-3 text-left"
-                    : "flex min-h-14 w-full items-center justify-between border border-border px-4 py-3 text-left"
-                }
-              >
-                <span className="font-display text-2xl">{theme.label}</span>
-                <span className="text-sm">{theme.line}</span>
-              </button>
-            </li>
-          ))}
+        <p className="mt-3 text-sm leading-relaxed text-muted">Tap a mark. The whole screen takes it, and this device keeps it.</p>
+        <section className="mt-5 border border-border bg-surface p-4">
+          <p className="text-xs tracking-[0.16em] text-muted uppercase">On now</p>
+          <p className="mt-1 font-display text-4xl tracking-tight capitalize">{on}</p>
+          <p className="mt-2 text-sm text-fg">Header, talk, and the rooms use this mark.</p>
+          <span className="mt-3 inline-flex h-11 items-center bg-accent px-3 text-sm text-accent-fg">Accent</span>
+        </section>
+        <ul className="mt-4 grid grid-cols-1 gap-2">
+          {THEMES.map((theme) => {
+            const chosen = on === theme.id;
+            return (
+              <li key={theme.id}>
+                <button
+                  type="button"
+                  data-swatch={theme.id}
+                  onClick={() => choose(theme.id)}
+                  className={
+                    chosen
+                      ? "flex min-h-14 w-full items-center gap-3 border border-accent bg-bg px-3 py-2 text-left text-fg"
+                      : "flex min-h-14 w-full items-center gap-3 border border-border bg-bg px-3 py-2 text-left text-fg"
+                  }
+                >
+                  <span className="size-11 shrink-0 bg-accent" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-display text-2xl leading-none">{theme.label}</span>
+                    <span className="mt-1 block text-sm text-muted">{theme.line}</span>
+                  </span>
+                  <span className={chosen ? "bg-accent px-2 py-1 text-xs text-accent-fg" : "text-xs text-muted"}>
+                    {chosen ? "On" : "Use"}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
+        <p className="mt-4 text-xs text-subtle">{THEME_IDS.length} marks. An unknown name stays water.</p>
       </div>
     </div>
   );

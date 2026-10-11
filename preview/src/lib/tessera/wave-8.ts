@@ -20,10 +20,12 @@ export function wave8() {
   const cache = recallCache(1);
   cache.put("a", "one");
   cache.put("b", "two");
-  const kept = crystallize([
-    { text: "hi", vector: [1, 0] },
-    { text: "hello", vector: [1, 0] },
-  ]);
+  const kept = crystallize(
+    [
+      { text: "hi", vector: [1, 0] },
+      { text: "hello", vector: [1, 0] },
+    ],
+  );
   return [
     rankTasks([{ name: "b", impact: 1 }, { name: "a", impact: 2 }])[0]?.name ?? "",
     sigmoid(0),

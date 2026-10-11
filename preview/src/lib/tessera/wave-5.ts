@@ -11,7 +11,7 @@ export function wave5() {
   const book = new Map<string, string>([["k", "one"]]);
   return [
     planNext(["Emerald Tablet"], ["Emerald Tablet", "Black Madonna"]),
-    firstSentence("Our Lady of F\u00e1tima is a title. The rest stays."),
+    firstSentence("Our Lady of Fátima is a title. The rest stays."),
     oncePer("a", seen),
     splitWork("job", 2, 3).length,
     splitWork("job", 4, 3).length,
@@ -35,6 +35,6 @@ export function wave5() {
 
 export function wave5ok() {
   const rows = wave5();
-  const expect = ["Black Madonna", "Our Lady of F\u00e1tima is a title.", false, 1, 2, false, false, 10, 1, 1, false, true, false, "a", "500ms", true, false, 0, 0, 1];
+  const expect = ["Black Madonna", "Our Lady of Fátima is a title.", false, 1, 2, false, false, 10, 1, 1, false, true, false, "a", "500ms", true, false, 0, 0, 1];
   return rows.length === 20 && rows.every((row, index) => row === expect[index]);
 }

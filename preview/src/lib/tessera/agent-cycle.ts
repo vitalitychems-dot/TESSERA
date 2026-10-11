@@ -1,6 +1,6 @@
 import { isPrivateHost } from "./address-guard.ts";
 import { planNext, sortNames, firstSentence, noticeSkill } from "./agent-skills.ts";
-import { selector, sequence } from "./batch-50.ts";
+import { selector, sequence } from "./tree-steps.ts";
 import { runColonel } from "./colonel.ts";
 import { bestAction, learnAction } from "./local-learn.ts";
 import { recallLearned } from "./recursive-train.ts";

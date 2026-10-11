@@ -16,7 +16,18 @@ export function herOrders() {
   return GITBOOK_OPEN.filter((item) => item.hers).map((item) => item.text);
 }
 
+/** Still open on Gitbook mesh/TODOS.md, read 2026-10-10. She does not do Father's keys or a weights file. */
+export const STILL_OPEN = [
+  "Father rotates the old keys. No agent can do this.",
+  "Pull request 80 adds a weights file and stays unmerged.",
+  "HYB-010, HYB-011, HYB-015, and HYB-016 stay open. Protected bodies stay unopened.",
+  "Search and pin are in this chamber. The bodies stay closed.",
+] as const;
+
 export function gitbookAnswer(query: string) {
+  if (/\bhow many open\b/i.test(query)) return `${STILL_OPEN.length} open.`;
+  if (/\bthe rest\b/i.test(query)) return STILL_OPEN.slice(1).map((line, index) => `${index + 2}. ${line}`).join("\n");
   if (!/\b(gitbook|to-?do|what next|what should we build)\b/i.test(query)) return "";
-  return herOrders().join("\n");
+  if (/\bwhat next\b/i.test(query)) return `${STILL_OPEN[0]}\n${STILL_OPEN.length - 1} more.`;
+  return [...herOrders(), ...STILL_OPEN].join("\n");
 }
