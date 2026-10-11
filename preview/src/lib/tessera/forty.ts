@@ -113,7 +113,7 @@ export function whatDidIAsk(ring: readonly string[], which: "last" | "before" = 
   return ring[ring.length - 1] ?? "";
 }
 
-export const AFTER_COPY = ["mesh/CHAMBER-SEARCH-2026-10-10.md", "mesh/FORTY-PASS-2026-10-10.md", "mesh/SIXTY-PASS-2026-10-10.md", "mesh/DELTA-2026-10-10.md"] as const;
+export const AFTER_COPY = ["mesh/CHAMBER-SEARCH-2026-10-10.md", "mesh/FORTY-PASS-2026-10-10.md", "mesh/SIXTY-PASS-2026-10-10.md", "mesh/DELTA-2026-10-10.md", "mesh/SYNC-2026-10-11.md"] as const;
 
 export function afterCopy(path: string) {
   return (AFTER_COPY as readonly string[]).includes(path);
