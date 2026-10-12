@@ -14,6 +14,7 @@ import { applyShip } from "./ship.mjs";
 import { createForeman } from "./task-graph.mjs";
 import { createMonitor } from "./worker-stream.mjs";
 import { buildWorld, readBuildLog } from "./world.mjs";
+import { reviewRequest } from "../hyb011-denylist.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -305,6 +306,12 @@ export function listenStudio(studio = createStudio(), options = {}) {
   }
 
   const server = createServer(async (req, res) => {
+    const gate = reviewRequest({ url: req.url ?? "/", method: req.method });
+    if (!gate.allowed) {
+      res.writeHead(gate.status, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: gate.reason, match: gate.match }));
+      return;
+    }
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
       const view = url.searchParams.get("view") === "2d" ? "2d" : "3d";
@@ -433,6 +440,10 @@ export function listenStudio(studio = createStudio(), options = {}) {
 
   server.on("upgrade", (req, socket) => {
     const path = (req.url ?? "").split("?")[0];
+    if (!reviewRequest({ url: req.url ?? "/" }).allowed) {
+      socket.destroy();
+      return;
+    }
     if (path !== "/live" || !acceptWebSocket(req, socket)) {
       socket.destroy();
       return;
