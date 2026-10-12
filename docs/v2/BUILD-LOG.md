@@ -31,3 +31,18 @@ Plain record of merged plan items. Each row is one pull request.
 | 18 | V2-025 | https://github.com/vitalitychems-dot/TESSERA/pull/222 | Mesh pages encrypt and decrypt. A bad signature is quarantined. | `61842568b2b2d209e9e6f9887e63d4128cb4d1b7` |
 | 19 | V2-026 | https://github.com/vitalitychems-dot/TESSERA/pull/223 | A sneakernet bundle round-trips and the checksum matches. | `1280afd3a9286d4da5689dc70edaa29010b5340d` |
 | 20 | V2-027 | https://github.com/vitalitychems-dot/TESSERA/pull/224 | LAN peers use an empty ICE list and stay on localhost. | `914cb6a5a551c88e3e323d47015663e647693be0` |
+
+## After 30
+
+| # | ID | PR | What landed | Merge SHA |
+|---|---|---|---|---|
+| 21 | V2-028 | https://github.com/vitalitychems-dot/TESSERA/pull/225 | Kiwix stays off unless a local mock server answers. | `d74681d7940b3e5158419fcd0d63163de7ee99e2` |
+| 22 | V2-029 | https://github.com/vitalitychems-dot/TESSERA/pull/226 | The Gitbook summary links the Offline Internet page. | `cb385ca9c48e184d3e41272ad38acfe32540907d` |
+| 23 | V2-030 | https://github.com/vitalitychems-dot/TESSERA/pull/227 | LoRa is a research note. The repo ships no radio firmware. | `b58c048ae38ef96571e6a9b3d5fa228df7d30660` |
+| 24 | V2-040 | https://github.com/vitalitychems-dot/TESSERA/pull/228 | Asking for an entity name returns its observations. | `814f6cd277ad95ce3165fb5e469b5ae8aa54e685` |
+| 25 | V2-041 | https://github.com/vitalitychems-dot/TESSERA/pull/229 | The memory server config reads the vendored graph. | `f5190988ff86d0ef912e748b58d04d02dcdf99b0` |
+| 26 | V2-042 | https://github.com/vitalitychems-dot/TESSERA/pull/230 | The library panel draws task and doc cards from the graph. | `417dc221636fbfb069b19a1934cf37fbf22d79a2` |
+| 27 | V2-043 | https://github.com/vitalitychems-dot/TESSERA/pull/231 | GitHub metadata is fetched only for our own repositories. | `807733986c1c28b59a74df8013f15e81bfac158b` |
+| 28 | V2-050 | https://github.com/vitalitychems-dot/TESSERA/pull/232 | A desk probe denies the network and caps the heap. | `3e2621307439d508c81bb99ff3ca16cc413274ba` |
+| 29 | V2-051 | https://github.com/vitalitychems-dot/TESSERA/pull/233 | A fixture task writes a token baseline. | `ab87578012c721963e9107c0780959ad881857d3` |
+| 30 | V2-052 | https://github.com/vitalitychems-dot/TESSERA/pull/234 | Graph and full-file retrieval arms are both recorded. | `cd762bee18d3afa38a56b21d3e60f9d9ceedb9b1` |
