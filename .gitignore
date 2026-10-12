@@ -92,5 +92,6 @@ service-account*.json
 # Local trees that should not be added
 .grok/
 **/data/ingest/
+artifacts/v2/data/
 **/Zz/
 **/natal-vault*
