@@ -1,0 +1,9 @@
+
+# git-crypt: sensitive-but-needed files (key held by owner only; code stays readable)
+config/secrets/** filter=git-crypt diff=git-crypt
+**/*.secret.json filter=git-crypt diff=git-crypt
+**/*.secret.jsonl filter=git-crypt diff=git-crypt
+.env filter=git-crypt diff=git-crypt
+.env.local filter=git-crypt diff=git-crypt
+.gitattributes !filter !diff
+config/secrets/README.md !filter !diff

@@ -57,7 +57,7 @@ describe("learning memory", () => {
 
   it("redacts secret-shaped text before appending", async () => {
     const store = await tempStore();
-    const token = "***REMOVED***";
+    const token = "ghp_" + "abcdefghijklmnopqrstuvwxyz0123456789";
     const saved = await store.record({
       sourceAgent: "Security",
       input: `token ${token} leaked`,
