@@ -99,6 +99,10 @@
 * [Screenshot supplement](review/source-screenshot-supplement/00-START-HERE.md)
 * [Image/text review](review/image-text/README.md)
 
+## Offline
+
+* [Offline Internet](mesh/OFFLINE-INTERNET.md)
+
 ## Operations
 
 * [Tessera operating guidelines](operations/tessera-operating-guidelines.md)
