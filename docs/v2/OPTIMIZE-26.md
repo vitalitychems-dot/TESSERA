@@ -25,31 +25,31 @@ Test suite: before 47/47 non-browser tests (0.60–0.92 s over 3 runs), after 73
 
 | # | Name | Plain description | Metric | Before | After | % change | Test | PASS/FAIL | PR |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | dedupe-lines | Drop repeated lines before sending context | tokens (memory rows sent twice) | 4030 | 2015 | -50% | v2-070-opt-token-lab: OPT-01 | PASS | PR_URL |
-| 2 | cut-filler | Cut polite filler words from asks | tokens (polite task ask) | 47 | 22 | -53.2% | v2-070-opt-token-lab: OPT-02 | PASS | PR_URL |
-| 3 | compact-json | Minify JSON in prompts | tokens (pretty JSON memory row) | 61 | 53 | -13.1% | v2-070-opt-token-lab: OPT-03 | PASS | PR_URL |
-| 4 | ref-legend | Swap repeated long paths/SHAs for short refs | tokens (BUILD-LOG with repeated URLs/SHAs) | 1675 | 1675 | 0% | v2-070-opt-token-lab: OPT-04 | NOT DONE (no gain; test of correctness passes) | PR_URL |
-| 5 | exact-prompt-cache | Answer an exact repeat prompt from cache | model calls per 100 tasks | 100 | 60 | -40% | v2-070-opt-token-lab: OPT-05 | PASS | PR_URL |
-| 6 | normalized-cache-key | Cache key ignores case/whitespace | model calls per 100 tasks | 60 | 20 | -66.7% | v2-070-opt-token-lab: OPT-06 | PASS | PR_URL |
-| 7 | fit-budget | Hard token budget keeping head+tail | max context tokens (budget 512, memory file) | 20239 | 512 | -97.5% | v2-070-opt-token-lab: OPT-07 | PASS | PR_URL |
-| 8 | route-by-size | Short tasks go to the small model | compute units per 50 tasks | 207.5 | 171.5 | -17.3% | v2-070-opt-token-lab: OPT-08 | PASS | PR_URL |
-| 9 | diff-only-summary | Repeat summary sends only the diff | tokens over 10 repeat calls | 21876 | 20518 | -6.2% | v2-070-opt-token-lab: OPT-09 | PASS | PR_URL |
-| 10 | clip-tool-result | Clip long tool outputs | tokens (200-line tool output) | 12464 | 2021 | -83.8% | v2-070-opt-token-lab: OPT-10 | PASS | PR_URL |
-| 11 | pack-context chain | Chain of lossless passes | tokens (V2-051 fixture) | 10 | 10 | 0% | v2-070-opt-token-lab: OPT-11 | NO GAIN on V2-051 fixture (already minimal) | PR_URL |
-| 11.1 | pack-context chain | Chain of lossless passes | tokens (BUILD-LOG lossless) | 1672 | 1624 | -2.9% | v2-070-opt-token-lab: OPT-11 | PASS | PR_URL |
-| 12 | parallel-waves | Run independent tasks in parallel waves | sequential steps for 10-task DAG | 10 | 4 | -60% | v2-071-opt-handoff: OPT-12 | PASS | PR_URL |
-| 13 | capped-retry | Capped retry for flaky steps | tasks finished of 20 flaky | 7 | 20 | 185.7% | v2-071-opt-handoff: OPT-13 | PASS | PR_URL |
-| 14 | idempotent-complete | Duplicate 'done' is a no-op | errors from duplicate done event | 1 | 0 | -100% | v2-071-opt-handoff: OPT-14 | PASS | PR_URL |
-| 15 | memo-protocol-load | Parse protocol schema once, not every message | ms per 500 message checks | 63.63 | 4.81 | -92.4% | v2-071-opt-handoff: OPT-15 | PASS | PR_URL |
-| 16 | handoff-envelope | Compact JSON bot handoff envelope | tokens per bot handoff | 85 | 39 | -54.1% | v2-071-opt-handoff: OPT-16 | PASS | PR_URL |
-| 17 | capability-route | Route a handoff straight to the owning lane | messages per handoff (find 'sync' owner) | 15 | 1 | -93.3% | v2-071-opt-handoff: OPT-17 | PASS | PR_URL |
-| 18 | plan-memo | Reuse plans for identical goals | pen calls for 10 goals (2 distinct) | 10 | 2 | -80% | v2-071-opt-handoff: OPT-18 | PASS | PR_URL |
-| 19 | batch-decisions | Ask Father all open decisions in one round | human round trips for 4 decisions | 4 | 1 | -75% | v2-071-opt-handoff: OPT-19 | PASS | PR_URL |
-| 20 | early-quorum | Stop counting votes once 2/3 is decided | votes read (9 voters, 2/3) | 9 | 6 | -33.3% | v2-071-opt-handoff: OPT-20 | PASS | PR_URL |
-| 21 | single-owner-claim | Only one lane can claim a task | task runs (3 lanes x 5 tasks) | 15 | 5 | -66.7% | v2-071-opt-handoff: OPT-21 | PASS | PR_URL |
-| 22 | fetch-once-relay | Relay fetches each source once per TTL | upstream fetches (12 nodes x 3 sources) | 36 | 3 | -91.7% | v2-072-opt-relay: OPT-22 | PASS | PR_URL |
-| 23 | token-bucket-pacing | Pace requests under a source's limit | requests over 5/s limit (30 burst) | 25 | 0 | -100% | v2-072-opt-relay: OPT-23 | PASS | PR_URL |
-| 24 | retry-after-backoff | Wait for Retry-After instead of hammering | calls sent inside the source's Retry-After window | 2 | 0 | -100% | v2-072-opt-relay: OPT-24 | PASS | PR_URL |
-| 25 | in-flight-coalesce | Concurrent identical asks share one fetch | upstream fetches (10 concurrent same ask) | 10 | 1 | -90% | v2-072-opt-relay: OPT-25 | PASS | PR_URL |
-| 26 | hash-store + delta-sync | Store identical pages once; sync only changed pages | bytes stored (50 pages, 10 unique) | 10765 | 2153 | -80% | v2-072-opt-relay: OPT-26 | PASS | PR_URL |
-| 26.1 | hash-store + delta-sync | Store identical pages once; sync only changed pages | bytes sent to sync 2 changed pages | 10620 | 180 | -98.3% | v2-072-opt-relay: OPT-26 | PASS | PR_URL |
+| 1 | dedupe-lines | Drop repeated lines before sending context | tokens (memory rows sent twice) | 4030 | 2015 | -50% | v2-070-opt-token-lab: OPT-01 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 2 | cut-filler | Cut polite filler words from asks | tokens (polite task ask) | 47 | 22 | -53.2% | v2-070-opt-token-lab: OPT-02 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 3 | compact-json | Minify JSON in prompts | tokens (pretty JSON memory row) | 61 | 53 | -13.1% | v2-070-opt-token-lab: OPT-03 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 4 | ref-legend | Swap repeated long paths/SHAs for short refs | tokens (BUILD-LOG with repeated URLs/SHAs) | 1675 | 1675 | 0% | v2-070-opt-token-lab: OPT-04 | NOT DONE (no gain; test of correctness passes) | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 5 | exact-prompt-cache | Answer an exact repeat prompt from cache | model calls per 100 tasks | 100 | 60 | -40% | v2-070-opt-token-lab: OPT-05 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 6 | normalized-cache-key | Cache key ignores case/whitespace | model calls per 100 tasks | 60 | 20 | -66.7% | v2-070-opt-token-lab: OPT-06 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 7 | fit-budget | Hard token budget keeping head+tail | max context tokens (budget 512, memory file) | 20239 | 512 | -97.5% | v2-070-opt-token-lab: OPT-07 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 8 | route-by-size | Short tasks go to the small model | compute units per 50 tasks | 207.5 | 171.5 | -17.3% | v2-070-opt-token-lab: OPT-08 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 9 | diff-only-summary | Repeat summary sends only the diff | tokens over 10 repeat calls | 21876 | 20518 | -6.2% | v2-070-opt-token-lab: OPT-09 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 10 | clip-tool-result | Clip long tool outputs | tokens (200-line tool output) | 12464 | 2021 | -83.8% | v2-070-opt-token-lab: OPT-10 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 11 | pack-context chain | Chain of lossless passes | tokens (V2-051 fixture) | 10 | 10 | 0% | v2-070-opt-token-lab: OPT-11 | NO GAIN on V2-051 fixture (already minimal) | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 11.1 | pack-context chain | Chain of lossless passes | tokens (BUILD-LOG lossless) | 1672 | 1624 | -2.9% | v2-070-opt-token-lab: OPT-11 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 12 | parallel-waves | Run independent tasks in parallel waves | sequential steps for 10-task DAG | 10 | 4 | -60% | v2-071-opt-handoff: OPT-12 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 13 | capped-retry | Capped retry for flaky steps | tasks finished of 20 flaky | 7 | 20 | 185.7% | v2-071-opt-handoff: OPT-13 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 14 | idempotent-complete | Duplicate 'done' is a no-op | errors from duplicate done event | 1 | 0 | -100% | v2-071-opt-handoff: OPT-14 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 15 | memo-protocol-load | Parse protocol schema once, not every message | ms per 500 message checks | 63.63 | 4.81 | -92.4% | v2-071-opt-handoff: OPT-15 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 16 | handoff-envelope | Compact JSON bot handoff envelope | tokens per bot handoff | 85 | 39 | -54.1% | v2-071-opt-handoff: OPT-16 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 17 | capability-route | Route a handoff straight to the owning lane | messages per handoff (find 'sync' owner) | 15 | 1 | -93.3% | v2-071-opt-handoff: OPT-17 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 18 | plan-memo | Reuse plans for identical goals | pen calls for 10 goals (2 distinct) | 10 | 2 | -80% | v2-071-opt-handoff: OPT-18 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 19 | batch-decisions | Ask Father all open decisions in one round | human round trips for 4 decisions | 4 | 1 | -75% | v2-071-opt-handoff: OPT-19 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 20 | early-quorum | Stop counting votes once 2/3 is decided | votes read (9 voters, 2/3) | 9 | 6 | -33.3% | v2-071-opt-handoff: OPT-20 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 21 | single-owner-claim | Only one lane can claim a task | task runs (3 lanes x 5 tasks) | 15 | 5 | -66.7% | v2-071-opt-handoff: OPT-21 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 22 | fetch-once-relay | Relay fetches each source once per TTL | upstream fetches (12 nodes x 3 sources) | 36 | 3 | -91.7% | v2-072-opt-relay: OPT-22 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 23 | token-bucket-pacing | Pace requests under a source's limit | requests over 5/s limit (30 burst) | 25 | 0 | -100% | v2-072-opt-relay: OPT-23 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 24 | retry-after-backoff | Wait for Retry-After instead of hammering | calls sent inside the source's Retry-After window | 2 | 0 | -100% | v2-072-opt-relay: OPT-24 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 25 | in-flight-coalesce | Concurrent identical asks share one fetch | upstream fetches (10 concurrent same ask) | 10 | 1 | -90% | v2-072-opt-relay: OPT-25 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 26 | hash-store + delta-sync | Store identical pages once; sync only changed pages | bytes stored (50 pages, 10 unique) | 10765 | 2153 | -80% | v2-072-opt-relay: OPT-26 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
+| 26.1 | hash-store + delta-sync | Store identical pages once; sync only changed pages | bytes sent to sync 2 changed pages | 10620 | 180 | -98.3% | v2-072-opt-relay: OPT-26 | PASS | [#246](https://github.com/vitalitychems-dot/TESSERA/pull/246) |
