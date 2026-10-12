@@ -36,7 +36,7 @@ export function GitbookAiView() {
     <div className="px-4 py-6 pb-24 sm:px-8">
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
         <div>
-          <p className="text-xs tracking-[0.2em] text-muted uppercase">GitbookAI</p>
+          <p className="text-xs tracking-[0.2em] text-muted uppercase">GitMesh</p>
           <h2 className="mt-1 font-display text-4xl tracking-tight">The mesh</h2>
           <p className="mt-3 text-sm leading-relaxed text-muted">
             The mesh is the git repository. A clone can be read with no web. The private Gitbook stays private. A drop is not delivered until it is approved. Payment is not handled. Machines are not accepted.

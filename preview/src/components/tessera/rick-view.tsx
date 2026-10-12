@@ -143,7 +143,7 @@ export function RickView() {
             className="mt-4 flex flex-col gap-2"
             onSubmit={(event) => {
               event.preventDefault();
-              const open = engineAsk.match(/^open\s+(TESSERA|Gitbook|GitbookAI|vitality)(?:\s+(.+))?$/i);
+              const open = engineAsk.match(/^open\s+(TESSERA|Gitbook|GitMesh|GitbookAI|vitality)(?:\s+(.+))?$/i);
               if (open?.[1]) {
                 const repo = open[1];
                 const path = open[2]?.trim() ?? "";
