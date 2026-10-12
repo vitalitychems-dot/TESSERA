@@ -51,7 +51,7 @@ export function askAll(question: string) {
   if (strict) return strict;
   const fed = fedAnswer(q);
   if (fed) return fed;
-  if (/^open\s+(TESSERA|Gitbook|GitbookAI|vitality)\b/i.test(q)) return null;
+  if (/^open\s+(TESSERA|Gitbook|GitMesh|GitbookAI|vitality)\b/i.test(q)) return null;
   if (/\b(no wifi|no ip|offline mesh|search the files)\b/i.test(q)) return fileMeshLine(q);
   const filed = q.match(/^run file\s+(\S+)/i);
   if (filed?.[1]) return runFile(filed[1].toLowerCase()).line;
@@ -133,7 +133,7 @@ export function askAll(question: string) {
     return rooms.length ? rooms.join(". ") : "No two are in the same room at this turn.";
   }
   if (/\b(repos|repositories|github)\b/i.test(lower)) {
-    return "GitHub is vitalitychems-dot. TESSERA, Gitbook, GitbookAI, and vitality. Ask open TESSERA and a path. The token stays on the server.";
+    return "GitHub is vitalitychems-dot. TESSERA, Gitbook, GitMesh, and vitality. Ask open TESSERA and a path. The token stays on the server.";
   }
   if (/\b(sovereign desk|plumbus|priority queue)\b/i.test(lower)) return deskLine();
   const skill = directSkill(q);
