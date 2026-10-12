@@ -6,6 +6,8 @@ import { createServer } from "node:http";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, normalize, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createCivic, presentWorld } from "./civic.mjs";
+import { loadCivic, saveCivic } from "./civic-store.mjs";
 import { floorMarkup, studioView } from "./floor.mjs";
 import { acceptWebSocket, liveMessages, textFrame } from "./live.mjs";
 import { createForeman } from "./task-graph.mjs";
@@ -85,8 +87,42 @@ function loadLog(path) {
   }
 }
 
+function latestMemory(civic, id) {
+  const entity = (civic.graph?.entities ?? []).find((item) => item.name === id);
+  const observations = entity?.observations ?? [];
+  return observations[observations.length - 1] ?? "";
+}
+
+function renderCivic(civic) {
+  const agents = Object.values(civic.agents ?? {});
+  const total = agents.length || 1;
+  const proposals = (civic.proposals ?? [])
+    .map((proposal) => {
+      const yes = Object.values(proposal.votes ?? {}).filter((vote) => vote === "yes").length;
+      return `<li class="proposal" data-status="${escapeHtml(proposal.status)}" data-proposal="${escapeHtml(proposal.id)}"><span class="proposal-title">${escapeHtml(proposal.title)}</span> <span class="tally">${yes}/${total}</span> <span class="proposal-status">${escapeHtml(proposal.status)}</span></li>`;
+    })
+    .join("");
+  const rules = (civic.rules ?? []).map((rule) => `<li class="rule">${escapeHtml(rule)}</li>`).join("");
+  const neighborhoods = Object.values(civic.neighborhoods ?? {})
+    .map((hood) => {
+      const names = (hood.members ?? []).map((id) => civic.agents?.[id]?.name ?? id);
+      const lives = (hood.members ?? [])
+        .map((id) => {
+          const agent = civic.agents?.[id];
+          if (!agent) return "";
+          const memory = latestMemory(civic, id);
+          return `<p class="life" data-agent="${escapeHtml(id)}">${escapeHtml(agent.name)} · level ${agent.home.level} · ${escapeHtml(agent.life.now)} · ${escapeHtml(agent.life.activity)}</p>${memory ? `<p class="memory">${escapeHtml(memory)}</p>` : ""}`;
+        })
+        .join("");
+      return `<article class="neighborhood" data-neighborhood="${escapeHtml(hood.id)}"><h3>${escapeHtml(hood.name)}</h3><p>${escapeHtml(names.join(", "))}</p>${lives}</article>`;
+    })
+    .join("");
+  return `<section id="vote-panel"><h2>Votes</h2><p id="vote-rule">A change passes with a two-thirds vote. Tessera may veto. Father may override.</p><ul id="proposals">${proposals}</ul><h3>Rules</h3><ul id="rules">${rules}</ul></section><section id="community"><h2>Community</h2>${neighborhoods}</section>`;
+}
+
 export function renderStudio(state, options = {}) {
   const view = studioView(options);
+  const civic = options.civic ?? createCivic().snapshot();
   const cards = state.tasks
     .map(
       (task) =>
@@ -110,14 +146,18 @@ export function renderStudio(state, options = {}) {
   <title>Tessera studio</title>
   <style>
     body { font-family: Georgia, serif; margin: 0; background: #f4f0e6; color: #1c1915; }
-    body[data-mode="3d"] { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
-    main { padding: 24px; }
+    body[data-mode="3d"] { display: grid; grid-template-columns: 320px 1fr; min-height: 100vh; }
+    main { padding: 16px; }
     form { display: flex; gap: 8px; flex-wrap: wrap; }
     #task-wall, #desks { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
     .task-card, .desk { background: #fffdf8; border: 1px solid #d9d0c1; padding: 12px; min-width: 140px; }
     .lamp { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #7d9a72; }
     .lamp[data-lamp="busy"] { background: #e0a045; }
     #view-toggle { display: inline-block; margin-top: 12px; color: #6b3e22; }
+    #vote-panel, #community { margin-top: 16px; }
+    #vote-panel h2, #community h2, #vote-panel h3 { font-size: 1.05rem; margin: 0 0 8px; }
+    .proposal, .neighborhood, .rule { background: #fffdf8; border: 1px solid #d9d0c1; padding: 8px; margin: 6px 0; }
+    .life, .memory, #vote-rule { margin: 4px 0; color: #4a4036; }
     #stage { min-height: 100vh; background: #d7cbb8; }
     #floor-3d { width: 100%; height: 100vh; display: block; }
   </style>
@@ -125,12 +165,13 @@ export function renderStudio(state, options = {}) {
 <body data-mode="${view}">
   <main>
   <h1>${view === "3d" ? "Studio floor" : "Task wall"}</h1>
+  ${toggle}
+  ${renderCivic(civic)}
   <form id="goal-form">
     <label for="goal">Goal</label>
     <input id="goal" name="goal" required />
     <button id="post-goal" type="submit">Post goal</button>
   </form>
-  ${toggle}
   <section id="task-wall">${cards}</section>
   <h2>Desks</h2>
   <section id="desks">${desks}</section>
@@ -170,16 +211,25 @@ function readBody(req) {
 export function listenStudio(studio = createStudio(), options = {}) {
   const monitor = options.monitor ?? createMonitor();
   const logPath = options.buildLogPath === null ? null : options.buildLogPath ?? defaultBuildLogPath();
+  const civicPath = options.civicPath ?? null;
+  const civic = options.civic ?? createCivic(civicPath ? loadCivic(civicPath) : null);
   const clients = new Set();
+
+  function persist() {
+    if (civicPath) saveCivic(civic.snapshot(), civicPath);
+  }
 
   function world() {
     const state = studio.state();
-    return buildWorld({
-      desks: state.desks,
-      tasks: state.tasks,
-      events: monitor.list(),
-      log: logPath ? loadLog(logPath) : [],
-    });
+    return presentWorld(
+      buildWorld({
+        desks: state.desks,
+        tasks: state.tasks,
+        events: monitor.list(),
+        log: logPath ? loadLog(logPath) : [],
+      }),
+      civic.snapshot(),
+    );
   }
 
   function pushLive() {
@@ -201,7 +251,12 @@ export function listenStudio(studio = createStudio(), options = {}) {
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
       const view = url.searchParams.get("view") === "2d" ? "2d" : "3d";
       res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      res.end(renderStudio(studio.state(), { view }));
+      res.end(renderStudio(studio.state(), { view, civic: civic.snapshot() }));
+      return;
+    }
+    if (req.method === "GET" && url.pathname === "/civic") {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify(civic.snapshot()));
       return;
     }
     if (req.method === "GET" && url.pathname === "/floor.js") {
@@ -234,6 +289,36 @@ export function listenStudio(studio = createStudio(), options = {}) {
     if (req.method === "GET" && url.pathname === "/events") {
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify({ events: monitor.list() }));
+      return;
+    }
+    if (req.method === "POST" && url.pathname.startsWith("/civic/")) {
+      let body = {};
+      try {
+        body = JSON.parse((await readBody(req)) || "{}");
+      } catch {
+        res.writeHead(400, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: "bad json" }));
+        return;
+      }
+      try {
+        let result;
+        if (url.pathname === "/civic/proposals") result = civic.propose(body.agentId, body);
+        else if (url.pathname === "/civic/votes") result = civic.vote(body.agentId, body.proposalId, body.choice);
+        else if (url.pathname === "/civic/veto") result = civic.veto(body.actorId, body.proposalId);
+        else if (url.pathname === "/civic/override") result = civic.override(body.actorId, body.proposalId, body.decision);
+        else {
+          res.writeHead(404, { "content-type": "application/json" });
+          res.end(JSON.stringify({ error: "not found" }));
+          return;
+        }
+        persist();
+        pushLive();
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify(result));
+      } catch (error) {
+        res.writeHead(400, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: error.message }));
+      }
       return;
     }
     if (req.method === "POST" && url.pathname === "/goals") {
@@ -272,7 +357,17 @@ export function listenStudio(studio = createStudio(), options = {}) {
     pushLive();
   });
 
-  const timer = setInterval(pushLive, 2000);
+  function pulse() {
+    try {
+      civic.tick({ tasks: studio.state().tasks, events: monitor.list() });
+      persist();
+    } catch {
+      // The floor stays up if one tick fails.
+    }
+    pushLive();
+  }
+
+  const timer = setInterval(pulse, 1000);
   timer.unref();
   const closeServer = server.close.bind(server);
   server.close = (callback) => {
