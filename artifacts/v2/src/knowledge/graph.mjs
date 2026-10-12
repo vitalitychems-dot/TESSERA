@@ -28,6 +28,14 @@ export function loadGraphFile(path) {
   return loadGraph(readFileSync(path, "utf8"));
 }
 
+/** MCP memory `read_graph`: the full entity and relation lists. */
+export function readGraph(graph) {
+  return {
+    entities: [...graph.entities.values()],
+    relations: graph.relations,
+  };
+}
+
 /** MCP memory `open_nodes`: return the named entities and the relations that touch them. */
 export function openNodes(graph, names) {
   const wanted = new Set(names);
