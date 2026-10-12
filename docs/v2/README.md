@@ -8,3 +8,17 @@ Vendored 2026-10-12 so later agents can read the plan without the planner worksp
 - Full narrative stays in the planner's TESSERA-V2-PLAN. This directory is the in-repo copy of the counts and the graph.
 
 Hard limits stay in force: no wallets, payments, trading, mining, 1T, or vault imports; no people-OSINT; no history rewrites.
+
+## Open the 3D studio
+
+The studio floor is on by default. Each agent has an office with a desk, a name plate, and a status light. A worker who is writing walks between the desk and the work spot. Finished tasks show up as books on the desk. Rows in the build log add rooms beside the offices.
+
+From the repo root, after `pnpm install`:
+
+```bash
+pnpm --filter @workspace/v2 studio
+```
+
+Open the printed address, `http://127.0.0.1:4173/`, in a browser. The page link **2D wall** switches to the flat task wall. That switch is on the page. It is not a `TESSERA_ENABLE_*` flag.
+
+`PORT` changes the listen port. The default is `4173`.
