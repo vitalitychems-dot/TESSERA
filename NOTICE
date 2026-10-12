@@ -1,0 +1,16 @@
+TESSERA v2
+Copyright (c) 2026 vitalitychems-dot
+
+Default license: MIT (see LICENSE).
+
+Patterns below were clean-roomed. No third-party source files were copied.
+Minecraft assets are not included.
+
+- blendi-remade/agentcraft (MIT) — task graph, per-task git worktrees, and
+  approve-only merge. Agents do not push.
+- goodnight000/api-anything (MIT) — public, no-login site adapter shape.
+  Cookie import stays off.
+- reconurge/flowsint (Apache-2.0) — graph panel layout reference only.
+  People-OSINT enrichers are not included.
+- @modelcontextprotocol/server-memory — JSONL entity, relation, and
+  observation graph shape used by the knowledge store.
