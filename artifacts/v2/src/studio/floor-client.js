@@ -67,6 +67,39 @@ function agentFigure() {
   return group;
 }
 
+function shippedSet(world) {
+  const ids = new Set();
+  for (const shipment of world.shipments ?? []) {
+    const key = shipment?.objectId ?? shipment?.id ?? "";
+    if (key) ids.add(String(key));
+  }
+  return ids;
+}
+
+function shippedMarker() {
+  const group = new THREE.Group();
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(0.55, 0.06, 10, 28),
+    new THREE.MeshStandardMaterial({ color: 0xd9a520, emissive: 0xd9a520, emissiveIntensity: 0.55, roughness: 0.4 }),
+  );
+  ring.position.set(0.2, 1.35, -0.4);
+  const board = document.createElement("canvas");
+  board.width = 128;
+  board.height = 32;
+  const pen = board.getContext("2d");
+  pen.fillStyle = "#d9a520";
+  pen.fillRect(0, 0, 128, 32);
+  pen.fillStyle = "#2a2118";
+  pen.font = "16px Georgia, serif";
+  pen.fillText("PACKAGE", 12, 22);
+  const texture = new THREE.CanvasTexture(board);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const tag = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.22), new THREE.MeshBasicMaterial({ map: texture }));
+  tag.position.set(0.2, 1.95, -0.4);
+  group.add(ring, tag);
+  return group;
+}
+
 function makePlot(plot) {
   const group = new THREE.Group();
   group.position.set(plot.x, 0, plot.z);
@@ -79,7 +112,7 @@ function makePlot(plot) {
   return group;
 }
 
-function makeOffice(office) {
+function makeOffice(office, shipped = null) {
   const group = new THREE.Group();
   group.position.set(office.x, 0, office.z);
   const floor = new THREE.Mesh(new THREE.BoxGeometry(6, 0.08, 5), wood(0x8d5a32));
@@ -102,6 +135,11 @@ function makeOffice(office) {
   agent.userData.walking = office.walking;
   walkers.push(agent);
   group.add(floor, back, side, desk, light, namePlate(office.name, office.neighborhoodName), agent);
+  const isShipped =
+    shipped instanceof Set
+      ? shipped.has(String(office.id)) || (office.objectId != null && shipped.has(String(office.objectId)))
+      : office.shipped === true;
+  if (isShipped) group.add(shippedMarker());
   if ((office.level ?? 1) >= 2) {
     const room = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.15, 2.2), wood(0xe7dcc8));
     room.position.set(2.2, 0.58, 0.8);
@@ -152,10 +190,11 @@ function look() {
 
 async function refresh() {
   const world = await (await fetch("/world")).json();
+  const shipped = shippedSet(world);
   root.clear();
   walkers.length = 0;
   for (const plot of world.plots ?? []) root.add(makePlot(plot));
-  for (const office of world.offices) root.add(makeOffice(office));
+  for (const office of world.offices) root.add(makeOffice(office, shipped));
   for (const room of world.rooms) root.add(makeRoom(room));
   look();
 }

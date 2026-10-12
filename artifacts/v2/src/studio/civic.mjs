@@ -3,6 +3,7 @@
  * The tick reads the task graph and the monitor stream.
  * It does not open a network. Work each tick stops at the step cap.
  */
+import { reviewPath } from "../hyb011-denylist.mjs";
 
 export const VOTE_RATIO_NUMERATOR = 2;
 export const VOTE_RATIO_DENOMINATOR = 3;
@@ -21,6 +22,34 @@ const SCHEDULE = [
   { hour: "afternoon", activity: "build" },
   { hour: "dusk", activity: "write the memory log" },
 ];
+
+const SHIP_KINDS = ["tool", "fix", "doc"];
+const SHIP_SPEC_BLOCKED = /(vault|wallets?|payments?|\b1t\b|mining|trading)/i;
+
+function normalizeShip(change = {}) {
+  const objectId = String(change.objectId ?? "").trim();
+  if (!/^[a-z0-9][a-z0-9-]{0,48}$/i.test(objectId)) throw new Error("objectId required (letters, digits, dash)");
+  const shipKind = String(change.shipKind ?? "").trim();
+  if (!SHIP_KINDS.includes(shipKind)) throw new Error("shipKind tool, fix, or doc");
+  const specTitle = String(change.specTitle ?? "").trim();
+  if (!specTitle || specTitle.length > 120) throw new Error("specTitle 1-120 chars");
+  const specDetail = String(change.specDetail ?? "");
+  if (specDetail.length > 2000) throw new Error("specDetail too long");
+  const targetPath = String(change.targetPath ?? "").trim();
+  if (!targetPath || targetPath.startsWith("..") || targetPath.startsWith("/") || /^[a-zA-Z]:/.test(targetPath)) {
+    throw new Error("targetPath must be relative");
+  }
+  if (!reviewPath(targetPath).allowed) throw new Error("targetPath refused");
+  const testName = String(change.testName ?? "").trim();
+  if (testName.includes("/") || !/^[a-z0-9][\w.-]*\.test\.mjs$/i.test(testName)) {
+    throw new Error("testName must be a file.test.mjs basename");
+  }
+  if (!reviewPath(testName).allowed) throw new Error("testName refused");
+  if (SHIP_SPEC_BLOCKED.test(`${specTitle} ${specDetail} ${targetPath} ${testName}`)) {
+    throw new Error("spec refused");
+  }
+  return { objectId, shipKind, specTitle, specDetail, targetPath, testName };
+}
 
 function passes(yes, total) {
   return yes * VOTE_RATIO_DENOMINATOR >= total * VOTE_RATIO_NUMERATOR;
@@ -64,6 +93,7 @@ function blankState() {
     },
     rules: ["Homes stay inside their neighborhood."],
     proposals: [],
+    shipments: [],
     graph: { entities: [], relations: [] },
   };
 }
@@ -125,6 +155,7 @@ function capture(state, proposal) {
   if (proposal.kind === "upgrade") {
     return { home: structuredClone(state.agents[proposal.change.agentId].home) };
   }
+  if (proposal.kind === "ship") return { shipments: [...state.shipments] };
   return {
     neighborhoods: structuredClone(state.neighborhoods),
     agents: Object.fromEntries(
@@ -144,6 +175,23 @@ function mutate(state, proposal) {
     upgradeHome(state.agents[proposal.change.agentId], proposal.change.levels);
     return;
   }
+  if (proposal.kind === "ship") {
+    if (!state.shipments.some((item) => item.proposalId === proposal.id)) {
+      state.shipments.push({
+        proposalId: proposal.id,
+        objectId: proposal.change.objectId,
+        status: "approved",
+        taskId: null,
+        branch: null,
+        worktreePath: null,
+        diffStat: "",
+        testsPassed: false,
+        prDraft: null,
+        pushed: false,
+      });
+    }
+    return;
+  }
   moveHome(state, proposal.change.agentId, proposal.change.neighborhood);
 }
 
@@ -156,6 +204,10 @@ function restore(state, proposal) {
   }
   if (proposal.kind === "upgrade") {
     state.agents[proposal.change.agentId].home = structuredClone(before.home);
+    return;
+  }
+  if (proposal.kind === "ship") {
+    state.shipments.splice(0, state.shipments.length, ...before.shipments.map((item) => ({ ...item })));
     return;
   }
   state.neighborhoods = structuredClone(before.neighborhoods);
@@ -175,6 +227,10 @@ export function createCivic(saved) {
     state.agents = saved.agents;
     state.neighborhoods = saved.neighborhoods;
     state.rules = [...(saved.rules ?? [])];
+    state.shipments = (saved.shipments ?? []).map((item) => ({
+      ...item,
+      prDraft: item.prDraft ? { ...item.prDraft } : null,
+    }));
     state.proposals = (saved.proposals ?? []).map((proposal) => ({
       ...proposal,
       votes: { ...proposal.votes },
@@ -234,6 +290,7 @@ export function createCivic(saved) {
         neighborhoods: state.neighborhoods,
         rules: state.rules,
         proposals: state.proposals,
+        shipments: state.shipments,
         graph: state.graph,
         limits: {
           tickStepCap: TICK_STEP_CAP,
@@ -248,7 +305,9 @@ export function createCivic(saved) {
       const title = String(input.title ?? "").trim();
       if (!title) throw new Error("title required");
       const kind = input.kind;
-      if (kind !== "rule" && kind !== "upgrade" && kind !== "join") throw new Error("unknown kind");
+      if (kind !== "rule" && kind !== "upgrade" && kind !== "join" && kind !== "ship") {
+        throw new Error("unknown kind");
+      }
       const change = input.change ?? {};
       let normalized;
       if (kind === "rule") {
@@ -260,6 +319,8 @@ export function createCivic(saved) {
         const levels = Number(change.levels ?? 1);
         if (!Number.isInteger(levels) || levels < 1 || levels > 3) throw new Error("levels out of range");
         normalized = { agentId: change.agentId, levels };
+      } else if (kind === "ship") {
+        normalized = normalizeShip(change);
       } else {
         if (!state.agents[change.agentId]) throw new Error("missing agent");
         if (!state.neighborhoods[change.neighborhood]) throw new Error("missing neighborhood");
@@ -317,6 +378,16 @@ export function createCivic(saved) {
       }
       proposal.overriddenBy = OWNER_ID;
       return structuredClone(proposal);
+    },
+    recordShipment(shipment) {
+      if (!shipment || typeof shipment.proposalId !== "string") throw new Error("shipment required");
+      const proposal = find(shipment.proposalId);
+      if (proposal.kind !== "ship") throw new Error("not a ship proposal");
+      const record = { ...shipment, pushed: false };
+      const index = state.shipments.findIndex((item) => item.proposalId === shipment.proposalId);
+      if (index >= 0) state.shipments[index] = record;
+      else state.shipments.push(record);
+      return structuredClone(record);
     },
     tick({ tasks = [], events = [] } = {}) {
       let steps = 0;
@@ -441,5 +512,6 @@ export function presentWorld(built, civic) {
     plots,
     rules: civic?.rules ?? [],
     proposals: civic?.proposals ?? [],
+    shipments: civic?.shipments ?? [],
   };
 }
