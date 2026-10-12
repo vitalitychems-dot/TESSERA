@@ -6,7 +6,11 @@
   "license": "MIT",
   "scripts": {
     "check": "node src/check-protocol.mjs",
+    "studio": "node src/studio/serve.mjs",
     "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test --test-reporter=spec test/*.test.mjs"
+  },
+  "dependencies": {
+    "three": "0.169.0"
   },
   "devDependencies": {
     "playwright-core": "^1.64.0"
