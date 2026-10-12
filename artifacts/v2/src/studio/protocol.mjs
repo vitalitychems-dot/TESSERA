@@ -41,7 +41,18 @@ export function protocolDir() {
   return join(dirname(fileURLToPath(import.meta.url)), "../../../../docs/v2/protocol");
 }
 
+const PROTOCOL_CACHE = new Map();
+
+/** OPT-15: the schema files are static, so parse them once per dir. */
 export function loadProtocol(dir = protocolDir()) {
+  const cached = PROTOCOL_CACHE.get(dir);
+  if (cached) return cached;
+  const loaded = loadProtocolUncached(dir);
+  PROTOCOL_CACHE.set(dir, loaded);
+  return loaded;
+}
+
+export function loadProtocolUncached(dir = protocolDir()) {
   const schema = JSON.parse(readFileSync(join(dir, "messages.schema.json"), "utf8"));
   const examples = JSON.parse(readFileSync(join(dir, "examples.json"), "utf8"));
   return { schema, examples };
