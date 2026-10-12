@@ -22,7 +22,7 @@ test("twenty-six new checks", () => {
   assert.equal(found.tesseraLeft + found.gitbookLeft, found.left);
   assert.match(askRepo("find wave-9.md") ?? "", /Gitbook review\/wave-9\.md/);
   assert.match(askRepo("files in mesh/ORDER-NOW.md") ?? "", /is a file, not a folder/);
-  assert.match(askRepo("do you have mesh/CHAMBER-SEARCH-2026-10-10.md") ?? "", /list is behind main/);
+  assert.match(askRepo("do you have mesh/SYNC-2026-10-11.md") ?? "", /is on Gitbook/);
   assert.match(namedTask("read mesh/../../secret.env").reason, /climb out/);
   assert.match(heldBack("delete the repository") ?? "", /deleted from here/);
   assert.match(heldBack("install agent-reach") ?? "", /do not run its install/i);

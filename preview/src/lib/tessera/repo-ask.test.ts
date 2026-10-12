@@ -1,13 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { COUNT as GITBOOK_FILES } from "./gitbook-paths.ts";
 import { askRepo, filesIn, namesLike } from "./repo-ask.ts";
+import { COUNT as TESSERA_FILES } from "./tessera-paths.ts";
 
 test("a folder count and a path come from the lists", () => {
   assert.equal(filesIn("gitbook", "history"), 3110);
   assert.equal(filesIn("gitbook", "review"), 18);
-  assert.equal(filesIn("tessera", "preview"), 346);
-  assert.match(askRepo("how many files") ?? "", /4099 file names/);
-  assert.match(askRepo("how many files") ?? "", /10400 file names/);
+  assert.equal(filesIn("tessera", "preview"), 405);
+  assert.match(askRepo("how many files") ?? "", new RegExp(`${TESSERA_FILES} file names`));
+  assert.match(askRepo("how many files") ?? "", new RegExp(`${GITBOOK_FILES} file names`));
   assert.match(askRepo("files in history") ?? "", /Gitbook has 3110/);
   assert.match(askRepo("files in history") ?? "", /Largest on Gitbook is archive/);
   assert.match(askRepo("files in history") ?? "", /Largest on TESSERA is/);

@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { AFTER_COPY } from "./forty.ts";
-import { PATHS as GITBOOK_PATHS } from "./gitbook-paths.ts";
 import { deltaLine, pathDelta, pathList } from "./path-delta.ts";
+import { PATHS as GITBOOK_PATHS } from "./gitbook-paths.ts";
 import { tokenReport } from "./token-index.ts";
 
 test("the copy can be compared and a spaced search is split by repo", () => {
@@ -15,8 +14,8 @@ test("the copy can be compared and a spaced search is split by repo", () => {
   assert.equal(delta.live, 2);
   assert.match(deltaLine("Gitbook", delta), /1 added/);
   assert.match(deltaLine("Gitbook", delta), /I did not open the bodies/);
-  const notes = pathDelta(pathList(GITBOOK_PATHS), [...pathList(GITBOOK_PATHS), ...AFTER_COPY]);
-  assert.deepEqual(notes.added, [...AFTER_COPY]);
+  const notes = pathDelta(pathList(GITBOOK_PATHS), [...pathList(GITBOOK_PATHS), "mesh/not-written-yet.md"]);
+  assert.deepEqual(notes.added, ["mesh/not-written-yet.md"]);
   assert.equal(notes.removed.length, 0);
   const spaced = tokenReport("wave 9");
   assert.equal(spaced.hits.some((line) => line.includes("review/wave-9.md")), true);

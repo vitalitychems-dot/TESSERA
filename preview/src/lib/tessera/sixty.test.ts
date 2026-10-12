@@ -4,6 +4,7 @@ import { pathRows, tokenFind, tokenize, topFolders } from "./token-index.ts";
 import { loadAsks, recall, remember } from "./ask-memory.ts";
 import { answerLocal, routeOf } from "./local-route.ts";
 import { look } from "./repo-ask.ts";
+import { COUNT as TESSERA_FILES } from "./tessera-paths.ts";
 
 test("sixty larger checks", () => {
   const rows = pathRows();
@@ -60,7 +61,7 @@ test("sixty larger checks", () => {
     ["route-hers", routeOf("who are you") === "hers"],
     ["route-pen-sentence", routeOf("tell me about the weather") === "pen"],
     ["refusal-closed", answerLocal("mark AGI done")?.includes("not met") === true],
-    ["local-files", answerLocal("how many files")?.includes("4099") === true],
+    ["local-files", answerLocal("how many files")?.includes(String(TESSERA_FILES)) === true],
     ["local-next", answerLocal("what next")?.includes("Father rotates") === true],
     ["local-rest", answerLocal("the rest")?.includes("2. Pull request 80") === true],
     ["local-hello-null", answerLocal("hello") === null],

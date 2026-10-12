@@ -24,7 +24,8 @@
 
 :root,
 html[data-theme="night"],
-html[data-theme="water"] {
+html[data-theme="water"],
+[data-swatch="water"] {
   color-scheme: dark;
   --tessera-bg: #071018;
   --tessera-surface: #0d1c28;
@@ -32,14 +33,15 @@ html[data-theme="water"] {
   --tessera-fg: #e7f6f4;
   --tessera-muted: #9ec4c8;
   --tessera-subtle: #6e98a0;
-  --tessera-accent: #67e8f0;
+  --tessera-accent: #3ee0f0;
   --tessera-accent-fg: #04141a;
   --tessera-border: color-mix(in oklab, var(--tessera-accent) 28%, transparent);
   --tessera-border-strong: color-mix(in oklab, var(--tessera-accent) 48%, transparent);
-  --tessera-alive: #67e8f0;
+  --tessera-alive: #3ee0f0;
 }
 
-html[data-theme="fire"] {
+html[data-theme="fire"],
+[data-swatch="fire"] {
   color-scheme: dark;
   --tessera-bg: #140806;
   --tessera-surface: #24100c;
@@ -47,14 +49,15 @@ html[data-theme="fire"] {
   --tessera-fg: #f8efe8;
   --tessera-muted: #e2b8a4;
   --tessera-subtle: #a87868;
-  --tessera-accent: #e07048;
+  --tessera-accent: #ff6a3d;
   --tessera-accent-fg: #1a0c08;
   --tessera-border: color-mix(in oklab, var(--tessera-accent) 30%, transparent);
   --tessera-border-strong: color-mix(in oklab, var(--tessera-accent) 50%, transparent);
-  --tessera-alive: #e07048;
+  --tessera-alive: #ff6a3d;
 }
 
-html[data-theme="lightning"] {
+html[data-theme="lightning"],
+[data-swatch="lightning"] {
   color-scheme: dark;
   --tessera-bg: #05070c;
   --tessera-surface: #10141e;
@@ -69,7 +72,8 @@ html[data-theme="lightning"] {
   --tessera-alive: #d6f26a;
 }
 
-html[data-theme="diamond"] {
+html[data-theme="diamond"],
+[data-swatch="diamond"] {
   color-scheme: light;
   --tessera-bg: #eef3f4;
   --tessera-surface: #f8fbfb;
@@ -84,7 +88,8 @@ html[data-theme="diamond"] {
   --tessera-alive: #0e7490;
 }
 
-html[data-theme="spiral"] {
+html[data-theme="spiral"],
+[data-swatch="spiral"] {
   color-scheme: dark;
   --tessera-bg: #100818;
   --tessera-surface: #1c1030;
@@ -92,11 +97,11 @@ html[data-theme="spiral"] {
   --tessera-fg: #f6f1e8;
   --tessera-muted: #cfc0ea;
   --tessera-subtle: #9a84bc;
-  --tessera-accent: #c4b5fd;
+  --tessera-accent: #e7b3ff;
   --tessera-accent-fg: #160c24;
   --tessera-border: color-mix(in oklab, var(--tessera-accent) 28%, transparent);
   --tessera-border-strong: color-mix(in oklab, var(--tessera-accent) 48%, transparent);
-  --tessera-alive: #c4b5fd;
+  --tessera-alive: #e7b3ff;
 }
 
 @layer base {

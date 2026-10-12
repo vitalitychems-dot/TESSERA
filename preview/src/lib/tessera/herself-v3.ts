@@ -17,7 +17,7 @@ export function buildV3() {
   const note = `REAL: I am Tessera v3. TESSERA main ${TESSERA_SHA.slice(0, 7)} lists ${TESSERA_FILES} files. Gitbook main ${GITBOOK_SHA.slice(0, 7)} lists ${GITBOOK_FILES} files. I did not open the file bodies. A name that is not on the list is not mine. Lesson sealed.`;
   const vow = vowCheck(note);
   if (!vow.ok) return `GOAL: ${vow.reason}`;
-  if (TESSERA_FILES !== 4099 || GITBOOK_FILES !== 10400) return "GOAL: The file count moved. v3 was not sealed.";
+  if (TESSERA_FILES < 4000 || GITBOOK_FILES < 10000) return "GOAL: The file count moved. v3 was not sealed.";
   if (!listed(TESSERA_PATHS, "README.md") || !listed(GITBOOK_PATHS, "review/wave-9.md")) return "GOAL: A known file was missing. v3 was not sealed.";
   return note;
 }

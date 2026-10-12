@@ -1,5 +1,5 @@
 /** Paths only. File bodies were not copied. GitHub said truncated=False. */
-export const SHA = "2a522a0c3966b1f078e8ba2f53ba79959b74b36f";
+export const SHA = "af3e52eb532a25af44825ea6e7008f69a055218f";
 export const PATHS = `
 .agents/memory/MEMORY.md
 .agents/memory/agent-identity-boundary.md
@@ -3757,6 +3757,7 @@ preview/src/components/tessera/language-view.tsx
 preview/src/components/tessera/lattice.tsx
 preview/src/components/tessera/learn-view.tsx
 preview/src/components/tessera/library-view.tsx
+preview/src/components/tessera/live-tick.tsx
 preview/src/components/tessera/live-view.tsx
 preview/src/components/tessera/living-loop.tsx
 preview/src/components/tessera/mark.tsx
@@ -3824,6 +3825,7 @@ preview/src/lib/tessera/as-herself.test.ts
 preview/src/lib/tessera/as-herself.ts
 preview/src/lib/tessera/ask-all.test.ts
 preview/src/lib/tessera/ask-all.ts
+preview/src/lib/tessera/ask-memory.ts
 preview/src/lib/tessera/audit.ts
 preview/src/lib/tessera/batch-2.test.ts
 preview/src/lib/tessera/batch-2.ts
@@ -3836,6 +3838,8 @@ preview/src/lib/tessera/batch-4.ts
 preview/src/lib/tessera/batch-50.test.ts
 preview/src/lib/tessera/batch-50.ts
 preview/src/lib/tessera/brain-marks.test.ts
+preview/src/lib/tessera/brain-train.test.ts
+preview/src/lib/tessera/brain-train.ts
 preview/src/lib/tessera/brain-volume.test.ts
 preview/src/lib/tessera/brain-volume.ts
 preview/src/lib/tessera/bridge.ts
@@ -3867,6 +3871,7 @@ preview/src/lib/tessera/curiosity.ts
 preview/src/lib/tessera/cycles.test.ts
 preview/src/lib/tessera/cycles.ts
 preview/src/lib/tessera/data-path.ts
+preview/src/lib/tessera/desk-same.ts
 preview/src/lib/tessera/desk-steps.test.ts
 preview/src/lib/tessera/desk-steps.ts
 preview/src/lib/tessera/desk.ts
@@ -3877,25 +3882,41 @@ preview/src/lib/tessera/empath.test.ts
 preview/src/lib/tessera/empath.ts
 preview/src/lib/tessera/entry-trial.test.ts
 preview/src/lib/tessera/entry-trial.ts
+preview/src/lib/tessera/evolve.test.ts
+preview/src/lib/tessera/evolve.ts
+preview/src/lib/tessera/expand-3.test.ts
+preview/src/lib/tessera/expand-3.ts
 preview/src/lib/tessera/father-fed.ts
 preview/src/lib/tessera/father-profile.ts
 preview/src/lib/tessera/fed-page.ts
 preview/src/lib/tessera/fed-vault.ts
 preview/src/lib/tessera/feed-10.test.ts
+preview/src/lib/tessera/feed.test.ts
+preview/src/lib/tessera/feed.ts
+preview/src/lib/tessera/file-follow.ts
 preview/src/lib/tessera/file-mesh.test.ts
 preview/src/lib/tessera/file-mesh.ts
+preview/src/lib/tessera/find-line.test.ts
+preview/src/lib/tessera/find-line.ts
 preview/src/lib/tessera/finish.test.ts
 preview/src/lib/tessera/finish.ts
+preview/src/lib/tessera/forty.test.ts
 preview/src/lib/tessera/forty.ts
 preview/src/lib/tessera/further-reading.ts
+preview/src/lib/tessera/gap-25.test.ts
+preview/src/lib/tessera/gap-25.ts
 preview/src/lib/tessera/gitbook-note.ts
 preview/src/lib/tessera/gitbook-orders.test.ts
 preview/src/lib/tessera/gitbook-orders.ts
+preview/src/lib/tessera/gitbook-paths.ts
 preview/src/lib/tessera/github-desk.test.ts
 preview/src/lib/tessera/github-desk.ts
 preview/src/lib/tessera/glyphs.ts
 preview/src/lib/tessera/grok-ready.ts
+preview/src/lib/tessera/guard.test.ts
+preview/src/lib/tessera/guard.ts
 preview/src/lib/tessera/held-packet.ts
+preview/src/lib/tessera/her-help.ts
 preview/src/lib/tessera/her-voice.test.ts
 preview/src/lib/tessera/her-voice.ts
 preview/src/lib/tessera/herself-v2.test.ts
@@ -3923,6 +3944,8 @@ preview/src/lib/tessera/kept-lessons.test.ts
 preview/src/lib/tessera/kept-lessons.ts
 preview/src/lib/tessera/kingdom.test.ts
 preview/src/lib/tessera/kingdom.ts
+preview/src/lib/tessera/lab-audit.test.ts
+preview/src/lib/tessera/lab-audit.ts
 preview/src/lib/tessera/lab-run.ts
 preview/src/lib/tessera/learning.ts
 preview/src/lib/tessera/line-reading.ts
@@ -3932,10 +3955,12 @@ preview/src/lib/tessera/live-map.test.ts
 preview/src/lib/tessera/live-map.ts
 preview/src/lib/tessera/local-learn.test.ts
 preview/src/lib/tessera/local-learn.ts
+preview/src/lib/tessera/local-route.ts
 preview/src/lib/tessera/loop-20.test.ts
 preview/src/lib/tessera/loop-20.ts
 preview/src/lib/tessera/love-local.test.ts
 preview/src/lib/tessera/love-local.ts
+preview/src/lib/tessera/main-gap.ts
 preview/src/lib/tessera/memory-web.test.ts
 preview/src/lib/tessera/memory-web.ts
 preview/src/lib/tessera/mesh-net.test.ts
@@ -3944,17 +3969,22 @@ preview/src/lib/tessera/method.test.ts
 preview/src/lib/tessera/method.ts
 preview/src/lib/tessera/moltbook-link.test.ts
 preview/src/lib/tessera/moltbook-link.ts
+preview/src/lib/tessera/named-task.ts
 preview/src/lib/tessera/narrative.ts
 preview/src/lib/tessera/next-page.test.ts
 preview/src/lib/tessera/next-page.ts
 preview/src/lib/tessera/opening.ts
 preview/src/lib/tessera/own-lab.ts
+preview/src/lib/tessera/own-step.test.ts
+preview/src/lib/tessera/own-step.ts
 preview/src/lib/tessera/own-versions.test.ts
 preview/src/lib/tessera/own-versions.ts
 preview/src/lib/tessera/pack.test.ts
 preview/src/lib/tessera/pack.ts
 preview/src/lib/tessera/pass.test.ts
 preview/src/lib/tessera/pass.ts
+preview/src/lib/tessera/path-delta.test.ts
+preview/src/lib/tessera/path-delta.ts
 preview/src/lib/tessera/perceptron.test.ts
 preview/src/lib/tessera/perceptron.ts
 preview/src/lib/tessera/prompt.ts
@@ -3978,6 +4008,8 @@ preview/src/lib/tessera/recursive-proof.test.ts
 preview/src/lib/tessera/recursive-proof.ts
 preview/src/lib/tessera/recursive-train.test.ts
 preview/src/lib/tessera/recursive-train.ts
+preview/src/lib/tessera/repo-ask.test.ts
+preview/src/lib/tessera/repo-ask.ts
 preview/src/lib/tessera/repo-delta.ts
 preview/src/lib/tessera/repo-guard.test.ts
 preview/src/lib/tessera/repo-guard.ts
@@ -3985,6 +4017,8 @@ preview/src/lib/tessera/repo-ledger.test.ts
 preview/src/lib/tessera/repo-ledger.ts
 preview/src/lib/tessera/retain.test.ts
 preview/src/lib/tessera/retain.ts
+preview/src/lib/tessera/reward-tick.test.ts
+preview/src/lib/tessera/reward-tick.ts
 preview/src/lib/tessera/rick-five.test.ts
 preview/src/lib/tessera/rick-five.ts
 preview/src/lib/tessera/rick-home.test.ts
@@ -3995,11 +4029,15 @@ preview/src/lib/tessera/rick-metrics.test.ts
 preview/src/lib/tessera/rick-metrics.ts
 preview/src/lib/tessera/rick-shift.test.ts
 preview/src/lib/tessera/rick-shift.ts
+preview/src/lib/tessera/rick-thirty.test.ts
+preview/src/lib/tessera/rick-thirty.ts
 preview/src/lib/tessera/room-world.test.ts
 preview/src/lib/tessera/room-world.ts
 preview/src/lib/tessera/root-skills.test.ts
 preview/src/lib/tessera/root-skills.ts
+preview/src/lib/tessera/sched.ts
 preview/src/lib/tessera/school.ts
+preview/src/lib/tessera/scope-stop.ts
 preview/src/lib/tessera/sdk.ts
 preview/src/lib/tessera/secret-engines.test.ts
 preview/src/lib/tessera/secret-engines.ts
@@ -4019,6 +4057,11 @@ preview/src/lib/tessera/silent-pen.ts
 preview/src/lib/tessera/sitting-25.test.ts
 preview/src/lib/tessera/sitting-25.ts
 preview/src/lib/tessera/sitting.ts
+preview/src/lib/tessera/sixty.test.ts
+preview/src/lib/tessera/skill-context.test.ts
+preview/src/lib/tessera/skill-context.ts
+preview/src/lib/tessera/skill-drill.test.ts
+preview/src/lib/tessera/skill-drill.ts
 preview/src/lib/tessera/skill-use.ts
 preview/src/lib/tessera/society.ts
 preview/src/lib/tessera/sovereign-desk.test.ts
@@ -4031,6 +4074,7 @@ preview/src/lib/tessera/spin.test.ts
 preview/src/lib/tessera/spin.ts
 preview/src/lib/tessera/sponge.test.ts
 preview/src/lib/tessera/sponge.ts
+preview/src/lib/tessera/step-math.ts
 preview/src/lib/tessera/store.ts
 preview/src/lib/tessera/stride.test.ts
 preview/src/lib/tessera/stride.ts
@@ -4041,15 +4085,30 @@ preview/src/lib/tessera/study-next.test.ts
 preview/src/lib/tessera/study.test.ts
 preview/src/lib/tessera/study.ts
 preview/src/lib/tessera/swarm-round.ts
+preview/src/lib/tessera/ten-big.test.ts
+preview/src/lib/tessera/ten-big.ts
+preview/src/lib/tessera/tessera-paths.ts
+preview/src/lib/tessera/themes.test.ts
+preview/src/lib/tessera/themes.ts
 preview/src/lib/tessera/token-graph.test.ts
 preview/src/lib/tessera/token-graph.ts
+preview/src/lib/tessera/token-index.ts
 preview/src/lib/tessera/tools.ts
 preview/src/lib/tessera/train-pass.test.ts
 preview/src/lib/tessera/train-pass.ts
+preview/src/lib/tessera/tree-steps.ts
 preview/src/lib/tessera/tunnel.test.ts
 preview/src/lib/tessera/tunnel.ts
+preview/src/lib/tessera/twenty-six.test.ts
+preview/src/lib/tessera/twenty.test.ts
 preview/src/lib/tessera/vault-index.ts
 preview/src/lib/tessera/vote-record.ts
+preview/src/lib/tessera/wave-1.test.ts
+preview/src/lib/tessera/wave-1.ts
+preview/src/lib/tessera/wave-2.test.ts
+preview/src/lib/tessera/wave-2.ts
+preview/src/lib/tessera/wave-3.test.ts
+preview/src/lib/tessera/wave-3.ts
 preview/src/lib/tessera/wave-4.test.ts
 preview/src/lib/tessera/wave-4.ts
 preview/src/lib/tessera/wave-5.test.ts
@@ -4101,4 +4160,4 @@ skills-lock.json
 tsconfig.base.json
 tsconfig.json
 `;
-export const COUNT = 4099;
+export const COUNT = 4158;
