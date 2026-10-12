@@ -1,0 +1,57 @@
+{
+  "title": "TESSERA v2 studio websocket messages",
+  "messages": {
+    "goal.post": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "goal"],
+      "properties": {
+        "type": { "type": "string", "enum": ["goal.post"] },
+        "goal": { "type": "string", "minLength": 1 }
+      }
+    },
+    "decision.answer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "decisionId", "answer"],
+      "properties": {
+        "type": { "type": "string", "enum": ["decision.answer"] },
+        "decisionId": { "type": "string", "minLength": 1 },
+        "answer": { "type": "string", "minLength": 1 }
+      }
+    },
+    "task.upsert": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id", "title", "status"],
+      "properties": {
+        "type": { "type": "string", "enum": ["task.upsert"] },
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["pending", "blocked", "running", "done"] }
+      }
+    },
+    "decision.request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "decisionId", "taskId", "question"],
+      "properties": {
+        "type": { "type": "string", "enum": ["decision.request"] },
+        "decisionId": { "type": "string", "minLength": 1 },
+        "taskId": { "type": "string", "minLength": 1 },
+        "question": { "type": "string", "minLength": 1 }
+      }
+    },
+    "worker.event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "taskId", "name", "detail"],
+      "properties": {
+        "type": { "type": "string", "enum": ["worker.event"] },
+        "taskId": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "detail": { "type": "string" }
+      }
+    }
+  }
+}

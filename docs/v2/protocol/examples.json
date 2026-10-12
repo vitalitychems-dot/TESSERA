@@ -1,0 +1,7 @@
+[
+  { "type": "goal.post", "goal": "Ship the studio board" },
+  { "type": "decision.answer", "decisionId": "d1", "answer": "use the task wall" },
+  { "type": "task.upsert", "id": "draft", "title": "Draft the change", "status": "running" },
+  { "type": "decision.request", "decisionId": "d1", "taskId": "draft", "question": "Which file?" },
+  { "type": "worker.event", "taskId": "draft", "name": "tool.read", "detail": "docs/v2/protocol/messages.schema.json" }
+]
