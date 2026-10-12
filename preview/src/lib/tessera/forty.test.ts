@@ -21,7 +21,7 @@ test("forty improvements", () => {
     ["missing-name", byName("no-such-file-xyz.md").length === 0],
     ["index-reused", nameIndex() === index],
     ["after-copy", afterCopy(AFTER_COPY[0])],
-    ["behind-note", /list is behind main/.test(askRepo("do you have mesh/CHAMBER-SEARCH-2026-10-10.md") ?? "")],
+    ["behind-note", /is on Gitbook/.test(askRepo("do you have mesh/SYNC-2026-10-11.md") ?? "")],
     ["body-closed", /did not open the body/.test(askRepo("do you have mesh/ORDER-NOW.md") ?? "")],
     ["no-secret-overlay", !AFTER_COPY.join(" ").includes("secret")],
     ["ring-keeps-eight", rememberAsk(ring, "ask 9").length === 8],
