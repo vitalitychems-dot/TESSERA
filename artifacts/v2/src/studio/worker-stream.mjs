@@ -3,6 +3,7 @@
  */
 import { createServer } from "node:http";
 import { checkMessage } from "./protocol.mjs";
+import { reviewRequest } from "../hyb011-denylist.mjs";
 
 export function createMonitor() {
   const events = [];
@@ -33,6 +34,12 @@ export function fakeWorker(monitor, taskId = "t1") {
 
 export function listenMonitor(monitor = createMonitor()) {
   const server = createServer((req, res) => {
+    const gate = reviewRequest({ url: req.url ?? "/", method: req.method });
+    if (!gate.allowed) {
+      res.writeHead(gate.status, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: gate.reason, match: gate.match }));
+      return;
+    }
     if (req.method === "GET" && req.url === "/events") {
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify({ events: monitor.list() }));
