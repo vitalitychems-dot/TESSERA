@@ -20,12 +20,12 @@ test("the sim pen finishes a two-task goal", async () => {
   assert.deepEqual(snap.tasks[1].dependsOn, ["t1"]);
 });
 
-test("the first thirty merges are written in the build log", () => {
+test("the first thirty-five merges are written in the build log", () => {
   const log = readFileSync(new URL("../../../docs/v2/BUILD-LOG.md", import.meta.url), "utf8");
   const shas = log.match(/`[0-9a-f]{40}`/g) ?? [];
-  assert.equal(shas.length, 30);
+  assert.equal(shas.length, 35);
   assert.match(log, /V2-015/);
-  assert.match(log, /V2-027/);
   assert.match(log, /V2-052/);
-  assert.match(log, /cd762bee18d3afa38a56b21d3e60f9d9ceedb9b1/);
+  assert.match(log, /V2-061/);
+  assert.match(log, /462cc37f72b945e1e0e565a1e6bf87984753e722/);
 });

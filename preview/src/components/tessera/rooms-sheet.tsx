@@ -9,7 +9,7 @@ export const ROOMS: { id: ViewId; group: string; label: string; line: string }[]
   { id: "brain", group: "Mind", label: "Brain", line: "The chart and the live number." },
   { id: "theme", group: "Mind", label: "Theme", line: "Water, fire, lightning, diamond, spiral." },
   { id: "gitbook", group: "Books", label: "Gitbook", line: "The private notes." },
-  { id: "gitbookai", group: "Books", label: "GitbookAI", line: `${MESH.projects.length} programs on the public mesh.` },
+  { id: "gitbookai", group: "Books", label: "GitMesh", line: `${MESH.projects.length} programs on the public mesh.` },
   { id: "board", group: "Books", label: "Board", line: "What is open." },
 ];
 

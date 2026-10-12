@@ -11,7 +11,7 @@ export const MESH = {
     { ours: "a drop", theirs: "mail" },
     { ours: "a project", theirs: "a site" },
     { ours: "a node", theirs: "a phone book" },
-    { ours: "GitbookAI", theirs: "GitHub" },
+    { ours: "GitMesh", theirs: "GitHub" },
   ],
   pages: [
     { id: "rules", path: "RULES.md", title: "Rules" },

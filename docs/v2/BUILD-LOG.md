@@ -46,3 +46,13 @@ Plain record of merged plan items. Each row is one pull request.
 | 28 | V2-050 | https://github.com/vitalitychems-dot/TESSERA/pull/232 | A desk probe denies the network and caps the heap. | `3e2621307439d508c81bb99ff3ca16cc413274ba` |
 | 29 | V2-051 | https://github.com/vitalitychems-dot/TESSERA/pull/233 | A fixture task writes a token baseline. | `ab87578012c721963e9107c0780959ad881857d3` |
 | 30 | V2-052 | https://github.com/vitalitychems-dot/TESSERA/pull/234 | Graph and full-file retrieval arms are both recorded. | `cd762bee18d3afa38a56b21d3e60f9d9ceedb9b1` |
+
+## After 35
+
+| # | ID | PR | What landed | Merge SHA |
+|---|---|---|---|---|
+| 31 | V2-053 | https://github.com/vitalitychems-dot/TESSERA/pull/235 | A repeated page reuses its summary, so the token count drops. | `968d4f010ab8f5ae76a8fcf3eb752d29ebeb7e35` |
+| 32 | V2-054 | https://github.com/vitalitychems-dot/TESSERA/pull/236 | Classify tasks use the small sim model, and extra spaces are collapsed. | `2b38622f3c01f51c45f114625dd845c5982dcde5` |
+| 33 | V2-055 | https://github.com/vitalitychems-dot/TESSERA/pull/237 | A new method stays queued and cannot turn itself on. | `eaf4633be29240fe2f0381522fd6c15cecf3454a` |
+| 34 | V2-060 | https://github.com/vitalitychems-dot/TESSERA/pull/238 | Hacker News search stays on the public allowlist. Cookie import stays off. | `8ba962e2bc88c0edf62f0188b6b7897b5dd5422e` |
+| 35 | V2-061 | https://github.com/vitalitychems-dot/TESSERA/pull/239 | The board shows two cards and refuses a repeated first line. | `462cc37f72b945e1e0e565a1e6bf87984753e722` |

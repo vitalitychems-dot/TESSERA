@@ -130,7 +130,7 @@ export async function speak(data: ChatInput) {
 
     if (data.mode === "chat" || data.mode === "learn") {
       const asked = [...data.messages].reverse().find((message) => message.role === "user")?.content ?? "";
-      const open = asked.match(/^open\s+(TESSERA|Gitbook|GitbookAI|vitality)(?:\s+(\S+))?$/i);
+      const open = asked.match(/^open\s+(TESSERA|Gitbook|GitMesh|GitbookAI|vitality)(?:\s+(\S+))?$/i);
       if (open?.[1]) {
         const { openRepoContents } = await import("./github-desk");
         const opened = await openRepoContents(open[1], open[2] ?? "");
