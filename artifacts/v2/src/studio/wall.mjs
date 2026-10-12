@@ -10,6 +10,7 @@ import { createCivic, presentWorld } from "./civic.mjs";
 import { loadCivic, saveCivic } from "./civic-store.mjs";
 import { floorMarkup, studioView } from "./floor.mjs";
 import { acceptWebSocket, liveMessages, textFrame } from "./live.mjs";
+import { applyShip } from "./ship.mjs";
 import { createForeman } from "./task-graph.mjs";
 import { createMonitor } from "./worker-stream.mjs";
 import { buildWorld, readBuildLog } from "./world.mjs";
@@ -28,6 +29,7 @@ export function createStudio() {
   const foreman = createForeman();
   const goals = [];
   return {
+    foreman,
     postGoal(goal) {
       const text = String(goal ?? "").trim();
       if (!text) throw new Error("goal required");
@@ -117,7 +119,24 @@ function renderCivic(civic) {
       return `<article class="neighborhood" data-neighborhood="${escapeHtml(hood.id)}"><h3>${escapeHtml(hood.name)}</h3><p>${escapeHtml(names.join(", "))}</p>${lives}</article>`;
     })
     .join("");
-  return `<section id="vote-panel"><h2>Votes</h2><p id="vote-rule">A change passes with a two-thirds vote. Tessera may veto. Father may override.</p><ul id="proposals">${proposals}</ul><h3>Rules</h3><ul id="rules">${rules}</ul></section><section id="community"><h2>Community</h2>${neighborhoods}</section>`;
+  const shipments = (civic.shipments ?? [])
+    .map((shipment) => {
+      const proposalId = String(shipment.proposalId ?? "");
+      const objectId = String(shipment.objectId ?? "");
+      const taskId = String(shipment.taskId ?? "");
+      const branch = String(shipment.branch ?? "");
+      const status = taskId ? `real task ${taskId}` : String(shipment.status ?? "approved");
+      const tests = shipment.testsPassed === true ? "tests passed" : shipment.testsPassed === false ? "tests pending" : "";
+      const prTitle = String(shipment.prDraft?.title ?? "");
+      const prBlock = prTitle
+        ? `<span class="shipment-pr">${escapeHtml(prTitle)} · ${escapeHtml(branch)} · draft</span>`
+        : branch
+          ? `<span class="shipment-pr">${escapeHtml(branch)} · draft</span>`
+          : "";
+      return `<li class="shipment" data-shipment="${escapeHtml(proposalId)}"><span class="shipment-object">${escapeHtml(objectId)}</span> <span class="shipment-status">${escapeHtml(status)}</span> <span class="shipment-tests">${escapeHtml(tests)}</span> ${prBlock} <button type="button" class="shipment-retry" data-retry="${escapeHtml(proposalId)}">Retry</button></li>`;
+    })
+    .join("");
+  return `<section id="vote-panel"><h2>Votes</h2><p id="vote-rule">A change passes with a two-thirds vote. Tessera may veto. Father may override.</p><ul id="proposals">${proposals}</ul><h3>Rules</h3><ul id="rules">${rules}</ul></section><section id="shipments"><h2>Shipped</h2><ul id="shipment-list">${shipments}</ul></section><section id="community"><h2>Community</h2>${neighborhoods}</section>`;
 }
 
 export function renderStudio(state, options = {}) {
@@ -154,9 +173,12 @@ export function renderStudio(state, options = {}) {
     .lamp { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #7d9a72; }
     .lamp[data-lamp="busy"] { background: #e0a045; }
     #view-toggle { display: inline-block; margin-top: 12px; color: #6b3e22; }
-    #vote-panel, #community { margin-top: 16px; }
-    #vote-panel h2, #community h2, #vote-panel h3 { font-size: 1.05rem; margin: 0 0 8px; }
-    .proposal, .neighborhood, .rule { background: #fffdf8; border: 1px solid #d9d0c1; padding: 8px; margin: 6px 0; }
+    #vote-panel, #community, #shipments { margin-top: 16px; }
+    #vote-panel h2, #community h2, #shipments h2, #vote-panel h3 { font-size: 1.05rem; margin: 0 0 8px; }
+    .proposal, .neighborhood, .rule, .shipment { background: #fffdf8; border: 1px solid #d9d0c1; padding: 8px; margin: 6px 0; }
+    .shipment-object { font-weight: 700; }
+    .shipment-status, .shipment-tests, .shipment-pr { color: #4a4036; font-size: 0.9rem; }
+    .shipment-retry { border: 1px solid #d9d0c1; background: #f4f0e6; padding: 2px 8px; cursor: pointer; }
     .life, .memory, #vote-rule { margin: 4px 0; color: #4a4036; }
     #stage { min-height: 100vh; background: #d7cbb8; }
     #floor-3d { width: 100%; height: 100vh; display: block; }
@@ -194,6 +216,15 @@ export function renderStudio(state, options = {}) {
         '<article class="desk" data-desk="' + escapeHtml(desk.id) + '"><span class="lamp" data-lamp="' + escapeHtml(desk.lamp) + '"></span><p>' + escapeHtml(desk.id) + '</p></article>'
       ).join("");
     });
+    document.querySelector("#shipment-list")?.addEventListener("click", async (event) => {
+      const button = event.target.closest("[data-retry]");
+      if (!button) return;
+      await fetch("/civic/shipments", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ proposalId: button.dataset.retry }),
+      });
+    });
   </script>
 </body>
 </html>`;
@@ -217,6 +248,33 @@ export function listenStudio(studio = createStudio(), options = {}) {
 
   function persist() {
     if (civicPath) saveCivic(civic.snapshot(), civicPath);
+  }
+
+  const shipRepoDir = options.shipRepoDir ?? null;
+  const shipRunner = options.shipRunner ?? null;
+  const shipForeman = studio.foreman ?? options.foreman ?? null;
+
+  async function materializeShip(proposalId) {
+    if (!shipRepoDir) throw new Error("shipping is not configured");
+    if (!shipForeman) throw new Error("shipping is not configured");
+    const proposal = civic.snapshot().proposals.find((item) => item.id === proposalId);
+    if (!proposal) throw new Error("missing proposal");
+    if (proposal.kind !== "ship") throw new Error("not a ship proposal");
+    if (proposal.status !== "applied") throw new Error("ship is not applied");
+    const existing = civic.snapshot().shipments.find((item) => item.proposalId === proposalId && item.taskId);
+    if (existing) return existing;
+    const worktree = await import("./worktree.mjs");
+    const shipment = applyShip({
+      proposal,
+      foreman: shipForeman,
+      repoDir: shipRepoDir,
+      tools: {
+        createTaskWorktree: worktree.createTaskWorktree,
+        git: worktree.git,
+        ...(shipRunner ? { runTestFile: shipRunner } : {}),
+      },
+    });
+    return civic.recordShipment(shipment);
   }
 
   function world() {
@@ -291,6 +349,27 @@ export function listenStudio(studio = createStudio(), options = {}) {
       res.end(JSON.stringify({ events: monitor.list() }));
       return;
     }
+    if (req.method === "POST" && url.pathname === "/civic/shipments") {
+      let body = {};
+      try {
+        body = JSON.parse((await readBody(req)) || "{}");
+      } catch {
+        res.writeHead(400, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: "bad json" }));
+        return;
+      }
+      try {
+        const recorded = await materializeShip(String(body.proposalId ?? ""));
+        persist();
+        pushLive();
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify(recorded));
+      } catch (error) {
+        res.writeHead(400, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: error.message }));
+      }
+      return;
+    }
     if (req.method === "POST" && url.pathname.startsWith("/civic/")) {
       let body = {};
       try {
@@ -310,6 +389,13 @@ export function listenStudio(studio = createStudio(), options = {}) {
           res.writeHead(404, { "content-type": "application/json" });
           res.end(JSON.stringify({ error: "not found" }));
           return;
+        }
+        if (result?.kind === "ship" && result?.status === "applied") {
+          try {
+            await materializeShip(result.id);
+          } catch {
+            // The floor stays up; the approved placeholder remains and /civic/shipments can retry.
+          }
         }
         persist();
         pushLive();
