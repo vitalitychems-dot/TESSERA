@@ -58,6 +58,7 @@ for (const [label, selector] of [
   ["Suite safety policy", "@workspace/scripts"],
   ["Gitbook MCP", "@workspace/gitbook-mcp"],
   ["TESSERA v2", "@workspace/v2"],
+  ["GitAI", "@workspace/gitai"],
 ]) {
   failures += await runWorkspaceTest(label, selector, { ...isolatedEnv });
 }

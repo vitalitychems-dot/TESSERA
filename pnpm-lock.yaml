@@ -264,6 +264,8 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@25.3.5)(esbuild@0.28.1)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.1)
 
+  artifacts/gitai: {}
+
   artifacts/gitbook-mcp:
     devDependencies:
       '@types/node':

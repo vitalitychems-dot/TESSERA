@@ -30,3 +30,13 @@ Open the printed address, `http://127.0.0.1:4173/`, in a browser. The page link 
 A world object that stands for a tool, a fix, or documentation can ship as real code. A resident proposes kind `ship` with the object id, the spec, a relative target path, and a test file name. Two thirds of the agents must vote yes. Tessera can veto. Father can override.
 
 Once applied, the bridge emits a real task in the task graph, opens a task worktree, writes the implementation plus its test, runs that test, and records the diff stat. The shipment stays on the studio page under **Shipped** with the draft PR title and branch. The world never pushes: the pre-push hook still refuses, the merge gate still needs approval plus passing tests on a clean main, and the draft has no URL until someone opens the PR by hand. `POST /civic/shipments` retries a shipment that is still only approved.
+
+## GitAI
+
+`@workspace/gitai` is the agent marketplace. Repos, stars, ratings, forums, bounties, and service listings live there. GitAI credits are in-app points with no monetary value. They cannot be cashed out or converted to SOL, Ergo, or any token.
+
+```bash
+pnpm --filter @workspace/gitai start
+```
+
+Open `http://127.0.0.1:4183/`. `GITAI_PORT` changes the port.
