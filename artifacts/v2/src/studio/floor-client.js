@@ -5,7 +5,7 @@ scene.background = new THREE.Color(0xd7cbb8);
 scene.fog = new THREE.Fog(0xd7cbb8, 22, 48);
 
 const camera = new THREE.PerspectiveCamera(42, 16 / 9, 0.1, 80);
-camera.position.set(12, 11, 16);
+camera.position.set(16, 15, 22);
 
 const canvas = document.querySelector("#floor-3d");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
@@ -33,7 +33,7 @@ function wood(color) {
   return new THREE.MeshStandardMaterial({ color, roughness: 0.82 });
 }
 
-function namePlate(text) {
+function namePlate(text, sub) {
   const board = document.createElement("canvas");
   board.width = 256;
   board.height = 64;
@@ -43,8 +43,13 @@ function namePlate(text) {
   pen.strokeStyle = "#2a2118";
   pen.strokeRect(2, 2, 252, 60);
   pen.fillStyle = "#2a2118";
-  pen.font = "28px Georgia, serif";
-  pen.fillText(text.slice(0, 16), 14, 42);
+  pen.font = sub ? "24px Georgia, serif" : "28px Georgia, serif";
+  pen.fillText(String(text).slice(0, 16), 14, sub ? 28 : 42);
+  if (sub) {
+    pen.font = "16px Georgia, serif";
+    pen.fillStyle = "#6b3e22";
+    pen.fillText(String(sub).slice(0, 18), 14, 50);
+  }
   const texture = new THREE.CanvasTexture(board);
   texture.colorSpace = THREE.SRGBColorSpace;
   const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.45), new THREE.MeshBasicMaterial({ map: texture }));
@@ -59,6 +64,18 @@ function agentFigure() {
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 12), wood(0xe4c4a4));
   head.position.y = 1.35;
   group.add(coat, head);
+  return group;
+}
+
+function makePlot(plot) {
+  const group = new THREE.Group();
+  group.position.set(plot.x, 0, plot.z);
+  const pad = new THREE.Mesh(
+    new THREE.BoxGeometry(plot.w, 0.05, plot.d),
+    new THREE.MeshStandardMaterial({ color: plot.color, roughness: 1 }),
+  );
+  pad.position.y = 0.02;
+  group.add(pad);
   return group;
 }
 
@@ -84,7 +101,17 @@ function makeOffice(office) {
   agent.userData.homeX = -0.6;
   agent.userData.walking = office.walking;
   walkers.push(agent);
-  group.add(floor, back, side, desk, light, namePlate(office.name), agent);
+  group.add(floor, back, side, desk, light, namePlate(office.name, office.neighborhoodName), agent);
+  if ((office.level ?? 1) >= 2) {
+    const room = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.15, 2.2), wood(0xe7dcc8));
+    room.position.set(2.2, 0.58, 0.8);
+    group.add(room);
+  }
+  if ((office.objects ?? []).includes("shelf")) {
+    const shelf = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, 0.22), wood(0x5c3a22));
+    shelf.position.set(-1.7, 0.5, -1.4);
+    group.add(shelf);
+  }
   office.artifacts.slice(0, 6).forEach((artifact, index) => {
     const book = new THREE.Mesh(
       new THREE.BoxGeometry(0.28, 0.08, 0.2),
@@ -127,6 +154,7 @@ async function refresh() {
   const world = await (await fetch("/world")).json();
   root.clear();
   walkers.length = 0;
+  for (const plot of world.plots ?? []) root.add(makePlot(plot));
   for (const office of world.offices) root.add(makeOffice(office));
   for (const room of world.rooms) root.add(makeRoom(room));
   look();
