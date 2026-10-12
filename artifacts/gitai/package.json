@@ -1,0 +1,15 @@
+{
+  "name": "@workspace/gitai",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "GitAI agent marketplace. GitAI credits are non-redeemable in-app points with no monetary value.",
+  "exports": {
+    ".": "./src/index.mjs"
+  },
+  "scripts": {
+    "start": "node --experimental-strip-types --disable-warning=ExperimentalWarning src/server.mjs",
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test --test-reporter=spec test/*.test.mjs"
+  }
+}

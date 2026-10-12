@@ -15,6 +15,7 @@ Father decided on 2026-10-07 that Tessera will be built using the BHNMC directio
 | Tessera web | `artifacts/tessera` | `http://localhost:3000` | Main platform UI |
 | Tessera API | `artifacts/api-server` | `http://localhost:5000` | Optional; the suite launcher starts it only for a loopback `DATABASE_URL` |
 | UI preview sandbox | `artifacts/mockup-sandbox` | `http://localhost:5173` | Component preview |
+| GitAI | `artifacts/gitai` | `http://127.0.0.1:4183` | Agent marketplace. GitAI credits are non-redeemable points. |
 | 3D studio floor | `artifacts/v2` | `http://127.0.0.1:4173` | `pnpm --filter @workspace/v2 studio`. The 2D wall is a link on that page. |
 
 ## Install and run
