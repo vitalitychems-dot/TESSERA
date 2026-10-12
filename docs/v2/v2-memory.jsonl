@@ -1,0 +1,467 @@
+{"type": "entity", "name": "@modelcontextprotocol/server-memory", "entityType": "tool", "observations": ["Official MCP memory server; JSONL entities/relations/observations", "MEMORY_FILE_PATH points at v2-memory.jsonl"]}
+{"type": "entity", "name": "TESSERA_v2", "entityType": "project", "observations": ["Goal: one all-in-one open-source Tessera combining useful capabilities from ~315 inventory repos", "Base repo: vitalitychems-dot/TESSERA", "License aim: MIT unless reused piece requires otherwise", "Father approved auto-merge with list every 100 actions", "Hard limits: no wallets/payments/1T/vault/deletes/history-rewrites/TESSERA_ENABLE flips/excluded categories"]}
+{"type": "entity", "name": "blendi-remade/agentcraft", "entityType": "tool", "observations": ["MIT; lead+workers in git worktrees; Foreman orchestrator", "Minecraft Fabric studio view + Claude/Codex backends", "Fit: design home for TESSERA v2 agents; clean-room or attributed Foreman patterns", "Non-Minecraft option required: web 2D/3D studio"]}
+{"type": "entity", "name": "cap_api_adapters", "entityType": "capability", "observations": ["category:adapters", "Taught site operations via api-anything + official APIs"]}
+{"type": "entity", "name": "cap_chamber_board_ui", "entityType": "capability", "observations": ["category:ui", "Olive Chamber/Board into TESSERA"]}
+{"type": "entity", "name": "cap_encrypted_mesh_sync", "entityType": "capability", "observations": ["category:offline-mesh", "Ed25519 identity + AES-GCM payloads; LAN discovery"]}
+{"type": "entity", "name": "cap_gitmesh_drops", "entityType": "capability", "observations": ["category:docs", "Public mesh drops APPROVED by owner"]}
+{"type": "entity", "name": "cap_kiwix_hook", "entityType": "capability", "observations": ["category:offline-mesh", "Optional local Kiwix/ZIM read-only"]}
+{"type": "entity", "name": "cap_knowledge_graph_memory", "entityType": "capability", "observations": ["category:knowledge-memory", "Repo/docs/decision/task nodes; MCP memory compatible"]}
+{"type": "entity", "name": "cap_lan_p2p", "entityType": "capability", "observations": ["category:offline-mesh", "WebRTC LAN rooms without public IP"]}
+{"type": "entity", "name": "cap_lead_worker_studio", "entityType": "capability", "observations": ["category:agents-studio", "Lead plans; workers in worktrees; visible desks/status"]}
+{"type": "entity", "name": "cap_offline_file_mesh", "entityType": "capability", "observations": ["category:offline-mesh", "Indexed Gitbook pages searchable offline"]}
+{"type": "entity", "name": "cap_offline_queue", "entityType": "capability", "observations": ["category:offline-mesh", "Queue actions while offline; replay once"]}
+{"type": "entity", "name": "cap_sandbox_compute", "entityType": "capability", "observations": ["category:compute-sandbox", "Per-desk container/worker; CPU/mem limits"]}
+{"type": "entity", "name": "cap_service_worker_shell", "entityType": "capability", "observations": ["category:offline-mesh", "PWA shell loads without network"]}
+{"type": "entity", "name": "cap_shepherd_egress", "entityType": "capability", "observations": ["category:security-protocols", "Allowlisted fetch + audit JSONL"]}
+{"type": "entity", "name": "cap_token_meter_ab", "entityType": "capability", "observations": ["category:token-efficiency", "Baseline tokens/task + A/B method lab"]}
+{"type": "entity", "name": "cap_usb_sneakernet", "entityType": "capability", "observations": ["category:offline-mesh", "git bundle USB carry"]}
+{"type": "entity", "name": "decision_agentcraft_home", "entityType": "decision", "observations": ["AgentCraft model is the home where v2 agents live and build"]}
+{"type": "entity", "name": "decision_agents_mesh_toggle", "entityType": "decision", "observations": ["Agents may toggle mesh on/off when they need it; owner one-time allow + hard off"]}
+{"type": "entity", "name": "decision_auto_approve_100", "entityType": "decision", "observations": ["Father: auto-approve builds; report every 100 actions; undo by number"]}
+{"type": "entity", "name": "decision_compute_token", "entityType": "decision", "observations": ["Add compute+token efficiency module with sandboxes, KG memory, token lab"]}
+{"type": "entity", "name": "decision_full_gitbook_into_plan", "entityType": "decision", "observations": ["Plan must reflect full Gitbook mesh/merge/intake/history/review + all REA"]}
+{"type": "entity", "name": "decision_full_rea", "entityType": "decision", "observations": ["Every accessible input through full REA; feed into graph; report coverage %"]}
+{"type": "entity", "name": "decision_gitmesh_rename", "entityType": "decision", "observations": ["GitbookAI renamed to GitMesh"]}
+{"type": "entity", "name": "decision_key_rotate_later", "entityType": "decision", "observations": ["Father will rotate leaked API/wallet keys later"]}
+{"type": "entity", "name": "decision_memory_mcp_flowsint", "entityType": "decision", "observations": ["Use MCP memory JSONL + Flowsint as design reference"]}
+{"type": "entity", "name": "decision_scan_tessera_gitbook_only", "entityType": "decision", "observations": ["Father narrowed live scan to TESSERA+Gitbook on vitalitychems-dot; later v2 expands via public matches"]}
+{"type": "entity", "name": "goodnight000/api-anything", "entityType": "tool", "observations": ["MIT; local website-to-operation recorder/replayer", "MCP: list_sites, list_operations, call_operation, login", "Fit: adapter layer for public no-login sites after Security review", "Risk: cookie import / ToS; not a replacement for sanctioned APIs"]}
+{"type": "entity", "name": "inventory_summary", "entityType": "source", "observations": ["feature_map_rows:318", "include_y:47", "include_n:224", "excluded:47", "accessible:9", "categories:{'docs': 17, 'misc': 101, 'excluded': 42, 'browser-fingerprint': 3, 'tessera-core': 89, 'commerce': 2, 'offline-mesh': 2, 'ui': 9, 'security-protocols': 9, 'agents-studio': 5, 'adapters': 13, 'knowledge-memory': 2, 'web-fetch': 5, 'compute-sandbox': 1, 'learning': 5, 'testing': 3, 'token-efficiency': 3, 'search-index': 2, 'llm-runtime': 3, 'comms': 1, 'auth': 1}"]}
+{"type": "entity", "name": "live::ask-memory.ts", "entityType": "code", "observations": ["path:/workspace/rea-batch/b2-TESSERA/preview/src/lib/tessera/ask-memory.ts", "reuse candidate for knowledge/token modules"]}
+{"type": "entity", "name": "live::learning.ts", "entityType": "code", "observations": ["path:/workspace/rea-batch/b2-TESSERA/preview/src/lib/tessera/learning.ts", "reuse candidate for knowledge/token modules"]}
+{"type": "entity", "name": "live::local-learn.ts", "entityType": "code", "observations": ["path:/workspace/rea-batch/b2-TESSERA/preview/src/lib/tessera/local-learn.ts", "reuse candidate for knowledge/token modules"]}
+{"type": "entity", "name": "live::memory-web.ts", "entityType": "code", "observations": ["path:/workspace/rea-batch/b2-TESSERA/preview/src/lib/tessera/memory-web.ts", "reuse candidate for knowledge/token modules"]}
+{"type": "entity", "name": "live::mesh-node", "entityType": "code", "observations": ["path:/workspace/rea-batch/b2-TESSERA/preview/src/lib/mesh-node", "present in current TESSERA preview"]}
+{"type": "entity", "name": "live::offline", "entityType": "code", "observations": ["path:/workspace/rea-batch/b2-TESSERA/preview/src/lib/offline", "present in current TESSERA preview"]}
+{"type": "entity", "name": "live::secure-mesh", "entityType": "code", "observations": ["path:/workspace/rea-batch/b2-TESSERA/preview/src/lib/secure-mesh", "present in current TESSERA preview"]}
+{"type": "entity", "name": "live::tessera", "entityType": "code", "observations": ["path:/workspace/rea-batch/b2-TESSERA/preview/src/lib/tessera", "present in current TESSERA preview"]}
+{"type": "entity", "name": "live::token-graph.ts", "entityType": "code", "observations": ["path:/workspace/rea-batch/b2-TESSERA/preview/src/lib/tessera/token-graph.ts", "reuse candidate for knowledge/token modules"]}
+{"type": "entity", "name": "module_adapters", "entityType": "module", "observations": ["api-anything style adapters + sanctioned MCP connectors"]}
+{"type": "entity", "name": "module_agents_studio", "entityType": "module", "observations": ["AgentCraft-model studio: Tessera lead, worker desks, git worktrees, web 2D/3D view"]}
+{"type": "entity", "name": "module_compute_sandbox", "entityType": "module", "observations": ["Per-desk sandboxed compute with resource limits; no network unless allowed"]}
+{"type": "entity", "name": "module_docs_gitmesh", "entityType": "module", "observations": ["Gitbook + GitMesh documentation and drops"]}
+{"type": "entity", "name": "module_exclusion_hyb011", "entityType": "module", "observations": ["HYB-011 exclusion: wallets, payments, trading, vault, 1T"]}
+{"type": "entity", "name": "module_knowledge_graph", "entityType": "module", "observations": ["Shared memory KG: repo/docs/decisions/tasks; query instead of re-read"]}
+{"type": "entity", "name": "module_offline_mesh", "entityType": "module", "observations": ["O1–O11 offline internet + encrypted mesh + opt-in nodes"]}
+{"type": "entity", "name": "module_security_shepherd", "entityType": "module", "observations": ["Shepherd outbound, sovereign fetch guard, Ed25519 mesh keys, AES-GCM envelopes"]}
+{"type": "entity", "name": "module_token_lab", "entityType": "module", "observations": ["Token-reduction lab with baseline meter and A/B tests"]}
+{"type": "entity", "name": "module_ui_chamber", "entityType": "module", "observations": ["Chamber/Board screens from olive; MeshStatusBadge"]}
+{"type": "entity", "name": "morluto/rea-agents", "entityType": "tool", "observations": ["MIT; rea-agents@6.4.0 via npx for analyze-javascript-application", "Produces evidence JSON with statistics.parsed_javascript_files"]}
+{"type": "entity", "name": "rea::Gitbook", "entityType": "rea_run", "observations": ["path:/workspace/rea-batch/b2-out/Gitbook.json", "relevant_files:1094", "parsed_javascript_files:952", "coverage_pct:87.0", "findings:14386", "input:/workspace/rea-batch/b2-Gitbook"]}
+{"type": "entity", "name": "rea::GitbookAI", "entityType": "rea_run", "observations": ["path:/workspace/rea-batch/b2-out/GitbookAI.json", "relevant_files:9", "parsed_javascript_files:7", "coverage_pct:77.8", "findings:6", "input:/workspace/rea-batch/b2-GitbookAI"]}
+{"type": "entity", "name": "rea::T44", "entityType": "rea_run", "observations": ["path:/workspace/rea-batch/b2-out/T44.json", "relevant_files:52", "parsed_javascript_files:52", "coverage_pct:100.0", "findings:1777", "input:/workspace/rea-batch/b2-TESSERA/archives/source-variants/T44"]}
+{"type": "entity", "name": "rea::TESSERA", "entityType": "rea_run", "observations": ["path:/workspace/rea-batch/b2-out/TESSERA.json", "relevant_files:1405", "parsed_javascript_files:1341", "coverage_pct:95.4", "findings:9327", "input:/workspace/rea-batch/b2-TESSERA"]}
+{"type": "entity", "name": "rea::XXX", "entityType": "rea_run", "observations": ["path:/workspace/rea-batch/b2-out/XXX.json", "relevant_files:878", "parsed_javascript_files:786", "coverage_pct:89.5", "findings:13294", "input:/workspace/rea-batch/b2-Gitbook/archive/moved/collink1007-XXX"]}
+{"type": "entity", "name": "rea::Zz", "entityType": "rea_run", "observations": ["path:/workspace/rea-batch/b2-out/Zz.json", "relevant_files:137", "parsed_javascript_files:115", "coverage_pct:83.9", "findings:1336", "input:/workspace/rea-batch/b2-Gitbook/archive/moved/Zz"]}
+{"type": "entity", "name": "rea::b3-TheTesseractAI_18", "entityType": "rea_run", "observations": ["path:/workspace/rea-batch/b2-out/b3-TheTesseractAI_18.json", "relevant_files:2668", "parsed_javascript_files:1605", "coverage_pct:60.2", "findings:36062", "input:/workspace/rea-batch/b3-TheTesseractAI_18"]}
+{"type": "entity", "name": "rea::b3-collink1007_XXX", "entityType": "rea_run", "observations": ["path:/workspace/rea-batch/b2-out/b3-collink1007_XXX.json", "relevant_files:1936", "parsed_javascript_files:1740", "coverage_pct:89.9", "findings:17615", "input:/workspace/rea-batch/b3-collink1007_XXX"]}
+{"type": "entity", "name": "rea::b3-collink1007_amber-flame-tiger-sand", "entityType": "rea_run", "observations": ["path:/workspace/rea-batch/b2-out/b3-collink1007_amber-flame-tiger-sand.json", "error:Analysis was cancelled. Start it again when ready.", "coverage:0%"]}
+{"type": "entity", "name": "rea::olive", "entityType": "rea_run", "observations": ["path:/workspace/rea-batch/b2-out/olive.json", "relevant_files:65", "parsed_javascript_files:48", "coverage_pct:73.8", "findings:656", "input:/workspace/rea-batch/b2-Gitbook/archive/moved/olive-giant-ever-glade"]}
+{"type": "entity", "name": "rea::vitality", "entityType": "rea_run", "observations": ["path:/workspace/rea-batch/b2-out/vitality.json", "relevant_files:716", "parsed_javascript_files:692", "coverage_pct:96.6", "findings:4014", "input:/workspace/rea-batch/b2-vitality"]}
+{"type": "entity", "name": "reconurge/flowsint", "entityType": "tool", "observations": ["Apache-2.0; open-source OSINT graph investigation platform", "Entities + enrichers + visual graph; local Docker", "Use as DESIGN REFERENCE only for knowledge-graph UX", "Do not run people-OSINT; only own public repo metadata if used"]}
+{"type": "entity", "name": "repo::blendi-remade/agentcraft", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:agents-studio", "Lead+workers in git worktrees; Minecraft studio view; Foreman orchestrator", "MIT; reuse Foreman patterns clean-room or with attribution; web 2D/3D studio instead of Minecraft"]}
+{"type": "entity", "name": "repo::collin-keane/Tessera", "entityType": "repository", "observations": ["accessible:n", "license:Apache-2.0", "include:y", "category:ui", "A dashboard front-end for graphite.  ", "public match under Apache-2.0; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::collink1007/Vitalitychems", "entityType": "repository", "observations": ["accessible:n", "license:UNKNOWN", "include:excluded", "category:excluded", "mentioned in logs as collink1007/Vitalitychems; no description available", "excluded: vitality store / commerce"]}
+{"type": "entity", "name": "repo::collink1007/XXX", "entityType": "repository", "observations": ["accessible:y", "license:MIT", "include:y", "category:offline-mesh", "Historical XXX tess client/server (lattice-mesh; SW; offline)", "MIT in package.json; reuse offline pieces only; exclude wallet/income routes"]}
+{"type": "entity", "name": "repo::collink1007/amber-flame-tiger-sand", "entityType": "repository", "observations": ["accessible:y", "license:NONE", "include:n", "category:ui", "Grok app template with TESSERA seed docs", "license NONE; idea-only; already partly in Gitbook archive"]}
+{"type": "entity", "name": "repo::collink1007/fleet-moss-monarch-rapid", "entityType": "repository", "observations": ["accessible:y", "license:NONE", "include:excluded", "category:commerce", "Vitality storefront migrations", "excluded: vitality store"]}
+{"type": "entity", "name": "repo::collink1007/z", "entityType": "repository", "observations": ["accessible:y", "license:NONE", "include:n", "category:tessera-core", "Historical Zz / tesseract archive checkout", "idea-only / archive; license NONE; wallet/secret paths stay out"]}
+{"type": "entity", "name": "repo::goodnight000/api-anything", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:adapters", "Local website-to-operation recorder/replayer; MCP call_operation", "MIT; adapter layer for public no-login sites after Security review"]}
+{"type": "entity", "name": "repo::nicholasgasior/2captcha-python", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:excluded", "category:excluded", "Python 3 package for easy integration with the API of 2captcha captcha solving service to bypass recaptcha; сloudflare turnstile; funcaptcha; geetest and solve ", "excluded: captcha solving"]}
+{"type": "entity", "name": "repo::nicholasgasior/CreepJS", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:excluded", "category:browser-fingerprint", "Creepy device and browser fingerprinting", "excluded: fingerprinting dual-use (Security hold)"]}
+{"type": "entity", "name": "repo::nicholasgasior/FingerprintJS", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:excluded", "category:browser-fingerprint", "The most advanced free and open-source browser fingerprinting library", "excluded: fingerprinting dual-use (Security hold)"]}
+{"type": "entity", "name": "repo::nicholasgasior/GoLogin", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:excluded", "category:excluded", "Go login handlers for authentication providers (OAuth1; OAuth2)", "excluded: antidetect/stealth browser"]}
+{"type": "entity", "name": "repo::nicholasgasior/Multilogin", "entityType": "repository", "observations": ["accessible:n", "license:GPL-3.0", "include:excluded", "category:excluded", "外置共存", "excluded: antidetect/stealth browser"]}
+{"type": "entity", "name": "repo::nicholasgasior/affiliate-tracking", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:excluded", "category:excluded", "Databowl Affiliate Tracking Library", "excluded: vitality store / commerce"]}
+{"type": "entity", "name": "repo::nicholasgasior/anticaptchaofficial", "entityType": "repository", "observations": ["accessible:n", "license:NONE", "include:excluded", "category:excluded", "UNKNOWN", "excluded: captcha solving"]}
+{"type": "entity", "name": "repo::nicholasgasior/antidetect", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:excluded", "category:excluded", "A console application with a simple user interface for managing and working with browser profiles with anti-detection protection.", "excluded: antidetect/stealth browser"]}
+{"type": "entity", "name": "repo::nicholasgasior/arbitrage-bot", "entityType": "repository", "observations": ["accessible:n", "license:NONE", "include:excluded", "category:excluded", "A bot that makes profit of the best crypto Arbitrage opportunities on the market", "excluded: MEV/DeFi/trading bots"]}
+{"type": "entity", "name": "repo::nicholasgasior/audio-captcha-solver", "entityType": "repository", "observations": ["accessible:n", "license:NONE", "include:excluded", "category:excluded", "This project implements an Audio Captcha Recognition system using Wav2Vec2 (speech-to-text) and CRNN (CNN + RNN) models. The goal is to accurately decode distor", "excluded: captcha solving"]}
+{"type": "entity", "name": "repo::nicholasgasior/blog-generator", "entityType": "repository", "observations": ["accessible:n", "license:Apache-2.0", "include:y", "category:misc", "Mirror for https://git.sr.ht/~zupzup/blog-generator. static blog generator for my blog at https://zupzup.org/", "public match under Apache-2.0; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/browser-fingerprinting", "entityType": "repository", "observations": ["accessible:n", "license:NONE", "include:excluded", "category:browser-fingerprint", "Analysis of Bot Protection systems with available countermeasures 🚿. How to defeat anti-bot system 👻 and get around browser fingerprinting scripts 🕵️‍♂️ when sc", "excluded: fingerprinting dual-use (Security hold)"]}
+{"type": "entity", "name": "repo::nicholasgasior/capsolver-python", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:excluded", "category:excluded", "Python 3 package for easy integration with the API of capsolver captcha solving service to solver recaptcha; geetest and solve any other captchas. Capsolver.", "excluded: captcha solving"]}
+{"type": "entity", "name": "repo::nicholasgasior/captcha-harvester", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:excluded", "category:excluded", "Possible plans for a collaborative harvesting method ", "excluded: captcha solving"]}
+{"type": "entity", "name": "repo::nicholasgasior/censys-python", "entityType": "repository", "observations": ["accessible:n", "license:Apache-2.0", "include:y", "category:adapters", "An easy-to-use and lightweight API wrapper for Censys APIs.", "public match under Apache-2.0; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/cf-workers", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:compute-sandbox", "Collection of Cloudflare Workers", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/cfscrape", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:excluded", "category:excluded", "A simple PHP module to bypass Cloudflare's anti-bot page (also known as \"I'm Under Attack Mode\"; or IUAM)", "excluded: Cloudflare/bot-detection bypass"]}
+{"type": "entity", "name": "repo::nicholasgasior/checkout-optimizer", "entityType": "repository", "observations": ["accessible:n", "license:NONE", "include:excluded", "category:excluded", "Free open-source checkout-optimizer", "excluded: payments"]}
+{"type": "entity", "name": "repo::nicholasgasior/chromedp", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:security-protocols", "A faster; simpler way to drive browsers supporting the Chrome DevTools Protocol.", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/cloudflare-bypass", "entityType": "repository", "observations": ["accessible:n", "license:Apache-2.0", "include:excluded", "category:excluded", "Bypass Coudflare bot protection using Cloudflare Workers", "excluded: Cloudflare/bot-detection bypass"]}
+{"type": "entity", "name": "repo::nicholasgasior/cloudflare-scrape", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:excluded", "category:excluded", "A Python module to bypass Cloudflare's anti-bot page.", "excluded: Cloudflare/bot-detection bypass"]}
+{"type": "entity", "name": "repo::nicholasgasior/conversion-optimizer", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:misc", "UNKNOWN", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/facebook-ads-api", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:adapters", "Python client for the Facebook Ads API", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/finnhub-python", "entityType": "repository", "observations": ["accessible:n", "license:Apache-2.0", "include:y", "category:adapters", "Finnhub Python API Client. Finnhub API provides institutional-grade financial data to investors; fintech startups and investment firms. We support real-time sto", "public match under Apache-2.0; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/flaresolverr", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:excluded", "category:excluded", "Proxy server to bypass Cloudflare protection", "excluded: Cloudflare/bot-detection bypass"]}
+{"type": "entity", "name": "repo::nicholasgasior/funcaptcha-solver", "entityType": "repository", "observations": ["accessible:n", "license:NONE", "include:excluded", "category:excluded", "UNKNOWN", "excluded: captcha solving"]}
+{"type": "entity", "name": "repo::nicholasgasior/google-ads-api", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:adapters", "Google Ads API client library for Node.js", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/goquery", "entityType": "repository", "observations": ["accessible:n", "license:BSD-3-Clause", "include:y", "category:misc", "A little like that j-thing; only in Go.", "public match under BSD-3-Clause; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/grpcurl", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:learning", "Like cURL; but for gRPC: Command-line tool for interacting with gRPC servers", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/gumroad-api", "entityType": "repository", "observations": ["accessible:n", "license:Apache-2.0", "include:excluded", "category:excluded", "Node client for the Gumroad API", "excluded: payments"]}
+{"type": "entity", "name": "repo::nicholasgasior/hashcat", "entityType": "repository", "observations": ["accessible:n", "license:NONE", "include:excluded", "category:excluded", "World's fastest and most advanced password recovery utility", "excluded: credential cracking"]}
+{"type": "entity", "name": "repo::nicholasgasior/hcaptcha-solver", "entityType": "repository", "observations": ["accessible:n", "license:NONE", "include:excluded", "category:excluded", "A library to solve hCaptcha challenges", "excluded: captcha solving"]}
+{"type": "entity", "name": "repo::nicholasgasior/headless-chrome-crawler", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:web-fetch", "Distributed crawler powered by Headless Chrome", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/httpie", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:adapters", "A Node.js HTTP client as easy as pie! 🥧", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/image-captcha-solver", "entityType": "repository", "observations": ["accessible:n", "license:UNKNOWN", "include:excluded", "category:excluded", "mentioned in logs as nicholasgasior/image-captcha-solver; no description available", "excluded: captcha solving"]}
+{"type": "entity", "name": "repo::nicholasgasior/lattigo", "entityType": "repository", "observations": ["accessible:n", "license:Apache-2.0", "include:y", "category:security-protocols", "A library for lattice-based multiparty homomorphic encryption in Go", "public match under Apache-2.0; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/lemon-squeezy-sdk", "entityType": "repository", "observations": ["accessible:n", "license:UNKNOWN", "include:excluded", "category:excluded", "mentioned in logs as nicholasgasior/lemon-squeezy-sdk; no description available", "excluded: payments"]}
+{"type": "entity", "name": "repo::nicholasgasior/liquidity-mining", "entityType": "repository", "observations": ["accessible:n", "license:UNKNOWN", "include:excluded", "category:excluded", "mentioned in logs as nicholasgasior/liquidity-mining; no description available", "excluded: mining"]}
+{"type": "entity", "name": "repo::nicholasgasior/mailgun-js", "entityType": "repository", "observations": ["accessible:n", "license:Apache-2.0", "include:y", "category:misc", "UNKNOWN", "public match under Apache-2.0; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/mechanize", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:misc", "Mechanize is a ruby library that makes automated web interaction easy.", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/mercury-parser", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:security-protocols", "Extract meaningful content from the chaos of a web page", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/mev-templates", "entityType": "repository", "observations": ["accessible:n", "license:NONE", "include:excluded", "category:excluded", "MEV bot templates written in Python/Javascript/Rust. All implementing DEX flashloan arbitrage", "excluded: MEV/DeFi/trading bots"]}
+{"type": "entity", "name": "repo::nicholasgasior/nft-minter", "entityType": "repository", "observations": ["accessible:n", "license:UNKNOWN", "include:excluded", "category:excluded", "mentioned in logs as nicholasgasior/nft-minter; no description available", "excluded: NFT"]}
+{"type": "entity", "name": "repo::nicholasgasior/openssl", "entityType": "repository", "observations": ["accessible:n", "license:Apache-2.0", "include:y", "category:misc", "General purpose TLS and crypto library", "public match under Apache-2.0; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/paddle-sdk", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:excluded", "category:excluded", "Paddle.com Node.js SDK", "excluded: payments"]}
+{"type": "entity", "name": "repo::nicholasgasior/plaid-node", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:excluded", "category:excluded", "Node bindings for Plaid", "excluded: payments"]}
+{"type": "entity", "name": "repo::nicholasgasior/playwright-cf-bypass", "entityType": "repository", "observations": ["accessible:n", "license:UNKNOWN", "include:excluded", "category:excluded", "mentioned in logs as nicholasgasior/playwright-cf-bypass; no description available", "excluded: Cloudflare/bot-detection bypass"]}
+{"type": "entity", "name": "repo::nicholasgasior/playwright-python", "entityType": "repository", "observations": ["accessible:n", "license:Apache-2.0", "include:y", "category:testing", "Python version of the Playwright testing and automation library.", "public match under Apache-2.0; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/playwright-stealth", "entityType": "repository", "observations": ["accessible:n", "license:NONE", "include:excluded", "category:excluded", "UNKNOWN", "excluded: antidetect/stealth browser"]}
+{"type": "entity", "name": "repo::nicholasgasior/postman-collection", "entityType": "repository", "observations": ["accessible:n", "license:Apache-2.0", "include:y", "category:misc", "Javascript module that allows a developer to work with Postman Collections", "public match under Apache-2.0; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/press-release-writer", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:misc", "企业新闻稿撰写助手 - Claude Code Skill", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/puppeteer-cf-bypass", "entityType": "repository", "observations": ["accessible:n", "license:UNKNOWN", "include:excluded", "category:excluded", "mentioned in logs as nicholasgasior/puppeteer-cf-bypass; no description available", "excluded: Cloudflare/bot-detection bypass"]}
+{"type": "entity", "name": "repo::nicholasgasior/puppeteer-extra", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:web-fetch", "💯  Teach puppeteer new tricks through plugins.", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/puppeteer-extra-plugin-stealth", "entityType": "repository", "observations": ["accessible:n", "license:NONE", "include:excluded", "category:excluded", "UNKNOWN", "excluded: antidetect/stealth browser"]}
+{"type": "entity", "name": "repo::nicholasgasior/quandl-python", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:misc", "UNKNOWN", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/readability", "entityType": "repository", "observations": ["accessible:n", "license:Apache-2.0", "include:y", "category:misc", "A standalone version of the readability lib", "public match under Apache-2.0; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/recaptcha-solver", "entityType": "repository", "observations": ["accessible:n", "license:UNKNOWN", "include:excluded", "category:excluded", "mentioned in logs as nicholasgasior/recaptcha-solver; no description available", "excluded: captcha solving"]}
+{"type": "entity", "name": "repo::nicholasgasior/requests-html", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:misc", "Pythonic HTML Parsing for Humans™", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/sandwich-bot", "entityType": "repository", "observations": ["accessible:n", "license:UNKNOWN", "include:excluded", "category:excluded", "mentioned in logs as nicholasgasior/sandwich-bot; no description available", "excluded: MEV/DeFi/trading bots"]}
+{"type": "entity", "name": "repo::nicholasgasior/scraperapi-sdk", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:adapters", "SDK for web scrapping service ScraperAPI", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/scrapy-redis", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:misc", "Redis-based components for Scrapy.", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/scrapy-splash", "entityType": "repository", "observations": ["accessible:n", "license:BSD-3-Clause", "include:y", "category:misc", "Scrapy+Splash for JavaScript integration", "public match under BSD-3-Clause; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/selenium-cf-bypass", "entityType": "repository", "observations": ["accessible:n", "license:UNKNOWN", "include:excluded", "category:excluded", "mentioned in logs as nicholasgasior/selenium-cf-bypass; no description available", "excluded: Cloudflare/bot-detection bypass"]}
+{"type": "entity", "name": "repo::nicholasgasior/selenium-wire", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:misc", "Extends Selenium's Python bindings to give you the ability to inspect requests made by the browser.", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/sendgrid-nodejs", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:misc", "The Official Twilio SendGrid Led; Community Driven Node.js API Library", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/seo-analyzer", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:misc", "The library for analyze a HTML file to show all of the SEO defects", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/shipping-calculator", "entityType": "repository", "observations": ["accessible:n", "license:NONE", "include:excluded", "category:excluded", "To use in Shopify to add a shipping rates calculator to the cart page. Requires jQuery.", "excluded: payments"]}
+{"type": "entity", "name": "repo::nicholasgasior/sitemap-generator", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:misc", "Easily create XML sitemaps for your website.", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/sniper-bot", "entityType": "repository", "observations": ["accessible:n", "license:UNKNOWN", "include:excluded", "category:excluded", "mentioned in logs as nicholasgasior/sniper-bot; no description available", "excluded: MEV/DeFi/trading bots"]}
+{"type": "entity", "name": "repo::nicholasgasior/story-writer", "entityType": "repository", "observations": ["accessible:n", "license:BSD-3-Clause", "include:y", "category:token-efficiency", "An AI-based story writer and Python library which uses OpenAI's chatGPT and Dall-E to generate PDFs with a story and a picture from a prompt and writes them int", "public match under BSD-3-Clause; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/tiingo-python", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:adapters", "Python client for interacting with the Tiingo Financial Data API (stock ticker and news data)", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/tink", "entityType": "repository", "observations": ["accessible:n", "license:Apache-2.0", "include:y", "category:security-protocols", "Tink is a multi-language; cross-platform; open source library that provides cryptographic APIs that are secure; easy to use correctly; and hard(er) to misuse.", "public match under Apache-2.0; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/token-creator", "entityType": "repository", "observations": ["accessible:n", "license:Apache-2.0", "include:y", "category:token-efficiency", "An example Repository to showcase creating tokens on Solana and attaching Metadata to them", "public match under Apache-2.0; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/trafilatura", "entityType": "repository", "observations": ["accessible:n", "license:Apache-2.0", "include:y", "category:misc", "Python & Command-line tool to gather text and metadata on the Web: Crawling; scraping; extraction; output as CSV; JSON; HTML; MD; TXT; XML", "public match under Apache-2.0; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/undetected-chromedriver", "entityType": "repository", "observations": ["accessible:n", "license:UNKNOWN", "include:excluded", "category:excluded", "mentioned in logs as nicholasgasior/undetected-chromedriver; no description available", "excluded: antidetect/stealth browser"]}
+{"type": "entity", "name": "repo::nicholasgasior/wireguard-go", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:misc", "Mirror only. Official repository is at https://git.zx2c4.com/wireguard-go", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::nicholasgasior/yahoo-finance-api", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:y", "category:adapters", "PHP client for Yahoo Finance API 📈", "public match under MIT; prefer dependency or clean attribution"]}
+{"type": "entity", "name": "repo::reconurge/flowsint", "entityType": "repository", "observations": ["accessible:n", "license:Apache-2.0", "include:y", "category:knowledge-memory", "Open-source OSINT graph investigation platform (enrichers + visual graph); design reference only; no people-OSINT", "Apache-2.0; design reference for entity/relation graph UX; do not run enrichers on people"]}
+{"type": "entity", "name": "repo::sovereign-core/mining", "entityType": "repository", "observations": ["accessible:n", "license:MIT", "include:excluded", "category:excluded", "Business Intelligence (BI) in Python; OLAP", "excluded: mining"]}
+{"type": "entity", "name": "repo::sovereign-core/tessera-payment-processing", "entityType": "repository", "observations": ["accessible:n", "license:UNKNOWN", "include:excluded", "category:excluded", "mentioned in logs as sovereign-core/tessera-payment-processing; no description available", "excluded: payments"]}
+{"type": "entity", "name": "repo::thetesseractai/18", "entityType": "repository", "observations": ["accessible:y", "license:MIT", "include:y", "category:tessera-core", "Tessera Sovereign System v18 multi-agent consolidation", "MIT package; prior TESSERA lineage; secrets in .replit stay out"]}
+{"type": "entity", "name": "repo::vitalitychems-dot/Gitbook", "entityType": "repository", "observations": ["accessible:y", "license:NONE", "include:y", "category:docs", "Tessera docs; intake; review; agent collaboration ledger", "docs home; idea+content reusable; confirm LICENSE file"]}
+{"type": "entity", "name": "repo::vitalitychems-dot/GitbookAI", "entityType": "repository", "observations": ["accessible:y", "license:NONE", "include:y", "category:offline-mesh", "Public git-carried mesh room (renamed GitMesh)", "mesh drops; renamed to GitMesh"]}
+{"type": "entity", "name": "repo::vitalitychems-dot/TESSERA", "entityType": "repository", "observations": ["accessible:y", "license:NONE", "include:y", "category:tessera-core", "Unified Tessera monorepo: web/API; preview; mesh; agents", "current v2 base; package.json says MIT; GitHub license field empty"]}
+{"type": "entity", "name": "repo::vitalitychems-dot/tessera-coordination", "entityType": "repository", "observations": ["accessible:n", "license:UNKNOWN", "include:excluded", "category:excluded", "mentioned in logs as vitalitychems-dot/tessera-coordination; no description available", "excluded: vitality store / commerce"]}
+{"type": "entity", "name": "repo::vitalitychems-dot/tessera-unified", "entityType": "repository", "observations": ["accessible:n", "license:UNKNOWN", "include:excluded", "category:excluded", "mentioned in logs as vitalitychems-dot/tessera-unified; no description available", "excluded: vitality store / commerce"]}
+{"type": "entity", "name": "repo::vitalitychems-dot/vitality", "entityType": "repository", "observations": ["accessible:y", "license:NONE", "include:excluded", "category:commerce", "Vitality Supply store + archives", "excluded: vitality store"]}
+{"type": "entity", "name": "repo::vitalitychems-dot/z", "entityType": "repository", "observations": ["accessible:n", "license:UNKNOWN", "include:excluded", "category:excluded", "mentioned in logs as vitalitychems-dot/z; no description available", "excluded: vitality store / commerce"]}
+{"type": "entity", "name": "risk_api_anything_cookies", "entityType": "risk", "observations": ["api-anything can import signed-in browser cookies — Security review required"]}
+{"type": "entity", "name": "risk_hyb011_routes", "entityType": "risk", "observations": ["Archived XXX wallet/income/arbitrage routes must never deploy with real keys"]}
+{"type": "entity", "name": "risk_leaked_replit_keys", "entityType": "risk", "observations": ["Apparent real keys in TheTesseractAI_18 and Tesseracxt9 .replit; rotate; no values in graph"]}
+{"type": "entity", "name": "risk_minecraft_dep", "entityType": "risk", "observations": ["AgentCraft default view needs paid Minecraft; use web studio fallback"]}
+{"type": "entity", "name": "risk_natal_vault_tracked", "entityType": "risk", "observations": ["Gitbook archive natal-vault.json tracked; history rewrite needs Father"]}
+{"type": "entity", "name": "risk_unreachable_repos", "entityType": "risk", "observations": ["~300 inventory names 404 to vitalitychems-dot token"]}
+{"type": "entity", "name": "source_CODEBASE_MEMORY_MCP", "entityType": "source", "observations": ["path: Gitbook mesh/CODEBASE-MEMORY-MCP.md", "existing memory MCP notes"]}
+{"type": "entity", "name": "source_CONSOLIDATION_MAP", "entityType": "source", "observations": ["path: Gitbook merge/CONSOLIDATION-MAP-2026-10-12.md", "four-repo map"]}
+{"type": "entity", "name": "source_FUNCTIONAL_MERGE", "entityType": "source", "observations": ["path: Gitbook merge/FUNCTIONAL-MERGE-MATRIX.md", "merge decisions"]}
+{"type": "entity", "name": "source_HANDOFF", "entityType": "source", "observations": ["path: Gitbook mesh/HANDOFF.md", "lane handoff rules"]}
+{"type": "entity", "name": "source_HYB011", "entityType": "source", "observations": ["path: Gitbook merge/HYB-011-EXCLUSION-MANIFEST.md", "exclusion list"]}
+{"type": "entity", "name": "source_INTAKE_LOG", "entityType": "source", "observations": ["path: Gitbook intake/log.md", "GB package ledger"]}
+{"type": "entity", "name": "source_NESTED_REPO_MAP", "entityType": "source", "observations": ["path: /workspace/build-plan-2026-10-12/NESTED-REPO-MAP.md", "21 archive basenames"]}
+{"type": "entity", "name": "source_OFFLINE_GITBOOK", "entityType": "source", "observations": ["path: Gitbook mesh/offline-internet.md", "offline policy page"]}
+{"type": "entity", "name": "source_OFFLINE_INTERNET", "entityType": "source", "observations": ["path: /workspace/build-plan-2026-10-12/OFFLINE-INTERNET.md", "O1–O9 proposals"]}
+{"type": "entity", "name": "source_REA_RUN_LOG", "entityType": "source", "observations": ["path: /workspace/build-plan-2026-10-12/REA-RUN-LOG.md", "batch 2/3 log"]}
+{"type": "entity", "name": "source_REPO_INVENTORY", "entityType": "source", "observations": ["path: /workspace/build-plan-2026-10-12/REPO-INVENTORY.csv", "~315 names"]}
+{"type": "entity", "name": "source_SECURE_MESH", "entityType": "source", "observations": ["path: Gitbook mesh/secure-mesh.md", "secure mesh design"]}
+{"type": "entity", "name": "source_SECURITY_PROTOCOLS", "entityType": "source", "observations": ["path: /workspace/build-plan-2026-10-12/SECURITY-PROTOCOLS-INVENTORY.md", "shepherd/cipher/o11 gaps"]}
+{"type": "entity", "name": "source_V2_ROADMAP_EXISTING", "entityType": "source", "observations": ["path: Gitbook brain-consciousness/TESSERA-V2-ROADMAP.md", "prior v2 roadmap"]}
+{"type": "entity", "name": "vitalitychems-dot/GitMesh", "entityType": "repository", "observations": ["Formerly GitbookAI; public git-carried mesh room", "needsWeb:false; clone readable offline"]}
+{"type": "entity", "name": "vitalitychems-dot/Gitbook", "entityType": "repository", "observations": ["Docs/intake/review/mesh ledger", "Four-gate publish model (Moderator, Tessera, Security, Build)"]}
+{"type": "entity", "name": "vitalitychems-dot/TESSERA", "entityType": "repository", "observations": ["Current consolidation monorepo (private)", "package.json license MIT; GitHub license field NONE", "Contains preview/, artifacts/, mesh/, archives/"]}
+{"type": "entity", "name": "vitalitychems-dot/vitality", "entityType": "repository", "observations": ["Vitality store archives — EXCLUDED from TESSERA v2 combine", "Risk-flag REA only"]}
+{"type": "entity", "name": "deliverable_TESSERA_V2_PLAN", "entityType": "source", "observations": ["path:/workspace/build-plan-2026-10-12/TESSERA-V2-PLAN.md", "phase1 deliverable"]}
+{"type": "entity", "name": "deliverable_V2_HANDOFF", "entityType": "source", "observations": ["path:/workspace/build-plan-2026-10-12/V2-HANDOFF.md", "phase1 deliverable"]}
+{"type": "entity", "name": "deliverable_V2_FEATURE_MAP", "entityType": "source", "observations": ["path:/workspace/build-plan-2026-10-12/V2-FEATURE-MAP.csv", "phase1 deliverable"]}
+{"type": "entity", "name": "rea::v2::GitMesh", "entityType": "rea_run", "observations": ["path:/workspace/rea-batch/v2-rea-out/GitMesh.json", "relevant_files:9", "parsed_javascript_files:7", "coverage_pct:77.8", "suite:v2-rea-full", "1T_and_vault_excluded_from_Gitbook_stage"]}
+{"type": "entity", "name": "rea::v2::Gitbook-full", "entityType": "rea_run", "observations": ["path:/workspace/rea-batch/v2-rea-out/Gitbook-full.json", "relevant_files:1186", "parsed_javascript_files:1006", "coverage_pct:84.8", "suite:v2-rea-full", "1T_and_vault_excluded_from_Gitbook_stage"]}
+{"type": "entity", "name": "rea::v2::TESSERA", "entityType": "rea_run", "observations": ["path:/workspace/rea-batch/v2-rea-out/TESSERA.json", "relevant_files:1431", "parsed_javascript_files:1367", "coverage_pct:95.5", "suite:v2-rea-full", "1T_and_vault_excluded_from_Gitbook_stage"]}
+{"type": "entity", "name": "rea::v2::Zz", "entityType": "rea_run", "observations": ["path:/workspace/rea-batch/v2-rea-out/Zz.json", "relevant_files:137", "parsed_javascript_files:115", "coverage_pct:83.9", "suite:v2-rea-full", "1T_and_vault_excluded_from_Gitbook_stage"]}
+{"type": "entity", "name": "rea::v2::amber", "entityType": "rea_run", "observations": ["path:/workspace/rea-batch/v2-rea-out/amber.json", "relevant_files:178", "parsed_javascript_files:147", "coverage_pct:82.6", "suite:v2-rea-full", "1T_and_vault_excluded_from_Gitbook_stage"]}
+{"type": "entity", "name": "rea::v2::vitality", "entityType": "rea_run", "observations": ["path:/workspace/rea-batch/v2-rea-out/vitality.json", "relevant_files:716", "parsed_javascript_files:692", "coverage_pct:96.6", "suite:v2-rea-full", "1T_and_vault_excluded_from_Gitbook_stage"]}
+{"type": "entity", "name": "rea_coverage_summary", "entityType": "source", "observations": ["GitMesh: 7/9 = 77.8%", "Gitbook-full: 1006/1186 = 84.8%", "TESSERA: 1367/1431 = 95.5%", "Zz: 115/137 = 83.9%", "amber: 147/178 = 82.6%", "vitality: 692/716 = 96.6%", "All accessible inputs ran through rea-agents@6.4.0 analyze-javascript-application"]}
+{"type": "relation", "from": "TESSERA_v2", "to": "vitalitychems-dot/TESSERA", "relationType": "based_on"}
+{"type": "relation", "from": "TESSERA_v2", "to": "vitalitychems-dot/Gitbook", "relationType": "uses_docs_from"}
+{"type": "relation", "from": "TESSERA_v2", "to": "vitalitychems-dot/GitMesh", "relationType": "uses_mesh_from"}
+{"type": "relation", "from": "TESSERA_v2", "to": "goodnight000/api-anything", "relationType": "integrates"}
+{"type": "relation", "from": "TESSERA_v2", "to": "blendi-remade/agentcraft", "relationType": "inspired_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "reconurge/flowsint", "relationType": "design_reference"}
+{"type": "relation", "from": "TESSERA_v2", "to": "morluto/rea-agents", "relationType": "analyzed_with"}
+{"type": "relation", "from": "TESSERA_v2", "to": "@modelcontextprotocol/server-memory", "relationType": "stores_context_in"}
+{"type": "relation", "from": "TESSERA_v2", "to": "module_agents_studio", "relationType": "contains"}
+{"type": "relation", "from": "TESSERA_v2", "to": "module_adapters", "relationType": "contains"}
+{"type": "relation", "from": "TESSERA_v2", "to": "module_offline_mesh", "relationType": "contains"}
+{"type": "relation", "from": "TESSERA_v2", "to": "module_docs_gitmesh", "relationType": "contains"}
+{"type": "relation", "from": "TESSERA_v2", "to": "module_compute_sandbox", "relationType": "contains"}
+{"type": "relation", "from": "TESSERA_v2", "to": "module_knowledge_graph", "relationType": "contains"}
+{"type": "relation", "from": "TESSERA_v2", "to": "module_token_lab", "relationType": "contains"}
+{"type": "relation", "from": "TESSERA_v2", "to": "module_security_shepherd", "relationType": "contains"}
+{"type": "relation", "from": "TESSERA_v2", "to": "module_ui_chamber", "relationType": "contains"}
+{"type": "relation", "from": "TESSERA_v2", "to": "module_exclusion_hyb011", "relationType": "contains"}
+{"type": "relation", "from": "TESSERA_v2", "to": "decision_auto_approve_100", "relationType": "governed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "decision_gitmesh_rename", "relationType": "governed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "decision_agents_mesh_toggle", "relationType": "governed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "decision_scan_tessera_gitbook_only", "relationType": "governed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "decision_key_rotate_later", "relationType": "governed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "decision_agentcraft_home", "relationType": "governed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "decision_compute_token", "relationType": "governed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "decision_full_gitbook_into_plan", "relationType": "governed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "decision_memory_mcp_flowsint", "relationType": "governed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "decision_full_rea", "relationType": "governed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "risk_leaked_replit_keys", "relationType": "has_risk"}
+{"type": "relation", "from": "TESSERA_v2", "to": "risk_natal_vault_tracked", "relationType": "has_risk"}
+{"type": "relation", "from": "TESSERA_v2", "to": "risk_hyb011_routes", "relationType": "has_risk"}
+{"type": "relation", "from": "TESSERA_v2", "to": "risk_unreachable_repos", "relationType": "has_risk"}
+{"type": "relation", "from": "TESSERA_v2", "to": "risk_api_anything_cookies", "relationType": "has_risk"}
+{"type": "relation", "from": "TESSERA_v2", "to": "risk_minecraft_dep", "relationType": "has_risk"}
+{"type": "relation", "from": "TESSERA_v2", "to": "source_REPO_INVENTORY", "relationType": "informed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "source_REA_RUN_LOG", "relationType": "informed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "source_OFFLINE_INTERNET", "relationType": "informed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "source_SECURITY_PROTOCOLS", "relationType": "informed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "source_NESTED_REPO_MAP", "relationType": "informed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "source_CONSOLIDATION_MAP", "relationType": "informed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "source_HYB011", "relationType": "informed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "source_FUNCTIONAL_MERGE", "relationType": "informed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "source_V2_ROADMAP_EXISTING", "relationType": "informed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "source_CODEBASE_MEMORY_MCP", "relationType": "informed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "source_OFFLINE_GITBOOK", "relationType": "informed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "source_SECURE_MESH", "relationType": "informed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "source_HANDOFF", "relationType": "informed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "source_INTAKE_LOG", "relationType": "informed_by"}
+{"type": "relation", "from": "source_OFFLINE_INTERNET", "to": "module_offline_mesh", "relationType": "feeds"}
+{"type": "relation", "from": "source_OFFLINE_GITBOOK", "to": "module_offline_mesh", "relationType": "feeds"}
+{"type": "relation", "from": "source_SECURE_MESH", "to": "module_offline_mesh", "relationType": "feeds"}
+{"type": "relation", "from": "source_SECURITY_PROTOCOLS", "to": "module_security_shepherd", "relationType": "feeds"}
+{"type": "relation", "from": "source_HYB011", "to": "module_exclusion_hyb011", "relationType": "feeds"}
+{"type": "relation", "from": "source_CODEBASE_MEMORY_MCP", "to": "module_knowledge_graph", "relationType": "feeds"}
+{"type": "relation", "from": "source_CONSOLIDATION_MAP", "to": "module_docs_gitmesh", "relationType": "feeds"}
+{"type": "relation", "from": "source_FUNCTIONAL_MERGE", "to": "module_docs_gitmesh", "relationType": "feeds"}
+{"type": "relation", "from": "source_V2_ROADMAP_EXISTING", "to": "TESSERA_v2", "relationType": "feeds"}
+{"type": "relation", "from": "source_INTAKE_LOG", "to": "module_docs_gitmesh", "relationType": "feeds"}
+{"type": "relation", "from": "TESSERA_v2", "to": "cap_lead_worker_studio", "relationType": "includes_capability"}
+{"type": "relation", "from": "TESSERA_v2", "to": "cap_offline_file_mesh", "relationType": "includes_capability"}
+{"type": "relation", "from": "TESSERA_v2", "to": "cap_offline_queue", "relationType": "includes_capability"}
+{"type": "relation", "from": "TESSERA_v2", "to": "cap_service_worker_shell", "relationType": "includes_capability"}
+{"type": "relation", "from": "TESSERA_v2", "to": "cap_encrypted_mesh_sync", "relationType": "includes_capability"}
+{"type": "relation", "from": "TESSERA_v2", "to": "cap_kiwix_hook", "relationType": "includes_capability"}
+{"type": "relation", "from": "TESSERA_v2", "to": "cap_usb_sneakernet", "relationType": "includes_capability"}
+{"type": "relation", "from": "TESSERA_v2", "to": "cap_lan_p2p", "relationType": "includes_capability"}
+{"type": "relation", "from": "TESSERA_v2", "to": "cap_api_adapters", "relationType": "includes_capability"}
+{"type": "relation", "from": "TESSERA_v2", "to": "cap_shepherd_egress", "relationType": "includes_capability"}
+{"type": "relation", "from": "TESSERA_v2", "to": "cap_sandbox_compute", "relationType": "includes_capability"}
+{"type": "relation", "from": "TESSERA_v2", "to": "cap_knowledge_graph_memory", "relationType": "includes_capability"}
+{"type": "relation", "from": "TESSERA_v2", "to": "cap_token_meter_ab", "relationType": "includes_capability"}
+{"type": "relation", "from": "TESSERA_v2", "to": "cap_chamber_board_ui", "relationType": "includes_capability"}
+{"type": "relation", "from": "TESSERA_v2", "to": "cap_gitmesh_drops", "relationType": "includes_capability"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/GoLogin", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/GoLogin", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/CreepJS", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/CreepJS", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::collink1007/Vitalitychems", "relationType": "inventories"}
+{"type": "relation", "from": "repo::collink1007/Vitalitychems", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/2captcha-python", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/2captcha-python", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/Multilogin", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/Multilogin", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/FingerprintJS", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/FingerprintJS", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::collink1007/z", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::collink1007/fleet-moss-monarch-rapid", "relationType": "inventories"}
+{"type": "relation", "from": "repo::collink1007/fleet-moss-monarch-rapid", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::collink1007/XXX", "relationType": "inventories"}
+{"type": "relation", "from": "repo::collink1007/XXX", "to": "module_offline_mesh", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::collink1007/amber-flame-tiger-sand", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/affiliate-tracking", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/affiliate-tracking", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/anticaptchaofficial", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/anticaptchaofficial", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/antidetect", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/antidetect", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/arbitrage-bot", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/arbitrage-bot", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/audio-captcha-solver", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/audio-captcha-solver", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/blog-generator", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/browser-fingerprinting", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/browser-fingerprinting", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/capsolver-python", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/capsolver-python", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/captcha-harvester", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/captcha-harvester", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/censys-python", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/censys-python", "to": "module_adapters", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/checkout-optimizer", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/checkout-optimizer", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/cloudflare-bypass", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/cloudflare-bypass", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/cloudflare-scrape", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/cloudflare-scrape", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/cfscrape", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/cfscrape", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/chromedp", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/chromedp", "to": "module_security_shepherd", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/cf-workers", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/cf-workers", "to": "module_compute_sandbox", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/conversion-optimizer", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/facebook-ads-api", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/facebook-ads-api", "to": "module_adapters", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/finnhub-python", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/finnhub-python", "to": "module_adapters", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/flaresolverr", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/flaresolverr", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/funcaptcha-solver", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/funcaptcha-solver", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/google-ads-api", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/google-ads-api", "to": "module_adapters", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/goquery", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/hcaptcha-solver", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/hcaptcha-solver", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/hashcat", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/hashcat", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/headless-chrome-crawler", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/gumroad-api", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/gumroad-api", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/grpcurl", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/httpie", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/httpie", "to": "module_adapters", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/image-captcha-solver", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/image-captcha-solver", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/lemon-squeezy-sdk", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/lemon-squeezy-sdk", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/lattigo", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/lattigo", "to": "module_security_shepherd", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/liquidity-mining", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/liquidity-mining", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/mailgun-js", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/mechanize", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/mercury-parser", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/mercury-parser", "to": "module_security_shepherd", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/mev-templates", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/mev-templates", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/nft-minter", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/nft-minter", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/openssl", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/paddle-sdk", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/paddle-sdk", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/plaid-node", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/plaid-node", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/playwright-python", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/playwright-stealth", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/playwright-stealth", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/playwright-cf-bypass", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/playwright-cf-bypass", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/postman-collection", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/press-release-writer", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/puppeteer-cf-bypass", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/puppeteer-cf-bypass", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/puppeteer-extra-plugin-stealth", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/puppeteer-extra-plugin-stealth", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/readability", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/puppeteer-extra", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/quandl-python", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/requests-html", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/recaptcha-solver", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/recaptcha-solver", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/sandwich-bot", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/sandwich-bot", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/scraperapi-sdk", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/scraperapi-sdk", "to": "module_adapters", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/scrapy-redis", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/scrapy-splash", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/selenium-cf-bypass", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/selenium-cf-bypass", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/sendgrid-nodejs", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/selenium-wire", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/shipping-calculator", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/shipping-calculator", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/sitemap-generator", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/seo-analyzer", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/sniper-bot", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/sniper-bot", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/story-writer", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/story-writer", "to": "module_token_lab", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/tiingo-python", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/tiingo-python", "to": "module_adapters", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/tink", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/tink", "to": "module_security_shepherd", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/trafilatura", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/token-creator", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/token-creator", "to": "module_token_lab", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/undetected-chromedriver", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/undetected-chromedriver", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/wireguard-go", "relationType": "inventories"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::nicholasgasior/yahoo-finance-api", "relationType": "inventories"}
+{"type": "relation", "from": "repo::nicholasgasior/yahoo-finance-api", "to": "module_adapters", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::sovereign-core/mining", "relationType": "inventories"}
+{"type": "relation", "from": "repo::sovereign-core/mining", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::sovereign-core/tessera-payment-processing", "relationType": "inventories"}
+{"type": "relation", "from": "repo::sovereign-core/tessera-payment-processing", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::thetesseractai/18", "relationType": "inventories"}
+{"type": "relation", "from": "repo::thetesseractai/18", "to": "TESSERA_v2", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::vitalitychems-dot/GitbookAI", "relationType": "inventories"}
+{"type": "relation", "from": "repo::vitalitychems-dot/GitbookAI", "to": "module_offline_mesh", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::vitalitychems-dot/Gitbook", "relationType": "inventories"}
+{"type": "relation", "from": "repo::vitalitychems-dot/Gitbook", "to": "module_docs_gitmesh", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::vitalitychems-dot/tessera-coordination", "relationType": "inventories"}
+{"type": "relation", "from": "repo::vitalitychems-dot/tessera-coordination", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::vitalitychems-dot/TESSERA", "relationType": "inventories"}
+{"type": "relation", "from": "repo::vitalitychems-dot/TESSERA", "to": "TESSERA_v2", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::vitalitychems-dot/tessera-unified", "relationType": "inventories"}
+{"type": "relation", "from": "repo::vitalitychems-dot/tessera-unified", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::vitalitychems-dot/z", "relationType": "inventories"}
+{"type": "relation", "from": "repo::vitalitychems-dot/z", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::vitalitychems-dot/vitality", "relationType": "inventories"}
+{"type": "relation", "from": "repo::vitalitychems-dot/vitality", "to": "module_exclusion_hyb011", "relationType": "excluded_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::collin-keane/Tessera", "relationType": "inventories"}
+{"type": "relation", "from": "repo::collin-keane/Tessera", "to": "module_ui_chamber", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::goodnight000/api-anything", "relationType": "inventories"}
+{"type": "relation", "from": "repo::goodnight000/api-anything", "to": "module_adapters", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::blendi-remade/agentcraft", "relationType": "inventories"}
+{"type": "relation", "from": "repo::blendi-remade/agentcraft", "to": "module_agents_studio", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "repo::reconurge/flowsint", "relationType": "inventories"}
+{"type": "relation", "from": "repo::reconurge/flowsint", "to": "module_knowledge_graph", "relationType": "contributes_to"}
+{"type": "relation", "from": "TESSERA_v2", "to": "inventory_summary", "relationType": "informed_by"}
+{"type": "relation", "from": "TESSERA_v2", "to": "rea::Gitbook", "relationType": "has_rea"}
+{"type": "relation", "from": "TESSERA_v2", "to": "rea::GitbookAI", "relationType": "has_rea"}
+{"type": "relation", "from": "TESSERA_v2", "to": "rea::T44", "relationType": "has_rea"}
+{"type": "relation", "from": "TESSERA_v2", "to": "rea::TESSERA", "relationType": "has_rea"}
+{"type": "relation", "from": "TESSERA_v2", "to": "rea::XXX", "relationType": "has_rea"}
+{"type": "relation", "from": "TESSERA_v2", "to": "rea::Zz", "relationType": "has_rea"}
+{"type": "relation", "from": "TESSERA_v2", "to": "rea::b3-TheTesseractAI_18", "relationType": "has_rea"}
+{"type": "relation", "from": "TESSERA_v2", "to": "rea::b3-collink1007_XXX", "relationType": "has_rea"}
+{"type": "relation", "from": "TESSERA_v2", "to": "rea::olive", "relationType": "has_rea"}
+{"type": "relation", "from": "TESSERA_v2", "to": "rea::vitality", "relationType": "has_rea"}
+{"type": "relation", "from": "vitalitychems-dot/TESSERA", "to": "live::mesh-node", "relationType": "contains"}
+{"type": "relation", "from": "vitalitychems-dot/TESSERA", "to": "live::secure-mesh", "relationType": "contains"}
+{"type": "relation", "from": "vitalitychems-dot/TESSERA", "to": "live::offline", "relationType": "contains"}
+{"type": "relation", "from": "vitalitychems-dot/TESSERA", "to": "live::tessera", "relationType": "contains"}
+{"type": "relation", "from": "module_knowledge_graph", "to": "live::memory-web.ts", "relationType": "reuses"}
+{"type": "relation", "from": "module_token_lab", "to": "live::memory-web.ts", "relationType": "reuses"}
+{"type": "relation", "from": "module_knowledge_graph", "to": "live::token-graph.ts", "relationType": "reuses"}
+{"type": "relation", "from": "module_token_lab", "to": "live::token-graph.ts", "relationType": "reuses"}
+{"type": "relation", "from": "module_knowledge_graph", "to": "live::local-learn.ts", "relationType": "reuses"}
+{"type": "relation", "from": "module_token_lab", "to": "live::local-learn.ts", "relationType": "reuses"}
+{"type": "relation", "from": "module_knowledge_graph", "to": "live::learning.ts", "relationType": "reuses"}
+{"type": "relation", "from": "module_token_lab", "to": "live::learning.ts", "relationType": "reuses"}
+{"type": "relation", "from": "module_knowledge_graph", "to": "live::ask-memory.ts", "relationType": "reuses"}
+{"type": "relation", "from": "module_token_lab", "to": "live::ask-memory.ts", "relationType": "reuses"}
+{"type": "relation", "from": "TESSERA_v2", "to": "deliverable_TESSERA_V2_PLAN", "relationType": "produces"}
+{"type": "relation", "from": "TESSERA_v2", "to": "deliverable_V2_HANDOFF", "relationType": "produces"}
+{"type": "relation", "from": "TESSERA_v2", "to": "deliverable_V2_FEATURE_MAP", "relationType": "produces"}
+{"type": "relation", "from": "TESSERA_v2", "to": "rea::v2::GitMesh", "relationType": "has_rea"}
+{"type": "relation", "from": "TESSERA_v2", "to": "rea::v2::Gitbook-full", "relationType": "has_rea"}
+{"type": "relation", "from": "TESSERA_v2", "to": "rea::v2::TESSERA", "relationType": "has_rea"}
+{"type": "relation", "from": "TESSERA_v2", "to": "rea::v2::Zz", "relationType": "has_rea"}
+{"type": "relation", "from": "TESSERA_v2", "to": "rea::v2::amber", "relationType": "has_rea"}
+{"type": "relation", "from": "TESSERA_v2", "to": "rea::v2::vitality", "relationType": "has_rea"}
+{"type": "relation", "from": "TESSERA_v2", "to": "rea_coverage_summary", "relationType": "informed_by"}
