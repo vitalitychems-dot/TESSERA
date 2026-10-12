@@ -3,6 +3,7 @@
  * Clean-room board. No 3D and no Minecraft client.
  */
 import { createServer } from "node:http";
+import { floorMarkup } from "./floor.mjs";
 import { createForeman } from "./task-graph.mjs";
 
 function escapeHtml(value) {
@@ -79,6 +80,7 @@ export function renderStudio(state) {
   <section id="task-wall">${cards}</section>
   <h2>Desks</h2>
   <section id="desks">${desks}</section>
+  ${floorMarkup()}
   <script>
     const form = document.querySelector("#goal-form");
     form.addEventListener("submit", async (event) => {
