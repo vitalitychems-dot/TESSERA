@@ -24,3 +24,4 @@ renovate.json @vitalitychems-dot
 **/bench/ @vitalitychems-dot
 /artifacts/api-server/scripts/pen-local-gate.mjs @vitalitychems-dot
 /artifacts/api-server/src/lib/pen-local/ @vitalitychems-dot
+/evals/heldout/ @vitalitychems-dot
