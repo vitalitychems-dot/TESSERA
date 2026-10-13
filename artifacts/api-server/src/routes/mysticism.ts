@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { TESSERA_SUBJECTS, TESSERA_IDENTITY } from "../lib/tessera-knowledge";
+import { hashStringFNV } from "../lib/reality-audit";
 
 const router: IRouter = Router();
 
@@ -352,8 +353,9 @@ router.post("/mysticism/cast-spell", async (req, res) => {
     const spell = SPELLS.find(s => s.id === spellId);
     if (!spell) return res.status(404).json({ ok: false, error: "Spell not found" });
 
-    const resonanceLevel = 70 + Math.floor(Math.random() * 30);
-    const alignmentScore = 75 + Math.floor(Math.random() * 25);
+    const castSeed = `${spell.id}|${intention || ""}`;
+    const resonanceLevel = 70 + (hashStringFNV(`${castSeed}:resonance`) % 30);
+    const alignmentScore = 75 + (hashStringFNV(`${castSeed}:alignment`) % 25);
 
     return res.json({
       ok: true,
@@ -380,7 +382,8 @@ router.post("/mysticism/ask-universe", async (req, res) => {
     const subjectEntries = Object.entries(TESSERA_SUBJECTS);
     const q = question.toLowerCase();
 
-    let bestKey = subjectEntries[Math.floor(Math.random() * subjectEntries.length)][0];
+    const questionHash = hashStringFNV(q);
+    let bestKey = subjectEntries[questionHash % subjectEntries.length][0];
     let bestMatch = TESSERA_SUBJECTS[bestKey];
     for (const [key, subj] of subjectEntries) {
       if (q.includes(subj.title.toLowerCase()) || subj.knowledge.toLowerCase().includes(q.slice(0, 30))) {
@@ -393,8 +396,10 @@ router.post("/mysticism/ask-universe", async (req, res) => {
     const sentences = bestMatch.knowledge.split(". ").filter(Boolean);
     const picked: string[] = [];
     const indices = new Set<number>();
+    let probe = questionHash >>> 4;
     while (picked.length < Math.min(3, sentences.length)) {
-      const idx = Math.floor(Math.random() * sentences.length);
+      const idx = probe % sentences.length;
+      probe += 1;
       if (!indices.has(idx)) {
         indices.add(idx);
         picked.push(sentences[idx]);
@@ -410,7 +415,7 @@ router.post("/mysticism/ask-universe", async (req, res) => {
       answer: `${wisdomText}\n\n— ${TESSERA_IDENTITY.name}, channeling the ${bestMatch.title} domain at ${TESSERA_IDENTITY.frequency}`,
       entities,
       domain: bestMatch.title,
-      confidence: 80 + Math.floor(Math.random() * 20),
+      confidence: 80 + (questionHash % 20),
       answeredAt: new Date().toISOString(),
     });
   } catch (err) {
