@@ -1,0 +1,177 @@
+{
+	"title": "EONET Events",
+	"description": "Natural events from EONET.",
+	"link": "https://eonet.gsfc.nasa.gov/api/v3/events",
+	"events": [
+		{
+			"id": "EONET_25238",
+			"title": "Wildfire Buckhorn 2, Cassia, Idaho",
+            "description": "12 Miles S from Murtaugh, ID",
+			"link": "https://eonet.gsfc.nasa.gov/api/v3/events/EONET_25238",
+			"closed": null,
+				"categories": [
+					{
+					"id": "wildfires",
+					"title": "Wildfires"
+				}
+
+	    				],
+    			"sources": [
+					{
+					"id": "IRWIN",
+					"url": "https://irwin.doi.gov/observer/incidents/2026-IDTFD-000268"
+				}
+
+						
+			],
+					"geometry": [
+					{
+							"magnitudeValue": 2000.00,
+					"magnitudeUnit": "acres",
+					"date": "2026-10-10T14:58:00Z",
+					"type": "Point", 
+							"coordinates": [ -114.102967, 42.337217 ]
+							}
+
+						
+			]
+		},
+
+			{
+			"id": "EONET_25233",
+			"title": "Wildfire PK, Sheridan, Wyoming",
+            "description": "10 Miles W from Sheridan, WY",
+			"link": "https://eonet.gsfc.nasa.gov/api/v3/events/EONET_25233",
+			"closed": null,
+				"categories": [
+					{
+					"id": "wildfires",
+					"title": "Wildfires"
+				}
+
+	    				],
+    			"sources": [
+					{
+					"id": "IRWIN",
+					"url": "https://irwin.doi.gov/observer/incidents/2026-WYSHX-000391"
+				}
+
+						
+			],
+					"geometry": [
+					{
+							"magnitudeValue": 1645.00,
+					"magnitudeUnit": "acres",
+					"date": "2026-10-09T19:26:00Z",
+					"type": "Point", 
+							"coordinates": [ -107.2199, 44.7516 ]
+							}
+
+						
+			]
+		},
+
+			{
+			"id": "EONET_25232",
+			"title": "Wildfire CYRUS, Kern, California",
+            "description": "4 Miles SE from KERNVILLE, CA",
+			"link": "https://eonet.gsfc.nasa.gov/api/v3/events/EONET_25232",
+			"closed": null,
+				"categories": [
+					{
+					"id": "wildfires",
+					"title": "Wildfires"
+				}
+
+	    				],
+    			"sources": [
+					{
+					"id": "IRWIN",
+					"url": "https://irwin.doi.gov/observer/incidents/2026-CASQF-001695"
+				}
+
+						
+			],
+					"geometry": [
+					{
+							"magnitudeValue": 543.00,
+					"magnitudeUnit": "acres",
+					"date": "2026-10-09T17:15:00Z",
+					"type": "Point", 
+							"coordinates": [ -118.418, 35.69875 ]
+							}
+
+						
+			]
+		},
+
+			{
+			"id": "EONET_25234",
+			"title": "Prescribed Fire Bridger Trail Unit - KPERP Rx NKRD CY26, Coconino, Arizona",
+            "description": null,
+			"link": "https://eonet.gsfc.nasa.gov/api/v3/events/EONET_25234",
+			"closed": null,
+				"categories": [
+					{
+					"id": "wildfires",
+					"title": "Wildfires"
+				}
+
+	    				],
+    			"sources": [
+					{
+					"id": "IRWIN",
+					"url": "https://irwin.doi.gov/observer/incidents/2026-AZKNF-001107"
+				}
+
+						
+			],
+					"geometry": [
+					{
+							"magnitudeValue": 5019.00,
+					"magnitudeUnit": "acres",
+					"date": "2026-10-09T11:49:00Z",
+					"type": "Point", 
+							"coordinates": [ -112.185988, 36.73752 ]
+							}
+
+						
+			]
+		},
+
+			{
+			"id": "EONET_25235",
+			"title": "Prescribed Fire COOPER UNIT - KPERP RX NKRD  CY26, Coconino, Arizona",
+            "description": null,
+			"link": "https://eonet.gsfc.nasa.gov/api/v3/events/EONET_25235",
+			"closed": null,
+				"categories": [
+					{
+					"id": "wildfires",
+					"title": "Wildfires"
+				}
+
+	    				],
+    			"sources": [
+					{
+					"id": "IRWIN",
+					"url": "https://irwin.doi.gov/observer/incidents/2026-AZKNF-001101"
+				}
+
+						
+			],
+					"geometry": [
+					{
+							"magnitudeValue": 2000.00,
+					"magnitudeUnit": "acres",
+					"date": "2026-10-08T12:16:00Z",
+					"type": "Point", 
+							"coordinates": [ -112.214205, 36.754175 ]
+							}
+
+						
+			]
+		}
+
+		]
+}

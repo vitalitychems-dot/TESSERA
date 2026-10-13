@@ -1,0 +1,1 @@
+{"features": [{"id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ed1978112a4c73d68a476213b060f86a99ab7343.001.1", "type": "Feature", "properties": {"headline": "Special Weather Statement issued October 12 at 1:33PM CDT by NWS Paducah KY"}}]}
