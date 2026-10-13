@@ -172,6 +172,9 @@ export async function runCritiqueLoop(
   let passed = false;
 
   let refinedContext = "";
+  // Skip-if-unchanged: an identical draft gets an identical critique, so reuse it
+  // instead of re-running validation + truthfulness analysis (up to 2x2.5s each).
+  const critiqueMemo = new Map<string, Awaited<ReturnType<typeof critiqueOne>>>();
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     let draft: string;
@@ -183,7 +186,11 @@ export async function runCritiqueLoop(
       if (!draft) continue;
     }
 
-    const c = await critiqueOne(draft, userQuery, passScore);
+    let c = critiqueMemo.get(draft);
+    if (!c) {
+      c = await critiqueOne(draft, userQuery, passScore);
+      critiqueMemo.set(draft, c);
+    }
     const compositeScore = 0.5 * c.groundingScore + 0.5 * c.truthfulnessScore;
 
     history.push({
