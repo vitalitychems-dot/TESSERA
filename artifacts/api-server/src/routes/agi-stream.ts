@@ -17,6 +17,7 @@ import { trySubscribeWorkspace } from "../lib/agi/global-workspace.js";
 import { isAdminTokenConfigured } from "../lib/sovereign-session.js";
 import { resolveFatherAuthorization } from "../lib/sovereign-admin.js";
 import type { AgentMessage } from "../lib/agi/agent-bus.js";
+import { BlockList, isIP } from "node:net";
 
 export interface AgiStreamOptions {
   maxGlobal: number;
@@ -24,6 +25,66 @@ export interface AgiStreamOptions {
   heartbeatMs: number;
   maxLifetimeMs: number;
   maxBufferedBytes: number;
+  /**
+   * Proxies whose X-Forwarded-For is trusted for the per-IP cap: IPs or CIDRs.
+   * Defaults to AGI_STREAM_TRUSTED_PROXIES (comma-separated). Empty = trust no
+   * proxy, so the per-IP cap always uses the socket peer address. This is
+   * independent of the app-wide `trust proxy` setting (req.ip), which an
+   * untrusted client can spoof when no proxy is actually in front.
+   */
+  trustedProxies?: string[];
+}
+
+function normalizeIp(raw: string | undefined): string {
+  const s = (raw ?? "").trim();
+  const m = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(s);
+  return m ? m[1] : s;
+}
+
+export function buildTrustedProxyList(entries: string[]): BlockList {
+  const list = new BlockList();
+  for (const raw of entries) {
+    const e = raw.trim();
+    if (!e) continue;
+    const [addr, bits] = e.split("/");
+    const ip = normalizeIp(addr);
+    const fam = isIP(ip);
+    if (!fam) continue;
+    const type = fam === 6 ? "ipv6" : "ipv4";
+    if (bits !== undefined) {
+      const n = Number(bits);
+      if (Number.isInteger(n) && n >= 0 && n <= (fam === 6 ? 128 : 32)) list.addSubnet(ip, n, type);
+    } else {
+      list.addAddress(ip, type);
+    }
+  }
+  return list;
+}
+
+function isTrusted(list: BlockList, ip: string): boolean {
+  const fam = isIP(ip);
+  return fam ? list.check(ip, fam === 6 ? "ipv6" : "ipv4") : false;
+}
+
+/**
+ * Client IP for the per-IP cap. Starts from the socket peer; only if that peer
+ * is a configured trusted proxy is X-Forwarded-For consulted, walking right to
+ * left past trusted hops to the first untrusted address.
+ */
+export function streamClientIp(
+  peer: string | undefined,
+  xff: string | string[] | undefined,
+  trusted: BlockList,
+): string {
+  let ip = normalizeIp(peer) || "unknown";
+  if (!isTrusted(trusted, ip) || !xff) return ip;
+  const hops = (Array.isArray(xff) ? xff.join(",") : xff).split(",").map((h) => normalizeIp(h)).filter(Boolean);
+  for (let i = hops.length - 1; i >= 0; i--) {
+    if (!isIP(hops[i])) break;
+    ip = hops[i];
+    if (!isTrusted(trusted, ip)) break;
+  }
+  return ip;
 }
 
 export const DEFAULT_STREAM_OPTIONS: AgiStreamOptions = {
@@ -79,12 +140,16 @@ function requireStreamAuth(req: Request, res: Response, next: NextFunction): voi
 
 export function createAgiStreamRouter(overrides: Partial<AgiStreamOptions> = {}) {
   const opts: AgiStreamOptions = { ...DEFAULT_STREAM_OPTIONS, ...overrides };
+  const trusted = buildTrustedProxyList(
+    opts.trustedProxies ?? (process.env.AGI_STREAM_TRUSTED_PROXIES ?? "").split(","),
+  );
   const router = Router();
   let globalCount = 0;
   const perIp = new Map<string, number>();
 
   router.get("/agi/stream", requireStreamAuth, (req, res) => {
-    const ip = req.ip || req.socket.remoteAddress || "unknown";
+    // Not req.ip: with app-wide `trust proxy` and no real proxy, X-Forwarded-For is client-controlled.
+    const ip = streamClientIp(req.socket.remoteAddress, req.headers["x-forwarded-for"], trusted);
     if (globalCount >= opts.maxGlobal || (perIp.get(ip) ?? 0) >= opts.maxPerIp) {
       res.status(429).json({ ok: false, error: "stream-capacity" });
       return;
