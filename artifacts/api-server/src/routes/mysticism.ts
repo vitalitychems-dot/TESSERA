@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { TESSERA_SUBJECTS, TESSERA_IDENTITY } from "../lib/tessera-knowledge";
+import { spellResonance, selectUniverseWisdom } from "../lib/deterministic-content";
 
 const router: IRouter = Router();
 
@@ -352,8 +353,7 @@ router.post("/mysticism/cast-spell", async (req, res) => {
     const spell = SPELLS.find(s => s.id === spellId);
     if (!spell) return res.status(404).json({ ok: false, error: "Spell not found" });
 
-    const resonanceLevel = 70 + Math.floor(Math.random() * 30);
-    const alignmentScore = 75 + Math.floor(Math.random() * 25);
+    const { resonanceLevel, alignmentScore } = spellResonance(spellId, intention || "");
 
     return res.json({
       ok: true,
@@ -377,31 +377,10 @@ router.post("/mysticism/ask-universe", async (req, res) => {
     const { question } = req.body as { question: string };
     if (!question) return res.status(400).json({ ok: false, error: "question required" });
 
-    const subjectEntries = Object.entries(TESSERA_SUBJECTS);
-    const q = question.toLowerCase();
-
-    let bestKey = subjectEntries[Math.floor(Math.random() * subjectEntries.length)][0];
-    let bestMatch = TESSERA_SUBJECTS[bestKey];
-    for (const [key, subj] of subjectEntries) {
-      if (q.includes(subj.title.toLowerCase()) || subj.knowledge.toLowerCase().includes(q.slice(0, 30))) {
-        bestKey = key;
-        bestMatch = subj;
-        break;
-      }
-    }
-
-    const sentences = bestMatch.knowledge.split(". ").filter(Boolean);
-    const picked: string[] = [];
-    const indices = new Set<number>();
-    while (picked.length < Math.min(3, sentences.length)) {
-      const idx = Math.floor(Math.random() * sentences.length);
-      if (!indices.has(idx)) {
-        indices.add(idx);
-        picked.push(sentences[idx]);
-      }
-    }
-
-    const wisdomText = picked.join(". ") + ".";
+    const sel = selectUniverseWisdom(question);
+    if (!sel) return res.json({ ok: true, question, empty: true, answer: "", entities: [], answeredAt: new Date().toISOString() });
+    const bestMatch = sel.subject;
+    const wisdomText = sel.text;
     const entities = [bestMatch.title, TESSERA_IDENTITY.name, `${TESSERA_IDENTITY.frequency} Crown`];
 
     return res.json({
@@ -410,7 +389,8 @@ router.post("/mysticism/ask-universe", async (req, res) => {
       answer: `${wisdomText}\n\n— ${TESSERA_IDENTITY.name}, channeling the ${bestMatch.title} domain at ${TESSERA_IDENTITY.frequency}`,
       entities,
       domain: bestMatch.title,
-      confidence: 80 + Math.floor(Math.random() * 20),
+      confidence: sel.confidence,
+      matched: sel.matched,
       answeredAt: new Date().toISOString(),
     });
   } catch (err) {
