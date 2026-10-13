@@ -6,9 +6,9 @@
  * manifest that offline nodes delta-sync (USB/LAN/GitMesh) and verify with the pinned key.
  */
 import { createHash, generateKeyPairSync, sign, verify, createPublicKey } from "node:crypto";
-import { mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync, statSync, copyFileSync } from "node:fs";
 import { join } from "node:path";
-import { createBucket, politeFetch, deltaSync } from "../opt/relay.mjs";
+import { createBucket, politeFetch } from "../opt/relay.mjs";
 import { SOURCES, UA, parseSse } from "./sources.mjs";
 
 const sha = (s) => createHash("sha256").update(s).digest("hex");
@@ -103,13 +103,24 @@ export function verifyManifest(m, pubPem) {
   return verify(null, Buffer.from(sha(body)), createPublicKey(pubPem), Buffer.from(m.sig, "base64"));
 }
 
-/** Offline sync: copy only snapshots the node doesn't have (delta by hash). */
+/**
+ * Offline sync: copy only snapshots the node doesn't have (delta by content address).
+ * Snapshot filenames are their sha256, so a node file with the same name and byte size is
+ * already present; only missing/size-mismatched files are read and copied. Integrity is
+ * still enforced end-to-end by verifySnapshot (hash + signature) on the node.
+ */
 export function syncTo(gatewayDir, nodeDir) {
-  mkdirSync(join(nodeDir, "snapshots"), { recursive: true });
-  const have = Object.fromEntries(readdirSync(join(nodeDir, "snapshots")).map((f) => [f, sha(readFileSync(join(nodeDir, "snapshots", f), "utf8"))]));
-  const local = Object.fromEntries(readdirSync(join(gatewayDir, "snapshots")).map((f) => [f, readFileSync(join(gatewayDir, "snapshots", f), "utf8")]));
-  const send = deltaSync(local, have);
-  for (const [f, v] of Object.entries(send)) writeFileSync(join(nodeDir, "snapshots", f), v);
-  for (const f of ["manifest.json", "shepherd.pub.pem"]) if (existsSync(join(gatewayDir, f))) writeFileSync(join(nodeDir, f), readFileSync(join(gatewayDir, f)));
-  return Object.keys(send).length;
+  const gwSnaps = join(gatewayDir, "snapshots"), nodeSnaps = join(nodeDir, "snapshots");
+  mkdirSync(nodeSnaps, { recursive: true });
+  const have = new Map();
+  for (const f of readdirSync(nodeSnaps)) have.set(f, statSync(join(nodeSnaps, f)).size);
+  let sent = 0;
+  for (const f of readdirSync(gwSnaps)) {
+    const src = join(gwSnaps, f);
+    if (have.get(f) === statSync(src).size) continue;
+    copyFileSync(src, join(nodeSnaps, f));
+    sent++;
+  }
+  for (const f of ["manifest.json", "shepherd.pub.pem"]) if (existsSync(join(gatewayDir, f))) copyFileSync(join(gatewayDir, f), join(nodeDir, f));
+  return sent;
 }
