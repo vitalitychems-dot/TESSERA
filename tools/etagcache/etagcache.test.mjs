@@ -9,6 +9,7 @@ import {
   SCAN_ENDPOINTS,
   cacheFileForUrl,
   cachedGet,
+  etagCacheEnabled,
   readCacheEntry,
   runCli,
 } from "./etagcache.mjs";
@@ -71,33 +72,95 @@ test("304 returns the cached body and an unchanged marker", async () => {
   assert.deepEqual(calls, [null, "\"e1\""]);
 });
 
-test("flag off is a passthrough and does not touch the cache", async () => {
+test("etag cache is on unless TESSERA_ENABLE_ETAG_CACHE is 0, false, off or no (any case)", () => {
+  assert.equal(etagCacheEnabled({}), true);
+  for (const on of ["1", "true", "on", "yes", "", "2", "nope"]) {
+    assert.equal(etagCacheEnabled({ [ENABLE_FLAG]: on }), true, JSON.stringify(on));
+  }
+  for (const off of ["0", "false", "off", "no", "FALSE", "Off", "NO", " false ", "oFf"]) {
+    assert.equal(etagCacheEnabled({ [ENABLE_FLAG]: off }), false, JSON.stringify(off));
+  }
+});
+
+for (const off of ["0", "false", "OFF", "No"]) {
+  test(`TESSERA_ENABLE_ETAG_CACHE=${off} ignores a valid cached entry for the same URL`, async () => {
+    const cacheDir = tempCache();
+    const file = cacheFileForUrl(cacheDir, ENDPOINT);
+    const seed = JSON.stringify({ etag: "\"seeded\"", body: "CACHED" });
+    writeFileSync(file, seed);
+    const calls = [];
+    const result = await cachedGet({
+      url: ENDPOINT,
+      cacheDir,
+      env: { [ENABLE_FLAG]: off },
+      request: async (req) => {
+        calls.push(req.headers["If-None-Match"] ?? null);
+        return { status: 304, body: "", headers: { etag: "\"seeded\"" } };
+      },
+    });
+    assert.deepEqual(calls, [null]);
+    assert.notEqual(result.body, "CACHED");
+    assert.equal(readFileSync(file, "utf8"), seed);
+  });
+}
+
+test("control: the same seeded entry IS used when the flag is unset", async () => {
+  const cacheDir = tempCache();
+  const file = cacheFileForUrl(cacheDir, ENDPOINT);
+  writeFileSync(file, JSON.stringify({ etag: "\"seeded\"", body: "CACHED" }));
+  const calls = [];
+  const result = await cachedGet({
+    url: ENDPOINT, cacheDir, env: {}, request: async (req) => {
+      calls.push(req.headers["If-None-Match"] ?? null);
+      return { status: 304, body: "", headers: { etag: "\"seeded\"" } };
+    },
+  });
+  assert.deepEqual(calls, ["\"seeded\""]);
+  assert.equal(result.body, "CACHED");
+});
+
+test("unset flag uses the cache", async () => {
+  const cacheDir = tempCache();
+  const calls = [];
+  const result = await cachedGet({
+    url: ENDPOINT,
+    cacheDir,
+    env: {},
+    request: async (req) => {
+      calls.push(req.headers["If-None-Match"] ?? null);
+      return { status: 200, body: "LIVE", headers: { etag: "\"live\"" } };
+    },
+  });
+  assert.equal(result.unchanged, false);
+  assert.equal(result.body, "LIVE");
+  assert.deepEqual(calls, [null]);
+  const stored = readCacheEntry(cacheFileForUrl(cacheDir, ENDPOINT));
+  assert.equal(stored.ok, true);
+  assert.equal(stored.etag, "\"live\"");
+  assert.equal(stored.body, "LIVE");
+});
+
+test("TESSERA_ENABLE_ETAG_CACHE=0 opts out and does not touch the cache", async () => {
   const cacheDir = tempCache();
   const file = join(cacheDir, "seed.json");
   writeFileSync(file, "{\"etag\":\"\\\"stale\\\"\",\"body\":\"CACHED\"}\n");
   const before = statSync(file).mtimeMs;
   const calls = [];
-  for (const value of [undefined, "0", "true", "yes", ""]) {
-    const env = {};
-    if (value !== undefined) env[ENABLE_FLAG] = value;
-    const result = await cachedGet({
-      url: ENDPOINT,
-      cacheDir,
-      env,
-      headers: { Accept: "application/vnd.github+json" },
-      request: async (req) => {
-        calls.push(req.headers);
-        return { status: 200, body: "LIVE", headers: { etag: "\"live\"" } };
-      },
-    });
-    assert.equal(result.unchanged, false);
-    assert.equal(result.body, "LIVE");
-  }
-  assert.equal(calls.length, 5);
-  for (const headers of calls) {
-    assert.equal(headers["If-None-Match"], undefined);
-    assert.equal(headers.Accept, "application/vnd.github+json");
-  }
+  const result = await cachedGet({
+    url: ENDPOINT,
+    cacheDir,
+    env: { [ENABLE_FLAG]: "0" },
+    headers: { Accept: "application/vnd.github+json" },
+    request: async (req) => {
+      calls.push(req.headers);
+      return { status: 200, body: "LIVE", headers: { etag: "\"live\"" } };
+    },
+  });
+  assert.equal(result.unchanged, false);
+  assert.equal(result.body, "LIVE");
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0]["If-None-Match"], undefined);
+  assert.equal(calls[0].Accept, "application/vnd.github+json");
   assert.equal(readFileSync(file, "utf8"), "{\"etag\":\"\\\"stale\\\"\",\"body\":\"CACHED\"}\n");
   assert.equal(statSync(file).mtimeMs, before);
   assert.deepEqual(readdirSync(cacheDir), ["seed.json"]);
@@ -325,7 +388,7 @@ test("reading a 0644 cache file tightens it to mode 0600", async () => {
   }
 });
 
-test("EPERM while tightening a cache file does not fail the read", () => {
+test("EPERM while tightening a cache file we own does not fail the read", () => {
   const cacheDir = tempCache();
   const file = cacheFileForUrl(cacheDir, ENDPOINT);
   writeFileSync(file, JSON.stringify({ etag: "\"old\"", body: "OLD" }));
@@ -339,6 +402,71 @@ test("EPERM while tightening a cache file does not fail the read", () => {
   assert.equal(stored.ok, true);
   assert.equal(stored.etag, "\"old\"");
   assert.equal(stored.body, "OLD");
+});
+
+test("EPERM on read is a cache miss and does not serve the body", async () => {
+  const cacheDir = tempCache();
+  const file = cacheFileForUrl(cacheDir, ENDPOINT);
+  writeFileSync(file, JSON.stringify({ etag: "\"old\"", body: "OTHER-USER" }));
+  const readDeps = {
+    readFileSync() {
+      const error = new Error("operation not permitted");
+      error.code = "EPERM";
+      throw error;
+    },
+  };
+  const stored = readCacheEntry(file, readDeps);
+  assert.equal(stored.ok, false);
+  assert.equal(stored.reason, "miss");
+  assert.equal(stored.body, undefined);
+  const calls = [];
+  const result = await cachedGet({
+    url: ENDPOINT,
+    cacheDir,
+    env: {},
+    readDeps,
+    request: async (req) => {
+      calls.push(req.headers["If-None-Match"] ?? null);
+      return { status: 200, body: "LIVE", headers: { etag: "\"live\"" } };
+    },
+  });
+  assert.equal(result.unchanged, false);
+  assert.equal(result.body, "LIVE");
+  assert.deepEqual(calls, [null]);
+  assert.equal(result.body.includes("OTHER-USER"), false);
+});
+
+test("a cache file owned by another user is a miss and is never served", async () => {
+  const cacheDir = tempCache();
+  const file = cacheFileForUrl(cacheDir, ENDPOINT);
+  writeFileSync(file, JSON.stringify({ etag: "\"old\"", body: "OTHER-USER" }), { mode: 0o644 });
+  const readDeps = {
+    statSync() {
+      return { uid: 65534 };
+    },
+    getuid() {
+      return 1000;
+    },
+  };
+  const stored = readCacheEntry(file, readDeps);
+  assert.equal(stored.ok, false);
+  assert.equal(stored.reason, "miss");
+  assert.equal(stored.body, undefined);
+  const calls = [];
+  const result = await cachedGet({
+    url: ENDPOINT,
+    cacheDir,
+    env: {},
+    readDeps,
+    request: async (req) => {
+      calls.push(req.headers["If-None-Match"] ?? null);
+      return { status: 200, body: "LIVE", headers: { etag: "\"live\"" } };
+    },
+  });
+  assert.equal(result.body, "LIVE");
+  assert.equal(result.unchanged, false);
+  assert.deepEqual(calls, [null]);
+  assert.equal(result.body.includes("OTHER-USER"), false);
 });
 
 test("flag on 304 hit writes the body to stdout and unchanged to stderr", async () => {
@@ -375,12 +503,18 @@ test("flag on 304 hit writes the body to stdout and unchanged to stderr", async 
   assert.equal(stderr.written, "unchanged\n");
 });
 
-test("flag on passes graphql and {owner}/{repo} placeholders through to gh api", async () => {
+test("flag on passes graphql, /graphql, and {owner}/{repo}/{branch} placeholders through to gh api", async () => {
   const cases = [
     ["graphql"],
+    ["/graphql"],
+    ["-X", "GET", "/graphql"],
+    ["/graphql", "-X", "GET"],
     ["repos/{owner}/{repo}/contents/"],
     ["repos/{owner}/{repo}"],
     ["-X", "GET", "repos/{owner}/{repo}/contents/"],
+    ["repos/{owner}/{repo}/branches/{branch}"],
+    ["repos/vitalitychems-dot/TESSERA/commits/{branch}"],
+    ["-X", "GET", "repos/{owner}/{repo}/git/ref/heads/{branch}"],
   ];
   for (const argv of cases) {
     const cacheDir = tempCache();
@@ -455,10 +589,33 @@ test("flag on with --paginate bypasses the cache", async () => {
   assert.deepEqual(readdirSync(cacheDir), []);
 });
 
-test("flag off CLI spawns gh api with the same arguments", async () => {
-  const spawned = [];
-  const code = await runCli(["repos/vitalitychems-dot/TESSERA/contents/", "-H", "Accept: application/json"], {
+test("unset flag CLI uses the cache for an allowlisted path", async () => {
+  const cacheDir = tempCache();
+  const stdout = { written: "", write(chunk) { this.written += chunk; } };
+  const urls = [];
+  const code = await runCli(["repos/vitalitychems-dot/TESSERA/contents/"], {
     env: {},
+    cacheDir,
+    token: "ghs_plain_get",
+    stdout,
+    stderr: { write() {} },
+    spawnImpl: () => {
+      throw new Error("unset flag must not spawn gh for an allowlisted path");
+    },
+    request: async (req) => {
+      urls.push(req.url);
+      return { status: 200, body: "FROM-CACHE-PATH", headers: { etag: "\"eu\"" } };
+    },
+  });
+  assert.equal(code, 0);
+  assert.deepEqual(urls, [ENDPOINT]);
+  assert.equal(stdout.written, "FROM-CACHE-PATH");
+});
+
+test("TESSERA_ENABLE_ETAG_CACHE=0 CLI spawns gh api with the same arguments", async () => {
+  const spawned = [];
+  const code = await runCli(["repos/vitalitychems-dot/TESSERA/contents/"], {
+    env: { [ENABLE_FLAG]: "0" },
     spawnImpl: (cmd, args) => {
       spawned.push([cmd, args]);
       return { status: 0 };
@@ -470,6 +627,6 @@ test("flag off CLI spawns gh api with the same arguments", async () => {
   assert.equal(code, 0);
   assert.deepEqual(spawned, [[
     "gh",
-    ["api", "repos/vitalitychems-dot/TESSERA/contents/", "-H", "Accept: application/json"],
+    ["api", "repos/vitalitychems-dot/TESSERA/contents/"],
   ]]);
 });
