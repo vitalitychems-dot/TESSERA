@@ -31,3 +31,9 @@ If `bwrap` is missing or can't start, the runner refuses to execute code (fails 
 
 ## Tests
 `node --test evals/heldout/run.test.mjs` uses a tiny synthetic fixture in a temp dir.
+
+## Per-improvement run on the box (#21)
+`HELDOUT_DIR=... node evals/heldout/per-improvement.mjs --improvement <id> [--predictions p.json]`
+runs `run.test.mjs` first (fail closed: no score if any test fails), then scores and appends one
+aggregate line (improvement, SHA, test counts, per-suite scores, macro; never items) to
+`evals/heldout/out/per-improvement.jsonl` (git-ignored). Tests: `node --test evals/heldout/per-improvement.test.mjs`.
