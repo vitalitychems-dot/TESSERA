@@ -1,0 +1,199 @@
+import { describe, it, expect, afterEach } from "vitest";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import express from "express";
+import { resolveAlias, applyMeshRegistryPolicy, initMeshRegistryFromEnv, isMessageAllowed, getCommsPolicy, setCommsPolicy } from "../lib/comms-policy";
+import { loadMeshRegistry, validateMeshRegistry, DEFAULT_MESH_REGISTRY_PATH } from "../lib/mesh-registry";
+import { sha256Hex, parseLaneTokens, laneForToken } from "../lib/mesh-lane-auth";
+import { validateMeshToken } from "../lib/mesh-auth";
+import agentNetworkRouter, { validateCommsBody } from "../routes/agent-network";
+
+afterEach(() => setCommsPolicy(null));
+const tmp = mkdtempSync(join(tmpdir(), "mesh-reg-"));
+const write = (name: string, body: string) => { const p = join(tmp, name); writeFileSync(p, body); return p; };
+
+describe("mesh lane registry (GM-1)", () => {
+  const reg = loadMeshRegistry();
+  it("loads config/mesh-lanes.json", () => {
+    expect(reg.lanes).toHaveLength(17);
+    expect(reg.edges).toHaveLength(735);
+  });
+  it("allows every registered edge", () => {
+    expect(applyMeshRegistryPolicy()).toBe(true);
+    for (const [f, t] of reg.edges) expect(isMessageAllowed(f, t)).toBe(true);
+  });
+  it("rejects unknown edges, including lane -> owner", () => {
+    applyMeshRegistryPolicy();
+    expect(isMessageAllowed("build", "rick")).toBe(false);
+    expect(isMessageAllowed("tessera", "owner-digest")).toBe(false);
+    expect(isMessageAllowed("mesh-cloud", "owner-digest")).toBe(false);
+    expect(isMessageAllowed("unknown-bot", "tessera")).toBe(false);
+  });
+});
+
+describe("fail closed + schema (Security HIGH #1)", () => {
+  it("missing file denies all edges", () => {
+    expect(applyMeshRegistryPolicy(join(tmp, "nope.json"))).toBe(false);
+    expect(getCommsPolicy()).toEqual([]);
+    expect(isMessageAllowed("build", "tessera")).toBe(false);
+  });
+  it("invalid JSON denies all edges", () => {
+    expect(applyMeshRegistryPolicy(write("bad.json", "{not json"))).toBe(false);
+    expect(isMessageAllowed("build", "tessera")).toBe(false);
+  });
+  it("schema-invalid file denies all edges", () => {
+    const p = write("schema.json", JSON.stringify({ lanes: ["a"], edges: [["a", "ghost"]] }));
+    expect(applyMeshRegistryPolicy(p)).toBe(false);
+    expect(isMessageAllowed("a", "ghost")).toBe(false);
+    expect(() => validateMeshRegistry({ lanes: "a", edges: [] })).toThrow();
+    expect(() => validateMeshRegistry({ lanes: ["a"], edges: [["a"]] })).toThrow();
+    expect(() => validateMeshRegistry({ lanes: ["A B"], edges: [] })).toThrow();
+  });
+  it("rejects '*' as a sender (whole file denied)", () => {
+    expect(() => validateMeshRegistry({ lanes: ["a"], edges: [["*", "a"]] })).toThrow(/sender/);
+    const p = write("star.json", JSON.stringify({ lanes: ["a", "b"], edges: [["*", "a"]] }));
+    expect(applyMeshRegistryPolicy(p)).toBe(false);
+    expect(isMessageAllowed("b", "a")).toBe(false);
+  });
+  it("still accepts '*' as a recipient", () => {
+    expect(validateMeshRegistry({ lanes: ["a"], edges: [["a", "*"]] }).edges).toHaveLength(1);
+  });
+});
+
+describe("startup hook MESH_REGISTRY_PATH (GM-1b)", () => {
+  it("env unset => open", () => {
+    expect(initMeshRegistryFromEnv({})).toBe("open");
+    expect(getCommsPolicy()).toBeNull();
+    expect(isMessageAllowed("build", "rick")).toBe(true);
+  });
+  it("env set => enforced", () => {
+    expect(initMeshRegistryFromEnv({ MESH_REGISTRY_PATH: DEFAULT_MESH_REGISTRY_PATH })).toBe("enforced");
+    expect(isMessageAllowed("build", "tessera")).toBe(true);
+    expect(isMessageAllowed("build", "rick")).toBe(false);
+  });
+  it("env set to missing file => deny-all", () => {
+    expect(initMeshRegistryFromEnv({ MESH_REGISTRY_PATH: join(tmp, "missing.json") })).toBe("deny-all");
+    expect(isMessageAllowed("build", "tessera")).toBe(false);
+  });
+});
+
+describe("agent-comms route input checks (Security HIGH #2, partial)", () => {
+  const ok = { to: "tessera", content: "hi" };
+  it("rejects bad content/type/priority", () => {
+    const o = { requireTo: true, allowType: true };
+    expect(validateCommsBody(ok, o)).toBeNull();
+    expect(validateCommsBody({ ...ok, content: "" }, o)).toMatch(/content/);
+    expect(validateCommsBody({ ...ok, content: "x".repeat(4001) }, o)).toMatch(/content/);
+    expect(validateCommsBody({ ...ok, content: { a: 1 } }, o)).toMatch(/content/);
+    expect(validateCommsBody({ ...ok, type: "evil" }, o)).toMatch(/type/);
+    expect(validateCommsBody({ ...ok, priority: "urgent" }, o)).toMatch(/priority/);
+    expect(validateCommsBody({ ...ok, to: "x".repeat(129) }, o)).toMatch(/to/);
+  });
+  it("route returns 400 on bad input and 403 on a denied edge", async () => {
+    const app = express().use(express.json()).use(agentNetworkRouter);
+    const server = app.listen(0);
+    const port = (server.address() as any).port;
+    const post = (body: unknown) => fetch(`http://127.0.0.1:${port}/agent-comms/send`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    try {
+      expect((await post({ from: "build", to: "tessera", content: "hi", priority: "urgent" })).status).toBe(400);
+      applyMeshRegistryPolicy();
+      expect((await post({ from: "build", to: "rick", content: "hi" })).status).toBe(403);
+      expect((await post({ from: "build", to: "tessera", content: "hi" })).status).toBe(200);
+    } finally { server.close(); }
+  });
+});
+
+describe("per-lane tokens + aliases (Security HIGH #2)", () => {
+  const fake = () => `fake-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+  const tTessera = fake(), tBuild = fake();
+  const envJson = JSON.stringify({ tessera: sha256Hex(tTessera), build: sha256Hex(tBuild) });
+  const prev = process.env.MESH_LANE_TOKENS;
+  const restore = () => { if (prev === undefined) delete process.env.MESH_LANE_TOKENS; else process.env.MESH_LANE_TOKENS = prev; };
+  const withServer = async (fn: (post: (path: string, body: unknown, token?: string) => Promise<Response>) => Promise<void>) => {
+    const app = express().use(express.json()).use(agentNetworkRouter);
+    const server = app.listen(0);
+    const port = (server.address() as any).port;
+    const post = (path: string, body: unknown, token?: string) => fetch(`http://127.0.0.1:${port}${path}`, {
+      method: "POST", headers: { "content-type": "application/json", ...(token ? { "x-mesh-lane-token": token } : {}) }, body: JSON.stringify(body) });
+    try { await fn(post); } finally { server.close(); restore(); }
+  };
+
+  it("matched token derives from (body from omitted)", async () => withServer(async (post) => {
+    process.env.MESH_LANE_TOKENS = envJson;
+    const r = await post("/agent-comms/send", { to: "tessera", content: "hi" }, tBuild);
+    expect(r.status).toBe(200);
+    expect((await r.json()).data.from).toBe("build");
+  }));
+  it("mismatched body from is rejected", async () => withServer(async (post) => {
+    process.env.MESH_LANE_TOKENS = envJson;
+    expect((await post("/agent-comms/send", { from: "tessera", to: "build", content: "hi" }, tBuild)).status).toBe(403);
+  }));
+  it("body from given as an alias of the token's lane is accepted", async () => withServer(async (post) => {
+    process.env.MESH_LANE_TOKENS = envJson;
+    applyMeshRegistryPolicy();
+    expect((await post("/agent-comms/send", { from: "Tessera", to: "build", content: "hi" }, tTessera)).status).toBe(200);
+  }));
+  it("unknown or missing token is rejected", async () => withServer(async (post) => {
+    process.env.MESH_LANE_TOKENS = envJson;
+    expect((await post("/agent-comms/send", { to: "tessera", content: "hi" }, fake())).status).toBe(403);
+    expect((await post("/agent-comms/send", { to: "tessera", content: "hi" })).status).toBe(403);
+    expect((await post("/agent-comms/broadcast", { content: "hi" }, fake())).status).toBe(403);
+  }));
+  it("malformed MESH_LANE_TOKENS fails closed", async () => withServer(async (post) => {
+    process.env.MESH_LANE_TOKENS = "{oops";
+    expect((await post("/agent-comms/send", { to: "tessera", content: "hi" }, tBuild)).status).toBe(403);
+  }));
+  it("env unset keeps existing behaviour; shared-key validator untouched", async () => {
+    delete process.env.MESH_LANE_TOKENS;
+    expect(parseLaneTokens({})).toBeNull();
+    expect(validateMeshToken(undefined)).toBeNull();
+    await withServer(async (post) => {
+      delete process.env.MESH_LANE_TOKENS;
+      expect((await post("/agent-comms/send", { from: "Alpha", to: "Beta", content: "hi" })).status).toBe(200);
+    });
+  });
+  it("laneForToken: hashes + constant-time match", () => {
+    const table = parseLaneTokens({ MESH_LANE_TOKENS: envJson })!;
+    expect(laneForToken(tTessera, table)).toBe("tessera");
+    expect(laneForToken(fake(), table)).toBeNull();
+    expect(() => parseLaneTokens({ MESH_LANE_TOKENS: JSON.stringify({ a: "not-hex" }) })).toThrow();
+  });
+  it("aliases: schema-validated; seeded Tessera flows resolve through the alias", () => {
+    expect(() => validateMeshRegistry({ lanes: ["a"], edges: [], aliases: { X: "ghost" } })).toThrow(/alias/);
+    expect(() => validateMeshRegistry({ lanes: ["a"], edges: [], aliases: [] })).toThrow(/aliases/);
+    expect(loadMeshRegistry().aliases!.Tessera).toBe("tessera");
+    applyMeshRegistryPolicy();
+    expect(resolveAlias("Tessera")).toBe("tessera");
+    expect(isMessageAllowed("Tessera", "build")).toBe(true);
+    expect(isMessageAllowed("build", "Tessera")).toBe(true);
+    expect(isMessageAllowed("Tessera", "Sigma")).toBe(true);
+  });
+});
+
+describe("council node group", () => {
+  const reg = loadMeshRegistry();
+  const council = reg.groups!.find((g) => g.kind === "council")!.nodes;
+  it("has 26 council nodes, each aliased from its seeded name", () => {
+    expect(council).toHaveLength(26);
+    for (const [name, slug] of Object.entries(reg.aliases!)) if (name !== "Tessera") expect(slug).toBe(`council-${name.toLowerCase()}`);
+  });
+  it("seeded flows pass with the registry on", () => {
+    applyMeshRegistryPolicy();
+    const seeded = [["Tessera", "Sigma"], ["Sigma", "Tessera"], ["Theta", "Pi"], ["Pi", "Theta"], ["Zeta", "Mu"], ["Mu", "Zeta"], ["Alpha", "Omicron"], ["Omicron", "Alpha"]];
+    for (const [f, t] of seeded) expect(isMessageAllowed(f, t)).toBe(true);
+  });
+  it("council -> mesh lane and council -> owner-digest are denied", () => {
+    applyMeshRegistryPolicy();
+    for (const c of council) {
+      expect(isMessageAllowed(c, "rick")).toBe(false);
+      expect(isMessageAllowed(c, "owner-digest")).toBe(false);
+      expect(isMessageAllowed("build", c)).toBe(false);
+    }
+    expect(isMessageAllowed("Sigma", "rick")).toBe(false);
+  });
+  it("schema: bad kind / unprefixed node rejected", () => {
+    expect(() => validateMeshRegistry({ lanes: ["a"], edges: [], groups: [{ kind: "evil", nodes: ["evil-x"] }] })).toThrow(/kind/);
+    expect(() => validateMeshRegistry({ lanes: ["a"], edges: [], groups: [{ kind: "council", nodes: ["sigma"] }] })).toThrow(/prefixed/);
+  });
+});

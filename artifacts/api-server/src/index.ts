@@ -1,3 +1,4 @@
+import { initMeshRegistryFromEnv } from "./lib/comms-policy";
 import { installSovereignFetchGuard } from "./lib/sovereign-fetch-guard";
 installSovereignFetchGuard();
 
@@ -362,6 +363,10 @@ async function runPostBindHealthProbe(port: number): Promise<void> {
 (async () => {
   try {
     await initPromise;
+    {
+      const meshMode = initMeshRegistryFromEnv();
+      if (meshMode !== "open") logger.info({ meshMode }, "Mesh registry comms policy applied (MESH_REGISTRY_PATH)");
+    }
     logger.info("Module initialization complete — binding port");
 
     const port = await findAvailablePort(basePort);

@@ -8,6 +8,8 @@
  * Default is OPEN (no policy set) so existing behaviour is unchanged until a
  * policy is installed with setCommsPolicy().
  */
+import { loadMeshRegistry } from "./mesh-registry";
+
 export type CommsEdge = [from: string, to: string];
 
 export class CommsPolicyError extends Error {
@@ -18,10 +20,17 @@ export class CommsPolicyError extends Error {
 }
 
 let allowed: Map<string, Set<string>> | null = null;
+let aliases: Map<string, string> = new Map();
+
+/** Display-name -> slug aliases, resolved before every policy check. */
+export function setCommsAliases(map: Record<string, string> | null): void {
+  aliases = new Map(Object.entries(map ?? {}));
+}
+export const resolveAlias = (name: string): string => aliases.get(name) ?? name;
 
 /** Install a directed allow-list. "*" as `to` means any recipient. Pass null to reopen. */
 export function setCommsPolicy(edges: CommsEdge[] | null): void {
-  if (edges === null) { allowed = null; return; }
+  if (edges === null) { allowed = null; aliases = new Map(); return; }
   allowed = new Map();
   for (const [f, t] of edges) {
     if (!allowed.has(f)) allowed.set(f, new Set());
@@ -31,8 +40,8 @@ export function setCommsPolicy(edges: CommsEdge[] | null): void {
 
 export function isMessageAllowed(from: string, to: string): boolean {
   if (!allowed) return true;
-  const s = allowed.get(from);
-  return Boolean(s && (s.has(to) || s.has("*")));
+  const s = allowed.get(resolveAlias(from));
+  return Boolean(s && (s.has(resolveAlias(to)) || s.has("*")));
 }
 
 export function assertMayMessage(from: string, to: string): void {
@@ -42,4 +51,30 @@ export function assertMayMessage(from: string, to: string): void {
 export function getCommsPolicy(): CommsEdge[] | null {
   if (!allowed) return null;
   return [...allowed.entries()].flatMap(([f, ts]) => [...ts].map((t) => [f, t] as CommsEdge));
+}
+
+/** Env var naming the registry file. Unset => policy stays open (REA-08 default). */
+export const MESH_REGISTRY_ENV = "MESH_REGISTRY_PATH";
+
+/**
+ * GM-1: install the mesh lane registry as the policy. FAIL CLOSED: if the file is
+ * missing or invalid, every edge is denied. Returns true if the registry loaded.
+ */
+export function applyMeshRegistryPolicy(path?: string): boolean {
+  try {
+    const reg = loadMeshRegistry(path);
+    setCommsPolicy(reg.edges);
+    setCommsAliases(reg.aliases ?? null);
+    return true;
+  } catch {
+    setCommsPolicy([]);
+    return false;
+  }
+}
+
+/** GM-1b startup hook: enforce only when MESH_REGISTRY_PATH is set. */
+export function initMeshRegistryFromEnv(env: NodeJS.ProcessEnv = process.env): "open" | "enforced" | "deny-all" {
+  const path = env[MESH_REGISTRY_ENV];
+  if (!path) return "open";
+  return applyMeshRegistryPolicy(path) ? "enforced" : "deny-all";
 }

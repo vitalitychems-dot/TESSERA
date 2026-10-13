@@ -95,3 +95,8 @@ service-account*.json
 artifacts/v2/data/
 **/Zz/
 **/natal-vault*
+
+# Mesh lane tokens: only the example is tracked
+config/secrets/*
+!config/secrets/README.md
+!config/secrets/*.example.json
