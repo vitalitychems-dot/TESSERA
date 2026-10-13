@@ -54,13 +54,16 @@ delete isolatedEnv.TESSERA_TEST_DATABASE_URL;
 delete isolatedEnv.TESSERA_TEST_FATHER_NATAL_CHART_JSON;
 
 let failures = 0;
-for (const [label, selector] of [
-  ["Suite safety policy", "@workspace/scripts"],
-  ["Gitbook MCP", "@workspace/gitbook-mcp"],
-  ["TESSERA v2", "@workspace/v2"],
-  ["GitAI", "@workspace/gitai"],
+for (const [label, selector, script] of [
+  ["Suite safety policy", "@workspace/scripts", "test"],
+  ["Gitbook MCP", "@workspace/gitbook-mcp", "test"],
+  ["TESSERA v2", "@workspace/v2", "test"],
+  ["GitAI", "@workspace/gitai", "test"],
+  // Optional-boot assertions require DATABASE_URL to be unset, so they run
+  // here with the isolated env instead of with the database-backed suite.
+  ["Tessera API boot without database", "@workspace/api-server", "test:boot"],
 ]) {
-  failures += await runWorkspaceTest(label, selector, { ...isolatedEnv });
+  failures += await runWorkspaceTest(label, selector, { ...isolatedEnv }, script);
 }
 
 const testDatabaseUrl = localTestValue("TESSERA_TEST_DATABASE_URL").trim();
@@ -87,7 +90,7 @@ if (!testDatabaseUrl) {
       ? { FATHER_NATAL_CHART_JSON: localTestValue("TESSERA_TEST_FATHER_NATAL_CHART_JSON") }
       : {}),
   };
-  failures += await runWorkspaceTest("Tessera API (local test database)", "@workspace/api-server", apiEnv);
+  failures += await runWorkspaceTest("Tessera API (local test database)", "@workspace/api-server", apiEnv, "test:db");
 }
 
 failures += await runWorkspaceTest(
