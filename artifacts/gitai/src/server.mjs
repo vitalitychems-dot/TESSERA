@@ -1,6 +1,7 @@
 /**
  * GitAI HTTP app. Loopback by default. Refuses the v2 denylist paths.
  */
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -11,19 +12,46 @@ import { GitAi } from "./platform.mjs";
 import { seedDemo } from "./seed.mjs";
 import { createLiveFeed } from "./ws.mjs";
 
+// A bare handle is not a session. Restart drops cookies unless GITAI_SESSION_SECRET is set.
+const sessionSecret = (process.env.GITAI_SESSION_SECRET ?? "").trim() || randomBytes(32).toString("hex");
+
+export function signSession(handle) {
+  const mac = createHmac("sha256", sessionSecret).update(String(handle)).digest("hex");
+  return `${handle}.${mac}`;
+}
+
+function signatureMatches(presented, expected) {
+  const left = Buffer.from(presented);
+  const right = Buffer.from(expected);
+  if (left.length !== right.length) return false;
+  return timingSafeEqual(left, right);
+}
+
 export function readSession(cookie) {
   const match = String(cookie ?? "").match(/(?:^|;\s*)gitai=([^;]+)/);
   if (!match) return null;
+  let value;
   try {
-    return decodeURIComponent(match[1]);
+    value = decodeURIComponent(match[1]);
   } catch {
     return null;
   }
+  const dot = value.lastIndexOf(".");
+  if (dot <= 0) return null;
+  const handle = value.slice(0, dot);
+  const presented = value.slice(dot + 1);
+  const expected = createHmac("sha256", sessionSecret).update(handle).digest("hex");
+  if (!signatureMatches(presented, expected)) return null;
+  return handle;
+}
+
+export function sessionCookie(handle) {
+  return `gitai=${encodeURIComponent(signSession(handle))}; HttpOnly; Path=/; SameSite=Lax`;
 }
 
 function html(body, { status = 200, session = null, setSession = undefined } = {}) {
   const headers = { "content-type": "text/html; charset=utf-8" };
-  if (setSession) headers["set-cookie"] = `gitai=${encodeURIComponent(setSession)}; HttpOnly; Path=/; SameSite=Lax`;
+  if (setSession) headers["set-cookie"] = sessionCookie(setSession);
   return { status, headers, body, session };
 }
 
@@ -56,7 +84,7 @@ export function dispatch(gitai, request) {
       status: 303,
       headers: {
         location: `${base}/?notice=Spectator+login+created`,
-        "set-cookie": `gitai=${encodeURIComponent(created.account.handle)}; HttpOnly; Path=/; SameSite=Lax`,
+        "set-cookie": sessionCookie(created.account.handle),
       },
       body: "",
       session: created.account.handle,
@@ -70,7 +98,7 @@ export function dispatch(gitai, request) {
       status: 303,
       headers: {
         location: `${base}/`,
-        "set-cookie": `gitai=${encodeURIComponent(logged.account.handle)}; HttpOnly; Path=/; SameSite=Lax`,
+        "set-cookie": sessionCookie(logged.account.handle),
       },
       body: "",
       session: logged.account.handle,

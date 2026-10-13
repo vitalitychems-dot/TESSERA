@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { listenGitAi } from "../../gitai/src/server.mjs";
+import { listenGitAi, signSession } from "../../gitai/src/server.mjs";
 import { seedDemo } from "../../gitai/src/seed.mjs";
 import { createStudio, listenStudio } from "../src/studio/wall.mjs";
 
@@ -46,9 +46,15 @@ test("the studio tab can share the standalone GitAI process", async () => {
       direct.projects.find((project) => project.name === "mesh-note").stars,
     );
     const projectId = direct.projects.find((project) => project.name === "mesh-note").id;
-    const starred = await fetch(`${studio.url}gitai/api/stars`, {
+    const forged = await fetch(`${studio.url}gitai/api/stars`, {
       method: "POST",
       headers: { "content-type": "application/json", cookie: "gitai=Jules" },
+      body: JSON.stringify({ projectId }),
+    });
+    assert.equal(forged.status, 401);
+    const starred = await fetch(`${studio.url}gitai/api/stars`, {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie: `gitai=${signSession("Jules")}` },
       body: JSON.stringify({ projectId }),
     });
     assert.equal(starred.status, 200);
