@@ -697,6 +697,8 @@ importers:
         specifier: ^1.64.0
         version: 1.64.0
 
+  artifacts/v3: {}
+
   lib/api-client-react:
     dependencies:
       '@tanstack/react-query':

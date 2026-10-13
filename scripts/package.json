@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
-    "test": "node --test ./suite-policy.test.mjs ./historical-merge-gate.test.mjs ./eval/write-result.test.mjs ./check-task-mirror.test.mjs ./rea-registry.test.mjs ./gitleaks-scan.test.mjs ./main-provenance.test.mjs ./pr-diff-scan.test.mjs ./pr-author-check.test.mjs ./ready-for-gate-comment.test.mjs ../tools/etagcache/etagcache.test.mjs ./scan-cache.test.mjs",
+    "test": "node --test ./suite-policy.test.mjs ./historical-merge-gate.test.mjs ./eval/write-result.test.mjs ./check-task-mirror.test.mjs ./rea-registry.test.mjs ./gitleaks-scan.test.mjs ./main-provenance.test.mjs ./pr-diff-scan.test.mjs ./pr-author-check.test.mjs ./ready-for-gate-comment.test.mjs ../tools/etagcache/etagcache.test.mjs ./scan-cache.test.mjs ../tools/pregate/pregate.test.mjs",
     "secret-scan:test": "node --test ./gitleaks-fixture-test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
