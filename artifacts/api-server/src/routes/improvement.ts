@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { requireAdminSession } from "../lib/sovereign-admin";
 import { db } from "@workspace/db";
 import {
   improvementCyclesTable,
@@ -168,7 +169,7 @@ async function computeRealSovereigntyScore(): Promise<number> {
   return Math.min(100, Math.round(baseScore + localBonus + activeBonus + perfBonus));
 }
 
-router.post("/improvement/cycle", async (req, res) => {
+router.post("/improvement/cycle", requireAdminSession, async (req, res) => {
   try {
     const cycleId = `cycle-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
