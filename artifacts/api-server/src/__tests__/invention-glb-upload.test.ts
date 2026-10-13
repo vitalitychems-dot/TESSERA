@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from "vitest";
 import express, { type Express } from "express";
 import { createServer, type Server } from "node:http";
-import { db } from "@workspace/db";
+import { db, isDbConfigured } from "@workspace/db";
+
+// Needs a real Postgres (DATABASE_URL). Skip cleanly instead of failing the
+// whole file with DbUnavailableError when no DB is configured.
+const HAS_DB = isDbConfigured();
 import { inventionsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 
@@ -107,6 +111,7 @@ async function patchJson(path: string, body: unknown, headers: Record<string, st
 }
 
 beforeAll(async () => {
+  if (!HAS_DB) return;
   // Keep auth tests independent of whichever secrets happen to be configured
   // in the developer or CI environment.
   process.env["TESSERACT_ADMIN_KEY"] = TEST_ADMIN_TOKEN;
@@ -164,6 +169,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (!HAS_DB) return;
   try {
     await db.delete(inventionsTable).where(eq(inventionsTable.inventionId, TEST_INVENTION_ID));
     await db.delete(inventionsTable).where(eq(inventionsTable.inventionId, SECOND_INVENTION_ID));
@@ -188,7 +194,7 @@ afterEach(() => {
   process.env["TESSERACT_ADMIN_KEY"] = TEST_ADMIN_TOKEN;
 });
 
-describe("GLB upload flow (presign -> PUT -> PATCH -> chat render)", () => {
+describe.skipIf(!HAS_DB)("GLB upload flow (presign -> PUT -> PATCH -> chat render)", () => {
   it("rejects presign without admin token", async () => {
     const res = await fetch(`${baseUrl}/api/inventions/${TEST_INVENTION_ID}/model/upload-url`, {
       method: "POST",
