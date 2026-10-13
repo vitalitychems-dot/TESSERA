@@ -47,17 +47,50 @@ export function decay(g, { factor = 0.9, floor = 0.05 } = {}) {
   for (const [k, w] of g.syn) { const nw = w * factor; if (nw < floor) { g.syn.delete(k); pruned++; } else g.syn.set(k, nw); }
   return pruned;
 }
-const toks = (s) => new Set(String(s ?? "").split(/[^a-z0-9]+/).filter((w) => w.length > 3));
+const EMPTY_TOKENS = new Set();
+const tokenCache = new WeakMap();
+/** Observation tokens for a node. Same split as before; reused while `node.text` is unchanged. */
+function tokenSet(node) {
+  if (!node) return EMPTY_TOKENS;
+  const text = node.text ?? "";
+  const hit = tokenCache.get(node);
+  if (hit && hit.text === text) return hit.set;
+  const set = new Set(String(text).split(/[^a-z0-9]+/).filter((w) => w.length > 3));
+  tokenCache.set(node, { text, set });
+  return set;
+}
+const adjCache = new WeakMap();
+/** Relation adjacency, reused while the edge map, its size, and its weight sum are unchanged.
+ * Synapses are read live and are not part of this cache. */
+function cachedAdjacency(g) {
+  let sum = 0;
+  for (const w of g.edges.values()) sum += w;
+  const hit = adjCache.get(g);
+  if (hit && hit.edges === g.edges && hit.size === g.edges.size && hit.sum === sum) return hit.adj;
+  const adj = adjacency(g);
+  adjCache.set(g, { edges: g.edges, size: g.edges.size, sum, adj });
+  return adj;
+}
 /** Link recall: rank non-neighbours of seed by Adamic-Adar over relations + synapse strength
  * + observation-token overlap. Returns top-k names. Use with no synapses for the baseline. */
 export function predict(g, seed, k = 5, { synW = 2, textW = 1 } = {}) {
-  const adj = adjacency(g); const nb = new Map(adj.get(seed) ?? []); const deg = (n) => (adj.get(n) ?? []).length;
-  const T = toks(g.nodes.get(seed)?.text); const out = [];
+  const adj = cachedAdjacency(g);
+  const nb = new Map(adj.get(seed) ?? []);
+  const invLog = new Map();
+  for (const [n, list] of adj) invLog.set(n, 1 / Math.log(1 + list.length));
+  const T = tokenSet(g.nodes.get(seed));
+  const out = [];
   for (const n of g.nodes.keys()) {
     if (n === seed || nb.has(n)) continue;
-    let s = 0; for (const [m] of adj.get(n) ?? []) if (nb.has(m)) s += 1 / Math.log(1 + deg(m));
+    let s = 0;
+    for (const [m] of adj.get(n) ?? []) if (nb.has(m)) s += invLog.get(m);
     s += synW * synapse(g, seed, n);
-    if (textW) { const U = toks(g.nodes.get(n)?.text); let i = 0; for (const w of T) if (U.has(w)) i++; s += textW * (i / ((T.size + U.size - i) || 1)); }
+    if (textW) {
+      const U = tokenSet(g.nodes.get(n));
+      let i = 0;
+      for (const w of T) if (U.has(w)) i++;
+      s += textW * (i / ((T.size + U.size - i) || 1));
+    }
     if (s > 0) out.push([n, s]);
   }
   return out.sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, k).map(([n]) => n);
