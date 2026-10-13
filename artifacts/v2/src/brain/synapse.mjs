@@ -97,7 +97,7 @@ export function predict(g, seed, k = 5, { synW = 2, textW = 1 } = {}) {
 }
 /** Spreading activation from seed, 2 hops, top-k (excluding seed). */
 export function recall(g, seed, k = 5, { hops = 2, damp = 0.5 } = {}) {
-  const adj = adjacency(g); const act = new Map([[seed, 1]]); let front = new Map([[seed, 1]]);
+  const adj = cachedAdjacency(g); const act = new Map([[seed, 1]]); let front = new Map([[seed, 1]]);
   for (let h = 0; h < hops; h++) {
     const next = new Map();
     for (const [n, a] of front) {
