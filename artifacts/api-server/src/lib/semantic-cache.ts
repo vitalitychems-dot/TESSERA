@@ -194,14 +194,23 @@ export async function storeInCache(
     stats.cacheSize = countRow?.cnt ?? 0;
 
     if (stats.cacheSize > MAX_CACHE_SIZE) {
-      await evictExpired();
+      await evictExpired(true);
     }
   } catch (err) {
     logger.warn({ err: (err as Error).message }, "SemanticCache: store error");
   }
 }
 
-export async function evictExpired(): Promise<number> {
+// Reads already filter on expiresAt > now(), so eviction is housekeeping only.
+// Opportunistic callers (fact extraction, re-embed batches) are throttled to one
+// DELETE per window; capacity pressure and init pass force=true.
+const EVICT_MIN_INTERVAL_MS = 60_000;
+let lastEvictAt = 0;
+
+export async function evictExpired(force = false): Promise<number> {
+  const now = Date.now();
+  if (!force && now - lastEvictAt < EVICT_MIN_INTERVAL_MS) return 0;
+  lastEvictAt = now;
   try {
     const result = await db.delete(semanticCacheTable)
       .where(sql`${semanticCacheTable.expiresAt} < now()`)
@@ -269,7 +278,7 @@ export async function invalidateRelatedEntries(keywords: string[]): Promise<numb
 
 export async function initSemanticCache(): Promise<void> {
   try {
-    await evictExpired();
+    await evictExpired(true);
     const [countRow] = await db.select({ cnt: sql<number>`count(*)::int` }).from(semanticCacheTable);
     stats.cacheSize = countRow?.cnt ?? 0;
     logger.info({ cacheSize: stats.cacheSize }, "SemanticCache: initialized");
