@@ -831,9 +831,11 @@ export async function loadPortalJumpTableFromDb(): Promise<number> {
   }
 }
 
-// Auto-warm on module load: cross-run dedup and version-safe decoding active from request #1.
-setImmediate(() => {
-  loadPortalJumpTableFromDb().catch(err => {
-    logger.debug({ err: (err as Error).message }, "SemanticCompression: startup hydration error (non-fatal)");
+// Auto-warm on module load when a database is configured.
+if (process.env.DATABASE_URL) {
+  setImmediate(() => {
+    loadPortalJumpTableFromDb().catch(err => {
+      logger.debug({ err: (err as Error).message }, "SemanticCompression: startup hydration error (non-fatal)");
+    });
   });
-});
+}

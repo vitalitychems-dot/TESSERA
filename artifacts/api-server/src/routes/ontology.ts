@@ -217,7 +217,9 @@ async function seedOntologiesIfEmpty(): Promise<void> {
   }
 }
 
-seedOntologiesIfEmpty().catch(() => {});
+if (process.env.DATABASE_URL) {
+  seedOntologiesIfEmpty().catch(() => {});
+}
 
 router.get("/ontology/domains", async (_req, res) => {
   try {

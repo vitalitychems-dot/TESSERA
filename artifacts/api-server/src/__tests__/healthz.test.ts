@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import express from "express";
 import { createServer, type Server } from "node:http";
 import { HealthCheckResponse } from "@workspace/api-zod";
+import { isDbConfigured } from "@workspace/db";
 import healthRouter from "../routes/health";
 
 describe("GET /healthz", () => {
@@ -32,6 +33,9 @@ describe("GET /healthz", () => {
     expect(response.status).toBe(200);
     const json: unknown = await response.json();
     expect(HealthCheckResponse.parse(json)).toEqual({ status: "ok" });
-    expect(json).toEqual({ status: "ok" });
+    expect(json).toEqual({
+      status: "ok",
+      db: isDbConfigured() ? "configured" : "not-configured",
+    });
   });
 });

@@ -591,7 +591,9 @@ async function seedInventionsIfEmpty(): Promise<void> {
   }
 }
 
-seedInventionsIfEmpty();
+if (process.env.DATABASE_URL) {
+  seedInventionsIfEmpty();
+}
 
 router.get("/inventions", async (req, res) => {
   try {
@@ -1358,7 +1360,9 @@ function startAutoLoop() {
   // Kick off an initial tick after seed delay.
   setTimeout(() => { autonomousTick().catch(() => {}); }, 10_000);
 }
-startAutoLoop();
+if (process.env.DATABASE_URL) {
+  startAutoLoop();
+}
 
 router.get("/inventions/autonomous/status", (_req, res) => {
   return res.json({
