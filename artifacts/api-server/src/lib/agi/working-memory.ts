@@ -210,3 +210,39 @@ export function snapshotWorkingMemory() {
     },
   };
 }
+
+// ---------- checkpoint support (REA-01) ----------
+export interface WorkingMemoryState {
+  version: 1;
+  observations: Observation[];
+  hypotheses: Hypothesis[];
+  goals: Goal[];
+  contradictions: Contradiction[];
+}
+
+export function exportWorkingMemoryState(): WorkingMemoryState {
+  return {
+    version: 1,
+    observations: observations.map((o) => ({ ...o })),
+    hypotheses: [...hypotheses.values()].map((h) => ({ ...h, provenance: [...h.provenance], supportingObservations: [...h.supportingObservations] })),
+    goals: [...goals.values()].map((g) => ({ ...g })),
+    contradictions: [...contradictions.values()].map((c) => ({ ...c })),
+  };
+}
+
+/** Replace working memory with a checkpoint (resume after restart). */
+export function importWorkingMemoryState(state: WorkingMemoryState): boolean {
+  if (!state || state.version !== 1) return false;
+  observations.length = 0;
+  observations.push(...(state.observations ?? []).slice(-obsCap()));
+  hypotheses.clear();
+  for (const h of state.hypotheses ?? []) hypotheses.set(h.id, h);
+  goals.clear();
+  for (const g of state.goals ?? []) goals.set(g.id, g);
+  contradictions.clear();
+  for (const c of state.contradictions ?? []) contradictions.set(c.id, c);
+  pruneMap(hypotheses, HYPOTHESES_CAP);
+  pruneMap(goals, GOALS_CAP);
+  pruneMap(contradictions, CONTRADICTIONS_CAP);
+  return true;
+}

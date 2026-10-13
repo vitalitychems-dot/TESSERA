@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import { assertMayMessage, isMessageAllowed } from "./comms-policy";
 
 export interface AgentMessage {
   id: string;
@@ -128,6 +129,7 @@ export function initAgentComms(): void {
 
 export function sendMessage(from: string, to: string, content: string, type: AgentMessage["type"] = "directive", priority: AgentMessage["priority"] = "normal"): AgentMessage {
   seedInitialThreads();
+  assertMayMessage(from, to);
   const msg: AgentMessage = {
     id: makeId(), from, to, content, timestamp: Date.now(), type, priority, read: false,
   };
@@ -149,7 +151,7 @@ export function sendMessage(from: string, to: string, content: string, type: Age
 }
 
 export function broadcastMessage(from: string, content: string, priority: AgentMessage["priority"] = "normal"): AgentMessage[] {
-  return COUNCIL_AGENTS.filter(a => a !== from).map(to =>
+  return COUNCIL_AGENTS.filter(a => a !== from && isMessageAllowed(from, a)).map(to =>
     sendMessage(from, to, content, "broadcast", priority)
   );
 }

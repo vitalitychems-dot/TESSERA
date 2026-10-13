@@ -54,11 +54,12 @@ delete isolatedEnv.TESSERA_TEST_DATABASE_URL;
 delete isolatedEnv.TESSERA_TEST_FATHER_NATAL_CHART_JSON;
 
 let failures = 0;
-for (const [label, selector, script] of [
-  ["Suite safety policy", "@workspace/scripts", "test"],
-  ["Gitbook MCP", "@workspace/gitbook-mcp", "test"],
-  ["TESSERA v2", "@workspace/v2", "test"],
-  ["GitAI", "@workspace/gitai", "test"],
+for (const [label, selector, script = "test"] of [
+  ["Suite safety policy", "@workspace/scripts"],
+  ["Tessera console", "@workspace/console"],
+  ["Gitbook MCP", "@workspace/gitbook-mcp"],
+  ["TESSERA v2", "@workspace/v2"],
+  ["GitAI", "@workspace/gitai"],
   // Optional-boot assertions require DATABASE_URL to be unset, so they run
   // here with the isolated env instead of with the database-backed suite.
   ["Tessera API boot without database", "@workspace/api-server", "test:boot"],

@@ -1,0 +1,5 @@
+{
+  "name": "TESSERA",
+  "install": "bash .cursor/setup && pnpm install --frozen-lockfile --ignore-scripts",
+  "start": "bash .cursor/setup"
+}
