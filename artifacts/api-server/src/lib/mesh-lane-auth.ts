@@ -9,6 +9,8 @@ import { createHash, timingSafeEqual } from "node:crypto";
 export const MESH_LANE_TOKENS_ENV = "MESH_LANE_TOKENS";
 export const LANE_TOKEN_HEADER = "x-mesh-lane-token";
 const HEX64 = /^[0-9a-f]{64}$/;
+/** Same slug grammar as the registry; council nodes ("council-*") are valid identities too. */
+const SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
 export function sha256Hex(s: string): string {
   return createHash("sha256").update(s, "utf8").digest("hex");
@@ -22,6 +24,8 @@ export function parseLaneTokens(env: NodeJS.ProcessEnv = process.env): Map<strin
   if (!obj || typeof obj !== "object" || Array.isArray(obj)) throw new Error("MESH_LANE_TOKENS must be a JSON object");
   const out = new Map<string, Buffer>();
   for (const [slug, h] of Object.entries(obj)) {
+    if (slug.startsWith("_")) continue; // comment keys such as "_doc" (copied from the example file)
+    if (!SLUG.test(slug)) throw new Error(`MESH_LANE_TOKENS: bad slug ${slug.slice(0, 64)}`);
     if (typeof h !== "string" || !HEX64.test(h)) throw new Error(`MESH_LANE_TOKENS: bad sha256 for ${slug}`);
     out.set(slug, Buffer.from(h, "hex"));
   }

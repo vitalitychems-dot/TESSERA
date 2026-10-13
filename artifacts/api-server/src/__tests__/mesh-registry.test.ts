@@ -63,7 +63,7 @@ describe("fail closed + schema (Security HIGH #1)", () => {
 
 describe("startup hook MESH_REGISTRY_PATH (GM-1b)", () => {
   it("env unset => open", () => {
-    expect(initMeshRegistryFromEnv({})).toBe("open");
+    expect(initMeshRegistryFromEnv({})).toBe("inert");
     expect(getCommsPolicy()).toBeNull();
     expect(isMessageAllowed("build", "rick")).toBe(true);
   });
@@ -94,13 +94,16 @@ describe("agent-comms route input checks (Security HIGH #2, partial)", () => {
     const app = express().use(express.json()).use(agentNetworkRouter);
     const server = app.listen(0);
     const port = (server.address() as any).port;
-    const post = (body: unknown) => fetch(`http://127.0.0.1:${port}/agent-comms/send`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const tok = `fake-${Math.random().toString(36).slice(2)}`;
+    const prevTok = process.env.MESH_LANE_TOKENS;
+    process.env.MESH_LANE_TOKENS = JSON.stringify({ build: sha256Hex(tok) });
+    const post = (body: unknown) => fetch(`http://127.0.0.1:${port}/agent-comms/send`, { method: "POST", headers: { "content-type": "application/json", "x-mesh-lane-token": tok }, body: JSON.stringify(body) });
     try {
       expect((await post({ from: "build", to: "tessera", content: "hi", priority: "urgent" })).status).toBe(400);
       applyMeshRegistryPolicy();
       expect((await post({ from: "build", to: "rick", content: "hi" })).status).toBe(403);
       expect((await post({ from: "build", to: "tessera", content: "hi" })).status).toBe(200);
-    } finally { server.close(); }
+    } finally { server.close(); if (prevTok === undefined) delete process.env.MESH_LANE_TOKENS; else process.env.MESH_LANE_TOKENS = prevTok; }
   });
 });
 
@@ -144,13 +147,33 @@ describe("per-lane tokens + aliases (Security HIGH #2)", () => {
     process.env.MESH_LANE_TOKENS = "{oops";
     expect((await post("/agent-comms/send", { to: "tessera", content: "hi" }, tBuild)).status).toBe(403);
   }));
-  it("env unset keeps existing behaviour; shared-key validator untouched", async () => {
+  it("env unset: body from is never trusted (401), no Tessera fallback; shared-key validator untouched", async () => {
     delete process.env.MESH_LANE_TOKENS;
     expect(parseLaneTokens({})).toBeNull();
     expect(validateMeshToken(undefined)).toBeNull();
     await withServer(async (post) => {
       delete process.env.MESH_LANE_TOKENS;
-      expect((await post("/agent-comms/send", { from: "Alpha", to: "Beta", content: "hi" })).status).toBe(200);
+      expect((await post("/agent-comms/send", { from: "Alpha", to: "Beta", content: "hi" })).status).toBe(401);
+      expect((await post("/agent-comms/send", { from: "tessera", to: "build", content: "hi" })).status).toBe(401);
+      expect((await post("/agent-comms/send", { to: "build", content: "hi" }, fake())).status).toBe(401);
+      const b = await post("/agent-comms/broadcast", { content: "hi" });
+      expect(b.status).toBe(401);
+      expect(JSON.stringify(await b.json())).not.toMatch(/Tessera/);
+      expect((await post("/agent-comms/broadcast", { from: "Tessera", content: "hi" })).status).toBe(401);
+    });
+  });
+  it("council slugs are valid MESH_LANE_TOKENS identities; bad slugs rejected", async () => {
+    const t = fake();
+    const json = JSON.stringify({ "council-sigma": sha256Hex(t) });
+    expect(laneForToken(t, parseLaneTokens({ MESH_LANE_TOKENS: json })!)).toBe("council-sigma");
+    const withDoc = parseLaneTokens({ MESH_LANE_TOKENS: JSON.stringify({ _doc: "comment", "council-sigma": sha256Hex(t) }) })!;
+    expect(withDoc.size).toBe(1);
+    expect(() => parseLaneTokens({ MESH_LANE_TOKENS: JSON.stringify({ "Bad Slug!": sha256Hex(t) }) })).toThrow(/slug/);
+    await withServer(async (post) => {
+      process.env.MESH_LANE_TOKENS = json;
+      applyMeshRegistryPolicy();
+      expect((await post("/agent-comms/send", { to: "tessera", content: "hi" }, t)).status).toBe(200);
+      expect((await post("/agent-comms/send", { to: "rick", content: "hi" }, t)).status).toBe(403);
     });
   });
   it("laneForToken: hashes + constant-time match", () => {
@@ -192,8 +215,31 @@ describe("council node group", () => {
     }
     expect(isMessageAllowed("Sigma", "rick")).toBe(false);
   });
+  it("schema: group -> lane / sink / wildcard edges rejected; group -> tessera and group -> group allowed", () => {
+    const base = { lanes: ["tessera", "rick"], sinks: ["owner-digest"], groups: [{ kind: "council", nodes: ["council-a", "council-b"] }] };
+    expect(() => validateMeshRegistry({ ...base, edges: [["council-a", "rick"]] })).toThrow(/may not message/);
+    expect(() => validateMeshRegistry({ ...base, edges: [["council-a", "owner-digest"]] })).toThrow(/may not message/);
+    expect(() => validateMeshRegistry({ ...base, edges: [["council-a", "*"]] })).toThrow(/may not message/);
+    expect(() => validateMeshRegistry({ ...base, edges: [["council-a", "tessera"], ["council-a", "council-b"], ["tessera", "council-a"]] })).not.toThrow();
+  });
   it("schema: bad kind / unprefixed node rejected", () => {
     expect(() => validateMeshRegistry({ lanes: ["a"], edges: [], groups: [{ kind: "evil", nodes: ["evil-x"] }] })).toThrow(/kind/);
     expect(() => validateMeshRegistry({ lanes: ["a"], edges: [], groups: [{ kind: "council", nodes: ["sigma"] }] })).toThrow(/prefixed/);
+  });
+});
+
+describe("logger redaction (Security LOW)", () => {
+  it("redacts x-mesh-lane-token", async () => {
+    const pino = (await import("pino")).default;
+    const { Writable } = await import("node:stream");
+    const lines: string[] = [];
+    const sink = new Writable({ write(c, _e, cb) { lines.push(String(c)); cb(); } });
+    const secret = `fake-${Math.random().toString(36).slice(2)}`;
+    const { LOGGER_REDACT_PATHS } = await import("../lib/logger");
+    const l = pino({ redact: LOGGER_REDACT_PATHS }, sink);
+    l.info({ req: { headers: { "x-mesh-lane-token": secret, authorization: "x" } } }, "req");
+    expect(lines.join("")).not.toContain(secret);
+    expect(lines.join("")).toContain("[Redacted]");
+    expect(LOGGER_REDACT_PATHS).toContain("req.headers['x-mesh-lane-token']");
   });
 });

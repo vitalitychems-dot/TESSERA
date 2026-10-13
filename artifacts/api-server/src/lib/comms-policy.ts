@@ -72,9 +72,14 @@ export function applyMeshRegistryPolicy(path?: string): boolean {
   }
 }
 
-/** GM-1b startup hook: enforce only when MESH_REGISTRY_PATH is set. */
-export function initMeshRegistryFromEnv(env: NodeJS.ProcessEnv = process.env): "open" | "enforced" | "deny-all" {
+/**
+ * GM-1b startup hook. MESH_REGISTRY_PATH unset => "inert": GM-1 installs nothing and
+ * adds no routes; the pre-GM-1 policy state is left as is. That is safe because the
+ * comms POST routes no longer accept an unauthenticated sender (401 without
+ * MESH_LANE_TOKENS), so an open policy can't be abused for impersonation.
+ */
+export function initMeshRegistryFromEnv(env: NodeJS.ProcessEnv = process.env): "inert" | "enforced" | "deny-all" {
   const path = env[MESH_REGISTRY_ENV];
-  if (!path) return "open";
+  if (!path) return "inert";
   return applyMeshRegistryPolicy(path) ? "enforced" : "deny-all";
 }

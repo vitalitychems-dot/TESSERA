@@ -6,14 +6,15 @@ import { CommsPolicyError, resolveAlias } from "../lib/comms-policy";
 import { parseLaneTokens, laneForToken, LANE_TOKEN_HEADER } from "../lib/mesh-lane-auth";
 
 /**
- * Resolve the sender. MESH_LANE_TOKENS unset => body `from` (unchanged behaviour).
+ * Resolve the sender. The sender is ONLY ever derived from a presented lane token.
+ * MESH_LANE_TOKENS unset => 401 (a body `from` is never trusted; no default sender).
  * Set => `from` is the slug of the presented lane token; a body `from` that does not
  * resolve to that slug is rejected. Malformed env fails closed.
  */
 function resolveSender(req: Request, bodyFrom: unknown): { from?: unknown; status?: number; error?: string } {
   let table;
   try { table = parseLaneTokens(); } catch { return { status: 403, error: "lane auth misconfigured" }; }
-  if (!table) return { from: bodyFrom };
+  if (!table) return { status: 401, error: "lane identity required: MESH_LANE_TOKENS is not configured; body from is not trusted" };
   const raw = req.headers[LANE_TOKEN_HEADER];
   const slug = laneForToken(Array.isArray(raw) ? raw[0] : raw, table);
   if (!slug) return { status: 403, error: "valid lane token required" };
@@ -124,7 +125,7 @@ router.post("/agent-comms/broadcast", (req: Request, res: Response) => {
   const { content, priority = "normal" } = body as any;
   const sender = resolveSender(req, body.from);
   if (sender.status) { res.status(sender.status).json({ ok: false, error: sender.error }); return; }
-  const from = (sender.from ?? "Tessera") as any;
+  const from = sender.from as any;
   if (typeof from !== "string" || from.length === 0 || from.length > MAX_NAME) { res.status(400).json({ ok: false, error: "from must be a short string" }); return; }
   const err = validateCommsBody(body, { requireTo: false, allowType: false });
   if (err) { res.status(400).json({ ok: false, error: err }); return; }

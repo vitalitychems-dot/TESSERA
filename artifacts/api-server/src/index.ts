@@ -365,7 +365,7 @@ async function runPostBindHealthProbe(port: number): Promise<void> {
     await initPromise;
     {
       const meshMode = initMeshRegistryFromEnv();
-      if (meshMode !== "open") logger.info({ meshMode }, "Mesh registry comms policy applied (MESH_REGISTRY_PATH)");
+      if (meshMode !== "inert") logger.info({ meshMode }, "Mesh registry comms policy applied (MESH_REGISTRY_PATH)");
     }
     logger.info("Module initialization complete — binding port");
 

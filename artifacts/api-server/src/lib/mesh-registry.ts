@@ -55,6 +55,11 @@ export function validateMeshRegistry(raw: unknown): MeshRegistry {
     if (f === "*") throw new MeshRegistryError("'*' is not allowed as a sender");
     if (!nodes.has(f)) throw new MeshRegistryError(`unknown sender ${f}`);
     if (t !== "*" && !nodes.has(t)) throw new MeshRegistryError(`unknown recipient ${t}`);
+    // Group (council) nodes are internal personas: they may reach tessera and their own
+    // group only, never a mesh lane, a sink, or a wildcard.
+    if (groupNodes.includes(f) && t !== "tessera" && (t === "*" || r.lanes.includes(t) || sinks.includes(t))) {
+      throw new MeshRegistryError(`group node ${f} may not message lane/sink ${t}`);
+    }
   }
   let aliases: Record<string, string> = {};
   if (r.aliases !== undefined) {
