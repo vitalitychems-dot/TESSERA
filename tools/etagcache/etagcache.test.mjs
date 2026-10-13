@@ -278,6 +278,86 @@ test("flag on with -X GET still uses the cache", async () => {
   })).mode & 0o777, 0o600);
 });
 
+test("flag on caches path then -X GET", async () => {
+  const cacheDir = tempCache();
+  const urls = [];
+  const stdout = { written: "", write(chunk) { this.written += chunk; } };
+  const code = await runCli(["repos/vitalitychems-dot/TESSERA/contents/", "-X", "GET"], {
+    env: { [ENABLE_FLAG]: "1" },
+    cacheDir,
+    token: "ghs_plain_get",
+    stdout,
+    stderr: { write() {} },
+    spawnImpl: () => {
+      throw new Error("path -X GET must not spawn gh");
+    },
+    request: async (req) => {
+      urls.push(req.url);
+      return { status: 200, body: "CACHED-GET", headers: { etag: "\"eg\"" } };
+    },
+  });
+  assert.equal(code, 0);
+  assert.deepEqual(urls, [ENDPOINT]);
+  assert.equal(stdout.written, "CACHED-GET");
+});
+
+test("reading a 0644 cache file tightens it to mode 0600", async () => {
+  const previous = process.umask(0);
+  try {
+    const cacheDir = tempCache();
+    const file = cacheFileForUrl(cacheDir, ENDPOINT);
+    writeFileSync(file, JSON.stringify({ etag: "\"old\"", body: "OLD" }), { mode: 0o644 });
+    assert.equal(statSync(file).mode & 0o777, 0o644);
+    const result = await cachedGet({
+      url: ENDPOINT,
+      cacheDir,
+      env: { [ENABLE_FLAG]: "1" },
+      request: async (req) => {
+        assert.equal(req.headers["If-None-Match"], "\"old\"");
+        return { status: 304, body: "", headers: { etag: "\"old\"" } };
+      },
+    });
+    assert.equal(result.unchanged, true);
+    assert.equal(result.body, "OLD");
+    assert.equal(statSync(file).mode & 0o777, 0o600);
+  } finally {
+    process.umask(previous);
+  }
+});
+
+test("flag on passes -f, -F, --raw-field, --field, --jq, -q, -H, -i, and --input through to gh api", async () => {
+  const path = "repos/vitalitychems-dot/TESSERA/contents/";
+  const cases = [
+    ["-f", "title=hello", path],
+    ["-F", "body=@note.txt", path],
+    ["--raw-field", "title=hello", path],
+    ["--field", "body=@note.txt", path],
+    [path, "--jq", ".sha"],
+    [path, "-q", ".sha"],
+    ["-H", "Accept: application/vnd.github.diff", path],
+    ["-i", path],
+    ["--input", "body.json", path],
+  ];
+  for (const argv of cases) {
+    const cacheDir = tempCache();
+    const spawned = [];
+    const code = await runCli(argv, {
+      env: { [ENABLE_FLAG]: "1" },
+      cacheDir,
+      spawnImpl: (cmd, args) => {
+        spawned.push([cmd, args]);
+        return { status: 0 };
+      },
+      request: async () => {
+        throw new Error(`${argv[0]} must not use the cache`);
+      },
+    });
+    assert.equal(code, 0, argv.join(" "));
+    assert.deepEqual(spawned, [["gh", ["api", ...argv]]], argv.join(" "));
+    assert.deepEqual(readdirSync(cacheDir), [], argv.join(" "));
+  }
+});
+
 test("flag on with --paginate bypasses the cache", async () => {
   const cacheDir = tempCache();
   const spawned = [];

@@ -70,6 +70,9 @@ export function cacheFileForUrl(cacheDir, url, options = {}) {
   return join(cacheDir, `${key}.json`);
 }
 
+const CACHE_DIR_MODE = 0o700;
+const CACHE_FILE_MODE = 0o600;
+
 export function readCacheEntry(file) {
   let raw;
   try {
@@ -78,6 +81,7 @@ export function readCacheEntry(file) {
     if (error?.code === "ENOENT") return { ok: false, reason: "miss" };
     return { ok: false, reason: "corrupt" };
   }
+  chmodSync(file, CACHE_FILE_MODE);
   try {
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed.etag !== "string" || parsed.etag.length === 0) {
@@ -89,9 +93,6 @@ export function readCacheEntry(file) {
     return { ok: false, reason: "corrupt" };
   }
 }
-
-const CACHE_DIR_MODE = 0o700;
-const CACHE_FILE_MODE = 0o600;
 
 export function writeCacheEntry(file, entry) {
   const dir = dirname(file);
@@ -107,44 +108,21 @@ export function writeCacheEntry(file, entry) {
   chmodSync(file, CACHE_FILE_MODE);
 }
 
-/** True when argv is a single GET with no --paginate. -X GET still counts. */
-export function isPlainGet(argv) {
-  let method = "GET";
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === "--") break;
-    if (arg === "--paginate") return false;
-    if (arg.startsWith("--method=")) {
-      method = arg.slice("--method=".length);
-      continue;
-    }
-    if (arg.startsWith("-X") && arg.length > 2) {
-      method = arg.slice(2);
-      continue;
-    }
-    if (arg === "-X" || arg === "--method") {
-      const value = argv[i + 1];
-      if (value === undefined) return false;
-      method = value;
-      i += 1;
-    }
-  }
-  return method.toUpperCase() === "GET";
+function isApiPath(arg) {
+  return typeof arg === "string" && arg.length > 0 && !arg.startsWith("-");
 }
 
-/** First positional gh api path. Skips the value after -X / --method. */
-export function githubPathArg(argv) {
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === "--") return argv[i + 1];
-    if (arg === "-X" || arg === "--method") {
-      i += 1;
-      continue;
-    }
-    if (arg.startsWith("-")) continue;
-    return arg;
-  }
-  return undefined;
+/**
+ * Cache only an exact allowlist. Anything else, including -f/-F/--raw-field/--field,
+ * --jq/-q, -H, -i, and --input, must be passed to gh api unchanged.
+ * Allowed: `<path>` or `<path> -X GET` in either order.
+ * @returns {string|null}
+ */
+export function cacheablePath(argv) {
+  if (argv.length === 1 && isApiPath(argv[0])) return argv[0];
+  if (argv.length === 3 && argv[0] === "-X" && argv[1] === "GET" && isApiPath(argv[2])) return argv[2];
+  if (argv.length === 3 && isApiPath(argv[0]) && argv[1] === "-X" && argv[2] === "GET") return argv[0];
+  return null;
 }
 
 /**
@@ -250,22 +228,18 @@ function spawnGhApi(spawnImpl, argv, env) {
 
 /**
  * Flag off: `gh api <args>` with inherited stdio (same stdout, stderr, and exit code).
- * Flag on, plain GET: conditional GET. Body on stdout. The line `unchanged` on stderr
- * when the response is a 304 served from cache, so callers can skip re-parsing.
- * Flag on, anything else (-X other than GET, or --paginate): same passthrough as flag off.
+ * Flag on, allowlisted argv only (`<path>` or `<path> -X GET` in either order):
+ * conditional GET. Body on stdout. The line `unchanged` on stderr when the
+ * response is a 304 served from cache, so callers can skip re-parsing.
+ * Flag on, every other argv: the same passthrough, arguments unchanged.
  */
 export async function runCli(argv, deps = {}) {
   const env = deps.env ?? process.env;
   const spawnImpl = deps.spawnImpl ?? spawnSync;
   const stdout = deps.stdout ?? process.stdout;
-  const stderr = deps.stderr ?? process.stderr;
-  if (!etagCacheEnabled(env) || !isPlainGet(argv)) {
-    return spawnGhApi(spawnImpl, argv, env);
-  }
-  const pathArg = githubPathArg(argv);
+  const pathArg = etagCacheEnabled(env) ? cacheablePath(argv) : null;
   if (!pathArg) {
-    stderr.write("usage: etagcache.mjs <gh api path>\n");
-    return 2;
+    return spawnGhApi(spawnImpl, argv, env);
   }
   const cacheDir = deps.cacheDir ?? join(process.cwd(), ".cache", "etag");
   const token = deps.token ?? (deps.request ? resolveToken({ env }) : readGhToken());
