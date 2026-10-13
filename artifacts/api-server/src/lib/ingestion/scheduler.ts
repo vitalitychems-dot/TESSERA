@@ -320,13 +320,29 @@ export async function runAllIngestion(): Promise<Record<string, { ingested: numb
   return results;
 }
 
+/** Max multiplier applied to a source's interval while it stays silent. */
+export const QUIET_BACKOFF_MAX = 4;
+
+/**
+ * Silence-as-signal: a source that keeps producing nothing new (no lastSuccessAt
+ * since several intervals) is polled less often, doubling per silent interval up
+ * to QUIET_BACKOFF_MAX x. One new item resets lastSuccessAt and the base cadence.
+ */
+export function quietSourceNextRunAt(s: { lastRunAt: Date | null; lastSuccessAt?: Date | null; intervalSeconds: number | null }): Date | null {
+  if (!s.lastRunAt) return null;
+  const baseMs = (s.intervalSeconds || 3600) * 1000;
+  const lastNew = s.lastSuccessAt?.getTime() ?? 0;
+  const silentIntervals = lastNew > 0 ? Math.floor((s.lastRunAt.getTime() - lastNew) / baseMs) : 0;
+  const mult = Math.min(QUIET_BACKOFF_MAX, Math.pow(2, Math.max(0, silentIntervals - 1)));
+  return new Date(s.lastRunAt.getTime() + baseMs * mult);
+}
+
 export async function runDueIngestion(): Promise<Record<string, { ingested: number; skipped: number; errors: string[] }>> {
   const now = new Date();
   const sources = await db.select().from(dataSourcesTable).where(eq(dataSourcesTable.enabled, true));
   const due = sources.filter(s => {
-    if (!s.lastRunAt) return true;
-    const nextRun = new Date(s.lastRunAt.getTime() + (s.intervalSeconds || 3600) * 1000);
-    return now >= nextRun;
+    const nextRun = quietSourceNextRunAt(s);
+    return nextRun === null || now >= nextRun;
   });
 
   const results: Record<string, { ingested: number; skipped: number; errors: string[] }> = {};
