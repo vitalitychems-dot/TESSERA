@@ -9,6 +9,9 @@
 \if :{?embed_dim}
 \else
   \echo 'ERROR: set -v embed_dim=<embedder output size>'
+  -- Raise a real SQL error so psql exits non-zero (3) under ON_ERROR_STOP=1.
+  DO $$ BEGIN RAISE EXCEPTION 'set -v embed_dim'; END $$;
+  -- Without ON_ERROR_STOP, still stop before any DDL runs.
   \quit
 \endif
 CREATE EXTENSION IF NOT EXISTS vector;
