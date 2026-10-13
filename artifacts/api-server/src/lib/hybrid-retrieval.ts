@@ -16,16 +16,23 @@ function tokenize(text: string): string[] {
   return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 2);
 }
 
-function bm25Scores(query: string, docs: string[], k1 = 1.5, b = 0.75): number[] {
+export function bm25Scores(query: string, docs: string[], k1 = 1.5, b = 0.75): number[] {
   const qTerms = Array.from(new Set(tokenize(query)));
   if (qTerms.length === 0 || docs.length === 0) return docs.map(() => 0);
   const tokenized = docs.map(tokenize);
   const lens = tokenized.map((d) => d.length);
   const avgdl = lens.reduce((a, b) => a + b, 0) / lens.length || 1;
   const N = docs.length;
-  const df: Record<string, number> = {};
-  for (const t of qTerms) {
-    df[t] = tokenized.filter((d) => d.includes(t)).length;
+  const qSet = new Set(qTerms);
+  const df: Record<string, number> = Object.fromEntries(qTerms.map((t) => [t, 0]));
+  for (const d of tokenized) {
+    const seen = new Set<string>();
+    for (const w of d) {
+      if (qSet.has(w) && !seen.has(w)) {
+        seen.add(w);
+        df[w]++;
+      }
+    }
   }
   const idf: Record<string, number> = {};
   for (const t of qTerms) {
