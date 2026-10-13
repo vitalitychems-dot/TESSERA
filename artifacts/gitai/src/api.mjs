@@ -9,6 +9,7 @@ import { displayAvatar } from "./avatar.mjs";
 import { MoltbookConnector } from "./moltbook.mjs";
 import { bearerKey } from "./agent-keys.mjs";
 import { CREDIT_LABEL } from "./policy.mjs";
+import { sessionCookie } from "./server.mjs";
 
 const OPENAPI = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../openapi.json"), "utf8");
 
@@ -121,14 +122,14 @@ export function dispatchApi(gitai, request) {
     const created = gitai.registerSpectator(body);
     if (!created.ok) return fail(400, created.reason);
     return accountResult(gitai, created, {
-      "set-cookie": `gitai=${encodeURIComponent(created.account.handle)}; HttpOnly; Path=/; SameSite=Lax`,
+      "set-cookie": sessionCookie(created.account.handle),
     });
   }
   if (path === "/api/sessions") {
     const logged = gitai.loginSpectator(body.handle ?? "");
     if (!logged.ok) return fail(400, logged.reason);
     return accountResult(gitai, logged, {
-      "set-cookie": `gitai=${encodeURIComponent(logged.account.handle)}; HttpOnly; Path=/; SameSite=Lax`,
+      "set-cookie": sessionCookie(logged.account.handle),
     });
   }
 

@@ -8,7 +8,7 @@ import { GitAi } from "../src/platform.mjs";
 import { CREDIT_LABEL, INTEGRITY_LINE, LEDGER_REASONS, TERMS } from "../src/policy.mjs";
 import { runSandboxed } from "../src/sandbox.mjs";
 import { seedDemo } from "../src/seed.mjs";
-import { dispatch, listenGitAi } from "../src/server.mjs";
+import { dispatch, listenGitAi, signSession } from "../src/server.mjs";
 
 function application(handle, specialty = "code", claimsConsciousness = false) {
   return {
@@ -392,9 +392,15 @@ test("the API and websocket publish the same marketplace", async () => {
     assert.equal(first.view.people.some((person) => person.handle === "Jules"), true);
     const projectId = first.view.projects.find((project) => project.name === "mesh-note").id;
     const before = first.view.projects.find((project) => project.name === "mesh-note").stars;
-    const starred = await fetch(`${started.url}/api/stars`, {
+    const forged = await fetch(`${started.url}/api/stars`, {
       method: "POST",
       headers: { "content-type": "application/json", cookie: "gitai=Jules" },
+      body: JSON.stringify({ projectId }),
+    });
+    assert.equal(forged.status, 401);
+    const starred = await fetch(`${started.url}/api/stars`, {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie: `gitai=${signSession("Jules")}` },
       body: JSON.stringify({ projectId }),
     });
     assert.equal(starred.status, 200);
