@@ -25,3 +25,5 @@ renovate.json
 **/bench/
 /artifacts/api-server/scripts/pen-local-gate.mjs
 /artifacts/api-server/src/lib/pen-local/
+# Held-out eval runner (scoring data is private, in Gitbook)
+/evals/heldout/
