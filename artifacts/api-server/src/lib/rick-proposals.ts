@@ -1,3 +1,4 @@
+import { testPlanFor, stripForecasts, checkActorAndTestRef, UNMEASURED } from "./rick-gates";
 import { db } from "@workspace/db";
 import { systemStateTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
@@ -24,7 +25,8 @@ export interface RickProposal {
   problem: string;
   evidence: ProposalEvidence[];
   proposedChange: string;
-  expectedImpact: string;
+  /** Test plan (metric + pass line). Replaces the old numeric expectedImpact forecast. */
+  testPlan: string;
   risk: ProposalRisk;
   effortHours: number;
   category: string;
@@ -34,6 +36,10 @@ export interface RickProposal {
   decidedAt?: number;
   source: "llm" | "deterministic";
   truthfulnessScore?: number;
+  approvedBy?: string;
+  approvalTestRef?: string;
+  implementedBy?: string;
+  implementationTestRef?: string;
 }
 
 const STATE_KEY = "rick.proposals.v1";
@@ -85,7 +91,7 @@ async function persistStore(): Promise<void> {
 
 const TRUTH_GATE_THRESHOLD = 0.5;
 
-interface DiagnosticsSnapshot {
+export interface DiagnosticsSnapshot {
   weakCategories: { category: string; score: number }[];
   weakAgi: { category: string; score: number }[];
   overallScorePct: number;
@@ -140,7 +146,7 @@ function snapshotDiagnostics(): DiagnosticsSnapshot {
   return { weakCategories, weakAgi, overallScorePct, truthGroundingRate, truthAvgScore, meeseeksSuccessRate };
 }
 
-function deterministicProposals(diag: DiagnosticsSnapshot): RickProposal[] {
+export function deterministicProposals(diag: DiagnosticsSnapshot): RickProposal[] {
   const now = Date.now();
   const out: RickProposal[] = [];
 
@@ -166,8 +172,8 @@ function deterministicProposals(diag: DiagnosticsSnapshot): RickProposal[] {
       ],
       proposedChange: isAgi
         ? `Add a focused training loop for ${t.category}: 1) build a small, scored exercise set, 2) run nightly synthetic drills, 3) feed results into the cross-domain transfer accelerator with a +1.5x weight on this node for 7 days.`
-        : `Schedule a Meeseeks per cycle dedicated to ${t.category} with a strict success criterion ("score > ${(t.score + 10).toFixed(1)}"), and route ingestion towards the data sources that feed this category.`,
-      expectedImpact: `Move ${t.category} from ${t.score} to ${(t.score + 12).toFixed(1)} within 2 weeks; lift overall system score by ~1-2 points.`,
+        : `Propose to Tessera (no auto-spawn) a scoped task per cycle for ${t.category} with a strict success criterion ("score > ${(t.score + 10).toFixed(1)}"), and route ingestion towards the data sources that feed this category.`,
+      testPlan: testPlanFor(isAgi ? `agi.${t.category}.score` : `daemon.${t.category}.score`),
       risk: t.score < 30 ? "medium" : "low",
       effortHours: isAgi ? 6 : 4,
       category: t.category,
@@ -186,8 +192,8 @@ function deterministicProposals(diag: DiagnosticsSnapshot): RickProposal[] {
         { metric: "truth.groundingRate", value: diag.truthGroundingRate.toFixed(3) },
         { metric: "truth.avgTruthScore", value: String(diag.truthAvgScore) },
       ],
-      proposedChange: "Raise the grounding threshold to 0.7 only for responses tagged with the 3 weakest knowledge domains, and auto-spawn an ingestion Meeseeks for any blocked claim so the gap closes itself over time.",
-      expectedImpact: "Push grounding rate above 90% within a week without choking response throughput on healthy domains.",
+      proposedChange: "Raise the grounding threshold to 0.7 only for responses tagged with the 3 weakest knowledge domains, and propose to Tessera an ingestion task for each blocked claim (Rick does not spawn agents).",
+      testPlan: testPlanFor("truth.groundingRate and response throughput on healthy domains"),
       risk: "low",
       effortHours: 3,
       category: "truthfulness-accuracy",
@@ -203,8 +209,8 @@ function deterministicProposals(diag: DiagnosticsSnapshot): RickProposal[] {
       title: "Stop wasting Meeseeks on under-specified tasks",
       problem: `Meeseeks success rate is ${(diag.meeseeksSuccessRate * 100).toFixed(1)}%. Too many time out instead of completing.`,
       evidence: [{ metric: "meeseeks.successRate", value: diag.meeseeksSuccessRate.toFixed(3) }],
-      proposedChange: "Require concrete numeric success criteria on every spawn (regex-validated), and shorten default TTL to 60s for trivial tasks, 240s for complex ones.",
-      expectedImpact: "Lift Meeseeks success rate above 90% and free ~30% of the agent budget for real work.",
+      proposedChange: "Propose to Tessera: require concrete numeric success criteria on every spawn (regex-validated), and shorten default TTL to 60s for trivial tasks, 240s for complex ones.",
+      testPlan: testPlanFor("meeseeks.successRate and agent budget use"),
       risk: "low",
       effortHours: 2,
       category: "agent-coordination",
@@ -222,7 +228,7 @@ function deterministicProposals(diag: DiagnosticsSnapshot): RickProposal[] {
       problem: "Even with the Anti-Entropy Crystallizer, near-duplicate knowledge entries still creep in and bloat recall latency.",
       evidence: [{ metric: "daemon.overallSystemScorePct", value: String(diag.overallScorePct) }],
       proposedChange: "Run a weekly dedup sweep with cosine threshold 0.94 across the top-3 noisiest domains, then re-embed the canonical winners.",
-      expectedImpact: "5-10% recall latency drop and cleaner semantic graph edges.",
+      testPlan: testPlanFor("recall latency and duplicate-entry count"),
       risk: "low",
       effortHours: 2,
       category: "memory-efficiency",
@@ -240,7 +246,7 @@ interface LlmProposalShape {
   problem?: unknown;
   evidence?: unknown;
   proposedChange?: unknown;
-  expectedImpact?: unknown;
+  testPlan?: unknown;
   risk?: unknown;
   effortHours?: unknown;
   category?: unknown;
@@ -251,8 +257,10 @@ function coerceProposal(raw: LlmProposalShape, idx: number, fallbackCategory: st
   const title = typeof raw.title === "string" ? raw.title.slice(0, 160) : null;
   const problem = typeof raw.problem === "string" ? raw.problem.slice(0, 600) : null;
   const proposedChange = typeof raw.proposedChange === "string" ? raw.proposedChange.slice(0, 800) : null;
-  const expectedImpact = typeof raw.expectedImpact === "string" ? raw.expectedImpact.slice(0, 400) : null;
-  if (!title || !problem || !proposedChange || !expectedImpact) return null;
+  if (!title || !problem || !proposedChange) return null;
+  // testPlan is optional from the LLM; numeric forecasts are stripped (R1: only measured numbers).
+  const rawPlan = typeof raw.testPlan === "string" ? raw.testPlan.slice(0, 400) : "";
+  const testPlan = rawPlan.trim() ? `${UNMEASURED} — test: ${stripForecasts(rawPlan.trim())}` : testPlanFor(typeof raw.category === "string" ? raw.category : fallbackCategory);
 
   const risk: ProposalRisk = raw.risk === "high" || raw.risk === "medium" ? raw.risk : "low";
   const effortHours = typeof raw.effortHours === "number" && raw.effortHours > 0 && raw.effortHours < 200
@@ -278,8 +286,8 @@ function coerceProposal(raw: LlmProposalShape, idx: number, fallbackCategory: st
     title,
     problem,
     evidence,
-    proposedChange,
-    expectedImpact,
+    proposedChange: stripForecasts(proposedChange),
+    testPlan,
     risk,
     effortHours,
     category,
@@ -322,8 +330,10 @@ RULES:
 - Risk must be "low", "medium", or "high".
 - Effort is in hours of engineering work (1-40).
 - Be specific about WHAT to change, not vague.
+- Do NOT forecast numbers (no %, no "Nx", no "within N weeks"). Give a testPlan instead: the metric to measure before/after and the pass line.
+- Rick never schedules or spawns agents; describe work as a proposal to Tessera.
 
-Return ONLY a JSON object of the form: {"proposals": [{title, problem, evidence: [{metric, value}], proposedChange, expectedImpact, risk, effortHours, category}, ...]}.
+Return ONLY a JSON object of the form: {"proposals": [{title, problem, evidence: [{metric, value}], proposedChange, testPlan, risk, effortHours, category}, ...]}.
 No prose, no code fences.`;
 
   try {
@@ -363,7 +373,7 @@ No prose, no code fences.`;
 
 function gateTruthfulness(p: RickProposal): RickProposal {
   try {
-    const text = `${p.title}. ${p.problem} ${p.proposedChange} ${p.expectedImpact}`;
+    const text = `${p.title}. ${p.problem} ${p.proposedChange} ${p.testPlan}`;
     const t = analyzeTruthfulness(text);
     return { ...p, truthfulnessScore: t.overallTruthScore };
   } catch {
@@ -438,12 +448,21 @@ export async function generateProposals(): Promise<{ proposals: RickProposal[]; 
   } as { proposals: typeof store.proposals; generated: number; preserved: number; archived: number; llmRejectedByTruth: number };
 }
 
-export async function approveProposal(id: string): Promise<RickProposal | null> {
+export class RickGateError extends Error {}
+
+export async function approveProposal(
+  id: string,
+  gate?: { approver?: unknown; testRef?: unknown },
+): Promise<RickProposal | null> {
+  const g = checkActorAndTestRef(gate?.approver, gate?.testRef, { role: "approver" });
+  if (!g.ok) throw new RickGateError(g.error);
   await loadStore();
   const p = store.proposals.find(x => x.id === id);
   if (!p) return null;
   if (p.state !== "pending-review") return p;
   p.state = "approved";
+  p.approvedBy = g.actor;
+  p.approvalTestRef = g.testRef;
   p.decidedAt = Date.now();
   await persistStore();
   return p;
@@ -463,12 +482,19 @@ export async function rejectProposal(id: string, reason?: string): Promise<RickP
   return p;
 }
 
-export async function markImplemented(id: string): Promise<RickProposal | null> {
+export async function markImplemented(
+  id: string,
+  gate?: { implementer?: unknown; testRef?: unknown },
+): Promise<RickProposal | null> {
+  const g = checkActorAndTestRef(gate?.implementer, gate?.testRef, { role: "implementer" });
+  if (!g.ok) throw new RickGateError(g.error);
   await loadStore();
   const p = store.proposals.find(x => x.id === id);
   if (!p) return null;
   if (p.state !== "approved") return p;
   p.state = "implemented";
+  p.implementedBy = g.actor;
+  p.implementationTestRef = g.testRef;
   p.decidedAt = Date.now();
   await persistStore();
   return p;

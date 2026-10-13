@@ -1,3 +1,4 @@
+import { checkActorAndTestRef, isRickLoopEnabled, RICK_LOOP_FLAG, testPlanFor, UNMEASURED } from "./rick-gates";
 import { db } from "@workspace/db";
 import { systemStateTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
@@ -46,7 +47,7 @@ export interface ProgramProposal {
   problem: string;
   evidence: { metric: string; value: string }[];
   proposedChange: string;
-  expectedImpact: string;
+  testPlan: string;
   risk: ProposalRisk;
   effortHours: number;
   category: string;
@@ -54,6 +55,8 @@ export interface ProgramProposal {
   truthfulnessScore?: number;
   decision: "pending" | "approved" | "rejected";
   decidedAt?: number;
+  decidedBy?: string;
+  approvalTestRef?: string;
   reviewerReason?: string;
   dispatch?: {
     taskRef: string;
@@ -189,7 +192,7 @@ function toProgramProposal(p: RickProposal): ProgramProposal {
     problem: p.problem,
     evidence: p.evidence,
     proposedChange: p.proposedChange,
-    expectedImpact: p.expectedImpact,
+    testPlan: p.testPlan ?? testPlanFor(p.category),
     risk: p.risk,
     effortHours: p.effortHours,
     category: p.category,
@@ -319,7 +322,11 @@ export async function decideProposal(
   proposalId: string,
   decision: "approved" | "rejected",
   reason?: string,
+  gate?: { approver?: unknown; testRef?: unknown },
 ): Promise<ImprovementProgram> {
+  // R2: a non-Rick reviewer decides; approvals also need a test reference.
+  const g = checkActorAndTestRef(gate?.approver, gate?.testRef, { role: "approver", requireTestRef: decision === "approved" });
+  if (!g.ok) throw new Error(g.error);
   await loadStore();
   if (!store.active) throw new Error("No active program");
   const p = store.active;
@@ -329,6 +336,8 @@ export async function decideProposal(
   if (!proposal) throw new Error("Proposal not found in current cycle");
   proposal.decision = decision;
   proposal.decidedAt = Date.now();
+  proposal.decidedBy = g.actor;
+  if (g.testRef) proposal.approvalTestRef = g.testRef;
   if (reason && reason.trim().length > 0) {
     proposal.reviewerReason = reason.trim().slice(0, 400);
   }
@@ -352,8 +361,8 @@ ${proposal.problem}
 ## Proposed change
 ${proposal.proposedChange}
 
-## Expected impact
-${proposal.expectedImpact}
+## Test plan (UNMEASURED until run)
+${proposal.testPlan ?? testPlanFor(proposal.category)}
 
 ## Evidence
 ${evidenceLines}
@@ -364,6 +373,8 @@ Dispatched from Rick's 5-cycle improvement program.
 }
 
 export async function dispatchProposal(proposalId: string): Promise<{ program: ImprovementProgram; task: DispatchedTask }> {
+  // R2: Rick does not self-dispatch. Only allowed when TESSERA_ENABLE_RICK_LOOP=1.
+  if (!isRickLoopEnabled()) throw new Error(`Rick self-dispatch is disabled (${RICK_LOOP_FLAG}=0). Dispatch belongs to another lane.`);
   await loadStore();
   if (!store.active) throw new Error("No active program");
   const p = store.active;
@@ -441,7 +452,14 @@ export async function updateDispatchStatus(
   proposalIdOrTaskId: string,
   status: string,
   note?: string,
+  gate?: { actor?: unknown; testRef?: unknown },
 ): Promise<ImprovementProgram | null> {
+  if (status === "completed") {
+    // R2: completion needs a non-Rick implementer and a passing test reference.
+    const g = checkActorAndTestRef(gate?.actor, gate?.testRef, { role: "implementer" });
+    if (!g.ok) throw new Error(g.error);
+    note = `${note ? note + " — " : ""}completed by ${g.actor}; test: ${g.testRef}`;
+  }
   await loadStore();
   if (!VALID_TASK_STATUS.includes(status as TaskQueueStatus)) {
     throw new Error(`status must be one of: ${VALID_TASK_STATUS.join(", ")}`);
@@ -622,7 +640,7 @@ function composeReflectionText(args: {
 
   switch (verdict) {
     case "improved":
-      return `*burp* — it worked. ${catStr}, ${overall}, ${grounding}, ${mks}. Expected: ${proposal.expectedImpact.slice(0, 140)} — close enough. Feed this pattern into the next cycle: more of this, fewer cosmetic patches.`;
+      return `*burp* — it worked. ${catStr}, ${overall}, ${grounding}, ${mks}. Test plan: ${(proposal.testPlan ?? UNMEASURED).slice(0, 140)}. Measured deltas above are the only numbers that count. Feed this pattern into the next cycle: more of this, fewer cosmetic patches.`;
     case "regressed":
       return `Metrics went backwards. ${catStr}, ${overall}. Possible causes: the change was implemented wrong, the category is dominated by a variable I didn't model, or it's measurement noise from the short cycle. Next cycle should either roll this back or double-down with a sharper intervention on the root cause.`;
     case "flat":

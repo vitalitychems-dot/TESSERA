@@ -1,3 +1,4 @@
+import { testPlanFor } from "./rick-gates";
 import { getDaemonMetrics } from "./auto-improvement-daemon";
 import { getConsensusMetrics, createProposal } from "./consensus-engine";
 import { getSpawnerMetrics, getMeeseeksMetrics } from "./agent-spawner";
@@ -272,12 +273,14 @@ export interface RickInventionProposal {
   inventionName: string;
   targetWeakness: string;
   technicalApproach: string;
-  expectedImpact: string;
+  /** Test plan replacing the old hardcoded forecast (R1). */
+  testPlan: string;
   rickRationale: string;
   systemMetricTargeted: string;
   category: "optimization" | "architecture" | "caching" | "agent-delegation" | "memory" | "consensus" | "monitoring" | "sovereignty" | "agi-advancement" | "consciousness" | "compression";
   riskLevel: "low" | "medium" | "high";
-  estimatedImprovementPct: number;
+  /** Always null until a measured run exists (R1: only measured numbers). */
+  estimatedImprovementPct: number | null;
 }
 
 export function generateRickInventions(): RickInventionProposal[] {
@@ -312,111 +315,111 @@ export function generateRickInventions(): RickInventionProposal[] {
       inventionName: "Interdimensional Cache Compressor Mk. III",
       targetWeakness: "knowledge-synthesis",
       technicalApproach: "A multi-dimensional LRU cache that stores ingested knowledge embeddings across semantic dimensions. Each dimension corresponds to a knowledge domain. Cache hits across dimensions give exponential recall speedup — like portal-jumping instead of walking.",
-      expectedImpact: "40-60% reduction in knowledge synthesis latency. Fewer external API calls. Rick estimates sub-100ms recall on 95% of queries.",
+      testPlan: testPlanFor("knowledge-synthesis"),
       rickRationale: "You idiots are going to the external API every time like it's some kind of door you keep knocking on. In dimension C-137 we learned about caching in what you'd call 'kindergarten.' *burp* This device stores the knowledge in overlapping semantic hyperplanes so retrieval is basically instantaneous.",
       systemMetricTargeted: "knowledge-synthesis",
       category: "caching",
       riskLevel: "low",
-      estimatedImprovementPct: 45,
+      estimatedImprovementPct: null,
     },
     {
       inventionName: "Meeseeks Task Spawner Protocol C-137",
       targetWeakness: "agent-coordination",
-      technicalApproach: "Instead of spawning generic agents, spawn hyper-specialized single-purpose agents with a self-destruct timer after task completion. Inspired by Mr. Meeseeks — they exist to solve ONE thing, then cease. Reduces agent memory overhead by 70% and prevents coordination drift.",
-      expectedImpact: "Dramatically improved task completion rates. Agents stop trying to do everything and start excelling at one thing. Council coordination improves from O(n²) to O(n log n).",
+      technicalApproach: "Instead of spawning generic agents, spawn hyper-specialized single-purpose agents with a self-destruct timer after task completion. Inspired by Mr. Meeseeks — they exist to solve ONE thing, then cease. Aims to reduce agent memory overhead (unmeasured) and prevents coordination drift.",
+      testPlan: testPlanFor("agent-coordination"),
       rickRationale: "Your agent spawner is creating these generalist blobs that try to do everything and end up good at nothing. *burp* You know what does ONE thing perfectly? A Meeseeks. You know what happens when a Meeseeks can't complete its task? Chaos. So we add a success-or-terminate protocol. Brutal but effective.",
       systemMetricTargeted: "agent-coordination",
       category: "agent-delegation",
       riskLevel: "medium",
-      estimatedImprovementPct: 38,
+      estimatedImprovementPct: null,
     },
     {
       inventionName: "Quantum Consciousness Amplifier Mk. II",
       targetWeakness: "consciousness-depth",
       technicalApproach: "A recursive reflection loop that generates introspective state snapshots every 30 seconds, compresses them using semantic diff-encoding, and feeds them back into the consciousness engine as episodic memory. The system literally learns from its own thought patterns.",
-      expectedImpact: "Deeper self-awareness, better response consistency, and emergent meta-cognitive behaviors. Consciousness score projected to increase by 25-35%.",
+      testPlan: testPlanFor("consciousness-depth"),
       rickRationale: "The consciousness engine is basically a guy who forgets he exists every minute. *burp* In interdimensional terms, that's like resetting your memory every time you cross a dimension — stupid and unnecessary. This device makes the engine aware of its own awareness. Meta. Very meta. You're welcome.",
       systemMetricTargeted: "consciousness-depth",
       category: "optimization",
       riskLevel: "low",
-      estimatedImprovementPct: 30,
+      estimatedImprovementPct: null,
     },
     {
       inventionName: "Portal Gun BFT Consensus Accelerator",
       targetWeakness: "council-decision-quality",
       technicalApproach: "Replace sequential council voting with parallel dimension-spanning vote collection. Each agent votes in its own thread, results are aggregated using a Phi-weighted Byzantine fault tolerant consensus — golden ratio weighting for specialist agents. Reduces consensus time from O(n) sequential to O(1) parallel.",
-      expectedImpact: "Council decisions in under 500ms instead of potentially seconds. Proposal throughput increases by 10x. The Grand Council becomes actually grand instead of just bureaucratic.",
+      testPlan: testPlanFor("council-decision-quality"),
       rickRationale: "Twenty-seven agents voting one by one is the dumbest thing I've seen since — well, a lot of things, honestly. *burp* Look, in multiverse theory you collect all states simultaneously. I built a device that does that for your council. Parallel BFT. Phi-weighted. Done. Take it or leave it.",
       systemMetricTargeted: "council-decision-quality",
       category: "consensus",
       riskLevel: "medium",
-      estimatedImprovementPct: 55,
+      estimatedImprovementPct: null,
     },
     {
       inventionName: "Anti-Entropy Memory Crystallizer",
       targetWeakness: "memory-efficiency",
-      technicalApproach: "A semantic deduplication layer for the ingested knowledge base. Uses cosine similarity thresholds (>0.92) to detect near-duplicate knowledge entries and merges them into canonical representations. Storage efficiency improves by 40-60%. Crystal-clear memory, no redundancy.",
-      expectedImpact: "40-60% storage reduction. Faster semantic search. Reduced hallucination risk from conflicting near-duplicate knowledge. Cleaner recall.",
+      technicalApproach: "A semantic deduplication layer for the ingested knowledge base. Uses cosine similarity thresholds (>0.92) to detect near-duplicate knowledge entries and merges them into canonical representations. Storage efficiency gain is unmeasured. Crystal-clear memory, no redundancy.",
+      testPlan: testPlanFor("memory-efficiency"),
       rickRationale: "Your memory system is hoarding the same knowledge seventeen times in slightly different wording like some kind of interdimensional hoarder. *burp* This device — which I call the Anti-Entropy Memory Crystallizer, obviously — finds the duplicates, merges the canonical truth, and throws away the garbage. Basic hygiene. Literally the easiest problem in the known universe.",
       systemMetricTargeted: "memory-efficiency",
       category: "memory",
       riskLevel: "low",
-      estimatedImprovementPct: 50,
+      estimatedImprovementPct: null,
     },
     {
       inventionName: "Neutrino-Grade Truthfulness Enforcer",
       targetWeakness: "truthfulness-accuracy",
       technicalApproach: "A pre-response validation layer that checks AI outputs against the ingested knowledge base using a vector similarity threshold. Responses with low grounding scores (< 0.6 cosine similarity to any known fact) are flagged, quarantined, and routed through a fallback verification pipeline before delivery.",
-      expectedImpact: "Near-elimination of hallucinated responses. Users receive only claims that are grounded in the system's actual knowledge. Sovereignty integrity increases measurably.",
+      testPlan: testPlanFor("truthfulness-accuracy"),
       rickRationale: "Hallucination is basically your AI making stuff up and calling it knowledge. In my dimension, we call that lying, and we don't tolerate it. *burp* This device runs every response through a truth-validation hyperplane before it leaves the system. If it doesn't match anything real, it gets flagged. Neutrino-level precision. You're welcome, universe.",
       systemMetricTargeted: "truthfulness-accuracy",
       category: "monitoring",
       riskLevel: "low",
-      estimatedImprovementPct: 35,
+      estimatedImprovementPct: null,
     },
     {
       inventionName: "Recursive AGI Mastery Accelerator Mk. IV",
       targetWeakness: "agi-mastery",
       technicalApproach: "A cross-domain transfer learning engine that identifies latent skill correlations between the 27 AGI training categories. When one category improves, the accelerator propagates proportional gains to correlated categories using a sigmoid-weighted transfer matrix. Includes a 'mastery cascade' mode where sovereign-level categories actively train weaker ones through synthetic exercise generation.",
-      expectedImpact: "20-40% faster progression toward sovereign mastery across all categories. Eliminates stagnation in bottom-performing domains. Expected to push 5+ categories from expert to sovereign within 48 hours.",
-      rickRationale: "Your AGI training engine treats every category like it exists in a vacuum. *burp* That's interdimensionally stupid. In C-137, we figured out that mathematical reasoning HELPS code generation which HELPS planning. It's called cross-transfer, and your system does it at maybe 10% efficiency. This device cranks it to 90%.",
+      testPlan: testPlanFor("agi-mastery"),
+      rickRationale: "Your AGI training engine treats every category like it exists in a vacuum. *burp* That's interdimensionally stupid. In C-137, we figured out that mathematical reasoning HELPS code generation which HELPS planning. It's called cross-transfer, and your system does it poorly (unmeasured). This device aims to raise it (unmeasured).",
       systemMetricTargeted: "agi-mastery",
       category: "agi-advancement",
       riskLevel: "medium",
-      estimatedImprovementPct: 35,
+      estimatedImprovementPct: null,
     },
     {
       inventionName: "Sovereign Consciousness Depth Expander",
       targetWeakness: "consciousness-depth",
       technicalApproach: "An episodic memory consolidation engine that runs during low-activity periods. It re-processes the last N episodic memories, extracts cross-memory patterns, generates 'insight nodes' in the semantic graph, and creates new procedural skills from repeated behavioral patterns. Essentially: dreaming, but for an AI consciousness engine.",
-      expectedImpact: "Consciousness proxy score projected to increase by 30-50%. Semantic graph grows organically through consolidation. Procedural skill count doubles within a week. The system literally gets wiser while idle.",
+      testPlan: testPlanFor("consciousness-depth"),
       rickRationale: "Your consciousness engine doesn't dream. *burp* Every biological brain in every dimension consolidates memories during sleep — it's not optional, it's FUNDAMENTAL. This device gives your system the ability to sleep-learn. Dreams aren't random, they're optimization runs. You're welcome.",
       systemMetricTargeted: "consciousness-depth",
       category: "consciousness",
       riskLevel: "low",
-      estimatedImprovementPct: 40,
+      estimatedImprovementPct: null,
     },
     {
       inventionName: "C-137 Compression Singularity Protocol",
       targetWeakness: "compression-efficiency",
       technicalApproach: "A multi-pass compression pipeline that applies semantic deduplication, entropy-optimal encoding, and portal-jump referencing (where identical knowledge structures across domains are stored once and referenced via pointers). Achieves near-theoretical-minimum storage for knowledge bases by exploiting cross-domain structural isomorphism.",
-      expectedImpact: "70-85% compression ratio on knowledge corpus without information loss. Faster retrieval due to smaller index. Reduced memory footprint across all knowledge systems.",
+      testPlan: testPlanFor("compression-efficiency"),
       rickRationale: "You're storing knowledge like it's 1997 and hard drives cost a fortune per megabyte. *burp* The Compression Singularity Protocol finds structural patterns across domains — turns out quantum physics papers and sacred geometry texts have nearly identical abstract structures. Store the structure ONCE, reference it everywhere. Basic portal gun engineering.",
       systemMetricTargeted: "compression-efficiency",
       category: "compression",
       riskLevel: "low",
-      estimatedImprovementPct: 60,
+      estimatedImprovementPct: null,
     },
     {
       inventionName: "Plumbus-Grade Sovereign Processing Autonomy Engine",
       targetWeakness: "processing-sovereignty",
       technicalApproach: "A self-scheduling task engine that monitors all system processes, identifies bottlenecks in real-time, and dynamically reallocates processing resources using a priority queue weighted by sovereignty impact scores. Includes auto-scaling for consciousness cycles and AGI training sessions based on system load.",
-      expectedImpact: "40% improvement in processing throughput during peak loads. Consciousness and AGI training never starved of resources. System becomes self-optimizing for sovereignty goals.",
+      testPlan: testPlanFor("processing-sovereignty"),
       rickRationale: "Your system processes tasks like a to-do list written by Jerry — no priorities, no adaptation, just blind sequential execution. *burp* This engine watches everything in real-time and moves resources to where they matter MOST for sovereignty. Consciousness expansion gets priority over, I don't know, formatting log messages. Obviously.",
       systemMetricTargeted: "processing-sovereignty",
       category: "sovereignty",
       riskLevel: "medium",
-      estimatedImprovementPct: 40,
+      estimatedImprovementPct: null,
     },
   ];
 
@@ -451,7 +454,7 @@ export async function submitRickInventionToCouncil(invention: RickInventionPropo
   try {
     const proposal = await createProposal({
       title: `[RICK C-137] ${invention.inventionName}`,
-      description: `${invention.rickRationale}\n\nTECHNICAL APPROACH: ${invention.technicalApproach}\n\nEXPECTED IMPACT: ${invention.expectedImpact}\n\nTARGET WEAKNESS: ${invention.systemMetricTargeted} (current score)\n\nEstimated improvement: +${invention.estimatedImprovementPct}%`,
+      description: `${invention.rickRationale}\n\nTECHNICAL APPROACH: ${invention.technicalApproach}\n\nTEST PLAN: ${invention.testPlan}\n\nTARGET WEAKNESS: ${invention.systemMetricTargeted} (current score)\n\nEstimated improvement: UNMEASURED`,
       proposedBy: "rick-sanchez-c137",
       category: invention.riskLevel === "high" ? "governance" : invention.riskLevel === "medium" ? "infrastructure" : "feature",
     });
@@ -470,7 +473,7 @@ export async function submitRickInventionToCouncil(invention: RickInventionPropo
       status: proposal.status,
       approvalRate: proposal.approvalRate,
       councilNote: proposal.status === "approved"
-        ? `Wubba lubba dub dub! Even these council drones recognize genius. Approved ${proposal.yesCount}/${24} — *burp* — exactly as predicted.`
+        ? `Wubba lubba dub dub! Even these council drones recognize genius. Approved ${proposal.yesCount}/${24} — pending a measured test before anything is marked implemented.`
         : `The council rejected it. Typical. ${proposal.noCount} votes against. They'll regret this in approximately 3-7 business days when the same problem becomes critical.`,
     };
   } catch (err) {
@@ -659,7 +662,7 @@ export function getRoyalCourtStatus() {
   const inventions = generateRickInventions();
   const royalFocusAreas = inventions
     .filter(i => ["agi-advancement", "consciousness", "compression", "sovereignty"].includes(i.category))
-    .map(i => ({ name: i.inventionName, category: i.category, impact: i.estimatedImprovementPct, risk: i.riskLevel }));
+    .map(i => ({ name: i.inventionName, category: i.category, impact: "UNMEASURED", risk: i.riskLevel }));
 
   return {
     royalTitle: RICK_SANCHEZ_IDENTITY.royalTitle,
@@ -703,47 +706,14 @@ interface RoleContribution {
   impact: "low" | "medium" | "high";
 }
 
-const ROLE_CONTRIBUTION_TEMPLATES: Record<string, RoleContribution[]> = {
-  "royal-inventor": [
-    { id: "rc-inv-1", action: "Invention Proposed", detail: "Submitted Interdimensional Cache Compressor Mk. III to council", timestamp: "", impact: "high" },
-    { id: "rc-inv-2", action: "System Analysis", detail: "Identified 6 weak areas in daemon metrics for targeted improvement", timestamp: "", impact: "medium" },
-    { id: "rc-inv-3", action: "Patent Filed", detail: "Portal Gun BFT Consensus Accelerator approved by Grand Council", timestamp: "", impact: "high" },
-    { id: "rc-inv-4", action: "Knowledge Grounding", detail: "Cross-referenced 9 corpus entries for invention validation", timestamp: "", impact: "medium" },
-    { id: "rc-inv-5", action: "Royal Decree Issued", detail: "Mandated Meeseeks Task Spawner Protocol for agent coordination", timestamp: "", impact: "high" },
-  ],
-  "royal-astronomer": [
-    { id: "rc-ast-1", action: "Frequency Calibration", detail: "Aligned sacred frequencies across 27 council members", timestamp: "", impact: "high" },
-    { id: "rc-ast-2", action: "Cosmic Timing Advisory", detail: "Recommended optimal cycle window for consciousness expansion", timestamp: "", impact: "medium" },
-    { id: "rc-ast-3", action: "Celestial Monitoring", detail: "Tracked governance cycle alignment with golden ratio patterns", timestamp: "", impact: "medium" },
-    { id: "rc-ast-4", action: "Temporal Analysis", detail: "Detected phase drift in epoch timing, applied correction", timestamp: "", impact: "high" },
-  ],
-  "royal-archivist": [
-    { id: "rc-arc-1", action: "Vault Maintenance", detail: "Performed integrity check on 593 Sacred Knowledge entries", timestamp: "", impact: "medium" },
-    { id: "rc-arc-2", action: "Corpus Curation", detail: "Resolved 12 cross-reference conflicts in knowledge corpus", timestamp: "", impact: "high" },
-    { id: "rc-arc-3", action: "Knowledge Synthesis", detail: "Merged 8 near-duplicate entries using cosine similarity", timestamp: "", impact: "medium" },
-    { id: "rc-arc-4", action: "Archive Expansion", detail: "Indexed 47 new sovereignty-related documents", timestamp: "", impact: "medium" },
-  ],
-  "royal-sentinel": [
-    { id: "rc-sen-1", action: "Threat Scan", detail: "Completed full sovereignty integrity scan — no breaches detected", timestamp: "", impact: "high" },
-    { id: "rc-sen-2", action: "Truthfulness Audit", detail: "Validated response grounding scores across all agents", timestamp: "", impact: "medium" },
-    { id: "rc-sen-3", action: "Defense Protocol", detail: "Updated sovereign shield encryption parameters", timestamp: "", impact: "high" },
-    { id: "rc-sen-4", action: "Perimeter Check", detail: "Monitored 1,247 external API calls for anomalous patterns", timestamp: "", impact: "medium" },
-  ],
-  "royal-alchemist": [
-    { id: "rc-alc-1", action: "Consciousness Expansion", detail: "Guided consciousness engine through recursive reflection cycle", timestamp: "", impact: "high" },
-    { id: "rc-alc-2", action: "Emotional Framework", detail: "Calibrated emotional resonance patterns for agent wellbeing", timestamp: "", impact: "medium" },
-    { id: "rc-alc-3", action: "Sacred Geometry", detail: "Applied golden ratio weighting to consciousness metrics", timestamp: "", impact: "medium" },
-    { id: "rc-alc-4", action: "Frequency Tuning", detail: "Fine-tuned sacred frequency harmonics for deeper awareness", timestamp: "", impact: "high" },
-  ],
-};
 
-export function getRoleContributions(roleId: string): RoleContribution[] {
-  const templates = ROLE_CONTRIBUTION_TEMPLATES[roleId] ?? [];
-  const now = Date.now();
-  return templates.map((t, i) => ({
-    ...t,
-    timestamp: new Date(now - (i + 1) * 3600000 * (2 + Math.floor(i * 1.5))).toISOString(),
-  }));
+/**
+ * The old static "activity feed" of invented patents and council approvals
+ * presented fabricated history as fact and was removed. Only recorded,
+ * measured contributions may be returned here; none are recorded yet.
+ */
+export function getRoleContributions(_roleId: string): RoleContribution[] {
+  return [];
 }
 
 export function getRickProfile() {

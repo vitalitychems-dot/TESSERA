@@ -1102,7 +1102,8 @@ interface RickProposalItem {
   problem: string;
   evidence: RickProposalEvidence[];
   proposedChange: string;
-  expectedImpact: string;
+  testPlan?: string;
+  expectedImpact?: string;
   risk: "low" | "medium" | "high";
   effortHours: number;
   category: string;
@@ -1351,7 +1352,7 @@ function RickProposalsPanel() {
 
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Expected Impact</div>
-                <p className="text-[11px] font-mono" style={{ color: "#22d3ee" }}>{p.expectedImpact}</p>
+                <p className="text-[11px] font-mono" style={{ color: "#22d3ee" }}>{p.testPlan ?? p.expectedImpact ?? "UNMEASURED"}</p>
               </div>
 
               {p.reviewerReason && (
@@ -1628,7 +1629,8 @@ interface ProgramProposal {
   problem: string;
   evidence: ProgramEvidence[];
   proposedChange: string;
-  expectedImpact: string;
+  testPlan?: string;
+  expectedImpact?: string;
   risk: "low" | "medium" | "high";
   effortHours: number;
   category: string;
@@ -2125,7 +2127,7 @@ function ActiveCyclePanel({
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Proposed change</div>
             <div className="text-[11px] font-mono text-foreground/80">{p.proposedChange}</div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Expected impact</div>
-            <div className="text-[11px] font-mono text-foreground/80">{p.expectedImpact}</div>
+            <div className="text-[11px] font-mono text-foreground/80">{p.testPlan ?? p.expectedImpact ?? "UNMEASURED"}</div>
             {p.evidence.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {p.evidence.map((e, i) => (

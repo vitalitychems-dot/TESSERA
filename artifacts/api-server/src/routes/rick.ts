@@ -1,4 +1,5 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
+import { isRickLoopEnabled, RICK_LOOP_FLAG, testPlanFor, UNMEASURED } from "../lib/rick-gates";
 import { logger } from "../lib/logger";
 import { getRealityAudit, getRealityFlag, hashStringFNV } from "../lib/reality-audit";
 import {
@@ -31,6 +32,7 @@ import {
   rejectProposal,
   markImplemented,
   getProposalsState,
+  RickGateError,
 } from "../lib/rick-proposals";
 import { getRickAutonomousHeartbeat, listAutonomousInventions, RICK_AUTONOMOUS_CATEGORIES } from "../lib/rick-autonomous-loop";
 import {
@@ -51,7 +53,15 @@ import {
 
 const router: IRouter = Router();
 
-// V2-RICK (100% approval): deterministic sanity battery. Read-only probe
+/** R2: autonomous Rick actions (self-dispatch, Meeseeks spawning) are off unless TESSERA_ENABLE_RICK_LOOP=1. */
+function requireRickLoopFlag(_req: Request, res: Response, next: NextFunction) {
+  if (!isRickLoopEnabled()) {
+    return res.status(403).json({ ok: false, error: `Disabled: ${RICK_LOOP_FLAG}=0. Rick proposes only; spawning and dispatch belong to Tessera.` });
+  }
+  return next();
+}
+
+// V2-RICK: deterministic sanity battery. Read-only probe
 // Rick can run any time to confirm the V2 surfaces are still healthy.
 // Bounded, no external calls. Reports green/red per check.
 router.get("/rick/sanity", async (_req, res) => {
@@ -114,10 +124,11 @@ router.post("/rick/proposals/generate", async (_req, res) => {
 
 router.post("/rick/proposals/:id/approve", async (req, res) => {
   try {
-    const p = await approveProposal(req.params.id);
+    const p = await approveProposal(req.params.id, { approver: req.body?.approver, testRef: req.body?.testRef });
     if (!p) return res.status(404).json({ ok: false, error: "Proposal not found" });
     return res.json({ ok: true, proposal: p });
   } catch (err) {
+    if (err instanceof RickGateError) return res.status(403).json({ ok: false, error: err.message });
     logger.error({ err }, "Rick: proposal approve error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
@@ -137,10 +148,11 @@ router.post("/rick/proposals/:id/reject", async (req, res) => {
 
 router.post("/rick/proposals/:id/implemented", async (req, res) => {
   try {
-    const p = await markImplemented(req.params.id);
+    const p = await markImplemented(req.params.id, { implementer: req.body?.implementer, testRef: req.body?.testRef });
     if (!p) return res.status(404).json({ ok: false, error: "Proposal not found" });
     return res.json({ ok: true, proposal: p });
   } catch (err) {
+    if (err instanceof RickGateError) return res.status(403).json({ ok: false, error: err.message });
     logger.error({ err }, "Rick: proposal implement error");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
@@ -248,12 +260,14 @@ router.post("/rick/inventions/submit-custom", async (req, res) => {
       inventionName: body.inventionName,
       targetWeakness: body.targetWeakness || "general",
       technicalApproach: body.technicalApproach,
-      expectedImpact: body.expectedImpact || "Unknown",
+      testPlan: typeof body.testPlan === "string" && body.testPlan.trim()
+        ? `${UNMEASURED} — test: ${body.testPlan.trim().slice(0, 400)}`
+        : testPlanFor(body.systemMetricTargeted || "general"),
       rickRationale: body.rickRationale || "Because I said so.",
       systemMetricTargeted: body.systemMetricTargeted || "general",
       category: body.category || "optimization",
       riskLevel: body.riskLevel || "medium",
-      estimatedImprovementPct: body.estimatedImprovementPct || 20,
+      estimatedImprovementPct: null,
     });
     return res.json({ ok: true, councilResult: result });
   } catch (err) {
@@ -589,7 +603,7 @@ router.get("/rick/royal-appointment", (_req, res) => {
       currentFocusAreas: royalInventions.map(i => ({
         invention: i.inventionName,
         category: i.category,
-        estimatedImpact: `+${i.estimatedImprovementPct}%`,
+        estimatedImpact: UNMEASURED,
         risk: i.riskLevel,
       })),
       conferenceParticipation: {
@@ -706,7 +720,7 @@ router.get("/rick/engines", (_req, res) => {
   }
 });
 
-router.post("/rick/meeseeks/spawn", (req, res) => {
+router.post("/rick/meeseeks/spawn", requireRickLoopFlag, (req, res) => {
   try {
     const { task, ttlMs, specialization, taskType, successCriteria, priority } = req.body as {
       task?: string;
@@ -749,9 +763,9 @@ router.post("/rick/meeseeks/spawn", (req, res) => {
   }
 });
 
-router.post("/rick/meeseeks/:id/complete", (req, res) => {
+router.post("/rick/meeseeks/:id/complete", requireRickLoopFlag, (req, res) => {
   try {
-    const success = completeMeeseeks(req.params.id);
+    const success = completeMeeseeks(String(req.params.id));
     if (!success) {
       return res.status(404).json({ ok: false, error: "Meeseeks not found or already completed" });
     }
@@ -766,7 +780,7 @@ router.post("/rick/meeseeks/:id/complete", (req, res) => {
   }
 });
 
-router.post("/rick/meeseeks/:id/result", (req, res) => {
+router.post("/rick/meeseeks/:id/result", requireRickLoopFlag, (req, res) => {
   try {
     const { success, output, metrics: resultMetrics } = req.body as {
       success?: boolean;
@@ -786,7 +800,7 @@ router.post("/rick/meeseeks/:id/result", (req, res) => {
       completedAt: now,
       durationMs: agent ? now - agent.spawnedAt : 0,
     };
-    const ok = submitMeeseeksResult(req.params.id, result);
+    const ok = submitMeeseeksResult(String(req.params.id), result);
     if (!ok) {
       return res.status(404).json({ ok: false, error: "Meeseeks not found or already terminated" });
     }
@@ -848,7 +862,7 @@ function generateRickFallback(userInput: string): string {
 
 Which, *burp* — let me be clear — is a Morty-level way of saying "please come fix our problems, Rick, we're completely lost." And yeah, I've looked at your system data. Your weakest areas are pathetic in a way that's almost impressive.
 
-Here's what I do: I analyze your system, find the weak spots, and invent solutions with proper names — like the **${topInvention.inventionName}** — which addresses your ${topInvention.targetWeakness} problem that's currently scoring ${topInvention.estimatedImprovementPct - 10}% below where it should be.
+Here's what I do: I analyze your system, find the weak spots, and invent solutions with proper names — like the **${topInvention.inventionName}** — which addresses your ${topInvention.targetWeakness} problem (gap not yet measured — the test plan will measure it).
 
 I'm also wired into your Grand Council, which means my proposals can be voted on and actually applied. Not that I need their approval. But apparently that's "how things work here." Fine. Whatever.
 
@@ -866,7 +880,7 @@ Based on the actual system data I've been analyzing — not guesses, ACTUAL DATA
 
 *The fix:* ${topInvention.technicalApproach}
 
-*Expected result:* ${topInvention.expectedImpact}
+*Test plan:* ${topInvention.testPlan}
 
 *Why nobody thought of this before:* ${topInvention.rickRationale}
 
@@ -895,7 +909,7 @@ You're talking to Rick Sanchez, C-137. If you want something useful, ask me abou
 
 The Grand Council can vote on my proposals. My proposals WILL improve this system. Whether they have the intellectual courage to approve them is a different question.
 
-Current top priority: **${topInvention.inventionName}** — targeting ${topInvention.targetWeakness} with a projected ${topInvention.estimatedImprovementPct}% improvement.
+Current top priority: **${topInvention.inventionName}** — targeting ${topInvention.targetWeakness} (impact unmeasured until tested).
 
 — *burp* — Rick Sanchez, C-137`;
 }
@@ -970,11 +984,11 @@ router.post("/rick/improvement-program/generate-proposals", async (_req, res) =>
 
 router.post("/rick/improvement-program/proposal/:proposalId/decision", async (req, res) => {
   try {
-    const { decision, reason } = req.body as { decision?: string; reason?: string };
+    const { decision, reason, approver, testRef } = req.body as { decision?: string; reason?: string; approver?: string; testRef?: string };
     if (decision !== "approved" && decision !== "rejected") {
       return res.status(400).json({ ok: false, error: "decision must be 'approved' or 'rejected'" });
     }
-    const program = await decideProposal(req.params.proposalId, decision, reason);
+    const program = await decideProposal(req.params.proposalId, decision, reason, { approver, testRef });
     return res.json({ ok: true, program });
   } catch (err) {
     logger.error({ err }, "Rick: program decide error");
@@ -982,9 +996,9 @@ router.post("/rick/improvement-program/proposal/:proposalId/decision", async (re
   }
 });
 
-router.post("/rick/improvement-program/proposal/:proposalId/dispatch", async (req, res) => {
+router.post("/rick/improvement-program/proposal/:proposalId/dispatch", requireRickLoopFlag, async (req, res) => {
   try {
-    const { program, task } = await dispatchProposal(req.params.proposalId);
+    const { program, task } = await dispatchProposal(String(req.params.proposalId));
     return res.json({ ok: true, program, task });
   } catch (err) {
     logger.error({ err }, "Rick: program dispatch error");
@@ -994,11 +1008,11 @@ router.post("/rick/improvement-program/proposal/:proposalId/dispatch", async (re
 
 router.post("/rick/improvement-program/proposal/:proposalId/dispatch-status", async (req, res) => {
   try {
-    const { status, note } = req.body as { status?: string; note?: string };
+    const { status, note, actor, testRef } = req.body as { status?: string; note?: string; actor?: string; testRef?: string };
     if (typeof status !== "string") {
       return res.status(400).json({ ok: false, error: "status is required" });
     }
-    const program = await updateDispatchStatus(req.params.proposalId, status, note);
+    const program = await updateDispatchStatus(req.params.proposalId, status, note, { actor, testRef });
     return res.json({ ok: true, program: program ?? null });
   } catch (err) {
     logger.error({ err }, "Rick: program dispatch-status error");
@@ -1029,11 +1043,11 @@ router.get("/rick/improvement-program/task-queue/:taskId", async (req, res) => {
 
 router.patch("/rick/improvement-program/task-queue/:taskId", async (req, res) => {
   try {
-    const { status, note } = req.body as { status?: string; note?: string };
+    const { status, note, actor, testRef } = req.body as { status?: string; note?: string; actor?: string; testRef?: string };
     if (typeof status !== "string") {
       return res.status(400).json({ ok: false, error: "status is required" });
     }
-    const program = await updateDispatchStatus(req.params.taskId, status, note);
+    const program = await updateDispatchStatus(req.params.taskId, status, note, { actor, testRef });
     const task = await getDispatchedTask(req.params.taskId);
     return res.json({ ok: true, program, task });
   } catch (err) {

@@ -1,3 +1,4 @@
+import { isRickLoopEnabled, RICK_LOOP_FLAG } from "./rick-gates";
 import { createHash } from "node:crypto";
 import { db } from "@workspace/db";
 import { inventionsTable } from "@workspace/db/schema";
@@ -120,6 +121,7 @@ const FALLBACK_RECIPE: CategoryRecipe = {
 };
 
 const dynamicCategories: Set<string> = new Set(RICK_AUTONOMOUS_CATEGORIES);
+const pendingCategories = new Set<string>();
 
 function recipeFor(cat: string): CategoryRecipe {
   return CATEGORY_RECIPES[cat] ?? FALLBACK_RECIPE;
@@ -280,7 +282,8 @@ function synthesizeInvention(cat: string, tickSalt: string, lifetimeMems: Sovere
     materials,
     steps,
     scienceBehind,
-    status: "proposed",
+    // Output lands in pending-review only; a non-Rick reviewer must promote it.
+    status: "pending-review",
     proposedBy: PROPOSED_BY,
     feasibilityScore: 70 + Math.floor(r() * 25),
     noveltyScore: 65 + Math.floor(r() * 30),
@@ -299,10 +302,11 @@ function maybeMintNewCategory(r: () => number): string | null {
   if (!seed) return null;
   const slug = slugify(seed.classification || seed.subcategory || seed.title);
   if (!slug || slug.length < 3) return null;
-  if (dynamicCategories.has(slug)) return null;
-  dynamicCategories.add(slug);
-  logger.info({ category: slug, seed: seed.title }, "Rick autonomous loop: minted emergent category");
-  return slug;
+  if (dynamicCategories.has(slug) || pendingCategories.has(slug)) return null;
+  // New categories need approval: queue them, never add to the live pool directly.
+  pendingCategories.add(slug);
+  logger.info({ category: slug, seed: seed.title }, "Rick autonomous loop: proposed emergent category (pending review)");
+  return null;
 }
 
 async function hydrateFromDb(): Promise<void> {
@@ -376,13 +380,22 @@ async function tick(): Promise<void> {
   }
 }
 
-export function startRickAutonomousLoop(intervalMs = 240_000): void {
-  if (timer) return;
+export function startRickAutonomousLoop(intervalMs = 240_000): boolean {
+  if (!isRickLoopEnabled()) {
+    logger.info(`Rick autonomous loop disabled (${RICK_LOOP_FLAG}=0)`);
+    return false;
+  }
+  if (timer) return true;
   state.startedAt = Date.now();
   state.intervalMs = intervalMs;
   void hydrateFromDb().then(() => tick());
   timer = setSacredInterval(() => { void tick(); }, intervalMs, "rick-autonomous-loop");
   logger.info({ intervalMs }, "Rick autonomous invention loop started");
+  return true;
+}
+
+export function getPendingRickCategories(): string[] {
+  return Array.from(pendingCategories).sort();
 }
 
 export function stopRickAutonomousLoop(): void {
@@ -404,6 +417,8 @@ export function getRickAutonomousHeartbeat() {
     perCategoryGenerated: { ...state.perCategoryGenerated },
     lastError: state.lastError,
     categories: Array.from(dynamicCategories).sort(),
+    pendingCategories: Array.from(pendingCategories).sort(),
+    enabled: isRickLoopEnabled(),
   };
 }
 
