@@ -25,4 +25,20 @@ describe("Soar-style subgoaling (REA-10)", () => {
     const s = new SubgoalEngine(2);
     for (const p of [0.1, 0.2, 0.3, 0.4]) expect(s.tick(ev(p)).subgoals).toEqual([]);
   });
+  it("subgoal IDs are monotonic and never reused after resolve", () => {
+    const s = new SubgoalEngine(1);
+    const sig = (g: string, sigName: string, p: number) => ({ [g]: { progress: p, done: false, signature: sigName } });
+    s.tick(sig("g2", "a", 0.1));
+    const first = s.tick(sig("g2", "a", 0.1)).subgoals[0];
+    s.resolve(first, "fix a");
+    s.tick(sig("g2", "b", 0.2));
+    const second = s.tick(sig("g2", "b", 0.2)).subgoals[0];
+    expect(first).toBeDefined();
+    expect(second).toBeDefined();
+    expect(second).not.toBe(first);
+    const g = listGoals().find((x) => x.id === second);
+    expect(g?.parentId).toBe("g2");
+    // the resolved subgoal keeps its own record (not overwritten)
+    expect(listGoals().find((x) => x.id === first)?.status).toBe("complete");
+  });
 });

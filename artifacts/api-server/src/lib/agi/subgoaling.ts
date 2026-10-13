@@ -17,6 +17,8 @@ export class SubgoalEngine {
   private lastProgress = new Map<string, { p: number; stalled: number }>();
   private chunks = new Map<string, Chunk>();
   private open = new Map<string, Impasse>(); // subgoalId -> impasse
+  /** Monotonic subgoal counter: IDs are never reused, even after resolve(). */
+  private seq = 0;
 
   constructor(private readonly stallTicks = 3) {}
 
@@ -42,7 +44,7 @@ export class SubgoalEngine {
         continue;
       }
       if ([...this.open.values()].some((i) => i.goalId === goalId)) continue;
-      const subId = `${goalId}-impasse-${this.open.size + 1}`;
+      const subId = `${goalId}-impasse-${++this.seq}`;
       this.open.set(subId, { goalId, signature: e.signature, stalledTicks: stalled });
       setGoal({ id: subId, goal: `Resolve impasse on ${goalId} (${e.signature})`, parentId: goalId, priority: 90 });
       updateGoal(goalId, { status: "blocked" });
