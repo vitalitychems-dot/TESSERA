@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireAdminSession } from "../lib/sovereign-admin";
 import { queryNasaApod, queryNasaImageLibrary, fetchNasaImageAsBuffer } from "../lib/providers/nasa-provider";
 import { getUniverseMetrics } from "../lib/universe-mechanics";
 import { TESSERA_SUBJECTS } from "../lib/tessera-knowledge";
@@ -157,7 +158,7 @@ router.post("/universe/compression-lab/round-trip", async (req, res) => {
   }
 });
 
-router.get("/universe/metrics", async (_req, res) => {
+router.get("/universe/metrics", requireAdminSession, async (_req, res) => {
   try {
     const metrics = getUniverseMetrics();
     res.json({ ok: true, metrics });

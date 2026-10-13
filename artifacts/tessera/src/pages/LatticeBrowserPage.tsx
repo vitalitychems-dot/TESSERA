@@ -130,14 +130,14 @@ export default function LatticeBrowserPage() {
     data?: { latticeDomains?: Array<{ domain: string; title: string; description: string }> };
   }>({
     queryKey: ["lattice-heartbeat-domains"],
-    queryFn: () => fetch(`${API}/api/heartbeat/metrics`).then(r => r.json()),
+    queryFn: () => fetch(`${API}/api/heartbeat/metrics`, { credentials: "include" }).then(r => r.json()),
     refetchInterval: 30000,
   });
   const liveDomains: PresentedDomain[] = (heartbeat?.data?.latticeDomains ?? []).map(presentDomain);
 
   const { data: universeMetrics } = useQuery({
     queryKey: ["universe-metrics"],
-    queryFn: () => fetch(`${API}/api/universe/metrics`).then(r => r.json()).then(d => d.data),
+    queryFn: () => fetch(`${API}/api/universe/metrics`, { credentials: "include" }).then(r => r.json()).then(d => d.data),
     refetchInterval: 60000,
     enabled: selectedDomain?.id === "universe-mechanics",
   });
@@ -151,7 +151,7 @@ export default function LatticeBrowserPage() {
 
   const { data: truthMetrics } = useQuery({
     queryKey: ["truthfulness-metrics"],
-    queryFn: () => fetch(`${API}/api/truthfulness/metrics`).then(r => r.json()).then(d => d.data),
+    queryFn: () => fetch(`${API}/api/truthfulness/metrics`, { credentials: "include" }).then(r => r.json()).then(d => d.data),
     enabled: selectedDomain?.id === "truthfulness",
   });
 
@@ -162,7 +162,7 @@ export default function LatticeBrowserPage() {
   });
 
   const simulateMutation = useMutation({
-    mutationFn: (type: string) => fetch(`${API}/api/universe/simulate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type }) }).then(r => r.json()),
+    mutationFn: (type: string) => fetch(`${API}/api/universe/simulate`, { credentials: "include", method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type }) }).then(r => r.json()),
   });
 
   const filtered = liveDomains.filter(d => {

@@ -216,6 +216,19 @@ function ownerCookie(): string {
   return `${SESSION_COOKIE}=${issued.signedId}`;
 }
 
+function withOwner<T>(run: () => Promise<T>): Promise<T> {
+  const previousAdmin = process.env.TESSERACT_ADMIN_KEY;
+  const previousSession = process.env.SOVEREIGN_SESSION_SECRET;
+  process.env.TESSERACT_ADMIN_KEY = OWNER_ADMIN_KEY;
+  process.env.SOVEREIGN_SESSION_SECRET = OWNER_SESSION_SECRET;
+  return run().finally(() => {
+    if (previousAdmin === undefined) delete process.env.TESSERACT_ADMIN_KEY;
+    else process.env.TESSERACT_ADMIN_KEY = previousAdmin;
+    if (previousSession === undefined) delete process.env.SOVEREIGN_SESSION_SECRET;
+    else process.env.SOVEREIGN_SESSION_SECRET = previousSession;
+  });
+}
+
 describe("HYB-012 route inventory", () => {
   const registrations = listRouteRegistrations();
 
@@ -334,16 +347,25 @@ describe("HYB-012 quantum mount order", () => {
   });
 
   it("GET /api/quantum/state answers with the system-runtime shape", async () => {
-    const response = await request("GET", "/api/quantum/state");
+    await withOwner(async () => {
+    const anonymous = await request("GET", "/api/quantum/state");
+    expect(anonymous.status).toBe(401);
+
+    const response = await request("GET", "/api/quantum/state", undefined, ownerCookie());
     expect(response.status).toBe(200);
     expect(response.json).toEqual(QUANTUM_STATE_SHAPE);
+    });
   });
 
   it("POST /api/quantum/gate answers with the system-runtime contract", async () => {
+    await withOwner(async () => {
+    const anonymous = await request("POST", "/api/quantum/gate", {});
+    expect(anonymous.status).toBe(401);
+
     const accepted = await request("POST", "/api/quantum/gate", {
       qubitId: "hyb012-probe",
       gate: "H",
-    });
+    }, ownerCookie());
     expect(accepted.status).toBe(200);
     expect(accepted.json).toEqual({
       ok: true,
@@ -354,11 +376,12 @@ describe("HYB-012 quantum mount order", () => {
       circuitId: "legacy-would-accept",
       gate: "H",
       target: 0,
-    });
+    }, ownerCookie());
     expect(missingQubit.status).toBe(400);
     expect(missingQubit.json).toEqual({
       ok: false,
       error: "qubitId and gate are required",
+    });
     });
   });
 });
@@ -400,18 +423,6 @@ describe("HYB-012 non-quantum duplicate response shapes", () => {
     restoreDatabaseUrl();
   });
 
-  function withOwner<T>(run: () => Promise<T>): Promise<T> {
-    const previousAdmin = process.env.TESSERACT_ADMIN_KEY;
-    const previousSession = process.env.SOVEREIGN_SESSION_SECRET;
-    process.env.TESSERACT_ADMIN_KEY = OWNER_ADMIN_KEY;
-    process.env.SOVEREIGN_SESSION_SECRET = OWNER_SESSION_SECRET;
-    return run().finally(() => {
-      if (previousAdmin === undefined) delete process.env.TESSERACT_ADMIN_KEY;
-      else process.env.TESSERACT_ADMIN_KEY = previousAdmin;
-      if (previousSession === undefined) delete process.env.SOVEREIGN_SESSION_SECRET;
-      else process.env.SOVEREIGN_SESSION_SECRET = previousSession;
-    });
-  }
 
   it("GET /api/consciousness/state answers with the sovereign-engines wrapper", async () => {
     await withOwner(async () => {
@@ -429,12 +440,17 @@ describe("HYB-012 non-quantum duplicate response shapes", () => {
   });
 
   it("GET /api/consensus/proposals answers with the governance-consensus wrapper", async () => {
-    const response = await request("GET", "/api/consensus/proposals");
+    await withOwner(async () => {
+    const anonymous = await request("GET", "/api/consensus/proposals");
+    expect(anonymous.status).toBe(401);
+
+    const response = await request("GET", "/api/consensus/proposals", undefined, ownerCookie());
     expect(response.status).toBe(200);
     const body = response.json as { ok?: boolean; data?: unknown; count?: number };
     expect(body.ok).toBe(true);
     expect(Array.isArray(body.data)).toBe(true);
     expect(body.count).toBe((body.data as unknown[]).length);
+    });
   });
 
   it("GET /api/dual-brain/state answers with the sovereign-engines wrapper", async () => {
@@ -466,43 +482,63 @@ describe("HYB-012 non-quantum duplicate response shapes", () => {
   });
 
   it("GET /api/universe/metrics answers with the system-runtime data field", async () => {
-    const response = await request("GET", "/api/universe/metrics");
+    await withOwner(async () => {
+    const anonymous = await request("GET", "/api/universe/metrics");
+    expect(anonymous.status).toBe(401);
+
+    const response = await request("GET", "/api/universe/metrics", undefined, ownerCookie());
     expect(response.status).toBe(200);
     const body = response.json as { ok?: boolean; data?: { universeAge?: unknown }; metrics?: unknown };
     expect(body.ok).toBe(true);
     expect(typeof body.data?.universeAge).toBe("string");
     expect(body.metrics).toBeUndefined();
+    });
   });
 
   it("POST /api/consensus/propose keeps the governance-consensus validation contract", async () => {
-    const response = await request("POST", "/api/consensus/propose", {});
+    await withOwner(async () => {
+    const anonymous = await request("POST", "/api/consensus/propose", {});
+    expect(anonymous.status).toBe(401);
+
+    const response = await request("POST", "/api/consensus/propose", {}, ownerCookie());
     expect(response.status).toBe(400);
     expect(response.json).toEqual({
       ok: false,
       error: "title and description are required",
     });
+    });
   });
 
   it("POST /api/improvement/cycle keeps the improvement.ts error envelope when the database is offline", async () => {
-    const response = await request("POST", "/api/improvement/cycle", {});
+    await withOwner(async () => {
+    const anonymous = await request("POST", "/api/improvement/cycle", {});
+    expect(anonymous.status).toBe(401);
+
+    const response = await request("POST", "/api/improvement/cycle", {}, ownerCookie());
     expect(response.status).toBe(500);
     expect(response.json).toEqual({
       ok: false,
       error: "probe-db-offline",
     });
+    });
   });
 
   it("POST /api/universe/simulate keeps the system-runtime contract", async () => {
-    const rejected = await request("POST", "/api/universe/simulate", { type: "not-a-type" });
+    await withOwner(async () => {
+    const anonymous = await request("POST", "/api/universe/simulate", {});
+    expect(anonymous.status).toBe(401);
+
+    const rejected = await request("POST", "/api/universe/simulate", { type: "not-a-type" }, ownerCookie());
     expect(rejected.status).toBe(400);
     const rejectedBody = rejected.json as { ok?: boolean; error?: string };
     expect(rejectedBody.ok).toBe(false);
     expect(rejectedBody.error).toContain("type must be one of:");
 
-    const accepted = await request("POST", "/api/universe/simulate", { type: "quantum" });
+    const accepted = await request("POST", "/api/universe/simulate", { type: "quantum" }, ownerCookie());
     expect(accepted.status).toBe(200);
     const acceptedBody = accepted.json as { ok?: boolean; data?: { type?: string } };
     expect(acceptedBody.ok).toBe(true);
     expect(acceptedBody.data?.type).toBe("quantum");
+    });
   });
 });
