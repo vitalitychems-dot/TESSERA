@@ -8,9 +8,11 @@
 # in a blobless clone they download the blobs one by one.
 set -euo pipefail
 DEST="${1:-tessera-lean}"; BRANCH="${2:-main}"; shift $(( $# > 2 ? 2 : $# ))
+# Auth: use `gh auth login` / gh credential helper. Never put a token in TESSERA_URL;
+# git saves the clone URL (token included) in .git/config.
 URL="${TESSERA_URL:-https://github.com/vitalitychems-dot/TESSERA.git}"
 [ -e "$DEST" ] && { echo "clone-lean: $DEST already exists" >&2; exit 1; }
-git clone --quiet --filter=blob:none --no-checkout --branch "$BRANCH" "$URL" "$DEST"
+git clone --quiet --filter=blob:none --no-checkout --branch "$BRANCH" -- "$URL" "$DEST"
 cd "$DEST"
 git sparse-checkout set --no-cone '/*' '!/archive/from-gitbook/' "$@"
 git checkout --quiet "$BRANCH"
