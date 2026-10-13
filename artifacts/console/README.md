@@ -6,7 +6,9 @@ Phosphor lattice is the current Tessera UI. It is one Node process on **127.0.0.
 pnpm --filter @workspace/console run dev
 ```
 
-`TESSERA_CONSOLE_PORT` overrides the port. `TESSERA_CONSOLE_MEMORY` overrides the gitignored retrieval-memory directory (default `.local/tessera-console-memory`). This app does not read or set `TESSERA_ENABLE_*`.
+The process binds `127.0.0.1` only. That address is not read from the environment. `TESSERA_CONSOLE_PORT` overrides the port. `TESSERA_CONSOLE_MEMORY` overrides the gitignored retrieval-memory directory (default `.local/tessera-console-memory`). This app does not read or set `TESSERA_ENABLE_*`.
+
+Static files are an allowlist. Request paths are percent-decoded and normalized, then the file is resolved and kept inside `public/`. `POST /api/chat` accepts only `Origin: http://127.0.0.1:<port>` on that loopback socket. A browser on the console page sends that header. Other origins get 403.
 
 | Tab | Real source |
 | --- | --- |
@@ -22,4 +24,4 @@ Syne (Bonjour Monde) and Fragment Mono (Wei Huang) are SIL Open Font License fac
 
 ## Where this was left
 
-The older water/fire/lightning/diamond/spiral marks and the tessera accent palette are still on disk and marked superseded in the root README. The console does not replace `artifacts/tessera` routes. Chat falls through to the file pen when no local pen is configured. A full-graph time step recomputes co-mention synapses once per memory line and then caches that step in the process.
+The older water/fire/lightning/diamond/spiral marks and the tessera accent palette are still on disk and marked superseded in the root README. The console does not replace `artifacts/tessera` routes. Chat falls through to the file pen when no local pen is configured. A full-graph time step recomputes co-mention synapses once per memory line and then caches that step in the process. The listen address stays `127.0.0.1` even if `HOST` or `TESSERA_CONSOLE_HOST` is set. Chat from curl needs the matching Origin header.
