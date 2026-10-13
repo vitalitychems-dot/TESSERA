@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { vectorEmbeddingsTable, decisionHistoryTable, systemStateTable } from "@workspace/db/schema";
-import { desc, eq, sql } from "drizzle-orm";
+import { desc, eq, inArray, sql } from "drizzle-orm";
 import { generateEmbedding, generateEmbeddingsBatch, cosineSimilarity as neuralCosineSimilarity, getEmbeddingStats } from "./neural-embeddings";
 import { evictExpired } from "./semantic-cache";
 import { resolveCanonicalId } from "./semantic-deduplication";
@@ -78,11 +78,9 @@ export async function searchMemory(query: string, topK = 10, category?: string):
 
   if (scored.length > 0) {
     const ids = scored.map(r => r.id);
-    for (const id of ids) {
-      await db.update(vectorEmbeddingsTable)
-        .set({ accessCount: sql`${vectorEmbeddingsTable.accessCount} + 1` })
-        .where(eq(vectorEmbeddingsTable.id, id));
-    }
+    await db.update(vectorEmbeddingsTable)
+      .set({ accessCount: sql`${vectorEmbeddingsTable.accessCount} + 1` })
+      .where(inArray(vectorEmbeddingsTable.id, ids));
   }
 
   return scored.map(r => ({
