@@ -163,7 +163,7 @@ function compareRank(a, b) {
   return b.score - a.score || a.path.length - b.path.length || (a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
 }
 
-export function rankIndex(index, query, k = 10, params = BM25_PARAMS) {
+function bm25Scores(index, query, params) {
   const terms = [...new Set(tokenize(query))];
   const scores = new Float64Array(index.docs.length);
   const { k1, b, weights } = params;
@@ -188,18 +188,32 @@ export function rankIndex(index, query, k = 10, params = BM25_PARAMS) {
   for (let i = 0; i < index.docs.length; i++) {
     ranked.push({ path: index.docs[i].path, tool: index.docs[i].tool, score: scores[i] });
   }
+  return ranked;
+}
+
+export function rankIndex(index, query, k = 10, params = BM25_PARAMS) {
+  const ranked = bm25Scores(index, query, params);
   ranked.sort(compareRank);
   return k > 0 ? ranked.slice(0, k) : ranked;
 }
 
-export function filenameKeywordRank(paths, query, k = 10) {
+/** Path token sets, built once per path list and reused across queries. */
+export function pathTermSets(paths) {
+  return paths.map((path) => new Set(tokenize(path)));
+}
+
+function keywordScores(paths, termSets, query) {
   const terms = [...new Set(tokenize(query))];
-  const ranked = paths.map((path) => {
-    const nameTerms = new Set(tokenize(path));
+  return paths.map((path, i) => {
+    const nameTerms = termSets[i];
     let score = 0;
     for (const term of terms) if (nameTerms.has(term)) score += 1;
     return { path, tool: null, score };
   });
+}
+
+export function filenameKeywordRank(paths, query, k = 10, termSets = pathTermSets(paths)) {
+  const ranked = keywordScores(paths, termSets, query);
   ranked.sort(compareRank);
   return k > 0 ? ranked.slice(0, k) : ranked;
 }
@@ -297,15 +311,18 @@ export function buildRouter(root = repoRoot()) {
   const entries = signalsForCatalog(root, catalog.entries);
   const index = buildIndex(entries);
   const paths = entries.map((e) => e.path);
+  // Path tokens do not change between queries; tokenize them once, not per query.
+  const termSets = pathTermSets(paths);
   return {
     source: catalog.source,
     paths,
     index,
     rank(query, k = 10, params = BM25_PARAMS) {
       const mix = params.filenameMix ?? 0;
-      const bm = rankIndex(index, query, mix ? 0 : k, params);
-      if (!mix) return bm;
-      const kw = filenameKeywordRank(paths, query, 0);
+      if (!mix) return rankIndex(index, query, k, params);
+      // Both lists are re-sorted after mixing, so they are scored unsorted here.
+      const bm = bm25Scores(index, query, params);
+      const kw = keywordScores(paths, termSets, query);
       let bmMax = 0;
       let kwMax = 0;
       for (const row of bm) if (row.score > bmMax) bmMax = row.score;
@@ -322,7 +339,7 @@ export function buildRouter(root = repoRoot()) {
       return k > 0 ? rows.slice(0, k) : rows;
     },
     baseline(query, k = 10) {
-      return filenameKeywordRank(paths, query, k);
+      return filenameKeywordRank(paths, query, k, termSets);
     },
   };
 }

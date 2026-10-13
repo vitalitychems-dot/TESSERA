@@ -7,7 +7,7 @@ import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sac
 import { startConsciousnessEngine, stopConsciousnessEngine, getConsciousnessMetrics, addEpisodicMemory, setActivityCallback } from "./consciousness-engine";
 import { startDualBrain, stopDualBrain, getDualBrainMetrics, runManualCycle as runDualBrainCycle } from "./dual-brain";
 import { startIdentityReinforcement, stopIdentityReinforcement, forceIdentityCheck } from "./identity-reinforcement";
-import { startPersonalityEvolution, stopPersonalityEvolution, evolveAllPersonalities, getPersonalityEvolutionMetrics } from "./personality-evolution";
+import { startPersonalityEvolution, stopPersonalityEvolution, evolveAllPersonalitiesAsync, getPersonalityEvolutionMetrics } from "./personality-evolution";
 import { startAutoImprovementDaemon, stopAutoImprovementDaemon, runImprovementCycle, getDaemonMetrics } from "./auto-improvement-daemon";
 import { startAGITrainingEngine, stopAGITrainingEngine, getAGITrainingMetrics } from "./agi-training-engine";
 import { startCouncilExecutor, stopCouncilExecutor, sweepAndExecute, getExecutorMetrics } from "./council-executor";
@@ -19,7 +19,7 @@ import { getQuantumMetrics } from "./quantum-tesseract";
 import { getUniverseMetrics, generateNewSnapshot } from "./universe-mechanics";
 import { getEvolutionMetrics, seedEvolutionProposals } from "./self-code-evolution";
 import { logEvolutionCycleSummary, shouldSkipEvolutionForLoad, getSystemLoad } from "./evolution-throttle";
-import { getSpawnerMetrics, spawnAgent, sweepExpiredMeeseeks, getMeeseeksMetrics } from "./agent-spawner";
+import { getSpawnerMetrics, spawnAgent, sweepExpiredMeeseeksAsync, getMeeseeksMetrics } from "./agent-spawner";
 import { broadcastMessage, getAgentCommsMetrics } from "./agent-comms";
 import { getCollectiveIntelMetrics, runTrainingCycle as runCollectiveTrainingCycle } from "./collective-intelligence";
 import { getIdentityStatus, runDriftDetection } from "./sovereign-identity-reinforcement";
@@ -299,10 +299,10 @@ async function phase5_CouncilDeliberationVoting(): Promise<Record<string, unknow
 }
 
 async function phase6_EvolutionApplication(): Promise<Record<string, unknown>> {
-  evolveAllPersonalities();
+  await evolveAllPersonalitiesAsync();
   const personalityMetrics = getPersonalityEvolutionMetrics();
 
-  const meeseeksSwept = sweepExpiredMeeseeks();
+  const meeseeksSwept = await sweepExpiredMeeseeksAsync();
   const meeseeksMetrics = getMeeseeksMetrics();
 
   const spawnerMetrics = getSpawnerMetrics();

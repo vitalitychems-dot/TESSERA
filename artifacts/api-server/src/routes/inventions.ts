@@ -6,6 +6,10 @@ import { desc, eq, and } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { logger } from "../lib/logger";
 import { hashStringFNV, getRealityFlag } from "../lib/reality-audit";
+import {
+  seedFeasibility, seedNovelty, deterministicInventionId, abstainIncrement,
+  buildStartProgress, buildStep, testRegressed, pickFreshCandidate, REGRESSION_RESUME_PROGRESS,
+} from "../lib/invention-seed";
 import { buildInvention3DBlock, buildInvention3DBlocks } from "../lib/invention-3d";
 
 const router: IRouter = Router();
@@ -1083,17 +1087,15 @@ router.post("/inventions/generate", async (_req, res) => {
 
         const statuses = ["proposed", "debating", "approved", "building"] as const;
         const status = statuses[titleHash % statuses.length];
-        // Feasibility/novelty derived deterministically from title hash blended with real DB activity
-        const realActivity = (allInventions.length + 1);
-        const feasibility = 70 + ((titleHash % 25) + (realActivity % 5));
-        const novelty = 65 + (((titleHash >>> 4) % 30));
+        const feasibility = seedFeasibility(idea.title);
+        const novelty = seedNovelty(idea.title);
         const progress = status === "building" ? 10 + ((titleHash >>> 8) % 70) : 0;
         // Vote tallies: deterministic baseline derived from feasibility (real signal)
         const yesVotes = 15 + Math.floor(feasibility / 4);
         const noVotes = Math.max(0, 8 - Math.floor(feasibility / 15));
         const abstainVotes = (titleHash >>> 12) % 8;
 
-        const inventionId = `sys-${idea.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40)}-${Date.now().toString(36)}`;
+        const inventionId = deterministicInventionId("sys", idea.title);
 
         const inv = {
           inventionId,
@@ -1195,14 +1197,13 @@ async function autonomousTick() {
       const fresh = candidateAreas.filter(c => !existingTitles.has(c.title));
       if (fresh.length > 0) {
         // Deterministic: round-robin over hash-sorted candidates.
-        const sortedFresh = [...fresh].sort((a, b) => hashStringFNV(a.title) - hashStringFNV(b.title));
-        const pick = sortedFresh[autoLoopState.ticks % sortedFresh.length];
+        const pick = pickFreshCandidate(fresh, autoLoopState.ticks)!;
         const pickHash = hashStringFNV(pick.title);
         const agent1 = AGENTS[pickHash % AGENTS.length];
         const agent2 = AGENTS[((pickHash >>> 8) + 1) % AGENTS.length] === agent1
           ? AGENTS[((pickHash >>> 8) + 2) % AGENTS.length]
           : AGENTS[((pickHash >>> 8) + 1) % AGENTS.length];
-        const inventionId = `auto-${pick.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40)}-${Date.now().toString(36)}`;
+        const inventionId = deterministicInventionId("auto", pick.title);
         await db.insert(inventionsTable).values({
           inventionId,
           title: pick.title,
@@ -1254,7 +1255,7 @@ async function autonomousTick() {
       const yesAdd = 8 + Math.floor((feas / 100) * 10);
       const noAdd = Math.max(1, Math.floor((1 - feas / 100) * 12));
       // Deterministic abstain count: f(hash, tick).
-      const absAdd = 1 + ((hashStringFNV(inv.title) + autoLoopState.ticks) % 3);
+      const absAdd = abstainIncrement(inv.title, autoLoopState.ticks);
       const newVotes = {
         yes: currentVotes.yes + yesAdd,
         no: currentVotes.no + noAdd,
@@ -1280,7 +1281,7 @@ async function autonomousTick() {
     for (const inv of (byStatus.approved || []).slice(0, 2)) {
       await db.update(inventionsTable).set({
         status: "building",
-        buildProgress: 10 + (hashStringFNV(inv.title) % 20),
+        buildProgress: buildStartProgress(inv.title),
         updatedAt: new Date(),
       }).where(eq(inventionsTable.id, inv.id));
       autoLoopState.advanced += 1;
@@ -1292,7 +1293,7 @@ async function autonomousTick() {
     for (const inv of (byStatus.building || []).slice(0, buildsPerTick)) {
       const cur = inv.buildProgress ?? 0;
       // Deterministic build step: 8 + (hash % 14) percent.
-      const step = 8 + ((hashStringFNV(inv.title) + autoLoopState.ticks) % 14);
+      const step = buildStep(inv.title, autoLoopState.ticks);
       const next = Math.min(100, cur + step);
       if (next >= 100) {
         await db.update(inventionsTable).set({
@@ -1330,11 +1331,11 @@ async function autonomousTick() {
     //    we flip a built invention back to "building" at 90% to simulate a test regression.
     for (const inv of (byStatus.built || []).slice(0, 2)) {
       // Deterministic pass/fail bucket: depends on title hash + tick count.
-      const passed = ((hashStringFNV(inv.title) + autoLoopState.ticks) % 12) !== 0;
+      const passed = !testRegressed(inv.title, autoLoopState.ticks);
       if (!passed) {
         await db.update(inventionsTable).set({
           status: "building",
-          buildProgress: 90,
+          buildProgress: REGRESSION_RESUME_PROGRESS,
           updatedAt: new Date(),
         }).where(eq(inventionsTable.id, inv.id));
         pushEvent("test-fail", `Self-diagnostic flagged regression; re-entering build.`, inv.title);

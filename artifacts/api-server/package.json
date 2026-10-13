@@ -10,6 +10,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "eval": "node --enable-source-maps ./dist/cli/run-eval.mjs",
     "test": "vitest run",
+    "test:boot": "vitest run src/__tests__/db-optional-boot.test.ts",
+    "test:db": "vitest run --exclude '**/db-optional-boot.test.ts'",
     "test:memory": "vitest run src/__tests__/learning-memory.test.ts",
     "pen:local:gate": "node ./scripts/pen-local-gate.mjs"
   },

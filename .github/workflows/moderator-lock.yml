@@ -31,7 +31,8 @@ jobs:
           HEAD: ${{ github.event.pull_request.head.sha }}
           AUTHOR: ${{ github.event.pull_request.user.login }}
           BODY: ${{ github.event.pull_request.body }}
-          FATHER_LOGIN: ${{ vars.FATHER_LOGIN }}
+          # FATHERLOGIN (no underscore) preferred: phone keyboards often omit _. Fallback to FATHER_LOGIN.
+          FATHER_LOGIN: ${{ vars.FATHERLOGIN || vars.FATHER_LOGIN }}
           AGENT_LOGINS: ${{ vars.AGENT_LOGINS || 'vitalitychems-dot' }}
           MODERATOR_APP_ID: ${{ vars.MODERATOR_APP_ID }}
           SECURITY_APP_ID: ${{ vars.SECURITY_APP_ID }}

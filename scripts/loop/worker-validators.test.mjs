@@ -101,3 +101,14 @@ test("trusted authors: OWNER/MEMBER/COLLABORATOR + allowlisted bots; others skip
   assert.equal(JSON.parse(run([issues[0], { number: 4, author_association: "NONE", user: { login: "github-actions[bot]" } }])).number, 4);
   assert.equal(run(issues.slice(0, 2)), "");
 });
+test("publish patch-check: mode-only / exec-bit / new / rename / symlink headers rejected", async () => {
+  const { checkHeaders } = await import("./patch-check.mjs");
+  const ok = "diff --git a/src/a.mjs b/src/a.mjs\nindex 1111111..2222222 100644\n--- a/src/a.mjs\n+++ b/src/a.mjs\n@@ -1 +1 @@\n-a\n+b\n";
+  assert.equal(checkHeaders(ok).ok, true);
+  assert.equal(checkHeaders("diff --git a/src/a.mjs b/src/a.mjs\nold mode 100644\nnew mode 100755\n").ok, false);
+  assert.equal(checkHeaders(ok.replace("100644", "100755")).ok, false);
+  assert.equal(checkHeaders("diff --git a/x b/x\nnew file mode 100644\n").ok, false);
+  assert.equal(checkHeaders("diff --git a/x b/y\nsimilarity index 90%\nrename from x\nrename to y\n").ok, false);
+  assert.equal(checkHeaders("diff --git a/x b/x\nnew file mode 120000\n").ok, false);
+  assert.equal(checkHeaders("diff --git a/x b/x\nGIT binary patch\n").ok, false);
+});

@@ -1,3 +1,5 @@
+import { logger } from "./logger";
+
 const PHI = (1 + Math.sqrt(5)) / 2;
 const PHI_INVERSE = PHI - 1;
 const PI = Math.PI;
@@ -222,7 +224,18 @@ function goldenSpiralPoint(angle: number): { x: number; y: number; r: number } {
   return { x: r * Math.cos(angle), y: r * Math.sin(angle), r };
 }
 
-function computeCurrentSacredAlignment(date: Date = new Date()): {
+const MS_PER_DAY = 86_400_000;
+const FIBONACCI_DAY_CYCLE = 377;
+const FIBONACCI_DAY_VALUES = [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377];
+const SPIRITUAL_COMPLETION_ROOT = 7;
+const UNIVERSAL_COMPLETION_ROOT = 9;
+const FULL_CIRCLE_DEGREES = 360;
+const FIBONACCI_DISPLAY_TERMS = 21;
+const LUCAS_DISPLAY_TERMS = 15;
+const SPIRAL_POINT_COUNT = 12;
+const CONVERGENCE_PRECISION = 1e8;
+
+type SacredAlignment = {
   dayOfYear: number;
   dayNumerology: number;
   fibonacciDay: boolean;
@@ -231,49 +244,75 @@ function computeCurrentSacredAlignment(date: Date = new Date()): {
   goldenAngle: number;
   currentAxiom: typeof LATIN_AXIOMS[number];
   alignment: string;
-} {
-  const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000);
-  const dayRoot = reduceToRoot(dayOfYear);
-  const fib21 = [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377];
-  const fibDay = fib21.includes(dayOfYear % 377);
+};
 
-  function isPrime(n: number): boolean {
-    if (n < 2) return false;
-    for (let i = 2; i * i <= n; i++) { if (n % i === 0) return false; }
-    return true;
-  }
+function isPrime(n: number): boolean {
+  if (n < 2) return false;
+  for (let i = 2; i * i <= n; i++) { if (n % i === 0) return false; }
+  return true;
+}
 
-  const sacredNums = Object.keys(SACRED_NUMBERS).map(Number);
-  const isSacred = sacredNums.includes(dayOfYear) || sacredNums.includes(dayRoot);
+function resolveValidDate(date: Date): Date {
+  if (date instanceof Date && !Number.isNaN(date.getTime())) return date;
+  logger.warn({ received: String(date) }, "SacredGeometry: invalid date supplied, falling back to current time");
+  return new Date();
+}
 
-  const goldenAngle = 360 * (1 - 1 / PHI);
+function classifyAlignment(dayOfYear: number, dayRoot: number, fibDay: boolean, primeDay: boolean, isSacred: boolean): string {
+  if (fibDay && primeDay) return "Fibonacci-Prime Convergence (extremely rare)";
+  if (fibDay) return "Fibonacci Alignment";
+  if (primeDay) return "Prime Day — indivisible sovereignty";
+  if (isSacred) return "Sacred Number Alignment";
+  if (dayRoot === SPIRITUAL_COMPLETION_ROOT) return "Spiritual Completion Day";
+  if (dayRoot === UNIVERSAL_COMPLETION_ROOT) return "Universal Completion Day";
+  return "Standard";
+}
 
-  const axiomIndex = dayOfYear % LATIN_AXIOMS.length;
-
-  let alignment = "Standard";
-  if (fibDay && isPrime(dayOfYear)) alignment = "Fibonacci-Prime Convergence (extremely rare)";
-  else if (fibDay) alignment = "Fibonacci Alignment";
-  else if (isPrime(dayOfYear)) alignment = "Prime Day — indivisible sovereignty";
-  else if (isSacred) alignment = "Sacred Number Alignment";
-  else if (dayRoot === 7) alignment = "Spiritual Completion Day";
-  else if (dayRoot === 9) alignment = "Universal Completion Day";
-
+function degradedAlignment(): SacredAlignment {
   return {
-    dayOfYear,
-    dayNumerology: dayRoot,
-    fibonacciDay: fibDay,
-    primeDay: isPrime(dayOfYear),
-    sacredNumber: isSacred,
-    goldenAngle,
-    currentAxiom: LATIN_AXIOMS[axiomIndex],
-    alignment,
+    dayOfYear: 0,
+    dayNumerology: 0,
+    fibonacciDay: false,
+    primeDay: false,
+    sacredNumber: false,
+    goldenAngle: FULL_CIRCLE_DEGREES * (1 - 1 / PHI),
+    currentAxiom: LATIN_AXIOMS[0],
+    alignment: "Unavailable (degraded)",
   };
 }
 
+function computeCurrentSacredAlignment(date: Date = new Date()): SacredAlignment {
+  try {
+    const when = resolveValidDate(date);
+    const dayOfYear = Math.floor((when.getTime() - new Date(when.getFullYear(), 0, 0).getTime()) / MS_PER_DAY);
+    const dayRoot = reduceToRoot(dayOfYear);
+    const fibDay = FIBONACCI_DAY_VALUES.includes(dayOfYear % FIBONACCI_DAY_CYCLE);
+    const primeDay = isPrime(dayOfYear);
+
+    const sacredNums = Object.keys(SACRED_NUMBERS).map(Number);
+    const isSacred = sacredNums.includes(dayOfYear) || sacredNums.includes(dayRoot);
+
+    return {
+      dayOfYear,
+      dayNumerology: dayRoot,
+      fibonacciDay: fibDay,
+      primeDay,
+      sacredNumber: isSacred,
+      goldenAngle: FULL_CIRCLE_DEGREES * (1 - 1 / PHI),
+      currentAxiom: LATIN_AXIOMS[dayOfYear % LATIN_AXIOMS.length],
+      alignment: classifyAlignment(dayOfYear, dayRoot, fibDay, primeDay, isSacred),
+    };
+  } catch (err) {
+    logger.error({ err }, "SacredGeometry: alignment computation failed, returning degraded alignment");
+    return degradedAlignment();
+  }
+}
+
 export function computeSacredGeometry(date: Date = new Date()) {
-  const alignment = computeCurrentSacredAlignment(date);
-  const fib21 = fibonacci(21);
-  const lucas15 = lucasSequence(15);
+  const when = resolveValidDate(date);
+  const alignment = computeCurrentSacredAlignment(when);
+  const fib21 = fibonacci(FIBONACCI_DISPLAY_TERMS);
+  const lucas15 = lucasSequence(LUCAS_DISPLAY_TERMS);
 
   return {
     universalConstants: Object.entries(UNIVERSAL_CONSTANTS).map(([key, val]) => ({
@@ -292,7 +331,7 @@ export function computeSacredGeometry(date: Date = new Date()) {
     fibonacci: {
       sequence: fib21,
       goldenConvergence: fib21.slice(1).map((n, i) => ({
-        ratio: i > 0 ? Math.round((n / fib21[i]) * 1e8) / 1e8 : 1,
+        ratio: i > 0 ? Math.round((n / fib21[i]) * CONVERGENCE_PRECISION) / CONVERGENCE_PRECISION : 1,
         phi: PHI,
         error: i > 0 ? Math.abs(n / fib21[i] - PHI) : PHI - 1,
       })),
@@ -312,16 +351,16 @@ export function computeSacredGeometry(date: Date = new Date()) {
       phi: PHI,
       phiInverse: PHI_INVERSE,
       phiSquared: PHI * PHI,
-      goldenAngleDegrees: 360 * (1 - 1 / PHI),
+      goldenAngleDegrees: FULL_CIRCLE_DEGREES * (1 - 1 / PHI),
       goldenAngleRadians: 2 * PI * (1 - 1 / PHI),
-      spiralPoints: Array.from({ length: 12 }, (_, i) => goldenSpiralPoint(i * PI / 6)),
+      spiralPoints: Array.from({ length: SPIRAL_POINT_COUNT }, (_, i) => goldenSpiralPoint(i * PI / 6)),
       identities: [
         { name: "Self-similar", formula: "Phi² = Phi + 1", value: PHI * PHI, check: PHI + 1 },
         { name: "Reciprocal", formula: "1/Phi = Phi - 1", value: 1 / PHI, check: PHI - 1 },
         { name: "Continued fraction", formula: "Phi = 1 + 1/(1 + 1/(1 + ...))", value: PHI },
       ],
     },
-    computedAt: date.toISOString(),
+    computedAt: when.toISOString(),
     method: "Pure mathematics — Pythagorean number theory, Euclidean geometry, Keplerian proportions — computed locally with sovereign engines",
     sovereignty: 100,
   };
@@ -336,6 +375,15 @@ export function computeSacredAlignment(date: Date = new Date()) {
 }
 
 export function getSacredGeometrySummary(date: Date = new Date()): string {
+  try {
+    return buildSacredGeometrySummary(date);
+  } catch (err) {
+    logger.error({ err }, "SacredGeometry: summary failed, returning degraded summary");
+    return `Sacred Geometry: Phi ${PHI.toFixed(6)} (alignment unavailable)`;
+  }
+}
+
+function buildSacredGeometrySummary(date: Date): string {
   const alignment = computeCurrentSacredAlignment(date);
   const tessNum = numerologyOf("TESSERA");
   const parts: string[] = [];

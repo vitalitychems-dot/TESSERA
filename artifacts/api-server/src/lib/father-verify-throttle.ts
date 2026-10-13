@@ -14,8 +14,8 @@ const _hits = new Map<string, number[]>();
 const _fatherGlobalHits: number[] = [];
 
 function ipOf(req: Request): string {
-  // req.ip follows the app trust-proxy hop count. The first X-Forwarded-For
-  // entry is client-controlled and must not key a limiter.
+  // req.ip follows the app trust-proxy setting (APP_TRUSTED_PROXIES, lib/trust-proxy.ts). X-Forwarded-For
+  // from an unlisted peer is client-controlled and must not key a limiter.
   return req.ip || req.socket.remoteAddress || "unknown";
 }
 

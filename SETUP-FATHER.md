@@ -5,7 +5,7 @@ Why: every agent pushes and comments as `vitalitychems-dot`, so CODEOWNERS revie
 ## 1. Separate Father from the agents
 1. Create a **second, Father-only GitHub account** (for example `collin-keane`). It becomes the only admin and CODEOWNER. Enable 2FA on it.
 2. Repo **Settings → Secrets and variables → Actions → Variables** on TESSERA and Gitbook:
-   - `FATHER_LOGIN` = that account's login. It must be different from `vitalitychems-dot`; otherwise the lock stays closed.
+   - `FATHERLOGIN` = that account's login (preferred; no underscore — phone-friendly). Falls back to `FATHER_LOGIN` if unset. It must be different from `vitalitychems-dot`; otherwise the lock stays closed. Comparison is case-insensitive (both sides lowercased).
    - `AGENT_LOGINS` = `vitalitychems-dot` (comma-separated if there are more).
 3. Change `@vitalitychems-dot` to the Father-only login in `.github/CODEOWNERS` (both repos), from the Father account.
 4. Downgrade `vitalitychems-dot` to **Write** (not Admin) on both repos, or move the agents to the Apps in step 2 and revoke the PAT on the box.
