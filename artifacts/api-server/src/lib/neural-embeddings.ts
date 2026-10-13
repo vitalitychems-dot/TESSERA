@@ -79,11 +79,14 @@ function localFallbackEmbedding(text: string): number[] {
   let totalWeight = 0;
   for (const [term, weight] of bag) {
     totalWeight += weight;
-    const h1 = hashStr(term, 2166136261);
-    const h2 = hashStr(term, 40503);
-    for (let i = 0; i < EMBEDDING_DIM; i++) {
-      const bit = ((h1 >>> (i % 32)) ^ (h2 >>> ((i * 7) % 32))) & 1;
-      simhash[i] += bit ? weight : -weight;
+    // One independent 32-bit hash per 32-dim block so every dimension gets its own sign bit.
+    // The old (h1, h2) scheme depended only on i % 32, making the 256-d vector 8 copies of a 32-d sketch.
+    for (let block = 0; block < EMBEDDING_DIM / 32; block++) {
+      const h = hashStr(term, (2166136261 + 7919 * block) >>> 0);
+      for (let b = 0; b < 32; b++) {
+        const i = block * 32 + b;
+        simhash[i] += (h >>> b) & 1 ? weight : -weight;
+      }
     }
   }
 
