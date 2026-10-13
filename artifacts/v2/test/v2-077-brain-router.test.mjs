@@ -91,3 +91,11 @@ test("held-out PR file routing beats the filename-keyword baseline", () => {
   assert.ok(model.top1 > baseline.top1);
   assert.ok(model.top3 > baseline.top3);
 });
+
+test("R4-21: precomputed path token sets rank the same as per-query tokenizing", () => {
+  const paths = ["artifacts/gitai/src/server.mjs", "artifacts/v2/src/brain/affect.mjs", "lib/db/src/schema/sessionCookie.ts"];
+  const sets = paths.map((p) => new Set(tokenize(p)));
+  for (const q of ["gitai server cookie", "brain affect", "session cookie schema db"]) {
+    assert.deepEqual(filenameKeywordRank(paths, q, 0, sets), filenameKeywordRank(paths, q, 0));
+  }
+});

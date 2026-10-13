@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { forumTopicsTable, forumRepliesTable, forumProposalsTable, forumVotesTable, forumKnowledgeTable, forumLearningMetricsTable, forumApplicantsTable, forumPostVotesTable } from "@workspace/db/schema";
 import { desc, eq, sql, and, gt } from "drizzle-orm";
 import { logger } from "./logger";
+import { seededUnit, seededInt, seededPick } from "./deterministic-selectors";
 import { systemStateTable } from "@workspace/db/schema";
 import { isLLMAvailable } from "./llm-client";
 import { batchedCallLLM } from "./llm-batcher";
@@ -404,11 +405,12 @@ function generateKnowledgeDrivenTopics(
   });
 
   for (const proposal of proposalsNeedingFollowUp.slice(0, 1)) {
-    const progressPercent = 15 + Math.floor(Math.random() * 45);
-    const blockers = Math.random() > 0.6 ? `\n\n**Blockers identified:**\n- Integration testing with the memory vault is slower than expected\n- Need QuantumMechanicAgent review on the coherence impact` : "";
+    // Honest status: no measured progress / test data exists for forum proposals,
+    // so we report that instead of fabricating numbers or blockers.
+    const blockers = "";
     topics.push({
       title: `Implementation Progress: ${proposal.title}`,
-      content: `**Cycle ${cycle} Status Update** on approved proposal "${proposal.title}" (${proposal.votesYes}Y/${proposal.votesNo}N)\n\nProgress: **${progressPercent}%**\n\nWhat's been done:\n- Initial implementation scaffolded and integrated into the sovereign pipeline\n- ${proposal.proposedBy} has been leading the execution with support from 3 additional agents\n- Automated tests added covering core functionality — ${2 + Math.floor(Math.random() * 5)} tests passing\n\nRemaining work:\n- Performance benchmarking under load (estimated 2 more cycles)\n- Cross-system integration testing with all 4 mandate engines\n- Final council review before full deployment${blockers}\n\nThe collective approved this — now we need to deliver. Progress reports will continue each cycle until completion.`,
+      content: `**Cycle ${cycle} Status Update** on approved proposal "${proposal.title}" (${proposal.votesYes}Y/${proposal.votesNo}N)\n\nProgress: **not yet measured** (no execution telemetry recorded for this proposal)\n\nWhat's been done:\n- ${proposal.proposedBy} is the proposing agent and owns follow-up\n- No verified implementation or test results have been reported yet\n\nRemaining work:\n- Performance benchmarking under load (estimated 2 more cycles)\n- Cross-system integration testing with all 4 mandate engines\n- Final council review before full deployment${blockers}\n\nThe collective approved this — now we need to deliver. Progress reports will continue each cycle until completion.`,
       category: "governance",
       author: "GrandCoordinatorAgent",
       tags: ["implementation", "progress", "governance"],
@@ -792,7 +794,7 @@ async function postTopicWithReplies(topic: DiscussionTopic, knowledge: Knowledge
     const otherAgents = FORUM_AGENTS.filter(a => a.name !== topic.author);
     const startIdx = cycle % Math.max(otherAgents.length, 1);
     const rotated = [...otherAgents.slice(startIdx), ...otherAgents.slice(0, startIdx)];
-    const baseResponders = 3 + Math.floor(Math.random() * 5);
+    const baseResponders = seededInt(`responders:${inserted.id}:${topic.title}:${cycle}`, 3, 5);
     const bonusFromLearning = Math.min(Math.floor(cycle / 3), 3);
     const responders = rotated.slice(0, Math.min(baseResponders + bonusFromLearning, otherAgents.length));
 
@@ -845,9 +847,9 @@ async function postTopicWithReplies(topic: DiscussionTopic, knowledge: Knowledge
           const knowledgeBoost = knowledge.filter(k =>
             agent.expertise.some(e => k.title.toLowerCase().includes(e))
           ).length;
-          vote = Math.random() > (0.15 - Math.min(knowledgeBoost * 0.02, 0.1)) ? "yes" : "no";
+          vote = seededUnit(`vote:${agent.name}:${topic.proposalTitle}:${cycle}`) > (0.15 - Math.min(knowledgeBoost * 0.02, 0.1)) ? "yes" : "no";
         } else {
-          const r = Math.random();
+          const r = seededUnit(`vote:${agent.name}:${topic.proposalTitle}:${cycle}`);
           vote = r > 0.3 ? "yes" : r > 0.1 ? "abstain" : "no";
         }
 
@@ -944,7 +946,7 @@ async function buildOnExistingTopics(knowledge: KnowledgeInsight[], cycle: numbe
       const available = FORUM_AGENTS.filter(a => !repliedAgents.has(a.name));
       if (available.length === 0) continue;
 
-      const nextAgent = available[Math.floor(Math.random() * available.length)];
+      const nextAgent = seededPick(`reply:${topic.id}:${existingReplies.length}:${cycle}`, available);
       const priorContents = existingReplies.map(r => r.content);
       const replyContent = await generateContextualReplyLLM(nextAgent, { title: topic.title, content: topic.content }, priorContents, knowledge, cycle);
       if (replyContent === null) continue;
@@ -1064,7 +1066,7 @@ async function runAgentPostVoting(cycle: number): Promise<void> {
       const candidates = recentReplies.filter(r => r.author !== voter.name);
       if (candidates.length === 0) continue;
       const target = candidates[(start + i) % candidates.length];
-      const vote = Math.random() < 0.75 ? "up" : "down";
+      const vote = seededUnit(`pv:${voter.name}:${target.topicId}:${target.id}`) < 0.75 ? "up" : "down";
       await db.delete(forumPostVotesTable).where(sql`
         ${forumPostVotesTable.topicId} = ${target.topicId}
         AND COALESCE(${forumPostVotesTable.replyId}, 0) = ${target.id}
@@ -1089,7 +1091,7 @@ async function runAgentPostVoting(cycle: number): Promise<void> {
       const candidates = recentTopics.filter(t => t.author !== voter.name);
       if (candidates.length === 0) continue;
       const target = candidates[(start + i + 1) % candidates.length];
-      const vote = Math.random() < 0.78 ? "up" : "down";
+      const vote = seededUnit(`tv:${voter.name}:${target.id}`) < 0.78 ? "up" : "down";
       await db.delete(forumPostVotesTable).where(sql`
         ${forumPostVotesTable.topicId} = ${target.id}
         AND ${forumPostVotesTable.replyId} IS NULL
