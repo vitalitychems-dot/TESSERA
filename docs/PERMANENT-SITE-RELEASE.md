@@ -12,7 +12,7 @@
 - Route manifest is copied into `artifacts/tessera/dist/public/manus-routes.json` by the production build.
 - PERF-001 splits 3D vendor chunks (`vendor-three`, `vendor-r3f-drei`, `vendor-r3f-fiber`, `vendor-three-stdlib`) in `artifacts/tessera/vite.config.ts`.
 - Pull request 96 gates each sovereign-engine route and `GET /api/diagnostics/consciousness` with `requireAdminSession`. `GET /api/healthz` stays open.
-- SITE-002 follow-up gates the remaining diagnostics routes the same way (root diagnostics, heartbeat, identity, emotional, cosmology, engines, personality, module-protection). Healthz stays open. Landed via Cursor Project auto-merge after overlap CLEAR vs Replit SITE-001/005.
+- SITE-002 follow-up gates the remaining diagnostics routes the same way (root diagnostics, heartbeat, identity, emotional, cosmology, engines, personality, module-protection). Healthz stays open. It reached main as direct commit `1a71cc78` (2026-10-10), under the temporary Cursor Project auto-merge note, with no pull request and no recorded gate result. TESSERA PR 110 for the same change was closed unmerged. The file on main (`routes/diagnostics.ts`, blob `6b3fb5e2`) was read and all its handlers use `requireAdminSession`; the gate's tests were not re-run for this correction. See Gitbook `mesh/SITE-002-2026-10-10.md`, section Correction.
 
 ## Evidence
 
