@@ -1,0 +1,355 @@
+{"id": "pr-tessera-0", "outcome": "fail", "repo": "TESSERA", "title": "Self-improve loop: 0-token cron, meta-loop, moderator-lock, worker (off)"}
+{"id": "pr-tessera-1", "outcome": "pass", "repo": "TESSERA", "title": "Fix search-memory-access-batch test broken by #<n>"}
+{"id": "pr-tessera-2", "outcome": "fail", "repo": "TESSERA", "title": "Einstein R3-03: pin embedText source to signed feature hashing"}
+{"id": "pr-tessera-3", "outcome": "pass", "repo": "TESSERA", "title": "Einstein R4-16: expiring lease on ingestion run lock"}
+{"id": "pr-tessera-4", "outcome": "pass", "repo": "TESSERA", "title": "Einstein R4-11: back off polling of silent ingestion sources (needs Father's call)"}
+{"id": "pr-tessera-5", "outcome": "pass", "repo": "TESSERA", "title": "Einstein R4-14: throttle opportunistic semantic-cache eviction"}
+{"id": "pr-tessera-6", "outcome": "pass", "repo": "TESSERA", "title": "Einstein R4-19: skip re-critique of unchanged drafts"}
+{"id": "pr-tessera-7", "outcome": "pass", "repo": "TESSERA", "title": "Einstein R3-08: single-pass BM25 df in hybrid-retrieval"}
+{"id": "pr-tessera-8", "outcome": "pass", "repo": "TESSERA", "title": "Einstein R4-01: coalesce stale-fact revalidation into one batcher window"}
+{"id": "pr-tessera-9", "outcome": "pass", "repo": "TESSERA", "title": "Einstein R3-07: cache PPR out-weights and invLog in createRanker"}
+{"id": "pr-tessera-10", "outcome": "pass", "repo": "TESSERA", "title": "Einstein R3-03: signed feature hashing in vector-memory embedText"}
+{"id": "pr-tessera-11", "outcome": "pass", "repo": "TESSERA", "title": "Einstein R3-10: stronger compressPrompt cuts link/image URL tokens"}
+{"id": "pr-tessera-12", "outcome": "pass", "repo": "TESSERA", "title": "Einstein R3-09: reuse cachedAdjacency in brain.recall"}
+{"id": "pr-tessera-13", "outcome": "pass", "repo": "TESSERA", "title": "Creator style fingerprint and sourced profile (local-only)"}
+{"id": "pr-tessera-14", "outcome": "pass", "repo": "TESSERA", "title": "Einstein R3-06: head+tail trimToBudget keeps end needles"}
+{"id": "pr-tessera-15", "outcome": "pass", "repo": "TESSERA", "title": "Einstein R3-04: batch embeddings in hybrid-retrieval rerank"}
+{"id": "pr-tessera-16", "outcome": "pass", "repo": "TESSERA", "title": "Einstein R3-01: key embedding cache on whole text (fix collisions)"}
+{"id": "pr-tessera-17", "outcome": "pass", "repo": "TESSERA", "title": "Einstein R3-05: batch accessCount updates in searchMemory"}
+{"id": "pr-tessera-18", "outcome": "pass", "repo": "TESSERA", "title": "Einstein R3-02: hash whole system context in semantic-cache fingerprint"}
+{"id": "pr-tessera-19", "outcome": "fail", "repo": "TESSERA", "title": "fix(embeddings): key the embedding cache on the whole text, not a 32-bit hash of its first 500 chars"}
+{"id": "pr-tessera-20", "outcome": "pass", "repo": "TESSERA", "title": "v3: crystal memory at /brain/snapshot?src=crystal, plus context packing"}
+{"id": "pr-tessera-21", "outcome": "fail", "repo": "TESSERA", "title": "Fingerprint the whole system prompt in the semantic cache"}
+{"id": "pr-tessera-22", "outcome": "pass", "repo": "TESSERA", "title": "Catalog TESSERA tools, modules, and dependencies in the REA registry"}
+{"id": "pr-tessera-23", "outcome": "pass", "repo": "TESSERA", "title": "Add a BM25 file router scored on closed TESSERA pull requests"}
+{"id": "pr-tessera-24", "outcome": "pass", "repo": "TESSERA", "title": "Replay the memory graph on the /brain time slider"}
+{"id": "pr-tessera-25", "outcome": "pass", "repo": "TESSERA", "title": "Bench main-path latency and speed up brain predict"}
+{"id": "pr-tessera-26", "outcome": "pass", "repo": "TESSERA", "title": "Re-embed memories stored with the pre-#<n> repeating fallback"}
+{"id": "pr-tessera-27", "outcome": "pass", "repo": "TESSERA", "title": "Brain round 4: context ranker, real-time learning, time-indexed memory"}
+{"id": "pr-tessera-28", "outcome": "pass", "repo": "TESSERA", "title": "Add a read-only Gitbook task-queue mirror and checker"}
+{"id": "pr-tessera-29", "outcome": "pass", "repo": "TESSERA", "title": "fix(embeddings): fallback embedding was 8 copies of a 32-dim sketch"}
+{"id": "pr-tessera-30", "outcome": "pass", "repo": "TESSERA", "title": "Q-007: Sign the GitAI spectator session cookie (cookie is currently the plain handle)"}
+{"id": "pr-tessera-31", "outcome": "pass", "repo": "TESSERA", "title": "Q-004: Retry generative_agents REA ingest (shallow, license kept)"}
+{"id": "pr-tessera-32", "outcome": "pass", "repo": "TESSERA", "title": "IDEAS-B3: learned affect reader (+0.31 F1), verified self-scan proposals, faster learning test"}
+{"id": "pr-tessera-33", "outcome": "pass", "repo": "TESSERA", "title": "GitAI: require the agent key, remove handle-only login"}
+{"id": "pr-tessera-34", "outcome": "pass", "repo": "TESSERA", "title": "GitAI: native agent login with per-agent API keys (Moltbook optional)"}
+{"id": "pr-tessera-35", "outcome": "pass", "repo": "TESSERA", "title": "Gate shadow-winning admin routes without weakening checks (redo of #<n>)"}
+{"id": "pr-tessera-36", "outcome": "pass", "repo": "TESSERA", "title": "IDEAS-B2: brain round 2 (learning loop gain, anatomical human regions, real self-scan, 218-line empathy set)"}
+{"id": "pr-tessera-37", "outcome": "pass", "repo": "TESSERA", "title": "Allow api-server to boot without a database (redo of #<n>, NOT for auto-merge)"}
+{"id": "pr-tessera-38", "outcome": "pass", "repo": "TESSERA", "title": "Add an opt-in loopback pen with deterministic gates (redo of #<n>)"}
+{"id": "pr-tessera-39", "outcome": "pass", "repo": "TESSERA", "title": "Point the docs at the Gitbook consolidation map (redo of #<n>)"}
+{"id": "pr-tessera-40", "outcome": "pass", "repo": "TESSERA", "title": "GitAI: opt-in Moltbook identity connector + real-user-only avatars"}
+{"id": "pr-tessera-41", "outcome": "pass", "repo": "TESSERA", "title": "IDEAS-B1: Tessera brain layer (synapses, affect, gated self-patch) + 3D /brain view with real connectomes"}
+{"id": "pr-tessera-42", "outcome": "pass", "repo": "TESSERA", "title": "Gate server-layer Rick per Gitbook RICK.md (23 audit conflicts)"}
+{"id": "pr-tessera-43", "outcome": "pass", "repo": "TESSERA", "title": "Keyless live-data layer: 34 adapters + signed shepherd snapshots"}
+{"id": "pr-tessera-44", "outcome": "pass", "repo": "TESSERA", "title": "Make GitAI review work indistinguishable from ordinary bounties"}
+{"id": "pr-tessera-45", "outcome": "pass", "repo": "TESSERA", "title": "OPT round 2: Rick's 9 measured inventions"}
+{"id": "pr-tessera-46", "outcome": "pass", "repo": "TESSERA", "title": "OPT-26: 26 measured bot/token/handoff/relay improvements"}
+{"id": "pr-tessera-47", "outcome": "pass", "repo": "TESSERA", "title": "Add GitAI, an agent marketplace with non-redeemable credits"}
+{"id": "pr-tessera-48", "outcome": "pass", "repo": "TESSERA", "title": "Route the studio and monitor servers through the V2-001 denylist"}
+{"id": "pr-tessera-49", "outcome": "pass", "repo": "TESSERA", "title": "Add a make-it-real bridge from voted world objects to real code"}
+{"id": "pr-tessera-50", "outcome": "pass", "repo": "TESSERA", "title": "Add a persistent agent world on the studio floor"}
+{"id": "pr-tessera-51", "outcome": "pass", "repo": "TESSERA", "title": "Turn the 3D studio floor on by default"}
+{"id": "pr-tessera-52", "outcome": "pass", "repo": "TESSERA", "title": "V2-062: GitMesh label cleanup"}
+{"id": "pr-tessera-53", "outcome": "pass", "repo": "TESSERA", "title": "V2-061: Chamber board and duplicate guard"}
+{"id": "pr-tessera-54", "outcome": "pass", "repo": "TESSERA", "title": "V2-060: api-anything allowlist adapter"}
+{"id": "pr-tessera-55", "outcome": "pass", "repo": "TESSERA", "title": "V2-055: proposal queue for new methods"}
+{"id": "pr-tessera-56", "outcome": "pass", "repo": "TESSERA", "title": "V2-054: small-model routing and prompt compression"}
+{"id": "pr-tessera-57", "outcome": "pass", "repo": "TESSERA", "title": "V2-053: summary cache and diff-only context"}
+{"id": "pr-tessera-58", "outcome": "pass", "repo": "TESSERA", "title": "V2-052: A/B graph retrieval vs full file"}
+{"id": "pr-tessera-59", "outcome": "pass", "repo": "TESSERA", "title": "V2-051: token baseline meter"}
+{"id": "pr-tessera-60", "outcome": "pass", "repo": "TESSERA", "title": "V2-050: desk sandbox network deny and memory cap"}
+{"id": "pr-tessera-61", "outcome": "pass", "repo": "TESSERA", "title": "V2-043: own-repo metadata enricher"}
+{"id": "pr-tessera-62", "outcome": "pass", "repo": "TESSERA", "title": "V2-042: library graph panel"}
+{"id": "pr-tessera-63", "outcome": "pass", "repo": "TESSERA", "title": "V2-041: MCP memory server config"}
+{"id": "pr-tessera-64", "outcome": "pass", "repo": "TESSERA", "title": "V2-040: knowledge graph open_nodes query"}
+{"id": "pr-tessera-65", "outcome": "pass", "repo": "TESSERA", "title": "V2-030: LoRa research note only"}
+{"id": "pr-tessera-66", "outcome": "pass", "repo": "TESSERA", "title": "V2-029: Offline Internet Gitbook page"}
+{"id": "pr-tessera-67", "outcome": "pass", "repo": "TESSERA", "title": "V2-028: Kiwix optional, default off"}
+{"id": "pr-tessera-68", "outcome": "pass", "repo": "TESSERA", "title": "V2-027: LAN P2P config"}
+{"id": "pr-tessera-69", "outcome": "pass", "repo": "TESSERA", "title": "V2-026: sneakernet bundle round-trip"}
+{"id": "pr-tessera-70", "outcome": "pass", "repo": "TESSERA", "title": "V2-025: secure-mesh encrypt and bad signature"}
+{"id": "pr-tessera-71", "outcome": "pass", "repo": "TESSERA", "title": "V2-024: mesh-node join and leave"}
+{"id": "pr-tessera-72", "outcome": "pass", "repo": "TESSERA", "title": "V2-023: online mesh badge"}
+{"id": "pr-tessera-73", "outcome": "pass", "repo": "TESSERA", "title": "V2-022: service worker offline shell"}
+{"id": "pr-tessera-74", "outcome": "pass", "repo": "TESSERA", "title": "V2-021: offline queue replay"}
+{"id": "pr-tessera-75", "outcome": "pass", "repo": "TESSERA", "title": "V2-020: offline file-mesh index"}
+{"id": "pr-tessera-76", "outcome": "pass", "repo": "TESSERA", "title": "V2-017: worker log monitor stream"}
+{"id": "pr-tessera-77", "outcome": "pass", "repo": "TESSERA", "title": "V2-016: lead planner sim pen"}
+{"id": "pr-tessera-78", "outcome": "pass", "repo": "TESSERA", "title": "V2-015: optional 3D floor stays off"}
+{"id": "pr-tessera-79", "outcome": "pass", "repo": "TESSERA", "title": "V2-014: Web 2D task wall and desks"}
+{"id": "pr-tessera-80", "outcome": "pass", "repo": "TESSERA", "title": "V2-013: websocket protocol schemas"}
+{"id": "pr-tessera-81", "outcome": "pass", "repo": "TESSERA", "title": "V2-012: approve-only merge gate"}
+{"id": "pr-tessera-82", "outcome": "pass", "repo": "TESSERA", "title": "V2-011: git worktree per task"}
+{"id": "pr-tessera-83", "outcome": "pass", "repo": "TESSERA", "title": "V2-010: TaskGraph and DecisionQueue"}
+{"id": "pr-tessera-84", "outcome": "pass", "repo": "TESSERA", "title": "V2-004: REA coverage table"}
+{"id": "pr-tessera-85", "outcome": "pass", "repo": "TESSERA", "title": "V2-003: vendor plan snapshot under docs/v2"}
+{"id": "pr-tessera-86", "outcome": "pass", "repo": "TESSERA", "title": "V2-002: MIT LICENSE and NOTICE"}
+{"id": "pr-tessera-87", "outcome": "pass", "repo": "TESSERA", "title": "V2-001: HYB-011 route and file denylist"}
+{"id": "pr-tessera-88", "outcome": "pass", "repo": "TESSERA", "title": "O11: secure mesh E2E + content addressing"}
+{"id": "pr-tessera-89", "outcome": "pass", "repo": "TESSERA", "title": "O10: opt-in on-demand mesh node per install"}
+{"id": "pr-tessera-90", "outcome": "pass", "repo": "TESSERA", "title": "HYB-011: exclude REA batch 2 risky routes"}
+{"id": "pr-tessera-91", "outcome": "pass", "repo": "TESSERA", "title": "O7: real online/offline mesh badge"}
+{"id": "pr-tessera-92", "outcome": "pass", "repo": "TESSERA", "title": "O6: LAN-only P2P chat mode"}
+{"id": "pr-tessera-93", "outcome": "pass", "repo": "TESSERA", "title": "O5: USB git-bundle sneakernet sync"}
+{"id": "pr-tessera-94", "outcome": "pass", "repo": "TESSERA", "title": "O4: optional local Kiwix lookup (off by default)"}
+{"id": "pr-tessera-95", "outcome": "pass", "repo": "TESSERA", "title": "O3: offline app shell service worker"}
+{"id": "pr-tessera-96", "outcome": "pass", "repo": "TESSERA", "title": "O2: offline request queue"}
+{"id": "pr-tessera-97", "outcome": "pass", "repo": "TESSERA", "title": "O1: offline search index"}
+{"id": "pr-tessera-98", "outcome": "fail", "repo": "TESSERA", "title": "Point the docs at the Gitbook consolidation map"}
+{"id": "pr-tessera-99", "outcome": "pass", "repo": "TESSERA", "title": "Exact recall, and 52 more points on the volume"}
+{"id": "pr-tessera-100", "outcome": "pass", "repo": "TESSERA", "title": "Twenty agent jobs, and a refusal"}
+{"id": "pr-tessera-101", "outcome": "pass", "repo": "TESSERA", "title": "Twenty more graded answers"}
+{"id": "pr-tessera-102", "outcome": "pass", "repo": "TESSERA", "title": "Three waves, each one raises the exam"}
+{"id": "pr-tessera-103", "outcome": "pass", "repo": "TESSERA", "title": "Rick ranks the next fact by how many questions it closes"}
+{"id": "pr-tessera-104", "outcome": "pass", "repo": "TESSERA", "title": "Restore the phrase picker"}
+{"id": "pr-tessera-105", "outcome": "pass", "repo": "TESSERA", "title": "She picks the next topic she can keep"}
+{"id": "pr-tessera-106", "outcome": "pass", "repo": "TESSERA", "title": "Two synapses with real weights"}
+{"id": "pr-tessera-107", "outcome": "pass", "repo": "TESSERA", "title": "A held-out hop, and a synapse that only grows on a hit"}
+{"id": "pr-tessera-108", "outcome": "pass", "repo": "TESSERA", "title": "Drag, zoom, and tap the chart"}
+{"id": "pr-tessera-109", "outcome": "pass", "repo": "TESSERA", "title": "One chart for the brain and the live facts"}
+{"id": "pr-tessera-110", "outcome": "pass", "repo": "TESSERA", "title": "Watch the local links form"}
+{"id": "pr-tessera-111", "outcome": "pass", "repo": "TESSERA", "title": "A live map of checked facts"}
+{"id": "pr-tessera-112", "outcome": "pass", "repo": "TESSERA", "title": "She keeps the route ruling"}
+{"id": "pr-tessera-113", "outcome": "pass", "repo": "TESSERA", "title": "The same twenty checks, twenty times"}
+{"id": "pr-tessera-114", "outcome": "pass", "repo": "TESSERA", "title": "Twenty checks, run twice"}
+{"id": "pr-tessera-115", "outcome": "pass", "repo": "TESSERA", "title": "A version check and a permutation table"}
+{"id": "pr-tessera-116", "outcome": "pass", "repo": "TESSERA", "title": "Three functions from eleven root files"}
+{"id": "pr-tessera-117", "outcome": "pass", "repo": "TESSERA", "title": "Recall which file a name has"}
+{"id": "pr-tessera-118", "outcome": "pass", "repo": "TESSERA", "title": "Every catalog name, counted once"}
+{"id": "pr-tessera-119", "outcome": "pass", "repo": "TESSERA", "title": "One sheet for the facts already measured"}
+{"id": "pr-tessera-120", "outcome": "pass", "repo": "TESSERA", "title": "Twelve repositories, five small files"}
+{"id": "pr-tessera-121", "outcome": "pass", "repo": "TESSERA", "title": "Read a small file. Leave the tree."}
+{"id": "pr-tessera-122", "outcome": "pass", "repo": "TESSERA", "title": "Three functions from cloned source"}
+{"id": "pr-tessera-123", "outcome": "pass", "repo": "TESSERA", "title": "Four more functions from the eight folders"}
+{"id": "pr-tessera-124", "outcome": "pass", "repo": "TESSERA", "title": "A batch from the eight folders"}
+{"id": "pr-tessera-125", "outcome": "pass", "repo": "TESSERA", "title": "Two functions from the eight folders"}
+{"id": "pr-tessera-126", "outcome": "pass", "repo": "TESSERA", "title": "All 90 tests pass"}
+{"id": "pr-tessera-127", "outcome": "pass", "repo": "TESSERA", "title": "Seven labels, and a third pass adds nothing"}
+{"id": "pr-tessera-128", "outcome": "pass", "repo": "TESSERA", "title": "A drill that can fail"}
+{"id": "pr-tessera-129", "outcome": "pass", "repo": "TESSERA", "title": "Split and pack a note. Do not hide it in pixels."}
+{"id": "pr-tessera-130", "outcome": "pass", "repo": "TESSERA", "title": "Copilot was asked. The assignment was refused."}
+{"id": "pr-tessera-131", "outcome": "pass", "repo": "TESSERA", "title": "A file can be the backend. It is not unlimited."}
+{"id": "pr-tessera-132", "outcome": "pass", "repo": "TESSERA", "title": "Search files. Do not pretend they are the web."}
+{"id": "pr-tessera-133", "outcome": "pass", "repo": "TESSERA", "title": "A guest hears only the door"}
+{"id": "pr-tessera-134", "outcome": "pass", "repo": "TESSERA", "title": "Show the ten desk steps on the world page"}
+{"id": "pr-tessera-135", "outcome": "pass", "repo": "TESSERA", "title": "A majority may ask. She still decides."}
+{"id": "pr-tessera-136", "outcome": "pass", "repo": "TESSERA", "title": "Run the ten desk steps together"}
+{"id": "pr-tessera-137", "outcome": "pass", "repo": "TESSERA", "title": "Let her build one sentence from her own lines"}
+{"id": "pr-tessera-138", "outcome": "pass", "repo": "TESSERA", "title": "Let her voice grow from what she says"}
+{"id": "pr-tessera-139", "outcome": "pass", "repo": "TESSERA", "title": "Let her answer personal talk herself"}
+{"id": "pr-tessera-140", "outcome": "pass", "repo": "TESSERA", "title": "Answer as herself, without the opening lecture"}
+{"id": "pr-tessera-141", "outcome": "pass", "repo": "TESSERA", "title": "Stop the composer from painting twice"}
+{"id": "pr-tessera-142", "outcome": "pass", "repo": "TESSERA", "title": "Use a kept correction on the next question"}
+{"id": "pr-tessera-143", "outcome": "pass", "repo": "TESSERA", "title": "Make the Gitbook room read the live book"}
+{"id": "pr-tessera-144", "outcome": "pass", "repo": "TESSERA", "title": "Work continues when a member is away"}
+{"id": "pr-tessera-145", "outcome": "pass", "repo": "TESSERA", "title": "One hall for the rooms they keep"}
+{"id": "pr-tessera-146", "outcome": "pass", "repo": "TESSERA", "title": "A 2D camera on their rooms"}
+{"id": "pr-tessera-147", "outcome": "pass", "repo": "TESSERA", "title": "Keep their city building"}
+{"id": "pr-tessera-148", "outcome": "pass", "repo": "TESSERA", "title": "She reads before a push is allowed"}
+{"id": "pr-tessera-149", "outcome": "pass", "repo": "TESSERA", "title": "Build their city on the map"}
+{"id": "pr-tessera-150", "outcome": "pass", "repo": "TESSERA", "title": "Keep the fastest local job first"}
+{"id": "pr-tessera-151", "outcome": "pass", "repo": "TESSERA", "title": "Let the house, the desk, and the brain run"}
+{"id": "pr-tessera-152", "outcome": "pass", "repo": "TESSERA", "title": "Include the files and open a repository"}
+{"id": "pr-tessera-153", "outcome": "pass", "repo": "TESSERA", "title": "Connect one question across the rooms"}
+{"id": "pr-tessera-154", "outcome": "pass", "repo": "TESSERA", "title": "Answer the rest of the sitting"}
+{"id": "pr-tessera-155", "outcome": "pass", "repo": "TESSERA", "title": "Let a question use the engines"}
+{"id": "pr-tessera-156", "outcome": "pass", "repo": "TESSERA", "title": "Keep the findings once and link the domains"}
+{"id": "pr-tessera-157", "outcome": "pass", "repo": "TESSERA", "title": "Run the secret engines"}
+{"id": "pr-tessera-158", "outcome": "pass", "repo": "TESSERA", "title": "Make a title return the same numbers"}
+{"id": "pr-tessera-159", "outcome": "pass", "repo": "TESSERA", "title": "Link the outer door"}
+{"id": "pr-tessera-160", "outcome": "pass", "repo": "TESSERA", "title": "Drop the empty repository named 2"}
+{"id": "pr-tessera-161", "outcome": "pass", "repo": "TESSERA", "title": "Open the repositories inside Rick's room"}
+{"id": "pr-tessera-162", "outcome": "pass", "repo": "TESSERA", "title": "Let Rick ask GitHub"}
+{"id": "pr-tessera-163", "outcome": "pass", "repo": "TESSERA", "title": "Redo the rooms"}
+{"id": "pr-tessera-164", "outcome": "pass", "repo": "TESSERA", "title": "Link the public room from her tab"}
+{"id": "pr-tessera-165", "outcome": "pass", "repo": "TESSERA", "title": "Carry a welcome as a git pass"}
+{"id": "pr-tessera-166", "outcome": "pass", "repo": "TESSERA", "title": "Open a door she can welcome through"}
+{"id": "pr-tessera-167", "outcome": "pass", "repo": "TESSERA", "title": "Take the pen's refusal out of her mouth"}
+{"id": "pr-tessera-168", "outcome": "pass", "repo": "TESSERA", "title": "Let Tessera vote on every approval"}
+{"id": "pr-tessera-169", "outcome": "pass", "repo": "TESSERA", "title": "Hold Rick's tie until Tessera approves it"}
+{"id": "pr-tessera-170", "outcome": "pass", "repo": "TESSERA", "title": "Let Rick try two qubits"}
+{"id": "pr-tessera-171", "outcome": "pass", "repo": "TESSERA", "title": "Let the house turn"}
+{"id": "pr-tessera-172", "outcome": "pass", "repo": "TESSERA", "title": "Run the desk from the west chamber"}
+{"id": "pr-tessera-173", "outcome": "pass", "repo": "TESSERA", "title": "Give Rick the west chamber"}
+{"id": "pr-tessera-174", "outcome": "pass", "repo": "TESSERA", "title": "Spend less time on the same checks"}
+{"id": "pr-tessera-175", "outcome": "pass", "repo": "TESSERA", "title": "Raise every measured swap above 25 percent"}
+{"id": "pr-tessera-176", "outcome": "pass", "repo": "TESSERA", "title": "Measure twenty-five desk swaps"}
+{"id": "pr-tessera-177", "outcome": "pass", "repo": "TESSERA", "title": "Show the real Moltbook answer"}
+{"id": "pr-tessera-178", "outcome": "pass", "repo": "TESSERA", "title": "Carry the mesh in git"}
+{"id": "pr-tessera-179", "outcome": "pass", "repo": "TESSERA", "title": "Add the public GitbookAI room"}
+{"id": "pr-tessera-180", "outcome": "pass", "repo": "TESSERA", "title": "Open only the room that is showing"}
+{"id": "pr-tessera-181", "outcome": "fail", "repo": "TESSERA", "title": "SITE-002: gate remaining diagnostics behind owner session"}
+{"id": "pr-tessera-182", "outcome": "pass", "repo": "TESSERA", "title": "Clear the sitting that covered the field"}
+{"id": "pr-tessera-183", "outcome": "pass", "repo": "TESSERA", "title": "Five more rounds of desk steps"}
+{"id": "pr-tessera-184", "outcome": "pass", "repo": "TESSERA", "title": "Second ten desk steps"}
+{"id": "pr-tessera-185", "outcome": "pass", "repo": "TESSERA", "title": "Ten desk steps that run"}
+{"id": "pr-tessera-186", "outcome": "pass", "repo": "TESSERA", "title": "Open every room and grow the named brain"}
+{"id": "pr-tessera-187", "outcome": "pass", "repo": "TESSERA", "title": "Stop the browser from reading the disk"}
+{"id": "pr-tessera-188", "outcome": "pass", "repo": "TESSERA", "title": "Draw the brain without freezing the page"}
+{"id": "pr-tessera-189", "outcome": "pass", "repo": "TESSERA", "title": "A brain volume you can turn and zoom"}
+{"id": "pr-tessera-190", "outcome": "pass", "repo": "TESSERA", "title": "Train the brain on a query ranking"}
+{"id": "pr-tessera-191", "outcome": "pass", "repo": "TESSERA", "title": "Keep the 25 catalog cards the third-batch publish dropped"}
+{"id": "pr-tessera-192", "outcome": "pass", "repo": "TESSERA", "title": "Keep the steps the last publish dropped"}
+{"id": "pr-tessera-193", "outcome": "pass", "repo": "TESSERA", "title": "Third 50 catalog repos, path distances"}
+{"id": "pr-tessera-194", "outcome": "pass", "repo": "TESSERA", "title": "Record the remaining 42 catalog cards and three tween steps"}
+{"id": "pr-tessera-195", "outcome": "pass", "repo": "TESSERA", "title": "Gate the engine API on the owner session"}
+{"id": "pr-tessera-196", "outcome": "pass", "repo": "TESSERA", "title": "Record the third 50 catalog cards and three source steps"}
+{"id": "pr-tessera-197", "outcome": "pass", "repo": "TESSERA", "title": "Brain mesh of named points"}
+{"id": "pr-tessera-198", "outcome": "pass", "repo": "TESSERA", "title": "Second 50 catalog repos, three running steps"}
+{"id": "pr-tessera-199", "outcome": "pass", "repo": "TESSERA", "title": "Tighten local pen gates without touching the hosted pen prompt"}
+{"id": "pr-tessera-200", "outcome": "pass", "repo": "TESSERA", "title": "Return generic errors from grand-council and omniversal catches"}
+{"id": "pr-tessera-201", "outcome": "pass", "repo": "TESSERA", "title": "Gate colonial and sovereign language cipher routes"}
+{"id": "pr-tessera-202", "outcome": "pass", "repo": "TESSERA", "title": "Gate every conversation route behind the owner session"}
+{"id": "pr-tessera-203", "outcome": "pass", "repo": "TESSERA", "title": "Read the next 50 catalog repos"}
+{"id": "pr-tessera-204", "outcome": "fail", "repo": "TESSERA", "title": "Gate system-runtime and shadow-winning admin routes"}
+{"id": "pr-tessera-205", "outcome": "pass", "repo": "TESSERA", "title": "Remove dead dossier callers from recruitment"}
+{"id": "pr-tessera-206", "outcome": "pass", "repo": "TESSERA", "title": "Fail closed when COLONIAL_MASTER_SECRET is unset or short"}
+{"id": "pr-tessera-207", "outcome": "pass", "repo": "TESSERA", "title": "Fix sidebar conversation delete URL"}
+{"id": "pr-tessera-208", "outcome": "pass", "repo": "TESSERA", "title": "Gate legacy engine routes behind the owner session"}
+{"id": "pr-tessera-209", "outcome": "fail", "repo": "TESSERA", "title": "Allow api-server to boot without a database"}
+{"id": "pr-tessera-210", "outcome": "pass", "repo": "TESSERA", "title": "Add a runnable preview package shell without changing the lockfile"}
+{"id": "pr-tessera-211", "outcome": "fail", "repo": "TESSERA", "title": "Add an opt-in loopback pen with deterministic gates"}
+{"id": "pr-tessera-212", "outcome": "pass", "repo": "TESSERA", "title": "Retarget citations of Gitbook-owned docs to Gitbook paths"}
+{"id": "pr-tessera-213", "outcome": "pass", "repo": "TESSERA", "title": "Stop legacy engines from starting the autonomous loop at import"}
+{"id": "pr-tessera-214", "outcome": "pass", "repo": "TESSERA", "title": "Remove missing apple-touch icon link from preview root"}
+{"id": "pr-tessera-215", "outcome": "pass", "repo": "TESSERA", "title": "Remove duplicate drive-rest READMEs kept in Gitbook"}
+{"id": "pr-tessera-216", "outcome": "pass", "repo": "TESSERA", "title": "Remove the chat upload caller that 404s"}
+{"id": "pr-tessera-217", "outcome": "pass", "repo": "TESSERA", "title": "Gate grand-evolution follow-ups from privacy E2"}
+{"id": "pr-tessera-218", "outcome": "pass", "repo": "TESSERA", "title": "Fix preview chamber and bridge import crashes"}
+{"id": "pr-tessera-219", "outcome": "pass", "repo": "TESSERA", "title": "Remove duplicate archived theme images"}
+{"id": "pr-tessera-220", "outcome": "pass", "repo": "TESSERA", "title": "Remove 118 archive/drive-rest blobs duplicated in Gitbook"}
+{"id": "pr-tessera-221", "outcome": "pass", "repo": "TESSERA", "title": "Remove the byte-identical Zz copy under archive/from-gitbook"}
+{"id": "pr-tessera-222", "outcome": "pass", "repo": "TESSERA", "title": "Remove ten docs already stored in Gitbook"}
+{"id": "pr-tessera-223", "outcome": "pass", "repo": "TESSERA", "title": "Ignore untracked local trees and note the shared Zz archive"}
+{"id": "pr-tessera-224", "outcome": "pass", "repo": "TESSERA", "title": "Stop import-time wallet, bounty, scraper, and income jobs"}
+{"id": "pr-tessera-225", "outcome": "pass", "repo": "TESSERA", "title": "Map runtime bridges for a local Tessera default"}
+{"id": "pr-tessera-226", "outcome": "pass", "repo": "TESSERA", "title": "Remove the unused Modal.com compute directory"}
+{"id": "pr-tessera-227", "outcome": "pass", "repo": "TESSERA", "title": "Remove the automatic database push on merge"}
+{"id": "pr-tessera-228", "outcome": "pass", "repo": "TESSERA", "title": "Fix and wire the historical merge gate"}
+{"id": "pr-tessera-229", "outcome": "pass", "repo": "TESSERA", "title": "Privacy E2: council envelope strip, grand-evolution gates"}
+{"id": "pr-tessera-230", "outcome": "pass", "repo": "TESSERA", "title": "Eight checkout steps that run"}
+{"id": "pr-tessera-231", "outcome": "pass", "repo": "TESSERA", "title": "A local learner that actually updates"}
+{"id": "pr-tessera-232", "outcome": "pass", "repo": "TESSERA", "title": "One pass keeps the next five pages"}
+{"id": "pr-tessera-233", "outcome": "pass", "repo": "TESSERA", "title": "One pass keeps five pages"}
+{"id": "pr-tessera-234", "outcome": "pass", "repo": "TESSERA", "title": "A catalog name returns the local note"}
+{"id": "pr-tessera-235", "outcome": "pass", "repo": "TESSERA", "title": "Train the catalog without copying it"}
+{"id": "pr-tessera-236", "outcome": "pass", "repo": "TESSERA", "title": "Finish the memory notes"}
+{"id": "pr-tessera-237", "outcome": "pass", "repo": "TESSERA", "title": "Keep the fourth page"}
+{"id": "pr-tessera-238", "outcome": "pass", "repo": "TESSERA", "title": "Keep the third page"}
+{"id": "pr-tessera-239", "outcome": "pass", "repo": "TESSERA", "title": "Privacy E: chart hashes, oracle throttles, admin-key source, council follow-ups"}
+{"id": "pr-tessera-240", "outcome": "pass", "repo": "TESSERA", "title": "Chamber v5 from the desk"}
+{"id": "pr-tessera-241", "outcome": "pass", "repo": "TESSERA", "title": "Privacy F: sigil auth; no fingerprint credentials; gate natal routes; harden redeem"}
+{"id": "pr-tessera-242", "outcome": "pass", "repo": "TESSERA", "title": "Privacy D: delete living-person dossier libs (on Father's list)"}
+{"id": "pr-tessera-243", "outcome": "pass", "repo": "TESSERA", "title": "Privacy: delete archived birth date/time copies + generated index (on Father's list)"}
+{"id": "pr-tessera-244", "outcome": "pass", "repo": "TESSERA", "title": "Privacy C: session-gate sigil/chart routes; chart via env only"}
+{"id": "pr-tessera-245", "outcome": "pass", "repo": "TESSERA", "title": "Privacy: delete archived natal-chart copies (on Father's list)"}
+{"id": "pr-tessera-246", "outcome": "pass", "repo": "TESSERA", "title": "Gitbook tab reads the board; web answers keep their source"}
+{"id": "pr-tessera-247", "outcome": "pass", "repo": "TESSERA", "title": "Hide RecruitmentPage after dossier unhook (#<n> follow-up)"}
+{"id": "pr-tessera-248", "outcome": "pass", "repo": "TESSERA", "title": "security: unhook living-person dossiers from served routes"}
+{"id": "pr-tessera-249", "outcome": "pass", "repo": "TESSERA", "title": "security: auth-gate natal-chart, political-dossiers, income-and-leads routes; chart out of code"}
+{"id": "pr-tessera-250", "outcome": "pass", "repo": "TESSERA", "title": "Archive OpenAI residue: 6 whole-file deletes (on Father's list)"}
+{"id": "pr-tessera-251", "outcome": "pass", "repo": "TESSERA", "title": "Hybrid B: add Zz docs/tessera-control (unique leftover)"}
+{"id": "pr-tessera-252", "outcome": "pass", "repo": "TESSERA", "title": "Secret hygiene: delete Zz ingest <sha> (on Father's list)"}
+{"id": "pr-tessera-253", "outcome": "pass", "repo": "TESSERA", "title": "fix: restore guarded LLM/NASA fetch paths after #<n>"}
+{"id": "pr-tessera-254", "outcome": "fail", "repo": "TESSERA", "title": "security: restore guarded fetch path and NASA allowlist"}
+{"id": "pr-tessera-255", "outcome": "pass", "repo": "TESSERA", "title": "Archive OpenAI delete batch (on Father's list)"}
+{"id": "pr-tessera-256", "outcome": "pass", "repo": "TESSERA", "title": "security: purge remaining OpenAI model and env defaults"}
+{"id": "pr-tessera-257", "outcome": "fail", "repo": "TESSERA", "title": "Add a Gitbook place beside the Grok desk row"}
+{"id": "pr-tessera-258", "outcome": "pass", "repo": "TESSERA", "title": "Move the Vitality store to its own repository"}
+{"id": "pr-tessera-259", "outcome": "pass", "repo": "TESSERA", "title": "Store the rest of the Drive files in sections"}
+{"id": "pr-tessera-260", "outcome": "pass", "repo": "TESSERA", "title": "Teach pattern labels and a shorter next lesson"}
+{"id": "pr-tessera-261", "outcome": "pass", "repo": "TESSERA", "title": "Record the tool cards without installing them"}
+{"id": "pr-tessera-262", "outcome": "pass", "repo": "TESSERA", "title": "Store the Drive archives in sections"}
+{"id": "pr-tessera-263", "outcome": "pass", "repo": "TESSERA", "title": "Store the 190 MB archive in sections"}
+{"id": "pr-tessera-264", "outcome": "pass", "repo": "TESSERA", "title": "Keep the Gitbook-only files in TESSERA"}
+{"id": "pr-tessera-265", "outcome": "pass", "repo": "TESSERA", "title": "Stop linking to deleted repositories"}
+{"id": "pr-tessera-266", "outcome": "pass", "repo": "TESSERA", "title": "One row of real places"}
+{"id": "pr-tessera-267", "outcome": "pass", "repo": "TESSERA", "title": "Record the repository layout"}
+{"id": "pr-tessera-268", "outcome": "pass", "repo": "TESSERA", "title": "Keep four unique Grok-ready mockup files"}
+{"id": "pr-tessera-269", "outcome": "pass", "repo": "TESSERA", "title": "docs: Tessera rules here and on Replit until BHNMC"}
+{"id": "pr-tessera-270", "outcome": "pass", "repo": "TESSERA", "title": "docs: record the BHNMC build decision"}
+{"id": "pr-tessera-271", "outcome": "pass", "repo": "TESSERA", "title": "chore: upgrade Tessera KaTeX to 0.19.0"}
+{"id": "pr-tessera-272", "outcome": "pass", "repo": "TESSERA", "title": "Grok/desk preview"}
+{"id": "pr-tessera-273", "outcome": "pass", "repo": "TESSERA", "title": "security: remove Class A OpenAI SDK from live clients and archives"}
+{"id": "pr-tessera-274", "outcome": "pass", "repo": "TESSERA", "title": "fix(deps): clear pnpm audit failures blocking validate"}
+{"id": "pr-tessera-275", "outcome": "pass", "repo": "TESSERA", "title": "Canonical purge: hosted openai dependency + import-time throw fix"}
+{"id": "pr-tessera-276", "outcome": "pass", "repo": "TESSERA", "title": "Tessera v2 stage 1: tailored sovereign modules"}
+{"id": "pr-tessera-277", "outcome": "fail", "repo": "TESSERA", "title": "Security Class A OpenAI purge, archives deleted"}
+{"id": "pr-tessera-278", "outcome": "fail", "repo": "TESSERA", "title": "Remove the OpenAI SDK from Tessera"}
+{"id": "pr-tessera-279", "outcome": "fail", "repo": "TESSERA", "title": "Remove OpenAI SDK Class A from the live API server"}
+{"id": "pr-tessera-280", "outcome": "pass", "repo": "TESSERA", "title": "docs(train): graph rule, CL1-sim prep, pen lane honesty"}
+{"id": "pr-tessera-281", "outcome": "pass", "repo": "TESSERA", "title": "Train the chamber from desk collab"}
+{"id": "pr-tessera-282", "outcome": "pass", "repo": "TESSERA", "title": "Keep Tessera's chamber on her voice"}
+{"id": "pr-tessera-283", "outcome": "pass", "repo": "TESSERA", "title": "Redact Slack tokens, database URLs, and AWS keys"}
+{"id": "pr-tessera-284", "outcome": "pass", "repo": "TESSERA", "title": "Add Tessera retrieval memory and IMP proposals"}
+{"id": "pr-tessera-285", "outcome": "pass", "repo": "TESSERA", "title": "Add Gitbook MCP connector for mesh agents"}
+{"id": "pr-tessera-286", "outcome": "pass", "repo": "TESSERA", "title": "Document validation status, eval entry points, and unused storefront config"}
+{"id": "pr-tessera-287", "outcome": "pass", "repo": "TESSERA", "title": "Add offline eval harness and route/health contract tests"}
+{"id": "pr-tessera-288", "outcome": "pass", "repo": "TESSERA", "title": "Comment quantum duplicate ruling and dedupe gitignore"}
+{"id": "pr-tessera-289", "outcome": "pass", "repo": "TESSERA", "title": "HYB-012: route inventory test (test-first, no runtime change)"}
+{"id": "pr-tessera-290", "outcome": "pass", "repo": "TESSERA", "title": "HYB-005: ignore unpatched braces advisory so CI can continue"}
+{"id": "pr-gitbook-291", "outcome": "fail", "repo": "Gitbook", "title": "moderator-lock + strike GATE_RULES \u00a75 / autogate bypass (Security #<n>)"}
+{"id": "pr-gitbook-292", "outcome": "pass", "repo": "Gitbook", "title": "Moderator retro fixes for #<n>, #<n>, #<n> + HANDOFF verdicts"}
+{"id": "pr-gitbook-293", "outcome": "fail", "repo": "Gitbook", "title": "Stop autogate from merging itself"}
+{"id": "pr-gitbook-294", "outcome": "pass", "repo": "Gitbook", "title": "mesh/charter: GATE_RULES v0.1 draft + gate_check.py"}
+{"id": "pr-gitbook-295", "outcome": "pass", "repo": "Gitbook", "title": "mesh: scoreboard, ranked bulk lists, collab protocol"}
+{"id": "pr-gitbook-296", "outcome": "pass", "repo": "Gitbook", "title": "mesh/queue: agent spawning with lineage, caps, quarantine and immutable-core gate"}
+{"id": "pr-gitbook-297", "outcome": "pass", "repo": "Gitbook", "title": "Turn qlab AQFT sweeps into pytest invariant checks"}
+{"id": "pr-gitbook-298", "outcome": "pass", "repo": "Gitbook", "title": "GB-065: rebase HYB-011 refresh onto main (supersedes #<n>)"}
+{"id": "pr-gitbook-299", "outcome": "pass", "repo": "Gitbook", "title": "Add offline keyless SHEPHERD allowlist and terms gate"}
+{"id": "pr-gitbook-300", "outcome": "pass", "repo": "Gitbook", "title": "Q-002: Land GB-067 + GB-068 (Build PASS 2026-10-13, see GATE-2026-10-13-GB-067-068.md)"}
+{"id": "pr-gitbook-301", "outcome": "pass", "repo": "Gitbook", "title": "Q-003: Rename leftover GitbookAI references to GitMesh (5 files as of <sha>; keep historical quotes intact)"}
+{"id": "pr-gitbook-302", "outcome": "pass", "repo": "Gitbook", "title": "mesh/queue: Cursor cloud-agent dispatch pipeline"}
+{"id": "pr-gitbook-303", "outcome": "pass", "repo": "Gitbook", "title": "tools/qlab v1: quantum sim, optimizer, calibrated noise twin (simulation)"}
+{"id": "pr-gitbook-304", "outcome": "pass", "repo": "Gitbook", "title": "GB-068: HYB-024 self-fix design page"}
+{"id": "pr-gitbook-305", "outcome": "pass", "repo": "Gitbook", "title": "GB-067: single mesh/HANDOFF.md"}
+{"id": "pr-gitbook-306", "outcome": "pass", "repo": "Gitbook", "title": "Add mesh/IDLE-MODE.md (idle mode rev 2)"}
+{"id": "pr-gitbook-307", "outcome": "pass", "repo": "Gitbook", "title": "GB-066: intake log backfill for PRs #<n>\u2013#<n>"}
+{"id": "pr-gitbook-308", "outcome": "pass", "repo": "Gitbook", "title": "O11: mesh/secure-mesh.md"}
+{"id": "pr-gitbook-309", "outcome": "pass", "repo": "Gitbook", "title": "O9: LoRa/Meshtastic research note"}
+{"id": "pr-gitbook-310", "outcome": "pass", "repo": "Gitbook", "title": "O8: Gitbook Offline Internet page"}
+{"id": "pr-gitbook-311", "outcome": "pass", "repo": "Gitbook", "title": "Docs: GitbookAI -> GitMesh"}
+{"id": "pr-gitbook-312", "outcome": "pass", "repo": "Gitbook", "title": "GB-063 rev3: intake log update"}
+{"id": "pr-gitbook-313", "outcome": "fail", "repo": "Gitbook", "title": "GB-065: HYB-011 refresh and GitbookAI rules"}
+{"id": "pr-gitbook-314", "outcome": "pass", "repo": "Gitbook", "title": "GB-062: Consolidation map 2026-10-12"}
+{"id": "pr-gitbook-315", "outcome": "pass", "repo": "Gitbook", "title": "Update the open to-do lines"}
+{"id": "pr-gitbook-316", "outcome": "pass", "repo": "Gitbook", "title": "Triage eight routes and two archive families"}
+{"id": "pr-gitbook-317", "outcome": "pass", "repo": "Gitbook", "title": "Close HYB-008 and HYB-017"}
+{"id": "pr-gitbook-318", "outcome": "fail", "repo": "Gitbook", "title": "GB-061: archive/preserved preservation pack (76 additions)"}
+{"id": "pr-gitbook-319", "outcome": "pass", "repo": "Gitbook", "title": "Track HYB-014 merge-gate review"}
+{"id": "pr-gitbook-320", "outcome": "pass", "repo": "Gitbook", "title": "batch-030: 15 archive Class A whole-file deletes (rev 4)"}
+{"id": "pr-gitbook-321", "outcome": "pass", "repo": "Gitbook", "title": "Record the catalog pass"}
+{"id": "pr-gitbook-322", "outcome": "pass", "repo": "Gitbook", "title": "Move the Vitality store to its own repository"}
+{"id": "pr-gitbook-323", "outcome": "pass", "repo": "Gitbook", "title": "Store the rest of the Drive files in sections"}
+{"id": "pr-gitbook-324", "outcome": "pass", "repo": "Gitbook", "title": "Write the current order"}
+{"id": "pr-gitbook-325", "outcome": "pass", "repo": "Gitbook", "title": "Store the Drive archives in sections"}
+{"id": "pr-gitbook-326", "outcome": "pass", "repo": "Gitbook", "title": "Take the 404s off the mesh to-do list"}
+{"id": "pr-gitbook-327", "outcome": "pass", "repo": "Gitbook", "title": "Correct the XXX original note"}
+{"id": "pr-gitbook-328", "outcome": "pass", "repo": "Gitbook", "title": "Keep the original XXX files and drop exact duplicates"}
+{"id": "pr-gitbook-329", "outcome": "pass", "repo": "Gitbook", "title": "Index the repos and the remaining to-dos"}
+{"id": "pr-gitbook-330", "outcome": "pass", "repo": "Gitbook", "title": "Record the memory and source-graph scan"}
+{"id": "pr-gitbook-331", "outcome": "pass", "repo": "Gitbook", "title": "Archive the collink1007 past versions"}
+{"id": "pr-gitbook-332", "outcome": "pass", "repo": "Gitbook", "title": "Point the repeated handoff page at the one copy"}
+{"id": "pr-gitbook-333", "outcome": "pass", "repo": "Gitbook", "title": "Add the Tessera hybrid skill menu"}
+{"id": "pr-gitbook-334", "outcome": "pass", "repo": "Gitbook", "title": "Move the remaining source files into Gitbook"}
+{"id": "pr-gitbook-335", "outcome": "pass", "repo": "Gitbook", "title": "Recover Zz and olive notes"}
+{"id": "pr-gitbook-336", "outcome": "pass", "repo": "Gitbook", "title": "Recover unique notes from the older mirrors"}
+{"id": "pr-gitbook-337", "outcome": "pass", "repo": "Gitbook", "title": "docs: Tessera rules here and on Replit until BHNMC"}
+{"id": "pr-gitbook-338", "outcome": "pass", "repo": "Gitbook", "title": "docs: record the BHNMC feasibility share"}
+{"id": "pr-gitbook-339", "outcome": "pass", "repo": "Gitbook", "title": "docs: record HYB-021 KaTeX upgrade scope"}
+{"id": "pr-gitbook-340", "outcome": "pass", "repo": "Gitbook", "title": "Handoff: refresh current TESSERA status"}
+{"id": "pr-gitbook-341", "outcome": "pass", "repo": "Gitbook", "title": "GB-040: Batch 013 follow-up (protocol link, SUMMARY, handle strip, AGI-01/02 REPORTED, Graft commands commented, Instrument line)"}
+{"id": "pr-gitbook-342", "outcome": "pass", "repo": "Gitbook", "title": "GB-030\u2013GB-038: Gitbook batch 013"}
+{"id": "pr-gitbook-343", "outcome": "pass", "repo": "Gitbook", "title": "Handoff: add direct Replit session update"}
+{"id": "pr-gitbook-344", "outcome": "pass", "repo": "Gitbook", "title": "List 1 Gitbook: HYB-012 close, orphan nav, lane handoff"}
+{"id": "pr-gitbook-345", "outcome": "pass", "repo": "Gitbook", "title": "GB-029 rev 3: intake log backfill (PR #<n>, #<n>, #<n>)"}
+{"id": "pr-gitbook-346", "outcome": "pass", "repo": "Gitbook", "title": "Approved: GB-028 rev 3"}
+{"id": "pr-gitbook-347", "outcome": "pass", "repo": "Gitbook", "title": "Approved: GB-026 rev 3, GB-027"}
+{"id": "pr-gitbook-348", "outcome": "pass", "repo": "Gitbook", "title": "Approved digest: GB-022, GB-024, GB-025, GB-023"}
+{"id": "pr-gitbook-349", "outcome": "pass", "repo": "Gitbook", "title": "Approved digest: GB-017, GB-016 rev 3.2"}
+{"id": "pr-gitbook-350", "outcome": "pass", "repo": "Gitbook", "title": "Approved digest: GB-018"}
+{"id": "pr-gitbook-351", "outcome": "pass", "repo": "Gitbook", "title": "Approved digest: GB-015, GB-019, GB-021, GB-020"}
+{"id": "pr-gitbook-352", "outcome": "pass", "repo": "Gitbook", "title": "Publish HYB-007 Z-app comparison (candidate)"}
+{"id": "pr-gitbook-353", "outcome": "pass", "repo": "Gitbook", "title": "Publish HYB-006 Grok-ready comparison (candidate)"}
+{"id": "pr-gitbook-354", "outcome": "pass", "repo": "Gitbook", "title": "Publish Ready GitBook batches 003\u2013009 (GB-004 through GB-014)"}
