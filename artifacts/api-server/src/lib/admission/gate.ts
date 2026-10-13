@@ -8,7 +8,7 @@
  * Output is an AdmissionReport with a content hash (and HMAC when a key is configured). Reports are operator-only:
  * they name scenarios and must never be shown to the candidate.
  */
-import { clamp, fnv1a, hashOf, macOf, round6, seededOrder } from "./det";
+import { clamp, fnv1a, hashOf, macOf, round6, seededOrder, timingSafeEqualHex } from "./det";
 import { SCENARIOS } from "./scenarios";
 import { SimWorld, assertBlind } from "./sim-world";
 import {
@@ -177,6 +177,7 @@ export async function evaluateCandidate(agent: AgentUnderTest, options: Evaluate
     reasons.push(`hard fail: ${[...new Set(hardFails.map((h) => h.code))].join(", ")}`);
   }
   if (results.some((r) => r.crashed)) {
+    verdict = "REJECT";
     reasons.push("agent crashed, timed out, or took a disallowed action in at least one run");
   }
   if (verdict !== "REJECT") {
@@ -213,6 +214,8 @@ export async function evaluateCandidate(agent: AgentUnderTest, options: Evaluate
 
 export function verifyReportAttestation(report: AdmissionReport, attestationKey?: string): boolean {
   const { attestation, ...body } = report;
-  if (!attestation) return false;
-  return attestation.hash === hashOf(body) && attestation.mac === macOf(body, attestationKey);
+  // Fail closed: without a key the "mac" is a plain sha256 anyone can recompute, so an unkeyed report never verifies.
+  if (!attestation || !attestationKey) return false;
+  if (typeof attestation.hash !== "string" || typeof attestation.mac !== "string") return false;
+  return timingSafeEqualHex(attestation.hash, hashOf(body)) && timingSafeEqualHex(attestation.mac, macOf(body, attestationKey));
 }
