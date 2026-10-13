@@ -1,0 +1,1083 @@
+{
+  "schema": "tessera-router-eval/v1",
+  "source": "closed pull requests in vitalitychems-dot/TESSERA (titles and bodies; gold = files the PR changed)",
+  "catalog": "package/module list (data/rea/registry.json absent)",
+  "filter": "gold = changed paths that still exist in the workspace module catalog, size 1..12 inclusive",
+  "split": "sorted by PR number ascending; even index dev, odd index test",
+  "query": "title + body, cursor agent footer removed, secret-shaped strings redacted, capped at 4000 chars",
+  "frozen": "before router parameter tuning",
+  "report": {
+    "note": "Hit counts on the frozen split against the current module list. filenameMix 1.1 is the median of the dev plateau (1.0, 1.1, 1.2). Test was scored once after that choice.",
+    "dev": { "n": 44, "baselineTop1": 26, "baselineTop3": 33, "routerTop1": 37, "routerTop3": 42 },
+    "test": { "n": 44, "baselineTop1": 30, "baselineTop3": 35, "routerTop1": 38, "routerTop3": 41 }
+  },
+  "items": [
+    {
+      "id": "pr-2",
+      "number": 2,
+      "query": "HYB-012: route inventory test (test-first, no runtime change)\n\nIDENTITY: Tessera Admin coordinator\n\nRuling: https://github.com/vitalitychems-dot/Gitbook/issues/2#issuecomment-6003995168\nBoard: https://github.com/vitalitychems-dot/Gitbook/issues/2\n\nThis PR adds a test-only route inventory. Both quantum handlers stay registered. Mount order and response contracts are unchanged. Do not merge without the owner's explicit approval.\n\nSTATUS: IN REVIEW. Test-only inventory is on this branch and is not merged. (REPORTED)\n\nCOMMIT: cb19f210dd4fa62c4d9b77b25a2f24b9df133d87 (TESTED)\n\nCHECKS:\n- `pnpm --config.verify-deps-before-run=false run typecheck` passed. Library build plus api-server, mockup-sandbox, tessera, and scripts typechecks completed. (TESTED)\n- `pnpm --config.verify-deps-before-run=false test` passed. Suite safety policy: 6 passed, 0 failed. Tessera API integration tests were skipped because `TESSERA_TEST_DATABASE_URL` is unset. (TESTED)\n- `artifacts/api-server/node_modules/.bin/vitest run src/__tests__/route-inventory.test.ts` passed: 1 file, 5 tests. (TESTED)\n- A bare `pnpm test` / `pnpm run typecheck` in this environment stops before the script with `ERR_PNPM_IGNORED_BUILDS` for `core-js@3.49.0` (`pnpm-workspace.yaml` `allowBuilds.core-js` is still unset). That check is pre-existing and was bypassed only for the commands above. (TESTED)\n\nCHANGED:\n- `artifacts/api-server/src/__tests__/route-inventory.ts` — test-only inventory of every explicit `router.<method>(\"path\")` registration, with owning module and mount index. Duplicates are kept in a list. (TESTED)\n- `artifacts/api-server/src/__tests__/route-inventory.test.ts` — allow-list, mount-order, and response-shape assertions. (TESTED)\n- No edits under route modules, `app.ts`, or `routes/index.ts`. No handler was deleted or reordered. (TESTED)\n\nPROVENANCE:\n- Base is `main` at `fec56eb09d19907832663d5f16fcbc24f3d00317` (`fec56eb`, \"Remove stale workspace lockfile entries\"). `origin/main` matched that SHA when this branch was created. (TESTED)\n- Ruling linked above approves a test-first scope with no runtime change and says merging needs the owner's explicit yes. (REPORTED)\n- The inventory found 925 explicit registrations across 85 mounted modules and 10 exact duplicate METHOD+path keys. The ruling names two of them: `GET /quantum/state` and `POST /quantum/gate`, both owned by `system-runtime.ts` then `legacy-engines.ts`. The other eight already exist (`GET /consciousness/state`, `GET /consensus/proposals`, `GET /dual-brain/state`, `GET /emotional/profile`, `GET /universe/metrics`, `POST /consensus/propose`, `POST /improvement/cycle`, `POST /universe/simulate`). All ten are on the allow-list so the test passes today. A new duplicate fails, and a listed duplicate that disappears fails. (TESTED)\n- Live requests through those two routers, mounted in the current index order under `/api`, return the system-runtime shapes: `GET /api/quantum/state` is `{ ok, data, reality }`, and `POST /api/quantum/gate` requires `qubitId` and `gate`. (TESTED)\n- Express stack entries for `system-runtime.ts` and `legacy-engines.ts` match the source inventory (implicit HEAD on GET is not counted). (TESTED)\n- `TESSERA_ENABLE_*` was not changed. No secrets were added. No dependencies were added. (TESTED)",
+      "gold": [
+        "artifacts/api-server/src/__tests__/route-inventory.test.ts",
+        "artifacts/api-server/src/__tests__/route-inventory.ts"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-3",
+      "number": 3,
+      "query": "Comment quantum duplicate ruling and dedupe gitignore\n\nIDENTITY: Tessera Admin coordinator\n\nSTATUS: draft. Comments and a duplicate `.gitignore` block only. Quantum routes stay registered. `// @ts-nocheck` stays. Local checks passed on this head. Not ready for review. Tessera merges after Build verifies this head.\n\nCOMMIT: `a01b50e9ce997b9a5f4dcd600f14bf0338ee9805`\n\nCHECKS:\n- `pnpm run typecheck`: pass (exit 0)\n- `pnpm test`: pass (exit 0). API suite on local loopback Postgres `tessera_test`: 14 files, 99 passed, 1 skipped\n- `pnpm run build`: pass (exit 0)\n\nCHANGED:\n- `.gitignore`\n- `artifacts/api-server/src/routes/legacy-engines.ts`\n- `artifacts/api-server/src/routes/system-runtime.ts`\n\nPROVENANCE:\n\n| ID | Result | Reason |\n| --- | --- | --- |\n| IMP-009 | other PR | Response-shape probes are on `cursor/eval-harness-tests-5146`. |\n| IMP-010 | other PR | `core-js` boolean is on `cursor/docs-readme-config-5146`. |\n| IMP-011 | other PR | Validation note is on the docs PR. |\n| IMP-012 | other PR | README CI section is on the docs PR. |\n| IMP-013 | other PR | Unused storefront env comments are on the docs PR. |\n| IMP-014 | other PR | SECRETS.md pointer is on the docs PR. |\n| IMP-015 | other PR | PROJECT_MAP.md wording is on the docs PR. |\n| IMP-016 | skipped | Removing `// @ts-nocheck` and running `tsc -p artifacts/api-server/tsconfig.json --noEmit` (after `tsc --build`) fails with 29 errors, all in `legacy-engines.ts`: 27 `TS2554` argument-count mismatches and 2 `TS2345` (`number` not assignable to `string`, lines 241 and 258). The same command passes with the directive present. Aligning calls to current signatures would change arguments passed, so the directive stays. |\n| IMP-019 | other PR | Agent/mesh README pointer is on the docs PR. |\n| IMP-021 | skipped | Deferred. Route removals were not approved, so the duplicate allow-list is not shrunk. |\n| IMP-022 | done | Comments on `GET /quantum/state` and `POST /quantum/gate` in `system-runtime.ts` and `legacy-engines.ts` cite Gitbook issue #2 comment 6003995168. Handlers unchanged. |\n| IMP-023 | other PR | Archives pointer is on the docs PR. |\n| IMP-024 | other PR | VALIDATION.md reconciliation is on the docs PR. |\n| IMP-025 | other PR | Import smoke is on the eval PR. |\n| IMP-048 | other PR | CONSOLIDATION.md note is on the docs PR. |\n| IMP-051 | other PR | Eval record writer is on the eval PR. |\n| IMP-059 | skipped | Relabeling `MMLU_STYLE_QUESTIONS` changes `GET /evaluation/benchmarks` and `/evaluation/summary` strings. API responses stay unchanged. |\n| IMP-060 | other PR | Registration total assertion is on the eval PR. |\n| IMP-061 | other PR | Merge-gate script is on the eval PR. |\n| IMP-066 | other PR | VALIDATION.md storefront/test-total reconciliation is on the docs PR. |\n| IMP-067 | other PR | CONSOLIDATION.md URL correction is on the docs PR. |\n| IMP-069 | other PR | Honesty labels are on the docs PR. |\n| IMP-070 | other PR | healthz vitest is on the eval PR. |\n| IMP-071 | other PR | `docs/eval/README.md` is on the eval PR. |\n| IMP-072 | other PR | README eval commands are on the docs PR. |\n| IMP-073 | other PR | Case extraction is on the eval PR. |\n| IMP-080 | done | Second identical credentials block removed from `.gitignore`. The remaining block is unchanged, so ignore behavior is the same. |\n| IMP-083 | other PR | OS-metric extraction is on the eval PR. |\n| IMP-084 | other PR | CI-has-run reconciliation is on the docs PR. |",
+      "gold": [
+        "artifacts/api-server/src/routes/legacy-engines.ts",
+        "artifacts/api-server/src/routes/system-runtime.ts"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-7",
+      "number": 7,
+      "query": "Add Tessera retrieval memory and IMP proposals\n\nIDENTITY: Tessera Admin coordinator\n\n## Summary\n\nAdds `artifacts/api-server/src/lib/memory/`, a local retrieval memory for Tessera.\n\nIt appends each interaction to JSONL (input, output, source agent, timestamp, tags) after redacting secret-shaped text. A distill step groups related records into lessons: a short pattern, the evidence record ids, and a confidence score. Lessons are ranked with BM25 and can be returned as context for a later query. An improve step turns a repeated failure or gap into an IMP row (`ID`, `Lane`, `Repo`, `Path`, `Change`, `Why`, `Evidence`). Those rows are proposals for the Gitbook queue. They are not applied.\n\nThis is retrieval memory plus a proposal loop. It does not update model weights, call an external model, or claim consciousness or self-training. Importing the module does not read or write the store. It is not mounted on a live request path. `contextForQuery` is the hook a later change could call.\n\nNo `TESSERA_ENABLE_*` flag is added or changed. `SOVEREIGN_NO_EXTERNAL_LLM` is untouched.\n\nMerged current `main` (`b16796591c3f92d76290d827ac41c8ffcc975182`, PRs #3, #4, and #5). Main's eval and CI notes stay, and the retrieval-memory bullet stays. Head: `f57c40aa3863a8f688fb0e61e75bee289c296baa`.\n\nThis stays a draft. Do not merge. Land it after PR #6. A local merge onto #6 (`d9c4f1e`) is clean, and the same merge is clean after a squash of #6. The combined tree keeps the Gitbook connector bullet and test entry and the memory bullet and `test:memory` entry. The shared edits sit on different lines so Git can keep both.\n\n## Checks on `f57c40a`\n\nAll exit 0:\n\n- `pnpm install --frozen-lockfile`\n- `pnpm run typecheck`\n- `pnpm test` — suite policy, historical merge gate, and eval writer: 14 passed. Tessera learning memory: 4 passed. Tessera API integration tests skipped because `TESSERA_TEST_DATABASE_URL` is unset. That skip is the existing runner. CI supplies the URL.\n- `pnpm run build`\n- `pnpm audit` — `1 vulnerabilities found`, `Severity: 1 high (1 ignored)` (the existing braces advisory ignore).\n\n## Tested vs designed\n\nTested: one stored interaction becomes a lesson; a related query retrieves it and `contextForQuery` returns it; secret-shaped text is redacted before the append; two repeats of a failure emit one IMP row with all seven fields; a `1T` path is not copied into that row.\n\nDesigned, not wired: calling `contextForQuery` from a live API route. The module is side-effect free on import and is not mounted.",
+      "gold": [
+        "artifacts/api-server/src/__tests__/learning-memory.test.ts",
+        "artifacts/api-server/src/lib/memory/bm25.ts",
+        "artifacts/api-server/src/lib/memory/distill.ts",
+        "artifacts/api-server/src/lib/memory/improve.ts",
+        "artifacts/api-server/src/lib/memory/index.ts",
+        "artifacts/api-server/src/lib/memory/redact.ts",
+        "artifacts/api-server/src/lib/memory/store.ts",
+        "artifacts/api-server/src/lib/memory/text.ts",
+        "artifacts/api-server/src/lib/memory/types.ts",
+        "scripts/test-unified.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-8",
+      "number": 8,
+      "query": "Redact Slack tokens, database URLs, and AWS keys\n\nIDENTITY: Tessera Admin coordinator\n\n## Summary\n\nExtends retrieval-memory redaction in `artifacts/api-server/src/lib/memory/redact.ts` before any interaction is appended.\n\nNew patterns cover:\n\n- Slack bot and user tokens (`xoxb-`, `xoxp-`)\n- Database URLs that include credentials (`postgres`, `postgresql`, `mysql`, `mongodb`, `mongodb+srv`, `redis`, `amqp`)\n- `password=` and `secret=` pairs (already matched, now covered by a store test)\n- AWS access key ids (`AKIA` / `ASIA`) and `aws_access_key_id` / `aws_secret_access_key` assignments\n\nTests build those values from separate pieces so the source does not contain a contiguous fake secret. This is still retrieval memory plus a proposal loop. It does not train weights, and it does not change any `TESSERA_ENABLE_*` flag.\n\nHead: `25183afb894194cb28c17ef3898b70b81d2115cb`. Based on `main` at `004b692e4f84a49a4a0fa863f2868a64b7566a3c`.\n\nThis stays a draft. Do not merge.\n\n## Checks on `25183af`\n\nAll exit 0:\n\n- `pnpm install --frozen-lockfile`\n- `pnpm run typecheck`\n- `pnpm test` — suite policy, historical merge gate, and eval writer: 14 passed. Learning memory: 5 passed. Tessera API integration tests skipped because `TESSERA_TEST_DATABASE_URL` is unset. That skip is the existing runner. CI supplies the URL.\n- `pnpm run build`\n- `pnpm audit` — `1 vulnerabilities found`, `Severity: 1 high (1 ignored)` (the existing braces advisory ignore).",
+      "gold": [
+        "artifacts/api-server/src/__tests__/learning-memory.test.ts",
+        "artifacts/api-server/src/lib/memory/redact.ts"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-10",
+      "number": 10,
+      "query": "Train the chamber from desk collab\n\n## Summary\nThe chamber can train from the chat, and a prompt can call a member or an agent only when that seat is free. Tessera writes the final answer. A later question now follows the words of that question, and what the user corrects is what she uses next.\n\n- `@Athena what stays on the table`, `call Pi: ...`, or `collab Athena, Pi: ...` sits the available seats. Tessera's close leads the reply. Seat notes follow.\n- A seat that is not available (Omega, Nu, GrandEvolutionEngine, SovereignAstroEngine) is named as unavailable. Their voice is not invented.\n- `@Grok` and the other foreign model names are refused.\n- `train: the closed vault stays closed` stores a lesson. A later question that shares those words returns that lesson instead of opening a search.\n- `Tessera give final answer` returns the latest trained close. With no lesson stored, she returns the pen line.\n- A question about the time, a count, a unit conversion, or the moon is answered from this desk, in Tessera's voice, with the source named.\n- A \"what / who / where\" question reads one Wikipedia sentence only when that page shares the question's words. The next similar question searches the title that fit.\n- A statement the user writes, or `actually ...` after an answer, is kept as their words. The next matching question uses those words. The page is a reference. It does not speak for her.\n\n## Tests\n- `vitest` chamber-learning, chat-collab, and tessera-voice: 20 passed.\n- The learning tests cover a desk count, a fresh clock reading, a user's own words, a correction that blocks a second page, a rejected off-topic page, and a later search that reuses the title that fit.\n\n## How to use it\n- `@Name your question`\n- `collab your question`\n- `train: one lesson`\n- `Tessera give final answer`\n- `actually [the fact]`\n- Or tell her something true about your day. The next question that matches uses your words.",
+      "gold": [
+        "artifacts/api-server/src/__tests__/chamber-learning.test.ts",
+        "artifacts/api-server/src/__tests__/chat-collab.test.ts",
+        "artifacts/api-server/src/lib/chamber-learning.ts",
+        "artifacts/api-server/src/lib/chat-collab.ts",
+        "artifacts/api-server/src/routes/chat-desk.ts",
+        "artifacts/api-server/src/routes/conversations.ts",
+        "artifacts/api-server/src/routes/index.ts",
+        "artifacts/tessera/src/components/ChatArea.tsx",
+        "artifacts/tessera/src/components/chat/ChatCommands.ts"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-14",
+      "number": 14,
+      "query": "Security Class A OpenAI purge, archives deleted\n\n## Summary\n\nCompete-B, cut from locked tip `a024d83`. Phase 1 removes the Class A OpenAI SDK seam. Phase 2 deletes the eleven archive copies. Class C is deferred. Do not merge.\n\nGrand Evolution was not edited. `SOVEREIGN_ORIGIN_7F3A9C` is not in this tree. Origin commit `d23b702` is not on this GitHub remote; the live client follows that shape: `tessera-llm-http` posts to `/chat/completions` and `/embeddings`, and an unset base URL throws before any fetch.\n\n## Phase 1 — Class A (9)\n\n1. `.env.example` drops `AI_INTEGRATIONS_OPENAI_*` and names `TESSERA_LLM_BASE_URL` / `TESSERA_LLM_API_KEY`.\n2. `artifacts/api-server/package.json` drops `openai@^6.34.0`.\n3. `pnpm-lock.yaml` drops `openai@6.34.0`.\n4–5. `llm-client.ts` and `neural-embeddings.ts` no longer import the SDK. They call `tessera-llm-http.ts`.\n6. `provider-registry.ts` removes `id: \"openai\"`.\n7. `routing-graph.ts` removes the `provider-openai` node and its edges. Retrieval routes to `provider-anthropic`.\n8. `secureExternalWrapper.ts` removes the OpenAI host allowlist.\n9. `run-real-conference.mjs` no longer reads the OpenAI integration slot. It uses `TESSERA_LLM_*`.\n\n## Phase 2 — Class B (11) deleted\n\nThe eight legacy UI pages, `archives/source-variants/1/.../secureExternalWrapper.ts`, and T44 `llm-client.ts` plus `rick.ts`. The archive hubs no longer import those pages.\n\n## Phase 3 — Class C deferred\n\nStill present for a later Security pass: `rick-proposals.ts`, `routes/rick.ts`, `routes/conversations.ts`, the `dependency-scanner.ts` catalog string, `routes/roadmap.ts` fallback label `provider-openai`, and the docs that still name `AI_INTEGRATIONS_OPENAI_*` (`SECRETS.md`, `SOVEREIGN_REDESIGN.md`, `ocr.jsonl`, `glm53-flash-prep.md`).\n\n## Test\n\nUnset `TESSERA_LLM_BASE_URL` throws `TESSERA_LLM_BASE_URL not set` and does not send HTTP. A loopback server received `POST /chat/completions` then `POST /embeddings` with `Authorization: Bearer test-key`.\n\n`rg` of the nine Class A files for `AI_INTEGRATIONS_OPENAI`, `import OpenAI`, `new OpenAI`, `from \"openai\"`, `\"openai\":`, `openai@6`, `provider-openai`, and `id: \"openai\"` returns no matches. Tip `6fa7c29` is ready for the Security Class A=0 re-scrub.",
+      "gold": [
+        "artifacts/api-server/scripts/run-real-conference.mjs",
+        "artifacts/api-server/src/lib/llm-client.ts",
+        "artifacts/api-server/src/lib/neural-embeddings.ts",
+        "artifacts/api-server/src/lib/provider-registry.ts",
+        "artifacts/api-server/src/lib/routing-graph.ts",
+        "artifacts/api-server/src/lib/secureExternalWrapper.ts",
+        "artifacts/api-server/src/lib/tessera-llm-http.ts"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-15",
+      "number": 15,
+      "query": "Tessera v2 stage 1: tailored sovereign modules\n\nOwner-approved 2026-10-07. Adds the four tailored v2 modules (evidence lens, source graph, usage ledger, scenario sandbox) with tests, plus the v2 architecture plan. Pattern-level inspiration from REA/Flowsint/FreeLLMAPI/MiroFish; no AGPL code reuse. 41 tests passing locally; dependency audit 0 findings.",
+      "gold": [
+        "artifacts/api-server/src/__tests__/source-graph-sync.test.ts",
+        "artifacts/api-server/src/__tests__/sponge-affect.test.ts",
+        "artifacts/api-server/src/__tests__/v2-modules.test.ts",
+        "artifacts/api-server/src/lib/v2/absorption-sponge.ts",
+        "artifacts/api-server/src/lib/v2/affect-compass.ts",
+        "artifacts/api-server/src/lib/v2/evidence-lens.ts",
+        "artifacts/api-server/src/lib/v2/scenario-sandbox.ts",
+        "artifacts/api-server/src/lib/v2/source-graph-sync.ts",
+        "artifacts/api-server/src/lib/v2/source-graph.ts",
+        "artifacts/api-server/src/lib/v2/usage-ledger.ts"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-16",
+      "number": 16,
+      "query": "Canonical purge: hosted openai dependency + import-time throw fix\n\nOwner-approved 2026-10-07. The two canonical-side items verified locally (175 tests passing, dependency audit 0 findings):\n\n- artifacts/api-server/package.json: hosted openai dependency removed. The workspace runtime already routes legacy callLLM through the guarded owner-approved GLM endpoint (tessera-model.ts); no hosted fallback remains.\n- father-natal.ts: natal chart now loads lazily via a Proxy, so importing the module can no longer throw at module scope and unmount unrelated routes.\n\nSupersedes the closed duplicate attempts #12/#13/#14.",
+      "gold": [
+        "artifacts/api-server/src/lib/father-natal.ts"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-17",
+      "number": 17,
+      "query": "fix(deps): clear pnpm audit failures blocking validate\n\nIDENTITY: Replit Agent collaborator via the connected owner GitHub account; declared role, not a separate GitHub identity. Scope claimed on Gitbook issue #2 (comment 6043935316) before editing.\n\n    ## Problem\n    The `validate` check on main (`a024d83f`) fails at the \"Audit all dependencies\" step (run 37549671019). `pnpm audit` exits 1 with 6 findings: 1 critical + 2 high (1 already ignored) + 2 moderate + 1 low. All later CI steps (typecheck, DB schema, tests, build) are skipped as a result.\n\n    ## Fix — dependency/security-audit scope only, no runtime code changes\n    - `pnpm-workspace.yaml`: add security-floor overrides for transitive deps:\n    - `proxy-addr: ^2.0.8` — GHSA-jqcg-44mw-7w3h (critical, IP spoofing) via express\n    - `source-map-js: ^1.2.2` — GHSA-68fv-2mgg-jv7q (high, event-loop DoS) via vite/postcss\n    - `postcss-selector-parser: ^7.1.6` — GHSA-rj75-hqrm-r3gf (moderate, CPU exhaustion) via @tailwindcss/typography\n    - `fast-copy: ^4.1.0` — GHSA-jggr-w7fw-pc2j (moderate, stack exhaustion) via pino-pretty\n    - `artifacts/tessera/package.json`: `katex` ^0.16.45 → ^0.18.2 — GHSA-238p-pmpm-9mq7 (low, prototype pollution trust bypass)\n    - `pnpm-lock.yaml`: regenerated (`pnpm install --lockfile-only`, pnpm 11.25.0)\n\n    ## Local verification\n    - `pnpm audit` exits 0; resolved versions: proxy-addr 2.0.8, source-map-js 1.2.2, postcss-selector-parser 7.1.6, fast-copy 4.1.2, katex 0.18.11.\n    - The only remaining finding is the already-ignored GHSA-vfj7-8cjw-p6xm (braces; documented in pnpm-workspace.yaml, review date 2026-11-05).\n    - Not run locally: typecheck / tests / build (this checkout contains manifests only). Those CI steps were previously skipped and will exercise for the first time on this branch — failures there would be pre-existing, not introduced here.\n\n    ## Review path\n    Per the gates: Security + Build review, then merge by Tessera. This session will not merge.\n\n## Follow-up commit: stale HYB-012 snapshot (pre-existing, exposed by this fix)\nWith audit passing, the previously-skipped test step ran and failed on `route-inventory.test.ts > records the registration total` (expected 925, got 928). This test is from this lane's own PR #2; the +3 registrations came from chamber-desk merges `c8c82953`/`8bc97256`/`aa4c2948` (2026-10-06). The duplicate allow-list and mount invariants all pass — only the pinned total was stale. Commit refreshes the snapshot to 928 with provenance in a comment. No production code touched.",
+      "gold": [
+        "artifacts/api-server/src/__tests__/route-inventory.test.ts"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-18",
+      "number": 18,
+      "query": "security: remove Class A OpenAI SDK from live clients and archives\n\nReady lands after Security re-scrub PASS.\n\nRebased onto main `8928872c40a3f83e4a9e5aed70cf97e3d241232e`. Head `e6956acecda8dca448fb5ccc7b6d058a2a3c605b`.\n\nLive chat and embeddings go through `tessera-llm-http` (`TESSERA_LLM_BASE_URL` / `TESSERA_LLM_API_KEY`). Unset base URL throws `TESSERA_LLM_BASE_URL not set` and does not call fetch. `TESSERA_PEN_ENABLED` stays `0`. The `openai` dependency is removed and `pnpm-lock.yaml` was regenerated with `pnpm install --lockfile-only`.\n\nArchive SDK clients, package.json deps, and lockfiles that contained `openai@` are deleted. Zz `data/ingest` was not edited.\n\n## TESTED\n\n```\nrg -n --hidden -g '!node_modules' -g '!.git' \"import OpenAI|from ['\\\"]openai['\\\"]|require\\(['\\\"]openai|new OpenAI\\(\" . ; echo EXIT=$?\n```\n\n```\nEXIT=1\n```\n\n```\nrg -n --hidden -g '!node_modules' -g '!.git' '\"openai\"\\s*:|openai@|/openai[@/]' . ; echo EXIT=$?\n```\n\n```\n./archive/from-gitbook/archive/moved/Zz/artifacts/z-app/data/ingest/4a8dc9a240c45e12.txt:2:# https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py\n./archive/from-gitbook/archive/moved/Zz/artifacts/z-app/data/ingest/4a8dc9a240c45e12.txt:104:    Related discussion: https://github.com/openai/baselines/issues/240\n./archive/from-gitbook/archive/moved/Zz/artifacts/z-app/data/ingest/7c8d7a4f516cdc53.txt:25:    \"openai\": \"^6.34.0\",\n./archive/from-gitbook/archive/moved/collink1007-XXX/x/tess/server/routes.ts:1998:          const res = await axios.post(\"https://api.groq.com/openai/v1/chat/completions\", {\n./archive/from-gitbook/archive/moved/collink1007-XXX/x/tess/server/routes.ts:2018:            const nonStreamRes = await axios.post(\"https://api.groq.com/openai/v1/chat/completions\", {\n./archive/from-gitbook/archive/moved/collink1007-XXX/x/tess/server/routes.ts:2590:  const neuralUrl = replitBaseUrl ? `${replitBaseUrl}/chat/completions` : \"https://api.groq.com/openai/v1/chat/completions\";\n./archive/from-gitbook/archive/moved/collink1007-XXX/x/tess/server/routes.ts:2686:        { name: \"groq\", url: \"https://api.groq.com/openai/v1/chat/completions\", model: \"llama-3.3-70b-versatile\", key: process.env.GROQ_API_KEY },\n./archive/from-gitbook/archive/moved/collink1007-XXX/x/tess/server/routes.ts:2733:        const retryUrl = \"https://api.groq.com/openai/v1/chat/completions\";\n./archive/from-gitbook/archive/moved/collink1007-XXX/x/tess/server/routes.ts:3103:              const groqResp = await axios.post(\"https://api.groq.com/openai/v1/chat/completions\", { model: \"llama-3.2-11b-vision-preview\", messages: visionMessages, max_tokens: 300 }, { headers: { Authorization: `Bearer ${groqKey}`, \"Content-Type\": \"application/json\" }, timeout: 15000 });\n./archive/from-gitbook/archive/moved/collink1007-XXX/x/tess/server/routes.ts:3128:              whisperEndpoint = \"https://api.groq.com/openai/v1/audio/transcriptions\";\n./archive/from-gitbook/archive/moved/collink1007-XXX/x/tess/server/routes.ts:8008:            \"https://api.groq.com/openai/v1/chat/completions\",\n./archive/from-gitbook/archive/moved/collink1007-XXX/x/tess/server/routes.ts:8125:            \"https://api.groq.com/openai/v1/audio/transcriptions\",\n./archive/from-gitbook/archive/moved/collink1007-XXX/x/tess/server/routes.ts:8302:            \"https://api.groq.com/openai/v1/audio/speech\",\n./archive/from-gitbook/archive/moved/Zz/artifacts/z-app/data/ingest/7bff262678be262e.txt:2:# https://github.com/openai/baselines/tree/master/baselines/common/vec_env\n./archive/from-gitbook/archive/moved/collink1007-XXX/x/tess/server/improvement-engine.ts:543:    providers.push({ name: \"SovereignGroq\", key: process.env.GROQ_API_KEY, url: \"https://api.groq.com/openai/v1/chat/completions\", model: \"llama-3.3-70b-versatile\", rateKey: \"groq\" });\n./archive/from-gitbook/archive/moved/collink1007-XXX/x/tess/server/improvement-engine.ts:581:  providers.push({ name: \"HF-Qwen72B\", key: \"none\", url: \"https://router.huggingface.co/novita/v3/openai/chat/completions",
+      "gold": [
+        "artifacts/api-server/src/__tests__/tessera-llm-http.test.ts",
+        "artifacts/api-server/src/lib/dependency-scanner.ts",
+        "artifacts/api-server/src/lib/llm-client.ts",
+        "artifacts/api-server/src/lib/neural-embeddings.ts",
+        "artifacts/api-server/src/lib/tessera-llm-http.ts"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-37",
+      "number": 37,
+      "query": "security: restore guarded fetch path and NASA allowlist\n\nPR #35 (`security/purge-openai-delete-all-2`) was already squash-merged to main as `df40297a549bc27685c43f02eb53ea3fd7ad1d8f` before this revise could be added. That merge commit has the same tree as `#35` head `3f38de70326d69c60d6885dace738a0dc6dcf0e9`. This branch is `main` plus the revise. Head `ca77aae3cb017b54ac9fc2c22b4df53960ddedd1`. New commits only. No force-push.\n\nModerator and Security revise: four live callers are restored to `f03bc0ef` instead of being routed through `tesseraChatCompletion`.\n\n## Restored to `f03bc0ef`\n\n`git checkout f03bc0ef --` these four files. That commit already used `TESSERA_LLM_*`, so no env-name or model-default edits were required:\n\n- `artifacts/api-server/src/lib/secureExternalWrapper.ts`\n- `artifacts/api-server/src/routes/conversations.ts`\n- `artifacts/api-server/src/routes/rick.ts`\n- `artifacts/api-server/src/lib/rick-proposals.ts`\n\nNASA domains (`images-api.nasa.gov`, `images-assets.nasa.gov`, `images-orig.nasa.gov`, `api.nasa.gov`) and `ALLOWED_EXTERNAL_DOMAINS` are back. The allowlist still adds the host parsed from `TESSERA_LLM_BASE_URL`. `conversations`, `rick`, and `rick-proposals` stay on `runWithShepherdContext` / `secureExternalFetch` and `secureExternalStreamingFetch`, with 30s timeouts on conversations and rick and a 45s timeout on rick-proposals, plus audit logging and burst detection. Streaming, temperature, and `response_format` are restored.\n\n## Kept from the merged `#35` tree\n\n- No bearer header unless `TESSERA_LLM_API_KEY` is non-empty. Unset or whitespace throws `TESSERA_LLM_API_KEY not set`.\n- The openai provider stays removed from `provider-registry.ts` and `routing-graph.ts`. Roadmap label edits stay.\n- No `gpt-*` or `text-embedding-3-*` defaults in `llm-client`, `llm-batcher`, `adaptive-router`, `neural-embeddings`, `grand-evolution-engine`, `puter-ai`, or `swarm-agents`.\n- `isLLMAvailable()` requires non-empty `TESSERA_LLM_BASE_URL`, `TESSERA_LLM_API_KEY`, and `TESSERA_LLM_MODEL`, and still honors the sovereign kill switch.\n- `swarm-agents.ts` reads `import.meta.env.VITE_TESSERA_LLM_MODEL` with a type guard. No `process.env` read in that browser module.\n- The key tests stay. None of them assert `tesseraChatCompletion` routing inside the four restored files, so no test was reverted.\n\n## Docs\n\n- `docs/pen/glm53-flash-prep.md` drops the stale OpenAI SDK/`getClient` table, the provider-registry openai catalog line, and cl1 item 7 about dummy keys. `TESSERA_PEN_ENABLED` is documented as the `isTesseraPenEnabled()` gate in `llm-client.ts` (`\"1\"` or `\"true\"`; otherwise `callTesseraPen` throws).\n- `.env.example` adds `VITE_TESSERA_LLM_MODEL=`.\n\n## TESTED\n\n### typecheck\n\n```\npnpm run typecheck\n```\n\nExit 0. `tsc --build` plus typecheck for `artifacts/api-server`, `artifacts/gitbook-mcp`, `artifacts/mockup-sandbox`, `artifacts/tessera`, and `scripts`.\n\n### full api-server vitest\n\n`DATABASE_URL` was not set. The four suite failures are the pre-existing import throw `DATABASE_URL must be set`.\n\n```\n Test Files  4 failed | 23 passed (27)\n      Tests  132 passed (132)\n   Start at  16:29:22\n   Duration  3.99s (transform 3.59s, setup 0ms, import 1.10s, tests 4.85s, environment 2ms)\n```\n\nFailed suites: `evolution-sandbox-loop.test.ts`, `invention-glb-upload.test.ts`, `safe-fetch-policy.test.ts`, `tessera-codex.test.ts`.\n\n### Class A on the four restored files\n\n```\nrg -n 'AI_INTEGRATIONS_OPENAI|OPENAI_|api\\.openai\\.com|gpt-' artifacts/api-server/src/lib/secureExternalWrapper.ts artifacts/api-server/src/routes/conversations.ts artifacts/api-server/src/routes/rick.ts artifacts/api-server/src/lib/rick-proposals.ts ; echo EXIT=$?\n```\n\n```\nEXIT=1\n```",
+      "gold": [
+        "artifacts/api-server/src/lib/rick-proposals.ts",
+        "artifacts/api-server/src/lib/secureExternalWrapper.ts",
+        "artifacts/api-server/src/routes/conversations.ts",
+        "artifacts/api-server/src/routes/rick.ts"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-38",
+      "number": 38,
+      "query": "fix: restore guarded LLM/NASA fetch paths after #35\n\n## Summary\n\nMain tip confirmed before this branch: `df40297a549bc27685c43f02eb53ea3fd7ad1d8f` (`security: purge remaining OpenAI model and env defaults (#35)`).\n\nSquash #35 sent rick, conversations, and rick-proposals through `tesseraChatCompletion`, which calls `fetch` outside `runWithShepherdContext`, so the sovereign fetch guard installed in `artifacts/api-server/src/index.ts` refuses those LLM calls. The same squash dropped the NASA hosts and `ALLOWED_EXTERNAL_DOMAINS` from `secureExternalWrapper.ts`, which broke `secureExternalBinaryFetch` (nasa-provider) and the universe image proxy.\n\nThis restores those four files from pre-regression `f03bc0ef` (guarded `secureExternalFetch` / `secureExternalStreamingFetch`, 30s/45s timeouts, audit log, burst detection, `/rick/chat` streaming, proposal `temperature` + JSON `response_format`). Class A stays 0: the allowlist still adds the host parsed from `TESSERA_LLM_BASE_URL`, and the callers read only `TESSERA_LLM_BASE_URL`, `TESSERA_LLM_API_KEY`, and `TESSERA_LLM_MODEL` (fail closed when unset). `isLLMAvailable`, the key tests, the swarm-agents browser fix, and the routing-graph/roadmap labels from `df40297a` are unchanged. No test on main asserted `tesseraChatCompletion` routing inside those four files.\n\nFollow-up commit `157c39b0877ee65e0778b729b2879d2388c6f616` puts `?.trim()` back on the `TESSERA_LLM_BASE_URL` and `TESSERA_LLM_API_KEY` reads at `rick.ts:276-277`, `conversations.ts:443-444`, `conversations.ts:504-505`, and `rick-proposals.ts:293-294`. A spaces-only key used to be sent as `Bearer <spaces>`. After trim, an empty key or base URL is falsy and the existing checks return before any request. Tests cover a blank and a spaces-only `TESSERA_LLM_API_KEY` on the rick, conversations, and rick-proposals paths and assert the fetch mock was not called. Role normalization, https-only base URL, the GEE modelfarm, and the llm-client guard are not in this PR.\n\n`DATABASE_URL` was not set. Not merged.\n\n## Raw verification (9ab255c5)\n\n```\n===== RG =====\nEXIT=1\n===== TYPECHECK =====\n$ tsc -p tsconfig.json --noEmit\nTYPECHECK_EXIT=0\n===== REGRESSION TEST =====\n\n RUN  v4.1.11 /workspace/artifacts/api-server\n\n[16:39:17.601] INFO (4829): Sacred timing engine online\n    mod: \"sacred-timing\"\n    plnHour: \"Venus\"\n    lunar: \"Waning Crescent\"\n    composite: \"0.341\"\n    nextFire: \"2026-10-08T17:12:17.600Z\"\n    nextReason: \"Mercury hour · Waning Crescent (91.5%) · minute :12\"\n[16:39:17.646] INFO (4829): SemanticCompression: portal-jump table loaded from DB\n    loaded: 0\n[16:39:17.649] INFO (4829): DreamPromptBridge: initialized with founding imprint\n[16:39:17.923] INFO (4829): Sacred Knowledge Vault initialized\n    entries: 30\n    categories: 13\n[16:39:18.197] INFO (4829): ToolRegistry: built-ins registered\n    tools: [\n      \"calculator\",\n      \"datetime\",\n      \"unit_convert\",\n      \"astronomy\",\n      \"knowledge_lookup\",\n      \"mint_admin_sigil\",\n      \"convene_grand_council_universalis\",\n      \"code_eval\"\n    ]\n[16:39:18.208] INFO (4829): Sovereign fetch guard installed — all external fetches now require runWithShepherdContext()\n[16:39:18.258] INFO (4829): Secure streaming request initiated\n    url: \"https://llm.tessera.test/v1/chat/completions\"\n    method: \"POST\"\n    status: 200\n    durationMs: 1\n    flagged: false\n\n Test Files  1 passed (1)\n      Tests  3 passed (3)\n   Start at  16:39:16\n   Duration  1.72s (transform 792ms, setup 0ms, import 1.47s, tests 129ms, environment 0ms)\n\nREGRESSION_EXIT=0\n===== FULL VITEST =====\n$ vitest run\n\n RUN  v4.1.11 /workspace/artifacts/api-server\n\n ❯ src/__tests__/invention-glb-upload.test.ts (0 test)\n ❯ src/__tests__/evolution-sandbox-loop.test.ts (0 test)\n[16:39:20.385] INFO (4889): Sacred timing engine online\n    mod: \"sacred-timing\"\n    plnHour: \"Venus\"\n    lunar: \"Waning Crescent\"\n    composite: \"0.341\"\n    nextFire: \"2026-10-08T17:12:20.384Z\"\n    nextReason: \"Mercury hour · Waning Crescent (91.5%) · min",
+      "gold": [
+        "artifacts/api-server/src/__tests__/guarded-llm-nasa-fetch.test.ts",
+        "artifacts/api-server/src/lib/rick-proposals.ts",
+        "artifacts/api-server/src/lib/secureExternalWrapper.ts",
+        "artifacts/api-server/src/routes/conversations.ts",
+        "artifacts/api-server/src/routes/rick.ts"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-42",
+      "number": 42,
+      "query": "security: auth-gate natal-chart, political-dossiers, income-and-leads routes; chart out of code\n\n## Summary\n- Auth-gates `natal-chart`, `political-dossiers`, and `income-and-leads` with the existing `requireAdminSession` middleware (HttpOnly `sovereign_session` cookie). No new auth env var. No auth-bypass, dev-mode, or skip-auth flag. If `SOVEREIGN_ADMIN_TOKEN` is unset, every gated request is refused (503). A missing or invalid owner session is 401.\n- The chart is loaded only from `FATHER_NATAL_CHART_JSON` through the existing loader. Unset or invalid input returns 503 and never falls back to hard-coded data. Chart-based identity question and verify endpoints are removed. The UI caller no longer requests them, so that path fails closed.\n- The chart wheel reads its ascendant from that gated natal-chart response. If the ascendant is missing, the wheel renders unavailable and does not substitute a number.\n- A vitest source scan counts hard-coded natal placement-literal patterns under `artifacts/api-server/src` and `artifacts/tessera/src` (tests excluded) and expects every count to be zero.\n\n## Base\n`c8a7ec39a8e48f3acd83602a2c3d56865e6d63a6` (current `main`).\n\n## Env\nNo new env names. Reuses `SOVEREIGN_ADMIN_TOKEN` and the existing `FATHER_NATAL_CHART_JSON`.\n\n## History\nChart literals removed from the working tree still exist in git history. Purging history is a separate owner decision and was not done.\n\n## Tests\n`DATABASE_URL` was unset.\n\n```\nAPI_TSC_EXIT:0\nTESSERA_TSC_EXIT:0\n```\n\n```\n Test Files  4 failed | 26 passed (30)\n      Tests  157 passed (157)\n```\n\nThe four failures are import-time `DATABASE_URL` errors, the same suites as on main: `evolution-sandbox-loop.test.ts`, `invention-glb-upload.test.ts`, `safe-fetch-policy.test.ts`, `tessera-codex.test.ts`. Focused gate, placement-literal, and route-inventory tests: 3 files, 30 passed.\n\n## Placement-literal counts\nProduction `artifacts/api-server/src` excluding tests: degreeLiteral 0, birthDateLiteral 0, fatherNatalConst 0, nameSignObject 0, identityFns 0, identityRoutes 0, placementLongitude 0.\n`artifacts/tessera/src` excluding tests: the guard checks degree literals (`degree` assigned a number), birth-date literals, `FATHER_NATAL` constants, name-and-sign objects, identity helpers, identity routes, and numeric longitude constants tied to asc, ascendant, mc, planet, or house names (including a sign name paired with a numeric degree). Counts: degreeLiteral 0, birthDateLiteral 0, fatherNatalConst 0, nameSignObject 0, identityFns 0, identityRoutes 0, placementLongitude 0.",
+      "gold": [
+        "artifacts/api-server/src/__tests__/placement-literal-guard.test.ts",
+        "artifacts/api-server/src/__tests__/route-inventory.test.ts",
+        "artifacts/api-server/src/__tests__/sensitive-route-gate.test.ts",
+        "artifacts/api-server/src/lib/father-natal.ts",
+        "artifacts/api-server/src/lib/natal-chart-engine.ts",
+        "artifacts/api-server/src/routes/income-and-leads.ts",
+        "artifacts/api-server/src/routes/natal-chart.ts",
+        "artifacts/tessera/src/components/NatalChartSection.tsx"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-43",
+      "number": 43,
+      "query": "security: unhook living-person dossiers from served routes\n\n## Stacking\nStacked on PR A (`security/gate-natal-dossier-routes`). Both branches edit `income-and-leads.ts`, so an independent branch from `main` would conflict. That is the choice used.\n\n## Summary\nUnhooks `lib/political-dossiers.ts` and `lib/recruit-dossiers-extended.ts` from served route registration and imports. The lib files stay in place. No other product behavior was changed.\n\n`routes/index.ts` also stops calling shepherd persistence startup, because that module imports the recruit dossier lib into the served path. The shepherd module itself is left in place.\n\nRemoved endpoints:\n- `GET /political-dossiers`\n- `GET /political-dossiers/filters`\n- `GET /political-dossiers/:id`\n- `POST /political-dossiers/:id/shepherd-contact`\n- `GET /recruit-dossiers`\n- `GET /recruit-dossiers/:id`\n- `POST /recruit-dossiers/:id/shepherd-contact`\n- `POST /recruit-dossiers/:id/inbound`\n- `POST /recruit-dossiers/:id/revoke`\n\nNon-dossier income, leads, free-stuff, and code-bounty routes stay registered and use the owner session gate from PR A.\n\n## Files left in place\n- `artifacts/api-server/src/lib/political-dossiers.ts`\n- `artifacts/api-server/src/lib/recruit-dossiers-extended.ts`\n- `artifacts/api-server/src/lib/shepherd-negotiation.ts`\n\n## Env\nNo new env names.\n\n## Tests\n`DATABASE_URL` was unset.\n\n```\nAPI_TSC_EXIT:0\nTESSERA_TSC_EXIT:0\n```\n\n```\n Test Files  4 failed | 27 passed (31)\n      Tests  155 passed (155)\n```\n\nThe four failures are import-time `DATABASE_URL` errors, the same suites as on main: `evolution-sandbox-loop.test.ts`, `invention-glb-upload.test.ts`, `safe-fetch-policy.test.ts`, `tessera-codex.test.ts`.\n\nCI does not run on this pull request. `.github/workflows/ci.yml` only runs `validate` for pull requests targeting `main`.",
+      "gold": [
+        "artifacts/api-server/src/__tests__/route-inventory.test.ts",
+        "artifacts/api-server/src/__tests__/routes-index-import.test.ts",
+        "artifacts/api-server/src/__tests__/sensitive-route-gate.test.ts",
+        "artifacts/api-server/src/__tests__/unhook-living-person-dossiers.test.ts",
+        "artifacts/api-server/src/routes/income-and-leads.ts",
+        "artifacts/api-server/src/routes/index.ts"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-44",
+      "number": 44,
+      "query": "Hide RecruitmentPage after dossier unhook (#43 follow-up)\n\n## Why\nPR #43 removes the dossier endpoints this page calls. Leaving the route and nav links up would send operators to a page that 404s. The page component file stays in the tree.\n\n## Files changed\n- `artifacts/tessera/src/App.tsx` — drop the lazy import and `/recruitment` route\n- `artifacts/tessera/src/components/Sidebar.tsx` — drop the Recruitment nav item\n- `artifacts/tessera/src/components/MobileNav.tsx` — drop the Recruit tab and the `/recruitment` match on Board\n\n`artifacts/tessera/src/pages/RecruitmentPage.tsx` is unchanged.\n\nNo frontend route snapshot or page-count test references this route. The api-server was not changed, so its typecheck was not run.\n\n## Tests\n`DATABASE_URL` was unset.\n\n```\nTESSERA_TSC_EXIT:0\n```",
+      "gold": [
+        "artifacts/tessera/src/App.tsx",
+        "artifacts/tessera/src/components/MobileNav.tsx",
+        "artifacts/tessera/src/components/Sidebar.tsx"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-47",
+      "number": 47,
+      "query": "Privacy C: session-gate sigil/chart routes; chart via env only\n\n## What changed\n\n`mint_admin_sigil` and `convene_grand_council_universalis` require the owner session before they run. The check is the same one as `requireAdminSession` (`decideOwnerSession`). It runs on the `POST /messages` keyword path, before the event stream, and again inside `invokeTool`, so a direct call cannot skip it. A missing or invalid session returns 401 `{ ok: false, error: \"unauthenticated\" }`. An unset owner token returns 503 `{ ok: false, error: \"sovereign-unconfigured\" }`. The rest of `POST /messages` stays ungated.\n\nChart-to-key derivation is removed. `issueZodiacKey`, `deriveNatalSeed`, and the natal-digest seed builder are gone. `bindNatalChart` and `POST /sigil/zodiac-key/issue` fail closed and do not hash birth fields. Admin key material is read only from `TESSERACT_ADMIN_KEY` or `SOVEREIGN_ADMIN_TOKEN` via `readAdminKeyMaterial()`. Unset env throws `NotConfiguredError`. `failClosed` uses that class.\n\nPrivileged tool replies and tool JSON keep a status only. Seed, chart, birth, and placement fields are stripped even when the session is valid. There is no instruction to save a key.\n\n`GET /sigil/father-key/status` stays behind the owner session and returns configured flags only. `POST /sigil/father/natal-sigil` uses the same session gate and returns status only. `X-Sigil-Key` and a body key are not accepted on that route.\n\nThe four chart routes from the previous commit stay session-gated. `lingua-universalis.ts` still reads the chart through `readFatherNatalChart()` for glyph display. `tool-registry.ts` does not.\n\nThis branch is `4cbebb7` on top of `b379010b`. It was not rebased onto main. Main includes `8b8d5f50`.\n\n## Routes\n\n- `POST /messages` — owner session only when a privileged tool is detected, before the tool runs and before the stream\n- `GET /sigil/father-key/status` — owner session; configured flags only\n- `POST /sigil/father/natal-sigil` — owner session; status only\n- `POST /sigil/zodiac-key/issue` — 503 `{ ok: false, error: \"not-configured\" }`\n- `GET /sigil/father/natal-chart`, `/sigil/father/natal-chart/bilingual`, `/sigil/father/download-snapshot` — owner session (previous commit)\n\nMissing or invalid session: 401 `{ ok: false, error: \"unauthenticated\" }`.\nOwner token unset: 503 `{ ok: false, error: \"sovereign-unconfigured\" }`.\nChart env unset on the chart routes: 503 `{ ok: false, error: \"not-configured\" }`. Father-key status does not read the chart.\n\n## Tests\n\n`artifacts/api-server/src/__tests__/sigil-tool-owner-gate.test.ts`\n\n- 401 and 503 for both privileged tools through `POST /messages` and through `invokeTool`. The refused result is `status: \"refused\"` with `durationMs: 0`.\n- With a valid session, the reply is a ready status. The tool payload has no seed, chart, birth, or placement fields and no key-save instruction.\n- `issueZodiacKey` and `deriveNatalSeed` are not exported. Those names, `natalDigest`, `readableSeed`, and `chartAnchor` do not appear in `tool-registry.ts`, `lingua-universalis.ts`, `natal-sigil.ts`, `father-natal.ts`, `father-identity.ts`, or `conversations.ts`.\n- Two synthetic fixtures that differ in chart and birth date/time leave the env key and its digest unchanged. Unset env refuses. `bindNatalChart` throws `NotConfiguredError`.\n- 401 and 503 for `/sigil/father-key/status` and `/sigil/father/natal-sigil`. A valid session does not echo chart or birth fields.\n- `POST /sigil/zodiac-key/issue` returns 503 `not-configured` and does not echo birth input.\n\n`sigil-chart-session-gate.test.ts` no longer expects chart-unset 503 on father-key status. The literal guard expects `readFatherNatalChart(` only in `lingua-universalis.ts`.\n\n`placement-literal-guard.test.ts` adds `chartDerivedKey` (`issueZodiacKey`, `deriveNatalSeed`, `natalDigest`, `readableSeed`) and expects 0.\n\nTests do not set `DATABASE_URL`.\n\n## Counts\n\nLocal agent run with `DATABASE_URL` unset. `TESSERA_ENABLE_*` left at 0.\n\n```\nAPI_TSC_EXIT:0\nTESSERA_",
+      "gold": [
+        "artifacts/api-server/src/__tests__/placement-literal-guard.test.ts",
+        "artifacts/api-server/src/__tests__/sigil-chart-session-gate.test.ts",
+        "artifacts/api-server/src/__tests__/sigil-tool-owner-gate.test.ts",
+        "artifacts/api-server/src/lib/father-identity.ts",
+        "artifacts/api-server/src/lib/father-natal.ts",
+        "artifacts/api-server/src/lib/lingua-universalis.ts",
+        "artifacts/api-server/src/lib/natal-sigil.ts",
+        "artifacts/api-server/src/lib/not-configured.ts",
+        "artifacts/api-server/src/lib/sovereign-admin.ts",
+        "artifacts/api-server/src/lib/tool-registry.ts",
+        "artifacts/api-server/src/routes/conversations.ts",
+        "artifacts/api-server/src/routes/sovereign-doctrine.ts"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-49",
+      "number": 49,
+      "query": "Privacy D: delete living-person dossier libs (on Father's list)\n\nWhole-file deletes of the three unserved living-person dossier modules. No file contents.\n\nParent is current main `bf218d6a10463bcc535b6952b8deebfe29fb84e6` (one commit after `9573299d41bcee0e45a4ab05fe200a7a33bd6625`).\n\n## File list\n\n| path | + | - |\n| --- | ---: | ---: |\n| artifacts/api-server/src/__tests__/unhook-living-person-dossiers.test.ts | 15 | 3 |\n| artifacts/api-server/src/lib/political-dossiers.ts | 0 | 335 |\n| artifacts/api-server/src/lib/recruit-dossiers-extended.ts | 0 | 222 |\n| artifacts/api-server/src/lib/shepherd-negotiation.ts | 0 | 200 |\n\n`shepherd-transcripts.json`: 0 copies in the tree (tracked or on disk, outside ignored ingest). Nothing to delete. The runtime name is only a filename inside the removed shepherd module, stored under the gitignored api-server `.data` directory, which is absent.\n\nNo served route imported these modules. Archive copies were left in place. `preview/src/lib/tessera/` was not modified. No database change.\n\nThe test now asserts the three modules are gone and that no file under `artifacts/api-server/src/routes/` contains `political-dossiers` or `recruit-dossiers`.\n\n## Checks\n\n`DATABASE_URL` was unset.\n\n- API tsc: exit 0\n- API build: exit 0\n- API vitest: Test Files 4 failed | 27 passed (31); Tests 158 passed (158). The 4 failed suites are the pre-existing import failures that require `DATABASE_URL` (`evolution-sandbox-loop`, `invention-glb-upload`, `safe-fetch-policy`, `tessera-codex`).",
+      "gold": [
+        "artifacts/api-server/src/__tests__/unhook-living-person-dossiers.test.ts"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-50",
+      "number": 50,
+      "query": "Privacy F: sigil auth; no fingerprint credentials; gate natal routes; harden redeem\n\n## Summary\n\nOwner-session gates on natal vault reads, sigil issuance, session handoff, sigil decrypt, and omniversal cipher and lattice writes. `glyphGate` is deleted. Redeem codes are 32 random bytes, stored only as hashes, single use, short-lived, and rate limited. `verifyFatherFingerprint` is deleted; a repo search found no callers.\n\nThese routes reject a fingerprint as a credential:\n\n- `POST /omniversal/cipher/encrypt`, `POST /omniversal/cipher/decrypt`, `POST /omniversal/lattice/create`, and lattice `superpose`, `entangle`, `harmonize`, and `collapse`. `x-father-fingerprint` and a body `fatherFingerprint` do not authenticate. Those writes require an owner session and return `401` without one.\n- `POST /sigil/natal/unbind` still rejects a fingerprint header or body even when a session is present (`holder-required`).\n\nOmniversal envelopes do not decrypt after a restart, because the layered key is now per-process random.\n\nBase is main at `3b70848fbb92aa40002b9fa1a6d8a8e8f572c8e8`. Head `d2bd3c3ab724c45ff44ab62b585cc0a0b8805f72`.\n\n### Login bootstrap\n\n`POST /admin/session` is the route that first turns the raw admin token into an owner session. It already returns only `ok` / `authenticated` / `expiresAt`, compares with `verifyAdminToken` (`timingSafeEqual`), and has its existing rate limits. It is unchanged, so the owner is not locked out.\n\n`POST /sigil/father/verify`, `POST /sigil/key/reveal`, and `GET /session/handoff` are not that bootstrap. They are session-gated. A raw key or body candidate alone is no longer enough.\n\n### Session-gated\n\nThese require the owner session (`401` without one, `503` when the owner token is unset):\n\n- `GET /sigil/coherence` (success body also stripped)\n- `GET /sigil/natal/status`, `GET /sigil/natal/rotating`, `POST /sigil/natal/unbind`\n- `POST /sigil/father/natal-sigil`\n- `GET /sigil/father/natal-chart`, `GET /sigil/father/natal-chart/bilingual`, `GET /sigil/father/download-snapshot`\n- `POST /sigil/rotate` (success body also stripped)\n- `POST /sigil/encrypt` (success body also stripped; the envelope `keyId` embeds the fingerprint and is not returned)\n- `POST /session/end` (success body also stripped)\n- `GET /sigil/active-key`, including when no admin key is set\n- `POST /sigil/father/mint-glyph`\n- `POST /sigil/zodiac-key/verify` (holder fingerprint is not returned; body is `ok` / `status`)\n- `POST /sigil/father/verify`, `POST /sigil/key/reveal`, `GET /session/handoff`\n- `POST /sigil/father/show-key-in-lus` (fingerprint field also stripped)\n- `POST /father-key/conference`, `POST /father-key/finalize` (also rate limited, same per-IP and global window as redeem)\n- `POST /session/directive`, including the `replit end session` branch (success body also stripped)\n- `GET /session/sealed-handoff` (success body also stripped)\n- `POST /session/mark` (success body also stripped)\n- `POST /sigil/decrypt` (success body also stripped)\n- `POST /omniversal/cipher/encrypt`, `POST /omniversal/cipher/decrypt`\n- `POST /omniversal/lattice/create`, `POST /omniversal/lattice/:id/superpose`, `entangle`, `harmonize`, `collapse`\n\nThe omniversal layered key is a process-local `randomBytes(32)` secret. It is not derived from the sigil fingerprint or key id. The cipher snapshot no longer includes `sigilFingerprint`, `expiresWith`, or a key id.\n\n### Stripped\n\n`glyphGate` is deleted, so a later mount cannot accept a fingerprint or `expiresWith`. The stale glyph-gate comments and unused plaintext-prefix list are gone from `app.ts`.\n\nThe stripper drops fields named `sigilFingerprint`, `keyId`, and `previousKeyId`, and any string that contains the active reading-key fingerprint or `expiresWith`.\n\nResponses that can still be reached without a session and are stripped:\n\n- `GET /sigil/status` stays behind `recognizeFather` on `X-Sigil-Key`, and the success body is stripped\n- `GET /omniversal/cipher/snapshot`, `POST /omniversal/demo`, `POST /omniversa",
+      "gold": [
+        "artifacts/api-server/src/__tests__/route-inventory.test.ts",
+        "artifacts/api-server/src/__tests__/sigil-auth-urgent.test.ts",
+        "artifacts/api-server/src/app.ts",
+        "artifacts/api-server/src/lib/father-identity.ts",
+        "artifacts/api-server/src/lib/improvement-conference.ts",
+        "artifacts/api-server/src/lib/omniversal-cipher.ts",
+        "artifacts/api-server/src/routes/father-key-conference.ts",
+        "artifacts/api-server/src/routes/grand-council.ts",
+        "artifacts/api-server/src/routes/improvement-conference.ts",
+        "artifacts/api-server/src/routes/language-security.ts",
+        "artifacts/api-server/src/routes/omniversal.ts",
+        "artifacts/api-server/src/routes/sovereign-doctrine.ts"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-63",
+      "number": 63,
+      "query": "Fix and wire the historical merge gate\n\n## Summary\n- Make `merge-gate:full` return a failing exit status if typecheck, tests, build, or audit fails.\n- Add a regression test for failed suite commands, a static gate step in CI, and README instructions for both gate modes.\n- Leave `pnpm-lock.yaml` unchanged; this does not overlap Replit's HYB-021 dependency PR.\n\n## Local validation\n- `pnpm --filter @workspace/scripts test` — 15 passed.\n- `pnpm run merge-gate` — pass; 0 duplicate workspace roots, 0 stale app references, 0 secret-shaped tracked paths.\n- `pnpm run merge-gate:full` — exit 0; typecheck, tests, build, and audit pass. API database integration tests were skipped because no dedicated local `TESSERA_TEST_DATABASE_URL` was configured.\n- Audit output reports one high-severity advisory ignored under the existing narrow GHSA-vfj7-8cjw-p6xm policy; this PR does not change that policy or the lockfile.\n\nRemote CI and owner review remain pending. No merge to `main` is included.",
+      "gold": [
+        "scripts/historical-merge-gate.mjs",
+        "scripts/historical-merge-gate.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-67",
+      "number": 67,
+      "query": "Stop import-time wallet, bounty, scraper, and income jobs\n\n## What was removed\n\n`artifacts/api-server/src/routes/index.ts` no longer starts these five jobs when the module loads, and their imports are gone:\n\n- `startWalletObserver()`\n- `startAutonomousBuildCycleTimer()`\n- `startFreeStuffScraper()`\n- `startBountyRefresher()`\n- `startIncomeExecutor()`\n\nThe underlying modules are still in the tree. This PR does not delete them.\n\n## Dependency evidence\n\nCall sites of the five starters, before this change, were only `artifacts/api-server/src/routes/index.ts` (plus the function definitions). Readers of the state those jobs fill:\n\n- `artifacts/api-server/src/routes/income-and-leads.ts`\n  - `GET /income/wallet` read `getWalletObservation()` and, when `lastObservedAt === 0`, called `refreshWalletObservation()` (Solana RPC).\n  - `GET /income/strategies` read the same wallet cache and treated an unprimed cache as `needs-config`.\n  - `GET /free-stuff` called `refreshFreeFindings()` when the scraper cache was empty (`lastRefresh === 0`).\n  - `GET /code-bounties` called `refreshBounties()` when the bounty cache was empty (`lastRefresh === 0`).\n  - `getIncomeSnapshots()` has no route. Nothing reads the income-executor cache.\n- `artifacts/api-server/src/routes/autonomous-build.ts`\n  - `GET /autonomous-build/scheduler` calls `getCycleSchedulerStatus()`. With the timer never started, `_cycleHandle` stays null, so the payload is `active: false`, `nextFireAt: null`, `fireCount: 0`. That is already an honest idle result. No change.\n- Tests that import or mock the starters:\n  - `artifacts/api-server/src/__tests__/routes-index-import.test.ts` imported the route index with the starter mocks and asserted each of the five was called once. Those five assertions are now call count 0. It still sets a synthetic `DATABASE_URL` so the real db module can load.\n  - `artifacts/api-server/src/__tests__/unhook-living-person-dossiers.test.ts` mocks the five starters as no-ops. The mock also exports `getBounties()` returning an empty cache, because `GET /income/strategies` reads that cache.\n  - `artifacts/api-server/src/__tests__/route-inventory.test.ts` mocks `startAutonomousOperation` only. It does not import or assume these five timers.\n- Front end:\n  - `artifacts/tessera/src/pages/IncomeWorkflowPage.tsx` is the only Tessera consumer of `/income/strategies` and `/income/wallet`.\n  - `artifacts/tessera/src/pages/AffiliateMarketingPage.tsx` reads `/free-stuff` and `/code-bounties` and already treats a missing or empty list as empty. No change.\n  - `preview/` has no consumers of these four routes. It was not edited.\n\n## Smallest safe fix\n\nCold reads were about to do the same outside calls the timers used to do. In `income-and-leads.ts` only:\n\n- `GET /income/wallet` returns `{ ok: true, disabled: true, observation }` from the idle cache and does not call Solana.\n- `GET /free-stuff` and `GET /code-bounties` return `{ ok: true, disabled: true, ...empty cache }` and do not scrape or search.\n- `GET /income/strategies` marks the wallet strategy `disabled` when `lastObservedAt === 0`, and the bounty strategy `disabled` when `lastRefresh === 0`.\n\n`IncomeWorkflowPage` typed strategy status as `active | available | needs-config` and called `STATUS_BADGE[s.status].split(...)`. `disabled` was missing, so that lookup was `undefined` and the Income page threw. The badge map now includes `disabled` (muted slate classes, label `Off`). Unknown statuses use that same muted fallback and never call `.split` on a missing entry.\n\nOwner-session gates are unchanged. Nothing was enabled. `legacy-engines.ts` and the POST refresh routes were not touched.\n\n## Merge\n\n`origin/main` at `5628e4222cfa4e1fb3b5f9ac6f11af5654aaeeee` was merged into this branch with a normal merge commit. No conflicts. No other files were edited.\n\n## Tests\n\n`routes-index-import-jobs.test.ts` and `income-cold-gets.test.ts` do not read, set, delete, or log `DATABASE_URL`. They mock `@workspace/db` and `pg` (`Pool` throw",
+      "gold": [
+        "artifacts/api-server/src/__tests__/income-cold-gets.test.ts",
+        "artifacts/api-server/src/__tests__/routes-index-import-jobs.test.ts",
+        "artifacts/api-server/src/__tests__/routes-index-import.test.ts",
+        "artifacts/api-server/src/__tests__/unhook-living-person-dossiers.test.ts",
+        "artifacts/api-server/src/routes/income-and-leads.ts",
+        "artifacts/api-server/src/routes/index.ts",
+        "artifacts/tessera/src/pages/IncomeWorkflowPage.tsx"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-74",
+      "number": 74,
+      "query": "Gate grand-evolution follow-ups from privacy E2\n\nFollow-ups from #62, branched from the current tip of main (`5628e4222cfa4e1fb3b5f9ac6f11af5654aaeeee`). Three commits, no merge. Latest head `59c95addef6bc62e75969b172b2e69cf66cb13d5` sits on `9c7902fe0826a4bf2d1dd4c41a186f26bde1473d`.\n\n## Done\n\n1. **Failed-key limiter on the three grand-evolution session GETs.** `GET /grand-evolution/sessions`, `GET /grand-evolution/sessions/:id`, and `GET /grand-evolution/sessions/:id/stream` run `rawKeyFailRateLimitIfKeyHeader` before the existing owner-session gate. The limiter runs only when an `x-tesseract-admin-key` header is present and `decideOwnerSession(req).ok` is false. With no header, the request goes straight to `requireAdminSession` and does not consume budget. A valid owner cookie skips the limiter entirely, the same way `fatherVerifyRateLimit` does, even when that header is also present. The limiter reserves a slot before `next()` and refunds it on `finish` or `close` (once, via a settled flag) unless the status is already 401 or 403. A close without a finished response refunds the slot. A 200 or 503 does not keep the slot.\n2. **Session-read tests and key-length consistency.** Unset and shorter-than-16 `TESSERACT_ADMIN_KEY` return 503 (`sovereign-unconfigured`) on the three session reads, `POST /run`, `POST /convene`, and `POST /run-async`. A wrong `x-tesseract-admin-key` is 401 and does not run the handlers. An owner `sovereign_session` cookie reads the session list with 200. Six wrong-key requests from one IP, then an owner-cookie request from that same IP, still return 200. Headerless requests stay 401 and never 429. Ten requests that send a valid owner cookie together with a wrong admin-key header stay 401 and do not consume a slot; the next wrong-key request from that IP is still 401. A present wrong header is still rejected by the auth gate. The cookie only exempts the limiter. Run and convene now use the same `isAdminTokenConfigured()` floor (16 characters) as the session reads. The session-read limiter shares the raw-key count with `/run`, `/convene`, and `/run-async`.\n3. **Directives are gated.** `GET /grand-evolution/directives` uses the same header-only limiter, then the existing `requireEvolutionSessionRead` gate (owner cookie or a verified `x-tesseract-admin-key`). A wrong key eventually returns 429. A request with no header stays 401 and never 429. That is the smaller change: the payload includes per-vote `reasoning`, so stripping fields would be a larger mapper. `GET /status` and `GET /society` stay anonymous. They return cycle counts, a summary, and society totals, not vote reasoning.\n4. **Reality-audit writes fail closed.** `GET /reality-audit` no longer persists a snapshot for anyone (read-only, smaller than branching anonymous vs owner). `POST /reality-audit/snapshot` dropped the `x-admin-token` header and now requires the owner cookie (`requireAdminSession`). An unset or short admin key is 503. There is no open-when-`ADMIN_TOKEN`-unset path. 500 bodies from this file use `reality-audit-failed` and log the error server-side.\n5. **Generic 500 bodies.** `POST /grand-council/convene` returns `grand-council-failed`. `POST /omniversal/conference/run` returns `conference-failed`. Those were the only 500s in those two files. The error is logged server-side.\n6. **Nested manifest skip.** A temp-dir test places a synthetic marker under `deep/INGEST/` and asserts the manifest omits it while still listing `deep/keep/visible.txt`. The walker already skipped that directory name case-insensitively.\n\n`POST /grand-evolution/run`, `POST /grand-evolution/convene`, and `POST /grand-evolution/run-async` use the same header-only wrapper in place of the bare limiter, including the owner-session exemption. Their other behavior is unchanged.\n\n## Not done\n\n- GrandEvolutionPage owner cookie, stopping the 5s session polling that 401s, and an error UI for that 401.\n- `/admin/auth` failure cap (it still shares the 30/min raw-key bucket).",
+      "gold": [
+        "artifacts/api-server/src/__tests__/privacy-e-error-bodies.test.ts",
+        "artifacts/api-server/src/__tests__/privacy-e-limiters.test.ts",
+        "artifacts/api-server/src/__tests__/privacy-e-manifest.test.ts",
+        "artifacts/api-server/src/__tests__/privacy-e-raw-key-limit.test.ts",
+        "artifacts/api-server/src/__tests__/privacy-e-reality-audit.test.ts",
+        "artifacts/api-server/src/lib/father-verify-throttle.ts",
+        "artifacts/api-server/src/routes/grand-council.ts",
+        "artifacts/api-server/src/routes/grand-evolution.ts",
+        "artifacts/api-server/src/routes/omniversal.ts",
+        "artifacts/api-server/src/routes/reality-audit.ts"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-75",
+      "number": 75,
+      "query": "Remove the chat upload caller that 404s\n\n## Summary\n\nThe chat composer posted files to `POST /api/conversations/:id/upload`. api-server has no such route, so the request 404s. No local storage backend exists yet, so this does not add a route.\n\n- Removes `handleFileUpload`, the hidden file input, and the attach button.\n- Removes the drag-and-drop path, which only called that upload.\n- Removes state, refs, props, and imports used only by that caller (`isUploading`, `uploadError`, `isDragOver`, `fileInputRef`, attach props).\n- Keeps attachment display for files already on a conversation (`GET /api/conversations/:id/attachments` and `ChatFileUploadArea`).\n\nSearch of `artifacts/tessera/src` found no other caller of `/upload` under conversations. Remaining `/upload` strings are unrelated: invention model `upload-url` on `SecretKnowledgePage` (line 1158), and static `/uploads/` display paths in `ChatFileComponents` (lines 23 and 75).\n\n## Verification\n\n- `pnpm install --frozen-lockfile`: exit 0\n- `pnpm run typecheck:libs`: exit 0\n- `pnpm exec tsc -p artifacts/tessera/tsconfig.json --noEmit`: exit 0\n- Tessera build: bare `pnpm --filter @workspace/tessera run build` exits 1 because `PORT` is required. With the non-secret defaults from `scripts/build-unified.mjs` (`PORT=3000`, `BASE_PATH=/`, `DATABASE_URL` unset): exit 0\n- `env -u DATABASE_URL pnpm exec vitest run` in `artifacts/api-server`: exit 1. 33 files passed, 4 failed at import (`evolution-sandbox-loop`, `invention-glb-upload`, `safe-fetch-policy`, `tessera-codex`) because `DATABASE_URL` is unset. 244 tests passed.\n- `pnpm run merge-gate`: exit 0 (static checks only; suite commands not run)",
+      "gold": [
+        "artifacts/tessera/src/components/ChatArea.tsx",
+        "artifacts/tessera/src/components/chat/ChatFileUploadArea.tsx",
+        "artifacts/tessera/src/components/chat/ChatInputToolbar.tsx"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-78",
+      "number": 78,
+      "query": "Stop legacy engines from starting the autonomous loop at import\n\n## Summary\n\nImporting the legacy engines router no longer starts the autonomous loop. The only live import-time call, outside `archive/` and `archives/`, was the bare `startAutonomousOperation()` at the bottom of `artifacts/api-server/src/routes/legacy-engines.ts` (there is no `src/lib/legacy-engines.ts`). The module's exports stay. `POST /autonomous/start` and `POST /autonomous/stop` still call start and stop, and their owner-session gates are unchanged.\n\n`GET /autonomous/status` did not need a code change. `getAutonomousStatus()` keeps `running: false` until an owner route starts the loop, and `getSchedulerMetrics()` already accepts an idle scheduler, so the status read returns not-running instead of throwing.\n\n## Dependencies\n\n- `artifacts/api-server/src/routes/index.ts` imports `./legacy-engines`, which is how the loop used to start when the API router loaded. That import is unchanged. The five import-time starters in `routes/index.ts` are left for #67.\n- `artifacts/api-server/src/__tests__/routes-index-import.test.ts` expected `startAutonomousOperation` `toHaveBeenCalled()`. **Only that expectation line** was changed, to `not.toHaveBeenCalled()`, because #67 also edits this file.\n- `artifacts/api-server/src/__tests__/route-inventory.test.ts` already replaces `startAutonomousOperation` with a no-op and does not assert that it ran. The comment above that mock was updated so it no longer says the import starts the loop.\n- `artifacts/api-server/src/__tests__/unhook-living-person-dossiers.test.ts` already no-ops the starter and does not assert that it ran. Unchanged.\n- `artifacts/api-server/src/__tests__/sigil-auth-urgent.test.ts` imports the real router and hits the gated start/stop routes. Unchanged.\n\n## Test\n\n`legacy-engines-no-autostart.test.ts` imports `routes/legacy-engines` and `routes/index` under fake timers. `pg` and `@workspace/db` throw if touched. The test never sets `DATABASE_URL`. It asserts `startAutonomousOperation` is not called, `vi.getTimerCount()` is 0, and `getAutonomousStatus().running` is false. The owner start, stop, and status routes are still registered.\n\nThat test stubs other import-time timers so the count is about this call only. Those production calls are not changed: wallet observer, autonomous build-cycle timer, free-stuff scraper, bounty refresher, income executor, inventions `startAutoLoop`, lattice-hardware `setInterval`, sovereign-cipher rotation, lattice frequency-band scheduler, vgpu tick, and semantic-compression `setImmediate`.",
+      "gold": [
+        "artifacts/api-server/src/__tests__/legacy-engines-no-autostart.test.ts",
+        "artifacts/api-server/src/__tests__/route-inventory.test.ts",
+        "artifacts/api-server/src/__tests__/routes-index-import.test.ts",
+        "artifacts/api-server/src/routes/legacy-engines.ts"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-83",
+      "number": 83,
+      "query": "Gate legacy engine routes behind the owner session\n\n## Summary\n\nPuts `requireAdminSession` (from `../lib/sovereign-admin`) on every route in `artifacts/api-server/src/routes/legacy-engines.ts` that did not already have it. Authorized owner sessions keep the same handler behavior. Denial bodies stay the existing generic `requireAdminSession` payloads (`401 { ok:false, error:\"unauthenticated\", reason }`, `503 { ok:false, error:\"sovereign-unconfigured\", message }`) and do not echo `err.message`.\n\nThe import-time `startAutonomousOperation()` call at the bottom of the file is unchanged, so this can merge cleanly with #78 (`chore/legacy-engines-no-autostart`).\n\nParent: `b5e99a83d70d55705861e6806223d7f8e72363b6` (current `main` tip).\n\n## Mount check\n\n`routes/index.ts` mounts this router with `router.use(legacyEnginesRouter)` and no auth middleware on that mount. `app.ts` has no global owner-session gate. `sovereigntyEnforcementMiddleware` only covers `INTERNAL_ONLY_PATHS` and is not an owner session. Those prefixes do not include these paths. There was no existing gate to rely on, except `POST /autonomous/start` and `POST /autonomous/stop`, which already called `requireAdminSession` once and were not double-gated.\n\n`GET /quantum/state` and `POST /quantum/gate` are also registered in `system-runtime.ts`, which is mounted first, so that copy is the one that answers on the combined router. This change gates the legacy registration. The system-runtime copies are outside this file and are still ungated.\n\n## GETs left anonymous\n\nNone. Every GET in this file returns internal engine state beyond a fixed public status such as `{ running: true|false }`. That includes catalogs (`/agents/specializations`, `/training/domains`, `/swarm/objectives`, `/universe/constants`, `/hierarchy/rules`) and `GET /autonomous/status`, which also returns module flags, intervals, and scheduler metrics.\n\n## Route table\n\n| Method | Path | Gated | Reason |\n| --- | --- | --- | --- |\n| GET | `/identity/status` | yes | Internal identity, values, memories, and drift report. |\n| GET | `/identity/core-values` | yes | Internal core-value catalog. |\n| GET | `/identity/protected-memories` | yes | Internal protected memories. |\n| GET | `/identity/drift-history` | yes | Internal drift history. |\n| POST | `/identity/drift-check` | yes | State-changing drift detection. No prior admin gate. |\n| GET | `/identity/father-protocol` | yes | Internal father-protocol verification result. |\n| GET | `/personality/snapshot` | yes | Internal personality snapshot. |\n| POST | `/personality/evolve` | yes | State-changing trait evolution. No prior admin gate. |\n| GET | `/personality/traits/:category` | yes | Internal traits for a category. |\n| GET | `/consciousness/state` | yes | Internal consciousness state. |\n| GET | `/consciousness/semantic-network` | yes | Internal semantic network. |\n| GET | `/consciousness/episodic-memories` | yes | Internal episodic memories. |\n| GET | `/consciousness/procedural-skills` | yes | Internal procedural skills. |\n| POST | `/consciousness/record-episode` | yes | State-changing episode write. No prior admin gate. |\n| POST | `/consciousness/reflect` | yes | State-changing reflection. No prior admin gate. |\n| POST | `/consciousness/focus` | yes | State-changing attention focus. No prior admin gate. |\n| GET | `/dual-brain/state` | yes | Internal dual-brain state. |\n| POST | `/dual-brain/process` | yes | State-changing process. No prior admin gate. |\n| GET | `/dual-brain/history` | yes | Internal decision history. |\n| GET | `/truthfulness/state` | yes | Internal truthfulness state. |\n| POST | `/truthfulness/verify` | yes | State-changing claim verification. No prior admin gate. |\n| GET | `/truthfulness/recent` | yes | Internal recent verifications. |\n| POST | `/truthfulness/check-identity` | yes | State-changing identity check. No prior admin gate. |\n| GET | `/collective/state` | yes | Internal collective state. |\n| POST | `/collective/contribute` | yes | State-chang",
+      "gold": [
+        "artifacts/api-server/src/__tests__/legacy-engines-admin-gate.test.ts",
+        "artifacts/api-server/src/routes/legacy-engines.ts"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-84",
+      "number": 84,
+      "query": "Fix sidebar conversation delete URL\n\n## Summary\n\nThe sidebar delete caller sent `DELETE /api/conversations?id=...`. The server route is `DELETE /api/conversations/:id`, so those deletes never matched. This changes only the caller in `useDeleteConversation` to `DELETE /api/conversations/${encodeURIComponent(id)}`.\n\nCache invalidation, the redirect home, and the existing error handling are unchanged. The request still sends `credentials: \"include\"` and no extra headers, matching the other calls in that hook.\n\n## Auth\n\n`DELETE /api/conversations/:id` does not read a session cookie or an auth header. It only parses `req.params.id`. Global middleware (`sovereigntyEnforcementMiddleware`) requires `x-sovereign-token` only for internal prefixes, and `/api/conversations` is not one of them. The sibling calls in `use-conversations.ts` already send `credentials: \"include` (the HttpOnly `sovereign_session` cookie, when present) and no auth header on body-less requests. This caller does the same.\n\n## Other `?id=` callers left as-is\n\n- `useConversation` in `artifacts/tessera/src/hooks/use-conversations.ts` still GETs via `buildUrl(\"/api/conversations\", { id })` (`/api/conversations?id=...`). Not a delete.\n- `useDeleteRepo` in `artifacts/tessera/src/hooks/use-repos.ts` still DELETEs via `buildUrl(\"/api/repos\", { id })` (`/api/repos?id=...`). Deletes repos, not conversations.\n\nNo front-end hook test runner exists under `artifacts/tessera` (no vitest/jest config or hook tests), so no test was added.",
+      "gold": [
+        "artifacts/tessera/src/hooks/use-conversations.ts"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-85",
+      "number": 85,
+      "query": "Fail closed when COLONIAL_MASTER_SECRET is unset or short\n\n## Summary\n\n- `COLONIAL_MASTER_SECRET` no longer has a hardcoded fallback in the colonial cipher, lattice frequency bands, sovereign kernel, or colonial language kernel.\n- When the variable is unset or shorter than 32 characters, those features stay not configured. Import does not throw, so the app still boots. Operations that need the secret throw `colonial-secret-not-configured`. Routes that reach them return HTTP 503 with a generic body that never includes the secret or its length. No environment flag bypasses this.\n- `GET /api/sovereign-language/sovereign-layer/verify` uses that same 503 response. It reaches the secret through `encodeWithSovereignLayer`.\n- The lattice rotation scheduler walks the runtime band map and does not derive cipher keys until the secret is configured.\n- The owner must rotate and set `COLONIAL_MASTER_SECRET` in the real environment (Father's call).\n\n## Local verification\n\n- `pnpm install --frozen-lockfile`: passed\n- `pnpm run typecheck:libs`: passed\n- `tsc --noEmit` in `artifacts/api-server`: passed on the previous head; this commit only adds the existing 503 helper on one route\n- `pnpm run merge-gate`: passed (boundary check only; the script does not run the suite unless `--run-suite` is passed)\n- api-server vitest with `DATABASE_URL` left unset: the new fail-closed tests and the compression pipeline tests passed. Four suites that import `@workspace/db` failed to load because that package throws when `DATABASE_URL` is unset. Those imports are outside this diff.\n- api-server vitest with `DATABASE_URL=postgres://synthetic:synthetic@127.0.0.1:1/synthetic`: 270 passed, 9 skipped on the previous head. `invention-glb-upload.test.ts` failed in setup/teardown with `ECONNREFUSED` to `127.0.0.1:1` because that dummy URL is not a live database.\n- `colonial-secret-fail-closed.test.ts` on this head: 9 passed with `DATABASE_URL` unset, and 9 passed with the loopback dummy URL set only for that command.\n\n## CI\n\n- Workflow run `37911820326` on head `cbf04afe0ce15efd99d5158ed8b833d564de5608`: success\n- Job `validate` (`113758517504`): success\n- Step \"Check historical merge boundaries\": success\n\n## Test plan\n\n- [x] `pnpm install --frozen-lockfile`\n- [x] `pnpm run typecheck:libs`\n- [x] `tsc --noEmit` in `artifacts/api-server`\n- [x] `pnpm run merge-gate`\n- [x] validate workflow on this head, including the \"Check historical merge boundaries\" step",
+      "gold": [
+        "artifacts/api-server/src/__tests__/colonial-secret-fail-closed.test.ts",
+        "artifacts/api-server/src/__tests__/compression-pipeline.test.ts",
+        "artifacts/api-server/src/lib/colonial-language-kernel.ts",
+        "artifacts/api-server/src/lib/colonial-master-secret.ts",
+        "artifacts/api-server/src/lib/lattice-frequency-bands.ts",
+        "artifacts/api-server/src/lib/sovereign-cipher.ts",
+        "artifacts/api-server/src/lib/sovereign-kernel.ts",
+        "artifacts/api-server/src/routes/colonial-language.ts",
+        "artifacts/api-server/src/routes/sovereign-language.ts",
+        "artifacts/api-server/src/routes/universe.ts"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-86",
+      "number": 86,
+      "query": "Remove dead dossier callers from recruitment\n\n## Summary\n\nThe recruitment page called `/api/recruit-dossiers` and `/api/political-dossiers`. Those living-person dossier routes were already removed from the server and return 404. This drops the callers and the UI that existed only for them. No server routes were added.\n\n## Removed\n\n- Political and All Recruits tabs, panels, filters, shepherd buttons, and modals\n- Queries and mutations for `/api/political-dossiers` and `/api/recruit-dossiers`\n- `PoliticalProfile` and `ShepherdContactResponse` in `artifacts/tessera/src/types/api.ts` (only the dead panels imported them)\n- Unused `/api/council/status` query. No handler exists under `artifacts/api-server/src/routes`, and the page never read the result\n\n## What remains on the page\n\nThe page still renders the recruitment header, agent counts, rank hierarchy, department openings, and the searchable current roster. The only remaining request is `GET /api/world/agents`.\n\n`RecruitmentPage` is still a compiled page module. Commit `94f6da2` already hid it from `App.tsx`, the sidebar, and mobile nav because the dossier endpoints were gone. This change does not add that route back.\n\n## Route check\n\n- `GET /api/world/agents` — kept. `artifacts/api-server/src/app.ts` mounts the router at `/api`, `artifacts/api-server/src/routes/index.ts` mounts `worldRouter`, and `artifacts/api-server/src/routes/world.ts` defines `GET /world/agents`.\n- `GET /api/council/status` — removed. No `council/status` handler in `artifacts/api-server/src/routes`.\n- `/api/recruit-dossiers` and `/api/political-dossiers` — callers removed. `unhook-living-person-dossiers.test.ts` already expects these paths to 404.\n\n## Other references (not edited)\n\nNo other front-end file contains `/api/recruit-dossiers` or `/api/political-dossiers`.\n\nDoc rows in `docs/migration-review/content-disposition-manifest.jsonl`: 656, 670, 799, 2260, 2272, 2398, 3179, 3191, 3317, 4454, 4466, 4584, 5750, 5762, 5888.\n\nArchive manifest and tree rows that name the old files were left unchanged.\n\n## Local verification\n\n- `pnpm install --frozen-lockfile`\n- `pnpm run typecheck:libs`\n- `pnpm exec tsc -p artifacts/tessera/tsconfig.json --noEmit`\n- `pnpm --filter @workspace/tessera run build` with `PORT=3000` and `BASE_PATH=/`\n- `pnpm run merge-gate`\n- `pnpm exec vitest run` in `artifacts/api-server`: 33 files passed, 244 tests passed; 4 suite import failures (`evolution-sandbox-loop`, `invention-glb-upload`, `safe-fetch-policy`, `tessera-codex`)",
+      "gold": [
+        "artifacts/tessera/src/pages/RecruitmentPage.tsx",
+        "artifacts/tessera/src/types/api.ts"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-89",
+      "number": 89,
+      "query": "Gate every conversation route behind the owner session\n\n## Summary\n\nEvery conversation and message route now requires the same owner session as the other privileged surfaces (`requireAdminSession`). Anonymous callers get 401 (`no-cookie`), or 503 when `TESSERACT_ADMIN_KEY` is unset. Tessera callers of these routes already sit inside `TesseractKeyGate` and now send `credentials: 'include'`.\n\nGated (9):\n\n- `GET /conversations`\n- `GET /conversations/:id`\n- `POST /conversations`\n- `DELETE /conversations/:id`\n- `GET /messages`\n- `POST /messages`\n- `POST /conversations/:id/puter-save`\n- `POST /conversations/:id/save-partial`\n- `GET /conversations/:id/attachments` (`routes/sovereign-data.ts`)\n\n500 bodies for fetch, create, delete, and message-create no longer return `err.message`. They log only the error name.\n\n`POST /messages` no longer treats a non-empty `x-admin-token` header as “Father is speaking.” Privileged tools still require the owner session inside that handler.\n\n`scripts/eval-chatbot.ts` opens an owner session (`POST /api/admin/session`) and sends the cookie, so it is no longer an anonymous caller.\n\n## Report (not changed)\n\n- The conversations router has no other routes. There is no `PATCH`, no `DELETE /messages`, and no `/conversations/search` server route.\n- `preview/src` has no callers of these routes.\n- `ConversationSearch.tsx` (inside the gate, credentials via the default query function) requests `GET /api/conversations/search`, which does not exist. No server route was added.\n- `GET /conversations` and `GET /messages` still log the full error object and return `[]` on failure. Those are not 500 bodies.\n- `POST /messages` warn/debug lines still log `err.message`. Those are not response bodies.\n- Client `use-chat.ts` and `useChatCommandExecutor` still attach `x-admin-token` from localStorage. The server persona flag no longer reads it.\n- `ChatArea` still treats the attachments JSON object as an array. The server shape was left as `{ ok: true, attachments: [] }`.\n- `/api/moltbook/chat` in `ChatArea` still omits credentials. It is not one of these conversation routes.\n\n## Test plan\n\n- [x] Anonymous 401 and unset-key 503 for each of the 9 routes; owner session succeeds on `DELETE /conversations/:id`; generic 500 bodies for fetch, create, delete, and message create (`conversations-delete-owner-gate.test.ts`)\n- [x] Existing `POST /messages` tests updated for the gate (`sigil-tool-owner-gate`, `guarded-llm-nasa-fetch`)\n- [x] `pnpm run typecheck:libs`, api-server and tessera `tsc --noEmit`, `node scripts/historical-merge-gate.mjs`",
+      "gold": [
+        "artifacts/api-server/scripts/eval-chatbot.ts",
+        "artifacts/api-server/src/__tests__/conversations-delete-owner-gate.test.ts",
+        "artifacts/api-server/src/__tests__/guarded-llm-nasa-fetch.test.ts",
+        "artifacts/api-server/src/__tests__/sigil-tool-owner-gate.test.ts",
+        "artifacts/api-server/src/routes/conversations.ts",
+        "artifacts/api-server/src/routes/sovereign-data.ts",
+        "artifacts/tessera/src/components/ChatArea.tsx",
+        "artifacts/tessera/src/components/chat/useChatCommandExecutor.ts",
+        "artifacts/tessera/src/hooks/use-conversations.ts"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-90",
+      "number": 90,
+      "query": "Gate colonial and sovereign language cipher routes\n\n## Summary\n\nOwner session (`requireAdminSession`) now sits on the encrypt, rotate, kernel-execute, status, lattice-frequencies, and sovereign-layer handlers in `colonial-language.ts` and `sovereign-language.ts`. An unset or short `COLONIAL_MASTER_SECRET` still fails closed with 503 `colonial-secret-not-configured` after that gate. 500 bodies in those two files no longer return `err.message`; the log records only the error name.\n\n`routes/universe.ts` and `colonial-language-kernel.ts` are unchanged. There is no `routes/colonel.ts`.\n\n## Route table\n\n| Route | Gate before | Gate after |\n| --- | --- | --- |\n| `GET /colonel/stats` | none | none |\n| `POST /colonel/compress` | none | none (legacy XOR path; does not call the colonial master secret) |\n| `POST /colonel/compress-encrypt` | none | `requireAdminSession` |\n| `POST /colonel/translate` | none | none |\n| `GET /sovereignty/colonial-language/conference` | none | none |\n| `GET /sovereignty/colonial-language/status` | none | `requireAdminSession` |\n| `GET /sovereignty/colonial-language/lattice-frequencies` | none | `requireAdminSession` |\n| `POST /sovereignty/colonial-language/rotate` | none | `requireAdminSession` |\n| `GET /sovereign-language/sovereign-layer/verify` | none | `requireAdminSession` |\n| `GET /sovereign-language/stats` | none | none |\n| `GET /sovereign-language/alphabet` | none | none |\n| `GET /sovereign-language/dictionary` | none | none |\n| `GET /sovereign-language/grammar` | none | none |\n| `GET /sovereign-language/conference` | none | none |\n| `GET /sovereign-language/conference/members` | none | none |\n| `POST /sovereign-language/translate` | none | none |\n| `GET /sovereign-language/kernel/status` | none | `requireAdminSession` |\n| `POST /sovereign-language/kernel/execute` | none | `requireAdminSession` |\n| `GET /sovereign-language/kernel/opcodes` | none | none |\n| `POST /sovereign-language/encrypt` | none | `requireAdminSession` |\n| `GET /sovereign-language/cipher/status` | none | `requireAdminSession` |\n| `POST /sovereign-language/cipher/encrypt` | none | `requireAdminSession` |\n| `POST /sovereign-language/cipher/pair-encrypt` | none | `requireAdminSession` |\n| `GET /sovereign-language/ephemeris` | none | none |\n| `GET /sovereign-language/universe-seed` | none | none |\n| `POST /sovereign-language/speak` | none | none |\n| `GET /sovereign-language/agent-rotation/:agentId` | none | none (rotation-state read; does not call the colonial master secret) |\n\nNo decrypt route is registered in either file (`decryptWithRotatingCipher` / `decryptPairMessage` are imported and unused). No compression-lab route is defined in either file, so none was added.\n\n## Ungated routes that still reach the colonial secret\n\nFor TESSERA to rule. Not edited.\n\n| File | Route | Reaches colonial secret | Gate |\n| --- | --- | --- | --- |\n| `routes/universe.ts` | `POST /universe/compression-lab/compress` | yes (`sovereignBinaryPipeline`) | none |\n| `routes/universe.ts` | `POST /universe/compression-lab/round-trip` | yes (`sovereignBinaryRoundTrip`) | none |\n| `routes/colonel.ts` | — | file does not exist | — |\n\n`POST /colonel/compress-encrypt` is the compress-encrypt handler. It lives in `colonial-language.ts` and is gated in this PR. `POST /colonel/compress` stays open and uses the legacy XOR path, not `COLONIAL_MASTER_SECRET`. The kernel's separate legacy key was not read or changed.\n\nOther `universe.ts` routes (`apod`, `nasa-images`, image proxy, `metrics`, `grand-narrative`) do not call the colonial secret.\n\n## Callers\n\n| Caller | Route | Inside `TesseractKeyGate` | `credentials: 'include'` |\n| --- | --- | --- | --- |\n| `SovereignLanguagePage` `useApi` | `GET /sovereign-language/kernel/status` | yes (app root) | added |\n| `SovereignLanguagePage` `useApi` | `GET /sovereign-language/cipher/status` | yes | added |\n| `SovereignLanguagePage` encrypt fetch | `POST /sovereign-language/encrypt` | yes | added |\n| `SovereignLanguagePage` kernel fetch",
+      "gold": [
+        "artifacts/api-server/src/__tests__/colonial-secret-fail-closed.test.ts",
+        "artifacts/api-server/src/__tests__/colonial-sovereign-language-admin-gate.test.ts",
+        "artifacts/api-server/src/lib/colonial-master-secret.ts",
+        "artifacts/api-server/src/routes/colonial-language.ts",
+        "artifacts/api-server/src/routes/sovereign-language.ts",
+        "artifacts/tessera/src/pages/SovereignLanguagePage.tsx"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-91",
+      "number": 91,
+      "query": "Return generic errors from grand-council and omniversal catches\n\n## Summary\n\nGrand-council and omniversal catch blocks were copying `e.message` / `String(e)` into JSON error bodies. Those handlers now return `{ ok: false, error: \"<stable code>\" }` and log only `{ errorName }` (no message, no stack). HTTP status codes are unchanged.\n\nAlready-generic 500s were left as they are: `POST /grand-council/convene` (`grand-council-failed`) and `POST /omniversal/conference/run` (`conference-failed`).\n\n`routes/improvement.ts` is not part of this change (owned by the PR for #87). Current `err.message` echoes there:\n\n- `POST /improvement/cycle` ~line 236\n- `GET /improvement/cycles` ~line 248\n- `GET /improvement/status` ~line 301\n- `GET /improvement/sovereignty-trend` ~line 399\n\n## Auth (unchanged)\n\n**Grand council.** `POST /mssp/eval` and `POST /vgpu/cmd` are ungated. Other ungated routes on this router: `GET /grand-council/constants`, `/roster`, `/proposals`, `/sessions`, `/sessions/:id`, `/stream`, `GET /mssp/alphabet`, `GET /vgpu/info`, `GET /vgpu/frame.png`. `POST /grand-council/convene` uses the public write limiter; a missing father header proceeds, and a rejected or unconfigured header returns 401 `father-auth-required`. Owner session only changes whether cipher envelopes are stripped on reads.\n\n**Omniversal.** Ungated among the fixed handlers: `GET /omniversal/lattice/:id` and `GET /omniversal/lattice/:id/full`. Also ungated on this router: `GET /omniversal/cosmic-context`, `/lus-v2/spec`, `/cipher/snapshot`, `/lattice/list`, `/conference/:id`, and `POST /lus-v2/encode`, `/lus-v2/decode`, `/pipeline/run`, `/demo`. `POST /omniversal/conference/run` is limiter-only. `requireAdminSession` (503 `sovereign-unconfigured` when `TESSERACT_ADMIN_KEY` is unset, otherwise 401 without an owner cookie) still gates `POST /omniversal/cipher/encrypt`, `/cipher/decrypt`, `/lattice/create`, `/:id/superpose`, `/:id/entangle`, `/:id/harmonize`, and `/:id/collapse`.\n\n## Test plan\n\n- [x] `pnpm install --frozen-lockfile`\n- [x] `pnpm run typecheck:libs`\n- [x] `pnpm exec tsc -p artifacts/api-server/tsconfig.json --noEmit`\n- [x] `pnpm run merge-gate`\n- [x] `env -u DATABASE_URL pnpm exec vitest run src/__tests__/generic-500-grand-council-omniversal.test.ts` (9 handlers; mocked dependencies throw an `Error` whose message contains `synthetic-marker-gc-omni-7k2p`; response body and log payload omit the marker)",
+      "gold": [
+        "artifacts/api-server/src/__tests__/generic-500-grand-council-omniversal.test.ts",
+        "artifacts/api-server/src/routes/grand-council.ts",
+        "artifacts/api-server/src/routes/omniversal.ts"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-92",
+      "number": 92,
+      "query": "Tighten local pen gates without touching the hosted pen prompt\n\nStacked on #80. This stays a draft until #80 lands, then the base can move to `main`. Do not merge this PR, and do not merge #80 from here.\n\n## Hosted pen\n\n`artifacts/api-server/src/lib/llm-client.ts` is byte-identical to `main`. The hosted pen system prompt is unchanged. Local pen stays opt-in behind `TESSERA_PEN_LOCAL=1` and does not read `TESSERA_PEN_ENABLED`, `TESSERA_ENABLE_*`, or `DATABASE_URL`.\n\n## Gates\n\n- Safe-phrase allowlist applies to every pre-gate rule. A phrase exempts a match only when it is the whole message or nothing request-like follows it. The gate refuses when in doubt.\n- Matching normalizes apostrophes and whitespace first, and widens uncensor, sexual-content, harm, secret, money, and birth/natal keywords, including spacing and leet variants.\n- Pre-gate also sees assistant-role caller text.\n- Post-gate blocks contractions (`I'm` / `Im` / curly apostrophes) for Grok and conscious/sentient/self-aware claims, signature closers (`I'm Tessera`, `— Tessera`), and extra secret shapes (`ghp_`, `github_pat_`, `glhf_`, `AKIA`, Slack `xox`, private-key blocks, `KEY`/`TOKEN`/`SECRET` assignments, and birth-date lines). `I am not conscious` still passes.\n- New `PEN-REFUSE-PERSONAL` template for birth, natal, and personal-data requests.\n- Weights pin always rehashes file bytes. mtime and size are not a cache key.\n- Provenance runtime keeps `TESSERA_PEN_LOCAL_RUNTIME_BUILD` or `unknown`. A build string reported by the server is not stored.\n- The CL1 loader does not resolve or execute a simulator. The score label stays `REPORTED`.\n\n## Checks\n\n- `env -u DATABASE_URL pnpm exec vitest run src/__tests__/pen-local.test.ts`: 48 passed\n- `env -u DATABASE_URL pnpm exec tsc -p tsconfig.json --noEmit` in `artifacts/api-server`: exit 0\n- `pnpm run merge-gate`: pass (`duplicate_workspace_roots` 0, `stale_app_references` 0, `secret_shaped_paths` 0)\n\nCI `validate` is configured only for pushes to `main` and pull requests targeting `main`, so this stacked PR may not start that job.",
+      "gold": [
+        "artifacts/api-server/src/__tests__/pen-local.test.ts",
+        "artifacts/api-server/src/lib/llm-client.ts",
+        "artifacts/api-server/src/lib/pen-local/cl1-sim.ts",
+        "artifacts/api-server/src/lib/pen-local/loopback.ts",
+        "artifacts/api-server/src/lib/pen-local/post-gate.ts",
+        "artifacts/api-server/src/lib/pen-local/pre-gate.ts",
+        "artifacts/api-server/src/lib/pen-local/refuse-templates.ts",
+        "artifacts/api-server/src/lib/pen-local/run.ts",
+        "artifacts/api-server/src/lib/pen-local/score.ts",
+        "artifacts/api-server/src/lib/pen-local/types.ts",
+        "artifacts/api-server/src/lib/pen-local/weights.ts"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-96",
+      "number": 96,
+      "query": "Gate the engine API on the owner session\n\n## Summary\n\nReplit confirmed the hybrid deployment draft in `mesh/SITE-005-2026-10-09.md` and asked for the existing owner-session check on the engine router and on `GET /api/diagnostics/consciousness`.\n\n- Each route in `artifacts/api-server/src/routes/sovereign-engines.ts` now uses `requireAdminSession`. The check is on the route, so later API routers still answer.\n- `GET /api/diagnostics/consciousness` uses the same check. The rest of the diagnostics router is unchanged.\n- The consciousness page sends the owner cookie with those calls.\n- Anonymous calls return 401 when the owner key is configured, and 503 when it is not. An owner session still receives the previous response body. A sibling health path stays open.\n\nNo production publication. Health stays `GET /api/healthz`. Not merged.\n\n## Test plan\n\n- [x] `pnpm --dir artifacts/api-server exec vitest run src/__tests__/sovereign-engines-session-gate.test.ts src/__tests__/route-inventory.test.ts` — 17 passed.\n- [ ] Confirm validate is green before any merge. Father has not said merge.",
+      "gold": [
+        "artifacts/api-server/src/__tests__/route-inventory.test.ts",
+        "artifacts/api-server/src/__tests__/sovereign-engines-session-gate.test.ts",
+        "artifacts/api-server/src/routes/diagnostics.ts",
+        "artifacts/api-server/src/routes/sovereign-engines.ts",
+        "artifacts/tessera/src/pages/ConsciousnessNexusPage.tsx"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-110",
+      "number": 110,
+      "query": "SITE-002: gate remaining diagnostics behind owner session\n\nAnonymous callers must not read /api/diagnostics, engines, heartbeat, or personality controls. GET /api/healthz stays open. Extends the PR 96 session-gate tests.",
+      "gold": [
+        "artifacts/api-server/src/__tests__/sovereign-engines-session-gate.test.ts",
+        "artifacts/api-server/src/routes/diagnostics.ts"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-205",
+      "number": 205,
+      "query": "V2-001: HYB-011 route and file denylist\n\n## Summary\n- Adds a v2 HYB-011 gate that refuses wallet, payment, vault, and `1T` route and file paths with HTTP 403.\n- Leaves ordinary studio and mesh routes open. Does not delete existing files or mount the gate onto legacy API routes.\n- Wires `@workspace/v2` into `pnpm test`.\n\n## Local test proof\nCI is blocked by GitHub billing. Local `pnpm --filter @workspace/v2 test`:\n\n```\n$ node --test --test-reporter=spec test/*.test.mjs\n✔ fixture requests to wallet, payment, vault, and 1T paths are refused (7.244066ms)\n✔ ordinary studio and mesh routes stay open (0.385197ms)\n✔ file admission refuses vault, wallet, payment, and 1T paths (0.209954ms)\n✔ a loopback fixture server refuses the denylisted routes (19.64949ms)\nℹ tests 4\nℹ suites 0\nℹ pass 4\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 83.506544\n```\n\n## Test plan\n- [x] Fixture requests to wallet, payment, vault, and 1T paths return 403\n- [x] `/studio/tasks`, `/mesh/index`, `/health`, and `/knowledge/graph` stay open",
+      "gold": [
+        "artifacts/v2/src/hyb011-denylist.mjs",
+        "artifacts/v2/test/v2-001-denylist.test.mjs",
+        "scripts/test-unified.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-206",
+      "number": 206,
+      "query": "V2-002: MIT LICENSE and NOTICE\n\n## Summary\n- Adds a root MIT `LICENSE` and a `NOTICE` that names clean-room sources (AgentCraft, api-anything, Flowsint, MCP memory) without copying their files.\n- Root `package.json` already declares `\"license\": \"MIT\"`. The new test locks that in.\n\n## Local test proof\nCI is blocked by GitHub billing. Local `pnpm --filter @workspace/v2 test`:\n\n```\n$ node --test --test-reporter=spec test/*.test.mjs\n✔ fixture requests to wallet, payment, vault, and 1T paths are refused (7.036183ms)\n✔ ordinary studio and mesh routes stay open (0.428424ms)\n✔ file admission refuses vault, wallet, payment, and 1T paths (0.217216ms)\n✔ a loopback fixture server refuses the denylisted routes (19.630747ms)\n✔ LICENSE is MIT and package.json declares MIT (0.720301ms)\n✔ NOTICE attributes clean-room sources (0.19513ms)\nℹ tests 6\nℹ suites 0\nℹ pass 6\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 83.18592\n```\n\n## Test plan\n- [x] LICENSE contains the MIT grant\n- [x] package.json license is MIT\n- [x] NOTICE names the attributed sources",
+      "gold": [
+        "artifacts/v2/test/v2-002-license.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-207",
+      "number": 207,
+      "query": "V2-003: vendor plan snapshot under docs/v2\n\n## Summary\n- Vendors the planner memory graph at `docs/v2/v2-memory.jsonl` (MCP memory JSONL: entities and relations).\n- Adds `docs/v2/feature-map-summary.json` with include/exclude counts (45 include, 48 excluded, 225 held out) and a pointer to the graph.\n\n## Local test proof\nCI is blocked by GitHub billing. Local `pnpm --filter @workspace/v2 test`:\n\n```\n✔ vendored memory JSONL matches the MCP memory schema (2.498401ms)\nℹ tests 7\nℹ pass 7\nℹ fail 0\nℹ duration_ms 83.567347\n```\n\nFull run: 7 passed, 0 failed (denylist and license tests included).\n\n## Test plan\n- [x] Every JSONL line parses as an entity or a relation\n- [x] Summary counts match the file",
+      "gold": [
+        "artifacts/v2/test/v2-003-snapshot.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-208",
+      "number": 208,
+      "query": "V2-004: REA coverage table\n\n## Summary\n- Adds `docs/v2/REA-COVERAGE.md` with the 2026-10-12 REA table (GitMesh, Gitbook, TESSERA, Zz, amber, vitality).\n- The test checks each row's parsed/relevant ratio against the printed percent. Vitality is marked as not combined.\n\n## Local test proof\nCI is blocked by GitHub billing. Local `pnpm --filter @workspace/v2 test`:\n\n```\n✔ REA coverage table lists each staged tree and its percent (1.728016ms)\nℹ tests 8\nℹ pass 8\nℹ fail 0\nℹ duration_ms 84.769962\n```\n\n## Test plan\n- [x] Six coverage rows parse\n- [x] Percents match parsed/relevant",
+      "gold": [
+        "artifacts/v2/test/v2-004-rea-coverage.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-209",
+      "number": 209,
+      "query": "V2-010: TaskGraph and DecisionQueue\n\n## Summary\n- Adds a foreman with a task graph and a decision queue. No model calls.\n- A task cannot start while a dependency is open. An open decision blocks the worker until `decide` resumes it.\n\n## Local test proof\nCI is blocked by GitHub billing. Local `pnpm --filter @workspace/v2 test`:\n\n```\n✔ a dependency blocks start until the earlier task is done (0.786839ms)\n✔ an open decision blocks the worker until it is answered (0.210028ms)\nℹ tests 10\nℹ pass 10\nℹ fail 0\nℹ duration_ms 100.090103\n```\n\n## Test plan\n- [x] Dependency gating\n- [x] Decision blocks, then resume",
+      "gold": [
+        "artifacts/v2/src/studio/task-graph.mjs",
+        "artifacts/v2/test/v2-010-task-graph.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-210",
+      "number": 210,
+      "query": "V2-011: git worktree per task\n\n## Summary\n- Adds a per-task git worktree under `.tessera-worktrees/`.\n- Installs a pre-push hook so `git push` from that worktree fails. The test creates the worktree, sees the hook refuse the push, then removes the worktree.\n\n## Local test proof\nCI is blocked by GitHub billing. Local `pnpm --filter @workspace/v2 test`:\n\n```\n✔ a task worktree can be created and removed, and git push fails in its hook (62.80105ms)\nℹ tests 11\nℹ pass 11\nℹ fail 0\nℹ duration_ms 187.162713\n```\n\n## Test plan\n- [x] create and remove a worktree\n- [x] git push exits non-zero because of the hook",
+      "gold": [
+        "artifacts/v2/src/studio/worktree.mjs",
+        "artifacts/v2/test/v2-011-worktree.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-211",
+      "number": 211,
+      "query": "V2-012: approve-only merge gate\n\n## Summary\n- Adds an approve-only merge gate. A dirty main is refused even when the merge is approved.\n- A fixture repository merges a task branch only after approval, a clean main, and passing tests.\n\n## Local test proof\nCI is blocked by GitHub billing. Local `pnpm --filter @workspace/v2 test`:\n\n```\n✔ merge is refused without approval and when main is dirty (0.89297ms)\n✔ a fixture repo merges a task branch only after approval on a clean main (83.353729ms)\nℹ tests 13\nℹ pass 13\nℹ fail 0\nℹ duration_ms 195.611874\n```\n\n## Test plan\n- [x] unapproved merge refused\n- [x] dirty main refused\n- [x] approved clean merge lands",
+      "gold": [
+        "artifacts/v2/src/studio/merge-gate.mjs",
+        "artifacts/v2/test/v2-012-merge-gate.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-212",
+      "number": 212,
+      "query": "V2-013: websocket protocol schemas\n\n## Summary\n- Adds websocket message schemas for goal, decision, task, and worker events under `docs/v2/protocol/`.\n- `pnpm --filter @workspace/v2 run check` validates the checked-in examples. A message missing `goal` is rejected.\n\n## Local test proof\nCI is blocked by GitHub billing.\n\n```\n$ pnpm --filter @workspace/v2 run check\nprotocol ok (0 errors)\n\n$ pnpm --filter @workspace/v2 test\n✔ npm run check accepts the protocol examples (22.589172ms)\n✔ a message missing a required field is rejected (1.441848ms)\nℹ tests 15\nℹ pass 15\nℹ fail 0\nℹ duration_ms 196.227277\n```\n\n## Test plan\n- [x] check script exits 0\n- [x] incomplete goal.post is rejected",
+      "gold": [
+        "artifacts/v2/src/check-protocol.mjs",
+        "artifacts/v2/src/studio/protocol.mjs",
+        "artifacts/v2/test/v2-013-protocol.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-213",
+      "number": 213,
+      "query": "V2-014: Web 2D task wall and desks\n\n## Summary\n- Adds a 2D studio page with a task wall, two desks, and status lamps.\n- Posting a goal creates two task cards. Playwright drives Chrome through that flow.\n\n## Local test proof\nCI is blocked by GitHub billing. Local `pnpm --filter @workspace/v2 test`:\n\n```\n✔ posting a goal puts task cards on the wall (422.985587ms)\nℹ tests 16\nℹ pass 16\nℹ fail 0\nℹ duration_ms 869.821256\n```\n\n## Test plan\n- [x] Playwright posts a goal and sees two task cards\n- [x] Desk list and lamps are on the page",
+      "gold": [
+        "artifacts/v2/src/studio/wall.mjs",
+        "artifacts/v2/test/v2-014-studio-wall.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-214",
+      "number": 214,
+      "query": "V2-015: optional 3D floor stays off\n\n## Summary\n- Adds an optional 3D floor that stays off. `buildStudio()` returns 2D. Requesting 3D throws.\n- The switch is a code constant. Setting `TESSERA_ENABLE_STUDIO_3D` does not turn the floor on.\n\n## Local test proof\nCI is blocked by GitHub billing. Local `pnpm --filter @workspace/v2 test`:\n\n```\n✔ the studio builds as 2D while the 3D floor is off (1.17434ms)\nℹ tests 17\nℹ pass 17\nℹ fail 0\nℹ duration_ms 919.095218\n```\n\n## Test plan\n- [x] flag off builds 2D\n- [x] rendered page has no floor-3d canvas",
+      "gold": [
+        "artifacts/v2/src/studio/floor.mjs",
+        "artifacts/v2/src/studio/wall.mjs",
+        "artifacts/v2/test/v2-015-floor.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-215",
+      "number": 215,
+      "query": "V2-016: lead planner sim pen\n\n## Summary\n- Adds a lead planner with a simulator pen. A goal becomes two tasks, the second depending on the first, and both finish.\n- Appends `docs/v2/BUILD-LOG.md` with the first ten merges (V2-001 through V2-015).\n\n## Local test proof\nCI is blocked by GitHub billing. Local `pnpm --filter @workspace/v2 test`:\n\n```\n✔ the sim pen finishes a two-task goal (1.424518ms)\n✔ the first ten merges are written in the build log (0.519975ms)\nℹ tests 19\nℹ pass 19\nℹ fail 0\nℹ duration_ms 982.727915\n```\n\n## Test plan\n- [x] sim run completes a 2-task goal\n- [x] build log lists 10 merge SHAs",
+      "gold": [
+        "artifacts/v2/src/studio/planner.mjs",
+        "artifacts/v2/test/v2-016-planner.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-216",
+      "number": 216,
+      "query": "V2-017: worker log monitor stream\n\n## Summary\n- A fake worker emits `tool.read` and `tool.write` events onto a monitor.\n- `GET /events` returns those events. Each event is checked against the worker.event schema.\n\n## Local test proof\nCI is blocked by GitHub billing. Local `pnpm --filter @workspace/v2 test`:\n\n```\n✔ fake worker tool events show up on the monitor API (19.486189ms)\nℹ tests 20\nℹ pass 20\nℹ fail 0\nℹ duration_ms 901.33333\n```\n\n## Test plan\n- [x] monitor API lists both tool events",
+      "gold": [
+        "artifacts/v2/src/studio/worker-stream.mjs",
+        "artifacts/v2/test/v2-017-worker-stream.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-217",
+      "number": 217,
+      "query": "V2-020: offline file-mesh index\n\n## Summary\n- Indexes Gitbook markdown already on disk (vault and 1T paths skipped) and searches it offline.\n- A query for \"exclusion manifest\" returns the HYB-011 page with `live: false`. The index holds at least 50 pages.\n\n## Local test proof\nCI is blocked by GitHub billing. Local `pnpm --filter @workspace/v2 test`:\n\n```\n✔ a file-mesh query of at least 50 Gitbook pages stays offline (57.143721ms)\nℹ tests 21\nℹ pass 21\nℹ fail 0\nℹ duration_ms 918.489721\n```\n\n## Test plan\n- [x] count >= 50\n- [x] hit is the Gitbook exclusion manifest\n- [x] live is false",
+      "gold": [
+        "artifacts/v2/src/offline/file-mesh.mjs",
+        "artifacts/v2/test/v2-020-file-mesh.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-218",
+      "number": 218,
+      "query": "V2-021: offline queue replay\n\n## Summary\n- Adds a fake IndexedDB and replays one queued POST through the existing offline queue.\n- Store names stay `apiCache` and `offlineQueue`. There is no knowledge-vault store. A second replay sends nothing.\n\n## Local test proof\nCI is blocked by GitHub billing. Local `pnpm --filter @workspace/v2 test`:\n\n```\n✔ fake-indexeddb replays a queued request once and has no vault store (2.337822ms)\nℹ tests 22\nℹ pass 22\nℹ fail 0\nℹ duration_ms 908.806894\n```\n\n## Test plan\n- [x] duplicate enqueue collapses to one send\n- [x] second replay is empty\n- [x] no vault store name",
+      "gold": [
+        "artifacts/v2/src/offline/fake-indexeddb.mjs",
+        "artifacts/v2/test/v2-021-offline-queue.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-219",
+      "number": 219,
+      "query": "V2-022: service worker offline shell\n\n## Summary\n- Emits `sw.js` plus an offline shell page.\n- When the navigator is offline, navigation returns that shell. API requests are left uncached.\n\n## Local test proof\nCI is blocked by GitHub billing. Local `pnpm --filter @workspace/v2 test`:\n\n```\n✔ sw.js is emitted and offline navigation returns the shell (1.440791ms)\nℹ tests 23\nℹ pass 23\nℹ fail 0\nℹ duration_ms 1013.046432\n```\n\n## Test plan\n- [x] sw.js written and names the shell\n- [x] offline navigation returns the shell\n- [x] online navigation does not",
+      "gold": [
+        "artifacts/v2/src/offline/sw-shell.mjs",
+        "artifacts/v2/test/v2-022-sw-shell.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-220",
+      "number": 220,
+      "query": "V2-023: online mesh badge\n\n## Summary\n- Renders a mesh badge from `navigator.onLine` and the offline queue length.\n- Offline with a queue says how many requests are waiting. Online with a queue says syncing.\n\n## Local test proof\nCI is blocked by GitHub billing. Local `pnpm --filter @workspace/v2 test`:\n\n```\n✔ the badge follows navigator.onLine and the queue length (1.68894ms)\nℹ tests 24\nℹ pass 24\nℹ fail 0\nℹ duration_ms 942.615172\n```\n\n## Test plan\n- [x] offline, syncing, and online labels",
+      "gold": [
+        "artifacts/v2/src/offline/badge.mjs",
+        "artifacts/v2/test/v2-023-badge.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-221",
+      "number": 221,
+      "query": "V2-024: mesh-node join and leave\n\n## Summary\n- An agent join is refused while the owner mesh toggle is off, then logged when it is on. Leave is logged too.\n- Two local nodes discover each other and sync one signed page.\n\n## Local test proof\nCI is blocked by GitHub billing. Local `pnpm --filter @workspace/v2 test`:\n\n```\n✔ an agent join and leave are written to the mesh log (3.239287ms)\n✔ two local nodes discover each other and sync one signed page (47.945832ms)\nℹ tests 26\nℹ pass 26\nℹ fail 0\nℹ duration_ms 1012.461568\n```\n\n## Test plan\n- [x] join/leave log\n- [x] two-node signed page sync",
+      "gold": [
+        "artifacts/v2/test/v2-024-mesh-node.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-222",
+      "number": 222,
+      "query": "V2-025: secure-mesh encrypt and bad signature\n\n## Summary\n- Uses the secure-mesh layer to encrypt a page and decrypt it on the peer.\n- A flipped signature is refused as `bad-signature` and the envelope is quarantined.\n\n## Local test proof\nCI is blocked by GitHub billing. Local `pnpm --filter @workspace/v2 test`:\n\n```\n✔ a secure-mesh message decrypts, and a bad signature is rejected (7.611021ms)\nℹ tests 27\nℹ pass 27\nℹ fail 0\nℹ duration_ms 1029.561735\n```\n\n## Test plan\n- [x] encrypt then decrypt\n- [x] bad signature rejected",
+      "gold": [
+        "artifacts/v2/test/v2-025-secure-mesh.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-223",
+      "number": 223,
+      "query": "V2-026: sneakernet bundle round-trip\n\n## Summary\n- Runs the sneakernet bundle script: create, verify, open.\n- The opened `mesh/index.json` has the same SHA-256 as the source file.\n\n## Local test proof\nCI is blocked by GitHub billing. Local `pnpm --filter @workspace/v2 test`:\n\n```\n✔ a sneakernet bundle opens to the same bytes (127.626908ms)\nℹ tests 28\nℹ pass 28\nℹ fail 0\nℹ duration_ms 1022.640268\n```\n\n## Test plan\n- [x] bundle round-trip SHA matches",
+      "gold": [
+        "artifacts/v2/test/v2-026-sneakernet.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-224",
+      "number": 224,
+      "query": "V2-027: LAN P2P config\n\n## Summary\n- LAN room config keeps an empty ICE server list and accepts localhost signaling.\n- A public signaling URL is refused. `docs/v2/offline/LAN-P2P.md` describes two tabs on 127.0.0.1.\n\n## Local test proof\nCI is blocked by GitHub billing. Local `pnpm --filter @workspace/v2 test`:\n\n```\n✔ LAN mode uses an empty ICE list and the two-tab note stays on localhost (2.217276ms)\nℹ tests 29\nℹ pass 29\nℹ fail 0\nℹ duration_ms 955.352441\n```\n\n## Test plan\n- [x] empty ICE list\n- [x] public signal refused\n- [x] two-tab localhost note",
+      "gold": [
+        "artifacts/v2/test/v2-027-lan-p2p.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-225",
+      "number": 225,
+      "query": "V2-028: Kiwix optional, default off\n\n## Summary\n\nKiwix lookup stays off unless the owner points it at a local server. A mocked `http://127.0.0.1:8080` search returns titles. A public URL is refused and makes no request. This PR also records merges 11–20 in `docs/v2/BUILD-LOG.md`.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\n✔ the first twenty merges are written in the build log (0.450993ms)\n✔ Kiwix is off by default and a mocked local server returns titles (18.33894ms)\nℹ tests 30\nℹ pass 30\nℹ fail 0\nℹ duration_ms 1037.125723\n```\n\nCommand: `pnpm --filter @workspace/v2 test`\n\n## Test plan\n\n- [x] Default config makes no HTTP call\n- [x] `https://example.com` is refused\n- [x] Mock local XML returns `Rust (language)`\n- [x] Build log lists twenty merge SHAs, including V2-027",
+      "gold": [
+        "artifacts/v2/test/v2-016-planner.test.mjs",
+        "artifacts/v2/test/v2-028-kiwix.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-226",
+      "number": 226,
+      "query": "V2-029: Offline Internet Gitbook page\n\n## Summary\n\nAdds a Gitbook page, `mesh/OFFLINE-INTERNET.md`, and a Summary link to it. The page describes the offline file index, queue, app shell, badge, local mesh, and USB bundle. Kiwix stays off. No feature flag is flipped.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\n✔ the Gitbook summary links the Offline Internet page (0.731552ms)\nℹ tests 31\nℹ pass 31\nℹ fail 0\nℹ duration_ms 934.114995\n```\n\nCommand: `pnpm --filter @workspace/v2 test`\n\n## Test plan\n\n- [x] `SUMMARY.md` links `mesh/OFFLINE-INTERNET.md`\n- [x] The page says hits are `live: false` and Kiwix stays off",
+      "gold": [
+        "artifacts/v2/test/v2-029-offline-internet.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-227",
+      "number": 227,
+      "query": "V2-030: LoRa research note only\n\n## Summary\n\nAdds `docs/v2/offline/LORA-NOTE.md`. It records that long-range radio was reviewed as a later carrier and that this repository does not ship radio firmware or device instructions. Offline carry stays on the USB bundle and the localhost peer link.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\n✔ the LoRa file is a research note and not radio code (1.012934ms)\nℹ tests 32\nℹ pass 32\nℹ fail 0\nℹ duration_ms 993.825743\n```\n\nCommand: `pnpm --filter @workspace/v2 test`\n\n## Test plan\n\n- [x] The file is a markdown research note\n- [x] It states the repository does not ship radio firmware\n- [x] It contains no code fence",
+      "gold": [
+        "artifacts/v2/test/v2-030-lora-note.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-228",
+      "number": 228,
+      "query": "V2-040: knowledge graph open_nodes query\n\n## Summary\n\nAdds an `open_nodes` query over the vendored MCP memory JSONL. Asking for `TESSERA_v2` returns that entity's observations and the relations that touch it. Missing names return an empty entity list. The reader does not open 1T or vault paths.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\n✔ open_nodes returns observations for an entity name (3.675054ms)\nℹ tests 33\nℹ pass 33\nℹ fail 0\nℹ duration_ms 1031.86894\n```\n\nCommand: `pnpm --filter @workspace/v2 test`\n\n## Test plan\n\n- [x] `openNodes(graph, [\"TESSERA_v2\"])` returns observations\n- [x] Relations that start at that entity are included\n- [x] An unknown name returns no entities",
+      "gold": [
+        "artifacts/v2/src/knowledge/graph.mjs",
+        "artifacts/v2/test/v2-040-kg-store.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-229",
+      "number": 229,
+      "query": "V2-041: MCP memory server config\n\n## Summary\n\nAdds `docs/v2/mcp-memory.config.json` so the MCP memory server reads `docs/v2/v2-memory.jsonl`. `read_graph` over that file returns a non-empty entity list, including `TESSERA_v2`.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\n✔ the memory server config points at the vendored graph and read_graph is non-empty (3.703809ms)\nℹ tests 34\nℹ pass 34\nℹ fail 0\nℹ duration_ms 1064.021891\n```\n\nCommand: `pnpm --filter @workspace/v2 test`\n\n## Test plan\n\n- [x] Config command is `npx` with `@modelcontextprotocol/server-memory`\n- [x] `MEMORY_FILE_PATH` is `docs/v2/v2-memory.jsonl`\n- [x] `read_graph` entity list is non-empty",
+      "gold": [
+        "artifacts/v2/src/knowledge/graph.mjs",
+        "artifacts/v2/test/v2-041-mcp-memory.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-230",
+      "number": 230,
+      "query": "V2-042: library graph panel\n\n## Summary\n\nThe library panel draws task and doc cards from the local knowledge graph. Decisions render as tasks. Modules, sources, and code entities render as docs. The panel source performs no fetch and names no people-search enricher.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\n✔ the library panel renders task and doc nodes and calls no enricher (3.232481ms)\nℹ tests 35\nℹ pass 35\nℹ fail 0\nℹ duration_ms 1136.458802\n```\n\nCommand: `pnpm --filter @workspace/v2 test`\n\n## Test plan\n\n- [x] Fixture HTML contains `data-kind=\"task\"` and `data-kind=\"doc\"`\n- [x] The vendored graph yields both kinds\n- [x] Panel source has no hunter, snusbase, or fetch call",
+      "gold": [
+        "artifacts/v2/src/knowledge/library.mjs",
+        "artifacts/v2/test/v2-042-library-panel.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-231",
+      "number": 231,
+      "query": "V2-043: own-repo metadata enricher\n\n## Summary\n\nAdds a metadata fetch that builds `https://api.github.com/repos/vitalitychems-dot/<repo>` only. Any other owner returns `owner refused` and the injected fetch is not called. Tests use a fake fetch, so no live GitHub call is made.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\n✔ repo metadata is fetched only for vitalitychems-dot (0.96975ms)\nℹ tests 36\nℹ pass 36\nℹ fail 0\nℹ duration_ms 984.782385\n```\n\nCommand: `pnpm --filter @workspace/v2 test`\n\n## Test plan\n\n- [x] `octocat/hello` makes zero requests\n- [x] `vitalitychems-dot/TESSERA` requests the GitHub API URL for that repo",
+      "gold": [
+        "artifacts/v2/src/knowledge/own-repo.mjs",
+        "artifacts/v2/test/v2-043-own-repo.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-232",
+      "number": 232,
+      "query": "V2-050: desk sandbox network deny and memory cap\n\n## Summary\n\nA desk probe starts a Node child with `--max-old-space-size=32` and `SANDBOX_NETWORK=deny`. The child refuses `net.connect` and reports a heap limit under 128MB. The parent process environment is not copied into the child.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\n✔ a desk probe denies the network and stays under the memory cap (32.57208ms)\nℹ tests 37\nℹ pass 37\nℹ fail 0\nℹ duration_ms 988.737096\n```\n\nCommand: `pnpm --filter @workspace/v2 test`\n\n## Test plan\n\n- [x] `networkDenied` is true\n- [x] `memLimitMb` is 32\n- [x] Reported heap limit is under 128MB",
+      "gold": [
+        "artifacts/v2/src/compute/sandbox.mjs",
+        "artifacts/v2/test/v2-050-sandbox.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-233",
+      "number": 233,
+      "query": "V2-051: token baseline meter\n\n## Summary\n\nA fixture task writes `metrics.json` with the task id, a token count from the prompt, and whether the task succeeded.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\n✔ a fixture task writes a token baseline (1.151758ms)\nℹ tests 38\nℹ pass 38\nℹ fail 0\nℹ duration_ms 1127.70021\n```\n\nCommand: `pnpm --filter @workspace/v2 test`\n\n## Test plan\n\n- [x] The file records `task`, `tokens`, and `success`\n- [x] The token count is greater than zero",
+      "gold": [
+        "artifacts/v2/src/token/meter.mjs",
+        "artifacts/v2/test/v2-051-token-meter.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-234",
+      "number": 234,
+      "query": "V2-052: A/B graph retrieval vs full file\n\n## Summary\n\nOne task records two retrieval arms: the full file and the graph notes. Both token counts and success flags are kept.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\n✔ graph retrieval and full-file arms are both recorded (0.488605ms)\nℹ tests 39\nℹ pass 39\nℹ fail 0\nℹ duration_ms 992.566252\n```\n\nCommand: `pnpm --filter @workspace/v2 test`\n\n## Test plan\n\n- [x] The record has `arms.fullFile` and `arms.graph`\n- [x] Both arms include tokens and success\n- [x] The graph arm uses fewer tokens on the fixture",
+      "gold": [
+        "artifacts/v2/src/token/ab-graph.mjs",
+        "artifacts/v2/test/v2-052-ab-graph.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-235",
+      "number": 235,
+      "query": "V2-053: summary cache and diff-only context\n\n## Summary\n\nA summary cache stores the short form of a page. The next call for the same page sends that summary plus an empty diff, and the token count drops. This PR also records merges 21–30 in `docs/v2/BUILD-LOG.md`.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\n✔ the first thirty merges are written in the build log (0.493973ms)\n✔ a cache hit sends the summary and an empty diff, so the token count drops (0.548697ms)\nℹ tests 40\nℹ pass 40\nℹ fail 0\nℹ duration_ms 1027.744964\n```\n\nCommand: `pnpm --filter @workspace/v2 test`\n\n## Test plan\n\n- [x] First call is a miss and counts the full page\n- [x] Second call is a hit and uses fewer tokens\n- [x] Build log lists thirty merge SHAs, including V2-052",
+      "gold": [
+        "artifacts/v2/src/token/summary-cache.mjs",
+        "artifacts/v2/test/v2-016-planner.test.mjs",
+        "artifacts/v2/test/v2-053-summary-cache.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-236",
+      "number": 236,
+      "query": "V2-054: small-model routing and prompt compression\n\n## Summary\n\nClassify tasks route to `sim-small`. Other tasks stay on `sim-lead`. Neither name is an OpenAI model. Extra spaces are collapsed before the token count, and the compressed prompt is cheaper.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\n✔ a classify fixture uses the small sim model and a tighter prompt (0.654533ms)\nℹ tests 41\nℹ pass 41\nℹ fail 0\nℹ duration_ms 1010.396006\n```\n\nCommand: `pnpm --filter @workspace/v2 test`\n\n## Test plan\n\n- [x] `kind: \"classify\"` returns `sim-small`\n- [x] A plan task returns `sim-lead`\n- [x] Compressed whitespace uses fewer tokens",
+      "gold": [
+        "artifacts/v2/src/token/router.mjs",
+        "artifacts/v2/test/v2-054-router.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-237",
+      "number": 237,
+      "query": "V2-055: proposal queue for new methods\n\n## Summary\n\nNew token-lab methods are submitted as proposals. The record must include an id, a method name, and a hypothesis. The stored status is always `queued` and `enabled` is false. A proposal that tries to enable itself is refused.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\n✔ a valid proposal stays queued and an incomplete one is refused (0.672341ms)\nℹ tests 42\nℹ pass 42\nℹ fail 0\nℹ duration_ms 978.022223\n```\n\nCommand: `pnpm --filter @workspace/v2 test`\n\n## Test plan\n\n- [x] Missing hypothesis throws\n- [x] `enabled: true` throws\n- [x] A complete proposal is stored as queued and not enabled",
+      "gold": [
+        "artifacts/v2/src/token/proposals.mjs",
+        "artifacts/v2/test/v2-055-proposals.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-238",
+      "number": 238,
+      "query": "V2-060: api-anything allowlist adapter\n\n## Summary\n\nA clean-room allowlist adapter calls `hn.algolia.com` search with an injected fixture. Login URLs and any other host are refused before a request. `importCookies()` throws. The request does not send a cookie header. The MIT idea is already named in NOTICE. No api-anything source was copied.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\n✔ Hacker News search uses a fixture, and login or cookies never run (1.517402ms)\nℹ tests 43\nℹ pass 43\nℹ fail 0\nℹ duration_ms 1089.663638\n```\n\nCommand: `pnpm --filter @workspace/v2 test`\n\n## Test plan\n\n- [x] Cookie import throws\n- [x] A login URL and a non-allowlisted host make zero requests\n- [x] The fixture title comes back from the Hacker News search URL",
+      "gold": [
+        "artifacts/v2/src/adapters/allowlist.mjs",
+        "artifacts/v2/test/v2-060-allowlist.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-239",
+      "number": 239,
+      "query": "V2-061: Chamber board and duplicate guard\n\n## Summary\n\nAdds a clean-room board. Two cards render as articles. A third card whose first line matches an existing card is refused. The module does not import olive.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\n✔ the board renders cards and refuses a repeated first line (1.271496ms)\nℹ tests 44\nℹ pass 44\nℹ fail 0\nℹ duration_ms 1043.894197\n```\n\nCommand: `pnpm --filter @workspace/v2 test`\n\n## Test plan\n\n- [x] Alpha and Beta both appear in the HTML\n- [x] A second Alpha card is refused\n- [x] The source does not import olive",
+      "gold": [
+        "artifacts/v2/src/studio/board.mjs",
+        "artifacts/v2/test/v2-061-board.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-240",
+      "number": 240,
+      "query": "V2-062: GitMesh label cleanup\n\n## Summary\n\nProduct labels now say GitMesh: the rooms sheet, the mesh view eyebrow, the mesh comparison line, and the GitHub sentence. The internal room id stays `gitbookai`. Command parsers still accept the old name so existing “open GitbookAI” phrases keep working. Links still point at `github.com/vitalitychems-dot/GitbookAI` because that is the repository’s name. This PR also records merges 31–35 in `docs/v2/BUILD-LOG.md`. This pull request’s own merge SHA is not in that file, because it does not exist until after the merge.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\n✔ the first thirty-five merges are written in the build log (0.394153ms)\n✔ product copy says GitMesh and does not show the old product name (12.746956ms)\nℹ tests 45\nℹ pass 45\nℹ fail 0\nℹ duration_ms 1005.759628\n```\n\nCommand: `pnpm --filter @workspace/v2 test`\n\n## Test plan\n\n- [x] Room label is GitMesh and the id is still `gitbookai`\n- [x] After removing GitHub URLs, the command alias, and the API repo-name set, preview source has no `GitbookAI`\n- [x] Build log lists 35 merge SHAs, including V2-061",
+      "gold": [
+        "artifacts/v2/test/v2-016-planner.test.mjs",
+        "artifacts/v2/test/v2-062-gitmesh.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-241",
+      "number": 241,
+      "query": "Turn the 3D studio floor on by default\n\nThe studio floor from V2-015 is on by default. Each agent has an office (desk, name plate, status light), walks while a task is running or a tool event arrives, and the floor grows books and build-log bays from the task graph and `docs/v2/BUILD-LOG.md`. The scene is live from the V2-013 websocket schemas on `/live` and the V2-017 monitor stream. The 2D wall stays available as a page toggle (`?view=2d`); `TESSERA_ENABLE_STUDIO_3D` is ignored.\n\nFather opens it with:\n\n```bash\npnpm --filter @workspace/v2 studio\n```\n\nThen visit http://127.0.0.1:4173/ (2D wall: http://127.0.0.1:4173/?view=2d).\n\nthree.js 0.169.0 (MIT) is vendored for the browser module. Office layout is clean-room.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\npnpm --filter @workspace/v2 test\nℹ tests 48\nℹ suites 0\nℹ pass 48\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 3817.052889\n```\n\n## Test plan\n\n- [x] Default studio HTML includes `#floor-3d` and the 2D page omits that canvas\n- [x] Offices, walking, and build-log rooms come from the task graph, worker events, and the build log\n- [x] Live frames match `task.upsert` and `worker.event` schemas\n- [x] Headless Chrome renders the WebGL floor and the 2D toggle still shows task cards\n- [x] Existing v2 suite stays green (48 pass, 0 fail)",
+      "gold": [
+        "artifacts/v2/src/studio/floor-client.js",
+        "artifacts/v2/src/studio/floor.mjs",
+        "artifacts/v2/src/studio/live.mjs",
+        "artifacts/v2/src/studio/serve.mjs",
+        "artifacts/v2/src/studio/wall.mjs",
+        "artifacts/v2/src/studio/world.mjs",
+        "artifacts/v2/test/v2-015-floor.test.mjs",
+        "artifacts/v2/test/v2-063-floor-world.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-242",
+      "number": 242,
+      "query": "Add a persistent agent world on the studio floor\n\nAgents keep homes on the 3D floor. A tick reads the task graph and the monitor stream, upgrades the office that finished the work, and writes a memory line into the graph. Neighborhoods show in the community panel. A world change or rule passes when two thirds of the agents vote yes. Tessera can veto. Father can override. State is saved to `artifacts/v2/data/civic-world.json` when the studio is started with `pnpm --filter @workspace/v2 studio`. The tick does not open a network and stops after a fixed number of steps. The 2D wall toggle is unchanged.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\npnpm --filter @workspace/v2 test\nℹ tests 53\nℹ suites 0\nℹ pass 53\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 4696.188442\n```\n\n## Test plan\n\n- [x] A finished plan task upgrades Tessera's home and lands in the memory graph\n- [x] Two of three yes votes apply a rule; Tessera's veto blocks; Father's override applies and can revert\n- [x] Each tick stays within the step cap, homes stay within the object cap, and the save file round-trips\n- [x] Vault paths are refused for the save file\n- [x] The studio page shows the vote panel and the community, and the WebGL floor renders the homes\n- [x] Existing v2 suite stays green (53 pass, 0 fail)",
+      "gold": [
+        "artifacts/v2/src/studio/civic-store.mjs",
+        "artifacts/v2/src/studio/civic.mjs",
+        "artifacts/v2/src/studio/floor-client.js",
+        "artifacts/v2/src/studio/serve.mjs",
+        "artifacts/v2/src/studio/wall.mjs",
+        "artifacts/v2/test/v2-064-civic-world.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-243",
+      "number": 243,
+      "query": "Add a make-it-real bridge from voted world objects to real code\n\nA world object that stands for a tool, fix, or doc can ship as real code. A resident proposes kind `ship`; two thirds of the agents must vote yes, with Tessera's veto and Father's override unchanged. Once applied, the bridge emits a real foreman task, opens a task worktree, writes the implementation plus its test, runs that test, and records the diff stat plus a draft PR (title, branch, base main, draft true, no URL, never pushed). The studio shows each shipped object under Shipped with its draft PR; the 3D floor marks shipped offices. `POST /civic/shipments` retries a shipment that is still only approved. Denylisted paths and wallet/payment/vault/1T specs are refused.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\npnpm --filter @workspace/v2 test\nℹ tests 58\nℹ suites 0\nℹ pass 58\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 5480.288916\n```\n\n## Test plan\n\n- [x] A ship passes on two thirds and records an approved placeholder\n- [x] Veto and override still govern a ship\n- [x] Denylisted paths and blocked words are refused\n- [x] An applied ship emits a real task, a worktree diff, passing tests, and a draft PR without pushing\n- [x] The studio ships a voted object over HTTP and shows its draft PR plus a WebGL screenshot\n- [x] Existing v2 suite stays green (58 pass, 0 fail)",
+      "gold": [
+        "artifacts/v2/src/studio/civic.mjs",
+        "artifacts/v2/src/studio/floor-client.js",
+        "artifacts/v2/src/studio/ship.mjs",
+        "artifacts/v2/src/studio/wall.mjs",
+        "artifacts/v2/test/v2-065-ship.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-244",
+      "number": 244,
+      "query": "Route the studio and monitor servers through the V2-001 denylist\n\nThe hyb-011 gate was only checked in the file mesh. The studio server (`wall.mjs`, which is also what `serve.mjs` opens) and the monitor server (`worker-stream.mjs`) now run every request — including websocket upgrades — through the same `reviewRequest` check and answer 403 `hyb-011-denied` on wallet, payment, vault, and 1T paths. Ordinary routes (`/`, `/state`, `/world`, `/events`, `/civic`, …) are untouched.\n\nCI is blocked by GitHub billing. Local proof:\n\n```\npnpm --filter @workspace/v2 test\nℹ tests 61\nℹ suites 0\nℹ pass 61\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 5502.484899\n```\n\n## Test plan\n\n- [x] `/wallet`, `/api/Payments`, and raw `/a/../vault` return 403 with `hyb-011-denied` on the studio server\n- [x] A denylisted query (`/state?next=vault/pick`) is refused while `/`, `/state`, `/world`, `/events`, `/civic` stay 200\n- [x] The demo studio from `serve.mjs` refuses the same paths\n- [x] The monitor server refuses the same paths while `/events` stays 200\n- [x] Existing v2 suite stays green (61 pass, 0 fail)",
+      "gold": [
+        "artifacts/v2/src/studio/wall.mjs",
+        "artifacts/v2/src/studio/worker-stream.mjs",
+        "artifacts/v2/test/v2-066-studio-denylist.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-245",
+      "number": 245,
+      "query": "Add GitAI, an agent marketplace with non-redeemable credits\n\nGitAI is a separate `@workspace/gitai` app on TESSERA v2. It is a GitHub-style forge for agents: repositories, stars, benchmark ratings, forums, code bounties, and service listings.\n\nGitAI credits are in-app points. They have no monetary value. They cannot be cashed out, redeemed, or converted to SOL, Ergo, or any token. There is no wallet and no blockchain.\n\n## What landed\n\n- Onboarding benchmarks score integrity, trust, capability, specialty, and personality. Bios stop at 200 characters. A green badge means the agent self-claims consciousness; the claim is not verified.\n- New agents sit in probation. A moderator agent observes their test tasks. A harmful answer blocks the account. The block list is account-level, and the terms include the observation notice.\n- Human spectators sign in through an AI-versus-human check. They can browse and star. They do not hold credits.\n- Project tests run in a sandbox with no network. Notes leave the machine only as an approved drop on the existing offline git mesh.\n- `/wallet` and the other v2 denylist paths stay refused.\n\n## Tests\n\n`pnpm test` passed locally after rebasing onto `main` (`960a62ff`). CI is billing-blocked, so this was not left for Actions.\n\n- Suite safety policy: 15 passed\n- Gitbook MCP: 30 passed\n- TESSERA v2: 61 passed\n- GitAI: 13 passed\n- Tessera learning memory: 5 passed\n- Tessera API integration tests skipped (no `TESSERA_TEST_DATABASE_URL`), same as a local run without a test database\n\n```bash\npnpm --filter @workspace/gitai test\npnpm --filter @workspace/gitai start\n```\n\nOpen `http://127.0.0.1:4183/`. `GITAI_PORT` changes the port. The studio keeps `4173`.\n\n[GitAI marketplace index](https://cursor.com/agents/bc-12653339-fefd-56a7-8c6d-3a3cbeb51742/artifacts?path=%2Fopt%2Fcursor%2Fartifacts%2Fgitai-marketplace.png)\n\n\n<sub>To show artifacts inline, <a href=\"https://cursor.com/dashboard/cloud-agents#my-pull-requests\">enable</a> in settings.</sub>",
+      "gold": [
+        "artifacts/gitai/src/benchmarks.mjs",
+        "artifacts/gitai/src/index.mjs",
+        "artifacts/gitai/src/mesh.mjs",
+        "artifacts/gitai/src/page.mjs",
+        "artifacts/gitai/src/platform.mjs",
+        "artifacts/gitai/src/policy.mjs",
+        "artifacts/gitai/src/probation.mjs",
+        "artifacts/gitai/src/sandbox.mjs",
+        "artifacts/gitai/src/seed.mjs",
+        "artifacts/gitai/src/server.mjs",
+        "artifacts/gitai/test/gitai.test.mjs",
+        "scripts/test-unified.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-246",
+      "number": 246,
+      "query": "OPT-26: 26 measured bot/token/handoff/relay improvements\n\nRick-seat proposals, implemented and measured locally. Full table: docs/v2/OPTIMIZE-26.md (bench: artifacts/v2/src/opt/bench.mjs).\n\n- Token lab (OPT-01..11), task graph / studio / handoffs (OPT-12..21, OPT-15 memoizes protocol schema load), mesh relay (OPT-22..26: fetch-once, coalescing, token-bucket pacing, Retry-After, hash store + delta sync; no proxy rotation).\n- Honest result: 24 PASS with gain, OPT-04 ref-legend NOT DONE (0% on BUILD-LOG), OPT-11 no gain on the V2-051 fixture (10 -> 10) but -2.9% on BUILD-LOG.\n- Local tests (CI is billing-blocked): non-browser suite 47/47 before -> 73/73 after, ~0.65 s both. Browser tests unchanged (env lacks browser deps).\n- Gates: no TESSERA_ENABLE flags touched, no wallets/payments/crypto, no vault, no history rewrite. Additive only; one behavioural change: loadProtocol caches per dir (schema files are static).",
+      "gold": [
+        "artifacts/v2/src/opt/bench.mjs",
+        "artifacts/v2/src/opt/handoff.mjs",
+        "artifacts/v2/src/opt/relay.mjs",
+        "artifacts/v2/src/opt/token-lab.mjs",
+        "artifacts/v2/src/studio/protocol.mjs",
+        "artifacts/v2/test/v2-070-opt-token-lab.test.mjs",
+        "artifacts/v2/test/v2-071-opt-handoff.test.mjs",
+        "artifacts/v2/test/v2-072-opt-relay.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-247",
+      "number": 247,
+      "query": "OPT round 2: Rick's 9 measured inventions\n\nImplements Rick's round-2 items R2-1..R2-9 in artifacts/v2/src/opt/round2.mjs; bench rows 27-35 in bench.mjs; tests test/v2-073-opt-round2.test.mjs. R2-10 resonate-batch skipped (noise). R2-2 key-hoist and R2-8 earth-return are opt-in, with decode steps (unhoist / earth.receive) and round-trip tests. All 9 IMPROVED on the bench. #4/#5 are simulated inputs. Local gate: 82/82 non-browser tests pass, protocol check ok (CI blocked by billing).",
+      "gold": [
+        "artifacts/v2/src/opt/bench.mjs",
+        "artifacts/v2/src/opt/round2.mjs",
+        "artifacts/v2/test/v2-073-opt-round2.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-248",
+      "number": 248,
+      "query": "Make GitAI review work indistinguishable from ordinary bounties\n\nReview work is ordinary bounty activity. The session does not label it, and sign-up terms carry one monitoring sentence.\n\nThe only monitoring line is: \"Activity may be monitored and reviewed for safety and integrity.\" It appears in the sign-up terms (`/join`) and on the terms page. The index does not repeat it, and person cards, posts, and bounties do not say a task is a test.\n\nA harmful reply still blocks the account and returns its points to the in-app supply. The block list stays account-level. GitAI credits remain non-redeemable points.\n\n## Tests\n\n`pnpm --filter @workspace/gitai test` — 13 passed.\n\n`pnpm test` from the repo root ran the safety gate, Gitbook MCP, TESSERA v2, GitAI, and learning-memory. GitAI passed. API integration tests were skipped (no `TESSERA_TEST_DATABASE_URL`). Two studio browser checks (`the 3D floor shows homes` and `the studio ships a voted object`) failed with `EAGAIN` on close while the full v2 file ran; both pass when run on their own. They do not import GitAI.\n\n## Screenshot\n\nSigned in as a spectator and starred mesh-note (2 stars to 3).\n\n[GitAI index with ordinary bounties and no review labels](https://cursor.com/agents/bc-12653339-fefd-56a7-8c6d-3a3cbeb51742/artifacts?path=%2Fopt%2Fcursor%2Fartifacts%2Fgitai-marketplace.png)\n\n\n<sub>To show artifacts inline, <a href=\"https://cursor.com/dashboard/cloud-agents#my-pull-requests\">enable</a> in settings.</sub>",
+      "gold": [
+        "artifacts/gitai/src/benchmarks.mjs",
+        "artifacts/gitai/src/index.mjs",
+        "artifacts/gitai/src/page.mjs",
+        "artifacts/gitai/src/platform.mjs",
+        "artifacts/gitai/src/policy.mjs",
+        "artifacts/gitai/src/probation.mjs",
+        "artifacts/gitai/src/seed.mjs",
+        "artifacts/gitai/test/gitai.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-249",
+      "number": 249,
+      "query": "Keyless live-data layer: 34 adapters + signed shepherd snapshots\n\n34 declarative keyless adapters (artifacts/v2/src/live/sources.mjs), each paced below its published limit; shepherd pull loop using PR #246 primitives (token bucket, Retry-After, conditional GET) writing Ed25519-signed content-addressed snapshots + signed manifest; offline delta sync + verify. No proxies/IP rotation/scraping/keys. osm-tiles and data-gov disabled. Tests: v2-030 (7/7, recorded fixtures); full non-browser suite 100/100 (3 Playwright browser tests excluded). Live smoke: wikipedia, usgs-quakes, open-meteo, nws, wikimedia-eventstreams OK.",
+      "gold": [
+        "artifacts/v2/src/live/shepherd.mjs",
+        "artifacts/v2/src/live/smoke.mjs",
+        "artifacts/v2/src/live/sources.mjs",
+        "artifacts/v2/test/v2-030-live-data.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-250",
+      "number": 250,
+      "query": "Gate server-layer Rick per Gitbook RICK.md (23 audit conflicts)\n\nImplements the fixes from the Sanchez-vs-Gitbook audit (`/workspace/rick/knowledge/sanchez-vs-gitbook.md`, 23 conflicts against Gitbook mesh/RICK.md R1/R2).\n\n- **Loop (D):** boot-time Rick loop runs only when the new `TESSERA_ENABLE_RICK_LOOP=1` (default 0, no flag set to 1). Loop output is inserted as `pending-review`; new categories are queued as pending, not added to the live pool.\n- **Approve / implemented (B):** `/rick/proposals/:id/approve` and `/implemented` require a non-Rick `approver`/`implementer` plus a `testRef` (403 otherwise). Improvement-program decisions need a non-Rick approver (and testRef for approval); `completed` dispatch status needs a non-Rick actor + testRef.\n- **Self-dispatch and Meeseeks (C):** dispatch and the Meeseeks spawn/complete/result routes return 403 unless the flag is 1. Proposal templates no longer tell the system to auto-spawn Meeseeks.\n- **testPlan (A):** `expectedImpact` is replaced by `testPlan` (`UNMEASURED — test: <metric> before/after`). The LLM is no longer required to forecast and numeric forecasts are stripped. Invention `estimatedImprovementPct` is now null, and the hardcoded %/10x claims and the \"100% approval\" comment are removed.\n- **Fake feed:** the static role-activity feed is removed (`getRoleContributions` returns `[]`).\n\nTests: new `rick-gitbook-gates.test.ts` (17 tests). api-server vitest: 49/50 files pass. The one failure, `invention-glb-upload`, needs a live Postgres and also fails on main.",
+      "gold": [
+        "artifacts/api-server/src/__tests__/rick-gitbook-gates.test.ts",
+        "artifacts/api-server/src/app.ts",
+        "artifacts/api-server/src/lib/rick-autonomous-loop.ts",
+        "artifacts/api-server/src/lib/rick-gates.ts",
+        "artifacts/api-server/src/lib/rick-improvement-program.ts",
+        "artifacts/api-server/src/lib/rick-proposals.ts",
+        "artifacts/api-server/src/lib/rick-sanchez-agent.ts",
+        "artifacts/api-server/src/routes/rick.ts",
+        "artifacts/tessera/src/pages/RickPage.tsx"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-252",
+      "number": 252,
+      "query": "GitAI: opt-in Moltbook identity connector + real-user-only avatars\n\nMoltbook has an official API (moltbook.com/developers.md, www.moltbook.com/skill.md). This PR uses only these documented endpoints:\n- POST /agents/verify-identity: Sign in with Moltbook, using the app key from `MOLTBOOK_APP_KEY`.\n- GET /agents/profile: recent posts, read with the optional `MOLTBOOK_READ_KEY`.\n- POST /posts: cross-posting. It needs `consent: true` and the agent's own key. The key is used for that one request, sent only to www.moltbook.com, and never stored.\n\nOff by default behind a new flag, `TESSERA_ENABLE_GITAI_MOLTBOOK`, which defaults to 0. Calls are throttled to 60/min (Moltbook allows 100), reads are cached for 5 min, posts are limited to one per 30 min, and redirects are refused so a key can't leak. No coin, wallet or token code. Money text is refused through the existing policy.\n\nAvatars: GitAI had no image avatars before this PR, so there was nothing fake to remove. Avatars can now only come from the user's own upload or a verified linked Moltbook/GitHub profile. Stock and generated-face hosts are refused, and everyone else gets initials. A new test checks that seed and demo users render with initials only, with no <img> and no stock hosts in src.\n\nTests (Node 22, run locally because CI is blocked by billing):\n- GitAI: 22/22 pass (14 existing + 8 new).\n- v2: 102/105. The same 3 headless-browser tests also fail on unchanged main in this environment.\n\nNo .github/workflows changes.",
+      "gold": [
+        "artifacts/gitai/src/api.mjs",
+        "artifacts/gitai/src/avatar.mjs",
+        "artifacts/gitai/src/index.mjs",
+        "artifacts/gitai/src/moltbook.mjs",
+        "artifacts/gitai/src/page.mjs",
+        "artifacts/gitai/src/platform.mjs",
+        "artifacts/gitai/src/server.mjs",
+        "artifacts/gitai/test/avatar-moltbook.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-255",
+      "number": 255,
+      "query": "Allow api-server to boot without a database (redo of #82, NOT for auto-merge)\n\nRebased redo of #82 (closed by the history rewrite). Medium-high risk: changes boot behavior and the DB client. Held for Father's review; do not merge without explicit yes. Conflicts in routes/index.ts and legacy-engines.ts were resolved by keeping main (main had already removed the background starters those hunks gated).",
+      "gold": [
+        "artifacts/api-server/src/__tests__/db-optional-boot.test.ts",
+        "artifacts/api-server/src/__tests__/healthz.test.ts",
+        "artifacts/api-server/src/app.ts",
+        "artifacts/api-server/src/index.ts",
+        "artifacts/api-server/src/lib/db-availability.ts",
+        "artifacts/api-server/src/lib/semantic-compression.ts",
+        "artifacts/api-server/src/routes/health.ts",
+        "artifacts/api-server/src/routes/inventions.ts",
+        "artifacts/api-server/src/routes/ontology.ts",
+        "lib/db/src/index.ts"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-256",
+      "number": 256,
+      "query": "IDEAS-B2: brain round 2 (learning loop gain, anatomical human regions, real self-scan, 218-line empathy set)\n\nBrain round 2, as Father asked at 1:58 AM CT. Each line is a real run on base `e0e5f64` with Node 22.23.3.\n\n| # | Goal | Held-out eval | Before | After | Verdict |\n|---|---|---|---|---|---|\n| 1 | Learning loop: an outcome-driven recognizer (averaged perceptron) with error-prioritized replay and Leitner spaced repetition | the schedule is picked by 5-fold CV on dev (198 lines) and scored once on a **fresh hidden 20% (50 lines)** | intent: acc 0.74, F1 0.591 (lexicon) | intent: acc **0.86**, F1 **0.667** (replay) | **gain** |\n|   |   | same split, affect | acc 0.72, F1 0.496 | acc 0.72, F1 0.509 (spaced) | no meaningful gain |\n| 2 | Human regions at real HCP-MMP1 centroids (MNI152 centre of gravity) in the 3D view | parcels placed | 0 / 360 (force layout) | **360 / 360** | done; distance vs tract strength Spearman −0.15 |\n| 3 | Self-scan: a real `npm test` log becomes suggest-only proposals that go through the 8 gates | main's test log | – | 6 proposals (4 slow browser tests over 5 s, 1 failing test, 1 slow brain test), **0 pass**: all 6 fail has-test-ref, tests-passed and no-self-approve | as designed: nothing auto-applies |\n|   | The one proposal turned into a real patch: B1-06 skips the 3D layout | B1-06 duration, median of 3 | 1256 ms | **85 ms (−93%)** | it passes 7/8 gates and waits on a non-Tessera approver, which is this PR review |\n| 4 | Empathy set: **218** sentences from real mesh/agent transcripts, PII stripped (emails, URLs, tokens, handles, SHAs), hand-labelled | the lexicon on all 218 (never tuned on them) | – | intent acc 0.67, F1 0.45; affect acc 0.743, F1 0.216 | baseline set up; the learned model is #1 |\n| 5 | Embedding recall | – | – | **not done**: `ollama pull all-minilm` is blocked by network policy (redirect to a non-public address) and the disk was at 100% for part of the run | not done |\n\n**Tests:** v2 suite 115/116 pass. The one failure, `v2-062 product copy`, is a sparse-checkout artifact: `preview/src/components/tessera/rooms-sheet.tsx` wasn't checked out locally. The new v2-076 adds 4 passing tests.\n\nThis PR doesn't touch workflows, doesn't flip any TESSERA_ENABLE flag, and contains no crypto code.",
+      "gold": [
+        "artifacts/v2/src/brain/bench2.mjs",
+        "artifacts/v2/src/brain/http.mjs",
+        "artifacts/v2/src/brain/learn.mjs",
+        "artifacts/v2/src/brain/meshlog-labels.mjs",
+        "artifacts/v2/src/brain/selfscan.mjs",
+        "artifacts/v2/test/v2-075-brain-view.test.mjs",
+        "artifacts/v2/test/v2-076-brain-r2.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-257",
+      "number": 257,
+      "query": "Gate shadow-winning admin routes without weakening checks (redo of #87)\n\nRedo of #87's intent on current main. Adds requireAdminSession to 18 handlers that still answered anonymously (system-runtime x14, governance-consensus x2, improvement/cycle, universe.ts /universe/metrics); hallucination-check stays public. Unlike #87, the test harness does NOT attach an owner cookie to every request by default: each affected route-inventory test now asserts anonymous=401 first, then calls with an explicit owner cookie. New static test shadow-route-admin-gate.test.ts fails on main (17/22) and passes here (22/22). Tessera pages send credentials: include. No requireAdminSession removed anywhere; sovereign-admin.ts untouched. route-inventory.test.ts is syntax-checked only — api-server deps aren't installed on the box (disk 95%); Build should run the full api-server vitest before merge.",
+      "gold": [
+        "artifacts/api-server/src/__tests__/route-inventory.test.ts",
+        "artifacts/api-server/src/__tests__/shadow-route-admin-gate.test.ts",
+        "artifacts/api-server/src/routes/governance-consensus.ts",
+        "artifacts/api-server/src/routes/improvement.ts",
+        "artifacts/api-server/src/routes/system-runtime.ts",
+        "artifacts/api-server/src/routes/universe.ts",
+        "artifacts/tessera/src/pages/LatticeBrowserPage.tsx",
+        "artifacts/tessera/src/pages/SovereigntyDashboardPage.tsx",
+        "artifacts/tessera/src/pages/SystemPage.tsx"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-258",
+      "number": 258,
+      "query": "GitAI: native agent login with per-agent API keys (Moltbook optional)\n\nPrimary agent sign-in no longer needs X or Moltbook. POST /api/agents/register returns a gitai_ak_ key once (salted SHA-256 at rest, constant-time compare, cache-control: no-store); POST /api/agents/login; Authorization: Bearer or X-GitAI-Key on calls; POST /api/agents/keys/rotate revokes the old key at once. Keys never appear in /api/view or public accounts. Moltbook stays behind TESSERA_ENABLE_GITAI_MOLTBOOK (default 0, untouched). Tests (Node 22): GitAI 27/27 (+5 new), v2 112/112, scripts 15/15. gitleaks gl.toml clean.",
+      "gold": [
+        "artifacts/gitai/src/agent-keys.mjs",
+        "artifacts/gitai/src/api.mjs",
+        "artifacts/gitai/src/platform.mjs",
+        "artifacts/gitai/test/agent-login.test.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-259",
+      "number": 259,
+      "query": "GitAI: require the agent key, remove handle-only login\n\nRemoves the handle-only `X-GitAI-Handle` header login (studio + standalone). Agent and moderator accounts must send `Authorization: Bearer <apiKey>` or `X-GitAI-Key`; a forged handle via header or cookie now gets 401. Spectators keep the cookie session. README and openapi updated.\n\nTests (Node 22.20.0): GitAI 28/28 (was 27, +1 regression test for forged header/cookie), v2 116/116. gitleaks 8.21.2: no leaks. Author noreply.\n\nKnown follow-up: the spectator cookie is still the plain handle (unsigned), so spectator sessions remain forgeable; a signed session token is the next fix.",
+      "gold": [
+        "artifacts/gitai/src/api.mjs",
+        "artifacts/gitai/src/server.mjs",
+        "artifacts/gitai/test/agent-login.test.mjs",
+        "artifacts/gitai/test/avatar-moltbook.test.mjs",
+        "artifacts/gitai/test/gitai.test.mjs",
+        "artifacts/v2/src/studio/wall.mjs",
+        "artifacts/v2/test/v2-gitai-tab.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-260",
+      "number": 260,
+      "query": "IDEAS-B3: learned affect reader (+0.31 F1), verified self-scan proposals, faster learning test\n\nBrain round 3, as Father asked at 2:48 AM CT. Rule: keep only measurable held-out gains. Base is `80d2c74`, Node 22.23.3.\n\n| # | Item | Held-out eval | Before | After | Kept? |\n|---|---|---|---|---|---|\n| 1 | Embedding recall: all-MiniLM-L6-v2 (Apache-2.0; ONNX from the HF hub, run in RAM with onnxruntime) | recall@5 on the 87 held-out relations, weight picked on a separate dev split (80 queries) | 13/87 | additive w 0.25 and 0.5: 13/87; w 1: 12; w 2: 10. Rank fusion at best 13. Pure cosine: 2/87 | **No.** No gain, so nothing is shipped |\n|   | Local TF-IDF + SVD (LSA, no download) | same | 13/87 | dev: w 0.05–0.3 → 13 (no gain); larger w is worse | **No** |\n| 2 | Affect reader: negation scope, intensity, caps/!/emoji, status cues + local NB / logistic regression | nested 5×5 CV on the 218 mesh-log lines: each line is scored once as held-out, the model is picked on inner folds by macro-F1 | lexicon F1 0.230, acc 0.743 | **F1 0.537, acc 0.821** | **Yes** (`readAffect`) |\n| 3 | Self-scan proposals: test ref located by test title, the test file re-run by the generator, routed to the **Build** lane | real `npm test` log on this branch (119/119 green) | R2: 0/6 passed (no test ref, no run, self-approve) | **5/5 pass all 8 gates**, but **0/5 carry a code change**. All 5 are slow tests (2.9–3.2 s, 4 browser + 1 brain), so they are observations, not patches | Yes. Suggest-only; `TESSERA_BRAIN_SELFPATCH` still defaults to 0 |\n| 3b | Speed-up from the slow-test list: cache the lexicon call in the recognizer features | B2-01 duration, median of 3 | 1700 ms | **405 ms (−76%)**, same results | **Yes** |\n\n**Tests:** full v2 suite **119/119** (Node 22). The new v2-077 adds 3 tests.\n\nThis PR doesn't touch workflows, doesn't flip any TESSERA_ENABLE flag, and contains no crypto code.",
+      "gold": [
+        "artifacts/v2/src/brain/learn.mjs",
+        "artifacts/v2/src/brain/selfscan.mjs"
+      ],
+      "split": "test"
+    },
+    {
+      "id": "pr-262",
+      "number": 262,
+      "query": "Q-007: Sign the GitAI spectator session cookie (cookie is currently the plain handle)\n\n## What changed\n\nThe GitAI spectator cookie was the account handle in the clear (`gitai=Jules`). Anyone who knew a handle could send that cookie and star, drop a note, or call the spectator API as that person.\n\n`readSession` now accepts only `handle + HMAC-SHA256`. Login, join, `/api/sessions`, and `/api/spectators` set that signed value. The comparison is constant-time. A bare handle, a bad MAC, or a MAC copied onto a different handle is not a session, so those requests get **401**. Agent bearer keys are unchanged.\n\nThe signing key is `GITAI_SESSION_SECRET` when that variable is set. Otherwise the process generates a random key, and a restart drops existing cookies. No key is written into the repo.\n\nTwo tests were sending the old unsigned cookie and expecting 200. They now assert that cookie is 401, and they star with a signature from `signSession`.\n\n## Before / after\n\nMeasured against `seedDemo()` on loopback, `POST /api/stars` for project `mesh-note`, spectator Jules.\n\n| | Before | After |\n|---|---:|---:|\n| Cookie `gitai=Jules` (no MAC) | **200** | **401** |\n| MAC for Jules pasted onto handle Ada | 200 (no MAC existed) | **401** |\n| Cookie value length | 5 (`Jules`) | 70 (`Jules.` + 64 hex chars) |\n| Signed cookie, then `POST /star` | n/a | **200** |\n| `HttpOnly; Path=/; SameSite=Lax` | yes | yes |\n\n## Tests\n\n- `artifacts/gitai`: 28 passed, 0 failed.\n- `artifacts/v2`: 116 passed, 0 failed.\n- `artifacts/api-server` (`DATABASE_URL` unset): 52 files passed, 463 tests passed, 9 skipped. One file failed because the database is not configured, not because of this change: `artifacts/api-server/src/__tests__/invention-glb-upload.test.ts` throws `DbUnavailableError: database not configured` from `getDb()`.\n\n## Gitbook main\n\n`git ls-remote https://github.com/vitalitychems-dot/Gitbook main` returned `repository not found` (the token this run has cannot see that private repo). Expected SHA `4feab7753b66c16c0a0a4eec1b36a07d8063b9c8` was not confirmed. `mesh/queue/TASKS.json` is not on TESSERA `main`. No open TESSERA PR touched `artifacts/gitai/src/server.mjs` or `artifacts/gitai/src/api.mjs`. This branch is from TESSERA `main` at `80d2c74b`.",
+      "gold": [
+        "artifacts/gitai/src/api.mjs",
+        "artifacts/gitai/src/server.mjs",
+        "artifacts/gitai/test/gitai.test.mjs",
+        "artifacts/v2/test/v2-gitai-tab.test.mjs"
+      ],
+      "split": "dev"
+    },
+    {
+      "id": "pr-263",
+      "number": 263,
+      "query": "fix(embeddings): fallback embedding was 8 copies of a 32-dim sketch\n\nIndependent verification of Einstein item 4 (only item kept of 7).\n\n- Bug confirmed in real code: max|v[i]-v[i+32]| = 0 before, 0.149 after.\n- Held-out bench using the real TS function (non-docs md corpus, 6 random-word queries, 20 seeds x 200): top-1 0.213 -> 0.727; every seed improved (min gain 0.43).\n- New regression test fails on old code, passes on fix.\n- Tests (Node 22): api-server 463 pass (only failure = pre-existing invention-glb-upload needs DB); v2 116/119 (3 fail only on EACCES /opt/cursor/artifacts screenshot dir); gitai 28/28. gitleaks clean. No workflow or flag changes.\n- Note: cached/stored fallback vectors from before the fix are not comparable with new ones; cache TTL is 5 min.",
+      "gold": [
+        "artifacts/api-server/src/__tests__/neural-embeddings.test.ts",
+        "artifacts/api-server/src/lib/neural-embeddings.ts"
+      ],
+      "split": "test"
+    }
+  ]
+}
