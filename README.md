@@ -62,6 +62,8 @@ Workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) has one job, `va
 
 [`.github/workflows/secret-scan.yml`](.github/workflows/secret-scan.yml) runs gitleaks on pull requests and pushes to `main`. The job has `contents: read` only, checks out with `persist-credentials: false`, and does not receive repository secrets. A finding or a scanner error fails the job. [`.github/workflows/main-provenance.yml`](.github/workflows/main-provenance.yml) reports recent `main` commits that did not arrive through a merged pull request, plus Tessera names, `@gmail.com` author or committer addresses, and Manus marks. It writes a job summary and annotations. `PROVENANCE_ENFORCE` defaults to `0`, so the job exits 0 until that flag is turned on.
 
+[`.github/workflows/pr-gates.yml`](.github/workflows/pr-gates.yml) runs on `pull_request` only. The diff scan reports a pull request that changes a `rules` path, a gate path, `CODEOWNERS`, or permission lines under `.github/workflows` when the pull request author is not the repository owner. `DIFF_SCAN_ENFORCE` defaults to `0`. The author check fails when any commit author or committer is named Tessera, or when either email is not `332565808+vitalitychems-dot@users.noreply.github.com`. If those two jobs pass, the comment job posts `ready for gate <head sha>` once and updates that comment on later runs. Only that job has `pull-requests: write`.
+
 ## Agent / mesh
 
 Mesh-agent onboarding stays in Gitbook. Start with the [hybrid consolidation backlog](https://github.com/vitalitychems-dot/Gitbook/blob/main/intake/HYBRID-CONSOLIDATION-BACKLOG.md) and [Gitbook issue #2](https://github.com/vitalitychems-dot/Gitbook/issues/2).
