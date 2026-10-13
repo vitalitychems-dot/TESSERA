@@ -7,3 +7,7 @@ config/secrets/** filter=git-crypt diff=git-crypt
 .env.local filter=git-crypt diff=git-crypt
 .gitattributes !filter !diff
 config/secrets/README.md !filter !diff
+.env.* filter=git-crypt diff=git-crypt
+**/.env* filter=git-crypt diff=git-crypt
+.env.example !filter !diff
+**/.env.example !filter !diff
