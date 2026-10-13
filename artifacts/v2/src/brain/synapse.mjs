@@ -37,15 +37,8 @@ export function hebbian(g, active, { rate = 0.5, cap = 10 } = {}) {
 /** Co-activation episodes: each entity fires with every other entity its observations mention. */
 export function coMentionEpisodes(g, { minLen = 4 } = {}) {
   const names = [...g.nodes.keys()].filter((n) => n.length >= minLen);
-  const lower = names.map((m) => m.toLowerCase()); // lowercase each name once, not once per node pair
   const eps = [];
-  for (const [n, v] of g.nodes) {
-    const text = v.text;
-    if (text == null) continue;
-    const hit = [];
-    for (let i = 0; i < names.length; i++) if (names[i] !== n && text.includes(lower[i])) hit.push(names[i]);
-    if (hit.length) eps.push([n, ...hit]);
-  }
+  for (const [n, v] of g.nodes) { const hit = names.filter((m) => m !== n && v.text?.includes(m.toLowerCase())); if (hit.length) eps.push([n, ...hit]); }
   return eps;
 }
 /** Decay all synapses by factor; prune below floor (synaptic pruning). Returns pruned count. */
