@@ -11,6 +11,14 @@ These four scan reads are the ones #295 does not cache:
 
 Bytes are the raw HTTP response (status line + headers + body). A 304 body is empty, so the unchanged size is the header block. Cache files live under `.cache/etag/`, which `.gitignore` already excludes via `.cache/`.
 
+## Default
+
+`TESSERA_ENABLE_ETAG_CACHE` is on when it is unset. Set it to `0` to opt out. Opt-out is a passthrough: no cache read, no cache write, and no `If-None-Match`. Any other value, including `1`, leaves the cache on.
+
+`/graphql` (leading slash) and any path containing `{branch}` are passed straight through to `gh api`, the same as bare `graphql` and paths containing `{owner}` or `{repo}`. Those calls are not cached.
+
+An `EPERM` while reading a cache file is a miss. The cached body is not returned, and `If-None-Match` is not sent. A cache file owned by another user is never served, including when the file is readable.
+
 ## Aggregate (n=40 pairs, mean ± 95% CI)
 
 Live TESSERA API, the four scan endpoints above.

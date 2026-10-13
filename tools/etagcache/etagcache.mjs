@@ -4,12 +4,12 @@
 // PR #295 (scripts/loop/pr-cache.mjs) already caches the open-PR list.
 // This wrapper does not call that path. SCAN_ENDPOINTS is the rest of the scan.
 //
-// TESSERA_ENABLE_ETAG_CACHE=1 turns the cache on. Any other value, including
-// unset, is a passthrough: no cache read, no cache write, no If-None-Match.
+// TESSERA_ENABLE_ETAG_CACHE is on when unset. Exactly "0" opts out:
+// no cache read, no cache write, no If-None-Match.
 
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -30,7 +30,7 @@ export const DEFAULT_ACCEPT = "application/vnd.github+json";
 export const DEFAULT_API_VERSION = "2022-11-28";
 
 export function etagCacheEnabled(env = process.env) {
-  return env[ENABLE_FLAG] === "1";
+  return env[ENABLE_FLAG] !== "0";
 }
 
 function headerValue(headers, name) {
@@ -74,12 +74,26 @@ const CACHE_DIR_MODE = 0o700;
 const CACHE_FILE_MODE = 0o600;
 
 export function readCacheEntry(file, deps = {}) {
+  const readImpl = deps.readFileSync ?? readFileSync;
   let raw;
   try {
-    raw = readFileSync(file, "utf8");
+    raw = readImpl(file, "utf8");
   } catch (error) {
-    if (error?.code === "ENOENT") return { ok: false, reason: "miss" };
+    if (error?.code === "ENOENT" || error?.code === "EPERM") return { ok: false, reason: "miss" };
     return { ok: false, reason: "corrupt" };
+  }
+  const statImpl = deps.statSync ?? statSync;
+  const getuid = deps.getuid ?? (() => (typeof process.getuid === "function" ? process.getuid() : undefined));
+  let ownerUid;
+  try {
+    ownerUid = statImpl(file).uid;
+  } catch (error) {
+    if (error?.code === "ENOENT" || error?.code === "EPERM") return { ok: false, reason: "miss" };
+    return { ok: false, reason: "corrupt" };
+  }
+  const myUid = getuid();
+  if (typeof myUid === "number" && typeof ownerUid === "number" && ownerUid !== myUid) {
+    return { ok: false, reason: "miss" };
   }
   const chmodImpl = deps.chmodSync ?? chmodSync;
   try {
@@ -121,11 +135,15 @@ function isApiPath(arg) {
  * Cache only an exact allowlist. Anything else, including -f/-F/--raw-field/--field,
  * --jq/-q, -H, -i, and --input, must be passed to gh api unchanged.
  * Allowed: `<path>` or `<path> -X GET` in either order.
- * Bare `graphql` and literal `{owner}` / `{repo}` placeholders pass through.
+ * Bare `graphql`, `/graphql`, and literal `{owner}` / `{repo}` / `{branch}` placeholders pass through.
  * @returns {string|null}
  */
 function isPlaceholderPath(path) {
-  return path === "graphql" || path.includes("{owner}") || path.includes("{repo}");
+  return path === "graphql"
+    || path === "/graphql"
+    || path.includes("{owner}")
+    || path.includes("{repo}")
+    || path.includes("{branch}");
 }
 
 export function cacheablePath(argv) {
@@ -145,9 +163,10 @@ export function cacheablePath(argv) {
  * @param {string} [options.token] sent as Authorization by the transport; hashed into the cache key, never stored
  * @param {Record<string, string>} [options.headers]
  * @param {(req: {url: string, headers: Record<string, string>}) => Promise<{status: number, body: string, headers?: Record<string, string>}>} options.request
+ * @param {object} [options.readDeps] replacements for readCacheEntry (tests)
  * @returns {Promise<{status: number, body: string, headers: Record<string, string>, etag: string|null, unchanged: boolean}>}
  */
-export async function cachedGet({ url, cacheDir, env = process.env, token, headers = {}, request }) {
+export async function cachedGet({ url, cacheDir, env = process.env, token, headers = {}, request, readDeps }) {
   if (!etagCacheEnabled(env)) {
     const response = await request({ url, headers: { ...headers } });
     return {
@@ -160,7 +179,7 @@ export async function cachedGet({ url, cacheDir, env = process.env, token, heade
   }
 
   const file = cacheFileForUrl(cacheDir, url, { token, headers, env });
-  const cached = readCacheEntry(file);
+  const cached = readCacheEntry(file, readDeps);
   const outbound = { ...headers };
   if (cached.ok) outbound["If-None-Match"] = cached.etag;
 
@@ -239,11 +258,12 @@ function spawnGhApi(spawnImpl, argv, env) {
 }
 
 /**
- * Flag off: `gh api <args>` with inherited stdio (same stdout, stderr, and exit code).
- * Flag on, allowlisted argv only (`<path>` or `<path> -X GET` in either order):
- * conditional GET. Body on stdout. The line `unchanged` on stderr when the
- * response is a 304 served from cache, so callers can skip re-parsing.
- * Flag on, every other argv: the same passthrough, arguments unchanged.
+ * Flag unset (or any value other than "0"): allowlisted argv only
+ * (`<path>` or `<path> -X GET` in either order) uses a conditional GET.
+ * Body on stdout. The line `unchanged` on stderr when the response is a 304
+ * served from cache, so callers can skip re-parsing. Every other argv is
+ * `gh api` with the same arguments.
+ * Flag "0": `gh api <args>` with inherited stdio (same stdout, stderr, and exit code).
  */
 export async function runCli(argv, deps = {}) {
   const env = deps.env ?? process.env;
