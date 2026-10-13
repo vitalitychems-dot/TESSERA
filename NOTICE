@@ -16,3 +16,8 @@ Minecraft assets are not included.
   observation graph shape used by the knowledge store.
 - three.js (MIT, https://github.com/mrdoob/three.js) — studio floor renderer.
   The office layout is clean-room. Minecraft assets are not included.
+
+v3 context packing (artifacts/v3/src/pack.mjs) re-implements ideas, without copying code, from:
+- microsoft/LLMLingua (MIT): prompt token pruning
+- yamadashy/repomix (MIT): compact context packing
+- mit-han-lab/streaming-llm (MIT): attention-sink + window

@@ -1,0 +1,11 @@
+{
+  "name": "@workspace/v3",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test --test-reporter=spec test/*.test.mjs",
+    "bench": "node src/bench.mjs"
+  }
+}
