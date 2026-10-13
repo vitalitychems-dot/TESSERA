@@ -21,18 +21,52 @@ export function subscribeWorkspace(fn: WorkspaceListener): () => void {
   return () => { workspaceListeners.delete(fn); };
 }
 
-/** Picks the highest-salience message (topic-inhibited) and broadcasts it. */
-export function broadcastWinner(windowMs = 60_000, inhibition = 0.5): AgentMessage | null {
+/**
+ * Delivery report for one broadcast (#10, W-state redundant broadcast).
+ * Like a W state, the broadcast is loss-tolerant: losing any one recipient
+ * (it throws, or unsubscribes mid-broadcast) never collapses delivery to the
+ * others. `delivered` counts recipients that actually received the winner.
+ */
+export interface BroadcastReport {
+  winner: AgentMessage | null;
+  attempted: number;
+  delivered: number;
+  failed: number;
+}
+
+let lastReport: BroadcastReport = { winner: null, attempted: 0, delivered: 0, failed: 0 };
+
+/** Delivery count from the most recent broadcast. */
+export function lastBroadcastReport(): BroadcastReport {
+  return { ...lastReport };
+}
+
+/** Picks the highest-salience message (topic-inhibited), broadcasts it, and reports delivery. */
+export function broadcastWinnerWithReport(windowMs = 60_000, inhibition = 0.5): BroadcastReport {
   const seen = new Set(recentWinners.map((w) => w.id));
   const candidates = pullTopK(50, undefined, windowMs).filter((m) => !seen.has(m.id));
-  if (!candidates.length) return null;
+  if (!candidates.length) {
+    lastReport = { winner: null, attempted: 0, delivered: 0, failed: 0 };
+    return { ...lastReport };
+  }
   const recentTopics = new Set(recentWinners.map((w) => w.topic));
   const salience = (m: AgentMessage) => m.attention * (recentTopics.has(m.topic) ? inhibition : 1);
   const winner = candidates.reduce((best, m) => (salience(m) > salience(best) ? m : best));
   recentWinners.push({ id: winner.id, topic: winner.topic });
   if (recentWinners.length > WINNER_MEMORY) recentWinners.shift();
-  for (const fn of workspaceListeners) {
-    try { fn(winner); } catch { /* a bad listener must not stop the broadcast */ }
+  // Snapshot recipients so a listener unsubscribing itself or another mid-loop
+  // cannot cause anyone in the snapshot to be skipped.
+  const recipients = [...workspaceListeners];
+  let delivered = 0;
+  let failed = 0;
+  for (const fn of recipients) {
+    try { fn(winner); delivered++; } catch { failed++; /* a bad listener must not stop the broadcast */ }
   }
-  return winner;
+  lastReport = { winner, attempted: recipients.length, delivered, failed };
+  return { ...lastReport };
+}
+
+/** Picks the highest-salience message (topic-inhibited) and broadcasts it. */
+export function broadcastWinner(windowMs = 60_000, inhibition = 0.5): AgentMessage | null {
+  return broadcastWinnerWithReport(windowMs, inhibition).winner;
 }
