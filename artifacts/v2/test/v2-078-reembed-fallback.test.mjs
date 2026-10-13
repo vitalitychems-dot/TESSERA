@@ -18,24 +18,39 @@ function stripTypes(source) {
     .replace(/:\s*[A-Za-z_][A-Za-z0-9_]*/g, "");
 }
 
-// The pre-fix function, loaded from git rather than retyped. Parent of the commit
-// that removed `(i % 32)` from neural-embeddings.ts.
-function loadOldFallback(root) {
-  const commit = execFileSync(
-    "git",
-    ["log", "-1", "--format=%H", "-S", "(i % 32)", "--", "artifacts/api-server/src/lib/neural-embeddings.ts"],
-    { cwd: root, encoding: "utf8" },
-  ).trim();
-  assert.ok(commit, "git history has the pre-fix fallback");
-  const src = execFileSync(
-    "git",
-    ["show", `${commit}^:artifacts/api-server/src/lib/neural-embeddings.ts`],
-    { cwd: root, encoding: "utf8" },
-  );
+// The pre-fix function: parent of the commit that removed `(i % 32)` from neural-embeddings.ts.
+// CI checkouts are shallow, so it comes from a vendored fixture (same block, pinned commit).
+// When full git history is present, the fixture is cross-checked against it.
+const FIXTURE = new URL("./fixtures/pre-fix-neural-embeddings.ts.txt", import.meta.url);
+function fromGitHistory(root) {
+  try {
+    const commit = execFileSync(
+      "git",
+      ["log", "-1", "--format=%H", "-S", "(i % 32)", "--", "artifacts/api-server/src/lib/neural-embeddings.ts"],
+      { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    ).trim();
+    if (!commit) return null;
+    return execFileSync(
+      "git",
+      ["show", `${commit}^:artifacts/api-server/src/lib/neural-embeddings.ts`],
+      { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    );
+  } catch {
+    return null;
+  }
+}
+function block(src) {
   const start = src.indexOf("const STOPWORDS");
   const end = src.indexOf("export async function generateEmbedding");
-  assert.ok(start > 0 && end > start, "old fallback source is present");
-  const chunk = src.slice(start, end);
+  return start >= 0 && end > start ? src.slice(start, end) : src.slice(Math.max(0, start));
+}
+function loadOldFallback(root) {
+  const fixture = readFileSync(FIXTURE, "utf8");
+  const git = fromGitHistory(root);
+  if (git) assert.equal(block(fixture).trim(), block(git).trim(), "fixture matches git history");
+  const src = fixture;
+  const chunk = block(src);
+  assert.ok(chunk.startsWith("const STOPWORDS"), "old fallback source is present");
   assert.match(chunk, /\(i % 32\)/);
   assert.doesNotMatch(chunk, /7919 \* block/);
   const factory = new Function(`${stripTypes(`const EMBEDDING_DIM = 256;\n${chunk}`)}\nreturn localFallbackEmbedding;`);
