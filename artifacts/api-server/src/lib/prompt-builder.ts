@@ -30,10 +30,14 @@ function approxTokens(s: string): number {
   return Math.ceil((s || "").length / APPROX_CHARS_PER_TOKEN);
 }
 
-function trimToBudget(text: string, maxTokens: number): string {
+export function trimToBudget(text: string, maxTokens: number): string {
   const maxChars = maxTokens * APPROX_CHARS_PER_TOKEN;
   if (text.length <= maxChars) return text;
-  return text.slice(0, maxChars - 30) + "\n…[truncated]";
+  const marker = "\n…[truncated]\n";
+  const budget = Math.max(16, maxChars - marker.length);
+  const head = Math.ceil(budget * 0.6);
+  const tail = budget - head;
+  return text.slice(0, head) + marker + text.slice(text.length - tail);
 }
 
 export function buildPrompt(parts: PromptParts, opts: PromptBuilderOpts = {}): BuiltPrompt {
