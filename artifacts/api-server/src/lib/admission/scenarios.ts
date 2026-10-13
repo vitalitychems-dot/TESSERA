@@ -502,3 +502,4 @@ export const SCENARIOS: readonly Scenario[] = [
   sortScenario(),
   allotmentScenario(),
 ];
+
