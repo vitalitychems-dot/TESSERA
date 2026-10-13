@@ -37,7 +37,8 @@ export function simulate(pick, { topics, difficulty, maxSteps = 2000, seed = 7 }
 /* ---- B2: outcome learning for the recognizer (error-driven, replayed, spaced) ---- */
 import { classify } from "./affect.mjs";
 const tok = (s) => String(s).toLowerCase().replace(/<[a-z]+>/g, " ").match(/[a-z][a-z'-]+/g) ?? [];
-const feats = (s, dim) => { const t = tok(s); const f = [...t, `lex:${classify(s)[dim]}`]; for (let i = 0; i + 1 < t.length; i++) f.push(`${t[i]}_${t[i + 1]}`); return f; };
+const lexCache = new Map(); const lex = (s) => { let c = lexCache.get(s); if (!c) { c = classify(s); if (lexCache.size > 50000) lexCache.clear(); lexCache.set(s, c); } return c; };
+const feats = (s, dim) => { const t = tok(s); const f = [...t, `lex:${lex(s)[dim]}`]; for (let i = 0; i + 1 < t.length; i++) f.push(`${t[i]}_${t[i + 1]}`); return f; };
 /** Averaged multiclass perceptron on top of the lexicon output. Prior = lexicon label. */
 export function createRecognizer(dim, labels) {
   const W = new Map(); const U = new Map(); let c = 1;
