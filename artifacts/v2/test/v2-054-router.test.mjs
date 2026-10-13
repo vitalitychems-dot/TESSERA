@@ -46,11 +46,9 @@ test("compressPrompt drops HTML comments and fence language tags", () => {
   assert.equal(out.includes("this"), true);
 });
 
-test("compressPrompt saves tokens on a real linked document", () => {
-  const buildLog = readFileSync(new URL("../../../docs/v2/BUILD-LOG.md", import.meta.url), "utf8");
+test("compressPrompt saves tokens on OPTIMIZE-26 markdown links", () => {
   const linked = readFileSync(new URL("../../../docs/v2/OPTIMIZE-26.md", import.meta.url), "utf8");
-  logCompress("docs/v2/BUILD-LOG.md", buildLog);
-  const opt = logCompress("docs/v2/OPTIMIZE-26.md", linked);
-  assert.ok(opt.afterTokens < opt.beforeTokens);
-  assert.ok(opt.saved / opt.beforeTokens >= 0.01);
+  const measured = logCompress("docs/v2/OPTIMIZE-26.md", linked);
+  assert.ok(measured.afterTokens < measured.beforeTokens);
+  assert.ok(measured.saved / measured.beforeTokens >= 0.01);
 });
