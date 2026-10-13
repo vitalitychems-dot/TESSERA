@@ -27,15 +27,18 @@ jobs:
           TESSERA_MESH_RUNNERS: ${{ vars.TESSERA_MESH_RUNNERS || '0' }}
           TESSERA_MESH_OWNER_OFF: ${{ vars.TESSERA_MESH_OWNER_OFF || '0' }}
         run: node scripts/loop/runner-select.mjs >> "$GITHUB_OUTPUT"
+  # fix: runs model output + the issue's test. Read-only token, no write scope, no push.
   fix:
     needs: select
     runs-on: ${{ fromJSON(needs.select.outputs.runs_on) }}
     timeout-minutes: 40
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
       issues: read
       models: read
+    outputs:
+      n: ${{ steps.pick.outputs.n }}
+      ok: ${{ steps.fix.outputs.ok }}
     env:
       LLAMA_TAG: b11583
       MODEL_URL: https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf
@@ -44,7 +47,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          persist-credentials: false   # no ambient git token during model run / test exec
+          persist-credentials: false   # no git token on disk during model run / test exec
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
@@ -57,38 +60,37 @@ jobs:
           mkdir -p ~/.cache/tessera-llm && cd ~/.cache/tessera-llm
           [ -d "llama-$LLAMA_TAG" ] || curl -fsSL "https://github.com/ggml-org/llama.cpp/releases/download/$LLAMA_TAG/llama-$LLAMA_TAG-bin-ubuntu-x64.tar.gz" | tar xz
           [ -f coder.gguf ] || curl -fsSL -o coder.gguf "$MODEL_URL"
-      - name: Pick the oldest needs-agent issue from a trusted author (OWNER/MEMBER or bot)
+      - name: Pick the oldest needs-agent issue from a trusted author
         id: pick
         env:
           GH_TOKEN: ${{ github.token }}
-          WORKER_BOT_LOGINS: ${{ vars.WORKER_BOT_LOGINS || 'vitalitychems-dot' }}
+          WORKER_BOT_LOGINS: ${{ vars.WORKER_BOT_LOGINS || 'vitalitychems-dot,github-actions[bot]' }}
         run: |
           set -euo pipefail
           R="$GITHUB_REPOSITORY"
-          # Use the REST API so author_association is available (gh issue list lacks it).
-          # Exclude PRs, require file:/test: lines, oldest first, then keep only trusted authors.
+          # REST API so author_association is available. Exclude PRs, need file:/test: lines, oldest first.
           gh api --paginate "repos/$R/issues?labels=needs-agent&state=open&per_page=100" \
             | jq -s 'add // [] | map(select(.pull_request | not))
                      | map(select((.body // "") | test("(?m)^file: ") and test("(?m)^test: ")))
                      | sort_by(.number)' > candidates.json
-          jq --arg allow "$WORKER_BOT_LOGINS" '
-            ($allow | split(",") | map(gsub("^\\s+|\\s+$"; ""))) as $bots
-            | map(select((.author_association == "OWNER")
-                         or (.author_association == "MEMBER")
-                         or (($bots | index(.user.login)) != null)))
-            | .[0] // empty' candidates.json > issue.json
+          jq --arg allow "$WORKER_BOT_LOGINS" -f scripts/loop/trusted-authors.jq candidates.json > issue.json
           if [ -s issue.json ]; then
             echo "n=$(jq .number issue.json)" >> "$GITHUB_OUTPUT"
           else
             echo "no workable issue from a trusted author"
           fi
+      - name: Hand the read-only models token over by file (never in the worker's env)
+        if: steps.pick.outputs.n && vars.WORKER_ENDPOINT
+        env:
+          T: ${{ github.token }}
+        run: umask 077 && printf '%s' "$T" > "$RUNNER_TEMP/wt"
       - name: Attempt fix (local model; GitHub Models if vars.WORKER_ENDPOINT is set)
         if: steps.pick.outputs.n
         id: fix
         env:
           WORKER_ENDPOINT: ${{ vars.WORKER_ENDPOINT }}
           WORKER_MODEL: ${{ vars.WORKER_MODEL }}
-          WORKER_TOKEN: ${{ vars.WORKER_ENDPOINT && github.token || '' }}
+          WORKER_TOKEN_FILE: ${{ vars.WORKER_ENDPOINT && format('{0}/wt', runner.temp) || '' }}
         run: |
           if [ -z "$WORKER_ENDPOINT" ]; then
             L=~/.cache/tessera-llm/llama-$LLAMA_TAG
@@ -96,18 +98,70 @@ jobs:
             for i in $(seq 90); do curl -sf localhost:8080/health >/dev/null && break; sleep 2; done
           fi
           set +e; node scripts/loop/worker.mjs . issue.json | tee result.json; rc=$?; set -e
+          rm -f "$RUNNER_TEMP/wt"
+          mkdir -p "$RUNNER_TEMP/out" && cp result.json "$RUNNER_TEMP/out/"
+          if [ $rc = 0 ]; then git diff --no-ext-diff --binary > "$RUNNER_TEMP/out/fix.patch"; fi
           echo "ok=$([ $rc = 0 ] && echo 1 || echo 0)" >> "$GITHUB_OUTPUT"
-      - name: Open PR (never merge)
-        if: steps.fix.outputs.ok == '1'
+      - if: steps.fix.outputs.ok == '1'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fix-patch
+          path: ${{ runner.temp }}/out
+          retention-days: 3
+  # publish: never runs model code or tests. Fresh checkout, re-derives the one allowed file
+  # from the issue itself, applies the (untrusted) patch only if it touches exactly that file.
+  publish:
+    needs: fix
+    if: needs.fix.outputs.ok == '1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: read
+    env:
+      N: ${{ needs.fix.outputs.n }}
+      WORKER_LINE_CAP: ${{ vars.WORKER_LINE_CAP || '60' }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: fix-patch
+          path: ${{ runner.temp }}/in
+      - name: Validate patch (one allowed file, regular, within line cap) and apply
+        id: apply
         env:
           GH_TOKEN: ${{ github.token }}
-          N: ${{ steps.pick.outputs.n }}
         run: |
-          git config user.name vitalitychems-dot
-          git config user.email 332565808+vitalitychems-dot@users.noreply.github.com
-          git switch -c "worker/issue-$N-${GITHUB_RUN_ID}"
-          git commit -qam "worker: attempt fix for #$N"
-          # checkout ran with persist-credentials:false; authenticate this push only.
-          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD
+          set -euo pipefail
+          case "$N" in ''|*[!0-9]*) echo "bad issue number"; exit 1;; esac
+          gh api "repos/$GITHUB_REPOSITORY/issues/$N" > "$RUNNER_TEMP/issue.json"
+          FILE=$(node scripts/loop/worker.mjs --allowed-file . "$RUNNER_TEMP/issue.json")
+          P="$RUNNER_TEMP/in/fix.patch"
+          git -c core.hooksPath=/dev/null apply --numstat -z "$P" > "$RUNNER_TEMP/numstat"
+          node scripts/loop/patch-check.mjs "$RUNNER_TEMP/numstat" "$FILE" "$WORKER_LINE_CAP"
+          git -c core.hooksPath=/dev/null apply --include="$FILE" --exclude='*' "$P"
+          [ "$(git status --porcelain=v1 -z | tr '\0' '\n')" = " M $FILE" ] || { echo "patch changed more than $FILE"; exit 1; }
+          [ -f "$FILE" ] && [ ! -L "$FILE" ]
+          echo "file=$FILE" >> "$GITHUB_OUTPUT"
+      - name: Push branch + open PR (never merge)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FILE: ${{ steps.apply.outputs.file }}
+        run: |
+          set -euo pipefail
+          B="worker/issue-$N-${GITHUB_RUN_ID}"
+          git switch -c "$B"
+          git add -- "$FILE"
+          git -c core.hooksPath=/dev/null -c user.name=vitalitychems-dot \
+              -c user.email=332565808+vitalitychems-dot@users.noreply.github.com \
+              commit -q -m "worker: attempt fix for #$N"
+          git -c core.hooksPath=/dev/null push -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$B"
           gh label create worker-pr --color 5319E7 2>/dev/null || true
-          gh pr create --label worker-pr --title "worker: fix #$N" --body "Automated attempt for #$N by worker.yml (local model, 0 paid tokens). Result: $(cat result.json). Needs moderator-lock + Security/Build/Moderator gates. Not auto-merged."
+          gh pr create --head "$B" --label worker-pr --title "worker: fix #$N" \
+            --body "Automated attempt for #$N by worker.yml (local model, 0 paid tokens). Patch built in a read-only job, applied here to \`$FILE\` only. Needs moderator-lock + Security/Build/Moderator gates. Not auto-merged."
