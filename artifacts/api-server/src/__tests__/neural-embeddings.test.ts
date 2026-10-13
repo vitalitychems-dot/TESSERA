@@ -28,3 +28,13 @@ describe("neural embeddings", () => {
     expect(maxDiff).toBeGreaterThan(0.01);
   });
 });
+
+describe("neural embedding cache key", () => {
+  it("texts sharing a 500-char prefix do not share a cached embedding", async () => {
+    delete process.env.TESSERA_EMBED_MODEL;
+    const prefix = `shared header ${Date.now()} `.padEnd(520, "x");
+    const a = await generateEmbedding(`${prefix} alpha consensus retrieval memory`);
+    const b = await generateEmbedding(`${prefix} omega scheduler annealing lattice`);
+    expect(a).not.toEqual(b);
+  });
+});
