@@ -1,0 +1,26 @@
+# Owner: Father only. Mirrors gate/locked-paths.txt. Agents cannot approve changes here (see SETUP-FATHER.md: agents must not hold this account's token).
+/.github/ @vitalitychems-dot
+/CODEOWNERS @vitalitychems-dot
+/.github/CODEOWNERS @vitalitychems-dot
+/gate/ @vitalitychems-dot
+/SETUP-FATHER.md @vitalitychems-dot
+/AGENTS.md @vitalitychems-dot
+/.cursor/ @vitalitychems-dot
+/mesh/roles/ @vitalitychems-dot
+/mesh/policy/ @vitalitychems-dot
+**/prompts/ @vitalitychems-dot
+*.prompt.md @vitalitychems-dot
+**/routines/ @vitalitychems-dot
+**/baseline.json @vitalitychems-dot
+**/qa_set* @vitalitychems-dot
+renovate.json @vitalitychems-dot
+/scripts/historical-merge-gate.mjs @vitalitychems-dot
+/scripts/historical-merge-gate.test.mjs @vitalitychems-dot
+/scripts/suite-policy.mjs @vitalitychems-dot
+/scripts/suite-policy.test.mjs @vitalitychems-dot
+/scripts/test-unified.mjs @vitalitychems-dot
+/scripts/bench-latency.mjs @vitalitychems-dot
+/scripts/loop/ @vitalitychems-dot
+**/bench/ @vitalitychems-dot
+/artifacts/api-server/scripts/pen-local-gate.mjs @vitalitychems-dot
+/artifacts/api-server/src/lib/pen-local/ @vitalitychems-dot
