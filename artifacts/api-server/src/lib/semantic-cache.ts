@@ -35,10 +35,13 @@ function hashPrompt(messages: Array<{ role: string; content: string }>, model: s
 
 const SYSTEM_FP_PREFIX = "@@sysfp:";
 
-function fingerprintSystemContext(messages: Array<{ role: string; content: string }>, model: string): string {
+// Hash the whole system context. A 500-char prefix made every prompt built with
+// withCodexDirective() (directive > 500 chars) share one fingerprint, so a semantic
+// hit could return an answer written under a different agent's system prompt.
+export function fingerprintSystemContext(messages: Array<{ role: string; content: string }>, model: string): string {
   const systemContent = messages.filter(m => m.role === "system").map(m => m.content).join("|");
   if (systemContent.length === 0) return "";
-  return crypto.createHash("sha256").update(model + "|sys:" + systemContent.slice(0, 500)).digest("hex").slice(0, 16);
+  return crypto.createHash("sha256").update(model + "|sys:" + systemContent).digest("hex").slice(0, 16);
 }
 
 function extractStoredFingerprint(promptText: string): string {
