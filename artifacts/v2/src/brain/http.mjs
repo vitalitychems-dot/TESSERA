@@ -4,6 +4,7 @@
  *  /brain/graph?src=memory|celegans|hemibrain|flywire   nodes+edges with 3D positions
  *  /brain/learn?n=4       next Hebbian learning step on the memory graph (fired edges)
  *  /brain/snapshot?t=&prev=   memory graph at event index t, diff vs previous index
+ *  /brain/snapshot?src=crystal&t=&prev=   same shape from the v3 crystal (adds p, v, src per item)
  * Memory file: TESSERA_BRAIN_MEMORY (path) or docs/v2/v2-memory.jsonl. Not a TESSERA_ENABLE flag.
  */
 import { readFileSync, existsSync } from "node:fs";
@@ -11,6 +12,8 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { buildBrain, createBrainLoop, layout3d, replayAt } from "./view.mjs";
 import { TEMPLATES, loadTemplate } from "./templates.mjs";
+import { crystalSnapshot } from "../../../v3/src/crystal.mjs";
+import { crystalCells } from "../../../v3/src/serve.mjs";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const memPath = () => process.env.TESSERA_BRAIN_MEMORY || join(HERE, "../../../../docs/v2/v2-memory.jsonl");
 const cache = new Map(); let loop = null;
@@ -41,6 +44,8 @@ export function handleBrain(req, res, url) {
   if (url.pathname === "/brain/learn") { loop ??= createBrainLoop(memory()); const s = loop.step(Math.min(16, Number(url.searchParams.get("n")) || 1)); if (s.done) loop = null; return send("application/json", JSON.stringify(s)); }
   if (url.pathname === "/brain/snapshot") {
     const q = url.searchParams;
+    if (q.get("src") === "crystal")
+      return send("application/json", JSON.stringify(crystalSnapshot(crystalCells(memPath(), memory), q.has("t") ? q.get("t") : undefined, q.has("prev") ? q.get("prev") : undefined)));
     return send("application/json", JSON.stringify(replayAt(memory(), q.has("t") ? q.get("t") : undefined, q.has("prev") ? q.get("prev") : undefined)));
   }
   return false;
