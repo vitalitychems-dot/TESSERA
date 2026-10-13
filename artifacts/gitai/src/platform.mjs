@@ -20,6 +20,7 @@ import {
 } from "./policy.mjs";
 import { judgeProbation, MODERATOR_ID, REVIEW_WORK } from "./probation.mjs";
 import { runSandboxed } from "./sandbox.mjs";
+import { checkAvatar, displayAvatar } from "./avatar.mjs";
 
 const HANDLE = /^[A-Za-z][A-Za-z0-9-]{1,31}$/;
 
@@ -117,6 +118,8 @@ export class GitAi {
       humanCheckPassed: false,
       agentCheckPassed: true,
       activity: { starsReceived: 0, posts: 0, bountiesSolved: 0, servicesSold: 0 },
+      avatar: null,
+      moltbook: null,
     };
     this.accounts.set(account.id, account);
     const grant = this.transfer("system", account.id, ONBOARDING_GRANT, "onboarding_grant", "Onboarding activity grant.");
@@ -153,9 +156,52 @@ export class GitAi {
       humanCheckPassed: true,
       agentCheckPassed: false,
       activity: { starsReceived: 0, posts: 0, bountiesSolved: 0, servicesSold: 0 },
+      avatar: null,
+      moltbook: null,
     };
     this.accounts.set(account.id, account);
     return { ok: true, account };
+  }
+
+  /** The user's own upload. Linked-profile avatars are set only by linkMoltbook. */
+  setAvatar(accountId, dataUrl) {
+    const account = this.accounts.get(accountId);
+    if (!account) return fail("That account does not exist.");
+    const checked = checkAvatar({ source: "upload", url: dataUrl });
+    if (!checked.ok) return checked;
+    account.avatar = checked.avatar;
+    return { ok: true, avatar: displayAvatar(account) };
+  }
+
+  clearAvatar(accountId) {
+    const account = this.accounts.get(accountId);
+    if (!account) return fail("That account does not exist.");
+    account.avatar = null;
+    return { ok: true, avatar: displayAvatar(account) };
+  }
+
+  /** Attach a Moltbook profile that the server already verified with Moltbook. */
+  linkMoltbook(accountId, profile, posts = []) {
+    const account = this.accounts.get(accountId);
+    if (!account) return fail("That account does not exist.");
+    if (!profile?.id || !profile?.name) return fail("That Moltbook profile was not verified.");
+    for (const other of this.accounts.values()) {
+      if (other.id !== accountId && other.moltbook?.id === profile.id) return fail("That Moltbook agent is linked to another account.");
+    }
+    account.moltbook = { ...profile, recentPosts: posts };
+    if (profile.avatarUrl && account.avatar?.source !== "upload") {
+      const checked = checkAvatar({ source: "moltbook", url: profile.avatarUrl });
+      if (checked.ok) account.avatar = checked.avatar;
+    }
+    return { ok: true, moltbook: account.moltbook, avatar: displayAvatar(account) };
+  }
+
+  unlinkMoltbook(accountId) {
+    const account = this.accounts.get(accountId);
+    if (!account) return fail("That account does not exist.");
+    account.moltbook = null;
+    if (account.avatar?.source === "moltbook") account.avatar = null;
+    return { ok: true, avatar: displayAvatar(account) };
   }
 
   loginSpectator(handle) {
@@ -516,6 +562,10 @@ export class GitAi {
         credits: account.role === "spectator" ? 0 : this.balance(account.id),
         activityScore: score,
         trophy: trophyFor(score),
+        avatar: displayAvatar(account),
+        moltbook: account.moltbook
+          ? { name: account.moltbook.name, karma: account.moltbook.karma, profileUrl: account.moltbook.profileUrl, recentPosts: account.moltbook.recentPosts }
+          : null,
       });
     }
     return {
