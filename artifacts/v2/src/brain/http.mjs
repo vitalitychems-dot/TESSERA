@@ -14,8 +14,9 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const memPath = () => process.env.TESSERA_BRAIN_MEMORY || join(HERE, "../../../../docs/v2/v2-memory.jsonl");
 const cache = new Map(); let loop = null;
 function memory() { return existsSync(memPath()) ? readFileSync(memPath(), "utf8") : ""; }
-export function brainGraph(src = "memory") {
-  if (cache.has(src)) return cache.get(src);
+export function brainGraph(src = "memory", { layout = true } = {}) {
+  const ck = layout ? src : `${src}:nolayout`;
+  if (cache.has(ck)) return cache.get(ck);
   let out;
   if (src === "memory") {
     const b = buildBrain(memory());
@@ -25,10 +26,10 @@ export function brainGraph(src = "memory") {
     const max = Math.max(...t.edges.map((e) => e.syn));
     const layer = (id) => (id.startsWith("in") ? -1 : id.startsWith("out") ? 1 : 0);
     const grid = (id) => { const n = Number(id.replace(/\D/g, "")); const w = id.startsWith("mlp") ? 16 : 10; return [((n % w) - w / 2) * 1.6, (Math.floor(n / w) - w / 2) * 1.6]; };
-    const pos = t.kind === "weights" ? ids.map((id) => [layer(id) * 22, ...grid(id)]) : layout3d(ids, t.edges.map((e) => [e.from, e.to, 4 * Math.log1p(e.syn) / Math.log1p(max)]), { iters: 100 });
-    out = { src, name: t.name, nodes: ids.map((id, i) => ({ id, group: t.networks?.[id] ?? id.replace(/[_(].*$/, "").replace(/[LR]$/, "").replace(/\d+$/, ""), p: pos[i] })), edges: t.edges.map((e) => ({ a: e.from, b: e.to, w: Math.log1p(e.syn), syn: e.syn, sign: e.inh > e.exc ? -1 : e.exc > 0 ? 1 : 0, kind: "synapse" })), license: `${t.species} · ${t.name} · ${t.license}` };
+    const pos = t.kind === "weights" ? ids.map((id) => [layer(id) * 22, ...grid(id)]) : t.coords && ids.every((id) => t.coords[id]) ? ids.map((id) => t.coords[id]) : !layout ? ids.map(() => [0, 0, 0]) : layout3d(ids, t.edges.map((e) => [e.from, e.to, 4 * Math.log1p(e.syn) / Math.log1p(max)]), { iters: 100 });
+    out = { src, name: t.name, nodes: ids.map((id, i) => ({ id, group: t.cortex?.[id] ?? t.networks?.[id] ?? id.replace(/[_(].*$/, "").replace(/[LR]$/, "").replace(/\d+$/, ""), p: pos[i] })), edges: t.edges.map((e) => ({ a: e.from, b: e.to, w: Math.log1p(e.syn), syn: e.syn, sign: e.inh > e.exc ? -1 : e.exc > 0 ? 1 : 0, kind: "synapse" })), license: `${t.species} · ${t.name} · ${t.license}${t.coordsSource ? ` · positions: ${t.coordsSource}` : " · positions: force layout"}` };
   } else return null;
-  cache.set(src, out); return out;
+  cache.set(ck, out); return out;
 }
 export function handleBrain(req, res, url) {
   if (req.method !== "GET") return false;

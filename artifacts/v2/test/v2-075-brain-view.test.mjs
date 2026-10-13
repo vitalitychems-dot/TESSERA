@@ -21,7 +21,7 @@ test("B1-06 connectome templates: attribution, real edges, same-density null", (
     const t = loadTemplate(k); assert.ok(t.license.length > 10); assert.ok(t.edges.length > 1000); assert.ok(t.species);
     const r = randomTemplate(t); assert.equal(r.edges.length, t.edges.length);
     assert.equal(r.edges.reduce((s, e) => s + e.syn, 0), t.edges.reduce((s, e) => s + e.syn, 0));
-    const g = brainGraph(k); const ids = new Set(g.nodes.map((n) => n.id)); assert.ok(g.edges.every((e) => ids.has(e.a) && ids.has(e.b)));
+    const g = brainGraph(k, { layout: false }); const ids = new Set(g.nodes.map((n) => n.id)); assert.ok(g.edges.every((e) => ids.has(e.a) && ids.has(e.b)));
   }
   assert.ok(Object.keys(TEMPLATES).includes("flywire"));
 });
