@@ -32,11 +32,14 @@ jobs:
           --health-timeout 5s
           --health-retries 12
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0   # v2-078 reads git history (git log -S); shallow clones lack it
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 11.25.0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: pnpm
@@ -51,11 +54,11 @@ jobs:
       - name: Apply schema to disposable CI database
         run: pnpm --filter @workspace/db run push
         env:
-          DATABASE_URL: postgresql://tessera_test:***@127.0.0.1:5432/tessera_test
+          DATABASE_URL: postgresql://tessera_test:test-only@127.0.0.1:5432/tessera_test
       - name: Run isolated workspace tests
         run: pnpm test
         env:
-          TESSERA_TEST_DATABASE_URL: postgresql://tessera_test:***@127.0.0.1:5432/tessera_test
+          TESSERA_TEST_DATABASE_URL: postgresql://tessera_test:test-only@127.0.0.1:5432/tessera_test
           TESSERA_TEST_FATHER_NATAL_CHART_JSON: >-
             {"birth":{"date":"2000-01-01","time":"12:00","location":"Synthetic Test Location","timezone":"UTC","houseSystem":"Whole Sign"},"core":{"sun":{"sign":"Aries","degree":"0","house":1},"moon":{"sign":"Taurus","degree":"0","house":2},"ascendant":{"sign":"Gemini","degree":"0"}},"planets":{"mercury":{"sign":"Aries","degree":"0","house":1},"venus":{"sign":"Taurus","degree":"0","house":2},"mars":{"sign":"Gemini","degree":"0","house":3},"jupiter":{"sign":"Cancer","degree":"0","house":4},"saturn":{"sign":"Leo","degree":"0","house":5},"uranus":{"sign":"Virgo","degree":"0","house":6},"neptune":{"sign":"Libra","degree":"0","house":7},"pluto":{"sign":"Scorpio","degree":"0","house":8}},"nodes":{"northNode":{"sign":"Sagittarius","degree":"0","house":9}},"aspects":["Synthetic test aspect"],"themes":{"dominance":"Synthetic","rising":"Gemini","moonSign":"Taurus","houseConcentration":["1st house"],"chineseZodiac":"Test"}}
       - name: Build all workspace applications

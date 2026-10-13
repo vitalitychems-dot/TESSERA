@@ -64,10 +64,41 @@ export function getGroundingThreshold(): number {
   return GROUNDING_THRESHOLD;
 }
 
+const MAX_REPORT_HISTORY = 100;
+const REPORT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const PRUNE_EVERY_N_REPORTS = 25;
+
 const reportHistory: TruthfulnessReport[] = [];
+let reportsSincePrune = 0;
 let checkCounter = 0;
 let totalGroundedClaims = 0;
 let totalUngroundedClaims = 0;
+
+export function pruneReportHistory(now: number = Date.now()): number {
+  const before = reportHistory.length;
+  const cutoff = now - REPORT_MAX_AGE_MS;
+  for (let i = reportHistory.length - 1; i >= 0; i--) {
+    if (reportHistory[i].timestamp < cutoff) reportHistory.splice(i, 1);
+  }
+  if (reportHistory.length > MAX_REPORT_HISTORY) reportHistory.splice(MAX_REPORT_HISTORY);
+  reportsSincePrune = 0;
+  return before - reportHistory.length;
+}
+
+function recordReport(report: TruthfulnessReport): void {
+  reportHistory.unshift(report);
+  if (reportHistory.length > MAX_REPORT_HISTORY) reportHistory.splice(MAX_REPORT_HISTORY);
+  reportsSincePrune++;
+  if (reportsSincePrune >= PRUNE_EVERY_N_REPORTS) pruneReportHistory(report.timestamp);
+}
+
+export function _resetTruthfulnessForTests(): void {
+  reportHistory.length = 0;
+  reportsSincePrune = 0;
+  checkCounter = 0;
+  totalGroundedClaims = 0;
+  totalUngroundedClaims = 0;
+}
 
 export function detectHallucination(text: string): HallucinationCheck {
   if (!text || text.length < 20) {
@@ -261,8 +292,7 @@ export async function analyzeTruthfulnessV2(text: string): Promise<TruthfulnessR
     timestamp: Date.now(),
   };
 
-  reportHistory.unshift(report);
-  if (reportHistory.length > 100) reportHistory.splice(100);
+  recordReport(report);
 
   return report;
 }
@@ -297,8 +327,7 @@ export function analyzeTruthfulness(text: string): TruthfulnessReport {
     timestamp: Date.now(),
   };
 
-  reportHistory.unshift(report);
-  if (reportHistory.length > 100) reportHistory.splice(100);
+  recordReport(report);
 
   return report;
 }

@@ -97,3 +97,18 @@ export function busStats() {
     topTopics: Object.entries(byTopic).sort((a, b) => b[1] - a[1]).slice(0, 8),
   };
 }
+
+// ---------- checkpoint support (REA-01) ----------
+export interface BusState { version: 1; messages: AgentMessage[] }
+
+export function exportBusState(): BusState {
+  return { version: 1, messages: messages.map((m) => ({ ...m })) };
+}
+
+/** Replace in-memory bus contents with a checkpoint. Does NOT re-emit observations. */
+export function importBusState(state: BusState): number {
+  if (!state || state.version !== 1 || !Array.isArray(state.messages)) return 0;
+  messages.length = 0;
+  for (const m of state.messages.slice(-BUS_CAP)) messages.push({ ...m });
+  return messages.length;
+}

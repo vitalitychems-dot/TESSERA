@@ -1,5 +1,6 @@
 import { logger } from "./logger";
 import * as os from "os";
+import { normalizeEvolutionModule } from "./evolution-modules";
 
 interface ModuleCooldown {
   moduleId: string;
@@ -8,6 +9,8 @@ interface ModuleCooldown {
   cooldownUntil: number;
   totalFailures: number;
   totalSuccesses: number;
+  totalDeferred: number;
+  lastDeferredReason: string | null;
   paused: boolean;
 }
 
@@ -25,7 +28,8 @@ const COOLDOWN_TIERS_MS = [
 const moduleCooldowns = new Map<string, ModuleCooldown>();
 let globalPaused = false;
 
-function getCooldown(moduleId: string): ModuleCooldown {
+function getCooldown(rawModuleId: string): ModuleCooldown {
+  const moduleId = normalizeEvolutionModule(rawModuleId);
   let entry = moduleCooldowns.get(moduleId);
   if (!entry) {
     entry = {
@@ -35,6 +39,8 @@ function getCooldown(moduleId: string): ModuleCooldown {
       cooldownUntil: 0,
       totalFailures: 0,
       totalSuccesses: 0,
+      totalDeferred: 0,
+      lastDeferredReason: null,
       paused: false,
     };
     moduleCooldowns.set(moduleId, entry);
@@ -99,6 +105,12 @@ export function recordEvolutionSuccess(moduleId: string): void {
   entry.totalSuccesses++;
 }
 
+export function recordEvolutionDeferred(moduleId: string, reason: string): void {
+  const entry = getCooldown(moduleId);
+  entry.totalDeferred++;
+  entry.lastDeferredReason = reason;
+}
+
 export function recordEvolutionFailure(moduleId: string): void {
   const entry = getCooldown(moduleId);
   entry.consecutiveFailures++;
@@ -159,6 +171,8 @@ export function getThrottleMetrics() {
     consecutiveFailures: number;
     totalFailures: number;
     totalSuccesses: number;
+    totalDeferred: number;
+    lastDeferredReason: string | null;
     successRate: number;
     cooldownRemainingMs: number;
     paused: boolean;
@@ -172,6 +186,8 @@ export function getThrottleMetrics() {
       consecutiveFailures: entry.consecutiveFailures,
       totalFailures: entry.totalFailures,
       totalSuccesses: entry.totalSuccesses,
+      totalDeferred: entry.totalDeferred,
+      lastDeferredReason: entry.lastDeferredReason,
       successRate: total > 0 ? Math.round((entry.totalSuccesses / total) * 100) : 100,
       cooldownRemainingMs: Math.max(0, entry.cooldownUntil - Date.now()),
       paused: entry.paused,
@@ -192,6 +208,11 @@ export function resetModuleCooldown(moduleId: string): void {
   entry.consecutiveFailures = 0;
   entry.cooldownUntil = 0;
   entry.paused = false;
+}
+
+export function _resetThrottleForTests(): void {
+  moduleCooldowns.clear();
+  globalPaused = false;
 }
 
 export function logEvolutionCycleSummary(): void {

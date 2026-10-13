@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Pin the git identity agents commit as. Local config wins inside the repo;
+# global config covers commits made before the checkout exists.
+set -euo pipefail
+
+git config --global user.name vitalitychems-dot
+git config --global user.email "332565808+vitalitychems-dot@users.noreply.github.com"
+
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  git config user.name vitalitychems-dot
+  git config user.email "332565808+vitalitychems-dot@users.noreply.github.com"
+fi

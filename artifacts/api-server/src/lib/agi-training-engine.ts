@@ -101,11 +101,61 @@ let trainingInterval: SacredHandle | null = null;
 let realCounts: Record<string, number> = {};
 const STATE_KEY = "agi-training-engine.state";
 
+const MASTERY_SOVEREIGN_MIN = 98;
+const MASTERY_EXPERT_MIN = 95;
+const MASTERY_ADVANCED_MIN = 90;
+const MASTERY_INTERMEDIATE_MIN = 80;
+const MASTERY_ACHIEVED_SCORE = 98;
+const MAX_MEASURED_SCORE = 99.5;
+const MAX_TRAINED_SCORE = 99.9;
+const SCORE_BASELINE = 50;
+const SCORE_LOG_SCALE = 12.5;
+const EVAL_MIN_QUESTIONS = 100;
+const EVAL_MIN_ACCURACY_PCT = 95;
+const EVAL_BOOST_BASELINE_PCT = 90;
+const EVAL_BOOST_FACTOR = 0.5;
+const EVAL_BOOST_CAP = 5;
+const MS_PER_HOUR = 3_600_000;
+const FRESHNESS_STALE_HOURS = 24;
+const FRESHNESS_AGING_HOURS = 6;
+const FRESHNESS_STALE = 0.2;
+const FRESHNESS_AGING = 0.5;
+const FRESHNESS_DEFAULT = 0.5;
+const FRESHNESS_VELOCITY_GAIN = 0.1;
+const FRESHNESS_MAX = 2;
+const FRESHNESS_MIN_MULTIPLIER = 0.1;
+const SIGMOID_STEEPNESS = 0.1;
+const SIGMOID_MIDPOINT_VOLUME = 50;
+const LEARNING_RATE_SCALE = 10;
+const LEARNING_RATE_MIN = 0.001;
+const LEARNING_RATE_MAX = 5;
+const LEARNING_RATE_STEP_WEIGHT = 0.1;
+const CROSS_BOOST_STEP_WEIGHT = 0.05;
+const CROSS_BOOST_DELTA_WEIGHT = 0.1;
+const CROSS_BOOST_INSIGHT_THRESHOLD = 0.5;
+const MIN_STEP_IMPROVEMENT = 0.001;
+const TRANSFER_PROPAGATION_MIN_DELTA = 0.05;
+const CASCADE_SESSION_MIN_GAIN = 0.01;
+const CATEGORIES_PER_CYCLE = 5;
+const RETRAIN_INTERVAL_MS = 60_000;
+const RELATED_CATEGORY_MIN_SCORE = 60;
+const RELATED_CATEGORY_LIMIT = 2;
+const INSIGHT_LIMIT = 10;
+const INITIAL_INSIGHT_COUNT = 2;
+const INITIAL_TRAINED_AGO_MS = 5 * 60 * 1000;
+const SESSION_START_OFFSET_MS = 100;
+const CASCADE_SESSION_START_OFFSET_MS = 50;
+const TRAINING_HISTORY_LIMIT = 100;
+const PERSISTED_HISTORY_LIMIT = 50;
+const RECENT_SESSIONS_LIMIT = 10;
+const TOP_CATEGORY_LIMIT = 5;
+const PERCENT_SCALE = 100;
+
 function getMasteryLevel(score: number): CategoryState["masteryLevel"] {
-  if (score >= 98) return "sovereign";
-  if (score >= 95) return "expert";
-  if (score >= 90) return "advanced";
-  if (score >= 80) return "intermediate";
+  if (score >= MASTERY_SOVEREIGN_MIN) return "sovereign";
+  if (score >= MASTERY_EXPERT_MIN) return "expert";
+  if (score >= MASTERY_ADVANCED_MIN) return "advanced";
+  if (score >= MASTERY_INTERMEDIATE_MIN) return "intermediate";
   return "novice";
 }
 
@@ -133,18 +183,18 @@ const categoryVelocity: Record<string, { lastCount: number; lastTimestamp: numbe
 function sigmoidLearningRate(currentScore: number, dataVolume: number, freshness: number): number {
   const normalizedScore = currentScore / 100;
   const capacityLeft = 1 - normalizedScore;
-  const baseSigmoid = capacityLeft * (1 / (1 + Math.exp(-0.1 * (dataVolume - 50))));
-  const freshnessMultiplier = Math.max(0.1, Math.min(2, freshness));
-  return Math.max(0.001, Math.min(5, baseSigmoid * 10 * freshnessMultiplier));
+  const baseSigmoid = capacityLeft * (1 / (1 + Math.exp(-SIGMOID_STEEPNESS * (dataVolume - SIGMOID_MIDPOINT_VOLUME))));
+  const freshnessMultiplier = Math.max(FRESHNESS_MIN_MULTIPLIER, Math.min(FRESHNESS_MAX, freshness));
+  return Math.max(LEARNING_RATE_MIN, Math.min(LEARNING_RATE_MAX, baseSigmoid * LEARNING_RATE_SCALE * freshnessMultiplier));
 }
 
 function computeDataFreshness(category: string): number {
   const vel = categoryVelocity[category];
-  if (!vel || vel.velocity <= 0) return 0.5;
-  const timeSinceUpdate = (Date.now() - vel.lastTimestamp) / 3600000;
-  if (timeSinceUpdate > 24) return 0.2;
-  if (timeSinceUpdate > 6) return 0.5;
-  return Math.min(2, 0.5 + vel.velocity * 0.1);
+  if (!vel || vel.velocity <= 0) return FRESHNESS_DEFAULT;
+  const timeSinceUpdate = (Date.now() - vel.lastTimestamp) / MS_PER_HOUR;
+  if (timeSinceUpdate > FRESHNESS_STALE_HOURS) return FRESHNESS_STALE;
+  if (timeSinceUpdate > FRESHNESS_AGING_HOURS) return FRESHNESS_AGING;
+  return Math.min(FRESHNESS_MAX, FRESHNESS_DEFAULT + vel.velocity * FRESHNESS_VELOCITY_GAIN);
 }
 
 function computeCrossTransferBoost(category: string): number {
@@ -162,7 +212,7 @@ function computeCrossTransferBoost(category: string): number {
 
 function scoreFromCount(count: number): number {
   if (count <= 0) return 0;
-  return Math.min(99.5, Math.round((50 + Math.log10(Math.max(1, count)) * 12.5) * 10) / 10);
+  return Math.min(MAX_MEASURED_SCORE, Math.round((SCORE_BASELINE + Math.log10(Math.max(1, count)) * SCORE_LOG_SCALE) * 10) / 10);
 }
 
 async function queryRealCounts(): Promise<Record<string, number>> {
@@ -226,9 +276,9 @@ function computeRealScore(category: string): { score: number; sessions: number }
 
   const evalQ = realCounts["eval_questions"] || 0;
   const evalAcc = realCounts["eval_accuracy"] || 0;
-  if (evalQ >= 100 && evalAcc >= 95) {
-    const evalBoost = Math.min(5, (evalAcc - 90) * 0.5);
-    score = Math.min(99.5, score + evalBoost);
+  if (evalQ >= EVAL_MIN_QUESTIONS && evalAcc >= EVAL_MIN_ACCURACY_PCT) {
+    const evalBoost = Math.min(EVAL_BOOST_CAP, (evalAcc - EVAL_BOOST_BASELINE_PCT) * EVAL_BOOST_FACTOR);
+    score = Math.min(MAX_MEASURED_SCORE, score + evalBoost);
   }
 
   return { score, sessions: sessionsCount + evalQ };
@@ -237,13 +287,13 @@ function computeRealScore(category: string): { score: number; sessions: number }
 function initFromRealData(): void {
   for (const cat of AGI_CATEGORIES) {
     const { score, sessions } = computeRealScore(cat);
-    const insights = (CATEGORY_INSIGHTS[cat] || [`${cat} capability assessed from real system operations`]).slice(0, 2);
+    const insights = (CATEGORY_INSIGHTS[cat] || [`${cat} capability assessed from real system operations`]).slice(0, INITIAL_INSIGHT_COUNT);
 
     agiTrainingState[cat] = {
       score,
       trained: sessions > 0,
       sessions,
-      lastTrained: sessions > 0 ? Date.now() - (1000 * 60 * 5) : 0,
+      lastTrained: sessions > 0 ? Date.now() - INITIAL_TRAINED_AGO_MS : 0,
       insights,
       masteryLevel: getMasteryLevel(score),
     };
@@ -251,101 +301,8 @@ function initFromRealData(): void {
   totalCycles = Object.values(agiTrainingState).reduce((s, c) => s + (c.sessions > 0 ? 1 : 0), 0);
 }
 
-function runTrainingCycle(): TrainingSession[] {
-  const sessions: TrainingSession[] = [];
-
-  const toTrain = AGI_CATEGORIES.filter(cat => {
-    const state = agiTrainingState[cat];
-    return state && (Date.now() - state.lastTrained > 60_000 || state.score < 98);
-  }).slice(0, 5);
-
-  for (const cat of toTrain) {
-    const state = agiTrainingState[cat];
-    if (!state) continue;
-    const scoreBefore = state.score;
-    const { score: realScore, sessions: realSessions } = computeRealScore(cat);
-
-    const sources = CATEGORY_DATA_SOURCES[cat] || ["provider_calls"];
-    const currentCount = sources.reduce((s, src) => s + (realCounts[src] || 0), 0);
-    const vel = categoryVelocity[cat];
-    if (vel) {
-      const elapsed = Math.max(1, (Date.now() - vel.lastTimestamp) / 1000);
-      const newItems = Math.max(0, currentCount - vel.lastCount);
-      vel.velocity = newItems / elapsed;
-      vel.lastCount = currentCount;
-      vel.lastTimestamp = Date.now();
-    } else {
-      categoryVelocity[cat] = { lastCount: currentCount, lastTimestamp: Date.now(), velocity: 0 };
-    }
-
-    const freshness = computeDataFreshness(cat);
-    const crossBoost = computeCrossTransferBoost(cat);
-    const adaptiveLR = sigmoidLearningRate(scoreBefore, currentCount, freshness);
-
-    if (realScore > scoreBefore) {
-      const delta = realScore - scoreBefore;
-      const adjustedDelta = delta * (1 + crossBoost * 0.1);
-      state.score = Math.min(99.9, scoreBefore + adjustedDelta);
-      state.sessions = realSessions;
-    } else {
-      const improvement = Math.max(0.001, adaptiveLR * 0.1 + crossBoost * 0.05);
-      state.score = Math.min(99.9, scoreBefore + improvement);
-    }
-
-    const realizedDelta = state.score - scoreBefore;
-    if (realizedDelta > 0.05) {
-      const refs: CategoryRef[] = AGI_CATEGORIES.map((name) => {
-        const s = agiTrainingState[name];
-        return {
-          name,
-          score: s?.score ?? 0,
-          masteryLevel: s?.masteryLevel ?? "novice",
-          sessions: s?.sessions ?? 0,
-        };
-      });
-      const propagated = propagateTransfer(cat, realizedDelta, refs);
-      for (const [tgtName, gain] of Object.entries(propagated)) {
-        const tgt = agiTrainingState[tgtName];
-        if (!tgt) continue;
-        tgt.score = Math.min(99.9, tgt.score + gain);
-        tgt.masteryLevel = getMasteryLevel(tgt.score);
-      }
-    }
-
-    state.lastTrained = Date.now();
-    state.trained = true;
-    state.masteryLevel = getMasteryLevel(state.score);
-    totalCycles++;
-
-    const insights = CATEGORY_INSIGHTS[cat] || [`Enhanced ${cat} through real system operations`];
-    const insight = insights[state.sessions % insights.length];
-    if (!state.insights.includes(insight)) {
-      state.insights.push(insight);
-      if (state.insights.length > 10) state.insights.shift();
-    }
-
-    if (crossBoost > 0.5) {
-      const relatedCats = (CATEGORY_RELATIONS[cat] || []).filter(r => agiTrainingState[r]?.score > 60).slice(0, 2);
-      const crossInsight = `Cross-category transfer from ${relatedCats.join(", ")} boosted learning by ${(crossBoost * 100).toFixed(0)}%`;
-      if (!state.insights.includes(crossInsight)) {
-        state.insights.push(crossInsight);
-        if (state.insights.length > 10) state.insights.shift();
-      }
-    }
-
-    const session: TrainingSession = {
-      id: `ts-${Date.now()}-${totalCycles}`,
-      category: cat, startedAt: Date.now() - 100, completedAt: Date.now(),
-      scoreBefore, scoreAfter: state.score, improvement: state.score - scoreBefore,
-      insight, masteryAchieved: state.score >= 98,
-    };
-    sessions.push(session);
-    trainingHistory.unshift(session);
-    if (trainingHistory.length > 100) trainingHistory.splice(100);
-  }
-
-  // Mastery cascade: sovereign categories actively train laggards
-  const refs: CategoryRef[] = AGI_CATEGORIES.map((name) => {
+function buildCategoryRefs(): CategoryRef[] {
+  return AGI_CATEGORIES.map((name) => {
     const s = agiTrainingState[name];
     return {
       name,
@@ -354,40 +311,147 @@ function runTrainingCycle(): TrainingSession[] {
       sessions: s?.sessions ?? 0,
     };
   });
-  const cascade = masteryCascade(refs);
+}
+
+function pushInsight(state: CategoryState, insight: string): void {
+  if (state.insights.includes(insight)) return;
+  state.insights.push(insight);
+  if (state.insights.length > INSIGHT_LIMIT) state.insights.shift();
+}
+
+function recordSession(session: TrainingSession, sessions: TrainingSession[]): void {
+  sessions.push(session);
+  trainingHistory.unshift(session);
+  if (trainingHistory.length > TRAINING_HISTORY_LIMIT) trainingHistory.splice(TRAINING_HISTORY_LIMIT);
+}
+
+function updateCategoryVelocity(cat: string, currentCount: number): void {
+  const vel = categoryVelocity[cat];
+  if (vel) {
+    const elapsed = Math.max(1, (Date.now() - vel.lastTimestamp) / 1000);
+    const newItems = Math.max(0, currentCount - vel.lastCount);
+    vel.velocity = newItems / elapsed;
+    vel.lastCount = currentCount;
+    vel.lastTimestamp = Date.now();
+  } else {
+    categoryVelocity[cat] = { lastCount: currentCount, lastTimestamp: Date.now(), velocity: 0 };
+  }
+}
+
+function applyTransferPropagation(cat: string, realizedDelta: number): void {
+  const propagated = propagateTransfer(cat, realizedDelta, buildCategoryRefs());
+  for (const [tgtName, gain] of Object.entries(propagated)) {
+    const tgt = agiTrainingState[tgtName];
+    if (!tgt) continue;
+    tgt.score = Math.min(MAX_TRAINED_SCORE, tgt.score + gain);
+    tgt.masteryLevel = getMasteryLevel(tgt.score);
+  }
+}
+
+function trainCategory(cat: string, sessions: TrainingSession[]): void {
+  const state = agiTrainingState[cat];
+  if (!state) return;
+  const scoreBefore = state.score;
+  const { score: realScore, sessions: realSessions } = computeRealScore(cat);
+
+  const sources = CATEGORY_DATA_SOURCES[cat] || ["provider_calls"];
+  const currentCount = sources.reduce((s, src) => s + (realCounts[src] || 0), 0);
+  updateCategoryVelocity(cat, currentCount);
+
+  const freshness = computeDataFreshness(cat);
+  const crossBoost = computeCrossTransferBoost(cat);
+  const adaptiveLR = sigmoidLearningRate(scoreBefore, currentCount, freshness);
+
+  if (realScore > scoreBefore) {
+    const delta = realScore - scoreBefore;
+    const adjustedDelta = delta * (1 + crossBoost * CROSS_BOOST_DELTA_WEIGHT);
+    state.score = Math.min(MAX_TRAINED_SCORE, scoreBefore + adjustedDelta);
+    state.sessions = realSessions;
+  } else {
+    const improvement = Math.max(MIN_STEP_IMPROVEMENT, adaptiveLR * LEARNING_RATE_STEP_WEIGHT + crossBoost * CROSS_BOOST_STEP_WEIGHT);
+    state.score = Math.min(MAX_TRAINED_SCORE, scoreBefore + improvement);
+  }
+
+  const realizedDelta = state.score - scoreBefore;
+  if (realizedDelta > TRANSFER_PROPAGATION_MIN_DELTA) applyTransferPropagation(cat, realizedDelta);
+
+  state.lastTrained = Date.now();
+  state.trained = true;
+  state.masteryLevel = getMasteryLevel(state.score);
+  totalCycles++;
+
+  const insights = CATEGORY_INSIGHTS[cat] || [`Enhanced ${cat} through real system operations`];
+  const insight = insights[state.sessions % insights.length];
+  pushInsight(state, insight);
+
+  if (crossBoost > CROSS_BOOST_INSIGHT_THRESHOLD) {
+    const relatedCats = (CATEGORY_RELATIONS[cat] || []).filter(r => agiTrainingState[r]?.score > RELATED_CATEGORY_MIN_SCORE).slice(0, RELATED_CATEGORY_LIMIT);
+    pushInsight(state, `Cross-category transfer from ${relatedCats.join(", ")} boosted learning by ${(crossBoost * PERCENT_SCALE).toFixed(0)}%`);
+  }
+
+  recordSession({
+    id: `ts-${Date.now()}-${totalCycles}`,
+    category: cat, startedAt: Date.now() - SESSION_START_OFFSET_MS, completedAt: Date.now(),
+    scoreBefore, scoreAfter: state.score, improvement: state.score - scoreBefore,
+    insight, masteryAchieved: state.score >= MASTERY_ACHIEVED_SCORE,
+  }, sessions);
+}
+
+function runMasteryCascade(sessions: TrainingSession[]): void {
+  const cascade = masteryCascade(buildCategoryRefs());
   for (const [tgtName, gain] of Object.entries(cascade.gains)) {
     const tgt = agiTrainingState[tgtName];
     if (!tgt) continue;
     const before = tgt.score;
-    tgt.score = Math.min(99.9, tgt.score + gain);
+    tgt.score = Math.min(MAX_TRAINED_SCORE, tgt.score + gain);
     tgt.masteryLevel = getMasteryLevel(tgt.score);
     const ex = cascade.exercises.find((e) => e.to === tgtName);
     if (ex) {
-      const cascadeInsight = `Sovereign cascade from ${ex.from} (intensity ${(ex.intensity * 100).toFixed(0)}%) lifted ${tgtName} +${gain.toFixed(2)}`;
-      if (!tgt.insights.includes(cascadeInsight)) {
-        tgt.insights.push(cascadeInsight);
-        if (tgt.insights.length > 10) tgt.insights.shift();
-      }
+      pushInsight(tgt, `Sovereign cascade from ${ex.from} (intensity ${(ex.intensity * PERCENT_SCALE).toFixed(0)}%) lifted ${tgtName} +${gain.toFixed(2)}`);
     }
-    if (tgt.score - before > 0.01) {
-      const synthSession: TrainingSession = {
+    if (tgt.score - before > CASCADE_SESSION_MIN_GAIN) {
+      recordSession({
         id: `cs-${Date.now()}-${tgtName.slice(0, 4)}`,
         category: tgtName,
-        startedAt: Date.now() - 50,
+        startedAt: Date.now() - CASCADE_SESSION_START_OFFSET_MS,
         completedAt: Date.now(),
         scoreBefore: before,
         scoreAfter: tgt.score,
         improvement: tgt.score - before,
         insight: `Mastery cascade synthetic exercise (+${gain.toFixed(2)})`,
-        masteryAchieved: tgt.score >= 98,
-      };
-      sessions.push(synthSession);
-      trainingHistory.unshift(synthSession);
-      if (trainingHistory.length > 100) trainingHistory.splice(100);
+        masteryAchieved: tgt.score >= MASTERY_ACHIEVED_SCORE,
+      }, sessions);
+    }
+  }
+}
+
+function runTrainingCycle(): TrainingSession[] {
+  const sessions: TrainingSession[] = [];
+
+  const toTrain = AGI_CATEGORIES.filter(cat => {
+    const state = agiTrainingState[cat];
+    return state && (Date.now() - state.lastTrained > RETRAIN_INTERVAL_MS || state.score < MASTERY_ACHIEVED_SCORE);
+  }).slice(0, CATEGORIES_PER_CYCLE);
+
+  for (const cat of toTrain) {
+    try {
+      trainCategory(cat, sessions);
+    } catch (err) {
+      logger.warn({ err, category: cat }, "AGITraining: category training failed, continuing with remaining categories");
     }
   }
 
-  logTransferSummary();
+  try {
+    runMasteryCascade(sessions);
+  } catch (err) {
+    logger.warn({ err }, "AGITraining: mastery cascade failed, skipping cascade for this cycle");
+  }
+
+  try {
+    logTransferSummary();
+  } catch (err) {
+    logger.warn({ err }, "AGITraining: transfer summary failed");
+  }
   return sessions;
 }
 
@@ -399,11 +463,11 @@ async function persistState(): Promise<void> {
   try {
     await db.insert(systemStateTable).values({
       key: STATE_KEY,
-      value: { agiTrainingState, totalCycles, trainingHistory: trainingHistory.slice(0, 50) },
+      value: { agiTrainingState, totalCycles, trainingHistory: trainingHistory.slice(0, PERSISTED_HISTORY_LIMIT) },
       description: "AGI training engine state — computed from real system activity",
     }).onConflictDoUpdate({
       target: systemStateTable.key,
-      set: { value: { agiTrainingState, totalCycles, trainingHistory: trainingHistory.slice(0, 50) }, lastSavedAt: new Date() },
+      set: { value: { agiTrainingState, totalCycles, trainingHistory: trainingHistory.slice(0, PERSISTED_HISTORY_LIMIT) }, lastSavedAt: new Date() },
     });
   } catch (err) { logger.warn({ err }, "AGITraining: persist failed"); }
 }
@@ -462,10 +526,10 @@ export function getAGITrainingMetrics() {
     avgScore: Math.round(avgScore * 100) / 100,
     sovereignMastery: sovereignCount,
     expertMastery: expertCount,
-    recentSessions: trainingHistory.slice(0, 10),
+    recentSessions: trainingHistory.slice(0, RECENT_SESSIONS_LIMIT),
     categoryStates: agiTrainingState,
-    topCategories: categories.sort(([, a], [, b]) => b.score - a.score).slice(0, 5).map(([cat, state]) => ({ category: cat, score: state.score, masteryLevel: state.masteryLevel })),
-    bottomCategories: categories.sort(([, a], [, b]) => a.score - b.score).slice(0, 5).map(([cat, state]) => ({ category: cat, score: state.score, masteryLevel: state.masteryLevel })),
+    topCategories: categories.sort(([, a], [, b]) => b.score - a.score).slice(0, TOP_CATEGORY_LIMIT).map(([cat, state]) => ({ category: cat, score: state.score, masteryLevel: state.masteryLevel })),
+    bottomCategories: categories.sort(([, a], [, b]) => a.score - b.score).slice(0, TOP_CATEGORY_LIMIT).map(([cat, state]) => ({ category: cat, score: state.score, masteryLevel: state.masteryLevel })),
     dataSourceCounts: realCounts,
     velocityReport,
   };
@@ -487,7 +551,12 @@ export async function triggerTrainingCycle(): Promise<{ sessions: number; avgSco
   try {
     realCounts = await queryRealCounts();
   } catch {}
-  const sessions = runTrainingCycle();
+  let sessions: TrainingSession[] = [];
+  try {
+    sessions = runTrainingCycle();
+  } catch (err) {
+    logger.warn({ err }, "AGITraining: scheduler-triggered cycle failed, reporting zero sessions");
+  }
   if (sessions.length > 0) {
     logger.info({ sessions: sessions.length }, "AGITraining: scheduler-triggered cycle complete");
     persistState().catch(() => {});
@@ -497,6 +566,18 @@ export async function triggerTrainingCycle(): Promise<{ sessions: number; avgSco
 }
 export function getSessionHistory() {
   return getAGITrainingMetrics().recentSessions || [];
+}
+export function _runTrainingCycleForTests(counts: Record<string, number>): TrainingSession[] {
+  realCounts = counts;
+  if (Object.keys(agiTrainingState).length === 0) initFromRealData();
+  return runTrainingCycle();
+}
+export function _resetAgiTrainingForTests(): void {
+  for (const k of Object.keys(agiTrainingState)) delete agiTrainingState[k];
+  for (const k of Object.keys(categoryVelocity)) delete categoryVelocity[k];
+  trainingHistory.length = 0;
+  totalCycles = 0;
+  realCounts = {};
 }
 export function getAvailableDomains() {
   return AGI_CATEGORIES;

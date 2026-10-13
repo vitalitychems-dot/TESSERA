@@ -1,0 +1,12 @@
+{
+  "name": "tessera-mesh-moltbook",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Simulation-only prototype: name-based mesh routing, peer discovery, store-and-forward, and a signed agent social layer. Not a pnpm workspace member; zero dependencies.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "demo": "node src/cli.js"
+  }
+}
