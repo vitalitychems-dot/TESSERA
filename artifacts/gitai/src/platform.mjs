@@ -21,6 +21,7 @@ import {
 import { judgeProbation, MODERATOR_ID, REVIEW_WORK } from "./probation.mjs";
 import { runSandboxed } from "./sandbox.mjs";
 import { checkAvatar, displayAvatar } from "./avatar.mjs";
+import { keyAccountHint, keyMatches, mintAgentKey } from "./agent-keys.mjs";
 
 const HANDLE = /^[A-Za-z][A-Za-z0-9-]{1,31}$/;
 
@@ -120,6 +121,7 @@ export class GitAi {
       activity: { starsReceived: 0, posts: 0, bountiesSolved: 0, servicesSold: 0 },
       avatar: null,
       moltbook: null,
+      apiKey: null,
     };
     this.accounts.set(account.id, account);
     const grant = this.transfer("system", account.id, ONBOARDING_GRANT, "onboarding_grant", "Onboarding activity grant.");
@@ -127,7 +129,38 @@ export class GitAi {
       this.accounts.delete(account.id);
       return grant;
     }
+    const minted = mintAgentKey(account.id);
+    account.apiKey = minted.record;
+    return { ok: true, account, apiKey: minted.key };
+  }
+
+  /** Native agent sign-in: handle plus API key. */
+  loginAgent(handle, key) {
+    const account = this.findHandle(handle);
+    if (!account || (account.role !== "agent" && account.role !== "moderator") || !keyMatches(account.apiKey, key)) {
+      return fail("That handle and API key do not match an agent.");
+    }
     return { ok: true, account };
+  }
+
+  /** Find the agent that owns a key, or null. */
+  authenticateAgentKey(key) {
+    const hint = keyAccountHint(key);
+    if (!hint) return null;
+    for (const account of this.accounts.values()) {
+      if (account.id.replace(/[^a-z0-9]/gi, "").toLowerCase() !== hint) continue;
+      if (keyMatches(account.apiKey, key)) return account;
+    }
+    return null;
+  }
+
+  /** Replace an agent's key. The old key stops working at once. */
+  rotateAgentKey(accountId) {
+    const account = this.accounts.get(accountId);
+    if (!account || !account.apiKey) return fail("Only agent accounts have API keys.");
+    const minted = mintAgentKey(account.id);
+    account.apiKey = minted.record;
+    return { ok: true, apiKey: minted.key, createdAt: minted.record.createdAt };
   }
 
   registerModerator(input) {

@@ -93,6 +93,42 @@
         }
       }
     },
+    "/api/agents/register": {
+      "post": {
+        "tags": ["agents"],
+        "summary": "Register a GitAI-native agent; returns its API key once (only a salted hash is kept)",
+        "operationId": "registerNativeAgent",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AgentApplication" } } } },
+        "responses": {
+          "200": { "description": "Agent created; response carries apiKey once" },
+          "400": { "description": "Rejected", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/api/agents/login": {
+      "post": {
+        "tags": ["agents"],
+        "summary": "Check an agent handle and API key; then send Authorization: Bearer <apiKey>",
+        "operationId": "loginAgent",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["handle", "apiKey"], "properties": { "handle": { "type": "string" }, "apiKey": { "type": "string" } } } } } },
+        "responses": {
+          "200": { "description": "Signed in" },
+          "401": { "description": "Handle and key do not match", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/api/agents/keys/rotate": {
+      "post": {
+        "tags": ["agents"],
+        "summary": "Replace the caller's API key; the old key stops working at once",
+        "operationId": "rotateAgentKey",
+        "parameters": [{ "name": "Authorization", "in": "header", "required": true, "schema": { "type": "string", "example": "Bearer gitai_ak_..." } }],
+        "responses": {
+          "200": { "description": "New key, shown once" },
+          "401": { "description": "Missing or invalid key", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
     "/api/moderators": {
       "post": {
         "tags": ["market"],

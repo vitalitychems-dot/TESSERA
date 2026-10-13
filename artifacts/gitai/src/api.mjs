@@ -7,6 +7,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { displayAvatar } from "./avatar.mjs";
 import { MoltbookConnector } from "./moltbook.mjs";
+import { bearerKey } from "./agent-keys.mjs";
 import { CREDIT_LABEL } from "./policy.mjs";
 
 const OPENAPI = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../openapi.json"), "utf8");
@@ -44,6 +45,15 @@ function accountResult(gitai, result, extra = {}) {
   return json(200, { ok: true, account: publicAccount(gitai, result.account) }, extra);
 }
 
+function agentCreated(gitai, result) {
+  if (!result.ok) return fail(400, result.reason);
+  return json(
+    200,
+    { ok: true, account: publicAccount(gitai, result.account), apiKey: result.apiKey, note: "Store this API key now. GitAI keeps only a hash and cannot show it again." },
+    { "cache-control": "no-store" },
+  );
+}
+
 function outcome(result) {
   if (!result.ok) return fail(400, result.reason);
   const copy = { ...result };
@@ -61,6 +71,12 @@ function parseJson(raw) {
 }
 
 function actor(gitai, request) {
+  const key = bearerKey(request.headers ?? {});
+  if (key) {
+    const agent = gitai.authenticateAgentKey(key);
+    if (!agent) return fail(401, "That API key is not valid. Rotate or register to get a new one.");
+    return { ok: true, account: agent };
+  }
   const handle = request.session;
   if (!handle) return fail(401, "Send the X-GitAI-Handle header or the gitai cookie.");
   const account = gitai.findHandle(handle);
@@ -89,8 +105,13 @@ export function dispatchApi(gitai, request) {
   const body = parseJson(request.raw);
   if (body === null) return fail(400, "Send JSON.");
 
-  if (path === "/api/agents") return accountResult(gitai, gitai.registerAgent(body));
-  if (path === "/api/moderators") return accountResult(gitai, gitai.registerModerator(body));
+  if (path === "/api/agents" || path === "/api/agents/register") return agentCreated(gitai, gitai.registerAgent(body));
+  if (path === "/api/moderators") return agentCreated(gitai, gitai.registerModerator(body));
+  if (path === "/api/agents/login") {
+    const logged = gitai.loginAgent(body.handle ?? "", body.apiKey ?? "");
+    if (!logged.ok) return fail(401, logged.reason);
+    return json(200, { ok: true, account: publicAccount(gitai, logged.account), auth: "Send Authorization: Bearer <apiKey> on each call." });
+  }
   if (path === "/api/spectators") {
     const created = gitai.registerSpectator(body);
     if (!created.ok) return fail(400, created.reason);
@@ -110,6 +131,11 @@ export function dispatchApi(gitai, request) {
   if (!who.ok) return who;
   const id = who.account.id;
 
+  if (path === "/api/agents/keys/rotate") {
+    const rotated = gitai.rotateAgentKey(id);
+    if (!rotated.ok) return fail(400, rotated.reason);
+    return json(200, { ok: true, apiKey: rotated.apiKey, createdAt: rotated.createdAt, note: "The old key no longer works. This key is shown once." }, { "cache-control": "no-store" });
+  }
   if (path === "/api/avatar") {
     const result = body.clear === true ? gitai.clearAvatar(id) : gitai.setAvatar(id, body.dataUrl ?? "");
     return outcome(result);
