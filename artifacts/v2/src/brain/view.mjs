@@ -5,6 +5,7 @@
  */
 import { loadGraph, hebbian, coMentionEpisodes, synapse } from "./synapse.mjs";
 import { connectome } from "./synapse.mjs";
+import { createTimeline } from "./temporal.mjs";
 const K = (a, b) => (a < b ? `${a}\u0000${b}` : `${b}\u0000${a}`);
 function rng(seed = 7) { let x = seed >>> 0; return () => ((x = (x * 1664525 + 1013904223) >>> 0) / 2 ** 32); }
 /** Deterministic 3D force layout (repulsion via grid buckets + spring edges + centering). */
@@ -59,3 +60,66 @@ export function createBrainLoop(jsonl) {
   };
 }
 export { K as synKey };
+
+/**
+ * Time index of the real memory JSONL. One event per entity or relation line; t is that
+ * line's index, so timeline.at(t) matches loadGraph of the prefix through t.
+ * Snapshots are taken once from createTimeline. A slider tick reads two of them instead of
+ * rebuilding the log and scanning it again.
+ */
+let timelineSlot = null;
+const absent = (have, other) => { const out = []; for (const k of have.keys()) if (!other.has(k)) out.push(k); return out; };
+/** Same added/removed sets as createTimeline.diff, over two at() snapshots. */
+export function snapshotDiff(A, B) {
+  return {
+    nodesAdded: absent(B.nodes, A.nodes),
+    nodesRemoved: absent(A.nodes, B.nodes),
+    edgesAdded: absent(B.edges, A.edges).map((k) => k.split("\u0000")),
+    edgesRemoved: absent(A.edges, B.edges).map((k) => k.split("\u0000")),
+  };
+}
+export function memoryTimeline(jsonl) {
+  const src = String(jsonl ?? "");
+  if (timelineSlot?.src === src) return timelineSlot;
+  const timeline = createTimeline();
+  const index = [];
+  src.split("\n").forEach((line, t) => {
+    if (!line.trim()) return;
+    let r; try { r = JSON.parse(line); } catch { return; }
+    if (r.type === "entity" && r.name) { timeline.addNode(t, r.name, { type: r.entityType }); index.push(t); }
+    else if (r.type === "relation" && r.from && r.to && r.from !== r.to) { timeline.link(t, r.from, r.to, 1); index.push(t); }
+  });
+  const snaps = index.map((t) => timeline.at(t));
+  timelineSlot = { src, timeline, index, snaps };
+  return timelineSlot;
+}
+function clampIndex(v, n, fallback) {
+  const x = Number(v);
+  if (!Number.isFinite(x)) return fallback;
+  return Math.max(0, Math.min(n - 1, Math.trunc(x)));
+}
+/** Snapshot at event index, plus the forward/back diff against a previous event index. */
+export function replayAt(jsonl, eventIndex, prevIndex) {
+  const { index, snaps } = memoryTimeline(jsonl);
+  const n = index.length;
+  const emptyDiff = { from: 0, to: 0, forward: 0, back: 0, edgesAdded: [], edgesRemoved: [], nodesAdded: [], nodesRemoved: [] };
+  if (!n) return { t: 0, line: -1, events: 0, nodes: [], edges: [], diff: emptyDiff };
+  const i = clampIndex(eventIndex, n, n - 1);
+  const p = clampIndex(prevIndex, n, i);
+  const s = snaps[i];
+  const d = i === p ? { nodesAdded: [], nodesRemoved: [], edgesAdded: [], edgesRemoved: [] } : snapshotDiff(snaps[p], snaps[i]);
+  return {
+    t: i,
+    line: index[i],
+    events: n,
+    nodes: [...s.nodes].map(([id, a]) => ({ id, type: a.type ?? "unknown" })),
+    edges: [...s.edges].map(([k, w]) => { const [a, b] = k.split("\u0000"); return { a, b, w }; }),
+    diff: {
+      from: p, to: i,
+      forward: d.nodesAdded.length + d.edgesAdded.length,
+      back: d.nodesRemoved.length + d.edgesRemoved.length,
+      edgesAdded: d.edgesAdded, edgesRemoved: d.edgesRemoved,
+      nodesAdded: d.nodesAdded, nodesRemoved: d.nodesRemoved,
+    },
+  };
+}
