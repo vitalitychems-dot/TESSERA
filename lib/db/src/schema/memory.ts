@@ -29,6 +29,11 @@ export const decisionHistoryTable = pgTable("decision_history", {
   source: text("source").notNull().default("system"),
   sessionId: text("session_id"),
   decidedAt: timestamp("decided_at").notNull().defaultNow(),
+  // REA-04 bi-temporal validity: null validTo = currently true. Rows are
+  // invalidated (validTo set) rather than overwritten.
+  validFrom: timestamp("valid_from"),
+  validTo: timestamp("valid_to"),
+  invalidatedBy: integer("invalidated_by"),
 });
 
 export const insertDecisionHistorySchema = createInsertSchema(decisionHistoryTable).omit({ id: true, decidedAt: true });

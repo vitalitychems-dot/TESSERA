@@ -1,5 +1,0 @@
-FROM node:20-slim
-WORKDIR /app
-COPY satellite-node.js ./
-EXPOSE 5001
-CMD ["node", "satellite-node.js"]

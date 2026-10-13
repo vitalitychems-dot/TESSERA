@@ -6,6 +6,7 @@ import { getEvolutionMetrics, proposeEvolution, type CodeEvolutionProposal } fro
 import { getDaemonMetrics, runImprovementCycle } from "./auto-improvement-daemon";
 import { getConsciousnessMetrics } from "./consciousness-engine";
 import { isModuleCoolingDown } from "./evolution-throttle";
+import { normalizeEvolutionModule } from "./evolution-modules";
 import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface CodeProfile {
@@ -88,7 +89,7 @@ export interface RecursiveSelfImprovementState {
   recentBenchmarks: PerformanceBenchmark[];
 }
 
-const ANALYZABLE_MODULES = [
+export const ANALYZABLE_MODULES = [
   { id: "consciousness-engine", name: "Consciousness Engine", file: "consciousness-engine.ts", category: "core" },
   { id: "dual-brain", name: "Dual Brain", file: "dual-brain.ts", category: "reasoning" },
   { id: "auto-improvement-daemon", name: "Auto-Improvement Daemon", file: "auto-improvement-daemon.ts", category: "self-improvement" },
@@ -100,7 +101,7 @@ const ANALYZABLE_MODULES = [
   { id: "consensus-engine", name: "Consensus Engine", file: "consensus-engine.ts", category: "governance" },
   { id: "truthfulness-engine", name: "Truthfulness Engine", file: "truthfulness-engine.ts", category: "verification" },
   { id: "sovereign-ephemeris", name: "Sovereign Ephemeris", file: "sovereign-ephemeris.ts", category: "computation" },
-  { id: "sacred-geometry", name: "Sacred Geometry", file: "sacred-geometry.ts", category: "computation" },
+  { id: "sacred-geometry", name: "Sacred Geometry", file: "sovereign-sacred-geometry.ts", category: "computation" },
 ];
 
 const WEAKNESS_PATTERNS: Array<{ type: CodeWeakness["type"]; pattern: string; severity: CodeWeakness["severity"]; fix: string }> = [
@@ -259,7 +260,8 @@ function benchmarkModule(mod: typeof ANALYZABLE_MODULES[0], profile: CodeProfile
 
 async function attemptAutonomousFix(profile: CodeProfile, weakness: CodeWeakness): Promise<SelfImprovementChangelog | null> {
   if (!weakness.autoFixable || weakness.resolvedAt) return null;
-  if (isModuleCoolingDown(profile.moduleId)) return null;
+  const targetModule = normalizeEvolutionModule(profile.moduleId);
+  if (isModuleCoolingDown(targetModule)) return null;
 
   const pattern = WEAKNESS_PATTERNS.find(p => weakness.description.includes(p.pattern));
   if (!pattern) return null;
@@ -280,7 +282,7 @@ async function attemptAutonomousFix(profile: CodeProfile, weakness: CodeWeakness
 
   try {
     const proposal = await proposeEvolution(
-      profile.moduleId,
+      targetModule,
       pattern.fix,
       `Autonomous fix for ${weakness.type}: ${weakness.description}`,
       weakness.severity === "high" ? "medium" : "low"

@@ -44,7 +44,9 @@ test("login needs the matching handle and key", () => {
   assert.equal(gitai.loginAgent("Ada", "gitai_ak_x").ok, false);
   assert.equal(gitai.loginAgent("Nobody", ada.apiKey).ok, false);
   assert.equal(gitai.authenticateAgentKey(ada.apiKey)?.handle, "Ada");
-  assert.equal(gitai.authenticateAgentKey(ada.apiKey.slice(0, -1) + "0") , null);
+  const last = ada.apiKey.slice(-1);
+  const wrongKey = ada.apiKey.slice(0, -1) + (last === "0" ? "1" : "0");
+  assert.equal(gitai.authenticateAgentKey(wrongKey), null);
 });
 
 test("rotation revokes the old key at once", () => {
