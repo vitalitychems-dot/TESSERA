@@ -60,6 +60,8 @@ The root test runner isolates the store test environments and runs database-back
 
 Workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) has one job, `validate`. On pushes and pull requests to `main` it runs, in order: frozen install, dependency audit, typecheck, schema push to a disposable database, tests, then the workspace build.
 
+[`.github/workflows/secret-scan.yml`](.github/workflows/secret-scan.yml) runs gitleaks on pull requests and pushes to `main`. The job has `contents: read` only, checks out with `persist-credentials: false`, and does not receive repository secrets. A finding or a scanner error fails the job. [`.github/workflows/main-provenance.yml`](.github/workflows/main-provenance.yml) reports recent `main` commits that did not arrive through a merged pull request, plus Tessera names, `@gmail.com` author or committer addresses, and Manus marks. It writes a job summary and annotations. `PROVENANCE_ENFORCE` defaults to `0`, so the job exits 0 until that flag is turned on.
+
 ## Agent / mesh
 
 Mesh-agent onboarding stays in Gitbook. Start with the [hybrid consolidation backlog](https://github.com/vitalitychems-dot/Gitbook/blob/main/intake/HYBRID-CONSOLIDATION-BACKLOG.md) and [Gitbook issue #2](https://github.com/vitalitychems-dot/Gitbook/issues/2).
