@@ -16,9 +16,29 @@ const workspaceListeners = new Set<WorkspaceListener>();
 const recentWinners: Array<{ id: string; topic: string }> = [];
 const WINNER_MEMORY = 5;
 
-export function subscribeWorkspace(fn: WorkspaceListener): () => void {
+/** Hard cap on the listener Set so subscribers can never grow without bound. */
+export const MAX_WORKSPACE_LISTENERS = 256;
+
+export class WorkspaceListenerCapError extends Error {
+  constructor() { super("workspace-listener-cap"); this.name = "WorkspaceListenerCapError"; }
+}
+
+/** Subscribe, or return null when the listener Set is at its hard cap. */
+export function trySubscribeWorkspace(fn: WorkspaceListener): (() => void) | null {
+  if (!workspaceListeners.has(fn) && workspaceListeners.size >= MAX_WORKSPACE_LISTENERS) return null;
   workspaceListeners.add(fn);
   return () => { workspaceListeners.delete(fn); };
+}
+
+/** Subscribe; throws WorkspaceListenerCapError when the listener Set is full. */
+export function subscribeWorkspace(fn: WorkspaceListener): () => void {
+  const off = trySubscribeWorkspace(fn);
+  if (!off) throw new WorkspaceListenerCapError();
+  return off;
+}
+
+export function workspaceListenerCount(): number {
+  return workspaceListeners.size;
 }
 
 /**
