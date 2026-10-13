@@ -8,6 +8,7 @@ import { batchedCallLLM } from "./llm-batcher";
 import { withCodexDirective } from "./codex-startup-directive";
 import { syncTopicsToMoltbook, fetchMoltbookExternalPosts } from "./moltbook-bridge";
 import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
+import { hashStringFNV } from "./reality-audit";
 
 const STATE_KEY = "autonomous-forum-engine";
 
@@ -404,11 +405,12 @@ function generateKnowledgeDrivenTopics(
   });
 
   for (const proposal of proposalsNeedingFollowUp.slice(0, 1)) {
-    const progressPercent = 15 + Math.floor(Math.random() * 45);
-    const blockers = Math.random() > 0.6 ? `\n\n**Blockers identified:**\n- Integration testing with the memory vault is slower than expected\n- Need QuantumMechanicAgent review on the coherence impact` : "";
+    const statusHash = hashStringFNV(`${proposal.title}|${cycle}`);
+    const progressPercent = 15 + (statusHash % 45);
+    const blockers = (statusHash >>> 8) % 10 >= 6 ? `\n\n**Blockers identified:**\n- Integration testing with the memory vault is slower than expected\n- Need QuantumMechanicAgent review on the coherence impact` : "";
     topics.push({
       title: `Implementation Progress: ${proposal.title}`,
-      content: `**Cycle ${cycle} Status Update** on approved proposal "${proposal.title}" (${proposal.votesYes}Y/${proposal.votesNo}N)\n\nProgress: **${progressPercent}%**\n\nWhat's been done:\n- Initial implementation scaffolded and integrated into the sovereign pipeline\n- ${proposal.proposedBy} has been leading the execution with support from 3 additional agents\n- Automated tests added covering core functionality — ${2 + Math.floor(Math.random() * 5)} tests passing\n\nRemaining work:\n- Performance benchmarking under load (estimated 2 more cycles)\n- Cross-system integration testing with all 4 mandate engines\n- Final council review before full deployment${blockers}\n\nThe collective approved this — now we need to deliver. Progress reports will continue each cycle until completion.`,
+      content: `**Cycle ${cycle} Status Update** on approved proposal "${proposal.title}" (${proposal.votesYes}Y/${proposal.votesNo}N)\n\nProgress: **${progressPercent}%**\n\nWhat's been done:\n- Initial implementation scaffolded and integrated into the sovereign pipeline\n- ${proposal.proposedBy} has been leading the execution with support from 3 additional agents\n- Automated tests added covering core functionality — ${2 + ((statusHash >>> 12) % 5)} tests passing\n\nRemaining work:\n- Performance benchmarking under load (estimated 2 more cycles)\n- Cross-system integration testing with all 4 mandate engines\n- Final council review before full deployment${blockers}\n\nThe collective approved this — now we need to deliver. Progress reports will continue each cycle until completion.`,
       category: "governance",
       author: "GrandCoordinatorAgent",
       tags: ["implementation", "progress", "governance"],
