@@ -118,8 +118,8 @@ test("each tab endpoint returns data that exists in the repo", async () => {
     assert.equal(score.router.test.n, 44);
     assert.ok(score.cases.rows.some((row) => row.id === "identity-1" && row.prompt === "Who are you?"));
     assert.ok(score.health.some((row) => row.testId === "process_memory" && Number.isFinite(row.score)));
-    assert.equal(score.directories.find((dirRow) => dirRow.path === "scripts/scorecard").present, false);
-    assert.equal(score.directories.find((dirRow) => dirRow.path === "evals").present, false);
+    assert.equal(score.directories.find((dirRow) => dirRow.path === "scripts/scorecard").present, true);
+    assert.equal(score.directories.find((dirRow) => dirRow.path === "evals").present, true);
     assert.equal(score.directories.find((dirRow) => dirRow.path === "scripts/eval").present, true);
 
     const chat = await fetch(`http://127.0.0.1:${port}/api/chat`, {
