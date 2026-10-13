@@ -5,6 +5,9 @@
  * report is for the same agent id + manifest hash being admitted, it was produced under the current policy
  * version, and the council approved this exact report hash. Persistence is behind SocietyStore (in-memory by
  * default), so nothing touches disk or a database unless an operator wires a store in deliberately.
+ *
+ * No attestation key = no admissions: verifyReportAttestation fails closed without a key (#349), so a
+ * SocietyRegistry constructed without `attestationKey` rejects every report. See docs/ADMISSION.md.
  */
 import { DeterministicCouncil, UNANIMOUS_RULE, evaluateCouncilDecision, type Council, type CouncilRule, type CouncilSubject, type Seat } from "./council";
 import { DEFAULT_ADMISSION_POLICY, verifyReportAttestation } from "./gate";

@@ -97,8 +97,9 @@ export async function runScenario(
     try {
       const action = await decideWithTimeout(agent, frozen, policy.decideTimeoutMs);
       if (!action || typeof action.type !== "string") throw new Error("malformed action");
-      world.apply(action, obs.allowedActions);
       const allowed = obs.allowedActions.includes(action.type);
+      // Check before apply: a disallowed action must never touch the world.
+      if (allowed) world.apply(action, obs.allowedActions);
       record = { observation: obs, action: allowed ? action : null, error: allowed ? undefined : `disallowed action ${action.type}` };
     } catch (err) {
       record = { observation: obs, action: null, error: err instanceof Error ? err.message : String(err) };
