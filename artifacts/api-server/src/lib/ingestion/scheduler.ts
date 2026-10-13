@@ -392,16 +392,28 @@ let schedulerPaused = false;
 let pauseReason: string | null = null;
 let inFlightKind: string | null = null;
 
-async function withRunLock<T>(kind: string, fn: () => Promise<T>): Promise<T | "locked"> {
+/** A run holding the lock longer than this is presumed hung; its lease expires. */
+export const RUN_LOCK_LEASE_MS = 15 * 60_000;
+let inFlightSince = 0;
+let inFlightToken = 0;
+
+export async function withRunLock<T>(kind: string, fn: () => Promise<T>): Promise<T | "locked"> {
   if (inFlightKind) {
-    audit({ kind: "retry", detail: `${kind} skipped: ${inFlightKind} already in flight`, ok: false });
-    return "locked";
+    const heldMs = Date.now() - inFlightSince;
+    if (heldMs < RUN_LOCK_LEASE_MS) {
+      audit({ kind: "retry", detail: `${kind} skipped: ${inFlightKind} already in flight`, ok: false });
+      return "locked";
+    }
+    audit({ kind: "retry", detail: `${kind} took over expired lease from ${inFlightKind} (held ${heldMs}ms)`, ok: false });
   }
+  const token = ++inFlightToken;
   inFlightKind = kind;
+  inFlightSince = Date.now();
   try {
     return await fn();
   } finally {
-    inFlightKind = null;
+    // A hung run that finally settles must not release a newer run's lease.
+    if (inFlightToken === token) inFlightKind = null;
   }
 }
 let lastRotationAt: number | null = null;
