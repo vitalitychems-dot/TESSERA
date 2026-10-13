@@ -35,3 +35,33 @@ export function summarize(props) {
   const why = {}; for (const p of props) for (const f of p.verdict.failed) why[f] = (why[f] ?? 0) + 1;
   return { proposals: props.length, passed: props.filter((p) => p.verdict.ok).length, failedBy: why };
 }
+
+/* ---- B3-03: attach a test ref, run it, route to the Build lane (never Tessera) ---- */
+import { readdirSync, readFileSync as readF } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { join as joinP } from "node:path";
+export const APPROVER_LANE = "build";
+/** Find the test file that declares a test with this exact title. */
+export function locateTest(title, testDir) {
+  const esc = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  for (const f of readdirSync(testDir).filter((x) => x.endsWith(".test.mjs")).sort()) {
+    if (new RegExp(`test\\(\\s*["'\`]${esc}["'\`]`).test(readF(joinP(testDir, f), "utf8"))) return `test/${f}`;
+  }
+  return null;
+}
+/** Run one test file in a child node process (read-only: no network flags, no writes by us). */
+export function runTestFile(ref, cwd, node = process.execPath) {
+  try { const out = execFileSync(node, ["--test", "--test-reporter=tap", ref], { cwd, encoding: "utf8", timeout: 120000, stdio: ["ignore", "pipe", "pipe"] });
+    return { passed: Number(out.match(/^# pass (\d+)/m)?.[1] ?? 0), failed: Number(out.match(/^# fail (\d+)/m)?.[1] ?? 0) };
+  } catch (e) { const out = String(e.stdout ?? ""); return { passed: Number(out.match(/^# pass (\d+)/m)?.[1] ?? 0), failed: Number(out.match(/^# fail (\d+)/m)?.[1] ?? 1) }; }
+}
+/** Full loop: scan -> proposals with testRef + fresh test result + Build approver -> gate. */
+export function proposeAndVerify(log, { root, run = runTestFile } = {}) {
+  const P = propose(scanTestLog(log), { approver: APPROVER_LANE }).map((p) => {
+    const name = p.title.replace(/^(slow \(\d+ ms\)|failing): /, "");
+    const testRef = locateTest(name, joinP(root, "test")); const testResult = testRef ? run(testRef, root) : null;
+    const q = { ...p, testRef: testRef ?? undefined, testResult, hasChange: Boolean(p.diff) };
+    return { ...q, verdict: gate(q) };
+  });
+  return { items: P, ...summarize(P), withChange: P.filter((p) => p.hasChange).length, passedWithChange: P.filter((p) => p.hasChange && p.verdict.ok).length };
+}
