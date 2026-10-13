@@ -9,7 +9,7 @@
 
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -90,11 +90,61 @@ export function readCacheEntry(file) {
   }
 }
 
+const CACHE_DIR_MODE = 0o700;
+const CACHE_FILE_MODE = 0o600;
+
 export function writeCacheEntry(file, entry) {
-  mkdirSync(dirname(file), { recursive: true });
+  const dir = dirname(file);
+  mkdirSync(dir, { recursive: true, mode: CACHE_DIR_MODE });
+  chmodSync(dir, CACHE_DIR_MODE);
   const tmp = `${file}.${process.pid}.tmp`;
-  writeFileSync(tmp, JSON.stringify({ etag: entry.etag, body: entry.body }), "utf8");
+  writeFileSync(tmp, JSON.stringify({ etag: entry.etag, body: entry.body }), {
+    encoding: "utf8",
+    mode: CACHE_FILE_MODE,
+  });
+  chmodSync(tmp, CACHE_FILE_MODE);
   renameSync(tmp, file);
+  chmodSync(file, CACHE_FILE_MODE);
+}
+
+/** True when argv is a single GET with no --paginate. -X GET still counts. */
+export function isPlainGet(argv) {
+  let method = "GET";
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === "--") break;
+    if (arg === "--paginate") return false;
+    if (arg.startsWith("--method=")) {
+      method = arg.slice("--method=".length);
+      continue;
+    }
+    if (arg.startsWith("-X") && arg.length > 2) {
+      method = arg.slice(2);
+      continue;
+    }
+    if (arg === "-X" || arg === "--method") {
+      const value = argv[i + 1];
+      if (value === undefined) return false;
+      method = value;
+      i += 1;
+    }
+  }
+  return method.toUpperCase() === "GET";
+}
+
+/** First positional gh api path. Skips the value after -X / --method. */
+export function githubPathArg(argv) {
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === "--") return argv[i + 1];
+    if (arg === "-X" || arg === "--method") {
+      i += 1;
+      continue;
+    }
+    if (arg.startsWith("-")) continue;
+    return arg;
+  }
+  return undefined;
 }
 
 /**
@@ -190,24 +240,29 @@ function readGhToken() {
   return result.stdout.trim();
 }
 
+function spawnGhApi(spawnImpl, argv, env) {
+  const result = spawnImpl("gh", ["api", ...argv], {
+    stdio: "inherit",
+    env,
+  });
+  return result.status ?? 1;
+}
+
 /**
  * Flag off: `gh api <args>` with inherited stdio (same stdout, stderr, and exit code).
- * Flag on: conditional GET. Body on stdout. The line `unchanged` on stderr when the
- * response is a 304 served from cache, so callers can skip re-parsing.
+ * Flag on, plain GET: conditional GET. Body on stdout. The line `unchanged` on stderr
+ * when the response is a 304 served from cache, so callers can skip re-parsing.
+ * Flag on, anything else (-X other than GET, or --paginate): same passthrough as flag off.
  */
 export async function runCli(argv, deps = {}) {
   const env = deps.env ?? process.env;
   const spawnImpl = deps.spawnImpl ?? spawnSync;
   const stdout = deps.stdout ?? process.stdout;
   const stderr = deps.stderr ?? process.stderr;
-  if (!etagCacheEnabled(env)) {
-    const result = spawnImpl("gh", ["api", ...argv], {
-      stdio: "inherit",
-      env,
-    });
-    return result.status ?? 1;
+  if (!etagCacheEnabled(env) || !isPlainGet(argv)) {
+    return spawnGhApi(spawnImpl, argv, env);
   }
-  const pathArg = argv.find((arg) => !arg.startsWith("-"));
+  const pathArg = githubPathArg(argv);
   if (!pathArg) {
     stderr.write("usage: etagcache.mjs <gh api path>\n");
     return 2;

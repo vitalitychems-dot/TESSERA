@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, readdirSync, writeFileSync, statSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -204,6 +204,98 @@ test("a different X-GitHub-Api-Version is a cache miss", async () => {
   assert.equal(other.unchanged, false);
   assert.equal(other.body, "body-2");
   assert.deepEqual(calls, [null, null]);
+});
+
+test("cache files are mode 0600 and the cache directory is mode 0700", async () => {
+  const previous = process.umask(0);
+  try {
+    const parent = tempCache();
+    const cacheDir = join(parent, "etag");
+    mkdirSync(cacheDir, { mode: 0o755 });
+    await cachedGet({
+      url: ENDPOINT,
+      cacheDir,
+      env: { [ENABLE_FLAG]: "1" },
+      request: async () => ({ status: 200, body: "{\"ok\":1}", headers: { etag: "\"e1\"" } }),
+    });
+    const file = cacheFileForUrl(cacheDir, ENDPOINT);
+    assert.equal(statSync(file).mode & 0o777, 0o600);
+    assert.equal(statSync(cacheDir).mode & 0o777, 0o700);
+  } finally {
+    process.umask(previous);
+  }
+});
+
+test("flag on with -X other than GET bypasses the cache", async () => {
+  const cacheDir = tempCache();
+  const spawned = [];
+  const argv = ["-X", "POST", "repos/vitalitychems-dot/TESSERA/contents/"];
+  const code = await runCli(argv, {
+    env: { [ENABLE_FLAG]: "1" },
+    cacheDir,
+    spawnImpl: (cmd, args) => {
+      spawned.push([cmd, args]);
+      return { status: 0 };
+    },
+    request: async () => {
+      throw new Error("non-GET must not use the cache");
+    },
+  });
+  assert.equal(code, 0);
+  assert.deepEqual(spawned, [["gh", ["api", ...argv]]]);
+  assert.deepEqual(readdirSync(cacheDir), []);
+});
+
+test("flag on with -X GET still uses the cache", async () => {
+  const cacheDir = tempCache();
+  const spawned = [];
+  let calls = 0;
+  const stdout = { written: "", write(chunk) { this.written += chunk; } };
+  const urls = [];
+  const code = await runCli(["-X", "GET", "repos/vitalitychems-dot/TESSERA/contents/"], {
+    env: { [ENABLE_FLAG]: "1" },
+    cacheDir,
+    token: "ghs_plain_get",
+    stdout,
+    stderr: { write() {} },
+    spawnImpl: (cmd, args) => {
+      spawned.push([cmd, args]);
+      return { status: 0 };
+    },
+    request: async (req) => {
+      calls += 1;
+      urls.push(req.url);
+      return { status: 200, body: "CACHED-GET", headers: { etag: "\"eg\"" } };
+    },
+  });
+  assert.equal(code, 0);
+  assert.equal(calls, 1);
+  assert.deepEqual(urls, [ENDPOINT]);
+  assert.deepEqual(spawned, []);
+  assert.equal(stdout.written, "CACHED-GET");
+  assert.equal(statSync(cacheFileForUrl(cacheDir, ENDPOINT, {
+    token: "ghs_plain_get",
+  })).mode & 0o777, 0o600);
+});
+
+test("flag on with --paginate bypasses the cache", async () => {
+  const cacheDir = tempCache();
+  const spawned = [];
+  const argv = ["repos/vitalitychems-dot/TESSERA/commits?per_page=100", "--paginate"];
+  const code = await runCli(argv, {
+    env: { [ENABLE_FLAG]: "1" },
+    cacheDir,
+    spawnImpl: (cmd, args) => {
+      spawned.push([cmd, args]);
+      return { status: 0 };
+    },
+    request: async () => {
+      throw new Error("paginate must not use the cache");
+    },
+  });
+  assert.equal(code, 0);
+  assert.deepEqual(spawned, [["gh", ["api", ...argv]]]);
+  assert.deepEqual(readdirSync(cacheDir), []);
 });
 
 test("flag off CLI spawns gh api with the same arguments", async () => {
