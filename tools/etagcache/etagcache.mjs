@@ -29,8 +29,13 @@ export const SCAN_ENDPOINTS = [
 export const DEFAULT_ACCEPT = "application/vnd.github+json";
 export const DEFAULT_API_VERSION = "2022-11-28";
 
+export const OFF_VALUES = new Set(["0", "false", "off", "no"]);
+
+/** On when unset. 0, false, off or no (any case, surrounding spaces ignored) turn it off. */
 export function etagCacheEnabled(env = process.env) {
-  return env[ENABLE_FLAG] !== "0";
+  const value = env[ENABLE_FLAG];
+  if (value === undefined) return true;
+  return !OFF_VALUES.has(String(value).trim().toLowerCase());
 }
 
 function headerValue(headers, name) {

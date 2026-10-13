@@ -13,7 +13,7 @@ Bytes are the raw HTTP response (status line + headers + body). A 304 body is em
 
 ## Default
 
-`TESSERA_ENABLE_ETAG_CACHE` is on when it is unset. Set it to `0` to opt out. Opt-out is a passthrough: no cache read, no cache write, and no `If-None-Match`. Any other value, including `1`, leaves the cache on.
+`TESSERA_ENABLE_ETAG_CACHE` is on when it is unset. Set it to `0`, `false`, `off` or `no` (any case) to opt out. Opt-out is a passthrough: no cache read, no cache write, and no `If-None-Match`. Any other value, including `1` or an empty string, leaves the cache on.
 
 `/graphql` (leading slash) and any path containing `{branch}` are passed straight through to `gh api`, the same as bare `graphql` and paths containing `{owner}` or `{repo}`. Those calls are not cached.
 
@@ -76,3 +76,14 @@ Those 304s did not cost a core rate-limit unit. A changed endpoint still does: i
 - 117× is only the no-change ceiling. The 8.5× figure is an estimate that assumes 11% of scans change. It is not a measured change rate: all 40 conditional reads were 304. The same assumption puts the smaller endpoints near 6.5×.
 - Token savings only happen when callers honour the `unchanged` marker and skip re-parsing. Returning the cached body does not save those tokens by itself.
 - The open-PR list stays with PR #295.
+
+## Off vs on, 2026-10-13 (MEASURED)
+
+Live read-only scan of the 4 `SCAN_ENDPOINTS` through `cachedGet`, with `gh api -i` as the transport, cache warmed once. Median of 7 runs each:
+
+| | body bytes | requests | 304s | wall |
+|---|---|---|---|---|
+| off (`=0`) | 627,729 | 4 | 0 | 1,816 ms |
+| on (default) | 0 | 4 | 4 | 1,834 ms |
+
+Body bytes go down 100% (MEASURED). Request count is unchanged. Wall time is unchanged within noise (+1%), because `gh` process start dominates. GitHub's docs say 304s with a valid ETag don't count against the primary rate limit; that wasn't measured here (ESTIMATE).

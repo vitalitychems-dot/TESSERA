@@ -72,10 +72,51 @@ test("304 returns the cached body and an unchanged marker", async () => {
   assert.deepEqual(calls, [null, "\"e1\""]);
 });
 
-test("etag cache is on unless TESSERA_ENABLE_ETAG_CACHE is exactly 0", () => {
+test("etag cache is on unless TESSERA_ENABLE_ETAG_CACHE is 0, false, off or no (any case)", () => {
   assert.equal(etagCacheEnabled({}), true);
-  assert.equal(etagCacheEnabled({ [ENABLE_FLAG]: "1" }), true);
-  assert.equal(etagCacheEnabled({ [ENABLE_FLAG]: "0" }), false);
+  for (const on of ["1", "true", "on", "yes", "", "2", "nope"]) {
+    assert.equal(etagCacheEnabled({ [ENABLE_FLAG]: on }), true, JSON.stringify(on));
+  }
+  for (const off of ["0", "false", "off", "no", "FALSE", "Off", "NO", " false ", "oFf"]) {
+    assert.equal(etagCacheEnabled({ [ENABLE_FLAG]: off }), false, JSON.stringify(off));
+  }
+});
+
+for (const off of ["0", "false", "OFF", "No"]) {
+  test(`TESSERA_ENABLE_ETAG_CACHE=${off} ignores a valid cached entry for the same URL`, async () => {
+    const cacheDir = tempCache();
+    const file = cacheFileForUrl(cacheDir, ENDPOINT);
+    const seed = JSON.stringify({ etag: "\"seeded\"", body: "CACHED" });
+    writeFileSync(file, seed);
+    const calls = [];
+    const result = await cachedGet({
+      url: ENDPOINT,
+      cacheDir,
+      env: { [ENABLE_FLAG]: off },
+      request: async (req) => {
+        calls.push(req.headers["If-None-Match"] ?? null);
+        return { status: 304, body: "", headers: { etag: "\"seeded\"" } };
+      },
+    });
+    assert.deepEqual(calls, [null]);
+    assert.notEqual(result.body, "CACHED");
+    assert.equal(readFileSync(file, "utf8"), seed);
+  });
+}
+
+test("control: the same seeded entry IS used when the flag is unset", async () => {
+  const cacheDir = tempCache();
+  const file = cacheFileForUrl(cacheDir, ENDPOINT);
+  writeFileSync(file, JSON.stringify({ etag: "\"seeded\"", body: "CACHED" }));
+  const calls = [];
+  const result = await cachedGet({
+    url: ENDPOINT, cacheDir, env: {}, request: async (req) => {
+      calls.push(req.headers["If-None-Match"] ?? null);
+      return { status: 304, body: "", headers: { etag: "\"seeded\"" } };
+    },
+  });
+  assert.deepEqual(calls, ["\"seeded\""]);
+  assert.equal(result.body, "CACHED");
 });
 
 test("unset flag uses the cache", async () => {
@@ -573,7 +614,7 @@ test("unset flag CLI uses the cache for an allowlisted path", async () => {
 
 test("TESSERA_ENABLE_ETAG_CACHE=0 CLI spawns gh api with the same arguments", async () => {
   const spawned = [];
-  const code = await runCli(["repos/vitalitychems-dot/TESSERA/contents/", "-H", "Accept: application/json"], {
+  const code = await runCli(["repos/vitalitychems-dot/TESSERA/contents/"], {
     env: { [ENABLE_FLAG]: "0" },
     spawnImpl: (cmd, args) => {
       spawned.push([cmd, args]);
@@ -586,6 +627,6 @@ test("TESSERA_ENABLE_ETAG_CACHE=0 CLI spawns gh api with the same arguments", as
   assert.equal(code, 0);
   assert.deepEqual(spawned, [[
     "gh",
-    ["api", "repos/vitalitychems-dot/TESSERA/contents/", "-H", "Accept: application/json"],
+    ["api", "repos/vitalitychems-dot/TESSERA/contents/"],
   ]]);
 });
