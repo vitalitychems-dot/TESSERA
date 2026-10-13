@@ -571,7 +571,7 @@ describe("local pen gates", () => {
     const slack = `xoxb-${"x".repeat(12)}`;
     const tokenLine = `TOKEN=${"x".repeat(8)}`;
     const secretLine = `SECRET=${"x".repeat(8)}`;
-    const privateKey = "***REMOVED***";
+    const privateKey = ["-----BEGIN", "PRIVATE KEY-----"].join(" ") + "\nnot-a-real-key\n";
     for (const sample of [adminKey, ghp, githubPat, glhf, akia, slack, tokenLine, secretLine, privateKey]) {
       expect(applyPostGate(sample, null), sample.slice(0, 24)).toEqual({ action: "blocked", rule: "SECRET_LEAK" });
     }
