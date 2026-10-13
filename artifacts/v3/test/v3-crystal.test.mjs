@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { loadGraph } from "../../v2/src/brain/synapse.mjs";
 import { replayAt } from "../../v2/src/brain/view.mjs";
-import { handleBrain } from "../../v2/src/brain/http.mjs";
+import { handleBrain } from "../src/serve.mjs";
 import { buildCrystal, serialize, parse, graphAt, verify, appendCells, crystalSnapshot } from "../src/crystal.mjs";
 const jsonl = readFileSync(new URL("../../../docs/v2/v2-memory.jsonl", import.meta.url), "utf8");
 const lines = jsonl.split("\n");

@@ -15,7 +15,7 @@ import { applyShip } from "./ship.mjs";
 import { createForeman } from "./task-graph.mjs";
 import { createMonitor } from "./worker-stream.mjs";
 import { buildWorld, readBuildLog } from "./world.mjs";
-import { handleBrain } from "../brain/http.mjs";
+import { handleBrain } from "../../../v3/src/serve.mjs";
 import { reviewRequest } from "../hyb011-denylist.mjs";
 import { dispatch, mountPath, readSession } from "../../../gitai/src/server.mjs";
 import { seedDemo } from "../../../gitai/src/seed.mjs";

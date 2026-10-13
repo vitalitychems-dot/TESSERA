@@ -13,3 +13,15 @@ export function crystalCells(memPath, readMemory) {
     if (facts === n && c.every((x) => !x.src || x.src.startsWith(basename(memPath) + ":"))) cells = c; }
   cells ??= buildCrystal(text, { source: basename(memPath) }); slot = { text, cells }; return cells;
 }
+import { handleBrain as handleBrainV2 } from "../../v2/src/brain/http.mjs";
+import { crystalSnapshot } from "./crystal.mjs";
+const MEM = () => process.env.TESSERA_BRAIN_MEMORY || join(HERE, "../../../docs/v2/v2-memory.jsonl");
+/** /brain routes: GET /brain/snapshot?src=crystal&t=&prev= from the crystal (read-only); everything else goes to v2. */
+export function handleBrain(req, res, url) {
+  if (req.method === "GET" && url.pathname === "/brain/snapshot" && url.searchParams.get("src") === "crystal") {
+    const q = url.searchParams; const p = MEM(); const read = () => (existsSync(p) ? readFileSync(p, "utf8") : "");
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify(crystalSnapshot(crystalCells(p, read), q.has("t") ? q.get("t") : undefined, q.has("prev") ? q.get("prev") : undefined))); return true;
+  }
+  return handleBrainV2(req, res, url);
+}
