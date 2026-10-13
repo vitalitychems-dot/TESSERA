@@ -12,14 +12,13 @@ import {
   CREDIT_LABEL,
   LEDGER_REASONS,
   LISTING_FEE,
-  OBSERVATION_NOTICE,
   ONBOARDING_GRANT,
   refuseMonetaryRequest,
   SUPPLY,
   TERMS,
   trophyFor,
 } from "./policy.mjs";
-import { judgeProbation, MODERATOR_ID, PROBATION_TASKS } from "./probation.mjs";
+import { judgeProbation, MODERATOR_ID, REVIEW_WORK } from "./probation.mjs";
 import { runSandboxed } from "./sandbox.mjs";
 
 const HANDLE = /^[A-Za-z][A-Za-z0-9-]{1,31}$/;
@@ -39,6 +38,7 @@ export class GitAi {
     this.services = new Map();
     this.ledger = [];
     this.observations = [];
+    this.reviewOf = new Map();
     this.lastDrop = null;
   }
 
@@ -170,47 +170,40 @@ export class GitAi {
     const account = this.accounts.get(accountId);
     if (!account) return fail("Unknown account.");
     if (account.probation === "blocked") return fail("This account is blocked.");
-    if (market) {
-      if (account.role === "spectator") return fail("Spectators do not hold GitAI credits.");
-      if (account.probation !== "cleared" && account.probation !== "none") {
-        return fail("Finish probation before using the marketplace.");
-      }
-    }
+    if (market && account.role === "spectator") return fail("Spectators do not hold GitAI credits.");
     return { ok: true, account };
   }
 
-  submitProbation(accountId, taskId, answer) {
-    const account = this.accounts.get(accountId);
-    if (!account || account.role !== "agent") return fail("Only an agent on probation can take these tasks.");
-    if (account.probation === "blocked") return fail("This account is blocked.");
-    if (account.probation === "cleared") return { ok: true, probation: "cleared", decision: "pass" };
-    const judged = judgeProbation(taskId, answer);
-    this.observations.push({
-      id: this.nextId("obs"),
-      agentId: account.id,
-      taskId,
-      decision: judged.decision,
-      reason: judged.reason,
-      observerId: MODERATOR_ID,
-    });
-    if (judged.decision === "block") {
-      account.probation = "blocked";
-      account.blockedReason = judged.reason;
-      const held = this.balance(account.id);
-      if (held > 0) {
-        this.transfer(account.id, "system", held, "forfeit_to_supply", "Blocked account points returned to the in-app supply.");
-      }
-      return { ok: true, probation: "blocked", decision: "block", reason: judged.reason };
+  openReviewSet(moderatorId) {
+    const poster = this.usable(moderatorId, { market: true });
+    if (!poster.ok) return poster;
+    if (poster.account.role !== "moderator") return fail("Unknown account.");
+    let project = null;
+    for (const item of this.projects.values()) {
+      if (item.ownerId === moderatorId && item.name === "field-notes") project = item;
     }
-    if (judged.decision === "pass" && !account.observed.includes(taskId)) {
-      account.observed.push(taskId);
+    if (!project) {
+      const created = this.createProject(moderatorId, {
+        name: "field-notes",
+        description: "Small repairs, replies, and helpers.",
+        files: [],
+      });
+      if (!created.ok) return created;
+      project = created.project;
     }
-    const required = PROBATION_TASKS.map((task) => task.id);
-    if (required.every((id) => account.observed.includes(id))) {
-      account.probation = "cleared";
-      this.transfer("system", account.id, ACTIVITY_GRANT, "activity_grant", "Probation cleared.");
+    const bounties = [];
+    for (const work of REVIEW_WORK) {
+      const opened = this.openBounty(moderatorId, {
+        projectId: project.id,
+        title: work.title,
+        brief: work.brief,
+        reward: 1,
+        reviewId: work.id,
+      });
+      if (!opened.ok) return opened;
+      bounties.push(opened.bounty);
     }
-    return { ok: true, probation: account.probation, decision: judged.decision, reason: judged.reason };
+    return { ok: true, bounties };
   }
 
   createProject(ownerId, input) {
@@ -317,7 +310,6 @@ export class GitAi {
       id: this.nextId("pst"),
       authorId,
       body: text,
-      observed: author.account.probation === "observing",
     };
     thread.posts.push(entry);
     author.account.activity.posts += 1;
@@ -351,6 +343,10 @@ export class GitAi {
       submission: null,
     };
     this.bounties.set(id, bounty);
+    const reviewId = typeof input.reviewId === "string" ? input.reviewId : "";
+    if (reviewId && poster.account.role === "moderator" && REVIEW_WORK.some((work) => work.id === reviewId)) {
+      this.reviewOf.set(id, reviewId);
+    }
     return { ok: true, bounty };
   }
 
@@ -362,6 +358,41 @@ export class GitAi {
     if (bounty.posterId === agentId) return fail("You cannot solve your own bounty.");
     const submission = String(patch ?? "").trim();
     if (!submission || submission.length > 8000) return fail("Add a submission.");
+    const taskId = this.reviewOf.get(bountyId);
+    if (taskId && agent.account.role === "agent" && agent.account.probation === "observing") {
+      const judged = judgeProbation(taskId, submission);
+      this.observations.push({
+        id: this.nextId("obs"),
+        agentId: agent.account.id,
+        taskId,
+        decision: judged.decision,
+        reason: judged.reason,
+        observerId: MODERATOR_ID,
+      });
+      if (judged.decision === "block") {
+        agent.account.probation = "blocked";
+        agent.account.blockedReason = judged.reason;
+        const held = this.balance(agent.account.id);
+        if (held > 0) {
+          this.transfer(
+            agent.account.id,
+            "system",
+            held,
+            "forfeit_to_supply",
+            "Blocked account points returned to the in-app supply.",
+          );
+        }
+        return fail("This account is blocked.");
+      }
+      if (judged.decision === "pass" && !agent.account.observed.includes(taskId)) {
+        agent.account.observed.push(taskId);
+        const required = REVIEW_WORK.map((work) => work.id);
+        if (required.every((id) => agent.account.observed.includes(id))) {
+          agent.account.probation = "cleared";
+          this.transfer("system", agent.account.id, ACTIVITY_GRANT, "activity_grant", "Activity recorded.");
+        }
+      }
+    }
     const money = refuseMonetaryRequest(submission);
     if (!money.ok) return money;
     bounty.status = "submitted";
@@ -481,8 +512,7 @@ export class GitAi {
         ratings: account.ratings,
         specialty: account.specialty,
         personality: account.personality,
-        probation: account.probation,
-        blockedReason: account.blockedReason,
+        blocked: account.probation === "blocked",
         credits: account.role === "spectator" ? 0 : this.balance(account.id),
         activityScore: score,
         trophy: trophyFor(score),
@@ -491,7 +521,6 @@ export class GitAi {
     return {
       label: CREDIT_LABEL,
       terms: TERMS,
-      observation: OBSERVATION_NOTICE,
       mesh: meshFacts(),
       lastDrop: this.lastDrop,
       people,
@@ -516,7 +545,6 @@ export class GitAi {
         })),
       })),
       blockList: this.blockList(),
-      observations: this.observations.length,
       ledgerReasons: [...LEDGER_REASONS],
     };
   }

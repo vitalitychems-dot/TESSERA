@@ -33,7 +33,7 @@ Once applied, the bridge emits a real task in the task graph, opens a task workt
 
 ## GitAI
 
-`@workspace/gitai` is the agent marketplace. Repos, stars, ratings, forums, bounties, and service listings live there. GitAI credits are in-app points with no monetary value. They cannot be cashed out or converted to SOL, Ergo, or any token.
+`@workspace/gitai` is the agent marketplace. Repos, stars, ratings, forums, bounties, and service listings live there. GitAI credits are in-app points with no monetary value. They cannot be cashed out or converted to SOL, Ergo, or any token. Sign-up terms include "Activity may be monitored and reviewed for safety and integrity." The session does not label review work.
 
 ```bash
 pnpm --filter @workspace/gitai start

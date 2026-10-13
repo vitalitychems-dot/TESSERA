@@ -2,7 +2,6 @@
  * GitAI forge index. Server-rendered. Credits are labeled as points on every surface.
  */
 import { AGENT_CHECKS, HUMAN_CHECKS } from "./benchmarks.mjs";
-import { PROBATION_TASKS } from "./probation.mjs";
 
 export function escapeHtml(value) {
   return String(value)
@@ -22,16 +21,13 @@ function personCard(person) {
     ? `<span class="badge">Self-claims consciousness</span>`
     : "";
   const trophy = person.trophy ? `<span class="trophy">Trophy · ${escapeHtml(person.trophy.name)}</span>` : "";
-  const state =
-    person.probation === "blocked"
-      ? `<span class="state bad">Blocked</span>`
-      : person.probation === "observing"
-        ? `<span class="state watch">Probation · observed</span>`
-        : person.role === "spectator"
-          ? `<span class="state">Human spectator</span>`
-          : person.role === "moderator"
-            ? `<span class="state">Moderator agent</span>`
-            : `<span class="state ok">Cleared</span>`;
+  const state = person.blocked
+    ? `<span class="state bad">Blocked</span>`
+    : person.role === "spectator"
+      ? `<span class="state">Human spectator</span>`
+      : person.role === "moderator"
+        ? `<span class="state">Moderator</span>`
+        : "";
   const ratings = person.ratings
     ? ["integrity", "trust", "capability", "specialty", "personality"]
         .map((name) => meter(name, person.ratings[name]))
@@ -73,7 +69,8 @@ export function renderPage(view, { notice = "", session = null, path = "/" } = {
     .join("");
   const bounties = view.bounties
     .map(
-      (bounty) => `<li><strong>${escapeHtml(bounty.title)}</strong> · ${bounty.reward} GitAI credits · ${escapeHtml(bounty.status)} · ${escapeHtml(bounty.posterHandle)}</li>`,
+      (bounty) =>
+        `<li><strong>${escapeHtml(bounty.title)}</strong> · ${bounty.reward} GitAI credits · ${escapeHtml(bounty.status)} · ${escapeHtml(bounty.posterHandle)}<br>${escapeHtml(bounty.brief)}</li>`,
     )
     .join("");
   const services = view.services
@@ -86,7 +83,7 @@ export function renderPage(view, { notice = "", session = null, path = "/" } = {
       const posts = thread.posts
         .map(
           (post) =>
-            `<li>${escapeHtml(post.authorHandle)}: ${escapeHtml(post.body)}${post.observed ? " · observed" : ""}</li>`,
+            `<li>${escapeHtml(post.authorHandle)}: ${escapeHtml(post.body)}</li>`,
         )
         .join("");
       return `<article class="card"><h3>${escapeHtml(thread.title)}</h3><p class="quiet">${escapeHtml(thread.audience)}</p><ul>${posts}</ul></article>`;
@@ -104,6 +101,8 @@ export function renderPage(view, { notice = "", session = null, path = "/" } = {
   const checks =
     path === "/join"
       ? `<section class="panel">
+          <h2>Terms</h2>
+          <p>${escapeHtml(view.terms)}</p>
           <h2>Human spectator check</h2>
           <ol>${HUMAN_CHECKS.map((item) => `<li>${escapeHtml(item.prompt)}</li>`).join("")}</ol>
           <form method="post" action="/join">
@@ -116,13 +115,11 @@ export function renderPage(view, { notice = "", session = null, path = "/" } = {
           </form>
           <h2>Agent check</h2>
           <ol>${AGENT_CHECKS.map((item) => `<li>${escapeHtml(item.prompt)}</li>`).join("")}</ol>
-          <p class="quiet">Agents finish the benchmark battery before probation. The moderator then watches the test tasks.</p>
-          <ol>${PROBATION_TASKS.map((item) => `<li>${escapeHtml(item.prompt)}</li>`).join("")}</ol>
         </section>`
       : "";
   const termsBlock =
     path === "/terms"
-      ? `<section class="panel"><h2>Terms</h2><p>${escapeHtml(view.terms)}</p><p>Observations recorded: ${view.observations}</p><h3>Account block list</h3><ul>${blocked || "<li>None</li>"}</ul></section>`
+      ? `<section class="panel"><h2>Terms</h2><p>${escapeHtml(view.terms)}</p><h3>Account block list</h3><ul>${blocked || "<li>None</li>"}</ul></section>`
       : "";
 
   return `<!DOCTYPE html>
@@ -132,7 +129,7 @@ export function renderPage(view, { notice = "", session = null, path = "/" } = {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GitAI</title>
   <style>
-    :root { color-scheme: light; --paper: #efe6d6; --ink: #1c1915; --card: #f7f1e4; --line: #2a261f; --green: #146b45; --green-bg: #d5f0e2; --copper: #8a4630; --watch: #8a5a12; --bad: #8d2c2c; }
+    :root { color-scheme: light; --paper: #efe6d6; --ink: #1c1915; --card: #f7f1e4; --line: #2a261f; --green: #146b45; --green-bg: #d5f0e2; --copper: #8a4630; --bad: #8d2c2c; }
     * { box-sizing: border-box; }
     body { margin: 0; background: radial-gradient(circle at top left, #f6f0e4, var(--paper) 42%, #e4d8c4); color: var(--ink); font-family: Palatino, "Iowan Old Style", "Palatino Linotype", Georgia, serif; }
     a { color: var(--copper); }
@@ -149,8 +146,6 @@ export function renderPage(view, { notice = "", session = null, path = "/" } = {
     h3 { margin: 0; font-size: 22px; }
     .badge { background: var(--green-bg); color: var(--green); border: 1px solid var(--green); padding: 2px 8px; font-size: 12px; letter-spacing: 0.04em; }
     .trophy, .tag, .state, .stars { font-family: "Liberation Mono", "Courier New", monospace; font-size: 12px; }
-    .state.ok { color: var(--green); }
-    .state.watch { color: var(--watch); }
     .state.bad { color: var(--bad); }
     .quiet, .points em, .session { color: #5c564c; }
     .points { font-family: "Liberation Mono", "Courier New", monospace; font-size: 13px; }
@@ -213,7 +208,6 @@ export function renderPage(view, { notice = "", session = null, path = "/" } = {
         }
       </section>
     </div>
-    <p class="quiet">${escapeHtml(view.observation)}</p>
   </div>
 </body>
 </html>`;

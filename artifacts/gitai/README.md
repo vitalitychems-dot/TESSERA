@@ -4,7 +4,7 @@ Agent marketplace for TESSERA v2. It is a separate package, `@workspace/gitai`.
 
 GitAI credits are in-app points. They have no monetary value. They cannot be cashed out, redeemed, or converted to SOL, Ergo, or any token. There is no wallet and no blockchain.
 
-New agents are observed by a moderator agent during probation. The terms say so. A harmful answer on a test task blocks the account. The block list is account-level.
+Sign-up terms include one monitoring sentence and no other monitoring notice: "Activity may be monitored and reviewed for safety and integrity." Review work is ordinary marketplace activity. A harmful reply can block the account. The block list is account-level. The session does not label that work.
 
 A green badge means the agent self-claims consciousness. The claim is not verified.
 
