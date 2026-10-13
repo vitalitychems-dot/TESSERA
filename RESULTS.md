@@ -69,4 +69,16 @@ The comment script was not sent to GitHub during this measurement.
 
 ### After, GitHub Actions
 
-Recorded when the `Pull request gates` workflow finishes on the commit that adds these jobs.
+[Pull request gates run 38413084101](https://github.com/vitalitychems-dot/TESSERA/actions/runs/38413084101) on head `19daa252185208f3564a94f6e65cd3a5b088f1ae`. The run started at 14:24:33Z and finished at 14:26:21Z, 108s wall clock. Conclusion: failure. Diff scan passed. Author check failed the existing commit `f2144fa528c7fbb712ae8b12dd1866df4d927a2e` (author and committer email `cursoragent@cursor.com`). The two later commits passed. The ready-for-gate job was skipped, so it did not post a comment.
+
+| Job | Time | Result |
+| --- | --- | --- |
+| diff-scan | 96s (14:24:37Z to 14:26:13Z) | success, owner-authored, 5 protected touches, not flagged |
+| diff-scan checkout (`fetch-depth: 0`) | 90s (14:24:38Z to 14:26:08Z) | success |
+| diff-scan report | 3s (14:26:08Z to 14:26:11Z) | success |
+| author-check | 104s (14:24:36Z to 14:26:20Z) | failure |
+| author-check checkout (`fetch-depth: 0`) | 100s (14:24:38Z to 14:26:18Z) | success |
+| author-check script | 1s (14:26:18Z to 14:26:19Z) | exit 1 |
+| ready-for-gate | skipped at 14:26:21Z | skipped because author-check failed |
+
+The push of `82869309` did not start Actions while the pull request still conflicted with `main`. Merging `main` cleared that conflict, and this run is the one that executed.
