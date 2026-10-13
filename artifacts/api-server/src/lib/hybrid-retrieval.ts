@@ -1,7 +1,7 @@
 import { logger } from "./logger";
 import { searchMemory } from "./vector-memory";
 import { recallIngestedKnowledge } from "./ingested-recall";
-import { generateEmbedding, cosineSimilarity } from "./neural-embeddings";
+import { generateEmbedding, generateEmbeddingsBatch, cosineSimilarity } from "./neural-embeddings";
 
 export interface RetrievedChunk {
   text: string;
@@ -102,16 +102,14 @@ async function rerankByEmbedding(query: string, chunks: RetrievedChunk[]): Promi
   try {
     const qEmb = await generateEmbedding(query);
     if (!qEmb || qEmb.length === 0) return chunks;
-    const scored: RetrievedChunk[] = [];
-    for (const c of chunks) {
-      try {
-        const cEmb = await generateEmbedding(c.text.slice(0, 800));
-        const sim = cosineSimilarity(qEmb, cEmb);
-        scored.push({ ...c, rerankScore: sim, score: 0.5 * c.score + 0.5 * sim });
-      } catch {
-        scored.push(c);
-      }
-    }
+    const texts = chunks.map((c) => c.text.slice(0, 800));
+    const embeddings = await generateEmbeddingsBatch(texts);
+    const scored: RetrievedChunk[] = chunks.map((c, i) => {
+      const cEmb = embeddings[i];
+      if (!cEmb || cEmb.length === 0) return c;
+      const sim = cosineSimilarity(qEmb, cEmb);
+      return { ...c, rerankScore: sim, score: 0.5 * c.score + 0.5 * sim };
+    });
     scored.sort((a, b) => b.score - a.score);
     return scored;
   } catch (err) {
