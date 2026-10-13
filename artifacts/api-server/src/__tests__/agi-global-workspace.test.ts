@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { publish, broadcastWinner, subscribeWorkspace } from "../lib/agi/agent-bus";
+import { publish } from "../lib/agi/agent-bus";
+import { broadcastWinner, subscribeWorkspace } from "../lib/agi/global-workspace";
 
 describe("global workspace broadcast (REA-06)", () => {
   it("broadcasts the single most salient message to all listeners", () => {
@@ -15,8 +16,24 @@ describe("global workspace broadcast (REA-06)", () => {
     off1(); off2();
   });
   it("does not re-broadcast the same winner", () => {
+    publish("z", "gw-rb-a", { v: "first candidate" }, 99);
+    publish("z", "gw-rb-b", { v: "second candidate" }, 98);
     const first = broadcastWinner();
     const second = broadcastWinner();
-    expect(second?.id).not.toBe(first?.id);
+    expect(first).not.toBeNull();
+    expect(second).not.toBeNull();
+    expect(typeof first!.id).toBe("string");
+    expect(second!.id).not.toBe(first!.id);
+  });
+  it("returns null rather than repeating once every candidate has won", () => {
+    publish("z", "gw-solo", { v: "only one" }, 97);
+    const ids = new Set<string>();
+    let w;
+    while ((w = broadcastWinner()) !== null) {
+      expect(ids.has(w.id)).toBe(false);
+      ids.add(w.id);
+      if (ids.size > 5) break;
+    }
+    expect(ids.size).toBeGreaterThan(0);
   });
 });

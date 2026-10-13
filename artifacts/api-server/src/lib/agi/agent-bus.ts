@@ -97,35 +97,3 @@ export function busStats() {
     topTopics: Object.entries(byTopic).sort((a, b) => b[1] - a[1]).slice(0, 8),
   };
 }
-
-// ---------- global-workspace broadcast (REA-06) ----------
-// Idea: Global Workspace Theory agents (giansha/Global-Workspace-Agents, MIT;
-// wyg5208/nct, MIT). Each tick, candidates compete on attention; the single
-// winner is broadcast to every subscriber ("conscious access"). Recent winners
-// are inhibited so one topic cannot monopolise the workspace. From scratch.
-export type WorkspaceListener = (winner: AgentMessage) => void;
-const workspaceListeners = new Set<WorkspaceListener>();
-const recentWinners: string[] = [];
-const WINNER_MEMORY = 5;
-
-export function subscribeWorkspace(fn: WorkspaceListener): () => void {
-  workspaceListeners.add(fn);
-  return () => { workspaceListeners.delete(fn); };
-}
-
-/** Picks the highest-salience message (topic-inhibited) and broadcasts it. */
-export function broadcastWinner(windowMs = 60_000, inhibition = 0.5): AgentMessage | null {
-  const candidates = pullTopK(50, undefined, windowMs).filter((m) => !recentWinners.includes(m.id));
-  if (!candidates.length) return null;
-  const recentTopics = recentWinners
-    .map((id) => messages.find((m) => m.id === id)?.topic)
-    .filter((t): t is string => Boolean(t));
-  const salience = (m: AgentMessage) => m.attention * (recentTopics.includes(m.topic) ? inhibition : 1);
-  const winner = candidates.reduce((best, m) => (salience(m) > salience(best) ? m : best));
-  recentWinners.push(winner.id);
-  if (recentWinners.length > WINNER_MEMORY) recentWinners.shift();
-  for (const fn of workspaceListeners) {
-    try { fn(winner); } catch { /* a bad listener must not stop the broadcast */ }
-  }
-  return winner;
-}
