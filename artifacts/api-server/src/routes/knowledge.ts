@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { ingestedDataTable, ingestionJobsTable, dataSourcesTable } from "@workspace/db/schema";
 import { desc, sql } from "drizzle-orm";
 import { TESSERA_SUBJECTS, TESSERA_IDENTITY } from "../lib/tessera-knowledge";
+import { hashStringFNV } from "../lib/reality-audit";
 
 const router: IRouter = Router();
 
@@ -110,7 +111,7 @@ router.post("/knowledge/generate", async (_req, res) => {
       category: categories[Math.floor(Math.random() * categories.length)],
       domain: subject.title,
       timestamp: Date.now(),
-      confidence: 80 + Math.floor(Math.random() * 20),
+      confidence: 80 + (hashStringFNV(picked) % 20),
       source: "knowledge-synthesis",
     });
   } catch (err) {
