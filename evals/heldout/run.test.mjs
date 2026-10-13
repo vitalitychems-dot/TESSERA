@@ -60,5 +60,9 @@ test("sandbox: no env secrets, cwd is a throwaway temp dir", sbx, () => {
 test("sandbox: filesystem is read-only outside the temp dir; home is hidden", sbx, () => {
   assert.equal(runPySandboxed("open('/usr/x-heldout','w')").ok, false);
   assert.equal(runPySandboxed("open('ok.txt','w').write('1')").ok, true);
-  assert.equal(runPySandboxed("import os\nassert not os.listdir('/home')").ok, true);
+  assert.equal(runPySandboxed("import os\nassert not os.path.exists('/home') or not os.listdir('/home')").ok, true);
+});
+test("sandbox: allowlist root, sensitive paths absent", sbx, () => {
+  for (const p of ["/opt", "/var/lib", "/etc/passwd", "/home", "/workspace", "/cursor", "/root"])
+    assert.equal(runPySandboxed(`import os\nassert not os.path.exists(${JSON.stringify(p)}) or not os.listdir(${JSON.stringify(p)})`).ok, true, p);
 });
