@@ -1,7 +1,9 @@
+const T = new Set(["trusted-a"]);
 import test from "node:test";
 import assert from "node:assert/strict";
-const U = "vitalitychems-dot";
-import { parseVerdicts, prWeight, rank, words, W } from "./outcome-feedback.mjs";
+const U = "trusted-a";
+import { parseVerdicts, prWeight as pw, rank as rk, words, W, parseTrusted } from "./outcome-feedback.mjs";
+const prWeight = (p, c, t = T) => pw(p, c, t), rank = (i, t = T) => rk(i, t);
 
 test("parses gate verdicts with SHAs", () => {
   const v = parseVerdicts("Moderator FAIL on x\nSecurity PASS ab3cb0eb44\nBuild gate: PASS");
@@ -51,4 +53,9 @@ test("verdicts on stale SHAs or with no SHA are ignored", () => {
 test("--trusted override and output marks ranking advisory-only", () => {
   const out = rank({ finished: [], candidates: [{ repo: "R", number: 1, title: "x", headSha: "abcdef01", comments: [{ author: "bot", body: "Security PASS abcdef0" }] }] }, new Set(["bot"]));
   assert.equal(out.tasks[0].gates.pass, 1); assert.match(out.advisory_only, /never feeds a gate/);
+});
+test("trusted list is config-only and empty means nothing counts", () => {
+  assert.deepEqual([...parseTrusted(" a, b ,")], ["a", "b"]);
+  const r = pw({ merged: true, headSha: "1234567a" }, [{ author: "trusted-a", body: "Security PASS 1234567" }], parseTrusted(""));
+  assert.equal(r.pass, 0);
 });

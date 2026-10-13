@@ -3,7 +3,7 @@
 //   node scripts/feedback/outcome-feedback.mjs [--repos owner/A,owner/B] [--out next-tasks.json] [--fixture f.json]
 // Read-only: uses `gh api` GETs only. Weighting per finished PR:
 //   merged +1, closed-unmerged -1, each gate PASS +0.25, each gate FAIL -0.5 (latest verdict per gate+SHA counted once).
-// A verdict counts only if (a) its comment author is in TRUSTED (or --trusted a,b) and (b) it names a SHA
+// A verdict counts only if (a) its comment author is in TRUSTED_VERDICT_AUTHORS (or --trusted a,b) and (b) it names a SHA
 // that is a prefix of the PR's head SHA. Verdicts on stale/superseded SHAs, or with no SHA, are ignored.
 // ADVISORY ONLY: this ranking picks what to work on next. It must never feed a gate, a merge decision,
 // or the silence timer; gates read their own verdicts on the exact head SHA.
@@ -12,7 +12,10 @@ import { execFileSync } from "node:child_process";
 import { writeFileSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-export const TRUSTED = new Set(["vitalitychems-dot", "collink1007"]);
+// Trusted verdict authors come from config, never from code: env TRUSTED_VERDICT_AUTHORS="login1,login2"
+// or --trusted. With none configured, no verdict counts (fail closed).
+export const parseTrusted = (s) => new Set(String(s ?? "").split(",").map((x) => x.trim()).filter(Boolean));
+export const TRUSTED = parseTrusted(process.env.TRUSTED_VERDICT_AUTHORS);
 export const W = { merged: 1, closed: -1, pass: 0.25, fail: -0.5, prior: 3 };
 const STOP = new Set("a an and the to of for in on with by from is are add fix update pr v2 via into new".split(" "));
 export const words = (t) => [...new Set(String(t).toLowerCase().replace(/[^a-z0-9 ]+/g, " ").split(/\s+/)
@@ -91,7 +94,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       const d = fetchRepo(r); input.finished.push(...d.finished); input.candidates.push(...d.candidates);
     }
   }
-  const trusted = a.includes("--trusted") ? new Set(arg("--trusted").split(",")) : TRUSTED;
+  const trusted = a.includes("--trusted") ? parseTrusted(arg("--trusted")) : TRUSTED;
   const out = rank(input, trusted);
   writeFileSync(arg("--out", "next-tasks.json"), JSON.stringify(out, null, 2) + "\n");
   console.log(`ranked ${out.tasks.length} candidates from ${out.history_prs} finished PRs -> ${arg("--out", "next-tasks.json")}`);

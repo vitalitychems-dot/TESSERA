@@ -4,7 +4,8 @@
 (Moderator/Security/Build PASS|FAIL, deduped per gate+SHA, latest wins) in TESSERA and Gitbook, read-only via `gh api`,
 and writes open PRs/issues ranked by learned title-topic weight (merged +1, closed −1, PASS +0.25, FAIL −0.5, prior 3) plus each candidate's own verdicts.
 Tests: `node --test scripts/feedback/outcome-feedback.test.mjs`. 
-Verdicts count only from trusted authors (default `vitalitychems-dot`, `collink1007`; override with `--trusted a,b`)
+Verdicts count only from trusted authors, set by env `TRUSTED_VERDICT_AUTHORS="login1,login2"` or `--trusted a,b`
+(no logins are hard-coded; if none are configured, no verdict counts)
 and only when they name a SHA matching the PR's current head; verdicts on stale/superseded SHAs or with no SHA are ignored.
 
 **Advisory only:** the ranking chooses what to work on next. It never feeds a gate, a merge decision, or the
