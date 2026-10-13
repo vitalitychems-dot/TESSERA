@@ -9,6 +9,7 @@ import {
   flagDefaultsOff,
   identityFailures,
   isInjectable,
+  isRuntimeFlagFile,
   isWrapperSource,
   lockedReason,
   permissionBlocks,
@@ -96,6 +97,17 @@ export function etagCacheEnabled(env = process.env) {
   assert.equal(flagDefaultsOff([truthy], "TESSERA_ENABLE_NEW"), false);
   assert.equal(prAllowsDefaultOn(["TESSERA_ENABLE_NEW defaults on for this migration"], "TESSERA_ENABLE_NEW"), true);
   assert.equal(prAllowsDefaultOn(["stays off unless TESSERA_ENABLE_ETAG_CACHE=1"], "TESSERA_ENABLE_ETAG_CACHE"), false);
+  const mixed = `
+export const ENABLE_FLAG = "TESSERA_ENABLE_ETAG_CACHE";
+function enabled(env) { return env[ENABLE_FLAG] === "1"; }
+const other = process.env.TESSERA_ENABLE_EXAMPLE;
+`;
+  assert.equal(flagDefaultsOff([mixed], "TESSERA_ENABLE_ETAG_CACHE"), true);
+  assert.equal(flagDefaultsOff([mixed], "TESSERA_ENABLE_EXAMPLE"), false);
+  assert.equal(isRuntimeFlagFile("tools/etagcache/etagcache.mjs"), true);
+  assert.equal(isRuntimeFlagFile("tools/pregate/pregate.test.mjs"), false);
+  assert.equal(isRuntimeFlagFile("tools/pregate/RESULTS.md"), false);
+  assert.equal(isRuntimeFlagFile("tools/etagcache/etagcache.test.mjs"), false);
 });
 
 test("argv sweep fails when flags are handled inside the wrapper", async () => {

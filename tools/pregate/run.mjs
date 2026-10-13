@@ -219,11 +219,19 @@ export function flagDefaultsOff(sources, flag) {
   ];
   if (unsafe.some((re) => re.test(combined))) return false;
   const direct = new RegExp(
-    String.raw`(?:\[\s*["']${flag}["']\s*\]|\.${flag}\b|\[\s*ENABLE_FLAG\s*\])\s*===?\s*["']1["']`,
+    String.raw`(?:\[\s*["']${flag}["']\s*\]|\.${flag}\b)\s*===?\s*["']1["']`,
   );
   if (direct.test(combined)) return true;
   const bound = new RegExp(String.raw`ENABLE_FLAG\s*=\s*["']${flag}["']`);
   return bound.test(combined) && /\[\s*ENABLE_FLAG\s*\]\s*===\s*["']1["']/.test(combined);
+}
+
+export function isRuntimeFlagFile(filePath) {
+  const path = filePath.replaceAll("\\", "/");
+  if (path.endsWith(".md")) return false;
+  if (/\.test\.(mjs|cjs|js|ts|tsx)$/.test(path)) return false;
+  if (path.startsWith("tools/pregate/")) return false;
+  return true;
 }
 
 export function containsSubsequence(haystack, needle) {
@@ -386,12 +394,21 @@ export async function evaluate({ cwd, head, base, commits, skipTests, runTestsIm
   section(lines, "locked", locked.length === 0, locked);
 
   const beforeFlags = treeFlags(cwd, base);
-  const afterFlags = treeFlags(cwd, head);
-  const introduced = [...afterFlags].filter((flag) => !beforeFlags.has(flag));
+  const introduced = [];
+  for (const change of changes) {
+    if (!isRuntimeFlagFile(change.path) || !change.after) continue;
+    for (const flag of flagNames(change.after)) {
+      if (beforeFlags.has(flag) || introduced.includes(flag)) continue;
+      introduced.push(flag);
+    }
+  }
   const flagFailures = [];
   for (const flag of introduced) {
     if (prAllowsDefaultOn(messages, flag)) continue;
-    const sources = changes.map((change) => change.after).filter((text) => text && text.includes(flag));
+    const sources = changes
+      .filter((change) => isRuntimeFlagFile(change.path))
+      .map((change) => change.after)
+      .filter((text) => text && text.includes(flag));
     if (!flagDefaultsOff(sources, flag)) flagFailures.push(`${flag}: new flag does not default off`);
   }
   section(lines, "flags", flagFailures.length === 0, flagFailures);
