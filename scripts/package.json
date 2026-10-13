@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
-    "test": "node --test ./suite-policy.test.mjs ./historical-merge-gate.test.mjs ./eval/write-result.test.mjs ./check-task-mirror.test.mjs ./rea-registry.test.mjs",
+    "test": "node --test ./suite-policy.test.mjs ./historical-merge-gate.test.mjs ./eval/write-result.test.mjs ./check-task-mirror.test.mjs ./rea-registry.test.mjs ../tools/pregate/pregate.test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
