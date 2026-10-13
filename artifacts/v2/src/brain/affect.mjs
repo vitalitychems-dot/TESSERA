@@ -17,7 +17,10 @@ const LEX = {
   },
 };
 const norm = (s) => ` ${String(s).toLowerCase().replace(/\s+/g, " ")} `;
-const hits = (t, words) => words.reduce((n, w) => n + (w.length <= 2 && /\W/.test(w) ? (t.includes(w) ? 1 : 0) : new RegExp(`(^|[^a-z])${w.replace(/[?!]/g, "\\$&")}([^a-z]|$)`).test(t) ? 1 : 0), 0);
+// One matcher per lexicon word, built once at load instead of a new RegExp per word per call.
+const matcher = (w) => (w.length <= 2 && /\W/.test(w) ? (t) => t.includes(w) : ((re) => (t) => re.test(t))(new RegExp(`(^|[^a-z])${w.replace(/[?!]/g, "\\$&")}([^a-z]|$)`)));
+const MATCHERS = new Map(Object.values(LEX).flatMap((d) => Object.values(d)).map((words) => [words, words.map(matcher)]));
+const hits = (t, words) => (MATCHERS.get(words) ?? words.map(matcher)).reduce((n, m) => n + (m(t) ? 1 : 0), 0);
 const PRIORITY = { intent: ["undo", "approve", "ask", "instruct"], affect: ["negative", "urgent", "positive"] };
 export function classify(text) {
   const t = norm(text); const out = {};
