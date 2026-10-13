@@ -17,6 +17,24 @@ Father decided on 2026-10-07 that Tessera will be built using the BHNMC directio
 | UI preview sandbox | `artifacts/mockup-sandbox` | `http://localhost:5173` | Component preview |
 | GitAI | `artifacts/gitai` | `http://127.0.0.1:4183` | Standalone marketplace, OpenAPI at `/api/openapi.json`, and the studio tab at `http://127.0.0.1:4173/gitai`. Same backend. GitAI credits are non-redeemable points. |
 | 3D studio floor | `artifacts/v2` | `http://127.0.0.1:4173` | `pnpm --filter @workspace/v2 studio`. The 2D wall is a link on that page. |
+| Tessera console | `artifacts/console` | `http://127.0.0.1:4391` | Phosphor lattice UI. One process, this port only. Does not start the other apps. |
+
+## Superseded themes
+
+The phosphor lattice console is the current Tessera UI theme. These older theme files stay in the tree. Do not delete them without the owner's yes.
+
+| File | What it was |
+| --- | --- |
+| `preview/src/lib/tessera/themes.ts` | Water, fire, lightning, diamond, and spiral marks. Superseded. |
+| `preview/src/components/tessera/theme-view.tsx` | Picker for those five marks. Superseded. |
+| `preview/src/styles.css` | CSS variables for those marks. Superseded for new UI work. |
+| `artifacts/tessera/src/lib/theme-constants.ts` | Cyan, purple, rose, and related accent palettes for the older web app. Superseded. |
+
+The console does not read `TESSERA_ENABLE_*` and does not change those flags. Ports already used by other apps are 3000 (web), 5000 (API), 5173 (mockup sandbox), 4173 (studio), 4183 (GitAI), and 8787 (Gitbook HTTP). The console listens on `127.0.0.1:4391` (`TESSERA_CONSOLE_PORT` overrides it).
+
+```bash
+pnpm --filter @workspace/console run dev
+```
 
 ## Install and run
 
@@ -59,6 +77,10 @@ The root test runner isolates the store test environments and runs database-back
 ## Continuous integration
 
 Workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) has one job, `validate`. On pushes and pull requests to `main` it runs, in order: frozen install, dependency audit, typecheck, schema push to a disposable database, tests, then the workspace build.
+
+[`.github/workflows/secret-scan.yml`](.github/workflows/secret-scan.yml) runs gitleaks on pull requests and pushes to `main`. The job has `contents: read` only, checks out with `persist-credentials: false`, and does not receive repository secrets. A finding or a scanner error fails the job. [`.github/workflows/main-provenance.yml`](.github/workflows/main-provenance.yml) reports recent `main` commits that did not arrive through a merged pull request, plus Tessera names, `@gmail.com` author or committer addresses, and Manus marks. It writes a job summary and annotations. `PROVENANCE_ENFORCE` defaults to `0`, so the job exits 0 until that flag is turned on.
+
+[`.github/workflows/pr-gates.yml`](.github/workflows/pr-gates.yml) runs on `pull_request` only. The diff scan reports a pull request that changes a `rules` path, a gate path, `CODEOWNERS`, or permission lines under `.github/workflows` when the pull request author is not the repository owner. `DIFF_SCAN_ENFORCE` defaults to `0`. The author check fails when any commit author or committer is named Tessera, or when either email is not `332565808+vitalitychems-dot@users.noreply.github.com`. If those two jobs pass, the comment job posts `ready for gate <head sha>` once and updates that comment on later runs. Only that job has `pull-requests: write`.
 
 ## Agent / mesh
 

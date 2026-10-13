@@ -3,6 +3,7 @@ import { systemStateTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
+import { yieldToEventLoop } from "./event-loop";
 
 export interface PersonalityTrait {
   name: string;
@@ -43,6 +44,9 @@ const TRAIT_NAMES = ["curiosity", "confidence", "empathy", "diligence", "creativ
 const TRAIT_LEARNING_RATE = 0.02;
 const TRAIT_DECAY_RATE = 0.001;
 const STATE_KEY = "personality-evolution.state";
+const MIN_EVOLUTION_INTERVAL_MS = 60_000;
+const EVOLUTION_NOISE_AMPLITUDE = 0.005;
+const EVOLVE_YIELD_EVERY = 8;
 
 const TRAIT_TO_PERSONALITY: Record<string, string> = {
   curiosity: "The Scholar", confidence: "The Leader", empathy: "The Empath",
@@ -141,20 +145,33 @@ export function recordPerformanceEvent(event: PerformanceEvent): void {
   state.growthAreas = [lowestTrait.name, ...state.growthAreas.filter(g => g !== lowestTrait.name)].slice(0, 3);
 }
 
-export function evolveAllPersonalities(): void {
-  for (const [, state] of personalityRegistry) {
-    const epoch = state.evolutionEpoch;
-    if (Date.now() - state.lastEvolutionAt < 60_000 && epoch > 1) continue;
+function evolvePersonality(state: AgentPersonalityState): boolean {
+  if (Date.now() - state.lastEvolutionAt < MIN_EVOLUTION_INTERVAL_MS && state.evolutionEpoch > 1) return false;
 
-    state.evolutionEpoch++;
-    for (const trait of state.coreTraits) {
-      const noise = (Math.random() - 0.5) * 0.005;
-      trait.value = Math.max(0, Math.min(1, trait.value + noise));
-    }
-    state.loyaltyScore = 1.0;
-    state.dominantPersonality = determineDominantPersonality(state.coreTraits);
-    state.lastEvolutionAt = Date.now();
+  state.evolutionEpoch++;
+  for (const trait of state.coreTraits) {
+    const noise = (Math.random() - 0.5) * EVOLUTION_NOISE_AMPLITUDE;
+    trait.value = Math.max(0, Math.min(1, trait.value + noise));
   }
+  state.loyaltyScore = 1.0;
+  state.dominantPersonality = determineDominantPersonality(state.coreTraits);
+  state.lastEvolutionAt = Date.now();
+  return true;
+}
+
+export function evolveAllPersonalities(): void {
+  for (const [, state] of personalityRegistry) evolvePersonality(state);
+}
+
+export async function evolveAllPersonalitiesAsync(): Promise<number> {
+  let evolved = 0;
+  let visited = 0;
+  for (const [, state] of Array.from(personalityRegistry)) {
+    if (visited > 0 && visited % EVOLVE_YIELD_EVERY === 0) await yieldToEventLoop();
+    visited++;
+    if (evolvePersonality(state)) evolved++;
+  }
+  return evolved;
 }
 
 export async function persistPersonalities(): Promise<void> {
@@ -243,9 +260,9 @@ export async function initPersonalityEvolution(): Promise<void> {
 
 export function startPersonalityEvolution(intervalMs = 300_000): void {
   if (evolutionInterval) return;
-  evolutionInterval = setSacredInterval(() => {
+  evolutionInterval = setSacredInterval(async () => {
     try {
-      evolveAllPersonalities();
+      await evolveAllPersonalitiesAsync();
       persistPersonalities().catch(() => {});
     } catch (err) { logger.error({ err }, "PersonalityEvolution: cycle error", "personality-evolution"); }
   }, intervalMs, "personality-evolution");

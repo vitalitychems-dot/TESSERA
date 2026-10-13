@@ -8,6 +8,7 @@ import { withCodexDirective } from "./codex-startup-directive";
 import { onProposalOutcome } from "./consciousness-engine";
 import { onCouncilDecision } from "./knowledge-diffusion";
 import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
+import { yieldToEventLoop } from "./event-loop";
 import { deliberatePersonas } from "./persona-deliberation";
 
 const RETRY_QUEUE_STATE_KEY = "consensus_retry_queue";
@@ -568,6 +569,7 @@ export async function drainRetryQueue(batchSize = 50): Promise<{ resolved: numbe
   const noQuorumBatch: ConsensusProposal[] = [];
 
   for (let i = 0; i < limit; i++) {
+    if (i > 0) await yieldToEventLoop();
     const proposal = retryQueue.shift();
     if (!proposal) break;
 

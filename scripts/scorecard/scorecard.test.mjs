@@ -7,6 +7,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { compare } from "./scorecard.mjs";
 import { compute, parseGain, parseTrusted, parseApps, gatedBy } from "./recursion_rate.mjs";
+import { embed, recallAtK, measure } from "./recall_at_k.mjs";
 import { sandboxArgs, runOnce, exportTrustedRunner, bwrapOk } from "./agi_proxy.mjs";
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -121,4 +122,21 @@ test("vitalitychems-dot is never a trusted verdict author, even if listed", () =
   assert.equal(compute(prs, "2026-10-13T00:00:00Z", parseTrusted("vitalitychems-dot"), parseApps("")).gated_merged, 0);
   delete process.env.TRUSTED_VERDICT_AUTHORS;
   assert.equal(compute(prs, "2026-10-13T00:00:00Z").gated_merged, 0);
+});
+test("recall@k math: perfect, partial and zero rankings", () => {
+  const fx = { docs: [{ id: "a", content: "x" }, { id: "b", content: "y" }, { id: "c", content: "z" }], queries: [{ q: "q1", relevant: ["a", "b"] }, { q: "q2", relevant: ["c"] }] };
+  assert.equal(recallAtK(() => ["a", "b", "c"], fx, 5), 1);
+  assert.equal(recallAtK(() => ["a"], fx, 1), 0.25);
+  assert.equal(recallAtK(() => [], fx, 5), 0);
+  assert.deepEqual(embed("hello"), embed("hello"));
+});
+test("recall_at_5 prints a deterministic score for hybrid-search, or null on a missing module", async () => {
+  const repo = join(HERE, "../..");
+  const r = await measure(repo, 5);
+  if (r.why) { assert.match(r.why, /Node >= 22.18|missing/); return; }
+  assert.ok(r.hybrid >= 0 && r.hybrid <= 1, String(r.hybrid));
+  assert.deepEqual(await measure(repo, 5), r);
+  assert.ok((await measure(mkdtempSync(join(tmpdir(), "sc-rk-")), 5)).why);
+  const o = JSON.parse(execFileSync(process.execPath, [join(HERE, "recall_at_k.mjs"), "--runs", "3"], { encoding: "utf8" }));
+  assert.equal(o.name, "recall_at_5"); assert.equal(o.value, r.hybrid); assert.equal(o.noise_band, 0);
 });
