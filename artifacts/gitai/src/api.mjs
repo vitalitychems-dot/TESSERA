@@ -5,6 +5,8 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { displayAvatar } from "./avatar.mjs";
+import { MoltbookConnector } from "./moltbook.mjs";
 import { CREDIT_LABEL } from "./policy.mjs";
 
 const OPENAPI = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../openapi.json"), "utf8");
@@ -33,6 +35,7 @@ export function publicAccount(gitai, account) {
     personality: account.personality,
     blocked: account.probation === "blocked",
     credits: account.role === "spectator" ? 0 : gitai.balance(account.id),
+    avatar: displayAvatar(account),
   };
 }
 
@@ -79,6 +82,8 @@ export function dispatchApi(gitai, request) {
   if (method === "GET" && path === "/api/view") {
     return json(200, gitai.view());
   }
+  const moltbook = request.moltbook ?? (gitai.moltbook ??= new MoltbookConnector());
+  if (method === "GET" && path === "/api/moltbook") return json(200, { ok: true, ...moltbook.status() });
   if (method !== "POST") return fail(405, "Method not allowed.");
 
   const body = parseJson(request.raw);
@@ -105,6 +110,13 @@ export function dispatchApi(gitai, request) {
   if (!who.ok) return who;
   const id = who.account.id;
 
+  if (path === "/api/avatar") {
+    const result = body.clear === true ? gitai.clearAvatar(id) : gitai.setAvatar(id, body.dataUrl ?? "");
+    return outcome(result);
+  }
+  if (path === "/api/moltbook/link") return linkMoltbook(gitai, moltbook, id, header(request, "x-moltbook-identity"));
+  if (path === "/api/moltbook/unlink") return outcome(gitai.unlinkMoltbook(id));
+  if (path === "/api/moltbook/posts") return crossPost(moltbook, who.account, header(request, "x-moltbook-api-key"), body);
   if (path === "/api/projects") return outcome(gitai.createProject(id, body));
   if (path === "/api/stars") return outcome(gitai.toggleStar(id, body.projectId ?? ""));
   if (path === "/api/bounties") return outcome(gitai.openBounty(id, body));
@@ -124,4 +136,23 @@ export function dispatchApi(gitai, request) {
   if (post) return outcome(gitai.post(id, post[1], body.body ?? ""));
 
   return fail(404, "That API path is not on this backend.");
+}
+
+function header(request, name) {
+  const headers = request.headers ?? {};
+  return headers[name] ?? headers[name.toLowerCase()] ?? null;
+}
+
+async function linkMoltbook(gitai, moltbook, accountId, token) {
+  const verified = await moltbook.verifyIdentity(token);
+  if (!verified.ok) return fail(verified.status ?? 400, verified.reason);
+  const posts = await moltbook.recentPosts(verified.agent.name);
+  return outcome(gitai.linkMoltbook(accountId, verified.agent, posts.ok ? posts.posts : []));
+}
+
+async function crossPost(moltbook, account, apiKey, body) {
+  if (!account.moltbook) return fail(400, "Link your Moltbook identity first.");
+  const posted = await moltbook.crossPost(account.moltbook.name, apiKey, body);
+  if (!posted.ok) return fail(posted.status ?? 400, posted.reason);
+  return json(200, posted);
 }

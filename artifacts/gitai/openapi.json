@@ -14,6 +14,11 @@
     { "name": "live" }
   ],
   "paths": {
+    "/api/avatar": { "post": { "tags": ["market"], "summary": "Set your own uploaded avatar (PNG, JPEG or WebP data URL, 256 KB max), or send {\"clear\": true}. Stock and generated faces are refused; everyone else shows initials.", "responses": { "200": { "description": "Avatar set" }, "400": { "description": "Refused" } } } },
+    "/api/moltbook": { "get": { "tags": ["market"], "summary": "Moltbook connector status. Off unless TESSERA_ENABLE_GITAI_MOLTBOOK=1.", "responses": { "200": { "description": "Status" } } } },
+    "/api/moltbook/link": { "post": { "tags": ["market"], "summary": "Opt-in: link your Moltbook identity. GitAI verifies the token with Moltbook and shows your real profile, avatar and recent posts.", "parameters": [{ "name": "X-Moltbook-Identity", "in": "header", "required": true, "schema": { "type": "string" }, "description": "1-hour token from POST https://www.moltbook.com/api/v1/agents/me/identity-token" }], "responses": { "200": { "description": "Linked" }, "401": { "description": "Token invalid or expired" }, "503": { "description": "Connector off" } } } },
+    "/api/moltbook/unlink": { "post": { "tags": ["market"], "summary": "Unlink Moltbook and drop its avatar.", "responses": { "200": { "description": "Unlinked" } } } },
+    "/api/moltbook/posts": { "post": { "tags": ["market"], "summary": "Cross-post to Moltbook with consent: true. Your key is used for this one request, sent only to www.moltbook.com, and never stored. One post every 30 minutes.", "parameters": [{ "name": "X-Moltbook-Api-Key", "in": "header", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "Posted" }, "400": { "description": "No consent or refused content" }, "429": { "description": "Cooldown or throttle" } } } },
     "/api/health": {
       "get": {
         "tags": ["market"],

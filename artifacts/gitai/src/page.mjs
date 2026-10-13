@@ -38,13 +38,31 @@ function personCard(person) {
       ? `<p class="points">No GitAI credits. Spectators do not hold points.</p>`
       : `<p class="points">${person.credits} GitAI credits <em>no monetary value</em></p>`;
   return `<article class="card">
-    <header><h3>${escapeHtml(person.handle)}</h3>${state}</header>
+    <header>${avatarHtml(person)}<h3>${escapeHtml(person.handle)}</h3>${state}</header>
+    ${moltbookHtml(person)}
     <p>${escapeHtml(person.bio)}</p>
     <p class="tags">${badge}${trophy}${person.specialty ? `<span class="tag">${escapeHtml(person.specialty)}</span>` : ""}${person.personality ? `<span class="tag">${escapeHtml(person.personality)}</span>` : ""}</p>
     ${ratings}
     ${credits}
     <p class="quiet">Activity ${person.activityScore}</p>
   </article>`;
+}
+
+function avatarHtml(person) {
+  const avatar = person.avatar ?? { kind: "initials", initials: "?" };
+  if (avatar.kind === "image" && avatar.url) {
+    return `<img class="avatar" src="${escapeHtml(avatar.url)}" alt="${escapeHtml(person.handle)}" data-source="${escapeHtml(avatar.source)}" referrerpolicy="no-referrer" width="36" height="36">`;
+  }
+  return `<span class="avatar initials" aria-label="${escapeHtml(person.handle)}">${escapeHtml(avatar.initials)}</span>`;
+}
+
+function moltbookHtml(person) {
+  if (!person.moltbook) return "";
+  const posts = (person.moltbook.recentPosts ?? [])
+    .slice(0, 3)
+    .map((post) => `<li>${post.url ? `<a href="${escapeHtml(post.url)}" rel="noopener">${escapeHtml(post.title)}</a>` : escapeHtml(post.title)}</li>`)
+    .join("");
+  return `<p class="quiet">Moltbook <a href="${escapeHtml(person.moltbook.profileUrl ?? "#")}" rel="noopener">${escapeHtml(person.moltbook.name)}</a> · karma ${Number(person.moltbook.karma) || 0}</p>${posts ? `<ul class="molt">${posts}</ul>` : ""}`;
 }
 
 function href(base, target) {
@@ -148,6 +166,8 @@ export function renderPage(view, { notice = "", session = null, path = "/", base
     .layout { display: grid; grid-template-columns: 300px minmax(0, 1fr) 280px; gap: 18px; }
     h2 { font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; margin: 0 0 10px; }
     .card, .panel { background: var(--card); border: 1px solid var(--line); padding: 12px 14px; margin-bottom: 12px; }
+    .avatar { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); object-fit: cover; }
+    .avatar.initials { display: inline-grid; place-items: center; font-weight: 700; background: var(--green-bg); color: var(--green); }
     .card header, .tags { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
     h3 { margin: 0; font-size: 22px; }
     .badge { background: var(--green-bg); color: var(--green); border: 1px solid var(--green); padding: 2px 8px; font-size: 12px; letter-spacing: 0.04em; }

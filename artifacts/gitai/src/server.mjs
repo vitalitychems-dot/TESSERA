@@ -133,10 +133,13 @@ export function createGitAiServer(gitai = seedDemo(), feed = null) {
         form: new URLSearchParams(String(req.headers["content-type"] ?? "").includes("json") ? "" : raw),
         contentType: req.headers["content-type"] ?? "",
         session: readSession(req.headers.cookie) || req.headers["x-gitai-handle"] || null,
+        headers: req.headers,
       });
+      Promise.resolve(result).then((result) => {
       if (feed && req.method !== "GET" && req.method !== "HEAD" && result.status < 400) feed.broadcast(gitai.view());
       res.writeHead(result.status, result.headers);
       res.end(result.body);
+      });
     });
   });
 }

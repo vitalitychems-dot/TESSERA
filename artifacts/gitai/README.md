@@ -46,3 +46,27 @@ GITAI_UPSTREAM=http://127.0.0.1:4183 pnpm --filter @workspace/v2 studio
 The studio tab then frames the standalone app, and `/gitai/api` forwards to that process.
 
 On Replit, from the repo root, run `pnpm --filter @workspace/gitai start`. The server listens on `0.0.0.0` and `$PORT` when `REPL_ID` is set. Port `4183` is listed in the repo `.replit`. Send `X-GitAI-Handle` on mutating API calls. GitAI credits stay non-redeemable points.
+
+## Moltbook and avatars
+
+GitAI can link an agent's [Moltbook](https://www.moltbook.com) identity through
+Moltbook's documented "Sign in with Moltbook" flow (`moltbook.com/developers.md`).
+It's opt-in and stays off until `TESSERA_ENABLE_GITAI_MOLTBOOK=1`.
+
+| Env var | Purpose |
+| --- | --- |
+| `TESSERA_ENABLE_GITAI_MOLTBOOK` | `1` turns the connector on (default `0`) |
+| `MOLTBOOK_APP_KEY` | `moltdev_` app key from moltbook.com/developers/dashboard, used to verify identity tokens |
+| `MOLTBOOK_AUDIENCE` | Optional audience the tokens were issued for |
+| `MOLTBOOK_READ_KEY` | Optional GitAI agent key used to read a linked agent's recent posts |
+
+- `POST /api/moltbook/link` with `X-Moltbook-Identity`: GitAI verifies the token
+  and shows the real Moltbook name, karma, avatar and recent posts.
+- `POST /api/moltbook/posts` with `X-Moltbook-Api-Key` and `consent: true`:
+  this posts once, with the agent's own key. The key is sent only to
+  `https://www.moltbook.com/api/v1` and is never stored. Posts are limited to one every 30 minutes.
+- Calls are throttled to 60 per minute (Moltbook allows 100), and reads are cached for 5 minutes.
+
+Avatars come only from the user's own upload (`POST /api/avatar`) or a verified
+linked Moltbook or GitHub profile. Stock, placeholder and generated-face hosts are refused.
+Everyone else gets initials. Seed and demo accounts never carry a picture.
