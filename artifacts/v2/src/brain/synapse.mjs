@@ -62,22 +62,33 @@ function tokenSet(node) {
 const adjCache = new WeakMap();
 /** Relation adjacency, reused while the edge map, its size, and its weight sum are unchanged.
  * Synapses are read live and are not part of this cache. */
-function cachedAdjacency(g) {
+function cachedEntry(g) {
   let sum = 0;
   for (const w of g.edges.values()) sum += w;
   const hit = adjCache.get(g);
-  if (hit && hit.edges === g.edges && hit.size === g.edges.size && hit.sum === sum) return hit.adj;
-  const adj = adjacency(g);
-  adjCache.set(g, { edges: g.edges, size: g.edges.size, sum, adj });
-  return adj;
+  if (hit && hit.edges === g.edges && hit.size === g.edges.size && hit.sum === sum) return hit;
+  const entry = { edges: g.edges, size: g.edges.size, sum, adj: adjacency(g), invLog: null };
+  adjCache.set(g, entry);
+  return entry;
+}
+function cachedAdjacency(g) {
+  return cachedEntry(g).adj;
+}
+/** Adamic-Adar 1/log(1+degree) per node, built once per cached adjacency (same formula). */
+function cachedInvLog(entry) {
+  if (entry.invLog) return entry.invLog;
+  const invLog = new Map();
+  for (const [n, list] of entry.adj) invLog.set(n, 1 / Math.log(1 + list.length));
+  entry.invLog = invLog;
+  return invLog;
 }
 /** Link recall: rank non-neighbours of seed by Adamic-Adar over relations + synapse strength
  * + observation-token overlap. Returns top-k names. Use with no synapses for the baseline. */
 export function predict(g, seed, k = 5, { synW = 2, textW = 1 } = {}) {
-  const adj = cachedAdjacency(g);
+  const entry = cachedEntry(g);
+  const adj = entry.adj;
   const nb = new Map(adj.get(seed) ?? []);
-  const invLog = new Map();
-  for (const [n, list] of adj) invLog.set(n, 1 / Math.log(1 + list.length));
+  const invLog = cachedInvLog(entry);
   const T = tokenSet(g.nodes.get(seed));
   const out = [];
   for (const n of g.nodes.keys()) {
