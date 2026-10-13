@@ -3,7 +3,7 @@
 // FAIL if any head score < base score - noise_band (noise_band = max of base/head bands).
 // A score that is null on both sides is reported as n/a and does not fail; null on head only fails.
 // Usage: node scorecard.mjs --base DIR --head DIR [--now ISO] [--runs 5] [--json]
-// Env: HELDOUT_DATA (private held-out data dir), AKHENATEN_DIR, HELDOUT_RUNNER.
+// Env: HELDOUT_DATA, TRUSTED_REF (runner ref, default origin/main), TRUSTED_VERDICT_AUTHORS, CONSCIOUSNESS_*.
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

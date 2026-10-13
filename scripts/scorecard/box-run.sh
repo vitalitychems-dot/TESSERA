@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Run the scorecard for one TESSERA PR on the box (private data never leaves the box).
-# Checks out base and head in clean throwaway worktrees, runs scorecard.mjs, and posts ONE
-# PR comment containing only the three aggregate before/after numbers and the verdict.
-# Usage: HELDOUT_DATA=/path/to/Gitbook/evals/heldout scripts/scorecard/box-run.sh PR_NUMBER HEAD_SHA [--dry-run]
-# --dry-run prints the comment instead of posting it. No secrets are read; posting uses the box's gh login.
+# Checks out base and head in clean throwaway worktrees, runs scorecard.mjs, and PRINTS the
+# aggregate before/after table and verdict. DRY-RUN BY DEFAULT: it never posts on its own.
+# Usage: HELDOUT_DATA=/path/to/Gitbook/evals/heldout scripts/scorecard/box-run.sh PR_NUMBER HEAD_SHA [--post]
+# --post (explicit, operator-chosen) posts ONE aggregate-only PR comment via gh. Without it nothing is posted.
 set -euo pipefail
-PR=${1:?PR number}; SHA=${2:?head sha}; DRY=${3:-}
+PR=${1:?PR number}; SHA=${2:?head sha}; MODE=${3:-}
+case "$MODE" in ""|--dry-run) POST=0 ;; --post) POST=1 ;; *) echo "unknown flag: $MODE (use --post)" >&2; exit 2 ;; esac
 [[ $SHA =~ ^[0-9a-f]{7,40}$ ]] || { echo "bad sha" >&2; exit 2; }
 REPO=vitalitychems-dot/TESSERA
 SRC=$(git rev-parse --show-toplevel)
@@ -28,5 +29,6 @@ console.log([`Scorecard ${r.verdict} for head ${process.argv[2].slice(0, 8)} vs 
   "| score | before | after | noise | |", "|---|---|---|---|---|", ...lines, "",
   "consciousness_proxy is a proxy, not a measure of consciousness."].join("\n"));
 ' "$OUT" "$SHA" "$BASE")
-if [[ $DRY == --dry-run ]]; then echo "$BODY"; else gh pr comment "$PR" -R "$REPO" --body "$BODY"; fi
+echo "$BODY"
+if [[ $POST == 1 ]]; then gh pr comment "$PR" -R "$REPO" --body "$BODY"; else echo "(dry-run: not posted; pass --post to post)" >&2; fi
 exit $RC
