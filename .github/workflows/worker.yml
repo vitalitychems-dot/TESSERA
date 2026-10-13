@@ -42,6 +42,9 @@ jobs:
     env:
       LLAMA_TAG: b11583
       MODEL_URL: https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf
+      # Pinned digests: HF LFS oid and GitHub release asset digest. Cache is verified on every run.
+      MODEL_SHA256: cc324af070c2ecbfd324a30884d2f951a7ff756aba85cb811a6ec436933bb046
+      LLAMA_SHA256: a4a681375770db521d15c66bd28339617b833ffc3bcc0a01ff93a883bac80438
       WORKER_LINE_CAP: ${{ vars.WORKER_LINE_CAP || '60' }}
       WORKER_TRIES: "4"
     steps:
@@ -54,12 +57,18 @@ jobs:
       - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: ~/.cache/tessera-llm
-          key: llm-${{ env.LLAMA_TAG }}-qwen25coder15b-q4km
-      - name: Fetch llama.cpp + model (cache miss only)
+          key: llm-v2-${{ env.LLAMA_TAG }}-${{ env.LLAMA_SHA256 }}-${{ env.MODEL_SHA256 }}
+      - name: Fetch llama.cpp + model (cache miss only), verify sha256 every run, extract fresh
         run: |
+          set -euo pipefail
           mkdir -p ~/.cache/tessera-llm && cd ~/.cache/tessera-llm
-          [ -d "llama-$LLAMA_TAG" ] || curl -fsSL "https://github.com/ggml-org/llama.cpp/releases/download/$LLAMA_TAG/llama-$LLAMA_TAG-bin-ubuntu-x64.tar.gz" | tar xz
+          T="llama-$LLAMA_TAG-bin-ubuntu-x64.tar.gz"
+          [ -f "$T" ] || curl -fsSL -o "$T" "https://github.com/ggml-org/llama.cpp/releases/download/$LLAMA_TAG/$T"
           [ -f coder.gguf ] || curl -fsSL -o coder.gguf "$MODEL_URL"
+          printf '%s  %s\n%s  %s\n' "$LLAMA_SHA256" "$T" "$MODEL_SHA256" coder.gguf | sha256sum -c --strict -
+          rm -rf "$RUNNER_TEMP/llama" && mkdir -p "$RUNNER_TEMP/llama" && tar xzf "$T" -C "$RUNNER_TEMP/llama"
+          B=$(find "$RUNNER_TEMP/llama" -type f -name llama-server | head -1); [ -n "$B" ]
+          echo "LLAMA_DIR=$(dirname "$B")" >> "$GITHUB_ENV"
       - name: Pick the oldest needs-agent issue from a trusted author
         id: pick
         env:
@@ -93,7 +102,7 @@ jobs:
           WORKER_TOKEN_FILE: ${{ vars.WORKER_ENDPOINT && format('{0}/wt', runner.temp) || '' }}
         run: |
           if [ -z "$WORKER_ENDPOINT" ]; then
-            L=~/.cache/tessera-llm/llama-$LLAMA_TAG
+            L="$LLAMA_DIR"
             LD_LIBRARY_PATH=$L $L/llama-server -m ~/.cache/tessera-llm/coder.gguf -c 4096 --port 8080 > llama.log 2>&1 &
             for i in $(seq 90); do curl -sf localhost:8080/health >/dev/null && break; sleep 2; done
           fi
@@ -145,7 +154,9 @@ jobs:
           P="$RUNNER_TEMP/in/fix.patch"
           git -c core.hooksPath=/dev/null apply --numstat -z "$P" > "$RUNNER_TEMP/numstat"
           node scripts/loop/patch-check.mjs "$RUNNER_TEMP/numstat" "$FILE" "$WORKER_LINE_CAP"
+          node scripts/loop/patch-check.mjs --headers "$P"
           git -c core.hooksPath=/dev/null apply --include="$FILE" --exclude='*' "$P"
+          [ -z "$(git diff --summary)" ] || { echo "patch changes mode/creates/deletes/renames"; exit 1; }
           [ "$(git status --porcelain=v1 -z | tr '\0' '\n')" = " M $FILE" ] || { echo "patch changed more than $FILE"; exit 1; }
           [ -f "$FILE" ] && [ ! -L "$FILE" ]
           echo "file=$FILE" >> "$GITHUB_OUTPUT"
