@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { ingestedDataTable, ingestionJobsTable, dataSourcesTable } from "@workspace/db/schema";
 import { desc, sql } from "drizzle-orm";
 import { TESSERA_SUBJECTS, TESSERA_IDENTITY } from "../lib/tessera-knowledge";
+import { synthesizeKnowledge } from "../lib/deterministic-content";
 
 const router: IRouter = Router();
 
@@ -87,30 +88,22 @@ router.get("/knowledge/stats", async (_req, res) => {
   }
 });
 
-router.post("/knowledge/generate", async (_req, res) => {
+router.post("/knowledge/generate", async (req, res) => {
   try {
-    const subjectKeys = Object.keys(TESSERA_SUBJECTS);
-    const key = subjectKeys[Math.floor(Math.random() * subjectKeys.length)];
-    const subject = TESSERA_SUBJECTS[key];
-    const sentences = subject.knowledge.split(". ").filter(Boolean);
-
-    const startIdx = Math.floor(Math.random() * Math.max(1, sentences.length - 2));
-    const picked = sentences.slice(startIdx, startIdx + 2).join(". ") + ".";
-
-    const agents = ["Tessera Prime", "Athena", "Euler", "Curie", "Noether", "Minerva", "Ada", "Iris"];
-    const categories = [
-      "AGI Architecture", "Consciousness Engineering", "Swarm Intelligence",
-      "Knowledge Synthesis", "Sovereignty Patterns", "Evolution Mechanics", "Quantum Computing",
-    ];
+    const bodySeed = (req.body as { seed?: unknown } | undefined)?.seed;
+    const s = synthesizeKnowledge(typeof bodySeed === "string" && bodySeed ? bodySeed : undefined);
+    if (!s) return res.json({ ok: true, empty: true, text: "", source: "knowledge-synthesis" });
 
     return res.json({
+      // Collision-avoidance ID suffix: intentionally random.
       id: `gen-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      text: picked,
-      agent: agents[Math.floor(Math.random() * agents.length)],
-      category: categories[Math.floor(Math.random() * categories.length)],
-      domain: subject.title,
+      text: s.text,
+      agent: s.agent,
+      category: s.category,
+      domain: s.domain,
       timestamp: Date.now(),
-      confidence: 80 + Math.floor(Math.random() * 20),
+      confidence: s.confidence,
+      seed: s.seed,
       source: "knowledge-synthesis",
     });
   } catch (err) {

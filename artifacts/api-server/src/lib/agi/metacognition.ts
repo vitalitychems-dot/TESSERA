@@ -19,17 +19,11 @@ import { getAllTunables } from "../system-tunables.js";
 import { getLastSynthesis, getSynthesisHistory } from "../invention-synthesis.js";
 import { getConsensusMetrics } from "../consensus-engine.js";
 import { logger } from "../logger.js";
-import { setSacredInterval, clearSacredInterval, type SacredHandle } from "../sacred-scheduler";
+import { setSacredInterval, clearSacredInterval } from "../sacred-scheduler";
+import type { SacredHandle } from "../sacred-scheduler";
 
-export interface MetacognitionFinding {
-  id: string;
-  at: number;
-  kind: "stall" | "drift" | "contradiction" | "hysteresis" | "healthy";
-  severity: "low" | "medium" | "high";
-  summary: string;
-  evidence: Record<string, unknown>;
-  recommendedAction?: string;
-}
+import type { MetacognitionFinding, MetacognitionSnapshot } from "./metacognition-types.js";
+export type { MetacognitionFinding, MetacognitionFindingKind, MetacognitionSeverity, MetacognitionSnapshot } from "./metacognition-types.js";
 
 const findingsLog: MetacognitionFinding[] = [];
 const FINDINGS_CAP = 200;
@@ -174,7 +168,7 @@ export function runMetacognitionTick(nowMetrics: Record<string, number>): Metaco
   return findings;
 }
 
-export function metacognitionSnapshot() {
+export function metacognitionSnapshot(): MetacognitionSnapshot {
   return {
     totalFindings: findingsLog.length,
     recentFindings: findingsLog.slice(0, 30),

@@ -1,0 +1,26 @@
+# TESSERA secret scan. Extends the gitleaks default rules.
+# Allowlists are exact captured secrets that are false positives.
+# There is no path blanket and no global ignore.
+
+title = "TESSERA"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Synthetic placeholders in artifacts/api-server/src/__tests__/compression-pipeline.test.ts and colonial-secret-fail-closed.test.ts. These exact strings are fail-closed test fixtures, not credentials."
+regexTarget = "secret"
+regexes = [
+  '''^synthetic-colonial-secret-32xxxx$''',
+  '''^synthetic-colonial-secret-32yyyy$''',
+]
+
+[[allowlists]]
+description = "Public commit SHA of joonspk-research/generative_agents recorded in artifacts/v2/src/brain/rea/generative_agents.json. sourcegraph-access-token matches the 40-hex shape only."
+regexTarget = "secret"
+regexes = ['''^fe05a71d3e4ed7d10bf68aa4eda6dd995ec070f4$''']
+
+[[allowlists]]
+description = "Log category captured from archived conference prose in archive/from-gitbook/archive/moved/collink1007-XXX/{tess,x/tess}/server/routes/algorithms.ts, next to the words access_log off. The captured value is the category label, not a credential."
+regexTarget = "secret"
+regexes = ['''^phase-7-untraceable$''']

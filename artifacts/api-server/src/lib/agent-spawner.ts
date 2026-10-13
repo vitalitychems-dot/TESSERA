@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { systemStateTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
+import { yieldToEventLoop } from "./event-loop";
 
 export type MeeseeksTaskType =
   | "analysis" | "optimization" | "security-audit" | "knowledge-synthesis"
@@ -121,6 +122,7 @@ const meeseeksHistory: MeeseeksHistoryEntry[] = [];
 
 const STATE_KEY = "agent-spawner.state";
 const SPAWN_COOLDOWN_MS = 30_000;
+const SWEEP_YIELD_EVERY = 10;
 
 async function persistState(): Promise<void> {
   try {
@@ -390,11 +392,24 @@ function reapMeeseeks(agentId: string, reason: "task-completed" | "ttl-expired")
   return true;
 }
 
+function findExpiredMeeseeks(now: number): SpawnedAgent[] {
+  return spawnerState.activeSpawned.filter(a => a.meeseeks && a.meeseeksExpiresAt && a.meeseeksExpiresAt <= now);
+}
+
 export function sweepExpiredMeeseeks(): number {
-  const now = Date.now();
-  const expired = spawnerState.activeSpawned.filter(a => a.meeseeks && a.meeseeksExpiresAt && a.meeseeksExpiresAt <= now);
   let count = 0;
-  for (const agent of expired) {
+  for (const agent of findExpiredMeeseeks(Date.now())) {
+    if (reapMeeseeks(agent.id, "ttl-expired")) count++;
+  }
+  return count;
+}
+
+export async function sweepExpiredMeeseeksAsync(): Promise<number> {
+  let count = 0;
+  let reaped = 0;
+  for (const agent of findExpiredMeeseeks(Date.now())) {
+    if (reaped > 0 && reaped % SWEEP_YIELD_EVERY === 0) await yieldToEventLoop();
+    reaped++;
     if (reapMeeseeks(agent.id, "ttl-expired")) count++;
   }
   return count;
@@ -408,6 +423,16 @@ export function getMeeseeksMetrics(): MeeseeksMetrics {
 export function spawnBatch(count: number, trigger: string, masteredDomains: string[] = []): SpawnedAgent[] {
   const results: SpawnedAgent[] = [];
   for (let i = 0; i < count; i++) {
+    const agent = spawnAgent(`${trigger}:batch-${i}`, masteredDomains);
+    if (agent) results.push(agent);
+  }
+  return results;
+}
+
+export async function spawnBatchAsync(count: number, trigger: string, masteredDomains: string[] = []): Promise<SpawnedAgent[]> {
+  const results: SpawnedAgent[] = [];
+  for (let i = 0; i < count; i++) {
+    if (i > 0) await yieldToEventLoop();
     const agent = spawnAgent(`${trigger}:batch-${i}`, masteredDomains);
     if (agent) results.push(agent);
   }

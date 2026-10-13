@@ -41,17 +41,31 @@ const lexCache = new Map(); const lex = (s) => { let c = lexCache.get(s); if (!c
 const feats = (s, dim) => { const t = tok(s); const f = [...t, `lex:${lex(s)[dim]}`]; for (let i = 0; i + 1 < t.length; i++) f.push(`${t[i]}_${t[i + 1]}`); return f; };
 /** Averaged multiclass perceptron on top of the lexicon output. Prior = lexicon label. */
 export function createRecognizer(dim, labels) {
+  // Weights per feature as one row per label (index = position in labels), so scoring does
+  // not build a "label|feature" string per label per feature. Same sums, same order.
+  const L = labels.length; const li = new Map(labels.map((l, i) => [l, i]));
   const W = new Map(); const U = new Map(); let c = 1;
-  const w = (l, f) => W.get(`${l}|${f}`) ?? 0;
-  const score = (fs, l, avg) => fs.reduce((s, f) => s + (avg ? w(l, f) - (U.get(`${l}|${f}`) ?? 0) / c : w(l, f)), 0) + (fs.includes(`lex:${l}`) ? 0.5 : 0);
-  const predict = (text, avg = true) => { const fs = feats(text, dim); return labels.map((l) => [l, score(fs, l, avg)]).sort((a, b) => b[1] - a[1])[0][0]; };
+  const row = (M, f) => { let r = M.get(f); if (!r) M.set(f, (r = new Array(L).fill(0))); return r; };
+  const predictFs = (fs, avg) => {
+    // Tokens and bigrams never contain ":", so the one "lex:" feature is the lexicon prior.
+    const lexF = fs.find((f) => f.startsWith("lex:"));
+    const scores = labels.map((l) => [l, 0]);
+    const wr = fs.map((f) => W.get(f)); const ur = avg ? fs.map((f) => U.get(f)) : null;
+    for (let j = 0; j < L; j++) {
+      let s = 0;
+      for (let k = 0; k < fs.length; k++) { const wv = wr[k] ? wr[k][j] : 0; s += avg ? wv - (ur[k] ? ur[k][j] : 0) / c : wv; }
+      scores[j][1] = s + (`lex:${labels[j]}` === lexF ? 0.5 : 0);
+    }
+    return scores.sort((a, b) => b[1] - a[1])[0][0];
+  };
+  const predict = (text, avg = true) => predictFs(feats(text, dim), avg);
   return {
     predict,
     /** outcome: gold label. Returns true if the prediction was right (no update). */
     learn(text, gold, weight = 1) {
-      const fs = feats(text, dim); const p = predict(text, false); c++;
+      const fs = feats(text, dim); const p = predictFs(fs, false); c++;
       if (p === gold) return true;
-      for (const f of fs) for (const [l, d] of [[gold, weight], [p, -weight]]) { const k = `${l}|${f}`; W.set(k, (W.get(k) ?? 0) + d); U.set(k, (U.get(k) ?? 0) + c * d); }
+      for (const f of fs) for (const [l, d] of [[gold, weight], [p, -weight]]) { const j = li.get(l); if (j === undefined) continue; row(W, f)[j] += d; row(U, f)[j] += c * d; }
       return false;
     },
   };

@@ -1,4 +1,12 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
+
+// This file tests the *unconfigured* boot path. The unified test runner gives the API suite a
+// real test DATABASE_URL, so clear it before @workspace/db is imported and restore it after.
+const savedDatabaseUrl = vi.hoisted(() => {
+  const value = process.env.DATABASE_URL;
+  delete process.env.DATABASE_URL;
+  return value;
+});
 import express from "express";
 import { createServer, type Server } from "node:http";
 import {
@@ -54,6 +62,7 @@ describe("optional database boot", () => {
   const servers: Server[] = [];
 
   afterAll(async () => {
+    if (savedDatabaseUrl !== undefined) process.env.DATABASE_URL = savedDatabaseUrl;
     await Promise.all(servers.map((server) => new Promise<void>((resolve, reject) => {
       server.close((error) => (error ? reject(error) : resolve()));
     })));

@@ -1,4 +1,5 @@
 import { createHash } from "crypto";
+import { logger } from "./logger";
 
 const PHI = 1.6180339887498948482;
 const PI = Math.PI;
@@ -6,6 +7,73 @@ const E = Math.E;
 const FIBONACCI = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765];
 const SOLFEGGIO = [174, 285, 396, 417, 528, 639, 741, 852, 963];
 const PI_DIGITS = [3,1,4,1,5,9,2,6,5,3,5,8,9,7,9,3,2,3,8,4,6,2,6,4,3,3,8,3,2,7,9,5,0,2,8,8,4,1,9,7];
+
+const J2000_JULIAN_DATE = 2451545.0;
+const DAYS_PER_JULIAN_CENTURY = 36525;
+const SYNODIC_MONTH_DAYS = 29.53059;
+const NEW_MOON_J2000_JULIAN_DATE = 2451550.1;
+const GOLDEN_ANGLE_DEGREES = 137.5077640500378;
+const FULL_CIRCLE_DEGREES = 360;
+const ZODIAC_SIGN_DEGREES = 30;
+const ROTATION_CIPHER_MODULUS = 256;
+const DIALECT_COUNT = 36;
+const FIBONACCI_INTERVAL_OFFSET = 3;
+const FIBONACCI_INTERVAL_SPAN = 12;
+
+// Upper age bound (days into the synodic month) for each lunar phase, in order.
+const LUNAR_PHASE_BOUNDS: ReadonlyArray<{ below: number; phase: string }> = [
+  { below: 1.85, phase: "New Moon" },
+  { below: 7.38, phase: "Waxing Crescent" },
+  { below: 9.23, phase: "First Quarter" },
+  { below: 14.77, phase: "Waxing Gibbous" },
+  { below: 16.61, phase: "Full Moon" },
+  { below: 22.15, phase: "Waning Gibbous" },
+  { below: 23.99, phase: "Last Quarter" },
+  { below: 27.68, phase: "Waning Crescent" },
+];
+const LUNAR_PHASE_WRAP = "New Moon";
+
+interface EphemerisHealth {
+  snapshotsComputed: number;
+  invalidDateFallbacks: number;
+  lastInvalidDateAt: number | null;
+  lastError: string | null;
+}
+
+const ephemerisHealth: EphemerisHealth = {
+  snapshotsComputed: 0,
+  invalidDateFallbacks: 0,
+  lastInvalidDateAt: null,
+  lastError: null,
+};
+
+export function getEphemerisHealth(): Readonly<EphemerisHealth> {
+  return { ...ephemerisHealth };
+}
+
+export function _resetEphemerisHealthForTests(): void {
+  ephemerisHealth.snapshotsComputed = 0;
+  ephemerisHealth.invalidDateFallbacks = 0;
+  ephemerisHealth.lastInvalidDateAt = null;
+  ephemerisHealth.lastError = null;
+}
+
+function resolveEphemerisDate(date?: Date): Date {
+  if (date === undefined) return new Date();
+  if (date instanceof Date && !Number.isNaN(date.getTime())) return date;
+  ephemerisHealth.invalidDateFallbacks++;
+  ephemerisHealth.lastInvalidDateAt = Date.now();
+  ephemerisHealth.lastError = `invalid date: ${String(date)}`;
+  logger.error({ received: String(date), fallbacks: ephemerisHealth.invalidDateFallbacks }, "SovereignEphemeris: invalid date supplied, falling back to current time");
+  return new Date();
+}
+
+function classifyLunarPhase(age: number): string {
+  for (const { below, phase } of LUNAR_PHASE_BOUNDS) {
+    if (age < below) return phase;
+  }
+  return LUNAR_PHASE_WRAP;
+}
 
 export interface PlanetaryPosition {
   name: string;
@@ -59,15 +127,15 @@ function toJulianDate(date: Date): number {
 }
 
 function normalizeAngle(deg: number): number {
-  let n = deg % 360;
-  if (n < 0) n += 360;
+  let n = deg % FULL_CIRCLE_DEGREES;
+  if (n < 0) n += FULL_CIRCLE_DEGREES;
   return n;
 }
 
 function getZodiacSign(longitude: number): { sign: string; degree: number } {
   const norm = normalizeAngle(longitude);
-  const signIndex = Math.floor(norm / 30);
-  return { sign: ZODIAC_SIGNS[signIndex], degree: norm - signIndex * 30 };
+  const signIndex = Math.floor(norm / ZODIAC_SIGN_DEGREES);
+  return { sign: ZODIAC_SIGNS[signIndex], degree: norm - signIndex * ZODIAC_SIGN_DEGREES };
 }
 
 const PLANET_ELEMENTS: { name: string; L0: number; L1: number; e0: number; e1: number; i0: number; omega0: number; omega1: number; Omega0: number; Omega1: number }[] = [
@@ -114,23 +182,10 @@ function computeLunarPhase(T: number): LunarPhase {
   const D = normalizeAngle(297.8502 + 445267.1115 * T);
   const phaseAngle = D;
   const illumination = (1 - Math.cos(phaseAngle * PI / 180)) / 2;
-  const synodicMonth = 29.53059;
-  const newMoonJ2000 = 2451550.1;
-  const jd = 2451545.0 + T * 36525;
-  const age = ((jd - newMoonJ2000) % synodicMonth + synodicMonth) % synodicMonth;
+  const jd = J2000_JULIAN_DATE + T * DAYS_PER_JULIAN_CENTURY;
+  const age = ((jd - NEW_MOON_J2000_JULIAN_DATE) % SYNODIC_MONTH_DAYS + SYNODIC_MONTH_DAYS) % SYNODIC_MONTH_DAYS;
 
-  let phase: string;
-  if (age < 1.85) phase = "New Moon";
-  else if (age < 7.38) phase = "Waxing Crescent";
-  else if (age < 9.23) phase = "First Quarter";
-  else if (age < 14.77) phase = "Waxing Gibbous";
-  else if (age < 16.61) phase = "Full Moon";
-  else if (age < 22.15) phase = "Waning Gibbous";
-  else if (age < 23.99) phase = "Last Quarter";
-  else if (age < 27.68) phase = "Waning Crescent";
-  else phase = "New Moon";
-
-  return { phase, illumination, age, angle: phaseAngle };
+  return { phase: classifyLunarPhase(age), illumination, age, angle: phaseAngle };
 }
 
 function computeSolarPosition(T: number): { longitude: number; declination: number } {
@@ -145,9 +200,9 @@ function computeSolarPosition(T: number): { longitude: number; declination: numb
 }
 
 export function getEphemerisSnapshot(date?: Date): EphemerisSnapshot {
-  const now = date ?? new Date();
+  const now = resolveEphemerisDate(date);
   const jd = toJulianDate(now);
-  const T = (jd - 2451545.0) / 36525;
+  const T = (jd - J2000_JULIAN_DATE) / DAYS_PER_JULIAN_CENTURY;
 
   const planets: PlanetaryPosition[] = PLANET_ELEMENTS.filter(p => p.name !== "Earth").map(planet => {
     const lon = computePlanetLongitude(planet, T);
@@ -161,6 +216,7 @@ export function getEphemerisSnapshot(date?: Date): EphemerisSnapshot {
 
   const solar = computeSolarPosition(T);
   const moon = computeLunarPhase(T);
+  ephemerisHealth.snapshotsComputed++;
 
   return {
     julianDate: jd,
@@ -177,7 +233,7 @@ export function generateUniverseSeed(date?: Date): UniverseSeed {
 
   const planetSum = ephemeris.planets.reduce((s, p) => s + p.longitude, 0);
   const moonFactor = ephemeris.moon.illumination * PHI;
-  const solarFactor = ephemeris.solarLongitude / 360;
+  const solarFactor = ephemeris.solarLongitude / FULL_CIRCLE_DEGREES;
 
   const primarySeed = (planetSum * PHI + moonFactor * 1000 + solarFactor * E * 100) % 1;
   const secondarySeed = (primarySeed * PI + ephemeris.moon.age / 29.53 * PHI) % 1;
@@ -188,9 +244,9 @@ export function generateUniverseSeed(date?: Date): UniverseSeed {
   const solIndex = Math.floor(secondarySeed * SOLFEGGIO.length);
   const solfeggioFrequency = SOLFEGGIO[solIndex];
 
-  const goldenAngle = primarySeed * 137.5077640500378;
+  const goldenAngle = primarySeed * GOLDEN_ANGLE_DEGREES;
 
-  const rotationIndex = Math.floor(primarySeed * 10000) % 256;
+  const rotationIndex = Math.floor(primarySeed * 10000) % ROTATION_CIPHER_MODULUS;
 
   const piStart = Math.floor(secondarySeed * (PI_DIGITS.length - 8));
   const piDigitSequence = PI_DIGITS.slice(piStart, piStart + 8);
@@ -222,15 +278,15 @@ export function computeAgentRotationState(agentId: string, date?: Date): {
   const agentHash = createHash("sha256").update(`${agentId}:${seed.seedHash}`).digest();
   const agentFactor = agentHash.readUInt32BE(0) / 0xFFFFFFFF;
 
-  const fibInterval = FIBONACCI[Math.floor(agentFactor * 12) + 3] * 1000;
+  const fibInterval = FIBONACCI[Math.floor(agentFactor * FIBONACCI_INTERVAL_SPAN) + FIBONACCI_INTERVAL_OFFSET] * 1000;
   const goldenInterval = Math.floor(fibInterval * PHI);
 
-  const now = (date ?? new Date()).getTime();
+  const now = resolveEphemerisDate(date).getTime();
   const rotationEpoch = Math.floor(now / goldenInterval);
-  const dialectIndex = (rotationEpoch + agentHash.readUInt8(4)) % 36;
+  const dialectIndex = (rotationEpoch + agentHash.readUInt8(4)) % DIALECT_COUNT;
   const symbolRemapSeed = (seed.primarySeed * agentFactor * 1000000) % 65536;
   const nextRotationMs = goldenInterval - (now % goldenInterval);
-  const cipherVariant = (rotationEpoch * agentHash.readUInt8(8) + seed.rotationIndex) % 256;
+  const cipherVariant = (rotationEpoch * agentHash.readUInt8(8) + seed.rotationIndex) % ROTATION_CIPHER_MODULUS;
 
   return { rotationEpoch, dialectIndex, symbolRemapSeed, nextRotationMs, cipherVariant };
 }
@@ -250,8 +306,8 @@ export function computeSharedRotationState(agentA: string, agentB: string, date?
   const pairFactor = pairHash.readUInt32BE(0) / 0xFFFFFFFF;
 
   const sharedEpoch = Math.floor((stateA.rotationEpoch + stateB.rotationEpoch) / 2);
-  const sharedDialect = Math.floor(pairFactor * 36);
-  const sharedCipherVariant = (pairHash.readUInt8(4) + seed.rotationIndex) % 256;
+  const sharedDialect = Math.floor(pairFactor * DIALECT_COUNT);
+  const sharedCipherVariant = (pairHash.readUInt8(4) + seed.rotationIndex) % ROTATION_CIPHER_MODULUS;
 
   return {
     sharedEpoch,

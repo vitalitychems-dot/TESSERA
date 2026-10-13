@@ -1,0 +1,11 @@
+{
+  "authorLogin": "guest",
+  "ownerLogin": "vitalitychems-dot",
+  "files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "before": "permissions:\n  contents: read\n",
+      "after": "permissions:\n  contents: write\n"
+    }
+  ]
+}
