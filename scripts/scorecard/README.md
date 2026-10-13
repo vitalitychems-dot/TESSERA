@@ -17,8 +17,11 @@ Three fixed scores, measured before and after every improvement. Each script pri
   The PR head is only the thing under test (it may supply a predictions file, which is data).
 - **recursion_rate counts no forgeable text.** A merge counts as gated only if (a) a comment/review by an
   author in `TRUSTED_VERDICT_AUTHORS` (comma list, as in #303) says `Security|Build|Moderator … PASS` and names a
-  SHA prefix of the merged head, or (b) a GitHub check run on the head named for a gate concluded SUCCESS.
-  Nobody configured = 0 (fail closed). `Gain:` lines are author-reported and count only on gated PRs.
+  SHA prefix of the merged head, or (b) a SUCCESS check run on the head created by a GitHub App whose
+  `app.slug` or `app.id` is in `TRUSTED_GATE_APPS` (empty by default, so (b) counts nothing until the gate Apps
+  exist). Check-run names are never trusted. Nobody configured = 0 (fail closed).
+- **`vitalitychems-dot` must stay out of `TRUSTED_VERDICT_AUTHORS`.** It is the shared login every agent and CI
+  post as, so its comments are forgeable; the code strips it even if listed, and it is never a default. `Gain:` lines are author-reported and count only on gated PRs.
 - **box-run.sh is dry-run by default**; it prints the table and posts nothing. Posting needs explicit `--post`.
 
 ## Private data stays on the box
@@ -37,6 +40,6 @@ is missing on head. A score missing on both (e.g. `agi_proxy` before #306 lands)
 ## Baseline (main 33ed938, 2026-10-13, 5 runs each, after fixes)
 - agi_proxy **0.2381 ±0** (sandboxed trusted runner d491e20b; baseline predictions, Gitbook #85 data)
 - consciousness_proxy **n/a** (no Moderator truth file / agent responses on the box yet; n/a on both sides does not fail)
-- recursion_rate **0 ±0** (no trusted authors set: 0 gated; with `TRUSTED_VERDICT_AUTHORS=vitalitychems-dot`: 2 gated / 7 days, no Gain lines)
+- recursion_rate **0 ±0** (no trusted authors set: 0 gated; vitalitychems-dot is never trusted; no gate Apps exist yet)
 
 Tests: `node --test scripts/scorecard/scorecard.test.mjs` (9/9)

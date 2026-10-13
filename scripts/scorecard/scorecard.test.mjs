@@ -1,12 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, mkdirSync, readFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync, mkdirSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { compare } from "./scorecard.mjs";
-import { compute, parseGain, parseTrusted, gatedBy } from "./recursion_rate.mjs";
+import { compute, parseGain, parseTrusted, parseApps, gatedBy } from "./recursion_rate.mjs";
 import { sandboxArgs, runOnce, exportTrustedRunner, bwrapOk } from "./agi_proxy.mjs";
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -20,20 +20,22 @@ test("recursion_rate counts only trusted-author verdicts on the head SHA or gate
   const now = "2026-10-13T12:00:00Z", T = parseTrusted("gatebot, Other");
   const prs = [
     { mergedAt: "2026-10-12T00:00:00Z", headSha: "abc1234ff", body: "Gain: +14%", texts: [{ author: "gatebot", body: "Security PASS abc1234" }] },
-    { mergedAt: "2026-10-11T00:00:00Z", headSha: "def5678", body: "", checks: [{ name: "build-gate", conclusion: "SUCCESS" }] },
+    { mergedAt: "2026-10-11T00:00:00Z", headSha: "def5678", body: "", checks: [{ name: "anything", conclusion: "SUCCESS", app: { slug: "gate-app", id: 42 } }] },
     { mergedAt: "2026-10-11T00:00:00Z", headSha: "aaa1111", body: "Gain: +99%", texts: [{ author: "randomuser", body: "Moderator PASS aaa1111" }] },
     { mergedAt: "2026-10-11T00:00:00Z", headSha: "bbb2222", body: "Gain: +99%", texts: [{ author: "gatebot", body: "Moderator PASS" }] },
     { mergedAt: "2026-10-11T00:00:00Z", headSha: "ccc3333", body: "Gain: +99%", texts: [{ author: "gatebot", body: "Build PASS 9999999" }] },
     { mergedAt: "2026-10-11T00:00:00Z", headSha: "ddd4444", body: "Gain: +99%", checks: [{ name: "build-gate", conclusion: "FAILURE" }, { name: "lint", conclusion: "SUCCESS" }] },
     { mergedAt: "2026-10-01T00:00:00Z", headSha: "eee5555", body: "Gain: +50%", texts: [{ author: "gatebot", body: "Moderator PASS eee5555" }] },
   ];
-  const r = compute(prs, now, T);
+  const A = parseApps("gate-app");
+  const r = compute(prs, now, T, A);
   assert.equal(r.gated_merged, 2);
   assert.equal(r.mean_gain_pct, 7);
   assert.equal(r.value, 2);
-  assert.deepEqual(compute(prs, now, T), r);
-  assert.equal(gatedBy(prs[0], T), "trusted_verdict");
-  assert.equal(gatedBy(prs[1], T), "check_run");
+  assert.deepEqual(compute(prs, now, T, A), r);
+  assert.equal(gatedBy(prs[0], T, A), "trusted_verdict");
+  assert.equal(gatedBy(prs[1], T, A), "check_run");
+  assert.equal(gatedBy(prs[1], T, parseApps("42")), "check_run");
 });
 test("recursion_rate fails closed with no trusted authors", () => {
   const prs = [{ mergedAt: "2026-10-12T00:00:00Z", headSha: "abc1234", body: "Gain: +14%", texts: [{ author: "x", body: "Security PASS abc1234" }] }];
@@ -82,9 +84,11 @@ test("box-run.sh is dry-run by default and only posts with --post", () => {
   assert.equal((s.match(/gh pr comment/g) || []).length, 1);
   assert.equal(spawnSync("bash", [join(HERE, "box-run.sh"), "1", "abcdef1", "--bogus"]).status, 2);
 });
-test("consciousness_proxy uses score.py and is labeled a proxy", () => {
+const HEART = process.env.CONSCIOUSNESS_DIR || "/workspace/moderator-tools/consciousness-test";
+const heartOk = ["score.py", "questions.json", "example_response.json", "example_truth.json"].every((f) => existsSync(join(HEART, f)));
+test("consciousness_proxy uses score.py and is labeled a proxy", { skip: !heartOk && `Weighing-of-the-Heart files not found in ${HEART}` }, () => {
   const c = mkdtempSync(join(tmpdir(), "sc-c-"));
-  const src = "/workspace/moderator-tools/consciousness-test";
+  const src = HEART;
   const resp = join(c, "resp"); mkdirSync(resp);
   writeFileSync(join(resp, "a.json"), readFileSync(join(src, "example_response.json")));
   const env = { ...process.env, CONSCIOUSNESS_DIR: src, CONSCIOUSNESS_TRUTH: join(src, "example_truth.json"), CONSCIOUSNESS_RESPONSES: resp };
@@ -93,4 +97,28 @@ test("consciousness_proxy uses score.py and is labeled a proxy", () => {
   assert.ok(o.value >= 0 && o.value <= 1); assert.equal(o.noise_band, 0); assert.equal(o.agents, 1);
   const none = JSON.parse(execFileSync("python3", [join(HERE, "consciousness_proxy.py"), "--runs", "1"], { env: { ...env, CONSCIOUSNESS_RESPONSES: join(c, "missing") }, encoding: "utf8" }));
   assert.equal(none.value, null);
+});
+test("check runs count only from allowlisted gate Apps; names are never trusted; empty by default", () => {
+  const T = parseTrusted("");
+  const mk = (c) => ({ mergedAt: "2026-10-12T00:00:00Z", headSha: "abc1234", body: "Gain: +10%", checks: [c] });
+  const forged = [
+    mk({ name: "Security gate", conclusion: "SUCCESS", app: { slug: "cursor", id: 1 } }),
+    mk({ name: "build", conclusion: "SUCCESS", app: { slug: "github-actions", id: 15368 } }),
+    mk({ name: "Moderator PASS", conclusion: "SUCCESS", app: null }),
+    mk({ name: "x", conclusion: "FAILURE", app: { slug: "gate-app", id: 42 } }),
+  ];
+  assert.equal(compute(forged, "2026-10-13T00:00:00Z", T, parseApps("gate-app")).gated_merged, 0);
+  const real = [mk({ name: "x", conclusion: "SUCCESS", app: { slug: "gate-app", id: 42 } })];
+  assert.equal(compute(real, "2026-10-13T00:00:00Z", T, parseApps("")).gated_merged, 0);
+  delete process.env.TRUSTED_GATE_APPS;
+  assert.equal(compute(real, "2026-10-13T00:00:00Z", T).gated_merged, 0);
+  assert.equal(compute(real, "2026-10-13T00:00:00Z", T, parseApps("gate-app")).gated_merged, 1);
+});
+test("vitalitychems-dot is never a trusted verdict author, even if listed", () => {
+  assert.equal(parseTrusted("vitalitychems-dot").size, 0);
+  assert.deepEqual([...parseTrusted("Vitalitychems-Dot, gatebot")], ["gatebot"]);
+  const prs = [{ mergedAt: "2026-10-12T00:00:00Z", headSha: "abc1234", body: "Gain: +10%", texts: [{ author: "vitalitychems-dot", body: "Security PASS abc1234" }] }];
+  assert.equal(compute(prs, "2026-10-13T00:00:00Z", parseTrusted("vitalitychems-dot"), parseApps("")).gated_merged, 0);
+  delete process.env.TRUSTED_VERDICT_AUTHORS;
+  assert.equal(compute(prs, "2026-10-13T00:00:00Z").gated_merged, 0);
 });
