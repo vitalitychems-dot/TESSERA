@@ -7,6 +7,9 @@
   "scripts": {
     "dev": "node --experimental-strip-types --disable-warning=ExperimentalWarning --import ./register.mjs ./server.mjs",
     "start": "node --experimental-strip-types --disable-warning=ExperimentalWarning --import ./register.mjs ./server.mjs",
-    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --import ./register.mjs --test --test-reporter=spec test/console.test.mjs"
+    "test": "node check-node.mjs && node --experimental-strip-types --disable-warning=ExperimentalWarning --import ./register.mjs --test --test-reporter=spec test/console.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
