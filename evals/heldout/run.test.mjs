@@ -39,7 +39,7 @@ test("gold scores 1.0, baseline lower and deterministic", () => {
 });
 test("normNum takes the last number", () => assert.equal(normNum("so 1,234 then 18"), 18));
 
-const sbx = sandboxAvailable() ? {} : { skip: "unshare -rn unavailable here" };
+const sbx = sandboxAvailable() ? {} : { skip: "bwrap unavailable here" };
 test("sandbox: correct code passes, wrong code fails", sbx, () => {
   assert.equal(runPySandboxed("assert 1 + 1 == 2").ok, true);
   assert.equal(runPySandboxed("assert False").ok, false);
@@ -56,4 +56,9 @@ test("sandbox: no env secrets, cwd is a throwaway temp dir", sbx, () => {
   try {
     assert.equal(runPySandboxed("import os\nassert 'GH_TOKEN_TEST_LEAK' not in os.environ\nassert 'heldout-sbx-' in os.getcwd()").ok, true);
   } finally { delete process.env.GH_TOKEN_TEST_LEAK; }
+});
+test("sandbox: filesystem is read-only outside the temp dir; home is hidden", sbx, () => {
+  assert.equal(runPySandboxed("open('/usr/x-heldout','w')").ok, false);
+  assert.equal(runPySandboxed("open('ok.txt','w').write('1')").ok, true);
+  assert.equal(runPySandboxed("import os\nassert not os.listdir('/home')").ok, true);
 });

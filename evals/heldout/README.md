@@ -17,12 +17,13 @@ The runner checks every data file against `MANIFEST.sha256` and exits 2 on any d
 
 ## Sandboxing predicted code
 HumanEval/MBPP predictions are untrusted code. `sandbox.mjs` runs each one with:
-- **no network**: a fresh empty network namespace (`unshare -rn`)
+- **bubblewrap** (`bwrap --unshare-all`): no network, separate pid/ipc/uts/user namespaces
+- **read-only filesystem**: only the run's temp dir is writable; /home, /root, /workspace, /cursor, /run, /tmp are empty tmpfs
 - **timeout**: 10 s wall clock (SIGKILL), plus `ulimit` CPU 10 s, 1 GiB memory, 10 MiB files, 256 procs
 - **temp dir**: a fresh `mkdtemp` dir as cwd/HOME/TMPDIR, deleted afterwards
 - **clean env**: only PATH/HOME/TMPDIR/LANG; `python3 -I -S`
 
-If the namespace can't be created the runner refuses to execute code (fails closed).
+If `bwrap` is missing or can't start, the runner refuses to execute code (fails closed).
 
 ## Rules
 - The data directory is a locked path; changes need Father's code-owner review.
