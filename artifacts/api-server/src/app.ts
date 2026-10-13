@@ -54,13 +54,13 @@ import { initRecursiveSelfImprovement, startRecursiveImprovementLoop } from "./l
 import { initCrossDomainSynthesis, startCrossDomainSynthesisLoop } from "./lib/cross-domain-synthesis";
 import { initSovereignMemoryVault, startSovereignMemoryVaultLoop } from "./lib/sovereign-memory-vault";
 import { initAutonomousForumEngine, startAutonomousForumLoop } from "./lib/autonomous-forum-engine";
+import { appTrustProxySetting } from "./lib/trust-proxy";
 import { initSovereignLoop, startSovereignLoop } from "./lib/sovereign-loop";
 
 const app: Express = express();
-// One edge hop terminates TLS in front of this process. req.ip is the
-// address that hop observed. A client-supplied first X-Forwarded-For entry
-// is not trusted.
-app.set("trust proxy", 1);
+// req.ip trusts X-Forwarded-For only from proxies listed in APP_TRUSTED_PROXIES
+// (see lib/trust-proxy.ts). Default: trust none, req.ip is the socket peer.
+app.set("trust proxy", appTrustProxySetting());
 
 app.use(healthRouter);
 app.use((_req, res, next) => {
