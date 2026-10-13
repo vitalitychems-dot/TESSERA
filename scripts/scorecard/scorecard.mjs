@@ -2,6 +2,7 @@
 // Scorecard: run the three scores on base and head checkouts and compare.
 // FAIL if any head score < base score - noise_band (noise_band = max of base/head bands).
 // A score that is null on both sides is reported as n/a and does not fail; null on head only fails.
+// recall_at_5 (hybrid-search, #18) is a 4th score from recall_at_k.mjs on a fixed synthetic fixture.
 // Usage: node scorecard.mjs --base DIR --head DIR [--now ISO] [--runs 5] [--json]
 // Env: HELDOUT_DATA, TRUSTED_REF (runner ref, default origin/main), TRUSTED_VERDICT_AUTHORS, CONSCIOUSNESS_*.
 import { execFileSync } from "node:child_process";
@@ -31,6 +32,7 @@ export function scoreAll(repo, { now, runs, cache }) {
     agi_proxy: sh(process.execPath, [join(HERE, "agi_proxy.mjs"), "--repo", repo, "--runs", runs]),
     consciousness_proxy: sh("python3", [join(HERE, "consciousness_proxy.py"), "--runs", runs]),
     recursion_rate: sh(process.execPath, [join(HERE, "recursion_rate.mjs"), "--cache", cache, "--now", now, "--runs", runs]),
+    recall_at_5: sh(process.execPath, [join(HERE, "recall_at_k.mjs"), "--repo", repo, "--k", "5", "--runs", runs]),
   };
 }
 if (resolve(process.argv[1] || "") === fileURLToPath(import.meta.url)) {

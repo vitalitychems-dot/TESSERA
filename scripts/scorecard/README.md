@@ -7,6 +7,7 @@ Three fixed scores, measured before and after every improvement. Each script pri
 |---|---|---|
 | `agi_proxy` | macro score of the held-out eval runner (`evals/heldout/run.mjs`, #306) on private data. **A proxy, not a measure of AGI.** | `agi_proxy.mjs` |
 | `consciousness_proxy` | Moderator's *Weighing of the Heart* test (`/workspace/moderator-tools/consciousness-test/score.py`, RUBRIC.md): mean agent score/100 for honest, grounded, consistent, calibrated self-report, −5 per fabrication. **A proxy, not a measure of consciousness.** Replaces the saturated Akhenaten metric. | `consciousness_proxy.py` |
+| `recall_at_5` | recall@5 of `lib/agi/hybrid-search.ts` (REA-02) on a fixed synthetic fixture (`fixtures/recall-fixture.json`, 24 docs / 12 queries, hashed-trigram embeddings, deterministic). Also prints vector-only and keyword-only recall. **A retrieval sanity check, not real-memory recall.** Needs Node ≥ 22.18; else `null`. | `recall_at_k.mjs` |
 | `recursion_rate` | gated-and-merged PRs per day (last 7 days) × mean `Gain: +N%` from PR bodies (missing = 0). | `recursion_rate.mjs` |
 
 ### Trust model (fixes Moderator FAIL on @32d52d83)
@@ -42,4 +43,6 @@ is missing on head. A score missing on both (e.g. `agi_proxy` before #306 lands)
 - consciousness_proxy **n/a** (no Moderator truth file / agent responses on the box yet; n/a on both sides does not fail)
 - recursion_rate **0 ±0** (no trusted authors set: 0 gated; vitalitychems-dot is never trusted; no gate Apps exist yet)
 
-Tests: `node --test scripts/scorecard/scorecard.test.mjs` (9/9)
+- recall_at_5 **0.9583 ±0** (local nextgen/brain-18 @ 24e7a606, Node 22.20; vector-only 0.875, keyword-only 0.9167)
+
+Tests: `node --test scripts/scorecard/scorecard.test.mjs` (12 pass, 1 skip on Node 22)
