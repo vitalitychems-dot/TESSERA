@@ -13,12 +13,15 @@ function tokenize(text: string): string[] {
 
 export function embedText(text: string, _vocab?: string[]): number[] {
   const tokens = tokenize(text);
+  if (tokens.length === 0) return new Array(256).fill(0);
   const vec = new Array(256).fill(0);
   for (let i = 0; i < tokens.length; i++) {
     let h = 0;
     for (let j = 0; j < tokens[i].length; j++) h = ((h << 5) - h + tokens[i].charCodeAt(j)) | 0;
-    const idx = Math.abs(h) % 256;
-    vec[idx] += 1 / tokens.length;
+    const a = Math.abs(h);
+    const idx = a % 256;
+    const sign = (a >> 16) & 1 ? 1 : -1;
+    vec[idx] += sign / tokens.length;
   }
   const mag = Math.sqrt(vec.reduce((s: number, v: number) => s + v * v, 0));
   if (mag > 0) for (let i = 0; i < vec.length; i++) vec[i] /= mag;
