@@ -7,7 +7,7 @@
  * it is testable; an LLM decider can be plugged in via `decide`.
  */
 export type MemoryOp = "ADD" | "UPDATE" | "DELETE" | "NOOP";
-export interface MemoryItem { id: string; text: string; updatedAt: number }
+export interface MemoryItem { id: string; text: string; updatedAt: number; deletedAt?: number }
 export interface WriteDecision { op: MemoryOp; targetId?: string; similarity: number }
 
 const NEG = /\b(not|no|never|isn't|aren't|wasn't|doesn't|don't|false|stopped|removed)\b/i;
@@ -21,16 +21,27 @@ export function similarity(a: string, b: string): number {
   return inter / (A.size + B.size - inter);
 }
 
-export interface WriterOptions { duplicate?: number; related?: number }
+/**
+ * duplicate: similarity at/above which a same-polarity fact is a NOOP.
+ * related:   similarity at/above which a fact touches an existing memory.
+ * contradict: similarity required (with a polarity flip) before DELETE.
+ *   A lone negation word on a merely related fact is NOT enough; below this
+ *   threshold the fact is recorded as an UPDATE instead.
+ */
+export interface WriterOptions { duplicate?: number; related?: number; contradict?: number }
 
-/** Deterministic decider: duplicate → NOOP, related+negation flip → DELETE, related → UPDATE, else ADD. */
+/**
+ * Deterministic decider: duplicate → NOOP; explicit contradiction (polarity
+ * flip AND similarity ≥ contradict) → DELETE (soft); related → UPDATE; else ADD.
+ * Soft-deleted memories are ignored when matching.
+ */
 export function decideWrite(fact: string, existing: MemoryItem[], opts: WriterOptions = {}): WriteDecision {
-  const dup = opts.duplicate ?? 0.9, rel = opts.related ?? 0.5;
+  const dup = opts.duplicate ?? 0.9, rel = opts.related ?? 0.5, con = opts.contradict ?? 0.75;
   let best: MemoryItem | undefined, bestSim = 0;
-  for (const m of existing) { const s = similarity(fact, m.text); if (s > bestSim) { bestSim = s; best = m; } }
+  for (const m of existing) { if (m.deletedAt !== undefined) continue; const s = similarity(fact, m.text); if (s > bestSim) { bestSim = s; best = m; } }
   if (!best || bestSim < rel) return { op: "ADD", similarity: bestSim };
   const flipped = NEG.test(fact) !== NEG.test(best.text);
-  if (flipped) return { op: "DELETE", targetId: best.id, similarity: bestSim };
+  if (flipped && bestSim >= con) return { op: "DELETE", targetId: best.id, similarity: bestSim };
   if (bestSim >= dup) return { op: "NOOP", targetId: best.id, similarity: bestSim };
   return { op: "UPDATE", targetId: best.id, similarity: bestSim };
 }
@@ -46,7 +57,11 @@ export function applyWrite(
   switch (d.op) {
     case "ADD": return { decision: d, store: [...store, { id: `mem-${now.toString(36)}-${store.length}`, text: fact, updatedAt: now }] };
     case "UPDATE": return { decision: d, store: store.map((m) => (m.id === d.targetId ? { ...m, text: fact, updatedAt: now } : m)) };
-    case "DELETE": return { decision: d, store: store.filter((m) => m.id !== d.targetId) };
+    // Soft-delete: keep the row with a tombstone so a bad DELETE is recoverable.
+    case "DELETE": return { decision: d, store: store.map((m) => (m.id === d.targetId ? { ...m, deletedAt: now } : m)) };
     default: return { decision: d, store };
   }
 }
+
+/** Live (non-soft-deleted) memories. */
+export const liveMemories = (store: MemoryItem[]) => store.filter((m) => m.deletedAt === undefined);
