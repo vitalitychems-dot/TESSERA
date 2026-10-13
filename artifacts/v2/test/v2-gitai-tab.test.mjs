@@ -48,7 +48,7 @@ test("the studio tab can share the standalone GitAI process", async () => {
     const projectId = direct.projects.find((project) => project.name === "mesh-note").id;
     const starred = await fetch(`${studio.url}gitai/api/stars`, {
       method: "POST",
-      headers: { "content-type": "application/json", "x-gitai-handle": "Jules" },
+      headers: { "content-type": "application/json", cookie: "gitai=Jules" },
       body: JSON.stringify({ projectId }),
     });
     assert.equal(starred.status, 200);

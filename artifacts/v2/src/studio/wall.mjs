@@ -399,7 +399,7 @@ export function listenStudio(studio = createStudio(), options = {}) {
         raw,
         form: new URLSearchParams(String(req.headers["content-type"] ?? "").includes("json") ? "" : raw),
         contentType: req.headers["content-type"] ?? "",
-        session: readSession(req.headers.cookie) || req.headers["x-gitai-handle"] || null,
+        session: readSession(req.headers.cookie) || null,
         base: "/gitai",
       });
       if (req.method !== "GET" && req.method !== "HEAD" && result.status < 400) backend.feed.broadcast(backend.gitai.view());

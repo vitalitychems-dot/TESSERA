@@ -132,7 +132,7 @@ export function createGitAiServer(gitai = seedDemo(), feed = null) {
         raw,
         form: new URLSearchParams(String(req.headers["content-type"] ?? "").includes("json") ? "" : raw),
         contentType: req.headers["content-type"] ?? "",
-        session: readSession(req.headers.cookie) || req.headers["x-gitai-handle"] || null,
+        session: readSession(req.headers.cookie) || null,
         headers: req.headers,
       });
       Promise.resolve(result).then((result) => {

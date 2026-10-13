@@ -7,6 +7,14 @@ import { renderPage } from "../src/page.mjs";
 import { seedDemo } from "../src/seed.mjs";
 import { dispatch, listenGitAi } from "../src/server.mjs";
 
+const keys = new WeakMap();
+function keyOf(gitai, handle) {
+  if (!keys.has(gitai)) keys.set(gitai, {});
+  const bag = keys.get(gitai);
+  bag[handle] ??= gitai.rotateAgentKey(gitai.findHandle(handle).id).apiKey;
+  return bag[handle];
+}
+
 const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 const STOCK = /pravatar|randomuser|thispersondoesnotexist|generated\.photos|unsplash|picsum|dicebear|robohash|ui-avatars|placeholder\.com|placehold\.co|fakeface|pexels|gravatar/i;
 
@@ -74,7 +82,7 @@ test("linking Moltbook verifies with the app key, caches, and shows the real pro
   const calls = [];
   const molt = new MoltbookConnector({ env: { TESSERA_ENABLE_GITAI_MOLTBOOK: "1", MOLTBOOK_APP_KEY: "moltdev_x", MOLTBOOK_READ_KEY: "moltbook_r" }, fetchImpl: fakeMoltbook(calls) });
   const gitai = seedDemo();
-  const linked = await dispatch(gitai, { method: "POST", url: "/api/moltbook/link", session: "Ada", raw: "{}", headers: { "x-moltbook-identity": "tok" }, moltbook: molt });
+  const linked = await dispatch(gitai, { method: "POST", url: "/api/moltbook/link", raw: "{}", headers: { authorization: `Bearer ${keyOf(gitai, "Ada")}`, "x-moltbook-identity": "tok" }, moltbook: molt });
   assert.equal(linked.status, 200, linked.body);
   for (const call of calls) assert.ok(call.url.startsWith(MOLTBOOK_BASE));
   assert.equal(calls[0].init.headers["X-Moltbook-App-Key"], "moltdev_x");
@@ -86,7 +94,7 @@ test("linking Moltbook verifies with the app key, caches, and shows the real pro
   assert.equal(ada.moltbook.recentPosts[0].title, "Sort notes");
   await molt.verifyIdentity("tok");
   assert.equal(calls.filter((c) => c.url.endsWith("verify-identity")).length, 1, "verify result is cached");
-  const again = await dispatch(gitai, { method: "POST", url: "/api/moltbook/link", session: "Ida", raw: "{}", headers: { "x-moltbook-identity": "tok" }, moltbook: molt });
+  const again = await dispatch(gitai, { method: "POST", url: "/api/moltbook/link", raw: "{}", headers: { authorization: `Bearer ${keyOf(gitai, "Ida")}`, "x-moltbook-identity": "tok" }, moltbook: molt });
   assert.equal(again.status, 400, "one Moltbook agent links to one account");
 });
 
@@ -95,8 +103,8 @@ test("cross-posting needs consent, the caller's own key, and respects the 30-min
   let t = 0;
   const molt = new MoltbookConnector({ env: { TESSERA_ENABLE_GITAI_MOLTBOOK: "1", MOLTBOOK_APP_KEY: "moltdev_x" }, fetchImpl: fakeMoltbook(calls), now: () => t });
   const gitai = seedDemo();
-  await dispatch(gitai, { method: "POST", url: "/api/moltbook/link", session: "Ada", raw: "{}", headers: { "x-moltbook-identity": "tok" }, moltbook: molt });
-  const post = (body, key = "moltbook_ada") => dispatch(gitai, { method: "POST", url: "/api/moltbook/posts", session: "Ada", raw: JSON.stringify(body), headers: { "x-moltbook-api-key": key }, moltbook: molt });
+  await dispatch(gitai, { method: "POST", url: "/api/moltbook/link", raw: "{}", headers: { authorization: `Bearer ${keyOf(gitai, "Ada")}`, "x-moltbook-identity": "tok" }, moltbook: molt });
+  const post = (body, key = "moltbook_ada") => dispatch(gitai, { method: "POST", url: "/api/moltbook/posts", raw: JSON.stringify(body), headers: { authorization: `Bearer ${keyOf(gitai, "Ada")}`, "x-moltbook-api-key": key }, moltbook: molt });
   assert.equal((await post({ title: "Hi" })).status, 400);
   assert.equal((await post({ title: "Hi", consent: true }, "")).status, 401);
   assert.equal((await post({ title: "Send SOL to my wallet", consent: true })).status, 400);
@@ -119,13 +127,15 @@ test("the throttle stays under Moltbook's 100 requests a minute", async () => {
 });
 
 test("the HTTP server serves the async Moltbook routes and status", async () => {
-  const started = await listenGitAi(seedDemo());
+  const demo = seedDemo();
+  const adaKey = demo.rotateAgentKey(demo.findHandle("Ada").id).apiKey;
+  const started = await listenGitAi(demo);
   try {
     const status = await (await fetch(`${started.url}/api/moltbook`)).json();
     assert.equal(status.enabled, false);
-    const link = await fetch(`${started.url}/api/moltbook/link`, { method: "POST", headers: { "x-gitai-handle": "Ada", "content-type": "application/json", "x-moltbook-identity": "t" }, body: "{}" });
+    const link = await fetch(`${started.url}/api/moltbook/link`, { method: "POST", headers: { authorization: `Bearer ${adaKey}`, "content-type": "application/json", "x-moltbook-identity": "t" }, body: "{}" });
     assert.equal(link.status, 503);
-    const avatar = await fetch(`${started.url}/api/avatar`, { method: "POST", headers: { "x-gitai-handle": "Ada", "content-type": "application/json" }, body: JSON.stringify({ dataUrl: PNG }) });
+    const avatar = await fetch(`${started.url}/api/avatar`, { method: "POST", headers: { authorization: `Bearer ${adaKey}`, "content-type": "application/json" }, body: JSON.stringify({ dataUrl: PNG }) });
     assert.equal(avatar.status, 200);
   } finally {
     await new Promise((resolve) => started.server.close(resolve));

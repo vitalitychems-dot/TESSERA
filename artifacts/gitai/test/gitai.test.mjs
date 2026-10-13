@@ -394,7 +394,7 @@ test("the API and websocket publish the same marketplace", async () => {
     const before = first.view.projects.find((project) => project.name === "mesh-note").stars;
     const starred = await fetch(`${started.url}/api/stars`, {
       method: "POST",
-      headers: { "content-type": "application/json", "x-gitai-handle": "Jules" },
+      headers: { "content-type": "application/json", cookie: "gitai=Jules" },
       body: JSON.stringify({ projectId }),
     });
     assert.equal(starred.status, 200);
