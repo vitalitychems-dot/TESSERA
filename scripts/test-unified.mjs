@@ -56,6 +56,7 @@ delete isolatedEnv.TESSERA_TEST_FATHER_NATAL_CHART_JSON;
 let failures = 0;
 for (const [label, selector] of [
   ["Suite safety policy", "@workspace/scripts"],
+  ["Tessera console", "@workspace/console"],
   ["Gitbook MCP", "@workspace/gitbook-mcp"],
   ["TESSERA v2", "@workspace/v2"],
   ["GitAI", "@workspace/gitai"],
