@@ -130,6 +130,82 @@ test("corrupt cache falls back to a full read and is rewritten", async () => {
   }
 });
 
+test("a different token is a cache miss and the raw token is not stored", async () => {
+  const cacheDir = tempCache();
+  const tokenA = "ghs_cache_key_alpha";
+  const tokenB = "ghs_cache_key_beta";
+  const headers = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
+  const calls = [];
+  const request = async (req) => {
+    calls.push(req.headers["If-None-Match"] ?? null);
+    if (calls.length === 1) return { status: 200, body: "FOR-A", headers: { etag: "\"ea\"" } };
+    if (calls.length === 2) return { status: 304, body: "", headers: { etag: "\"ea\"" } };
+    return { status: 200, body: "FOR-B", headers: { etag: "\"eb\"" } };
+  };
+  const env = { [ENABLE_FLAG]: "1" };
+  const first = await cachedGet({ url: ENDPOINT, cacheDir, env, token: tokenA, headers, request });
+  const again = await cachedGet({ url: ENDPOINT, cacheDir, env, token: tokenA, headers, request });
+  const other = await cachedGet({ url: ENDPOINT, cacheDir, env, token: tokenB, headers, request });
+  assert.equal(first.unchanged, false);
+  assert.equal(first.body, "FOR-A");
+  assert.equal(again.unchanged, true);
+  assert.equal(again.body, "FOR-A");
+  assert.equal(other.unchanged, false);
+  assert.equal(other.body, "FOR-B");
+  assert.deepEqual(calls, [null, "\"ea\"", null]);
+  const fileA = cacheFileForUrl(cacheDir, ENDPOINT, { token: tokenA, headers });
+  const fileB = cacheFileForUrl(cacheDir, ENDPOINT, { token: tokenB, headers });
+  assert.notEqual(fileA, fileB);
+  const stored = readdirSync(cacheDir).map((name) => `${name}\n${readFileSync(join(cacheDir, name), "utf8")}`).join("\n");
+  assert.equal(stored.includes(tokenA), false);
+  assert.equal(stored.includes(tokenB), false);
+});
+
+test("a different Accept header is a cache miss", async () => {
+  const cacheDir = tempCache();
+  const token = "ghs_cache_key_same";
+  const version = { "X-GitHub-Api-Version": "2022-11-28" };
+  const jsonHeaders = { Accept: "application/vnd.github+json", ...version };
+  const diffHeaders = { Accept: "application/vnd.github.diff", ...version };
+  const calls = [];
+  const request = async (req) => {
+    calls.push(req.headers["If-None-Match"] ?? null);
+    if (calls.length === 1) return { status: 200, body: "JSON-BODY", headers: { etag: "\"ej\"" } };
+    return { status: 200, body: "DIFF-BODY", headers: { etag: "\"ed\"" } };
+  };
+  const env = { [ENABLE_FLAG]: "1" };
+  const first = await cachedGet({ url: ENDPOINT, cacheDir, env, token, headers: jsonHeaders, request });
+  const other = await cachedGet({ url: ENDPOINT, cacheDir, env, token, headers: diffHeaders, request });
+  assert.equal(first.body, "JSON-BODY");
+  assert.equal(other.unchanged, false);
+  assert.equal(other.body, "DIFF-BODY");
+  assert.deepEqual(calls, [null, null]);
+  assert.notEqual(
+    cacheFileForUrl(cacheDir, ENDPOINT, { token, headers: jsonHeaders }),
+    cacheFileForUrl(cacheDir, ENDPOINT, { token, headers: diffHeaders }),
+  );
+  const stored = readdirSync(cacheDir).map((name) => readFileSync(join(cacheDir, name), "utf8")).join("\n");
+  assert.equal(stored.includes(token), false);
+});
+
+test("a different X-GitHub-Api-Version is a cache miss", async () => {
+  const cacheDir = tempCache();
+  const token = "ghs_cache_key_same";
+  const v1 = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
+  const v2 = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2026-01-01" };
+  const calls = [];
+  const request = async (req) => {
+    calls.push(req.headers["If-None-Match"] ?? null);
+    return { status: 200, body: `body-${calls.length}`, headers: { etag: `"e${calls.length}"` } };
+  };
+  const env = { [ENABLE_FLAG]: "1" };
+  await cachedGet({ url: ENDPOINT, cacheDir, env, token, headers: v1, request });
+  const other = await cachedGet({ url: ENDPOINT, cacheDir, env, token, headers: v2, request });
+  assert.equal(other.unchanged, false);
+  assert.equal(other.body, "body-2");
+  assert.deepEqual(calls, [null, null]);
+});
+
 test("flag off CLI spawns gh api with the same arguments", async () => {
   const spawned = [];
   const code = await runCli(["repos/vitalitychems-dot/TESSERA/contents/", "-H", "Accept: application/json"], {

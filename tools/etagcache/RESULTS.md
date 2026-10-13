@@ -22,9 +22,11 @@ Live TESSERA API, the four scan endpoints above.
 
 **117× is the no-change ceiling** (140,202 / 1,202 ≈ 117). It is the ratio only when every read is a 304.
 
-About 11% of scans see a change and still pay a full read. The blended figure is
+The **8.5× blend is an estimate**. It assumes an 11% change rate, which this sample did not measure:
 
 `1 / (0.89/117 + 0.11) ≈ 8.5×`.
+
+Byte and rate-limit savings from a 304 happen on the wire. Token savings only happen when callers honour the `unchanged` marker and skip re-parsing. A caller that parses the cached body anyway does not save those tokens.
 
 **Latency: no change (within noise).** 471 ± 32 ms and 462 ± 28 ms overlap (about 439–503 ms and 434–490 ms).
 
@@ -41,9 +43,9 @@ Measured 2026-10-13 against the live API. n=10 pairs per endpoint (40 pairs). Sa
 
 Pooled across these 40 pairs: 145,996 ± 53,528 bytes → 1,209 ± 6 bytes, and 298 ± 61 ms → 287 ± 53 ms. The pooled byte interval is wide because the four endpoints differ by an order of magnitude, not because a single endpoint flickered. 145,996 sits inside the aggregate interval 140,202 ± 27,372. The 304 size matches (1,209 ± 6 vs 1,202 ± 6). Latency in this run is lower than 471 ms and still shows **no change within noise** on the pool and on each endpoint (the intervals overlap).
 
-Applying the same 11% change rate to each measured ceiling, not as a measured per-endpoint change rate (this sample had zero changes):
+Per-endpoint blends below are estimates too. Each one assumes the same 11% change rate. This sample had zero changes, so it did not measure that rate:
 
-| endpoint | ceiling | blended at 11% changed |
+| endpoint | ceiling | estimated blend at an assumed 11% changed |
 | --- | ---: | ---: |
 | commits | 353× | ~8.9× |
 | open issues | 83× | ~8.3× |
@@ -63,6 +65,6 @@ Those 304s did not cost a core rate-limit unit. A changed endpoint still does: i
 ## Limits
 
 - A changed endpoint still pays a full read.
-- 117× is only the no-change ceiling. With about 11% of scans changing, expect about 8.5×, and less than that on the small endpoints (about 6.5× for branches and contents).
-- The 11% figure is the blend input above. This sample did not estimate it: all 40 conditional reads were 304.
+- 117× is only the no-change ceiling. The 8.5× figure is an estimate that assumes 11% of scans change. It is not a measured change rate: all 40 conditional reads were 304. The same assumption puts the smaller endpoints near 6.5×.
+- Token savings only happen when callers honour the `unchanged` marker and skip re-parsing. Returning the cached body does not save those tokens by itself.
 - The open-PR list stays with PR #295.

@@ -26,12 +26,47 @@ export const SCAN_ENDPOINTS = [
   "/repos/vitalitychems-dot/TESSERA/contents/",
 ];
 
+export const DEFAULT_ACCEPT = "application/vnd.github+json";
+export const DEFAULT_API_VERSION = "2022-11-28";
+
 export function etagCacheEnabled(env = process.env) {
   return env[ENABLE_FLAG] === "1";
 }
 
-export function cacheFileForUrl(cacheDir, url) {
-  const key = createHash("sha256").update(`GET ${url}`).digest("hex");
+function headerValue(headers, name) {
+  if (!headers) return null;
+  const want = name.toLowerCase();
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === want) return value ?? null;
+  }
+  return null;
+}
+
+/** Token used for the cache key. Never written to the cache file. */
+export function resolveToken({ token, headers, env = {} } = {}) {
+  if (typeof token === "string") return token;
+  const authorization = headerValue(headers, "authorization");
+  if (authorization) {
+    const bearer = /^Bearer\s+(\S+)/i.exec(String(authorization).trim());
+    if (bearer) return bearer[1];
+  }
+  return env.GH_TOKEN || env.GITHUB_TOKEN || "";
+}
+
+/**
+ * Cache identity is url + sha256(token) + Accept + X-GitHub-Api-Version.
+ * The raw token is only an input to sha256.
+ */
+export function cacheKeyMaterial({ url, token = "", headers = {} } = {}) {
+  const accept = String(headerValue(headers, "accept") ?? DEFAULT_ACCEPT).trim();
+  const apiVersion = String(headerValue(headers, "x-github-api-version") ?? DEFAULT_API_VERSION).trim();
+  const tokenHash = createHash("sha256").update(String(token)).digest("hex");
+  return `${url}\n${tokenHash}\n${accept}\n${apiVersion}`;
+}
+
+export function cacheFileForUrl(cacheDir, url, options = {}) {
+  const token = resolveToken({ token: options.token, headers: options.headers, env: options.env });
+  const key = createHash("sha256").update(cacheKeyMaterial({ url, token, headers: options.headers })).digest("hex");
   return join(cacheDir, `${key}.json`);
 }
 
@@ -62,25 +97,17 @@ export function writeCacheEntry(file, entry) {
   renameSync(tmp, file);
 }
 
-function headerValue(headers, name) {
-  if (!headers) return null;
-  const want = name.toLowerCase();
-  for (const [key, value] of Object.entries(headers)) {
-    if (key.toLowerCase() === want) return value ?? null;
-  }
-  return null;
-}
-
 /**
  * @param {object} options
  * @param {string} options.url
  * @param {string} options.cacheDir directory for `.cache/etag` files (gitignored via `.cache/`)
  * @param {NodeJS.ProcessEnv} [options.env]
+ * @param {string} [options.token] sent as Authorization by the transport; hashed into the cache key, never stored
  * @param {Record<string, string>} [options.headers]
  * @param {(req: {url: string, headers: Record<string, string>}) => Promise<{status: number, body: string, headers?: Record<string, string>}>} options.request
  * @returns {Promise<{status: number, body: string, headers: Record<string, string>, etag: string|null, unchanged: boolean}>}
  */
-export async function cachedGet({ url, cacheDir, env = process.env, headers = {}, request }) {
+export async function cachedGet({ url, cacheDir, env = process.env, token, headers = {}, request }) {
   if (!etagCacheEnabled(env)) {
     const response = await request({ url, headers: { ...headers } });
     return {
@@ -92,7 +119,7 @@ export async function cachedGet({ url, cacheDir, env = process.env, headers = {}
     };
   }
 
-  const file = cacheFileForUrl(cacheDir, url);
+  const file = cacheFileForUrl(cacheDir, url, { token, headers, env });
   const cached = readCacheEntry(file);
   const outbound = { ...headers };
   if (cached.ok) outbound["If-None-Match"] = cached.etag;
@@ -136,9 +163,9 @@ export function toGithubApiUrl(pathOrUrl) {
 
 export async function githubRequest({ url, headers, token, fetchImpl = globalThis.fetch }) {
   const outbound = {
-    Accept: "application/vnd.github+json",
+    Accept: DEFAULT_ACCEPT,
     "User-Agent": "tessera-etagcache",
-    "X-GitHub-Api-Version": "2022-11-28",
+    "X-GitHub-Api-Version": DEFAULT_API_VERSION,
     ...headers,
   };
   if (token && !outbound.Authorization && !outbound.authorization) {
@@ -186,11 +213,13 @@ export async function runCli(argv, deps = {}) {
     return 2;
   }
   const cacheDir = deps.cacheDir ?? join(process.cwd(), ".cache", "etag");
-  const request = deps.request ?? (async (req) => githubRequest({ ...req, token: deps.token ?? readGhToken() }));
+  const token = deps.token ?? (deps.request ? resolveToken({ env }) : readGhToken());
+  const request = deps.request ?? (async (req) => githubRequest({ ...req, token }));
   const result = await cachedGet({
     url: toGithubApiUrl(pathArg),
     cacheDir,
     env,
+    token,
     request,
   });
   stdout.write(result.body);
