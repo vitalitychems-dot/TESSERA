@@ -15,6 +15,8 @@ import { checkMessage, loadProtocolUncached, validate, protocolDir } from "../st
 import * as T from "./token-lab.mjs";
 import * as H from "./handoff.mjs";
 import * as R from "./relay.mjs";
+import * as R2 from "./round2.mjs";
+import { createHash } from "node:crypto";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../../../..");
 const read = (p) => readFileSync(join(root, p), "utf8");
@@ -119,6 +121,23 @@ export async function runBench() {
   const remote = { ...pages }; const local = { ...pages, p3: pages.p3 + " edit", p7: "new" };
   const sendBytes = Object.values(R.deltaSync(local, R.manifest(remote))).reduce((n, v) => n + Buffer.byteLength(v), 0);
   add(26.1, "hash-store + delta-sync", "bytes sent to sync 2 changed pages", Object.values(local).reduce((n, v) => n + Buffer.byteLength(v), 0), sendBytes);
+  // Round 2 (Rick). R2-10 resonate-batch skipped as noise.
+  add(27, "R2-1 prefix-legend", "tokens (BUILD-LOG, lossless)", tok(buildLog), tok(R2.prefixLegend(buildLog)));
+  { const s = memRows.slice(0, 200).map((r) => JSON.stringify(JSON.parse(r))); add(28, "R2-2 key-hoist (opt-in)", "tokens (200 minified memory rows)", tok(s.join("\n")), tok(R2.keyHoist(s))); }
+  add(29, "R2-3 resonate-chain", "tokens (BUILD-LOG vs packContext)", tok(T.packContext(buildLog)), tok(R2.resonateChain(buildLog).out));
+  { let seed = 7; const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648; let b0 = 0, b1 = 0;
+    for (let i = 0; i < 1000; i++) { const truth = rnd() < 0.5; const c = [0, 1, 2].map(() => (rnd() < 0.9 ? truth : !truth)); if (c[0] && !truth) b0++; if (R2.coincide(c).act && !truth) b1++; }
+    add(30, "R2-4 coincide 3-of-3", "wrong actions /1000 (simulated, checks 90%)", b0, b1); }
+  add(31, "R2-5 phase K=4", "peak starts in one tick (12 workers, simulated)", R2.peakStarts(Array(12).fill(0)), R2.peakStarts(R2.phaseStarts(12, 4)));
+  { const plain = Array.from({ length: 10 }, (_, i) => "l" + i); let a0 = 0; for (let i = 0; i < 10; i++) { plain[i] = "x"; a0++; }
+    const v = R2.valveLog(); for (let i = 0; i < 10; i++) v.append("l" + i); let a1 = 0; for (let i = 0; i < 10; i++) if (v.write(i, "x")) a1++;
+    add(32, "R2-6 valve append-only", "rewrites accepted of 10", a0, a1); }
+  { const ev = []; for (let i = 0; i < 20; i++) { ev.push(["open", "t" + i]); if (i % 4) ev.push(["close", "t" + i]); }
+    add(33, "R2-7 bifilar pairing", "leaked opens undetected (5 planted)", 5, 5 - R2.bifilar(ev).length); }
+  { const e = R2.createEarthStore(); const ref = e.send(buildLog); const hops = 7;
+    add(34, "R2-8 earth-return (opt-in)", "bytes over 7-hop handoff chain", hops * Buffer.byteLength(buildLog), Buffer.byteLength(buildLog) + hops * Buffer.byteLength(JSON.stringify(ref))); }
+  { const text = memRows.slice(0, 200).join("\n"); const q = "relation"; const kept = (o) => o.split("\n").filter((l) => l.toLowerCase().includes(q)).length;
+    add(35, "R2-9 tuned-clip", "query-matching lines kept, 40-line cap", kept(T.clipToolResult(text)), kept(R2.tunedClip(text, q)), false); }
   return rows.map((r) => ({ ...r, change: r.before === 0 ? (r.after === 0 ? 0 : null) : +(((r.after - r.before) / r.before) * 100).toFixed(1), improved: r.lowerIsBetter ? r.after < r.before : r.after > r.before }));
 }
 
