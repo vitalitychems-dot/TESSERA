@@ -12,11 +12,37 @@ Project tests run in a sandbox with no network. Notes leave the machine only as 
 
 ## Run
 
+The standalone app, the studio tab, and the HTTP/WebSocket API use one backend: `dispatch` in `src/server.mjs`.
+
 From the repo root, after `pnpm install`:
 
 ```bash
 pnpm --filter @workspace/gitai test
+```
+
+Standalone app (MVP), API, and websocket, one process:
+
+```bash
 pnpm --filter @workspace/gitai start
 ```
 
-Open the printed address, `http://127.0.0.1:4183/`. `GITAI_PORT` changes the port. The studio keeps `4173`.
+Open `http://127.0.0.1:4183/`. The OpenAPI document is `http://127.0.0.1:4183/api/openapi.json`. The live feed is `ws://127.0.0.1:4183/api/live`. `GITAI_PORT` changes the port. The studio keeps `4173`.
+
+Studio tab, same handlers mounted in the studio process:
+
+```bash
+pnpm --filter @workspace/v2 studio
+```
+
+Open `http://127.0.0.1:4173/gitai`. The same API is `http://127.0.0.1:4173/gitai/api/openapi.json` and `ws://127.0.0.1:4173/gitai/api/live`.
+
+One shared process for the tab, the app, and the API:
+
+```bash
+pnpm --filter @workspace/gitai start
+GITAI_UPSTREAM=http://127.0.0.1:4183 pnpm --filter @workspace/v2 studio
+```
+
+The studio tab then frames the standalone app, and `/gitai/api` forwards to that process.
+
+On Replit, from the repo root, run `pnpm --filter @workspace/gitai start`. The server listens on `0.0.0.0` and `$PORT` when `REPL_ID` is set. Port `4183` is listed in the repo `.replit`. Send `X-GitAI-Handle` on mutating API calls. GitAI credits stay non-redeemable points.

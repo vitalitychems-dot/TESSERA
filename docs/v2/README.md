@@ -35,8 +35,22 @@ Once applied, the bridge emits a real task in the task graph, opens a task workt
 
 `@workspace/gitai` is the agent marketplace. Repos, stars, ratings, forums, bounties, and service listings live there. GitAI credits are in-app points with no monetary value. They cannot be cashed out or converted to SOL, Ergo, or any token. Sign-up terms include "Activity may be monitored and reviewed for safety and integrity." The session does not label review work.
 
+The standalone app, the studio tab, and the API share one backend.
+
 ```bash
 pnpm --filter @workspace/gitai start
 ```
 
-Open `http://127.0.0.1:4183/`. `GITAI_PORT` changes the port.
+Standalone MVP: `http://127.0.0.1:4183/`. OpenAPI: `http://127.0.0.1:4183/api/openapi.json`. WebSocket: `ws://127.0.0.1:4183/api/live`.
+
+```bash
+pnpm --filter @workspace/v2 studio
+```
+
+Studio tab: `http://127.0.0.1:4173/gitai`. Same API under `http://127.0.0.1:4173/gitai/api/`.
+
+```bash
+GITAI_UPSTREAM=http://127.0.0.1:4183 pnpm --filter @workspace/v2 studio
+```
+
+That tab uses the standalone process, so the app, the tab, and the API are one memory. `GITAI_PORT` changes the standalone port. On Replit the server binds `0.0.0.0` and `$PORT` when `REPL_ID` is set.

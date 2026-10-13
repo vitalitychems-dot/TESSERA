@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import http from "node:http";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { perfectAnswers } from "../src/benchmarks.mjs";
 import { meshFacts } from "../src/mesh.mjs";
@@ -302,6 +304,107 @@ test("the monitoring sentence appears only in the sign-up terms", () => {
   assert.equal(terms.body.split(INTEGRITY_LINE).length - 1, 1);
   assert.doesNotMatch(terms.body, marker);
   assert.equal(terms.body.includes("Observations recorded"), false);
+});
+
+function frameReader(socket, head = Buffer.alloc(0)) {
+  const frames = [];
+  const waiters = [];
+  let buffer = Buffer.alloc(0);
+  const push = (buf) => {
+    if (!buf?.length) return;
+    buffer = Buffer.concat([buffer, buf]);
+    while (buffer.length >= 2) {
+      const short = buffer[1] & 0x7f;
+      let start = 2;
+      let size = short;
+      if (short === 126) {
+        if (buffer.length < 4) return;
+        size = buffer.readUInt16BE(2);
+        start = 4;
+      } else if (short === 127) {
+        if (buffer.length < 10) return;
+        size = Number(buffer.readBigUInt64BE(2));
+        start = 10;
+      }
+      if (buffer.length < start + size) return;
+      const text = buffer.subarray(start, start + size).toString();
+      buffer = buffer.subarray(start + size);
+      const waiter = waiters.shift();
+      if (waiter) waiter(text);
+      else frames.push(text);
+    }
+  };
+  push(head);
+  socket.on("data", push);
+  return {
+    next() {
+      if (frames.length) return Promise.resolve(frames.shift());
+      return new Promise((resolve, reject) => {
+        waiters.push(resolve);
+        socket.once("error", reject);
+      });
+    },
+    destroy() {
+      socket.destroy();
+    },
+  };
+}
+
+test("the API and websocket publish the same marketplace", async () => {
+  const spec = readFileSync(new URL("../openapi.json", import.meta.url), "utf8");
+  const gitai = seedDemo();
+  const document = dispatch(gitai, { method: "GET", url: "/api/openapi.json", session: null });
+  assert.equal(document.body, spec);
+  assert.match(document.body, /"openapi": "3.1.0"/);
+  assert.match(document.body, /\/api\/live/);
+  const health = dispatch(gitai, { method: "GET", url: "/api/health", session: null });
+  assert.deepEqual(JSON.parse(health.body).service, "gitai");
+  const view = dispatch(gitai, { method: "GET", url: "/api/view", session: null });
+  const snapshot = JSON.parse(view.body);
+  assert.equal(snapshot.people.some((person) => person.handle === "Ada"), true);
+  assert.equal(JSON.stringify(snapshot).includes("probation"), false);
+  const started = await listenGitAi(gitai);
+  try {
+    const listed = await fetch(`${started.url}/api/openapi.json`);
+    assert.equal(await listed.text(), spec);
+    const key = Buffer.from("gitai-live-feed!").toString("base64");
+    const live = await new Promise((resolve, reject) => {
+      const req = http.request(
+        {
+          hostname: "127.0.0.1",
+          port: new URL(started.url).port,
+          path: "/api/live",
+          headers: {
+            Connection: "Upgrade",
+            Upgrade: "websocket",
+            "Sec-WebSocket-Key": key,
+            "Sec-WebSocket-Version": "13",
+          },
+        },
+        () => reject(new Error("expected a websocket upgrade")),
+      );
+      req.on("upgrade", (_res, socket, head) => resolve(frameReader(socket, head)));
+      req.on("error", reject);
+      req.end();
+    });
+    const first = JSON.parse(await live.next());
+    assert.equal(first.type, "view");
+    assert.equal(first.view.people.some((person) => person.handle === "Jules"), true);
+    const projectId = first.view.projects.find((project) => project.name === "mesh-note").id;
+    const before = first.view.projects.find((project) => project.name === "mesh-note").stars;
+    const starred = await fetch(`${started.url}/api/stars`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-gitai-handle": "Jules" },
+      body: JSON.stringify({ projectId }),
+    });
+    assert.equal(starred.status, 200);
+    const second = JSON.parse(await live.next());
+    const after = second.view.projects.find((project) => project.name === "mesh-note").stars;
+    assert.equal(after, before + 1);
+    live.destroy();
+  } finally {
+    await new Promise((resolve, reject) => started.server.close((error) => (error ? reject(error) : resolve())));
+  }
 });
 
 test("the v2 denylist still refuses a wallet path, and a spectator can star over HTTP", async () => {

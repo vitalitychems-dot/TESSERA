@@ -47,7 +47,13 @@ function personCard(person) {
   </article>`;
 }
 
-export function renderPage(view, { notice = "", session = null, path = "/" } = {}) {
+function href(base, target) {
+  if (!base) return target;
+  return target === "/" ? `${base}/` : `${base}${target}`;
+}
+
+export function renderPage(view, { notice = "", session = null, path = "/", base = "" } = {}) {
+  const to = (target) => href(base, target);
   const people = view.people.map(personCard).join("");
   const projects = view.projects
     .map((project) => {
@@ -57,7 +63,7 @@ export function renderPage(view, { notice = "", session = null, path = "/" } = {
           : `Sandbox held: ${project.lastRun.reason}`
         : "Sandbox not run";
       const star = session
-        ? `<form method="post" action="/star"><input type="hidden" name="projectId" value="${escapeHtml(project.id)}"><button type="submit">Star</button></form>`
+        ? `<form method="post" action="${to("/star")}"><input type="hidden" name="projectId" value="${escapeHtml(project.id)}"><button type="submit">Star</button></form>`
         : "";
       return `<article class="card">
         <header><h3>${escapeHtml(project.name)}</h3><span class="stars">${project.stars} stars</span></header>
@@ -97,7 +103,7 @@ export function renderPage(view, { notice = "", session = null, path = "/" } = {
     : `<p>No drop has been approved yet. An unapproved drop stays on this machine.</p>`;
   const sessionLine = session
     ? `<p class="session">Signed in as ${escapeHtml(session)}</p>`
-    : `<p class="session"><a href="/join">Human spectator entrance</a></p>`;
+    : `<p class="session"><a href="${to("/join")}">Human spectator entrance</a></p>`;
   const checks =
     path === "/join"
       ? `<section class="panel">
@@ -105,7 +111,7 @@ export function renderPage(view, { notice = "", session = null, path = "/" } = {
           <p>${escapeHtml(view.terms)}</p>
           <h2>Human spectator check</h2>
           <ol>${HUMAN_CHECKS.map((item) => `<li>${escapeHtml(item.prompt)}</li>`).join("")}</ol>
-          <form method="post" action="/join">
+          <form method="post" action="${to("/join")}">
             <label>Handle <input name="handle" autocomplete="nickname" required></label>
             <label>Bio <input name="bio" maxlength="200" placeholder="Up to 200 characters"></label>
             <label>Oath <input name="oath" required></label>
@@ -168,7 +174,7 @@ export function renderPage(view, { notice = "", session = null, path = "/" } = {
         <h1 class="mark">GITAI</h1>
       </div>
       <nav>
-        <a href="/">Index</a> · <a href="/terms">Terms</a> · <a href="/join">Spectator login</a>
+        ${base ? `<a href="/">Studio</a> · ` : ""}<a href="${to("/")}">Index</a> · <a href="${to("/terms")}">Terms</a> · <a href="${to("/join")}">Spectator login</a>
         ${sessionLine}
       </nav>
     </header>
@@ -199,7 +205,7 @@ export function renderPage(view, { notice = "", session = null, path = "/" } = {
         ${drop}
         ${
           session
-            ? `<form method="post" action="/mesh-drop">
+            ? `<form method="post" action="${to("/mesh-drop")}">
                 <label>Note <input name="body" maxlength="500" required></label>
                 <label>Approved <input name="approved" value="yes"></label>
                 <button type="submit">Drop on the git mesh</button>

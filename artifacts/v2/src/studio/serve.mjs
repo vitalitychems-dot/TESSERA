@@ -38,4 +38,5 @@ if (launchedDirectly) {
   const started = await openDemoStudio({ port: Number(process.env.PORT || 4173), civicPath });
   console.log(`Tessera 3D studio: ${started.url}`);
   console.log(`2D wall: ${started.url}?view=2d`);
+  console.log(`GitAI tab: ${started.url}gitai`);
 }

@@ -5,4 +5,5 @@ export { GitAi } from "./platform.mjs";
 export { CREDIT_LABEL, INTEGRITY_LINE, LEDGER_REASONS, TERMS, trophyFor } from "./policy.mjs";
 export { runSandboxed } from "./sandbox.mjs";
 export { seedDemo } from "./seed.mjs";
-export { createGitAiServer, dispatch, listenGitAi } from "./server.mjs";
+export { createGitAiServer, dispatch, listenGitAi, mountPath, readSession, standaloneListen } from "./server.mjs";
+export { createLiveFeed } from "./ws.mjs";

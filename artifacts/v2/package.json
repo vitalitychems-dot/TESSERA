@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "check": "node src/check-protocol.mjs",
-    "studio": "node src/studio/serve.mjs",
+    "studio": "node --experimental-strip-types --disable-warning=ExperimentalWarning src/studio/serve.mjs",
     "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test --test-reporter=spec test/*.test.mjs"
   },
   "dependencies": {

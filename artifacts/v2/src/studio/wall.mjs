@@ -2,7 +2,8 @@
  * Studio page: 3D floor by default, 2D task wall as a toggle.
  * Clean-room board. No Minecraft client.
  */
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
+import { connect as netConnect } from "node:net";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, normalize, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,6 +16,9 @@ import { createForeman } from "./task-graph.mjs";
 import { createMonitor } from "./worker-stream.mjs";
 import { buildWorld, readBuildLog } from "./world.mjs";
 import { reviewRequest } from "../hyb011-denylist.mjs";
+import { dispatch, mountPath, readSession } from "../../../gitai/src/server.mjs";
+import { seedDemo } from "../../../gitai/src/seed.mjs";
+import { createLiveFeed } from "../../../gitai/src/ws.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -173,7 +177,8 @@ export function renderStudio(state, options = {}) {
     .task-card, .desk { background: #fffdf8; border: 1px solid #d9d0c1; padding: 12px; min-width: 140px; }
     .lamp { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #7d9a72; }
     .lamp[data-lamp="busy"] { background: #e0a045; }
-    #view-toggle { display: inline-block; margin-top: 12px; color: #6b3e22; }
+    .studio-tabs { display: flex; gap: 16px; align-items: center; margin-top: 12px; }
+    .studio-tabs a, #view-toggle { color: #6b3e22; }
     #vote-panel, #community, #shipments { margin-top: 16px; }
     #vote-panel h2, #community h2, #shipments h2, #vote-panel h3 { font-size: 1.05rem; margin: 0 0 8px; }
     .proposal, .neighborhood, .rule, .shipment { background: #fffdf8; border: 1px solid #d9d0c1; padding: 8px; margin: 6px 0; }
@@ -188,7 +193,7 @@ export function renderStudio(state, options = {}) {
 <body data-mode="${view}">
   <main>
   <h1>${view === "3d" ? "Studio floor" : "Task wall"}</h1>
-  ${toggle}
+  <nav class="studio-tabs"><a id="gitai-tab" href="/gitai">GitAI</a>${toggle}</nav>
   ${renderCivic(civic)}
   <form id="goal-form">
     <label for="goal">Goal</label>
@@ -231,6 +236,53 @@ export function renderStudio(state, options = {}) {
 </html>`;
 }
 
+function proxyGitAi(req, res, upstream, suffix) {
+  const target = new URL(upstream);
+  const headers = { ...req.headers, host: target.host };
+  delete headers.connection;
+  const out = httpRequest(
+    {
+      hostname: target.hostname,
+      port: target.port,
+      method: req.method,
+      path: suffix,
+      headers,
+    },
+    (up) => {
+      const responseHeaders = { ...up.headers };
+      delete responseHeaders["transfer-encoding"];
+      delete responseHeaders.connection;
+      res.writeHead(up.statusCode ?? 502, responseHeaders);
+      up.pipe(res);
+    },
+  );
+  out.on("error", () => {
+    if (!res.headersSent) {
+      res.writeHead(502, { "content-type": "text/plain; charset=utf-8" });
+      res.end("GitAI backend is not answering.");
+    }
+  });
+  req.pipe(out);
+}
+
+function proxyUpgrade(req, socket, head, upstream, path) {
+  const target = new URL(upstream);
+  const out = netConnect(Number(target.port), target.hostname, () => {
+    const lines = [`GET ${path} HTTP/1.1`, `Host: ${target.host}`];
+    for (const [key, value] of Object.entries(req.headers)) {
+      if (key.toLowerCase() === "host") continue;
+      const values = Array.isArray(value) ? value : [value];
+      for (const item of values) lines.push(`${key}: ${item}`);
+    }
+    lines.push("", "");
+    out.write(lines.join("\r\n"));
+    if (head?.length) out.write(head);
+    socket.pipe(out);
+    out.pipe(socket);
+  });
+  out.on("error", () => socket.destroy());
+}
+
 function readBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -254,6 +306,15 @@ export function listenStudio(studio = createStudio(), options = {}) {
   const shipRepoDir = options.shipRepoDir ?? null;
   const shipRunner = options.shipRunner ?? null;
   const shipForeman = studio.foreman ?? options.foreman ?? null;
+  const gitaiUpstream = options.gitaiUpstream ?? process.env.GITAI_UPSTREAM ?? "";
+  let gitai = options.gitai ?? null;
+  let gitaiFeed = null;
+
+  function gitaiBackend() {
+    if (!gitai) gitai = seedDemo();
+    if (!gitaiFeed) gitaiFeed = createLiveFeed();
+    return { gitai, feed: gitaiFeed };
+  }
 
   async function materializeShip(proposalId) {
     if (!shipRepoDir) throw new Error("shipping is not configured");
@@ -313,6 +374,37 @@ export function listenStudio(studio = createStudio(), options = {}) {
       return;
     }
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
+    const mounted = mountPath(url.pathname, "/gitai");
+    if (mounted) {
+      const suffix = `${mounted}${url.search}`;
+      if (gitaiUpstream && req.method === "GET" && mounted === "/") {
+        const src = gitaiUpstream.replace(/\/$/, "");
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+        res.end(
+          `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>GitAI</title><style>html,body,iframe{margin:0;height:100%;width:100%;border:0}</style></head><body><iframe id="gitai-frame" title="GitAI" src="${src}/"></iframe></body></html>`,
+        );
+        return;
+      }
+      if (gitaiUpstream) {
+        proxyGitAi(req, res, gitaiUpstream, suffix);
+        return;
+      }
+      const raw = req.method === "GET" || req.method === "HEAD" ? "" : await readBody(req);
+      const backend = gitaiBackend();
+      const result = dispatch(backend.gitai, {
+        method: req.method,
+        url: suffix,
+        raw,
+        form: new URLSearchParams(String(req.headers["content-type"] ?? "").includes("json") ? "" : raw),
+        contentType: req.headers["content-type"] ?? "",
+        session: readSession(req.headers.cookie) || req.headers["x-gitai-handle"] || null,
+        base: "/gitai",
+      });
+      if (req.method !== "GET" && req.method !== "HEAD" && result.status < 400) backend.feed.broadcast(backend.gitai.view());
+      res.writeHead(result.status, result.headers);
+      res.end(result.body);
+      return;
+    }
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
       const view = url.searchParams.get("view") === "2d" ? "2d" : "3d";
       res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
@@ -438,10 +530,19 @@ export function listenStudio(studio = createStudio(), options = {}) {
     res.end(JSON.stringify({ error: "not found" }));
   });
 
-  server.on("upgrade", (req, socket) => {
+  server.on("upgrade", (req, socket, head) => {
     const path = (req.url ?? "").split("?")[0];
     if (!reviewRequest({ url: req.url ?? "/" }).allowed) {
       socket.destroy();
+      return;
+    }
+    if (path === "/gitai/api/live") {
+      if (gitaiUpstream) {
+        proxyUpgrade(req, socket, head, gitaiUpstream, "/api/live");
+        return;
+      }
+      const backend = gitaiBackend();
+      if (!backend.feed.accept(req, socket, backend.gitai)) socket.destroy();
       return;
     }
     if (path !== "/live" || !acceptWebSocket(req, socket)) {
@@ -471,6 +572,7 @@ export function listenStudio(studio = createStudio(), options = {}) {
     clearInterval(timer);
     for (const socket of clients) socket.destroy();
     clients.clear();
+    gitaiFeed?.close();
     return closeServer(callback);
   };
 
