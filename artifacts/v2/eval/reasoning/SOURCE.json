@@ -1,0 +1,22 @@
+{
+  "name": "GSM8K",
+  "full_name": "Grade School Math 8K",
+  "upstream": "https://github.com/openai/grade-school-math",
+  "commit": "3101c7d5072418e28b9008a6636bde82a006892c",
+  "commit_date": "2021-11-19T21:32:22Z",
+  "license": "MIT",
+  "license_copyright": "Copyright (c) 2021 OpenAI",
+  "license_file": "LICENSE",
+  "split": "test",
+  "split_path": "grade_school_math/data/test.jsonl",
+  "split_url": "https://github.com/openai/grade-school-math/blob/3101c7d5072418e28b9008a6636bde82a006892c/grade_school_math/data/test.jsonl",
+  "split_sha256": "3730d312f6e3440559ace48831e51066acaca737f6eabec99bccb9e4b3c39d14",
+  "split_lines": 1319,
+  "subset": {
+    "rule": "first 200 lines of the official test split, file order, indices 0 through 199 inclusive",
+    "n": 200,
+    "file": "gsm8k-test-200.jsonl",
+    "sha256": "bd70035c7acaf107b4e0d077c605a23c3d3a0acb4342e5bc60099e6ad9ff4284"
+  },
+  "metric": "exact_match_accuracy"
+}
