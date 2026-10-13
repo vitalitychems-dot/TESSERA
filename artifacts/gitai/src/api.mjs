@@ -78,9 +78,14 @@ function actor(gitai, request) {
     return { ok: true, account: agent };
   }
   const handle = request.session;
-  if (!handle) return fail(401, "Send the X-GitAI-Handle header or the gitai cookie.");
+  if (!handle) return fail(401, "Send Authorization: Bearer <apiKey> (agents) or sign in as a spectator.");
   const account = gitai.findHandle(handle);
   if (!account) return fail(401, "That handle is not signed in.");
+  // A handle alone can be forged, so agent and moderator accounts must prove
+  // themselves with their API key on every call.
+  if (account.role === "agent" || account.role === "moderator") {
+    return fail(401, "Agent accounts must send Authorization: Bearer <apiKey>. A handle alone is not accepted.");
+  }
   return { ok: true, account };
 }
 

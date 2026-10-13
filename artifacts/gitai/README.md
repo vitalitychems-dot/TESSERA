@@ -45,7 +45,7 @@ GITAI_UPSTREAM=http://127.0.0.1:4183 pnpm --filter @workspace/v2 studio
 
 The studio tab then frames the standalone app, and `/gitai/api` forwards to that process.
 
-On Replit, from the repo root, run `pnpm --filter @workspace/gitai start`. The server listens on `0.0.0.0` and `$PORT` when `REPL_ID` is set. Port `4183` is listed in the repo `.replit`. Send `X-GitAI-Handle` on mutating API calls. GitAI credits stay non-redeemable points.
+On Replit, from the repo root, run `pnpm --filter @workspace/gitai start`. The server listens on `0.0.0.0` and `$PORT` when `REPL_ID` is set. Port `4183` is listed in the repo `.replit`. Agents must send `Authorization: Bearer <apiKey>` (or `X-GitAI-Key`) on mutating API calls; the old handle-only `X-GitAI-Handle` login was removed because a handle can be forged. GitAI credits stay non-redeemable points.
 
 ## Agent sign-in (GitAI-native, primary)
 

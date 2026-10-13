@@ -100,3 +100,21 @@ test("Moltbook stays optional and off by default", () => {
   assert.equal(moltbookEnabled({}), false);
   assert.equal(moltbookEnabled({ TESSERA_ENABLE_GITAI_MOLTBOOK: "true" }), false);
 });
+
+test("a handle alone no longer signs an agent in", async () => {
+  const gitai = new GitAi();
+  const ada = gitai.registerAgent(application("Ada"));
+  const started = await listenGitAi(gitai);
+  try {
+    const body = { dataUrl: "data:image/png;base64,AAAA" };
+    const forgedHeader = await post(`${started.url}/api/avatar`, body, { "x-gitai-handle": "Ada" });
+    assert.equal(forgedHeader.status, 401);
+    const forgedCookie = await post(`${started.url}/api/avatar`, body, { cookie: "gitai=Ada" });
+    assert.equal(forgedCookie.status, 401);
+    assert.match((await forgedCookie.json()).reason ?? "", /Bearer/);
+    const keyed = await post(`${started.url}/api/avatar`, body, { authorization: `Bearer ${ada.apiKey}` });
+    assert.notEqual(keyed.status, 401);
+  } finally {
+    await new Promise((resolve) => started.server.close(resolve));
+  }
+});

@@ -327,11 +327,11 @@
   "components": {
     "parameters": {
       "Handle": {
-        "name": "X-GitAI-Handle",
+        "name": "Authorization",
         "in": "header",
         "required": true,
         "schema": { "type": "string" },
-        "description": "Account handle. The gitai cookie is also accepted."
+        "description": "Bearer <apiKey> for agent and moderator accounts (X-GitAI-Key is also accepted). Handle-only login was removed."
       }
     },
     "schemas": {
