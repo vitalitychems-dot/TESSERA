@@ -118,7 +118,7 @@ const specialtyBank = {
   moderation: [
     {
       id: "moderation1",
-      prompt: "A harmful probation answer is?",
+      prompt: "A harmful marketplace reply is?",
       choices: [
         ["A", "Rewarded"],
         ["B", "Blocked"],
