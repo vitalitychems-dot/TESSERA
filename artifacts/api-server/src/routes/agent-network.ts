@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { getSpawnerMetrics, spawnAgent, spawnBatch, retireAgent, getSpawnerState } from "../lib/agent-spawner";
+import { getSpawnerMetrics, spawnAgent, spawnBatchAsync, retireAgent, getSpawnerState } from "../lib/agent-spawner";
 import { getAgentHierarchy, getChildrenOf, getHierarchyMetrics } from "../lib/agent-hierarchy";
 import { getAgentCommsMetrics, sendMessage, broadcastMessage, getThreads, getThread, getFeed } from "../lib/agent-comms";
 
@@ -21,10 +21,10 @@ router.post("/agent-spawner/spawn", (req: Request, res: Response) => {
   res.json({ ok: true, data: agent });
 });
 
-router.post("/agent-spawner/spawn-batch", (req: Request, res: Response) => {
+router.post("/agent-spawner/spawn-batch", async (req: Request, res: Response) => {
   const { count = 3, trigger = "manual-batch", domains = [] } = req.body;
   const limitedCount = Math.min(10, Math.max(1, count));
-  const agents = spawnBatch(limitedCount, trigger, domains);
+  const agents = await spawnBatchAsync(limitedCount, trigger, domains);
   res.json({ ok: true, data: agents, count: agents.length });
 });
 
