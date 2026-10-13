@@ -28,13 +28,6 @@ const embeddingMetrics = {
   errors: 0,
 };
 
-function hashText(text: string): string {
-  let h = 0;
-  const t = text.slice(0, 500).toLowerCase().trim();
-  for (let i = 0; i < t.length; i++) h = ((h << 5) - h + t.charCodeAt(i)) | 0;
-  return `emb-${Math.abs(h).toString(36)}`;
-}
-
 const STOPWORDS = new Set([
   "the","a","an","and","or","but","if","then","of","to","in","on","at","by","for","with","as","is","are","was","were","be","been","being","have","has","had","do","does","did","this","that","these","those","it","its","from","so","not","no","yes","i","you","he","she","we","they","them","us","our","your","their","my","me"
 ]);
@@ -46,6 +39,13 @@ function hashStr(s: string, seed = 2166136261): number {
     h = Math.imul(h, 16777619);
   }
   return h >>> 0;
+}
+
+function hashText(text: string): string {
+  // Key on the whole normalized text (two FNV-1a seeds + length). The old key hashed only the
+  // first 500 chars into 32 bits, so texts sharing a 500-char prefix got each other's embedding.
+  const t = text.toLowerCase().trim();
+  return `emb-${hashStr(t).toString(36)}-${hashStr(t, 0x9e3779b9).toString(36)}-${t.length.toString(36)}`;
 }
 
 function tokenize(text: string): string[] {
