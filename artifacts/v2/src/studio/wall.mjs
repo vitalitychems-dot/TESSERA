@@ -15,6 +15,7 @@ import { applyShip } from "./ship.mjs";
 import { createForeman } from "./task-graph.mjs";
 import { createMonitor } from "./worker-stream.mjs";
 import { buildWorld, readBuildLog } from "./world.mjs";
+import { handleBrain } from "../brain/http.mjs";
 import { reviewRequest } from "../hyb011-denylist.mjs";
 import { dispatch, mountPath, readSession } from "../../../gitai/src/server.mjs";
 import { seedDemo } from "../../../gitai/src/seed.mjs";
@@ -374,6 +375,7 @@ export function listenStudio(studio = createStudio(), options = {}) {
       return;
     }
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
+    if (url.pathname === "/brain" || url.pathname === "/brain.js" || url.pathname.startsWith("/brain/")) { if (handleBrain(req, res, url)) return; }
     const mounted = mountPath(url.pathname, "/gitai");
     if (mounted) {
       const suffix = `${mounted}${url.search}`;
