@@ -29,6 +29,9 @@ jobs:
           --health-retries 12
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # v2-078 reads git history (git log -S); shallow clones lack it
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
         with:
           version: 11.25.0
