@@ -28,12 +28,15 @@ describe("global workspace broadcast (REA-06)", () => {
   it("returns null rather than repeating once every candidate has won", () => {
     publish("z", "gw-solo", { v: "only one" }, 97);
     const ids = new Set<string>();
-    let w;
-    while ((w = broadcastWinner()) !== null) {
+    let w: ReturnType<typeof broadcastWinner> = null;
+    for (let i = 0; i < 100; i++) {
+      w = broadcastWinner();
+      if (w === null) break;
       expect(ids.has(w.id)).toBe(false);
       ids.add(w.id);
-      if (ids.size > 5) break;
     }
     expect(ids.size).toBeGreaterThan(0);
+    expect(w).toBeNull();
+    expect(broadcastWinner()).toBeNull();
   });
 });
