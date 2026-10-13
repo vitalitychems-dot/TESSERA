@@ -1,0 +1,93 @@
+name: worker
+# Attempts a fix for one needs-agent issue inside the runner with a local open model (llama.cpp + Qwen2.5-Coder GGUF, cached).
+# OFF by default: runs only when repo variable TESSERA_WORKER == '1'. Opens a PR only; never merges.
+# Locked paths are refused, line cap applies, and the PR goes through moderator-lock + the normal gates.
+on:
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: worker
+  cancel-in-progress: false
+jobs:
+  select:
+    if: vars.TESSERA_WORKER == '1'
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      runs_on: ${{ steps.s.outputs.runs_on }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts/loop
+      - id: s
+        env:
+          TESSERA_MESH_RUNNERS: ${{ vars.TESSERA_MESH_RUNNERS || '0' }}
+          TESSERA_MESH_OWNER_OFF: ${{ vars.TESSERA_MESH_OWNER_OFF || '0' }}
+        run: node scripts/loop/runner-select.mjs >> "$GITHUB_OUTPUT"
+  fix:
+    needs: select
+    runs-on: ${{ fromJSON(needs.select.outputs.runs_on) }}
+    timeout-minutes: 40
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: read
+      models: read
+    env:
+      LLAMA_TAG: b11583
+      MODEL_URL: https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf
+      WORKER_LINE_CAP: ${{ vars.WORKER_LINE_CAP || '60' }}
+      WORKER_TRIES: "4"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ~/.cache/tessera-llm
+          key: llm-${{ env.LLAMA_TAG }}-qwen25coder15b-q4km
+      - name: Fetch llama.cpp + model (cache miss only)
+        run: |
+          mkdir -p ~/.cache/tessera-llm && cd ~/.cache/tessera-llm
+          [ -d "llama-$LLAMA_TAG" ] || curl -fsSL "https://github.com/ggml-org/llama.cpp/releases/download/$LLAMA_TAG/llama-$LLAMA_TAG-bin-ubuntu-x64.tar.gz" | tar xz
+          [ -f coder.gguf ] || curl -fsSL -o coder.gguf "$MODEL_URL"
+      - name: Pick the oldest needs-agent issue that has file and test lines
+        id: pick
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue list -R "$GITHUB_REPOSITORY" --label needs-agent --state open --json number,title,body \
+            -q '[.[] | select(.body | test("(?m)^file: ") and test("(?m)^test: "))] | sort_by(.number) | .[0] // empty' > issue.json
+          if [ -s issue.json ]; then echo "n=$(jq .number issue.json)" >> "$GITHUB_OUTPUT"; else echo "no workable issue"; fi
+      - name: Attempt fix (local model; GitHub Models if vars.WORKER_ENDPOINT is set)
+        if: steps.pick.outputs.n
+        id: fix
+        env:
+          WORKER_ENDPOINT: ${{ vars.WORKER_ENDPOINT }}
+          WORKER_MODEL: ${{ vars.WORKER_MODEL }}
+          WORKER_TOKEN: ${{ vars.WORKER_ENDPOINT && github.token || '' }}
+        run: |
+          if [ -z "$WORKER_ENDPOINT" ]; then
+            L=~/.cache/tessera-llm/llama-$LLAMA_TAG
+            LD_LIBRARY_PATH=$L $L/llama-server -m ~/.cache/tessera-llm/coder.gguf -c 4096 --port 8080 > llama.log 2>&1 &
+            for i in $(seq 90); do curl -sf localhost:8080/health >/dev/null && break; sleep 2; done
+          fi
+          set +e; node scripts/loop/worker.mjs . issue.json | tee result.json; rc=$?; set -e
+          echo "ok=$([ $rc = 0 ] && echo 1 || echo 0)" >> "$GITHUB_OUTPUT"
+      - name: Open PR (never merge)
+        if: steps.fix.outputs.ok == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          N: ${{ steps.pick.outputs.n }}
+        run: |
+          git config user.name vitalitychems-dot
+          git config user.email 332565808+vitalitychems-dot@users.noreply.github.com
+          git switch -c "worker/issue-$N-${GITHUB_RUN_ID}"
+          git commit -qam "worker: attempt fix for #$N"
+          git push -q origin HEAD
+          gh label create worker-pr --color 5319E7 2>/dev/null || true
+          gh pr create --label worker-pr --title "worker: fix #$N" --body "Automated attempt for #$N by worker.yml (local model, 0 paid tokens). Result: $(cat result.json). Needs moderator-lock + Security/Build/Moderator gates. Not auto-merged."
