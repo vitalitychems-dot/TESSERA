@@ -73,7 +73,7 @@ export function cacheFileForUrl(cacheDir, url, options = {}) {
 const CACHE_DIR_MODE = 0o700;
 const CACHE_FILE_MODE = 0o600;
 
-export function readCacheEntry(file) {
+export function readCacheEntry(file, deps = {}) {
   let raw;
   try {
     raw = readFileSync(file, "utf8");
@@ -81,7 +81,12 @@ export function readCacheEntry(file) {
     if (error?.code === "ENOENT") return { ok: false, reason: "miss" };
     return { ok: false, reason: "corrupt" };
   }
-  chmodSync(file, CACHE_FILE_MODE);
+  const chmodImpl = deps.chmodSync ?? chmodSync;
+  try {
+    chmodImpl(file, CACHE_FILE_MODE);
+  } catch (error) {
+    if (error?.code !== "EPERM") throw error;
+  }
   try {
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed.etag !== "string" || parsed.etag.length === 0) {
@@ -116,13 +121,20 @@ function isApiPath(arg) {
  * Cache only an exact allowlist. Anything else, including -f/-F/--raw-field/--field,
  * --jq/-q, -H, -i, and --input, must be passed to gh api unchanged.
  * Allowed: `<path>` or `<path> -X GET` in either order.
+ * Bare `graphql` and literal `{owner}` / `{repo}` placeholders pass through.
  * @returns {string|null}
  */
+function isPlaceholderPath(path) {
+  return path === "graphql" || path.includes("{owner}") || path.includes("{repo}");
+}
+
 export function cacheablePath(argv) {
-  if (argv.length === 1 && isApiPath(argv[0])) return argv[0];
-  if (argv.length === 3 && argv[0] === "-X" && argv[1] === "GET" && isApiPath(argv[2])) return argv[2];
-  if (argv.length === 3 && isApiPath(argv[0]) && argv[1] === "-X" && argv[2] === "GET") return argv[0];
-  return null;
+  let path = null;
+  if (argv.length === 1 && isApiPath(argv[0])) path = argv[0];
+  else if (argv.length === 3 && argv[0] === "-X" && argv[1] === "GET" && isApiPath(argv[2])) path = argv[2];
+  else if (argv.length === 3 && isApiPath(argv[0]) && argv[1] === "-X" && argv[2] === "GET") path = argv[0];
+  if (path === null || isPlaceholderPath(path)) return null;
+  return path;
 }
 
 /**
@@ -237,6 +249,7 @@ export async function runCli(argv, deps = {}) {
   const env = deps.env ?? process.env;
   const spawnImpl = deps.spawnImpl ?? spawnSync;
   const stdout = deps.stdout ?? process.stdout;
+  const stderr = deps.stderr ?? process.stderr;
   const pathArg = etagCacheEnabled(env) ? cacheablePath(argv) : null;
   if (!pathArg) {
     return spawnGhApi(spawnImpl, argv, env);

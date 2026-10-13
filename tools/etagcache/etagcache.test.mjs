@@ -325,6 +325,83 @@ test("reading a 0644 cache file tightens it to mode 0600", async () => {
   }
 });
 
+test("EPERM while tightening a cache file does not fail the read", () => {
+  const cacheDir = tempCache();
+  const file = cacheFileForUrl(cacheDir, ENDPOINT);
+  writeFileSync(file, JSON.stringify({ etag: "\"old\"", body: "OLD" }));
+  const stored = readCacheEntry(file, {
+    chmodSync() {
+      const error = new Error("operation not permitted");
+      error.code = "EPERM";
+      throw error;
+    },
+  });
+  assert.equal(stored.ok, true);
+  assert.equal(stored.etag, "\"old\"");
+  assert.equal(stored.body, "OLD");
+});
+
+test("flag on 304 hit writes the body to stdout and unchanged to stderr", async () => {
+  const cacheDir = tempCache();
+  const stdout = { written: "", write(chunk) { this.written += chunk; } };
+  const stderr = { written: "", write(chunk) { this.written += chunk; } };
+  let phase = "miss";
+  const deps = {
+    env: { [ENABLE_FLAG]: "1" },
+    cacheDir,
+    token: "ghs_plain_get",
+    stdout,
+    stderr,
+    spawnImpl: () => {
+      throw new Error("304 hit must not spawn gh");
+    },
+    request: async () => {
+      if (phase === "miss") {
+        return { status: 200, body: "CACHED-BODY", headers: { etag: "\"e1\"" } };
+      }
+      return { status: 304, body: "", headers: { etag: "\"e1\"" } };
+    },
+  };
+  const argv = ["repos/vitalitychems-dot/TESSERA/contents/"];
+  const first = await runCli(argv, deps);
+  assert.equal(first, 0);
+  assert.equal(stdout.written, "CACHED-BODY");
+  assert.equal(stderr.written, "");
+  phase = "hit";
+  stdout.written = "";
+  const second = await runCli(argv, deps);
+  assert.equal(second, 0);
+  assert.equal(stdout.written, "CACHED-BODY");
+  assert.equal(stderr.written, "unchanged\n");
+});
+
+test("flag on passes graphql and {owner}/{repo} placeholders through to gh api", async () => {
+  const cases = [
+    ["graphql"],
+    ["repos/{owner}/{repo}/contents/"],
+    ["repos/{owner}/{repo}"],
+    ["-X", "GET", "repos/{owner}/{repo}/contents/"],
+  ];
+  for (const argv of cases) {
+    const cacheDir = tempCache();
+    const spawned = [];
+    const code = await runCli(argv, {
+      env: { [ENABLE_FLAG]: "1" },
+      cacheDir,
+      spawnImpl: (cmd, args) => {
+        spawned.push([cmd, args]);
+        return { status: 0 };
+      },
+      request: async () => {
+        throw new Error(`${argv.join(" ")} must not use the cache`);
+      },
+    });
+    assert.equal(code, 0, argv.join(" "));
+    assert.deepEqual(spawned, [["gh", ["api", ...argv]]], argv.join(" "));
+    assert.deepEqual(readdirSync(cacheDir), [], argv.join(" "));
+  }
+});
+
 test("flag on passes -f, -F, --raw-field, --field, --jq, -q, -H, -i, and --input through to gh api", async () => {
   const path = "repos/vitalitychems-dot/TESSERA/contents/";
   const cases = [
