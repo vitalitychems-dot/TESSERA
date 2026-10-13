@@ -356,13 +356,19 @@ export async function revalidateStaleKnowledge(verifyFn: (fact: string) => Promi
       .orderBy(desc(distilledKnowledgeTable.confidence))
       .limit(10);
 
+    // Fire every verification at once so the LLM batcher's 2s debounce window
+    // coalesces them (and dedupes identical facts) into one flush, instead of
+    // awaiting a fresh window per fact. DB writes stay sequential.
+    const pending = staleFacts.filter(f => f.fact !== null);
+    const verdicts = await Promise.allSettled(pending.map(f => verifyFn(f.fact as string)));
+
     let revalidated = 0;
-    for (const fact of staleFacts) {
-      // Skip compressed rows (fact=null) — their text lives in the canonical store.
-      if (fact.fact === null) continue;
+    for (let i = 0; i < pending.length; i++) {
+      const fact = pending[i];
+      const verdict = verdicts[i];
       try {
-        const isValid = await verifyFn(fact.fact);
-        await verifyFact(fact.id, isValid);
+        if (verdict.status === "rejected") throw verdict.reason;
+        await verifyFact(fact.id, verdict.value);
         revalidated++;
       } catch {
         await db
