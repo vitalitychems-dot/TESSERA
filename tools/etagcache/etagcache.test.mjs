@@ -1,0 +1,632 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  ENABLE_FLAG,
+  OPEN_PR_LIST_PATH,
+  SCAN_ENDPOINTS,
+  cacheFileForUrl,
+  cachedGet,
+  etagCacheEnabled,
+  readCacheEntry,
+  runCli,
+} from "./etagcache.mjs";
+
+const ENDPOINT = "https://api.github.com/repos/vitalitychems-dot/TESSERA/contents/";
+
+function tempCache() {
+  return mkdtempSync(join(tmpdir(), "etagcache-"));
+}
+
+test("scan endpoints exclude the open-PR list cached by PR #295", () => {
+  assert.equal(SCAN_ENDPOINTS.length, 4);
+  for (const endpoint of SCAN_ENDPOINTS) {
+    assert.equal(endpoint.includes("/pulls"), false, endpoint);
+  }
+  assert.match(OPEN_PR_LIST_PATH, /\/pulls\?state=open/);
+});
+
+test("cache miss stores the ETag and body", async () => {
+  const cacheDir = tempCache();
+  const calls = [];
+  const result = await cachedGet({
+    url: ENDPOINT,
+    cacheDir,
+    env: { [ENABLE_FLAG]: "1" },
+    request: async (req) => {
+      calls.push(req);
+      return { status: 200, body: "{\"ok\":1}", headers: { etag: "\"e1\"" } };
+    },
+  });
+  assert.equal(result.unchanged, false);
+  assert.equal(result.status, 200);
+  assert.equal(result.body, "{\"ok\":1}");
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].headers["If-None-Match"], undefined);
+  const stored = readCacheEntry(cacheFileForUrl(cacheDir, ENDPOINT));
+  assert.equal(stored.ok, true);
+  assert.equal(stored.etag, "\"e1\"");
+  assert.equal(stored.body, "{\"ok\":1}");
+});
+
+test("304 returns the cached body and an unchanged marker", async () => {
+  const cacheDir = tempCache();
+  let phase = "miss";
+  const calls = [];
+  const request = async (req) => {
+    calls.push(req.headers["If-None-Match"] ?? null);
+    if (phase === "miss") {
+      return { status: 200, body: "{\"fresh\":true}", headers: { etag: "\"e1\"" } };
+    }
+    return { status: 304, body: "", headers: { etag: "\"e1\"" } };
+  };
+  const first = await cachedGet({ url: ENDPOINT, cacheDir, env: { [ENABLE_FLAG]: "1" }, request });
+  phase = "hit";
+  const second = await cachedGet({ url: ENDPOINT, cacheDir, env: { [ENABLE_FLAG]: "1" }, request });
+  assert.equal(first.unchanged, false);
+  assert.equal(second.status, 304);
+  assert.equal(second.unchanged, true);
+  assert.equal(second.body, "{\"fresh\":true}");
+  assert.deepEqual(calls, [null, "\"e1\""]);
+});
+
+test("etag cache is on unless TESSERA_ENABLE_ETAG_CACHE is 0, false, off or no (any case)", () => {
+  assert.equal(etagCacheEnabled({}), true);
+  for (const on of ["1", "true", "on", "yes", "", "2", "nope"]) {
+    assert.equal(etagCacheEnabled({ [ENABLE_FLAG]: on }), true, JSON.stringify(on));
+  }
+  for (const off of ["0", "false", "off", "no", "FALSE", "Off", "NO", " false ", "oFf"]) {
+    assert.equal(etagCacheEnabled({ [ENABLE_FLAG]: off }), false, JSON.stringify(off));
+  }
+});
+
+for (const off of ["0", "false", "OFF", "No"]) {
+  test(`TESSERA_ENABLE_ETAG_CACHE=${off} ignores a valid cached entry for the same URL`, async () => {
+    const cacheDir = tempCache();
+    const file = cacheFileForUrl(cacheDir, ENDPOINT);
+    const seed = JSON.stringify({ etag: "\"seeded\"", body: "CACHED" });
+    writeFileSync(file, seed);
+    const calls = [];
+    const result = await cachedGet({
+      url: ENDPOINT,
+      cacheDir,
+      env: { [ENABLE_FLAG]: off },
+      request: async (req) => {
+        calls.push(req.headers["If-None-Match"] ?? null);
+        return { status: 304, body: "", headers: { etag: "\"seeded\"" } };
+      },
+    });
+    assert.deepEqual(calls, [null]);
+    assert.notEqual(result.body, "CACHED");
+    assert.equal(readFileSync(file, "utf8"), seed);
+  });
+}
+
+test("control: the same seeded entry IS used when the flag is unset", async () => {
+  const cacheDir = tempCache();
+  const file = cacheFileForUrl(cacheDir, ENDPOINT);
+  writeFileSync(file, JSON.stringify({ etag: "\"seeded\"", body: "CACHED" }));
+  const calls = [];
+  const result = await cachedGet({
+    url: ENDPOINT, cacheDir, env: {}, request: async (req) => {
+      calls.push(req.headers["If-None-Match"] ?? null);
+      return { status: 304, body: "", headers: { etag: "\"seeded\"" } };
+    },
+  });
+  assert.deepEqual(calls, ["\"seeded\""]);
+  assert.equal(result.body, "CACHED");
+});
+
+test("unset flag uses the cache", async () => {
+  const cacheDir = tempCache();
+  const calls = [];
+  const result = await cachedGet({
+    url: ENDPOINT,
+    cacheDir,
+    env: {},
+    request: async (req) => {
+      calls.push(req.headers["If-None-Match"] ?? null);
+      return { status: 200, body: "LIVE", headers: { etag: "\"live\"" } };
+    },
+  });
+  assert.equal(result.unchanged, false);
+  assert.equal(result.body, "LIVE");
+  assert.deepEqual(calls, [null]);
+  const stored = readCacheEntry(cacheFileForUrl(cacheDir, ENDPOINT));
+  assert.equal(stored.ok, true);
+  assert.equal(stored.etag, "\"live\"");
+  assert.equal(stored.body, "LIVE");
+});
+
+test("TESSERA_ENABLE_ETAG_CACHE=0 opts out and does not touch the cache", async () => {
+  const cacheDir = tempCache();
+  const file = join(cacheDir, "seed.json");
+  writeFileSync(file, "{\"etag\":\"\\\"stale\\\"\",\"body\":\"CACHED\"}\n");
+  const before = statSync(file).mtimeMs;
+  const calls = [];
+  const result = await cachedGet({
+    url: ENDPOINT,
+    cacheDir,
+    env: { [ENABLE_FLAG]: "0" },
+    headers: { Accept: "application/vnd.github+json" },
+    request: async (req) => {
+      calls.push(req.headers);
+      return { status: 200, body: "LIVE", headers: { etag: "\"live\"" } };
+    },
+  });
+  assert.equal(result.unchanged, false);
+  assert.equal(result.body, "LIVE");
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0]["If-None-Match"], undefined);
+  assert.equal(calls[0].Accept, "application/vnd.github+json");
+  assert.equal(readFileSync(file, "utf8"), "{\"etag\":\"\\\"stale\\\"\",\"body\":\"CACHED\"}\n");
+  assert.equal(statSync(file).mtimeMs, before);
+  assert.deepEqual(readdirSync(cacheDir), ["seed.json"]);
+});
+
+test("corrupt cache falls back to a full read and is rewritten", async () => {
+  const cacheDir = tempCache();
+  const cases = ["{", "{\"etag\":1,\"body\":\"x\"}", "{\"etag\":\"\\\"e\\\"\"}", ""];
+  for (const garbage of cases) {
+    const dir = tempCache();
+    const file = cacheFileForUrl(dir, ENDPOINT);
+    writeFileSync(file, garbage);
+    const calls = [];
+    const result = await cachedGet({
+      url: ENDPOINT,
+      cacheDir: dir,
+      env: { [ENABLE_FLAG]: "1" },
+      request: async (req) => {
+        calls.push(req.headers["If-None-Match"] ?? null);
+        return { status: 200, body: "RECOVERED", headers: { ETag: "\"new\"" } };
+      },
+    });
+    assert.equal(result.unchanged, false);
+    assert.equal(result.body, "RECOVERED");
+    assert.deepEqual(calls, [null]);
+    const stored = readCacheEntry(file);
+    assert.equal(stored.ok, true);
+    assert.equal(stored.etag, "\"new\"");
+    assert.equal(stored.body, "RECOVERED");
+  }
+});
+
+test("a different token is a cache miss and the raw token is not stored", async () => {
+  const cacheDir = tempCache();
+  const tokenA = "ghs_cache_key_alpha";
+  const tokenB = "ghs_cache_key_beta";
+  const headers = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
+  const calls = [];
+  const request = async (req) => {
+    calls.push(req.headers["If-None-Match"] ?? null);
+    if (calls.length === 1) return { status: 200, body: "FOR-A", headers: { etag: "\"ea\"" } };
+    if (calls.length === 2) return { status: 304, body: "", headers: { etag: "\"ea\"" } };
+    return { status: 200, body: "FOR-B", headers: { etag: "\"eb\"" } };
+  };
+  const env = { [ENABLE_FLAG]: "1" };
+  const first = await cachedGet({ url: ENDPOINT, cacheDir, env, token: tokenA, headers, request });
+  const again = await cachedGet({ url: ENDPOINT, cacheDir, env, token: tokenA, headers, request });
+  const other = await cachedGet({ url: ENDPOINT, cacheDir, env, token: tokenB, headers, request });
+  assert.equal(first.unchanged, false);
+  assert.equal(first.body, "FOR-A");
+  assert.equal(again.unchanged, true);
+  assert.equal(again.body, "FOR-A");
+  assert.equal(other.unchanged, false);
+  assert.equal(other.body, "FOR-B");
+  assert.deepEqual(calls, [null, "\"ea\"", null]);
+  const fileA = cacheFileForUrl(cacheDir, ENDPOINT, { token: tokenA, headers });
+  const fileB = cacheFileForUrl(cacheDir, ENDPOINT, { token: tokenB, headers });
+  assert.notEqual(fileA, fileB);
+  const stored = readdirSync(cacheDir).map((name) => `${name}\n${readFileSync(join(cacheDir, name), "utf8")}`).join("\n");
+  assert.equal(stored.includes(tokenA), false);
+  assert.equal(stored.includes(tokenB), false);
+});
+
+test("a different Accept header is a cache miss", async () => {
+  const cacheDir = tempCache();
+  const token = "ghs_cache_key_same";
+  const version = { "X-GitHub-Api-Version": "2022-11-28" };
+  const jsonHeaders = { Accept: "application/vnd.github+json", ...version };
+  const diffHeaders = { Accept: "application/vnd.github.diff", ...version };
+  const calls = [];
+  const request = async (req) => {
+    calls.push(req.headers["If-None-Match"] ?? null);
+    if (calls.length === 1) return { status: 200, body: "JSON-BODY", headers: { etag: "\"ej\"" } };
+    return { status: 200, body: "DIFF-BODY", headers: { etag: "\"ed\"" } };
+  };
+  const env = { [ENABLE_FLAG]: "1" };
+  const first = await cachedGet({ url: ENDPOINT, cacheDir, env, token, headers: jsonHeaders, request });
+  const other = await cachedGet({ url: ENDPOINT, cacheDir, env, token, headers: diffHeaders, request });
+  assert.equal(first.body, "JSON-BODY");
+  assert.equal(other.unchanged, false);
+  assert.equal(other.body, "DIFF-BODY");
+  assert.deepEqual(calls, [null, null]);
+  assert.notEqual(
+    cacheFileForUrl(cacheDir, ENDPOINT, { token, headers: jsonHeaders }),
+    cacheFileForUrl(cacheDir, ENDPOINT, { token, headers: diffHeaders }),
+  );
+  const stored = readdirSync(cacheDir).map((name) => readFileSync(join(cacheDir, name), "utf8")).join("\n");
+  assert.equal(stored.includes(token), false);
+});
+
+test("a different X-GitHub-Api-Version is a cache miss", async () => {
+  const cacheDir = tempCache();
+  const token = "ghs_cache_key_same";
+  const v1 = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
+  const v2 = { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2026-01-01" };
+  const calls = [];
+  const request = async (req) => {
+    calls.push(req.headers["If-None-Match"] ?? null);
+    return { status: 200, body: `body-${calls.length}`, headers: { etag: `"e${calls.length}"` } };
+  };
+  const env = { [ENABLE_FLAG]: "1" };
+  await cachedGet({ url: ENDPOINT, cacheDir, env, token, headers: v1, request });
+  const other = await cachedGet({ url: ENDPOINT, cacheDir, env, token, headers: v2, request });
+  assert.equal(other.unchanged, false);
+  assert.equal(other.body, "body-2");
+  assert.deepEqual(calls, [null, null]);
+});
+
+test("cache files are mode 0600 and the cache directory is mode 0700", async () => {
+  const previous = process.umask(0);
+  try {
+    const parent = tempCache();
+    const cacheDir = join(parent, "etag");
+    mkdirSync(cacheDir, { mode: 0o755 });
+    await cachedGet({
+      url: ENDPOINT,
+      cacheDir,
+      env: { [ENABLE_FLAG]: "1" },
+      request: async () => ({ status: 200, body: "{\"ok\":1}", headers: { etag: "\"e1\"" } }),
+    });
+    const file = cacheFileForUrl(cacheDir, ENDPOINT);
+    assert.equal(statSync(file).mode & 0o777, 0o600);
+    assert.equal(statSync(cacheDir).mode & 0o777, 0o700);
+  } finally {
+    process.umask(previous);
+  }
+});
+
+test("flag on with -X other than GET bypasses the cache", async () => {
+  const cacheDir = tempCache();
+  const spawned = [];
+  const argv = ["-X", "POST", "repos/vitalitychems-dot/TESSERA/contents/"];
+  const code = await runCli(argv, {
+    env: { [ENABLE_FLAG]: "1" },
+    cacheDir,
+    spawnImpl: (cmd, args) => {
+      spawned.push([cmd, args]);
+      return { status: 0 };
+    },
+    request: async () => {
+      throw new Error("non-GET must not use the cache");
+    },
+  });
+  assert.equal(code, 0);
+  assert.deepEqual(spawned, [["gh", ["api", ...argv]]]);
+  assert.deepEqual(readdirSync(cacheDir), []);
+});
+
+test("flag on with -X GET still uses the cache", async () => {
+  const cacheDir = tempCache();
+  const spawned = [];
+  let calls = 0;
+  const stdout = { written: "", write(chunk) { this.written += chunk; } };
+  const urls = [];
+  const code = await runCli(["-X", "GET", "repos/vitalitychems-dot/TESSERA/contents/"], {
+    env: { [ENABLE_FLAG]: "1" },
+    cacheDir,
+    token: "ghs_plain_get",
+    stdout,
+    stderr: { write() {} },
+    spawnImpl: (cmd, args) => {
+      spawned.push([cmd, args]);
+      return { status: 0 };
+    },
+    request: async (req) => {
+      calls += 1;
+      urls.push(req.url);
+      return { status: 200, body: "CACHED-GET", headers: { etag: "\"eg\"" } };
+    },
+  });
+  assert.equal(code, 0);
+  assert.equal(calls, 1);
+  assert.deepEqual(urls, [ENDPOINT]);
+  assert.deepEqual(spawned, []);
+  assert.equal(stdout.written, "CACHED-GET");
+  assert.equal(statSync(cacheFileForUrl(cacheDir, ENDPOINT, {
+    token: "ghs_plain_get",
+  })).mode & 0o777, 0o600);
+});
+
+test("flag on caches path then -X GET", async () => {
+  const cacheDir = tempCache();
+  const urls = [];
+  const stdout = { written: "", write(chunk) { this.written += chunk; } };
+  const code = await runCli(["repos/vitalitychems-dot/TESSERA/contents/", "-X", "GET"], {
+    env: { [ENABLE_FLAG]: "1" },
+    cacheDir,
+    token: "ghs_plain_get",
+    stdout,
+    stderr: { write() {} },
+    spawnImpl: () => {
+      throw new Error("path -X GET must not spawn gh");
+    },
+    request: async (req) => {
+      urls.push(req.url);
+      return { status: 200, body: "CACHED-GET", headers: { etag: "\"eg\"" } };
+    },
+  });
+  assert.equal(code, 0);
+  assert.deepEqual(urls, [ENDPOINT]);
+  assert.equal(stdout.written, "CACHED-GET");
+});
+
+test("reading a 0644 cache file tightens it to mode 0600", async () => {
+  const previous = process.umask(0);
+  try {
+    const cacheDir = tempCache();
+    const file = cacheFileForUrl(cacheDir, ENDPOINT);
+    writeFileSync(file, JSON.stringify({ etag: "\"old\"", body: "OLD" }), { mode: 0o644 });
+    assert.equal(statSync(file).mode & 0o777, 0o644);
+    const result = await cachedGet({
+      url: ENDPOINT,
+      cacheDir,
+      env: { [ENABLE_FLAG]: "1" },
+      request: async (req) => {
+        assert.equal(req.headers["If-None-Match"], "\"old\"");
+        return { status: 304, body: "", headers: { etag: "\"old\"" } };
+      },
+    });
+    assert.equal(result.unchanged, true);
+    assert.equal(result.body, "OLD");
+    assert.equal(statSync(file).mode & 0o777, 0o600);
+  } finally {
+    process.umask(previous);
+  }
+});
+
+test("EPERM while tightening a cache file we own does not fail the read", () => {
+  const cacheDir = tempCache();
+  const file = cacheFileForUrl(cacheDir, ENDPOINT);
+  writeFileSync(file, JSON.stringify({ etag: "\"old\"", body: "OLD" }));
+  const stored = readCacheEntry(file, {
+    chmodSync() {
+      const error = new Error("operation not permitted");
+      error.code = "EPERM";
+      throw error;
+    },
+  });
+  assert.equal(stored.ok, true);
+  assert.equal(stored.etag, "\"old\"");
+  assert.equal(stored.body, "OLD");
+});
+
+test("EPERM on read is a cache miss and does not serve the body", async () => {
+  const cacheDir = tempCache();
+  const file = cacheFileForUrl(cacheDir, ENDPOINT);
+  writeFileSync(file, JSON.stringify({ etag: "\"old\"", body: "OTHER-USER" }));
+  const readDeps = {
+    readFileSync() {
+      const error = new Error("operation not permitted");
+      error.code = "EPERM";
+      throw error;
+    },
+  };
+  const stored = readCacheEntry(file, readDeps);
+  assert.equal(stored.ok, false);
+  assert.equal(stored.reason, "miss");
+  assert.equal(stored.body, undefined);
+  const calls = [];
+  const result = await cachedGet({
+    url: ENDPOINT,
+    cacheDir,
+    env: {},
+    readDeps,
+    request: async (req) => {
+      calls.push(req.headers["If-None-Match"] ?? null);
+      return { status: 200, body: "LIVE", headers: { etag: "\"live\"" } };
+    },
+  });
+  assert.equal(result.unchanged, false);
+  assert.equal(result.body, "LIVE");
+  assert.deepEqual(calls, [null]);
+  assert.equal(result.body.includes("OTHER-USER"), false);
+});
+
+test("a cache file owned by another user is a miss and is never served", async () => {
+  const cacheDir = tempCache();
+  const file = cacheFileForUrl(cacheDir, ENDPOINT);
+  writeFileSync(file, JSON.stringify({ etag: "\"old\"", body: "OTHER-USER" }), { mode: 0o644 });
+  const readDeps = {
+    statSync() {
+      return { uid: 65534 };
+    },
+    getuid() {
+      return 1000;
+    },
+  };
+  const stored = readCacheEntry(file, readDeps);
+  assert.equal(stored.ok, false);
+  assert.equal(stored.reason, "miss");
+  assert.equal(stored.body, undefined);
+  const calls = [];
+  const result = await cachedGet({
+    url: ENDPOINT,
+    cacheDir,
+    env: {},
+    readDeps,
+    request: async (req) => {
+      calls.push(req.headers["If-None-Match"] ?? null);
+      return { status: 200, body: "LIVE", headers: { etag: "\"live\"" } };
+    },
+  });
+  assert.equal(result.body, "LIVE");
+  assert.equal(result.unchanged, false);
+  assert.deepEqual(calls, [null]);
+  assert.equal(result.body.includes("OTHER-USER"), false);
+});
+
+test("flag on 304 hit writes the body to stdout and unchanged to stderr", async () => {
+  const cacheDir = tempCache();
+  const stdout = { written: "", write(chunk) { this.written += chunk; } };
+  const stderr = { written: "", write(chunk) { this.written += chunk; } };
+  let phase = "miss";
+  const deps = {
+    env: { [ENABLE_FLAG]: "1" },
+    cacheDir,
+    token: "ghs_plain_get",
+    stdout,
+    stderr,
+    spawnImpl: () => {
+      throw new Error("304 hit must not spawn gh");
+    },
+    request: async () => {
+      if (phase === "miss") {
+        return { status: 200, body: "CACHED-BODY", headers: { etag: "\"e1\"" } };
+      }
+      return { status: 304, body: "", headers: { etag: "\"e1\"" } };
+    },
+  };
+  const argv = ["repos/vitalitychems-dot/TESSERA/contents/"];
+  const first = await runCli(argv, deps);
+  assert.equal(first, 0);
+  assert.equal(stdout.written, "CACHED-BODY");
+  assert.equal(stderr.written, "");
+  phase = "hit";
+  stdout.written = "";
+  const second = await runCli(argv, deps);
+  assert.equal(second, 0);
+  assert.equal(stdout.written, "CACHED-BODY");
+  assert.equal(stderr.written, "unchanged\n");
+});
+
+test("flag on passes graphql, /graphql, and {owner}/{repo}/{branch} placeholders through to gh api", async () => {
+  const cases = [
+    ["graphql"],
+    ["/graphql"],
+    ["-X", "GET", "/graphql"],
+    ["/graphql", "-X", "GET"],
+    ["repos/{owner}/{repo}/contents/"],
+    ["repos/{owner}/{repo}"],
+    ["-X", "GET", "repos/{owner}/{repo}/contents/"],
+    ["repos/{owner}/{repo}/branches/{branch}"],
+    ["repos/vitalitychems-dot/TESSERA/commits/{branch}"],
+    ["-X", "GET", "repos/{owner}/{repo}/git/ref/heads/{branch}"],
+  ];
+  for (const argv of cases) {
+    const cacheDir = tempCache();
+    const spawned = [];
+    const code = await runCli(argv, {
+      env: { [ENABLE_FLAG]: "1" },
+      cacheDir,
+      spawnImpl: (cmd, args) => {
+        spawned.push([cmd, args]);
+        return { status: 0 };
+      },
+      request: async () => {
+        throw new Error(`${argv.join(" ")} must not use the cache`);
+      },
+    });
+    assert.equal(code, 0, argv.join(" "));
+    assert.deepEqual(spawned, [["gh", ["api", ...argv]]], argv.join(" "));
+    assert.deepEqual(readdirSync(cacheDir), [], argv.join(" "));
+  }
+});
+
+test("flag on passes -f, -F, --raw-field, --field, --jq, -q, -H, -i, and --input through to gh api", async () => {
+  const path = "repos/vitalitychems-dot/TESSERA/contents/";
+  const cases = [
+    ["-f", "title=hello", path],
+    ["-F", "body=@note.txt", path],
+    ["--raw-field", "title=hello", path],
+    ["--field", "body=@note.txt", path],
+    [path, "--jq", ".sha"],
+    [path, "-q", ".sha"],
+    ["-H", "Accept: application/vnd.github.diff", path],
+    ["-i", path],
+    ["--input", "body.json", path],
+  ];
+  for (const argv of cases) {
+    const cacheDir = tempCache();
+    const spawned = [];
+    const code = await runCli(argv, {
+      env: { [ENABLE_FLAG]: "1" },
+      cacheDir,
+      spawnImpl: (cmd, args) => {
+        spawned.push([cmd, args]);
+        return { status: 0 };
+      },
+      request: async () => {
+        throw new Error(`${argv[0]} must not use the cache`);
+      },
+    });
+    assert.equal(code, 0, argv.join(" "));
+    assert.deepEqual(spawned, [["gh", ["api", ...argv]]], argv.join(" "));
+    assert.deepEqual(readdirSync(cacheDir), [], argv.join(" "));
+  }
+});
+
+test("flag on with --paginate bypasses the cache", async () => {
+  const cacheDir = tempCache();
+  const spawned = [];
+  const argv = ["repos/vitalitychems-dot/TESSERA/commits?per_page=100", "--paginate"];
+  const code = await runCli(argv, {
+    env: { [ENABLE_FLAG]: "1" },
+    cacheDir,
+    spawnImpl: (cmd, args) => {
+      spawned.push([cmd, args]);
+      return { status: 0 };
+    },
+    request: async () => {
+      throw new Error("paginate must not use the cache");
+    },
+  });
+  assert.equal(code, 0);
+  assert.deepEqual(spawned, [["gh", ["api", ...argv]]]);
+  assert.deepEqual(readdirSync(cacheDir), []);
+});
+
+test("unset flag CLI uses the cache for an allowlisted path", async () => {
+  const cacheDir = tempCache();
+  const stdout = { written: "", write(chunk) { this.written += chunk; } };
+  const urls = [];
+  const code = await runCli(["repos/vitalitychems-dot/TESSERA/contents/"], {
+    env: {},
+    cacheDir,
+    token: "ghs_plain_get",
+    stdout,
+    stderr: { write() {} },
+    spawnImpl: () => {
+      throw new Error("unset flag must not spawn gh for an allowlisted path");
+    },
+    request: async (req) => {
+      urls.push(req.url);
+      return { status: 200, body: "FROM-CACHE-PATH", headers: { etag: "\"eu\"" } };
+    },
+  });
+  assert.equal(code, 0);
+  assert.deepEqual(urls, [ENDPOINT]);
+  assert.equal(stdout.written, "FROM-CACHE-PATH");
+});
+
+test("TESSERA_ENABLE_ETAG_CACHE=0 CLI spawns gh api with the same arguments", async () => {
+  const spawned = [];
+  const code = await runCli(["repos/vitalitychems-dot/TESSERA/contents/"], {
+    env: { [ENABLE_FLAG]: "0" },
+    spawnImpl: (cmd, args) => {
+      spawned.push([cmd, args]);
+      return { status: 0 };
+    },
+    request: async () => {
+      throw new Error("passthrough must not call the cache transport");
+    },
+  });
+  assert.equal(code, 0);
+  assert.deepEqual(spawned, [[
+    "gh",
+    ["api", "repos/vitalitychems-dot/TESSERA/contents/"],
+  ]]);
+});

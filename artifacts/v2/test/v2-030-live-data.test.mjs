@@ -103,3 +103,40 @@ test("token bucket spaces requests to the source's pace", async () => {
   for (let i = 0; i < 3; i++) { await sh.runOnce(); t += 1; }
   assert.ok(sleeps.filter((s) => s >= 3000).length >= 2, JSON.stringify(sleeps));
 });
+
+test("syncTo: content-addressed delta skips present files and repairs truncated ones", async () => {
+  const { writeFileSync: w, statSync: st } = await import("node:fs");
+  let t = Date.parse("2026-10-13T00:00:00Z");
+  const gw = tmp(), node = tmp();
+  const sh = createShepherd({ transport: fixtureTransport(), cacheDir: gw, keys: newKeys(), now: () => t, sleep: async () => {} });
+  await sh.runOnce();
+  const n1 = syncTo(gw, node);
+  assert.ok(n1 > 0);
+  assert.equal(syncTo(gw, node), 0);
+  const f = readdirSync(join(node, "snapshots"))[0];
+  w(join(node, "snapshots", f), "x");
+  assert.equal(syncTo(gw, node), 1, "size-mismatched file is re-sent");
+  assert.equal(st(join(node, "snapshots", f)).size, st(join(gw, "snapshots", f)).size);
+  t += 86400e3; await sh.runOnce();
+  assert.equal(syncTo(gw, node), n1, "only the new round is sent");
+});
+
+test("syncTo: same-size corruption is re-sent; symlinks are skipped and never written through", async () => {
+  const { writeFileSync: w, readFileSync: r, symlinkSync, unlinkSync } = await import("node:fs");
+  const gw = tmp(), node = tmp(), outside = tmp();
+  const sh = createShepherd({ transport: fixtureTransport(), cacheDir: gw, keys: newKeys(), now: () => Date.parse("2026-10-13T00:00:00Z"), sleep: async () => {} });
+  await sh.runOnce();
+  const n = syncTo(gw, node);
+  const [f, g] = readdirSync(join(node, "snapshots"));
+  const orig = r(join(node, "snapshots", f), "utf8");
+  const i = orig.indexOf('"items"') + 10;
+  w(join(node, "snapshots", f), orig.slice(0, i) + (orig[i] === "Z" ? "Y" : "Z") + orig.slice(i + 1));
+  assert.equal(r(join(node, "snapshots", f), "utf8").length, orig.length);
+  assert.equal(syncTo(gw, node), 1, "same-size corrupt file is re-sent");
+  assert.equal(r(join(node, "snapshots", f), "utf8"), orig);
+  const target = join(outside, "victim.txt"); w(target, "keep");
+  unlinkSync(join(node, "snapshots", g)); symlinkSync(target, join(node, "snapshots", g));
+  assert.equal(syncTo(gw, node), 0, "symlinked entry is skipped");
+  assert.equal(r(target, "utf8"), "keep", "never written through the link");
+  assert.ok(n > 1);
+});
