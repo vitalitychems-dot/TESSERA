@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#14120c">
+  <title>Tessera · Phosphor lattice</title>
+  <link rel="stylesheet" href="/console.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"></span>
+      <div>
+        <p class="kicker">Tessera</p>
+        <h1>Phosphor lattice</h1>
+      </div>
+    </div>
+    <p class="port" id="port-label">127.0.0.1</p>
+  </header>
+  <nav class="tabs" aria-label="Sections">
+    <button type="button" data-action="tab-eye" id="tab-eye">Eye</button>
+    <button type="button" data-action="tab-brain" id="tab-brain">Brain</button>
+    <button type="button" data-action="tab-chat" id="tab-chat">Chat</button>
+    <button type="button" data-action="tab-bus" id="tab-bus">Bus</button>
+    <button type="button" data-action="tab-score" id="tab-score">Score</button>
+  </nav>
+  <main>
+    <section data-panel="eye" id="panel-eye">
+      <div class="panel-head">
+        <div>
+          <p class="kicker">Perception</p>
+          <h2>What she just took in</h2>
+        </div>
+        <button type="button" data-action="eye-refresh">Refresh perception</button>
+      </div>
+      <p class="lede" id="eye-summary"></p>
+      <ol class="tape" id="eye-list"></ol>
+    </section>
+    <section data-panel="brain" id="panel-brain" hidden>
+      <div class="panel-head">
+        <div>
+          <p class="kicker">Memory</p>
+          <h2>Synapses over time</h2>
+        </div>
+        <button type="button" data-action="brain-recall">Recall from selection</button>
+      </div>
+      <label class="slider">
+        <span id="brain-label">Time</span>
+        <input id="brain-time" data-action="brain-time" type="range" min="0" max="0" value="0" step="1">
+      </label>
+      <div class="stage">
+        <canvas id="brain-canvas" width="900" height="640" aria-label="Memory graph"></canvas>
+        <aside id="brain-readout"></aside>
+      </div>
+    </section>
+    <section data-panel="chat" id="panel-chat" hidden>
+      <div class="panel-head">
+        <div>
+          <p class="kicker">Talk</p>
+          <h2>Existing chat path</h2>
+        </div>
+      </div>
+      <ol class="tape" id="chat-log"></ol>
+      <form id="chat-form">
+        <label class="sr" for="chat-input">Message</label>
+        <textarea id="chat-input" rows="3" placeholder="Ask Tessera"></textarea>
+        <button type="submit" data-action="chat-send">Send</button>
+      </form>
+      <p class="warn" id="chat-error"></p>
+    </section>
+    <section data-panel="bus" id="panel-bus" hidden>
+      <div class="panel-head">
+        <div>
+          <p class="kicker">Agents</p>
+          <h2>Bus and log</h2>
+        </div>
+        <button type="button" data-action="bus-refresh">Refresh bus</button>
+      </div>
+      <p class="lede" id="bus-summary"></p>
+      <ol class="tape" id="bus-list"></ol>
+    </section>
+    <section data-panel="score" id="panel-score" hidden>
+      <div class="panel-head">
+        <div>
+          <p class="kicker">Eval</p>
+          <h2>Scorecard</h2>
+        </div>
+        <button type="button" data-action="score-refresh">Refresh scores</button>
+      </div>
+      <div id="score-body"></div>
+    </section>
+  </main>
+  <script type="module" src="/console.js"></script>
+</body>
+</html>
