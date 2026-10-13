@@ -1,0 +1,63 @@
+name: moderator-lock
+# Locked by CODEOWNERS. Policy + script are read from the BASE ref; the PR diff is data only.
+on:
+  # pull_request_target: policy + script are read from the trusted BASE ref (checkout below
+  # pins base.sha, persist-credentials:false, read-only perms). The PR head diff is data only,
+  # so a PR cannot rewrite its own lock. pull_request_review dropped (Security #71 / #294).
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+permissions: {}
+concurrency:
+  group: moderator-lock-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+          sparse-checkout: gate
+      - name: Collect PR facts from the GitHub API (fail closed on any error)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          BODY: ${{ github.event.pull_request.body }}
+          # FATHERLOGIN (no underscore) preferred: phone keyboards often omit _. Fallback to FATHER_LOGIN.
+          FATHER_LOGIN: ${{ vars.FATHERLOGIN || vars.FATHER_LOGIN }}
+          AGENT_LOGINS: ${{ vars.AGENT_LOGINS || 'vitalitychems-dot' }}
+          MODERATOR_APP_ID: ${{ vars.MODERATOR_APP_ID }}
+          SECURITY_APP_ID: ${{ vars.SECURITY_APP_ID }}
+          BUILD_APP_ID: ${{ vars.BUILD_APP_ID }}
+        run: |
+          set -euo pipefail
+          R="$GITHUB_REPOSITORY"
+          gh api --paginate "repos/$R/pulls/$PR/files?per_page=100" | jq -s 'add // []' > files.json
+          gh api --paginate "repos/$R/pulls/$PR/reviews?per_page=100" | jq -s 'add // []' > reviews.json
+          gh api --paginate "repos/$R/issues/$PR/comments?per_page=100" | jq -s 'add // []' > comments.json
+          gh api --paginate "repos/$R/pulls/$PR/commits?per_page=100" | jq -s 'add // [] | map(.author.login // .commit.author.email) | unique' > commits.json
+          gh api "repos/$R/commits/$HEAD/check-runs?per_page=100" | jq '.check_runs' > checks.json
+          jq -n --arg head "$HEAD" --arg author "$AUTHOR" --arg body "$BODY" --arg father "$FATHER_LOGIN" \
+            --arg agents "$AGENT_LOGINS" --arg m "$MODERATOR_APP_ID" --arg s "$SECURITY_APP_ID" --arg b "$BUILD_APP_ID" \
+            --rawfile locked gate/locked-paths.txt \
+            --slurpfile files files.json --slurpfile reviews reviews.json --slurpfile comments comments.json \
+            --slurpfile commits commits.json --slurpfile checks checks.json '
+            { headSha: $head, prAuthor: $author, prBody: $body, fatherLogin: $father,
+              agentLogins: ($agents | split(",") | map(gsub(" "; ""))),
+              lockedPatterns: ($locked | split("\n") | map(sub("#.*"; "") | gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))),
+              files: $files[0], reviews: $reviews[0], comments: $comments[0],
+              commitAuthors: $commits[0], checkRuns: $checks[0],
+              gateApps: { moderator: $m, security: $s, build: $b } }' > input.json
+      - name: Path lock + hard limits (from the real diff)
+        run: node gate/moderator-lock.mjs lock input.json | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Gate identity (per-gate GitHub Apps; fails closed until Father configures them)
+        if: always()
+        run: node gate/moderator-lock.mjs gates input.json | tee -a "$GITHUB_STEP_SUMMARY"

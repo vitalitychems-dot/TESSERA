@@ -1,5 +1,5 @@
 # Owner: Father only. Mirrors gate/locked-paths.txt. Agents cannot approve changes here (see SETUP-FATHER.md: agents must not hold this account's token).
-# Follow-up: CODEOWNER switched to @collink1007 (Father's owner login). Merge after #297 lands this file path on main.
+# Follow-up: CODEOWNER is @collink1007 (Father's owner login). #297 keeps that owner and adds /evals/heldout/.
 /.github/ @collink1007
 /CODEOWNERS @collink1007
 /.github/CODEOWNERS @collink1007
@@ -25,3 +25,4 @@ renovate.json @collink1007
 **/bench/ @collink1007
 /artifacts/api-server/scripts/pen-local-gate.mjs @collink1007
 /artifacts/api-server/src/lib/pen-local/ @collink1007
+/evals/heldout/ @collink1007

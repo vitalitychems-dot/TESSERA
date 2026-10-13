@@ -1,0 +1,83 @@
+name: self-improve
+# 0-token loop: score main, record scores on branch gate-scores, open/refresh one needs-agent issue per finding.
+# Writes gate-scores:scores/heartbeat.json for the dead man's switch (deadman.yml reads it; not duplicated here).
+on:
+  schedule:
+    - cron: "17 9 * * *"
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: self-improve
+  cancel-in-progress: false
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # some v2 tests read git history
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Tests (real log is the score source)
+        env:
+          NO_COLOR: "1"
+        run: |
+          set +e; pnpm test > test.log 2>&1; echo $? > test.exit; set -e
+          tail -n 40 test.log
+      - name: Bench x5 (medians)
+        run: for i in 1 2 3 4 5; do node scripts/bench-latency.mjs > "bench-$i.json" || rm -f "bench-$i.json"; done
+      - name: Collect scores
+        run: node scripts/loop/scores.mjs collect test.log "$(cat test.exit)" bench-*.json > scores.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: scores
+          path: scores.json
+          retention-days: 7
+  publish:
+    needs: score
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          sparse-checkout: scripts/loop
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: scores
+      - name: Compare with last recorded scores
+        run: |
+          git fetch --depth 1 origin gate-scores 2>/dev/null && git show origin/gate-scores:scores/latest.json > prev.json 2>/dev/null || echo "no previous scores"
+          node scripts/loop/scores.mjs compare prev.json scores.json > findings.json
+          cat findings.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Open / refresh / close needs-agent issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create needs-agent --color B60205 --description "Self-improve finding; agents spend tokens only here" 2>/dev/null || true
+          node scripts/loop/findings.mjs findings.json scores.json
+      - name: Record scores + heartbeat on gate-scores
+        run: |
+          set -euo pipefail
+          git config user.name vitalitychems-dot
+          git config user.email 332565808+vitalitychems-dot@users.noreply.github.com
+          mkdir -p /tmp/s && cp scores.json findings.json /tmp/s/
+          git switch --orphan gate-scores-new
+          git fetch --depth 1 origin gate-scores 2>/dev/null && git checkout origin/gate-scores -- scores 2>/dev/null || mkdir -p scores
+          cp /tmp/s/scores.json scores/latest.json
+          cp /tmp/s/scores.json "scores/$(date -u +%Y%m%dT%H%M)-${GITHUB_SHA::8}.json"
+          jq -n --arg sha "$GITHUB_SHA" --arg at "$(date -u +%FT%TZ)" --slurpfile f /tmp/s/findings.json '{sha:$sha, at:$at, findings:($f[0]|length)}' > scores/heartbeat.json
+          ls -1 scores/2*.json | head -n -90 | xargs -r git rm -q --cached --ignore-unmatch 2>/dev/null || true
+          git add scores && git commit -qm "scores: ${GITHUB_SHA::8}" && git push -q origin HEAD:gate-scores
