@@ -1,0 +1,42 @@
+[
+  {
+    "id": "merged-pr",
+    "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "author": { "name": "Ada Lovelace", "email": "ada@example.com" },
+    "committer": { "name": "Ada Lovelace", "email": "ada@example.com" },
+    "message": "Add the provenance check (#12)",
+    "pulls": [{ "number": 12, "merged_at": "2026-10-01T00:00:00Z", "state": "closed" }]
+  },
+  {
+    "id": "direct-push",
+    "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "author": { "name": "Ada Lovelace", "email": "ada@example.com" },
+    "committer": { "name": "Ada Lovelace", "email": "ada@example.com" },
+    "message": "push straight to main",
+    "pulls": []
+  },
+  {
+    "id": "tessera-author",
+    "sha": "cccccccccccccccccccccccccccccccccccccccc",
+    "author": { "name": "Tessera", "email": "tessera@example.com" },
+    "committer": { "name": "Ada Lovelace", "email": "ada@example.com" },
+    "message": "merged by a pull request",
+    "pulls": [{ "number": 13, "merged_at": "2026-10-02T00:00:00Z" }]
+  },
+  {
+    "id": "gmail-author",
+    "sha": "dddddddddddddddddddddddddddddddddddddddd",
+    "author": { "name": "Ada Lovelace", "email": "ada@gmail.com" },
+    "committer": { "name": "Ada Lovelace", "email": "ada@example.com" },
+    "message": "merged by a pull request",
+    "pulls": [{ "number": 14, "merged_at": "2026-10-03T00:00:00Z" }]
+  },
+  {
+    "id": "manus-message",
+    "sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "author": { "name": "Ada Lovelace", "email": "ada@example.com" },
+    "committer": { "name": "Ada Lovelace", "email": "ada@example.com" },
+    "message": "Apply review notes from Manus",
+    "pulls": [{ "number": 15, "merged_at": "2026-10-04T00:00:00Z" }]
+  }
+]
