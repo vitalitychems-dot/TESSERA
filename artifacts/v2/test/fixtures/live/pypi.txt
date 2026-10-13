@@ -1,0 +1,1 @@
+{"info": {"name": "numpy", "version": "2.5.4"}}

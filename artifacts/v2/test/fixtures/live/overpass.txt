@@ -1,0 +1,1 @@
+{"elements": [{"type": "node", "id": 1, "tags": {"name": "Harold Washington Library Center", "amenity": "library"}}], "_note": "synthetic (overpass unreachable from gateway box at record time)"}
