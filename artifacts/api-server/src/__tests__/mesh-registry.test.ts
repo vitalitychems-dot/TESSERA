@@ -126,7 +126,7 @@ describe("per-lane tokens + aliases (Security HIGH #2)", () => {
     process.env.MESH_LANE_TOKENS = envJson;
     const r = await post("/agent-comms/send", { to: "tessera", content: "hi" }, tBuild);
     expect(r.status).toBe(200);
-    expect((await r.json()).data.from).toBe("build");
+    expect(((await r.json()) as { data: { from: string } }).data.from).toBe("build");
   }));
   it("mismatched body from is rejected", async () => withServer(async (post) => {
     process.env.MESH_LANE_TOKENS = envJson;
