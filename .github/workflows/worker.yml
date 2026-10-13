@@ -43,6 +43,8 @@ jobs:
       WORKER_TRIES: "4"
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false   # no ambient git token during model run / test exec
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
@@ -55,14 +57,31 @@ jobs:
           mkdir -p ~/.cache/tessera-llm && cd ~/.cache/tessera-llm
           [ -d "llama-$LLAMA_TAG" ] || curl -fsSL "https://github.com/ggml-org/llama.cpp/releases/download/$LLAMA_TAG/llama-$LLAMA_TAG-bin-ubuntu-x64.tar.gz" | tar xz
           [ -f coder.gguf ] || curl -fsSL -o coder.gguf "$MODEL_URL"
-      - name: Pick the oldest needs-agent issue that has file and test lines
+      - name: Pick the oldest needs-agent issue from a trusted author (OWNER/MEMBER or bot)
         id: pick
         env:
           GH_TOKEN: ${{ github.token }}
+          WORKER_BOT_LOGINS: ${{ vars.WORKER_BOT_LOGINS || 'vitalitychems-dot' }}
         run: |
-          gh issue list -R "$GITHUB_REPOSITORY" --label needs-agent --state open --json number,title,body \
-            -q '[.[] | select(.body | test("(?m)^file: ") and test("(?m)^test: "))] | sort_by(.number) | .[0] // empty' > issue.json
-          if [ -s issue.json ]; then echo "n=$(jq .number issue.json)" >> "$GITHUB_OUTPUT"; else echo "no workable issue"; fi
+          set -euo pipefail
+          R="$GITHUB_REPOSITORY"
+          # Use the REST API so author_association is available (gh issue list lacks it).
+          # Exclude PRs, require file:/test: lines, oldest first, then keep only trusted authors.
+          gh api --paginate "repos/$R/issues?labels=needs-agent&state=open&per_page=100" \
+            | jq -s 'add // [] | map(select(.pull_request | not))
+                     | map(select((.body // "") | test("(?m)^file: ") and test("(?m)^test: ")))
+                     | sort_by(.number)' > candidates.json
+          jq --arg allow "$WORKER_BOT_LOGINS" '
+            ($allow | split(",") | map(gsub("^\\s+|\\s+$"; ""))) as $bots
+            | map(select((.author_association == "OWNER")
+                         or (.author_association == "MEMBER")
+                         or (($bots | index(.user.login)) != null)))
+            | .[0] // empty' candidates.json > issue.json
+          if [ -s issue.json ]; then
+            echo "n=$(jq .number issue.json)" >> "$GITHUB_OUTPUT"
+          else
+            echo "no workable issue from a trusted author"
+          fi
       - name: Attempt fix (local model; GitHub Models if vars.WORKER_ENDPOINT is set)
         if: steps.pick.outputs.n
         id: fix
@@ -88,6 +107,7 @@ jobs:
           git config user.email 332565808+vitalitychems-dot@users.noreply.github.com
           git switch -c "worker/issue-$N-${GITHUB_RUN_ID}"
           git commit -qam "worker: attempt fix for #$N"
-          git push -q origin HEAD
+          # checkout ran with persist-credentials:false; authenticate this push only.
+          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD
           gh label create worker-pr --color 5319E7 2>/dev/null || true
           gh pr create --label worker-pr --title "worker: fix #$N" --body "Automated attempt for #$N by worker.yml (local model, 0 paid tokens). Result: $(cat result.json). Needs moderator-lock + Security/Build/Moderator gates. Not auto-merged."
