@@ -1,24 +1,11 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@workspace/db", () => ({ db: {} }));
 
 const SOURCE_PATH = fileURLToPath(new URL("../lib/vector-memory.ts", import.meta.url));
 const TOP_K_DEFAULT = 10;
-
-/** embedText as it exists on main. R3-05 must not rewrite hashing (R3-03 owns signed embedText). */
-const EMBED_TEXT_SOURCE = `export function embedText(text: string, _vocab?: string[]): number[] {
-  const tokens = tokenize(text);
-  const vec = new Array(256).fill(0);
-  for (let i = 0; i < tokens.length; i++) {
-    let h = 0;
-    for (let j = 0; j < tokens[i].length; j++) h = ((h << 5) - h + tokens[i].charCodeAt(j)) | 0;
-    const idx = Math.abs(h) % 256;
-    vec[idx] += 1 / tokens.length;
-  }
-  const mag = Math.sqrt(vec.reduce((s: number, v: number) => s + v * v, 0));
-  if (mag > 0) for (let i = 0; i < vec.length; i++) vec[i] /= mag;
-  return vec;
-}`;
 
 function extractFunction(source: string, signature: string, nextSignature: string): string {
   const start = source.indexOf(signature);
@@ -70,9 +57,14 @@ describe("searchMemory accessCount batching", () => {
     expect(searchMemory).toContain("accessCount: sql`${vectorEmbeddingsTable.accessCount} + 1`");
   });
 
-  it("does not change embedText", () => {
-    const embedText = extractFunction(source, "export function embedText", "export async function storeMemory");
-    expect(embedText).toBe(EMBED_TEXT_SOURCE);
+  it("embedText (real, from vector-memory) still returns a 256-dim unit vector", async () => {
+    // Imports the real function instead of a frozen source copy, so embedding
+    // changes like R3-03 signed hashing (#284) don't break this batching test.
+    const { embedText } = await import("../lib/vector-memory");
+    const v = embedText("surface code threshold under code capacity noise");
+    expect(v).toHaveLength(256);
+    expect(Math.hypot(...v)).toBeCloseTo(1, 6);
+    expect(embedText("")).toEqual(new Array(256).fill(0));
   });
 
   it("collapses N sequential access updates into 1", async () => {
