@@ -1,84 +1,157 @@
 import { useEffect, useRef, useState } from "react";
 
-/** A block house you can pan and zoom. Not a game, and not a map. */
+/** Web studio in the AgentCraft model (MIT, blendi-remade/agentcraft). Tessera leads. Minecraft is not in this page. */
 
 type Cube = { x: number; y: number; z: number; top: string; left: string; right: string };
 
-const GRASS = ["#6eae58", "#4e8438", "#3c6a2c"];
-const DIRT = ["#8a6244", "#6b4630", "#543624"];
-const PLANK = ["#d7b07a", "#b8884e", "#8d6436"];
-const PLASTER = ["#f4e7cf", "#e2d0b0", "#cbb892"];
-const TIMBER = ["#6a4030", "#4e2e22", "#3a2218"];
-const ROOF = ["#c4533e", "#9a382c", "#74281e"];
-const GLASS = ["#d5fff6", "#8ee0d4", "#5eb8b0"];
-const STONE = ["#b7b2a8", "#8e8980", "#6e6a62"];
-const GOLD = ["#ffe08a", "#e6b84a", "#c4922a"];
-const LAMP = ["#fff1b0", "#ffd36a", "#e6a83a"];
+const PLASTER = ["#f4ead8", "#e6d4b4", "#d2c09e"];
+const TIMBER = ["#5a3424", "#3c2216", "#28160e"];
+const ROOF = ["#c2503c", "#9a3828", "#722418"];
+const GLASS = ["#d7fff6", "#9ee6da", "#6ec4b8"];
+const STONE = ["#a39e94", "#7a756c", "#5e5952"];
+const GRASS = ["#67a84c", "#4a8634", "#356426"];
+const LEAF = ["#3e8f44", "#2c6c32", "#1d4e24"];
+const GOLD = ["#f3d48a", "#e0b24e", "#c4902c"];
+const FLOWER = ["#e58ab8", "#c96a98", "#a85080"];
+const LAMP = ["#ffe7a4", "#ffd06a", "#e8a83a"];
+const SCREEN = ["#d9fff2", "#8ef0d4", "#4ec8ae"];
 
 function put(list: Cube[], x: number, y: number, z: number, colors: string[]) {
   list.push({ x, y, z, top: colors[0], left: colors[1], right: colors[2] });
 }
 
-function buildHouse(): Cube[] {
-  const blocks: Cube[] = [];
-  for (let x = -9; x <= 8; x += 1) {
-    for (let y = -7; y <= 7; y += 1) {
-      const path = x >= -1 && x <= 1 && y >= 2;
-      put(blocks, x, y, 0, path ? STONE : GRASS);
-      if (x === -9 || y === -7 || x === 8 || y === 7) put(blocks, x, y, -1, DIRT);
-    }
-  }
-  for (let x = -4; x <= 4; x += 1) {
-    for (let y = -3; y <= 2; y += 1) put(blocks, x, y, 1, PLANK);
-  }
-  for (let z = 2; z <= 4; z += 1) {
-    for (let x = -4; x <= 4; x += 1) put(blocks, x, -3, z, x % 2 === 0 ? TIMBER : PLASTER);
-    for (let y = -2; y <= 2; y += 1) {
-      put(blocks, -4, y, z, y % 2 === 0 ? TIMBER : PLASTER);
-      put(blocks, 4, y, z, y % 2 === 0 ? TIMBER : PLASTER);
+function buildStudio() {
+  const solid: Cube[] = [];
+  const glass: Cube[] = [];
+  const yard = (x: number, y: number) => x < -9 || x > 14 || y < -7 || y > 6;
+  for (let x = -14; x <= 16; x += 1) {
+    for (let y = -10; y <= 10; y += 1) {
+      if (!yard(x, y) && !(x >= -1 && x <= 1 && y >= 6)) continue;
+      const path = x >= -1 && x <= 1 && y >= 6 && y <= 10;
+      put(solid, x, y, 0, path ? STONE : GRASS);
     }
   }
   for (const spot of [
-    [-2, -3],
-    [0, -3],
-    [2, -3],
-    [-4, 0],
-    [4, 0],
+    [-12, 4],
+    [-11, 6],
+    [15, 3],
+    [13, 8],
+    [-8, 8],
+    [6, 9],
   ] as const) {
-    put(blocks, spot[0], spot[1], 3, GLASS);
+    put(solid, spot[0], spot[1], 1, FLOWER);
   }
-  for (let z = 5; z <= 7; z += 1) {
-    const inset = z - 5;
-    for (let x = -4 + inset; x <= 4 - inset; x += 1) {
-      for (let y = -3 + inset; y <= 2 - inset; y += 1) {
-        const edge = x === -4 + inset || x === 4 - inset || y === -3 + inset || y === 2 - inset || z === 7;
-        if (edge) put(blocks, x, y, z, ROOF);
+  const timber = (x: number, y: number, z: number) => z === 2 || z === 6 || z === 10 || x % 4 === 0 || y % 4 === 0;
+  const windowAt = (x: number, y: number, z: number) => {
+    const front = y === 6 && z >= 3 && z <= 5 && ((x >= -7 && x <= -3) || (x >= 3 && x <= 7));
+    const upper = y === 6 && z >= 7 && z <= 9 && ((x >= -6 && x <= -3) || (x >= 3 && x <= 6));
+    const side = Math.abs(x) === 9 && y >= -2 && y <= 2 && (z === 4 || z === 8);
+    return front || upper || side;
+  };
+  const door = (x: number, y: number, z: number) => y === 6 && x >= -1 && x <= 1 && z >= 2 && z <= 5;
+  for (let z = 1; z <= 10; z += 1) {
+    for (let x = -9; x <= 9; x += 1) {
+      for (let y = -6; y <= 6; y += 1) {
+        const edge = x === -9 || x === 9 || y === -6 || y === 6;
+        if (z === 1) {
+          put(solid, x, y, z, STONE);
+          continue;
+        }
+        if (!edge || door(x, y, z)) continue;
+        if (windowAt(x, y, z)) put(glass, x, y, z, GLASS);
+        else put(solid, x, y, z, timber(x, y, z) ? TIMBER : PLASTER);
       }
     }
   }
-  for (let z = 1; z <= 9; z += 1) {
-    for (let x = 5; x <= 6; x += 1) {
-      for (let y = -5; y <= -4; y += 1) put(blocks, x, y, z, z === 8 ? GOLD : STONE);
+  for (let x = -9; x <= 9; x += 1) {
+    for (let y = -6; y <= 6; y += 1) {
+      const rise = 4 - Math.min(4, Math.abs(y));
+      if (rise <= 0) continue;
+      put(solid, x, y, 10 + rise, ROOF);
     }
   }
-  put(blocks, 5, -4, 10, GOLD);
-  put(blocks, -1, 1, 2, PLANK);
-  put(blocks, -1, 1, 3, GLASS);
-  put(blocks, 1, 0, 2, PLANK);
-  put(blocks, 1, 0, 3, LAMP);
-  put(blocks, -7, 4, 1, TIMBER);
-  put(blocks, -7, 4, 2, TIMBER);
-  for (let x = -8; x <= -6; x += 1) for (let y = 3; y <= 5; y += 1) put(blocks, x, y, 3, GRASS);
-  return blocks.sort((a, b) => a.x + a.y + a.z * 0.01 - (b.x + b.y + b.z * 0.01));
+  for (let z = 1; z <= 6; z += 1) {
+    for (let x = 10; x <= 14; x += 1) {
+      for (let y = -2; y <= 4; y += 1) {
+        const edge = x === 10 || x === 14 || y === -2 || y === 4;
+        if (z === 1) {
+          put(solid, x, y, z, STONE);
+          continue;
+        }
+        if (!edge) continue;
+        if (y === 4 && z >= 3 && z <= 4 && x >= 11 && x <= 13) put(glass, x, y, z, GLASS);
+        else put(solid, x, y, z, timber(x, y, z) ? TIMBER : PLASTER);
+      }
+    }
+  }
+  for (let x = 10; x <= 14; x += 1) {
+    for (let y = -2; y <= 4; y += 1) {
+      const rise = 2 - Math.min(2, Math.abs(y - 1));
+      if (rise > 0) put(solid, x, y, 6 + rise, ROOF);
+    }
+  }
+  for (let z = 12; z <= 18; z += 1) {
+    for (let x = -1; x <= 2; x += 1) {
+      for (let y = -1; y <= 2; y += 1) {
+        const edge = x === -1 || x === 2 || y === -1 || y === 2;
+        if (!edge) continue;
+        put(solid, x, y, z, z === 16 ? GOLD : TIMBER);
+      }
+    }
+  }
+  for (let x = -1; x <= 2; x += 1) for (let y = -1; y <= 2; y += 1) put(solid, x, y, 19, ROOF);
+  put(solid, 0, 0, 20, GOLD);
+  put(solid, 7, -6, 11, STONE);
+  put(solid, 7, -6, 12, STONE);
+  put(solid, 7, -6, 13, TIMBER);
+  for (const tree of [
+    [-12, -4],
+    [15, -6],
+    [-13, 2],
+  ] as const) {
+    put(solid, tree[0], tree[1], 1, TIMBER);
+    put(solid, tree[0], tree[1], 2, TIMBER);
+    put(solid, tree[0], tree[1], 3, TIMBER);
+    for (let x = tree[0] - 1; x <= tree[0] + 1; x += 1) {
+      for (let y = tree[1] - 1; y <= tree[1] + 1; y += 1) put(solid, x, y, 4, LEAF);
+    }
+    put(solid, tree[0], tree[1], 5, LEAF);
+  }
+  put(solid, -3, 2, 2, TIMBER);
+  put(solid, -3, 2, 3, SCREEN);
+  put(solid, 3, 2, 2, TIMBER);
+  put(solid, 3, 2, 3, SCREEN);
+  put(solid, 0, 0, 2, TIMBER);
+  put(solid, 0, 0, 3, LAMP);
+  put(solid, 12, 1, 2, TIMBER);
+  put(solid, 12, 1, 3, SCREEN);
+  put(solid, -11, 7, 1, LAMP);
+  put(solid, 2, 8, 1, LAMP);
+  return {
+    solid: solid.sort((a, b) => a.x + a.y - (b.x + b.y)),
+    glass,
+  };
 }
 
-const HOUSE = buildHouse();
+const STUDIO = buildStudio();
 
-function project(x: number, y: number, z: number, zoom: number, panX: number, panY: number, width: number, height: number) {
-  const tile = 18 * zoom;
+const SEATS = [
+  { name: "Tessera", x: -3, y: 3.2, role: "lead" },
+  { name: "Rick", x: 3, y: 3.2, role: "shop" },
+  { name: "Cursor", x: 12, y: 2.2, role: "bench" },
+  { name: "Replit", x: 0, y: 4.4, role: "bay" },
+];
+
+function project(x: number, y: number, z: number, yaw: number, zoom: number, width: number, height: number) {
+  const c = Math.cos(yaw);
+  const s = Math.sin(yaw);
+  const rx = x * c - y * s;
+  const ry = x * s + y * c;
+  const tile = 13 * zoom;
   return {
-    x: width * 0.5 + (x - y) * tile + panX,
-    y: height * 0.62 + (x + y) * tile * 0.5 - z * tile + panY,
+    x: width * 0.52 + (rx - ry) * tile,
+    y: height * 0.7 + (rx + ry) * tile * 0.5 - z * tile,
+    depth: rx + ry,
   };
 }
 
@@ -91,20 +164,29 @@ function poly(pen: CanvasRenderingContext2D, points: { x: number; y: number }[],
   pen.fill();
 }
 
-const SEATS = [
-  { name: "Tessera", x: -1, y: 2.2, line: "Talk is hers" },
-  { name: "Rick", x: 3.2, y: -1, line: "Shop is open" },
-  { name: "Cursor", x: -6, y: 1, line: "Bench" },
-  { name: "Replit", x: 2, y: 4, line: "Bay" },
-];
+function drawCube(pen: CanvasRenderingContext2D, block: Cube, yaw: number, zoom: number, width: number, height: number) {
+  const at = (x: number, y: number, z: number) => project(x, y, z, yaw, zoom, width, height);
+  const t = at(block.x, block.y, block.z + 1);
+  const tr = at(block.x + 1, block.y, block.z + 1);
+  const tf = at(block.x + 1, block.y + 1, block.z + 1);
+  const tl = at(block.x, block.y + 1, block.z + 1);
+  const bl = at(block.x, block.y + 1, block.z);
+  const bf = at(block.x + 1, block.y + 1, block.z);
+  const br = at(block.x + 1, block.y, block.z);
+  poly(pen, [tl, tf, bf, bl], block.left);
+  poly(pen, [tr, tf, bf, br], block.right);
+  poly(pen, [t, tr, tf, tl], block.top);
+}
 
 export function WorldStage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const drag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+  const drag = useRef<{ x: number; yaw: number } | null>(null);
+  const [yaw, setYaw] = useState(0.55);
   const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const view = useRef({ zoom: 1, x: 0, y: 0 });
-  view.current = { zoom, x: pan.x, y: pan.y };
+  const view = useRef({ yaw: 0.55, zoom: 1 });
+  const ordered = useRef<Cube[]>([]);
+  const orderKey = useRef("");
+  view.current = { yaw, zoom };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -114,51 +196,60 @@ export function WorldStage() {
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
-      if (canvas.width !== Math.floor(width * ratio) || canvas.height !== Math.floor(height * ratio)) {
-        canvas.width = Math.floor(width * ratio);
-        canvas.height = Math.floor(height * ratio);
+      const nextW = Math.floor(width * ratio);
+      const nextH = Math.floor(height * ratio);
+      if (canvas.width !== nextW || canvas.height !== nextH) {
+        canvas.width = nextW;
+        canvas.height = nextH;
       }
       const pen = canvas.getContext("2d");
       if (!pen) return;
       pen.setTransform(ratio, 0, 0, ratio, 0, 0);
       const sky = pen.createLinearGradient(0, 0, 0, height);
-      sky.addColorStop(0, "#243156");
-      sky.addColorStop(0.55, "#c4785a");
-      sky.addColorStop(1, "#6f8f4e");
+      sky.addColorStop(0, "#2a3d68");
+      sky.addColorStop(0.42, "#e39a6a");
+      sky.addColorStop(0.72, "#f0c49a");
+      sky.addColorStop(1, "#6a9a48");
       pen.fillStyle = sky;
       pen.fillRect(0, 0, width, height);
+      pen.fillStyle = "rgba(255,255,255,0.55)";
+      pen.beginPath();
+      pen.ellipse(width * 0.22, height * 0.16, 70, 18, 0, 0, Math.PI * 2);
+      pen.ellipse(width * 0.7, height * 0.12, 90, 16, 0, 0, Math.PI * 2);
+      pen.fill();
       const cam = view.current;
-      const at = (x: number, y: number, z: number) => project(x, y, z, cam.zoom, cam.x, cam.y, width, height);
-      for (const block of HOUSE) {
-        const t = at(block.x, block.y, block.z + 1);
-        const tr = at(block.x + 1, block.y, block.z + 1);
-        const tf = at(block.x + 1, block.y + 1, block.z + 1);
-        const tl = at(block.x, block.y + 1, block.z + 1);
-        const bl = at(block.x, block.y + 1, block.z);
-        const bf = at(block.x + 1, block.y + 1, block.z);
-        const br = at(block.x + 1, block.y, block.z);
-        poly(pen, [tl, tf, bf, bl], block.left);
-        poly(pen, [tr, tf, bf, br], block.right);
-        poly(pen, [t, tr, tf, tl], block.top);
+      const key = `${cam.yaw.toFixed(3)}:${cam.zoom.toFixed(2)}:${width}:${height}`;
+      if (orderKey.current !== key) {
+        orderKey.current = key;
+        ordered.current = [...STUDIO.solid].sort((a, b) => {
+          const da = project(a.x, a.y, a.z, cam.yaw, cam.zoom, width, height).depth;
+          const db = project(b.x, b.y, b.z, cam.yaw, cam.zoom, width, height).depth;
+          return da - db;
+        });
       }
-      const bob = Math.sin(now / 700) * 0.15;
+      for (const block of ordered.current) drawCube(pen, block, cam.yaw, cam.zoom, width, height);
+      pen.save();
+      pen.globalAlpha = 0.55;
+      for (const block of STUDIO.glass) drawCube(pen, block, cam.yaw, cam.zoom, width, height);
+      pen.restore();
+      const bob = Math.sin(now / 700) * 0.12;
       for (const seat of SEATS) {
-        const step = seat.name === "Tessera" ? bob : -bob;
-        const foot = at(seat.x, seat.y + step, 1);
-        const head = at(seat.x, seat.y + step, 2.4);
-        pen.fillStyle = "#f4e7cf";
+        const step = seat.name === "Tessera" ? bob : -bob * 0.4;
+        const head = project(seat.x, seat.y + step, 2.6, cam.yaw, cam.zoom, width, height);
+        const foot = project(seat.x, seat.y + step, 1.2, cam.yaw, cam.zoom, width, height);
+        pen.fillStyle = "#4a2c1e";
+        pen.fillRect(foot.x - 5 * cam.zoom, foot.y - 14 * cam.zoom, 10 * cam.zoom, 16 * cam.zoom);
+        pen.fillStyle = seat.name === "Tessera" ? "#f4ead8" : "#e7b89a";
         pen.beginPath();
         pen.arc(head.x, head.y, 7 * cam.zoom, 0, Math.PI * 2);
         pen.fill();
-        pen.fillStyle = "#4e2e22";
-        pen.fillRect(foot.x - 5 * cam.zoom, foot.y - 16 * cam.zoom, 10 * cam.zoom, 16 * cam.zoom);
-        pen.fillStyle = "#fff8e8";
-        pen.font = `${Math.max(10, 11 * cam.zoom)}px sans-serif`;
-        pen.fillText(seat.name, head.x + 8, head.y);
+        pen.fillStyle = "#1a120e";
+        pen.font = `${Math.max(11, 12 * cam.zoom)}px sans-serif`;
+        pen.fillText(seat.name, head.x + 8, head.y - 4);
+        pen.font = `${Math.max(9, 10 * cam.zoom)}px sans-serif`;
+        pen.fillStyle = "#3a2418";
+        pen.fillText(seat.role, head.x + 8, head.y + 10);
       }
-      pen.fillStyle = "#fff8e8";
-      pen.font = "12px sans-serif";
-      pen.fillText("Block house · drag to look", 12, 22);
       frame = window.requestAnimationFrame(draw);
     };
     frame = window.requestAnimationFrame(draw);
@@ -166,35 +257,35 @@ export function WorldStage() {
   }, []);
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[#1a120e]">
+    <div className="relative flex h-full min-h-0 flex-col bg-[#243656]">
       <canvas
         ref={canvasRef}
         className="min-h-0 w-full flex-1 touch-none"
-        aria-label="Block house. Drag to look around."
+        aria-label="Studio. Drag to walk around the house."
         onPointerDown={(event) => {
-          drag.current = { x: event.clientX, y: event.clientY, px: pan.x, py: pan.y };
+          drag.current = { x: event.clientX, yaw };
           event.currentTarget.setPointerCapture(event.pointerId);
         }}
         onPointerMove={(event) => {
           if (!drag.current) return;
-          setPan({
-            x: drag.current.px + event.clientX - drag.current.x,
-            y: drag.current.py + event.clientY - drag.current.y,
-          });
+          setYaw(drag.current.yaw + (event.clientX - drag.current.x) * 0.008);
         }}
         onPointerUp={() => {
           drag.current = null;
         }}
       />
-      <div className="flex shrink-0 gap-2 overflow-x-auto px-2 py-2">
-        <button type="button" className="h-10 shrink-0 border border-[#e7b3a1] px-3 text-sm text-[#f6efe8]" onClick={() => setZoom((value) => Math.min(2.2, value + 0.2))}>
+      <div className="pointer-events-none absolute inset-x-0 bottom-12 px-3">
+        <p className="text-[10px] text-white/80">Studio after AgentCraft, MIT. Tessera leads. Drag to walk around.</p>
+      </div>
+      <div className="absolute inset-x-0 bottom-0 flex gap-2 overflow-x-auto px-2 py-2">
+        <button type="button" className="h-10 shrink-0 border border-white/40 bg-black/35 px-3 text-sm text-white" onClick={() => setZoom((value) => Math.min(1.8, value + 0.15))}>
           Closer
         </button>
-        <button type="button" className="h-10 shrink-0 border border-[#6a4030] px-3 text-sm text-[#f6efe8]" onClick={() => setZoom((value) => Math.max(0.6, value - 0.2))}>
+        <button type="button" className="h-10 shrink-0 border border-white/40 bg-black/35 px-3 text-sm text-white" onClick={() => setZoom((value) => Math.max(0.55, value - 0.15))}>
           Farther
         </button>
-        <button type="button" className="h-10 shrink-0 border border-[#6a4030] px-3 text-sm text-[#f6efe8]" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>
-          Door
+        <button type="button" className="h-10 shrink-0 border border-white/40 bg-black/35 px-3 text-sm text-white" onClick={() => { setYaw(0.55); setZoom(1); }}>
+          Front
         </button>
       </div>
     </div>
