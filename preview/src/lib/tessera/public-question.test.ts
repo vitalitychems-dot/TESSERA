@@ -29,7 +29,7 @@ test("the rooms and the row under her name stay put", () => {
   );
   assert.deepEqual(
     UNDER_HER_NAME.map((room) => room.label),
-    ["Agents", "Gitbook", "Language", "Bible", "Map", "Board", "Practice", "Code", "Narrative", "Closed", "Theme", "Library"],
+    ["Agents", "Gitbook", "Language", "Bible", "Map", "Board", "Practice", "Code", "Narrative", "Closed", "Library"],
   );
 });
 

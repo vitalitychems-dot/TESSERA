@@ -6,7 +6,6 @@ import { CouncilRoom } from "./council-room";
 import { BrainView } from "./brain-view";
 import { GitbookView } from "./gitbook-view";
 import { GitbookAiView } from "./gitbook-ai-view";
-import { ThemeView, applyTheme, type ThemeId } from "./theme-view";
 import { RickView } from "./rick-view";
 import { RoomsSheet, ROOMS } from "./rooms-sheet";
 import { Simulation } from "./simulation";
@@ -31,13 +30,7 @@ const PRIMARY: { id: ViewId | "rooms"; label: string; icon: typeof MessageCircle
 
 export function AppShell() {
   const [place, setPlace] = useState<ViewId>("chamber");
-  const [theme, setTheme] = useState<ThemeId>("water");
   const [sheet, setSheet] = useState(false);
-
-  useEffect(() => {
-    const current = document.documentElement.dataset.theme;
-    if (current === "water" || current === "fire" || current === "lightning" || current === "diamond" || current === "spiral") setTheme(current);
-  }, []);
 
   useEffect(() => {
     startCity();
@@ -59,10 +52,6 @@ export function AppShell() {
     };
   }, []);
 
-  function chooseTheme(id: ThemeId) {
-    setTheme(applyTheme(id));
-  }
-
   function open(id: ViewId) {
     const next = settle(id) || "chamber";
     setSheet(false);
@@ -82,10 +71,6 @@ export function AppShell() {
           </div>
           <p className="mt-0.5 text-[10px] tracking-[0.22em] text-accent uppercase">{TESSERA.title} · {SIGIL.short}</p>
         </div>
-        <button type="button" onClick={() => open("theme")} className="ml-auto flex h-11 items-center gap-2 border border-border bg-surface px-3 text-sm text-fg capitalize">
-          <span className="size-3 bg-accent" />
-          {theme}
-        </button>
       </header>
       <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
         {place === "world" ? (
@@ -99,7 +84,6 @@ export function AppShell() {
             {place === "brain" ? <BrainView open={open} /> : null}
             {place === "gitbook" ? <GitbookView open={open} /> : null}
             {place === "gitbookai" ? <GitbookAiView /> : null}
-            {place === "theme" ? <ThemeView current={theme} choose={chooseTheme} /> : null}
             {place === "rick" ? <RickView /> : null}
             {place === "board" ? <BoardView /> : null}
           </div>

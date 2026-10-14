@@ -120,7 +120,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   const [megaConfResults, setMegaConfResults] = useState<any[]>([]);
   const [megaConfSummary, setMegaConfSummary] = useState("");
   const [moltChatLoading, setMoltChatLoading] = useState(false);
-  const [themeOpen, setThemeOpen] = useState(false);
   const [messageReactions, setMessageReactions] = useState<Record<string, "up" | "down">>({});
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -131,8 +130,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   const [historyNavIndex, setHistoryNavIndex] = useState(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
-  const [localFontColor, setLocalFontColor] = useState<string>(() => localStorage.getItem("tessera-font-color") || "");
-  
   const tesseractMode = true;
   const { isAdmin, authenticate, stealthMode, toggleStealth, adminMode, savedAdminKey, saveAdminKey } = useAdmin();
 
@@ -187,15 +184,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
     refetchInterval: summitFeedOpen ? 30000 : false,
     enabled: summitFeedOpen,
   });
-
-  const handleLocalFontColor = (color: string) => {
-    const next = localFontColor === color ? "" : color;
-    setLocalFontColor(next);
-    if (next) localStorage.setItem("tessera-font-color", next);
-    else localStorage.removeItem("tessera-font-color");
-    setUserFontColor(next);
-    window.dispatchEvent(new Event("tessera-font-color-change"));
-  };
 
   const tesseraCategory = getTesseraCategory(convMeta?.title);
   const tesseraMsgStyle = isTesseraConv ? MSG_STYLES[tesseraCategory] || MSG_STYLES.general : null;
@@ -258,13 +246,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   useEffect(() => { replyModeRef.current = replyMode; }, [replyMode]);
   useEffect(() => { sendMessageRef.current = sendMessage; }, [sendMessage]);
   useEffect(() => { isStreamingRef.current = isStreaming; }, [isStreaming]);
-
-  const [userFontColor, setUserFontColor] = useState<string>(() => localStorage.getItem("tessera-font-color") || "");
-  useEffect(() => {
-    const onColorChange = () => setUserFontColor(localStorage.getItem("tessera-font-color") || "");
-    window.addEventListener("tessera-font-color-change", onColorChange);
-    return () => window.removeEventListener("tessera-font-color-change", onColorChange);
-  }, []);
 
   const scrollToBottom = useCallback(() => {
     virtuosoRef.current?.scrollToIndex({ index: "LAST", behavior: "smooth" });
@@ -1278,8 +1259,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
                 style={
                   adminMode
                     ? {}
-                    : userFontColor
-                    ? { color: userFontColor, caretColor: userFontColor }
                     : inputIsAdminKey
                     ? { color: "#f59e0b", caretColor: "#f59e0b", textShadow: "0 0 12px rgba(245,158,11,0.5)" }
                     : {}
@@ -1293,8 +1272,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
                     : colonelPhase === "hash_accepted"
                     ? "text-violet-400 caret-violet-400"
                     : inputIsAdminKey
-                    ? ""
-                    : userFontColor
                     ? ""
                     : "text-white/60 caret-cyan-400"
                 )}
@@ -1354,15 +1331,11 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
               ttsEnabled={ttsEnabled}
               latticeOpen={latticeOpen}
               summitFeedOpen={summitFeedOpen}
-              themeOpen={themeOpen}
-              localFontColor={localFontColor}
               globalVoiceSpeed={globalVoiceSpeed}
               voiceSpeedSliderOpen={voiceSpeedSliderOpen}
               onSummitClick={() => { setInputBoth("/summit "); textareaRef.current?.focus(); }}
-              onLatticeClick={() => { setLatticeOpen(!latticeOpen); setMoltAgentOpen(false); setThemeOpen(false); setSummitFeedOpen(false); }}
-              onLiveClick={() => { setSummitFeedOpen(v => !v); setLatticeOpen(false); setMoltAgentOpen(false); setThemeOpen(false); }}
-              onFontColorToggle={() => { setThemeOpen(v => !v); setMoltAgentOpen(false); }}
-              onFontColorChange={handleLocalFontColor}
+              onLatticeClick={() => { setLatticeOpen(!latticeOpen); setMoltAgentOpen(false); setSummitFeedOpen(false); }}
+              onLiveClick={() => { setSummitFeedOpen(v => !v); setLatticeOpen(false); setMoltAgentOpen(false); }}
               onTtsToggle={() => {
                 if (isSpeaking) { stopSpeaking(); setIsSpeaking(false); }
                 else { setTtsEnabled(!ttsEnabled); if (ttsEnabled) stopSpeaking(); }

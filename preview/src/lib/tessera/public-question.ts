@@ -27,7 +27,6 @@ export const UNDER_HER_NAME = [
   { id: "code", label: "Code" },
   { id: "narrative", label: "Narrative" },
   { id: "secrets", label: "Closed" },
-  { id: "theme", label: "Theme" },
   { id: "library", label: "Library" },
 ] as const;
 

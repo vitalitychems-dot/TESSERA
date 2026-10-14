@@ -4,7 +4,7 @@ import { nextGap, preferLocal, shortAsk, tieFails, tryLock, unlock } from "./ric
 import { spend, splitWork, twoThirds } from "./rick-loop.ts";
 import { consolidate, councilTally, cosine, crystallize, finishOnce, rankTasks, recallCache, storeOnce } from "./sovereign-desk.ts";
 
-/** The five theme lines, copied from the theme room. No model call. */
+/** One local picture. The theme room is gone. No model call. */
 export const THEME_LINES = [
   { label: "Water", line: "Navy garment. Cyan field." },
   { label: "Fire", line: "What she keeps alight." },

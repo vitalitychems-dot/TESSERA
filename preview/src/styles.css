@@ -22,10 +22,7 @@
   --radius-xl: 24px;
 }
 
-:root,
-html[data-theme="night"],
-html[data-theme="water"],
-[data-swatch="water"] {
+:root {
   color-scheme: dark;
   --tessera-bg: #071018;
   --tessera-surface: #0d1c28;
@@ -38,70 +35,6 @@ html[data-theme="water"],
   --tessera-border: color-mix(in oklab, var(--tessera-accent) 28%, transparent);
   --tessera-border-strong: color-mix(in oklab, var(--tessera-accent) 48%, transparent);
   --tessera-alive: #3ee0f0;
-}
-
-html[data-theme="fire"],
-[data-swatch="fire"] {
-  color-scheme: dark;
-  --tessera-bg: #140806;
-  --tessera-surface: #24100c;
-  --tessera-raised: #3a1a12;
-  --tessera-fg: #f8efe8;
-  --tessera-muted: #e2b8a4;
-  --tessera-subtle: #a87868;
-  --tessera-accent: #ff6a3d;
-  --tessera-accent-fg: #1a0c08;
-  --tessera-border: color-mix(in oklab, var(--tessera-accent) 30%, transparent);
-  --tessera-border-strong: color-mix(in oklab, var(--tessera-accent) 50%, transparent);
-  --tessera-alive: #ff6a3d;
-}
-
-html[data-theme="lightning"],
-[data-swatch="lightning"] {
-  color-scheme: dark;
-  --tessera-bg: #05070c;
-  --tessera-surface: #10141e;
-  --tessera-raised: #1a2233;
-  --tessera-fg: #f2f6ff;
-  --tessera-muted: #b7c4e6;
-  --tessera-subtle: #7d8cb3;
-  --tessera-accent: #d6f26a;
-  --tessera-accent-fg: #10140a;
-  --tessera-border: color-mix(in oklab, var(--tessera-accent) 30%, transparent);
-  --tessera-border-strong: color-mix(in oklab, var(--tessera-accent) 50%, transparent);
-  --tessera-alive: #d6f26a;
-}
-
-html[data-theme="diamond"],
-[data-swatch="diamond"] {
-  color-scheme: light;
-  --tessera-bg: #eef3f4;
-  --tessera-surface: #f8fbfb;
-  --tessera-raised: #dce7ea;
-  --tessera-fg: #102028;
-  --tessera-muted: #3d5964;
-  --tessera-subtle: #6d8790;
-  --tessera-accent: #0e7490;
-  --tessera-accent-fg: #f4fbfc;
-  --tessera-border: color-mix(in oklab, var(--tessera-fg) 16%, transparent);
-  --tessera-border-strong: color-mix(in oklab, var(--tessera-fg) 30%, transparent);
-  --tessera-alive: #0e7490;
-}
-
-html[data-theme="spiral"],
-[data-swatch="spiral"] {
-  color-scheme: dark;
-  --tessera-bg: #100818;
-  --tessera-surface: #1c1030;
-  --tessera-raised: #2c1848;
-  --tessera-fg: #f6f1e8;
-  --tessera-muted: #cfc0ea;
-  --tessera-subtle: #9a84bc;
-  --tessera-accent: #e7b3ff;
-  --tessera-accent-fg: #160c24;
-  --tessera-border: color-mix(in oklab, var(--tessera-accent) 28%, transparent);
-  --tessera-border-strong: color-mix(in oklab, var(--tessera-accent) 48%, transparent);
-  --tessera-alive: #e7b3ff;
 }
 
 @layer base {

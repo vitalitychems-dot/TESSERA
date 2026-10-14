@@ -1,6 +1,6 @@
 # Grok desk preview
 
-The five theme marks in `src/lib/tessera/themes.ts` and `src/components/tessera/theme-view.tsx` are superseded by the phosphor lattice console in `artifacts/console`. Those files stay here. Deleting them needs the owner's yes.
+The phosphor lattice console in `artifacts/console` is the current theme. The five-mark picker has been removed. This preview uses the single palette in `src/styles.css`.
 
 This is the preview that runs on the Grok desk. It is not the TESSERA app under `artifacts/tessera`, and it is not merged into `main`'s build.
 

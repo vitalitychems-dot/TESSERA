@@ -1,4 +1,4 @@
-/** The twenty room names. Nine screens. An unknown name does not invent a screen. */
+/** Nineteen room names. Eight screens. An unknown name does not invent a screen. */
 
 export const TWENTY = [
   ["chamber", "chamber"],
@@ -10,7 +10,6 @@ export const TWENTY = [
   ["live", "brain"],
   ["memory", "brain"],
   ["library", "brain"],
-  ["theme", "theme"],
   ["language", "brain"],
   ["bible", "brain"],
   ["narrative", "brain"],
@@ -33,7 +32,6 @@ const LINES: Record<string, string> = {
   live: "Live is the brain screen.",
   memory: "Memory is the brain screen.",
   library: "The shelf is not a second chart.",
-  theme: "Water, fire, lightning, diamond, spiral.",
   language: "A line is kept only when it was read.",
   bible: "No verse was opened in this pass.",
   narrative: "A story is not a new fact.",
@@ -58,10 +56,10 @@ export function wave1() {
   const screens = TWENTY.map(([id]) => roomScreen(id));
   const lines = TWENTY.map(([id]) => roomLine(id));
   const ok =
-    TWENTY.length === 20 &&
+    TWENTY.length === 19 &&
     screens.every((screen) => screen.length > 0) &&
     lines.every((line) => line.length > 0) &&
-    new Set(screens).size === 9 &&
+    new Set(screens).size === 8 &&
     roomScreen("no-such-room") === "" &&
     roomLine("bible") === "No verse was opened in this pass.";
   return { ok, count: TWENTY.length, screens: new Set(screens).size };

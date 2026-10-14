@@ -8,7 +8,7 @@ Status: REPORTED. This is the map after the source repositories were moved. It i
 |---|---|
 | `artifacts/tessera` | The live web app. |
 | `artifacts/api-server` | The live API. |
-| `artifacts/mockup-sandbox` | A separate sandbox. Fifty-two UI files there are byte-for-byte the same as `artifacts/tessera/src/components/ui`. Both copies stay, because each package imports its own path. |
+| `artifacts/mockup-sandbox` | A separate sandbox. Its UI primitives, `use-mobile` hook, and `utils` module are symlinks to the single copies in `artifacts/tessera`. |
 | `lib` | Shared database and API packages. |
 | `preview` | The desk preview. |
 | `docs` | Current notes for this code. |

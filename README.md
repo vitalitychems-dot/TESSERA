@@ -19,16 +19,9 @@ Father decided on 2026-10-07 that Tessera will be built using the BHNMC directio
 | 3D studio floor | `artifacts/v2` | `http://127.0.0.1:4173` | `pnpm --filter @workspace/v2 studio`. The 2D wall is a link on that page. |
 | Tessera console | `artifacts/console` | `http://127.0.0.1:4391` | Phosphor lattice UI. One process, this port only. Does not start the other apps. |
 
-## Superseded themes
+## Theme
 
-The phosphor lattice console is the current Tessera UI theme. These older theme files stay in the tree. Do not delete them without the owner's yes.
-
-| File | What it was |
-| --- | --- |
-| `preview/src/lib/tessera/themes.ts` | Water, fire, lightning, diamond, and spiral marks. Superseded. |
-| `preview/src/components/tessera/theme-view.tsx` | Picker for those five marks. Superseded. |
-| `preview/src/styles.css` | CSS variables for those marks. Superseded for new UI work. |
-| `artifacts/tessera/src/lib/theme-constants.ts` | Cyan, purple, rose, and related accent palettes for the older web app. Superseded. |
+The phosphor lattice console is the current Tessera UI theme. The old mark picker (water, fire, lightning, diamond, spiral), the accent palette switcher, and the chat font-color picker were removed. The preview keeps one dark palette in `preview/src/styles.css`. The web app keeps the dark cyan values in `artifacts/tessera/src/index.css`.
 
 The console does not read `TESSERA_ENABLE_*` and does not change those flags. Ports already used by other apps are 3000 (web), 5000 (API), 5173 (mockup sandbox), 4173 (studio), 4183 (GitAI), and 8787 (Gitbook HTTP). The console listens on `127.0.0.1:4391`. The bind address is fixed and is not read from the environment. `TESSERA_CONSOLE_PORT` overrides the port.
 
@@ -50,7 +43,7 @@ pnpm dev
 
 Port overrides: `TESSERA_WEB_PORT`, `TESSERA_API_PORT`, and `MOCKUP_SANDBOX_PORT`. Base-path overrides: `TESSERA_BASE_PATH` and `MOCKUP_SANDBOX_BASE_PATH`.
 
-Some identical app files are shared through tracked symlinks to canonical copies (52 UI primitives, 147 duplicate image contents, eight repeated SQL migrations, and five identical utility modules). Git symlink support is required; enable it when cloning on Windows. The detailed SHA-256 disposition ledger records removed, linked, and deliberately retained copies.
+Identical app files are one canonical file plus a tracked symlink. The mockup sandbox UI primitives, `use-mobile.tsx`, and `utils.ts` point at `artifacts/tessera`. Git symlink support is required; enable it when cloning on Windows.
 
 ## Workspace checks
 
