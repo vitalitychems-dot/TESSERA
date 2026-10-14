@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { logger } from "../lib/logger";
 import { hashStringFNV, getRealityFlag } from "../lib/reality-audit";
 import {
-  seedFeasibility, seedNovelty, deterministicInventionId, abstainIncrement,
+  seedFeasibility, seedNovelty, resolveSeedInventionId, abstainIncrement,
   buildStartProgress, buildStep, testRegressed, pickFreshCandidate, REGRESSION_RESUME_PROGRESS,
 } from "../lib/invention-seed";
 import { buildInvention3DBlock, buildInvention3DBlocks } from "../lib/invention-3d";
@@ -711,6 +711,10 @@ router.post("/inventions", async (req, res) => {
     }
 
     const inventionId = body.inventionId || `inv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const [already] = await db.select().from(inventionsTable).where(eq(inventionsTable.inventionId, inventionId)).limit(1);
+    if (already) {
+      return res.status(409).json({ ok: false, error: "An invention with that id already exists", inventionId });
+    }
 
     const [inserted] = await db.insert(inventionsTable).values({
       inventionId,
@@ -738,6 +742,10 @@ router.post("/inventions", async (req, res) => {
 
     return res.json({ ok: true, invention: inserted, inventionId });
   } catch (err) {
+    const code = (err as { code?: string }).code;
+    if (code === "23505") {
+      return res.status(409).json({ ok: false, error: "An invention with that id already exists" });
+    }
     logger.error({ err }, "Failed to create invention");
     return res.status(500).json({ ok: false, error: (err as Error).message });
   }
@@ -1072,12 +1080,13 @@ const AGENTS = ["GrandCoordinatorAgent", "QuantumMechanicAgent", "BioNeuralistAg
 router.post("/inventions/generate", async (_req, res) => {
   try {
     const allInventions = await db.select().from(inventionsTable);
-    const existingTitles = new Set(allInventions.map(i => i.title));
+    const existing = allInventions.map(i => ({ inventionId: i.inventionId, title: i.title }));
 
     const generated: any[] = [];
     for (const area of SYSTEM_IMPROVEMENT_TEMPLATES) {
       for (const idea of area.ideas) {
-        if (existingTitles.has(idea.title)) continue;
+        const resolved = resolveSeedInventionId("sys", idea.title, existing);
+        if (resolved.action === "skip") continue;
         // Deterministic: seeded from FNV hash of title.
         const titleHash = hashStringFNV(idea.title);
         const agent1 = AGENTS[titleHash % AGENTS.length];
@@ -1095,7 +1104,7 @@ router.post("/inventions/generate", async (_req, res) => {
         const noVotes = Math.max(0, 8 - Math.floor(feasibility / 15));
         const abstainVotes = (titleHash >>> 12) % 8;
 
-        const inventionId = deterministicInventionId("sys", idea.title);
+        const inventionId = resolved.inventionId;
 
         const inv = {
           inventionId,
@@ -1127,7 +1136,8 @@ router.post("/inventions/generate", async (_req, res) => {
           votes: { yes: yesVotes, no: noVotes, abstain: abstainVotes },
         };
 
-        await db.insert(inventionsTable).values(inv).onConflictDoNothing();
+        await db.insert(inventionsTable).values(inv).onConflictDoNothing({ target: inventionsTable.inventionId });
+        existing.push({ inventionId, title: idea.title });
         generated.push({ title: idea.title, status, area: area.area, inventionId });
       }
     }
@@ -1192,9 +1202,9 @@ async function autonomousTick() {
 
     // 1. Generate: every 4 ticks, pull in fresh ideas from templates.
     if (autoLoopState.ticks % 4 === 1) {
-      const existingTitles = new Set(all.map(i => i.title));
+      const existing = all.map(i => ({ inventionId: i.inventionId, title: i.title }));
       const candidateAreas = SYSTEM_IMPROVEMENT_TEMPLATES.flatMap(a => a.ideas.map(i => ({ ...i, area: a.area })));
-      const fresh = candidateAreas.filter(c => !existingTitles.has(c.title));
+      const fresh = candidateAreas.filter(c => resolveSeedInventionId("auto", c.title, existing).action === "insert");
       if (fresh.length > 0) {
         // Deterministic: round-robin over hash-sorted candidates.
         const pick = pickFreshCandidate(fresh, autoLoopState.ticks)!;
@@ -1203,7 +1213,7 @@ async function autonomousTick() {
         const agent2 = AGENTS[((pickHash >>> 8) + 1) % AGENTS.length] === agent1
           ? AGENTS[((pickHash >>> 8) + 2) % AGENTS.length]
           : AGENTS[((pickHash >>> 8) + 1) % AGENTS.length];
-        const inventionId = deterministicInventionId("auto", pick.title);
+        const inventionId = resolveSeedInventionId("auto", pick.title, existing).inventionId;
         await db.insert(inventionsTable).values({
           inventionId,
           title: pick.title,
@@ -1232,7 +1242,7 @@ async function autonomousTick() {
           supporters: [agent1, agent2],
           conferenceRound: 10 + Math.floor(autoLoopState.ticks / 4),
           votes: { yes: 0, no: 0, abstain: 0 },
-        }).onConflictDoNothing();
+        }).onConflictDoNothing({ target: inventionsTable.inventionId });
         autoLoopState.generated += 1;
         pushEvent("propose", `Auto-proposed new invention by ${agent1}.`, pick.title);
       }
