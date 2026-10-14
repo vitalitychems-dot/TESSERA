@@ -1,6 +1,6 @@
 # Tessera console
 
-Phosphor lattice is the current Tessera UI. It is one Node process on **127.0.0.1:4391**.
+Tessera Next is the current UI. It is one Node process on **127.0.0.1:4391**. `/api/meta` reports `theme: "tessera-next"`.
 
 ```bash
 pnpm --filter @workspace/console run dev
@@ -24,4 +24,4 @@ Syne (Bonjour Monde) and Fragment Mono (Wei Huang) are SIL Open Font License fac
 
 ## Where this was left
 
-The older water/fire/lightning/diamond/spiral marks and the tessera accent palette are still on disk and marked superseded in the root README. The console does not replace `artifacts/tessera` routes. Chat falls through to the file pen when no local pen is configured. A full-graph time step recomputes co-mention synapses once per memory line and then caches that step in the process. The listen address stays `127.0.0.1` even if `HOST` or `TESSERA_CONSOLE_HOST` is set. Chat from curl needs the matching Origin header.
+The five preview marks and the web accent palette now use the same Next colors. The console does not replace `artifacts/tessera` routes. Chat falls through to the file pen when no local pen is configured. A full-graph time step recomputes co-mention synapses once per memory line and then caches that step in the process. The listen address stays `127.0.0.1` even if `HOST` or `TESSERA_CONSOLE_HOST` is set. Chat from curl needs the matching Origin header.

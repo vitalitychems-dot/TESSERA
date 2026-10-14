@@ -17,7 +17,7 @@ Father decided on 2026-10-07 that Tessera will be built using the BHNMC directio
 | UI preview sandbox | `artifacts/mockup-sandbox` | `http://localhost:5173` | Component preview |
 | GitAI | `artifacts/gitai` | `http://127.0.0.1:4183` | Standalone marketplace, OpenAPI at `/api/openapi.json`, and the studio tab at `http://127.0.0.1:4173/gitai`. Same backend. GitAI credits are non-redeemable points. |
 | 3D studio floor | `artifacts/v2` | `http://127.0.0.1:4173` | `pnpm --filter @workspace/v2 studio`. The 2D wall is a link on that page. |
-| Tessera console | `artifacts/console` | `http://127.0.0.1:4391` | Phosphor lattice UI. One process, this port only. Does not start the other apps. |
+| Tessera console | `artifacts/console` | `http://127.0.0.1:4391` | Tessera Next UI. One process, this port only. Does not start the other apps. |
 
 ## Port map
 
@@ -32,16 +32,16 @@ Standalone processes: console 4391 (`TESSERA_CONSOLE_PORT`), GitAI 4183 (`GITAI_
 
 Port notes: the 3D studio (`artifacts/v2`) keeps 4173 and the top-level `preview/` Vite app now defaults to 4174. `preview/` uses `strictPort`, so a taken port is an error. `PORT` overrides either one. The API server exits with an error when `PORT` is already taken. Set `TESSERA_PORT_FALLBACK=1` to let it move to the next free port (up to 10 tries, logged). On Replit (`REPL_ID` or `REPLIT_DEPLOYMENT` set) the old fallback stays unless `TESSERA_PORT_FALLBACK=0`. The four `.replit` `[[ports]]` forwards to external ports 3001, 3002, 3003, and 4200 had no app behind them and were removed. The other entries are unchanged.
 
-## Superseded themes
+## Theme
 
-The phosphor lattice console is the current Tessera UI theme. These older theme files stay in the tree. Do not delete them without the owner's yes.
+Tessera Next is the current UI theme: ink ground `#070b10`, glass edge `#7ef0d4`, fracture `#ff5c39`, bone text `#f3efe6`. Syne and Fragment Mono stay the typefaces. The five marks (water, fire, lightning, diamond, spiral) are facets of that theme. An unknown preview mark still resolves to water. Stored web accents from the old cyan, purple, rose, green, amber, blue, indigo, and teal names resolve to a Next facet. The files below were replaced in place. Archive copies were not deleted.
 
-| File | What it was |
+| File | What it is now |
 | --- | --- |
-| `preview/src/lib/tessera/themes.ts` | Water, fire, lightning, diamond, and spiral marks. Superseded. |
-| `preview/src/components/tessera/theme-view.tsx` | Picker for those five marks. Superseded. |
-| `preview/src/styles.css` | CSS variables for those marks. Superseded for new UI work. |
-| `artifacts/tessera/src/lib/theme-constants.ts` | Cyan, purple, rose, and related accent palettes for the older web app. Superseded as the canonical theme, but `artifacts/tessera/src/main.tsx` still applies it at startup (default accent `cyan`), so it is live code in that app. |
+| `artifacts/console/public/console.css` | Next console. `/api/meta` reports `tessera-next`. |
+| `preview/src/styles.css` | Next tokens for the five marks. Water is the glass default. |
+| `preview/src/components/tessera/theme-view.tsx` | Next picker for those five marks. |
+| `artifacts/tessera/src/lib/theme-constants.ts` | Next accents. Default is `glass`. |
 
 The console does not read `TESSERA_ENABLE_*` and does not change those flags. Ports already used by other apps are 3000 (web), 5000 (API), 5173 (mockup sandbox), 4173 (studio), 4174 (`preview/`), 4183 (GitAI), and 8787 (Gitbook HTTP). The console listens on `127.0.0.1:4391`. The bind address is fixed and is not read from the environment. `TESSERA_CONSOLE_PORT` overrides the port.
 

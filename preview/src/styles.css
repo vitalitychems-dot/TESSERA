@@ -12,9 +12,9 @@
   --color-border: var(--tessera-border);
   --color-border-strong: var(--tessera-border-strong);
   --color-alive: var(--tessera-alive);
-  --font-display: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
-  --font-sans: "Outfit", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --font-display: Syne, "Avenir Next", "Trebuchet MS", sans-serif;
+  --font-sans: Syne, "Avenir Next", "Trebuchet MS", sans-serif;
+  --font-mono: "Fragment Mono", ui-monospace, Menlo, Consolas, monospace;
   --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -27,81 +27,81 @@ html[data-theme="night"],
 html[data-theme="water"],
 [data-swatch="water"] {
   color-scheme: dark;
-  --tessera-bg: #071018;
-  --tessera-surface: #0d1c28;
-  --tessera-raised: #143044;
-  --tessera-fg: #e7f6f4;
-  --tessera-muted: #9ec4c8;
-  --tessera-subtle: #6e98a0;
-  --tessera-accent: #3ee0f0;
-  --tessera-accent-fg: #04141a;
+  --tessera-bg: #070b10;
+  --tessera-surface: #12181f;
+  --tessera-raised: #1a242e;
+  --tessera-fg: #f3efe6;
+  --tessera-muted: #9aa8b2;
+  --tessera-subtle: #6d7c86;
+  --tessera-accent: #7ef0d4;
+  --tessera-accent-fg: #071210;
   --tessera-border: color-mix(in oklab, var(--tessera-accent) 28%, transparent);
   --tessera-border-strong: color-mix(in oklab, var(--tessera-accent) 48%, transparent);
-  --tessera-alive: #3ee0f0;
+  --tessera-alive: #7ef0d4;
 }
 
 html[data-theme="fire"],
 [data-swatch="fire"] {
   color-scheme: dark;
-  --tessera-bg: #140806;
-  --tessera-surface: #24100c;
-  --tessera-raised: #3a1a12;
-  --tessera-fg: #f8efe8;
-  --tessera-muted: #e2b8a4;
-  --tessera-subtle: #a87868;
-  --tessera-accent: #ff6a3d;
+  --tessera-bg: #120c0a;
+  --tessera-surface: #1e1411;
+  --tessera-raised: #2c1c16;
+  --tessera-fg: #f6efe8;
+  --tessera-muted: #c9aea4;
+  --tessera-subtle: #8d7068;
+  --tessera-accent: #ff5c39;
   --tessera-accent-fg: #1a0c08;
   --tessera-border: color-mix(in oklab, var(--tessera-accent) 30%, transparent);
   --tessera-border-strong: color-mix(in oklab, var(--tessera-accent) 50%, transparent);
-  --tessera-alive: #ff6a3d;
+  --tessera-alive: #ff5c39;
 }
 
 html[data-theme="lightning"],
 [data-swatch="lightning"] {
   color-scheme: dark;
-  --tessera-bg: #05070c;
-  --tessera-surface: #10141e;
-  --tessera-raised: #1a2233;
-  --tessera-fg: #f2f6ff;
-  --tessera-muted: #b7c4e6;
-  --tessera-subtle: #7d8cb3;
-  --tessera-accent: #d6f26a;
-  --tessera-accent-fg: #10140a;
+  --tessera-bg: #08090c;
+  --tessera-surface: #12151c;
+  --tessera-raised: #1c212c;
+  --tessera-fg: #f4f7f8;
+  --tessera-muted: #b7c2c8;
+  --tessera-subtle: #7d8b94;
+  --tessera-accent: #d7f6ff;
+  --tessera-accent-fg: #101418;
   --tessera-border: color-mix(in oklab, var(--tessera-accent) 30%, transparent);
   --tessera-border-strong: color-mix(in oklab, var(--tessera-accent) 50%, transparent);
-  --tessera-alive: #d6f26a;
+  --tessera-alive: #d7f6ff;
 }
 
 html[data-theme="diamond"],
 [data-swatch="diamond"] {
   color-scheme: light;
-  --tessera-bg: #eef3f4;
-  --tessera-surface: #f8fbfb;
-  --tessera-raised: #dce7ea;
-  --tessera-fg: #102028;
-  --tessera-muted: #3d5964;
-  --tessera-subtle: #6d8790;
-  --tessera-accent: #0e7490;
-  --tessera-accent-fg: #f4fbfc;
+  --tessera-bg: #e7eeea;
+  --tessera-surface: #f4f7f5;
+  --tessera-raised: #d5e2dc;
+  --tessera-fg: #121816;
+  --tessera-muted: #3d524c;
+  --tessera-subtle: #6d827b;
+  --tessera-accent: #1f8f7a;
+  --tessera-accent-fg: #f3faf7;
   --tessera-border: color-mix(in oklab, var(--tessera-fg) 16%, transparent);
   --tessera-border-strong: color-mix(in oklab, var(--tessera-fg) 30%, transparent);
-  --tessera-alive: #0e7490;
+  --tessera-alive: #1f8f7a;
 }
 
 html[data-theme="spiral"],
 [data-swatch="spiral"] {
   color-scheme: dark;
-  --tessera-bg: #100818;
-  --tessera-surface: #1c1030;
-  --tessera-raised: #2c1848;
+  --tessera-bg: #0e0c12;
+  --tessera-surface: #18141f;
+  --tessera-raised: #241c30;
   --tessera-fg: #f6f1e8;
-  --tessera-muted: #cfc0ea;
-  --tessera-subtle: #9a84bc;
-  --tessera-accent: #e7b3ff;
+  --tessera-muted: #c9bdd4;
+  --tessera-subtle: #8f82a0;
+  --tessera-accent: #e4c6ff;
   --tessera-accent-fg: #160c24;
   --tessera-border: color-mix(in oklab, var(--tessera-accent) 28%, transparent);
   --tessera-border-strong: color-mix(in oklab, var(--tessera-accent) 48%, transparent);
-  --tessera-alive: #e7b3ff;
+  --tessera-alive: #e4c6ff;
 }
 
 @layer base {

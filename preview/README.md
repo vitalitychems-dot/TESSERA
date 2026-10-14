@@ -1,6 +1,6 @@
 # Grok desk preview
 
-The five theme marks in `src/lib/tessera/themes.ts` and `src/components/tessera/theme-view.tsx` are superseded by the phosphor lattice console in `artifacts/console`. Those files stay here. Deleting them needs the owner's yes.
+The five theme marks in `src/lib/tessera/themes.ts` and `src/components/tessera/theme-view.tsx` are facets of Tessera Next, the same theme as `artifacts/console`. Water is the glass default. Those files stay here.
 
 This is the preview that runs on the Grok desk. It is not the TESSERA app under `artifacts/tessera`, and it is not merged into `main`'s build.
 

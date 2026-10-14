@@ -192,12 +192,12 @@ function draw(canvas, brain, selected) {
   const w = canvas.width;
   const h = canvas.height;
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = "#100e0a";
+  ctx.fillStyle = "#070b10";
   ctx.fillRect(0, 0, w, h);
   const byId = new Map(brain.nodes.map((node) => [node.id, node]));
   const project = (node) => [w / 2 + node.x, h / 2 + node.y * 0.92];
   ctx.lineWidth = 1;
-  ctx.strokeStyle = "rgba(224, 122, 61, 0.35)";
+  ctx.strokeStyle = "rgba(255, 92, 57, 0.35)";
   for (const edge of brain.relations) {
     const a = byId.get(edge.a);
     const b = byId.get(edge.b);
@@ -209,7 +209,7 @@ function draw(canvas, brain, selected) {
     ctx.lineTo(x2, y2);
     ctx.stroke();
   }
-  ctx.strokeStyle = "rgba(214, 255, 62, 0.85)";
+  ctx.strokeStyle = "rgba(126, 240, 212, 0.85)";
   for (const edge of brain.synapses) {
     const a = byId.get(edge.a);
     const b = byId.get(edge.b);
@@ -224,7 +224,7 @@ function draw(canvas, brain, selected) {
   }
   for (const node of brain.nodes) {
     const [x, y] = project(node);
-    ctx.fillStyle = node.id === selected ? "#d6ff3e" : "#f4ecda";
+    ctx.fillStyle = node.id === selected ? "#7ef0d4" : "#f3efe6";
     ctx.fillRect(x - 2.2, y - 2.2, 4.4, 4.4);
   }
 }

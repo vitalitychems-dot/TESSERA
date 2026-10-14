@@ -91,7 +91,16 @@ test("each tab endpoint returns data that exists in the repo", async () => {
   try {
     const page = await fetch(`http://127.0.0.1:${port}/`);
     assert.equal(page.status, 200);
-    assert.match(await page.text(), /data-action="tab-eye"/);
+    const html = await page.text();
+    assert.match(html, /data-action="tab-eye"/);
+    assert.match(html, /Tessera · Next/);
+    const meta = await get("/api/meta");
+    assert.equal(meta.theme, "tessera-next");
+    const css = await fetch(`http://127.0.0.1:${port}/console.css`);
+    assert.equal(css.status, 200);
+    const sheet = await css.text();
+    assert.match(sheet, /--glass: #7ef0d4/);
+    assert.doesNotMatch(sheet, /#d6ff3e/);
 
     const eye = await get("/api/eye");
     assert.equal(eye.memoryFile, "docs/v2/v2-memory.jsonl");

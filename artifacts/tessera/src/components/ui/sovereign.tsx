@@ -27,7 +27,7 @@ export function RadialGauge({
   const offset = circumference * (1 - pct);
 
   const gradients: Record<string, [string, string]> = {
-    cyan: ["#06b6d4", "#22d3ee"],
+    cyan: ["#1f8f7a", "#7ef0d4"],
     violet: ["#8b5cf6", "#a78bfa"],
     emerald: ["#10b981", "#34d399"],
     amber: ["#f59e0b", "#fbbf24"],

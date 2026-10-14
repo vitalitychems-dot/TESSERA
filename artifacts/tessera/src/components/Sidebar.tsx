@@ -161,7 +161,7 @@ export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { isAdmin, logout } = useAdmin();
   const [readConvIds, setReadConvIds] = useState<number[]>(getReadConvIds);
-  const [activeAccent, setActiveAccent] = useState<string>(() => localStorage.getItem("tessera-accent") || "cyan");
+  const [activeAccent, setActiveAccent] = useState<string>(() => localStorage.getItem("tessera-accent") || "glass");
 
   const { data: rolesData } = useQuery({
     queryKey: ["/api/rick/royal-roles"],
