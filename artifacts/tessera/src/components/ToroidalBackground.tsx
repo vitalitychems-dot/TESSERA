@@ -87,7 +87,7 @@ function drawFlowerOfLife(ctx: CanvasRenderingContext2D, cx: number, cy: number,
 
   ctx.beginPath();
   ctx.arc(0, 0, rr, 0, Math.PI * 2);
-  ctx.strokeStyle = `rgba(139, 92, 246, ${alpha * 0.8})`;
+  ctx.strokeStyle = `rgba(228, 198, 255, ${alpha * 0.8})`;
   ctx.lineWidth = 0.6;
   ctx.stroke();
 
@@ -97,7 +97,7 @@ function drawFlowerOfLife(ctx: CanvasRenderingContext2D, cx: number, cy: number,
     const py = Math.sin(a) * rr;
     ctx.beginPath();
     ctx.arc(px, py, rr, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(6, 182, 212, ${alpha * (0.5 + 0.2 * Math.sin(t * 0.3 + i))})`;
+    ctx.strokeStyle = `rgba(126, 240, 212, ${alpha * (0.5 + 0.2 * Math.sin(t * 0.3 + i))})`;
     ctx.lineWidth = 0.5;
     ctx.stroke();
   }
@@ -149,8 +149,8 @@ function drawMetatronsCube(ctx: CanvasRenderingContext2D, cx: number, cy: number
 
   for (const [vx, vy] of vertices) {
     const glow = ctx.createRadialGradient(vx, vy, 0, vx, vy, 4);
-    glow.addColorStop(0, `rgba(139, 92, 246, ${alpha * 0.6})`);
-    glow.addColorStop(1, `rgba(139, 92, 246, 0)`);
+    glow.addColorStop(0, `rgba(228, 198, 255, ${alpha * 0.6})`);
+    glow.addColorStop(1, `rgba(228, 198, 255, 0)`);
     ctx.beginPath();
     ctx.arc(vx, vy, 4, 0, Math.PI * 2);
     ctx.fillStyle = glow;
@@ -164,7 +164,7 @@ function drawMetatronsCube(ctx: CanvasRenderingContext2D, cx: number, cy: number
 
   ctx.beginPath();
   ctx.arc(0, 0, rr, 0, Math.PI * 2);
-  ctx.strokeStyle = `rgba(6, 182, 212, ${alpha * 0.4})`;
+  ctx.strokeStyle = `rgba(126, 240, 212, ${alpha * 0.4})`;
   ctx.lineWidth = 0.5;
   ctx.stroke();
 
@@ -200,7 +200,7 @@ function drawSriYantra(ctx: CanvasRenderingContext2D, cx: number, cy: number, r:
     }
     ctx.closePath();
     const pulse = 0.5 + 0.5 * Math.sin(t * 0.3 + tri);
-    ctx.strokeStyle = `rgba(6, 182, 212, ${alpha * (0.3 + 0.15 * pulse)})`;
+    ctx.strokeStyle = `rgba(126, 240, 212, ${alpha * (0.3 + 0.15 * pulse)})`;
     ctx.lineWidth = 0.5;
     ctx.stroke();
     ctx.restore();
@@ -249,13 +249,13 @@ function drawVesicaPiscis(ctx: CanvasRenderingContext2D, cx: number, cy: number,
 
   ctx.beginPath();
   ctx.arc(-offset, 0, rr, 0, Math.PI * 2);
-  ctx.strokeStyle = `rgba(139, 92, 246, ${alpha * 0.5})`;
+  ctx.strokeStyle = `rgba(228, 198, 255, ${alpha * 0.5})`;
   ctx.lineWidth = 0.6;
   ctx.stroke();
 
   ctx.beginPath();
   ctx.arc(offset, 0, rr, 0, Math.PI * 2);
-  ctx.strokeStyle = `rgba(6, 182, 212, ${alpha * 0.5})`;
+  ctx.strokeStyle = `rgba(126, 240, 212, ${alpha * 0.5})`;
   ctx.lineWidth = 0.6;
   ctx.stroke();
 
@@ -305,8 +305,8 @@ function drawConnectionLine(ctx: CanvasRenderingContext2D, x1: number, y1: numbe
   if (a < 0.005) return;
 
   const grad = ctx.createLinearGradient(x1, y1, x2, y2);
-  grad.addColorStop(0, `rgba(6, 182, 212, ${a})`);
-  grad.addColorStop(0.5, `rgba(139, 92, 246, ${a * 1.5})`);
+  grad.addColorStop(0, `rgba(126, 240, 212, ${a})`);
+  grad.addColorStop(0.5, `rgba(228, 198, 255, ${a * 1.5})`);
   grad.addColorStop(1, `rgba(245, 158, 11, ${a})`);
 
   ctx.beginPath();
@@ -509,7 +509,7 @@ function ToroidalBackground() {
           if (alpha > 0.002) {
             ctx.beginPath();
             ctx.arc(sx, sy, 0.6 + s * 0.8, 0, Math.PI * 2);
-            const armColor = arm === 0 ? `rgba(139,92,246,${alpha})` : `rgba(6,182,212,${alpha})`;
+            const armColor = arm === 0 ? `rgba(228,198,255,${alpha})` : `rgba(126,240,212,${alpha})`;
             ctx.fillStyle = armColor;
             ctx.fill();
           }
@@ -574,8 +574,8 @@ function ToroidalBackground() {
 
         const ringAlpha = [0.14, 0.1, 0.08][li];
         const ringColors = [
-          `rgba(6,182,212,${ringAlpha + 0.04 * Math.sin(t * 0.5)})`,
-          `rgba(139,92,246,${ringAlpha + 0.03 * Math.sin(t * 0.4 + 1)})`,
+          `rgba(126,240,212,${ringAlpha + 0.04 * Math.sin(t * 0.5)})`,
+          `rgba(228,198,255,${ringAlpha + 0.03 * Math.sin(t * 0.4 + 1)})`,
           `rgba(245,158,11,${ringAlpha + 0.03 * Math.sin(t * 0.6 + 2)})`,
         ];
 
@@ -643,14 +643,14 @@ function ToroidalBackground() {
         const fy = Math.sin(ang) * 42;
         ctx.beginPath();
         ctx.arc(fx, fy, 42, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(6, 182, 212, ${geomAlpha})`;
+        ctx.strokeStyle = `rgba(126, 240, 212, ${geomAlpha})`;
         ctx.lineWidth = 0.6;
         ctx.stroke();
       }
 
       ctx.beginPath();
       ctx.arc(0, 0, 42, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(139, 92, 246, ${geomAlpha * 1.2})`;
+      ctx.strokeStyle = `rgba(228, 198, 255, ${geomAlpha * 1.2})`;
       ctx.lineWidth = 0.7;
       ctx.stroke();
 
@@ -674,8 +674,8 @@ function ToroidalBackground() {
       ctx.restore();
 
       const coreGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 60 + 15 * Math.sin(t * 0.8));
-      coreGlow.addColorStop(0, `rgba(139,92,246,${0.06 + 0.02 * Math.sin(t * 0.9)})`);
-      coreGlow.addColorStop(0.5, `rgba(6,182,212,${0.03 + 0.01 * Math.sin(t * 0.7)})`);
+      coreGlow.addColorStop(0, `rgba(228,198,255,${0.06 + 0.02 * Math.sin(t * 0.9)})`);
+      coreGlow.addColorStop(0.5, `rgba(126,240,212,${0.03 + 0.01 * Math.sin(t * 0.7)})`);
       coreGlow.addColorStop(1, "rgba(0,0,0,0)");
       ctx.beginPath();
       ctx.arc(cx, cy, 60 + 15 * Math.sin(t * 0.8), 0, Math.PI * 2);

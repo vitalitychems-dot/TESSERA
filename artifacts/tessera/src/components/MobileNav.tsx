@@ -52,9 +52,9 @@ const SECONDARY: NavTab[] = [
 ];
 
 const COLOR_MAP: Record<string, { active: string; text: string; dot: string; inactive: string; glow: string }> = {
-  cyan: { active: "bg-cyan-500/15", text: "text-cyan-400", dot: "bg-cyan-400", inactive: "text-slate-500", glow: "shadow-[0_0_10px_rgba(6,182,212,0.25)]" },
+  cyan: { active: "bg-cyan-500/15", text: "text-cyan-400", dot: "bg-cyan-400", inactive: "text-slate-500", glow: "shadow-[0_0_10px_rgba(126,240,212,0.25)]" },
   pink: { active: "bg-pink-500/15", text: "text-pink-400", dot: "bg-pink-400", inactive: "text-slate-500", glow: "shadow-[0_0_10px_rgba(236,72,153,0.25)]" },
-  violet: { active: "bg-violet-500/15", text: "text-violet-400", dot: "bg-violet-400", inactive: "text-slate-500", glow: "shadow-[0_0_10px_rgba(139,92,246,0.25)]" },
+  violet: { active: "bg-violet-500/15", text: "text-violet-400", dot: "bg-violet-400", inactive: "text-slate-500", glow: "shadow-[0_0_10px_rgba(228,198,255,0.25)]" },
   purple: { active: "bg-purple-500/15", text: "text-purple-400", dot: "bg-purple-400", inactive: "text-slate-500", glow: "shadow-[0_0_10px_rgba(168,85,247,0.25)]" },
   amber: { active: "bg-amber-500/15", text: "text-amber-400", dot: "bg-amber-400", inactive: "text-slate-500", glow: "shadow-[0_0_10px_rgba(245,158,11,0.25)]" },
   emerald: { active: "bg-emerald-500/15", text: "text-emerald-400", dot: "bg-emerald-400", inactive: "text-slate-500", glow: "shadow-[0_0_10px_rgba(16,185,129,0.25)]" },

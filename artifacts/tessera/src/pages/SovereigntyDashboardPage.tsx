@@ -146,7 +146,7 @@ export default function SovereigntyDashboardPage() {
               <select className="w-full bg-white/[0.06] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-violet-500/40 transition-colors" value={newProposal.category} onChange={e => setNewProposal(p => ({ ...p, category: e.target.value as any }))}>
                 {["governance", "feature", "security", "infrastructure", "income", "community", "consciousness", "sovereignty"].map(c => <option key={c} value={c}>{c}</option>)}
               </select>
-              <button onClick={() => proposeMutation.mutate(newProposal)} disabled={proposeMutation.isPending || !newProposal.title || !newProposal.description} className="w-full py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl text-sm hover:from-violet-700 hover:to-purple-700 disabled:opacity-40 transition-all font-medium shadow-[0_0_12px_rgba(139,92,246,0.2)]">
+              <button onClick={() => proposeMutation.mutate(newProposal)} disabled={proposeMutation.isPending || !newProposal.title || !newProposal.description} className="w-full py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl text-sm hover:from-violet-700 hover:to-purple-700 disabled:opacity-40 transition-all font-medium shadow-[0_0_12px_rgba(228,198,255,0.2)]">
                 {proposeMutation.isPending ? "Voting..." : "Submit to Council"}
               </button>
             </div>
