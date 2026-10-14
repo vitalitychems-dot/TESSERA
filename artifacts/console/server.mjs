@@ -79,7 +79,7 @@ export async function handleRequest(req, res) {
       return;
     }
     if (req.method === "GET" && pathname === "/api/meta") {
-      sendJson(res, 200, { port: boundPort, theme: "phosphor-lattice", listen: `127.0.0.1:${boundPort}` });
+      sendJson(res, 200, { port: boundPort, theme: "tessera-next", listen: `127.0.0.1:${boundPort}` });
       return;
     }
     if (req.method === "GET" && pathname === "/api/eye") {
@@ -145,5 +145,5 @@ if (entry === fileURLToPath(import.meta.url)) {
   const server = await startServer();
   const address = server.address();
   const port = typeof address === "object" && address ? address.port : consolePort();
-  console.log(`Tessera console  http://127.0.0.1:${port}  theme phosphor-lattice`);
+  console.log(`Tessera console  http://127.0.0.1:${port}  theme tessera-next`);
 }
