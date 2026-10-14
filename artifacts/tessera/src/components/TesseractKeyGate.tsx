@@ -139,7 +139,7 @@ function Frame({ tone, title, body }: { tone: "amber" | "rose" | "emerald" | "zi
     zinc: "ring-zinc-700/50 from-zinc-900/30 to-zinc-950",
   }[tone];
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-sm p-6">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background p-6">
       <div className={`w-full max-w-xl rounded-2xl ring-1 ${ring} bg-gradient-to-br p-6 shadow-2xl`}>
         <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>
         {body}

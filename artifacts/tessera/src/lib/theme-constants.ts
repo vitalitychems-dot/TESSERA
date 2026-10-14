@@ -1,14 +1,7 @@
-/** Tessera Next. Older accent names resolve to a Next facet. */
-
+/** Canonical Tessera Next facets; old saved names remain compatible. */
 const LEGACY_ACCENT: Record<string, string> = {
-  cyan: "glass",
-  purple: "return",
-  rose: "fracture",
-  green: "mineral",
-  amber: "flash",
-  blue: "glass",
-  indigo: "return",
-  teal: "stone",
+  cyan: "glass", blue: "glass", purple: "return", indigo: "return",
+  rose: "fracture", green: "mineral", amber: "flash", teal: "stone",
 };
 
 export const FONT_COLORS = [
@@ -29,16 +22,17 @@ export const ACCENT_COLORS = [
 ] as const;
 
 export const PARTICLE_COLORS = [
-  "#7ef0d4", "#d7f6ff", "#f3efe6", "#1f8f7a", "#e4c6ff", "#ff5c39",
+  "#7ef0d4", "#d7f6ff", "#f3efe6", "#1f8f7a", "#e4c6ff", "#8fd9c4",
 ];
 
 export const STAR_COLORS = [
   "#f3efe6", "#d7f6ff", "#7ef0d4", "#e4c6ff",
 ];
 
-export function resolveAccent(accentValue?: string) {
-  const mapped = accentValue ? LEGACY_ACCENT[accentValue] ?? accentValue : "glass";
-  return ACCENT_COLORS.find((item) => item.value === mapped) ?? ACCENT_COLORS[0];
+export function resolveAccent(value?: string) {
+  const normalized = value?.trim().toLowerCase() || "glass";
+  const mapped = LEGACY_ACCENT[normalized] ?? normalized;
+  return ACCENT_COLORS.find(item => item.value === mapped) ?? ACCENT_COLORS[0];
 }
 
 export function applyTheme(accentValue?: string) {
@@ -48,18 +42,18 @@ export function applyTheme(accentValue?: string) {
 
   const accent = resolveAccent(accentValue);
   const hslParts = accent.hsl.split(" ");
-  const hue = parseInt(hslParts[0], 10);
+  const hue = parseInt(hslParts[0]);
 
   const accentCss = [
     `--primary: ${accent.hsl}`,
     `--primary-foreground: 210 26% 6%`,
     `--ring: ${accent.hsl}`,
-    `--input: ${hue} 14% 18%`,
+    `--input: ${hue} 14% 22%`,
     `--sidebar-primary: ${accent.hsl}`,
     `--sidebar-ring: ${accent.hsl}`,
-    `--sidebar-accent: ${hue} 18% 14%`,
+    `--sidebar-accent: ${hue} 18% 12%`,
     `--chart-1: ${accent.hsl}`,
-    `--accent: ${hue} 20% 18%`,
+    `--accent: ${hue} 20% 20%`,
   ].join("; ") + ";";
 
   let style = document.getElementById("tessera-theme-vars") as HTMLStyleElement | null;
@@ -69,7 +63,16 @@ export function applyTheme(accentValue?: string) {
     document.head.appendChild(style);
   }
 
-  style.textContent = `:root { ${accentCss} }`;
+  // Inline properties outrank .dark defaults regardless of stylesheet load order.
+  for (const declaration of accentCss.split(";")) {
+    const separator = declaration.indexOf(":");
+    if (separator !== -1) html.style.setProperty(
+      declaration.slice(0, separator).trim(), declaration.slice(separator + 1).trim(),
+    );
+  }
+  style.textContent = "";
+  html.dataset.theme = "tessera-next";
+  html.dataset.accent = accent.value;
 }
 
 export function handleFontColorChange(currentColor: string, newColor: string): string {
@@ -82,7 +85,7 @@ export function handleFontColorChange(currentColor: string, newColor: string): s
 
 export function handleThemeChange(accent: string) {
   const next = resolveAccent(accent).value;
-  localStorage.setItem("tessera-accent", next);
+  try { localStorage.setItem("tessera-accent", next); } catch { /* Storage may be blocked. */ }
   applyTheme(next);
   window.dispatchEvent(new Event("tessera-theme-change"));
 }

@@ -260,13 +260,11 @@ export function Sidebar() {
         <div className="absolute inset-0 bg-gradient-to-b from-violet-500/[0.04] via-transparent to-transparent pointer-events-none" />
         <div className="flex items-center gap-3 text-primary mb-5 relative">
           <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-lg">T</span>
-            </div>
+            <div className="next-mosaic" aria-label="Tessera Next mosaic"><span /><span /><span /><span /></div>
             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[hsl(250,15%,4%)]" />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="font-bold text-lg bg-gradient-to-r from-violet-300 via-blue-400 to-cyan-400 bg-clip-text text-transparent leading-tight tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>Tessera</h1>
+            <h1 className="font-bold text-lg text-foreground leading-tight tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>Next</h1>
             <div className="text-[9px] font-mono text-violet-400/40 tracking-[.18em] mt-0.5">TESS:// SOVEREIGN</div>
           </div>
           <button
