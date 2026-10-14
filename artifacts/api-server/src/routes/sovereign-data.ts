@@ -617,10 +617,9 @@ router.get("/conversations/:id/attachments", requireAdminSession, (_req, res) =>
   res.json({ ok: true, attachments: [] });
 });
 
-router.get("/processes/live", (req, res) => {
-  const acceptsSSE = req.headers.accept?.includes("text/event-stream");
+function liveProcessSnapshot() {
   const network = computeNetworkTopology();
-  const payload = {
+  return {
     ok: true,
     processes: network.nodes.slice(0, 8).map(n => ({
       id: n.id,
@@ -633,41 +632,27 @@ router.get("/processes/live", (req, res) => {
     })),
     method: "Real system metrics + graph topology — computed locally",
   };
+}
 
-  if (acceptsSSE) {
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.flushHeaders?.();
-    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+router.get("/processes/live", (req, res) => {
+  // The chamber opens this with EventSource. A JSON body makes the browser
+  // abort the stream, so this route always speaks text/event-stream.
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
+  res.write(`data: ${JSON.stringify(liveProcessSnapshot())}\n\n`);
 
-    const interval = setInterval(() => {
-      try {
-        const updated = computeNetworkTopology();
-        const data = {
-          ok: true,
-          processes: updated.nodes.slice(0, 8).map(n => ({
-            id: n.id,
-            name: n.name,
-            status: n.status === "healthy" ? "running" : "warning",
-            cpu: n.cpuUsage,
-            memory: n.memoryUsage,
-            load: n.load,
-            connections: n.connections.length,
-          })),
-          method: "Real system metrics + graph topology — computed locally",
-        };
-        res.write(`data: ${JSON.stringify(data)}\n\n`);
-      } catch {}
-    }, 10000);
+  const interval = setInterval(() => {
+    try {
+      res.write(`data: ${JSON.stringify(liveProcessSnapshot())}\n\n`);
+    } catch {}
+  }, 10000);
 
-    req.on("close", () => {
-      clearInterval(interval);
-      res.end();
-    });
-  } else {
-    res.json(payload);
-  }
+  req.on("close", () => {
+    clearInterval(interval);
+    res.end();
+  });
 });
 
 router.get("/sacred-knowledge/traditions", (_req, res) => {
