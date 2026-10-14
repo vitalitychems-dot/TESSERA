@@ -18,6 +18,28 @@ import {
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
+function declaredVersion(packagePath, dependency) {
+  const pkg = JSON.parse(readFileSync(join(repoRoot, packagePath), "utf8"));
+  const specifier = pkg.dependencies?.[dependency] ?? pkg.devDependencies?.[dependency];
+  const match = String(specifier ?? "").match(/^[~^]?(\d+\.\d+\.\d+)/);
+  assert.ok(match, `${packagePath} must declare an exact semver floor for ${dependency}`);
+  return match[1];
+}
+
+function catalogVersion(dependency) {
+  const workspace = readFileSync(join(repoRoot, "pnpm-workspace.yaml"), "utf8");
+  const escaped = dependency.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = workspace.match(new RegExp(`^  ${escaped}:\\s*[~^]?(\\d+\\.\\d+\\.\\d+)\\s*$`, "m"));
+  assert.ok(match, `pnpm-workspace.yaml must catalog ${dependency}`);
+  return match[1];
+}
+
+const CURRENT_DEPENDENCY_FLOORS = Object.freeze({
+  express: declaredVersion("artifacts/api-server/package.json", "express"),
+  three: declaredVersion("artifacts/v2/package.json", "three"),
+  react: catalogVersion("react"),
+});
+
 function write(file, text) {
   mkdirSync(join(file, ".."), { recursive: true });
   writeFileSync(file, text);
@@ -102,10 +124,10 @@ test("license readers accept manifest and LICENSE text and reject prose", () => 
 test("lockfile importer versions and the single locked react version are readable", () => {
   const lock = readFileSync(new URL("../pnpm-lock.yaml", import.meta.url), "utf8");
   const parsed = parseLockfile(lock);
-  assert.equal(parsed.importers.get("artifacts/api-server").dependencies.express.version, "5.2.1");
-  assert.equal(parsed.importers.get("artifacts/v2").dependencies.three.version, "0.169.0");
+  assert.equal(parsed.importers.get("artifacts/api-server").dependencies.express.version, CURRENT_DEPENDENCY_FLOORS.express);
+  assert.equal(parsed.importers.get("artifacts/v2").dependencies.three.version, CURRENT_DEPENDENCY_FLOORS.three);
   assert.equal(parsed.versions.get("react").size, 1);
-  assert.equal([...parsed.versions.get("react")][0], "19.1.0");
+  assert.equal([...parsed.versions.get("react")][0], CURRENT_DEPENDENCY_FLOORS.react);
 });
 
 test("fixture registry uses package metadata only and measures coverage", async () => {
@@ -188,7 +210,7 @@ test("real tree offline coverage is above an empty registry and does not copy so
   assert.equal(affect.license, "MIT");
   assert.match(affect.license_source, /package\.json:artifacts\/v2\/package\.json#license/);
   assert.equal(templates.kind, "file-loader");
-  assert.equal(express.version, "5.2.1");
+  assert.equal(express.version, CURRENT_DEPENDENCY_FLOORS.express);
   assert.ok(express.call_sites.includes("artifacts/api-server/src/routes/health.ts"));
   assert.equal(registry.records.find((item) => item.kind === "tool" && item.name === "calculator").license, "MIT");
   assert.equal(registry.records.find((item) => item.kind === "dataset" && item.name === "wikipedia").license, "unknown");
@@ -251,7 +273,7 @@ test("committed registry beats the empty baseline on licenses taken from package
   }
   const express = registry.records.find((item) => item.kind === "dependency" && item.name === "express");
   assert.equal(express.license, "MIT");
-  assert.match(express.license_source, /registry\.npmjs\.org\/express\/5\.2\.1/);
+  assert.match(express.license_source, new RegExp(`registry\\.npmjs\\.org/express/${CURRENT_DEPENDENCY_FLOORS.express.replace(/\./g, "\\.")}`));
   assert.equal(registry.records.find((item) => item.kind === "dataset" && item.name === "wikipedia").license, "unknown");
   assert.equal(registry.records.find((item) => item.kind === "model" && item.name === "gpt2").license, "unknown");
   const brains = registry.records.filter((item) => item.path.startsWith("artifacts/v2/src/brain/") && item.kind !== "dataset" && item.kind !== "model");

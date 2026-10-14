@@ -2,207 +2,455 @@
   "routes": [
     {
       "path": "/",
-      "title": "TESSERA"
+      "title": "Tessera home"
     },
     {
-      "path": "/c/:id",
-      "title": "TESSERA C :Id"
+      "path": "/3d-diagrams",
+      "title": "Redirect to /universe"
     },
     {
-      "path": "/life",
-      "title": "TESSERA Life"
+      "path": "/affiliate",
+      "title": "Redirect to /lead-gen?tab=affiliate"
     },
     {
-      "path": "/intelligence",
-      "title": "TESSERA Intelligence"
-    },
-    {
-      "path": "/sovereignty-dashboard",
-      "title": "TESSERA Sovereignty Dashboard"
-    },
-    {
-      "path": "/sovereignty-readiness",
-      "title": "TESSERA Sovereignty Readiness"
-    },
-    {
-      "path": "/consciousness-nexus",
-      "title": "TESSERA Consciousness Nexus"
-    },
-    {
-      "path": "/bible",
-      "title": "TESSERA Bible"
-    },
-    {
-      "path": "/history",
-      "title": "TESSERA History"
-    },
-    {
-      "path": "/secret-society",
-      "title": "TESSERA Secret Society"
-    },
-    {
-      "path": "/sovereign-language",
-      "title": "TESSERA Sovereign Language"
-    },
-    {
-      "path": "/omniversal-lattice",
-      "title": "TESSERA Omniversal Lattice"
-    },
-    {
-      "path": "/grand-council",
-      "title": "TESSERA Grand Council"
-    },
-    {
-      "path": "/council-ledger",
-      "title": "TESSERA Council Ledger"
-    },
-    {
-      "path": "/council-vgpu",
-      "title": "TESSERA Council Vgpu"
-    },
-    {
-      "path": "/grand-evolution",
-      "title": "TESSERA Grand Evolution"
-    },
-    {
-      "path": "/forum",
-      "title": "TESSERA Forum"
-    },
-    {
-      "path": "/sovereign-lattice",
-      "title": "TESSERA Sovereign Lattice"
+      "path": "/agent-comms",
+      "title": "Redirect to /agent-nft"
     },
     {
       "path": "/agent-declarations",
-      "title": "TESSERA Agent Declarations"
-    },
-    {
-      "path": "/shepherd-audit",
-      "title": "TESSERA Shepherd Audit"
-    },
-    {
-      "path": "/universe",
-      "title": "TESSERA Universe"
-    },
-    {
-      "path": "/compression-lab",
-      "title": "TESSERA Compression Lab"
-    },
-    {
-      "path": "/lattice",
-      "title": "TESSERA Lattice"
+      "title": "Tessera /agent-declarations"
     },
     {
       "path": "/agent-nft",
-      "title": "TESSERA Agent Nft"
+      "title": "Tessera /agent-nft"
     },
     {
-      "path": "/fleet",
-      "title": "TESSERA Fleet"
+      "path": "/agent-profile",
+      "title": "Redirect to /agent-nft"
     },
     {
       "path": "/agent/:agentId",
-      "title": "TESSERA Agent :Agentid"
+      "title": "Tessera /agent/:agentId"
     },
     {
-      "path": "/royal-court",
-      "title": "TESSERA Royal Court"
-    },
-    {
-      "path": "/royal-appointments",
-      "title": "TESSERA Royal Appointments"
-    },
-    {
-      "path": "/royal-role/:roleId",
-      "title": "TESSERA Royal Role :Roleid"
-    },
-    {
-      "path": "/departments",
-      "title": "TESSERA Departments"
-    },
-    {
-      "path": "/rick",
-      "title": "TESSERA Rick"
-    },
-    {
-      "path": "/inventions",
-      "title": "TESSERA Inventions"
-    },
-    {
-      "path": "/command-center",
-      "title": "TESSERA Command Center"
-    },
-    {
-      "path": "/sovereignty-roadmap",
-      "title": "TESSERA Sovereignty Roadmap"
-    },
-    {
-      "path": "/system",
-      "title": "TESSERA System"
-    },
-    {
-      "path": "/sovereign-mesh",
-      "title": "TESSERA Sovereign Mesh"
-    },
-    {
-      "path": "/proof-center",
-      "title": "TESSERA Proof Center"
-    },
-    {
-      "path": "/rules",
-      "title": "TESSERA Rules"
-    },
-    {
-      "path": "/auto-healer",
-      "title": "TESSERA Auto Healer"
-    },
-    {
-      "path": "/finance",
-      "title": "TESSERA Finance"
-    },
-    {
-      "path": "/income",
-      "title": "TESSERA Income"
-    },
-    {
-      "path": "/ecom",
-      "title": "TESSERA Ecom"
-    },
-    {
-      "path": "/lead-gen",
-      "title": "TESSERA Lead Gen"
-    },
-    {
-      "path": "/code-builder",
-      "title": "TESSERA Code Builder"
-    },
-    {
-      "path": "/build",
-      "title": "TESSERA Build"
-    },
-    {
-      "path": "/nlp",
-      "title": "TESSERA Nlp"
+      "path": "/agi",
+      "title": "Redirect to /agi-core"
     },
     {
       "path": "/agi-core",
-      "title": "TESSERA Agi Core"
+      "title": "Tessera /agi-core"
     },
     {
-      "path": "/gallery",
-      "title": "TESSERA Gallery"
+      "path": "/api-marketplace",
+      "title": "Redirect to /code-builder?tab=api"
     },
     {
-      "path": "/council-transcript",
-      "title": "TESSERA Council Transcript"
+      "path": "/arbitrage",
+      "title": "Redirect to /finance?tab=arbitrage"
+    },
+    {
+      "path": "/audit-chain",
+      "title": "Redirect to /council-transcript"
+    },
+    {
+      "path": "/auto-healer",
+      "title": "Tessera /auto-healer"
+    },
+    {
+      "path": "/bible",
+      "title": "Tessera /bible"
+    },
+    {
+      "path": "/build",
+      "title": "Tessera /build"
+    },
+    {
+      "path": "/build-guides",
+      "title": "Redirect to /build"
+    },
+    {
+      "path": "/business-ideas",
+      "title": "Redirect to /lead-gen?tab=ideas"
+    },
+    {
+      "path": "/c/:id",
+      "title": "Tessera /c/:id"
+    },
+    {
+      "path": "/code-builder",
+      "title": "Tessera /code-builder"
     },
     {
       "path": "/codex",
-      "title": "TESSERA Codex"
+      "title": "Tessera /codex"
+    },
+    {
+      "path": "/colonel-language",
+      "title": "Redirect to /sovereign-language"
+    },
+    {
+      "path": "/command-center",
+      "title": "Tessera /command-center"
+    },
+    {
+      "path": "/compression-lab",
+      "title": "Tessera /compression-lab"
+    },
+    {
+      "path": "/conclusions",
+      "title": "Redirect to /bible?tab=conclusions"
+    },
+    {
+      "path": "/conference-decisions",
+      "title": "Redirect to /grand-council"
+    },
+    {
+      "path": "/consciousness",
+      "title": "Redirect to /consciousness-nexus"
+    },
+    {
+      "path": "/consciousness-2da",
+      "title": "Redirect to /consciousness-nexus"
+    },
+    {
+      "path": "/consciousness-nexus",
+      "title": "Tessera /consciousness-nexus"
+    },
+    {
+      "path": "/consensus",
+      "title": "Redirect to /grand-council"
+    },
+    {
+      "path": "/council-ledger",
+      "title": "Tessera /council-ledger"
+    },
+    {
+      "path": "/council-transcript",
+      "title": "Tessera /council-transcript"
+    },
+    {
+      "path": "/council-vgpu",
+      "title": "Tessera /council-vgpu"
+    },
+    {
+      "path": "/credentials",
+      "title": "Redirect to /code-builder?tab=credentials"
+    },
+    {
+      "path": "/cross-app",
+      "title": "Redirect to /sovereignty-roadmap?tab=bridge"
+    },
+    {
+      "path": "/departments",
+      "title": "Tessera /departments"
+    },
+    {
+      "path": "/diagram-gallery",
+      "title": "Redirect to /gallery"
+    },
+    {
+      "path": "/ecom",
+      "title": "Tessera /ecom"
+    },
+    {
+      "path": "/economy-hub",
+      "title": "Redirect to /agent-nft"
+    },
+    {
+      "path": "/evolution-health",
+      "title": "Redirect to /system"
+    },
+    {
+      "path": "/executor",
+      "title": "Redirect to /command-center?tab=executor"
+    },
+    {
+      "path": "/feedback",
+      "title": "Redirect to /grand-council"
+    },
+    {
+      "path": "/finance",
+      "title": "Tessera /finance"
+    },
+    {
+      "path": "/fleet",
+      "title": "Tessera /fleet"
+    },
+    {
+      "path": "/forum",
+      "title": "Tessera /forum"
+    },
+    {
+      "path": "/gallery",
+      "title": "Tessera /gallery"
+    },
+    {
+      "path": "/grand-conference",
+      "title": "Redirect to /grand-council"
+    },
+    {
+      "path": "/grand-council",
+      "title": "Tessera /grand-council"
+    },
+    {
+      "path": "/grand-evolution",
+      "title": "Tessera /grand-evolution"
+    },
+    {
+      "path": "/grand-narrative",
+      "title": "Redirect to /universe"
+    },
+    {
+      "path": "/history",
+      "title": "Tessera /history"
+    },
+    {
+      "path": "/income",
+      "title": "Tessera /income"
+    },
+    {
+      "path": "/intelligence",
+      "title": "Tessera /intelligence"
+    },
+    {
+      "path": "/intelligence-engine",
+      "title": "Redirect to /consciousness-nexus"
+    },
+    {
+      "path": "/inventions",
+      "title": "Tessera /inventions"
+    },
+    {
+      "path": "/knowledge-dashboard",
+      "title": "Redirect to /secret-society"
+    },
+    {
+      "path": "/lattice",
+      "title": "Tessera /lattice"
+    },
+    {
+      "path": "/lead-gen",
+      "title": "Tessera /lead-gen"
+    },
+    {
+      "path": "/ledger",
+      "title": "Redirect to /council-transcript"
+    },
+    {
+      "path": "/life",
+      "title": "Tessera /life"
+    },
+    {
+      "path": "/live-secret-knowledge",
+      "title": "Redirect to /secret-society"
+    },
+    {
+      "path": "/living-bible",
+      "title": "Redirect to /bible"
+    },
+    {
+      "path": "/local-services",
+      "title": "Redirect to /lead-gen?tab=local"
+    },
+    {
+      "path": "/market",
+      "title": "Redirect to /finance?tab=market"
+    },
+    {
+      "path": "/members",
+      "title": "Redirect to /agent-nft"
+    },
+    {
+      "path": "/memory-dashboard",
+      "title": "Redirect to /system"
+    },
+    {
+      "path": "/memory-explorer",
+      "title": "Redirect to /system"
+    },
+    {
+      "path": "/mission",
+      "title": "Redirect to /fleet"
     },
     {
       "path": "/next-five",
-      "title": "TESSERA Next Five"
+      "title": "Tessera /next-five"
+    },
+    {
+      "path": "/nlp",
+      "title": "Tessera /nlp"
+    },
+    {
+      "path": "/omniscient-knowledge",
+      "title": "Redirect to /secret-society"
+    },
+    {
+      "path": "/omniversal-lattice",
+      "title": "Tessera /omniversal-lattice"
+    },
+    {
+      "path": "/proof-center",
+      "title": "Tessera /proof-center"
+    },
+    {
+      "path": "/rick",
+      "title": "Tessera /rick"
+    },
+    {
+      "path": "/rick-sanchez",
+      "title": "Redirect to /rick"
+    },
+    {
+      "path": "/royal-appointments",
+      "title": "Tessera /royal-appointments"
+    },
+    {
+      "path": "/royal-court",
+      "title": "Tessera /royal-court"
+    },
+    {
+      "path": "/royal-role/:roleId",
+      "title": "Tessera /royal-role/:roleId"
+    },
+    {
+      "path": "/rules",
+      "title": "Tessera /rules"
+    },
+    {
+      "path": "/sacred-conference",
+      "title": "Redirect to /universe"
+    },
+    {
+      "path": "/sacred-knowledge-vault",
+      "title": "Redirect to /universe"
+    },
+    {
+      "path": "/sacred-traditions",
+      "title": "Redirect to /secret-society"
+    },
+    {
+      "path": "/secret-knowledge",
+      "title": "Redirect to /secret-society"
+    },
+    {
+      "path": "/secret-society",
+      "title": "Tessera /secret-society"
+    },
+    {
+      "path": "/secrets",
+      "title": "Redirect to /secret-society"
+    },
+    {
+      "path": "/self-healing",
+      "title": "Redirect to /auto-healer"
+    },
+    {
+      "path": "/seo",
+      "title": "Redirect to /lead-gen?tab=seo"
+    },
+    {
+      "path": "/settings",
+      "title": "Redirect to /command-center?tab=settings"
+    },
+    {
+      "path": "/shepherd-audit",
+      "title": "Tessera /shepherd-audit"
+    },
+    {
+      "path": "/sovereign-deps",
+      "title": "Redirect to /system"
+    },
+    {
+      "path": "/sovereign-framework",
+      "title": "Redirect to /sovereignty-dashboard"
+    },
+    {
+      "path": "/sovereign-hub",
+      "title": "Redirect to /sovereignty-dashboard"
+    },
+    {
+      "path": "/sovereign-language",
+      "title": "Tessera /sovereign-language"
+    },
+    {
+      "path": "/sovereign-lattice",
+      "title": "Tessera /sovereign-lattice"
+    },
+    {
+      "path": "/sovereign-mesh",
+      "title": "Tessera /sovereign-mesh"
+    },
+    {
+      "path": "/sovereignty",
+      "title": "Redirect to /sovereignty-dashboard"
+    },
+    {
+      "path": "/sovereignty-dashboard",
+      "title": "Tessera /sovereignty-dashboard"
+    },
+    {
+      "path": "/sovereignty-readiness",
+      "title": "Tessera /sovereignty-readiness"
+    },
+    {
+      "path": "/sovereignty-roadmap",
+      "title": "Tessera /sovereignty-roadmap"
+    },
+    {
+      "path": "/spiritual-awakening",
+      "title": "Redirect to /consciousness-nexus"
+    },
+    {
+      "path": "/sports-arb",
+      "title": "Redirect to /finance?tab=arbitrage"
+    },
+    {
+      "path": "/swarm",
+      "title": "Redirect to /universe"
+    },
+    {
+      "path": "/system",
+      "title": "Tessera /system"
+    },
+    {
+      "path": "/token-economy",
+      "title": "Redirect to /agent-nft"
+    },
+    {
+      "path": "/tokens",
+      "title": "Redirect to /agent-nft"
+    },
+    {
+      "path": "/transparency-ledger",
+      "title": "Redirect to /grand-council"
+    },
+    {
+      "path": "/unified-knowledge",
+      "title": "Redirect to /secret-society"
+    },
+    {
+      "path": "/unified-truth",
+      "title": "Redirect to /universe"
+    },
+    {
+      "path": "/universe",
+      "title": "Tessera /universe"
+    },
+    {
+      "path": "/universe-model",
+      "title": "Redirect to /universe"
+    },
+    {
+      "path": "/vatican-archives",
+      "title": "Redirect to /secret-society"
+    },
+    {
+      "path": "/vortex-math",
+      "title": "Redirect to /universe"
+    },
+    {
+      "path": "/wallet-dashboard",
+      "title": "Redirect to /agent-nft"
     }
   ]
 }

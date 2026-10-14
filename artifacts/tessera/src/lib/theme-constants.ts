@@ -11,6 +11,8 @@ const LEGACY_ACCENT: Record<string, string> = {
   teal: "stone",
 };
 
+export const DEFAULT_ACCENT = "glass";
+
 export const FONT_COLORS = [
   { label: "Bone", value: "#f3efe6", bg: "#f3efe6" },
   { label: "Glass", value: "#7ef0d4", bg: "#7ef0d4" },
@@ -37,7 +39,8 @@ export const STAR_COLORS = [
 ];
 
 export function resolveAccent(accentValue?: string) {
-  const mapped = accentValue ? LEGACY_ACCENT[accentValue] ?? accentValue : "glass";
+  const normalized = accentValue?.trim().toLowerCase() || DEFAULT_ACCENT;
+  const mapped = LEGACY_ACCENT[normalized] ?? normalized;
   return ACCENT_COLORS.find((item) => item.value === mapped) ?? ACCENT_COLORS[0];
 }
 
@@ -62,6 +65,8 @@ export function applyTheme(accentValue?: string) {
     "--accent": `${hue} 20% 18%`,
   };
   for (const [name, value] of Object.entries(accentVars)) html.style.setProperty(name, value);
+  html.dataset.theme = "tessera-next";
+  html.dataset.accent = accent.value;
 }
 
 export function handleFontColorChange(currentColor: string, newColor: string): string {
@@ -74,7 +79,11 @@ export function handleFontColorChange(currentColor: string, newColor: string): s
 
 export function handleThemeChange(accent: string) {
   const next = resolveAccent(accent).value;
-  localStorage.setItem("tessera-accent", next);
+  try {
+    localStorage.setItem("tessera-accent", next);
+  } catch {
+    // A blocked storage backend must not prevent the visual update.
+  }
   applyTheme(next);
   window.dispatchEvent(new Event("tessera-theme-change"));
 }

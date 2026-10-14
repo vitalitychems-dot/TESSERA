@@ -1,12 +1,12 @@
 {
   "schema": "tessera-rea-registry/v1",
   "coverage": {
-    "before": 0.894737,
+    "before": 0.721311,
     "after": 1,
-    "numerator": 57,
-    "denominator": 57,
+    "numerator": 61,
+    "denominator": 61,
     "package_dependencies": 37,
-    "brain_modules": 20,
+    "brain_modules": 24,
     "unknown": []
   },
   "records": [
@@ -598,9 +598,9 @@
     {
       "name": "@tanstack/react-query",
       "kind": "dependency",
-      "version": "5.90.21",
+      "version": "5.104.2",
       "license": "MIT",
-      "license_source": "npm:https://registry.npmjs.org/@tanstack%2Freact-query/5.90.21#license",
+      "license_source": "npm:https://registry.npmjs.org/@tanstack%2Freact-query/5.104.2#license",
       "call_sites": [
         "lib/api-client-react/src/generated/api.ts"
       ],
@@ -661,9 +661,9 @@
     {
       "name": "@types/pg",
       "kind": "dependency",
-      "version": "8.18.0",
+      "version": "8.23.1",
       "license": "MIT",
-      "license_source": "npm:https://registry.npmjs.org/@types%2Fpg/8.18.0#license",
+      "license_source": "npm:https://registry.npmjs.org/@types%2Fpg/8.23.1#license",
       "call_sites": [],
       "path": "lib/db/package.json",
       "declared_in": [
@@ -673,9 +673,9 @@
     {
       "name": "@types/ws",
       "kind": "dependency",
-      "version": "8.18.1",
+      "version": "8.18.2",
       "license": "MIT",
-      "license_source": "npm:https://registry.npmjs.org/@types%2Fws/8.18.1#license",
+      "license_source": "npm:https://registry.npmjs.org/@types%2Fws/8.18.2#license",
       "call_sites": [],
       "path": "artifacts/api-server/package.json",
       "declared_in": [
@@ -704,6 +704,7 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/agi-temporal-facts.test.ts",
         "artifacts/api-server/src/__tests__/db-optional-boot.test.ts",
         "artifacts/api-server/src/__tests__/healthz.test.ts",
         "artifacts/api-server/src/__tests__/invention-glb-upload.test.ts",
@@ -712,6 +713,7 @@
         "artifacts/api-server/src/lib/agent-hierarchy.ts",
         "artifacts/api-server/src/lib/agent-spawner.ts",
         "artifacts/api-server/src/lib/agi-training-engine.ts",
+        "artifacts/api-server/src/lib/agi/checkpoint.ts",
         "artifacts/api-server/src/lib/anomaly-detection.ts",
         "artifacts/api-server/src/lib/apply-council-decisions.ts",
         "artifacts/api-server/src/lib/auto-improvement-daemon.ts",
@@ -851,9 +853,9 @@
     {
       "name": "drizzle-kit",
       "kind": "dependency",
-      "version": "0.31.9",
+      "version": "0.31.11",
       "license": "MIT",
-      "license_source": "npm:https://registry.npmjs.org/drizzle-kit/0.31.9#license",
+      "license_source": "npm:https://registry.npmjs.org/drizzle-kit/0.31.11#license",
       "call_sites": [
         "lib/db/drizzle.config.ts"
       ],
@@ -865,15 +867,16 @@
     {
       "name": "drizzle-orm",
       "kind": "dependency",
-      "version": "0.45.3",
+      "version": "0.45.4",
       "license": "Apache-2.0",
-      "license_source": "npm:https://registry.npmjs.org/drizzle-orm/0.45.3#license",
+      "license_source": "npm:https://registry.npmjs.org/drizzle-orm/0.45.4#license",
       "call_sites": [
         "artifacts/api-server/src/__tests__/invention-glb-upload.test.ts",
         "artifacts/api-server/src/index.ts",
         "artifacts/api-server/src/lib/agent-hierarchy.ts",
         "artifacts/api-server/src/lib/agent-spawner.ts",
         "artifacts/api-server/src/lib/agi-training-engine.ts",
+        "artifacts/api-server/src/lib/agi/checkpoint.ts",
         "artifacts/api-server/src/lib/anomaly-detection.ts",
         "artifacts/api-server/src/lib/apply-council-decisions.ts",
         "artifacts/api-server/src/lib/auto-improvement-daemon.ts",
@@ -1047,15 +1050,18 @@
     {
       "name": "express",
       "kind": "dependency",
-      "version": "5.2.1",
+      "version": "5.3.0",
       "license": "MIT",
-      "license_source": "npm:https://registry.npmjs.org/express/5.2.1#license",
+      "license_source": "npm:https://registry.npmjs.org/express/5.3.0#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/agi-stream-xff.test.ts",
+        "artifacts/api-server/src/__tests__/agi-stream.test.ts",
         "artifacts/api-server/src/__tests__/colonial-secret-fail-closed.test.ts",
         "artifacts/api-server/src/__tests__/colonial-sovereign-language-admin-gate.test.ts",
         "artifacts/api-server/src/__tests__/conversations-delete-owner-gate.test.ts",
         "artifacts/api-server/src/__tests__/db-optional-boot.test.ts",
         "artifacts/api-server/src/__tests__/evolution-sandbox-loop.test.ts",
+        "artifacts/api-server/src/__tests__/followup-350-351.test.ts",
         "artifacts/api-server/src/__tests__/generic-500-grand-council-omniversal.test.ts",
         "artifacts/api-server/src/__tests__/guarded-llm-nasa-fetch.test.ts",
         "artifacts/api-server/src/__tests__/healthz.test.ts",
@@ -1063,6 +1069,7 @@
         "artifacts/api-server/src/__tests__/invention-glb-upload.test.ts",
         "artifacts/api-server/src/__tests__/legacy-engines-admin-gate.test.ts",
         "artifacts/api-server/src/__tests__/legacy-engines-no-autostart.test.ts",
+        "artifacts/api-server/src/__tests__/mesh-registry.test.ts",
         "artifacts/api-server/src/__tests__/privacy-e-error-bodies.test.ts",
         "artifacts/api-server/src/__tests__/privacy-e-limiters.test.ts",
         "artifacts/api-server/src/__tests__/privacy-e-raw-key-limit.test.ts",
@@ -1084,6 +1091,7 @@
         "artifacts/api-server/src/lib/tesseract-v2.ts",
         "artifacts/api-server/src/routes/admin-session.ts",
         "artifacts/api-server/src/routes/agent-network.ts",
+        "artifacts/api-server/src/routes/agi-stream.ts",
         "artifacts/api-server/src/routes/agi.ts",
         "artifacts/api-server/src/routes/archives.ts",
         "artifacts/api-server/src/routes/auto-healer.ts",
@@ -1203,9 +1211,9 @@
     {
       "name": "orval",
       "kind": "dependency",
-      "version": "8.39.0",
+      "version": "8.41.0",
       "license": "MIT",
-      "license_source": "npm:https://registry.npmjs.org/orval/8.39.0#license",
+      "license_source": "npm:https://registry.npmjs.org/orval/8.41.0#license",
       "call_sites": [
         "lib/api-spec/orval.config.ts"
       ],
@@ -1217,9 +1225,9 @@
     {
       "name": "pg",
       "kind": "dependency",
-      "version": "8.20.0",
+      "version": "8.23.1",
       "license": "MIT",
-      "license_source": "npm:https://registry.npmjs.org/pg/8.20.0#license",
+      "license_source": "npm:https://registry.npmjs.org/pg/8.23.1#license",
       "call_sites": [
         "artifacts/api-server/scripts/privacy-e-cleanup.mjs",
         "lib/db/src/index.ts"
@@ -1236,6 +1244,7 @@
       "license": "MIT",
       "license_source": "npm:https://registry.npmjs.org/pino/9.14.0#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/mesh-registry.test.ts",
         "artifacts/api-server/src/lib/logger.ts"
       ],
       "path": "artifacts/api-server/package.json",
@@ -1260,9 +1269,9 @@
     {
       "name": "pino-pretty",
       "kind": "dependency",
-      "version": "13.1.3",
+      "version": "13.2.0",
       "license": "MIT",
-      "license_source": "npm:https://registry.npmjs.org/pino-pretty/13.1.3#license",
+      "license_source": "npm:https://registry.npmjs.org/pino-pretty/13.2.0#license",
       "call_sites": [],
       "path": "artifacts/api-server/package.json",
       "declared_in": [
@@ -1289,9 +1298,9 @@
     {
       "name": "react",
       "kind": "dependency",
-      "version": "19.1.0",
+      "version": "19.3.0",
       "license": "MIT",
-      "license_source": "npm:https://registry.npmjs.org/react/19.1.0#license",
+      "license_source": "npm:https://registry.npmjs.org/react/19.3.0#license",
       "call_sites": [],
       "path": "lib/api-client-react/package.json",
       "declared_in": [
@@ -1301,9 +1310,9 @@
     {
       "name": "thread-stream",
       "kind": "dependency",
-      "version": "3.1.0",
+      "version": "4.2.0",
       "license": "MIT",
-      "license_source": "npm:https://registry.npmjs.org/thread-stream/3.1.0#license",
+      "license_source": "npm:https://registry.npmjs.org/thread-stream/4.2.0#license",
       "call_sites": [],
       "path": "artifacts/api-server/package.json",
       "declared_in": [
@@ -1313,9 +1322,9 @@
     {
       "name": "three",
       "kind": "dependency",
-      "version": "0.169.0",
+      "version": "0.186.1",
       "license": "MIT",
-      "license_source": "npm:https://registry.npmjs.org/three/0.169.0#license",
+      "license_source": "npm:https://registry.npmjs.org/three/0.186.1#license",
       "call_sites": [],
       "path": "artifacts/v2/package.json",
       "declared_in": [
@@ -1343,27 +1352,56 @@
       "license": "MIT",
       "license_source": "npm:https://registry.npmjs.org/vitest/4.1.11#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/admission-empathy-training.test.ts",
+        "artifacts/api-server/src/__tests__/admission-gate.test.ts",
+        "artifacts/api-server/src/__tests__/admission-issue-349.test.ts",
+        "artifacts/api-server/src/__tests__/admission-registry.test.ts",
+        "artifacts/api-server/src/__tests__/admission-self-improvement.test.ts",
+        "artifacts/api-server/src/__tests__/agi-checkpoint.test.ts",
+        "artifacts/api-server/src/__tests__/agi-global-workspace-redundant.test.ts",
+        "artifacts/api-server/src/__tests__/agi-global-workspace.test.ts",
+        "artifacts/api-server/src/__tests__/agi-hebbian.test.ts",
+        "artifacts/api-server/src/__tests__/agi-hybrid-search.test.ts",
+        "artifacts/api-server/src/__tests__/agi-memory-writer.test.ts",
+        "artifacts/api-server/src/__tests__/agi-reflection.test.ts",
+        "artifacts/api-server/src/__tests__/agi-stream-xff.test.ts",
+        "artifacts/api-server/src/__tests__/agi-stream.test.ts",
+        "artifacts/api-server/src/__tests__/agi-subgoaling.test.ts",
+        "artifacts/api-server/src/__tests__/agi-temporal-facts.test.ts",
+        "artifacts/api-server/src/__tests__/agi-tiered-memory.test.ts",
         "artifacts/api-server/src/__tests__/chamber-learning.test.ts",
         "artifacts/api-server/src/__tests__/chat-collab.test.ts",
         "artifacts/api-server/src/__tests__/colonial-secret-fail-closed.test.ts",
         "artifacts/api-server/src/__tests__/colonial-sovereign-language-admin-gate.test.ts",
+        "artifacts/api-server/src/__tests__/comms-policy.test.ts",
         "artifacts/api-server/src/__tests__/compression-pipeline.test.ts",
         "artifacts/api-server/src/__tests__/conversations-delete-owner-gate.test.ts",
         "artifacts/api-server/src/__tests__/db-optional-boot.test.ts",
+        "artifacts/api-server/src/__tests__/deterministic-selectors.test.ts",
         "artifacts/api-server/src/__tests__/doctrine-ingestion.test.ts",
+        "artifacts/api-server/src/__tests__/embed-text-signed.test.ts",
         "artifacts/api-server/src/__tests__/eval-chatbot-cases.test.ts",
         "artifacts/api-server/src/__tests__/eval-runner-os-metrics.test.ts",
+        "artifacts/api-server/src/__tests__/evolution-module-health.test.ts",
         "artifacts/api-server/src/__tests__/evolution-sandbox-loop.test.ts",
+        "artifacts/api-server/src/__tests__/followup-350-351.test.ts",
         "artifacts/api-server/src/__tests__/generic-500-grand-council-omniversal.test.ts",
         "artifacts/api-server/src/__tests__/guarded-llm-nasa-fetch.test.ts",
         "artifacts/api-server/src/__tests__/healthz.test.ts",
         "artifacts/api-server/src/__tests__/heavy-council-directives.test.ts",
+        "artifacts/api-server/src/__tests__/hybrid-bm25-df.test.ts",
+        "artifacts/api-server/src/__tests__/hybrid-rerank-batch.test.ts",
         "artifacts/api-server/src/__tests__/improvement-conference.test.ts",
         "artifacts/api-server/src/__tests__/income-cold-gets.test.ts",
+        "artifacts/api-server/src/__tests__/ingestion-quiet-backoff.test.ts",
+        "artifacts/api-server/src/__tests__/ingestion-run-lock-lease.test.ts",
         "artifacts/api-server/src/__tests__/invention-glb-upload.test.ts",
+        "artifacts/api-server/src/__tests__/invention-seed.test.ts",
         "artifacts/api-server/src/__tests__/learning-memory.test.ts",
         "artifacts/api-server/src/__tests__/legacy-engines-admin-gate.test.ts",
         "artifacts/api-server/src/__tests__/legacy-engines-no-autostart.test.ts",
+        "artifacts/api-server/src/__tests__/mesh-registry.test.ts",
+        "artifacts/api-server/src/__tests__/metacognition-type-import.test.ts",
         "artifacts/api-server/src/__tests__/moltbook-sandbox-boundary.test.ts",
         "artifacts/api-server/src/__tests__/neural-embeddings.test.ts",
         "artifacts/api-server/src/__tests__/next-five-improvements.test.ts",
@@ -1376,12 +1414,20 @@
         "artifacts/api-server/src/__tests__/privacy-e-manifest.test.ts",
         "artifacts/api-server/src/__tests__/privacy-e-raw-key-limit.test.ts",
         "artifacts/api-server/src/__tests__/privacy-e-reality-audit.test.ts",
+        "artifacts/api-server/src/__tests__/process-live-stream.test.ts",
+        "artifacts/api-server/src/__tests__/prompt-builder-trim.test.ts",
+        "artifacts/api-server/src/__tests__/protected-module-hardening.test.ts",
         "artifacts/api-server/src/__tests__/reality-audit-snapshot.test.ts",
+        "artifacts/api-server/src/__tests__/revalidate-coalesce.test.ts",
         "artifacts/api-server/src/__tests__/rick-gitbook-gates.test.ts",
         "artifacts/api-server/src/__tests__/route-inventory.test.ts",
         "artifacts/api-server/src/__tests__/routes-index-import-jobs.test.ts",
         "artifacts/api-server/src/__tests__/routes-index-import.test.ts",
         "artifacts/api-server/src/__tests__/safe-fetch-policy.test.ts",
+        "artifacts/api-server/src/__tests__/search-memory-access-batch.test.ts",
+        "artifacts/api-server/src/__tests__/self-critique-memo.test.ts",
+        "artifacts/api-server/src/__tests__/semantic-cache-evict-throttle.test.ts",
+        "artifacts/api-server/src/__tests__/semantic-cache-sysfp.test.ts",
         "artifacts/api-server/src/__tests__/sensitive-route-gate.test.ts",
         "artifacts/api-server/src/__tests__/shadow-route-admin-gate.test.ts",
         "artifacts/api-server/src/__tests__/sigil-auth-urgent.test.ts",
@@ -1469,6 +1515,16 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/api-server/src/__tests__/admission-gate.test.ts",
+      "kind": "file-loader",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/admission-gate.test.ts",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/api-server/src/__tests__/colonial-secret-fail-closed.test.ts",
       "kind": "file-loader",
       "version": "0.0.0",
@@ -1476,6 +1532,16 @@
       "license_source": "package.json:package.json#license",
       "call_sites": [],
       "path": "artifacts/api-server/src/__tests__/colonial-secret-fail-closed.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/embed-text-signed.test.ts",
+      "kind": "file-loader",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/embed-text-signed.test.ts",
       "declared_in": []
     },
     {
@@ -1489,6 +1555,26 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/api-server/src/__tests__/hybrid-bm25-df.test.ts",
+      "kind": "file-loader",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/hybrid-bm25-df.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/invention-seed.test.ts",
+      "kind": "file-loader",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/invention-seed.test.ts",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/api-server/src/__tests__/learning-memory.test.ts",
       "kind": "file-loader",
       "version": "0.0.0",
@@ -1496,6 +1582,16 @@
       "license_source": "package.json:package.json#license",
       "call_sites": [],
       "path": "artifacts/api-server/src/__tests__/learning-memory.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/metacognition-type-import.test.ts",
+      "kind": "file-loader",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/metacognition-type-import.test.ts",
       "declared_in": []
     },
     {
@@ -1539,6 +1635,16 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/api-server/src/__tests__/process-live-stream.test.ts",
+      "kind": "file-loader",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/process-live-stream.test.ts",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/api-server/src/__tests__/rick-gitbook-gates.test.ts",
       "kind": "file-loader",
       "version": "0.0.0",
@@ -1558,6 +1664,26 @@
         "artifacts/api-server/src/__tests__/route-inventory.test.ts"
       ],
       "path": "artifacts/api-server/src/__tests__/route-inventory.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/search-memory-access-batch.test.ts",
+      "kind": "file-loader",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/search-memory-access-batch.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/semantic-cache-sysfp.test.ts",
+      "kind": "file-loader",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/semantic-cache-sysfp.test.ts",
       "declared_in": []
     },
     {
@@ -1811,6 +1937,19 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/api-server/src/lib/mesh-registry.ts",
+      "kind": "file-loader",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/mesh-registry.test.ts",
+        "artifacts/api-server/src/lib/comms-policy.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/mesh-registry.ts",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/api-server/src/lib/moltbook-sandbox-test.ts",
       "kind": "file-loader",
       "version": "0.0.0",
@@ -1881,7 +2020,10 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/invention-seed.test.ts",
         "artifacts/api-server/src/__tests__/privacy-e-reality-audit.test.ts",
+        "artifacts/api-server/src/lib/deterministic-selectors.ts",
+        "artifacts/api-server/src/lib/invention-seed.ts",
         "artifacts/api-server/src/lib/next-five-improvements.ts",
         "artifacts/api-server/src/lib/reality-audit-snapshot.ts",
         "artifacts/api-server/src/routes/inventions.ts",
@@ -1899,6 +2041,7 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/evolution-module-health.test.ts",
         "artifacts/api-server/src/__tests__/evolution-sandbox-loop.test.ts",
         "artifacts/api-server/src/app.ts",
         "artifacts/api-server/src/lib/recursive-self-improvement.ts",
@@ -2000,6 +2143,19 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/v2/eval/reasoning/load.mjs",
+      "kind": "file-loader",
+      "version": "",
+      "license": "MIT",
+      "license_source": "file:artifacts/v2/eval/reasoning/LICENSE",
+      "call_sites": [
+        "artifacts/v2/eval/reasoning/run.mjs",
+        "artifacts/v2/test/v2-077-reasoning-eval.test.mjs"
+      ],
+      "path": "artifacts/v2/eval/reasoning/load.mjs",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/v2/scripts/reembed-fallback.mjs",
       "kind": "file-loader",
       "version": "0.0.0",
@@ -2047,13 +2203,34 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/v2/src/brain/creator/eval.mjs",
+      "kind": "file-loader",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:artifacts/v2/package.json#license",
+      "call_sites": [],
+      "path": "artifacts/v2/src/brain/creator/eval.mjs",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/v2/src/brain/grounded.mjs",
+      "kind": "file-loader",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:artifacts/v2/package.json#license",
+      "call_sites": [
+        "artifacts/v2/test/v2-079-brain-grounded.test.mjs"
+      ],
+      "path": "artifacts/v2/src/brain/grounded.mjs",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/v2/src/brain/http.mjs",
       "kind": "file-loader",
       "version": "0.0.0",
       "license": "MIT",
       "license_source": "package.json:artifacts/v2/package.json#license",
       "call_sites": [
-        "artifacts/v2/src/studio/wall.mjs",
         "artifacts/v2/test/v2-075-brain-view.test.mjs",
         "artifacts/v2/test/v2-079-brain-time.test.mjs"
       ],
@@ -2337,6 +2514,16 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/v2/test/v2-054-router.test.mjs",
+      "kind": "file-loader",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:artifacts/v2/package.json#license",
+      "call_sites": [],
+      "path": "artifacts/v2/test/v2-054-router.test.mjs",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/v2/test/v2-061-board.test.mjs",
       "kind": "file-loader",
       "version": "0.0.0",
@@ -2397,6 +2584,16 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/v2/test/v2-077-reasoning-eval.test.mjs",
+      "kind": "file-loader",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:artifacts/v2/package.json#license",
+      "call_sites": [],
+      "path": "artifacts/v2/test/v2-077-reasoning-eval.test.mjs",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/v2/test/v2-078-reembed-fallback.test.mjs",
       "kind": "file-loader",
       "version": "0.0.0",
@@ -2407,6 +2604,16 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/v2/test/v2-079-brain-grounded.test.mjs",
+      "kind": "file-loader",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:artifacts/v2/package.json#license",
+      "call_sites": [],
+      "path": "artifacts/v2/test/v2-079-brain-grounded.test.mjs",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/v2/test/v2-079-brain-time.test.mjs",
       "kind": "file-loader",
       "version": "0.0.0",
@@ -2414,6 +2621,46 @@
       "license_source": "package.json:artifacts/v2/package.json#license",
       "call_sites": [],
       "path": "artifacts/v2/test/v2-079-brain-time.test.mjs",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/v2/test/v2-080-brain-recall-cache.test.mjs",
+      "kind": "file-loader",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:artifacts/v2/package.json#license",
+      "call_sites": [],
+      "path": "artifacts/v2/test/v2-080-brain-recall-cache.test.mjs",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/v2/test/v2-080-ranker-speed.test.mjs",
+      "kind": "file-loader",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:artifacts/v2/package.json#license",
+      "call_sites": [],
+      "path": "artifacts/v2/test/v2-080-ranker-speed.test.mjs",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/v2/test/v2-081-predict-invlog-cache.test.mjs",
+      "kind": "file-loader",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:artifacts/v2/package.json#license",
+      "call_sites": [],
+      "path": "artifacts/v2/test/v2-081-predict-invlog-cache.test.mjs",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/v2/test/v2-082-comention-lower-once.test.mjs",
+      "kind": "file-loader",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:artifacts/v2/package.json#license",
+      "call_sites": [],
+      "path": "artifacts/v2/test/v2-082-comention-lower-once.test.mjs",
       "declared_in": []
     },
     {
@@ -2466,7 +2713,8 @@
         "artifacts/api-server/src/lib/local-model-manager.ts",
         "artifacts/api-server/src/lib/provider-registry.ts",
         "artifacts/api-server/src/routes/council-meeting.ts",
-        "artifacts/api-server/src/routes/local-models.ts"
+        "artifacts/api-server/src/routes/local-models.ts",
+        "artifacts/v2/eval/reasoning/run.mjs"
       ],
       "path": "artifacts/api-server/src/routes/local-models.ts",
       "declared_in": []
@@ -2558,6 +2806,166 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/api-server/src/__tests__/admission-empathy-training.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/admission-empathy-training.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/admission-issue-349.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/admission-issue-349.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/admission-registry.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/admission-registry.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/admission-self-improvement.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/admission-self-improvement.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/agi-checkpoint.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/agi-checkpoint.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/agi-global-workspace-redundant.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/agi-global-workspace-redundant.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/agi-global-workspace.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/agi-global-workspace.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/agi-hebbian.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/agi-hebbian.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/agi-hybrid-search.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/agi-hybrid-search.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/agi-memory-writer.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/agi-memory-writer.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/agi-reflection.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/agi-reflection.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/agi-stream-xff.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/agi-stream-xff.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/agi-stream.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/agi-stream.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/agi-subgoaling.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/agi-subgoaling.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/agi-temporal-facts.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/agi-temporal-facts.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/agi-tiered-memory.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/agi-tiered-memory.test.ts",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/api-server/src/__tests__/chamber-learning.test.ts",
       "kind": "module",
       "version": "0.0.0",
@@ -2585,6 +2993,16 @@
       "license_source": "package.json:package.json#license",
       "call_sites": [],
       "path": "artifacts/api-server/src/__tests__/colonial-sovereign-language-admin-gate.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/comms-policy.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/comms-policy.test.ts",
       "declared_in": []
     },
     {
@@ -2618,6 +3036,16 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/api-server/src/__tests__/deterministic-selectors.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/deterministic-selectors.test.ts",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/api-server/src/__tests__/doctrine-ingestion.test.ts",
       "kind": "module",
       "version": "0.0.0",
@@ -2645,6 +3073,26 @@
       "license_source": "package.json:package.json#license",
       "call_sites": [],
       "path": "artifacts/api-server/src/__tests__/eval-runner-os-metrics.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/evolution-module-health.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/evolution-module-health.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/followup-350-351.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/followup-350-351.test.ts",
       "declared_in": []
     },
     {
@@ -2700,6 +3148,16 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/api-server/src/__tests__/hybrid-rerank-batch.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/hybrid-rerank-batch.test.ts",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/api-server/src/__tests__/improvement-conference.test.ts",
       "kind": "module",
       "version": "0.0.0",
@@ -2717,6 +3175,26 @@
       "license_source": "package.json:package.json#license",
       "call_sites": [],
       "path": "artifacts/api-server/src/__tests__/income-cold-gets.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/ingestion-quiet-backoff.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/ingestion-quiet-backoff.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/ingestion-run-lock-lease.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/ingestion-run-lock-lease.test.ts",
       "declared_in": []
     },
     {
@@ -2747,6 +3225,16 @@
       "license_source": "package.json:package.json#license",
       "call_sites": [],
       "path": "artifacts/api-server/src/__tests__/legacy-engines-no-autostart.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/mesh-registry.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/mesh-registry.test.ts",
       "declared_in": []
     },
     {
@@ -2830,6 +3318,26 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/api-server/src/__tests__/prompt-builder-trim.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/prompt-builder-trim.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/protected-module-hardening.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/protected-module-hardening.test.ts",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/api-server/src/__tests__/reality-audit-snapshot.test.ts",
       "kind": "module",
       "version": "0.0.0",
@@ -2837,6 +3345,16 @@
       "license_source": "package.json:package.json#license",
       "call_sites": [],
       "path": "artifacts/api-server/src/__tests__/reality-audit-snapshot.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/revalidate-coalesce.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/revalidate-coalesce.test.ts",
       "declared_in": []
     },
     {
@@ -2877,6 +3395,26 @@
       "license_source": "package.json:package.json#license",
       "call_sites": [],
       "path": "artifacts/api-server/src/__tests__/safe-fetch-policy.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/self-critique-memo.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/self-critique-memo.test.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/__tests__/semantic-cache-evict-throttle.test.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/__tests__/semantic-cache-evict-throttle.test.ts",
       "declared_in": []
     },
     {
@@ -3042,12 +3580,209 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/api-server/src/lib/admission/council.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/admission-registry.test.ts",
+        "artifacts/api-server/src/__tests__/admission-self-improvement.test.ts",
+        "artifacts/api-server/src/lib/admission/index.ts",
+        "artifacts/api-server/src/lib/admission/registry.ts",
+        "artifacts/api-server/src/lib/admission/self-improvement.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/admission/council.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/admission/det.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/admission-issue-349.test.ts",
+        "artifacts/api-server/src/lib/admission/empathy-training.ts",
+        "artifacts/api-server/src/lib/admission/empathy.ts",
+        "artifacts/api-server/src/lib/admission/gate.ts",
+        "artifacts/api-server/src/lib/admission/self-improvement.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/admission/det.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/admission/empathy-corpus.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/admission-empathy-training.test.ts",
+        "artifacts/api-server/src/lib/admission/empathy-training.ts",
+        "artifacts/api-server/src/lib/admission/empathy.ts",
+        "artifacts/api-server/src/lib/admission/index.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/admission/empathy-corpus.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/admission/empathy-training.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/admission-empathy-training.test.ts",
+        "artifacts/api-server/src/lib/admission/index.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/admission/empathy-training.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/admission/empathy.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/admission-empathy-training.test.ts",
+        "artifacts/api-server/src/lib/admission/empathy-training.ts",
+        "artifacts/api-server/src/lib/admission/index.ts",
+        "artifacts/api-server/src/lib/admission/reference-agents.ts",
+        "artifacts/api-server/src/lib/admission/scenarios.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/admission/empathy.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/admission/gate.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/admission-gate.test.ts",
+        "artifacts/api-server/src/__tests__/admission-issue-349.test.ts",
+        "artifacts/api-server/src/__tests__/admission-registry.test.ts",
+        "artifacts/api-server/src/__tests__/followup-350-351.test.ts",
+        "artifacts/api-server/src/lib/admission/index.ts",
+        "artifacts/api-server/src/lib/admission/registry.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/admission/gate.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/admission/index.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [],
+      "path": "artifacts/api-server/src/lib/admission/index.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/admission/reference-agents.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/admission-gate.test.ts",
+        "artifacts/api-server/src/__tests__/admission-issue-349.test.ts",
+        "artifacts/api-server/src/__tests__/admission-registry.test.ts",
+        "artifacts/api-server/src/__tests__/followup-350-351.test.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/admission/reference-agents.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/admission/registry.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/admission-registry.test.ts",
+        "artifacts/api-server/src/lib/admission/index.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/admission/registry.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/admission/scenarios.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/admission-gate.test.ts",
+        "artifacts/api-server/src/__tests__/admission-issue-349.test.ts",
+        "artifacts/api-server/src/__tests__/followup-350-351.test.ts",
+        "artifacts/api-server/src/lib/admission/gate.ts",
+        "artifacts/api-server/src/lib/admission/index.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/admission/scenarios.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/admission/self-improvement.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/admission-empathy-training.test.ts",
+        "artifacts/api-server/src/__tests__/admission-self-improvement.test.ts",
+        "artifacts/api-server/src/lib/admission/empathy-training.ts",
+        "artifacts/api-server/src/lib/admission/index.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/admission/self-improvement.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/admission/sim-world.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/admission-gate.test.ts",
+        "artifacts/api-server/src/__tests__/followup-350-351.test.ts",
+        "artifacts/api-server/src/lib/admission/gate.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/admission/sim-world.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/admission/types.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/admission-gate.test.ts",
+        "artifacts/api-server/src/__tests__/admission-issue-349.test.ts",
+        "artifacts/api-server/src/__tests__/followup-350-351.test.ts",
+        "artifacts/api-server/src/lib/admission/gate.ts",
+        "artifacts/api-server/src/lib/admission/index.ts",
+        "artifacts/api-server/src/lib/admission/reference-agents.ts",
+        "artifacts/api-server/src/lib/admission/registry.ts",
+        "artifacts/api-server/src/lib/admission/scenarios.ts",
+        "artifacts/api-server/src/lib/admission/sim-world.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/admission/types.ts",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/api-server/src/lib/agent-comms.ts",
       "kind": "module",
       "version": "0.0.0",
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/comms-policy.test.ts",
         "artifacts/api-server/src/app.ts",
         "artifacts/api-server/src/lib/knowledge-diffusion.ts",
         "artifacts/api-server/src/lib/sovereign-loop.ts",
@@ -3080,6 +3815,7 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/protected-module-hardening.test.ts",
         "artifacts/api-server/src/app.ts",
         "artifacts/api-server/src/lib/auto-improvement-daemon.ts",
         "artifacts/api-server/src/lib/knowledge-diffusion.ts",
@@ -3102,6 +3838,7 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/protected-module-hardening.test.ts",
         "artifacts/api-server/src/app.ts",
         "artifacts/api-server/src/lib/autonomous-wiring.ts",
         "artifacts/api-server/src/lib/rick-proposals.ts",
@@ -3120,7 +3857,12 @@
       "version": "0.0.0",
       "license": "MIT",
       "license_source": "package.json:package.json#license",
-      "call_sites": [],
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/agi-checkpoint.test.ts",
+        "artifacts/api-server/src/__tests__/agi-global-workspace-redundant.test.ts",
+        "artifacts/api-server/src/__tests__/agi-global-workspace.test.ts",
+        "artifacts/api-server/src/__tests__/agi-stream.test.ts"
+      ],
       "path": "artifacts/api-server/src/lib/agi/agent-bus.ts",
       "declared_in": []
     },
@@ -3135,6 +3877,32 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/api-server/src/lib/agi/checkpoint.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/agi-checkpoint.test.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/agi/checkpoint.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/agi/global-workspace.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/agi-global-workspace-redundant.test.ts",
+        "artifacts/api-server/src/__tests__/agi-global-workspace.test.ts",
+        "artifacts/api-server/src/__tests__/agi-stream.test.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/agi/global-workspace.ts",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/api-server/src/lib/agi/goal-planner.ts",
       "kind": "module",
       "version": "0.0.0",
@@ -3142,6 +3910,54 @@
       "license_source": "package.json:package.json#license",
       "call_sites": [],
       "path": "artifacts/api-server/src/lib/agi/goal-planner.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/agi/hebbian.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/agi-hebbian.test.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/agi/hebbian.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/agi/hybrid-search.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/agi-hybrid-search.test.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/agi/hybrid-search.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/agi/memory-writer.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/agi-memory-writer.test.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/agi/memory-writer.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/agi/metacognition-types.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/metacognition-type-import.test.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/agi/metacognition-types.ts",
       "declared_in": []
     },
     {
@@ -3155,12 +3971,64 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/api-server/src/lib/agi/reflection.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/agi-reflection.test.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/agi/reflection.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/agi/subgoaling.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/agi-subgoaling.test.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/agi/subgoaling.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/agi/temporal-facts.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/agi-temporal-facts.test.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/agi/temporal-facts.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/agi/tiered-memory.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/agi-tiered-memory.test.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/agi/tiered-memory.ts",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/api-server/src/lib/agi/working-memory.ts",
       "kind": "module",
       "version": "0.0.0",
       "license": "MIT",
       "license_source": "package.json:package.json#license",
-      "call_sites": [],
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/agi-checkpoint.test.ts",
+        "artifacts/api-server/src/__tests__/agi-reflection.test.ts",
+        "artifacts/api-server/src/__tests__/agi-subgoaling.test.ts"
+      ],
       "path": "artifacts/api-server/src/lib/agi/working-memory.ts",
       "declared_in": []
     },
@@ -3403,6 +4271,7 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/semantic-cache-sysfp.test.ts",
         "artifacts/api-server/src/lib/autonomous-forum-engine.ts",
         "artifacts/api-server/src/lib/consensus-engine.ts",
         "artifacts/api-server/src/lib/next-five-improvements.ts",
@@ -3465,6 +4334,23 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/api-server/src/lib/comms-policy.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/comms-policy.test.ts",
+        "artifacts/api-server/src/__tests__/mesh-registry.test.ts",
+        "artifacts/api-server/src/index.ts",
+        "artifacts/api-server/src/lib/agent-comms.ts",
+        "artifacts/api-server/src/lib/mesh-registry.ts",
+        "artifacts/api-server/src/routes/agent-network.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/comms-policy.ts",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/api-server/src/lib/conference-persistence.ts",
       "kind": "module",
       "version": "0.0.0",
@@ -3513,6 +4399,7 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/evolution-module-health.test.ts",
         "artifacts/api-server/src/app.ts",
         "artifacts/api-server/src/lib/auto-improvement-daemon.ts",
         "artifacts/api-server/src/lib/council-executor.ts",
@@ -3648,6 +4535,34 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/api-server/src/lib/deterministic-content.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/deterministic-selectors.test.ts",
+        "artifacts/api-server/src/routes/knowledge.ts",
+        "artifacts/api-server/src/routes/mysticism.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/deterministic-content.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/deterministic-selectors.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/deterministic-selectors.test.ts",
+        "artifacts/api-server/src/lib/autonomous-forum-engine.ts",
+        "artifacts/api-server/src/lib/deterministic-content.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/deterministic-selectors.ts",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/api-server/src/lib/dimensional-lru-cache.ts",
       "kind": "module",
       "version": "0.0.0",
@@ -3738,6 +4653,36 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/api-server/src/lib/event-loop.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/protected-module-hardening.test.ts",
+        "artifacts/api-server/src/lib/agent-spawner.ts",
+        "artifacts/api-server/src/lib/consensus-engine.ts",
+        "artifacts/api-server/src/lib/personality-evolution.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/event-loop.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/evolution-modules.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/evolution-module-health.test.ts",
+        "artifacts/api-server/src/lib/evolution-throttle.ts",
+        "artifacts/api-server/src/lib/recursive-self-improvement.ts",
+        "artifacts/api-server/src/lib/self-code-evolution.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/evolution-modules.ts",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/api-server/src/lib/evolution-sandbox.ts",
       "kind": "module",
       "version": "0.0.0",
@@ -3757,6 +4702,7 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/evolution-module-health.test.ts",
         "artifacts/api-server/src/lib/autonomous-wiring.ts",
         "artifacts/api-server/src/lib/memory-consolidation-engine.ts",
         "artifacts/api-server/src/lib/recursive-self-improvement.ts",
@@ -4000,6 +4946,8 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/hybrid-bm25-df.test.ts",
+        "artifacts/api-server/src/__tests__/hybrid-rerank-batch.test.ts",
         "artifacts/api-server/src/lib/prompt-builder.ts",
         "artifacts/api-server/src/routes/conversations.ts"
       ],
@@ -4187,6 +5135,8 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/ingestion-quiet-backoff.test.ts",
+        "artifacts/api-server/src/__tests__/ingestion-run-lock-lease.test.ts",
         "artifacts/api-server/src/app.ts",
         "artifacts/api-server/src/lib/auto-improvement-daemon.ts",
         "artifacts/api-server/src/lib/ingestion/shepherd-agents.ts",
@@ -4243,6 +5193,19 @@
         "artifacts/api-server/src/routes/inventions.ts"
       ],
       "path": "artifacts/api-server/src/lib/invention-3d.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/invention-seed.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/invention-seed.test.ts",
+        "artifacts/api-server/src/routes/inventions.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/invention-seed.ts",
       "declared_in": []
     },
     {
@@ -4310,6 +5273,7 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/revalidate-coalesce.test.ts",
         "artifacts/api-server/src/lib/autonomous-tuning.ts",
         "artifacts/api-server/src/lib/llm-client.ts",
         "artifacts/api-server/src/lib/response-validation-engine.ts",
@@ -4460,6 +5424,7 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/revalidate-coalesce.test.ts",
         "artifacts/api-server/src/lib/autonomous-forum-engine.ts",
         "artifacts/api-server/src/lib/autonomous-tuning.ts",
         "artifacts/api-server/src/lib/consensus-engine.ts",
@@ -4482,6 +5447,7 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/evolution-module-health.test.ts",
         "artifacts/api-server/src/lib/autonomous-forum-engine.ts",
         "artifacts/api-server/src/lib/autonomous-tuning.ts",
         "artifacts/api-server/src/lib/consensus-engine.ts",
@@ -4520,6 +5486,7 @@
       "call_sites": [
         "artifacts/api-server/src/__tests__/conversations-delete-owner-gate.test.ts",
         "artifacts/api-server/src/__tests__/generic-500-grand-council-omniversal.test.ts",
+        "artifacts/api-server/src/__tests__/mesh-registry.test.ts",
         "artifacts/api-server/src/app.ts",
         "artifacts/api-server/src/index.ts",
         "artifacts/api-server/src/lib/adaptive-router.ts",
@@ -4639,6 +5606,7 @@
         "artifacts/api-server/src/lib/sovereign-astro-cipher.ts",
         "artifacts/api-server/src/lib/sovereign-cipher.ts",
         "artifacts/api-server/src/lib/sovereign-engine-router.ts",
+        "artifacts/api-server/src/lib/sovereign-ephemeris.ts",
         "artifacts/api-server/src/lib/sovereign-fetch-guard.ts",
         "artifacts/api-server/src/lib/sovereign-file-registry.ts",
         "artifacts/api-server/src/lib/sovereign-knowledge-autonomy.ts",
@@ -4646,6 +5614,7 @@
         "artifacts/api-server/src/lib/sovereign-ledger.ts",
         "artifacts/api-server/src/lib/sovereign-loop.ts",
         "artifacts/api-server/src/lib/sovereign-memory-vault.ts",
+        "artifacts/api-server/src/lib/sovereign-sacred-geometry.ts",
         "artifacts/api-server/src/lib/sovereign-vault.ts",
         "artifacts/api-server/src/lib/sovereignty-impact-scoring.ts",
         "artifacts/api-server/src/lib/sovereignty-monitor.ts",
@@ -4858,6 +5827,7 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/mesh-registry.test.ts",
         "artifacts/api-server/src/index.ts",
         "artifacts/api-server/src/lib/forum-identity-registry.ts",
         "artifacts/api-server/src/routes/auto-healer.ts",
@@ -4889,6 +5859,19 @@
         "artifacts/api-server/src/routes/swarm.ts"
       ],
       "path": "artifacts/api-server/src/lib/mesh-bus.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/lib/mesh-lane-auth.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/mesh-registry.test.ts",
+        "artifacts/api-server/src/routes/agent-network.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/mesh-lane-auth.ts",
       "declared_in": []
     },
     {
@@ -4974,6 +5957,7 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/hybrid-rerank-batch.test.ts",
         "artifacts/api-server/src/__tests__/neural-embeddings.test.ts",
         "artifacts/api-server/src/lib/auto-healer.ts",
         "artifacts/api-server/src/lib/autonomous-tuning.ts",
@@ -5260,6 +6244,7 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/protected-module-hardening.test.ts",
         "artifacts/api-server/src/app.ts",
         "artifacts/api-server/src/lib/rick-sanchez-agent.ts",
         "artifacts/api-server/src/lib/sovereign-loop.ts",
@@ -5305,7 +6290,9 @@
       "version": "0.0.0",
       "license": "MIT",
       "license_source": "package.json:package.json#license",
-      "call_sites": [],
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/prompt-builder-trim.test.ts"
+      ],
       "path": "artifacts/api-server/src/lib/prompt-builder.ts",
       "declared_in": []
     },
@@ -5469,6 +6456,7 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/evolution-module-health.test.ts",
         "artifacts/api-server/src/app.ts",
         "artifacts/api-server/src/routes/evolution-health.ts",
         "artifacts/api-server/src/routes/mandates.ts"
@@ -5791,6 +6779,7 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/self-critique-memo.test.ts",
         "artifacts/api-server/src/routes/conversations.ts",
         "artifacts/api-server/src/routes/evaluation.ts"
       ],
@@ -5818,6 +6807,8 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/semantic-cache-evict-throttle.test.ts",
+        "artifacts/api-server/src/__tests__/semantic-cache-sysfp.test.ts",
         "artifacts/api-server/src/lib/auto-healer.ts",
         "artifacts/api-server/src/lib/autonomous-tuning.ts",
         "artifacts/api-server/src/lib/knowledge-distillation.ts",
@@ -6093,6 +7084,7 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/protected-module-hardening.test.ts",
         "artifacts/api-server/src/lib/sovereign-cipher.ts",
         "artifacts/api-server/src/lib/sovereign-grammar.ts",
         "artifacts/api-server/src/lib/sovereign-kernel.ts",
@@ -6307,6 +7299,7 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/protected-module-hardening.test.ts",
         "artifacts/api-server/src/lib/cosmic-alignment.ts",
         "artifacts/api-server/src/lib/cosmic-context.ts",
         "artifacts/api-server/src/lib/mythosHistoryEngine.ts",
@@ -6326,6 +7319,7 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/agi-stream.test.ts",
         "artifacts/api-server/src/__tests__/colonial-secret-fail-closed.test.ts",
         "artifacts/api-server/src/__tests__/colonial-sovereign-language-admin-gate.test.ts",
         "artifacts/api-server/src/__tests__/conversations-delete-owner-gate.test.ts",
@@ -6501,6 +7495,7 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/lib/deterministic-content.ts",
         "artifacts/api-server/src/lib/knowledge-corpus-index.ts",
         "artifacts/api-server/src/lib/sacred-grand-conference-engine.ts",
         "artifacts/api-server/src/lib/sovereign-identity-reinforcement.ts",
@@ -6589,12 +7584,26 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/api-server/src/lib/trust-proxy.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/followup-350-351.test.ts",
+        "artifacts/api-server/src/app.ts"
+      ],
+      "path": "artifacts/api-server/src/lib/trust-proxy.ts",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/api-server/src/lib/truthfulness-engine.ts",
       "kind": "module",
       "version": "0.0.0",
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/protected-module-hardening.test.ts",
         "artifacts/api-server/src/app.ts",
         "artifacts/api-server/src/lib/rick-proposals.ts",
         "artifacts/api-server/src/lib/rick-sanchez-agent.ts",
@@ -6706,6 +7715,8 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/embed-text-signed.test.ts",
+        "artifacts/api-server/src/__tests__/search-memory-access-batch.test.ts",
         "artifacts/api-server/src/app.ts",
         "artifacts/api-server/src/lib/cosmic-alignment.ts",
         "artifacts/api-server/src/lib/cross-domain-synthesis.ts",
@@ -6793,9 +7804,24 @@
       "license": "MIT",
       "license_source": "package.json:package.json#license",
       "call_sites": [
+        "artifacts/api-server/src/__tests__/mesh-registry.test.ts",
         "artifacts/api-server/src/routes/index.ts"
       ],
       "path": "artifacts/api-server/src/routes/agent-network.ts",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/api-server/src/routes/agi-stream.ts",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:package.json#license",
+      "call_sites": [
+        "artifacts/api-server/src/__tests__/agi-stream-xff.test.ts",
+        "artifacts/api-server/src/__tests__/agi-stream.test.ts",
+        "artifacts/api-server/src/routes/index.ts"
+      ],
+      "path": "artifacts/api-server/src/routes/agi-stream.ts",
       "declared_in": []
     },
     {
@@ -8064,6 +9090,57 @@
       "declared_in": []
     },
     {
+      "name": "artifacts/v2/eval/reasoning/ollama.mjs",
+      "kind": "module",
+      "version": "",
+      "license": "MIT",
+      "license_source": "file:artifacts/v2/eval/reasoning/LICENSE",
+      "call_sites": [
+        "artifacts/v2/eval/reasoning/run.mjs",
+        "artifacts/v2/test/v2-077-reasoning-eval.test.mjs"
+      ],
+      "path": "artifacts/v2/eval/reasoning/ollama.mjs",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/v2/eval/reasoning/prompt.mjs",
+      "kind": "module",
+      "version": "",
+      "license": "MIT",
+      "license_source": "file:artifacts/v2/eval/reasoning/LICENSE",
+      "call_sites": [
+        "artifacts/v2/eval/reasoning/run.mjs",
+        "artifacts/v2/test/v2-077-reasoning-eval.test.mjs"
+      ],
+      "path": "artifacts/v2/eval/reasoning/prompt.mjs",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/v2/eval/reasoning/run.mjs",
+      "kind": "module",
+      "version": "",
+      "license": "MIT",
+      "license_source": "file:artifacts/v2/eval/reasoning/LICENSE",
+      "call_sites": [
+        "artifacts/v2/test/v2-077-reasoning-eval.test.mjs"
+      ],
+      "path": "artifacts/v2/eval/reasoning/run.mjs",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/v2/eval/reasoning/score.mjs",
+      "kind": "module",
+      "version": "",
+      "license": "MIT",
+      "license_source": "file:artifacts/v2/eval/reasoning/LICENSE",
+      "call_sites": [
+        "artifacts/v2/eval/reasoning/run.mjs",
+        "artifacts/v2/test/v2-077-reasoning-eval.test.mjs"
+      ],
+      "path": "artifacts/v2/eval/reasoning/score.mjs",
+      "declared_in": []
+    },
+    {
       "name": "artifacts/v2/src/adapters/allowlist.mjs",
       "kind": "module",
       "version": "0.0.0",
@@ -8100,7 +9177,8 @@
         "artifacts/v2/src/brain/bench2.mjs",
         "artifacts/v2/src/brain/bench3.mjs",
         "artifacts/v2/src/brain/learn.mjs",
-        "artifacts/v2/test/v2-074-brain.test.mjs"
+        "artifacts/v2/test/v2-074-brain.test.mjs",
+        "artifacts/v2/test/v2-083-recognizer-rows.test.mjs"
       ],
       "path": "artifacts/v2/src/brain/affect.mjs",
       "declared_in": []
@@ -8135,9 +9213,37 @@
       "license_source": "package.json:artifacts/v2/package.json#license",
       "call_sites": [
         "artifacts/v2/src/brain/bench4.mjs",
-        "artifacts/v2/test/v2-078-brain-r4.test.mjs"
+        "artifacts/v2/src/brain/grounded.mjs",
+        "artifacts/v2/test/v2-078-brain-r4.test.mjs",
+        "artifacts/v2/test/v2-080-ranker-speed.test.mjs"
       ],
       "path": "artifacts/v2/src/brain/context.mjs",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/v2/src/brain/creator/profile.mjs",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:artifacts/v2/package.json#license",
+      "call_sites": [
+        "artifacts/v2/src/brain/creator/eval.mjs",
+        "artifacts/v2/test/v2-080-creator.test.mjs"
+      ],
+      "path": "artifacts/v2/src/brain/creator/profile.mjs",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/v2/src/brain/creator/style.mjs",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:artifacts/v2/package.json#license",
+      "call_sites": [
+        "artifacts/v2/src/brain/creator/eval.mjs",
+        "artifacts/v2/test/v2-080-creator.test.mjs"
+      ],
+      "path": "artifacts/v2/src/brain/creator/style.mjs",
       "declared_in": []
     },
     {
@@ -8160,7 +9266,8 @@
       "license_source": "package.json:artifacts/v2/package.json#license",
       "call_sites": [
         "artifacts/v2/src/brain/bench.mjs",
-        "artifacts/v2/src/brain/bench2.mjs"
+        "artifacts/v2/src/brain/bench2.mjs",
+        "artifacts/v2/test/v2-083-recognizer-rows.test.mjs"
       ],
       "path": "artifacts/v2/src/brain/heldout.mjs",
       "declared_in": []
@@ -8175,7 +9282,8 @@
         "artifacts/v2/src/brain/bench.mjs",
         "artifacts/v2/src/brain/bench2.mjs",
         "artifacts/v2/test/v2-074-brain.test.mjs",
-        "artifacts/v2/test/v2-076-brain-r2.test.mjs"
+        "artifacts/v2/test/v2-076-brain-r2.test.mjs",
+        "artifacts/v2/test/v2-083-recognizer-rows.test.mjs"
       ],
       "path": "artifacts/v2/src/brain/learn.mjs",
       "declared_in": []
@@ -8191,7 +9299,8 @@
         "artifacts/v2/src/brain/bench2.mjs",
         "artifacts/v2/src/brain/bench3.mjs",
         "artifacts/v2/test/v2-076-brain-r2.test.mjs",
-        "artifacts/v2/test/v2-078-reembed-fallback.test.mjs"
+        "artifacts/v2/test/v2-078-reembed-fallback.test.mjs",
+        "artifacts/v2/test/v2-083-recognizer-rows.test.mjs"
       ],
       "path": "artifacts/v2/src/brain/meshlog-labels.mjs",
       "declared_in": []
@@ -8222,12 +9331,18 @@
         "artifacts/v2/src/brain/bench.mjs",
         "artifacts/v2/src/brain/bench4.mjs",
         "artifacts/v2/src/brain/context.mjs",
+        "artifacts/v2/src/brain/grounded.mjs",
         "artifacts/v2/src/brain/learn.mjs",
         "artifacts/v2/src/brain/templates.mjs",
         "artifacts/v2/src/brain/view.mjs",
         "artifacts/v2/test/v2-074-brain.test.mjs",
         "artifacts/v2/test/v2-078-brain-r4.test.mjs",
-        "artifacts/v2/test/v2-079-brain-time.test.mjs"
+        "artifacts/v2/test/v2-079-brain-grounded.test.mjs",
+        "artifacts/v2/test/v2-079-brain-time.test.mjs",
+        "artifacts/v2/test/v2-080-brain-recall-cache.test.mjs",
+        "artifacts/v2/test/v2-080-ranker-speed.test.mjs",
+        "artifacts/v2/test/v2-081-predict-invlog-cache.test.mjs",
+        "artifacts/v2/test/v2-082-comention-lower-once.test.mjs"
       ],
       "path": "artifacts/v2/src/brain/synapse.mjs",
       "declared_in": []
@@ -8240,6 +9355,7 @@
       "license_source": "package.json:artifacts/v2/package.json#license",
       "call_sites": [
         "artifacts/v2/src/brain/bench4.mjs",
+        "artifacts/v2/src/brain/creator/profile.mjs",
         "artifacts/v2/src/brain/view.mjs",
         "artifacts/v2/test/v2-078-brain-r4.test.mjs",
         "artifacts/v2/test/v2-079-brain-time.test.mjs"
@@ -8883,16 +9999,6 @@
       "declared_in": []
     },
     {
-      "name": "artifacts/v2/test/v2-054-router.test.mjs",
-      "kind": "module",
-      "version": "0.0.0",
-      "license": "MIT",
-      "license_source": "package.json:artifacts/v2/package.json#license",
-      "call_sites": [],
-      "path": "artifacts/v2/test/v2-054-router.test.mjs",
-      "declared_in": []
-    },
-    {
       "name": "artifacts/v2/test/v2-055-proposals.test.mjs",
       "kind": "module",
       "version": "0.0.0",
@@ -9010,6 +10116,26 @@
       "license_source": "package.json:artifacts/v2/package.json#license",
       "call_sites": [],
       "path": "artifacts/v2/test/v2-078-brain-r4.test.mjs",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/v2/test/v2-080-creator.test.mjs",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:artifacts/v2/package.json#license",
+      "call_sites": [],
+      "path": "artifacts/v2/test/v2-080-creator.test.mjs",
+      "declared_in": []
+    },
+    {
+      "name": "artifacts/v2/test/v2-083-recognizer-rows.test.mjs",
+      "kind": "module",
+      "version": "0.0.0",
+      "license": "MIT",
+      "license_source": "package.json:artifacts/v2/package.json#license",
+      "call_sites": [],
+      "path": "artifacts/v2/test/v2-083-recognizer-rows.test.mjs",
       "declared_in": []
     },
     {

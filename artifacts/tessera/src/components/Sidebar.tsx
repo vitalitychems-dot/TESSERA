@@ -259,15 +259,15 @@ export function Sidebar() {
       <div className="p-5 relative z-10">
         <div className="absolute inset-0 bg-gradient-to-b from-violet-500/[0.04] via-transparent to-transparent pointer-events-none" />
         <div className="flex items-center gap-3 text-primary mb-5 relative">
-          <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-lg">T</span>
-            </div>
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[hsl(250,15%,4%)]" />
+          <div className="tessera-brand-mark" role="img" aria-label="Tessera mark">
+            <span />
+            <span />
+            <span />
+            <span />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="font-bold text-lg bg-gradient-to-r from-violet-300 via-blue-400 to-cyan-400 bg-clip-text text-transparent leading-tight tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>Tessera</h1>
-            <div className="text-[9px] font-mono text-violet-400/40 tracking-[.18em] mt-0.5">TESS:// SOVEREIGN</div>
+            <h1 className="tessera-wordmark font-bold text-lg leading-tight tracking-tight">Tessera</h1>
+            <div className="text-[9px] font-mono text-primary/55 tracking-[.18em] mt-0.5">EVIDENCE WORKSPACE</div>
           </div>
           <button
             onClick={() => setMobileOpen(false)}
@@ -402,8 +402,8 @@ export function Sidebar() {
 
   return (
     <>
-      <aside
-        className="hidden md:flex flex-col w-72 border-r border-border/50 bg-sidebar/95 backdrop-blur-xl h-full relative overflow-hidden"
+          <aside
+        className="tessera-sidebar-shell hidden md:flex flex-col w-72 border-r border-border/50 bg-sidebar/95 backdrop-blur-xl h-full relative overflow-hidden"
         data-testid="sidebar-desktop"
       >
         {sidebarContent}
@@ -412,7 +412,7 @@ export function Sidebar() {
       {mobileOpen && (
         <div className="fixed inset-0 z-40 md:hidden" data-testid="sidebar-mobile-overlay">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-80 bg-sidebar/98 backdrop-blur-xl overflow-hidden flex flex-col shadow-2xl">
+          <aside className="tessera-sidebar-shell absolute left-0 top-0 bottom-0 w-80 bg-sidebar/98 backdrop-blur-xl overflow-hidden flex flex-col shadow-2xl">
             {sidebarContent}
           </aside>
         </div>
