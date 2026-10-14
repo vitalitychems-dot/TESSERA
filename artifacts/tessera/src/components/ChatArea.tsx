@@ -45,6 +45,33 @@ import { ChatFileUploadArea } from "./chat/ChatFileUploadArea";
 import { ChamberActions, ChamberBar } from "./chat/ChamberBar";
 import { presentAssistantText } from "@/lib/tessera-voice";
 
+function isUploadedFile(value: unknown): value is UploadedFile {
+  if (!value || typeof value !== "object") return false;
+  const file = value as Record<string, unknown>;
+  return (
+    Number.isSafeInteger(file.id) &&
+    typeof file.filename === "string" &&
+    typeof file.mimeType === "string" &&
+    typeof file.size === "number" &&
+    Number.isFinite(file.size) &&
+    (file.path === undefined || typeof file.path === "string")
+  );
+}
+
+function parseAttachmentResponse(value: unknown): UploadedFile[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Invalid attachment response");
+  }
+  const response = value as { ok?: unknown; attachments?: unknown };
+  if (response.ok !== true || !Array.isArray(response.attachments)) {
+    throw new Error("Invalid attachment response");
+  }
+  if (!response.attachments.every(isUploadedFile)) {
+    throw new Error("Invalid attachment records");
+  }
+  return response.attachments;
+}
+
 export function ChatArea({ conversationId }: { conversationId: number }) {
   const [currentLocation, setLocation] = useLocation();
   const [navFlash, setNavFlash] = useState<string | null>(null);
@@ -58,6 +85,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   }, []);
   const [isRecording, setIsRecording] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [attachmentLoadError, setAttachmentLoadError] = useState<string | null>(null);
   const [ttsEnabled, setTtsEnabled] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -354,10 +382,24 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
 
   useEffect(() => {
     setUploadedFiles([]);
-    fetch(`/api/conversations/${conversationId}/attachments`, { credentials: "include" })
-      .then(r => r.json())
-      .then((atts: UploadedFile[]) => setUploadedFiles(atts))
-      .catch(() => {});
+    setAttachmentLoadError(null);
+    const controller = new AbortController();
+    fetch(`/api/conversations/${conversationId}/attachments`, {
+      credentials: "include",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Attachment request failed");
+        return parseAttachmentResponse(await response.json());
+      })
+      .then(setUploadedFiles)
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setUploadedFiles([]);
+          setAttachmentLoadError("Attachments could not be loaded. You can continue chatting.");
+        }
+      });
+    return () => controller.abort();
   }, [conversationId]);
 
   useEffect(() => {
@@ -1079,6 +1121,11 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
       )}
 
       <div className="px-4 pb-[max(5rem,calc(4rem+env(safe-area-inset-bottom)))] pt-2 z-10 flex-shrink-0 backdrop-blur-md chat-input-bg" data-testid="chat-input-container">
+        {attachmentLoadError && (
+          <p role="status" aria-live="polite" className="max-w-3xl mx-auto mb-2 text-xs text-amber-300/90">
+            {attachmentLoadError}
+          </p>
+        )}
         <ChatFileUploadArea
           uploadedFiles={uploadedFiles}
           conversationId={conversationId}
