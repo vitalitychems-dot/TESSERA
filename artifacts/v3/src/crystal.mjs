@@ -68,8 +68,21 @@ export function graphAt(cells, T = Infinity) {
   return { nodes, edges, syn: new Map(), byH, val, src };
 }
 export const positions = (cells) => new Map(cells.filter((c) => c.k === "p").map((c) => [c.id, c.p]));
-/** Same response shape as v2 replayAt (GET /brain/snapshot), plus p (x,y,z), v and src per item. */
+const SNAP_CACHE_MAX = 32;
+const snapCaches = new WeakMap();
+/** Same response shape as v2 replayAt (GET /brain/snapshot), plus p (x,y,z), v and src per item.
+ * Repeat calls with the same cells, t, and prev return the cached object. */
 export function crystalSnapshot(cells, eventIndex, prevIndex) {
+  const key = `${eventIndex ?? ""}\0${prevIndex ?? ""}`;
+  let cached = snapCaches.get(cells);
+  if (!cached) { cached = new Map(); snapCaches.set(cells, cached); }
+  if (cached.has(key)) return cached.get(key);
+  const value = crystalSnapshotUncached(cells, eventIndex, prevIndex);
+  cached.set(key, value);
+  if (cached.size > SNAP_CACHE_MAX) cached.delete(cached.keys().next().value);
+  return value;
+}
+function crystalSnapshotUncached(cells, eventIndex, prevIndex) {
   const ts = [...new Set(cells.filter((c) => c.t != null).map((c) => c.t))].sort((a, b) => a - b); const n = ts.length;
   const cl = (v, d) => { const x = Number(v); return v == null || v === "" || !Number.isFinite(x) ? d : Math.max(0, Math.min(n - 1, Math.trunc(x))); };
   if (!n) return { t: 0, line: -1, events: 0, nodes: [], edges: [], diff: { from: 0, to: 0, forward: 0, back: 0, edgesAdded: [], edgesRemoved: [], nodesAdded: [], nodesRemoved: [] } };
