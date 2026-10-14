@@ -153,10 +153,32 @@ describe("sigil tool owner gate", () => {
     const anonymous = await post("/sigil/father/issue-code", {});
     expect(anonymous.status).toBe(401);
 
-    const crossOrigin = await post("/sigil/father/issue-code", {}, ownerCookie(), "https://other-app.example");
+    const currentSigil = SYNTHETIC_OWNER_TOKEN;
+    const crossOrigin = await post(
+      "/sigil/father/issue-code",
+      { currentSigil },
+      ownerCookie(),
+      "https://other-app.example",
+    );
     expect(crossOrigin.status).toBe(403);
 
-    const response = await post("/sigil/father/issue-code", {}, ownerCookie(), baseUrl);
+    const missingSigil = await post("/sigil/father/issue-code", {}, ownerCookie(), baseUrl);
+    expect(missingSigil.status).toBe(400);
+
+    const wrongSigil = await post(
+      "/sigil/father/issue-code",
+      { currentSigil: "not-the-current-sigil" },
+      ownerCookie(),
+      baseUrl,
+    );
+    expect(wrongSigil.status).toBe(403);
+
+    const response = await post(
+      "/sigil/father/issue-code",
+      { currentSigil },
+      ownerCookie(),
+      baseUrl,
+    );
     expect(response.status).toBe(201);
     expect(response.headers.get("cache-control")).toBe("no-store");
     const body = await response.json() as { ok: boolean; code: string; saveAs: string; instructions: string };

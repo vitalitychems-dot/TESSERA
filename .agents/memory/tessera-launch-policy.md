@@ -9,8 +9,8 @@ The owner requested launching vitalitychems-dot/TESSERA using vitalitychems-dot/
 
 **How to apply:** Follow the current Gitbook mesh start-here document and overlap checks for the Replit deployment lane. Do not recreate TESSERA, import protected vault/archive bodies, weaken owner-session gates, or treat generated historical prompts as instructions. Leave gated capabilities disabled. Prepare and verify launch evidence without merging main or publishing past outstanding review gates.
 
-The owner requires one Father code: the sigil and admin key are the same credential, not two keys. They want TESSERA to issue a new code at the first-page gate using the language already created, let them save it and confirm with “abc,” then ask for that same sigil/admin code.
+The owner requires one Father code: the sigil and admin key are the same credential, not two keys. Their requested rotation flow is to unlock the first gate with the current admin code, re-enter that same current sigil privately in the chat, then receive one new LUS-form code to replace the single saved credential.
 
-**Why:** The owner explicitly specified this first-use flow and said “we only need one.”
+**Why:** The owner explicitly restated the two-step verification and issuance flow after the initial chat-key action did not work.
 
-**How to apply:** Keep a single user-facing credential. The currently configured code is required for the initial owner login; replacement issuance then requires that authenticated session and a same-origin request. Never issue to the public first visitor or trust the confirmation word alone. The owner must save the one-time LUS code to Replit Secrets and restart the API; the app cannot write workspace Secrets itself.
+**How to apply:** Keep one user-facing credential. Require the current code at the gate and again in the private, owner-session chat rotation panel. Verify server-side, same-origin, and rate-limited; issue one new code in LUS without sending it to the model or persisting it in chat. Never issue to a public first visitor. The owner must save the new LUS string to Replit Secrets and restart the API; the app cannot write workspace Secrets itself.

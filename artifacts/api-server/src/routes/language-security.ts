@@ -13,6 +13,7 @@ import {
   recognizeFather,
   getFatherFingerprint,
   readAdminKeyMaterial,
+  verifyFatherKey,
 } from "../lib/father-identity";
 import {
   lusEncode,
@@ -52,11 +53,18 @@ function requireSameOrigin(req: Request, res: Response, next: NextFunction): voi
 
 // Issue a fresh one-key replacement only within an authenticated owner session.
 // The LUS value is returned once; Replit Secrets must be updated by the owner.
-router.post("/sigil/father/issue-code", requireAdminSession, requireSameOrigin, adminSessionRateLimit, (_req, res) => {
+router.post("/sigil/father/issue-code", requireAdminSession, requireSameOrigin, adminSessionRateLimit, (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Pragma", "no-cache");
   if (!isFatherKeyConfigured()) {
     return res.status(503).json({ ok: false, error: "father-key-unset" });
+  }
+  const currentSigil = typeof req.body?.currentSigil === "string" ? req.body.currentSigil.trim() : "";
+  if (!currentSigil || currentSigil.length > 512) {
+    return res.status(400).json({ ok: false, error: "current-sigil-required" });
+  }
+  if (!verifyFatherKey(currentSigil)) {
+    return res.status(403).json({ ok: false, error: "sigil-mismatch" });
   }
   const canonical = randomBytes(32).toString("base64url");
   return res.status(201).json({

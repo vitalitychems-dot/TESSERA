@@ -33,7 +33,7 @@ import {
 } from "./chat/ChatPanels";
 import { type UploadedFile } from "./chat/ChatFileComponents";
 import { ChatShortcutsModal } from "./chat/ChatKeyboardShortcuts";
-import { MyKeyRevealModal, isShowMyKeyCommand } from "./chat/MyKeyRevealModal";
+import { FatherCodeRotationPanel, isFatherCodeRotationCommand } from "./chat/FatherCodeRotationPanel";
 import { useChatCommandExecutor } from "./chat/useChatCommandExecutor";
 import { ChatDataCommandResult } from "./chat/ChatDataCommandResult";
 import { ChatVoiceModeOverlay } from "./chat/ChatVoiceModeOverlay";
@@ -155,11 +155,21 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [summitFeedOpen, setSummitFeedOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [keyRevealOpen, setKeyRevealOpen] = useState(false);
+  const [fatherRotationOpen, setFatherRotationOpen] = useState(false);
   const [historyNavIndex, setHistoryNavIndex] = useState(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const [localFontColor, setLocalFontColor] = useState<string>(() => localStorage.getItem("tessera-font-color") || "");
+
+  useEffect(() => {
+    let alreadyIssued = false;
+    try {
+      alreadyIssued = localStorage.getItem("tessera.father-code-rotation-issued.v1") === "true";
+    } catch {
+      // The prompt still works when browser storage is unavailable.
+    }
+    if (!alreadyIssued) setFatherRotationOpen(true);
+  }, []);
   
   const tesseractMode = true;
   const { isAdmin, authenticate, stealthMode, toggleStealth, adminMode, savedAdminKey, saveAdminKey } = useAdmin();
@@ -568,10 +578,9 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
 
     const msgText = currentInput.trim();
 
-    // "show my key" / "give me my key" / "/my key" → open the LUS reveal modal.
-    // Adopted by the Grand Conference (Language & Security Summit).
-    if (isShowMyKeyCommand(msgText)) {
-      setKeyRevealOpen(true);
+    // Keep sigil rotation in a protected, ephemeral chat panel; never send the code to the model.
+    if (isFatherCodeRotationCommand(msgText)) {
+      setFatherRotationOpen(true);
       setInputBoth("");
       return;
     }
@@ -1121,6 +1130,10 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
       )}
 
       <div className="px-4 pb-[max(5rem,calc(4rem+env(safe-area-inset-bottom)))] pt-2 z-10 flex-shrink-0 backdrop-blur-md chat-input-bg" data-testid="chat-input-container">
+        <FatherCodeRotationPanel
+          open={fatherRotationOpen}
+          onClose={() => setFatherRotationOpen(false)}
+        />
         {attachmentLoadError && (
           <p role="status" aria-live="polite" className="max-w-3xl mx-auto mb-2 text-xs text-amber-300/90">
             {attachmentLoadError}
@@ -1437,7 +1450,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
       </div>
 
       <ChatShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
-      <MyKeyRevealModal open={keyRevealOpen} onClose={() => setKeyRevealOpen(false)} />
     </div>
   );
 }

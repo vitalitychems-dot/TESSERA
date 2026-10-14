@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { useState, useEffect, useRef } from "react";
 import {
-  MessageSquare, Brain, Globe2, DollarSign, MoreHorizontal, X,
+  Brain, Globe2, DollarSign, MoreHorizontal, X,
   Heart, Shield, BookOpen, Eye, Gavel, MessageCircle, Hexagon,
   Truck, Skull, Terminal, Map, Code2, Workflow, Target, ShoppingCart,
   Search, Zap, Cpu, Crown, GitCommit,
@@ -17,16 +17,16 @@ interface NavTab {
   color: string;
 }
 
-// Chamber, World, Board, More — the desk the operator actually uses.
+// The integrated World contains Eye, Brain, and Chat; separate duplicate chat navigation is removed.
 const PRIMARY: NavTab[] = [
-  { label: "Chamber", href: "/", Icon: MessageSquare, match: (l) => l === "/" || l.startsWith("/c/"), color: "amber" },
-  { label: "World", href: "/universe", Icon: Globe2, match: (l) => l === "/universe", color: "violet" },
+  { label: "World", href: "/", Icon: Globe2, match: (l) => l === "/" || l.startsWith("/c/"), color: "cyan" },
   { label: "Board", href: "/grand-council", Icon: Gavel, match: (l) => l === "/grand-council" || l === "/forum" || l === "/next-five", color: "amber" },
   { label: "More", href: "#more", Icon: MoreHorizontal, match: () => false, color: "slate" },
 ];
 
 // Secondary — accessed via the More sheet
 const SECONDARY: NavTab[] = [
+  { label: "Universe", href: "/universe", Icon: Globe2, match: (l) => l === "/universe", color: "violet" },
   { label: "Finance", href: "/finance", Icon: DollarSign, match: (l) => l === "/finance" || l === "/income" || l === "/ecom" || l === "/lead-gen", color: "emerald" },
   { label: "Sovereign", href: "/sovereignty-dashboard", Icon: Shield, match: (l) => l === "/sovereignty-dashboard", color: "emerald" },
   { label: "Life", href: "/life", Icon: Heart, match: (l) => l === "/life", color: "pink" },
@@ -125,7 +125,7 @@ export default function MobileNav() {
           className="fixed left-0 right-0 z-50 rounded-t-3xl border-t border-white/10 animate-in slide-in-from-bottom"
           style={{
             bottom: "calc(56px + env(safe-area-inset-bottom, 0px))",
-            background: "linear-gradient(to top, rgba(2,1,10,0.98), rgba(8,5,24,0.96))",
+            background: "linear-gradient(to top, rgba(7,11,16,0.99), rgba(14,22,24,0.97))",
             maxHeight: "60vh",
             paddingBottom: "env(safe-area-inset-bottom, 0px)",
           }}
@@ -157,8 +157,8 @@ export default function MobileNav() {
         aria-label="Primary navigation"
         role="navigation"
       >
-        <div className="relative" style={{ background: "linear-gradient(to top, rgba(2, 1, 10, 0.97), rgba(4, 3, 14, 0.92))" }}>
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent pointer-events-none" />
+        <div className="relative" style={{ background: "linear-gradient(to top, rgba(7,11,16,0.99), rgba(14,22,24,0.96))" }}>
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-300/30 to-transparent pointer-events-none" />
           <div className="flex" style={{ height: 56 }}>
             {PRIMARY.map(tab => {
               const isActive = tab.label === "More" ? moreActive || moreOpen : tab.match(location);
@@ -170,7 +170,7 @@ export default function MobileNav() {
                   fullWidth
                   onClick={() => {
                     if (tab.label === "More") setMoreOpen(o => !o);
-                    else if (location !== tab.href) setLocation(tab.href);
+                    else if (!tab.match(location)) setLocation(tab.href);
                   }}
                 />
               );

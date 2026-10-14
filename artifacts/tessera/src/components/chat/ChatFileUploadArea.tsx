@@ -12,6 +12,13 @@ export const ChatFileUploadArea = memo(function ChatFileUploadArea({
   uploadedFiles, conversationId,
   onSetInput, currentInput,
 }: ChatFileUploadAreaProps) {
+  if (!Array.isArray(uploadedFiles)) {
+    return (
+      <p role="status" aria-live="polite" className="max-w-3xl mx-auto mb-2 text-xs text-amber-300/90">
+        Attachments are unavailable. You can continue chatting.
+      </p>
+    );
+  }
   if (uploadedFiles.length === 0) return null;
 
   return (
