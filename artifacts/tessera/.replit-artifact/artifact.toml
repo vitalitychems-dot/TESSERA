@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "TESSERA"
+description = "The canonical TESSERA web application, imported from its reviewed GitHub source for launch verification with existing owner-session gates preserved."
+version = "1.0.0"
+id = "artifacts/tessera"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18514
+
+[services.development]
+run = "pnpm --filter @workspace/tessera run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tessera", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/tessera/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18514"
+BASE_PATH = "/"

@@ -1,0 +1,2 @@
+- [TESSERA launch policy](tessera-launch-policy.md) — canonical GitHub source and Gitbook deployment rules; preserve owner gates and protected archives.
+- [Public repository imports](public-repository-imports.md) — check anonymous access before treating a failed GitHub credential as a private-repo problem.

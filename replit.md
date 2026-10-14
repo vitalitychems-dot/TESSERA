@@ -1,15 +1,17 @@
-# [Project name]
+# TESSERA
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Launch checkout of the canonical vitalitychems-dot/TESSERA application. vitalitychems-dot/Gitbook supplies the launch instructions; this workspace is not a replacement source-of-truth repository.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- Start the managed `artifacts/tessera: web` and `artifacts/api-server: API Server` workflows. They supply the correct ports and base paths.
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `DATABASE_URL` — PostgreSQL connection, managed by Replit. No old application data was imported.
+- `TESSERACT_ADMIN_KEY` — owner unlock key, at least 16 characters, supplied through Secrets only.
+- `SOVEREIGN_SESSION_SECRET` — production cookie signing secret, at least 32 characters. The launch adapter uses the existing secure `SESSION_SECRET` if the dedicated name is absent.
 
 ## Stack
 
@@ -18,27 +20,36 @@ _Replace the heading above with the project's name, and this line with one sente
 - DB: PostgreSQL + Drizzle ORM
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Build: Vite static frontend and esbuild ESM API bundles
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/tessera` — canonical web application.
+- `artifacts/api-server` — canonical API and session gates.
+- `lib/db` — canonical schema; migrations are explicit and separate from builds.
+- `docs/REPLIT-LAUNCH-EVIDENCE.md` — source checkpoint, verification, and remaining blockers.
+- `scripts/replit-runtime-env.mjs` — launch-only environment adapter; never logs credentials.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Static web and API remain separate services, as instructed by Gitbook.
+- Application source is imported unchanged. Local launch adaptations are confined to runtime metadata, the environment adapter, and workspace toolchain configuration.
+- Protected archives, prior runtime state, and secret files are excluded.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+The existing TESSERA application is owner-session gated. Do not bypass the unlock screen or claim full operation from an open health endpoint alone.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+Launch the existing TESSERA repository using Gitbook's current instructions. Both repositories are public.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Gitbook's current mesh start-here document governs deployment-lane overlap checks, evidence, review, and release gates. No direct main pushes, unauthorized merges, or publication past outstanding gates.
+- Keep `TESSERA_ENABLE_*` disabled and preserve existing diagnostics/session protections.
+- Managed development commands run with the artifact directory as their working directory.
+- Runtime audit/state directories are excluded from source and deploy uploads; production persistence still needs review before publication.
 
 ## Pointers
 
