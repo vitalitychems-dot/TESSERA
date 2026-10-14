@@ -186,11 +186,13 @@ export async function busPayload() {
   };
 }
 
-function directoryListing(rel) {
-  const abs = path.join(repoRoot, rel);
-  if (!existsSync(abs)) return { path: rel, present: false, files: [] };
-  const files = readdirSync(abs).filter((name) => !name.startsWith("."));
-  return { path: rel, present: true, files };
+const SCORECARD_DIR = path.join(repoRoot, "scripts/scorecard");
+const EVALS_DIR = path.join(repoRoot, "evals");
+const EVAL_DIR = path.join(repoRoot, "scripts/eval");
+
+function filesIn(abs) {
+  if (!existsSync(abs)) return [];
+  return readdirSync(abs).filter((name) => !name.startsWith("."));
 }
 
 export async function scorePayload() {
@@ -219,9 +221,9 @@ export async function scorePayload() {
     },
     health,
     directories: [
-      directoryListing("scripts/scorecard"),
-      directoryListing("evals"),
-      directoryListing("scripts/eval"),
+      { path: "scripts/scorecard", present: existsSync(SCORECARD_DIR), files: filesIn(SCORECARD_DIR) },
+      { path: "evals", present: existsSync(EVALS_DIR), files: filesIn(EVALS_DIR) },
+      { path: "scripts/eval", present: existsSync(EVAL_DIR), files: filesIn(EVAL_DIR) },
     ],
   };
 }

@@ -30,7 +30,7 @@ The phosphor lattice console is the current Tessera UI theme. These older theme 
 | `preview/src/styles.css` | CSS variables for those marks. Superseded for new UI work. |
 | `artifacts/tessera/src/lib/theme-constants.ts` | Cyan, purple, rose, and related accent palettes for the older web app. Superseded. |
 
-The console does not read `TESSERA_ENABLE_*` and does not change those flags. Ports already used by other apps are 3000 (web), 5000 (API), 5173 (mockup sandbox), 4173 (studio), 4183 (GitAI), and 8787 (Gitbook HTTP). The console listens on `127.0.0.1:4391` (`TESSERA_CONSOLE_PORT` overrides it).
+The console does not read `TESSERA_ENABLE_*` and does not change those flags. Ports already used by other apps are 3000 (web), 5000 (API), 5173 (mockup sandbox), 4173 (studio), 4183 (GitAI), and 8787 (Gitbook HTTP). The console listens on `127.0.0.1:4391`. The bind address is fixed and is not read from the environment. `TESSERA_CONSOLE_PORT` overrides the port.
 
 ```bash
 pnpm --filter @workspace/console run dev

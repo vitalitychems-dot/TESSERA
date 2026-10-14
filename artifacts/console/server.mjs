@@ -5,15 +5,16 @@ import { fileURLToPath } from "node:url";
 import { answerChat, brainPayload, busPayload, consolePort, DEFAULT_PORT, eyePayload, recallPayload, scorePayload } from "./lib/sources.mjs";
 
 const publicDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "public");
+const BIND_HOST = "127.0.0.1";
 let boundPort = DEFAULT_PORT;
 const files = new Map([
-  ["/", ["index.html", "text/html; charset=utf-8"]],
-  ["/console.css", ["console.css", "text/css; charset=utf-8"]],
-  ["/console.js", ["console.js", "text/javascript; charset=utf-8"]],
-  ["/actions.mjs", ["actions.mjs", "text/javascript; charset=utf-8"]],
-  ["/fonts/syne-500.woff2", ["fonts/syne-500.woff2", "font/woff2"]],
-  ["/fonts/syne-700.woff2", ["fonts/syne-700.woff2", "font/woff2"]],
-  ["/fonts/fragment-mono.woff2", ["fonts/fragment-mono.woff2", "font/woff2"]],
+  ["/", ["text/html; charset=utf-8", readFileSync(new URL("./public/index.html", import.meta.url))]],
+  ["/console.css", ["text/css; charset=utf-8", readFileSync(new URL("./public/console.css", import.meta.url))]],
+  ["/console.js", ["text/javascript; charset=utf-8", readFileSync(new URL("./public/console.js", import.meta.url))]],
+  ["/actions.mjs", ["text/javascript; charset=utf-8", readFileSync(new URL("./public/actions.mjs", import.meta.url))]],
+  ["/fonts/syne-500.woff2", ["font/woff2", readFileSync(new URL("./public/fonts/syne-500.woff2", import.meta.url))]],
+  ["/fonts/syne-700.woff2", ["font/woff2", readFileSync(new URL("./public/fonts/syne-700.woff2", import.meta.url))]],
+  ["/fonts/fragment-mono.woff2", ["font/woff2", readFileSync(new URL("./public/fonts/fragment-mono.woff2", import.meta.url))]],
 ]);
 
 function send(res, code, type, body) {
@@ -23,6 +24,34 @@ function send(res, code, type, body) {
 
 function sendJson(res, code, value) {
   send(res, code, "application/json; charset=utf-8", JSON.stringify(value));
+}
+
+export function normalizePublicPath(pathname) {
+  if (typeof pathname !== "string" || pathname.length === 0 || pathname.length > 512) return null;
+  if (!pathname.startsWith("/")) return null;
+  if (pathname.includes("%") || pathname.includes("\\") || pathname.includes("\0") || pathname.includes("..")) return null;
+  return pathname;
+}
+
+export function publicFilePath(name) {
+  if (typeof name !== "string" || !/^[a-z0-9][a-z0-9./-]*$/i.test(name)) return null;
+  if (name.includes("..") || name.includes("//") || name.startsWith("/") || name.startsWith(".")) return null;
+  return `${publicDir}${path.sep}${name}`;
+}
+
+function chatOriginOk(req) {
+  const address = req.socket?.localAddress;
+  const port = req.socket?.localPort;
+  if (address !== BIND_HOST || typeof port !== "number") return false;
+  const origin = req.headers.origin;
+  if (typeof origin !== "string" || origin.length === 0 || origin === "null") return false;
+  let parsed;
+  try {
+    parsed = new URL(origin);
+  } catch {
+    return false;
+  }
+  return parsed.protocol === "http:" && parsed.hostname === BIND_HOST && parsed.port === String(port);
 }
 
 async function readBody(req) {
@@ -38,38 +67,47 @@ async function readBody(req) {
 
 export async function handleRequest(req, res) {
   const url = new URL(req.url || "/", "http://127.0.0.1");
+  const pathname = normalizePublicPath(url.pathname);
   try {
-    if (req.method === "GET" && files.has(url.pathname)) {
-      const [name, type] = files.get(url.pathname);
-      send(res, 200, type, readFileSync(path.join(publicDir, name)));
+    if (!pathname) {
+      sendJson(res, 404, { ok: false, error: "Not found" });
       return;
     }
-    if (req.method === "GET" && url.pathname === "/api/meta") {
+    if (req.method === "GET" && files.has(pathname)) {
+      const [type, body] = files.get(pathname);
+      send(res, 200, type, body);
+      return;
+    }
+    if (req.method === "GET" && pathname === "/api/meta") {
       sendJson(res, 200, { port: boundPort, theme: "phosphor-lattice", listen: `127.0.0.1:${boundPort}` });
       return;
     }
-    if (req.method === "GET" && url.pathname === "/api/eye") {
+    if (req.method === "GET" && pathname === "/api/eye") {
       sendJson(res, 200, await eyePayload());
       return;
     }
-    if (req.method === "GET" && url.pathname === "/api/brain") {
+    if (req.method === "GET" && pathname === "/api/brain") {
       sendJson(res, 200, brainPayload(url.searchParams.get("t") ?? undefined));
       return;
     }
-    if (req.method === "GET" && url.pathname === "/api/brain/recall") {
+    if (req.method === "GET" && pathname === "/api/brain/recall") {
       const body = recallPayload(url.searchParams.get("t") ?? undefined, url.searchParams.get("seed") || "");
       sendJson(res, body.ok ? 200 : 404, body);
       return;
     }
-    if (req.method === "GET" && url.pathname === "/api/bus") {
+    if (req.method === "GET" && pathname === "/api/bus") {
       sendJson(res, 200, await busPayload());
       return;
     }
-    if (req.method === "GET" && url.pathname === "/api/score") {
+    if (req.method === "GET" && pathname === "/api/score") {
       sendJson(res, 200, await scorePayload());
       return;
     }
-    if (req.method === "POST" && url.pathname === "/api/chat") {
+    if (req.method === "POST" && pathname === "/api/chat") {
+      if (!chatOriginOk(req)) {
+        sendJson(res, 403, { ok: false, error: "Origin is not this console." });
+        return;
+      }
       const raw = await readBody(req);
       let message = "";
       try {
@@ -94,7 +132,7 @@ export function startServer(port = consolePort()) {
   });
   return new Promise((resolve, reject) => {
     server.once("error", reject);
-    server.listen(port, "127.0.0.1", () => {
+    server.listen(port, BIND_HOST, () => {
       const address = server.address();
       boundPort = typeof address === "object" && address ? address.port : port;
       resolve(server);
