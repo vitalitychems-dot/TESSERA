@@ -146,8 +146,8 @@ test("each tab endpoint returns data that exists in the repo", async () => {
 });
 
 test("loopback bind, public paths, and chat origin", async () => {
-  assert.equal(normalizePublicPath("/fonts/..%2f..%2f..%2fpackage.json"), "/package.json");
-  assert.equal(normalizePublicPath("/%2e%2e/package.json"), "/package.json");
+  assert.equal(normalizePublicPath("/fonts/..%2f..%2f..%2fpackage.json"), null);
+  assert.equal(normalizePublicPath("/%2e%2e/package.json"), null);
   assert.equal(normalizePublicPath("/console.css"), "/console.css");
   assert.equal(normalizePublicPath("/%"), null);
   assert.equal(publicFilePath("../../package.json"), null);

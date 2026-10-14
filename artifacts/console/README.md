@@ -8,7 +8,7 @@ pnpm --filter @workspace/console run dev
 
 The process binds `127.0.0.1` only. That address is not read from the environment. `TESSERA_CONSOLE_PORT` overrides the port. `TESSERA_CONSOLE_MEMORY` overrides the gitignored retrieval-memory directory (default `.local/tessera-console-memory`). This app does not read or set `TESSERA_ENABLE_*`.
 
-Static files are an allowlist. Request paths are percent-decoded and normalized, then the file is resolved and kept inside `public/`. `POST /api/chat` accepts only `Origin: http://127.0.0.1:<port>` on that loopback socket. A browser on the console page sends that header. Other origins get 403.
+Static files are read when the process starts, from fixed paths inside `public/`. A request is served only when its path is an exact allowlist key. Paths containing `%`, `..`, or a backslash are rejected and never joined onto the filesystem. `POST /api/chat` accepts only `Origin: http://127.0.0.1:<port>` on that loopback socket. A browser on the console page sends that header. Other origins get 403.
 
 | Tab | Real source |
 | --- | --- |

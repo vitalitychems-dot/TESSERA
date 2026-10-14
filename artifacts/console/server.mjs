@@ -8,13 +8,13 @@ const publicDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "publi
 const BIND_HOST = "127.0.0.1";
 let boundPort = DEFAULT_PORT;
 const files = new Map([
-  ["/", ["index.html", "text/html; charset=utf-8"]],
-  ["/console.css", ["console.css", "text/css; charset=utf-8"]],
-  ["/console.js", ["console.js", "text/javascript; charset=utf-8"]],
-  ["/actions.mjs", ["actions.mjs", "text/javascript; charset=utf-8"]],
-  ["/fonts/syne-500.woff2", ["fonts/syne-500.woff2", "font/woff2"]],
-  ["/fonts/syne-700.woff2", ["fonts/syne-700.woff2", "font/woff2"]],
-  ["/fonts/fragment-mono.woff2", ["fonts/fragment-mono.woff2", "font/woff2"]],
+  ["/", ["text/html; charset=utf-8", readFileSync(new URL("./public/index.html", import.meta.url))]],
+  ["/console.css", ["text/css; charset=utf-8", readFileSync(new URL("./public/console.css", import.meta.url))]],
+  ["/console.js", ["text/javascript; charset=utf-8", readFileSync(new URL("./public/console.js", import.meta.url))]],
+  ["/actions.mjs", ["text/javascript; charset=utf-8", readFileSync(new URL("./public/actions.mjs", import.meta.url))]],
+  ["/fonts/syne-500.woff2", ["font/woff2", readFileSync(new URL("./public/fonts/syne-500.woff2", import.meta.url))]],
+  ["/fonts/syne-700.woff2", ["font/woff2", readFileSync(new URL("./public/fonts/syne-700.woff2", import.meta.url))]],
+  ["/fonts/fragment-mono.woff2", ["font/woff2", readFileSync(new URL("./public/fonts/fragment-mono.woff2", import.meta.url))]],
 ]);
 
 function send(res, code, type, body) {
@@ -28,24 +28,15 @@ function sendJson(res, code, value) {
 
 export function normalizePublicPath(pathname) {
   if (typeof pathname !== "string" || pathname.length === 0 || pathname.length > 512) return null;
-  let decoded;
-  try {
-    decoded = decodeURIComponent(pathname);
-  } catch {
-    return null;
-  }
-  if (decoded.includes("\0") || decoded.includes("\\") || !decoded.startsWith("/")) return null;
-  const normalized = path.posix.normalize(decoded);
-  if (!normalized.startsWith("/") || normalized.includes("..")) return null;
-  return normalized;
+  if (!pathname.startsWith("/")) return null;
+  if (pathname.includes("%") || pathname.includes("\\") || pathname.includes("\0") || pathname.includes("..")) return null;
+  return pathname;
 }
 
 export function publicFilePath(name) {
-  if (typeof name !== "string" || name.includes("\0") || path.isAbsolute(name)) return null;
-  const root = path.resolve(publicDir);
-  const resolved = path.resolve(root, name);
-  if (!resolved.startsWith(`${root}${path.sep}`)) return null;
-  return resolved;
+  if (typeof name !== "string" || !/^[a-z0-9][a-z0-9./-]*$/i.test(name)) return null;
+  if (name.includes("..") || name.includes("//") || name.startsWith("/") || name.startsWith(".")) return null;
+  return `${publicDir}${path.sep}${name}`;
 }
 
 function chatOriginOk(req) {
@@ -83,13 +74,8 @@ export async function handleRequest(req, res) {
       return;
     }
     if (req.method === "GET" && files.has(pathname)) {
-      const [name, type] = files.get(pathname);
-      const file = publicFilePath(name);
-      if (!file) {
-        sendJson(res, 404, { ok: false, error: "Not found" });
-        return;
-      }
-      send(res, 200, type, readFileSync(file));
+      const [type, body] = files.get(pathname);
+      send(res, 200, type, body);
       return;
     }
     if (req.method === "GET" && pathname === "/api/meta") {
