@@ -1,6 +1,6 @@
-/** Five marks. An unknown name is water. */
+/** Six marks. An unknown name is water. */
 
-export const THEME_IDS = ["water", "fire", "lightning", "diamond", "spiral"] as const;
+export const THEME_IDS = ["water", "fire", "lightning", "diamond", "spiral", "house"] as const;
 
 export type ThemeId = (typeof THEME_IDS)[number];
 
