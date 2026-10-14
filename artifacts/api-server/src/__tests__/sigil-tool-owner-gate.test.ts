@@ -3,9 +3,11 @@ import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import express from "express";
 import { createServer, type Server } from "node:http";
-import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
+import { issueSession, SESSION_COOKIE, verifyAdminToken } from "../lib/sovereign-session";
+import { readAdminKeyMaterial, verifyFatherKey } from "../lib/father-identity";
+import { validateSovereignAdminToken } from "../lib/mesh-auth";
+import { canonicalAdminCode } from "../lib/lingua-universalis";
 import { NotConfiguredError } from "../lib/not-configured";
-import { readAdminKeyMaterial } from "../lib/father-identity";
 import { natalSigilFor } from "../lib/father-natal";
 import * as natalSigil from "../lib/natal-sigil";
 import { detectIntents, invokeTool, publicToolResult } from "../lib/tool-registry";
@@ -43,6 +45,7 @@ vi.mock("@workspace/db", () => {
 
 import conversationsRouter from "../routes/conversations";
 import sovereignDoctrineRouter from "../routes/sovereign-doctrine";
+import languageSecurityRouter from "../routes/language-security";
 
 const OWNER_ENV = "SOVEREIGN_ADMIN_TOKEN";
 const LEGACY_ENV = "TESSERACT_ADMIN_KEY";
@@ -94,6 +97,7 @@ describe("sigil tool owner gate", () => {
     app.use(express.json());
     app.use(conversationsRouter);
     app.use(sovereignDoctrineRouter);
+    app.use(languageSecurityRouter);
     server = createServer(app);
     await new Promise<void>((resolve) => {
       server?.listen(0, "127.0.0.1", () => resolve());
@@ -126,9 +130,10 @@ describe("sigil tool owner gate", () => {
     return `${SESSION_COOKIE}=${issued.signedId}`;
   }
 
-  async function post(path: string, body: unknown, cookie?: string): Promise<Response> {
+  async function post(path: string, body: unknown, cookie?: string, origin?: string): Promise<Response> {
     const headers = new Headers({ "content-type": "application/json" });
     if (cookie !== undefined) headers.set("cookie", cookie);
+    if (origin !== undefined) headers.set("origin", origin);
     return fetch(`${baseUrl}${path}`, { method: "POST", headers, body: JSON.stringify(body) });
   }
 
@@ -142,6 +147,30 @@ describe("sigil tool owner gate", () => {
     expect(detectIntents(MINT_PHRASE).map((call) => call.name)).toEqual(["mint_admin_sigil"]);
     expect(detectIntents(COUNCIL_PHRASE).every((call) => call.name === "convene_grand_council_universalis")).toBe(true);
     expect(detectIntents(COUNCIL_PHRASE).length).toBeGreaterThan(0);
+  });
+
+  it("issues one owner-only LUS code usable as the same Father/admin secret", async () => {
+    const anonymous = await post("/sigil/father/issue-code", {});
+    expect(anonymous.status).toBe(401);
+
+    const crossOrigin = await post("/sigil/father/issue-code", {}, ownerCookie(), "https://other-app.example");
+    expect(crossOrigin.status).toBe(403);
+
+    const response = await post("/sigil/father/issue-code", {}, ownerCookie(), baseUrl);
+    expect(response.status).toBe(201);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    const body = await response.json() as { ok: boolean; code: string; saveAs: string; instructions: string };
+    expect(body.ok).toBe(true);
+    expect(body.saveAs).toBe("TESSERACT_ADMIN_KEY");
+    expect(body.instructions).toContain("restart the API workflow");
+    expect(canonicalAdminCode(body.code)).toMatch(/^[A-Za-z0-9_-]{43}$/);
+
+    // Simulate saving exactly the displayed LUS value in Replit Secrets.
+    process.env[LEGACY_ENV] = body.code;
+    expect(verifyAdminToken(body.code)).toBe(true);
+    expect(verifyFatherKey(body.code)).toBe(true);
+    expect(validateSovereignAdminToken(body.code)).toBe(true);
+    expect(readAdminKeyMaterial()).toBe(canonicalAdminCode(body.code));
   });
 
   for (const phrase of [MINT_PHRASE, COUNCIL_PHRASE]) {

@@ -1,4 +1,5 @@
 import { createHash, timingSafeEqual } from "crypto";
+import { canonicalAdminCode } from "./lingua-universalis";
 
 const MIN_TOKEN_LENGTH = 8;
 
@@ -21,8 +22,8 @@ export function validateSovereignAdminToken(token: string | undefined | null): b
   const configured = process.env["TESSERACT_ADMIN_KEY"];
   if (!configured || configured.length < MIN_TOKEN_LENGTH) return false;
   if (!token || typeof token !== "string") return false;
-  const a = Buffer.from(token.trim());
-  const b = Buffer.from(configured);
+  const a = Buffer.from(canonicalAdminCode(token));
+  const b = Buffer.from(canonicalAdminCode(configured));
   if (a.length !== b.length) return false;
   try {
     return timingSafeEqual(a, b);

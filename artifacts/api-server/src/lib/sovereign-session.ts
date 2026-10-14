@@ -16,6 +16,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { canonicalAdminCode } from "./lingua-universalis";
 
 export const SESSION_COOKIE = "sovereign_session";
 export const DEFAULT_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
@@ -48,7 +49,7 @@ let _pruneCount = 0;
 
 // One admin secret: TESSERACT_ADMIN_KEY. No second env var is consulted.
 function getAdminToken(): string {
-  return (process.env.TESSERACT_ADMIN_KEY ?? "").trim();
+  return canonicalAdminCode(process.env.TESSERACT_ADMIN_KEY ?? "");
 }
 
 // R3-3 (77% approval): in production we REQUIRE a dedicated session secret.
@@ -81,13 +82,22 @@ export function verifyAdminToken(presented: string | undefined | null): boolean 
   if (!presented || typeof presented !== "string") return false;
   if (!isAdminTokenConfigured()) return false;
   const expected = Buffer.from(getAdminToken(), "utf8");
-  const got = Buffer.from(presented.trim(), "utf8");
-  if (expected.length !== got.length) return false;
-  try {
-    return timingSafeEqual(expected, got);
-  } catch {
-    return false;
-  }
+  const candidate = presented.trim();
+  const raw = Buffer.from(candidate, "utf8");
+  const decoded = canonicalAdminCode(candidate);
+  const matches = (got: Buffer) => {
+    if (expected.length !== got.length) return false;
+    try {
+      return timingSafeEqual(expected, got);
+    } catch {
+      return false;
+    }
+  };
+  // LUS is a reversible glyph rendering of this same admin credential, not a
+  // second key. Accepting it here lets the owner's saved LUS form open the same
+  // single session without storing either representation in the browser.
+  if (matches(raw)) return true;
+  return matches(Buffer.from(decoded, "utf8"));
 }
 
 function signSessionId(rawId: string): string {

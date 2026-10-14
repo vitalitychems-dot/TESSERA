@@ -10,6 +10,7 @@ import { initFileIntegrity } from "./lib/file-integrity";
 import { initFileRegistry } from "./lib/sovereign-file-registry";
 import { startAnomalyMonitor, stopAnomalyMonitor, recordRequest } from "./lib/anomaly-detection";
 import { initRecoveryModule, registerRecoveryHandler, updateModuleStatus, startRouteHealthMonitor, INTERNAL_PROBE_HEADER, INTERNAL_PROBE_SECRET, registerModuleInitFunction } from "./lib/auto-recovery";
+import { isExpectedEmptyState404, isOptionalStorageResourceRoute } from "./lib/health-probe-policy";
 import { initializeMemoryOnStartup } from "./lib/vector-memory";
 import { startIngestionScheduler, isSchedulerStarted } from "./lib/ingestion/scheduler";
 import { startPeriodicRegeneration } from "./lib/canonUpdater";
@@ -339,6 +340,7 @@ export function collectRegisteredRoutes(routerHandle: IRouter): Set<string> {
 export interface StartupProbeRoute {
   path: string;
   hasParams: boolean;
+  notFoundIsOk: boolean;
 }
 
 export function deriveStartupProbeRoutes(): StartupProbeRoute[] {
@@ -351,12 +353,17 @@ export function deriveStartupProbeRoutes(): StartupProbeRoute[] {
     const method = entry.slice(0, spaceIdx);
     const originalPath = entry.slice(spaceIdx + 1);
     if (method !== "GET") continue;
+    if (isOptionalStorageResourceRoute(originalPath)) continue;
     const hasParams = originalPath.includes(":") || originalPath.includes("*");
     const probePath = `/api${originalPath}`
       .replace(/:[^/]+/g, "0")
       .replace(/\*[A-Za-z_][\w]*/g, "0")
       .replace(/\*/g, "0");
-    probes.push({ path: probePath, hasParams });
+    probes.push({
+      path: probePath,
+      hasParams,
+      notFoundIsOk: isExpectedEmptyState404(originalPath, hasParams),
+    });
   }
 
   return probes;

@@ -13,4 +13,4 @@ The owner requires one Father code: the sigil and admin key are the same credent
 
 **Why:** The owner explicitly specified this first-use flow and said “we only need one.”
 
-**How to apply:** Keep a single user-facing credential. Do not assume the present manual-key gate already implements issuance. First-use issuance must be protected by verified owner access, never by public first-visitor ownership or knowledge of the confirmation word alone.
+**How to apply:** Keep a single user-facing credential. The currently configured code is required for the initial owner login; replacement issuance then requires that authenticated session and a same-origin request. Never issue to the public first visitor or trust the confirmation word alone. The owner must save the one-time LUS code to Replit Secrets and restart the API; the app cannot write workspace Secrets itself.

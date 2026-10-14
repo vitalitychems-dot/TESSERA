@@ -331,7 +331,7 @@ async function runPostBindHealthProbe(port: number): Promise<void> {
   for (let attempt = 1; attempt <= PROBE_MAX_ATTEMPTS; attempt++) {
     const results = await Promise.all(
       probeRoutes.map(p =>
-        probeRoute(baseUrl, p.path, !p.hasParams).then(res => ({ route: p.path, hasParams: p.hasParams, ...res })),
+        probeRoute(baseUrl, p.path, !p.notFoundIsOk).then(res => ({ route: p.path, hasParams: p.hasParams, ...res })),
       ),
     );
     const passed = results.filter(r => r.ok).length;

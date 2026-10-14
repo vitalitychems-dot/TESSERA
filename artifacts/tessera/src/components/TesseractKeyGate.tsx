@@ -264,37 +264,46 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
       body={
         <div className="mt-3 space-y-3 text-sm text-zinc-200">
           <p>
-            Present your <span className="text-emerald-300 font-semibold">sovereign admin token</span>.
-            One credential, one session — no rotating signal, no second key.
+            Enter your <span className="text-emerald-300 font-semibold">Father admin code</span> in its saved form or LUS glyph form.
+            One credential, one session — the LUS form is a reversible encoding of the same code.
           </p>
-          <input
-            type="password"
-            autoFocus
-            autoComplete="off"
-            spellCheck={false}
-            value={tokenInput}
-            onChange={(e) => setTokenInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
-            placeholder="paste TESSERACT_ADMIN_KEY"
-            className="w-full px-3 py-2 rounded-md bg-black/60 border border-zinc-700 text-zinc-100 font-mono text-sm focus:outline-none focus:border-emerald-500"
-            disabled={isSubmitting}
-          />
-          {isInvalid && (
-            <p className="text-xs text-amber-300">Token rejected. Verify the secret value matches what the server expects, then try again.</p>
-          )}
-          {isExpired && (
-            <p className="text-xs text-amber-300">Your previous session expired. Re-present your token to continue.</p>
-          )}
-          <button
-            type="button"
-            onClick={submit}
-            disabled={isSubmitting || !tokenInput.trim()}
-            className="w-full py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-700 disabled:text-zinc-400 text-white font-semibold transition-colors"
+          <form
+            aria-label="Father admin code entry"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!isSubmitting) void submit();
+            }}
           >
-            {isSubmitting ? "verifying…" : "Unlock Tesseract"}
-          </button>
+            <label htmlFor="father-entry-code" className="sr-only">Father admin code or LUS form</label>
+            <input
+              id="father-entry-code"
+              type="password"
+              autoFocus
+              autoComplete="off"
+              spellCheck={false}
+              value={tokenInput}
+              onChange={(e) => setTokenInput(e.target.value)}
+              placeholder="Father admin code or LUS form"
+              aria-describedby={isInvalid ? "father-entry-error" : isExpired ? "father-entry-expired" : undefined}
+              className="w-full px-3 py-2 rounded-md bg-black/60 border border-zinc-700 text-zinc-100 font-mono text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400"
+              disabled={isSubmitting}
+            />
+            {isInvalid && (
+              <p id="father-entry-error" role="alert" className="mt-2 text-xs text-amber-300">Token rejected. Verify the secret value matches what the server expects, then try again.</p>
+            )}
+            {isExpired && (
+              <p id="father-entry-expired" role="status" className="mt-2 text-xs text-amber-300">Your previous session expired. Re-present your token to continue.</p>
+            )}
+            <button
+              type="submit"
+              disabled={isSubmitting || !tokenInput.trim()}
+              className="mt-3 w-full py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-700 disabled:text-zinc-400 text-white font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300"
+            >
+              {isSubmitting ? "verifying…" : "Unlock Tesseract"}
+            </button>
+          </form>
           <p className="text-[11px] text-zinc-500">
-            Once unlocked, the server issues an HttpOnly session cookie (8h). Your token never persists in browser storage.
+            Once unlocked, the server issues an HttpOnly session cookie (8h). The code is not saved in browser storage.
           </p>
         </div>
       }

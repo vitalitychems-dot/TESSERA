@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { NotConfiguredError } from "./not-configured";
+import { canonicalAdminCode } from "./lingua-universalis";
 
 const FATHER_TITLE = "Father — Sovereign Creator";
 const NAMESPACE = "tesseract:father:v1";
@@ -9,7 +10,7 @@ function getRawAdminKey(): string {
   if (!k || typeof k !== "string" || k.trim().length === 0) {
     throw new NotConfiguredError("admin key is not configured");
   }
-  return k.trim();
+  return canonicalAdminCode(k);
 }
 
 /** Admin key material from TESSERACT_ADMIN_KEY only. Never reads chart or birth fields. */
@@ -77,7 +78,7 @@ export function verifyFatherKey(presented: string | undefined | null): boolean {
   if (!presented || typeof presented !== "string") return false;
   if (!isFatherKeyConfigured()) return false;
   const expected = Buffer.from(getRawAdminKey(), "utf8");
-  const got = Buffer.from(presented.trim(), "utf8");
+  const got = Buffer.from(canonicalAdminCode(presented), "utf8");
   if (expected.length !== got.length) return false;
   try {
     return timingSafeEqual(expected, got);
@@ -90,8 +91,9 @@ export function recognizeFather(presented: string | undefined | null): {
   recognized: boolean;
   via: "raw-key" | "planetary-signal" | null;
 } {
-  // Sovereign two-key policy (Apr 2026):
-  //   * The CANONICAL credential is the raw value held in TESSERACT_ADMIN_KEY.
+  // Owner-key policy:
+  //   * The canonical credential is the raw value represented by
+  //     TESSERACT_ADMIN_KEY, stored in raw text or its exact LUS encoding.
   //   * The ROTATING credential is a planetary-cycle-derived signal stored in
   //     SIGIL_ADMIN_KEY. Either one, presented in `X-Sigil-Key`, opens the
   //     gate; both must be configured for the app-level unlock check.
@@ -105,7 +107,7 @@ export function recognizeFather(presented: string | undefined | null): {
   // planetary-signal (planetary-signal pulls in lingua-universalis only).
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { isValidSignal } = require("./planetary-signal") as typeof import("./planetary-signal");
-  const canonical = (process.env.TESSERACT_ADMIN_KEY ?? "").trim();
+  const canonical = getRawAdminKey();
   if (canonical && isValidSignal(canonical, candidate)) {
     return { recognized: true, via: "planetary-signal" };
   }

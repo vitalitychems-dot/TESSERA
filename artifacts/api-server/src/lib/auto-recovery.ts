@@ -380,14 +380,14 @@ export async function runRecoveryCheck(): Promise<void> {
 
 interface WatchdogProbeRoute {
   path: string;
-  hasParams: boolean;
+  notFoundIsOk: boolean;
 }
 
 let watchdogProbeRoutes: WatchdogProbeRoute[] = [
-  { path: "/api/healthz", hasParams: false },
-  { path: "/api/tesseract-forum/topics", hasParams: false },
-  { path: "/api/memory/stats", hasParams: false },
-  { path: "/api/diagnostics", hasParams: false },
+  { path: "/api/healthz", notFoundIsOk: false },
+  { path: "/api/tesseract-forum/topics", notFoundIsOk: false },
+  { path: "/api/memory/stats", notFoundIsOk: false },
+  { path: "/api/diagnostics", notFoundIsOk: false },
 ];
 
 export function setWatchdogProbeRoutes(routes: WatchdogProbeRoute[]): void {
@@ -453,7 +453,7 @@ export function startRouteHealthMonitor(intervalMs = 120_000): void {
         if (res.status >= 500) {
           logger.warn({ route: probe.path, status: res.status }, "Route health check: server error — route may be broken");
           failures.push(`${res.status} on ${probe.path}`);
-        } else if (res.status === 404 && !probe.hasParams) {
+        } else if (res.status === 404 && !probe.notFoundIsOk) {
           logger.warn({ route: probe.path, status: 404 }, "Route health check: 404 on static route — route unregistered or unreachable");
           failures.push(`404 on static route ${probe.path}`);
           try {
@@ -466,7 +466,7 @@ export function startRouteHealthMonitor(intervalMs = 120_000): void {
             });
           } catch {}
         } else {
-          logger.debug({ route: probe.path, status: res.status, hasParams: probe.hasParams }, "Route health check: OK");
+          logger.debug({ route: probe.path, status: res.status, notFoundIsOk: probe.notFoundIsOk }, "Route health check: OK");
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);

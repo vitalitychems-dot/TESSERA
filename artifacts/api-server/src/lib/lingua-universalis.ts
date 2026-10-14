@@ -123,6 +123,10 @@ const PERMUTED_GLYPHS_36 = permute(SACRED_GLYPHS_36, RNG);
 
 const ENCODE_MAP = new Map<string, string>();
 const DECODE_MAP = new Map<string, string>();
+// The plain LUS alphabet has one glyph for each letter regardless of case.
+// Credentials must preserve case exactly, so mark lowercase glyphs only in
+// the credential-specific format; ordinary language text remains unchanged.
+const CREDENTIAL_LOWERCASE_MARKER = "\u02D9";
 for (let i = 0; i < PLAIN_36.length; i++) {
   const lower = PLAIN_36[i].toLowerCase();
   const upper = PLAIN_36[i].toUpperCase();
@@ -149,6 +153,48 @@ export function lusDecode(text: string): string {
     else out += ch;
   }
   return out;
+}
+
+/** Reversible static LUS rendering for owner credentials (not encryption). */
+export function lusEncodeCredential(text: string): string {
+  let out = "";
+  for (const ch of text) {
+    const glyph = ENCODE_MAP.get(ch);
+    if (glyph === undefined) {
+      out += ch;
+    } else {
+      out += glyph;
+      if (ch >= "a" && ch <= "z") out += CREDENTIAL_LOWERCASE_MARKER;
+    }
+  }
+  return out;
+}
+
+/** Decode only canonical, case-preserving static LUS credential forms. */
+export function lusDecodeCredential(text: string): string | null {
+  const chars = Array.from(text);
+  let out = "";
+  for (let i = 0; i < chars.length; i++) {
+    const decoded = DECODE_MAP.get(chars[i]);
+    if (decoded === undefined) {
+      if (chars[i] === CREDENTIAL_LOWERCASE_MARKER) return null;
+      out += chars[i];
+      continue;
+    }
+    if (chars[i + 1] === CREDENTIAL_LOWERCASE_MARKER) {
+      out += decoded.toLowerCase();
+      i++;
+    } else {
+      out += decoded;
+    }
+  }
+  return lusEncodeCredential(out) === text ? out : null;
+}
+
+/** The secret may be stored in raw text or in its exact, reversible LUS form. */
+export function canonicalAdminCode(value: string): string {
+  const trimmed = value.trim();
+  return lusDecodeCredential(trimmed) ?? trimmed;
 }
 
 // =====================================================================

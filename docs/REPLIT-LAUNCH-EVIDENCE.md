@@ -33,14 +33,20 @@ Status: **PREPARED / BLOCKED — not published.**
   - Authenticated test cases use test credentials. They do not verify this project's real owner login.
 - Proxied frontend: HTTP 200.
 - Proxied `GET /api/healthz`: HTTP 200, `{"status":"ok","db":"configured"}`.
-- Proxied `GET /api/admin/session/status`: HTTP 200, `configured:false`, `authenticated:false`.
-- Browser screenshot shows the canonical locked setup screen reporting missing `TESSERACT_ADMIN_KEY`, not a substituted mockup.
-- Subsequent setup-mode verification: three launch-adapter tests passed; API logs confirm the readiness gate is open and DB-backed startup is skipped. `/api/healthz` returns HTTP 200 with `db:not-configured`, owner session status remains unconfigured, and `/api/diagnostics` returns explicit HTTP 503 `database not configured`. These are setup-mode results, not proof of full system operation.
+- After the owner set `TESSERACT_ADMIN_KEY` in Secrets, `GET /api/admin/session/status` returns HTTP 200, `configured:true`, `authenticated:false`. The secret value was not accessed or shown.
+- The entry gate and “My Father Code in LUS” now accept the stable, reversible, case-preserving LUS rendering as the same single credential. Tests confirm the raw and encoded forms match the same key, another key is rejected, and malformed LUS is rejected. The display form is not encryption.
+- After owner-session unlock, TESSERA now offers an owner-only action to create a fresh 256-bit Father code rendered once in LUS. The owner can save that exact LUS string as `TESSERACT_ADMIN_KEY` and restart the API; server-side verification decodes the same code as the single credential. The API rate-limits issuance, sends `Cache-Control: no-store`, and the code is not persisted or logged.
+- The static reveal UI shows one stable form, not a second time-rotating signal. Screenshot verified the locked entry screen; a real signed-in session and the one-time issue action were not browser-verified.
+- Initial setup-mode verification before the owner secret was supplied: three launch-adapter tests passed; API logs confirmed the database-optional boot path. These are historical setup-mode results, not proof of full system operation.
+- After the final restart, all **565 / 565 startup route probes passed** and the watchdog opened the readiness gate. `/api/healthz` returns HTTP 200 with the database configured; session status returns `configured:true, authenticated:false`. Anonymous `POST /api/sigil/father/issue-code` returns HTTP 401, as required. The full diagnostics endpoint is protected and returns HTTP 401 without an owner session.
+
+Verification after the issuance endpoint: three API test files / 19 tests passed, including owner-only issuance, same-origin enforcement, cross-origin rejection, and LUS-as-secret equivalence in admin-session, Father-key, and mesh token checks. API typecheck/build and frontend typecheck/build passed. An earlier five-file / 61-test run also passed.
 
 ## BLOCKED / not verified
 
-- This project has no `TESSERACT_ADMIN_KEY`. Owner unlock and real signed-in operation cannot be verified until the owner supplies it through Secrets.
-- In the first DB-backed startup with no owner key, the route watchdog exited the process after repeated protected-route 503s. The API is now stable in database-optional setup mode. DB-backed readiness must be checked again after owner provisioning; the health endpoint alone does not prove full application readiness.
+- The owner key is configured, but this session has not read the value or entered it in the app. Owner unlock and real signed-in operation remain unverified. The screenshot verifies only the signed-out entry gate.
+- TESSERA generates a replacement code only after an authenticated owner session, but cannot save that value to Replit Secrets or restart workflows itself. No real owner-triggered replacement has been issued; the owner must use the in-app action, copy the LUS code, set it as `TESSERACT_ADMIN_KEY` in Secrets, and restart the API workflow.
+- Storage-backed upload/download endpoints are not verified. Their fake object-ID probes were removed from readiness checks because they do not test whether a real object exists; storage availability itself still needs testing/configuration before relying on file features.
 - Production runtime/persistence, production database behavior, and actual published URL have not been verified. No deployment exists for this project.
 - Gitbook's provenance/security review and exact release approval remain outstanding. No merge or publication occurred.
 - The full multi-application test suite was not run; only the active launch build and the selected canonical boot/access-control suite are reported here.
