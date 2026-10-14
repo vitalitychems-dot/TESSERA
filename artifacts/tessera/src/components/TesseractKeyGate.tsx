@@ -80,7 +80,7 @@ function CopyButton({ text }: { text: string }) {
       onClick={async () => {
         try { await navigator.clipboard.writeText(text); setDone(true); setTimeout(() => setDone(false), 1500); } catch { /* ignore */ }
       }}
-      className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-amber-500/40 text-amber-200 hover:bg-amber-500/10"
+      className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-border text-foreground hover:bg-accent"
     >
       {done ? "copied" : "copy"}
     </button>
@@ -90,40 +90,40 @@ function CopyButton({ text }: { text: string }) {
 function RecoveryPanel() {
   const [open, setOpen] = useState(false);
   return (
-    <div className="mt-6 border-t border-zinc-800 pt-4">
+    <div className="mt-6 border-t border-border pt-4">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="text-xs text-zinc-400 hover:text-zinc-200"
+        className="text-xs text-muted-foreground hover:text-foreground"
       >
         {open ? "▾" : "▸"} Can't unlock? Recovery runbook
       </button>
       {open && (
-        <ol className="mt-3 space-y-3 text-xs text-zinc-300">
+        <ol className="mt-3 space-y-3 text-xs text-muted-foreground">
           <li>
-            <div className="font-semibold text-zinc-100">1. Generate a new token</div>
+            <div className="font-semibold text-foreground">1. Generate a new token</div>
             <div className="mt-1 flex items-center gap-2">
-              <code className="flex-1 px-2 py-1 rounded bg-black/40 font-mono text-emerald-300 text-[11px]">openssl rand -base64 48 | tr -d '\n'</code>
+              <code className="flex-1 px-2 py-1 rounded bg-background font-mono text-primary text-[11px]">openssl rand -base64 48 | tr -d '\n'</code>
               <CopyButton text={"openssl rand -base64 48 | tr -d '\\n'"} />
             </div>
           </li>
           <li>
-            <div className="font-semibold text-zinc-100">2. Save it in Replit Secrets</div>
-            <div className="mt-1 text-zinc-400">
-              Set the secret <code className="px-1 py-0.5 rounded bg-black/40 text-amber-200">TESSERACT_ADMIN_KEY</code> to the value from step 1.
+            <div className="font-semibold text-foreground">2. Save it in Replit Secrets</div>
+            <div className="mt-1 text-muted-foreground">
+              Set the secret <code className="px-1 py-0.5 rounded bg-background text-foreground">TESSERACT_ADMIN_KEY</code> to the value from step 1.
             </div>
           </li>
           <li>
-            <div className="font-semibold text-zinc-100">3. Restart the API workflow</div>
-            <div className="mt-1 text-zinc-400">In the workspace, restart <code className="px-1 py-0.5 rounded bg-black/40">artifacts/api-server: API Server</code>.</div>
+            <div className="font-semibold text-foreground">3. Restart the API workflow</div>
+            <div className="mt-1 text-muted-foreground">In the workspace, restart <code className="px-1 py-0.5 rounded bg-background">artifacts/api-server: API Server</code>.</div>
           </li>
           <li>
-            <div className="font-semibold text-zinc-100">4. Verify the gate</div>
+            <div className="font-semibold text-foreground">4. Verify the gate</div>
             <div className="mt-1 flex items-center gap-2">
-              <code className="flex-1 px-2 py-1 rounded bg-black/40 font-mono text-emerald-300 text-[11px]">curl -sS $REPLIT_DEV_DOMAIN/api/admin/session/status</code>
+              <code className="flex-1 px-2 py-1 rounded bg-background font-mono text-primary text-[11px]">curl -sS $REPLIT_DEV_DOMAIN/api/admin/session/status</code>
               <CopyButton text={"curl -sS $REPLIT_DEV_DOMAIN/api/admin/session/status"} />
             </div>
-            <div className="mt-1 text-zinc-400">Should return <code>{"{\"configured\":true,\"authenticated\":false}"}</code>. Then unlock here.</div>
+            <div className="mt-1 text-muted-foreground">Should return <code>{"{\"configured\":true,\"authenticated\":false}"}</code>. Then unlock here.</div>
           </li>
         </ol>
       )}
@@ -133,15 +133,15 @@ function RecoveryPanel() {
 
 function Frame({ tone, title, body }: { tone: "amber" | "rose" | "emerald" | "zinc"; title: string; body: ReactNode }) {
   const ring = {
-    amber: "ring-amber-500/40 from-amber-950/30 to-zinc-950",
-    rose: "ring-rose-500/40 from-rose-950/30 to-zinc-950",
-    emerald: "ring-emerald-500/40 from-emerald-950/30 to-zinc-950",
-    zinc: "ring-zinc-700/50 from-zinc-900/30 to-zinc-950",
+    amber: "border-destructive",
+    rose: "border-destructive",
+    emerald: "border-primary",
+    zinc: "border-border",
   }[tone];
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-sm p-6">
-      <div className={`w-full max-w-xl rounded-2xl ring-1 ${ring} bg-gradient-to-br p-6 shadow-2xl`}>
-        <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background p-6">
+      <div className={`w-full max-w-xl rounded-2xl border bg-card p-6 text-card-foreground shadow-2xl ${ring}`}>
+        <h2 className="font-sans text-lg font-semibold text-foreground">{title}</h2>
         {body}
         <RecoveryPanel />
       </div>
@@ -210,16 +210,16 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
   };
 
   if (state.kind === "loading") {
-    return <Frame tone="zinc" title="Tesseract — verifying session…" body={<p className="mt-2 text-sm text-zinc-400">Probing sovereign session.</p>} />;
+    return <Frame tone="zinc" title="Tesseract — verifying session…" body={<p className="mt-2 text-sm text-muted-foreground">Probing sovereign session.</p>} />;
   }
 
   if (state.kind === "unlocked") {
     return (
       <>
         {children}
-        <div className="fixed bottom-3 right-3 z-[9998] text-[10px] text-emerald-400/70 font-mono">
+        <div className="fixed bottom-3 right-3 z-[9998] text-[10px] text-primary/80 font-mono">
           ◈ session · expires {new Date(state.expiresAt).toLocaleTimeString()}
-          <button onClick={logout} className="ml-2 underline hover:text-emerald-300">logout</button>
+          <button onClick={logout} className="ml-2 underline hover:text-foreground">logout</button>
         </div>
       </>
     );
@@ -231,9 +231,9 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
         tone="rose"
         title="◈ Tesseract — sovereign-unconfigured"
         body={
-          <div className="mt-3 space-y-3 text-sm text-rose-100">
-            <p>The server has no <code className="px-1 py-0.5 rounded bg-black/40 text-amber-200">TESSERACT_ADMIN_KEY</code> configured.</p>
-            <p className="text-rose-200/80">Privileged routes are fail-closed. Open the recovery runbook below to provision one.</p>
+          <div className="mt-3 space-y-3 text-sm text-foreground">
+            <p>The server has no <code className="px-1 py-0.5 rounded bg-background text-foreground">TESSERACT_ADMIN_KEY</code> configured.</p>
+            <p className="text-muted-foreground">Privileged routes are fail-closed. Open the recovery runbook below to provision one.</p>
           </div>
         }
       />
@@ -247,7 +247,7 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
         tone="rose"
         title="◈ Tesseract — too many attempts"
         body={
-          <p className="mt-3 text-sm text-rose-100">Try again in <span className="font-mono text-rose-200">{secs}s</span>. Your IP was rate-limited to protect the canonical token.</p>
+          <p className="mt-3 text-sm text-foreground">Try again in <span className="font-mono text-destructive">{secs}s</span>. Your IP was rate-limited to protect the canonical token.</p>
         }
       />
     );
@@ -262,9 +262,9 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
       tone={isInvalid || isExpired ? "amber" : "emerald"}
       title={isExpired ? "◈ Tesseract — session expired" : "◈ Tesseract — sovereign entry"}
       body={
-        <div className="mt-3 space-y-3 text-sm text-zinc-200">
+        <div className="mt-3 space-y-3 text-sm text-foreground">
           <p>
-            Present your <span className="text-emerald-300 font-semibold">sovereign admin token</span>.
+            Present your <span className="text-primary font-semibold">sovereign admin token</span>.
             One credential, one session — no rotating signal, no second key.
           </p>
           <input
@@ -276,24 +276,24 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
             onChange={(e) => setTokenInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
             placeholder="paste TESSERACT_ADMIN_KEY"
-            className="w-full px-3 py-2 rounded-md bg-black/60 border border-zinc-700 text-zinc-100 font-mono text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full px-3 py-2 rounded-md bg-background border border-input text-foreground font-mono text-sm focus:outline-none focus:border-primary"
             disabled={isSubmitting}
           />
           {isInvalid && (
-            <p className="text-xs text-amber-300">Token rejected. Verify the secret value matches what the server expects, then try again.</p>
+            <p className="text-xs text-destructive">Token rejected. Verify the secret value matches what the server expects, then try again.</p>
           )}
           {isExpired && (
-            <p className="text-xs text-amber-300">Your previous session expired. Re-present your token to continue.</p>
+            <p className="text-xs text-destructive">Your previous session expired. Re-present your token to continue.</p>
           )}
           <button
             type="button"
             onClick={submit}
             disabled={isSubmitting || !tokenInput.trim()}
-            className="w-full py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-700 disabled:text-zinc-400 text-white font-semibold transition-colors"
+            className="w-full py-2 rounded-md bg-primary text-primary-foreground hover:opacity-90 disabled:bg-muted disabled:text-muted-foreground font-semibold transition-colors"
           >
             {isSubmitting ? "verifying…" : "Unlock Tesseract"}
           </button>
-          <p className="text-[11px] text-zinc-500">
+          <p className="text-[11px] text-muted-foreground">
             Once unlocked, the server issues an HttpOnly session cookie (8h). Your token never persists in browser storage.
           </p>
         </div>
