@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
 import liveRepositoriesRouter from "./live-repositories";
+import gitbookRouter from "./gitbook";
 import adminSessionRouter from "./admin-session";
 import diagnosticsRouter from "./diagnostics";
 import securityRouter from "./security";
@@ -118,6 +119,7 @@ router.use(conversationsRouter);
 router.use(chatDeskRouter);
 router.use(worldRouter);
 router.use(liveRepositoriesRouter);
+router.use(gitbookRouter);
 router.use(forumRouter);
 router.use(latticeRouter);
 router.use(sovereignDataRouter);

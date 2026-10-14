@@ -85,6 +85,7 @@ const LeadsHubPage = lazyRetry(() => import("@/pages/LeadsHubPage"));
 const CommandHubPage = lazyRetry(() => import("@/pages/CommandHubPage"));
 const RoadmapHubPage = lazyRetry(() => import("@/pages/RoadmapHubPage"));
 const BibleHubPage = lazyRetry(() => import("@/pages/BibleHubPage"));
+const GitbookRoadmapPage = lazyRetry(() => import("@/pages/GitbookRoadmapPage"));
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -295,6 +296,7 @@ function AppRouter() {
         <Route path="/council-vgpu">{() => <GrandCouncilDeliberationPage />}</Route>
         <Route path="/grand-evolution">{() => <GrandEvolutionPage />}</Route>
         <Route path="/forum">{() => <TesseractForumPage />}</Route>
+        <Route path="/gitbook">{() => <GitbookRoadmapPage />}</Route>
         <Route path="/sovereign-lattice">{() => <SovereignLatticePage />}</Route>
         <Route path="/agent-declarations">{() => <AgentDeclarationsPage />}</Route>
         <Route path="/shepherd-audit">{() => <ShepherdAuditPage />}</Route>

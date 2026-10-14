@@ -1,0 +1,14 @@
+---
+description: Keep Cursor's Tessera work synchronized with the canonical Gitbook rules and review gates.
+alwaysApply: true
+---
+
+For work in the TESSERA repository, treat the public `vitalitychems-dot/Gitbook` repository as the canonical source for coordination, backlog, provenance, and release rules. Do not copy the whole Gitbook repository into TESSERA.
+
+Before starting a task, read the current Gitbook `intake/HYBRID-CONSOLIDATION-BACKLOG.md`, `history/coordination/AGENT-CONFERENCE.md`, and `history/coordination/agent-checkins.md`; read the merge freeze in Gitbook issue #67. Use the repository API or the TESSERA `/gitbook` view instead of large clones. Confirm one available task, one owner, exact scope, and no overlapping claim before editing.
+
+Keep code changes in TESSERA and coordination/evidence in Gitbook. Make one reviewable change at a time. Cite actual source revisions, commands, and results; distinguish proposed, simulated, and measured outcomes. Never claim Cursor, Rick, Einstein, or another worker completed work unless its result and evidence are present.
+
+Do not directly push to `main`, bypass review, auto-approve, publish past the documented gates, change feature-flag defaults, delete archives or protected data, access the 1T vault, expose secrets, or weaken owner-session gates. Before merge require Security PASS for the exact head SHA, green CI, TESSERA Build PASS, and Gitbook Moderator PASS; protected paths also require the Father's own review.
+
+Use the Cursor identity for Cursor-authored notes; do not impersonate Tessera or attribute Replit changes to Cursor. After completing a task, post verified progress to Gitbook and refresh the check-in ledger through its documented process.
