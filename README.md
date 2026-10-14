@@ -28,9 +28,9 @@ Two port schemes exist. They are not interchangeable.
 | Local suite (`pnpm dev`) | 3000 | 5000 | 5173 | `scripts/dev-unified.mjs`, `TESSERA_WEB_PORT`, `TESSERA_API_PORT`, `MOCKUP_SANDBOX_PORT` |
 | Replit artifacts | 18514 (`/`) | 8080 (`/api`) | 8081 (`/__mockup`) | each `artifacts/*/.replit-artifact/artifact.toml`, mirrored in the root `.replit` `[[ports]]` list |
 
-Standalone processes: console 4391 (`TESSERA_CONSOLE_PORT`), GitAI 4183 (`GITAI_PORT`), 3D studio 4173, Gitbook MCP HTTP 8787 (`GITBOOK_HTTP_PORT`).
+Standalone processes: console 4391 (`TESSERA_CONSOLE_PORT`), GitAI 4183 (`GITAI_PORT`), 3D studio 4173 (`PORT`), `preview/` Vite app 4174 (`PORT`), Gitbook MCP HTTP 8787 (`GITBOOK_HTTP_PORT`).
 
-Known overlap: the 3D studio (`artifacts/v2`) and the top-level `preview/` Vite app both default to port 4173, and `preview/` uses `strictPort`. Do not run them together without setting `PORT` for one of them. The API server falls back to the next free port on `EADDRINUSE` (up to 10 tries) and logs the alternate port, so a dev proxy or a client with a hard-coded API port can miss it. The `.replit` `[[ports]]` entries that forward to local ports 3001, 3002, 3003, and 4200 have no current app behind them.
+Port notes: the 3D studio (`artifacts/v2`) keeps 4173 and the top-level `preview/` Vite app now defaults to 4174. `preview/` uses `strictPort`, so a taken port is an error. `PORT` overrides either one. The API server exits with an error when `PORT` is already taken. Set `TESSERA_PORT_FALLBACK=1` to let it move to the next free port (up to 10 tries, logged). On Replit (`REPL_ID` or `REPLIT_DEPLOYMENT` set) the old fallback stays unless `TESSERA_PORT_FALLBACK=0`. The four `.replit` `[[ports]]` forwards to external ports 3001, 3002, 3003, and 4200 had no app behind them and were removed. The other entries are unchanged.
 
 ## Superseded themes
 
@@ -43,7 +43,7 @@ The phosphor lattice console is the current Tessera UI theme. These older theme 
 | `preview/src/styles.css` | CSS variables for those marks. Superseded for new UI work. |
 | `artifacts/tessera/src/lib/theme-constants.ts` | Cyan, purple, rose, and related accent palettes for the older web app. Superseded as the canonical theme, but `artifacts/tessera/src/main.tsx` still applies it at startup (default accent `cyan`), so it is live code in that app. |
 
-The console does not read `TESSERA_ENABLE_*` and does not change those flags. Ports already used by other apps are 3000 (web), 5000 (API), 5173 (mockup sandbox), 4173 (studio), 4183 (GitAI), and 8787 (Gitbook HTTP). The console listens on `127.0.0.1:4391`. The bind address is fixed and is not read from the environment. `TESSERA_CONSOLE_PORT` overrides the port.
+The console does not read `TESSERA_ENABLE_*` and does not change those flags. Ports already used by other apps are 3000 (web), 5000 (API), 5173 (mockup sandbox), 4173 (studio), 4174 (`preview/`), 4183 (GitAI), and 8787 (Gitbook HTTP). The console listens on `127.0.0.1:4391`. The bind address is fixed and is not read from the environment. `TESSERA_CONSOLE_PORT` overrides the port.
 
 ```bash
 pnpm --filter @workspace/console run dev
