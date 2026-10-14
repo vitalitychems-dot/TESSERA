@@ -50,6 +50,7 @@ Launch the existing TESSERA repository using Gitbook's current instructions. Bot
 - Keep `TESSERA_ENABLE_*` disabled and preserve existing diagnostics/session protections.
 - Managed development commands run with the artifact directory as their working directory.
 - Runtime audit/state directories are excluded from source and deploy uploads; production persistence still needs review before publication.
+- Until a valid owner key exists, the launch adapter keeps the setup gate available via the canonical database-optional boot path. It does not delete or change the managed database secret. Full DB-backed operation still needs verification after provisioning.
 
 ## Pointers
 

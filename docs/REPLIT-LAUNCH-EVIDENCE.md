@@ -21,6 +21,7 @@ Status: **PREPARED / BLOCKED — not published.**
 - `TESSERA_ENABLE_RICK_LOOP=0`, `TESSERA_ENABLE_COLONIAL_FALLBACK=0`, and port fallback is disabled.
 - Read-only inspection found no public tables in the fresh development database; the canonical Drizzle schema was then initialized. No historical private records were migrated.
 - Runtime-generated audit/state directories are excluded from source control and deployment uploads.
+- Before a valid owner key is provisioned, the launch adapter omits the database connection from the API process only. This uses the canonical database-optional boot path so the setup gate stays available without starting DB-backed engines. The managed database and its secret remain intact.
 
 ## TESTED
 
@@ -34,11 +35,12 @@ Status: **PREPARED / BLOCKED — not published.**
 - Proxied `GET /api/healthz`: HTTP 200, `{"status":"ok","db":"configured"}`.
 - Proxied `GET /api/admin/session/status`: HTTP 200, `configured:false`, `authenticated:false`.
 - Browser screenshot shows the canonical locked setup screen reporting missing `TESSERACT_ADMIN_KEY`, not a substituted mockup.
+- Subsequent setup-mode verification: three launch-adapter tests passed; API logs confirm the readiness gate is open and DB-backed startup is skipped. `/api/healthz` returns HTTP 200 with `db:not-configured`, owner session status remains unconfigured, and `/api/diagnostics` returns explicit HTTP 503 `database not configured`. These are setup-mode results, not proof of full system operation.
 
 ## BLOCKED / not verified
 
 - This project has no `TESSERACT_ADMIN_KEY`. Owner unlock and real signed-in operation cannot be verified until the owner supplies it through Secrets.
-- `GET /api/diagnostics` currently returns HTTP 503 (`starting`). Readiness must be checked again after owner-key configuration; the health endpoint alone does not prove the application is ready.
+- In the first DB-backed startup with no owner key, the route watchdog exited the process after repeated protected-route 503s. The API is now stable in database-optional setup mode. DB-backed readiness must be checked again after owner provisioning; the health endpoint alone does not prove full application readiness.
 - Production runtime/persistence, production database behavior, and actual published URL have not been verified. No deployment exists for this project.
 - Gitbook's provenance/security review and exact release approval remain outstanding. No merge or publication occurred.
 - The full multi-application test suite was not run; only the active launch build and the selected canonical boot/access-control suite are reported here.
