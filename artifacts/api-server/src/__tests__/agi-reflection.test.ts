@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { retrievalScore, reflect, runReflectionTick } from "../lib/agi/reflection";
+import { retrievalScore, reflect, runReflectionTick, recentReflectionEvents, reflectionsSince, clearReflectionEvents } from "../lib/agi/reflection";
 import { recordObservation } from "../lib/agi/working-memory";
 
 describe("reflection (REA-05)", () => {
@@ -19,5 +19,16 @@ describe("reflection (REA-05)", () => {
   it("tick writes hypotheses from observations", () => {
     for (let i = 0; i < 8; i++) recordObservation("t", `reflect-${i}`, { msg: `latency spike gateway ${i}` });
     expect(Array.isArray(runReflectionTick())).toBe(true);
+  });
+  it("#19: reflection adds a memory event per insight", () => {
+    clearReflectionEvents();
+    const t0 = Date.now();
+    for (let i = 0; i < 8; i++) recordObservation("deploy", `refl19-${i}`, { msg: `deploy failed on runner ${i}` });
+    const insights = runReflectionTick(t0);
+    const events = recentReflectionEvents();
+    expect(insights.length).toBeGreaterThan(0);
+    expect(events.length).toBe(insights.length);
+    events.forEach((e, i) => { expect(e.kind).toBe("reflection"); expect(e.text).toBe(insights[i]); });
+    expect(reflectionsSince(t0 - 86_400_000)).toBe(insights.length);
   });
 });
