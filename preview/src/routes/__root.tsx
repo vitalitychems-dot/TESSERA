@@ -30,7 +30,7 @@ export const Route = createRootRoute({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var map={light:'water',dark:'water',night:'water',dawn:'water',gold:'fire',ink:'diamond',sea:'water'};var t=localStorage.getItem('tessera-theme');t=map[t]||t;if(['water','fire','lightning','diamond','spiral'].indexOf(t)<0)t='water';document.documentElement.dataset.theme=t}catch(e){}",
+              "try{var map={light:'water',dark:'water',night:'water',dawn:'water',gold:'fire',ink:'diamond',sea:'water'};var t=localStorage.getItem('tessera-theme');t=map[t]||t;if(!t)t='house';if(['water','fire','lightning','diamond','spiral','house'].indexOf(t)<0)t='water';document.documentElement.dataset.theme=t}catch(e){}",
           }}
         />
       </head>

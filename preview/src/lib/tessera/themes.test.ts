@@ -3,8 +3,9 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { THEME_IDS, knownTheme } from "./themes.ts";
 
-test("five themes are named and an unknown name is water", () => {
-  assert.equal(THEME_IDS.length, 5);
+test("six themes are named and an unknown name is water", () => {
+  assert.equal(THEME_IDS.length, 6);
+  assert.equal(knownTheme("house"), "house");
   assert.equal(knownTheme("fire"), "fire");
   assert.equal(knownTheme("spiral"), "spiral");
   assert.equal(knownTheme("nope"), "water");

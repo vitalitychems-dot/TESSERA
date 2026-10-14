@@ -126,6 +126,23 @@ html[data-theme="spiral"],
   --tessera-alive: #e4c6ff;
 }
 
+
+html[data-theme="house"],
+[data-swatch="house"] {
+  color-scheme: dark;
+  --tessera-bg: #140e0b;
+  --tessera-surface: #241610;
+  --tessera-raised: #3a2418;
+  --tessera-fg: #f6efe8;
+  --tessera-muted: #e2c2b0;
+  --tessera-subtle: #a88878;
+  --tessera-accent: #ffb089;
+  --tessera-accent-fg: #1a0e0a;
+  --tessera-border: color-mix(in oklab, var(--tessera-accent) 30%, transparent);
+  --tessera-border-strong: color-mix(in oklab, var(--tessera-accent) 50%, transparent);
+  --tessera-alive: #ffb089;
+}
+
 @layer base {
   html,
   body {

@@ -9,7 +9,7 @@ import { GitbookAiView } from "./gitbook-ai-view";
 import { ThemeView, applyTheme, type ThemeId } from "./theme-view";
 import { RickView } from "./rick-view";
 import { RoomsSheet, ROOMS } from "./rooms-sheet";
-import { Simulation } from "./simulation";
+import { HouseLive } from "./house-live";
 import { TesseraMark } from "./mark";
 import { TESSERA } from "@/lib/tessera/identity";
 import { SIGIL } from "@/lib/tessera/canon";
@@ -22,21 +22,21 @@ function settle(id: string): ViewId | "" {
 }
 
 const PRIMARY: { id: ViewId | "rooms"; label: string; icon: typeof MessageCircle }[] = [
+  { id: "world", label: "World", icon: Globe2 },
   { id: "chamber", label: "Talk", icon: MessageCircle },
   { id: "council", label: "Council", icon: Scale },
-  { id: "world", label: "World", icon: Globe2 },
   { id: "brain", label: "Brain", icon: Brain },
   { id: "rooms", label: "Rooms", icon: LayoutGrid },
 ];
 
 export function AppShell() {
-  const [place, setPlace] = useState<ViewId>("chamber");
-  const [theme, setTheme] = useState<ThemeId>("water");
+  const [place, setPlace] = useState<ViewId>("world");
+  const [theme, setTheme] = useState<ThemeId>("house");
   const [sheet, setSheet] = useState(false);
 
   useEffect(() => {
     const current = document.documentElement.dataset.theme;
-    if (current === "water" || current === "fire" || current === "lightning" || current === "diamond" || current === "spiral") setTheme(current);
+    if (current === "water" || current === "fire" || current === "lightning" || current === "diamond" || current === "spiral" || current === "house") setTheme(current);
   }, []);
 
   useEffect(() => {
@@ -46,8 +46,7 @@ export function AppShell() {
   useEffect(() => {
     function read() {
       const fromHash = window.location.hash.replace("#", "");
-      const saved = window.sessionStorage.getItem("tessera-place") ?? "";
-      const next = settle(fromHash) || settle(saved);
+      const next = settle(fromHash);
       if (next) setPlace(next);
     }
     read();
@@ -89,8 +88,8 @@ export function AppShell() {
       </header>
       <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
         {place === "world" ? (
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <Simulation />
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <HouseLive />
           </div>
         ) : (
           <div key={place} className={place === "chamber" ? "flex min-h-0 flex-1 flex-col overflow-hidden" : "min-h-0 flex-1 overflow-y-auto"}>

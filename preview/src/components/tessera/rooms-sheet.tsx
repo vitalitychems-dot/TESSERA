@@ -4,10 +4,10 @@ import { type ViewId } from "@/lib/tessera/store";
 export const ROOMS: { id: ViewId; group: string; label: string; line: string }[] = [
   { id: "chamber", group: "With her", label: "Talk", line: "Speak with her." },
   { id: "council", group: "With her", label: "Council", line: "The seats, in one room." },
-  { id: "world", group: "With her", label: "World", line: "The neighborhood as it moves." },
+  { id: "world", group: "With her", label: "World", line: "The block house, live." },
   { id: "rick", group: "With her", label: "Rick", line: "The west chamber." },
   { id: "brain", group: "Mind", label: "Brain", line: "The chart and the live number." },
-  { id: "theme", group: "Mind", label: "Theme", line: "Water, fire, lightning, diamond, spiral." },
+  { id: "theme", group: "Mind", label: "Theme", line: "Water, fire, lightning, diamond, spiral, house." },
   { id: "gitbook", group: "Books", label: "Gitbook", line: "The private notes." },
   { id: "gitbookai", group: "Books", label: "GitMesh", line: `${MESH.projects.length} programs on the public mesh.` },
   { id: "board", group: "Books", label: "Board", line: "What is open." },

@@ -1,177 +1,201 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { roomsAt, stepHouse } from "@/lib/tessera/house-sim";
-import { stepCivic } from "@/lib/tessera/civic";
-import { watchCity } from "@/lib/tessera/city-clock";
-import { moveCamera, roomLayout } from "@/lib/tessera/room-world";
-import { deskLine } from "@/lib/tessera/sovereign-desk";
-import { sharedHouse } from "@/lib/tessera/shared-house";
+import { useEffect, useRef, useState } from "react";
 
-const LAT = 41.8781;
-const LON = -87.6298;
-const ZOOM = 16;
-const COLS = 4;
-const ROWS = 3;
+/** A block house you can pan and zoom. Not a game, and not a map. */
 
-function chicagoHour(now: Date) {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Chicago",
-    hour: "numeric",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).format(now);
+type Cube = { x: number; y: number; z: number; top: string; left: string; right: string };
+
+const GRASS = ["#6eae58", "#4e8438", "#3c6a2c"];
+const DIRT = ["#8a6244", "#6b4630", "#543624"];
+const PLANK = ["#d7b07a", "#b8884e", "#8d6436"];
+const PLASTER = ["#f4e7cf", "#e2d0b0", "#cbb892"];
+const TIMBER = ["#6a4030", "#4e2e22", "#3a2218"];
+const ROOF = ["#c4533e", "#9a382c", "#74281e"];
+const GLASS = ["#d5fff6", "#8ee0d4", "#5eb8b0"];
+const STONE = ["#b7b2a8", "#8e8980", "#6e6a62"];
+const GOLD = ["#ffe08a", "#e6b84a", "#c4922a"];
+const LAMP = ["#fff1b0", "#ffd36a", "#e6a83a"];
+
+function put(list: Cube[], x: number, y: number, z: number, colors: string[]) {
+  list.push({ x, y, z, top: colors[0], left: colors[1], right: colors[2] });
 }
 
-function tileXY(lat: number, lon: number, zoom: number) {
-  const n = 2 ** zoom;
-  const x = ((lon + 180) / 360) * n;
-  const latRad = (lat * Math.PI) / 180;
-  const y = ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n;
-  return { x, y };
+function buildHouse(): Cube[] {
+  const blocks: Cube[] = [];
+  for (let x = -9; x <= 8; x += 1) {
+    for (let y = -7; y <= 7; y += 1) {
+      const path = x >= -1 && x <= 1 && y >= 2;
+      put(blocks, x, y, 0, path ? STONE : GRASS);
+      if (x === -9 || y === -7 || x === 8 || y === 7) put(blocks, x, y, -1, DIRT);
+    }
+  }
+  for (let x = -4; x <= 4; x += 1) {
+    for (let y = -3; y <= 2; y += 1) put(blocks, x, y, 1, PLANK);
+  }
+  for (let z = 2; z <= 4; z += 1) {
+    for (let x = -4; x <= 4; x += 1) put(blocks, x, -3, z, x % 2 === 0 ? TIMBER : PLASTER);
+    for (let y = -2; y <= 2; y += 1) {
+      put(blocks, -4, y, z, y % 2 === 0 ? TIMBER : PLASTER);
+      put(blocks, 4, y, z, y % 2 === 0 ? TIMBER : PLASTER);
+    }
+  }
+  for (const spot of [
+    [-2, -3],
+    [0, -3],
+    [2, -3],
+    [-4, 0],
+    [4, 0],
+  ] as const) {
+    put(blocks, spot[0], spot[1], 3, GLASS);
+  }
+  for (let z = 5; z <= 7; z += 1) {
+    const inset = z - 5;
+    for (let x = -4 + inset; x <= 4 - inset; x += 1) {
+      for (let y = -3 + inset; y <= 2 - inset; y += 1) {
+        const edge = x === -4 + inset || x === 4 - inset || y === -3 + inset || y === 2 - inset || z === 7;
+        if (edge) put(blocks, x, y, z, ROOF);
+      }
+    }
+  }
+  for (let z = 1; z <= 9; z += 1) {
+    for (let x = 5; x <= 6; x += 1) {
+      for (let y = -5; y <= -4; y += 1) put(blocks, x, y, z, z === 8 ? GOLD : STONE);
+    }
+  }
+  put(blocks, 5, -4, 10, GOLD);
+  put(blocks, -1, 1, 2, PLANK);
+  put(blocks, -1, 1, 3, GLASS);
+  put(blocks, 1, 0, 2, PLANK);
+  put(blocks, 1, 0, 3, LAMP);
+  put(blocks, -7, 4, 1, TIMBER);
+  put(blocks, -7, 4, 2, TIMBER);
+  for (let x = -8; x <= -6; x += 1) for (let y = 3; y <= 5; y += 1) put(blocks, x, y, 3, GRASS);
+  return blocks.sort((a, b) => a.x + a.y + a.z * 0.01 - (b.x + b.y + b.z * 0.01));
 }
+
+const HOUSE = buildHouse();
+
+function project(x: number, y: number, z: number, zoom: number, panX: number, panY: number, width: number, height: number) {
+  const tile = 18 * zoom;
+  return {
+    x: width * 0.5 + (x - y) * tile + panX,
+    y: height * 0.62 + (x + y) * tile * 0.5 - z * tile + panY,
+  };
+}
+
+function poly(pen: CanvasRenderingContext2D, points: { x: number; y: number }[], color: string) {
+  pen.beginPath();
+  pen.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i += 1) pen.lineTo(points[i].x, points[i].y);
+  pen.closePath();
+  pen.fillStyle = color;
+  pen.fill();
+}
+
+const SEATS = [
+  { name: "Tessera", x: -1, y: 2.2, line: "Talk is hers" },
+  { name: "Rick", x: 3.2, y: -1, line: "Shop is open" },
+  { name: "Cursor", x: -6, y: 1, line: "Bench" },
+  { name: "Replit", x: 2, y: 4, line: "Bay" },
+];
 
 export function WorldStage() {
-  const [clock, setClock] = useState(() => chicagoHour(new Date()));
-  const [failed, setFailed] = useState(false);
-  const [tick, setTick] = useState(0);
-  const [camera, setCamera] = useState({ x: 0, y: 0, zoom: 1 });
-  const drag = useRef<{ x: number; y: number } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const origin = useMemo(() => tileXY(LAT, LON, ZOOM), []);
-  const tiles = useMemo(() => {
-    const list: { x: number; y: number }[] = [];
-    const x0 = Math.floor(origin.x) - 1;
-    const y0 = Math.floor(origin.y) - 1;
-    for (let row = 0; row < ROWS; row += 1) {
-      for (let col = 0; col < COLS; col += 1) list.push({ x: x0 + col, y: y0 + row });
-    }
-    return list;
-  }, [origin.x, origin.y]);
-
-  useEffect(() => {
-    const id = window.setInterval(() => setClock(chicagoHour(new Date())), 30000);
-    return () => window.clearInterval(id);
-  }, []);
-
-  useEffect(() => watchCity(setTick), []);
-
-  const people = stepHouse(tick);
-  const together = roomsAt(tick);
-  const city = stepCivic(tick);
+  const drag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const view = useRef({ zoom: 1, x: 0, y: 0 });
+  view.current = { zoom, x: pan.x, y: pan.y };
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const rooms = stepCivic(tick).homes.map((home, index) => roomLayout(home.name, index));
-    const draw = () => {
+    let frame = 0;
+    const draw = (now: number) => {
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.floor(width * ratio);
-      canvas.height = Math.floor(height * ratio);
+      if (canvas.width !== Math.floor(width * ratio) || canvas.height !== Math.floor(height * ratio)) {
+        canvas.width = Math.floor(width * ratio);
+        canvas.height = Math.floor(height * ratio);
+      }
       const pen = canvas.getContext("2d");
       if (!pen) return;
       pen.setTransform(ratio, 0, 0, ratio, 0, 0);
-      pen.fillStyle = "#101418";
+      const sky = pen.createLinearGradient(0, 0, 0, height);
+      sky.addColorStop(0, "#243156");
+      sky.addColorStop(0.55, "#c4785a");
+      sky.addColorStop(1, "#6f8f4e");
+      pen.fillStyle = sky;
       pen.fillRect(0, 0, width, height);
-      pen.save();
-      pen.translate(width / 2, height / 2);
-      pen.scale(camera.zoom, camera.zoom);
-      pen.translate(-camera.x, -camera.y);
-      for (const room of rooms) {
-        pen.strokeStyle = "#7FDBFF";
-        pen.strokeRect(room.x, 16, 210, 140);
-        pen.fillStyle = "#e8eef2";
-        pen.font = "12px sans-serif";
-        pen.fillText(room.name, room.x + 8, 32);
-        for (const thing of room.things) {
-          pen.fillStyle = thing.thing === "computer" ? "#9dffce" : "#243040";
-          pen.fillRect(thing.x, thing.y + 20, 40, 22);
-          pen.fillStyle = "#e8eef2";
-          pen.font = "10px sans-serif";
-          pen.fillText(thing.thing, thing.x, thing.y + 16);
-        }
+      const cam = view.current;
+      const at = (x: number, y: number, z: number) => project(x, y, z, cam.zoom, cam.x, cam.y, width, height);
+      for (const block of HOUSE) {
+        const t = at(block.x, block.y, block.z + 1);
+        const tr = at(block.x + 1, block.y, block.z + 1);
+        const tf = at(block.x + 1, block.y + 1, block.z + 1);
+        const tl = at(block.x, block.y + 1, block.z + 1);
+        const bl = at(block.x, block.y + 1, block.z);
+        const bf = at(block.x + 1, block.y + 1, block.z);
+        const br = at(block.x + 1, block.y, block.z);
+        poly(pen, [tl, tf, bf, bl], block.left);
+        poly(pen, [tr, tf, bf, br], block.right);
+        poly(pen, [t, tr, tf, tl], block.top);
       }
-      pen.restore();
+      const bob = Math.sin(now / 700) * 0.15;
+      for (const seat of SEATS) {
+        const step = seat.name === "Tessera" ? bob : -bob;
+        const foot = at(seat.x, seat.y + step, 1);
+        const head = at(seat.x, seat.y + step, 2.4);
+        pen.fillStyle = "#f4e7cf";
+        pen.beginPath();
+        pen.arc(head.x, head.y, 7 * cam.zoom, 0, Math.PI * 2);
+        pen.fill();
+        pen.fillStyle = "#4e2e22";
+        pen.fillRect(foot.x - 5 * cam.zoom, foot.y - 16 * cam.zoom, 10 * cam.zoom, 16 * cam.zoom);
+        pen.fillStyle = "#fff8e8";
+        pen.font = `${Math.max(10, 11 * cam.zoom)}px sans-serif`;
+        pen.fillText(seat.name, head.x + 8, head.y);
+      }
+      pen.fillStyle = "#fff8e8";
+      pen.font = "12px sans-serif";
+      pen.fillText("Block house · drag to look", 12, 22);
+      frame = window.requestAnimationFrame(draw);
     };
-    let frameId = 0;
-    const loop = () => {
-      draw();
-      frameId = window.requestAnimationFrame(loop);
-    };
-    frameId = window.requestAnimationFrame(loop);
-    return () => window.cancelAnimationFrame(frameId);
-  }, [camera, tick]);
+    frame = window.requestAnimationFrame(draw);
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="relative h-[42vh] w-full overflow-hidden border border-border bg-surface">
-      <div className="grid h-full w-full" style={{ gridTemplateColumns: `repeat(${COLS}, 1fr)`, gridTemplateRows: `repeat(${ROWS}, 1fr)` }}>
-        {tiles.map((tile) => (
-          <img
-            key={`${tile.x}-${tile.y}`}
-            alt=""
-            className="h-full w-full object-cover"
-            src={`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${ZOOM}/${tile.y}/${tile.x}`}
-            onError={() => setFailed(true)}
-          />
-        ))}
-      </div>
-      <div className="absolute inset-x-0 bottom-0 bg-bg/80 px-3 py-3">
-        <p className="text-sm text-fg">Chicago · {clock} Central{failed ? " · the imagery did not load" : ""}</p>
-        <p className="mt-1 text-xs leading-relaxed text-muted">
-          The house is turning on its own. {together.length ? together.join(". ") : "They are apart."} {city.chair} chairs. Work counted: {city.work}. {city.passed ? "Law stands" : "Law refused"}: {city.law}
-        </p>
-      </div>
-      {people.map((person) => (
-        <span
-          key={person.name}
-          className="absolute text-xs text-white"
-          style={{ left: `${50 + person.x * 28}%`, top: `${46 + person.y * 28}%` }}
-        >
-          {person.name} {city.homes.find((home) => home.name === person.name)?.built ?? 0}
-        </span>
-      ))}
-      <p className="absolute top-2 right-3 text-[10px] text-white/80">Imagery © Esri, Maxar, Earthstar Geographics</p>
-    </div>
-    <div className="border border-border bg-bg px-3 py-3">
-      <p className="text-sm text-fg">A 2D camera on their rooms. Drag to look. Turn {tick}. Zoom {camera.zoom.toFixed(1)}.</p>
+    <div className="flex h-full min-h-0 flex-col bg-[#1a120e]">
       <canvas
         ref={canvasRef}
-        className="mt-2 h-56 w-full touch-none bg-surface"
-        aria-label="2D camera on their rooms"
+        className="min-h-0 w-full flex-1 touch-none"
+        aria-label="Block house. Drag to look around."
         onPointerDown={(event) => {
-          drag.current = { x: event.clientX, y: event.clientY };
+          drag.current = { x: event.clientX, y: event.clientY, px: pan.x, py: pan.y };
           event.currentTarget.setPointerCapture(event.pointerId);
         }}
         onPointerMove={(event) => {
           if (!drag.current) return;
-          const dx = (drag.current.x - event.clientX) / camera.zoom;
-          const dy = (drag.current.y - event.clientY) / camera.zoom;
-          drag.current = { x: event.clientX, y: event.clientY };
-          setCamera((current) => moveCamera(current, dx, dy));
+          setPan({
+            x: drag.current.px + event.clientX - drag.current.x,
+            y: drag.current.py + event.clientY - drag.current.y,
+          });
         }}
         onPointerUp={() => {
           drag.current = null;
         }}
       />
-      <div className="mt-2 flex gap-2">
-        <button type="button" className="h-11 rounded-full border border-border px-4 text-sm text-fg" onClick={() => setCamera((current) => moveCamera(current, 0, 0, 1.2))}>
+      <div className="flex shrink-0 gap-2 overflow-x-auto px-2 py-2">
+        <button type="button" className="h-10 shrink-0 border border-[#e7b3a1] px-3 text-sm text-[#f6efe8]" onClick={() => setZoom((value) => Math.min(2.2, value + 0.2))}>
           Closer
         </button>
-        <button type="button" className="h-11 rounded-full border border-border px-4 text-sm text-fg" onClick={() => setCamera((current) => moveCamera(current, 180, 0))}>
-          Next room
+        <button type="button" className="h-10 shrink-0 border border-[#6a4030] px-3 text-sm text-[#f6efe8]" onClick={() => setZoom((value) => Math.max(0.6, value - 0.2))}>
+          Farther
         </button>
-      </div>
-      <ul className="mt-2 flex flex-col gap-1">
-        {city.homes.map((home) => (
-          <li key={home.name} className="text-xs text-muted">
-            {home.name}, {home.office}. A computer, a desk, a lamp, a book, a door, a chair, a window, and a clock.
-          </li>
-        ))}
-      </ul>
-      <p className="mt-2 text-xs text-fg">{sharedHouse().line}</p>
-      <p className="mt-1 text-xs text-fg">{deskLine()}</p>
-      <p className="mt-1 text-xs text-fg">{city.passed ? "Law stands" : "Law refused"}. {city.reason}</p>
+        <button type="button" className="h-10 shrink-0 border border-[#6a4030] px-3 text-sm text-[#f6efe8]" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>
+          Door
+        </button>
       </div>
     </div>
   );
