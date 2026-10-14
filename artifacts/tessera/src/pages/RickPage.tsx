@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Send, FlaskConical, Vote, CheckCircle2, XCircle, ChevronRight, ChevronDown, RefreshCw, BookOpen, TrendingUp, Crown, Shield, Brain, Zap, Database, Target, Loader2, Users, Timer, MemoryStick, Activity, AlertTriangle, Skull, Plus, ScanSearch, Repeat, Send as SendIcon, Lightbulb, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const RICK_GREEN = "#00ff41";
+const RICK_GREEN = "#7ef0d4";
 const RICK_PORTAL = "#22d3ee";
 const ROYAL_GOLD = "#f59e0b";
 const ROYAL_GOLD_DARK = "#d97706";

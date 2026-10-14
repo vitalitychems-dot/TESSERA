@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
+import { requireAdminSession } from "../lib/sovereign-admin";
 import { isRickLoopEnabled, RICK_LOOP_FLAG, testPlanFor, UNMEASURED } from "../lib/rick-gates";
 import { logger } from "../lib/logger";
 import { getRealityAudit, getRealityFlag, hashStringFNV } from "../lib/reality-audit";
@@ -52,6 +53,20 @@ import {
 } from "../lib/rick-improvement-program";
 
 const router: IRouter = Router();
+function proposalId(req: Request) { return typeof req.params.id === "string" ? req.params.id : ""; }
+
+function requireOwnerOrigin(req: Request, res: Response, next: NextFunction) {
+  const origin = req.get("origin");
+  const host = req.get("host");
+  try {
+    if (!origin || !host || origin === "null" || new URL(origin).host.toLowerCase() !== host.toLowerCase()) {
+      return res.status(403).json({ ok: false, error: "same-origin-required" });
+    }
+  } catch {
+    return res.status(403).json({ ok: false, error: "same-origin-required" });
+  }
+  return next();
+}
 
 /** R2: autonomous Rick actions (self-dispatch, Meeseeks spawning) are off unless TESSERA_ENABLE_RICK_LOOP=1. */
 function requireRickLoopFlag(_req: Request, res: Response, next: NextFunction) {
@@ -122,9 +137,9 @@ router.post("/rick/proposals/generate", async (_req, res) => {
   }
 });
 
-router.post("/rick/proposals/:id/approve", async (req, res) => {
+router.post("/rick/proposals/:id/approve", requireAdminSession, requireOwnerOrigin, async (req, res) => {
   try {
-    const p = await approveProposal(req.params.id, { approver: req.body?.approver, testRef: req.body?.testRef });
+    const p = await approveProposal(proposalId(req), { approver: req.body?.approver, testRef: req.body?.testRef });
     if (!p) return res.status(404).json({ ok: false, error: "Proposal not found" });
     return res.json({ ok: true, proposal: p });
   } catch (err) {
@@ -134,10 +149,10 @@ router.post("/rick/proposals/:id/approve", async (req, res) => {
   }
 });
 
-router.post("/rick/proposals/:id/reject", async (req, res) => {
+router.post("/rick/proposals/:id/reject", requireAdminSession, requireOwnerOrigin, async (req, res) => {
   try {
     const reason = typeof req.body?.reason === "string" ? req.body.reason : undefined;
-    const p = await rejectProposal(req.params.id, reason);
+    const p = await rejectProposal(proposalId(req), reason);
     if (!p) return res.status(404).json({ ok: false, error: "Proposal not found" });
     return res.json({ ok: true, proposal: p });
   } catch (err) {
@@ -146,9 +161,9 @@ router.post("/rick/proposals/:id/reject", async (req, res) => {
   }
 });
 
-router.post("/rick/proposals/:id/implemented", async (req, res) => {
+router.post("/rick/proposals/:id/implemented", requireAdminSession, requireOwnerOrigin, async (req, res) => {
   try {
-    const p = await markImplemented(req.params.id, { implementer: req.body?.implementer, testRef: req.body?.testRef });
+    const p = await markImplemented(proposalId(req), { implementer: req.body?.implementer, testRef: req.body?.testRef });
     if (!p) return res.status(404).json({ ok: false, error: "Proposal not found" });
     return res.json({ ok: true, proposal: p });
   } catch (err) {

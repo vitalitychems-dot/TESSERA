@@ -758,7 +758,7 @@ function SceneContent({ spec }: { spec: Object3DSpec }) {
           color={color}
           anchorX="center"
           anchorY="top"
-          font="https://fonts.gstatic.com/s/spacemono/v13/i7dPIFZifjKcF5UAWdDRYEF8RQ.woff2"
+          font="/fonts/FragmentMono-Regular.ttf"
         >
           {spec.label}
         </Text>

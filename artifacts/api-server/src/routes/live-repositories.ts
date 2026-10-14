@@ -30,7 +30,8 @@ async function snapshot(slug: string): Promise<Snapshot> {
   return result;
 }
 router.get("/world/repositories/:name", requireAdminSession, async (req, res) => {
-  const slug = repositories.get(req.params.name);
+  const name = typeof req.params.name === "string" ? req.params.name : "";
+  const slug = repositories.get(name);
   if (!slug) return res.status(404).json({ ok: false, error: "unknown-repository" });
   res.setHeader("Cache-Control", "private, no-store");
   const cached = cache.get(slug);

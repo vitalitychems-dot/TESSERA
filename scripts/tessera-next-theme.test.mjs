@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import ts from "typescript";
 
 const source = readFileSync(new URL("../artifacts/tessera/src/lib/theme-constants.ts", import.meta.url), "utf8");
@@ -32,7 +32,14 @@ test("chosen accent survives dark mode through inline properties", () => {
 test("first paint and fonts do not depend on Google Fonts", () => {
   const html = readFileSync(new URL("../artifacts/tessera/index.html", import.meta.url), "utf8");
   const css = readFileSync(new URL("../artifacts/tessera/src/styles/tessera-next.css", import.meta.url), "utf8");
-  assert.ok(!/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(html + css));
+  function sourceTree(dir) {
+    return readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+      const path = `${dir}/${entry.name}`;
+      return entry.isDirectory() ? sourceTree(path) : /\.(?:ts|tsx|css)$/.test(entry.name) ? [readFileSync(path, "utf8")] : [];
+    }).join("\n");
+  }
+  const appSources = sourceTree(new URL("../artifacts/tessera/src", import.meta.url).pathname);
+  assert.ok(!/fonts\.googleapis\.com|fonts\.gstatic\.com|fonts\.google\.com/.test(`${html}\n${css}\n${appSources}`));
   assert.match(html, /<style>[\s\S]*#070b10[\s\S]*#f3efe6/);
   assert.match(css, /font-display: swap/);
   assert.match(css, /grid-template-columns: repeat\(2, 1fr\)/);

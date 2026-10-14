@@ -82,8 +82,11 @@ describe("B. approve / implemented need a non-Rick actor plus a test reference",
   });
   it("routes pass approver/implementer + testRef and map gate errors to 403", () => {
     const r = read("routes/rick.ts");
-    expect(r).toContain("approveProposal(req.params.id, { approver: req.body?.approver, testRef: req.body?.testRef })");
-    expect(r).toContain("markImplemented(req.params.id, { implementer: req.body?.implementer, testRef: req.body?.testRef })");
+    expect(r).toContain("approveProposal(proposalId(req), { approver: req.body?.approver, testRef: req.body?.testRef })");
+    expect(r).toContain("markImplemented(proposalId(req), { implementer: req.body?.implementer, testRef: req.body?.testRef })");
+    expect(r).toMatch(/router\.post\("\/rick\/proposals\/:id\/approve", requireAdminSession, requireOwnerOrigin/);
+    expect(r).toMatch(/router\.post\("\/rick\/proposals\/:id\/reject", requireAdminSession, requireOwnerOrigin/);
+    expect(r).toMatch(/router\.post\("\/rick\/proposals\/:id\/implemented", requireAdminSession, requireOwnerOrigin/);
     expect((r.match(/err instanceof RickGateError\) return res\.status\(403\)/g) ?? []).length).toBe(2);
   });
   it("improvement-program decisions and completions are gated too", async () => {

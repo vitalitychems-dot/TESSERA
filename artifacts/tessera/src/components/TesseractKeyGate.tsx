@@ -132,16 +132,14 @@ function RecoveryPanel() {
 }
 
 function Frame({ tone, title, body }: { tone: "amber" | "rose" | "emerald" | "zinc"; title: string; body: ReactNode }) {
-  const ring = {
-    amber: "ring-amber-500/40 from-amber-950/30 to-zinc-950",
-    rose: "ring-rose-500/40 from-rose-950/30 to-zinc-950",
-    emerald: "ring-emerald-500/40 from-emerald-950/30 to-zinc-950",
-    zinc: "ring-zinc-700/50 from-zinc-900/30 to-zinc-950",
-  }[tone];
+  const ring = tone === "amber" || tone === "rose" ? "border-destructive/35" : "border-primary/25";
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background p-6">
-      <div className={`w-full max-w-xl rounded-2xl ring-1 ${ring} bg-gradient-to-br p-6 shadow-2xl`}>
-        <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background p-4 sm:p-6">
+      <div className={`w-full max-w-xl rounded-2xl border ${ring} bg-card p-5 sm:p-6 shadow-2xl`}>
+        <h2 className="flex items-center gap-3 text-lg font-semibold text-foreground">
+          <span className="next-mosaic shrink-0" aria-hidden="true"><span /><span /><span /><span /></span>
+          {title}
+        </h2>
         {body}
         <RecoveryPanel />
       </div>
@@ -210,14 +208,14 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
   };
 
   if (state.kind === "loading") {
-    return <Frame tone="zinc" title="Tesseract — verifying session…" body={<p className="mt-2 text-sm text-zinc-400">Probing sovereign session.</p>} />;
+    return <Frame tone="zinc" title="TESSERA NEXT — verifying session…" body={<p className="mt-2 text-sm text-zinc-400">Probing owner session.</p>} />;
   }
 
   if (state.kind === "unlocked") {
     return (
       <>
         {children}
-        <div className="fixed bottom-3 right-3 z-[9998] text-[10px] text-emerald-400/70 font-mono">
+        <div className="fixed bottom-3 right-3 z-[9998] text-[10px] text-primary font-mono">
           ◈ session · expires {new Date(state.expiresAt).toLocaleTimeString()}
           <button onClick={logout} className="ml-2 underline hover:text-emerald-300">logout</button>
         </div>
@@ -229,7 +227,7 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
     return (
       <Frame
         tone="rose"
-        title="◈ Tesseract — sovereign-unconfigured"
+        title="TESSERA NEXT — setup needed"
         body={
           <div className="mt-3 space-y-3 text-sm text-rose-100">
             <p>The server has no <code className="px-1 py-0.5 rounded bg-black/40 text-amber-200">TESSERACT_ADMIN_KEY</code> configured.</p>
@@ -245,7 +243,7 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
     return (
       <Frame
         tone="rose"
-        title="◈ Tesseract — too many attempts"
+        title="TESSERA NEXT — too many attempts"
         body={
           <p className="mt-3 text-sm text-rose-100">Try again in <span className="font-mono text-rose-200">{secs}s</span>. Your IP was rate-limited to protect the canonical token.</p>
         }
@@ -260,12 +258,12 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
   return (
     <Frame
       tone={isInvalid || isExpired ? "amber" : "emerald"}
-      title={isExpired ? "◈ Tesseract — session expired" : "◈ Tesseract — sovereign entry"}
+      title={isExpired ? "TESSERA NEXT — session expired" : "TESSERA NEXT — sovereign entry"}
       body={
         <div className="mt-3 space-y-3 text-sm text-zinc-200">
           <p>
-            Enter your <span className="text-emerald-300 font-semibold">Father admin code</span> in its saved form or LUS glyph form.
-            One credential, one session — the LUS form is a reversible encoding of the same code.
+            Enter your <span className="text-primary font-semibold">Father admin key</span> in its saved form or LUS glyph form.
+            This entry key stays stable. A separate private chat sigil is rotated from chat after you verify your last saved sigil.
           </p>
           <form
             aria-label="Father admin code entry"

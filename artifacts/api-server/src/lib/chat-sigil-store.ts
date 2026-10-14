@@ -31,7 +31,7 @@ export class ChatSigilStore {
     if (!/^father_chat_sigils(?:_test_[a-z0-9]+)?$/.test(table)) throw new Error("Invalid sigil table");
   }
   private async query(text: string, values: unknown[] = []) {
-    return this.pool.query({ text, values, query_timeout: 5000 });
+    return this.pool.query<Record<string, unknown>>(text, values);
   }
   private async ensure() {
     this.ready ??= this.query(`CREATE TABLE IF NOT EXISTS ${this.table} (
@@ -45,7 +45,8 @@ export class ChatSigilStore {
   async status(session: string) {
     await this.ensure();
     const result = await this.query(`SELECT confirmed_sessions FROM ${this.table} WHERE id = 1`);
-    return { enrolled: result.rows.length > 0, rotatedThisSession: result.rows[0]?.confirmed_sessions.includes(digest(session)) ?? false };
+    const row = result.rows[0] as unknown as { confirmed_sessions?: string[] } | undefined;
+    return { enrolled: Boolean(row), rotatedThisSession: row?.confirmed_sessions?.includes(digest(session)) ?? false };
   }
   async prepare(current: string, session: string, initialize = false) {
     await this.ensure();
