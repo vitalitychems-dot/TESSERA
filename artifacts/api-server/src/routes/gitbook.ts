@@ -3,6 +3,8 @@ import { logger } from "../lib/logger";
 import { requireAdminSession } from "../lib/sovereign-admin";
 import {
   escapeGitHubCommentText,
+  parseActiveClaims,
+  parseConferenceRules,
   parseGitbookRules,
   parseGitbookTasks,
   validateGitbookProgress,
@@ -13,12 +15,14 @@ const router = Router();
 const GITHUB_API = "https://api.github.com";
 const BACKLOG_URL = "https://github.com/vitalitychems-dot/Gitbook/blob/main/intake/HYBRID-CONSOLIDATION-BACKLOG.md";
 const HANDOFF_URL = "https://github.com/vitalitychems-dot/Gitbook/issues/67";
+const CONFERENCE_URL = "https://github.com/vitalitychems-dot/Gitbook/blob/main/history/coordination/AGENT-CONFERENCE.md";
+const CHECKINS_URL = "https://github.com/vitalitychems-dot/Gitbook/blob/main/history/coordination/agent-checkins.md";
 const PROGRESS_COMMENTS_URL = `${GITHUB_API}/repos/vitalitychems-dot/Gitbook/issues/2/comments`;
 const CACHE_MS = 5 * 60_000;
 const REQUEST_TIMEOUT_MS = 8_000;
 const MAX_UPSTREAM_BYTES = 1_500_000;
 
-type GithubBacklogFile = { content?: unknown; encoding?: unknown; sha?: unknown };
+type GithubContentFile = { content?: unknown; encoding?: unknown; sha?: unknown };
 type GithubHandoff = { body?: unknown; updated_at?: unknown };
 type CachedRoadmap = { data: GitbookRoadmapData; validUntil: number };
 
@@ -31,12 +35,27 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-async function readGithubJson(path: string): Promise<unknown> {
-  const response = await fetch(`${GITHUB_API}${path}`, {
-    headers: { Accept: "application/vnd.github+json", "User-Agent": "Tessera-Next-Gitbook-Bridge" },
+async function readGithubJson(path: string, allowPublicFallback = true): Promise<unknown> {
+  const token = process.env.TESSERA_GITHUB_TOKEN?.trim();
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github+json",
+    "User-Agent": "Tessera-Next-Gitbook-Bridge",
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  let response = await fetch(`${GITHUB_API}${path}`, {
+    headers,
     redirect: "error",
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
+  // Gitbook and TESSERA are public; a fine-grained token without Gitbook read
+  // access must not prevent reading their public coordination documents.
+  if (allowPublicFallback && token && [401, 403, 404].includes(response.status)) {
+    response = await fetch(`${GITHUB_API}${path}`, {
+      headers: { Accept: "application/vnd.github+json", "User-Agent": "Tessera-Next-Gitbook-Bridge" },
+      redirect: "error",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  }
   if (!response.ok) {
     logger.warn({ upstream: "github", statusCode: response.status }, "Gitbook read-through failed");
     throw new Error("Gitbook source unavailable");
@@ -51,33 +70,55 @@ async function readGithubJson(path: string): Promise<unknown> {
 }
 
 async function loadRoadmap(): Promise<GitbookRoadmapData> {
-  const [fileValue, handoffValue] = await Promise.all([
+  const [fileValue, handoffValue, conferenceValue, checkinsValue] = await Promise.all([
     readGithubJson("/repos/vitalitychems-dot/Gitbook/contents/intake/HYBRID-CONSOLIDATION-BACKLOG.md?ref=main"),
     readGithubJson("/repos/vitalitychems-dot/Gitbook/issues/67"),
+    readGithubJson("/repos/vitalitychems-dot/Gitbook/contents/history/coordination/AGENT-CONFERENCE.md?ref=main"),
+    readGithubJson("/repos/vitalitychems-dot/Gitbook/contents/history/coordination/agent-checkins.md?ref=main"),
   ]);
-  if (!isRecord(fileValue) || !isRecord(handoffValue)) throw new Error("Gitbook source shape is invalid");
-  const file = fileValue as GithubBacklogFile;
+  if (!isRecord(fileValue) || !isRecord(handoffValue) || !isRecord(conferenceValue) || !isRecord(checkinsValue)) {
+    throw new Error("Gitbook source shape is invalid");
+  }
+  const file = fileValue as GithubContentFile;
+  const conferenceFile = conferenceValue as GithubContentFile;
+  const checkinsFile = checkinsValue as GithubContentFile;
   const handoff = handoffValue as GithubHandoff;
-  if (file.encoding !== "base64" || typeof file.content !== "string" || typeof file.sha !== "string") {
+  if (typeof file.sha !== "string") {
     throw new Error("Gitbook backlog file is unavailable");
   }
   if (typeof handoff.body !== "string" || typeof handoff.updated_at !== "string" || !Number.isFinite(Date.parse(handoff.updated_at))) {
     throw new Error("Gitbook handoff issue is unavailable");
   }
 
-  const markdown = Buffer.from(file.content.replace(/\s/g, ""), "base64").toString("utf8");
+  const textFromContent = (source: GithubContentFile): string => {
+    if (source.encoding !== "base64" || typeof source.content !== "string" || typeof source.sha !== "string") {
+      throw new Error("Gitbook instruction file is unavailable");
+    }
+    return Buffer.from(source.content.replace(/\s/g, ""), "base64").toString("utf8");
+  };
+  const markdown = textFromContent(file);
+  const conference = textFromContent(conferenceFile);
+  const checkins = textFromContent(checkinsFile);
   const tasks = parseGitbookTasks(markdown);
   const rules = parseGitbookRules(handoff.body);
-  if (!tasks.length || !rules.length) throw new Error("Gitbook source is missing required sections");
+  const conferenceRules = parseConferenceRules(conference);
+  const activeClaims = parseActiveClaims(checkins);
+  if (!tasks.length || !rules.length || !conferenceRules.length) {
+    throw new Error("Gitbook source is missing required sections");
+  }
 
   return {
     tasks,
     rules,
+    conferenceRules,
+    activeClaims,
     observedAt: new Date().toISOString(),
     stale: false,
     sources: {
       backlog: { url: BACKLOG_URL, revision: file.sha },
       handoff: { url: HANDOFF_URL, updatedAt: handoff.updated_at },
+      conference: { url: CONFERENCE_URL, revision: conferenceFile.sha as string },
+      checkins: { url: CHECKINS_URL, revision: checkinsFile.sha as string },
     },
   };
 }
