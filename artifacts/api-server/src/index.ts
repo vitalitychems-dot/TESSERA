@@ -45,6 +45,10 @@ if (Number.isNaN(basePort) || basePort <= 0) {
 
 const server = http.createServer(app);
 
+const portFallbackFlag = process.env["TESSERA_PORT_FALLBACK"];
+const runningOnReplit = Boolean(process.env["REPL_ID"] || process.env["REPLIT_DEPLOYMENT"]);
+const allowPortFallback = portFallbackFlag === "1" || (runningOnReplit && portFallbackFlag !== "0");
+
 async function findAvailablePort(startPort: number, maxAttempts = 10): Promise<number> {
   return new Promise((resolve, reject) => {
     let attempt = 0;
@@ -54,6 +58,10 @@ async function findAvailablePort(startPort: number, maxAttempts = 10): Promise<n
       probe.once("error", (err: NodeJS.ErrnoException) => {
         probe.close();
         if (err.code === "EADDRINUSE") {
+          if (!allowPortFallback) {
+            reject(new Error(`Port ${p} is already in use. Free it, or set TESSERA_PORT_FALLBACK=1 to allow the next free port.`));
+            return;
+          }
           attempt++;
           if (attempt >= maxAttempts) {
             reject(new Error(`No available port found after ${maxAttempts} attempts starting from ${startPort}`));

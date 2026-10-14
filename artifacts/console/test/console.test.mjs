@@ -6,7 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { HANDLERS } from "../public/actions.mjs";
-import { startServer } from "../server.mjs";
+import { normalizePublicPath, publicFilePath, startServer } from "../server.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const html = readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
@@ -91,7 +91,16 @@ test("each tab endpoint returns data that exists in the repo", async () => {
   try {
     const page = await fetch(`http://127.0.0.1:${port}/`);
     assert.equal(page.status, 200);
-    assert.match(await page.text(), /data-action="tab-eye"/);
+    const html = await page.text();
+    assert.match(html, /data-action="tab-eye"/);
+    assert.match(html, /Tessera · Next/);
+    const meta = await get("/api/meta");
+    assert.equal(meta.theme, "tessera-next");
+    const css = await fetch(`http://127.0.0.1:${port}/console.css`);
+    assert.equal(css.status, 200);
+    const sheet = await css.text();
+    assert.match(sheet, /--glass: #7ef0d4/);
+    assert.doesNotMatch(sheet, /#d6ff3e/);
 
     const eye = await get("/api/eye");
     assert.equal(eye.memoryFile, "docs/v2/v2-memory.jsonl");
@@ -124,7 +133,7 @@ test("each tab endpoint returns data that exists in the repo", async () => {
 
     const chat = await fetch(`http://127.0.0.1:${port}/api/chat`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", origin: `http://127.0.0.1:${port}` },
       body: JSON.stringify({ message: "help" }),
     });
     assert.equal(chat.status, 200);
@@ -142,5 +151,58 @@ test("each tab endpoint returns data that exists in the repo", async () => {
     await new Promise((resolve) => server.close(resolve));
     await rm(dir, { recursive: true, force: true });
     delete process.env.TESSERA_CONSOLE_MEMORY;
+  }
+});
+
+test("loopback bind, public paths, and chat origin", async () => {
+  assert.equal(normalizePublicPath("/fonts/..%2f..%2f..%2fpackage.json"), null);
+  assert.equal(normalizePublicPath("/%2e%2e/package.json"), null);
+  assert.equal(normalizePublicPath("/console.css"), "/console.css");
+  assert.equal(normalizePublicPath("/%"), null);
+  assert.equal(publicFilePath("../../package.json"), null);
+  assert.equal(publicFilePath("/etc/passwd"), null);
+  assert.ok(publicFilePath("console.css")?.endsWith(`${path.sep}console.css`));
+
+  const dir = await mkdtemp(path.join(tmpdir(), "tessera-console-"));
+  process.env.TESSERA_CONSOLE_MEMORY = dir;
+  process.env.TESSERA_CONSOLE_HOST = "0.0.0.0";
+  process.env.HOST = "0.0.0.0";
+  const server = await startServer(0);
+  const port = server.address().port;
+  try {
+    assert.equal(server.address().address, "127.0.0.1");
+    const traversal = await fetch(`http://127.0.0.1:${port}/fonts/..%2f..%2f..%2fpackage.json`);
+    assert.equal(traversal.status, 404);
+    assert.doesNotMatch(await traversal.text(), /@workspace\/console/);
+    const encoded = await fetch(`http://127.0.0.1:${port}/%2e%2e/package.json`);
+    assert.equal(encoded.status, 404);
+    const css = await fetch(`http://127.0.0.1:${port}/console.css`);
+    assert.equal(css.status, 200);
+
+    const cross = await fetch(`http://127.0.0.1:${port}/api/chat`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "https://evil.example" },
+      body: JSON.stringify({ message: "help" }),
+    });
+    assert.equal(cross.status, 403);
+    const bare = await fetch(`http://127.0.0.1:${port}/api/chat`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: "help" }),
+    });
+    assert.equal(bare.status, 403);
+    const same = await fetch(`http://127.0.0.1:${port}/api/chat`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: `http://127.0.0.1:${port}` },
+      body: JSON.stringify({ message: "help" }),
+    });
+    assert.equal(same.status, 200);
+    assert.equal((await same.json()).instrument, "askAll");
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    await rm(dir, { recursive: true, force: true });
+    delete process.env.TESSERA_CONSOLE_MEMORY;
+    delete process.env.TESSERA_CONSOLE_HOST;
+    delete process.env.HOST;
   }
 });

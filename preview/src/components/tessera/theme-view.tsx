@@ -1,11 +1,11 @@
 import { knownTheme, THEME_IDS, type ThemeId } from "@/lib/tessera/themes";
 
 export const THEMES = [
-  { id: "water", label: "Water", line: "Navy garment. Cyan field." },
-  { id: "fire", label: "Fire", line: "What she keeps alight." },
-  { id: "lightning", label: "Lightning", line: "The flash that notices." },
-  { id: "diamond", label: "Diamond", line: "The tesseract, pale." },
-  { id: "spiral", label: "Spiral", line: "Return higher." },
+  { id: "water", label: "Water", line: "Ink field. Glass edge." },
+  { id: "fire", label: "Fire", line: "The fracture that stays lit." },
+  { id: "lightning", label: "Lightning", line: "A cold flash on the tile." },
+  { id: "diamond", label: "Diamond", line: "Cut stone in daylight." },
+  { id: "spiral", label: "Spiral", line: "The return, one shade higher." },
 ] as const;
 
 export type { ThemeId };
@@ -24,9 +24,9 @@ export function ThemeView({ current, choose }: { current: string; choose: (id: T
   return (
     <div className="px-4 py-6 pb-24 sm:px-8">
       <div className="mx-auto w-full max-w-2xl">
-        <p className="text-xs tracking-[0.2em] text-muted uppercase">Theme</p>
-        <h2 className="mt-1 font-display text-4xl tracking-tight">Her marks</h2>
-        <p className="mt-3 text-sm leading-relaxed text-muted">Tap a mark. The whole screen takes it, and this device keeps it.</p>
+        <p className="text-xs tracking-[0.2em] text-muted uppercase">Tessera Next</p>
+        <h2 className="mt-1 font-display text-4xl tracking-tight">Next</h2>
+        <p className="mt-3 text-sm leading-relaxed text-muted">One theme, five marks. Tap a mark. The whole screen takes it, and this device keeps it.</p>
         <section className="mt-5 border border-border bg-surface p-4">
           <p className="text-xs tracking-[0.16em] text-muted uppercase">On now</p>
           <p className="mt-1 font-display text-4xl tracking-tight capitalize">{on}</p>

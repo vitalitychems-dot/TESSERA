@@ -3,7 +3,7 @@ import { readFileSync } from "fs";
 import { join, resolve } from "path";
 import { hashStringFNV, getRealityAudit } from "../lib/reality-audit";
 import {
-  seedFeasibility, seedNovelty, deterministicInventionId, abstainIncrement,
+  seedFeasibility, seedNovelty, deterministicInventionId, resolveSeedInventionId, abstainIncrement,
   buildStartProgress, buildStep, testRegressed, pickFreshCandidate,
 } from "../lib/invention-seed";
 
@@ -31,6 +31,25 @@ describe("invention seed determinism", () => {
     expect(id).toBe(deterministicInventionId("sys", "Sovereign Mesh Gossip!"));
     expect(id).toMatch(/^sys-sovereign-mesh-gossip-+[a-z0-9]+$/);
     expect(deterministicInventionId("auto", "X")).not.toBe(deterministicInventionId("sys", "X"));
+  });
+
+  it("skips a repeat title and suffixes an id that already belongs to someone else", () => {
+    const title = "Sovereign Mesh Gossip!";
+    const stored = deterministicInventionId("sys", title);
+    expect(resolveSeedInventionId("sys", title, [{ inventionId: stored, title }])).toEqual({
+      action: "skip",
+      inventionId: stored,
+    });
+    expect(resolveSeedInventionId("sys", "  sovereign   mesh gossip! ", [{ inventionId: stored, title }])).toEqual({
+      action: "skip",
+      inventionId: stored,
+    });
+    const takenByOther = resolveSeedInventionId("sys", title, [{ inventionId: stored, title: "Different Device" }]);
+    expect(takenByOther).toEqual({ action: "insert", inventionId: `${stored}-2` });
+    expect(resolveSeedInventionId("auto", "Brand New", [])).toEqual({
+      action: "insert",
+      inventionId: deterministicInventionId("auto", "Brand New"),
+    });
   });
 
   it("abstain, build step, start progress and regression follow the documented formulas", () => {

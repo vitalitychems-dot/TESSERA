@@ -28,6 +28,30 @@ test("crystal snapshot keeps the /brain/snapshot shape and matches replayAt", ()
   assert.equal(b.diff.forward, a.diff.forward); assert.equal(b.diff.back, a.diff.back);
   assert.ok(b.nodes.every((n) => Array.isArray(n.p) && n.p.length === 3 && n.v >= 0)); assert.ok(b.edges.every((e) => /:\d+$/.test(e.src)));
 });
+test("repeat crystal snapshots with the same t and prev are cached", () => {
+  const cells = buildCrystal(jsonl, { source: "v2-memory.jsonl", layoutIters: 5 });
+  const a = crystalSnapshot(cells, 80, 10);
+  const b = crystalSnapshot(cells, 80, 10);
+  assert.equal(b, a);
+  const c = crystalSnapshot(cells, 81, 10);
+  assert.notEqual(c, a);
+  assert.equal(c.t, 81);
+});
+test("repeat GET /brain/snapshot?src=crystal stays under 0.7ms", () => {
+  const once = () => {
+    const r = { code: 0, body: "", writeHead(c) { r.code = c; }, end(x) { r.body = String(x); } };
+    const a = process.hrtime.bigint();
+    assert.equal(handleBrain({ method: "GET" }, r, new URL("http://x/brain/snapshot?src=crystal&t=50&prev=10")), true);
+    return { ms: Number(process.hrtime.bigint() - a) / 1e6, body: r.body, code: r.code };
+  };
+  const first = once();
+  assert.equal(first.code, 200);
+  const reps = Array.from({ length: 40 }, () => once());
+  for (const r of reps) { assert.equal(r.code, 200); assert.equal(r.body, first.body); }
+  const sorted = reps.map((r) => r.ms).sort((x, y) => x - y);
+  const p95 = sorted[Math.floor(0.95 * (sorted.length - 1))];
+  assert.ok(p95 < 0.7, `cached crystal snapshot p95 ${p95}ms, first ${first.ms}ms`);
+});
 test("GET /brain/snapshot?src=crystal is served read-only with p, v, src", () => {
   const r = { code: 0, body: "", writeHead(c) { r.code = c; }, end(x) { r.body = String(x); } };
   assert.equal(handleBrain({ method: "GET" }, r, new URL("http://x/brain/snapshot?src=crystal&t=50&prev=10")), true); assert.equal(r.code, 200);

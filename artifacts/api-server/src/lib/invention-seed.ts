@@ -33,6 +33,37 @@ export function deterministicInventionId(prefix: "sys" | "auto", title: string):
   return `${prefix}-${slugifyTitle(title)}-${hashStringFNV(title).toString(36)}`;
 }
 
+export function normalizeInventionTitle(title: string): string {
+  return title.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+type SeedInventionRef = { inventionId: string; title: string };
+
+/**
+ * Repeat titles reuse the row already stored. A deterministic id that belongs
+ * to a different title gets a numeric suffix so the unique invention_id
+ * constraint is not hit.
+ */
+export function resolveSeedInventionId(
+  prefix: "sys" | "auto",
+  title: string,
+  existing: readonly SeedInventionRef[],
+): { action: "skip"; inventionId: string } | { action: "insert"; inventionId: string } {
+  const normalized = normalizeInventionTitle(title);
+  const sameTitle = existing.find((row) => normalizeInventionTitle(row.title) === normalized);
+  if (sameTitle) return { action: "skip", inventionId: sameTitle.inventionId };
+
+  const taken = new Set(existing.map((row) => row.inventionId));
+  const base = deterministicInventionId(prefix, title);
+  if (!taken.has(base)) return { action: "insert", inventionId: base };
+
+  for (let n = 2; n < 1000; n++) {
+    const candidate = `${base}-${n}`;
+    if (!taken.has(candidate)) return { action: "insert", inventionId: candidate };
+  }
+  return { action: "skip", inventionId: base };
+}
+
 export function abstainIncrement(title: string, tick: number): number {
   return ABSTAIN_BASE + ((hashStringFNV(title) + tick) % ABSTAIN_SPAN);
 }

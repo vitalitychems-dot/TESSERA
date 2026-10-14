@@ -100,3 +100,7 @@ artifacts/v2/data/
 config/secrets/*
 !config/secrets/README.md
 !config/secrets/*.example.json
+
+# Creator logs stay off the public tree (Gitbook #67)
+**/creator/*.jsonl
+**/father-msgs*.jsonl

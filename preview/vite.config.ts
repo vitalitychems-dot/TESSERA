@@ -21,7 +21,7 @@ function packageDir(resolver: NodeJS.Require, name: string): string {
   return dirname(resolver.resolve(`${name}/package.json`));
 }
 
-const rawPort = process.env.PORT ?? "4173";
+const rawPort = process.env.PORT ?? "4174";
 const port = Number(rawPort);
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);

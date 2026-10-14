@@ -36,11 +36,24 @@ export function reflect(mems: ScoredMemory[], opts: { now?: number; threshold?: 
   return (opts.summarize ?? themeSummarizer)(top);
 }
 
+/** #19: every reflection insight is also logged as a memory event. */
+export interface ReflectionMemoryEvent { id: string; kind: "reflection"; text: string; at: number; sourceIds: string[] }
+const reflectionEvents: ReflectionMemoryEvent[] = [];
+const MAX_REFLECTION_EVENTS = 1000;
+export function recentReflectionEvents(limit = 100): ReflectionMemoryEvent[] { return reflectionEvents.slice(-limit); }
+export function reflectionsSince(since: number): number { return reflectionEvents.filter((e) => e.at >= since).length; }
+export function clearReflectionEvents(): void { reflectionEvents.length = 0; }
+
 /** Wires reflection to working memory: observations in, hypotheses out. */
 export function runReflectionTick(now = Date.now()): string[] {
   const obs: Observation[] = recentObservations(100);
   const mems = obs.map((o) => ({ id: o.id, text: `${o.topic} ${JSON.stringify(o.payload).slice(0, 300)}`, at: o.at, importance: o.novelty }));
   const insights = reflect(mems, { now });
-  for (const i of insights) assertHypothesis(i, 0.6, ["reflection"], mems.slice(0, 10).map((m) => m.id));
+  const sourceIds = mems.slice(0, 10).map((m) => m.id);
+  for (const i of insights) {
+    assertHypothesis(i, 0.6, ["reflection"], sourceIds);
+    reflectionEvents.push({ id: `refl-${now}-${reflectionEvents.length}`, kind: "reflection", text: i, at: now, sourceIds });
+    if (reflectionEvents.length > MAX_REFLECTION_EVENTS) reflectionEvents.shift();
+  }
   return insights;
 }
