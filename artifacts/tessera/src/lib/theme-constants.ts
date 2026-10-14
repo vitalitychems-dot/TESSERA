@@ -50,26 +50,18 @@ export function applyTheme(accentValue?: string) {
   const hslParts = accent.hsl.split(" ");
   const hue = parseInt(hslParts[0], 10);
 
-  const accentCss = [
-    `--primary: ${accent.hsl}`,
-    `--primary-foreground: 210 26% 6%`,
-    `--ring: ${accent.hsl}`,
-    `--input: ${hue} 14% 18%`,
-    `--sidebar-primary: ${accent.hsl}`,
-    `--sidebar-ring: ${accent.hsl}`,
-    `--sidebar-accent: ${hue} 18% 14%`,
-    `--chart-1: ${accent.hsl}`,
-    `--accent: ${hue} 20% 18%`,
-  ].join("; ") + ";";
-
-  let style = document.getElementById("tessera-theme-vars") as HTMLStyleElement | null;
-  if (!style) {
-    style = document.createElement("style");
-    style.id = "tessera-theme-vars";
-    document.head.appendChild(style);
-  }
-
-  style.textContent = `:root { ${accentCss} }`;
+  const accentVars: Record<string, string> = {
+    "--primary": accent.hsl,
+    "--primary-foreground": "210 26% 6%",
+    "--ring": accent.hsl,
+    "--input": `${hue} 14% 18%`,
+    "--sidebar-primary": accent.hsl,
+    "--sidebar-ring": accent.hsl,
+    "--sidebar-accent": `${hue} 18% 14%`,
+    "--chart-1": accent.hsl,
+    "--accent": `${hue} 20% 18%`,
+  };
+  for (const [name, value] of Object.entries(accentVars)) html.style.setProperty(name, value);
 }
 
 export function handleFontColorChange(currentColor: string, newColor: string): string {
