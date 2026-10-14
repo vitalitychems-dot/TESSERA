@@ -20,4 +20,7 @@ test("next glass is the live default and phosphor lime is gone", () => {
   assert.doesNotMatch(consoleCss, /#d6ff3e/);
   assert.match(webTokens, /value: "glass"/);
   assert.doesNotMatch(webTokens, /#22d3ee/);
+  const webCss = readFileSync(new URL("../../../../artifacts/tessera/src/index.css", import.meta.url), "utf8");
+  assert.match(webCss, /--color-cyan-400: #7ef0d4/);
+  assert.doesNotMatch(webCss, /rgba\(6,\s*182,\s*212/);
 });

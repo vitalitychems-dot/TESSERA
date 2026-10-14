@@ -363,7 +363,7 @@ function createLabelCanvas(symbol: string, name: string): HTMLCanvasElement {
   c.height = 80;
   const ctx = c.getContext("2d")!;
   ctx.clearRect(0, 0, 256, 80);
-  ctx.fillStyle = "rgba(6, 182, 212, 0.85)";
+  ctx.fillStyle = "rgba(126, 240, 212, 0.85)";
   ctx.font = "bold 32px monospace";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";

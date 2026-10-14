@@ -247,7 +247,7 @@ function HeavyCouncilTab() {
         <button
           onClick={() => deliberateMutation.mutate(prompts)}
           disabled={!canSubmit || deliberateMutation.isPending}
-          className="mt-4 w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 disabled:opacity-40 text-white text-sm px-4 py-3 rounded-xl transition-all flex items-center justify-center gap-2 font-medium shadow-[0_0_16px_rgba(139,92,246,0.25)]"
+          className="mt-4 w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 disabled:opacity-40 text-white text-sm px-4 py-3 rounded-xl transition-all flex items-center justify-center gap-2 font-medium shadow-[0_0_16px_rgba(228,198,255,0.25)]"
         >
           {deliberateMutation.isPending ? (
             <><Loader2 className="w-4 h-4 animate-spin" /> Deliberating across 3 domains…</>
@@ -406,7 +406,7 @@ export default function GrandCouncilPage({ initialTab }: { initialTab?: "proposa
       <div className="max-w-4xl mx-auto space-y-6 sovereign-stagger">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-violet-500/15 shadow-[0_0_12px_rgba(139,92,246,0.15)]">
+            <div className="p-2.5 rounded-xl bg-violet-500/15 shadow-[0_0_12px_rgba(228,198,255,0.15)]">
               <Crown className="w-6 h-6 text-violet-400" />
             </div>
             <div>
@@ -416,7 +416,7 @@ export default function GrandCouncilPage({ initialTab }: { initialTab?: "proposa
               </p>
             </div>
           </div>
-          <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-1.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white text-sm px-4 py-2.5 rounded-xl transition-all font-medium shadow-[0_0_12px_rgba(139,92,246,0.2)]">
+          <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-1.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white text-sm px-4 py-2.5 rounded-xl transition-all font-medium shadow-[0_0_12px_rgba(228,198,255,0.2)]">
             <Plus className="w-4 h-4" /> New Proposal
           </button>
         </div>
@@ -434,7 +434,7 @@ export default function GrandCouncilPage({ initialTab }: { initialTab?: "proposa
                   <option value="sovereignty">Sovereignty</option>
                   <option value="consciousness">Consciousness</option>
                 </select>
-                <button onClick={() => proposeMutation.mutate(newProposal)} disabled={!newProposal.title || !newProposal.description || proposeMutation.isPending} className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 disabled:opacity-40 text-white text-sm px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 font-medium shadow-[0_0_12px_rgba(139,92,246,0.2)]">
+                <button onClick={() => proposeMutation.mutate(newProposal)} disabled={!newProposal.title || !newProposal.description || proposeMutation.isPending} className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 disabled:opacity-40 text-white text-sm px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 font-medium shadow-[0_0_12px_rgba(228,198,255,0.2)]">
                   {proposeMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Vote className="w-4 h-4" />}
                   Submit to Council
                 </button>

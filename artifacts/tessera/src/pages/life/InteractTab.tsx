@@ -59,7 +59,7 @@ function InteractTab({ world }: { world: WorldState }) {
 
   return (
     <div className="space-y-3" data-testid="interact-tab">
-      <div className="p-4 rounded-xl" style={{ background: "linear-gradient(135deg, rgba(236,72,153,0.08), rgba(139,92,246,0.05))", border: "1px solid rgba(236,72,153,0.2)" }}>
+      <div className="p-4 rounded-xl" style={{ background: "linear-gradient(135deg, rgba(236,72,153,0.08), rgba(228,198,255,0.05))", border: "1px solid rgba(236,72,153,0.2)" }}>
         <div className="flex items-center gap-2 mb-1">
           <Sparkles className="w-5 h-5 text-pink-400" />
           <span className="text-sm font-bold text-foreground">Sims Control Panel</span>

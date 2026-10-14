@@ -1207,7 +1207,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
             {colonelMessage && !isAdmin && (
               <div className={cn(
                 "flex items-center gap-2 px-4 py-2 mx-2 mb-1 rounded-lg border font-mono text-[11px] tracking-wider transition-all duration-500",
-                colonelPhase === "hash_accepted" ? "bg-violet-950/60 border-violet-500/40 text-violet-400 shadow-[0_0_20px_rgba(139,92,246,0.15)]" :
+                colonelPhase === "hash_accepted" ? "bg-violet-950/60 border-violet-500/40 text-violet-400 shadow-[0_0_20px_rgba(228,198,255,0.15)]" :
                 colonelPhase === "authenticating" ? "bg-amber-950/40 border-amber-500/30 text-amber-400 animate-pulse" :
                 colonelPhase === "success" ? "bg-green-950/40 border-green-500/40 text-green-400 shadow-[0_0_20px_rgba(34,197,94,0.15)]" :
                 colonelPhase === "fail" ? "bg-red-950/40 border-red-500/30 text-red-400" :

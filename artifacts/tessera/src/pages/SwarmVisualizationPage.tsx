@@ -67,7 +67,7 @@ function SwarmCanvas({ agents, running }: { agents: SwarmAgent[]; running: boole
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
-        ctx.strokeStyle = `rgba(139, 92, 246, ${alpha})`;
+        ctx.strokeStyle = `rgba(228, 198, 255, ${alpha})`;
         ctx.lineWidth = agent.status === "processing" ? 1.5 : 0.8;
         ctx.stroke();
 
@@ -94,7 +94,7 @@ function SwarmCanvas({ agents, running }: { agents: SwarmAgent[]; running: boole
             ctx.beginPath();
             ctx.moveTo(x1, y1);
             ctx.lineTo(x2, y2);
-            ctx.strokeStyle = "rgba(6, 182, 212, 0.06)";
+            ctx.strokeStyle = "rgba(126, 240, 212, 0.06)";
             ctx.lineWidth = 0.5;
             ctx.stroke();
           }

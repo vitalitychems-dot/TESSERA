@@ -104,8 +104,8 @@ export function GlassCard({
   animate?: boolean;
 }) {
   const glowColors: Record<string, string> = {
-    cyan: "shadow-[0_0_20px_rgba(6,182,212,0.08)] border-cyan-500/20",
-    violet: "shadow-[0_0_20px_rgba(139,92,246,0.08)] border-violet-500/20",
+    cyan: "shadow-[0_0_20px_rgba(126,240,212,0.08)] border-cyan-500/20",
+    violet: "shadow-[0_0_20px_rgba(228,198,255,0.08)] border-violet-500/20",
     emerald: "shadow-[0_0_20px_rgba(16,185,129,0.08)] border-emerald-500/20",
     amber: "shadow-[0_0_20px_rgba(245,158,11,0.08)] border-amber-500/20",
     pink: "shadow-[0_0_20px_rgba(236,72,153,0.08)] border-pink-500/20",
@@ -264,8 +264,8 @@ export function GradientBar({
   };
 
   const glowColors: Record<string, string> = {
-    cyan: "shadow-[0_0_8px_rgba(6,182,212,0.3)]",
-    violet: "shadow-[0_0_8px_rgba(139,92,246,0.3)]",
+    cyan: "shadow-[0_0_8px_rgba(126,240,212,0.3)]",
+    violet: "shadow-[0_0_8px_rgba(228,198,255,0.3)]",
     emerald: "shadow-[0_0_8px_rgba(16,185,129,0.3)]",
     amber: "shadow-[0_0_8px_rgba(245,158,11,0.3)]",
     pink: "shadow-[0_0_8px_rgba(236,72,153,0.3)]",
@@ -312,8 +312,8 @@ export function HeroStat({
   className?: string;
 }) {
   const iconBg: Record<string, string> = {
-    cyan: "bg-cyan-500/15 text-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.15)]",
-    violet: "bg-violet-500/15 text-violet-400 shadow-[0_0_12px_rgba(139,92,246,0.15)]",
+    cyan: "bg-cyan-500/15 text-cyan-400 shadow-[0_0_12px_rgba(126,240,212,0.15)]",
+    violet: "bg-violet-500/15 text-violet-400 shadow-[0_0_12px_rgba(228,198,255,0.15)]",
     emerald: "bg-emerald-500/15 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.15)]",
     amber: "bg-amber-500/15 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.15)]",
     pink: "bg-pink-500/15 text-pink-400 shadow-[0_0_12px_rgba(236,72,153,0.15)]",
@@ -368,8 +368,8 @@ export function SectionHeader({
     rose: "text-rose-400",
   };
   const dotColor: Record<string, string> = {
-    cyan: "bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.6)]",
-    violet: "bg-violet-400 shadow-[0_0_6px_rgba(139,92,246,0.6)]",
+    cyan: "bg-cyan-400 shadow-[0_0_6px_rgba(126,240,212,0.6)]",
+    violet: "bg-violet-400 shadow-[0_0_6px_rgba(228,198,255,0.6)]",
     emerald: "bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.6)]",
     amber: "bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.6)]",
     pink: "bg-pink-400 shadow-[0_0_6px_rgba(236,72,153,0.6)]",
@@ -427,8 +427,8 @@ export function TabBar({
   }, [checkScroll]);
 
   const activeColors: Record<string, string> = {
-    cyan: "bg-gradient-to-r from-cyan-600 to-cyan-500 text-white shadow-[0_0_12px_rgba(6,182,212,0.25)]",
-    violet: "bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-[0_0_12px_rgba(139,92,246,0.25)]",
+    cyan: "bg-gradient-to-r from-cyan-600 to-cyan-500 text-white shadow-[0_0_12px_rgba(126,240,212,0.25)]",
+    violet: "bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-[0_0_12px_rgba(228,198,255,0.25)]",
     emerald: "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-[0_0_12px_rgba(16,185,129,0.25)]",
     amber: "bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-[0_0_12px_rgba(245,158,11,0.25)]",
   };
