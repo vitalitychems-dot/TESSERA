@@ -1,11 +1,11 @@
 .tessera-world-stage {
-  --tw-ink: #e9e5d7;
-  --tw-muted: #9b9b8a;
-  --tw-dim: #6d766d;
-  --tw-line: rgba(219, 204, 155, .13);
-  --tw-panel: rgba(17, 28, 29, .82);
-  --tw-cyan: #8bd0bd;
-  --tw-gold: #e6bd70;
+  --tw-ink: #f3efe6;
+  --tw-muted: #b4bebc;
+  --tw-dim: #8c9c98;
+  --tw-line: rgba(126, 240, 212, .16);
+  --tw-panel: #0c141b;
+  --tw-cyan: #7ef0d4;
+  --tw-gold: #d7f6ff;
   display: grid;
   grid-template-columns: minmax(340px, 43%) minmax(0, 1fr);
   width: 100%;
@@ -13,10 +13,8 @@
   min-height: 0;
   overflow: hidden;
   color: var(--tw-ink);
-  background:
-    radial-gradient(ellipse at 12% 0%, rgba(116, 151, 122, .13), transparent 40%),
-    #101a1b;
-  font-family: var(--app-font-sans, "DM Sans", sans-serif);
+  background: #070b10;
+  font-family: var(--app-font-sans, system-ui, sans-serif);
 }
 
 .tw-world-column {
@@ -28,6 +26,12 @@
   scrollbar-color: rgba(139, 208, 189, .25) transparent;
   scrollbar-width: thin;
 }
+
+.tw-destinations { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+.tw-destinations a { min-height: 44px; padding: 12px; border: 1px solid var(--tw-line); color: var(--tw-cyan); font-size: 12px; border-radius: 10px; }
+.tw-destinations a:hover { background: #12251f; }
+.tessera-world-stage .tw-chat-column, .tessera-world-stage .tw-chat-heading { background: #070b10; color: #f3efe6; }
+.tessera-world-stage .tw-chat-orbit { border-color: #7ef0d4; box-shadow: none; }
 
 .tw-topline { display: flex; align-items: center; gap: 12px; position: relative; }
 .tw-brand-mark {

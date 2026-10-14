@@ -459,7 +459,7 @@ export async function approveProposal(
   await loadStore();
   const p = store.proposals.find(x => x.id === id);
   if (!p) return null;
-  if (p.state !== "pending-review") return p;
+  if (p.state !== "pending-review") throw new RickGateError(`Proposal is ${p.state}; only pending-review proposals can be approved`);
   p.state = "approved";
   p.approvedBy = g.actor;
   p.approvalTestRef = g.testRef;
@@ -491,7 +491,7 @@ export async function markImplemented(
   await loadStore();
   const p = store.proposals.find(x => x.id === id);
   if (!p) return null;
-  if (p.state !== "approved") return p;
+  if (p.state !== "approved") throw new RickGateError(`Proposal is ${p.state}; approval is required before recording implementation`);
   p.state = "implemented";
   p.implementedBy = g.actor;
   p.implementationTestRef = g.testRef;

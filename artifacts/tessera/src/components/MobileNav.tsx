@@ -17,10 +17,12 @@ interface NavTab {
   color: string;
 }
 
-// The integrated World contains Eye, Brain, and Chat; separate duplicate chat navigation is removed.
+// Five primary destinations; every older tool remains available under More.
 const PRIMARY: NavTab[] = [
   { label: "World", href: "/", Icon: Globe2, match: (l) => l === "/" || l.startsWith("/c/"), color: "cyan" },
-  { label: "Board", href: "/grand-council", Icon: Gavel, match: (l) => l === "/grand-council" || l === "/forum" || l === "/next-five", color: "amber" },
+  { label: "Eye", href: "/eye", Icon: Eye, match: l => l === "/eye", color: "cyan" },
+  { label: "Brain", href: "/brain", Icon: Brain, match: l => l === "/brain", color: "cyan" },
+  { label: "Forum", href: "/forum", Icon: MessageCircle, match: l => l === "/forum", color: "cyan" },
   { label: "More", href: "#more", Icon: MoreHorizontal, match: () => false, color: "slate" },
 ];
 
@@ -64,7 +66,7 @@ const COLOR_MAP: Record<string, { active: string; text: string; dot: string; ina
 };
 
 function TabButton({ tab, active, onClick, fullWidth, large }: { tab: NavTab; active: boolean; onClick: () => void; fullWidth?: boolean; large?: boolean }) {
-  const colors = COLOR_MAP[tab.color] || COLOR_MAP.cyan;
+  const colors = { ...COLOR_MAP.cyan, glow: "shadow-none" };
   return (
     <button
       type="button"

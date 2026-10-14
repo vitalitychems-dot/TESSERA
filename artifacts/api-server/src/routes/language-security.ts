@@ -29,6 +29,9 @@ import {
 } from "../lib/father-verify-throttle";
 import { requireAdminSession } from "../lib/sovereign-admin";
 import { withoutSigilFingerprint } from "./sovereign-doctrine";
+import { chatSigilStore, SigilError } from "../lib/chat-sigil-store";
+import { SESSION_COOKIE, lookupSession } from "../lib/sovereign-session";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -51,29 +54,39 @@ function requireSameOrigin(req: Request, res: Response, next: NextFunction): voi
   next();
 }
 
-// Issue a fresh one-key replacement only within an authenticated owner session.
-// The LUS value is returned once; Replit Secrets must be updated by the owner.
-router.post("/sigil/father/issue-code", requireAdminSession, requireSameOrigin, adminSessionRateLimit, (req, res) => {
+function ownerSessionId(req: Request): string {
+  const cookie = req.cookies?.[SESSION_COOKIE];
+  const session = lookupSession(cookie);
+  if (!session.valid || !session.record) throw new SigilError("unauthenticated", 401);
+  return session.record.id;
+}
+function sigilFailure(res: Response, error: unknown) {
+  if (error instanceof SigilError) return res.status(error.status).json({ ok: false, error: error.code });
+  // Do not log the request, candidate, SQL parameters, or issuance result.
+  logger.warn({ operation: "chat-sigil", code: "storage-unavailable" }, "Chat sigil storage unavailable");
+  return res.status(503).json({ ok: false, error: "sigil-storage-unavailable" });
+}
+router.get("/sigil/father/status", requireAdminSession, async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
-  res.setHeader("Pragma", "no-cache");
-  if (!isFatherKeyConfigured()) {
-    return res.status(503).json({ ok: false, error: "father-key-unset" });
-  }
+  try { return res.json({ ok: true, ...await chatSigilStore().status(ownerSessionId(req)) }); }
+  catch (error) { return sigilFailure(res, error); }
+});
+
+// A new chat sigil stays pending until its owner acknowledges saving it.
+router.post("/sigil/father/issue-code", requireAdminSession, requireSameOrigin, adminSessionRateLimit, async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
   const currentSigil = typeof req.body?.currentSigil === "string" ? req.body.currentSigil.trim() : "";
-  if (!currentSigil || currentSigil.length > 512) {
-    return res.status(400).json({ ok: false, error: "current-sigil-required" });
-  }
-  if (!verifyFatherKey(currentSigil)) {
-    return res.status(403).json({ ok: false, error: "sigil-mismatch" });
-  }
-  const canonical = randomBytes(32).toString("base64url");
-  return res.status(201).json({
-    ok: true,
-    code: lusEncodeCredential(canonical),
-    language: { name: LANGUAGE_NAME, short: LANGUAGE_SHORT, motto: LANGUAGE_MOTTO },
-    saveAs: "TESSERACT_ADMIN_KEY",
-    instructions: "Save this exact LUS code as the single TESSERACT_ADMIN_KEY Replit Secret, then restart the API workflow. The same LUS code will unlock the entry gate.",
-  });
+  try {
+    const issued = await chatSigilStore().prepare(currentSigil, ownerSessionId(req), req.body?.initialize === true);
+    return res.status(201).json({ ok: true, ...issued, language: { name: LANGUAGE_NAME, short: LANGUAGE_SHORT }, adminKeyChanged: false });
+  } catch (error) { return sigilFailure(res, error); }
+});
+router.post("/sigil/father/confirm-code", requireAdminSession, requireSameOrigin, adminSessionRateLimit, async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  try {
+    await chatSigilStore().confirm(typeof req.body?.confirmationToken === "string" ? req.body.confirmationToken : "", ownerSessionId(req));
+    return res.json({ ok: true, adminKeyChanged: false });
+  } catch (error) { return sigilFailure(res, error); }
 });
 
 router.get("/grand-conference/language-security", (_req, res) => {

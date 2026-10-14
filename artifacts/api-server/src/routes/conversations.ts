@@ -21,6 +21,7 @@ import { classifyQuery } from "../lib/adaptive-router";
 import { hybridRetrieve, formatCitations } from "../lib/hybrid-retrieval";
 import { detectIntents, isPrivilegedTool, publicToolResult, runToolLoop } from "../lib/tool-registry";
 import { decideOwnerSession, requireAdminSession } from "../lib/sovereign-admin";
+import { requireChatSigil } from "../lib/chat-sigil-store";
 import { injectInventionDiagrams, buildInvention3DBlock, userRequested3D } from "../lib/invention-3d";
 import { inventionsTable } from "@workspace/db/schema";
 import { db as feedbackDb } from "@workspace/db";
@@ -664,7 +665,7 @@ router.get("/messages", requireAdminSession, async (req, res) => {
   }
 });
 
-router.post("/messages", requireAdminSession, async (req, res) => {
+router.post("/messages", requireAdminSession, requireChatSigil, async (req, res) => {
   try {
     const bodyConvId = req.body?.conversationId;
     const queryConvId = req.query?.conversationId;

@@ -1113,6 +1113,10 @@ interface RickProposalItem {
   decidedAt?: number;
   source: "llm" | "deterministic";
   truthfulnessScore?: number;
+  approvedBy?: string;
+  approvalTestRef?: string;
+  implementedBy?: string;
+  implementationTestRef?: string;
 }
 interface ProposalsResponse {
   ok: boolean;
@@ -1122,13 +1126,13 @@ interface ProposalsResponse {
   capacity: number;
 }
 
-const PROPOSAL_GOLD = "#fbbf24";
-const PROPOSAL_RISK: Record<string, string> = { low: "#22c55e", medium: "#f59e0b", high: "#ef4444" };
+const PROPOSAL_GOLD = "#d7f6ff";
+const PROPOSAL_RISK: Record<string, string> = { low: "#8fd9c4", medium: "#ff5c39", high: "#ff5c39" };
 const PROPOSAL_STATE_COLOR: Record<string, string> = {
-  "pending-review": "#fbbf24",
-  approved: "#22c55e",
-  rejected: "#ef4444",
-  implemented: "#22d3ee",
+  "pending-review": "#d7f6ff",
+  approved: "#8fd9c4",
+  rejected: "#ff5c39",
+  implemented: "#7ef0d4",
 };
 
 function RickProposalsPanel() {
@@ -1136,6 +1140,7 @@ function RickProposalsPanel() {
     queryKey: ["/api/rick/proposals"],
     queryFn: async () => {
       const r = await fetch("/api/rick/proposals");
+      if (!r.ok) throw new Error("Proposal source unavailable");
       return r.json() as Promise<ProposalsResponse>;
     },
     refetchInterval: 30000,
@@ -1145,14 +1150,34 @@ function RickProposalsPanel() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [reviewer, setReviewer] = useState("Father");
+  const [testRef, setTestRef] = useState("");
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [stateFilter, setStateFilter] = useState<"all" | "pending-review" | "approved" | "rejected" | "implemented">("all");
+
+  async function requestAction(path: string, body?: Record<string, string>) {
+    setActionError(null);
+    setFeedback(null);
+    const response = await fetch(path, {
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body ?? {}),
+    });
+    const result = await response.json();
+    if (!response.ok || result.ok !== true) throw new Error(typeof result.error === "string" ? result.error.slice(0, 400) : `Request failed (${response.status})`);
+    return result;
+  }
+  function actionFailed(error: unknown) {
+    setActionError(error instanceof Error ? error.message : "The request failed; no successful change was confirmed.");
+  }
 
   async function generate() {
     setGenerating(true);
     try {
-      await fetch("/api/rick/proposals/generate", { method: "POST" });
+      await requestAction("/api/rick/proposals/generate");
       await refetch();
-    } finally {
+      setFeedback("Proposals refreshed from the server.");
+    } catch (error) { actionFailed(error); } finally {
       setGenerating(false);
     }
   }
@@ -1160,31 +1185,30 @@ function RickProposalsPanel() {
   async function approve(id: string) {
     setBusyId(id);
     try {
-      await fetch(`/api/rick/proposals/${id}/approve`, { method: "POST" });
+      await requestAction(`/api/rick/proposals/${encodeURIComponent(id)}/approve`, { approver: reviewer.trim(), testRef: testRef.trim() });
       await refetch();
-    } finally { setBusyId(null); }
+      setFeedback("Approval recorded with your test reference. This has not deployed code.");
+    } catch (error) { actionFailed(error); } finally { setBusyId(null); }
   }
 
   async function reject(id: string) {
     setBusyId(id);
     try {
-      await fetch(`/api/rick/proposals/${id}/reject`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: rejectReason }),
-      });
+      await requestAction(`/api/rick/proposals/${encodeURIComponent(id)}/reject`, { reason: rejectReason });
       setRejectingId(null);
       setRejectReason("");
       await refetch();
-    } finally { setBusyId(null); }
+      setFeedback("Rejection recorded.");
+    } catch (error) { actionFailed(error); } finally { setBusyId(null); }
   }
 
   async function markImplementedFn(id: string) {
     setBusyId(id);
     try {
-      await fetch(`/api/rick/proposals/${id}/implemented`, { method: "POST" });
+      await requestAction(`/api/rick/proposals/${encodeURIComponent(id)}/implemented`, { implementer: reviewer.trim(), testRef: testRef.trim() });
       await refetch();
-    } finally { setBusyId(null); }
+      setFeedback("Implementation evidence recorded. This action records a verified change; it does not execute or deploy code.");
+    } catch (error) { actionFailed(error); } finally { setBusyId(null); }
   }
 
   const proposals = data?.proposals ?? [];
@@ -1197,7 +1221,21 @@ function RickProposalsPanel() {
   ];
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+    <div className="flex-1 min-w-0 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+      <section className="rounded-xl border border-border bg-card p-4 space-y-3">
+        <h2 className="font-bold text-sm">Reviewer and verification evidence</h2>
+        <p className="text-xs text-muted-foreground">Rick proposes; a different reviewer approves. Approval is not deployment. Record implementation only after the change actually exists and its test passes.</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="text-xs">Reviewer / implementer
+            <input className="mt-1 w-full rounded-lg border border-input bg-background p-3 text-foreground" value={reviewer} maxLength={120} onChange={event => setReviewer(event.target.value)} autoComplete="off" />
+          </label>
+          <label className="text-xs">Test result reference
+            <input className="mt-1 w-full rounded-lg border border-input bg-background p-3 text-foreground" value={testRef} maxLength={400} onChange={event => setTestRef(event.target.value)} placeholder="Passing test URL or result ID" autoComplete="off" />
+          </label>
+        </div>
+        {actionError && <p role="alert" className="text-sm text-destructive">{actionError}</p>}
+        {feedback && <p role="status" className="text-sm text-primary">{feedback}</p>}
+      </section>
       <div className="rounded-xl border p-4 flex items-start gap-4 flex-wrap" style={{ borderColor: `${PROPOSAL_GOLD}40`, background: `${PROPOSAL_GOLD}08` }}>
         <div className="flex-1 min-w-[220px]">
           <div className="font-bold font-mono text-sm" style={{ color: PROPOSAL_GOLD }}>
@@ -1392,7 +1430,7 @@ function RickProposalsPanel() {
                 <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={() => approve(p.id)}
-                    disabled={busyId === p.id}
+                    disabled={busyId === p.id || !reviewer.trim() || !testRef.trim()}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold border disabled:opacity-50"
                     style={{ color: "#22c55e", borderColor: "#22c55e60", background: "#22c55e10" }}
                   >
@@ -1413,7 +1451,7 @@ function RickProposalsPanel() {
                 <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={() => markImplementedFn(p.id)}
-                    disabled={busyId === p.id}
+                    disabled={busyId === p.id || !reviewer.trim() || !testRef.trim()}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold border disabled:opacity-50"
                     style={{ color: "#22d3ee", borderColor: "#22d3ee60", background: "#22d3ee10" }}
                   >

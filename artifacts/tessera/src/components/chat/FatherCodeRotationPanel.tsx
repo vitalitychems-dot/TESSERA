@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 
-const ROTATION_COMPLETE_KEY = "tessera.father-code-rotation-issued.v1";
-
 interface IssueResponse {
   ok?: boolean;
   code?: string;
+  confirmationToken?: string;
   error?: string;
 }
 
@@ -57,6 +56,10 @@ export function FatherCodeRotationPanel({ open, onClose }: Props) {
   const [issuedCode, setIssuedCode] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmationToken, setConfirmationToken] = useState("");
+  const [enrolled, setEnrolled] = useState<boolean | null>(null);
+  const [initialize, setInitialize] = useState(false);
+  const [saved, setSaved] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -64,8 +67,21 @@ export function FatherCodeRotationPanel({ open, onClose }: Props) {
     setCurrentSigil("");
     setIssuedCode(null);
     setError(null);
+    setConfirmationToken("");
+    setSaved(false);
+    setInitialize(false);
+    setEnrolled(null);
+    const controller = new AbortController();
+    void fetch("/api/sigil/father/status", { credentials: "include", cache: "no-store", signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) throw new Error("unavailable");
+        const data = await response.json();
+        if (data.rotatedThisSession) { onClose(); return; }
+        setEnrolled(data.enrolled === true);
+      })
+      .catch(() => { if (!controller.signal.aborted) setError("Sigil storage is unavailable. Retry after the connection recovers."); });
     const timer = window.setTimeout(() => inputRef.current?.focus(), 50);
-    return () => window.clearTimeout(timer);
+    return () => { controller.abort(); window.clearTimeout(timer); };
   }, [open]);
 
   if (!open) return null;
@@ -73,7 +89,7 @@ export function FatherCodeRotationPanel({ open, onClose }: Props) {
   const verifyAndIssue = async () => {
     const candidate = currentSigil.trim();
     if (!candidate) {
-      setError("Enter the current sigil you used at the gate.");
+      setError("Enter your last saved chat sigil, not your admin key.");
       return;
     }
 
@@ -84,18 +100,22 @@ export function FatherCodeRotationPanel({ open, onClose }: Props) {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentSigil: candidate }),
+        body: JSON.stringify({ currentSigil: candidate, initialize: enrolled === false && initialize }),
         cache: "no-store",
       });
       const data = await response.json() as IssueResponse;
-      if (!response.ok || !data.ok || !data.code) {
+      if (!response.ok || !data.ok || !data.code || !data.confirmationToken) {
         setError(
           response.status === 401
             ? "Unlock TESSERA first, then try again."
             : data.error === "same-origin-required"
               ? "Open TESSERA in this same preview tab and try again."
               : data.error === "sigil-mismatch"
-                ? "That sigil did not match the current Father code. The saved code is unchanged."
+                ? "That is not your last saved chat sigil. Nothing was changed."
+                : data.error === "sigil-length"
+                  ? "Use a sigil between 8 and 512 characters."
+                  : data.error === "already-rotated-this-session"
+                    ? "The sigil was already rotated in this owner session."
                 : data.error === "rate-limited"
                   ? "Too many attempts. Wait a minute, then try again."
                   : "TESSERA could not issue a replacement. The saved code is unchanged.",
@@ -104,18 +124,35 @@ export function FatherCodeRotationPanel({ open, onClose }: Props) {
       }
 
       setIssuedCode(data.code);
+      setConfirmationToken(data.confirmationToken);
       setCurrentSigil("");
-      try {
-        // This stores only an onboarding marker, never the credential.
-        window.localStorage.setItem(ROTATION_COMPLETE_KEY, "true");
-      } catch {
-        // Rotation remains available; the prompt may return on another visit.
-      }
     } catch {
       setError("The connection failed. Your saved code is unchanged; try again.");
     } finally {
       setBusy(false);
     }
+  };
+
+  const confirmSaved = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/sigil/father/confirm-code", {
+        method: "POST", credentials: "include", cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmationToken }),
+      });
+      if (!response.ok) {
+        // A lost response may follow a successful commit; ask the authoritative status.
+        const status = await fetch("/api/sigil/father/status", { credentials: "include", cache: "no-store" });
+        if (!status.ok || !(await status.json()).rotatedThisSession) throw new Error("not-confirmed");
+      }
+      setIssuedCode(null);
+      setConfirmationToken("");
+      onClose();
+    } catch {
+      setError("Confirmation was not verified. Keep both sigils until you can confirm; your admin key is unchanged.");
+    } finally { setBusy(false); }
   };
 
   return (
@@ -131,8 +168,10 @@ export function FatherCodeRotationPanel({ open, onClose }: Props) {
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-slate-300">
             {issuedCode
-              ? "This is the single admin/sigil credential, shown once in Lingua Universalis Sacra."
-              : "Enter the same current sigil you used at the gate. TESSERA will verify it before creating one replacement."}
+              ? "Save this Lingua Universalis Sacra sigil privately, then confirm below. Your admin key stays the same."
+              : enrolled === false
+                ? "Your separate chat sigil has not been enrolled. Use the sigil you already saved to set up this layer."
+                : "Enter your last saved chat sigil. This is separate from the admin key used at the entry gate."}
           </p>
         </div>
         <button
@@ -151,7 +190,7 @@ export function FatherCodeRotationPanel({ open, onClose }: Props) {
             className="select-all break-all rounded-xl border border-emerald-300/20 bg-black/40 p-3 font-mono text-base leading-relaxed text-emerald-100"
             role="status"
             aria-live="polite"
-            aria-label="New Father admin and sigil code in LUS"
+            aria-label="New private chat sigil in LUS"
           >
             {issuedCode}
           </div>
@@ -161,6 +200,14 @@ export function FatherCodeRotationPanel({ open, onClose }: Props) {
           <p className="border-t border-white/10 pt-3 text-xs leading-relaxed text-slate-300">
             {dataDefaultInstructions}
           </p>
+          <label className="flex gap-2 items-start text-sm text-foreground">
+            <input type="checkbox" checked={saved} onChange={event => setSaved(event.target.checked)} />
+            I saved this new sigil somewhere private.
+          </label>
+          <button type="button" disabled={!saved || busy} onClick={() => void confirmSaved()}
+            className="w-full rounded-lg border border-primary/40 bg-primary/15 p-3 text-primary disabled:opacity-50">
+            {busy ? "Confirming…" : "Confirm saved & activate new sigil"}
+          </button>
           {error && <p role="alert" className="text-xs text-amber-200">{error}</p>}
         </div>
       ) : (
@@ -183,9 +230,15 @@ export function FatherCodeRotationPanel({ open, onClose }: Props) {
             spellCheck={false}
             value={currentSigil}
             onChange={(event) => setCurrentSigil(event.target.value)}
-            placeholder="Enter the sigil used at the gate"
+            placeholder="Last saved chat sigil"
             className="w-full rounded-xl border border-slate-600 bg-black/50 px-3 py-3 font-mono text-sm text-white placeholder:text-slate-500 focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300/20"
           />
+          {enrolled === false && (
+            <label className="flex gap-2 items-start text-xs text-foreground">
+              <input type="checkbox" checked={initialize} onChange={event => setInitialize(event.target.checked)} />
+              Enroll this saved sigil as my separate chat credential. Leave my admin key unchanged.
+            </label>
+          )}
           {error && <p role="alert" className="text-xs text-amber-200">{error}</p>}
           <div className="flex items-center justify-between gap-3">
             <p className="max-w-md text-[11px] leading-relaxed text-slate-400">
@@ -193,7 +246,7 @@ export function FatherCodeRotationPanel({ open, onClose }: Props) {
             </p>
             <button
               type="submit"
-              disabled={busy || !currentSigil.trim()}
+              disabled={busy || currentSigil.trim().length < 8 || enrolled === null || (enrolled === false && !initialize)}
               className="shrink-0 rounded-xl border border-emerald-300/30 bg-emerald-400/15 px-3 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-400/25 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300"
             >
               {busy ? "Verifying…" : "Verify & create"}
@@ -206,4 +259,4 @@ export function FatherCodeRotationPanel({ open, onClose }: Props) {
 }
 
 const dataDefaultInstructions =
-  "Save this exact LUS code as the single TESSERACT_ADMIN_KEY in Replit Secrets, then restart the API workflow. The old code remains active until that restart. TESSERA does not save the Secret for you. LUS is reversible, not encryption; the code is not stored in chat history.";
+  "Do not put this in TESSERACT_ADMIN_KEY and do not restart the API. Your old chat sigil stays valid until you confirm saving this replacement. The pending replacement expires in 15 minutes. Only hashes are stored; neither sigil enters AI prompts, chat history, or browser storage.";

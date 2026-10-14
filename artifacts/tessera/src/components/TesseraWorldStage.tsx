@@ -1,4 +1,5 @@
 import { useWorldPulse } from "@/hooks/use-world-pulse";
+import { Link } from "wouter";
 import { ChatArea } from "@/components/ChatArea";
 import {
   Activity,
@@ -104,15 +105,21 @@ export default function TesseraWorldStage({ conversationId }: { conversationId: 
     <main className="tessera-world-stage" data-testid="tessera-world-stage">
       <section className="tw-world-column" aria-label="TESSERA world signals">
         <header className="tw-topline">
-          <div className="tw-brand-mark" aria-hidden="true"><span /></div>
+          <div className="next-mosaic" aria-hidden="true"><span /><span /><span /><span /></div>
           <div>
             <p className="tw-eyebrow">OPERATOR WORLD / 01</p>
-            <h1>TESSERA <span>WORLD</span></h1>
+            <h1>Next <span>WORLD</span></h1>
           </div>
           <span className="tw-private-tag">PRIVATE WORKSPACE</span>
         </header>
 
-        <section className="tw-world-art" aria-label="Voxel world signal map">
+        <nav className="tw-destinations" aria-label="Live workspace destinations">
+          <Link href="/eye">Eye / observed signals</Link>
+          <Link href="/brain">Brain / knowledge</Link>
+          <Link href="/forum">Forum / discussions</Link>
+          <a href="#live-chat">Chat / conversation</a>
+        </nav>
+        <section className="tw-world-art" aria-label="Decorative voxel illustration — not a connected Minecraft server">
           <div className="tw-skyline" aria-hidden="true">
             <span className="tw-orbit" />
             <span className="tw-sun" />
@@ -124,7 +131,7 @@ export default function TesseraWorldStage({ conversationId }: { conversationId: 
             <div className="tw-ground-grid" />
           </div>
           <div className="tw-world-caption">
-            <span className="tw-caption-index">WORLD STATE / SIGNALS ONLY</span>
+            <span className="tw-caption-index">VOXEL VIEW / NOT A GAME SERVER</span>
             <span className="tw-live-legend"><i /> Public repositories + service pulse</span>
           </div>
         </section>
@@ -138,7 +145,7 @@ export default function TesseraWorldStage({ conversationId }: { conversationId: 
           <article className="tw-panel tw-service-panel">
             <div className="tw-panel-title">
               <span className="tw-panel-symbol"><Eye size={15} /></span>
-              <div><h3>Service pulse</h3><p>Private system health</p></div>
+              <div><h3><Link href="/eye">Service pulse ↗</Link></h3><p>Source: /api/healthz</p></div>
             </div>
             {service.isLoading && !service.data ? (
               <div className="tw-service-loading"><span className="tw-skeleton tw-line" /><span className="tw-skeleton tw-line short" /></div>
@@ -161,7 +168,7 @@ export default function TesseraWorldStage({ conversationId }: { conversationId: 
           <article className="tw-panel tw-brain-panel">
             <div className="tw-panel-title">
               <span className="tw-panel-symbol is-brain"><BrainCircuit size={15} /></span>
-              <div><h3>The Brain</h3><p>Knowledge corpus</p></div>
+              <div><h3><Link href="/brain">The Brain ↗</Link></h3><p>Source: /api/knowledge-corpus/stats</p></div>
             </div>
             {brain.isLoading && !brain.data ? (
               <SignalSkeleton rows={3} />
@@ -205,10 +212,11 @@ export default function TesseraWorldStage({ conversationId }: { conversationId: 
                     </a>
                   </div>
                   <div className="tw-repo-numbers">
-                    <span><CircleDot size={13} /> {repository.openItems.toLocaleString()} <small>open issues + PRs</small></span>
-                    <span><Star size={13} /> {repository.stars.toLocaleString()} <small>stars</small></span>
+                    <span><CircleDot size={13} /> {repository.openItems?.toLocaleString() ?? "Unavailable"} <small>open issues + PRs</small></span>
+                    <span><Star size={13} /> {repository.stars?.toLocaleString() ?? "Unavailable"} <small>stars</small></span>
                   </div>
                   <p className="tw-pushed"><Clock3 size={12} /> Last pushed {dateLabel(repository.pushedAt)}</p>
+                  <p className="tw-pushed">{repository.stale ? "Stale · refresh failed" : "GitHub snapshot"} · {repository.fetchedAt ? ageLabel(repository.fetchedAt) : "time unavailable"}</p>
                   <div className="tw-events">
                     {repository.events.length ? repository.events.map((event) => (
                       <a className="tw-event" href={event.url} target="_blank" rel="noreferrer" key={event.id} data-testid={`repository-event-${repository.name.toLowerCase()}-${event.id}`}>
@@ -220,7 +228,7 @@ export default function TesseraWorldStage({ conversationId }: { conversationId: 
                         <ArrowUpRight size={12} className="tw-event-link-icon" aria-hidden="true" />
                       </a>
                     )) : (
-                      <p className="tw-empty-events">No public activity returned in this repository snapshot.</p>
+                      <p className="tw-empty-events">{repository.unavailable ? "Source unavailable. No substitute activity is generated; other repository signals remain visible." : "No public activity returned in this repository snapshot."}</p>
                     )}
                   </div>
                 </article>
@@ -245,7 +253,7 @@ export default function TesseraWorldStage({ conversationId }: { conversationId: 
         </section>
       </section>
 
-      <section className="tw-chat-column" aria-label="Live conversation">
+      <section id="live-chat" className="tw-chat-column" aria-label="Live conversation">
         <div className="tw-chat-heading">
           <div className="tw-chat-orbit"><span /></div>
           <div><p className="tw-eyebrow">LIVE CONVERSATION</p><h2>THE CHAMBER</h2></div>

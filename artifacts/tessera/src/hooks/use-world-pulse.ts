@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 const REPOSITORIES = [
   { name: "TESSERA", slug: "vitalitychems-dot/TESSERA" },
   { name: "Gitbook", slug: "vitalitychems-dot/Gitbook" },
+  { name: "box-backup-2026-10-13", slug: "vitalitychems-dot/box-backup-2026-10-13" },
 ] as const;
 
 const LIVE_POLL_MS = 30_000;
@@ -31,13 +32,16 @@ export interface RepositoryEvent {
 }
 
 export interface RepositoryPulse {
-  name: "TESSERA" | "Gitbook";
+  name: "TESSERA" | "Gitbook" | "box-backup-2026-10-13";
   slug: string;
   url: string;
-  openItems: number;
-  stars: number;
+  openItems: number | null;
+  stars: number | null;
   pushedAt: string | null;
   events: RepositoryEvent[];
+  fetchedAt: string;
+  stale: boolean;
+  unavailable?: boolean;
 }
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -188,12 +192,8 @@ async function readRepositoryPulse(
   repository: (typeof REPOSITORIES)[number],
   signal: AbortSignal,
 ): Promise<RepositoryPulse> {
-  const baseUrl = `https://api.github.com/repos/${repository.slug}`;
-  const [metadataValue, eventsValue] = await Promise.all([
-    readJson(baseUrl, signal),
-    readJson(`${baseUrl}/events?per_page=8`, signal),
-  ]);
-  const metadata = record(metadataValue);
+  const snapshot = record(await readJson(`/api/world/repositories/${repository.name}`, signal));
+  const metadata = record(snapshot?.metadata);
   const openItems = nonNegativeInteger(metadata?.open_issues_count);
   const stars = nonNegativeInteger(metadata?.stargazers_count);
   if (!metadata || openItems === null || stars === null) {
@@ -207,12 +207,23 @@ async function readRepositoryPulse(
     openItems,
     stars,
     pushedAt: safeDate(metadata.pushed_at),
-    events: parseEvents(eventsValue, repository.slug),
+    events: parseEvents(snapshot?.events, repository.slug),
+    fetchedAt: safeDate(snapshot?.fetchedAt) ?? "",
+    stale: snapshot?.stale === true,
   };
 }
 
 async function readRepositoryPulses(signal: AbortSignal): Promise<RepositoryPulse[]> {
-  return Promise.all(REPOSITORIES.map((repository) => readRepositoryPulse(repository, signal)));
+  return Promise.all(REPOSITORIES.map(async repository => {
+    try { return await readRepositoryPulse(repository, signal); }
+    catch (error) {
+      if (signal.aborted) throw error;
+      return {
+        ...repository, url: `https://github.com/${repository.slug}`, openItems: null, stars: null,
+        pushedAt: null, events: [], fetchedAt: "", stale: true, unavailable: true,
+      };
+    }
+  }));
 }
 
 export function useWorldPulse() {

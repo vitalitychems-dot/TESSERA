@@ -162,13 +162,15 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   const [localFontColor, setLocalFontColor] = useState<string>(() => localStorage.getItem("tessera-font-color") || "");
 
   useEffect(() => {
-    let alreadyIssued = false;
-    try {
-      alreadyIssued = localStorage.getItem("tessera.father-code-rotation-issued.v1") === "true";
-    } catch {
-      // The prompt still works when browser storage is unavailable.
-    }
-    if (!alreadyIssued) setFatherRotationOpen(true);
+    const controller = new AbortController();
+    void fetch("/api/sigil/father/status", { credentials: "include", cache: "no-store", signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) { setFatherRotationOpen(true); return; }
+        const status = await response.json();
+        if (!status.rotatedThisSession) setFatherRotationOpen(true);
+      })
+      .catch(() => { if (!controller.signal.aborted) setFatherRotationOpen(true); });
+    return () => controller.abort();
   }, []);
   
   const tesseractMode = true;
@@ -584,6 +586,15 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
       setInputBoth("");
       return;
     }
+
+    // Verify the session before recording user content or sending it to any model.
+    try {
+      const response = await fetch("/api/sigil/father/status", { credentials: "include", cache: "no-store" });
+      if (!response.ok || !(await response.json()).rotatedThisSession) {
+        setFatherRotationOpen(true);
+        return;
+      }
+    } catch { setFatherRotationOpen(true); return; }
 
     if (isAdmin && msgText.length > 20) {
       const bulkKeyPattern = /([A-Z][A-Z0-9_]{2,40}(?:_API_KEY|_SECRET_KEY|_KEY|_TOKEN|_SECRET|_API|_PASSWORD))\s*[=:]\s*["']?([^\s"',}{]+)["']?/g;
@@ -1129,7 +1140,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
         </div>
       )}
 
-      <div className="px-4 pb-[max(5rem,calc(4rem+env(safe-area-inset-bottom)))] pt-2 z-10 flex-shrink-0 backdrop-blur-md chat-input-bg" data-testid="chat-input-container">
+      <div className="px-3 pb-3 pt-2 z-10 flex-shrink-0 chat-input-bg" data-testid="chat-input-container">
         <FatherCodeRotationPanel
           open={fatherRotationOpen}
           onClose={() => setFatherRotationOpen(false)}

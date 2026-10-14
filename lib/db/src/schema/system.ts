@@ -66,3 +66,16 @@ export const realityAuditSnapshotsTable = pgTable("reality_audit_snapshots", {
 export const insertRealityAuditSnapshotSchema = createInsertSchema(realityAuditSnapshotsTable).omit({ id: true, createdAt: true, scannedAt: true });
 export type InsertRealityAuditSnapshot = z.infer<typeof insertRealityAuditSnapshotSchema>;
 export type RealityAuditSnapshotRow = typeof realityAuditSnapshotsTable.$inferSelect;
+
+// Plaintext sigils and confirmation tokens must never enter this table.
+export const fatherChatSigilsTable = pgTable("father_chat_sigils", {
+  id: integer("id").primaryKey(),
+  currentHash: text("current_hash").notNull(),
+  pendingHash: text("pending_hash"),
+  pendingTokenHash: text("pending_token_hash"),
+  pendingSessionHash: text("pending_session_hash"),
+  pendingExpiresAt: timestamp("pending_expires_at", { withTimezone: true }),
+  lastSessionHash: text("last_session_hash"),
+  generation: integer("generation").notNull().default(0),
+  confirmedSessions: text("confirmed_sessions").array().notNull().default([]),
+});
