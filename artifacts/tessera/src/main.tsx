@@ -3,6 +3,8 @@ import App from "./App";
 import "./index.css";
 import { applyTheme } from "./lib/theme-constants";
 
-applyTheme(localStorage.getItem("tessera-accent") || "cyan");
+let savedAccent = "glass";
+try { savedAccent = localStorage.getItem("tessera-accent") || "glass"; } catch { /* Paint without browser storage. */ }
+applyTheme(savedAccent);
 
 createRoot(document.getElementById("root")!).render(<App />);

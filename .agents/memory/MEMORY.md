@@ -1,3 +1,4 @@
+- [Next theme integration](tessera-next-integration.md) — verify the Replit-served theme independently of GitHub merges; fonts must not block first paint.
 - [TESSERA launch policy](tessera-launch-policy.md) — canonical GitHub source and Gitbook deployment rules; preserve owner gates and protected archives.
 - [Public repository imports](public-repository-imports.md) — check anonymous access before treating a failed GitHub credential as a private-repo problem.
 - [TESSERA live world interface](tessera-design-direction.md) — unify the voxel-inspired Eye, Brain, and Chat using real, clearly sourced live data.

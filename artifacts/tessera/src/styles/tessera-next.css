@@ -1,0 +1,133 @@
+/* Active Tessera Next theme. Historical themes remain archived. */
+@font-face {
+  font-family: "Syne";
+  src: url("/fonts/Syne.ttf") format("truetype");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Fragment Mono";
+  src: url("/fonts/FragmentMono-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@theme {
+  --color-zinc-50: #f3efe6;
+  --color-zinc-100: #f3efe6;
+  --color-zinc-950: #070b10;
+  --color-violet-900: #211a29;
+  --color-violet-950: #15101c;
+  --color-purple-900: #211a29;
+  --color-purple-950: #15101c;
+  --color-cyan-900: #102923;
+  --color-cyan-950: #0b1816;
+  --color-teal-900: #102923;
+  --color-teal-950: #0b1816;
+  --color-cyan-300: #d7f6ff;
+  --color-cyan-400: #7ef0d4;
+  --color-cyan-500: #7ef0d4;
+  --color-cyan-600: #1f8f7a;
+  --color-cyan-700: #1f8f7a;
+  --color-teal-300: #8fd9c4;
+  --color-teal-400: #7ef0d4;
+  --color-teal-500: #7ef0d4;
+  --color-teal-600: #1f8f7a;
+  --color-blue-300: #d7f6ff;
+  --color-blue-400: #7ef0d4;
+  --color-blue-500: #7ef0d4;
+  --color-blue-600: #1f8f7a;
+  --color-violet-300: #e4c6ff;
+  --color-violet-400: #e4c6ff;
+  --color-violet-500: #e4c6ff;
+  --color-violet-600: #9d83b6;
+  --color-purple-300: #e4c6ff;
+  --color-purple-400: #e4c6ff;
+  --color-purple-500: #e4c6ff;
+  --color-purple-600: #9d83b6;
+  --color-indigo-300: #e4c6ff;
+  --color-indigo-400: #e4c6ff;
+  --color-indigo-500: #e4c6ff;
+  --color-indigo-600: #9d83b6;
+  --color-emerald-300: #8fd9c4;
+  --color-emerald-400: #8fd9c4;
+  --color-emerald-500: #1f8f7a;
+  --color-green-300: #8fd9c4;
+  --color-green-400: #8fd9c4;
+  --color-green-500: #1f8f7a;
+  --color-amber-300: #d7f6ff;
+  --color-amber-400: #d7f6ff;
+  --color-amber-500: #d7f6ff;
+  --color-rose-400: #ff5c39;
+  --color-rose-500: #ff5c39;
+  --color-red-400: #ff5c39;
+  --color-red-500: #ff5c39;
+  --color-orange-400: #ff5c39;
+  --color-orange-500: #ff5c39;
+}
+:root.dark, :root:not(.dark) {
+  color-scheme: dark;
+  --background: 213.333 39.13% 4.51%;
+  --foreground: 41.538 35.135% 92.745%;
+  --border: 208 23% 18%;
+  --card: 212 27% 8%;
+  --card-foreground: 42 35% 93%;
+  --card-border: 208 23% 18%;
+  --sidebar: 212 24% 7%;
+  --sidebar-foreground: 42 22% 88%;
+  --sidebar-border: 208 20% 16%;
+  --sidebar-primary: 165 79% 72%;
+  --sidebar-primary-foreground: 210 26% 6%;
+  --sidebar-accent: 165 18% 14%;
+  --sidebar-accent-foreground: 42 22% 88%;
+  --sidebar-ring: 165 79% 72%;
+  --popover: 212 24% 9%;
+  --popover-foreground: 42 35% 93%;
+  --popover-border: 208 20% 18%;
+  --primary: 165 79% 72%;
+  --primary-foreground: 210 26% 6%;
+  --secondary: 212 16% 14%;
+  --secondary-foreground: 42 18% 86%;
+  --muted: 212 14% 14%;
+  --muted-foreground: 205 12% 68%;
+  --accent: 165 22% 18%;
+  --accent-foreground: 42 35% 93%;
+  --destructive: 11 100% 61%;
+  --destructive-foreground: 210 26% 6%;
+  --input: 208 16% 18%;
+  --ring: 165 79% 72%;
+  --chart-1: 165 79% 72%;
+  --chart-2: 276 100% 89%;
+  --chart-3: 162 48% 70%;
+  --chart-4: 192 100% 92%;
+  --chart-5: 168 64% 34%;
+  --app-font-sans: "Syne", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --app-font-serif: "Syne", Georgia, serif;
+  --app-font-mono: "Fragment Mono", ui-monospace, Menlo, Consolas, monospace;
+  --font-display: "Syne", system-ui, sans-serif;
+  --next-ink: #070b10;
+  --next-bone: #f3efe6;
+  --next-glass: #7ef0d4;
+  --next-fracture: #ff5c39;
+  --next-flash: #d7f6ff;
+  --next-stone: #1f8f7a;
+  --next-return: #e4c6ff;
+  --next-mineral: #8fd9c4;
+}
+html, body, #root { background-color: #070b10; color: #f3efe6; }
+body { font-family: var(--app-font-sans); }
+::selection { background: #7ef0d440; color: #f3efe6; }
+:focus-visible { outline-color: #7ef0d4; }
+.next-mosaic {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 3px;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+}
+.next-mosaic span { border-radius: 2px; background: #f3efe6; }
+.next-mosaic span:nth-child(2) { background: #7ef0d4; }
+.next-mosaic span:nth-child(3) { background: #1f8f7a; }
+.next-mosaic span:nth-child(4) { background: #ff5c39; }

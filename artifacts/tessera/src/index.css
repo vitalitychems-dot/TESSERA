@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./styles/tessera-next.css";
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
@@ -108,9 +109,9 @@
   --chart-4: 38 92% 50%;
   --chart-5: 350 89% 60%;
 
-  --app-font-sans: 'Inter', system-ui, sans-serif;
-  --app-font-serif: Georgia, serif;
-  --app-font-mono: 'JetBrains Mono', 'Fira Code', Menlo, monospace;
+  --app-font-sans: "Syne", system-ui, sans-serif;
+  --app-font-serif: "Syne", Georgia, serif;
+  --app-font-mono: "Fragment Mono", ui-monospace, Menlo, monospace;
   --radius: .625rem;
   --shadow-2xs: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
   --shadow-xs: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
