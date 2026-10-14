@@ -23,11 +23,11 @@ function put(list: Cube[], x: number, y: number, z: number, colors: string[]) {
 function buildStudio() {
   const solid: Cube[] = [];
   const glass: Cube[] = [];
-  const yard = (x: number, y: number) => x < -9 || x > 14 || y < -7 || y > 6;
   for (let x = -14; x <= 16; x += 1) {
     for (let y = -10; y <= 10; y += 1) {
-      if (!yard(x, y) && !(x >= -1 && x <= 1 && y >= 6)) continue;
+      const edge = x === -14 || x === 16 || y === -10 || y === 10 || x === -13 || y === -9 || x === 15 || y === 9;
       const path = x >= -1 && x <= 1 && y >= 6 && y <= 10;
+      if (!edge && !path) continue;
       put(solid, x, y, 0, path ? STONE : GRASS);
     }
   }
@@ -186,15 +186,17 @@ export function WorldStage() {
   const view = useRef({ yaw: 0.55, zoom: 1 });
   const ordered = useRef<Cube[]>([]);
   const orderKey = useRef("");
+  const paintRef = useRef<() => void>(() => {});
   view.current = { yaw, zoom };
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     let frame = 0;
-    const draw = (now: number) => {
+    const draw = () => {
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
+      if (width < 2 || height < 2) return;
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
       const nextW = Math.floor(width * ratio);
       const nextH = Math.floor(height * ratio);
@@ -232,11 +234,9 @@ export function WorldStage() {
       pen.globalAlpha = 0.55;
       for (const block of STUDIO.glass) drawCube(pen, block, cam.yaw, cam.zoom, width, height);
       pen.restore();
-      const bob = Math.sin(now / 700) * 0.12;
       for (const seat of SEATS) {
-        const step = seat.name === "Tessera" ? bob : -bob * 0.4;
-        const head = project(seat.x, seat.y + step, 2.6, cam.yaw, cam.zoom, width, height);
-        const foot = project(seat.x, seat.y + step, 1.2, cam.yaw, cam.zoom, width, height);
+        const head = project(seat.x, seat.y, 2.6, cam.yaw, cam.zoom, width, height);
+        const foot = project(seat.x, seat.y, 1.2, cam.yaw, cam.zoom, width, height);
         pen.fillStyle = "#4a2c1e";
         pen.fillRect(foot.x - 5 * cam.zoom, foot.y - 14 * cam.zoom, 10 * cam.zoom, 16 * cam.zoom);
         pen.fillStyle = seat.name === "Tessera" ? "#f4ead8" : "#e7b89a";
@@ -250,10 +250,20 @@ export function WorldStage() {
         pen.fillStyle = "#3a2418";
         pen.fillText(seat.role, head.x + 8, head.y + 10);
       }
+    };
+    const paint = () => {
+      window.cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(draw);
     };
-    frame = window.requestAnimationFrame(draw);
-    return () => window.cancelAnimationFrame(frame);
+    paintRef.current = paint;
+    paint();
+    const watch = new ResizeObserver(paint);
+    watch.observe(canvas);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      watch.disconnect();
+      paintRef.current = () => {};
+    };
   }, []);
 
   return (
@@ -268,23 +278,25 @@ export function WorldStage() {
         }}
         onPointerMove={(event) => {
           if (!drag.current) return;
-          setYaw(drag.current.yaw + (event.clientX - drag.current.x) * 0.008);
+          view.current.yaw = drag.current.yaw + (event.clientX - drag.current.x) * 0.008;
+          paintRef.current();
         }}
         onPointerUp={() => {
           drag.current = null;
+          setYaw(view.current.yaw);
         }}
       />
       <div className="pointer-events-none absolute inset-x-0 bottom-12 px-3">
         <p className="text-[10px] text-white/80">Studio after AgentCraft, MIT. Tessera leads. Drag to walk around.</p>
       </div>
       <div className="absolute inset-x-0 bottom-0 flex gap-2 overflow-x-auto px-2 py-2">
-        <button type="button" className="h-10 shrink-0 border border-white/40 bg-black/35 px-3 text-sm text-white" onClick={() => setZoom((value) => Math.min(1.8, value + 0.15))}>
+        <button type="button" className="h-10 shrink-0 border border-white/40 bg-black/35 px-3 text-sm text-white" onClick={() => { view.current.zoom = Math.min(1.8, view.current.zoom + 0.15); setZoom(view.current.zoom); paintRef.current(); }}>
           Closer
         </button>
-        <button type="button" className="h-10 shrink-0 border border-white/40 bg-black/35 px-3 text-sm text-white" onClick={() => setZoom((value) => Math.max(0.55, value - 0.15))}>
+        <button type="button" className="h-10 shrink-0 border border-white/40 bg-black/35 px-3 text-sm text-white" onClick={() => { view.current.zoom = Math.max(0.55, view.current.zoom - 0.15); setZoom(view.current.zoom); paintRef.current(); }}>
           Farther
         </button>
-        <button type="button" className="h-10 shrink-0 border border-white/40 bg-black/35 px-3 text-sm text-white" onClick={() => { setYaw(0.55); setZoom(1); }}>
+        <button type="button" className="h-10 shrink-0 border border-white/40 bg-black/35 px-3 text-sm text-white" onClick={() => { view.current.yaw = 0.55; view.current.zoom = 1; setYaw(0.55); setZoom(1); paintRef.current(); }}>
           Front
         </button>
       </div>
