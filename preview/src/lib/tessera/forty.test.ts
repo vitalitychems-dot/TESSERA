@@ -1,12 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { AFTER_COPY, FORTY_IDS, afterCopy, rememberAsk, whatDidIAsk } from "./forty.ts";
 import { askRepo, byName, look, nameIndex, shortSha } from "./repo-ask.ts";
 import { gitbookAnswer } from "./gitbook-orders.ts";
 import { heldBack, shouldStayLocal } from "./scope-stop.ts";
 import { namedTask } from "./named-task.ts";
-import { THEME_IDS } from "./themes.ts";
 
 test("forty improvements", () => {
   const index = nameIndex();
@@ -50,8 +49,8 @@ test("forty improvements", () => {
     ["largest-folders", /Largest on TESSERA is/.test(askRepo("largest folders") ?? "") && /Largest on Gitbook is archive/.test(askRepo("largest folders") ?? "")],
     ["how-many-open", gitbookAnswer("how many open") === "4 open."],
     ["short-sha", shortSha("2a522a0c3966") === "2a522a0"],
-    ["five-themes", THEME_IDS.length === 5],
-    ["nine-rooms", [...readFileSync(new URL("../../components/tessera/rooms-sheet.tsx", import.meta.url), "utf8").matchAll(/id: "([a-z]+)"/g)].length === 9],
+    ["themes-removed", !existsSync(new URL("./themes.ts", import.meta.url)) && !existsSync(new URL("../../components/tessera/theme-view.tsx", import.meta.url))],
+    ["eight-rooms", [...readFileSync(new URL("../../components/tessera/rooms-sheet.tsx", import.meta.url), "utf8").matchAll(/id: "([a-z]+)"/g)].length === 8],
     ["stay-local", shouldStayLocal("how many files") && shouldStayLocal("mark AGI done") && !shouldStayLocal("hello")],
     ["forty-counted", FORTY_IDS.length === 40 && new Set(FORTY_IDS).size === 40],
   ];

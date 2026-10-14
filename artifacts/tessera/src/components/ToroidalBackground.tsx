@@ -1,5 +1,13 @@
 import { useEffect, useRef, memo } from "react";
-import { PARTICLE_COLORS, STAR_COLORS } from "@/lib/theme-constants";
+
+const PARTICLE_COLORS = [
+  "#06b6d4", "#8b5cf6", "#a78bfa", "#22d3ee", "#f59e0b",
+  "#c4b5fd", "#67e8f9", "#818cf8", "#fb7185",
+];
+
+const STAR_COLORS = [
+  "#ffffff", "#e0f2fe", "#ddd6fe", "#fef9c3", "#d1fae5", "#fce7f3",
+];
 
 interface Star {
   x: number;
