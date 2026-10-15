@@ -54,6 +54,11 @@ import {
 
 const router: IRouter = Router();
 function proposalId(req: Request) { return typeof req.params.id === "string" ? req.params.id : ""; }
+function routeParam(req: Request, name: string): string {
+  const value = req.params[name];
+  if (typeof value === "string") return value;
+  return Array.isArray(value) && typeof value[0] === "string" ? value[0] : "";
+}
 
 function requireOwnerOrigin(req: Request, res: Response, next: NextFunction) {
   const origin = req.get("origin");
@@ -997,13 +1002,13 @@ router.post("/rick/improvement-program/generate-proposals", async (_req, res) =>
   }
 });
 
-router.post("/rick/improvement-program/proposal/:proposalId/decision", async (req, res) => {
+router.post("/rick/improvement-program/proposal/:proposalId/decision", requireAdminSession, requireOwnerOrigin, async (req, res) => {
   try {
     const { decision, reason, approver, testRef } = req.body as { decision?: string; reason?: string; approver?: string; testRef?: string };
     if (decision !== "approved" && decision !== "rejected") {
       return res.status(400).json({ ok: false, error: "decision must be 'approved' or 'rejected'" });
     }
-    const program = await decideProposal(req.params.proposalId, decision, reason, { approver, testRef });
+    const program = await decideProposal(routeParam(req, "proposalId"), decision, reason, { approver, testRef });
     return res.json({ ok: true, program });
   } catch (err) {
     logger.error({ err }, "Rick: program decide error");
@@ -1021,13 +1026,13 @@ router.post("/rick/improvement-program/proposal/:proposalId/dispatch", requireRi
   }
 });
 
-router.post("/rick/improvement-program/proposal/:proposalId/dispatch-status", async (req, res) => {
+router.post("/rick/improvement-program/proposal/:proposalId/dispatch-status", requireAdminSession, requireOwnerOrigin, async (req, res) => {
   try {
     const { status, note, actor, testRef } = req.body as { status?: string; note?: string; actor?: string; testRef?: string };
     if (typeof status !== "string") {
       return res.status(400).json({ ok: false, error: "status is required" });
     }
-    const program = await updateDispatchStatus(req.params.proposalId, status, note, { actor, testRef });
+    const program = await updateDispatchStatus(routeParam(req, "proposalId"), status, note, { actor, testRef });
     return res.json({ ok: true, program: program ?? null });
   } catch (err) {
     logger.error({ err }, "Rick: program dispatch-status error");
@@ -1056,14 +1061,15 @@ router.get("/rick/improvement-program/task-queue/:taskId", async (req, res) => {
   }
 });
 
-router.patch("/rick/improvement-program/task-queue/:taskId", async (req, res) => {
+router.patch("/rick/improvement-program/task-queue/:taskId", requireAdminSession, requireOwnerOrigin, async (req, res) => {
   try {
     const { status, note, actor, testRef } = req.body as { status?: string; note?: string; actor?: string; testRef?: string };
     if (typeof status !== "string") {
       return res.status(400).json({ ok: false, error: "status is required" });
     }
-    const program = await updateDispatchStatus(req.params.taskId, status, note, { actor, testRef });
-    const task = await getDispatchedTask(req.params.taskId);
+    const taskId = routeParam(req, "taskId");
+    const program = await updateDispatchStatus(taskId, status, note, { actor, testRef });
+    const task = await getDispatchedTask(taskId);
     return res.json({ ok: true, program, task });
   } catch (err) {
     logger.error({ err }, "Rick: task-queue patch error");

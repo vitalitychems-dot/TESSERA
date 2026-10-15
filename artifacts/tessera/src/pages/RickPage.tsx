@@ -1163,8 +1163,10 @@ function RickProposalsPanel() {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body ?? {}),
     });
-    const result = await response.json();
-    if (!response.ok || result.ok !== true) throw new Error(typeof result.error === "string" ? result.error.slice(0, 400) : `Request failed (${response.status})`);
+    const result = await response.json().catch(() => null) as { ok?: unknown; error?: unknown; proposal?: RickProposalItem | null } | null;
+    if (!response.ok || result?.ok !== true) {
+      throw new Error(typeof result?.error === "string" ? result.error.slice(0, 400) : `Request failed (${response.status})`);
+    }
     return result;
   }
   function actionFailed(error: unknown) {
@@ -1185,7 +1187,8 @@ function RickProposalsPanel() {
   async function approve(id: string) {
     setBusyId(id);
     try {
-      await requestAction(`/api/rick/proposals/${encodeURIComponent(id)}/approve`, { approver: reviewer.trim(), testRef: testRef.trim() });
+      const result = await requestAction(`/api/rick/proposals/${encodeURIComponent(id)}/approve`, { approver: reviewer.trim(), testRef: testRef.trim() });
+      if (result.proposal?.state !== "approved") throw new Error("The server did not confirm owner approval; the proposal state was not changed.");
       await refetch();
       setFeedback("Approval recorded with your test reference. This has not deployed code.");
     } catch (error) { actionFailed(error); } finally { setBusyId(null); }
@@ -1194,7 +1197,8 @@ function RickProposalsPanel() {
   async function reject(id: string) {
     setBusyId(id);
     try {
-      await requestAction(`/api/rick/proposals/${encodeURIComponent(id)}/reject`, { reason: rejectReason });
+      const result = await requestAction(`/api/rick/proposals/${encodeURIComponent(id)}/reject`, { reason: rejectReason });
+      if (result.proposal?.state !== "rejected") throw new Error("The proposal was not rejected; its current state was left unchanged.");
       setRejectingId(null);
       setRejectReason("");
       await refetch();
@@ -1205,9 +1209,10 @@ function RickProposalsPanel() {
   async function markImplementedFn(id: string) {
     setBusyId(id);
     try {
-      await requestAction(`/api/rick/proposals/${encodeURIComponent(id)}/implemented`, { implementer: reviewer.trim(), testRef: testRef.trim() });
+      const result = await requestAction(`/api/rick/proposals/${encodeURIComponent(id)}/implemented`, { implementer: reviewer.trim(), testRef: testRef.trim() });
+      if (result.proposal?.state !== "implemented") throw new Error("The server did not confirm the implementation record; the proposal state was not changed.");
       await refetch();
-      setFeedback("Implementation evidence recorded. This action records a verified change; it does not execute or deploy code.");
+      setFeedback("Implementation record saved with the supplied test reference. This action does not run tests or deploy code.");
     } catch (error) { actionFailed(error); } finally { setBusyId(null); }
   }
 
@@ -1224,13 +1229,13 @@ function RickProposalsPanel() {
     <div className="flex-1 min-w-0 overflow-y-auto p-4 space-y-3 custom-scrollbar">
       <section className="rounded-xl border border-border bg-card p-4 space-y-3">
         <h2 className="font-bold text-sm">Reviewer and verification evidence</h2>
-        <p className="text-xs text-muted-foreground">Rick proposes; a different reviewer approves. Approval is not deployment. Record implementation only after the change actually exists and its test passes.</p>
+        <p className="text-xs text-muted-foreground">Rick proposes; a different reviewer approves. Council ballots are shown separately in Grand Council. Test references are submitted records—the app does not run tests or deploy code.</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-xs">Reviewer / implementer
             <input className="mt-1 w-full rounded-lg border border-input bg-background p-3 text-foreground" value={reviewer} maxLength={120} onChange={event => setReviewer(event.target.value)} autoComplete="off" />
           </label>
-          <label className="text-xs">Test result reference
-            <input className="mt-1 w-full rounded-lg border border-input bg-background p-3 text-foreground" value={testRef} maxLength={400} onChange={event => setTestRef(event.target.value)} placeholder="Passing test URL or result ID" autoComplete="off" />
+            <label className="text-xs">Test result reference (submitted by you)
+              <input className="mt-1 w-full rounded-lg border border-input bg-background p-3 text-foreground" value={testRef} maxLength={400} onChange={event => setTestRef(event.target.value)} placeholder="CI run URL or result ID" autoComplete="off" />
           </label>
         </div>
         {actionError && <p role="alert" className="text-sm text-destructive">{actionError}</p>}
@@ -1275,7 +1280,7 @@ function RickProposalsPanel() {
           <div className="flex items-center gap-2 mb-2">
             <CheckCircle2 size={14} style={{ color: "#22c55e" }} />
             <div className="font-bold font-mono text-xs" style={{ color: "#22c55e" }}>
-              Approved Improvements Queue · {approvedQueue.length}
+              Owner-approved · awaiting implementation evidence · {approvedQueue.length}
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -1389,9 +1394,28 @@ function RickProposalsPanel() {
               </div>
 
               <div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Expected Impact</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Test plan / verification</div>
                 <p className="text-[11px] font-mono" style={{ color: "#22d3ee" }}>{p.testPlan ?? p.expectedImpact ?? "UNMEASURED"}</p>
               </div>
+
+              {(p.approvedBy || p.approvalTestRef || p.implementedBy || p.implementationTestRef) && (
+                <section className="rounded-lg border border-white/10 bg-black/20 p-2.5 text-[10px] font-mono space-y-1" aria-label="Owner approval and implementation evidence">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Owner approval and implementation record</div>
+                  {(p.approvedBy || p.approvalTestRef) && (
+                    <div>
+                      <div>Approval recorded by: <span className="text-foreground">{p.approvedBy ?? "not supplied"}</span></div>
+                      {p.approvalTestRef && <div className="break-all">Approval test reference: <span className="text-foreground">{p.approvalTestRef}</span></div>}
+                    </div>
+                  )}
+                  {(p.implementedBy || p.implementationTestRef) && (
+                    <div>
+                      <div>Implementation record submitted by: <span className="text-foreground">{p.implementedBy ?? "not supplied"}</span></div>
+                      {p.implementationTestRef && <div className="break-all">Implementation test reference: <span className="text-foreground">{p.implementationTestRef}</span></div>}
+                    </div>
+                  )}
+                  <p className="text-muted-foreground">These are submitted evidence references; no test execution or code deployment is performed here.</p>
+                </section>
+              )}
 
               {p.reviewerReason && (
                 <div className="rounded-lg border p-2 text-[11px] font-mono" style={{ borderColor: "#ef444440", background: "#ef444410", color: "#fca5a5" }}>
@@ -1676,6 +1700,8 @@ interface ProgramProposal {
   truthfulnessScore?: number;
   decision: "pending" | "approved" | "rejected";
   decidedAt?: number;
+  decidedBy?: string;
+  approvalTestRef?: string;
   reviewerReason?: string;
   dispatch?: {
     taskRef: string;
@@ -1798,6 +1824,8 @@ function RickImprovementProgramPanel() {
   const [reflectingId, setReflectingId] = useState<string | null>(null);
   const [reflectText, setReflectText] = useState("");
   const [expandedCycle, setExpandedCycle] = useState<number | null>(null);
+  const [reviewer, setReviewer] = useState("Father");
+  const [testRef, setTestRef] = useState("");
 
   const active = data?.active ?? null;
   const maxCycles = data?.maxCycles ?? 5;
@@ -1809,12 +1837,13 @@ function RickImprovementProgramPanel() {
     try {
       const r = await fetch(path, {
         method: "POST",
+        credentials: "include",
         headers: body ? { "Content-Type": "application/json" } : undefined,
         body: body ? JSON.stringify(body) : undefined,
       });
-      const j = await r.json();
-      if (!r.ok || j.ok === false) {
-        setErr(j.error || `Request failed: ${r.status}`);
+      const j = await r.json().catch(() => null) as { ok?: unknown; error?: unknown } | null;
+      if (!r.ok || j?.ok !== true) {
+        setErr(typeof j?.error === "string" ? j.error.slice(0, 400) : `Request failed: ${r.status}`);
         return false;
       }
       await refetch();
@@ -1835,11 +1864,25 @@ function RickImprovementProgramPanel() {
   async function advance() { await call("/api/rick/improvement-program/advance"); }
   async function generate() { await call("/api/rick/improvement-program/generate-proposals"); }
   async function decide(id: string, decision: "approved" | "rejected", reason?: string) {
-    await call(`/api/rick/improvement-program/proposal/${id}/decision`, { decision, reason });
+    if (!reviewer.trim() || (decision === "approved" && !testRef.trim())) {
+      setErr(decision === "approved"
+        ? "Enter a non-Rick reviewer and a test result reference before approving."
+        : "Enter a non-Rick reviewer before recording a rejection.");
+      return;
+    }
+    await call(`/api/rick/improvement-program/proposal/${encodeURIComponent(id)}/decision`, {
+      decision, reason, approver: reviewer.trim(), testRef: testRef.trim(),
+    });
   }
   async function dispatch(id: string) { await call(`/api/rick/improvement-program/proposal/${id}/dispatch`); }
   async function updateStatus(id: string, status: "completed" | "failed") {
-    await call(`/api/rick/improvement-program/proposal/${id}/dispatch-status`, { status });
+    if (status === "completed" && (!reviewer.trim() || !testRef.trim())) {
+      setErr("Enter a non-Rick implementer and a test result reference before recording completion.");
+      return;
+    }
+    await call(`/api/rick/improvement-program/proposal/${encodeURIComponent(id)}/dispatch-status`, {
+      status, actor: reviewer.trim(), testRef: testRef.trim(),
+    });
   }
   async function reflect(id: string, text: string) {
     const ok = await call(`/api/rick/improvement-program/proposal/${id}/reflection`, { text });
@@ -1882,11 +1925,45 @@ function RickImprovementProgramPanel() {
           </div>
         </div>
         {err && (
-          <div className="mt-2 text-[10px] font-mono px-2 py-1.5 rounded border" style={{ color: "#ef4444", borderColor: "#ef444440", background: "#ef444410" }}>
+          <div role="alert" className="mt-2 text-[10px] font-mono px-2 py-1.5 rounded border" style={{ color: "#ef4444", borderColor: "#ef444440", background: "#ef444410" }}>
             {err}
           </div>
         )}
       </div>
+
+      <section className="rounded-xl border border-border bg-card p-4 space-y-3" aria-label="Owner review and implementation evidence">
+        <div>
+          <h3 className="font-bold text-sm">Owner review and implementation evidence</h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            Approval and completion require a non-Rick name and a supplied test reference. This records your evidence; it does not run tests or deploy code.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label htmlFor="rick-program-reviewer" className="text-xs">
+            Reviewer / implementer
+            <input
+              id="rick-program-reviewer"
+              className="mt-1 w-full rounded-lg border border-input bg-background p-3 text-foreground"
+              value={reviewer}
+              maxLength={120}
+              autoComplete="off"
+              onChange={event => setReviewer(event.target.value)}
+            />
+          </label>
+          <label htmlFor="rick-program-test-ref" className="text-xs">
+            Test result reference
+            <input
+              id="rick-program-test-ref"
+              className="mt-1 w-full rounded-lg border border-input bg-background p-3 text-foreground"
+              value={testRef}
+              maxLength={400}
+              placeholder="CI run URL or result ID"
+              autoComplete="off"
+              onChange={event => setTestRef(event.target.value)}
+            />
+          </label>
+        </div>
+      </section>
 
       {!active && history.length === 0 && (
         <div className="text-center py-12 text-muted-foreground text-xs font-mono">
@@ -2164,7 +2241,7 @@ function ActiveCyclePanel({
             <div className="text-[11px] font-mono text-foreground/80">{p.problem}</div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Proposed change</div>
             <div className="text-[11px] font-mono text-foreground/80">{p.proposedChange}</div>
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Expected impact</div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Test plan / verification</div>
             <div className="text-[11px] font-mono text-foreground/80">{p.testPlan ?? p.expectedImpact ?? "UNMEASURED"}</div>
             {p.evidence.length > 0 && (
               <div className="flex flex-wrap gap-1">
@@ -2179,6 +2256,13 @@ function ActiveCyclePanel({
             {p.reviewerReason && (
               <div className="text-[10px] font-mono text-muted-foreground italic">
                 Reviewer: {p.reviewerReason}
+              </div>
+            )}
+            {(p.decidedBy || p.approvalTestRef) && (
+              <div className="rounded border border-white/10 bg-white/[0.03] p-2 text-[10px] font-mono" aria-label="Owner review evidence">
+                <div className="uppercase tracking-wider text-muted-foreground">Owner review record</div>
+                {p.decidedBy && <div className="mt-1">Decision recorded by: <span className="text-foreground">{p.decidedBy}</span></div>}
+                {p.approvalTestRef && <div className="break-all">Submitted test reference: <span className="text-foreground">{p.approvalTestRef}</span></div>}
               </div>
             )}
 
@@ -2228,7 +2312,11 @@ function ActiveCyclePanel({
                   </div>
                 )}
                 {p.dispatch.statusNote && (
-                  <div className="text-[10px] font-mono text-foreground/70 italic">{p.dispatch.statusNote}</div>
+                  <div className="text-[10px] font-mono text-foreground/70">
+                    <span className="uppercase tracking-wider text-muted-foreground">Implementation feedback (submitted)</span>
+                    <p className="mt-1 italic">{p.dispatch.statusNote}</p>
+                    <p className="mt-1 text-muted-foreground">Recorded status is not proof of source-code deployment.</p>
+                  </div>
                 )}
                 {p.dispatch.status === "dispatched" && (
                   <div className="flex gap-1.5">
@@ -2500,18 +2588,33 @@ function TaskQueueCard() {
   });
   const [expanded, setExpanded] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [reviewer, setReviewer] = useState("Father");
+  const [testRef, setTestRef] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
   const tasks = data?.tasks ?? [];
   if (tasks.length === 0) return null;
 
   async function setStatus(id: string, status: DispatchedTaskRow["status"]) {
+    if (status === "completed" && (!reviewer.trim() || !testRef.trim())) {
+      setActionError("Enter a non-Rick implementer and a test result reference before recording completion.");
+      return;
+    }
     setBusy(true);
+    setActionError(null);
     try {
-      await fetch(`/api/rick/improvement-program/task-queue/${id}`, {
+      const response = await fetch(`/api/rick/improvement-program/task-queue/${encodeURIComponent(id)}`, {
         method: "PATCH",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, actor: reviewer.trim(), testRef: testRef.trim() }),
       });
+      const result = await response.json().catch(() => null) as { ok?: unknown; error?: unknown } | null;
+      if (!response.ok || result?.ok !== true) {
+        throw new Error(typeof result?.error === "string" ? result.error.slice(0, 400) : `Request failed (${response.status})`);
+      }
       await refetch();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "The status update was not confirmed.");
     } finally {
       setBusy(false);
     }
@@ -2539,6 +2642,37 @@ function TaskQueueCard() {
           ))}
         </div>
       </div>
+      <section className="rounded-lg border border-white/10 bg-white/[0.03] p-2.5 space-y-2" aria-label="Task completion evidence">
+        <p className="text-[10px] text-muted-foreground">
+          Completion records a submitted implementer and test reference; this queue does not run tests or deploy code.
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label htmlFor="rick-task-implementer" className="text-[10px]">
+            Implementer
+            <input
+              id="rick-task-implementer"
+              className="mt-1 w-full rounded-lg border border-input bg-background p-2 text-foreground"
+              value={reviewer}
+              maxLength={120}
+              autoComplete="off"
+              onChange={event => setReviewer(event.target.value)}
+            />
+          </label>
+          <label htmlFor="rick-task-test-ref" className="text-[10px]">
+            Test result reference
+            <input
+              id="rick-task-test-ref"
+              className="mt-1 w-full rounded-lg border border-input bg-background p-2 text-foreground"
+              value={testRef}
+              maxLength={400}
+              placeholder="CI run URL or result ID"
+              autoComplete="off"
+              onChange={event => setTestRef(event.target.value)}
+            />
+          </label>
+        </div>
+        {actionError && <p role="alert" className="text-xs text-destructive">{actionError}</p>}
+      </section>
       <div className="space-y-1.5">
         {tasks.map(t => {
           const isOpen = expanded === t.id;
@@ -2563,7 +2697,7 @@ function TaskQueueCard() {
                   <pre className="text-[10px] font-mono text-foreground/80 whitespace-pre-wrap bg-black/40 border border-white/10 rounded p-2 max-h-64 overflow-auto">{t.body}</pre>
                   <div className="flex flex-wrap gap-1.5">
                     {(["queued", "in-progress", "completed", "failed", "cancelled"] as const).map(st => (
-                      <button key={st} disabled={busy || t.status === st} onClick={() => setStatus(t.id, st)}
+                      <button key={st} disabled={busy || t.status === st || (st === "completed" && (!reviewer.trim() || !testRef.trim()))} onClick={() => setStatus(t.id, st)}
                         className="text-[10px] font-mono px-2 py-0.5 rounded border disabled:opacity-30"
                         style={{ color: TASK_STATUS_COLORS[st], borderColor: `${TASK_STATUS_COLORS[st]}60`, background: `${TASK_STATUS_COLORS[st]}10` }}>
                         → {st}

@@ -10,14 +10,37 @@ import { cn } from "@/lib/utils";
 
 const API = import.meta.env.VITE_API_URL || "";
 
-function ProposalCard({ proposal }: { proposal: any }) {
+async function postApi(path: string, body?: unknown): Promise<any> {
+  const response = await fetch(path, {
+    method: "POST",
+    credentials: "include",
+    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const payload = await response.json().catch(() => null) as { ok?: unknown; error?: unknown } | null;
+  if (!response.ok || payload?.ok !== true) {
+    throw new Error(typeof payload?.error === "string" ? payload.error.slice(0, 400) : `Request failed (${response.status})`);
+  }
+  return payload;
+}
+
+function ProposalCard({ proposal, threshold }: { proposal: any; threshold: number }) {
   const [expanded, setExpanded] = useState(false);
-  const statusColor = proposal.status === "approved" ? "text-emerald-400" : proposal.status === "rejected" ? "text-red-400" : "text-amber-400";
-  const StatusIcon = proposal.status === "approved" ? CheckCircle : proposal.status === "rejected" ? XCircle : Clock;
+  const votePassed = proposal.status === "approved" || proposal.status === "implemented";
+  const voteLabel = votePassed ? "VOTE PASSED" : proposal.status === "rejected" ? "VOTE REJECTED" : "VOTE PENDING";
+  const statusColor = votePassed ? "text-emerald-400" : proposal.status === "rejected" ? "text-red-400" : "text-amber-400";
+  const StatusIcon = votePassed ? CheckCircle : proposal.status === "rejected" ? XCircle : Clock;
+  const approvalPct = Number.isFinite(Number(proposal.approvalRate)) ? Math.round(Number(proposal.approvalRate) * 100) : null;
+  const thresholdPct = Math.round(threshold * 100);
 
   return (
     <GlassCard hover>
-      <div className="flex items-start justify-between gap-2 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+      <button
+        type="button"
+        className="w-full text-left flex items-start justify-between gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 rounded-lg"
+        onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
+      >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <StatusIcon className={cn("w-4 h-4 flex-shrink-0", statusColor)} />
@@ -26,7 +49,7 @@ function ProposalCard({ proposal }: { proposal: any }) {
           <div className="text-xs text-slate-400 flex items-center gap-3 flex-wrap">
             <span className="bg-violet-500/15 text-violet-300 px-1.5 py-0.5 rounded-full border border-violet-500/20 text-[10px]">{proposal.category}</span>
             <span>By {proposal.proposedBy}</span>
-            <span>{Math.round(proposal.approvalRate * 100)}% approval</span>
+            <span>{approvalPct == null ? "No vote recorded" : `${approvalPct}% weighted support / ${thresholdPct}% threshold`}</span>
             {proposal.votingDurationMs != null && (
               <span className="text-cyan-400 flex items-center gap-0.5"><Timer className="w-3 h-3" />{proposal.votingDurationMs}ms</span>
             )}
@@ -36,17 +59,23 @@ function ProposalCard({ proposal }: { proposal: any }) {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className={cn("text-[10px] font-mono px-2 py-0.5 rounded-full border", proposal.status === "approved" ? "bg-emerald-500/15 border-emerald-500/20 text-emerald-400" : proposal.status === "rejected" ? "bg-red-500/15 border-red-500/20 text-red-400" : "bg-amber-500/15 border-amber-500/20 text-amber-400")}>{proposal.status?.toUpperCase()}</span>
+          <span className={cn("text-[10px] font-mono px-2 py-0.5 rounded-full border", votePassed ? "bg-emerald-500/15 border-emerald-500/20 text-emerald-400" : proposal.status === "rejected" ? "bg-red-500/15 border-red-500/20 text-red-400" : "bg-amber-500/15 border-amber-500/20 text-amber-400")}>{voteLabel}</span>
           {expanded ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
         </div>
-      </div>
+      </button>
       {expanded && (
         <div className="mt-3 pt-3 border-t border-white/[0.06] space-y-2">
           <p className="text-xs text-slate-300 leading-relaxed">{proposal.description}</p>
-          <div className="flex gap-4 text-xs">
-            <span className="text-emerald-400 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> {proposal.yesCount}</span>
-            <span className="text-red-400 flex items-center gap-1"><XCircle className="w-3 h-3" /> {proposal.noCount}</span>
-            <span className="text-slate-500">ABSTAIN: {proposal.abstainCount}</span>
+          <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-2 text-xs">
+            <div className="text-[10px] uppercase tracking-wider text-slate-500">Council vote record</div>
+            <div className="mt-1 text-slate-300">
+              {voteLabel} · {approvalPct == null ? "support not reported" : `${approvalPct}% weighted support`} · {thresholdPct}% required
+            </div>
+            <div className="flex gap-4 mt-1">
+              <span className="text-emerald-400 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> YES {proposal.yesCount ?? 0}</span>
+              <span className="text-red-400 flex items-center gap-1"><XCircle className="w-3 h-3" /> NO {proposal.noCount ?? 0}</span>
+              <span className="text-slate-500">ABSTAIN {proposal.abstainCount ?? 0}</span>
+            </div>
           </div>
           {proposal.votes && proposal.votes.length > 0 && (
             <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
@@ -63,8 +92,15 @@ function ProposalCard({ proposal }: { proposal: any }) {
               ))}
             </div>
           )}
-          {proposal.implementationNotes && (
-            <p className="text-xs text-emerald-400/70 italic mt-1">{proposal.implementationNotes}</p>
+          {proposal.status === "approved" && (
+            <p className="text-[11px] text-amber-300">Council vote passed; no Council execution record is attached yet. This is separate from owner approval.</p>
+          )}
+          {(proposal.status === "implemented" || proposal.implementationNotes) && (
+            <div className="rounded-lg border border-emerald-500/15 bg-emerald-500/[0.04] p-2">
+              <div className="text-[10px] uppercase tracking-wider text-emerald-400">Council execution record</div>
+              <p className="text-xs text-emerald-300/80 italic mt-1">{proposal.implementationNotes || "Execution status recorded by the Council."}</p>
+              <p className="text-[10px] text-slate-500 mt-1">This records a Council/system-policy action, not an application source-code deployment or owner approval.</p>
+            </div>
           )}
         </div>
       )}
@@ -173,6 +209,7 @@ function TranscriptCard({ deliberation }: { deliberation: any }) {
 
 function HeavyCouncilTab() {
   const queryClient = useQueryClient();
+  const [actionError, setActionError] = useState<string | null>(null);
   const [prompts, setPrompts] = useState({ life: "", universe: "", community: "" });
   const [lastResult, setLastResult] = useState<any>(null);
 
@@ -190,17 +227,15 @@ function HeavyCouncilTab() {
 
   const deliberateMutation = useMutation({
     mutationFn: (data: { life: string; universe: string; community: string }) =>
-      fetch(`${API}/api/council/heavy-deliberation`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      }).then(r => r.json()),
+      postApi(`${API}/api/council/heavy-deliberation`, data),
+    onMutate: () => setActionError(null),
     onSuccess: (data) => {
       setLastResult(data);
       queryClient.invalidateQueries({ queryKey: ["heavy-deliberations"] });
       queryClient.invalidateQueries({ queryKey: ["council-proposals"] });
       queryClient.invalidateQueries({ queryKey: ["council-consensus"] });
     },
+    onError: (error) => setActionError(error instanceof Error ? error.message : "Council deliberation failed."),
   });
 
   const canSubmit = prompts.life.trim().length > 10 && prompts.universe.trim().length > 10 && prompts.community.trim().length > 10;
@@ -217,11 +252,11 @@ function HeavyCouncilTab() {
         <div className="flex items-center gap-2 mb-4">
           <Brain className="w-5 h-5 text-violet-400" />
           <h2 className="text-base font-bold text-white">Heavy Council Deliberation</h2>
-          <span className="ml-auto text-[10px] font-mono text-violet-400/60 bg-violet-500/10 border border-violet-500/15 px-2 py-0.5 rounded-full">3 PROMPTS · Φ-BFT · AUTO-APPLY</span>
+          <span className="ml-auto text-[10px] font-mono text-violet-400/60 bg-violet-500/10 border border-violet-500/15 px-2 py-0.5 rounded-full">3 PROMPTS · Φ-BFT · DOMAIN-POLICY WRITE</span>
         </div>
         <p className="text-xs text-slate-400 mb-4 leading-relaxed">
           Submit three domain prompts — Life, Universe, and Community — for simultaneous Φ-weighted BFT deliberation by all 24 council agents.
-          Proposals passing the ≥2/3 supermajority threshold are automatically applied and marked implemented.
+          Proposals passing the ≥2/3 supermajority threshold are written to the active domain-directive store and knowledge corpus. This does not deploy application source code.
         </p>
 
         <div className="space-y-3">
@@ -255,6 +290,7 @@ function HeavyCouncilTab() {
             <><Zap className="w-4 h-4" /> Run Heavy Council Deliberation</>
           )}
         </button>
+        {actionError && <p role="alert" className="mt-3 text-xs text-red-300">{actionError}</p>}
       </GlassCard>
 
       {lastResult && !deliberateMutation.isPending && (
@@ -262,7 +298,7 @@ function HeavyCouncilTab() {
           <div className="flex items-center gap-2 mb-3">
             <CheckCircle className="w-4 h-4 text-emerald-400" />
             <h3 className="text-sm font-bold text-white">Deliberation Complete</h3>
-            <span className="ml-auto text-xs font-mono text-emerald-400">{lastResult.approvedCount}/3 applied</span>
+            <span className="ml-auto text-xs font-mono text-emerald-400">{lastResult.approvedCount}/3 votes passed · {lastResult.appliedCount}/3 policy writes</span>
           </div>
           <div className="space-y-2">
             {lastResult.entries?.map((entry: any) => (
@@ -270,17 +306,19 @@ function HeavyCouncilTab() {
                 <div className="flex items-center justify-between mb-1">
                   <span className={cn("text-[10px] font-mono font-bold uppercase", entry.domain === "life" ? "text-emerald-400" : entry.domain === "universe" ? "text-violet-400" : "text-amber-400")}>{entry.domain}</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono text-slate-400">{Math.round((entry.proposal.approvalRate ?? 0) * 100)}% approval</span>
+                    <span className="text-[10px] font-mono text-slate-400">{Math.round((entry.proposal.approvalRate ?? 0) * 100)}% weighted support</span>
                     <span className={cn("text-[10px] font-mono px-1.5 py-0.5 rounded-full border", entry.applied ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400" : entry.proposal.status === "rejected" ? "bg-red-500/15 border-red-500/30 text-red-400" : "bg-amber-500/15 border-amber-500/30 text-amber-400")}>
-                      {entry.applied ? "APPLIED" : entry.proposal.status?.toUpperCase()}
+                      {entry.applied ? "POLICY WRITTEN" : entry.proposal.status === "rejected" ? "VOTE REJECTED" : entry.proposal.status === "approved" ? "VOTE PASSED · WRITE FAILED" : "VOTE PENDING"}
                     </span>
                   </div>
                 </div>
                 <p className="text-xs text-slate-300 truncate">{entry.prompt}</p>
                 <div className="text-[10px] text-slate-500 font-mono mt-1">
+                  Council vote:{" "}
                   {entry.proposal.yesCount}Y · {entry.proposal.noCount}N · {entry.proposal.abstainCount}A
                   {entry.proposal.votingDurationMs != null && ` · ${entry.proposal.votingDurationMs}ms`}
                 </div>
+                {entry.applyNote && <div className="text-[10px] text-slate-400 mt-1">{entry.applyNote}</div>}
               </div>
             ))}
           </div>
@@ -347,6 +385,7 @@ export default function GrandCouncilPage({ initialTab }: { initialTab?: "proposa
   const [showForm, setShowForm] = useState(false);
   const [newProposal, setNewProposal] = useState({ title: "", description: "", category: "governance" });
   const [activeTab, setActiveTab] = useState<"proposals" | "hierarchy" | "executor" | "heavy">(initialTab || "proposals");
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const { data: consensus } = useQuery({
     queryKey: ["council-consensus"],
@@ -368,31 +407,34 @@ export default function GrandCouncilPage({ initialTab }: { initialTab?: "proposa
 
   const proposeMutation = useMutation({
     mutationFn: (data: { title: string; description: string; category: string }) =>
-      fetch(`${API}/api/council/propose`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      }).then(r => r.json()),
+      postApi(`${API}/api/council/propose`, data),
+    onMutate: () => setActionError(null),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["council-proposals"] });
       queryClient.invalidateQueries({ queryKey: ["council-consensus"] });
       setShowForm(false);
       setNewProposal({ title: "", description: "", category: "governance" });
     },
+    onError: (error) => setActionError(error instanceof Error ? error.message : "Proposal submission failed."),
   });
 
   const executorStartMutation = useMutation({
-    mutationFn: () => fetch(`${API}/api/council/executor/start`, { method: "POST" }).then(r => r.json()),
+    mutationFn: () => postApi(`${API}/api/council/executor/start`),
+    onMutate: () => setActionError(null),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["council-consensus"] }),
+    onError: (error) => setActionError(error instanceof Error ? error.message : "Council executor could not be started."),
   });
 
   const executorStopMutation = useMutation({
-    mutationFn: () => fetch(`${API}/api/council/executor/stop`, { method: "POST" }).then(r => r.json()),
+    mutationFn: () => postApi(`${API}/api/council/executor/stop`),
+    onMutate: () => setActionError(null),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["council-consensus"] }),
+    onError: (error) => setActionError(error instanceof Error ? error.message : "Council executor could not be stopped."),
   });
 
   const c = consensus?.consensus;
   const e = consensus?.executor;
+  const bftThreshold = typeof c?.bftResponseThreshold === "number" ? c.bftResponseThreshold : 2 / 3;
 
   const councilTabs = [
     { id: "proposals", label: "Proposals & Decisions" },
@@ -402,7 +444,7 @@ export default function GrandCouncilPage({ initialTab }: { initialTab?: "proposa
   ] as const;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#02010a] to-[#080518] p-4 md:p-6 pb-24">
+      <div className="min-h-screen bg-gradient-to-b from-[#02010a] to-[#080518] p-4 md:p-6 pb-24">
       <div className="max-w-4xl mx-auto space-y-6 sovereign-stagger">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -420,6 +462,11 @@ export default function GrandCouncilPage({ initialTab }: { initialTab?: "proposa
             <Plus className="w-4 h-4" /> New Proposal
           </button>
         </div>
+
+        <p className="text-[11px] text-slate-500 font-mono" role="note">
+          Council vote, owner approval, and Council execution are separate records. An “implemented” Council status does not mean application source code was deployed.
+        </p>
+        {actionError && <p role="alert" className="rounded-lg border border-red-500/20 bg-red-500/[0.06] px-3 py-2 text-xs text-red-300">{actionError}</p>}
 
         {showForm && (
           <GlassCard glow="violet">
@@ -445,15 +492,15 @@ export default function GrandCouncilPage({ initialTab }: { initialTab?: "proposa
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <HeroStat icon={Vote} value={c?.totalProposals ?? 0} label="Total Proposals" color="violet" />
-          <HeroStat icon={CheckCircle} value={c?.approved ?? 0} label="Approved" color="emerald" />
+          <HeroStat icon={CheckCircle} value={c?.approved ?? 0} label="Vote Passed" color="emerald" />
           <HeroStat icon={XCircle} value={c?.rejected ?? 0} label="Rejected" color="rose" />
-          <HeroStat icon={TrendingUp} value={`${c?.avgApprovalRate ?? 0}%`} label="Avg Approval" color="cyan" />
+          <HeroStat icon={TrendingUp} value={`${c?.avgApprovalRate ?? 0}%`} label="Avg Weighted Support" color="cyan" />
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <HeroStat icon={Users} value={consensus?.hierarchy?.totalAgents ?? 27} label="Council Agents" color="violet" />
           <HeroStat icon={Timer} value={c?.avgVotingDurationMs ? `${c.avgVotingDurationMs}ms` : "—"} label="Avg Vote Time" color="cyan" />
-          <HeroStat icon={Zap} value={e?.autoProcessed ?? 0} label="Auto-Executed" color="emerald" />
+          <HeroStat icon={Zap} value={e?.autoProcessed ?? 0} label="Executor Actions" color="emerald" />
           <HeroStat icon={e?.isRunning ? Play : Square} value={e?.isRunning ? "RUNNING" : "STOPPED"} label="Executor" color={e?.isRunning ? "emerald" : "rose"} />
         </div>
 
@@ -470,7 +517,7 @@ export default function GrandCouncilPage({ initialTab }: { initialTab?: "proposa
           <div className="space-y-3 sovereign-stagger">
             <SectionHeader icon={Vote} title="Φ-Weighted BFT Consensus Proposals" color="violet" />
             {proposals?.proposals?.length > 0 ? (
-              proposals.proposals.map((p: any) => <ProposalCard key={p.id} proposal={p} />)
+              proposals.proposals.map((p: any) => <ProposalCard key={p.id} proposal={p} threshold={bftThreshold} />)
             ) : (
               <div className="text-center text-slate-500 text-sm py-8">No proposals yet. Submit one to begin council deliberation.</div>
             )}

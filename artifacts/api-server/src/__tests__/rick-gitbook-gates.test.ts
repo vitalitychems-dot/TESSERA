@@ -1,6 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import express from "express";
+import { createServer, type Server } from "node:http";
 
 // Chainable no-op DB: every call returns the chain; awaiting it yields [].
 vi.mock("@workspace/db", () => {
@@ -22,14 +24,36 @@ import {
   stripForecasts,
   testPlanFor,
 } from "../lib/rick-gates";
+import rickRouter from "../routes/rick";
+import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 
 const SRC = resolve(__dirname, "..");
 const read = (p: string) => readFileSync(resolve(SRC, p), "utf-8");
 const FORECAST = /\d+(?:\.\d+)?\s*%|\b\d+x\b/i;
 
 let saved: string | undefined;
+let routeServer: Server | undefined;
+let routeBaseUrl = "";
 beforeEach(() => { saved = process.env[RICK_LOOP_FLAG]; delete process.env[RICK_LOOP_FLAG]; });
 afterEach(() => { if (saved === undefined) delete process.env[RICK_LOOP_FLAG]; else process.env[RICK_LOOP_FLAG] = saved; });
+
+beforeAll(async () => {
+  const app = express();
+  app.use(express.json());
+  app.use(rickRouter);
+  routeServer = createServer(app);
+  await new Promise<void>(resolveListen => routeServer?.listen(0, "127.0.0.1", resolveListen));
+  const address = routeServer.address();
+  if (!address || typeof address === "string") throw new Error("Rick route test server did not start");
+  routeBaseUrl = `http://127.0.0.1:${address.port}`;
+});
+
+afterAll(async () => {
+  if (!routeServer) return;
+  await new Promise<void>((resolveClose, rejectClose) =>
+    routeServer?.close(error => error ? rejectClose(error) : resolveClose()),
+  );
+});
 
 describe("D. boot-time Rick loop is gated (TESSERA_ENABLE_RICK_LOOP, default 0)", () => {
   it("flag defaults to off and only '1' turns it on", () => {
@@ -89,12 +113,201 @@ describe("B. approve / implemented need a non-Rick actor plus a test reference",
     expect(r).toMatch(/router\.post\("\/rick\/proposals\/:id\/implemented", requireAdminSession, requireOwnerOrigin/);
     expect((r.match(/err instanceof RickGateError\) return res\.status\(403\)/g) ?? []).length).toBe(2);
   });
+  it("owner-gates improvement-program review and implementation feedback routes", () => {
+    const r = read("routes/rick.ts");
+    expect(r).toContain('router.post("/rick/improvement-program/proposal/:proposalId/decision", requireAdminSession, requireOwnerOrigin');
+    expect(r).toContain('router.post("/rick/improvement-program/proposal/:proposalId/dispatch-status", requireAdminSession, requireOwnerOrigin');
+    expect(r).toContain('router.patch("/rick/improvement-program/task-queue/:taskId", requireAdminSession, requireOwnerOrigin');
+    expect(r).toContain('decideProposal(routeParam(req, "proposalId"), decision, reason, { approver, testRef })');
+    expect(r).toContain('updateDispatchStatus(routeParam(req, "proposalId"), status, note, { actor, testRef })');
+    expect(r).toContain("updateDispatchStatus(taskId, status, note, { actor, testRef })");
+  });
   it("improvement-program decisions and completions are gated too", async () => {
     const prog = await import("../lib/rick-improvement-program");
     await expect(prog.decideProposal("p", "approved", undefined, { approver: "rick", testRef: "t" })).rejects.toThrow(/must not be Rick/);
     await expect(prog.decideProposal("p", "approved", undefined, { approver: "tessera" })).rejects.toThrow(/testRef/);
     await expect(prog.updateDispatchStatus("t", "completed", undefined, { actor: "rick-sanchez-c137", testRef: "x" })).rejects.toThrow(/must not be Rick/);
     await expect(prog.updateDispatchStatus("t", "completed", undefined, { actor: "lane" })).rejects.toThrow(/testRef/);
+  });
+  it("records a distinct owner approval and implementation reference without promoting rejected proposals", async () => {
+    const llmEnvNames = ["TESSERA_LLM_BASE_URL", "TESSERA_LLM_API_KEY", "TESSERA_LLM_MODEL"] as const;
+    const savedLlmEnv = Object.fromEntries(llmEnvNames.map(name => [name, process.env[name]]));
+    for (const name of llmEnvNames) delete process.env[name];
+
+    try {
+      const proposals = await import("../lib/rick-proposals");
+      const generated = await proposals.generateProposals();
+      expect(generated.proposals.length).toBeGreaterThanOrEqual(2);
+
+      const toApprove = generated.proposals[0]!;
+      const toReject = generated.proposals[1]!;
+      const approved = await proposals.approveProposal(toApprove.id, {
+        approver: "Father",
+        testRef: "vitest:owner-approval",
+      });
+      expect(approved).toMatchObject({
+        state: "approved",
+        approvedBy: "Father",
+        approvalTestRef: "vitest:owner-approval",
+      });
+
+      const implemented = await proposals.markImplemented(toApprove.id, {
+        implementer: "Father",
+        testRef: "vitest:implementation-feedback",
+      });
+      expect(implemented).toMatchObject({
+        state: "implemented",
+        approvedBy: "Father",
+        approvalTestRef: "vitest:owner-approval",
+        implementedBy: "Father",
+        implementationTestRef: "vitest:implementation-feedback",
+      });
+
+      const rejected = await proposals.rejectProposal(toReject.id, "Not needed for this test.");
+      expect(rejected?.state).toBe("rejected");
+      await expect(proposals.approveProposal(toReject.id, {
+        approver: "Father",
+        testRef: "vitest:must-not-promote-rejected",
+      })).rejects.toThrow(/only pending-review/);
+      expect((await proposals.listProposals()).find(item => item.id === toReject.id)?.state).toBe("rejected");
+    } finally {
+      for (const name of llmEnvNames) {
+        const value = savedLlmEnv[name];
+        if (value === undefined) delete process.env[name];
+        else process.env[name] = value;
+      }
+    }
+  });
+  it("runs the owner-gated improvement approval and implementation feedback path over HTTP", async () => {
+    const envNames = ["TESSERACT_ADMIN_KEY", "SOVEREIGN_SESSION_SECRET", "TESSERA_LLM_BASE_URL", "TESSERA_LLM_API_KEY", "TESSERA_LLM_MODEL"] as const;
+    const savedEnv = Object.fromEntries(envNames.map(name => [name, process.env[name]]));
+    process.env.TESSERACT_ADMIN_KEY = "synthetic-rick-owner-token";
+    process.env.SOVEREIGN_SESSION_SECRET = "synthetic-rick-session-secret-32chars!!";
+    for (const name of envNames.slice(2)) delete process.env[name];
+
+    const post = (path: string, body: unknown, cookie?: string) => fetch(`${routeBaseUrl}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: routeBaseUrl,
+        ...(cookie ? { Cookie: cookie } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+
+    try {
+      const session = issueSession({ ip: "127.0.0.1", userAgent: "rick-gates-vitest" });
+      const ownerCookie = `${SESSION_COOKIE}=${session.signedId}`;
+
+      const directStateResponse = await fetch(`${routeBaseUrl}/rick/proposals`);
+      expect(directStateResponse.status).toBe(200);
+      const directState = await directStateResponse.json() as { proposals: Array<{ id: string; state: string }> };
+      const directPending = directState.proposals.filter(proposal => proposal.state === "pending-review");
+      expect(directPending.length).toBeGreaterThanOrEqual(2);
+      const directFirst = directPending[0]!;
+      const directUnauthenticated = await post(`/rick/proposals/${encodeURIComponent(directFirst.id)}/approve`, {
+        approver: "Father", testRef: "vitest:owner-approval",
+      });
+      expect(directUnauthenticated.status).toBe(401);
+
+      const directApproval = await post(`/rick/proposals/${encodeURIComponent(directFirst.id)}/approve`, {
+        approver: "Father", testRef: "vitest:owner-approval",
+      }, ownerCookie);
+      expect(directApproval.status).toBe(200);
+      const directApprovalBody = await directApproval.json() as { ok: boolean; proposal: { state: string; approvedBy: string; approvalTestRef: string } };
+      expect(directApprovalBody).toMatchObject({
+        ok: true,
+        proposal: { state: "approved", approvedBy: "Father", approvalTestRef: "vitest:owner-approval" },
+      });
+
+      const directImplementation = await post(`/rick/proposals/${encodeURIComponent(directFirst.id)}/implemented`, {
+        implementer: "Father", testRef: "vitest:implementation",
+      }, ownerCookie);
+      expect(directImplementation.status).toBe(200);
+      const directImplementationBody = await directImplementation.json() as { ok: boolean; proposal: { state: string; implementedBy: string; implementationTestRef: string } };
+      expect(directImplementationBody).toMatchObject({
+        ok: true,
+        proposal: { state: "implemented", implementedBy: "Father", implementationTestRef: "vitest:implementation" },
+      });
+
+      const directToReject = directPending[1]!;
+      const directReject = await post(`/rick/proposals/${encodeURIComponent(directToReject.id)}/reject`, {
+        reason: "Rejected in the route-flow test.",
+      }, ownerCookie);
+      expect(directReject.status).toBe(200);
+      const rejectThenApprove = await post(`/rick/proposals/${encodeURIComponent(directToReject.id)}/approve`, {
+        approver: "Father", testRef: "vitest:must-not-promote-rejected",
+      }, ownerCookie);
+      expect(rejectThenApprove.status).toBe(403);
+      const directFinalState = await (await fetch(`${routeBaseUrl}/rick/proposals`)).json() as { proposals: Array<{ id: string; state: string }> };
+      expect(directFinalState.proposals.find(proposal => proposal.id === directToReject.id)?.state).toBe("rejected");
+
+      const programService = await import("../lib/rick-improvement-program");
+      const active = await programService.startProgram();
+      await programService.generateCycleProposals();
+      await programService.advanceStage();
+
+      const pending = active.cycles[0]!.proposals;
+      expect(pending.length).toBeGreaterThan(0);
+      const first = pending[0]!;
+      const unauthenticated = await post(`/rick/improvement-program/proposal/${encodeURIComponent(first.id)}/decision`, {
+        decision: "approved", approver: "Father", testRef: "vitest:review",
+      });
+      expect(unauthenticated.status).toBe(401);
+
+      const approvedResponse = await post(`/rick/improvement-program/proposal/${encodeURIComponent(first.id)}/decision`, {
+        decision: "approved", approver: "Father", testRef: "vitest:review",
+      }, ownerCookie);
+      expect(approvedResponse.status).toBe(200);
+      const approvedBody = await approvedResponse.json() as { ok: boolean; program: { cycles: Array<{ proposals: Array<{ id: string; decision: string; decidedBy?: string; approvalTestRef?: string }> }> } };
+      expect(approvedBody.ok).toBe(true);
+      expect(approvedBody.program.cycles[0]!.proposals.find(proposal => proposal.id === first.id)).toMatchObject({
+        decision: "approved",
+        decidedBy: "Father",
+        approvalTestRef: "vitest:review",
+      });
+
+      for (const proposal of pending.slice(1)) {
+        await programService.decideProposal(proposal.id, "rejected", "Closed by test fixture.", { approver: "Father" });
+      }
+      await programService.advanceStage();
+      const state = await programService.getProgram();
+      const programProposal = state.active!.cycles[0]!.proposals.find(proposal => proposal.id === first.id)!;
+      programProposal.dispatch = {
+        taskRef: "fixture-dispatch",
+        dispatchedAt: Date.now(),
+        status: "dispatched",
+        statusNote: "Fixture task for status route test.",
+      };
+
+      const completedResponse = await post(`/rick/improvement-program/proposal/${encodeURIComponent(first.id)}/dispatch-status`, {
+        status: "completed", actor: "Father", testRef: "vitest:implementation",
+      }, ownerCookie);
+      expect(completedResponse.status).toBe(200);
+      const completedBody = await completedResponse.json() as { ok: boolean; program: { cycles: Array<{ proposals: Array<{ id: string; dispatch?: { status: string; statusNote?: string } }> }> } };
+      expect(completedBody.ok).toBe(true);
+      expect(completedBody.program.cycles[0]!.proposals.find(proposal => proposal.id === first.id)?.dispatch).toMatchObject({
+        status: "completed",
+        statusNote: expect.stringContaining("completed by Father; test: vitest:implementation"),
+      });
+      expect(isRickLoopEnabled()).toBe(false);
+    } finally {
+      for (const name of envNames) {
+        const value = savedEnv[name];
+        if (value === undefined) delete process.env[name];
+        else process.env[name] = value;
+      }
+    }
+  });
+  it("Rick UI sends review and implementation evidence and does not report unconfirmed state changes", () => {
+    const page = read("../../tessera/src/pages/RickPage.tsx");
+    expect(page).toContain("decision, reason, approver: reviewer.trim(), testRef: testRef.trim()");
+    expect(page).toContain("status, actor: reviewer.trim(), testRef: testRef.trim()");
+    expect(page).toContain("JSON.stringify({ status, actor: reviewer.trim(), testRef: testRef.trim() })");
+    expect(page).toContain("if (!r.ok || j?.ok !== true)");
+    expect(page).toContain("if (!response.ok || result?.ok !== true)");
+    expect(page).toContain("The proposal was not rejected; its current state was left unchanged.");
+    expect(page).toContain("Implementation record saved with the supplied test reference.");
   });
 });
 
