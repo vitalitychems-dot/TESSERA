@@ -37,7 +37,6 @@ interface SessionRecord {
   id: string;
   issuedAt: number;
   expiresAt: number;
-  ip: string;
   userAgent: string;
 }
 
@@ -126,7 +125,8 @@ function verifySessionSignature(signed: string): string | null {
 }
 
 export interface IssueOpts {
-  ip: string;
+  /** Legacy input accepted for compatibility; never stored or logged. */
+  ip?: string;
   userAgent: string;
   ttlMs?: number;
 }
@@ -148,7 +148,6 @@ export function issueSession(opts: IssueOpts): IssuedSession {
     id: rawId,
     issuedAt: now,
     expiresAt: now + ttlMs,
-    ip: opts.ip.slice(0, 64),
     userAgent: opts.userAgent.slice(0, 256),
   };
 

@@ -4,6 +4,7 @@
 
 import type { Request, Response, NextFunction } from "express";
 import { decideOwnerSession } from "./sovereign-admin";
+import { ipRateLimitKey, type IpRateLimitPurpose } from "./ip-rate-limit-key";
 
 const WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 10;
@@ -13,10 +14,11 @@ const FATHER_MAX_IPS = 4096;
 const _hits = new Map<string, number[]>();
 const _fatherGlobalHits: number[] = [];
 
-function ipOf(req: Request): string {
+function bucketKeyForRequest(req: Request, purpose: IpRateLimitPurpose): string {
   // req.ip follows the app trust-proxy setting (APP_TRUSTED_PROXIES, lib/trust-proxy.ts). X-Forwarded-For
   // from an unlisted peer is client-controlled and must not key a limiter.
-  return req.ip || req.socket.remoteAddress || "unknown";
+  // Only a purpose-separated HMAC is retained in the in-memory limiter maps.
+  return ipRateLimitKey(req.ip || req.socket.remoteAddress || "unknown", purpose);
 }
 
 function evictOldest<T>(map: Map<string, T[]>, maxIps: number): void {
@@ -28,10 +30,10 @@ function evictOldest<T>(map: Map<string, T[]>, maxIps: number): void {
 }
 
 function prune(now: number): void {
-  for (const [ip, arr] of _hits) {
+  for (const [bucketKey, arr] of _hits) {
     const filtered = arr.filter((t) => now - t < WINDOW_MS);
-    if (filtered.length === 0) _hits.delete(ip);
-    else _hits.set(ip, filtered);
+    if (filtered.length === 0) _hits.delete(bucketKey);
+    else _hits.set(bucketKey, filtered);
   }
   evictOldest(_hits, FATHER_MAX_IPS);
   const globalHits = _fatherGlobalHits.filter((t) => now - t < WINDOW_MS);
@@ -49,8 +51,8 @@ export function fatherVerifyRateLimit(req: Request, res: Response, next: NextFun
   }
   const now = Date.now();
   prune(now);
-  const ip = ipOf(req);
-  const arr = _hits.get(ip) ?? [];
+  const bucketKey = bucketKeyForRequest(req, "father-verification");
+  const arr = _hits.get(bucketKey) ?? [];
   const retry = (limit: number, oldest: number, scope: string) => {
     const retryAfterMs = WINDOW_MS - (now - oldest);
     res.setHeader("Retry-After", Math.max(1, Math.ceil(retryAfterMs / 1000)).toString());
@@ -70,7 +72,7 @@ export function fatherVerifyRateLimit(req: Request, res: Response, next: NextFun
     return;
   }
   arr.push(now);
-  _hits.set(ip, arr);
+  _hits.set(bucketKey, arr);
   _fatherGlobalHits.push(now);
   next();
 }
@@ -91,12 +93,12 @@ const _adminHits = new Map<string, number[]>();
 const _adminGlobalHits: number[] = [];
 
 function pruneAdmin(now: number): void {
-  for (const [ip, arr] of _adminHits) {
+  for (const [bucketKey, arr] of _adminHits) {
     const filtered = arr.filter((t) => now - t < ADMIN_SESSION_WINDOW_MS);
-    if (filtered.length === 0) _adminHits.delete(ip);
-    else _adminHits.set(ip, filtered);
+    if (filtered.length === 0) _adminHits.delete(bucketKey);
+    else _adminHits.set(bucketKey, filtered);
   }
-  // FIFO eviction if the IP table itself grows too large.
+  // FIFO eviction if the address-bucket table grows too large.
   while (_adminHits.size > ADMIN_SESSION_MAX_IPS) {
     const oldest = _adminHits.keys().next().value;
     if (oldest === undefined) break;
@@ -106,9 +108,10 @@ function pruneAdmin(now: number): void {
 
 export function adminSessionRateLimit(req: Request, res: Response, next: NextFunction): void {
   const now = Date.now();
-  if (Math.random() < 0.05) pruneAdmin(now);
-  const ip = ipOf(req);
-  const arr = (_adminHits.get(ip) ?? []).filter((t) => now - t < ADMIN_SESSION_WINDOW_MS);
+  // Bound address-hash retention to the same rolling window on every request.
+  pruneAdmin(now);
+  const bucketKey = bucketKeyForRequest(req, "admin-session");
+  const arr = (_adminHits.get(bucketKey) ?? []).filter((t) => now - t < ADMIN_SESSION_WINDOW_MS);
   const globalHits = _adminGlobalHits.filter((t) => now - t < ADMIN_SESSION_WINDOW_MS);
   _adminGlobalHits.length = 0;
   _adminGlobalHits.push(...globalHits);
@@ -132,7 +135,7 @@ export function adminSessionRateLimit(req: Request, res: Response, next: NextFun
     return;
   }
   arr.push(now);
-  _adminHits.set(ip, arr);
+  _adminHits.set(bucketKey, arr);
   _adminGlobalHits.push(now);
   next();
 }
@@ -149,17 +152,17 @@ const _chatSigilGlobalHits: number[] = [];
 
 export function chatSigilRateLimit(req: Request, res: Response, next: NextFunction): void {
   const now = Date.now();
-  for (const [ip, hits] of _chatSigilHits) {
+  for (const [bucketKey, hits] of _chatSigilHits) {
     const current = hits.filter(at => now - at < CHAT_SIGIL_WINDOW_MS);
-    if (current.length) _chatSigilHits.set(ip, current);
-    else _chatSigilHits.delete(ip);
+    if (current.length) _chatSigilHits.set(bucketKey, current);
+    else _chatSigilHits.delete(bucketKey);
   }
   const globalHits = _chatSigilGlobalHits.filter(at => now - at < CHAT_SIGIL_WINDOW_MS);
   _chatSigilGlobalHits.length = 0;
   _chatSigilGlobalHits.push(...globalHits);
 
-  const ip = ipOf(req);
-  const hits = _chatSigilHits.get(ip) ?? [];
+  const bucketKey = bucketKeyForRequest(req, "chat-sigil");
+  const hits = _chatSigilHits.get(bucketKey) ?? [];
   const retryAfterMs = (oldest: number) => Math.max(1, Math.ceil((CHAT_SIGIL_WINDOW_MS - (now - oldest)) / 1000));
   if (hits.length >= CHAT_SIGIL_IP_MAX) {
     const retry = retryAfterMs(hits[0]);
@@ -175,7 +178,7 @@ export function chatSigilRateLimit(req: Request, res: Response, next: NextFuncti
   }
 
   hits.push(now);
-  _chatSigilHits.set(ip, hits);
+  _chatSigilHits.set(bucketKey, hits);
   _chatSigilGlobalHits.push(now);
   while (_chatSigilHits.size > CHAT_SIGIL_MAX_IPS) {
     const oldest = _chatSigilHits.keys().next().value;
@@ -200,10 +203,10 @@ const _rawHits = new Map<string, RawStamp[]>();
 const _rawGlobalHits: RawStamp[] = [];
 
 function pruneRaw(now: number): void {
-  for (const [ip, arr] of _rawHits) {
+  for (const [bucketKey, arr] of _rawHits) {
     const filtered = arr.filter((hit) => now - hit.at < RAW_KEY_WINDOW_MS);
-    if (filtered.length === 0) _rawHits.delete(ip);
-    else _rawHits.set(ip, filtered);
+    if (filtered.length === 0) _rawHits.delete(bucketKey);
+    else _rawHits.set(bucketKey, filtered);
   }
   evictOldest(_rawHits, RAW_KEY_MAX_IPS);
   const globalHits = _rawGlobalHits.filter((hit) => now - hit.at < RAW_KEY_WINDOW_MS);
@@ -211,12 +214,12 @@ function pruneRaw(now: number): void {
   _rawGlobalHits.push(...globalHits);
 }
 
-function releaseRawStamp(ip: string, stamp: RawStamp): void {
-  const current = _rawHits.get(ip);
+function releaseRawStamp(bucketKey: string, stamp: RawStamp): void {
+  const current = _rawHits.get(bucketKey);
   if (current) {
     const idx = current.indexOf(stamp);
     if (idx >= 0) current.splice(idx, 1);
-    if (current.length === 0) _rawHits.delete(ip);
+    if (current.length === 0) _rawHits.delete(bucketKey);
   }
   const globalIdx = _rawGlobalHits.indexOf(stamp);
   if (globalIdx >= 0) _rawGlobalHits.splice(globalIdx, 1);
@@ -225,8 +228,8 @@ function releaseRawStamp(ip: string, stamp: RawStamp): void {
 export function rawKeyFailRateLimit(req: Request, res: Response, next: NextFunction): void {
   const now = Date.now();
   pruneRaw(now);
-  const ip = ipOf(req);
-  const arr = _rawHits.get(ip) ?? [];
+  const bucketKey = bucketKeyForRequest(req, "raw-key-admin");
+  const arr = _rawHits.get(bucketKey) ?? [];
   const retry = (limit: number, oldest: number, scope: string) => {
     const retryAfterMs = RAW_KEY_WINDOW_MS - (now - oldest);
     res.setHeader("Retry-After", Math.max(1, Math.ceil(retryAfterMs / 1000)).toString());
@@ -247,7 +250,7 @@ export function rawKeyFailRateLimit(req: Request, res: Response, next: NextFunct
   }
   const stamp: RawStamp = { at: now };
   arr.push(stamp);
-  _rawHits.set(ip, arr);
+  _rawHits.set(bucketKey, arr);
   _rawGlobalHits.push(stamp);
   evictOldest(_rawHits, RAW_KEY_MAX_IPS);
   let settled = false;
@@ -255,7 +258,7 @@ export function rawKeyFailRateLimit(req: Request, res: Response, next: NextFunct
     if (settled) return;
     settled = true;
     if (res.statusCode === 401 || res.statusCode === 403) return;
-    releaseRawStamp(ip, stamp);
+    releaseRawStamp(bucketKey, stamp);
   };
   res.on("finish", settle);
   res.on("close", settle);
@@ -289,10 +292,10 @@ const _writeHits = new Map<string, number[]>();
 const _writeGlobalHits: number[] = [];
 
 function pruneWrites(now: number): void {
-  for (const [ip, arr] of _writeHits) {
+  for (const [bucketKey, arr] of _writeHits) {
     const filtered = arr.filter((t) => now - t < WRITE_WINDOW_MS);
-    if (filtered.length === 0) _writeHits.delete(ip);
-    else _writeHits.set(ip, filtered);
+    if (filtered.length === 0) _writeHits.delete(bucketKey);
+    else _writeHits.set(bucketKey, filtered);
   }
   evictOldest(_writeHits, WRITE_MAX_IPS);
   const globalHits = _writeGlobalHits.filter((t) => now - t < WRITE_WINDOW_MS);
@@ -303,8 +306,8 @@ function pruneWrites(now: number): void {
 export function publicWriteRateLimit(req: Request, res: Response, next: NextFunction): void {
   const now = Date.now();
   pruneWrites(now);
-  const ip = ipOf(req);
-  const arr = _writeHits.get(ip) ?? [];
+  const bucketKey = bucketKeyForRequest(req, "public-write");
+  const arr = _writeHits.get(bucketKey) ?? [];
   const limited = arr.length >= WRITE_IP_MAX || _writeGlobalHits.length >= WRITE_GLOBAL_MAX;
   if (limited) {
     const oldest = arr.length >= WRITE_IP_MAX ? arr[0] : _writeGlobalHits[0];
@@ -319,7 +322,7 @@ export function publicWriteRateLimit(req: Request, res: Response, next: NextFunc
     return;
   }
   arr.push(now);
-  _writeHits.set(ip, arr);
+  _writeHits.set(bucketKey, arr);
   _writeGlobalHits.push(now);
   next();
 }

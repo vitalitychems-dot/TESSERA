@@ -25,12 +25,6 @@ import { logger } from "../lib/logger";
 
 const router: Router = Router();
 
-function ipOf(req: Request): string {
-  // req.ip follows the app trust-proxy hop count. The first X-Forwarded-For
-  // entry is client-controlled and is not a rate-limit or audit key.
-  return req.ip || req.socket.remoteAddress || "unknown";
-}
-
 function setCookie(res: Response, value: string, ttlMs: number): void {
   const isProd = process.env.NODE_ENV === "production";
   const attrs = [
@@ -81,7 +75,7 @@ function originAllowed(req: Request): boolean {
 
 function requireSameOrigin(req: Request, res: Response, next: () => void): void {
   if (!originAllowed(req)) {
-    logger.warn({ origin: req.headers.origin, ip: ipOf(req) }, "admin-session: Origin rejected");
+    logger.warn({ originRejected: true }, "admin-session: Origin rejected");
     res.status(403).json({ ok: false, error: "origin-forbidden" });
     return;
   }
@@ -106,7 +100,7 @@ router.post("/admin/session", adminSessionRateLimit, requireSameOrigin, (req: Re
   // its provenance header so callers can verify governance lineage.
   attestRatified(res, "P1+IMPL-1+R3-4", 0.811);
   const auditTail = (status: number, sessionHash?: string) =>
-    recordIngress({ ts: Date.now(), ip: ipOf(req), route: "POST /admin/session", status, sessionHash });
+    recordIngress({ ts: Date.now(), route: "POST /admin/session", status, sessionHash });
 
   if (!isAdminTokenConfigured()) {
     auditTail(503);
@@ -119,13 +113,12 @@ router.post("/admin/session", adminSessionRateLimit, requireSameOrigin, (req: Re
   }
   const presented = typeof req.body?.token === "string" ? req.body.token : "";
   if (!verifyAdminToken(presented)) {
-    logger.warn({ ip: ipOf(req) }, "sovereign-session: token rejected");
+    logger.warn("sovereign-session: token rejected");
     auditTail(401);
     res.status(401).json({ ok: false, error: "invalid-token" });
     return;
   }
   const issued = issueSession({
-    ip: ipOf(req),
     userAgent: String(req.headers["user-agent"] ?? "").slice(0, 256),
     ttlMs: DEFAULT_TTL_MS,
   });

@@ -13,6 +13,7 @@ import { randomBytes, createHash } from "node:crypto";
 import { castGenuineVote } from "../lib/sovereign-vote-engine";
 import { getFullSovereignSociety } from "../lib/sovereign-society";
 import { requireAdminSession } from "../lib/sovereign-admin";
+import { ipRateLimitKey } from "../lib/ip-rate-limit-key";
 
 const router = Router();
 
@@ -57,31 +58,32 @@ export const REDEEM_RATE_WINDOW_MS = 10 * 60 * 1000;
 export const REDEEM_IP_LIMIT = 8;
 export const REDEEM_GLOBAL_LIMIT = 20;
 
-const ipHits = new Map<string, number[]>();
+const MAX_RATE_LIMIT_BUCKETS = 4096;
+const redeemAddressBuckets = new Map<string, number[]>();
 const globalHits: number[] = [];
-const conferenceIpHits = new Map<string, number[]>();
+const conferenceAddressBuckets = new Map<string, number[]>();
 const conferenceGlobalHits: number[] = [];
 
 function pruneHits(hits: number[], now: number): number[] {
   return hits.filter((at) => now - at < REDEEM_RATE_WINDOW_MS);
 }
 
-function noteWindowAttempt(ipMap: Map<string, number[]>, global: number[], ip: string): boolean {
+function noteWindowAttempt(bucketMap: Map<string, number[]>, global: number[], bucketKey: string): boolean {
   const now = Date.now();
-  for (const [known, hits] of ipMap) {
+  for (const [knownBucket, hits] of bucketMap) {
     const pruned = pruneHits(hits, now);
-    if (pruned.length === 0) ipMap.delete(known);
-    else if (known !== ip) ipMap.set(known, pruned);
+    if (pruned.length === 0) bucketMap.delete(knownBucket);
+    else if (knownBucket !== bucketKey) bucketMap.set(knownBucket, pruned);
   }
   const nextGlobal = pruneHits(global, now);
   global.length = 0;
   global.push(...nextGlobal);
-  const nextIp = pruneHits(ipMap.get(ip) ?? [], now);
+  const nextIp = pruneHits(bucketMap.get(bucketKey) ?? [], now);
   // Per-address budget is decided before a global slot is taken, and a repeat
   // from the same address does not consume another global slot. One anonymous
   // caller therefore cannot exhaust REDEEM_GLOBAL_LIMIT.
   if (nextIp.length >= REDEEM_IP_LIMIT) {
-    ipMap.set(ip, nextIp);
+    bucketMap.set(bucketKey, nextIp);
     return false;
   }
   const consumesGlobalSlot = nextIp.length === 0;
@@ -90,23 +92,28 @@ function noteWindowAttempt(ipMap: Map<string, number[]>, global: number[], ip: s
   }
   nextIp.push(now);
   if (consumesGlobalSlot) global.push(now);
-  ipMap.set(ip, nextIp);
+  bucketMap.set(bucketKey, nextIp);
+  while (bucketMap.size > MAX_RATE_LIMIT_BUCKETS) {
+    const oldest = bucketMap.keys().next().value;
+    if (oldest === undefined) break;
+    bucketMap.delete(oldest);
+  }
   return true;
 }
 
-export function noteRedeemAttempt(ip: string): boolean {
-  return noteWindowAttempt(ipHits, globalHits, ip);
+export function noteRedeemAttempt(bucketKey: string): boolean {
+  return noteWindowAttempt(redeemAddressBuckets, globalHits, bucketKey);
 }
 
-function noteConferenceAttempt(ip: string): boolean {
-  return noteWindowAttempt(conferenceIpHits, conferenceGlobalHits, ip);
+function noteConferenceAttempt(bucketKey: string): boolean {
+  return noteWindowAttempt(conferenceAddressBuckets, conferenceGlobalHits, bucketKey);
 }
 
 export function clearFatherKeyRedeemState(): void {
   REDEMPTIONS.clear();
-  ipHits.clear();
+  redeemAddressBuckets.clear();
   globalHits.length = 0;
-  conferenceIpHits.clear();
+  conferenceAddressBuckets.clear();
   conferenceGlobalHits.length = 0;
 }
 
@@ -144,12 +151,12 @@ function publicCandidate(candidate: { id: string; title: string }): { id: string
   return { id: candidate.id, title: candidate.title };
 }
 
-function clientIp(req: Request): string {
+function clientAddress(req: Request): string {
   return req.ip || req.socket.remoteAddress || "unknown";
 }
 
 router.post("/father-key/conference", requireAdminSession, async (req, res) => {
-  if (!noteConferenceAttempt(clientIp(req))) {
+  if (!noteConferenceAttempt(ipRateLimitKey(clientAddress(req), "father-key-conference"))) {
     return res.status(429).json({ ok: false, error: "rate-limited" });
   }
   try {
@@ -246,13 +253,13 @@ router.post("/father-key/conference", requireAdminSession, async (req, res) => {
       redemption: issued,
       timestamp: Date.now(),
     });
-  } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+  } catch {
+    return res.status(500).json({ ok: false, error: "father-key-conference-failed" });
   }
 });
 
 router.post("/father-key/redeem", (req, res) => {
-  if (!noteRedeemAttempt(clientIp(req))) {
+  if (!noteRedeemAttempt(ipRateLimitKey(clientAddress(req), "father-key-redemption"))) {
     return res.status(429).json({ ok: false, error: "rate-limited" });
   }
   const codeRaw = (req.body?.code ?? "").toString().trim().toLowerCase();
@@ -293,7 +300,7 @@ router.post("/father-key/redeem", (req, res) => {
  * a real ballot just observed by the user.
  */
 router.post("/father-key/finalize", requireAdminSession, (req, res) => {
-  if (!noteConferenceAttempt(clientIp(req))) {
+  if (!noteConferenceAttempt(ipRateLimitKey(clientAddress(req), "father-key-conference"))) {
     return res.status(429).json({ ok: false, error: "rate-limited" });
   }
   const candidateId = (req.body?.candidateId ?? "").toString().trim().toLowerCase();

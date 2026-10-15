@@ -7,3 +7,4 @@
 - [Cursor run history](cursor-run-history.md) — batch result reads below the connector's 10 RPS limit; run summaries are not full chat streams.
 - [Mockup scanner dependency policy](mockup-glob-vulnerability.md) — use built-in traversal until a patched braces release or clean alternative is verified.
 - [Sovereign outbound fetches](sovereign-outbound-fetches.md) — an allowed Shepherd identity is not enough; external fetches must run inside the async Shepherd context.
+- [Authentication telemetry privacy](auth-telemetry-privacy.md) — never log or persist raw client IPs in auth telemetry; use ephemeral, purpose-separated HMAC buckets only when rate limits need them.
