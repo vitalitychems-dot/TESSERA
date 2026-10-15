@@ -88,7 +88,7 @@ const MAX_EVENTS = 50;
 const HEARTBEAT_INTERVAL_MS = 12_000;
 
 export function MeshProvider({ children }: { children: ReactNode }) {
-  const { isAdmin, token } = useAdmin();
+  const { isAdmin } = useAdmin();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [peers, setPeers] = useState<MeshPeer[]>([]);
   const [health, setHealth] = useState<MeshHealth>("offline");
@@ -101,7 +101,6 @@ export function MeshProvider({ children }: { children: ReactNode }) {
 
   const isRegisteredRef = useRef(false);
   const sessionIdRef = useRef<string | null>(null);
-  const sovereignKeyRef = useRef<string>("");
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentPageRef = useRef<string>(window.location.pathname);
 
@@ -138,7 +137,7 @@ export function MeshProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isAdmin || !token) {
+    if (!isAdmin) {
       setHealth("offline");
       setIsRegistered(false);
       isRegisteredRef.current = false;
@@ -153,13 +152,9 @@ export function MeshProvider({ children }: { children: ReactNode }) {
       }
     }, 5000);
 
-    const sovereignKey = localStorage.getItem("t9_sovereign_key") || token;
-    sovereignKeyRef.current = sovereignKey;
-
     const sendAuth = () => {
       tesseraWS.send({
         type: "mesh:auth",
-        token: sovereignKeyRef.current,
         metadata: {
           currentPage: currentPageRef.current,
           activeAgents: [],
@@ -301,7 +296,7 @@ export function MeshProvider({ children }: { children: ReactNode }) {
       setSessionId(null);
       setPeers([]);
     };
-  }, [isAdmin, token, addEvent]);
+  }, [isAdmin, addEvent]);
 
   return (
     <MeshContext.Provider value={{

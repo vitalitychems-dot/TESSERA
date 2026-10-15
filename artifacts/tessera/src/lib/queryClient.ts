@@ -24,20 +24,27 @@ if (typeof document !== "undefined") {
 export function isTabVisible() { return _tabVisible; }
 
 /**
- * Legacy reader retained ONLY so deprecated localStorage values can be wiped
- * during migration. New code MUST NOT rely on this. It returns "" by design.
+ * Remove deprecated credential entries during migration. No credential values
+ * are read back into JavaScript.
  */
-export function getTesseractAdminKey(): string {
-  if (typeof window === "undefined") return "";
-  try {
-    // Migration cleanup — purge any leftover credential material from
-    // localStorage so XSS can't read it on subsequent visits.
-    localStorage.removeItem("TESSERACT_ADMIN_KEY");
-    localStorage.removeItem("tesseract-admin-key");
-    localStorage.removeItem("t9_admin_token");
-    localStorage.removeItem("t9_sovereign_key");
-  } catch { /* ignore */ }
-  return "";
+export function clearLegacyCredentialStorage(): void {
+  if (typeof window === "undefined") return;
+  const legacyKeys = [
+    "TESSERACT_ADMIN_KEY",
+    "tesseract-admin-key",
+    "t9_admin_token",
+    "t9_sovereign_key",
+    "t9_saved_admin_key",
+    "t9_admin_mode",
+  ];
+  const stores: Storage[] = [];
+  try { stores.push(window.localStorage); } catch { /* storage may be disabled */ }
+  try { stores.push(window.sessionStorage); } catch { /* storage may be disabled */ }
+  for (const storage of stores) {
+    for (const legacyKey of legacyKeys) {
+      try { storage.removeItem(legacyKey); } catch { /* storage may be disabled */ }
+    }
+  }
 }
 
 async function throwIfResNotOk(res: Response) {
@@ -136,7 +143,5 @@ export const queryClient = new QueryClient({
   },
 });
 
-// Wipe legacy localStorage credentials on module load.
-if (typeof window !== "undefined") {
-  try { getTesseractAdminKey(); } catch { /* ignore */ }
-}
+// Purge legacy credentials from both browser stores; current auth is cookie-only.
+clearLegacyCredentialStorage();

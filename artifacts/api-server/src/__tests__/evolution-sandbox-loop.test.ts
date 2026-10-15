@@ -213,15 +213,21 @@ describe("evolution attempt ledger — durability flag", () => {
 });
 
 describe("/api/evolution-health/attempts — auth regression", () => {
-  it("rejects unauthenticated requests and accepts admin-token requests", async () => {
+  it("requires the HttpOnly owner session and rejects legacy admin-token headers", async () => {
     // Lazy-load express + the route (avoids server bootstrap)
     const express = (await import("express")).default;
     const router = (await import("../routes/evolution-health")).default;
+    const adminSessionRouter = (await import("../routes/admin-session")).default;
     const app = express();
+    app.use(express.json());
     app.use("/api", router);
+    app.use("/api", adminSessionRouter);
 
-    const prevToken = process.env["ADMIN_TOKEN"];
-    process.env["ADMIN_TOKEN"] = "test-admin-token-xyz";
+    const prevToken = process.env["TESSERACT_ADMIN_KEY"];
+    const prevSessionSecret = process.env["SOVEREIGN_SESSION_SECRET"];
+    const adminKey = "test-admin-token-xyz-123";
+    process.env["TESSERACT_ADMIN_KEY"] = adminKey;
+    process.env["SOVEREIGN_SESSION_SECRET"] = "test-session-secret-with-enough-entropy";
 
     try {
       const server = app.listen(0);
@@ -230,11 +236,25 @@ describe("/api/evolution-health/attempts — auth regression", () => {
         const noAuth = await fetch(`http://127.0.0.1:${port}/api/evolution-health/attempts`);
         expect(noAuth.status).toBe(401);
 
-        const withAuth = await fetch(`http://127.0.0.1:${port}/api/evolution-health/attempts`, {
-          headers: { "x-admin-token": "test-admin-token-xyz" },
+        const legacyHeader = await fetch(`http://127.0.0.1:${port}/api/evolution-health/attempts`, {
+          headers: { "x-admin-token": adminKey },
         });
-        expect(withAuth.status).toBe(200);
-        const body = await withAuth.json() as { ok: boolean; data: { attempts: unknown[]; counts: Record<string, number>; total: number } };
+        expect(legacyHeader.status).toBe(401);
+
+        const login = await fetch(`http://127.0.0.1:${port}/api/admin/session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: adminKey }),
+        });
+        expect(login.status).toBe(200);
+        const cookieHeader = login.headers.get("set-cookie");
+        expect(cookieHeader).toContain("sovereign_session=");
+        const cookie = cookieHeader!.split(";")[0];
+        const withSession = await fetch(`http://127.0.0.1:${port}/api/evolution-health/attempts`, {
+          headers: { cookie },
+        });
+        expect(withSession.status).toBe(200);
+        const body = await withSession.json() as { ok: boolean; data: { attempts: unknown[]; counts: Record<string, number>; total: number } };
         expect(body.ok).toBe(true);
         expect(Array.isArray(body.data.attempts)).toBe(true);
         expect(typeof body.data.counts).toBe("object");
@@ -243,8 +263,10 @@ describe("/api/evolution-health/attempts — auth regression", () => {
         await new Promise<void>((res) => server.close(() => res()));
       }
     } finally {
-      if (prevToken === undefined) delete process.env["ADMIN_TOKEN"];
-      else process.env["ADMIN_TOKEN"] = prevToken;
+      if (prevToken === undefined) delete process.env["TESSERACT_ADMIN_KEY"];
+      else process.env["TESSERACT_ADMIN_KEY"] = prevToken;
+      if (prevSessionSecret === undefined) delete process.env["SOVEREIGN_SESSION_SECRET"];
+      else process.env["SOVEREIGN_SESSION_SECRET"] = prevSessionSecret;
     }
   });
 });

@@ -70,10 +70,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
     queryFn: async () => {
       if (!conversationId) return [];
       const url = buildUrl("/api/messages", { conversationId });
-      const adminToken = localStorage.getItem("t9_admin_token") || "";
-      const headers: Record<string, string> = {};
-      if (adminToken) headers["x-admin-token"] = adminToken;
-      const res = await fetch(url, { credentials: "include", headers });
+      const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch messages");
       return (await res.json()) as Message[];
     },
@@ -169,9 +166,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
 
     if (tesseractMode) {
       try {
-        const adminToken = localStorage.getItem("t9_admin_token") || "";
         const saveHeaders: Record<string, string> = { "Content-Type": "application/json" };
-        if (adminToken) saveHeaders["x-admin-token"] = adminToken;
 
         fetch(`/api/conversations/${conversationId}/puter-save`, {
           method: "POST",
@@ -189,7 +184,6 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
         try {
           const url = buildUrl("/api/messages", { conversationId });
           const headers: Record<string, string> = { "Content-Type": "application/json" };
-          if (adminToken) headers["x-admin-token"] = adminToken;
           let nlpGoals: string[] = [];
           try {
             const rawGoals = localStorage.getItem("t9_nlp_goals_raw") || "";
@@ -351,9 +345,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
 
     try {
       const url = buildUrl("/api/messages", { conversationId });
-      const adminToken = localStorage.getItem("t9_admin_token") || "";
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (adminToken) headers["x-admin-token"] = adminToken;
       let nlpGoalsNonTesseract: string[] = [];
       try {
         const rawGoals = localStorage.getItem("t9_nlp_goals_raw") || "";
@@ -561,9 +553,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
     const userMsg: Message = { id: Date.now(), conversationId, role: "user", content: userText, createdAt: now };
     const assistantMsg: Message = { id: Date.now() + 1, conversationId, role: "assistant", content: assistantText, createdAt: new Date(now.getTime() + 1) };
     queryClient.setQueryData(queryKey, (old: Message[] = []) => [...old, userMsg, assistantMsg]);
-    const adminToken = localStorage.getItem("t9_admin_token") || "";
     const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (adminToken) headers["x-admin-token"] = adminToken;
     fetch(`/api/conversations/${conversationId}/puter-save`, {
       method: "POST",
       headers,

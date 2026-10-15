@@ -46,10 +46,11 @@ export default function SovereignDownloadDialog({ open, onClose }: SovereignDown
     try {
       setStatus({ state: "authenticating", progress: 5, message: "Verifying Father Protocol credentials..." });
 
-      const authResp = await fetch("/api/admin/auth", {
+      const authResp = await fetch("/api/admin/session", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: adminKey.trim() }),
+        body: JSON.stringify({ token: adminKey.trim() }),
         signal: controller.signal,
       });
 
@@ -58,16 +59,15 @@ export default function SovereignDownloadDialog({ open, onClose }: SovereignDown
         setStatus({ state: "error", progress: 0, message: err.error || "Invalid Father Protocol key" });
         return;
       }
-
-      const authData = await authResp.json();
-      const sessionToken = authData.token;
+      setAdminKey("");
 
       setStatus({ state: "preparing", progress: 15, message: "Generating one-time sovereign archive token...", colonelPhase: "§TOK-GEN" });
 
       const tokenResp = await fetch("/api/admin/sovereign-archive-token", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-admin-token": sessionToken },
-        body: JSON.stringify({ key: adminKey.trim() }),
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
         signal: controller.signal,
       });
 

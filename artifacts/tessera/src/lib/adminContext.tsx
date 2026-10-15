@@ -6,13 +6,9 @@ interface AdminState {
   loading: boolean;
   authenticate: (key: string) => Promise<boolean>;
   logout: () => void;
-  token: string;
   stealthMode: boolean;
   toggleStealth: () => void;
   adminMode: boolean;
-  savedAdminKey: string;
-  saveAdminKey: (key: string) => void;
-  removeAdminKey: () => void;
 }
 
 const AdminContext = createContext<AdminState>({
@@ -21,121 +17,71 @@ const AdminContext = createContext<AdminState>({
   loading: true,
   authenticate: async () => false,
   logout: () => {},
-  token: "",
   stealthMode: false,
   toggleStealth: () => {},
   adminMode: false,
-  savedAdminKey: "",
-  saveAdminKey: () => {},
-  removeAdminKey: () => {},
 });
 
 export function AdminProvider({ children }: { children: React.ReactNode }) {
-  const [isAdmin, setIsAdmin] = useState(() => !!localStorage.getItem("t9_admin_token"));
+  const [isAdmin, setIsAdmin] = useState(false);
   const [configured, setConfigured] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [token, setToken] = useState(() => localStorage.getItem("t9_admin_token") || "");
+  const [loading, setLoading] = useState(true);
   const [stealthMode, setStealthMode] = useState(false);
-  const [adminMode, setAdminMode] = useState(() => localStorage.getItem("t9_admin_mode") === "true" && !!localStorage.getItem("t9_admin_token"));
-  const [savedAdminKey, setSavedAdminKey] = useState(() => {
-    localStorage.removeItem("t9_saved_admin_key");
-    return "";
-  });
+  const [adminMode, setAdminMode] = useState(false);
 
   const checkStatus = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/status", {
-        headers: token ? { "x-admin-token": token } : {},
+      const res = await fetch("/api/admin/session/status", {
+        credentials: "include",
+        cache: "no-store",
       });
+      if (!res.ok) throw new Error("Unable to verify owner session");
       const data = await res.json();
-      if (data.isAdmin) {
-        setIsAdmin(true);
-        setAdminMode(true);
-        if (!token) {
-          const sessionToken = `sovereign-${Date.now()}`;
-          localStorage.setItem("t9_admin_token", sessionToken);
-          setToken(sessionToken);
-        }
-        applyAdminTheme(true);
-        return true;
-      }
-      const storedKey = localStorage.getItem("t9_sovereign_key");
-      if (storedKey) {
-        const reauth = await fetch("/api/admin/auth", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key: storedKey }),
-        });
-        if (reauth.ok) {
-          const rd = await reauth.json();
-          if (rd.authenticated && rd.token) {
-            localStorage.setItem("t9_admin_token", rd.token);
-            setToken(rd.token);
-            setIsAdmin(true);
-            setAdminMode(true);
-            applyAdminTheme(true);
-            return true;
-          }
-        }
-      }
-      setIsAdmin(false);
-      setConfigured(data.configured);
-      return false;
+      const authenticated = data.authenticated === true;
+      setIsAdmin(authenticated);
+      setAdminMode(authenticated);
+      setConfigured(data.configured === true);
+      applyAdminTheme(authenticated);
+      return authenticated;
     } catch {
       setIsAdmin(false);
+      setAdminMode(false);
+      applyAdminTheme(false);
       return false;
     }
-  }, [token]);
-
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      let launchToken: string | null = null;
-      const hash = window.location.hash;
-      if (hash && hash.startsWith("#t=")) {
-        launchToken = hash.slice(3);
-      }
-      if (!launchToken) {
-        const params = new URLSearchParams(window.location.search);
-        launchToken = params.get("t");
-      }
-      if (launchToken) {
-        try {
-          const decoded = atob(decodeURIComponent(launchToken));
-          if (decoded) {
-            const ok = await authenticate(decoded);
-            if (ok) {
-              window.history.replaceState({}, "", window.location.pathname);
-              setLoading(false);
-              return;
-            }
-          }
-        } catch {}
-        window.history.replaceState({}, "", window.location.pathname);
-      }
-      await checkStatus();
-      setLoading(false);
-    })();
   }, []);
 
-  const authenticate = async (key: string): Promise<boolean> => {
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      setLoading(true);
+      await checkStatus();
+      if (!cancelled) setLoading(false);
+    };
+    const handleSessionChange = () => { void refresh(); };
+    void refresh();
+    window.addEventListener("tessera-admin-session-changed", handleSessionChange);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("tessera-admin-session-changed", handleSessionChange);
+    };
+  }, [checkStatus]);
+
+  const authenticate = useCallback(async (key: string): Promise<boolean> => {
     try {
-      const res = await fetch("/api/admin/auth", {
+      const res = await fetch("/api/admin/session", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: key.trim() }),
+        body: JSON.stringify({ token: key.trim() }),
       });
       if (!res.ok) {
         return false;
       }
-      const data = await res.json();
-      if (data.authenticated && data.token) {
-        localStorage.setItem("t9_admin_token", data.token);
-        localStorage.setItem("t9_sovereign_key", key.trim());
-        setToken(data.token);
+      const authenticated = await checkStatus();
+      if (authenticated) {
         setIsAdmin(true);
         setAdminMode(true);
-        localStorage.setItem("t9_admin_mode", "true");
         applyAdminTheme(true);
         return true;
       }
@@ -143,7 +89,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     } catch {
       return false;
     }
-  };
+  }, [checkStatus]);
 
   const applyAdminTheme = (active: boolean) => {
     let style = document.getElementById("tessera-admin-theme") as HTMLStyleElement | null;
@@ -193,13 +139,15 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   }, [isAdmin]);
 
   const logout = () => {
-    setToken("");
+    void fetch("/api/admin/session/logout", {
+      method: "POST",
+      credentials: "include",
+    }).catch(() => {}).finally(() => {
+      window.dispatchEvent(new Event("tessera-admin-session-changed"));
+    });
     setIsAdmin(false);
     setStealthMode(false);
     setAdminMode(false);
-    localStorage.removeItem("t9_admin_token");
-    localStorage.removeItem("t9_admin_mode");
-    localStorage.removeItem("t9_sovereign_key");
     applyAdminTheme(false);
   };
 
@@ -209,18 +157,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const saveAdminKey = (key: string) => {
-    setSavedAdminKey(key);
-    localStorage.setItem("t9_sovereign_key", key);
-  };
-
-  const removeAdminKey = () => {
-    setSavedAdminKey("");
-    localStorage.removeItem("t9_sovereign_key");
-  };
-
   return (
-    <AdminContext.Provider value={{ isAdmin, configured, loading, authenticate, logout, token, stealthMode, toggleStealth, adminMode, savedAdminKey, saveAdminKey, removeAdminKey }}>
+    <AdminContext.Provider value={{ isAdmin, configured, loading, authenticate, logout, stealthMode, toggleStealth, adminMode }}>
       {children}
     </AdminContext.Provider>
   );

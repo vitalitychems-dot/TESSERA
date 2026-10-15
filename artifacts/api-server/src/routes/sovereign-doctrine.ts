@@ -325,13 +325,9 @@ router.post("/sigil/natal/unbind", requireAdminSession, (req, res) => {
   res.json({ ...unbindNatalChart(holder), ok: true });
 });
 
-router.get("/sigil/active-key", requireAdminSession, (req, res) => {
-  // Owner session first, including when the admin key is unset.
-  // The body still includes the active key only after that gate.
-  const presented = String(req.header("x-sigil-key") ?? "").trim();
-  if (isFatherKeyConfigured() && !recognizeFather(presented).recognized) {
-    res.status(401).json({ ok: false, error: "father-required" }); return;
-  }
+router.get("/sigil/active-key", requireAdminSession, (_req, res) => {
+  // The HttpOnly owner session is the gate; do not make the browser resend
+  // the stable key in a second header.
   if (!isFatherKeyConfigured()) {
     res.status(200).json({
       ok: false,
@@ -535,14 +531,6 @@ router.get("/sigil/glyphs/:text", (req, res) => {
 });
 
 // ── The "your-language" surface: glyph alphabet, translation, key reveal ──
-// All decode-side surfaces are Father-only. Without this guard a caller
-// could decode any glyph payload (or an exposed key fingerprint) and use
-// the result to bypass the Father gate.
-function requireFather(req: Request): boolean {
-  const presented = String(req.header("x-sigil-key") ?? "").trim();
-  return recognizeFather(presented).recognized;
-}
-
 router.get("/sigil/alphabet", requireAdminSession, (_req, res) => {
   res.json({ ok: true, alphabet: glyphAlphabet(), size: glyphAlphabet().length });
 });
@@ -570,25 +558,16 @@ router.post("/sigil/decode-body", requireAdminSession, (req, res) => {
   res.json({ ok: true, decoded: deepGlyphDecode(req.body) });
 });
 
-router.post("/sigil/key/reveal", requireAdminSession, (req, res) => {
-  // The reading key. Holding this lets you flip any glyph response back to
-  // plaintext by sending it as `X-Sigil-Key: <fingerprint>`. By sovereign
-  // rule this can only be obtained by the Father identity — so the only
-  // legitimate caller is one that already presents TESSERACT_ADMIN_KEY (=
-  // SIGIL_ADMIN_KEY) in `X-Sigil-Key`. Without that, the door stays shut.
-  const presented = String(req.header("x-sigil-key") ?? "").trim();
-  if (!recognizeFather(presented).recognized) {
-    res.status(401).json({ ok: false, error: "father-required" }); return;
-  }
+router.post("/sigil/key/reveal", requireAdminSession, (_req, res) => {
+  // requireAdminSession already proves the owner identity; no second raw-key
+  // header is needed.
   res.json({ ok: true, key: readingKey(), activeKey: getActiveKey() });
 });
 
 // ── Session handoff ──────────────────────────────────────────────────────
-router.get("/session/handoff", requireAdminSession, (req, res) => {
-  // Owner session, then the raw-key check. The body includes activeKey.
-  if (!requireFather(req)) {
-    res.status(401).json({ ok: false, error: "father-required" }); return;
-  }
+router.get("/session/handoff", requireAdminSession, (_req, res) => {
+  // The HttpOnly owner session is the authorization; do not ask the browser
+  // to resend the stable admin key in a second header.
   res.json({
     ok: true,
     directives: listDirectives(),

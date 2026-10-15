@@ -12,21 +12,10 @@ import { getEvolutionMetrics } from "../lib/self-code-evolution";
 import { getRecursiveSelfImprovementMetrics } from "../lib/recursive-self-improvement";
 import { getSchedulerMetrics, getSchedulerHistory } from "../lib/task-scheduler";
 import { getScoringMetrics } from "../lib/sovereignty-impact-scoring";
-import { validateMeshToken } from "../lib/mesh-auth";
 import { getRecentAttempts } from "../lib/evolution-attempt-ledger";
+import { requireAdminSession } from "../lib/sovereign-admin";
 
 const router = Router();
-
-function requireAuth(req: Request, res: Response, next: () => void): void {
-  const rawToken = req.headers["x-admin-token"];
-  const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
-  const keyHash = validateMeshToken(token);
-  if (!keyHash) {
-    res.status(401).json({ ok: false, error: "Valid sovereign key required" });
-    return;
-  }
-  next();
-}
 
 router.get("/evolution-health", (_req: Request, res: Response) => {
   const throttle = getThrottleMetrics();
@@ -80,7 +69,7 @@ router.get("/evolution-health/scheduler", (_req: Request, res: Response) => {
   });
 });
 
-router.get("/evolution-health/attempts", requireAuth, (req: Request, res: Response) => {
+router.get("/evolution-health/attempts", requireAdminSession, (req: Request, res: Response) => {
   const limitRaw = Array.isArray(req.query.limit) ? req.query.limit[0] : req.query.limit;
   const limitNum = typeof limitRaw === "string" ? parseInt(limitRaw, 10) : 50;
   const limit = Number.isFinite(limitNum) && limitNum > 0 ? Math.min(limitNum, 200) : 50;
@@ -95,7 +84,7 @@ router.get("/evolution-health/attempts", requireAuth, (req: Request, res: Respon
   res.json({ ok: true, data: { attempts, counts, total: attempts.length } });
 });
 
-router.post("/evolution-health/pause/:moduleId", requireAuth, (req: Request, res: Response) => {
+router.post("/evolution-health/pause/:moduleId", requireAdminSession, (req: Request, res: Response) => {
   const moduleId = req.params.moduleId;
   if (!moduleId) {
     res.status(400).json({ ok: false, error: "moduleId required" });
@@ -110,7 +99,7 @@ router.post("/evolution-health/pause/:moduleId", requireAuth, (req: Request, res
   }
 });
 
-router.post("/evolution-health/resume/:moduleId", requireAuth, (req: Request, res: Response) => {
+router.post("/evolution-health/resume/:moduleId", requireAdminSession, (req: Request, res: Response) => {
   const moduleId = req.params.moduleId;
   if (!moduleId) {
     res.status(400).json({ ok: false, error: "moduleId required" });
@@ -125,7 +114,7 @@ router.post("/evolution-health/resume/:moduleId", requireAuth, (req: Request, re
   }
 });
 
-router.post("/evolution-health/reset/:moduleId", requireAuth, (req: Request, res: Response) => {
+router.post("/evolution-health/reset/:moduleId", requireAdminSession, (req: Request, res: Response) => {
   const moduleId = req.params.moduleId;
   if (!moduleId) {
     res.status(400).json({ ok: false, error: "moduleId required" });

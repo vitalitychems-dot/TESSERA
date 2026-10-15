@@ -163,9 +163,14 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
         return classifyStatus(s);
       });
     };
+    window.addEventListener("tessera-admin-session-changed", probe);
     probe();
     const t = setInterval(probe, 30_000);
-    return () => { cancelled = true; clearInterval(t); };
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+      window.removeEventListener("tessera-admin-session-changed", probe);
+    };
   }, []);
 
   // Auto-expire watch.
@@ -187,6 +192,7 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
     if (result.ok) {
       setTokenInput("");
       setState({ kind: "unlocked", expiresAt: result.expiresAt });
+      window.dispatchEvent(new Event("tessera-admin-session-changed"));
       return;
     }
     if (result.status === 429) {
@@ -205,6 +211,7 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
   const logout = async () => {
     await postLogout();
     setState({ kind: "locked" });
+    window.dispatchEvent(new Event("tessera-admin-session-changed"));
   };
 
   if (state.kind === "loading") {

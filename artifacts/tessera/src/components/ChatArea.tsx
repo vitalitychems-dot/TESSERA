@@ -102,7 +102,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   });
   const [interimText, setInterimText] = useState("");
   const [adminAuthAttempt, setAdminAuthAttempt] = useState(false);
-  const [inputIsAdminKey, setInputIsAdminKey] = useState(false);
   const [colonelPhase, setColonelPhase] = useState<"idle" | "hash_accepted" | "authenticating" | "success" | "fail">("idle");
   const [colonelMessage, setColonelMessage] = useState("");
   const [puterSelectorOpen, setPuterSelectorOpen] = useState(false);
@@ -174,7 +173,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   }, []);
   
   const tesseractMode = true;
-  const { isAdmin, authenticate, stealthMode, toggleStealth, adminMode, savedAdminKey, saveAdminKey } = useAdmin();
+  const { isAdmin, authenticate, stealthMode, toggleStealth, adminMode } = useAdmin();
 
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -568,7 +567,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
           setColonelPhase("success");
           setColonelMessage("SOVEREIGN ACCESS GRANTED");
           setInputBoth("");
-          saveAdminKey(trimmed);
           setTimeout(() => { setColonelPhase("idle"); setColonelMessage(""); }, 5000);
           return;
         } else {
@@ -601,10 +599,9 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
       const matches = (Array.from(msgText.matchAll(bulkKeyPattern)) as RegExpExecArray[]).filter(m => (m[2] || "").length >= 8);
       if (matches.length >= 1) {
         try {
-          const adminToken = localStorage.getItem("t9_admin_token") || "";
           const resp = await fetch("/api/keys/bulk-detect", {
             method: "POST",
-            headers: { "Content-Type": "application/json", "x-admin-token": adminToken },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ text: msgText }),
             credentials: "include",
           });
@@ -1305,12 +1302,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
                       /^\/?(status|check|show|scan|get)\s*/.test(trimmed))
                     || (deskHint && trimmed.length <= 48)
                   );
-                  if (savedAdminKey && savedAdminKey.length > 4 && val.trim() === savedAdminKey.trim()) {
-                    setInputIsAdminKey(true);
-                    if (!isAdmin) authenticate(savedAdminKey).catch(() => {});
-                  } else {
-                    setInputIsAdminKey(false);
-                  }
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -1351,8 +1342,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
                     ? {}
                     : userFontColor
                     ? { color: userFontColor, caretColor: userFontColor }
-                    : inputIsAdminKey
-                    ? { color: "#f59e0b", caretColor: "#f59e0b", textShadow: "0 0 12px rgba(245,158,11,0.5)" }
                     : {}
                 }
                 className={cn(
@@ -1363,8 +1352,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
                     ? "text-violet-400 caret-violet-400 admin-mode-font admin-mode-caret"
                     : colonelPhase === "hash_accepted"
                     ? "text-violet-400 caret-violet-400"
-                    : inputIsAdminKey
-                    ? ""
                     : userFontColor
                     ? ""
                     : "text-white/60 caret-cyan-400"

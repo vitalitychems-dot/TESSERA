@@ -17,6 +17,7 @@ import {
   startMeshHeartbeatMonitor,
 } from "./lib/session-mesh";
 import { validateMeshToken } from "./lib/mesh-auth";
+import { SESSION_COOKIE, lookupSession } from "./lib/sovereign-session";
 import { setActualPort } from "./lib/server-config";
 import {
   setOnRoutesHealthyCallback,
@@ -85,6 +86,27 @@ async function findAvailablePort(startPort: number, maxAttempts = 10): Promise<n
 
 const wss = new WebSocketServer({ server, path: "/ws" });
 
+function cookieValue(header: string | undefined, name: string): string | null {
+  if (!header) return null;
+  for (const part of header.split(";")) {
+    const trimmed = part.trim();
+    if (!trimmed.startsWith(`${name}=`)) continue;
+    try {
+      return decodeURIComponent(trimmed.slice(name.length + 1));
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function ownerMeshHashFromCookie(cookieHeader: string | undefined): string | null {
+  const sessionCookie = cookieValue(cookieHeader, SESSION_COOKIE);
+  if (!lookupSession(sessionCookie).valid) return null;
+  const configuredKey = process.env.TESSERACT_ADMIN_KEY;
+  return validateMeshToken(configuredKey);
+}
+
 wss.on("connection", (ws, req) => {
   const sessionId = uuidv4();
   let sovereignKeyHash: string | null = null;
@@ -97,8 +119,9 @@ wss.on("connection", (ws, req) => {
       const msg = JSON.parse(raw.toString());
 
       if (msg.type === "mesh:auth") {
-        const token = msg.token || "";
-        const keyHash = validateMeshToken(token);
+        const ownerKeyHash = ownerMeshHashFromCookie(req.headers.cookie);
+        const memberToken = typeof msg.token === "string" ? msg.token : "";
+        const keyHash = ownerKeyHash ?? validateMeshToken(memberToken);
         if (keyHash) {
           sovereignKeyHash = keyHash;
           const session = registerSession(sovereignKeyHash, sessionId, ws, {

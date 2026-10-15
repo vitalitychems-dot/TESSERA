@@ -66,7 +66,7 @@ export default function SystemPage({ initialTab }: { initialTab?: SystemTab }) {
     queryKey: ["evolution-attempts"],
     queryFn: () =>
       fetch(`${API}/api/evolution-health/attempts?limit=30`, {
-        headers: { "x-admin-token": localStorage.getItem("t9_admin_token") || "" },
+        credentials: "include",
       })
         .then(r => (r.ok ? r.json() : { ok: false, data: { attempts: [], counts: {}, total: 0 } }))
         .then(j => j.data ?? { attempts: [], counts: {}, total: 0 }),
@@ -76,7 +76,7 @@ export default function SystemPage({ initialTab }: { initialTab?: SystemTab }) {
 
   const pauseMutation = useMutation({
     mutationFn: (moduleId: string) =>
-      fetch(`${API}/api/evolution-health/pause/${moduleId}`, { method: "POST", headers: { "x-admin-token": localStorage.getItem("t9_admin_token") || "" } }).then(r => r.json()),
+      fetch(`${API}/api/evolution-health/pause/${moduleId}`, { method: "POST", credentials: "include" }).then(r => r.json()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["evolution-health"] });
     },
@@ -84,7 +84,7 @@ export default function SystemPage({ initialTab }: { initialTab?: SystemTab }) {
 
   const resumeMutation = useMutation({
     mutationFn: (moduleId: string) =>
-      fetch(`${API}/api/evolution-health/resume/${moduleId}`, { method: "POST", headers: { "x-admin-token": localStorage.getItem("t9_admin_token") || "" } }).then(r => r.json()),
+      fetch(`${API}/api/evolution-health/resume/${moduleId}`, { method: "POST", credentials: "include" }).then(r => r.json()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["evolution-health"] });
     },
@@ -92,7 +92,7 @@ export default function SystemPage({ initialTab }: { initialTab?: SystemTab }) {
 
   const resetMutation = useMutation({
     mutationFn: (moduleId: string) =>
-      fetch(`${API}/api/evolution-health/reset/${moduleId}`, { method: "POST", headers: { "x-admin-token": localStorage.getItem("t9_admin_token") || "" } }).then(r => r.json()),
+      fetch(`${API}/api/evolution-health/reset/${moduleId}`, { method: "POST", credentials: "include" }).then(r => r.json()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["evolution-health"] });
     },
@@ -426,7 +426,7 @@ export default function SystemPage({ initialTab }: { initialTab?: SystemTab }) {
                         </div>
                       )) : (
                         <div className="text-[11px] text-slate-500 text-center py-4">
-                          No attempts yet. Set <span className="font-mono text-slate-400">t9_admin_token</span> in localStorage to view ledger.
+                          Sign in with the owner session to view the ledger.
                         </div>
                       )}
                     </div>

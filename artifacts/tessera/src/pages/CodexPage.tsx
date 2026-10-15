@@ -69,10 +69,6 @@ function useCodexEntry(entryId: string | null) {
 }
 
 function SovereignDoctrinePanel() {
-  const savedKey = (() => {
-    try { return localStorage.getItem("TESSERACT_ADMIN_KEY") ?? ""; } catch { return ""; }
-  })();
-
   const sigil = useQuery({
     queryKey: ["sigil-status"],
     queryFn: async () => (await fetch(`${BASE}/api/sigil/status`)).json(),
@@ -84,18 +80,17 @@ function SovereignDoctrinePanel() {
     refetchInterval: 30000,
   });
   const handoff = useQuery({
-    queryKey: ["session-handoff", savedKey],
-    queryFn: async () => (await fetch(`${BASE}/api/session/handoff`, { headers: savedKey ? { "X-Sigil-Key": savedKey } : {} })).json(),
+    queryKey: ["session-handoff"],
+    queryFn: async () => (await fetch(`${BASE}/api/session/handoff`, { credentials: "include" })).json(),
     refetchInterval: 30000,
   });
   const toolStats = useQuery({
     queryKey: ["external-tool-stats"],
-    queryFn: async () => (await fetch(`${BASE}/api/external-tools/stats`, { headers: savedKey ? { "X-Sigil-Key": savedKey } : {} })).json(),
+    queryFn: async () => (await fetch(`${BASE}/api/external-tools/stats`, { credentials: "include" })).json(),
     refetchInterval: 30000,
   });
 
   const fp = activeKey.data?.key?.fingerprint ?? "—";
-  const keyMatches = !!savedKey;
   const handoffPlaintext = handoff.data && typeof handoff.data?.directives !== "undefined" && Array.isArray(handoff.data.directives);
 
   return (
@@ -117,7 +112,7 @@ function SovereignDoctrinePanel() {
           <div className="text-[10px] uppercase text-cyan-400/70 font-mono mb-1">SESSION HANDOFF</div>
           <div className="text-xs font-mono text-white/70">Directives: <span className="text-cyan-300">{handoff.data?.directives?.length ?? "—"}</span></div>
           <div className="text-xs font-mono text-white/70">Position: <span className="text-cyan-300">{handoff.data?.position ?? "fresh"}</span></div>
-          <div className="text-[10px] font-mono text-white/40 mt-1">{handoffPlaintext ? "✓ readable (key valid)" : savedKey ? "encoded (key mismatch)" : "encoded (no key)"}</div>
+          <div className="text-[10px] font-mono text-white/40 mt-1">{handoffPlaintext ? "✓ readable (owner session)" : "sign in to read handoff"}</div>
         </div>
         <div className="bg-black/30 border border-white/10 rounded p-3">
           <div className="text-[10px] uppercase text-amber-400/70 font-mono mb-1">EXTERNAL-TOOL SANDBOX</div>
@@ -131,8 +126,8 @@ function SovereignDoctrinePanel() {
         <div className="flex items-center gap-2 mb-1">
           <Hash className="h-3 w-3 text-emerald-400" />
           <div className="text-xs uppercase text-emerald-400 font-mono">SOVEREIGN KEY</div>
-          <span className={`ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded ${keyMatches ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "bg-white/5 text-white/40 border border-white/10"}`}>
-            {keyMatches ? "✓ ACTIVE — surfaces in English" : "no key — surfaces in glyph"}
+          <span className={`ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded ${handoffPlaintext ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "bg-white/5 text-white/40 border border-white/10"}`}>
+            {handoffPlaintext ? "✓ OWNER SESSION ACTIVE" : "OWNER SESSION REQUIRED"}
           </span>
         </div>
         <p className="text-[10px] font-mono text-white/50">
