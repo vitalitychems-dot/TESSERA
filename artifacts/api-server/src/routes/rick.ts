@@ -962,7 +962,7 @@ router.get("/rick/improvement-program", async (_req, res) => {
   }
 });
 
-router.post("/rick/improvement-program/start", async (_req, res) => {
+router.post("/rick/improvement-program/start", requireAdminSession, requireOwnerOrigin, async (_req, res) => {
   try {
     const program = await startProgram();
     return res.json({ ok: true, program, maxCycles: PROGRAM_MAX_CYCLES });
@@ -972,7 +972,7 @@ router.post("/rick/improvement-program/start", async (_req, res) => {
   }
 });
 
-router.post("/rick/improvement-program/abandon", async (_req, res) => {
+router.post("/rick/improvement-program/abandon", requireAdminSession, requireOwnerOrigin, async (_req, res) => {
   try {
     const program = await abandonProgram();
     return res.json({ ok: true, program });
@@ -982,7 +982,7 @@ router.post("/rick/improvement-program/abandon", async (_req, res) => {
   }
 });
 
-router.post("/rick/improvement-program/advance", async (_req, res) => {
+router.post("/rick/improvement-program/advance", requireAdminSession, requireOwnerOrigin, async (_req, res) => {
   try {
     const program = await advanceStage();
     return res.json({ ok: true, program, maxCycles: PROGRAM_MAX_CYCLES });
@@ -992,7 +992,7 @@ router.post("/rick/improvement-program/advance", async (_req, res) => {
   }
 });
 
-router.post("/rick/improvement-program/generate-proposals", async (_req, res) => {
+router.post("/rick/improvement-program/generate-proposals", requireAdminSession, requireOwnerOrigin, async (_req, res) => {
   try {
     const program = await generateCycleProposals();
     return res.json({ ok: true, program });
@@ -1077,13 +1077,13 @@ router.patch("/rick/improvement-program/task-queue/:taskId", requireAdminSession
   }
 });
 
-router.post("/rick/improvement-program/proposal/:proposalId/reflection", async (req, res) => {
+router.post("/rick/improvement-program/proposal/:proposalId/reflection", requireAdminSession, requireOwnerOrigin, async (req, res) => {
   try {
     const { text } = req.body as { text?: string };
     if (!text || !text.trim()) {
       return res.status(400).json({ ok: false, error: "reflection text is required" });
     }
-    const program = await recordReflection(req.params.proposalId, text.trim());
+    const program = await recordReflection(routeParam(req, "proposalId"), text.trim());
     return res.json({ ok: true, program });
   } catch (err) {
     logger.error({ err }, "Rick: program reflection error");
@@ -1091,7 +1091,7 @@ router.post("/rick/improvement-program/proposal/:proposalId/reflection", async (
   }
 });
 
-router.post("/rick/improvement-program/regenerate-reflections", async (_req, res) => {
+router.post("/rick/improvement-program/regenerate-reflections", requireAdminSession, requireOwnerOrigin, async (_req, res) => {
   try {
     const program = await regenerateReflections();
     return res.json({ ok: true, program });

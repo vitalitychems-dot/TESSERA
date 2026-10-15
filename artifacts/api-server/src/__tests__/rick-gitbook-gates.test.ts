@@ -118,6 +118,18 @@ describe("B. approve / implemented need a non-Rick actor plus a test reference",
     expect(r).toContain('router.post("/rick/improvement-program/proposal/:proposalId/decision", requireAdminSession, requireOwnerOrigin');
     expect(r).toContain('router.post("/rick/improvement-program/proposal/:proposalId/dispatch-status", requireAdminSession, requireOwnerOrigin');
     expect(r).toContain('router.patch("/rick/improvement-program/task-queue/:taskId", requireAdminSession, requireOwnerOrigin');
+    for (const route of [
+      "/rick/improvement-program/start",
+      "/rick/improvement-program/abandon",
+      "/rick/improvement-program/advance",
+      "/rick/improvement-program/generate-proposals",
+      "/rick/improvement-program/proposal/:proposalId/reflection",
+      "/rick/improvement-program/regenerate-reflections",
+    ]) {
+      expect(r).toContain(`router.post("${route}", requireAdminSession, requireOwnerOrigin`);
+    }
+    expect(r).toContain('router.get("/rick/improvement-program", async (_req, res) =>');
+    expect(r).toContain('router.post("/rick/improvement-program/proposal/:proposalId/dispatch", requireRickLoopFlag');
     expect(r).toContain('decideProposal(routeParam(req, "proposalId"), decision, reason, { approver, testRef })');
     expect(r).toContain('updateDispatchStatus(routeParam(req, "proposalId"), status, note, { actor, testRef })');
     expect(r).toContain("updateDispatchStatus(taskId, status, note, { actor, testRef })");
@@ -292,6 +304,111 @@ describe("B. approve / implemented need a non-Rick actor plus a test reference",
       });
       expect(isRickLoopEnabled()).toBe(false);
     } finally {
+      for (const name of envNames) {
+        const value = savedEnv[name];
+        if (value === undefined) delete process.env[name];
+        else process.env[name] = value;
+      }
+    }
+  });
+  it("owner-gates lifecycle and reflection mutations while keeping reads open and dispatch flag-gated", async () => {
+    const programService = await import("../lib/rick-improvement-program");
+    const envNames = [
+      "TESSERACT_ADMIN_KEY",
+      "SOVEREIGN_SESSION_SECRET",
+      "TESSERA_LLM_BASE_URL",
+      "TESSERA_LLM_API_KEY",
+      "TESSERA_LLM_MODEL",
+    ] as const;
+    const savedEnv = Object.fromEntries(envNames.map(name => [name, process.env[name]]));
+    process.env.TESSERACT_ADMIN_KEY = "synthetic-rick-cycle-owner";
+    process.env.SOVEREIGN_SESSION_SECRET = "synthetic-rick-cycle-session-secret-32chars";
+    for (const name of envNames.slice(2)) delete process.env[name];
+
+    const mutations = [
+      { path: "/rick/improvement-program/start", body: {} },
+      { path: "/rick/improvement-program/abandon", body: {} },
+      { path: "/rick/improvement-program/advance", body: {} },
+      { path: "/rick/improvement-program/generate-proposals", body: {} },
+      { path: "/rick/improvement-program/proposal/synthetic-proposal/reflection", body: { text: "Synthetic reflection." } },
+      { path: "/rick/improvement-program/regenerate-reflections", body: {} },
+    ];
+    const sendMutation = (
+      path: string,
+      body: unknown,
+      cookie?: string,
+      origin = routeBaseUrl,
+    ) => fetch(`${routeBaseUrl}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: origin,
+        ...(cookie ? { Cookie: cookie } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+
+    try {
+      await programService.abandonProgram();
+      const session = issueSession({ ip: "127.0.0.1", userAgent: "rick-cycle-gates-vitest" });
+      const ownerCookie = `${SESSION_COOKIE}=${session.signedId}`;
+
+      for (const mutation of mutations) {
+        const anonymous = await sendMutation(mutation.path, mutation.body);
+        expect(anonymous.status, `${mutation.path} should deny anonymous writes`).toBe(401);
+        const crossOrigin = await sendMutation(mutation.path, mutation.body, ownerCookie, "https://attacker.example");
+        expect(crossOrigin.status, `${mutation.path} should reject cross-origin writes`).toBe(403);
+      }
+
+      expect((await fetch(`${routeBaseUrl}/rick/improvement-program`)).status).toBe(200);
+      expect((await fetch(`${routeBaseUrl}/rick/proposals`)).status).toBe(200);
+      const disabledDispatch = await sendMutation(
+        "/rick/improvement-program/proposal/synthetic-proposal/dispatch",
+        {},
+      );
+      expect(disabledDispatch.status).toBe(403);
+      expect(await disabledDispatch.json()).toMatchObject({
+        ok: false,
+        error: expect.stringContaining("Disabled:"),
+      });
+
+      const started = await sendMutation("/rick/improvement-program/start", {}, ownerCookie);
+      expect(started.status).toBe(200);
+      const generated = await sendMutation("/rick/improvement-program/generate-proposals", {}, ownerCookie);
+      expect(generated.status).toBe(200);
+
+      const enteredReview = await sendMutation("/rick/improvement-program/advance", {}, ownerCookie);
+      expect(enteredReview.status).toBe(200);
+      const active = (await programService.getProgram()).active!;
+      const proposals = active.cycles[0]!.proposals;
+      expect(proposals.length).toBeGreaterThan(0);
+      for (const [index, proposal] of proposals.entries()) {
+        await programService.decideProposal(
+          proposal.id,
+          index === 0 ? "approved" : "rejected",
+          "Synthetic owner-gate route test.",
+          { approver: "Father", testRef: "vitest:rick-cycle-gates" },
+        );
+      }
+
+      const enteredImplementation = await sendMutation("/rick/improvement-program/advance", {}, ownerCookie);
+      expect(enteredImplementation.status).toBe(200);
+      const enteredReflection = await sendMutation("/rick/improvement-program/advance", {}, ownerCookie);
+      expect(enteredReflection.status).toBe(200);
+      const savedReflection = await sendMutation(
+        `/rick/improvement-program/proposal/${encodeURIComponent(proposals[0]!.id)}/reflection`,
+        { text: "Owner-confirmed synthetic reflection." },
+        ownerCookie,
+      );
+      expect(savedReflection.status).toBe(200);
+      const regenerated = await sendMutation("/rick/improvement-program/regenerate-reflections", {}, ownerCookie);
+      expect(regenerated.status).toBe(200);
+
+      const abandoned = await sendMutation("/rick/improvement-program/abandon", {}, ownerCookie);
+      expect(abandoned.status).toBe(200);
+      expect((await programService.getProgram()).active).toBeNull();
+    } finally {
+      await programService.abandonProgram();
       for (const name of envNames) {
         const value = savedEnv[name];
         if (value === undefined) delete process.env[name];
