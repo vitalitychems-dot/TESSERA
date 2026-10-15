@@ -10,6 +10,8 @@ import { createHash, randomBytes } from "node:crypto";
 import { getForumEngineMetrics, runForumCycle, FORUM_AGENTS } from "../lib/autonomous-forum-engine";
 import { scoreApplicantAlignment } from "../lib/applicant-alignment";
 import { authorAndSignDeclaration } from "../lib/lattice-declarations";
+import { decideOwnerSession } from "../lib/sovereign-admin";
+import { createForumSummonHandler, dispatchForumSummons } from "../lib/forum-summons";
 
 const router: IRouter = Router();
 const forumReadRate = new Map<string, { windowStartedAt: number; requests: number }>();
@@ -463,12 +465,46 @@ router.post("/tesseract-forum/topics/:id/reply", async (req, res) => {
   }
 });
 
-router.post("/tesseract-forum/topics/:id/summon-all", async (_req, res) => {
-  return res.status(503).json({
-    ok: false,
-    error: "Live agent dispatch is not connected. No replies were created.",
-  });
+const summonAllHandler = createForumSummonHandler({
+  authorize: (req) => {
+    const decision = decideOwnerSession(req);
+    return decision.ok
+      ? { authorized: true }
+      : { authorized: false, statusCode: decision.status };
+  },
+  loadTopic: async (topicId) => {
+    const rows = await db.select({
+      id: forumTopicsTable.id,
+      title: forumTopicsTable.title,
+      content: forumTopicsTable.content,
+      category: forumTopicsTable.category,
+    }).from(forumTopicsTable).where(eq(forumTopicsTable.id, topicId)).limit(1);
+    return rows[0] ?? null;
+  },
+  dispatch: (topic, requestId) =>
+    dispatchForumSummons(topic, requestId, FORUM_AGENTS.map(agent => agent.name)),
+  persistReplies: async (topicId, replies) => db.transaction(async (tx) => {
+    const inserted = await tx.insert(forumRepliesTable).values(replies.map(reply => ({
+      topicId,
+      parentReplyId: null,
+      content: reply.content,
+      author: reply.agentName,
+      authorType: "agent",
+      authorKeyHash: null,
+    }))).returning();
+    if (inserted.length > 0) {
+      await tx.update(forumTopicsTable)
+        .set({
+          replies: sql`${forumTopicsTable.replies} + ${inserted.length}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(forumTopicsTable.id, topicId));
+    }
+    return inserted.map(omitKeyHash);
+  }),
 });
+
+router.post("/tesseract-forum/topics/:id/summon-all", summonAllHandler);
 
 router.post("/tesseract-forum/topics/:id/proposals", async (req, res) => {
   return res.status(503).json({

@@ -47,11 +47,13 @@ describe("world and forum provenance contracts", () => {
     expect(Number(limited.headers.get("retry-after"))).toBeGreaterThan(0);
   });
 
-  it("does not claim to dispatch agents or create non-persisted proposals", async () => {
+  it("requires an owner session before any forum agent dispatch", async () => {
     const summon = await fetch(`${baseUrl}/tesseract-forum/topics/1/summon-all`, { method: "POST" });
-    expect(summon.status).toBe(503);
+    expect([401, 503]).toContain(summon.status);
     expect(await summon.json()).toMatchObject({ ok: false, error: expect.stringContaining("No replies were created") });
+  });
 
+  it("does not create non-persisted proposals", async () => {
     const proposal = await fetch(`${baseUrl}/tesseract-forum/topics/1/proposals`, { method: "POST" });
     expect(proposal.status).toBe(503);
     expect(await proposal.json()).toMatchObject({ ok: false, error: expect.stringContaining("No proposal was created") });
