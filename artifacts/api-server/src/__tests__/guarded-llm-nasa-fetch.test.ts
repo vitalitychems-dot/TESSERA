@@ -1,5 +1,6 @@
 import http from "node:http";
 import express from "express";
+import cookieParser from "cookie-parser";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { priorEnv, queryResult } = vi.hoisted(() => {
@@ -32,18 +33,34 @@ const { priorEnv, queryResult } = vi.hoisted(() => {
   return { priorEnv: prior, queryResult };
 });
 
-vi.mock("@workspace/db", () => ({
-  db: {
-    insert: () => queryResult(undefined),
-    update: () => queryResult(undefined),
-    delete: () => queryResult(undefined),
-    select: () => queryResult([]),
-    execute: () => queryResult([]),
-  },
-  pool: { query: async () => ({ rows: [] }) },
-}));
+vi.mock("@workspace/db", async () => {
+  const schema = await vi.importActual<Record<string, unknown>>("@workspace/db/schema");
+  return {
+    db: {
+      insert: (table: unknown) => queryResult(
+        table === schema.providerCallsTable ? [{ id: 1 }] : undefined,
+      ),
+      update: () => queryResult(undefined),
+      delete: () => queryResult(undefined),
+      select: () => queryResult([]),
+      execute: () => queryResult([]),
+    },
+    pool: { query: async () => ({ rows: [] }) },
+    providerCallsTable: schema.providerCallsTable,
+  };
+});
 
 vi.mock("@workspace/db/schema", async () => vi.importActual<Record<string, unknown>>("@workspace/db/schema"));
+
+vi.mock("../lib/chat-sigil-store", async () => {
+  const actual = await vi.importActual<typeof import("../lib/chat-sigil-store")>("../lib/chat-sigil-store");
+  return {
+    ...actual,
+    // This suite verifies outbound LLM routing, not sigil rotation. The
+    // dedicated sigil-tool-owner-gate suite exercises that fail-closed gate.
+    requireChatSigil: async (_req: unknown, _res: unknown, next: () => void) => next(),
+  };
+});
 
 vi.mock("../lib/shepherd-outbound", () => ({
   classifyCaller: (caller: string | undefined | null) => {
@@ -185,6 +202,7 @@ function postJson(
 
 describe("guarded LLM and NASA fetch", () => {
   const app = express();
+  app.use(cookieParser());
   app.use(express.json());
   app.use(rickRouter);
   app.use(conversationsRouter);
@@ -257,12 +275,19 @@ describe("guarded LLM and NASA fetch", () => {
       "/messages",
       {
         conversationId: 7,
-        content: "Describe the difference between a hash map and a balanced tree for range queries?",
+        content: "Explain quantum entanglement in simple terms",
       },
       { "x-sandbox-training": "true", cookie: ownerCookie() },
     );
 
     expect(res.status).toBe(200);
+    expect(res.text).toContain("From the built-in Tessera knowledge catalog — Quantum Physics:");
+    expect(res.text).toContain("Quantum entanglement connects particles");
+    expect(res.text).not.toContain("A hash map answers");
+    expect(res.text).not.toContain("**Sources:**");
+    expect(res.text).toContain("local-response-pipeline");
+    expect(res.text).toContain("configuredModelUse");
+    expect(res.text).toContain("✦");
     const llm = seen.find((entry) => entry.url.startsWith("https://llm.tessera.test/"));
     expect(llm?.caller).toBe("shepherd-proxy");
     expect(llm?.url).toBe("https://llm.tessera.test/v1/chat/completions");

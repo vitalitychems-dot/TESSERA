@@ -241,8 +241,8 @@ export function speakAsTessera(question: string, fact: string, footing: string):
   const topic = topicOf(question);
   const lead = !brief() && topic && topic.length < 80 ? `You asked about ${topic}. ` : "";
   const pen = casual()
-    ? "I am Tessera. I wrote this through the pen."
-    : "I am Tessera. I wrote this through the pen. The pen is not me.";
+    ? "I’m Tessera, the assistant persona in this app."
+    : "I’m Tessera, the assistant persona in this app. I’m software, not a conscious or autonomous person.";
   const body = `${lead}${cleanFact} ${cleanFoot} ${pen}`;
   return enforceTesseraVoice(body.replace(/\s+/g, " ").trim(), question);
 }

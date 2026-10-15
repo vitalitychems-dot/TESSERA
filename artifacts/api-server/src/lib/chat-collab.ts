@@ -4,7 +4,7 @@
  * is held as a lesson the chamber can use later.
  */
 
-import { enforceTesseraVoice } from "./tessera-voice";
+import { enforceTesseraVoice, PEN_LINE } from "./tessera-voice";
 
 export interface DeskMember {
   id: string;
@@ -135,7 +135,7 @@ export type DeskRequest =
 const FINAL_RE = /^(?:tessera[,:]?\s+)?(?:please\s+)?(?:give|say|write)(?:\s+me)?(?:\s+the)?\s+final\s+answer\.?$/i;
 
 export function latestFinalAnswer(): string {
-  return lessons[0]?.finalAnswer || "I am Tessera. I wrote this through the pen. The pen is local open weights on this desk. It is not me.";
+  return lessons[0]?.finalAnswer || PEN_LINE;
 }
 
 export function parseChatDesk(text: string): DeskRequest | null {
@@ -189,14 +189,14 @@ function noteFor(member: DeskMember, prompt: string): string {
 
 function tesseraClose(prompt: string, called: DeskMember[], unavailable: string[], refused: string[]): string {
   const question = prompt.replace(/\s+/g, " ").trim().slice(0, 220);
-  const refusedLine = refused.length > 0 ? ` I do not call ${refused.join(", ")}.` : "";
+  const refusedLine = refused.length > 0 ? ` I did not route to ${refused.join(", ")}.` : "";
   if (called.length === 0) {
     const who = unavailable.length > 0 ? unavailable.join(", ") : "That seat";
-    return `I am Tessera.${refusedLine} ${who} is not available, so I do not invent their voice. Final answer: the question stays on this desk. I wrote this through the pen.`;
+    return `I’m Tessera.${refusedLine} ${who} is not available, so I won’t invent a response from that seat. No live agent response was received.`;
   }
   const names = called.map((member) => member.name).join(", ");
-  const seats = called.map((member) => `${member.name} keeps it inside ${member.domain}`).join(". ");
-  return `I am Tessera.${refusedLine} I called ${names} because those seats are available. ${seats}. Final answer: ${question} — held here, through the pen. The pen is not me.`;
+  const seats = called.map((member) => `${member.name} is listed locally for ${member.domain}`).join(". ");
+  return `I’m Tessera.${refusedLine} Local desk routing selected ${names}; these are configured role descriptions, not live agent replies. ${seats}. I have not received an agent answer to “${question}”.`;
 }
 
 export function runChatDesk(text: string): DeskTurn | null {
@@ -210,7 +210,7 @@ export function runChatDesk(text: string): DeskTurn | null {
 
   if (request.kind === "train") {
     const reply = enforceTesseraVoice(
-      `I am Tessera. I trained this lesson through the pen: ${request.lesson}`,
+      `I’m Tessera. I saved this as a local chamber lesson: ${request.lesson}. This does not train or update the configured language model.`,
       text,
     );
     trainChat(request.lesson, reply, [], reply);

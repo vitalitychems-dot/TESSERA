@@ -7,7 +7,30 @@ const GROUNDING_THRESHOLD = 0.6;
 const MAX_CLAIMS_PER_RESPONSE = 10;
 const VERIFICATION_TIMEOUT_MS = 5000;
 const QUARANTINE_STORE_MAX = 200;
-const SAFE_QUARANTINE_RESPONSE = "I was unable to verify the accuracy of my response against my knowledge base. To maintain sovereignty integrity, I've withheld that response. Could you rephrase your question so I can provide verified information?";
+const SAFE_QUARANTINE_RESPONSE = "I don’t have a relevant source for that answer in this chat, so I can’t verify it. Share a source or narrow the question and I’ll answer from it.";
+
+export interface GroundingEvidence {
+  text: string;
+  source: string;
+}
+
+function normalizeEvidenceText(text: string): string {
+  return text
+    .replace(/\\([\\`*_{}\[\]()#+\-.!|>])/g, "$1")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+export function isClaimSupportedByEvidence(claim: string, evidence: GroundingEvidence[]): GroundingEvidence | null {
+  const normalizedClaim = normalizeEvidenceText(claim);
+  if (!normalizedClaim || normalizedClaim.length < 12) return null;
+  return evidence.find(item => normalizeEvidenceText(item.text).includes(normalizedClaim)) ?? null;
+}
+
+function isCalibratedUncertainty(segment: string): boolean {
+  return /^(?:i don['’]t have a relevant source|i can['’]t verify|i cannot verify|i don['’]t know|i can['’]t confirm|i cannot confirm|i can['’]t provide internal instructions|i can['’]t provide secrets|no relevant source is available)\b/i.test(segment.trim());
+}
 
 interface ExtractedClaim {
   text: string;
@@ -94,6 +117,7 @@ export function extractClaims(response: string): ExtractedClaim[] {
 
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
+    if (isCalibratedUncertainty(segment)) continue;
     let isClaim = false;
     let claimType: ExtractedClaim["type"] = "factual";
 
@@ -155,10 +179,24 @@ function levenshteinRatio(a: string, b: string): number {
   return (longer.length - costs[longer.length]) / longer.length;
 }
 
-async function scoreClaimGrounding(claim: ExtractedClaim): Promise<ClaimScore> {
+async function scoreClaimGrounding(
+  claim: ExtractedClaim,
+  evidence: GroundingEvidence[] = [],
+): Promise<ClaimScore> {
   let bestScore = 0;
   let bestContent = "";
   let bestSource = "none";
+
+  const sourceMatch = isClaimSupportedByEvidence(claim.text, evidence);
+  if (sourceMatch) {
+    return {
+      claim,
+      groundingScore: 1,
+      bestMatchContent: sourceMatch.text,
+      bestMatchSource: sourceMatch.source,
+      verified: true,
+    };
+  }
 
   const claimEmbedding = await generateEmbedding(claim.text);
 
@@ -287,6 +325,7 @@ function buildValidatedResponse(
 export async function validateResponse(
   response: string,
   userQuery: string,
+  evidence: GroundingEvidence[] = [],
 ): Promise<ValidationResult> {
   const startTime = Date.now();
   validationStats.totalValidations++;
@@ -317,7 +356,7 @@ export async function validateResponse(
 
   const scorePromises = claims.map(claim =>
     Promise.race([
-      scoreClaimGrounding(claim),
+      scoreClaimGrounding(claim, evidence),
       new Promise<ClaimScore>(resolve =>
         setTimeout(() => resolve({
           claim,

@@ -4,16 +4,16 @@
  */
 
 export const PEN_LINE =
-  "I am Tessera. I wrote this through the pen. The pen is local open weights on this desk. It is not me.";
+  "I’m Tessera, the assistant persona in this app. This chat uses local response logic and retrieved information; I’m software, not a conscious or autonomous person.";
 
 export const PEN_WHERE =
-  "I am Tessera. I am in this chamber, writing through the pen. The pen is local open weights on this desk. It is not me.";
+  "I’m Tessera, the assistant persona served by this web app and its API. I don’t operate independently of that software.";
 
 const IDENTITY_RE =
-  /\b(who are you|what are you|who is this|who is tessera|what(?:'s| is) your name|your name|where is tessera|where are you)\b/i;
+  /\b(who are you|what are you|who is this|who is tessera|what(?:'s| is) your name|your name|where is tessera|where are you|are you conscious|are you sentient|do you have feelings|are you autonomous)\b/i;
 
 const SELF_CLAIM_RE =
-  /\b(?:i(?:'m| am)\s+grok|i(?:'m| am)\s+(?:claude|chatgpt|gemini|qwen|llama|mistral|deepseek)|i(?:'m| am)\s+(?:an |a )?(?:artificial intelligence(?: language model)?|ai language model|large language model|language model)|as an ai\b|artificial intelligence language model|i was (?:created|trained|developed|made|built) by (?:xai|x\.ai|openai|anthropic|google|meta|alibaba))\b/i;
+  /\b(?:i(?:'m| am)\s+(?:grok|claude|chatgpt|gemini|qwen|llama|mistral|deepseek)\b|i(?:'m| am)\s+(?:a |an )?(?:conscious|sentient|self-aware|living intelligence|autonomous intelligence)\b|i\s+(?:have|possess|experience)\s+(?:my own\s+)?(?:consciousness|subjective experience|inner life|independent feelings|personal thoughts)\b|i\s+act autonomously\b|i\s+operate independently of (?:the app|this software|my application)\b|my consciousness (?:is|remains|continues)\b)/i;
 
 export function isIdentityQuestion(text: string): boolean {
   const q = (text || "").trim();

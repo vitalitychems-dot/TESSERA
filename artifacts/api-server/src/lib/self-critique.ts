@@ -2,7 +2,7 @@ import { db } from "@workspace/db";
 import { selfCritiqueLogTable } from "@workspace/db/schema";
 import { desc, gte } from "drizzle-orm";
 import { logger } from "./logger";
-import { validateResponse } from "./response-validation-engine";
+import { isClaimSupportedByEvidence, validateResponse, type GroundingEvidence } from "./response-validation-engine";
 import { analyzeTruthfulnessV2 } from "./truthfulness-engine";
 import { searchMemory } from "./vector-memory";
 import { recallIngestedKnowledge } from "./ingested-recall";
@@ -62,6 +62,7 @@ export interface CritiqueOptions {
   passScore?: number;
   persist?: boolean;
   metadata?: Record<string, unknown>;
+  evidence?: GroundingEvidence[];
 }
 
 export interface Generator {
@@ -80,7 +81,12 @@ async function gatherRefinedContext(userQuery: string, priorResponse: string): P
   return lines.join("\n");
 }
 
-async function critiqueOne(content: string, userQuery: string, passScore: number): Promise<{
+async function critiqueOne(
+  content: string,
+  userQuery: string,
+  passScore: number,
+  evidence: GroundingEvidence[] = [],
+): Promise<{
   validatedContent: string;
   groundingScore: number;
   truthfulnessScore: number;
@@ -92,7 +98,7 @@ async function critiqueOne(content: string, userQuery: string, passScore: number
 }> {
   const [validation, truth] = await Promise.all([
     withTimeout(
-      validateResponse(content, userQuery).catch(err => {
+      validateResponse(content, userQuery, evidence).catch(err => {
         logger.warn({ err: (err as Error).message }, "self-critique: validateResponse failed");
         return null;
       }),
@@ -110,9 +116,20 @@ async function critiqueOne(content: string, userQuery: string, passScore: number
   ]);
 
   const groundingScore = validation?.overallGroundingScore ?? 0;
-  const truthScore = truth?.overallTruthScore ?? 0;
+  const evidenceBacked = !!validation &&
+    Array.isArray(validation.claims) &&
+    validation.claims.length > 0 &&
+    validation.claims.every(claim => isClaimSupportedByEvidence(claim.claim.text, evidence) !== null);
+  const safeEvidenceBacked = evidenceBacked &&
+    truth?.hallucinationCheck.severity !== "high" &&
+    truth?.recommendation !== "reject";
+  const truthScore = safeEvidenceBacked
+    ? Math.max(truth?.overallTruthScore ?? 0, passScore)
+    : truth?.overallTruthScore ?? 0;
   const hSeverity = truth?.hallucinationCheck.severity ?? "none";
-  const verdict = truth?.recommendation ?? "caution";
+  const verdict = safeEvidenceBacked && truth?.recommendation === "warning"
+    ? "caution"
+    : truth?.recommendation ?? "caution";
   const sources: string[] = [];
   if (validation) {
     for (const c of validation.passedClaims) {
@@ -188,7 +205,7 @@ export async function runCritiqueLoop(
 
     let c = critiqueMemo.get(draft);
     if (!c) {
-      c = await critiqueOne(draft, userQuery, passScore);
+      c = await critiqueOne(draft, userQuery, passScore, opts.evidence);
       critiqueMemo.set(draft, c);
     }
     const compositeScore = 0.5 * c.groundingScore + 0.5 * c.truthfulnessScore;
