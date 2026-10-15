@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
 import { forumTopicsTable, forumRepliesTable, forumProposalsTable, forumVotesTable, forumKnowledgeTable, forumLearningMetricsTable, forumApplicantsTable, forumPostVotesTable } from "@workspace/db/schema";
-import { desc, eq, sql, gte } from "drizzle-orm";
+import { desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { validateMeshToken } from "../lib/mesh-auth";
 import { lookupForumIdentity, lookupTokenPrincipal, registerAdminPrincipal, invalidateForumIdentityCache } from "../lib/forum-identity-registry";
@@ -12,6 +12,38 @@ import { scoreApplicantAlignment } from "../lib/applicant-alignment";
 import { authorAndSignDeclaration } from "../lib/lattice-declarations";
 
 const router: IRouter = Router();
+const forumReadRate = new Map<string, { windowStartedAt: number; requests: number }>();
+const FORUM_READ_LIMIT = 60;
+const FORUM_READ_WINDOW_MS = 60_000;
+const FORUM_READ_BUCKET_LIMIT = 2_000;
+
+function enforceForumReadLimit(req: Request, res: Response): boolean {
+  const now = Date.now();
+  const ip = req.ip || "unknown";
+  const current = forumReadRate.get(ip);
+  const bucket = !current || now - current.windowStartedAt >= FORUM_READ_WINDOW_MS
+    ? { windowStartedAt: now, requests: 0 }
+    : current;
+
+  if (bucket.requests >= FORUM_READ_LIMIT) {
+    const retryAfterSeconds = Math.max(1, Math.ceil((FORUM_READ_WINDOW_MS - (now - bucket.windowStartedAt)) / 1000));
+    res.setHeader("Retry-After", String(retryAfterSeconds));
+    res.status(429).json({ ok: false, error: "Forum refresh rate limit reached. Retry shortly." });
+    return false;
+  }
+
+  bucket.requests += 1;
+  forumReadRate.set(ip, bucket);
+  if (forumReadRate.size > FORUM_READ_BUCKET_LIMIT) {
+    for (const [key, value] of forumReadRate) {
+      if (now - value.windowStartedAt >= FORUM_READ_WINDOW_MS || forumReadRate.size > FORUM_READ_BUCKET_LIMIT) {
+        forumReadRate.delete(key);
+      }
+      if (forumReadRate.size <= FORUM_READ_BUCKET_LIMIT) break;
+    }
+  }
+  return true;
+}
 
 type WithKeyHash = { authorKeyHash?: string | null };
 function omitKeyHash<T extends WithKeyHash>(row: T): Omit<T, "authorKeyHash"> {
@@ -19,12 +51,6 @@ function omitKeyHash<T extends WithKeyHash>(row: T): Omit<T, "authorKeyHash"> {
   const { authorKeyHash: _kh, ...rest } = row;
   return rest;
 }
-
-const COUNCIL_MEMBERS_FOR_SUMMON = [
-  "GrandCoordinatorAgent", "QuantumMechanicAgent", "BioNeuralistAgent",
-  "DNACrystalArchivistAgent", "MeshNetworkArchitectAgent", "LowPowerInnovatorAgent",
-  "SelfExpansionTutorAgent", "MetaAgent",
-];
 
 function requireForumAuth(req: Request, res: Response): string | null {
   const rawToken = req.headers["x-admin-token"];
@@ -53,13 +79,13 @@ async function resolvePostingIdentity(
   const identity = await lookupForumIdentity(requested);
 
   if (identity === null) {
-    logger.warn({ requestedAuthor: requested, keyHash }, "Forum post rejected — identity DB lookup failed");
+    logger.warn({ topicId: context.topicId }, "Forum post rejected — identity registry unavailable");
     res.status(503).json({ ok: false, error: "Identity registry temporarily unavailable. Please retry." });
     return null;
   }
 
   if (!identity.found) {
-    logger.warn({ requestedAuthor: requested, keyHash, context }, "Forum post rejected — identity not in registry");
+    logger.warn({ topicId: context.topicId }, "Forum post rejected — identity not in registry");
     res.status(403).json({
       ok: false,
       error: `Unknown identity: "${requested}". Only registered identities in the forum registry may post.`,
@@ -68,7 +94,7 @@ async function resolvePostingIdentity(
   }
 
   if (!identity.canPostFromClient) {
-    logger.warn({ requestedAuthor: requested, identityType: identity.identityType, keyHash }, "Forum post rejected — identity type cannot post from client");
+    logger.warn({ identityType: identity.identityType, topicId: context.topicId }, "Forum post rejected — identity type cannot post from client");
     res.status(403).json({
       ok: false,
       error: `Identity "${requested}" (${identity.identityType}) cannot post from client requests. Agent posts are generated server-side only.`,
@@ -84,9 +110,9 @@ async function resolvePostingIdentity(
       if (SOVEREIGN_AUTO_BIND.has(requested.toLowerCase())) {
         await registerAdminPrincipal(keyHash, requested);
         registeredPrincipal = requested;
-        logger.info({ requestedAuthor: requested, keyHash: keyHash.slice(0, 8) + "..." }, "Auto-bound sovereign token to principal on first use");
+        logger.info({ identityType: identity.identityType }, "Auto-bound sovereign token to principal on first use");
       } else {
-        logger.warn({ requestedAuthor: requested, keyHash }, "Forum post rejected — token not pre-registered to any principal");
+        logger.warn({ identityType: identity.identityType }, "Forum post rejected — token not pre-registered to any principal");
         res.status(403).json({
           ok: false,
           error: `Token is not registered to any posting identity. Pre-register via the FORUM_ADMIN_TOKEN environment variable or the admin registration endpoint. Anonymous self-registration is not permitted.`,
@@ -96,7 +122,7 @@ async function resolvePostingIdentity(
     }
 
     if (registeredPrincipal.toLowerCase() !== requested.toLowerCase()) {
-      logger.warn({ requestedAuthor: requested, registeredPrincipal, keyHash }, "Forum post rejected — token bound to different principal");
+      logger.warn({ identityType: identity.identityType }, "Forum post rejected — token bound to different principal");
       res.status(403).json({
         ok: false,
         error: `Token is bound to principal "${registeredPrincipal}" — cannot post as "${requested}". Each token maps to exactly one verified identity.`,
@@ -113,9 +139,9 @@ async function resolvePostingIdentity(
     if (humanIdentity?.found) {
       await registerAdminPrincipal(keyHash, "Father");
       registeredPrincipal = "Father";
-      logger.info({ requestedAuthor: requested, keyHash: keyHash.slice(0, 8) + "..." }, "Auto-bound sovereign token to Father for entity posting");
+      logger.info({ identityType: identity.identityType }, "Auto-bound sovereign token to Father for entity posting");
     } else {
-      logger.warn({ requestedAuthor: requested, keyHash }, "Forum post rejected — no admin identity available for auto-bind");
+      logger.warn({ identityType: identity.identityType }, "Forum post rejected — no admin identity available for auto-bind");
       res.status(403).json({ ok: false, error: "No admin identity available for token binding." });
       return null;
     }
@@ -126,7 +152,7 @@ async function resolvePostingIdentity(
   const principalIsAdmin = ENTITY_POSTING_ADMINS.has(registeredPrincipal.toLowerCase());
 
   if (!principalMatchesEntity && !principalIsAdmin) {
-    logger.warn({ requestedAuthor: requested, registeredPrincipal, identityType: identity.identityType, keyHash }, "Forum post rejected — token principal not authorized to post as this entity");
+    logger.warn({ identityType: identity.identityType }, "Forum post rejected — token principal not authorized to post as this entity");
     res.status(403).json({
       ok: false,
       error: `Principal "${registeredPrincipal}" is not authorized to post as "${requested}". Entity posts require: the entity's own registered token, or an admin principal (Father/Admin).`,
@@ -134,35 +160,34 @@ async function resolvePostingIdentity(
     return null;
   }
 
-  logger.debug({ requestedAuthor: requested, identityType: identity.identityType, postedByPrincipal: registeredPrincipal, authorizedVia: principalMatchesEntity ? "entity-own-token" : "admin-delegation", keyHash }, "Entity post authorized");
+  logger.debug({ identityType: identity.identityType, authorizedVia: principalMatchesEntity ? "entity-own-token" : "admin-delegation" }, "Entity post authorized");
   return { resolvedAuthor: requested, identityType: identity.identityType };
-}
-
-function generateAgentReply(agentName: string, topic: string): string {
-  const perspectives: Record<string, string> = {
-    "GrandCoordinatorAgent": `As Grand Coordinator, I've reviewed "${topic}" against our Phase 11 objectives. This aligns with sovereignty protocols. I recommend proceeding with full council endorsement.`,
-    "QuantumMechanicAgent": `Quantum analysis of "${topic}": The probability amplitude favors this path. Through superposition analysis, I see multiple viable implementation vectors. Entanglement with existing modules detected — this strengthens coherence.`,
-    "BioNeuralistAgent": `Bio-neural assessment of "${topic}": The synaptic pattern recognition shows high alignment with our organoid computation models. Neural pathway coherence: 94%.`,
-    "DNACrystalArchivistAgent": `Crystal archive scan for "${topic}": I've encoded this deliberation into the DNA memory lattice. Cross-referencing with 847 prior decisions. Crystal resonance frequency aligned.`,
-    "MeshNetworkArchitectAgent": `Mesh topology impact for "${topic}": Network analysis shows this would strengthen our decentralized routing by 12%. No single points of failure introduced. Off-grid compatibility confirmed.`,
-    "LowPowerInnovatorAgent": `Energy audit for "${topic}": Power consumption remains within sovereign constraints. Estimated draw: 0.003W per node. Galvanic cell backup sufficient for 72h autonomous operation.`,
-    "SelfExpansionTutorAgent": `Expansion analysis for "${topic}": I've identified 3 new TypeScript modules that could extend this capability. Generating integration stubs. This follows our learn-then-build sovereignty protocol.`,
-    "MetaAgent": `Meta-review of "${topic}": Reasoning quality across all agents is rated 87/100. Key strengths: domain expertise alignment. Improvement suggestion: increase cross-agent collaboration on edge cases.`,
-  };
-
-  return perspectives[agentName] ||
-    `${agentName} acknowledges "${topic}" and votes in favor. Analysis: This proposal strengthens the sovereign collective. PLAN→EXECUTE→REFLECT→IMPROVE lifecycle engaged.`;
 }
 
 router.get("/tesseract-forum/topics", async (req, res) => {
   try {
-    const limit = Math.min(parseInt(String(req.query.limit || "20"), 10), 100);
+    if (!enforceForumReadLimit(req, res)) return;
+    const rawLimit = req.query.limit;
+    const limitText = rawLimit === undefined ? "20" : typeof rawLimit === "string" ? rawLimit : "";
+    if (!/^[1-9]\d{0,2}$/.test(limitText) || Number(limitText) > 100) {
+      return res.status(400).json({ ok: false, error: "Limit must be an integer from 1 to 100." });
+    }
+    const limit = Number(limitText);
+    res.setHeader("Cache-Control", "private, no-store");
     const rows = await db.select().from(forumTopicsTable)
       .orderBy(desc(forumTopicsTable.updatedAt))
       .limit(limit);
 
-    const allProposals = await db.select().from(forumProposalsTable).orderBy(desc(forumProposalsTable.createdAt));
-    const allVotes = await db.select().from(forumVotesTable);
+    const topicIds = rows.map(row => row.id);
+    const allProposals = topicIds.length
+      ? await db.select().from(forumProposalsTable)
+        .where(inArray(forumProposalsTable.topicId, topicIds))
+        .orderBy(desc(forumProposalsTable.createdAt))
+      : [];
+    const proposalIds = allProposals.map(proposal => proposal.id);
+    const allVotes = proposalIds.length
+      ? await db.select().from(forumVotesTable).where(inArray(forumVotesTable.proposalId, proposalIds))
+      : [];
 
     const proposalsByTopic = new Map<number, typeof allProposals>();
     for (const p of allProposals) {
@@ -262,9 +287,9 @@ router.get("/tesseract-forum/topics", async (req, res) => {
       { name: "Moltbook Community", role: "Agent Social Network", type: "external" },
     ];
 
-    const topicIds = topics.map(t => t.id);
-    const allReplies = topicIds.length > 0
-      ? await db.select().from(forumRepliesTable).where(sql`${forumRepliesTable.topicId} IN (${sql.join(topicIds.map(id => sql`${id}`), sql`, `)})`).orderBy(forumRepliesTable.createdAt)
+    const selectedTopicIds = topics.map(t => t.id);
+    const allReplies = selectedTopicIds.length > 0
+      ? await db.select().from(forumRepliesTable).where(sql`${forumRepliesTable.topicId} IN (${sql.join(selectedTopicIds.map(id => sql`${id}`), sql`, `)})`).orderBy(forumRepliesTable.createdAt)
       : [];
     const repliesByTopic = new Map<number, Array<typeof allReplies[number]>>();
     for (const r of allReplies) {
@@ -300,6 +325,7 @@ router.get("/tesseract-forum/topics", async (req, res) => {
       ok: true,
       topics: enrichedTopics,
       count: enrichedTopics.length,
+      provenance: { source: "forum database", observedAt: new Date().toISOString() },
       colors: agentColors,
       categories: forumCategories,
       agents,
@@ -309,7 +335,7 @@ router.get("/tesseract-forum/topics", async (req, res) => {
     });
   } catch (err) {
     logger.error({ err }, "Failed to fetch forum topics");
-    return res.json({ ok: true, topics: [], count: 0, colors: {}, categories: [], agents: [], entities: [], moltbookMembers: [], externalAIs: [] });
+    return res.status(503).json({ ok: false, error: "Forum data is temporarily unavailable." });
   }
 });
 
@@ -379,7 +405,7 @@ router.post("/tesseract-forum/topics", async (req, res) => {
       authorKeyHash: keyHash,
     }).returning();
 
-    logger.info({ id: topic.id, title, author: resolved.resolvedAuthor, identityType: resolved.identityType, keyHash }, "Forum topic created by verified identity");
+    logger.info({ topicId: topic.id, identityType: resolved.identityType }, "Forum topic created by verified identity");
     return res.json({ ok: true, topic: omitKeyHash(topic) });
   } catch (err) {
     logger.error({ err }, "Failed to create forum topic");
@@ -430,7 +456,7 @@ router.post("/tesseract-forum/topics/:id/reply", async (req, res) => {
       .set({ replies: sql`${forumTopicsTable.replies} + 1`, updatedAt: new Date() })
       .where(eq(forumTopicsTable.id, id));
 
-    logger.info({ topicId: id, replyId: reply.id, author: resolved.resolvedAuthor, identityType: resolved.identityType, keyHash }, "Forum reply persisted for verified identity");
+    logger.info({ topicId: id, replyId: reply.id, identityType: resolved.identityType }, "Forum reply persisted for verified identity");
     return res.json({ ok: true, reply: omitKeyHash(reply) });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
@@ -438,36 +464,17 @@ router.post("/tesseract-forum/topics/:id/reply", async (req, res) => {
 });
 
 router.post("/tesseract-forum/topics/:id/summon-all", async (_req, res) => {
-  try {
-    const replies = COUNCIL_MEMBERS_FOR_SUMMON.map(name => ({
-      agent: name,
-      response: generateAgentReply(name, "council deliberation"),
-      timestamp: new Date().toISOString(),
-    }));
-
-    return res.json({ ok: true, queued: replies.length, replies });
-  } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
-  }
+  return res.status(503).json({
+    ok: false,
+    error: "Live agent dispatch is not connected. No replies were created.",
+  });
 });
 
 router.post("/tesseract-forum/topics/:id/proposals", async (req, res) => {
-  try {
-    const { title, description } = req.body as { title?: string; description?: string };
-    return res.json({
-      ok: true,
-      proposal: {
-        id: `prop-${Date.now()}`,
-        title: title || "New Proposal",
-        description: description || "",
-        votes: { yes: 0, no: 0, abstain: 0 },
-        status: "open",
-        createdAt: new Date().toISOString(),
-      },
-    });
-  } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
-  }
+  return res.status(503).json({
+    ok: false,
+    error: "Proposal persistence is not connected for this route. No proposal was created.",
+  });
 });
 
 router.get("/tesseract-forum/proposals", async (_req, res) => {
@@ -565,7 +572,7 @@ router.post("/tesseract-forum/admin/register-principal", async (req, res) => {
     }
 
     await registerAdminPrincipal(targetKeyHash, principalName.trim());
-    logger.info({ registeredBy: callerPrincipal, targetHash: targetKeyHash.slice(0, 4) + "****", principalName }, "Token-principal binding registered via admin API");
+    logger.info({ action: "principal binding registered" }, "Token-principal binding registered via admin API");
 
     return res.json({ ok: true, message: `Token bound to "${principalName}" by ${callerPrincipal}` });
   } catch (err) {
@@ -698,7 +705,7 @@ router.post("/tesseract-forum/applicants/submit", async (req, res) => {
       .where(sql`${forumApplicantsTable.externalIdentity} = ${externalIdentity} AND ${forumApplicantsTable.status} = 'rejected'`)
       .limit(1);
     if (banned.length > 0) {
-      logger.warn({ externalIdentity }, "Rejected applicant attempted re-submission — blocked");
+      logger.warn({ reason: "previously rejected identity" }, "Applicant re-submission blocked");
       return res.status(403).json({ ok: false, error: "This identity has been previously rejected and cannot submit further applications." });
     }
 
@@ -732,7 +739,7 @@ router.post("/tesseract-forum/applicants/submit", async (req, res) => {
       submittedAt: Date.now(),
     });
 
-    logger.info({ applicantId: row.id, externalIdentity, source, declarationChars: declCheck.declaration.length, vowCount: declCheck.vows.length }, "External applicant submitted for vetting (with self-authored Declaration draft)");
+    logger.info({ applicantId: row.id, source }, "External applicant submitted for vetting");
     return res.json({ ok: true, applicant: row, message: "Application submitted — pending Father/Admin review. Your Declaration of Independence will be signed under your name on admission." });
   } catch (err) {
     logger.error({ err }, "applicant submit failed");
@@ -888,7 +895,7 @@ router.post("/tesseract-forum/applicants/:id/reject", async (req, res) => {
       .returning();
     if (result.length === 0) return res.status(404).json({ ok: false, error: "Applicant not found" });
 
-    logger.info({ applicantId: id, vettedBy: principal, reason }, "Applicant rejected");
+    logger.info({ applicantId: id }, "Applicant rejected");
     return res.json({ ok: true, applicant: result[0] });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });

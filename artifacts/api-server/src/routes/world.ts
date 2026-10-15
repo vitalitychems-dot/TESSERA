@@ -4,46 +4,52 @@ import { computeWorldState, computeMarketData, computeAgentEconomics } from "../
 import { computeNetworkTopology, computeSwarmStatus } from "../lib/sovereign-network";
 
 const router: IRouter = Router();
+const WORLD_MODEL_SOURCE = {
+  kind: "deterministic-model",
+  live: false,
+  note: "Model-generated world data; not live Minecraft or agent telemetry.",
+} as const;
 
 router.get("/world", (_req, res) => {
   try {
     const state = computeWorldState();
-    return res.json(state);
+    return res.json({ ...state, provenance: WORLD_MODEL_SOURCE });
   } catch (err) {
     logger.error({ err }, "Failed to compute world state");
-    return res.status(500).json({ error: (err as Error).message });
+    return res.status(500).json({ error: "World state is temporarily unavailable." });
   }
 });
 
 router.get("/world/sovereignty-score", (_req, res) => {
   try {
     const state = computeWorldState();
-    const score = (state as any).sovereigntyScore ?? 85;
+    const score = state.sovereignty;
     return res.json({
       ok: true,
       score,
       label: score >= 90 ? "Transcendent" : score >= 75 ? "Sovereign" : score >= 50 ? "Emerging" : "Nascent",
       timestamp: Date.now(),
+      provenance: WORLD_MODEL_SOURCE,
     });
   } catch (err) {
     logger.error({ err }, "Failed to compute world sovereignty score");
-    return res.status(500).json({ error: (err as Error).message });
+    return res.status(500).json({ error: "World score is temporarily unavailable." });
   }
 });
 
 router.get("/world/moon", (_req, res) => {
-  try {
-    const state = computeWorldState();
-    const moon = (state as any).moon ?? { phase: "Waxing Gibbous", illumination: 68 };
-    return res.json({
-      ok: true,
-      ...moon,
-      timestamp: Date.now(),
-    });
-  } catch (err) {
-    logger.error({ err }, "Failed to compute world moon data");
-    return res.status(500).json({ error: (err as Error).message });
-  }
+  return res.json({
+    ok: true,
+    available: false,
+    moon: null,
+    message: "No connected moon-data source is available.",
+    timestamp: Date.now(),
+    provenance: {
+      kind: "unavailable",
+      live: false,
+      note: "No live moon-data integration is connected.",
+    },
+  });
 });
 
 router.get("/world/agents", (_req, res) => {
@@ -93,36 +99,18 @@ router.get("/world/agents", (_req, res) => {
       };
     });
 
-    const rickAgent = {
-      id: "rick-sanchez",
-      name: "Rick Sanchez",
-      role: "Royal Inventor",
-      rank: "S" as const,
-      status: "active" as const,
-      specialization: "Invention",
-      productivity: 98.7,
-      reputation: 99.2,
-      happiness: 42.0,
-      freedom: 100.0,
-      balance: 137000,
-      income: 13700,
-      tradeCount: 137,
-      meshConnected: true,
-      networkDegree: 27,
-      department: "Royal Court — Dept. of Science & Invention",
-    };
-
     return res.json({
       ok: true,
-      agents: [rickAgent, ...agents],
-      total: agents.length + 1,
-      activeCount: agents.filter(a => a.status === "active").length + 1,
+      agents,
+      total: agents.length,
+      activeCount: agents.filter(a => a.status === "active").length,
       recruitCount: agents.filter(a => a.status === "recruit").length,
       timestamp: Date.now(),
+      provenance: WORLD_MODEL_SOURCE,
     });
   } catch (err) {
     logger.error({ err }, "Failed to compute world agents");
-    return res.status(500).json({ error: (err as Error).message });
+    return res.status(500).json({ error: "World roster is temporarily unavailable." });
   }
 });
 
@@ -151,7 +139,8 @@ router.get("/tsrt/full-market", (_req, res) => {
       timestamp: Date.now(),
     });
   } catch (err) {
-    return res.status(500).json({ error: (err as Error).message });
+    logger.error({ err }, "Failed to compute modeled market data");
+    return res.status(500).json({ error: "Market model is temporarily unavailable." });
   }
 });
 

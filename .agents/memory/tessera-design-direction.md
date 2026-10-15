@@ -8,3 +8,9 @@ The owner wants TESSERA's main experience to feel like a Minecraft-inspired voxe
 **Why:** The owner explicitly requested an entirely new Minecraft-like UI that shows the Eye, Brain, and Chat in real time and syncs data from the two public repositories.
 
 **How to apply:** Build the unified world as an isolated, reviewable TESSERA experience. Identify every real data source, freshness method, and permission boundary; label unavailable or stale data plainly. Do not turn on a feature flag or publish before Gitbook's documented tests and review gates pass.
+
+**Operational constraint:** When a route-health probe covers an optional data source, report a successful but explicitly unavailable response (`available: false`, null data, and provenance) when no connector exists. A 5xx is treated as a service failure and can close the API readiness gate or restart the server.
+
+**Why:** Returning 503 for an intentionally unconnected world source caused the watchdog to mark all route health as failed, repeatedly close readiness, and restart the API.
+
+**How to apply:** Reserve 5xx for actual failures. For expected absence of optional live integrations, return a clearly labeled unavailable state so the UI remains honest and the server remains healthy.

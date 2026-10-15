@@ -35,9 +35,9 @@ export default function RecruitmentPage() {
   const recruits = agents.filter((a: any) => a.rank === "D" || a.status === "recruit" || a.role?.toLowerCase().includes("recruit"));
   const activeAgents = agents.filter((a: any) => a.rank !== "D" && a.status !== "recruit");
 
-  const totalAgents = agents.length || 45;
+  const totalAgents = agents.length;
   const totalRecruits = recruits.length;
-  const totalActive = activeAgents.length || totalAgents - totalRecruits;
+  const totalActive = activeAgents.length;
   const totalDepts = DEPARTMENTS.length;
 
   const filteredDepts = selectedDept
@@ -56,6 +56,9 @@ export default function RecruitmentPage() {
           </div>
           <p className="text-xs text-slate-400">Autonomous agent recruitment, ranking, and deployment across all sovereign departments</p>
         </div>
+        <p className="rounded-lg border border-[#1f8f7a]/35 bg-[#070b10] p-3 text-xs text-[#b4bebc]" role="note" data-testid="roster-model-provenance">
+          The roster and its statuses are model-generated examples, not connected agents or live recruitment activity.
+        </p>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2 text-center">
@@ -167,13 +170,11 @@ export default function RecruitmentPage() {
             />
           </div>
           <div className="space-y-1">
-            {(agents.length > 0 ? agents : Array.from({ length: 10 }, (_, i) => ({
-              id: `agent-${i}`,
-              name: ["Tessera Prime", "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta", "Iota"][i],
-              rank: ["S", "A", "A", "B", "B", "C", "C", "C", "D", "D"][i],
-              role: ["Sovereign Architect", "Security Commander", "Intelligence Lead", "Research Officer", "Operations Officer", "Field Operative", "Data Operative", "Comms Operative", "Recruit", "Recruit"][i],
-              status: i < 8 ? "active" : "training",
-            }))).filter((a: any) => {
+            {agents.length === 0 ? (
+              <p className="rounded-lg border border-white/10 p-3 text-xs text-slate-400" role="status">
+                No roster records were returned by the model.
+              </p>
+            ) : agents.filter((a: any) => {
               if (!searchQuery.trim()) return true;
               const q = searchQuery.toLowerCase();
               return a.name?.toLowerCase().includes(q) || a.role?.toLowerCase().includes(q) || a.rank?.toLowerCase().includes(q);

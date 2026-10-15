@@ -199,10 +199,13 @@ export default function LifePage({ embedded }: { embedded?: boolean }) {
             </h1>
             <p className="text-[10px] text-slate-500">World simulation — agencies, governance, society & more</p>
           </div>
-          <div className="ml-auto flex items-center gap-1.5 text-[11px] text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 animate-pulse">
-            ● LIVE
+          <div className="ml-auto flex items-center gap-1.5 text-[10px] text-[#f3efe6] bg-[#1f8f7a]/15 px-2 py-1 rounded border border-[#1f8f7a]/40">
+            MODEL-GENERATED
           </div>
         </div>
+        <p className="rounded-lg border border-[#1f8f7a]/30 bg-[#070b10] px-3 py-2 text-xs text-[#b4bebc]" role="note" data-testid="world-model-provenance">
+          This world view is a deterministic model, not live Minecraft, agent telemetry, or observed activity.
+        </p>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {[
@@ -221,7 +224,7 @@ export default function LifePage({ embedded }: { embedded?: boolean }) {
         <div>
           <div className="text-xs font-mono text-muted-foreground uppercase tracking-wider flex items-center gap-2 mb-2">
             <Globe size={12} className="text-primary" />
-            Tessera Nexus — Live World Map
+            Tessera Nexus — Model World View
           </div>
           <LifeErrorBoundary>
             <WorldMap world={world} onSelectLocation={setSelectedLocation} onSelectAgent={setSelectedAgentId} />

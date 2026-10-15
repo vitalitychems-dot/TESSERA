@@ -8,6 +8,7 @@ const REPOSITORIES = [
 
 const LIVE_POLL_MS = 30_000;
 const BRAIN_POLL_MS = 60_000;
+const FORUM_POLL_MS = 60_000;
 const REPOSITORY_POLL_MS = 5 * 60_000;
 
 export interface ServicePulse {
@@ -20,6 +21,21 @@ export interface BrainPulse {
   domains: number;
   crossReferences: number;
   averageConfidence: number;
+}
+
+export interface ForumTopicPulse {
+  id: string;
+  title: string;
+  author: string;
+  category: string;
+  replyCount: number;
+  lastActivity: number | null;
+}
+
+export interface ForumPulse {
+  topics: ForumTopicPulse[];
+  source: string;
+  observedAt: string;
 }
 
 export interface RepositoryEvent {
@@ -71,6 +87,7 @@ async function readJson(url: string, signal: AbortSignal): Promise<unknown> {
   try {
     const response = await fetch(url, {
       signal: controller.signal,
+      cache: "no-store",
       headers: { Accept: "application/json" },
     });
     if (!response.ok) throw new Error(`Request failed (${response.status})`);
@@ -111,6 +128,51 @@ async function readBrainPulse(signal: AbortSignal): Promise<BrainPulse> {
   }
 
   return { entries, domains, crossReferences, averageConfidence };
+}
+
+async function readForumPulse(signal: AbortSignal): Promise<ForumPulse> {
+  const body = record(await readJson("/api/tesseract-forum/topics?limit=3", signal));
+  const provenance = record(body?.provenance);
+  if (
+    body?.ok !== true ||
+    provenance?.source !== "forum database" ||
+    !safeDate(provenance.observedAt) ||
+    !Array.isArray(body.topics)
+  ) {
+    throw new Error("Forum response did not match the stored-topic contract.");
+  }
+
+  const topics = body.topics.flatMap((candidate): ForumTopicPulse[] => {
+    const topic = record(candidate);
+    const replyCount = nonNegativeInteger(topic?.replyCount);
+    const lastActivity = topic?.lastActivity;
+    if (
+      !topic ||
+      (typeof topic.id !== "string" && typeof topic.id !== "number") ||
+      typeof topic.title !== "string" ||
+      typeof topic.author !== "string" ||
+      replyCount === null ||
+      (lastActivity !== null && (
+        typeof lastActivity !== "number" ||
+        !Number.isFinite(lastActivity) ||
+        !Number.isFinite(new Date(lastActivity).getTime())
+      ))
+    ) return [];
+    return [{
+      id: String(topic.id).slice(0, 80),
+      title: topic.title.slice(0, 180),
+      author: topic.author.slice(0, 80),
+      category: typeof topic.category === "string" ? topic.category.slice(0, 48) : "general",
+      replyCount,
+      lastActivity: typeof lastActivity === "number" ? lastActivity : null,
+    }];
+  });
+
+  return {
+    topics,
+    source: provenance.source,
+    observedAt: provenance.observedAt as string,
+  };
 }
 
 function validRepositoryUrl(value: unknown, slug: string): string {
@@ -245,6 +307,15 @@ export function useWorldPulse() {
     retry: 1,
   });
 
+  const forum = useQuery({
+    queryKey: ["tessera-world", "forum"],
+    queryFn: ({ signal }) => readForumPulse(signal),
+    staleTime: FORUM_POLL_MS - 5_000,
+    refetchInterval: FORUM_POLL_MS,
+    refetchIntervalInBackground: false,
+    retry: 1,
+  });
+
   const repositories = useQuery({
     queryKey: ["tessera-world", "repositories"],
     queryFn: ({ signal }) => readRepositoryPulses(signal),
@@ -256,5 +327,5 @@ export function useWorldPulse() {
     retry: 1,
   });
 
-  return { service, brain, repositories };
+  return { service, brain, forum, repositories };
 }

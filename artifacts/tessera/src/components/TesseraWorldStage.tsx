@@ -11,6 +11,7 @@ import {
   Database,
   Eye,
   GitBranch,
+  MessageSquare,
   RefreshCw,
   Star,
 } from "lucide-react";
@@ -78,7 +79,7 @@ function Retry({ onRetry, label }: { onRetry: () => unknown; label: string }) {
 
 function SignalSkeleton({ rows = 2 }: { rows?: number }) {
   return (
-    <div className="tw-skeleton-list" aria-label="Loading repository signals">
+    <div className="tw-skeleton-list" role="status" aria-label="Loading live source data">
       {Array.from({ length: rows }, (_, index) => <span className="tw-skeleton" key={index} />)}
     </div>
   );
@@ -95,7 +96,7 @@ function Metric({ label, value, icon: Icon }: { label: string; value: string; ic
 }
 
 export default function TesseraWorldStage({ conversationId }: { conversationId: number }) {
-  const { service, brain, repositories } = useWorldPulse();
+  const { service, brain, forum, repositories } = useWorldPulse();
   const repositoriesData = repositories.data ?? [];
   const confidence = brain.data
     ? new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 }).format(brain.data.averageConfidence)
@@ -132,7 +133,7 @@ export default function TesseraWorldStage({ conversationId }: { conversationId: 
           </div>
           <div className="tw-world-caption">
             <span className="tw-caption-index">VOXEL VIEW / NOT A GAME SERVER</span>
-            <span className="tw-live-legend"><i /> Public repositories + service pulse</span>
+            <span className="tw-live-legend"><i /> Service, GitHub snapshots + stored forum records</span>
           </div>
         </section>
 
@@ -153,10 +154,10 @@ export default function TesseraWorldStage({ conversationId }: { conversationId: 
               <>
                 <div className="tw-service-state">
                   <span className={`tw-status-dot ${service.data.status === "ok" ? "is-good" : "is-warn"}`} />
-                  <strong>{service.data.status === "ok" ? "Operational" : "Degraded"}</strong>
+                  <strong>{service.data.status === "ok" ? "API responding" : "Degraded"}</strong>
                   {service.isError && <span className="tw-inline-warning"><AlertTriangle size={13} /> Refresh failed</span>}
                 </div>
-                <div className="tw-db-state"><Database size={13} /><span>Database</span><b>{service.data.database.replace("-", " ")}</b></div>
+                <div className="tw-db-state"><Database size={13} /><span>Database URL</span><b>{service.data.database === "configured" ? "configured" : service.data.database === "not-configured" ? "not configured" : "unknown"}</b></div>
               </>
             ) : (
               <div className="tw-unavailable"><AlertTriangle size={14} /> Service status unavailable <Retry onRetry={service.refetch} label="service" /></div>
@@ -228,7 +229,10 @@ export default function TesseraWorldStage({ conversationId }: { conversationId: 
                         <ArrowUpRight size={12} className="tw-event-link-icon" aria-hidden="true" />
                       </a>
                     )) : (
-                      <p className="tw-empty-events">{repository.unavailable ? "Source unavailable. No substitute activity is generated; other repository signals remain visible." : "No public activity returned in this repository snapshot."}</p>
+                      <div className="tw-empty-events">
+                        <p>{repository.unavailable ? "Source unavailable. No substitute activity is generated; other repository signals remain visible." : "No public activity returned in this repository snapshot."}</p>
+                        {repository.unavailable && <Retry onRetry={repositories.refetch} label={`repository-${repository.name.toLowerCase()}`} />}
+                      </div>
                     )}
                   </div>
                 </article>
@@ -250,6 +254,47 @@ export default function TesseraWorldStage({ conversationId }: { conversationId: 
             <p className="tw-stale-note tw-repo-stale"><AlertTriangle size={12} /> GitHub refresh failed. Showing the last successful snapshot; public repository data is not instant.</p>
           )}
           {!repositories.isError && <p className="tw-public-note"><Activity size={12} /> GitHub activity is a public snapshot, refreshed on a five-minute cadence.</p>}
+        </section>
+        <section className="tw-forum-section" aria-labelledby="tw-forum-title" data-testid="world-forum-signals">
+          <div className="tw-section-heading">
+            <div className="tw-signal-heading">
+              <div><span className="tw-section-no">C</span><h2 id="tw-forum-title">THE FORUM</h2></div>
+              <p>Stored discussion records · 60 sec refresh</p>
+            </div>
+            <Link className="tw-forum-open" href="/forum" data-testid="link-open-forum">Open forum ↗</Link>
+          </div>
+          {forum.isLoading && !forum.data ? (
+            <article className="tw-panel tw-forum-card"><SignalSkeleton rows={3} /></article>
+          ) : forum.data ? (
+            <article className="tw-panel tw-forum-card" aria-live="polite">
+              <p className="tw-forum-source">Source: {forum.data.source} · observed {new Date(forum.data.observedAt).toLocaleTimeString()}</p>
+              {forum.data.topics.length ? (
+                <ul className="tw-forum-topics">
+                  {forum.data.topics.map(topic => (
+                    <li key={topic.id}>
+                      <MessageSquare size={14} aria-hidden="true" />
+                      <div className="tw-forum-topic-copy">
+                        <Link href="/forum">{topic.title}</Link>
+                        <span>{topic.author} · {topic.category} · {topic.replyCount} stored {topic.replyCount === 1 ? "reply" : "replies"}</span>
+                      </div>
+                      <time dateTime={topic.lastActivity ? new Date(topic.lastActivity).toISOString() : undefined}>
+                        {topic.lastActivity ? ageLabel(new Date(topic.lastActivity).toISOString()) : "time unavailable"}
+                      </time>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="tw-forum-empty">No stored discussion topics were returned.</p>
+              )}
+              {forum.isError && <p className="tw-stale-note"><AlertTriangle size={12} /> Refresh failed; showing the last successful database snapshot.</p>}
+            </article>
+          ) : (
+            <article className="tw-panel tw-forum-card tw-forum-unavailable" role="status">
+              <AlertTriangle size={14} /> Forum database signal unavailable. No substitute discussions are generated.
+              <Retry onRetry={forum.refetch} label="forum" />
+            </article>
+          )}
+          <Freshness query={forum} cadence="60 sec cadence" source="forum" />
         </section>
       </section>
 
