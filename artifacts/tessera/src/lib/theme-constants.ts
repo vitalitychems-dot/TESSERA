@@ -4,6 +4,8 @@ const LEGACY_ACCENT: Record<string, string> = {
   rose: "fracture", green: "mineral", amber: "flash", teal: "stone",
 };
 
+export const DEFAULT_ACCENT = "glass";
+
 export const FONT_COLORS = [
   { label: "Bone", value: "#f3efe6", bg: "#f3efe6" },
   { label: "Glass", value: "#7ef0d4", bg: "#7ef0d4" },
@@ -30,7 +32,7 @@ export const STAR_COLORS = [
 ];
 
 export function resolveAccent(value?: string) {
-  const normalized = value?.trim().toLowerCase() || "glass";
+  const normalized = value?.trim().toLowerCase() || DEFAULT_ACCENT;
   const mapped = LEGACY_ACCENT[normalized] ?? normalized;
   return ACCENT_COLORS.find(item => item.value === mapped) ?? ACCENT_COLORS[0];
 }

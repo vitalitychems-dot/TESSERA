@@ -5,7 +5,7 @@ import { useConversations, useCreateConversation, useDeleteConversation } from "
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/lib/adminContext";
-import { FONT_COLORS, ACCENT_COLORS, applyTheme } from "@/lib/theme-constants";
+import { FONT_COLORS, ACCENT_COLORS, DEFAULT_ACCENT, applyTheme, resolveAccent } from "@/lib/theme-constants";
 import AdminKeyInput from "@/components/AdminKeyInput";
 
 const UNREAD_KEY = "tessera-read-convs";
@@ -161,7 +161,13 @@ export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { isAdmin, logout } = useAdmin();
   const [readConvIds, setReadConvIds] = useState<number[]>(getReadConvIds);
-  const [activeAccent, setActiveAccent] = useState<string>(() => localStorage.getItem("tessera-accent") || "cyan");
+  const [activeAccent, setActiveAccent] = useState<string>(() => {
+    try {
+      return resolveAccent(localStorage.getItem("tessera-accent") || DEFAULT_ACCENT).value;
+    } catch {
+      return DEFAULT_ACCENT;
+    }
+  });
 
   const { data: rolesData } = useQuery({
     queryKey: ["/api/rick/royal-roles"],
