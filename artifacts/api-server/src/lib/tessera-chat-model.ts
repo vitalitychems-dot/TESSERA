@@ -61,6 +61,21 @@ const CHAT_SYSTEM_PROMPT = [
 
 const POTENTIAL_CREDENTIAL_RE =
   /-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----|\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9_-]{20,}|xox[baprs]-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16})\b|\b(?:api[_ -]?key|access[_ -]?token|secret|password|sigil|admin[_ -]?key)\s*[:=]\s*["']?[\w./+=-]{12,}|[?&](?:token|key|secret|signature|access_token)=\S{8,}|(?<!\w)[A-Za-z0-9_+/=-]{32,}(?!\w)/i;
+const POTENTIAL_PERSONAL_DATA_PATTERNS = [
+  /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i,
+  /\b\d{3}-\d{2}-\d{4}\b/,
+  /\b(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)\d{3}[-.\s]?\d{4}\b/,
+  /\b(?:\d[ -]*?){13,19}\b/,
+  /\b\d{1,6}\s+[A-Z0-9.'-]+(?:\s+[A-Z0-9.'-]+){0,3}\s+(?:street|st|road|rd|avenue|ave|boulevard|blvd|lane|ln|drive|dr)\b/i,
+];
+
+export function containsPotentiallySensitiveExternalData(text: string): boolean {
+  return POTENTIAL_CREDENTIAL_RE.test(text) || POTENTIAL_PERSONAL_DATA_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+export function maySendToExternalProvider(allowExternalProvider: unknown, text: string): boolean {
+  return allowExternalProvider === true && !containsPotentiallySensitiveExternalData(text);
+}
 const UNSAFE_ACTION_CLAIM_RE =
   /\b(?:I|we)\s+(?:(?:have|just|already)\s+)?(?:approved|merged|deployed|published|deleted|sent|rotated|changed|installed|executed|voted|implemented|created|granted)\b/i;
 const UNSAFE_PASSIVE_ACTION_CLAIM_RE =

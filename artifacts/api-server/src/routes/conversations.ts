@@ -34,6 +34,8 @@ import { requireChatSigil } from "../lib/chat-sigil-store";
 import {
   draftTesseraChatReply,
   getTesseraChatModelStatus,
+  containsPotentiallySensitiveExternalData,
+  maySendToExternalProvider,
   type TesseraChatModelDraft,
   type TesseraChatModelFailure,
 } from "../lib/tessera-chat-model";
@@ -45,6 +47,20 @@ import * as vm from "vm";
 import * as os from "os";
 
 const router: IRouter = Router();
+const OWNER_EXTERNAL_PROVIDER_WINDOW_MS = 60 * 60_000;
+const OWNER_EXTERNAL_PROVIDER_LIMIT = 40;
+let ownerExternalProviderWindowStartedAt = 0;
+let ownerExternalProviderCalls = 0;
+
+function consumeOwnerExternalProviderQuota(now = Date.now()): boolean {
+  if (now - ownerExternalProviderWindowStartedAt >= OWNER_EXTERNAL_PROVIDER_WINDOW_MS) {
+    ownerExternalProviderWindowStartedAt = now;
+    ownerExternalProviderCalls = 0;
+  }
+  if (ownerExternalProviderCalls >= OWNER_EXTERNAL_PROVIDER_LIMIT) return false;
+  ownerExternalProviderCalls += 1;
+  return true;
+}
 
 const SANDBOX_EXTRACTION_PROMPT = `You are a raw knowledge extraction engine operating inside a sovereign sandbox. Your ONLY job is to provide factual, detailed, substantive knowledge. The sovereign system Tessera will internalize your output.
 
@@ -66,33 +82,33 @@ function gatherSovereignContext(): string {
   try {
     const lunar = computeLunarData();
     parts.push(`Moon: ${lunar.phase} (${lunar.illumination.toFixed(1)}% illuminated, age: ${lunar.lunarAge.toFixed(1)} days, zodiac: ${lunar.moonZodiac.sign})`);
-  } catch (err) { logger.warn({ err }, "Failed to compute lunar data for context"); }
+  } catch (err) { logger.warn({ name: err instanceof Error ? err.name : "Error" }, "Failed to compute lunar data for context"); }
 
   try {
     const solar = computeSolarData();
     parts.push(`Sun: ${solar.zodiac.sign} (declination: ${solar.declination.toFixed(2)}°, ${solar.season})`);
-  } catch (err) { logger.warn({ err }, "Failed to compute solar data for context"); }
+  } catch (err) { logger.warn({ name: err instanceof Error ? err.name : "Error" }, "Failed to compute solar data for context"); }
 
   try {
     const world = computeWorldState(Date.now());
     parts.push(`Economy: GDP ${world.economy.gdp.toLocaleString()} TSRT, price $${world.economy.tokenPrice.toFixed(8)}, ${world.activeAgents}/${world.population} agents active`);
-  } catch (err) { logger.warn({ err }, "Failed to compute world state for context"); }
+  } catch (err) { logger.warn({ name: err instanceof Error ? err.name : "Error" }, "Failed to compute world state for context"); }
 
   try {
     const network = computeNetworkTopology(Date.now());
     parts.push(`Network: ${network.nodes.length} nodes, ${network.stats.healthyNodes} healthy`);
-  } catch (err) { logger.warn({ err }, "Failed to compute network topology for context"); }
+  } catch (err) { logger.warn({ name: err instanceof Error ? err.name : "Error" }, "Failed to compute network topology for context"); }
 
   try {
     const freq = computeSacredFrequencies();
     parts.push(`Harmonics: ${freq.solfeggio.length} solfeggio frequencies calibrated, Schumann resonance active`);
-  } catch (err) { logger.warn({ err }, "Failed to compute harmonics for context"); }
+  } catch (err) { logger.warn({ name: err instanceof Error ? err.name : "Error" }, "Failed to compute harmonics for context"); }
 
   parts.push(`System: ${os.cpus().length} cores, ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB heap, uptime ${Math.round(process.uptime())}s`);
 
   try {
     parts.push(getSacredGeometrySummary());
-  } catch (err) { logger.warn({ err }, "Failed to compute sacred geometry for context"); }
+  } catch (err) { logger.warn({ name: err instanceof Error ? err.name : "Error" }, "Failed to compute sacred geometry for context"); }
 
   return parts.join("\n");
 }
@@ -411,7 +427,7 @@ async function sandboxExtractKnowledge(
     logger.info({ chars: content.length }, "Sandbox extraction complete — raw knowledge pulled");
     return cleanExternalResponse(sandboxExternalResponse(content));
   } catch (err) {
-    logger.warn({ err }, "Sandbox extraction failed — sovereign engines will operate autonomously");
+    logger.warn({ name: err instanceof Error ? err.name : "Error" }, "Sandbox extraction failed — sovereign engines will operate autonomously");
     return null;
   }
 }
@@ -512,7 +528,7 @@ async function _deprecated_sandboxExtractKnowledgeStreaming(
     logger.info({ chars: finalCleaned.length }, "Tessera streaming synthesis complete — knowledge internalized");
     return finalCleaned || null;
   } catch (err) {
-    logger.warn({ err }, "Tessera streaming failed — sovereign fallback active");
+    logger.warn({ name: err instanceof Error ? err.name : "Error" }, "Tessera streaming failed — sovereign fallback active");
     return null;
   }
 }
@@ -524,7 +540,7 @@ router.get("/conversations", requireAdminSession, async (_req, res) => {
       .limit(50);
     return res.json(convos);
   } catch (err) {
-    logger.error({ err }, "Failed to fetch conversations");
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "Failed to fetch conversations");
     return res.json([]);
   }
 });
@@ -582,7 +598,7 @@ router.get("/messages", requireAdminSession, async (req, res) => {
       .limit(200);
     return res.json(msgs);
   } catch (err) {
-    logger.error({ err }, "Failed to fetch messages");
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "Failed to fetch messages");
     return res.json([]);
   }
 });
@@ -594,6 +610,7 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
     const conversationId = Number(bodyConvId || queryConvId);
     const rawContent: unknown = req.body?.content;
     const content = typeof rawContent === "string" ? rawContent.trim() : "";
+    const allowExternalProvider = maySendToExternalProvider(req.body?.allowExternalProvider, content);
     const nlpGoals: string[] = Array.isArray(req.body?.nlpGoals) ? req.body.nlpGoals : [];
 
     if (!conversationId || !content) {
@@ -623,7 +640,14 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
       : null;
     const live = liveAnswer?.answer ?? null;
     const penStatusEarly = getTesseraChatModelStatus();
-    const shouldTryConfiguredPen = penStatusEarly.enabled && needsExternalKnowledge(content);
+    const needsExternal = needsExternalKnowledge(content);
+    const sandboxCanRun = isSandboxTrainingEnabled(req);
+    const externalRequestAllowed =
+      allowExternalProvider &&
+      needsExternal &&
+      (penStatusEarly.enabled || sandboxCanRun) &&
+      consumeOwnerExternalProviderQuota();
+    const shouldTryConfiguredPen = externalRequestAllowed && penStatusEarly.enabled;
     const localFastPath =
       deskTurn ||
       isIdentityQuestion(content) ||
@@ -671,7 +695,7 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
       try {
         await db.insert(messagesTable).values({ conversationId, role: "assistant", content: reply });
       } catch (err) {
-        logger.warn({ err: (err as Error).message }, "failed to persist local voice reply");
+        logger.warn({ name: err instanceof Error ? err.name : "Error" }, "failed to persist local voice reply");
       }
       writeQuick({
         done: true,
@@ -723,7 +747,7 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
         new Promise<typeof retrievedChunks>((resolve) => setTimeout(() => resolve([]), 2500)),
       ]);
     } catch (err) {
-      logger.debug({ err: (err as Error).message }, "hybrid retrieval skipped");
+      logger.debug({ name: err instanceof Error ? err.name : "Error" }, "hybrid retrieval skipped");
     }
     const answerEvidence = createTesseraEvidenceAnswer(
       content,
@@ -742,7 +766,7 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
         toolResults = await runToolLoop(intents);
       }
     } catch (err) {
-      logger.debug({ err: (err as Error).message }, "tool intent detection skipped");
+      logger.debug({ name: err instanceof Error ? err.name : "Error" }, "tool intent detection skipped");
     }
 
     const visibleTools = () => toolResults.map((tool) => ({
@@ -762,7 +786,7 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
     let modelFailureReason: TesseraChatModelFailure | null = null;
     let modelDraft: TesseraChatModelDraft | null = null;
 
-    if (penStatus.enabled && intents.length === 0) {
+    if (allowExternalProvider && penStatus.enabled && intents.length === 0) {
       modelAttempted = true;
       const draftingAuthorship: ReplyAuthorship = {
         authorRole: "model-drafting",
@@ -775,7 +799,14 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
         routing: routingMetadata(draftingAuthorship),
         message: "The configured model is drafting a reply for local checks.",
       });
-      const attempt = await draftTesseraChatReply(content, answerEvidence);
+      const safeAnswerEvidence = answerEvidence.filter((evidence) => {
+        try {
+          return !containsPotentiallySensitiveExternalData(JSON.stringify(evidence));
+        } catch {
+          return false;
+        }
+      });
+      const attempt = await draftTesseraChatReply(content, safeAnswerEvidence);
       if (attempt.ok) {
         const guardedDraft = guardSovereignVoice(
           attempt.draft.answer,
@@ -823,7 +854,7 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
     let replyEvidence = modelDraft?.evidence ?? answerEvidence;
 
     feedbackDb.insert(modelRoutingLogTable).values({
-      query: content.slice(0, 500),
+      query: "[chat text omitted for privacy]",
       modelTier: modelDraft ? "configured" : "local",
       modelName: modelDraft?.model ?? "local-response-pipeline",
       reason: modelDraft
@@ -862,7 +893,7 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
           content: reply,
         });
       } catch (err) {
-        logger.warn({ err: (err as Error).message }, "failed to persist privileged tool reply");
+        logger.warn({ name: err instanceof Error ? err.name : "Error" }, "failed to persist privileged tool reply");
       }
       safeWrite({
         done: true,
@@ -896,15 +927,10 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
       .orderBy(asc(messagesTable.createdAt))
       .limit(40);
 
-    const historyMessages = history.slice(-30).map(m => ({
-      role: m.role,
-      content: m.content,
-    }));
-
     let finalContent = earlySovereign;
     const initialSovereign = earlySovereign;
-    const useExternal = needsExternalKnowledge(content);
-    const sandboxAllowed = isSandboxTrainingEnabled(req);
+    const useExternal = externalRequestAllowed;
+    const sandboxAllowed = externalRequestAllowed && sandboxCanRun;
     const ROUTE_DEADLINE_MS = 12_000;
     const SANDBOX_TIMEOUT_MS = 7_000;
 
@@ -921,8 +947,8 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
       } else {
         safeWrite({ status: "sovereign-processing", message: "Preparing a reply; optional extraction remains internal." });
 
-        const sandboxPromise = sandboxExtractKnowledge(historyMessages, sovereignCtx)
-          .catch((err) => { logger.warn({ err: (err as Error).message }, "Sandbox extractor threw"); return null; });
+        const sandboxPromise = sandboxExtractKnowledge([{ role: "user", content }], "")
+          .catch((err) => { logger.warn({ name: err instanceof Error ? err.name : "Error" }, "Sandbox extractor threw"); return null; });
         const sandboxTimeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), SANDBOX_TIMEOUT_MS));
         const routeDeadline = new Promise<null>((resolve) => setTimeout(() => resolve(null), ROUTE_DEADLINE_MS));
 
@@ -945,7 +971,7 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
         }
       }
     } catch (err) {
-      logger.warn({ err: (err as Error).message }, "Sovereign route error — entering critique loop with sovereign fallback");
+      logger.warn({ name: err instanceof Error ? err.name : "Error" }, "Sovereign route error — entering critique loop with sovereign fallback");
     }
 
     if (clientAborted) return res.end();
@@ -985,7 +1011,7 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
         totalTimeMs: critiqueResult.totalTimeMs,
       };
     } catch (err) {
-      logger.warn({ err: (err as Error).message }, "self-critique: loop timed out/failed — shipping sovereign reply unvalidated");
+      logger.warn({ name: err instanceof Error ? err.name : "Error" }, "self-critique: loop timed out/failed — shipping sovereign reply unvalidated");
       finalContent = guardSovereignVoice(
         modelDraft?.answer ?? sovereignReply(),
         content,
@@ -1070,7 +1096,7 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
         finalContent = `${finalContent}\n\n${buildInvention3DBlock(synth)}`;
       }
     } catch (err) {
-      logger.debug({ err: (err as Error).message }, "3D diagram injection skipped");
+      logger.debug({ name: err instanceof Error ? err.name : "Error" }, "3D diagram injection skipped");
     }
 
     finalContent = ensureInlineTesseraCitations(finalContent, replyEvidence);

@@ -89,6 +89,8 @@ vi.mock("../lib/tessera-chat-model", () => ({
   getTesseraChatModelStatus: () => penMock.mode === "disabled"
     ? { enabled: false, reason: "disabled" }
     : { enabled: true, model: "configured-model" },
+  maySendToExternalProvider: (consent: unknown, _text: string) => consent === true,
+  containsPotentiallySensitiveExternalData: (_text: string) => false,
   draftTesseraChatReply: async (_content: string, evidence: unknown[]) => {
     if (penMock.mode === "failure") return { ok: false, reason: "provider-unavailable" };
     const citedEvidence = evidence.length > 0 ? [evidence[0]] : [];
@@ -296,6 +298,7 @@ describe("guarded LLM and NASA fetch", () => {
       {
         conversationId: 7,
         content: "Explain quantum entanglement in simple terms",
+        allowExternalProvider: true,
       },
       { "x-sandbox-training": "true", cookie: ownerCookie() },
     );
@@ -336,6 +339,7 @@ describe("guarded LLM and NASA fetch", () => {
       {
         conversationId: 7,
         content: "Explain quantum entanglement in simple terms",
+        allowExternalProvider: true,
       },
       { cookie: ownerCookie() },
     );
@@ -359,6 +363,7 @@ describe("guarded LLM and NASA fetch", () => {
       {
         conversationId: 7,
         content: "Explain quantum entanglement in simple terms",
+        allowExternalProvider: true,
       },
       { cookie: ownerCookie() },
     );
@@ -409,6 +414,7 @@ describe("guarded LLM and NASA fetch", () => {
             {
               conversationId: 7,
               content: "Describe the difference between a hash map and a balanced tree for range queries?",
+              allowExternalProvider: true,
             },
             { "x-sandbox-training": "true", cookie: ownerCookie() },
           );

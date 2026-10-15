@@ -48,7 +48,13 @@ function parseChatAuthorship(value: unknown): ChatReplyAuthorship | null {
   };
 }
 
-export function useChat(conversationId: number | null, stealthMode: boolean = false, puterModel: string | null = null, tesseractMode: boolean = false) {
+export function useChat(
+  conversationId: number | null,
+  stealthMode: boolean = false,
+  puterModel: string | null = null,
+  tesseractMode: boolean = false,
+  allowExternalProvider: boolean = false,
+) {
   const queryClient = useQueryClient();
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
@@ -228,7 +234,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
           const res = await fetch(url, {
             method: "POST",
             headers,
-            body: JSON.stringify({ content, stealth: stealthMode, nlpGoals: nlpGoals.length > 0 ? nlpGoals : undefined }),
+            body: JSON.stringify({ content, stealth: stealthMode, allowExternalProvider, nlpGoals: nlpGoals.length > 0 ? nlpGoals : undefined }),
             credentials: "include",
             signal: controller.signal,
           });
@@ -392,7 +398,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
       const res = await fetch(url, {
         method: "POST",
         headers,
-        body: JSON.stringify({ content, stealth: stealthMode, nlpGoals: nlpGoalsNonTesseract.length > 0 ? nlpGoalsNonTesseract : undefined }),
+        body: JSON.stringify({ content, stealth: stealthMode, allowExternalProvider, nlpGoals: nlpGoalsNonTesseract.length > 0 ? nlpGoalsNonTesseract : undefined }),
         credentials: "include",
         signal: controller.signal,
       });
@@ -584,7 +590,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
       abortControllerRef.current = null;
       setIsStreaming(false);
     }
-  }, [conversationId, isStreaming, queryClient, queryKey, stealthMode, puterModel, tesseractMode, messages, startThinkingTimer, stopThinkingTimer]);
+  }, [conversationId, isStreaming, queryClient, queryKey, stealthMode, puterModel, tesseractMode, allowExternalProvider, messages, startThinkingTimer, stopThinkingTimer]);
 
   const addVoiceMessages = useCallback(async (userText: string, assistantText: string) => {
     if (!conversationId) return;

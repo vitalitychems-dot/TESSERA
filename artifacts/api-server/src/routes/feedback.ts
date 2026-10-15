@@ -3,66 +3,43 @@ import { db } from "@workspace/db";
 import { messageFeedbackTable } from "@workspace/db/schema";
 import { desc, sql, eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { requireAdminSession } from "../lib/sovereign-admin";
+import { z } from "zod/v4";
 
 const router: IRouter = Router();
+router.use(requireAdminSession);
+
+const feedbackSchema = z.object({
+  conversationId: z.number().int().positive().nullable().optional(),
+  messageId: z.number().int().positive().nullable().optional(),
+  rating: z.enum(["up", "down"]),
+});
 
 router.post("/feedback", async (req, res) => {
   try {
-    const {
-      conversationId,
-      messageId,
-      clientMsgKey,
-      rating,
-      reason,
-      userQuery,
-      responseExcerpt,
-      modelTier,
-      routerReason,
-      metadata,
-    } = req.body || {};
-
-    if (!rating || !["up", "down"].includes(String(rating))) {
+    const parsed = feedbackSchema.safeParse(req.body);
+    if (!parsed.success) {
       return res.status(400).json({ error: "rating must be 'up' or 'down'" });
     }
+    const { conversationId, messageId, rating } = parsed.data;
 
     const [row] = await db.insert(messageFeedbackTable).values({
-      conversationId: conversationId ? Number(conversationId) : null,
-      messageId: messageId ? Number(messageId) : null,
-      clientMsgKey: clientMsgKey ? String(clientMsgKey) : null,
-      rating: String(rating),
-      reason: reason ? String(reason).slice(0, 1000) : null,
-      userQuery: userQuery ? String(userQuery).slice(0, 2000) : null,
-      responseExcerpt: responseExcerpt ? String(responseExcerpt).slice(0, 4000) : null,
-      modelTier: modelTier ? String(modelTier) : null,
-      routerReason: routerReason ? String(routerReason) : null,
-      metadata: metadata || null,
+      conversationId: conversationId ?? null,
+      messageId: messageId ?? null,
+      clientMsgKey: null,
+      rating,
+      reason: null,
+      userQuery: null,
+      responseExcerpt: null,
+      modelTier: null,
+      routerReason: null,
+      metadata: null,
     }).returning();
-
-    if (rating === "down") {
-      try {
-        const { invalidateRelatedEntries } = await import("../lib/semantic-cache");
-        if (userQuery) {
-          const keywords = String(userQuery).toLowerCase().split(/\s+/).filter((w: string) => w.length > 3).slice(0, 8);
-          if (keywords.length > 0) await invalidateRelatedEntries(keywords);
-        }
-      } catch (err) {
-        logger.debug({ err: (err as Error).message }, "feedback: cache invalidation skipped");
-      }
-    }
-
-    if (rating === "up" && responseExcerpt && userQuery) {
-      try {
-        const { distillFromResponse } = await import("../lib/knowledge-distillation");
-        await distillFromResponse(String(responseExcerpt), String(userQuery));
-      } catch (err) {
-        logger.debug({ err: (err as Error).message }, "feedback: distillation skipped");
-      }
-    }
 
     return res.json({ ok: true, id: row.id });
   } catch (err) {
-    logger.error({ err: (err as Error).message }, "feedback: insert failed");
-    return res.status(500).json({ error: (err as Error).message });
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "feedback: insert failed");
+    return res.status(500).json({ error: "feedback-insert-failed" });
   }
 });
 
@@ -84,7 +61,7 @@ router.get("/feedback/stats", async (_req, res) => {
 
     return res.json({ stats, total, satisfaction, recent });
   } catch (err) {
-    return res.status(500).json({ error: (err as Error).message });
+    return res.status(500).json({ error: "feedback-stats-failed" });
   }
 });
 
@@ -97,7 +74,7 @@ router.get("/feedback/by-conversation/:id", async (req, res) => {
       .orderBy(desc(messageFeedbackTable.createdAt));
     return res.json(rows);
   } catch (err) {
-    return res.status(500).json({ error: (err as Error).message });
+    return res.status(500).json({ error: "feedback-fetch-failed" });
   }
 });
 

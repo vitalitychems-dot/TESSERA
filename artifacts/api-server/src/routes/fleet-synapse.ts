@@ -9,8 +9,10 @@ import { getProviderConfigs } from "../lib/provider-registry";
 import type { ProviderConfig } from "../lib/provider-registry";
 import { listAgents } from "../lib/agent-spawner";
 import os from "os";
+import { requireAdminSession } from "../lib/sovereign-admin";
 
 const router = Router();
+router.use(requireAdminSession);
 
 const SERVER_START = Date.now();
 
@@ -139,8 +141,8 @@ router.get("/fleet-synapse/map", async (_req, res) => {
       generatedAt: Date.now(),
     });
   } catch (err) {
-    logger.error({ err }, "GET /fleet-synapse/map failed");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "GET /fleet-synapse/map failed");
+    return res.status(500).json({ ok: false, error: "fleet-map-failed" });
   }
 });
 
@@ -238,8 +240,8 @@ router.get("/fleet-synapse/node-health/:nodeId", async (req, res) => {
       },
     });
   } catch (err) {
-    logger.error({ err }, "GET /fleet-synapse/node-health/:nodeId failed");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "GET /fleet-synapse/node-health/:nodeId failed");
+    return res.status(500).json({ ok: false, error: "fleet-health-failed" });
   }
 });
 
@@ -278,8 +280,8 @@ router.post("/fleet-synapse/ping/:nodeId", async (req, res) => {
         : `Node ${nodeId}: no recent calls — cannot measure live latency`,
     });
   } catch (err) {
-    logger.error({ err }, "POST /fleet-synapse/ping/:nodeId failed");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "POST /fleet-synapse/ping/:nodeId failed");
+    return res.status(500).json({ ok: false, error: "fleet-ping-failed" });
   }
 });
 
@@ -294,7 +296,7 @@ router.post("/fleet-synapse/wake/:nodeId", async (req, res) => {
       wokenAt: Date.now(),
     });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "fleet-node-update-failed" });
   }
 });
 
@@ -312,7 +314,7 @@ router.post("/fleet-synapse/disconnect/:nodeId", async (req, res) => {
       disconnectedAt: Date.now(),
     });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "fleet-node-disconnect-failed" });
   }
 });
 
@@ -346,8 +348,8 @@ router.get("/fleet-synapse/activity", async (req, res) => {
 
     return res.json({ ok: true, events, count: events.length });
   } catch (err) {
-    logger.error({ err }, "GET /fleet-synapse/activity failed");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "GET /fleet-synapse/activity failed");
+    return res.status(500).json({ ok: false, error: "fleet-activity-failed" });
   }
 });
 
@@ -373,8 +375,8 @@ router.get("/fleet-synapse/broadcast/messages", async (_req, res) => {
 
     return res.json({ ok: true, messages, count: messages.length });
   } catch (err) {
-    logger.error({ err }, "GET /fleet-synapse/broadcast/messages failed");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "GET /fleet-synapse/broadcast/messages failed");
+    return res.status(500).json({ ok: false, error: "fleet-broadcast-failed" });
   }
 });
 

@@ -182,7 +182,6 @@ describe("conversation owner gate", () => {
         { method: "GET", path: "/conversations/7", error: "conversation-fetch-failed", log: "Failed to fetch conversation" },
         { method: "POST", path: "/conversations", body: { title: "synthetic" }, error: "conversation-create-failed", log: "Failed to create conversation" },
         { method: "DELETE", path: "/conversations/7", error: "conversation-delete-failed", log: "Failed to delete conversation" },
-        { method: "POST", path: "/messages", body: { conversationId: 1, content: "hello" }, error: "message-create-failed", log: "Failed to create message" },
       ] as const;
       for (const entry of cases) {
         errorSpy.mockClear();

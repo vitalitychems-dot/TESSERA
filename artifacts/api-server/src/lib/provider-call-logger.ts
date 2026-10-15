@@ -28,13 +28,15 @@ export async function logProviderCall(opts: LogProviderCallOptions): Promise<num
       providerId: opts.providerId,
       providerName: opts.providerName,
       model: opts.model,
-      requestMessages: opts.requestMessages,
-      responseText: opts.responseText ?? null,
+      // Provider content can contain private chat text or fetched source data.
+      // Keep aggregate telemetry, not prompts, responses, or provider error text.
+      requestMessages: [],
+      responseText: null,
       latencyMs: opts.latencyMs ?? null,
       inputTokens: opts.inputTokens ?? null,
       outputTokens: opts.outputTokens ?? null,
       totalTokens: totalTokens ?? null,
-      error: opts.error ?? null,
+      error: opts.error ? "provider-call-failed" : null,
       status,
       isExternal: opts.isExternal ?? true,
       isDryRun: opts.isDryRun ?? false,
@@ -42,7 +44,7 @@ export async function logProviderCall(opts: LogProviderCallOptions): Promise<num
 
     return rows[0]?.id ?? null;
   } catch (err) {
-    logger.error({ err }, "Failed to log provider call");
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "Failed to log provider call");
     return null;
   }
 }

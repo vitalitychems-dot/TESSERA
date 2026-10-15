@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Settings, Activity, Shield, Cpu, HardDrive, Wifi, Zap, RefreshCw, Database, Globe, Search, BookOpen, Bot, Rocket } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GlassCard, GradientBar, SectionHeader, RadialGauge, MiniStat } from "@/components/ui/sovereign";
+import PersonalDataPanel from "@/components/PersonalDataPanel";
 import type { SovereignEngine, IngestionSource, IngestionJob, DiagnosticsResponse, SovereigntyResponse, EnginesResponse, MeshStatsResponse, IngestionStatsResponse } from "@/types/api";
 
 const API = import.meta.env.VITE_API_URL || "";
@@ -71,6 +72,8 @@ export default function SettingsPage() {
             <p className="text-[10px] text-slate-500">System health, sovereignty, engines & diagnostics</p>
           </div>
         </div>
+
+        <PersonalDataPanel />
 
         <div className="flex items-center justify-center gap-5 md:gap-8">
           <RadialGauge value={scoreNum} label="Sovereignty" sublabel="%" color="emerald" size={95} strokeWidth={8} />

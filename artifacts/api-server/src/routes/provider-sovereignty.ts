@@ -10,8 +10,33 @@ import {
 import { db } from "@workspace/db";
 import { providerDiffsTable } from "@workspace/db";
 import { desc } from "drizzle-orm";
+import { requireAdminSession } from "../lib/sovereign-admin";
+import { z } from "zod/v4";
 
 const router = Router();
+router.use(requireAdminSession);
+
+const providerLogSchema = z.object({
+  providerId: z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9._:-]+$/),
+  providerName: z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9 .:/+-]+$/).optional(),
+  model: z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9 .:/+-]+$/),
+  latencyMs: z.number().int().min(0).max(600_000).optional(),
+  inputTokens: z.number().int().min(0).max(10_000_000).optional(),
+  outputTokens: z.number().int().min(0).max(10_000_000).optional(),
+  error: z.unknown().optional(),
+  isExternal: z.boolean().optional(),
+  isDryRun: z.boolean().optional(),
+}).passthrough();
+
+const providerDiffSchema = z.object({
+  prompt: z.string().trim().min(1).max(8_000),
+  providerIds: z.array(z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9._:-]+$/)).max(20).optional(),
+  responses: z.array(z.object({
+    providerId: z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9._:-]+$/),
+    text: z.string().max(16_000),
+    latencyMs: z.number().int().min(0).max(600_000).optional().default(0),
+  }).passthrough()).min(1).max(20),
+}).passthrough();
 
 router.get("/provider-sovereignty/providers", async (_req, res) => {
   try {
@@ -26,37 +51,35 @@ router.get("/provider-sovereignty/providers", async (_req, res) => {
 
     return res.json({ ok: true, providers });
   } catch (err) {
-    logger.error({ err }, "GET /provider-sovereignty/providers failed");
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "GET /provider-sovereignty/providers failed");
     return res.status(500).json({ ok: false, error: "Failed to fetch providers" });
   }
 });
 
 router.post("/provider-sovereignty/log-call", async (req, res) => {
   try {
-    const { providerId, providerName, model, requestMessages, responseText,
-            latencyMs, inputTokens, outputTokens, error, isExternal, isDryRun } = req.body;
-
-    if (!providerId || !model) {
+    const parsed = providerLogSchema.safeParse(req.body);
+    if (!parsed.success) {
       return res.status(400).json({ ok: false, error: "providerId and model are required" });
     }
+    const { providerId, providerName, model, latencyMs, inputTokens, outputTokens, error, isExternal, isDryRun } = parsed.data;
 
     const id = await logProviderCall({
       providerId,
       providerName: providerName ?? providerId,
       model,
-      requestMessages: requestMessages ?? [],
-      responseText,
+      requestMessages: [],
       latencyMs,
       inputTokens,
       outputTokens,
-      error,
+      error: error ? "provider-call-failed" : undefined,
       isExternal: isExternal ?? true,
       isDryRun: isDryRun ?? false,
     });
 
     return res.json({ ok: true, id });
   } catch (err) {
-    logger.error({ err }, "POST /provider-sovereignty/log-call failed");
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "POST /provider-sovereignty/log-call failed");
     return res.status(500).json({ ok: false, error: "Failed to log provider call" });
   }
 });
@@ -67,7 +90,7 @@ router.get("/provider-sovereignty/calls", async (req, res) => {
     const calls = await getRecentProviderCalls(Math.min(limit, 500));
     return res.json({ ok: true, calls });
   } catch (err) {
-    logger.error({ err }, "GET /provider-sovereignty/calls failed");
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "GET /provider-sovereignty/calls failed");
     return res.status(500).json({ ok: false, error: "Failed to fetch calls" });
   }
 });
@@ -78,7 +101,7 @@ router.get("/provider-sovereignty/stats", async (_req, res) => {
     const byProvider = await getCallCountsByProvider(24);
     return res.json({ ok: true, stats, byProvider });
   } catch (err) {
-    logger.error({ err }, "GET /provider-sovereignty/stats failed");
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "GET /provider-sovereignty/stats failed");
     return res.status(500).json({ ok: false, error: "Failed to fetch stats" });
   }
 });
@@ -88,7 +111,7 @@ router.post("/provider-sovereignty/analyze", async (_req, res) => {
     const profiles = await analyzeAllProviders();
     return res.json({ ok: true, profiles, analyzedAt: new Date().toISOString() });
   } catch (err) {
-    logger.error({ err }, "POST /provider-sovereignty/analyze failed");
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "POST /provider-sovereignty/analyze failed");
     return res.status(500).json({ ok: false, error: "Failed to analyze providers" });
   }
 });
@@ -102,25 +125,25 @@ router.get("/provider-sovereignty/analyze/:providerId", async (req, res) => {
     }
     return res.json({ ok: true, profile });
   } catch (err) {
-    logger.error({ err }, "GET /provider-sovereignty/analyze/:providerId failed");
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "GET /provider-sovereignty/analyze/:providerId failed");
     return res.status(500).json({ ok: false, error: "Failed to analyze provider" });
   }
 });
 
 router.post("/provider-sovereignty/diff", async (req, res) => {
   try {
-    const { prompt, providerIds, responses } = req.body;
-
-    if (!prompt || !Array.isArray(responses) || responses.length === 0) {
+    const parsed = providerDiffSchema.safeParse(req.body);
+    if (!parsed.success) {
       return res.status(400).json({ ok: false, error: "prompt and responses[] are required" });
     }
+    const { prompt, providerIds, responses } = parsed.data;
 
     const result = await compareProvidersForPrompt(prompt, providerIds ?? [], responses);
 
     await db.insert(providerDiffsTable).values({
-      prompt,
+      prompt: "[content omitted for privacy]",
       providers: providerIds ?? [],
-      responses,
+      responses: [],
       similarityMatrix: result.similarities,
       winnerProviderId: result.winner,
       scoringCriteria: "length(30%) + speed(30%) + cross-similarity(40%)",
@@ -128,7 +151,7 @@ router.post("/provider-sovereignty/diff", async (req, res) => {
 
     return res.json({ ok: true, ...result });
   } catch (err) {
-    logger.error({ err }, "POST /provider-sovereignty/diff failed");
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "POST /provider-sovereignty/diff failed");
     return res.status(500).json({ ok: false, error: "Failed to diff providers" });
   }
 });
@@ -141,7 +164,7 @@ router.get("/provider-sovereignty/diffs", async (req, res) => {
       .limit(Math.min(limit, 100));
     return res.json({ ok: true, diffs });
   } catch (err) {
-    logger.error({ err }, "GET /provider-sovereignty/diffs failed");
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "GET /provider-sovereignty/diffs failed");
     return res.status(500).json({ ok: false, error: "Failed to fetch diffs" });
   }
 });
@@ -151,7 +174,7 @@ router.get("/provider-sovereignty/sovereignty", async (_req, res) => {
     const status = await computeSovereigntyStatus();
     return res.json({ ok: true, ...status });
   } catch (err) {
-    logger.error({ err }, "GET /provider-sovereignty/sovereignty failed");
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "GET /provider-sovereignty/sovereignty failed");
     return res.status(500).json({ ok: false, error: "Failed to compute sovereignty status" });
   }
 });
@@ -162,7 +185,7 @@ router.get("/provider-sovereignty/sovereignty/history", async (req, res) => {
     const history = await getLatestSovereigntyMetrics(Math.min(limit, 50));
     return res.json({ ok: true, history });
   } catch (err) {
-    logger.error({ err }, "GET /provider-sovereignty/sovereignty/history failed");
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "GET /provider-sovereignty/sovereignty/history failed");
     return res.status(500).json({ ok: false, error: "Failed to fetch sovereignty history" });
   }
 });
@@ -172,7 +195,7 @@ router.post("/provider-sovereignty/dry-run", async (_req, res) => {
     const result = await runDryRun();
     return res.json({ ok: true, ...result });
   } catch (err) {
-    logger.error({ err }, "POST /provider-sovereignty/dry-run failed");
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "POST /provider-sovereignty/dry-run failed");
     return res.status(500).json({ ok: false, error: "Failed to run dry-run simulation" });
   }
 });
@@ -184,7 +207,7 @@ router.post("/provider-sovereignty/initialize", async (_req, res) => {
     const status = await computeSovereigntyStatus();
     return res.json({ ok: true, initialized: true, profileCount: profiles.length, sovereignty: status });
   } catch (err) {
-    logger.error({ err }, "POST /provider-sovereignty/initialize failed");
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "POST /provider-sovereignty/initialize failed");
     return res.status(500).json({ ok: false, error: "Failed to initialize" });
   }
 });
@@ -198,7 +221,7 @@ router.post("/provider-sovereignty/hard-disconnect/enable", (_req, res) => {
     const result = enableHardDisconnect();
     return res.json({ ...result, ok: true, status: getHardDisconnectStatus() });
   } catch (err) {
-    logger.error({ err }, "POST /provider-sovereignty/hard-disconnect/enable failed");
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "POST /provider-sovereignty/hard-disconnect/enable failed");
     return res.status(500).json({ ok: false, error: "Failed to enable hard-disconnect" });
   }
 });
@@ -208,7 +231,7 @@ router.post("/provider-sovereignty/hard-disconnect/disable", (_req, res) => {
     const result = disableHardDisconnect();
     return res.json({ ...result, ok: true, status: getHardDisconnectStatus() });
   } catch (err) {
-    logger.error({ err }, "POST /provider-sovereignty/hard-disconnect/disable failed");
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "POST /provider-sovereignty/hard-disconnect/disable failed");
     return res.status(500).json({ ok: false, error: "Failed to disable hard-disconnect" });
   }
 });
@@ -218,7 +241,7 @@ router.post("/provider-sovereignty/full-dry-run", async (_req, res) => {
     const result = await runFullDryRunDetach();
     return res.json({ ok: true, ...result });
   } catch (err) {
-    logger.error({ err }, "POST /provider-sovereignty/full-dry-run failed");
+    logger.error({ name: err instanceof Error ? err.name : "Error" }, "POST /provider-sovereignty/full-dry-run failed");
     return res.status(500).json({ ok: false, error: "Failed to run full dry-run detach" });
   }
 });

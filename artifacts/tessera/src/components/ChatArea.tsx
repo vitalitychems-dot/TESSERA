@@ -78,6 +78,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   const [dataCommandResult, setDataCommandResult] = useState<{ label: string; content: string; loading: boolean } | null>(null);
   const [showCommandHints, setShowCommandHints] = useState(false);
   const [input, setInput] = useState("");
+  const [allowExternalProvider, setAllowExternalProvider] = useState(false);
   const inputRef = useRef("");
   const setInputBoth = useCallback((val: string) => {
     inputRef.current = val;
@@ -193,7 +194,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   const sendMessageRef = useRef<((text: string) => void) | null>(null);
   const isStreamingRef = useRef(false);
 
-  const { messages, isStreaming, streamingContent, authorship, sendMessage, stopStreaming, isLoading, activeAgents, agentComms, swarmAgents, swarmComms, puterAvailable, thinkingElapsedMs, codeExecutionResults, error: chatError } = useChat(conversationId, stealthMode, null, tesseractMode);
+  const { messages, isStreaming, streamingContent, authorship, sendMessage, stopStreaming, isLoading, activeAgents, agentComms, swarmAgents, swarmComms, puterAvailable, thinkingElapsedMs, codeExecutionResults, error: chatError } = useChat(conversationId, stealthMode, null, tesseractMode, allowExternalProvider);
 
   const { data: convMeta } = useQuery<{ initiatedBy?: string; title?: string }>({
     queryKey: ["/api/conversations", conversationId],
@@ -317,17 +318,14 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
     });
     const idx = messages.findIndex(m => `${m.id || ""}` === msgId || `${msgId}`.endsWith(String(m.id || "")));
     const target = idx >= 0 ? messages[idx] : null;
-    const userBefore = idx > 0 ? [...messages.slice(0, idx)].reverse().find(m => m.role === "user") : null;
     fetch("/api/feedback", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        clientMsgKey: msgId,
         messageId: target?.id ? Number(target.id) : null,
         conversationId: conversationId ?? null,
         rating: type,
-        userQuery: userBefore?.content?.slice(0, 2000) ?? null,
-        responseExcerpt: target?.content?.slice(0, 4000) ?? null,
       }),
     }).catch(() => {});
   }, [messages, conversationId]);
@@ -1186,6 +1184,23 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
           isStreaming={isStreaming}
           onSelect={(s) => { setInputBoth(s); textareaRef.current?.focus(); }}
         />
+
+        <label className="max-w-3xl mx-auto flex items-start gap-2 px-3 py-2 text-[11px] text-muted-foreground/80">
+          <input
+            type="checkbox"
+            checked={allowExternalProvider}
+            onChange={(event) => setAllowExternalProvider(event.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-[#7ef0d4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7ef0d4]"
+            aria-describedby="external-provider-privacy-note"
+            data-testid="checkbox-external-model-consent"
+          />
+          <span>
+            Allow an external model for this chat
+            <span id="external-provider-privacy-note" className="block text-[10px] text-muted-foreground/60">
+              Off by default. The current message and non-sensitive retrieved evidence may be sent; chat history and private system context are not.
+            </span>
+          </span>
+        </label>
 
         {selectedMoltAgent && (
           <div className="max-w-3xl mx-auto mb-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px]" data-testid="molt-agent-banner">
