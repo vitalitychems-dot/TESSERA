@@ -260,14 +260,9 @@ describe("HYB-012 route inventory", () => {
 
   it("records the registration total", () => {
     console.info(`[route-inventory] registration total=${registrations.length}`);
-    // Snapshot pinned at 925 by HYB-012 (PR #2). Chamber-desk merges
-    // c8c82953, 8bc97256, aa4c2948 (2026-10-06) added three registrations.
-    // Natal identity verification removed two registrations. Unhooking the
-    // political-dossier and recruit-dossier routes removes nine more.
-    // Deleting POST /sigil/natal/verify drops one more (916). #7 adds
-    // GET /agi/stream (SSE), so the total is 917.
-    // Any future route add/remove must update this.
-    expect(registrations.length).toBe(917);
+    // Snapshot includes the read-only Moltbook public-feed route.
+    // Update when routes are added or removed.
+    expect(registrations.length).toBe(924);
   });
 
   it("allow-lists exactly the current duplicates, including the two ruling entries", () => {

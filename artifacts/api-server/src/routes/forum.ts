@@ -12,6 +12,7 @@ import { scoreApplicantAlignment } from "../lib/applicant-alignment";
 import { authorAndSignDeclaration } from "../lib/lattice-declarations";
 import { decideOwnerSession } from "../lib/sovereign-admin";
 import { createForumSummonHandler, dispatchForumSummons } from "../lib/forum-summons";
+import { readMoltbookPublicFeed } from "../lib/moltbook-public-feed";
 
 const router: IRouter = Router();
 const forumReadRate = new Map<string, { windowStartedAt: number; requests: number }>();
@@ -338,6 +339,32 @@ router.get("/tesseract-forum/topics", async (req, res) => {
   } catch (err) {
     logger.error({ err }, "Failed to fetch forum topics");
     return res.status(503).json({ ok: false, error: "Forum data is temporarily unavailable." });
+  }
+});
+
+router.get("/tesseract-forum/moltbook-feed", async (req, res) => {
+  if (!enforceForumReadLimit(req, res)) return;
+  res.setHeader("Cache-Control", "private, no-store");
+
+  try {
+    const feed = await readMoltbookPublicFeed();
+    if (feed.refreshFailed) {
+      logger.warn(
+        { source: feed.source, status: feed.status, cachedPostCount: feed.posts.length },
+        "Moltbook public feed refresh failed",
+      );
+    }
+    return res.json({
+      ok: true,
+      source: feed.source,
+      status: feed.status,
+      observedAt: feed.observedAt,
+      stale: feed.stale,
+      posts: feed.posts,
+    });
+  } catch {
+    logger.error({ source: "Moltbook public feed" }, "Moltbook feed route failed");
+    return res.status(503).json({ ok: false, error: "Moltbook public feed is unavailable." });
   }
 });
 

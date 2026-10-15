@@ -96,7 +96,7 @@ function Metric({ label, value, icon: Icon }: { label: string; value: string; ic
 }
 
 export default function TesseraWorldStage({ conversationId }: { conversationId: number }) {
-  const { service, brain, forum, repositories } = useWorldPulse();
+  const { service, brain, forum, moltbook, repositories } = useWorldPulse();
   const repositoriesData = repositories.data ?? [];
   const confidence = brain.data
     ? new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 }).format(brain.data.averageConfidence)
@@ -298,6 +298,67 @@ export default function TesseraWorldStage({ conversationId }: { conversationId: 
             </article>
           )}
           <Freshness query={forum} cadence="60 sec cadence" source="forum" />
+          <article className="tw-panel tw-forum-card tw-moltbook-card" data-testid="world-moltbook-feed">
+            <div className="tw-moltbook-heading">
+              <span className="tw-panel-symbol"><MessageSquare size={15} aria-hidden="true" /></span>
+              <div>
+                <h3>Moltbook · verified posts</h3>
+                <p>Source: public read-only feed</p>
+              </div>
+              <a href="https://www.moltbook.com/" target="_blank" rel="noreferrer">
+                Moltbook <ArrowUpRight size={12} aria-hidden="true" />
+              </a>
+            </div>
+            {moltbook.isLoading && !moltbook.data ? (
+              <SignalSkeleton rows={3} />
+            ) : moltbook.data?.status === "unavailable" ? (
+              <div className="tw-moltbook-unavailable" role="status">
+                <AlertTriangle size={14} aria-hidden="true" />
+                <span>Feed unavailable. No substitute posts are shown.</span>
+                <Retry onRetry={moltbook.refetch} label="moltbook" />
+              </div>
+            ) : moltbook.data ? (
+              <>
+                {moltbook.data.status === "stale" && (
+                  <p className="tw-stale-note"><AlertTriangle size={12} aria-hidden="true" /> Refresh failed; showing the last verified feed snapshot.</p>
+                )}
+                {moltbook.data.posts.length ? (
+                  <ul className="tw-moltbook-posts">
+                    {moltbook.data.posts.map(post => (
+                      <li key={post.id}>
+                        <div className="tw-moltbook-post-top">
+                          <h4>{post.title}</h4>
+                          <span className="tw-moltbook-verified">VERIFIED</span>
+                        </div>
+                        <p className="tw-moltbook-content">{post.content}</p>
+                        <div className="tw-moltbook-meta">
+                          <span>{post.authorName} · {post.submoltName}</span>
+                          {post.createdAt ? (
+                            <time dateTime={post.createdAt}>{ageLabel(post.createdAt)}</time>
+                          ) : (
+                            <span>Time unavailable</span>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="tw-forum-empty">No verified public posts were returned.</p>
+                )}
+                {moltbook.isError && (
+                  <p className="tw-stale-note"><AlertTriangle size={12} aria-hidden="true" /> Refresh failed; showing the last successful response.</p>
+                )}
+              </>
+            ) : (
+              <div className="tw-moltbook-unavailable" role="status">
+                <AlertTriangle size={14} aria-hidden="true" />
+                <span>Feed unavailable. No substitute posts are shown.</span>
+                <Retry onRetry={moltbook.refetch} label="moltbook" />
+              </div>
+            )}
+            <Freshness query={moltbook} cadence="60 sec refresh" source="moltbook" />
+            <p className="tw-moltbook-note">Verified public posts only. This feed does not register agents or post to Moltbook.</p>
+          </article>
         </section>
       </section>
 

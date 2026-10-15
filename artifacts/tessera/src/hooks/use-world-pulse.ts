@@ -9,6 +9,7 @@ const REPOSITORIES = [
 const LIVE_POLL_MS = 30_000;
 const BRAIN_POLL_MS = 60_000;
 const FORUM_POLL_MS = 60_000;
+const MOLTBOOK_POLL_MS = 60_000;
 const REPOSITORY_POLL_MS = 5 * 60_000;
 
 export interface ServicePulse {
@@ -36,6 +37,25 @@ export interface ForumPulse {
   topics: ForumTopicPulse[];
   source: string;
   observedAt: string;
+}
+
+export interface MoltbookPostPulse {
+  id: string;
+  title: string;
+  content: string;
+  authorName: string;
+  submoltName: string;
+  createdAt: string | null;
+  score: number | null;
+  verified: true;
+}
+
+export interface MoltbookPulse {
+  posts: MoltbookPostPulse[];
+  source: string;
+  status: "live" | "stale" | "unavailable";
+  observedAt: string | null;
+  stale: boolean;
 }
 
 export interface RepositoryEvent {
@@ -172,6 +192,60 @@ async function readForumPulse(signal: AbortSignal): Promise<ForumPulse> {
     topics,
     source: provenance.source,
     observedAt: provenance.observedAt as string,
+  };
+}
+
+async function readMoltbookPulse(signal: AbortSignal): Promise<MoltbookPulse> {
+  const body = record(await readJson("/api/tesseract-forum/moltbook-feed", signal));
+  const statuses = new Set(["live", "stale", "unavailable"]);
+  const status = body?.status;
+  const observedAt = safeDate(body?.observedAt);
+  if (
+    body?.ok !== true ||
+    body.source !== "Moltbook public feed" ||
+    typeof status !== "string" ||
+    !statuses.has(status) ||
+    !Array.isArray(body.posts) ||
+    ((status === "live" || status === "stale") && !observedAt)
+  ) {
+    throw new Error("Moltbook response did not match the public-feed contract.");
+  }
+
+  const posts = body.posts.flatMap((candidate): MoltbookPostPulse[] => {
+    const post = record(candidate);
+    const id = typeof post?.id === "string" ? post.id : "";
+    const title = typeof post?.title === "string" ? post.title : "";
+    const content = typeof post?.content === "string" ? post.content : "";
+    const authorName = typeof post?.authorName === "string" ? post.authorName : "";
+    const submoltName = typeof post?.submoltName === "string" ? post.submoltName : "";
+    const createdAt = safeDate(post?.createdAt);
+    const score = post?.score;
+    if (
+      !post || !id || id.length > 128 || !title || title.length > 300 ||
+      !content || content.length > 5_000 || !authorName || authorName.length > 100 ||
+      !submoltName || submoltName.length > 100 || post.verified !== true ||
+      (post.createdAt !== null && !createdAt) ||
+      (score !== null && (typeof score !== "number" || !Number.isSafeInteger(score)))
+    ) return [];
+
+    return [{
+      id,
+      title,
+      content,
+      authorName,
+      submoltName,
+      createdAt,
+      score: typeof score === "number" ? score : null,
+      verified: true,
+    }];
+  }).slice(0, 10);
+
+  return {
+    posts,
+    source: "Moltbook public feed",
+    status: status as MoltbookPulse["status"],
+    observedAt,
+    stale: body.stale === true || status === "stale",
   };
 }
 
@@ -316,6 +390,15 @@ export function useWorldPulse() {
     retry: 1,
   });
 
+  const moltbook = useQuery({
+    queryKey: ["tessera-world", "moltbook-feed"],
+    queryFn: ({ signal }) => readMoltbookPulse(signal),
+    staleTime: MOLTBOOK_POLL_MS - 5_000,
+    refetchInterval: MOLTBOOK_POLL_MS,
+    refetchIntervalInBackground: false,
+    retry: false,
+  });
+
   const repositories = useQuery({
     queryKey: ["tessera-world", "repositories"],
     queryFn: ({ signal }) => readRepositoryPulses(signal),
@@ -327,5 +410,5 @@ export function useWorldPulse() {
     retry: 1,
   });
 
-  return { service, brain, forum, repositories };
+  return { service, brain, forum, moltbook, repositories };
 }

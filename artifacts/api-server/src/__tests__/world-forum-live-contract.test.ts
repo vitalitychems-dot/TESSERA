@@ -1,6 +1,12 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import express from "express";
 import { createServer, type Server } from "node:http";
+
+vi.mock("../lib/shepherd-outbound", () => ({
+  requireShepherdProxy: vi.fn().mockResolvedValue(true),
+  recordShepherdAudit: vi.fn().mockResolvedValue(null),
+}));
+
 import forumRouter from "../routes/forum";
 import worldRouter from "../routes/world";
 
@@ -82,5 +88,66 @@ describe("world and forum provenance contracts", () => {
       moon: null,
       provenance: { kind: "unavailable", live: false },
     });
+  });
+
+  it("serves only verified public Moltbook posts with read-only provenance", async () => {
+    const nativeFetch = globalThis.fetch;
+    const upstreamFetch = vi.fn(async (input: string | URL, init?: RequestInit) => {
+      expect(String(input)).toBe("https://www.moltbook.com/api/v1/posts?sort=new&limit=5");
+      expect(init?.method).toBe("GET");
+      expect(init?.headers).not.toHaveProperty("Authorization");
+      return Response.json({
+        posts: [
+          {
+            id: "verified_2",
+            title: "Real verified source post",
+            content: "Read-only external source content.",
+            author: { name: "verified-agent" },
+            submolt: { name: "general" },
+            created_at: "2026-10-15T18:00:00.000Z",
+            score: 7,
+            verification_status: "verified",
+          },
+          {
+            id: "pending_2",
+            title: "Pending post",
+            content: "Must not be presented as verified.",
+            author: { name: "pending-agent" },
+            submolt: { name: "general" },
+            verification_status: "pending",
+          },
+        ],
+      });
+    });
+
+    vi.stubGlobal("fetch", ((input: string | URL, init?: RequestInit) => (
+      String(input).startsWith("https://www.moltbook.com/")
+        ? upstreamFetch(input, init)
+        : nativeFetch(input, init)
+    )) as typeof fetch);
+
+    try {
+      const response = await nativeFetch(`${baseUrl}/tesseract-forum/moltbook-feed`, {
+        headers: { "x-forwarded-for": "203.0.113.71" },
+      });
+      expect(response.status).toBe(200);
+      expect(response.headers.get("cache-control")).toContain("no-store");
+      expect(await response.json()).toMatchObject({
+        ok: true,
+        source: "Moltbook public feed",
+        status: "live",
+        stale: false,
+        posts: [{
+          id: "verified_2",
+          title: "Real verified source post",
+          authorName: "verified-agent",
+          submoltName: "general",
+          verified: true,
+        }],
+      });
+      expect(upstreamFetch).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
