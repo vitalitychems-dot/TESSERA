@@ -1,12 +1,19 @@
 import { logger } from "./logger";
 import { searchMemory } from "./vector-memory";
-import { recallIngestedKnowledge } from "./ingested-recall";
+import { recallIngestedKnowledgeWithProvenance } from "./ingested-recall";
 import { generateEmbedding, generateEmbeddingsBatch, cosineSimilarity } from "./neural-embeddings";
+import type { TesseraAnswerEvidence } from "./tessera-knowledge";
+import {
+  formatInlineCitation,
+  makeSourceProvenance,
+  sanitizeCitationText,
+  type TesseraSourceProvenance,
+} from "./tessera-source-provenance";
 
-export interface RetrievedChunk {
-  text: string;
-  source: string;
+export interface RetrievedChunk extends TesseraAnswerEvidence {
+  id?: string;
   score: number;
+  provenance?: TesseraSourceProvenance;
   vectorScore?: number;
   bm25Score?: number;
   rerankScore?: number;
@@ -71,18 +78,42 @@ export async function hybridRetrieve(query: string, opts: HybridRetrievalOpts = 
     const vectorHits = await searchMemory(query, topK * 2);
     for (const hit of vectorHits as Array<Record<string, unknown>>) {
       const text = String(hit.content ?? hit.text ?? "");
-      const source = String(hit.source ?? hit.id ?? "memory");
+      const memoryId = String(hit.id ?? "unknown");
+      const source = sanitizeCitationText(hit.source ?? "memory");
       const vScore = Number(hit.score ?? hit.similarity ?? 0);
-      if (text) candidates.push({ text, source: `mem:${source}`, score: 0, vectorScore: vScore });
+      const metadata = hit.metadata && typeof hit.metadata === "object"
+        ? hit.metadata as Record<string, unknown>
+        : {};
+      if (text) candidates.push({
+        id: `memory:${memoryId}`,
+        text,
+        source: `mem:${source}`,
+        score: 0,
+        vectorScore: vScore,
+        provenance: makeSourceProvenance({
+          sourceUrl: metadata.url,
+          documentReference: `vector-memory:${memoryId}`,
+          retrievedAt: metadata.retrievedAt,
+          publishedAt: metadata.publishedAt,
+          trustStatus: "unverified",
+        }),
+      });
     }
   } catch (err) {
     logger.debug({ err: (err as Error).message }, "hybrid: vector retrieval failed");
   }
 
   try {
-    const ingested = await recallIngestedKnowledge(query, topK);
-    for (const line of ingested) {
-      candidates.push({ text: line, source: "ingested", score: 0, vectorScore: 0 });
+    const ingested = await recallIngestedKnowledgeWithProvenance(query, topK);
+    for (const passage of ingested) {
+      candidates.push({
+        id: passage.id,
+        text: passage.text,
+        source: passage.source,
+        provenance: passage.provenance,
+        score: 0,
+        vectorScore: 0,
+      });
     }
   } catch (err) {
     logger.debug({ err: (err as Error).message }, "hybrid: ingested recall failed");
@@ -128,6 +159,21 @@ async function rerankByEmbedding(query: string, chunks: RetrievedChunk[]): Promi
 export function formatCitations(chunks: RetrievedChunk[]): string {
   if (chunks.length === 0) return "";
   return chunks
-    .map((c, i) => `[${i + 1}] ${c.source} (relevance: ${(c.score * 100).toFixed(0)}%)`)
+    .map((chunk, index) => {
+      const provenance = chunk.provenance ?? makeSourceProvenance({
+        documentReference: chunk.id ?? `retrieved:${sanitizeCitationText(chunk.source)}`,
+      });
+      const details = [
+        getCitationTrustStatus(provenance.trustStatus),
+        `retrieved ${provenance.retrievedAt ?? "date unavailable"}`,
+        provenance.publishedAt ? `published ${provenance.publishedAt}` : null,
+        provenance.sourceUrl ?? provenance.documentReference,
+      ].filter(Boolean).join("; ");
+      return `${formatInlineCitation(index + 1, provenance)} ${sanitizeCitationText(chunk.source)} — ${details} (relevance: ${(chunk.score * 100).toFixed(0)}%)`;
+    })
     .join("\n");
+}
+
+function getCitationTrustStatus(status: TesseraSourceProvenance["trustStatus"]): string {
+  return status === "verified" ? "verified" : status === "stale" ? "outdated note" : "unverified note";
 }

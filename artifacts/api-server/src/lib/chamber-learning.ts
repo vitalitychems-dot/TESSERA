@@ -9,6 +9,13 @@ import * as vm from "vm";
 import { trainChat, recallLesson, isChatDeskPrompt, resetChatDesk } from "./chat-collab";
 import { computeLunarData } from "./sovereign-astro";
 import { enforceTesseraVoice, hasSelfClaim, isIdentityQuestion, PEN_LINE, PEN_WHERE } from "./tessera-voice";
+import type { TesseraAnswerEvidence } from "./tessera-knowledge";
+import {
+  formatInlineCitation,
+  getSourceTrustLabel,
+  makeSourceProvenance,
+  sanitizeCitationText,
+} from "./tessera-source-provenance";
 
 export type LiveSource = "clock" | "math" | "units" | "sky" | "wikipedia" | "you";
 
@@ -19,6 +26,7 @@ interface MemoryTurn {
   volatile: boolean;
   at: number;
   kept: number;
+  evidence?: TesseraAnswerEvidence[];
 }
 
 interface TitleMemory {
@@ -200,7 +208,13 @@ export function searchQueryFor(question: string): string {
   return rememberedTitle(question) || topicOf(question);
 }
 
-function remember(question: string, answer: string, source: LiveSource, volatile: boolean): void {
+function remember(
+  question: string,
+  answer: string,
+  source: LiveSource,
+  volatile: boolean,
+  evidence?: TesseraAnswerEvidence[],
+): void {
   turns.unshift({
     question: question.slice(0, 400),
     answer: answer.slice(0, 1200),
@@ -208,6 +222,7 @@ function remember(question: string, answer: string, source: LiveSource, volatile
     volatile,
     at: Date.now(),
     kept: 0,
+    evidence,
   });
   if (turns.length > 80) turns.length = 80;
   bump(question, source, 1);
@@ -342,26 +357,34 @@ async function defaultWiki(question: string): Promise<WikiHit | null> {
   return { title: summary.title, extract: summary.extract, url: summary.url };
 }
 
-export async function answerInContext(
+export interface ChamberContextAnswer {
+  answer: string;
+  evidence: TesseraAnswerEvidence[];
+}
+
+export async function answerInContextWithEvidence(
   question: string,
   wiki: (question: string) => Promise<WikiHit | null> = defaultWiki,
-): Promise<string | null> {
+): Promise<ChamberContextAnswer | null> {
   const raw = (question || "").trim();
   if (!raw || isIdentityQuestion(raw) || isChatDeskPrompt(raw)) return null;
 
   const corrected = applyCorrection(raw);
-  if (corrected) return corrected;
+  if (corrected) return { answer: corrected, evidence: [] };
 
   const current = asksForCurrent(raw);
   if (!current) {
-    const lesson = recallLesson(raw);
-    if (lesson?.answer) return enforceTesseraVoice(lesson.answer, raw);
     const learned = recallLearned(raw);
-    if (learned) return learned.answer;
+    // Preserve the original provenance-bearing answer before consulting the
+    // older lesson cache, which stores only plain text.
+    if (learned?.evidence?.length) return { answer: learned.answer, evidence: learned.evidence };
+    const lesson = recallLesson(raw);
+    if (lesson?.answer) return { answer: enforceTesseraVoice(lesson.answer, raw), evidence: [] };
+    if (learned) return { answer: learned.answer, evidence: learned.evidence ?? [] };
   }
 
   const toolReply = await replyFromTools(raw);
-  if (toolReply) return toolReply;
+  if (toolReply) return { answer: toolReply, evidence: [] };
 
   if (isUserTeaching(raw) && !wantsReference(raw)) {
     const snippet = raw.slice(0, 180);
@@ -374,7 +397,7 @@ export async function answerInContext(
     );
     if (!reply || reply === PEN_LINE || reply === PEN_WHERE) return null;
     remember(raw, reply, "you", false);
-    return reply;
+    return { answer: reply, evidence: [] };
   }
 
   const prefer = preferredSource(raw);
@@ -396,17 +419,41 @@ export async function answerInContext(
       return null;
     }
     const when = new Date().toISOString();
-    const reply = speakAsTessera(
-      raw,
-      sentence,
-      `I read ${hit.title} on Wikipedia at ${when}. The page is a reference.`,
-    );
+    const safeTitle = sanitizeCitationText(hit.title, 120);
+    const safeSentence = sentence
+      .replace(/[\u0000-\u001f<>]/g, " ")
+      .replace(/\s+/g, " ")
+      .replace(/([\\`*_{}\[\]()#+.!|>])/g, "\\$1")
+      .trim();
+    const provenance = makeSourceProvenance({
+      sourceUrl: hit.url,
+      documentReference: `Wikipedia page: ${safeTitle}`,
+      retrievedAt: when,
+      trustStatus: "unverified",
+    });
+    const evidence: TesseraAnswerEvidence[] = [{
+      id: `wikipedia:${safeTitle}`,
+      text: sentence,
+      source: `Wikipedia — ${safeTitle}`,
+      provenance,
+    }];
+    const marker = formatInlineCitation(1, provenance);
+    const reference = provenance.sourceUrl ?? provenance.documentReference;
+    const reply = `${getSourceTrustLabel(provenance.trustStatus)} from Wikipedia — ${safeTitle} (${reference}; retrieved ${when}) ${marker}:\n\n> ${safeSentence}\n\nThis is a note, not an established fact.`;
     if (!reply || reply === PEN_LINE || reply === PEN_WHERE) return null;
-    remember(raw, reply, "wikipedia", false);
+    remember(raw, reply, "wikipedia", false, evidence);
     rememberTitle(raw, hit.title);
-    return reply;
+    return { answer: reply, evidence };
   } catch {
     forgetTitles(raw);
     return null;
   }
+}
+
+export async function answerInContext(
+  question: string,
+  wiki: (question: string) => Promise<WikiHit | null> = defaultWiki,
+): Promise<string | null> {
+  const result = await answerInContextWithEvidence(question, wiki);
+  return result?.answer ?? null;
 }

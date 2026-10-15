@@ -281,8 +281,13 @@ describe("guarded LLM and NASA fetch", () => {
     );
 
     expect(res.status).toBe(200);
-    expect(res.text).toContain("From the built-in Tessera knowledge catalog — Quantum Physics:");
+    expect(res.text).toContain("Unverified note from the built-in catalog — Quantum Physics");
     expect(res.text).toContain("Quantum entanglement connects particles");
+    expect(res.text).toContain("[1]");
+    expect(res.text).toContain("artifacts/api-server/src/lib/tessera-knowledge.ts#TESSERA_SUBJECTS.quantum-physics");
+    expect(res.text).toContain("\"trustStatus\":\"unverified\"");
+    expect(res.text).toContain("\"sourceUrl\":null");
+    expect(res.text).toContain("\"retrievedAt\":null");
     expect(res.text).not.toContain("A hash map answers");
     expect(res.text).not.toContain("**Sources:**");
     expect(res.text).toContain("local-response-pipeline");

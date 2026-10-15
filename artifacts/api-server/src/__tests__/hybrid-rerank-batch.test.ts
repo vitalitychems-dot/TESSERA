@@ -8,7 +8,7 @@ const state = vi.hoisted(() => ({
   embeddingCalls: [] as string[],
   batchCalls: [] as string[][],
   hits: [] as Array<{ content: string; source: string; score: number }>,
-  ingested: [] as string[],
+  ingested: [] as Array<Record<string, unknown>>,
 }));
 
 vi.mock("../lib/logger", () => ({
@@ -25,7 +25,7 @@ vi.mock("../lib/vector-memory", () => ({
 }));
 
 vi.mock("../lib/ingested-recall", () => ({
-  recallIngestedKnowledge: async () => state.ingested,
+  recallIngestedKnowledgeWithProvenance: async () => state.ingested,
 }));
 
 vi.mock("../lib/neural-embeddings", () => ({
@@ -60,8 +60,9 @@ vi.mock("../lib/neural-embeddings", () => ({
   },
 }));
 
-import { hybridRetrieve } from "../lib/hybrid-retrieval";
+import { formatCitations, hybridRetrieve } from "../lib/hybrid-retrieval";
 import { generateEmbedding, generateEmbeddingsBatch } from "../lib/neural-embeddings";
+import { makeSourceProvenance } from "../lib/tessera-source-provenance";
 
 describe("hybrid retrieval embedding rerank", () => {
   beforeEach(() => {
@@ -109,5 +110,38 @@ describe("hybrid retrieval embedding rerank", () => {
       `HYBRID_RERANK sequentialMs=${sequentialLabel} batchMs=${batchLabel} callReduction=${N}→1`,
     );
     expect(batchMs).toBeLessThan(sequentialMs);
+  });
+
+  it("preserves original source URL, retrieval date, document reference, and unverified status", async () => {
+    state.hits = [];
+    state.ingested = [{
+      id: "ingested:42",
+      text: "A battery separator can reduce thermal runaway by shutting down ion transport under excessive heat.",
+      source: "research-paper/thermal-safety — Separator testing",
+      provenance: makeSourceProvenance({
+        sourceUrl: "https://research.example.org/separator-safety",
+        documentReference: "ingested-data:42",
+        retrievedAt: "2026-10-01T12:00:00.000Z",
+        publishedAt: "2026-09-28T12:00:00.000Z",
+        trustStatus: "unverified",
+      }),
+    }];
+
+    const results = await hybridRetrieve("How does a battery separator reduce thermal runaway?", {
+      topK: 1,
+      rerankTopK: 1,
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0].provenance).toMatchObject({
+      sourceUrl: "https://research.example.org/separator-safety",
+      documentReference: "ingested-data:42",
+      retrievedAt: "2026-10-01T12:00:00.000Z",
+      publishedAt: "2026-09-28T12:00:00.000Z",
+      trustStatus: "unverified",
+    });
+    expect(formatCitations(results)).toContain("[1](<https://research.example.org/separator-safety>)");
+    expect(formatCitations(results)).toContain("unverified note");
+    expect(formatCitations(results)).toContain("2026-10-01T12:00:00.000Z");
   });
 });

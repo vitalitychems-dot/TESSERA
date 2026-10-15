@@ -1,4 +1,11 @@
 import { getFatherIdentity, isFatherKeyConfigured } from "./father-identity";
+import {
+  formatInlineCitation,
+  getSourceTrustLabel,
+  makeSourceProvenance,
+  sanitizeCitationText,
+  type TesseraSourceProvenance,
+} from "./tessera-source-provenance";
 
 export function getFatherIdentityBlock() {
   if (!isFatherKeyConfigured()) {
@@ -427,7 +434,7 @@ const STOPWORDS = new Set([
 
 export function lookupKnowledge(query: string): string[] {
   return searchTesseraKnowledge(query).map(
-    hit => `From the built-in Tessera knowledge catalog — ${hit.title}:\n${hit.excerpt}`,
+    hit => `${getSourceTrustLabel(hit.provenance.trustStatus)} from the built-in catalog — ${hit.title} (${hit.provenance.documentReference}; retrieval date not recorded):\n${hit.excerpt}`,
   );
 }
 
@@ -437,12 +444,15 @@ export interface TesseraKnowledgeHit {
   excerpt: string;
   source: string;
   score: number;
+  provenance: TesseraSourceProvenance;
 }
 
 export interface TesseraAnswerEvidence {
+  id?: string;
   text: string;
   source: string;
   score?: number;
+  provenance?: TesseraSourceProvenance;
 }
 
 const QUERY_STOPWORDS = new Set([
@@ -523,10 +533,78 @@ export function searchTesseraKnowledge(query: string, limit = 2): TesseraKnowled
       excerpt: best.sentence.slice(0, 700),
       source: `Tessera built-in knowledge catalog — ${subject.title}`,
       score: best.score,
+      provenance: makeSourceProvenance({
+        documentReference: `artifacts/api-server/src/lib/tessera-knowledge.ts#TESSERA_SUBJECTS.${id}`,
+        trustStatus: "unverified",
+      }),
     });
   }
 
   return hits.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title)).slice(0, Math.max(1, limit));
+}
+
+function provenanceForEvidence(item: TesseraAnswerEvidence): TesseraSourceProvenance {
+  return item.provenance ?? makeSourceProvenance({
+    documentReference: item.id ?? `retrieved:${sanitizeCitationText(item.source)}`,
+    trustStatus: "unverified",
+  });
+}
+
+function formatEvidenceDates(provenance: TesseraSourceProvenance): string {
+  const dates = [
+    provenance.retrievedAt ? `retrieved ${provenance.retrievedAt}` : null,
+    provenance.publishedAt ? `published ${provenance.publishedAt}` : null,
+  ].filter((date): date is string => Boolean(date));
+  return dates.length > 0 ? dates.join("; ") : "retrieval date not recorded";
+}
+
+function provenancePriority(provenance: TesseraSourceProvenance): number {
+  if (provenance.trustStatus === "verified") return 3;
+  if (provenance.trustStatus === "unverified" && provenance.sourceUrl) return 2;
+  if (provenance.trustStatus === "unverified") return 1;
+  return 0;
+}
+
+export function serializeTesseraCitations(evidence: TesseraAnswerEvidence[]) {
+  return evidence.map((item, index) => {
+    const provenance = provenanceForEvidence(item);
+    return {
+      id: item.id ?? provenance.documentReference,
+      idx: index + 1,
+      source: sanitizeCitationText(item.source),
+      score: item.score ?? 1,
+      sourceUrl: provenance.sourceUrl,
+      documentReference: provenance.documentReference,
+      retrievedAt: provenance.retrievedAt,
+      publishedAt: provenance.publishedAt,
+      trustStatus: provenance.trustStatus,
+      trustNote: provenance.trustNote,
+    };
+  });
+}
+
+export function ensureInlineTesseraCitations(
+  answer: string,
+  evidence: TesseraAnswerEvidence[],
+): string {
+  const withoutBibliography = answer
+    .replace(/\n{2,}(?:\*\*|#{1,3}\s*)?(?:sources|references|citations)\s*:?\s*(?:\*\*)?[\s\S]*$/i, "")
+    .trim();
+  // Generated citation markers are not evidence. Rebuild markers from the
+  // exact selected records, while preserving numbered references inside
+  // quoted passages that came directly from a source.
+  const withoutGeneratedCitations = withoutBibliography
+    .split("\n")
+    .map((line) => /^\s*>/.test(line)
+      ? line
+      : line.replace(/\[\d+\](?:\((?:<[^>]*>|[^)]*)\))?/g, "").replace(/\s{2,}/g, " "))
+    .join("\n")
+    .trim();
+  if (!withoutGeneratedCitations || evidence.length === 0) return withoutGeneratedCitations;
+  const markers = evidence
+    .map((item, index) => formatInlineCitation(index + 1, provenanceForEvidence(item)))
+    .join(" ");
+  return `${withoutGeneratedCitations}${withoutGeneratedCitations ? " " : ""}${markers}`;
 }
 
 function selectRelevantPassage(query: string, text: string): { excerpt: string; score: number } | null {
@@ -565,34 +643,64 @@ export function createTesseraEvidenceAnswer(
   }
 
   const localHit = searchTesseraKnowledge(safeQuery, 1)[0];
-  if (localHit) {
-    return {
-      answer: `${prefix}From the built-in Tessera knowledge catalog — ${localHit.title}:\n\n> ${localHit.excerpt}`,
-      evidence: [{ text: localHit.excerpt, source: localHit.source, score: localHit.score }],
-    };
-  }
-
   const candidates = retrieved
     .filter(item => typeof item.text === "string" && item.text.trim() && typeof item.source === "string" && item.source.trim() && !containsCredentialMaterial(item.text))
     .map(item => {
       const passage = selectRelevantPassage(safeQuery, item.text);
-      return passage ? { item, ...passage } : null;
+      return passage ? { item, provenance: provenanceForEvidence(item), ...passage } : null;
     })
-    .filter((item): item is { item: TesseraAnswerEvidence; excerpt: string; score: number } => item !== null)
-    .sort((a, b) => b.score - a.score || (b.item.score ?? 0) - (a.item.score ?? 0));
+    .filter((item): item is { item: TesseraAnswerEvidence; provenance: TesseraSourceProvenance; excerpt: string; score: number } => item !== null)
+    .sort((a, b) =>
+      provenancePriority(b.provenance) - provenancePriority(a.provenance) ||
+      b.score - a.score ||
+      (b.item.score ?? 0) - (a.item.score ?? 0)
+    );
 
-  const best = candidates[0];
-  if (best) {
-    const safeSource = best.item.source
+  const bestRetrieved = candidates[0];
+  const preferRetrieved = bestRetrieved && (
+    bestRetrieved.provenance.trustStatus === "verified" ||
+    (bestRetrieved.provenance.trustStatus === "unverified" && !!bestRetrieved.provenance.sourceUrl)
+  );
+
+  if (localHit && !preferRetrieved) {
+    const provenance = localHit.provenance;
+    const citation = formatInlineCitation(1, provenance);
+    const reference = provenance.sourceUrl ?? provenance.documentReference;
+    const answer = `${prefix}${getSourceTrustLabel(provenance.trustStatus)} from the built-in catalog — ${localHit.title} (${reference}; ${formatEvidenceDates(provenance)}) ${citation}:\n\n> ${localHit.excerpt}`;
+    return {
+      answer,
+      evidence: [{
+        id: `builtin:${localHit.id}`,
+        text: localHit.excerpt,
+        source: localHit.source,
+        score: localHit.score,
+        provenance,
+      }],
+    };
+  }
+
+  if (bestRetrieved) {
+    const safeSource = sanitizeCitationText(bestRetrieved.item.source)
       .replace(/[\r\n<>`]/g, " ")
       .replace(/([\\`*_{}\[\]()#+.!|>])/g, "\\$1")
       .slice(0, 140);
-    const safeExcerpt = best.excerpt
+    const safeExcerpt = bestRetrieved.excerpt
       .replace(/<[^>]*>/g, "")
       .replace(/([\\`*_{}\[\]()#+\-.!|>])/g, "\\$1");
+    const provenance = bestRetrieved.provenance;
+    const reference = provenance.sourceUrl ?? provenance.documentReference;
+    const citation = formatInlineCitation(1, provenance);
+    const evidence: TesseraAnswerEvidence = {
+      ...bestRetrieved.item,
+      id: bestRetrieved.item.id ?? provenance.documentReference,
+      text: bestRetrieved.excerpt,
+      source: bestRetrieved.item.source,
+      score: bestRetrieved.score,
+      provenance,
+    };
     return {
-      answer: `${prefix}From the retrieved source “${safeSource}”:\n\n> ${safeExcerpt}`,
-      evidence: [{ text: best.excerpt, source: best.item.source, score: best.item.score }],
+      answer: `${prefix}${getSourceTrustLabel(provenance.trustStatus)} from “${safeSource}” (${reference}; ${formatEvidenceDates(provenance)}) ${citation}:\n\n> ${safeExcerpt}`,
+      evidence: [evidence],
     };
   }
 

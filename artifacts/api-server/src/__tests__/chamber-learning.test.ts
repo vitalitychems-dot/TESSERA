@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   answerInContext,
+  answerInContextWithEvidence,
   correctionFact,
   noteChamberTurn,
   resetChamberLearning,
@@ -20,8 +21,8 @@ describe("chamber learning", () => {
   it("counts on the desk and speaks as Tessera", async () => {
     const reply = await answerInContext("What is 17 * 23?");
     expect(reply).toMatch(/The value is 391/);
-    expect(reply).toMatch(/I am Tessera/);
-    expect(reply).toMatch(/through the pen/);
+    expect(reply).toMatch(/I(?: am|’m) Tessera/);
+    expect(reply).toMatch(/this desk/);
     expect(reply).not.toMatch(/grok/i);
     expect(reply).not.toMatch(/^\s*[{[]/);
   });
@@ -40,7 +41,7 @@ describe("chamber learning", () => {
     noteChamberTurn("I sleep after sunrise because of the night shift");
     const heard = await answerInContext("I sleep after sunrise because of the night shift");
     expect(heard).toMatch(/night shift/);
-    expect(heard).toMatch(/I am Tessera/);
+    expect(heard).toMatch(/I(?: am|’m) Tessera/);
     expect(heard).not.toMatch(/I have lived/i);
 
     noteChamberTurn("When do I sleep?");
@@ -48,7 +49,7 @@ describe("chamber learning", () => {
       throw new Error("a personal question should use the user's words");
     });
     expect(later).toMatch(/sunrise|night shift/);
-    expect(later).toMatch(/I am Tessera/);
+    expect(later).toMatch(/I(?: am|’m) Tessera/);
   });
 
   it("learns a correction and uses it the next time", async () => {
@@ -72,23 +73,44 @@ describe("chamber learning", () => {
 
   it("rejects a page that does not share the question and reuses a title that did", async () => {
     const seen: string[] = [];
-    noteChamberTurn("what is the capital of france");
-    const first = await answerInContext("what is the capital of france", async (question) => {
+    noteChamberTurn("tell me about the capital of france according to wikipedia");
+    const first = await answerInContext("tell me about the capital of france according to wikipedia", async (question) => {
       seen.push(searchQueryFor(question));
       return PARIS;
     });
     expect(first).toMatch(/capital of France/);
-    expect(first).toMatch(/I am Tessera/);
+    expect(first).toContain("Unverified note from Wikipedia");
     expect(first).not.toMatch(/UNTRUSTED/);
 
-    noteChamberTurn("which french capital sits on the seine");
-    const second = await answerInContext("which french capital sits on the seine", async (question) => {
+    noteChamberTurn("tell me about a french capital on the seine according to wikipedia");
+    const second = await answerInContext("tell me about a french capital on the seine according to wikipedia", async (question) => {
       seen.push(searchQueryFor(question));
       return PARIS;
     });
     expect(second).toMatch(/Seine/);
+    expect(second).toContain("Unverified note from Wikipedia");
+    expect(second).toContain("[1](<https://en.wikipedia.org/wiki/Paris>)");
     expect(seen[0]).toMatch(/capital of france/i);
-    expect(seen[1]).toBe("Paris");
+    expect(seen).toHaveLength(1);
+    expect(searchQueryFor("tell me about a french capital on the seine according to wikipedia")).toBe("Paris");
+  });
+
+  it("returns an inline citation and exact provenance for a retrieved Wikipedia answer", async () => {
+    noteChamberTurn("tell me about the capital of france according to wikipedia");
+    const result = await answerInContextWithEvidence(
+      "tell me about the capital of france according to wikipedia",
+      async () => PARIS,
+    );
+
+    expect(result?.answer).toContain("Unverified note from Wikipedia — Paris");
+    expect(result?.answer).toContain("[1](<https://en.wikipedia.org/wiki/Paris>)");
+    expect(result?.evidence).toHaveLength(1);
+    expect(result?.evidence[0].provenance).toMatchObject({
+      sourceUrl: "https://en.wikipedia.org/wiki/Paris",
+      documentReference: "Wikipedia page: Paris",
+      trustStatus: "unverified",
+    });
+    expect(result?.evidence[0].provenance?.retrievedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
   it("drops a page that claims another model", async () => {
