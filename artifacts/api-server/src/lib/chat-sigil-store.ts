@@ -49,8 +49,8 @@ export class ChatSigilStore {
     return { enrolled: Boolean(row), rotatedThisSession: row?.confirmed_sessions?.includes(digest(session)) ?? false };
   }
   async prepare(current: string, session: string, initialize = false) {
-    await this.ensure();
     if (current.length < 8 || current.length > 512) throw new SigilError("sigil-length", 400);
+    await this.ensure();
     if (initialize) await this.query(`INSERT INTO ${this.table} (id, current_hash) VALUES (1, $1) ON CONFLICT (id) DO NOTHING`, [await hashSigil(current)]);
     const result = await this.query(`SELECT * FROM ${this.table} WHERE id = 1`);
     const row = result.rows[0] as Row | undefined;

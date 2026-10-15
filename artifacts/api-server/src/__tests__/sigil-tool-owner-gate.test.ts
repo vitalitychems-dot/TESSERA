@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import express from "express";
+import cookieParser from "cookie-parser";
 import { createServer, type Server } from "node:http";
 import { issueSession, SESSION_COOKIE, verifyAdminToken } from "../lib/sovereign-session";
 import { readAdminKeyMaterial, verifyFatherKey } from "../lib/father-identity";
@@ -11,6 +12,38 @@ import { NotConfiguredError } from "../lib/not-configured";
 import { natalSigilFor } from "../lib/father-natal";
 import * as natalSigil from "../lib/natal-sigil";
 import { detectIntents, invokeTool, publicToolResult } from "../lib/tool-registry";
+
+const chatSigilStoreMock = vi.hoisted(() => ({
+  status: vi.fn(async (_session: string) => ({ enrolled: false, rotatedThisSession: false })),
+  prepare: vi.fn(async (_current: string, _session: string, _initialize: boolean) => ({
+    code: "LUS-chat-sigil-fixture",
+    confirmationToken: "one-time-confirmation-fixture",
+  })),
+  confirm: vi.fn(async (_confirmationToken: string, _session: string) => undefined),
+}));
+
+vi.mock("../lib/chat-sigil-store", () => {
+  class MockSigilError extends Error {
+    constructor(public code: string, public status: number) {
+      super(code);
+    }
+  }
+  return {
+    chatSigilStore: () => chatSigilStoreMock,
+    SigilError: MockSigilError,
+    requireChatSigil: async (
+      _req: unknown,
+      res: { status: (code: number) => { json: (body: unknown) => unknown } },
+      next: () => void,
+    ) => {
+      const status = await chatSigilStoreMock.status("fixture-owner-session");
+      if (!status.rotatedThisSession) {
+        return res.status(428).json({ ok: false, error: "chat-sigil-required" });
+      }
+      return next();
+    },
+  };
+});
 
 vi.mock("../lib/ingested-recall", () => ({
   recallIngestedKnowledge: async () => [],
@@ -46,6 +79,7 @@ vi.mock("@workspace/db", () => {
 import conversationsRouter from "../routes/conversations";
 import sovereignDoctrineRouter from "../routes/sovereign-doctrine";
 import languageSecurityRouter from "../routes/language-security";
+import { SigilError } from "../lib/chat-sigil-store";
 
 const OWNER_ENV = "SOVEREIGN_ADMIN_TOKEN";
 const LEGACY_ENV = "TESSERACT_ADMIN_KEY";
@@ -94,7 +128,9 @@ describe("sigil tool owner gate", () => {
 
   beforeAll(async () => {
     const app = express();
+    app.set("trust proxy", true);
     app.use(express.json());
+    app.use(cookieParser());
     app.use(conversationsRouter);
     app.use(sovereignDoctrineRouter);
     app.use(languageSecurityRouter);
@@ -112,6 +148,12 @@ describe("sigil tool owner gate", () => {
     process.env[LEGACY_ENV] = SYNTHETIC_OWNER_TOKEN;
     process.env[SESSION_ENV] = SYNTHETIC_SESSION_SECRET;
     delete process.env[CHART_ENV];
+    chatSigilStoreMock.status.mockResolvedValue({ enrolled: false, rotatedThisSession: false });
+    chatSigilStoreMock.prepare.mockResolvedValue({
+      code: "LUS-chat-sigil-fixture",
+      confirmationToken: "one-time-confirmation-fixture",
+    });
+    chatSigilStoreMock.confirm.mockResolvedValue(undefined);
   });
 
   afterAll(async () => {
@@ -130,10 +172,19 @@ describe("sigil tool owner gate", () => {
     return `${SESSION_COOKIE}=${issued.signedId}`;
   }
 
-  async function post(path: string, body: unknown, cookie?: string, origin?: string): Promise<Response> {
+  async function post(
+    path: string,
+    body: unknown,
+    cookie?: string,
+    origin?: string,
+    fetchSite?: string,
+    clientIp?: string,
+  ): Promise<Response> {
     const headers = new Headers({ "content-type": "application/json" });
     if (cookie !== undefined) headers.set("cookie", cookie);
     if (origin !== undefined) headers.set("origin", origin);
+    if (fetchSite !== undefined) headers.set("sec-fetch-site", fetchSite);
+    if (clientIp !== undefined) headers.set("x-forwarded-for", clientIp);
     return fetch(`${baseUrl}${path}`, { method: "POST", headers, body: JSON.stringify(body) });
   }
 
@@ -149,7 +200,7 @@ describe("sigil tool owner gate", () => {
     expect(detectIntents(COUNCIL_PHRASE).length).toBeGreaterThan(0);
   });
 
-  it("issues one owner-only LUS code usable as the same Father/admin secret", async () => {
+  it("rotates only the private chat sigil and leaves the stable admin key unchanged", async () => {
     const anonymous = await post("/sigil/father/issue-code", {});
     expect(anonymous.status).toBe(401);
 
@@ -162,37 +213,99 @@ describe("sigil tool owner gate", () => {
     );
     expect(crossOrigin.status).toBe(403);
 
+    const crossSite = await post(
+      "/sigil/father/issue-code",
+      { currentSigil },
+      ownerCookie(),
+      baseUrl,
+      "cross-site",
+    );
+    expect(crossSite.status).toBe(403);
+
     const missingSigil = await post("/sigil/father/issue-code", {}, ownerCookie(), baseUrl);
     expect(missingSigil.status).toBe(400);
+    expect(chatSigilStoreMock.prepare).not.toHaveBeenCalled();
 
+    chatSigilStoreMock.prepare.mockRejectedValueOnce(new SigilError("sigil-mismatch", 403));
     const wrongSigil = await post(
       "/sigil/father/issue-code",
-      { currentSigil: "not-the-current-sigil" },
+      { currentSigil: "synthetic-wrong-sigil-candidate" },
       ownerCookie(),
       baseUrl,
     );
     expect(wrongSigil.status).toBe(403);
+    expect(await wrongSigil.text()).not.toContain("synthetic-wrong-sigil-candidate");
 
     const response = await post(
       "/sigil/father/issue-code",
-      { currentSigil },
+      { currentSigil, initialize: true },
       ownerCookie(),
       baseUrl,
     );
     expect(response.status).toBe(201);
     expect(response.headers.get("cache-control")).toBe("no-store");
-    const body = await response.json() as { ok: boolean; code: string; saveAs: string; instructions: string };
+    const body = await response.json() as {
+      ok: boolean;
+      code: string;
+      confirmationToken: string;
+      adminKeyChanged: boolean;
+    };
     expect(body.ok).toBe(true);
-    expect(body.saveAs).toBe("TESSERACT_ADMIN_KEY");
-    expect(body.instructions).toContain("restart the API workflow");
-    expect(canonicalAdminCode(body.code)).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(body.code).toBe("LUS-chat-sigil-fixture");
+    expect(body.confirmationToken).toBe("one-time-confirmation-fixture");
+    expect(body.adminKeyChanged).toBe(false);
+    expect(chatSigilStoreMock.prepare).toHaveBeenCalledWith(currentSigil, expect.any(String), true);
+    expect(verifyAdminToken(body.code)).toBe(false);
+    expect(verifyFatherKey(body.code)).toBe(false);
+    expect(validateSovereignAdminToken(body.code)).toBe(false);
+    expect(readAdminKeyMaterial()).toBe(SYNTHETIC_OWNER_TOKEN);
 
-    // Simulate saving exactly the displayed LUS value in Replit Secrets.
-    process.env[LEGACY_ENV] = body.code;
-    expect(verifyAdminToken(body.code)).toBe(true);
-    expect(verifyFatherKey(body.code)).toBe(true);
-    expect(validateSovereignAdminToken(body.code)).toBe(true);
-    expect(readAdminKeyMaterial()).toBe(canonicalAdminCode(body.code));
+    const confirm = await post(
+      "/sigil/father/confirm-code",
+      { confirmationToken: body.confirmationToken },
+      ownerCookie(),
+      baseUrl,
+    );
+    expect(confirm.status).toBe(200);
+    expect(await confirm.json()).toEqual({ ok: true, adminKeyChanged: false });
+    expect(chatSigilStoreMock.confirm).toHaveBeenCalledWith(body.confirmationToken, expect.any(String));
+    expect(readAdminKeyMaterial()).toBe(SYNTHETIC_OWNER_TOKEN);
+  });
+
+  it("rate limits repeated sigil operations even with a valid owner session", async () => {
+    const cookie = ownerCookie();
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const response = await post(
+        "/sigil/father/issue-code",
+        { currentSigil: SYNTHETIC_OWNER_TOKEN, initialize: true },
+        cookie,
+        baseUrl,
+        "same-origin",
+        "198.51.100.77",
+      );
+      expect(response.status).toBe(201);
+    }
+    const limited = await post(
+      "/sigil/father/issue-code",
+      { currentSigil: SYNTHETIC_OWNER_TOKEN, initialize: true },
+      cookie,
+      baseUrl,
+      "same-origin",
+      "198.51.100.77",
+    );
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("retry-after")).toBeTruthy();
+    expect(limited.headers.get("cache-control")).toBe("no-store");
+    expect((await limited.json() as { error: string }).error).toBe("rate-limited");
+  });
+
+  it("requires a private save acknowledgment before the UI confirms a sigil", () => {
+    const panelPath = fileURLToPath(new URL("../../../tessera/src/components/chat/FatherCodeRotationPanel.tsx", import.meta.url));
+    const panel = readFileSync(panelPath, "utf8");
+    expect(panel).toContain("I saved this new sigil somewhere private.");
+    expect(panel).toContain("disabled={!saved || busy}");
+    expect(panel).toContain("if (!saved)");
+    expect(panel).not.toMatch(/localStorage\.(?:setItem|getItem)\s*\(/);
   });
 
   for (const phrase of [MINT_PHRASE, COUNCIL_PHRASE]) {
@@ -221,8 +334,13 @@ describe("sigil tool owner gate", () => {
         });
       });
 
-      it("returns a ready status with no chart, birth, or key fields when the session is valid", async () => {
+      it("blocks chat until the sigil is confirmed, then returns a ready status without key fields", async () => {
         process.env[CHART_ENV] = FIXTURE_A;
+        const blocked = await post("/messages", { conversationId: 1, content: phrase }, ownerCookie());
+        expect(blocked.status).toBe(428);
+        expect(await blocked.json()).toEqual({ ok: false, error: "chat-sigil-required" });
+
+        chatSigilStoreMock.status.mockResolvedValue({ enrolled: true, rotatedThisSession: true });
         const response = await post("/messages", { conversationId: 1, content: phrase }, ownerCookie());
         expect(response.status).toBe(200);
         const body = await response.text();

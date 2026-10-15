@@ -24,6 +24,7 @@ import {
 } from "../lib/lingua-universalis";
 import {
   adminSessionRateLimit,
+  chatSigilRateLimit,
   fatherVerifyRateLimit,
   rateLimitSnapshot,
 } from "../lib/father-verify-throttle";
@@ -35,7 +36,18 @@ import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
+function privateNoStore(_req: Request, res: Response, next: NextFunction): void {
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Pragma", "no-cache");
+  next();
+}
+
 function requireSameOrigin(req: Request, res: Response, next: NextFunction): void {
+  const fetchSite = req.get("sec-fetch-site");
+  if (fetchSite && fetchSite !== "same-origin") {
+    res.status(403).json({ ok: false, error: "same-origin-required" });
+    return;
+  }
   const origin = req.get("origin");
   const host = req.get("host");
   if (!origin || !host || origin === "null") {
@@ -66,23 +78,23 @@ function sigilFailure(res: Response, error: unknown) {
   logger.warn({ operation: "chat-sigil", code: "storage-unavailable" }, "Chat sigil storage unavailable");
   return res.status(503).json({ ok: false, error: "sigil-storage-unavailable" });
 }
-router.get("/sigil/father/status", requireAdminSession, async (req, res) => {
-  res.setHeader("Cache-Control", "no-store");
+router.get("/sigil/father/status", privateNoStore, requireAdminSession, async (req, res) => {
   try { return res.json({ ok: true, ...await chatSigilStore().status(ownerSessionId(req)) }); }
   catch (error) { return sigilFailure(res, error); }
 });
 
 // A new chat sigil stays pending until its owner acknowledges saving it.
-router.post("/sigil/father/issue-code", requireAdminSession, requireSameOrigin, adminSessionRateLimit, async (req, res) => {
-  res.setHeader("Cache-Control", "no-store");
+router.post("/sigil/father/issue-code", privateNoStore, requireAdminSession, requireSameOrigin, adminSessionRateLimit, chatSigilRateLimit, async (req, res) => {
   const currentSigil = typeof req.body?.currentSigil === "string" ? req.body.currentSigil.trim() : "";
+  if (currentSigil.length < 8 || currentSigil.length > 512) {
+    return res.status(400).json({ ok: false, error: "sigil-length" });
+  }
   try {
     const issued = await chatSigilStore().prepare(currentSigil, ownerSessionId(req), req.body?.initialize === true);
     return res.status(201).json({ ok: true, ...issued, language: { name: LANGUAGE_NAME, short: LANGUAGE_SHORT }, adminKeyChanged: false });
   } catch (error) { return sigilFailure(res, error); }
 });
-router.post("/sigil/father/confirm-code", requireAdminSession, requireSameOrigin, adminSessionRateLimit, async (req, res) => {
-  res.setHeader("Cache-Control", "no-store");
+router.post("/sigil/father/confirm-code", privateNoStore, requireAdminSession, requireSameOrigin, adminSessionRateLimit, chatSigilRateLimit, async (req, res) => {
   try {
     await chatSigilStore().confirm(typeof req.body?.confirmationToken === "string" ? req.body.confirmationToken : "", ownerSessionId(req));
     return res.json({ ok: true, adminKeyChanged: false });

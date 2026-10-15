@@ -137,6 +137,54 @@ export function adminSessionRateLimit(req: Request, res: Response, next: NextFun
   next();
 }
 
+// Chat-sigil verification has its own budget because valid owner sessions
+// intentionally bypass the admin-login limiter above. Failed guesses and
+// repeated pending-code replacements must still be bounded per source IP.
+const CHAT_SIGIL_WINDOW_MS = 60_000;
+const CHAT_SIGIL_IP_MAX = 5;
+const CHAT_SIGIL_GLOBAL_MAX = 100;
+const CHAT_SIGIL_MAX_IPS = 4096;
+const _chatSigilHits = new Map<string, number[]>();
+const _chatSigilGlobalHits: number[] = [];
+
+export function chatSigilRateLimit(req: Request, res: Response, next: NextFunction): void {
+  const now = Date.now();
+  for (const [ip, hits] of _chatSigilHits) {
+    const current = hits.filter(at => now - at < CHAT_SIGIL_WINDOW_MS);
+    if (current.length) _chatSigilHits.set(ip, current);
+    else _chatSigilHits.delete(ip);
+  }
+  const globalHits = _chatSigilGlobalHits.filter(at => now - at < CHAT_SIGIL_WINDOW_MS);
+  _chatSigilGlobalHits.length = 0;
+  _chatSigilGlobalHits.push(...globalHits);
+
+  const ip = ipOf(req);
+  const hits = _chatSigilHits.get(ip) ?? [];
+  const retryAfterMs = (oldest: number) => Math.max(1, Math.ceil((CHAT_SIGIL_WINDOW_MS - (now - oldest)) / 1000));
+  if (hits.length >= CHAT_SIGIL_IP_MAX) {
+    const retry = retryAfterMs(hits[0]);
+    res.setHeader("Retry-After", String(retry));
+    res.status(429).json({ ok: false, error: "rate-limited", retryAfterMs: retry * 1000 });
+    return;
+  }
+  if (_chatSigilGlobalHits.length >= CHAT_SIGIL_GLOBAL_MAX) {
+    const retry = retryAfterMs(_chatSigilGlobalHits[0]);
+    res.setHeader("Retry-After", String(retry));
+    res.status(429).json({ ok: false, error: "rate-limited", retryAfterMs: retry * 1000 });
+    return;
+  }
+
+  hits.push(now);
+  _chatSigilHits.set(ip, hits);
+  _chatSigilGlobalHits.push(now);
+  while (_chatSigilHits.size > CHAT_SIGIL_MAX_IPS) {
+    const oldest = _chatSigilHits.keys().next().value;
+    if (oldest === undefined) break;
+    _chatSigilHits.delete(oldest);
+  }
+  next();
+}
+
 // Failed attempts on raw-key admin routes. Successful authenticated requests
 // do not consume budget. Separate from the login counter above.
 // A slot is reserved before next() and refunded unless the response is 401

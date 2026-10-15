@@ -20,6 +20,7 @@ describe.skipIf(!isDbConfigured())("durable private chat sigil", () => {
     await expect(store.prepare("wrong-sigil-value", "test-session-a")).rejects.toMatchObject({ code: "sigil-mismatch" });
     const raw = JSON.stringify((await pool.query(`SELECT * FROM ${table}`)).rows);
     for (const value of [prior, replacement.code, replacement.confirmationToken, "test-session-a"]) expect(raw).not.toContain(value);
+    expect(await store.status("test-session-a")).toEqual({ enrolled: true, rotatedThisSession: false });
     await store.confirm(replacement.confirmationToken, "test-session-a");
     expect((await new ChatSigilStore(pool, table).status("test-session-a")).rotatedThisSession).toBe(true);
     await expect(store.prepare(prior, "test-session-b")).rejects.toMatchObject({ code: "sigil-mismatch" });

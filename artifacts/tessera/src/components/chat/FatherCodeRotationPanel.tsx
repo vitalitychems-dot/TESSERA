@@ -15,17 +15,12 @@ interface Props {
 export function isFatherCodeRotationCommand(text: string): boolean {
   const command = text.trim().toLowerCase().replace(/\s+/g, " ");
   return [
-    "my key",
-    "/my key",
-    "show my key",
-    "show my admin key",
     "rotate my sigil",
     "rotate sigil",
     "new sigil",
-    "rotate my father code",
-    "new father code",
-    "rotate admin key",
-    "new admin key",
+    "rotate my chat sigil",
+    "rotate chat sigil",
+    "new chat sigil",
   ].includes(command);
 }
 
@@ -43,7 +38,7 @@ function CopyButton({ code, onError }: { code: string; onError: (message: string
           onError("Copy was blocked. Select the code and copy it manually.");
         }
       }}
-      aria-label={copied ? "Father code copied" : "Copy Father code"}
+      aria-label={copied ? "Private chat sigil copied" : "Copy private chat sigil"}
       className="px-3 py-2 rounded-lg border border-emerald-300/30 bg-emerald-400/10 text-sm text-emerald-100 hover:bg-emerald-400/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300"
     >
       {copied ? "Copied" : "Copy code"}
@@ -134,6 +129,10 @@ export function FatherCodeRotationPanel({ open, onClose }: Props) {
   };
 
   const confirmSaved = async () => {
+    if (!saved) {
+      setError("Save the new sigil privately before activating it.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -164,7 +163,7 @@ export function FatherCodeRotationPanel({ open, onClose }: Props) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 id="father-rotation-title" className="text-sm font-semibold text-emerald-100">
-            {issuedCode ? "Your new Father sigil" : "Rotate your Father sigil"}
+            {issuedCode ? "Your new chat sigil" : "Rotate your chat sigil"}
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-slate-300">
             {issuedCode
