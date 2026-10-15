@@ -120,21 +120,24 @@ export default function TesseraWorldStage({ conversationId }: { conversationId: 
           <Link href="/forum">Forum / discussions</Link>
           <a href="#live-chat">Chat / conversation</a>
         </nav>
-        <section className="tw-world-art" aria-label="Decorative voxel illustration — not a connected Minecraft server">
-          <div className="tw-skyline" aria-hidden="true">
-            <span className="tw-orbit" />
-            <span className="tw-sun" />
-            <span className="tw-starfield">· &nbsp; · &nbsp; · &nbsp; · &nbsp; ·</span>
-            <div className="tw-world-tower tw-tower-one"><i /><i /><i /></div>
-            <div className="tw-world-tower tw-tower-two"><i /><i /><i /><i /></div>
-            <div className="tw-world-tower tw-tower-three"><i /><i /></div>
-            <div className="tw-world-tower tw-tower-four"><i /><i /><i /></div>
-            <div className="tw-ground-grid" />
+        <section
+          className="tw-world-unavailable"
+          aria-labelledby="tw-world-source-title"
+          data-testid="world-map-unavailable"
+          role="status"
+        >
+          <span className="tw-world-source-icon" aria-hidden="true">
+            <AlertTriangle size={18} />
+          </span>
+          <div className="tw-world-source-copy">
+            <p className="tw-caption-index">MINECRAFT WORLD / UNAVAILABLE</p>
+            <h2 id="tw-world-source-title">No live Minecraft map is connected</h2>
+            <p>
+              No authorized Minecraft server or map feed is available. The current
+              <code>/api/world</code> endpoint returns deterministic modeled data, not live world telemetry.
+            </p>
           </div>
-          <div className="tw-world-caption">
-            <span className="tw-caption-index">VOXEL VIEW / NOT A GAME SERVER</span>
-            <span className="tw-live-legend"><i /> Service, GitHub snapshots + stored forum records</span>
-          </div>
+          <span className="tw-world-source-state">SOURCE NOT CONNECTED</span>
         </section>
 
         <div className="tw-signal-heading">
