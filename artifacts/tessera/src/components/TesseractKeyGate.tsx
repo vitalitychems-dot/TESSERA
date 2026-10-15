@@ -140,7 +140,19 @@ function Frame({ tone, title, body }: { tone: "amber" | "rose" | "emerald" | "zi
   }[tone];
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background p-6">
-      <div className={`w-full max-w-xl rounded-2xl border bg-card p-6 text-card-foreground shadow-2xl ${ring}`}>
+      <div className={`tessera-gate-frame w-full max-w-xl rounded-2xl border bg-card p-6 text-card-foreground shadow-2xl ${ring}`}>
+        <div className="tessera-gate-header">
+          <div className="tessera-brand-mark tessera-brand-mark--small" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+          <div>
+            <p className="tessera-gate-kicker">TESSERA / SESSION GATE</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Evidence before execution.</p>
+          </div>
+        </div>
         <h2 className="font-sans text-lg font-semibold text-foreground">{title}</h2>
         {body}
         <RecoveryPanel />
