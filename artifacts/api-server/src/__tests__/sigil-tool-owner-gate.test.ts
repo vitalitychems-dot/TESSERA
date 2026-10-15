@@ -47,6 +47,7 @@ vi.mock("../lib/chat-sigil-store", () => {
 
 vi.mock("../lib/ingested-recall", () => ({
   recallIngestedKnowledge: async () => [],
+  recallIngestedKnowledgeWithProvenance: async () => [],
 }));
 
 vi.mock("../lib/hybrid-retrieval", () => ({
@@ -346,7 +347,9 @@ describe("sigil tool owner gate", () => {
         const body = await response.text();
         expect(body).not.toMatch(FORBIDDEN);
         const done = sseData(body).find((event) => event.done === true);
-        expect(done?.finalContent).toMatch(/: ready$/);
+        expect(done?.finalContent).toMatch(
+          /^[a-z_]+: ready\n\n---\n\*Response path: local application\/tool result; no configured model authored this reply\.\*$/,
+        );
         const tools = done?.tools as Array<{ result?: Record<string, unknown> }> | undefined;
         expect(tools?.length).toBeGreaterThan(0);
         for (const tool of tools ?? []) {

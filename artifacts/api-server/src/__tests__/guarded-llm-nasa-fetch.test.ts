@@ -3,7 +3,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { priorEnv, queryResult } = vi.hoisted(() => {
+const { priorEnv, queryResult, penMock } = vi.hoisted(() => {
   const prior = {
     base: process.env.TESSERA_LLM_BASE_URL,
     key: process.env.TESSERA_LLM_API_KEY,
@@ -30,7 +30,7 @@ const { priorEnv, queryResult } = vi.hoisted(() => {
     });
   }
 
-  return { priorEnv: prior, queryResult };
+  return { priorEnv: prior, queryResult, penMock: { mode: "disabled" as string } };
 });
 
 vi.mock("@workspace/db", async () => {
@@ -83,6 +83,25 @@ vi.mock("../lib/rick-autonomous-loop", () => ({
   getRickAutonomousHeartbeat: () => ({ ok: true }),
   listAutonomousInventions: async () => [],
   RICK_AUTONOMOUS_CATEGORIES: [],
+}));
+
+vi.mock("../lib/tessera-chat-model", () => ({
+  getTesseraChatModelStatus: () => penMock.mode === "disabled"
+    ? { enabled: false, reason: "disabled" }
+    : { enabled: true, model: "configured-model" },
+  draftTesseraChatReply: async (_content: string, evidence: unknown[]) => {
+    if (penMock.mode === "failure") return { ok: false, reason: "provider-unavailable" };
+    const citedEvidence = evidence.length > 0 ? [evidence[0]] : [];
+    return {
+      ok: true,
+      draft: {
+        answer: "Quantum entanglement describes correlations between measurements of separated quantum systems.",
+        model: "unit-test-actual-model",
+        evidence: citedEvidence,
+        provenance: citedEvidence.length > 0 ? "retrieved-evidence" : "unverified-model-knowledge",
+      },
+    };
+  },
 }));
 
 import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
@@ -215,6 +234,7 @@ describe("guarded LLM and NASA fetch", () => {
   beforeEach(() => {
     seen.length = 0;
     networkFetch.mockClear();
+    penMock.mode = "disabled";
   });
 
   afterAll(() => {
@@ -290,8 +310,9 @@ describe("guarded LLM and NASA fetch", () => {
     expect(res.text).toContain("\"retrievedAt\":null");
     expect(res.text).not.toContain("A hash map answers");
     expect(res.text).not.toContain("**Sources:**");
-    expect(res.text).toContain("local-response-pipeline");
-    expect(res.text).toContain("configuredModelUse");
+    expect(res.text).toContain("\"authorRole\":\"local\"");
+    expect(res.text).toContain("\"model\":null");
+    expect(res.text).toContain("no configured model authored this reply");
     expect(res.text).toContain("✦");
     const llm = seen.find((entry) => entry.url.startsWith("https://llm.tessera.test/"));
     expect(llm?.caller).toBe("shepherd-proxy");
@@ -305,6 +326,50 @@ describe("guarded LLM and NASA fetch", () => {
     expect(parsed.temperature).toBe(0.7);
     expect(parsed.model).toBe("unit-test-model");
   }, 20_000);
+
+  it("reports model-drafting status and labels the final configured-model provenance", async () => {
+    penMock.mode = "success";
+
+    const res = await postJson(
+      app,
+      "/messages",
+      {
+        conversationId: 7,
+        content: "Explain quantum entanglement in simple terms",
+      },
+      { cookie: ownerCookie() },
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.text).toContain("\"authorRole\":\"model-drafting\"");
+    expect(res.text).toContain("\"authorRole\":\"model-authored\"");
+    expect(res.text).toContain("\"model\":\"unit-test-actual-model\"");
+    expect(res.text).toContain("Draft attribution: Tessera Pen");
+    expect(res.text).toContain("Retrieved evidence is cited by the application.");
+    expect(res.text).toContain("\"modelAuthored\":true");
+    expect(res.text).toContain("\"tools\":[]");
+  });
+
+  it("labels a provider failure as a local fallback instead of claiming model authorship", async () => {
+    penMock.mode = "failure";
+
+    const res = await postJson(
+      app,
+      "/messages",
+      {
+        conversationId: 7,
+        content: "Explain quantum entanglement in simple terms",
+      },
+      { cookie: ownerCookie() },
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.text).toContain("\"authorRole\":\"local-fallback\"");
+    expect(res.text).toContain("\"model\":null");
+    expect(res.text).toContain("no model authored this reply");
+    expect(res.text).not.toContain("Draft attribution: Tessera Pen");
+    expect(res.text).toContain("\"modelAuthored\":false");
+  });
 
   describe("blank or spaces-only TESSERA_LLM_API_KEY", () => {
     const blankKeys = [

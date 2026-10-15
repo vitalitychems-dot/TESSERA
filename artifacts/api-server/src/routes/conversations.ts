@@ -31,6 +31,12 @@ import { hybridRetrieve } from "../lib/hybrid-retrieval";
 import { detectIntents, isPrivilegedTool, publicToolResult, runToolLoop } from "../lib/tool-registry";
 import { decideOwnerSession, requireAdminSession } from "../lib/sovereign-admin";
 import { requireChatSigil } from "../lib/chat-sigil-store";
+import {
+  draftTesseraChatReply,
+  getTesseraChatModelStatus,
+  type TesseraChatModelDraft,
+  type TesseraChatModelFailure,
+} from "../lib/tessera-chat-model";
 import { injectInventionDiagrams, buildInvention3DBlock, userRequested3D } from "../lib/invention-3d";
 import { inventionsTable } from "@workspace/db/schema";
 import { db as feedbackDb } from "@workspace/db";
@@ -146,7 +152,7 @@ function guardSovereignVoice(
     return generateSovereignResponse(userInput, isAdmin, retrievedChunks);
   }
   if (detectImpersonation(candidate) || isIdentityQuestion(userInput)) {
-    logger.warn({ sample: candidate.slice(0, 120) }, "Impersonation guard triggered — substituting Tessera's voice");
+    logger.warn({ reason: "impersonation-or-identity-claim" }, "Impersonation guard triggered — substituting Tessera's voice");
     return enforceTesseraVoice(
       isIdentityQuestion(userInput) ? "" : generateSovereignResponse(userInput, isAdmin, retrievedChunks),
       userInput,
@@ -190,6 +196,56 @@ function needsExternalKnowledge(input: string): boolean {
   const strippedForMath = lower.replace(/^(what('s|s| is)|calculate|compute|solve|how much is)\s+/i, "").replace(/\?$/, "").trim();
   if (strippedForMath.match(/^\d+(\.\d+)?\s*[×x\*\+\-÷\/]\s*\d+(\.\d+)?$/) || strippedForMath.match(/^\d+(\.\d+)?\s+(times|plus|minus|divided\s+by|multiplied\s+by)\s+\d+(\.\d+)?$/)) return false;
   return true;
+}
+
+type ReplyAuthorship = {
+  authorRole: "model-drafting" | "model-authored" | "local" | "local-fallback" | "application-result";
+  author: "Tessera Pen" | "Tessera" | "Application";
+  model: string | null;
+  provenance?: "retrieved-evidence" | "unverified-model-knowledge";
+  reason?: string;
+};
+
+function modelFailureLabel(reason: TesseraChatModelFailure | null): string {
+  switch (reason) {
+    case "disabled": return "the configured model is opt-in";
+    case "unconfigured": return "the configured model is unavailable";
+    case "unsafe-input": return "sensitive-looking input stayed local";
+    case "rate-limited": return "the local request limit was reached";
+    case "invalid-response": return "the provider draft did not pass validation";
+    case "provider-unavailable": return "the provider did not return a usable draft";
+    default: return "the configured model did not contribute";
+  }
+}
+
+function responseAttribution(authorship: ReplyAuthorship): string {
+  if (authorship.authorRole === "model-authored" && authorship.model) {
+    const sourceNote = authorship.provenance === "retrieved-evidence"
+      ? "Retrieved evidence is cited by the application."
+      : "No Tessera source evidence was used; factual claims are unverified.";
+    return `\n\n---\n*Draft attribution: Tessera Pen · model \`${authorship.model}\` · passed local safety and voice checks. The model had no tools or action permissions. ${sourceNote}*`;
+  }
+  if (authorship.authorRole === "local-fallback") {
+    return `\n\n---\n*Response path: local fallback; no model authored this reply because ${modelFailureLabel(authorship.reason as TesseraChatModelFailure | null)}.*`;
+  }
+  if (authorship.authorRole === "application-result") {
+    return "\n\n---\n*Response path: local application/tool result; no configured model authored this reply.*";
+  }
+  return "\n\n---\n*Response path: Tessera local application logic; no configured model authored this reply.*";
+}
+
+function routingMetadata(authorship: ReplyAuthorship) {
+  return {
+    tier: authorship.authorRole === "model-authored" || authorship.authorRole === "model-drafting"
+      ? "configured"
+      : "local",
+    model: authorship.model,
+    authorRole: authorship.authorRole,
+    author: authorship.author,
+    modelAuthored: authorship.authorRole === "model-authored",
+    provenance: authorship.provenance ?? null,
+    reason: authorship.reason ?? null,
+  };
 }
 
 function generateSovereignResponse(
@@ -536,11 +592,15 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
     const bodyConvId = req.body?.conversationId;
     const queryConvId = req.query?.conversationId;
     const conversationId = Number(bodyConvId || queryConvId);
-    const content = req.body?.content as string;
+    const rawContent: unknown = req.body?.content;
+    const content = typeof rawContent === "string" ? rawContent.trim() : "";
     const nlpGoals: string[] = Array.isArray(req.body?.nlpGoals) ? req.body.nlpGoals : [];
 
     if (!conversationId || !content) {
       return res.status(400).json({ error: "conversationId and content required" });
+    }
+    if (content.length > 10_000) {
+      return res.status(413).json({ error: "message-too-long" });
     }
 
     await db.insert(messagesTable).values({
@@ -555,12 +615,20 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
 
     const isAdminRequestEarly = false;
     noteChamberTurn(content);
-    const deskTurn = isIdentityQuestion(content) ? null : runChatDesk(content);
-    const liveAnswer = !deskTurn && !isIdentityQuestion(content)
+    const intents = detectIntents(content);
+    const hasToolIntent = intents.length > 0;
+    const deskTurn = hasToolIntent || isIdentityQuestion(content) ? null : runChatDesk(content);
+    const liveAnswer = !hasToolIntent && !deskTurn && !isIdentityQuestion(content)
       ? await answerInContextWithEvidence(content)
       : null;
     const live = liveAnswer?.answer ?? null;
-    if (deskTurn || isIdentityQuestion(content) || live || !needsExternalKnowledge(content)) {
+    const penStatusEarly = getTesseraChatModelStatus();
+    const shouldTryConfiguredPen = penStatusEarly.enabled && needsExternalKnowledge(content);
+    const localFastPath =
+      deskTurn ||
+      isIdentityQuestion(content) ||
+      (!shouldTryConfiguredPen && (Boolean(live) || !needsExternalKnowledge(content)));
+    if (!hasToolIntent && localFastPath) {
       const localEvidence = deskTurn || isIdentityQuestion(content)
         ? []
         : liveAnswer
@@ -571,13 +639,21 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
         : live
           ? live
           : enforceTesseraVoice(generateSovereignResponse(content, isAdminRequestEarly), content);
-      const reply = signTesseraReply(ensureInlineTesseraCitations(rawReply, localEvidence));
       const deskAgents = deskTurn?.agents ?? [{ id: "tessera", name: "Tessera" }];
       const deskReason = deskTurn
         ? "desk collab, Tessera closes"
         : live
           ? "pen read the question"
           : "local voice, no search";
+      const replyAuthorship: ReplyAuthorship = {
+        authorRole: "local",
+        author: "Tessera",
+        model: null,
+        reason: deskReason,
+      };
+      const reply = signTesseraReply(
+        `${ensureInlineTesseraCitations(rawReply, localEvidence)}${responseAttribution(replyAuthorship)}`,
+      );
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
@@ -589,7 +665,7 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
       };
       writeQuick({
         agents: deskAgents,
-        routing: { tier: "local", model: "local-response-pipeline", reason: deskReason, isStrong: false },
+        routing: { ...routingMetadata(replyAuthorship), isStrong: false },
       });
       writeQuick({ content: reply });
       try {
@@ -601,14 +677,13 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
         done: true,
         finalContent: reply,
         validationMetrics: null,
-        routing: { tier: "local", model: "local-response-pipeline", reason: deskReason },
+        routing: routingMetadata(replyAuthorship),
         citations: serializeTesseraCitations(localEvidence),
         tools: [],
       });
       return res.end();
     }
 
-    const intents = detectIntents(content);
     const privilegedIntent = intents.some((call) => isPrivilegedTool(call.name));
     const ownerDecision = privilegedIntent ? decideOwnerSession(req) : undefined;
     if (ownerDecision && !ownerDecision.ok) {
@@ -639,17 +714,9 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
 
     // ---- Adaptive model routing (T3) ----
     const routingDecision = classifyQuery(content, { isAdmin: isAdminRequest, hasContext: ingestedRecall.length > 0 });
-    feedbackDb.insert(modelRoutingLogTable).values({
-      query: content.slice(0, 500),
-      modelTier: "local",
-      modelName: "local-response-pipeline",
-      reason: `Visible chat replies use local application logic; routing classification does not invoke a model. ${routingDecision.reason}`,
-      estimatedTokens: routingDecision.estimatedTokens,
-      cacheHit: 0,
-    }).catch(() => {});
 
     // ---- Hybrid retrieval + citations (T4 + T10) ----
-    let retrievedChunks: Array<{ text: string; source: string; score: number }> = [];
+    let retrievedChunks: TesseraAnswerEvidence[] = [];
     try {
       retrievedChunks = await Promise.race([
         hybridRetrieve(content, { topK: 6, rerankTopK: 3 }),
@@ -658,7 +725,10 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
     } catch (err) {
       logger.debug({ err: (err as Error).message }, "hybrid retrieval skipped");
     }
-    const answerEvidence = createTesseraEvidenceAnswer(content, retrievedChunks).evidence;
+    const answerEvidence = createTesseraEvidenceAnswer(
+      content,
+      [...(liveAnswer?.evidence ?? []), ...retrievedChunks],
+    ).evidence;
 
     // ---- Tool calling intents (T2) ----
     let toolResults: Array<{ name: string; ok: boolean; result?: unknown; error?: string; durationMs: number }> = [];
@@ -687,24 +757,102 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
       try { res.write(`data: ${JSON.stringify(payload)}\n\n`); } catch {}
     };
 
-    res.write(`data: ${JSON.stringify({
+    const penStatus = getTesseraChatModelStatus();
+    let modelAttempted = false;
+    let modelFailureReason: TesseraChatModelFailure | null = null;
+    let modelDraft: TesseraChatModelDraft | null = null;
+
+    if (penStatus.enabled && intents.length === 0) {
+      modelAttempted = true;
+      const draftingAuthorship: ReplyAuthorship = {
+        authorRole: "model-drafting",
+        author: "Tessera Pen",
+        model: penStatus.model,
+        reason: "drafting",
+      };
+      safeWrite({
+        status: "pen-drafting",
+        routing: routingMetadata(draftingAuthorship),
+        message: "The configured model is drafting a reply for local checks.",
+      });
+      const attempt = await draftTesseraChatReply(content, answerEvidence);
+      if (attempt.ok) {
+        const guardedDraft = guardSovereignVoice(
+          attempt.draft.answer,
+          content,
+          isAdminRequest,
+          attempt.draft.evidence,
+        );
+        if (guardedDraft === attempt.draft.answer) {
+          modelDraft = attempt.draft;
+        } else {
+          modelFailureReason = "invalid-response";
+        }
+      } else {
+        modelFailureReason = attempt.reason;
+      }
+    }
+
+    let replyAuthorship: ReplyAuthorship = modelDraft
+      ? {
+          authorRole: "model-authored",
+          author: "Tessera Pen",
+          model: modelDraft.model,
+          provenance: modelDraft.provenance,
+        }
+      : toolResults.length > 0
+        ? {
+            authorRole: "application-result",
+            author: "Application",
+            model: null,
+            reason: "tool-result",
+          }
+        : modelAttempted
+          ? {
+              authorRole: "local-fallback",
+              author: "Tessera",
+              model: null,
+              reason: modelFailureReason ?? "provider-unavailable",
+            }
+          : {
+              authorRole: "local",
+              author: "Tessera",
+              model: null,
+              reason: penStatus.enabled ? "tool-path" : penStatus.reason,
+            };
+    let replyEvidence = modelDraft?.evidence ?? answerEvidence;
+
+    feedbackDb.insert(modelRoutingLogTable).values({
+      query: content.slice(0, 500),
+      modelTier: modelDraft ? "configured" : "local",
+      modelName: modelDraft?.model ?? "local-response-pipeline",
+      reason: modelDraft
+        ? `Tessera Pen authored the visible reply; local application checks ran. ${routingDecision.reason}`
+        : `Visible reply used ${replyAuthorship.authorRole === "local-fallback" ? "the local fallback" : "local application logic"}; no model authored it. ${routingDecision.reason}`,
+      estimatedTokens: routingDecision.estimatedTokens,
+      cacheHit: 0,
+    }).catch(() => {});
+
+    safeWrite({
       agents: [{ id: "tessera", name: "Tessera" }],
       routing: {
-        tier: "local",
-        model: "local-response-pipeline",
-        configuredModel: process.env.TESSERA_LLM_MODEL?.trim() || null,
-        configuredModelUse: "opt-in internal extraction only; not the author of this chat reply",
-        reason: "The route classifies query complexity but builds the visible reply with local application logic.",
-        isStrong: false,
+        ...routingMetadata(replyAuthorship),
+        isStrong: routingDecision.isStrong,
       },
-      retrieved: answerEvidence.length,
+      retrieved: replyEvidence.length,
       tools: visibleTools().map(t => ({ name: t.name, ok: t.ok })),
-    })}\n\n`);
+    });
 
     const privilegedTool = toolResults.find((tool) => isPrivilegedTool(tool.name) && tool.ok);
     if (privilegedTool) {
       const view = publicToolResult(privilegedTool.name, privilegedTool.result) as { status?: string };
-      const reply = `${privilegedTool.name}: ${view.status ?? "ready"}`;
+      const actionAuthorship: ReplyAuthorship = {
+        authorRole: "application-result",
+        author: "Application",
+        model: null,
+        reason: "privileged-tool-result",
+      };
+      const reply = `${privilegedTool.name}: ${view.status ?? "ready"}${responseAttribution(actionAuthorship)}`;
       safeWrite({ reset: true });
       safeWrite({ content: reply });
       try {
@@ -720,13 +868,7 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
         done: true,
         finalContent: reply,
         validationMetrics: null,
-        routing: {
-          tier: "local",
-          model: "local-response-pipeline",
-          configuredModel: process.env.TESSERA_LLM_MODEL?.trim() || null,
-          configuredModelUse: "opt-in internal extraction only; not the author of this chat reply",
-          reason: "The visible reply is assembled by local application logic.",
-        },
+        routing: routingMetadata(actionAuthorship),
         citations: [],
         tools: visibleTools(),
       });
@@ -736,12 +878,13 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
     // Send the sovereign reply IMMEDIATELY so users see a response within ~1s
     // even if downstream sandbox/critique LLM calls hang. This is overwritten
     // later via a reset+content if the critique loop produces a refined reply.
+    const earlyDraft = modelDraft?.answer ?? generateSovereignResponse(content, isAdminRequest, retrievedChunks);
     const earlySovereign = signTesseraReply(ensureInlineTesseraCitations(guardSovereignVoice(
-      generateSovereignResponse(content, isAdminRequest, retrievedChunks),
+      earlyDraft,
       content,
       isAdminRequest,
-      retrievedChunks,
-    ), answerEvidence));
+      replyEvidence,
+    ), replyEvidence));
     safeWrite({ content: earlySovereign });
 
     if (routingDecision.isStrong) {
@@ -770,10 +913,10 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
 
     let sandboxSeed = "";
     try {
-      if (!useExternal || !sandboxAllowed) {
+      if (!useExternal || !sandboxAllowed || modelAttempted) {
         logger.info(
-          { source: "tessera-sovereign", isAdmin: isAdminRequest, useExternal, sandboxAllowed },
-          "Sovereign engine speaking — no external voice",
+          { source: "tessera-sovereign", isAdmin: isAdminRequest, useExternal, sandboxAllowed, modelAttempted },
+          "Using the selected response path; no second external drafting call",
         );
       } else {
         safeWrite({ status: "sovereign-processing", message: "Preparing a reply; optional extraction remains internal." });
@@ -817,12 +960,13 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
         runCritiqueLoop(
           content,
           async () => {
-            return guardSovereignVoice(sovereignReply(), content, isAdminRequest, retrievedChunks);
+            const candidate = modelDraft?.answer ?? sovereignReply();
+            return guardSovereignVoice(candidate, content, isAdminRequest, replyEvidence);
           },
           {
             passScore: Number.isFinite(passScoreEnv) ? passScoreEnv : 0.6,
             maxAttempts: 1,
-            evidence: answerEvidence,
+            evidence: replyEvidence,
             metadata: { isAdmin: isAdminRequest, useExternal, sandboxAllowed, sandboxSeedChars: sandboxSeed.length, conversationId },
           },
         ),
@@ -842,7 +986,12 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
       };
     } catch (err) {
       logger.warn({ err: (err as Error).message }, "self-critique: loop timed out/failed — shipping sovereign reply unvalidated");
-      finalContent = guardSovereignVoice(sovereignReply(), content, isAdminRequest, retrievedChunks);
+      finalContent = guardSovereignVoice(
+        modelDraft?.answer ?? sovereignReply(),
+        content,
+        isAdminRequest,
+        replyEvidence,
+      );
       validationMetrics = {
         groundingScore: 0,
         truthfulnessScore: 0,
@@ -856,7 +1005,24 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
       };
     }
 
-    finalContent = guardSovereignVoice(finalContent, content, isAdminRequest, retrievedChunks);
+    const preGuardFinalContent = finalContent;
+    finalContent = guardSovereignVoice(finalContent, content, isAdminRequest, replyEvidence);
+    if (modelDraft && finalContent !== preGuardFinalContent) {
+      modelDraft = null;
+      replyEvidence = answerEvidence;
+      replyAuthorship = {
+        authorRole: "local-fallback",
+        author: "Tessera",
+        model: null,
+        reason: "invalid-response",
+      };
+      if (validationMetrics && typeof validationMetrics === "object") {
+        validationMetrics.passed = false;
+        validationMetrics.verdict = "caution";
+        validationMetrics.sources = serializeTesseraCitations(replyEvidence).map((citation) => citation.source);
+      }
+      safeWrite({ routing: routingMetadata(replyAuthorship) });
+    }
 
     // ---- Append verified tool results; source citations are inline with the answer ----
     if (toolResults.length > 0) {
@@ -907,11 +1073,13 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
       logger.debug({ err: (err as Error).message }, "3D diagram injection skipped");
     }
 
-    finalContent = ensureInlineTesseraCitations(finalContent, answerEvidence);
+    finalContent = ensureInlineTesseraCitations(finalContent, replyEvidence);
     if (validationMetrics && typeof validationMetrics === "object") {
-      validationMetrics.sources = serializeTesseraCitations(answerEvidence).map((citation) => citation.source);
+      validationMetrics.sources = serializeTesseraCitations(replyEvidence).map((citation) => citation.source);
     }
-    if (finalContent) finalContent = signTesseraReply(finalContent);
+    if (finalContent) {
+      finalContent = signTesseraReply(`${finalContent}${responseAttribution(replyAuthorship)}`);
+    }
 
     if (clientAborted) return res.end();
 
@@ -931,14 +1099,8 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
       done: true,
       finalContent,
       validationMetrics,
-      routing: {
-        tier: "local",
-        model: "local-response-pipeline",
-        configuredModel: process.env.TESSERA_LLM_MODEL?.trim() || null,
-        configuredModelUse: "opt-in internal extraction only; not the author of this chat reply",
-        reason: "The visible reply is assembled by local application logic.",
-      },
-      citations: serializeTesseraCitations(answerEvidence),
+      routing: routingMetadata(replyAuthorship),
+      citations: serializeTesseraCitations(replyEvidence),
       tools: visibleTools(),
     });
     return res.end();
@@ -949,10 +1111,23 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
       return res.status(500).json({ ok: false, error: "message-create-failed" });
     }
     try {
-      const userInput = (req.body?.content as string) || "";
-      const sovereignFallback = signTesseraReply(generateSovereignResponse(userInput, false));
+      const userInput = typeof req.body?.content === "string" ? req.body.content.slice(0, 10_000) : "";
+      const fallbackAuthorship: ReplyAuthorship = {
+        authorRole: "local-fallback",
+        author: "Tessera",
+        model: null,
+        reason: "provider-unavailable",
+      };
+      const sovereignFallback = signTesseraReply(
+        `${generateSovereignResponse(userInput, false)}${responseAttribution(fallbackAuthorship)}`,
+      );
       res.write(`data: ${JSON.stringify({ content: sovereignFallback })}\n\n`);
-      res.write(`data: ${JSON.stringify({ done: true, finalContent: sovereignFallback, error: "sovereign-fallback-after-failure" })}\n\n`);
+      res.write(`data: ${JSON.stringify({
+        done: true,
+        finalContent: sovereignFallback,
+        error: "sovereign-fallback-after-failure",
+        routing: routingMetadata(fallbackAuthorship),
+      })}\n\n`);
     } catch {}
     return res.end();
   }

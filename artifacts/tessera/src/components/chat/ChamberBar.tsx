@@ -4,6 +4,13 @@ import { PEN_LINE } from "@/lib/tessera-voice";
 
 interface ChamberBarProps {
   streaming: boolean;
+  authorship?: {
+    authorRole: "model-drafting" | "model-authored" | "local" | "local-fallback" | "application-result" | "unattributed";
+    author: string;
+    model: string | null;
+    provenance?: "retrieved-evidence" | "unverified-model-knowledge" | null;
+    reason?: string | null;
+  } | null;
 }
 
 interface ChamberActionsProps {
@@ -11,20 +18,60 @@ interface ChamberActionsProps {
   onCopyReply: () => void;
 }
 
-export const ChamberBar = memo(function ChamberBar({ streaming }: ChamberBarProps) {
+function authorshipLabel(authorship: ChamberBarProps["authorship"]): string {
+  if (!authorship) return "Authorship is labeled separately for each reply.";
+  if (authorship.authorRole === "model-drafting") {
+    return `Tessera Pen · ${authorship.model ?? "configured model"} is drafting; no reply is attributed yet.`;
+  }
+  if (authorship.authorRole === "model-authored") {
+    const evidence = authorship.provenance === "retrieved-evidence"
+      ? "retrieved evidence cited"
+      : "no Tessera source evidence used";
+    return `Tessera Pen · model-authored by ${authorship.model ?? "configured model"} · ${evidence}`;
+  }
+  if (authorship.authorRole === "local-fallback") {
+    return "Local fallback · the configured model did not author this reply.";
+  }
+  if (authorship.authorRole === "application-result") {
+    return "Application/tool result · no language model authored this reply.";
+  }
+  if (authorship.authorRole === "unattributed") {
+    return "Voice reply path · provider authorship metadata was not supplied.";
+  }
+  return "Local response logic · no language model authored this reply.";
+}
+
+export const ChamberBar = memo(function ChamberBar({ streaming, authorship }: ChamberBarProps) {
+  const streamingLabel = !streaming
+    ? null
+    : authorship?.authorRole === "model-drafting"
+      ? `Tessera Pen is drafting with ${authorship.model ?? "the configured model"}; local checks will run before use.`
+      : authorship?.authorRole === "model-authored"
+      ? `Tessera Pen draft from ${authorship.model ?? "the configured model"}; local checks are running.`
+      : authorship?.authorRole === "local-fallback"
+        ? "The configured model did not contribute; the local fallback is active."
+        : "Preparing a local response.";
+
   return (
     <header className="shrink-0 px-4 pt-2 pb-2 border-b border-primary/15 bg-[#070b10]" data-testid="chamber-bar">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-[17px] font-semibold text-[#f3efe6] tracking-wide">TESSERA <span className="text-primary">NEXT</span></h1>
         <p className="text-[12px] leading-snug text-[#b8c1bf] mt-0.5">
-          Tessera is this app’s software assistant persona. Replies use local response logic and retrieved information; the configured model does not author this chat.
+          Tessera is this app’s software assistant persona. When enabled, the configured model receives only this message and bounded retrieved evidence—no chat history or tools.
         </p>
         <p className="text-[12px] leading-snug text-white/40">
-          Software, not conscious or autonomous. External model extraction is opt-in and internal only.
+          Software, not conscious or autonomous. Model drafts pass local safety and voice checks; unsupported model knowledge is labeled.
         </p>
-        {streaming ? (
-          <p className="mt-2 text-[12px] text-white/50" data-testid="text-chamber-status">
-            Processing this message.
+        <p
+          className="mt-1 text-[12px] leading-snug text-primary/80"
+          aria-live="polite"
+          data-testid="status-reply-authorship"
+        >
+          {authorshipLabel(authorship)}
+        </p>
+        {streamingLabel ? (
+          <p className="mt-1 text-[12px] text-white/50" aria-live="polite" data-testid="text-chamber-status">
+            {streamingLabel}
           </p>
         ) : null}
       </div>

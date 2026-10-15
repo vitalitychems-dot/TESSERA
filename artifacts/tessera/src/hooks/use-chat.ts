@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@/lib/queryClient";
 import { type Message } from "@/lib/types";
@@ -20,10 +20,39 @@ export interface AgentComm {
   timestamp: number;
 }
 
+export interface ChatReplyAuthorship {
+  authorRole: "model-drafting" | "model-authored" | "local" | "local-fallback" | "application-result" | "unattributed";
+  author: string;
+  model: string | null;
+  provenance?: "retrieved-evidence" | "unverified-model-knowledge" | null;
+  reason?: string | null;
+}
+
+function parseChatAuthorship(value: unknown): ChatReplyAuthorship | null {
+  if (!value || typeof value !== "object") return null;
+  const data = value as Record<string, unknown>;
+  const roles = ["model-drafting", "model-authored", "local", "local-fallback", "application-result"] as const;
+  if (!roles.includes(data.authorRole as typeof roles[number])) return null;
+  const model = typeof data.model === "string" && /^[A-Za-z0-9._:/-]{1,120}$/.test(data.model)
+    ? data.model
+    : null;
+  const provenance = data.provenance === "retrieved-evidence" || data.provenance === "unverified-model-knowledge"
+    ? data.provenance
+    : null;
+  return {
+    authorRole: data.authorRole as ChatReplyAuthorship["authorRole"],
+    author: typeof data.author === "string" ? data.author.slice(0, 48) : "Tessera",
+    model,
+    provenance,
+    reason: typeof data.reason === "string" ? data.reason.slice(0, 120) : null,
+  };
+}
+
 export function useChat(conversationId: number | null, stealthMode: boolean = false, puterModel: string | null = null, tesseractMode: boolean = false) {
   const queryClient = useQueryClient();
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
+  const [authorship, setAuthorship] = useState<ChatReplyAuthorship | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeAgents, setActiveAgents] = useState<AgentInfo[]>([]);
   const [agentComms, setAgentComms] = useState<AgentComm[]>([]);
@@ -31,6 +60,9 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
   const [swarmComms, setSwarmComms] = useState<SwarmComm[]>([]);
   const [thinkingElapsedMs, setThinkingElapsedMs] = useState(0);
   const [codeExecutionResults, setCodeExecutionResults] = useState<ExecutionResultData[]>([]);
+  useEffect(() => {
+    setAuthorship(null);
+  }, [conversationId]);
   const thinkingStartRef = useRef<number>(0);
   const thinkingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const firstContentReceivedRef = useRef(false);
@@ -132,6 +164,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
 
     setIsStreaming(true);
     setStreamingContent("");
+    setAuthorship(null);
     setError(null);
     setActiveAgents([]);
     setAgentComms([]);
@@ -216,6 +249,8 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
                 if (!dataStr) continue;
                 try {
                   const data = JSON.parse(dataStr);
+                  const responseAuthorship = parseChatAuthorship(data.routing);
+                  if (responseAuthorship) setAuthorship(responseAuthorship);
                   if (data.agents) setActiveAgents(data.agents);
                   if (data.comms) setAgentComms(data.comms);
                   if (data.orchestrator) {
@@ -389,6 +424,8 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
 
           try {
             const data = JSON.parse(dataStr);
+            const responseAuthorship = parseChatAuthorship(data.routing);
+            if (responseAuthorship) setAuthorship(responseAuthorship);
             if (data.agents) {
               setActiveAgents(data.agents);
             }
@@ -470,6 +507,8 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
           const dataStr = remaining.slice(6).trim();
           try {
             const data = JSON.parse(dataStr);
+            const responseAuthorship = parseChatAuthorship(data.routing);
+            if (responseAuthorship) setAuthorship(responseAuthorship);
             if (data.content) {
               accumulated = appendTesseraVoice(accumulated, data.content, content);
               lastAccumulatedRef.current = accumulated;
@@ -549,6 +588,13 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
 
   const addVoiceMessages = useCallback(async (userText: string, assistantText: string) => {
     if (!conversationId) return;
+    setAuthorship({
+      authorRole: "unattributed",
+      author: "Voice path",
+      model: null,
+      provenance: null,
+      reason: "provider-authorship-not-reported",
+    });
     const now = new Date();
     const userMsg: Message = { id: Date.now(), conversationId, role: "user", content: userText, createdAt: now };
     const assistantMsg: Message = { id: Date.now() + 1, conversationId, role: "assistant", content: assistantText, createdAt: new Date(now.getTime() + 1) };
@@ -573,6 +619,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
     isLoading,
     isStreaming,
     streamingContent,
+    authorship,
     sendMessage,
     addVoiceMessages,
     stopStreaming,

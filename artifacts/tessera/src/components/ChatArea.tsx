@@ -193,7 +193,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   const sendMessageRef = useRef<((text: string) => void) | null>(null);
   const isStreamingRef = useRef(false);
 
-  const { messages, isStreaming, streamingContent, sendMessage, stopStreaming, isLoading, activeAgents, agentComms, swarmAgents, swarmComms, puterAvailable, thinkingElapsedMs, codeExecutionResults, error: chatError } = useChat(conversationId, stealthMode, null, tesseractMode);
+  const { messages, isStreaming, streamingContent, authorship, sendMessage, stopStreaming, isLoading, activeAgents, agentComms, swarmAgents, swarmComms, puterAvailable, thinkingElapsedMs, codeExecutionResults, error: chatError } = useChat(conversationId, stealthMode, null, tesseractMode);
 
   const { data: convMeta } = useQuery<{ initiatedBy?: string; title?: string }>({
     queryKey: ["/api/conversations", conversationId],
@@ -1008,7 +1008,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
 
   return (
     <div className="flex-1 flex flex-col relative overflow-hidden min-h-0">
-      <ChamberBar streaming={isStreaming} />
+      <ChamberBar streaming={isStreaming} authorship={authorship} />
       {adminMode && (
         <div className="flex items-center justify-center gap-2 py-1.5 px-4 bg-violet-950/50 border-b border-violet-500/30 backdrop-blur-sm z-10" data-testid="admin-mode-bar">
           <Shield size={12} className="text-violet-500" />
