@@ -4,3 +4,4 @@
 - [Public repository imports](public-repository-imports.md) — check anonymous access before treating a failed GitHub credential as a private-repo problem.
 - [TESSERA live world interface](tessera-design-direction.md) — unify the voxel-inspired Eye, Brain, and Chat using real, clearly sourced live data.
 - [Cursor run history](cursor-run-history.md) — batch result reads below the connector's 10 RPS limit; run summaries are not full chat streams.
+- [Mockup scanner dependency policy](mockup-glob-vulnerability.md) — use built-in traversal until a patched braces release or clean alternative is verified.
