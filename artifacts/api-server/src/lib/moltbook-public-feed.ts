@@ -1,4 +1,5 @@
 import {
+  classifyMoltbookFailure,
   fetchMoltbookPublicPosts,
   type MoltbookPublicPost,
 } from "./moltbook-bridge";
@@ -13,6 +14,7 @@ export interface MoltbookPublicFeed {
   stale: boolean;
   posts: MoltbookPublicPost[];
   refreshFailed: boolean;
+  failureCode: string | null;
 }
 
 interface CachedFeed {
@@ -21,7 +23,7 @@ interface CachedFeed {
   fetchedAt: number;
 }
 
-function unavailable(refreshFailed: boolean): MoltbookPublicFeed {
+function unavailable(refreshFailed: boolean, failureCode: string | null = null): MoltbookPublicFeed {
   return {
     source: "Moltbook public feed",
     status: "unavailable",
@@ -29,10 +31,16 @@ function unavailable(refreshFailed: boolean): MoltbookPublicFeed {
     stale: false,
     posts: [],
     refreshFailed,
+    failureCode,
   };
 }
 
-function fromCache(cache: CachedFeed, stale: boolean, refreshFailed = false): MoltbookPublicFeed {
+function fromCache(
+  cache: CachedFeed,
+  stale: boolean,
+  refreshFailed = false,
+  failureCode: string | null = null,
+): MoltbookPublicFeed {
   return {
     source: "Moltbook public feed",
     status: stale ? "stale" : "live",
@@ -40,6 +48,7 @@ function fromCache(cache: CachedFeed, stale: boolean, refreshFailed = false): Mo
     stale,
     posts: cache.posts,
     refreshFailed,
+    failureCode,
   };
 }
 
@@ -71,7 +80,12 @@ export function createMoltbookPublicFeedReader(
         };
         return fromCache(cache, false);
       })
-      .catch(() => cache ? fromCache(cache, true, true) : unavailable(true))
+      .catch(error => {
+        const failureCode = classifyMoltbookFailure(error);
+        return cache
+          ? fromCache(cache, true, true, failureCode)
+          : unavailable(true, failureCode);
+      })
       .finally(() => {
         inFlight = null;
       });

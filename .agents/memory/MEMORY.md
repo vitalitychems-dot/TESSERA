@@ -5,3 +5,4 @@
 - [TESSERA live world interface](tessera-design-direction.md) — unify the voxel-inspired Eye, Brain, and Chat using real, clearly sourced live data.
 - [Cursor run history](cursor-run-history.md) — batch result reads below the connector's 10 RPS limit; run summaries are not full chat streams.
 - [Mockup scanner dependency policy](mockup-glob-vulnerability.md) — use built-in traversal until a patched braces release or clean alternative is verified.
+- [Sovereign outbound fetches](sovereign-outbound-fetches.md) — an allowed Shepherd identity is not enough; external fetches must run inside the async Shepherd context.

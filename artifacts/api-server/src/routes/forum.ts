@@ -350,7 +350,12 @@ router.get("/tesseract-forum/moltbook-feed", async (req, res) => {
     const feed = await readMoltbookPublicFeed();
     if (feed.refreshFailed) {
       logger.warn(
-        { source: feed.source, status: feed.status, cachedPostCount: feed.posts.length },
+        {
+          source: feed.source,
+          status: feed.status,
+          cachedPostCount: feed.posts.length,
+          failureCode: feed.failureCode,
+        },
         "Moltbook public feed refresh failed",
       );
     }

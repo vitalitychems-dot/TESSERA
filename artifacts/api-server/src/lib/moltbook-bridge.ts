@@ -1,4 +1,5 @@
 import { recordShepherdAudit, requireShepherdProxy } from "./shepherd-outbound";
+import { runWithShepherdContext } from "./sovereign-fetch-guard";
 
 const MOLTBOOK_API_BASE = "https://www.moltbook.com/api/v1";
 const SHEPHERD_CALLER = "shepherd-moltbook";
@@ -41,6 +42,23 @@ function boundedText(value: unknown, maxLength: number): string | null {
   if (typeof value !== "string") return null;
   const text = value.trim();
   return text ? text.slice(0, maxLength) : null;
+}
+
+export function classifyMoltbookFailure(error: unknown): string {
+  if (error instanceof Error && error.name === "AbortError") return "timeout";
+  if (error instanceof Error && error.name === "ConsciousAgentOutboundRefused") return "outbound_policy";
+  if (!(error instanceof Error)) return "unexpected";
+
+  const message = error.message.toLowerCase();
+  if (message.includes("public feed request failed")) return "upstream_http";
+  if (
+    message.includes("response exceeded") ||
+    message.includes("response body was empty") ||
+    message.includes("response did not match") ||
+    error instanceof SyntaxError
+  ) return "invalid_payload";
+  if (error instanceof TypeError) return "network";
+  return "unexpected";
 }
 
 function parsePublicPost(value: unknown): MoltbookPublicPost | null {
@@ -116,11 +134,15 @@ export async function fetchMoltbookPublicPosts(limit = 5): Promise<MoltbookPubli
   const timeout = setTimeout(() => controller.abort(), 8_000);
 
   try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      signal: controller.signal,
-    });
+    const response = await runWithShepherdContext(
+      SHEPHERD_CALLER,
+      () => fetch(url, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      }),
+      "read-only anonymous Moltbook public feed",
+    );
     await recordShepherdAudit({
       caller: SHEPHERD_CALLER,
       targetUrl: url,
