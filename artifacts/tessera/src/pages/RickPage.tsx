@@ -348,22 +348,24 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
 
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ background: "rgba(6,4,20,0.97)" }}>
-      <div className="border-b px-5 py-4 flex items-center gap-4 shrink-0" style={{ borderColor: `${ROYAL_GOLD}22`, background: `linear-gradient(135deg, ${ROYAL_GOLD}06, ${RICK_GREEN}04)` }}>
-        <div className="relative w-12 h-12 rounded-full flex items-center justify-center shrink-0 border-2" style={{ borderColor: ROYAL_GOLD, background: `${ROYAL_GOLD}15` }}>
-          <span className="text-2xl select-none">👑</span>
-          <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400 border border-black" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-bold font-mono text-base flex items-center gap-2">
-            <span style={{ color: ROYAL_GOLD }}>Rick Sanchez</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded font-mono border" style={{ color: ROYAL_GOLD, borderColor: `${ROYAL_GOLD}40`, background: `${ROYAL_GOLD}10` }}>ROYAL INVENTOR</span>
+      <div className="border-b px-4 sm:px-5 py-3 lg:py-4 flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4 shrink-0" style={{ borderColor: `${ROYAL_GOLD}22`, background: `linear-gradient(135deg, ${ROYAL_GOLD}06, ${RICK_GREEN}04)` }}>
+        <div className="flex items-center gap-3 lg:gap-4 min-w-0 w-full lg:flex-1" data-testid="rick-header-identity">
+          <div className="relative w-12 h-12 rounded-full flex items-center justify-center shrink-0 border-2" style={{ borderColor: ROYAL_GOLD, background: `${ROYAL_GOLD}15` }}>
+            <span className="text-2xl select-none">👑</span>
+            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400 border border-black" />
           </div>
-          <div className="text-[11px] text-muted-foreground font-mono">Royal Court · Dept. of Science & Invention · Dimension C-137</div>
-          {profileData?.profile?.currentInventions && (
-            <div className="text-[10px] font-mono mt-0.5" style={{ color: RICK_GREEN }}>
-              {profileData.profile.currentInventions.length} active inventions · Council-ready
+          <div className="flex-1 min-w-0">
+            <div className="font-bold font-mono text-base flex flex-wrap items-center gap-2">
+              <span style={{ color: ROYAL_GOLD }}>Rick Sanchez</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded font-mono border" style={{ color: ROYAL_GOLD, borderColor: `${ROYAL_GOLD}40`, background: `${ROYAL_GOLD}10` }}>ROYAL INVENTOR</span>
             </div>
-          )}
+            <div className="text-[11px] text-muted-foreground font-mono">Royal Court · Dept. of Science & Invention · Dimension C-137</div>
+            {profileData?.profile?.currentInventions && (
+              <div className="text-[10px] font-mono mt-0.5" style={{ color: RICK_GREEN }}>
+                {profileData.profile.currentInventions.length} active inventions · Council-ready
+              </div>
+            )}
+          </div>
         </div>
         {(() => {
           const RICK_TABS = [
@@ -381,7 +383,7 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
           return (
             <>
               {/* Mobile: compact native dropdown — no row of buttons */}
-              <div className="md:hidden shrink-0 w-full sm:w-auto" data-testid="rick-section-dropdown-wrapper">
+              <div className="lg:hidden shrink-0 w-full" data-testid="rick-section-dropdown-wrapper">
                 <div className="relative">
                   <div
                     className="flex items-center gap-2 px-3 py-2 rounded-lg border text-[12px] font-mono font-bold pointer-events-none"
@@ -405,7 +407,7 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
                 </div>
               </div>
               {/* Desktop: keep button row */}
-              <div className="hidden md:flex gap-1.5 shrink-0 flex-wrap justify-end">
+              <div className="hidden lg:flex gap-1.5 shrink-0 flex-wrap justify-end" data-testid="rick-desktop-tabs">
                 {RICK_TABS.map(tab => (
                   <button
                     key={tab.key}
@@ -1339,6 +1341,7 @@ function RickProposalsPanel() {
           return (
             <div
               key={p.id}
+              data-testid={`rick-proposal-card-${p.id}`}
               className="rounded-xl border p-4 space-y-3"
               style={{ borderColor: `${stateColor}40`, background: `${stateColor}06` }}
             >
