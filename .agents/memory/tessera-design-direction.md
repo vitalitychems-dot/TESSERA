@@ -15,6 +15,12 @@ The owner wants TESSERA's main experience to feel like a Minecraft-inspired voxe
 
 **How to apply:** Preserve the provenance boundary when integrating the Minecraft runtime. Do not invent agent telemetry or expose write controls through a read-only map connection.
 
+**Transport rule:** AgentCraft Foreman's loopback WebSocket is command-capable. Keep it on the local machine; an outbound bridge may send only the hello handshake, accept snapshots/status updates, and forward allowlisted agent status/station fields. Never proxy that socket to a browser or forward browser messages to Foreman.
+
+**Why:** Foreman uses one WebSocket protocol for both read snapshots and commands that can dispatch work or mutate decisions; the public schema also contains private logs, messages, diffs, and filesystem paths that TESSERA's world view does not need.
+
+**How to apply:** For future integrations, filter data at the local bridge before transmission, authenticate it separately from the owner admin key, and represent station labels as a diagram rather than real Minecraft coordinates.
+
 **Operational constraint:** When a route-health probe covers an optional data source, report a successful but explicitly unavailable response (`available: false`, null data, and provenance) when no connector exists. A 5xx is treated as a service failure and can close the API readiness gate or restart the server.
 
 **Why:** Returning 503 for an intentionally unconnected world source caused the watchdog to mark all route health as failed, repeatedly close readiness, and restart the API.

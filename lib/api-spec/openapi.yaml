@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: world
+    description: Owner-visible world signals
 paths:
   /healthz:
     get:
@@ -24,7 +26,54 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /world/agentcraft:
+    get:
+      operationId: getAgentCraftWorld
+      tags: [world]
+      summary: Read the latest AgentCraft Foreman snapshot
+      description: Owner-session protected. Returns live/stale/unavailable status and an allowlisted station roster; this is not Minecraft coordinate telemetry.
+      responses:
+        "200":
+          description: AgentCraft source state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentCraftWorld"
+        "401":
+          description: Owner session required
+        "503":
+          description: Owner gate is not configured
+  /world/agentcraft/ingest:
+    post:
+      operationId: ingestAgentCraftWorld
+      tags: [world]
+      summary: Accept a filtered AgentCraft bridge snapshot
+      description: Requires the server-only AGENTCRAFT_BRIDGE_TOKEN. Accepts agent status and station labels only; chat, logs, diffs, repo paths, and control messages are not accepted.
+      security:
+        - AgentCraftBridgeToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentCraftWorldInput"
+      responses:
+        "202":
+          description: Snapshot accepted
+        "400":
+          description: Invalid or oversized snapshot
+        "401":
+          description: Bridge token rejected
+        "429":
+          description: Bridge rate limit exceeded
+        "503":
+          description: Bridge token is not configured
 components:
+  securitySchemes:
+    AgentCraftBridgeToken:
+      type: http
+      scheme: bearer
+      description: Server-only bridge token, stored in Replit Secrets and the local bridge environment.
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +82,48 @@ components:
           type: string
       required:
         - status
+    AgentCraftWorldAgent:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, pattern: "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,39}$" }
+        name: { type: string, minLength: 1, maxLength: 48 }
+        state:
+          type: string
+          enum: [idle, thinking, reading, editing, running, testing, waiting_user, blocked, done, error]
+        station:
+          type: string
+          enum: [desk, library, terminal, testbench, mergestation, meeting, lounge, user]
+        active: { type: boolean }
+      required: [id, name, state, station, active]
+    AgentCraftWorldInput:
+      type: object
+      additionalProperties: false
+      properties:
+        backend: { type: string, enum: [sim, claude, codex] }
+        agents:
+          type: array
+          maxItems: 32
+          items: { $ref: "#/components/schemas/AgentCraftWorldAgent" }
+      required: [backend, agents]
+    AgentCraftWorld:
+      type: object
+      properties:
+        ok: { const: true }
+        status: { type: string, enum: [live, stale, unavailable] }
+        source: { const: AgentCraft Foreman }
+        backend: { type: [string, "null"], enum: [sim, claude, codex, null] }
+        agents:
+          type: array
+          items: { $ref: "#/components/schemas/AgentCraftWorldAgent" }
+        receivedAt: { type: [integer, "null"] }
+        provenance:
+          type: object
+          properties:
+            kind: { const: agentcraft-foreman }
+            live: { type: boolean }
+            gameCoordinates: { const: false }
+            note: { type: string }
+          required: [kind, live, gameCoordinates, note]
+      required: [ok, status, source, backend, agents, receivedAt, provenance]
 

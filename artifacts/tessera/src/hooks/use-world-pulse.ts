@@ -80,6 +80,29 @@ export interface RepositoryPulse {
   unavailable?: boolean;
 }
 
+export interface AgentCraftAgentPulse {
+  id: string;
+  name: string;
+  state: "idle" | "thinking" | "reading" | "editing" | "running" | "testing" | "waiting_user" | "blocked" | "done" | "error";
+  station: "desk" | "library" | "terminal" | "testbench" | "mergestation" | "meeting" | "lounge" | "user";
+  active: boolean;
+}
+
+export interface AgentCraftPulse {
+  ok: true;
+  status: "live" | "stale" | "unavailable";
+  source: "AgentCraft Foreman";
+  backend: "sim" | "claude" | "codex" | null;
+  agents: AgentCraftAgentPulse[];
+  receivedAt: number | null;
+  provenance: {
+    kind: "agentcraft-foreman";
+    live: boolean;
+    gameCoordinates: false;
+    note: string;
+  };
+}
+
 function record(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>
@@ -116,6 +139,66 @@ async function readJson(url: string, signal: AbortSignal): Promise<unknown> {
     clearTimeout(timeout);
     signal.removeEventListener("abort", abortFromQuery);
   }
+}
+
+async function readAgentCraftPulse(signal: AbortSignal): Promise<AgentCraftPulse> {
+  const body = record(await readJson("/api/world/agentcraft", signal));
+  const provenance = record(body?.provenance);
+  const allowedBackends = new Set(["sim", "claude", "codex"]);
+  const allowedStates = new Set(["idle", "thinking", "reading", "editing", "running", "testing", "waiting_user", "blocked", "done", "error"]);
+  const allowedStations = new Set(["desk", "library", "terminal", "testbench", "mergestation", "meeting", "lounge", "user"]);
+  if (
+    body?.ok !== true ||
+    body.source !== "AgentCraft Foreman" ||
+    !["live", "stale", "unavailable"].includes(String(body.status)) ||
+    (body.backend !== null && (typeof body.backend !== "string" || !allowedBackends.has(body.backend))) ||
+    !Array.isArray(body.agents) ||
+    !provenance ||
+    provenance.kind !== "agentcraft-foreman" ||
+    typeof provenance.live !== "boolean" ||
+    provenance.gameCoordinates !== false ||
+    typeof provenance.note !== "string" ||
+    (body.receivedAt !== null && (typeof body.receivedAt !== "number" || !Number.isSafeInteger(body.receivedAt)))
+  ) {
+    throw new Error("AgentCraft response did not match the read-only world contract.");
+  }
+
+  const agents = body.agents.flatMap((candidate): AgentCraftAgentPulse[] => {
+    const agent = record(candidate);
+    if (
+      !agent ||
+      typeof agent.id !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,39}$/.test(agent.id) ||
+      typeof agent.name !== "string" || !agent.name.trim() || agent.name.length > 48 ||
+      typeof agent.state !== "string" || !allowedStates.has(agent.state) ||
+      typeof agent.station !== "string" || !allowedStations.has(agent.station) ||
+      typeof agent.active !== "boolean"
+    ) return [];
+    return [{
+      id: agent.id,
+      name: agent.name,
+      state: agent.state as AgentCraftAgentPulse["state"],
+      station: agent.station as AgentCraftAgentPulse["station"],
+      active: agent.active,
+    }];
+  });
+
+  if (agents.length !== body.agents.length || agents.length > 32) {
+    throw new Error("AgentCraft response contained invalid agent records.");
+  }
+  return {
+    ok: true,
+    status: body.status as AgentCraftPulse["status"],
+    source: "AgentCraft Foreman",
+    backend: body.backend as AgentCraftPulse["backend"],
+    agents,
+    receivedAt: body.receivedAt as number | null,
+    provenance: {
+      kind: "agentcraft-foreman",
+      live: provenance.live,
+      gameCoordinates: false,
+      note: provenance.note,
+    },
+  };
 }
 
 async function readServicePulse(signal: AbortSignal): Promise<ServicePulse> {
@@ -363,6 +446,15 @@ async function readRepositoryPulses(signal: AbortSignal): Promise<RepositoryPuls
 }
 
 export function useWorldPulse() {
+  const agentcraft = useQuery({
+    queryKey: ["tessera-world", "agentcraft"],
+    queryFn: ({ signal }) => readAgentCraftPulse(signal),
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
+    retry: false,
+  });
+
   const service = useQuery({
     queryKey: ["tessera-world", "service"],
     queryFn: ({ signal }) => readServicePulse(signal),
@@ -410,5 +502,5 @@ export function useWorldPulse() {
     retry: 1,
   });
 
-  return { service, brain, forum, moltbook, repositories };
+  return { agentcraft, service, brain, forum, moltbook, repositories };
 }

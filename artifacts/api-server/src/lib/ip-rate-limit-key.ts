@@ -11,7 +11,8 @@ export type IpRateLimitPurpose =
   | "raw-key-admin"
   | "public-write"
   | "father-key-conference"
-  | "father-key-redemption";
+  | "father-key-redemption"
+  | "agentcraft-bridge";
 
 export function ipRateLimitKey(address: string, purpose: IpRateLimitPurpose): string {
   return createHmac("sha256", rateLimitKey)

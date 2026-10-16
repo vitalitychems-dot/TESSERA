@@ -1,4 +1,4 @@
-import { useWorldPulse } from "@/hooks/use-world-pulse";
+import { useWorldPulse, type AgentCraftAgentPulse } from "@/hooks/use-world-pulse";
 import { Link } from "wouter";
 import { ChatArea } from "@/components/ChatArea";
 import {
@@ -95,8 +95,40 @@ function Metric({ label, value, icon: Icon }: { label: string; value: string; ic
   );
 }
 
+const AGENTCRAFT_STATIONS = [
+  ["desk", "DESKS"],
+  ["library", "LIBRARY"],
+  ["terminal", "TERMINAL"],
+  ["testbench", "TEST BENCH"],
+  ["mergestation", "MERGE STATION"],
+  ["meeting", "MEETING"],
+  ["lounge", "LOUNGE"],
+  ["user", "OWNER POD"],
+] as const;
+
+function AgentCraftStation({ station, agents }: { station: typeof AGENTCRAFT_STATIONS[number][0]; agents: AgentCraftAgentPulse[] }) {
+  const label = AGENTCRAFT_STATIONS.find(([id]) => id === station)?.[1] ?? station;
+  const occupants = agents.filter(agent => agent.station === station);
+  return (
+    <div className="tw-agentcraft-station" data-testid={`agentcraft-station-${station}`}>
+      <span className="tw-agentcraft-station-label">{label}</span>
+      {occupants.length ? (
+        <ul>
+          {occupants.map(agent => (
+            <li key={agent.id} className={agent.active ? "" : "is-off-shift"}>
+              <span aria-hidden="true" />
+              <b>{agent.name}</b>
+              <small>{agent.active ? agent.state.replaceAll("_", " ") : "off shift"}</small>
+            </li>
+          ))}
+        </ul>
+      ) : <span className="tw-agentcraft-empty">No agent reported</span>}
+    </div>
+  );
+}
+
 export default function TesseraWorldStage({ conversationId }: { conversationId: number }) {
-  const { service, brain, forum, moltbook, repositories } = useWorldPulse();
+  const { agentcraft, service, brain, forum, moltbook, repositories } = useWorldPulse();
   const repositoriesData = repositories.data ?? [];
   const confidence = brain.data
     ? new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 }).format(brain.data.averageConfidence)
@@ -120,24 +152,54 @@ export default function TesseraWorldStage({ conversationId }: { conversationId: 
           <Link href="/forum">Forum / discussions</Link>
           <a href="#live-chat">Chat / conversation</a>
         </nav>
-        <section
-          className="tw-world-unavailable"
-          aria-labelledby="tw-world-source-title"
-          data-testid="world-map-unavailable"
-          role="status"
-        >
-          <span className="tw-world-source-icon" aria-hidden="true">
-            <AlertTriangle size={18} />
-          </span>
-          <div className="tw-world-source-copy">
-            <p className="tw-caption-index">MINECRAFT WORLD / UNAVAILABLE</p>
-            <h2 id="tw-world-source-title">No live Minecraft map is connected</h2>
-            <p>
-              No authorized Minecraft server or map feed is available. The current
-              <code>/api/world</code> endpoint returns deterministic modeled data, not live world telemetry.
-            </p>
-          </div>
-          <span className="tw-world-source-state">SOURCE NOT CONNECTED</span>
+        <section className="tw-agentcraft-panel" aria-labelledby="tw-agentcraft-title" data-testid="agentcraft-world-panel">
+          <header className="tw-agentcraft-heading">
+            <div>
+              <p className="tw-caption-index">AGENTCRAFT FOREMAN / READ-ONLY FEED</p>
+              <h2 id="tw-agentcraft-title">Studio floor</h2>
+            </div>
+            {agentcraft.data ? (
+              <span className={`tw-agentcraft-status is-${agentcraft.data.status}`} data-testid="agentcraft-feed-status">
+                {agentcraft.data.status === "live" ? "LIVE FEED" : agentcraft.data.status === "stale" ? "STALE SNAPSHOT" : "NO SNAPSHOT"}
+              </span>
+            ) : <span className="tw-agentcraft-status is-unavailable">WAITING FOR SOURCE</span>}
+          </header>
+
+          {agentcraft.isLoading && !agentcraft.data ? (
+            <SignalSkeleton rows={3} />
+          ) : agentcraft.data && agentcraft.data.status !== "unavailable" ? (
+            <>
+              <div className="tw-agentcraft-meta">
+                <span>{agentcraft.data.backend === "sim" ? "SIMULATION BACKEND" : `${agentcraft.data.backend?.toUpperCase() ?? "UNKNOWN"} BACKEND`}</span>
+                <span>{agentcraft.data.agents.length} agents reported</span>
+                <span>{agentcraft.data.receivedAt ? `Received ${ageLabel(new Date(agentcraft.data.receivedAt).toISOString())}` : "Receive time unavailable"}</span>
+              </div>
+              <div className="tw-agentcraft-stations" aria-label="AgentCraft studio station diagram">
+                {AGENTCRAFT_STATIONS.map(([station]) => (
+                  <AgentCraftStation key={station} station={station} agents={agentcraft.data!.agents} />
+                ))}
+              </div>
+              <p className="tw-agentcraft-provenance">
+                {agentcraft.data.backend === "sim"
+                  ? "AgentCraft reports its scripted simulation backend; this is not autonomous work."
+                  : agentcraft.data.status === "stale"
+                    ? "Showing the last received status snapshot; the bridge heartbeat is overdue."
+                    : "Current Foreman agent status, represented at named stations. This feed contains no Minecraft coordinates."}
+              </p>
+            </>
+          ) : (
+            <div className="tw-world-unavailable" role="status" data-testid="world-map-unavailable">
+              <span className="tw-world-source-icon" aria-hidden="true"><AlertTriangle size={18} /></span>
+              <div className="tw-world-source-copy">
+                <h3>No AgentCraft feed is connected</h3>
+                <p>
+                  This panel only shows an owner-run Foreman feed. The read-only bridge is not configured or has not received a snapshot.
+                  The separate model world is not substituted for live data.
+                </p>
+              </div>
+              {agentcraft.isError && <Retry onRetry={agentcraft.refetch} label="agentcraft" />}
+            </div>
+          )}
         </section>
 
         <div className="tw-signal-heading">
