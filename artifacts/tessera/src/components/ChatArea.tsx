@@ -9,6 +9,7 @@ import { useLocation } from "wouter";
 import { useChat } from "@/hooks/use-chat";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { NEXT_COLORS, nextTint } from "@/lib/theme-constants";
 import { useAdmin } from "@/lib/adminContext";
 import { queryClient } from "@/lib/queryClient";
 
@@ -1190,7 +1191,8 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
             type="checkbox"
             checked={allowExternalProvider}
             onChange={(event) => setAllowExternalProvider(event.target.checked)}
-            className="mt-0.5 h-4 w-4 accent-[#7ef0d4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7ef0d4]"
+            className="mt-0.5 h-4 w-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            style={{ accentColor: NEXT_COLORS.glass, outlineColor: NEXT_COLORS.glass }}
             aria-describedby="external-provider-privacy-note"
             data-testid="checkbox-external-model-consent"
           />
@@ -1288,17 +1290,36 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
             <NLPGoalsPanel />
 
             {colonelMessage && !isAdmin && (
-              <div className={cn(
-                "flex items-center gap-2 px-4 py-2 mx-2 mb-1 rounded-lg border font-mono text-[11px] tracking-wider transition-all duration-500",
-                colonelPhase === "hash_accepted" ? "bg-violet-950/60 border-violet-500/40 text-violet-400 shadow-[0_0_20px_rgba(139,92,246,0.15)]" :
-                colonelPhase === "authenticating" ? "bg-amber-950/40 border-amber-500/30 text-amber-400 animate-pulse" :
-                colonelPhase === "success" ? "bg-green-950/40 border-green-500/40 text-green-400 shadow-[0_0_20px_rgba(34,197,94,0.15)]" :
-                colonelPhase === "fail" ? "bg-red-950/40 border-red-500/30 text-red-400" :
-                "bg-violet-950/30 border-violet-500/20 text-violet-400"
-              )} data-testid="colonel-protocol-banner">
+              <div
+                className={cn("flex items-center gap-2 px-4 py-2 mx-2 mb-1 rounded-lg border font-mono text-[11px] tracking-wider transition-all duration-500", colonelPhase === "authenticating" && "animate-pulse")}
+                style={{
+                  color: colonelPhase === "success" ? NEXT_COLORS.glass
+                    : colonelPhase === "fail" ? NEXT_COLORS.fracture
+                    : colonelPhase === "authenticating" ? NEXT_COLORS.flash
+                    : NEXT_COLORS.return,
+                  borderColor: nextTint(
+                    colonelPhase === "success" ? NEXT_COLORS.glass
+                      : colonelPhase === "fail" ? NEXT_COLORS.fracture
+                      : colonelPhase === "authenticating" ? NEXT_COLORS.flash
+                      : NEXT_COLORS.return,
+                    30,
+                  ),
+                  background: nextTint(
+                    colonelPhase === "success" ? NEXT_COLORS.glass
+                      : colonelPhase === "fail" ? NEXT_COLORS.fracture
+                      : colonelPhase === "authenticating" ? NEXT_COLORS.flash
+                      : NEXT_COLORS.return,
+                    7,
+                  ),
+                  boxShadow: colonelPhase === "success"
+                    ? `0 0 20px ${nextTint(NEXT_COLORS.glass, 15)}`
+                    : colonelPhase === "hash_accepted" ? `0 0 20px ${nextTint(NEXT_COLORS.return, 15)}` : undefined,
+                }}
+                data-testid="colonel-protocol-banner"
+              >
                 <span className="text-base">{colonelPhase === "success" ? "⊕" : colonelPhase === "fail" ? "⊗" : "⊕"}</span>
                 <span>{colonelMessage}</span>
-                {colonelPhase === "authenticating" && <span className="ml-auto flex gap-0.5">{[0,1,2].map(i => <span key={i} className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />)}</span>}
+                {colonelPhase === "authenticating" && <span className="ml-auto flex gap-0.5">{[0,1,2].map(i => <span key={i} className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: NEXT_COLORS.flash, animationDelay: `${i * 200}ms` }} />)}</span>}
               </div>
             )}
             <div className="relative">

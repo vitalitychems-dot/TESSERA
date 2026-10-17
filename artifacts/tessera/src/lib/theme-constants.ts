@@ -6,6 +6,26 @@ const LEGACY_ACCENT: Record<string, string> = {
 
 export const DEFAULT_ACCENT = "glass";
 
+/** CSS-variable references for active UI surfaces and status colors. */
+export const NEXT_COLORS = {
+  ink: "var(--next-ink)",
+  panel: "var(--next-panel)",
+  raised: "var(--next-raised)",
+  bone: "var(--next-bone)",
+  glass: "var(--next-glass)",
+  fracture: "var(--next-fracture)",
+  flash: "var(--next-flash)",
+  stone: "var(--next-stone)",
+  return: "var(--next-return)",
+  mineral: "var(--next-mineral)",
+  rule: "var(--next-rule)",
+} as const;
+
+export function nextTint(color: string, percent: number): string {
+  const opacity = Math.min(100, Math.max(0, percent));
+  return `color-mix(in srgb, ${color} ${opacity}%, transparent)`;
+}
+
 export const FONT_COLORS = [
   { label: "Bone", value: "#f3efe6", bg: "#f3efe6" },
   { label: "Glass", value: "#7ef0d4", bg: "#7ef0d4" },

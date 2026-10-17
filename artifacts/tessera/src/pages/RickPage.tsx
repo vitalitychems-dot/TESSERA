@@ -2,11 +2,12 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Send, FlaskConical, Vote, CheckCircle2, XCircle, ChevronRight, ChevronDown, RefreshCw, BookOpen, TrendingUp, Crown, Shield, Brain, Zap, Database, Target, Loader2, Users, Timer, MemoryStick, Activity, AlertTriangle, Skull, Plus, ScanSearch, Repeat, Send as SendIcon, Lightbulb, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { NEXT_COLORS, nextTint } from "@/lib/theme-constants";
 
-const RICK_GREEN = "#7ef0d4";
-const RICK_PORTAL = "#22d3ee";
-const ROYAL_GOLD = "#f59e0b";
-const ROYAL_GOLD_DARK = "#d97706";
+const RICK_GREEN = NEXT_COLORS.glass;
+const RICK_PORTAL = NEXT_COLORS.flash;
+const ROYAL_GOLD = NEXT_COLORS.return;
+const ROYAL_GOLD_DARK = NEXT_COLORS.stone;
 
 interface AutonomousInventionUiRow {
   inventionId: string;
@@ -34,9 +35,9 @@ interface ChatMessage {
 }
 
 const RISK_COLORS: Record<string, string> = {
-  low: "#22c55e",
-  medium: "#f59e0b",
-  high: "#ef4444",
+  low: NEXT_COLORS.glass,
+  medium: NEXT_COLORS.fracture,
+  high: NEXT_COLORS.return,
 };
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -55,13 +56,13 @@ const CATEGORY_ICONS: Record<string, string> = {
 
 function PortalSpinner() {
   return (
-    <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: `${RICK_PORTAL}44`, borderTopColor: RICK_PORTAL }} />
+    <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: nextTint(RICK_PORTAL, 27), borderTopColor: RICK_PORTAL }} />
   );
 }
 
 function RickTypingIndicator() {
   return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-xl max-w-xs" style={{ background: `${RICK_GREEN}15`, border: `1px solid ${RICK_GREEN}30` }}>
+    <div className="flex items-center gap-2 px-3 py-2 rounded-xl max-w-xs" style={{ background: nextTint(RICK_GREEN, 8), border: `1px solid ${nextTint(RICK_GREEN, 18)}` }}>
       <span className="text-xs font-mono" style={{ color: RICK_GREEN }}>Rick is thinking</span>
       <span className="flex gap-0.5">
         {[0, 1, 2].map(i => (
@@ -347,17 +348,17 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ background: "rgba(6,4,20,0.97)" }}>
-      <div className="border-b px-4 sm:px-5 py-3 lg:py-4 flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4 shrink-0" style={{ borderColor: `${ROYAL_GOLD}22`, background: `linear-gradient(135deg, ${ROYAL_GOLD}06, ${RICK_GREEN}04)` }}>
+    <div className="flex flex-col h-full overflow-hidden" style={{ background: NEXT_COLORS.ink }}>
+      <div className="border-b px-4 sm:px-5 py-3 lg:py-4 flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4 shrink-0" style={{ borderColor: nextTint(ROYAL_GOLD, 14), background: `linear-gradient(135deg, ${nextTint(ROYAL_GOLD, 4)}, ${nextTint(RICK_GREEN, 3)})` }}>
         <div className="flex items-center gap-3 lg:gap-4 min-w-0 w-full lg:flex-1" data-testid="rick-header-identity">
-          <div className="relative w-12 h-12 rounded-full flex items-center justify-center shrink-0 border-2" style={{ borderColor: ROYAL_GOLD, background: `${ROYAL_GOLD}15` }}>
+          <div className="relative w-12 h-12 rounded-full flex items-center justify-center shrink-0 border-2" style={{ borderColor: ROYAL_GOLD, background: nextTint(ROYAL_GOLD, 8) }}>
             <span className="text-2xl select-none">👑</span>
             <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400 border border-black" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-bold font-mono text-base flex flex-wrap items-center gap-2">
               <span style={{ color: ROYAL_GOLD }}>Rick Sanchez</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded font-mono border" style={{ color: ROYAL_GOLD, borderColor: `${ROYAL_GOLD}40`, background: `${ROYAL_GOLD}10` }}>ROYAL INVENTOR</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded font-mono border" style={{ color: ROYAL_GOLD, borderColor: nextTint(ROYAL_GOLD, 25), background: nextTint(ROYAL_GOLD, 6) }}>ROYAL INVENTOR</span>
             </div>
             <div className="text-[11px] text-muted-foreground font-mono">Royal Court · Dept. of Science & Invention · Dimension C-137</div>
             {profileData?.profile?.currentInventions && (
@@ -369,13 +370,13 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
         </div>
         {(() => {
           const RICK_TABS = [
-            { key: "reality" as const, label: "Reality", icon: ScanSearch, color: "#10b981" },
-            { key: "program" as const, label: "Program", icon: Repeat, color: "#f472b6" },
-            { key: "proposals" as const, label: "Proposals", icon: Vote, color: "#fbbf24" },
+            { key: "reality" as const, label: "Reality", icon: ScanSearch, color: NEXT_COLORS.glass },
+            { key: "program" as const, label: "Program", icon: Repeat, color: NEXT_COLORS.return },
+            { key: "proposals" as const, label: "Proposals", icon: Vote, color: NEXT_COLORS.flash },
             { key: "inventions" as const, label: "Inventions", icon: FlaskConical, color: RICK_GREEN },
-            { key: "meeseeks" as const, label: "Meeseeks", icon: Users, color: "#a855f7" },
-            { key: "knowledge" as const, label: "Vault", icon: BookOpen, color: "#a78bfa" },
-            { key: "improvements" as const, label: "Improve", icon: TrendingUp, color: "#22d3ee" },
+            { key: "meeseeks" as const, label: "Meeseeks", icon: Users, color: NEXT_COLORS.return },
+            { key: "knowledge" as const, label: "Vault", icon: BookOpen, color: NEXT_COLORS.mineral },
+            { key: "improvements" as const, label: "Improve", icon: TrendingUp, color: NEXT_COLORS.flash },
             { key: "royal" as const, label: "Royal", icon: Crown, color: ROYAL_GOLD },
             { key: "chat" as const, label: "Chat", icon: Send, color: RICK_PORTAL },
           ];
@@ -440,7 +441,7 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
             <div className="flex items-center gap-1">
               <span
                 className="px-2 py-1 rounded-lg text-[10px] font-mono font-bold border flex items-center gap-1"
-                style={{ color: RICK_GREEN, borderColor: `${RICK_GREEN}50`, background: `${RICK_GREEN}10` }}
+                style={{ color: RICK_GREEN, borderColor: nextTint(RICK_GREEN, 31), background: nextTint(RICK_GREEN, 6) }}
                 data-testid="badge-autonomous-mode"
                 title="Rick proposes and submits inventions on his own — no human action required."
               >
@@ -471,7 +472,7 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
                 <div
                   key={inv.inventionId}
                   className="rounded-xl border overflow-hidden transition-all duration-200"
-                  style={{ borderColor: `${RICK_GREEN}22`, background: "rgba(0,255,65,0.03)" }}
+                  style={{ borderColor: nextTint(RICK_GREEN, 13), background: nextTint(RICK_GREEN, 2) }}
                   data-testid={`row-rick-invention-${inv.inventionId}`}
                 >
                   <div
@@ -485,7 +486,7 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
                         <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-white/5 text-muted-foreground border border-white/10">
                           {inv.category}
                         </span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded font-mono border text-muted-foreground" style={{ borderColor: `${RICK_GREEN}30`, background: `${RICK_GREEN}06` }}>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded font-mono border text-muted-foreground" style={{ borderColor: nextTint(RICK_GREEN, 18), background: nextTint(RICK_GREEN, 4) }}>
                           {inv.status}
                         </span>
                       </div>
@@ -501,7 +502,7 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
                   </div>
 
                   {isExpanded && (
-                    <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: `${RICK_GREEN}10` }}>
+                    <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: nextTint(RICK_GREEN, 6) }}>
                       {inv.customModelUrl && (
                         <div className="pt-3 flex justify-center">
                           <img
@@ -525,7 +526,7 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
           )}
 
           {councilProposals.length > 0 && (
-            <div className="mt-4 pt-4 border-t" style={{ borderColor: `${RICK_GREEN}15` }}>
+            <div className="mt-4 pt-4 border-t" style={{ borderColor: nextTint(RICK_GREEN, 8) }}>
               <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
                 <Vote size={10} />
                 Grand Council History · {councilProposals.length} proposal{councilProposals.length !== 1 ? "s" : ""} submitted
@@ -533,7 +534,7 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
               <div className="space-y-2">
                 {councilProposals.map(p => {
                   const statusColor = p.status === "approved" || p.status === "implemented"
-                    ? "#22c55e" : p.status === "rejected" ? "#ef4444" : "#f59e0b";
+                    ? NEXT_COLORS.glass : p.status === "rejected" ? NEXT_COLORS.return : NEXT_COLORS.flash;
                   return (
                     <div key={p.id} className="flex items-start gap-3 px-3 py-2.5 rounded-lg border" style={{ borderColor: `${statusColor}25`, background: `${statusColor}06` }}>
                       <div className="flex-1 min-w-0">
@@ -659,9 +660,9 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
                           <div className="text-[11px] font-mono text-foreground/90 truncate">{c.category}</div>
                         </div>
                         <div className="w-24 h-1.5 rounded-full bg-white/5 overflow-hidden">
-                          <div className="h-full rounded-full" style={{ width: `${c.score}%`, background: c.score > 70 ? "#22c55e" : c.score > 50 ? "#f59e0b" : "#ef4444" }} />
+                          <div className="h-full rounded-full" style={{ width: `${c.score}%`, background: c.score > 70 ? NEXT_COLORS.glass : c.score > 50 ? NEXT_COLORS.fracture : NEXT_COLORS.return }} />
                         </div>
-                        <span className="text-[10px] font-mono w-12 text-right" style={{ color: c.score > 70 ? "#22c55e" : c.score > 50 ? "#f59e0b" : "#ef4444" }}>{c.score}%</span>
+                        <span className="text-[10px] font-mono w-12 text-right" style={{ color: c.score > 70 ? NEXT_COLORS.glass : c.score > 50 ? NEXT_COLORS.fracture : NEXT_COLORS.return }}>{c.score}%</span>
                         <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-mono border",
                           c.trend === "stable" ? "text-green-400 border-green-500/30 bg-green-500/10" :
                           c.trend === "improving" ? "text-amber-400 border-amber-500/30 bg-amber-500/10" :
@@ -704,9 +705,9 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
             <div className="flex justify-center py-12"><Loader2 className="animate-spin text-amber-400" size={20} /></div>
           ) : (
             <>
-              <div className="rounded-xl border-2 p-5" style={{ borderColor: `${ROYAL_GOLD}40`, background: `linear-gradient(135deg, ${ROYAL_GOLD}06, transparent)` }}>
+              <div className="rounded-xl border-2 p-5" style={{ borderColor: nextTint(ROYAL_GOLD, 25), background: `linear-gradient(135deg, ${nextTint(ROYAL_GOLD, 4)}, transparent)` }}>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center border-2" style={{ borderColor: ROYAL_GOLD, background: `${ROYAL_GOLD}15` }}>
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center border-2" style={{ borderColor: ROYAL_GOLD, background: nextTint(ROYAL_GOLD, 8) }}>
                     <span className="text-xl">👑</span>
                   </div>
                   <div>
@@ -745,7 +746,7 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
               </div>
 
               {courtData.court.royalFocusInventions?.length > 0 && (
-                <div className="rounded-xl border p-4" style={{ borderColor: `${RICK_GREEN}20`, background: `${RICK_GREEN}03` }}>
+                <div className="rounded-xl border p-4" style={{ borderColor: nextTint(RICK_GREEN, 12), background: nextTint(RICK_GREEN, 2) }}>
                   <h3 className="text-xs font-bold font-mono uppercase tracking-wider mb-3 flex items-center gap-2" style={{ color: RICK_GREEN }}>
                     <FlaskConical size={12} /> Royal Focus Inventions
                   </h3>
@@ -908,7 +909,7 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
                           className="h-full rounded-full transition-all duration-1000"
                           style={{
                             width: `${ttlPct}%`,
-                            background: isUrgent ? "#ef4444" : ttlPct < 50 ? "#f59e0b" : "#a855f7",
+                            background: isUrgent ? NEXT_COLORS.return : ttlPct < 50 ? NEXT_COLORS.fracture : NEXT_COLORS.glass,
                           }}
                         />
                       </div>
@@ -1029,7 +1030,7 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
             {messages.map((msg, i) => (
               <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
                 {msg.role === "assistant" && (
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mr-2 mt-0.5 border" style={{ borderColor: `${RICK_GREEN}40`, background: `${RICK_GREEN}10` }}>
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mr-2 mt-0.5 border" style={{ borderColor: nextTint(RICK_GREEN, 25), background: nextTint(RICK_GREEN, 6) }}>
                     <span className="text-sm">🧪</span>
                   </div>
                 )}
@@ -1037,14 +1038,14 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
                   <div
                     className={cn("rounded-2xl px-3 py-2 text-[12px] font-mono leading-relaxed whitespace-pre-wrap", msg.role === "user" ? "rounded-tr-sm" : "rounded-tl-sm")}
                     style={msg.role === "user"
-                      ? { background: `${RICK_PORTAL}20`, color: "rgba(255,255,255,0.9)", border: `1px solid ${RICK_PORTAL}30` }
-                      : { background: `${RICK_GREEN}08`, color: "rgba(255,255,255,0.85)", border: `1px solid ${RICK_GREEN}20` }
+                      ? { background: nextTint(RICK_PORTAL, 12), color: NEXT_COLORS.bone, border: `1px solid ${nextTint(RICK_PORTAL, 18)}` }
+                      : { background: nextTint(RICK_GREEN, 5), color: NEXT_COLORS.bone, border: `1px solid ${nextTint(RICK_GREEN, 12)}` }
                     }
                   >
                     {msg.content}
                   </div>
                   {msg.role === "assistant" && msg.groundingScore !== undefined && (
-                    <div className="flex items-center gap-1 px-1" style={{ color: msg.groundingScore >= 0.7 ? "#22c55e" : msg.groundingScore >= 0.5 ? "#f59e0b" : "#ef4444" }}>
+                    <div className="flex items-center gap-1 px-1" style={{ color: msg.groundingScore >= 0.7 ? NEXT_COLORS.glass : msg.groundingScore >= 0.5 ? NEXT_COLORS.fracture : NEXT_COLORS.return }}>
                       <Shield size={8} />
                       <span className="text-[9px] font-mono">Grounding: {(msg.groundingScore * 100).toFixed(0)}%</span>
                     </div>
@@ -1055,7 +1056,7 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
 
             {isStreaming && messages[messages.length - 1]?.role === "user" && (
               <div className="flex justify-start">
-                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mr-2 mt-0.5 border" style={{ borderColor: `${RICK_GREEN}40`, background: `${RICK_GREEN}10` }}>
+                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mr-2 mt-0.5 border" style={{ borderColor: nextTint(RICK_GREEN, 25), background: nextTint(RICK_GREEN, 6) }}>
                   <span className="text-sm">🧪</span>
                 </div>
                 <RickTypingIndicator />
@@ -1065,8 +1066,8 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
             <div ref={chatEndRef} />
           </div>
 
-          <div className="shrink-0 border-t p-3" style={{ borderColor: `${RICK_GREEN}15` }}>
-            <div className="flex items-end gap-2 rounded-xl border p-2" style={{ borderColor: `${RICK_GREEN}30`, background: `${RICK_GREEN}05` }}>
+          <div className="shrink-0 border-t p-3" style={{ borderColor: nextTint(RICK_GREEN, 8) }}>
+            <div className="flex items-end gap-2 rounded-xl border p-2" style={{ borderColor: nextTint(RICK_GREEN, 18), background: nextTint(RICK_GREEN, 3) }}>
               <textarea
                 ref={textareaRef}
                 value={input}
@@ -1082,7 +1083,7 @@ export default function RickPage({ initialTab }: { initialTab?: RickTabKey } = {
                 onClick={sendMessage}
                 disabled={!input.trim() || isStreaming}
                 className="p-2 rounded-lg transition-all shrink-0 disabled:opacity-40"
-                style={{ background: `${RICK_GREEN}20`, color: RICK_GREEN }}
+                style={{ background: nextTint(RICK_GREEN, 12), color: RICK_GREEN }}
               >
                 {isStreaming ? <PortalSpinner /> : <Send size={14} />}
               </button>
@@ -1128,13 +1129,13 @@ interface ProposalsResponse {
   capacity: number;
 }
 
-const PROPOSAL_GOLD = "#d7f6ff";
-const PROPOSAL_RISK: Record<string, string> = { low: "#8fd9c4", medium: "#ff5c39", high: "#ff5c39" };
+const PROPOSAL_GOLD = NEXT_COLORS.flash;
+const PROPOSAL_RISK: Record<string, string> = { low: NEXT_COLORS.mineral, medium: NEXT_COLORS.fracture, high: NEXT_COLORS.return };
 const PROPOSAL_STATE_COLOR: Record<string, string> = {
-  "pending-review": "#d7f6ff",
-  approved: "#8fd9c4",
-  rejected: "#ff5c39",
-  implemented: "#7ef0d4",
+  "pending-review": NEXT_COLORS.flash,
+  approved: NEXT_COLORS.glass,
+  rejected: NEXT_COLORS.return,
+  implemented: NEXT_COLORS.mineral,
 };
 
 function RickProposalsPanel() {
@@ -1243,7 +1244,7 @@ function RickProposalsPanel() {
         {actionError && <p role="alert" className="text-sm text-destructive">{actionError}</p>}
         {feedback && <p role="status" className="text-sm text-primary">{feedback}</p>}
       </section>
-      <div className="rounded-xl border p-4 flex items-start gap-4 flex-wrap" style={{ borderColor: `${PROPOSAL_GOLD}40`, background: `${PROPOSAL_GOLD}08` }}>
+      <div className="rounded-xl border p-4 flex items-start gap-4 flex-wrap" style={{ borderColor: nextTint(PROPOSAL_GOLD, 25), background: nextTint(PROPOSAL_GOLD, 5) }}>
         <div className="flex-1 min-w-[220px]">
           <div className="font-bold font-mono text-sm" style={{ color: PROPOSAL_GOLD }}>
             Rick&apos;s 5 System Improvement Proposals
@@ -1269,7 +1270,7 @@ function RickProposalsPanel() {
             onClick={generate}
             disabled={generating}
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-mono font-bold transition-all border disabled:opacity-50"
-            style={{ color: PROPOSAL_GOLD, borderColor: `${PROPOSAL_GOLD}60`, background: `${PROPOSAL_GOLD}15` }}
+            style={{ color: PROPOSAL_GOLD, borderColor: nextTint(PROPOSAL_GOLD, 38), background: nextTint(PROPOSAL_GOLD, 8) }}
           >
             {generating ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
             {proposals.length === 0 ? "Generate 5 Proposals" : "Refill Pending Slots"}
@@ -1278,17 +1279,17 @@ function RickProposalsPanel() {
       </div>
 
       {approvedQueue.length > 0 && (
-        <div className="rounded-xl border p-3" style={{ borderColor: "#22c55e40", background: "#22c55e08" }}>
+        <div className="rounded-xl border p-3" style={{ borderColor: nextTint(NEXT_COLORS.glass, 25), background: nextTint(NEXT_COLORS.glass, 5) }}>
           <div className="flex items-center gap-2 mb-2">
-            <CheckCircle2 size={14} style={{ color: "#22c55e" }} />
-            <div className="font-bold font-mono text-xs" style={{ color: "#22c55e" }}>
+            <CheckCircle2 size={14} style={{ color: NEXT_COLORS.glass }} />
+            <div className="font-bold font-mono text-xs" style={{ color: NEXT_COLORS.glass }}>
               Owner-approved · awaiting implementation evidence · {approvedQueue.length}
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {approvedQueue.map(p => (
               <div key={`q-${p.id}`} className="rounded-lg border border-white/10 bg-black/20 p-2">
-                <div className="font-mono text-[11px] font-bold" style={{ color: "#bbf7d0" }}>{p.title}</div>
+                <div className="font-mono text-[11px] font-bold" style={{ color: NEXT_COLORS.mineral }}>{p.title}</div>
                 <div className="font-mono text-[10px] text-muted-foreground mt-0.5">
                   {p.category} · ~{p.effortHours}h · risk: {p.risk}
                 </div>
@@ -1303,16 +1304,16 @@ function RickProposalsPanel() {
         {filterStates.map(k => {
           const count = k === "all" ? proposals.length : (counts[k] ?? 0);
           const active = stateFilter === k;
-          const c = k === "all" ? PROPOSAL_GOLD : (PROPOSAL_STATE_COLOR[k] ?? "#888");
+          const c = k === "all" ? PROPOSAL_GOLD : (PROPOSAL_STATE_COLOR[k] ?? NEXT_COLORS.mineral);
           return (
             <button
               key={k}
               onClick={() => setStateFilter(k)}
               className="text-[10px] font-mono px-2 py-1 rounded border transition-all"
               style={{
-                color: active ? "#0a0a0a" : c,
-                borderColor: `${c}60`,
-                background: active ? c : `${c}10`,
+                color: active ? NEXT_COLORS.ink : c,
+                borderColor: active ? nextTint(c, 50) : nextTint(c, 15),
+                background: active ? c : nextTint(c, 6),
                 fontWeight: active ? 700 : 500,
               }}
             >
@@ -1334,8 +1335,8 @@ function RickProposalsPanel() {
         </div>
       ) : (
         filtered.map((p) => {
-          const stateColor = PROPOSAL_STATE_COLOR[p.state] ?? "#888";
-          const riskColor = PROPOSAL_RISK[p.risk] ?? "#888";
+          const stateColor = PROPOSAL_STATE_COLOR[p.state] ?? NEXT_COLORS.mineral;
+          const riskColor = PROPOSAL_RISK[p.risk] ?? NEXT_COLORS.mineral;
           const isPending = p.state === "pending-review";
           const isApproved = p.state === "approved";
           return (
@@ -1398,7 +1399,7 @@ function RickProposalsPanel() {
 
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Test plan / verification</div>
-                <p className="text-[11px] font-mono" style={{ color: "#22d3ee" }}>{p.testPlan ?? p.expectedImpact ?? "UNMEASURED"}</p>
+                <p className="text-[11px] font-mono" style={{ color: NEXT_COLORS.flash }}>{p.testPlan ?? p.expectedImpact ?? "UNMEASURED"}</p>
               </div>
 
               {(p.approvedBy || p.approvalTestRef || p.implementedBy || p.implementationTestRef) && (
@@ -1421,7 +1422,7 @@ function RickProposalsPanel() {
               )}
 
               {p.reviewerReason && (
-                <div className="rounded-lg border p-2 text-[11px] font-mono" style={{ borderColor: "#ef444440", background: "#ef444410", color: "#fca5a5" }}>
+                <div className="rounded-lg border p-2 text-[11px] font-mono" style={{ borderColor: nextTint(NEXT_COLORS.return, 25), background: nextTint(NEXT_COLORS.return, 6), color: NEXT_COLORS.return }}>
                   <div className="text-[10px] uppercase tracking-wider mb-0.5 text-muted-foreground">Reject reason</div>
                   {p.reviewerReason}
                 </div>
@@ -1441,7 +1442,7 @@ function RickProposalsPanel() {
                       onClick={() => reject(p.id)}
                       disabled={busyId === p.id}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold border disabled:opacity-50"
-                      style={{ color: "#ef4444", borderColor: "#ef444460", background: "#ef444410" }}
+                      style={{ color: NEXT_COLORS.return, borderColor: nextTint(NEXT_COLORS.return, 38), background: nextTint(NEXT_COLORS.return, 6) }}
                     >
                       {busyId === p.id ? <Loader2 size={10} className="animate-spin" /> : <XCircle size={10} />} Confirm reject
                     </button>
@@ -1459,7 +1460,7 @@ function RickProposalsPanel() {
                     onClick={() => approve(p.id)}
                     disabled={busyId === p.id || !reviewer.trim() || !testRef.trim()}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold border disabled:opacity-50"
-                    style={{ color: "#22c55e", borderColor: "#22c55e60", background: "#22c55e10" }}
+                    style={{ color: NEXT_COLORS.glass, borderColor: nextTint(NEXT_COLORS.glass, 38), background: nextTint(NEXT_COLORS.glass, 6) }}
                   >
                     {busyId === p.id ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle2 size={10} />} Approve
                   </button>
@@ -1467,7 +1468,7 @@ function RickProposalsPanel() {
                     onClick={() => { setRejectingId(p.id); setRejectReason(""); }}
                     disabled={busyId === p.id}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold border disabled:opacity-50"
-                    style={{ color: "#ef4444", borderColor: "#ef444460", background: "#ef444410" }}
+                    style={{ color: NEXT_COLORS.return, borderColor: nextTint(NEXT_COLORS.return, 38), background: nextTint(NEXT_COLORS.return, 6) }}
                   >
                     <XCircle size={10} /> Reject
                   </button>
@@ -1480,7 +1481,7 @@ function RickProposalsPanel() {
                     onClick={() => markImplementedFn(p.id)}
                     disabled={busyId === p.id || !reviewer.trim() || !testRef.trim()}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold border disabled:opacity-50"
-                    style={{ color: "#22d3ee", borderColor: "#22d3ee60", background: "#22d3ee10" }}
+                    style={{ color: NEXT_COLORS.flash, borderColor: nextTint(NEXT_COLORS.flash, 38), background: nextTint(NEXT_COLORS.flash, 6) }}
                   >
                     {busyId === p.id ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle2 size={10} />} Mark as Implemented
                   </button>
@@ -1520,9 +1521,9 @@ interface RealityAuditData {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  real: "#10b981",
-  converted: "#22d3ee",
-  simulated: "#ef4444",
+  real: NEXT_COLORS.glass,
+  converted: NEXT_COLORS.flash,
+  simulated: NEXT_COLORS.return,
 };
 const STATUS_LABEL: Record<string, string> = {
   real: "REAL",
@@ -1536,14 +1537,14 @@ function FindingCard({ finding }: { finding: AuditFinding }) {
   return (
     <div
       className="rounded-xl border p-3 cursor-pointer transition-all"
-      style={{ borderColor: `${color}55`, background: `${color}08` }}
+      style={{ borderColor: nextTint(color, 33), background: nextTint(color, 5) }}
       onClick={() => setExpanded(v => !v)}
       data-testid={`finding-${finding.id}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border" style={{ color, borderColor: `${color}60`, background: `${color}15` }}>
+            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border" style={{ color, borderColor: nextTint(color, 38), background: nextTint(color, 8) }}>
               {STATUS_LABEL[finding.status]}
             </span>
             <span className="text-[10px] font-mono text-muted-foreground">impact: {finding.impactScore}</span>
@@ -1785,11 +1786,11 @@ interface ProgramResponse {
 }
 
 const STAGE_COLORS: Record<CycleStage, string> = {
-  propose: "#fbbf24",
-  review: "#22d3ee",
-  implement: "#a855f7",
-  reflect: "#22c55e",
-  done: "#94a3b8",
+  propose: NEXT_COLORS.return,
+  review: NEXT_COLORS.flash,
+  implement: NEXT_COLORS.stone,
+  reflect: NEXT_COLORS.glass,
+  done: NEXT_COLORS.mineral,
 };
 
 const STAGE_LABELS: Record<CycleStage, string> = {
@@ -1808,7 +1809,7 @@ const STAGE_ICONS: Record<CycleStage, typeof Lightbulb> = {
   done: CheckCircle2,
 };
 
-const PROGRAM_PINK = "#f472b6";
+const PROGRAM_PINK = NEXT_COLORS.return;
 
 function RickImprovementProgramPanel() {
   const { data, isLoading, refetch } = useQuery({
@@ -1901,7 +1902,7 @@ function RickImprovementProgramPanel() {
 
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-      <div className="rounded-xl border p-4" style={{ borderColor: `${PROGRAM_PINK}40`, background: `${PROGRAM_PINK}08` }}>
+      <div className="rounded-xl border p-4" style={{ borderColor: nextTint(PROGRAM_PINK, 25), background: nextTint(PROGRAM_PINK, 5) }}>
         <div className="flex items-start gap-3 flex-wrap">
           <div className="flex-1 min-w-[240px]">
             <div className="font-bold font-mono text-sm" style={{ color: PROGRAM_PINK }}>
@@ -1914,21 +1915,21 @@ function RickImprovementProgramPanel() {
           <div className="flex gap-2 flex-wrap justify-end">
             {!active && (
               <button onClick={start} disabled={busy} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-mono font-bold transition-all border disabled:opacity-50"
-                style={{ color: PROGRAM_PINK, borderColor: `${PROGRAM_PINK}60`, background: `${PROGRAM_PINK}15` }}>
+                style={{ color: PROGRAM_PINK, borderColor: nextTint(PROGRAM_PINK, 38), background: nextTint(PROGRAM_PINK, 8) }}>
                 {busy ? <Loader2 size={12} className="animate-spin" /> : <Repeat size={12} />}
                 Start New Program
               </button>
             )}
             {active && active.status === "active" && (
               <button onClick={abandon} disabled={busy} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-mono font-bold transition-all border disabled:opacity-50"
-                style={{ color: "#ef4444", borderColor: "#ef444460", background: "#ef444415" }}>
+                style={{ color: NEXT_COLORS.return, borderColor: nextTint(NEXT_COLORS.return, 38), background: nextTint(NEXT_COLORS.return, 8) }}>
                 <XCircle size={12} /> Abandon
               </button>
             )}
           </div>
         </div>
         {err && (
-          <div role="alert" className="mt-2 text-[10px] font-mono px-2 py-1.5 rounded border" style={{ color: "#ef4444", borderColor: "#ef444440", background: "#ef444410" }}>
+          <div role="alert" className="mt-2 text-[10px] font-mono px-2 py-1.5 rounded border" style={{ color: NEXT_COLORS.return, borderColor: nextTint(NEXT_COLORS.return, 25), background: nextTint(NEXT_COLORS.return, 6) }}>
             {err}
           </div>
         )}
@@ -2055,24 +2056,24 @@ function CycleTimeline({
           const num = idx + 1;
           const isActive = c && program.currentCycle === num && program.status === "active";
           const stage = c?.stage ?? null;
-          const stageColor = stage ? STAGE_COLORS[stage] : "#1e293b";
+          const stageColor = stage ? STAGE_COLORS[stage] : NEXT_COLORS.panel;
           return (
             <div
               key={num}
               onClick={() => c && setExpandedCycle(expandedCycle === num ? null : num)}
               className={cn("flex-1 min-w-[140px] rounded-lg border p-2 transition-all", c ? "cursor-pointer" : "opacity-40")}
               style={{
-                borderColor: isActive ? stageColor : `${stageColor}40`,
-                background: isActive ? `${stageColor}15` : `${stageColor}06`,
+                borderColor: isActive ? stageColor : nextTint(stageColor, 25),
+                background: isActive ? nextTint(stageColor, 8) : nextTint(stageColor, 4),
                 borderWidth: isActive ? 2 : 1,
               }}
             >
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-mono font-bold" style={{ color: isActive ? stageColor : "#94a3b8" }}>
+                <span className="text-[10px] font-mono font-bold" style={{ color: isActive ? stageColor : NEXT_COLORS.mineral }}>
                   Cycle {num}
                 </span>
                 {c && stage && (
-                  <span className="text-[9px] font-mono px-1 py-0.5 rounded border" style={{ color: stageColor, borderColor: `${stageColor}60`, background: `${stageColor}10` }}>
+                  <span className="text-[9px] font-mono px-1 py-0.5 rounded border" style={{ color: stageColor, borderColor: nextTint(stageColor, 38), background: nextTint(stageColor, 6) }}>
                     {STAGE_LABELS[stage]}
                   </span>
                 )}
@@ -2081,7 +2082,7 @@ function CycleTimeline({
                 {(["propose", "review", "implement", "reflect"] as const).map((s) => {
                   const done = c && (stageRank(c.stage) > stageRank(s));
                   const current = c && c.stage === s;
-                  const col = current ? STAGE_COLORS[s] : done ? "#22c55e" : "#1e293b";
+                  const col = current ? STAGE_COLORS[s] : done ? NEXT_COLORS.glass : NEXT_COLORS.panel;
                   return (
                     <div key={s} className="flex-1 h-1.5 rounded-full" style={{ background: col }} title={STAGE_LABELS[s]} />
                   );
@@ -2194,14 +2195,14 @@ function ActiveCyclePanel({
             </button>
           )}
           <button onClick={onAdvance} disabled={busy || !canAdvance} className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-mono font-bold transition-all border disabled:opacity-40"
-            style={{ color: stageColor, borderColor: `${stageColor}60`, background: `${stageColor}15` }}>
+            style={{ color: stageColor, borderColor: nextTint(stageColor, 38), background: nextTint(stageColor, 8) }}>
             {busy ? <Loader2 size={12} className="animate-spin" /> : <ChevronRight size={12} />}
             Next Stage → {STAGE_LABELS[nextStage(cycle.stage)] ?? "Next Cycle"}
           </button>
         </div>
       </div>
       {cycle.stage === "review" && pending > 0 && (
-        <div className="text-[10px] font-mono px-2 py-1.5 rounded border" style={{ color: "#fbbf24", borderColor: "#fbbf2440", background: "#fbbf2410" }}>
+        <div className="text-[10px] font-mono px-2 py-1.5 rounded border" style={{ color: NEXT_COLORS.fracture, borderColor: nextTint(NEXT_COLORS.fracture, 25), background: nextTint(NEXT_COLORS.fracture, 6) }}>
           {pending} proposal(s) still need your approve/reject decision before you can advance.
         </div>
       )}
@@ -2222,7 +2223,7 @@ function ActiveCyclePanel({
           <div key={p.id} className="rounded-lg border border-white/10 bg-black/20 p-3 space-y-2">
             <div className="flex items-start justify-between flex-wrap gap-2">
               <div className="flex-1 min-w-0">
-                <div className="font-bold font-mono text-[12px]" style={{ color: "#fde68a" }}>{p.title}</div>
+                <div className="font-bold font-mono text-[12px]" style={{ color: NEXT_COLORS.bone }}>{p.title}</div>
                 <div className="flex flex-wrap gap-1.5 mt-1">
                   <DecisionBadge decision={p.decision} />
                   <MiniBadge color={PROGRAM_RISK_COLORS[p.risk]}>risk: {p.risk}</MiniBadge>
@@ -2233,7 +2234,7 @@ function ActiveCyclePanel({
                     <MiniBadge>truth: {(p.truthfulnessScore * 100).toFixed(0)}%</MiniBadge>
                   )}
                   {p.dispatch && (
-                    <MiniBadge color={p.dispatch.status === "completed" ? "#22c55e" : p.dispatch.status === "failed" ? "#ef4444" : "#a855f7"}>
+                    <MiniBadge color={p.dispatch.status === "completed" ? NEXT_COLORS.glass : p.dispatch.status === "failed" ? NEXT_COLORS.return : NEXT_COLORS.flash}>
                       dispatch: {p.dispatch.status}
                     </MiniBadge>
                   )}
@@ -2273,13 +2274,13 @@ function ActiveCyclePanel({
               <div className="flex gap-2 pt-1">
                 <button onClick={() => onDecide(p.id, "approved")} disabled={busy}
                   className="text-[10px] font-mono px-2 py-1 rounded border transition-all disabled:opacity-50"
-                  style={{ color: "#22c55e", borderColor: "#22c55e60", background: "#22c55e15" }}>
+                  style={{ color: NEXT_COLORS.glass, borderColor: nextTint(NEXT_COLORS.glass, 38), background: nextTint(NEXT_COLORS.glass, 8) }}>
                   <CheckCircle2 size={10} className="inline mr-1" />Approve
                 </button>
                 {!isRejecting ? (
                   <button onClick={() => { setRejectingId(p.id); setRejectReason(""); }} disabled={busy}
                     className="text-[10px] font-mono px-2 py-1 rounded border transition-all disabled:opacity-50"
-                    style={{ color: "#ef4444", borderColor: "#ef444460", background: "#ef444415" }}>
+                    style={{ color: NEXT_COLORS.return, borderColor: nextTint(NEXT_COLORS.return, 38), background: nextTint(NEXT_COLORS.return, 8) }}>
                     <XCircle size={10} className="inline mr-1" />Reject
                   </button>
                 ) : (
@@ -2287,7 +2288,7 @@ function ActiveCyclePanel({
                     <input type="text" value={rejectReason} onChange={e => setRejectReason(e.target.value)}
                       placeholder="Reason (optional)" className="flex-1 text-[10px] font-mono bg-black/40 border border-white/10 rounded px-2 py-1 text-foreground focus:outline-none focus:border-red-500/40" />
                     <button onClick={() => { onDecide(p.id, "rejected", rejectReason); setRejectingId(null); setRejectReason(""); }} disabled={busy}
-                      className="text-[10px] font-mono px-2 py-1 rounded border" style={{ color: "#ef4444", borderColor: "#ef444460", background: "#ef444415" }}>
+                      className="text-[10px] font-mono px-2 py-1 rounded border" style={{ color: NEXT_COLORS.return, borderColor: nextTint(NEXT_COLORS.return, 38), background: nextTint(NEXT_COLORS.return, 8) }}>
                       Confirm
                     </button>
                     <button onClick={() => { setRejectingId(null); setRejectReason(""); }} className="text-[10px] font-mono px-2 py-1 text-muted-foreground">cancel</button>
@@ -2299,7 +2300,7 @@ function ActiveCyclePanel({
             {showDispatch && !p.dispatch && (
               <button onClick={() => onDispatch(p.id)} disabled={busy}
                 className="text-[10px] font-mono px-2 py-1 rounded border transition-all disabled:opacity-50"
-                style={{ color: "#a855f7", borderColor: "#a855f760", background: "#a855f715" }}>
+                style={{ color: NEXT_COLORS.flash, borderColor: nextTint(NEXT_COLORS.flash, 38), background: nextTint(NEXT_COLORS.flash, 8) }}>
                 <SendIcon size={10} className="inline mr-1" />Dispatch as Project Task
               </button>
             )}
@@ -2324,11 +2325,11 @@ function ActiveCyclePanel({
                 {p.dispatch.status === "dispatched" && (
                   <div className="flex gap-1.5">
                     <button onClick={() => onUpdateStatus(p.id, "completed")} disabled={busy}
-                      className="text-[9px] font-mono px-1.5 py-0.5 rounded border" style={{ color: "#22c55e", borderColor: "#22c55e60" }}>
+                      className="text-[9px] font-mono px-1.5 py-0.5 rounded border" style={{ color: NEXT_COLORS.glass, borderColor: nextTint(NEXT_COLORS.glass, 38) }}>
                       mark completed
                     </button>
                     <button onClick={() => onUpdateStatus(p.id, "failed")} disabled={busy}
-                      className="text-[9px] font-mono px-1.5 py-0.5 rounded border" style={{ color: "#ef4444", borderColor: "#ef444460" }}>
+                      className="text-[9px] font-mono px-1.5 py-0.5 rounded border" style={{ color: NEXT_COLORS.return, borderColor: nextTint(NEXT_COLORS.return, 38) }}>
                       mark failed
                     </button>
                   </div>
@@ -2346,7 +2347,7 @@ function ActiveCyclePanel({
                       const pos = d.delta >= 0;
                       return (
                         <span key={i} className="text-[9px] font-mono px-1.5 py-0.5 rounded border"
-                          style={{ color: pos ? "#22c55e" : "#ef4444", borderColor: pos ? "#22c55e40" : "#ef444440", background: pos ? "#22c55e10" : "#ef444410" }}>
+                          style={{ color: pos ? NEXT_COLORS.glass : NEXT_COLORS.return, borderColor: nextTint(pos ? NEXT_COLORS.glass : NEXT_COLORS.return, 25), background: nextTint(pos ? NEXT_COLORS.glass : NEXT_COLORS.return, 6) }}>
                           {d.metric}: {d.before} → {d.after} ({pos ? "+" : ""}{d.delta})
                         </span>
                       );
@@ -2364,7 +2365,7 @@ function ActiveCyclePanel({
                 {!isReflecting ? (
                   <button onClick={() => { setReflectingId(p.id); setReflectText(""); }}
                     className="text-[10px] font-mono px-2 py-1 rounded border"
-                    style={{ color: "#22c55e", borderColor: "#22c55e60", background: "#22c55e15" }}>
+                    style={{ color: NEXT_COLORS.glass, borderColor: nextTint(NEXT_COLORS.glass, 38), background: nextTint(NEXT_COLORS.glass, 8) }}>
                     <Sparkles size={10} className="inline mr-1" />Write manual reflection
                   </button>
                 ) : (
@@ -2375,7 +2376,7 @@ function ActiveCyclePanel({
                     <div className="flex gap-2">
                       <button onClick={() => reflectText.trim() && onReflect(p.id, reflectText.trim())} disabled={busy || !reflectText.trim()}
                         className="text-[10px] font-mono px-2 py-1 rounded border disabled:opacity-40"
-                        style={{ color: "#22c55e", borderColor: "#22c55e60", background: "#22c55e15" }}>
+                         style={{ color: NEXT_COLORS.glass, borderColor: nextTint(NEXT_COLORS.glass, 38), background: nextTint(NEXT_COLORS.glass, 8) }}>
                         Save
                       </button>
                       <button onClick={() => { setReflectingId(null); setReflectText(""); }}
@@ -2399,7 +2400,7 @@ function ActiveCyclePanel({
                     <div className="flex gap-2">
                       <button onClick={() => reflectText.trim() && onReflect(p.id, reflectText.trim())} disabled={busy || !reflectText.trim()}
                         className="text-[10px] font-mono px-2 py-1 rounded border disabled:opacity-40"
-                        style={{ color: "#22c55e", borderColor: "#22c55e60", background: "#22c55e15" }}>
+                         style={{ color: NEXT_COLORS.glass, borderColor: nextTint(NEXT_COLORS.glass, 38), background: nextTint(NEXT_COLORS.glass, 8) }}>
                         Save override
                       </button>
                       <button onClick={() => { setReflectingId(null); setReflectText(""); }}
@@ -2439,26 +2440,26 @@ function nextStage(s: CycleStage): CycleStage {
 }
 
 function DecisionBadge({ decision }: { decision: "pending" | "approved" | "rejected" }) {
-  const color = decision === "approved" ? "#22c55e" : decision === "rejected" ? "#ef4444" : "#fbbf24";
+  const color = decision === "approved" ? NEXT_COLORS.glass : decision === "rejected" ? NEXT_COLORS.return : NEXT_COLORS.flash;
   const label = decision === "pending" ? "pending" : decision;
   return <MiniBadge color={color}>{label}</MiniBadge>;
 }
 
 function MiniBadge({ children, color }: { children: React.ReactNode; color?: string }) {
   if (color) {
-    return <span className="text-[9px] px-1.5 py-0.5 rounded font-mono border" style={{ color, borderColor: `${color}40`, background: `${color}10` }}>{children}</span>;
+    return <span className="text-[9px] px-1.5 py-0.5 rounded font-mono border" style={{ color, borderColor: nextTint(color, 25), background: nextTint(color, 6) }}>{children}</span>;
   }
   return <span className="text-[9px] px-1.5 py-0.5 rounded font-mono bg-white/5 text-muted-foreground border border-white/10">{children}</span>;
 }
 
-const PROGRAM_RISK_COLORS: Record<string, string> = { low: "#22c55e", medium: "#f59e0b", high: "#ef4444" };
+const PROGRAM_RISK_COLORS: Record<string, string> = { low: NEXT_COLORS.glass, medium: NEXT_COLORS.fracture, high: NEXT_COLORS.return };
 
 function FinalSummaryCard({ program }: { program: ImprovementProgram }) {
   const s = program.finalSummary;
   if (!s) return null;
   const positive = s.overallScoreDelta >= 0;
   return (
-    <div className="rounded-xl border p-4 space-y-2" style={{ borderColor: `${PROGRAM_PINK}60`, background: `${PROGRAM_PINK}10` }}>
+    <div className="rounded-xl border p-4 space-y-2" style={{ borderColor: nextTint(PROGRAM_PINK, 38), background: nextTint(PROGRAM_PINK, 6) }}>
       <div className="font-bold font-mono text-sm flex items-center gap-2" style={{ color: PROGRAM_PINK }}>
         <Sparkles size={14} /> Final Program Summary
       </div>
@@ -2475,17 +2476,17 @@ function FinalSummaryCard({ program }: { program: ImprovementProgram }) {
         <MetricBox
           label="Overall Score Δ"
           value={`${s.overallScoreStart} → ${s.overallScoreEnd} (${positive ? "+" : ""}${s.overallScoreDelta})`}
-          color={s.overallScoreDelta > 0 ? "#22c55e" : s.overallScoreDelta < 0 ? "#ef4444" : undefined}
+          color={s.overallScoreDelta > 0 ? NEXT_COLORS.glass : s.overallScoreDelta < 0 ? NEXT_COLORS.return : undefined}
         />
         <MetricBox
           label="Grounding Rate Δ"
           value={`${s.groundingRateStart} → ${s.groundingRateEnd} (${s.groundingRateDelta >= 0 ? "+" : ""}${s.groundingRateDelta})`}
-          color={s.groundingRateDelta > 0 ? "#22c55e" : s.groundingRateDelta < 0 ? "#ef4444" : undefined}
+          color={s.groundingRateDelta > 0 ? NEXT_COLORS.glass : s.groundingRateDelta < 0 ? NEXT_COLORS.return : undefined}
         />
         <MetricBox
           label="Meeseeks Success Δ"
           value={`${s.meeseeksSuccessStart} → ${s.meeseeksSuccessEnd} (${s.meeseeksSuccessDelta >= 0 ? "+" : ""}${s.meeseeksSuccessDelta})`}
-          color={s.meeseeksSuccessDelta > 0 ? "#22c55e" : s.meeseeksSuccessDelta < 0 ? "#ef4444" : undefined}
+          color={s.meeseeksSuccessDelta > 0 ? NEXT_COLORS.glass : s.meeseeksSuccessDelta < 0 ? NEXT_COLORS.return : undefined}
         />
       </div>
       {s.categoryMovements && s.categoryMovements.length > 0 && (
@@ -2495,10 +2496,10 @@ function FinalSummaryCard({ program }: { program: ImprovementProgram }) {
             {s.categoryMovements.map(m => {
               const pos = m.delta > 0;
               const neg = m.delta < 0;
-              const color = pos ? "#22c55e" : neg ? "#ef4444" : "#94a3b8";
+              const color = pos ? NEXT_COLORS.glass : neg ? NEXT_COLORS.return : NEXT_COLORS.mineral;
               return (
                 <span key={m.category} className="text-[9px] font-mono px-1.5 py-0.5 rounded border"
-                  style={{ color, borderColor: `${color}40`, background: `${color}10` }}>
+                  style={{ color, borderColor: nextTint(color, 25), background: nextTint(color, 6) }}>
                   {m.category}: {m.before} → {m.after} ({pos ? "+" : ""}{m.delta})
                 </span>
               );
@@ -2524,7 +2525,7 @@ function FinalSummaryCard({ program }: { program: ImprovementProgram }) {
               {s.perCycle.map(row => (
                 <tr key={row.cycle} className="border-t border-white/5">
                   <td className="pr-2 py-0.5">{row.cycle}</td>
-                  <td className="pr-2 py-0.5" style={{ color: row.overallScoreDelta == null ? undefined : row.overallScoreDelta > 0 ? "#22c55e" : row.overallScoreDelta < 0 ? "#ef4444" : undefined }}>
+                  <td className="pr-2 py-0.5" style={{ color: row.overallScoreDelta == null ? undefined : row.overallScoreDelta > 0 ? NEXT_COLORS.glass : row.overallScoreDelta < 0 ? NEXT_COLORS.return : undefined }}>
                     {row.overallScoreDelta == null ? "—" : `${row.overallScoreDelta >= 0 ? "+" : ""}${row.overallScoreDelta}`}
                   </td>
                   <td className="pr-2 py-0.5">{row.groundingRateDelta == null ? "—" : `${row.groundingRateDelta >= 0 ? "+" : ""}${row.groundingRateDelta}`}</td>
@@ -2573,11 +2574,11 @@ interface DispatchedTaskRow {
 }
 
 const TASK_STATUS_COLORS: Record<DispatchedTaskRow["status"], string> = {
-  queued: "#a855f7",
-  "in-progress": "#22d3ee",
-  completed: "#22c55e",
-  failed: "#ef4444",
-  cancelled: "#94a3b8",
+  queued: NEXT_COLORS.flash,
+  "in-progress": NEXT_COLORS.glass,
+  completed: NEXT_COLORS.mineral,
+  failed: NEXT_COLORS.return,
+  cancelled: NEXT_COLORS.stone,
 };
 
 function TaskQueueCard() {
@@ -2685,7 +2686,7 @@ function TaskQueueCard() {
               <button onClick={() => setExpanded(isOpen ? null : t.id)}
                 className="w-full flex items-center gap-2 p-2 text-left hover:bg-white/5">
                 <span className="text-[9px] font-mono px-1.5 py-0.5 rounded border"
-                  style={{ color, borderColor: `${color}40`, background: `${color}10` }}>{t.status}</span>
+                  style={{ color, borderColor: nextTint(color, 25), background: nextTint(color, 6) }}>{t.status}</span>
                 <span className="text-[10px] font-mono text-muted-foreground">C{t.cycleNumber}</span>
                 <span className="text-[11px] font-mono text-foreground/90 flex-1 truncate">{t.title}</span>
                 <span className="text-[9px] font-mono text-muted-foreground">{t.category} · {t.effortHours}h</span>
@@ -2721,7 +2722,7 @@ function MetricBox({ label, value, color }: { label: string; value: string; colo
   return (
     <div className="rounded-lg border border-white/10 bg-black/30 px-2 py-1.5">
       <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className="text-[12px] font-mono font-bold" style={{ color: color ?? "#f0f0f0" }}>{value}</div>
+      <div className="text-[12px] font-mono font-bold" style={{ color: color ?? NEXT_COLORS.bone }}>{value}</div>
     </div>
   );
 }
@@ -2756,11 +2757,11 @@ function RickAutonomousHeartbeatStrip() {
   });
   const hb = data?.heartbeat;
   if (!hb) return null;
-  const accent = hb.running ? "#22c55e" : "#ef4444";
+  const accent = hb.running ? NEXT_COLORS.glass : NEXT_COLORS.fracture;
   return (
     <div
       className="rounded-xl border p-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5"
-      style={{ borderColor: `${accent}40`, background: `${accent}08` }}
+      style={{ borderColor: nextTint(accent, 25), background: nextTint(accent, 5) }}
       data-testid="rick-autonomous-strip"
     >
       <span className="flex items-center gap-1.5 text-[11px] font-mono font-bold" style={{ color: accent }}>
