@@ -1091,17 +1091,6 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/topics"] }),
   });
 
-  const summonAllMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", `/api/tesseract-forum/topics/${topic.id}/summon-all`, {});
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/topics"] });
-      toast({ title: "All agents summoned" });
-    },
-  });
-
   const fatherInterveneMutation = useMutation({
     mutationFn: async (comment: string) => {
       const res = await apiRequest("POST", `/api/tesseract-forum/topics/${topic.id}/father-intervene`, { comment });
@@ -1379,9 +1368,13 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
             >
               {replyMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
             </Button>
-            <span className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-green-500/25 bg-green-500/10 text-green-400 text-[11px] font-mono min-h-[44px]" data-testid="badge-auto-summon">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              Auto
+            <span
+              role="status"
+              className="flex min-h-[44px] max-w-[190px] items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-2 py-2 text-[10px] leading-tight text-destructive"
+              data-testid="badge-summon-unavailable"
+            >
+              <ShieldAlert size={13} className="shrink-0" />
+              Live worker not configured; summons unavailable.
             </span>
           </div>
         </div>
