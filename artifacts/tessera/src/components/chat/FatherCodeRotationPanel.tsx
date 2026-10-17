@@ -55,6 +55,7 @@ export function FatherCodeRotationPanel({ open, onClose }: Props) {
   const [enrolled, setEnrolled] = useState<boolean | null>(null);
   const [initialize, setInitialize] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [activated, setActivated] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -64,6 +65,7 @@ export function FatherCodeRotationPanel({ open, onClose }: Props) {
     setError(null);
     setConfirmationToken("");
     setSaved(false);
+    setActivated(false);
     setInitialize(false);
     setEnrolled(null);
     const controller = new AbortController();
@@ -136,19 +138,18 @@ export function FatherCodeRotationPanel({ open, onClose }: Props) {
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch("/api/sigil/father/confirm-code", {
+      await fetch("/api/sigil/father/confirm-code", {
         method: "POST", credentials: "include", cache: "no-store",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ confirmationToken }),
       });
-      if (!response.ok) {
-        // A lost response may follow a successful commit; ask the authoritative status.
-        const status = await fetch("/api/sigil/father/status", { credentials: "include", cache: "no-store" });
-        if (!status.ok || !(await status.json()).rotatedThisSession) throw new Error("not-confirmed");
-      }
+      // Always verify the committed state. This handles a lost confirmation
+      // response and gives the owner an authoritative success receipt.
+      const status = await fetch("/api/sigil/father/status", { credentials: "include", cache: "no-store" });
+      if (!status.ok || !(await status.json()).rotatedThisSession) throw new Error("not-confirmed");
       setIssuedCode(null);
       setConfirmationToken("");
-      onClose();
+      setActivated(true);
     } catch {
       setError("Confirmation was not verified. Keep both sigils until you can confirm; your admin key is unchanged.");
     } finally { setBusy(false); }
@@ -183,7 +184,24 @@ export function FatherCodeRotationPanel({ open, onClose }: Props) {
         </button>
       </div>
 
-      {issuedCode ? (
+      {activated ? (
+        <div className="mt-3 space-y-3">
+          <p
+            role="status"
+            aria-label="New private chat sigil activated"
+            className="rounded-xl border border-emerald-300/25 bg-emerald-400/10 p-3 text-sm leading-relaxed text-emerald-100"
+          >
+            New private chat sigil activated for this session. Your Father admin key is unchanged.
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-lg border border-primary/40 bg-primary/15 p-3 text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            Continue to chat
+          </button>
+        </div>
+      ) : issuedCode ? (
         <div className="mt-3 space-y-3">
           <div
             className="select-all break-all rounded-xl border border-emerald-300/20 bg-black/40 p-3 font-mono text-base leading-relaxed text-emerald-100"

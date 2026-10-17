@@ -13,7 +13,7 @@ The owner's latest requirement separates the stable admin key from a rotating ch
 
 **Why:** The owner explicitly changed the earlier single-code requirement to a two-layer flow: stable admin key plus a sigil that rotates each session.
 
-**How to apply:** Treat this as a requested security design, not evidence it already works. Preserve the existing owner gate. Sigil issuance must be server-verified, same-origin, rate-limited, persistent across restarts, and replay-resistant, without sending credentials to the model or storing plaintext in chat/logs. Never issue to a public first visitor or rotate the workspace admin Secret as a side effect of chat.
+**How to apply:** Treat this as a requested security design, not evidence it already works. Preserve the existing owner gate. Keep each replacement pending until the owner confirms saving it privately; only then activate it for that session. Verify issuance server-side, same-origin, rate-limited, persistent across restarts, and replay-resistant, without sending credentials to the model or storing plaintext in chat/logs. Never issue to a public first visitor or rotate the workspace admin Secret as a side effect of chat.
 
 When checking whether a TESSERA feature branch exists on GitHub, query its exact Git ref and compare its SHA with the local tracking ref; a paginated branch list is not proof that the ref is absent.
 

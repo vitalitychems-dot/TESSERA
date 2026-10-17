@@ -302,6 +302,7 @@ async function expectNoCredentialStorage(page: Page, values: string[]) {
 test.describe("private chat sigil rotation", () => {
   test("enrolls, rejects the wrong prior sigil, confirms the replacement, and permits only one rotation per session", async ({ page }) => {
     const state = makeState();
+    await page.setViewportSize({ width: 390, height: 844 });
     await openSignedInChat(page, state);
 
     await openRotationPanel(page, "Please answer this after I verify my private sigil.");
@@ -334,7 +335,13 @@ test.describe("private chat sigil rotation", () => {
     await expect(page.getByRole("button", { name: "Private chat sigil copied" })).toBeVisible();
     expect(await page.evaluate(() => (window as Window & { __testClipboard?: string }).__testClipboard)).toBe(activeSigil);
     await page.getByLabel("I saved this new sigil somewhere private.").check();
-    await page.getByRole("button", { name: "Confirm saved & activate new sigil" }).click();
+    const activateButton = page.getByRole("button", { name: "Confirm saved & activate new sigil" });
+    await activateButton.scrollIntoViewIfNeeded();
+    await expect(activateButton).toBeVisible();
+    await expect(activateButton).toBeEnabled();
+    await activateButton.click();
+    await expect(page.getByRole("status", { name: "New private chat sigil activated" })).toContainText("Your Father admin key is unchanged.");
+    await page.getByRole("button", { name: "Continue to chat" }).click();
     await expect(page.getByTestId("father-code-rotation-panel")).toHaveCount(0);
     expect(state.rotatedThisSession).toBe(true);
     expect(state.currentSigil).toBe(activeSigil);
@@ -381,6 +388,8 @@ test.describe("private chat sigil rotation", () => {
     await expect(page.getByRole("status", { name: "New private chat sigil in LUS" })).toContainText(nextSessionCode);
     await page.getByLabel("I saved this new sigil somewhere private.").check();
     await page.getByRole("button", { name: "Confirm saved & activate new sigil" }).click();
+    await expect(page.getByRole("status", { name: "New private chat sigil activated" })).toBeVisible();
+    await page.getByRole("button", { name: "Continue to chat" }).click();
     await expect(page.getByTestId("father-code-rotation-panel")).toHaveCount(0);
     expect(state.rotatedThisSession).toBe(true);
     expect(state.currentSigil).toBe(nextSessionCode);
@@ -437,6 +446,8 @@ test.describe("private chat sigil rotation", () => {
     await page.getByLabel("I saved this new sigil somewhere private.").check();
     await page.getByRole("button", { name: "Confirm saved & activate new sigil" }).click();
 
+    await expect(page.getByRole("status", { name: "New private chat sigil activated" })).toBeVisible();
+    await page.getByRole("button", { name: "Continue to chat" }).click();
     await expect(page.getByTestId("father-code-rotation-panel")).toHaveCount(0);
     expect(state.currentSigil).toBe(pendingCode);
     expect(state.rotatedThisSession).toBe(true);
