@@ -2,6 +2,13 @@ import { expect, test } from "@playwright/test";
 
 const TEST_CONVERSATION_ID = 2_147_483_000;
 
+test.afterEach(async ({ page }) => {
+  const logoutButton = page.getByRole("button", { name: "logout" });
+  if (await logoutButton.isVisible().catch(() => false)) {
+    await logoutButton.click();
+  }
+});
+
 test("World panel stays readable at phone, tablet, and desktop widths with the real owner gate", async ({ page }) => {
   const adminKey = process.env.TESSERACT_ADMIN_KEY;
   test.skip(!adminKey, "TESSERACT_ADMIN_KEY is required to exercise the real owner sign-in flow.");
