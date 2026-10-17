@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import { chromium } from "playwright-core";
 import { checkMessage } from "../src/studio/protocol.mjs";
@@ -76,8 +77,7 @@ test("the 3D floor renders offices in a browser", async () => {
     const offices = await (await fetch(`${url}world`)).json();
     assert.ok(offices.offices.length >= 2);
     assert.ok(offices.rooms.length >= 1);
-    const shot = "/opt/cursor/artifacts/studio-3d-floor.png";
-    mkdirSync("/opt/cursor/artifacts", { recursive: true });
+    const shot = join(tmpdir(), "tessera-v2-studio-3d-floor.png");
     await page.screenshot({ path: shot });
     const pixels = await page.evaluate(() => {
       const canvas = document.querySelector("#floor-3d");

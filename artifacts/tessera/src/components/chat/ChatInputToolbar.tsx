@@ -1,7 +1,6 @@
 import { memo } from "react";
 import { Send, Mic, MicOff, Square, Volume2, VolumeX, Network, Radio, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ChatFontColorPicker } from "./ChatFontColorPicker";
 import { ChatVoiceSpeedControl } from "./ChatVoiceSpeedControl";
 
 interface ChatInputToolbarProps {
@@ -13,15 +12,11 @@ interface ChatInputToolbarProps {
   ttsEnabled: boolean;
   latticeOpen: boolean;
   summitFeedOpen: boolean;
-  themeOpen: boolean;
-  localFontColor: string;
   globalVoiceSpeed: number;
   voiceSpeedSliderOpen: boolean;
   onSummitClick: () => void;
   onLatticeClick: () => void;
   onLiveClick: () => void;
-  onFontColorToggle: () => void;
-  onFontColorChange: (color: string) => void;
   onTtsToggle: () => void;
   onVoiceSpeedToggle: () => void;
   onVoiceSpeedChange: (speed: number) => void;
@@ -32,10 +27,10 @@ interface ChatInputToolbarProps {
 
 export const ChatInputToolbar = memo(function ChatInputToolbar({
   input, isStreaming, isSending, isRecording,
-  isSpeaking, ttsEnabled, latticeOpen, summitFeedOpen, themeOpen,
-  localFontColor, globalVoiceSpeed, voiceSpeedSliderOpen,
+  isSpeaking, ttsEnabled, latticeOpen, summitFeedOpen,
+  globalVoiceSpeed, voiceSpeedSliderOpen,
   onSummitClick, onLatticeClick, onLiveClick,
-  onFontColorToggle, onFontColorChange, onTtsToggle,
+  onTtsToggle,
   onVoiceSpeedToggle, onVoiceSpeedChange,
   onMicPressStart, onMicPressEnd, onStopStreaming,
 }: ChatInputToolbarProps) {
@@ -82,13 +77,6 @@ export const ChatInputToolbar = memo(function ChatInputToolbar({
         </button>
 
       </div>
-
-      <ChatFontColorPicker
-        isOpen={themeOpen}
-        onToggle={onFontColorToggle}
-        localFontColor={localFontColor}
-        onColorChange={onFontColorChange}
-      />
 
       <div className="flex items-center gap-1.5">
         <button

@@ -135,7 +135,7 @@ export type DeskRequest =
 const FINAL_RE = /^(?:tessera[,:]?\s+)?(?:please\s+)?(?:give|say|write)(?:\s+me)?(?:\s+the)?\s+final\s+answer\.?$/i;
 
 export function latestFinalAnswer(): string {
-  return lessons[0]?.finalAnswer || "I am Tessera. I wrote this through the pen. The pen is local open weights on this desk. It is not me.";
+  return lessons[0]?.finalAnswer || "No final answer has been saved in this running server session. No local Pen model is configured for this desk.";
 }
 
 export function parseChatDesk(text: string): DeskRequest | null {
@@ -184,19 +184,15 @@ function pickAvailable(prompt: string, limit: number): DeskMember[] {
 
 function noteFor(member: DeskMember, prompt: string): string {
   const question = prompt.replace(/\s+/g, " ").trim().slice(0, 180);
-  return `${member.name} is available (${member.role}). Seat: ${member.domain}. On "${question}", this seat keeps the question here and leaves the close to Tessera.`;
+  return `${member.name} is a preset local role label (${member.role}; ${member.domain}). It is not a live independent agent. The prompt was "${question}".`;
 }
 
 function tesseraClose(prompt: string, called: DeskMember[], unavailable: string[], refused: string[]): string {
   const question = prompt.replace(/\s+/g, " ").trim().slice(0, 220);
-  const refusedLine = refused.length > 0 ? ` I do not call ${refused.join(", ")}.` : "";
-  if (called.length === 0) {
-    const who = unavailable.length > 0 ? unavailable.join(", ") : "That seat";
-    return `I am Tessera.${refusedLine} ${who} is not available, so I do not invent their voice. Final answer: the question stays on this desk. I wrote this through the pen.`;
-  }
-  const names = called.map((member) => member.name).join(", ");
-  const seats = called.map((member) => `${member.name} keeps it inside ${member.domain}`).join(". ");
-  return `I am Tessera.${refusedLine} I called ${names} because those seats are available. ${seats}. Final answer: ${question} — held here, through the pen. The pen is not me.`;
+  const refusedLine = refused.length > 0 ? ` Refused external model names: ${refused.join(", ")}.` : "";
+  const selected = called.length > 0 ? called.map((member) => member.name).join(", ") : "none";
+  const unavailableLine = unavailable.length > 0 ? ` Role labels not available: ${unavailable.join(", ")}.` : "";
+  return `This is a local planning template, not a live agent call. Selected role labels: ${selected}.${unavailableLine}${refusedLine} No independent model/provider was contacted and no code or settings were changed. Prompt: "${question}".`;
 }
 
 export function runChatDesk(text: string): DeskTurn | null {
@@ -210,7 +206,7 @@ export function runChatDesk(text: string): DeskTurn | null {
 
   if (request.kind === "train") {
     const reply = enforceTesseraVoice(
-      `I am Tessera. I trained this lesson through the pen: ${request.lesson}`,
+      `I saved this lesson in the running server's in-memory desk: ${request.lesson}. This is not model training and may not survive a server restart.`,
       text,
     );
     trainChat(request.lesson, reply, [], reply);
@@ -251,7 +247,7 @@ export function runChatDesk(text: string): DeskTurn | null {
   trainChat(request.prompt, reply, called.map((member) => member.name), close);
   return {
     reply,
-    agents: [{ id: "tessera", name: "Tessera" }, ...called.map((member) => ({ id: member.id, name: member.name }))],
+    agents: [{ id: "tessera", name: "Tessera" }],
     trained: true,
     called: called.map((member) => member.name),
     unavailable,
