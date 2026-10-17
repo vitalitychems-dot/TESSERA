@@ -1,19 +1,28 @@
-/**
- * Display-side copy of the pen rule.
- * Keep the patterns aligned with artifacts/api-server/src/lib/tessera-voice.ts.
- */
+/** Display-side copy of the server identity/response filter. */
 
 export const PEN_LINE =
-  "I am Tessera. I wrote this through the pen. The pen is local open weights on this desk. It is not me.";
+  "Tessera is the software application; its configured model is a tool, not Tessera's identity.";
 
 export const PEN_WHERE =
-  "I am Tessera. I am in this chamber, writing through the pen. The pen is local open weights on this desk. It is not me.";
+  "Tessera is the application in this interface; the chat view does not establish where it is hosted.";
+
+export const IDENTITY_UNAVAILABLE_REPLY =
+  "I’m Tessera, the AI software application in this project. The current operator says they created Tessera; that is an operator-provided note, not independently verified. This deployment has no configured language model, so it cannot generate a free-form answer right now.";
+
+export const CHAT_MODEL_DISABLED_REPLY =
+  "No language model is configured for this Tessera deployment, so free-form chat generation is unavailable. Deterministic tools and saved application context may still work.";
+
+export const RESPONSE_SUPPRESSED_REPLY =
+  "I couldn’t safely verify that generated response, so it was suppressed. Please retry.";
 
 const IDENTITY_RE =
-  /\b(who are you|what are you|who is this|who is tessera|what(?:'s| is) your name|your name|where is tessera|where are you)\b/i;
+  /\b(who are you|what are you|who is this|who is tessera|what(?:'s| is) your name|your name|where is tessera|where are you|who created you|who made you|your creator)\b/i;
 
-const SELF_CLAIM_RE =
-  /\b(?:i(?:'m| am)\s+grok|i(?:'m| am)\s+(?:claude|chatgpt|gemini|qwen|llama|mistral|deepseek)|i(?:'m| am)\s+(?:an |a )?(?:artificial intelligence(?: language model)?|ai language model|large language model|language model)|as an ai\b|artificial intelligence language model|i was (?:created|trained|developed|made|built) by (?:xai|x\.ai|openai|anthropic|google|meta|alibaba))\b/i;
+const FOREIGN_MODEL_CLAIM_RE =
+  /\b(?:i(?:'m| am)\s+(?:chatgpt|gpt-?\d|claude|gemini|bard|grok|qwen|llama|mistral|deepseek)|my name is\s+(?:chatgpt|gpt-?\d|claude|gemini|bard|grok|qwen|llama|mistral|deepseek)|i was (?:created|trained|developed|made|built) by (?:xai|x\.ai|openai|anthropic|google|meta|alibaba))\b/i;
+
+const UNSUPPORTED_SELFHOOD_RE =
+  /\b(?:i am|i'm) (?:a |an )?(?:conscious|sentient|self-aware|living intelligence)\b|\bi (?:have|possess) (?:my own )?(?:feelings|subjective experience|independent consciousness)\b/i;
 
 export function isIdentityQuestion(text: string): boolean {
   const q = (text || "").trim();
@@ -34,46 +43,32 @@ export function isSearchDump(text: string): boolean {
 }
 
 export function hasSelfClaim(text: string): boolean {
-  return SELF_CLAIM_RE.test(text || "");
+  return FOREIGN_MODEL_CLAIM_RE.test(text || "") || UNSUPPORTED_SELFHOOD_RE.test(text || "");
 }
 
-export function identityReply(userInput: string): string {
-  if (/\bwhere\b/i.test(userInput || "")) return PEN_WHERE;
-  return PEN_LINE;
+export function identityReply(_userInput: string): string {
+  return IDENTITY_UNAVAILABLE_REPLY;
 }
 
 export function enforceTesseraVoice(candidate: string, userInput: string): string {
   const text = (candidate || "").trim();
-  if (isIdentityQuestion(userInput)) {
-    if (!text || hasSelfClaim(text) || isSearchDump(text) || !/\btessera\b/i.test(text)) {
-      return identityReply(userInput);
-    }
-    if (text.startsWith(PEN_WHERE) && text.length > PEN_WHERE.length) return PEN_WHERE;
-    if (text.startsWith(PEN_LINE) && text.length > PEN_LINE.length) return PEN_LINE;
-    return text;
+  if (!text) return isIdentityQuestion(userInput) ? identityReply(userInput) : "";
+  if (hasSelfClaim(text) || isSearchDump(text)) {
+    return isIdentityQuestion(userInput) ? identityReply(userInput) : RESPONSE_SUPPRESSED_REPLY;
   }
-  if (hasSelfClaim(text) || isSearchDump(text)) return PEN_LINE;
   return text;
 }
 
-/** Stream-safe append. Keep aligned with the server copy. */
+/** Stream-safe accumulation; complete identity output is validated at finalization. */
 export function appendTesseraVoice(prev: string, piece: string, userInput: string): string {
-  if (isIdentityQuestion(userInput)) return identityReply(userInput);
-  const prior = prev || "";
-  const incoming = piece || "";
-  if ((prior === PEN_LINE || prior === PEN_WHERE) && incoming.trim()) {
-    const rest = enforceTesseraVoice(incoming.trim(), userInput);
-    if (!rest || rest === PEN_LINE || rest === PEN_WHERE || hasSelfClaim(incoming) || isSearchDump(incoming)) {
-      return PEN_LINE;
-    }
-    return rest;
-  }
-  return enforceTesseraVoice(prior + incoming, userInput);
+  const combined = `${prev || ""}${piece || ""}`;
+  if (isIdentityQuestion(userInput)) return combined;
+  return enforceTesseraVoice(combined, userInput);
 }
 
 /** Last-line display filter when the user turn is no longer in scope. */
 export function presentAssistantText(text: string): string {
   if (!text) return text;
-  if (hasSelfClaim(text) || isSearchDump(text)) return PEN_LINE;
+  if (hasSelfClaim(text) || isSearchDump(text)) return RESPONSE_SUPPRESSED_REPLY;
   return text;
 }

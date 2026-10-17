@@ -727,11 +727,13 @@ describe("local pen boundaries", () => {
     expect(gateScript.includes('["cl"]')).toBe(false);
   });
 
-  it("keeps the hosted pen identity line and the manual gate script", () => {
+  it("keeps the truthful hosted Pen identity line and the manual gate script", () => {
     const client = readFileSync(fileURLToPath(new URL("../lib/llm-client.ts", import.meta.url)), "utf8");
     expect(client).toContain(
-      "You are not Tessera herself, not a biological mind, not consciousness, and not owned weights.",
+      "You are Tessera Pen, the configured language-generation component used by the Tessera software application.",
     );
+    expect(client).toContain("This is unverified operator-provided history, not your own memory.");
+    expect(client).toContain("Do not claim consciousness, sentience, persistent personal identity");
     expect(client).not.toContain("You are Tessera's pen. The pen is Tessera, never Grok.");
     const pkg = JSON.parse(readFileSync(fileURLToPath(new URL("../../package.json", import.meta.url)), "utf8")) as {
       scripts: Record<string, string>;

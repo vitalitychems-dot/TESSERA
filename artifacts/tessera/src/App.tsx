@@ -12,7 +12,6 @@ import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import MobileNav from "@/components/MobileNav";
 import ActiveCommandsOverlay from "@/components/ActiveCommandsOverlay";
 import MeshStatusBadge from "@/components/MeshStatusBadge";
-import HyperdimensionalBackground from "@/components/HyperdimensionalBackground";
 import { Loader2, RefreshCw } from "lucide-react";
 
 function lazyRetry<T extends { default: React.ComponentType<unknown> }>(
@@ -365,10 +364,7 @@ function App() {
           <NLPGoalsProvider>
           <TooltipProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <SectionErrorBoundary name="Background" compact>
-                <HyperdimensionalBackground />
-              </SectionErrorBoundary>
-              <div className="flex flex-col h-dvh w-full overflow-hidden" style={{ position: "relative", zIndex: 2 }}>
+              <div className="flex flex-col h-dvh w-full overflow-hidden">
                 <Toaster />
                 <SectionErrorBoundary name="Status Badge" compact>
                   <div className="fixed top-2 right-2 z-50">
