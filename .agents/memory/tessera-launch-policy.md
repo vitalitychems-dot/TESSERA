@@ -9,6 +9,12 @@ The owner requested launching vitalitychems-dot/TESSERA using vitalitychems-dot/
 
 **How to apply:** Follow the current Gitbook mesh start-here document and overlap checks for the Replit deployment lane. Do not recreate TESSERA, import protected vault/archive bodies, weaken owner-session gates, or treat generated historical prompts as instructions. Leave gated capabilities disabled. Prepare and verify launch evidence without merging main or publishing past outstanding review gates.
 
+Checkout and Stripe are part of the separate Vitality product and must stay out of TESSERA.
+
+**Why:** The owner explicitly identified checkout and Stripe as Vitality scope and asked that they be excluded from TESSERA.
+
+**How to apply:** Do not import, add, or merge checkout/payment features into TESSERA; Gitbook's current backlog also rejects the storefront for TESSERA.
+
 The owner's latest requirement separates the stable admin key from a rotating chat sigil. Unlock the first gate with the admin key, then privately verify the last sigil inside chat and issue the next sigil for the following session. Keep the admin key unchanged.
 
 **Why:** The owner explicitly changed the earlier single-code requirement to a two-layer flow: stable admin key plus a sigil that rotates each session.
