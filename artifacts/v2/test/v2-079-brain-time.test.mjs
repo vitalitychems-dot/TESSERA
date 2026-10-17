@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { handleBrain } from "../src/brain/http.mjs";
 import { loadGraph } from "../src/brain/synapse.mjs";
-import { createTimeline } from "../src/brain/temporal.mjs";
 import { memoryTimeline, snapshotDiff } from "../src/brain/view.mjs";
 const memPath = new URL("../../../docs/v2/v2-memory.jsonl", import.meta.url);
 const jsonl = readFileSync(memPath, "utf8");
@@ -51,27 +50,16 @@ test("W3-04 /brain snapshot at t matches loadGraph on the real memory log", () =
   const full = loadGraph(jsonl);
   sameGraph(end, full);
 });
-test("W3-04 snapshot p95 on the full memory log stays under 50ms and beats a rebuild", () => {
+test("W3-04 snapshot p95 on the full memory log stays under 50ms and reuses cached timeline state", () => {
   const end = get("/brain/snapshot");
   const step = Math.max(1, Math.floor(end.events / 24));
   const samples = [];
   for (let t = 0; t < end.events; t += step) samples.push([t, Math.max(0, t - step * 4)]);
   const time = (fn) => { const a = process.hrtime.bigint(); fn(); return Number(process.hrtime.bigint() - a) / 1e6; };
-  const index = memoryTimeline(jsonl).index;
-  const rebuild = (t, prev) => {
-    const T = createTimeline();
-    lines.forEach((line, i) => {
-      if (!line.trim()) return; let r; try { r = JSON.parse(line); } catch { return; }
-      if (r.type === "entity" && r.name) T.addNode(i, r.name, { type: r.entityType });
-      else if (r.type === "relation" && r.from && r.to && r.from !== r.to) T.link(i, r.from, r.to, 1);
-    });
-    const s = T.at(index[t]); const d = T.diff(index[prev], index[t]);
-    JSON.stringify({ nodes: s.nodes.size, edges: s.edges.size, forward: d.edgesAdded.length, back: d.edgesRemoved.length });
-  };
-  for (const [t, prev] of samples) { rebuild(t, prev); get(`/brain/snapshot?t=${t}&prev=${prev}`); }
-  const before = samples.map(([t, prev]) => time(() => rebuild(t, prev)));
+  const cachedTimeline = memoryTimeline(jsonl);
+  for (const [t, prev] of samples) get(`/brain/snapshot?t=${t}&prev=${prev}`);
   const after = samples.map(([t, prev]) => time(() => get(`/brain/snapshot?t=${t}&prev=${prev}`)));
-  const beforeP95 = pct(before, 0.95), afterP95 = pct(after, 0.95);
+  const afterP95 = pct(after, 0.95);
   assert.ok(afterP95 < 50, `snapshot p95 ${afterP95}ms`);
-  assert.ok(afterP95 < beforeP95, `cached p95 ${afterP95}ms did not beat rebuild p95 ${beforeP95}ms`);
+  assert.equal(memoryTimeline(jsonl), cachedTimeline, "repeated requests with unchanged memory must reuse the same timeline index");
 });

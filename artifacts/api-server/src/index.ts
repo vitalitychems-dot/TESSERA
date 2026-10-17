@@ -17,7 +17,7 @@ import {
   startMeshHeartbeatMonitor,
 } from "./lib/session-mesh";
 import { validateMeshToken } from "./lib/mesh-auth";
-import { setActualPort } from "./lib/server-config";
+import { parseConfiguredPort, setActualPort } from "./lib/server-config";
 import {
   setOnRoutesHealthyCallback,
   setOnRoutesUnhealthyCallback,
@@ -29,19 +29,7 @@ import { db } from "@workspace/db";
 import { swarmTasksTable, decisionHistoryTable } from "@workspace/db/schema";
 import { desc } from "drizzle-orm";
 
-const rawPort = process.env["PORT"];
-
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
-
-const basePort = Number(rawPort);
-
-if (Number.isNaN(basePort) || basePort <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
+const basePort = parseConfiguredPort(process.env["PORT"]);
 
 const server = http.createServer(app);
 
@@ -54,6 +42,10 @@ async function findAvailablePort(startPort: number, maxAttempts = 10): Promise<n
     let attempt = 0;
 
     function tryPort(p: number) {
+      if (!Number.isInteger(p) || p < 1 || p > 65_535) {
+        reject(new Error(`No available valid port found after ${attempt} attempts starting from ${startPort}`));
+        return;
+      }
       const probe = http.createServer();
       probe.once("error", (err: NodeJS.ErrnoException) => {
         probe.close();

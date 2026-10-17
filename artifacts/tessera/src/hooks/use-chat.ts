@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@/lib/queryClient";
 import { type Message } from "@/lib/types";
 import { puterChat, isPuterAvailable, tesseractSwarm, PUTER_MODELS, type SwarmAgentResponse, type SwarmComm } from "@/lib/puter-ai";
-import { appendTesseraVoice, enforceTesseraVoice, identityReply, isIdentityQuestion } from "@/lib/tessera-voice";
+import { appendTesseraVoice, enforceTesseraVoice, isIdentityQuestion } from "@/lib/tessera-voice";
 import type { ExecutionResultData } from "@/components/chat/CodeExecutionResult";
 
 export interface AgentInfo {
@@ -142,12 +142,6 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
     lastAccumulatedRef.current = "";
     timedOutRef.current = false;
     startThinkingTimer();
-    if (isIdentityQuestion(content)) {
-      const spoken = identityReply(content);
-      setStreamingContent(spoken);
-      lastAccumulatedRef.current = spoken;
-      stopThinkingTimer();
-    }
 
     if (hardTimeoutRef.current) clearTimeout(hardTimeoutRef.current);
     hardTimeoutRef.current = setTimeout(() => {
@@ -232,21 +226,19 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
                   if (data.content) {
                     stopThinkingTimer();
                     serverAccumulated = appendTesseraVoice(serverAccumulated, data.content, content);
-                    setStreamingContent(serverAccumulated);
+                    if (!isIdentityQuestion(content)) setStreamingContent(serverAccumulated);
                     lastAccumulatedRef.current = serverAccumulated;
                   }
                   if (data.chunk) {
                     stopThinkingTimer();
                     serverAccumulated = appendTesseraVoice(serverAccumulated, data.chunk, content);
-                    setStreamingContent(serverAccumulated);
+                    if (!isIdentityQuestion(content)) setStreamingContent(serverAccumulated);
                     lastAccumulatedRef.current = serverAccumulated;
                   }
                   if (data.done) {
                     stopThinkingTimer();
                     if (data.finalContent) {
-                      serverAccumulated = isIdentityQuestion(content)
-                        ? identityReply(content)
-                        : enforceTesseraVoice(data.finalContent, content);
+                      serverAccumulated = enforceTesseraVoice(data.finalContent, content);
                       setStreamingContent(serverAccumulated);
                       lastAccumulatedRef.current = serverAccumulated;
                     }
@@ -422,9 +414,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
               stopThinkingTimer();
               receivedDone = true;
               if (data.finalContent) {
-                accumulated = isIdentityQuestion(content)
-                  ? identityReply(content)
-                  : enforceTesseraVoice(data.finalContent, content);
+                accumulated = enforceTesseraVoice(data.finalContent, content);
                 setStreamingContent(accumulated);
               }
               const finalText = accumulated;
@@ -463,7 +453,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
             if (data.content) {
               stopThinkingTimer();
               accumulated = appendTesseraVoice(accumulated, data.content, content);
-              setStreamingContent(accumulated);
+              if (!isIdentityQuestion(content)) setStreamingContent(accumulated);
               lastAccumulatedRef.current = accumulated;
             }
           } catch (_e) {
@@ -483,9 +473,7 @@ export function useChat(conversationId: number | null, stealthMode: boolean = fa
               lastAccumulatedRef.current = accumulated;
             }
             if (data.finalContent) {
-              accumulated = isIdentityQuestion(content)
-                ? identityReply(content)
-                : enforceTesseraVoice(data.finalContent, content);
+              accumulated = enforceTesseraVoice(data.finalContent, content);
               lastAccumulatedRef.current = accumulated;
             }
           } catch (_e) {}

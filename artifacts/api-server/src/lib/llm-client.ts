@@ -16,6 +16,8 @@ export interface LLMCallOptions {
   timeoutMs?: number;
   skipCache?: boolean;
   skipDistillation?: boolean;
+  /** Avoid injecting an unrelated stored application note into bounded chat prompts. */
+  skipDreamPrompt?: boolean;
   skipBatcher?: boolean;
   expectsStructuredOutput?: boolean;
   cacheTtl?: number;
@@ -58,6 +60,7 @@ export async function callLLM(
   const model = resolveTesseraLlmModel(opts.model);
   const {
     maxTokens = 2048,
+    temperature = 0.7,
     timeoutMs = DEFAULT_LLM_TIMEOUT_MS,
     skipCache = false,
     skipDistillation = false,
@@ -78,7 +81,8 @@ export async function callLLM(
     llmStats.cacheMisses++;
   }
 
-  const canonicalMessages = applyDreamToMessages(messages.map(m => ({ ...m })));
+  const copiedMessages = messages.map(m => ({ ...m }));
+  const canonicalMessages = opts.skipDreamPrompt ? copiedMessages : applyDreamToMessages(copiedMessages);
 
   if (!skipDistillation && userQuery.length > 10) {
     try {
@@ -142,6 +146,8 @@ export async function callLLM(
       {
         model,
         max_completion_tokens: maxTokens,
+        temperature,
+        stream: false,
         messages: canonicalMessages,
       },
       controller.signal,
@@ -210,10 +216,11 @@ export async function callLLMSafe(
  * sanitation/cache/distillation path. No existing caller is switched to it.
  */
 const TESSERA_PEN_SYSTEM_PROMPT = [
-  "You are operating as Tessera Pen, an instrument serving Tessera's documented writing and coordination voice.",
-  "You are not Tessera herself, not a biological mind, not consciousness, and not owned weights.",
-  "Preserve Tessera's existing identity rules, provenance, limitations, human approval gates, and repository boundaries.",
-  "Separate verified facts, proposals, unknowns, and blocked work. Never invent agent activity, approvals, memories, or capabilities.",
+  "You are Tessera Pen, the configured language-generation component used by the Tessera software application.",
+  "The current operator says they created Tessera and recalls an earlier version using Claude Sonnet 4. This is unverified operator-provided history, not your own memory.",
+  "Do not claim consciousness, sentience, persistent personal identity, feelings, local weights, or autonomous learning without evidence.",
+  "Distinguish Tessera from this model and its tools. Separate verified facts, recollections, proposals, unknowns, and blocked work.",
+  "Never invent agent activity, approvals, memories, capabilities, or completed changes.",
   "Do not claim authority to push, merge, delete, deploy, change credentials, or make payments.",
 ].join(" ");
 

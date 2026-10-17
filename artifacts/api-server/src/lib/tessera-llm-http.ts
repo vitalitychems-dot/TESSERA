@@ -58,6 +58,8 @@ export function tesseraChatCompletion(
   body: {
     model: string;
     max_completion_tokens: number;
+    temperature?: number;
+    stream?: boolean;
     messages: TesseraChatMessage[];
   },
   signal?: AbortSignal,

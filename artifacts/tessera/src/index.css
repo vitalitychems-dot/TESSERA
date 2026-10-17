@@ -1,29 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "./styles/tessera-next.css";
+@import "./styles/workspace-shell.css";
 @plugin "@tailwindcss/typography";
-
-@font-face {
-  font-family: Syne;
-  src: url("/fonts/syne-500.woff2") format("woff2");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: Syne;
-  src: url("/fonts/syne-700.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Fragment Mono";
-  src: url("/fonts/fragment-mono.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
 
 @custom-variant dark (&:is(.dark *));
 
@@ -160,9 +138,9 @@
   --chart-4: 42 30% 80%;
   --chart-5: 200 18% 62%;
 
-  --app-font-sans: Syne, "Avenir Next", "Trebuchet MS", sans-serif;
-  --app-font-serif: Syne, "Avenir Next", Georgia, serif;
-  --app-font-mono: "Fragment Mono", ui-monospace, Menlo, monospace;
+  --app-font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --app-font-serif: Georgia, "Times New Roman", serif;
+  --app-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --radius: .625rem;
   --shadow-2xs: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
   --shadow-xs: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
@@ -197,41 +175,6 @@
   --opaque-button-border-intensity: 9;
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
-
-  --background: 210 26% 4%;
-  --foreground: 42 35% 93%;
-  --border: 208 23% 18%;
-  --card: 212 27% 8%;
-  --card-foreground: 42 35% 93%;
-  --card-border: 208 23% 18%;
-  --sidebar: 212 24% 7%;
-  --sidebar-foreground: 42 22% 88%;
-  --sidebar-border: 208 20% 16%;
-  --sidebar-primary: 165 79% 72%;
-  --sidebar-primary-foreground: 210 26% 6%;
-  --sidebar-accent: 165 18% 14%;
-  --sidebar-accent-foreground: 42 22% 88%;
-  --sidebar-ring: 165 79% 72%;
-  --popover: 212 24% 9%;
-  --popover-foreground: 42 35% 93%;
-  --popover-border: 208 20% 18%;
-  --primary: 165 79% 72%;
-  --primary-foreground: 210 26% 6%;
-  --secondary: 212 16% 14%;
-  --secondary-foreground: 42 18% 86%;
-  --muted: 212 14% 14%;
-  --muted-foreground: 205 12% 68%;
-  --accent: 165 22% 18%;
-  --accent-foreground: 42 35% 93%;
-  --destructive: 11 100% 61%;
-  --destructive-foreground: 20 30% 8%;
-  --input: 208 16% 18%;
-  --ring: 165 79% 72%;
-  --chart-1: 165 79% 72%;
-  --chart-2: 11 90% 64%;
-  --chart-3: 172 40% 70%;
-  --chart-4: 42 30% 80%;
-  --chart-5: 200 18% 62%;
 
   --shadow-2xs: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
   --shadow-xs: 0 1px 3px 0 rgba(0, 0, 0, 0.5);
