@@ -14,7 +14,11 @@ import { requireAdminSession } from "../lib/sovereign-admin";
 import { z } from "zod/v4";
 
 const router = Router();
-router.use(requireAdminSession);
+// Keep the owner gate scoped to this router's endpoints. A root-level
+// `router.use(requireAdminSession)` also intercepts unrelated API routes when
+// this router is mounted in the shared root router, including the public
+// `/admin/session` handlers that must be reachable to establish a session.
+router.use("/provider-sovereignty", requireAdminSession);
 
 const providerLogSchema = z.object({
   providerId: z.string().trim().min(1).max(128).regex(/^[a-zA-Z0-9._:-]+$/),
