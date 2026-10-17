@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Send, Mic, MicOff, Square, Volume2, VolumeX, Network, Radio, Activity } from "lucide-react";
+import { Send, Mic, MicOff, Square, Volume2, VolumeX, Network, Radio, Activity, Keyboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChatFontColorPicker } from "./ChatFontColorPicker";
 import { ChatVoiceSpeedControl } from "./ChatVoiceSpeedControl";
@@ -14,12 +14,14 @@ interface ChatInputToolbarProps {
   latticeOpen: boolean;
   summitFeedOpen: boolean;
   themeOpen: boolean;
+  keyboardEnabled: boolean;
   localFontColor: string;
   globalVoiceSpeed: number;
   voiceSpeedSliderOpen: boolean;
   onSummitClick: () => void;
   onLatticeClick: () => void;
   onLiveClick: () => void;
+  onKeyboardToggle: () => void;
   onFontColorToggle: () => void;
   onFontColorChange: (color: string) => void;
   onTtsToggle: () => void;
@@ -32,9 +34,9 @@ interface ChatInputToolbarProps {
 
 export const ChatInputToolbar = memo(function ChatInputToolbar({
   input, isStreaming, isSending, isRecording,
-  isSpeaking, ttsEnabled, latticeOpen, summitFeedOpen, themeOpen,
+  isSpeaking, ttsEnabled, latticeOpen, summitFeedOpen, themeOpen, keyboardEnabled,
   localFontColor, globalVoiceSpeed, voiceSpeedSliderOpen,
-  onSummitClick, onLatticeClick, onLiveClick,
+  onSummitClick, onLatticeClick, onLiveClick, onKeyboardToggle,
   onFontColorToggle, onFontColorChange, onTtsToggle,
   onVoiceSpeedToggle, onVoiceSpeedChange,
   onMicPressStart, onMicPressEnd, onStopStreaming,
@@ -79,6 +81,21 @@ export const ChatInputToolbar = memo(function ChatInputToolbar({
         >
           <Activity size={13} className={summitFeedOpen ? "animate-pulse" : ""} />
           <span className="hidden sm:inline">Live</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onKeyboardToggle}
+          aria-pressed={keyboardEnabled}
+          className={cn(
+            "h-8 w-8 flex items-center justify-center rounded-full transition-all",
+            keyboardEnabled ? "text-[#7ef0d4] bg-[#7ef0d4]/10" : "text-gray-500 hover:text-[#7ef0d4] hover:bg-white/[0.06]"
+          )}
+          title={keyboardEnabled ? "Use device keyboard" : "Use Tessera keyboard"}
+          aria-label={keyboardEnabled ? "Use device keyboard" : "Use Tessera keyboard"}
+          data-testid="button-toggle-tessera-keyboard"
+        >
+          <Keyboard size={14} />
         </button>
 
       </div>

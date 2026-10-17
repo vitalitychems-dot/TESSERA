@@ -20,3 +20,15 @@ When checking whether a TESSERA feature branch exists on GitHub, query its exact
 **Why:** GitHub's first branch-list page omitted a known repository ref while the exact Git-ref endpoint returned it.
 
 **How to apply:** Before syncing a branch, verify the precise ref and ancestry. Do not push or merge based only on a truncated branch list.
+
+The owner requires TESSERA's private mesh to remain separate from Gitmesh: Gitmesh may be inspected as a reference, but do not post to or write into that repository. Do not admit Moltbook or other external agents into TESSERA's private mesh.
+
+**Why:** The owner explicitly asked to use Gitmesh technology without joining its network or publishing there, and wants the owner-controlled mesh isolated from outside agents.
+
+**How to apply:** Inspect an identified Gitmesh repository read-only until the owner approves a specific integration. Keep TESSERA's own mesh identity, storage, and peers separate; do not enable an external-agent ingress path without an owner-approved source and policy.
+
+TESSERA's owner-facing notes must come from verifiable events or an actual configured worker, not fabricated claims of spontaneous thoughts. Each note must have a stable source/event identity so retries and app reopen do not create duplicates.
+
+**Why:** The owner requested real, non-roleplayed notes that appear on reopening and are never sent twice.
+
+**How to apply:** Do not generate or label content as an autonomous Tessera thought without a real source. Persist and deduplicate by source event ID before surfacing a note; keep its provenance visible.

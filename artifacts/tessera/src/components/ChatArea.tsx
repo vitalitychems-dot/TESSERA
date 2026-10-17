@@ -42,6 +42,7 @@ import { ChatLatticePanel } from "./chat/ChatLatticePanel";
 import { ChatSummitFeedPanel } from "./chat/ChatSummitFeedPanel";
 import { ChatMessageList } from "./chat/ChatMessageList";
 import { ChatInputToolbar } from "./chat/ChatInputToolbar";
+import { TesseraKeyboard } from "./chat/TesseraKeyboard";
 import { ChatFileUploadArea } from "./chat/ChatFileUploadArea";
 import { ChamberActions, ChamberBar } from "./chat/ChamberBar";
 import { presentAssistantText } from "@/lib/tessera-voice";
@@ -79,12 +80,49 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   const [dataCommandResult, setDataCommandResult] = useState<{ label: string; content: string; loading: boolean } | null>(null);
   const [showCommandHints, setShowCommandHints] = useState(false);
   const [input, setInput] = useState("");
+  const [tesseraKeyboardMode, setTesseraKeyboardMode] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(pointer: coarse), (max-width: 640px)").matches,
+  );
+  const [tesseraKeyboardOpen, setTesseraKeyboardOpen] = useState(false);
   const [allowExternalProvider, setAllowExternalProvider] = useState(false);
   const inputRef = useRef("");
   const setInputBoth = useCallback((val: string) => {
     inputRef.current = val;
     setInput(val);
   }, []);
+  const insertAtComposerCaret = useCallback((text: string) => {
+    const textarea = textareaRef.current;
+    const current = inputRef.current;
+    const start = textarea?.selectionStart ?? current.length;
+    const end = textarea?.selectionEnd ?? start;
+    const next = current.slice(0, start) + text + current.slice(end);
+    const caret = start + text.length;
+    setInputBoth(next);
+    requestAnimationFrame(() => {
+      if (!textarea) return;
+      textarea.focus({ preventScroll: true });
+      textarea.setSelectionRange(caret, caret);
+    });
+  }, [setInputBoth]);
+  const deleteAtComposerCaret = useCallback(() => {
+    const textarea = textareaRef.current;
+    const current = inputRef.current;
+    let start = textarea?.selectionStart ?? current.length;
+    const end = textarea?.selectionEnd ?? start;
+    if (start === end && start > 0) {
+      start -= 1;
+      const code = current.charCodeAt(start);
+      if (code >= 0xdc00 && code <= 0xdfff && start > 0) start -= 1;
+    }
+    if (start === end) return;
+    const next = current.slice(0, start) + current.slice(end);
+    setInputBoth(next);
+    requestAnimationFrame(() => {
+      if (!textarea) return;
+      textarea.focus({ preventScroll: true });
+      textarea.setSelectionRange(start, start);
+    });
+  }, [setInputBoth]);
   const [isRecording, setIsRecording] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [attachmentLoadError, setAttachmentLoadError] = useState<string | null>(null);
@@ -1326,6 +1364,9 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
               <textarea
                 ref={textareaRef}
                 value={input}
+                readOnly={tesseraKeyboardMode}
+                inputMode={tesseraKeyboardMode ? "none" : "text"}
+                aria-describedby={tesseraKeyboardMode ? "tessera-keyboard-privacy-note" : undefined}
                 onChange={(e) => {
                   const val = e.target.value;
                   inputRef.current = val;
@@ -1367,7 +1408,9 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
                     }
                   }
                 }}
-                onFocus={() => {}}
+                onFocus={() => {
+                  if (tesseraKeyboardMode) setTesseraKeyboardOpen(true);
+                }}
                 placeholder={
                   isAdmin ? "Sovereign command..." :
                   colonelPhase === "hash_accepted" ? "Enter your sovereign key..." :
@@ -1395,10 +1438,15 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
                 rows={1}
                 enterKeyHint="send"
                 autoComplete="off"
-                autoCorrect="on"
-                spellCheck={true}
+                autoCorrect={tesseraKeyboardMode ? "off" : "on"}
+                spellCheck={!tesseraKeyboardMode}
                 data-testid="input-message"
               />
+              {tesseraKeyboardMode && (
+                <span id="tessera-keyboard-privacy-note" className="sr-only">
+                  Draft text stays in this page until you choose Send. The app cannot control what the operating system or browser observes.
+                </span>
+              )}
               
               {isRecording && !input && !interimText && (
                 <div className="absolute left-5 top-4 right-5 pointer-events-none">
@@ -1449,12 +1497,19 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
               latticeOpen={latticeOpen}
               summitFeedOpen={summitFeedOpen}
               themeOpen={themeOpen}
+              keyboardEnabled={tesseraKeyboardMode}
               localFontColor={localFontColor}
               globalVoiceSpeed={globalVoiceSpeed}
               voiceSpeedSliderOpen={voiceSpeedSliderOpen}
               onSummitClick={() => { setInputBoth("/summit "); textareaRef.current?.focus(); }}
               onLatticeClick={() => { setLatticeOpen(!latticeOpen); setMoltAgentOpen(false); setThemeOpen(false); setSummitFeedOpen(false); }}
               onLiveClick={() => { setSummitFeedOpen(v => !v); setLatticeOpen(false); setMoltAgentOpen(false); setThemeOpen(false); }}
+              onKeyboardToggle={() => {
+                const enabled = !tesseraKeyboardMode;
+                setTesseraKeyboardMode(enabled);
+                setTesseraKeyboardOpen(enabled);
+                textareaRef.current?.focus();
+              }}
               onFontColorToggle={() => { setThemeOpen(v => !v); setMoltAgentOpen(false); }}
               onFontColorChange={handleLocalFontColor}
               onTtsToggle={() => {
@@ -1469,6 +1524,12 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
             />
           </div>
         </form>
+        <TesseraKeyboard
+          open={tesseraKeyboardMode && tesseraKeyboardOpen}
+          onInsert={insertAtComposerCaret}
+          onBackspace={deleteAtComposerCaret}
+          onClose={() => setTesseraKeyboardOpen(false)}
+        />
         <ChamberActions
           lastReply={(() => {
             const last = [...messages].reverse().find((m) => m.role === "assistant");

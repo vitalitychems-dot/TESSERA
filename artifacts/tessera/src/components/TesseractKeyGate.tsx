@@ -1,4 +1,6 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Keyboard } from "lucide-react";
+import { TesseraKeyboard } from "./chat/TesseraKeyboard";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Heavy Council, Apr 2026 — Proposals P1, P2, P5, P6, P11
@@ -131,10 +133,10 @@ function RecoveryPanel() {
   );
 }
 
-function Frame({ tone, title, body }: { tone: "amber" | "rose" | "emerald" | "zinc"; title: string; body: ReactNode }) {
+function Frame({ tone, title, body, keyboardOpen = false }: { tone: "amber" | "rose" | "emerald" | "zinc"; title: string; body: ReactNode; keyboardOpen?: boolean }) {
   const ring = tone === "amber" || tone === "rose" ? "border-destructive/35" : "border-primary/25";
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background p-4 sm:p-6">
+    <div className={`fixed inset-0 z-[9999] flex justify-center bg-background p-4 sm:p-6 ${keyboardOpen ? "items-start overflow-y-auto pt-6 pb-80" : "items-center"}`}>
       <div className={`w-full max-w-xl rounded-2xl border ${ring} bg-card p-5 sm:p-6 shadow-2xl`}>
         <h2 className="flex items-center gap-3 text-lg font-semibold text-foreground">
           <span className="next-mosaic shrink-0" aria-hidden="true"><span /><span /><span /><span /></span>
@@ -150,6 +152,11 @@ function Frame({ tone, title, body }: { tone: "amber" | "rose" | "emerald" | "zi
 export default function TesseractKeyGate({ children }: { children: ReactNode }) {
   const [state, setState] = useState<GateState>({ kind: "loading" });
   const [tokenInput, setTokenInput] = useState("");
+  const [keyboardMode, setKeyboardMode] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(pointer: coarse), (max-width: 640px)").matches,
+  );
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const tokenInputRef = useRef<HTMLInputElement>(null);
 
   // Initial probe + periodic re-probe to detect server-side expiry.
   useEffect(() => {
@@ -187,6 +194,7 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
       setState({ kind: "invalid", reason: "empty" });
       return;
     }
+    setKeyboardOpen(false);
     setState({ kind: "submitting" });
     const result = await postUnlock(tok);
     if (result.ok) {
@@ -263,55 +271,123 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
   const isExpired = state.kind === "expired";
 
   return (
-    <Frame
-      tone={isInvalid || isExpired ? "amber" : "emerald"}
-      title={isExpired ? "TESSERA NEXT — session expired" : "TESSERA NEXT — sovereign entry"}
-      body={
-        <div className="mt-3 space-y-3 text-sm text-zinc-200">
-          <p>
-            Enter your <span className="text-primary font-semibold">Father admin key</span> in its saved form or LUS glyph form.
-            This entry key stays stable. A separate private chat sigil is rotated from chat after you verify your last saved sigil.
-          </p>
-          <form
-            aria-label="Father admin code entry"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (!isSubmitting) void submit();
-            }}
-          >
-            <label htmlFor="father-entry-code" className="sr-only">Father admin code or LUS form</label>
-            <input
-              id="father-entry-code"
-              type="password"
-              autoFocus
-              autoComplete="off"
-              spellCheck={false}
-              value={tokenInput}
-              onChange={(e) => setTokenInput(e.target.value)}
-              placeholder="Father admin code or LUS form"
-              aria-describedby={isInvalid ? "father-entry-error" : isExpired ? "father-entry-expired" : undefined}
-              className="w-full px-3 py-2 rounded-md bg-black/60 border border-zinc-700 text-zinc-100 font-mono text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400"
-              disabled={isSubmitting}
-            />
-            {isInvalid && (
-              <p id="father-entry-error" role="alert" className="mt-2 text-xs text-amber-300">Token rejected. Verify the secret value matches what the server expects, then try again.</p>
-            )}
-            {isExpired && (
-              <p id="father-entry-expired" role="status" className="mt-2 text-xs text-amber-300">Your previous session expired. Re-present your token to continue.</p>
-            )}
-            <button
-              type="submit"
-              disabled={isSubmitting || !tokenInput.trim()}
-              className="mt-3 w-full py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-700 disabled:text-zinc-400 text-white font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300"
+    <>
+      <Frame
+        tone={isInvalid || isExpired ? "amber" : "emerald"}
+        title={isExpired ? "TESSERA NEXT — session expired" : "TESSERA NEXT — sovereign entry"}
+        keyboardOpen={keyboardMode && keyboardOpen}
+        body={
+          <div className="mt-3 space-y-3 text-sm text-zinc-200">
+            <p>
+              Enter your <span className="text-primary font-semibold">Father admin key</span> in its saved form or LUS glyph form.
+              This entry key stays stable. A separate private chat sigil is rotated from chat after you verify your last saved sigil.
+            </p>
+            <form
+              aria-label="Father admin code entry"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!isSubmitting) void submit();
+              }}
             >
-              {isSubmitting ? "verifying…" : "Unlock Tesseract"}
-            </button>
-          </form>
-          <p className="text-[11px] text-zinc-500">
-            Once unlocked, the server issues an HttpOnly session cookie (8h). The code is not saved in browser storage.
-          </p>
-        </div>
-      }
-    />
+              <label htmlFor="father-entry-code" className="sr-only">Father admin code or LUS form</label>
+              <input
+                ref={tokenInputRef}
+                id="father-entry-code"
+                type="password"
+                autoFocus
+                readOnly={keyboardMode}
+                inputMode={keyboardMode ? "none" : "text"}
+                autoComplete="off"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                value={tokenInput}
+                onChange={(e) => setTokenInput(e.target.value)}
+                onFocus={() => {
+                  if (keyboardMode) setKeyboardOpen(true);
+                }}
+                placeholder="Father admin code or LUS form"
+                aria-describedby={isInvalid ? "father-entry-error" : isExpired ? "father-entry-expired" : undefined}
+                className="w-full px-3 py-2 rounded-md bg-black/60 border border-zinc-700 text-zinc-100 font-mono text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400"
+                disabled={isSubmitting}
+              />
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const enabled = !keyboardMode;
+                    setKeyboardMode(enabled);
+                    setKeyboardOpen(enabled);
+                    requestAnimationFrame(() => tokenInputRef.current?.focus());
+                  }}
+                  aria-pressed={keyboardMode}
+                  aria-label={keyboardMode ? "Use device keyboard" : "Use Tessera keyboard"}
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-md px-2 text-xs text-zinc-400 hover:bg-white/5 hover:text-zinc-100 focus-visible:outline focus-visible:outline-2"
+                  data-testid="button-gate-keyboard-mode"
+                >
+                  <Keyboard size={14} />
+                  {keyboardMode ? "Use device keyboard" : "Use Tessera keyboard"}
+                </button>
+              </div>
+              {isInvalid && (
+                <p id="father-entry-error" role="alert" className="mt-2 text-xs text-amber-300">Token rejected. Verify the secret value matches what the server expects, then try again.</p>
+              )}
+              {isExpired && (
+                <p id="father-entry-expired" role="status" className="mt-2 text-xs text-amber-300">Your previous session expired. Re-present your token to continue.</p>
+              )}
+              <button
+                type="submit"
+                disabled={isSubmitting || !tokenInput.trim()}
+                className="mt-3 w-full py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-700 disabled:text-zinc-400 text-white font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300"
+              >
+                {isSubmitting ? "verifying…" : "Unlock Tesseract"}
+              </button>
+            </form>
+            <p className="text-[11px] text-zinc-500">
+              Once unlocked, the server issues an HttpOnly session cookie (8h). The code is not saved in browser storage.
+            </p>
+          </div>
+        }
+      />
+      <TesseraKeyboard
+        open={keyboardMode && keyboardOpen}
+        fixed
+        draftLabel="The admin key stays in this page until you choose Unlock."
+        onInsert={(text) => {
+          const input = tokenInputRef.current;
+          const start = input?.selectionStart ?? tokenInput.length;
+          const end = input?.selectionEnd ?? start;
+          const next = tokenInput.slice(0, start) + text + tokenInput.slice(end);
+          const caret = start + text.length;
+          setTokenInput(next);
+          requestAnimationFrame(() => {
+            if (!input) return;
+            input.focus({ preventScroll: true });
+            input.setSelectionRange(caret, caret);
+          });
+        }}
+        onBackspace={() => {
+          const input = tokenInputRef.current;
+          let start = input?.selectionStart ?? tokenInput.length;
+          const end = input?.selectionEnd ?? start;
+          if (start === end && start > 0) {
+            start -= 1;
+            const code = tokenInput.charCodeAt(start);
+            if (code >= 0xdc00 && code <= 0xdfff && start > 0) start -= 1;
+          }
+          if (start === end) return;
+          const next = tokenInput.slice(0, start) + tokenInput.slice(end);
+          setTokenInput(next);
+          requestAnimationFrame(() => {
+            if (!input) return;
+            input.focus({ preventScroll: true });
+            input.setSelectionRange(start, start);
+          });
+        }}
+        onEnter={() => { void submit(); }}
+        enterLabel="Unlock using the entered admin key"
+        onClose={() => setKeyboardOpen(false)}
+      />
+    </>
   );
 }

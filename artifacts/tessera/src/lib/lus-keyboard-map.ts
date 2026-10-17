@@ -1,0 +1,43 @@
+/**
+ * Static keyboard codebook from the deterministic LUS alphabet.
+ * The map is bundled so long-press glyph selection works offline and never
+ * sends draft text to the server.
+ */
+export const LUS_KEYBOARD_GLYPHS: Readonly<Record<string, string>> = Object.freeze({
+  "0": "⑨",
+  "1": "♄",
+  "2": "♐",
+  "3": "②",
+  "4": "④",
+  "5": "♂",
+  "6": "♊",
+  "7": "☽",
+  "8": "♋",
+  "9": "♃",
+  a: "①",
+  b: "♌",
+  c: "⑧",
+  d: "♆",
+  e: "⬠",
+  f: "◇",
+  g: "♉",
+  h: "⑤",
+  i: "☿",
+  j: "△",
+  k: "♀",
+  l: "♑",
+  m: "☉",
+  n: "♒",
+  o: "♈",
+  p: "♎",
+  q: "♇",
+  r: "♏",
+  s: "□",
+  t: "③",
+  u: "⑦",
+  v: "⬡",
+  w: "♓",
+  x: "♍",
+  y: "⑥",
+  z: "♅",
+});
