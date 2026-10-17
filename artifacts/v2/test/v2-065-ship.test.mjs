@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -186,8 +186,7 @@ test("the studio ships a voted object and shows its draft PR", async () => {
     await view.goto(url);
     await view.waitForFunction(() => window.__FLOOR_READY === true);
     await view.waitForSelector("#shipment-list .shipment");
-    const shot = "/opt/cursor/artifacts/studio-ship-bridge.png";
-    mkdirSync("/opt/cursor/artifacts", { recursive: true });
+    const shot = join(tmpdir(), "tessera-v2-studio-ship-bridge.png");
     await view.screenshot({ path: shot });
   } finally {
     if (browser) await browser.close();

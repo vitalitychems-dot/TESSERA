@@ -694,7 +694,7 @@ export async function initSovereignLoop(): Promise<void> {
   });
   registerSubsystem({
     name: "dual-brain",
-    startFn: () => startDualBrain(),
+    startFn: () => { startDualBrain(); },
     stopFn: () => stopDualBrain(),
     healthCheckFn: () => {
       const m = getDualBrainMetrics();

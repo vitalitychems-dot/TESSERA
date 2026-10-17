@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -210,8 +210,7 @@ test("the 3D floor shows homes, the vote panel, and the community", async () => 
     const world = await (await fetch(`${url}world`)).json();
     assert.ok(world.offices.some((office) => office.id === "tessera" && office.level >= 2));
     assert.ok(world.offices.some((office) => office.id === "clerk"));
-    const shot = "/opt/cursor/artifacts/studio-civic-world.png";
-    mkdirSync("/opt/cursor/artifacts", { recursive: true });
+    const shot = join(tmpdir(), "tessera-v2-studio-civic-world.png");
     await page.screenshot({ path: shot });
     const pixels = await page.evaluate(() => {
       const canvas = document.querySelector("#floor-3d");

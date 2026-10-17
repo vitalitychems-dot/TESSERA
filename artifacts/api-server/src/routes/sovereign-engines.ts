@@ -18,6 +18,7 @@ import {
   type FileDomain,
 } from "../lib/sovereign-file-registry";
 import { requireAdminSession } from "../lib/sovereign-admin";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -117,18 +118,44 @@ router.get("/dual-brain/metrics", requireAdminSession, (_req: Request, res: Resp
 
 router.get("/dual-brain/state", requireAdminSession, (_req: Request, res: Response) => {
   const state = getDualBrainState();
-  res.json({ ok: true, data: { running: state.running, totalRounds: state.totalRounds, totalImprovements: state.totalImprovements, currentTopic: state.currentTopic, brainStats: state.brainStats, recentConversations: state.conversations.slice(0, 5), recentImprovements: state.improvements.slice(0, 5) } });
+  res.json({ ok: true, data: {
+    running: state.running,
+    totalRounds: state.totalRounds,
+    totalImprovements: state.totalImprovements,
+    totalExecutions: state.totalExecutions,
+    legacyReportedRounds: state.legacyReportedRounds,
+    legacyReportedImprovements: state.legacyReportedImprovements,
+    provenance: "New rounds require configured Cortex and Pen model passes; generated text is not code execution or an applied improvement.",
+    currentTopic: state.currentTopic,
+    brainStats: state.brainStats,
+    recentConversations: state.conversations.slice(0, 5),
+    recentImprovements: state.improvements.slice(0, 5),
+  } });
 });
 
 router.post("/dual-brain/cycle", requireAdminSession, async (req: Request, res: Response) => {
   const { topic } = req.body;
-  const round = await runManualCycle(topic);
-  res.json({ ok: true, data: round });
+  try {
+    const round = await runManualCycle(topic);
+    res.json({ ok: true, data: round });
+  } catch (err) {
+    const message = (err as Error).message;
+    const unavailable = message.startsWith("Dual-brain cycle unavailable:") || message === "Dual-brain cycle topic is required.";
+    logger.warn({ reason: unavailable ? message : "configured model request failed" }, "DualBrain: request did not complete");
+    res.status(unavailable ? 503 : 502).json({
+      ok: false,
+      error: unavailable ? message : "Configured model cycle failed; no code or settings were changed.",
+    });
+  }
 });
 
 router.post("/dual-brain/start", requireAdminSession, (_req: Request, res: Response) => {
-  startDualBrain();
-  res.json({ ok: true, message: "Dual brain started" });
+  const started = startDualBrain();
+  if (!started) {
+    res.status(409).json({ ok: false, message: "Auto-run is disabled or the required model lanes are not configured. No synthetic cycles were started." });
+    return;
+  }
+  res.json({ ok: true, message: "Configured-model dual-brain auto-run started" });
 });
 
 router.post("/dual-brain/stop", requireAdminSession, (_req: Request, res: Response) => {
