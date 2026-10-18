@@ -1,4 +1,4 @@
-import { Router, type IRouter, type Response } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { logger } from "../lib/logger";
 import { requireAdminSession } from "../lib/sovereign-admin";
 import {
@@ -168,7 +168,7 @@ router.get("/sovereign-language/grammar", (_req, res) => {
   }
 });
 
-router.get("/sovereign-language/conference", async (_req, res) => {
+router.get("/sovereign-language/conference", requireAdminSession, async (_req, res) => {
   try {
     const conference = await getOrRunLanguageConference();
     return res.json({ ok: true, data: conference });
@@ -185,7 +185,7 @@ router.get("/sovereign-language/conference/members", (_req, res) => {
   }
 });
 
-router.post("/sovereign-language/translate", (req, res) => {
+router.post("/sovereign-language/translate", requireAdminSession, (req, res) => {
   try {
     const { text, direction } = req.body as { text?: string; direction?: string };
     if (!text || typeof text !== "string") {
@@ -312,7 +312,7 @@ router.get("/sovereign-language/ephemeris", (_req, res) => {
   }
 });
 
-router.get("/sovereign-language/universe-seed", (_req, res) => {
+router.get("/sovereign-language/universe-seed", requireAdminSession, (_req, res) => {
   try {
     const seed = generateUniverseSeed();
     return res.json({
@@ -339,7 +339,7 @@ router.get("/sovereign-language/universe-seed", (_req, res) => {
   }
 });
 
-router.post("/sovereign-language/speak", (req, res) => {
+router.post("/sovereign-language/speak", requireAdminSession, (req, res) => {
   try {
     const { message } = req.body as { message?: string };
     if (!message || typeof message !== "string") {
@@ -392,7 +392,7 @@ router.post("/sovereign-language/speak", (req, res) => {
   }
 });
 
-router.get("/sovereign-language/agent-rotation/:agentId", (req, res) => {
+router.get("/sovereign-language/agent-rotation/:agentId", requireAdminSession, (req: Request<{ agentId: string }>, res) => {
   try {
     const { agentId } = req.params;
     const rotation = computeAgentRotationState(agentId);
