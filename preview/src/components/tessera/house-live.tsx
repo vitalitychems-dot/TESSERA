@@ -3,11 +3,33 @@ import { Chamber } from "./chamber";
 import { MindChart } from "./mind-chart";
 import { WorldStage } from "./world-stage";
 import { TESSERA } from "@/lib/tessera/identity";
+import { openPulls } from "@/lib/tessera/github-desk";
 
-/** The house fills the screen. Eye, brain, and talk sit on top of it. */
+/** The house fills the screen. Eye, brain, talk, and the open-pull wall sit on top of it. */
+
+type Pull = { repo: string; number: number; title: string; state: string };
 
 export function HouseLive() {
-  const [sheet, setSheet] = useState<"" | "brain" | "talk">("");
+  const [sheet, setSheet] = useState<"" | "brain" | "talk" | "wall">("");
+  const [rows, setRows] = useState<Pull[]>([]);
+  const [wallNote, setWallNote] = useState("Not loaded.");
+
+  async function showWall() {
+    if (sheet === "wall") {
+      setSheet("");
+      return;
+    }
+    setSheet("wall");
+    setWallNote("Reading the open pull requests.");
+    try {
+      const result = await openPulls();
+      setRows(result.rows);
+      setWallNote(result.ok ? `Open at ${result.at.slice(0, 16).replace("T", " ")} UTC.` : `Partial read. ${result.error}`);
+    } catch {
+      setRows([]);
+      setWallNote("The pull list did not load.");
+    }
+  }
 
   return (
     <div className="relative h-full min-h-0 bg-[#243656]">
@@ -25,10 +47,31 @@ export function HouseLive() {
         <button type="button" className="h-10 border border-white/40 bg-black/45 px-3 text-sm text-white" onClick={() => setSheet((value) => (value === "talk" ? "" : "talk"))}>
           Talk
         </button>
+        <button type="button" className="h-10 border border-white/40 bg-black/45 px-3 text-sm text-white" onClick={() => void showWall()}>
+          Wall
+        </button>
       </div>
       {sheet ? (
         <div className="absolute inset-x-0 bottom-0 z-20 flex h-[62%] flex-col border-t border-white/20 bg-bg">
-          <div className="min-h-0 flex-1 overflow-hidden">{sheet === "brain" ? <MindChart /> : <Chamber />}</div>
+          <div className="min-h-0 flex-1 overflow-hidden">
+            {sheet === "brain" ? <MindChart /> : null}
+            {sheet === "talk" ? <Chamber /> : null}
+            {sheet === "wall" ? (
+              <div className="h-full overflow-y-auto px-4 py-3">
+                <p className="text-xs tracking-[0.16em] text-muted uppercase">Task wall</p>
+                <p className="mt-1 text-sm text-fg">{wallNote}</p>
+                <ul className="mt-3 flex flex-col gap-2">
+                  {rows.map((row) => (
+                    <li key={`${row.repo}-${row.number}`} className="border border-border px-3 py-2 text-sm">
+                      <span className="text-muted">{row.repo} #{row.number}</span>
+                      <span className="mt-1 block text-fg">{row.title}</span>
+                      <span className="text-xs text-muted">{row.state}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </div>

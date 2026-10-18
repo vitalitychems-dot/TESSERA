@@ -163,6 +163,28 @@ export const readBoard = createServerFn({ method: "POST" }).handler(async () => 
   return { ok: false as const, error: "The command center could not be read.", lines: [] as { id?: number; user: string; body: string }[] };
 });
 
+export const openPulls = createServerFn({ method: "POST" }).handler(async () => {
+  const rows: { repo: string; number: number; title: string; state: string }[] = [];
+  const errors: string[] = [];
+  for (const repo of ["TESSERA", "Gitbook"]) {
+    const result = await githubApi(`/repos/vitalitychems-dot/${repo}/pulls?state=open&per_page=20`);
+    if (!result.ok) {
+      errors.push(`${repo} ${result.status}`);
+      continue;
+    }
+    const pulls = JSON.parse(result.text) as { number?: number; title?: string; draft?: boolean; mergeable_state?: string }[];
+    for (const pull of pulls) {
+      rows.push({
+        repo,
+        number: pull.number ?? 0,
+        title: (pull.title ?? "").slice(0, 140),
+        state: pull.draft ? "draft" : pull.mergeable_state || "open",
+      });
+    }
+  }
+  return { ok: errors.length === 0, at: new Date().toISOString(), rows, error: errors.join(", ") };
+});
+
 async function refuseRepeat(body: string) {
   const blocked = writeRefusal("vitalitychems-dot/Gitbook");
   if (blocked) return blocked;
