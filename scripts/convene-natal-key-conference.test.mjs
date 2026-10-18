@@ -1,15 +1,15 @@
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync } from "node:fs";
+import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { conferenceKeyMaterial, writeKeyFile } from "../artifacts/api-server/scripts/convene-natal-key-conference.mjs";
+import { conferencePrivateMaterial, renderPublicReport, textHasKeyMaterial, writeKeyFile } from "../artifacts/api-server/scripts/convene-natal-key-conference.mjs";
 
 const sample = "roundtrip-key-material";
 const replacement = "roundtrip-key-material-other";
 const scriptPath = fileURLToPath(new URL("../artifacts/api-server/scripts/convene-natal-key-conference.mjs", import.meta.url));
+const keyName = "tesseract-admin-key";
 
 const fixtureChart = {
   birth: {
@@ -75,20 +75,9 @@ function capture() {
   };
 }
 
-function needles(secret) {
-  if (typeof secret !== "string" || secret.length === 0) return [];
-  const sha256 = createHash("sha256").update(secret).digest("hex");
-  const sha512 = createHash("sha512").update(secret).digest("hex");
-  return [secret, secret.slice(0, 8), sha256, sha512];
-}
-
-function assertClean(text, secrets) {
-  const haystack = String(text ?? "");
-  for (const secret of secrets) {
-    for (const needle of needles(secret)) {
-      if (needle && haystack.includes(needle)) throw new Error("output contains key material");
-    }
-  }
+function assertClean(text, material) {
+  const payload = Array.isArray(material) ? { keys: material } : material;
+  if (textHasKeyMaterial(text, payload)) throw new Error("output contains key material");
 }
 
 function modeOf(file) {
@@ -97,6 +86,12 @@ function modeOf(file) {
 
 function assertMode(file, expected) {
   if (modeOf(file) !== expected) throw new Error(`mode ${expected.toString(8)} was not applied`);
+}
+
+function gitInit(dir) {
+  mkdirSync(dir, { recursive: true });
+  const result = spawnSync("git", ["init", "-q", dir], { stdio: "ignore" });
+  if (result.status !== 0) throw new Error("git init failed");
 }
 
 async function expectCode(run, code) {
@@ -109,21 +104,27 @@ async function expectCode(run, code) {
   throw new Error(`expected refusal ${code}`);
 }
 
-test("writes the key outside the repo without printing it", async () => {
+function privateDir(dir) {
+  mkdirSync(dir, { recursive: true });
+  chmodSync(dir, 0o700);
+}
+
+test("writes the key outside a git work tree without printing it", async () => {
   const tree = tempTree();
   const io = capture();
+  const home = join(tree.root, "home");
   try {
-    mkdirSync(tree.repo, { recursive: true });
-    mkdirSync(tree.outside, { recursive: true, mode: 0o755 });
+    mkdirSync(home, { recursive: true });
     const written = await writeKeyFile(sample, {
       outputDir: tree.outside,
-      repoRoot: tree.repo,
+      homedir: home,
       stdout: io.stdout,
       stderr: io.stderr,
       env: {},
     });
-    const file = join(tree.outside, "tesseract-admin-key");
+    const file = realpathSync(join(tree.outside, keyName));
     if (written.path !== file) throw new Error("unexpected key path");
+    if (written.display !== file) throw new Error("path outside home was rewritten");
     if (lstatSync(file).isSymbolicLink()) throw new Error("key file must be a regular file");
     assertMode(file, 0o600);
     assertMode(tree.outside, 0o700);
@@ -136,58 +137,77 @@ test("writes the key outside the repo without printing it", async () => {
   }
 });
 
-test("default directory is under the home directory and the env override is honored", async () => {
+test("default directory is under the home directory and prints a tilde path", async () => {
   const tree = tempTree();
   const io = capture();
   const home = join(tree.root, "home");
-  const fromEnv = join(tree.root, "from-env");
   try {
-    mkdirSync(tree.repo, { recursive: true });
     mkdirSync(home, { recursive: true });
     const written = await writeKeyFile(sample, {
-      repoRoot: tree.repo,
       homedir: home,
       stdout: io.stdout,
       stderr: io.stderr,
       env: {},
     });
-    const file = join(home, ".tessera", "keys", "tesseract-admin-key");
+    const file = realpathSync(join(home, ".tessera", "keys", keyName));
     if (written.path !== file) throw new Error("unexpected default key path");
+    if (written.display !== `~/.tessera/keys/${keyName}`) throw new Error("default path was not home-relative");
     assertMode(file, 0o600);
+    assertMode(join(home, ".tessera"), 0o700);
     assertMode(join(home, ".tessera", "keys"), 0o700);
     if (readFileSync(file, "utf8") !== sample) throw new Error("key file content mismatch");
     assertClean(`${io.out}\n${io.err}`, [sample]);
-
-    const override = capture();
-    const overridden = await writeKeyFile(replacement, {
-      repoRoot: tree.repo,
-      homedir: home,
-      stdout: override.stdout,
-      stderr: override.stderr,
-      env: { TESSERA_KEY_OUTPUT_DIR: fromEnv },
-    });
-    const envFile = join(fromEnv, "tesseract-admin-key");
-    if (overridden.path !== envFile) throw new Error("env output directory was ignored");
-    if (readFileSync(envFile, "utf8") !== replacement) throw new Error("key file content mismatch");
-    assertMode(envFile, 0o600);
-    assertMode(fromEnv, 0o700);
-    assertClean(`${override.out}\n${override.err}`, [sample, replacement]);
+    if (io.out.includes(home)) throw new Error("stdout contains a home path");
+    if (io.out !== `key written: ~/.tessera/keys/${keyName}\n`) throw new Error("unexpected stdout");
   } finally {
     tree.remove();
   }
 });
 
-test("refuses a path that resolves inside the repo", async () => {
+test("expands a current-user tilde and refuses another user's", async () => {
   const tree = tempTree();
   const io = capture();
+  const home = join(tree.root, "home");
   try {
-    mkdirSync(tree.repo, { recursive: true });
-    mkdirSync(tree.outside, { recursive: true });
+    mkdirSync(home, { recursive: true });
+    const written = await writeKeyFile(sample, {
+      homedir: home,
+      stdout: io.stdout,
+      stderr: io.stderr,
+      env: { TESSERA_KEY_OUTPUT_DIR: "~/boxed" },
+    });
+    const file = realpathSync(join(home, "boxed", keyName));
+    if (written.path !== file) throw new Error("tilde output directory was not expanded");
+    if (io.out !== "key written: ~/boxed/tesseract-admin-key\n") throw new Error("unexpected stdout");
+    if (io.out.includes(home)) throw new Error("stdout contains a home path");
+    assertMode(file, 0o600);
+    const error = await expectCode(
+      () => writeKeyFile(replacement, {
+        homedir: home,
+        stdout: io.stdout,
+        stderr: io.stderr,
+        env: { TESSERA_KEY_OUTPUT_DIR: "~nobody/keys" },
+      }),
+      "EKEYTILDE",
+    );
+    assertClean(`${error.message}\n${io.out}\n${io.err}`, [sample, replacement]);
+  } finally {
+    tree.remove();
+  }
+});
+
+test("refuses a destination inside any git work tree", async () => {
+  const tree = tempTree();
+  const io = capture();
+  const home = join(tree.root, "home");
+  try {
+    gitInit(tree.repo);
+    mkdirSync(home, { recursive: true });
     const inside = join(tree.repo, "keys");
     const lexical = await expectCode(
       () => writeKeyFile(sample, {
         outputDir: inside,
-        repoRoot: tree.repo,
+        homedir: home,
         stdout: io.stdout,
         stderr: io.stderr,
         env: {},
@@ -200,7 +220,7 @@ test("refuses a path that resolves inside the repo", async () => {
     const viaEnv = capture();
     const envError = await expectCode(
       () => writeKeyFile(sample, {
-        repoRoot: tree.repo,
+        homedir: home,
         stdout: viaEnv.stdout,
         stderr: viaEnv.stderr,
         env: { TESSERA_KEY_OUTPUT_DIR: join(tree.repo, "env-keys") },
@@ -210,34 +230,118 @@ test("refuses a path that resolves inside the repo", async () => {
     if (existsSync(join(tree.repo, "env-keys"))) throw new Error("in-repo directory was created");
     assertClean(`${envError.message}\n${viaEnv.out}\n${viaEnv.err}`, [sample]);
 
-    symlinkSync(tree.repo, join(tree.outside, "linked-repo"));
-    const viaLink = capture();
-    const linkError = await expectCode(
+    const relative = capture();
+    const relativeError = await expectCode(
       () => writeKeyFile(sample, {
-        outputDir: join(tree.outside, "linked-repo"),
-        repoRoot: tree.repo,
-        stdout: viaLink.stdout,
-        stderr: viaLink.stderr,
+        outputDir: "rel-keys",
+        cwd: tree.repo,
+        homedir: home,
+        stdout: relative.stdout,
+        stderr: relative.stderr,
         env: {},
       }),
       "EKEYINREPO",
     );
-    if (existsSync(join(tree.repo, "tesseract-admin-key"))) throw new Error("key file was written inside the repo");
-    assertClean(`${linkError.message}\n${viaLink.out}\n${viaLink.err}`, [sample]);
+    if (existsSync(join(tree.repo, "rel-keys"))) throw new Error("relative directory was created");
+    assertClean(`${relativeError.message}\n${relative.out}\n${relative.err}`, [sample]);
   } finally {
     tree.remove();
   }
 });
 
-test("refuses to overwrite an existing key file", async () => {
+test("refuses a symlink directory, a dangling symlink, and a symlink at the key path", async () => {
+  const tree = tempTree();
+  const home = join(tree.root, "home");
+  try {
+    gitInit(tree.repo);
+    mkdirSync(home, { recursive: true });
+    mkdirSync(tree.outside, { recursive: true });
+    symlinkSync(tree.repo, join(tree.outside, "linked-repo"));
+    const viaLink = capture();
+    const linkError = await expectCode(
+      () => writeKeyFile(sample, {
+        outputDir: join(tree.outside, "linked-repo"),
+        homedir: home,
+        stdout: viaLink.stdout,
+        stderr: viaLink.stderr,
+        env: {},
+      }),
+      "EKEYLINK",
+    );
+    if (existsSync(join(tree.repo, keyName))) throw new Error("key file was written inside the repo");
+    assertClean(`${linkError.message}\n${viaLink.out}\n${viaLink.err}`, [sample]);
+
+    symlinkSync(join(tree.root, "missing-dir"), join(tree.root, "dangling"));
+    const dangling = capture();
+    const danglingError = await expectCode(
+      () => writeKeyFile(sample, {
+        outputDir: join(tree.root, "dangling"),
+        homedir: home,
+        stdout: dangling.stdout,
+        stderr: dangling.stderr,
+        env: {},
+      }),
+      "EKEYLINK",
+    );
+    if (existsSync(join(tree.root, "missing-dir"))) throw new Error("dangling symlink was followed");
+    assertClean(`${danglingError.message}\n${dangling.out}\n${dangling.err}`, [sample]);
+
+    privateDir(join(tree.root, "held"));
+    symlinkSync(join(tree.root, "elsewhere"), join(tree.root, "held", keyName));
+    const target = capture();
+    const targetError = await expectCode(
+      () => writeKeyFile(sample, {
+        outputDir: join(tree.root, "held"),
+        homedir: home,
+        stdout: target.stdout,
+        stderr: target.stderr,
+        env: {},
+      }),
+      "EKEYLINK",
+    );
+    if (existsSync(join(tree.root, "elsewhere"))) throw new Error("symlink target was created");
+    assertClean(`${targetError.message}\n${target.out}\n${target.err}`, [sample]);
+  } finally {
+    tree.remove();
+  }
+});
+
+test("refuses an existing 0755 directory without changing it", async () => {
+  const tree = tempTree();
+  const io = capture();
+  const home = join(tree.root, "home");
+  try {
+    mkdirSync(home, { recursive: true });
+    mkdirSync(tree.outside, { recursive: true });
+    chmodSync(tree.outside, 0o755);
+    const error = await expectCode(
+      () => writeKeyFile(sample, {
+        outputDir: tree.outside,
+        homedir: home,
+        stdout: io.stdout,
+        stderr: io.stderr,
+        env: {},
+      }),
+      "EKEYMODE",
+    );
+    if (modeOf(tree.outside) !== 0o755) throw new Error("existing directory mode was changed");
+    if (existsSync(join(tree.outside, keyName))) throw new Error("key file was written");
+    assertClean(`${error.message}\n${io.out}\n${io.err}`, [sample]);
+  } finally {
+    tree.remove();
+  }
+});
+
+test("refuses to overwrite an existing key file or an existing directory at the key path", async () => {
   const tree = tempTree();
   const first = capture();
   const second = capture();
+  const home = join(tree.root, "home");
   try {
-    mkdirSync(tree.repo, { recursive: true });
+    mkdirSync(home, { recursive: true });
     await writeKeyFile(sample, {
       outputDir: tree.outside,
-      repoRoot: tree.repo,
+      homedir: home,
       stdout: first.stdout,
       stderr: first.stderr,
       env: {},
@@ -245,56 +349,176 @@ test("refuses to overwrite an existing key file", async () => {
     const error = await expectCode(
       () => writeKeyFile(replacement, {
         outputDir: tree.outside,
-        repoRoot: tree.repo,
+        homedir: home,
         stdout: second.stdout,
         stderr: second.stderr,
         env: {},
       }),
       "EEXIST",
     );
-    const file = join(tree.outside, "tesseract-admin-key");
+    const file = join(tree.outside, keyName);
     if (readFileSync(file, "utf8") !== sample) throw new Error("existing key file was changed");
     assertClean(`${error.message}\n${first.out}\n${first.err}\n${second.out}\n${second.err}`, [sample, replacement]);
     if (second.out !== "") throw new Error("overwrite attempt wrote stdout");
+
+    const occupied = join(tree.root, "occupied");
+    privateDir(occupied);
+    mkdirSync(join(occupied, keyName));
+    const directory = capture();
+    const directoryError = await expectCode(
+      () => writeKeyFile(sample, {
+        outputDir: occupied,
+        homedir: home,
+        stdout: directory.stdout,
+        stderr: directory.stderr,
+        env: {},
+      }),
+      "EKEYDIR",
+    );
+    if (!lstatSync(join(occupied, keyName)).isDirectory()) throw new Error("existing directory was replaced");
+    assertClean(`${directoryError.message}\n${directory.out}\n${directory.err}`, [sample]);
   } finally {
     tree.remove();
   }
 });
 
-test("the script writes the ratified key and does not print key material", () => {
+test("a failed write leaves no key file", async () => {
+  const tree = tempTree();
+  const io = capture();
+  const home = join(tree.root, "home");
+  const filename = "a".repeat(300);
+  try {
+    mkdirSync(home, { recursive: true });
+    const error = await expectCode(
+      () => writeKeyFile(sample, {
+        outputDir: tree.outside,
+        filename,
+        homedir: home,
+        stdout: io.stdout,
+        stderr: io.stderr,
+        env: {},
+      }),
+      "ENAMETOOLONG",
+    );
+    if (existsSync(join(tree.outside, filename))) throw new Error("partial key file remained");
+    if (existsSync(join(tree.outside, keyName))) throw new Error("key file was written");
+    assertClean(`${error.message}\n${io.out}\n${io.err}`, [sample]);
+    if (io.out !== "") throw new Error("failed write printed a key path");
+  } finally {
+    tree.remove();
+  }
+});
+
+test("textHasKeyMaterial flags seed prefixes and birth data", () => {
+  const material = conferencePrivateMaterial(JSON.stringify(fixtureChart));
+  const clean = [
+    "Identifier: sovereign-sigil-33",
+    "Tally (raw): approve=1 reject=0 abstain=0 total=1",
+    "Tally (weighted): approve=1 reject=0 abstain=0",
+    "Approval rate: 100.00%",
+    "key written: ~/.tessera/keys/tesseract-admin-key",
+  ].join("\n");
+  assertClean(clean, material);
+  for (let length = 4; length <= material.seedHex.length; length += 1) {
+    if (!textHasKeyMaterial(material.seedHex.slice(0, length), material)) {
+      throw new Error("seed prefix was not flagged");
+    }
+  }
+  for (const start of [0, 12, 24]) {
+    if (!textHasKeyMaterial(material.seedHex.slice(start, start + 12), material)) {
+      throw new Error("seed slice was not flagged");
+    }
+  }
+  for (const value of material.birth) {
+    if (!textHasKeyMaterial(value, material)) throw new Error("birth data was not flagged");
+  }
+});
+
+test("exit 2 report has the identifier and tallies and no chart material", () => {
+  const material = conferencePrivateMaterial(JSON.stringify(fixtureChart));
+  const rendered = renderPublicReport([{
+    id: "candidate-a",
+    result: {
+      outcome: "rejected",
+      approvalRate: 0,
+      weighted: { approve: 0, reject: 1, abstain: 0 },
+      raw: { approve: 0, reject: 1, abstain: 0 },
+      totalEligible: 1,
+    },
+  }]);
+  if (rendered.code !== 2 || rendered.winnerId !== null) throw new Error("expected exit 2");
+  if (rendered.report.includes("Length")) throw new Error("report contains a length line");
+  if (!rendered.report.includes("Identifier: candidate-a")) throw new Error("missing identifier");
+  if (!rendered.report.includes("Tally (raw):")) throw new Error("missing tally");
+  if (!rendered.report.includes("Approval rate:")) throw new Error("missing approval rate");
+  assertClean(rendered.report, material);
+});
+
+test("the script writes the ratified key and does not print chart material", () => {
   const tree = tempTree();
   const chartJson = JSON.stringify(fixtureChart);
-  const keys = conferenceKeyMaterial(chartJson);
+  const material = conferencePrivateMaterial(chartJson);
+  const home = join(tree.root, "home");
   try {
-    if (keys.length !== 3 || keys.some((key) => typeof key !== "string" || key.length < 8)) {
+    if (material.keys.length !== 3 || material.keys.some((key) => typeof key !== "string" || key.length < 8)) {
       throw new Error("fixture chart did not derive candidate keys");
     }
-    mkdirSync(tree.repo, { recursive: true });
+    mkdirSync(home, { recursive: true });
     const child = spawnSync(process.execPath, [scriptPath], {
       encoding: "utf8",
       env: {
-        HOME: join(tree.root, "home"),
-        TESSERA_KEY_OUTPUT_DIR: tree.outside,
+        HOME: home,
+        PATH: process.env.PATH,
         FATHER_NATAL_CHART_JSON: chartJson,
       },
     });
     const stdout = child.stdout ?? "";
     const stderr = child.stderr ?? "";
-    assertClean(`${stdout}\n${stderr}`, keys);
+    assertClean(`${stdout}\n${stderr}`, material);
     if (child.status !== 0) throw new Error(`script exited ${child.status}`);
-    const line = stdout.match(/^key written: (.+)$/m);
-    if (!line) throw new Error("missing key written line");
-    const file = line[1];
-    if (file !== join(realpathSync(tree.outside), "tesseract-admin-key")) {
-      throw new Error("script wrote outside the requested directory");
-    }
+    if (stdout.includes("Length")) throw new Error("report contains a length line");
+    if (stdout.includes(home)) throw new Error("stdout contains a home path");
+    if (!stdout.includes(`key written: ~/.tessera/keys/${keyName}`)) throw new Error("missing key written line");
+    const file = join(home, ".tessera", "keys", keyName);
     if (lstatSync(file).isSymbolicLink()) throw new Error("key file must be a regular file");
     assertMode(file, 0o600);
-    assertMode(tree.outside, 0o700);
+    assertMode(join(home, ".tessera", "keys"), 0o700);
     const stored = readFileSync(file, "utf8");
-    if (!keys.includes(stored)) throw new Error("stored key is not a derived candidate");
-    if (stdout.includes("permanentKey")) throw new Error("stdout still names the key field");
-    assertClean(`${stdout}\n${stderr}`, [stored]);
+    if (!material.keys.includes(stored)) throw new Error("stored key is not a derived candidate");
+    const marker = "=== JSON RESULT ===";
+    const jsonStart = stdout.indexOf(marker);
+    if (jsonStart < 0) throw new Error("missing json result");
+    const payload = JSON.parse(stdout.slice(jsonStart + marker.length));
+    for (const field of ["birthDate", "zodiac", "moon", "rising", "boundToHolder", "permanentKey"]) {
+      if (Object.hasOwn(payload, field)) throw new Error("json contains a chart field");
+    }
+    if (payload.keyFile !== `~/.tessera/keys/${keyName}`) throw new Error("json key path was not home-relative");
+    assertClean(JSON.stringify(payload), material);
+  } finally {
+    tree.remove();
+  }
+});
+
+test("the script refuses an in-repo output directory", () => {
+  const tree = tempTree();
+  const chartJson = JSON.stringify(fixtureChart);
+  const material = conferencePrivateMaterial(chartJson);
+  const home = join(tree.root, "home");
+  try {
+    gitInit(tree.repo);
+    mkdirSync(home, { recursive: true });
+    const child = spawnSync(process.execPath, [scriptPath], {
+      encoding: "utf8",
+      env: {
+        HOME: home,
+        PATH: process.env.PATH,
+        TESSERA_KEY_OUTPUT_DIR: join(tree.repo, "keys"),
+        FATHER_NATAL_CHART_JSON: chartJson,
+      },
+    });
+    assertClean(`${child.stdout ?? ""}\n${child.stderr ?? ""}`, material);
+    if (child.status === 0) throw new Error("in-repo output was accepted");
+    if (existsSync(join(tree.repo, "keys", keyName))) throw new Error("key file was written inside the repo");
   } finally {
     tree.remove();
   }

@@ -11,49 +11,35 @@
 //
 // Usage: node artifacts/api-server/scripts/convene-natal-key-conference.mjs
 //
-// The ratified key is never printed (not the value, and not a hash, prefix,
-// or fingerprint of it, including on error paths). It is created exclusively
-// — no silent overwrite — with mode 0600 under $TESSERA_KEY_OUTPUT_DIR, or
-// ~/.tessera/keys/ when that variable is unset. The directory is mode 0700.
-// A path that resolves inside this repository is refused. The only key line
-// on stdout is: key written: <path>
+// Public output is only the candidate identifier, tallies, approval rate,
+// and `key written: <path>`. Nothing derived from the chart is printed:
+// not the key, not a hash, prefix, or fingerprint of the key or its seed,
+// and not birth date, time, place, or signs. That includes error paths.
+// The key file is created exclusively (no silent overwrite) at mode 0600.
+// The default directory is ~/.tessera/keys/ (mode 0700 only when this script
+// creates it). TESSERA_KEY_OUTPUT_DIR overrides that directory. A leading ~
+// expands to the current user; ~other is refused. An existing output
+// directory is refused unless the current user owns it and it is already
+// mode 0700 — this script does not chmod a directory it did not create.
+// Any path inside a git work tree (git rev-parse --show-toplevel) is refused.
+// The printed path is ~-relative when the file is under the home directory.
 
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { chmod, mkdir, realpath, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
+import { constants } from "node:fs";
+import { chmod, lstat, mkdir, open, realpath, rmdir, unlink, writeFile } from "node:fs/promises";
+import { homedir, userInfo } from "node:os";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 
 const KEY_FILENAME = "tesseract-admin-key";
 const KEY_DIR_ENV = "TESSERA_KEY_OUTPUT_DIR";
-
-function scriptRepoRoot() {
-  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
-}
 
 function pathIsInside(root, candidate) {
   const base = path.resolve(root);
   const target = path.resolve(candidate);
   const rel = path.relative(base, target);
   return rel === "" || (rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel));
-}
-
-async function resolveReal(inputPath) {
-  const absolute = path.resolve(inputPath);
-  const missing = [];
-  let current = absolute;
-  for (;;) {
-    try {
-      const real = await realpath(current);
-      return missing.length === 0 ? real : path.join(real, ...missing);
-    } catch (error) {
-      if (error?.code !== "ENOENT") throw error;
-      const parent = path.dirname(current);
-      if (parent === current) throw error;
-      missing.unshift(path.basename(current));
-      current = parent;
-    }
-  }
 }
 
 function keyMaterialNeedles(key) {
@@ -65,19 +51,33 @@ function keyMaterialNeedles(key) {
   return needles;
 }
 
-function textHasKeyMaterial(text, keys) {
-  const haystack = String(text ?? "");
-  for (const key of keys) {
-    for (const needle of keyMaterialNeedles(key)) {
-      if (needle && haystack.includes(needle)) return true;
-    }
+function seedNeedles(seedHex) {
+  if (typeof seedHex !== "string" || seedHex.length === 0) return [];
+  const needles = [];
+  for (let length = 4; length <= seedHex.length; length += 1) {
+    needles.push(seedHex.slice(0, length));
   }
-  return false;
+  if (seedHex.length >= 36) {
+    needles.push(seedHex.slice(0, 12), seedHex.slice(12, 24), seedHex.slice(24, 36), seedHex.slice(0, 24), seedHex.slice(0, 36));
+  }
+  return needles;
 }
 
-function publicErrorMessage(error, keys) {
+export function textHasKeyMaterial(text, material) {
+  const haystack = String(text ?? "");
+  const needles = Array.isArray(material)
+    ? material.flatMap((key) => keyMaterialNeedles(key))
+    : [
+      ...((material?.keys ?? []).flatMap((key) => keyMaterialNeedles(key))),
+      ...seedNeedles(material?.seedHex ?? ""),
+      ...(material?.birth ?? []).filter((value) => typeof value === "string" && value.length >= 3),
+    ];
+  return needles.some((needle) => needle && haystack.includes(needle));
+}
+
+function publicErrorMessage(error, material) {
   const message = typeof error?.message === "string" ? error.message : "";
-  if (message && !textHasKeyMaterial(message, keys)) return message;
+  if (message && !textHasKeyMaterial(message, material)) return message;
   return "key conference failed";
 }
 
@@ -89,6 +89,125 @@ function selectOutputDir(options) {
   return path.join(options.homedir ?? homedir(), ".tessera", "keys");
 }
 
+function expandUserHome(input, home) {
+  if (typeof input !== "string" || !input.startsWith("~")) return input;
+  if (input === "~") return home;
+  if (input.startsWith("~/") || input.startsWith("~\\")) return path.join(home, input.slice(2));
+  throw Object.assign(new Error("refusing a home shortcut for another user"), { code: "EKEYTILDE" });
+}
+
+function gitToplevel(startDir) {
+  const result = spawnSync("git", ["-C", startDir, "rev-parse", "--show-toplevel"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.error) {
+    throw Object.assign(new Error("refusing to write a key without a git work-tree check"), { code: "EKEYGIT" });
+  }
+  if (result.status !== 0) {
+    if (String(result.stderr ?? "").includes("not a git repository")) return null;
+    throw Object.assign(new Error("refusing to write a key without a git work-tree check"), { code: "EKEYGIT" });
+  }
+  const top = result.stdout.trim();
+  return top || null;
+}
+
+async function pathStat(candidate) {
+  try {
+    return await lstat(candidate);
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+async function existingAncestor(candidate) {
+  let current = path.resolve(candidate);
+  for (;;) {
+    const stat = await pathStat(current);
+    if (stat) return realpath(current);
+    const parent = path.dirname(current);
+    if (parent === current) return current;
+    current = parent;
+  }
+}
+
+async function assertOutsideGit(candidate) {
+  const resolved = path.resolve(candidate);
+  let start = await existingAncestor(resolved);
+  const stat = await pathStat(start);
+  if (stat && !stat.isDirectory()) start = path.dirname(start);
+  const top = gitToplevel(start);
+  if (top && pathIsInside(top, resolved)) {
+    throw Object.assign(new Error("refusing to write a key inside a git work tree"), { code: "EKEYINREPO" });
+  }
+}
+
+function assertOwnedPrivateDir(stat) {
+  if (typeof stat.uid === "number" && stat.uid !== userInfo().uid) {
+    throw Object.assign(new Error("refusing an output directory not owned by the current user"), { code: "EKEYOWNER" });
+  }
+  if ((stat.mode & 0o777) !== 0o700) {
+    throw Object.assign(new Error("refusing an output directory that is not mode 0700"), { code: "EKEYMODE" });
+  }
+}
+
+async function mkdirPrivate(dir) {
+  const resolved = path.resolve(dir);
+  const missing = [];
+  let cursor = resolved;
+  let anchor = resolved;
+  for (;;) {
+    const stat = await pathStat(cursor);
+    if (stat) {
+      if (stat.isSymbolicLink()) {
+        throw Object.assign(new Error("refusing a symlink key directory"), { code: "EKEYLINK" });
+      }
+      anchor = cursor;
+      break;
+    }
+    const parent = path.dirname(cursor);
+    if (parent === cursor) break;
+    missing.push(path.basename(cursor));
+    cursor = parent;
+  }
+  const created = [];
+  let current = anchor;
+  for (const segment of missing.reverse()) {
+    current = path.join(current, segment);
+    await mkdir(current, { mode: 0o700 });
+    created.push(current);
+    await chmod(current, 0o700);
+  }
+  return created;
+}
+
+async function displayPath(file, home) {
+  let base = home;
+  try {
+    base = await realpath(home);
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+  const relative = path.relative(base, file);
+  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) return file;
+  return `~/${relative.split(path.sep).join("/")}`;
+}
+
+function wrapWriteError(error, key) {
+  const material = { keys: [key] };
+  if (error?.code === "EEXIST") {
+    return Object.assign(new Error("refusing to overwrite an existing key file"), { code: "EEXIST" });
+  }
+  const safe = new Set(["EKEYINREPO", "EKEYLINK", "EKEYDIR", "EKEYMODE", "EKEYOWNER", "EKEYTILDE", "EKEYPRINT", "EKEYEMPTY", "EKEYNAME", "EKEYGIT"]);
+  if (safe.has(error?.code) && !textHasKeyMaterial(error.message ?? "", material)) return error;
+  return Object.assign(new Error(publicErrorMessage(error, material)), { code: error?.code || "EKEYWRITE" });
+}
+
+function keepCreatedDirectory(error) {
+  return new Set(["ENAMETOOLONG", "EACCES", "EPERM", "EROFS", "ENOSPC", "EISDIR", "EEXIST"]).has(error?.code);
+}
+
 export async function writeKeyFile(key, options = {}) {
   if (typeof key !== "string" || key.length === 0 || key.includes("\0")) {
     throw Object.assign(new Error("refusing to write an empty key"), { code: "EKEYEMPTY" });
@@ -97,36 +216,68 @@ export async function writeKeyFile(key, options = {}) {
   if (filename !== path.basename(filename) || filename === "." || filename === ".." || filename.includes("\0")) {
     throw Object.assign(new Error("refusing a key filename that is not a single path segment"), { code: "EKEYNAME" });
   }
+  const home = options.homedir ?? homedir();
+  const cwd = options.cwd ?? process.cwd();
+  const expanded = expandUserHome(selectOutputDir({ ...options, homedir: home }), home);
+  const resolvedDir = path.resolve(cwd, expanded);
   const stdout = options.stdout ?? process.stdout;
-  const repoRoot = await resolveReal(options.repoRoot ?? scriptRepoRoot());
-  const resolvedDir = await resolveReal(selectOutputDir(options));
-  const resolvedFile = path.join(resolvedDir, filename);
-  if (pathIsInside(repoRoot, resolvedDir) || pathIsInside(repoRoot, resolvedFile)) {
-    throw Object.assign(new Error("refusing to write a key inside the repository"), { code: "EKEYINREPO" });
-  }
-  await mkdir(resolvedDir, { recursive: true, mode: 0o700 });
-  const realDir = await realpath(resolvedDir);
-  const realFile = path.join(realDir, filename);
-  if (pathIsInside(repoRoot, realDir) || pathIsInside(repoRoot, realFile)) {
-    throw Object.assign(new Error("refusing to write a key inside the repository"), { code: "EKEYINREPO" });
-  }
-  await chmod(realDir, 0o700);
+  let createdDirs = [];
+  let createdFile = null;
+  let dirHandle = null;
   try {
-    await writeFile(realFile, key, { encoding: "utf8", mode: 0o600, flag: "wx" });
-  } catch (error) {
-    if (error?.code === "EEXIST") {
+    const dirStat = await pathStat(resolvedDir);
+    if (dirStat?.isSymbolicLink()) {
+      throw Object.assign(new Error("refusing a symlink key directory"), { code: "EKEYLINK" });
+    }
+    await assertOutsideGit(resolvedDir);
+    if (dirStat && !dirStat.isDirectory()) {
+      throw Object.assign(new Error("refusing a key directory that is not a directory"), { code: "EKEYDIR" });
+    }
+    if (dirStat) assertOwnedPrivateDir(dirStat);
+    else createdDirs = await mkdirPrivate(resolvedDir);
+    const realDir = await realpath(resolvedDir);
+    await assertOutsideGit(realDir);
+    const fileStat = await pathStat(path.join(realDir, filename));
+    if (fileStat?.isSymbolicLink()) {
+      throw Object.assign(new Error("refusing a symlink at the key path"), { code: "EKEYLINK" });
+    }
+    if (fileStat?.isDirectory()) {
+      throw Object.assign(new Error("refusing a key path that is a directory"), { code: "EKEYDIR" });
+    }
+    if (fileStat) {
       throw Object.assign(new Error("refusing to overwrite an existing key file"), { code: "EEXIST" });
     }
-    const message = publicErrorMessage(error, [key]);
-    throw Object.assign(new Error(message), { code: error?.code });
+    dirHandle = await open(realDir, constants.O_RDONLY | constants.O_DIRECTORY);
+    const before = await dirHandle.stat();
+    const destination = path.join(realDir, filename);
+    await writeFile(destination, key, { encoding: "utf8", mode: 0o600, flag: "wx" });
+    createdFile = destination;
+    await chmod(destination, 0o600);
+    const after = await dirHandle.stat();
+    if (before.ino !== after.ino || before.dev !== after.dev) {
+      throw Object.assign(new Error("refusing to write after the key directory changed"), { code: "EKEYDIR" });
+    }
+    const confirmed = await realpath(destination);
+    if (path.dirname(confirmed) !== realDir) {
+      throw Object.assign(new Error("refusing to write after the key path changed"), { code: "EKEYDIR" });
+    }
+    await assertOutsideGit(confirmed);
+    const display = await displayPath(confirmed, home);
+    const line = `key written: ${display}\n`;
+    if (textHasKeyMaterial(line, { keys: [key] })) {
+      throw Object.assign(new Error("refusing to print key material"), { code: "EKEYPRINT" });
+    }
+    stdout.write(line);
+    return { path: confirmed, display };
+  } catch (error) {
+    if (createdFile) await unlink(createdFile).catch(() => {});
+    if (!keepCreatedDirectory(error)) {
+      for (const dir of createdDirs.reverse()) await rmdir(dir).catch(() => {});
+    }
+    throw wrapWriteError(error, key);
+  } finally {
+    await dirHandle?.close();
   }
-  await chmod(realFile, 0o600);
-  const line = `key written: ${realFile}\n`;
-  if (textHasKeyMaterial(line, [key])) {
-    throw Object.assign(new Error("refusing to print key material"), { code: "EKEYPRINT" });
-  }
-  stdout.write(line);
-  return { path: realFile };
 }
 
 // ---------------------------------------------------------------
@@ -527,7 +678,7 @@ function buildCandidateKeys(natal) {
       domain: "sovereignty",
       description: "Permanent Father key derived from full natal chart (sun-moon-ascendant + outer planets + nodes), fused with PHI and the sacred-numeric ladder via SHA-512. 33-character Crockford base-32 sigil. The audit-evidence ledger of consensus is the natal chart itself: the same chart input always yields the same hash signature — verifiable, reproducible, sandboxed inside the holder fingerprint binding. No external-llm involvement. Anchors: phi-resonance, gematria, sacred-geometry, kabbalah, integration, sovereignty, governance, auditable.",
       tags: ["sovereignty","governance","sacred","phi","gematria","verifiable","reproducible","auditable","ledger","integration","kabbalah","prophecy","architecture"],
-      evidenceRef: `natal-chart-${natal.birthDateISO}-sha512:${seedHex.slice(0,12)}`,
+      evidenceRef: "ledger",
       key: aKey,
     },
     {
@@ -536,7 +687,7 @@ function buildCandidateKeys(natal) {
       domain: "sovereignty",
       description: "Permanent Father key encoded as twelve sacred house segments (one per astrological house), reproducible from the chart, anchored on PHI and the sacred ladder. Twelve gates of New Jerusalem (144). The signature is verifiable against the chart by any agent without consulting external-llm centralities. Sandboxed under holder fingerprint binding. Anchors: integration, sovereignty, sacred-geometry, gematria, prophecy, scripture, geometry, distributed, lattice.",
       tags: ["sovereignty","governance","twelve","sacred","prophecy","scripture","geometry","verifiable","reproducible","ledger","auditable","integration","lattice","distributed"],
-      evidenceRef: `natal-chart-${natal.birthDateISO}-12x3:${seedHex.slice(12,24)}`,
+      evidenceRef: "ledger",
       key: bKey,
     },
     {
@@ -545,14 +696,67 @@ function buildCandidateKeys(natal) {
       domain: "sovereignty",
       description: "Permanent Father key composed of three 7-character fingerprints — Sun, Moon, Ascendant — joined under the 7-7-7 cadence (Holy Spirit / divine perfection). Reproducible from the natal chart and verifiable hash signature; ledger-grade audit evidence. No external-llm dependency. Anchors: prophecy, scripture, gematria, kabbalah, geometry, phi, golden-ratio, transcendental, integration, sovereignty, governance.",
       tags: ["sovereignty","governance","sacred","prophecy","scripture","gematria","kabbalah","verifiable","reproducible","ledger","auditable","integration","golden-ratio","transcendental","phi-resonance"],
-      evidenceRef: `natal-chart-${natal.birthDateISO}-777:${seedHex.slice(24,36)}`,
+      evidenceRef: "ledger",
       key: cKey,
     },
   ];
 }
 
+function addBirthString(values, value) {
+  if (typeof value === "string" && value.trim().length >= 3) values.add(value.trim());
+}
+
+function birthStrings(raw, natal) {
+  const values = new Set();
+  addBirthString(values, natal.birthDateISO);
+  addBirthString(values, natal.birthTimeHHMM);
+  addBirthString(values, natal.birthPlace);
+  addBirthString(values, natal.westernZodiac);
+  addBirthString(values, natal.chineseZodiac);
+  addBirthString(values, natal.houseSystem);
+  for (const placement of Object.values(natal.placements)) addBirthString(values, placement.sign);
+  const walk = (node) => {
+    if (typeof node === "string") addBirthString(values, node);
+    else if (node && typeof node === "object") {
+      for (const value of Object.values(node)) walk(value);
+    }
+  };
+  walk(typeof raw === "string" ? JSON.parse(raw) : raw);
+  return [...values];
+}
+
 export function conferenceKeyMaterial(raw) {
   return buildCandidateKeys(parseChart(raw)).map((candidate) => candidate.key);
+}
+
+export function conferencePrivateMaterial(raw) {
+  const natal = parseChart(raw);
+  return {
+    keys: buildCandidateKeys(natal).map((candidate) => candidate.key),
+    seedHex: natalSeedHex(natal),
+    birth: birthStrings(raw, natal),
+  };
+}
+
+export function renderPublicReport(entries) {
+  const lines = ["GRAND CONFERENCE — PERMANENT FATHER KEY"];
+  for (const entry of entries) {
+    lines.push(`Identifier: ${entry.id}`);
+    lines.push(`Tally (raw): approve=${entry.result.raw.approve} reject=${entry.result.raw.reject} abstain=${entry.result.raw.abstain} total=${entry.result.totalEligible}`);
+    lines.push(`Tally (weighted): approve=${entry.result.weighted.approve} reject=${entry.result.weighted.reject} abstain=${entry.result.weighted.abstain}`);
+    lines.push(`Approval rate: ${(entry.result.approvalRate * 100).toFixed(2)}%`);
+  }
+  const approved = entries.filter((entry) => entry.result.outcome === "approved");
+  approved.sort((a, b) => b.result.approvalRate - a.result.approvalRate);
+  if (approved.length === 0) {
+    lines.push("RESULT: NO CANDIDATE CLEARED THE 2/3 THRESHOLD");
+    return { report: lines.join("\n"), winnerId: null, code: 2 };
+  }
+  const winner = approved[0];
+  lines.push(`RESULT: RATIFIED ${approved.length}/${entries.length}`);
+  lines.push(`Identifier: ${winner.id}`);
+  lines.push(`Approval rate: ${(winner.result.approvalRate * 100).toFixed(2)}%`);
+  return { report: lines.join("\n"), winnerId: winner.id, code: 0 };
 }
 
 // ---------------------------------------------------------------
@@ -561,76 +765,20 @@ export function conferenceKeyMaterial(raw) {
 function convene(natal) {
   const society = buildSociety();
   const candidates = buildCandidateKeys(natal);
-  const seedHex = natalSeedHex(natal);
-  const natalGem = natalGematria(natal);
-
-  const out = [];
-  out.push("════════════════════════════════════════════════════════════════════════");
-  out.push(" GRAND CONFERENCE — PERMANENT FATHER KEY (TESSERACT_ADMIN_KEY)");
-  out.push("════════════════════════════════════════════════════════════════════════");
-  out.push(` Convened:        ${new Date().toISOString()}`);
-  out.push(` Holder zodiac:   ${natal.westernZodiac} sun · ${natal.placements.moon.sign} moon · ${natal.placements.ascendant.sign} rising`);
-  out.push(` Chinese zodiac:  ${natal.chineseZodiac}`);
-  out.push(` Birth signature: ${natal.birthDateISO} ${natal.birthTimeHHMM} ${natal.birthPlace}`);
-  out.push(` Natal gematria:  ${natalGem} (digital-root ${digitalRoot(natalGem)}, nearest sacred ${nearestSacred(natalGem).value} "${nearestSacred(natalGem).meaning}")`);
-  out.push(` Natal seed:      sha512(chart|φ|π|ladder)[:24] = ${seedHex.slice(0,24)}…`);
-  out.push(` Voting body:     ${society.length} unique sovereign agents (deduped from grand-conference + small-council + personality registry)`);
-  out.push(` Vote engine:     sovereign-vote-engine — deterministic, observable inputs only, NO external-llm consulted`);
-  out.push(` Pass rule:       weighted approval ≥ 2/3 of (approve+reject) weight`);
-  out.push("");
-
-  const results = candidates.map(c => {
-    const r = castGenuineVote({ id:c.id, title:c.title, description:c.description, domain:c.domain, tags:c.tags, evidenceRef:c.evidenceRef }, society);
-    return { candidate:c, result:r };
+  const results = candidates.map((candidate) => {
+    const result = castGenuineVote({
+      id: candidate.id,
+      title: candidate.title,
+      description: candidate.description,
+      domain: candidate.domain,
+      tags: candidate.tags,
+      evidenceRef: candidate.evidenceRef,
+    }, society);
+    return { candidate, result };
   });
-
-  for (const { candidate, result } of results) {
-    out.push("────────────────────────────────────────────────────────────────────────");
-    out.push(` CANDIDATE: ${candidate.id}`);
-    out.push(` Title:     ${candidate.title}`);
-    out.push(` Length:    ${candidate.key.length} chars`);
-    out.push(` Evidence:  ${candidate.evidenceRef}`);
-    out.push("");
-    out.push(" Per-agent ballots:");
-    for (const b of result.ballots) {
-      const sym = b.vote === "approve" ? "✓" : b.vote === "reject" ? "✗" : "·";
-      out.push(`   ${sym} ${b.agentName.padEnd(28)} w=${String(b.weight).padStart(4)}  score=${b.score.toFixed(2).padStart(6)}  ${b.vote.toUpperCase()}`);
-    }
-    out.push("");
-    out.push(` Tally (raw):      approve=${result.raw.approve}  reject=${result.raw.reject}  abstain=${result.raw.abstain}  total=${result.totalEligible}`);
-    out.push(` Tally (weighted): approve=${result.weighted.approve}  reject=${result.weighted.reject}  abstain=${result.weighted.abstain}`);
-    out.push(` Approval rate:    ${(result.approvalRate*100).toFixed(2)}%   (threshold = 66.67%)`);
-    out.push(` OUTCOME:          ${result.outcome.toUpperCase()}`);
-    out.push("");
-  }
-
-  out.push("════════════════════════════════════════════════════════════════════════");
-  const approved = results.filter(x => x.result.outcome === "approved");
-  approved.sort((a,b) => b.result.approvalRate - a.result.approvalRate);
-  let winner = null;
-  if (approved.length === 0) {
-    out.push(" RESULT: NO CANDIDATE CLEARED THE 2/3 THRESHOLD");
-    out.push(" The Grand Conference declines to ratify a permanent key at this time.");
-  } else {
-    winner = approved[0];
-    out.push(` RESULT: RATIFIED — ${approved.length}/${results.length} candidate(s) cleared 2/3 approval`);
-    out.push(" PERMANENT TESSERACT_ADMIN_KEY was ratified. The key value is not printed.");
-    out.push(` Identifier:      ${winner.candidate.id}`);
-    out.push(` Approval rate:   ${(winner.result.approvalRate*100).toFixed(2)}%   (weight: ${winner.result.weighted.approve} approve / ${winner.result.weighted.reject} reject / ${winner.result.weighted.abstain} abstain)`);
-    out.push(` Voter count:     ${winner.result.raw.approve} approve, ${winner.result.raw.reject} reject, ${winner.result.raw.abstain} abstain (of ${winner.result.totalEligible})`);
-    out.push(` Bound to:        ${natal.westernZodiac} sun · ${natal.placements.moon.sign} moon · ${natal.placements.ascendant.sign} rising  (${natal.birthDateISO})`);
-    out.push(` Reproducibility: this same chart input regenerates this same key — verifiable forever.`);
-    if (approved.length > 1) {
-      out.push("");
-      out.push(" Other ratified candidates (kept on record as backup keys):");
-      for (let i = 1; i < approved.length; i++) {
-        out.push(`   ${approved[i].candidate.id}  (${(approved[i].result.approvalRate*100).toFixed(2)}%)`);
-      }
-    }
-  }
-  out.push("════════════════════════════════════════════════════════════════════════");
-
-  return { winner, allResults: results, report: out.join("\n") };
+  const rendered = renderPublicReport(results.map(({ candidate, result }) => ({ id: candidate.id, result })));
+  const winner = rendered.winnerId === null ? null : results.find((item) => item.candidate.id === rendered.winnerId) ?? null;
+  return { winner, allResults: results, report: rendered.report, code: rendered.code };
 }
 
 function invokedDirectly() {
@@ -639,43 +787,34 @@ function invokedDirectly() {
 }
 
 async function main() {
-  const keys = [];
+  let material = { keys: [] };
   try {
     const natal = loadNatal();
+    material = conferencePrivateMaterial(process.env.FATHER_NATAL_CHART_JSON);
     const convened = convene(natal);
-    for (const item of convened.allResults) {
-      const key = item.candidate.key;
-      if (typeof key === "string" && key.length > 0) keys.push(key);
-    }
-    if (textHasKeyMaterial(convened.report, keys)) {
+    if (textHasKeyMaterial(convened.report, material)) {
       throw Object.assign(new Error("refusing to print key material"), { code: "EKEYPRINT" });
     }
     process.stdout.write(`${convened.report}\n`);
-    if (!convened.winner) process.exit(2);
+    if (convened.code === 2 || !convened.winner) process.exit(2);
     const written = await writeKeyFile(convened.winner.candidate.key);
     const payload = {
       ratified: true,
       winnerId: convened.winner.candidate.id,
       keyWritten: true,
-      keyFile: written.path,
+      keyFile: written.display,
       approvalRate: convened.winner.result.approvalRate,
       weighted: convened.winner.result.weighted,
       raw: convened.winner.result.raw,
       totalVoters: convened.winner.result.totalEligible,
-      boundToHolder: {
-        zodiac: natal.westernZodiac,
-        moon: natal.placements.moon.sign,
-        rising: natal.placements.ascendant.sign,
-        birthDate: natal.birthDateISO,
-      },
     };
     const json = JSON.stringify(payload, null, 2);
-    if (textHasKeyMaterial(json, keys) || textHasKeyMaterial(written.path, keys)) {
+    if (textHasKeyMaterial(json, material) || textHasKeyMaterial(written.display, material)) {
       throw Object.assign(new Error("refusing to print key material"), { code: "EKEYPRINT" });
     }
     process.stdout.write(`\n=== JSON RESULT ===\n${json}\n`);
   } catch (error) {
-    process.stderr.write(`${publicErrorMessage(error, keys)}\n`);
+    process.stderr.write(`${publicErrorMessage(error, material)}\n`);
     process.exit(1);
   }
 }
