@@ -16,7 +16,19 @@ function tokenize(text: string): string[] {
   return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 2);
 }
 
-export function bm25Scores(query: string, docs: string[], k1 = 1.5, b = 0.75): number[] {
+/** Optional counters for the document-frequency pass. Omitted probes leave scores unchanged. */
+export interface Bm25DfProbe {
+  tokenExams?: { n: number };
+  df?: Record<string, number>;
+}
+
+export function bm25Scores(
+  query: string,
+  docs: string[],
+  k1 = 1.5,
+  b = 0.75,
+  probe?: Bm25DfProbe,
+): number[] {
   const qTerms = Array.from(new Set(tokenize(query)));
   if (qTerms.length === 0 || docs.length === 0) return docs.map(() => 0);
   const tokenized = docs.map(tokenize);
@@ -25,14 +37,20 @@ export function bm25Scores(query: string, docs: string[], k1 = 1.5, b = 0.75): n
   const N = docs.length;
   const qSet = new Set(qTerms);
   const df: Record<string, number> = Object.fromEntries(qTerms.map((t) => [t, 0]));
+  const tokenExams = probe?.tokenExams;
   for (const d of tokenized) {
     const seen = new Set<string>();
     for (const w of d) {
+      if (tokenExams) tokenExams.n += 1;
       if (qSet.has(w) && !seen.has(w)) {
         seen.add(w);
         df[w]++;
       }
     }
+  }
+  if (probe?.df) {
+    const dfOut = probe.df;
+    for (const t of qTerms) dfOut[t] = df[t];
   }
   const idf: Record<string, number> = {};
   for (const t of qTerms) {
