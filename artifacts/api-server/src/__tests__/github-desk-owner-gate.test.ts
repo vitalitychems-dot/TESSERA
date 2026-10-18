@@ -32,6 +32,7 @@ const SERVER_TOKEN = "server-desk-token";
 const previousAdmin = process.env[ADMIN_ENV];
 const previousSession = process.env[SESSION_ENV];
 const previousPort = process.env.PORT;
+const previousApiPort = process.env.API_SERVER_PORT;
 const previousDatabase = process.env.DATABASE_URL;
 
 let checkServer: Server;
@@ -47,11 +48,12 @@ beforeAll(async () => {
   const address = checkServer.address();
   if (!address || typeof address === "string") throw new Error("session-check test server has no port");
   checkPort = address.port;
-  process.env.PORT = String(checkPort);
+  process.env.API_SERVER_PORT = String(checkPort);
 });
 
 afterAll(async () => {
   restore("PORT", previousPort);
+  restore("API_SERVER_PORT", previousApiPort);
   await new Promise<void>((resolve, reject) => {
     checkServer.close((error) => (error ? reject(error) : resolve()));
   });
@@ -61,7 +63,8 @@ afterEach(() => {
   restore(ADMIN_ENV, previousAdmin);
   restore(SESSION_ENV, previousSession);
   restore("DATABASE_URL", previousDatabase);
-  process.env.PORT = String(checkPort);
+  restore("PORT", previousPort);
+  process.env.API_SERVER_PORT = String(checkPort);
   resetSessionCheckRateLimitForTests();
 });
 
@@ -395,6 +398,36 @@ describe("gated desk actions", () => {
     expect(fetched).toEqual([]);
   });
 
+  it("denies held paths in readRepoFile and rickOpen before GitHub is called", async () => {
+    const cookie = ownerCookie();
+    const fetched: string[] = [];
+    const io = { token: async () => SERVER_TOKEN, fetchImpl: fetchSpy(fetched) };
+    const heldPaths = [
+      "data/school/brief.txt",
+      "archives/source-repositories/Zz/artifacts/api-server/package.json",
+      "src/lib/tessera/ingest.ts",
+      "archives/source-variants/1T/README.md",
+      "archives/source-variants/T44/README.md",
+      "preview/src/lib/tessera/constitution-seal.ts",
+      "preview/src/lib/tessera/study-log.ts",
+      "preview/src/lib/tessera/desk.ts",
+    ];
+    for (const path of heldPaths) {
+      const read = await readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path }, cookie, io);
+      expect(read, path).toEqual({ ok: false, error: "That repository path is not allowed." });
+      const opened = await openRepoContentsGated({ repo: "TESSERA", path }, cookie, io);
+      expect(opened, path).toEqual({
+        ok: false,
+        kind: "no",
+        line: "That repository path is not allowed.",
+        entries: [],
+        text: "",
+        error: "That repository path is not allowed.",
+      });
+    }
+    expect(fetched).toEqual([]);
+  });
+
   it("serves reach, open, main, trees, and gitbook notes for an owner session", async () => {
     const cookie = ownerCookie();
     const seen: string[] = [];
@@ -486,7 +519,7 @@ describe("loopback session check", () => {
     });
     const port = await listen(closed);
     await closeServer(closed);
-    process.env.PORT = String(port);
+    process.env.API_SERVER_PORT = String(port);
     const decision = await deskOwnerGate(ownerCookie());
     expect(decision).toEqual({ ok: false, status: 503, error: "sovereign-unconfigured" });
     assertGeneric(decision);
@@ -496,7 +529,7 @@ describe("loopback session check", () => {
     configured();
     const hanging = createServer(() => undefined);
     const port = await listen(hanging);
-    process.env.PORT = String(port);
+    process.env.API_SERVER_PORT = String(port);
     try {
       const decision = await deskOwnerGate(ownerCookie());
       expect(decision).toEqual({ ok: false, status: 503, error: "sovereign-unconfigured" });
@@ -514,13 +547,66 @@ describe("loopback session check", () => {
       res.end();
     });
     const port = await listen(redirecting);
-    process.env.PORT = String(port);
+    process.env.API_SERVER_PORT = String(port);
     try {
       const decision = await deskOwnerGate(ownerCookie());
       expect(decision).toEqual({ ok: false, status: 401, error: "unauthenticated" });
       assertGeneric(decision);
     } finally {
       await closeServer(redirecting);
+    }
+  });
+
+  it("allows the owner when PORT is the preview port and API_SERVER_PORT is the check server", async () => {
+    expect(checkPort).not.toBe(4174);
+    process.env.PORT = "4174";
+    process.env.API_SERVER_PORT = String(checkPort);
+    expect(await deskOwnerGate(ownerCookie())).toEqual({ ok: true });
+  });
+
+  it("falls back to port 8080 when API_SERVER_PORT is invalid and ignores PORT", async () => {
+    process.env.PORT = String(checkPort);
+    process.env.API_SERVER_PORT = "not-a-port";
+    const decision = await deskOwnerGate(ownerCookie());
+    expect(decision).toEqual({ ok: false, status: 503, error: "sovereign-unconfigured" });
+    assertGeneric(decision);
+  });
+
+  it("denies a session check that returns HTTP 500 without echoing the body", async () => {
+    const leak = "upstream-detail-must-not-leak";
+    const broken = createServer((_req, res) => {
+      res.writeHead(500, { "content-type": "application/json" });
+      res.end(JSON.stringify({ message: leak }));
+    });
+    const port = await listen(broken);
+    process.env.API_SERVER_PORT = String(port);
+    try {
+      const decision = await deskOwnerGate(ownerCookie());
+      expect(decision).toEqual({ ok: false, status: 401, error: "unauthenticated" });
+      const text = JSON.stringify(decision);
+      expect(text.includes(leak)).toBe(false);
+      expect(text.includes("message")).toBe(false);
+      assertGeneric(decision);
+    } finally {
+      await closeServer(broken);
+    }
+  });
+
+  it("denies a session check that returns malformed JSON without echoing the body", async () => {
+    const leak = "malformed-body-must-not-leak";
+    const broken = createServer((_req, res) => {
+      res.writeHead(200, { "content-type": "text/plain" });
+      res.end(`{${leak}`);
+    });
+    const port = await listen(broken);
+    process.env.API_SERVER_PORT = String(port);
+    try {
+      const decision = await deskOwnerGate(ownerCookie());
+      expect(decision).toEqual({ ok: false, status: 401, error: "unauthenticated" });
+      expect(JSON.stringify(decision).includes(leak)).toBe(false);
+      assertGeneric(decision);
+    } finally {
+      await closeServer(broken);
     }
   });
 
@@ -641,6 +727,8 @@ describe("loopback session check", () => {
   it("keeps the check off the preview proxy and the public internal-path list", () => {
     const gateSource = readFileSync(new URL("../lib/github-desk-gate.ts", import.meta.url), "utf8");
     expect(gateSource.includes("lookupSession")).toBe(false);
+    expect(gateSource.includes("process.env.PORT")).toBe(false);
+    expect(gateSource.includes("API_SERVER_PORT")).toBe(true);
     expect(gateSource.includes("http://127.0.0.1:")).toBe(true);
     expect(gateSource.includes('redirect: "error"')).toBe(true);
     const appSource = readFileSync(new URL("../app.ts", import.meta.url), "utf8");

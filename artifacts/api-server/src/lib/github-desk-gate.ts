@@ -1,11 +1,11 @@
 // Owner gate for the preview GitHub desk.
 // Preview does not share the api-server session Map, so this gate POSTs the
 // caller's own session token to the api-server loopback session check.
+// The port is API_SERVER_PORT (integer 1-65535, default 8080), never PORT.
 // Unreachable or timed-out api-server -> 503. Any other error, or {valid:false} -> 401.
 // Denial bodies stay generic: no lookup reason, no exception text, no env values.
 
 import { SESSION_COOKIE } from "./sovereign-session";
-import { parseConfiguredPort } from "./server-config";
 
 export const DESK_FILE_BYTE_CAP = 32_768;
 
@@ -17,6 +17,8 @@ const ALLOWED_REPOS = [
 const PATH_DENIED = "That repository path is not allowed." as const;
 const SECRET_PATH =
   /(^|\/)\.env(?:\.|$)|(^|\/)\.git(?:\/|$)|(?:^|\/)id_rsa(?:\.|$)|(?:^|\/)id_ed25519(?:\.|$)|(?:^|\/)[^/]*\.(?:pem|key|p12|pfx)$|(?:^|\/)[^/]*(?:secret|password|credential)[^/]*$|(?:^|\/)[^/]*natal-vault[^/]*(?:\/|$)/i;
+const HELD_PATH =
+  /(?:^|\/)data(?:\/|$)|(?:^|\/)Zz(?:\/|$)|(?:^|\/)[^/]*ingest[^/]*(?:\/|$)|(?:^|\/)1T(?:\/|$)|(?:^|\/)T44(?:\/|$)|(?:^|\/)[^/]*constitution-seal[^/]*(?:\/|$)|(?:^|\/)study-log\.ts$|(?:^|\/)desk\.ts$/;
 const SECRET_TEXT =
   /SESSION_SECRET|BEGIN [A-Z ]*PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]|github_pat_|xox[baprs]-|sk-[A-Za-z0-9]{10,}/;
 
@@ -50,9 +52,10 @@ const UNREACHABLE_CODES = new Set([
 const UNAVAILABLE: DeskGateDenial = { ok: false, status: 503, error: "sovereign-unconfigured" };
 const UNAUTHENTICATED: DeskGateDenial = { ok: false, status: 401, error: "unauthenticated" };
 
+const DEFAULT_API_SERVER_PORT = 8080;
+
 export async function deskOwnerGate(cookieHeader: string | undefined): Promise<{ ok: true } | DeskGateDenial> {
   const url = sessionCheckUrl();
-  if (!url) return UNAVAILABLE;
   const token = sessionCookie(cookieHeader);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), SESSION_CHECK_TIMEOUT_MS);
@@ -81,13 +84,18 @@ export async function deskOwnerGate(cookieHeader: string | undefined): Promise<{
   }
 }
 
-function sessionCheckUrl(): string | null {
-  try {
-    const port = parseConfiguredPort(process.env.PORT);
-    return `http://127.0.0.1:${port}/api/internal/session-check`;
-  } catch {
-    return null;
-  }
+function apiServerPort(): number {
+  const raw = process.env.API_SERVER_PORT;
+  if (raw === undefined) return DEFAULT_API_SERVER_PORT;
+  const trimmed = raw.trim();
+  if (!/^[1-9][0-9]{0,4}$/.test(trimmed)) return DEFAULT_API_SERVER_PORT;
+  const port = Number(trimmed);
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) return DEFAULT_API_SERVER_PORT;
+  return port;
+}
+
+function sessionCheckUrl(): string {
+  return `http://127.0.0.1:${apiServerPort()}/api/internal/session-check`;
 }
 
 async function readValidFlag(response: Response): Promise<boolean | null> {
@@ -176,7 +184,7 @@ function cleanRepoPath(raw: string): string | null {
   if (decoded.startsWith("/") || decoded.startsWith("~") || /^[a-zA-Z]:/.test(decoded)) return null;
   const parts = decoded.split("/");
   if (parts.length === 0 || parts.some((part) => part.length === 0 || part === "." || part === "..")) return null;
-  if (SECRET_PATH.test(decoded)) return null;
+  if (SECRET_PATH.test(decoded) || HELD_PATH.test(decoded)) return null;
   return parts.join("/");
 }
 
