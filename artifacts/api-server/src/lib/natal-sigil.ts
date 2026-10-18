@@ -39,7 +39,8 @@ function saveVault(v: Vault): void {
 }
 
 /** Vault AES key from admin key material. The holder id is only a salt.
- *  Independent of session-rotating keys so natal data survives rotations. */
+ *  Session-key rotation does not change this key. Rotating the admin key
+ *  strands existing natal ciphertext. */
 function vaultKeyFor(holderFp: string): Buffer {
   const material = readAdminKeyMaterial();
   return scryptSync(`tessera-natal-vault-v1|${material}`, `tessera-natal-vault-salt|${holderFp}`, 32);

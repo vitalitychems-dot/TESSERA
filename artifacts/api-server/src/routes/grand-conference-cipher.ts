@@ -91,7 +91,7 @@ router.get("/grand-conference/vault/list", requireFather, (_req, res) => {
   res.json({ ok: true, entries: vaultList() });
 });
 
-router.post("/grand-conference/vault/put", requireFather, (req, res) => {
+router.post("/grand-conference/vault/put", requireFather, (req, res, next) => {
   const key = typeof req.body?.key === "string" ? req.body.key.trim() : "";
   const plaintext = typeof req.body?.plaintext === "string" ? req.body.plaintext : null;
   const notes = typeof req.body?.notes === "string" ? req.body.notes : undefined;
@@ -99,8 +99,16 @@ router.post("/grand-conference/vault/put", requireFather, (req, res) => {
     res.status(400).json({ ok: false, error: "key and plaintext required" });
     return;
   }
-  const entry = vaultPut(key, plaintext, notes);
-  res.json({ ok: true, key: entry.key, epochId: entry.envelope.epochId, updatedAt: entry.updatedAt });
+  try {
+    const entry = vaultPut(key, plaintext, notes);
+    res.json({ ok: true, key: entry.key, epochId: entry.envelope.epochId, updatedAt: entry.updatedAt });
+  } catch (err) {
+    if (isVaultUnavailable(err)) {
+      res.status(503).json({ ok: false, error: "vault-unavailable" });
+      return;
+    }
+    next(err);
+  }
 });
 
 router.get("/grand-conference/vault/get/:key", requireFather, (req, res) => {
@@ -123,9 +131,17 @@ router.get("/grand-conference/vault/get/:key", requireFather, (req, res) => {
   }
 });
 
-router.delete("/grand-conference/vault/delete/:key", requireFather, (req, res) => {
-  const removed = vaultDelete(String(req.params.key ?? ""));
-  res.json({ ok: removed });
+router.delete("/grand-conference/vault/delete/:key", requireFather, (req, res, next) => {
+  try {
+    const removed = vaultDelete(String(req.params.key ?? ""));
+    res.json({ ok: removed });
+  } catch (err) {
+    if (isVaultUnavailable(err)) {
+      res.status(503).json({ ok: false, error: "vault-unavailable" });
+      return;
+    }
+    next(err);
+  }
 });
 
 router.post("/grand-conference/vault/rewrap", requireFather, (_req, res) => {
@@ -302,7 +318,7 @@ router.get("/grand-conference/summary", (_req, res) => {
   const snap = (() => { try { return epochSnapshot(); } catch (e) { return { error: (e as Error).message }; } })();
   const fatherKeyConfigured = (() => { try { return isFatherKeyConfigured(); } catch { return false; } })();
   const activeFatherSessions = (() => { try { return activeFatherSessionCount(); } catch { return 0; } })();
-  const vault = (() => { try { return vaultStatus(); } catch (e) { return { error: (e as Error).message }; } })();
+  const vault = (() => { try { return anonymousVaultStatus(); } catch (e) { return { error: (e as Error).message }; } })();
   const heartbeat = (() => { try { return heartbeatStatus(); } catch (e) { return { error: (e as Error).message }; } })();
   res.json({
     ok: true,
@@ -334,5 +350,20 @@ router.get("/grand-conference/summary", (_req, res) => {
     res.status(200).json({ ok: false, degraded: true, error: (err as Error).message, timestamp: Date.now() });
   }
 });
+
+function anonymousVaultStatus() {
+  const status = vaultStatus();
+  return {
+    totalEntries: status.totalEntries,
+    currentEpochId: status.currentEpochId,
+    entriesPerEpoch: status.entriesPerEpoch,
+    lastRewrapEpoch: status.lastRewrapEpoch,
+    lastRewrapAt: status.lastRewrapAt,
+  };
+}
+
+function isVaultUnavailable(err: unknown): boolean {
+  return err instanceof Error && err.name === "NotConfiguredError" && err.message === "vault-unavailable";
+}
 
 export default router;

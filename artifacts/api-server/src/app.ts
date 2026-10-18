@@ -195,11 +195,54 @@ app.use("/api", (_req, res, next) => {
 app.use("/api", router);
 app.use(dbUnavailableErrorHandler);
 
-/** Last resort. Fixed body and a fixed log line. Never the raw error, its message, or its stack. */
-export function terminalErrorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction): void {
-  void err;
-  if (res.headersSent) return;
-  logger.error("request failed");
+const CLIENT_STATUS_ERROR: Record<number, string> = {
+  400: "bad-request",
+  401: "unauthorized",
+  403: "forbidden",
+  404: "not-found",
+  405: "method-not-allowed",
+  406: "not-acceptable",
+  408: "request-timeout",
+  409: "conflict",
+  411: "length-required",
+  413: "payload-too-large",
+  414: "uri-too-long",
+  415: "unsupported-media-type",
+  422: "unprocessable-entity",
+  429: "too-many-requests",
+};
+
+function clientStatus(err: unknown): number | null {
+  if (!err || typeof err !== "object") return null;
+  const record = err as { status?: unknown; statusCode?: unknown };
+  const raw = typeof record.status === "number" ? record.status : record.statusCode;
+  if (typeof raw !== "number" || !Number.isInteger(raw) || raw < 400 || raw > 499) return null;
+  return raw;
+}
+
+function terminalErrorLog(err: unknown, status: number): { errorName: string; status: number; code?: string | number } {
+  const errorName = err instanceof Error && err.name ? err.name : "UnknownError";
+  const fields: { errorName: string; status: number; code?: string | number } = { errorName, status };
+  if (err && typeof err === "object" && "code" in err) {
+    const raw = (err as { code?: unknown }).code;
+    if (typeof raw === "number" && Number.isFinite(raw)) fields.code = raw;
+    else if (typeof raw === "string" && /^[A-Za-z0-9_.-]{1,64}$/.test(raw)) fields.code = raw;
+  }
+  return fields;
+}
+
+/** Last resort. A numeric 4xx keeps that status with a fixed label. Everything else is a fixed 500. */
+export function terminalErrorHandler(err: unknown, _req: Request, res: Response, next: NextFunction): void {
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
+  const status = clientStatus(err);
+  logger.error(terminalErrorLog(err, status ?? 500), "request failed");
+  if (status !== null) {
+    res.status(status).json({ ok: false, error: CLIENT_STATUS_ERROR[status] ?? "client-error" });
+    return;
+  }
   res.status(500).json({ ok: false, error: "request-failed" });
 }
 

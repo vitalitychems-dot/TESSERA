@@ -114,7 +114,11 @@ export function vaultGet(key: string): { key: string; plaintext: string; envelop
   const buf = decryptEnvelope(entry.envelope, `vault:${key}`);
   if (entry.envelope.ct !== beforeCt) {
     entry.updatedAt = new Date().toISOString();
-    persist();
+    try {
+      persist();
+    } catch {
+      logger.warn("SovereignVault: rewrap persist failed");
+    }
   }
   return { key, plaintext: buf.toString("utf8"), envelope: entry.envelope, updatedAt: entry.updatedAt };
 }

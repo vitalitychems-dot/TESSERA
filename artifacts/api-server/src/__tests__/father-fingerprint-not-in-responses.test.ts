@@ -210,6 +210,7 @@ describe("father fingerprint is absent from handler responses and logs", () => {
       const body = JSON.parse(text) as unknown;
       expect(hasKey(body, "windowId"), call.name).toBe(false);
       expect(hasKey(body, "permutationFingerprint"), call.name).toBe(false);
+      if (call.name === "summary") expect(hasKey(body, "path"), call.name).toBe(false);
     }
   });
 

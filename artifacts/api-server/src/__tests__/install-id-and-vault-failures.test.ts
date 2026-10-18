@@ -1,10 +1,12 @@
-import { chmodSync, mkdtempSync, readFileSync, rmSync, statSync, unlinkSync } from "node:fs";
+import { createCipheriv, createHash, hkdfSync, randomBytes } from "node:crypto";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer, type Server } from "node:http";
-import express from "express";
+import express, { type NextFunction, type Request, type Response } from "express";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { terminalErrorHandler } from "../app";
+import apiApp, { setServerReady, terminalErrorHandler } from "../app";
+import { getFatherSeal } from "../lib/father-identity";
 import { logger } from "../lib/logger";
 
 const ADMIN_ENV = "TESSERACT_ADMIN_KEY";
@@ -167,17 +169,212 @@ describe("install id and vault failures stay generic", () => {
     try {
       const response = await fetch(`${server.url}/boom`);
       const text = await response.text();
+      const log = logs();
       const leaked = response.status !== 500
         || text !== JSON.stringify({ ok: false, error: "request-failed" })
         || mentionsFailureDetail(text, "/tmp/install-id")
-        || mentionsFailureDetail(logs(), "/tmp/install-id");
+        || mentionsFailureDetail(log, "/tmp/install-id")
+        || !log.includes("\"errorName\":\"Error\"")
+        || !log.includes("\"status\":500");
       expect(leaked).toBe(false);
     } finally {
       logs.restore();
       await server.close();
     }
   });
+
+  it("keeps a numeric 4xx and a fixed body", async () => {
+    const logs = captureLogs();
+    const app = express();
+    app.get("/bad", (_req, _res, next) => {
+      const error = new SyntaxError("Unexpected token in JSON at position 1");
+      next(Object.assign(error, { status: 400, statusCode: 400 }));
+    });
+    app.use(terminalErrorHandler);
+    const server = await listen(app);
+    try {
+      const response = await fetch(`${server.url}/bad`);
+      const text = await response.text();
+      const log = logs();
+      const leaked = response.status !== 400
+        || text !== JSON.stringify({ ok: false, error: "bad-request" })
+        || log.includes("Unexpected token")
+        || log.includes("position")
+        || !log.includes("\"errorName\":\"SyntaxError\"")
+        || !log.includes("\"status\":400");
+      expect(leaked).toBe(false);
+    } finally {
+      logs.restore();
+      await server.close();
+    }
+  });
+
+  it("calls next when headers are already sent", async () => {
+    let forwarded = false;
+    const app = express();
+    app.get("/partial", (_req, res, next) => {
+      res.write("ok");
+      const error = new Error("EACCES: permission denied, open '/tmp/install-id'");
+      next(Object.assign(error, { status: 400 }));
+    });
+    app.use(terminalErrorHandler);
+    app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+      forwarded = err instanceof Error && (err as { status?: number }).status === 400;
+      if (!res.writableEnded) res.end();
+    });
+    const server = await listen(app);
+    try {
+      const response = await fetch(`${server.url}/partial`);
+      const text = await response.text();
+      const leaked = !forwarded
+        || text.includes("/tmp/install-id")
+        || text.includes("EACCES");
+      expect(leaked).toBe(false);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("returns 400 for malformed JSON and 413 for an oversized body on the real app", async () => {
+    setServerReady();
+    const logs = captureLogs();
+    const server = await listen(apiApp);
+    try {
+      const malformed = await fetch(`${server.url}/api/admin/session`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{",
+      });
+      const malformedText = await malformed.text();
+      const oversized = await fetch(`${server.url}/api/admin/session`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: `{"pad":"${"x".repeat(120_000)}"}`,
+      });
+      const oversizedText = await oversized.text();
+      const log = logs();
+      const leaked = malformed.status !== 400
+        || malformedText !== JSON.stringify({ ok: false, error: "bad-request" })
+        || oversized.status !== 413
+        || oversizedText !== JSON.stringify({ ok: false, error: "payload-too-large" })
+        || log.includes("Unexpected")
+        || log.includes("entity")
+        || log.includes("too large")
+        || log.includes("position");
+      expect(leaked).toBe(false);
+    } finally {
+      logs.restore();
+      await server.close();
+    }
+  });
+
+  it("returns vault plaintext when rewrap persist fails", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "tessera-vault-rewrap-"));
+    dirs.push(dir);
+    const vaultPath = join(dir, "vault.json");
+    vi.resetModules();
+    process.env[ADMIN_ENV] = ADMIN_KEY;
+    process.env[VAULT_ENV] = vaultPath;
+    const astro = await import("../lib/sovereign-astro-cipher");
+    const plain = "rewrap-plain";
+    const key = "row";
+    writeFileSync(vaultPath, retiredVaultDocument(astro.getCurrentEpoch(), astro.activeEpochSignature(), key, plain), { mode: 0o600 });
+    chmodSync(dir, 0o555);
+    const logs = captureLogs();
+    const vault = await import("../lib/sovereign-vault");
+    let threw = false;
+    let opened = "";
+    try {
+      opened = vault.vaultGet(key)?.plaintext ?? "";
+    } catch {
+      threw = true;
+    } finally {
+      logs.restore();
+    }
+    const leaked = threw || opened !== plain || mentionsFailureDetail(logs(), dir);
+    expect(leaked).toBe(false);
+  });
+
+  it("maps vault put and delete failures to 503", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "tessera-vault-route-"));
+    dirs.push(dir);
+    const vaultPath = join(dir, "vault.json");
+    vi.resetModules();
+    process.env[ADMIN_ENV] = ADMIN_KEY;
+    process.env[VAULT_ENV] = vaultPath;
+    const writer = await import("../lib/sovereign-vault");
+    writer.vaultPut("kept", "vault-plain");
+    chmodSync(dir, 0o555);
+    vi.resetModules();
+    process.env[ADMIN_ENV] = ADMIN_KEY;
+    process.env[VAULT_ENV] = vaultPath;
+    const [{ default: router }, sessions] = await Promise.all([
+      import("../routes/grand-conference-cipher"),
+      import("../lib/father-session-store"),
+    ]);
+    const token = sessions.issueFatherToken("raw-key");
+    const app = express();
+    app.use(express.json());
+    app.use(router);
+    const server = await listen(app);
+    try {
+      const headers = { authorization: `Bearer ${token}`, "content-type": "application/json" };
+      const removed = await fetch(`${server.url}/grand-conference/vault/delete/kept`, { method: "DELETE", headers });
+      const removedText = await removed.text();
+      const stored = await fetch(`${server.url}/grand-conference/vault/put`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ key: "fresh", plaintext: "vault-plain" }),
+      });
+      const storedText = await stored.text();
+      const leaked = removed.status !== 503
+        || removedText !== JSON.stringify({ ok: false, error: "vault-unavailable" })
+        || stored.status !== 503
+        || storedText !== JSON.stringify({ ok: false, error: "vault-unavailable" })
+        || removedText.includes(dir)
+        || storedText.includes(dir);
+      expect(leaked).toBe(false);
+    } finally {
+      await server.close();
+    }
+  });
 });
+
+function retiredVaultDocument(
+  epoch: { epochId: string; epochHash: string },
+  sig: string,
+  key: string,
+  plain: string,
+): string {
+  const raw = process.env[ADMIN_ENV] ?? "";
+  const retired = createHash("sha256").update(`tesseract:father:v1|${raw}`).digest("hex").slice(0, 16);
+  const ikm = Buffer.from(`${getFatherSeal()}|${retired}`, "utf8");
+  const aesKey = Buffer.from(hkdfSync("sha256", ikm, Buffer.from(sig, "utf8"), Buffer.from("tesseract:astro-cipher:v1", "utf8"), 32));
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", aesKey, iv);
+  cipher.setAAD(Buffer.from(`vault:${key}`, "utf8"));
+  const ct = Buffer.concat([cipher.update(plain, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return JSON.stringify({
+    version: 1,
+    entries: {
+      [key]: {
+        key,
+        updatedAt: "2026-01-01T00:00:00.000Z",
+        envelope: {
+          v: 1,
+          alg: "aes-256-gcm",
+          epochId: epoch.epochId,
+          epochHash: epoch.epochHash,
+          iv: iv.toString("base64"),
+          tag: tag.toString("base64"),
+          ct: ct.toString("base64"),
+          createdAt: "2026-01-01T00:00:00.000Z",
+        },
+      },
+    },
+  });
+}
 
 function isInstallUnavailable(err: unknown): boolean {
   return err instanceof Error && err.name === "NotConfiguredError" && err.message === "install-id-unavailable";
