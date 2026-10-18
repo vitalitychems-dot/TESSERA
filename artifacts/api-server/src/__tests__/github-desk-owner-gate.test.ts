@@ -1,6 +1,8 @@
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import express, { type Request as ExpressRequest, type Response as ExpressResponse } from "express";
 import { rejectWhenDatabaseNotConfigured } from "../lib/db-availability";
@@ -333,6 +335,50 @@ describe("gated desk actions", () => {
     assertGeneric(climbed);
   });
 
+  it("hides an npm token in an otherwise allowlisted file", async () => {
+    const cookie = ownerCookie();
+    const fetched: string[] = [];
+    const marker = `npm_${"a".repeat(36)}`;
+    const body = `note ${marker}`;
+    const read = await readRepoFileGated(
+      { owner: "vitalitychems-dot", repo: "TESSERA", path: "NOTES.md" },
+      cookie,
+      {
+        token: async () => SERVER_TOKEN,
+        fetchImpl: (async (url: string | URL | Request) => {
+          fetched.push(String(url));
+          return jsonResponse({
+            type: "file",
+            encoding: "base64",
+            size: Buffer.byteLength(body),
+            content: Buffer.from(body).toString("base64"),
+          });
+        }) as typeof fetch,
+      },
+    );
+    expect(read.ok).toBe(false);
+    if (!read.ok) expect(read.error).toBe("That file could not be read.");
+    expect(JSON.stringify(read).includes("npm_")).toBe(false);
+    expect(fetched).toEqual(["https://api.github.com/repos/vitalitychems-dot/TESSERA/contents/NOTES.md"]);
+    const shortBody = `note npm_${"b".repeat(10)}`;
+    const allowed = await readRepoFileGated(
+      { owner: "vitalitychems-dot", repo: "TESSERA", path: "SHORT.md" },
+      cookie,
+      {
+        token: async () => SERVER_TOKEN,
+        fetchImpl: (async () =>
+          jsonResponse({
+            type: "file",
+            encoding: "base64",
+            size: Buffer.byteLength(shortBody),
+            content: Buffer.from(shortBody).toString("base64"),
+          })) as typeof fetch,
+      },
+    );
+    expect(allowed.ok).toBe(true);
+    if (allowed.ok) expect(allowed.text.length).toBe(shortBody.length);
+  });
+
   it("reads an allowlisted file with the server token and hides upstream errors", async () => {
     const cookie = ownerCookie();
     const seen: { url: string; headerText: string }[] = [];
@@ -386,9 +432,18 @@ describe("gated desk actions", () => {
       ".envrc",
       ".ENV-backup",
       "config/.Envrc",
+      "prod.env",
+      "config.env.bak",
+      "secrets/x.json",
+      "config/secrets/x.json",
+      "config/passwords/notes.md",
       ".npmrc",
+      ".npmrc.bak",
+      "nested/.NPMRC.bak",
       ".NPMRC",
       "archives/source-repositories/olive-giant-ever-glade/.grok/app-env.json",
+      "app-env.json.bak",
+      "nested/APP-ENV.JSON.bak",
       ".grok/APP-ENV.JSON",
       "\uFF0Eenv",
       "docs/\uFF0Enpmrc",
@@ -426,6 +481,9 @@ describe("gated desk actions", () => {
       "archives/source-variants/T44/README.md",
       "preview/src/lib/tessera/constitution-seal.ts",
       "preview/src/lib/tessera/study-log.ts",
+      "preview/src/lib/tessera/study-log.ts.bak",
+      "preview/src/lib/tessera/study-log.tsx",
+      "notes/study-log.ts/extra.md",
       "preview/src/lib/tessera/desk.ts",
       "T44-agent-coordination.md",
       "ZZ_NOW.txt",
@@ -460,6 +518,7 @@ describe("gated desk actions", () => {
       "archives/ZZ/package.json",
       "preview/src/lib/tessera/CONSTITUTION-SEAL.ts",
       "preview/src/lib/tessera/STUDY-LOG.ts",
+      "preview/src/lib/tessera/STUDY-LOG.ts.bak",
       "preview/src/lib/tessera/Desk.ts",
       "archives/source-variants/1t/README.md",
       "archives/source-variants/t44/README.md",
@@ -524,9 +583,15 @@ describe("gated desk actions", () => {
           { name: "desk.ts", type: "file" },
           { name: "ingest.ts", type: "file" },
           { name: ".npmrc", type: "file" },
+          { name: ".npmrc.bak", type: "file" },
           { name: "app-env.json", type: "file" },
+          { name: "app-env.json.bak", type: "file" },
           { name: ".envrc", type: "file" },
+          { name: "prod.env", type: "file" },
+          { name: "config.env.bak", type: "file" },
+          { name: "secrets", type: "dir" },
           { name: ".ENV-backup", type: "file" },
+          { name: "study-log.ts.bak", type: "file" },
           { name: "T44-agent-coordination.md", type: "file" },
           { name: "ZZ_NOW.txt", type: "file" },
           { name: "zz-olive", type: "dir" },
@@ -682,52 +747,86 @@ describe("gated desk actions", () => {
 
   it("does not print a held name in the tree delta", async () => {
     const cookie = ownerCookie();
-    const hidden = [
-      "secret-society-plan.md",
+    const families = [
+      "secure-recruitment/brief.md",
+      "moltbook-recruitment/brief.md",
+      "summit-45/brief.md",
+      "secret-society/brief.md",
+      "society-recruits/brief.md",
+      "society-intel/brief.md",
+      "secure-outreach/brief.md",
+      "email-outreach/brief.md",
+      "recruit-dossiers/brief.md",
+      "political-dossiers/brief.md",
+      "natal-chart/brief.md",
+      "father-natal/brief.md",
+      "SecretSociety/brief.md",
+      "personal-notes/brief.md",
+    ];
+    const heldPaths = [
+      ...families,
       "T44-agent-coordination.md",
       "ZZ_NOW.txt",
       "zz-olive/readme.md",
       "desk.tsx",
+      "study-log.ts.bak",
       ".npmrc",
+      ".npmrc.bak",
       ".grok/app-env.json",
+      "app-env.json.bak",
       ".envrc",
-      "personal-notes.md",
+      "prod.env",
+      "config.env.bak",
+      "secrets/x.json",
     ];
-    const api: DeskGithubApi = async (path) => {
-      if (path.endsWith("/commits/main")) {
-        return {
-          ok: true,
-          status: 200,
-          text: JSON.stringify({ sha: "a".repeat(40), commit: { tree: { sha: "c".repeat(40) } } }),
-        };
-      }
-      if (path.includes("/git/trees/")) {
-        return {
-          ok: true,
-          status: 200,
-          text: JSON.stringify({
-            tree: [{ path: "README.md", type: "blob" }, { path: "docs/guide.md", type: "blob" }, ...hidden.map((entry) => ({ path: entry, type: "blob" }))],
-            truncated: false,
-          }),
-        };
-      }
-      return { ok: false, status: 500, text: "unused" };
-    };
-    const delta = await treeDeltaGated(cookie, {
-      githubApi: api,
-      tesseraHeld: ["README.md", ...hidden],
-      gitbookHeld: ["old-secret-society.md", "removed-only.md"],
-      pathDelta: deskPathDelta,
-      deltaLine: deskDeltaLine,
-    });
-    expect(delta.ok).toBe(true);
-    if (!delta.ok) return;
-    for (const name of [...hidden, "old-secret-society.md", "secret-society", "personal-"]) {
-      expect(delta.line.includes(name), name).toBe(false);
+    expect(families).toHaveLength(14);
+    for (const heldPath of heldPaths) {
+      const preSlice = { added: [] as string[], removed: [] as string[] };
+      const api: DeskGithubApi = async (path) => {
+        if (path.endsWith("/commits/main")) {
+          return {
+            ok: true,
+            status: 200,
+            text: JSON.stringify({ sha: "a".repeat(40), commit: { tree: { sha: "c".repeat(40) } } }),
+          };
+        }
+        if (path.includes("/git/trees/")) {
+          return {
+            ok: true,
+            status: 200,
+            text: JSON.stringify({
+              tree: [
+                { path: heldPath, type: "blob" },
+                { path: "README.md", type: "blob" },
+                { path: "docs/guide.md", type: "blob" },
+              ],
+              truncated: false,
+            }),
+          };
+        }
+        return { ok: false, status: 500, text: "unused" };
+      };
+      const delta = await treeDeltaGated(cookie, {
+        githubApi: api,
+        tesseraHeld: ["README.md"],
+        gitbookHeld: [heldPath, "removed-only.md"],
+        pathDelta: (held, live) => {
+          const result = deskPathDelta(held, live);
+          preSlice.added.push(...result.added);
+          preSlice.removed.push(...result.removed);
+          return result;
+        },
+        deltaLine: deskDeltaLine,
+      });
+      expect(delta.ok, heldPath).toBe(true);
+      if (!delta.ok) continue;
+      expect(preSlice.added, heldPath).toEqual(["docs/guide.md", "README.md", "docs/guide.md"]);
+      expect(preSlice.removed, heldPath).toEqual(["removed-only.md"]);
+      expect(delta.line.includes(heldPath), heldPath).toBe(false);
+      expect(delta.line.includes("docs/guide.md"), heldPath).toBe(true);
+      expect(delta.line.includes("removed-only.md"), heldPath).toBe(true);
+      expect(delta.line.includes("README.md"), heldPath).toBe(true);
     }
-    expect(delta.line.includes("docs/guide.md")).toBe(true);
-    expect(delta.line.includes("removed-only.md")).toBe(true);
-    expect(delta.line.includes("README.md")).toBe(true);
   });
 
   it("serves reach, open, main, trees, and gitbook notes for an owner session", async () => {
@@ -1143,6 +1242,21 @@ describe("loopback session check", () => {
     expect(result.text.includes("database not configured")).toBe(false);
   });
 
+  it("copies a dev suite port and does not invent one when the api runs elsewhere", () => {
+    expect(fillDevPort("serve", "development", {})).toEqual({ port: null });
+    expect(fillDevPort("serve", "development", { API_SERVER_PORT: "   " })).toEqual({ port: "   " });
+    expect(fillDevPort("serve", "development", { TESSERA_API_PORT: "8080" })).toEqual({ port: "8080" });
+    expect(fillDevPort("serve", "development", { API_SERVER_PORT: "8080", TESSERA_API_PORT: "5000" })).toEqual({
+      port: "8080",
+    });
+    expect(fillDevPort("serve", "development", { TESSERA_API_PORT: "5000" })).toEqual({ port: "5000" });
+    expect(fillDevPort("build", "development", { TESSERA_API_PORT: "8080" })).toEqual({ port: null });
+    expect(fillDevPort("serve", "production", { TESSERA_API_PORT: "8080" })).toEqual({ port: null });
+    for (const suitePort of ["nope", "0", "65536", "   "]) {
+      expect(fillDevPort("serve", "development", { TESSERA_API_PORT: suitePort })).toEqual({ port: null });
+    }
+  });
+
   it("keeps the check off the preview proxy and the public internal-path list", () => {
     const gateSource = readFileSync(new URL("../lib/github-desk-gate.ts", import.meta.url), "utf8");
     expect(gateSource.includes("lookupSession")).toBe(false);
@@ -1165,6 +1279,22 @@ describe("loopback session check", () => {
     expect(routeSource.includes("console.")).toBe(false);
   });
 });
+
+function fillDevPort(command: string, mode: string, env: Record<string, string>): { port: string | null } {
+  const modulePath = fileURLToPath(new URL("../../../../preview/src/lib/dev-api-port.ts", import.meta.url));
+  const probe = `
+    import { fillDevApiServerPort } from ${JSON.stringify(modulePath)};
+    const env = ${JSON.stringify(env)};
+    fillDevApiServerPort(${JSON.stringify(command)}, ${JSON.stringify(mode)}, env);
+    const port = Object.prototype.hasOwnProperty.call(env, "API_SERVER_PORT") ? env.API_SERVER_PORT : null;
+    process.stdout.write(JSON.stringify({ port }));
+  `;
+  const result = spawnSync(process.execPath, ["--experimental-strip-types", "--input-type=module", "-e", probe], {
+    encoding: "utf8",
+  });
+  if (result.status !== 0) throw new Error("dev port probe failed");
+  return JSON.parse(result.stdout) as { port: string | null };
+}
 
 function ownerCookieWithoutConfig(): string {
   return `${SESSION_COOKIE}=present`;
