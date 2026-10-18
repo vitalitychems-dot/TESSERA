@@ -235,25 +235,61 @@ describe("sovereign language anonymous route gate", () => {
     }
   });
 
-  it("keeps the owner session gate first so every registered route is closed", async () => {
+  it("rejects a path-less gate and closes every /sovereign-language route", async () => {
     type StackLayer = {
       handle: unknown;
-      route?: { path: string; methods: Record<string, boolean> };
+      slash?: boolean;
+      match?: (path: string) => boolean;
+      route?: {
+        path: string;
+        methods: Record<string, boolean>;
+        stack?: Array<{ handle: unknown }>;
+      };
     };
     const layers = (sovereignLanguageRouter as unknown as { stack: StackLayer[] }).stack;
-    expect(layers[0]?.handle).toBe(requireAdminSession);
-    expect(layers[0]?.route).toBeUndefined();
     const routes = layers.filter((layer) => layer.route);
-    expect(routes.length).toBe(layers.length - 1);
     expect(routes.length).toBeGreaterThanOrEqual(GATED.length);
+
+    for (const layer of layers) {
+      if (layer.route) continue;
+      if (layer.slash === true) {
+        expect(layer.handle).not.toBe(requireAdminSession);
+      }
+    }
+
+    const scopedGates = layers.filter((layer) => !layer.route && layer.handle === requireAdminSession);
+    expect(scopedGates.length).toBeGreaterThan(0);
+    for (const gate of scopedGates) {
+      expect(gate.slash).toBe(false);
+      expect(gate.match?.("/sovereign-language")).toBe(true);
+      expect(gate.match?.("/sovereign-language/stats")).toBe(true);
+      expect(gate.match?.("/sovereign-language/agent-rotation/synthetic-agent")).toBe(true);
+      expect(gate.match?.("/metrics")).toBe(false);
+      expect(gate.match?.("/red-team/stats")).toBe(false);
+      expect(gate.match?.("/sovereign-ledger/attest")).toBe(false);
+      expect(gate.match?.("/api/sovereign-language/stats")).toBe(false);
+    }
 
     for (const layer of routes) {
       const route = layer.route;
       if (!route) throw new Error("registered layer has no route");
+      const concrete = route.path.replace(/:[^/]+/g, "synthetic-agent");
+      const routeIndex = layers.indexOf(layer);
+      const coveredByScopedGate = layers.slice(0, routeIndex).some((gate) =>
+        !gate.route
+        && gate.handle === requireAdminSession
+        && gate.slash !== true
+        && gate.match?.(concrete) === true
+        && gate.match?.("/metrics") === false
+      );
+      const coveredOnRoute = (route.stack ?? []).some((entry) => entry.handle === requireAdminSession);
+      expect(route.path.startsWith("/sovereign-language")).toBe(true);
+      expect(coveredByScopedGate || coveredOnRoute).toBe(true);
+
       const methodName = Object.entries(route.methods).find(([, enabled]) => enabled)?.[0];
       expect(methodName === "get" || methodName === "post").toBe(true);
       const method = (methodName ?? "get").toUpperCase() as Method;
-      const path = `/api${route.path.replace(/:[^/]+/g, "synthetic-agent")}`;
+      const path = `/api${concrete}`;
       const body = method === "POST"
         ? { text: "synthetic", message: "synthetic", instruction: "synthetic", agentId: "synthetic-agent", senderAgent: "synthetic-a", receiverAgent: "synthetic-b" }
         : undefined;

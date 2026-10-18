@@ -57,7 +57,9 @@ function respondInternalError(res: Response, err: unknown, label: string) {
   return res.status(500).json({ ok: false, error: "internal error" });
 }
 
-router.use(requireAdminSession);
+// This router is mounted at the API root, so the gate must be path-scoped.
+// A path-less use() would run for every later router.
+router.use("/sovereign-language", requireAdminSession);
 
 
 router.get("/sovereign-language/sovereign-layer/verify", (_req, res) => {
