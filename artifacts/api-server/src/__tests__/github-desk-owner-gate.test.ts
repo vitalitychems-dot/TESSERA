@@ -7,7 +7,6 @@ import { rejectWhenDatabaseNotConfigured } from "../lib/db-availability";
 import { resetSessionCheckRateLimitForTests } from "../lib/father-verify-throttle";
 import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 import internalSessionCheckRouter, { handleInternalSessionCheck, rejectSessionCheckPeer } from "../routes/internal-session-check";
-import { deltaLine, pathDelta } from "../../../../preview/src/lib/tessera/path-delta";
 import {
   deskOwnerGate,
   mainNowGated,
@@ -718,8 +717,8 @@ describe("gated desk actions", () => {
       githubApi: api,
       tesseraHeld: ["README.md", ...hidden],
       gitbookHeld: ["old-secret-society.md", "removed-only.md"],
-      pathDelta,
-      deltaLine,
+      pathDelta: deskPathDelta,
+      deltaLine: deskDeltaLine,
     });
     expect(delta.ok).toBe(true);
     if (!delta.ok) return;
@@ -1178,6 +1177,23 @@ function boardDeps(githubApi: DeskGithubApi) {
     saveCachedBoard: async () => undefined,
     savedBoard: [],
   };
+}
+
+function deskPathDelta(held: readonly string[], live: readonly string[]) {
+  const have = new Set(held);
+  const now = new Set(live);
+  const added = [...new Set(live.filter((path) => path && !have.has(path)))];
+  const removed = [...new Set(held.filter((path) => path && !now.has(path)))];
+  return { added, removed, held: have.size, live: now.size };
+}
+
+function deskDeltaLine(
+  repo: string,
+  delta: { added: readonly string[]; removed: readonly string[]; held: number; live: number },
+) {
+  const added = delta.added.slice(0, 4).join(", ") || "none";
+  const removed = delta.removed.slice(0, 4).join(", ") || "none";
+  return `${repo}: ${delta.live} live names, ${delta.held} copied. ${delta.added.length} added. ${delta.removed.length} removed. Added: ${added}. Removed: ${removed}. I did not open the bodies.`;
 }
 
 function treeDeps(githubApi: DeskGithubApi) {
