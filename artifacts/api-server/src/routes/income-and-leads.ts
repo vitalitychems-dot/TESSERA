@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Response } from "express";
 import { logger } from "../lib/logger";
 import { requireAdminSession } from "../lib/sovereign-admin";
 import { getWalletObservation, refreshWalletObservation } from "../lib/wallet-observer";
@@ -12,6 +12,13 @@ import {
 } from "../lib/code-bounties-real";
 
 const router: IRouter = Router();
+
+/** Response bodies stay generic. Logs carry the error name only — never message, stack, or upstream bodies. */
+function respondInternal(res: Response, err: unknown, event: string) {
+  const errorName = err instanceof Error ? err.name : "UnknownError";
+  logger.error({ errorName }, event);
+  return res.status(500).json({ ok: false, error: "internal_error" });
+}
 
 router.use("/income", requireAdminSession);
 router.use("/leads", requireAdminSession);
@@ -31,7 +38,7 @@ router.post("/income/wallet/refresh", async (_req, res) => {
     const obs = await refreshWalletObservation();
     return res.json({ ok: true, observation: obs });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternal(res, err, "income wallet refresh failed");
   }
 });
 
@@ -103,7 +110,7 @@ router.get("/leads/feed", async (req, res) => {
     const counts = await leadCountsByKind();
     return res.json({ ok: true, leads, counts });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternal(res, err, "leads feed failed");
   }
 });
 
@@ -117,8 +124,7 @@ router.get("/free-stuff", async (req, res) => {
     }
     return res.json({ ok: true, ...data });
   } catch (err) {
-    logger.warn({ err: (err as Error).message }, "free-stuff endpoint failed");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternal(res, err, "free-stuff endpoint failed");
   }
 });
 
@@ -127,7 +133,7 @@ router.post("/free-stuff/refresh", async (_req, res) => {
     await refreshFreeFindings();
     return res.json({ ok: true, ...getFreeFindings() });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternal(res, err, "free-stuff refresh failed");
   }
 });
 
@@ -141,7 +147,7 @@ router.get("/code-bounties", async (req, res) => {
     }
     return res.json({ ok: true, ...data });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondInternal(res, err, "code-bounties list failed");
   }
 });
 
