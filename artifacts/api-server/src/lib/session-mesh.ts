@@ -87,7 +87,7 @@ export function registerSession(
     isAuthorized: guardAuthorizer(isAuthorized),
   };
   group.set(sessionId, session);
-  logger.info({ sessionId, sovereignKeyHash, peerCount: group.size }, "Session registered in mesh");
+  logger.info({ sessionId, key: "configured", peerCount: group.size }, "Session registered in mesh");
   return session;
 }
 
@@ -110,7 +110,7 @@ export function removeSession(sovereignKeyHash: string, sessionId: string): void
   if (group.size === 0) {
     meshSessions.delete(sovereignKeyHash);
   }
-  logger.info({ sessionId, sovereignKeyHash }, "Session removed from mesh");
+  logger.info({ sessionId, key: "configured" }, "Session removed from mesh");
 }
 
 export function getGroupSessions(sovereignKeyHash: string): MeshSessionInfo[] {
@@ -222,7 +222,7 @@ export function pruneMeshSessions(): void {
     }
     for (const sessionId of stale) {
       group.delete(sessionId);
-      logger.info({ sessionId, keyHash }, "Stale session pruned from mesh");
+      logger.info({ sessionId, key: "configured" }, "Stale session pruned from mesh");
       broadcastToGroup(keyHash, {
         type: "mesh:peer-left",
         channel: "mesh",

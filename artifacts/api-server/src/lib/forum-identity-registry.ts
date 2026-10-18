@@ -137,7 +137,7 @@ async function seedAdminTokenBindingFromEnv(): Promise<void> {
         .insert(forumPrincipalTokensTable)
         .values({ tokenHash: keyHash, principalName: "Father" })
         .onConflictDoNothing();
-      logger.info({ envName, keyHash: keyHash.slice(0, 4) + "****" }, "Admin token pre-registered as Father (env-seeded binding)");
+      logger.info({ envName, binding: "bound" }, "Admin token pre-registered as Father (env-seeded binding)");
       bound++;
     } catch (err) {
       logger.warn({ envName, err: (err as Error).message }, "Admin token pre-registration failed (non-fatal)");
@@ -154,7 +154,7 @@ export async function registerAdminPrincipal(tokenHash: string, principalName: s
       .insert(forumPrincipalTokensTable)
       .values({ tokenHash, principalName })
       .onConflictDoNothing();
-    logger.info({ tokenHash: tokenHash.slice(0, 8) + "...", principalName }, "Admin principal registered for forum token");
+    logger.info({ binding: "bound", principalName }, "Admin principal registered for forum token");
   } catch (err) {
     logger.warn({ err: (err as Error).message }, "Forum principal registration warning (non-fatal)");
   }
