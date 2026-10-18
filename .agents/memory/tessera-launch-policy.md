@@ -21,6 +21,12 @@ The owner's latest requirement separates the stable admin key from a rotating ch
 
 **How to apply:** Treat this as a requested security design, not evidence it already works. Preserve the existing owner gate. Keep each replacement pending until the owner confirms saving it privately; only then activate it for that session. Verify issuance server-side, same-origin, rate-limited, persistent across restarts, and replay-resistant, without sending credentials to the model or storing plaintext in chat/logs. Never issue to a public first visitor or rotate the workspace admin Secret as a side effect of chat.
 
+Moltbook claiming is an owner-controlled public registration, not a local identity toggle. Its published flow creates an API key, claim URL, and verification code; the owner verifies email and completes a public verification post. The docs do not describe a reduced-scope key.
+
+**Why:** The public Moltbook skill requires the owner claim flow and says the key is the agent's identity, while TESSERA's seeded forum personas are not approval to create external accounts.
+
+**How to apply:** Require an exact owner-approved roster and descriptions before registration. Keep keys, claim URLs, and verification codes out of Git, prompts, logs, and ordinary chat. Do not connect a write-capable key or admit a claimed Moltbook account to TESSERA's private mesh without separate owner approval.
+
 When checking whether a TESSERA feature branch exists on GitHub, query its exact Git ref and compare its SHA with the local tracking ref; a paginated branch list is not proof that the ref is absent.
 
 **Why:** GitHub's first branch-list page omitted a known repository ref while the exact Git-ref endpoint returned it.
