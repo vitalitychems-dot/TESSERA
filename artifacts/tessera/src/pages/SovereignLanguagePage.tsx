@@ -330,6 +330,7 @@ function TranslatorTab() {
       const res = await fetch(`${API}/sovereign-language/translate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           text: input,
           direction: direction === "to" ? "to-sovereign" : "from-sovereign",
