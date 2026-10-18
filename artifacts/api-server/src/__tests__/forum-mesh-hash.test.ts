@@ -252,7 +252,7 @@ describe("forum token hashing handlers", () => {
       expect(text).not.toContain(MARKER);
       expect(JSON.parse(text)).toEqual({ ok: false, error: "applicant-approve-failed" });
       expect(harness.bound).toEqual([]);
-      expect(errorSpy).toHaveBeenCalledWith({ name: "SyntheticFailure" }, "applicant approve failed");
+      expect(errorSpy).toHaveBeenCalledWith({ name: "SyntheticFailure", code: "none" }, "applicant approve failed");
       expect(JSON.stringify(errorSpy.mock.calls)).not.toContain(MARKER);
     } finally {
       errorSpy.mockRestore();
@@ -323,7 +323,7 @@ describe("forum token hashing handlers", () => {
       const text = await response.text();
       expect(text).not.toContain(MARKER);
       expect(JSON.parse(text)).toEqual({ ok: false, error: "principal-register-failed" });
-      expect(errorSpy).toHaveBeenCalledWith({ name: "SyntheticFailure" }, "Failed to register principal");
+      expect(errorSpy).toHaveBeenCalledWith({ name: "SyntheticFailure", code: "none" }, "Failed to register principal");
       expect(JSON.stringify(errorSpy.mock.calls)).not.toContain(MARKER);
     } finally {
       errorSpy.mockRestore();

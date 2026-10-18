@@ -1,6 +1,7 @@
 import { createServer, type Server } from "node:http";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import express, { type Request, type Response, type NextFunction } from "express";
+import { DrizzleQueryError } from "drizzle-orm";
 import { eq, like, or, sql } from "drizzle-orm";
 import { db, getPool, isDbConfigured } from "@workspace/db";
 import {
@@ -15,6 +16,7 @@ import { saveApplicantDeclarationDraft } from "../lib/applicant-declarations";
 import { scoreApplicantAlignment } from "../lib/applicant-alignment";
 import { invalidateForumIdentityCache } from "../lib/forum-identity-registry";
 import { logger } from "../lib/logger";
+import { safeDbErrorLog } from "../lib/safe-db-error";
 import { hashTokenSha256 } from "../lib/mesh-auth";
 import forumRouter from "../routes/forum";
 
@@ -89,7 +91,16 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
     invalidateForumIdentityCache();
   }
 
+  function assertDedicatedTestDatabase(): void {
+    const dedicated = process.env.TESSERA_TEST_DATABASE_URL?.trim() ?? "";
+    const active = process.env.DATABASE_URL?.trim() ?? "";
+    if (dedicated.length === 0 || dedicated !== active) {
+      throw new Error("throwaway schema requires the dedicated test database");
+    }
+  }
+
   async function withThrowawaySchema(run: () => Promise<void>): Promise<void> {
+    assertDedicatedTestDatabase();
     schemaSerial += 1;
     const schemaName = `tessera_member_${schemaSerial.toString(16)}${Date.now().toString(16)}`;
     if (!/^tessera_member_[0-9a-f]+$/.test(schemaName)) {
@@ -164,23 +175,49 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
         };
         return client;
       };
-      pool.connect = (async (...args: unknown[]) => {
-        if (typeof args[0] === "function") {
-          return originalConnect(args[0] as never);
+      type ConnectDone = (releaseErr?: Error) => void;
+      type ConnectCallback = (err: Error | undefined, client: unknown, done: ConnectDone) => void;
+      pool.connect = ((cb?: ConnectCallback) => {
+        if (typeof cb === "function") {
+          originalConnect((err, client, done) => {
+            const finish: ConnectDone = done ?? (() => {});
+            if (err || !client) {
+              cb(err ?? undefined, client, finish);
+              return;
+            }
+            void client.query(`SET search_path TO ${schemaName}`).then(() => {
+              let released = false;
+              const wrappedDone: ConnectDone = (releaseErr) => {
+                if (released) return;
+                released = true;
+                void client.query("RESET search_path").then(
+                  () => finish(releaseErr),
+                  () => finish(releaseErr),
+                );
+              };
+              cb(undefined, client, wrappedDone);
+            }, (setErr: unknown) => {
+              const failure = setErr instanceof Error ? setErr : new Error("search_path pin failed");
+              cb(failure, client, finish);
+            });
+          });
+          return undefined;
         }
-        const client = await originalConnect();
-        try {
-          return await pinSearchPath(client);
-        } catch (error) {
-          client.release();
-          throw error;
-        }
+        return (async () => {
+          const client = await originalConnect();
+          try {
+            return await pinSearchPath(client);
+          } catch (error) {
+            client.release();
+            throw error;
+          }
+        })();
       }) as typeof pool.connect;
       pool.query = (async (...args: unknown[]) => {
         const client = await originalConnect();
         try {
           await client.query(`SET search_path TO ${schemaName}`);
-          return await (client.query as (...inner: unknown[]) => Promise<unknown>)(...args);
+          return await Reflect.apply(client.query, client, args);
         } finally {
           try {
             await client.query("RESET search_path");
@@ -190,6 +227,23 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
           client.release();
         }
       }) as typeof pool.query;
+      await new Promise<void>((resolve, reject) => {
+        pool.connect((err, client, done) => {
+          if (err || !client) {
+            reject(err ?? new Error("callback connect failed"));
+            return;
+          }
+          void client.query("SELECT current_schema() AS schema").then((result) => {
+            const current = result.rows[0]?.schema;
+            done();
+            if (current !== schemaName) reject(new Error("callback connect did not pin the throwaway schema"));
+            else resolve();
+          }, (queryErr: unknown) => {
+            done();
+            reject(queryErr instanceof Error ? queryErr : new Error("callback schema check failed"));
+          });
+        });
+      });
       invalidateForumIdentityCache();
       await db.insert(forumPrincipalTokensTable).values({
         tokenHash: adminHash,
@@ -688,6 +742,166 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
     } finally {
       mintHarness.shortMint = false;
       errorSpy.mockRestore();
+    }
+  });
+
+  function assertNoSecret(haystack: string, needle: string): void {
+    if (needle.length > 0 && haystack.includes(needle)) {
+      throw new Error("captured output contained a credential");
+    }
+  }
+
+  function assertNoDigestPrefix(haystack: string, digest: string): void {
+    if (digest.length < 8) throw new Error("digest fixture is too short");
+    for (let length = 8; length <= digest.length; length += 1) {
+      if (haystack.includes(digest.slice(0, length))) {
+        throw new Error("captured output contained a digest prefix");
+      }
+    }
+  }
+
+  function queryText(query: unknown): string {
+    if (typeof query === "string") return query;
+    if (query && typeof query === "object" && "text" in query && typeof query.text === "string") {
+      return query.text;
+    }
+    return "";
+  }
+
+  function startCapture(): { text: () => string; restore: () => void } {
+    const streams: string[] = [];
+    const stdoutWrite = process.stdout.write.bind(process.stdout);
+    const stderrWrite = process.stderr.write.bind(process.stderr);
+    const record = (chunk: string | Uint8Array) => {
+      streams.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8"));
+    };
+    process.stdout.write = ((chunk: string | Uint8Array, ...rest: unknown[]) => {
+      record(chunk);
+      return stdoutWrite(chunk, ...(rest as []));
+    }) as typeof process.stdout.write;
+    process.stderr.write = ((chunk: string | Uint8Array, ...rest: unknown[]) => {
+      record(chunk);
+      return stderrWrite(chunk, ...(rest as []));
+    }) as typeof process.stderr.write;
+    const levels = ["trace", "debug", "info", "warn", "error", "fatal"] as const;
+    const spies = levels.map((level) => vi.spyOn(logger, level));
+    return {
+      text() {
+        return [JSON.stringify(spies.map((spy) => spy.mock.calls)), streams.join("")].join("\n");
+      },
+      restore() {
+        for (const spy of spies) spy.mockRestore();
+        process.stdout.write = stdoutWrite;
+        process.stderr.write = stderrWrite;
+      },
+    };
+  }
+
+  it("logs a successful member post without the token digest", async () => {
+    await insertMember(MEMBER_NAME, MEMBER_TOKEN);
+    const digest = sha(MEMBER_TOKEN);
+    const capture = startCapture();
+    try {
+      const posted = await send("/tesseract-forum/topics", {
+        title: "Synthetic member log topic",
+        content: "A member post",
+        author: MEMBER_NAME,
+      }, { "x-member-token": MEMBER_TOKEN });
+      expect(posted.status).toBe(200);
+      const logs = capture.text();
+      expect(logs.includes("Forum topic created by verified identity")).toBe(true);
+      expect(logs.includes("\"binding\":\"bound\"")).toBe(true);
+      assertNoSecret(logs, MEMBER_TOKEN);
+      assertNoSecret(posted.text, MEMBER_TOKEN);
+      assertNoDigestPrefix(logs, digest);
+      assertNoDigestPrefix(posted.text, digest);
+    } finally {
+      capture.restore();
+    }
+  });
+
+  it("hides the token digest when a hash-param insert fails", async () => {
+    await insertMember(MEMBER_NAME, MEMBER_TOKEN);
+    const digest = sha(MEMBER_TOKEN);
+    const driver = new Error("synthetic-insert-fault");
+    driver.name = "SyntheticInsertFault";
+    const shaped = new DrizzleQueryError("insert into forum_topics", [digest], driver);
+    if (!shaped.message.includes("Failed query:") || !shaped.message.includes(digest)) {
+      throw new Error("hash-param query error did not keep the digest in its message");
+    }
+    const logged = safeDbErrorLog(shaped);
+    expect([...Object.keys(logged)].sort()).toEqual(["code", "name"]);
+    assertNoDigestPrefix(JSON.stringify(logged), digest);
+    assertNoSecret(JSON.stringify(logged), "SyntheticInsertFault");
+
+    const pool = getPool();
+    const original = pool.query.bind(pool);
+    const failInsert = (table: "forum_topics" | "forum_replies") => {
+      pool.query = ((...args: unknown[]) => {
+        const text = queryText(args[0]);
+        if (text.toLowerCase().includes(`insert into "${table}"`)) {
+          const failure = new Error("synthetic-insert-fault");
+          failure.name = "SyntheticInsertFault";
+          return Promise.reject(failure);
+        }
+        return Reflect.apply(original, pool, args);
+      }) as typeof pool.query;
+    };
+
+    failInsert("forum_topics");
+    const topicCapture = startCapture();
+    try {
+      const posted = await send("/tesseract-forum/topics", {
+        title: "Synthetic insert fault topic",
+        content: "nope",
+        author: MEMBER_NAME,
+      }, { "x-member-token": MEMBER_TOKEN });
+      expect(posted.status).toBe(500);
+      expect(posted.json).toEqual({ ok: false, error: "topic-create-failed" });
+      const logs = topicCapture.text();
+      expect(logs.includes("Failed to create forum topic")).toBe(true);
+      expect(logs.includes("\"name\":\"Error\"")).toBe(true);
+      expect(logs.includes("SyntheticInsertFault")).toBe(false);
+      expect(logs.includes("Failed query:")).toBe(false);
+      assertNoSecret(posted.text, MEMBER_TOKEN);
+      assertNoSecret(logs, MEMBER_TOKEN);
+      assertNoDigestPrefix(posted.text, digest);
+      assertNoDigestPrefix(logs, digest);
+    } finally {
+      topicCapture.restore();
+      pool.query = original as typeof pool.query;
+    }
+
+    const created = await send("/tesseract-forum/topics", {
+      title: "Synthetic reply fault thread",
+      content: "A member post",
+      author: MEMBER_NAME,
+    }, { "x-member-token": MEMBER_TOKEN });
+    expect(created.status).toBe(200);
+    const topicId = (created.json?.topic as { id?: number } | undefined)?.id;
+    expect(typeof topicId).toBe("number");
+
+    failInsert("forum_replies");
+    const replyCapture = startCapture();
+    try {
+      const replied = await send(`/tesseract-forum/topics/${topicId}/reply`, {
+        content: "nope",
+        author: MEMBER_NAME,
+      }, { "x-member-token": MEMBER_TOKEN });
+      expect(replied.status).toBe(500);
+      expect(replied.json).toEqual({ ok: false, error: "reply-create-failed" });
+      const logs = replyCapture.text();
+      expect(logs.includes("Failed to create forum reply")).toBe(true);
+      expect(logs.includes("\"name\":\"Error\"")).toBe(true);
+      expect(logs.includes("SyntheticInsertFault")).toBe(false);
+      expect(logs.includes("Failed query:")).toBe(false);
+      assertNoSecret(replied.text, MEMBER_TOKEN);
+      assertNoSecret(logs, MEMBER_TOKEN);
+      assertNoDigestPrefix(replied.text, digest);
+      assertNoDigestPrefix(logs, digest);
+    } finally {
+      replyCapture.restore();
+      pool.query = original as typeof pool.query;
     }
   });
 });

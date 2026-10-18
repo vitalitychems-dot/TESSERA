@@ -4,6 +4,7 @@ import { forumTrustedIdentitiesTable, forumPrincipalTokensTable } from "@workspa
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 import { hashTokenSha256 } from "./mesh-auth";
+import { safeDbErrorLog } from "./safe-db-error";
 
 const ADMIN_ONLY_PRINCIPALS = new Set(["father", "admin", "father protocol"]);
 
@@ -157,7 +158,7 @@ async function seedAdminTokenBindingFromEnv(): Promise<void> {
       logger.info({ envName, binding }, "Admin token pre-registered as Father (env-seeded binding)");
       bound++;
     } catch (err) {
-      logger.warn({ envName, err: (err as Error).message }, "Admin token pre-registration failed (non-fatal)");
+      logger.warn({ envName, ...safeDbErrorLog(err) }, "Admin token pre-registration failed (non-fatal)");
     }
   }
   if (bound === 0) {
@@ -210,8 +211,7 @@ export async function authenticateForumMemberToken(
     }
     return { ok: true, tokenHash, principalName: row.principalName };
   } catch (err) {
-    const name = err instanceof Error ? err.name : "Error";
-    logger.warn({ name }, "Forum member token lookup failed");
+    logger.warn(safeDbErrorLog(err), "Forum member token lookup failed");
     return { ok: false, reason: "unavailable" };
   }
 }
@@ -225,7 +225,7 @@ export async function lookupTokenPrincipal(tokenHash: string): Promise<string | 
       .limit(1);
     return rows.length > 0 ? rows[0].principalName : null;
   } catch (err) {
-    logger.warn({ err: (err as Error).message }, "Forum principal lookup failed");
+    logger.warn(safeDbErrorLog(err), "Forum principal lookup failed");
     return null;
   }
 }

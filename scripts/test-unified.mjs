@@ -87,6 +87,7 @@ if (!testDatabaseUrl) {
   const apiEnv = {
     ...isolatedEnv,
     DATABASE_URL: testDatabaseUrl,
+    TESSERA_TEST_DATABASE_URL: testDatabaseUrl,
     ...(localTestValue("TESSERA_TEST_FATHER_NATAL_CHART_JSON")
       ? { FATHER_NATAL_CHART_JSON: localTestValue("TESSERA_TEST_FATHER_NATAL_CHART_JSON") }
       : {}),
