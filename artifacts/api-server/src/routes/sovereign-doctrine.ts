@@ -176,27 +176,36 @@ export function withoutSigilFingerprint(value: unknown, secrets: Set<string> = r
 
 router.get("/sigil/status", fatherVerifyRateLimit, (req, res) => {
   // Codex reads this without a session. Rate-limited, and the body is stripped.
-  // Anonymous callers do not receive the encrypt handle.
-  // An owner session gets the handle back after the strip.
-  // The reader digest is not returned.
-  const status = cipherStatus();
-  const owner = decideOwnerSession(req).ok;
-  const stripped = withoutSigilFingerprint({
-    ok: true,
-    active: status.active,
-    history: status.history,
-    sacredTimingSnapshot: status.sacredTimingSnapshot,
-    glyphTableSize: status.glyphTableSize,
-    keyHistory: getKeyHistory().length,
-    coherence: cipherCoherenceSnapshot(),
-  }) as Record<string, unknown>;
-  if (owner && status.active) {
-    const active = stripped.active;
-    if (active && typeof active === "object") {
-      (active as { handle?: string }).handle = status.active.handle;
+  // Anonymous callers do not receive the encrypt handle or cipher coherence.
+  // Coherence labels are derived from the session-key HMAC, so they stay
+  // behind the owner session. An owner session gets the handle back after the strip.
+  try {
+    const status = cipherStatus();
+    const owner = decideOwnerSession(req).ok;
+    const payload: Record<string, unknown> = {
+      ok: true,
+      active: status.active,
+      history: status.history,
+      sacredTimingSnapshot: status.sacredTimingSnapshot,
+      glyphTableSize: status.glyphTableSize,
+      keyHistory: getKeyHistory().length,
+    };
+    if (owner) payload.coherence = cipherCoherenceSnapshot();
+    const stripped = withoutSigilFingerprint(payload) as Record<string, unknown>;
+    if (owner && status.active) {
+      const active = stripped.active;
+      if (active && typeof active === "object") {
+        (active as { handle?: string }).handle = status.active.handle;
+      }
     }
+    res.json(stripped);
+  } catch (err: unknown) {
+    if (err instanceof NotConfiguredError || (err instanceof Error && err.name === "NotConfiguredError")) {
+      res.status(503).json({ ok: false, error: "not-configured" });
+      return;
+    }
+    res.status(500).json({ ok: false, error: "status-unavailable" });
   }
-  res.json(stripped);
 });
 
 router.get("/sigil/coherence", requireAdminSession, (_req, res) => {

@@ -235,16 +235,16 @@ export function decryptEnvelope(env: EncryptedEnvelope, aad?: string): Buffer {
   ensureFreshEpoch();
   const chosen = epochForEnvelope(env);
   if (!chosen) {
-    throw new Error(`No key available for epoch ${env.epochId}`);
+    throw new Error("astro-decrypt-failed");
   }
   try {
     return openWith(chosen.key, env, aad);
-  } catch (primary: unknown) {
+  } catch {
     let legacyPlain: Buffer;
     try {
       legacyPlain = openWith(deriveRetiredKey(chosen.sig), env, aad);
     } catch {
-      throw primary;
+      throw new Error("astro-decrypt-failed");
     }
     const fresh = sealWith(chosen, legacyPlain, aad);
     env.iv = fresh.iv;

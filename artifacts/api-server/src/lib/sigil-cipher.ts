@@ -104,16 +104,18 @@ function generateRawKey(): Buffer {
 }
 
 export function rotateSessionKey(_reason: string): SigilKey {
+  // Resolve the install id before sealing history. A storage failure must
+  // leave the active key and history unchanged.
+  const installId = isFatherKeyConfigured() ? getInstallId() : null;
+  const raw = generateRawKey();
+  const fingerprint = installId
+    ?? createHash("sha256").update(raw).digest("hex").slice(0, 16);
   if (_activeKey) {
     _activeKey.rotatedAt = new Date();
     _activeKey.sealed = true;
     _keyHistory.push(_activeKey);
     if (_keyHistory.length > 144) _keyHistory.shift();
   }
-  const raw = generateRawKey();
-  const fingerprint = isFatherKeyConfigured()
-    ? getInstallId()
-    : createHash("sha256").update(raw).digest("hex").slice(0, 16);
   const generation = (_activeKey?.generation ?? 0) + 1;
   _activeKey = {
     id: `sigil-${generation}-${fingerprint}`,

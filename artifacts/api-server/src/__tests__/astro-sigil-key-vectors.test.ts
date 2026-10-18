@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createCipheriv, createHash, hkdfSync, randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes } from "node:crypto";
 import { getFatherSeal } from "../lib/father-identity";
+import { logger } from "../lib/logger";
+import { openNatalPayload, sealNatalPayload } from "../lib/natal-sigil";
 import { decryptFromCorpus, encryptForCorpus, glyphEncode, rotateSessionKey } from "../lib/sigil-cipher";
 import {
   activeEpochSignature,
@@ -45,6 +45,63 @@ describe("astro and sigil key vectors", () => {
     expect(decryptEnvelope(envelope).toString("utf8") === plain).toBe(true);
   });
 
+  it("opens a new astro envelope with the seal-derived key", () => {
+    const plain = "seal-derived-open";
+    const envelope = encryptPayload(plain);
+    const sig = activeEpochSignature();
+    const opened = openEnvelope(sealDerivedKey(sig), envelope);
+    expect(opened.toString("utf8") === plain).toBe(true);
+    let retiredOpened = false;
+    try {
+      openEnvelope(retiredDerivedKey(sig), envelope);
+      retiredOpened = true;
+    } catch {
+      retiredOpened = false;
+    }
+    expect(retiredOpened).toBe(false);
+  });
+
+  it("uses a fixed astro failure when neither key opens an envelope", () => {
+    const envelope = encryptPayload("astro-failure");
+    envelope.ct = Buffer.from("not-the-ciphertext").toString("base64");
+    const logs: string[] = [];
+    const levels = ["fatal", "error", "warn", "info", "debug", "trace"] as const;
+    const restore: Array<() => void> = [];
+    for (const level of levels) {
+      const current = logger[level];
+      if (typeof current !== "function") continue;
+      (logger as unknown as Record<string, unknown>)[level] = (...args: unknown[]) => {
+        logs.push(JSON.stringify(args));
+      };
+      restore.push(() => {
+        (logger as unknown as Record<string, unknown>)[level] = current;
+      });
+    }
+    const originalStderr = process.stderr.write.bind(process.stderr);
+    process.stderr.write = ((chunk: string | Uint8Array) => {
+      logs.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8"));
+      return true;
+    }) as typeof process.stderr.write;
+    let message = "";
+    try {
+      decryptEnvelope(envelope);
+    } catch (err: unknown) {
+      message = err instanceof Error ? err.message : "";
+    } finally {
+      process.stderr.write = originalStderr;
+      for (const undo of restore) undo();
+    }
+    const sig = activeEpochSignature();
+    const leaked = message !== "astro-decrypt-failed"
+      || message.includes(ADMIN_KEY)
+      || message.includes(sig)
+      || /EACCES|ENOENT|EPERM|EEXIST/.test(message)
+      || logs.join("\n").includes(ADMIN_KEY)
+      || logs.join("\n").includes(sig)
+      || /EACCES|ENOENT|EPERM/.test(logs.join("\n"));
+    expect(leaked).toBe(false);
+  });
+
   it("decrypts a retired astro fixture and rewraps it onto the seal input", () => {
     const plain = "retired-astro-fixture";
     encryptPayload(plain);
@@ -66,15 +123,53 @@ describe("astro and sigil key vectors", () => {
     expect(first === second).toBe(false);
   });
 
-  it("derives the natal vault AES key from admin material", () => {
-    const source = readFileSync(fileURLToPath(new URL("../lib/natal-sigil.ts", import.meta.url)), "utf8");
-    const start = source.indexOf("function vaultKeyFor");
-    const end = source.indexOf("function encryptNatal");
-    const fn = source.slice(start, end);
-    expect(fn.includes("readAdminKeyMaterial()")).toBe(true);
-    expect(fn.includes("scryptSync(`tessera-natal-vault-v1|${holderFp}`")).toBe(false);
+  it("binds the natal vault key to admin material", () => {
+    const holder = "holder-a";
+    const plain = "natal-plain";
+    const sealed = sealNatalPayload(holder, plain);
+    expect(openNatalPayload(holder, sealed) === plain).toBe(true);
+    process.env[ADMIN_ENV] = `${ADMIN_KEY}-other`;
+    let otherKeyOpened = false;
+    try {
+      openNatalPayload(holder, sealed);
+      otherKeyOpened = true;
+    } catch {
+      otherKeyOpened = false;
+    }
+    process.env[ADMIN_ENV] = ADMIN_KEY;
+    let otherHolderOpened = false;
+    try {
+      openNatalPayload("holder-b", sealed);
+      otherHolderOpened = true;
+    } catch {
+      otherHolderOpened = false;
+    }
+    expect(otherKeyOpened).toBe(false);
+    expect(otherHolderOpened).toBe(false);
   });
 });
+
+function sealDerivedKey(sig: string): Buffer {
+  return Buffer.from(
+    hkdfSync("sha256", Buffer.from(getFatherSeal(), "utf8"), Buffer.from(sig, "utf8"), Buffer.from("tesseract:astro-cipher:v1", "utf8"), 32),
+  );
+}
+
+function retiredDerivedKey(sig: string): Buffer {
+  const raw = process.env[ADMIN_ENV] ?? "";
+  const namespace = "tesseract:father:v1";
+  const bound = createHash("sha256").update(`${namespace}|${raw}`).digest("hex").slice(0, 16);
+  const seal = createHash("sha512").update(`${namespace}|seal|${raw}|${bound}`).digest("hex").slice(0, 32);
+  return Buffer.from(
+    hkdfSync("sha256", Buffer.from(`${seal}|${bound}`, "utf8"), Buffer.from(sig, "utf8"), Buffer.from("tesseract:astro-cipher:v1", "utf8"), 32),
+  );
+}
+
+function openEnvelope(key: Buffer, env: EncryptedEnvelope): Buffer {
+  const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(env.iv, "base64"));
+  decipher.setAuthTag(Buffer.from(env.tag, "base64"));
+  return Buffer.concat([decipher.update(Buffer.from(env.ct, "base64")), decipher.final()]);
+}
 
 function retiredEnvelope(plain: string, sig: string, epoch: { epochId: string; epochHash: string }): EncryptedEnvelope {
   const raw = process.env[ADMIN_ENV] ?? "";

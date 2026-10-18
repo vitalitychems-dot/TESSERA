@@ -61,6 +61,27 @@ function decryptNatal(holderFp: string, env: NatalEnvelope): string {
   return Buffer.concat([decipher.update(Buffer.from(env.ct, "base64")), decipher.final()]).toString("utf8");
 }
 
+/** In-memory natal seal. Does not read or write the vault file. */
+export function sealNatalPayload(holderFp: string, plaintext: string): { iv: string; tag: string; ct: string } {
+  return encryptNatal(holderFp, plaintext);
+}
+
+/** In-memory natal open. Does not read or write the vault file. */
+export function openNatalPayload(
+  holderFp: string,
+  env: { iv: string; tag: string; ct: string },
+): string {
+  return decryptNatal(holderFp, {
+    v: 1,
+    iv: env.iv,
+    tag: env.tag,
+    ct: env.ct,
+    signatureGlyph: "",
+    signatureHashHex: "",
+    boundAt: "",
+  });
+}
+
 /** Render a hex hash as a permanent glyph signature using the FIXED LUS
  *  alphabet (deterministically permuted from a universal seed at module
  *  load — same across every run, every restart, every process). The

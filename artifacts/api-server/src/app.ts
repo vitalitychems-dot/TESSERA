@@ -195,6 +195,16 @@ app.use("/api", (_req, res, next) => {
 app.use("/api", router);
 app.use(dbUnavailableErrorHandler);
 
+/** Last resort. Fixed body and a fixed log line. Never the raw error, its message, or its stack. */
+export function terminalErrorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction): void {
+  void err;
+  if (res.headersSent) return;
+  logger.error("request failed");
+  res.status(500).json({ ok: false, error: "request-failed" });
+}
+
+app.use(terminalErrorHandler);
+
 function registerModuleHandlers(): void {
   registerRecoveryHandler("file-integrity", async () => {
     updateModuleStatus("file-integrity", "recovering");

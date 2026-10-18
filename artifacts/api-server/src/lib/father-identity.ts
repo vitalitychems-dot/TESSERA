@@ -35,6 +35,22 @@ function resolveApiServerRoot(): string {
 }
 
 const INSTALL_ID_PATH = join(resolveApiServerRoot(), ".local-data", "install-id");
+const INSTALL_ID_UNAVAILABLE = "install-id-unavailable";
+let _installDirOverride: string | null = null;
+
+function installIdPath(): string {
+  if (_installDirOverride !== null) return join(_installDirOverride, "install-id");
+  return INSTALL_ID_PATH;
+}
+
+/** Test-only path override. Production calls fail closed and do not redirect storage. */
+export function setInstallIdDirectoryForTests(dir: string | null): void {
+  if (process.env.NODE_ENV === "production") {
+    throw new NotConfiguredError(INSTALL_ID_UNAVAILABLE);
+  }
+  _installDirOverride = dir;
+  _installId = null;
+}
 
 /** Public presence label. Not derived from a key, token, seed, or secret. */
 export const ADMIN_SESSION_STATUS = "admin session active";
@@ -67,7 +83,7 @@ function isNodeErrno(err: unknown, code: string): boolean {
 function readPersistedInstallId(): string | null {
   let fd: number;
   try {
-    fd = openSync(INSTALL_ID_PATH, constants.O_RDONLY | constants.O_NOFOLLOW);
+    fd = openSync(installIdPath(), constants.O_RDONLY | constants.O_NOFOLLOW);
   } catch (err: unknown) {
     if (isNodeErrno(err, "ENOENT")) return null;
     throw err;
@@ -82,7 +98,7 @@ function readPersistedInstallId(): string | null {
 
 function writeInstallIdExclusive(id: string): void {
   const fd = openSync(
-    INSTALL_ID_PATH,
+    installIdPath(),
     constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
     0o600,
   );
@@ -96,14 +112,14 @@ function writeInstallIdExclusive(id: string): void {
 
 function persistInstallId(id: string): string {
   try {
-    mkdirSync(dirname(INSTALL_ID_PATH), { recursive: true, mode: 0o700 });
+    mkdirSync(dirname(installIdPath()), { recursive: true, mode: 0o700 });
     writeInstallIdExclusive(id);
     return id;
   } catch (err: unknown) {
     if (!isNodeErrno(err, "EEXIST")) throw err;
     const winner = readPersistedInstallId();
     if (winner) return winner;
-    unlinkSync(INSTALL_ID_PATH);
+    unlinkSync(installIdPath());
     writeInstallIdExclusive(id);
     return id;
   }
@@ -112,9 +128,14 @@ function persistInstallId(id: string): string {
 /** Random per-install id, created once and stored on disk. Never derived from a key, token, seed, or secret. */
 export function getInstallId(): string {
   if (_installId) return _installId;
-  const existing = readPersistedInstallId();
-  _installId = existing ?? persistInstallId(randomUUID());
-  return _installId;
+  try {
+    const existing = readPersistedInstallId();
+    _installId = existing ?? persistInstallId(randomUUID());
+    return _installId;
+  } catch {
+    _installId = null;
+    throw new NotConfiguredError(INSTALL_ID_UNAVAILABLE);
+  }
 }
 
 export function getFatherSeal(): string {

@@ -12,12 +12,13 @@ import {
 } from "../lib/father-identity";
 import * as fatherIdentity from "../lib/father-identity";
 import { logger } from "../lib/logger";
-import { rotateSessionKey } from "../lib/sigil-cipher";
+import { cipherCoherenceSnapshot, rotateSessionKey } from "../lib/sigil-cipher";
 import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 import sovereignDoctrineRouter from "../routes/sovereign-doctrine";
 import languageSecurityRouter from "../routes/language-security";
 import legacyEnginesRouter from "../routes/legacy-engines";
 import omniversalRouter from "../routes/omniversal";
+import grandConferenceRouter from "../routes/grand-conference-cipher";
 
 const ADMIN_ENV = "TESSERACT_ADMIN_KEY";
 const SESSION_ENV = "SOVEREIGN_SESSION_SECRET";
@@ -68,6 +69,7 @@ describe("father fingerprint is absent from handler responses and logs", () => {
     app.use(languageSecurityRouter);
     app.use(legacyEnginesRouter);
     app.use(omniversalRouter);
+    app.use(grandConferenceRouter);
     server = createServer(app);
     await new Promise<void>((resolve) => {
       server?.listen(0, "127.0.0.1", () => resolve());
@@ -174,6 +176,43 @@ describe("father fingerprint is absent from handler responses and logs", () => {
     expect(containsForbidden(logLines.join("\n"), markers), "logs").toBe(false);
   });
 
+  it("omits key-derived coherence labels from anonymous sigil status", async () => {
+    const response = await fetch(`${baseUrl}/sigil/status`);
+    const text = await response.text();
+    expect(response.status).toBe(200);
+    const body = JSON.parse(text) as Record<string, unknown>;
+    expect(hasKey(body, "windowId")).toBe(false);
+    expect(hasKey(body, "permutationFingerprint")).toBe(false);
+    expect(hasKey(body, "recentWindows")).toBe(false);
+    expect(body.coherence).toBeUndefined();
+    const leaked = containsForbidden(text, [...forbiddenMarkers(), ...coherenceMarkers()]);
+    expect(leaked).toBe(false);
+  });
+
+  it("omits key-derived values from other anonymous routes", async () => {
+    const calls = [
+      { name: "glyphs", method: "GET" as const, path: "/sigil/glyphs/abc" },
+      { name: "epoch", method: "GET" as const, path: "/grand-conference/cipher/epoch" },
+      { name: "history", method: "GET" as const, path: "/grand-conference/cipher/history" },
+      { name: "summary", method: "GET" as const, path: "/grand-conference/summary" },
+      { name: "heartbeat", method: "GET" as const, path: "/grand-conference/lattice/heartbeat" },
+      { name: "cosmic", method: "GET" as const, path: "/omniversal/cosmic-context" },
+      { name: "snapshot", method: "GET" as const, path: "/omniversal/cipher/snapshot" },
+      { name: "spec", method: "GET" as const, path: "/omniversal/lus-v2/spec" },
+      { name: "tools", method: "GET" as const, path: "/external-tools/stats" },
+    ];
+    const markers = [...forbiddenMarkers(), ...coherenceValues()];
+    for (const call of calls) {
+      const response = await fetch(`${baseUrl}${call.path}`, { method: call.method });
+      const text = await response.text();
+      expect(response.status, call.name).toBe(200);
+      expect(containsForbidden(text, markers), call.name).toBe(false);
+      const body = JSON.parse(text) as unknown;
+      expect(hasKey(body, "windowId"), call.name).toBe(false);
+      expect(hasKey(body, "permutationFingerprint"), call.name).toBe(false);
+    }
+  });
+
   it("returns 401 without a session and still omits key material", async () => {
     const response = await fetch(`${baseUrl}/sigil/active-key`);
     const text = await response.text();
@@ -186,6 +225,27 @@ describe("father fingerprint is absent from handler responses and logs", () => {
 function ownerCookie(): string {
   const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
   return `${SESSION_COOKIE}=${issued.signedId}`;
+}
+
+function coherenceValues(): string[] {
+  const snap = cipherCoherenceSnapshot();
+  return [
+    snap.current.windowId,
+    snap.current.permutationFingerprint,
+    ...snap.recentWindows.flatMap((window) => [window.windowId, window.permutationFingerprint]),
+  ];
+}
+
+function coherenceMarkers(): string[] {
+  const values = coherenceValues();
+  const markers = new Set<string>(values);
+  for (const value of values) {
+    const digest = createHash("sha256").update(value).digest("hex");
+    for (let length = 8; length <= digest.length; length += 1) {
+      markers.add(digest.slice(0, length));
+    }
+  }
+  return [...markers];
 }
 
 function forbiddenMarkers(): string[] {
