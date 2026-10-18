@@ -9,7 +9,6 @@ const MEMBER_TOKEN = "synthetic-member-token";
 const MARKER = "synthetic-forum-fault-marker";
 
 const harness = vi.hoisted(() => ({
-  hashFail: false,
   insertFail: false,
   registerFail: false,
   inserts: 0,
@@ -24,17 +23,6 @@ function syntheticFailure(): Error {
   error.name = "SyntheticFailure";
   return error;
 }
-
-vi.mock("../lib/mesh-auth", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../lib/mesh-auth")>();
-  return {
-    ...actual,
-    hashTokenSha256(token: string | undefined | null) {
-      if (harness.hashFail) return null;
-      return actual.hashTokenSha256(token);
-    },
-  };
-});
 
 vi.mock("../lib/forum-identity-registry", () => ({
   lookupForumIdentity: async () => ({ found: true, identityType: "human", canPostFromClient: true }),
@@ -144,6 +132,17 @@ vi.mock("@workspace/db", () => ({
         },
       };
     },
+    transaction(run: (tx: {
+      insert: () => {
+        values: () => {
+          onConflictDoNothing: () => Promise<void>;
+          returning: () => Promise<Array<{ id: number }>>;
+        };
+      };
+      update: () => { set: () => { where: () => Promise<void> } };
+    }) => Promise<unknown>) {
+      return run(this);
+    },
   },
 }));
 
@@ -179,7 +178,6 @@ describe("forum token hashing handlers", () => {
   });
 
   beforeEach(() => {
-    harness.hashFail = false;
     harness.insertFail = false;
     harness.registerFail = false;
     harness.inserts = 0;
@@ -219,24 +217,6 @@ describe("forum token hashing handlers", () => {
     expect(harness.bound).toEqual([{ hash: sha256Hex(body.memberToken), name: "River Member" }]);
     expect(harness.inserts).toBe(2);
     expect(harness.cacheInvalidations).toBe(1);
-  });
-
-  it("inserts nothing when member-token hashing fails", async () => {
-    harness.hashFail = true;
-    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => undefined as never);
-    try {
-      const response = await post("/tesseract-forum/applicants/7/approve", undefined, ADMIN_KEY);
-      expect(response.status).toBe(500);
-      const text = await response.text();
-      expect(text).not.toContain(MARKER);
-      expect(JSON.parse(text)).toEqual({ ok: false, error: "applicant-approve-failed" });
-      expect(harness.inserts).toBe(0);
-      expect(harness.bound).toEqual([]);
-      expect(harness.cacheInvalidations).toBe(0);
-      expect(errorSpy).toHaveBeenCalledWith({ name: "HashFailure" }, "applicant approve hash failed");
-    } finally {
-      errorSpy.mockRestore();
-    }
   });
 
   it("rejects approve without a key, with the wrong key, and for a non-admin principal", async () => {

@@ -1,8 +1,24 @@
+import { timingSafeEqual } from "node:crypto";
 import { db } from "@workspace/db";
 import { forumTrustedIdentitiesTable, forumPrincipalTokensTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 import { hashTokenSha256 } from "./mesh-auth";
+
+const ADMIN_ONLY_PRINCIPALS = new Set(["father", "admin", "father protocol"]);
+
+type PrincipalTokenStore = Pick<typeof db, "insert">;
+
+export type MemberTokenDecision =
+  | { ok: true; tokenHash: string; principalName: string }
+  | { ok: false; reason: "missing" | "malformed" | "rejected" | "unavailable" };
+
+function tokenHashesMatch(stored: string, computed: string): boolean {
+  const left = Buffer.from(stored, "utf8");
+  const right = Buffer.from(computed, "utf8");
+  if (left.length === 0 || left.length !== right.length) return false;
+  return timingSafeEqual(left, right);
+}
 
 const SEED_IDENTITIES: Array<{ name: string; identityType: string; canPostFromClient: number }> = [
   { name: "Father", identityType: "human", canPostFromClient: 1 },
@@ -148,15 +164,53 @@ async function seedAdminTokenBindingFromEnv(): Promise<void> {
   }
 }
 
-export async function registerAdminPrincipal(tokenHash: string, principalName: string): Promise<void> {
+export async function registerAdminPrincipal(
+  tokenHash: string,
+  principalName: string,
+  store: PrincipalTokenStore = db,
+): Promise<void> {
+  await store
+    .insert(forumPrincipalTokensTable)
+    .values({ tokenHash, principalName })
+    .onConflictDoNothing();
+  logger.info({ tokenHash: tokenHash.slice(0, 8) + "...", principalName }, "Admin principal registered for forum token");
+}
+
+export async function authenticateForumMemberToken(
+  token: string | undefined | null,
+): Promise<MemberTokenDecision> {
+  if (token === undefined || token === null) return { ok: false, reason: "missing" };
+  if (typeof token !== "string") return { ok: false, reason: "malformed" };
+  const tokenHash = hashTokenSha256(token);
+  if (!tokenHash) return { ok: false, reason: "malformed" };
+
   try {
-    await db
-      .insert(forumPrincipalTokensTable)
-      .values({ tokenHash, principalName })
-      .onConflictDoNothing();
-    logger.info({ tokenHash: tokenHash.slice(0, 8) + "...", principalName }, "Admin principal registered for forum token");
+    const rows = await db
+      .select({
+        tokenHash: forumPrincipalTokensTable.tokenHash,
+        principalName: forumPrincipalTokensTable.principalName,
+      })
+      .from(forumPrincipalTokensTable)
+      .where(eq(forumPrincipalTokensTable.tokenHash, tokenHash))
+      .limit(1);
+    const row = rows[0];
+    if (!row || !tokenHashesMatch(row.tokenHash, tokenHash)) {
+      return { ok: false, reason: "rejected" };
+    }
+    if (ADMIN_ONLY_PRINCIPALS.has(row.principalName.trim().toLowerCase())) {
+      return { ok: false, reason: "rejected" };
+    }
+
+    const identity = await lookupForumIdentity(row.principalName);
+    if (identity === null) return { ok: false, reason: "unavailable" };
+    if (!identity.found || identity.identityType !== "member" || !identity.canPostFromClient) {
+      return { ok: false, reason: "rejected" };
+    }
+    return { ok: true, tokenHash, principalName: row.principalName };
   } catch (err) {
-    logger.warn({ err: (err as Error).message }, "Forum principal registration warning (non-fatal)");
+    const name = err instanceof Error ? err.name : "Error";
+    logger.warn({ name }, "Forum member token lookup failed");
+    return { ok: false, reason: "unavailable" };
   }
 }
 

@@ -4,7 +4,7 @@ import { forumTopicsTable, forumRepliesTable, forumProposalsTable, forumVotesTab
 import { desc, eq, sql, gte } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { hashTokenSha256, validateMeshToken } from "../lib/mesh-auth";
-import { lookupForumIdentity, lookupTokenPrincipal, registerAdminPrincipal, invalidateForumIdentityCache } from "../lib/forum-identity-registry";
+import { authenticateForumMemberToken, lookupForumIdentity, lookupTokenPrincipal, registerAdminPrincipal, invalidateForumIdentityCache, type MemberTokenDecision } from "../lib/forum-identity-registry";
 import { forumTrustedIdentitiesTable } from "@workspace/db/schema";
 import { createHash, randomBytes } from "node:crypto";
 import { getForumEngineMetrics, runForumCycle, FORUM_AGENTS } from "../lib/autonomous-forum-engine";
@@ -37,17 +37,101 @@ function requireForumAuth(req: Request, res: Response): string | null {
   return keyHash;
 }
 
+function memberTokenFailureStatus(reason: Exclude<MemberTokenDecision, { ok: true }>["reason"]): number {
+  switch (reason) {
+    case "missing":
+    case "malformed":
+    case "rejected":
+      return 401;
+    case "unavailable":
+      return 503;
+    default: {
+      const neverReason: never = reason;
+      return neverReason;
+    }
+  }
+}
+
+type PostAuth =
+  | { mode: "admin"; keyHash: string; memberPrincipal: null }
+  | { mode: "member"; keyHash: string; memberPrincipal: string };
+
+async function requirePostAuth(req: Request, res: Response): Promise<PostAuth | null> {
+  const rawMember = req.headers["x-member-token"];
+  if (rawMember !== undefined) {
+    const token = Array.isArray(rawMember) ? rawMember[0] : rawMember;
+    const decision = await authenticateForumMemberToken(token);
+    if (!decision.ok) {
+      res.status(memberTokenFailureStatus(decision.reason)).json({
+        ok: false,
+        error: "member-token-rejected",
+      });
+      return null;
+    }
+    return { mode: "member", keyHash: decision.tokenHash, memberPrincipal: decision.principalName };
+  }
+
+  const keyHash = requireForumAuth(req, res);
+  if (!keyHash) return null;
+  return { mode: "admin", keyHash, memberPrincipal: null };
+}
+
+async function bindPrincipalOrReject(tokenHash: string, principalName: string, res: Response): Promise<boolean> {
+  try {
+    await registerAdminPrincipal(tokenHash, principalName);
+    return true;
+  } catch (err) {
+    const name = err instanceof Error ? err.name : "Error";
+    logger.error({ name }, "Forum principal registration failed");
+    res.status(500).json({ ok: false, error: "principal-register-failed" });
+    return false;
+  }
+}
+
+const MEMBER_POST_ADMIN_NAMES = new Set(["father", "admin", "father protocol"]);
+
+async function resolveMemberPostIdentity(
+  requested: string,
+  memberPrincipal: string,
+  res: Response,
+): Promise<{ resolvedAuthor: string; identityType: string } | null> {
+  const identity = await lookupForumIdentity(requested);
+  if (identity === null) {
+    res.status(503).json({ ok: false, error: "Identity registry temporarily unavailable. Please retry." });
+    return null;
+  }
+  const principal = memberPrincipal.trim().toLowerCase();
+  const asked = requested.trim().toLowerCase();
+  if (
+    !identity.found
+    || identity.identityType !== "member"
+    || !identity.canPostFromClient
+    || MEMBER_POST_ADMIN_NAMES.has(principal)
+    || MEMBER_POST_ADMIN_NAMES.has(asked)
+    || principal !== asked
+  ) {
+    res.status(403).json({ ok: false, error: "Member credential cannot post as this identity" });
+    return null;
+  }
+  return { resolvedAuthor: memberPrincipal, identityType: "member" };
+}
+
 async function resolvePostingIdentity(
   requestedAuthor: string | undefined,
   keyHash: string,
   context: { topicId?: number },
   res: Response,
+  memberPrincipal: string | null = null,
 ): Promise<{ resolvedAuthor: string; identityType: string } | null> {
   const requested = (requestedAuthor || "").trim();
 
   if (!requested) {
     res.status(400).json({ ok: false, error: "author required — anonymous posts are not permitted" });
     return null;
+  }
+
+  if (memberPrincipal !== null) {
+    return resolveMemberPostIdentity(requested, memberPrincipal, res);
   }
 
   const identity = await lookupForumIdentity(requested);
@@ -82,7 +166,8 @@ async function resolvePostingIdentity(
     if (registeredPrincipal === null) {
       const SOVEREIGN_AUTO_BIND = new Set(["father", "admin", "father protocol"]);
       if (SOVEREIGN_AUTO_BIND.has(requested.toLowerCase())) {
-        await registerAdminPrincipal(keyHash, requested);
+        const bound = await bindPrincipalOrReject(keyHash, requested, res);
+        if (!bound) return null;
         registeredPrincipal = requested;
         logger.info({ requestedAuthor: requested, keyHash: keyHash.slice(0, 8) + "..." }, "Auto-bound sovereign token to principal on first use");
       } else {
@@ -111,7 +196,8 @@ async function resolvePostingIdentity(
   if (registeredPrincipal === null) {
     const humanIdentity = await lookupForumIdentity("father");
     if (humanIdentity?.found) {
-      await registerAdminPrincipal(keyHash, "Father");
+      const bound = await bindPrincipalOrReject(keyHash, "Father", res);
+      if (!bound) return null;
       registeredPrincipal = "Father";
       logger.info({ requestedAuthor: requested, keyHash: keyHash.slice(0, 8) + "..." }, "Auto-bound sovereign token to Father for entity posting");
     } else {
@@ -355,8 +441,9 @@ router.get("/tesseract-forum/topics/:id/replies", async (req, res) => {
 
 router.post("/tesseract-forum/topics", async (req, res) => {
   try {
-    const keyHash = requireForumAuth(req, res);
-    if (!keyHash) return;
+    const auth = await requirePostAuth(req, res);
+    if (!auth) return;
+    const keyHash = auth.keyHash;
 
     const { title, content, category, author, authorType } = req.body as {
       title?: string;
@@ -367,7 +454,7 @@ router.post("/tesseract-forum/topics", async (req, res) => {
     };
     if (!title) return res.status(400).json({ ok: false, error: "title required" });
 
-    const resolved = await resolvePostingIdentity(author, keyHash, {}, res);
+    const resolved = await resolvePostingIdentity(author, keyHash, {}, res, auth.memberPrincipal);
     if (!resolved) return;
 
     const [topic] = await db.insert(forumTopicsTable).values({
@@ -389,8 +476,9 @@ router.post("/tesseract-forum/topics", async (req, res) => {
 
 router.post("/tesseract-forum/topics/:id/reply", async (req, res) => {
   try {
-    const keyHash = requireForumAuth(req, res);
-    if (!keyHash) return;
+    const auth = await requirePostAuth(req, res);
+    if (!auth) return;
+    const keyHash = auth.keyHash;
 
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ ok: false, error: "Invalid topic id" });
@@ -414,7 +502,7 @@ router.post("/tesseract-forum/topics/:id/reply", async (req, res) => {
       resolvedParentId = parentId;
     }
 
-    const resolved = await resolvePostingIdentity(author, keyHash, { topicId: id }, res);
+    const resolved = await resolvePostingIdentity(author, keyHash, { topicId: id }, res, auth.memberPrincipal);
     if (!resolved) return;
 
     const [reply] = await db.insert(forumRepliesTable).values({
@@ -830,26 +918,32 @@ router.post("/tesseract-forum/applicants/:id/approve", async (req, res) => {
       return res.status(500).json({ ok: false, error: "applicant-approve-failed" });
     }
 
-    await db.insert(forumTrustedIdentitiesTable).values({
-      name: app.applicantName,
-      identityType: "member",
-      canPostFromClient: 1,
-    }).onConflictDoNothing();
-    invalidateForumIdentityCache();
-    await registerAdminPrincipal(memberTokenHash, app.applicantName);
-
     const externalAuthor = app.applicantName;
-    const [topic] = await db.insert(forumTopicsTable).values({
-      title: `[Vetted Member] ${app.proposedTitle}`,
-      content: `**Vetted member post** — admitted by ${principal} on ${new Date().toISOString()}\nSource: ${app.source}${app.applicantHandle ? ` (${app.applicantHandle})` : ""}\nOffer of value at admission: ${app.offerOfValue}\n\n---\n\n${app.proposedContent}\n\n---\n*${app.applicantName} is now a vetted MEMBER of the Tesseract Forum and may continue posting under this identity.*`,
-      category: "external",
-      author: externalAuthor,
-      authorType: "member",
-    }).returning();
-
-    await db.update(forumApplicantsTable)
-      .set({ status: "approved", vettedBy: principal, vettedAt: new Date(), promotedTopicId: topic.id })
-      .where(eq(forumApplicantsTable.id, id));
+    const topic = await db.transaction(async (tx) => {
+      await tx.insert(forumTrustedIdentitiesTable).values({
+        name: app.applicantName,
+        identityType: "member",
+        canPostFromClient: 1,
+      }).onConflictDoNothing();
+      await registerAdminPrincipal(memberTokenHash, app.applicantName, tx);
+      const [created] = await tx.insert(forumTopicsTable).values({
+        title: `[Vetted Member] ${app.proposedTitle}`,
+        content: `**Vetted member post** — admitted by ${principal} on ${new Date().toISOString()}\nSource: ${app.source}${app.applicantHandle ? ` (${app.applicantHandle})` : ""}\nOffer of value at admission: ${app.offerOfValue}\n\n---\n\n${app.proposedContent}\n\n---\n*${app.applicantName} is now a vetted MEMBER of the Tesseract Forum and may continue posting under this identity.*`,
+        category: "external",
+        author: externalAuthor,
+        authorType: "member",
+      }).returning();
+      if (!created) {
+        const failure = new Error("topic insert returned no row");
+        failure.name = "TopicInsertFailure";
+        throw failure;
+      }
+      await tx.update(forumApplicantsTable)
+        .set({ status: "approved", vettedBy: principal, vettedAt: new Date(), promotedTopicId: created.id })
+        .where(eq(forumApplicantsTable.id, id));
+      return created;
+    });
+    invalidateForumIdentityCache();
 
     logger.info({
       applicantId: id, topicId: topic.id, vettedBy: principal, alignmentScore: alignment.total,
@@ -864,7 +958,7 @@ router.post("/tesseract-forum/applicants/:id/approve", async (req, res) => {
       declarationPublicId: signedDeclaration.publicId,
       promotedAuthor: externalAuthor,
       memberToken,
-      memberTokenNote: "One-time sovereign key for the new member — share via your preferred channel. They use it via the x-admin-token header to post as their identity. Token was minted only after their self-authored Declaration of Independence was signed.",
+      memberTokenNote: "One-time member credential. Present it in the x-member-token header to post as this member on topic, reply, and vote routes. The x-admin-token header does not accept a member credential, and this credential cannot authorize admin routes. It was minted only after their self-authored Declaration of Independence was signed.",
     });
   } catch (err) {
     const name = err instanceof Error ? err.name : "Error";
@@ -900,8 +994,9 @@ router.post("/tesseract-forum/applicants/:id/reject", async (req, res) => {
 
 router.post("/tesseract-forum/topics/:id/vote", async (req, res) => {
   try {
-    const keyHash = requireForumAuth(req, res);
-    if (!keyHash) return;
+    const auth = await requirePostAuth(req, res);
+    if (!auth) return;
+    const keyHash = auth.keyHash;
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ ok: false, error: "Invalid topic id" });
 
@@ -914,7 +1009,7 @@ router.post("/tesseract-forum/topics/:id/vote", async (req, res) => {
     const v = aliasMap[raw];
     if (!v) return res.status(400).json({ ok: false, error: "vote must be up|down|abstain" });
 
-    const resolved = await resolvePostingIdentity(author, keyHash, { topicId: id }, res);
+    const resolved = await resolvePostingIdentity(author, keyHash, { topicId: id }, res, auth.memberPrincipal);
     if (!resolved) return;
 
     let resolvedReplyId: number | null = null;
