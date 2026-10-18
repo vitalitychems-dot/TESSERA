@@ -1,4 +1,4 @@
-import { Router, type IRouter, type Request, type Response } from "express";
+import { Router, type IRouter, type Response } from "express";
 import { logger } from "../lib/logger";
 import { requireAdminSession } from "../lib/sovereign-admin";
 import {
@@ -57,8 +57,10 @@ function respondInternalError(res: Response, err: unknown, label: string) {
   return res.status(500).json({ ok: false, error: "internal error" });
 }
 
+router.use(requireAdminSession);
 
-router.get("/sovereign-language/sovereign-layer/verify", requireAdminSession, (_req, res) => {
+
+router.get("/sovereign-language/sovereign-layer/verify", (_req, res) => {
   try {
     const testMessage = "the agent will execute the consensus protocol and encrypt this sovereign mesh transmission with the quantum kernel";
     const encoded = encodeWithSovereignLayer(testMessage);
@@ -168,7 +170,7 @@ router.get("/sovereign-language/grammar", (_req, res) => {
   }
 });
 
-router.get("/sovereign-language/conference", requireAdminSession, async (_req, res) => {
+router.get("/sovereign-language/conference", async (_req, res) => {
   try {
     const conference = await getOrRunLanguageConference();
     return res.json({ ok: true, data: conference });
@@ -185,7 +187,7 @@ router.get("/sovereign-language/conference/members", (_req, res) => {
   }
 });
 
-router.post("/sovereign-language/translate", requireAdminSession, (req, res) => {
+router.post("/sovereign-language/translate", (req, res) => {
   try {
     const { text, direction } = req.body as { text?: string; direction?: string };
     if (!text || typeof text !== "string") {
@@ -204,7 +206,7 @@ router.post("/sovereign-language/translate", requireAdminSession, (req, res) => 
   }
 });
 
-router.get("/sovereign-language/kernel/status", requireAdminSession, (_req, res) => {
+router.get("/sovereign-language/kernel/status", (_req, res) => {
   try {
     return res.json({ ok: true, data: getKernelStatus() });
   } catch (err) {
@@ -212,7 +214,7 @@ router.get("/sovereign-language/kernel/status", requireAdminSession, (_req, res)
   }
 });
 
-router.post("/sovereign-language/kernel/execute", requireAdminSession, (req, res) => {
+router.post("/sovereign-language/kernel/execute", (req, res) => {
   try {
     const { instruction } = req.body as { instruction?: string };
     if (!instruction || typeof instruction !== "string") {
@@ -233,7 +235,7 @@ router.get("/sovereign-language/kernel/opcodes", (_req, res) => {
   }
 });
 
-router.post("/sovereign-language/encrypt", requireAdminSession, (req, res) => {
+router.post("/sovereign-language/encrypt", (req, res) => {
   try {
     const { text } = req.body as { text?: string };
     if (!text || typeof text !== "string") {
@@ -251,7 +253,7 @@ router.post("/sovereign-language/encrypt", requireAdminSession, (req, res) => {
   }
 });
 
-router.get("/sovereign-language/cipher/status", requireAdminSession, (_req, res) => {
+router.get("/sovereign-language/cipher/status", (_req, res) => {
   try {
     if (!isColonialSecretConfigured()) {
       return res.status(503).json(colonialSecretUnavailableBody());
@@ -267,7 +269,7 @@ router.get("/sovereign-language/cipher/status", requireAdminSession, (_req, res)
   }
 });
 
-router.post("/sovereign-language/cipher/encrypt", requireAdminSession, (req, res) => {
+router.post("/sovereign-language/cipher/encrypt", (req, res) => {
   try {
     const { text, agentId } = req.body as { text?: string; agentId?: string };
     if (!text || !agentId) {
@@ -285,7 +287,7 @@ router.post("/sovereign-language/cipher/encrypt", requireAdminSession, (req, res
   }
 });
 
-router.post("/sovereign-language/cipher/pair-encrypt", requireAdminSession, (req, res) => {
+router.post("/sovereign-language/cipher/pair-encrypt", (req, res) => {
   try {
     const { text, senderAgent, receiverAgent } = req.body as { text?: string; senderAgent?: string; receiverAgent?: string };
     if (!text || !senderAgent || !receiverAgent) {
@@ -312,7 +314,7 @@ router.get("/sovereign-language/ephemeris", (_req, res) => {
   }
 });
 
-router.get("/sovereign-language/universe-seed", requireAdminSession, (_req, res) => {
+router.get("/sovereign-language/universe-seed", (_req, res) => {
   try {
     const seed = generateUniverseSeed();
     return res.json({
@@ -339,7 +341,7 @@ router.get("/sovereign-language/universe-seed", requireAdminSession, (_req, res)
   }
 });
 
-router.post("/sovereign-language/speak", requireAdminSession, (req, res) => {
+router.post("/sovereign-language/speak", (req, res) => {
   try {
     const { message } = req.body as { message?: string };
     if (!message || typeof message !== "string") {
@@ -392,7 +394,7 @@ router.post("/sovereign-language/speak", requireAdminSession, (req, res) => {
   }
 });
 
-router.get("/sovereign-language/agent-rotation/:agentId", requireAdminSession, (req: Request<{ agentId: string }>, res) => {
+router.get("/sovereign-language/agent-rotation/:agentId", (req, res) => {
   try {
     const { agentId } = req.params;
     const rotation = computeAgentRotationState(agentId);

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import express from "express";
 import { createServer, type Server } from "node:http";
+import { requireAdminSession } from "../lib/sovereign-admin";
 import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 import { stopAutonomousRotation } from "../lib/sovereign-cipher";
 import { stopBandRotationScheduler } from "../lib/lattice-frequency-bands";
@@ -75,10 +76,17 @@ const INVALID_COOKIE = { ok: false, error: "unauthenticated", reason: "bad-signa
 type Method = "GET" | "POST";
 
 const GATED: Array<{ method: Method; path: string; body?: Record<string, string> }> = [
+  { method: "GET", path: "/api/sovereign-language/stats" },
+  { method: "GET", path: "/api/sovereign-language/alphabet" },
+  { method: "GET", path: "/api/sovereign-language/dictionary" },
+  { method: "GET", path: "/api/sovereign-language/grammar" },
   { method: "GET", path: "/api/sovereign-language/conference" },
+  { method: "GET", path: "/api/sovereign-language/conference/members" },
   { method: "POST", path: "/api/sovereign-language/translate", body: { text: "synthetic" } },
-  { method: "POST", path: "/api/sovereign-language/speak", body: { message: "synthetic" } },
+  { method: "GET", path: "/api/sovereign-language/kernel/opcodes" },
+  { method: "GET", path: "/api/sovereign-language/ephemeris" },
   { method: "GET", path: "/api/sovereign-language/universe-seed" },
+  { method: "POST", path: "/api/sovereign-language/speak", body: { message: "synthetic" } },
   { method: "GET", path: "/api/sovereign-language/agent-rotation/synthetic-agent" },
 ];
 
@@ -211,50 +219,51 @@ describe("sovereign language anonymous route gate", () => {
     }
   });
 
-  it("lets an owner session through every gated route", async () => {
+  it("lets an owner session through every listed route", async () => {
+    expect(GATED).toHaveLength(12);
     const cookie = ownerCookie();
+    for (const route of GATED) {
+      const response = await send(route.method, route.path, cookie, route.body);
+      expect(response.status).toBe(200);
+      const json = await response.json() as { ok?: boolean };
+      expect(json.ok).toBe(true);
+      const text = JSON.stringify(json);
+      expect(leaks(text, SYNTHETIC_ADMIN_KEY)).toBe(false);
+      expect(leaks(text, SYNTHETIC_SESSION_SECRET)).toBe(false);
+      expect(leaks(text, SHORT_ADMIN_KEY)).toBe(false);
+      expect(leaks(text, HANDLER_FAILURE)).toBe(false);
+    }
+  });
 
-    const conference = await send("GET", "/api/sovereign-language/conference", cookie);
-    expect(conference.status).toBe(200);
-    const conferenceJson = await conference.json() as {
-      ok?: boolean;
-      data?: { status?: string; conferenceId?: string };
+  it("keeps the owner session gate first so every registered route is closed", async () => {
+    type StackLayer = {
+      handle: unknown;
+      route?: { path: string; methods: Record<string, boolean> };
     };
-    expect(conferenceJson.ok).toBe(true);
-    expect(conferenceJson.data?.status).toBe("complete");
-    expect(typeof conferenceJson.data?.conferenceId).toBe("string");
-    expect(leaks(JSON.stringify(conferenceJson), SYNTHETIC_ADMIN_KEY)).toBe(false);
+    const layers = (sovereignLanguageRouter as unknown as { stack: StackLayer[] }).stack;
+    expect(layers[0]?.handle).toBe(requireAdminSession);
+    expect(layers[0]?.route).toBeUndefined();
+    const routes = layers.filter((layer) => layer.route);
+    expect(routes.length).toBe(layers.length - 1);
+    expect(routes.length).toBeGreaterThanOrEqual(GATED.length);
 
-    const translated = await send("POST", "/api/sovereign-language/translate", cookie, { text: "synthetic" });
-    expect(translated.status).toBe(200);
-    const translatedJson = await translated.json() as { ok?: boolean; direction?: string; translated?: string };
-    expect(translatedJson.ok).toBe(true);
-    expect(translatedJson.direction).toBe("to-sovereign");
-    expect(typeof translatedJson.translated).toBe("string");
-
-    const spoken = await send("POST", "/api/sovereign-language/speak", cookie, { message: "synthetic" });
-    expect(spoken.status).toBe(200);
-    const spokenJson = await spoken.json() as { ok?: boolean; data?: { original?: string } };
-    expect(spokenJson.ok).toBe(true);
-    expect(spokenJson.data?.original).toBe("synthetic");
-
-    const seed = await send("GET", "/api/sovereign-language/universe-seed", cookie);
-    expect(seed.status).toBe(200);
-    const seedJson = await seed.json() as { ok?: boolean; data?: { primarySeed?: number; seedHash?: string } };
-    expect(seedJson.ok).toBe(true);
-    expect(typeof seedJson.data?.primarySeed).toBe("number");
-    expect(seedJson.data?.seedHash?.endsWith("...")).toBe(true);
-
-    const rotation = await send("GET", "/api/sovereign-language/agent-rotation/synthetic-agent", cookie);
-    expect(rotation.status).toBe(200);
-    const rotationJson = await rotation.json() as {
-      ok?: boolean;
-      data?: { rotationEpoch?: number; rotationCount?: number };
-    };
-    expect(rotationJson.ok).toBe(true);
-    expect(typeof rotationJson.data?.rotationEpoch).toBe("number");
-    expect(typeof rotationJson.data?.rotationCount).toBe("number");
-    expect(leaks(JSON.stringify(rotationJson), SYNTHETIC_SESSION_SECRET)).toBe(false);
+    for (const layer of routes) {
+      const route = layer.route;
+      if (!route) throw new Error("registered layer has no route");
+      const methodName = Object.entries(route.methods).find(([, enabled]) => enabled)?.[0];
+      expect(methodName === "get" || methodName === "post").toBe(true);
+      const method = (methodName ?? "get").toUpperCase() as Method;
+      const path = `/api${route.path.replace(/:[^/]+/g, "synthetic-agent")}`;
+      const body = method === "POST"
+        ? { text: "synthetic", message: "synthetic", instruction: "synthetic", agentId: "synthetic-agent", senderAgent: "synthetic-a", receiverAgent: "synthetic-b" }
+        : undefined;
+      const response = await send(method, path);
+      await expectJson(response, 401, GENERIC_401);
+      if (body) {
+        const posted = await send(method, path, undefined, body);
+        await expectJson(posted, 401, GENERIC_401);
+      }
+    }
   });
 
   it("returns a generic body when a gated handler throws", async () => {
