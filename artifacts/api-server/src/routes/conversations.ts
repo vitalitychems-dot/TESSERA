@@ -18,6 +18,7 @@ import { recallIngestedKnowledge } from "../lib/ingested-recall";
 import { validateResponse } from "../lib/response-validation-engine";
 import { runCritiqueLoop } from "../lib/self-critique";
 import { generateConfiguredChatReply } from "../lib/chat-generation";
+import { acceptedChatLlmBaseUrl, isChatRedirectStatus } from "../lib/tessera-llm-http";
 import { classifyQuery } from "../lib/adaptive-router";
 import { hybridRetrieve, formatCitations } from "../lib/hybrid-retrieval";
 import { detectIntents, isPrivilegedTool, publicToolResult, runToolLoop } from "../lib/tool-registry";
@@ -118,12 +119,23 @@ function cleanExternalResponse(text: string): string {
   return cleaned.trim() || text.trim();
 }
 
-function detectImpersonation(text: string): boolean {
+const IMPERSONATION_PATTERNS: RegExp[] = [
+  /\bI(?:'m| am) (?:ChatGPT|GPT-?\d|Claude|Gemini|Bard|Grok|Qwen|Llama|OpenAI|Anthropic)\b/i,
+  /\bI(?:'m| am) (?:an |a )?(?:AI |large |artificial intelligence )?language model\b/i,
+  /\bI(?:'m| am) (?:an |a )?(?:AI|artificial intelligence)(?: language model| assistant| chatbot)?\b/i,
+  /\bAs an AI( language model| assistant| chatbot)?\b/i,
+  /\bartificial intelligence language model\b/i,
+  /\bI was (?:created|made|developed|trained) by (?:OpenAI|Anthropic|Google|Meta|xAI)\b/i,
+  /\bmy (?:training data|knowledge cutoff|knowledge was last updated)\b/i,
+  /\bI cannot (?:browse the internet|access real-time|provide real-time data)\b/i,
+];
+
+export function detectImpersonation(text: string): boolean {
   if (!text) return false;
-  return hasSelfClaim(text) || isSearchDump(text);
+  return hasSelfClaim(text) || isSearchDump(text) || IMPERSONATION_PATTERNS.some((pattern) => pattern.test(text));
 }
 
-function guardSovereignVoice(
+export function guardSovereignVoice(
   candidate: string,
   userInput: string,
   isAdmin: boolean,
@@ -131,7 +143,7 @@ function guardSovereignVoice(
   if (!candidate || candidate.trim().length < 3) {
     return generateSovereignResponse(userInput, isAdmin);
   }
-  if (detectImpersonation(candidate)) {
+  if (detectImpersonation(candidate) || isIdentityQuestion(userInput)) {
     logger.warn({ sample: candidate.slice(0, 120) }, "Impersonation guard triggered — substituting Tessera's voice");
     return enforceTesseraVoice(
       isIdentityQuestion(userInput) ? "" : generateSovereignResponse(userInput, isAdmin),
@@ -270,7 +282,7 @@ async function sandboxExtractKnowledge(
   messages: Array<{ role: string; content: string }>,
   sovereignCtx: string,
 ): Promise<string | null> {
-  const baseURL = process.env.TESSERA_LLM_BASE_URL?.trim();
+  const baseURL = acceptedChatLlmBaseUrl();
   const apiKey = process.env.TESSERA_LLM_API_KEY?.trim();
   const model = process.env.TESSERA_LLM_MODEL?.trim();
   if (!baseURL || !apiKey || !model) return null;
@@ -304,7 +316,9 @@ async function sandboxExtractKnowledge(
       body,
       timeoutMs: 30000,
       requestedBy: "sovereign-sandbox-extraction",
+      redirect: "manual",
     });
+    if (isChatRedirectStatus(result.status)) return null;
 
     if (result.flagged) {
       logger.warn({ reason: result.flagReason }, "Sandbox extraction flagged by security wrapper");
@@ -331,7 +345,7 @@ async function _deprecated_sandboxExtractKnowledgeStreaming(
   sovereignCtx: string,
   onChunk: (text: string) => void,
 ): Promise<string | null> {
-  const baseURL = process.env.TESSERA_LLM_BASE_URL?.trim();
+  const baseURL = acceptedChatLlmBaseUrl();
   const apiKey = process.env.TESSERA_LLM_API_KEY?.trim();
   const model = process.env.TESSERA_LLM_MODEL?.trim();
   if (!baseURL || !apiKey || !model) return null;
@@ -372,7 +386,12 @@ async function _deprecated_sandboxExtractKnowledgeStreaming(
       }),
       timeoutMs: 30000,
       requestedBy: "tessera-sovereign-synthesis",
+      redirect: "manual",
     });
+    if (isChatRedirectStatus(response.status)) {
+      await response.body?.cancel().catch(() => undefined);
+      return null;
+    }
 
     if (flagged) {
       logger.warn({ reason: flagReason, url: streamUrl }, "Tessera streaming flagged");

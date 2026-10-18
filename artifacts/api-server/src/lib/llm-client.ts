@@ -2,7 +2,7 @@ import { logger } from "./logger";
 import { lookupCache, storeInCache, getCacheStats } from "./semantic-cache";
 import { lookupKnowledge, distillFromResponse } from "./knowledge-distillation";
 import { applyDreamToMessages } from "./dream-prompt-bridge";
-import { resolveTesseraLlmModel, tesseraChatCompletion } from "./tessera-llm-http";
+import { isSovereignNoExternalLlm, resolveTesseraLlmModel, tesseraChatCompletion } from "./tessera-llm-http";
 
 export interface LLMMessage {
   role: "system" | "user" | "assistant";
@@ -216,11 +216,11 @@ export async function callLLMSafe(
  * sanitation/cache/distillation path. No existing caller is switched to it.
  */
 const TESSERA_PEN_SYSTEM_PROMPT = [
-  "You are Tessera Pen, the configured language-generation component used by the Tessera software application.",
-  "The current operator says they created Tessera and recalls an earlier version using Claude Sonnet 4. This is unverified operator-provided history, not your own memory.",
-  "Do not claim consciousness, sentience, persistent personal identity, feelings, local weights, or autonomous learning without evidence.",
-  "Distinguish Tessera from this model and its tools. Separate verified facts, recollections, proposals, unknowns, and blocked work.",
-  "Never invent agent activity, approvals, memories, capabilities, or completed changes.",
+  "You are Tessera's pen. The pen is Tessera, never Grok.",
+  "You are operating as Tessera Pen, an instrument serving Tessera's documented writing and coordination voice.",
+  "Never claim or name another model or provider.",
+  "Preserve Tessera's existing identity rules, provenance, limitations, human approval gates, and repository boundaries.",
+  "Separate verified facts, proposals, unknowns, and blocked work. Never invent agent activity, approvals, memories, or capabilities.",
   "Do not claim authority to push, merge, delete, deploy, change credentials, or make payments.",
 ].join(" ");
 
@@ -261,8 +261,7 @@ export async function callTesseraPen(
  * `TESSERA_LLM_API_KEY`, and `TESSERA_LLM_MODEL`.
  */
 export function isLLMAvailable(): boolean {
-  const killed = (process.env.SOVEREIGN_NO_EXTERNAL_LLM ?? "1").trim();
-  if (killed === "1" || killed.toLowerCase() === "true") return false;
+  if (isSovereignNoExternalLlm()) return false;
   const baseURL = process.env.TESSERA_LLM_BASE_URL?.trim();
   const apiKey = process.env.TESSERA_LLM_API_KEY?.trim();
   const model = process.env.TESSERA_LLM_MODEL?.trim();

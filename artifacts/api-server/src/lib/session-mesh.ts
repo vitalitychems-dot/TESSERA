@@ -32,6 +32,30 @@ const meshSessions = new Map<string, Map<string, MeshSession>>();
 const HEARTBEAT_INTERVAL_MS = 15_000;
 const SESSION_TIMEOUT_MS = 45_000;
 
+export const MESH_SOCKET_CLOSE_CODE = 1008;
+export const MESH_SOCKET_CLOSE_REASON = "admin session expired or revoked";
+
+function guardAuthorizer(isAuthorized: (() => boolean) | undefined): () => boolean {
+  return () => {
+    if (typeof isAuthorized !== "function") return false;
+    try {
+      return isAuthorized() === true;
+    } catch {
+      return false;
+    }
+  };
+}
+
+export function closeMeshSocket(ws: WebSocket): void {
+  if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+    try {
+      ws.close(MESH_SOCKET_CLOSE_CODE, MESH_SOCKET_CLOSE_REASON);
+    } catch {
+      // The socket is already going away.
+    }
+  }
+}
+
 let heartbeatTimer: SacredHandle | null = null;
 
 function hashKey(key: string): string {
@@ -46,8 +70,8 @@ export function registerSession(
   sovereignKeyHash: string,
   sessionId: string,
   ws: WebSocket,
-  metadata: MeshSession["metadata"] = {},
-  isAuthorized: () => boolean = () => true,
+  metadata: MeshSession["metadata"],
+  isAuthorized: () => boolean,
 ): MeshSession {
   if (!meshSessions.has(sovereignKeyHash)) {
     meshSessions.set(sovereignKeyHash, new Map());
@@ -60,7 +84,7 @@ export function registerSession(
     lastHeartbeat: new Date(),
     metadata,
     ws,
-    isAuthorized,
+    isAuthorized: guardAuthorizer(isAuthorized),
   };
   group.set(sessionId, session);
   logger.info({ sessionId, sovereignKeyHash, peerCount: group.size }, "Session registered in mesh");
@@ -95,7 +119,7 @@ export function getGroupSessions(sovereignKeyHash: string): MeshSessionInfo[] {
   for (const [sessionId, session] of group) {
     if (!session.isAuthorized()) {
       group.delete(sessionId);
-      if (session.ws.readyState === WebSocket.OPEN) session.ws.close(1008, "admin session expired or revoked");
+      closeMeshSocket(session.ws);
     }
   }
   if (group.size === 0) {
@@ -132,7 +156,7 @@ export function broadcastToGroup(
     if (excludeSessionId && sessionId === excludeSessionId) continue;
     if (!session.isAuthorized()) {
       group.delete(sessionId);
-      if (session.ws.readyState === WebSocket.OPEN) session.ws.close(1008, "admin session expired or revoked");
+      closeMeshSocket(session.ws);
       continue;
     }
     if (session.ws.readyState === WebSocket.OPEN) {
@@ -154,7 +178,7 @@ export function sendToSession(sovereignKeyHash: string, sessionId: string, messa
   if (!session || session.ws.readyState !== WebSocket.OPEN) return false;
   if (!session.isAuthorized()) {
     group.delete(sessionId);
-    session.ws.close(1008, "admin session expired or revoked");
+    closeMeshSocket(session.ws);
     if (group.size === 0) meshSessions.delete(sovereignKeyHash);
     return false;
   }
@@ -184,13 +208,15 @@ export function getGroupSharedState(sovereignKeyHash: string): object {
   };
 }
 
-function runHeartbeatCheck(): void {
+export function pruneMeshSessions(): void {
   const now = Date.now();
   for (const [keyHash, group] of meshSessions) {
     const stale: string[] = [];
     for (const [sessionId, session] of group) {
       const age = now - session.lastHeartbeat.getTime();
-      if (age > SESSION_TIMEOUT_MS || session.ws.readyState !== WebSocket.OPEN || !session.isAuthorized()) {
+      const authorized = session.isAuthorized();
+      if (!authorized) closeMeshSocket(session.ws);
+      if (age > SESSION_TIMEOUT_MS || session.ws.readyState !== WebSocket.OPEN || !authorized) {
         stale.push(sessionId);
       }
     }
@@ -219,7 +245,7 @@ export function broadcastToAll(message: object): number {
     for (const session of group.values()) {
       if (!session.isAuthorized()) {
         group.delete(session.sessionId);
-        if (session.ws.readyState === WebSocket.OPEN) session.ws.close(1008, "admin session expired or revoked");
+        closeMeshSocket(session.ws);
         continue;
       }
       if (session.ws.readyState === WebSocket.OPEN) {
@@ -236,7 +262,7 @@ export function broadcastToKeyHash(sovereignKeyHash: string, message: object, ex
 
 export function startMeshHeartbeatMonitor(): void {
   if (heartbeatTimer) return;
-  heartbeatTimer = setSacredInterval(runHeartbeatCheck, HEARTBEAT_INTERVAL_MS, "session-mesh");
+  heartbeatTimer = setSacredInterval(pruneMeshSessions, HEARTBEAT_INTERVAL_MS, "session-mesh");
   logger.info({ intervalMs: HEARTBEAT_INTERVAL_MS }, "Mesh heartbeat monitor started");
 }
 

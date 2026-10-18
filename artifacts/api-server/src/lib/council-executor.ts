@@ -215,8 +215,57 @@ export function getSystemConfig(): Record<string, unknown> {
   return Object.fromEntries(systemConfig);
 }
 
-export function updateSystemConfig(key: string, value: unknown): void {
+const FORBIDDEN_CONFIG_KEYS: ReadonlySet<string> = new Set(["__proto__", "constructor", "prototype"]);
+
+const PERMITTED_CONFIG = {
+  "agent.collaborationMode": "string",
+  "agent.learningRate": "number",
+  "agent.maxTaskQueue": "number",
+  "consciousness.cycleIntervalMs": "number",
+  "consciousness.reflectionDepth": "number",
+  "consciousness.memoryRetention": "number",
+  "dual-brain.cycleIntervalMs": "number",
+  "identity.checkIntervalMs": "number",
+  "swarm.coordinationMode": "string",
+  "heartbeat.enabled": "boolean",
+  "improvement.enabled": "boolean",
+  "agi-training.categories": "number",
+  "council.requiredMajority": "number",
+  "security.hardeningLevel": "number",
+  "network.externalFetchFrozen": "boolean",
+  "runtime.backoffMode": "boolean",
+  "runtime.tickMultiplier": "number",
+} as const;
+
+type PermittedConfigKind = (typeof PERMITTED_CONFIG)[keyof typeof PERMITTED_CONFIG];
+
+function permittedConfigKind(key: string): PermittedConfigKind | undefined {
+  if (!Object.hasOwn(PERMITTED_CONFIG, key)) return undefined;
+  return PERMITTED_CONFIG[key as keyof typeof PERMITTED_CONFIG];
+}
+
+function valueMatchesKind(kind: PermittedConfigKind, value: unknown): boolean {
+  switch (kind) {
+    case "string":
+      return typeof value === "string";
+    case "number":
+      return typeof value === "number" && Number.isFinite(value);
+    case "boolean":
+      return typeof value === "boolean";
+    default: {
+      const _unhandled: never = kind;
+      return _unhandled;
+    }
+  }
+}
+
+/** Applies one allowlisted config write. Rejects unknown keys, wrong types, and prototype keys. */
+export function updateSystemConfig(key: string, value: unknown): boolean {
+  if (typeof key !== "string" || FORBIDDEN_CONFIG_KEYS.has(key)) return false;
+  const kind = permittedConfigKind(key);
+  if (kind === undefined || !valueMatchesKind(kind, value)) return false;
   systemConfig.set(key, value);
+  return true;
 }
 
 export function getExecutorStatus() {

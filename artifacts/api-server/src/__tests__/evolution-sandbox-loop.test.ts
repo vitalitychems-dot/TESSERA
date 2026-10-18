@@ -221,7 +221,9 @@ describe("/api/evolution-health/attempts — auth regression", () => {
     app.use("/api", router);
 
     const prevToken = process.env["ADMIN_TOKEN"];
+    const prevKey = process.env["TESSERACT_ADMIN_KEY"];
     process.env["ADMIN_TOKEN"] = "test-admin-token-xyz";
+    process.env["TESSERACT_ADMIN_KEY"] = "test-admin-token-xyz";
 
     try {
       const server = app.listen(0);
@@ -229,6 +231,11 @@ describe("/api/evolution-health/attempts — auth regression", () => {
         const port = (server.address() as { port: number }).port;
         const noAuth = await fetch(`http://127.0.0.1:${port}/api/evolution-health/attempts`);
         expect(noAuth.status).toBe(401);
+
+        const garbage = await fetch(`http://127.0.0.1:${port}/api/evolution-health/attempts`, {
+          headers: { "x-admin-token": "abcdefghijklmnop" },
+        });
+        expect(garbage.status).toBe(401);
 
         const withAuth = await fetch(`http://127.0.0.1:${port}/api/evolution-health/attempts`, {
           headers: { "x-admin-token": "test-admin-token-xyz" },
@@ -245,6 +252,8 @@ describe("/api/evolution-health/attempts — auth regression", () => {
     } finally {
       if (prevToken === undefined) delete process.env["ADMIN_TOKEN"];
       else process.env["ADMIN_TOKEN"] = prevToken;
+      if (prevKey === undefined) delete process.env["TESSERACT_ADMIN_KEY"];
+      else process.env["TESSERACT_ADMIN_KEY"] = prevKey;
     }
   });
 });

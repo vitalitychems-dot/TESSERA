@@ -100,9 +100,11 @@ export function listMountedRouteModules(): MountedRouteModule[] {
   const mounts: MountedRouteModule[] = [];
   const usePattern = /router\.use\(\s*(?:(["'][^"']+["'])\s*,\s*)?(\w+)\s*\)/g;
   for (const match of source.matchAll(usePattern)) {
+    const pathLiteral = match[1];
     const binding = match[2];
     const specifier = imports.get(binding);
     if (!specifier) {
+      if (pathLiteral) continue;
       throw new Error(`router.use(${binding}) has no local route import`);
     }
     const module = `${specifier.slice(2)}.ts`;

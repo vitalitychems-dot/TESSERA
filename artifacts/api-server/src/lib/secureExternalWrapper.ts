@@ -9,6 +9,7 @@ export interface ExternalRequestOptions {
   body?: string;
   timeoutMs?: number;
   requestedBy?: string;
+  redirect?: "error" | "follow" | "manual";
 }
 
 export interface ExternalRequestResult {
@@ -174,6 +175,7 @@ export async function secureExternalFetch(
       headers: options.headers,
       body: options.body,
       signal: controller.signal,
+      redirect: options.redirect,
     });
 
     status = res.status;
@@ -271,6 +273,7 @@ export async function secureExternalStreamingFetch(
       headers: options.headers,
       body: options.body,
       signal: AbortSignal.timeout(timeoutMs),
+      redirect: options.redirect,
     });
 
     const durationMs = Date.now() - start;
