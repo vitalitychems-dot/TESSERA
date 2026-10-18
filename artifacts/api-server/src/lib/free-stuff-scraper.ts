@@ -30,6 +30,10 @@ const VALIDATION_TIMEOUT_MS = 6000;
 const USER_AGENT = "Tessera-Sovereign-FreeStuffScraper/1.0 (+https://tessera.local)";
 const MAX_PER_SOURCE = 25;
 
+function failureName(err: unknown): string {
+  return err instanceof Error ? err.name : "Error";
+}
+
 let cache: FreeFinding[] = [];
 let lastRefresh = 0;
 let refreshing = false;
@@ -125,7 +129,7 @@ export async function refreshFreeFindings(): Promise<FreeFinding[]> {
         const subResults = await fetchSubreddit(s.subreddit);
         all.push(...subResults);
       } catch (err) {
-        logger.warn({ sub: s.subreddit, err: (err as Error).message }, "free-stuff: source failed");
+        logger.warn({ sub: s.subreddit, errorName: failureName(err) }, "free-stuff: source failed");
       }
     }
     const seen = new Set<string>();
@@ -157,9 +161,9 @@ export function getFreeFindings(opts: { onlyValid?: boolean; limit?: number } = 
 
 export function startFreeStuffScraper(): void {
   if (timer) return;
-  void refreshFreeFindings().catch(err => logger.warn({ err: (err as Error).message }, "free-stuff: initial refresh failed"));
+  void refreshFreeFindings().catch(err => logger.warn({ errorName: failureName(err) }, "free-stuff: initial refresh failed"));
   timer = setSacredInterval(() => {
-    void refreshFreeFindings().catch(err => logger.warn({ err: (err as Error).message }, "free-stuff: refresh failed", "free-stuff-scraper"));
+    void refreshFreeFindings().catch(err => logger.warn({ errorName: failureName(err) }, "free-stuff: refresh failed", "free-stuff-scraper"));
   }, REFRESH_MS, "free-stuff-scraper");
   if (typeof timer.unref === "function") timer.unref();
   logger.info("free-stuff scraper started");
