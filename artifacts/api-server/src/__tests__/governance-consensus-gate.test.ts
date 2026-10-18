@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import express from "express";
 import { createServer, type Server } from "node:http";
+import { getSystemConfig, updateSystemConfig } from "../lib/council-executor";
+import { MAX_CYCLE_GAP_MS } from "../lib/sacred-timing";
 import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 import apiRouter from "../routes/index";
 
@@ -20,7 +22,13 @@ const MESH_REJECTED = { ok: false, error: "Valid sovereign key required" };
 
 const GATED = [
   { method: "GET", path: "/consensus/metrics" },
+  { method: "GET", path: "/consensus/proposals" },
   { method: "GET", path: "/consensus/proposals/missing-proposal" },
+  {
+    method: "POST",
+    path: "/consensus/propose",
+    body: { title: "synthetic-title", description: "synthetic-description" },
+  },
   { method: "GET", path: "/consensus/agents" },
   { method: "GET", path: "/council-executor/metrics" },
   { method: "GET", path: "/council-executor/config" },
@@ -28,6 +36,26 @@ const GATED = [
     method: "PATCH",
     path: "/council-executor/config",
     body: { key: "heartbeat.enabled", value: true },
+  },
+] as const;
+
+const NUMERIC_RANGES = [
+  { key: "council.requiredMajority", min: 0.5, max: 1, below: 0.499, above: 1.001 },
+  { key: "runtime.tickMultiplier", min: 1, max: 8, below: 0, above: 9 },
+  { key: "agent.learningRate", min: 0.001, max: 0.1, below: 0.0009, above: 0.1001 },
+  {
+    key: "consciousness.cycleIntervalMs",
+    min: 1_000,
+    max: MAX_CYCLE_GAP_MS,
+    below: 999,
+    above: MAX_CYCLE_GAP_MS + 1,
+  },
+  {
+    key: "dual-brain.cycleIntervalMs",
+    min: 1_000,
+    max: MAX_CYCLE_GAP_MS,
+    below: 999,
+    above: MAX_CYCLE_GAP_MS + 1,
   },
 ] as const;
 
@@ -71,11 +99,12 @@ describe("governance consensus owner gate", () => {
   async function send(
     method: string,
     path: string,
-    opts?: { cookie?: string; token?: string; body?: unknown },
+    opts?: { cookie?: string; token?: string; adminKey?: string; body?: unknown },
   ): Promise<{ status: number; json: unknown; text: string }> {
     const headers = new Headers();
     if (opts?.cookie !== undefined) headers.set("cookie", opts.cookie);
     if (opts?.token !== undefined) headers.set("x-admin-token", opts.token);
+    if (opts?.adminKey !== undefined) headers.set("x-tesseract-admin-key", opts.adminKey);
     if (opts?.body !== undefined) headers.set("content-type", "application/json");
     const response = await fetch(`${baseUrl}${path}`, {
       method,
@@ -99,6 +128,25 @@ describe("governance consensus owner gate", () => {
       });
       expect(response.status, `${route.method} ${route.path}`).toBe(401);
       expect(response.json, `${route.method} ${route.path}`).toEqual(UNAUTHENTICATED);
+    }
+  });
+
+  it("returns 401 for a bad session cookie even when a key header is valid", async () => {
+    process.env[ADMIN_ENV] = SYNTHETIC_ADMIN_KEY;
+    for (const route of GATED) {
+      const response = await send(route.method, route.path, {
+        cookie: `${SESSION_COOKIE}=not-a-session`,
+        token: SYNTHETIC_ADMIN_KEY,
+        adminKey: SYNTHETIC_ADMIN_KEY,
+        body: "body" in route ? route.body : undefined,
+      });
+      expect(response.status, `${route.method} ${route.path}`).toBe(401);
+      expect(response.json, `${route.method} ${route.path}`).toEqual({
+        ok: false,
+        error: "unauthenticated",
+        reason: "bad-signature",
+      });
+      expect(response.text).not.toContain(SYNTHETIC_ADMIN_KEY);
     }
   });
 
@@ -215,6 +263,119 @@ describe("governance consensus owner gate", () => {
     expect(Object.hasOwn(afterData, "constructor")).toBe(false);
     expect(Object.hasOwn(afterData, "prototype")).toBe(false);
     expect(Object.hasOwn(Object.prototype, "polluted")).toBe(false);
+  });
+
+  it("accepts numeric bounds and rejects the adjacent values without echoing them", async () => {
+    process.env[ADMIN_ENV] = SYNTHETIC_ADMIN_KEY;
+    const cookie = ownerCookie();
+
+    for (const range of NUMERIC_RANGES) {
+      const min = await send("PATCH", "/council-executor/config", {
+        cookie,
+        body: { key: range.key, value: range.min },
+      });
+      expect(min.status, `${range.key} min`).toBe(200);
+      expect(min.json).toEqual({ ok: true });
+      expect(min.text).not.toContain(range.key);
+
+      const max = await send("PATCH", "/council-executor/config", {
+        cookie,
+        body: { key: range.key, value: range.max },
+      });
+      expect(max.status, `${range.key} max`).toBe(200);
+      expect(max.json).toEqual({ ok: true });
+
+      for (const value of [range.below, range.above]) {
+        const response = await send("PATCH", "/council-executor/config", {
+          cookie,
+          body: { key: range.key, value },
+        });
+        expect(response.status, `${range.key} ${value}`).toBe(400);
+        expect(response.json).toEqual(INVALID_CONFIG);
+        expect(response.text).not.toContain(range.key);
+        expect(response.text).not.toContain(String(value));
+      }
+
+      const stored = await send("GET", "/council-executor/config", { cookie });
+      const data = (stored.json as { data: Record<string, unknown> }).data;
+      expect(data[range.key], range.key).toBe(range.max);
+    }
+
+    const fractional = await send("PATCH", "/council-executor/config", {
+      cookie,
+      body: { key: "council.requiredMajority", value: 2 / 3 },
+    });
+    expect(fractional.status).toBe(200);
+    const nonIntegers = [
+      { key: "runtime.tickMultiplier", value: 1.5 },
+      { key: "consciousness.cycleIntervalMs", value: 1_000.5 },
+      { key: "dual-brain.cycleIntervalMs", value: 1_000.5 },
+    ];
+    for (const body of nonIntegers) {
+      const response = await send("PATCH", "/council-executor/config", { cookie, body });
+      expect(response.status, body.key).toBe(400);
+      expect(response.json).toEqual(INVALID_CONFIG);
+      expect(response.text).not.toContain(body.key);
+      expect(response.text).not.toContain(String(body.value));
+    }
+
+    const before = getSystemConfig();
+    expect(updateSystemConfig("runtime.tickMultiplier", Number.NaN)).toBe(false);
+    expect(updateSystemConfig("runtime.tickMultiplier", Number.POSITIVE_INFINITY)).toBe(false);
+    expect(updateSystemConfig("runtime.tickMultiplier", Number.NEGATIVE_INFINITY)).toBe(false);
+    expect(updateSystemConfig("agent.learningRate", Number.NaN)).toBe(false);
+    expect(updateSystemConfig("council.requiredMajority", Number.POSITIVE_INFINITY)).toBe(false);
+    expect(updateSystemConfig("consciousness.cycleIntervalMs", Number.NaN)).toBe(false);
+    expect(updateSystemConfig("dual-brain.cycleIntervalMs", Number.NEGATIVE_INFINITY)).toBe(false);
+    expect(getSystemConfig()["runtime.tickMultiplier"]).toBe(before["runtime.tickMultiplier"]);
+    expect(getSystemConfig()["agent.learningRate"]).toBe(before["agent.learningRate"]);
+    expect(getSystemConfig()["council.requiredMajority"]).toBe(before["council.requiredMajority"]);
+
+    expect(updateSystemConfig("council.requiredMajority", 2 / 3)).toBe(true);
+    expect(updateSystemConfig("runtime.tickMultiplier", 2)).toBe(true);
+    expect(getSystemConfig()["council.requiredMajority"]).toBe(2 / 3);
+    expect(getSystemConfig()["runtime.tickMultiplier"]).toBe(2);
+  });
+
+  it("lets the owner session write hardening level and the external fetch freeze", async () => {
+    process.env[ADMIN_ENV] = SYNTHETIC_ADMIN_KEY;
+    const cookie = ownerCookie();
+
+    const level = await send("PATCH", "/council-executor/config", {
+      cookie,
+      body: { key: "security.hardeningLevel", value: 2 },
+    });
+    expect(level.status).toBe(200);
+    expect(level.json).toEqual({ ok: true });
+    expect(level.text).not.toContain("hardeningLevel");
+
+    const frozen = await send("PATCH", "/council-executor/config", {
+      cookie,
+      body: { key: "network.externalFetchFrozen", value: true },
+    });
+    expect(frozen.status).toBe(200);
+    expect(frozen.json).toEqual({ ok: true });
+    expect(frozen.text).not.toContain("externalFetchFrozen");
+
+    const cleared = await send("PATCH", "/council-executor/config", {
+      cookie,
+      body: { key: "network.externalFetchFrozen", value: false },
+    });
+    expect(cleared.status).toBe(200);
+
+    const stored = await send("GET", "/council-executor/config", { cookie });
+    const data = (stored.json as { data: Record<string, unknown> }).data;
+    expect(data["security.hardeningLevel"]).toBe(2);
+    expect(data["network.externalFetchFrozen"]).toBe(false);
+
+    const wrongType = await send("PATCH", "/council-executor/config", {
+      cookie,
+      body: { key: "security.hardeningLevel", value: "SENTINEL_HARDENING_zz" },
+    });
+    expect(wrongType.status).toBe(400);
+    expect(wrongType.json).toEqual(INVALID_CONFIG);
+    expect(wrongType.text).not.toContain("SENTINEL_HARDENING_zz");
+    expect(wrongType.text).not.toContain("hardeningLevel");
   });
 
   it("drains the queue with a mesh token and rejects a missing token without an owner session", async () => {
