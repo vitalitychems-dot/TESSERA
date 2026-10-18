@@ -25,7 +25,7 @@ Two port schemes exist. They are not interchangeable.
 
 | Scheme | Web | API | Sandbox | Where it is set |
 | --- | --- | --- | --- | --- |
-| Local suite (`pnpm dev`) | 3000 | 5000 | 5173 | `scripts/dev-unified.mjs`, `TESSERA_WEB_PORT`, `TESSERA_API_PORT`, `MOCKUP_SANDBOX_PORT` |
+| Local suite (`pnpm dev`) | 3000 | 5000 (suite launcher only) | 5173 | `scripts/dev-unified.mjs`, `TESSERA_WEB_PORT`, `TESSERA_API_PORT`, `MOCKUP_SANDBOX_PORT`. The old Vite dev default of 5000 is gone. An API on 5000 without `TESSERA_API_PORT` returns 503 from the desk gate during Vite dev. |
 | Replit artifacts | 18514 (`/`) | 8080 (`/api`) | 8081 (`/__mockup`) | each `artifacts/*/.replit-artifact/artifact.toml`, mirrored in the root `.replit` `[[ports]]` list |
 
 Standalone processes: console 4391 (`TESSERA_CONSOLE_PORT`), GitAI 4183 (`GITAI_PORT`), 3D studio 4173 (`PORT`), `preview/` Vite app 4174 (`PORT`), Gitbook MCP HTTP 8787 (`GITBOOK_HTTP_PORT`).

@@ -18,7 +18,7 @@ const ALLOWED_REPOS = [
 
 const PATH_DENIED = "That repository path is not allowed." as const;
 const SECRET_PATH =
-  /(?:^|\/)[^/]*\.env(?:\.[^/]*)?$|(^|\/)\.env|(?:^|\/)\.npmrc[^/]*(?:\/|$)|(?:^|\/)app-env\.json[^/]*(?:\/|$)|(^|\/)\.git(?:\/|$)|(?:^|\/)id_rsa(?:\.|$)|(?:^|\/)id_ed25519(?:\.|$)|(?:^|\/)[^/]*\.(?:pem|key|p12|pfx)$|(?:^|\/)[^/]*(?:secret|password|credential)[^/]*(?:\/|$)|(?:^|\/)[^/]*natal-vault[^/]*(?:\/|$)/i;
+  /(?:^|\/)[^/]*\.env(?![a-zA-Z])[^/]*(?:\/|$)|(?:^|\/)[^/]*\.envrc(?![a-zA-Z])[^/]*(?:\/|$)|(?:^|\/)[^/]*\.npmrc[^/]*(?:\/|$)|(?:^|\/)app-env\.json[^/]*(?:\/|$)|(^|\/)\.git(?:\/|$)|(?:^|\/)id_rsa(?:\.|$)|(?:^|\/)id_ed25519(?:\.|$)|(?:^|\/)[^/]*\.(?:pem|key|p12|pfx)$|(?:^|\/)[^/]*(?:secret|password|credential)[^/]*(?:\/|$)|(?:^|\/)[^/]*natal-vault[^/]*(?:\/|$)/i;
 const HELD_PATH =
   /(?:^|\/)data(?:\/|$)|(?:^|\/)(?:zz|1t|t44)(?:[-_.\s][^/]*)?(?:\/|$)|(?:^|\/)[^/]*ingest[^/]*(?:\/|$)|(?:^|\/)[^/]*constitution-seal[^/]*(?:\/|$)|(?:^|\/)study-log\.ts[^/]*(?:\/|$)|(?:^|\/)desk\.ts[^/]*(?:\/|$)/i;
 const HELD_NAME_MARKERS = [
@@ -38,7 +38,7 @@ const HELD_NAME_MARKERS = [
   "personal-",
 ] as const;
 const SECRET_TEXT =
-  /SESSION_SECRET|BEGIN [A-Z ]*PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]|github_pat_|npm_[A-Za-z0-9]{36}|xox[baprs]-|sk-[A-Za-z0-9]{10,}/;
+  /SESSION_SECRET|BEGIN [A-Z ]*PRIVATE KEY|(?:AKIA|ASIA)[0-9A-Z]{16}|(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]|github_pat_|npm_[A-Za-z0-9]{36}|glpat-[A-Za-z0-9]|xox[abceprs]-|xapp-[A-Za-z0-9]|sk-[A-Za-z0-9]{10,}/;
 
 export type DeskGateDenial = {
   ok: false;

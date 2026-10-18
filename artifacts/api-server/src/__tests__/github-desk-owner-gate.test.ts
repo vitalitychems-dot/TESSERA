@@ -379,6 +379,102 @@ describe("gated desk actions", () => {
     if (allowed.ok) expect(allowed.text.length).toBe(shortBody.length);
   });
 
+  it("denies env and npmrc names anywhere in a segment and still reads environment docs", async () => {
+    const cookie = ownerCookie();
+    const denied = [
+      "prod.env-backup",
+      "config.env~",
+      "x.envrc",
+      ".envrc",
+      "config/.Envrc",
+      "prod.env",
+      "config.env.bak",
+      "prod.env/x.txt",
+      ".env/x.txt",
+      ".env.example",
+      "preview/.env.example",
+      "my.env.local",
+      ".ENV-backup",
+      "file.envrc.md",
+      "user.npmrc",
+      "x.npmrc.bak",
+      ".npmrc",
+      "nested/.NPMRC.bak",
+      "nested/user.npmrc/token.txt",
+    ];
+    const allowed = [
+      "docs/.environment.md",
+      "docs/.ENVIRONMENT.md",
+      "docs/setup.environment.md",
+      "docs/.environment/readme.md",
+      "notes/environment.md",
+      "docs/npmrc.md",
+      "docs/notnpmrc.md",
+      ".envrcbackup",
+      "README.md",
+    ];
+    const fetched: string[] = [];
+    const io = { token: async () => SERVER_TOKEN, fetchImpl: fetchSpy(fetched) };
+    for (const path of denied) {
+      const before = fetched.length;
+      const read = await readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path }, cookie, io);
+      expect(read, path).toEqual({ ok: false, error: "That repository path is not allowed." });
+      expect(fetched.length, path).toBe(before);
+    }
+    for (const path of allowed) {
+      const read = await readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path }, cookie, io);
+      expect(read, path).toEqual({ ok: true, text: "x", path: `vitalitychems-dot/TESSERA/${path}` });
+    }
+  });
+
+  it("hides other token prefixes built from parts", async () => {
+    const cookie = ownerCookie();
+    const deniedParts = [
+      ["ghp", "_", "x"],
+      ["gho", "_", "x"],
+      ["ghu", "_", "x"],
+      ["ghs", "_", "x"],
+      ["ghr", "_", "x"],
+      ["glpat", "-", "x"],
+      ["xapp", "-", "x"],
+      ["xoxc", "-", "x"],
+      ["xoxe", "-", "x"],
+      ["ASIA", "A".repeat(16)],
+    ];
+    const allowedParts = [
+      ["gho", "x"],
+      ["glpat", "x"],
+      ["xapp", "x"],
+      ["xoxz", "-", "x"],
+      ["ASIA", "A".repeat(15)],
+      ["npm", "_", "c".repeat(10)],
+    ];
+    const readBody = async (body: string) =>
+      readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path: "NOTES.md" }, cookie, {
+        token: async () => SERVER_TOKEN,
+        fetchImpl: (async () =>
+          jsonResponse({
+            type: "file",
+            encoding: "base64",
+            size: Buffer.byteLength(body),
+            content: Buffer.from(body).toString("base64"),
+          })) as typeof fetch,
+      });
+    for (const parts of deniedParts) {
+      const marker = parts.join("");
+      const read = await readBody(`note ${marker}`);
+      expect(read.ok).toBe(false);
+      if (!read.ok) expect(read.error).toBe("That file could not be read.");
+      expect(JSON.stringify(read).includes(marker)).toBe(false);
+    }
+    for (const parts of allowedParts) {
+      const body = `note ${parts.join("")}`;
+      const read = await readBody(body);
+      expect(read.ok).toBe(true);
+      if (read.ok) expect(read.text.length).toBe(body.length);
+    }
+  });
+
   it("reads an allowlisted file with the server token and hides upstream errors", async () => {
     const cookie = ownerCookie();
     const seen: { url: string; headerText: string }[] = [];
