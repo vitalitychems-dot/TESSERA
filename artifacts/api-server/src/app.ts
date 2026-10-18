@@ -456,7 +456,7 @@ async function runStartupHealthCheck(): Promise<void> {
 export function logSessionSecretPresence(): void {
   logger.info(
     { configured: getSessionSecret().length > 0 },
-    "sovereign-session: secret fingerprint attestation (V2-LAMBDA)",
+    "sovereign-session: session secret presence",
   );
 }
 

@@ -5,7 +5,7 @@ import { logger } from "../lib/logger";
 
 const ADMIN_KEY = "synthetic-session-attest-key";
 const SESSION_SECRET = "synthetic-session-secret-value-32ch";
-const ATTESTATION = "sovereign-session: secret fingerprint attestation (V2-LAMBDA)";
+const ATTESTATION = "sovereign-session: session secret presence";
 
 function sha256Hex(value: string): string {
   return createHash("sha256").update(value, "utf8").digest("hex");

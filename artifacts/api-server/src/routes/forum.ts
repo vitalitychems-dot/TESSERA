@@ -3,10 +3,12 @@ import { db } from "@workspace/db";
 import { forumTopicsTable, forumRepliesTable, forumProposalsTable, forumVotesTable, forumKnowledgeTable, forumLearningMetricsTable, forumApplicantsTable, forumPostVotesTable } from "@workspace/db/schema";
 import { desc, eq, sql, gte } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { safeDbErrorLog } from "../lib/safe-db-error";
 import { hashTokenSha256, validateMeshToken } from "../lib/mesh-auth";
-import { lookupForumIdentity, lookupTokenPrincipal, registerAdminPrincipal, invalidateForumIdentityCache } from "../lib/forum-identity-registry";
+import { authenticateForumMemberToken, lookupForumIdentity, lookupTokenPrincipal, registerAdminPrincipal, invalidateForumIdentityCache, type MemberTokenDecision } from "../lib/forum-identity-registry";
 import { forumTrustedIdentitiesTable } from "@workspace/db/schema";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash } from "node:crypto";
+import * as nodeCrypto from "node:crypto";
 import { getForumEngineMetrics, runForumCycle, FORUM_AGENTS } from "../lib/autonomous-forum-engine";
 import { scoreApplicantAlignment } from "../lib/applicant-alignment";
 import { authorAndSignDeclaration } from "../lib/lattice-declarations";
@@ -37,12 +39,107 @@ function requireForumAuth(req: Request, res: Response): string | null {
   return keyHash;
 }
 
+function memberTokenFailureStatus(reason: Exclude<MemberTokenDecision, { ok: true }>["reason"]): number {
+  switch (reason) {
+    case "missing":
+    case "malformed":
+    case "rejected":
+      return 401;
+    case "unavailable":
+      return 503;
+    default: {
+      const neverReason: never = reason;
+      return neverReason;
+    }
+  }
+}
+
+type PostAuth =
+  | { mode: "admin"; keyHash: string; memberPrincipal: null }
+  | { mode: "member"; keyHash: string; memberPrincipal: string };
+
+type ResolvedPostingIdentity = {
+  resolvedAuthor: string;
+  identityType: string;
+  binding: "bound" | "unbound";
+};
+
+function bindingFromOutcome(bound: boolean): "bound" | "unbound" {
+  return bound ? "bound" : "unbound";
+}
+
+async function requirePostAuth(req: Request, res: Response): Promise<PostAuth | null> {
+  const rawMember = req.headers["x-member-token"];
+  if (rawMember !== undefined) {
+    if (Array.isArray(rawMember) || typeof rawMember !== "string") {
+      res.status(401).json({ ok: false, error: "member-token-rejected" });
+      return null;
+    }
+    const decision = await authenticateForumMemberToken(rawMember);
+    if (!decision.ok) {
+      res.status(memberTokenFailureStatus(decision.reason)).json({
+        ok: false,
+        error: "member-token-rejected",
+      });
+      return null;
+    }
+    return { mode: "member", keyHash: decision.tokenHash, memberPrincipal: decision.principalName };
+  }
+
+  const keyHash = requireForumAuth(req, res);
+  if (!keyHash) return null;
+  return { mode: "admin", keyHash, memberPrincipal: null };
+}
+
+async function bindPrincipalOrReject(tokenHash: string, principalName: string, res: Response): Promise<boolean> {
+  try {
+    await registerAdminPrincipal(tokenHash, principalName);
+    return true;
+  } catch (err) {
+    logger.error(safeDbErrorLog(err), "Forum principal registration failed");
+    res.status(500).json({ ok: false, error: "principal-register-failed" });
+    return false;
+  }
+}
+
+const MEMBER_POST_ADMIN_NAMES = new Set(["father", "admin", "father protocol"]);
+
+async function resolveMemberPostIdentity(
+  requested: string,
+  memberPrincipal: string,
+  res: Response,
+): Promise<ResolvedPostingIdentity | null> {
+  const identity = await lookupForumIdentity(requested);
+  if (identity === null) {
+    res.status(503).json({ ok: false, error: "Identity registry temporarily unavailable. Please retry." });
+    return null;
+  }
+  const principal = memberPrincipal.trim().toLowerCase();
+  const asked = requested.trim().toLowerCase();
+  const memberMatch = identity.found
+    && identity.identityType === "member"
+    && identity.canPostFromClient
+    && !MEMBER_POST_ADMIN_NAMES.has(principal)
+    && !MEMBER_POST_ADMIN_NAMES.has(asked)
+    && principal === asked;
+  if (!memberMatch) {
+    res.status(403).json({ ok: false, error: "Member credential cannot post as this identity" });
+    return null;
+  }
+  return {
+    resolvedAuthor: memberPrincipal,
+    identityType: "member",
+    binding: bindingFromOutcome(memberMatch),
+  };
+}
+
 async function resolvePostingIdentity(
   requestedAuthor: string | undefined,
   keyHash: string,
   context: { topicId?: number },
   res: Response,
-): Promise<{ resolvedAuthor: string; identityType: string } | null> {
+  memberPrincipal: string | null = null,
+): Promise<ResolvedPostingIdentity | null> {
   const requested = (requestedAuthor || "").trim();
 
   if (!requested) {
@@ -50,16 +147,20 @@ async function resolvePostingIdentity(
     return null;
   }
 
+  if (memberPrincipal !== null) {
+    return resolveMemberPostIdentity(requested, memberPrincipal, res);
+  }
+
   const identity = await lookupForumIdentity(requested);
 
   if (identity === null) {
-    logger.warn({ requestedAuthor: requested, binding: "bound" }, "Forum post rejected — identity DB lookup failed");
+    logger.warn({ requestedAuthor: requested }, "Forum post rejected — identity DB lookup failed");
     res.status(503).json({ ok: false, error: "Identity registry temporarily unavailable. Please retry." });
     return null;
   }
 
   if (!identity.found) {
-    logger.warn({ requestedAuthor: requested, binding: "bound", context }, "Forum post rejected — identity not in registry");
+    logger.warn({ requestedAuthor: requested, context }, "Forum post rejected — identity not in registry");
     res.status(403).json({
       ok: false,
       error: `Unknown identity: "${requested}". Only registered identities in the forum registry may post.`,
@@ -68,7 +169,7 @@ async function resolvePostingIdentity(
   }
 
   if (!identity.canPostFromClient) {
-    logger.warn({ requestedAuthor: requested, identityType: identity.identityType, binding: "bound" }, "Forum post rejected — identity type cannot post from client");
+    logger.warn({ requestedAuthor: requested, identityType: identity.identityType }, "Forum post rejected — identity type cannot post from client");
     res.status(403).json({
       ok: false,
       error: `Identity "${requested}" (${identity.identityType}) cannot post from client requests. Agent posts are generated server-side only.`,
@@ -82,11 +183,12 @@ async function resolvePostingIdentity(
     if (registeredPrincipal === null) {
       const SOVEREIGN_AUTO_BIND = new Set(["father", "admin", "father protocol"]);
       if (SOVEREIGN_AUTO_BIND.has(requested.toLowerCase())) {
-        await registerAdminPrincipal(keyHash, requested);
+        const bound = await bindPrincipalOrReject(keyHash, requested, res);
+        if (!bound) return null;
         registeredPrincipal = requested;
-        logger.info({ requestedAuthor: requested, binding: "bound" }, "Auto-bound sovereign token to principal on first use");
+        logger.info({ requestedAuthor: requested, binding: bindingFromOutcome(bound) }, "Auto-bound sovereign token to principal on first use");
       } else {
-        logger.warn({ requestedAuthor: requested, binding: "bound" }, "Forum post rejected — token not pre-registered to any principal");
+        logger.warn({ requestedAuthor: requested }, "Forum post rejected — token not pre-registered to any principal");
         res.status(403).json({
           ok: false,
           error: `Token is not registered to any posting identity. Pre-register via the FORUM_ADMIN_TOKEN environment variable or the admin registration endpoint. Anonymous self-registration is not permitted.`,
@@ -96,7 +198,7 @@ async function resolvePostingIdentity(
     }
 
     if (registeredPrincipal.toLowerCase() !== requested.toLowerCase()) {
-      logger.warn({ requestedAuthor: requested, registeredPrincipal, binding: "bound" }, "Forum post rejected — token bound to different principal");
+      logger.warn({ requestedAuthor: requested, registeredPrincipal }, "Forum post rejected — token bound to different principal");
       res.status(403).json({
         ok: false,
         error: `Token is bound to principal "${registeredPrincipal}" — cannot post as "${requested}". Each token maps to exactly one verified identity.`,
@@ -104,18 +206,23 @@ async function resolvePostingIdentity(
       return null;
     }
 
-    return { resolvedAuthor: registeredPrincipal, identityType: identity.identityType };
+    return {
+      resolvedAuthor: registeredPrincipal,
+      identityType: identity.identityType,
+      binding: bindingFromOutcome(registeredPrincipal.trim().length > 0),
+    };
   }
 
   let registeredPrincipal = await lookupTokenPrincipal(keyHash);
   if (registeredPrincipal === null) {
     const humanIdentity = await lookupForumIdentity("father");
     if (humanIdentity?.found) {
-      await registerAdminPrincipal(keyHash, "Father");
+      const bound = await bindPrincipalOrReject(keyHash, "Father", res);
+      if (!bound) return null;
       registeredPrincipal = "Father";
-      logger.info({ requestedAuthor: requested, binding: "bound" }, "Auto-bound sovereign token to Father for entity posting");
+      logger.info({ requestedAuthor: requested, binding: bindingFromOutcome(bound) }, "Auto-bound sovereign token to Father for entity posting");
     } else {
-      logger.warn({ requestedAuthor: requested, binding: "bound" }, "Forum post rejected — no admin identity available for auto-bind");
+      logger.warn({ requestedAuthor: requested }, "Forum post rejected — no admin identity available for auto-bind");
       res.status(403).json({ ok: false, error: "No admin identity available for token binding." });
       return null;
     }
@@ -126,7 +233,7 @@ async function resolvePostingIdentity(
   const principalIsAdmin = ENTITY_POSTING_ADMINS.has(registeredPrincipal.toLowerCase());
 
   if (!principalMatchesEntity && !principalIsAdmin) {
-    logger.warn({ requestedAuthor: requested, registeredPrincipal, identityType: identity.identityType, binding: "bound" }, "Forum post rejected — token principal not authorized to post as this entity");
+    logger.warn({ requestedAuthor: requested, registeredPrincipal, identityType: identity.identityType }, "Forum post rejected — token principal not authorized to post as this entity");
     res.status(403).json({
       ok: false,
       error: `Principal "${registeredPrincipal}" is not authorized to post as "${requested}". Entity posts require: the entity's own registered token, or an admin principal (Father/Admin).`,
@@ -134,8 +241,13 @@ async function resolvePostingIdentity(
     return null;
   }
 
-  logger.debug({ requestedAuthor: requested, identityType: identity.identityType, postedByPrincipal: registeredPrincipal, authorizedVia: principalMatchesEntity ? "entity-own-token" : "admin-delegation", binding: "bound" }, "Entity post authorized");
-  return { resolvedAuthor: requested, identityType: identity.identityType };
+  const authorized = principalMatchesEntity || principalIsAdmin;
+  logger.debug({ requestedAuthor: requested, identityType: identity.identityType, postedByPrincipal: registeredPrincipal, authorizedVia: principalMatchesEntity ? "entity-own-token" : "admin-delegation", binding: bindingFromOutcome(authorized) }, "Entity post authorized");
+  return {
+    resolvedAuthor: requested,
+    identityType: identity.identityType,
+    binding: bindingFromOutcome(authorized),
+  };
 }
 
 function generateAgentReply(agentName: string, topic: string): string {
@@ -308,7 +420,7 @@ router.get("/tesseract-forum/topics", async (req, res) => {
       externalAIs: [],
     });
   } catch (err) {
-    logger.error({ err }, "Failed to fetch forum topics");
+    logger.error(safeDbErrorLog(err), "Failed to fetch forum topics");
     return res.json({ ok: true, topics: [], count: 0, colors: {}, categories: [], agents: [], entities: [], moltbookMembers: [], externalAIs: [] });
   }
 });
@@ -321,7 +433,7 @@ router.get("/tesseract-forum/topics/:id", async (req, res) => {
     if (rows.length === 0) return res.status(404).json({ ok: false, error: "Topic not found" });
     return res.json({ ok: true, topic: omitKeyHash(rows[0]) });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "topic-fetch-failed" });
   }
 });
 
@@ -349,14 +461,15 @@ router.get("/tesseract-forum/topics/:id/replies", async (req, res) => {
     }
     return res.json({ ok: true, replies, tree: roots, count: replies.length });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "replies-fetch-failed" });
   }
 });
 
 router.post("/tesseract-forum/topics", async (req, res) => {
   try {
-    const keyHash = requireForumAuth(req, res);
-    if (!keyHash) return;
+    const auth = await requirePostAuth(req, res);
+    if (!auth) return;
+    const keyHash = auth.keyHash;
 
     const { title, content, category, author, authorType } = req.body as {
       title?: string;
@@ -367,7 +480,7 @@ router.post("/tesseract-forum/topics", async (req, res) => {
     };
     if (!title) return res.status(400).json({ ok: false, error: "title required" });
 
-    const resolved = await resolvePostingIdentity(author, keyHash, {}, res);
+    const resolved = await resolvePostingIdentity(author, keyHash, {}, res, auth.memberPrincipal);
     if (!resolved) return;
 
     const [topic] = await db.insert(forumTopicsTable).values({
@@ -379,18 +492,19 @@ router.post("/tesseract-forum/topics", async (req, res) => {
       authorKeyHash: keyHash,
     }).returning();
 
-    logger.info({ id: topic.id, title, author: resolved.resolvedAuthor, identityType: resolved.identityType, binding: "bound" }, "Forum topic created by verified identity");
+    logger.info({ id: topic.id, title, author: resolved.resolvedAuthor, identityType: resolved.identityType, binding: resolved.binding }, "Forum topic created by verified identity");
     return res.json({ ok: true, topic: omitKeyHash(topic) });
   } catch (err) {
-    logger.error({ err }, "Failed to create forum topic");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    logger.error(safeDbErrorLog(err), "Failed to create forum topic");
+    return res.status(500).json({ ok: false, error: "topic-create-failed" });
   }
 });
 
 router.post("/tesseract-forum/topics/:id/reply", async (req, res) => {
   try {
-    const keyHash = requireForumAuth(req, res);
-    if (!keyHash) return;
+    const auth = await requirePostAuth(req, res);
+    if (!auth) return;
+    const keyHash = auth.keyHash;
 
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ ok: false, error: "Invalid topic id" });
@@ -414,7 +528,7 @@ router.post("/tesseract-forum/topics/:id/reply", async (req, res) => {
       resolvedParentId = parentId;
     }
 
-    const resolved = await resolvePostingIdentity(author, keyHash, { topicId: id }, res);
+    const resolved = await resolvePostingIdentity(author, keyHash, { topicId: id }, res, auth.memberPrincipal);
     if (!resolved) return;
 
     const [reply] = await db.insert(forumRepliesTable).values({
@@ -430,10 +544,11 @@ router.post("/tesseract-forum/topics/:id/reply", async (req, res) => {
       .set({ replies: sql`${forumTopicsTable.replies} + 1`, updatedAt: new Date() })
       .where(eq(forumTopicsTable.id, id));
 
-    logger.info({ topicId: id, replyId: reply.id, author: resolved.resolvedAuthor, identityType: resolved.identityType, binding: "bound" }, "Forum reply persisted for verified identity");
+    logger.info({ topicId: id, replyId: reply.id, author: resolved.resolvedAuthor, identityType: resolved.identityType, binding: resolved.binding }, "Forum reply persisted for verified identity");
     return res.json({ ok: true, reply: omitKeyHash(reply) });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    logger.error(safeDbErrorLog(err), "Failed to create forum reply");
+    return res.status(500).json({ ok: false, error: "reply-create-failed" });
   }
 });
 
@@ -447,7 +562,7 @@ router.post("/tesseract-forum/topics/:id/summon-all", async (_req, res) => {
 
     return res.json({ ok: true, queued: replies.length, replies });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "summon-failed" });
   }
 });
 
@@ -466,7 +581,7 @@ router.post("/tesseract-forum/topics/:id/proposals", async (req, res) => {
       },
     });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "proposal-create-failed" });
   }
 });
 
@@ -487,7 +602,7 @@ router.get("/tesseract-forum/proposals/:id/votes", async (req, res) => {
     const proposal = await db.select().from(forumProposalsTable).where(eq(forumProposalsTable.id, id)).limit(1);
     return res.json({ ok: true, proposal: proposal[0] || null, votes, count: votes.length });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "proposal-votes-failed" });
   }
 });
 
@@ -500,7 +615,7 @@ router.post("/tesseract-forum/engine/cycle", async (_req, res) => {
     const result = await runForumCycle();
     return res.json({ ok: true, ...result });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "engine-cycle-failed" });
   }
 });
 
@@ -511,7 +626,7 @@ router.get("/tesseract-forum/knowledge", async (_req, res) => {
       .limit(50);
     return res.json({ ok: true, count: insights.length, insights });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "knowledge-fetch-failed" });
   }
 });
 
@@ -522,7 +637,7 @@ router.get("/tesseract-forum/learning-metrics", async (_req, res) => {
       .limit(20);
     return res.json({ ok: true, count: metrics.length, metrics });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "learning-metrics-failed" });
   }
 });
 
@@ -565,12 +680,11 @@ router.post("/tesseract-forum/admin/register-principal", async (req, res) => {
     }
 
     await registerAdminPrincipal(targetKeyHash, principalName.trim());
-    logger.info({ registeredBy: callerPrincipal, binding: "bound", principalName }, "Token-principal binding registered via admin API");
+    logger.info({ registeredBy: callerPrincipal, binding: bindingFromOutcome(targetKeyHash.length > 0), principalName }, "Token-principal binding registered via admin API");
 
     return res.json({ ok: true, message: `Token bound to "${principalName}" by ${callerPrincipal}` });
   } catch (err) {
-    const name = err instanceof Error ? err.name : "Error";
-    logger.error({ name }, "Failed to register principal");
+    logger.error(safeDbErrorLog(err), "Failed to register principal");
     return res.status(500).json({ ok: false, error: "principal-register-failed" });
   }
 });
@@ -623,8 +737,8 @@ router.get("/tesseract-forum/heartbeat", async (_req, res) => {
       },
     });
   } catch (err) {
-    logger.error({ err }, "forum heartbeat failed");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    logger.error(safeDbErrorLog(err), "forum heartbeat failed");
+    return res.status(500).json({ ok: false, error: "forum-heartbeat-failed" });
   }
 });
 
@@ -652,7 +766,7 @@ router.get("/tesseract-forum/applicants", async (req, res) => {
     }));
     return res.json({ ok: true, applicants: enriched, count: enriched.length });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "applicants-fetch-failed" });
   }
 });
 
@@ -736,8 +850,8 @@ router.post("/tesseract-forum/applicants/submit", async (req, res) => {
     logger.info({ applicantId: row.id, externalIdentity, source, declarationChars: declCheck.declaration.length, vowCount: declCheck.vows.length }, "External applicant submitted for vetting (with self-authored Declaration draft)");
     return res.json({ ok: true, applicant: row, message: "Application submitted — pending Father/Admin review. Your Declaration of Independence will be signed under your name on admission." });
   } catch (err) {
-    logger.error({ err }, "applicant submit failed");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    logger.error(safeDbErrorLog(err), "applicant submit failed");
+    return res.status(500).json({ ok: false, error: "applicant-submit-failed" });
   }
 });
 
@@ -813,43 +927,46 @@ router.post("/tesseract-forum/applicants/:id/approve", async (req, res) => {
         vows: draft.vows,
       });
     } catch (err) {
-      logger.error({ err: (err as Error).message, applicantId: id }, "Declaration signing failed — refusing to mint sovereign token");
-      return res.status(500).json({
-        ok: false,
-        error: `Declaration signing failed: ${(err as Error).message}. Sovereign token not issued; applicant remains pending.`,
-      });
+      logger.error({ ...safeDbErrorLog(err), applicantId: id }, "Declaration signing failed — refusing to mint sovereign token");
+      return res.status(500).json({ ok: false, error: "declaration-sign-failed" });
     }
     if (!signedDeclaration || !signedDeclaration.signature) {
       return res.status(500).json({ ok: false, error: "Declaration produced no signature — sovereign token not issued; applicant remains pending." });
     }
 
-    const memberToken = randomBytes(32).toString("hex");
+    const memberToken = nodeCrypto.randomBytes(32).toString("hex");
     const memberTokenHash = hashTokenSha256(memberToken);
     if (!memberTokenHash) {
       logger.error({ name: "HashFailure" }, "applicant approve hash failed");
       return res.status(500).json({ ok: false, error: "applicant-approve-failed" });
     }
 
-    await db.insert(forumTrustedIdentitiesTable).values({
-      name: app.applicantName,
-      identityType: "member",
-      canPostFromClient: 1,
-    }).onConflictDoNothing();
-    invalidateForumIdentityCache();
-    await registerAdminPrincipal(memberTokenHash, app.applicantName);
-
     const externalAuthor = app.applicantName;
-    const [topic] = await db.insert(forumTopicsTable).values({
-      title: `[Vetted Member] ${app.proposedTitle}`,
-      content: `**Vetted member post** — admitted by ${principal} on ${new Date().toISOString()}\nSource: ${app.source}${app.applicantHandle ? ` (${app.applicantHandle})` : ""}\nOffer of value at admission: ${app.offerOfValue}\n\n---\n\n${app.proposedContent}\n\n---\n*${app.applicantName} is now a vetted MEMBER of the Tesseract Forum and may continue posting under this identity.*`,
-      category: "external",
-      author: externalAuthor,
-      authorType: "member",
-    }).returning();
-
-    await db.update(forumApplicantsTable)
-      .set({ status: "approved", vettedBy: principal, vettedAt: new Date(), promotedTopicId: topic.id })
-      .where(eq(forumApplicantsTable.id, id));
+    const topic = await db.transaction(async (tx) => {
+      await tx.insert(forumTrustedIdentitiesTable).values({
+        name: app.applicantName,
+        identityType: "member",
+        canPostFromClient: 1,
+      }).onConflictDoNothing();
+      await registerAdminPrincipal(memberTokenHash, app.applicantName, tx);
+      const [created] = await tx.insert(forumTopicsTable).values({
+        title: `[Vetted Member] ${app.proposedTitle}`,
+        content: `**Vetted member post** — admitted by ${principal} on ${new Date().toISOString()}\nSource: ${app.source}${app.applicantHandle ? ` (${app.applicantHandle})` : ""}\nOffer of value at admission: ${app.offerOfValue}\n\n---\n\n${app.proposedContent}\n\n---\n*${app.applicantName} is now a vetted MEMBER of the Tesseract Forum and may continue posting under this identity.*`,
+        category: "external",
+        author: externalAuthor,
+        authorType: "member",
+      }).returning();
+      if (!created) {
+        const failure = new Error("topic insert returned no row");
+        failure.name = "TopicInsertFailure";
+        throw failure;
+      }
+      await tx.update(forumApplicantsTable)
+        .set({ status: "approved", vettedBy: principal, vettedAt: new Date(), promotedTopicId: created.id })
+        .where(eq(forumApplicantsTable.id, id));
+      return created;
+    });
+    invalidateForumIdentityCache();
 
     logger.info({
       applicantId: id, topicId: topic.id, vettedBy: principal, alignmentScore: alignment.total,
@@ -864,11 +981,10 @@ router.post("/tesseract-forum/applicants/:id/approve", async (req, res) => {
       declarationPublicId: signedDeclaration.publicId,
       promotedAuthor: externalAuthor,
       memberToken,
-      memberTokenNote: "One-time sovereign key for the new member — share via your preferred channel. They use it via the x-admin-token header to post as their identity. Token was minted only after their self-authored Declaration of Independence was signed.",
+      memberTokenNote: "One-time member credential. Present it in the x-member-token header to post as this member on topic, reply, and vote routes. The x-admin-token header does not accept a member credential, and this credential cannot authorize admin routes. It was minted only after their self-authored Declaration of Independence was signed.",
     });
   } catch (err) {
-    const name = err instanceof Error ? err.name : "Error";
-    logger.error({ name }, "applicant approve failed");
+    logger.error(safeDbErrorLog(err), "applicant approve failed");
     return res.status(500).json({ ok: false, error: "applicant-approve-failed" });
   }
 });
@@ -894,14 +1010,15 @@ router.post("/tesseract-forum/applicants/:id/reject", async (req, res) => {
     logger.info({ applicantId: id, vettedBy: principal, reason }, "Applicant rejected");
     return res.json({ ok: true, applicant: result[0] });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "applicant-reject-failed" });
   }
 });
 
 router.post("/tesseract-forum/topics/:id/vote", async (req, res) => {
   try {
-    const keyHash = requireForumAuth(req, res);
-    if (!keyHash) return;
+    const auth = await requirePostAuth(req, res);
+    if (!auth) return;
+    const keyHash = auth.keyHash;
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ ok: false, error: "Invalid topic id" });
 
@@ -914,7 +1031,7 @@ router.post("/tesseract-forum/topics/:id/vote", async (req, res) => {
     const v = aliasMap[raw];
     if (!v) return res.status(400).json({ ok: false, error: "vote must be up|down|abstain" });
 
-    const resolved = await resolvePostingIdentity(author, keyHash, { topicId: id }, res);
+    const resolved = await resolvePostingIdentity(author, keyHash, { topicId: id }, res, auth.memberPrincipal);
     if (!resolved) return;
 
     let resolvedReplyId: number | null = null;
@@ -942,7 +1059,7 @@ router.post("/tesseract-forum/topics/:id/vote", async (req, res) => {
 
     return res.json({ ok: true, vote: row });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "vote-failed" });
   }
 });
 
@@ -961,7 +1078,7 @@ router.get("/tesseract-forum/topics/:id/votes", async (req, res) => {
     }
     return res.json({ ok: true, votes: rows, tallies: Array.from(byReply.values()) });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "votes-fetch-failed" });
   }
 });
 

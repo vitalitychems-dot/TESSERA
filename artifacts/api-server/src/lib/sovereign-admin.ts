@@ -79,7 +79,7 @@ export function requireAdminSession(req: AdminRequest, res: Response, next: Next
   const decision = decideOwnerSession(req);
   if (!decision.ok) {
     if (decision.status === 401) {
-      logger.warn({ route: "admin-session", reason: decision.reason }, "admin-session denied");
+      logger.warn({ reason: decision.reason }, "admin-session denied");
       res.status(401).json({ ok: false, error: "unauthenticated", reason: decision.reason ?? "unknown" });
       return;
     }

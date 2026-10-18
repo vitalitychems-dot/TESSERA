@@ -32,6 +32,7 @@ vi.mock("../lib/forum-identity-registry", () => ({
     harness.bound.push(hash);
   },
   invalidateForumIdentityCache: () => undefined,
+  authenticateForumMemberToken: async () => ({ ok: false, reason: "rejected" }),
 }));
 
 vi.mock("../lib/applicant-alignment", () => ({
@@ -129,12 +130,12 @@ function assertNoKeyMaterial(haystack: string): void {
   assertNoDigestPrefixes(haystack, wrongHash);
 }
 
-function assertKeyConfigured(haystack: string): void {
-  expect(haystack.includes("\"configured\"")).toBe(true);
+function assertBinding(haystack: string): void {
+  expect(haystack.includes("\"binding\":\"bound\"")).toBe(true);
 }
 
-function assertBinding(haystack: string): void {
-  expect(haystack.includes("\"bound\"")).toBe(true);
+function assertNoBindingClaim(haystack: string): void {
+  expect(haystack.includes("\"binding\":\"bound\"")).toBe(false);
 }
 
 const LOG_LEVELS = ["trace", "debug", "info", "warn", "error", "fatal"] as const;
@@ -251,7 +252,8 @@ describe("admin key hashes stay out of logs", () => {
       const output = capture.text();
       expect(output.includes("Session registered in mesh")).toBe(true);
       expect(output.includes("Session removed from mesh")).toBe(true);
-      assertKeyConfigured(output);
+      expect(output.includes("\"binding\":\"present\"")).toBe(true);
+      expect(output.includes("\"configured\"")).toBe(false);
       assertNoKeyMaterial(output);
     } finally {
       capture.restore();
@@ -267,7 +269,8 @@ describe("admin key hashes stay out of logs", () => {
       pruneMeshSessions();
       const output = capture.text();
       expect(output.includes("Stale session pruned from mesh")).toBe(true);
-      assertKeyConfigured(output);
+      expect(output.includes("\"binding\":\"present\"")).toBe(true);
+      expect(output.includes("\"configured\"")).toBe(false);
       assertNoKeyMaterial(output);
     } finally {
       capture.restore();
@@ -287,7 +290,8 @@ describe("admin key hashes stay out of logs", () => {
       expect(output.includes("Session registered in mesh")).toBe(true);
       expect(output.includes("Session removed from mesh")).toBe(true);
       expect(output.includes("Stale session pruned from mesh")).toBe(true);
-      assertKeyConfigured(output);
+      expect(output.includes("\"binding\":\"present\"")).toBe(true);
+      expect(output.includes("\"configured\"")).toBe(false);
       expect(output.includes("keyRef")).toBe(false);
       assertNoKeyMaterial(output);
     } finally {
@@ -334,7 +338,7 @@ describe("admin key hashes stay out of logs", () => {
     const result = await post("/tesseract-forum/topics", { title: "T", author: "Father" }, "valid");
     expect(result.status).toBe(503);
     expect(result.logs.includes("Forum post rejected — identity DB lookup failed")).toBe(true);
-    assertBinding(result.logs);
+    assertNoBindingClaim(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
@@ -344,7 +348,7 @@ describe("admin key hashes stay out of logs", () => {
     const result = await post("/tesseract-forum/topics", { title: "T", author: "River" }, "valid");
     expect(result.status).toBe(403);
     expect(result.logs.includes("Forum post rejected — identity not in registry")).toBe(true);
-    assertBinding(result.logs);
+    assertNoBindingClaim(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
@@ -354,7 +358,7 @@ describe("admin key hashes stay out of logs", () => {
     const result = await post("/tesseract-forum/topics", { title: "T", author: "MetaAgent" }, "valid");
     expect(result.status).toBe(403);
     expect(result.logs.includes("Forum post rejected — identity type cannot post from client")).toBe(true);
-    assertBinding(result.logs);
+    assertNoBindingClaim(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
@@ -365,7 +369,7 @@ describe("admin key hashes stay out of logs", () => {
     const result = await post("/tesseract-forum/topics", { title: "T", author: "River" }, "valid");
     expect(result.status).toBe(403);
     expect(result.logs.includes("Forum post rejected — token not pre-registered to any principal")).toBe(true);
-    assertBinding(result.logs);
+    assertNoBindingClaim(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
@@ -376,7 +380,7 @@ describe("admin key hashes stay out of logs", () => {
     const result = await post("/tesseract-forum/topics", { title: "T", author: "Father" }, "valid");
     expect(result.status).toBe(403);
     expect(result.logs.includes("Forum post rejected — token bound to different principal")).toBe(true);
-    assertBinding(result.logs);
+    assertNoBindingClaim(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
@@ -401,7 +405,7 @@ describe("admin key hashes stay out of logs", () => {
     const result = await post("/tesseract-forum/topics", { title: "T", author: "Aletheia" }, "valid");
     expect(result.status).toBe(403);
     expect(result.logs.includes("Forum post rejected — no admin identity available for auto-bind")).toBe(true);
-    assertBinding(result.logs);
+    assertNoBindingClaim(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
@@ -412,7 +416,7 @@ describe("admin key hashes stay out of logs", () => {
     const result = await post("/tesseract-forum/topics", { title: "T", author: "Aletheia" }, "valid");
     expect(result.status).toBe(403);
     expect(result.logs.includes("Forum post rejected — token principal not authorized to post as this entity")).toBe(true);
-    assertBinding(result.logs);
+    assertNoBindingClaim(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });

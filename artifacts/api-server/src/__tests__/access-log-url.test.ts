@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import app, { setServerReady } from "../app";
+import { redactAccessLogUrl } from "../lib/access-log-url";
 import { logger } from "../lib/logger";
 
 const ADMIN_KEY = "synthetic-access-log-admin-key";
@@ -34,6 +35,21 @@ function loggerDestination(target: object): WritableStream | undefined {
 }
 
 const LOG_LEVELS = ["trace", "debug", "info", "warn", "error", "fatal"] as const;
+
+describe("redactAccessLogUrl", () => {
+  it("redacts percent-encoded labels, encoded ids, and double slashes", () => {
+    expect(redactAccessLogUrl("/api/%6d%65%73%68/%73%65%73%73%69%6f%6e%73/not-a-digest")).toBe(
+      "/api/%6d%65%73%68/%73%65%73%73%69%6f%6e%73/redacted",
+    );
+    expect(redactAccessLogUrl("/api/mesh/sessions/%6e%6f%74%2d%61%2d%64%69%67%65%73%74")).toBe(
+      "/api/mesh/sessions/redacted",
+    );
+    expect(redactAccessLogUrl("/api/mesh//sessions/not-a-digest")).toBe("/api/mesh//sessions/redacted");
+    expect(redactAccessLogUrl("/api/mesh/sessions//not-a-digest")).toBe("/api/mesh/sessions//redacted");
+    expect(redactAccessLogUrl(`/api/mesh/sessions/${adminHash}`)).toBe("/api/mesh/sessions/redacted");
+    expect(redactAccessLogUrl("%E0%A4%A")).toBe("%E0%A4%A");
+  });
+});
 
 describe("mesh session hashes stay out of access logs", () => {
   let server: Server | undefined;

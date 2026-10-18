@@ -32,7 +32,7 @@ describe("admin session denial log", () => {
       requireAdminSession(req, res, next);
       const output = JSON.stringify(warn.mock.calls);
       expect(output.includes("admin-session denied")).toBe(true);
-      expect(output.includes("\"route\":\"admin-session\"")).toBe(true);
+      expect(output.includes("\"route\":\"admin-session\"")).toBe(false);
       expect(output.includes("\"reason\":\"no-cookie\"")).toBe(true);
       expect(output.includes(path)).toBe(false);
       expect(output.includes(hash)).toBe(false);
