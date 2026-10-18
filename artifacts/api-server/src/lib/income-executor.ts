@@ -50,7 +50,8 @@ async function tick(): Promise<void> {
     }
     void lastSigs;
   } catch (err) {
-    logger.warn({ err: (err as Error).message }, "income-executor: tick failed");
+    const errorName = err instanceof Error ? err.name : "Error";
+    logger.warn({ errorName }, "income-executor: tick failed");
   }
 }
 

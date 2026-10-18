@@ -20,13 +20,19 @@ function respondInternal(res: Response, err: unknown, event: string) {
   return res.status(500).json({ ok: false, error: "internal_error" });
 }
 
+function publishedWalletObservation<T extends object>(obs: T): T {
+  const published = { ...obs } as T & { rpcUrl?: unknown };
+  delete published.rpcUrl;
+  return published;
+}
+
 router.use("/income", requireAdminSession);
 router.use("/leads", requireAdminSession);
 router.use("/free-stuff", requireAdminSession);
 router.use("/code-bounties", requireAdminSession);
 
 router.get("/income/wallet", (_req, res) => {
-  const obs = getWalletObservation();
+  const obs = publishedWalletObservation(getWalletObservation());
   if (obs.lastObservedAt === 0) {
     return res.json({ ok: true, disabled: true, observation: obs });
   }
@@ -35,7 +41,7 @@ router.get("/income/wallet", (_req, res) => {
 
 router.post("/income/wallet/refresh", async (_req, res) => {
   try {
-    const obs = await refreshWalletObservation();
+    const obs = publishedWalletObservation(await refreshWalletObservation());
     return res.json({ ok: true, observation: obs });
   } catch (err) {
     return respondInternal(res, err, "income wallet refresh failed");
@@ -152,18 +158,26 @@ router.get("/code-bounties", async (req, res) => {
 });
 
 router.post("/code-bounties/:id/attempt", (req, res) => {
-  const { status, notes } = req.body as { status?: BountyAttempt["status"]; notes?: string };
-  const validStatus: BountyAttempt["status"][] = ["investigating", "drafting", "submitted", "merged", "rejected", "abandoned"];
-  if (!status || !validStatus.includes(status)) {
-    return res.status(400).json({ ok: false, error: `status must be one of ${validStatus.join(",")}` });
+  try {
+    const { status, notes } = req.body as { status?: BountyAttempt["status"]; notes?: string };
+    const validStatus: BountyAttempt["status"][] = ["investigating", "drafting", "submitted", "merged", "rejected", "abandoned"];
+    if (!status || !validStatus.includes(status)) {
+      return res.status(400).json({ ok: false, error: `status must be one of ${validStatus.join(",")}` });
+    }
+    const a = recordAttempt(req.params.id, status, notes ?? "");
+    return res.json({ ok: true, attempt: a, attempts: getAttempts(req.params.id) });
+  } catch (err) {
+    return respondInternal(res, err, "code-bounties attempt failed");
   }
-  const a = recordAttempt(req.params.id, status, notes ?? "");
-  return res.json({ ok: true, attempt: a, attempts: getAttempts(req.params.id) });
 });
 
 router.get("/code-bounties/attempts", (req, res) => {
-  const bountyId = typeof req.query.bountyId === "string" ? req.query.bountyId : undefined;
-  return res.json({ ok: true, attempts: getAttempts(bountyId) });
+  try {
+    const bountyId = typeof req.query.bountyId === "string" ? req.query.bountyId : undefined;
+    return res.json({ ok: true, attempts: getAttempts(bountyId) });
+  } catch (err) {
+    return respondInternal(res, err, "code-bounties attempts failed");
+  }
 });
 
 export default router;

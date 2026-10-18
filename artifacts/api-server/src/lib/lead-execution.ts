@@ -3,6 +3,10 @@ import { ingestedDataTable } from "@workspace/db/schema";
 import { desc, isNotNull } from "drizzle-orm";
 import { logger } from "./logger";
 
+function failureName(err: unknown): string {
+  return err instanceof Error ? err.name : "Error";
+}
+
 export type LeadKind = "affiliate" | "service" | "access" | "knowledge" | "general";
 
 export interface ExecutableLead {
@@ -135,7 +139,7 @@ export async function getExecutableLeads(opts: { kind?: LeadKind; limit?: number
     }
     return leads;
   } catch (err) {
-    logger.warn({ err: (err as Error).message }, "lead-execution: query failed");
+    logger.warn({ errorName: failureName(err) }, "lead-execution: query failed");
     return [];
   }
 }

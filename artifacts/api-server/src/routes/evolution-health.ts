@@ -15,10 +15,19 @@ import { getScoringMetrics } from "../lib/sovereignty-impact-scoring";
 import { validateMeshToken } from "../lib/mesh-auth";
 import { getRecentAttempts } from "../lib/evolution-attempt-ledger";
 import { logger } from "../lib/logger";
+import { isAdminTokenConfigured } from "../lib/sovereign-session";
 
 const router = Router();
 
 function requireAuth(req: Request, res: Response, next: () => void): void {
+  if (!isAdminTokenConfigured()) {
+    res.status(503).json({
+      ok: false,
+      error: "sovereign-unconfigured",
+      message: "TESSERACT_ADMIN_KEY is not configured. Privileged surfaces are fail-closed.",
+    });
+    return;
+  }
   const rawToken = req.headers["x-admin-token"];
   const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
   const keyHash = validateMeshToken(token);

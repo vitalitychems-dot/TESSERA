@@ -15,7 +15,6 @@ export interface WalletObservation {
   configured: boolean;
   walletAddress: string | null;
   network: string;
-  rpcUrl: string;
   balanceLamports: number | null;
   balanceSol: number | null;
   deposits: OnChainDeposit[];
@@ -27,12 +26,16 @@ export interface WalletObservation {
 const SOL_PER_LAMPORT = 1 / 1_000_000_000;
 const POLL_INTERVAL_MS = 90_000;
 const TX_LIMIT = 25;
+const WALLET_REFRESH_ERROR = "wallet_refresh_failed";
+
+function failureName(err: unknown): string {
+  return err instanceof Error ? err.name : "Error";
+}
 
 let cache: WalletObservation = {
   configured: false,
   walletAddress: null,
   network: "solana-mainnet",
-  rpcUrl: "https://api.mainnet-beta.solana.com",
   balanceLamports: null,
   balanceSol: null,
   deposits: [],
@@ -71,13 +74,11 @@ export async function refreshWalletObservation(): Promise<WalletObservation> {
   if (inFlight) return cache;
   inFlight = true;
   const address = getWalletAddress();
-  const rpcUrl = getRpcUrl();
   if (!address) {
     cache = {
       ...cache,
       configured: false,
       walletAddress: null,
-      rpcUrl,
       balanceLamports: null,
       balanceSol: null,
       deposits: [],
@@ -128,7 +129,6 @@ export async function refreshWalletObservation(): Promise<WalletObservation> {
       configured: true,
       walletAddress: address,
       network: "solana-mainnet",
-      rpcUrl,
       balanceLamports: balanceRes.value,
       balanceSol: balanceRes.value * SOL_PER_LAMPORT,
       deposits: deposits.sort((a, b) => b.blockTime - a.blockTime),
@@ -141,11 +141,10 @@ export async function refreshWalletObservation(): Promise<WalletObservation> {
       ...cache,
       configured: true,
       walletAddress: address,
-      rpcUrl,
       lastObservedAt: Date.now(),
-      lastError: (err as Error).message,
+      lastError: WALLET_REFRESH_ERROR,
     };
-    logger.warn({ err: (err as Error).message }, "WalletObserver: refresh failed");
+    logger.warn({ errorName: failureName(err) }, "WalletObserver: refresh failed");
   } finally {
     inFlight = false;
   }

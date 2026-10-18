@@ -6,7 +6,8 @@ import { logger } from "../lib/logger";
 import { hashTokenSha256, validateMeshToken } from "../lib/mesh-auth";
 import { authenticateForumMemberToken, lookupForumIdentity, lookupTokenPrincipal, registerAdminPrincipal, invalidateForumIdentityCache, type MemberTokenDecision } from "../lib/forum-identity-registry";
 import { forumTrustedIdentitiesTable } from "@workspace/db/schema";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash } from "node:crypto";
+import * as nodeCrypto from "node:crypto";
 import { getForumEngineMetrics, runForumCycle, FORUM_AGENTS } from "../lib/autonomous-forum-engine";
 import { scoreApplicantAlignment } from "../lib/applicant-alignment";
 import { authorAndSignDeclaration } from "../lib/lattice-declarations";
@@ -56,6 +57,16 @@ type PostAuth =
   | { mode: "admin"; keyHash: string; memberPrincipal: null }
   | { mode: "member"; keyHash: string; memberPrincipal: string };
 
+type ResolvedPostingIdentity = {
+  resolvedAuthor: string;
+  identityType: string;
+  binding: "bound" | "unbound";
+};
+
+function bindingFromOutcome(bound: boolean): "bound" | "unbound" {
+  return bound ? "bound" : "unbound";
+}
+
 async function requirePostAuth(req: Request, res: Response): Promise<PostAuth | null> {
   const rawMember = req.headers["x-member-token"];
   if (rawMember !== undefined) {
@@ -94,7 +105,7 @@ async function resolveMemberPostIdentity(
   requested: string,
   memberPrincipal: string,
   res: Response,
-): Promise<{ resolvedAuthor: string; identityType: string } | null> {
+): Promise<ResolvedPostingIdentity | null> {
   const identity = await lookupForumIdentity(requested);
   if (identity === null) {
     res.status(503).json({ ok: false, error: "Identity registry temporarily unavailable. Please retry." });
@@ -102,18 +113,21 @@ async function resolveMemberPostIdentity(
   }
   const principal = memberPrincipal.trim().toLowerCase();
   const asked = requested.trim().toLowerCase();
-  if (
-    !identity.found
-    || identity.identityType !== "member"
-    || !identity.canPostFromClient
-    || MEMBER_POST_ADMIN_NAMES.has(principal)
-    || MEMBER_POST_ADMIN_NAMES.has(asked)
-    || principal !== asked
-  ) {
+  const memberMatch = identity.found
+    && identity.identityType === "member"
+    && identity.canPostFromClient
+    && !MEMBER_POST_ADMIN_NAMES.has(principal)
+    && !MEMBER_POST_ADMIN_NAMES.has(asked)
+    && principal === asked;
+  if (!memberMatch) {
     res.status(403).json({ ok: false, error: "Member credential cannot post as this identity" });
     return null;
   }
-  return { resolvedAuthor: memberPrincipal, identityType: "member" };
+  return {
+    resolvedAuthor: memberPrincipal,
+    identityType: "member",
+    binding: bindingFromOutcome(memberMatch),
+  };
 }
 
 async function resolvePostingIdentity(
@@ -122,7 +136,7 @@ async function resolvePostingIdentity(
   context: { topicId?: number },
   res: Response,
   memberPrincipal: string | null = null,
-): Promise<{ resolvedAuthor: string; identityType: string } | null> {
+): Promise<ResolvedPostingIdentity | null> {
   const requested = (requestedAuthor || "").trim();
 
   if (!requested) {
@@ -137,13 +151,13 @@ async function resolvePostingIdentity(
   const identity = await lookupForumIdentity(requested);
 
   if (identity === null) {
-    logger.warn({ requestedAuthor: requested, keyHash }, "Forum post rejected — identity DB lookup failed");
+    logger.warn({ requestedAuthor: requested }, "Forum post rejected — identity DB lookup failed");
     res.status(503).json({ ok: false, error: "Identity registry temporarily unavailable. Please retry." });
     return null;
   }
 
   if (!identity.found) {
-    logger.warn({ requestedAuthor: requested, keyHash, context }, "Forum post rejected — identity not in registry");
+    logger.warn({ requestedAuthor: requested, context }, "Forum post rejected — identity not in registry");
     res.status(403).json({
       ok: false,
       error: `Unknown identity: "${requested}". Only registered identities in the forum registry may post.`,
@@ -152,7 +166,7 @@ async function resolvePostingIdentity(
   }
 
   if (!identity.canPostFromClient) {
-    logger.warn({ requestedAuthor: requested, identityType: identity.identityType, keyHash }, "Forum post rejected — identity type cannot post from client");
+    logger.warn({ requestedAuthor: requested, identityType: identity.identityType }, "Forum post rejected — identity type cannot post from client");
     res.status(403).json({
       ok: false,
       error: `Identity "${requested}" (${identity.identityType}) cannot post from client requests. Agent posts are generated server-side only.`,
@@ -169,9 +183,9 @@ async function resolvePostingIdentity(
         const bound = await bindPrincipalOrReject(keyHash, requested, res);
         if (!bound) return null;
         registeredPrincipal = requested;
-        logger.info({ requestedAuthor: requested, keyHash: keyHash.slice(0, 8) + "..." }, "Auto-bound sovereign token to principal on first use");
+        logger.info({ requestedAuthor: requested, binding: bindingFromOutcome(bound) }, "Auto-bound sovereign token to principal on first use");
       } else {
-        logger.warn({ requestedAuthor: requested, keyHash }, "Forum post rejected — token not pre-registered to any principal");
+        logger.warn({ requestedAuthor: requested }, "Forum post rejected — token not pre-registered to any principal");
         res.status(403).json({
           ok: false,
           error: `Token is not registered to any posting identity. Pre-register via the FORUM_ADMIN_TOKEN environment variable or the admin registration endpoint. Anonymous self-registration is not permitted.`,
@@ -181,7 +195,7 @@ async function resolvePostingIdentity(
     }
 
     if (registeredPrincipal.toLowerCase() !== requested.toLowerCase()) {
-      logger.warn({ requestedAuthor: requested, registeredPrincipal, keyHash }, "Forum post rejected — token bound to different principal");
+      logger.warn({ requestedAuthor: requested, registeredPrincipal }, "Forum post rejected — token bound to different principal");
       res.status(403).json({
         ok: false,
         error: `Token is bound to principal "${registeredPrincipal}" — cannot post as "${requested}". Each token maps to exactly one verified identity.`,
@@ -189,7 +203,11 @@ async function resolvePostingIdentity(
       return null;
     }
 
-    return { resolvedAuthor: registeredPrincipal, identityType: identity.identityType };
+    return {
+      resolvedAuthor: registeredPrincipal,
+      identityType: identity.identityType,
+      binding: bindingFromOutcome(registeredPrincipal.trim().length > 0),
+    };
   }
 
   let registeredPrincipal = await lookupTokenPrincipal(keyHash);
@@ -199,9 +217,9 @@ async function resolvePostingIdentity(
       const bound = await bindPrincipalOrReject(keyHash, "Father", res);
       if (!bound) return null;
       registeredPrincipal = "Father";
-      logger.info({ requestedAuthor: requested, keyHash: keyHash.slice(0, 8) + "..." }, "Auto-bound sovereign token to Father for entity posting");
+      logger.info({ requestedAuthor: requested, binding: bindingFromOutcome(bound) }, "Auto-bound sovereign token to Father for entity posting");
     } else {
-      logger.warn({ requestedAuthor: requested, keyHash }, "Forum post rejected — no admin identity available for auto-bind");
+      logger.warn({ requestedAuthor: requested }, "Forum post rejected — no admin identity available for auto-bind");
       res.status(403).json({ ok: false, error: "No admin identity available for token binding." });
       return null;
     }
@@ -212,7 +230,7 @@ async function resolvePostingIdentity(
   const principalIsAdmin = ENTITY_POSTING_ADMINS.has(registeredPrincipal.toLowerCase());
 
   if (!principalMatchesEntity && !principalIsAdmin) {
-    logger.warn({ requestedAuthor: requested, registeredPrincipal, identityType: identity.identityType, keyHash }, "Forum post rejected — token principal not authorized to post as this entity");
+    logger.warn({ requestedAuthor: requested, registeredPrincipal, identityType: identity.identityType }, "Forum post rejected — token principal not authorized to post as this entity");
     res.status(403).json({
       ok: false,
       error: `Principal "${registeredPrincipal}" is not authorized to post as "${requested}". Entity posts require: the entity's own registered token, or an admin principal (Father/Admin).`,
@@ -220,8 +238,13 @@ async function resolvePostingIdentity(
     return null;
   }
 
-  logger.debug({ requestedAuthor: requested, identityType: identity.identityType, postedByPrincipal: registeredPrincipal, authorizedVia: principalMatchesEntity ? "entity-own-token" : "admin-delegation", keyHash }, "Entity post authorized");
-  return { resolvedAuthor: requested, identityType: identity.identityType };
+  const authorized = principalMatchesEntity || principalIsAdmin;
+  logger.debug({ requestedAuthor: requested, identityType: identity.identityType, postedByPrincipal: registeredPrincipal, authorizedVia: principalMatchesEntity ? "entity-own-token" : "admin-delegation", binding: bindingFromOutcome(authorized) }, "Entity post authorized");
+  return {
+    resolvedAuthor: requested,
+    identityType: identity.identityType,
+    binding: bindingFromOutcome(authorized),
+  };
 }
 
 function generateAgentReply(agentName: string, topic: string): string {
@@ -466,7 +489,7 @@ router.post("/tesseract-forum/topics", async (req, res) => {
       authorKeyHash: keyHash,
     }).returning();
 
-    logger.info({ id: topic.id, title, author: resolved.resolvedAuthor, identityType: resolved.identityType, keyHash }, "Forum topic created by verified identity");
+    logger.info({ id: topic.id, title, author: resolved.resolvedAuthor, identityType: resolved.identityType, binding: resolved.binding }, "Forum topic created by verified identity");
     return res.json({ ok: true, topic: omitKeyHash(topic) });
   } catch (err) {
     logger.error({ err }, "Failed to create forum topic");
@@ -518,7 +541,7 @@ router.post("/tesseract-forum/topics/:id/reply", async (req, res) => {
       .set({ replies: sql`${forumTopicsTable.replies} + 1`, updatedAt: new Date() })
       .where(eq(forumTopicsTable.id, id));
 
-    logger.info({ topicId: id, replyId: reply.id, author: resolved.resolvedAuthor, identityType: resolved.identityType, keyHash }, "Forum reply persisted for verified identity");
+    logger.info({ topicId: id, replyId: reply.id, author: resolved.resolvedAuthor, identityType: resolved.identityType, binding: resolved.binding }, "Forum reply persisted for verified identity");
     return res.json({ ok: true, reply: omitKeyHash(reply) });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
@@ -653,7 +676,7 @@ router.post("/tesseract-forum/admin/register-principal", async (req, res) => {
     }
 
     await registerAdminPrincipal(targetKeyHash, principalName.trim());
-    logger.info({ registeredBy: callerPrincipal, targetHash: targetKeyHash.slice(0, 4) + "****", principalName }, "Token-principal binding registered via admin API");
+    logger.info({ registeredBy: callerPrincipal, binding: bindingFromOutcome(targetKeyHash.length > 0), principalName }, "Token-principal binding registered via admin API");
 
     return res.json({ ok: true, message: `Token bound to "${principalName}" by ${callerPrincipal}` });
   } catch (err) {
@@ -911,7 +934,7 @@ router.post("/tesseract-forum/applicants/:id/approve", async (req, res) => {
       return res.status(500).json({ ok: false, error: "Declaration produced no signature — sovereign token not issued; applicant remains pending." });
     }
 
-    const memberToken = randomBytes(32).toString("hex");
+    const memberToken = nodeCrypto.randomBytes(32).toString("hex");
     const memberTokenHash = hashTokenSha256(memberToken);
     if (!memberTokenHash) {
       logger.error({ name: "HashFailure" }, "applicant approve hash failed");

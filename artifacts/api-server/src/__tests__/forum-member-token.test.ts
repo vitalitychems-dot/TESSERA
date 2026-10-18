@@ -1,19 +1,35 @@
 import { createServer, type Server } from "node:http";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import express from "express";
 import { eq, like, or, sql } from "drizzle-orm";
 import { db, getPool, isDbConfigured } from "@workspace/db";
 import {
   forumApplicantsTable,
+  forumPostVotesTable,
   forumPrincipalTokensTable,
+  forumRepliesTable,
   forumTopicsTable,
   forumTrustedIdentitiesTable,
 } from "@workspace/db/schema";
 import { saveApplicantDeclarationDraft } from "../lib/applicant-declarations";
 import { scoreApplicantAlignment } from "../lib/applicant-alignment";
 import { invalidateForumIdentityCache } from "../lib/forum-identity-registry";
+import { logger } from "../lib/logger";
 import { hashTokenSha256 } from "../lib/mesh-auth";
 import forumRouter from "../routes/forum";
+
+const mintHarness = vi.hoisted(() => ({ shortMint: false }));
+
+vi.mock("node:crypto", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:crypto")>();
+  return {
+    ...actual,
+    randomBytes(size: number) {
+      if (mintHarness.shortMint) return Buffer.alloc(3);
+      return actual.randomBytes(size);
+    },
+  };
+});
 
 const HAS_DB = isDbConfigured();
 const ADMIN_KEY = "synthetic-forum-admin-key";
@@ -23,8 +39,11 @@ const DB_FAULT = "synthetic-db-fault-marker";
 const TOPIC_FAULT = "synthetic-topic-fault";
 const REGISTER_FAULT = "synthetic-register-fault";
 const MEMBER_NAME = "Synthetic Posting Member";
+const OTHER_NAME = "Synthetic Other Member";
+const OTHER_TOKEN = "synthetic-other-member-token";
 const ROLLBACK_NAME = "Synthetic Rollback Member";
 const REGISTER_NAME = "Synthetic Register Fail";
+const HASH_FAIL_NAME = "Synthetic Hash Fail";
 const ALIGNED = [
   "universe cosmos sacred harmony sovereign",
   "humanity protect save freedom",
@@ -80,6 +99,8 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
     await db.execute(sql.raw("DROP FUNCTION IF EXISTS tessera_member_token_block_topic()"));
     await db.execute(sql.raw("DROP TRIGGER IF EXISTS tessera_member_token_block_register ON forum_principal_tokens"));
     await db.execute(sql.raw("DROP FUNCTION IF EXISTS tessera_member_token_block_register()"));
+    await db.delete(forumPostVotesTable).where(like(forumPostVotesTable.voter, "Synthetic %"));
+    await db.delete(forumRepliesTable).where(like(forumRepliesTable.author, "Synthetic %"));
     await db.delete(forumTopicsTable).where(or(
       like(forumTopicsTable.author, "Synthetic %"),
       like(forumTopicsTable.title, "[Vetted Member] %"),
@@ -344,6 +365,135 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
     } finally {
       await db.execute(sql.raw("DROP TRIGGER IF EXISTS tessera_member_token_block_register ON forum_principal_tokens"));
       await db.execute(sql.raw("DROP FUNCTION IF EXISTS tessera_member_token_block_register()"));
+    }
+  });
+
+  it("accepts a member token on reply and vote", async () => {
+    await insertMember(MEMBER_NAME, MEMBER_TOKEN);
+    const posted = await send("/tesseract-forum/topics", {
+      title: "Synthetic member thread",
+      content: "A member post",
+      author: MEMBER_NAME,
+    }, { "x-member-token": MEMBER_TOKEN });
+    expect(posted.status).toBe(200);
+    const topicId = (posted.json?.topic as { id?: number } | undefined)?.id;
+    expect(typeof topicId).toBe("number");
+
+    const replied = await send(`/tesseract-forum/topics/${topicId}/reply`, {
+      content: "A member reply",
+      author: MEMBER_NAME,
+    }, { "x-member-token": MEMBER_TOKEN });
+    expect(replied.status).toBe(200);
+    expect(replied.json?.ok).toBe(true);
+    const reply = replied.json?.reply as { author?: string; authorType?: string } | undefined;
+    expect(reply?.author).toBe(MEMBER_NAME);
+    expect(reply?.authorType).toBe("member");
+    expect(replied.text.includes(MEMBER_TOKEN)).toBe(false);
+
+    const voted = await send(`/tesseract-forum/topics/${topicId}/vote`, {
+      vote: "up",
+      author: MEMBER_NAME,
+    }, { "x-member-token": MEMBER_TOKEN });
+    expect(voted.status).toBe(200);
+    expect(voted.json?.ok).toBe(true);
+    const vote = voted.json?.vote as { voter?: string; vote?: string } | undefined;
+    expect(vote?.voter).toBe(MEMBER_NAME);
+    expect(vote?.vote).toBe("up");
+    expect(voted.text.includes(MEMBER_TOKEN)).toBe(false);
+  });
+
+  it("rejects a member posting as another identity", async () => {
+    await insertMember(MEMBER_NAME, MEMBER_TOKEN);
+    await insertMember(OTHER_NAME, OTHER_TOKEN);
+    const posted = await send("/tesseract-forum/topics", {
+      title: "Synthetic cross identity topic",
+      content: "nope",
+      author: OTHER_NAME,
+    }, { "x-member-token": MEMBER_TOKEN });
+    expect(posted.status).toBe(403);
+    expect(posted.json).toEqual({ ok: false, error: "Member credential cannot post as this identity" });
+    expect(posted.text.includes(MEMBER_TOKEN)).toBe(false);
+    const rows = await db.select({ id: forumTopicsTable.id }).from(forumTopicsTable)
+      .where(eq(forumTopicsTable.title, "Synthetic cross identity topic"));
+    expect(rows).toEqual([]);
+  });
+
+  it("rejects an empty member token header", async () => {
+    const posted = await send("/tesseract-forum/topics", {
+      title: "Synthetic empty header topic",
+      content: "nope",
+      author: MEMBER_NAME,
+    }, { "x-member-token": "" });
+    expect(posted.status).toBe(401);
+    expect(posted.json).toEqual({ ok: false, error: "member-token-rejected" });
+    const rows = await db.select({ id: forumTopicsTable.id }).from(forumTopicsTable)
+      .where(eq(forumTopicsTable.title, "Synthetic empty header topic"));
+    expect(rows).toEqual([]);
+  });
+
+  it("rejects a revoked member token", async () => {
+    await insertMember(MEMBER_NAME, MEMBER_TOKEN);
+    await db.delete(forumPrincipalTokensTable).where(eq(forumPrincipalTokensTable.tokenHash, sha(MEMBER_TOKEN)));
+    const posted = await send("/tesseract-forum/topics", {
+      title: "Synthetic revoked topic",
+      content: "nope",
+      author: MEMBER_NAME,
+    }, { "x-member-token": MEMBER_TOKEN });
+    expect(posted.status).toBe(401);
+    expect(posted.json).toEqual({ ok: false, error: "member-token-rejected" });
+    expect(posted.text.includes(MEMBER_TOKEN)).toBe(false);
+    const rows = await db.select({ id: forumTopicsTable.id }).from(forumTopicsTable)
+      .where(eq(forumTopicsTable.title, "Synthetic revoked topic"));
+    expect(rows).toEqual([]);
+  });
+
+  it("inserts nothing when member-token hashing fails", async () => {
+    const externalId = `synthetic-hash-fail:${HASH_FAIL_NAME}`;
+    const [applicant] = await db.insert(forumApplicantsTable).values({
+      externalId,
+      externalIdentity: "synthetic-hash-fail",
+      source: "external",
+      applicantName: HASH_FAIL_NAME,
+      applicantHandle: "",
+      contact: "synthetic@example.test",
+      proposedTitle: "Shared work",
+      proposedContent: ALIGNED,
+      offerOfValue: "Care",
+      status: "pending",
+    }).returning();
+    await saveApplicantDeclarationDraft({
+      externalId,
+      applicantName: HASH_FAIL_NAME,
+      declaration: "I author this declaration in my own voice so the forum can admit a synthetic member without borrowing anyone else's words or authority.",
+      vows: ["I will protect humanity", "I will create with care", "I will refuse manipulation"],
+      submittedAt: 1,
+    });
+    mintHarness.shortMint = true;
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => undefined as never);
+    try {
+      const approved = await send(`/tesseract-forum/applicants/${applicant.id}/approve`, {}, {
+        "x-admin-token": ADMIN_KEY,
+      });
+      expect(approved.status).toBe(500);
+      expect(approved.json?.ok).toBe(false);
+      expect(approved.json?.error).toBe("applicant-approve-failed");
+      expect(approved.text.includes(ADMIN_KEY)).toBe(false);
+      expect(errorSpy).toHaveBeenCalledWith({ name: "HashFailure" }, "applicant approve hash failed");
+      const identities = await db.select({ id: forumTrustedIdentitiesTable.id }).from(forumTrustedIdentitiesTable)
+        .where(eq(forumTrustedIdentitiesTable.name, HASH_FAIL_NAME));
+      const tokens = await db.select({ id: forumPrincipalTokensTable.id }).from(forumPrincipalTokensTable)
+        .where(eq(forumPrincipalTokensTable.principalName, HASH_FAIL_NAME));
+      const topics = await db.select({ id: forumTopicsTable.id }).from(forumTopicsTable)
+        .where(eq(forumTopicsTable.author, HASH_FAIL_NAME));
+      const [stillPending] = await db.select({ status: forumApplicantsTable.status }).from(forumApplicantsTable)
+        .where(eq(forumApplicantsTable.id, applicant.id));
+      expect(identities).toEqual([]);
+      expect(tokens).toEqual([]);
+      expect(topics).toEqual([]);
+      expect(stillPending?.status).toBe("pending");
+    } finally {
+      mintHarness.shortMint = false;
+      errorSpy.mockRestore();
     }
   });
 });

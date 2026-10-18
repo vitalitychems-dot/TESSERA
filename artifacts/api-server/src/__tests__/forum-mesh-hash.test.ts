@@ -34,6 +34,7 @@ vi.mock("../lib/forum-identity-registry", () => ({
   invalidateForumIdentityCache: () => {
     harness.cacheInvalidations += 1;
   },
+  authenticateForumMemberToken: async () => ({ ok: false, reason: "rejected" }),
 }));
 
 vi.mock("../lib/applicant-alignment", () => ({
