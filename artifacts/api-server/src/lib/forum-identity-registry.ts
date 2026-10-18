@@ -75,7 +75,7 @@ export async function seedForumIdentities(): Promise<void> {
     logger.info({ count: SEED_IDENTITIES.length }, "Forum identity registry seeded");
     identityCache = null;
   } catch (err) {
-    logger.warn({ err: (err as Error).message }, "Forum identity seed warning (non-fatal)");
+    logger.warn(safeDbErrorLog(err), "Forum identity seed warning (non-fatal)");
   }
   await seedAdminTokenBindingFromEnv();
   try {
@@ -83,7 +83,7 @@ export async function seedForumIdentities(): Promise<void> {
     const r = await seedResidentDeclarations();
     logger.info({ residentDeclarationsCreated: r.created, alreadyExisted: r.existed }, "Lattice declarations seeded after identity registry");
   } catch (err) {
-    logger.warn({ err: (err as Error).message }, "Resident declaration seed failed (non-fatal)");
+    logger.warn(safeDbErrorLog(err), "Resident declaration seed failed (non-fatal)");
   }
 }
 
@@ -131,7 +131,7 @@ export async function lookupForumIdentity(name: string): Promise<{
     if (!entry) return { found: false, identityType: "unknown", canPostFromClient: false };
     return { found: true, ...entry };
   } catch (err) {
-    logger.warn({ err: (err as Error).message, name }, "Forum identity DB lookup failed — falling back to reject");
+    logger.warn({ ...safeDbErrorLog(err), identity: name }, "Forum identity DB lookup failed — falling back to reject");
     return null;
   }
 }

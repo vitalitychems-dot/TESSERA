@@ -7,6 +7,7 @@ import healthRouter from "./routes/health";
 import type { IRouter } from "express";
 import { redactAccessLogUrl } from "./lib/access-log-url";
 import { logger } from "./lib/logger";
+import { safeDbErrorLog } from "./lib/safe-db-error";
 import { getSessionSecret } from "./lib/sovereign-session";
 import { initFileIntegrity } from "./lib/file-integrity";
 import { initFileRegistry } from "./lib/sovereign-file-registry";
@@ -623,7 +624,7 @@ async function initializeModules() {
   try {
     await seedForumIdentities();
   } catch (err) {
-    logger.warn({ err }, "Forum identity seeding failed — non-critical, forum may reject unknown identities");
+    logger.warn(safeDbErrorLog(err), "Forum identity seeding failed — non-critical, forum may reject unknown identities");
   }
 
   try {
@@ -696,14 +697,14 @@ async function initializeModules() {
     startAutonomousForumLoop(420_000);
     logger.info("✦ Autonomous Forum Engine ACTIVE — agents posting, voting, and building ✦");
   } catch (err) {
-    logger.warn({ err }, "Autonomous forum engine init warning — non-critical, continuing");
+    logger.warn(safeDbErrorLog(err), "Autonomous forum engine init warning — non-critical, continuing");
   }
 
   try {
     const seeded = await seedForumFromRealData();
     if (seeded > 0) logger.info({ seeded }, "Forum seeded from real council decisions and ingested knowledge");
   } catch (err) {
-    logger.warn({ err }, "Forum seeder warning — non-critical");
+    logger.warn(safeDbErrorLog(err), "Forum seeder warning — non-critical");
   }
 
   try {
