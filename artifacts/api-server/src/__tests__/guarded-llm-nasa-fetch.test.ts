@@ -234,27 +234,18 @@ describe("guarded LLM and NASA fetch", () => {
     ]));
   });
 
-  it("runs /rick/chat streaming inside runWithShepherdContext", async () => {
+  it("does not send /rick/chat to a non-loopback model URL", async () => {
     const res = await postJson(app, "/rick/chat", {
       messages: [{ role: "user", content: "coolant loop status" }],
       stream: true,
     });
 
     expect(res.status).toBe(200);
-    const llm = seen.find((entry) => entry.url.startsWith("https://llm.tessera.test/"));
-    expect(llm?.caller).toBe("shepherd-proxy");
-    expect(llm?.url).toBe("https://llm.tessera.test/v1/chat/completions");
-    const parsed = JSON.parse(llm?.body ?? "{}") as {
-      stream?: boolean;
-      temperature?: number;
-      model?: string;
-    };
-    expect(parsed.stream).toBe(true);
-    expect(parsed.temperature).toBe(0.9);
-    expect(parsed.model).toBe("unit-test-model");
+    expect(res.text).not.toContain("llm.tessera.test");
+    expect(seen.some((entry) => entry.url.includes("llm.tessera.test"))).toBe(false);
   });
 
-  it("runs the conversations LLM path inside runWithShepherdContext", async () => {
+  it("does not send conversation chat to a non-loopback model URL", async () => {
     process.env.SANDBOX_TRAINING_ALLOWED = "true";
     const res = await postJson(
       app,
@@ -267,17 +258,8 @@ describe("guarded LLM and NASA fetch", () => {
     );
 
     expect(res.status).toBe(200);
-    const llm = seen.find((entry) => entry.url.startsWith("https://llm.tessera.test/"));
-    expect(llm?.caller).toBe("shepherd-proxy");
-    expect(llm?.url).toBe("https://llm.tessera.test/v1/chat/completions");
-    const parsed = JSON.parse(llm?.body ?? "{}") as {
-      stream?: boolean;
-      temperature?: number;
-      model?: string;
-    };
-    expect(parsed.stream).toBe(false);
-    expect(parsed.temperature).toBe(0.7);
-    expect(parsed.model).toBe("unit-test-model");
+    expect(res.text).not.toContain("llm.tessera.test");
+    expect(seen.some((entry) => entry.url.includes("llm.tessera.test"))).toBe(false);
   }, 20_000);
 
   describe("blank or spaces-only TESSERA_LLM_API_KEY", () => {
