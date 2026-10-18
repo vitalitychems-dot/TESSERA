@@ -21,6 +21,18 @@ function packageDir(resolver: NodeJS.Require, name: string): string {
   return dirname(resolver.resolve(`${name}/package.json`));
 }
 
+// The desk gate reads API_SERVER_PORT and fails closed when it is unset or
+// invalid. Only the Vite dev server fills a blank value, from TESSERA_API_PORT
+// or the local suite API port. Production preview and builds leave it unset.
+// An invalid value is left unchanged so the gate still fails closed.
+function fillDevApiServerPort(command: string, mode: string): void {
+  if (command !== "serve" || mode !== "development") return;
+  const configuredApiPort = process.env.API_SERVER_PORT?.trim();
+  if (configuredApiPort) return;
+  const suitePort = process.env.TESSERA_API_PORT?.trim();
+  process.env.API_SERVER_PORT = suitePort || "5000";
+}
+
 const rawPort = process.env.PORT ?? "4174";
 const port = Number(rawPort);
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -31,7 +43,9 @@ const viteMod = await import(pathToFileURL(tesseraRequire.resolve("vite")).href)
 const reactMod = await import(pathToFileURL(tesseraRequire.resolve("@vitejs/plugin-react")).href);
 const tailwindMod = await import(pathToFileURL(tesseraRequire.resolve("@tailwindcss/vite")).href);
 
-export default viteMod.defineConfig({
+export default viteMod.defineConfig((env: { command: string; mode: string }) => {
+  fillDevApiServerPort(env.command, env.mode);
+  return {
   plugins: [tailwindMod.default(), reactMod.default()],
   resolve: {
     alias: {
@@ -60,4 +74,5 @@ export default viteMod.defineConfig({
     outDir: join(previewDir, "dist"),
     emptyOutDir: true,
   },
+};
 });

@@ -50,7 +50,9 @@ if (tesseraDatabaseUrl && isLoopbackPostgresUrl(tesseraDatabaseUrl)) {
     label: "Tessera API",
     selector: "@workspace/api-server",
     port: apiPort,
-    env: { PORT: apiPort },
+    // API_SERVER_PORT here is inert. The desk gate reads it on the preview
+    // process. Without a preview service the gate returns 503.
+    env: { PORT: apiPort, API_SERVER_PORT: apiPort },
     databaseUrl: tesseraDatabaseUrl,
   });
 } else {

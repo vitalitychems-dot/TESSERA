@@ -15,6 +15,7 @@ function isDatabaseOptionalPath(path: string): boolean {
   if (path === "/healthz" || path === "/api/healthz") return true;
   if (path === "/api/admin/session" || path.startsWith("/api/admin/session/")) return true;
   if (path === "/api/admin/surface" || path.startsWith("/api/admin/surface/")) return true;
+  if (path === "/api/internal/session-check") return true;
   return false;
 }
 
