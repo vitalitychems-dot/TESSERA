@@ -40,7 +40,7 @@ describe("evolution-health admin gate", () => {
   beforeAll(async () => {
     expect(SHORT_KEY.length).toBeLessThan(16);
     expect(CONFIGURED_KEY.length).toBeGreaterThanOrEqual(16);
-    expect(WRONG_TOKEN === CONFIGURED_KEY).toBe(false);
+    expect(WRONG_TOKEN.length).toBeGreaterThanOrEqual(16);
 
     const app = express();
     app.use(express.json());
