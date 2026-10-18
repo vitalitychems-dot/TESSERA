@@ -12,6 +12,7 @@ import { authorAndSignDeclaration } from "../lib/lattice-declarations";
 import { decideOwnerSession } from "../lib/sovereign-admin";
 import { createForumSummonHandler } from "../lib/forum-summons";
 import { dispatchLocalForumEvidence } from "../lib/forum-local-evidence-worker";
+import { persistForumSummonReplies } from "../lib/forum-summon-persistence";
 import { readMoltbookPublicFeed } from "../lib/moltbook-public-feed";
 
 const router: IRouter = Router();
@@ -474,28 +475,7 @@ const summonAllHandler = createForumSummonHandler({
     return rows[0] ?? null;
   },
   dispatch: async (topic, requestId) => dispatchLocalForumEvidence(topic, requestId),
-  persistReplies: async (topicId, replies) => {
-    if (replies.length === 0) return [];
-    return db.transaction(async (tx) => {
-      const inserted = await tx.insert(forumRepliesTable).values(replies.map(reply => ({
-        topicId,
-        parentReplyId: null,
-        content: reply.content,
-        author: reply.agentName,
-        authorType: reply.agentName === "Local Evidence Worker" ? "system" : "agent",
-        authorKeyHash: null,
-      }))).returning();
-      if (inserted.length > 0) {
-        await tx.update(forumTopicsTable)
-          .set({
-            replies: sql`${forumTopicsTable.replies} + ${inserted.length}`,
-            updatedAt: new Date(),
-          })
-          .where(eq(forumTopicsTable.id, topicId));
-      }
-      return inserted.map(omitKeyHash);
-    });
-  },
+  persistReplies: (topicId, replies) => persistForumSummonReplies(topicId, replies),
 });
 
 router.post("/tesseract-forum/topics/:id/summon-all", summonAllHandler);
