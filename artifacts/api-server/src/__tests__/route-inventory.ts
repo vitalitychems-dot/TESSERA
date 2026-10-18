@@ -89,23 +89,26 @@ function readRouteSource(absolutePath: string): string {
   return stripComments(readFileSync(absolutePath, "utf8"));
 }
 
-export function listMountedRouteModules(): MountedRouteModule[] {
-  const source = readRouteSource(join(ROUTES_DIR, "index.ts"));
+const SESSION_GATE_BINDING = "requireAdminSession";
+
+export function listMountedRouteModulesFromSource(source: string): MountedRouteModule[] {
+  const stripped = stripComments(source);
   const imports = new Map<string, string>();
   const importPattern = /import\s+(\w+)\s+from\s+"(\.\/[^"]+)"/g;
-  for (const match of source.matchAll(importPattern)) {
+  for (const match of stripped.matchAll(importPattern)) {
     imports.set(match[1], match[2]);
   }
 
   const mounts: MountedRouteModule[] = [];
   const usePattern = /router\.use\(\s*(?:(["'][^"']+["'])\s*,\s*)?(\w+)\s*\)/g;
-  for (const match of source.matchAll(usePattern)) {
+  for (const match of stripped.matchAll(usePattern)) {
     const pathLiteral = match[1];
     const binding = match[2];
     const specifier = imports.get(binding);
     if (!specifier) {
-      if (pathLiteral) continue;
-      throw new Error(`router.use(${binding}) has no local route import`);
+      if (binding === SESSION_GATE_BINDING) continue;
+      const call = pathLiteral ? `router.use(${pathLiteral}, ${binding})` : `router.use(${binding})`;
+      throw new Error(`${call} has no local route import`);
     }
     const module = `${specifier.slice(2)}.ts`;
     mounts.push({
@@ -116,6 +119,11 @@ export function listMountedRouteModules(): MountedRouteModule[] {
     });
   }
   return mounts;
+}
+
+export function listMountedRouteModules(): MountedRouteModule[] {
+  const source = readFileSync(join(ROUTES_DIR, "index.ts"), "utf8");
+  return listMountedRouteModulesFromSource(source);
 }
 
 function assertLiteralRegistrations(source: string, module: string): void {
