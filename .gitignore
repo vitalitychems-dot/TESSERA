@@ -67,6 +67,8 @@ artifacts/api-server/data/council-ledger.jsonl
 artifacts/api-server/data/
 artifacts/api-server/.sovereign-data/
 artifacts/api-server/.local-data/
+# Install id when a process cwd is the repository root
+/.local-data/
 artifacts/api-server/.data/
 _evolutions/
 attached_assets/
