@@ -33,18 +33,22 @@ test("a held pull request is blocked and a clean one stays pending", () => {
   assert.match(board.decisions[0].question, /Held/);
 });
 
-test("hold matches the word and not household or threshold", () => {
-  const board = boardFromPulls([
-    { repo: "TESSERA", number: 2, title: "household chores", state: "clean" },
-    { repo: "TESSERA", number: 3, title: "threshold check", state: "clean" },
-    { repo: "TESSERA", number: 4, title: "withhold the notes", state: "clean" },
-    { repo: "TESSERA", number: 5, title: "Please hold", state: "clean" },
-    { repo: "TESSERA", number: 6, title: "HOLD the line", state: "clean" },
-  ]);
-  assert.equal(board.tasks[0].status, "pending");
-  assert.equal(board.tasks[1].status, "pending");
-  assert.equal(board.tasks[2].status, "pending");
-  assert.equal(board.tasks[3].status, "blocked");
-  assert.equal(board.tasks[4].status, "blocked");
-  assert.equal(board.decisions.length, 2);
+test("hold matches hold, holds, and holding, not lookalike words", () => {
+  const rows = [
+    { title: "hold", blocked: true },
+    { title: "holds", blocked: true },
+    { title: "holding", blocked: true },
+    { title: "Hold on", blocked: true },
+    { title: "household", blocked: false },
+    { title: "threshold", blocked: false },
+    { title: "holder", blocked: false },
+    { title: "holdings", blocked: false },
+  ];
+  const board = boardFromPulls(
+    rows.map((row, index) => ({ repo: "TESSERA", number: index + 2, title: row.title, state: "clean" })),
+  );
+  rows.forEach((row, index) => {
+    assert.equal(board.tasks[index].status, row.blocked ? "blocked" : "pending", row.title);
+  });
+  assert.equal(board.decisions.length, 4);
 });

@@ -73,7 +73,7 @@ export function boardFromPulls(rows: { repo: string; number: number; title: stri
   for (const row of rows) {
     const id = `${row.repo}-${row.number}`;
     foreman.addTask({ id, title: `${row.repo} #${row.number} ${row.title}` });
-    const held = /\bhold\b/i.test(row.title) || row.state === "draft" || row.state === "dirty";
+    const held = /\bhold(?:s|ing)?\b/i.test(row.title) || row.state === "draft" || row.state === "dirty";
     if (held) foreman.requestDecision({ taskId: id, question: row.state === "draft" ? "Held. Not merged." : `Blocked: ${row.state || "conflict"}.` });
   }
   return foreman.snapshot();
