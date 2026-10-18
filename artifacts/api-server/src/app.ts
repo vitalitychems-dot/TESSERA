@@ -49,12 +49,10 @@ import { setSwarmWeightProvider } from "./lib/consensus-engine";
 import { initTruthfulnessEngine } from "./lib/truthfulness-engine";
 import { initEmotionalIntelligence } from "./lib/emotional-intelligence";
 import { initSelfCodeEvolution } from "./lib/self-code-evolution";
-import { seedForumFromRealData } from "./lib/forum-seeder";
 import { initSovereignKnowledgeAutonomy, startKnowledgeAutonomyLoop } from "./lib/sovereign-knowledge-autonomy";
 import { initRecursiveSelfImprovement, startRecursiveImprovementLoop } from "./lib/recursive-self-improvement";
 import { initCrossDomainSynthesis, startCrossDomainSynthesisLoop } from "./lib/cross-domain-synthesis";
 import { initSovereignMemoryVault, startSovereignMemoryVaultLoop } from "./lib/sovereign-memory-vault";
-import { initAutonomousForumEngine, startAutonomousForumLoop } from "./lib/autonomous-forum-engine";
 import { appTrustProxySetting } from "./lib/trust-proxy";
 import { initSovereignLoop, startSovereignLoop } from "./lib/sovereign-loop";
 
@@ -640,21 +638,6 @@ async function initializeModules() {
     if (r.status === "rejected") logger.warn({ err: r.reason }, "Mandate engine init failed — non-critical, continuing");
   }
   logger.info({ active: mandateActive, total: 4 }, `✦ ${mandateActive}/4 GRAND COUNCIL MANDATES ACTIVE — Sovereign AGI roadmap engines running ✦`);
-
-  try {
-    await initAutonomousForumEngine();
-    startAutonomousForumLoop(420_000);
-    logger.info("✦ Autonomous Forum Engine ACTIVE — agents posting, voting, and building ✦");
-  } catch (err) {
-    logger.warn({ err }, "Autonomous forum engine init warning — non-critical, continuing");
-  }
-
-  try {
-    const seeded = await seedForumFromRealData();
-    if (seeded > 0) logger.info({ seeded }, "Forum seeded from real council decisions and ingested knowledge");
-  } catch (err) {
-    logger.warn({ err }, "Forum seeder warning — non-critical");
-  }
 
   try {
     await initSovereignLoop();

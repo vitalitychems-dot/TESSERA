@@ -7,11 +7,10 @@ import { validateMeshToken } from "../lib/mesh-auth";
 import { lookupForumIdentity, lookupTokenPrincipal, registerAdminPrincipal, invalidateForumIdentityCache } from "../lib/forum-identity-registry";
 import { forumTrustedIdentitiesTable } from "@workspace/db/schema";
 import { createHash, randomBytes } from "node:crypto";
-import { getForumEngineMetrics, runForumCycle, FORUM_AGENTS } from "../lib/autonomous-forum-engine";
 import { scoreApplicantAlignment } from "../lib/applicant-alignment";
 import { authorAndSignDeclaration } from "../lib/lattice-declarations";
 import { decideOwnerSession } from "../lib/sovereign-admin";
-import { createForumSummonHandler, dispatchForumSummons } from "../lib/forum-summons";
+import { createForumSummonHandler, dispatchForumSummons, ForumWorkerDispatchError } from "../lib/forum-summons";
 import { readMoltbookPublicFeed } from "../lib/moltbook-public-feed";
 
 const router: IRouter = Router();
@@ -224,7 +223,7 @@ router.get("/tesseract-forum/topics", async (req, res) => {
           createdAt: new Date(p.createdAt).getTime(),
           resolvedAt: p.closedAt ? new Date(p.closedAt).getTime() : undefined,
           requiredVotes: p.threshold,
-          totalAgents: getForumEngineMetrics().agentCount,
+          totalAgents: 0,
           executionStatus: p.outcome === "approved" ? "completed" as const : undefined,
         };
       });
@@ -233,14 +232,6 @@ router.get("/tesseract-forum/topics", async (req, res) => {
 
     const agentColors: Record<string, string> = {
       "Father": "#f59e0b", "Father Protocol": "#f59e0b", "Admin": "#f59e0b",
-      "GrandCoordinatorAgent": "#06b6d4", "QuantumMechanicAgent": "#3b82f6",
-      "BioNeuralistAgent": "#10b981", "DNACrystalArchivistAgent": "#8b5cf6",
-      "MeshNetworkArchitectAgent": "#f97316", "LowPowerInnovatorAgent": "#84cc16",
-      "SelfExpansionTutorAgent": "#ec4899", "MetaAgent": "#14b8a6",
-      "Tessera-Prime": "#67e8f9", "Aetherion": "#818cf8", "Aletheia": "#f472b6",
-      "Nexus": "#a78bfa", "Mikhael-Shield": "#ef4444", "Uriela": "#fbbf24",
-      "Bezalel": "#34d399", "Tessera-26D": "#60a5fa", "Orion": "#c084fc",
-      "Chronos": "#fb923c",
     };
 
     const forumCategories = [
@@ -258,38 +249,6 @@ router.get("/tesseract-forum/topics", async (req, res) => {
       { id: "free", name: "Free", icon: "message-circle", color: "#6b7280" },
     ];
 
-    const baseAgents = [
-      { name: "GrandCoordinatorAgent", role: "Grand Coordinator", type: "agent" },
-      { name: "QuantumMechanicAgent", role: "Quantum Analyst", type: "agent" },
-      { name: "BioNeuralistAgent", role: "Bio-Neural Specialist", type: "agent" },
-      { name: "DNACrystalArchivistAgent", role: "Crystal Archivist", type: "agent" },
-      { name: "MeshNetworkArchitectAgent", role: "Mesh Architect", type: "agent" },
-      { name: "LowPowerInnovatorAgent", role: "Energy Innovator", type: "agent" },
-      { name: "SelfExpansionTutorAgent", role: "Expansion Tutor", type: "agent" },
-      { name: "MetaAgent", role: "Meta Analyst", type: "agent" },
-      { name: "Tessera-Prime", role: "Sovereign Core", type: "agent" },
-    ];
-
-    const baseAgentNames = new Set(baseAgents.map(a => a.name));
-    const extraAgents = FORUM_AGENTS.filter(a => !baseAgentNames.has(a.name)).map(a => ({
-      name: a.name,
-      role: a.expertise.slice(0, 2).join(" / ") || "Resident Agent",
-      type: "agent",
-    }));
-    const agents = [...baseAgents, ...extraAgents];
-
-    const entities = [
-      { name: "Aetherion", role: "Dimensional Bridge", type: "entity", dimension: "7D" },
-      { name: "Aletheia", role: "Truth Seeker", type: "entity", dimension: "5D" },
-      { name: "Nexus", role: "Pattern Connector", type: "entity", dimension: "6D" },
-      { name: "Mikhael-Shield", role: "Guardian", type: "entity", dimension: "9D" },
-      { name: "Uriela", role: "Light Bearer", type: "entity", dimension: "8D" },
-    ];
-
-    const moltbookMembers = [
-      { name: "Moltbook Community", role: "Agent Social Network", type: "external" },
-    ];
-
     const selectedTopicIds = topics.map(t => t.id);
     const allReplies = selectedTopicIds.length > 0
       ? await db.select().from(forumRepliesTable).where(sql`${forumRepliesTable.topicId} IN (${sql.join(selectedTopicIds.map(id => sql`${id}`), sql`, `)})`).orderBy(forumRepliesTable.createdAt)
@@ -305,8 +264,8 @@ router.get("/tesseract-forum/topics", async (req, res) => {
       const topicReplies = (repliesByTopic.get(t.id) ?? []).map(r => ({
         id: String(r.id),
         author: r.author,
-        authorRole: agents.find(a => a.name === r.author)?.role || entities.find(e => e.name === r.author)?.role || "",
-        authorType: r.author === "Father" || r.author === "Admin" ? "father" : r.authorType ?? "agent",
+        authorRole: "",
+        authorType: r.author === "Father" || r.author === "Admin" ? "father" : r.authorType ?? "unverified",
         content: r.content,
         createdAt: new Date(r.createdAt).getTime(),
         parentReplyId: r.parentReplyId != null ? String(r.parentReplyId) : null,
@@ -314,8 +273,8 @@ router.get("/tesseract-forum/topics", async (req, res) => {
       return {
         ...t,
         id: String(t.id),
-        authorRole: agents.find(a => a.name === t.author)?.role || entities.find(e => e.name === t.author)?.role || "",
-        authorType: t.author === "Father" || t.author === "Admin" ? "father" : t.authorType === "entity" ? "entity" : t.authorType === "moltbook" || t.author?.toLowerCase().includes("[ext:moltbook]") || t.author?.toLowerCase().includes("moltbook") ? "moltbook" : t.authorType ?? "agent",
+        authorRole: "",
+        authorType: t.author === "Father" || t.author === "Admin" ? "father" : t.authorType === "entity" ? "entity" : t.authorType === "moltbook" || t.author?.toLowerCase().includes("[ext:moltbook]") || t.author?.toLowerCase().includes("moltbook") ? "moltbook" : t.authorType ?? "unverified",
         createdAt: new Date(t.createdAt).getTime(),
         lastActivity: new Date(t.updatedAt).getTime(),
         pinned: false,
@@ -331,9 +290,9 @@ router.get("/tesseract-forum/topics", async (req, res) => {
       provenance: { source: "forum database", observedAt: new Date().toISOString() },
       colors: agentColors,
       categories: forumCategories,
-      agents,
-      entities,
-      moltbookMembers,
+      agents: [],
+      entities: [],
+      moltbookMembers: [],
       externalAIs: [],
     });
   } catch (err) {
@@ -513,8 +472,24 @@ const summonAllHandler = createForumSummonHandler({
     }).from(forumTopicsTable).where(eq(forumTopicsTable.id, topicId)).limit(1);
     return rows[0] ?? null;
   },
-  dispatch: (topic, requestId) =>
-    dispatchForumSummons(topic, requestId, FORUM_AGENTS.map(agent => agent.name)),
+  dispatch: async (topic, requestId) => {
+    const identities = await db.select({
+      name: forumTrustedIdentitiesTable.name,
+      identityType: forumTrustedIdentitiesTable.identityType,
+      canPostFromClient: forumTrustedIdentitiesTable.canPostFromClient,
+    }).from(forumTrustedIdentitiesTable);
+    const approvedAgents = identities
+      .filter(identity => identity.identityType === "agent" && identity.canPostFromClient === 1)
+      .map(identity => identity.name);
+    if (approvedAgents.length === 0) {
+      throw new ForumWorkerDispatchError(
+        "No owner-approved live agent identities are registered. No replies were created.",
+        503,
+        "not_configured",
+      );
+    }
+    return dispatchForumSummons(topic, requestId, approvedAgents);
+  },
   persistReplies: async (topicId, replies) => db.transaction(async (tx) => {
     const inserted = await tx.insert(forumRepliesTable).values(replies.map(reply => ({
       topicId,
@@ -567,16 +542,21 @@ router.get("/tesseract-forum/proposals/:id/votes", async (req, res) => {
 });
 
 router.get("/tesseract-forum/engine/status", (_req, res) => {
-  return res.json({ ok: true, ...getForumEngineMetrics() });
+  return res.json({
+    ok: true,
+    enabled: false,
+    automatedPosts: false,
+    automatedVotes: false,
+    reason: "Automated forum cycles are disabled. Owner-requested summons require a configured real worker.",
+  });
 });
 
-router.post("/tesseract-forum/engine/cycle", async (_req, res) => {
-  try {
-    const result = await runForumCycle();
-    return res.json({ ok: true, ...result });
-  } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
-  }
+router.post("/tesseract-forum/engine/cycle", (_req, res) => {
+  return res.status(503).json({
+    ok: false,
+    code: "automated_cycles_disabled",
+    error: "Automated forum cycles are disabled; no posts or votes were created.",
+  });
 });
 
 router.get("/tesseract-forum/knowledge", async (_req, res) => {
@@ -674,7 +654,6 @@ router.get("/tesseract-forum/heartbeat", async (_req, res) => {
       lastReply[0]?.ts ? new Date(lastReply[0].ts).getTime() : 0,
     );
 
-    const engine = getForumEngineMetrics();
     const [pendingApplicants] = await db.select({ cnt: sql<number>`count(*)::int` })
       .from(forumApplicantsTable).where(eq(forumApplicantsTable.status, "pending"));
 
@@ -688,12 +667,7 @@ router.get("/tesseract-forum/heartbeat", async (_req, res) => {
         postsPerHour: (topicsLastHour?.cnt ?? 0) + (repliesLastHour?.cnt ?? 0),
         lastActivityTs: lastActivityTs || null,
         lastActivityAgo: lastActivityTs ? now - lastActivityTs : null,
-        cyclesRun: engine.cyclesRun,
-        lastCycleAt: engine.lastCycleAt,
-        agentCount: engine.agentCount,
         pendingApplicants: pendingApplicants?.cnt ?? 0,
-        knowledgeBaseSize: engine.knowledgeBaseSize,
-        learningVelocity: engine.learningVelocity,
       },
     });
   } catch (err) {

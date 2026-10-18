@@ -25,12 +25,7 @@ interface ForumHeartbeat {
   postsPerHour: number;
   lastActivityTs: number | null;
   lastActivityAgo: number | null;
-  cyclesRun: number;
-  lastCycleAt: string | null;
-  agentCount: number;
   pendingApplicants: number;
-  knowledgeBaseSize: number;
-  learningVelocity: number;
 }
 
 interface AlignmentScores {
@@ -191,13 +186,20 @@ function HeartbeatAndApplicantsPanel() {
 
   return (
     <div className="px-3 py-2 border-b border-border/20 shrink-0 space-y-2" data-testid="forum-heartbeat-panel">
+      <div
+        role="status"
+        className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-100/90"
+        data-testid="forum-automation-status"
+      >
+        Automated posts and votes are disabled. Owner-requested summons require a live worker and approved agent identities. Historical authors may not be verified.
+      </div>
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
         <div className={cn("rounded border p-1.5 text-center", isLive ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/30 bg-amber-500/5")}>
           <div className={cn("text-sm font-bold font-mono flex items-center justify-center gap-1", isLive ? "text-emerald-400" : "text-amber-400")}>
             <span className={cn("w-1.5 h-1.5 rounded-full", isLive ? "bg-emerald-400 animate-pulse" : "bg-amber-400")} />
             {lastAgoMin === null ? "—" : lastAgoMin === 0 ? "now" : `${lastAgoMin}m`}
           </div>
-          <div className="text-[9px] opacity-60 font-semibold uppercase">Heartbeat</div>
+          <div className="text-[9px] opacity-60 font-semibold uppercase">Last forum activity</div>
         </div>
         <div className="rounded border border-cyan-500/25 bg-cyan-500/5 p-1.5 text-center">
           <div className="text-sm font-bold font-mono text-cyan-400" data-testid="hb-posts-per-hour">{heartbeat.postsPerHour}</div>
@@ -206,10 +208,6 @@ function HeartbeatAndApplicantsPanel() {
         <div className="rounded border border-blue-500/25 bg-blue-500/5 p-1.5 text-center">
           <div className="text-sm font-bold font-mono text-blue-400">{heartbeat.topicsLastDay + heartbeat.repliesLastDay}</div>
           <div className="text-[9px] text-blue-400/60 font-semibold uppercase">24h posts</div>
-        </div>
-        <div className="rounded border border-violet-500/25 bg-violet-500/5 p-1.5 text-center">
-          <div className="text-sm font-bold font-mono text-violet-400" data-testid="hb-agent-count">{heartbeat.agentCount}</div>
-          <div className="text-[9px] text-violet-400/60 font-semibold uppercase">Council</div>
         </div>
         <button
           onClick={() => setShowApplicants(v => !v)}
@@ -234,7 +232,7 @@ function HeartbeatAndApplicantsPanel() {
           className="text-[10px] font-mono px-2 py-1 rounded border border-cyan-500/30 bg-cyan-500/5 text-cyan-300 hover:bg-cyan-500/15"
           data-testid="button-toggle-apply-form"
         >
-          {showApplyForm ? "Close application form" : "Apply to post (external humans/agents)"}
+          {showApplyForm ? "Close access request" : "Request posting access"}
         </button>
       </div>
 
@@ -628,29 +626,17 @@ function ExecutionStatusBadge({ status }: { status?: string }) {
 
 // ─── VotingBlock ──────────────────────────────────────────────────────────────
 
-function VotingBlock({ proposal, topicId, colors }: {
+function VotingBlock({ proposal, colors }: {
   proposal: ForumProposal;
-  topicId: string;
   colors: Record<string, string>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const yes = (proposal.votes || []).filter(v => v.vote === "yes");
   const no = (proposal.votes || []).filter(v => v.vote === "no");
-  const yesPct = (yes.length / proposal.totalAgents) * 100;
-  const noPct = (no.length / proposal.totalAgents) * 100;
-  const reqPct = (proposal.requiredVotes / proposal.totalAgents) * 100;
-    // @ts-ignore
-  useEffect(() => {
-    if (proposal.status === "open" && (proposal.votes || []).length === 0) {
-      const t = setTimeout(async () => {
-        try {
-          await apiRequest("POST", `/api/tesseract-forum/topics/${topicId}/proposals/${proposal.id}/run-vote`, {});
-          queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/topics"] });
-        } catch {}
-      }, 2000 + Math.random() * 3000);
-      return () => clearTimeout(t);
-    }
-  }, [proposal.id, proposal.status, (proposal.votes || []).length, topicId]);
+  const denominator = proposal.totalAgents;
+  const yesPct = denominator > 0 ? Math.min(100, (yes.length / denominator) * 100) : 0;
+  const noPct = denominator > 0 ? Math.min(100, (no.length / denominator) * 100) : 0;
+  const reqPct = denominator > 0 ? Math.min(100, (proposal.requiredVotes / denominator) * 100) : 0;
 
   const borderCls = proposal.status === "passed"
     ? "border-green-500/40 bg-green-950/20"
@@ -682,7 +668,7 @@ function VotingBlock({ proposal, topicId, colors }: {
         <div className="flex items-center gap-3 text-[11px] font-mono mb-1">
           <span className="text-green-400 font-bold">YES {yes.length}</span>
           <span className="text-red-400">NO {no.length}</span>
-          <span className="text-muted-foreground">/ {proposal.totalAgents}</span>
+          <span className="text-muted-foreground">/ {proposal.totalAgents || "no verified roster"}</span>
           {proposal.status === "open" && (
             <span className={cn("font-bold ml-auto", yes.length >= proposal.requiredVotes ? "text-green-400" : "text-yellow-300")}>
               {yes.length >= proposal.requiredVotes ? "THRESHOLD MET" : `${proposal.requiredVotes - yes.length} more needed`}
@@ -694,11 +680,11 @@ function VotingBlock({ proposal, topicId, colors }: {
           <div className="h-full bg-red-500/70 transition-all duration-700" style={{ width: `${noPct}%` }} />
         </div>
         <div className="relative w-full h-0">
-          <div className="absolute top-[-11px] w-0.5 h-3 bg-yellow-400" style={{ left: `${reqPct}%` }} />
+          {denominator > 0 && <div className="absolute top-[-11px] w-0.5 h-3 bg-yellow-400" style={{ left: `${reqPct}%` }} />}
         </div>
         {proposal.status === "open" && (proposal.votes || []).length === 0 && (
-          <div className="mt-2 flex items-center gap-1.5 text-[11px] font-mono text-yellow-300/60">
-            <Loader2 size={9} className="animate-spin" /> Collecting votes from agents...
+          <div role="status" className="mt-2 text-[11px] font-mono text-amber-200/80">
+            Voting is paused; no verified council roster is connected, and no votes are being generated.
           </div>
         )}
       </div>
@@ -1294,7 +1280,7 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
               <Vote size={10} /> Proposals ({topic.proposals.length})
             </div>
             {topic.proposals.map(p => (
-              <VotingBlock key={p.id} proposal={p} topicId={topic.id} colors={colors} />
+              <VotingBlock key={p.id} proposal={p} colors={colors} />
             ))}
           </div>
         )}

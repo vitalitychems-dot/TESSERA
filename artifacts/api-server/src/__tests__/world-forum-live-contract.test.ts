@@ -59,6 +59,25 @@ describe("world and forum provenance contracts", () => {
     expect(await summon.json()).toMatchObject({ ok: false, error: expect.stringContaining("No replies were created") });
   });
 
+  it("keeps the persona-driven forum cycle disabled", async () => {
+    const status = await fetch(`${baseUrl}/tesseract-forum/engine/status`);
+    expect(status.status).toBe(200);
+    expect(await status.json()).toMatchObject({
+      ok: true,
+      enabled: false,
+      automatedPosts: false,
+      automatedVotes: false,
+    });
+
+    const cycle = await fetch(`${baseUrl}/tesseract-forum/engine/cycle`, { method: "POST" });
+    expect(cycle.status).toBe(503);
+    expect(await cycle.json()).toMatchObject({
+      ok: false,
+      code: "automated_cycles_disabled",
+      error: expect.stringContaining("no posts or votes were created"),
+    });
+  });
+
   it("does not create non-persisted proposals", async () => {
     const proposal = await fetch(`${baseUrl}/tesseract-forum/topics/1/proposals`, { method: "POST" });
     expect(proposal.status).toBe(503);
