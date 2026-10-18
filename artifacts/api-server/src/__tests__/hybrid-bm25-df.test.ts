@@ -127,7 +127,9 @@ describe("hybrid bm25 document frequency", () => {
       expect(paragraphTerms.has(term)).toBe(false);
     }
     const body = Array.from({ length: 6 }, () => paragraph).join(" ");
-    const docs = Array.from({ length: 500 }, (_, i) => `${body} ${tail} copy${i}`);
+    // Document count cancels out of the token-exam ratio. Eight documents keep
+    // the repeated body, and stay inside the 5s vitest timeout when CI is loaded.
+    const docs = Array.from({ length: 8 }, (_, i) => `${body} ${tail} copy${i}`);
     const tokenized = docs.map(tokenize);
     const bodyTokenCount = tokenize(body).length;
     const totalTokens = tokenized.reduce((sum, doc) => sum + doc.length, 0);
