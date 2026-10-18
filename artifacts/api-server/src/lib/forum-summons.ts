@@ -40,6 +40,8 @@ export interface ForumWorkerReply {
 export interface ForumWorkerDispatchResult {
   dispatchId: string;
   replies: ForumWorkerReply[];
+  workerType?: "external-model" | "local-evidence";
+  notice?: string;
 }
 
 export class ForumWorkerDispatchError extends Error {
@@ -321,6 +323,8 @@ export function createForumSummonHandler(dependencies: ForumSummonHandlerDepende
       return res.json({
         ok: true,
         dispatchId: dispatched.dispatchId,
+        workerType: dispatched.workerType ?? "external-model",
+        notice: dispatched.notice,
         replies: persistedReplies,
         count: persistedReplies.length,
       });

@@ -10,7 +10,8 @@ import { createHash, randomBytes } from "node:crypto";
 import { scoreApplicantAlignment } from "../lib/applicant-alignment";
 import { authorAndSignDeclaration } from "../lib/lattice-declarations";
 import { decideOwnerSession } from "../lib/sovereign-admin";
-import { createForumSummonHandler, dispatchForumSummons, ForumWorkerDispatchError } from "../lib/forum-summons";
+import { createForumSummonHandler } from "../lib/forum-summons";
+import { dispatchLocalForumEvidence } from "../lib/forum-local-evidence-worker";
 import { readMoltbookPublicFeed } from "../lib/moltbook-public-feed";
 
 const router: IRouter = Router();
@@ -264,7 +265,7 @@ router.get("/tesseract-forum/topics", async (req, res) => {
       const topicReplies = (repliesByTopic.get(t.id) ?? []).map(r => ({
         id: String(r.id),
         author: r.author,
-        authorRole: "",
+        authorRole: r.author === "Local Evidence Worker" ? "local deterministic retrieval" : "",
         authorType: r.author === "Father" || r.author === "Admin" ? "father" : r.authorType ?? "unverified",
         content: r.content,
         createdAt: new Date(r.createdAt).getTime(),
@@ -472,43 +473,29 @@ const summonAllHandler = createForumSummonHandler({
     }).from(forumTopicsTable).where(eq(forumTopicsTable.id, topicId)).limit(1);
     return rows[0] ?? null;
   },
-  dispatch: async (topic, requestId) => {
-    const identities = await db.select({
-      name: forumTrustedIdentitiesTable.name,
-      identityType: forumTrustedIdentitiesTable.identityType,
-      canPostFromClient: forumTrustedIdentitiesTable.canPostFromClient,
-    }).from(forumTrustedIdentitiesTable);
-    const approvedAgents = identities
-      .filter(identity => identity.identityType === "agent" && identity.canPostFromClient === 1)
-      .map(identity => identity.name);
-    if (approvedAgents.length === 0) {
-      throw new ForumWorkerDispatchError(
-        "No owner-approved live agent identities are registered. No replies were created.",
-        503,
-        "not_configured",
-      );
-    }
-    return dispatchForumSummons(topic, requestId, approvedAgents);
+  dispatch: async (topic, requestId) => dispatchLocalForumEvidence(topic, requestId),
+  persistReplies: async (topicId, replies) => {
+    if (replies.length === 0) return [];
+    return db.transaction(async (tx) => {
+      const inserted = await tx.insert(forumRepliesTable).values(replies.map(reply => ({
+        topicId,
+        parentReplyId: null,
+        content: reply.content,
+        author: reply.agentName,
+        authorType: reply.agentName === "Local Evidence Worker" ? "system" : "agent",
+        authorKeyHash: null,
+      }))).returning();
+      if (inserted.length > 0) {
+        await tx.update(forumTopicsTable)
+          .set({
+            replies: sql`${forumTopicsTable.replies} + ${inserted.length}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(forumTopicsTable.id, topicId));
+      }
+      return inserted.map(omitKeyHash);
+    });
   },
-  persistReplies: async (topicId, replies) => db.transaction(async (tx) => {
-    const inserted = await tx.insert(forumRepliesTable).values(replies.map(reply => ({
-      topicId,
-      parentReplyId: null,
-      content: reply.content,
-      author: reply.agentName,
-      authorType: "agent",
-      authorKeyHash: null,
-    }))).returning();
-    if (inserted.length > 0) {
-      await tx.update(forumTopicsTable)
-        .set({
-          replies: sql`${forumTopicsTable.replies} + ${inserted.length}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(forumTopicsTable.id, topicId));
-    }
-    return inserted.map(omitKeyHash);
-  }),
 });
 
 router.post("/tesseract-forum/topics/:id/summon-all", summonAllHandler);

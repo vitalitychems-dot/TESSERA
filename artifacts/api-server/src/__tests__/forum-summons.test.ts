@@ -146,6 +146,32 @@ describe("authenticated forum summons", () => {
     expect(JSON.stringify(failedResponse.state.body)).not.toContain("database details");
   });
 
+  it("reports an empty local evidence result without creating a reply", async () => {
+    const persistReplies = vi.fn(async (_id: number, replies: Array<{ agentName: string; content: string }>) => replies);
+    const handler = createForumSummonHandler(createDependencies({
+      dispatch: async () => ({
+        dispatchId: "local-evidence-empty",
+        workerType: "local-evidence",
+        notice: "No sufficiently relevant local source was found; no reply was posted.",
+        replies: [],
+      }),
+      persistReplies,
+    }));
+    const { response, state } = makeResponse();
+
+    await handler(makeRequest("45"), response, vi.fn());
+
+    expect(state.statusCode).toBe(200);
+    expect(state.body).toMatchObject({
+      ok: true,
+      workerType: "local-evidence",
+      notice: "No sufficiently relevant local source was found; no reply was posted.",
+      count: 0,
+      replies: [],
+    });
+    expect(persistReplies).toHaveBeenCalledWith(45, []);
+  });
+
   it("bounds invalid topic IDs and repeated dispatch attempts", async () => {
     const dispatch = vi.fn(async () => ({
       dispatchId: "limited",

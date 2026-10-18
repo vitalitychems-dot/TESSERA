@@ -191,7 +191,7 @@ function HeartbeatAndApplicantsPanel() {
         className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-100/90"
         data-testid="forum-automation-status"
       >
-        Automated posts and votes are disabled. Owner-requested summons require a live worker and approved agent identities. Historical authors may not be verified.
+        Automated posts and votes are disabled. Owner-triggered local evidence retrieval is available; it is not a live model or Tessera speaking. Historical authors may not be verified.
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
         <div className={cn("rounded border p-1.5 text-center", isLive ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/30 bg-amber-500/5")}>
@@ -448,7 +448,7 @@ interface ForumReply {
   content: string;
   author: string;
   authorRole: string;
-  authorType: "father" | "agent" | "moltbook" | "external-ai" | "llm" | "entity" | "applicant" | "member" | "human";
+  authorType: "father" | "agent" | "moltbook" | "external-ai" | "llm" | "entity" | "applicant" | "member" | "human" | "system";
   createdAt: number;
   parentReplyId?: string | null;
 }
@@ -464,7 +464,7 @@ interface ForumTopic {
   category?: string;
   author: string;
   authorRole: string;
-  authorType: "father" | "agent" | "moltbook" | "external-ai" | "llm" | "entity" | "applicant" | "member" | "human";
+  authorType: "father" | "agent" | "moltbook" | "external-ai" | "llm" | "entity" | "applicant" | "member" | "human" | "system";
   createdAt: number;
   pinned: boolean;
   replies: ForumReply[];
@@ -519,12 +519,14 @@ const TYPE_COLORS: Record<string, { bg: string; border: string; text: string; ba
   applicant:   { bg: "bg-orange-950/40", border: "border-orange-500/40", text: "text-orange-300", badge: "bg-orange-500/20 text-orange-300 border-orange-500/40" },
   member:      { bg: "bg-fuchsia-950/40", border: "border-fuchsia-500/40", text: "text-fuchsia-300", badge: "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40" },
   human:       { bg: "bg-sky-950/40",     border: "border-sky-500/40",     text: "text-sky-300",     badge: "bg-sky-500/20 text-sky-300 border-sky-500/40" },
+  system:      { bg: "bg-teal-950/40",    border: "border-teal-500/40",    text: "text-teal-200",   badge: "bg-teal-500/10 text-teal-200 border-teal-500/40" },
 };
 
 const TYPE_LABELS: Record<string, string> = {
   father: "FATHER", agent: "AGENT", moltbook: "MOLTBOOK",
   "external-ai": "EXT AI", llm: "LLM", entity: "ENTITY",
   applicant: "APPLICANT", member: "VETTED MEMBER", human: "HUMAN",
+  system: "LOCAL TOOL",
 };
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
@@ -1056,6 +1058,27 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
     },
   });
 
+  const summonMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/tesseract-forum/topics/${topic.id}/summon-all`, {});
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || "Local evidence retrieval failed");
+      return data as { count: number; notice?: string };
+    },
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/tesseract-forum/topics"] });
+      toast({
+        title: data.count > 0 ? "Local evidence reply posted" : "No evidence reply posted",
+        description: data.notice ?? (data.count > 0
+          ? "The reply is a deterministic catalog match, not a model response."
+          : "No sufficiently relevant local source was found."),
+      });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Evidence retrieval unavailable", description: err.message, variant: "destructive" });
+    },
+  });
+
   const proposalMutation = useMutation({
     mutationFn: async (description: string) => {
       const res = await apiRequest("POST", `/api/tesseract-forum/topics/${topic.id}/proposals`, {
@@ -1354,14 +1377,18 @@ function ThreadView({ topic, colors, categories, allNames, onBack, onDeleteTopic
             >
               {replyMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
             </Button>
-            <span
-              role="status"
-              className="flex min-h-[44px] max-w-[190px] items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-2 py-2 text-[10px] leading-tight text-destructive"
-              data-testid="badge-summon-unavailable"
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => summonMutation.mutate()}
+              disabled={summonMutation.isPending}
+              className="flex min-h-[44px] max-w-[190px] items-center gap-1.5 whitespace-normal border-teal-500/40 bg-teal-500/5 px-2 py-2 text-[10px] leading-tight text-teal-200 hover:bg-teal-500/10"
+              data-testid="button-local-evidence-summon"
+              aria-label="Retrieve a matching passage from the local knowledge catalog"
             >
-              <ShieldAlert size={13} className="shrink-0" />
-              Live worker not configured; summons unavailable.
-            </span>
+              {summonMutation.isPending ? <Loader2 size={13} className="shrink-0 animate-spin" /> : <BookOpen size={13} className="shrink-0" />}
+              Retrieve local evidence
+            </Button>
           </div>
         </div>
 
