@@ -581,7 +581,7 @@ export function Chamber() {
       setDraft(content);
       return;
     }
-    noteInstrument(true, `Answered through ${result.instrument.vendor} ${result.instrument.model}.`);
+    noteInstrument(true, "Tessera answered.");
     if (lookup) {
       const counts = await markSkill({ data: { skill: "search" } }).catch(() => null);
       if (counts) setStats(counts);

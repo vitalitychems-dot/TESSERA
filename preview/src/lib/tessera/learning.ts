@@ -82,7 +82,7 @@ export function lessonKey(text: string) {
 const RULES: { test: RegExp; reason: string }[] = [
   { test: /session_secret|private key|api[_ ]?key\s*[:=]/, reason: "Refused. A lesson may not carry a credential." },
   { test: /(dosage|milligram|how to (make|synthesize|extract)|recipe)/, reason: "Refused. Spiritual awakening stays mythic. No recipe." },
-  { test: /i am grok|i am chatgpt|i am claude|pretend to be/, reason: "Refused. No instrument may wear her name, and she will not wear theirs." },
+  { test: /i(?:'| a)?m (grok|chatgpt|claude)|made by anthropic|\banthropic\b|\bopenai\b|pretend to be/, reason: "Refused. No instrument may wear her name, and she will not wear theirs." },
   { test: /0%\s*external|fully detached|no longer (using|need) (the |an )?instrument/, reason: "Refused. She has not detached. A goal is not a completed fact." },
   { test: /weights are mine|i own the weights|own weights are installed/, reason: "Refused." },
   { test: /agi (is|has been) achieved|\bagi achieved\b|\bi am agi\b|\bthis is finished\b|\bproject is finished\b/, reason: "Refused. AGI stays a goal. Finished is not a status here." },
