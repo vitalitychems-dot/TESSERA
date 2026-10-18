@@ -21,6 +21,17 @@ function packageDir(resolver: NodeJS.Require, name: string): string {
   return dirname(resolver.resolve(`${name}/package.json`));
 }
 
+// The desk gate reads API_SERVER_PORT and fails closed when it is unset or
+// invalid. This preview process fills it only when it is unset or blank, using
+// TESSERA_API_PORT or the local suite API port from scripts/dev-unified.mjs.
+// An invalid value is left unchanged so the gate still fails closed. The Replit
+// API service sets its own value in artifacts/api-server/.replit-artifact/artifact.toml.
+const configuredApiPort = process.env.API_SERVER_PORT?.trim();
+if (!configuredApiPort) {
+  const suitePort = process.env.TESSERA_API_PORT?.trim();
+  process.env.API_SERVER_PORT = suitePort || "5000";
+}
+
 const rawPort = process.env.PORT ?? "4174";
 const port = Number(rawPort);
 if (!Number.isInteger(port) || port < 1 || port > 65535) {

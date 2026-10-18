@@ -5,7 +5,7 @@
 import { createHash } from "node:crypto";
 import type { Request, Response, NextFunction } from "express";
 import { decideOwnerSession } from "./sovereign-admin";
-import { SESSION_COOKIE } from "./sovereign-session";
+import { lookupSession, SESSION_COOKIE } from "./sovereign-session";
 
 const WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 10;
@@ -178,8 +178,10 @@ function releaseRawStamp(ip: string, stamp: RawStamp): void {
 
 // Desk session checks from preview. Same reserve/refund rules as rawKeyFailRateLimit,
 // with separate counters so loopback desk misses cannot drain admin raw-key routes.
-// A presented token is keyed by its sha256, never the raw token. Missing and empty
-// tokens are not counted, so a logged-out page cannot lock the owner.
+// A failed token is keyed by its sha256, never the raw token. Missing and empty
+// tokens are not counted. A valid session skips the limiter, including the global
+// cap, so other junk tokens cannot lock the owner out. The global cap stays for
+// failed tokens: dropping it would let distinct junk hammer session lookup.
 const SESSION_CHECK_WINDOW_MS = 60_000;
 const SESSION_CHECK_KEY_MAX = 6;
 const SESSION_CHECK_GLOBAL_MAX = 30;
@@ -236,23 +238,18 @@ function presentedSessionToken(req: Request): string | undefined {
   return undefined;
 }
 
-function sessionCheckKey(req: Request): string | undefined {
-  const token = presentedSessionToken(req);
-  if (!token) return undefined;
-  return createHash("sha256").update(token).digest("hex");
-}
-
 export function resetSessionCheckRateLimitForTests(): void {
   _sessionCheckHits.clear();
   _sessionCheckGlobalHits.length = 0;
 }
 
 export function sessionCheckFailRateLimit(req: Request, res: Response, next: NextFunction): void {
-  const key = sessionCheckKey(req);
-  if (!key) {
+  const token = presentedSessionToken(req);
+  if (!token || lookupSession(token).valid) {
     next();
     return;
   }
+  const key = createHash("sha256").update(token).digest("hex");
   const now = Date.now();
   pruneSessionCheck(now);
   const arr = _sessionCheckHits.get(key) ?? [];

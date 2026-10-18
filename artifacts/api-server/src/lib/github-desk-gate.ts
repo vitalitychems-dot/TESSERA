@@ -21,6 +21,22 @@ const SECRET_PATH =
   /(^|\/)\.env(?:\.|$)|(^|\/)\.git(?:\/|$)|(?:^|\/)id_rsa(?:\.|$)|(?:^|\/)id_ed25519(?:\.|$)|(?:^|\/)[^/]*\.(?:pem|key|p12|pfx)$|(?:^|\/)[^/]*(?:secret|password|credential)[^/]*$|(?:^|\/)[^/]*natal-vault[^/]*(?:\/|$)/i;
 const HELD_PATH =
   /(?:^|\/)data(?:\/|$)|(?:^|\/)Zz(?:\/|$)|(?:^|\/)[^/]*ingest[^/]*(?:\/|$)|(?:^|\/)1T(?:\/|$)|(?:^|\/)T44(?:\/|$)|(?:^|\/)[^/]*constitution-seal[^/]*(?:\/|$)|(?:^|\/)study-log\.ts$|(?:^|\/)desk\.ts$/i;
+const HELD_NAME_MARKERS = [
+  "secure-recruitment",
+  "moltbook-recruitment",
+  "summit-45",
+  "secret-society",
+  "society-recruits",
+  "society-intel",
+  "secure-outreach",
+  "email-outreach",
+  "recruit-dossiers",
+  "political-dossiers",
+  "natal-",
+  "father-natal",
+  "secretsociety",
+  "collink1007",
+] as const;
 const SECRET_TEXT =
   /SESSION_SECRET|BEGIN [A-Z ]*PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]|github_pat_|xox[baprs]-|sk-[A-Za-z0-9]{10,}/;
 
@@ -173,7 +189,8 @@ function cleanRepoPath(raw: string): string | null {
   if (trimmed.includes("\\") || trimmed.includes("\0")) return null;
   if (trimmed.startsWith("/") || trimmed.startsWith("~") || /^[a-zA-Z]:/.test(trimmed)) return null;
   let decoded = trimmed;
-  for (let pass = 0; pass < 2; pass += 1) {
+  // Three passes so a triple-encoded held name is denied after decoding.
+  for (let pass = 0; pass < 3; pass += 1) {
     if (!decoded.includes("%")) break;
     try {
       const next = decodeURIComponent(decoded);
@@ -188,7 +205,14 @@ function cleanRepoPath(raw: string): string | null {
   const parts = decoded.split("/");
   if (parts.length === 0 || parts.some((part) => part.length === 0 || part === "." || part === "..")) return null;
   if (SECRET_PATH.test(decoded) || HELD_PATH.test(decoded)) return null;
+  const basename = parts[parts.length - 1] ?? "";
+  if (heldName(basename) || parts.some((part) => heldName(part))) return null;
   return parts.join("/");
+}
+
+function heldName(segment: string): boolean {
+  const name = segment.toLowerCase();
+  return HELD_NAME_MARKERS.some((marker) => name.includes(marker));
 }
 
 type RepoFileIo = {

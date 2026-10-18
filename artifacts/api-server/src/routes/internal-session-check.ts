@@ -58,6 +58,25 @@ export function hasForwardingHeader(req: Request): boolean {
   return FORWARDING_HEADERS.some((name) => headerPresent(req, name));
 }
 
+function deny(res: Response, status: 401 | 403 | 503): void {
+  res.status(status).json({ valid: false });
+}
+
+// Peer checks run before the fail limiter. A non-loopback or forwarded request
+// must not take a rate-limit slot.
+export function rejectSessionCheckPeer(req: Request, res: Response, next: () => void): void {
+  const url = req.originalUrl || req.url || "";
+  if (url.includes("?")) {
+    deny(res, 401);
+    return;
+  }
+  if (hasForwardingHeader(req) || !isLoopbackSocket(req.socket?.remoteAddress)) {
+    deny(res, 403);
+    return;
+  }
+  next();
+}
+
 function sessionFromCookie(cookieHeader: string | undefined): string | undefined {
   if (!cookieHeader) return undefined;
   for (const part of cookieHeader.split(";")) {
@@ -87,10 +106,6 @@ function presentedToken(req: Request): string | undefined {
   return sessionFromCookie(typeof cookieHeader === "string" ? cookieHeader : undefined);
 }
 
-function deny(res: Response, status: 401 | 403 | 503): void {
-  res.status(status).json({ valid: false });
-}
-
 export function handleInternalSessionCheck(req: Request, res: Response): void {
   const url = req.originalUrl || req.url || "";
   if (url.includes("?")) {
@@ -117,6 +132,6 @@ export function handleInternalSessionCheck(req: Request, res: Response): void {
   deny(res, 401);
 }
 
-router.post("/internal/session-check", sessionCheckFailRateLimit, handleInternalSessionCheck);
+router.post("/internal/session-check", rejectSessionCheckPeer, sessionCheckFailRateLimit, handleInternalSessionCheck);
 
 export default router;

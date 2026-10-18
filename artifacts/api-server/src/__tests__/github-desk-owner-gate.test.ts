@@ -437,6 +437,11 @@ describe("gated desk actions", () => {
       "Data/school/brief.txt",
       "archives/ZZ/package.json",
       "preview/src/lib/tessera/CONSTITUTION-SEAL.ts",
+      "preview/src/lib/tessera/STUDY-LOG.ts",
+      "preview/src/lib/tessera/Desk.ts",
+      "archives/source-variants/1t/README.md",
+      "archives/source-variants/t44/README.md",
+      "src/lib/tessera/INGEST.ts",
     ];
     for (const path of heldPaths) {
       const read = await readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path }, cookie, io);
@@ -458,7 +463,16 @@ describe("gated desk actions", () => {
     const cookie = ownerCookie();
     const fetched: string[] = [];
     const io = { token: async () => SERVER_TOKEN, fetchImpl: fetchSpy(fetched) };
-    for (const path of ["%64ata/notes.md", "%2564ata/notes.md"]) {
+    for (const path of [
+      "%64ata/notes.md",
+      "%2564ata/notes.md",
+      "%252564ata/notes.md",
+      "%64ata%2fnotes.md",
+      "data\\notes.md",
+      "data/\0notes.md",
+      "Data/",
+      "study-log.ts/",
+    ]) {
       const read = await readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path }, cookie, io);
       expect(read, path).toEqual({ ok: false, error: "That repository path is not allowed." });
       const opened = await openRepoContentsGated({ repo: "TESSERA", path }, cookie, io);
@@ -474,28 +488,104 @@ describe("gated desk actions", () => {
     expect(fetched).toEqual([]);
   });
 
-  it("omits held names from a directory listing", async () => {
+  it("omits held names from directory listings", async () => {
     const cookie = ownerCookie();
-    const listing = [
-      { name: "NOTES.md", type: "file" },
-      { name: "Data", type: "dir" },
-      { name: "ZZ", type: "dir" },
-      { name: "CONSTITUTION-SEAL.ts", type: "file" },
-      { name: "study-log.ts", type: "file" },
-      { name: "desk.ts", type: "file" },
-      { name: "ingest.ts", type: "file" },
+    const listings = [
+      {
+        path: "src",
+        rows: [
+          { name: "NOTES.md", type: "file" },
+          { name: "Data", type: "dir" },
+          { name: "ZZ", type: "dir" },
+          { name: "CONSTITUTION-SEAL.ts", type: "file" },
+          { name: "study-log.ts", type: "file" },
+          { name: "desk.ts", type: "file" },
+          { name: "ingest.ts", type: "file" },
+        ],
+      },
+      {
+        path: "preview/src/lib/tessera",
+        rows: [
+          { name: "NOTES.md", type: "file" },
+          { name: "STUDY-LOG.ts", type: "file" },
+          { name: "Desk.ts", type: "file" },
+          { name: "INGEST.ts", type: "file" },
+          { name: "1t", type: "dir" },
+          { name: "t44", type: "dir" },
+          { name: "secure-recruitment.ts", type: "file" },
+          { name: "moltbook-recruitment.md", type: "file" },
+          { name: "summit-45", type: "dir" },
+        ],
+      },
+      {
+        path: "docs",
+        rows: [
+          { name: "NOTES.md", type: "file" },
+          { name: "SECRET-SOCIETY.md", type: "file" },
+          { name: "society-recruits-a.md", type: "file" },
+          { name: "society-intel.json", type: "file" },
+          { name: "secure-outreach.csv", type: "file" },
+          { name: "email-outreach.md", type: "file" },
+          { name: "recruit-dossiers", type: "dir" },
+          { name: "political-dossiers.pdf", type: "file" },
+          { name: "natal-chart.json", type: "file" },
+          { name: "father-natal.json", type: "file" },
+          { name: "SecretSocietyLedger.md", type: "file" },
+          { name: "collink1007.txt", type: "file" },
+        ],
+      },
     ];
-    const opened = await openRepoContentsGated({ repo: "TESSERA", path: "src" }, cookie, {
-      token: async () => SERVER_TOKEN,
-      fetchImpl: (async () => jsonResponse(listing)) as typeof fetch,
-    });
-    expect(opened).toEqual({
-      ok: true,
-      kind: "dir",
-      line: "src",
-      entries: [{ name: "NOTES.md", kind: "file" }],
-      text: "NOTES.md",
-    });
+    for (const listing of listings) {
+      const opened = await openRepoContentsGated({ repo: "TESSERA", path: listing.path }, cookie, {
+        token: async () => SERVER_TOKEN,
+        fetchImpl: (async () => jsonResponse(listing.rows)) as typeof fetch,
+      });
+      expect(opened, listing.path).toEqual({
+        ok: true,
+        kind: "dir",
+        line: listing.path,
+        entries: [{ name: "NOTES.md", kind: "file" }],
+        text: "NOTES.md",
+      });
+    }
+  });
+
+  it("denies held name families on decoded segments and basenames before GitHub is called", async () => {
+    const cookie = ownerCookie();
+    const fetched: string[] = [];
+    const io = { token: async () => SERVER_TOKEN, fetchImpl: fetchSpy(fetched) };
+    const families = [
+      ["SECURE-RECRUITMENT/brief.md", "%73ecure-recruitment/brief.md", "archive/nested/secure-recruitment/brief.md", "archive/nested/notes-secure-recruitment.md"],
+      ["MOLTBOOK-RECRUITMENT/brief.md", "%6doltbook-recruitment/brief.md", "archive/nested/moltbook-recruitment/brief.md", "archive/nested/notes-moltbook-recruitment.md"],
+      ["SUMMIT-45/brief.md", "%73ummit-45/brief.md", "archive/nested/summit-45/brief.md", "archive/nested/notes-summit-45.md"],
+      ["SECRET-SOCIETY/brief.md", "%73ecret-society/brief.md", "archive/nested/secret-society/brief.md", "archive/nested/notes-secret-society.md"],
+      ["SOCIETY-RECRUITS/brief.md", "%73ociety-recruits-extra/brief.md", "archive/nested/society-recruits/brief.md", "archive/nested/notes-society-recruits.md"],
+      ["SOCIETY-INTEL/brief.md", "%73ociety-intel-extra/brief.md", "archive/nested/society-intel/brief.md", "archive/nested/notes-society-intel.md"],
+      ["SECURE-OUTREACH/brief.md", "%73ecure-outreach-extra/brief.md", "archive/nested/secure-outreach/brief.md", "archive/nested/notes-secure-outreach.md"],
+      ["EMAIL-OUTREACH/brief.md", "%65mail-outreach-extra/brief.md", "archive/nested/email-outreach/brief.md", "archive/nested/notes-email-outreach.md"],
+      ["RECRUIT-DOSSIERS/brief.md", "%72ecruit-dossiers-extra/brief.md", "archive/nested/recruit-dossiers/brief.md", "archive/nested/notes-recruit-dossiers.md"],
+      ["POLITICAL-DOSSIERS/brief.md", "%70olitical-dossiers-extra/brief.md", "archive/nested/political-dossiers/brief.md", "archive/nested/notes-political-dossiers.md"],
+      ["NATAL-CHART/brief.md", "%6eatal-chart/brief.md", "archive/nested/natal-chart/brief.md", "archive/nested/notes-natal-chart.md"],
+      ["FATHER-NATAL/brief.md", "%66ather-natal-chart/brief.md", "archive/nested/father-natal/brief.md", "archive/nested/notes-father-natal.md"],
+      ["SecretSociety/brief.md", "%53ecretSocietyLedger.md", "archive/nested/SecretSociety/brief.md", "archive/nested/SecretSocietyLedger.md"],
+      ["COLLINK1007/brief.md", "%63ollink1007-extra/brief.md", "archive/nested/collink1007/brief.md", "archive/nested/notes-collink1007.md"],
+    ];
+    for (const paths of families) {
+      for (const path of paths) {
+        const read = await readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path }, cookie, io);
+        expect(read, path).toEqual({ ok: false, error: "That repository path is not allowed." });
+        const opened = await openRepoContentsGated({ repo: "TESSERA", path }, cookie, io);
+        expect(opened, path).toEqual({
+          ok: false,
+          kind: "no",
+          line: "That repository path is not allowed.",
+          entries: [],
+          text: "",
+          error: "That repository path is not allowed.",
+        });
+      }
+    }
+    expect(fetched).toEqual([]);
   });
 
   it("serves reach, open, main, trees, and gitbook notes for an owner session", async () => {
@@ -636,7 +726,7 @@ describe("loopback session check", () => {
 
   it("fails closed when API_SERVER_PORT is unset or invalid and does not fetch", async () => {
     const calls = vi.spyOn(globalThis, "fetch");
-    const invalid = [undefined, "", "   ", "0", "65536", "nope", "8080.5", "1.5"] as const;
+    const invalid = [undefined, "", "   ", "0", "65536", "nope", "8080.5", "1.5", "8080abc", "08080"] as const;
     try {
       for (const value of invalid) {
         calls.mockClear();
@@ -796,6 +886,45 @@ describe("loopback session check", () => {
     expect(results[6]?.text.includes("rate-limited")).toBe(true);
     const digest = createHash("sha256").update(token).digest("hex");
     expect(results[6]?.text.includes(digest)).toBe(false);
+  });
+
+  it("does not let distinct junk cookies block a valid owner", async () => {
+    configured();
+    resetSessionCheckRateLimitForTests();
+    for (let attempt = 0; attempt < 31; attempt += 1) {
+      const result = await postCheck({}, `${SESSION_COOKIE}=junk-cookie-${attempt}`);
+      expect(result.text.includes(`junk-cookie-${attempt}`)).toBe(false);
+      if (attempt < 30) {
+        expect(result.status).toBe(401);
+        expect(result.text).toBe('{"valid":false}');
+      } else {
+        expect(result.status).toBe(429);
+      }
+    }
+    expect(await deskOwnerGate(ownerCookie())).toEqual({ ok: true });
+  });
+
+  it("does not count forwarded rejects toward the session-check cap", async () => {
+    configured();
+    resetSessionCheckRateLimitForTests();
+    for (let attempt = 0; attempt < 31; attempt += 1) {
+      const response = await fetch(`http://127.0.0.1:${checkPort}/api/internal/session-check`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-forwarded-for": "203.0.113.9",
+        },
+        body: JSON.stringify({ session: `forwarded-junk-${attempt}` }),
+      });
+      const text = await response.text();
+      expect(response.status).toBe(403);
+      expect(text).toBe('{"valid":false}');
+      expect(text.includes(`forwarded-junk-${attempt}`)).toBe(false);
+    }
+    const after = await postCheck({ session: "after-forward-must-not-be-limited" });
+    expect(after.status).toBe(401);
+    expect(after.text).toBe('{"valid":false}');
+    expect(after.text.includes("after-forward-must-not-be-limited")).toBe(false);
   });
 
   it("does not let cookie-less session checks block a later owner", async () => {

@@ -50,7 +50,7 @@ if (tesseraDatabaseUrl && isLoopbackPostgresUrl(tesseraDatabaseUrl)) {
     label: "Tessera API",
     selector: "@workspace/api-server",
     port: apiPort,
-    env: { PORT: apiPort },
+    env: { PORT: apiPort, API_SERVER_PORT: apiPort },
     databaseUrl: tesseraDatabaseUrl,
   });
 } else {
