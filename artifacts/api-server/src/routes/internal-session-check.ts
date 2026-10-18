@@ -32,6 +32,11 @@ const FORWARDING_HEADERS = [
   "x-real-ip",
   "via",
   "x-original-forwarded-for",
+  "cf-connecting-ip",
+  "true-client-ip",
+  "x-client-ip",
+  "x-forwarded-ssl",
+  "x-envoy-external-address",
 ] as const;
 const MAX_TOKEN_LENGTH = 512;
 

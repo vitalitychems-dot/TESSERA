@@ -6,7 +6,8 @@ import express, { type Request as ExpressRequest, type Response as ExpressRespon
 import { rejectWhenDatabaseNotConfigured } from "../lib/db-availability";
 import { resetSessionCheckRateLimitForTests } from "../lib/father-verify-throttle";
 import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
-import internalSessionCheckRouter, { handleInternalSessionCheck } from "../routes/internal-session-check";
+import internalSessionCheckRouter, { handleInternalSessionCheck, rejectSessionCheckPeer } from "../routes/internal-session-check";
+import { deltaLine, pathDelta } from "../../../../preview/src/lib/tessera/path-delta";
 import {
   deskOwnerGate,
   mainNowGated,
@@ -381,7 +382,22 @@ describe("gated desk actions", () => {
   it("denies .env, .pem, and natal-vault paths before GitHub is called", async () => {
     const cookie = ownerCookie();
     const fetched: string[] = [];
-    for (const path of [".env", "certs/server.pem", "artifacts/api-server/.local-data/natal-vault.json", "natal-vault"]) {
+    for (const path of [
+      ".env",
+      ".envrc",
+      ".ENV-backup",
+      "config/.Envrc",
+      ".npmrc",
+      ".NPMRC",
+      "archives/source-repositories/olive-giant-ever-glade/.grok/app-env.json",
+      ".grok/APP-ENV.JSON",
+      "\uFF0Eenv",
+      "docs/\uFF0Enpmrc",
+      "docs/app-env\uFF0Ejson",
+      "certs/server.pem",
+      "artifacts/api-server/.local-data/natal-vault.json",
+      "natal-vault",
+    ]) {
       const opened = await openRepoContentsGated({ repo: "TESSERA", path }, cookie, {
         token: async () => SERVER_TOKEN,
         fetchImpl: fetchSpy(fetched),
@@ -412,6 +428,13 @@ describe("gated desk actions", () => {
       "preview/src/lib/tessera/constitution-seal.ts",
       "preview/src/lib/tessera/study-log.ts",
       "preview/src/lib/tessera/desk.ts",
+      "T44-agent-coordination.md",
+      "ZZ_NOW.txt",
+      "zz-olive/readme.md",
+      "preview/src/lib/tessera/desk.tsx",
+      "preview/src/lib/tessera/desk.ts.bak",
+      "notes/zz notes.txt",
+      "1t.ledger.md",
     ];
     for (const path of heldPaths) {
       const read = await readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path }, cookie, io);
@@ -501,6 +524,15 @@ describe("gated desk actions", () => {
           { name: "study-log.ts", type: "file" },
           { name: "desk.ts", type: "file" },
           { name: "ingest.ts", type: "file" },
+          { name: ".npmrc", type: "file" },
+          { name: "app-env.json", type: "file" },
+          { name: ".envrc", type: "file" },
+          { name: ".ENV-backup", type: "file" },
+          { name: "T44-agent-coordination.md", type: "file" },
+          { name: "ZZ_NOW.txt", type: "file" },
+          { name: "zz-olive", type: "dir" },
+          { name: "desk.tsx", type: "file" },
+          { name: "desk.ts.bak", type: "file" },
         ],
       },
       {
@@ -531,7 +563,7 @@ describe("gated desk actions", () => {
           { name: "natal-chart.json", type: "file" },
           { name: "father-natal.json", type: "file" },
           { name: "SecretSocietyLedger.md", type: "file" },
-          { name: "collink1007.txt", type: "file" },
+          { name: "personal-notes.txt", type: "file" },
         ],
       },
     ];
@@ -568,7 +600,7 @@ describe("gated desk actions", () => {
       ["NATAL-CHART/brief.md", "%6eatal-chart/brief.md", "archive/nested/natal-chart/brief.md", "archive/nested/notes-natal-chart.md"],
       ["FATHER-NATAL/brief.md", "%66ather-natal-chart/brief.md", "archive/nested/father-natal/brief.md", "archive/nested/notes-father-natal.md"],
       ["SecretSociety/brief.md", "%53ecretSocietyLedger.md", "archive/nested/SecretSociety/brief.md", "archive/nested/SecretSocietyLedger.md"],
-      ["COLLINK1007/brief.md", "%63ollink1007-extra/brief.md", "archive/nested/collink1007/brief.md", "archive/nested/notes-collink1007.md"],
+      ["PERSONAL-NOTES/brief.md", "%70ersonal-notes/brief.md", "archive/nested/personal-notes/brief.md", "archive/nested/notes-personal-extra.md"],
     ];
     for (const paths of families) {
       for (const path of paths) {
@@ -586,6 +618,117 @@ describe("gated desk actions", () => {
       }
     }
     expect(fetched).toEqual([]);
+  });
+
+  it("fails closed when a percent sign is still decodable after three passes", async () => {
+    const cookie = ownerCookie();
+    const fetched: string[] = [];
+    const io = { token: async () => SERVER_TOKEN, fetchImpl: fetchSpy(fetched) };
+    const read = await readRepoFileGated(
+      { owner: "vitalitychems-dot", repo: "TESSERA", path: "README%2525252emd" },
+      cookie,
+      io,
+    );
+    expect(read).toEqual({ ok: false, error: "That repository path is not allowed." });
+    const opened = await openRepoContentsGated({ repo: "TESSERA", path: "notes/%25252564ata/brief.md" }, cookie, io);
+    expect(opened.ok).toBe(false);
+    expect(fetched).toEqual([]);
+    const allowed = await readRepoFileGated(
+      { owner: "vitalitychems-dot", repo: "TESSERA", path: "README%25252emd" },
+      cookie,
+      io,
+    );
+    expect(allowed).toEqual({ ok: true, text: "x", path: "vitalitychems-dot/TESSERA/README.md" });
+    expect(fetched).toEqual(["https://api.github.com/repos/vitalitychems-dot/TESSERA/contents/README.md"]);
+  });
+
+  it("allows a segment that merely begins with a held prefix and has no separator", async () => {
+    const cookie = ownerCookie();
+    const fetched: string[] = [];
+    const read = await readRepoFileGated(
+      { owner: "vitalitychems-dot", repo: "TESSERA", path: "notes/t44foo.md" },
+      cookie,
+      { token: async () => SERVER_TOKEN, fetchImpl: fetchSpy(fetched) },
+    );
+    expect(read).toEqual({ ok: true, text: "x", path: "vitalitychems-dot/TESSERA/notes/t44foo.md" });
+    expect(fetched).toEqual(["https://api.github.com/repos/vitalitychems-dot/TESSERA/contents/notes/t44foo.md"]);
+  });
+
+  it("denies an extra held marker from the environment and ignores it when unset", async () => {
+    const previous = process.env.SOVEREIGN_HELD_NAME_PATTERN;
+    const cookie = ownerCookie();
+    const fetched: string[] = [];
+    const io = { token: async () => SERVER_TOKEN, fetchImpl: fetchSpy(fetched) };
+    try {
+      process.env.SOVEREIGN_HELD_NAME_PATTERN = "fixture-held";
+      const denied = await readRepoFileGated(
+        { owner: "vitalitychems-dot", repo: "TESSERA", path: "notes/fixture-held-a.md" },
+        cookie,
+        io,
+      );
+      expect(denied).toEqual({ ok: false, error: "That repository path is not allowed." });
+      expect(fetched).toEqual([]);
+      delete process.env.SOVEREIGN_HELD_NAME_PATTERN;
+      const allowed = await readRepoFileGated(
+        { owner: "vitalitychems-dot", repo: "TESSERA", path: "notes/fixture-held-a.md" },
+        cookie,
+        io,
+      );
+      expect(allowed).toEqual({ ok: true, text: "x", path: "vitalitychems-dot/TESSERA/notes/fixture-held-a.md" });
+    } finally {
+      if (previous === undefined) delete process.env.SOVEREIGN_HELD_NAME_PATTERN;
+      else process.env.SOVEREIGN_HELD_NAME_PATTERN = previous;
+    }
+  });
+
+  it("does not print a held name in the tree delta", async () => {
+    const cookie = ownerCookie();
+    const hidden = [
+      "secret-society-plan.md",
+      "T44-agent-coordination.md",
+      "ZZ_NOW.txt",
+      "zz-olive/readme.md",
+      "desk.tsx",
+      ".npmrc",
+      ".grok/app-env.json",
+      ".envrc",
+      "personal-notes.md",
+    ];
+    const api: DeskGithubApi = async (path) => {
+      if (path.endsWith("/commits/main")) {
+        return {
+          ok: true,
+          status: 200,
+          text: JSON.stringify({ sha: "a".repeat(40), commit: { tree: { sha: "c".repeat(40) } } }),
+        };
+      }
+      if (path.includes("/git/trees/")) {
+        return {
+          ok: true,
+          status: 200,
+          text: JSON.stringify({
+            tree: [{ path: "README.md", type: "blob" }, { path: "docs/guide.md", type: "blob" }, ...hidden.map((entry) => ({ path: entry, type: "blob" }))],
+            truncated: false,
+          }),
+        };
+      }
+      return { ok: false, status: 500, text: "unused" };
+    };
+    const delta = await treeDeltaGated(cookie, {
+      githubApi: api,
+      tesseraHeld: ["README.md", ...hidden],
+      gitbookHeld: ["old-secret-society.md", "removed-only.md"],
+      pathDelta,
+      deltaLine,
+    });
+    expect(delta.ok).toBe(true);
+    if (!delta.ok) return;
+    for (const name of [...hidden, "old-secret-society.md", "secret-society", "personal-"]) {
+      expect(delta.line.includes(name), name).toBe(false);
+    }
+    expect(delta.line.includes("docs/guide.md")).toBe(true);
+    expect(delta.line.includes("removed-only.md")).toBe(true);
+    expect(delta.line.includes("README.md")).toBe(true);
   });
 
   it("serves reach, open, main, trees, and gitbook notes for an owner session", async () => {
@@ -832,6 +975,61 @@ describe("loopback session check", () => {
     expect(text).toBe('{"valid":false}');
     expect(text.includes(token)).toBe(false);
     expect(text.includes("203.0.113.9")).toBe(false);
+  });
+
+  it("rejects a non-loopback peer in rejectSessionCheckPeer before the handler", () => {
+    let status = 0;
+    let payload: unknown;
+    let continued = false;
+    const req = {
+      originalUrl: "/api/internal/session-check",
+      url: "/api/internal/session-check",
+      headers: {},
+      socket: { remoteAddress: "198.51.100.20" },
+    } as unknown as ExpressRequest;
+    const res = {
+      status(code: number) {
+        status = code;
+        return this;
+      },
+      json(body: unknown) {
+        payload = body;
+        return this;
+      },
+    } as unknown as ExpressResponse;
+    rejectSessionCheckPeer(req, res, () => {
+      continued = true;
+    });
+    expect(status).toBe(403);
+    expect(payload).toEqual({ valid: false });
+    expect(continued).toBe(false);
+  });
+
+  it("rejects extra forwarding headers from a loopback peer", () => {
+    for (const name of ["cf-connecting-ip", "true-client-ip", "x-client-ip", "x-forwarded-ssl", "x-envoy-external-address"]) {
+      let status = 0;
+      let continued = false;
+      const req = {
+        originalUrl: "/api/internal/session-check",
+        url: "/api/internal/session-check",
+        headers: { [name]: "203.0.113.9" },
+        socket: { remoteAddress: "127.0.0.1" },
+      } as unknown as ExpressRequest;
+      const res = {
+        status(code: number) {
+          status = code;
+          return this;
+        },
+        json() {
+          return this;
+        },
+      } as unknown as ExpressResponse;
+      rejectSessionCheckPeer(req, res, () => {
+        continued = true;
+      });
+      expect(status, name).toBe(403);
+      expect(continued, name).toBe(false);
+    }
   });
 
   it("rejects a non-loopback socket and an empty forwarding header", () => {

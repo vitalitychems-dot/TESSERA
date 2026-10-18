@@ -26,9 +26,9 @@ args = ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
 
 [services.production.run.env]
 PORT = "8080"
-# Loopback port for the preview desk owner-session check. Integer 1-65535.
-# This Replit service listens on 8080. The local suite default is 5000
-# (scripts/dev-unified.mjs). Unset or invalid fails closed. There is no fallback.
+# Inert on this API process. The desk gate runs in the preview process and
+# reads API_SERVER_PORT there. Without that value on the preview process the
+# gate returns 503 and does not connect. This assignment does not configure it.
 API_SERVER_PORT = "8080"
 NODE_ENV = "production"
 

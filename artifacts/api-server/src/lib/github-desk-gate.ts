@@ -18,9 +18,9 @@ const ALLOWED_REPOS = [
 
 const PATH_DENIED = "That repository path is not allowed." as const;
 const SECRET_PATH =
-  /(^|\/)\.env(?:\.|$)|(^|\/)\.git(?:\/|$)|(?:^|\/)id_rsa(?:\.|$)|(?:^|\/)id_ed25519(?:\.|$)|(?:^|\/)[^/]*\.(?:pem|key|p12|pfx)$|(?:^|\/)[^/]*(?:secret|password|credential)[^/]*$|(?:^|\/)[^/]*natal-vault[^/]*(?:\/|$)/i;
+  /(^|\/)\.env|(?:^|\/)\.npmrc(?:\/|$)|(?:^|\/)app-env\.json(?:\/|$)|(^|\/)\.git(?:\/|$)|(?:^|\/)id_rsa(?:\.|$)|(?:^|\/)id_ed25519(?:\.|$)|(?:^|\/)[^/]*\.(?:pem|key|p12|pfx)$|(?:^|\/)[^/]*(?:secret|password|credential)[^/]*$|(?:^|\/)[^/]*natal-vault[^/]*(?:\/|$)/i;
 const HELD_PATH =
-  /(?:^|\/)data(?:\/|$)|(?:^|\/)Zz(?:\/|$)|(?:^|\/)[^/]*ingest[^/]*(?:\/|$)|(?:^|\/)1T(?:\/|$)|(?:^|\/)T44(?:\/|$)|(?:^|\/)[^/]*constitution-seal[^/]*(?:\/|$)|(?:^|\/)study-log\.ts$|(?:^|\/)desk\.ts$/i;
+  /(?:^|\/)data(?:\/|$)|(?:^|\/)(?:zz|1t|t44)(?:[-_.\s][^/]*)?(?:\/|$)|(?:^|\/)[^/]*ingest[^/]*(?:\/|$)|(?:^|\/)[^/]*constitution-seal[^/]*(?:\/|$)|(?:^|\/)study-log\.ts$|(?:^|\/)desk\.ts[^/]*(?:\/|$)/i;
 const HELD_NAME_MARKERS = [
   "secure-recruitment",
   "moltbook-recruitment",
@@ -35,7 +35,7 @@ const HELD_NAME_MARKERS = [
   "natal-",
   "father-natal",
   "secretsociety",
-  "collink1007",
+  "personal-",
 ] as const;
 const SECRET_TEXT =
   /SESSION_SECRET|BEGIN [A-Z ]*PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]|github_pat_|xox[baprs]-|sk-[A-Za-z0-9]{10,}/;
@@ -184,22 +184,24 @@ export function pinRepoFile(
 }
 
 function cleanRepoPath(raw: string): string | null {
-  const trimmed = raw.trim();
+  const trimmed = raw.trim().normalize("NFKC");
   if (!trimmed || trimmed.length > 512) return null;
   if (trimmed.includes("\\") || trimmed.includes("\0")) return null;
   if (trimmed.startsWith("/") || trimmed.startsWith("~") || /^[a-zA-Z]:/.test(trimmed)) return null;
   let decoded = trimmed;
   // Three passes so a triple-encoded held name is denied after decoding.
+  // A percent sign that remains is denied, including one that would still decode.
   for (let pass = 0; pass < 3; pass += 1) {
     if (!decoded.includes("%")) break;
     try {
-      const next = decodeURIComponent(decoded);
+      const next = decodeURIComponent(decoded).normalize("NFKC");
       if (next === decoded) break;
       decoded = next;
     } catch {
       return null;
     }
   }
+  if (decoded.includes("%")) return null;
   if (decoded.includes("..") || decoded.includes("\\") || decoded.includes("\0")) return null;
   if (decoded.startsWith("/") || decoded.startsWith("~") || /^[a-zA-Z]:/.test(decoded)) return null;
   const parts = decoded.split("/");
@@ -210,9 +212,27 @@ function cleanRepoPath(raw: string): string | null {
   return parts.join("/");
 }
 
+function extraHeldMarker(): string | null {
+  const raw = process.env.SOVEREIGN_HELD_NAME_PATTERN;
+  if (raw === undefined) return null;
+  const marker = raw.trim().normalize("NFKC").toLowerCase();
+  return marker.length > 0 ? marker : null;
+}
+
 function heldName(segment: string): boolean {
-  const name = segment.toLowerCase();
-  return HELD_NAME_MARKERS.some((marker) => name.includes(marker));
+  const name = segment.normalize("NFKC").toLowerCase();
+  if (HELD_NAME_MARKERS.some((marker) => name.includes(marker))) return true;
+  const extra = extraHeldMarker();
+  return extra !== null && name.includes(extra);
+}
+
+function pathsForDelta(paths: readonly string[]): string[] {
+  const visible: string[] = [];
+  for (const path of paths) {
+    const clean = cleanRepoPath(path);
+    if (clean) visible.push(clean);
+  }
+  return visible;
 }
 
 type RepoFileIo = {
@@ -521,8 +541,8 @@ export async function treeDeltaGated(
     const tesseraBlobs = tessera.ok ? blobsFrom(tessera.text) : null;
     const gitbookBlobs = gitbook.ok ? blobsFrom(gitbook.text) : null;
     if (!tesseraBlobs || !gitbookBlobs) return { ok: false, line: TREE_FAIL };
-    const one = deps.pathDelta(deps.tesseraHeld, tesseraBlobs.paths);
-    const two = deps.pathDelta(deps.gitbookHeld, gitbookBlobs.paths);
+    const one = deps.pathDelta(pathsForDelta(deps.tesseraHeld), pathsForDelta(tesseraBlobs.paths));
+    const two = deps.pathDelta(pathsForDelta(deps.gitbookHeld), pathsForDelta(gitbookBlobs.paths));
     const cut = tesseraBlobs.truncated || gitbookBlobs.truncated ? " A tree was truncated, so this diff is not complete." : "";
     return { ok: true, line: `${deps.deltaLine("TESSERA", one)} ${deps.deltaLine("Gitbook", two)}${cut}` };
   } catch {

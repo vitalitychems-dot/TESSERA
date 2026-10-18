@@ -117,43 +117,16 @@ describe("hybrid bm25 document frequency", () => {
     // per-document term counts dominate bm25Scores and hide this loop.
     const tokenized = docs.map(tokenize);
     const iterations = 8;
+    const time = (fn: () => Record<string, number>) => {
+      const start = performance.now();
+      for (let i = 0; i < iterations; i++) fn();
+      return performance.now() - start;
+    };
     documentFrequencyFilter(tokenized, qTerms);
     documentFrequencySinglePass(tokenized, qTerms);
 
-    // Alternate which function runs first so a busy runner does not charge
-    // the whole stall to whichever pass is measured second. Keep the best
-    // paired sample.
-    const paired = () => {
-      let beforeMs = 0;
-      let afterMs = 0;
-      for (let i = 0; i < iterations; i++) {
-        const filterFirst = i % 2 === 0;
-        const start = performance.now();
-        if (filterFirst) documentFrequencyFilter(tokenized, qTerms);
-        else documentFrequencySinglePass(tokenized, qTerms);
-        const mid = performance.now();
-        if (filterFirst) documentFrequencySinglePass(tokenized, qTerms);
-        else documentFrequencyFilter(tokenized, qTerms);
-        const end = performance.now();
-        if (filterFirst) {
-          beforeMs += mid - start;
-          afterMs += end - mid;
-        } else {
-          afterMs += mid - start;
-          beforeMs += end - mid;
-        }
-      }
-      return { beforeMs, afterMs };
-    };
-    let beforeMs = 0;
-    let afterMs = Number.POSITIVE_INFINITY;
-    for (let trial = 0; trial < 3; trial++) {
-      const sample = paired();
-      if (sample.beforeMs / sample.afterMs > beforeMs / afterMs) {
-        beforeMs = sample.beforeMs;
-        afterMs = sample.afterMs;
-      }
-    }
+    const beforeMs = time(() => documentFrequencyFilter(tokenized, qTerms));
+    const afterMs = time(() => documentFrequencySinglePass(tokenized, qTerms));
     const speedup = beforeMs / afterMs;
     console.log(
       `BM25_DF beforeMs=${beforeMs.toFixed(1)} afterMs=${afterMs.toFixed(1)} speedup=${speedup.toFixed(2)}`,
