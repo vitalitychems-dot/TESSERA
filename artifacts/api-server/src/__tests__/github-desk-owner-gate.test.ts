@@ -1,6 +1,7 @@
+import { createHash } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import { readFileSync } from "node:fs";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import express, { type Request as ExpressRequest, type Response as ExpressResponse } from "express";
 import { rejectWhenDatabaseNotConfigured } from "../lib/db-availability";
 import { resetSessionCheckRateLimitForTests } from "../lib/father-verify-throttle";
@@ -428,6 +429,75 @@ describe("gated desk actions", () => {
     expect(fetched).toEqual([]);
   });
 
+  it("denies case variants of held paths before GitHub is called", async () => {
+    const cookie = ownerCookie();
+    const fetched: string[] = [];
+    const io = { token: async () => SERVER_TOKEN, fetchImpl: fetchSpy(fetched) };
+    const heldPaths = [
+      "Data/school/brief.txt",
+      "archives/ZZ/package.json",
+      "preview/src/lib/tessera/CONSTITUTION-SEAL.ts",
+    ];
+    for (const path of heldPaths) {
+      const read = await readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path }, cookie, io);
+      expect(read, path).toEqual({ ok: false, error: "That repository path is not allowed." });
+      const opened = await openRepoContentsGated({ repo: "TESSERA", path }, cookie, io);
+      expect(opened, path).toEqual({
+        ok: false,
+        kind: "no",
+        line: "That repository path is not allowed.",
+        entries: [],
+        text: "",
+        error: "That repository path is not allowed.",
+      });
+    }
+    expect(fetched).toEqual([]);
+  });
+
+  it("denies percent-encoded held names, including a second decode", async () => {
+    const cookie = ownerCookie();
+    const fetched: string[] = [];
+    const io = { token: async () => SERVER_TOKEN, fetchImpl: fetchSpy(fetched) };
+    for (const path of ["%64ata/notes.md", "%2564ata/notes.md"]) {
+      const read = await readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path }, cookie, io);
+      expect(read, path).toEqual({ ok: false, error: "That repository path is not allowed." });
+      const opened = await openRepoContentsGated({ repo: "TESSERA", path }, cookie, io);
+      expect(opened, path).toEqual({
+        ok: false,
+        kind: "no",
+        line: "That repository path is not allowed.",
+        entries: [],
+        text: "",
+        error: "That repository path is not allowed.",
+      });
+    }
+    expect(fetched).toEqual([]);
+  });
+
+  it("omits held names from a directory listing", async () => {
+    const cookie = ownerCookie();
+    const listing = [
+      { name: "NOTES.md", type: "file" },
+      { name: "Data", type: "dir" },
+      { name: "ZZ", type: "dir" },
+      { name: "CONSTITUTION-SEAL.ts", type: "file" },
+      { name: "study-log.ts", type: "file" },
+      { name: "desk.ts", type: "file" },
+      { name: "ingest.ts", type: "file" },
+    ];
+    const opened = await openRepoContentsGated({ repo: "TESSERA", path: "src" }, cookie, {
+      token: async () => SERVER_TOKEN,
+      fetchImpl: (async () => jsonResponse(listing)) as typeof fetch,
+    });
+    expect(opened).toEqual({
+      ok: true,
+      kind: "dir",
+      line: "src",
+      entries: [{ name: "NOTES.md", kind: "file" }],
+      text: "NOTES.md",
+    });
+  });
+
   it("serves reach, open, main, trees, and gitbook notes for an owner session", async () => {
     const cookie = ownerCookie();
     const seen: string[] = [];
@@ -564,12 +634,23 @@ describe("loopback session check", () => {
     expect(await deskOwnerGate(ownerCookie())).toEqual({ ok: true });
   });
 
-  it("falls back to port 8080 when API_SERVER_PORT is invalid and ignores PORT", async () => {
-    process.env.PORT = String(checkPort);
-    process.env.API_SERVER_PORT = "not-a-port";
-    const decision = await deskOwnerGate(ownerCookie());
-    expect(decision).toEqual({ ok: false, status: 503, error: "sovereign-unconfigured" });
-    assertGeneric(decision);
+  it("fails closed when API_SERVER_PORT is unset or invalid and does not fetch", async () => {
+    const calls = vi.spyOn(globalThis, "fetch");
+    const invalid = [undefined, "", "   ", "0", "65536", "nope", "8080.5", "1.5"] as const;
+    try {
+      for (const value of invalid) {
+        calls.mockClear();
+        process.env.PORT = String(checkPort);
+        if (value === undefined) delete process.env.API_SERVER_PORT;
+        else process.env.API_SERVER_PORT = value;
+        const decision = await deskOwnerGate(ownerCookie());
+        expect(decision, String(value)).toEqual({ ok: false, status: 503, error: "sovereign-unconfigured" });
+        assertGeneric(decision);
+        expect(calls, String(value)).not.toHaveBeenCalled();
+      }
+    } finally {
+      calls.mockRestore();
+    }
   });
 
   it("denies a session check that returns HTTP 500 without echoing the body", async () => {
@@ -713,6 +794,18 @@ describe("loopback session check", () => {
     expect(results[6]?.text.includes(token)).toBe(false);
     expect(results[6]?.text.includes("signedId")).toBe(false);
     expect(results[6]?.text.includes("rate-limited")).toBe(true);
+    const digest = createHash("sha256").update(token).digest("hex");
+    expect(results[6]?.text.includes(digest)).toBe(false);
+  });
+
+  it("does not let cookie-less session checks block a later owner", async () => {
+    configured();
+    for (let attempt = 0; attempt < 31; attempt += 1) {
+      const decision = await deskOwnerGate(undefined);
+      expect(decision).toEqual({ ok: false, status: 401, error: "unauthenticated" });
+      assertGeneric(decision);
+    }
+    expect(await deskOwnerGate(ownerCookie())).toEqual({ ok: true });
   });
 
   it("does not require a database", async () => {
@@ -729,6 +822,7 @@ describe("loopback session check", () => {
     expect(gateSource.includes("lookupSession")).toBe(false);
     expect(gateSource.includes("process.env.PORT")).toBe(false);
     expect(gateSource.includes("API_SERVER_PORT")).toBe(true);
+    expect(gateSource.includes("DEFAULT_API_SERVER_PORT")).toBe(false);
     expect(gateSource.includes("http://127.0.0.1:")).toBe(true);
     expect(gateSource.includes('redirect: "error"')).toBe(true);
     const appSource = readFileSync(new URL("../app.ts", import.meta.url), "utf8");

@@ -2,8 +2,10 @@
 // Adopted by the Grand Conference — Language & Security Summit.
 // In-process, zero deps, no candidate values logged.
 
+import { createHash } from "node:crypto";
 import type { Request, Response, NextFunction } from "express";
 import { decideOwnerSession } from "./sovereign-admin";
+import { SESSION_COOKIE } from "./sovereign-session";
 
 const WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 10;
@@ -176,34 +178,68 @@ function releaseRawStamp(ip: string, stamp: RawStamp): void {
 
 // Desk session checks from preview. Same reserve/refund rules as rawKeyFailRateLimit,
 // with separate counters so loopback desk misses cannot drain admin raw-key routes.
+// A presented token is keyed by its sha256, never the raw token. Missing and empty
+// tokens are not counted, so a logged-out page cannot lock the owner.
 const SESSION_CHECK_WINDOW_MS = 60_000;
-const SESSION_CHECK_IP_MAX = 6;
+const SESSION_CHECK_KEY_MAX = 6;
 const SESSION_CHECK_GLOBAL_MAX = 30;
-const SESSION_CHECK_MAX_IPS = 4096;
+const SESSION_CHECK_MAX_KEYS = 4096;
+const SESSION_CHECK_TOKEN_MAX = 512;
 const _sessionCheckHits = new Map<string, RawStamp[]>();
 const _sessionCheckGlobalHits: RawStamp[] = [];
 
 function pruneSessionCheck(now: number): void {
-  for (const [ip, arr] of _sessionCheckHits) {
+  for (const [key, arr] of _sessionCheckHits) {
     const filtered = arr.filter((hit) => now - hit.at < SESSION_CHECK_WINDOW_MS);
-    if (filtered.length === 0) _sessionCheckHits.delete(ip);
-    else _sessionCheckHits.set(ip, filtered);
+    if (filtered.length === 0) _sessionCheckHits.delete(key);
+    else _sessionCheckHits.set(key, filtered);
   }
-  evictOldest(_sessionCheckHits, SESSION_CHECK_MAX_IPS);
+  evictOldest(_sessionCheckHits, SESSION_CHECK_MAX_KEYS);
   const globalHits = _sessionCheckGlobalHits.filter((hit) => now - hit.at < SESSION_CHECK_WINDOW_MS);
   _sessionCheckGlobalHits.length = 0;
   _sessionCheckGlobalHits.push(...globalHits);
 }
 
-function releaseSessionCheckStamp(ip: string, stamp: RawStamp): void {
-  const current = _sessionCheckHits.get(ip);
+function releaseSessionCheckStamp(key: string, stamp: RawStamp): void {
+  const current = _sessionCheckHits.get(key);
   if (current) {
     const idx = current.indexOf(stamp);
     if (idx >= 0) current.splice(idx, 1);
-    if (current.length === 0) _sessionCheckHits.delete(ip);
+    if (current.length === 0) _sessionCheckHits.delete(key);
   }
   const globalIdx = _sessionCheckGlobalHits.indexOf(stamp);
   if (globalIdx >= 0) _sessionCheckGlobalHits.splice(globalIdx, 1);
+}
+
+function presentedSessionToken(req: Request): string | undefined {
+  const body = req.body;
+  if (body && typeof body === "object" && "session" in body) {
+    const session = (body as { session?: unknown }).session;
+    if (typeof session !== "string" || session.length < 1 || session.length > SESSION_CHECK_TOKEN_MAX) return undefined;
+    return session;
+  }
+  const cookieHeader = req.headers.cookie;
+  if (typeof cookieHeader !== "string" || cookieHeader.length === 0) return undefined;
+  for (const part of cookieHeader.split(";")) {
+    const trimmed = part.trim();
+    const eq = trimmed.indexOf("=");
+    if (eq < 1) continue;
+    if (trimmed.slice(0, eq) !== SESSION_COOKIE) continue;
+    try {
+      const value = decodeURIComponent(trimmed.slice(eq + 1));
+      if (value.length < 1 || value.length > SESSION_CHECK_TOKEN_MAX) return undefined;
+      return value;
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
+function sessionCheckKey(req: Request): string | undefined {
+  const token = presentedSessionToken(req);
+  if (!token) return undefined;
+  return createHash("sha256").update(token).digest("hex");
 }
 
 export function resetSessionCheckRateLimitForTests(): void {
@@ -212,10 +248,14 @@ export function resetSessionCheckRateLimitForTests(): void {
 }
 
 export function sessionCheckFailRateLimit(req: Request, res: Response, next: NextFunction): void {
+  const key = sessionCheckKey(req);
+  if (!key) {
+    next();
+    return;
+  }
   const now = Date.now();
   pruneSessionCheck(now);
-  const ip = ipOf(req);
-  const arr = _sessionCheckHits.get(ip) ?? [];
+  const arr = _sessionCheckHits.get(key) ?? [];
   const retry = (limit: number, oldest: number, scope: string) => {
     const retryAfterMs = SESSION_CHECK_WINDOW_MS - (now - oldest);
     res.setHeader("Retry-After", Math.max(1, Math.ceil(retryAfterMs / 1000)).toString());
@@ -226,8 +266,8 @@ export function sessionCheckFailRateLimit(req: Request, res: Response, next: Nex
       retryAfterMs,
     });
   };
-  if (arr.length >= SESSION_CHECK_IP_MAX) {
-    retry(SESSION_CHECK_IP_MAX, arr[0].at, "per IP");
+  if (arr.length >= SESSION_CHECK_KEY_MAX) {
+    retry(SESSION_CHECK_KEY_MAX, arr[0].at, "per session");
     return;
   }
   if (_sessionCheckGlobalHits.length >= SESSION_CHECK_GLOBAL_MAX) {
@@ -236,15 +276,15 @@ export function sessionCheckFailRateLimit(req: Request, res: Response, next: Nex
   }
   const stamp: RawStamp = { at: now };
   arr.push(stamp);
-  _sessionCheckHits.set(ip, arr);
+  _sessionCheckHits.set(key, arr);
   _sessionCheckGlobalHits.push(stamp);
-  evictOldest(_sessionCheckHits, SESSION_CHECK_MAX_IPS);
+  evictOldest(_sessionCheckHits, SESSION_CHECK_MAX_KEYS);
   let settled = false;
   const settle = () => {
     if (settled) return;
     settled = true;
     if (res.statusCode === 401 || res.statusCode === 403) return;
-    releaseSessionCheckStamp(ip, stamp);
+    releaseSessionCheckStamp(key, stamp);
   };
   res.on("finish", settle);
   res.on("close", settle);

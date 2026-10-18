@@ -1,7 +1,9 @@
 // Owner gate for the preview GitHub desk.
 // Preview does not share the api-server session Map, so this gate POSTs the
 // caller's own session token to the api-server loopback session check.
-// The port is API_SERVER_PORT (integer 1-65535, default 8080), never PORT.
+// The port is API_SERVER_PORT, an integer from 1 to 65535. Unset, blank, or
+// invalid fails closed with 503 and does not connect. The host is 127.0.0.1.
+// PORT is ignored. There is no fallback port.
 // Unreachable or timed-out api-server -> 503. Any other error, or {valid:false} -> 401.
 // Denial bodies stay generic: no lookup reason, no exception text, no env values.
 
@@ -18,7 +20,7 @@ const PATH_DENIED = "That repository path is not allowed." as const;
 const SECRET_PATH =
   /(^|\/)\.env(?:\.|$)|(^|\/)\.git(?:\/|$)|(?:^|\/)id_rsa(?:\.|$)|(?:^|\/)id_ed25519(?:\.|$)|(?:^|\/)[^/]*\.(?:pem|key|p12|pfx)$|(?:^|\/)[^/]*(?:secret|password|credential)[^/]*$|(?:^|\/)[^/]*natal-vault[^/]*(?:\/|$)/i;
 const HELD_PATH =
-  /(?:^|\/)data(?:\/|$)|(?:^|\/)Zz(?:\/|$)|(?:^|\/)[^/]*ingest[^/]*(?:\/|$)|(?:^|\/)1T(?:\/|$)|(?:^|\/)T44(?:\/|$)|(?:^|\/)[^/]*constitution-seal[^/]*(?:\/|$)|(?:^|\/)study-log\.ts$|(?:^|\/)desk\.ts$/;
+  /(?:^|\/)data(?:\/|$)|(?:^|\/)Zz(?:\/|$)|(?:^|\/)[^/]*ingest[^/]*(?:\/|$)|(?:^|\/)1T(?:\/|$)|(?:^|\/)T44(?:\/|$)|(?:^|\/)[^/]*constitution-seal[^/]*(?:\/|$)|(?:^|\/)study-log\.ts$|(?:^|\/)desk\.ts$/i;
 const SECRET_TEXT =
   /SESSION_SECRET|BEGIN [A-Z ]*PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]|github_pat_|xox[baprs]-|sk-[A-Za-z0-9]{10,}/;
 
@@ -52,10 +54,9 @@ const UNREACHABLE_CODES = new Set([
 const UNAVAILABLE: DeskGateDenial = { ok: false, status: 503, error: "sovereign-unconfigured" };
 const UNAUTHENTICATED: DeskGateDenial = { ok: false, status: 401, error: "unauthenticated" };
 
-const DEFAULT_API_SERVER_PORT = 8080;
-
 export async function deskOwnerGate(cookieHeader: string | undefined): Promise<{ ok: true } | DeskGateDenial> {
   const url = sessionCheckUrl();
+  if (!url) return UNAVAILABLE;
   const token = sessionCookie(cookieHeader);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), SESSION_CHECK_TIMEOUT_MS);
@@ -84,18 +85,20 @@ export async function deskOwnerGate(cookieHeader: string | undefined): Promise<{
   }
 }
 
-function apiServerPort(): number {
+function apiServerPort(): number | null {
   const raw = process.env.API_SERVER_PORT;
-  if (raw === undefined) return DEFAULT_API_SERVER_PORT;
+  if (raw === undefined) return null;
   const trimmed = raw.trim();
-  if (!/^[1-9][0-9]{0,4}$/.test(trimmed)) return DEFAULT_API_SERVER_PORT;
+  if (!/^[1-9][0-9]{0,4}$/.test(trimmed)) return null;
   const port = Number(trimmed);
-  if (!Number.isInteger(port) || port < 1 || port > 65_535) return DEFAULT_API_SERVER_PORT;
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) return null;
   return port;
 }
 
-function sessionCheckUrl(): string {
-  return `http://127.0.0.1:${apiServerPort()}/api/internal/session-check`;
+function sessionCheckUrl(): string | null {
+  const port = apiServerPort();
+  if (port === null) return null;
+  return `http://127.0.0.1:${port}/api/internal/session-check`;
 }
 
 async function readValidFlag(response: Response): Promise<boolean | null> {
