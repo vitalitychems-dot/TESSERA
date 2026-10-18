@@ -4,6 +4,7 @@ import { MindChart } from "./mind-chart";
 import { WorldStage } from "./world-stage";
 import { TESSERA } from "@/lib/tessera/identity";
 import { openPulls } from "@/lib/tessera/github-desk";
+import { boardFromPulls } from "@/lib/tessera/foreman";
 
 /** The house fills the screen. Eye, brain, talk, and the open-pull wall sit on top of it. */
 
@@ -61,11 +62,10 @@ export function HouseLive() {
                 <p className="text-xs tracking-[0.16em] text-muted uppercase">Task wall</p>
                 <p className="mt-1 text-sm text-fg">{wallNote}</p>
                 <ul className="mt-3 flex flex-col gap-2">
-                  {rows.map((row) => (
-                    <li key={`${row.repo}-${row.number}`} className="border border-border px-3 py-2 text-sm">
-                      <span className="text-muted">{row.repo} #{row.number}</span>
-                      <span className="mt-1 block text-fg">{row.title}</span>
-                      <span className="text-xs text-muted">{row.state}</span>
+                  {boardFromPulls(rows).tasks.map((task) => (
+                    <li key={task.id} className="border border-border px-3 py-2 text-sm">
+                      <span className="text-muted">{task.status}</span>
+                      <span className="mt-1 block text-fg">{task.title}</span>
                     </li>
                   ))}
                 </ul>
