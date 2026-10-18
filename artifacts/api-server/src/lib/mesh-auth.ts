@@ -1,8 +1,5 @@
-import { createHash, createHmac, timingSafeEqual } from "crypto";
+import { createHash, timingSafeEqual } from "crypto";
 import { isAdminTokenConfigured } from "./sovereign-session";
-
-/** Fixed HMAC message for the log-safe admin-key id. The value is not secret. */
-export const ADMIN_KEY_LOG_LABEL = "tessera:admin-key-log-id:v1";
 
 const MIN_TOKEN_LENGTH = 8;
 const CONFIGURED_KEY_MIN_LENGTH = 16;
@@ -66,41 +63,6 @@ export function configuredMeshKeyHash(): string | null {
     return sha256(key).toString("hex");
   } catch {
     return null;
-  }
-}
-
-/**
- * Eight hex chars of HMAC-SHA256(admin key, fixed label).
- * Null when owner auth is not configured. Never returns the key or its unkeyed digest.
- */
-export function adminKeyLogId(): string | null {
-  try {
-    const key = readConfiguredKey();
-    if (!key) return null;
-    return createHmac("sha256", key).update(ADMIN_KEY_LOG_LABEL, "utf8").digest("hex").slice(0, 8);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Log field for the configured admin key only.
- * Any other digest, including a hash of a different token, is omitted.
- */
-export function adminKeyLogRef(
-  candidateHash: string | null | undefined,
-): { keyRef: string } | Record<string, never> {
-  if (typeof candidateHash !== "string" || candidateHash.length === 0) return {};
-  try {
-    const configured = configuredMeshKeyHash();
-    const keyRef = adminKeyLogId();
-    if (!configured || !keyRef) return {};
-    const left = Buffer.from(candidateHash, "utf8");
-    const right = Buffer.from(configured, "utf8");
-    if (left.length !== right.length || !timingSafeEqual(left, right)) return {};
-    return { keyRef };
-  } catch {
-    return {};
   }
 }
 

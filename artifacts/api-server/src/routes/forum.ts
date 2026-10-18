@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { forumTopicsTable, forumRepliesTable, forumProposalsTable, forumVotesTable, forumKnowledgeTable, forumLearningMetricsTable, forumApplicantsTable, forumPostVotesTable } from "@workspace/db/schema";
 import { desc, eq, sql, gte } from "drizzle-orm";
 import { logger } from "../lib/logger";
-import { adminKeyLogRef, hashTokenSha256, validateMeshToken } from "../lib/mesh-auth";
+import { hashTokenSha256, validateMeshToken } from "../lib/mesh-auth";
 import { lookupForumIdentity, lookupTokenPrincipal, registerAdminPrincipal, invalidateForumIdentityCache } from "../lib/forum-identity-registry";
 import { forumTrustedIdentitiesTable } from "@workspace/db/schema";
 import { createHash, randomBytes } from "node:crypto";
@@ -53,13 +53,13 @@ async function resolvePostingIdentity(
   const identity = await lookupForumIdentity(requested);
 
   if (identity === null) {
-    logger.warn({ requestedAuthor: requested, ...adminKeyLogRef(keyHash) }, "Forum post rejected — identity DB lookup failed");
+    logger.warn({ requestedAuthor: requested, key: "configured" }, "Forum post rejected — identity DB lookup failed");
     res.status(503).json({ ok: false, error: "Identity registry temporarily unavailable. Please retry." });
     return null;
   }
 
   if (!identity.found) {
-    logger.warn({ requestedAuthor: requested, ...adminKeyLogRef(keyHash), context }, "Forum post rejected — identity not in registry");
+    logger.warn({ requestedAuthor: requested, key: "configured", context }, "Forum post rejected — identity not in registry");
     res.status(403).json({
       ok: false,
       error: `Unknown identity: "${requested}". Only registered identities in the forum registry may post.`,
@@ -68,7 +68,7 @@ async function resolvePostingIdentity(
   }
 
   if (!identity.canPostFromClient) {
-    logger.warn({ requestedAuthor: requested, identityType: identity.identityType, ...adminKeyLogRef(keyHash) }, "Forum post rejected — identity type cannot post from client");
+    logger.warn({ requestedAuthor: requested, identityType: identity.identityType, key: "configured" }, "Forum post rejected — identity type cannot post from client");
     res.status(403).json({
       ok: false,
       error: `Identity "${requested}" (${identity.identityType}) cannot post from client requests. Agent posts are generated server-side only.`,
@@ -84,9 +84,9 @@ async function resolvePostingIdentity(
       if (SOVEREIGN_AUTO_BIND.has(requested.toLowerCase())) {
         await registerAdminPrincipal(keyHash, requested);
         registeredPrincipal = requested;
-        logger.info({ requestedAuthor: requested, ...adminKeyLogRef(keyHash) }, "Auto-bound sovereign token to principal on first use");
+        logger.info({ requestedAuthor: requested, key: "configured" }, "Auto-bound sovereign token to principal on first use");
       } else {
-        logger.warn({ requestedAuthor: requested, ...adminKeyLogRef(keyHash) }, "Forum post rejected — token not pre-registered to any principal");
+        logger.warn({ requestedAuthor: requested, key: "configured" }, "Forum post rejected — token not pre-registered to any principal");
         res.status(403).json({
           ok: false,
           error: `Token is not registered to any posting identity. Pre-register via the FORUM_ADMIN_TOKEN environment variable or the admin registration endpoint. Anonymous self-registration is not permitted.`,
@@ -96,7 +96,7 @@ async function resolvePostingIdentity(
     }
 
     if (registeredPrincipal.toLowerCase() !== requested.toLowerCase()) {
-      logger.warn({ requestedAuthor: requested, registeredPrincipal, ...adminKeyLogRef(keyHash) }, "Forum post rejected — token bound to different principal");
+      logger.warn({ requestedAuthor: requested, registeredPrincipal, key: "configured" }, "Forum post rejected — token bound to different principal");
       res.status(403).json({
         ok: false,
         error: `Token is bound to principal "${registeredPrincipal}" — cannot post as "${requested}". Each token maps to exactly one verified identity.`,
@@ -113,9 +113,9 @@ async function resolvePostingIdentity(
     if (humanIdentity?.found) {
       await registerAdminPrincipal(keyHash, "Father");
       registeredPrincipal = "Father";
-      logger.info({ requestedAuthor: requested, ...adminKeyLogRef(keyHash) }, "Auto-bound sovereign token to Father for entity posting");
+      logger.info({ requestedAuthor: requested, key: "configured" }, "Auto-bound sovereign token to Father for entity posting");
     } else {
-      logger.warn({ requestedAuthor: requested, ...adminKeyLogRef(keyHash) }, "Forum post rejected — no admin identity available for auto-bind");
+      logger.warn({ requestedAuthor: requested, key: "configured" }, "Forum post rejected — no admin identity available for auto-bind");
       res.status(403).json({ ok: false, error: "No admin identity available for token binding." });
       return null;
     }
@@ -126,7 +126,7 @@ async function resolvePostingIdentity(
   const principalIsAdmin = ENTITY_POSTING_ADMINS.has(registeredPrincipal.toLowerCase());
 
   if (!principalMatchesEntity && !principalIsAdmin) {
-    logger.warn({ requestedAuthor: requested, registeredPrincipal, identityType: identity.identityType, ...adminKeyLogRef(keyHash) }, "Forum post rejected — token principal not authorized to post as this entity");
+    logger.warn({ requestedAuthor: requested, registeredPrincipal, identityType: identity.identityType, key: "configured" }, "Forum post rejected — token principal not authorized to post as this entity");
     res.status(403).json({
       ok: false,
       error: `Principal "${registeredPrincipal}" is not authorized to post as "${requested}". Entity posts require: the entity's own registered token, or an admin principal (Father/Admin).`,
@@ -134,7 +134,7 @@ async function resolvePostingIdentity(
     return null;
   }
 
-  logger.debug({ requestedAuthor: requested, identityType: identity.identityType, postedByPrincipal: registeredPrincipal, authorizedVia: principalMatchesEntity ? "entity-own-token" : "admin-delegation", ...adminKeyLogRef(keyHash) }, "Entity post authorized");
+  logger.debug({ requestedAuthor: requested, identityType: identity.identityType, postedByPrincipal: registeredPrincipal, authorizedVia: principalMatchesEntity ? "entity-own-token" : "admin-delegation", key: "configured" }, "Entity post authorized");
   return { resolvedAuthor: requested, identityType: identity.identityType };
 }
 
@@ -379,7 +379,7 @@ router.post("/tesseract-forum/topics", async (req, res) => {
       authorKeyHash: keyHash,
     }).returning();
 
-    logger.info({ id: topic.id, title, author: resolved.resolvedAuthor, identityType: resolved.identityType, ...adminKeyLogRef(keyHash) }, "Forum topic created by verified identity");
+    logger.info({ id: topic.id, title, author: resolved.resolvedAuthor, identityType: resolved.identityType, key: "configured" }, "Forum topic created by verified identity");
     return res.json({ ok: true, topic: omitKeyHash(topic) });
   } catch (err) {
     logger.error({ err }, "Failed to create forum topic");
@@ -430,7 +430,7 @@ router.post("/tesseract-forum/topics/:id/reply", async (req, res) => {
       .set({ replies: sql`${forumTopicsTable.replies} + 1`, updatedAt: new Date() })
       .where(eq(forumTopicsTable.id, id));
 
-    logger.info({ topicId: id, replyId: reply.id, author: resolved.resolvedAuthor, identityType: resolved.identityType, ...adminKeyLogRef(keyHash) }, "Forum reply persisted for verified identity");
+    logger.info({ topicId: id, replyId: reply.id, author: resolved.resolvedAuthor, identityType: resolved.identityType, key: "configured" }, "Forum reply persisted for verified identity");
     return res.json({ ok: true, reply: omitKeyHash(reply) });
   } catch (err) {
     return res.status(500).json({ ok: false, error: (err as Error).message });
@@ -565,7 +565,7 @@ router.post("/tesseract-forum/admin/register-principal", async (req, res) => {
     }
 
     await registerAdminPrincipal(targetKeyHash, principalName.trim());
-    logger.info({ registeredBy: callerPrincipal, targetHash: targetKeyHash.slice(0, 4) + "****", principalName }, "Token-principal binding registered via admin API");
+    logger.info({ registeredBy: callerPrincipal, binding: "bound", principalName }, "Token-principal binding registered via admin API");
 
     return res.json({ ok: true, message: `Token bound to "${principalName}" by ${callerPrincipal}` });
   } catch (err) {

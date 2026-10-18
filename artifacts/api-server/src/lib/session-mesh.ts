@@ -1,7 +1,6 @@
 import { WebSocket } from "ws";
 import { createHash } from "crypto";
 import { logger } from "./logger";
-import { adminKeyLogRef } from "./mesh-auth";
 import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 export interface MeshSession {
@@ -88,7 +87,7 @@ export function registerSession(
     isAuthorized: guardAuthorizer(isAuthorized),
   };
   group.set(sessionId, session);
-  logger.info({ sessionId, ...adminKeyLogRef(sovereignKeyHash), peerCount: group.size }, "Session registered in mesh");
+  logger.info({ sessionId, key: "configured", peerCount: group.size }, "Session registered in mesh");
   return session;
 }
 
@@ -111,7 +110,7 @@ export function removeSession(sovereignKeyHash: string, sessionId: string): void
   if (group.size === 0) {
     meshSessions.delete(sovereignKeyHash);
   }
-  logger.info({ sessionId, ...adminKeyLogRef(sovereignKeyHash) }, "Session removed from mesh");
+  logger.info({ sessionId, key: "configured" }, "Session removed from mesh");
 }
 
 export function getGroupSessions(sovereignKeyHash: string): MeshSessionInfo[] {
@@ -223,7 +222,7 @@ export function pruneMeshSessions(): void {
     }
     for (const sessionId of stale) {
       group.delete(sessionId);
-      logger.info({ sessionId, ...adminKeyLogRef(keyHash) }, "Stale session pruned from mesh");
+      logger.info({ sessionId, key: "configured" }, "Stale session pruned from mesh");
       broadcastToGroup(keyHash, {
         type: "mesh:peer-left",
         channel: "mesh",

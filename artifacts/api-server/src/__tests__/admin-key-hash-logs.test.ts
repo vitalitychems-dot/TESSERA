@@ -87,7 +87,7 @@ vi.mock("@workspace/db", () => ({
 }));
 
 import { logger } from "../lib/logger";
-import { ADMIN_KEY_LOG_LABEL, adminKeyLogRef, validateMeshToken } from "../lib/mesh-auth";
+import { validateMeshToken } from "../lib/mesh-auth";
 import { pruneMeshSessions, registerSession, removeSession } from "../lib/session-mesh";
 import forumRouter from "../routes/forum";
 
@@ -102,27 +102,35 @@ function sha256Hex(value: string): string {
   return createHash("sha256").update(value, "utf8").digest("hex");
 }
 
-function keyedLogId(value: string): string {
-  return createHmac("sha256", value).update(ADMIN_KEY_LOG_LABEL, "utf8").digest("hex").slice(0, 8);
+const RETIRED_LOG_LABEL = "tessera:admin-key-log-id:v1";
+
+function retiredLogId(value: string): string {
+  return createHmac("sha256", value).update(RETIRED_LOG_LABEL, "utf8").digest("hex").slice(0, 8);
 }
 
 const adminHash = sha256Hex(ADMIN_KEY);
 const wrongHash = sha256Hex(WRONG_KEY);
-const adminLogId = keyedLogId(ADMIN_KEY);
 
 function assertAbsent(haystack: string, needle: string): void {
   expect(needle.length > 0 && haystack.includes(needle)).toBe(false);
 }
 
+function assertNoDigestPrefixes(haystack: string, digest: string): void {
+  for (let length = 4; length <= digest.length; length += 1) {
+    assertAbsent(haystack, digest.slice(0, length));
+  }
+}
+
 function assertNoKeyMaterial(haystack: string): void {
   assertAbsent(haystack, ADMIN_KEY);
   assertAbsent(haystack, WRONG_KEY);
-  assertAbsent(haystack, adminHash);
-  assertAbsent(haystack, wrongHash);
-  assertAbsent(haystack, adminHash.slice(0, 16));
-  assertAbsent(haystack, adminHash.slice(0, 8));
-  assertAbsent(haystack, wrongHash.slice(0, 16));
-  assertAbsent(haystack, wrongHash.slice(0, 8));
+  assertAbsent(haystack, retiredLogId(ADMIN_KEY));
+  assertNoDigestPrefixes(haystack, adminHash);
+  assertNoDigestPrefixes(haystack, wrongHash);
+}
+
+function assertKeyConfigured(haystack: string): void {
+  expect(haystack.includes("\"configured\"")).toBe(true);
 }
 
 const LOG_LEVELS = ["trace", "debug", "info", "warn", "error", "fatal"] as const;
@@ -218,27 +226,18 @@ describe("admin key hashes stay out of logs", () => {
     });
   });
 
-  it("keeps mesh auth results and emits only the keyed log id", () => {
-    expect(adminLogId === adminHash.slice(0, 8)).toBe(false);
+  it("keeps mesh auth results without logging a key fingerprint", () => {
     expect(validateMeshToken(ADMIN_KEY) === adminHash).toBe(true);
     expect(validateMeshToken(`  ${ADMIN_KEY}  `) === adminHash).toBe(true);
     expect(validateMeshToken(WRONG_KEY)).toBeNull();
     expect(validateMeshToken(undefined)).toBeNull();
 
-    const matched = adminKeyLogRef(validateMeshToken(ADMIN_KEY));
-    const matchedId = "keyRef" in matched ? matched.keyRef : "";
-    expect(matchedId === adminLogId).toBe(true);
-    expect(Object.keys(adminKeyLogRef(wrongHash)).length).toBe(0);
-    expect(Object.keys(adminKeyLogRef(WRONG_KEY)).length).toBe(0);
-    expect(Object.keys(adminKeyLogRef(null)).length).toBe(0);
-
     delete process.env.TESSERACT_ADMIN_KEY;
     expect(validateMeshToken(ADMIN_KEY)).toBeNull();
-    expect(Object.keys(adminKeyLogRef(adminHash)).length).toBe(0);
     process.env.TESSERACT_ADMIN_KEY = ADMIN_KEY;
   });
 
-  it("logs a keyed id when a valid admin session is registered and removed", () => {
+  it("logs key presence when a valid admin session is registered and removed", () => {
     const hash = validateMeshToken(ADMIN_KEY);
     expect(hash === adminHash).toBe(true);
     const capture = startCapture();
@@ -248,7 +247,7 @@ describe("admin key hashes stay out of logs", () => {
       const output = capture.text();
       expect(output.includes("Session registered in mesh")).toBe(true);
       expect(output.includes("Session removed from mesh")).toBe(true);
-      expect(output.includes(adminLogId)).toBe(true);
+      assertKeyConfigured(output);
       assertNoKeyMaterial(output);
     } finally {
       capture.restore();
@@ -256,7 +255,7 @@ describe("admin key hashes stay out of logs", () => {
     }
   });
 
-  it("logs a keyed id when a valid admin session is pruned", () => {
+  it("logs key presence when a valid admin session is pruned", () => {
     const hash = validateMeshToken(ADMIN_KEY);
     const capture = startCapture();
     try {
@@ -264,7 +263,7 @@ describe("admin key hashes stay out of logs", () => {
       pruneMeshSessions();
       const output = capture.text();
       expect(output.includes("Stale session pruned from mesh")).toBe(true);
-      expect(output.includes(adminLogId)).toBe(true);
+      assertKeyConfigured(output);
       assertNoKeyMaterial(output);
     } finally {
       capture.restore();
@@ -284,7 +283,7 @@ describe("admin key hashes stay out of logs", () => {
       expect(output.includes("Session registered in mesh")).toBe(true);
       expect(output.includes("Session removed from mesh")).toBe(true);
       expect(output.includes("Stale session pruned from mesh")).toBe(true);
-      expect(output.includes(adminLogId)).toBe(false);
+      assertKeyConfigured(output);
       expect(output.includes("keyRef")).toBe(false);
       assertNoKeyMaterial(output);
     } finally {
@@ -326,95 +325,95 @@ describe("admin key hashes stay out of logs", () => {
     assertNoKeyMaterial(wrong.body);
   });
 
-  it("logs a keyed id when identity lookup fails for a valid token", async () => {
+  it("logs key presence when identity lookup fails for a valid token", async () => {
     harness.byName = { father: null };
     const result = await post("/tesseract-forum/topics", { title: "T", author: "Father" }, "valid");
     expect(result.status).toBe(503);
     expect(result.logs.includes("Forum post rejected — identity DB lookup failed")).toBe(true);
-    expect(result.logs.includes(adminLogId)).toBe(true);
+    assertKeyConfigured(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
 
-  it("logs a keyed id when the identity is not registered", async () => {
+  it("logs key presence when the identity is not registered", async () => {
     harness.byName = { river: UNKNOWN };
     const result = await post("/tesseract-forum/topics", { title: "T", author: "River" }, "valid");
     expect(result.status).toBe(403);
     expect(result.logs.includes("Forum post rejected — identity not in registry")).toBe(true);
-    expect(result.logs.includes(adminLogId)).toBe(true);
+    assertKeyConfigured(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
 
-  it("logs a keyed id when the identity cannot post from a client", async () => {
+  it("logs key presence when the identity cannot post from a client", async () => {
     harness.byName = { metaagent: AGENT };
     const result = await post("/tesseract-forum/topics", { title: "T", author: "MetaAgent" }, "valid");
     expect(result.status).toBe(403);
     expect(result.logs.includes("Forum post rejected — identity type cannot post from client")).toBe(true);
-    expect(result.logs.includes(adminLogId)).toBe(true);
+    assertKeyConfigured(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
 
-  it("logs a keyed id when a human token is not pre-registered", async () => {
+  it("logs key presence when a human token is not pre-registered", async () => {
     harness.byName = { river: HUMAN };
     harness.principal = null;
     const result = await post("/tesseract-forum/topics", { title: "T", author: "River" }, "valid");
     expect(result.status).toBe(403);
     expect(result.logs.includes("Forum post rejected — token not pre-registered to any principal")).toBe(true);
-    expect(result.logs.includes(adminLogId)).toBe(true);
+    assertKeyConfigured(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
 
-  it("logs a keyed id when the token is bound to a different principal", async () => {
+  it("logs key presence when the token is bound to a different principal", async () => {
     harness.byName = { father: HUMAN };
     harness.principal = "Admin";
     const result = await post("/tesseract-forum/topics", { title: "T", author: "Father" }, "valid");
     expect(result.status).toBe(403);
     expect(result.logs.includes("Forum post rejected — token bound to different principal")).toBe(true);
-    expect(result.logs.includes(adminLogId)).toBe(true);
+    assertKeyConfigured(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
 
-  it("logs a keyed id when a valid token auto-binds and creates a topic", async () => {
+  it("logs key presence when a valid token auto-binds and creates a topic", async () => {
     harness.byName = { father: HUMAN };
     harness.principal = null;
     const result = await post("/tesseract-forum/topics", { title: "T", content: "c", author: "Father" }, "valid");
     expect(result.status).toBe(200);
     expect(result.logs.includes("Auto-bound sovereign token to principal on first use")).toBe(true);
     expect(result.logs.includes("Forum topic created by verified identity")).toBe(true);
-    expect(result.logs.includes(adminLogId)).toBe(true);
+    assertKeyConfigured(result.logs);
     expect(harness.bound.length).toBe(1);
     expect(harness.bound[0] === adminHash).toBe(true);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
 
-  it("logs a keyed id when no admin identity is available for entity auto-bind", async () => {
+  it("logs key presence when no admin identity is available for entity auto-bind", async () => {
     harness.byName = { aletheia: ENTITY, father: null };
     harness.principal = null;
     const result = await post("/tesseract-forum/topics", { title: "T", author: "Aletheia" }, "valid");
     expect(result.status).toBe(403);
     expect(result.logs.includes("Forum post rejected — no admin identity available for auto-bind")).toBe(true);
-    expect(result.logs.includes(adminLogId)).toBe(true);
+    assertKeyConfigured(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
 
-  it("logs a keyed id when an entity post is not authorized", async () => {
+  it("logs key presence when an entity post is not authorized", async () => {
     harness.byName = { aletheia: ENTITY };
     harness.principal = "River";
     const result = await post("/tesseract-forum/topics", { title: "T", author: "Aletheia" }, "valid");
     expect(result.status).toBe(403);
     expect(result.logs.includes("Forum post rejected — token principal not authorized to post as this entity")).toBe(true);
-    expect(result.logs.includes(adminLogId)).toBe(true);
+    assertKeyConfigured(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
 
-  it("logs a keyed id when a valid token auto-binds for an entity post", async () => {
+  it("logs key presence when a valid token auto-binds for an entity post", async () => {
     harness.byName = { aletheia: ENTITY, father: HUMAN };
     harness.principal = null;
     const result = await post("/tesseract-forum/topics", { title: "T", author: "Aletheia" }, "valid");
@@ -422,19 +421,19 @@ describe("admin key hashes stay out of logs", () => {
     expect(result.logs.includes("Auto-bound sovereign token to Father for entity posting")).toBe(true);
     expect(result.logs.includes("Entity post authorized")).toBe(true);
     expect(result.logs.includes("Forum topic created by verified identity")).toBe(true);
-    expect(result.logs.includes(adminLogId)).toBe(true);
+    assertKeyConfigured(result.logs);
     expect(harness.bound[0] === adminHash).toBe(true);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
 
-  it("logs a keyed id when a valid token persists a forum reply", async () => {
+  it("logs key presence when a valid token persists a forum reply", async () => {
     harness.byName = { father: HUMAN };
     harness.principal = "Father";
     const result = await post("/tesseract-forum/topics/7/reply", { content: "hello", author: "Father" }, "valid");
     expect(result.status).toBe(200);
     expect(result.logs.includes("Forum reply persisted for verified identity")).toBe(true);
-    expect(result.logs.includes(adminLogId)).toBe(true);
+    assertKeyConfigured(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });

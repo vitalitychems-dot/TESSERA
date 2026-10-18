@@ -5,6 +5,7 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import healthRouter from "./routes/health";
 import type { IRouter } from "express";
+import { redactAccessLogUrl } from "./lib/access-log-url";
 import { logger } from "./lib/logger";
 import { initFileIntegrity } from "./lib/file-integrity";
 import { initFileRegistry } from "./lib/sovereign-file-registry";
@@ -133,7 +134,7 @@ app.use(
         return {
           id: req.id,
           method: req.method,
-          url: req.url?.split("?")[0],
+          url: redactAccessLogUrl(typeof req.url === "string" ? req.url : undefined),
         };
       },
       res(res) {
