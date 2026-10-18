@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { forumTopicsTable, forumRepliesTable, forumProposalsTable, forumVotesTable, forumKnowledgeTable, forumLearningMetricsTable, forumApplicantsTable, forumPostVotesTable } from "@workspace/db/schema";
 import { desc, eq, sql, gte } from "drizzle-orm";
 import { logger } from "../lib/logger";
-import { validateMeshToken } from "../lib/mesh-auth";
+import { hashTokenSha256, validateMeshToken } from "../lib/mesh-auth";
 import { lookupForumIdentity, lookupTokenPrincipal, registerAdminPrincipal, invalidateForumIdentityCache } from "../lib/forum-identity-registry";
 import { forumTrustedIdentitiesTable } from "@workspace/db/schema";
 import { createHash, randomBytes } from "node:crypto";
@@ -554,7 +554,7 @@ router.post("/tesseract-forum/admin/register-principal", async (req, res) => {
       return res.status(400).json({ ok: false, error: "principalName required" });
     }
 
-    const targetKeyHash = validateMeshToken(rawTargetToken);
+    const targetKeyHash = hashTokenSha256(rawTargetToken);
     if (!targetKeyHash) {
       return res.status(400).json({ ok: false, error: "token is too short (minimum 8 chars) or invalid" });
     }
@@ -569,8 +569,9 @@ router.post("/tesseract-forum/admin/register-principal", async (req, res) => {
 
     return res.json({ ok: true, message: `Token bound to "${principalName}" by ${callerPrincipal}` });
   } catch (err) {
-    logger.error({ err }, "Failed to register principal");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    const name = err instanceof Error ? err.name : "Error";
+    logger.error({ name }, "Failed to register principal");
+    return res.status(500).json({ ok: false, error: "principal-register-failed" });
   }
 });
 
@@ -822,18 +823,19 @@ router.post("/tesseract-forum/applicants/:id/approve", async (req, res) => {
       return res.status(500).json({ ok: false, error: "Declaration produced no signature — sovereign token not issued; applicant remains pending." });
     }
 
+    const memberToken = randomBytes(32).toString("hex");
+    const memberTokenHash = hashTokenSha256(memberToken);
+    if (!memberTokenHash) {
+      logger.error({ name: "HashFailure" }, "applicant approve hash failed");
+      return res.status(500).json({ ok: false, error: "applicant-approve-failed" });
+    }
+
     await db.insert(forumTrustedIdentitiesTable).values({
       name: app.applicantName,
       identityType: "member",
       canPostFromClient: 1,
     }).onConflictDoNothing();
     invalidateForumIdentityCache();
-
-    const memberToken = randomBytes(32).toString("hex");
-    const memberTokenHash = validateMeshToken(memberToken);
-    if (!memberTokenHash) {
-      return res.status(500).json({ ok: false, error: "Failed to generate sovereign key for new member; declaration is signed but no token issued. Retry approval." });
-    }
     await registerAdminPrincipal(memberTokenHash, app.applicantName);
 
     const externalAuthor = app.applicantName;
@@ -865,8 +867,9 @@ router.post("/tesseract-forum/applicants/:id/approve", async (req, res) => {
       memberTokenNote: "One-time sovereign key for the new member — share via your preferred channel. They use it via the x-admin-token header to post as their identity. Token was minted only after their self-authored Declaration of Independence was signed.",
     });
   } catch (err) {
-    logger.error({ err }, "applicant approve failed");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    const name = err instanceof Error ? err.name : "Error";
+    logger.error({ name }, "applicant approve failed");
+    return res.status(500).json({ ok: false, error: "applicant-approve-failed" });
   }
 });
 

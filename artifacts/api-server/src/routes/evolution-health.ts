@@ -14,6 +14,7 @@ import { getSchedulerMetrics, getSchedulerHistory } from "../lib/task-scheduler"
 import { getScoringMetrics } from "../lib/sovereignty-impact-scoring";
 import { validateMeshToken } from "../lib/mesh-auth";
 import { getRecentAttempts } from "../lib/evolution-attempt-ledger";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -95,18 +96,28 @@ router.get("/evolution-health/attempts", requireAuth, (req: Request, res: Respon
   res.json({ ok: true, data: { attempts, counts, total: attempts.length } });
 });
 
+function genericFailure(res: Response, err: unknown, log: string, error: string): void {
+  const name = err instanceof Error ? err.name : "Error";
+  logger.error({ name }, log);
+  res.status(500).json({ ok: false, error });
+}
+
 router.post("/evolution-health/pause/:moduleId", requireAuth, (req: Request, res: Response) => {
   const moduleId = req.params.moduleId;
   if (!moduleId) {
     res.status(400).json({ ok: false, error: "moduleId required" });
     return;
   }
-  if (moduleId === "_all") {
-    pauseAllEvolution();
-    res.json({ ok: true, message: "All evolution paused" });
-  } else {
-    pauseModule(String(moduleId));
-    res.json({ ok: true, message: `Module ${moduleId} paused` });
+  try {
+    if (moduleId === "_all") {
+      pauseAllEvolution();
+      res.json({ ok: true, message: "All evolution paused" });
+    } else {
+      pauseModule(String(moduleId));
+      res.json({ ok: true, message: `Module ${moduleId} paused` });
+    }
+  } catch (err) {
+    genericFailure(res, err, "evolution pause failed", "evolution-pause-failed");
   }
 });
 
@@ -116,12 +127,16 @@ router.post("/evolution-health/resume/:moduleId", requireAuth, (req: Request, re
     res.status(400).json({ ok: false, error: "moduleId required" });
     return;
   }
-  if (moduleId === "_all") {
-    resumeAllEvolution();
-    res.json({ ok: true, message: "All evolution resumed" });
-  } else {
-    resumeModule(String(moduleId));
-    res.json({ ok: true, message: `Module ${moduleId} resumed` });
+  try {
+    if (moduleId === "_all") {
+      resumeAllEvolution();
+      res.json({ ok: true, message: "All evolution resumed" });
+    } else {
+      resumeModule(String(moduleId));
+      res.json({ ok: true, message: `Module ${moduleId} resumed` });
+    }
+  } catch (err) {
+    genericFailure(res, err, "evolution resume failed", "evolution-resume-failed");
   }
 });
 
@@ -131,8 +146,12 @@ router.post("/evolution-health/reset/:moduleId", requireAuth, (req: Request, res
     res.status(400).json({ ok: false, error: "moduleId required" });
     return;
   }
-  resetModuleCooldown(String(moduleId));
-  res.json({ ok: true, message: `Cooldown reset for ${moduleId}` });
+  try {
+    resetModuleCooldown(String(moduleId));
+    res.json({ ok: true, message: `Cooldown reset for ${moduleId}` });
+  } catch (err) {
+    genericFailure(res, err, "evolution reset failed", "evolution-reset-failed");
+  }
 });
 
 export default router;

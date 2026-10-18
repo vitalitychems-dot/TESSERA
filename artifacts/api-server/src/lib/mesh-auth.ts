@@ -17,6 +17,22 @@ function readConfiguredKey(): string | null {
 }
 
 /**
+ * Plain sha256 hex of a token being minted or bound.
+ * Does not authenticate and does not compare against the admin key.
+ * Returns null for missing, short, or unhashable values. Never logs the token.
+ */
+export function hashTokenSha256(token: string | undefined | null): string | null {
+  try {
+    if (typeof token !== "string") return null;
+    const presented = token.trim();
+    if (presented.length < MIN_TOKEN_LENGTH) return null;
+    return sha256(presented).toString("hex");
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Accepts only the configured admin key.
  * Compares sha256(token) to sha256(key) with timingSafeEqual (equal-length digests).
  * Returns the hex digest on match. Unset, short, wrong, or thrown checks return null.
