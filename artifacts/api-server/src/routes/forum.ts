@@ -20,6 +20,15 @@ function omitKeyHash<T extends WithKeyHash>(row: T): Omit<T, "authorKeyHash"> {
   return rest;
 }
 
+function forumErrorName(err: unknown): string {
+  return err instanceof Error ? err.name : "UnknownError";
+}
+
+function respondForumInternal(res: Response, err: unknown, event: string): Response {
+  logger.error({ errorName: forumErrorName(err) }, event);
+  return res.status(500).json({ ok: false, error: "internal_error" });
+}
+
 const COUNCIL_MEMBERS_FOR_SUMMON = [
   "GrandCoordinatorAgent", "QuantumMechanicAgent", "BioNeuralistAgent",
   "DNACrystalArchivistAgent", "MeshNetworkArchitectAgent", "LowPowerInnovatorAgent",
@@ -308,7 +317,7 @@ router.get("/tesseract-forum/topics", async (req, res) => {
       externalAIs: [],
     });
   } catch (err) {
-    logger.error({ err }, "Failed to fetch forum topics");
+    logger.error({ errorName: forumErrorName(err) }, "Failed to fetch forum topics");
     return res.json({ ok: true, topics: [], count: 0, colors: {}, categories: [], agents: [], entities: [], moltbookMembers: [], externalAIs: [] });
   }
 });
@@ -321,7 +330,7 @@ router.get("/tesseract-forum/topics/:id", async (req, res) => {
     if (rows.length === 0) return res.status(404).json({ ok: false, error: "Topic not found" });
     return res.json({ ok: true, topic: omitKeyHash(rows[0]) });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondForumInternal(res, err, "Failed to fetch forum topic");
   }
 });
 
@@ -349,7 +358,7 @@ router.get("/tesseract-forum/topics/:id/replies", async (req, res) => {
     }
     return res.json({ ok: true, replies, tree: roots, count: replies.length });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondForumInternal(res, err, "Failed to fetch forum replies");
   }
 });
 
@@ -382,8 +391,7 @@ router.post("/tesseract-forum/topics", async (req, res) => {
     logger.info({ id: topic.id, title, author: resolved.resolvedAuthor, identityType: resolved.identityType, keyHash }, "Forum topic created by verified identity");
     return res.json({ ok: true, topic: omitKeyHash(topic) });
   } catch (err) {
-    logger.error({ err }, "Failed to create forum topic");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondForumInternal(res, err, "Failed to create forum topic");
   }
 });
 
@@ -433,7 +441,7 @@ router.post("/tesseract-forum/topics/:id/reply", async (req, res) => {
     logger.info({ topicId: id, replyId: reply.id, author: resolved.resolvedAuthor, identityType: resolved.identityType, keyHash }, "Forum reply persisted for verified identity");
     return res.json({ ok: true, reply: omitKeyHash(reply) });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondForumInternal(res, err, "Failed to create forum reply");
   }
 });
 
@@ -447,7 +455,7 @@ router.post("/tesseract-forum/topics/:id/summon-all", async (_req, res) => {
 
     return res.json({ ok: true, queued: replies.length, replies });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondForumInternal(res, err, "Failed to summon forum council");
   }
 });
 
@@ -466,7 +474,7 @@ router.post("/tesseract-forum/topics/:id/proposals", async (req, res) => {
       },
     });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondForumInternal(res, err, "Failed to create forum proposal");
   }
 });
 
@@ -487,7 +495,7 @@ router.get("/tesseract-forum/proposals/:id/votes", async (req, res) => {
     const proposal = await db.select().from(forumProposalsTable).where(eq(forumProposalsTable.id, id)).limit(1);
     return res.json({ ok: true, proposal: proposal[0] || null, votes, count: votes.length });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondForumInternal(res, err, "Failed to fetch proposal votes");
   }
 });
 
@@ -500,7 +508,7 @@ router.post("/tesseract-forum/engine/cycle", async (_req, res) => {
     const result = await runForumCycle();
     return res.json({ ok: true, ...result });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondForumInternal(res, err, "Failed to run forum cycle");
   }
 });
 
@@ -511,7 +519,7 @@ router.get("/tesseract-forum/knowledge", async (_req, res) => {
       .limit(50);
     return res.json({ ok: true, count: insights.length, insights });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondForumInternal(res, err, "Failed to fetch forum knowledge");
   }
 });
 
@@ -522,7 +530,7 @@ router.get("/tesseract-forum/learning-metrics", async (_req, res) => {
       .limit(20);
     return res.json({ ok: true, count: metrics.length, metrics });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondForumInternal(res, err, "Failed to fetch forum learning metrics");
   }
 });
 
@@ -623,8 +631,7 @@ router.get("/tesseract-forum/heartbeat", async (_req, res) => {
       },
     });
   } catch (err) {
-    logger.error({ err }, "forum heartbeat failed");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondForumInternal(res, err, "forum heartbeat failed");
   }
 });
 
@@ -652,7 +659,7 @@ router.get("/tesseract-forum/applicants", async (req, res) => {
     }));
     return res.json({ ok: true, applicants: enriched, count: enriched.length });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondForumInternal(res, err, "Failed to fetch forum applicants");
   }
 });
 
@@ -736,8 +743,7 @@ router.post("/tesseract-forum/applicants/submit", async (req, res) => {
     logger.info({ applicantId: row.id, externalIdentity, source, declarationChars: declCheck.declaration.length, vowCount: declCheck.vows.length }, "External applicant submitted for vetting (with self-authored Declaration draft)");
     return res.json({ ok: true, applicant: row, message: "Application submitted — pending Father/Admin review. Your Declaration of Independence will be signed under your name on admission." });
   } catch (err) {
-    logger.error({ err }, "applicant submit failed");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondForumInternal(res, err, "applicant submit failed");
   }
 });
 
@@ -813,11 +819,7 @@ router.post("/tesseract-forum/applicants/:id/approve", async (req, res) => {
         vows: draft.vows,
       });
     } catch (err) {
-      logger.error({ err: (err as Error).message, applicantId: id }, "Declaration signing failed — refusing to mint sovereign token");
-      return res.status(500).json({
-        ok: false,
-        error: `Declaration signing failed: ${(err as Error).message}. Sovereign token not issued; applicant remains pending.`,
-      });
+      return respondForumInternal(res, err, "Declaration signing failed — refusing to mint sovereign token");
     }
     if (!signedDeclaration || !signedDeclaration.signature) {
       return res.status(500).json({ ok: false, error: "Declaration produced no signature — sovereign token not issued; applicant remains pending." });
@@ -894,7 +896,7 @@ router.post("/tesseract-forum/applicants/:id/reject", async (req, res) => {
     logger.info({ applicantId: id, vettedBy: principal, reason }, "Applicant rejected");
     return res.json({ ok: true, applicant: result[0] });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondForumInternal(res, err, "Failed to reject forum applicant");
   }
 });
 
@@ -942,7 +944,7 @@ router.post("/tesseract-forum/topics/:id/vote", async (req, res) => {
 
     return res.json({ ok: true, vote: row });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondForumInternal(res, err, "Failed to record forum vote");
   }
 });
 
@@ -961,7 +963,7 @@ router.get("/tesseract-forum/topics/:id/votes", async (req, res) => {
     }
     return res.json({ ok: true, votes: rows, tallies: Array.from(byReply.values()) });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return respondForumInternal(res, err, "Failed to fetch forum votes");
   }
 });
 
