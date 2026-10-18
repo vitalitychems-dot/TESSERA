@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { bm25Scores } from "../lib/hybrid-retrieval";
+import { bm25Scores, type Bm25DfProbe } from "../lib/hybrid-retrieval";
 
 function tokenize(text: string): string[] {
   return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 2);
@@ -45,20 +45,37 @@ function documentFrequencyFilter(tokenized: string[][], qTerms: string[]): Recor
   return df;
 }
 
-/** Same single pass as bm25Scores: each query term counted once per document. */
-function documentFrequencySinglePass(tokenized: string[][], qTerms: string[]): Record<string, number> {
-  const qSet = new Set(qTerms);
-  const df: Record<string, number> = Object.fromEntries(qTerms.map((t) => [t, 0]));
-  for (const d of tokenized) {
-    const seen = new Set<string>();
-    for (const w of d) {
-      if (qSet.has(w) && !seen.has(w)) {
-        seen.add(w);
-        df[w]++;
-      }
+function isArrayIndexProperty(prop: string | symbol): boolean {
+  if (typeof prop !== "string" || prop.length === 0) return false;
+  const index = Number(prop);
+  return Number.isInteger(index) && index >= 0 && String(index) === prop;
+}
+
+/** Calls Array.includes and counts each index read, which is the filter scan. */
+function includesCountingExams(tokens: string[], term: string, exams: { n: number }): boolean {
+  const wrapped = new Proxy(tokens, {
+    get(target, prop, receiver) {
+      if (isArrayIndexProperty(prop)) exams.n += 1;
+      return Reflect.get(target, prop, receiver);
+    },
+  });
+  return wrapped.includes(term);
+}
+
+function documentFrequencyFilterCounted(
+  tokenized: string[][],
+  qTerms: string[],
+): { df: Record<string, number>; tokenExams: number } {
+  const df: Record<string, number> = {};
+  const exams = { n: 0 };
+  for (const t of qTerms) {
+    let docsWithTerm = 0;
+    for (const d of tokenized) {
+      if (includesCountingExams(d, t, exams)) docsWithTerm += 1;
     }
+    df[t] = docsWithTerm;
   }
-  return df;
+  return { df, tokenExams: exams.n };
 }
 
 function expectScoresEqual(actual: number[], expected: number[]) {
@@ -99,7 +116,7 @@ describe("hybrid bm25 document frequency", () => {
     expectScoresEqual(bm25Scores(query, docs), bm25ScoresFilterDf(query, docs));
   });
 
-  it("single-pass df is faster on a repeated documentation corpus", () => {
+  it("single-pass df does less work than the filter pass on a repeated documentation corpus", () => {
     expect(lines.length).toBeGreaterThanOrEqual(20);
     const paragraph = lines.slice(0, 20).join(" ");
     const tail = "xylophone quartzite marigold zeppelin harmonica nebula kayak fjord";
@@ -110,65 +127,47 @@ describe("hybrid bm25 document frequency", () => {
       expect(paragraphTerms.has(term)).toBe(false);
     }
     const body = Array.from({ length: 6 }, () => paragraph).join(" ");
-    const docs = Array.from({ length: 500 }, (_, i) => `${body} ${tail} copy${i}`);
-    expectScoresEqual(bm25Scores(tail, docs), bm25ScoresFilterDf(tail, docs));
-
-    // Time the document-frequency pass, not the whole scorer. Tokenizing and
-    // per-document term counts dominate bm25Scores and hide this loop.
+    // Document count cancels out of the token-exam ratio. Eight documents keep
+    // the repeated body, and stay inside the 5s vitest timeout when CI is loaded.
+    const docs = Array.from({ length: 8 }, (_, i) => `${body} ${tail} copy${i}`);
     const tokenized = docs.map(tokenize);
-    const iterations = 8;
-    const trials = 5;
-    const anchor = qTerms[0];
-    let observed = 0;
-    const runFilter = () => {
-      observed += documentFrequencyFilter(tokenized, qTerms)[anchor];
-    };
-    const runSinglePass = () => {
-      observed += documentFrequencySinglePass(tokenized, qTerms)[anchor];
-    };
-    runFilter();
-    runSinglePass();
+    const bodyTokenCount = tokenize(body).length;
+    const totalTokens = tokenized.reduce((sum, doc) => sum + doc.length, 0);
+    expect(bodyTokenCount).toBeGreaterThan(0);
+    expect(totalTokens).toBeGreaterThan(docs.length * bodyTokenCount);
 
-    // Alternate which pass is timed first so a stall is not charged only to
-    // whichever call happens to run second. Each trial is one paired sample.
-    const samplePair = (filterFirst: boolean) => {
-      let beforeMs = 0;
-      let afterMs = 0;
-      for (let i = 0; i < iterations; i++) {
-        const filterLeads = filterFirst === (i % 2 === 0);
-        const start = performance.now();
-        if (filterLeads) runFilter();
-        else runSinglePass();
-        const mid = performance.now();
-        if (filterLeads) runSinglePass();
-        else runFilter();
-        const end = performance.now();
-        if (filterLeads) {
-          beforeMs += mid - start;
-          afterMs += end - mid;
-        } else {
-          afterMs += mid - start;
-          beforeMs += end - mid;
-        }
-      }
-      return { beforeMs, afterMs };
-    };
+    const probe: Bm25DfProbe = { tokenExams: { n: 0 }, df: {} };
+    const filterStart = performance.now();
+    const filterDf = documentFrequencyFilter(tokenized, qTerms);
+    const filterMs = performance.now() - filterStart;
+    const counted = documentFrequencyFilterCounted(tokenized, qTerms);
+    expect(counted.df).toEqual(filterDf);
 
-    let best = samplePair(true);
-    for (let trial = 1; trial < trials; trial++) {
-      const sample = samplePair(trial % 2 === 0);
-      if (sample.beforeMs * best.afterMs > best.beforeMs * sample.afterMs) best = sample;
+    const singleStart = performance.now();
+    const probedScores = bm25Scores(tail, docs, 1.5, 0.75, probe);
+    const singlePassMs = performance.now() - singleStart;
+    expectScoresEqual(probedScores, bm25ScoresFilterDf(tail, docs));
+    expectScoresEqual(bm25Scores(tail, docs), bm25ScoresFilterDf(tail, docs));
+    expect(probe.df).toEqual(filterDf);
+    for (const term of qTerms) {
+      expect(probe.df?.[term]).toBe(docs.length);
     }
-    const { beforeMs, afterMs } = best;
-    const speedup = beforeMs / afterMs;
-    console.log(
-      `BM25_DF beforeMs=${beforeMs.toFixed(1)} afterMs=${afterMs.toFixed(1)} speedup=${speedup.toFixed(2)}`,
-    );
 
-    expect(observed).toBeGreaterThan(0);
-    // 1.5x sits under the steady single-pass gap and above timer noise on the
-    // best pair, so one stalled sample does not fail a real speedup.
-    const minSpeedup = 1.5;
-    expect(speedup).toBeGreaterThanOrEqual(minSpeedup);
+    const singlePassExams = probe.tokenExams?.n ?? 0;
+    // The production pass reads each token once. The filter pass calls
+    // Array.includes once per query term and therefore rereads the repeated
+    // body that many times. terms-1 stays under that ratio: includes stops
+    // at the tail term, so the last few tokens are not reread for every term.
+    const minFactor = qTerms.length - 1;
+    expect(singlePassExams).toBe(totalTokens);
+    expect(counted.tokenExams).toBeGreaterThanOrEqual(docs.length * qTerms.length * bodyTokenCount);
+    expect(counted.tokenExams).toBeGreaterThanOrEqual(singlePassExams * minFactor);
+
+    const tokenFactor = counted.tokenExams / singlePassExams;
+    // Times are a log only. filterDfMs is the includes pass; bm25ScoresMs is the
+    // whole production helper, including tokenization, so they are not a ratio.
+    console.log(
+      `BM25_DF singlePassTokenExams=${singlePassExams} filterTokenExams=${counted.tokenExams} tokenFactor=${tokenFactor.toFixed(2)} filterDfMs=${filterMs.toFixed(1)} bm25ScoresMs=${singlePassMs.toFixed(1)}`,
+    );
   });
 });
