@@ -2,7 +2,7 @@ import { db } from "@workspace/db";
 import { forumTrustedIdentitiesTable, forumPrincipalTokensTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
-import { validateMeshToken } from "./mesh-auth";
+import { hashTokenSha256 } from "./mesh-auth";
 
 const SEED_IDENTITIES: Array<{ name: string; identityType: string; canPostFromClient: number }> = [
   { name: "Father", identityType: "human", canPostFromClient: 1 },
@@ -127,7 +127,7 @@ async function seedAdminTokenBindingFromEnv(): Promise<void> {
   let bound = 0;
   for (const [envName, envToken] of candidates) {
     if (!envToken) continue;
-    const keyHash = validateMeshToken(envToken);
+    const keyHash = hashTokenSha256(envToken);
     if (!keyHash) {
       logger.warn({ envName }, "Admin token candidate too short (minimum 8 chars) or invalid — skipping pre-registration");
       continue;
