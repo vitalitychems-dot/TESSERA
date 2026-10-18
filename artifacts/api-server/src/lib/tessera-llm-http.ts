@@ -50,7 +50,6 @@ export function decideChatLlmBaseUrl(
   if (!trimmed) return { ok: false, code: "missing" };
   const loopback = classifyChatLoopbackBase(trimmed);
   if (loopback.ok) return loopback;
-  if (isSovereignNoExternalLlm(env)) return { ok: false, code: "refused" };
   return { ok: false, code: "refused" };
 }
 
