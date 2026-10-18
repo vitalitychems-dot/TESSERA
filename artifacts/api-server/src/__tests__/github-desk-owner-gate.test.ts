@@ -1,6 +1,11 @@
+import { createServer, type Server } from "node:http";
 import { readFileSync } from "node:fs";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import express, { type Request as ExpressRequest, type Response as ExpressResponse } from "express";
+import { rejectWhenDatabaseNotConfigured } from "../lib/db-availability";
+import { resetSessionCheckRateLimitForTests } from "../lib/father-verify-throttle";
 import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
+import internalSessionCheckRouter, { handleInternalSessionCheck } from "../routes/internal-session-check";
 import {
   deskOwnerGate,
   mainNowGated,
@@ -26,10 +31,38 @@ const SERVER_TOKEN = "server-desk-token";
 
 const previousAdmin = process.env[ADMIN_ENV];
 const previousSession = process.env[SESSION_ENV];
+const previousPort = process.env.PORT;
+const previousDatabase = process.env.DATABASE_URL;
+
+let checkServer: Server;
+let checkPort = 0;
+
+beforeAll(async () => {
+  const app = express();
+  app.use(express.json({ limit: "2kb" }));
+  app.use(rejectWhenDatabaseNotConfigured);
+  app.use("/api", internalSessionCheckRouter);
+  checkServer = createServer(app);
+  await new Promise<void>((resolve) => checkServer.listen(0, "127.0.0.1", () => resolve()));
+  const address = checkServer.address();
+  if (!address || typeof address === "string") throw new Error("session-check test server has no port");
+  checkPort = address.port;
+  process.env.PORT = String(checkPort);
+});
+
+afterAll(async () => {
+  restore("PORT", previousPort);
+  await new Promise<void>((resolve, reject) => {
+    checkServer.close((error) => (error ? reject(error) : resolve()));
+  });
+});
 
 afterEach(() => {
   restore(ADMIN_ENV, previousAdmin);
   restore(SESSION_ENV, previousSession);
+  restore("DATABASE_URL", previousDatabase);
+  process.env.PORT = String(checkPort);
+  resetSessionCheckRateLimitForTests();
 });
 
 function restore(name: string, value: string | undefined) {
@@ -69,36 +102,36 @@ function assertGeneric(body: unknown) {
 }
 
 describe("github desk owner gate", () => {
-  it("returns 503 when the owner gate is not configured", () => {
+  it("returns 503 when the owner gate is not configured", async () => {
     unconfigured();
-    const decision = deskOwnerGate(`${SESSION_COOKIE}=present`);
+    const decision = await deskOwnerGate(`${SESSION_COOKIE}=present`);
     expect(decision).toEqual({ ok: false, status: 503, error: "sovereign-unconfigured" });
     assertGeneric(decision);
   });
 
-  it("returns 503 when the admin key is blank", () => {
+  it("returns 503 when the admin key is blank", async () => {
     process.env[ADMIN_ENV] = "   ";
-    const decision = deskOwnerGate(undefined);
+    const decision = await deskOwnerGate(undefined);
     expect(decision).toEqual({ ok: false, status: 503, error: "sovereign-unconfigured" });
     assertGeneric(decision);
   });
 
-  it("returns 401 when no owner session is presented", () => {
+  it("returns 401 when no owner session is presented", async () => {
     configured();
-    const decision = deskOwnerGate(undefined);
+    const decision = await deskOwnerGate(undefined);
     expect(decision).toEqual({ ok: false, status: 401, error: "unauthenticated" });
     assertGeneric(decision);
   });
 
-  it("returns 401 when the owner session is wrong", () => {
+  it("returns 401 when the owner session is wrong", async () => {
     configured();
-    const decision = deskOwnerGate(`${SESSION_COOKIE}=wrong-synthetic-session`);
+    const decision = await deskOwnerGate(`${SESSION_COOKIE}=wrong-synthetic-session`);
     expect(decision).toEqual({ ok: false, status: 401, error: "unauthenticated" });
     assertGeneric(decision);
   });
 
-  it("accepts a valid owner session", () => {
-    expect(deskOwnerGate(ownerCookie())).toEqual({ ok: true });
+  it("accepts a valid owner session", async () => {
+    expect(await deskOwnerGate(ownerCookie())).toEqual({ ok: true });
   });
 
   it("wires the desk server functions through the owner gate", () => {
@@ -445,6 +478,186 @@ describe("gated desk actions", () => {
   });
 });
 
+describe("loopback session check", () => {
+  it("returns 503 when the api-server is unreachable", async () => {
+    configured();
+    const closed = createServer((_req, res) => {
+      res.end();
+    });
+    const port = await listen(closed);
+    await closeServer(closed);
+    process.env.PORT = String(port);
+    const decision = await deskOwnerGate(ownerCookie());
+    expect(decision).toEqual({ ok: false, status: 503, error: "sovereign-unconfigured" });
+    assertGeneric(decision);
+  });
+
+  it("returns 503 when the api-server times out", async () => {
+    configured();
+    const hanging = createServer(() => undefined);
+    const port = await listen(hanging);
+    process.env.PORT = String(port);
+    try {
+      const decision = await deskOwnerGate(ownerCookie());
+      expect(decision).toEqual({ ok: false, status: 503, error: "sovereign-unconfigured" });
+      assertGeneric(decision);
+    } finally {
+      hanging.closeAllConnections();
+      await closeServer(hanging);
+    }
+  }, 10_000);
+
+  it("fails closed when the session check responds with a redirect", async () => {
+    configured();
+    const redirecting = createServer((_req, res) => {
+      res.writeHead(302, { location: "http://127.0.0.1:9/elsewhere" });
+      res.end();
+    });
+    const port = await listen(redirecting);
+    process.env.PORT = String(port);
+    try {
+      const decision = await deskOwnerGate(ownerCookie());
+      expect(decision).toEqual({ ok: false, status: 401, error: "unauthenticated" });
+      assertGeneric(decision);
+    } finally {
+      await closeServer(redirecting);
+    }
+  });
+
+  it("returns only the valid flag, with no session contents or token echo", async () => {
+    configured();
+    const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+    const valid = await postCheck({ session: issued.signedId });
+    expect(valid.status).toBe(200);
+    expect(valid.text).toBe('{"valid":true}');
+    expect(valid.text.includes(issued.signedId)).toBe(false);
+    expect(valid.text.includes("expiresAt")).toBe(false);
+    expect(valid.text.includes("record")).toBe(false);
+    const invalid = await postCheck({ session: "wrong-synthetic-session" });
+    expect(invalid.status).toBe(401);
+    expect(invalid.text).toBe('{"valid":false}');
+    expect(invalid.text.includes("wrong-synthetic-session")).toBe(false);
+    const cookie = await postCheck({}, `${SESSION_COOKIE}=${encodeURIComponent(issued.signedId)}`);
+    expect(cookie.status).toBe(200);
+    expect(cookie.text).toBe('{"valid":true}');
+    expect(cookie.text.includes(issued.signedId)).toBe(false);
+    const gate = await deskOwnerGate(`${SESSION_COOKIE}=${encodeURIComponent(issued.signedId)}`);
+    expect(gate).toEqual({ ok: true });
+  });
+
+  it("rejects a token in the query string", async () => {
+    configured();
+    const token = "query-token-must-not-echo";
+    const response = await fetch(`http://127.0.0.1:${checkPort}/api/internal/session-check?session=${token}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    const text = await response.text();
+    expect(response.status).toBe(401);
+    expect(text).toBe('{"valid":false}');
+    expect(text.includes(token)).toBe(false);
+  });
+
+  it("rejects a forwarded header from a loopback socket", async () => {
+    configured();
+    const token = "forwarded-token-must-not-echo";
+    const response = await fetch(`http://127.0.0.1:${checkPort}/api/internal/session-check`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-for": "203.0.113.9",
+      },
+      body: JSON.stringify({ session: token }),
+    });
+    const text = await response.text();
+    expect(response.status).toBe(403);
+    expect(text).toBe('{"valid":false}');
+    expect(text.includes(token)).toBe(false);
+    expect(text.includes("203.0.113.9")).toBe(false);
+  });
+
+  it("rejects a non-loopback socket and an empty forwarding header", () => {
+    configured();
+    const peer = invokeCheck({
+      remoteAddress: "203.0.113.5",
+      headers: {},
+      body: { session: "peer-token-must-not-echo" },
+    });
+    expect(peer.status).toBe(403);
+    expect(peer.body).toEqual({ valid: false });
+    expect(JSON.stringify(peer.body).includes("peer-token-must-not-echo")).toBe(false);
+    const forwarded = invokeCheck({
+      remoteAddress: "127.0.0.1",
+      headers: { "x-forwarded-for": "" },
+      body: { session: "empty-forward-token" },
+    });
+    expect(forwarded.status).toBe(403);
+    expect(forwarded.body).toEqual({ valid: false });
+    const mapped = invokeCheck({
+      remoteAddress: "::ffff:127.0.0.1",
+      headers: {},
+      body: { session: "not-a-session" },
+    });
+    expect(mapped.status).toBe(401);
+    expect(mapped.body).toEqual({ valid: false });
+    const v6 = invokeCheck({
+      remoteAddress: "::1",
+      headers: {},
+      body: { session: "not-a-session" },
+    });
+    expect(v6.status).toBe(401);
+    expect(v6.body).toEqual({ valid: false });
+  });
+
+  it("rate-limits failed session checks", async () => {
+    configured();
+    resetSessionCheckRateLimitForTests();
+    const token = "rate-limit-token-must-not-echo";
+    const results = [];
+    for (let attempt = 0; attempt < 7; attempt += 1) {
+      results.push(await postCheck({ session: token }));
+    }
+    for (const result of results.slice(0, 6)) {
+      expect(result.status).toBe(401);
+      expect(result.text).toBe('{"valid":false}');
+      expect(result.text.includes(token)).toBe(false);
+    }
+    expect(results[6]?.status).toBe(429);
+    expect(results[6]?.text.includes(token)).toBe(false);
+    expect(results[6]?.text.includes("signedId")).toBe(false);
+    expect(results[6]?.text.includes("rate-limited")).toBe(true);
+  });
+
+  it("does not require a database", async () => {
+    configured();
+    delete process.env.DATABASE_URL;
+    const result = await postCheck({ session: "not-a-session" });
+    expect(result.status).toBe(401);
+    expect(result.text).toBe('{"valid":false}');
+    expect(result.text.includes("database not configured")).toBe(false);
+  });
+
+  it("keeps the check off the preview proxy and the public internal-path list", () => {
+    const gateSource = readFileSync(new URL("../lib/github-desk-gate.ts", import.meta.url), "utf8");
+    expect(gateSource.includes("lookupSession")).toBe(false);
+    expect(gateSource.includes("http://127.0.0.1:")).toBe(true);
+    expect(gateSource.includes('redirect: "error"')).toBe(true);
+    const appSource = readFileSync(new URL("../app.ts", import.meta.url), "utf8");
+    expect(appSource.includes('"/api/internal/session-check"')).toBe(true);
+    const dbSource = readFileSync(new URL("../lib/db-availability.ts", import.meta.url), "utf8");
+    expect(dbSource.includes('"/api/internal/session-check"')).toBe(true);
+    const viteSource = readFileSync(new URL("../../../../preview/vite.config.ts", import.meta.url), "utf8");
+    expect(viteSource.includes("proxy")).toBe(false);
+    const registry = readFileSync(new URL("../lib/provider-registry.ts", import.meta.url), "utf8");
+    const internalOnly = registry.slice(registry.indexOf("INTERNAL_ONLY_PATHS"), registry.indexOf("SOVEREIGN_TOKEN"));
+    expect(internalOnly.includes("/api/internal")).toBe(false);
+    const routeSource = readFileSync(new URL("../routes/internal-session-check.ts", import.meta.url), "utf8");
+    expect(routeSource.includes("logger")).toBe(false);
+    expect(routeSource.includes("console.")).toBe(false);
+  });
+});
+
 function ownerCookieWithoutConfig(): string {
   return `${SESSION_COOKIE}=present`;
 }
@@ -490,6 +703,66 @@ function fetchSpy(urls: string[]): typeof fetch {
     urls.push(String(url));
     return jsonResponse({ type: "file", encoding: "base64", size: 1, content: Buffer.from("x").toString("base64") });
   }) as typeof fetch;
+}
+
+function listen(server: Server): Promise<number> {
+  return new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        reject(new Error("no port"));
+        return;
+      }
+      resolve(address.port);
+    });
+  });
+}
+
+function closeServer(server: Server): Promise<void> {
+  return new Promise((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()));
+  });
+}
+
+async function postCheck(body: unknown, cookie?: string): Promise<{ status: number; text: string }> {
+  const headers: Record<string, string> = { "content-type": "application/json", accept: "application/json" };
+  if (cookie) headers.cookie = cookie;
+  const response = await fetch(`http://127.0.0.1:${checkPort}/api/internal/session-check`, {
+    method: "POST",
+    redirect: "error",
+    headers,
+    body: JSON.stringify(body),
+  });
+  return { status: response.status, text: await response.text() };
+}
+
+function invokeCheck(input: {
+  remoteAddress: string;
+  headers: Record<string, string>;
+  body: unknown;
+}): { status: number; body: unknown } {
+  let status = 0;
+  let payload: unknown;
+  const req = {
+    originalUrl: "/api/internal/session-check",
+    url: "/api/internal/session-check",
+    headers: input.headers,
+    body: input.body,
+    socket: { remoteAddress: input.remoteAddress },
+  } as unknown as ExpressRequest;
+  const res = {
+    status(code: number) {
+      status = code;
+      return this;
+    },
+    json(body: unknown) {
+      payload = body;
+      return this;
+    },
+  } as unknown as ExpressResponse;
+  handleInternalSessionCheck(req, res);
+  return { status, body: payload };
 }
 
 function jsonResponse(body: unknown): Response {

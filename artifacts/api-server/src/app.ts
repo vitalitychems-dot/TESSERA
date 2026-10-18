@@ -91,6 +91,7 @@ const ALWAYS_OPEN_PREFIXES = [
   "/api/admin/session", // Heavy Council P9: gate must reach unlock during boot
   "/api/admin/session/status",
   "/api/admin/session/logout",
+  "/api/internal/session-check",
   "/api/external-tools/",
   "/api/sacred-timing/",
   "/api/health",

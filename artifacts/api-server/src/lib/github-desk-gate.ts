@@ -1,11 +1,11 @@
 // Owner gate for the preview GitHub desk.
-// Same fail-closed sovereign_session check as decideOwnerSession in sovereign-admin.ts:
-// TESSERACT_ADMIN_KEY unset -> 503, missing or invalid cookie -> 401.
+// Preview does not share the api-server session Map, so this gate POSTs the
+// caller's own session token to the api-server loopback session check.
+// Unreachable or timed-out api-server -> 503. Any other error, or {valid:false} -> 401.
 // Denial bodies stay generic: no lookup reason, no exception text, no env values.
-// The session record is the in-memory Map in sovereign-session.ts for this process.
-// Importing this file from preview does not attach the api-server process Map.
 
-import { isAdminTokenConfigured, lookupSession, SESSION_COOKIE } from "./sovereign-session";
+import { SESSION_COOKIE } from "./sovereign-session";
+import { parseConfiguredPort } from "./server-config";
 
 export const DESK_FILE_BYTE_CAP = 32_768;
 
@@ -32,15 +32,96 @@ export type DeskGithubApi = (path: string, init?: { method?: string; body?: stri
 type BoardLine = { id?: number; user: string; body: string };
 type PullRow = { repo: string; number: number; title: string; state: string };
 
-export function deskOwnerGate(cookieHeader: string | undefined): { ok: true } | DeskGateDenial {
-  if (!isAdminTokenConfigured()) {
-    return { ok: false, status: 503, error: "sovereign-unconfigured" };
+const SESSION_CHECK_TIMEOUT_MS = 1500;
+const UNREACHABLE_CODES = new Set([
+  "ECONNREFUSED",
+  "ENOTFOUND",
+  "EHOSTUNREACH",
+  "ECONNRESET",
+  "EAI_AGAIN",
+  "ETIMEDOUT",
+  "ECONNABORTED",
+  "UND_ERR_CONNECT_TIMEOUT",
+  "UND_ERR_HEADERS_TIMEOUT",
+  "UND_ERR_BODY_TIMEOUT",
+  "UND_ERR_SOCKET",
+]);
+
+const UNAVAILABLE: DeskGateDenial = { ok: false, status: 503, error: "sovereign-unconfigured" };
+const UNAUTHENTICATED: DeskGateDenial = { ok: false, status: 401, error: "unauthenticated" };
+
+export async function deskOwnerGate(cookieHeader: string | undefined): Promise<{ ok: true } | DeskGateDenial> {
+  const url = sessionCheckUrl();
+  if (!url) return UNAVAILABLE;
+  const token = sessionCookie(cookieHeader);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), SESSION_CHECK_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      redirect: "error",
+      signal: controller.signal,
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify({ session: token ?? "" }),
+    });
+    if (response.status === 503) {
+      await response.body?.cancel().catch(() => undefined);
+      return UNAVAILABLE;
+    }
+    const valid = await readValidFlag(response);
+    if (response.status === 200 && valid === true) return { ok: true };
+    return UNAUTHENTICATED;
+  } catch (error) {
+    return isUnreachable(error) ? UNAVAILABLE : UNAUTHENTICATED;
+  } finally {
+    clearTimeout(timer);
   }
-  const lookup = lookupSession(sessionCookie(cookieHeader));
-  if (!lookup.valid || !lookup.record) {
-    return { ok: false, status: 401, error: "unauthenticated" };
+}
+
+function sessionCheckUrl(): string | null {
+  try {
+    const port = parseConfiguredPort(process.env.PORT);
+    return `http://127.0.0.1:${port}/api/internal/session-check`;
+  } catch {
+    return null;
   }
-  return { ok: true };
+}
+
+async function readValidFlag(response: Response): Promise<boolean | null> {
+  const length = response.headers.get("content-length");
+  if (length !== null && Number(length) > 64) {
+    await response.body?.cancel().catch(() => undefined);
+    return null;
+  }
+  const text = await response.text();
+  if (text.length > 64) return null;
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const keys = Object.keys(parsed);
+    if (keys.length !== 1 || keys[0] !== "valid") return null;
+    const valid = (parsed as { valid: unknown }).valid;
+    return typeof valid === "boolean" ? valid : null;
+  } catch {
+    return null;
+  }
+}
+
+function isUnreachable(error: unknown): boolean {
+  const seen = new Set<unknown>();
+  let current: unknown = error;
+  while (current && typeof current === "object" && !seen.has(current)) {
+    seen.add(current);
+    const name = "name" in current ? (current as { name?: unknown }).name : undefined;
+    if (name === "AbortError" || name === "TimeoutError") return true;
+    const code = "code" in current ? (current as { code?: unknown }).code : undefined;
+    if (typeof code === "string" && UNREACHABLE_CODES.has(code)) return true;
+    current = "cause" in current ? (current as { cause?: unknown }).cause : undefined;
+  }
+  return false;
 }
 
 function sessionCookie(cookieHeader: string | undefined): string | undefined {
@@ -109,7 +190,7 @@ export async function readRepoFileGated(
   cookieHeader: string | undefined,
   io: RepoFileIo,
 ): Promise<{ ok: true; text: string; path: string } | { ok: false; error: string; status?: 401 | 503 }> {
-  const gate = deskOwnerGate(cookieHeader);
+  const gate = await deskOwnerGate(cookieHeader);
   if (!gate.ok) return gate;
   const pinned = pinRepoFile(input);
   if (!pinned.ok) return pinned;
@@ -157,7 +238,7 @@ export async function openPullsGated(
   cookieHeader: string | undefined,
   githubApi: DeskGithubApi,
 ): Promise<{ ok: boolean; status?: 401 | 503; at: string; rows: PullRow[]; error: string }> {
-  const gate = deskOwnerGate(cookieHeader);
+  const gate = await deskOwnerGate(cookieHeader);
   if (!gate.ok) return { ...gate, at: "", rows: [], error: gate.error };
   const rows: PullRow[] = [];
   let failed = false;
@@ -198,7 +279,7 @@ export async function readBoardGated(
     savedBoard: BoardLine[];
   },
 ): Promise<{ ok: true; lines: BoardLine[]; error: "" } | { ok: false; status?: 401 | 503; error: string; lines: BoardLine[] }> {
-  const gate = deskOwnerGate(cookieHeader);
+  const gate = await deskOwnerGate(cookieHeader);
   if (!gate.ok) return { ...gate, lines: [], error: gate.error };
   try {
     const result = await deps.githubApi("/repos/vitalitychems-dot/Gitbook/issues/2/comments");
@@ -222,7 +303,7 @@ export async function postApprovalGated(
   cookieHeader: string | undefined,
   deps: { githubApi: DeskGithubApi; refuseRepeat: (body: string) => Promise<string | null> },
 ): Promise<{ ok: true; url: string } | { ok: false; status?: 401 | 503; error: string }> {
-  const gate = deskOwnerGate(cookieHeader);
+  const gate = await deskOwnerGate(cookieHeader);
   if (!gate.ok) return gate;
   if (data.decision !== "YES" && data.decision !== "NO") return { ok: false, error: "The decision must be yes or no." };
   if (typeof data.commentId !== "number" || !Number.isInteger(data.commentId) || data.commentId < 1) {
@@ -256,7 +337,7 @@ export async function postBoardGated(
     ghComment: (body: string) => Promise<boolean>;
   },
 ): Promise<{ ok: true; url: string } | { ok: false; status?: 401 | 503; error: string }> {
-  const gate = deskOwnerGate(cookieHeader);
+  const gate = await deskOwnerGate(cookieHeader);
   if (!gate.ok) return gate;
   if (typeof data.text !== "string") return { ok: false, error: "The command was not posted." };
   const refused = deps.noteAllowed(data.text) ?? deps.writeRefusal("vitalitychems-dot/Gitbook");
@@ -304,7 +385,7 @@ export async function rickReachGated(
   | { ok: false; status: 401 | 503; error: DeskGateDenial["error"]; login: ""; repos: []; line: string }
   | { ok: false; login: ""; repos: []; line: typeof REACH_FAIL }
 > {
-  const gate = deskOwnerGate(cookieHeader);
+  const gate = await deskOwnerGate(cookieHeader);
   if (!gate.ok) return { ...gate, login: "", repos: [], line: REACH_FAIL };
   try {
     const user = await githubApi("/user");
@@ -334,7 +415,7 @@ export async function openRepoContentsGated(
   cookieHeader: string | undefined,
   io: RepoFileIo,
 ): Promise<OpenOk | OpenNo> {
-  const gate = deskOwnerGate(cookieHeader);
+  const gate = await deskOwnerGate(cookieHeader);
   if (!gate.ok) return { ...gate, kind: "no", line: OPEN_FAIL, entries: [], text: "" };
   const repo = typeof input.repo === "string" ? input.repo.trim().replace(/\.git$/i, "") : "";
   const rawPath = typeof input.path === "string" ? input.path : "";
@@ -362,7 +443,7 @@ export async function mainNowGated(
   cookieHeader: string | undefined,
   deps: { githubApi: DeskGithubApi; mainGap: (tesseraSha: string, gitbookSha: string) => { line: string } },
 ): Promise<{ ok: true; line: string } | { ok: false; status?: 401 | 503; error?: DeskGateDenial["error"]; line: string }> {
-  const gate = deskOwnerGate(cookieHeader);
+  const gate = await deskOwnerGate(cookieHeader);
   if (!gate.ok) return { ...gate, line: MAIN_FAIL };
   try {
     const tessera = await deps.githubApi("/repos/vitalitychems-dot/TESSERA/commits/main");
@@ -392,7 +473,7 @@ export async function treeDeltaGated(
     ) => string;
   },
 ): Promise<{ ok: true; line: string } | { ok: false; status?: 401 | 503; error?: DeskGateDenial["error"]; line: string }> {
-  const gate = deskOwnerGate(cookieHeader);
+  const gate = await deskOwnerGate(cookieHeader);
   if (!gate.ok) return { ...gate, line: TREE_FAIL };
   try {
     const tesseraCommit = await deps.githubApi("/repos/vitalitychems-dot/TESSERA/commits/main");
@@ -421,7 +502,7 @@ export async function readGitbookGated(
   | { ok: true; error: ""; notes: { user: string; at: string; body: string }[]; files: { name: string; href: string }[] }
   | { ok: false; status?: 401 | 503; error: string; notes: { user: string; at: string; body: string }[]; files: { name: string; href: string }[] }
 > {
-  const gate = deskOwnerGate(cookieHeader);
+  const gate = await deskOwnerGate(cookieHeader);
   if (!gate.ok) return { ...gate, notes: [], files: [] };
   const notes: { user: string; at: string; body: string }[] = [];
   try {

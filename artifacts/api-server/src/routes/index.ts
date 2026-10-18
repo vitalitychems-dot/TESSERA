@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
 import adminSessionRouter from "./admin-session";
+import internalSessionCheckRouter from "./internal-session-check";
 import diagnosticsRouter from "./diagnostics";
 import securityRouter from "./security";
 import securityDefenseRouter from "./security-defense";
@@ -109,6 +110,7 @@ router.use(inventionSynthesisRouter);
 router.use(agiRouter);
 router.use(agiStreamRouter);
 router.use("/", adminSessionRouter);
+router.use(internalSessionCheckRouter);
 router.use(councilRouter);
 router.use(councilMeetingRouter);
 router.use(fatherKeyConferenceRouter);

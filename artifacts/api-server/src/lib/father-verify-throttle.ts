@@ -174,6 +174,83 @@ function releaseRawStamp(ip: string, stamp: RawStamp): void {
   if (globalIdx >= 0) _rawGlobalHits.splice(globalIdx, 1);
 }
 
+// Desk session checks from preview. Same reserve/refund rules as rawKeyFailRateLimit,
+// with separate counters so loopback desk misses cannot drain admin raw-key routes.
+const SESSION_CHECK_WINDOW_MS = 60_000;
+const SESSION_CHECK_IP_MAX = 6;
+const SESSION_CHECK_GLOBAL_MAX = 30;
+const SESSION_CHECK_MAX_IPS = 4096;
+const _sessionCheckHits = new Map<string, RawStamp[]>();
+const _sessionCheckGlobalHits: RawStamp[] = [];
+
+function pruneSessionCheck(now: number): void {
+  for (const [ip, arr] of _sessionCheckHits) {
+    const filtered = arr.filter((hit) => now - hit.at < SESSION_CHECK_WINDOW_MS);
+    if (filtered.length === 0) _sessionCheckHits.delete(ip);
+    else _sessionCheckHits.set(ip, filtered);
+  }
+  evictOldest(_sessionCheckHits, SESSION_CHECK_MAX_IPS);
+  const globalHits = _sessionCheckGlobalHits.filter((hit) => now - hit.at < SESSION_CHECK_WINDOW_MS);
+  _sessionCheckGlobalHits.length = 0;
+  _sessionCheckGlobalHits.push(...globalHits);
+}
+
+function releaseSessionCheckStamp(ip: string, stamp: RawStamp): void {
+  const current = _sessionCheckHits.get(ip);
+  if (current) {
+    const idx = current.indexOf(stamp);
+    if (idx >= 0) current.splice(idx, 1);
+    if (current.length === 0) _sessionCheckHits.delete(ip);
+  }
+  const globalIdx = _sessionCheckGlobalHits.indexOf(stamp);
+  if (globalIdx >= 0) _sessionCheckGlobalHits.splice(globalIdx, 1);
+}
+
+export function resetSessionCheckRateLimitForTests(): void {
+  _sessionCheckHits.clear();
+  _sessionCheckGlobalHits.length = 0;
+}
+
+export function sessionCheckFailRateLimit(req: Request, res: Response, next: NextFunction): void {
+  const now = Date.now();
+  pruneSessionCheck(now);
+  const ip = ipOf(req);
+  const arr = _sessionCheckHits.get(ip) ?? [];
+  const retry = (limit: number, oldest: number, scope: string) => {
+    const retryAfterMs = SESSION_CHECK_WINDOW_MS - (now - oldest);
+    res.setHeader("Retry-After", Math.max(1, Math.ceil(retryAfterMs / 1000)).toString());
+    res.status(429).json({
+      ok: false,
+      error: "rate-limited",
+      message: `Session check is rate-limited to ${limit} failed attempts per minute ${scope}.`,
+      retryAfterMs,
+    });
+  };
+  if (arr.length >= SESSION_CHECK_IP_MAX) {
+    retry(SESSION_CHECK_IP_MAX, arr[0].at, "per IP");
+    return;
+  }
+  if (_sessionCheckGlobalHits.length >= SESSION_CHECK_GLOBAL_MAX) {
+    retry(SESSION_CHECK_GLOBAL_MAX, _sessionCheckGlobalHits[0].at, "globally");
+    return;
+  }
+  const stamp: RawStamp = { at: now };
+  arr.push(stamp);
+  _sessionCheckHits.set(ip, arr);
+  _sessionCheckGlobalHits.push(stamp);
+  evictOldest(_sessionCheckHits, SESSION_CHECK_MAX_IPS);
+  let settled = false;
+  const settle = () => {
+    if (settled) return;
+    settled = true;
+    if (res.statusCode === 401 || res.statusCode === 403) return;
+    releaseSessionCheckStamp(ip, stamp);
+  };
+  res.on("finish", settle);
+  res.on("close", settle);
+  next();
+}
+
 export function rawKeyFailRateLimit(req: Request, res: Response, next: NextFunction): void {
   const now = Date.now();
   pruneRaw(now);
