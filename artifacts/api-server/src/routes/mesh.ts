@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { getMeshStats, getGroupSessions, getGroupSharedState } from "../lib/session-mesh";
 import { validateMeshToken, validateSovereignAdminToken } from "../lib/mesh-auth";
 import { rawKeyFailRateLimit } from "../lib/father-verify-throttle";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -32,7 +33,9 @@ router.get("/mesh/stats", (_req, res) => {
       messageCount: 0,
     });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    const name = err instanceof Error ? err.name : "Error";
+    logger.error({ name }, "mesh stats failed");
+    return res.status(500).json({ ok: false, error: "mesh-stats-failed" });
   }
 });
 
@@ -52,7 +55,9 @@ router.get("/mesh/sessions/:keyHash", rawKeyFailRateLimit, requireRealAdminToken
     const sharedState = getGroupSharedState(keyHash);
     return res.json({ ok: true, sessions, sharedState, count: sessions.length });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    const name = err instanceof Error ? err.name : "Error";
+    logger.error({ name }, "mesh sessions failed");
+    return res.status(500).json({ ok: false, error: "mesh-sessions-failed" });
   }
 });
 
