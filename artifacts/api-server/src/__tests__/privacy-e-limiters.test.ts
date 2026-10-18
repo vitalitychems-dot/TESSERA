@@ -56,7 +56,7 @@ describe("privacy e limiters and admin key sources", () => {
   beforeAll(async () => {
     process.env.TESSERACT_ADMIN_KEY = ADMIN_KEY;
     process.env.SOVEREIGN_SESSION_SECRET = "synthetic-session-secret-32chars!!";
-    registerSession(MESH_HASH, "synthetic-session", { readyState: 0 } as never);
+    registerSession(MESH_HASH, "synthetic-session", { readyState: 0 } as never, {}, () => true);
     const app = express();
     app.set("trust proxy", 1);
     app.use(express.json());
