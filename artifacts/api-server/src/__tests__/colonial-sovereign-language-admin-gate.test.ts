@@ -183,10 +183,8 @@ describe("colonial and sovereign language admin gate", () => {
     }
   });
 
-  it("leaves an ungated language route open to an anonymous caller", async () => {
+  it("returns 401 for the language alphabet when no owner session is presented", async () => {
     const response = await send("GET", "/sovereign-language/alphabet");
-    expect(response.status).toBe(200);
-    const json = await response.json() as { ok?: boolean };
-    expect(json.ok).toBe(true);
+    await expectJson(response, 401, GENERIC_401);
   });
 });

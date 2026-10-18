@@ -46,6 +46,10 @@ const attempts = new Map<string, BountyAttempt[]>();
 let attemptsLoaded = false;
 const ATTEMPTS_FILE = "bounty-attempts.json";
 
+function failureName(err: unknown): string {
+  return err instanceof Error ? err.name : "Error";
+}
+
 async function ensureAttemptsLoaded(): Promise<void> {
   if (attemptsLoaded) return;
   attemptsLoaded = true;
@@ -129,7 +133,7 @@ export async function refreshBounties(): Promise<CodeBounty[]> {
         const r = await searchGitHub(q);
         all.push(...r);
       } catch (err) {
-        logger.warn({ q, err: (err as Error).message }, "code-bounties: query failed");
+        logger.warn({ q, errorName: failureName(err) }, "code-bounties: query failed");
       }
     }
     const seen = new Set<string>();
@@ -181,9 +185,9 @@ export function getAttempts(bountyId?: string): BountyAttempt[] {
 export function startBountyRefresher(): void {
   if (timer) return;
   void ensureAttemptsLoaded();
-  void refreshBounties().catch(err => logger.warn({ err: (err as Error).message }, "code-bounties: initial refresh failed"));
+  void refreshBounties().catch(err => logger.warn({ errorName: failureName(err) }, "code-bounties: initial refresh failed"));
   timer = setSacredInterval(() => {
-    void refreshBounties().catch(err => logger.warn({ err: (err as Error).message }, "code-bounties: refresh failed", "code-bounties-real"));
+    void refreshBounties().catch(err => logger.warn({ errorName: failureName(err) }, "code-bounties: refresh failed", "code-bounties-real"));
   }, REFRESH_MS, "code-bounties-real");
   if (typeof timer.unref === "function") timer.unref();
   logger.info("code-bounty refresher started");

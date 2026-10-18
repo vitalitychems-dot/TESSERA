@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import express from "express";
+import { createHmac, randomBytes } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 import { stopAutonomousRotation } from "../lib/sovereign-cipher";
@@ -126,15 +127,35 @@ describe("colonial language admin gate and legacy xor key", () => {
     path: string,
     cookie?: string,
     body?: Record<string, string>,
+    withAdminKey = false,
   ): Promise<Response> {
     const headers = new Headers();
     if (cookie !== undefined) headers.set("cookie", cookie);
-    let payload: string | undefined;
-    if (body !== undefined) {
-      headers.set("content-type", "application/json");
-      payload = JSON.stringify(body);
+    let payload: Record<string, string> | undefined = body;
+    if (withAdminKey) {
+      headers.set("x-tesseract-admin-key", SYNTHETIC_ADMIN_KEY);
+      headers.set("x-admin-token", SYNTHETIC_ADMIN_KEY);
+      headers.set("authorization", `Bearer ${SYNTHETIC_ADMIN_KEY}`);
+      if (payload !== undefined) {
+        payload = { ...payload, token: SYNTHETIC_ADMIN_KEY, adminKey: SYNTHETIC_ADMIN_KEY };
+      }
     }
-    return fetch(`${baseUrl}${path}`, { method, headers, body: payload });
+    let serialized: string | undefined;
+    if (payload !== undefined) {
+      headers.set("content-type", "application/json");
+      serialized = JSON.stringify(payload);
+    }
+    return fetch(`${baseUrl}${path}`, { method, headers, body: serialized });
+  }
+
+  function invalidSessionCookie(): string {
+    return `${SESSION_COOKIE}=not-a-session`;
+  }
+
+  function forgedSessionCookie(): string {
+    const rawId = randomBytes(32).toString("hex");
+    const mac = createHmac("sha256", SYNTHETIC_ADMIN_KEY).update(rawId).digest("hex");
+    return `${SESSION_COOKIE}=${rawId}.${mac}`;
   }
 
   async function expectJson(response: Response, status: number, body: unknown): Promise<void> {
@@ -155,6 +176,38 @@ describe("colonial language admin gate and legacy xor key", () => {
     for (const route of GATED) {
       const response = await send(route.method, route.path, undefined, route.body);
       await expectJson(response, 401, GENERIC_401);
+    }
+  });
+
+  it("rejects an invalid or forged cookie even when a valid admin key is presented", async () => {
+    const cookies = [invalidSessionCookie(), forgedSessionCookie(), `${SESSION_COOKIE}=${SYNTHETIC_ADMIN_KEY}`];
+    for (const cookie of cookies) {
+      for (const route of GATED) {
+        const response = await send(route.method, route.path, cookie, route.body, true);
+        await expectJson(response, 401, { ok: false, error: "unauthenticated", reason: "bad-signature" });
+      }
+    }
+  });
+
+  it("rejects an expired owner cookie even when a valid admin key is presented", async () => {
+    const issued = GATED.map(() => issueSession({ ip: "127.0.0.1", userAgent: "vitest", ttlMs: 60_000 }));
+    const deadline = Math.max(...issued.map((session) => session.expiresAt)) + 1_000;
+    const now = vi.spyOn(Date, "now").mockImplementation(() => deadline);
+    try {
+      for (const [index, route] of GATED.entries()) {
+        const session = issued[index];
+        if (!session) throw new Error("missing issued session");
+        const response = await send(
+          route.method,
+          route.path,
+          `${SESSION_COOKIE}=${session.signedId}`,
+          route.body,
+          true,
+        );
+        await expectJson(response, 401, { ok: false, error: "unauthenticated", reason: "expired" });
+      }
+    } finally {
+      now.mockRestore();
     }
   });
 

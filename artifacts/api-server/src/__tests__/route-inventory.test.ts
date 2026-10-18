@@ -7,6 +7,7 @@ import {
   duplicateRoutes,
   listExpressRegistrations,
   listMountedRouteModules,
+  listMountedRouteModulesFromSource,
   listRouteRegistrations,
   routeModuleFileNames,
   type DuplicateRoute,
@@ -228,6 +229,32 @@ function withOwner<T>(run: () => Promise<T>): Promise<T> {
     else process.env.SOVEREIGN_SESSION_SECRET = previousSession;
   });
 }
+
+describe("route index binding names", () => {
+  it("skips only the explicit session-gate binding and fails on any other unknown name", () => {
+    const accepted = [
+      'import governanceConsensusRouter from "./governance-consensus";',
+      'router.use("/council-executor/config", requireAdminSession);',
+      "router.use(governanceConsensusRouter);",
+    ].join("\n");
+    const mounts = listMountedRouteModulesFromSource(accepted);
+    expect(mounts.map((entry) => entry.binding)).toEqual(["governanceConsensusRouter"]);
+
+    const unknown = [
+      'import governanceConsensusRouter from "./governance-consensus";',
+      'router.use("/consensus/metrics", notARealRouter);',
+      "router.use(governanceConsensusRouter);",
+    ].join("\n");
+    expect(() => listMountedRouteModulesFromSource(unknown)).toThrow(
+      'router.use("/consensus/metrics", notARealRouter) has no local route import',
+    );
+
+    const bare = 'router.use(missingRouter);';
+    expect(() => listMountedRouteModulesFromSource(bare)).toThrow(
+      "router.use(missingRouter) has no local route import",
+    );
+  });
+});
 
 describe("HYB-012 route inventory", () => {
   const registrations = listRouteRegistrations();

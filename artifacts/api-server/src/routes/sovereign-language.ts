@@ -57,8 +57,12 @@ function respondInternalError(res: Response, err: unknown, label: string) {
   return res.status(500).json({ ok: false, error: "internal error" });
 }
 
+// This router is mounted at the API root, so the gate must be path-scoped.
+// A path-less use() would run for every later router.
+router.use("/sovereign-language", requireAdminSession);
 
-router.get("/sovereign-language/sovereign-layer/verify", requireAdminSession, (_req, res) => {
+
+router.get("/sovereign-language/sovereign-layer/verify", (_req, res) => {
   try {
     const testMessage = "the agent will execute the consensus protocol and encrypt this sovereign mesh transmission with the quantum kernel";
     const encoded = encodeWithSovereignLayer(testMessage);
@@ -204,7 +208,7 @@ router.post("/sovereign-language/translate", (req, res) => {
   }
 });
 
-router.get("/sovereign-language/kernel/status", requireAdminSession, (_req, res) => {
+router.get("/sovereign-language/kernel/status", (_req, res) => {
   try {
     return res.json({ ok: true, data: getKernelStatus() });
   } catch (err) {
@@ -212,7 +216,7 @@ router.get("/sovereign-language/kernel/status", requireAdminSession, (_req, res)
   }
 });
 
-router.post("/sovereign-language/kernel/execute", requireAdminSession, (req, res) => {
+router.post("/sovereign-language/kernel/execute", (req, res) => {
   try {
     const { instruction } = req.body as { instruction?: string };
     if (!instruction || typeof instruction !== "string") {
@@ -233,7 +237,7 @@ router.get("/sovereign-language/kernel/opcodes", (_req, res) => {
   }
 });
 
-router.post("/sovereign-language/encrypt", requireAdminSession, (req, res) => {
+router.post("/sovereign-language/encrypt", (req, res) => {
   try {
     const { text } = req.body as { text?: string };
     if (!text || typeof text !== "string") {
@@ -251,7 +255,7 @@ router.post("/sovereign-language/encrypt", requireAdminSession, (req, res) => {
   }
 });
 
-router.get("/sovereign-language/cipher/status", requireAdminSession, (_req, res) => {
+router.get("/sovereign-language/cipher/status", (_req, res) => {
   try {
     if (!isColonialSecretConfigured()) {
       return res.status(503).json(colonialSecretUnavailableBody());
@@ -267,7 +271,7 @@ router.get("/sovereign-language/cipher/status", requireAdminSession, (_req, res)
   }
 });
 
-router.post("/sovereign-language/cipher/encrypt", requireAdminSession, (req, res) => {
+router.post("/sovereign-language/cipher/encrypt", (req, res) => {
   try {
     const { text, agentId } = req.body as { text?: string; agentId?: string };
     if (!text || !agentId) {
@@ -285,7 +289,7 @@ router.post("/sovereign-language/cipher/encrypt", requireAdminSession, (req, res
   }
 });
 
-router.post("/sovereign-language/cipher/pair-encrypt", requireAdminSession, (req, res) => {
+router.post("/sovereign-language/cipher/pair-encrypt", (req, res) => {
   try {
     const { text, senderAgent, receiverAgent } = req.body as { text?: string; senderAgent?: string; receiverAgent?: string };
     if (!text || !senderAgent || !receiverAgent) {
