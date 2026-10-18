@@ -2,6 +2,8 @@
 // Same fail-closed sovereign_session check as decideOwnerSession in sovereign-admin.ts:
 // TESSERACT_ADMIN_KEY unset -> 503, missing or invalid cookie -> 401.
 // Denial bodies stay generic: no lookup reason, no exception text, no env values.
+// The session record is the in-memory Map in sovereign-session.ts for this process.
+// Importing this file from preview does not attach the api-server process Map.
 
 import { isAdminTokenConfigured, lookupSession, SESSION_COOKIE } from "./sovereign-session";
 
@@ -14,7 +16,7 @@ const ALLOWED_REPOS = [
 
 const PATH_DENIED = "That repository path is not allowed." as const;
 const SECRET_PATH =
-  /(^|\/)\.env(?:\.|$)|(^|\/)\.git(?:\/|$)|(?:^|\/)id_rsa(?:\.|$)|(?:^|\/)id_ed25519(?:\.|$)|(?:^|\/)[^/]*\.(?:pem|key|p12|pfx)$|(?:^|\/)[^/]*(?:secret|password|credential)[^/]*$/i;
+  /(^|\/)\.env(?:\.|$)|(^|\/)\.git(?:\/|$)|(?:^|\/)id_rsa(?:\.|$)|(?:^|\/)id_ed25519(?:\.|$)|(?:^|\/)[^/]*\.(?:pem|key|p12|pfx)$|(?:^|\/)[^/]*(?:secret|password|credential)[^/]*$|(?:^|\/)[^/]*natal-vault[^/]*(?:\/|$)/i;
 const SECRET_TEXT =
   /SESSION_SECRET|BEGIN [A-Z ]*PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]|github_pat_|xox[baprs]-|sk-[A-Za-z0-9]{10,}/;
 
@@ -282,4 +284,272 @@ export async function postBoardGated(
   } catch {
     return { ok: false, error: "The command was not posted." };
   }
+}
+
+const REACH_FAIL = "The app could not use the GitHub login.";
+const OPEN_FAIL = "The app could not open that.";
+const MAIN_FAIL = "I could not reach main.";
+const TREE_FAIL = "I could not reach the trees.";
+const NOTES_FAIL = "The notes could not be read.";
+
+type DeskEntry = { name: string; kind: string };
+type OpenOk = { ok: true; kind: "dir" | "file"; line: string; entries: DeskEntry[]; text: string };
+type OpenNo = { ok: false; kind: "no"; line: string; entries: []; text: ""; status?: 401 | 503; error: string };
+
+export async function rickReachGated(
+  cookieHeader: string | undefined,
+  githubApi: DeskGithubApi,
+): Promise<
+  | { ok: true; login: string; repos: { name: string; private: boolean }[]; line: string }
+  | { ok: false; status: 401 | 503; error: DeskGateDenial["error"]; login: ""; repos: []; line: string }
+  | { ok: false; login: ""; repos: []; line: typeof REACH_FAIL }
+> {
+  const gate = deskOwnerGate(cookieHeader);
+  if (!gate.ok) return { ...gate, login: "", repos: [], line: REACH_FAIL };
+  try {
+    const user = await githubApi("/user");
+    if (!user.ok) return { ok: false, login: "", repos: [], line: REACH_FAIL };
+    const who = JSON.parse(user.text) as { login?: unknown };
+    const login = typeof who.login === "string" ? who.login.slice(0, 80) : "";
+    const reposResult = await githubApi("/user/repos?per_page=20&sort=updated&affiliation=owner");
+    const rows = reposResult.ok ? (JSON.parse(reposResult.text) as unknown) : [];
+    const repos = Array.isArray(rows)
+      ? rows.flatMap((row) => {
+          if (!row || typeof row !== "object") return [];
+          const rec = row as { name?: unknown; private?: unknown };
+          if (typeof rec.name !== "string") return [];
+          const match = ALLOWED_REPOS.find((item) => item.repo === rec.name);
+          if (!match) return [];
+          return [{ name: match.repo, private: rec.private === true }];
+        })
+      : [];
+    return { ok: true, login, repos, line: `${login || "github"}. ${repos.map((row) => row.name).join(", ")}.` };
+  } catch {
+    return { ok: false, login: "", repos: [], line: REACH_FAIL };
+  }
+}
+
+export async function openRepoContentsGated(
+  input: { repo?: unknown; path?: unknown },
+  cookieHeader: string | undefined,
+  io: RepoFileIo,
+): Promise<OpenOk | OpenNo> {
+  const gate = deskOwnerGate(cookieHeader);
+  if (!gate.ok) return { ...gate, kind: "no", line: OPEN_FAIL, entries: [], text: "" };
+  const repo = typeof input.repo === "string" ? input.repo.trim().replace(/\.git$/i, "") : "";
+  const rawPath = typeof input.path === "string" ? input.path : "";
+  if (!rawPath.trim()) {
+    const pinnedRepo = ALLOWED_REPOS.find((row) => row.repo === repo);
+    if (!pinnedRepo) return openDenied(PATH_DENIED);
+    const payload = await fetchContents(io, pinnedRepo.owner, pinnedRepo.repo, "");
+    if (!Array.isArray(payload)) return openDenied(OPEN_FAIL);
+    return directoryResult(repo, listedEntries(payload, ""));
+  }
+  const pinned = pinRepoFile({ owner: "vitalitychems-dot", repo, path: rawPath });
+  if (!pinned.ok) return openDenied(pinned.error);
+  try {
+    const file = await readRepoFileGated({ owner: pinned.owner, repo: pinned.repo, path: pinned.path }, cookieHeader, io);
+    if (file.ok) return { ok: true, kind: "file", line: pinned.path, entries: [], text: file.text };
+    const payload = await fetchContents(io, pinned.owner, pinned.repo, pinned.path);
+    if (Array.isArray(payload)) return directoryResult(pinned.path, listedEntries(payload, pinned.path));
+    return openDenied(OPEN_FAIL);
+  } catch {
+    return openDenied(OPEN_FAIL);
+  }
+}
+
+export async function mainNowGated(
+  cookieHeader: string | undefined,
+  deps: { githubApi: DeskGithubApi; mainGap: (tesseraSha: string, gitbookSha: string) => { line: string } },
+): Promise<{ ok: true; line: string } | { ok: false; status?: 401 | 503; error?: DeskGateDenial["error"]; line: string }> {
+  const gate = deskOwnerGate(cookieHeader);
+  if (!gate.ok) return { ...gate, line: MAIN_FAIL };
+  try {
+    const tessera = await deps.githubApi("/repos/vitalitychems-dot/TESSERA/commits/main");
+    const gitbook = await deps.githubApi("/repos/vitalitychems-dot/Gitbook/commits/main");
+    const tesseraSha = tessera.ok ? commitSha(tessera.text) : "";
+    const gitbookSha = gitbook.ok ? commitSha(gitbook.text) : "";
+    if (!tesseraSha || !gitbookSha) return { ok: false, line: MAIN_FAIL };
+    return { ok: true, line: deps.mainGap(tesseraSha, gitbookSha).line };
+  } catch {
+    return { ok: false, line: MAIN_FAIL };
+  }
+}
+
+export async function treeDeltaGated(
+  cookieHeader: string | undefined,
+  deps: {
+    githubApi: DeskGithubApi;
+    tesseraHeld: readonly string[];
+    gitbookHeld: readonly string[];
+    pathDelta: (
+      held: readonly string[],
+      live: readonly string[],
+    ) => { added: readonly string[]; removed: readonly string[]; held: number; live: number };
+    deltaLine: (
+      repo: string,
+      delta: { added: readonly string[]; removed: readonly string[]; held: number; live: number },
+    ) => string;
+  },
+): Promise<{ ok: true; line: string } | { ok: false; status?: 401 | 503; error?: DeskGateDenial["error"]; line: string }> {
+  const gate = deskOwnerGate(cookieHeader);
+  if (!gate.ok) return { ...gate, line: TREE_FAIL };
+  try {
+    const tesseraCommit = await deps.githubApi("/repos/vitalitychems-dot/TESSERA/commits/main");
+    const gitbookCommit = await deps.githubApi("/repos/vitalitychems-dot/Gitbook/commits/main");
+    const tesseraTree = tesseraCommit.ok ? treeSha(tesseraCommit.text) : "";
+    const gitbookTree = gitbookCommit.ok ? treeSha(gitbookCommit.text) : "";
+    if (!tesseraTree || !gitbookTree) return { ok: false, line: TREE_FAIL };
+    const tessera = await deps.githubApi(`/repos/vitalitychems-dot/TESSERA/git/trees/${tesseraTree}?recursive=1`);
+    const gitbook = await deps.githubApi(`/repos/vitalitychems-dot/Gitbook/git/trees/${gitbookTree}?recursive=1`);
+    const tesseraBlobs = tessera.ok ? blobsFrom(tessera.text) : null;
+    const gitbookBlobs = gitbook.ok ? blobsFrom(gitbook.text) : null;
+    if (!tesseraBlobs || !gitbookBlobs) return { ok: false, line: TREE_FAIL };
+    const one = deps.pathDelta(deps.tesseraHeld, tesseraBlobs.paths);
+    const two = deps.pathDelta(deps.gitbookHeld, gitbookBlobs.paths);
+    const cut = tesseraBlobs.truncated || gitbookBlobs.truncated ? " A tree was truncated, so this diff is not complete." : "";
+    return { ok: true, line: `${deps.deltaLine("TESSERA", one)} ${deps.deltaLine("Gitbook", two)}${cut}` };
+  } catch {
+    return { ok: false, line: TREE_FAIL };
+  }
+}
+
+export async function readGitbookGated(
+  cookieHeader: string | undefined,
+  deps: { githubApi: DeskGithubApi; gitbookNote: (body: string) => string },
+): Promise<
+  | { ok: true; error: ""; notes: { user: string; at: string; body: string }[]; files: { name: string; href: string }[] }
+  | { ok: false; status?: 401 | 503; error: string; notes: { user: string; at: string; body: string }[]; files: { name: string; href: string }[] }
+> {
+  const gate = deskOwnerGate(cookieHeader);
+  if (!gate.ok) return { ...gate, notes: [], files: [] };
+  const notes: { user: string; at: string; body: string }[] = [];
+  try {
+    for (let page = 1; page <= 4; page += 1) {
+      const result = await deps.githubApi(`/repos/vitalitychems-dot/Gitbook/issues/2/comments?per_page=100&page=${page}`);
+      const rows = result.ok ? parsedRows(result.text) : null;
+      if (!rows) {
+        if (notes.length > 0) break;
+        return { ok: false, error: NOTES_FAIL, notes, files: [] };
+      }
+      for (const row of rows) {
+        const rec = row as { user?: { login?: unknown }; created_at?: unknown; body?: unknown };
+        const user = typeof rec.user?.login === "string" ? rec.user.login.slice(0, 80) : "github";
+        const at = typeof rec.created_at === "string" ? rec.created_at.slice(0, 40) : "";
+        const body = deps.gitbookNote(typeof rec.body === "string" ? rec.body : "");
+        notes.push({ user, at, body });
+      }
+      if (rows.length < 100) break;
+    }
+    const mesh = await deps.githubApi("/repos/vitalitychems-dot/Gitbook/contents/mesh");
+    const meshRows = mesh.ok ? parsedRows(mesh.text) : null;
+    const files = Array.isArray(meshRows) ? meshFiles(meshRows) : [];
+    return { ok: true, error: "", notes: notes.slice(-8), files };
+  } catch {
+    return { ok: false, error: NOTES_FAIL, notes: [], files: [] };
+  }
+}
+
+function openDenied(error: string): OpenNo {
+  return { ok: false, kind: "no", line: error === PATH_DENIED ? PATH_DENIED : OPEN_FAIL, entries: [], text: "", error };
+}
+
+function directoryResult(line: string, entries: DeskEntry[]): OpenOk {
+  return { ok: true, kind: "dir", line, entries, text: entries.map((row) => row.name).join(", ") };
+}
+
+function listedEntries(data: unknown[], prefix: string): DeskEntry[] {
+  const entries: DeskEntry[] = [];
+  for (const row of data) {
+    if (entries.length >= 40) break;
+    if (!row || typeof row !== "object") continue;
+    const rec = row as { name?: unknown; type?: unknown };
+    if (typeof rec.name !== "string" || !rec.name || rec.name.includes("/") || rec.name.includes("\\")) continue;
+    const joined = prefix ? `${prefix}/${rec.name}` : rec.name;
+    if (!cleanRepoPath(joined)) continue;
+    entries.push({ name: rec.name, kind: rec.type === "dir" ? "dir" : "file" });
+  }
+  return entries;
+}
+
+async function fetchContents(io: RepoFileIo, owner: string, repo: string, path: string): Promise<unknown | null> {
+  const token = (await io.token()).trim();
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github+json",
+    "User-Agent": "tessera-chamber",
+  };
+  if (token && !token.includes(" ")) headers.Authorization = `Bearer ${token}`;
+  const suffix = path
+    ? `/${path
+        .split("/")
+        .map((part) => encodeURIComponent(part))
+        .join("/")}`
+    : "";
+  const response = await io.fetchImpl(`https://api.github.com/repos/${owner}/${repo}/contents${suffix}`, {
+    method: "GET",
+    headers,
+  });
+  if (!response.ok) return null;
+  return response.json();
+}
+
+function commitSha(text: string): string {
+  try {
+    const parsed = JSON.parse(text) as { sha?: unknown };
+    return typeof parsed.sha === "string" && /^[0-9a-f]{40}$/i.test(parsed.sha) ? parsed.sha : "";
+  } catch {
+    return "";
+  }
+}
+
+function treeSha(text: string): string {
+  try {
+    const parsed = JSON.parse(text) as { commit?: { tree?: { sha?: unknown } } };
+    const sha = parsed.commit?.tree?.sha;
+    return typeof sha === "string" && /^[0-9a-f]{40}$/i.test(sha) ? sha : "";
+  } catch {
+    return "";
+  }
+}
+
+function blobsFrom(text: string): { paths: string[]; truncated: boolean } | null {
+  try {
+    const parsed = JSON.parse(text) as { tree?: unknown; truncated?: unknown };
+    if (!Array.isArray(parsed.tree)) return null;
+    const paths: string[] = [];
+    for (const row of parsed.tree) {
+      if (!row || typeof row !== "object") continue;
+      const rec = row as { path?: unknown; type?: unknown };
+      if (rec.type !== "blob" || typeof rec.path !== "string") continue;
+      if (rec.path.length > 512 || /[\0\r\n]/.test(rec.path)) continue;
+      paths.push(rec.path);
+    }
+    return { paths, truncated: parsed.truncated === true };
+  } catch {
+    return null;
+  }
+}
+
+function parsedRows(text: string): unknown[] | null {
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function meshFiles(rows: unknown[]): { name: string; href: string }[] {
+  const files: { name: string; href: string }[] = [];
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const rec = row as { name?: unknown; type?: unknown };
+    if (rec.type !== "file" || typeof rec.name !== "string") continue;
+    if (!cleanRepoPath(`mesh/${rec.name}`)) continue;
+    files.push({
+      name: rec.name,
+      href: `https://github.com/vitalitychems-dot/Gitbook/blob/main/mesh/${encodeURIComponent(rec.name)}`,
+    });
+  }
+  return files;
 }

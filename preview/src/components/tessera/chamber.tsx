@@ -225,8 +225,8 @@ export function Chamber() {
     asks.current = remember(asks.current, content, Date.now());
     try { localStorage.setItem("tessera-asks", JSON.stringify(asks.current)); } catch { /* this view only */ }
     if (/\bwhat changed\b/i.test(content)) {
-      const changed = await treeDelta().catch(() => ({ ok: false as const, line: "I could not reach the trees." }));
-      addMessage("assistant", changed.line);
+      const changed = await treeDelta().catch(() => null);
+      addMessage("assistant", changed?.ok ? changed.line : "I could not reach the trees.");
       setPending(false);
       sending.current = false;
       return;
@@ -275,7 +275,14 @@ export function Chamber() {
       const { repoHas } = await import("@/lib/tessera/herself-v3");
       const repo = repoHas("gitbook", named.path) ? "Gitbook" : repoHas("tessera", named.path) ? "TESSERA" : "";
       const opened = repo ? await rickOpen({ data: { repo, path: named.path } }).catch(() => null) : null;
-      addMessage("assistant", repo ? opened?.text || `${named.path} was named. ${opened?.line ?? "It did not open."}` : `${named.path} is not on the list. I did not open a body.`);
+      addMessage(
+        "assistant",
+        repo
+          ? opened?.ok
+            ? opened.text || opened.line
+            : "The app could not open that."
+          : `${named.path} is not on the list. I did not open a body.`,
+      );
       setPending(false);
       sending.current = false;
       return;
@@ -287,7 +294,7 @@ export function Chamber() {
         lastFile.current = content;
         lastKind.current = "file";
         const live = /\bhow many files\b/i.test(content) ? await mainNow().catch(() => null) : null;
-        addMessage("assistant", live?.line ? `${listed}\n${live.line}` : listed);
+        addMessage("assistant", live?.ok ? `${listed}\n${live.line}` : listed);
         setPending(false);
         sending.current = false;
         return;

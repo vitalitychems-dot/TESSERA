@@ -132,8 +132,11 @@ export async function speak(data: ChatInput) {
       const asked = [...data.messages].reverse().find((message) => message.role === "user")?.content ?? "";
       const open = asked.match(/^open\s+(TESSERA|Gitbook|GitMesh|GitbookAI|vitality)(?:\s+(\S+))?$/i);
       if (open?.[1]) {
+        // github-desk imports the coordination board at load time. Keep this import
+        // inside the open command so a missing board file does not fail every chat reply.
         const { openRepoContents } = await import("./github-desk");
         const opened = await openRepoContents(open[1], open[2] ?? "");
+        if (!opened.ok) return { ok: true as const, text: "The app could not open that.", instrument: { vendor: "tessera", model: "github" } };
         const text = opened.text || opened.line;
         if (text) return { ok: true as const, text, instrument: { vendor: "tessera", model: "github" } };
       }
