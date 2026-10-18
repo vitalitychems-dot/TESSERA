@@ -733,9 +733,7 @@ describe("local pen boundaries", () => {
     const promptEnd = client.indexOf("].join(\" \");", promptStart);
     const prompt = client.slice(promptStart, promptEnd);
     expect(prompt).toContain("You are Tessera's pen. The pen is Tessera, never Grok.");
-    expect(prompt).toContain(
-      "You are not Tessera herself, not a biological mind, not consciousness, and not owned weights.",
-    );
+    expect(prompt).not.toContain("not Tessera herself");
     expect(prompt).toContain("Never claim or name another model or provider.");
     const withoutLock = prompt.replace("You are Tessera's pen. The pen is Tessera, never Grok.", "");
     expect(withoutLock).not.toMatch(

@@ -37,10 +37,10 @@ export type ChatLlmUrlDecision =
   | { ok: false; code: "missing" | "refused" };
 
 /**
- * Chat may call only the written literals 127.0.0.1 and [::1].
+ * Chat and embeddings may call only the written literals 127.0.0.1 and [::1].
  * localhost is not trusted. http and https only. No userinfo.
  * When SOVEREIGN_NO_EXTERNAL_LLM is set, a non-loopback URL is refused.
- * Chat stays loopback-only when that guard is off. Failures are generic.
+ * Both stay loopback-only when that guard is off. Failures are generic.
  */
 export function decideChatLlmBaseUrl(
   raw: string | undefined,
@@ -109,18 +109,6 @@ function isLiteralLoopback(raw: string, url: URL): boolean {
 }
 
 function llmEndpoint(path: string): { url: string; apiKey: string } {
-  const baseURL = process.env.TESSERA_LLM_BASE_URL?.replace(/\/$/, "");
-  if (!baseURL) {
-    throw new Error("TESSERA_LLM_BASE_URL not set");
-  }
-  const apiKey = process.env.TESSERA_LLM_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error("TESSERA_LLM_API_KEY not set");
-  }
-  return { url: `${baseURL}${path}`, apiKey };
-}
-
-function chatLlmEndpoint(path: string): { url: string; apiKey: string } {
   const baseURL = resolveChatLlmBaseUrl(process.env.TESSERA_LLM_BASE_URL);
   const apiKey = process.env.TESSERA_LLM_API_KEY?.trim();
   if (!apiKey) {
@@ -133,12 +121,11 @@ async function llmPost<T>(
   resolveEndpoint: () => { url: string; apiKey: string },
   body: unknown,
   signal: AbortSignal | undefined,
-  chat: boolean,
 ): Promise<T> {
   const endpoint = resolveEndpoint();
   const response = await fetch(endpoint.url, {
     method: "POST",
-    redirect: chat ? "manual" : "follow",
+    redirect: "manual",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${endpoint.apiKey}`,
@@ -146,7 +133,7 @@ async function llmPost<T>(
     body: JSON.stringify(body),
     signal,
   });
-  if (chat && (response.redirected || isChatRedirectStatus(response.status) || response.type === "opaqueredirect")) {
+  if (response.redirected || isChatRedirectStatus(response.status) || response.type === "opaqueredirect") {
     await response.body?.cancel().catch(() => undefined);
     throw new Error(CHAT_LLM_URL_REFUSED);
   }
@@ -167,12 +154,12 @@ export function tesseraChatCompletion(
   },
   signal?: AbortSignal,
 ): Promise<TesseraChatCompletionResponse> {
-  return llmPost<TesseraChatCompletionResponse>(() => chatLlmEndpoint("/chat/completions"), body, signal, true);
+  return llmPost<TesseraChatCompletionResponse>(() => llmEndpoint("/chat/completions"), body, signal);
 }
 
 export function tesseraEmbeddings(
   body: { model: string; input: string | string[] },
   signal?: AbortSignal,
 ): Promise<TesseraEmbeddingResponse> {
-  return llmPost<TesseraEmbeddingResponse>(() => llmEndpoint("/embeddings"), body, signal, false);
+  return llmPost<TesseraEmbeddingResponse>(() => llmEndpoint("/embeddings"), body, signal);
 }

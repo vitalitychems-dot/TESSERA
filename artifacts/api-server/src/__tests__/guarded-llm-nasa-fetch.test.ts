@@ -10,7 +10,7 @@ const { priorEnv, queryResult } = vi.hoisted(() => {
     sandbox: process.env.SANDBOX_TRAINING_ALLOWED,
     noExternal: process.env.SOVEREIGN_NO_EXTERNAL_LLM,
   };
-  process.env.TESSERA_LLM_BASE_URL = "https://llm.tessera.test/v1";
+  process.env.TESSERA_LLM_BASE_URL = "https://127.0.0.1:9/v1";
   process.env.TESSERA_LLM_API_KEY = "unit-test-key";
   process.env.TESSERA_LLM_MODEL = "unit-test-model";
   process.env.SOVEREIGN_NO_EXTERNAL_LLM = "0";
@@ -230,22 +230,31 @@ describe("guarded LLM and NASA fetch", () => {
       "images-assets.nasa.gov",
       "images-orig.nasa.gov",
       "api.nasa.gov",
-      "llm.tessera.test",
+      "127.0.0.1",
     ]));
   });
 
-  it("does not send /rick/chat to a non-loopback model URL", async () => {
+  it("runs /rick/chat streaming inside runWithShepherdContext", async () => {
     const res = await postJson(app, "/rick/chat", {
       messages: [{ role: "user", content: "coolant loop status" }],
       stream: true,
     });
 
     expect(res.status).toBe(200);
-    expect(res.text).not.toContain("llm.tessera.test");
-    expect(seen.some((entry) => entry.url.includes("llm.tessera.test"))).toBe(false);
+    const llm = seen.find((entry) => entry.url.startsWith("https://127.0.0.1:9/"));
+    expect(llm?.caller).toBe("shepherd-proxy");
+    expect(llm?.url).toBe("https://127.0.0.1:9/v1/chat/completions");
+    const parsed = JSON.parse(llm?.body ?? "{}") as {
+      stream?: boolean;
+      temperature?: number;
+      model?: string;
+    };
+    expect(parsed.stream).toBe(true);
+    expect(parsed.temperature).toBe(0.9);
+    expect(parsed.model).toBe("unit-test-model");
   });
 
-  it("does not send conversation chat to a non-loopback model URL", async () => {
+  it("runs the conversations LLM path inside runWithShepherdContext", async () => {
     process.env.SANDBOX_TRAINING_ALLOWED = "true";
     const res = await postJson(
       app,
@@ -258,8 +267,17 @@ describe("guarded LLM and NASA fetch", () => {
     );
 
     expect(res.status).toBe(200);
-    expect(res.text).not.toContain("llm.tessera.test");
-    expect(seen.some((entry) => entry.url.includes("llm.tessera.test"))).toBe(false);
+    const llm = seen.find((entry) => entry.url.startsWith("https://127.0.0.1:9/"));
+    expect(llm?.caller).toBe("shepherd-proxy");
+    expect(llm?.url).toBe("https://127.0.0.1:9/v1/chat/completions");
+    const parsed = JSON.parse(llm?.body ?? "{}") as {
+      stream?: boolean;
+      temperature?: number;
+      model?: string;
+    };
+    expect(parsed.stream).toBe(false);
+    expect(parsed.temperature).toBe(0.7);
+    expect(parsed.model).toBe("unit-test-model");
   }, 20_000);
 
   describe("blank or spaces-only TESSERA_LLM_API_KEY", () => {

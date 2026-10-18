@@ -5,6 +5,7 @@ import {
   decideChatLlmBaseUrl,
   resolveChatLlmBaseUrl,
   tesseraChatCompletion,
+  tesseraEmbeddings,
 } from "../lib/tessera-llm-http";
 
 const ACCEPTED = [
@@ -149,6 +150,109 @@ describe("chat TESSERA_LLM_BASE_URL loopback policy", () => {
       expect(message).not.toContain(String(address.port));
     }
     expect(hits).toEqual(["/v1/chat/completions", "/v1/chat/completions"]);
+  });
+});
+
+describe("embeddings TESSERA_LLM_BASE_URL loopback policy", () => {
+  const originalBase = process.env.TESSERA_LLM_BASE_URL;
+  const originalKey = process.env.TESSERA_LLM_API_KEY;
+  const originalGuard = process.env.SOVEREIGN_NO_EXTERNAL_LLM;
+  let server: Server | undefined;
+
+  afterEach(async () => {
+    restore("TESSERA_LLM_BASE_URL", originalBase);
+    restore("TESSERA_LLM_API_KEY", originalKey);
+    restore("SOVEREIGN_NO_EXTERNAL_LLM", originalGuard);
+    if (!server) return;
+    const closing = server;
+    server = undefined;
+    await new Promise<void>((resolveClose, reject) => {
+      closing.close((error) => (error ? reject(error) : resolveClose()));
+    });
+  });
+
+  it("refuses a non-loopback embeddings URL with the sovereign guard on or off and does not echo it", async () => {
+    for (const guard of GUARDS) {
+      let calls = 0;
+      const original = globalThis.fetch;
+      globalThis.fetch = async () => {
+        calls += 1;
+        throw new Error("fetch should not run");
+      };
+      const raw = "https://embed.example/secret-v1";
+      process.env.TESSERA_LLM_BASE_URL = raw;
+      process.env.TESSERA_LLM_API_KEY = "test-key";
+      if (guard === undefined) delete process.env.SOVEREIGN_NO_EXTERNAL_LLM;
+      else process.env.SOVEREIGN_NO_EXTERNAL_LLM = guard;
+      try {
+        await expect(
+          tesseraEmbeddings({ model: "embed", input: "hi" }),
+          guard ?? "unset",
+        ).rejects.toThrow(CHAT_LLM_URL_REFUSED);
+        try {
+          await tesseraEmbeddings({ model: "embed", input: "hi" });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          expect(message).toBe(CHAT_LLM_URL_REFUSED);
+          expect(message).not.toContain(raw);
+          expect(message).not.toContain("embed.example");
+        }
+        expect(calls).toBe(0);
+      } finally {
+        globalThis.fetch = original;
+      }
+    }
+  });
+
+  it("posts embeddings to a literal loopback URL when the sovereign guard is on", async () => {
+    const hits: string[] = [];
+    server = createServer((req, res) => {
+      hits.push(req.url ?? "");
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify({ data: [{ index: 0, embedding: [1] }] }));
+    });
+    await new Promise<void>((resolveListen) => {
+      server?.listen(0, "127.0.0.1", () => resolveListen());
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("no test server address");
+    process.env.TESSERA_LLM_BASE_URL = `http://127.0.0.1:${address.port}/v1`;
+    process.env.TESSERA_LLM_API_KEY = "test-key";
+    process.env.SOVEREIGN_NO_EXTERNAL_LLM = "1";
+
+    const embeddings = await tesseraEmbeddings({ model: "embed", input: "hi" });
+    expect(embeddings.data?.[0]?.embedding).toEqual([1]);
+    expect(hits).toEqual(["/v1/embeddings"]);
+  });
+
+  it("does not follow an embeddings redirect and does not echo the target", async () => {
+    const hits: string[] = [];
+    server = createServer((req, res) => {
+      hits.push(req.url ?? "");
+      res.statusCode = 302;
+      res.setHeader("Location", "http://embed.example/secret-target-token");
+      res.end("redirect-body-secret-target-token");
+    });
+    await new Promise<void>((resolveListen) => {
+      server?.listen(0, "127.0.0.1", () => resolveListen());
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("no test server address");
+    process.env.TESSERA_LLM_BASE_URL = `http://127.0.0.1:${address.port}/v1`;
+    process.env.TESSERA_LLM_API_KEY = "test-key";
+    process.env.SOVEREIGN_NO_EXTERNAL_LLM = "0";
+
+    await expect(tesseraEmbeddings({ model: "embed", input: "hi" })).rejects.toThrow(CHAT_LLM_URL_REFUSED);
+    try {
+      await tesseraEmbeddings({ model: "embed", input: "hi" });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      expect(message).toBe(CHAT_LLM_URL_REFUSED);
+      expect(message).not.toContain("secret-target-token");
+      expect(message).not.toContain("embed.example");
+      expect(message).not.toContain(String(address.port));
+    }
+    expect(hits).toEqual(["/v1/embeddings", "/v1/embeddings"]);
   });
 });
 
