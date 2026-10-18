@@ -19,6 +19,7 @@ import { getVaultStats, SACRED_KNOWLEDGE_ENTRIES } from "../lib/sacred-knowledge
 import { getCorpusStats, queryCorpus } from "../lib/knowledge-corpus-index";
 import { getDaemonMetrics } from "../lib/auto-improvement-daemon";
 import { secureExternalStreamingFetch, secureExternalFetch } from "../lib/secureExternalWrapper";
+import { acceptedChatLlmBaseUrl, isChatRedirectStatus } from "../lib/tessera-llm-http";
 import { getAllProposals } from "../lib/consensus-engine";
 import { getMeeseeksMetrics, spawnMeeseeks, completeMeeseeks, getActiveMeeseeks, getDetailedMeeseeksMetrics, submitMeeseeksResult, getTaskTypeRegistry, type MeeseeksResult, type MeeseeksTaskType } from "../lib/agent-spawner";
 import { getTruthfulnessMetrics, analyzeTruthfulnessV2, analyzeTruthfulness, getGroundingThreshold } from "../lib/truthfulness-engine";
@@ -287,7 +288,7 @@ router.post("/rick/chat", async (req, res) => {
       return res.status(400).json({ ok: false, error: "messages array required" });
     }
 
-    const baseURL = process.env.TESSERA_LLM_BASE_URL?.trim();
+    const baseURL = acceptedChatLlmBaseUrl();
     const apiKey = process.env.TESSERA_LLM_API_KEY?.trim();
     const model = process.env.TESSERA_LLM_MODEL?.trim();
 
@@ -333,8 +334,12 @@ router.post("/rick/chat", async (req, res) => {
           }),
           timeoutMs: 30000,
           requestedBy: "rick-sanchez-agent",
+          redirect: "manual",
         });
 
+        if (isChatRedirectStatus(response.status)) {
+          await response.body?.cancel().catch(() => undefined);
+        }
         if (!response.ok || !response.body) {
           const fallback = generateRickFallback(messages[messages.length - 1]?.content || "");
           res.write(`data: ${JSON.stringify({ content: fallback })}\n\n`);
@@ -440,7 +445,12 @@ router.post("/rick/chat", async (req, res) => {
           }),
           timeoutMs: 30000,
           requestedBy: "rick-sanchez-agent",
+          redirect: "manual",
         });
+        if (isChatRedirectStatus(result.status)) {
+          const fallback = generateRickFallback(messages[messages.length - 1]?.content || "");
+          return res.json({ ok: true, content: fallback, source: "rick-sovereign-fallback" });
+        }
         const parsed = JSON.parse(result.body);
         let content = parsed?.choices?.[0]?.message?.content || generateRickFallback(messages[messages.length - 1]?.content || "");
 

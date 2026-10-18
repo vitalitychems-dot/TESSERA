@@ -530,8 +530,52 @@ for (let i = 0; i < WORDS.length; i++) {
   wordReverseMap.set(cp, WORDS[i]);
 }
 
-// XOR key for legacy cipher
-const XOR_KEY = "TesseraV1ColonialLang2025SovereignMesh";
+// Legacy XOR key. COLONIAL_LEGACY_XOR_KEY is required. Minimum length is 32.
+// A missing or short value disables the legacy path. This module never
+// supplies a fallback literal. The previous literal is in git history, so
+// treat anything encrypted under it as plaintext. Never log the key or its length.
+export const COLONIAL_LEGACY_XOR_MIN_LENGTH = 32;
+export const COLONIAL_LEGACY_XOR_NOT_CONFIGURED = "colonial-legacy-xor-not-configured";
+
+export class ColonialLegacyXorNotConfiguredError extends Error {
+  readonly code = COLONIAL_LEGACY_XOR_NOT_CONFIGURED;
+
+  constructor() {
+    super(COLONIAL_LEGACY_XOR_NOT_CONFIGURED);
+    this.name = "ColonialLegacyXorNotConfiguredError";
+  }
+}
+
+function readLegacyXorKey(): string | undefined {
+  const value = process.env.COLONIAL_LEGACY_XOR_KEY;
+  if (typeof value !== "string" || value.length < COLONIAL_LEGACY_XOR_MIN_LENGTH) {
+    return undefined;
+  }
+  return value;
+}
+
+function requireLegacyXorKey(): string {
+  const value = readLegacyXorKey();
+  if (value === undefined) {
+    throw new ColonialLegacyXorNotConfiguredError();
+  }
+  return value;
+}
+
+export function colonialLegacyXorUnavailableBody(): {
+  ok: false;
+  error: typeof COLONIAL_LEGACY_XOR_NOT_CONFIGURED;
+} {
+  return { ok: false, error: COLONIAL_LEGACY_XOR_NOT_CONFIGURED };
+}
+
+export function colonialLegacyXorFailure(err: unknown): {
+  status: 503;
+  body: ReturnType<typeof colonialLegacyXorUnavailableBody>;
+} | null {
+  if (!(err instanceof ColonialLegacyXorNotConfiguredError)) return null;
+  return { status: 503, body: colonialLegacyXorUnavailableBody() };
+}
 
 // ─── TOKENIZER ────────────────────────────────────────────────────────────────
 
@@ -596,10 +640,10 @@ export function detokenize(encoded: string): string {
 // ─── LEGACY XOR CIPHER ───────────────────────────────────────────────────────
 
 export function xorEncode(text: string): string {
-  const key = XOR_KEY;
+  const legacyKey = requireLegacyXorKey();
   let result = "";
   for (let i = 0; i < text.length; i++) {
-    const c = text.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+    const c = text.charCodeAt(i) ^ legacyKey.charCodeAt(i % legacyKey.length);
     result += String.fromCharCode(c);
   }
   return Buffer.from(result, "binary").toString("base64");
@@ -607,10 +651,10 @@ export function xorEncode(text: string): string {
 
 export function xorDecode(encoded: string): string {
   const bin = Buffer.from(encoded, "base64").toString("binary");
-  const key = XOR_KEY;
+  const legacyKey = requireLegacyXorKey();
   let result = "";
   for (let i = 0; i < bin.length; i++) {
-    const c = bin.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+    const c = bin.charCodeAt(i) ^ legacyKey.charCodeAt(i % legacyKey.length);
     result += String.fromCharCode(c);
   }
   return result;

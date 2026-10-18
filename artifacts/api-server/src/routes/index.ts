@@ -85,6 +85,7 @@ import improvementConferenceRouter from "./improvement-conference";
 import discoveriesRouter from "./discoveries";
 import trainingRouter from "./training";
 import knowledgeSynthesisRouter from "./knowledge-synthesis";
+import { requireAdminSession } from "../lib/sovereign-admin";
 
 const router: IRouter = Router();
 
@@ -93,6 +94,11 @@ router.use(agentNetworkRouter);
 router.use(natalChartRouter);
 router.use(intelligenceCoreRouter);
 router.use(trainingEvolutionRouter);
+router.use("/consensus/metrics", requireAdminSession);
+router.use("/consensus/proposals/:id", requireAdminSession);
+router.use("/consensus/agents", requireAdminSession);
+router.use("/council-executor/metrics", requireAdminSession);
+router.use("/council-executor/config", requireAdminSession);
 router.use(governanceConsensusRouter);
 router.use(systemRuntimeRouter);
 router.use(healthRouter);

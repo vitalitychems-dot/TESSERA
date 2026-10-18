@@ -6,7 +6,24 @@ import { validateMeshToken } from "../lib/mesh-auth";
 
 const router = Router();
 
-router.get("/consensus/metrics", (_req: Request, res: Response) => {
+const INVALID_CONFIG = { ok: false, error: "invalid config" } as const;
+
+router.post("/consensus/drain-queue", async (req: Request, res: Response) => {
+  const rawToken = req.headers["x-admin-token"];
+  const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
+  if (!validateMeshToken(token)) {
+    res.status(401).json({ ok: false, error: "Valid sovereign key required" });
+    return;
+  }
+  try {
+    const result = await drainRetryQueue(100);
+    res.json({ ok: true, data: result });
+  } catch {
+    res.status(500).json({ ok: false, error: "drain failed" });
+  }
+});
+
+router.get("/consensus/metrics", requireAdminSession, (_req: Request, res: Response) => {
   res.json({ ok: true, data: getConsensusMetrics() });
 });
 
@@ -15,7 +32,7 @@ router.get("/consensus/proposals", requireAdminSession, (_req: Request, res: Res
   res.json({ ok: true, data: proposals, count: proposals.length });
 });
 
-router.get("/consensus/proposals/:id", (req: Request, res: Response) => {
+router.get("/consensus/proposals/:id", requireAdminSession, (req: Request, res: Response) => {
   const proposal = getProposal(String(req.params.id));
   if (!proposal) { res.status(404).json({ ok: false, error: "Proposal not found" }); return; }
   res.json({ ok: true, data: proposal });
@@ -31,37 +48,39 @@ router.post("/consensus/propose", requireAdminSession, async (req: Request, res:
   res.json({ ok: true, data: proposal });
 });
 
-router.get("/consensus/agents", (_req: Request, res: Response) => {
+router.get("/consensus/agents", requireAdminSession, (_req: Request, res: Response) => {
   res.json({ ok: true, data: GRAND_COUNCIL_AGENTS, count: GRAND_COUNCIL_AGENTS.length });
 });
 
-router.get("/council-executor/metrics", (_req: Request, res: Response) => {
+router.get("/council-executor/metrics", requireAdminSession, (_req: Request, res: Response) => {
   res.json({ ok: true, data: getExecutorMetrics() });
 });
 
-router.get("/council-executor/config", (_req: Request, res: Response) => {
+router.get("/council-executor/config", requireAdminSession, (_req: Request, res: Response) => {
   res.json({ ok: true, data: getSystemConfig() });
 });
 
-router.patch("/council-executor/config", (req: Request, res: Response) => {
-  const { key, value } = req.body;
-  if (!key || value === undefined) {
-    res.status(400).json({ ok: false, error: "key and value are required" });
-    return;
+router.patch("/council-executor/config", requireAdminSession, (req: Request, res: Response) => {
+  try {
+    const body: unknown = req.body;
+    if (body === null || typeof body !== "object" || Array.isArray(body)) {
+      res.status(400).json(INVALID_CONFIG);
+      return;
+    }
+    if (!Object.hasOwn(body, "key") || !Object.hasOwn(body, "value")) {
+      res.status(400).json(INVALID_CONFIG);
+      return;
+    }
+    const key = (body as { key: unknown }).key;
+    const value = (body as { value: unknown }).value;
+    if (typeof key !== "string" || !updateSystemConfig(key, value)) {
+      res.status(400).json(INVALID_CONFIG);
+      return;
+    }
+    res.json({ ok: true });
+  } catch {
+    res.status(400).json(INVALID_CONFIG);
   }
-  updateSystemConfig(key, value);
-  res.json({ ok: true, message: `Config updated: ${key} = ${JSON.stringify(value)}` });
-});
-
-router.post("/consensus/drain-queue", async (req: Request, res: Response) => {
-  const rawToken = req.headers["x-admin-token"];
-  const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
-  if (!validateMeshToken(token)) {
-    res.status(401).json({ ok: false, error: "Valid sovereign key required" });
-    return;
-  }
-  const result = await drainRetryQueue(100);
-  res.json({ ok: true, data: result });
 });
 
 export default router;

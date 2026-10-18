@@ -7,6 +7,7 @@ import {
   compressEncryptQuantum,
   translateToColonial,
   translateFromColonial,
+  colonialLegacyXorFailure,
 } from "../lib/colonial-language-kernel";
 import {
   getBandStatus,
@@ -36,7 +37,7 @@ function respondInternalError(res: Response, err: unknown, label: string) {
 
 
 // ─── GET /api/colonel/stats ───────────────────────────────────────────────────
-router.get("/colonel/stats", (_req, res) => {
+router.get("/colonel/stats", requireAdminSession, (_req, res) => {
   try {
     const stats = getKernelStats();
     return res.json({ ok: true, ...stats });
@@ -46,7 +47,7 @@ router.get("/colonel/stats", (_req, res) => {
 });
 
 // ─── POST /api/colonel/compress ───────────────────────────────────────────────
-router.post("/colonel/compress", (req, res) => {
+router.post("/colonel/compress", requireAdminSession, (req, res) => {
   try {
     const { text } = req.body as { text?: string };
     if (!text || typeof text !== "string") {
@@ -59,6 +60,11 @@ router.post("/colonel/compress", (req, res) => {
     recordEncodedFile();
     return res.json({ ok: true, ...result });
   } catch (err) {
+    const failure = colonialLegacyXorFailure(err);
+    if (failure) {
+      logger.error("colonial legacy xor not configured");
+      return res.status(failure.status).json(failure.body);
+    }
     return respondInternalError(res, err, "colonel/compress error");
   }
 });
@@ -87,7 +93,7 @@ router.post("/colonel/compress-encrypt", requireAdminSession, (req, res) => {
 });
 
 // ─── POST /api/colonel/translate ─────────────────────────────────────────────
-router.post("/colonel/translate", (req, res) => {
+router.post("/colonel/translate", requireAdminSession, (req, res) => {
   try {
     const { text, direction } = req.body as { text?: string; direction?: string };
     if (!text || typeof text !== "string") {
@@ -109,7 +115,7 @@ router.post("/colonel/translate", (req, res) => {
 });
 
 // ─── GET /api/sovereignty/colonial-language/conference ───────────────────────
-router.get("/sovereignty/colonial-language/conference", async (_req, res) => {
+router.get("/sovereignty/colonial-language/conference", requireAdminSession, async (_req, res) => {
   try {
     const conference = await getOrRunGrandConference();
     return res.json({
