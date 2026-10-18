@@ -70,8 +70,11 @@ function bindingFromOutcome(bound: boolean): "bound" | "unbound" {
 async function requirePostAuth(req: Request, res: Response): Promise<PostAuth | null> {
   const rawMember = req.headers["x-member-token"];
   if (rawMember !== undefined) {
-    const token = Array.isArray(rawMember) ? rawMember[0] : rawMember;
-    const decision = await authenticateForumMemberToken(token);
+    if (Array.isArray(rawMember) || typeof rawMember !== "string") {
+      res.status(401).json({ ok: false, error: "member-token-rejected" });
+      return null;
+    }
+    const decision = await authenticateForumMemberToken(rawMember);
     if (!decision.ok) {
       res.status(memberTokenFailureStatus(decision.reason)).json({
         ok: false,

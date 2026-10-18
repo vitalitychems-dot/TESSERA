@@ -1,6 +1,6 @@
 import { createServer, type Server } from "node:http";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import express from "express";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import express, { type Request, type Response, type NextFunction } from "express";
 import { eq, like, or, sql } from "drizzle-orm";
 import { db, getPool, isDbConfigured } from "@workspace/db";
 import {
@@ -41,6 +41,8 @@ const REGISTER_FAULT = "synthetic-register-fault";
 const MEMBER_NAME = "Synthetic Posting Member";
 const OTHER_NAME = "Synthetic Other Member";
 const OTHER_TOKEN = "synthetic-other-member-token";
+const DISABLED_NAME = "Synthetic Disabled Member";
+const DISABLED_TOKEN = "synthetic-disabled-member-token";
 const ROLLBACK_NAME = "Synthetic Rollback Member";
 const REGISTER_NAME = "Synthetic Register Fail";
 const HASH_FAIL_NAME = "Synthetic Hash Fail";
@@ -65,6 +67,140 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
   let server: Server | undefined;
   let baseUrl = "";
   const adminHash = sha(ADMIN_KEY);
+  let activeSchema: string | null = null;
+  let schemaSerial = 0;
+  let savedQuery: ReturnType<typeof getPool>["query"] | null = null;
+  let savedConnect: ReturnType<typeof getPool>["connect"] | null = null;
+
+  function restorePool(): void {
+    const pool = getPool();
+    if (savedQuery) pool.query = savedQuery;
+    if (savedConnect) pool.connect = savedConnect;
+    savedQuery = null;
+    savedConnect = null;
+  }
+
+  async function dropActiveSchema(): Promise<void> {
+    const name = activeSchema;
+    activeSchema = null;
+    restorePool();
+    if (!name || !/^tessera_member_[0-9a-f]+$/.test(name)) return;
+    await getPool().query(`DROP SCHEMA IF EXISTS ${name} CASCADE`);
+    invalidateForumIdentityCache();
+  }
+
+  async function withThrowawaySchema(run: () => Promise<void>): Promise<void> {
+    schemaSerial += 1;
+    const schemaName = `tessera_member_${schemaSerial.toString(16)}${Date.now().toString(16)}`;
+    if (!/^tessera_member_[0-9a-f]+$/.test(schemaName)) {
+      throw new Error("throwaway schema name rejected");
+    }
+    activeSchema = schemaName;
+    const pool = getPool();
+    const originalQuery = pool.query.bind(pool);
+    const originalConnect = pool.connect.bind(pool);
+    savedQuery = pool.query;
+    savedConnect = pool.connect;
+    const tables = `
+      CREATE TABLE ${schemaName}.forum_topics (
+        id serial PRIMARY KEY,
+        title text NOT NULL,
+        content text NOT NULL DEFAULT '',
+        author text NOT NULL DEFAULT '',
+        author_type text NOT NULL DEFAULT 'human',
+        author_key_hash text,
+        category text NOT NULL DEFAULT 'general',
+        status text NOT NULL DEFAULT 'active',
+        replies integer NOT NULL DEFAULT 0,
+        created_at timestamp NOT NULL DEFAULT now(),
+        updated_at timestamp NOT NULL DEFAULT now()
+      );
+      CREATE TABLE ${schemaName}.forum_principal_tokens (
+        id serial PRIMARY KEY,
+        token_hash text NOT NULL UNIQUE,
+        principal_name text NOT NULL,
+        created_at timestamp NOT NULL DEFAULT now()
+      );
+      CREATE TABLE ${schemaName}.forum_trusted_identities (
+        id serial PRIMARY KEY,
+        name text NOT NULL UNIQUE,
+        identity_type text NOT NULL,
+        can_post_from_client integer NOT NULL DEFAULT 1,
+        created_at timestamp NOT NULL DEFAULT now()
+      );
+      CREATE TABLE ${schemaName}.forum_applicants (
+        id serial PRIMARY KEY,
+        external_id text NOT NULL UNIQUE,
+        external_identity text NOT NULL DEFAULT '',
+        source text NOT NULL DEFAULT 'external',
+        applicant_name text NOT NULL,
+        applicant_handle text NOT NULL DEFAULT '',
+        contact text NOT NULL DEFAULT '',
+        proposed_title text NOT NULL,
+        proposed_content text NOT NULL,
+        offer_of_value text NOT NULL DEFAULT '',
+        status text NOT NULL DEFAULT 'pending',
+        vetted_by text,
+        vetted_at timestamp,
+        reject_reason text,
+        promoted_topic_id integer,
+        created_at timestamp NOT NULL DEFAULT now()
+      );
+    `;
+    try {
+      await originalQuery(`CREATE SCHEMA ${schemaName}`);
+      await originalQuery(tables);
+      const pinSearchPath = async (client: { query: (text: string) => Promise<unknown>; release: (err?: Error) => void }) => {
+        await client.query(`SET search_path TO ${schemaName}`);
+        const release = client.release.bind(client);
+        let released = false;
+        client.release = (err?: Error) => {
+          if (released) return;
+          released = true;
+          void client.query("RESET search_path").then(
+            () => release(err),
+            () => release(err),
+          );
+        };
+        return client;
+      };
+      pool.connect = (async (...args: unknown[]) => {
+        if (typeof args[0] === "function") {
+          return originalConnect(args[0] as never);
+        }
+        const client = await originalConnect();
+        try {
+          return await pinSearchPath(client);
+        } catch (error) {
+          client.release();
+          throw error;
+        }
+      }) as typeof pool.connect;
+      pool.query = (async (...args: unknown[]) => {
+        const client = await originalConnect();
+        try {
+          await client.query(`SET search_path TO ${schemaName}`);
+          return await (client.query as (...inner: unknown[]) => Promise<unknown>)(...args);
+        } finally {
+          try {
+            await client.query("RESET search_path");
+          } catch {
+            // Release the client even when the reset fails.
+          }
+          client.release();
+        }
+      }) as typeof pool.query;
+      invalidateForumIdentityCache();
+      await db.insert(forumPrincipalTokensTable).values({
+        tokenHash: adminHash,
+        principalName: "Father",
+      });
+      invalidateForumIdentityCache();
+      await run();
+    } finally {
+      await dropActiveSchema();
+    }
+  }
 
   beforeAll(async () => {
     process.env.TESSERACT_ADMIN_KEY = ADMIN_KEY;
@@ -83,6 +219,14 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
     invalidateForumIdentityCache();
 
     const app = express();
+    app.use((req: Request, _res: Response, next: NextFunction) => {
+      const parts = req.headers["x-member-token-array"];
+      if (typeof parts === "string") {
+        req.headers["x-member-token"] = parts.length === 0 ? [] : parts.split("|");
+        delete req.headers["x-member-token-array"];
+      }
+      next();
+    });
     app.use(express.json());
     app.use(forumRouter);
     server = createServer(app);
@@ -94,7 +238,12 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
     baseUrl = `http://127.0.0.1:${address.port}`;
   });
 
+  afterEach(async () => {
+    await dropActiveSchema();
+  });
+
   afterAll(async () => {
+    await dropActiveSchema();
     await db.execute(sql.raw("DROP TRIGGER IF EXISTS tessera_member_token_block_topic ON forum_topics"));
     await db.execute(sql.raw("DROP FUNCTION IF EXISTS tessera_member_token_block_topic()"));
     await db.execute(sql.raw("DROP TRIGGER IF EXISTS tessera_member_token_block_register ON forum_principal_tokens"));
@@ -253,6 +402,7 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
   });
 
   it("rolls back identity, binding, and topic when admission fails mid-transaction", async () => {
+    await withThrowawaySchema(async () => {
     await db.execute(sql.raw(`
       CREATE OR REPLACE FUNCTION tessera_member_token_block_topic()
       RETURNS trigger
@@ -322,9 +472,11 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
       await db.execute(sql.raw("DROP TRIGGER IF EXISTS tessera_member_token_block_topic ON forum_topics"));
       await db.execute(sql.raw("DROP FUNCTION IF EXISTS tessera_member_token_block_topic()"));
     }
+    });
   });
 
   it("surfaces registerAdminPrincipal failure instead of a 200", async () => {
+    await withThrowawaySchema(async () => {
     await db.insert(forumTrustedIdentitiesTable).values({
       name: REGISTER_NAME,
       identityType: "entity",
@@ -366,6 +518,7 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
       await db.execute(sql.raw("DROP TRIGGER IF EXISTS tessera_member_token_block_register ON forum_principal_tokens"));
       await db.execute(sql.raw("DROP FUNCTION IF EXISTS tessera_member_token_block_register()"));
     }
+    });
   });
 
   it("accepts a member token on reply and vote", async () => {
@@ -415,6 +568,47 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
     expect(posted.text.includes(MEMBER_TOKEN)).toBe(false);
     const rows = await db.select({ id: forumTopicsTable.id }).from(forumTopicsTable)
       .where(eq(forumTopicsTable.title, "Synthetic cross identity topic"));
+    expect(rows).toEqual([]);
+  });
+
+  it("refuses a disabled member", async () => {
+    await db.delete(forumPrincipalTokensTable).where(eq(forumPrincipalTokensTable.principalName, DISABLED_NAME));
+    await db.delete(forumTrustedIdentitiesTable).where(eq(forumTrustedIdentitiesTable.name, DISABLED_NAME));
+    await db.insert(forumTrustedIdentitiesTable).values({
+      name: DISABLED_NAME,
+      identityType: "member",
+      canPostFromClient: 0,
+    });
+    await db.insert(forumPrincipalTokensTable).values({
+      tokenHash: sha(DISABLED_TOKEN),
+      principalName: DISABLED_NAME,
+    });
+    invalidateForumIdentityCache();
+    const posted = await send("/tesseract-forum/topics", {
+      title: "Synthetic disabled member topic",
+      content: "nope",
+      author: DISABLED_NAME,
+    }, { "x-member-token": DISABLED_TOKEN });
+    expect(posted.status).toBe(401);
+    expect(posted.json).toEqual({ ok: false, error: "member-token-rejected" });
+    expect(posted.text.includes(DISABLED_TOKEN)).toBe(false);
+    const rows = await db.select({ id: forumTopicsTable.id }).from(forumTopicsTable)
+      .where(eq(forumTopicsTable.title, "Synthetic disabled member topic"));
+    expect(rows).toEqual([]);
+  });
+
+  it("rejects an array-valued member token header", async () => {
+    await insertMember(MEMBER_NAME, MEMBER_TOKEN);
+    const posted = await send("/tesseract-forum/topics", {
+      title: "Synthetic array header topic",
+      content: "nope",
+      author: MEMBER_NAME,
+    }, { "x-member-token-array": `${MEMBER_TOKEN}|${OTHER_TOKEN}` });
+    expect(posted.status).toBe(401);
+    expect(posted.json).toEqual({ ok: false, error: "member-token-rejected" });
+    expect(posted.text.includes(MEMBER_TOKEN)).toBe(false);
+    const rows = await db.select({ id: forumTopicsTable.id }).from(forumTopicsTable)
+      .where(eq(forumTopicsTable.title, "Synthetic array header topic"));
     expect(rows).toEqual([]);
   });
 
