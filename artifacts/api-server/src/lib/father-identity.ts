@@ -1,12 +1,40 @@
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  fchmodSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { NotConfiguredError } from "./not-configured";
 
 const FATHER_TITLE = "Father — Sovereign Creator";
 const NAMESPACE = "tesseract:father:v1";
-const INSTALL_ID_PATH = join(process.cwd(), ".local-data", "install-id");
 const INSTALL_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function resolveApiServerRoot(): string {
+  let dir = dirname(fileURLToPath(import.meta.url));
+  for (let depth = 0; depth < 8; depth += 1) {
+    const manifestPath = join(dir, "package.json");
+    try {
+      const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as { name?: string };
+      if (manifest.name === "@workspace/api-server") return dir;
+    } catch {
+      // Keep walking until the server package manifest.
+    }
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return process.cwd();
+}
+
+const INSTALL_ID_PATH = join(resolveApiServerRoot(), ".local-data", "install-id");
 
 /** Public presence label. Not derived from a key, token, seed, or secret. */
 export const ADMIN_SESSION_STATUS = "admin session active";
@@ -32,34 +60,51 @@ export function isFatherKeyConfigured(): boolean {
 let _installId: string | null = null;
 let _seal: string | null = null;
 
+function isNodeErrno(err: unknown, code: string): boolean {
+  return !!err && typeof err === "object" && "code" in err && (err as { code?: unknown }).code === code;
+}
+
 function readPersistedInstallId(): string | null {
+  let fd: number;
   try {
-    if (!existsSync(INSTALL_ID_PATH)) return null;
-    const existing = readFileSync(INSTALL_ID_PATH, "utf8").trim();
+    fd = openSync(INSTALL_ID_PATH, constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch (err: unknown) {
+    if (isNodeErrno(err, "ENOENT")) return null;
+    throw err;
+  }
+  try {
+    const existing = readFileSync(fd, "utf8").trim();
     return INSTALL_ID_RE.test(existing) ? existing : null;
-  } catch {
-    return null;
+  } finally {
+    closeSync(fd);
   }
 }
 
-function writeInstallId(id: string, flag: "wx" | "w"): void {
-  writeFileSync(INSTALL_ID_PATH, `${id}\n`, { mode: 0o600, flag });
-  chmodSync(INSTALL_ID_PATH, 0o600);
+function writeInstallIdExclusive(id: string): void {
+  const fd = openSync(
+    INSTALL_ID_PATH,
+    constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
+    0o600,
+  );
+  try {
+    writeFileSync(fd, `${id}\n`);
+    fchmodSync(fd, 0o600);
+  } finally {
+    closeSync(fd);
+  }
 }
 
 function persistInstallId(id: string): string {
-  mkdirSync(dirname(INSTALL_ID_PATH), { recursive: true, mode: 0o700 });
   try {
-    writeInstallId(id, "wx");
+    mkdirSync(dirname(INSTALL_ID_PATH), { recursive: true, mode: 0o700 });
+    writeInstallIdExclusive(id);
     return id;
   } catch (err: unknown) {
-    const code = err && typeof err === "object" && "code" in err ? String((err as { code?: unknown }).code) : "";
-    if (code === "EEXIST") {
-      const winner = readPersistedInstallId();
-      if (winner) return winner;
-      writeInstallId(id, "w");
-      return id;
-    }
+    if (!isNodeErrno(err, "EEXIST")) throw err;
+    const winner = readPersistedInstallId();
+    if (winner) return winner;
+    unlinkSync(INSTALL_ID_PATH);
+    writeInstallIdExclusive(id);
     return id;
   }
 }
@@ -70,19 +115,6 @@ export function getInstallId(): string {
   const existing = readPersistedInstallId();
   _installId = existing ?? persistInstallId(randomUUID());
   return _installId;
-}
-
-/** Public id for older callers. This is the install id, not a digest of any secret. */
-export function getFatherFingerprint(): string {
-  return getInstallId();
-}
-
-export function getFatherFingerprintShort(): string {
-  return getInstallId();
-}
-
-export function getFatherFingerprintUltraShort(): string {
-  return getInstallId();
 }
 
 export function getFatherSeal(): string {

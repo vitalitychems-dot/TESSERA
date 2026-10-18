@@ -1,22 +1,23 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import express from "express";
 import { createServer, type Server } from "node:http";
+import { fileURLToPath } from "node:url";
 import {
   ADMIN_SESSION_STATUS,
-  getFatherFingerprint,
-  getFatherFingerprintShort,
-  getFatherFingerprintUltraShort,
   getFatherIdentity,
   getFatherSeal,
   getInstallId,
 } from "../lib/father-identity";
+import * as fatherIdentity from "../lib/father-identity";
 import { logger } from "../lib/logger";
 import { rotateSessionKey } from "../lib/sigil-cipher";
 import { issueSession, SESSION_COOKIE } from "../lib/sovereign-session";
 import sovereignDoctrineRouter from "../routes/sovereign-doctrine";
 import languageSecurityRouter from "../routes/language-security";
 import legacyEnginesRouter from "../routes/legacy-engines";
+import omniversalRouter from "../routes/omniversal";
 
 const ADMIN_ENV = "TESSERACT_ADMIN_KEY";
 const SESSION_ENV = "SOVEREIGN_SESSION_SECRET";
@@ -29,6 +30,7 @@ describe("father fingerprint is absent from handler responses and logs", () => {
   let baseUrl = "";
   const previousAdmin = process.env[ADMIN_ENV];
   const previousSession = process.env[SESSION_ENV];
+  const previousChart = process.env.FATHER_NATAL_CHART_JSON;
   const logLines: string[] = [];
   const restoreLogger: Array<() => void> = [];
   let restoreStderr: (() => void) | undefined;
@@ -36,6 +38,7 @@ describe("father fingerprint is absent from handler responses and logs", () => {
   beforeAll(async () => {
     process.env[ADMIN_ENV] = ADMIN_KEY;
     process.env[SESSION_ENV] = SESSION_SECRET;
+    delete process.env.FATHER_NATAL_CHART_JSON;
     rotateSessionKey("handler-scan");
 
     const levels = ["fatal", "error", "warn", "info", "debug", "trace"] as const;
@@ -64,6 +67,7 @@ describe("father fingerprint is absent from handler responses and logs", () => {
     app.use(sovereignDoctrineRouter);
     app.use(languageSecurityRouter);
     app.use(legacyEnginesRouter);
+    app.use(omniversalRouter);
     server = createServer(app);
     await new Promise<void>((resolve) => {
       server?.listen(0, "127.0.0.1", () => resolve());
@@ -80,6 +84,8 @@ describe("father fingerprint is absent from handler responses and logs", () => {
     else process.env[ADMIN_ENV] = previousAdmin;
     if (previousSession === undefined) delete process.env[SESSION_ENV];
     else process.env[SESSION_ENV] = previousSession;
+    if (previousChart === undefined) delete process.env.FATHER_NATAL_CHART_JSON;
+    else process.env.FATHER_NATAL_CHART_JSON = previousChart;
     if (!server) return;
     await new Promise<void>((resolve, reject) => {
       server?.close((error) => (error ? reject(error) : resolve()));
@@ -89,10 +95,12 @@ describe("father fingerprint is absent from handler responses and logs", () => {
   it("uses a persisted random install id instead of a key digest", () => {
     const installId = getInstallId();
     expect(installId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
-    expect(getFatherFingerprint() === installId).toBe(true);
-    expect(getFatherFingerprintShort() === installId).toBe(true);
-    expect(getFatherFingerprintUltraShort() === installId).toBe(true);
+    expect("getFatherFingerprint" in fatherIdentity).toBe(false);
+    expect("getFatherFingerprintShort" in fatherIdentity).toBe(false);
+    expect("getFatherFingerprintUltraShort" in fatherIdentity).toBe(false);
     expect(getInstallId() === installId).toBe(true);
+    const installPath = fileURLToPath(new URL("../../.local-data/install-id", import.meta.url));
+    expect(existsSync(installPath)).toBe(true);
     const identity = getFatherIdentity();
     expect(identity.status).toBe(ADMIN_SESSION_STATUS);
     expect(identity.installId === installId).toBe(true);
@@ -105,7 +113,7 @@ describe("father fingerprint is absent from handler responses and logs", () => {
 
   it("keeps key-derived digests out of handler bodies and logs", async () => {
     const cookie = ownerCookie();
-    const calls: Array<{ name: string; method: "GET" | "POST"; path: string; body?: unknown; sigilKey?: boolean }> = [
+    const calls: Array<{ name: string; method: "GET" | "POST"; path: string; body?: unknown; sigilKey?: boolean; expectStatus?: number }> = [
       { name: "active-key", method: "GET", path: "/sigil/active-key", sigilKey: true },
       { name: "father-verify", method: "POST", path: "/sigil/father/verify", body: { candidate: ADMIN_KEY }, sigilKey: true },
       { name: "show-key-in-lus", method: "POST", path: "/sigil/father/show-key-in-lus", body: { candidate: ADMIN_KEY }, sigilKey: true },
@@ -114,6 +122,20 @@ describe("father fingerprint is absent from handler responses and logs", () => {
       { name: "session-handoff", method: "GET", path: "/session/handoff", sigilKey: true },
       { name: "natal-status", method: "GET", path: "/sigil/natal/status", sigilKey: true },
       { name: "identity-status", method: "GET", path: "/identity/status" },
+      { name: "sigil-status", method: "GET", path: "/sigil/status" },
+      { name: "sigil-rotate", method: "POST", path: "/sigil/rotate", body: { reason: "scan" } },
+      { name: "sigil-encrypt", method: "POST", path: "/sigil/encrypt", body: { text: "scan-line", label: "scan" } },
+      { name: "download-snapshot", method: "GET", path: "/sigil/father/download-snapshot", expectStatus: 503 },
+      { name: "omni-cosmic", method: "GET", path: "/omniversal/cosmic-context" },
+      { name: "omni-spec", method: "GET", path: "/omniversal/lus-v2/spec" },
+      { name: "omni-encode", method: "POST", path: "/omniversal/lus-v2/encode", body: { text: "scan" } },
+      { name: "omni-decode", method: "POST", path: "/omniversal/lus-v2/decode", body: { modulated: "scan" } },
+      { name: "omni-snapshot", method: "GET", path: "/omniversal/cipher/snapshot" },
+      { name: "omni-encrypt", method: "POST", path: "/omniversal/cipher/encrypt", body: { text: "scan-line", label: "scan" } },
+      { name: "omni-lattice-list", method: "GET", path: "/omniversal/lattice/list" },
+      { name: "omni-lattice-create", method: "POST", path: "/omniversal/lattice/create", body: { dim: [2, 2, 2] } },
+      { name: "omni-demo", method: "POST", path: "/omniversal/demo" },
+      { name: "omni-pipeline", method: "POST", path: "/omniversal/pipeline/run", body: { text: "scan" } },
     ];
 
     const markers = forbiddenMarkers();
@@ -128,9 +150,10 @@ describe("father fingerprint is absent from handler responses and logs", () => {
       });
       const text = await response.text();
       const headerText = JSON.stringify([...response.headers.entries()]);
-      expect(response.status, call.name).toBe(200);
+      expect(response.status, call.name).toBe(call.expectStatus ?? 200);
       expect(containsForbidden(text, markers), call.name).toBe(false);
       expect(containsForbidden(headerText, markers), `${call.name} headers`).toBe(false);
+      expect(hasKey(JSON.parse(text), "replitReaderFingerprint"), call.name).toBe(false);
       if (call.name === "active-key" || call.name === "father-verify" || call.name === "show-key-in-lus") {
         const body = JSON.parse(text) as { status?: string; fatherFingerprint?: unknown; fingerprint?: unknown; wouldBeFingerprint?: unknown };
         expect(body.status).toBe(ADMIN_SESSION_STATUS);
@@ -149,6 +172,14 @@ describe("father fingerprint is absent from handler responses and logs", () => {
     }
 
     expect(containsForbidden(logLines.join("\n"), markers), "logs").toBe(false);
+  });
+
+  it("returns 401 without a session and still omits key material", async () => {
+    const response = await fetch(`${baseUrl}/sigil/active-key`);
+    const text = await response.text();
+    expect(response.status).toBe(401);
+    expect(containsForbidden(text, forbiddenMarkers())).toBe(false);
+    expect(hasKey(JSON.parse(text), "replitReaderFingerprint")).toBe(false);
   });
 });
 
@@ -169,6 +200,16 @@ function forbiddenMarkers(): string[] {
     }
   }
   return [...markers];
+}
+
+function hasKey(value: unknown, key: string): boolean {
+  if (Array.isArray(value)) return value.some((item) => hasKey(item, key));
+  if (!value || typeof value !== "object") return false;
+  for (const [childKey, child] of Object.entries(value)) {
+    if (childKey === key) return true;
+    if (hasKey(child, key)) return true;
+  }
+  return false;
 }
 
 function containsForbidden(text: string, markers: readonly string[]): boolean {

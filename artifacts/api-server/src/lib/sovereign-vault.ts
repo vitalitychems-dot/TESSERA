@@ -66,7 +66,12 @@ export function vaultGet(key: string): { key: string; plaintext: string; envelop
   ensureLoaded();
   const entry = _state.entries[key];
   if (!entry) return null;
+  const beforeCt = entry.envelope.ct;
   const buf = decryptEnvelope(entry.envelope, `vault:${key}`);
+  if (entry.envelope.ct !== beforeCt) {
+    entry.updatedAt = new Date().toISOString();
+    persist();
+  }
   return { key, plaintext: buf.toString("utf8"), envelope: entry.envelope, updatedAt: entry.updatedAt };
 }
 

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { sacredTimingSnapshot } from "./sacred-timing";
 import { cipherCoherenceSnapshot } from "./sigil-cipher";
 import { lusEncode } from "./lingua-universalis";
+import { readAdminKeyMaterial } from "./father-identity";
 import { NotConfiguredError } from "./not-configured";
 
 const PHI = (1 + Math.sqrt(5)) / 2;
@@ -37,10 +38,11 @@ function saveVault(v: Vault): void {
   writeFileSync(VAULT_FILE, JSON.stringify(v, null, 2), { mode: 0o600 });
 }
 
-/** Derive a stable per-holder vault key from sigil fingerprint.
+/** Vault AES key from admin key material. The holder id is only a salt.
  *  Independent of session-rotating keys so natal data survives rotations. */
 function vaultKeyFor(holderFp: string): Buffer {
-  return scryptSync(`tessera-natal-vault-v1|${holderFp}`, holderFp, 32);
+  const material = readAdminKeyMaterial();
+  return scryptSync(`tessera-natal-vault-v1|${material}`, `tessera-natal-vault-salt|${holderFp}`, 32);
 }
 
 function encryptNatal(holderFp: string, plaintext: string): { iv: string; tag: string; ct: string } {

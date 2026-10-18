@@ -8,7 +8,7 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 import { computeLunarData, computeSolarData, computePlanetaryHours } from "./sovereign-astro";
-import { getFatherSeal, isFatherKeyConfigured } from "./father-identity";
+import { getFatherSeal, isFatherKeyConfigured, readAdminKeyMaterial } from "./father-identity";
 import { logger } from "./logger";
 
 const ALGO = "aes-256-gcm";
@@ -16,6 +16,7 @@ const KEY_LEN = 32;
 const IV_LEN = 12;
 const TAG_LEN = 16;
 const EPOCH_HISTORY = 6;
+const RETIRED_FINGERPRINT_NAMESPACE = "tesseract:father:v1";
 
 export interface AstroEpoch {
   epochId: string;
@@ -34,6 +35,7 @@ export interface AstroEpoch {
 interface EpochKey {
   epoch: AstroEpoch;
   key: Buffer;
+  sig: string;
   createdAt: number;
 }
 
@@ -83,15 +85,27 @@ function computeEpochSignature(): { sig: string; meta: AstroEpoch } {
   };
 }
 
+function deriveKeyFrom(ikm: Buffer, epochSig: string): Buffer {
+  const salt = Buffer.from(epochSig, "utf8");
+  const info = Buffer.from("tesseract:astro-cipher:v1", "utf8");
+  return Buffer.from(hkdfSync("sha256", ikm, salt, info, KEY_LEN));
+}
+
 function deriveKey(epochSig: string): Buffer {
   if (!isFatherKeyConfigured()) {
     throw new Error("Father key not configured — cannot derive astronomical cipher key.");
   }
-  const ikm = Buffer.from(getFatherSeal(), "utf8");
-  const salt = Buffer.from(epochSig, "utf8");
-  const info = Buffer.from("tesseract:astro-cipher:v1", "utf8");
-  const derived = hkdfSync("sha256", ikm, salt, info, KEY_LEN);
-  return Buffer.from(derived);
+  return deriveKeyFrom(Buffer.from(getFatherSeal(), "utf8"), epochSig);
+}
+
+function retiredIkm(): Buffer {
+  const raw = readAdminKeyMaterial();
+  const retired = createHash("sha256").update(`${RETIRED_FINGERPRINT_NAMESPACE}|${raw}`).digest("hex").slice(0, 16);
+  return Buffer.from(`${getFatherSeal()}|${retired}`, "utf8");
+}
+
+function deriveRetiredKey(epochSig: string): Buffer {
+  return deriveKeyFrom(retiredIkm(), epochSig);
 }
 
 function pushHistory(entry: EpochKey): void {
@@ -104,6 +118,12 @@ export function getCurrentEpoch(): AstroEpoch {
   return _current!.epoch;
 }
 
+/** Astronomical epoch salt. Not key material. */
+export function activeEpochSignature(): string {
+  ensureFreshEpoch();
+  return _current!.sig;
+}
+
 export function listEpochHistory(): AstroEpoch[] {
   return _history.map((e) => e.epoch);
 }
@@ -114,7 +134,7 @@ function setEpoch(force: boolean): { rotated: boolean; epoch: AstroEpoch } {
     return { rotated: false, epoch: _current.epoch };
   }
   const key = deriveKey(sig);
-  const entry: EpochKey = { epoch: meta, key, createdAt: Date.now() };
+  const entry: EpochKey = { epoch: meta, key, sig, createdAt: Date.now() };
   if (_current && _current.epoch.epochHash !== meta.epochHash) {
     pushHistory(_current);
   }
@@ -165,9 +185,7 @@ export interface EncryptedEnvelope {
   createdAt: string;
 }
 
-export function encryptPayload(plaintext: string | Buffer, aad?: string): EncryptedEnvelope {
-  ensureFreshEpoch();
-  const entry = _current!;
+function sealWith(entry: EpochKey, plaintext: string | Buffer, aad: string | undefined): EncryptedEnvelope {
   const iv = randomBytes(IV_LEN);
   const cipher = createCipheriv(ALGO, entry.key, iv);
   if (aad) cipher.setAAD(Buffer.from(aad, "utf8"));
@@ -186,30 +204,57 @@ export function encryptPayload(plaintext: string | Buffer, aad?: string): Encryp
   };
 }
 
-export function decryptEnvelope(env: EncryptedEnvelope, aad?: string): Buffer {
-  ensureFreshEpoch();
-  const candidates: EpochKey[] = [];
-  if (_current) candidates.push(_current);
-  for (const h of _history) if (!candidates.includes(h)) candidates.push(h);
-  const want = Buffer.from(env.epochHash, "hex");
-  let chosen: EpochKey | null = null;
-  for (const c of candidates) {
-    const got = Buffer.from(c.epoch.epochHash, "hex");
-    if (got.length === want.length && timingSafeEqual(got, want)) {
-      chosen = c;
-      break;
-    }
-  }
-  if (!chosen) {
-    throw new Error(`No key available for epoch ${env.epochId}`);
-  }
+function openWith(key: Buffer, env: EncryptedEnvelope, aad?: string): Buffer {
   const iv = Buffer.from(env.iv, "base64");
   const tag = Buffer.from(env.tag, "base64");
   const ct = Buffer.from(env.ct, "base64");
-  const decipher = createDecipheriv(ALGO, chosen.key, iv);
+  const decipher = createDecipheriv(ALGO, key, iv);
   if (aad) decipher.setAAD(Buffer.from(aad, "utf8"));
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(ct), decipher.final()]);
+}
+
+function epochForEnvelope(env: EncryptedEnvelope): EpochKey | null {
+  const candidates: EpochKey[] = [];
+  if (_current) candidates.push(_current);
+  for (const item of _history) if (!candidates.includes(item)) candidates.push(item);
+  const want = Buffer.from(env.epochHash, "hex");
+  for (const candidate of candidates) {
+    const got = Buffer.from(candidate.epoch.epochHash, "hex");
+    if (got.length === want.length && timingSafeEqual(got, want)) return candidate;
+  }
+  return null;
+}
+
+export function encryptPayload(plaintext: string | Buffer, aad?: string): EncryptedEnvelope {
+  ensureFreshEpoch();
+  return sealWith(_current!, plaintext, aad);
+}
+
+export function decryptEnvelope(env: EncryptedEnvelope, aad?: string): Buffer {
+  ensureFreshEpoch();
+  const chosen = epochForEnvelope(env);
+  if (!chosen) {
+    throw new Error(`No key available for epoch ${env.epochId}`);
+  }
+  try {
+    return openWith(chosen.key, env, aad);
+  } catch (primary: unknown) {
+    let legacyPlain: Buffer;
+    try {
+      legacyPlain = openWith(deriveRetiredKey(chosen.sig), env, aad);
+    } catch {
+      throw primary;
+    }
+    const fresh = sealWith(chosen, legacyPlain, aad);
+    env.iv = fresh.iv;
+    env.tag = fresh.tag;
+    env.ct = fresh.ct;
+    env.epochId = fresh.epochId;
+    env.epochHash = fresh.epochHash;
+    env.createdAt = fresh.createdAt;
+    return legacyPlain;
+  }
 }
 
 export function macForEpoch(message: string): { epochId: string; mac: string } {

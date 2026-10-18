@@ -176,8 +176,9 @@ export function withoutSigilFingerprint(value: unknown, secrets: Set<string> = r
 
 router.get("/sigil/status", fatherVerifyRateLimit, (req, res) => {
   // Codex reads this without a session. Rate-limited, and the body is stripped.
-  // Anonymous callers do not receive the encrypt handle or the reader digest.
-  // An owner session gets those two fields back after the strip.
+  // Anonymous callers do not receive the encrypt handle.
+  // An owner session gets the handle back after the strip.
+  // The reader digest is not returned.
   const status = cipherStatus();
   const owner = decideOwnerSession(req).ok;
   const stripped = withoutSigilFingerprint({
@@ -194,7 +195,6 @@ router.get("/sigil/status", fatherVerifyRateLimit, (req, res) => {
     if (active && typeof active === "object") {
       (active as { handle?: string }).handle = status.active.handle;
     }
-    stripped.replitReaderFingerprint = status.replitReaderFingerprint;
   }
   res.json(stripped);
 });
