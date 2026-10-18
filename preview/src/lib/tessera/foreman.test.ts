@@ -32,3 +32,19 @@ test("a held pull request is blocked and a clean one stays pending", () => {
   assert.equal(board.tasks[1].status, "blocked");
   assert.match(board.decisions[0].question, /Held/);
 });
+
+test("hold matches the word and not household or threshold", () => {
+  const board = boardFromPulls([
+    { repo: "TESSERA", number: 2, title: "household chores", state: "clean" },
+    { repo: "TESSERA", number: 3, title: "threshold check", state: "clean" },
+    { repo: "TESSERA", number: 4, title: "withhold the notes", state: "clean" },
+    { repo: "TESSERA", number: 5, title: "Please hold", state: "clean" },
+    { repo: "TESSERA", number: 6, title: "HOLD the line", state: "clean" },
+  ]);
+  assert.equal(board.tasks[0].status, "pending");
+  assert.equal(board.tasks[1].status, "pending");
+  assert.equal(board.tasks[2].status, "pending");
+  assert.equal(board.tasks[3].status, "blocked");
+  assert.equal(board.tasks[4].status, "blocked");
+  assert.equal(board.decisions.length, 2);
+});
