@@ -5,7 +5,9 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import healthRouter from "./routes/health";
 import type { IRouter } from "express";
+import { redactAccessLogUrl } from "./lib/access-log-url";
 import { logger } from "./lib/logger";
+import { getSessionSecret } from "./lib/sovereign-session";
 import { initFileIntegrity } from "./lib/file-integrity";
 import { initFileRegistry } from "./lib/sovereign-file-registry";
 import { startAnomalyMonitor, stopAnomalyMonitor, recordRequest } from "./lib/anomaly-detection";
@@ -133,7 +135,7 @@ app.use(
         return {
           id: req.id,
           method: req.method,
-          url: req.url?.split("?")[0],
+          url: redactAccessLogUrl(typeof req.url === "string" ? req.url : undefined),
         };
       },
       res(res) {
@@ -450,6 +452,13 @@ async function runStartupHealthCheck(): Promise<void> {
   }
 }
 
+export function logSessionSecretPresence(): void {
+  logger.info(
+    { configured: getSessionSecret().length > 0 },
+    "sovereign-session: secret fingerprint attestation (V2-LAMBDA)",
+  );
+}
+
 async function initializeModules() {
   if (!process.env.DATABASE_URL) {
     logger.warn("Database is not configured — skipping database startup, schedulers, and DB-backed loops");
@@ -462,20 +471,14 @@ async function initializeModules() {
   registerModuleInitFunction("self-code-evolution", initSelfCodeEvolution);
   registerModuleHandlers();
 
-  // V2-LAMBDA (68.7% approval): publish a one-line cryptographic attestation
-  // of the active session-secret fingerprint (NOT the secret itself) so the
-  // operator can detect silent rotation drift.
+  // V2-LAMBDA: record whether the session secret resolver has a value.
+  // The same resolver signs cookies. No digest of that value is logged.
   // V2-OMICRON (80.8% approval): write the audit-surface manifest.
   // V2-KAPPA (82.7% approval): warn if the audit data dir is on ephemeral
   // storage and the operator hasn't acknowledged it.
   try {
-    const { secretFingerprint, writeAuditManifest } = await import("./lib/tesseract-v2");
-    const { getSessionSecret } = await import("./lib/sovereign-session");
-    // V2-LAMBDA correction (post-review): use the SAME resolver the cookie
-    // signer uses, so the published fingerprint actually attests the bytes
-    // signing live cookies — no divergence from runtime precedence.
-    const fp = secretFingerprint(getSessionSecret());
-    logger.info({ secretFingerprint: fp }, "sovereign-session: secret fingerprint attestation (V2-LAMBDA)");
+    const { writeAuditManifest } = await import("./lib/tesseract-v2");
+    logSessionSecretPresence();
     void writeAuditManifest();
     if (!process.env.SOVEREIGN_ALLOW_EPHEMERAL && !process.env.REPLIT_DEPLOYMENT) {
       logger.warn(
