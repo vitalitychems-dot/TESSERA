@@ -133,6 +133,10 @@ function assertKeyConfigured(haystack: string): void {
   expect(haystack.includes("\"configured\"")).toBe(true);
 }
 
+function assertBinding(haystack: string): void {
+  expect(haystack.includes("\"bound\"")).toBe(true);
+}
+
 const LOG_LEVELS = ["trace", "debug", "info", "warn", "error", "fatal"] as const;
 const CONSOLE_METHODS = ["log", "info", "warn", "error", "debug"] as const;
 
@@ -330,7 +334,7 @@ describe("admin key hashes stay out of logs", () => {
     const result = await post("/tesseract-forum/topics", { title: "T", author: "Father" }, "valid");
     expect(result.status).toBe(503);
     expect(result.logs.includes("Forum post rejected — identity DB lookup failed")).toBe(true);
-    assertKeyConfigured(result.logs);
+    assertBinding(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
@@ -340,7 +344,7 @@ describe("admin key hashes stay out of logs", () => {
     const result = await post("/tesseract-forum/topics", { title: "T", author: "River" }, "valid");
     expect(result.status).toBe(403);
     expect(result.logs.includes("Forum post rejected — identity not in registry")).toBe(true);
-    assertKeyConfigured(result.logs);
+    assertBinding(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
@@ -350,7 +354,7 @@ describe("admin key hashes stay out of logs", () => {
     const result = await post("/tesseract-forum/topics", { title: "T", author: "MetaAgent" }, "valid");
     expect(result.status).toBe(403);
     expect(result.logs.includes("Forum post rejected — identity type cannot post from client")).toBe(true);
-    assertKeyConfigured(result.logs);
+    assertBinding(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
@@ -361,7 +365,7 @@ describe("admin key hashes stay out of logs", () => {
     const result = await post("/tesseract-forum/topics", { title: "T", author: "River" }, "valid");
     expect(result.status).toBe(403);
     expect(result.logs.includes("Forum post rejected — token not pre-registered to any principal")).toBe(true);
-    assertKeyConfigured(result.logs);
+    assertBinding(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
@@ -372,7 +376,7 @@ describe("admin key hashes stay out of logs", () => {
     const result = await post("/tesseract-forum/topics", { title: "T", author: "Father" }, "valid");
     expect(result.status).toBe(403);
     expect(result.logs.includes("Forum post rejected — token bound to different principal")).toBe(true);
-    assertKeyConfigured(result.logs);
+    assertBinding(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
@@ -384,7 +388,7 @@ describe("admin key hashes stay out of logs", () => {
     expect(result.status).toBe(200);
     expect(result.logs.includes("Auto-bound sovereign token to principal on first use")).toBe(true);
     expect(result.logs.includes("Forum topic created by verified identity")).toBe(true);
-    assertKeyConfigured(result.logs);
+    assertBinding(result.logs);
     expect(harness.bound.length).toBe(1);
     expect(harness.bound[0] === adminHash).toBe(true);
     assertNoKeyMaterial(result.logs);
@@ -397,7 +401,7 @@ describe("admin key hashes stay out of logs", () => {
     const result = await post("/tesseract-forum/topics", { title: "T", author: "Aletheia" }, "valid");
     expect(result.status).toBe(403);
     expect(result.logs.includes("Forum post rejected — no admin identity available for auto-bind")).toBe(true);
-    assertKeyConfigured(result.logs);
+    assertBinding(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
@@ -408,7 +412,7 @@ describe("admin key hashes stay out of logs", () => {
     const result = await post("/tesseract-forum/topics", { title: "T", author: "Aletheia" }, "valid");
     expect(result.status).toBe(403);
     expect(result.logs.includes("Forum post rejected — token principal not authorized to post as this entity")).toBe(true);
-    assertKeyConfigured(result.logs);
+    assertBinding(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
   });
@@ -421,7 +425,7 @@ describe("admin key hashes stay out of logs", () => {
     expect(result.logs.includes("Auto-bound sovereign token to Father for entity posting")).toBe(true);
     expect(result.logs.includes("Entity post authorized")).toBe(true);
     expect(result.logs.includes("Forum topic created by verified identity")).toBe(true);
-    assertKeyConfigured(result.logs);
+    assertBinding(result.logs);
     expect(harness.bound[0] === adminHash).toBe(true);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
@@ -433,8 +437,28 @@ describe("admin key hashes stay out of logs", () => {
     const result = await post("/tesseract-forum/topics/7/reply", { content: "hello", author: "Father" }, "valid");
     expect(result.status).toBe(200);
     expect(result.logs.includes("Forum reply persisted for verified identity")).toBe(true);
-    assertKeyConfigured(result.logs);
+    assertBinding(result.logs);
     assertNoKeyMaterial(result.logs);
     assertNoKeyMaterial(result.body);
+  });
+
+  it("logs binding presence when an admin registers a principal", async () => {
+    harness.byName = { aletheia: HUMAN };
+    harness.principal = "Father";
+    const member = "synthetic-member-register-token";
+    const result = await post(
+      "/tesseract-forum/admin/register-principal",
+      { token: member, principalName: "Aletheia" },
+      "valid",
+    );
+    expect(result.status).toBe(200);
+    expect(result.logs.includes("Token-principal binding registered via admin API")).toBe(true);
+    expect(result.logs.includes("\"binding\":\"bound\"")).toBe(true);
+    assertBinding(result.logs);
+    assertNoKeyMaterial(result.logs);
+    assertNoDigestPrefixes(result.logs, sha256Hex(member));
+    assertAbsent(result.logs, member);
+    assertNoKeyMaterial(result.body);
+    assertAbsent(result.body, member);
   });
 });

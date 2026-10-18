@@ -99,4 +99,37 @@ describe("mesh session hashes stay out of access logs", () => {
       for (const spy of loggerSpies) spy.mockRestore();
     }
   });
+
+  it("redacts a mixed-case mesh sessions path in the logged request url", async () => {
+    const destination = loggerDestination(logger);
+    expect(destination === undefined).toBe(false);
+    const chunks: string[] = [];
+    const originalWrite = destination?.write.bind(destination);
+    if (destination && originalWrite) {
+      destination.write = (chunk: unknown, ...rest: unknown[]) => {
+        chunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk as Uint8Array).toString("utf8"));
+        return originalWrite(chunk, ...rest);
+      };
+    }
+    const loggerSpies = LOG_LEVELS.map((level) => vi.spyOn(logger, level));
+    try {
+      const response = await fetch(`${baseUrl}/api/MESH/Sessions/${adminHash}`, {
+        headers: { "x-admin-token": ADMIN_KEY },
+      });
+      expect(response.status > 0).toBe(true);
+      const output = [
+        chunks.join(""),
+        JSON.stringify(loggerSpies.map((spy) => spy.mock.calls)),
+      ].join("\n");
+      expect(output.includes("/api/MESH/Sessions/redacted")).toBe(true);
+      expect(output.includes(adminHash)).toBe(false);
+      expect(output.includes(ADMIN_KEY)).toBe(false);
+      for (let length = 4; length <= adminHash.length; length += 1) {
+        expect(output.includes(adminHash.slice(0, length))).toBe(false);
+      }
+    } finally {
+      if (destination && originalWrite) destination.write = originalWrite;
+      for (const spy of loggerSpies) spy.mockRestore();
+    }
+  });
 });

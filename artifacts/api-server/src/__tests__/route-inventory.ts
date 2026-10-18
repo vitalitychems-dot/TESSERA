@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { RequestHandler } from "express";
 
 /**
  * Test-only route inventory.
@@ -216,6 +217,74 @@ type ExpressRouteLayer = {
   stack?: ExpressRouteLayer[];
   handle?: { stack?: ExpressRouteLayer[] };
 };
+
+export interface PathlessRootAdminSessionGate {
+  /** `function.name` of the middleware layer Express registered. */
+  name: string;
+  /** Layer indexes from the walked router down to the flagged layer. */
+  stackIndexes: number[];
+}
+
+type RouterLayer = {
+  handle?: unknown;
+  name?: string;
+  /**
+   * Express sets this only for `router.use` mounted at `/` (including a
+   * path-less `router.use(fn)`, which defaults to `/`) with `end: false`.
+   */
+  slash?: boolean;
+  route?: unknown;
+};
+
+type StackRouter = {
+  stack?: RouterLayer[];
+};
+
+function stackRouter(value: unknown): StackRouter | undefined {
+  if (typeof value !== "function") return undefined;
+  const stack = (value as { stack?: unknown }).stack;
+  if (!Array.isArray(stack)) return undefined;
+  return value as StackRouter;
+}
+
+/**
+ * Path-less `router.use(requireAdminSession)` on a router mounted at the API
+ * root. Express records that mount as `slash` (`path === '/'`, `end === false`).
+ * Path-scoped `router.use("/prefix", requireAdminSession)` and per-route
+ * handlers are left alone. Nested routers are walked; a path-scoped mount
+ * stops counting descendants as API-root mounts.
+ */
+export function listPathlessRootAdminSessionGates(
+  router: unknown,
+  gate: RequestHandler,
+): PathlessRootAdminSessionGate[] {
+  const hits: PathlessRootAdminSessionGate[] = [];
+  const seen = new Set<unknown>();
+
+  const walk = (current: unknown, atApiRoot: boolean, indexes: number[]): void => {
+    if (seen.has(current)) return;
+    const carrier = stackRouter(current);
+    if (!carrier?.stack) return;
+    seen.add(current);
+
+    carrier.stack.forEach((layer, index) => {
+      const here = indexes.concat(index);
+      const rootMounted = layer.slash === true && layer.route == null;
+      if (atApiRoot && rootMounted && layer.handle === gate) {
+        hits.push({
+          name: typeof layer.name === "string" && layer.name.length > 0 ? layer.name : "anonymous",
+          stackIndexes: here,
+        });
+      }
+      if (layer.route != null) return;
+      if (!stackRouter(layer.handle)) return;
+      walk(layer.handle, atApiRoot && rootMounted, here);
+    });
+  };
+
+  walk(router, true, []);
+  return hits;
+}
 
 /**
  * Live Express registrations for one already-constructed router.
