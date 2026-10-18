@@ -16,6 +16,7 @@ export interface MeshSession {
     taskCount?: number;
   };
   ws: WebSocket;
+  isAuthorized: () => boolean;
 }
 
 export interface MeshSessionInfo {
@@ -45,7 +46,8 @@ export function registerSession(
   sovereignKeyHash: string,
   sessionId: string,
   ws: WebSocket,
-  metadata: MeshSession["metadata"] = {}
+  metadata: MeshSession["metadata"] = {},
+  isAuthorized: () => boolean = () => true,
 ): MeshSession {
   if (!meshSessions.has(sovereignKeyHash)) {
     meshSessions.set(sovereignKeyHash, new Map());
@@ -58,6 +60,7 @@ export function registerSession(
     lastHeartbeat: new Date(),
     metadata,
     ws,
+    isAuthorized,
   };
   group.set(sessionId, session);
   logger.info({ sessionId, sovereignKeyHash, peerCount: group.size }, "Session registered in mesh");
@@ -89,6 +92,16 @@ export function removeSession(sovereignKeyHash: string, sessionId: string): void
 export function getGroupSessions(sovereignKeyHash: string): MeshSessionInfo[] {
   const group = meshSessions.get(sovereignKeyHash);
   if (!group) return [];
+  for (const [sessionId, session] of group) {
+    if (!session.isAuthorized()) {
+      group.delete(sessionId);
+      if (session.ws.readyState === WebSocket.OPEN) session.ws.close(1008, "admin session expired or revoked");
+    }
+  }
+  if (group.size === 0) {
+    meshSessions.delete(sovereignKeyHash);
+    return [];
+  }
   return Array.from(group.values()).map((s) => ({
     sessionId: s.sessionId,
     connectedAt: s.connectedAt,
@@ -117,6 +130,11 @@ export function broadcastToGroup(
   let count = 0;
   for (const [sessionId, session] of group) {
     if (excludeSessionId && sessionId === excludeSessionId) continue;
+    if (!session.isAuthorized()) {
+      group.delete(sessionId);
+      if (session.ws.readyState === WebSocket.OPEN) session.ws.close(1008, "admin session expired or revoked");
+      continue;
+    }
     if (session.ws.readyState === WebSocket.OPEN) {
       try {
         session.ws.send(payload);
@@ -134,6 +152,12 @@ export function sendToSession(sovereignKeyHash: string, sessionId: string, messa
   if (!group) return false;
   const session = group.get(sessionId);
   if (!session || session.ws.readyState !== WebSocket.OPEN) return false;
+  if (!session.isAuthorized()) {
+    group.delete(sessionId);
+    session.ws.close(1008, "admin session expired or revoked");
+    if (group.size === 0) meshSessions.delete(sovereignKeyHash);
+    return false;
+  }
   try {
     session.ws.send(JSON.stringify(message));
     return true;
@@ -166,7 +190,7 @@ function runHeartbeatCheck(): void {
     const stale: string[] = [];
     for (const [sessionId, session] of group) {
       const age = now - session.lastHeartbeat.getTime();
-      if (age > SESSION_TIMEOUT_MS || session.ws.readyState !== WebSocket.OPEN) {
+      if (age > SESSION_TIMEOUT_MS || session.ws.readyState !== WebSocket.OPEN || !session.isAuthorized()) {
         stale.push(sessionId);
       }
     }
@@ -193,6 +217,11 @@ export function broadcastToAll(message: object): number {
   const payload = JSON.stringify(message);
   for (const group of meshSessions.values()) {
     for (const session of group.values()) {
+      if (!session.isAuthorized()) {
+        group.delete(session.sessionId);
+        if (session.ws.readyState === WebSocket.OPEN) session.ws.close(1008, "admin session expired or revoked");
+        continue;
+      }
       if (session.ws.readyState === WebSocket.OPEN) {
         try { session.ws.send(payload); total++; } catch {}
       }
