@@ -82,11 +82,17 @@ export function BoardView() {
     }
     setPending(true);
     setError(null);
-    const result = await postApproval({ data: { decision, commentId: question.id } });
-    setPending(false);
-    if (!result.ok) {
-      setError(result.error);
+    try {
+      const result = await postApproval({ data: { decision, commentId: question.id } });
+      if (!result.ok) {
+        setError("That could not be completed.");
+        return;
+      }
+    } catch {
+      setError("That could not be completed.");
       return;
+    } finally {
+      setPending(false);
     }
     setDraft("");
     await load();
@@ -100,10 +106,18 @@ export function BoardView() {
   }
 
   async function load(quiet = false) {
-    const [result, lanes] = await Promise.all([readBoard(), readListComments()]);
+    let result: Awaited<ReturnType<typeof readBoard>>;
+    let lanes: Awaited<ReturnType<typeof readListComments>>;
+    try {
+      [result, lanes] = await Promise.all([readBoard(), readListComments()]);
+    } catch {
+      setLoaded(true);
+      if (!quiet) setError("That could not be completed.");
+      return;
+    }
     setLoaded(true);
     if (!result.ok) {
-      if (!quiet) setError(result.error);
+      if (!quiet) setError("That could not be completed.");
       return;
     }
     setChecked(new Date().toLocaleTimeString("en-US", { timeZone: "America/Chicago", hour: "numeric", minute: "2-digit" }));
@@ -125,11 +139,17 @@ export function BoardView() {
     }
     setPending(true);
     setError(null);
-    const result = await postBoard({ data: { text } });
-    setPending(false);
-    if (!result.ok) {
-      setError(result.error);
+    try {
+      const result = await postBoard({ data: { text } });
+      if (!result.ok) {
+        setError("That could not be completed.");
+        return;
+      }
+    } catch {
+      setError("That could not be completed.");
       return;
+    } finally {
+      setPending(false);
     }
     setDraft("");
     window.localStorage.removeItem("tessera-board-draft");
