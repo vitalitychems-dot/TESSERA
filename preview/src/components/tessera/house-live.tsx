@@ -25,10 +25,10 @@ export function HouseLive() {
     try {
       const result = await openPulls();
       setRows(result.rows);
-      setWallNote(result.ok ? `Open at ${result.at.slice(0, 16).replace("T", " ")} UTC.` : `Partial read. ${result.error}`);
+      setWallNote(result.ok ? `Open at ${result.at.slice(0, 16).replace("T", " ")} UTC.` : "The pull list could not be read.");
     } catch {
       setRows([]);
-      setWallNote("The pull list did not load.");
+      setWallNote("The pull list could not be read.");
     }
   }
 

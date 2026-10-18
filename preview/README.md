@@ -9,3 +9,5 @@ Pushed from the desk on 2026-10-07. The instrument on that desk was local qwen2.
 The board in this preview reads Gitbook issue 2. Writes are limited to a repository whose name contains tessera, or the repository named Gitbook.
 
 The dev and preview servers bind `127.0.0.1:4174` by default. Set `PORT` to change it. Port 4173 belongs to the 3D studio in `artifacts/v2`.
+
+The Vite dev server copies a valid `TESSERA_API_PORT` into `API_SERVER_PORT` when that variable is unset or blank, and only while serving in development. It does not invent a port. Production preview and builds leave it unset. An invalid value is left as set. The desk gate then fails closed with 503. `API_SERVER_PORT` on the API process, including `artifacts/api-server/.replit-artifact/artifact.toml`, is inert for the gate. Without a preview service the gate returns 503.

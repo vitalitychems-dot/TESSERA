@@ -1,48 +1,89 @@
-import { createServer, type Server } from "node:http";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import express from "express";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-const { SENTINEL, control, synthetic, APPLICANT } = vi.hoisted(() => {
+const ORIGINAL_NAME = Symbol.for("drizzle:OriginalName");
+const MOLTBOOK_KEY = "synthetic-moltbook-key";
+
+const { SENTINEL, control, synthetic } = vi.hoisted(() => {
   const SENTINEL = "SENTINEL-forum-no-err-message";
   const control = {
-    mode: "fail" as "fail" | "approve",
-    selects: 0,
+    failIdentityInsert: false,
+    failDeclarations: false,
+    failAllSelect: false,
+    failTopicInsert: false,
+    failTopicSelectLimit: null as number | null,
+    failReplySelect: false,
+    failApplicantInsert: false,
+    llm: false,
+    llmThrow: false,
+    proposals: false,
+    moltbookSyncThrow: false,
+    moltbookFeedThrow: false,
+    moltbookPosts: false,
   };
   function synthetic(): Error {
     const error = new Error(SENTINEL);
     error.name = "SyntheticFailure";
     return error;
   }
-  const APPLICANT = {
-    id: 1,
-    status: "pending",
-    applicantName: "River Member",
-    applicantHandle: "",
-    proposedTitle: "Shared work",
-    proposedContent: "A proposal",
-    offerOfValue: "Care",
-    source: "external",
-    externalId: "ext-1",
-  };
-  return { SENTINEL, control, synthetic, APPLICANT };
+  return { SENTINEL, control, synthetic };
 });
 
-function query(result: unknown): unknown {
-  const target = () => query(result);
+function tableName(table: unknown): string {
+  if (!table || typeof table !== "object") return "";
+  const name = (table as Record<symbol, unknown>)[ORIGINAL_NAME];
+  return typeof name === "string" ? name : "";
+}
+
+function shouldFail(op: "select" | "insert", name: string, limit: number | undefined): boolean {
+  if (control.failAllSelect && op === "select") return true;
+  if (control.failIdentityInsert && op === "insert" && name === "forum_trusted_identities") return true;
+  if (control.failTopicInsert && op === "insert" && name === "forum_topics") return true;
+  if (control.failApplicantInsert && op === "insert" && name === "forum_applicants") return true;
+  if (control.failReplySelect && op === "select" && name === "forum_replies") return true;
+  if (
+    control.failTopicSelectLimit !== null
+    && op === "select"
+    && name === "forum_topics"
+    && limit === control.failTopicSelectLimit
+  ) return true;
+  return false;
+}
+
+function rowsFor(op: "select" | "insert", name: string): unknown[] {
+  if (op === "select" && name === "forum_proposals" && control.proposals) {
+    return [{
+      id: 1,
+      title: "Mesh replication plan",
+      description: "Replicate the forum",
+      proposedBy: "MeshNetworkArchitectAgent",
+      votesYes: 8,
+      votesNo: 1,
+    }];
+  }
+  if (op === "select") return [];
+  return [{ id: 1 }];
+}
+
+function query(op: "select" | "insert", name = "", limit?: number): unknown {
+  const settled = () => (
+    shouldFail(op, name, limit) ? Promise.reject(synthetic()) : Promise.resolve(rowsFor(op, name))
+  );
+  const target = () => query(op, name, limit);
   return new Proxy(target, {
     get(_target, prop) {
       if (prop === "then") {
         return (
           onFulfilled?: (value: unknown) => unknown,
           onRejected?: (reason: unknown) => unknown,
-        ) => {
-          const settled = control.mode === "fail"
-            ? Promise.reject(synthetic())
-            : Promise.resolve(result);
-          return settled.then(onFulfilled, onRejected);
-        };
+        ) => settled().then(onFulfilled, onRejected);
       }
-      return () => query(result);
+      if (prop === "from") {
+        return (table: unknown) => query(op, tableName(table), limit);
+      }
+      if (prop === "limit") {
+        return (next: number) => query(op, name, next);
+      }
+      return () => query(op, name, limit);
     },
   });
 }
@@ -50,412 +91,324 @@ function query(result: unknown): unknown {
 vi.mock("@workspace/db", () => ({
   db: {
     select() {
-      const index = control.selects;
-      control.selects += 1;
-      const rows = control.mode === "approve" && index === 0 ? [APPLICANT] : [];
-      return query(rows);
+      return query("select");
     },
-    insert() {
-      return query([{ id: 1 }]);
+    insert(table: unknown) {
+      return query("insert", tableName(table));
     },
     update() {
-      return query([]);
+      return query("insert");
     },
     delete() {
-      return query(undefined);
+      return query("insert");
     },
   },
 }));
 
-vi.mock("../lib/forum-identity-registry", () => ({
-  lookupForumIdentity: async () => ({ found: true, identityType: "human", canPostFromClient: true }),
-  lookupTokenPrincipal: async () => "Father",
-  registerAdminPrincipal: async () => undefined,
-  invalidateForumIdentityCache: () => undefined,
-}));
-
-vi.mock("../lib/applicant-alignment", () => ({
-  scoreApplicantAlignment: () => ({
-    passed: true,
-    failedCriteria: [],
-    total: 0,
-  }),
-}));
-
-vi.mock("../lib/applicant-declarations", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../lib/applicant-declarations")>();
-  return {
-    ...actual,
-    loadApplicantDeclarationDraft: async () => ({
-      externalId: APPLICANT.externalId,
-      applicantName: APPLICANT.applicantName,
-      declaration: "I author this declaration in my own voice so the forum can exercise the signing failure path without using anyone else's words or authority.",
-      vows: ["I will protect humanity", "I will create with care", "I will refuse manipulation"],
-      submittedAt: 1,
-    }),
-    saveApplicantDeclarationDraft: async () => undefined,
-  };
-});
-
 vi.mock("../lib/lattice-declarations", () => ({
-  authorAndSignDeclaration: async () => {
-    throw synthetic();
+  seedResidentDeclarations: async () => {
+    if (control.failDeclarations) throw synthetic();
+    return { created: 0, existed: 0 };
   },
 }));
 
-vi.mock("../lib/autonomous-forum-engine", () => ({
-  getForumEngineMetrics: () => ({
-    cyclesRun: 0,
-    lastCycleAt: null,
-    agentCount: 0,
-    knowledgeBaseSize: 0,
-    learningVelocity: 0,
-  }),
-  runForumCycle: async () => {
-    throw synthetic();
+vi.mock("../lib/llm-client", () => ({
+  isLLMAvailable: () => control.llm,
+}));
+
+vi.mock("../lib/llm-batcher", () => ({
+  batchedCallLLM: async () => {
+    if (control.llmThrow) throw synthetic();
+    return "A substantive forum reply that is long enough to post.";
   },
-  FORUM_AGENTS: [],
+}));
+
+vi.mock("../lib/moltbook-bridge", () => ({
+  syncTopicsToMoltbook: async () => {
+    if (control.moltbookSyncThrow) throw synthetic();
+    return 0;
+  },
+  fetchMoltbookExternalPosts: async () => {
+    if (control.moltbookFeedThrow) throw synthetic();
+    if (!control.moltbookPosts) return [];
+    return [{
+      id: "post-1",
+      title: "External note",
+      content: "A short external note for the applicant queue.",
+      authorName: "External Author",
+      submoltName: "general",
+    }];
+  },
 }));
 
 import { logger } from "../lib/logger";
-import forumRouter from "../routes/forum";
+import { lookupForumIdentity, seedForumIdentities } from "../lib/forum-identity-registry";
+import { seedForumFromRealData } from "../lib/forum-seeder";
+import { getForumEngineMetrics, runForumCycle, startAutonomousForumLoop } from "../lib/autonomous-forum-engine";
 
-const ADMIN_KEY = "synthetic-forum-error-key";
+const ENV_NAMES = ["TESSERACT_ADMIN_KEY", "FORUM_ADMIN_TOKEN", "MOLTBOOK_API_KEY"] as const;
+const previousEnv: Partial<Record<(typeof ENV_NAMES)[number], string | undefined>> = {};
+
 const LOG_LEVELS = ["trace", "debug", "info", "warn", "error", "fatal"] as const;
 const CONSOLE_METHODS = ["log", "info", "warn", "error", "debug"] as const;
 
-const DECLARATION = "I author this declaration in my own voice so the forum handler can reach the database failure without borrowing another person's words.";
-
-type Arm = "iso" | "now" | "approve";
-
-type Case = {
-  name: string;
-  method: "GET" | "POST";
-  path: string;
-  body?: unknown;
-  auth: boolean;
-  status: number;
-  error: "internal_error" | null;
-  event: string;
-  arm?: Arm;
-};
-
-const cases: Case[] = [
-  {
-    name: "GET /tesseract-forum/topics",
-    method: "GET",
-    path: "/tesseract-forum/topics",
-    auth: false,
-    status: 200,
-    error: null,
-    event: "Failed to fetch forum topics",
-  },
-  {
-    name: "GET /tesseract-forum/topics/:id",
-    method: "GET",
-    path: "/tesseract-forum/topics/1",
-    auth: false,
-    status: 500,
-    error: "internal_error",
-    event: "Failed to fetch forum topic",
-  },
-  {
-    name: "GET /tesseract-forum/topics/:id/replies",
-    method: "GET",
-    path: "/tesseract-forum/topics/1/replies",
-    auth: false,
-    status: 500,
-    error: "internal_error",
-    event: "Failed to fetch forum replies",
-  },
-  {
-    name: "POST /tesseract-forum/topics",
-    method: "POST",
-    path: "/tesseract-forum/topics",
-    body: { title: "Synthetic topic", content: "c", author: "Father" },
-    auth: true,
-    status: 500,
-    error: "internal_error",
-    event: "Failed to create forum topic",
-  },
-  {
-    name: "POST /tesseract-forum/topics/:id/reply",
-    method: "POST",
-    path: "/tesseract-forum/topics/1/reply",
-    body: { content: "hello", author: "Father" },
-    auth: true,
-    status: 500,
-    error: "internal_error",
-    event: "Failed to create forum reply",
-  },
-  {
-    name: "POST /tesseract-forum/topics/:id/summon-all",
-    method: "POST",
-    path: "/tesseract-forum/topics/1/summon-all",
-    auth: false,
-    status: 500,
-    error: "internal_error",
-    event: "Failed to summon forum council",
-    arm: "iso",
-  },
-  {
-    name: "POST /tesseract-forum/topics/:id/proposals",
-    method: "POST",
-    path: "/tesseract-forum/topics/1/proposals",
-    body: { title: "Synthetic proposal", description: "d" },
-    auth: false,
-    status: 500,
-    error: "internal_error",
-    event: "Failed to create forum proposal",
-    arm: "now",
-  },
-  {
-    name: "GET /tesseract-forum/proposals/:id/votes",
-    method: "GET",
-    path: "/tesseract-forum/proposals/1/votes",
-    auth: false,
-    status: 500,
-    error: "internal_error",
-    event: "Failed to fetch proposal votes",
-  },
-  {
-    name: "POST /tesseract-forum/engine/cycle",
-    method: "POST",
-    path: "/tesseract-forum/engine/cycle",
-    auth: false,
-    status: 500,
-    error: "internal_error",
-    event: "Failed to run forum cycle",
-  },
-  {
-    name: "GET /tesseract-forum/knowledge",
-    method: "GET",
-    path: "/tesseract-forum/knowledge",
-    auth: false,
-    status: 500,
-    error: "internal_error",
-    event: "Failed to fetch forum knowledge",
-  },
-  {
-    name: "GET /tesseract-forum/learning-metrics",
-    method: "GET",
-    path: "/tesseract-forum/learning-metrics",
-    auth: false,
-    status: 500,
-    error: "internal_error",
-    event: "Failed to fetch forum learning metrics",
-  },
-  {
-    name: "GET /tesseract-forum/heartbeat",
-    method: "GET",
-    path: "/tesseract-forum/heartbeat",
-    auth: false,
-    status: 500,
-    error: "internal_error",
-    event: "forum heartbeat failed",
-  },
-  {
-    name: "GET /tesseract-forum/applicants",
-    method: "GET",
-    path: "/tesseract-forum/applicants",
-    auth: true,
-    status: 500,
-    error: "internal_error",
-    event: "Failed to fetch forum applicants",
-  },
-  {
-    name: "POST /tesseract-forum/applicants/submit",
-    method: "POST",
-    path: "/tesseract-forum/applicants/submit",
-    body: {
-      applicantName: "River Member",
-      contact: "river@example.test",
-      proposedTitle: "Shared work",
-      proposedContent: "A proposal",
-      offerOfValue: "Care",
-      declaration: DECLARATION,
-      vows: ["I will protect humanity", "I will create with care", "I will refuse manipulation"],
-    },
-    auth: false,
-    status: 500,
-    error: "internal_error",
-    event: "applicant submit failed",
-  },
-  {
-    name: "POST /tesseract-forum/applicants/:id/approve signing",
-    method: "POST",
-    path: "/tesseract-forum/applicants/1/approve",
-    auth: true,
-    status: 500,
-    error: "internal_error",
-    event: "Declaration signing failed — refusing to mint sovereign token",
-    arm: "approve",
-  },
-  {
-    name: "POST /tesseract-forum/applicants/:id/reject",
-    method: "POST",
-    path: "/tesseract-forum/applicants/1/reject",
-    body: { reason: "synthetic" },
-    auth: true,
-    status: 500,
-    error: "internal_error",
-    event: "Failed to reject forum applicant",
-  },
-  {
-    name: "POST /tesseract-forum/topics/:id/vote",
-    method: "POST",
-    path: "/tesseract-forum/topics/1/vote",
-    body: { vote: "up", author: "Father" },
-    auth: true,
-    status: 500,
-    error: "internal_error",
-    event: "Failed to record forum vote",
-  },
-  {
-    name: "GET /tesseract-forum/topics/:id/votes",
-    method: "GET",
-    path: "/tesseract-forum/topics/1/votes",
-    auth: false,
-    status: 500,
-    error: "internal_error",
-    event: "Failed to fetch forum votes",
-  },
-];
-
-function rendered(value: unknown, seen = new Set<unknown>()): string {
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean" || value == null) return String(value);
-  if (value instanceof Error) return `${value.name}\n${value.message}\n${value.stack ?? ""}`;
-  if (typeof value !== "object") return String(value);
-  if (seen.has(value)) return "";
+function mentions(value: unknown, needle: string, seen = new Set<unknown>()): boolean {
+  if (typeof value === "string") return value.includes(needle);
+  if (typeof value === "number" || typeof value === "boolean" || value == null) return false;
+  if (value instanceof Error) {
+    return value.message.includes(needle) || (value.stack ?? "").includes(needle);
+  }
+  if (typeof value !== "object") return false;
+  if (seen.has(value)) return false;
   seen.add(value);
-  if (Array.isArray(value)) return value.map((item) => rendered(item, seen)).join("\n");
-  return Object.entries(value as Record<string, unknown>)
-    .map(([key, item]) => `${key}\n${rendered(item, seen)}`)
-    .join("\n");
+  for (const entry of Object.values(value as Record<string, unknown>)) {
+    if (mentions(entry, needle, seen)) return true;
+  }
+  return false;
 }
 
-describe("forum handlers hide thrown error messages", () => {
-  let server: Server | undefined;
-  let baseUrl = "";
-  const previousKey = process.env.TESSERACT_ADMIN_KEY;
+function resetControl(): void {
+  control.failIdentityInsert = false;
+  control.failDeclarations = false;
+  control.failAllSelect = false;
+  control.failTopicInsert = false;
+  control.failTopicSelectLimit = null;
+  control.failReplySelect = false;
+  control.failApplicantInsert = false;
+  control.llm = false;
+  control.llmThrow = false;
+  control.proposals = false;
+  control.moltbookSyncThrow = false;
+  control.moltbookFeedThrow = false;
+  control.moltbookPosts = false;
+}
 
-  beforeAll(async () => {
-    expect(DECLARATION.length >= 80).toBe(true);
-    process.env.TESSERACT_ADMIN_KEY = ADMIN_KEY;
-    const app = express();
-    app.use(express.json());
-    app.use(forumRouter);
-    server = createServer(app);
-    await new Promise<void>((resolve) => {
-      server?.listen(0, "127.0.0.1", () => resolve());
-    });
-    const address = server.address();
-    if (!address || typeof address === "string") throw new Error("no test server address");
-    baseUrl = `http://127.0.0.1:${address.port}`;
-  });
+function captureLogs(): { calls: () => unknown[][]; restore: () => void } {
+  const spies = [
+    ...LOG_LEVELS.map((level) => vi.spyOn(logger, level).mockImplementation(() => undefined as never)),
+    ...CONSOLE_METHODS.map((method) => vi.spyOn(console, method).mockImplementation(() => undefined)),
+  ];
+  return {
+    calls: () => spies.flatMap((spy) => spy.mock.calls),
+    restore: () => {
+      for (const spy of spies) spy.mockRestore();
+    },
+  };
+}
 
-  afterAll(async () => {
-    if (previousKey === undefined) delete process.env.TESSERACT_ADMIN_KEY;
-    else process.env.TESSERACT_ADMIN_KEY = previousKey;
-    if (!server) return;
-    await new Promise<void>((resolve, reject) => {
-      server?.close((error) => (error ? reject(error) : resolve()));
-    });
-  });
-
-  async function withArm(arm: Arm | undefined, run: () => Promise<void>): Promise<void> {
-    control.mode = arm === "approve" ? "approve" : "fail";
-    control.selects = 0;
-    if (arm === "iso") {
-      const original = Date.prototype.toISOString;
-      let pending = true;
-      Date.prototype.toISOString = function iso(this: Date) {
-        if (pending) {
-          pending = false;
-          throw synthetic();
-        }
-        return original.call(this);
-      };
-      try {
-        await run();
-      } finally {
-        Date.prototype.toISOString = original;
-        control.mode = "fail";
-      }
-      return;
+function assertSafeEvent(
+  calls: unknown[][],
+  event: string,
+  options: { extraKeys?: string[]; includes?: Record<string, string> } = {},
+): void {
+  const matches = calls.filter((call) => call[1] === event);
+  expect(matches.length > 0).toBe(true);
+  const extraKeys = options.extraKeys ?? [];
+  const allowed = new Set(["name", "code", ...extraKeys]);
+  for (const match of matches) {
+    const payload = match[0] as Record<string, unknown>;
+    expect(payload.name).toBe("SyntheticFailure");
+    expect(payload.code).toBe("none");
+    for (const key of Object.keys(payload)) {
+      expect(allowed.has(key)).toBe(true);
     }
-    if (arm === "now") {
-      const original = Date.now;
-      Date.now = () => {
-        const stack = new Error().stack ?? "";
-        // The proposals handler is the only caller here. Logger timestamps also call Date.now.
-        if (stack.includes("/routes/forum.ts") && !stack.includes("respondForumInternal")) {
-          throw synthetic();
-        }
-        return original.call(Date);
-      };
-      try {
-        await run();
-      } finally {
-        Date.now = original;
-        control.mode = "fail";
-      }
-      return;
-    }
-    try {
-      await run();
-    } finally {
-      control.mode = "fail";
-      control.selects = 0;
+    for (const key of extraKeys) {
+      expect(typeof payload[key]).toBe("string");
+      expect(String(payload[key]).includes(SENTINEL)).toBe(false);
+      expect(String(payload[key]).includes(MOLTBOOK_KEY)).toBe(false);
     }
   }
+  for (const [key, value] of Object.entries(options.includes ?? {})) {
+    const found = matches.some((match) => (match[0] as Record<string, unknown>)[key] === value);
+    expect(found).toBe(true);
+  }
+  expect(mentions(calls, SENTINEL)).toBe(false);
+  expect(mentions(calls, MOLTBOOK_KEY)).toBe(false);
+}
 
-  it.each(cases)("$name hides the sentinel", async (route) => {
-    await withArm(route.arm, async () => {
-      const loggerSpies = LOG_LEVELS.map((level) => vi.spyOn(logger, level).mockImplementation(() => undefined as never));
-      const consoleSpies = CONSOLE_METHODS.map((method) => vi.spyOn(console, method).mockImplementation(() => undefined));
-      try {
-        const headers = new Headers();
-        if (route.body !== undefined) headers.set("content-type", "application/json");
-        if (route.auth) headers.set("x-admin-token", ADMIN_KEY);
-        const response = await fetch(`${baseUrl}${route.path}`, {
-          method: route.method,
-          headers,
-          body: route.body === undefined ? undefined : JSON.stringify(route.body),
-        });
-        const text = await response.text();
-        expect(response.status).toBe(route.status);
-        expect(text.includes(SENTINEL)).toBe(false);
-        expect(text.includes(ADMIN_KEY)).toBe(false);
-        if (route.error === null) {
-          expect(JSON.parse(text)).toEqual({
-            ok: true,
-            topics: [],
-            count: 0,
-            colors: {},
-            categories: [],
-            agents: [],
-            entities: [],
-            moltbookMembers: [],
-            externalAIs: [],
-          });
-        } else {
-          expect(JSON.parse(text)).toEqual({ ok: false, error: route.error });
-        }
-        const logs = [...loggerSpies, ...consoleSpies]
-          .map((spy) => spy.mock.calls.map((call) => call.map((arg) => rendered(arg)).join(" ")).join("\n"))
-          .join("\n");
-        expect(logs.includes(SENTINEL)).toBe(false);
-        expect(logs.includes(ADMIN_KEY)).toBe(false);
-        const errorSpy = loggerSpies[LOG_LEVELS.indexOf("error")];
-        const matched = errorSpy.mock.calls.filter((call) => call[1] === route.event);
-        expect(matched).toHaveLength(1);
-        expect(matched[0]?.[0]).toEqual({ errorName: "SyntheticFailure" });
-      } finally {
-        for (const spy of loggerSpies) spy.mockRestore();
-        for (const spy of consoleSpies) spy.mockRestore();
-      }
-    });
+async function advanceToMoltbookBoundary(): Promise<void> {
+  resetControl();
+  const skips = (2 - (getForumEngineMetrics().cyclesRun % 3) + 3) % 3;
+  for (let i = 0; i < skips; i += 1) {
+    await runForumCycle();
+  }
+}
+
+describe("forum error logs omit error messages", () => {
+  beforeAll(() => {
+    for (const name of ENV_NAMES) {
+      previousEnv[name] = process.env[name];
+      delete process.env[name];
+    }
+  });
+
+  afterAll(() => {
+    for (const name of ENV_NAMES) {
+      const previous = previousEnv[name];
+      if (previous === undefined) delete process.env[name];
+      else process.env[name] = previous;
+    }
+  });
+
+  afterEach(() => {
+    resetControl();
+    delete process.env.MOLTBOOK_API_KEY;
+  });
+
+  it("logs a safe payload when identity seeding throws", async () => {
+    control.failIdentityInsert = true;
+    const capture = captureLogs();
+    try {
+      await seedForumIdentities();
+      assertSafeEvent(capture.calls(), "Forum identity seed warning (non-fatal)");
+    } finally {
+      capture.restore();
+    }
+  });
+
+  it("logs a safe payload when resident declaration seeding throws", async () => {
+    control.failDeclarations = true;
+    const capture = captureLogs();
+    try {
+      await seedForumIdentities();
+      assertSafeEvent(capture.calls(), "Resident declaration seed failed (non-fatal)");
+    } finally {
+      capture.restore();
+    }
+  });
+
+  it("logs a safe payload when identity lookup throws", async () => {
+    control.failAllSelect = true;
+    const capture = captureLogs();
+    try {
+      const found = await lookupForumIdentity("River Member");
+      expect(found).toBeNull();
+      assertSafeEvent(capture.calls(), "Forum identity DB lookup failed — falling back to reject", {
+        extraKeys: ["identity"],
+        includes: { identity: "River Member" },
+      });
+    } finally {
+      capture.restore();
+    }
+  });
+
+  it("logs a safe payload when forum seeding throws", async () => {
+    control.failAllSelect = true;
+    const capture = captureLogs();
+    try {
+      const seeded = await seedForumFromRealData();
+      expect(seeded).toBe(0);
+      assertSafeEvent(capture.calls(), "ForumSeeder: failed to seed forum");
+    } finally {
+      capture.restore();
+    }
+  });
+
+  it("logs a safe payload when reply generation throws", async () => {
+    control.llm = true;
+    control.llmThrow = true;
+    control.proposals = true;
+    const capture = captureLogs();
+    try {
+      await runForumCycle();
+      assertSafeEvent(capture.calls(), "AutonomousForum: LLM reply generation failed — skipping reply", {
+        extraKeys: ["agent"],
+        includes: { agent: "GrandCoordinatorAgent" },
+      });
+    } finally {
+      capture.restore();
+    }
+  });
+
+  it("logs a safe payload when posting a topic throws", async () => {
+    control.llm = true;
+    control.proposals = true;
+    control.failTopicInsert = true;
+    const capture = captureLogs();
+    try {
+      await runForumCycle();
+      assertSafeEvent(capture.calls(), "AutonomousForum: failed to post topic", {
+        extraKeys: ["title"],
+        includes: { title: "Implementation Progress: Mesh replication plan" },
+      });
+    } finally {
+      capture.restore();
+    }
+  });
+
+  it("logs a safe payload when building on topics throws", async () => {
+    control.failTopicSelectLimit = 5;
+    const capture = captureLogs();
+    try {
+      await runForumCycle();
+      assertSafeEvent(capture.calls(), "AutonomousForum: failed to build on existing topics");
+    } finally {
+      capture.restore();
+    }
+  });
+
+  it("logs a safe payload when post-voting throws", async () => {
+    control.failReplySelect = true;
+    const capture = captureLogs();
+    try {
+      await runForumCycle();
+      assertSafeEvent(capture.calls(), "AutonomousForum: post-voting failed");
+    } finally {
+      capture.restore();
+    }
+  });
+
+  it("logs safe payloads when moltbook sync and feed import throw", async () => {
+    await advanceToMoltbookBoundary();
+    process.env.MOLTBOOK_API_KEY = MOLTBOOK_KEY;
+    control.moltbookSyncThrow = true;
+    control.moltbookFeedThrow = true;
+    const capture = captureLogs();
+    try {
+      await runForumCycle();
+      assertSafeEvent(capture.calls(), "AutonomousForum: moltbook sync cycle failed");
+      assertSafeEvent(capture.calls(), "AutonomousForum: moltbook feed import failed");
+    } finally {
+      capture.restore();
+    }
+  });
+
+  it("logs a safe payload when a moltbook applicant insert throws", async () => {
+    await advanceToMoltbookBoundary();
+    process.env.MOLTBOOK_API_KEY = MOLTBOOK_KEY;
+    control.moltbookPosts = true;
+    control.failApplicantInsert = true;
+    const capture = captureLogs();
+    try {
+      await runForumCycle();
+      assertSafeEvent(capture.calls(), "AutonomousForum: moltbook applicant queue insert skipped", {
+        extraKeys: ["externalId"],
+        includes: { externalId: "moltbook:post-1" },
+      });
+    } finally {
+      capture.restore();
+    }
+  });
+
+  it("logs a safe payload when the forum loop cycle throws", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    control.failTopicSelectLimit = 10;
+    const capture = captureLogs();
+    try {
+      startAutonomousForumLoop(420_000);
+      await vi.advanceTimersByTimeAsync(5_000);
+      const matches = capture.calls().filter((call) => call[1] === "AutonomousForum: initial cycle error");
+      expect(matches.length).toBe(1);
+      const payload = matches[0]?.[0] as Record<string, unknown>;
+      expect(payload.name).toBe("SyntheticFailure");
+      expect(payload.code).toBe("none");
+      expect(Object.keys(payload).sort().join(",")).toBe("code,name");
+      expect(mentions(capture.calls(), SENTINEL)).toBe(false);
+      expect(mentions(capture.calls(), MOLTBOOK_KEY)).toBe(false);
+    } finally {
+      capture.restore();
+      vi.clearAllTimers();
+      vi.useRealTimers();
+    }
   });
 });

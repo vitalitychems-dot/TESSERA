@@ -7,7 +7,14 @@ export function getFatherIdentityBlock() {
       reason: "TESSERACT_ADMIN_KEY not set — Father identity unbound",
     };
   }
-  return getFatherIdentity();
+  const identity = getFatherIdentity();
+  return {
+    role: identity.role,
+    title: identity.title,
+    status: identity.status,
+    installId: identity.installId,
+    bound: identity.bound,
+  };
 }
 
 export const TESSERA_IDENTITY = {

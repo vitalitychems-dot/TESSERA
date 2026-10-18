@@ -61,7 +61,7 @@ pnpm dev
 
 `pnpm dev` starts the two user-facing apps above. It starts the Tessera API only when `DATABASE_URL` points to a loopback/local database; non-local database URLs are intentionally ignored by the suite launcher. The launcher reads `.env.local` without printing values.
 
-Port overrides: `TESSERA_WEB_PORT`, `TESSERA_API_PORT`, and `MOCKUP_SANDBOX_PORT`. Base-path overrides: `TESSERA_BASE_PATH` and `MOCKUP_SANDBOX_BASE_PATH`.
+Port overrides: `TESSERA_WEB_PORT`, `TESSERA_API_PORT`, and `MOCKUP_SANDBOX_PORT`. Base-path overrides: `TESSERA_BASE_PATH` and `MOCKUP_SANDBOX_BASE_PATH`. The Vite dev server copies a valid `TESSERA_API_PORT` into `API_SERVER_PORT` when it is unset, and only while serving in development. It does not invent a port. Production preview and builds leave it unset. The desk gate fails closed when the value is missing or invalid. `API_SERVER_PORT` in `scripts/dev-unified.mjs` and `artifacts/api-server/.replit-artifact/artifact.toml` is inert for the gate. Without a preview service the gate returns 503.
 
 Some identical app files are shared through tracked symlinks to canonical copies (52 UI primitives, 147 duplicate image contents, eight repeated SQL migrations, and five identical utility modules). Git symlink support is required; enable it when cloning on Windows. The detailed SHA-256 disposition ledger records removed, linked, and deliberately retained copies.
 

@@ -60,7 +60,12 @@ export function RickView() {
     void rickReach()
       .then((result) => {
         if (stop) return;
-        setReach(result.ok ? result.login : result.line);
+        if (!result.ok) {
+          setReach("The app could not ask GitHub.");
+          setRepos([]);
+          return;
+        }
+        setReach(result.login || "GitHub");
         setRepos(result.repos);
       })
       .catch(() => {
@@ -83,9 +88,14 @@ export function RickView() {
     setFileText("");
     void rickOpen({ data: { repo: name, path } })
       .then((result) => {
+        if (!result.ok) {
+          setEntries([]);
+          setFileText("");
+          setReach("The app could not open that.");
+          return;
+        }
         if (result.kind === "dir") setEntries(result.entries);
         setFileText(result.text);
-        if (!result.ok) setReach(result.line);
       })
       .catch(() => setReach("The app could not open that."));
   }
@@ -150,6 +160,10 @@ export function RickView() {
                 setEngineLine("Opening.");
                 void rickOpen({ data: { repo, path } })
                   .then((result) => {
+                    if (!result.ok) {
+                      setEngineLine("The app could not open that.");
+                      return;
+                    }
                     if (result.kind === "dir") setEntries(result.entries);
                     setRepo(repo);
                     setFolder(path);

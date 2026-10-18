@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { forumTopicsTable, forumRepliesTable, forumProposalsTable, forumVotesTable, forumKnowledgeTable, forumLearningMetricsTable, forumApplicantsTable, forumPostVotesTable } from "@workspace/db/schema";
 import { desc, eq, sql, and, gt } from "drizzle-orm";
 import { logger } from "./logger";
+import { safeDbErrorLog } from "./safe-db-error";
 import { seededUnit, seededInt, seededPick } from "./deterministic-selectors";
 import { systemStateTable } from "@workspace/db/schema";
 import { isLLMAvailable } from "./llm-client";
@@ -563,7 +564,7 @@ Write your reply as ${agent.name}:`;
     if (trimmed.length < 20) return null;
     return trimmed;
   } catch (err) {
-    logger.debug({ err: (err as Error).message, agent: agent.name }, "AutonomousForum: LLM reply generation failed — skipping reply");
+    logger.debug({ ...safeDbErrorLog(err), agent: agent.name }, "AutonomousForum: LLM reply generation failed — skipping reply");
     return null;
   }
 }
@@ -922,7 +923,7 @@ async function postTopicWithReplies(topic: DiscussionTopic, knowledge: Knowledge
 
     return inserted.id;
   } catch (err) {
-    logger.error({ err, title: topic.title }, "AutonomousForum: failed to post topic");
+    logger.error({ ...safeDbErrorLog(err), title: topic.title }, "AutonomousForum: failed to post topic");
     return null;
   }
 }
@@ -977,7 +978,7 @@ async function buildOnExistingTopics(knowledge: KnowledgeInsight[], cycle: numbe
       logger.info({ topicId: topic.id, agent: nextAgent.name, title: topic.title, cycle }, "AutonomousForum: agent built on existing topic");
     }
   } catch (err) {
-    logger.error({ err }, "AutonomousForum: failed to build on existing topics");
+    logger.error(safeDbErrorLog(err), "AutonomousForum: failed to build on existing topics");
   }
 }
 
@@ -1003,7 +1004,7 @@ async function syncToMoltbook(): Promise<void> {
     state.moltbookSynced += synced;
     if (synced > 0) logger.info({ synced }, "AutonomousForum: synced topics to moltbook.com via bridge");
   } catch (err) {
-    logger.warn({ err: (err as Error).message }, "AutonomousForum: moltbook sync cycle failed");
+    logger.warn(safeDbErrorLog(err), "AutonomousForum: moltbook sync cycle failed");
   }
 }
 
@@ -1040,12 +1041,12 @@ async function fetchMoltbookFeed(): Promise<void> {
           status: "pending",
         }).onConflictDoNothing();
       } catch (err) {
-        logger.debug({ err: (err as Error).message, externalId }, "AutonomousForum: moltbook applicant queue insert skipped");
+        logger.debug({ ...safeDbErrorLog(err), externalId }, "AutonomousForum: moltbook applicant queue insert skipped");
       }
     }
     logger.info({ queued: posts.length }, "AutonomousForum: moltbook external posts queued for vetting (NOT auto-imported)");
   } catch (err) {
-    logger.warn({ err: (err as Error).message }, "AutonomousForum: moltbook feed import failed");
+    logger.warn(safeDbErrorLog(err), "AutonomousForum: moltbook feed import failed");
   }
 }
 
@@ -1108,7 +1109,7 @@ async function runAgentPostVoting(cycle: number): Promise<void> {
     }
     if (cast > 0 || topicCast > 0) logger.info({ cast, topicCast, cycle }, "AutonomousForum: agent post-voting cycle complete");
   } catch (err) {
-    logger.error({ err }, "AutonomousForum: post-voting failed");
+    logger.error(safeDbErrorLog(err), "AutonomousForum: post-voting failed");
   }
 }
 
@@ -1178,11 +1179,11 @@ export async function initAutonomousForumEngine(): Promise<void> {
 export function startAutonomousForumLoop(intervalMs: number): void {
   if (intervalHandle) clearSacredInterval(intervalHandle);
   intervalHandle = setSacredInterval(() => {
-    runForumCycle().catch(err => logger.error({ err }, "AutonomousForum: cycle error", "autonomous-forum-engine"));
+    runForumCycle().catch(err => logger.error(safeDbErrorLog(err), "AutonomousForum: cycle error", "autonomous-forum-engine"));
   }, intervalMs, "autonomous-forum-engine");
 
   setTimeout(() => {
-    runForumCycle().catch(err => logger.error({ err }, "AutonomousForum: initial cycle error"));
+    runForumCycle().catch(err => logger.error(safeDbErrorLog(err), "AutonomousForum: initial cycle error"));
   }, 5_000);
 
   logger.info({ intervalMs }, "AutonomousForum: autonomous loop started with knowledge-driven learning");

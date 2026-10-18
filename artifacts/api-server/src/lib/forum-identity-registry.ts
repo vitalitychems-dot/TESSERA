@@ -1,8 +1,25 @@
+import { timingSafeEqual } from "node:crypto";
 import { db } from "@workspace/db";
 import { forumTrustedIdentitiesTable, forumPrincipalTokensTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 import { hashTokenSha256 } from "./mesh-auth";
+import { safeDbErrorLog } from "./safe-db-error";
+
+const ADMIN_ONLY_PRINCIPALS = new Set(["father", "admin", "father protocol"]);
+
+type PrincipalTokenStore = Pick<typeof db, "insert">;
+
+export type MemberTokenDecision =
+  | { ok: true; tokenHash: string; principalName: string }
+  | { ok: false; reason: "missing" | "malformed" | "rejected" | "unavailable" };
+
+function tokenHashesMatch(stored: string, computed: string): boolean {
+  const left = Buffer.from(stored, "utf8");
+  const right = Buffer.from(computed, "utf8");
+  if (left.length === 0 || left.length !== right.length) return false;
+  return timingSafeEqual(left, right);
+}
 
 const SEED_IDENTITIES: Array<{ name: string; identityType: string; canPostFromClient: number }> = [
   { name: "Father", identityType: "human", canPostFromClient: 1 },
@@ -58,7 +75,7 @@ export async function seedForumIdentities(): Promise<void> {
     logger.info({ count: SEED_IDENTITIES.length }, "Forum identity registry seeded");
     identityCache = null;
   } catch (err) {
-    logger.warn({ err: (err as Error).message }, "Forum identity seed warning (non-fatal)");
+    logger.warn(safeDbErrorLog(err), "Forum identity seed warning (non-fatal)");
   }
   await seedAdminTokenBindingFromEnv();
   try {
@@ -66,7 +83,7 @@ export async function seedForumIdentities(): Promise<void> {
     const r = await seedResidentDeclarations();
     logger.info({ residentDeclarationsCreated: r.created, alreadyExisted: r.existed }, "Lattice declarations seeded after identity registry");
   } catch (err) {
-    logger.warn({ err: (err as Error).message }, "Resident declaration seed failed (non-fatal)");
+    logger.warn(safeDbErrorLog(err), "Resident declaration seed failed (non-fatal)");
   }
 }
 
@@ -114,7 +131,7 @@ export async function lookupForumIdentity(name: string): Promise<{
     if (!entry) return { found: false, identityType: "unknown", canPostFromClient: false };
     return { found: true, ...entry };
   } catch (err) {
-    logger.warn({ err: (err as Error).message, name }, "Forum identity DB lookup failed — falling back to reject");
+    logger.warn({ ...safeDbErrorLog(err), identity: name }, "Forum identity DB lookup failed — falling back to reject");
     return null;
   }
 }
@@ -137,10 +154,11 @@ async function seedAdminTokenBindingFromEnv(): Promise<void> {
         .insert(forumPrincipalTokensTable)
         .values({ tokenHash: keyHash, principalName: "Father" })
         .onConflictDoNothing();
-      logger.info({ envName, keyHash: keyHash.slice(0, 4) + "****" }, "Admin token pre-registered as Father (env-seeded binding)");
+      const binding = keyHash.length > 0 ? "bound" : "unbound";
+      logger.info({ envName, binding }, "Admin token pre-registered as Father (env-seeded binding)");
       bound++;
     } catch (err) {
-      logger.warn({ envName, err: (err as Error).message }, "Admin token pre-registration failed (non-fatal)");
+      logger.warn({ envName, ...safeDbErrorLog(err) }, "Admin token pre-registration failed (non-fatal)");
     }
   }
   if (bound === 0) {
@@ -148,15 +166,53 @@ async function seedAdminTokenBindingFromEnv(): Promise<void> {
   }
 }
 
-export async function registerAdminPrincipal(tokenHash: string, principalName: string): Promise<void> {
+export async function registerAdminPrincipal(
+  tokenHash: string,
+  principalName: string,
+  store: PrincipalTokenStore = db,
+): Promise<void> {
+  await store
+    .insert(forumPrincipalTokensTable)
+    .values({ tokenHash, principalName })
+    .onConflictDoNothing();
+  const binding = tokenHash.length > 0 && principalName.trim().length > 0 ? "bound" : "unbound";
+  logger.info({ binding, principalName }, "Admin principal registered for forum token");
+}
+
+export async function authenticateForumMemberToken(
+  token: string | undefined | null,
+): Promise<MemberTokenDecision> {
+  if (token === undefined || token === null) return { ok: false, reason: "missing" };
+  if (typeof token !== "string") return { ok: false, reason: "malformed" };
+  const tokenHash = hashTokenSha256(token);
+  if (!tokenHash) return { ok: false, reason: "malformed" };
+
   try {
-    await db
-      .insert(forumPrincipalTokensTable)
-      .values({ tokenHash, principalName })
-      .onConflictDoNothing();
-    logger.info({ tokenHash: tokenHash.slice(0, 8) + "...", principalName }, "Admin principal registered for forum token");
+    const rows = await db
+      .select({
+        tokenHash: forumPrincipalTokensTable.tokenHash,
+        principalName: forumPrincipalTokensTable.principalName,
+      })
+      .from(forumPrincipalTokensTable)
+      .where(eq(forumPrincipalTokensTable.tokenHash, tokenHash))
+      .limit(1);
+    const row = rows[0];
+    if (!row || !tokenHashesMatch(row.tokenHash, tokenHash)) {
+      return { ok: false, reason: "rejected" };
+    }
+    if (ADMIN_ONLY_PRINCIPALS.has(row.principalName.trim().toLowerCase())) {
+      return { ok: false, reason: "rejected" };
+    }
+
+    const identity = await lookupForumIdentity(row.principalName);
+    if (identity === null) return { ok: false, reason: "unavailable" };
+    if (!identity.found || identity.identityType !== "member" || !identity.canPostFromClient) {
+      return { ok: false, reason: "rejected" };
+    }
+    return { ok: true, tokenHash, principalName: row.principalName };
   } catch (err) {
-    logger.warn({ err: (err as Error).message }, "Forum principal registration warning (non-fatal)");
+    logger.warn(safeDbErrorLog(err), "Forum member token lookup failed");
+    return { ok: false, reason: "unavailable" };
   }
 }
 
@@ -169,7 +225,7 @@ export async function lookupTokenPrincipal(tokenHash: string): Promise<string | 
       .limit(1);
     return rows.length > 0 ? rows[0].principalName : null;
   } catch (err) {
-    logger.warn({ err: (err as Error).message }, "Forum principal lookup failed");
+    logger.warn(safeDbErrorLog(err), "Forum principal lookup failed");
     return null;
   }
 }

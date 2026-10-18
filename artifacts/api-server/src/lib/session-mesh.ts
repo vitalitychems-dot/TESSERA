@@ -62,6 +62,10 @@ function hashKey(key: string): string {
   return createHash("sha256").update(key).digest("hex");
 }
 
+function sessionBinding(sovereignKeyHash: string): "present" | "absent" {
+  return sovereignKeyHash.length > 0 ? "present" : "absent";
+}
+
 export function getSovereignKeyHash(key: string): string {
   return hashKey(key);
 }
@@ -87,7 +91,7 @@ export function registerSession(
     isAuthorized: guardAuthorizer(isAuthorized),
   };
   group.set(sessionId, session);
-  logger.info({ sessionId, sovereignKeyHash, peerCount: group.size }, "Session registered in mesh");
+  logger.info({ sessionId, binding: sessionBinding(sovereignKeyHash), peerCount: group.size }, "Session registered in mesh");
   return session;
 }
 
@@ -110,7 +114,7 @@ export function removeSession(sovereignKeyHash: string, sessionId: string): void
   if (group.size === 0) {
     meshSessions.delete(sovereignKeyHash);
   }
-  logger.info({ sessionId, sovereignKeyHash }, "Session removed from mesh");
+  logger.info({ sessionId, binding: sessionBinding(sovereignKeyHash) }, "Session removed from mesh");
 }
 
 export function getGroupSessions(sovereignKeyHash: string): MeshSessionInfo[] {
@@ -222,7 +226,7 @@ export function pruneMeshSessions(): void {
     }
     for (const sessionId of stale) {
       group.delete(sessionId);
-      logger.info({ sessionId, keyHash }, "Stale session pruned from mesh");
+      logger.info({ sessionId, binding: sessionBinding(keyHash) }, "Stale session pruned from mesh");
       broadcastToGroup(keyHash, {
         type: "mesh:peer-left",
         channel: "mesh",

@@ -18,8 +18,13 @@ export function GitbookView({ open }: { open: (id: "board" | "web" | "world" | "
   useEffect(() => {
     let stop = false;
     async function load() {
-      const result = await readGitbook();
-      if (!stop) setLive(result);
+      const result = await readGitbook().catch(() => null);
+      if (stop) return;
+      if (!result?.ok) {
+        setLive({ ok: false, error: "The notes could not be read.", notes: [], files: [] });
+        return;
+      }
+      setLive({ ok: true, error: "", notes: result.notes, files: result.files });
     }
     void load();
     const id = window.setInterval(() => void load(), 20000);

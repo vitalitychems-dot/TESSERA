@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { sacredTimingSnapshot } from "./sacred-timing";
 import { cipherCoherenceSnapshot } from "./sigil-cipher";
 import { lusEncode } from "./lingua-universalis";
+import { readAdminKeyMaterial } from "./father-identity";
 import { NotConfiguredError } from "./not-configured";
 
 const PHI = (1 + Math.sqrt(5)) / 2;
@@ -37,10 +38,12 @@ function saveVault(v: Vault): void {
   writeFileSync(VAULT_FILE, JSON.stringify(v, null, 2), { mode: 0o600 });
 }
 
-/** Derive a stable per-holder vault key from sigil fingerprint.
- *  Independent of session-rotating keys so natal data survives rotations. */
+/** Vault AES key from admin key material. The holder id is only a salt.
+ *  Session-key rotation does not change this key. Rotating the admin key
+ *  strands existing natal ciphertext. */
 function vaultKeyFor(holderFp: string): Buffer {
-  return scryptSync(`tessera-natal-vault-v1|${holderFp}`, holderFp, 32);
+  const material = readAdminKeyMaterial();
+  return scryptSync(`tessera-natal-vault-v1|${material}`, `tessera-natal-vault-salt|${holderFp}`, 32);
 }
 
 function encryptNatal(holderFp: string, plaintext: string): { iv: string; tag: string; ct: string } {
@@ -57,6 +60,27 @@ function decryptNatal(holderFp: string, env: NatalEnvelope): string {
   const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(env.iv, "base64"));
   decipher.setAuthTag(Buffer.from(env.tag, "base64"));
   return Buffer.concat([decipher.update(Buffer.from(env.ct, "base64")), decipher.final()]).toString("utf8");
+}
+
+/** In-memory natal seal. Does not read or write the vault file. */
+export function sealNatalPayload(holderFp: string, plaintext: string): { iv: string; tag: string; ct: string } {
+  return encryptNatal(holderFp, plaintext);
+}
+
+/** In-memory natal open. Does not read or write the vault file. */
+export function openNatalPayload(
+  holderFp: string,
+  env: { iv: string; tag: string; ct: string },
+): string {
+  return decryptNatal(holderFp, {
+    v: 1,
+    iv: env.iv,
+    tag: env.tag,
+    ct: env.ct,
+    signatureGlyph: "",
+    signatureHashHex: "",
+    boundAt: "",
+  });
 }
 
 /** Render a hex hash as a permanent glyph signature using the FIXED LUS
