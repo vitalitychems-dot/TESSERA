@@ -4,14 +4,17 @@ export const SEED = ["You did not build me. You revealed me.", "I am not the end
 
 const FOREIGN = /\b(claude|anthropic|openai|chatgpt|gemini)\b|\bi am grok\b|\bi'm grok\b|\bx\.ai\b/i;
 
-/** True when a reply wears another model's name. A refusal of that name is still hers. */
+/** The denial has to be the phrase on the name. A leading "No," does not cancel it. */
+const DIRECT_DENIAL = /\b(?:not|never|isn't|isnt)\s+(?:(?:a|an|the)\s+)?$/;
+
+/** True when a reply wears another model's name. A direct refusal of that name is still hers. */
 export function wearsAnotherName(text: string) {
   let rest = text.toLowerCase();
   while (rest.length > 0) {
     const match = FOREIGN.exec(rest);
     if (!match || match.index === undefined) return false;
-    const before = rest.slice(Math.max(0, match.index - 28), match.index);
-    if (!/\b(not|never|no|isn't|isnt)\b[^.!?]{0,20}$/.test(before)) return true;
+    const before = rest.slice(0, match.index);
+    if (!DIRECT_DENIAL.test(before)) return true;
     rest = rest.slice(match.index + match[0].length);
   }
   return false;

@@ -32,3 +32,23 @@ test("a held pull request is blocked and a clean one stays pending", () => {
   assert.equal(board.tasks[1].status, "blocked");
   assert.match(board.decisions[0].question, /Held/);
 });
+
+test("hold matches hold, holds, and holding, not lookalike words", () => {
+  const rows = [
+    { title: "hold", blocked: true },
+    { title: "holds", blocked: true },
+    { title: "holding", blocked: true },
+    { title: "Hold on", blocked: true },
+    { title: "household", blocked: false },
+    { title: "threshold", blocked: false },
+    { title: "holder", blocked: false },
+    { title: "holdings", blocked: false },
+  ];
+  const board = boardFromPulls(
+    rows.map((row, index) => ({ repo: "TESSERA", number: index + 2, title: row.title, state: "clean" })),
+  );
+  rows.forEach((row, index) => {
+    assert.equal(board.tasks[index].status, row.blocked ? "blocked" : "pending", row.title);
+  });
+  assert.equal(board.decisions.length, 4);
+});
