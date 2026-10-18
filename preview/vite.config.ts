@@ -2,6 +2,7 @@ import { readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { fillDevApiServerPort } from "./src/lib/dev-api-port.ts";
 
 const previewDir = process.cwd();
 const repoRoot = join(previewDir, "..");
@@ -19,18 +20,6 @@ function installedPackage(name: string, versionPrefix: string): string {
 
 function packageDir(resolver: NodeJS.Require, name: string): string {
   return dirname(resolver.resolve(`${name}/package.json`));
-}
-
-// The desk gate reads API_SERVER_PORT and fails closed when it is unset or
-// invalid. Only the Vite dev server fills a blank value, from TESSERA_API_PORT
-// or the local suite API port. Production preview and builds leave it unset.
-// An invalid value is left unchanged so the gate still fails closed.
-function fillDevApiServerPort(command: string, mode: string): void {
-  if (command !== "serve" || mode !== "development") return;
-  const configuredApiPort = process.env.API_SERVER_PORT?.trim();
-  if (configuredApiPort) return;
-  const suitePort = process.env.TESSERA_API_PORT?.trim();
-  process.env.API_SERVER_PORT = suitePort || "5000";
 }
 
 const rawPort = process.env.PORT ?? "4174";

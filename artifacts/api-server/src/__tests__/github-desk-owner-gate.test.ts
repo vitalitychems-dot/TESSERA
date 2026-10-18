@@ -1,6 +1,8 @@
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import express, { type Request as ExpressRequest, type Response as ExpressResponse } from "express";
 import { rejectWhenDatabaseNotConfigured } from "../lib/db-availability";
@@ -1240,6 +1242,21 @@ describe("loopback session check", () => {
     expect(result.text.includes("database not configured")).toBe(false);
   });
 
+  it("copies a dev suite port and does not invent one when the api runs elsewhere", () => {
+    expect(fillDevPort("serve", "development", {})).toEqual({ port: null });
+    expect(fillDevPort("serve", "development", { API_SERVER_PORT: "   " })).toEqual({ port: "   " });
+    expect(fillDevPort("serve", "development", { TESSERA_API_PORT: "8080" })).toEqual({ port: "8080" });
+    expect(fillDevPort("serve", "development", { API_SERVER_PORT: "8080", TESSERA_API_PORT: "5000" })).toEqual({
+      port: "8080",
+    });
+    expect(fillDevPort("serve", "development", { TESSERA_API_PORT: "5000" })).toEqual({ port: "5000" });
+    expect(fillDevPort("build", "development", { TESSERA_API_PORT: "8080" })).toEqual({ port: null });
+    expect(fillDevPort("serve", "production", { TESSERA_API_PORT: "8080" })).toEqual({ port: null });
+    for (const suitePort of ["nope", "0", "65536", "   "]) {
+      expect(fillDevPort("serve", "development", { TESSERA_API_PORT: suitePort })).toEqual({ port: null });
+    }
+  });
+
   it("keeps the check off the preview proxy and the public internal-path list", () => {
     const gateSource = readFileSync(new URL("../lib/github-desk-gate.ts", import.meta.url), "utf8");
     expect(gateSource.includes("lookupSession")).toBe(false);
@@ -1262,6 +1279,22 @@ describe("loopback session check", () => {
     expect(routeSource.includes("console.")).toBe(false);
   });
 });
+
+function fillDevPort(command: string, mode: string, env: Record<string, string>): { port: string | null } {
+  const modulePath = fileURLToPath(new URL("../../../../preview/src/lib/dev-api-port.ts", import.meta.url));
+  const probe = `
+    import { fillDevApiServerPort } from ${JSON.stringify(modulePath)};
+    const env = ${JSON.stringify(env)};
+    fillDevApiServerPort(${JSON.stringify(command)}, ${JSON.stringify(mode)}, env);
+    const port = Object.prototype.hasOwnProperty.call(env, "API_SERVER_PORT") ? env.API_SERVER_PORT : null;
+    process.stdout.write(JSON.stringify({ port }));
+  `;
+  const result = spawnSync(process.execPath, ["--experimental-strip-types", "--input-type=module", "-e", probe], {
+    encoding: "utf8",
+  });
+  if (result.status !== 0) throw new Error("dev port probe failed");
+  return JSON.parse(result.stdout) as { port: string | null };
+}
 
 function ownerCookieWithoutConfig(): string {
   return `${SESSION_COOKIE}=present`;
