@@ -94,7 +94,8 @@ function SovereignDoctrinePanel() {
     refetchInterval: 30000,
   });
 
-  const fp = activeKey.data?.key?.fingerprint ?? "—";
+  const sessionStatus = typeof activeKey.data?.status === "string" ? activeKey.data.status : null;
+  const publicId = typeof activeKey.data?.key?.fingerprint === "string" ? activeKey.data.key.fingerprint : "—";
   const keyMatches = !!savedKey;
   const handoffPlaintext = handoff.data && typeof handoff.data?.directives !== "undefined" && Array.isArray(handoff.data.directives);
 
@@ -111,7 +112,8 @@ function SovereignDoctrinePanel() {
           <div className="text-[10px] uppercase text-fuchsia-400/70 font-mono mb-1">SIGIL CIPHER</div>
           <div className="text-xs font-mono text-white/70">Generation: <span className="text-fuchsia-300">{sigil.data?.active?.generation ?? "—"}</span></div>
           <div className="text-xs font-mono text-white/70">Key history: <span className="text-fuchsia-300">{sigil.data?.keyHistory ?? 0}</span></div>
-          <div className="text-[10px] font-mono text-white/40 mt-1 truncate" title={fp}>fp: {fp}</div>
+          <div className="text-[10px] font-mono text-white/40 mt-1 truncate">{sessionStatus ? sessionStatus : "no session status"}</div>
+          <div className="text-[10px] font-mono text-white/40 mt-1 truncate" title={publicId}>id: {publicId}</div>
         </div>
         <div className="bg-black/30 border border-white/10 rounded p-3">
           <div className="text-[10px] uppercase text-cyan-400/70 font-mono mb-1">SESSION HANDOFF</div>

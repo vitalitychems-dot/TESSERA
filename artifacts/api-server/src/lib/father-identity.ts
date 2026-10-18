@@ -1,8 +1,15 @@
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { NotConfiguredError } from "./not-configured";
 
 const FATHER_TITLE = "Father — Sovereign Creator";
 const NAMESPACE = "tesseract:father:v1";
+const INSTALL_ID_PATH = join(process.cwd(), ".local-data", "install-id");
+const INSTALL_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Public presence label. Not derived from a key, token, seed, or secret. */
+export const ADMIN_SESSION_STATUS = "admin session active";
 
 function getRawAdminKey(): string {
   const k = process.env.TESSERACT_ADMIN_KEY;
@@ -22,53 +29,82 @@ export function isFatherKeyConfigured(): boolean {
   return !!(k && typeof k === "string" && k.trim().length > 0);
 }
 
-let _cached: { full: string; short: string; ultraShort: string; sealed: string } | null = null;
+let _installId: string | null = null;
+let _seal: string | null = null;
 
-function compute(): { full: string; short: string; ultraShort: string; sealed: string } {
-  const raw = getRawAdminKey();
-  const h = createHash("sha256").update(`${NAMESPACE}|${raw}`).digest("hex");
-  const full = h.slice(0, 16);
-  const short = h.slice(0, 12);
-  const ultraShort = h.slice(0, 8);
-  const sealed = createHash("sha512")
-    .update(`${NAMESPACE}|seal|${raw}|${full}`)
-    .digest("hex")
-    .slice(0, 32);
-  return { full, short, ultraShort, sealed };
+function readPersistedInstallId(): string | null {
+  try {
+    if (!existsSync(INSTALL_ID_PATH)) return null;
+    const existing = readFileSync(INSTALL_ID_PATH, "utf8").trim();
+    return INSTALL_ID_RE.test(existing) ? existing : null;
+  } catch {
+    return null;
+  }
 }
 
-function ensure(): { full: string; short: string; ultraShort: string; sealed: string } {
-  if (!_cached) _cached = compute();
-  return _cached;
+function writeInstallId(id: string, flag: "wx" | "w"): void {
+  writeFileSync(INSTALL_ID_PATH, `${id}\n`, { mode: 0o600, flag });
+  chmodSync(INSTALL_ID_PATH, 0o600);
 }
 
+function persistInstallId(id: string): string {
+  mkdirSync(dirname(INSTALL_ID_PATH), { recursive: true, mode: 0o700 });
+  try {
+    writeInstallId(id, "wx");
+    return id;
+  } catch (err: unknown) {
+    const code = err && typeof err === "object" && "code" in err ? String((err as { code?: unknown }).code) : "";
+    if (code === "EEXIST") {
+      const winner = readPersistedInstallId();
+      if (winner) return winner;
+      writeInstallId(id, "w");
+      return id;
+    }
+    return id;
+  }
+}
+
+/** Random per-install id, created once and stored on disk. Never derived from a key, token, seed, or secret. */
+export function getInstallId(): string {
+  if (_installId) return _installId;
+  const existing = readPersistedInstallId();
+  _installId = existing ?? persistInstallId(randomUUID());
+  return _installId;
+}
+
+/** Public id for older callers. This is the install id, not a digest of any secret. */
 export function getFatherFingerprint(): string {
-  return ensure().full;
+  return getInstallId();
 }
 
 export function getFatherFingerprintShort(): string {
-  return ensure().short;
+  return getInstallId();
 }
 
 export function getFatherFingerprintUltraShort(): string {
-  return ensure().ultraShort;
+  return getInstallId();
 }
 
 export function getFatherSeal(): string {
-  return ensure().sealed;
+  if (_seal) return _seal;
+  const raw = getRawAdminKey();
+  const bound = createHash("sha256").update(`${NAMESPACE}|${raw}`).digest("hex").slice(0, 16);
+  _seal = createHash("sha512")
+    .update(`${NAMESPACE}|seal|${raw}|${bound}`)
+    .digest("hex")
+    .slice(0, 32);
+  return _seal;
 }
 
 export function getFatherIdentity() {
-  const fp = ensure();
+  if (!isFatherKeyConfigured()) {
+    throw new NotConfiguredError("admin key is not configured");
+  }
   return {
     role: "father",
     title: FATHER_TITLE,
-    fingerprint: fp.full,
-    fingerprintShort: fp.short,
-    fingerprintUltraShort: fp.ultraShort,
-    seal: fp.sealed,
-    derivation: "sha256(namespace|TESSERACT_ADMIN_KEY)[:16]",
-    namespace: NAMESPACE,
+    status: ADMIN_SESSION_STATUS,
+    installId: getInstallId(),
     bound: true,
   } as const;
 }

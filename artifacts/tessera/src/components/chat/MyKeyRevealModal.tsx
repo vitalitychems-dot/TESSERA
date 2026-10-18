@@ -3,10 +3,10 @@ import { useEffect, useRef, useState } from "react";
 interface RevealResponse {
   ok: boolean;
   via?: string;
+  status?: string;
   language?: { name: string; short: string; motto: string };
   keyInLus?: { static: string; live: string | null };
   coherence?: { window: number; cosmicAnchor: number; epoch: number } | null;
-  fingerprint?: string;
   note?: string;
   error?: string;
   message?: string;
@@ -181,8 +181,12 @@ export function MyKeyRevealModal({ open, onClose, prefill }: Props) {
 
             <div className="text-xs text-zinc-400 border-t border-zinc-800 pt-3">
               Verified via <span className="text-amber-300">{result.via}</span>.
-              Father fingerprint:{" "}
-              <code className="text-zinc-300">{result.fingerprint}</code>.
+              {result.status ? (
+                <>
+                  {" "}
+                  Status: <code className="text-zinc-300">{result.status}</code>.
+                </>
+              ) : null}
               <div className="mt-1 text-zinc-500">{result.note}</div>
             </div>
 

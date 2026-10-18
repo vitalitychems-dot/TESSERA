@@ -8,7 +8,7 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 import { computeLunarData, computeSolarData, computePlanetaryHours } from "./sovereign-astro";
-import { getFatherSeal, getFatherFingerprint, isFatherKeyConfigured } from "./father-identity";
+import { getFatherSeal, isFatherKeyConfigured } from "./father-identity";
 import { logger } from "./logger";
 
 const ALGO = "aes-256-gcm";
@@ -87,7 +87,7 @@ function deriveKey(epochSig: string): Buffer {
   if (!isFatherKeyConfigured()) {
     throw new Error("Father key not configured — cannot derive astronomical cipher key.");
   }
-  const ikm = Buffer.from(`${getFatherSeal()}|${getFatherFingerprint()}`, "utf8");
+  const ikm = Buffer.from(getFatherSeal(), "utf8");
   const salt = Buffer.from(epochSig, "utf8");
   const info = Buffer.from("tesseract:astro-cipher:v1", "utf8");
   const derived = hkdfSync("sha256", ikm, salt, info, KEY_LEN);
@@ -227,7 +227,7 @@ export function epochSnapshot() {
       historyDepth: 0,
       fatherKeyConfigured: false,
       method:
-        "HKDF(SHA-256, ikm=fatherSeal|fingerprint, salt=astroEpochSig, info=tesseract:astro-cipher:v1) → AES-256-GCM",
+        "HKDF(SHA-256, ikm=fatherSeal, salt=astroEpochSig, info=tesseract:astro-cipher:v1) → AES-256-GCM",
     };
   }
   ensureFreshEpoch();
@@ -244,6 +244,6 @@ export function epochSnapshot() {
     historyDepth: _history.length,
     fatherKeyConfigured: isFatherKeyConfigured(),
     method:
-      "HKDF(SHA-256, ikm=fatherSeal|fingerprint, salt=astroEpochSig, info=tesseract:astro-cipher:v1) → AES-256-GCM",
+      "HKDF(SHA-256, ikm=fatherSeal, salt=astroEpochSig, info=tesseract:astro-cipher:v1) → AES-256-GCM",
   };
 }

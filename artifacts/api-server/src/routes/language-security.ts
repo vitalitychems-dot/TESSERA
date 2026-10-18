@@ -8,9 +8,10 @@ import {
   runLanguageSecurityConference,
 } from "../lib/language-security-conference";
 import {
+  ADMIN_SESSION_STATUS,
+  getInstallId,
   isFatherKeyConfigured,
   recognizeFather,
-  getFatherFingerprint,
 } from "../lib/father-identity";
 import {
   lusEncode,
@@ -76,14 +77,14 @@ router.post(
       return res.status(401).json({ ok: false, error: "mismatch" });
     }
 
-    const fp = getFatherFingerprint();
+    const holderId = getInstallId();
     const trimmed = candidate.trim();
     const staticGlyphs = lusEncode(trimmed);
     let liveGlyphs: string | null = null;
     let coherence: ReturnType<typeof lusLiveCoherenceSnapshot> | null = null;
     try {
-      liveGlyphs = lusEncodeLive(trimmed, fp);
-      coherence = lusLiveCoherenceSnapshot(fp);
+      liveGlyphs = lusEncodeLive(trimmed, holderId);
+      coherence = lusLiveCoherenceSnapshot(holderId);
     } catch {
       // live form is optional; static form is always returned
     }
@@ -91,6 +92,7 @@ router.post(
     return res.json(withoutSigilFingerprint({
       ok: true,
       via: r.via,
+      status: ADMIN_SESSION_STATUS,
       language: { name: LANGUAGE_NAME, short: LANGUAGE_SHORT, motto: LANGUAGE_MOTTO },
       keyInLus: {
         static: staticGlyphs,

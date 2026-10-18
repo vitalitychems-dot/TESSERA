@@ -312,7 +312,7 @@ router.get("/grand-conference/summary", (_req, res) => {
     cipher: snap,
     vault,
     capabilities: {
-      astronomicalKDF: "HKDF-SHA256 over (fatherSeal|fingerprint, astroEpochSig, info)",
+      astronomicalKDF: "HKDF-SHA256 over (fatherSeal, astroEpochSig, info)",
       symmetricCipher: "AES-256-GCM with random 96-bit IV per envelope",
       autonomousRotation: "Recomputed every heartbeat tick + every API request",
       gracefulRecovery: "Last 6 epoch keys retained for in-flight decryption",
