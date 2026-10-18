@@ -31,14 +31,18 @@ export function TesseraKeyboard({
   const [numbers, setNumbers] = useState(false);
   const [heldKey, setHeldKey] = useState<string | null>(null);
   const holdTimer = useRef<number | null>(null);
-  const suppressNextClick = useRef(false);
+  const longPressTriggered = useRef(false);
+  const suppressClickUntil = useRef(0);
+  const pointerPressedKey = useRef<string | null>(null);
 
   useEffect(() => {
     if (!open) {
       setHeldKey(null);
       if (holdTimer.current !== null) window.clearTimeout(holdTimer.current);
       holdTimer.current = null;
-      suppressNextClick.current = false;
+      longPressTriggered.current = false;
+      suppressClickUntil.current = 0;
+      pointerPressedKey.current = null;
       return;
     }
 
@@ -54,16 +58,28 @@ export function TesseraKeyboard({
   const startHold = (key: string) => {
     if (!/^[a-z]$/i.test(key) || !LUS_KEYBOARD_GLYPHS[key.toLowerCase()]) return;
     if (holdTimer.current !== null) window.clearTimeout(holdTimer.current);
-    suppressNextClick.current = false;
+    longPressTriggered.current = false;
     holdTimer.current = window.setTimeout(() => {
-      suppressNextClick.current = true;
+      longPressTriggered.current = true;
       setHeldKey(key);
-    }, 460);
+    }, 360);
   };
 
   const clearHold = () => {
     if (holdTimer.current !== null) window.clearTimeout(holdTimer.current);
     holdTimer.current = null;
+  };
+
+  const finishLetterPress = (visibleKey: string) => {
+    clearHold();
+    suppressClickUntil.current = performance.now() + 100;
+    if (longPressTriggered.current) {
+      longPressTriggered.current = false;
+      return;
+    }
+    setHeldKey(null);
+    onInsert(visibleKey);
+    setUppercase(false);
   };
 
   const renderLetter = (key: string) => {
@@ -74,21 +90,40 @@ export function TesseraKeyboard({
         <button
           type="button"
           aria-label={`Type ${visibleKey}. Hold for its LUS glyph.`}
-          onPointerDown={() => startHold(key)}
-          onPointerUp={clearHold}
-          onPointerCancel={clearHold}
-          onPointerLeave={clearHold}
+          onPointerDown={(event) => {
+            if (event.button !== 0) return;
+            event.preventDefault();
+            pointerPressedKey.current = key;
+            startHold(key);
+          }}
+          onPointerUp={(event) => {
+            if (pointerPressedKey.current !== key) return;
+            event.preventDefault();
+            pointerPressedKey.current = null;
+            finishLetterPress(visibleKey);
+          }}
+          onPointerCancel={() => {
+            clearHold();
+            longPressTriggered.current = false;
+            pointerPressedKey.current = null;
+          }}
+          onPointerLeave={() => {
+            if (!longPressTriggered.current) {
+              clearHold();
+              pointerPressedKey.current = null;
+            }
+          }}
           onContextMenu={(event) => event.preventDefault()}
           onClick={() => {
-            if (suppressNextClick.current) {
-              suppressNextClick.current = false;
+            if (suppressClickUntil.current > performance.now()) {
+              suppressClickUntil.current = 0;
               return;
             }
             setHeldKey(null);
             onInsert(visibleKey);
             setUppercase(false);
           }}
-          className="h-10 sm:h-11 w-full select-none rounded-md border border-white/[0.09] bg-white/[0.11] text-[18px] sm:text-[20px] font-medium text-[#f3efe6] active:bg-white/[0.2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
+          className="h-10 sm:h-11 w-full touch-manipulation select-none rounded-md border border-white/[0.09] bg-white/[0.11] text-[18px] sm:text-[20px] font-medium text-[#f3efe6] active:bg-white/[0.2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
           style={{ outlineColor: NEXT_COLORS.glass, touchAction: "manipulation" }}
           data-testid={`tessera-key-${key}`}
         >
@@ -103,6 +138,7 @@ export function TesseraKeyboard({
           >
             <button
               type="button"
+              onPointerDown={(event) => event.preventDefault()}
               aria-label={`Type English ${visibleKey}`}
               onClick={() => {
                 onInsert(visibleKey);
@@ -117,6 +153,7 @@ export function TesseraKeyboard({
             <span aria-hidden="true" className="h-7 w-px bg-white/15" />
             <button
               type="button"
+              onPointerDown={(event) => event.preventDefault()}
               aria-label={`Type LUS glyph ${glyph} for ${visibleKey}`}
               onClick={() => {
                 onInsert(glyph);
@@ -172,9 +209,10 @@ export function TesseraKeyboard({
                 <button
                   type="button"
                   key={`${key}-${index}`}
+                  onPointerDown={(event) => event.preventDefault()}
                   onClick={() => onInsert(key)}
-                  className="h-10 min-w-0 flex-1 rounded-md border border-white/[0.09] bg-white/[0.11] text-[16px] text-[#f3efe6] active:bg-white/[0.2] focus-visible:outline focus-visible:outline-2"
-                  style={{ outlineColor: NEXT_COLORS.glass }}
+                  className="h-10 min-w-0 flex-1 touch-manipulation rounded-md border border-white/[0.09] bg-white/[0.11] text-[16px] text-[#f3efe6] active:bg-white/[0.2] focus-visible:outline focus-visible:outline-2"
+                  style={{ outlineColor: NEXT_COLORS.glass, touchAction: "manipulation" }}
                 >
                   {key}
                 </button>
@@ -194,8 +232,9 @@ export function TesseraKeyboard({
                   type="button"
                   aria-label={uppercase ? "Turn off uppercase" : "Turn on uppercase"}
                   aria-pressed={uppercase}
+                  onPointerDown={(event) => event.preventDefault()}
                   onClick={() => setUppercase((value) => !value)}
-                  className="h-10 min-w-10 rounded-md border border-white/[0.09] bg-white/[0.11] px-2 text-sm text-[#f3efe6] focus-visible:outline focus-visible:outline-2"
+                  className="h-10 min-w-10 touch-manipulation rounded-md border border-white/[0.09] bg-white/[0.11] px-2 text-sm text-[#f3efe6] focus-visible:outline focus-visible:outline-2"
                   style={{ outlineColor: NEXT_COLORS.glass }}
                 >
                   ⇧
@@ -205,9 +244,10 @@ export function TesseraKeyboard({
               {rowIndex === 2 && (
                 <button
                   type="button"
+                  onPointerDown={(event) => event.preventDefault()}
                   onClick={onBackspace}
                   aria-label="Delete previous character"
-                  className="grid h-10 min-w-10 place-items-center rounded-md border border-white/[0.09] bg-white/[0.11] px-2 text-[#f3efe6] focus-visible:outline focus-visible:outline-2"
+                  className="grid h-10 min-w-10 touch-manipulation place-items-center rounded-md border border-white/[0.09] bg-white/[0.11] px-2 text-[#f3efe6] focus-visible:outline focus-visible:outline-2"
                   style={{ outlineColor: NEXT_COLORS.glass }}
                 >
                   <Delete size={18} />
@@ -221,8 +261,9 @@ export function TesseraKeyboard({
       <div className="mt-1.5 flex gap-1">
         <button
           type="button"
+          onPointerDown={(event) => event.preventDefault()}
           onClick={() => setNumbers((value) => !value)}
-          className="h-10 min-w-[52px] rounded-md border border-white/[0.09] bg-white/[0.11] px-3 text-sm text-[#f3efe6] focus-visible:outline focus-visible:outline-2"
+          className="h-10 min-w-[52px] touch-manipulation rounded-md border border-white/[0.09] bg-white/[0.11] px-3 text-sm text-[#f3efe6] focus-visible:outline focus-visible:outline-2"
           style={{ outlineColor: NEXT_COLORS.glass }}
           data-testid="button-keyboard-numbers"
         >
@@ -230,36 +271,40 @@ export function TesseraKeyboard({
         </button>
         <button
           type="button"
+          onPointerDown={(event) => event.preventDefault()}
           onClick={() => onInsert(",")}
           aria-label="Type comma"
-          className="h-10 min-w-9 rounded-md border border-white/[0.09] bg-white/[0.11] px-2 text-[#f3efe6] focus-visible:outline focus-visible:outline-2"
+          className="h-10 min-w-9 touch-manipulation rounded-md border border-white/[0.09] bg-white/[0.11] px-2 text-[#f3efe6] focus-visible:outline focus-visible:outline-2"
           style={{ outlineColor: NEXT_COLORS.glass }}
         >
           ,
         </button>
         <button
           type="button"
+          onPointerDown={(event) => event.preventDefault()}
           onClick={() => onInsert(" ")}
           aria-label="Space"
-          className="h-10 flex-1 rounded-md border border-white/[0.09] bg-white/[0.11] text-[10px] text-white/50 focus-visible:outline focus-visible:outline-2"
+          className="h-10 flex-1 touch-manipulation rounded-md border border-white/[0.09] bg-white/[0.11] text-[10px] text-white/50 focus-visible:outline focus-visible:outline-2"
           style={{ outlineColor: NEXT_COLORS.glass }}
         >
           space
         </button>
         <button
           type="button"
+          onPointerDown={(event) => event.preventDefault()}
           onClick={() => onInsert(".")}
           aria-label="Type period"
-          className="h-10 min-w-9 rounded-md border border-white/[0.09] bg-white/[0.11] px-2 text-[#f3efe6] focus-visible:outline focus-visible:outline-2"
+          className="h-10 min-w-9 touch-manipulation rounded-md border border-white/[0.09] bg-white/[0.11] px-2 text-[#f3efe6] focus-visible:outline focus-visible:outline-2"
           style={{ outlineColor: NEXT_COLORS.glass }}
         >
           .
         </button>
         <button
           type="button"
+          onPointerDown={(event) => event.preventDefault()}
           onClick={() => onEnter ? onEnter() : onInsert("\n")}
           aria-label={enterLabel}
-          className="grid h-10 min-w-12 place-items-center rounded-md border border-white/[0.09] bg-white/[0.11] px-2 text-[#f3efe6] focus-visible:outline focus-visible:outline-2"
+          className="grid h-10 min-w-12 touch-manipulation place-items-center rounded-md border border-white/[0.09] bg-white/[0.11] px-2 text-[#f3efe6] focus-visible:outline focus-visible:outline-2"
           style={{ outlineColor: NEXT_COLORS.glass }}
         >
           <CornerDownLeft size={17} />

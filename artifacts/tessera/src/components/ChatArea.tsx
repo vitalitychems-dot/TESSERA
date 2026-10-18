@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from "react";
 import { Loader2, X, Copy, Check, Download, Zap, PhoneOff, Pause, Play, MessageSquare, Shield, Settings2, Bot, CheckCircle2, Search, Sparkles, Code, Database, Keyboard, Eye } from "lucide-react";
 import { NLPGoalsPanel } from "./chat/NLPGoalsPanel";
 import { type VirtuosoHandle } from "react-virtuoso";
@@ -86,6 +86,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   const [tesseraKeyboardOpen, setTesseraKeyboardOpen] = useState(false);
   const [allowExternalProvider, setAllowExternalProvider] = useState(false);
   const inputRef = useRef("");
+  const pendingComposerCaretRef = useRef<number | null>(null);
   const setInputBoth = useCallback((val: string) => {
     inputRef.current = val;
     setInput(val);
@@ -97,12 +98,8 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
     const end = textarea?.selectionEnd ?? start;
     const next = current.slice(0, start) + text + current.slice(end);
     const caret = start + text.length;
+    pendingComposerCaretRef.current = caret;
     setInputBoth(next);
-    requestAnimationFrame(() => {
-      if (!textarea) return;
-      textarea.focus({ preventScroll: true });
-      textarea.setSelectionRange(caret, caret);
-    });
   }, [setInputBoth]);
   const deleteAtComposerCaret = useCallback(() => {
     const textarea = textareaRef.current;
@@ -116,12 +113,8 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
     }
     if (start === end) return;
     const next = current.slice(0, start) + current.slice(end);
+    pendingComposerCaretRef.current = start;
     setInputBoth(next);
-    requestAnimationFrame(() => {
-      if (!textarea) return;
-      textarea.focus({ preventScroll: true });
-      textarea.setSelectionRange(start, start);
-    });
   }, [setInputBoth]);
   const [isRecording, setIsRecording] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
@@ -221,6 +214,15 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const caret = pendingComposerCaretRef.current;
+    if (caret === null) return;
+    pendingComposerCaretRef.current = null;
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const safeCaret = Math.min(caret, textarea.value.length);
+    textarea.setSelectionRange(safeCaret, safeCaret);
+  }, [input]);
   const lastSpokenRef = useRef<string>("");
   const autoSendTimerRef = useRef<any>(null);
   const countdownRef = useRef<any>(null);

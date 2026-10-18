@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Keyboard } from "lucide-react";
 import { TesseraKeyboard } from "./chat/TesseraKeyboard";
 
@@ -157,6 +157,16 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
   );
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const tokenInputRef = useRef<HTMLInputElement>(null);
+  const pendingTokenCaretRef = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const caret = pendingTokenCaretRef.current;
+    if (caret === null) return;
+    pendingTokenCaretRef.current = null;
+    const input = tokenInputRef.current;
+    if (!input) return;
+    const safeCaret = Math.min(caret, input.value.length);
+    input.setSelectionRange(safeCaret, safeCaret);
+  }, [tokenInput]);
 
   // Initial probe + periodic re-probe to detect server-side expiry.
   useEffect(() => {
@@ -359,12 +369,8 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
           const end = input?.selectionEnd ?? start;
           const next = tokenInput.slice(0, start) + text + tokenInput.slice(end);
           const caret = start + text.length;
+          pendingTokenCaretRef.current = caret;
           setTokenInput(next);
-          requestAnimationFrame(() => {
-            if (!input) return;
-            input.focus({ preventScroll: true });
-            input.setSelectionRange(caret, caret);
-          });
         }}
         onBackspace={() => {
           const input = tokenInputRef.current;
@@ -377,12 +383,8 @@ export default function TesseractKeyGate({ children }: { children: ReactNode }) 
           }
           if (start === end) return;
           const next = tokenInput.slice(0, start) + tokenInput.slice(end);
+          pendingTokenCaretRef.current = start;
           setTokenInput(next);
-          requestAnimationFrame(() => {
-            if (!input) return;
-            input.focus({ preventScroll: true });
-            input.setSelectionRange(start, start);
-          });
         }}
         onEnter={() => { void submit(); }}
         enterLabel="Unlock using the entered admin key"
