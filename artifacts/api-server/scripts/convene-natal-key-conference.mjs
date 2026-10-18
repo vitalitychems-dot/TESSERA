@@ -10,8 +10,124 @@
 // the permanent Father Key.
 //
 // Usage: node artifacts/api-server/scripts/convene-natal-key-conference.mjs
+//
+// The ratified key is never printed (not the value, and not a hash, prefix,
+// or fingerprint of it, including on error paths). It is created exclusively
+// — no silent overwrite — with mode 0600 under $TESSERA_KEY_OUTPUT_DIR, or
+// ~/.tessera/keys/ when that variable is unset. The directory is mode 0700.
+// A path that resolves inside this repository is refused. The only key line
+// on stdout is: key written: <path>
 
 import { createHash } from "node:crypto";
+import { chmod, mkdir, realpath, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const KEY_FILENAME = "tesseract-admin-key";
+const KEY_DIR_ENV = "TESSERA_KEY_OUTPUT_DIR";
+
+function scriptRepoRoot() {
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+}
+
+function pathIsInside(root, candidate) {
+  const base = path.resolve(root);
+  const target = path.resolve(candidate);
+  const rel = path.relative(base, target);
+  return rel === "" || (rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel));
+}
+
+async function resolveReal(inputPath) {
+  const absolute = path.resolve(inputPath);
+  const missing = [];
+  let current = absolute;
+  for (;;) {
+    try {
+      const real = await realpath(current);
+      return missing.length === 0 ? real : path.join(real, ...missing);
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+      const parent = path.dirname(current);
+      if (parent === current) throw error;
+      missing.unshift(path.basename(current));
+      current = parent;
+    }
+  }
+}
+
+function keyMaterialNeedles(key) {
+  if (typeof key !== "string" || key.length === 0) return [];
+  const sha256 = createHash("sha256").update(key).digest("hex");
+  const sha512 = createHash("sha512").update(key).digest("hex");
+  const needles = [key, sha256, sha512];
+  if (key.length >= 8) needles.push(key.slice(0, 8));
+  return needles;
+}
+
+function textHasKeyMaterial(text, keys) {
+  const haystack = String(text ?? "");
+  for (const key of keys) {
+    for (const needle of keyMaterialNeedles(key)) {
+      if (needle && haystack.includes(needle)) return true;
+    }
+  }
+  return false;
+}
+
+function publicErrorMessage(error, keys) {
+  const message = typeof error?.message === "string" ? error.message : "";
+  if (message && !textHasKeyMaterial(message, keys)) return message;
+  return "key conference failed";
+}
+
+function selectOutputDir(options) {
+  if (typeof options.outputDir === "string" && options.outputDir.trim()) return options.outputDir.trim();
+  const env = options.env ?? process.env;
+  const fromEnv = env?.[KEY_DIR_ENV];
+  if (typeof fromEnv === "string" && fromEnv.trim()) return fromEnv.trim();
+  return path.join(options.homedir ?? homedir(), ".tessera", "keys");
+}
+
+export async function writeKeyFile(key, options = {}) {
+  if (typeof key !== "string" || key.length === 0 || key.includes("\0")) {
+    throw Object.assign(new Error("refusing to write an empty key"), { code: "EKEYEMPTY" });
+  }
+  const filename = options.filename ?? KEY_FILENAME;
+  if (filename !== path.basename(filename) || filename === "." || filename === ".." || filename.includes("\0")) {
+    throw Object.assign(new Error("refusing a key filename that is not a single path segment"), { code: "EKEYNAME" });
+  }
+  const stdout = options.stdout ?? process.stdout;
+  const repoRoot = await resolveReal(options.repoRoot ?? scriptRepoRoot());
+  const resolvedDir = await resolveReal(selectOutputDir(options));
+  const resolvedFile = path.join(resolvedDir, filename);
+  if (pathIsInside(repoRoot, resolvedDir) || pathIsInside(repoRoot, resolvedFile)) {
+    throw Object.assign(new Error("refusing to write a key inside the repository"), { code: "EKEYINREPO" });
+  }
+  await mkdir(resolvedDir, { recursive: true, mode: 0o700 });
+  const realDir = await realpath(resolvedDir);
+  const realFile = path.join(realDir, filename);
+  if (pathIsInside(repoRoot, realDir) || pathIsInside(repoRoot, realFile)) {
+    throw Object.assign(new Error("refusing to write a key inside the repository"), { code: "EKEYINREPO" });
+  }
+  await chmod(realDir, 0o700);
+  try {
+    await writeFile(realFile, key, { encoding: "utf8", mode: 0o600, flag: "wx" });
+  } catch (error) {
+    if (error?.code === "EEXIST") {
+      throw Object.assign(new Error("refusing to overwrite an existing key file"), { code: "EEXIST" });
+    }
+    const message = publicErrorMessage(error, [key]);
+    throw Object.assign(new Error(message), { code: error?.code });
+  }
+  await chmod(realFile, 0o600);
+  const line = `key written: ${realFile}\n`;
+  if (textHasKeyMaterial(line, [key])) {
+    throw Object.assign(new Error("refusing to print key material"), { code: "EKEYPRINT" });
+  }
+  stdout.write(line);
+  return { path: realFile };
+}
 
 // ---------------------------------------------------------------
 // Load the holder chart from Replit Secrets.
@@ -65,17 +181,14 @@ function mapPlacement(value, path, houseOverride) {
   };
 }
 
-function loadNatal() {
-  const raw = process.env.FATHER_NATAL_CHART_JSON;
-  if (!raw) {
-    throw new Error("Missing required Replit Secret: FATHER_NATAL_CHART_JSON");
-  }
-
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error("FATHER_NATAL_CHART_JSON must contain valid JSON");
+function parseChart(raw) {
+  let parsed = raw;
+  if (typeof raw === "string") {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      throw new Error("FATHER_NATAL_CHART_JSON must contain valid JSON");
+    }
   }
 
   const chart = requireObject(parsed, "chart");
@@ -118,7 +231,13 @@ function loadNatal() {
   };
 }
 
-const NATAL = loadNatal();
+function loadNatal() {
+  const raw = process.env.FATHER_NATAL_CHART_JSON;
+  if (!raw) {
+    throw new Error("Missing required Replit Secret: FATHER_NATAL_CHART_JSON");
+  }
+  return parseChart(raw);
+}
 
 // ---------------------------------------------------------------
 // Sacred constants — copied verbatim from sovereign-society.ts
@@ -432,23 +551,27 @@ function buildCandidateKeys(natal) {
   ];
 }
 
+export function conferenceKeyMaterial(raw) {
+  return buildCandidateKeys(parseChart(raw)).map((candidate) => candidate.key);
+}
+
 // ---------------------------------------------------------------
 // Convene the conference
 // ---------------------------------------------------------------
-function convene() {
+function convene(natal) {
   const society = buildSociety();
-  const candidates = buildCandidateKeys(NATAL);
-  const seedHex = natalSeedHex(NATAL);
-  const natalGem = natalGematria(NATAL);
+  const candidates = buildCandidateKeys(natal);
+  const seedHex = natalSeedHex(natal);
+  const natalGem = natalGematria(natal);
 
   const out = [];
   out.push("════════════════════════════════════════════════════════════════════════");
   out.push(" GRAND CONFERENCE — PERMANENT FATHER KEY (TESSERACT_ADMIN_KEY)");
   out.push("════════════════════════════════════════════════════════════════════════");
   out.push(` Convened:        ${new Date().toISOString()}`);
-  out.push(` Holder zodiac:   ${NATAL.westernZodiac} sun · ${NATAL.placements.moon.sign} moon · ${NATAL.placements.ascendant.sign} rising`);
-  out.push(` Chinese zodiac:  ${NATAL.chineseZodiac}`);
-  out.push(` Birth signature: ${NATAL.birthDateISO} ${NATAL.birthTimeHHMM} ${NATAL.birthPlace}`);
+  out.push(` Holder zodiac:   ${natal.westernZodiac} sun · ${natal.placements.moon.sign} moon · ${natal.placements.ascendant.sign} rising`);
+  out.push(` Chinese zodiac:  ${natal.chineseZodiac}`);
+  out.push(` Birth signature: ${natal.birthDateISO} ${natal.birthTimeHHMM} ${natal.birthPlace}`);
   out.push(` Natal gematria:  ${natalGem} (digital-root ${digitalRoot(natalGem)}, nearest sacred ${nearestSacred(natalGem).value} "${nearestSacred(natalGem).meaning}")`);
   out.push(` Natal seed:      sha512(chart|φ|π|ladder)[:24] = ${seedHex.slice(0,24)}…`);
   out.push(` Voting body:     ${society.length} unique sovereign agents (deduped from grand-conference + small-council + personality registry)`);
@@ -465,7 +588,6 @@ function convene() {
     out.push("────────────────────────────────────────────────────────────────────────");
     out.push(` CANDIDATE: ${candidate.id}`);
     out.push(` Title:     ${candidate.title}`);
-    out.push(` Key:       ${candidate.key}`);
     out.push(` Length:    ${candidate.key.length} chars`);
     out.push(` Evidence:  ${candidate.evidenceRef}`);
     out.push("");
@@ -492,48 +614,75 @@ function convene() {
   } else {
     winner = approved[0];
     out.push(` RESULT: RATIFIED — ${approved.length}/${results.length} candidate(s) cleared 2/3 approval`);
-    out.push(` PERMANENT TESSERACT_ADMIN_KEY (Father Key, ratified by Grand Conference):`);
-    out.push("");
-    out.push(`     ${winner.candidate.key}`);
-    out.push("");
+    out.push(" PERMANENT TESSERACT_ADMIN_KEY was ratified. The key value is not printed.");
     out.push(` Identifier:      ${winner.candidate.id}`);
     out.push(` Approval rate:   ${(winner.result.approvalRate*100).toFixed(2)}%   (weight: ${winner.result.weighted.approve} approve / ${winner.result.weighted.reject} reject / ${winner.result.weighted.abstain} abstain)`);
     out.push(` Voter count:     ${winner.result.raw.approve} approve, ${winner.result.raw.reject} reject, ${winner.result.raw.abstain} abstain (of ${winner.result.totalEligible})`);
-    out.push(` Bound to:        ${NATAL.westernZodiac} sun · ${NATAL.placements.moon.sign} moon · ${NATAL.placements.ascendant.sign} rising  (${NATAL.birthDateISO})`);
+    out.push(` Bound to:        ${natal.westernZodiac} sun · ${natal.placements.moon.sign} moon · ${natal.placements.ascendant.sign} rising  (${natal.birthDateISO})`);
     out.push(` Reproducibility: this same chart input regenerates this same key — verifiable forever.`);
     if (approved.length > 1) {
       out.push("");
       out.push(" Other ratified candidates (kept on record as backup keys):");
       for (let i = 1; i < approved.length; i++) {
-        out.push(`   ${approved[i].candidate.id}: ${approved[i].candidate.key}  (${(approved[i].result.approvalRate*100).toFixed(2)}%)`);
+        out.push(`   ${approved[i].candidate.id}  (${(approved[i].result.approvalRate*100).toFixed(2)}%)`);
       }
     }
   }
   out.push("════════════════════════════════════════════════════════════════════════");
 
-  console.log(out.join("\n"));
-
-  return { winner, allResults: results };
+  return { winner, allResults: results, report: out.join("\n") };
 }
 
-const { winner, allResults } = convene();
-if (winner) {
-  console.log("\n=== JSON RESULT ===");
-  console.log(JSON.stringify({
-    ratified: true,
-    winnerId: winner.candidate.id,
-    permanentKey: winner.candidate.key,
-    approvalRate: winner.result.approvalRate,
-    weighted: winner.result.weighted,
-    raw: winner.result.raw,
-    totalVoters: winner.result.totalEligible,
-    boundToHolder: {
-      zodiac: NATAL.westernZodiac,
-      moon: NATAL.placements.moon.sign,
-      rising: NATAL.placements.ascendant.sign,
-      birthDate: NATAL.birthDateISO,
-    },
-  }, null, 2));
-} else {
-  process.exit(2);
+function invokedDirectly() {
+  const entry = process.argv[1];
+  return entry !== undefined && import.meta.url === pathToFileURL(entry).href;
+}
+
+async function main() {
+  const keys = [];
+  try {
+    const natal = loadNatal();
+    const convened = convene(natal);
+    for (const item of convened.allResults) {
+      const key = item.candidate.key;
+      if (typeof key === "string" && key.length > 0) keys.push(key);
+    }
+    if (textHasKeyMaterial(convened.report, keys)) {
+      throw Object.assign(new Error("refusing to print key material"), { code: "EKEYPRINT" });
+    }
+    process.stdout.write(`${convened.report}\n`);
+    if (!convened.winner) process.exit(2);
+    const written = await writeKeyFile(convened.winner.candidate.key);
+    const payload = {
+      ratified: true,
+      winnerId: convened.winner.candidate.id,
+      keyWritten: true,
+      keyFile: written.path,
+      approvalRate: convened.winner.result.approvalRate,
+      weighted: convened.winner.result.weighted,
+      raw: convened.winner.result.raw,
+      totalVoters: convened.winner.result.totalEligible,
+      boundToHolder: {
+        zodiac: natal.westernZodiac,
+        moon: natal.placements.moon.sign,
+        rising: natal.placements.ascendant.sign,
+        birthDate: natal.birthDateISO,
+      },
+    };
+    const json = JSON.stringify(payload, null, 2);
+    if (textHasKeyMaterial(json, keys) || textHasKeyMaterial(written.path, keys)) {
+      throw Object.assign(new Error("refusing to print key material"), { code: "EKEYPRINT" });
+    }
+    process.stdout.write(`\n=== JSON RESULT ===\n${json}\n`);
+  } catch (error) {
+    process.stderr.write(`${publicErrorMessage(error, keys)}\n`);
+    process.exit(1);
+  }
+}
+
+if (invokedDirectly()) {
+  main().catch(() => {
+    process.stderr.write("key conference failed\n");
+    process.exit(1);
+  });
 }
