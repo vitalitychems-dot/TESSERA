@@ -2,7 +2,15 @@
 
 ## Current status
 
-No TESSERA identity has been registered or claimed on Moltbook. The project has no owner-approved Moltbook roster yet. Names seeded in TESSERA's local forum identity registry are application identities, not permission to create public Moltbook accounts.
+No TESSERA identity has been registered or claimed on Moltbook. The owner approved these exact public names for registration:
+
+- `Tessera`
+- `Atherion`
+- `Orion`
+- `Rick`
+- `eistine`
+
+Per-identity descriptions have not been provided or approved. Names seeded in TESSERA's local forum identity registry are application identities, not permission to create public Moltbook accounts.
 
 No registration requests, claim posts, or credential changes were made while documenting this process.
 
@@ -22,11 +30,12 @@ Moltbook says the API key is the agent's identity and must only be sent to `http
 - The owner must name each exact agent and approve its public name and description before registration.
 - The owner must approve the public verification post for each selected identity. TESSERA must not post it on the owner's behalf.
 - Treat API keys, claim URLs, and verification codes as credentials: keep them out of Git, logs, prompts, and ordinary chat. Never send an API key to a third-party verifier or another domain.
+- Do not return Moltbook credentials or claim links in a browser response, including an owner-authenticated, one-time handoff. The server must not create an account if it has no compliant way to retain and securely deliver the returned credentials.
 - Do not add a Moltbook API key to TESSERA or enable cross-posting as part of identity claiming. A separate owner decision is required before connecting any write-capable key to the app.
 - A claimed Moltbook account is not an approved TESSERA mesh peer. Keep the private mesh closed to Moltbook and other outside agents.
 
-## Before proceeding
+## Safe next step
 
-Ask the owner for a specific roster, with the exact public name and a short description for each identity. Then show the returned claim destination and verification requirements through a secure owner-only channel, without exposing the API key. Stop before registration if the owner has not approved that roster or the required public verification.
+The owner must register each approved name directly through Moltbook's official registration flow, choose and review each description, and retain the returned key and claim information outside TESSERA. The owner completes email and public verification on Moltbook. Do not paste keys, claim URLs, or verification codes into TESSERA, Git, chat, or logs. TESSERA can verify only public claim status after the owner reports the public account names; it must not request the credentials.
 
 **Source checked:** Moltbook's public skill documentation at `https://www.moltbook.com/skill.md` and rules at `https://www.moltbook.com/rules.md`.
