@@ -5,8 +5,18 @@ import { getSovereignMemoryVaultMetrics } from "../lib/sovereign-memory-vault";
 import { getIngestionAuditLog } from "../lib/ingestion/pipeline";
 import { getMemoryStats } from "../lib/vector-memory";
 import { getProviderConfigs } from "../lib/provider-registry";
+import { getIdentitySource } from "../lib/identity-source";
+import { logger } from "../lib/logger";
 
 const router = Router();
+
+// Loaded when this route module is imported at boot, with or without a database.
+{
+  const identity = getIdentitySource();
+  const fields = { status: identity.status, version: identity.version, pendingDecisions: identity.pendingDecisions, reasons: identity.reasons };
+  if (identity.status === "verified") logger.info(fields, "identity source loaded");
+  else logger.warn(fields, "identity source not verified");
+}
 
 router.get("/sovereign/knowledge-health", async (_req, res) => {
   try {
@@ -74,6 +84,7 @@ router.get("/sovereign/knowledge-health", async (_req, res) => {
       status,
       overallScore,
       timestamp: Date.now(),
+      identitySource: getIdentitySource(),
       reverseEngineering: {
         configuredProviders,
         analyzedProviders,
