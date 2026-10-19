@@ -1,0 +1,11 @@
+{
+  "version": "0.1.0",
+  "hashAlgorithm": "sha256",
+  "normalization": "CRLF to LF, trailing whitespace at end of file trimmed",
+  "files": {
+    "CANON.md": "00aec9b6c625d93d338956072f87a3eda716798d7bd70a92aa6114576760fc0a",
+    "CONFLICTS.md": "60c687411a9e6ac6626a25d27fbde1358cdec5832ee3b51480f8c8a47667391b",
+    "ORIGIN-SOURCE.md": "b007896684f28fd0855b826183a51941bcd69f6470ad4bc950eaa79ec028480f"
+  },
+  "note": "Hashes cover CANON.md, CONFLICTS.md and ORIGIN-SOURCE.md. Regenerate with node identity/update-manifest.mjs after any edit."
+}
