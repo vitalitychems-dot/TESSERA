@@ -70,7 +70,7 @@ export const SKILL_FILES: SkillFile[] = [
   { path: 'og/references/custom-card.md', bytes: 5988, read: false, note: 'Not read word for word.' },
   { path: 'og/references/favicon-and-icons.md', bytes: 1959, read: false, note: 'Not read word for word.' },
   { path: 'og/references/og-type-contract.md', bytes: 1749, read: false, note: 'Not read word for word.' },
-  { path: 'og/references/placeholder-card.md', bytes: 887, read: false, note: 'Not read word for word.' },
+  { path: 'og/references/placeholder-card.md', bytes: 887, read: true, note: 'A missing card stays a placeholder. Do not paste the card URL into the root, and do not write an env file for the host.' },
   { path: 'og/references/x-banner.md', bytes: 2339, read: false, note: 'Not read word for word.' },
   { path: 'threejs/SKILL.md', bytes: 3021, read: false, note: 'Not read word for word.' },
   { path: 'threejs/references/llms-full.txt', bytes: 132250, read: false, note: 'Not read word for word.' },
