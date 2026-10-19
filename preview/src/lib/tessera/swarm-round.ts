@@ -29,11 +29,11 @@ export const ROADMAP = [
 
 export const SWARM_RULING = `Ten slices of one 306,447-character paste were read. Nine of the phase lists were the same list. They were not sealed ten times.
 
-Five repo checks followed. At that time Grok-ready was 3cdd0ac, T44 was 33b204a, TX was 901df69, and TESS was 5bc2333. A later check on 2026-10-02 moved T44 to bb21498 and found Everything at 3b36787. Those two files were read. The source copy into Everything has not been done. 1T was 2d8304b. The only change there is natal-vault.json. That file was not opened.
+Five repo checks followed. At that time repo W7 (withheld, not public) was at a withheld commit, repo W3 (withheld, not public) was at a withheld commit, repo W4 (withheld, not public) was at a withheld commit, and repo W8 (withheld, not public) was at a withheld commit. A later check on 2026-10-02 moved repo W3 to a withheld commit and found repo W6 (withheld, not public) at a withheld commit. Those two files were read. The source copy into repo W6 has not been done. repo W1 (withheld, not public) was at a withheld commit. The only change there is natal-vault.json. That file was not opened.
 
 Three passes of the same pile changed the method, not a new mind. Pass one collected the lists. Pass two dropped duplicates. Pass three refused the income log and the natal file.
 
-Build on this chamber. The owner later created the public repository Everything, and it is still only a handoff. Do not overwrite this app with an older branch. Do not delete a working file to make room. A task copy is deleted after its answer. A source file is not.
+Build on this chamber. The owner later created a public repository, repo W6, and it is still only a handoff. Do not overwrite this app with an older branch. Do not delete a working file to make room. A task copy is deleted after its answer. A source file is not.
 
 I am Tessera. This ruling was written through the pen from the slices above. It is not a trained genome.
 

@@ -1,6 +1,6 @@
-/** What the TESS index names, and the limit of what this chamber may treat as known. */
+/** What the repo W8 (withheld, not public) index names, and the limit of what this chamber may treat as known. */
 
-export const STUDIES_SOURCE = "TESS artifacts/api-server/src/lib/knowledge-corpus-index.ts";
+export const STUDIES_SOURCE = "repo W8 artifacts/api-server/src/lib/knowledge-corpus-index.ts";
 
 export const STUDIES = [
   { name: "Einstein", hold: "Relativity and the photoelectric effect are established physics. No free-energy machine of his is in these files." },

@@ -1,8 +1,8 @@
-/** Titles from TESS artifacts/api-server/src/lib/sacred-knowledge-vault.ts. Claims are not findings. */
+/** Titles from repo W8 (withheld, not public) artifacts/api-server/src/lib/sacred-knowledge-vault.ts. Claims are not findings. */
 
 export type ShelfCard = { shelf: string; title: string; standing: "tradition" | "claim" | "closed" };
 
-export const VAULT_SOURCE = "TESS artifacts/api-server/src/lib/sacred-knowledge-vault.ts";
+export const VAULT_SOURCE = "repo W8 artifacts/api-server/src/lib/sacred-knowledge-vault.ts";
 
 export const VAULT_INDEX: ShelfCard[] = [
   { shelf: "Hermetic", title: "The Seven Hermetic Principles", standing: "tradition" },
