@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 import { yieldToEventLoop } from "./event-loop";
+import { seededUnit } from "./deterministic-selectors";
 
 export interface PersonalityTrait {
   name: string;
@@ -58,10 +59,10 @@ const TRAIT_TO_PERSONALITY: Record<string, string> = {
 const personalityRegistry = new Map<string, AgentPersonalityState>();
 const performanceHistory: PerformanceEvent[] = [];
 
-function generateDefaultTraits(): PersonalityTrait[] {
+function generateDefaultTraits(agentId: string): PersonalityTrait[] {
   return TRAIT_NAMES.map(name => ({
     name,
-    value: 0.6 + (Math.random() * 0.2 - 0.1),
+    value: 0.6 + (seededUnit(`personality-trait|${agentId}|${name}`) * 0.2 - 0.1),
     direction: "stable" as const,
     lastChanged: Date.now(),
     changeHistory: [],
@@ -75,7 +76,7 @@ function determineDominantPersonality(traits: PersonalityTrait[]): string {
 
 function getOrCreatePersonality(agentId: string, agentName: string): AgentPersonalityState {
   if (personalityRegistry.has(agentId)) return personalityRegistry.get(agentId)!;
-  const traits = generateDefaultTraits();
+  const traits = generateDefaultTraits(agentId);
 
   const state: AgentPersonalityState = {
     agentId, agentName,
@@ -150,7 +151,7 @@ function evolvePersonality(state: AgentPersonalityState): boolean {
 
   state.evolutionEpoch++;
   for (const trait of state.coreTraits) {
-    const noise = (Math.random() - 0.5) * EVOLUTION_NOISE_AMPLITUDE;
+    const noise = (seededUnit(`personality-evolve|${state.agentId}|${state.evolutionEpoch}|${trait.name}`) - 0.5) * EVOLUTION_NOISE_AMPLITUDE;
     trait.value = Math.max(0, Math.min(1, trait.value + noise));
   }
   state.loyaltyScore = 1.0;
@@ -285,4 +286,3 @@ export function getTraitsByCategory(category?: string) {
   if (category) return all.filter(p => (p.coreTraits || []).some((t: any) => t.category === category));
   return all;
 }
-
