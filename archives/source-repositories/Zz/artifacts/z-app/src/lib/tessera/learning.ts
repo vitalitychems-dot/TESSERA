@@ -1,7 +1,8 @@
 /** Honest learning loop. Goals stay goals until a test in this chamber seals them. */
 
-export const BIRTH_MARK = `♂♅⑨♉♄⑦⑨♒♄♒♊♅♂◇②⑥♊△♂□⑨♐♐⬡④⑤♊△⑨①♐⑥♊
-♂♊♋⬠♆①♄④◇⑨♂♃♂②♐♊♄♂♋⬠♃②♐④◇♃♌♂♋◇⑧⑧②♐♋♃⬠♂♃♂♋⬠④♐⑨⑧⑧④♆②♂♋☽◇♆♋♃⑨♆♊♐①♊⑨`;
+/** Loaded at runtime from TESSERA_BIRTH_MARK; empty when unset. The value is not stored in this repository. */
+export const BIRTH_MARK: string =
+  (typeof process !== "undefined" ? process.env?.TESSERA_BIRTH_MARK : undefined)?.trim() ?? "";
 
 export const INSTRUMENT = {
   vendor: "xAI",
