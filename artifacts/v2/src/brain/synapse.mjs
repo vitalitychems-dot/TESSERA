@@ -37,8 +37,15 @@ export function hebbian(g, active, { rate = 0.5, cap = 10 } = {}) {
 /** Co-activation episodes: each entity fires with every other entity its observations mention. */
 export function coMentionEpisodes(g, { minLen = 4 } = {}) {
   const names = [...g.nodes.keys()].filter((n) => n.length >= minLen);
+  const lower = names.map((m) => m.toLowerCase()); // lowercase each name once, not once per node pair
   const eps = [];
-  for (const [n, v] of g.nodes) { const hit = names.filter((m) => m !== n && v.text?.includes(m.toLowerCase())); if (hit.length) eps.push([n, ...hit]); }
+  for (const [n, v] of g.nodes) {
+    const text = v.text;
+    if (!text) continue;
+    const hit = [];
+    for (let i = 0; i < names.length; i++) if (names[i] !== n && text.includes(lower[i])) hit.push(names[i]);
+    if (hit.length) eps.push([n, ...hit]);
+  }
   return eps;
 }
 /** Decay all synapses by factor; prune below floor (synaptic pruning). Returns pruned count. */
@@ -62,22 +69,33 @@ function tokenSet(node) {
 const adjCache = new WeakMap();
 /** Relation adjacency, reused while the edge map, its size, and its weight sum are unchanged.
  * Synapses are read live and are not part of this cache. */
-function cachedAdjacency(g) {
+function cachedEntry(g) {
   let sum = 0;
   for (const w of g.edges.values()) sum += w;
   const hit = adjCache.get(g);
-  if (hit && hit.edges === g.edges && hit.size === g.edges.size && hit.sum === sum) return hit.adj;
-  const adj = adjacency(g);
-  adjCache.set(g, { edges: g.edges, size: g.edges.size, sum, adj });
-  return adj;
+  if (hit && hit.edges === g.edges && hit.size === g.edges.size && hit.sum === sum) return hit;
+  const entry = { edges: g.edges, size: g.edges.size, sum, adj: adjacency(g), invLog: null };
+  adjCache.set(g, entry);
+  return entry;
+}
+function cachedAdjacency(g) {
+  return cachedEntry(g).adj;
+}
+/** Adamic-Adar 1/log(1+degree) per node, built once per cached adjacency (same formula). */
+function cachedInvLog(entry) {
+  if (entry.invLog) return entry.invLog;
+  const invLog = new Map();
+  for (const [n, list] of entry.adj) invLog.set(n, 1 / Math.log(1 + list.length));
+  entry.invLog = invLog;
+  return invLog;
 }
 /** Link recall: rank non-neighbours of seed by Adamic-Adar over relations + synapse strength
  * + observation-token overlap. Returns top-k names. Use with no synapses for the baseline. */
 export function predict(g, seed, k = 5, { synW = 2, textW = 1 } = {}) {
-  const adj = cachedAdjacency(g);
+  const entry = cachedEntry(g);
+  const adj = entry.adj;
   const nb = new Map(adj.get(seed) ?? []);
-  const invLog = new Map();
-  for (const [n, list] of adj) invLog.set(n, 1 / Math.log(1 + list.length));
+  const invLog = cachedInvLog(entry);
   const T = tokenSet(g.nodes.get(seed));
   const out = [];
   for (const n of g.nodes.keys()) {
