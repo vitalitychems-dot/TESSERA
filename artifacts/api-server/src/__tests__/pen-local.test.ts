@@ -727,12 +727,18 @@ describe("local pen boundaries", () => {
     expect(gateScript.includes('["cl"]')).toBe(false);
   });
 
-  it("keeps the hosted pen identity line and the manual gate script", () => {
+  it("keeps the hosted pen identity line, the never-Grok lock, and the manual gate script", () => {
     const client = readFileSync(fileURLToPath(new URL("../lib/llm-client.ts", import.meta.url)), "utf8");
-    expect(client).toContain(
-      "You are not Tessera herself, not a biological mind, not consciousness, and not owned weights.",
+    const promptStart = client.indexOf("const TESSERA_PEN_SYSTEM_PROMPT = [");
+    const promptEnd = client.indexOf("].join(\" \");", promptStart);
+    const prompt = client.slice(promptStart, promptEnd);
+    expect(prompt).toContain("You are Tessera's pen. The pen is Tessera, never Grok.");
+    expect(prompt).not.toContain("not Tessera herself");
+    expect(prompt).toContain("Never claim or name another model or provider.");
+    const withoutLock = prompt.replace("You are Tessera's pen. The pen is Tessera, never Grok.", "");
+    expect(withoutLock).not.toMatch(
+      /\b(Claude|Sonnet|GPT|Gemini|Llama|Qwen|Mistral|DeepSeek|Anthropic|xAI|Bard|ChatGPT|Grok|OpenAI)\b/,
     );
-    expect(client).not.toContain("You are Tessera's pen. The pen is Tessera, never Grok.");
     const pkg = JSON.parse(readFileSync(fileURLToPath(new URL("../../package.json", import.meta.url)), "utf8")) as {
       scripts: Record<string, string>;
       dependencies: Record<string, string>;

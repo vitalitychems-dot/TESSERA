@@ -342,7 +342,7 @@ export default function SecretKnowledgePage({ embedded }: { embedded?: boolean }
                   className={cn(
                     "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-200",
                     activeView === tab
-                      ? "bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-[0_0_12px_rgba(139,92,246,0.25)]"
+                      ? "bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-[0_0_12px_rgba(228,198,255,0.25)]"
                       : "text-slate-400 hover:text-white hover:bg-white/[0.06]"
                   )}
                   data-testid={`tab-knowledge-${tab}`}

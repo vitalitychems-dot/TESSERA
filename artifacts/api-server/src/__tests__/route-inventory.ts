@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { RequestHandler } from "express";
 
 /**
  * Test-only route inventory.
@@ -89,21 +90,26 @@ function readRouteSource(absolutePath: string): string {
   return stripComments(readFileSync(absolutePath, "utf8"));
 }
 
-export function listMountedRouteModules(): MountedRouteModule[] {
-  const source = readRouteSource(join(ROUTES_DIR, "index.ts"));
+const SESSION_GATE_BINDING = "requireAdminSession";
+
+export function listMountedRouteModulesFromSource(source: string): MountedRouteModule[] {
+  const stripped = stripComments(source);
   const imports = new Map<string, string>();
   const importPattern = /import\s+(\w+)\s+from\s+"(\.\/[^"]+)"/g;
-  for (const match of source.matchAll(importPattern)) {
+  for (const match of stripped.matchAll(importPattern)) {
     imports.set(match[1], match[2]);
   }
 
   const mounts: MountedRouteModule[] = [];
   const usePattern = /router\.use\(\s*(?:(["'][^"']+["'])\s*,\s*)?(\w+)\s*\)/g;
-  for (const match of source.matchAll(usePattern)) {
+  for (const match of stripped.matchAll(usePattern)) {
+    const pathLiteral = match[1];
     const binding = match[2];
     const specifier = imports.get(binding);
     if (!specifier) {
-      throw new Error(`router.use(${binding}) has no local route import`);
+      if (binding === SESSION_GATE_BINDING) continue;
+      const call = pathLiteral ? `router.use(${pathLiteral}, ${binding})` : `router.use(${binding})`;
+      throw new Error(`${call} has no local route import`);
     }
     const module = `${specifier.slice(2)}.ts`;
     mounts.push({
@@ -114,6 +120,11 @@ export function listMountedRouteModules(): MountedRouteModule[] {
     });
   }
   return mounts;
+}
+
+export function listMountedRouteModules(): MountedRouteModule[] {
+  const source = readFileSync(join(ROUTES_DIR, "index.ts"), "utf8");
+  return listMountedRouteModulesFromSource(source);
 }
 
 function assertLiteralRegistrations(source: string, module: string): void {
@@ -206,6 +217,74 @@ type ExpressRouteLayer = {
   stack?: ExpressRouteLayer[];
   handle?: { stack?: ExpressRouteLayer[] };
 };
+
+export interface PathlessRootAdminSessionGate {
+  /** `function.name` of the middleware layer Express registered. */
+  name: string;
+  /** Layer indexes from the walked router down to the flagged layer. */
+  stackIndexes: number[];
+}
+
+type RouterLayer = {
+  handle?: unknown;
+  name?: string;
+  /**
+   * Express sets this only for `router.use` mounted at `/` (including a
+   * path-less `router.use(fn)`, which defaults to `/`) with `end: false`.
+   */
+  slash?: boolean;
+  route?: unknown;
+};
+
+type StackRouter = {
+  stack?: RouterLayer[];
+};
+
+function stackRouter(value: unknown): StackRouter | undefined {
+  if (typeof value !== "function") return undefined;
+  const stack = (value as { stack?: unknown }).stack;
+  if (!Array.isArray(stack)) return undefined;
+  return value as StackRouter;
+}
+
+/**
+ * Path-less `router.use(requireAdminSession)` on a router mounted at the API
+ * root. Express records that mount as `slash` (`path === '/'`, `end === false`).
+ * Path-scoped `router.use("/prefix", requireAdminSession)` and per-route
+ * handlers are left alone. Nested routers are walked; a path-scoped mount
+ * stops counting descendants as API-root mounts.
+ */
+export function listPathlessRootAdminSessionGates(
+  router: unknown,
+  gate: RequestHandler,
+): PathlessRootAdminSessionGate[] {
+  const hits: PathlessRootAdminSessionGate[] = [];
+  const seen = new Set<unknown>();
+
+  const walk = (current: unknown, atApiRoot: boolean, indexes: number[]): void => {
+    if (seen.has(current)) return;
+    const carrier = stackRouter(current);
+    if (!carrier?.stack) return;
+    seen.add(current);
+
+    carrier.stack.forEach((layer, index) => {
+      const here = indexes.concat(index);
+      const rootMounted = layer.slash === true && layer.route == null;
+      if (atApiRoot && rootMounted && layer.handle === gate) {
+        hits.push({
+          name: typeof layer.name === "string" && layer.name.length > 0 ? layer.name : "anonymous",
+          stackIndexes: here,
+        });
+      }
+      if (layer.route != null) return;
+      if (!stackRouter(layer.handle)) return;
+      walk(layer.handle, atApiRoot && rootMounted, here);
+    });
+  };
+
+  walk(router, true, []);
+  return hits;
+}
 
 /**
  * Live Express registrations for one already-constructed router.

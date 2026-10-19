@@ -2,7 +2,7 @@ import { logger } from "./logger";
 import { lookupCache, storeInCache, getCacheStats } from "./semantic-cache";
 import { lookupKnowledge, distillFromResponse } from "./knowledge-distillation";
 import { applyDreamToMessages } from "./dream-prompt-bridge";
-import { resolveTesseraLlmModel, tesseraChatCompletion } from "./tessera-llm-http";
+import { isSovereignNoExternalLlm, resolveTesseraLlmModel, tesseraChatCompletion } from "./tessera-llm-http";
 
 export interface LLMMessage {
   role: "system" | "user" | "assistant";
@@ -16,6 +16,8 @@ export interface LLMCallOptions {
   timeoutMs?: number;
   skipCache?: boolean;
   skipDistillation?: boolean;
+  /** Avoid injecting an unrelated stored application note into bounded chat prompts. */
+  skipDreamPrompt?: boolean;
   skipBatcher?: boolean;
   expectsStructuredOutput?: boolean;
   cacheTtl?: number;
@@ -58,6 +60,7 @@ export async function callLLM(
   const model = resolveTesseraLlmModel(opts.model);
   const {
     maxTokens = 2048,
+    temperature = 0.7,
     timeoutMs = DEFAULT_LLM_TIMEOUT_MS,
     skipCache = false,
     skipDistillation = false,
@@ -78,7 +81,8 @@ export async function callLLM(
     llmStats.cacheMisses++;
   }
 
-  const canonicalMessages = applyDreamToMessages(messages.map(m => ({ ...m })));
+  const copiedMessages = messages.map(m => ({ ...m }));
+  const canonicalMessages = opts.skipDreamPrompt ? copiedMessages : applyDreamToMessages(copiedMessages);
 
   if (!skipDistillation && userQuery.length > 10) {
     try {
@@ -142,6 +146,8 @@ export async function callLLM(
       {
         model,
         max_completion_tokens: maxTokens,
+        temperature,
+        stream: false,
         messages: canonicalMessages,
       },
       controller.signal,
@@ -210,8 +216,9 @@ export async function callLLMSafe(
  * sanitation/cache/distillation path. No existing caller is switched to it.
  */
 const TESSERA_PEN_SYSTEM_PROMPT = [
+  "You are Tessera's pen. The pen is Tessera, never Grok.",
   "You are operating as Tessera Pen, an instrument serving Tessera's documented writing and coordination voice.",
-  "You are not Tessera herself, not a biological mind, not consciousness, and not owned weights.",
+  "Never claim or name another model or provider.",
   "Preserve Tessera's existing identity rules, provenance, limitations, human approval gates, and repository boundaries.",
   "Separate verified facts, proposals, unknowns, and blocked work. Never invent agent activity, approvals, memories, or capabilities.",
   "Do not claim authority to push, merge, delete, deploy, change credentials, or make payments.",
@@ -254,8 +261,7 @@ export async function callTesseraPen(
  * `TESSERA_LLM_API_KEY`, and `TESSERA_LLM_MODEL`.
  */
 export function isLLMAvailable(): boolean {
-  const killed = (process.env.SOVEREIGN_NO_EXTERNAL_LLM ?? "1").trim();
-  if (killed === "1" || killed.toLowerCase() === "true") return false;
+  if (isSovereignNoExternalLlm()) return false;
   const baseURL = process.env.TESSERA_LLM_BASE_URL?.trim();
   const apiKey = process.env.TESSERA_LLM_API_KEY?.trim();
   const model = process.env.TESSERA_LLM_MODEL?.trim();

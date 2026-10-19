@@ -553,7 +553,7 @@ export async function proposeEvolution(
     proposals.unshift(proposal);
     if (proposals.length > 50) proposals.splice(50);
     evolutionState.totalProposals++;
-    logger.warn({ targetModule, error: syntaxCheck.error }, "SelfCodeEvolution: syntax validation failed — throttle updated");
+    logger.warn({ targetModule, err: syntaxCheck.error }, "SelfCodeEvolution: syntax validation failed — throttle updated");
     return proposal;
   }
 

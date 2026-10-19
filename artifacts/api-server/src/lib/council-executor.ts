@@ -4,6 +4,7 @@ import { desc, eq } from "drizzle-orm";
 import { logger } from "./logger";
 import { markProposalImplemented } from "./consensus-engine";
 import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
+import { MAX_CYCLE_GAP_MS } from "./sacred-timing";
 
 export interface ExecutionResult {
   proposalId: string;
@@ -215,8 +216,90 @@ export function getSystemConfig(): Record<string, unknown> {
   return Object.fromEntries(systemConfig);
 }
 
-export function updateSystemConfig(key: string, value: unknown): void {
+const FORBIDDEN_CONFIG_KEYS: ReadonlySet<string> = new Set(["__proto__", "constructor", "prototype"]);
+
+const PERMITTED_CONFIG = {
+  "agent.collaborationMode": "string",
+  "agent.learningRate": "number",
+  "agent.maxTaskQueue": "number",
+  "consciousness.cycleIntervalMs": "number",
+  "consciousness.reflectionDepth": "number",
+  "consciousness.memoryRetention": "number",
+  "dual-brain.cycleIntervalMs": "number",
+  "identity.checkIntervalMs": "number",
+  "swarm.coordinationMode": "string",
+  "heartbeat.enabled": "boolean",
+  "improvement.enabled": "boolean",
+  "agi-training.categories": "number",
+  "council.requiredMajority": "number",
+  "security.hardeningLevel": "number",
+  "network.externalFetchFrozen": "boolean",
+  "runtime.backoffMode": "boolean",
+  "runtime.tickMultiplier": "number",
+} as const;
+
+type PermittedConfigKind = (typeof PERMITTED_CONFIG)[keyof typeof PERMITTED_CONFIG];
+
+type NumericRange = { min: number; max: number; integer: boolean };
+
+/**
+ * Inclusive bounds. Keys not listed here stay finite-only.
+ * `*.cycleIntervalMs` shares one range because every such key is a scheduler base.
+ */
+const NUMERIC_RANGE = {
+  "agent.learningRate": { min: 0.001, max: 0.1, integer: false },
+  "council.requiredMajority": { min: 0.5, max: 1, integer: false },
+  "runtime.tickMultiplier": { min: 1, max: 8, integer: true },
+} as const satisfies Partial<Record<keyof typeof PERMITTED_CONFIG, NumericRange>>;
+
+/** Fast-loop floor in sacred-scheduler (`Math.max(1_000, ...)`). Ceiling is MAX_CYCLE_GAP_MS. */
+const CYCLE_INTERVAL_MS_RANGE: NumericRange = {
+  min: 1_000,
+  max: MAX_CYCLE_GAP_MS,
+  integer: true,
+};
+
+function permittedConfigKind(key: string): PermittedConfigKind | undefined {
+  if (!Object.hasOwn(PERMITTED_CONFIG, key)) return undefined;
+  return PERMITTED_CONFIG[key as keyof typeof PERMITTED_CONFIG];
+}
+
+function numericRangeFor(key: string): NumericRange | undefined {
+  if (key.endsWith(".cycleIntervalMs")) return CYCLE_INTERVAL_MS_RANGE;
+  if (!Object.hasOwn(NUMERIC_RANGE, key)) return undefined;
+  return NUMERIC_RANGE[key as keyof typeof NUMERIC_RANGE];
+}
+
+function valueMatchesKind(kind: PermittedConfigKind, value: unknown): boolean {
+  switch (kind) {
+    case "string":
+      return typeof value === "string";
+    case "number":
+      return typeof value === "number" && Number.isFinite(value);
+    case "boolean":
+      return typeof value === "boolean";
+    default: {
+      const _unhandled: never = kind;
+      return _unhandled;
+    }
+  }
+}
+
+function valueWithinRange(key: string, value: number): boolean {
+  const range = numericRangeFor(key);
+  if (!range) return true;
+  if (range.integer && !Number.isInteger(value)) return false;
+  return value >= range.min && value <= range.max;
+}
+
+/** Applies one allowlisted config write. Rejects unknown keys, wrong types, out-of-range numbers, and prototype keys. */
+export function updateSystemConfig(key: string, value: unknown): boolean {
+  if (typeof key !== "string" || FORBIDDEN_CONFIG_KEYS.has(key)) return false;
+  const kind = permittedConfigKind(key);
+  if (kind === undefined || !valueMatchesKind(kind, value)) return false;
+  if (typeof value === "number" && !valueWithinRange(key, value)) return false;
   systemConfig.set(key, value);
+  return true;
 }
 
 export function getExecutorStatus() {

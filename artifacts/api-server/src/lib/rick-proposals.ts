@@ -9,6 +9,7 @@ import { getTruthfulnessMetrics } from "./truthfulness-engine";
 import { getMeeseeksMetrics } from "./agent-spawner";
 import { getRickSystemPrompt } from "./rick-sanchez-agent";
 import { secureExternalFetch } from "./secureExternalWrapper";
+import { acceptedChatLlmBaseUrl, isChatRedirectStatus } from "./tessera-llm-http";
 import { analyzeTruthfulness } from "./truthfulness-engine";
 
 export type ProposalState = "pending-review" | "approved" | "rejected" | "implemented";
@@ -298,7 +299,7 @@ function coerceProposal(raw: LlmProposalShape, idx: number, fallbackCategory: st
 }
 
 async function generateViaLlm(diag: DiagnosticsSnapshot, slotsNeeded: number, recentRejections: { title: string; reason: string }[]): Promise<RickProposal[]> {
-  const baseURL = process.env.TESSERA_LLM_BASE_URL?.trim();
+  const baseURL = acceptedChatLlmBaseUrl();
   const apiKey = process.env.TESSERA_LLM_API_KEY?.trim();
   const model = process.env.TESSERA_LLM_MODEL?.trim();
   if (!baseURL || !apiKey || !model || slotsNeeded <= 0) return [];
@@ -352,7 +353,9 @@ No prose, no code fences.`;
       }),
       timeoutMs: 45000,
       requestedBy: "rick-proposals",
+      redirect: "manual",
     });
+    if (isChatRedirectStatus(result.status)) return [];
     const parsed = JSON.parse(result.body);
     const content = parsed?.choices?.[0]?.message?.content;
     if (typeof content !== "string") return [];

@@ -28,12 +28,13 @@ Launch checkout of the canonical vitalitychems-dot/TESSERA application. vitality
 - `artifacts/api-server` — canonical API and session gates.
 - `lib/db` — canonical schema; migrations are explicit and separate from builds.
 - `docs/REPLIT-LAUNCH-EVIDENCE.md` — source checkpoint, verification, and remaining blockers.
+- `docs/REPOSITORY-SYNC-AUDIT.md` — pinned cross-repository comparison, retained local work, and cleanup decisions.
 - `scripts/replit-runtime-env.mjs` — launch-only environment adapter; never logs credentials.
 
 ## Architecture decisions
 
 - Static web and API remain separate services, as instructed by Gitbook.
-- Application source is imported unchanged. Local launch adaptations are confined to runtime metadata, the environment adapter, and workspace toolchain configuration.
+- The initial launch import preserved canonical source. Subsequent owner-requested local features must be reconciled with upstream changes, not overwritten by replacing the checkout. Preserve the keyboard, theme, owner-session work, and runtime adapter during synchronization.
 - Protected archives, prior runtime state, and secret files are excluded.
 
 ## Product

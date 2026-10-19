@@ -44,3 +44,9 @@ TESSERA's owner-facing notes must come from verifiable events or an actual confi
 **Why:** The owner requested real, non-roleplayed notes that appear on reopening and are never sent twice.
 
 **How to apply:** Do not generate or label content as an autonomous Tessera thought without a real source. Persist and deduplicate by source event ID before surfacing a note; keep its provenance visible.
+
+Managed development commands and published production commands can have different working directories. Verify production entry paths from the workspace root rather than assuming the artifact directory used by development.
+
+**Why:** A command that worked in the development workflow failed during publishing because relative preload and entry paths were resolved from a different directory.
+
+**How to apply:** Validate production command changes through the artifact schema, then exercise the configured command from the production working directory in a clean synthetic environment. Development startup alone is insufficient evidence.

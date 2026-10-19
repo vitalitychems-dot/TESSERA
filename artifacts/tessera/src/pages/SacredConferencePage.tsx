@@ -96,7 +96,7 @@ function BuildDiagram3D({ diagram }: { diagram: any }) {
       ctx.fillRect(0, 0, w, h);
 
       const gridSize = 30 * zoom;
-      ctx.strokeStyle = "rgba(6, 182, 212, 0.05)";
+      ctx.strokeStyle = "rgba(126, 240, 212, 0.05)";
       ctx.lineWidth = 0.5;
       for (let gx = 0; gx < w; gx += gridSize) {
         ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, h); ctx.stroke();
@@ -115,9 +115,9 @@ function BuildDiagram3D({ diagram }: { diagram: any }) {
           const p2 = project(toComp.x, toComp.y, toComp.z, cx, cy);
 
           const colors: Record<string, string> = {
-            data: "rgba(6, 182, 212, 0.6)",
+            data: "rgba(126, 240, 212, 0.6)",
             energy: "rgba(16, 185, 129, 0.6)",
-            consciousness: "rgba(139, 92, 246, 0.6)",
+            consciousness: "rgba(228, 198, 255, 0.6)",
             harmonic: "rgba(245, 158, 11, 0.6)",
             quantum: "rgba(236, 72, 153, 0.6)",
           };
@@ -186,7 +186,7 @@ function BuildDiagram3D({ diagram }: { diagram: any }) {
 
         if (isHovered && comp.description) {
           ctx.font = "9px monospace";
-          ctx.fillStyle = "rgba(6, 182, 212, 0.7)";
+          ctx.fillStyle = "rgba(126, 240, 212, 0.7)";
           const words = comp.description.split(" ");
           let line = "";
           let ly = p.py + r + 28;
@@ -205,7 +205,7 @@ function BuildDiagram3D({ diagram }: { diagram: any }) {
       }
 
       ctx.font = "10px monospace";
-      ctx.fillStyle = "rgba(6, 182, 212, 0.5)";
+      ctx.fillStyle = "rgba(126, 240, 212, 0.5)";
       ctx.textAlign = "left";
       ctx.fillText(`${diagram.name} | ${diagram.dimensions.toUpperCase()} | ${diagram.components.length} components`, 10, h - 10);
     };

@@ -135,7 +135,7 @@ export type DeskRequest =
 const FINAL_RE = /^(?:tessera[,:]?\s+)?(?:please\s+)?(?:give|say|write)(?:\s+me)?(?:\s+the)?\s+final\s+answer\.?$/i;
 
 export function latestFinalAnswer(): string {
-  return lessons[0]?.finalAnswer || PEN_LINE;
+  return lessons[0]?.finalAnswer || "No final answer has been saved in this running server session.";
 }
 
 export function parseChatDesk(text: string): DeskRequest | null {
@@ -184,7 +184,7 @@ function pickAvailable(prompt: string, limit: number): DeskMember[] {
 
 function noteFor(member: DeskMember, prompt: string): string {
   const question = prompt.replace(/\s+/g, " ").trim().slice(0, 180);
-  return `${member.name} is available (${member.role}). Seat: ${member.domain}. On "${question}", this seat keeps the question here and leaves the close to Tessera.`;
+  return `${member.name} is a preset local role label (${member.role}; ${member.domain}). It is not a live independent agent. The prompt was "${question}".`;
 }
 
 function tesseraClose(prompt: string, called: DeskMember[], unavailable: string[], refused: string[]): string {
@@ -251,7 +251,7 @@ export function runChatDesk(text: string): DeskTurn | null {
   trainChat(request.prompt, reply, called.map((member) => member.name), close);
   return {
     reply,
-    agents: [{ id: "tessera", name: "Tessera" }, ...called.map((member) => ({ id: member.id, name: member.name }))],
+    agents: [{ id: "tessera", name: "Tessera" }],
     trained: true,
     called: called.map((member) => member.name),
     unavailable,

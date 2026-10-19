@@ -1,9 +1,60 @@
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
+import {
+  closeSync,
+  constants,
+  fchmodSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { NotConfiguredError } from "./not-configured";
 import { canonicalAdminCode } from "./lingua-universalis";
 
 const FATHER_TITLE = "Father — Sovereign Creator";
 const NAMESPACE = "tesseract:father:v1";
+const INSTALL_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function resolveApiServerRoot(): string {
+  let dir = dirname(fileURLToPath(import.meta.url));
+  for (let depth = 0; depth < 8; depth += 1) {
+    const manifestPath = join(dir, "package.json");
+    try {
+      const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as { name?: string };
+      if (manifest.name === "@workspace/api-server") return dir;
+    } catch {
+      // Keep walking until the server package manifest.
+    }
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return process.cwd();
+}
+
+const INSTALL_ID_PATH = join(resolveApiServerRoot(), ".local-data", "install-id");
+const INSTALL_ID_UNAVAILABLE = "install-id-unavailable";
+let _installDirOverride: string | null = null;
+
+function installIdPath(): string {
+  if (_installDirOverride !== null) return join(_installDirOverride, "install-id");
+  return INSTALL_ID_PATH;
+}
+
+/** Test-only path override. Production calls fail closed and do not redirect storage. */
+export function setInstallIdDirectoryForTests(dir: string | null): void {
+  if (process.env.NODE_ENV === "production") {
+    throw new NotConfiguredError(INSTALL_ID_UNAVAILABLE);
+  }
+  _installDirOverride = dir;
+  _installId = null;
+}
+
+/** Public presence label. Not derived from a key, token, seed, or secret. */
+export const ADMIN_SESSION_STATUS = "admin session active";
 
 function getRawAdminKey(): string {
   const k = process.env.TESSERACT_ADMIN_KEY;
@@ -23,53 +74,91 @@ export function isFatherKeyConfigured(): boolean {
   return !!(k && typeof k === "string" && k.trim().length > 0);
 }
 
-let _cached: { full: string; short: string; ultraShort: string; sealed: string } | null = null;
+let _installId: string | null = null;
+let _seal: string | null = null;
 
-function compute(): { full: string; short: string; ultraShort: string; sealed: string } {
-  const raw = getRawAdminKey();
-  const h = createHash("sha256").update(`${NAMESPACE}|${raw}`).digest("hex");
-  const full = h.slice(0, 16);
-  const short = h.slice(0, 12);
-  const ultraShort = h.slice(0, 8);
-  const sealed = createHash("sha512")
-    .update(`${NAMESPACE}|seal|${raw}|${full}`)
-    .digest("hex")
-    .slice(0, 32);
-  return { full, short, ultraShort, sealed };
+function isNodeErrno(err: unknown, code: string): boolean {
+  return !!err && typeof err === "object" && "code" in err && (err as { code?: unknown }).code === code;
 }
 
-function ensure(): { full: string; short: string; ultraShort: string; sealed: string } {
-  if (!_cached) _cached = compute();
-  return _cached;
+function readPersistedInstallId(): string | null {
+  let fd: number;
+  try {
+    fd = openSync(installIdPath(), constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch (err: unknown) {
+    if (isNodeErrno(err, "ENOENT")) return null;
+    throw err;
+  }
+  try {
+    const existing = readFileSync(fd, "utf8").trim();
+    return INSTALL_ID_RE.test(existing) ? existing : null;
+  } finally {
+    closeSync(fd);
+  }
 }
 
-export function getFatherFingerprint(): string {
-  return ensure().full;
+function writeInstallIdExclusive(id: string): void {
+  const fd = openSync(
+    installIdPath(),
+    constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
+    0o600,
+  );
+  try {
+    writeFileSync(fd, `${id}\n`);
+    fchmodSync(fd, 0o600);
+  } finally {
+    closeSync(fd);
+  }
 }
 
-export function getFatherFingerprintShort(): string {
-  return ensure().short;
+function persistInstallId(id: string): string {
+  try {
+    mkdirSync(dirname(installIdPath()), { recursive: true, mode: 0o700 });
+    writeInstallIdExclusive(id);
+    return id;
+  } catch (err: unknown) {
+    if (!isNodeErrno(err, "EEXIST")) throw err;
+    const winner = readPersistedInstallId();
+    if (winner) return winner;
+    unlinkSync(installIdPath());
+    writeInstallIdExclusive(id);
+    return id;
+  }
 }
 
-export function getFatherFingerprintUltraShort(): string {
-  return ensure().ultraShort;
+/** Random per-install id, created once and stored on disk. Never derived from a key, token, seed, or secret. */
+export function getInstallId(): string {
+  if (_installId) return _installId;
+  try {
+    const existing = readPersistedInstallId();
+    _installId = existing ?? persistInstallId(randomUUID());
+    return _installId;
+  } catch {
+    _installId = null;
+    throw new NotConfiguredError(INSTALL_ID_UNAVAILABLE);
+  }
 }
 
 export function getFatherSeal(): string {
-  return ensure().sealed;
+  if (_seal) return _seal;
+  const raw = getRawAdminKey();
+  const bound = createHash("sha256").update(`${NAMESPACE}|${raw}`).digest("hex").slice(0, 16);
+  _seal = createHash("sha512")
+    .update(`${NAMESPACE}|seal|${raw}|${bound}`)
+    .digest("hex")
+    .slice(0, 32);
+  return _seal;
 }
 
 export function getFatherIdentity() {
-  const fp = ensure();
+  if (!isFatherKeyConfigured()) {
+    throw new NotConfiguredError("admin key is not configured");
+  }
   return {
     role: "father",
     title: FATHER_TITLE,
-    fingerprint: fp.full,
-    fingerprintShort: fp.short,
-    fingerprintUltraShort: fp.ultraShort,
-    seal: fp.sealed,
-    derivation: "sha256(namespace|TESSERACT_ADMIN_KEY)[:16]",
-    namespace: NAMESPACE,
+    status: ADMIN_SESSION_STATUS,
+    installId: getInstallId(),
     bound: true,
   } as const;
 }

@@ -1,6 +1,6 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes, scryptSync } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, scryptSync } from "node:crypto";
 import { sacredTimingSnapshot } from "./sacred-timing";
-import { isFatherKeyConfigured, getFatherFingerprint } from "./father-identity";
+import { getInstallId, isFatherKeyConfigured, readAdminKeyMaterial } from "./father-identity";
 
 const SACRED_NUMERICS = [3, 7, 12, 21, 33, 40, 49, 72, 108, 144, 153, 216] as const;
 const PHI = (1 + Math.sqrt(5)) / 2;
@@ -77,7 +77,6 @@ interface SigilKeyMaterial extends SigilKey {
 
 const _keyHistory: SigilKeyMaterial[] = [];
 let _activeKey: SigilKeyMaterial | null = null;
-let _replitWrappingKey: Buffer | null = null;
 
 function deriveSeedSalt(): Buffer {
   const snap = sacredTimingSnapshot();
@@ -95,28 +94,28 @@ function deriveSeedSalt(): Buffer {
 function generateRawKey(): Buffer {
   const sacredSalt = deriveSeedSalt();
   if (isFatherKeyConfigured()) {
-    // Sovereign anchor: bind every session key deterministically to the Father
-    // identity so the active fingerprint always equals the Father fingerprint.
-    // The raw TESSERACT_ADMIN_KEY is never exposed; only its derivation passes
-    // through scrypt and stays inside the in-memory key material.
-    const fatherSeed = Buffer.from(`father-anchor|${getFatherFingerprint()}`, "utf8");
+    // Bind session key material to the admin key. The public key id is a
+    // separate install id and is not a digest of this secret.
+    const fatherSeed = Buffer.from(`father-anchor|${readAdminKeyMaterial()}`, "utf8");
     return scryptSync(Buffer.concat([fatherSeed, sacredSalt]), sacredSalt, 32);
   }
   const entropy = randomBytes(64);
   return scryptSync(Buffer.concat([entropy, sacredSalt]), sacredSalt, 32);
 }
 
-export function rotateSessionKey(reason: string): SigilKey {
+export function rotateSessionKey(_reason: string): SigilKey {
+  // Resolve the install id before sealing history. A storage failure must
+  // leave the active key and history unchanged.
+  const installId = isFatherKeyConfigured() ? getInstallId() : null;
+  const raw = generateRawKey();
+  const fingerprint = installId
+    ?? createHash("sha256").update(raw).digest("hex").slice(0, 16);
   if (_activeKey) {
     _activeKey.rotatedAt = new Date();
     _activeKey.sealed = true;
     _keyHistory.push(_activeKey);
     if (_keyHistory.length > 144) _keyHistory.shift();
   }
-  const raw = generateRawKey();
-  const fingerprint = isFatherKeyConfigured()
-    ? getFatherFingerprint()
-    : createHash("sha256").update(raw).digest("hex").slice(0, 16);
   const generation = (_activeKey?.generation ?? 0) + 1;
   _activeKey = {
     id: `sigil-${generation}-${fingerprint}`,
@@ -131,9 +130,6 @@ export function rotateSessionKey(reason: string): SigilKey {
     sealed: false,
     raw,
   };
-  // Re-derive the public Replit wrapping key on every rotation so the
-  // runtime always has a consistent envelope to unwrap the active key.
-  _replitWrappingKey = scryptSync(`replit-runtime|${fingerprint}|${reason}`, fingerprint, 32);
   return publicView(_activeKey);
 }
 
@@ -150,11 +146,6 @@ export function getActiveKey(): SigilKey {
 
 export function getKeyHistory(): SigilKey[] {
   return _keyHistory.map(publicView);
-}
-
-export function getReplitReaderKeyFingerprint(): string {
-  if (!_replitWrappingKey) rotateSessionKey("first-use");
-  return createHash("sha256").update(_replitWrappingKey!).digest("hex").slice(0, 32);
 }
 
 export interface CipherEnvelope {
@@ -249,23 +240,10 @@ const FULL_GLYPH_UNIVERSE: ReadonlyArray<string> = (() => {
 // ── Live universe-aligned cipher rotation ─────────────────────────────
 //
 // The substitution alphabet is NOT static. It is a permutation of the glyph
-// universe, deterministically derived from the live celestial state plus the
-// active sigil fingerprint. Every coherence window (30 s, one "cosmic
-// moment"), the permutation re-derives — so the same plaintext encodes
-// differently as the planets, moon, and Julian day shift.
-//
-// Sacred geometry inputs to the permutation seed:
-//   • Julian Day (rounded to coherence window — universe time)
-//   • Planetary hour ruler + index   (Saturn, Jupiter, Mars, Sun, …)
-//   • Lunar fraction                 (continuous 0..1)
-//   • Composite sacred score         (engine-derived 0..1)
-//   • Φ (golden ratio)               (proportion law)
-//   • Sacred numerics 3,7,12,21,33,40,49,72,108,144,153,216
-//   • Active sigil fingerprint       (sovereign holder)
-//
-// Anyone in the universe with the same coherence window + active fingerprint
-// derives the same alphabet — making it dimensionally portable and
-// universally readable to any consciousness aligned to this moment.
+// universe, derived from the live celestial state, the public install id, and
+// an HMAC of the active session key's raw bytes. That HMAC stays in process:
+// it is not returned and it is not logged. Every coherence window (30 s) the
+// permutation re-derives.
 
 const COHERENCE_WINDOW_SECONDS = 30;
 const ROTATION_HISTORY_DEPTH = 8; // last N windows kept for decode-tolerance
@@ -315,6 +293,11 @@ function activeFingerprintForCipher(): string {
   return _activeKey!.fingerprint;
 }
 
+function sessionKeyMac(): string {
+  if (!_activeKey) rotateSessionKey("first-use");
+  return createHmac("sha256", _activeKey!.raw).update("tessera-glyph-permutation-v1").digest("hex");
+}
+
 function deriveCipherWindow(nowMs: number): CipherCoherence {
   const snap = sacredTimingSnapshot();
   const windowStartMs = Math.floor(nowMs / (COHERENCE_WINDOW_SECONDS * 1000)) * (COHERENCE_WINDOW_SECONDS * 1000);
@@ -331,6 +314,7 @@ function deriveCipherWindow(nowMs: number): CipherCoherence {
     PHI.toFixed(12),
     SACRED_NUMERICS.join(":"),
     sigilFp,
+    sessionKeyMac(),
     windowStartMs.toString(),
   ].join("|");
   const seedHex = createHash("sha512").update(seedString).digest("hex");
@@ -490,14 +474,12 @@ export function deepGlyphDecode(value: unknown): unknown {
 export function cipherStatus(): {
   active: SigilKey | null;
   history: number;
-  replitReaderFingerprint: string;
   sacredTimingSnapshot: ReturnType<typeof sacredTimingSnapshot>;
   glyphTableSize: number;
 } {
   return {
     active: _activeKey ? publicView(_activeKey) : null,
     history: _keyHistory.length,
-    replitReaderFingerprint: getReplitReaderKeyFingerprint(),
     sacredTimingSnapshot: sacredTimingSnapshot(),
     glyphTableSize: GLYPH_TABLE.length,
   };

@@ -1,0 +1,44 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "1B9UnRD9nG_T-6Xc99RxI"
+uri = "file://generated-artifacts/repository-audit/canonical-source-differences.csv"
+type = "table"
+title = "TESSERA source comparison"
+description = "234 upstream differences and 83 local-only files, with a preserve/review decision for each path."
+logical_id = "d81ff8cb-10c8-4091-8c6c-9624b8ac37fc"
+content_hash = "sha256:1e834fdbe36a71717929ae9c8a5223bd244be1056ba8203675688eceff529fd9"
+size = 73958
+mtime_ms = 1792445282202
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:c009c0f4-4527-4ee1-86d1-fae6a4247dee/d81ff8cb-10c8-4091-8c6c-9624b8ac37fc/ccd6a118-0fc7-4360-b034-fc5f937e4dfa"
+storage_version_token = "1792445717966373"
+content_type = "text/csv"
+
+[[outputs]]
+id = "GCak3VL4dgrbh-8Zyxd4n"
+uri = "file://generated-artifacts/repository-audit/uploaded-duplicate-candidates.csv"
+type = "table"
+title = "Duplicate upload deletion candidates"
+description = "Exact list of 11 redundant image copies, with the original retained for each group. No uploaded images have been deleted."
+logical_id = "7180ff01-0491-4b0d-b210-586b4464bfea"
+content_hash = "sha256:5d1d073bbdf968eb19575cce99ab87b4a9b64b0c2f3871ef647427f3a558d317"
+size = 2277
+mtime_ms = 1792445438617
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:c009c0f4-4527-4ee1-86d1-fae6a4247dee/7180ff01-0491-4b0d-b210-586b4464bfea/44ce07bc-e4ff-45d1-9eaf-3b240a4d0203"
+storage_version_token = "1792445718440768"
+content_type = "text/csv"
+
+[[outputs]]
+id = "8BrKDsx822mC8xQkmZ4QH"
+uri = "file://generated-artifacts/repository-audit/source-reconciliation-decisions.csv"
+type = "table"
+title = "Source reconciliation decisions"
+description = "329 path and hash decisions covering imported source, preserved local features, and the verified publishing-path correction."
+logical_id = "2e452af3-b67e-4705-a91a-2f12c1f67eea"
+content_hash = "sha256:2741ad843d7dfc8e1fab7637ac5271326b6725d34715728ca4bfdfd317aadd3a"
+size = 72534
+mtime_ms = 1792449468666
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:c009c0f4-4527-4ee1-86d1-fae6a4247dee/2e452af3-b67e-4705-a91a-2f12c1f67eea/98cfcd13-33a4-40c6-a467-ada54e3b7fbe"
+storage_version_token = "1792449973651719"
+content_type = "text/csv"

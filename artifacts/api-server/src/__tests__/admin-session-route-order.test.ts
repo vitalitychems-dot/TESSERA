@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import express from "express";
 import { createServer, type Server } from "node:http";
 import adminSessionRouter from "../routes/admin-session";
@@ -9,6 +9,7 @@ describe("admin session gate route ordering", () => {
   let baseUrl = "";
 
   beforeAll(async () => {
+    vi.stubEnv("TESSERACT_ADMIN_KEY", "synthetic-route-order-admin-key");
     const app = express();
     app.use(express.json());
     // Match the shared router's order: provider sovereignty comes before the
@@ -23,6 +24,7 @@ describe("admin session gate route ordering", () => {
   });
 
   afterAll(async () => {
+    vi.unstubAllEnvs();
     if (server) {
       await new Promise<void>((resolve, reject) => {
         server?.close((error) => (error ? reject(error) : resolve()));

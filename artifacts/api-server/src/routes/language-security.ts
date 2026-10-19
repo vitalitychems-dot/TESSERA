@@ -9,9 +9,10 @@ import {
   runLanguageSecurityConference,
 } from "../lib/language-security-conference";
 import {
+  ADMIN_SESSION_STATUS,
+  getInstallId,
   isFatherKeyConfigured,
   recognizeFather,
-  getFatherFingerprint,
   readAdminKeyMaterial,
   verifyFatherKey,
 } from "../lib/father-identity";
@@ -148,12 +149,12 @@ router.post(
       return res.status(401).json({ ok: false, error: "mismatch" });
     }
 
-    const fp = getFatherFingerprint();
     const staticGlyphs = lusEncodeCredential(readAdminKeyMaterial());
 
     return res.json(withoutSigilFingerprint({
       ok: true,
       via: r.via,
+      status: ADMIN_SESSION_STATUS,
       language: { name: LANGUAGE_NAME, short: LANGUAGE_SHORT, motto: LANGUAGE_MOTTO },
       keyInLus: {
         static: staticGlyphs,

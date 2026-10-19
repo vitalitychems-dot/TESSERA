@@ -16,7 +16,7 @@ Status: **PREPARED / BLOCKED — not published.**
 
 - Managed web service at `/`; API routes at `/api`; mesh WebSocket route at `/ws`.
 - Static frontend output: `artifacts/tessera/dist/public`.
-- API runtime: `node --import ../../scripts/replit-runtime-env.mjs --enable-source-maps ./dist/index.mjs`, with the API artifact as the working directory.
+- Development API runtime uses the API artifact working directory. Published production commands run from the workspace root: `node --import ./scripts/replit-runtime-env.mjs --enable-source-maps ./artifacts/api-server/dist/index.mjs`. This distinction was confirmed by the failed publishing logs and an isolated successful launch of the corrected command.
 - Node 24.13.0 and the available pnpm 10.26.1 are used. The upstream pnpm 11.25.0 self-bootstrap failed in this environment; the local package-manager declaration was adjusted. Dependency installation still passed with the upstream frozen lockfile.
 - Runtime adapter preserves an explicitly supplied sovereign session secret, otherwise maps the existing Replit session secret to the canonical required variable name without logging or persisting its value.
 - `TESSERA_ENABLE_RICK_LOOP=0`, `TESSERA_ENABLE_COLONIAL_FALLBACK=0`, and port fallback is disabled.
@@ -49,7 +49,7 @@ Verification after the rotation confirmation flow: three API test files / 19 tes
 - The Secret is configured, but its value was never read or entered by the agent. Owner unlock and live signed-in operation remain unverified. No real owner-triggered replacement was issued in this workspace.
 - Gitbook currently has five open issues, plus active TESSERA PRs including a theme-cleanup PR. No issue was closed, no PR opened, and no task marked complete: the required per-task overlap/check-in and review gates have not been completed.
 - Storage-backed upload/download endpoints are not verified. Their fake object-ID probes were removed from readiness checks because they do not test whether a real object exists; storage availability itself still needs testing/configuration before relying on file features.
-- Production runtime/persistence, production database behavior, and actual published URL have not been verified. No deployment exists for this project.
+- Production persistence, production database behavior, and successful live access have not been verified. The deployment service now reports a failed published build; do not interpret the local preview as a successful deployment.
 - Gitbook's provenance/security review and exact release approval remain outstanding. Its current policy requires branches/PRs, green CI, a TESSERA build pass, Security PASS, and Moderator PASS before merge. No merge or publication occurred.
 - The full multi-application test suite was not run; only the active launch build and the selected canonical boot/access-control suite are reported here.
 - GitHub CI and secret-scan jobs on the checkpoint did not execute because of a GitHub account billing/spending restriction. This is not passing CI or secret-scan evidence.

@@ -107,7 +107,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       .admin-mode-font {
         font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', monospace !important;
         color: #8b5cf6 !important;
-        text-shadow: 0 0 8px rgba(139, 92, 246, 0.35);
+        text-shadow: 0 0 8px rgba(228, 198, 255, 0.35);
       }
       .admin-mode-caret {
         caret-color: #8b5cf6 !important;
@@ -119,15 +119,15 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         background-clip: text !important;
       }
       [data-testid="mobile-nav"], [data-testid="mobile-bottom-nav"] {
-        border-top-color: rgba(139, 92, 246, 0.25) !important;
-        box-shadow: 0 -4px 20px rgba(139, 92, 246, 0.08);
+        border-top-color: rgba(228, 198, 255, 0.25) !important;
+        box-shadow: 0 -4px 20px rgba(228, 198, 255, 0.08);
       }
       [data-testid="sidebar"] {
-        border-right-color: rgba(139, 92, 246, 0.15) !important;
+        border-right-color: rgba(228, 198, 255, 0.15) !important;
       }
       [data-testid="admin-key-section"] {
-        border-color: rgba(139, 92, 246, 0.4) !important;
-        box-shadow: 0 0 20px rgba(139, 92, 246, 0.1);
+        border-color: rgba(228, 198, 255, 0.4) !important;
+        box-shadow: 0 0 20px rgba(228, 198, 255, 0.1);
       }`;
     } else {
       style.textContent = "";

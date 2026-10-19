@@ -255,10 +255,7 @@ export function speakAsTessera(question: string, fact: string, footing: string):
   if (!cleanFact || hasSelfClaim(cleanFact)) return PEN_LINE;
   const topic = topicOf(question);
   const lead = !brief() && topic && topic.length < 80 ? `You asked about ${topic}. ` : "";
-  const pen = casual()
-    ? "I’m Tessera, the assistant persona in this app."
-    : "I’m Tessera, the assistant persona in this app. I’m software, not a conscious or autonomous person.";
-  const body = `${lead}${cleanFact} ${cleanFoot} ${pen}`;
+  const body = `${lead}${cleanFact} ${cleanFoot}`;
   return enforceTesseraVoice(body.replace(/\s+/g, " ").trim(), question);
 }
 

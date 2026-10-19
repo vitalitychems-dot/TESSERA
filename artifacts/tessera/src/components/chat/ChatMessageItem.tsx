@@ -1,4 +1,4 @@
-import { memo, Suspense, useState, useCallback } from "react";
+import { lazy, memo, Suspense, useState, useCallback } from "react";
 import { Copy, Check, RefreshCw, Volume2, ThumbsUp, ThumbsDown, Languages } from "lucide-react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -9,7 +9,11 @@ import { CodePreview } from "./ChatCodePreview";
 import { ColorizedText } from "./ChatColorizedText";
 import { copyToClipboard, playAudioResponse } from "./ChatVoice";
 import { CodeExecutionResult, parseCodeExecutionBlocks, stripCodeExecutionBlocks } from "./CodeExecutionResult";
-import { parse3DObjectBlocks, inferObjectSpec, InlineObject3D, type Object3DSpec } from "./ChatObject3D";
+import { parse3DObjectBlocks, inferObjectSpec, type Object3DSpec } from "./Chat3DParser";
+
+const InlineObject3D = lazy(() =>
+  import("./ChatObject3D").then((module) => ({ default: module.InlineObject3D })),
+);
 
 const AGENT_FREQUENCIES: Record<string, number> = {
   "paraclete": 852, "brahman-all": 963, "aletheia": 963, "melchizedek": 963,

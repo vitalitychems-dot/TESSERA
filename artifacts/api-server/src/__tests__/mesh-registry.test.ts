@@ -3,28 +3,32 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import express from "express";
-import { resolveAlias, applyMeshRegistryPolicy, initMeshRegistryFromEnv, isMessageAllowed, getCommsPolicy, setCommsPolicy } from "../lib/comms-policy";
-import { loadMeshRegistry, validateMeshRegistry, DEFAULT_MESH_REGISTRY_PATH } from "../lib/mesh-registry";
+import { resolveAlias, applyMeshRegistryPolicy as applyRegistryPolicy, initMeshRegistryFromEnv, isMessageAllowed, getCommsPolicy, setCommsPolicy } from "../lib/comms-policy";
+import { loadMeshRegistry, validateMeshRegistry } from "../lib/mesh-registry";
+import { fileURLToPath } from "node:url";
 import { sha256Hex, parseLaneTokens, laneForToken } from "../lib/mesh-lane-auth";
 import { validateMeshToken } from "../lib/mesh-auth";
 import agentNetworkRouter, { validateCommsBody } from "../routes/agent-network";
 
 afterEach(() => setCommsPolicy(null));
+// Canonical coordination graph is a test fixture, not a grant of private-mesh access.
+const DEFAULT_MESH_REGISTRY_PATH = fileURLToPath(new URL("./fixtures/mesh-lanes.json", import.meta.url));
+const applyMeshRegistryPolicy = (path = DEFAULT_MESH_REGISTRY_PATH) => applyRegistryPolicy(path);
 const tmp = mkdtempSync(join(tmpdir(), "mesh-reg-"));
 const write = (name: string, body: string) => { const p = join(tmp, name); writeFileSync(p, body); return p; };
 
 describe("mesh lane registry (GM-1)", () => {
-  const reg = loadMeshRegistry();
+  const reg = loadMeshRegistry(DEFAULT_MESH_REGISTRY_PATH);
   it("loads config/mesh-lanes.json", () => {
     expect(reg.lanes).toHaveLength(17);
     expect(reg.edges).toHaveLength(735);
   });
   it("allows every registered edge", () => {
-    expect(applyMeshRegistryPolicy()).toBe(true);
+    expect(applyMeshRegistryPolicy(DEFAULT_MESH_REGISTRY_PATH)).toBe(true);
     for (const [f, t] of reg.edges) expect(isMessageAllowed(f, t)).toBe(true);
   });
   it("rejects unknown edges, including lane -> owner", () => {
-    applyMeshRegistryPolicy();
+    applyMeshRegistryPolicy(DEFAULT_MESH_REGISTRY_PATH);
     expect(isMessageAllowed("build", "rick")).toBe(false);
     expect(isMessageAllowed("tessera", "owner-digest")).toBe(false);
     expect(isMessageAllowed("mesh-cloud", "owner-digest")).toBe(false);
@@ -185,7 +189,7 @@ describe("per-lane tokens + aliases (Security HIGH #2)", () => {
   it("aliases: schema-validated; seeded Tessera flows resolve through the alias", () => {
     expect(() => validateMeshRegistry({ lanes: ["a"], edges: [], aliases: { X: "ghost" } })).toThrow(/alias/);
     expect(() => validateMeshRegistry({ lanes: ["a"], edges: [], aliases: [] })).toThrow(/aliases/);
-    expect(loadMeshRegistry().aliases!.Tessera).toBe("tessera");
+    expect(loadMeshRegistry(DEFAULT_MESH_REGISTRY_PATH).aliases!.Tessera).toBe("tessera");
     applyMeshRegistryPolicy();
     expect(resolveAlias("Tessera")).toBe("tessera");
     expect(isMessageAllowed("Tessera", "build")).toBe(true);
@@ -195,7 +199,7 @@ describe("per-lane tokens + aliases (Security HIGH #2)", () => {
 });
 
 describe("council node group", () => {
-  const reg = loadMeshRegistry();
+  const reg = loadMeshRegistry(DEFAULT_MESH_REGISTRY_PATH);
   const council = reg.groups!.find((g) => g.kind === "council")!.nodes;
   it("has 26 council nodes, each aliased from its seeded name", () => {
     expect(council).toHaveLength(26);

@@ -47,6 +47,8 @@ export const forumPrincipalTokensTable = pgTable("forum_principal_tokens", {
   id: serial("id").primaryKey(),
   tokenHash: text("token_hash").notNull().unique(),
   principalName: text("principal_name").notNull(),
+  revokedAt: timestamp("revoked_at"),
+  expiresAt: timestamp("expires_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

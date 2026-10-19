@@ -3,6 +3,7 @@ import { forumTopicsTable, forumRepliesTable, councilDecisionsTable } from "@wor
 import { ingestedDataTable } from "@workspace/db/schema";
 import { desc, sql } from "drizzle-orm";
 import { logger } from "./logger";
+import { safeDbErrorLog } from "./safe-db-error";
 
 const AGENT_PERSPECTIVES: Record<string, (topic: string) => string> = {
   GrandCoordinatorAgent: (t) => `Council coordination analysis: "${t}" has been assessed against our sovereign governance framework. This topic aligns with our Phase 11 expansion objectives. Recommending full deliberation cycle with all 45 agents for comprehensive coverage.`,
@@ -129,7 +130,7 @@ export async function seedForumFromRealData(): Promise<number> {
     logger.info({ seeded, fromDecisions: recentDecisions.length, fromKnowledge: recentKnowledge.length }, "ForumSeeder: forum seeded from REAL council decisions and ingested knowledge");
     return seeded;
   } catch (err) {
-    logger.error({ err }, "ForumSeeder: failed to seed forum");
+    logger.error(safeDbErrorLog(err), "ForumSeeder: failed to seed forum");
     return 0;
   }
 }

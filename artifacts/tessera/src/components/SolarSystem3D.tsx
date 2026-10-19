@@ -444,7 +444,7 @@ function PlanetWithTexture({ name, distance, size, speed, color, emissive, initi
           <Html distanceFactor={15} center style={{ pointerEvents: "none" }}>
             <div style={{
               background: "rgba(0,0,0,0.85)",
-              border: `1px solid ${isRulingPlanet ? "rgba(192,132,252,0.7)" : "rgba(139,92,246,0.5)"}`,
+              border: `1px solid ${isRulingPlanet ? "rgba(192,132,252,0.7)" : "rgba(228,198,255,0.5)"}`,
               borderRadius: "8px",
               padding: "6px 12px",
               color: "#e2e8f0",
@@ -1565,7 +1565,7 @@ export default function SolarSystem3D({ showDimensions, apodItems, userZodiac, d
           <div style={{
             position: "absolute", bottom: isMobile ? "70px" : "80px", left: "50%", transform: "translateX(-50%)",
             zIndex: 10, pointerEvents: "none",
-            background: "rgba(0,0,0,0.7)", border: "1px solid rgba(139,92,246,0.3)",
+            background: "rgba(0,0,0,0.7)", border: "1px solid rgba(228,198,255,0.3)",
             borderRadius: isMobile ? "10px" : "12px", padding: isMobile ? "6px 12px" : "8px 16px",
             fontFamily: "monospace", fontSize: isMobile ? "9px" : "11px", color: "#94a3b8",
             backdropFilter: "blur(8px)", whiteSpace: "nowrap",
@@ -1590,7 +1590,7 @@ export default function SolarSystem3D({ showDimensions, apodItems, userZodiac, d
                 borderRadius: "50%",
                 background: "rgba(3,1,8,0.80)",
                 border: `1px solid rgba(167,139,250,${isMobile ? "0.2" : "0.25"})`,
-                boxShadow: "0 0 12px rgba(139,92,246,0.12)",
+                boxShadow: "0 0 12px rgba(228,198,255,0.12)",
                 backdropFilter: "blur(6px)",
               }}>
                 <circle cx={sz/2} cy={sz/2} r={sz/2-1} fill="none" stroke="rgba(167,139,250,0.1)" strokeWidth="0.5" />

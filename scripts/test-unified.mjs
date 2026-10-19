@@ -56,6 +56,7 @@ delete isolatedEnv.TESSERA_TEST_FATHER_NATAL_CHART_JSON;
 let failures = 0;
 for (const [label, selector, script = "test"] of [
   ["Suite safety policy", "@workspace/scripts"],
+  ["Replit production entry points", "@workspace/scripts", "test:replit-launch"],
   ["Tessera console", "@workspace/console"],
   ["Gitbook MCP", "@workspace/gitbook-mcp"],
   ["TESSERA v2", "@workspace/v2"],
@@ -87,6 +88,7 @@ if (!testDatabaseUrl) {
   const apiEnv = {
     ...isolatedEnv,
     DATABASE_URL: testDatabaseUrl,
+    TESSERA_TEST_DATABASE_URL: testDatabaseUrl,
     ...(localTestValue("TESSERA_TEST_FATHER_NATAL_CHART_JSON")
       ? { FATHER_NATAL_CHART_JSON: localTestValue("TESSERA_TEST_FATHER_NATAL_CHART_JSON") }
       : {}),

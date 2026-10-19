@@ -26,6 +26,8 @@ import {
   recallIngestedKnowledgeWithProvenance,
 } from "../lib/ingested-recall";
 import { runCritiqueLoop } from "../lib/self-critique";
+import { generateConfiguredChatReply } from "../lib/chat-generation";
+import { acceptedChatLlmBaseUrl, isChatRedirectStatus } from "../lib/tessera-llm-http";
 import { classifyQuery } from "../lib/adaptive-router";
 import { hybridRetrieve } from "../lib/hybrid-retrieval";
 import { detectIntents, isPrivilegedTool, publicToolResult, runToolLoop } from "../lib/tool-registry";
@@ -153,12 +155,12 @@ const IMPERSONATION_PATTERNS: RegExp[] = [
   /\bI(?:'m| am) (?:ChatGPT|GPT-?\d|Claude|Gemini|Bard|Grok|Qwen|Llama|OpenAI|Anthropic)\b/i,
 ];
 
-function detectImpersonation(text: string): boolean {
+export function detectImpersonation(text: string): boolean {
   if (!text) return false;
-  return hasSelfClaim(text) || isSearchDump(text) || IMPERSONATION_PATTERNS.some(p => p.test(text));
+  return hasSelfClaim(text) || isSearchDump(text) || IMPERSONATION_PATTERNS.some((pattern) => pattern.test(text));
 }
 
-function guardSovereignVoice(
+export function guardSovereignVoice(
   candidate: string,
   userInput: string,
   isAdmin: boolean,
@@ -302,7 +304,6 @@ function generateSovereignResponse(
   if (input.includes("help") || input.includes("what can you do")) {
     return "I can answer from the built-in knowledge catalog, use relevant information retrieved for a question, and perform supported application calculations. I’ll say when a source is missing; I won’t claim that agents or background systems acted unless the app provides evidence.";
   }
-
   const normalizedInput = normalizeArithmetic(input);
   const hasArithmeticExpr = normalizedInput.match(/(\d+(?:\.\d+)?)\s*([\+\-\*\/\^])\s*(\d+(?:\.\d+)?)/);
 
@@ -380,7 +381,7 @@ async function sandboxExtractKnowledge(
   messages: Array<{ role: string; content: string }>,
   sovereignCtx: string,
 ): Promise<string | null> {
-  const baseURL = process.env.TESSERA_LLM_BASE_URL?.trim();
+  const baseURL = acceptedChatLlmBaseUrl();
   const apiKey = process.env.TESSERA_LLM_API_KEY?.trim();
   const model = process.env.TESSERA_LLM_MODEL?.trim();
   if (!baseURL || !apiKey || !model) return null;
@@ -414,7 +415,9 @@ async function sandboxExtractKnowledge(
       body,
       timeoutMs: 30000,
       requestedBy: "sovereign-sandbox-extraction",
+      redirect: "manual",
     });
+    if (isChatRedirectStatus(result.status)) return null;
 
     if (result.flagged) {
       logger.warn({ reason: result.flagReason }, "Sandbox extraction flagged by security wrapper");
@@ -441,7 +444,7 @@ async function _deprecated_sandboxExtractKnowledgeStreaming(
   sovereignCtx: string,
   onChunk: (text: string) => void,
 ): Promise<string | null> {
-  const baseURL = process.env.TESSERA_LLM_BASE_URL?.trim();
+  const baseURL = acceptedChatLlmBaseUrl();
   const apiKey = process.env.TESSERA_LLM_API_KEY?.trim();
   const model = process.env.TESSERA_LLM_MODEL?.trim();
   if (!baseURL || !apiKey || !model) return null;
@@ -482,7 +485,12 @@ async function _deprecated_sandboxExtractKnowledgeStreaming(
       }),
       timeoutMs: 30000,
       requestedBy: "tessera-sovereign-synthesis",
+      redirect: "manual",
     });
+    if (isChatRedirectStatus(response.status)) {
+      await response.body?.cancel().catch(() => undefined);
+      return null;
+    }
 
     if (flagged) {
       logger.warn({ reason: flagReason, url: streamUrl }, "Tessera streaming flagged");
@@ -660,9 +668,7 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
           : createTesseraEvidenceAnswer(content).evidence;
       const rawReply = deskTurn
         ? deskTurn.reply
-        : live
-          ? live
-          : enforceTesseraVoice(generateSovereignResponse(content, isAdminRequestEarly), content);
+        : live!;
       const deskAgents = deskTurn?.agents ?? [{ id: "tessera", name: "Tessera" }];
       const deskReason = deskTurn
         ? "desk collab, Tessera closes"
@@ -924,8 +930,9 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
 
     const history = await db.select().from(messagesTable)
       .where(eq(messagesTable.conversationId, conversationId))
-      .orderBy(asc(messagesTable.createdAt))
+      .orderBy(desc(messagesTable.createdAt), desc(messagesTable.id))
       .limit(40);
+    history.reverse();
 
     let finalContent = earlySovereign;
     const initialSovereign = earlySovereign;

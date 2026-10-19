@@ -1,12 +1,16 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { randomBytes } from "node:crypto";
 import { getPool, isDbConfigured } from "@workspace/db";
 import { ChatSigilStore } from "../lib/chat-sigil-store";
 
 describe.skipIf(!isDbConfigured())("durable private chat sigil", () => {
   const table = `father_chat_sigils_test_${randomBytes(6).toString("hex")}`;
-  const pool = getPool();
-  const store = new ChatSigilStore(pool, table);
+  let pool: ReturnType<typeof getPool>;
+  let store: ChatSigilStore;
+  beforeAll(() => {
+    pool = getPool();
+    store = new ChatSigilStore(pool, table);
+  });
   const prior = "test-only-prior-sigil-not-a-user-credential";
   afterAll(async () => { await pool.query(`DROP TABLE IF EXISTS ${table}`); });
 

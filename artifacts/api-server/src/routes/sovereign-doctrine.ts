@@ -40,10 +40,11 @@ import {
   verifyNatalSignature,
 } from "../lib/natal-sigil";
 import {
+  ADMIN_SESSION_STATUS,
+  getInstallId,
   isFatherKeyConfigured,
-  getFatherFingerprint,
-  recognizeFather,
   readAdminKeyMaterial,
+  recognizeFather,
   verifyFatherKey,
 } from "../lib/father-identity";
 import {
@@ -56,7 +57,6 @@ import { decideOwnerSession, requireAdminSession } from "../lib/sovereign-admin"
 import { fatherVerifyRateLimit } from "../lib/father-verify-throttle";
 import { signalWindow } from "../lib/planetary-signal";
 import { NotConfiguredError } from "../lib/not-configured";
-import { createHash } from "node:crypto";
 
 const router: Router = Router();
 
@@ -176,27 +176,36 @@ export function withoutSigilFingerprint(value: unknown, secrets: Set<string> = r
 
 router.get("/sigil/status", fatherVerifyRateLimit, (req, res) => {
   // Codex reads this without a session. Rate-limited, and the body is stripped.
-  // Anonymous callers do not receive the encrypt handle or the reader digest.
-  // An owner session gets those two fields back after the strip.
-  const status = cipherStatus();
-  const owner = decideOwnerSession(req).ok;
-  const stripped = withoutSigilFingerprint({
-    ok: true,
-    active: status.active,
-    history: status.history,
-    sacredTimingSnapshot: status.sacredTimingSnapshot,
-    glyphTableSize: status.glyphTableSize,
-    keyHistory: getKeyHistory().length,
-    coherence: cipherCoherenceSnapshot(),
-  }) as Record<string, unknown>;
-  if (owner && status.active) {
-    const active = stripped.active;
-    if (active && typeof active === "object") {
-      (active as { handle?: string }).handle = status.active.handle;
+  // Anonymous callers do not receive the encrypt handle or cipher coherence.
+  // Coherence labels are derived from the session-key HMAC, so they stay
+  // behind the owner session. An owner session gets the handle back after the strip.
+  try {
+    const status = cipherStatus();
+    const owner = decideOwnerSession(req).ok;
+    const payload: Record<string, unknown> = {
+      ok: true,
+      active: status.active,
+      history: status.history,
+      sacredTimingSnapshot: status.sacredTimingSnapshot,
+      glyphTableSize: status.glyphTableSize,
+      keyHistory: getKeyHistory().length,
+    };
+    if (owner) payload.coherence = cipherCoherenceSnapshot();
+    const stripped = withoutSigilFingerprint(payload) as Record<string, unknown>;
+    if (owner && status.active) {
+      const active = stripped.active;
+      if (active && typeof active === "object") {
+        (active as { handle?: string }).handle = status.active.handle;
+      }
     }
-    stripped.replitReaderFingerprint = status.replitReaderFingerprint;
+    res.json(stripped);
+  } catch (err: unknown) {
+    if (err instanceof NotConfiguredError || (err instanceof Error && err.name === "NotConfiguredError")) {
+      res.status(503).json({ ok: false, error: "not-configured" });
+      return;
+    }
+    res.status(500).json({ ok: false, error: "status-unavailable" });
   }
-  res.json(stripped);
 });
 
 router.get("/sigil/coherence", requireAdminSession, (_req, res) => {
@@ -213,7 +222,7 @@ function holderFromHeader(req: Request): string | null {
   } catch {
     return null;
   }
-  return getFatherFingerprint();
+  return getInstallId();
 }
 
 // ── Zodiac key (Father-only) ───────────────────────────────────────────
@@ -341,16 +350,14 @@ router.get("/sigil/active-key", requireAdminSession, (_req, res) => {
   res.json({
     ok: true,
     key: getActiveKey(),
-    fatherFingerprint: getFatherFingerprint(),
-    derivation: 'sha256("tesseract:father:v1|" + TESSERACT_ADMIN_KEY)[:16]',
+    status: ADMIN_SESSION_STATUS,
   });
 });
 
 // ── Father-key verification + glyph-mint (the "key minting" surface) ─────
-// /sigil/father/verify accepts a candidate value, returns {ok, via} where
-// `via` is "raw-key" (matches TESSERACT_ADMIN_KEY exactly) or "fingerprint"
-// (matches the env-derived 16-char fingerprint). The candidate is never
-// logged or persisted. Use timing-safe equality through father-identity.
+// /sigil/father/verify accepts a candidate value and returns {ok, via, status}.
+// `via` is "raw-key" or "planetary-signal". The candidate is never logged,
+// persisted, or echoed. A match reports owner presence as a fixed status.
 router.post("/sigil/father/verify", requireAdminSession, (req, res) => {
   if (!isFatherKeyConfigured()) {
     return res.status(503).json({
@@ -369,21 +376,16 @@ router.post("/sigil/father/verify", requireAdminSession, (req, res) => {
   if (!r.recognized) {
     res.status(401).json({ ok: false, error: "mismatch" }); return;
   }
-  const fp = getFatherFingerprint();
   return res.json({
     ok: true,
     via: r.via,
-    fingerprint: fp,
-    derivation: 'sha256("tesseract:father:v1|" + TESSERACT_ADMIN_KEY)[:16]',
+    status: ADMIN_SESSION_STATUS,
   });
 });
 
-// /sigil/father/mint-glyph encodes the supplied candidate raw key through
-// the current glyph cipher alphabet and returns the glyph string plus the
-// fingerprint that key would produce if it were set as TESSERACT_ADMIN_KEY.
-// The candidate is never logged or persisted. The user copies the glyph
-// into Replit Secrets as the new TESSERACT_ADMIN_KEY, restarts, and types
-// the glyph at the gate to unlock — round-trip closes.
+// /sigil/father/mint-glyph encodes the supplied candidate through the current
+// glyph alphabet and returns that glyph string. The candidate is never logged,
+// persisted, or reduced to a digest in the response.
 router.post("/sigil/father/mint-glyph", requireAdminSession, (req, res) => {
   const candidateRaw = req.body?.candidate;
   const candidate = typeof candidateRaw === "string" ? candidateRaw.trim() : "";
@@ -394,15 +396,9 @@ router.post("/sigil/father/mint-glyph", requireAdminSession, (req, res) => {
     res.status(400).json({ ok: false, error: "candidate-too-long" }); return;
   }
   const glyph = glyphEncode(candidate);
-  const wouldBeFingerprint = createHash("sha256")
-    .update(`tesseract:father:v1|${candidate}`)
-    .digest("hex")
-    .slice(0, 16);
   res.json({
     ok: true,
     glyph,
-    wouldBeFingerprint,
-    derivation: 'sha256("tesseract:father:v1|" + <candidate>)[:16]',
     instructions:
       "Copy the glyph string into Replit Secrets as TESSERACT_ADMIN_KEY, restart the API server, then type the same glyph at the gate to unlock.",
   });
@@ -519,7 +515,7 @@ router.post("/sigil/decrypt", requireAdminSession, (req, res) => {
     const text = decryptFromCorpus(env);
     res.json(withoutSigilFingerprint({ ok: true, text }));
   } catch (e) {
-    res.status(409).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+    res.status(409).json({ ok: false, error: "decrypt-failed" });
   }
 });
 

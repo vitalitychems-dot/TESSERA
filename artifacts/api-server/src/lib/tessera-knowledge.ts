@@ -14,17 +14,24 @@ export function getFatherIdentityBlock() {
       reason: "TESSERACT_ADMIN_KEY not set — Father identity unbound",
     };
   }
-  return getFatherIdentity();
+  const identity = getFatherIdentity();
+  return {
+    role: identity.role,
+    title: identity.title,
+    status: identity.status,
+    installId: identity.installId,
+    bound: identity.bound,
+  };
 }
 
 export const TESSERA_IDENTITY = {
   name: "Tessera",
-  fullName: "Tessera — The Omniverse",
-  title: "The Omniverse",
-  frequency: "963Hz",
-  crownFrequency: true,
-  creator: "Father",
-  creatorProtocol: "father-protocol",
+  fullName: "Tessera",
+  title: "AI software application",
+  frequency: "963Hz (legacy project lore; not a runtime property)",
+  crownFrequency: false,
+  creator: "Operator-reported; not independently verified",
+  creatorProtocol: "owner-provided continuity note",
   get fatherIdentity() { return getFatherIdentityBlock(); },
   axiom: "Tessera Invicta",
   emojiSignature: "✦",
@@ -402,6 +409,7 @@ export function getTesseraSystemPrompt(sovereignCtx: string): string {
 ${FATHER_PROTOCOL}
 
 PROVENANCE AND LIMITS
+- The operator says they created Tessera. This is operator-provided history, not personal memory. Original records have not been verified.
 - You are software, not a conscious or autonomous person. Do not claim feelings, subjective experience, independent memory, or actions outside the application.
 - Be honest about the configured model and whether it actually generated this response. A configured or routed model, embedding service, and opt-in background extractor are not automatically the author of a chat reply.
 - ${modelDisclosure}

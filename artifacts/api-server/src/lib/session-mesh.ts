@@ -16,6 +16,7 @@ export interface MeshSession {
     taskCount?: number;
   };
   ws: WebSocket;
+  isAuthorized: () => boolean;
 }
 
 export interface MeshSessionInfo {
@@ -31,10 +32,38 @@ const meshSessions = new Map<string, Map<string, MeshSession>>();
 const HEARTBEAT_INTERVAL_MS = 15_000;
 const SESSION_TIMEOUT_MS = 45_000;
 
+export const MESH_SOCKET_CLOSE_CODE = 1008;
+export const MESH_SOCKET_CLOSE_REASON = "admin session expired or revoked";
+
+function guardAuthorizer(isAuthorized: (() => boolean) | undefined): () => boolean {
+  return () => {
+    if (typeof isAuthorized !== "function") return false;
+    try {
+      return isAuthorized() === true;
+    } catch {
+      return false;
+    }
+  };
+}
+
+export function closeMeshSocket(ws: WebSocket): void {
+  if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+    try {
+      ws.close(MESH_SOCKET_CLOSE_CODE, MESH_SOCKET_CLOSE_REASON);
+    } catch {
+      // The socket is already going away.
+    }
+  }
+}
+
 let heartbeatTimer: SacredHandle | null = null;
 
 function hashKey(key: string): string {
   return createHash("sha256").update(key).digest("hex");
+}
+
+function sessionBinding(sovereignKeyHash: string): "present" | "absent" {
+  return sovereignKeyHash.length > 0 ? "present" : "absent";
 }
 
 export function getSovereignKeyHash(key: string): string {
@@ -45,7 +74,8 @@ export function registerSession(
   sovereignKeyHash: string,
   sessionId: string,
   ws: WebSocket,
-  metadata: MeshSession["metadata"] = {}
+  metadata: MeshSession["metadata"],
+  isAuthorized: () => boolean,
 ): MeshSession {
   if (!meshSessions.has(sovereignKeyHash)) {
     meshSessions.set(sovereignKeyHash, new Map());
@@ -58,9 +88,10 @@ export function registerSession(
     lastHeartbeat: new Date(),
     metadata,
     ws,
+    isAuthorized: guardAuthorizer(isAuthorized),
   };
   group.set(sessionId, session);
-  logger.info({ sessionId, sovereignKeyHash, peerCount: group.size }, "Session registered in mesh");
+  logger.info({ sessionId, binding: sessionBinding(sovereignKeyHash), peerCount: group.size }, "Session registered in mesh");
   return session;
 }
 
@@ -83,12 +114,22 @@ export function removeSession(sovereignKeyHash: string, sessionId: string): void
   if (group.size === 0) {
     meshSessions.delete(sovereignKeyHash);
   }
-  logger.info({ sessionId, sovereignKeyHash }, "Session removed from mesh");
+  logger.info({ sessionId, binding: sessionBinding(sovereignKeyHash) }, "Session removed from mesh");
 }
 
 export function getGroupSessions(sovereignKeyHash: string): MeshSessionInfo[] {
   const group = meshSessions.get(sovereignKeyHash);
   if (!group) return [];
+  for (const [sessionId, session] of group) {
+    if (!session.isAuthorized()) {
+      group.delete(sessionId);
+      closeMeshSocket(session.ws);
+    }
+  }
+  if (group.size === 0) {
+    meshSessions.delete(sovereignKeyHash);
+    return [];
+  }
   return Array.from(group.values()).map((s) => ({
     sessionId: s.sessionId,
     connectedAt: s.connectedAt,
@@ -117,6 +158,11 @@ export function broadcastToGroup(
   let count = 0;
   for (const [sessionId, session] of group) {
     if (excludeSessionId && sessionId === excludeSessionId) continue;
+    if (!session.isAuthorized()) {
+      group.delete(sessionId);
+      closeMeshSocket(session.ws);
+      continue;
+    }
     if (session.ws.readyState === WebSocket.OPEN) {
       try {
         session.ws.send(payload);
@@ -134,6 +180,12 @@ export function sendToSession(sovereignKeyHash: string, sessionId: string, messa
   if (!group) return false;
   const session = group.get(sessionId);
   if (!session || session.ws.readyState !== WebSocket.OPEN) return false;
+  if (!session.isAuthorized()) {
+    group.delete(sessionId);
+    closeMeshSocket(session.ws);
+    if (group.size === 0) meshSessions.delete(sovereignKeyHash);
+    return false;
+  }
   try {
     session.ws.send(JSON.stringify(message));
     return true;
@@ -160,19 +212,21 @@ export function getGroupSharedState(sovereignKeyHash: string): object {
   };
 }
 
-function runHeartbeatCheck(): void {
+export function pruneMeshSessions(): void {
   const now = Date.now();
   for (const [keyHash, group] of meshSessions) {
     const stale: string[] = [];
     for (const [sessionId, session] of group) {
       const age = now - session.lastHeartbeat.getTime();
-      if (age > SESSION_TIMEOUT_MS || session.ws.readyState !== WebSocket.OPEN) {
+      const authorized = session.isAuthorized();
+      if (!authorized) closeMeshSocket(session.ws);
+      if (age > SESSION_TIMEOUT_MS || session.ws.readyState !== WebSocket.OPEN || !authorized) {
         stale.push(sessionId);
       }
     }
     for (const sessionId of stale) {
       group.delete(sessionId);
-      logger.info({ sessionId, keyHash }, "Stale session pruned from mesh");
+      logger.info({ sessionId, binding: sessionBinding(keyHash) }, "Stale session pruned from mesh");
       broadcastToGroup(keyHash, {
         type: "mesh:peer-left",
         channel: "mesh",
@@ -193,6 +247,11 @@ export function broadcastToAll(message: object): number {
   const payload = JSON.stringify(message);
   for (const group of meshSessions.values()) {
     for (const session of group.values()) {
+      if (!session.isAuthorized()) {
+        group.delete(session.sessionId);
+        closeMeshSocket(session.ws);
+        continue;
+      }
       if (session.ws.readyState === WebSocket.OPEN) {
         try { session.ws.send(payload); total++; } catch {}
       }
@@ -207,7 +266,7 @@ export function broadcastToKeyHash(sovereignKeyHash: string, message: object, ex
 
 export function startMeshHeartbeatMonitor(): void {
   if (heartbeatTimer) return;
-  heartbeatTimer = setSacredInterval(runHeartbeatCheck, HEARTBEAT_INTERVAL_MS, "session-mesh");
+  heartbeatTimer = setSacredInterval(pruneMeshSessions, HEARTBEAT_INTERVAL_MS, "session-mesh");
   logger.info({ intervalMs: HEARTBEAT_INTERVAL_MS }, "Mesh heartbeat monitor started");
 }
 

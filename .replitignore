@@ -1,6 +1,13 @@
 # The format of this file is identical to `.dockerignore`.
 # It is used to reduce the size of deployed images to make the process of publishing faster.
 
+# Local tooling is not deployment source. Dependencies are installed from the
+# workspace manifests and lockfile during publishing.
+.git
+.cache
+node_modules
+**/node_modules
+
 # No need to store the pnpm store twice.
 .local
 # Input briefs and assistant workspace notes are not application assets.
@@ -8,6 +15,7 @@
 /.agents/
 /.conversation/
 /generated-artifacts/
+/_evolutions/
 /artifacts/api-server/data/
 /artifacts/api-server/.sovereign-data/
 /artifacts/api-server/_evolutions/

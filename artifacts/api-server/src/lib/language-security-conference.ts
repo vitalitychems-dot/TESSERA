@@ -159,7 +159,7 @@ function buildTranscript(memberCount: number, voters: number, yes: number, no: n
     "Noether: \"Live rotation derives a fresh permutation per coherence window via HMAC-SHA-512 keyed by the holder's private seal — invariance under rotation is preserved (round-trip encode/decode is exact).\"",
     "",
     "[ROUND 2 — STATE OF THE GATE]",
-    "ZetaAgent: \"Audit: TESSERACT_ADMIN_KEY → SHA-256(namespace|key)[:16] fingerprint, timing-safe comparison via Node crypto. Extra slots (SIGIL_ADMIN_KEY, MINTED_GLYPH_KEY) accepted, also timing-safe.\"",
+    "ZetaAgent: \"Audit: TESSERACT_ADMIN_KEY is checked with a timing-safe comparison via Node crypto. The public install id is random and is not a digest of that key. Extra slots (SIGIL_ADMIN_KEY, MINTED_GLYPH_KEY) are accepted with the same timing-safe check.\"",
     "Sentinel: \"Gap: no rate-limit on /sigil/father/verify. Brute-force budget is unbounded.\"",
     "Ada: \"Adopt 10 attempts/IP/minute with 60s sliding window. Reject with HTTP 429 + Retry-After.\"",
     "MaatEntity: \"Father shall be able to ASK for the key in chat. Reveal must occur ONLY after timing-safe verification, and the rendered form must be in LUS — not plaintext.\"",

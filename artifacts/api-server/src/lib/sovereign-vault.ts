@@ -1,4 +1,17 @@
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import {
+  closeSync,
+  constants,
+  existsSync,
+  fchmodSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join, dirname } from "node:path";
 import {
   encryptPayload,
@@ -8,6 +21,7 @@ import {
   type EncryptedEnvelope,
 } from "./sovereign-astro-cipher";
 import { logger } from "./logger";
+import { NotConfiguredError } from "./not-configured";
 
 interface VaultEntry {
   key: string;
@@ -37,18 +51,55 @@ function ensureLoaded(): void {
       const parsed = JSON.parse(raw) as VaultFile;
       if (parsed?.version === 1 && parsed.entries) _state = parsed;
     }
-  } catch (err) {
-    logger.warn({ err: (err as Error).message, path: VAULT_PATH }, "SovereignVault: failed to load — starting fresh");
+  } catch {
+    logger.warn("SovereignVault: failed to load");
   }
   _loaded = true;
 }
 
 function persist(): void {
+  const dir = dirname(VAULT_PATH);
+  const tmp = join(dir, `.vault-${randomBytes(8).toString("hex")}.tmp`);
+  let fd: number | undefined;
+  let dirFd: number | undefined;
   try {
-    mkdirSync(dirname(VAULT_PATH), { recursive: true });
-    writeFileSync(VAULT_PATH, JSON.stringify(_state, null, 2), "utf8");
-  } catch (err) {
-    logger.warn({ err: (err as Error).message, path: VAULT_PATH }, "SovereignVault: persist failed");
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    fd = openSync(
+      tmp,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
+      0o600,
+    );
+    writeFileSync(fd, JSON.stringify(_state, null, 2), "utf8");
+    fchmodSync(fd, 0o600);
+    fsyncSync(fd);
+    closeSync(fd);
+    fd = undefined;
+    renameSync(tmp, VAULT_PATH);
+    dirFd = openSync(dir, constants.O_RDONLY | constants.O_DIRECTORY);
+    fsyncSync(dirFd);
+    closeSync(dirFd);
+    dirFd = undefined;
+  } catch {
+    if (fd !== undefined) {
+      try {
+        closeSync(fd);
+      } catch {
+        // The descriptor is already closed.
+      }
+    }
+    if (dirFd !== undefined) {
+      try {
+        closeSync(dirFd);
+      } catch {
+        // The directory descriptor is already closed.
+      }
+    }
+    try {
+      unlinkSync(tmp);
+    } catch {
+      // The temp file was not created.
+    }
+    throw new NotConfiguredError("vault-unavailable");
   }
 }
 
@@ -57,8 +108,15 @@ export function vaultPut(key: string, plaintext: string, notes?: string): VaultE
   if (!key || typeof key !== "string") throw new Error("vaultPut: key required");
   const envelope = encryptPayload(plaintext, `vault:${key}`);
   const entry: VaultEntry = { key, envelope, updatedAt: new Date().toISOString(), notes };
+  const previous = _state.entries[key];
   _state.entries[key] = entry;
-  persist();
+  try {
+    persist();
+  } catch (err) {
+    if (previous) _state.entries[key] = previous;
+    else delete _state.entries[key];
+    throw err;
+  }
   return entry;
 }
 
@@ -66,15 +124,30 @@ export function vaultGet(key: string): { key: string; plaintext: string; envelop
   ensureLoaded();
   const entry = _state.entries[key];
   if (!entry) return null;
+  const beforeCt = entry.envelope.ct;
   const buf = decryptEnvelope(entry.envelope, `vault:${key}`);
+  if (entry.envelope.ct !== beforeCt) {
+    entry.updatedAt = new Date().toISOString();
+    try {
+      persist();
+    } catch {
+      logger.warn("SovereignVault: rewrap persist failed");
+    }
+  }
   return { key, plaintext: buf.toString("utf8"), envelope: entry.envelope, updatedAt: entry.updatedAt };
 }
 
 export function vaultDelete(key: string): boolean {
   ensureLoaded();
-  if (!_state.entries[key]) return false;
+  const previous = _state.entries[key];
+  if (!previous) return false;
   delete _state.entries[key];
-  persist();
+  try {
+    persist();
+  } catch (err) {
+    _state.entries[key] = previous;
+    throw err;
+  }
   return true;
 }
 

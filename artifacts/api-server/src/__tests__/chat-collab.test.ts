@@ -9,7 +9,7 @@ import {
 describe("chat desk collab and training", () => {
   beforeEach(() => resetChatDesk());
 
-  it("calls an available member and lets Tessera close", () => {
+  it("selects a local role template without claiming a live agent call", () => {
     const turn = runChatDesk("@Athena what stays on the table");
     expect(turn).not.toBeNull();
     expect(turn!.called).toEqual(["Athena"]);
@@ -53,7 +53,7 @@ describe("chat desk collab and training", () => {
 
   it("gives Tessera's final answer when asked", () => {
     const standing = runChatDesk("Tessera give final answer");
-    expect(standing!.reply).toContain("I’m Tessera, the assistant persona in this app.");
+    expect(standing!.reply).toContain("No final answer has been saved");
     expect(standing!.called).toEqual([]);
     runChatDesk("train: the closed vault stays closed");
     const held = runChatDesk("give the final answer");

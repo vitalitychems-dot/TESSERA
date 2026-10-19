@@ -9,10 +9,12 @@ const { priorEnv, queryResult, penMock } = vi.hoisted(() => {
     key: process.env.TESSERA_LLM_API_KEY,
     model: process.env.TESSERA_LLM_MODEL,
     sandbox: process.env.SANDBOX_TRAINING_ALLOWED,
+    noExternal: process.env.SOVEREIGN_NO_EXTERNAL_LLM,
   };
-  process.env.TESSERA_LLM_BASE_URL = "https://llm.tessera.test/v1";
+  process.env.TESSERA_LLM_BASE_URL = "https://127.0.0.1:9/v1";
   process.env.TESSERA_LLM_API_KEY = "unit-test-key";
   process.env.TESSERA_LLM_MODEL = "unit-test-model";
+  process.env.SOVEREIGN_NO_EXTERNAL_LLM = "0";
 
   function queryResult(value: unknown): any {
     const promise = Promise.resolve(value);
@@ -165,11 +167,13 @@ function restoreEnv(): void {
   else process.env.TESSERA_LLM_MODEL = priorEnv.model;
   if (priorEnv.sandbox === undefined) delete process.env.SANDBOX_TRAINING_ALLOWED;
   else process.env.SANDBOX_TRAINING_ALLOWED = priorEnv.sandbox;
+  if (priorEnv.noExternal === undefined) delete process.env.SOVEREIGN_NO_EXTERNAL_LLM;
+  else process.env.SOVEREIGN_NO_EXTERNAL_LLM = priorEnv.noExternal;
 }
 
 function ownerCookie(): string {
   process.env.TESSERACT_ADMIN_KEY = "synthetic-owner-token";
-  process.env.SOVEREIGN_SESSION_SECRET = "synthetic-session-secret-32chars!!";
+  process.env.SOVEREIGN_SESSION_SECRET = "syn*****!!";
   const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
   return `${SESSION_COOKIE}=${issued.signedId}`;
 }
@@ -266,7 +270,7 @@ describe("guarded LLM and NASA fetch", () => {
       "images-assets.nasa.gov",
       "images-orig.nasa.gov",
       "api.nasa.gov",
-      "llm.tessera.test",
+      "127.0.0.1",
     ]));
   });
 
@@ -277,9 +281,9 @@ describe("guarded LLM and NASA fetch", () => {
     });
 
     expect(res.status).toBe(200);
-    const llm = seen.find((entry) => entry.url.startsWith("https://llm.tessera.test/"));
+    const llm = seen.find((entry) => entry.url.startsWith("https://127.0.0.1:9/"));
     expect(llm?.caller).toBe("shepherd-proxy");
-    expect(llm?.url).toBe("https://llm.tessera.test/v1/chat/completions");
+    expect(llm?.url).toBe("https://127.0.0.1:9/v1/chat/completions");
     const parsed = JSON.parse(llm?.body ?? "{}") as {
       stream?: boolean;
       temperature?: number;
@@ -290,7 +294,7 @@ describe("guarded LLM and NASA fetch", () => {
     expect(parsed.model).toBe("unit-test-model");
   });
 
-  it("runs the conversations LLM path inside runWithShepherdContext", async () => {
+  it("keeps a grounded local answer local instead of making an unnecessary provider call", async () => {
     process.env.SANDBOX_TRAINING_ALLOWED = "true";
     const res = await postJson(
       app,
@@ -317,17 +321,7 @@ describe("guarded LLM and NASA fetch", () => {
     expect(res.text).toContain("\"model\":null");
     expect(res.text).toContain("no configured model authored this reply");
     expect(res.text).toContain("✦");
-    const llm = seen.find((entry) => entry.url.startsWith("https://llm.tessera.test/"));
-    expect(llm?.caller).toBe("shepherd-proxy");
-    expect(llm?.url).toBe("https://llm.tessera.test/v1/chat/completions");
-    const parsed = JSON.parse(llm?.body ?? "{}") as {
-      stream?: boolean;
-      temperature?: number;
-      model?: string;
-    };
-    expect(parsed.stream).toBe(false);
-    expect(parsed.temperature).toBe(0.7);
-    expect(parsed.model).toBe("unit-test-model");
+    expect(seen.filter((entry) => entry.url.startsWith("https://llm.tessera.test/"))).toEqual([]);
   }, 20_000);
 
   it("reports model-drafting status and labels the final configured-model provenance", async () => {

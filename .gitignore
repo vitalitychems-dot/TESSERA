@@ -54,3 +54,5 @@ Thumbs.db
 /artifacts/api-server/.sovereign-data/
 /artifacts/api-server/_evolutions/
 /artifacts/api-server/eval/results/
+# Runtime-generated audit snapshots are not application source.
+/_evolutions/

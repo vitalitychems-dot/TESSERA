@@ -10,3 +10,5 @@
 - [Mockup scanner dependency policy](mockup-glob-vulnerability.md) — use built-in traversal until a patched braces release or clean alternative is verified.
 - [Sovereign outbound fetches](sovereign-outbound-fetches.md) — an allowed Shepherd identity is not enough; external fetches must run inside the async Shepherd context.
 - [Authentication telemetry privacy](auth-telemetry-privacy.md) — never log or persist raw client IPs in auth telemetry; use ephemeral, purpose-separated HMAC buckets only when rate limits need them.
+- [Large GitHub inventories](large-github-inventories.md) — filter recursive tree responses before returning them to the notebook; keep large raw inventories in temporary files.
+- [Skipped Vitest suites](vitest-optional-integrations.md) — skipped describe callbacks still execute; initialize database and network resources in hooks.

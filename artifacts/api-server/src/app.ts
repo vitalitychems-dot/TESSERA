@@ -5,7 +5,10 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import healthRouter from "./routes/health";
 import type { IRouter } from "express";
-import { logger } from "./lib/logger";
+import { redactAccessLogUrl } from "./lib/access-log-url";
+import { logger, serializeLogErr } from "./lib/logger";
+import { safeDbErrorLog } from "./lib/safe-db-error";
+import { getSessionSecret } from "./lib/sovereign-session";
 import { initFileIntegrity } from "./lib/file-integrity";
 import { initFileRegistry } from "./lib/sovereign-file-registry";
 import { startAnomalyMonitor, stopAnomalyMonitor, recordRequest } from "./lib/anomaly-detection";
@@ -90,6 +93,7 @@ const ALWAYS_OPEN_PREFIXES = [
   "/api/admin/session", // Heavy Council P9: gate must reach unlock during boot
   "/api/admin/session/status",
   "/api/admin/session/logout",
+  "/api/internal/session-check",
   "/api/external-tools/",
   "/api/sacred-timing/",
   "/api/health",
@@ -128,11 +132,12 @@ app.use(
   pinoHttp({
     logger,
     serializers: {
+      err: serializeLogErr,
       req(req) {
         return {
           id: req.id,
           method: req.method,
-          url: req.url?.split("?")[0],
+          url: redactAccessLogUrl(typeof req.url === "string" ? req.url : undefined),
         };
       },
       res(res) {
@@ -191,6 +196,59 @@ app.use("/api", (_req, res, next) => {
 
 app.use("/api", router);
 app.use(dbUnavailableErrorHandler);
+
+const CLIENT_STATUS_ERROR: Record<number, string> = {
+  400: "bad-request",
+  401: "unauthorized",
+  403: "forbidden",
+  404: "not-found",
+  405: "method-not-allowed",
+  406: "not-acceptable",
+  408: "request-timeout",
+  409: "conflict",
+  411: "length-required",
+  413: "payload-too-large",
+  414: "uri-too-long",
+  415: "unsupported-media-type",
+  422: "unprocessable-entity",
+  429: "too-many-requests",
+};
+
+function clientStatus(err: unknown): number | null {
+  if (!err || typeof err !== "object") return null;
+  const record = err as { status?: unknown; statusCode?: unknown };
+  const raw = typeof record.status === "number" ? record.status : record.statusCode;
+  if (typeof raw !== "number" || !Number.isInteger(raw) || raw < 400 || raw > 499) return null;
+  return raw;
+}
+
+function terminalErrorLog(err: unknown, status: number): { errorName: string; status: number; code?: string | number } {
+  const errorName = err instanceof Error && err.name ? err.name : "UnknownError";
+  const fields: { errorName: string; status: number; code?: string | number } = { errorName, status };
+  if (err && typeof err === "object" && "code" in err) {
+    const raw = (err as { code?: unknown }).code;
+    if (typeof raw === "number" && Number.isFinite(raw)) fields.code = raw;
+    else if (typeof raw === "string" && /^[A-Za-z0-9_.-]{1,64}$/.test(raw)) fields.code = raw;
+  }
+  return fields;
+}
+
+/** Last resort. A numeric 4xx keeps that status with a fixed label. Everything else is a fixed 500. */
+export function terminalErrorHandler(err: unknown, _req: Request, res: Response, next: NextFunction): void {
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
+  const status = clientStatus(err);
+  logger.error(terminalErrorLog(err, status ?? 500), "request failed");
+  if (status !== null) {
+    res.status(status).json({ ok: false, error: CLIENT_STATUS_ERROR[status] ?? "client-error" });
+    return;
+  }
+  res.status(500).json({ ok: false, error: "request-failed" });
+}
+
+app.use(terminalErrorHandler);
 
 function registerModuleHandlers(): void {
   registerRecoveryHandler("file-integrity", async () => {
@@ -455,6 +513,13 @@ async function runStartupHealthCheck(): Promise<void> {
   }
 }
 
+export function logSessionSecretPresence(): void {
+  logger.info(
+    { configured: getSessionSecret().length > 0 },
+    "sovereign-session: session secret presence",
+  );
+}
+
 async function initializeModules() {
   if (!process.env.DATABASE_URL) {
     logger.warn("Database is not configured — skipping database startup, schedulers, and DB-backed loops");
@@ -467,20 +532,14 @@ async function initializeModules() {
   registerModuleInitFunction("self-code-evolution", initSelfCodeEvolution);
   registerModuleHandlers();
 
-  // V2-LAMBDA (68.7% approval): publish a one-line cryptographic attestation
-  // of the active session-secret fingerprint (NOT the secret itself) so the
-  // operator can detect silent rotation drift.
+  // V2-LAMBDA: record whether the session secret resolver has a value.
+  // The same resolver signs cookies. No digest of that value is logged.
   // V2-OMICRON (80.8% approval): write the audit-surface manifest.
   // V2-KAPPA (82.7% approval): warn if the audit data dir is on ephemeral
   // storage and the operator hasn't acknowledged it.
   try {
-    const { secretFingerprint, writeAuditManifest } = await import("./lib/tesseract-v2");
-    const { getSessionSecret } = await import("./lib/sovereign-session");
-    // V2-LAMBDA correction (post-review): use the SAME resolver the cookie
-    // signer uses, so the published fingerprint actually attests the bytes
-    // signing live cookies — no divergence from runtime precedence.
-    const fp = secretFingerprint(getSessionSecret());
-    logger.info({ secretFingerprint: fp }, "sovereign-session: secret fingerprint attestation (V2-LAMBDA)");
+    const { writeAuditManifest } = await import("./lib/tesseract-v2");
+    logSessionSecretPresence();
     void writeAuditManifest();
     if (!process.env.SOVEREIGN_ALLOW_EPHEMERAL && !process.env.REPLIT_DEPLOYMENT) {
       logger.warn(
@@ -571,7 +630,7 @@ async function initializeModules() {
   try {
     await seedForumIdentities();
   } catch (err) {
-    logger.warn({ err }, "Forum identity seeding failed — non-critical, forum may reject unknown identities");
+    logger.warn(safeDbErrorLog(err), "Forum identity seeding failed — non-critical, forum may reject unknown identities");
   }
 
   try {

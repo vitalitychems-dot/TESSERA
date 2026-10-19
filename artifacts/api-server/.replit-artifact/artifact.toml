@@ -21,8 +21,8 @@ args = ["pnpm", "--filter", "@workspace/api-server", "run", "build"]
 NODE_ENV = "production"
 
 [services.production.run]
-# we don't run through pnpm to make startup faster in production
-args = ["node", "--import", "../../scripts/replit-runtime-env.mjs", "--enable-source-maps", "./dist/index.mjs"]
+# Published artifact commands run from the workspace root, unlike development.
+args = ["node", "--import", "./scripts/replit-runtime-env.mjs", "--enable-source-maps", "./artifacts/api-server/dist/index.mjs"]
 
 [services.production.run.env]
 PORT = "8080"
