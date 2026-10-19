@@ -71,6 +71,7 @@ const ALLOWLIST: Record<string, AllowEntry> = {
   "lib/sovereign-memory-vault.ts": id(),
   "routes/council.ts": id(),
   "routes/council-meeting.ts": id(),
+  "routes/evaluation.ts": id(),
   "routes/improvement.ts": id(),
   "routes/inventions.ts": id(),
   "routes/knowledge.ts": id(),
@@ -129,23 +130,11 @@ interface PendingEntry {
 }
 
 /**
- * Known sites that fabricate or randomise a number and are outside the item 3 file lane. Counts are pinned so the
- * list can only shrink. Release gate M4 needs this to be empty.
+ * Sites that still fabricate or randomise a number. Counts are pinned so the list can only shrink. Release gate
+ * M4 needs this to be empty, and it is: department-competition, evaluation and personality-evolution were
+ * converted to seeded derivations.
  */
-const PENDING_CONVERSION: Record<string, PendingEntry> = {
-  "lib/department-competition.ts": {
-    count: 4,
-    note: "generateScore base and the yes/no/abstain vote tallies written to the competition log are fabricated.",
-  },
-  "routes/evaluation.ts": {
-    count: 3,
-    note: "Two hits fabricate the confidence of a scripted answer; one is a run id suffix.",
-  },
-  "lib/personality-evolution.ts": {
-    count: 2,
-    note: "Random initial trait value and per-step drift noise; item 6 lane.",
-  },
-};
+const PENDING_CONVERSION: Record<string, PendingEntry> = {};
 
 const SRC = resolve(__dirname, "..");
 const SCAN_DIRS = ["routes", "lib"];
@@ -255,6 +244,10 @@ describe("Math.random allowlist (release gate M4)", () => {
     }
   });
 
+  it("nothing is left pending conversion (gate M4)", () => {
+    expect(Object.keys(PENDING_CONVERSION)).toEqual([]);
+  });
+
   it("only measureQubit may claim the Born rule", () => {
     const born = Object.entries(ALLOWLIST).filter(([, e]) => e.kind === "born-rule").map(([f]) => f);
     expect(born).toEqual(["lib/quantum-tesseract.ts"]);
@@ -270,6 +263,8 @@ describe("Math.random allowlist (release gate M4)", () => {
       "lib/deterministic-content.ts",
       "routes/mysticism.ts",
       "routes/rick.ts",
+      "lib/department-competition.ts",
+      "lib/personality-evolution.ts",
     ];
     for (const file of converted) expect(countRandomUses(read(file)), file).toBe(0);
   });
@@ -331,4 +326,22 @@ describe("reality-audit scanner does not count its own patterns", () => {
     const files = audit.topFiles.map((f) => f.file.split(sep).join("/"));
     expect(files).not.toContain("artifacts/api-server/src/lib/reality-audit.ts");
   }, 30_000);
+});
+
+describe("personality-evolution starting traits are seeded, not drawn", () => {
+  it("the same agent id gets the same traits in the same range after a module reload", async () => {
+    vi.resetModules();
+    const first = await import("../lib/personality-evolution");
+    const a = first.getPersonality("alpha").coreTraits.map((t) => [t.name, t.value] as const);
+    vi.resetModules();
+    const second = await import("../lib/personality-evolution");
+    const b = second.getPersonality("alpha").coreTraits.map((t) => [t.name, t.value] as const);
+    expect(a).toEqual(b);
+    for (const [name, value] of a) {
+      expect(value, name).toBeGreaterThanOrEqual(0.5);
+      expect(value, name).toBeLessThan(0.7);
+    }
+    const other = second.getPersonality("beta").coreTraits.map((t) => t.value);
+    expect(other).not.toEqual(a.map(([, v]) => v));
+  });
 });
