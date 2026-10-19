@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { dataPath } from "./data-path";
 
-const REPOS = ["Grok-ready", "T44", "1T", "TX", "TESS"] as const;
+/** Only the two public homes are looked up. Withheld names are never sent out. */
+const REPOS = ["TESSERA", "Gitbook"] as const;
 
 export type ProofRow = {
   at: string;
