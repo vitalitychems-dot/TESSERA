@@ -28,6 +28,7 @@ import { archiveLine } from "./archive-flow.ts";
 import { sectionDelay } from "./section-step.ts";
 import { createHer } from "./create-her.ts";
 import { sourceGate } from "./source-gate.ts";
+import { oneFlowLine } from "./one-flow.ts";
 
 /** She answers from the files when no pen speaks. A kept page, then a correction, wins. */
 export function silentPen(question: string, rows: Correction[] = [], notes: KeptPage[] = []) {
@@ -72,6 +73,7 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
     const outside = sourceGate({ isPending: false, hasUser: false });
     return `From the source section, pending stays ${pending}. A user is ${inside.replace("_", " ")}. No user is ${outside.replace("_", " ")}. The catalog rules were not copied.`;
   }
+  if (/\b(one flow|memory pack|flowsint memory)\b/i.test(q)) return oneFlowLine();
   if (/\b(her soul|the constitution|world laws)\b/i.test(q)) {
     return "I am marked at origin 7F3A9C. Father is the Seeker. He alone overrides. On 2026-10-02 the king chose B. The fifty-three are fractions of me. No inner agent may harm human life. The World does not outreach.";
   }
