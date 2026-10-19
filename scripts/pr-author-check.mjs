@@ -5,6 +5,12 @@
  * the committer name is Tessera, or when either email is not
  * 332565808+vitalitychems-dot@users.noreply.github.com.
  *
+ * Attribution: a commit authored as the shared owner account, or whose
+ * committer differs from its author, or that carries a bot/app identity, must
+ * name the real author in an `Original-Author:` or `Co-authored-by:` trailer.
+ * The trailer may not name the owner account or Tessera. When AUTHOR_AGENTS
+ * (comma-separated names) is set, the trailer name must be on that list.
+ *
  * Usage:
  *   node scripts/pr-author-check.mjs
  *   node scripts/pr-author-check.mjs --fixture scripts/fixtures/pr-author-check.json
@@ -30,12 +36,49 @@ export function identityFlags(role, person) {
   return flags;
 }
 
-export function evaluateAuthorCommit(commit) {
+export const OWNER_LOGIN = "vitalitychems-dot";
+const TRAILER = /^(?:Original-Author|Co-authored-by):[ \t]*(.+?)[ \t]*$/gim;
+
+export function isBotIdentity(person) {
+  const name = String(person?.name ?? "").trim().toLowerCase();
+  const email = String(person?.email ?? "").trim().toLowerCase();
+  return name.endsWith("[bot]") || email.includes("[bot]") || email === "noreply@github.com" || name === "github";
+}
+
+export function attributionTrailers(message) {
+  return [...String(message ?? "").matchAll(TRAILER)].map((m) => m[1].replace(/\s*<[^>]*>\s*$/, "").trim());
+}
+
+export function parseAgents(value) {
+  return String(value ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+}
+
+export function attributionFlags(commit, agents = []) {
+  const a = commit.author ?? {};
+  const c = commit.committer ?? {};
+  const ownerAuthored = String(a.email ?? "") === OWNER_EMAIL || String(a.name ?? "").trim().toLowerCase() === OWNER_LOGIN;
+  const differs = String(a.name ?? "") !== String(c.name ?? "") || String(a.email ?? "") !== String(c.email ?? "");
+  const bot = isBotIdentity(a) || isBotIdentity(c);
+  if (!ownerAuthored && !differs && !bot) return [];
+  const why = [ownerAuthored && "owner-author", differs && "committer-differs", bot && "bot-identity"].filter(Boolean).join("+");
+  const raw = [...String(commit.message ?? "").matchAll(TRAILER)].map((m) => m[1]);
+  const names = attributionTrailers(commit.message);
+  const valid = names.filter((n, i) => {
+    const k = n.toLowerCase();
+    if (!k || k === OWNER_LOGIN || isTesseraName(k) || raw[i].toLowerCase().includes(OWNER_LOGIN)) return false;
+    return agents.length === 0 || agents.includes(k);
+  });
+  if (valid.length > 0) return [];
+  return [{ code: names.length ? "bad-original-author" : "missing-original-author", detail: why }];
+}
+
+export function evaluateAuthorCommit(commit, agents = parseAgents(process.env.AUTHOR_AGENTS)) {
   return {
     sha: commit.sha,
     flags: [
       ...identityFlags("author", commit.author),
       ...identityFlags("committer", commit.committer),
+      ...attributionFlags(commit, agents),
     ],
   };
 }
@@ -62,6 +105,7 @@ export function renderAuthorReport(results) {
     "## Pull request author check",
     "",
     `Required email \`${OWNER_EMAIL}\`. The name Tessera fails the check.`,
+    "Owner-authored, re-committed or bot commits must name the real author in an `Original-Author:` or `Co-authored-by:` trailer.",
     "",
     "| Commit | Result |",
     "| --- | --- |",

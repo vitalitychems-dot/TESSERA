@@ -52,6 +52,8 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          # Optional allowlist of real agent names for Original-Author trailers (repo variable).
+          AUTHOR_AGENTS: ${{ vars.AUTHOR_AGENTS }}
         run: node scripts/pr-author-check.mjs
 
   ready-for-gate:
