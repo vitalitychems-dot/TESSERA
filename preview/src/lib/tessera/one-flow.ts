@@ -3,6 +3,7 @@
 import { ARCHIVE_SECTIONS } from "./archive-flow.ts";
 import { SIGIL } from "./canon.ts";
 import { sectionDelay } from "./section-step.ts";
+import { PARTS } from "./part-index.ts";
 import { SKILL_FILES } from "./skill-index.ts";
 import { sourceGate } from "./source-gate.ts";
 
@@ -26,7 +27,7 @@ export function oneFlow(): FlowFact[] {
     { id: "gate", fact: `No user is ${outside}. Pending stays pending.` },
     { id: "held", fact: "Identity canon item 5 is on TESSERA main. Private owner lines are not in this flow. Two open pulls wait for Father's word and were not merged." },
     { id: "desk", fact: "Cursor, Replit, Manus, and the Grok bot were not in this session. The shared note is Gitbook issue 164." },
-    { id: "drive", fact: "A Drive search for tessera returned 3 zips. None were opened. Their sizes are 93635859, 419604215, and 659619726 bytes." },
+    { id: "drive", fact: "Drive root has 10 items. One store zip was skipped. Two share pages were opened at the header. Seven other zips were not opened." },
   ];
 }
 
@@ -42,7 +43,12 @@ export function memoryPack() {
     a: file.read ? `${file.path}. ${file.note}` : `${file.path} is ${file.bytes} bytes. ${file.note}`,
     at: `skill-${String(index + 1).padStart(2, "0")}`,
   }));
-  return [...base, ...sections, ...skills];
+  const parts = PARTS.map((row) => ({
+    q: `${row.kind} ${row.name}`,
+    a: row.note,
+    at: row.id,
+  }));
+  return [...base, ...sections, ...skills, ...parts];
 }
 
 export function oneFlowLine() {
