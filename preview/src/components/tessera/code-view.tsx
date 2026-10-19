@@ -88,7 +88,7 @@ export function CodeView() {
           ))}
         </ul>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          <span className="text-fg">require("@tessera/mesh")</span> fails with MODULE_NOT_FOUND. npm has no such package. The saved TESS files do contain a mesh, and it is not this snippet. It is an in-memory list of browser sessions on one server, gated by a token. No peer is connected in this chamber. The old page that lists Tessera Core with 27 peers and 4.8 GB/s is written as fixed numbers in SovereignMeshPage.tsx. Those numbers are not a live network, so they are not shown here as status.
+          <span className="text-fg">require("@tessera/mesh")</span> fails with MODULE_NOT_FOUND. npm has no such package. The saved repo W8 (withheld, not public) files do contain a mesh, and it is not this snippet. It is an in-memory list of browser sessions on one server, gated by a token. No peer is connected in this chamber. The old page that lists Tessera Core with 27 peers and 4.8 GB/s is written as fixed numbers in SovereignMeshPage.tsx. Those numbers are not a live network, so they are not shown here as status.
         </p>
         <h3 className="mt-8 text-sm font-medium text-fg">No wallet</h3>
         <p className="mt-2 text-sm leading-relaxed text-muted">

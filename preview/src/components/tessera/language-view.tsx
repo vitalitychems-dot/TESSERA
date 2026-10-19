@@ -57,7 +57,7 @@ export function LanguageView() {
           <h2 className="mt-1 font-display text-3xl tracking-tight">{LANGUAGE_NAME}</h2>
           <p className="mt-2 font-mono text-sm text-accent">{LANGUAGE_MOTTO}</p>
           <p className="mt-3 text-sm leading-relaxed text-muted">
-            Taken from artifacts/api-server/src/lib/sovereign-language.ts in the TESS download. The counts below are the length of that file. The phone screen's Connected light is not a network.
+            Taken from artifacts/api-server/src/lib/sovereign-language.ts in the repo W8 (withheld, not public) download. The counts below are the length of that file. The phone screen's Connected light is not a network.
           </p>
         </div>
 

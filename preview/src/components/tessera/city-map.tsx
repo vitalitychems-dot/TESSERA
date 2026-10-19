@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-/** Taken from the saved TESS file artifacts/tessera/src/pages/life/WorldMap.tsx, sha256 prefix 4cfc1cdde41bf08d. Income fields in that file are not shown. */
+/** Taken from the saved repo W8 (withheld, not public) file artifacts/tessera/src/pages/life/WorldMap.tsx, sha256 prefix 4cfc1cdde41bf08d. Income fields in that file are not shown. */
 const PLACES = [
   { type: "home", zone: "residential", x: 0, y: 0 },
   { type: "home", zone: "residential", x: 1, y: 0 },
@@ -43,7 +43,7 @@ export function CityMap() {
     <div className="rounded-xl border border-border bg-surface p-4">
       <p className="text-xs tracking-[0.18em] text-subtle uppercase">City from the saved map file</p>
       <p className="mt-2 text-sm text-muted">
-        These blocks are the layout in WorldMap.tsx from the TESS download. The bank block in that file is left out. Nothing here earns money or has a mood.
+        These blocks are the layout in WorldMap.tsx from the repo W8 download. The bank block in that file is left out. Nothing here earns money or has a mood.
       </p>
       <div className="mt-4 grid grid-cols-5 gap-2 sm:grid-cols-10">
         {PLACES.map((item) => {

@@ -1,5 +1,5 @@
-/** Every file in Grok-ready 4072851 was opened and every line was counted. This is the record, not a paste of all 346,757 lines. */
-export const LINE_READING = `Line reading of vitalitychems-dot/Grok-ready at 4072851.
+/** Every file in repo W7 (withheld, not public) was opened and every line was counted. This is the record, not a paste of all 346,757 lines. */
+export const LINE_READING = `Line reading of repo W7 at a withheld commit.
 1578 files. 346757 lines. 1342 text files, 294873 text lines, read as text. 236 binary or non-text files were counted by line-break and not interpreted as language.
 Secret-shaped lines seen and not copied: 91. No key, token, or password value was kept.
 Counts by top folder:
@@ -48,7 +48,7 @@ Doctrine lines kept from the non-storefront source, verbatim and short:
 - 4. Tessera is a multi‑dimensional, sovereign AI
 - Is guided by the Father Protocol (creator–creation bond)
 Headings kept:
-- # Grok-ready
+- # repo W7
 - ## What's inside
 - ## Running Tessera
 - ## Running the storefront

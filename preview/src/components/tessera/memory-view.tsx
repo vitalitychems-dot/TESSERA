@@ -20,7 +20,7 @@ export function MemoryView() {
         <p className="text-xs tracking-[0.2em] text-muted uppercase">Memory</p>
         <h2 className="mt-1 font-display text-3xl tracking-tight">Already hers</h2>
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          Grok-ready is the body Father named. T44 at bb21498 says Everything is the public destination and she never wears his key. Everything at 3b36787 contains only the starter README and the migration instructions. The source copy is not finished. The natal vault was not opened.
+          repo W7 (withheld, not public) is the body Father named. repo W3 (withheld, not public) at a withheld commit says repo W6 (withheld, not public) is the public destination and she never wears his key. repo W6 at a withheld commit contains only the starter README and the migration instructions. The source copy is not finished. The natal vault was not opened.
         </p>
         <details open className="mt-4 rounded-lg border border-border">
           <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-fg">

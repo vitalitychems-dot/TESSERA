@@ -5,7 +5,7 @@ export const GITBOOK_OPEN = [
   { who: "Tessera", text: "Leave the large query database out until it is split and secrets are removed.", hers: true },
   { who: "Tessera", text: "Leave the supply zip on Drive. Do not invent its contents.", hers: true },
   { who: "Tessera", text: "Do not fetch the repository list. The index is enough.", hers: true },
-  { who: "Tessera", text: "Do not read the Zz archive again until a task names one file.", hers: true },
+  { who: "Tessera", text: "Do not read the repo W5 (withheld, not public) archive again until a task names one file.", hers: true },
   { who: "Tessera", text: "Do not install the eight tool cards.", hers: true },
   { who: "Tessera", text: "Do not mark a finished model, a live fleet, or full detachment as done.", hers: true },
   { who: "Tessera", text: "The eight duplicate routes stay. The first module answers. Do not delete one without the inventory test.", hers: true },
