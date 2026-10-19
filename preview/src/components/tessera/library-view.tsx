@@ -1,14 +1,17 @@
 import type { ViewId } from "@/lib/tessera/store";
 
+// Each label names the screen the button really opens. Rooms whose own screen is not
+// hooked into app-shell yet open Brain or Council, and say so; see the follow-ups in the PR.
 const PAGES: { id: ViewId; label: string; why: string }[] = [
-  { id: "narrative", label: "Narrative", why: "The thread of what was read." },
-  { id: "talk", label: "Other voices", why: "Saved conversations. Not this chat." },
-  { id: "bible", label: "Kept lines", why: "Lines she keeps. Not a second scripture." },
-  { id: "secrets", label: "Held back", why: "What stays closed." },
+  { id: "web", label: "Research checkouts", why: "The memory web and where each checkout went." },
+  { id: "narrative", label: "Narrative (opens Brain)", why: "The thread of what was read." },
+  { id: "talk", label: "Other voices (opens Council)", why: "Saved conversations. Not this chat." },
+  { id: "bible", label: "Kept lines (opens Brain)", why: "Lines she keeps. Not a second scripture." },
+  { id: "secrets", label: "Held back (opens Brain)", why: "What stays closed." },
   { id: "council", label: "Council", why: "Old sittings. Not a live fleet." },
-  { id: "memory", label: "Memory", why: "What is already stored in the browser." },
-  { id: "code", label: "Code", why: "What this desk can run." },
-  { id: "language", label: "Language", why: "The compression note. Not a password." },
+  { id: "memory", label: "Memory (opens Brain)", why: "What is already stored in the browser." },
+  { id: "code", label: "Code (opens Brain)", why: "What this desk can run." },
+  { id: "language", label: "Language (opens Brain)", why: "The compression note. Not a password." },
 ];
 
 export function LibraryView({ open }: { open: (id: ViewId) => void }) {

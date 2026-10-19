@@ -58,7 +58,7 @@ test("forty improvements", () => {
     ["how-many-open", gitbookAnswer("how many open") === "4 open."],
     ["short-sha", shortSha("2a522a0c3966") === "2a522a0"],
     ["six-themes", THEME_IDS.length === 6],
-    ["nine-rooms", [...readFileSync(new URL("../../components/tessera/rooms-sheet.tsx", import.meta.url), "utf8").matchAll(/id: "([a-z]+)"/g)].length === 9],
+    ["ten-rooms", [...readFileSync(new URL("../../components/tessera/rooms-sheet.tsx", import.meta.url), "utf8").matchAll(/id: "([a-z]+)"/g)].length === 10],
     ["stay-local", shouldStayLocal("how many files") && shouldStayLocal("mark AGI done") && !shouldStayLocal("hello")],
     ["forty-counted", FORTY_IDS.length === 40 && new Set(FORTY_IDS).size === 40],
   ];

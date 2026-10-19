@@ -96,7 +96,7 @@ export const FORTY_IDS = [
   "how-many-open",
   "short-sha",
   "five-themes",
-  "nine-rooms",
+  "ten-rooms",
   "stay-local",
   "forty-counted",
 ] as const;
