@@ -15,7 +15,7 @@ export const PARTS: PartRow[] = [
   { id: "repo-01", kind: "repo", name: "TESSERA", opened: false, note: "Live program. Not recopied this pass." },
   { id: "repo-02", kind: "repo", name: "Gitbook", opened: false, note: "Live notes. Not recopied this pass." },
   { id: "repo-03", kind: "repo", name: "GitMesh", opened: true, note: "Public room. The top was listed. The private book is not in it." },
-  { id: "repo-04", kind: "repo", name: "combined", opened: true, note: "The 12 GB archive is release assets, not repository blobs." },
+  { id: "repo-04", kind: "repo", name: "private repo (withheld)", opened: true, note: "Private. Details withheld." },
   { id: "repo-05", kind: "repo", name: "2", opened: true, note: "Handoff dated 2026-10-05. TESSERA is the canonical app. Gitbook is the reference." },
   { id: "repo-06", kind: "repo", name: "Gitai", opened: true, note: "Package name workspace. MIT. It asks for pnpm." },
   { id: "repo-07", kind: "repo", name: "1", opened: true, note: "Empty." },
