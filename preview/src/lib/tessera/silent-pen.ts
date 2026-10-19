@@ -18,6 +18,7 @@ import { systems } from "./self-build.ts";
 import { directSkill } from "./skill-use.ts";
 import { useEngines } from "./secret-engines.ts";
 import { fromFedArchive } from "./fed-archive.ts";
+import { createWorlds } from "./fed-world.ts";
 
 /** She answers from the files when no pen speaks. A kept page, then a correction, wins. */
 export function silentPen(question: string, rows: Correction[] = [], notes: KeptPage[] = []) {
@@ -27,6 +28,12 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (noted) return noted;
   const fed = fromFedArchive(q);
   if (fed) return fed;
+  if (/\b(local world|simulation world)\b/i.test(q)) {
+    const gate = createWorlds();
+    const world = gate.create("the house");
+    const next = gate.advance(world.id, world.version, "the lamp");
+    return `I built a local world from the archived simulation rules. ${next.id} is version ${next.version}. A stale version is refused. No provider was called.`;
+  }
   if (/\breward\b/i.test(q)) {
     const run = rewardEat();
     return `The reward raised eat from 0 to ${run.once.eat} and then to ${run.twice.eat}. The best action is ${run.best}.`;
