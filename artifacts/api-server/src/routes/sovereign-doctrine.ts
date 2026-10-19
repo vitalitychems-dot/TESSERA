@@ -519,7 +519,7 @@ router.post("/sigil/decrypt", requireAdminSession, (req, res) => {
     const text = decryptFromCorpus(env);
     res.json(withoutSigilFingerprint({ ok: true, text }));
   } catch (e) {
-    res.status(409).json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+    res.status(409).json({ ok: false, error: "decrypt-failed" });
   }
 });
 

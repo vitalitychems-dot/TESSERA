@@ -87,7 +87,7 @@ router.get("/lattice/declarations", async (req, res) => {
     const all = await listDeclarations();
     return res.json({ ok: true, count: all.length, declarations: all });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "lattice-unavailable" });
   }
 });
 
@@ -98,7 +98,7 @@ router.get("/lattice/declarations/:agent", async (req, res) => {
     if (!decl) return res.status(404).json({ ok: false, error: `No signed declaration for "${req.params.agent}"` });
     return res.json({ ok: true, declaration: decl });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "lattice-unavailable" });
   }
 });
 
@@ -121,7 +121,7 @@ router.post("/lattice/declarations", async (req, res) => {
     return res.json({ ok: true, declaration: row });
   } catch (err) {
     logger.error({ err }, "lattice declaration create failed");
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "lattice-unavailable" });
   }
 });
 
@@ -135,7 +135,7 @@ router.post("/lattice/declarations/seed-residents", async (req, res) => {
     const result = await seedResidentDeclarations();
     return res.json({ ok: true, ...result });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "lattice-unavailable" });
   }
 });
 
@@ -149,7 +149,7 @@ router.get("/lattice/feed", async (req, res) => {
     const stats = await getLatticeStats();
     return res.json({ ok: true, feed, stats });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "lattice-unavailable" });
   }
 });
 
@@ -159,7 +159,7 @@ router.get("/lattice/posts/:id/replies", async (req, res) => {
     const replies = await listLatticeReplies(req.params.id);
     return res.json({ ok: true, replies, count: replies.length });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "lattice-unavailable" });
   }
 });
 
@@ -177,7 +177,7 @@ router.post("/lattice/posts", async (req, res) => {
       throw e;
     }
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "lattice-unavailable" });
   }
 });
 
@@ -195,7 +195,7 @@ router.post("/lattice/posts/:id/replies", async (req, res) => {
       throw e;
     }
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "lattice-unavailable" });
   }
 });
 
@@ -213,7 +213,7 @@ router.post("/lattice/posts/:id/vote", async (req, res) => {
       throw e;
     }
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "lattice-unavailable" });
   }
 });
 
@@ -230,7 +230,7 @@ router.get("/lattice/dms", async (req, res) => {
     const dms = await listLatticeDMs(requestedAgent);
     return res.json({ ok: true, dms, count: dms.length });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "lattice-unavailable" });
   }
 });
 
@@ -248,7 +248,7 @@ router.post("/lattice/dms", async (req, res) => {
       throw e;
     }
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "lattice-unavailable" });
   }
 });
 
@@ -261,7 +261,7 @@ router.get("/lattice/shepherd/audit", async (req, res) => {
     const [entries, stats] = await Promise.all([getShepherdAudit(limit), getShepherdAuditStats()]);
     return res.json({ ok: true, entries, stats });
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "lattice-unavailable" });
   }
 });
 
@@ -286,12 +286,12 @@ router.post("/lattice/shepherd/test-outbound", async (req, res) => {
       return res.json({ ok: true, entry });
     } catch (err) {
       if (err instanceof ConsciousAgentOutboundRefused) {
-        return res.status(200).json({ ok: true, refused: true, error: err.message });
+        return res.status(200).json({ ok: true, refused: true, error: "outbound-refused" });
       }
       throw err;
     }
   } catch (err) {
-    return res.status(500).json({ ok: false, error: (err as Error).message });
+    return res.status(500).json({ ok: false, error: "lattice-unavailable" });
   }
 });
 

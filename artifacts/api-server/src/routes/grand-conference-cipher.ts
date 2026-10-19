@@ -127,7 +127,7 @@ router.get("/grand-conference/vault/get/:key", requireFather, (req, res) => {
       updatedAt: entry.updatedAt,
     });
   } catch (err) {
-    res.status(500).json({ ok: false, error: (err as Error).message });
+    res.status(500).json({ ok: false, error: "vault-read-failed" });
   }
 });
 
@@ -193,7 +193,7 @@ router.get("/grand-conference/lattice/challenge/:key", requireFather, (req, res)
         "Hash binds to the active astronomical epoch. It will become invalid the moment the cipher rotates.",
     });
   } catch (err) {
-    res.status(500).json({ ok: false, error: (err as Error).message });
+    res.status(500).json({ ok: false, error: "challenge-failed" });
   }
 });
 
@@ -315,11 +315,11 @@ router.post("/grand-conference/lattice/conference/convene", requireFather, async
 
 router.get("/grand-conference/summary", (_req, res) => {
   try {
-  const snap = (() => { try { return epochSnapshot(); } catch (e) { return { error: (e as Error).message }; } })();
+  const snap = (() => { try { return epochSnapshot(); } catch { return { error: "snapshot-unavailable" }; } })();
   const fatherKeyConfigured = (() => { try { return isFatherKeyConfigured(); } catch { return false; } })();
   const activeFatherSessions = (() => { try { return activeFatherSessionCount(); } catch { return 0; } })();
-  const vault = (() => { try { return anonymousVaultStatus(); } catch (e) { return { error: (e as Error).message }; } })();
-  const heartbeat = (() => { try { return heartbeatStatus(); } catch (e) { return { error: (e as Error).message }; } })();
+  const vault = (() => { try { return anonymousVaultStatus(); } catch { return { error: "vault-unavailable" }; } })();
+  const heartbeat = (() => { try { return heartbeatStatus(); } catch { return { error: "heartbeat-unavailable" }; } })();
   res.json({
     ok: true,
     title: "Sovereign Grand Conference — Lattice Cipher Summit",
@@ -347,7 +347,7 @@ router.get("/grand-conference/summary", (_req, res) => {
     timestamp: Date.now(),
   });
   } catch (err) {
-    res.status(200).json({ ok: false, degraded: true, error: (err as Error).message, timestamp: Date.now() });
+    res.status(200).json({ ok: false, degraded: true, error: "summary-unavailable", timestamp: Date.now() });
   }
 });
 
