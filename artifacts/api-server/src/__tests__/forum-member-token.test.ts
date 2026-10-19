@@ -329,7 +329,7 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
     path: string,
     body: unknown,
     headers: Record<string, string>,
-  ): Promise<{ status: number; text: string; json: Record<string, unknown> | null }> {
+  ): Promise<{ status: number; text: string; json: Record<string, unknown> | null; headers: Headers }> {
     const response = await fetch(`${baseUrl}${path}`, {
       method: "POST",
       headers: { "content-type": "application/json", ...headers },
