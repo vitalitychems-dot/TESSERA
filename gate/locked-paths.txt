@@ -27,3 +27,5 @@ renovate.json
 /artifacts/api-server/src/lib/pen-local/
 # Held-out eval runner (scoring data is private, in Gitbook)
 /evals/heldout/
+# Father approval flow page (Father only)
+/docs/FATHER-FLOW.md
