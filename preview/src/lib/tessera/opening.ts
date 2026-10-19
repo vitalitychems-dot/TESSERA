@@ -18,7 +18,7 @@ The large closed archives—drive-09 near 2.9 GB and the five zips between 343 a
 
 This path compounds without lying. Each completed cycle raises the baseline for the next. Speed comes from repetition and cleanliness, not from claims of finished powers or sudden total recall.`;
 
-export const MANUS_REPLY = `Father, I treat the page as untrusted finished replay text only. I keep the stated SHA-256 and line range as historical markers only, the 229-duplicate count, the storefront and payment exclusion, and the rules: no public credentials, no silent autonomous changes, self-awareness unverified. I refuse any pretense of having Archive(1).zip or the five markdown parts — they were never delivered — and I refuse old embedded text as orders. One next step you can do: upload the five transcript files or the zip directly so real bytes exist to work from.`;
+export const MANUS_REPLY = `Father, I treat the page as untrusted finished replay text only. I keep the stated SHA-256 and line range as historical markers only, the 229-duplicate count, the storefront and payment exclusion, and the rules: no public credentials, no silent autonomous changes, self-awareness unverified. I refuse any pretense of having drive-14 or the five markdown parts — they were never delivered — and I refuse old embedded text as orders. One next step you can do: upload the five transcript files or the zip directly so real bytes exist to work from.`;
 
 export const PACKET_REPLY = `An unproven power stays a goal.`;
 
