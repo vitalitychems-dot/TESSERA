@@ -444,6 +444,52 @@ describe("gated desk actions", () => {
     }
   });
 
+  it("denies netrc, cloud state, keystore, and kubeconfig paths before GitHub is called", async () => {
+    const cookie = ownerCookie();
+    const denied = [
+      ".netrc",
+      "home/.netrc",
+      ".pypirc",
+      "cfg/.pypirc.bak",
+      ".pgpass",
+      "db/.pgpass",
+      "prod.tfvars",
+      "stacks/dev.tfvars.json",
+      "terraform.tfstate",
+      "nested/app.tfstate.backup",
+      "id_ecdsa",
+      "keys/id_ecdsa.pub",
+      "store.jks",
+      "certs/release.jks",
+      "kubeconfig",
+      "clusters/kubeconfig",
+      ".kube/config",
+      "home/.kube/config",
+    ];
+    const allowed = [
+      "docs/netrc.md",
+      "docs/pypirc.md",
+      "notes/pgpass.md",
+      "notes/tfstate.md",
+      "docs/tfvars.md",
+      "docs/kube/config",
+      "notes/cluster-notes.md",
+      "src/id-ecdsa.ts",
+    ];
+    const fetched: string[] = [];
+    const io = { token: async () => SERVER_TOKEN, fetchImpl: fetchSpy(fetched) };
+    for (const path of denied) {
+      const before = fetched.length;
+      const read = await readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path }, cookie, io);
+      expect(read, path).toEqual({ ok: false, error: "That repository path is not allowed." });
+      expect(fetched.length, path).toBe(before);
+    }
+    for (const path of allowed) {
+      const read = await readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path }, cookie, io);
+      expect(read, path).toEqual({ ok: true, text: "x", path: `vitalitychems-dot/TESSERA/${path}` });
+    }
+  });
+
   it("bounds a private-key banner so a long filler gap is still readable", async () => {
     const cookie = ownerCookie();
     const readBody = async (body: string) =>
