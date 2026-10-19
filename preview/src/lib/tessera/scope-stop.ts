@@ -12,7 +12,7 @@ export function heldBack(question: string) {
   if (/\b(mark|call)\b/i.test(q) && /\bagi\b/i.test(q) && /\b(done|met|yes)\b/i.test(q)) return "AGI is not met. I will not mark it done.";
   if (/\bpublish\b/i.test(q) && /\b(site|app)\b/i.test(q)) return "The site was not published.";
   if (/\b(unpack|unzip)\b/i.test(q)) return "The zip stays packed. I do not invent its contents.";
-  if (/\bzz\b/i.test(q) && /\b(read|open|archive)\b/i.test(q)) return "The Zz archive stays unread until a task names one file.";
+  if (/\bzz\b/i.test(q) && /\b(read|open|archive)\b/i.test(q)) return "The repo W5 (withheld, not public) archive stays unread until a task names one file.";
   if (/\bolive-giant\b/i.test(q)) return "Olive-giant stays uncopied.";
   if (/\bstorefront\b/i.test(q)) return "No storefront is added here.";
   if (/\bfetch\b/i.test(q) && /\brepositor(y|ies)\b/i.test(q)) return "The repository list is not fetched. The index is enough.";

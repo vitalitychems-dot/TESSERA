@@ -33,7 +33,7 @@ const VAULT: Sitting = {
   turns: [
     { name: "Vatican Archivist", text: "There is no file named Lexus. The observatory entry says LUCIFER, later renamed LUCI. The secret-program ending is the file’s claim." },
     { name: "Mystic Scholar", text: "The other near name is Laszlo. He is cited on the Akashic entry, as a theory." },
-    { name: "Deep Web Scout", text: "I found one vault, 43 titles, in the TESS tree. It was saved and never shown on this page." },
+    { name: "Deep Web Scout", text: "I found one vault, 43 titles, in the repo W8 (withheld, not public) tree. It was saved and never shown on this page." },
     { name: "Sacred Geometer", text: "Geometry, the tree, and the emerald tablet are traditions. They do not prove a private map of the universe." },
     { name: "Quantum Oracle", text: "Stargate is named as a past research program. Naming it is not the same as possessing its results." },
     { name: "Templar Knight", text: "The twelve method entries were seen by title. They were not brought into the meeting." },
