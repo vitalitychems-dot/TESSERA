@@ -110,7 +110,7 @@ export const LEFT_OUT_THIS_VERSION = [
   {
     title: "Archives as running code",
     detail:
-      "Drive zips (including 8 2.zip / TXTz 2.zip class), Replit dumps, and 100GB-class attachments were not executed.",
+      "Drive zips (including drive-01 and a withheld Drive zip), Replit dumps, and 100GB-class attachments were not executed.",
   },
   {
     title: "Money and outreach engines",

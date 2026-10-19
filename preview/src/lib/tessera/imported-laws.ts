@@ -28,12 +28,12 @@ export const SWARM_ROLES = [
 
 /** Named in a screenshot transcript. The pictures show the names and rough sizes. The archives themselves were not opened. */
 export const STILL_CLOSED = [
-  { name: "XL1.zip", size: "about 2.9 GB" },
-  { name: "Tesseract-AI5.zip", size: "about 400 MB" },
-  { name: "Tx13.zip", size: "about 363 MB" },
-  { name: "Tesseracxt9.zip", size: "about 629 MB" },
-  { name: "8 2.zip", size: "about 343 MB" },
-  { name: "Tx17 9.zip", size: "about 408 MB" },
+  { name: "drive-09", size: "about 2.9 GB" },
+  { name: "drive-04", size: "about 400 MB" },
+  { name: "drive-07", size: "about 363 MB" },
+  { name: "drive-06", size: "about 629 MB" },
+  { name: "drive-01", size: "about 343 MB" },
+  { name: "drive-08", size: "about 408 MB" },
 ] as const;
 export const IMPORT_PASS = { opened: 1093, read: 999, skipped: 94 } as const;
 export const IMPORTED_ROLES = [
