@@ -1,0 +1,11 @@
+{
+  "name": "@workspace/nextgen",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "start": "node --experimental-transform-types --disable-warning=ExperimentalWarning --import ../console/register.mjs ./server.mjs",
+    "test": "node --experimental-transform-types --disable-warning=ExperimentalWarning --import ../console/register.mjs --test --test-reporter=spec test/nextgen.test.mjs"
+  }
+}
