@@ -17,14 +17,17 @@ const ALLOWED_REPOS = [
 ] as const;
 
 const PATH_DENIED = "That repository path is not allowed." as const;
-// Leading ".env" is denied unless the following letters are exactly "environment"
-// and then a non-letter (".environment", ".environment.md", ".environment/readme").
+// Leading ".env" is denied unless the letters are exactly "environment" and the
+// segment then ends, a slash follows, or the path ends in ".md"
+// (".environment", ".environment.md", ".environment/readme").
+// Punctuation after that word stays denied (".environment_backup", ".environment-old").
 // ".environmental" stays denied.
 // Mid-segment ".env" plus letters keeps only envelope, environment, and envy
-// (the tails elope, ironment, and y). There is no open letter suffix. dotenv and
-// environ do not contain the ".env" dot, so they are not part of that list.
+// (the tails elope, ironment, and y). environment uses the same end, slash, or
+// ".md" rule. There is no open letter suffix. dotenv and environ do not contain
+// the ".env" dot, so they are not part of that list.
 const SECRET_PATH =
-  /(?:^|\/)\.env(?!ironment(?![a-zA-Z]))|(?:^|\/)[^/]*\.env(?!(?:elope|ironment|y)(?![a-zA-Z]))[^/]*(?:\/|$)|(?:^|\/)[^/]*\.envrc(?![a-zA-Z])[^/]*(?:\/|$)|(?:^|\/)[^/]*\.npmrc[^/]*(?:\/|$)|(?:^|\/)app-env\.json[^/]*(?:\/|$)|(^|\/)\.git(?:\/|$)|(?:^|\/)id_rsa(?:\.|$)|(?:^|\/)id_ed25519(?:\.|$)|(?:^|\/)id_ecdsa(?:\.|$)|(?:^|\/)\.(?:netrc|pypirc|pgpass)(?:[^a-zA-Z]|$)|(?:^|\/)[^/]*\.(?:tfvars|tfstate|jks)(?:[^a-zA-Z]|$)|(?:^|\/)kubeconfig(?:[^a-zA-Z]|$)|(?:^|\/)\.kube\/config(?:[^a-zA-Z]|$)|(?:^|\/)[^/]*\.(?:pem|key|p12|pfx)$|(?:^|\/)[^/]*(?:secret|password|credential)[^/]*(?:\/|$)|(?:^|\/)[^/]*natal-vault[^/]*(?:\/|$)/i;
+  /(?:^|\/)\.env(?!ironment(?:$|\/|\.md$))|(?:^|\/)[^/]*\.env(?!(?:elope(?![a-zA-Z])|ironment(?:$|\/|\.md$)|y(?![a-zA-Z])))[^/]*(?:\/|$)|(?:^|\/)[^/]*\.envrc(?![a-zA-Z])[^/]*(?:\/|$)|(?:^|\/)[^/]*\.npmrc[^/]*(?:\/|$)|(?:^|\/)app-env\.json[^/]*(?:\/|$)|(^|\/)\.git(?:\/|$)|(?:^|\/)id_rsa(?:\.|$)|(?:^|\/)id_ed25519(?:\.|$)|(?:^|\/)id_ecdsa(?:\.|$)|(?:^|\/)\.(?:netrc|pypirc|pgpass)(?:[^a-zA-Z]|$)|(?:^|\/)[^/]*\.(?:tfvars|tfstate|jks)(?:[^a-zA-Z]|$)|(?:^|\/)kubeconfig(?:[^a-zA-Z]|$)|(?:^|\/)\.kube\/config(?:[^a-zA-Z]|$)|(?:^|\/)[^/]*\.(?:pem|key|p12|pfx)$|(?:^|\/)[^/]*(?:secret|password|credential)[^/]*(?:\/|$)|(?:^|\/)[^/]*natal-vault[^/]*(?:\/|$)/i;
 const CONFUSABLE_FOLD: Readonly<Record<string, string>> = {
   "\u0435": "e",
   "\u0415": "e",
