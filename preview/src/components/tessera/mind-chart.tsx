@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { hitNode, LESSON_SPOTS, liveCount, liveEdges, liveNodes } from "@/lib/tessera/live-map";
+import { ARCHIVE_SECTIONS, archiveEdges } from "@/lib/tessera/archive-flow";
 import { lessonAt, stepLearn } from "@/lib/tessera/recursive-train";
 import { improveLoops } from "@/lib/tessera/improve-loop";
 import { skillNames } from "@/lib/tessera/agent-cycle";
@@ -58,14 +59,15 @@ export function MindChart() {
     const rect = svgRef.current?.getBoundingClientRect();
     if (!rect) return { x: 0, y: 0 };
     const x = ((event.clientX - rect.left) / rect.width) * 360;
-    const y = ((event.clientY - rect.top) / rect.height) * 600;
+    const y = ((event.clientY - rect.top) / rect.height) * 780;
     return { x: (x - pan.x) / zoom, y: (y - pan.y) / zoom };
   }
 
   const boardEdges = liveEdges().filter(([from, to]) => visible.some((node) => node.id === from) && visible.some((node) => node.id === to));
   const selected = BY_ID.get(picked);
   const lessonIndex = LESSON_SPOTS.findIndex((spot) => spot.id === picked);
-  const selectedText = selected?.detail ?? (lessonIndex >= 0 ? lessonAt(lessonIndex) : "Tap a node.");
+  const section = ARCHIVE_SECTIONS.find((item) => item.id === picked);
+  const selectedText = selected?.detail ?? section?.note ?? (lessonIndex >= 0 ? lessonAt(lessonIndex) : "Tap a node.");
   const stats = [
     { n: String(count.known), label: "Known" },
     { n: String(count.missing), label: "Open" },
@@ -100,7 +102,7 @@ export function MindChart() {
       <div className="overflow-hidden rounded-3xl bg-black">
       <svg
         ref={svgRef}
-        viewBox="0 0 360 600"
+        viewBox="0 0 360 780"
         className="w-full touch-none"
         role="img"
         aria-label="Drag to move. Tap a node to read it."
@@ -117,7 +119,7 @@ export function MindChart() {
           if (current.moved) {
             const rect = svgRef.current?.getBoundingClientRect();
             const sx = rect ? 360 / rect.width : 1;
-            const sy = rect ? 600 / rect.height : 1;
+            const sy = rect ? 780 / rect.height : 1;
             setPan({ x: current.panX + dx * sx, y: current.panY + dy * sy });
           }
         }}
@@ -126,7 +128,7 @@ export function MindChart() {
           drag.current = null;
           if (!current || current.moved) return;
           const at = point(event);
-          const id = hitNode(at.x, at.y, [...visible, ...lessons]);
+          const id = hitNode(at.x, at.y, [...visible, ...lessons, ...ARCHIVE_SECTIONS]);
           if (id) setPicked(id);
         }}
       >
@@ -153,6 +155,12 @@ export function MindChart() {
               </text>
             </g>
           ))}
+          {archiveEdges().map(([from, to]) => {
+            const a = ARCHIVE_SECTIONS.find((item) => item.id === from);
+            const b = ARCHIVE_SECTIONS.find((item) => item.id === to);
+            if (!a || !b) return null;
+            return <path key={`${from}-${to}`} d={curve(a.x, a.y, b.x, b.y)} fill="none" stroke="currentColor" className="text-accent/50" strokeWidth="1.1" />;
+          })}
           {lessons.map((spot) => (
             <g key={spot.id}>
               <circle cx={spot.x} cy={spot.y} r={picked === spot.id ? 9 : 5} fill="currentColor" className="text-accent" />
@@ -161,11 +169,19 @@ export function MindChart() {
               </text>
             </g>
           ))}
+          {ARCHIVE_SECTIONS.map((sectionNode) => (
+            <g key={sectionNode.id}>
+              <circle cx={sectionNode.x} cy={sectionNode.y} r={picked === sectionNode.id ? 8 : 5} fill="currentColor" className="text-accent" />
+              <text x={sectionNode.x} y={sectionNode.y + 14} textAnchor="middle" className="fill-accent" fontSize="8">
+                {sectionNode.label}
+              </text>
+            </g>
+          ))}
         </g>
       </svg>
       </div>
       <div className="rounded-2xl border border-accent/40 bg-bg px-3 py-3">
-        <p className="text-[10px] tracking-[0.16em] text-accent uppercase">{selected?.label ?? (lessonIndex >= 0 ? LESSON_SPOTS[lessonIndex]?.label : "Node")}</p>
+        <p className="text-[10px] tracking-[0.16em] text-accent uppercase">{selected?.label ?? section?.label ?? (lessonIndex >= 0 ? LESSON_SPOTS[lessonIndex]?.label : "Node")}</p>
         <p className="mt-1 text-base leading-snug text-fg">{selectedText}</p>
       </div>
       <div className="flex flex-wrap gap-2">
