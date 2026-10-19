@@ -9,6 +9,7 @@ import apiApp, { setServerReady, terminalErrorHandler } from "../app";
 import { getFatherSeal } from "../lib/father-identity";
 import { logger } from "../lib/logger";
 
+const runningAsRoot = typeof process.getuid === "function" && process.getuid() === 0;
 const ADMIN_ENV = "TESSERACT_ADMIN_KEY";
 const ADMIN_KEY = "synthetic-admin-key-for-tests-only";
 const VAULT_ENV = "SOVEREIGN_VAULT_PATH";
@@ -34,7 +35,7 @@ describe("install id and vault failures stay generic", () => {
     }
   });
 
-  it("throws a fixed install-id error and anonymous status returns 503", async () => {
+  it.skipIf(runningAsRoot)("throws a fixed install-id error and anonymous status returns 503", async () => {
     const dir = mkdtempSync(join(tmpdir(), "tessera-install-"));
     dirs.push(dir);
     chmodSync(dir, 0o555);
@@ -73,7 +74,7 @@ describe("install id and vault failures stay generic", () => {
     }
   });
 
-  it("leaves session-key history unchanged when install id storage fails", async () => {
+  it.skipIf(runningAsRoot)("leaves session-key history unchanged when install id storage fails", async () => {
     const dir = mkdtempSync(join(tmpdir(), "tessera-rotate-"));
     dirs.push(dir);
     chmodSync(dir, 0o700);
@@ -107,7 +108,7 @@ describe("install id and vault failures stay generic", () => {
     expect(after).toBe(before.length + 1);
   });
 
-  it("round-trips the vault key and fails closed on a read-only directory", async () => {
+  it.skipIf(runningAsRoot)("round-trips the vault key and fails closed on a read-only directory", async () => {
     const dir = mkdtempSync(join(tmpdir(), "tessera-vault-"));
     dirs.push(dir);
     const vaultPath = join(dir, "vault.json");
@@ -268,7 +269,7 @@ describe("install id and vault failures stay generic", () => {
     }
   });
 
-  it("returns vault plaintext when rewrap persist fails", async () => {
+  it.skipIf(runningAsRoot)("returns vault plaintext when rewrap persist fails", async () => {
     const dir = mkdtempSync(join(tmpdir(), "tessera-vault-rewrap-"));
     dirs.push(dir);
     const vaultPath = join(dir, "vault.json");
@@ -295,7 +296,7 @@ describe("install id and vault failures stay generic", () => {
     expect(leaked).toBe(false);
   });
 
-  it("maps vault put and delete failures to 503", async () => {
+  it.skipIf(runningAsRoot)("maps vault put and delete failures to 503", async () => {
     const dir = mkdtempSync(join(tmpdir(), "tessera-vault-route-"));
     dirs.push(dir);
     const vaultPath = join(dir, "vault.json");
