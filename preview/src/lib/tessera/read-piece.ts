@@ -14,9 +14,8 @@ export const PIECES = [
     text: "The reflection loop keeps a plain lesson. A claim that a lock is unbreakable is dropped.",
   },
   {
-    repo: "combined",
-    sha: "b33c495ee4",
-    text: "The archive is a release asset. A repository does not run a server by being read.",
+    repo: "private repo (withheld)",
+    text: "Details withheld. A repository does not run a server by being read.",
   },
   {
     repo: "TESSERA",
@@ -40,7 +39,7 @@ export function v2Piece() {
   const read = PIECES.map((piece) => {
     const row = readPiece(piece.text);
     const line = row.kept[0] ?? "Nothing in this piece survived.";
-    return `${piece.repo} ${piece.sha}: ${line} Dropped ${row.dropped}.`;
+    return `${piece.repo}${"sha" in piece ? ` ${piece.sha}` : ""}: ${line} Dropped ${row.dropped}.`;
   });
   return `I read four pieces. ${read.join(" ")} Store lines were not kept.`;
 }
