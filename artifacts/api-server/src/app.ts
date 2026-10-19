@@ -6,7 +6,7 @@ import router from "./routes";
 import healthRouter from "./routes/health";
 import type { IRouter } from "express";
 import { redactAccessLogUrl } from "./lib/access-log-url";
-import { logger } from "./lib/logger";
+import { logger, serializeLogErr } from "./lib/logger";
 import { safeDbErrorLog } from "./lib/safe-db-error";
 import { getSessionSecret } from "./lib/sovereign-session";
 import { initFileIntegrity } from "./lib/file-integrity";
@@ -133,6 +133,7 @@ app.use(
   pinoHttp({
     logger,
     serializers: {
+      err: serializeLogErr,
       req(req) {
         return {
           id: req.id,
