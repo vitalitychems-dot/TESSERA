@@ -181,6 +181,16 @@ const SCAN_ROOTS = [
   "artifacts/api-server/src/lib",
 ];
 
+// The registry and SOURCE_PATTERNS above spell out the very text the scan looks
+// for, so scanning this file would only count the audit's own descriptions.
+const SCANNER_SELF_FILES = new Set([
+  path.join("artifacts", "api-server", "src", "lib", "reality-audit.ts"),
+]);
+
+export function isScannerSelfFile(relPath: string): boolean {
+  return SCANNER_SELF_FILES.has(path.normalize(relPath));
+}
+
 let lastScan: { at: number; perFile: Record<string, Record<string, number>>; total: number } | null = null;
 
 async function walkDir(dir: string, files: string[]): Promise<void> {
@@ -215,13 +225,14 @@ async function scanSourceTree(): Promise<typeof lastScan> {
   let total = 0;
 
   for (const file of files) {
+    const rel = path.relative(monorepoRoot, file);
+    if (isScannerSelfFile(rel)) continue;
     let content: string;
     try {
       content = await fs.readFile(file, "utf-8");
     } catch {
       continue;
     }
-    const rel = path.relative(monorepoRoot, file);
     const counts: Record<string, number> = {};
     for (const { pattern, weight, label } of SOURCE_PATTERNS) {
       const matches = content.match(pattern);
