@@ -81,7 +81,7 @@ export const readIngest = createServerFn({ method: "POST" }).handler(async () =>
         { repo: "Grok-ready", count: 158, bytes: 0 },
       ],
       skipped: 22126,
-      note: "Last count on this machine: 2,714 text files, 27,104,750 bytes, 22,126 skipped. This host could not open the manifest just now.",
+      note: "Last count on this machine: 2,714 text files, about 27 MB, 22,126 skipped. This host could not open the manifest just now.",
     };
   }
 });
