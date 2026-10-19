@@ -4,20 +4,30 @@ import { logger } from "./logger";
 import { createProposal } from "./consensus-engine";
 import { isLLMAvailable } from "./llm-client";
 import { batchedCallLLM } from "./llm-batcher";
-import { isModuleCoolingDown, recordEvolutionSuccess, recordEvolutionFailure, recordEvolutionDeferred, shouldSkipEvolutionForLoad } from "./evolution-throttle";
+import { isModuleCoolingDown, recordEvolutionSuccess, recordEvolutionFailure, recordEvolutionDeferred, recordEvolutionRolledBack, shouldSkipEvolutionForLoad, type EvolutionPatchSource } from "./evolution-throttle";
 import { normalizeEvolutionModule, EvolutionUnavailableError } from "./evolution-modules";
 import { verifyPatchInSandbox, type SandboxFn } from "./evolution-sandbox";
 import { recordAttempt } from "./evolution-attempt-ledger";
+import { generateOfflinePatch, isOfflinePatcherEnabled } from "./evolution-offline-patcher";
 
-const EVOLUTION_QUEUE_DIR = join(process.cwd(), "_evolutions");
+let evolutionQueueDir = join(process.cwd(), "_evolutions");
 const SOURCE_LIB_DIR_CANDIDATES = [
   join(process.cwd(), "src", "lib"),
   join(process.cwd(), "artifacts", "api-server", "src", "lib"),
 ];
 let sourceLibDirOverride: string | null | undefined;
+let sandboxFnOverride: SandboxFn | undefined;
 
 export function _setSourceLibDirForTests(dir: string | null | undefined): void {
   sourceLibDirOverride = dir;
+}
+
+export function _setEvolutionQueueDirForTests(dir: string | undefined): void {
+  evolutionQueueDir = dir ?? join(process.cwd(), "_evolutions");
+}
+
+export function _setSandboxFnForTests(fn: SandboxFn | undefined): void {
+  sandboxFnOverride = fn;
 }
 
 function getSourceLibDir(): string | null {
@@ -26,13 +36,13 @@ function getSourceLibDir(): string | null {
 }
 
 function ensureEvolutionDir(): void {
-  if (!existsSync(EVOLUTION_QUEUE_DIR)) {
-    mkdirSync(EVOLUTION_QUEUE_DIR, { recursive: true });
+  if (!existsSync(evolutionQueueDir)) {
+    mkdirSync(evolutionQueueDir, { recursive: true });
   }
 }
 
 function evolutionFilePath(proposalId: string): string {
-  return join(EVOLUTION_QUEUE_DIR, `${proposalId}.json`);
+  return join(evolutionQueueDir, `${proposalId}.json`);
 }
 
 function findSourceFilePath(targetModule: string): string | null {
@@ -52,15 +62,20 @@ function findSourceFilePath(targetModule: string): string | null {
 
 /**
  * Production apply pipeline. Composes:
- *   1. compute patched content (via LLM if available)
+ *   1. compute patched content (via LLM if available, otherwise via the
+ *      opt-in offline deterministic patcher)
  *   2. delegate to applyVerifiedPatch which gates on the sandbox
+ *
+ * Returns only after the patch was written AND verified. Anything the
+ * environment cannot do (no source tree, no code generator, no offline recipe)
+ * throws EvolutionUnavailableError and is counted as deferred, not applied.
  */
 async function applyPatchToSourceFile(
   targetModule: string,
   proposedChange: string,
   proposalId: string,
   sandboxFn?: SandboxFn,
-): Promise<{ sourceFilePath: string; backupPath: string; patchedLines: number }> {
+): Promise<{ sourceFilePath: string; backupPath: string; patchedLines: number; patchSource: EvolutionPatchSource }> {
   if (!getSourceLibDir()) {
     throw new EvolutionUnavailableError("source-unavailable", "Source tree is not present in this deployment (src/lib not found)");
   }
@@ -68,45 +83,61 @@ async function applyPatchToSourceFile(
   if (!sourceFilePath) {
     throw new Error(`Source file not found for module: ${targetModule}`);
   }
-  if (!isLLMAvailable()) {
+  const llmUp = isLLMAvailable();
+  const useOffline = !llmUp && isOfflinePatcherEnabled();
+  if (!llmUp && !useOffline) {
     throw new EvolutionUnavailableError("llm-unavailable", "No code generator available (external LLM disabled or unconfigured)");
   }
 
   const originalContent = readFileSync(sourceFilePath, "utf8");
-  ensureEvolutionDir();
-  const backupPath = join(EVOLUTION_QUEUE_DIR, `${proposalId}-backup.ts.bak`);
-  writeFileSync(backupPath, originalContent, "utf8");
+  const backupPath = join(evolutionQueueDir, `${proposalId}-backup.ts.bak`);
 
   let codeToAppend = "";
+  let patchSource: EvolutionPatchSource;
 
-  const excerpt = originalContent.slice(0, 2500);
-  let raw = "";
-  try {
-    raw = await batchedCallLLM(
-      [
-        {
-          role: "system",
-          content: `You are a TypeScript code transformation engine. Given a TypeScript source file excerpt and a change request, generate ONLY the minimal valid TypeScript code to append to the end of the file that implements the requested change. Return ONLY compilable TypeScript — no markdown fencing, no explanations, no comments other than JSDoc if appropriate. If the change cannot be implemented as an appended snippet, return an empty string.`,
-        },
-        {
-          role: "user",
-          content: `File: ${targetModule}\n\nSource excerpt:\n${excerpt}\n\nChange to implement: ${proposedChange}\n\nGenerate valid TypeScript code to append:`,
-        },
-      ],
-      { maxTokens: 500, timeoutMs: 10_000 },
-    );
-  } catch { raw = ""; }
-  codeToAppend = raw.replace(/^```(?:typescript)?\n?/m, "").replace(/\n?```$/m, "").trim();
+  if (useOffline) {
+    const generated = generateOfflinePatch({ targetModule, proposedChange, originalContent });
+    if (generated.kind === "none") {
+      throw new EvolutionUnavailableError(generated.reason, generated.message);
+    }
+    codeToAppend = generated.code;
+    patchSource = "offline";
+    ensureEvolutionDir();
+    writeFileSync(backupPath, originalContent, "utf8");
+  } else {
+    patchSource = "llm";
+    ensureEvolutionDir();
+    writeFileSync(backupPath, originalContent, "utf8");
 
-  if (!codeToAppend || codeToAppend.length < 5) {
-    // Live file untouched — nothing to revert
-    recordAttempt({
-      proposalId,
-      event: "SANDBOXED_FAIL",
-      targetModule,
-      reason: "LLM did not generate executable TypeScript",
-    });
-    throw new Error("LLM did not generate executable TypeScript for this proposal — rejecting to avoid non-functional patch");
+    const excerpt = originalContent.slice(0, 2500);
+    let raw = "";
+    try {
+      raw = await batchedCallLLM(
+        [
+          {
+            role: "system",
+            content: `You are a TypeScript code transformation engine. Given a TypeScript source file excerpt and a change request, generate ONLY the minimal valid TypeScript code to append to the end of the file that implements the requested change. Return ONLY compilable TypeScript — no markdown fencing, no explanations, no comments other than JSDoc if appropriate. If the change cannot be implemented as an appended snippet, return an empty string.`,
+          },
+          {
+            role: "user",
+            content: `File: ${targetModule}\n\nSource excerpt:\n${excerpt}\n\nChange to implement: ${proposedChange}\n\nGenerate valid TypeScript code to append:`,
+          },
+        ],
+        { maxTokens: 500, timeoutMs: 10_000 },
+      );
+    } catch { raw = ""; }
+    codeToAppend = raw.replace(/^```(?:typescript)?\n?/m, "").replace(/\n?```$/m, "").trim();
+
+    if (!codeToAppend || codeToAppend.length < 5) {
+      // Live file untouched — nothing to revert
+      recordAttempt({
+        proposalId,
+        event: "SANDBOXED_FAIL",
+        targetModule,
+        reason: "LLM did not generate executable TypeScript",
+      });
+      throw new Error("LLM did not generate executable TypeScript for this proposal — rejecting to avoid non-functional patch");
+    }
   }
 
   const patchedContent = `${originalContent}\n${codeToAppend}\n`;
@@ -116,12 +147,12 @@ async function applyPatchToSourceFile(
     patchedContent,
     proposalId,
     targetModule,
-    sandboxFn,
+    sandboxFn: sandboxFn ?? sandboxFnOverride,
   });
   if (!result.ok) {
     throw new Error(result.error ?? "apply rejected");
   }
-  return { sourceFilePath, backupPath, patchedLines: result.patchedLines };
+  return { sourceFilePath, backupPath, patchedLines: result.patchedLines, patchSource };
 }
 
 /**
@@ -229,17 +260,19 @@ export async function applyVerifiedPatch(params: {
   return { ok: true, patchedLines: params.patchedContent.split("\n").length };
 }
 
-function restoreSourceFromBackup(proposalId: string, targetModule: string): void {
-  const backupPath = join(EVOLUTION_QUEUE_DIR, `${proposalId}-backup.ts.bak`);
-  if (!existsSync(backupPath)) return;
+function restoreSourceFromBackup(proposalId: string, targetModule: string): boolean {
+  const backupPath = join(evolutionQueueDir, `${proposalId}-backup.ts.bak`);
+  if (!existsSync(backupPath)) return false;
   const sourceFilePath = findSourceFilePath(targetModule);
-  if (!sourceFilePath) return;
+  if (!sourceFilePath) return false;
   try {
     const original = readFileSync(backupPath, "utf8");
     writeFileSync(sourceFilePath, original, "utf8");
     unlinkSync(backupPath);
+    return true;
   } catch (err) {
     logger.error({ proposalId, err }, "SelfCodeEvolution: source file restore from backup failed");
+    return false;
   }
 }
 
@@ -611,11 +644,11 @@ export async function proposeEvolution(
       evolutionState.lastEvolutionAt = Date.now();
 
       try {
-        const { sourceFilePath, patchedLines } = await applyPatchToSourceFile(targetModule, proposedChange, id);
+        const { sourceFilePath, patchedLines, patchSource } = await applyPatchToSourceFile(targetModule, proposedChange, id);
         const { filePath, bytesWritten } = writeEvolutionToFile(proposal);
-        recordEvolutionSuccess(targetModule);
+        recordEvolutionSuccess(targetModule, patchSource);
         logger.info(
-          { id, targetModule, riskLevel, verifySteps: verifyResult.steps, sourceFilePath, patchedLines, filePath, bytesWritten },
+          { id, targetModule, riskLevel, patchSource, verifySteps: verifyResult.steps, sourceFilePath, patchedLines, filePath, bytesWritten },
           "SelfCodeEvolution: evolution auto-applied and verified"
         );
       } catch (writeErr) {
@@ -658,7 +691,9 @@ export function rollbackEvolution(proposalId: string): boolean {
   proposal.status = "rolled-back";
   evolutionState.rolledBackChanges++;
 
-  restoreSourceFromBackup(proposalId, proposal.targetModule);
+  if (restoreSourceFromBackup(proposalId, proposal.targetModule)) {
+    recordEvolutionRolledBack(proposal.targetModule);
+  }
 
   try {
     const fp = evolutionFilePath(proposalId);
@@ -778,6 +813,7 @@ export function getEvolutionMetrics() {
     safeModuleCount: SAFE_MODULES.length,
     recentProposals: dedupedRecent(10),
     approvedCount: proposals.filter(p => p.status === "applied").length,
+    pendingImplementationCount: proposals.filter(p => p.status === "approved").length,
     rejectedCount: proposals.filter(p => p.status === "rejected").length,
     protectedModules: PROTECTED_MODULES,
     safeModules: SAFE_MODULES,
@@ -826,9 +862,10 @@ export async function applyEvolution(proposalId: string): Promise<{ ok: boolean;
     evolutionState.appliedChanges++;
     evolutionState.lastEvolutionAt = Date.now();
 
-    const { sourceFilePath, patchedLines } = await applyPatchToSourceFile(proposal.targetModule, proposal.proposedChange, proposalId);
+    const { sourceFilePath, patchedLines, patchSource } = await applyPatchToSourceFile(proposal.targetModule, proposal.proposedChange, proposalId);
     const { filePath, bytesWritten } = writeEvolutionToFile(proposal);
-    logger.info({ proposalId, targetModule: proposal.targetModule, sourceFilePath, patchedLines, filePath, bytesWritten }, "SelfCodeEvolution: manually applied and written to file");
+    recordEvolutionSuccess(proposal.targetModule, patchSource);
+    logger.info({ proposalId, targetModule: proposal.targetModule, patchSource, sourceFilePath, patchedLines, filePath, bytesWritten }, "SelfCodeEvolution: manually applied and written to file");
     return { ok: true, proposalId, applied: true, filePath };
   } catch (err) {
     evolutionState.appliedChanges--;
@@ -841,6 +878,7 @@ export async function applyEvolution(proposalId: string): Promise<{ ok: boolean;
     }
     proposal.status = "rejected";
     restoreSourceFromBackup(proposalId, proposal.targetModule);
+    recordEvolutionFailure(proposal.targetModule);
     const errMsg = err instanceof Error ? err.message : String(err);
     logger.error({ proposalId, err }, "SelfCodeEvolution: manual apply file write failed");
     return { ok: false, proposalId, applied: false, error: errMsg };
