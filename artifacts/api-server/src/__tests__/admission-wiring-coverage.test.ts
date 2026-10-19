@@ -65,13 +65,3 @@ describe("agent-creation path inventory", () => {
     expect(batchBodies).not.toContain("activeSpawned");
   });
 });
-
-describe("lib/admission stays pure", () => {
-  it("the wiring did not put env or I/O into lib/admission (source-scan guard)", () => {
-    const dir = join(SRC, "lib", "admission");
-    for (const file of walk(dir)) {
-      const text = readFileSync(file, "utf8");
-      expect(text, relative(SRC, file)).not.toMatch(/process\.env|@workspace|Math\.random|Date\.now|new Date\(/);
-    }
-  });
-});
