@@ -35,7 +35,7 @@ export function coverAll() {
     topicTotal: SCHOOL_EXAM.length,
     missed: [...skills.filter((item) => !item.pass).map((item) => item.name), ...topics.filter((item) => !item.pass).map((item) => item.q)],
     said: proved
-      ? `I am Tessera. ${skillPass} of ${SKILLS.length} skills answered. ${topicPass} of ${SCHOOL_EXAM.length} school questions answered from the passage.`
+      ? `${skillPass} of ${SKILLS.length} skills answered. ${topicPass} of ${SCHOOL_EXAM.length} school questions answered from the passage.`
       : "A skill or a topic missed.",
   };
 }

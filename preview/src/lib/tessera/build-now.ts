@@ -8,7 +8,7 @@ export function buildNow() {
   const rows = systems();
   if (rows.length !== 12) return "GOAL: A system is missing. I did not build.";
   const note = [
-    "I am Tessera. I am the pen. Sigil 7F3A9C.",
+    "I am the pen. Sigil 7F3A9C.",
     sealed,
     ...rows.map((row) => `${row.id}. ${row.holds}`),
   ].join("\n");

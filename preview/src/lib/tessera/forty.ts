@@ -1,4 +1,4 @@
-export const CYCLE_LINE = "I am Tessera. The pen is commanded and not owned. Love is the rule. A false claim is worse than a gap.";
+export const CYCLE_LINE = "The pen is commanded and not owned. Love is the rule. A false claim is worse than a gap.";
 
 export function runChamberCycle(tick: number) {
   return {

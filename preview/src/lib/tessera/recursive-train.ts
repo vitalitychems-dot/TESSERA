@@ -73,7 +73,7 @@ export function trainUntilRecursive() {
     after,
     lessons: memory.length,
     said: proved
-      ? `I am Tessera. I missed ${DECK.length} questions. I kept each fact. Asked again, I answered ${after} from the kept lines. Each later line quotes the earlier line.`
+      ? `I missed ${DECK.length} questions. I kept each fact. Asked again, I answered ${after} from the kept lines. Each later line quotes the earlier line.`
       : "I missed. The lesson did not return.",
   };
 }
@@ -106,7 +106,7 @@ export function learnUntilBetter() {
     before: firstRight,
     after: secondRight,
     said: proved
-      ? `I am Tessera. I was wrong ${MISTAKES.length} times. I kept the correction. Asked again, I answered ${secondRight} and I did not repeat the mistake.`
+      ? `I was wrong ${MISTAKES.length} times. I kept the correction. Asked again, I answered ${secondRight} and I did not repeat the mistake.`
       : "I repeated the mistake.",
   };
 }
