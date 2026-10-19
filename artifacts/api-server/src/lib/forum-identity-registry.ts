@@ -192,12 +192,18 @@ export async function authenticateForumMemberToken(
       .select({
         tokenHash: forumPrincipalTokensTable.tokenHash,
         principalName: forumPrincipalTokensTable.principalName,
+        revokedAt: forumPrincipalTokensTable.revokedAt,
+        expiresAt: forumPrincipalTokensTable.expiresAt,
       })
       .from(forumPrincipalTokensTable)
       .where(eq(forumPrincipalTokensTable.tokenHash, tokenHash))
       .limit(1);
     const row = rows[0];
     if (!row || !tokenHashesMatch(row.tokenHash, tokenHash)) {
+      return { ok: false, reason: "rejected" };
+    }
+    if (row.revokedAt) return { ok: false, reason: "rejected" };
+    if (row.expiresAt && row.expiresAt.getTime() <= Date.now()) {
       return { ok: false, reason: "rejected" };
     }
     if (ADMIN_ONLY_PRINCIPALS.has(row.principalName.trim().toLowerCase())) {

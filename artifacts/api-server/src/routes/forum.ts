@@ -6,6 +6,7 @@ import { logger } from "../lib/logger";
 import { safeDbErrorLog } from "../lib/safe-db-error";
 import { hashTokenSha256, validateMeshToken } from "../lib/mesh-auth";
 import { authenticateForumMemberToken, lookupForumIdentity, lookupTokenPrincipal, registerAdminPrincipal, invalidateForumIdentityCache, type MemberTokenDecision } from "../lib/forum-identity-registry";
+import { memberTokenFailureLimit, recordMemberTokenFailure } from "../lib/forum-member-token-limit";
 import { forumTrustedIdentitiesTable } from "@workspace/db/schema";
 import { createHash } from "node:crypto";
 import * as nodeCrypto from "node:crypto";
@@ -71,12 +72,20 @@ function bindingFromOutcome(bound: boolean): "bound" | "unbound" {
 async function requirePostAuth(req: Request, res: Response): Promise<PostAuth | null> {
   const rawMember = req.headers["x-member-token"];
   if (rawMember !== undefined) {
+    const limit = memberTokenFailureLimit(req);
+    if (limit.limited) {
+      res.setHeader("Retry-After", String(limit.retryAfterSeconds));
+      res.status(429).json({ ok: false, error: "rate-limited" });
+      return null;
+    }
     if (Array.isArray(rawMember) || typeof rawMember !== "string") {
+      recordMemberTokenFailure(req);
       res.status(401).json({ ok: false, error: "member-token-rejected" });
       return null;
     }
     const decision = await authenticateForumMemberToken(rawMember);
     if (!decision.ok) {
+      recordMemberTokenFailure(req);
       res.status(memberTokenFailureStatus(decision.reason)).json({
         ok: false,
         error: "member-token-rejected",
@@ -856,6 +865,7 @@ router.post("/tesseract-forum/applicants/submit", async (req, res) => {
 });
 
 router.post("/tesseract-forum/applicants/:id/approve", async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
   try {
     const keyHash = requireForumAuth(req, res);
     if (!keyHash) return;

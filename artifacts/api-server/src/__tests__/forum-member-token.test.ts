@@ -2,18 +2,17 @@ import { createServer, type Server } from "node:http";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import express, { type Request, type Response, type NextFunction } from "express";
 import { DrizzleQueryError } from "drizzle-orm";
-import { eq, like, or, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, getPool, isDbConfigured } from "@workspace/db";
 import {
   forumApplicantsTable,
-  forumPostVotesTable,
   forumPrincipalTokensTable,
-  forumRepliesTable,
   forumTopicsTable,
   forumTrustedIdentitiesTable,
 } from "@workspace/db/schema";
 import { saveApplicantDeclarationDraft } from "../lib/applicant-declarations";
 import { scoreApplicantAlignment } from "../lib/applicant-alignment";
+import { resetMemberTokenFailureLimitForTests } from "../lib/forum-member-token-limit";
 import { invalidateForumIdentityCache } from "../lib/forum-identity-registry";
 import { logger } from "../lib/logger";
 import { safeDbErrorLog } from "../lib/safe-db-error";
@@ -33,7 +32,11 @@ vi.mock("node:crypto", async (importOriginal) => {
   };
 });
 
-const HAS_DB = isDbConfigured();
+const HAS_DB = (() => {
+  const dedicated = process.env.TESSERA_TEST_DATABASE_URL?.trim() ?? "";
+  const active = process.env.DATABASE_URL?.trim() ?? "";
+  return dedicated.length > 0 && dedicated === active && isDbConfigured();
+})();
 const ADMIN_KEY = "synthetic-forum-admin-key";
 const MEMBER_TOKEN = "synthetic-member-post-token";
 const UNKNOWN_TOKEN = "synthetic-unknown-member-token";
@@ -130,6 +133,27 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
         id serial PRIMARY KEY,
         token_hash text NOT NULL UNIQUE,
         principal_name text NOT NULL,
+        revoked_at timestamp,
+        expires_at timestamp,
+        created_at timestamp NOT NULL DEFAULT now()
+      );
+      CREATE TABLE ${schemaName}.forum_replies (
+        id serial PRIMARY KEY,
+        topic_id integer NOT NULL,
+        parent_reply_id integer,
+        content text NOT NULL,
+        author text NOT NULL,
+        author_type text NOT NULL DEFAULT 'human',
+        author_key_hash text,
+        created_at timestamp NOT NULL DEFAULT now()
+      );
+      CREATE TABLE ${schemaName}.forum_post_votes (
+        id serial PRIMARY KEY,
+        topic_id integer NOT NULL,
+        reply_id integer,
+        voter text NOT NULL,
+        voter_type text NOT NULL DEFAULT 'member',
+        vote text NOT NULL,
         created_at timestamp NOT NULL DEFAULT now()
       );
       CREATE TABLE ${schemaName}.forum_trusted_identities (
@@ -158,7 +182,7 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
         created_at timestamp NOT NULL DEFAULT now()
       );
     `;
-    try {
+    {
       await originalQuery(`CREATE SCHEMA ${schemaName}`);
       await originalQuery(tables);
       const pinSearchPath = async (client: { query: (text: string) => Promise<unknown>; release: (err?: Error) => void }) => {
@@ -251,8 +275,6 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
       });
       invalidateForumIdentityCache();
       await run();
-    } finally {
-      await dropActiveSchema();
     }
   }
 
@@ -266,11 +288,7 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
     });
     expect(alignment.passed).toBe(true);
 
-    await db.insert(forumPrincipalTokensTable).values({
-      tokenHash: adminHash,
-      principalName: "Father",
-    }).onConflictDoNothing();
-    invalidateForumIdentityCache();
+    await withThrowawaySchema(async () => {});
 
     const app = express();
     app.use((req: Request, _res: Response, next: NextFunction) => {
@@ -292,28 +310,12 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
     baseUrl = `http://127.0.0.1:${address.port}`;
   });
 
-  afterEach(async () => {
-    await dropActiveSchema();
+  afterEach(() => {
+    resetMemberTokenFailureLimitForTests();
   });
 
   afterAll(async () => {
     await dropActiveSchema();
-    await db.execute(sql.raw("DROP TRIGGER IF EXISTS tessera_member_token_block_topic ON forum_topics"));
-    await db.execute(sql.raw("DROP FUNCTION IF EXISTS tessera_member_token_block_topic()"));
-    await db.execute(sql.raw("DROP TRIGGER IF EXISTS tessera_member_token_block_register ON forum_principal_tokens"));
-    await db.execute(sql.raw("DROP FUNCTION IF EXISTS tessera_member_token_block_register()"));
-    await db.delete(forumPostVotesTable).where(like(forumPostVotesTable.voter, "Synthetic %"));
-    await db.delete(forumRepliesTable).where(like(forumRepliesTable.author, "Synthetic %"));
-    await db.delete(forumTopicsTable).where(or(
-      like(forumTopicsTable.author, "Synthetic %"),
-      like(forumTopicsTable.title, "[Vetted Member] %"),
-    ));
-    await db.delete(forumApplicantsTable).where(like(forumApplicantsTable.applicantName, "Synthetic %"));
-    await db.delete(forumPrincipalTokensTable).where(or(
-      eq(forumPrincipalTokensTable.tokenHash, adminHash),
-      like(forumPrincipalTokensTable.principalName, "Synthetic %"),
-    ));
-    await db.delete(forumTrustedIdentitiesTable).where(like(forumTrustedIdentitiesTable.name, "Synthetic %"));
     invalidateForumIdentityCache();
     if (previousAdminKey === undefined) delete process.env.TESSERACT_ADMIN_KEY;
     else process.env.TESSERACT_ADMIN_KEY = previousAdminKey;
@@ -343,7 +345,7 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
         json = null;
       }
     }
-    return { status: response.status, text, json };
+    return { status: response.status, text, json, headers: response.headers };
   }
 
   async function insertMember(name: string, token: string): Promise<void> {
@@ -436,8 +438,10 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
     pool.query = ((..._args: unknown[]) => {
       const failure = new Error(DB_FAULT);
       failure.name = "SyntheticDbFault";
+      failure.stack = "synthetic-db-stack-frame";
       return Promise.reject(failure);
     }) as typeof pool.query;
+    const capture = startCapture();
     try {
       const posted = await send("/tesseract-forum/topics", {
         title: "Synthetic db fault topic",
@@ -447,7 +451,14 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
       expect(posted.status).toBe(503);
       expect(posted.json).toEqual({ ok: false, error: "member-token-rejected" });
       expect(posted.text).not.toContain(DB_FAULT);
+      const logs = capture.text();
+      expect(logs.includes("\"name\":\"SyntheticDbFault\"")).toBe(true);
+      expect(logs.includes("\"code\":\"none\"")).toBe(true);
+      expect(logs.includes(DB_FAULT)).toBe(false);
+      expect(logs.includes("Failed query")).toBe(false);
+      expect(logs.includes("synthetic-db-stack-frame")).toBe(false);
     } finally {
+      capture.restore();
       pool.query = original as typeof pool.query;
     }
     const rows = await db.select({ id: forumTopicsTable.id }).from(forumTopicsTable)
@@ -456,7 +467,6 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
   });
 
   it("rolls back identity, binding, and topic when admission fails mid-transaction", async () => {
-    await withThrowawaySchema(async () => {
     await db.execute(sql.raw(`
       CREATE OR REPLACE FUNCTION tessera_member_token_block_topic()
       RETURNS trigger
@@ -502,11 +512,24 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
         submittedAt: 1,
       });
 
-      const approved = await send(`/tesseract-forum/applicants/${applicant.id}/approve`, {}, {
-        "x-admin-token": ADMIN_KEY,
-      });
+      const capture = startCapture();
+      let approved: Awaited<ReturnType<typeof send>>;
+      try {
+        approved = await send(`/tesseract-forum/applicants/${applicant.id}/approve`, {}, {
+          "x-admin-token": ADMIN_KEY,
+        });
+        const logs = capture.text();
+        expect(logs.includes("\"name\":\"DrizzleQueryError\"")).toBe(true);
+        expect(logs.includes("\"code\":\"P0001\"")).toBe(true);
+        expect(logs.includes(TOPIC_FAULT)).toBe(false);
+        expect(logs.includes("Failed query")).toBe(false);
+        expect(logs.includes("synthetic-db-stack-frame")).toBe(false);
+      } finally {
+        capture.restore();
+      }
       expect(approved.status).toBe(500);
       expect(approved.json).toEqual({ ok: false, error: "applicant-approve-failed" });
+      expect(approved.headers.get("cache-control")).toBe("no-store");
       expect(approved.text).not.toContain(TOPIC_FAULT);
       expect(approved.text).not.toContain(ADMIN_KEY);
 
@@ -526,11 +549,9 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
       await db.execute(sql.raw("DROP TRIGGER IF EXISTS tessera_member_token_block_topic ON forum_topics"));
       await db.execute(sql.raw("DROP FUNCTION IF EXISTS tessera_member_token_block_topic()"));
     }
-    });
   });
 
   it("surfaces registerAdminPrincipal failure instead of a 200", async () => {
-    await withThrowawaySchema(async () => {
     await db.insert(forumTrustedIdentitiesTable).values({
       name: REGISTER_NAME,
       identityType: "entity",
@@ -558,10 +579,21 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
       EXECUTE FUNCTION tessera_member_token_block_register()
     `));
     try {
-      const registered = await send("/tesseract-forum/admin/register-principal", {
-        token: "synthetic-register-target",
-        principalName: REGISTER_NAME,
-      }, { "x-admin-token": ADMIN_KEY });
+      const capture = startCapture();
+      let registered: Awaited<ReturnType<typeof send>>;
+      try {
+        registered = await send("/tesseract-forum/admin/register-principal", {
+          token: "synthetic-register-target",
+          principalName: REGISTER_NAME,
+        }, { "x-admin-token": ADMIN_KEY });
+        const logs = capture.text();
+        expect(logs.includes("\"name\":\"DrizzleQueryError\"")).toBe(true);
+        expect(logs.includes("\"code\":\"P0001\"")).toBe(true);
+        expect(logs.includes(REGISTER_FAULT)).toBe(false);
+        expect(logs.includes("Failed query")).toBe(false);
+      } finally {
+        capture.restore();
+      }
       expect(registered.status).toBe(500);
       expect(registered.json).toEqual({ ok: false, error: "principal-register-failed" });
       expect(registered.text).not.toContain(REGISTER_FAULT);
@@ -572,7 +604,6 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
       await db.execute(sql.raw("DROP TRIGGER IF EXISTS tessera_member_token_block_register ON forum_principal_tokens"));
       await db.execute(sql.raw("DROP FUNCTION IF EXISTS tessera_member_token_block_register()"));
     }
-    });
   });
 
   it("accepts a member token on reply and vote", async () => {
@@ -681,7 +712,9 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
 
   it("rejects a revoked member token", async () => {
     await insertMember(MEMBER_NAME, MEMBER_TOKEN);
-    await db.delete(forumPrincipalTokensTable).where(eq(forumPrincipalTokensTable.tokenHash, sha(MEMBER_TOKEN)));
+    await db.update(forumPrincipalTokensTable)
+      .set({ revokedAt: new Date() })
+      .where(eq(forumPrincipalTokensTable.tokenHash, sha(MEMBER_TOKEN)));
     const posted = await send("/tesseract-forum/topics", {
       title: "Synthetic revoked topic",
       content: "nope",
@@ -693,6 +726,74 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
     const rows = await db.select({ id: forumTopicsTable.id }).from(forumTopicsTable)
       .where(eq(forumTopicsTable.title, "Synthetic revoked topic"));
     expect(rows).toEqual([]);
+  });
+
+  it("rejects an expired member token and accepts a future expiry", async () => {
+    await insertMember(MEMBER_NAME, MEMBER_TOKEN);
+    await db.update(forumPrincipalTokensTable)
+      .set({ expiresAt: new Date(Date.now() - 60_000) })
+      .where(eq(forumPrincipalTokensTable.tokenHash, sha(MEMBER_TOKEN)));
+    const expired = await send("/tesseract-forum/topics", {
+      title: "Synthetic expired topic",
+      content: "nope",
+      author: MEMBER_NAME,
+    }, { "x-member-token": MEMBER_TOKEN });
+    expect(expired.status).toBe(401);
+    expect(expired.json).toEqual({ ok: false, error: "member-token-rejected" });
+    expect(expired.text.includes(MEMBER_TOKEN)).toBe(false);
+
+    await db.update(forumPrincipalTokensTable)
+      .set({ expiresAt: new Date(Date.now() + 60_000) })
+      .where(eq(forumPrincipalTokensTable.tokenHash, sha(MEMBER_TOKEN)));
+    const posted = await send("/tesseract-forum/topics", {
+      title: "Synthetic future expiry topic",
+      content: "A member post",
+      author: MEMBER_NAME,
+    }, { "x-member-token": MEMBER_TOKEN });
+    expect(posted.status).toBe(200);
+    expect(posted.json?.ok).toBe(true);
+    expect(posted.text.includes(MEMBER_TOKEN)).toBe(false);
+  });
+
+  it("rate-limits member-token failures without logging the token", async () => {
+    await insertMember(MEMBER_NAME, MEMBER_TOKEN);
+    for (let attempt = 0; attempt < 7; attempt += 1) {
+      const failed = await send("/tesseract-forum/topics", {
+        title: "Synthetic rate topic",
+        content: "nope",
+        author: MEMBER_NAME,
+      }, { "x-member-token": UNKNOWN_TOKEN });
+      expect(failed.status).toBe(401);
+    }
+    const allowed = await send("/tesseract-forum/topics", {
+      title: "Synthetic rate success",
+      content: "A member post",
+      author: MEMBER_NAME,
+    }, { "x-member-token": MEMBER_TOKEN });
+    expect(allowed.status).toBe(200);
+    const eighth = await send("/tesseract-forum/topics", {
+      title: "Synthetic rate eighth",
+      content: "nope",
+      author: MEMBER_NAME,
+    }, { "x-member-token": UNKNOWN_TOKEN });
+    expect(eighth.status).toBe(401);
+    const capture = startCapture();
+    try {
+      const limited = await send("/tesseract-forum/topics", {
+        title: "Synthetic rate limited",
+        content: "nope",
+        author: MEMBER_NAME,
+      }, { "x-member-token": UNKNOWN_TOKEN });
+      expect(limited.status).toBe(429);
+      expect(limited.json).toEqual({ ok: false, error: "rate-limited" });
+      expect(limited.headers.get("retry-after")).toBeTruthy();
+      expect(limited.text.includes(UNKNOWN_TOKEN)).toBe(false);
+      const logs = capture.text();
+      expect(logs.includes(UNKNOWN_TOKEN)).toBe(false);
+      expect(logs.includes(MEMBER_TOKEN)).toBe(false);
+    } finally {
+      capture.restore();
+    }
   });
 
   it("inserts nothing when member-token hashing fails", async () => {
@@ -840,9 +941,7 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
       pool.query = ((...args: unknown[]) => {
         const text = queryText(args[0]);
         if (text.toLowerCase().includes(`insert into "${table}"`)) {
-          const failure = new Error("synthetic-insert-fault");
-          failure.name = "SyntheticInsertFault";
-          return Promise.reject(failure);
+          return Promise.reject(shaped);
         }
         return Reflect.apply(original, pool, args);
       }) as typeof pool.query;
@@ -860,7 +959,7 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
       expect(posted.json).toEqual({ ok: false, error: "topic-create-failed" });
       const logs = topicCapture.text();
       expect(logs.includes("Failed to create forum topic")).toBe(true);
-      expect(logs.includes("\"name\":\"Error\"")).toBe(true);
+      expect(logs.includes("\"name\":\"DrizzleQueryError\"")).toBe(true);
       expect(logs.includes("SyntheticInsertFault")).toBe(false);
       expect(logs.includes("Failed query:")).toBe(false);
       assertNoSecret(posted.text, MEMBER_TOKEN);
@@ -892,7 +991,7 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
       expect(replied.json).toEqual({ ok: false, error: "reply-create-failed" });
       const logs = replyCapture.text();
       expect(logs.includes("Failed to create forum reply")).toBe(true);
-      expect(logs.includes("\"name\":\"Error\"")).toBe(true);
+      expect(logs.includes("\"name\":\"DrizzleQueryError\"")).toBe(true);
       expect(logs.includes("SyntheticInsertFault")).toBe(false);
       expect(logs.includes("Failed query:")).toBe(false);
       assertNoSecret(replied.text, MEMBER_TOKEN);

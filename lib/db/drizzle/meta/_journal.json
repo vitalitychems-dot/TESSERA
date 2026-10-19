@@ -78,6 +78,13 @@
       "when": 1776566400000,
       "tag": "0010_semantic_cache_model_default",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1776652800000,
+      "tag": "0011_forum_principal_token_revoke",
+      "breakpoints": true
     }
   ]
 }
