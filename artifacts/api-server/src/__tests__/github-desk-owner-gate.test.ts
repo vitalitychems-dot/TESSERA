@@ -403,6 +403,9 @@ describe("gated desk actions", () => {
       ".envold",
       ".envs",
       ".envBak",
+      ".environmental",
+      ".environmentally",
+      "notes.envbackup",
       ".envrcx",
       ".envrcbackup",
       "a/b.env/c.txt",
@@ -422,9 +425,52 @@ describe("gated desk actions", () => {
       "docs/npmrc.md",
       "docs/notnpmrc.md",
       "README.md",
+      "src/environ.ts",
+      "my.envelope.md",
+      "src/dotenv.ts",
+      "x.envy",
     ];
     const fetched: string[] = [];
     const io = { token: async () => SERVER_TOKEN, fetchImpl: fetchSpy(fetched) };
+    for (const path of denied) {
+      const before = fetched.length;
+      const read = await readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path }, cookie, io);
+      expect(read, path).toEqual({ ok: false, error: "That repository path is not allowed." });
+      expect(fetched.length, path).toBe(before);
+    }
+    for (const path of allowed) {
+      const read = await readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path }, cookie, io);
+      expect(read, path).toEqual({ ok: true, text: "x", path: `vitalitychems-dot/TESSERA/${path}` });
+    }
+  });
+
+  it("denies percent-encoded, mixed-case, and lookalike env names before GitHub is called", async () => {
+    const cookie = ownerCookie();
+    const fetched: string[] = [];
+    const io = { token: async () => SERVER_TOKEN, fetchImpl: fetchSpy(fetched) };
+    const cyrillicE = "\u0435";
+    const denied = [
+      "config/%2eenv",
+      "config/%2Eenv.local",
+      "%2E%65%6E%76",
+      "dir/.%65nv",
+      ".%65%6E%76backup",
+      `dir/.%D0%B5nv`,
+      ".EnV.local",
+      ".eNvbackup",
+      "Prod.ENV",
+      `.${cyrillicE}nv`,
+      `\uFF0E\uFF45\uFF4E\uFF56`,
+      "\u2024env",
+      `notes/.e${"\u200B"}nv`,
+    ];
+    const allowed = [
+      "src/environ.ts",
+      "my.envelope.md",
+      "src/dotenv.ts",
+      "x.envy",
+      "docs/.environment/readme.md",
+    ];
     for (const path of denied) {
       const before = fetched.length;
       const read = await readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path }, cookie, io);

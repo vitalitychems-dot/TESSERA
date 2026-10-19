@@ -17,8 +17,26 @@ const ALLOWED_REPOS = [
 ] as const;
 
 const PATH_DENIED = "That repository path is not allowed." as const;
+// Leading ".env" is denied unless the following letters are exactly "environment"
+// and then a non-letter (".environment", ".environment.md", ".environment/readme").
+// ".environmental" stays denied.
+// Mid-segment ".env" plus letters keeps only envelope, environment, and envy
+// (the tails elope, ironment, and y). There is no open letter suffix. dotenv and
+// environ do not contain the ".env" dot, so they are not part of that list.
 const SECRET_PATH =
-  /(?:^|\/)\.env(?!ironment)|(?:^|\/)[^/]*\.env(?![a-zA-Z])[^/]*(?:\/|$)|(?:^|\/)[^/]*\.envrc(?![a-zA-Z])[^/]*(?:\/|$)|(?:^|\/)[^/]*\.npmrc[^/]*(?:\/|$)|(?:^|\/)app-env\.json[^/]*(?:\/|$)|(^|\/)\.git(?:\/|$)|(?:^|\/)id_rsa(?:\.|$)|(?:^|\/)id_ed25519(?:\.|$)|(?:^|\/)[^/]*\.(?:pem|key|p12|pfx)$|(?:^|\/)[^/]*(?:secret|password|credential)[^/]*(?:\/|$)|(?:^|\/)[^/]*natal-vault[^/]*(?:\/|$)/i;
+  /(?:^|\/)\.env(?!ironment(?![a-zA-Z]))|(?:^|\/)[^/]*\.env(?!(?:elope|ironment|y)(?![a-zA-Z]))[^/]*(?:\/|$)|(?:^|\/)[^/]*\.envrc(?![a-zA-Z])[^/]*(?:\/|$)|(?:^|\/)[^/]*\.npmrc[^/]*(?:\/|$)|(?:^|\/)app-env\.json[^/]*(?:\/|$)|(^|\/)\.git(?:\/|$)|(?:^|\/)id_rsa(?:\.|$)|(?:^|\/)id_ed25519(?:\.|$)|(?:^|\/)[^/]*\.(?:pem|key|p12|pfx)$|(?:^|\/)[^/]*(?:secret|password|credential)[^/]*(?:\/|$)|(?:^|\/)[^/]*natal-vault[^/]*(?:\/|$)/i;
+const CONFUSABLE_FOLD: Readonly<Record<string, string>> = {
+  "\u0435": "e",
+  "\u0415": "e",
+  "\u03bd": "v",
+  "\u039d": "v",
+  "\u0548": "n",
+  "\u0578": "n",
+  "\u2024": ".",
+  "\ufe52": ".",
+  "\uff0e": ".",
+};
+const ZERO_WIDTH = /[\u200B-\u200D\uFEFF\u2060\u00AD]/g;
 const HELD_PATH =
   /(?:^|\/)data(?:\/|$)|(?:^|\/)(?:zz|1t|t44)(?:[-_.\s][^/]*)?(?:\/|$)|(?:^|\/)[^/]*ingest[^/]*(?:\/|$)|(?:^|\/)[^/]*constitution-seal[^/]*(?:\/|$)|(?:^|\/)study-log\.ts[^/]*(?:\/|$)|(?:^|\/)desk\.ts[^/]*(?:\/|$)/i;
 const HELD_NAME_MARKERS = [
@@ -206,7 +224,8 @@ function cleanRepoPath(raw: string): string | null {
   if (decoded.startsWith("/") || decoded.startsWith("~") || /^[a-zA-Z]:/.test(decoded)) return null;
   const parts = decoded.split("/");
   if (parts.length === 0 || parts.some((part) => part.length === 0 || part === "." || part === "..")) return null;
-  if (SECRET_PATH.test(decoded) || HELD_PATH.test(decoded)) return null;
+  const folded = foldPathForMatch(decoded);
+  if (SECRET_PATH.test(folded) || HELD_PATH.test(folded)) return null;
   const basename = parts[parts.length - 1] ?? "";
   if (heldName(basename) || parts.some((part) => heldName(part))) return null;
   return parts.join("/");
@@ -219,8 +238,15 @@ function extraHeldMarker(): string | null {
   return marker.length > 0 ? marker : null;
 }
 
+function foldPathForMatch(value: string): string {
+  const folded = value.normalize("NFKC").replace(ZERO_WIDTH, "");
+  let out = "";
+  for (const char of folded) out += CONFUSABLE_FOLD[char] ?? char;
+  return out;
+}
+
 function heldName(segment: string): boolean {
-  const name = segment.normalize("NFKC").toLowerCase();
+  const name = foldPathForMatch(segment).toLowerCase();
   if (HELD_NAME_MARKERS.some((marker) => name.includes(marker))) return true;
   const extra = extraHeldMarker();
   return extra !== null && name.includes(extra);
