@@ -12,10 +12,16 @@ export function normalizeEvolutionModule(raw: string): string {
   return `${MODULE_ALIASES[base] ?? base}.ts`;
 }
 
-export type EvolutionUnavailableReason = "llm-unavailable" | "source-unavailable";
+export type EvolutionUnavailableReason =
+  | "llm-unavailable"
+  | "source-unavailable"
+  | "offline-no-recipe"
+  | "offline-already-applied";
 
-// The environment cannot run the apply stage (no code generator, no source tree).
-// This is not a defect in the target module and must not count against its health.
+// The environment cannot run the apply stage (no code generator, no source tree,
+// or the offline patcher has nothing to add). This is not a defect in the target
+// module and must not count against its health. It is also not an applied patch:
+// it is counted as "deferred", never as a success.
 export class EvolutionUnavailableError extends Error {
   readonly reason: EvolutionUnavailableReason;
   constructor(reason: EvolutionUnavailableReason, message: string) {
