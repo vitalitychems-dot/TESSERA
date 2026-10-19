@@ -11,6 +11,7 @@ export const ROOMS: { id: ViewId; group: string; label: string; line: string }[]
   { id: "gitbook", group: "Books", label: "Gitbook", line: "The private notes." },
   { id: "gitbookai", group: "Books", label: "GitMesh", line: `${MESH.projects.length} programs on the public mesh.` },
   { id: "board", group: "Books", label: "Board", line: "What is open." },
+  { id: "library", group: "Books", label: "Library", line: "The shelf, and the research checkouts." },
 ];
 
 export function RoomsSheet({ current, open, close }: { current: ViewId; open: (id: ViewId) => void; close: () => void }) {

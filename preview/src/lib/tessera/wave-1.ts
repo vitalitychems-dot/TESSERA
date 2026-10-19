@@ -1,4 +1,4 @@
-/** The twenty room names. Nine screens. An unknown name does not invent a screen. */
+/** The twenty room names. Eleven screens. An unknown name does not invent a screen. */
 
 export const TWENTY = [
   ["chamber", "chamber"],
@@ -9,7 +9,7 @@ export const TWENTY = [
   ["brain", "brain"],
   ["live", "brain"],
   ["memory", "brain"],
-  ["library", "brain"],
+  ["library", "library"],
   ["theme", "theme"],
   ["language", "brain"],
   ["bible", "brain"],
@@ -17,7 +17,7 @@ export const TWENTY = [
   ["gitbook", "gitbook"],
   ["gitbookai", "gitbookai"],
   ["board", "board"],
-  ["web", "brain"],
+  ["web", "web"],
   ["code", "brain"],
   ["learn", "brain"],
   ["secrets", "brain"],
@@ -61,7 +61,7 @@ export function wave1() {
     TWENTY.length === 20 &&
     screens.every((screen) => screen.length > 0) &&
     lines.every((line) => line.length > 0) &&
-    new Set(screens).size === 9 &&
+    new Set(screens).size === 11 &&
     roomScreen("no-such-room") === "" &&
     roomLine("bible") === "No verse was opened in this pass.";
   return { ok, count: TWENTY.length, screens: new Set(screens).size };

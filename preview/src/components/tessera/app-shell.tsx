@@ -6,10 +6,12 @@ import { CouncilRoom } from "./council-room";
 import { BrainView } from "./brain-view";
 import { GitbookView } from "./gitbook-view";
 import { GitbookAiView } from "./gitbook-ai-view";
+import { LibraryView } from "./library-view";
 import { ThemeView, applyTheme, type ThemeId } from "./theme-view";
 import { RickView } from "./rick-view";
 import { RoomsSheet, ROOMS } from "./rooms-sheet";
 import { HouseLive } from "./house-live";
+import { WebView } from "./web-view";
 import { TesseraMark } from "./mark";
 import { TESSERA } from "@/lib/tessera/identity";
 import { SIGIL } from "@/lib/tessera/canon";
@@ -101,6 +103,8 @@ export function AppShell() {
             {place === "theme" ? <ThemeView current={theme} choose={chooseTheme} /> : null}
             {place === "rick" ? <RickView /> : null}
             {place === "board" ? <BoardView /> : null}
+            {place === "library" ? <LibraryView open={open} /> : null}
+            {place === "web" ? <WebView /> : null}
           </div>
         )}
         {sheet ? <RoomsSheet current={place} open={open} close={() => setSheet(false)} /> : null}
