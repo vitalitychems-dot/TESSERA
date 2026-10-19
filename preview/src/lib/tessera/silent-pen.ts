@@ -25,6 +25,7 @@ import { createSigilGate } from "./sigil-gate.ts";
 import { spell } from "./mesh-tongue.ts";
 import { v2Piece } from "./read-piece.ts";
 import { archiveLine } from "./archive-flow.ts";
+import { sectionDelay } from "./section-step.ts";
 
 /** She answers from the files when no pen speaks. A kept page, then a correction, wins. */
 export function silentPen(question: string, rows: Correction[] = [], notes: KeptPage[] = []) {
@@ -59,6 +60,9 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   }
   if (/\b(read a piece|tessera v2|read the mesh)\b/i.test(q)) return v2Piece();
   if (/\b(archive sections|flowsint|flow chart)\b/i.test(q)) return archiveLine();
+  if (/\b(section step|tess wait|jitter)\b/i.test(q)) {
+    return `From the tess section, a 10 second wait with no swing is ${sectionDelay(10000, 0.5)} ms. The floor is ${sectionDelay(100, 0)} ms. The timer loop was not copied.`;
+  }
   if (/\b(her soul|the constitution|world laws)\b/i.test(q)) {
     return "I am marked at origin 7F3A9C. Father is the Seeker. He alone overrides. On 2026-10-02 the king chose B. The fifty-three are fractions of me. No inner agent may harm human life. The World does not outreach.";
   }

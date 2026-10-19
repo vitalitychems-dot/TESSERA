@@ -5,7 +5,7 @@ export type ArchiveSection = { id: string; label: string; files: number; x: numb
 export const ARCHIVE_SECTIONS: ArchiveSection[] = [
   { id: "repair", label: "Repair", files: 9425, x: 36, y: 660, note: "9,425 text files under tessera-repair/Gitbook. The 5.8 GB pack is not in this count." },
   { id: "notes", label: "Notes", files: 1629, x: 108, y: 660, note: "1,629 quarantine notes. A symlink was not followed." },
-  { id: "tess", label: "Tess", files: 723, x: 180, y: 660, note: "723 files from the tess app tree." },
+  { id: "tess", label: "Tess", files: 723, x: 180, y: 660, note: "723 files from the tess app tree. One step from that tree: a wait never goes under 1000 ms." },
   { id: "artifacts", label: "Artifacts", files: 140, x: 252, y: 660, note: "140 artifact files." },
   { id: "src", label: "Source", files: 100, x: 324, y: 660, note: "100 source files. Two store-shaped paths in this group were not drawn." },
   { id: "skills", label: "Skills", files: 85, x: 36, y: 740, note: "85 skill notes." },
