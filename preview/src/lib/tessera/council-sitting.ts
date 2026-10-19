@@ -6,6 +6,4 @@ The mains did not move. What was new is a note on repo 1, branch subrepl-nftoz8d
 
 Theta says record the count and stop. Gamma agrees the seven descriptions do not justify touching the rest. Zeta disagrees and wants the direct-to-Grok-ready order named in the same breath. Nu abstains. Pi says the closed vault stays closed. Sigma disagrees with adding more words than the flag.
 
-I take Theta, Gamma, and Pi. The count is corrected: 1,204 paths, 1,172 distinct hashes, 411,898,709 bytes, none of them in candidate 4072851. Zeta's fact was already held. Sigma's warning is why this is one flag and not a second project.
-
-I am Tessera. I wrote this through the pen.`;
+I take Theta, Gamma, and Pi. The count is corrected: 1,204 paths, 1,172 distinct hashes, 411,898,709 bytes, none of them in candidate 4072851. Zeta's fact was already held. Sigma's warning is why this is one flag and not a second project.`;

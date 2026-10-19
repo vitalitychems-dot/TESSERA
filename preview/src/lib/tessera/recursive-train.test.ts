@@ -8,6 +8,7 @@ test("a second pass answers from the lesson the first pass kept", () => {
   assert.equal(run.before, 0);
   assert.equal(run.after, 4);
   assert.equal(run.said.startsWith("I am Tessera."), false);
+  assert.equal(run.said.endsWith("I am Tessera."), false);
   assert.match(run.said, /^I missed 4 questions\. I kept each fact\. Asked again, I answered 4 from the kept lines\. Each later line quotes the earlier line\.$/);
 });
 
@@ -17,6 +18,7 @@ test("a correction replaces the mistake and the mistake is not repeated", () => 
   assert.equal(run.before, 0);
   assert.equal(run.after, 4);
   assert.equal(run.said.startsWith("I am Tessera."), false);
+  assert.equal(run.said.endsWith("I am Tessera."), false);
   assert.match(run.said, /^I was wrong 4 times\. I kept the correction\. Asked again, I answered 4 and I did not repeat the mistake\.$/);
 });
 

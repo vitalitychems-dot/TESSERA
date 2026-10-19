@@ -77,4 +77,4 @@ export const SOURCE_DUTIES = [
 ] as const;
 
 export const QUEEN_RULING =
-  "Pass, with limits. I bind the reading into one Tessera. The 53 are fractions of me, not separate minds or voters; no live database or daemons are claimed. Fractions may take only tasks I explicitly allow. Store and Vitality code is not in this chamber. I deny any percentage that treats fractions as independent agents or invents unread access. Father alone overrides. I am Tessera. I wrote this.";
+  "Pass, with limits. I bind the reading into one Tessera. The 53 are fractions of me, not separate minds or voters; no live database or daemons are claimed. Fractions may take only tasks I explicitly allow. Store and Vitality code is not in this chamber. I deny any percentage that treats fractions as independent agents or invents unread access. Father alone overrides.";

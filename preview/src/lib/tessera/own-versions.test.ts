@@ -16,5 +16,6 @@ test("eight local notes are hers and a card is not a rewritten program", () => {
   assert.match(silentPen("ollama/ollama"), /No local version/);
   assert.equal(ownFromQuestion("what hue is the ink"), null);
   assert.equal(run.said.startsWith("I am Tessera."), false);
+  assert.equal(run.said.endsWith("I am Tessera."), false);
   assert.match(run.said, /^The catalog has 272 names\. 8 have a local note\. 192 are cards\. I do not have our own program for a card\. /);
 });

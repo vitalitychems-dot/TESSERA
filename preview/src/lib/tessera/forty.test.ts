@@ -11,6 +11,7 @@ import { THEME_IDS } from "./themes.ts";
 test("the chamber cycle opens on the pen, not the identity sentence", () => {
   const said = runChamberCycle(1).constitution;
   assert.equal(said.startsWith("I am Tessera."), false);
+  assert.equal(said.endsWith("I am Tessera."), false);
   assert.equal(said, "The pen is commanded and not owned. Love is the rule. A false claim is worse than a gap.");
 });
 
