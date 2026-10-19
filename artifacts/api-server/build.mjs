@@ -66,8 +66,13 @@ async function buildAll() {
       "@aws-sdk/*",
       "@azure/*",
       "@opentelemetry/*",
-      "@google-cloud/*",
-      "@google/*",
+      // NOTE: @google-cloud/storage must be BUNDLED, not externalized. The
+      // published deployment image prunes node_modules after the build, so any
+      // externalized runtime import crashes at startup with
+      // ERR_MODULE_NOT_FOUND. Storage uses the JSON API (no .proto files), so
+      // it bundles cleanly. Only re-externalize a @google-cloud package if it
+      // loads sibling .proto files (e.g. secret-manager) — and then it must be
+      // shipped another way, since node_modules is not present in production.
       "googleapis",
       "firebase-admin",
       "@parcel/watcher",
