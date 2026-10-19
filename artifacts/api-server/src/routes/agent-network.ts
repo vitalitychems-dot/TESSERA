@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
-import { getSpawnerMetrics, spawnAgent, spawnBatchAsync, retireAgent, getSpawnerState } from "../lib/agent-spawner";
+import { getSpawnerMetrics, trySpawnAgent, spawnBatchAsync, retireAgent, getSpawnerState } from "../lib/agent-spawner";
+import { getAdmissionGateStatus } from "../lib/admission-wiring";
 import { getAgentHierarchy, getChildrenOf, getHierarchyMetrics } from "../lib/agent-hierarchy";
 import { getAgentCommsMetrics, sendMessage, broadcastMessage, getThreads, getThread, getFeed } from "../lib/agent-comms";
 import { CommsPolicyError, resolveAlias } from "../lib/comms-policy";
@@ -37,16 +38,21 @@ router.get("/agent-spawner/state", (_req: Request, res: Response) => {
 
 router.post("/agent-spawner/spawn", (req: Request, res: Response) => {
   const { trigger = "manual-spawn", domains = [] } = req.body;
-  const agent = spawnAgent(trigger, domains);
-  if (!agent) { res.json({ ok: false, message: "Spawn cooldown active — try again shortly" }); return; }
-  res.json({ ok: true, data: agent });
+  const outcome = trySpawnAgent(trigger, domains);
+  if (outcome.status === "denied") {
+    res.status(403).json({ ok: false, code: "ADMISSION_DENIED", error: "Agent creation refused: not an admitted member of the society", reason: outcome.decision.reason });
+    return;
+  }
+  if (outcome.status === "cooldown") { res.json({ ok: false, message: "Spawn cooldown active — try again shortly" }); return; }
+  res.json({ ok: true, data: outcome.agent });
 });
 
 router.post("/agent-spawner/spawn-batch", async (req: Request, res: Response) => {
   const { count = 3, trigger = "manual-batch", domains = [] } = req.body;
   const limitedCount = Math.min(10, Math.max(1, count));
   const agents = await spawnBatchAsync(limitedCount, trigger, domains);
-  res.json({ ok: true, data: agents, count: agents.length });
+  const gate = getAdmissionGateStatus();
+  res.json({ ok: true, data: agents, count: agents.length, admission: { mode: gate.mode, deniedTotal: gate.denied } });
 });
 
 router.delete("/agent-spawner/retire/:agentId", (req: Request, res: Response) => {
