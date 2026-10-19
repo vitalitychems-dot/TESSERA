@@ -249,7 +249,7 @@ router.post("/reasoning/goals", async (req, res) => {
 
     return res.json(goal);
   } catch (err) {
-    logger.error({ module: "reasoning-goals" }, `Failed to create goal: ${err}`);
+    logger.error({ module: "reasoning-goals", err }, "Failed to create goal");
     return res.status(500).json({ error: "Failed to create goal" });
   }
 });
@@ -322,7 +322,7 @@ router.post("/reasoning/traces", async (req, res) => {
 
     return res.json(trace);
   } catch (err) {
-    logger.error({ module: "reasoning-traces" }, `Failed to create trace: ${err}`);
+    logger.error({ module: "reasoning-traces", err }, "Failed to create trace");
     return res.status(500).json({ error: "Failed to create trace" });
   }
 });
@@ -368,7 +368,7 @@ router.post("/reasoning/causal", async (req, res) => {
 
     return res.json(model);
   } catch (err) {
-    logger.error({ module: "reasoning-causal" }, `Failed to create causal model: ${err}`);
+    logger.error({ module: "reasoning-causal", err }, "Failed to create causal model");
     return res.status(500).json({ error: "Failed to create causal model" });
   }
 });
@@ -457,7 +457,7 @@ router.post("/reasoning/codegen", async (req, res) => {
 
     return res.json(generated);
   } catch (err) {
-    logger.error({ module: "reasoning-codegen" }, `Failed to generate code: ${err}`);
+    logger.error({ module: "reasoning-codegen", err }, "Failed to generate code");
     return res.status(500).json({ error: "Failed to generate code" });
   }
 });
@@ -491,7 +491,7 @@ router.post("/reasoning/execute", async (req, res) => {
 
     return res.json(result);
   } catch (err) {
-    logger.error({ module: "reasoning-execute" }, `Execution failed: ${err}`);
+    logger.error({ module: "reasoning-execute", err }, "Execution failed");
     return res.status(500).json({ error: "Execution failed", details: String(err) });
   }
 });
@@ -537,7 +537,7 @@ router.get("/reasoning/dashboard", async (_req, res) => {
       },
     });
   } catch (err) {
-    logger.error({ module: "reasoning-dashboard" }, `Failed to fetch dashboard data: ${err}`);
+    logger.error({ module: "reasoning-dashboard", err }, "Failed to fetch dashboard data");
     return res.status(500).json({ error: "Failed to fetch dashboard data" });
   }
 });

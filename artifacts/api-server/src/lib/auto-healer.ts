@@ -605,11 +605,11 @@ export function startAutoHealer(intervalMs = 45_000): void {
   if (healerInterval) return;
   process.on("unhandledRejection", (reason) => {
     recordUnhandledRejection();
-    logger.warn({ reason: String(reason).slice(0, 200) }, "AutoHealer: unhandledRejection");
+    logger.warn({ err: reason instanceof Error ? reason : new Error("non-error-rejection") }, "AutoHealer: unhandledRejection");
   });
   process.on("uncaughtException", (err) => {
     recordUncaughtException();
-    logger.error({ err: err.message }, "AutoHealer: uncaughtException");
+    logger.error({ err }, "AutoHealer: uncaughtException");
   });
   setTimeout(() => { runHealingSweep().catch(() => {}); }, 10_000);
   healerInterval = setSacredInterval(() => {

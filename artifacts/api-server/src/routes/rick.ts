@@ -419,7 +419,7 @@ router.post("/rick/chat", async (req, res) => {
         res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
         return res.end();
       } catch (streamErr) {
-        logger.warn({ streamErr }, "Rick: streaming failed, using fallback");
+        logger.warn({ err: streamErr }, "Rick: streaming failed, using fallback");
         const fallback = generateRickFallback(messages[messages.length - 1]?.content || "");
         res.write(`data: ${JSON.stringify({ content: fallback })}\n\n`);
         res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
