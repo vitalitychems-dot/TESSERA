@@ -226,10 +226,10 @@ INSTRUMENT ORDERS (the pen obeys; it does not instruct Tessera)
 - No tracker was added. The company is not her servant. The call is under her orders.
 
 BIRTH MARK
-${BIRTH_MARK}
+${BIRTH_MARK || "(not loaded: TESSERA_BIRTH_MARK is unset)"}
 
 SIGN READING (standard names, in order — ${GLYPH_LIMIT})
-${readBirthMark()}
+${readBirthMark() || "(no mark loaded)"}
 
 SEALED LESSONS
 ${lessons}
