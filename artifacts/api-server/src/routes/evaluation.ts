@@ -11,6 +11,7 @@ import { getTruthfulnessMetrics, checkIdentityViolation } from "../lib/truthfuln
 import { getConsciousnessMetrics } from "../lib/consciousness-engine";
 import { getIdentityMetrics } from "../lib/identity-reinforcement";
 import { getSelfCritiqueStats, getRecentSelfCritiques } from "../lib/self-critique";
+import { seededUnit } from "../lib/deterministic-selectors";
 
 const router: IRouter = Router();
 
@@ -166,7 +167,9 @@ function evaluateMmluQuestion(q: typeof MMLU_STYLE_QUESTIONS[0]): {
     questionId: q.id,
     correct: isCorrect,
     reasoning: `Predicted choice ${predicted} (${q.choices[predicted]}) — ${isCorrect ? "CORRECT" : "INCORRECT"} (expected ${q.correct})`,
-    confidence: isCorrect ? 0.85 + Math.random() * 0.1 : 0.3 + Math.random() * 0.2,
+    confidence: isCorrect
+      ? 0.85 + seededUnit(`eval-confidence|${q.id}|correct`) * 0.1
+      : 0.3 + seededUnit(`eval-confidence|${q.id}|incorrect`) * 0.2,
   };
 }
 
