@@ -176,7 +176,7 @@ export const readNarrative = createServerFn({ method: "GET" }).handler(async () 
       titles?: { standing: string }[];
     };
     const closed = (raw.titles ?? []).filter((row) => row.standing === "closed").length;
-    ledger = `${raw.uniqueTitles ?? 0} titles were repeated under ${raw.builtTags ?? 0} BUILT tags. ${closed} are closed methods. None of those tags is a device in this room. Zz text is loaded as a reference library. It is not the running program.`;
+    ledger = `${raw.uniqueTitles ?? 0} titles were repeated under ${raw.builtTags ?? 0} BUILT tags. ${closed} are closed methods. None of those tags is a device in this room. repo W5 (withheld, not public) text is loaded as a reference library. It is not the running program.`;
   } catch {
     ledger = "The old invention log is not loaded.";
   }

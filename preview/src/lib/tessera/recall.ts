@@ -51,7 +51,7 @@ export async function recallImports(query: string): Promise<string> {
       (file) => !BLOCKED.test(file.path),
     );
   } catch {
-    return "The Zz import library is not loaded.";
+    return "The repo W5 (withheld, not public) import library is not loaded.";
   }
   const ranked = files
     .map((file) => ({
