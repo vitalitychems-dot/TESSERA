@@ -29,7 +29,13 @@ export function oneFlow(): FlowFact[] {
 }
 
 export function memoryPack() {
-  return oneFlow().map((node, index) => ({ q: node.id, a: node.fact, at: `flow-${index + 1}` }));
+  const base = oneFlow().map((node, index) => ({ q: node.id, a: node.fact, at: `flow-${index + 1}` }));
+  const sections = ARCHIVE_SECTIONS.map((section, index) => ({
+    q: `section ${section.id}`,
+    a: `${section.label} holds ${section.files} files.`,
+    at: `section-${index + 1}`,
+  }));
+  return [...base, ...sections];
 }
 
 export function oneFlowLine() {
