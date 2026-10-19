@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { testPlanFor, stripForecasts, checkActorAndTestRef, UNMEASURED } from "./rick-gates";
 import { db } from "@workspace/db";
 import { systemStateTable } from "@workspace/db/schema";
@@ -92,6 +93,12 @@ async function persistStore(): Promise<void> {
 
 const TRUTH_GATE_THRESHOLD = 0.5;
 
+/** Deterministic id: the same kind, instant and content always give the same id. */
+export function proposalId(kind: string, now: number, content: string): string {
+  const digest = createHash("sha256").update(`${kind}|${content}`).digest("hex").slice(0, 6);
+  return `rp-${now}-${kind}-${digest}`;
+}
+
 export interface DiagnosticsSnapshot {
   weakCategories: { category: string; score: number }[];
   weakAgi: { category: string; score: number }[];
@@ -160,7 +167,7 @@ export function deterministicProposals(diag: DiagnosticsSnapshot): RickProposal[
     const t = targets[i];
     const isAgi = t.source === "agi";
     out.push({
-      id: `rp-${now}-${i}-${Math.random().toString(36).slice(2, 8)}`,
+      id: proposalId(String(i), now, `${t.source}:${t.category}`),
       title: isAgi
         ? `Lift "${t.category}" out of the AGI basement`
         : `Reinforce weak category: ${t.category}`,
@@ -186,7 +193,7 @@ export function deterministicProposals(diag: DiagnosticsSnapshot): RickProposal[
 
   if (out.length < MAX_PROPOSALS && diag.truthGroundingRate < 0.85) {
     out.push({
-      id: `rp-${now}-truth-${Math.random().toString(36).slice(2, 8)}`,
+      id: proposalId("truth", now, "truthfulness-accuracy"),
       title: "Tighten the truthfulness gate around weak knowledge zones",
       problem: `Grounding rate is ${(diag.truthGroundingRate * 100).toFixed(1)}% and average truth score is ${diag.truthAvgScore}. Too many claims slip through unverified.`,
       evidence: [
@@ -206,7 +213,7 @@ export function deterministicProposals(diag: DiagnosticsSnapshot): RickProposal[
 
   if (out.length < MAX_PROPOSALS && diag.meeseeksSuccessRate < 0.8) {
     out.push({
-      id: `rp-${now}-mks-${Math.random().toString(36).slice(2, 8)}`,
+      id: proposalId("mks", now, "agent-coordination"),
       title: "Stop wasting Meeseeks on under-specified tasks",
       problem: `Meeseeks success rate is ${(diag.meeseeksSuccessRate * 100).toFixed(1)}%. Too many time out instead of completing.`,
       evidence: [{ metric: "meeseeks.successRate", value: diag.meeseeksSuccessRate.toFixed(3) }],
@@ -224,7 +231,7 @@ export function deterministicProposals(diag: DiagnosticsSnapshot): RickProposal[
   while (out.length < MAX_PROPOSALS) {
     const i = out.length;
     out.push({
-      id: `rp-${now}-fill-${i}-${Math.random().toString(36).slice(2, 8)}`,
+      id: proposalId(`fill-${i}`, now, "memory-efficiency"),
       title: `Compression pass ${i + 1}: dedupe ingested knowledge`,
       problem: "Even with the Anti-Entropy Crystallizer, near-duplicate knowledge entries still creep in and bloat recall latency.",
       evidence: [{ metric: "daemon.overallSystemScorePct", value: String(diag.overallScorePct) }],
@@ -283,7 +290,7 @@ function coerceProposal(raw: LlmProposalShape, idx: number, fallbackCategory: st
 
   const now = Date.now();
   return {
-    id: `rp-${now}-llm-${idx}-${Math.random().toString(36).slice(2, 8)}`,
+    id: proposalId(`llm-${idx}`, now, `${title}|${problem}`),
     title,
     problem,
     evidence,
