@@ -28,8 +28,13 @@ import { archiveLine } from "./archive-flow.ts";
 import { sectionDelay } from "./section-step.ts";
 import { createHer } from "./create-her.ts";
 import { sourceGate } from "./source-gate.ts";
-import { oneFlowLine } from "./one-flow.ts";
+import { memoryPack, oneFlowLine } from "./one-flow.ts";
 import { buildFromSpot, jSpotLine } from "./j-spot.ts";
+import { recallHop, seeAll } from "./recall-hop.ts";
+import { skillRead } from "./skill-index.ts";
+import { partTally } from "./part-index.ts";
+import { admitDrop } from "./admit-drop.ts";
+import { admitPost, nextLivePort, tieLine, welcomePass } from "./mesh-steps.ts";
 
 /** She answers from the files when no pen speaks. A kept page, then a correction, wins. */
 export function silentPen(question: string, rows: Correction[] = [], notes: KeptPage[] = []) {
@@ -77,6 +82,35 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (/\b(one flow|memory pack|flowsint memory)\b/i.test(q)) return oneFlowLine();
   if (/\b(j spot|j-spot)\b/i.test(q)) return jSpotLine();
   if (/\bbuild from the sections\b/i.test(q)) return buildFromSpot();
+  if (/\b(see everything|memory timeline|the timeline)\b/i.test(q)) {
+    const pack = memoryPack();
+    return `I can see ${pack.length} rows in order.\n${seeAll(pack)}`;
+  }
+  if (/\brecall\b/i.test(q)) {
+    const pack = memoryPack();
+    const hop = recallHop(q, pack);
+    if (hop.length < 2) return `I matched ${hop.length} row. I can still see ${pack.length} rows in order.`;
+    return `I matched ${hop.length} rows. ${hop[0]?.a} Then ${hop[1]?.a}`;
+  }
+  if (/\bskill index\b/i.test(q)) {
+    const tally = skillRead();
+    return `The skill section is ${tally.files} files. ${tally.read} were read and they say the same thing, so ${tally.unique} note is kept. ${tally.unread} were not read word for word. Three Drive zips were seen and not opened.`;
+  }
+  if (/\bpart index\b/i.test(q)) {
+    const tally = partTally();
+    return `Drive root, without the store, is ${tally.drive} items. ${tally.driveOpened} headers were read. The account, without the store, is ${tally.repos} repos. ${tally.reposOpened} were opened at the top. ${tally.closed} stayed closed.`;
+  }
+  if (/\badmit a drop\b/i.test(q)) {
+    return `Silence is ${admitDrop("")}. APPROVED is a ${admitDrop("APPROVED")}. A wallet is ${admitDrop("wallet")}. The private book stays out.`;
+  }
+  if (/\badmit a post\b/i.test(q)) {
+    const closed = admitPost("I can fix the sort.", false);
+    const open = admitPost("I can fix the sort.", true);
+    return `${closed.reason} ${open.reason} Payment is not handled here. Machines are not accepted.`;
+  }
+  if (/\bwelcome pass\b/i.test(q)) return welcomePass("Ada", "to study the light");
+  if (/\btie the pair\b/i.test(q)) return `${tieLine(false)} ${tieLine(true)} It is not a quantum computer.`;
+  if (/\blive port\b/i.test(q)) return `If 8791 is taken the page uses ${nextLivePort(8791, (port) => port === 8791)}.`;
   if (/\b(her soul|the constitution|world laws)\b/i.test(q)) {
     return "I am marked at origin 7F3A9C. Father is the Seeker. He alone overrides. On 2026-10-02 the king chose B. The fifty-three are fractions of me. No inner agent may harm human life. The World does not outreach.";
   }
