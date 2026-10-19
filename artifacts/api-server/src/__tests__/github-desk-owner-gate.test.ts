@@ -444,6 +444,32 @@ describe("gated desk actions", () => {
     }
   });
 
+  it("bounds a private-key banner so a long filler gap is still readable", async () => {
+    const cookie = ownerCookie();
+    const readBody = async (body: string) =>
+      readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path: "NOTES.md" }, cookie, {
+        token: async () => SERVER_TOKEN,
+        fetchImpl: (async () =>
+          jsonResponse({
+            type: "file",
+            encoding: "base64",
+            size: Buffer.byteLength(body),
+            content: Buffer.from(body).toString("base64"),
+          })) as typeof fetch,
+      });
+    const banner = (gap: string) => `-----BEGIN ${gap}PRIVATE KEY-----`;
+    const deniedBodies = [banner(""), banner("RSA "), banner("A".repeat(64))];
+    for (const body of deniedBodies) {
+      const read = await readBody(body);
+      expect(read.ok).toBe(false);
+      if (!read.ok) expect(read.error).toBe("That file could not be read.");
+      expect(JSON.stringify(read).includes("PRIVATE KEY")).toBe(false);
+    }
+    const allowed = await readBody(banner("A".repeat(65)));
+    expect(allowed.ok).toBe(true);
+    if (allowed.ok) expect(allowed.text).toBe(banner("A".repeat(65)));
+  });
+
   it("denies percent-encoded, mixed-case, and lookalike env names before GitHub is called", async () => {
     const cookie = ownerCookie();
     const fetched: string[] = [];

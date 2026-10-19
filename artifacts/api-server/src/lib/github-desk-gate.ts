@@ -56,7 +56,7 @@ const HELD_NAME_MARKERS = [
   "personal-",
 ] as const;
 const SECRET_TEXT =
-  /SESSION_SECRET|BEGIN [A-Z ]*PRIVATE KEY|(?:AKIA|ASIA)[0-9A-Z]{16}|(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]|github_pat_|npm_[A-Za-z0-9]{36}|glpat-[A-Za-z0-9_-]{8,}|xox[abdoprs]-|xox[ce]-[A-Za-z0-9-]{8,}|xapp-[A-Za-z0-9-]{8,}|sk-[A-Za-z0-9]{10,}/;
+  /SESSION_SECRET|BEGIN [A-Z ]{0,64}PRIVATE KEY|(?:AKIA|ASIA)[0-9A-Z]{16}|(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]|github_pat_|npm_[A-Za-z0-9]{36}|glpat-[A-Za-z0-9_-]{8,}|xox[abdoprs]-|xox[ce]-[A-Za-z0-9-]{8,}|xapp-[A-Za-z0-9-]{8,}|sk-[A-Za-z0-9]{10,}/;
 
 export type DeskGateDenial = {
   ok: false;
