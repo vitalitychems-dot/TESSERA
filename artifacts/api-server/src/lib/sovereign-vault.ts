@@ -4,6 +4,7 @@ import {
   constants,
   existsSync,
   fchmodSync,
+  fsyncSync,
   mkdirSync,
   openSync,
   readFileSync,
@@ -60,6 +61,7 @@ function persist(): void {
   const dir = dirname(VAULT_PATH);
   const tmp = join(dir, `.vault-${randomBytes(8).toString("hex")}.tmp`);
   let fd: number | undefined;
+  let dirFd: number | undefined;
   try {
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     fd = openSync(
@@ -69,15 +71,27 @@ function persist(): void {
     );
     writeFileSync(fd, JSON.stringify(_state, null, 2), "utf8");
     fchmodSync(fd, 0o600);
+    fsyncSync(fd);
     closeSync(fd);
     fd = undefined;
     renameSync(tmp, VAULT_PATH);
+    dirFd = openSync(dir, constants.O_RDONLY | constants.O_DIRECTORY);
+    fsyncSync(dirFd);
+    closeSync(dirFd);
+    dirFd = undefined;
   } catch {
     if (fd !== undefined) {
       try {
         closeSync(fd);
       } catch {
         // The descriptor is already closed.
+      }
+    }
+    if (dirFd !== undefined) {
+      try {
+        closeSync(dirFd);
+      } catch {
+        // The directory descriptor is already closed.
       }
     }
     try {

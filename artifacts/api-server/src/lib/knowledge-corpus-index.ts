@@ -371,7 +371,7 @@ function buildFullCorpus(): CorpusEntry[] {
       });
     }
   } catch (err: unknown) {
-    logger.debug({ error: err instanceof Error ? err.message : String(err) }, "Failed to load sovereign file registry for corpus");
+    logger.debug({ err }, "Failed to load sovereign file registry for corpus");
   }
 
   return corpus;

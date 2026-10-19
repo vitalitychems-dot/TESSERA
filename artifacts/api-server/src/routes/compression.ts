@@ -45,7 +45,7 @@ router.get("/sovereign/compression/metrics", (_req, res) => {
     const metrics = getCompressionMetrics();
     res.json({ status: "ok", ...metrics });
   } catch (err) {
-    res.status(500).json({ error: "Failed to retrieve compression metrics", detail: (err as Error).message });
+    res.status(500).json({ error: "Failed to retrieve compression metrics" });
   }
 });
 
@@ -64,7 +64,7 @@ router.post("/sovereign/compression/run", requireMeshAuth, async (req, res) => {
     });
     res.json({ status: "ok", message: "Compression pipeline started in background. Poll /metrics for results." });
   } catch (err) {
-    res.status(500).json({ error: "Compression pipeline failed", detail: (err as Error).message });
+    res.status(500).json({ error: "Compression pipeline failed" });
   }
 });
 
@@ -73,7 +73,7 @@ router.get("/sovereign/compression/runs", requireMeshAuth, async (_req, res) => 
     const runs = await getRecentCompressionRuns(20);
     res.json({ status: "ok", runs });
   } catch (err) {
-    res.status(500).json({ error: "Failed to retrieve run history", detail: (err as Error).message });
+    res.status(500).json({ error: "Failed to retrieve run history" });
   }
 });
 
@@ -87,7 +87,7 @@ router.get("/sovereign/compression/canonical", requireMeshAuth, async (req, res)
       .limit(limit);
     res.json({ status: "ok", total: rows.length, canonical: rows });
   } catch (err) {
-    res.status(500).json({ error: "Failed to retrieve canonical facts", detail: (err as Error).message });
+    res.status(500).json({ error: "Failed to retrieve canonical facts" });
   }
 });
 
@@ -113,7 +113,7 @@ router.post("/sovereign/compression/portal/warm", requireMeshAuth, async (_req, 
     const loaded = await loadPortalJumpTableFromDb();
     res.json({ status: "ok", loaded });
   } catch (err) {
-    res.status(500).json({ error: "Failed to warm portal-jump table", detail: (err as Error).message });
+    res.status(500).json({ error: "Failed to warm portal-jump table" });
   }
 });
 

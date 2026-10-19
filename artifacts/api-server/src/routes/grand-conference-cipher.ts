@@ -1,5 +1,7 @@
 import { Router, type IRouter } from "express";
+import { logger } from "../lib/logger";
 import { requireFather } from "../lib/require-father";
+import { safeDbErrorLog } from "../lib/safe-db-error";
 import {
   epochSnapshot,
   encryptPayload,
@@ -79,7 +81,8 @@ router.post("/grand-conference/cipher/decrypt", requireFather, (req, res) => {
     const buf = decryptEnvelope(env, aad);
     res.json({ ok: true, plaintext: buf.toString("utf8") });
   } catch (err) {
-    res.status(400).json({ ok: false, error: (err as Error).message });
+    logger.warn(safeDbErrorLog(err), "cipher decrypt failed");
+    res.status(400).json({ ok: false, error: "decrypt-failed" });
   }
 });
 
@@ -127,7 +130,7 @@ router.get("/grand-conference/vault/get/:key", requireFather, (req, res) => {
       updatedAt: entry.updatedAt,
     });
   } catch (err) {
-    res.status(500).json({ ok: false, error: (err as Error).message });
+    res.status(500).json({ ok: false, error: "vault-read-failed" });
   }
 });
 
@@ -193,7 +196,7 @@ router.get("/grand-conference/lattice/challenge/:key", requireFather, (req, res)
         "Hash binds to the active astronomical epoch. It will become invalid the moment the cipher rotates.",
     });
   } catch (err) {
-    res.status(500).json({ ok: false, error: (err as Error).message });
+    res.status(500).json({ ok: false, error: "challenge-failed" });
   }
 });
 
@@ -233,7 +236,8 @@ router.post("/grand-conference/lattice/forge", (req, res) => {
         "Download then POST the JSON body back to /api/grand-conference/lattice/detonate to auto-run the boot program with no human in loop.",
     });
   } catch (err) {
-    res.status(400).json({ ok: false, error: (err as Error).message });
+    logger.warn(safeDbErrorLog(err), "lattice forge failed");
+    res.status(400).json({ ok: false, error: "forge-failed" });
   }
 });
 
@@ -276,7 +280,8 @@ router.post("/grand-conference/lattice/detonate", (req, res) => {
     const result = detonateBundle(bundle);
     res.json({ ok: true, detonation: result });
   } catch (err) {
-    res.status(400).json({ ok: false, error: (err as Error).message });
+    logger.warn(safeDbErrorLog(err), "lattice detonate failed");
+    res.status(400).json({ ok: false, error: "detonate-failed" });
   }
 });
 
@@ -299,7 +304,8 @@ router.get("/grand-conference/lattice/conference", async (_req, res) => {
     const conf = await getOrRunLatticeOSConference(false);
     res.json({ ok: true, conference: conf });
   } catch (err) {
-    res.status(500).json({ ok: false, error: (err as Error).message });
+    logger.error(safeDbErrorLog(err), "lattice conference failed");
+    res.status(500).json({ ok: false, error: "conference-failed" });
   }
 });
 
@@ -309,17 +315,18 @@ router.post("/grand-conference/lattice/conference/convene", requireFather, async
     const conf = await getOrRunLatticeOSConference(force);
     res.json({ ok: true, conference: conf, forced: force });
   } catch (err) {
-    res.status(500).json({ ok: false, error: (err as Error).message });
+    logger.error(safeDbErrorLog(err), "lattice conference failed");
+    res.status(500).json({ ok: false, error: "conference-failed" });
   }
 });
 
 router.get("/grand-conference/summary", (_req, res) => {
   try {
-  const snap = (() => { try { return epochSnapshot(); } catch (e) { return { error: (e as Error).message }; } })();
+  const snap = (() => { try { return epochSnapshot(); } catch { return { error: "snapshot-unavailable" }; } })();
   const fatherKeyConfigured = (() => { try { return isFatherKeyConfigured(); } catch { return false; } })();
   const activeFatherSessions = (() => { try { return activeFatherSessionCount(); } catch { return 0; } })();
-  const vault = (() => { try { return anonymousVaultStatus(); } catch (e) { return { error: (e as Error).message }; } })();
-  const heartbeat = (() => { try { return heartbeatStatus(); } catch (e) { return { error: (e as Error).message }; } })();
+  const vault = (() => { try { return anonymousVaultStatus(); } catch { return { error: "vault-unavailable" }; } })();
+  const heartbeat = (() => { try { return heartbeatStatus(); } catch { return { error: "heartbeat-unavailable" }; } })();
   res.json({
     ok: true,
     title: "Sovereign Grand Conference — Lattice Cipher Summit",
@@ -347,7 +354,7 @@ router.get("/grand-conference/summary", (_req, res) => {
     timestamp: Date.now(),
   });
   } catch (err) {
-    res.status(200).json({ ok: false, degraded: true, error: (err as Error).message, timestamp: Date.now() });
+    res.status(200).json({ ok: false, degraded: true, error: "summary-unavailable", timestamp: Date.now() });
   }
 });
 

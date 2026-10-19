@@ -141,7 +141,7 @@ router.post("/dual-brain/cycle", requireAdminSession, async (req: Request, res: 
   } catch (err) {
     const message = (err as Error).message;
     const unavailable = message.startsWith("Dual-brain cycle unavailable:") || message === "Dual-brain cycle topic is required.";
-    logger.warn({ reason: unavailable ? message : "configured model request failed" }, "DualBrain: request did not complete");
+    logger.warn({ reason: unavailable ? "unavailable" : "configured-model-failed" }, "DualBrain: request did not complete");
     res.status(unavailable ? 503 : 502).json({
       ok: false,
       error: unavailable ? message : "Configured model cycle failed; no code or settings were changed.",

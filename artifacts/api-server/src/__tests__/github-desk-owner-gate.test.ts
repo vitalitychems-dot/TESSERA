@@ -403,6 +403,20 @@ describe("gated desk actions", () => {
       ".envold",
       ".envs",
       ".envBak",
+      ".environmental",
+      ".environmentally",
+      ".environment_backup",
+      ".environment-old",
+      ".environment~",
+      ".environment.bak",
+      ".environment.local",
+      ".environment.prod",
+      ".environment+old",
+      "nested/.environment_backup",
+      "docs/setup.environment-old",
+      "notes.environment_backup",
+      "cfg/.environment.old",
+      "notes.envbackup",
       ".envrcx",
       ".envrcbackup",
       "a/b.env/c.txt",
@@ -422,9 +436,141 @@ describe("gated desk actions", () => {
       "docs/npmrc.md",
       "docs/notnpmrc.md",
       "README.md",
+      "src/environ.ts",
+      "my.envelope.md",
+      "src/dotenv.ts",
+      "x.envy",
     ];
     const fetched: string[] = [];
     const io = { token: async () => SERVER_TOKEN, fetchImpl: fetchSpy(fetched) };
+    for (const path of denied) {
+      const before = fetched.length;
+      const read = await readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path }, cookie, io);
+      expect(read, path).toEqual({ ok: false, error: "That repository path is not allowed." });
+      expect(fetched.length, path).toBe(before);
+    }
+    for (const path of allowed) {
+      const read = await readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path }, cookie, io);
+      expect(read, path).toEqual({ ok: true, text: "x", path: `vitalitychems-dot/TESSERA/${path}` });
+    }
+  });
+
+  it("denies netrc, cloud state, keystore, and kubeconfig paths before GitHub is called", async () => {
+    const cookie = ownerCookie();
+    const denied = [
+      ".netrc",
+      "home/.netrc",
+      ".pypirc",
+      "cfg/.pypirc.bak",
+      ".pgpass",
+      "db/.pgpass",
+      "prod.tfvars",
+      "stacks/dev.tfvars.json",
+      "terraform.tfstate",
+      "nested/app.tfstate.backup",
+      "id_ecdsa",
+      "keys/id_ecdsa.pub",
+      "id_dsa",
+      "keys/id_dsa.pub",
+      "store.jks",
+      "certs/release.jks",
+      "release.keystore",
+      "certs/app.keystore",
+      "client.p8",
+      "keys/auth.p8",
+      "_netrc",
+      "home/_netrc",
+      "kubeconfig",
+      "clusters/kubeconfig",
+      "kubeconfig.yaml",
+      "x.kubeconfig",
+      "clusters/app.kubeconfig",
+      `kube${"\u0441"}onfig`,
+      `dir/kube${"\u0421"}onfig.yaml`,
+      ".kube/config",
+      "home/.kube/config",
+    ];
+    const allowed = [
+      "docs/netrc.md",
+      "docs/pypirc.md",
+      "notes/pgpass.md",
+      "notes/tfstate.md",
+      "docs/tfvars.md",
+      "docs/kubeconfig-guide.md",
+      "docs/kube/config",
+      "notes/cluster-notes.md",
+      "keystore.ts",
+      "docs/p8-notes.md",
+      "src/id-ecdsa.ts",
+      "src/id-dsa.ts",
+    ];
+    const fetched: string[] = [];
+    const io = { token: async () => SERVER_TOKEN, fetchImpl: fetchSpy(fetched) };
+    for (const path of denied) {
+      const before = fetched.length;
+      const read = await readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path }, cookie, io);
+      expect(read, path).toEqual({ ok: false, error: "That repository path is not allowed." });
+      expect(fetched.length, path).toBe(before);
+    }
+    for (const path of allowed) {
+      const read = await readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path }, cookie, io);
+      expect(read, path).toEqual({ ok: true, text: "x", path: `vitalitychems-dot/TESSERA/${path}` });
+    }
+  });
+
+  it("bounds a private-key banner so a long filler gap is still readable", async () => {
+    const cookie = ownerCookie();
+    const readBody = async (body: string) =>
+      readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path: "NOTES.md" }, cookie, {
+        token: async () => SERVER_TOKEN,
+        fetchImpl: (async () =>
+          jsonResponse({
+            type: "file",
+            encoding: "base64",
+            size: Buffer.byteLength(body),
+            content: Buffer.from(body).toString("base64"),
+          })) as typeof fetch,
+      });
+    const banner = (gap: string) => `-----BEGIN ${gap}PRIVATE KEY-----`;
+    const deniedBodies = [banner(""), banner("RSA "), banner("A".repeat(64))];
+    for (const body of deniedBodies) {
+      const read = await readBody(body);
+      expect(read.ok).toBe(false);
+      if (!read.ok) expect(read.error).toBe("That file could not be read.");
+      expect(JSON.stringify(read).includes("PRIVATE KEY")).toBe(false);
+    }
+    const allowed = await readBody(banner("A".repeat(65)));
+    expect(allowed.ok).toBe(true);
+    if (allowed.ok) expect(allowed.text).toBe(banner("A".repeat(65)));
+  });
+
+  it("denies percent-encoded, mixed-case, and lookalike env names before GitHub is called", async () => {
+    const cookie = ownerCookie();
+    const fetched: string[] = [];
+    const io = { token: async () => SERVER_TOKEN, fetchImpl: fetchSpy(fetched) };
+    const cyrillicE = "\u0435";
+    const denied = [
+      "config/%2eenv",
+      "config/%2Eenv.local",
+      "%2E%65%6E%76",
+      "dir/.%65nv",
+      ".%65%6E%76backup",
+      `dir/.%D0%B5nv`,
+      ".EnV.local",
+      ".eNvbackup",
+      "Prod.ENV",
+      `.${cyrillicE}nv`,
+      `\uFF0E\uFF45\uFF4E\uFF56`,
+      "\u2024env",
+      `notes/.e${"\u200B"}nv`,
+    ];
+    const allowed = [
+      "src/environ.ts",
+      "my.envelope.md",
+      "src/dotenv.ts",
+      "x.envy",
+      "docs/.environment/readme.md",
+    ];
     for (const path of denied) {
       const before = fetched.length;
       const read = await readRepoFileGated({ owner: "vitalitychems-dot", repo: "TESSERA", path }, cookie, io);
