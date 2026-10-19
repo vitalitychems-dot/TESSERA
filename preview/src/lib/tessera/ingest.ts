@@ -72,13 +72,13 @@ export const readIngest = createServerFn({ method: "POST" }).handler(async () =>
     return {
       updated: "2026-10-03T19:12:29.386Z",
       total: 2714,
-      bytes: 27104750,
+      bytes: 27000000,
       recent: [],
       byRepo: [
-        { repo: "TESS", count: 872, bytes: 0 },
+        { repo: "repo W8 (withheld, not public)", count: 872, bytes: 0 },
         { repo: "GodelOS", count: 713, bytes: 0 },
         { repo: "Brain-Cog", count: 574, bytes: 0 },
-        { repo: "Grok-ready", count: 158, bytes: 0 },
+        { repo: "repo W7 (withheld, not public)", count: 158, bytes: 0 },
       ],
       skipped: 22126,
       note: "Last count on this machine: 2,714 text files, about 27 MB, 22,126 skipped. This host could not open the manifest just now.",
