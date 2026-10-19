@@ -27,20 +27,29 @@ export function trainNB(data, labels, { alpha = 1 } = {}) {
   for (const x of data) { pri.set(x.y, pri.get(x.y) + 1); for (const f of feats(x.text)) { V.add(f); cnt.get(x.y).set(f, (cnt.get(x.y).get(f) ?? 0) + 1); tot.set(x.y, tot.get(x.y) + 1); } }
   return (text) => { const fs = feats(text); return labels.map((l) => [l, Math.log((pri.get(l) + 1) / (data.length + labels.length)) + fs.reduce((s, f) => s + Math.log(((cnt.get(l).get(f) ?? 0) + alpha) / (tot.get(l) + alpha * V.size)), 0)]).sort((a, b) => b[1] - a[1])[0][0]; };
 }
+// trainLR kernels at module level, so every model shares one call target (fresh closures per trainLR call
+// deoptimised): softmax over the first n row offsets of rs, the first index of the largest probability (as
+// p.indexOf(Math.max(...p)) gives, -1 on NaN), and one SGD step.
+function lrProbs(W, B, z, e, p, L, rs, n) { z.fill(0); for (let j = 0; j < n; j++) { const o = rs[j]; for (let k = 0; k < L; k++) z[k] += W[o + k]; } let m = -Infinity; for (let k = 0; k < L; k++) { z[k] = B[k] + z[k]; if (z[k] > m) m = z[k]; } let S = 0; for (let k = 0; k < L; k++) { e[k] = Math.exp(z[k] - m); S += e[k]; } for (let k = 0; k < L; k++) p[k] = e[k] / S; return p; }
+function argmaxFirst(p) { let b = -1, m = -Infinity; for (let k = 0; k < p.length; k++) { const v = p[k]; if (v !== v) return -1; if (v > m || (b < 0 && v === m)) { m = v; b = k; } } return b; }
+function lrStep(W, B, p, labels, L, r, y, cy, eta, keep) { for (let k = 0; k < L; k++) { const g = ((labels[k] === y ? 1 : 0) - p[k]) * cy; B[k] = B[k] + eta * g; const d = eta * g; for (let j = 0; j < r.length; j++) { const o = r[j] + k; W[o] = W[o] * keep + d; } } }
 export function trainLR(data, labels, { epochs = 30, lr = 0.3, l2 = 1e-3, balance = true, seed = 3 } = {}) {
-  // Weights as one row per feature (index = label position) and the training rows resolved once
-  // per sample, so SGD does no per-label Map lookups. Same sums in the same order as before.
-  const L = labels.length; const li = new Map(labels.map((l, k) => [l, k])); const W = new Map(); const B = new Array(L).fill(0);
+  // All weights in one flat Float64Array (feature row o = index * L, column = label position); each training
+  // sample's row offsets are resolved once, so SGD does no Map lookups. Same sums in the same order as the
+  // R5-01 row version: per label 0 + w_0 + w_1 + ... in feature order, then bias + that sum.
+  const L = labels.length; const li = new Map(labels.map((l, k) => [l, k])); const idx = new Map(); const B = new Float64Array(L);
   const freq = labels.map((l) => data.filter((x) => x.y === l).length || 1); const cwk = (k) => (balance ? data.length / (L * freq[k]) : 1);
-  const row = (f) => { let r = W.get(f); if (!r) W.set(f, (r = new Array(L).fill(0))); return r; };
-  const X = data.map((x) => { const f = feats(x.text); return { r: f.map(row), y: x.y, cy: cwk(li.get(x.y)) }; }); let s = seed >>> 0; const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32);
-  const z = new Array(L); const e = new Array(L);
-  const probs = (rs) => { let m = -Infinity; for (let k = 0; k < L; k++) { let a = 0; for (let j = 0; j < rs.length; j++) a += rs[j] ? rs[j][k] : 0; z[k] = B[k] + a; if (z[k] > m) m = z[k]; } let S = 0; for (let k = 0; k < L; k++) { e[k] = Math.exp(z[k] - m); S += e[k]; } const p = new Array(L); for (let k = 0; k < L; k++) p[k] = e[k] / S; return p; };
+  const off = (f) => { let o = idx.get(f); if (o === undefined) idx.set(f, (o = idx.size * L)); return o; };
+  const X = data.map((x) => ({ r: Int32Array.from(feats(x.text), off), y: x.y, cy: cwk(li.get(x.y)) }));
+  const W = new Float64Array(idx.size * L); let s = seed >>> 0; const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32);
+  const z = new Float64Array(L); const e = new Float64Array(L); const p = new Float64Array(L);
   for (let ep = 0; ep < epochs; ep++) {
     const order = X.map((_, i) => i).sort(() => rnd() - 0.5); const eta = lr / (1 + ep * 0.1); const keep = 1 - eta * l2;
-    for (const i of order) { const { r, y, cy } = X[i]; const p = probs(r); for (let k = 0; k < L; k++) { const g = ((labels[k] === y ? 1 : 0) - p[k]) * cy; B[k] = B[k] + eta * g; const d = eta * g; for (let j = 0; j < r.length; j++) r[j][k] = r[j][k] * keep + d; } }
+    for (const i of order) { const { r, y, cy } = X[i]; lrProbs(W, B, z, e, p, L, r, r.length); lrStep(W, B, p, labels, L, r, y, cy, eta, keep); }
   }
-  return (text) => { const p = probs(feats(text).map((f) => W.get(f))); return labels[p.indexOf(Math.max(...p))]; };
+  // Reads reuse one offset buffer; features unseen in training add nothing, as before.
+  let buf = new Int32Array(64);
+  return (text) => { const fs = feats(text); if (fs.length > buf.length) buf = new Int32Array(2 * fs.length); let n = 0; for (let j = 0; j < fs.length; j++) { const o = idx.get(fs[j]); if (o !== undefined) buf[n++] = o; } lrProbs(W, B, z, e, p, L, buf, n); return labels[argmaxFirst(p)]; };
 }
 /** Default reader: balanced LR trained on the 218 labelled mesh-log lines (lazy, local). */
 let reader = null;
