@@ -8,4 +8,4 @@ The coordination contract is `docs/TESSERA-GITMESH-INTEGRATION.md` in that repos
 
 The chamber that is running is this TESSERA preview. GitMesh stays the public room. Vitality stays the store.
 
-The older copies (`collink1007/z`, `amber-flame-tiger-sand`, `fleet-moss-monarch-rapid`, `XXX`) stay outside this tree. This account cannot delete them.
+The older copies (`amber-flame-tiger-sand`, `fleet-moss-monarch-rapid`, `XXX`) stay outside this tree. This account cannot delete them.

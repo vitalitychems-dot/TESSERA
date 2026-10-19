@@ -20,6 +20,7 @@ import { findLines, pinLine, nameQuery, pinWrite, clearSearch } from "@/lib/tess
 import { followFile } from "@/lib/tessera/file-follow";
 import { gitbookAnswer } from "@/lib/tessera/gitbook-orders";
 import { buildV2 } from "@/lib/tessera/herself-v2";
+import { v2Piece } from "@/lib/tessera/read-piece";
 import { namedTask } from "@/lib/tessera/named-task";
 import { sameDesk, shouldPull } from "@/lib/tessera/desk-same";
 import { asHerself } from "@/lib/tessera/as-herself";
@@ -432,7 +433,7 @@ export function Chamber() {
       return;
     }
     if (/\b(better version|version of herself|\bv2\b)\b/i.test(content)) {
-      const answer = buildV2();
+      const answer = `${buildV2()} ${v2Piece()}`;
       await keepLine({ data: { q: content, a: answer } }).catch(() => null);
       addMessage("assistant", answer);
       setPending(false);
