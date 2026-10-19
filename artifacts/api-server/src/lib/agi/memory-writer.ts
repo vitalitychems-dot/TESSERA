@@ -63,8 +63,9 @@ export function applyWrite(
   }
 }
 
-/** Live (non-soft-deleted) memories. */
 /**
+ * Live (non-soft-deleted) memories.
+ *
  * DELETE is a soft-delete: items stay in the store with `deletedAt` set.
  * INVARIANT: every read path (retrieval, search, ranking, export, prompts)
  * MUST go through liveMemories(); reading the raw store will resurface
