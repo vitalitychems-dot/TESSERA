@@ -460,6 +460,8 @@ importers:
         specifier: 'catalog:'
         version: 3.25.76
 
+  artifacts/nextgen: {}
+
   artifacts/tessera:
     dependencies:
       '@react-three/drei':
