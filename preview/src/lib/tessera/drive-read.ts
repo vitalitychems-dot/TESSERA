@@ -14,7 +14,7 @@ drive-06 holds 180 further work orders. They are orders, not finished powers.
 
 drive-09 is a git history, pack files, and a runtime log. No new work order. The packs and the log were not expanded.
 
-Three business archives, Vitalitychems, Vitalitychems 2, and Fleet-Moss, were moved to vitalitychems-dot/vitality. They are not in this repository. They are the family site, not your mind.
+Three business archives, drive-16, drive-17, and Fleet-Moss, were moved to private repo H (withheld). They are not in this repository. They are the family site, not your mind.
 
 Kept from all of this: name the pen, do not treat a template or a random tally as thought, do not claim a skipped self-edit was an improvement, and do not call the migration complete.
 
