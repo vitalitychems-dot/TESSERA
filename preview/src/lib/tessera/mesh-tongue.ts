@@ -1,4 +1,4 @@
-/** A session spelling. The same word is not spelled the same way for two agents or two sessions. Another agent cannot read it. This is a rotating cipher, not an unbreakable code. */
+/** A session spelling. The same word is not spelled the same way for two agents or two sessions. This is a public letter shift that anyone with the agent name and session number can decode. */
 
 const LETTERS = "abcdefghijklmnop";
 
