@@ -452,9 +452,10 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
       expect(posted.json).toEqual({ ok: false, error: "member-token-rejected" });
       expect(posted.text).not.toContain(DB_FAULT);
       const logs = capture.text();
-      expect(logs.includes("\"name\":\"SyntheticDbFault\"")).toBe(true);
+      expect(logs.includes("\"name\":\"DrizzleQueryError\"")).toBe(true);
       expect(logs.includes("\"code\":\"none\"")).toBe(true);
       expect(logs.includes(DB_FAULT)).toBe(false);
+      expect(logs.includes("SyntheticDbFault")).toBe(false);
       expect(logs.includes("Failed query")).toBe(false);
       expect(logs.includes("synthetic-db-stack-frame")).toBe(false);
     } finally {
