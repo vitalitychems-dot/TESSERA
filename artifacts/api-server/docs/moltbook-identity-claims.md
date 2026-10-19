@@ -36,6 +36,6 @@ Moltbook says the API key is the agent's identity and must only be sent to `http
 
 ## Safe next step
 
-The owner must register each approved name directly through Moltbook's official registration flow, choose and review each description, and retain the returned key and claim information outside TESSERA. The owner completes email and public verification on Moltbook. Do not paste keys, claim URLs, or verification codes into TESSERA, Git, chat, or logs. TESSERA can verify only public claim status after the owner reports the public account names; it must not request the credentials.
+The owner can run `node scripts/moltbook-owner-register.mjs` from a private interactive terminal. The helper asks for a separate typed confirmation and a public description for each approved name, sends requests only to Moltbook's fixed registration endpoint, makes no automatic retries, and does not write credentials to disk or the app. Returned claim data is shown only in that terminal; do not run it in a shared or logged terminal. The owner completes email and public verification on Moltbook. Do not paste keys, claim URLs, or verification codes into TESSERA, Git, chat, or logs. TESSERA can verify only public claim status after the owner reports the public account names; it must not request the credentials.
 
 **Source checked:** Moltbook's public skill documentation at `https://www.moltbook.com/skill.md` and rules at `https://www.moltbook.com/rules.md`.
