@@ -1,6 +1,6 @@
 # SETUP-FATHER: steps only Father can do
 
-> **Updated 2026-10-19:** [Father's approval flow](docs/FATHER-FLOW.md) is the source of truth for reporting, approvals and merges. Where this page disagrees, that page wins. Under that flow, one 'merge' in Father's own words counts for both of his accounts, so the steps below are optional hardening he can choose, not a block on his merges.
+> **Updated 2026-10-19:** [Father's approval flow](docs/FATHER-FLOW.md) is the source of truth for reporting, approvals and merges. Where this page disagrees, that page wins. Under that flow, one 'merge' in Father's own words counts for both of his accounts. That waives **only** the separate collink1007 (code-owner) review requirement. Every other step below stays in force: keeping the owner token off the box, the secret and variable setup, the per-gate Apps, branch protection and the other hardening.
 
 Why: every agent pushes and comments as `vitalitychems-dot`, so CODEOWNERS reviews, `FATHER APPROVED` comments and PASS comments can all be forged (Moderator and Security, Gitbook #71). `moderator-lock` therefore **fails closed** until the steps below are done. Agents must not do any of them.
 

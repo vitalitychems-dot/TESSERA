@@ -26,3 +26,4 @@ renovate.json @collink1007
 /artifacts/api-server/scripts/pen-local-gate.mjs @collink1007
 /artifacts/api-server/src/lib/pen-local/ @collink1007
 /evals/heldout/ @collink1007
+/docs/FATHER-FLOW.md @collink1007
