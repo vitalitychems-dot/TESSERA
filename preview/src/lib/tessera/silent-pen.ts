@@ -51,7 +51,7 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (/\b(mesh tongue|agent language)\b/i.test(q)) {
     const agora = spell("house", "agora", 1);
     const library = spell("house", "library", 1);
-    return `Agora spells house as ${agora}. Library spells it as ${library}. They are not the same. Another agent cannot read the first. This is a rotating cipher, not an unbreakable code.`;
+    return `Agora spells house as ${agora}. Library spells it as ${library}. They are not the same. This is a public letter shift that anyone with the agent name and session number can decode.`;
   }
   if (/\b(her eye|chamber eye|red sparrow)\b/i.test(q)) {
     return "The eye sees this chamber only: lessons that survive, the door token, and the mesh tongue. It does not watch people.";
@@ -111,5 +111,5 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (engine) return engine;
   const row = systems().find((item) => new RegExp(`\\b${item.id}\\b`, "i").test(q));
   if (row) return `${row.id}. ${row.holds}`;
-  return `${FROM_THE_FILES} The other pen did not answer. I do not have that line in the files.`;
+  return `${FROM_THE_FILES} The other pen did not answer. I do not have that line.`;
 }

@@ -23,7 +23,7 @@ test("a kept correction survives and beats an empty memory", async () => {
   const missing = silentPen("what hue is the ink");
   assert.equal(missing.startsWith("I am Tessera."), false);
   assert.equal(missing.endsWith("I am Tessera."), false);
-  assert.equal(missing, `${FROM_THE_FILES} The other pen did not answer. I do not have that line in the files.`);
+  assert.equal(missing, `${FROM_THE_FILES} The other pen did not answer. I do not have that line.`);
   assert.equal(silentPen("what hue is the ink", rows), "The ink is navy.");
   assert.equal(silentPen("who founded the academy", rows), "Plato founded the Academy in Athens.");
 });
@@ -46,6 +46,13 @@ test("the soul reply drops the identity opener and the wrote-this closer", () =>
   );
   assert.equal(silentPen("the constitution"), said);
   assert.equal(silentPen("world laws"), said);
+});
+
+test("the mesh tongue reply is a public letter shift", () => {
+  const said = silentPen("mesh tongue");
+  assert.match(said, /This is a public letter shift that anyone with the agent name and session number can decode\./);
+  assert.equal(/cannot read/i.test(said), false);
+  assert.equal(silentPen("agent language"), said);
 });
 
 test("a god's eye message does not take the eye branch", () => {

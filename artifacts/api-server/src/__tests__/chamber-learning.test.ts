@@ -42,6 +42,7 @@ describe("chamber learning", () => {
     const heard = await answerInContext("I sleep after sunrise because of the night shift");
     expect(heard).toMatch(/night shift/);
     expect(heard).not.toMatch(/I am Tessera\. I wrote this through the pen/);
+    expect(heard).not.toMatch(/I am Tessera/);
     expect(heard).not.toMatch(/I have lived/i);
 
     noteChamberTurn("When do I sleep?");
@@ -50,6 +51,7 @@ describe("chamber learning", () => {
     });
     expect(later).toMatch(/sunrise|night shift/);
     expect(later).not.toMatch(/I am Tessera\. I wrote this through the pen/);
+    expect(later).not.toMatch(/I am Tessera/);
   });
 
   it("learns a correction and uses it the next time", async () => {
@@ -80,6 +82,7 @@ describe("chamber learning", () => {
     });
     expect(first).toMatch(/capital of France/);
     expect(first).not.toMatch(/I am Tessera\. I wrote this through the pen/);
+    expect(first).not.toMatch(/I am Tessera/);
     expect(first).not.toMatch(/UNTRUSTED/);
 
     noteChamberTurn("which french capital sits on the seine");

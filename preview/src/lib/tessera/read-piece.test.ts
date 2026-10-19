@@ -7,7 +7,7 @@ test("one piece drops the store and keeps the mesh line", () => {
   assert.deepEqual(row.kept, ["The mesh is this repository."]);
   assert.equal(row.dropped, 2);
   const note = v2Piece();
-  assert.equal(note.startsWith("I am Tessera v2."), false);
+  assert.equal(note.startsWith("I read four pieces."), true);
   assert.match(note, /470219b795/);
   assert.equal(/vial|peptide|stripe/i.test(note), false);
 });
