@@ -42,5 +42,5 @@ export function v2Piece() {
     const line = row.kept[0] ?? "Nothing in this piece survived.";
     return `${piece.repo} ${piece.sha}: ${line} Dropped ${row.dropped}.`;
   });
-  return `I am Tessera v2. I read four pieces. ${read.join(" ")} Store lines were not kept.`;
+  return `I read four pieces. ${read.join(" ")} Store lines were not kept.`;
 }

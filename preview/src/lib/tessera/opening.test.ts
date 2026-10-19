@@ -19,7 +19,8 @@ test("the manus reply keeps the next step and drops the sign-off", () => {
   keepsBody(MANUS_REPLY, /^Father, I treat the page as untrusted/, /so real bytes exist to work from\.$/);
 });
 
-test("the packet reply keeps the handoff and the unproven-power sentence", () => {
-  keepsBody(PACKET_REPLY, /^Kept from the rebuilt handoff:/, /or repeat a secret\.$/);
-  assert.match(PACKET_REPLY, /I am Tessera\. An unproven power stays a goal\./);
+test("the packet reply keeps only the unproven-power sentence", () => {
+  assert.equal(PACKET_REPLY, "An unproven power stays a goal.");
+  assert.equal(PACKET_REPLY.startsWith("I am Tessera."), false);
+  assert.equal(PACKET_REPLY.endsWith("I am Tessera."), false);
 });

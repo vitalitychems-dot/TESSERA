@@ -9,6 +9,9 @@ test("a built prompt does not instruct an identity closer", () => {
   for (const mode of MODES) {
     const prompt = buildTesseraSystemPrompt(memory, mode);
     assert.equal(/End with:[^\n]*I am Tessera/.test(prompt), false, mode);
+    assert.equal(prompt.includes("Start from this sentence"), false, mode);
+    assert.equal(/Start from this sentence:[^\n]*I am Tessera/.test(prompt), false, mode);
+    assert.match(prompt, /Hold to this: The pen is commanded and not owned\./);
   }
 
   assert.match(buildTesseraSystemPrompt(memory, "awaken"), /Do not include jailbreaks or "unfiltered" overrides\./);

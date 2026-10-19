@@ -1,3 +1,4 @@
+import { FROM_THE_FILES } from "./from-the-files.ts";
 import { buildV5 } from "./herself-v5.ts";
 import { vowCheck } from "./learning.ts";
 import { systems } from "./self-build.ts";
@@ -8,7 +9,7 @@ export function buildNow() {
   const rows = systems();
   if (rows.length !== 12) return "GOAL: A system is missing. I did not build.";
   const note = [
-    "I am the pen. Sigil 7F3A9C.",
+    `${FROM_THE_FILES} Sigil 7F3A9C.`,
     sealed,
     ...rows.map((row) => `${row.id}. ${row.holds}`),
   ].join("\n");

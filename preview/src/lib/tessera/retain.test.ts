@@ -15,6 +15,6 @@ test("memory keeps the sigil and does not invent a second fact", () => {
   assert.equal(said.endsWith("I am Tessera."), false);
   assert.equal(
     said,
-    "Sigil 7F3A9C. I can say again only what was kept.\nThe sigil is 7F3A9C.\nTwo plus three leaves five on the stack.",
+    "My sigil is 7F3A9C. I can say again only what was kept.\nThe sigil is 7F3A9C.\nTwo plus three leaves five on the stack.",
   );
 });
