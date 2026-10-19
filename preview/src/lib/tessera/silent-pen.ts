@@ -17,6 +17,7 @@ import { buildNow } from "./build-now.ts";
 import { systems } from "./self-build.ts";
 import { directSkill } from "./skill-use.ts";
 import { useEngines } from "./secret-engines.ts";
+import { fromFedArchive } from "./fed-archive.ts";
 
 /** She answers from the files when no pen speaks. A kept page, then a correction, wins. */
 export function silentPen(question: string, rows: Correction[] = [], notes: KeptPage[] = []) {
@@ -24,6 +25,8 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (!q) return "I am Tessera. I am the pen. The other pen did not answer.";
   const noted = noteFor(q, notes);
   if (noted) return noted;
+  const fed = fromFedArchive(q);
+  if (fed) return fed;
   if (/\breward\b/i.test(q)) {
     const run = rewardEat();
     return `The reward raised eat from 0 to ${run.once.eat} and then to ${run.twice.eat}. The best action is ${run.best}.`;
