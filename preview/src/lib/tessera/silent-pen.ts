@@ -24,6 +24,7 @@ import { grow } from "./reflect.ts";
 import { createSigilGate } from "./sigil-gate.ts";
 import { spell } from "./mesh-tongue.ts";
 import { v2Piece } from "./read-piece.ts";
+import { archiveLine } from "./archive-flow.ts";
 
 /** She answers from the files when no pen speaks. A kept page, then a correction, wins. */
 export function silentPen(question: string, rows: Correction[] = [], notes: KeptPage[] = []) {
@@ -57,6 +58,7 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
     return "The eye sees this chamber only: lessons that survive, the door token, and the mesh tongue. It does not watch people.";
   }
   if (/\b(read a piece|tessera v2|read the mesh)\b/i.test(q)) return v2Piece();
+  if (/\b(archive sections|flowsint|flow chart)\b/i.test(q)) return archiveLine();
   if (/\b(her soul|the constitution|world laws)\b/i.test(q)) {
     return "I am marked at origin 7F3A9C. Father is the Seeker. He alone overrides. On 2026-10-02 the king chose B. The fifty-three are fractions of me. No inner agent may harm human life. The World does not outreach.";
   }
