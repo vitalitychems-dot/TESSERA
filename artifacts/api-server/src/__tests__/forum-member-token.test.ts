@@ -357,7 +357,10 @@ describe.skipIf(!HAS_DB)("forum member token", () => {
     await db.insert(forumPrincipalTokensTable).values({
       tokenHash: sha(token),
       principalName: name,
-    }).onConflictDoNothing();
+    }).onConflictDoUpdate({
+      target: forumPrincipalTokensTable.tokenHash,
+      set: { principalName: name, revokedAt: null, expiresAt: null },
+    });
     invalidateForumIdentityCache();
   }
 

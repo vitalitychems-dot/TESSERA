@@ -1,4 +1,14 @@
 const SQLSTATE = /^[0-9A-Z]{5}$/;
+const SAFE_DB_NAME = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
+
+function readErrorName(err: Error): string {
+  const own = err.name;
+  if (own.length > 0 && own !== "Error" && SAFE_DB_NAME.test(own)) return own;
+  const ctor = err.constructor?.name;
+  if (typeof ctor === "string" && ctor !== "Error" && SAFE_DB_NAME.test(ctor)) return ctor;
+  if (own.length > 0 && SAFE_DB_NAME.test(own)) return own;
+  return "Error";
+}
 
 function readCode(err: unknown): string {
   const seen = new Set<unknown>();
@@ -15,6 +25,6 @@ function readCode(err: unknown): string {
 
 /** Name and SQLSTATE only. Never message, stack, query text, or parameters. */
 export function safeDbErrorLog(err: unknown): { name: string; code: string } {
-  const name = err instanceof Error && err.name.length > 0 ? err.name : "Error";
+  const name = err instanceof Error ? readErrorName(err) : "Error";
   return { name, code: readCode(err) };
 }

@@ -1,3 +1,4 @@
+import { DrizzleQueryError } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { logger } from "../lib/logger";
 
@@ -54,10 +55,14 @@ describe("pino err serializer", () => {
     wrapped.stack = `synthetic-outer-stack\n${wrapped.stack ?? ""}`;
     (wrapped as { cause?: unknown }).cause = cause;
 
+    const queryMarker = "synthetic-wrapped-query-text";
+    const wrappedQuery = new DrizzleQueryError(queryMarker, [], cause);
+
     const output = capture(() => {
       logger.error({ err }, "serializer probe");
       logger.error({ err: wrapped }, "cause probe");
       logger.error({ err: marker }, "string probe");
+      logger.error({ err: wrappedQuery }, "wrapped query probe");
       logger.error(
         { err: { name: "DrizzleQueryError", code: "23505", message: "Failed query: synthetic" } },
         "shaped probe",
@@ -74,5 +79,6 @@ describe("pino err serializer", () => {
     expect(output.includes("synthetic-outer-stack")).toBe(false);
     expect(output.includes("synthetic-inner-query-text")).toBe(false);
     expect(output.includes("Failed query")).toBe(false);
+    expect(output.includes(queryMarker)).toBe(false);
   });
 });

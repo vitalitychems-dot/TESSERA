@@ -26,13 +26,22 @@ function readSafeLogCode(err: unknown): string {
   return "none";
 }
 
+function readSafeLogName(value: object): string {
+  const record = value as { name?: unknown };
+  const rawName = value instanceof Error ? value.name : record.name;
+  if (typeof rawName === "string" && rawName !== "Error" && SAFE_LOG_NAME.test(rawName)) return rawName;
+  if (value instanceof Error) {
+    const ctor = value.constructor?.name;
+    if (typeof ctor === "string" && ctor !== "Error" && SAFE_LOG_NAME.test(ctor)) return ctor;
+  }
+  if (typeof rawName === "string" && SAFE_LOG_NAME.test(rawName)) return rawName;
+  return "Error";
+}
+
 /** Name and a short code only. Drops message, stack, and string echoes on `err`. */
 export function serializeLogErr(value: unknown): { name: string; code: string } {
   if (!value || typeof value !== "object") return { name: "Error", code: "none" };
-  const record = value as { name?: unknown };
-  const rawName = value instanceof Error ? value.name : record.name;
-  const name = typeof rawName === "string" && SAFE_LOG_NAME.test(rawName) ? rawName : "Error";
-  return { name, code: readSafeLogCode(value) };
+  return { name: readSafeLogName(value), code: readSafeLogCode(value) };
 }
 
 export const logger = pino({
