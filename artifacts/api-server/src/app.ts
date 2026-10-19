@@ -593,6 +593,15 @@ async function initializeModules() {
     }
     await initPersonalityEvolution();
     startPersonalityEvolution(300_000);
+    try {
+      const { loadAgenticReflectionState, runAgenticReflectionCycle } = await import("./lib/agentic-reflection");
+      await loadAgenticReflectionState();
+      // First cycle at boot establishes the baseline; later cycles are owner-triggered
+      // via POST /api/reflection/agentic/run so the loop stays observable, not noisy.
+      await runAgenticReflectionCycle();
+    } catch (err) {
+      logger.warn({ err }, "AgenticReflection: initial cycle failed — non-critical");
+    }
     await initAgentSpawner();
     initAgentComms();
     await initCollectiveIntelligence();

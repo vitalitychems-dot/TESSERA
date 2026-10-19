@@ -5,7 +5,23 @@ import { GlassCard, GradientBar, HeroStat, SectionHeader, TabBar, PageHeader, Ra
 
 const API = import.meta.env.VITE_API_URL || "";
 
-type TabId = "overview" | "jspace" | "audit" | "memory" | "reflections" | "dual-brain";
+type TabId = "overview" | "jspace" | "loop" | "audit" | "memory" | "reflections" | "dual-brain";
+
+interface AgenticReflection {
+  id: string;
+  cycle: number;
+  timestamp: string;
+  observations: string[];
+  conclusions: string[];
+  commitments: string[];
+}
+
+interface AgenticReflectionState {
+  cycle: number;
+  totalReflections: number;
+  latest: AgenticReflection | null;
+  reflections: AgenticReflection[];
+}
 
 interface AuditReport {
   generatedAt: string;
@@ -64,6 +80,18 @@ export default function ConsciousnessNexusPage({ initialTab }: { initialTab?: Ta
     enabled: activeTab === "memory",
   });
 
+  const { data: loop } = useQuery<AgenticReflectionState>({
+    queryKey: ["agentic-reflections"],
+    queryFn: () => fetch(`${API}/api/reflection/agentic`, { credentials: "include" }).then(r => r.json()).then(d => d.data),
+    refetchInterval: 30000,
+    enabled: activeTab === "loop",
+  });
+
+  const loopRunMutation = useMutation({
+    mutationFn: () => fetch(`${API}/api/reflection/agentic/run`, { method: "POST", credentials: "include" }).then(r => r.json()),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["agentic-reflections"] }),
+  });
+
   const { data: dualBrain } = useQuery({
     queryKey: ["dual-brain-state"],
     queryFn: () => fetch(`${API}/api/dual-brain/state`, { credentials: "include" }).then(r => r.json()).then(d => d.data),
@@ -90,6 +118,7 @@ export default function ConsciousnessNexusPage({ initialTab }: { initialTab?: Ta
   const tabs = [
     { id: "overview", label: "Overview" },
     { id: "jspace", label: "J-Space" },
+    { id: "loop", label: "Loop" },
     { id: "audit", label: "Audit" },
     { id: "memory", label: "Memory" },
     { id: "reflections", label: "Reflections" },
@@ -168,6 +197,33 @@ export default function ConsciousnessNexusPage({ initialTab }: { initialTab?: Ta
                 )}
               </div>
             </GlassCard>
+          </div>
+        )}
+
+        {activeTab === "loop" && (
+          <div className="space-y-4 sovereign-stagger">
+            <div className="flex items-center justify-between">
+              <SectionHeader icon={RefreshCw} title="Agentic Reflection Loop" color="violet" badge={loop ? `cycle ${loop.cycle}` : undefined} />
+              <button onClick={() => loopRunMutation.mutate()} disabled={loopRunMutation.isPending} className="px-4 py-2 bg-gradient-to-r from-violet-600/30 to-purple-600/30 border border-violet-500/20 text-violet-300 rounded-xl text-xs hover:from-violet-600/50 hover:to-purple-600/50 transition-all font-medium">
+                {loopRunMutation.isPending ? "Reflecting..." : "Run Cycle"}
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-500 leading-relaxed">Each cycle reads real system measurements, compares them to the previous cycle, and records observations, conclusions, and commitments. Nothing here is generated from templates — every claim traces to a number.</p>
+            {!loop?.reflections?.length && <GlassCard animate><div className="text-xs text-slate-500">No reflection cycles recorded yet.</div></GlassCard>}
+            {loop?.reflections?.map((r) => (
+              <GlassCard key={r.id} glow="violet" animate>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-violet-300 font-medium">Cycle {r.cycle}</span>
+                  <span className="text-[10px] text-slate-500 font-mono">{new Date(r.timestamp).toLocaleString()}</span>
+                </div>
+                <div className="text-[10px] text-slate-500 font-medium mb-1">Observations</div>
+                {r.observations.map((o, i) => <div key={i} className="text-xs text-slate-300 border-l-2 border-blue-500/30 pl-2 py-0.5">{o}</div>)}
+                <div className="text-[10px] text-slate-500 font-medium mt-2 mb-1">Conclusions</div>
+                {r.conclusions.map((c, i) => <div key={i} className="text-xs text-violet-300 border-l-2 border-violet-500/30 pl-2 py-0.5">{c}</div>)}
+                <div className="text-[10px] text-slate-500 font-medium mt-2 mb-1">Commitments</div>
+                {r.commitments.map((c, i) => <div key={i} className="text-xs text-emerald-300/90 border-l-2 border-emerald-500/30 pl-2 py-0.5">{c}</div>)}
+              </GlassCard>
+            ))}
           </div>
         )}
 

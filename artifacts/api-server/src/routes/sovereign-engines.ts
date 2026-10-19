@@ -19,9 +19,28 @@ import {
 } from "../lib/sovereign-file-registry";
 import { requireAdminSession } from "../lib/sovereign-admin";
 import { buildConsciousnessAudit } from "../lib/consciousness-audit";
+import {
+  runAgenticReflectionCycle,
+  getAgenticReflections,
+  getAgenticReflectionState,
+} from "../lib/agentic-reflection";
 import { logger } from "../lib/logger";
 
 const router = Router();
+
+router.get("/reflection/agentic", requireAdminSession, (_req: Request, res: Response) => {
+  res.json({ ok: true, data: { ...getAgenticReflectionState(), reflections: getAgenticReflections(20) } });
+});
+
+router.post("/reflection/agentic/run", requireAdminSession, async (_req: Request, res: Response) => {
+  try {
+    const reflection = await runAgenticReflectionCycle();
+    res.json({ ok: true, data: reflection });
+  } catch (err) {
+    logger.error({ err }, "agentic reflection cycle failed");
+    res.status(500).json({ ok: false, error: "agentic-reflection-failed" });
+  }
+});
 
 router.get("/consciousness/audit", requireAdminSession, async (_req: Request, res: Response) => {
   try {
