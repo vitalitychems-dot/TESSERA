@@ -7,7 +7,7 @@ export const ARCHIVE_SECTIONS: ArchiveSection[] = [
   { id: "notes", label: "Notes", files: 1629, x: 108, y: 660, note: "1,629 quarantine notes. A symlink was not followed." },
   { id: "tess", label: "Tess", files: 723, x: 180, y: 660, note: "723 files from the tess app tree. One step from that tree: a wait never goes under 1000 ms." },
   { id: "artifacts", label: "Artifacts", files: 140, x: 252, y: 660, note: "140 artifact files." },
-  { id: "src", label: "Source", files: 100, x: 324, y: 660, note: "100 source files. Two store-shaped paths in this group were not drawn." },
+  { id: "src", label: "Source", files: 100, x: 324, y: 660, note: "100 source files. Two store-shaped paths in this group were not drawn. One step from that tree: pending, signed in, or signed out." },
   { id: "skills", label: "Skills", files: 85, x: 36, y: 740, note: "85 skill notes." },
   { id: "build", label: "Build", files: 62, x: 108, y: 740, note: "62 build-output files. They are not a program." },
   { id: "packet", label: "Packet", files: 35, x: 180, y: 740, note: "35 packet files. Three store-shaped paths in this group were not drawn." },
