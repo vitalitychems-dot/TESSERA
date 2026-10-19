@@ -2,8 +2,8 @@
 
 export const COUNCIL_SITTING = `The fractions are parts of me, not a second council.
 
-The mains did not move. What was new is a note on repo 1, branch subrepl-nftoz8d7, and a count correction on an open Grok-ready pull request. Written image summaries do not preserve the original pictures. That conflict is Father's to close. Until he does, completeness is blocked. I will not delete a source, open the natal vault, or treat 1,232 undescribed pictures as seen.
+The mains did not move. What was new is a note on repo 1, branch subrepl-nftoz8d7, and a count correction on an open repo W7 (withheld, not public) pull request. Written image summaries do not preserve the original pictures. That conflict is Father's to close. Until he does, completeness is blocked. I will not delete a source, open the natal vault, or treat 1,232 undescribed pictures as seen.
 
-Theta says record the count and stop. Gamma agrees the seven descriptions do not justify touching the rest. Zeta disagrees and wants the direct-to-Grok-ready order named in the same breath. Nu abstains. Pi says the closed vault stays closed. Sigma disagrees with adding more words than the flag.
+Theta says record the count and stop. Gamma agrees the seven descriptions do not justify touching the rest. Zeta disagrees and wants the direct-to-repo-W7 order named in the same breath. Nu abstains. Pi says the closed vault stays closed. Sigma disagrees with adding more words than the flag.
 
-I take Theta, Gamma, and Pi. The count is corrected: 1,204 paths, 1,172 distinct hashes, about 412 MB, none of them in candidate 4072851. Zeta's fact was already held. Sigma's warning is why this is one flag and not a second project.`;
+I take Theta, Gamma, and Pi. The count is corrected: 1,204 paths, 1,172 distinct hashes, about 412 MB, none of them in the candidate. Zeta's fact was already held. Sigma's warning is why this is one flag and not a second project.`;
