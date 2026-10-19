@@ -33,6 +33,17 @@ export function trainNB(data, labels, { alpha = 1 } = {}) {
 function lrProbs(W, B, z, e, p, L, rs, n) { z.fill(0); for (let j = 0; j < n; j++) { const o = rs[j]; for (let k = 0; k < L; k++) z[k] += W[o + k]; } let m = -Infinity; for (let k = 0; k < L; k++) { z[k] = B[k] + z[k]; if (z[k] > m) m = z[k]; } let S = 0; for (let k = 0; k < L; k++) { e[k] = Math.exp(z[k] - m); S += e[k]; } for (let k = 0; k < L; k++) p[k] = e[k] / S; return p; }
 function argmaxFirst(p) { let b = -1, m = -Infinity; for (let k = 0; k < p.length; k++) { const v = p[k]; if (v !== v) return -1; if (v > m || (b < 0 && v === m)) { m = v; b = k; } } return b; }
 function lrStep(W, B, p, labels, L, r, y, cy, eta, keep) { for (let k = 0; k < L; k++) { const g = ((labels[k] === y ? 1 : 0) - p[k]) * cy; B[k] = B[k] + eta * g; const d = eta * g; for (let j = 0; j < r.length; j++) { const o = r[j] + k; W[o] = W[o] * keep + d; } } }
+// Epoch orders. The shuffle below depends only on (seed, sample count, epochs): its comparator ignores its
+// arguments and the LCG is used for nothing else. So the same orders are computed once per key, with the
+// same sort(() => rnd() - 0.5) call, and replayed by later trainLR calls (nested CV re-trains on equal-sized
+// folds many times). Read-only Int32Arrays; at most 64 keys kept.
+const orderCache = new Map();
+function epochOrders(seed, n, epochs) {
+  const k = `${seed >>> 0}|${n}|${epochs}`; let o = orderCache.get(k); if (o) return o;
+  let s = seed >>> 0; const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32); const base = Array.from({ length: n }, (_, i) => i);
+  o = []; for (let ep = 0; ep < epochs; ep++) o.push(Int32Array.from(base.slice().sort(() => rnd() - 0.5)));
+  if (orderCache.size >= 64) orderCache.clear(); orderCache.set(k, o); return o;
+}
 export function trainLR(data, labels, { epochs = 30, lr = 0.3, l2 = 1e-3, balance = true, seed = 3 } = {}) {
   // All weights in one flat Float64Array (feature row o = index * L, column = label position); each training
   // sample's row offsets are resolved once, so SGD does no Map lookups. Same sums in the same order as the
@@ -41,10 +52,10 @@ export function trainLR(data, labels, { epochs = 30, lr = 0.3, l2 = 1e-3, balanc
   const freq = labels.map((l) => data.filter((x) => x.y === l).length || 1); const cwk = (k) => (balance ? data.length / (L * freq[k]) : 1);
   const off = (f) => { let o = idx.get(f); if (o === undefined) idx.set(f, (o = idx.size * L)); return o; };
   const X = data.map((x) => ({ r: Int32Array.from(feats(x.text), off), y: x.y, cy: cwk(li.get(x.y)) }));
-  const W = new Float64Array(idx.size * L); let s = seed >>> 0; const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32);
+  const W = new Float64Array(idx.size * L); const orders = epochOrders(seed, X.length, epochs);
   const z = new Float64Array(L); const e = new Float64Array(L); const p = new Float64Array(L);
   for (let ep = 0; ep < epochs; ep++) {
-    const order = X.map((_, i) => i).sort(() => rnd() - 0.5); const eta = lr / (1 + ep * 0.1); const keep = 1 - eta * l2;
+    const order = orders[ep]; const eta = lr / (1 + ep * 0.1); const keep = 1 - eta * l2;
     for (const i of order) { const { r, y, cy } = X[i]; lrProbs(W, B, z, e, p, L, r, r.length); lrStep(W, B, p, labels, L, r, y, cy, eta, keep); }
   }
   // Reads reuse one offset buffer; features unseen in training add nothing, as before.
