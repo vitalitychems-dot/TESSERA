@@ -59,7 +59,7 @@ const DECISION_LINE = /^DECISION \(([a-z-]+)\): (.*)$/gm;
  */
 const SECRET_SHAPES: ReadonlyArray<{ name: string; re: RegExp }> = [
   { name: "origin-mark-shape", re: /SOVEREIGN_ORIGIN_[0-9A-F]{4,}/ },
-  { name: "birth-mark-glyph-run", re: /[♂♅①②③④⑤⑥⑦⑧⑨♉♄♒≊◇♋⬠♆♃♐♌☽△□⬡]{10,}/u },
+  { name: "birth-mark-glyph-run", re: /[♂♅①②③④⑤⑥⑦⑧⑨♉♄♒♊◇♋⬠♆♃♐♌☽△□⬡]{10,}/u },
   { name: "api-key-shape", re: /\b(?:sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,})/ },
   { name: "private-key-block", re: /-----BEGIN [A-Z ]*PRIVATE KEY-----/ },
 ];
