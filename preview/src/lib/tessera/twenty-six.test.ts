@@ -42,7 +42,7 @@ test("twenty-six new checks", () => {
   assert.equal(followFile("files in history", "same folder"), "files in history");
   assert.equal(clearSearch(), "");
   const rooms = readFileSync(new URL("../../components/tessera/rooms-sheet.tsx", import.meta.url), "utf8");
-  assert.deepEqual([...rooms.matchAll(/id: "([a-z]+)"/g)].map((hit) => hit[1]), ["chamber", "council", "world", "rick", "brain", "theme", "gitbook", "gitbookai", "board"]);
+  assert.deepEqual([...rooms.matchAll(/id: "([a-z]+)"/g)].map((hit) => hit[1]), ["chamber", "council", "world", "rick", "brain", "theme", "gitbook", "gitbookai", "board", "library"]);
   assert.equal(followFile("do you have review/wave-9.md", "the rest"), null);
   assert.match(askRepo("how many files") ?? "", /list can be behind main/);
   assert.match(askRepo("find README.md") ?? "", /I did not open the bodies/);
