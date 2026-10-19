@@ -492,7 +492,7 @@ router.post("/reasoning/execute", async (req, res) => {
     return res.json(result);
   } catch (err) {
     logger.error({ module: "reasoning-execute", err }, "Execution failed");
-    return res.status(500).json({ error: "Execution failed", details: String(err) });
+    return res.status(500).json({ error: "Execution failed", details: "internal error" });
   }
 });
 
