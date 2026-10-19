@@ -177,6 +177,8 @@ overrides:
   postcss-selector-parser: ^7.1.6
   fast-copy: ^4.1.0
 
+packageExtensionsChecksum: sha256-5Vuvwv+qHPCcJ1EXwEF60EBLm2p6Gb0jSu/vMLXdZXc=
+
 importers:
 
   .:
@@ -270,17 +272,6 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@25.3.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1)
 
-  artifacts/gitai: {}
-
-  artifacts/gitbook-mcp:
-    devDependencies:
-      '@types/node':
-        specifier: 'catalog:'
-        version: 25.3.5
-      vitest:
-        specifier: 4.1.11
-        version: 4.1.11(@types/node@25.3.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.1)
-
   artifacts/mockup-sandbox:
     devDependencies:
       '@hookform/resolvers':
@@ -369,10 +360,10 @@ importers:
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@replit/vite-plugin-cartographer':
         specifier: 'catalog:'
-        version: 0.5.1
+        version: 0.5.1(vite@7.3.6(@types/node@25.3.5)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.21.0)(yaml@2.9.1))
       '@replit/vite-plugin-runtime-error-modal':
         specifier: 'catalog:'
-        version: 0.0.6
+        version: 0.0.6(vite@7.3.6(@types/node@25.3.5)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.21.0)(yaml@2.9.1))
       '@tailwindcss/vite':
         specifier: 'catalog:'
         version: 4.2.1(vite@7.3.6(@types/node@25.3.5)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.21.0)(yaml@2.9.1))
@@ -586,13 +577,13 @@ importers:
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@replit/vite-plugin-cartographer':
         specifier: 'catalog:'
-        version: 0.5.1
+        version: 0.5.1(vite@7.3.6(@types/node@25.3.5)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.21.0)(yaml@2.9.1))
       '@replit/vite-plugin-dev-banner':
         specifier: 'catalog:'
-        version: 0.1.2
+        version: 0.1.2(vite@7.3.6(@types/node@25.3.5)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.21.0)(yaml@2.9.1))
       '@replit/vite-plugin-runtime-error-modal':
         specifier: 'catalog:'
-        version: 0.0.6
+        version: 0.0.6(vite@7.3.6(@types/node@25.3.5)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.21.0)(yaml@2.9.1))
       '@tailwindcss/typography':
         specifier: ^0.5.19
         version: 0.5.19(tailwindcss@4.3.3)
@@ -692,18 +683,6 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 3.25.76
-
-  artifacts/v2:
-    dependencies:
-      three:
-        specifier: 0.169.0
-        version: 0.169.0
-    devDependencies:
-      playwright-core:
-        specifier: ^1.64.0
-        version: 1.64.0
-
-  artifacts/v3: {}
 
   lib/api-client-react:
     dependencies:
@@ -1766,12 +1745,18 @@ packages:
 
   '@replit/vite-plugin-cartographer@0.5.1':
     resolution: {integrity: sha512-KiaQMx4ssTM8hSjMFscyIV1PN1bRVCWCFqN3fXOfXa39uFFCKUaeL3VvH/sxuy7S7ET+MCFOt+J7lLtL56bRrA==}
+    peerDependencies:
+      vite: ^7.3.6
 
   '@replit/vite-plugin-dev-banner@0.1.2':
     resolution: {integrity: sha512-YfW3U1xKnLrqvSiTzXeEX8AG+Vpz7XwBsJHNvGbp841AE1mLvishMQi2Zw7ApyHp+9EMGthXuCjP+mLbl3IuGA==}
+    peerDependencies:
+      vite: ^7.3.6
 
   '@replit/vite-plugin-runtime-error-modal@0.0.6':
     resolution: {integrity: sha512-53iuzLsrvcUnWxAo0fvNrUhOf7LYJ+3at61dZeTIrkaZD4vGNjTbvE0j50TFcjjTC9UM74uprlnQ4+L2A//Cjg==}
+    peerDependencies:
+      vite: ^7.3.6
 
   '@rolldown/binding-android-arm-eabi@1.2.12':
     resolution: {integrity: sha512-dB/a1214qKfHMXCpgqR4OZT+jS4kTyEXbQGJPqzobt5EwH5rX080pxE37alt3RzvR1bf1Yz/yGqRfrYAxuPw0A==}
@@ -3549,11 +3534,6 @@ packages:
     resolution: {integrity: sha512-8OEwKp5juEvb/MjpIc4hjqfgCNysrS94RIOMXYvpYCdm/jglrKEiAYmiumbmGhCvs+IcInsphYDFwqrjr7398w==}
     hasBin: true
 
-  playwright-core@1.64.0:
-    resolution: {integrity: sha512-T9r+MZkTECl2+oUcZ26YgZzTrYidTsIhYYkJix+6iDOymOb1FB2RLLSOxRGnZGv5DStt+aduIVbt+E8WygXYpg==}
-    engines: {node: '>=20'}
-    hasBin: true
-
   playwright-core@1.64.1:
     resolution: {integrity: sha512-BC4s8y6SEVA6Q1rSxZTto8hI1KUI3xXlHGZgvGqP4IqPdI/a6FX9H29IDNz7vKo9l21b6LfYosScPL6M3xxyDQ==}
     engines: {node: '>=20'}
@@ -4015,9 +3995,6 @@ packages:
     resolution: {integrity: sha512-XyGQrFmNQ5O/IoKm556ftwKsBg11TIb301MB5dWNicziQBEs2g3gtOYIf7pFiLa0zI2gUwhtCjv9fmjnxKZ1Cg==}
     peerDependencies:
       three: '>=0.128.0'
-
-  three@0.169.0:
-    resolution: {integrity: sha512-Ed906MA3dR4TS5riErd4QBsRGPcx+HBDX2O5yYE5GqJeFQTPU+M56Va/f/Oph9X7uZo3W3o4l2ZhBZ6f6qUv0w==}
 
   three@0.183.2:
     resolution: {integrity: sha512-di3BsL2FEQ1PA7Hcvn4fyJOlxRRgFYBpMTcyOgkwJIaDOdJMebEFPA+t98EvjuljDx4hNulAGwF6KIjtwI5jgQ==}
@@ -5539,21 +5516,25 @@ snapshots:
       - '@types/react'
       - immer
 
-  '@replit/vite-plugin-cartographer@0.5.1':
+  '@replit/vite-plugin-cartographer@0.5.1(vite@7.3.6(@types/node@25.3.5)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.21.0)(yaml@2.9.1))':
     dependencies:
       '@babel/parser': 7.29.0
       '@babel/traverse': 7.29.0
       '@babel/types': 7.29.0
       magic-string: 0.30.21
       modern-screenshot: 4.6.8
+      vite: 7.3.6(@types/node@25.3.5)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.21.0)(yaml@2.9.1)
     transitivePeerDependencies:
       - supports-color
 
-  '@replit/vite-plugin-dev-banner@0.1.2': {}
+  '@replit/vite-plugin-dev-banner@0.1.2(vite@7.3.6(@types/node@25.3.5)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.21.0)(yaml@2.9.1))':
+    dependencies:
+      vite: 7.3.6(@types/node@25.3.5)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.21.0)(yaml@2.9.1)
 
-  '@replit/vite-plugin-runtime-error-modal@0.0.6':
+  '@replit/vite-plugin-runtime-error-modal@0.0.6(vite@7.3.6(@types/node@25.3.5)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.21.0)(yaml@2.9.1))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
+      vite: 7.3.6(@types/node@25.3.5)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.21.0)(yaml@2.9.1)
 
   '@rolldown/binding-android-arm-eabi@1.2.12':
     optional: true
@@ -7475,8 +7456,6 @@ snapshots:
       sonic-boom: 4.2.1
       thread-stream: 3.1.0
 
-  playwright-core@1.64.0: {}
-
   playwright-core@1.64.1: {}
 
   playwright@1.64.1:
@@ -7987,8 +7966,6 @@ snapshots:
       fflate: 0.6.11
       potpack: 1.0.2
       three: 0.183.2
-
-  three@0.169.0: {}
 
   three@0.183.2: {}
 

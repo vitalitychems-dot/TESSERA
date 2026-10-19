@@ -3,6 +3,10 @@
 
 # No need to store the pnpm store twice.
 .local
+# Input briefs and assistant workspace notes are not application assets.
+/attached_assets/
+/.agents/
+/.conversation/
 /generated-artifacts/
 /artifacts/api-server/data/
 /artifacts/api-server/.sovereign-data/

@@ -12,6 +12,19 @@ allowBuilds:
 
 autoInstallPeers: false
 
+# These plugins import Vite types but omit the peer from their published
+# manifests. Resolve them against the apps' Vite 7, not Vitest's Vite 8.
+packageExtensions:
+  '@replit/vite-plugin-runtime-error-modal@0.0.6':
+    peerDependencies:
+      vite: ^7.3.6
+  '@replit/vite-plugin-cartographer@0.5.1':
+    peerDependencies:
+      vite: ^7.3.6
+  '@replit/vite-plugin-dev-banner@0.1.2':
+    peerDependencies:
+      vite: ^7.3.6
+
 catalog:
   '@replit/vite-plugin-cartographer': ^0.5.1
   '@replit/vite-plugin-dev-banner': ^0.1.2
