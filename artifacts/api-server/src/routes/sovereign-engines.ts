@@ -18,8 +18,20 @@ import {
   type FileDomain,
 } from "../lib/sovereign-file-registry";
 import { requireAdminSession } from "../lib/sovereign-admin";
+import { buildConsciousnessAudit } from "../lib/consciousness-audit";
+import { logger } from "../lib/logger";
 
 const router = Router();
+
+router.get("/consciousness/audit", requireAdminSession, async (_req: Request, res: Response) => {
+  try {
+    const report = await buildConsciousnessAudit();
+    res.json({ ok: true, data: report });
+  } catch (err) {
+    logger.error({ err }, "consciousness audit failed");
+    res.status(500).json({ ok: false, error: "consciousness-audit-failed" });
+  }
+});
 
 router.get("/consciousness/metrics", requireAdminSession, (_req: Request, res: Response) => {
   res.json({ ok: true, data: getConsciousnessMetrics() });

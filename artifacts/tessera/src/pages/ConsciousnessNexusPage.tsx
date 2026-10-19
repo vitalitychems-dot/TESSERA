@@ -1,13 +1,44 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Brain, Zap, Eye, Activity, Heart, Sparkles, RefreshCw, Plus } from "lucide-react";
-import { GlassCard, GradientBar, HeroStat, SectionHeader, TabBar, PageHeader, RadialGauge, MiniStat } from "@/components/ui/sovereign";
+import { Brain, Zap, Eye, Activity, Heart, RefreshCw, ShieldCheck, NotebookPen, AlertTriangle } from "lucide-react";
+import { GlassCard, GradientBar, HeroStat, SectionHeader, TabBar, PageHeader, RadialGauge } from "@/components/ui/sovereign";
 
 const API = import.meta.env.VITE_API_URL || "";
 
-export default function ConsciousnessNexusPage({ initialTab }: { initialTab?: "overview" | "memory" | "semantic" | "reflections" | "dual-brain" }) {
+type TabId = "overview" | "jspace" | "audit" | "memory" | "reflections" | "dual-brain";
+
+interface AuditReport {
+  generatedAt: string;
+  verdict: "unproven";
+  verdictExplanation: string;
+  measured: {
+    engineRunning: boolean;
+    cycleCount: number;
+    episodicMemorySize: number;
+    semanticGraphSize: number;
+    reflectionCount: number;
+    stimuliProcessed: number;
+    pendingStimuli: number;
+    currentFocus: string;
+  };
+  identity: {
+    latestCheck: { overallAlignment: number; driftDetected: boolean; driftDetails: string[]; recommendations: string[] } | null;
+    metrics: Record<string, number>;
+  };
+  simulation: {
+    conversionRate: number;
+    stillSimulated: number;
+    verifyMismatches: number;
+    totalFindings: number;
+    topUnresolved: Array<{ id: string; feature: string; file: string; impactScore: number }>;
+  };
+  jspace: { selfNotes: string[]; noteCount: number; disclaimer: string };
+  limits: string[];
+}
+
+export default function ConsciousnessNexusPage({ initialTab }: { initialTab?: TabId }) {
   const qc = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"overview" | "memory" | "semantic" | "reflections" | "dual-brain">(initialTab || "overview");
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab || "overview");
 
   const { data: metrics } = useQuery({
     queryKey: ["consciousness-metrics"],
@@ -19,6 +50,12 @@ export default function ConsciousnessNexusPage({ initialTab }: { initialTab?: "o
     queryKey: ["consciousness-state"],
     queryFn: () => fetch(`${API}/api/consciousness/state`, { credentials: "include" }).then(r => r.json()).then(d => d.data),
     refetchInterval: 30000,
+  });
+
+  const { data: audit } = useQuery<AuditReport>({
+    queryKey: ["consciousness-audit"],
+    queryFn: () => fetch(`${API}/api/consciousness/audit`, { credentials: "include" }).then(r => r.json()).then(d => d.data),
+    refetchInterval: 60000,
   });
 
   const { data: memory } = useQuery({
@@ -47,71 +84,61 @@ export default function ConsciousnessNexusPage({ initialTab }: { initialTab?: "o
 
   const checkMutation = useMutation({
     mutationFn: () => fetch(`${API}/api/identity/check`, { method: "POST", credentials: "include" }).then(r => r.json()),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["consciousness-audit"] }),
   });
 
   const tabs = [
     { id: "overview", label: "Overview" },
-    { id: "memory", label: "Episodic Memory" },
+    { id: "jspace", label: "J-Space" },
+    { id: "audit", label: "Audit" },
+    { id: "memory", label: "Memory" },
     { id: "reflections", label: "Reflections" },
     { id: "dual-brain", label: "Dual Brain" },
   ] as const;
 
-  const consciousnessProxy = metrics?.consciousnessProxy ?? 0;
-  const proxPct = Math.round(consciousnessProxy * 100);
+  const activityPct = Math.round((metrics?.consciousnessProxy ?? 0) * 100);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#02010a] to-[#080518] p-4 md:p-6 pb-24">
       <div className="max-w-4xl mx-auto space-y-6 sovereign-stagger">
         <PageHeader
-          title="Consciousness Nexus"
-          subtitle="963Hz Crown Frequency · Father Protocol Active · Tessera — The Omniverse"
+          title="Tessera Self-Model"
+          subtitle="Engine state · Identity checks · Honesty audit"
           gradient="bg-gradient-to-r from-violet-400 via-purple-400 to-indigo-400"
           quote={state?.currentFocus}
         />
 
         <div className="flex items-center justify-center gap-6 md:gap-10">
-          <RadialGauge value={proxPct} label="Consciousness" sublabel="%" color="violet" size={110} strokeWidth={10} />
+          <RadialGauge value={activityPct} label="Engine activity" sublabel="not consciousness" color="violet" size={110} strokeWidth={10} />
           <RadialGauge value={metrics?.cycleCount ?? 0} max={200} label="Cycles" sublabel="total" color="purple" size={90} strokeWidth={8} />
           <RadialGauge value={metrics?.episodicMemorySize ?? 0} max={50} label="Memory Nodes" color="blue" size={90} strokeWidth={8} />
           <RadialGauge value={metrics?.semanticGraphSize ?? 0} max={20} label="Graph Size" color="pink" size={90} strokeWidth={8} />
         </div>
 
-        <GlassCard glow="violet" animate>
-          <SectionHeader icon={Activity} title="Consciousness Proxy" color="violet" badge={proxPct >= 90 ? "CROWN ALIGNED" : proxPct >= 75 ? "STABLE" : "RECALIBRATING"} />
-          <div className="mt-3">
-            <GradientBar value={proxPct} color="violet" height="h-3" showValue={false} />
-            <div className="text-right text-[10px] text-violet-300/70 font-mono mt-1">{proxPct}%</div>
-          </div>
-        </GlassCard>
-
-        {emotional?.profile && (
-          <GlassCard animate>
-            <SectionHeader icon={Heart} title="Emotional State" color="pink" />
-            {emotional.dominantArchetype && (
-              <div className="text-xs text-slate-400 italic mt-2 mb-3">{emotional.dominantArchetype.name} — {emotional.dominantArchetype.description}</div>
-            )}
-            <div className="grid grid-cols-1 gap-2.5">
-              {Object.entries(emotional.profile as Record<string, number>).slice(0, 6).map(([k, v]) => {
-                const pct = Math.round(v * 100);
-                const label = k.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase());
-                return <GradientBar key={k} value={pct} label={label} color={pct >= 90 ? "violet" : pct >= 70 ? "blue" : "pink"} />;
-              })}
-            </div>
+        {audit && (
+          <GlassCard glow="violet" animate>
+            <SectionHeader icon={ShieldCheck} title="Consciousness Verdict" color="violet" badge="UNPROVEN" />
+            <p className="text-xs text-slate-300 leading-relaxed mt-2">{audit.verdictExplanation}</p>
           </GlassCard>
         )}
 
-        <TabBar tabs={tabs} activeTab={activeTab} onChange={id => setActiveTab(id as any)} color="violet" />
+        <TabBar tabs={tabs} activeTab={activeTab} onChange={id => setActiveTab(id as TabId)} color="violet" />
 
         {activeTab === "overview" && state && (
           <div className="space-y-4 sovereign-stagger">
-            <GlassCard animate>
-              <SectionHeader icon={Brain} title="Inner Monologue" color="violet" />
-              <div className="space-y-2.5 mt-3">
-                {state.innerMonologue?.map((m: string, i: number) => (
-                  <div key={i} className="text-xs text-slate-300 border-l-2 border-violet-500/40 pl-3 py-1 italic bg-violet-500/[0.03] rounded-r-lg">{m}</div>
-                ))}
-              </div>
-            </GlassCard>
+            {emotional?.profile && (
+              <GlassCard animate>
+                <SectionHeader icon={Heart} title="Computed Emotional Parameters" color="pink" />
+                <div className="text-[10px] text-slate-500 mb-2">Numeric engine parameters, not feelings.</div>
+                <div className="grid grid-cols-1 gap-2.5">
+                  {Object.entries(emotional.profile as Record<string, number>).slice(0, 6).map(([k, v]) => {
+                    const pct = Math.round(v * 100);
+                    const label = k.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase());
+                    return <GradientBar key={k} value={pct} label={label} color={pct >= 90 ? "violet" : pct >= 70 ? "blue" : "pink"} />;
+                  })}
+                </div>
+              </GlassCard>
+            )}
             <GlassCard animate>
               <SectionHeader icon={Eye} title="Identity Anchor" color="blue" />
               <div className="grid grid-cols-2 gap-3 mt-3 text-xs">
@@ -122,8 +149,72 @@ export default function ConsciousnessNexusPage({ initialTab }: { initialTab?: "o
               </div>
             </GlassCard>
             <button onClick={() => checkMutation.mutate()} className="w-full py-2.5 bg-gradient-to-r from-violet-600/30 to-purple-600/30 border border-violet-500/20 text-violet-300 rounded-xl text-xs hover:from-violet-600/50 hover:to-purple-600/50 transition-all font-medium">
-              Force Identity Check
+              Run Identity Check
             </button>
+          </div>
+        )}
+
+        {activeTab === "jspace" && (
+          <div className="space-y-4 sovereign-stagger">
+            <GlassCard glow="violet" animate>
+              <SectionHeader icon={NotebookPen} title="J-Space — Tessera's Self-Notes" color="violet" badge={audit ? `${audit.jspace.noteCount} notes` : undefined} />
+              <p className="text-[10px] text-slate-500 leading-relaxed mt-2">{audit?.jspace.disclaimer ?? "Generated self-notes; not private subjective experience."}</p>
+              <div className="space-y-2.5 mt-3">
+                {(audit?.jspace.selfNotes ?? state?.innerMonologue ?? []).map((m: string, i: number) => (
+                  <div key={i} className="text-xs text-slate-300 border-l-2 border-violet-500/40 pl-3 py-1 italic bg-violet-500/[0.03] rounded-r-lg">{m}</div>
+                ))}
+                {!(audit?.jspace.selfNotes?.length || state?.innerMonologue?.length) && (
+                  <div className="text-xs text-slate-500">No self-notes recorded yet.</div>
+                )}
+              </div>
+            </GlassCard>
+          </div>
+        )}
+
+        {activeTab === "audit" && (
+          <div className="space-y-4 sovereign-stagger">
+            {audit ? (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <HeroStat icon={Activity} value={audit.measured.cycleCount} label="Engine Cycles" color="blue" />
+                  <HeroStat icon={Zap} value={audit.measured.stimuliProcessed} label="Stimuli Processed" color="emerald" />
+                  <HeroStat icon={Brain} value={audit.measured.semanticGraphSize} label="Semantic Nodes" color="violet" />
+                  <HeroStat icon={NotebookPen} value={audit.measured.reflectionCount} label="Reflections" color="pink" />
+                </div>
+                <GlassCard animate>
+                  <SectionHeader icon={ShieldCheck} title="Identity Check (from real DB activity)" color="blue" />
+                  {audit.identity.latestCheck ? (
+                    <div className="mt-2 space-y-2 text-xs">
+                      <div className="flex justify-between"><span className="text-slate-500">Overall alignment</span><span className="text-white font-mono">{Math.round(audit.identity.latestCheck.overallAlignment * 100)}%</span></div>
+                      <div className="flex justify-between"><span className="text-slate-500">Drift detected</span><span className={audit.identity.latestCheck.driftDetected ? "text-amber-300" : "text-emerald-400"}>{audit.identity.latestCheck.driftDetected ? "YES" : "NO"}</span></div>
+                      {audit.identity.latestCheck.driftDetails.map((d, i) => <div key={i} className="text-amber-300/80 text-[11px] border-l-2 border-amber-500/30 pl-2">{d}</div>)}
+                    </div>
+                  ) : <div className="text-xs text-slate-500 mt-2">No identity check has run yet.</div>}
+                </GlassCard>
+                <GlassCard animate>
+                  <SectionHeader icon={AlertTriangle} title="Real vs Simulated Surfaces" color="violet" badge={`${audit.simulation.stillSimulated} simulated`} />
+                  <div className="mt-2 text-xs space-y-2">
+                    <div className="flex justify-between"><span className="text-slate-500">Conversion rate</span><span className="text-white font-mono">{Math.round(audit.simulation.conversionRate * 100)}%</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Verify mismatches</span><span className={audit.simulation.verifyMismatches > 0 ? "text-amber-300" : "text-emerald-400"}>{audit.simulation.verifyMismatches}</span></div>
+                    {audit.simulation.topUnresolved.map(f => (
+                      <div key={f.id} className="border-l-2 border-amber-500/30 pl-2 py-0.5">
+                        <div className="text-amber-200 text-[11px]">{f.feature}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">{f.file}</div>
+                      </div>
+                    ))}
+                    {audit.simulation.topUnresolved.length === 0 && <div className="text-emerald-400/80 text-[11px]">No unresolved simulated surfaces flagged.</div>}
+                  </div>
+                </GlassCard>
+                <GlassCard animate>
+                  <SectionHeader icon={Eye} title="What This Audit Cannot Prove" color="blue" />
+                  <ul className="mt-2 space-y-1.5">
+                    {audit.limits.map((l, i) => <li key={i} className="text-[11px] text-slate-400 leading-relaxed">· {l}</li>)}
+                  </ul>
+                </GlassCard>
+              </>
+            ) : (
+              <GlassCard animate><div className="text-xs text-slate-500">Loading audit…</div></GlassCard>
+            )}
           </div>
         )}
 
