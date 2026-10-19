@@ -15,7 +15,6 @@ vi.mock("@workspace/db", () => ({
 }));
 
 import natalChartRouter from "../routes/natal-chart";
-import incomeAndLeadsRouter from "../routes/income-and-leads";
 
 const OWNER_ENV = "SOVEREIGN_ADMIN_TOKEN";
 const LEGACY_ENV = "TESSERACT_ADMIN_KEY";
@@ -26,7 +25,6 @@ const SYNTHETIC_SESSION_SECRET = "synthetic-session-secret-32chars!!";
 
 const gatedEndpoints = [
   { router: "natal-chart", path: "/natal-chart/father" },
-  { router: "income-and-leads", path: "/income/wallet" },
 ] as const;
 
 describe("sensitive route gate", () => {
@@ -40,7 +38,6 @@ describe("sensitive route gate", () => {
   beforeAll(async () => {
     const app = express();
     app.use(natalChartRouter);
-    app.use(incomeAndLeadsRouter);
     app.get("/healthz", (_req, res) => {
       res.json({ status: "ok" });
     });

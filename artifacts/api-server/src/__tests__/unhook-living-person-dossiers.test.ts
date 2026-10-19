@@ -45,33 +45,12 @@ vi.mock("../lib/autonomous-wiring", () => ({
   },
 }));
 
-vi.mock("../lib/wallet-observer", () => ({
-  startWalletObserver(): void {},
-  getWalletObservation() {
-    return { lastObservedAt: 1, configured: false, lastError: null, totalReceivedSol: 0, balanceSol: 0 };
-  },
-  async refreshWalletObservation() {
-    return { lastObservedAt: 1, configured: false, lastError: null, totalReceivedSol: 0, balanceSol: 0 };
-  },
-}));
-
 vi.mock("../lib/autonomous-build-cycle", () => ({
   startAutonomousBuildCycleTimer(): void {},
 }));
 
 vi.mock("../lib/free-stuff-scraper", () => ({
   startFreeStuffScraper(): void {},
-}));
-
-vi.mock("../lib/code-bounties-real", () => ({
-  startBountyRefresher(): void {},
-  getBounties() {
-    return { bounties: [], lastRefresh: 0, attemptsCount: 0 };
-  },
-}));
-
-vi.mock("../lib/income-executor", () => ({
-  startIncomeExecutor(): void {},
 }));
 
 import apiRouter from "../routes/index";
@@ -145,7 +124,7 @@ describe("unhook living-person dossiers", () => {
     }
   });
 
-  it("keeps a non-dossier income route gated instead of removed", async () => {
+  it("income routes are removed along with the dossier routes", async () => {
     const missing = await fetch(`${baseUrl}/income/strategies`);
     expect(missing.status).toBe(401);
 
@@ -153,7 +132,7 @@ describe("unhook living-person dossiers", () => {
     const authed = await fetch(`${baseUrl}/income/strategies`, {
       headers: { cookie: `${SESSION_COOKIE}=${issued.signedId}` },
     });
-    expect(authed.status).toBe(200);
+    expect(authed.status).toBe(404);
   });
 
   it("does not import dossier libs from any served route file", () => {

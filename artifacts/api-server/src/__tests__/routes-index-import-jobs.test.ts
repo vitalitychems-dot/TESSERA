@@ -26,11 +26,8 @@ const probes = vi.hoisted(() => {
 });
 
 const starters = vi.hoisted(() => ({
-  startWalletObserver: vi.fn(),
   startAutonomousBuildCycleTimer: vi.fn(),
   startFreeStuffScraper: vi.fn(),
-  startBountyRefresher: vi.fn(),
-  startIncomeExecutor: vi.fn(),
 }));
 
 vi.mock("../lib/autonomous-wiring", () => ({
@@ -38,12 +35,6 @@ vi.mock("../lib/autonomous-wiring", () => ({
   stopAutonomousOperation(): void {},
   getAutonomousStatus(): { running: boolean } {
     return { running: false };
-  },
-}));
-
-vi.mock("../lib/wallet-observer", () => ({
-  startWalletObserver(): void {
-    starters.startWalletObserver();
   },
 }));
 
@@ -56,18 +47,6 @@ vi.mock("../lib/autonomous-build-cycle", () => ({
 vi.mock("../lib/free-stuff-scraper", () => ({
   startFreeStuffScraper(): void {
     starters.startFreeStuffScraper();
-  },
-}));
-
-vi.mock("../lib/code-bounties-real", () => ({
-  startBountyRefresher(): void {
-    starters.startBountyRefresher();
-  },
-}));
-
-vi.mock("../lib/income-executor", () => ({
-  startIncomeExecutor(): void {
-    starters.startIncomeExecutor();
   },
 }));
 
@@ -104,11 +83,8 @@ describe("routes/index import does not start background jobs", () => {
     const routes = await import("../routes/index");
     vi.clearAllTimers();
     expect(routes.default).toBeTypeOf("function");
-    expect(starters.startWalletObserver).toHaveBeenCalledTimes(0);
     expect(starters.startAutonomousBuildCycleTimer).toHaveBeenCalledTimes(0);
     expect(starters.startFreeStuffScraper).toHaveBeenCalledTimes(0);
-    expect(starters.startBountyRefresher).toHaveBeenCalledTimes(0);
-    expect(starters.startIncomeExecutor).toHaveBeenCalledTimes(0);
     expect(probes.dbCalls.select).toHaveBeenCalledTimes(0);
     expect(probes.dbCalls.insert).toHaveBeenCalledTimes(0);
     expect(probes.dbCalls.update).toHaveBeenCalledTimes(0);

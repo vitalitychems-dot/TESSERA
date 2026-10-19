@@ -64,8 +64,6 @@ const SovereignMeshPage = lazyRetry(() => import("@/pages/SovereignMeshPage"));
 const ProofCenterPage = lazyRetry(() => import("@/pages/ProofCenterPage"));
 const FleetPage = lazyRetry(() => import("@/pages/FleetPage"));
 const AgentLivePage = lazyRetry(() => import("@/pages/AgentLivePage"));
-const EcomPage = lazyRetry(() => import("@/pages/EcomPage"));
-const IncomeWorkflowPage = lazyRetry(() => import("@/pages/IncomeWorkflowPage"));
 const RulesPage = lazyRetry(() => import("@/pages/RulesPage"));
 const IntelligencePage = lazyRetry(() => import("@/pages/IntelligencePage"));
 const RoyalCourtPage = lazyRetry(() => import("@/pages/RoyalCourtPage"));
@@ -80,10 +78,8 @@ const NextFivePage = lazyRetry(() => import("@/pages/NextFivePage"));
 
 // ---- Hub wrappers ----
 const UniverseHubPage = lazyRetry(() => import("@/pages/UniverseHubPage"));
-const NFTHubPage = lazyRetry(() => import("@/pages/NFTHubPage"));
-const FinanceHubPage = lazyRetry(() => import("@/pages/FinanceHubPage"));
 const CodeHubPage = lazyRetry(() => import("@/pages/CodeHubPage"));
-const LeadsHubPage = lazyRetry(() => import("@/pages/LeadsHubPage"));
+const SEOResearchPage = lazyRetry(() => import("@/pages/SEOResearchPage"));
 const CommandHubPage = lazyRetry(() => import("@/pages/CommandHubPage"));
 const RoadmapHubPage = lazyRetry(() => import("@/pages/RoadmapHubPage"));
 const BibleHubPage = lazyRetry(() => import("@/pages/BibleHubPage"));
@@ -222,14 +218,6 @@ const REDIRECTS: Array<[string, string]> = [
   ["/3d-diagrams", "/universe"],
   ["/grand-narrative", "/universe"],
   ["/unified-truth", "/universe"],
-  // NFT cluster — single canonical surface (Unified Directory)
-  ["/members", "/agent-nft"],
-  ["/agent-profile", "/agent-nft"],
-  ["/agent-comms", "/agent-nft"],
-  ["/wallet-dashboard", "/agent-nft"],
-  ["/token-economy", "/agent-nft"],
-  ["/economy-hub", "/agent-nft"],
-  ["/tokens", "/agent-nft"],
   // Fleet cluster
   ["/mission", "/fleet"],
   // Royal / Inventions
@@ -242,17 +230,7 @@ const REDIRECTS: Array<[string, string]> = [
   ["/memory-dashboard", "/system"],
   ["/sovereign-deps", "/system"],
   ["/evolution-health", "/system"],
-  // Finance cluster
-  ["/market", "/finance?tab=market"],
-  ["/arbitrage", "/finance?tab=arbitrage"],
-  ["/sports-arb", "/finance?tab=arbitrage"],
-  // Leads cluster
-  ["/affiliate", "/lead-gen?tab=affiliate"],
-  ["/local-services", "/lead-gen?tab=local"],
-  ["/business-ideas", "/lead-gen?tab=ideas"],
-  ["/seo", "/lead-gen?tab=seo"],
   // Code cluster
-  ["/api-marketplace", "/code-builder?tab=api"],
   ["/credentials", "/code-builder?tab=credentials"],
   // Misc aliases
   ["/intelligence-engine", "/consciousness-nexus"],
@@ -321,9 +299,6 @@ function AppRouter() {
         <Route path="/compression-lab">{() => <CompressionLabPage />}</Route>
         <Route path="/lattice">{() => <LatticeBrowserPage />}</Route>
 
-        {/* NFT hub (Members + Wallets) */}
-        <Route path="/agent-nft">{() => <NFTHubPage />}</Route>
-
         {/* Fleet & Mission */}
         <Route path="/fleet">{() => <FleetPage />}</Route>
         <Route path="/agent/:agentId">{() => <AgentLivePage />}</Route>
@@ -345,13 +320,8 @@ function AppRouter() {
         <Route path="/rules">{() => <RulesPage />}</Route>
         <Route path="/auto-healer">{() => <AutoHealerPage />}</Route>
 
-        {/* Economy: Finance + Market + Arbitrage */}
-        <Route path="/finance">{() => <FinanceHubPage />}</Route>
-        <Route path="/income">{() => <IncomeWorkflowPage />}</Route>
-        <Route path="/ecom">{() => <EcomPage />}</Route>
-
-        {/* Leads */}
-        <Route path="/lead-gen">{() => <LeadsHubPage />}</Route>
+        {/* SEO research */}
+        <Route path="/seo">{() => <SEOResearchPage />}</Route>
 
         {/* Developer: Code + API + Credentials */}
         <Route path="/code-builder">{() => <CodeHubPage />}</Route>

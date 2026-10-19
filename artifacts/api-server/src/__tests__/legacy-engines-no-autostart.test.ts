@@ -61,11 +61,6 @@ function silenceStarter<T extends Record<string, unknown>>(actual: T, name: keyo
   return { ...actual, [name]: () => undefined };
 }
 
-vi.mock("../lib/wallet-observer", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../lib/wallet-observer")>();
-  return silenceStarter(actual, "startWalletObserver");
-});
-
 vi.mock("../lib/autonomous-build-cycle", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/autonomous-build-cycle")>();
   return silenceStarter(actual, "startAutonomousBuildCycleTimer");
@@ -74,16 +69,6 @@ vi.mock("../lib/autonomous-build-cycle", async (importOriginal) => {
 vi.mock("../lib/free-stuff-scraper", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/free-stuff-scraper")>();
   return silenceStarter(actual, "startFreeStuffScraper");
-});
-
-vi.mock("../lib/code-bounties-real", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../lib/code-bounties-real")>();
-  return silenceStarter(actual, "startBountyRefresher");
-});
-
-vi.mock("../lib/income-executor", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../lib/income-executor")>();
-  return silenceStarter(actual, "startIncomeExecutor");
 });
 
 function inertModule() {

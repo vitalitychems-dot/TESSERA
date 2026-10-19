@@ -11,8 +11,6 @@ import type { WorldState } from "./life/types";
 import { locationIcons, agentColors } from "./life/types";
 import type { LucideIcon } from "@/types/api";
 
-const AgentNFTPage = lazy(() => import("@/pages/AgentNFTPage"));
-
 import WorldMap from "./life/WorldMap";
 import AgentProfile from "./life/AgentProfile";
 import ActivityFeed from "./life/ActivityFeed";
@@ -297,14 +295,6 @@ export default function LifePage({ embedded }: { embedded?: boolean }) {
         <ExpandableSection id="family" title="Family Registry" icon={Heart} iconColor="text-rose-400">
           <LifeErrorBoundary>
             <TesseractFamilyTab />
-          </LifeErrorBoundary>
-        </ExpandableSection>
-
-        <ExpandableSection id="nfts" title="Agent NFTs" icon={Crown} iconColor="text-yellow-400">
-          <LifeErrorBoundary>
-            <Suspense fallback={<div className="flex items-center justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-purple-400/50" /></div>}>
-              <AgentNFTPage embedded />
-            </Suspense>
           </LifeErrorBoundary>
         </ExpandableSection>
 

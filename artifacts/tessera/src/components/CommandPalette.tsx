@@ -22,9 +22,7 @@ export function CommandPalette() {
     { id: "chat", label: "Chat", description: "Open sovereign chat", icon: MessageSquare, action: () => setLocation("/"), category: "Navigate" },
     { id: "command", label: "Command", description: "Intelligence & System Health", icon: Brain, action: () => setLocation("/command"), category: "Navigate" },
     { id: "swarm", label: "Swarm", description: "Life World, Swarm Viz & Forum", icon: Satellite, action: () => setLocation("/swarm"), category: "Navigate" },
-    { id: "coin", label: "$TSRT Coin", description: "Token economy & live chart", icon: Coins, action: () => setLocation("/coin"), category: "Navigate" },
-    { id: "revenue", label: "Revenue", description: "Income & financial engines", icon: DollarSign, action: () => setLocation("/revenue-hub"), category: "Navigate" },
-    { id: "config", label: "Config", description: "API Keys, Rules & Marketplace", icon: Key, action: () => setLocation("/config"), category: "Navigate" },
+    { id: "config", label: "Config", description: "API Keys & Rules", icon: Key, action: () => setLocation("/config"), category: "Navigate" },
     { id: "new-chat", label: "New Conversation", description: "Start a new chat thread", icon: MessageSquare, action: () => { setLocation("/"); setTimeout(() => { const btn = document.querySelector<HTMLButtonElement>("[data-testid='button-new-chat']"); btn?.click(); }, 100); }, category: "Actions" },
     { id: "focus-search", label: "Focus Chat Input", description: "Jump to chat input", icon: Search, action: () => { setLocation("/"); setTimeout(() => { const input = document.querySelector<HTMLTextAreaElement>("[data-testid='input-message']"); input?.focus(); }, 100); }, category: "Actions" },
   ];

@@ -66,11 +66,14 @@ async function getOrSeedNatalChart() {
 
 router.get("/natal-chart/father", async (_req, res) => {
   try {
+    // Configuration check must precede any database use: when the chart is not
+    // configured the route must fail as not-configured without touching the DB.
+    const configuredChart = getFatherNatalChart();
     const row = await getOrSeedNatalChart();
     if (!row) {
       return res.json({ ok: true, identity: "Father", chart: null, source: "owner-deleted" });
     }
-    const chart = getFatherNatalChart();
+    const chart = configuredChart;
     const sovereignKeys = row.sovereignKeys && typeof row.sovereignKeys === "object"
       ? publicSovereignKeys(row.sovereignKeys as unknown as Record<string, unknown>)
       : row.sovereignKeys;

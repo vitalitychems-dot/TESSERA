@@ -88,7 +88,6 @@ const NAV_GROUPS: NavGroup[] = [
     label: "AGENTS & ROYAL",
     labelColor: "text-rose-400",
     items: [
-      { title: "Agent NFT (Members · Wallets)", href: "/agent-nft", icon: Crown, color: "rose", dotColor: "bg-rose-400", testId: "link-agent-nft", matchFn: (loc) => loc === "/agent-nft" },
       { title: "Fleet & Mission", href: "/fleet", icon: Truck, color: "cyan", dotColor: "bg-cyan-400", testId: "link-fleet", matchFn: (loc) => loc === "/fleet" },
       { title: "Royal Court", href: "/royal-court", icon: Crown, color: "amber", dotColor: "bg-amber-400", testId: "link-royal-court", matchFn: (loc) => loc === "/royal-court" || loc === "/royal-appointments" || loc === "/departments" },
       { title: "Royal Inventor", href: "/rick", icon: Atom, color: "amber", dotColor: "bg-amber-400", testId: "link-rick", matchFn: (loc) => loc === "/rick" || loc === "/inventions" },
@@ -102,16 +101,6 @@ const NAV_GROUPS: NavGroup[] = [
       { title: "Roadmap & Bridge", href: "/sovereignty-roadmap", icon: Map, color: "violet", dotColor: "bg-violet-400", testId: "link-sovereignty-roadmap", matchFn: (loc) => loc === "/sovereignty-roadmap" },
       { title: "System & Diagnostics", href: "/system", icon: Cpu, color: "emerald", dotColor: "bg-emerald-400", testId: "link-system", matchFn: (loc) => loc === "/system" },
       { title: "Sovereign Mesh", href: "/sovereign-mesh", icon: ShieldCheck, color: "emerald", dotColor: "bg-emerald-400", testId: "link-sovereign-mesh", matchFn: (loc) => loc === "/sovereign-mesh" || loc === "/proof-center" || loc === "/rules" },
-    ],
-  },
-  {
-    label: "ECONOMY",
-    labelColor: "text-emerald-400",
-    items: [
-      { title: "Finance · Market · Arbitrage", href: "/finance", icon: DollarSign, color: "emerald", dotColor: "bg-emerald-400", testId: "link-finance", matchFn: (loc) => loc === "/finance" },
-      { title: "Income Workflows", href: "/income", icon: Workflow, color: "emerald", dotColor: "bg-emerald-400", testId: "link-income", matchFn: (loc) => loc === "/income" },
-      { title: "E-Commerce", href: "/ecom", icon: ShoppingCart, color: "orange", dotColor: "bg-orange-400", testId: "link-ecom", matchFn: (loc) => loc === "/ecom" },
-      { title: "Leads · Affiliate · SEO", href: "/lead-gen", icon: Target, color: "amber", dotColor: "bg-amber-400", testId: "link-lead-gen", matchFn: (loc) => loc === "/lead-gen" },
     ],
   },
   {

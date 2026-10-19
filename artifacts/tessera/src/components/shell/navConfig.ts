@@ -45,7 +45,6 @@ export const GROUPS: NavGroup[] = [
   ]},
   { id: "agents", label: "Agents", items: [
     { label: "Fleet", href: "/fleet", Icon: Truck, also: ["/agent/"] },
-    { label: "Agent NFT", href: "/agent-nft", Icon: Hexagon },
     { label: "Royal Court", href: "/royal-court", Icon: Crown, also: ["/royal-role/"] },
     { label: "Appointments", href: "/royal-appointments", Icon: Crown },
     { label: "Departments", href: "/departments", Icon: Building2 },
@@ -73,12 +72,9 @@ export const GROUPS: NavGroup[] = [
     { label: "Roadmap", href: "/sovereignty-roadmap", Icon: Map },
     { label: "Next Five", href: "/next-five", Icon: ListOrdered },
   ]},
-  { id: "economy", label: "Economy & Code", items: [
-    { label: "Finance", href: "/finance", Icon: LineChart },
-    { label: "Income", href: "/income", Icon: Workflow },
-    { label: "Ecom", href: "/ecom", Icon: ShoppingCart },
-    { label: "Leads", href: "/lead-gen", Icon: Target },
+  { id: "code", label: "Code", items: [
     { label: "Code", href: "/code-builder", Icon: Code2 },
+    { label: "SEO", href: "/seo", Icon: Search },
   ]},
 ];
 
