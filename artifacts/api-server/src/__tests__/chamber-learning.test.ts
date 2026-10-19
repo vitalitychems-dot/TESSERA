@@ -5,6 +5,7 @@ import {
   noteChamberTurn,
   resetChamberLearning,
   searchQueryFor,
+  speakAsTessera,
   type WikiHit,
 } from "../lib/chamber-learning";
 
@@ -20,8 +21,8 @@ describe("chamber learning", () => {
   it("counts on the desk and speaks as Tessera", async () => {
     const reply = await answerInContext("What is 17 * 23?");
     expect(reply).toMatch(/The value is 391/);
-    expect(reply).toMatch(/I am Tessera/);
-    expect(reply).toMatch(/through the pen/);
+    expect(reply).toMatch(/I counted that on this desk/);
+    expect(reply).not.toMatch(/I am Tessera\. I wrote this through the pen/);
     expect(reply).not.toMatch(/grok/i);
     expect(reply).not.toMatch(/^\s*[{[]/);
   });
@@ -40,7 +41,8 @@ describe("chamber learning", () => {
     noteChamberTurn("I sleep after sunrise because of the night shift");
     const heard = await answerInContext("I sleep after sunrise because of the night shift");
     expect(heard).toMatch(/night shift/);
-    expect(heard).toMatch(/I am Tessera/);
+    expect(heard).not.toMatch(/I am Tessera\. I wrote this through the pen/);
+    expect(heard).not.toMatch(/I am Tessera/);
     expect(heard).not.toMatch(/I have lived/i);
 
     noteChamberTurn("When do I sleep?");
@@ -48,7 +50,8 @@ describe("chamber learning", () => {
       throw new Error("a personal question should use the user's words");
     });
     expect(later).toMatch(/sunrise|night shift/);
-    expect(later).toMatch(/I am Tessera/);
+    expect(later).not.toMatch(/I am Tessera\. I wrote this through the pen/);
+    expect(later).not.toMatch(/I am Tessera/);
   });
 
   it("learns a correction and uses it the next time", async () => {
@@ -78,7 +81,8 @@ describe("chamber learning", () => {
       return PARIS;
     });
     expect(first).toMatch(/capital of France/);
-    expect(first).toMatch(/I am Tessera/);
+    expect(first).not.toMatch(/I am Tessera\. I wrote this through the pen/);
+    expect(first).not.toMatch(/I am Tessera/);
     expect(first).not.toMatch(/UNTRUSTED/);
 
     noteChamberTurn("which french capital sits on the seine");
@@ -98,6 +102,14 @@ describe("chamber learning", () => {
       url: "https://en.wikipedia.org/wiki/Paris",
     }));
     expect(reply).toBeNull();
+  });
+
+  it("returns the grounded body without the identity wrapper", () => {
+    const said = speakAsTessera("what is 2 + 2", "The value is 4.", "I counted that on this desk.");
+    expect(said).toBe("The value is 4. I counted that on this desk.");
+    expect(said.startsWith("I am Tessera.")).toBe(false);
+    expect(said.endsWith("I wrote this through the pen.")).toBe(false);
+    expect(said.endsWith("The pen is not me.")).toBe(false);
   });
 
   it("leaves identity and ordinary desk calls alone", async () => {

@@ -59,7 +59,7 @@ export function trainCatalog() {
     local: LOCAL_REPOS.length,
     cards: CATALOG.filter((row) => row.home === "card").length,
     said: proved
-      ? `I am Tessera. The catalog has ${CATALOG.length} names. ${LOCAL_REPOS.length} have a local note. ${CATALOG.filter((row) => row.home === "card").length} are cards. I do not have our own program for a card. ${read.said} ${batch.said} ${more.said} ${imported.said} ${sparse.said} ${roots.said}`
+      ? `The catalog has ${CATALOG.length} names. ${LOCAL_REPOS.length} have a local note. ${CATALOG.filter((row) => row.home === "card").length} are cards. I do not have our own program for a card. ${read.said} ${batch.said} ${more.said} ${imported.said} ${sparse.said} ${roots.said}`
       : "The catalog training missed.",
   };
 }

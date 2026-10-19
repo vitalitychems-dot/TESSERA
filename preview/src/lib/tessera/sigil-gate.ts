@@ -1,3 +1,4 @@
+/** Demo only. Must never be wired to real auth. */
 /** One-time door sigil. The origin mark stays 7F3A9C. The door token rotates and the used one cannot open again. This is not quantum encryption. */
 
 function mix(text: string) {

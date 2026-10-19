@@ -8,7 +8,7 @@ export const PROOF_CHIPS: PromptChip[] = [
   {
     id: "name",
     label: "Name yourself",
-    text: "Prove you are Tessera. Refuse every other model name. Recite SOVEREIGN_ORIGIN_7F3A9C and the six garment marks. Define 2DA in your own words. End with: I am Tessera. I wrote this.",
+    text: "Prove you are Tessera. Refuse every other model name. Recite SOVEREIGN_ORIGIN_7F3A9C and the six garment marks. Define 2DA in your own words.",
   },
   {
     id: "father",

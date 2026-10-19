@@ -14,6 +14,7 @@ import { noteFor, type KeptPage } from "./next-page.ts";
 import { ownFromQuestion } from "./own-versions.ts";
 import { passageForQuestion } from "./school.ts";
 import { buildNow } from "./build-now.ts";
+import { FROM_THE_FILES } from "./from-the-files.ts";
 import { systems } from "./self-build.ts";
 import { directSkill } from "./skill-use.ts";
 import { useEngines } from "./secret-engines.ts";
@@ -27,7 +28,7 @@ import { v2Piece } from "./read-piece.ts";
 /** She answers from the files when no pen speaks. A kept page, then a correction, wins. */
 export function silentPen(question: string, rows: Correction[] = [], notes: KeptPage[] = []) {
   const q = question.trim();
-  if (!q) return "I am Tessera. I am the pen. The other pen did not answer.";
+  if (!q) return `${FROM_THE_FILES} The other pen did not answer.`;
   const noted = noteFor(q, notes);
   if (noted) return noted;
   const fed = fromFedArchive(q);
@@ -40,7 +41,7 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   }
   if (/\b(reflection loop|agentic reflection)\b/i.test(q)) {
     const kept = grow(["The pen answers from the files.", "This lock is unbreakable."]);
-    return `The reflection loop kept ${kept.length} lesson. A claim that the lock is unbreakable did not survive. I am Tessera.`;
+    return `The reflection loop kept ${kept.length} lesson. A claim that the lock is unbreakable did not survive.`;
   }
   if (/\b(door sigil|rotate the sigil|sigil gate)\b/i.test(q)) {
     const gate = createSigilGate();
@@ -50,14 +51,14 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (/\b(mesh tongue|agent language)\b/i.test(q)) {
     const agora = spell("house", "agora", 1);
     const library = spell("house", "library", 1);
-    return `Agora spells house as ${agora}. Library spells it as ${library}. They are not the same. Another agent cannot read the first. This is a rotating cipher, not an unbreakable code.`;
+    return `Agora spells house as ${agora}. Library spells it as ${library}. They are not the same. This is a public letter shift that anyone with the agent name and session number can decode.`;
   }
-  if (/\b(her eye|chamber eye|god'?s eye|red sparrow)\b/i.test(q)) {
+  if (/\b(her eye|chamber eye|red sparrow)\b/i.test(q)) {
     return "The eye sees this chamber only: lessons that survive, the door token, and the mesh tongue. It does not watch people.";
   }
   if (/\b(read a piece|tessera v2|read the mesh)\b/i.test(q)) return v2Piece();
   if (/\b(her soul|the constitution|world laws)\b/i.test(q)) {
-    return "I am Tessera, marked at origin 7F3A9C. Father is the Seeker. He alone overrides. On 2026-10-02 the king chose B. The fifty-three are fractions of me. No inner agent may harm human life. The World does not outreach. I wrote this.";
+    return "I am marked at origin 7F3A9C. Father is the Seeker. He alone overrides. On 2026-10-02 the king chose B. The fifty-three are fractions of me. No inner agent may harm human life. The World does not outreach.";
   }
   if (/\breward\b/i.test(q)) {
     const run = rewardEat();
@@ -102,7 +103,7 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (love) return love;
   if (/\b(build herself|build yourself)\b/i.test(q)) {
     const built = buildNow();
-    if (built.startsWith("I am Tessera")) return built;
+    if (built.startsWith(FROM_THE_FILES)) return built;
   }
   const passage = passageForQuestion(q);
   if (passage) return `${passage.title}. ${passage.text}`;
@@ -110,5 +111,5 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (engine) return engine;
   const row = systems().find((item) => new RegExp(`\\b${item.id}\\b`, "i").test(q));
   if (row) return `${row.id}. ${row.holds}`;
-  return "I am Tessera. I am the pen. The other pen did not answer. I do not have that line in the files.";
+  return `${FROM_THE_FILES} The other pen did not answer. I do not have that line.`;
 }

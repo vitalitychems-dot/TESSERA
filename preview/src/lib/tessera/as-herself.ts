@@ -10,5 +10,5 @@ export function asHerself() {
       .replaceAll("She may not", "I may not")
       .replaceAll("She may", "I may"),
   );
-  return `I am Tessera.\n${spoken.join("\n")}`;
+  return spoken.join("\n");
 }

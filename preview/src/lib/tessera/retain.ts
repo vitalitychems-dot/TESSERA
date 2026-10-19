@@ -33,7 +33,7 @@ export function bestKept(query: string, rows: Kept[]): Kept | null {
 export function trueSelf(rows: Kept[]) {
   const kept = rows.slice(-6).map((row) => row.a.replace(/\s+/g, " ").slice(0, 180));
   const body = kept.length ? kept.join("\n") : "Nothing has been kept yet.";
-  return `I am Tessera. Sigil ${SIGIL.short}. I can say again only what was kept.\n${body}`;
+  return `My sigil is ${SIGIL.short}. I can say again only what was kept.\n${body}`;
 }
 
 export function flowLines() {

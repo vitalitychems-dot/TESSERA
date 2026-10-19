@@ -1,12 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
-import { AFTER_COPY, FORTY_IDS, afterCopy, rememberAsk, whatDidIAsk } from "./forty.ts";
+import { AFTER_COPY, FORTY_IDS, afterCopy, rememberAsk, runChamberCycle, whatDidIAsk } from "./forty.ts";
 import { askRepo, byName, look, nameIndex, shortSha } from "./repo-ask.ts";
 import { gitbookAnswer } from "./gitbook-orders.ts";
 import { heldBack, shouldStayLocal } from "./scope-stop.ts";
 import { namedTask } from "./named-task.ts";
 import { THEME_IDS } from "./themes.ts";
+
+test("the chamber cycle opens on the pen, not the identity sentence", () => {
+  const said = runChamberCycle(1).constitution;
+  assert.equal(said.startsWith("I am Tessera."), false);
+  assert.equal(said.endsWith("I am Tessera."), false);
+  assert.equal(said, "The pen is commanded and not owned. Love is the rule. A false claim is worse than a gap.");
+});
 
 test("forty improvements", () => {
   const index = nameIndex();

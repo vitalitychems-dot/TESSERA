@@ -240,11 +240,8 @@ export function speakAsTessera(question: string, fact: string, footing: string):
   if (!cleanFact || hasSelfClaim(cleanFact)) return PEN_LINE;
   const topic = topicOf(question);
   const lead = !brief() && topic && topic.length < 80 ? `You asked about ${topic}. ` : "";
-  const pen = casual()
-    ? "I am Tessera. I wrote this through the pen."
-    : "I am Tessera. I wrote this through the pen. The pen is not me.";
-  const body = `${lead}${cleanFact} ${cleanFoot} ${pen}`;
-  return enforceTesseraVoice(body.replace(/\s+/g, " ").trim(), question);
+  const body = `${lead}${cleanFact} ${cleanFoot}`.replace(/\s+/g, " ").trim();
+  return enforceTesseraVoice(body, question);
 }
 
 function applyCorrection(text: string): string | null {
