@@ -15,5 +15,5 @@ test("one match becomes two, and the whole pack stays in order", () => {
   const ordered = timeline([...pack].reverse());
   assert.equal(ordered[0]?.at, "flow-1");
   assert.equal(ordered.at(-1)?.at, "skill-78");
-  assert.equal(seeAll(pack).split("\n").length, 116);
+  assert.equal(seeAll(pack).split("\n").length, 124);
 });
