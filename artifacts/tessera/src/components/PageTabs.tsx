@@ -1,7 +1,5 @@
 import { useState, useEffect, useMemo, Suspense, lazy, type LazyExoticComponent, type ComponentType } from "react";
 import { useLocation } from "wouter";
-import { Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 export interface PageTabSpec {
   id: string;
@@ -15,6 +13,7 @@ interface PageTabsProps {
   hubKey: string;
   title: string;
   subtitle?: string;
+  /** Kept for API compatibility; the shell applies one accent. */
   iconColor?: string;
   tabs: PageTabSpec[];
   defaultTab?: string;
@@ -32,7 +31,18 @@ function getLazy(hubKey: string, spec: PageTabSpec): LazyExoticComponent<Compone
   return c;
 }
 
-export default function PageTabs({ hubKey, title, subtitle, iconColor = "text-cyan-400", tabs, defaultTab }: PageTabsProps) {
+function TabSkeleton() {
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-6 space-y-3" aria-busy="true" aria-label="Loading section">
+      <div className="tx-skel h-6 w-48" />
+      <div className="tx-skel h-24 w-full" />
+      <div className="tx-skel h-24 w-full" />
+    </div>
+  );
+}
+
+/** Hub sub-navigation. Not sticky (the shell owns the only sticky bar), so nested bars never stack. */
+export default function PageTabs({ hubKey, title, subtitle, tabs, defaultTab }: PageTabsProps) {
   const [location] = useLocation();
 
   const matched = useMemo(() => {
@@ -64,40 +74,48 @@ export default function PageTabs({ hubKey, title, subtitle, iconColor = "text-cy
   const ActiveComp = useMemo(() => {
     const spec = tabs.find(t => t.id === active) || tabs[0];
     return spec ? getLazy(hubKey, spec) : null;
-  }, [active, tabs]);
+  }, [active, tabs, hubKey]);
+
+  const showTabs = tabs.length > 1;
 
   return (
     <div className="flex flex-col w-full">
-      <div className="sticky top-0 z-30 backdrop-blur-md bg-[hsl(250,15%,4%)]/80 border-b border-white/[0.06]">
-        <div className="px-4 pt-3 pb-1 max-w-5xl mx-auto">
-          <div className="flex items-baseline gap-2 mb-2">
-            <h1 className={cn("text-lg font-bold font-mono", iconColor)}>{title}</h1>
-            {subtitle && <span className="text-[10px] text-slate-500 font-mono truncate">{subtitle}</span>}
-          </div>
-          <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mb-px" style={{ scrollbarWidth: "none" }}>
-            <style>{`.hub-tabs::-webkit-scrollbar{display:none}`}</style>
-            <div className="hub-tabs flex gap-1.5">
-              {tabs.map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => setActive(t.id)}
-                  data-testid={`hub-tab-${hubKey}-${t.id}`}
-                  className={cn(
-                    "px-3 py-1.5 rounded-t-lg text-[11px] font-mono whitespace-nowrap transition-all border-b-2",
-                    active === t.id
-                      ? cn("text-cyan-300 border-cyan-400 bg-white/[0.04]")
-                      : "text-slate-500 border-transparent hover:text-slate-300 hover:bg-white/[0.02]"
-                  )}
-                >
-                  {t.label}
-                </button>
-              ))}
+      <header className="border-b" style={{ borderColor: "var(--next-rule)" }}>
+        <div className="px-4 pt-4 max-w-5xl mx-auto">
+          <h1 className="tx-display text-xl font-bold leading-tight" style={{ color: "var(--next-bone)" }}>{title}</h1>
+          {subtitle && <p className="tx-mono text-[11px] mt-1 truncate" style={{ color: "#858078" }}>{subtitle}</p>}
+          {showTabs ? (
+            <div
+              role="tablist"
+              aria-label={`${title} sections`}
+              className="flex gap-4 overflow-x-auto tx-scrollbar-none mt-3 -mb-px"
+            >
+              {tabs.map(t => {
+                const sel = active === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    role="tab"
+                    type="button"
+                    aria-selected={sel}
+                    onClick={() => setActive(t.id)}
+                    data-testid={`hub-tab-${hubKey}-${t.id}`}
+                    className="tx-focus tx-mono shrink-0 py-2.5 text-[12px] whitespace-nowrap border-b-2 transition-colors"
+                    style={{
+                      color: sel ? "var(--next-bone)" : "#858078",
+                      borderColor: sel ? "var(--next-glass)" : "transparent",
+                    }}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
             </div>
-          </div>
+          ) : <div className="h-4" />}
         </div>
-      </div>
-      <div className="flex-1 min-h-0">
-        <Suspense fallback={<div className="flex items-center justify-center py-20"><Loader2 className="animate-spin text-cyan-400" /></div>}>
+      </header>
+      <div className="flex-1 min-h-0" role={showTabs ? "tabpanel" : undefined}>
+        <Suspense fallback={<TabSkeleton />}>
           {ActiveComp ? <ActiveComp /> : null}
         </Suspense>
       </div>

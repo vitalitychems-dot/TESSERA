@@ -1,8 +1,9 @@
 import { memo } from "react";
-import { Send, Mic, MicOff, Square, Volume2, VolumeX, Network, Radio, Activity, Keyboard } from "lucide-react";
+import { Send, Mic, MicOff, Square, Volume2, VolumeX, Network, Radio, Activity, Keyboard, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChatFontColorPicker } from "./ChatFontColorPicker";
 import { ChatVoiceSpeedControl } from "./ChatVoiceSpeedControl";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface ChatInputToolbarProps {
   input: string;
@@ -42,7 +43,15 @@ export const ChatInputToolbar = memo(function ChatInputToolbar({
   onMicPressStart, onMicPressEnd, onStopStreaming,
 }: ChatInputToolbarProps) {
   return (
-    <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between">
+    <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between gap-2">
+      <Popover>
+        <PopoverTrigger asChild>
+          <button type="button" className="flex min-h-10 items-center gap-2 rounded-lg px-3 text-xs text-[#b8c1bf] hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" data-testid="button-chat-tools">
+            <Settings2 size={16} /> Tools
+          </button>
+        </PopoverTrigger>
+        <PopoverContent side="top" align="start" className="w-[min(340px,calc(100vw-32px))] border-primary/20 bg-[#101820] p-3 text-[#f3efe6]">
+          <p className="mb-3 text-xs text-[#b8c1bf]">Chat tools · open only what you need</p>
       <div className="flex items-center gap-1">
         <button
           type="button"
@@ -106,6 +115,8 @@ export const ChatInputToolbar = memo(function ChatInputToolbar({
         localFontColor={localFontColor}
         onColorChange={onFontColorChange}
       />
+        </PopoverContent>
+      </Popover>
 
       <div className="flex items-center gap-1.5">
         <button
@@ -120,6 +131,7 @@ export const ChatInputToolbar = memo(function ChatInputToolbar({
                 : "text-gray-600 hover:text-gray-400 hover:bg-white/[0.06]"
           )}
           title={isSpeaking ? "Stop speaking" : ttsEnabled ? "Mute" : "Unmute"}
+          aria-label={isSpeaking ? "Stop speaking" : ttsEnabled ? "Mute spoken replies" : "Enable spoken replies"}
           data-testid="button-tts"
         >
           {isSpeaking ? <Square size={16} className="fill-current" /> : ttsEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
@@ -142,6 +154,7 @@ export const ChatInputToolbar = memo(function ChatInputToolbar({
               : "text-gray-500 hover:text-white hover:bg-white/[0.06]"
           )}
           title={isRecording ? "Tap to stop" : "Tap to speak"}
+          aria-label={isRecording ? "Stop recording" : "Record voice message"}
           data-testid="button-voice"
         >
           {isRecording ? (

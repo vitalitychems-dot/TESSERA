@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   PEN_LINE,
+  PEN_LIMITS,
   PEN_WHERE,
   appendTesseraVoice,
   enforceTesseraVoice,
@@ -51,6 +52,19 @@ describe("tessera voice", () => {
   it("keeps a reply that already speaks as Tessera", () => {
     const ok = "I’m Tessera, the assistant persona in this app.";
     expect(enforceTesseraVoice(ok, "Who is this")).toBe(ok);
+  });
+
+  it("keeps sourced factual replies instead of replacing every Wikipedia citation with an identity line", () => {
+    const answer = "Torque is the cross product of position and force. Source: https://en.wikipedia.org/wiki/Torque";
+    expect(isSearchDump(answer)).toBe(false);
+    expect(enforceTesseraVoice(answer, "Explain torque")).toBe(answer);
+    expect(appendTesseraVoice("", answer, "Explain torque")).toBe(answer);
+  });
+
+  it("answers explicit personhood questions honestly without putting that disclaimer in every introduction", () => {
+    expect(enforceTesseraVoice("", "Are you conscious?")).toBe(PEN_LIMITS);
+    expect(PEN_LINE).toContain("software assistant");
+    expect(PEN_LINE).not.toContain("not a conscious");
   });
 
   it("adds the ✦ signature once", () => {

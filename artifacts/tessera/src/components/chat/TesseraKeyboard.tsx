@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { CornerDownLeft, Delete, X } from "lucide-react";
 import { NEXT_COLORS } from "@/lib/theme-constants";
 import { LUS_KEYBOARD_GLYPHS } from "@/lib/lus-keyboard-map";
@@ -17,7 +17,22 @@ interface TesseraKeyboardProps {
 const LETTER_ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
 const NUMBER_ROWS = ["1234567890", "@#$%&-+()/", "*'\"=;:!?_"];
 
-export function TesseraKeyboard({
+// Keep the key grid out of the chat's render loop. Callers can use inline
+// callbacks without rebuilding every key whenever the draft changes.
+export function TesseraKeyboard(props: TesseraKeyboardProps) {
+  const callbacks = useRef(props);
+  callbacks.current = props;
+  const insert = useCallback((text: string) => callbacks.current.onInsert(text), []);
+  const backspace = useCallback(() => callbacks.current.onBackspace(), []);
+  const close = useCallback(() => callbacks.current.onClose(), []);
+  const enter = useCallback(() => {
+    if (callbacks.current.onEnter) callbacks.current.onEnter();
+    else callbacks.current.onInsert("\n");
+  }, []);
+  return <KeyboardView {...props} onInsert={insert} onBackspace={backspace} onClose={close} onEnter={enter} />;
+}
+
+const KeyboardView = memo(function KeyboardView({
   open,
   onInsert,
   onBackspace,
@@ -30,19 +45,26 @@ export function TesseraKeyboard({
   const [uppercase, setUppercase] = useState(false);
   const [numbers, setNumbers] = useState(false);
   const [heldKey, setHeldKey] = useState<string | null>(null);
-  const holdTimer = useRef<number | null>(null);
-  const longPressTriggered = useRef(false);
-  const suppressClickUntil = useRef(0);
-  const pointerPressedKey = useRef<string | null>(null);
+  // One record per pointer lets two thumbs type without one cancelling the other.
+  const presses = useRef(new Map<number, { key: string; timer: number; held: boolean }>());
+  const deleteDelay = useRef<number | null>(null);
+  const deleteRepeat = useRef<number | null>(null);
+  const clearDelete = useCallback(() => {
+    if (deleteDelay.current !== null) window.clearTimeout(deleteDelay.current);
+    if (deleteRepeat.current !== null) window.clearInterval(deleteRepeat.current);
+    deleteDelay.current = null;
+    deleteRepeat.current = null;
+  }, []);
+  const clearPresses = useCallback(() => {
+    for (const press of presses.current.values()) window.clearTimeout(press.timer);
+    presses.current.clear();
+    clearDelete();
+  }, [clearDelete]);
 
   useEffect(() => {
     if (!open) {
       setHeldKey(null);
-      if (holdTimer.current !== null) window.clearTimeout(holdTimer.current);
-      holdTimer.current = null;
-      longPressTriggered.current = false;
-      suppressClickUntil.current = 0;
-      pointerPressedKey.current = null;
+      clearPresses();
       return;
     }
 
@@ -50,33 +72,40 @@ export function TesseraKeyboard({
       if (event.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
-  }, [open, onClose]);
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+      clearPresses();
+    };
+  }, [open, onClose, clearPresses]);
 
   if (!open) return null;
 
-  const startHold = (key: string) => {
+  const startHold = (key: string, pointerId: number) => {
     if (!/^[a-z]$/i.test(key) || !LUS_KEYBOARD_GLYPHS[key.toLowerCase()]) return;
-    if (holdTimer.current !== null) window.clearTimeout(holdTimer.current);
-    longPressTriggered.current = false;
-    holdTimer.current = window.setTimeout(() => {
-      longPressTriggered.current = true;
+    const previous = presses.current.get(pointerId);
+    if (previous) window.clearTimeout(previous.timer);
+    setHeldKey(null);
+    const press = { key, timer: 0, held: false };
+    press.timer = window.setTimeout(() => {
+      press.held = true;
       setHeldKey(key);
-    }, 360);
+    }, 260);
+    presses.current.set(pointerId, press);
   };
 
-  const clearHold = () => {
-    if (holdTimer.current !== null) window.clearTimeout(holdTimer.current);
-    holdTimer.current = null;
+  const cancelPress = (pointerId: number) => {
+    const press = presses.current.get(pointerId);
+    if (press) window.clearTimeout(press.timer);
+    presses.current.delete(pointerId);
+    if (press?.held) setHeldKey(null);
   };
 
-  const finishLetterPress = (visibleKey: string) => {
-    clearHold();
-    suppressClickUntil.current = performance.now() + 100;
-    if (longPressTriggered.current) {
-      longPressTriggered.current = false;
-      return;
-    }
+  const finishLetterPress = (pointerId: number, key: string, visibleKey: string) => {
+    const press = presses.current.get(pointerId);
+    if (!press || press.key !== key) return;
+    window.clearTimeout(press.timer);
+    presses.current.delete(pointerId);
+    if (press.held) return;
     setHeldKey(null);
     onInsert(visibleKey);
     setUppercase(false);
@@ -93,38 +122,25 @@ export function TesseraKeyboard({
           onPointerDown={(event) => {
             if (event.button !== 0) return;
             event.preventDefault();
-            pointerPressedKey.current = key;
-            startHold(key);
+            try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* synthetic or cancelled pointer */ }
+            startHold(key, event.pointerId);
           }}
           onPointerUp={(event) => {
-            if (pointerPressedKey.current !== key) return;
             event.preventDefault();
-            pointerPressedKey.current = null;
-            finishLetterPress(visibleKey);
+            finishLetterPress(event.pointerId, key, visibleKey);
           }}
-          onPointerCancel={() => {
-            clearHold();
-            longPressTriggered.current = false;
-            pointerPressedKey.current = null;
-          }}
-          onPointerLeave={() => {
-            if (!longPressTriggered.current) {
-              clearHold();
-              pointerPressedKey.current = null;
-            }
-          }}
+          onPointerCancel={(event) => cancelPress(event.pointerId)}
           onContextMenu={(event) => event.preventDefault()}
-          onClick={() => {
-            if (suppressClickUntil.current > performance.now()) {
-              suppressClickUntil.current = 0;
-              return;
-            }
+          onClick={(event) => {
+            // Pointer input is committed on release; detail=0 preserves
+            // keyboard/screen-reader activation without duplicate characters.
+            if (event.detail !== 0) return;
             setHeldKey(null);
             onInsert(visibleKey);
             setUppercase(false);
           }}
           className="h-10 sm:h-11 w-full touch-manipulation select-none rounded-md border border-white/[0.09] bg-white/[0.11] text-[18px] sm:text-[20px] font-medium text-[#f3efe6] active:bg-white/[0.2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
-          style={{ outlineColor: NEXT_COLORS.glass, touchAction: "manipulation" }}
+          style={{ outlineColor: NEXT_COLORS.glass, touchAction: "none" }}
           data-testid={`tessera-key-${key}`}
         >
           {visibleKey}
@@ -176,9 +192,10 @@ export function TesseraKeyboard({
     <section
       className={`${
         fixed
-          ? "fixed bottom-2 left-2 right-2 z-[10001] mx-auto max-w-xl"
+          ? "fixed left-2 right-2 z-[10001] mx-auto max-w-xl"
           : "mx-auto mt-2 w-full max-w-3xl"
-      } rounded-2xl border border-white/10 bg-[#10151b]/95 px-2 pb-2 pt-2 shadow-2xl backdrop-blur-xl`}
+      } rounded-xl border border-white/15 bg-[#10151b] px-2 pb-2 pt-2`}
+      style={fixed ? { bottom: "max(8px, env(safe-area-inset-bottom, 0px))" } : undefined}
       role="group"
       aria-label="Tessera on-screen keyboard"
       data-testid="tessera-keyboard"
@@ -197,7 +214,7 @@ export function TesseraKeyboard({
           <X size={15} />
         </button>
       </div>
-      <p className="mb-2 px-1 text-[10px] text-white/45">
+      <p className="sr-only">
         {draftLabel}
       </p>
 
@@ -209,8 +226,8 @@ export function TesseraKeyboard({
                 <button
                   type="button"
                   key={`${key}-${index}`}
-                  onPointerDown={(event) => event.preventDefault()}
-                  onClick={() => onInsert(key)}
+                  onPointerDown={(event) => { if (event.button === 0) { event.preventDefault(); onInsert(key); } }}
+                  onClick={(event) => { if (event.detail === 0) onInsert(key); }}
                   className="h-10 min-w-0 flex-1 touch-manipulation rounded-md border border-white/[0.09] bg-white/[0.11] text-[16px] text-[#f3efe6] active:bg-white/[0.2] focus-visible:outline focus-visible:outline-2"
                   style={{ outlineColor: NEXT_COLORS.glass, touchAction: "manipulation" }}
                 >
@@ -232,8 +249,8 @@ export function TesseraKeyboard({
                   type="button"
                   aria-label={uppercase ? "Turn off uppercase" : "Turn on uppercase"}
                   aria-pressed={uppercase}
-                  onPointerDown={(event) => event.preventDefault()}
-                  onClick={() => setUppercase((value) => !value)}
+                  onPointerDown={(event) => { if (event.button === 0) { event.preventDefault(); setUppercase((value) => !value); } }}
+                  onClick={(event) => { if (event.detail === 0) setUppercase((value) => !value); }}
                   className="h-10 min-w-10 touch-manipulation rounded-md border border-white/[0.09] bg-white/[0.11] px-2 text-sm text-[#f3efe6] focus-visible:outline focus-visible:outline-2"
                   style={{ outlineColor: NEXT_COLORS.glass }}
                 >
@@ -244,8 +261,20 @@ export function TesseraKeyboard({
               {rowIndex === 2 && (
                 <button
                   type="button"
-                  onPointerDown={(event) => event.preventDefault()}
-                  onClick={onBackspace}
+                  onPointerDown={(event) => {
+                    if (event.button !== 0) return;
+                    event.preventDefault();
+                    try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* synthetic or cancelled pointer */ }
+                    clearDelete();
+                    onBackspace();
+                    deleteDelay.current = window.setTimeout(() => {
+                      deleteRepeat.current = window.setInterval(onBackspace, 55);
+                    }, 300);
+                  }}
+                  onPointerUp={clearDelete}
+                  onPointerCancel={clearDelete}
+                  onLostPointerCapture={clearDelete}
+                  onClick={(event) => { if (event.detail === 0) onBackspace(); }}
                   aria-label="Delete previous character"
                   className="grid h-10 min-w-10 touch-manipulation place-items-center rounded-md border border-white/[0.09] bg-white/[0.11] px-2 text-[#f3efe6] focus-visible:outline focus-visible:outline-2"
                   style={{ outlineColor: NEXT_COLORS.glass }}
@@ -261,8 +290,8 @@ export function TesseraKeyboard({
       <div className="mt-1.5 flex gap-1">
         <button
           type="button"
-          onPointerDown={(event) => event.preventDefault()}
-          onClick={() => setNumbers((value) => !value)}
+          onPointerDown={(event) => { if (event.button === 0) { event.preventDefault(); setNumbers((value) => !value); } }}
+          onClick={(event) => { if (event.detail === 0) setNumbers((value) => !value); }}
           className="h-10 min-w-[52px] touch-manipulation rounded-md border border-white/[0.09] bg-white/[0.11] px-3 text-sm text-[#f3efe6] focus-visible:outline focus-visible:outline-2"
           style={{ outlineColor: NEXT_COLORS.glass }}
           data-testid="button-keyboard-numbers"
@@ -271,8 +300,8 @@ export function TesseraKeyboard({
         </button>
         <button
           type="button"
-          onPointerDown={(event) => event.preventDefault()}
-          onClick={() => onInsert(",")}
+          onPointerDown={(event) => { if (event.button === 0) { event.preventDefault(); onInsert(","); } }}
+          onClick={(event) => { if (event.detail === 0) onInsert(","); }}
           aria-label="Type comma"
           className="h-10 min-w-9 touch-manipulation rounded-md border border-white/[0.09] bg-white/[0.11] px-2 text-[#f3efe6] focus-visible:outline focus-visible:outline-2"
           style={{ outlineColor: NEXT_COLORS.glass }}
@@ -281,8 +310,8 @@ export function TesseraKeyboard({
         </button>
         <button
           type="button"
-          onPointerDown={(event) => event.preventDefault()}
-          onClick={() => onInsert(" ")}
+          onPointerDown={(event) => { if (event.button === 0) { event.preventDefault(); onInsert(" "); } }}
+          onClick={(event) => { if (event.detail === 0) onInsert(" "); }}
           aria-label="Space"
           className="h-10 flex-1 touch-manipulation rounded-md border border-white/[0.09] bg-white/[0.11] text-[10px] text-white/50 focus-visible:outline focus-visible:outline-2"
           style={{ outlineColor: NEXT_COLORS.glass }}
@@ -291,8 +320,8 @@ export function TesseraKeyboard({
         </button>
         <button
           type="button"
-          onPointerDown={(event) => event.preventDefault()}
-          onClick={() => onInsert(".")}
+          onPointerDown={(event) => { if (event.button === 0) { event.preventDefault(); onInsert("."); } }}
+          onClick={(event) => { if (event.detail === 0) onInsert("."); }}
           aria-label="Type period"
           className="h-10 min-w-9 touch-manipulation rounded-md border border-white/[0.09] bg-white/[0.11] px-2 text-[#f3efe6] focus-visible:outline focus-visible:outline-2"
           style={{ outlineColor: NEXT_COLORS.glass }}
@@ -301,8 +330,8 @@ export function TesseraKeyboard({
         </button>
         <button
           type="button"
-          onPointerDown={(event) => event.preventDefault()}
-          onClick={() => onEnter ? onEnter() : onInsert("\n")}
+          onPointerDown={(event) => { if (event.button === 0) { event.preventDefault(); onEnter ? onEnter() : onInsert("\n"); } }}
+          onClick={(event) => { if (event.detail === 0) { onEnter ? onEnter() : onInsert("\n"); } }}
           aria-label={enterLabel}
           className="grid h-10 min-w-12 touch-manipulation place-items-center rounded-md border border-white/[0.09] bg-white/[0.11] px-2 text-[#f3efe6] focus-visible:outline focus-visible:outline-2"
           style={{ outlineColor: NEXT_COLORS.glass }}
@@ -315,4 +344,4 @@ export function TesseraKeyboard({
       </p>
     </section>
   );
-}
+});

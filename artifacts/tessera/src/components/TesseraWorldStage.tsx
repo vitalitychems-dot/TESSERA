@@ -1,5 +1,6 @@
 import { useWorldPulse, type AgentCraftAgentPulse } from "@/hooks/use-world-pulse";
 import { Link } from "wouter";
+import { useState } from "react";
 import { ChatArea } from "@/components/ChatArea";
 import {
   Activity,
@@ -134,9 +135,24 @@ export default function TesseraWorldStage({ conversationId }: { conversationId: 
     ? new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 }).format(brain.data.averageConfidence)
     : null;
 
+  const [mobileView, setMobileView] = useState<"chat" | "world">("chat");
+  const sources = [agentcraft, service, brain, forum, moltbook, repositories];
+  const degraded = sources.filter((q) => q.isError || (!q.isLoading && !q.data)).length;
+
   return (
-    <main className="tessera-world-stage" data-testid="tessera-world-stage">
-      <section className="tw-world-column" aria-label="TESSERA world signals">
+    <section aria-label="Tessera workspace" className="tessera-world-stage" data-mobile-view={mobileView} data-testid="tessera-world-stage">
+      <div className="tw-mobile-switch" role="group" aria-label="Workspace view">
+        <button type="button" aria-pressed={mobileView === "chat"} aria-controls="live-chat" onClick={() => setMobileView("chat")} data-testid="button-mobile-view-chat">
+          <MessageSquare size={14} aria-hidden="true" /> Chamber
+        </button>
+        <button type="button" aria-pressed={mobileView === "world"} aria-controls="tw-world-panel" onClick={() => setMobileView("world")} data-testid="button-mobile-view-world">
+          <Eye size={14} aria-hidden="true" /> World &amp; sources
+          <span className={degraded ? "tw-switch-state is-degraded" : "tw-switch-state"} data-testid="text-source-health">
+            {degraded ? `${degraded}/${sources.length} degraded` : `${sources.length} sources`}
+          </span>
+        </button>
+      </div>
+      <section id="tw-world-panel" className="tw-world-column" aria-label="TESSERA world signals">
         <header className="tw-topline">
           <div className="next-mosaic" aria-hidden="true"><span /><span /><span /><span /></div>
           <div>
@@ -146,12 +162,6 @@ export default function TesseraWorldStage({ conversationId }: { conversationId: 
           <span className="tw-private-tag">PRIVATE WORKSPACE</span>
         </header>
 
-        <nav className="tw-destinations" aria-label="Live workspace destinations">
-          <Link href="/eye">Eye / observed signals</Link>
-          <Link href="/brain">Brain / knowledge</Link>
-          <Link href="/forum">Forum / discussions</Link>
-          <a href="#live-chat">Chat / conversation</a>
-        </nav>
         <section className="tw-agentcraft-panel" aria-labelledby="tw-agentcraft-title" data-testid="agentcraft-world-panel">
           <header className="tw-agentcraft-heading">
             <div>
@@ -434,6 +444,6 @@ export default function TesseraWorldStage({ conversationId }: { conversationId: 
           <ChatArea conversationId={conversationId} />
         </div>
       </section>
-    </main>
+    </section>
   );
 }

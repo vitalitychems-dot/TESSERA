@@ -40,3 +40,28 @@ test("holding a key still offers its LUS glyph", async ({ page }) => {
 
   await expect(entry).toHaveValue(LUS_KEYBOARD_GLYPHS.g);
 });
+
+test("overlapping two-thumb presses keep both letters in release order", async ({ page }) => {
+  const entry = await openGateKeyboard(page);
+  const left = page.getByTestId("tessera-key-q");
+  const right = page.getByTestId("tessera-key-w");
+  const first = { button: 0, pointerId: 11, pointerType: "touch", isPrimary: true };
+  const second = { button: 0, pointerId: 12, pointerType: "touch", isPrimary: false };
+  await left.dispatchEvent("pointerdown", first);
+  await right.dispatchEvent("pointerdown", second);
+  await left.dispatchEvent("pointerup", first);
+  await right.dispatchEvent("pointerup", second);
+  await expect(entry).toHaveValue("qw");
+});
+
+test("fast taps, numbers, space and backspace commit exactly once", async ({ page }) => {
+  const entry = await openGateKeyboard(page);
+  for (const letter of "tessera") await page.getByTestId(`tessera-key-${letter}`).click();
+  await page.getByRole("button", { name: "Space", exact: true }).click();
+  await page.getByTestId("button-keyboard-numbers").click();
+  await page.getByRole("button", { name: "1", exact: true }).click();
+  await page.getByTestId("button-keyboard-numbers").click();
+  await expect(entry).toHaveValue("tessera 1");
+  await page.getByRole("button", { name: "Delete previous character", exact: true }).click();
+  await expect(entry).toHaveValue("tessera ");
+});

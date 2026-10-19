@@ -30,7 +30,7 @@
 .tw-destinations { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
 .tw-destinations a { min-height: 44px; padding: 12px; border: 1px solid var(--tw-line); color: var(--tw-cyan); font-size: 12px; border-radius: 10px; }
 .tw-destinations a:hover { background: #12251f; }
-.tw-destinations a:focus-visible, .tw-forum-open:focus-visible, .tw-forum-topic-copy a:focus-visible { outline: 2px solid var(--tw-cyan); outline-offset: 3px; }
+.tw-forum-open:focus-visible, .tw-forum-topic-copy a:focus-visible { outline: 2px solid var(--tw-cyan); outline-offset: 3px; }
 .tessera-world-stage .tw-chat-column, .tessera-world-stage .tw-chat-heading { background: #070b10; color: #f3efe6; }
 .tessera-world-stage .tw-chat-orbit { border-color: #7ef0d4; box-shadow: none; }
 
@@ -247,12 +247,24 @@
   .tw-repo-card { padding: 11px; }
 }
 
+.tw-mobile-switch { display: none; }
+
 @media (max-width: 720px) {
-  .tessera-world-stage { display: flex; flex-direction: column; height: auto; min-height: 100%; overflow: visible; }
-  .tw-world-column { overflow: visible; flex: none; width: 100%; padding: 17px 16px 19px; border-right: 0; border-bottom: 1px solid var(--tw-line); }
+  /* Bounded two-view workspace: chat first, world/sources one tap away. */
+  .tessera-world-stage { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }
+  .tw-mobile-switch { display: flex; flex: 0 0 auto; gap: 4px; padding: 6px 8px; border-bottom: 1px solid var(--tw-line); background: #070b10; }
+  .tw-mobile-switch button { flex: 1; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid transparent; border-radius: 8px; color: var(--tw-dim); background: transparent; font: 11px var(--app-font-mono, monospace); letter-spacing: .04em; cursor: pointer; transition: background-color .15s, color .15s; }
+  .tw-mobile-switch button[aria-pressed="true"] { color: var(--tw-ink); border-color: var(--tw-line); background: rgba(126, 240, 212, .07); }
+  .tw-mobile-switch button:focus-visible { outline: 2px solid var(--tw-cyan); outline-offset: 2px; }
+  .tw-switch-state { padding: 2px 5px; border: 1px solid var(--tw-line); border-radius: 4px; color: var(--tw-muted); font-size: 9px; }
+  .tw-switch-state.is-degraded { color: #ff5c39; border-color: rgba(255, 92, 57, .35); }
+  .tessera-world-stage[data-mobile-view="chat"] .tw-world-column { display: none; }
+  .tessera-world-stage[data-mobile-view="world"] .tw-chat-column { display: none; }
+  .tw-world-column { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; width: 100%; padding: 14px 16px 24px; border-right: 0; }
+  .tw-topline { display: none; }
   .tw-private-tag { font-size: 8px; }
-  .tw-world-unavailable { margin: 18px 0 20px; }
-  .tw-agentcraft-panel { margin: 18px 0 20px; }
+  .tw-world-unavailable { margin: 4px 0 20px; }
+  .tw-agentcraft-panel { margin: 0 0 20px; }
   .tw-agentcraft-stations { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tw-eye-grid { grid-template-columns: 1fr 1fr; }
   .tw-repo-grid { grid-template-columns: 1fr; }
@@ -260,9 +272,13 @@
   .tw-section-heading .tw-signal-heading { display: block; }
   .tw-section-heading .tw-signal-heading > p { margin-top: 5px; }
   .tw-moltbook-heading { align-items: flex-start; }
-  .tw-chat-column { min-height: 560px; flex: 1 0 560px; }
-  .tw-chat-heading { min-height: 58px; padding: 10px 16px; }
-  .tw-chat-surface { min-height: 500px; }
+  .tw-chat-column { flex: 1 1 auto; min-height: 0; }
+  .tw-chat-heading { display: none; }
+  .tw-chat-surface { flex: 1; min-height: 0; }
+}
+
+@media (max-width: 720px) and (prefers-reduced-motion: reduce) {
+  .tw-mobile-switch button { transition: none; }
 }
 
 @media (max-width: 410px) {

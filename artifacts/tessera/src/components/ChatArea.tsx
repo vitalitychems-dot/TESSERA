@@ -214,7 +214,17 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const autoResize = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    const maxHeight = window.innerWidth < 640 ? 120 : 200;
+    textarea.style.height = Math.min(textarea.scrollHeight, maxHeight) + "px";
+  }, []);
   useLayoutEffect(() => {
+    // Covers custom-keyboard insertion too, without a second layout read in
+    // onChange or a 200ms height transition on every character.
+    autoResize();
     const caret = pendingComposerCaretRef.current;
     if (caret === null) return;
     pendingComposerCaretRef.current = null;
@@ -222,7 +232,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
     if (!textarea) return;
     const safeCaret = Math.min(caret, textarea.value.length);
     textarea.setSelectionRange(safeCaret, safeCaret);
-  }, [input]);
+  }, [input, autoResize]);
   const lastSpokenRef = useRef<string>("");
   const autoSendTimerRef = useRef<any>(null);
   const countdownRef = useRef<any>(null);
@@ -378,6 +388,24 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
       sendMessage(lastUserMsg.content);
     }
   }, [messages, sendMessage]);
+
+  const handleRetry = useCallback(() => {
+    const lastUserMsg = messages.filter(m => m.role === "user").pop();
+    if (lastUserMsg) sendMessage(lastUserMsg.content);
+  }, [messages, sendMessage]);
+
+  // Do not tokenize the entire conversation or scan replies on each keystroke.
+  const estimatedTokens = useMemo(
+    () => Math.ceil(messages.reduce((total, message) => total + message.content.split(/\s+/).length, 0) / 0.75),
+    [messages],
+  );
+  const lastReply = useMemo(() => {
+    if (streamingContent) return presentAssistantText(streamingContent);
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      if (messages[index].role === "assistant") return presentAssistantText(messages[index].content);
+    }
+    return "";
+  }, [messages, streamingContent]);
 
   const filteredMessages = useMemo(() => {
     if (!searchQuery.trim()) return messages;
@@ -565,17 +593,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
     vv.addEventListener("resize", handler);
     return () => vv.removeEventListener("resize", handler);
   }, []);
-
-  const autoResize = useCallback(() => {
-    const ta = textareaRef.current;
-    if (ta) {
-      ta.style.height = "auto";
-      const maxH = window.innerWidth < 640 ? 160 : 400;
-      ta.style.height = Math.min(ta.scrollHeight, maxH) + "px";
-    }
-  }, []);
-
-  useEffect(() => { autoResize(); }, [autoResize]);
 
   useEffect(() => {
     if (autoSendTimerRef.current) clearTimeout(autoSendTimerRef.current);
@@ -1137,7 +1154,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
         setShowScrollBottom={setShowScrollBottom}
         onReaction={handleReaction}
         onRegenerate={handleRegenerate}
-        onRetry={() => { const lastUserMsg = messages.filter(m => m.role === "user").pop(); if (lastUserMsg) sendMessage(lastUserMsg.content); }}
+        onRetry={handleRetry}
       />
 
       {messages.length > 0 && !isStreaming && (
@@ -1172,11 +1189,11 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
             <span>{copiedId === "full-conv" ? "Copied" : "Copy All"}</span>
           </button>
           <div className="w-px h-3 bg-white/[0.06]" />
-          <span className="text-[10px] text-muted-foreground/25 font-mono px-2">{messages.length} messages · {Math.ceil(messages.reduce((a, m) => a + m.content.split(/\s+/).length, 0) / 0.75)}tk</span>
+          <span className="hidden sm:inline text-[10px] text-muted-foreground/60 font-mono px-2">{messages.length} messages · {estimatedTokens}tk</span>
         </div>
       )}
 
-      <div className="px-3 pb-3 pt-2 z-10 flex-shrink-0 chat-input-bg" data-testid="chat-input-container">
+      <div className="px-3 pb-3 pt-2 z-10 flex-shrink-0 max-h-[75%] overflow-y-auto overscroll-contain chat-input-bg" data-testid="chat-input-container">
         <FatherCodeRotationPanel
           open={fatherRotationOpen}
           onClose={() => setFatherRotationOpen(false)}
@@ -1288,7 +1305,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
 
         <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
           <div className={cn(
-            "relative rounded-[28px] transition-all duration-300 border border-white/[0.08] bg-white/[0.04]",
+            "relative rounded-xl transition-colors duration-150 border border-white/[0.12] bg-white/[0.03]",
             input && "border-white/[0.14] bg-white/[0.06]"
           )}>
             <AnimatePresence>
@@ -1373,7 +1390,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
                   const val = e.target.value;
                   inputRef.current = val;
                   setInput(val);
-                  autoResize();
                   const trimmed = val.trim().toLowerCase();
                   const deskHint = /^\/?(@|call\b|collab\b|train\b|ask\b|tessera\b|final\b|actually\b)/.test(trimmed);
                   setShowCommandHints(
@@ -1426,7 +1442,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
                     : {}
                 }
                 className={cn(
-                  "w-full bg-transparent px-5 pt-3 pb-12 min-h-[48px] max-h-[160px] sm:max-h-[400px] resize-none focus:outline-none custom-scrollbar text-[16px] leading-relaxed transition-all duration-200",
+                  "w-full bg-transparent px-4 pt-3 pb-12 min-h-[88px] max-h-[120px] sm:max-h-[200px] resize-none focus:outline-none custom-scrollbar text-[16px] leading-relaxed",
                   adminMode
                     ? "text-violet-500 caret-violet-500 admin-mode-font admin-mode-caret"
                     : isAdmin
@@ -1533,15 +1549,9 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
           onClose={() => setTesseraKeyboardOpen(false)}
         />
         <ChamberActions
-          lastReply={(() => {
-            const last = [...messages].reverse().find((m) => m.role === "assistant");
-            const shown = streamingContent || (last ? last.content : "");
-            return shown ? presentAssistantText(shown) : "";
-          })()}
+          lastReply={lastReply}
           onCopyReply={() => {
-            const last = [...messages].reverse().find((m) => m.role === "assistant");
-            const shown = streamingContent || (last ? last.content : "");
-            if (shown) copyToClipboard(presentAssistantText(shown), setCopiedId, "chamber-reply");
+            if (lastReply) copyToClipboard(lastReply, setCopiedId, "chamber-reply");
           }}
         />
       </div>

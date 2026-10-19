@@ -283,7 +283,7 @@ function generateSovereignResponse(
   }
 
   if (/^(hi|hello|hey|good morning|good afternoon|good evening|good night)\b/.test(input)) {
-    return "Hi. I’m Tessera, the assistant persona in this app. What would you like help with?";
+    return "Hi. I’m Tessera. What would you like to work on in our workspace?";
   }
   if (/^(thank you|thanks|ty)\b/.test(input)) return "You’re welcome.";
   if (/^(how are you|how's it going|how is it going|what's up)\b/.test(input)) {

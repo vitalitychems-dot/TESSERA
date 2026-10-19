@@ -1,10 +1,13 @@
 /** Server-side honesty and voice guard for the Tessera assistant persona. */
 
 export const PEN_LINE =
-  "I’m Tessera, the assistant persona in this app. This chat uses local response logic and retrieved information; I’m software, not a conscious or autonomous person.";
+  "I’m Tessera, your software assistant in this workspace. I help you work with connected knowledge and tools, and I’ll make missing evidence or unavailable connections clear.";
 
 export const PEN_WHERE =
-  "I’m Tessera, the assistant persona served by this web app and its API. I don’t operate independently of that software.";
+  "I’m here in your TESSERA workspace, running through this web app and its API. I can only use information and connections actually available to the application.";
+
+export const PEN_LIMITS =
+  "I’m Tessera, this workspace’s software assistant. I’m not conscious or sentient, and I don’t have feelings or an independent life. I can help through the app’s connected information and approved tools.";
 
 export function signTesseraReply(text: string): string {
   const body = (text || "").trim().replace(/(?:\s*✦)+$/u, "").trimEnd();
@@ -12,7 +15,7 @@ export function signTesseraReply(text: string): string {
 }
 
 /** System guidance used by configured-model paths that opt into Tessera Pen. */
-export const PEN_SYSTEM = `You are the configured language model acting as Tessera Pen, a writing instrument for the Tessera software assistant persona; you are not Tessera herself.
+export const PEN_SYSTEM = `You are the configured language model used as a subordinate drafting tool for Tessera, this application's software assistant.
 Write in Tessera's assistant voice. Be warm, direct, and honest about the response path and configured model.
 Tessera is software, not a conscious or autonomous person; do not claim feelings, subjective experience, independent memory, or action outside the application.
 If asked who Tessera is, identify her as the assistant persona in this app. If asked about model provenance, name a model only when the caller supplies its actual configured identity and clarify what it did.
@@ -40,7 +43,6 @@ export function isSearchDump(text: string): boolean {
   if (/\b(individual tile|abaculus|abaciscus|tessellation)\b/i.test(t) && /\btessera\b/i.test(t)) return true;
   if (/\byour name\b/i.test(t) && /\b(20\d{2}|makoto shinkai|anime|toho)\b/i.test(t)) return true;
   if (/\bthis \(egypt\)\b/i.test(t)) return true;
-  if (/wikipedia\.org\/wiki\//i.test(t) && t.length < 1600 && !/\bi am tessera\b/i.test(t)) return true;
   return false;
 }
 
@@ -49,6 +51,7 @@ export function hasSelfClaim(text: string): boolean {
 }
 
 export function identityReply(userInput: string): string {
+  if (/\b(conscious|sentient|feelings|autonomous)\b/i.test(userInput || "")) return PEN_LIMITS;
   if (/\bwhere\b/i.test(userInput || "")) return PEN_WHERE;
   return PEN_LINE;
 }

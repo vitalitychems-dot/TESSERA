@@ -55,15 +55,17 @@ export const ChamberBar = memo(function ChamberBar({ streaming, authorship }: Ch
   return (
     <header className="shrink-0 px-4 pt-2 pb-2 border-b border-primary/15 bg-[#070b10]" data-testid="chamber-bar">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-[17px] font-semibold text-[#f3efe6] tracking-wide">TESSERA <span className="text-primary">NEXT</span></h1>
-        <p className="text-[12px] leading-snug text-[#b8c1bf] mt-0.5">
-          Tessera is this app’s software assistant persona. When enabled, the configured model receives only this message and bounded retrieved evidence—no chat history or tools.
-        </p>
-        <p className="text-[12px] leading-snug text-white/40">
-          Software, not conscious or autonomous. Model drafts pass local safety and voice checks; unsupported model knowledge is labeled.
-        </p>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-[#f3efe6] tracking-wide">Tessera <span className="text-primary">/ Chat</span></h2>
+          <details className="relative text-xs text-[#b8c1bf]">
+            <summary className="cursor-pointer rounded px-2 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" data-testid="button-chat-provenance">About this chat</summary>
+            <div className="absolute right-0 top-full z-40 mt-2 w-[min(290px,75vw)] rounded-xl border border-primary/20 bg-[#101820] p-4 text-xs leading-relaxed shadow-xl" data-testid="text-chat-provenance">
+              Tessera is this app’s software assistant, not a conscious person. When enabled, a configured model receives this message and bounded retrieved evidence—not chat history or tools. Each reply labels its actual response path.
+            </div>
+          </details>
+        </div>
         <p
-          className="mt-1 text-[12px] leading-snug text-primary/80"
+          className="mt-1 text-[10px] leading-snug text-[#b8c1bf]"
           aria-live="polite"
           data-testid="status-reply-authorship"
         >
@@ -84,33 +86,34 @@ export const ChamberActions = memo(function ChamberActions({ lastReply, onCopyRe
   const [learned, setLearned] = useState(false);
 
   return (
-    <div className="max-w-3xl mx-auto px-3 pb-2" data-testid="chamber-actions">
+    <div className="max-w-3xl mx-auto w-full px-1 pt-1" data-testid="chamber-actions">
       {learned ? (
         <p className="mb-2 text-[13px] leading-relaxed text-white/85" data-testid="text-learn-reply">
           {PEN_LINE}
         </p>
       ) : null}
-      <div className="flex items-center justify-end gap-2 mb-2">
+      <div className="flex items-center justify-between gap-2">
         <button
           type="button"
-          onClick={() => setLearned(true)}
-          className="h-9 px-4 rounded-full border border-amber-100/25 text-[13px] text-amber-50"
+          onClick={() => setLearned(value => !value)}
+          aria-expanded={learned}
+          className="min-h-9 px-3 rounded-lg text-[11px] text-[#b8c1bf] hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
           data-testid="button-learn"
         >
-          Learn
+          About Tessera
         </button>
-      </div>
       {lastReply ? (
         <button
           type="button"
           onClick={onCopyReply}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-[#e6c36a] py-3 text-[15px] font-medium text-[#2a2110]"
+          className="flex min-h-9 items-center justify-center gap-2 rounded-lg px-3 text-[11px] text-[#7ef0d4] hover:bg-[#7ef0d4]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
           data-testid="button-copy-reply"
         >
           <Copy size={15} />
           Copy reply
         </button>
       ) : null}
+      </div>
     </div>
   );
 });

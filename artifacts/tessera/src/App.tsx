@@ -13,8 +13,10 @@ import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 import MobileNav from "@/components/MobileNav";
 import ActiveCommandsOverlay from "@/components/ActiveCommandsOverlay";
 import MeshStatusBadge from "@/components/MeshStatusBadge";
-import HyperdimensionalBackground from "@/components/HyperdimensionalBackground";
-import { Loader2, RefreshCw } from "lucide-react";
+import DesktopRail from "@/components/shell/DesktopRail";
+import Mosaic from "@/components/shell/Mosaic";
+import { findCurrent } from "@/components/shell/navConfig";
+import "@/styles/shell.css";
 
 function lazyRetry<T extends { default: React.ComponentType<unknown> }>(
   factory: () => Promise<T>,
@@ -107,15 +109,15 @@ class ErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex items-center justify-center min-h-screen" data-testid="error-boundary-fallback">
+        <div className="flex items-center justify-center min-h-[100dvh]" style={{ background: "#070b10", color: "#f3efe6" }} data-testid="error-boundary-fallback">
           <div className="text-center p-6 max-w-md">
-            <h2 className="text-xl font-semibold mb-2" data-testid="text-error-title">Something went wrong</h2>
+            <h2 className="text-xl font-semibold mb-2" style={{ color: "#ff5c39" }} data-testid="text-error-title">Something went wrong</h2>
             <p className="text-muted-foreground mb-4" data-testid="text-error-message">
               {this.state.error?.message || "An unexpected error occurred"}
             </p>
             <button
               data-testid="button-reload"
-              className="px-4 py-2 rounded-md bg-primary text-primary-foreground"
+              className="px-4 py-2 rounded-md border focus-visible:outline-2" style={{ borderColor: "rgba(126,240,212,.3)", color: "#7ef0d4" }}
               onClick={() => {
                 this.setState({ hasError: false, error: null });
                 window.location.reload();
@@ -140,7 +142,7 @@ function ScrollToTop() {
       prevLocationRef.current = location;
       const contentArea = document.querySelector("[data-scroll-container]");
       if (contentArea) {
-        contentArea.scrollTo({ top: 0, behavior: "smooth" });
+        contentArea.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
       }
     }
   }, [location]);
@@ -155,28 +157,39 @@ function PageLoadingFallback() {
     return () => clearTimeout(timer);
   }, []);
   return (
-    <div className="flex flex-col items-center justify-center min-h-[50vh] gap-6" data-testid="page-loading-fallback">
-      <div className="relative">
-        <div className="absolute inset-0 rounded-full bg-cyan-500/20 animate-ping" style={{ animationDuration: "2s" }} />
-        <div className="absolute inset-[-4px] rounded-full bg-violet-500/10 animate-ping" style={{ animationDuration: "3s" }} />
-        {stalled ? <RefreshCw className="h-10 w-10 text-cyan-400/80 relative z-10" /> : <Loader2 className="h-10 w-10 animate-spin text-cyan-400/80 relative z-10" />}
-      </div>
-      <div className="space-y-2 text-center">
-        {stalled ? (
-          <>
-            <div className="text-sm text-cyan-400/60 font-mono tracking-wider">LOADING STALLED</div>
-            <button onClick={() => window.location.reload()} className="mt-2 px-4 py-2 rounded-lg bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-mono hover:bg-cyan-500/30 transition-colors">TAP TO RELOAD</button>
-          </>
-        ) : (
-          <>
-            <div className="text-sm text-cyan-400/60 font-mono tracking-wider">INITIALIZING</div>
-            <div className="flex gap-1 justify-center">
-              {[0, 1, 2, 3, 4].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-cyan-500/40 animate-pulse" style={{ animationDelay: `${i * 150}ms` }} />)}
-            </div>
-          </>
-        )}
-      </div>
+    <div className="max-w-5xl mx-auto px-4 py-6" data-testid="page-loading-fallback" aria-busy={!stalled}>
+      {stalled ? (
+        <div className="py-16 text-center" role="alert">
+          <Mosaic />
+          <p className="tx-mono text-[11px] tracking-[0.14em] uppercase mt-4" style={{ color: "#a09b91" }}>This view is taking longer than expected</p>
+          <button onClick={() => window.location.reload()} className="tx-focus tx-mono mt-4 px-4 py-2 rounded-md border text-xs" style={{ borderColor: "var(--next-rule)", color: "var(--next-glass)" }} data-testid="button-reload-stalled">Reload</button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="tx-skel h-7 w-56" />
+          <div className="tx-skel h-4 w-80 max-w-full" />
+          <div className="tx-skel h-40 w-full mt-4" />
+          <div className="tx-skel h-24 w-full" />
+        </div>
+      )}
     </div>
+  );
+}
+
+function TopBar() {
+  const [location] = useLocation();
+  const cur = findCurrent(location);
+  return (
+    <header className="tx-topbar" data-testid="shell-topbar">
+      <span className="md:hidden"><Mosaic small /></span>
+      <div className="min-w-0 flex-1 flex items-baseline gap-2">
+        {cur?.group && <span className="tx-label hidden sm:inline">{cur.group.label} /</span>}
+        <span className="tx-display font-semibold text-[14px] truncate" data-testid="text-current-view">{cur?.item.label ?? "TESSERA"}</span>
+      </div>
+      <SectionErrorBoundary name="Status Badge" compact>
+        <div className="shrink-0"><MeshStatusBadge /></div>
+      </SectionErrorBoundary>
+    </header>
   );
 }
 
@@ -370,19 +383,15 @@ function App() {
           <NLPGoalsProvider>
           <TooltipProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <SectionErrorBoundary name="Background" compact>
-                <HyperdimensionalBackground />
-              </SectionErrorBoundary>
-              <div className="flex flex-col h-dvh w-full overflow-hidden" style={{ position: "relative", zIndex: 2 }}>
-                <Toaster />
-                <SectionErrorBoundary name="Status Badge" compact>
-                  <div className="fixed top-2 right-2 z-50">
-                    <MeshStatusBadge />
-                  </div>
-                </SectionErrorBoundary>
-                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden" data-scroll-container style={{ paddingBottom: "calc(56px + env(safe-area-inset-bottom, 0px))", WebkitOverflowScrolling: "touch" }}>
-                  <ScrollToTop />
-                  <AppRouter />
+              <Toaster />
+              <div className="tx-shell">
+                <DesktopRail />
+                <div className="tx-main">
+                  <TopBar />
+                  <main className="tx-scroll" data-scroll-container id="main">
+                    <ScrollToTop />
+                    <AppRouter />
+                  </main>
                 </div>
                 <SectionErrorBoundary name="Commands" compact>
                   <ActiveCommandsOverlay />

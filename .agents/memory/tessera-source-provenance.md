@@ -8,3 +8,9 @@ description: Rules for grounding factual replies in source records and preservin
 **Why:** TESSERA has separate early-response and local-memory paths; a plain-text cache can lose the source metadata or a persona guard can replace a sourced reply. Ingested metadata is not a trust decision.
 
 **How to apply:** When adding a factual reply path, return structured evidence with the answer, preserve it when caching or reusing the answer, and serialize citations from only the evidence that supports that reply. Label missing dates honestly instead of inventing them.
+
+**Voice-guard boundary:** The presence of a citation URL is not an identity error. Identity consistency checks must not replace ordinary source-backed factual answers with an introduction.
+
+**Why:** A broad search-dump heuristic discarded short factual replies merely because they cited Wikipedia, making correct retrieved answers look like identity failures.
+
+**How to apply:** Distinguish actual identity/search dumps from factual citations, and preserve tests demonstrating that a normal cited answer survives voice enforcement.
