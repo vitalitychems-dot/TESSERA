@@ -48,6 +48,13 @@ describe("redactAccessLogUrl", () => {
     expect(redactAccessLogUrl("/api/mesh/sessions//not-a-digest")).toBe("/api/mesh/sessions//redacted");
     expect(redactAccessLogUrl(`/api/mesh/sessions/${adminHash}`)).toBe("/api/mesh/sessions/redacted");
     expect(redactAccessLogUrl("%E0%A4%A")).toBe("%E0%A4%A");
+    expect(redactAccessLogUrl("/api/mesh%2Fsessions%2Fnot-a-digest")).toBe("/api/mesh/sessions/redacted");
+    expect(redactAccessLogUrl(`/api/mesh%2Fsessions%2F${adminHash}`)).toBe("/api/mesh/sessions/redacted");
+    expect(redactAccessLogUrl("/api/health;drop=this")).toBe("/api/health;redacted");
+    expect(redactAccessLogUrl("/api/mesh/sessions/not-a-digest;drop=this")).toBe("/api/mesh/sessions/redacted");
+    expect(redactAccessLogUrl(`/files/prefix${adminHash}`)).toBe("/files/prefixredacted");
+    expect(redactAccessLogUrl(`/files/${adminHash}.txt`)).toBe("/files/redacted.txt");
+    expect(redactAccessLogUrl("/files/abcdef")).toBe("/files/abcdef");
   });
 });
 
@@ -143,6 +150,36 @@ describe("mesh session hashes stay out of access logs", () => {
       for (let length = 4; length <= adminHash.length; length += 1) {
         expect(output.includes(adminHash.slice(0, length))).toBe(false);
       }
+    } finally {
+      if (destination && originalWrite) destination.write = originalWrite;
+      for (const spy of loggerSpies) spy.mockRestore();
+    }
+  });
+
+  it("redacts a percent-encoded mesh sessions separator in the logged request url", async () => {
+    const destination = loggerDestination(logger);
+    expect(destination === undefined).toBe(false);
+    const chunks: string[] = [];
+    const originalWrite = destination?.write.bind(destination);
+    if (destination && originalWrite) {
+      destination.write = (chunk: unknown, ...rest: unknown[]) => {
+        chunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk as Uint8Array).toString("utf8"));
+        return originalWrite(chunk, ...rest);
+      };
+    }
+    const loggerSpies = LOG_LEVELS.map((level) => vi.spyOn(logger, level));
+    try {
+      const response = await fetch(`${baseUrl}/api/mesh%2Fsessions%2F${adminHash}`, {
+        headers: { "x-admin-token": ADMIN_KEY },
+      });
+      expect(response.status > 0).toBe(true);
+      const output = [
+        chunks.join(""),
+        JSON.stringify(loggerSpies.map((spy) => spy.mock.calls)),
+      ].join("\n");
+      expect(output.includes("/api/mesh/sessions/redacted")).toBe(true);
+      expect(output.includes(adminHash)).toBe(false);
+      expect(output.includes(ADMIN_KEY)).toBe(false);
     } finally {
       if (destination && originalWrite) destination.write = originalWrite;
       for (const spy of loggerSpies) spy.mockRestore();

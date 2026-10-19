@@ -1,24 +1,70 @@
 const REDACTED_SEGMENT = "redacted";
 const SHA256_HEX = /^[0-9a-f]{64}$/i;
 
-function decodePathSegment(segment: string): string {
-  try {
-    return decodeURIComponent(segment);
-  } catch {
-    return segment;
+type PathPiece = { raw: string; decoded: string; split: boolean };
+
+function decodeRepeated(segment: string): string {
+  let current = segment;
+  for (let pass = 0; pass < 3; pass += 1) {
+    if (!current.includes("%")) return current;
+    try {
+      const next = decodeURIComponent(current);
+      if (next === current) return current;
+      current = next;
+    } catch {
+      return current;
+    }
   }
+  return current;
+}
+
+function expandPiece(raw: string): PathPiece[] {
+  if (raw.length === 0) return [{ raw, decoded: "", split: false }];
+  const decoded = decodeRepeated(raw);
+  if (!decoded.includes("/")) return [{ raw, decoded, split: false }];
+  return decoded.split("/").map((part) => ({ raw: part, decoded: part, split: true }));
+}
+
+function pathPart(decoded: string): string {
+  const semi = decoded.indexOf(";");
+  return semi === -1 ? decoded : decoded.slice(0, semi);
+}
+
+function rawPath(piece: PathPiece): string {
+  if (piece.split) return pathPart(piece.decoded);
+  const lower = piece.raw.toLowerCase();
+  let cut = piece.raw.length;
+  const semi = lower.indexOf(";");
+  const encoded = lower.indexOf("%3b");
+  if (semi !== -1) cut = Math.min(cut, semi);
+  if (encoded !== -1) cut = Math.min(cut, encoded);
+  return piece.raw.slice(0, cut);
+}
+
+function replaceHexRuns(value: string): string {
+  return value.replace(/[0-9a-f]{64}/gi, REDACTED_SEGMENT);
+}
+
+function renderPiece(piece: PathPiece, fullyRedact: boolean): string {
+  if (fullyRedact) return REDACTED_SEGMENT;
+  const path = pathPart(piece.decoded);
+  const hashed = replaceHexRuns(path);
+  const hasParams = piece.decoded.includes(";");
+  if (hashed !== path) return hasParams ? `${hashed};redacted` : hashed;
+  if (hasParams) return `${rawPath(piece)};redacted`;
+  return piece.split ? path : piece.raw;
 }
 
 /**
  * Access-log path with the query string removed.
- * Each segment is decoded before matching so percent-encoded labels and
- * double slashes still hide mesh session ids and 64-hex digests.
+ * Segments are decoded, including %2F boundaries, before matching so encoded
+ * labels, matrix params, and glued digests still hide mesh session ids.
  */
 export function redactAccessLogUrl(url: string | undefined): string | undefined {
   if (typeof url !== "string") return undefined;
   const path = url.split("?")[0] ?? "";
-  const segments = path.split("/");
-  const decoded = segments.map(decodePathSegment);
+  const pieces = path.split("/").flatMap(expandPiece);
+  const decoded = pieces.map((piece) => pathPart(piece.decoded));
   const named: number[] = [];
   for (let index = 0; index < decoded.length; index += 1) {
     if (decoded[index].length > 0) named.push(index);
@@ -34,7 +80,7 @@ export function redactAccessLogUrl(url: string | undefined): string | undefined 
     }
     if (SHA256_HEX.test(segment)) redact.add(index);
   }
-  return segments
-    .map((segment, index) => (redact.has(index) ? REDACTED_SEGMENT : segment))
+  return pieces
+    .map((piece, index) => renderPiece(piece, redact.has(index)))
     .join("/");
 }
