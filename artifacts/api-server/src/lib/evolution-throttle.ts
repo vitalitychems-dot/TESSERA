@@ -9,10 +9,14 @@ interface ModuleCooldown {
   cooldownUntil: number;
   totalFailures: number;
   totalSuccesses: number;
+  totalOfflineApplied: number;
+  totalRolledBack: number;
   totalDeferred: number;
   lastDeferredReason: string | null;
   paused: boolean;
 }
+
+export type EvolutionPatchSource = "llm" | "offline";
 
 const HIGH_LOAD_THRESHOLD = 0.85;
 const HIGH_MEMORY_THRESHOLD = 0.90;
@@ -39,6 +43,8 @@ function getCooldown(rawModuleId: string): ModuleCooldown {
       cooldownUntil: 0,
       totalFailures: 0,
       totalSuccesses: 0,
+      totalOfflineApplied: 0,
+      totalRolledBack: 0,
       totalDeferred: 0,
       lastDeferredReason: null,
       paused: false,
@@ -98,11 +104,19 @@ export function getCooldownRemainingMs(moduleId: string): number {
   return remaining > 0 ? remaining : 0;
 }
 
-export function recordEvolutionSuccess(moduleId: string): void {
+// Call only after a patch was written to the live file AND passed sandbox
+// verification plus the post-write check. Deferred attempts never come here.
+export function recordEvolutionSuccess(moduleId: string, source: EvolutionPatchSource = "llm"): void {
   const entry = getCooldown(moduleId);
   entry.consecutiveFailures = 0;
   entry.cooldownUntil = 0;
   entry.totalSuccesses++;
+  if (source === "offline") entry.totalOfflineApplied++;
+}
+
+export function recordEvolutionRolledBack(moduleId: string): void {
+  const entry = getCooldown(moduleId);
+  entry.totalRolledBack++;
 }
 
 export function recordEvolutionDeferred(moduleId: string, reason: string): void {
@@ -165,19 +179,30 @@ export function isGloballyPaused(): boolean {
   return globalPaused;
 }
 
+export interface ThrottleModuleMetrics {
+  moduleId: string;
+  consecutiveFailures: number;
+  totalFailures: number;
+  totalSuccesses: number;
+  /** Patches that were written, sandbox-verified and post-write verified. Same count as totalSuccesses. */
+  verifiedApplied: number;
+  totalOfflineApplied: number;
+  totalRolledBack: number;
+  totalDeferred: number;
+  lastDeferredReason: string | null;
+  /**
+   * verified successes / (verified successes + failures), in percent.
+   * null when nothing was ever verified or failed: a module that only deferred
+   * has no success rate, and reporting 100 for it would be vacuous.
+   */
+  successRate: number | null;
+  cooldownRemainingMs: number;
+  paused: boolean;
+  lastFailureAt: number;
+}
+
 export function getThrottleMetrics() {
-  const modules: Array<{
-    moduleId: string;
-    consecutiveFailures: number;
-    totalFailures: number;
-    totalSuccesses: number;
-    totalDeferred: number;
-    lastDeferredReason: string | null;
-    successRate: number;
-    cooldownRemainingMs: number;
-    paused: boolean;
-    lastFailureAt: number;
-  }> = [];
+  const modules: ThrottleModuleMetrics[] = [];
 
   for (const [, entry] of moduleCooldowns) {
     const total = entry.totalSuccesses + entry.totalFailures;
@@ -186,9 +211,12 @@ export function getThrottleMetrics() {
       consecutiveFailures: entry.consecutiveFailures,
       totalFailures: entry.totalFailures,
       totalSuccesses: entry.totalSuccesses,
+      verifiedApplied: entry.totalSuccesses,
+      totalOfflineApplied: entry.totalOfflineApplied,
+      totalRolledBack: entry.totalRolledBack,
       totalDeferred: entry.totalDeferred,
       lastDeferredReason: entry.lastDeferredReason,
-      successRate: total > 0 ? Math.round((entry.totalSuccesses / total) * 100) : 100,
+      successRate: total > 0 ? Math.round((entry.totalSuccesses / total) * 100) : null,
       cooldownRemainingMs: Math.max(0, entry.cooldownUntil - Date.now()),
       paused: entry.paused,
       lastFailureAt: entry.lastFailureAt,
@@ -220,6 +248,7 @@ export function logEvolutionCycleSummary(): void {
 
   let totalOk = 0;
   let totalFail = 0;
+  let totalDeferred = 0;
   let coolingCount = 0;
   let pausedCount = 0;
   const troubled: string[] = [];
@@ -227,6 +256,7 @@ export function logEvolutionCycleSummary(): void {
   for (const [, entry] of moduleCooldowns) {
     totalOk += entry.totalSuccesses;
     totalFail += entry.totalFailures;
+    totalDeferred += entry.totalDeferred;
     if (entry.cooldownUntil > Date.now()) coolingCount++;
     if (entry.paused) pausedCount++;
     if (entry.consecutiveFailures >= 5) troubled.push(entry.moduleId);
@@ -237,6 +267,7 @@ export function logEvolutionCycleSummary(): void {
       modules: moduleCooldowns.size,
       totalOk,
       totalFail,
+      totalDeferred,
       coolingDown: coolingCount,
       paused: pausedCount,
       globalPaused,

@@ -8,7 +8,9 @@ import {
   resumeAllEvolution,
   resetModuleCooldown,
 } from "../lib/evolution-throttle";
-import { getEvolutionMetrics } from "../lib/self-code-evolution";
+import { getEvolutionMetrics, TRACKED_EVOLUTION_MODULES } from "../lib/self-code-evolution";
+import { summarizeEvolutionHealth } from "../lib/evolution-health-summary";
+import { isOfflinePatcherEnabled } from "../lib/evolution-offline-patcher";
 import { getRecursiveSelfImprovementMetrics } from "../lib/recursive-self-improvement";
 import { getSchedulerMetrics, getSchedulerHistory } from "../lib/task-scheduler";
 import { getScoringMetrics } from "../lib/sovereignty-impact-scoring";
@@ -43,6 +45,7 @@ router.get("/evolution-health", (_req: Request, res: Response) => {
   const evolution = getEvolutionMetrics();
   const improvement = getRecursiveSelfImprovementMetrics();
   const scheduler = getSchedulerMetrics();
+  const moduleHealth = summarizeEvolutionHealth(throttle.modules, TRACKED_EVOLUTION_MODULES);
 
   const systemLoad = getSystemLoad();
 
@@ -55,9 +58,12 @@ router.get("/evolution-health", (_req: Request, res: Response) => {
         highLoad: systemLoad.highLoad,
       },
       throttle,
+      moduleHealth,
+      offlinePatcher: { enabled: isOfflinePatcherEnabled() },
       evolution: {
         totalProposals: evolution.totalProposals,
         appliedChanges: evolution.appliedChanges,
+        pendingImplementationCount: evolution.pendingImplementationCount,
         rejectedCount: evolution.rejectedCount,
         rolledBackChanges: evolution.rolledBackChanges,
         lastEvolutionAt: evolution.lastEvolutionAt,
