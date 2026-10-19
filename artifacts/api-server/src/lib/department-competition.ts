@@ -6,6 +6,7 @@ import {
 import { eq, desc } from "drizzle-orm";
 import { logger } from "./logger";
 import { GRAND_COUNCIL_AGENTS } from "./consensus-engine";
+import { seededInt } from "./deterministic-selectors";
 
 const PHI = 1.618033988749895;
 
@@ -41,7 +42,7 @@ function generateScore(agentName: string, departmentId: string): number {
   const isPrimary = aptitudes[0] === departmentId;
   const isSecondary = aptitudes[1] === departmentId;
 
-  let base = 50 + Math.floor(Math.random() * 20);
+  let base = 50 + seededInt(`dept-score|${agentName}|${departmentId}`, 0, 20);
   if (isPrimary) base += 25;
   else if (isSecondary) base += 15;
 
@@ -188,13 +189,18 @@ export async function runCompetitiveAppointments(): Promise<{ appointed: number;
         .where(eq(departmentPositionsTable.positionId, position.positionId));
 
       const compId = `comp-${dept.id}-${position.positionId}-${Date.now()}`;
+      const voteSeed = `dept-vote|${dept.id}|${position.positionId}|${winner.agentName}`;
       await db.insert(competitionLogTable).values({
         competitionId: compId,
         departmentId: dept.id,
         positionId: position.positionId,
         candidates: candidates.map(c => c.agentName),
         winner: winner.agentName,
-        voteResults: { yes: Math.floor(18 + Math.random() * 6), no: Math.floor(Math.random() * 3), abstain: Math.floor(Math.random() * 3) },
+        voteResults: {
+          yes: seededInt(`${voteSeed}|yes`, 18, 6),
+          no: seededInt(`${voteSeed}|no`, 0, 3),
+          abstain: seededInt(`${voteSeed}|abstain`, 0, 3),
+        },
         status: "complete",
       }).onConflictDoNothing();
 
