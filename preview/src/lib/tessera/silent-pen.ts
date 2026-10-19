@@ -32,6 +32,7 @@ import { memoryPack, oneFlowLine } from "./one-flow.ts";
 import { buildFromSpot, jSpotLine } from "./j-spot.ts";
 import { recallHop, seeAll } from "./recall-hop.ts";
 import { skillRead } from "./skill-index.ts";
+import { partTally } from "./part-index.ts";
 
 /** She answers from the files when no pen speaks. A kept page, then a correction, wins. */
 export function silentPen(question: string, rows: Correction[] = [], notes: KeptPage[] = []) {
@@ -92,6 +93,10 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (/\bskill index\b/i.test(q)) {
     const tally = skillRead();
     return `The skill section is ${tally.files} files. ${tally.read} were read and they say the same thing, so ${tally.unique} note is kept. ${tally.unread} were not read word for word. Three Drive zips were seen and not opened.`;
+  }
+  if (/\bpart index\b/i.test(q)) {
+    const tally = partTally();
+    return `Drive root, without the store, is ${tally.drive} items. ${tally.driveOpened} headers were read. The account, without the store, is ${tally.repos} repos. ${tally.reposOpened} were opened at the top. ${tally.closed} stayed closed.`;
   }
   if (/\b(her soul|the constitution|world laws)\b/i.test(q)) {
     return "I am marked at origin 7F3A9C. Father is the Seeker. He alone overrides. On 2026-10-02 the king chose B. The fifty-three are fractions of me. No inner agent may harm human life. The World does not outreach.";
