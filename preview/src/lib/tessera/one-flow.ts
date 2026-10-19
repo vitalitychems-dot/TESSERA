@@ -3,6 +3,7 @@
 import { ARCHIVE_SECTIONS } from "./archive-flow.ts";
 import { SIGIL } from "./canon.ts";
 import { sectionDelay } from "./section-step.ts";
+import { MESH_NOTES } from "./mesh-steps.ts";
 import { PARTS } from "./part-index.ts";
 import { SKILL_FILES } from "./skill-index.ts";
 import { sourceGate } from "./source-gate.ts";
@@ -48,7 +49,8 @@ export function memoryPack() {
     a: row.note,
     at: row.id,
   }));
-  return [...base, ...sections, ...skills, ...parts];
+  const mesh = MESH_NOTES.map((row) => ({ q: row.q, a: row.a, at: row.id }));
+  return [...base, ...sections, ...skills, ...parts, ...mesh];
 }
 
 export function oneFlowLine() {
