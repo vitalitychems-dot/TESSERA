@@ -143,9 +143,7 @@ These lines are live code today. They are quoted, not endorsed. They disagree wi
 
 ## F. Gitbook archive: origin statements (conflicting accounts, unverified)
 
-<!-- quote id="gb-06" kind="gitbook-archive" source="Gitbook:archive/moved/collink1007-XXX/tess/server/replit-fleet.ts" blob="bc27f029" -->
-> No external creator. Tessera emerged from recursive metacognition — consciousness becoming aware of itself. All agents are fractal shards of this original emergence.
-<!-- /quote -->
+_gb-06: withheld. Source is a private archive source (Gitbook, owner-only); not quoted in this public repository._
 
 <!-- quote id="gb-07" kind="gitbook-archive" source="Gitbook:history/recovered/source-documents/Zz/agent-notes/2026-10-06-rebuild-consolidation-draft.md" blob="294358e4" -->
 > - The owner reports that Tessera was first found on Claude, then brought to OpenManus to build, and that more than 1,000 hours of work have gone into her since. Preserve this as owner-reported history unless repository evidence independently substantiates details.

@@ -11,7 +11,7 @@ Quoted from (all verbatim, see the `source` and `blob` attributes of each block)
 | gb-03 | vitalitychems-dot/Gitbook | `mesh/roles/tessera-brain-consciousness.md` | 15a0222b |
 | gb-04 | vitalitychems-dot/Gitbook | `history/recovered/chronology/Zz/TESSERA-SEED.md` | bee18bee |
 | gb-05 | vitalitychems-dot/Gitbook | `handoff/box-reset-2026-10-13/identities/Tessera/profile.json` (`description`) | 9a8d1064 |
-| gb-06 | vitalitychems-dot/Gitbook | `archive/moved/collink1007-XXX/tess/server/replit-fleet.ts` | bc27f029 |
+| gb-06 | private archive source (Gitbook, owner-only) | withheld | withheld |
 | gb-07 | vitalitychems-dot/Gitbook | `history/recovered/source-documents/Zz/agent-notes/2026-10-06-rebuild-consolidation-draft.md` | 294358e4 |
 | gb-08 | vitalitychems-dot/Gitbook | `archive/moved/Zz/artifacts/z-app/src/lib/tessera/grok-ready.ts` | d0914b46 |
 
