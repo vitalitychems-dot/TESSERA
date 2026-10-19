@@ -113,7 +113,8 @@ describe("evolution health when the environment cannot apply patches", () => {
     expect(m!.totalFailures).toBe(0);
     expect(m!.totalDeferred).toBe(8);
     expect(m!.lastDeferredReason).toBe("llm-unavailable");
-    expect(m!.successRate).toBe(100);
+    expect(m!.verifiedApplied).toBe(0);
+    expect(m!.successRate).toBeNull();
     expect(isModuleCoolingDown("consensus-engine")).toBe(false);
   });
 
