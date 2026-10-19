@@ -3,6 +3,12 @@ import { systemStateTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 import { yieldToEventLoop } from "./event-loop";
+import {
+  assertAgentCreationAllowed,
+  checkAgentCreation,
+  creationManifestHash,
+  type AgentCreationDecision,
+} from "./admission-wiring";
 
 export type MeeseeksTaskType =
   | "analysis" | "optimization" | "security-audit" | "knowledge-synthesis"
@@ -230,18 +236,69 @@ export interface MeeseeksOptions {
   priority?: "low" | "normal" | "high" | "critical";
 }
 
-export function spawnAgent(trigger: string, masteredDomains: string[] = [], parentAgent = "tessera-prime"): SpawnedAgent | null {
-  if (Date.now() - spawnerState.lastSpawnAt < SPAWN_COOLDOWN_MS) return null;
+export type SpawnOutcome =
+  | { status: "spawned"; agent: SpawnedAgent }
+  | { status: "existing"; agent: SpawnedAgent }
+  | { status: "cooldown" }
+  | { status: "denied"; decision: AgentCreationDecision };
 
+function planNextSpawn() {
   const specIndex = spawnerState.totalSpawned % SPAWN_SPECIALIZATIONS.length;
   const spec = SPAWN_SPECIALIZATIONS[specIndex];
   const generation = Math.floor(spawnerState.totalSpawned / SPAWN_SPECIALIZATIONS.length) + 1;
   const name = generateAgentName(generation, specIndex);
   const id = `tessera-${name.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
+  const manifestHash = creationManifestHash({
+    kind: "persistent",
+    role: spec.role,
+    specialization: spec.spec,
+    personality: spec.personality,
+    generation,
+  });
+  return { spec, generation, name, id, manifestHash };
+}
 
-  if (spawnerState.activeSpawned.find(a => a.id === id)) {
-    return spawnerState.activeSpawned.find(a => a.id === id) ?? null;
-  }
+/** Identity the next persistent spawn is checked under: what an operator must admit before enforce mode. */
+export function previewNextSpawn(): { id: string; manifestHash: string } {
+  const { id, manifestHash } = planNextSpawn();
+  return { id, manifestHash };
+}
+
+function resolveMeeseeksTemplate(opts: Pick<MeeseeksOptions, "task" | "taskType" | "specialization">) {
+  const taskType = opts.taskType || inferTaskType(opts.task);
+  const profile = getTaskTypeProfile(taskType);
+  const resolvedSpec = opts.specialization || profile.optimalSpecialization;
+  const specIndex = SPAWN_SPECIALIZATIONS.findIndex(s => s.spec === resolvedSpec);
+  const spec = SPAWN_SPECIALIZATIONS[Math.max(0, specIndex) % SPAWN_SPECIALIZATIONS.length];
+  return {
+    taskType,
+    profile,
+    spec,
+    subjectId: `meeseeks-template:${taskType}:${spec.spec}`,
+    manifestHash: creationManifestHash({ kind: "meeseeks", taskType, specialization: spec.spec, role: spec.role }),
+  };
+}
+
+/** Template identity a Meeseeks spawn is checked under (the instance id is not known in advance). */
+export function previewMeeseeksTemplate(opts: Pick<MeeseeksOptions, "task" | "taskType" | "specialization">): { subjectId: string; manifestHash: string } {
+  const { subjectId, manifestHash } = resolveMeeseeksTemplate(opts);
+  return { subjectId, manifestHash };
+}
+
+/**
+ * Creation choke point for persistent agents. spawnAgent and spawnBatch* both go through here, so every
+ * caller is covered by the admission gate. A denied or cooled-down spawn creates nothing.
+ */
+export function trySpawnAgent(trigger: string, masteredDomains: string[] = [], parentAgent = "tessera-prime"): SpawnOutcome {
+  if (Date.now() - spawnerState.lastSpawnAt < SPAWN_COOLDOWN_MS) return { status: "cooldown" };
+
+  const { spec, generation, name, id, manifestHash } = planNextSpawn();
+
+  const existing = spawnerState.activeSpawned.find(a => a.id === id);
+  if (existing) return { status: "existing", agent: existing };
+
+  const decision = checkAgentCreation({ path: "agent-spawner:spawnAgent", subjectId: id, manifestHash });
+  if (!decision.allowed) return { status: "denied", decision };
 
   const newAgent: SpawnedAgent = {
     id, name, role: spec.role, personality: spec.personality,
@@ -267,20 +324,27 @@ export function spawnAgent(trigger: string, masteredDomains: string[] = [], pare
 
   persistState().catch(() => {});
   logger.info({ name, role: spec.role, generation, power: newAgent.power }, "AgentSpawner: agent spawned");
-  return newAgent;
+  return { status: "spawned", agent: newAgent };
 }
 
+export function spawnAgent(trigger: string, masteredDomains: string[] = [], parentAgent = "tessera-prime"): SpawnedAgent | null {
+  const outcome = trySpawnAgent(trigger, masteredDomains, parentAgent);
+  return outcome.status === "spawned" || outcome.status === "existing" ? outcome.agent : null;
+}
+
+/**
+ * Creation choke point for ephemeral agents. A Meeseeks id is not known in advance, so membership is checked
+ * against a template identity (task type + specialization), not the instance. Throws AgentCreationDeniedError
+ * only in enforce mode; the return type is unchanged for existing callers.
+ */
 export function spawnMeeseeks(opts: MeeseeksOptions, parentAgent = "tessera-prime"): SpawnedAgent {
-  const taskType = opts.taskType || inferTaskType(opts.task);
-  const profile = getTaskTypeProfile(taskType);
+  const { taskType, profile, spec, subjectId, manifestHash } = resolveMeeseeksTemplate(opts);
+  assertAgentCreationAllowed({ path: "agent-spawner:spawnMeeseeks", subjectId, manifestHash });
+
   const ttl = computeIntelligentTTL(taskType, opts.task, opts.ttlMs);
   const now = Date.now();
   const meeseeksNum = spawnerState.meeseeksMetrics.totalSpawned + 1;
   const meeseeksId = `meeseeks-${now}-${Math.random().toString(36).slice(2, 8)}`;
-
-  const resolvedSpec = opts.specialization || profile.optimalSpecialization;
-  const specIndex = SPAWN_SPECIALIZATIONS.findIndex(s => s.spec === resolvedSpec);
-  const spec = SPAWN_SPECIALIZATIONS[Math.max(0, specIndex) % SPAWN_SPECIALIZATIONS.length];
 
   const agent: SpawnedAgent = {
     id: meeseeksId,
