@@ -26,11 +26,15 @@ const PATH_DENIED = "That repository path is not allowed." as const;
 // (the tails elope, ironment, and y). environment uses the same end, slash, or
 // ".md" rule. There is no open letter suffix. dotenv and environ do not contain
 // the ".env" dot, so they are not part of that list.
+// kubeconfig matches a whole filename (kubeconfig, kubeconfig.yaml) or a
+// .kubeconfig extension. A doc name that only contains the letters stays allowed.
 const SECRET_PATH =
-  /(?:^|\/)\.env(?!ironment(?:$|\/|\.md$))|(?:^|\/)[^/]*\.env(?!(?:elope(?![a-zA-Z])|ironment(?:$|\/|\.md$)|y(?![a-zA-Z])))[^/]*(?:\/|$)|(?:^|\/)[^/]*\.envrc(?![a-zA-Z])[^/]*(?:\/|$)|(?:^|\/)[^/]*\.npmrc[^/]*(?:\/|$)|(?:^|\/)app-env\.json[^/]*(?:\/|$)|(^|\/)\.git(?:\/|$)|(?:^|\/)id_rsa(?:\.|$)|(?:^|\/)id_ed25519(?:\.|$)|(?:^|\/)id_ecdsa(?:\.|$)|(?:^|\/)\.(?:netrc|pypirc|pgpass)(?:[^a-zA-Z]|$)|(?:^|\/)[^/]*\.(?:tfvars|tfstate|jks)(?:[^a-zA-Z]|$)|(?:^|\/)kubeconfig(?:[^a-zA-Z]|$)|(?:^|\/)\.kube\/config(?:[^a-zA-Z]|$)|(?:^|\/)[^/]*\.(?:pem|key|p12|pfx)$|(?:^|\/)[^/]*(?:secret|password|credential)[^/]*(?:\/|$)|(?:^|\/)[^/]*natal-vault[^/]*(?:\/|$)/i;
+  /(?:^|\/)\.env(?!ironment(?:$|\/|\.md$))|(?:^|\/)[^/]*\.env(?!(?:elope(?![a-zA-Z])|ironment(?:$|\/|\.md$)|y(?![a-zA-Z])))[^/]*(?:\/|$)|(?:^|\/)[^/]*\.envrc(?![a-zA-Z])[^/]*(?:\/|$)|(?:^|\/)[^/]*\.npmrc[^/]*(?:\/|$)|(?:^|\/)app-env\.json[^/]*(?:\/|$)|(^|\/)\.git(?:\/|$)|(?:^|\/)id_rsa(?:\.|$)|(?:^|\/)id_ed25519(?:\.|$)|(?:^|\/)id_ecdsa(?:\.|$)|(?:^|\/)id_dsa(?:\.|$)|(?:^|\/)_netrc(?:[^a-zA-Z]|$)|(?:^|\/)\.(?:netrc|pypirc|pgpass)(?:[^a-zA-Z]|$)|(?:^|\/)[^/]*\.(?:tfvars|tfstate|jks|keystore|p8)(?:[^a-zA-Z]|$)|(?:^|\/)kubeconfig(?:\.[^/]*)*(?:\/|$)|(?:^|\/)[^/]*\.kubeconfig(?:\.[^/]*)*(?:\/|$)|(?:^|\/)\.kube\/config(?:[^a-zA-Z]|$)|(?:^|\/)[^/]*\.(?:pem|key|p12|pfx)$|(?:^|\/)[^/]*(?:secret|password|credential)[^/]*(?:\/|$)|(?:^|\/)[^/]*natal-vault[^/]*(?:\/|$)/i;
 const CONFUSABLE_FOLD: Readonly<Record<string, string>> = {
   "\u0435": "e",
   "\u0415": "e",
+  "\u0441": "c",
+  "\u0421": "c",
   "\u03bd": "v",
   "\u039d": "v",
   "\u0548": "n",
