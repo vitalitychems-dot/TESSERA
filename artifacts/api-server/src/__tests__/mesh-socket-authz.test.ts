@@ -68,6 +68,7 @@ async function waitUntil(predicate: () => boolean, attempts = 200): Promise<void
 interface MeshHarness {
   port: number;
   calls: number;
+  incomingFrames: string[];
   close: () => Promise<void>;
 }
 
@@ -75,9 +76,14 @@ async function startMesh(
   loadEnrichment?: () => Promise<MeshEnrichment>,
 ): Promise<MeshHarness> {
   const state = { calls: 0 };
-  const httpServer: Server = createServer();
+  const app = express();
+  app.use(express.json());
+  app.use("/api", adminSessionRouter);
+  const httpServer: Server = createServer(app);
+  const incomingFrames: string[] = [];
   const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
   wss.on("connection", (ws, req) => {
+    ws.on("message", frame => incomingFrames.push(frame.toString()));
     attachMeshClient(ws, req, {
       loadEnrichment: loadEnrichment ?? (async () => {
         state.calls += 1;
@@ -94,6 +100,7 @@ async function startMesh(
   const address = httpServer.address() as AddressInfo;
   return {
     port: address.port,
+    incomingFrames,
     get calls() {
       return state.calls;
     },
@@ -290,6 +297,87 @@ describe("mesh socket authorization", () => {
     expect(client.ws.readyState).toBe(WebSocket.OPEN);
     expect(blob(client.messages)).not.toContain(KEY);
     expect(blob([info.mock.calls, warn.mock.calls])).not.toContain(KEY);
+  });
+
+  it("registers cookie-only peers after HTTP sign-in and exchanges events in the owner group", async () => {
+    harness = await startMesh();
+    const login = await fetch(`http://127.0.0.1:${harness.port}/api/admin/session`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token: KEY }),
+    });
+    expect(login.status).toBe(200);
+    const setCookie = login.headers.get("set-cookie") ?? "";
+    expect(setCookie).toContain("HttpOnly");
+    expect(setCookie).toContain("SameSite=Strict");
+    const cookiePair = setCookie.split(";")[0] ?? "";
+    const signedId = decodeURIComponent(cookiePair.slice(`${SESSION_COOKIE}=`.length));
+    expect(signedId).not.toBe("");
+    expect(await login.text()).not.toContain(signedId);
+
+    const first = await openClient(harness.port, signedId);
+    first.ws.send(JSON.stringify({ type: "mesh:auth", metadata: { currentPage: "/owner-first" } }));
+    await waitUntil(() => first.messages.some(message => message.type === "mesh:registered"));
+    const firstId = first.messages.find(message => message.type === "mesh:registered")?.sessionId;
+    const second = await openClient(harness.port, signedId);
+    second.ws.send(JSON.stringify({ type: "mesh:auth", metadata: { currentPage: "/owner-second" } }));
+    await waitUntil(() => second.messages.some(message => message.type === "mesh:registered"));
+    const secondId = second.messages.find(message => message.type === "mesh:registered")?.sessionId;
+    await waitUntil(() => first.messages.some(message => message.type === "mesh:peer-joined" && message.sessionId === secondId));
+    const peers = getGroupSessions(keyHash(KEY));
+    expect(peers.map(peer => peer.sessionId).sort()).toEqual([firstId, secondId].sort());
+    expect(peers.map(peer => peer.metadata.currentPage).sort()).toEqual(["/owner-first", "/owner-second"]);
+
+    first.ws.send(JSON.stringify({ type: "mesh:broadcast", eventType: "test:first-to-second", payload: { text: "first" } }));
+    await waitUntil(() => second.messages.some(message => message.eventType === "test:first-to-second"));
+    expect(second.messages.find(message => message.eventType === "test:first-to-second"))
+      .toMatchObject({ type: "mesh:event", fromSession: firstId, payload: { text: "first" } });
+    second.ws.send(JSON.stringify({ type: "mesh:broadcast", eventType: "test:second-to-first", payload: { text: "second" } }));
+    await waitUntil(() => first.messages.some(message => message.eventType === "test:second-to-first"));
+    expect(first.messages.find(message => message.eventType === "test:second-to-first"))
+      .toMatchObject({ type: "mesh:event", fromSession: secondId, payload: { text: "second" } });
+    expect(first.messages.some(message => message.eventType === "test:first-to-second")).toBe(false);
+    expect(harness.calls).toBe(2);
+    for (const frame of harness.incomingFrames) {
+      expect(JSON.parse(frame)).not.toHaveProperty("token");
+      expect(frame).not.toContain(KEY);
+      expect(frame).not.toContain(signedId);
+    }
+    const outputs = blob([first.messages, second.messages, info.mock.calls, warn.mock.calls]);
+    expect(outputs).not.toContain(KEY);
+    expect(outputs).not.toContain(signedId);
+    expect(revokeSession(signedId)).toBe(true);
+    second.ws.send(JSON.stringify({ type: "mesh:heartbeat" }));
+    expect((await withTimeout(second.closed)).code).toBe(MESH_SOCKET_CLOSE_CODE);
+  });
+
+  it("never registers owner peers with missing or invalid cookies", async () => {
+    harness = await startMesh();
+    const missing = await openClient(harness.port);
+    missing.ws.send(JSON.stringify({ type: "mesh:auth", metadata: { currentPage: "/no-owner" } }));
+    expect((await withTimeout(missing.closed)).code).toBe(MESH_SOCKET_CLOSE_CODE);
+    const invalid = await openClient(harness.port, "synthetic-invalid-owner-cookie");
+    expect((await withTimeout(invalid.closed)).code).toBe(MESH_SOCKET_CLOSE_CODE);
+    expect(invalid.messages.some(message => message.type === "mesh:connected")).toBe(false);
+    expect([...missing.messages, ...invalid.messages].some(message => message.type === "mesh:registered")).toBe(false);
+    expect(getGroupSessions(keyHash(KEY))).toEqual([]);
+    expect(harness.calls).toBe(0);
+  });
+
+  it("does not promote a scoped member token to owner mesh authority, even alongside an owner cookie", async () => {
+    harness = await startMesh();
+    const memberToken = "synthetic-forum-member-only-token";
+    const member = await openClient(harness.port);
+    member.ws.send(JSON.stringify({ type: "mesh:auth", token: memberToken }));
+    expect((await withTimeout(member.closed)).code).toBe(MESH_SOCKET_CLOSE_CODE);
+    const issued = issueSession({ userAgent: "mesh-member-boundary-test" });
+    const mixed = await openClient(harness.port, issued.signedId);
+    mixed.ws.send(JSON.stringify({ type: "mesh:auth", token: memberToken }));
+    expect((await withTimeout(mixed.closed)).code).toBe(MESH_SOCKET_CLOSE_CODE);
+    expect(getGroupSessions(keyHash(KEY))).toEqual([]);
+    expect(harness.calls).toBe(0);
+    expect(blob([member.messages, mixed.messages, info.mock.calls, warn.mock.calls])).not.toContain(memberToken);
+    revokeSession(issued.signedId);
   });
 
   it("drops a revoked owner session on the next message", async () => {
