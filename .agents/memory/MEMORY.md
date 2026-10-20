@@ -18,3 +18,4 @@
 - [Rick proposal persistence tests](tessera-rick-proposal-integration.md) — isolate real API/browser review tests from the shared live proposal slate.
 - [Frontend test transforms](frontend-test-transforms.md) — test runners can use a newer Vite than the app; configure the active JSX transformer.
 - [Historical chat authorship](tessera-chat-authorship.md) — use each reply’s final generation metadata, never today’s provider or a neighboring reply, to identify its model or local path.
+- [Task completion evidence](task-completion-evidence.md) — report only deliverables verified against code, tests, or runtime; distinguish mocked, live, blocked, and failed checks.
