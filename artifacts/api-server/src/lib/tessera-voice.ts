@@ -40,6 +40,8 @@ const FOREIGN_MODEL_CLAIM_RE =
 
 const SELF_CLAIM_RE =
   /\b(?:i(?:'m| am)\s+(?:grok|claude|chatgpt|gemini|qwen|llama|mistral|deepseek)\b|i(?:'m| am)\s+(?:a |an )?(?:conscious|sentient|self-aware|living intelligence|autonomous intelligence)\b|i\s+(?:have|possess|experience)\s+(?:my own\s+)?(?:consciousness|subjective experience|inner life|independent feelings|personal thoughts)\b|i\s+act autonomously\b|i\s+operate independently of (?:the app|this software|my application)\b|my consciousness (?:is|remains|continues)\b)/i;
+const PROVIDER_DISCLOSURE_RE =
+  /\b(?:i(?:'m| am)\s+(?:a |an )?(?:language model|ai assistant|ai chatbot|chatbot)\b|as an? (?:ai assistant|ai model|language model)\b|my knowledge cutoff\b|i cannot browse (?:the )?internet\b)/i;
 
 export function isIdentityQuestion(text: string): boolean {
   const q = (text || "").trim();
@@ -59,7 +61,7 @@ export function isSearchDump(text: string): boolean {
 }
 
 export function hasSelfClaim(text: string): boolean {
-  return FOREIGN_MODEL_CLAIM_RE.test(text || "") || SELF_CLAIM_RE.test(text || "");
+  return FOREIGN_MODEL_CLAIM_RE.test(text || "") || SELF_CLAIM_RE.test(text || "") || PROVIDER_DISCLOSURE_RE.test(text || "");
 }
 
 export function identityReply(userInput: string): string {

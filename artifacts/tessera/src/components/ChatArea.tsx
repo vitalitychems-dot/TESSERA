@@ -188,25 +188,55 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   const [summitFeedOpen, setSummitFeedOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [fatherRotationOpen, setFatherRotationOpen] = useState(false);
+  const [fatherSigilReady, setFatherSigilReady] = useState(false);
+  const { isAdmin, authenticate, stealthMode, toggleStealth, adminMode } = useAdmin();
   const [historyNavIndex, setHistoryNavIndex] = useState(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const [localFontColor, setLocalFontColor] = useState<string>(() => localStorage.getItem("tessera-font-color") || "");
 
   useEffect(() => {
+    if (!isAdmin) {
+      setFatherSigilReady(false);
+      setFatherRotationOpen(false);
+      return;
+    }
     const controller = new AbortController();
     void fetch("/api/sigil/father/status", { credentials: "include", cache: "no-store", signal: controller.signal })
       .then(async response => {
-        if (!response.ok) { setFatherRotationOpen(true); return; }
+        if (!response.ok) {
+          setFatherSigilReady(false);
+          setFatherRotationOpen(true);
+          return;
+        }
         const status = await response.json();
-        if (!status.rotatedThisSession) setFatherRotationOpen(true);
+        const ready = Boolean(status.rotatedThisSession);
+        setFatherSigilReady(ready);
+        if (!ready) setFatherRotationOpen(true);
       })
-      .catch(() => { if (!controller.signal.aborted) setFatherRotationOpen(true); });
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setFatherSigilReady(false);
+        setFatherRotationOpen(true);
+      });
     return () => controller.abort();
-  }, []);
+  }, [isAdmin]);
+
+  const closeFatherRotationPanel = async () => {
+    setFatherRotationOpen(false);
+    try {
+      const response = await fetch("/api/sigil/father/status", {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const status = response.ok ? await response.json() : null;
+      setFatherSigilReady(Boolean(status?.rotatedThisSession));
+    } catch {
+      setFatherSigilReady(false);
+    }
+  };
   
   const tesseractMode = true;
-  const { isAdmin, authenticate, stealthMode, toggleStealth, adminMode } = useAdmin();
 
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -1196,8 +1226,20 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
       <div className="px-3 pb-3 pt-2 z-10 flex-shrink-0 max-h-[75%] overflow-y-auto overscroll-contain chat-input-bg" data-testid="chat-input-container">
         <FatherCodeRotationPanel
           open={fatherRotationOpen}
-          onClose={() => setFatherRotationOpen(false)}
+          onClose={() => void closeFatherRotationPanel()}
         />
+        {!fatherRotationOpen && !fatherSigilReady && (
+          <div className="max-w-3xl mx-auto mb-3 w-full">
+            <button
+              type="button"
+              onClick={() => setFatherRotationOpen(true)}
+              className="rounded-lg border border-emerald-300/25 px-3 py-2 text-sm text-emerald-100 hover:bg-emerald-300/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-300"
+              data-testid="button-reopen-father-sigil"
+            >
+              Reopen private chat sigil setup
+            </button>
+          </div>
+        )}
         {attachmentLoadError && (
           <p role="status" aria-live="polite" className="max-w-3xl mx-auto mb-2 text-xs text-amber-300/90">
             {attachmentLoadError}

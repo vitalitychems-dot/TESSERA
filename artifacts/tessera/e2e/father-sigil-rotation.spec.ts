@@ -298,10 +298,25 @@ async function openSignedInChat(page: Page, state: MockState) {
 }
 
 async function openRotationPanel(page: Page, message: string) {
+  const panel = page.getByTestId("father-code-rotation-panel");
   const composer = page.getByTestId("input-message");
+  const reopenButton = page.getByTestId("button-reopen-father-sigil");
+  if (await panel.isVisible()) return;
+  if (await reopenButton.isVisible()) {
+    try {
+      await reopenButton.click({ timeout: 1500 });
+    } catch (error) {
+      // The session-status refresh may open the panel between visibility and click.
+      if (!(await panel.isVisible())) throw error;
+    }
+    await expect(panel).toBeVisible();
+    return;
+  }
+  await expect.poll(async () => (await panel.isVisible()) || (await composer.isEditable())).toBe(true);
+  if (await panel.isVisible()) return;
   await composer.fill(message);
   await composer.press("Enter");
-  await expect(page.getByTestId("father-code-rotation-panel")).toBeVisible();
+  await expect(panel).toBeVisible();
 }
 
 async function assertMobilePanelFits(page: Page) {
@@ -385,7 +400,7 @@ test.describe("owner session cookie-only lifecycle", () => {
     const logoutSession = state.ownerCookieValue;
     expect(logoutSession).toBeTruthy();
 
-    await page.getByRole("button", { name: "logout" }).click();
+    await page.getByRole("button", { name: "logout", exact: true }).click();
     await expect(page.getByLabel("Father admin code or LUS form")).toBeVisible();
     expect(state.authenticated).toBe(false);
     expect(state.ownerCookieValue).toBeNull();
@@ -405,8 +420,10 @@ test.describe("owner session cookie-only lifecycle", () => {
 test.describe("private chat sigil rotation", () => {
   test("enrolls, rejects the wrong prior sigil, confirms the replacement, and permits only one rotation per session", async ({ page }) => {
     const state = makeState();
-    await page.setViewportSize({ width: 390, height: 844 });
+    // Mount the chat with device input enabled, then test its responsive layout at phone width.
+    await page.setViewportSize({ width: 1280, height: 900 });
     await openSignedInChat(page, state);
+    await page.setViewportSize({ width: 390, height: 844 });
 
     await openRotationPanel(page, "Please answer this after I verify my private sigil.");
     expect(state.chatBodies).toHaveLength(0);
@@ -469,7 +486,8 @@ test.describe("private chat sigil rotation", () => {
     expect(state.issueAttempts).toBe(issueAttemptsAfterConfirmation);
 
     // A fresh owner session can rotate again, but only by presenting the newly active sigil.
-    await page.getByRole("button", { name: "logout" }).click();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.getByRole("button", { name: "logout", exact: true }).click();
     const keyField = page.getByLabel("Father admin code or LUS form");
     await expect(keyField).toBeVisible();
     await keyField.fill(TEST_ADMIN_KEY);

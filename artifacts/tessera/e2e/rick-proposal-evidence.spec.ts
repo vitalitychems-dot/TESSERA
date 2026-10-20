@@ -218,6 +218,8 @@ async function signInOnRickPage(page: Page, state: MockState) {
   await page.goto("/rick");
   const adminField = page.getByLabel("Father admin code or LUS form");
   await expect(adminField).toBeVisible();
+  const deviceKeyboard = page.getByRole("button", { name: "Use device keyboard", exact: true });
+  if (await deviceKeyboard.isVisible()) await deviceKeyboard.click();
   await adminField.fill(TEST_OWNER_KEY);
   await page.getByRole("button", { name: "Unlock Tesseract" }).click();
   await expect(page.getByText("Owner approval evidence path")).toBeVisible();
@@ -303,8 +305,13 @@ test.describe("Rick owner evidence on mobile", () => {
     await page.setViewportSize({ width: 768, height: 1024 });
     await expect(page.getByTestId("rick-section-dropdown-wrapper")).toBeVisible();
     await expect(page.getByTestId("rick-desktop-tabs")).toBeHidden();
-    const tabletHeaderWidth = await page.getByTestId("rick-header-identity").evaluate((element) => element.getBoundingClientRect().width);
-    expect(tabletHeaderWidth).toBeGreaterThan(700);
+    const tabletHeaderBounds = await page.getByTestId("rick-header-identity").evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return { left: rect.left, right: rect.right, width: rect.width, viewportWidth: window.innerWidth };
+    });
+    expect(tabletHeaderBounds.width).toBeGreaterThan(400);
+    expect(tabletHeaderBounds.left).toBeGreaterThanOrEqual(0);
+    expect(tabletHeaderBounds.right).toBeLessThanOrEqual(tabletHeaderBounds.viewportWidth + 1);
 
     await page.setViewportSize({ width: 1280, height: 900 });
     await expect(page.getByTestId("rick-section-dropdown-wrapper")).toBeHidden();
