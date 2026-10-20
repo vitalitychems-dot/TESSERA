@@ -9,6 +9,12 @@ description: Rules for grounding factual replies in source records and preservin
 
 **How to apply:** When adding a factual reply path, return structured evidence with the answer, preserve it when caching or reusing the answer, and serialize citations from only the evidence that supports that reply. Label missing dates honestly instead of inventing them.
 
+**Legacy-history boundary:** Do not reconstruct structured provenance or verification for old messages from inline links, source-looking text, or neighboring messages.
+
+**Why:** A rendered link does not establish which evidence supported that specific answer or whether the server reviewed it. Retrospective reconstruction can attach another answer's sources or falsely promote a claim.
+
+**How to apply:** Leave historical messages without a structured record as such; only carry forward the records selected for the answer at generation time.
+
 **Voice-guard boundary:** The presence of a citation URL is not an identity error. Identity consistency checks must not replace ordinary source-backed factual answers with an introduction.
 
 **Why:** A broad search-dump heuristic discarded short factual replies merely because they cited Wikipedia, making correct retrieved answers look like identity failures.

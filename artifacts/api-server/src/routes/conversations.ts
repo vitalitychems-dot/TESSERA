@@ -698,8 +698,9 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
         routing: { ...routingMetadata(replyAuthorship), isStrong: false },
       });
       writeQuick({ content: reply });
+      const citations = serializeTesseraCitations(localEvidence);
       try {
-        await db.insert(messagesTable).values({ conversationId, role: "assistant", content: reply });
+        await db.insert(messagesTable).values({ conversationId, role: "assistant", content: reply, citations });
       } catch (err) {
         logger.warn({ name: err instanceof Error ? err.name : "Error" }, "failed to persist local voice reply");
       }
@@ -708,7 +709,7 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
         finalContent: reply,
         validationMetrics: null,
         routing: routingMetadata(replyAuthorship),
-        citations: serializeTesseraCitations(localEvidence),
+        citations,
         tools: [],
       });
       return res.end();
@@ -1107,8 +1108,9 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
     }
 
     finalContent = ensureInlineTesseraCitations(finalContent, replyEvidence);
+    const citations = serializeTesseraCitations(replyEvidence);
     if (validationMetrics && typeof validationMetrics === "object") {
-      validationMetrics.sources = serializeTesseraCitations(replyEvidence).map((citation) => citation.source);
+      validationMetrics.sources = citations.map((citation) => citation.source);
     }
     if (finalContent) {
       finalContent = signTesseraReply(`${finalContent}${responseAttribution(replyAuthorship)}`);
@@ -1125,6 +1127,7 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
         conversationId,
         role: "assistant",
         content: finalContent,
+        citations,
       });
     }
 
@@ -1133,7 +1136,7 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
       finalContent,
       validationMetrics,
       routing: routingMetadata(replyAuthorship),
-      citations: serializeTesseraCitations(replyEvidence),
+      citations,
       tools: visibleTools(),
     });
     return res.end();

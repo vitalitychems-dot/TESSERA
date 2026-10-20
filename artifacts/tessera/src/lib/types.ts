@@ -1,7 +1,10 @@
+import type { MessageCitation } from "./message-citations";
+
 export interface Message {
   id?: string | number;
   role: "user" | "assistant" | "system";
   content: string;
+  citations?: MessageCitation[] | null;
   timestamp?: number;
   agentId?: string;
   agentName?: string;

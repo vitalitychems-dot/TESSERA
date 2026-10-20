@@ -10,6 +10,7 @@ import { ColorizedText } from "./ChatColorizedText";
 import { copyToClipboard, playAudioResponse } from "./ChatVoice";
 import { CodeExecutionResult, parseCodeExecutionBlocks, stripCodeExecutionBlocks } from "./CodeExecutionResult";
 import { parse3DObjectBlocks, inferObjectSpec, type Object3DSpec } from "./Chat3DParser";
+import { MessageCitationList } from "./MessageCitationList";
 
 const InlineObject3D = lazy(() =>
   import("./ChatObject3D").then((module) => ({ default: module.InlineObject3D })),
@@ -64,7 +65,7 @@ function sanitizeMessageContent(content: string): string {
 }
 
 interface MessageItemProps {
-  msg: { id?: number | string; role: string; content: string; createdAt?: Date | string };
+  msg: { id?: number | string; role: string; content: string; createdAt?: Date | string; citations?: unknown };
   index: number;
   adminMode: boolean;
   tesseraMsgStyle: { wrapper: string; prose: string } | null;
@@ -283,6 +284,8 @@ const AssistantMessage = memo(function AssistantMessage({
       )}>
         <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>{chartText}</ReactMarkdown>
       </div>
+
+      <MessageCitationList citations={msg.citations} />
 
       {charts.map((chart, ci) => (
         <InlineChart key={ci} chart={chart} />

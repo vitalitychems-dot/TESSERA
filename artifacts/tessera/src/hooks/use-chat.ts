@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@/lib/queryClient";
 import { type Message } from "@/lib/types";
+import { parseMessageCitations, type MessageCitation } from "@/lib/message-citations";
 import { puterChat, isPuterAvailable, tesseractSwarm, PUTER_MODELS, type SwarmAgentResponse, type SwarmComm } from "@/lib/puter-ai";
 import { appendTesseraVoice, enforceTesseraVoice, isIdentityQuestion } from "@/lib/tessera-voice";
 import type { ExecutionResultData } from "@/components/chat/CodeExecutionResult";
@@ -199,20 +200,12 @@ export function useChat(
 
     if (tesseractMode) {
       try {
-        const saveHeaders: Record<string, string> = { "Content-Type": "application/json" };
-
-        fetch(`/api/conversations/${conversationId}/puter-save`, {
-          method: "POST",
-          headers: saveHeaders,
-          body: JSON.stringify({ content, role: "user" }),
-          credentials: "include",
-        }).catch(() => {});
-
         const historyMsgs = messages.slice(-40).map(m => ({ role: m.role, content: m.content }));
         setSwarmAgents([]);
         setSwarmComms([]);
 
         let serverAccumulated = "";
+        let serverCitations: MessageCitation[] = [];
 
         try {
           const url = buildUrl("/api/messages", { conversationId });
@@ -272,6 +265,7 @@ export function useChat(
                   }
                   if (data.done) {
                     stopThinkingTimer();
+                    serverCitations = parseMessageCitations(data.citations);
                     if (data.finalContent) {
                       serverAccumulated = enforceTesseraVoice(data.finalContent, content);
                       setStreamingContent(serverAccumulated);
@@ -335,16 +329,11 @@ export function useChat(
             conversationId: conversationId!,
             role: "assistant",
             content: finalResponse,
+            citations: serverCitations,
             createdAt: new Date(),
           };
           queryClient.setQueryData(queryKey, (old: Message[] = []) => [...old, optimisticAssistantMsg]);
 
-          fetch(`/api/conversations/${conversationId}/puter-save`, {
-            method: "POST",
-            headers: saveHeaders,
-            body: JSON.stringify({ content: finalResponse, role: "assistant", model: "tesseract-unified" }),
-            credentials: "include",
-          }).catch(() => {});
         }
 
         stopThinkingTimer();
@@ -460,6 +449,7 @@ export function useChat(
                   conversationId: conversationId!,
                   role: "assistant",
                   content: finalText,
+                  citations: parseMessageCitations(data.citations),
                   createdAt: new Date(),
                 };
                 queryClient.setQueryData(queryKey, (old: Message[] = []) => [...old, optimisticAssistantMsg]);

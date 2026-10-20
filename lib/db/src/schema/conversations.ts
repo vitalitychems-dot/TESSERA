@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -13,11 +13,26 @@ export const insertConversationSchema = createInsertSchema(conversationsTable).o
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
 export type ConversationRow = typeof conversationsTable.$inferSelect;
 
+/** Server-selected supporting records; never reconstructed from saved message text. */
+export interface StoredMessageCitation {
+  id: string;
+  idx: number;
+  source: string;
+  score: number;
+  sourceUrl: string | null;
+  documentReference: string;
+  retrievedAt: string | null;
+  publishedAt: string | null;
+  trustStatus: "verified" | "unverified" | "stale";
+  trustNote: string;
+}
+
 export const messagesTable = pgTable("messages", {
   id: serial("id").primaryKey(),
   conversationId: integer("conversation_id").notNull(),
   role: text("role").notNull().default("user"),
   content: text("content").notNull(),
+  citations: jsonb("citations").$type<StoredMessageCitation[]>().notNull().default([]),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

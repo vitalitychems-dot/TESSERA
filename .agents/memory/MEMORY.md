@@ -16,3 +16,4 @@
 - [Tessera mobile browser keyboard](tessera-mobile-test-keyboard.md) — use device input for bulk-fill mobile browser tests; cover the custom keyboard in its own interaction tests.
 - [Tessera session-expiry tests](tessera-session-expiry-tests.md) — distinguish an expired owner session from a missing cookie when testing protected actions.
 - [Rick proposal persistence tests](tessera-rick-proposal-integration.md) — isolate real API/browser review tests from the shared live proposal slate.
+- [Frontend test transforms](frontend-test-transforms.md) — test runners can use a newer Vite than the app; configure the active JSX transformer.
