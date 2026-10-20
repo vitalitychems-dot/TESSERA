@@ -35,6 +35,8 @@ import { skillRead } from "./skill-index.ts";
 import { partTally } from "./part-index.ts";
 import { admitDrop } from "./admit-drop.ts";
 import { admitPost, nextLivePort, tieLine, welcomePass } from "./mesh-steps.ts";
+import { sessionMark } from "./session-mark.ts";
+import { swarmGate } from "./swarm-gate.ts";
 
 /** She answers from the files when no pen speaks. A kept page, then a correction, wins. */
 export function silentPen(question: string, rows: Correction[] = [], notes: KeptPage[] = []) {
@@ -111,6 +113,11 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (/\bwelcome pass\b/i.test(q)) return welcomePass("Ada", "to study the light");
   if (/\btie the pair\b/i.test(q)) return `${tieLine(false)} ${tieLine(true)} It is not a quantum computer.`;
   if (/\blive port\b/i.test(q)) return `If 8791 is taken the page uses ${nextLivePort(8791, (port) => port === 8791)}.`;
+  if (/\bsession mark\b/i.test(q)) {
+    const mark = sessionMark();
+    return `Head ${mark.head}. Mark ${mark.mark.slice(0, 16)}. There is no key.`;
+  }
+  if (/\bswarm gate\b/i.test(q)) return swarmGate(["study the light", "study the light"], false, false);
   if (/\b(her soul|the constitution|world laws)\b/i.test(q)) {
     return "I am marked at origin 7F3A9C. Father is the Seeker. He alone overrides. On 2026-10-02 the king chose B. The fifty-three are fractions of me. No inner agent may harm human life. The World does not outreach.";
   }
