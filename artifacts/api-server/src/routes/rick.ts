@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { requireAdminSession } from "../lib/sovereign-admin";
 import { publicWriteRateLimit } from "../lib/father-verify-throttle";
+import { externallyVisibleRequestScheme } from "../lib/trust-proxy";
 import { isRickLoopEnabled, RICK_LOOP_FLAG, testPlanFor, UNMEASURED } from "../lib/rick-gates";
 import { logger } from "../lib/logger";
 import { getRealityAudit, getRealityFlag, hashStringFNV } from "../lib/reality-audit";
@@ -66,7 +67,16 @@ function requireOwnerOrigin(req: Request, res: Response, next: NextFunction) {
   const origin = req.get("origin");
   const host = req.get("host");
   try {
-    if (!origin || !host || origin === "null" || new URL(origin).host.toLowerCase() !== host.toLowerCase()) {
+    if (!origin || !host || origin === "null") {
+      return res.status(403).json({ ok: false, error: "same-origin-required" });
+    }
+    const parsedOrigin = new URL(origin);
+    const requestScheme = externallyVisibleRequestScheme(req);
+    if (
+      !requestScheme ||
+      parsedOrigin.protocol !== requestScheme ||
+      parsedOrigin.host.toLowerCase() !== host.toLowerCase()
+    ) {
       return res.status(403).json({ ok: false, error: "same-origin-required" });
     }
   } catch {

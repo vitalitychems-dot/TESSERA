@@ -2,7 +2,7 @@ import { describe, it, expect, afterAll } from "vitest";
 import express from "express";
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
-import { appTrustProxySetting } from "../lib/trust-proxy";
+import { appTrustProxySetting, externallyVisibleRequestScheme } from "../lib/trust-proxy";
 import { evaluateCandidate, runScenario, DEFAULT_ADMISSION_POLICY } from "../lib/admission/gate";
 import { SCENARIOS } from "../lib/admission/scenarios";
 import { SimWorld } from "../lib/admission/sim-world";
@@ -23,6 +23,23 @@ async function ipOf(env: NodeJS.ProcessEnv, xff: string): Promise<string> {
 }
 
 describe("follow-up (1): app-wide trust proxy", () => {
+  it.each([
+    [{}, "https", "http:"],
+    [{ APP_TRUSTED_PROXIES: "10.0.0.1" }, "https", "http:"],
+    [{ APP_TRUSTED_PROXIES: "127.0.0.1/32" }, "https", "https:"],
+    [{ APP_TRUSTED_PROXIES: "127.0.0.1/32" }, "ftp", null],
+  ])("derives the scheme only through configured proxy trust (%j, %s)", async (env, forwarded, expected) => {
+    const app = express();
+    app.set("trust proxy", appTrustProxySetting(env as NodeJS.ProcessEnv));
+    app.get("/scheme", (req, res) => res.json({ scheme: externallyVisibleRequestScheme(req) }));
+    const server = app.listen(0, "127.0.0.1");
+    servers.push(server);
+    await new Promise((resolve) => server.once("listening", resolve));
+    const response = await fetch(`http://127.0.0.1:${(server.address() as AddressInfo).port}/scheme`, {
+      headers: { "X-Forwarded-Proto": String(forwarded) },
+    });
+    expect(await response.json()).toEqual({ scheme: expected });
+  });
   it("a forged X-Forwarded-For from an untrusted peer does not change req.ip (default env)", async () => {
     const ip = await ipOf({}, "203.0.113.9");
     console.log(`[followup-1] default env, forged XFF 203.0.113.9 -> req.ip=${ip}`);

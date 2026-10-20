@@ -39,6 +39,9 @@ afterEach(() => { if (saved === undefined) delete process.env[RICK_LOOP_FLAG]; e
 
 beforeAll(async () => {
   const app = express();
+  // The test server is reached over loopback, which stands in for the single
+  // explicitly trusted TLS edge used by the deployed app.
+  app.set("trust proxy", "loopback");
   app.use(express.json());
   app.use(rickRouter);
   routeServer = createServer(app);
@@ -338,12 +341,14 @@ describe("B. approve / implemented need a non-Rick actor plus a test reference",
       body: unknown,
       cookie?: string,
       origin = routeBaseUrl,
+      forwardedProto?: string,
     ) => fetch(`${routeBaseUrl}${path}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Origin: origin,
         ...(cookie ? { Cookie: cookie } : {}),
+        ...(forwardedProto ? { "X-Forwarded-Proto": forwardedProto } : {}),
       },
       body: JSON.stringify(body),
     });
@@ -352,6 +357,26 @@ describe("B. approve / implemented need a non-Rick actor plus a test reference",
       await programService.abandonProgram();
       const session = issueSession({ ip: "127.0.0.1", userAgent: "rick-cycle-gates-vitest" });
       const ownerCookie = `${SESSION_COOKIE}=${session.signedId}`;
+
+      const sameHostHttpsOrigin = `https://${new URL(routeBaseUrl).host}`;
+      const wrongScheme = await sendMutation(
+        "/rick/improvement-program/start",
+        {},
+        ownerCookie,
+        sameHostHttpsOrigin,
+      );
+      expect(wrongScheme.status).toBe(403);
+
+      // Simulate the Replit TLS edge: the browser uses HTTPS, the local hop is
+      // HTTP, and Express accepts the forwarded scheme only from trusted loopback.
+      const trustedPreviewOrigin = await sendMutation(
+        "/rick/inventions/submit-custom",
+        {},
+        ownerCookie,
+        sameHostHttpsOrigin,
+        "https",
+      );
+      expect(trustedPreviewOrigin.status).toBe(400); // passed origin/session gate, failed payload validation
 
       for (const mutation of mutations) {
         const anonymous = await sendMutation(mutation.path, mutation.body);
