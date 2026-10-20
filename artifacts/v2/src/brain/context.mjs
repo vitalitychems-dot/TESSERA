@@ -55,24 +55,53 @@ export function createRanker(g, { idfW = 1, typeW = 1, pprIters = 10, pprW = 1, 
   const idfV = new Map(); for (const [w, c] of df) idfV.set(w, Math.log(N.length / c));
   const idf0 = Math.log(N.length / 1);
   const nbMark = new Int32Array(M); let nbGen = 0;
+  // Token ids: per node an Int32Array of token ids in the same order as T.get(n), and an idf table with the same values.
+  const tokId = new Map(); for (const w of df.keys()) tokId.set(w, tokId.size);
+  const idfT = new Float64Array(tokId.size); for (const [w, c] of df) idfT[tokId.get(w)] = Math.log(N.length / c);
+  const TOK = N.map((n) => Int32Array.from(T.get(n), (w) => tokId.get(w)));
+  const sMark = new Int32Array(tokId.size); let sGen = 0;
+  const topS = new Float64Array(64); const topN = new Array(64);
+  const better = (s1, n1, s2, n2) => s1 > s2 || (s1 === s2 && n1 < n2);
   return function rank(seed, k = 5) {
-    const SL = A.get(seed); const nb = new Map(SL ?? []); const S = T.get(seed) ?? new Set(); const st = g.nodes.get(seed)?.type;
+    const S = T.get(seed) ?? new Set(); const st = g.nodes.get(seed)?.type;
     let stot = 0; for (const w of S) stot += idfV.get(w) ?? idf0;
+    sGen++; for (const w of S) sMark[tokId.get(w)] = sGen;
     const si = ix.get(seed); const usePpr = pprW && si !== undefined; if (usePpr) ppr(si);
     nbGen++; if (si !== undefined) for (let e = off[si], end = off[si + 1]; e < end; e++) nbMark[nbrA[e]] = nbGen;
+    // A node with no index (j < 0) has no edges in the build-time adjacency, so it is never a neighbour of the seed.
+    let sm = null;
+    // Synapses are still read live: when there are few of them, scan g.syn once per call for the seed's partners
+    // (same values, same keys); otherwise look each candidate up as before.
+    if (g.syn.size <= N.length) {
+      sm = new Map(); const pre = seed + "\u0000", suf = "\u0000" + seed;
+      for (const [kk, w] of g.syn) {
+        if (kk.startsWith(pre)) { const p = kk.slice(pre.length); if (seed < p) sm.set(p, w); }
+        if (kk.endsWith(suf)) { const p = kk.slice(0, kk.length - suf.length); if (p < seed) sm.set(p, w); }
+      }
+    }
+    // Top-k selection for small integer k: (score desc, name asc) is a strict total order, so the first k are the same.
+    const sel = Number.isInteger(k) && k >= 1 && k <= 64; let len = 0;
     const ttS = tt.get(st) || 1; const fac = new Map(); const out = [];
     for (let c = 0; c < N.length; c++) {
       const n = N[c]; const j = NI[c];
-      if (n === seed || (j >= 0 ? nbMark[j] === nbGen : nb.has(n))) continue; let s = 0;
+      if (n === seed || (j >= 0 && nbMark[j] === nbGen)) continue; let s = 0;
       if (j >= 0) for (let e = off[j], end = off[j + 1]; e < end; e++) { const m = nbrA[e]; if (nbMark[m] === nbGen) s += invLogA[m]; }
-      s += synW * synapse(g, seed, n);
-      let i = 0; for (const w of T.get(n)) if (S.has(w)) i += idfV.get(w) ?? idf0; s += idfW * (i / (stot || 1));
+      s += synW * (sm ? (sm.get(n) ?? 0) : synapse(g, seed, n));
+      let i = 0; const ta = TOK[c]; for (let q = 0; q < ta.length; q++) { const t = ta[q]; if (sMark[t] === sGen) i += idfT[t]; } s += idfW * (i / (stot || 1));
       s += pprW * 10 * (usePpr && j >= 0 && mark[j] === gen ? pv[j] : 0);
       const ty = g.nodes.get(n).type; let f = fac.get(ty);
       if (f === undefined) { f = 1 + typeW * ((tp.get(`${st}|${ty}`) ?? 0) / ttS); fac.set(ty, f); }
       s *= f;
-      if (s > 0) out.push([n, s]);
+      if (s > 0) {
+        if (sel) {
+          let p;
+          if (len < k) p = len++; else if (better(s, n, topS[k - 1], topN[k - 1])) p = k - 1; else continue;
+          while (p > 0 && better(s, n, topS[p - 1], topN[p - 1])) { topS[p] = topS[p - 1]; topN[p] = topN[p - 1]; p--; }
+          topS[p] = s; topN[p] = n;
+        } else out.push([n, s]);
+      }
     }
+    if (sel) return topN.slice(0, len);
     return out.sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, k).map(([n]) => n);
   };
 }
