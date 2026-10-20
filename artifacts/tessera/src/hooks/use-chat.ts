@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@/lib/queryClient";
 import { type Message } from "@/lib/types";
 import { parseMessageCitations, type MessageCitation } from "@/lib/message-citations";
+import { parseChatAuthorship, lastReplyAuthorship, type ChatReplyAuthorship } from "@/lib/chat-authorship";
 import { puterChat, isPuterAvailable, tesseractSwarm, PUTER_MODELS, type SwarmAgentResponse, type SwarmComm } from "@/lib/puter-ai";
 import { appendTesseraVoice, enforceTesseraVoice, isIdentityQuestion } from "@/lib/tessera-voice";
 import type { ExecutionResultData } from "@/components/chat/CodeExecutionResult";
@@ -19,34 +20,6 @@ export interface AgentComm {
   toName: string;
   message: string;
   timestamp: number;
-}
-
-export interface ChatReplyAuthorship {
-  authorRole: "model-drafting" | "model-authored" | "local" | "local-fallback" | "application-result" | "unattributed";
-  author: string;
-  model: string | null;
-  provenance?: "retrieved-evidence" | "unverified-model-knowledge" | null;
-  reason?: string | null;
-}
-
-function parseChatAuthorship(value: unknown): ChatReplyAuthorship | null {
-  if (!value || typeof value !== "object") return null;
-  const data = value as Record<string, unknown>;
-  const roles = ["model-drafting", "model-authored", "local", "local-fallback", "application-result"] as const;
-  if (!roles.includes(data.authorRole as typeof roles[number])) return null;
-  const model = typeof data.model === "string" && /^[A-Za-z0-9._:/-]{1,120}$/.test(data.model)
-    ? data.model
-    : null;
-  const provenance = data.provenance === "retrieved-evidence" || data.provenance === "unverified-model-knowledge"
-    ? data.provenance
-    : null;
-  return {
-    authorRole: data.authorRole as ChatReplyAuthorship["authorRole"],
-    author: typeof data.author === "string" ? data.author.slice(0, 48) : "Tessera",
-    model,
-    provenance,
-    reason: typeof data.reason === "string" ? data.reason.slice(0, 120) : null,
-  };
 }
 
 export function useChat(
@@ -124,7 +97,12 @@ export function useChat(
     return sorted.filter((msg, index) => {
       if (index === 0) return true;
       const prev = sorted[index - 1];
-      return !(msg.role === prev.role && msg.content === prev.content);
+      return !(
+        msg.role === prev.role &&
+        msg.content === prev.content &&
+        JSON.stringify(msg.authorship ?? null) === JSON.stringify(prev.authorship ?? null) &&
+        JSON.stringify(msg.citations ?? []) === JSON.stringify(prev.citations ?? [])
+      );
     });
   })();
 
@@ -206,6 +184,7 @@ export function useChat(
 
         let serverAccumulated = "";
         let serverCitations: MessageCitation[] = [];
+        let serverAuthorship: ChatReplyAuthorship | null = null;
 
         try {
           const url = buildUrl("/api/messages", { conversationId });
@@ -243,7 +222,9 @@ export function useChat(
                 try {
                   const data = JSON.parse(dataStr);
                   const responseAuthorship = parseChatAuthorship(data.routing);
-                  if (responseAuthorship) setAuthorship(responseAuthorship);
+                  if (responseAuthorship) {
+                    setAuthorship(responseAuthorship);
+                  }
                   if (data.agents) setActiveAgents(data.agents);
                   if (data.comms) setAgentComms(data.comms);
                   if (data.orchestrator) {
@@ -266,6 +247,7 @@ export function useChat(
                   if (data.done) {
                     stopThinkingTimer();
                     serverCitations = parseMessageCitations(data.citations);
+                    serverAuthorship = responseAuthorship;
                     if (data.finalContent) {
                       serverAccumulated = enforceTesseraVoice(data.finalContent, content);
                       setStreamingContent(serverAccumulated);
@@ -330,6 +312,7 @@ export function useChat(
             role: "assistant",
             content: finalResponse,
             citations: serverCitations,
+            authorship: serverAuthorship,
             createdAt: new Date(),
           };
           queryClient.setQueryData(queryKey, (old: Message[] = []) => [...old, optimisticAssistantMsg]);
@@ -450,6 +433,7 @@ export function useChat(
                   role: "assistant",
                   content: finalText,
                   citations: parseMessageCitations(data.citations),
+                  authorship: responseAuthorship,
                   createdAt: new Date(),
                 };
                 queryClient.setQueryData(queryKey, (old: Message[] = []) => [...old, optimisticAssistantMsg]);
@@ -572,16 +556,24 @@ export function useChat(
 
   const addVoiceMessages = useCallback(async (userText: string, assistantText: string) => {
     if (!conversationId) return;
-    setAuthorship({
+    const voiceAuthorship: ChatReplyAuthorship = {
       authorRole: "unattributed",
-      author: "Voice path",
+      author: "Provider",
       model: null,
       provenance: null,
-      reason: "provider-authorship-not-reported",
-    });
+      reason: "client-saved-reply-authorship-unavailable",
+    };
+    setAuthorship(voiceAuthorship);
     const now = new Date();
     const userMsg: Message = { id: Date.now(), conversationId, role: "user", content: userText, createdAt: now };
-    const assistantMsg: Message = { id: Date.now() + 1, conversationId, role: "assistant", content: assistantText, createdAt: new Date(now.getTime() + 1) };
+    const assistantMsg: Message = {
+      id: Date.now() + 1,
+      conversationId,
+      role: "assistant",
+      content: assistantText,
+      authorship: voiceAuthorship,
+      createdAt: new Date(now.getTime() + 1),
+    };
     queryClient.setQueryData(queryKey, (old: Message[] = []) => [...old, userMsg, assistantMsg]);
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     fetch(`/api/conversations/${conversationId}/puter-save`, {
@@ -603,7 +595,7 @@ export function useChat(
     isLoading,
     isStreaming,
     streamingContent,
-    authorship,
+    authorship: isStreaming ? authorship : lastReplyAuthorship(messages),
     sendMessage,
     addVoiceMessages,
     stopStreaming,

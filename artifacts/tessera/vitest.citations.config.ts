@@ -3,6 +3,6 @@ export default {
   test: {
     globals: true,
     environment: "node",
-    include: ["tests/message-citations.test.tsx"],
+    include: ["tests/message-citations.test.tsx", "tests/message-authorship.test.tsx"],
   },
 };

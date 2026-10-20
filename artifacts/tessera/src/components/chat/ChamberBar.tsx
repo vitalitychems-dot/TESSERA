@@ -4,6 +4,7 @@ import { PEN_LINE } from "@/lib/tessera-voice";
 
 interface ChamberBarProps {
   streaming: boolean;
+  hasReply?: boolean;
   authorship?: {
     authorRole: "model-drafting" | "model-authored" | "local" | "local-fallback" | "application-result" | "unattributed";
     author: string;
@@ -18,8 +19,10 @@ interface ChamberActionsProps {
   onCopyReply: () => void;
 }
 
-function authorshipLabel(authorship: ChamberBarProps["authorship"]): string {
-  if (!authorship) return "Authorship is labeled separately for each reply.";
+function authorshipLabel(authorship: ChamberBarProps["authorship"], hasReply: boolean): string {
+  if (!authorship) return hasReply
+    ? "Latest reply: legacy / unknown. See each reply’s own authorship label."
+    : "Authorship is labeled separately for each reply.";
   if (authorship.authorRole === "model-drafting") {
     return `Tessera Pen · ${authorship.model ?? "configured model"} is drafting; no reply is attributed yet.`;
   }
@@ -36,12 +39,12 @@ function authorshipLabel(authorship: ChamberBarProps["authorship"]): string {
     return "Application/tool result · no language model authored this reply.";
   }
   if (authorship.authorRole === "unattributed") {
-    return "Voice reply path · provider authorship metadata was not supplied.";
+    return "Unattributed reply · provider/model metadata was not reported.";
   }
   return "Local response logic · no language model authored this reply.";
 }
 
-export const ChamberBar = memo(function ChamberBar({ streaming, authorship }: ChamberBarProps) {
+export const ChamberBar = memo(function ChamberBar({ streaming, authorship, hasReply = false }: ChamberBarProps) {
   const streamingLabel = !streaming
     ? null
     : authorship?.authorRole === "model-drafting"
@@ -69,7 +72,7 @@ export const ChamberBar = memo(function ChamberBar({ streaming, authorship }: Ch
           aria-live="polite"
           data-testid="status-reply-authorship"
         >
-          {authorshipLabel(authorship)}
+          {authorshipLabel(authorship, hasReply && !streaming)}
         </p>
         {streamingLabel ? (
           <p className="mt-1 text-[12px] text-white/50" aria-live="polite" data-testid="text-chamber-status">

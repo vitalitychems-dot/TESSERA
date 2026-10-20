@@ -1094,7 +1094,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
 
   return (
     <div className="flex-1 flex flex-col relative overflow-hidden min-h-0">
-      <ChamberBar streaming={isStreaming} authorship={authorship} />
+      <ChamberBar streaming={isStreaming} authorship={authorship} hasReply={messages.some(message => message.role === "assistant")} />
       {adminMode && (
         <div className="flex items-center justify-center gap-2 py-1.5 px-4 bg-violet-950/50 border-b border-violet-500/30 backdrop-blur-sm z-10" data-testid="admin-mode-bar">
           <Shield size={12} className="text-violet-500" />

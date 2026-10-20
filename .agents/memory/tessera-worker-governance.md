@@ -14,3 +14,9 @@ External models, agent workers, and software dependencies are untrusted tools wi
 **Why:** The owner explicitly asked for real installations after seeing an inventory that distinguished requested tools from running integrations.
 
 **How to apply:** Confirm the exact upstream repositories, review licenses and runtime requirements, and verify an actual execution path before claiming installation. Preserve Tessera's application identity while truthfully identifying the backing framework/model and maintaining existing owner controls.
+
+The owner wants the named Eye projects combined using their original data providers, including REA where useful. Keep non-runnable reference projects and unavailable integrations visible in the inventory rather than silently excluding them.
+
+**Why:** The owner explicitly requested direct source data and said to include projects even when they cannot run.
+
+**How to apply:** Separate installed/executed components, connected providers, reference collections, and blocked components. Source links or a successful repository lookup are not evidence that a runtime or feed is active.

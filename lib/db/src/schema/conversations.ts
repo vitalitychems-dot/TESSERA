@@ -27,12 +27,21 @@ export interface StoredMessageCitation {
   trustNote: string;
 }
 
+export interface StoredMessageAuthorship {
+  authorRole: "model-drafting" | "model-authored" | "local" | "local-fallback" | "application-result" | "unattributed";
+  author: string;
+  model: string | null;
+  provenance?: "retrieved-evidence" | "unverified-model-knowledge" | null;
+  reason?: string | null;
+}
+
 export const messagesTable = pgTable("messages", {
   id: serial("id").primaryKey(),
   conversationId: integer("conversation_id").notNull(),
   role: text("role").notNull().default("user"),
   content: text("content").notNull(),
   citations: jsonb("citations").$type<StoredMessageCitation[]>().notNull().default([]),
+  authorship: jsonb("authorship").$type<StoredMessageAuthorship | null>().default(null),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

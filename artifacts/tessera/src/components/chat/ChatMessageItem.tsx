@@ -11,6 +11,7 @@ import { copyToClipboard, playAudioResponse } from "./ChatVoice";
 import { CodeExecutionResult, parseCodeExecutionBlocks, stripCodeExecutionBlocks } from "./CodeExecutionResult";
 import { parse3DObjectBlocks, inferObjectSpec, type Object3DSpec } from "./Chat3DParser";
 import { MessageCitationList } from "./MessageCitationList";
+import { MessageAuthorshipLabel } from "./MessageAuthorshipLabel";
 
 const InlineObject3D = lazy(() =>
   import("./ChatObject3D").then((module) => ({ default: module.InlineObject3D })),
@@ -65,7 +66,7 @@ function sanitizeMessageContent(content: string): string {
 }
 
 interface MessageItemProps {
-  msg: { id?: number | string; role: string; content: string; createdAt?: Date | string; citations?: unknown };
+  msg: { id?: number | string; role: string; content: string; createdAt?: Date | string; citations?: unknown; authorship?: unknown };
   index: number;
   adminMode: boolean;
   tesseraMsgStyle: { wrapper: string; prose: string } | null;
@@ -274,6 +275,10 @@ const AssistantMessage = memo(function AssistantMessage({
           <span className={cn("text-[7px] font-mono font-bold px-1.5 py-0.5 rounded-full border", hzColor)}>{agentHz}Hz</span>
         )}
         {parsedAgent && <span className="text-[8px] text-slate-600 truncate max-w-[120px]">{parsedAgent.role}</span>}
+      </div>
+
+      <div className="mb-2">
+        <MessageAuthorshipLabel authorship={msg.authorship} />
       </div>
 
       <div className={cn(

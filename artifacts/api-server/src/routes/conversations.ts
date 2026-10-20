@@ -700,7 +700,13 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
       writeQuick({ content: reply });
       const citations = serializeTesseraCitations(localEvidence);
       try {
-        await db.insert(messagesTable).values({ conversationId, role: "assistant", content: reply, citations });
+        await db.insert(messagesTable).values({
+          conversationId,
+          role: "assistant",
+          content: reply,
+          citations,
+          authorship: replyAuthorship,
+        });
       } catch (err) {
         logger.warn({ name: err instanceof Error ? err.name : "Error" }, "failed to persist local voice reply");
       }
@@ -898,6 +904,7 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
           conversationId,
           role: "assistant",
           content: reply,
+          authorship: actionAuthorship,
         });
       } catch (err) {
         logger.warn({ name: err instanceof Error ? err.name : "Error" }, "failed to persist privileged tool reply");
@@ -1128,6 +1135,7 @@ router.post("/messages", requireAdminSession, requireChatSigil, async (req, res)
         role: "assistant",
         content: finalContent,
         citations,
+        authorship: replyAuthorship,
       });
     }
 
@@ -1175,7 +1183,22 @@ router.post("/conversations/:id/puter-save", requireAdminSession, async (req, re
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
     const { content, role } = req.body;
     if (content && role) {
-      await db.insert(messagesTable).values({ conversationId: id, role, content });
+      await db.insert(messagesTable).values({
+        conversationId: id,
+        role,
+        content,
+        ...(role === "assistant"
+          ? {
+              authorship: {
+                authorRole: "unattributed",
+                author: "Provider",
+                model: null,
+                provenance: null,
+                reason: "client-saved-reply-authorship-unavailable",
+              },
+            }
+          : {}),
+      });
     }
     return res.json({ ok: true });
   } catch (err) {

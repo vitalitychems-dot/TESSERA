@@ -1,10 +1,12 @@
 import type { MessageCitation } from "./message-citations";
+import type { ChatReplyAuthorship } from "./chat-authorship";
 
 export interface Message {
   id?: string | number;
   role: "user" | "assistant" | "system";
   content: string;
   citations?: MessageCitation[] | null;
+  authorship?: ChatReplyAuthorship | null;
   timestamp?: number;
   agentId?: string;
   agentName?: string;
