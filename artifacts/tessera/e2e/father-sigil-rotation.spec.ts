@@ -554,7 +554,7 @@ test.describe("private chat sigil rotation", () => {
     expect(firstOwnerSession).toBeTruthy();
     await page.getByLabel("I saved this new sigil somewhere private.").check();
     await expect(page.getByLabel("I saved this new sigil somewhere private.")).toBeChecked();
-    await page.getByRole("button", { name: "logout" }).click();
+    await page.getByRole("button", { name: "logout", exact: true }).click();
     await expect(page.getByLabel("Father admin code or LUS form")).toBeVisible();
 
     expect(state.currentSigil).toBe(PREVIOUS_SIGIL);
