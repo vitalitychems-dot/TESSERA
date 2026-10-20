@@ -270,7 +270,7 @@ router.get("/rick/council-proposals", (_req, res) => {
 // Owner-only: submitting an invention writes internal council state.
 router.post("/rick/inventions/:index/submit", requireAdminSession, requireOwnerOrigin, async (req, res) => {
   try {
-    const idx = parseInt(req.params.index, 10);
+    const idx = parseInt(routeParam(req, "index"), 10);
     const inventions = generateRickInventions();
     if (isNaN(idx) || idx < 0 || idx >= inventions.length) {
       return res.status(400).json({ ok: false, error: "Invalid invention index" });

@@ -15,3 +15,4 @@
 - [Published images prune node_modules](deployment-prunes-node-modules.md) — externalized npm imports crash on publish; bundle runtime deps and grep dist for bare imports.
 - [Tessera mobile browser keyboard](tessera-mobile-test-keyboard.md) — use device input for bulk-fill mobile browser tests; cover the custom keyboard in its own interaction tests.
 - [Tessera session-expiry tests](tessera-session-expiry-tests.md) — distinguish an expired owner session from a missing cookie when testing protected actions.
+- [Rick proposal persistence tests](tessera-rick-proposal-integration.md) — isolate real API/browser review tests from the shared live proposal slate.

@@ -32,6 +32,20 @@ type MockState = {
   mutationCookieMissing: boolean;
 };
 
+type LiveRickApi = {
+  baseUrl: string;
+  ownerKey: string;
+  proposalId: string;
+  title: string;
+  readPersistedProposal(): Promise<{
+    state: string;
+    approvedBy?: string;
+    approvalTestRef?: string;
+    implementedBy?: string;
+    implementationTestRef?: string;
+  } | undefined>;
+};
+
 function makeProposal(id: string, title: string): RickProposal {
   return {
     id,
@@ -80,13 +94,30 @@ function countsFor(proposals: RickProposal[]) {
   }, {});
 }
 
-async function installRickApiMocks(page: Page, state: MockState) {
+async function installRickApiMocks(page: Page, state: MockState, liveApi?: LiveRickApi) {
   await page.route("**/api/**", async (route) => {
     const request = route.request();
     const { pathname } = new URL(request.url());
     const method = request.method();
     const cookie = request.headers().cookie ?? "";
     const hasOwnerCookie = cookie.includes(`sovereign_session=${OWNER_COOKIE}`);
+
+    const isLiveRickRoute =
+      (pathname === "/api/admin/session" && method === "POST") ||
+      (pathname === "/api/admin/session/status" && method === "GET") ||
+      (pathname === "/api/admin/session/logout" && method === "POST") ||
+      (pathname === "/api/rick/proposals" && method === "GET") ||
+      (/^\/api\/rick\/proposals\/[^/]+\/(approve|implemented)$/.test(pathname) && method === "POST");
+    if (liveApi && isLiveRickRoute) {
+      const headers = await request.allHeaders();
+      delete headers.host;
+      headers.origin = liveApi.baseUrl;
+      const upstream = await route.fetch({
+        url: `${liveApi.baseUrl}${pathname}${new URL(request.url()).search}`,
+        headers,
+      });
+      return route.fulfill({ response: upstream });
+    }
 
     if (pathname === "/api/admin/session/status" && method === "GET") {
       if (state.authenticated && !hasOwnerCookie) state.ownerCookieMissing = true;
@@ -217,18 +248,73 @@ async function installRickApiMocks(page: Page, state: MockState) {
   });
 }
 
-async function signInOnRickPage(page: Page, state: MockState) {
-  await installRickApiMocks(page, state);
+async function signInOnRickPage(page: Page, state: MockState, liveApi?: LiveRickApi) {
+  await installRickApiMocks(page, state, liveApi);
   await page.goto("/rick");
   const adminField = page.getByLabel("Father admin code or LUS form");
   await expect(adminField).toBeVisible();
   const deviceKeyboard = page.getByRole("button", { name: "Use device keyboard", exact: true });
   if (await deviceKeyboard.isVisible()) await deviceKeyboard.click();
-  await adminField.fill(TEST_OWNER_KEY);
+  await adminField.fill(liveApi?.ownerKey ?? TEST_OWNER_KEY);
   await page.getByRole("button", { name: "Unlock Tesseract" }).click();
-  await expect(page.getByText("Owner approval evidence path")).toBeVisible();
+  await expect(page.getByText(liveApi?.title ?? "Owner approval evidence path")).toBeVisible();
   expect(state.ownerCookieMissing).toBe(false);
 }
+
+test("Rick approval and implementation evidence persist through the real API and reload", async ({ page }) => {
+  test.skip(process.env.NODE_ENV === "production", "This integration test must not run against production.");
+  test.skip(!process.env.DATABASE_URL, "The real persistence check requires the development database.");
+
+  const { startRickProposalBrowserApi } = await import("../../api-server/src/test-support/rick-proposal-browser-api");
+  const api = await startRickProposalBrowserApi();
+  const state = makeState();
+
+  try {
+    await signInOnRickPage(page, state, {
+      baseUrl: api.baseUrl,
+      ownerKey: api.ownerKey,
+      proposalId: api.proposalId,
+      title: "Synthetic Rick approval and implementation persistence check",
+      readPersistedProposal: api.readPersistedProposal,
+    });
+
+    const card = page.getByTestId(`rick-proposal-card-${api.proposalId}`);
+    await expect(card).toContainText("pending review");
+    const approvalRef = `integration://rick-approval/${api.proposalId}`;
+    const implementationRef = `integration://rick-implementation/${api.proposalId}`;
+    await page.getByLabel("Reviewer / implementer").fill("Father");
+    await page.getByLabel("Test result reference (submitted by you)").fill(approvalRef);
+    await card.getByRole("button", { name: "Approve" }).click();
+    await expect(card).toContainText("Approval test reference: " + approvalRef);
+
+    await page.getByLabel("Test result reference (submitted by you)").fill(implementationRef);
+    await card.getByRole("button", { name: "Mark as Implemented" }).click();
+    await expect(card).toContainText("Implementation test reference: " + implementationRef);
+
+    expect(await api.readPersistedProposal()).toMatchObject({
+      state: "implemented",
+      approvedBy: "Father",
+      approvalTestRef: approvalRef,
+      implementedBy: "Father",
+      implementationTestRef: implementationRef,
+    });
+
+    await page.reload();
+    const reloadedCard = page.getByTestId(`rick-proposal-card-${api.proposalId}`);
+    await expect(reloadedCard).toContainText("implemented");
+    await expect(reloadedCard).toContainText("Approval recorded by: Father");
+    await expect(reloadedCard).toContainText("Approval test reference: " + approvalRef);
+    await expect(reloadedCard).toContainText("Implementation record submitted by: Father");
+    await expect(reloadedCard).toContainText("Implementation test reference: " + implementationRef);
+    expect(await api.readPersistedProposal()).toMatchObject({
+      state: "implemented",
+      approvalTestRef: approvalRef,
+      implementationTestRef: implementationRef,
+    });
+  } finally {
+    await api.cleanup();
+  }
+});
 
 test.describe("Rick owner evidence on mobile", () => {
   test("separates owner evidence from Council votes, preserves rejections, and refreshes successful actions", async ({ page }, testInfo) => {

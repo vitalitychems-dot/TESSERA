@@ -43,7 +43,9 @@ export interface RickProposal {
   implementationTestRef?: string;
 }
 
-const STATE_KEY = "rick.proposals.v1";
+const STATE_KEY =
+  (process.env.NODE_ENV === "test" ? process.env.RICK_PROPOSALS_STATE_KEY?.trim() : undefined) ||
+  "rick.proposals.v1";
 const MAX_PROPOSALS = 5;
 
 interface ProposalStore {
