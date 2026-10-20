@@ -73,7 +73,7 @@ describe("improvement gate (dual-brain step 1)", () => {
     const log: GateDecision[] = [];
     const brain = new BrainA();
     for (const p of BAD) {
-      const d = await runImprovementGate(brain, p, SPLIT, reasoning, { budget, onDecision: (x) => log.push(x) });
+      const d = await runImprovementGate(brain, p, SPLIT, reasoning, { budget, comparisons: 1, onDecision: (x) => log.push(x) });
       expect(d.verdict, `${p.id}: ${d.reasons.join("; ")}`).toBe("rejected");
       expect(d.stage).toBe("dev");
       expect(d.heldout).toBeNull();
@@ -93,7 +93,9 @@ describe("improvement gate (dual-brain step 1)", () => {
     const budget = new HeldoutBudget(1);
     const brain = new BrainA();
     const prop = set(`dev-argmax-kw-${sel.best.config.keywordWeight}`, { keywordWeight: sel.best.config.keywordWeight });
-    const d = await runImprovementGate(brain, prop, SPLIT, reasoning, { budget, comparisons: GRID_KW.length });
+    const d = await runImprovementGate(brain, prop, SPLIT, reasoning, { budget, devSelection: sel });
+    expect(d.comparisons).toBe(GRID_KW.length);
+    expect(d.devGrid).toHaveLength(GRID_KW.length);
     console.log("[gate] decision", JSON.stringify({ verdict: d.verdict, stage: d.stage, dev: d.dev.delta, heldout: d.heldout, reasons: d.reasons, labels: d.labels }));
     expect(budget.spent).toBe(1);
     // Whatever the verdict, it must be consistent with the rules and rolled back if rejected.
@@ -105,16 +107,81 @@ describe("improvement gate (dual-brain step 1)", () => {
       expect(brain.config).toEqual(DEFAULT_BRAIN_A);
     }
     // A second held-out run is refused by the sealed budget.
-    const again = await runImprovementGate(new BrainA(), prop, SPLIT, reasoning, { budget, comparisons: GRID_KW.length });
+    const again = await runImprovementGate(new BrainA(), prop, SPLIT, reasoning, { budget, devSelection: sel });
     expect(again.verdict).toBe("rejected");
     expect(again.reasons.join()).toContain("budget exhausted");
   }, T);
 
-  it("is deterministic under a fixed seed", async () => {
+  it("is deterministic under a fixed seed (dev only, no held-out spent)", async () => {
     expect(bootstrapCI([0, 1, 0, -1, 1], 500, 3)).toEqual(bootstrapCI([0, 1, 0, -1, 1], 500, 3));
+    const budget = new HeldoutBudget(0);
     const p = set("kw-3", { keywordWeight: 3 });
-    const a = await runImprovementGate(new BrainA(), p, SPLIT, reasoning, { seed: 7 });
-    const b = await runImprovementGate(new BrainA(), p, SPLIT, reasoning, { seed: 7 });
+    const a = await runImprovementGate(new BrainA(), p, SPLIT, reasoning, { budget, comparisons: 1, seed: 7 });
+    const b = await runImprovementGate(new BrainA(), p, SPLIT, reasoning, { budget, comparisons: 1, seed: 7 });
     expect({ ...a, finding: null }).toEqual({ ...b, finding: null });
+    expect(budget.spent).toBe(0);
+  }, T);
+});
+
+describe("improvement gate fails closed", () => {
+  const good = set("kw-5", { keywordWeight: 5 });
+  const run = (reasoningFn: Parameters<typeof runImprovementGate>[3], opts: Record<string, unknown> = {}, split: RetrievalSplit = SPLIT) => {
+    const brain = new BrainA();
+    return runImprovementGate(brain, good, split, reasoningFn, { budget: new HeldoutBudget(1), comparisons: 1, ...opts } as never)
+      .then((d) => ({ d, brain }));
+  };
+  const expectReject = (r: { d: GateDecision; brain: BrainA }, text: string) => {
+    expect(r.d.verdict).toBe("rejected");
+    expect(r.d.reasons.join(" | ")).toContain(text);
+    expect(r.brain.config).toEqual(DEFAULT_BRAIN_A);
+    expect(r.d.config).toEqual(DEFAULT_BRAIN_A);
+  };
+
+  it("reasoning scorer that throws (dev or held-out) rolls back and rejects", async () => {
+    expectReject(await run(() => { throw new Error("scorer down"); }), "evaluation threw: scorer down");
+    expectReject(await run((c, w) => { if (w === "heldout") throw new Error("late"); return reasoning(c); }), "evaluation threw: late");
+    expectReject(await run(async () => Promise.reject(new Error("async down"))), "async down");
+  }, T);
+
+  it("onDecision that throws rolls back and rejects", async () => {
+    expectReject(await run(reasoning, { onDecision: () => { throw new Error("sink down"); } }), "onDecision threw");
+  }, T);
+
+  it("rejects NaN, empty and length-mismatched reasoning results", async () => {
+    expectReject(await run(() => [1, Number.NaN]), "invalid reasoning data");
+    expectReject(await run(() => []), "invalid reasoning data");
+    expectReject(await run(() => "x" as never), "invalid reasoning data");
+    expectReject(await run((c) => (c.keywordWeight === 1 ? [1, 1, 1] : [1, 1])), "length 3 before vs 2 after");
+  }, T);
+
+  it("rejects NaN recall (query with no relevant docs) and empty splits", async () => {
+    const bad = { ...SPLIT, dev: [...SPLIT.dev, { q: "x", relevant: [] }] };
+    expectReject(await run(reasoning, {}, bad), "invalid recall data");
+    expectReject(await run(reasoning, {}, { ...SPLIT, dev: [] }), "empty dev split");
+  }, T);
+
+  it("validates every option", async () => {
+    const sel = { scores: [{ config: DEFAULT_BRAIN_A, dev: 0.5 }, { config: DEFAULT_BRAIN_A, dev: 0.6 }], best: { config: DEFAULT_BRAIN_A, dev: 0.6 } };
+    const cases: [Record<string, unknown>, string][] = [
+      [{ epsilon: Number.NaN }, "epsilon"], [{ minGain: 0 }, "minGain"], [{ minGain: 0.02, epsilon: 0.01 }, "disagree"],
+      [{ alpha: Number.NaN }, "alpha"], [{ alpha: 0 }, "alpha"], [{ alpha: 1 }, "alpha"],
+      [{ comparisons: 0 }, "comparisons must be"], [{ comparisons: 1.5 }, "comparisons must be"], [{ comparisons: undefined }, "comparisons required"],
+      [{ budget: undefined }, "budget is required"], [{ budget: { spend: () => true, spent: 0, limit: 1e9 } }, "budget is required"],
+      [{ devSelection: sel, comparisons: 9 }, "!= dev grid size 2"], [{ devSelection: { scores: [], best: null } }, "non-empty"],
+      [{ devSelection: { scores: [{ config: DEFAULT_BRAIN_A, dev: Number.NaN }] } }, "finite"],
+      [{ bootstrapIters: 10 }, "bootstrapIters"], [{ k: 0 }, "k must"], [{ reasoningLabel: "TESTED" }, "reasoningEvalId"],
+    ];
+    for (const [o, text] of cases) expectReject(await run(reasoning, o), text);
+    expect(() => selectOnDev([], SPLIT)).toThrow("non-empty");
+  }, T);
+
+  it("budget is shared: a second gate instance cannot reuse it", async () => {
+    const budget = new HeldoutBudget(1);
+    const a = await runImprovementGate(new BrainA(), good, SPLIT, reasoning, { budget, comparisons: 1 });
+    const b = await runImprovementGate(new BrainA(), good, SPLIT, reasoning, { budget, comparisons: 1 });
+    expect(a.stage).toBe("heldout");
+    expect(b.verdict).toBe("rejected");
+    expect(b.reasons.join()).toContain("budget exhausted");
+    expect(budget.spent).toBe(1);
   }, T);
 });

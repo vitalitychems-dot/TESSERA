@@ -12,6 +12,9 @@
  *      one-sided p < alpha / comparisons (Bonferroni), and the reasoning check
  *      does not fall. Two-sided p is reported alongside.
  * Rejected changes roll Brain A back to the checkpoint taken before the change.
+ * Fails closed: any throw, invalid option or non-finite/empty/mismatched data
+ * rejects and rolls back. Power is low by design: in Einstein's simulation a
+ * true +0.05 gain with realistic churn is approved only about 16-32% of the time.
  *
  * Labels: recall numbers come from a PROXY split (test titles -> lib module,
  * module-disjoint); the reasoning check is SIMULATION until GSM8K-200 is wired.
@@ -54,17 +57,26 @@ export class HeldoutBudget {
 }
 
 export interface GateOptions {
-  epsilon?: number;
-  alpha?: number;
-  /** Number of comparisons for Bonferroni (e.g. dev grid size). */
+  /** Sealed held-out budget, required and shared across calls. */
+  budget: HeldoutBudget;
+  /** Dev-grid selection the proposal came from; Bonferroni uses its actual size. */
+  devSelection?: DevSelection;
+  /** Comparisons for Bonferroni when there is no grid (a single pre-specified proposal is 1). Must match the grid size if both are given. */
   comparisons?: number;
+  /** Minimum gain on recall@5 (alias: minGain). */
+  epsilon?: number;
+  minGain?: number;
+  alpha?: number;
   bootstrapIters?: number;
   seed?: number;
   k?: number;
-  budget?: HeldoutBudget;
   reasoningLabel?: "SIMULATION" | "TESTED";
+  /** Required when reasoningLabel is "TESTED" (e.g. the GSM8K-200 run id). */
+  reasoningEvalId?: string;
   onDecision?: (d: GateDecision) => void;
 }
+
+export interface DevSelection { scores: { config: BrainAConfig; dev: number }[]; best: { config: BrainAConfig; dev: number } }
 
 interface Scores { recallAt5: number; reasoning: number }
 
@@ -82,6 +94,8 @@ export interface GateDecision {
     alphaCorrected: number;
   };
   heldoutEvaluationsSpent: number;
+  comparisons: number | null;
+  devGrid: { config: BrainAConfig; dev: number }[] | null;
   stats: { test: "exact sign test on discordant queries"; ci: "paired bootstrap percentile"; bootstrapIters: number; seed: number };
   labels: { recall: string; reasoning: "SIMULATION" | "TESTED" };
   config: BrainAConfig;
@@ -163,7 +177,8 @@ export function bootstrapCI(diffs: number[], iters = 2000, seed = 1): [number, n
 }
 
 /** Score every grid config on dev only; returns all scores and the argmax (first on ties). */
-export function selectOnDev(grid: BrainAConfig[], split: RetrievalSplit, k = 5) {
+export function selectOnDev(grid: BrainAConfig[], split: RetrievalSplit, k = 5): DevSelection {
+  if (!Array.isArray(grid) || grid.length === 0) throw new Error("dev grid must be a non-empty array");
   const scores = grid.map((config) => ({ config, dev: r4(mean(retrievalRecalls(config, split.docs, split.dev, k))) }));
   const best = scores.reduce((b, x) => (x.dev > b.dev ? x : b), scores[0]);
   return { scores, best };
@@ -181,76 +196,142 @@ export class BrainA {
   commit(): void { this.checkpoints.pop(); }
 }
 
+class GateReject extends Error {}
+
 async function score(c: BrainAConfig, split: RetrievalSplit, which: "dev" | "heldout", reasoning: ReasoningEval, k: number) {
-  return { rec: retrievalRecalls(c, split.docs, split[which], k), rea: await reasoning(c, which) };
+  const queries = split[which];
+  if (!Array.isArray(queries) || queries.length === 0) throw new GateReject(`invalid recall data: empty ${which} split`);
+  const rec = retrievalRecalls(c, split.docs, queries, k);
+  if (rec.some((x) => !Number.isFinite(x))) throw new GateReject(`invalid recall data: non-finite recall on ${which}`);
+  const rea = await reasoning(c, which);
+  if (!Array.isArray(rea) || rea.length === 0 || rea.some((x) => typeof x !== "number" || !Number.isFinite(x)))
+    throw new GateReject(`invalid reasoning data on ${which}: empty or non-finite`);
+  return { rec, rea };
+}
+function sameLength(a: number[], b: number[], what: string) {
+  if (a.length !== b.length) throw new GateReject(`invalid ${what} data: length ${a.length} before vs ${b.length} after`);
 }
 const summary = (rec: number[], rea: number[]): Scores => ({ recallAt5: r4(mean(rec)), reasoning: r4(mean(rea)) });
 const diff = (a: Scores, b: Scores): Scores => ({ recallAt5: r4(a.recallAt5 - b.recallAt5), reasoning: r4(a.reasoning - b.reasoning) });
 
-/** Brain B: dev screen, then one held-out evaluation; approve or roll back. */
+function optionErrors(o: GateOptions | undefined): { errs: string[]; comparisons: number | null } {
+  const errs: string[] = [];
+  if (!o || typeof o !== "object") return { errs: ["options missing"], comparisons: null };
+  const eps = o.minGain ?? o.epsilon ?? 0.01, alpha = o.alpha ?? 0.05;
+  if (!(o.budget instanceof HeldoutBudget)) errs.push("budget is required (shared HeldoutBudget)");
+  if (o.minGain !== undefined && o.epsilon !== undefined && o.minGain !== o.epsilon) errs.push("minGain and epsilon disagree");
+  if (!(Number.isFinite(eps) && eps > 0)) errs.push("minGain/epsilon must be finite and > 0");
+  if (!(Number.isFinite(alpha) && alpha > 0 && alpha < 1)) errs.push("alpha must be in (0, 1)");
+  const iters = o.bootstrapIters ?? 2000;
+  if (!(Number.isInteger(iters) && iters >= 100)) errs.push("bootstrapIters must be an integer >= 100");
+  if (o.seed !== undefined && !Number.isInteger(o.seed)) errs.push("seed must be an integer");
+  if (o.k !== undefined && !(Number.isInteger(o.k) && o.k >= 1)) errs.push("k must be an integer >= 1");
+  if (o.reasoningLabel === "TESTED" && !o.reasoningEvalId) errs.push("reasoningLabel TESTED needs reasoningEvalId");
+  let comparisons: number | null = null;
+  if (o.devSelection !== undefined) {
+    const sc = o.devSelection?.scores;
+    if (!Array.isArray(sc) || sc.length === 0 || sc.some((x) => !Number.isFinite(x?.dev))) errs.push("devSelection grid must be non-empty with finite scores");
+    else {
+      comparisons = sc.length;
+      if (o.comparisons !== undefined && o.comparisons !== sc.length) errs.push(`comparisons ${o.comparisons} != dev grid size ${sc.length}`);
+    }
+  } else if (o.comparisons === undefined) errs.push("comparisons required when no devSelection is given");
+  else comparisons = o.comparisons;
+  if (comparisons !== null && !(Number.isInteger(comparisons) && comparisons >= 1)) { errs.push("comparisons must be an integer >= 1"); comparisons = null; }
+  return { errs, comparisons };
+}
+
+/** Brain B: dev screen, then one budgeted held-out evaluation; approve or roll back. Fails closed. */
 export async function runImprovementGate(
   brainA: BrainA,
   proposal: Proposal,
   split: RetrievalSplit,
   reasoning: ReasoningEval,
-  opts: GateOptions = {},
+  opts: GateOptions,
 ): Promise<GateDecision> {
-  const { epsilon = 0.01, alpha = 0.05, comparisons = 1, bootstrapIters = 2000, seed = 1, k = 5, reasoningLabel = "SIMULATION" } = opts;
-  const budget = opts.budget ?? new HeldoutBudget(1);
   const before = brainA.config;
-  brainA.checkpoint();
-  const reasons: string[] = [];
-  let after: BrainAConfig = before;
-  try { after = proposal.apply({ ...before }); } catch (e) { reasons.push(`proposal threw: ${(e as Error).message}`); }
-  if (!validConfig(after)) { reasons.push("invalid config"); after = before; }
-  brainA.set(after);
-
-  // Stage 1: dev screen.
-  const dB = await score(before, split, "dev", reasoning, k), dA = await score(after, split, "dev", reasoning, k);
-  const devB = summary(dB.rec, dB.rea), devA = summary(dA.rec, dA.rea), devD = diff(devA, devB);
-  if (!reasons.length) {
-    if (devD.recallAt5 < epsilon) reasons.push(`dev recall@${k} gain ${devD.recallAt5} < ${epsilon}`);
-    if (devD.reasoning < 0) reasons.push(`dev reasoning fell by ${-devD.reasoning}`);
-  }
-
-  // Stage 2: held-out, only for proposals that passed the dev screen.
+  const { errs, comparisons } = optionErrors(opts);
+  const epsilon = opts?.minGain ?? opts?.epsilon ?? 0.01, alpha = opts?.alpha ?? 0.05;
+  const bootstrapIters = opts?.bootstrapIters ?? 2000, seed = opts?.seed ?? 1, k = opts?.k ?? 5;
+  const reasoningLabel = opts?.reasoningLabel ?? "SIMULATION";
+  const reasons: string[] = [...errs];
+  const zero: Scores = { recallAt5: 0, reasoning: 0 };
+  let dev: GateDecision["dev"] = { before: zero, after: zero, delta: zero };
   let held: GateDecision["heldout"] = null;
   let stage: GateDecision["stage"] = "dev";
-  if (!reasons.length) {
-    if (!budget.spend()) reasons.push(`held-out budget exhausted (${budget.limit})`);
-    else {
-      stage = "heldout";
-      const hB = await score(before, split, "heldout", reasoning, k), hA = await score(after, split, "heldout", reasoning, k);
-      const diffs = hA.rec.map((x, i) => x - hB.rec[i]);
-      const gains = diffs.filter((d) => d > 0).length, losses = diffs.filter((d) => d < 0).length;
-      const st = signTest(gains, losses);
-      const ci = bootstrapCI(diffs, bootstrapIters, seed);
-      const alphaC = alpha / comparisons;
-      const b = summary(hB.rec, hB.rea), a = summary(hA.rec, hA.rea);
-      held = { before: b, after: a, delta: diff(a, b), ci95: [r4(ci[0]), r4(ci[1])],
-        signTest: { gains, losses, pOneSided: r4(st.pOneSided), pTwoSided: r4(st.pTwoSided) }, alphaCorrected: r4(alphaC) };
-      if (ci[0] < epsilon) reasons.push(`held-out CI lower bound ${r4(ci[0])} < ${epsilon}`);
-      if (st.pOneSided >= alphaC) reasons.push(`sign test one-sided p ${r4(st.pOneSided)} >= ${r4(alphaC)} (two-sided ${r4(st.pTwoSided)})`);
-      if (a.recallAt5 < b.recallAt5) reasons.push("held-out recall@5 fell");
-      if (a.reasoning < b.reasoning) reasons.push(`held-out reasoning fell (${reasoningLabel})`);
+  let approved = false;
+  brainA.checkpoint();
+  let decision: GateDecision | null = null;
+  try {
+    if (!reasons.length) {
+      let after: BrainAConfig = before;
+      try { after = proposal.apply({ ...before }); } catch (e) { throw new GateReject(`proposal threw: ${(e as Error).message}`); }
+      if (!validConfig(after)) throw new GateReject("invalid config");
+      brainA.set(after);
+
+      // Stage 1: dev screen.
+      const dB = await score(before, split, "dev", reasoning, k), dA = await score(after, split, "dev", reasoning, k);
+      sameLength(dB.rea, dA.rea, "reasoning"); sameLength(dB.rec, dA.rec, "recall");
+      dev = { before: summary(dB.rec, dB.rea), after: summary(dA.rec, dA.rea), delta: zero };
+      dev.delta = diff(dev.after, dev.before);
+      if (dev.delta.recallAt5 < epsilon) reasons.push(`dev recall@${k} gain ${dev.delta.recallAt5} < ${epsilon}`);
+      if (dev.delta.reasoning < 0) reasons.push(`dev reasoning fell by ${-dev.delta.reasoning} (${reasoningLabel})`);
+
+      // Stage 2: held-out, once, only for proposals that passed the dev screen.
+      if (!reasons.length) {
+        if (!opts.budget.spend()) throw new GateReject(`held-out budget exhausted (${opts.budget.limit})`);
+        stage = "heldout";
+        const hB = await score(before, split, "heldout", reasoning, k), hA = await score(after, split, "heldout", reasoning, k);
+        sameLength(hB.rea, hA.rea, "reasoning"); sameLength(hB.rec, hA.rec, "recall");
+        const diffs = hA.rec.map((x, i) => x - hB.rec[i]);
+        const gains = diffs.filter((d) => d > 0).length, losses = diffs.filter((d) => d < 0).length;
+        const st = signTest(gains, losses);
+        const ci = bootstrapCI(diffs, bootstrapIters, seed);
+        const alphaC = alpha / (comparisons as number);
+        const b = summary(hB.rec, hB.rea), a = summary(hA.rec, hA.rea);
+        held = { before: b, after: a, delta: diff(a, b), ci95: [r4(ci[0]), r4(ci[1])],
+          signTest: { gains, losses, pOneSided: r4(st.pOneSided), pTwoSided: r4(st.pTwoSided) }, alphaCorrected: r4(alphaC) };
+        if (!(ci[0] >= epsilon)) reasons.push(`held-out CI lower bound ${r4(ci[0])} < ${epsilon}`);
+        if (!(st.pOneSided < alphaC)) reasons.push(`sign test one-sided p ${r4(st.pOneSided)} >= ${r4(alphaC)} (two-sided ${r4(st.pTwoSided)})`);
+        if (!(a.recallAt5 >= b.recallAt5)) reasons.push("held-out recall@5 fell");
+        if (!(a.reasoning >= b.reasoning)) reasons.push(`held-out reasoning fell (${reasoningLabel})`);
+      }
+    }
+    approved = reasons.length === 0;
+    decision = makeDecision();
+  } catch (e) {
+    approved = false;
+    reasons.push(e instanceof GateReject ? e.message : `evaluation threw: ${(e as Error)?.message ?? String(e)}`);
+    decision = makeDecision();
+  } finally {
+    // Every decision (approve or reject) reaches the sink; a throwing sink rejects.
+    try {
+      if (!decision) { approved = false; reasons.push("no decision produced"); decision = makeDecision(); }
+      opts?.onDecision?.(decision);
+    } catch (e) {
+      approved = false; reasons.push(`onDecision threw: ${(e as Error)?.message ?? String(e)}`); decision = makeDecision();
+    } finally {
+      if (approved) brainA.commit(); else brainA.rollback();
     }
   }
+  decision!.config = brainA.config;
+  return decision!;
 
-  const verdict = reasons.length ? "rejected" : "approved";
-  if (verdict === "approved") brainA.commit(); else brainA.rollback();
-  const decision: GateDecision = {
-    proposal: proposal.id, description: proposal.description, verdict, stage, reasons,
-    dev: { before: devB, after: devA, delta: devD }, heldout: held, heldoutEvaluationsSpent: budget.spent,
-    stats: { test: "exact sign test on discordant queries", ci: "paired bootstrap percentile", bootstrapIters, seed },
-    labels: { recall: RECALL_LABEL, reasoning: reasoningLabel },
-    config: brainA.config,
-    finding: {
-      id: `gate-${proposal.id}`, at: Date.now(), kind: verdict === "approved" ? "healthy" : "drift",
-      severity: verdict === "approved" ? "low" : "medium",
-      summary: `Improvement gate ${verdict} ${proposal.id} at ${stage} stage`,
-      evidence: { dev: devD, heldout: held, reasons },
-    },
-  };
-  opts.onDecision?.(decision);
-  return decision;
+  function makeDecision(): GateDecision {
+    const verdict = approved ? "approved" : "rejected";
+    return {
+      proposal: proposal?.id ?? "?", description: proposal?.description ?? "", verdict, stage, reasons: [...reasons],
+      dev, heldout: held, heldoutEvaluationsSpent: opts?.budget instanceof HeldoutBudget ? opts.budget.spent : 0,
+      comparisons, devGrid: opts?.devSelection?.scores ?? null,
+      stats: { test: "exact sign test on discordant queries", ci: "paired bootstrap percentile", bootstrapIters, seed },
+      labels: { recall: RECALL_LABEL, reasoning: reasoningLabel },
+      config: approved ? brainA.config : before,
+      finding: {
+        id: `gate-${proposal?.id}`, at: Date.now(), kind: approved ? "healthy" : "drift",
+        severity: approved ? "low" : "medium",
+        summary: `Improvement gate ${verdict} ${proposal?.id} at ${stage} stage`,
+        evidence: { dev: dev.delta, heldout: held, reasons: [...reasons] },
+      },
+    };
+  }
 }
