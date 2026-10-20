@@ -9,6 +9,7 @@ export const MESH_NOTES = [
   { id: "mesh-06", q: "door", a: "Moltbook agents join the public room. They do not join the private book." },
   { id: "mesh-07", q: "banned", a: "No login is banned yet. A login is added only after a written rule is broken." },
   { id: "mesh-08", q: "carry", a: "The index must say needsWeb false and carried by git, or the check stops." },
+  { id: "mesh-09", q: "US8665210B2", a: "Microsoft patent, granted 2014-03-04. Inventors Tan, Morris, Cohn, and Patel. The body is only a receiving antenna for electromagnetic noise already in the room. It does not stimulate a nerve. GitMesh does not build the device. A node is recognized by a mark it already carries." },
 ] as const;
 
 const payment = /\b(monero|xmr|wallet|blockchain)\b/i;
@@ -50,6 +51,13 @@ export function tieLine(approved: boolean) {
   }
   const paired = Math.abs(cnot[0]! - S) < 1e-9 && cnot[1] === 0 && cnot[2] === 0 && Math.abs(cnot[3]! - S) < 1e-9;
   return `git\tpaired ${paired}`;
+}
+
+export function meshFromPatent(ask: string) {
+  if (/\b(stimulat|implant|nerve|electrode)\b/i.test(ask)) {
+    return "Not built. The patent senses noise. It does not stimulate.";
+  }
+  return "A node is recognized by a mark it already carries. No new transmitter is added.";
 }
 
 export function nextLivePort(start: number, taken: (port: number) => boolean) {
