@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { retrievalScore, reflect, runReflectionTick, recentReflectionEvents, reflectionsSince, clearReflectionEvents } from "../lib/agi/reflection";
+import { retrievalScore, reflect, runReflectionTick, recentReflectionEvents, reflectionsSince, clearReflectionEvents, MAX_REFLECTION_EVENTS } from "../lib/agi/reflection";
 import { recordObservation } from "../lib/agi/working-memory";
 
 describe("reflection (REA-05)", () => {
@@ -30,5 +30,31 @@ describe("reflection (REA-05)", () => {
     expect(events.length).toBe(insights.length);
     events.forEach((e, i) => { expect(e.kind).toBe("reflection"); expect(e.text).toBe(insights[i]); });
     expect(reflectionsSince(t0 - 86_400_000)).toBe(insights.length);
+  });
+  it("#13: cap holds exactly 1000 and drops the oldest", () => {
+    clearReflectionEvents();
+    for (let i = 0; i < 8; i++) recordObservation("deploy", `refl13-${i}`, { msg: `deploy failed on runner ${i}` });
+    const first = runReflectionTick(1);
+    expect(first.length).toBeGreaterThan(0);
+    const firstIds = recentReflectionEvents(1000).map((e) => e.id);
+    let n = 1;
+    while (recentReflectionEvents(2000).length < MAX_REFLECTION_EVENTS) runReflectionTick(++n);
+    runReflectionTick(++n);
+    const all = recentReflectionEvents(2000);
+    expect(all.length).toBe(MAX_REFLECTION_EVENTS);
+    expect(all.some((e) => e.id === firstIds[0])).toBe(false);
+    expect(all[all.length - 1].at).toBe(n);
+    expect(new Set(all.map((e) => e.id)).size).toBe(all.length);
+  });
+  it("#13: ids unique across two ticks with the same timestamp, even when full", () => {
+    clearReflectionEvents();
+    for (let i = 0; i < 8; i++) recordObservation("deploy", `refl13b-${i}`, { msg: `deploy failed on runner ${i}` });
+    let n = 0;
+    while (recentReflectionEvents(2000).length < MAX_REFLECTION_EVENTS) runReflectionTick(++n);
+    runReflectionTick(42);
+    runReflectionTick(42);
+    const all = recentReflectionEvents(2000);
+    expect(all.length).toBe(MAX_REFLECTION_EVENTS);
+    expect(new Set(all.map((e) => e.id)).size).toBe(all.length);
   });
 });
