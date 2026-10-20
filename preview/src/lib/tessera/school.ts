@@ -148,7 +148,10 @@ export function passageForQuestion(q: string) {
       best = passage;
     }
   }
-  return score > 0 ? best : null;
+  // One shared word in a longer question is not enough evidence; it needs two.
+  // A bare one-word lookup (e.g. "photoelectric") may still match on that word.
+  const need = tokens.length <= 1 ? 1 : 2;
+  return score >= need ? best : null;
 }
 
 export function gradeSchool(answer: string) {
