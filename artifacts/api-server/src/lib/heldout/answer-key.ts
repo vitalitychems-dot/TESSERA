@@ -21,7 +21,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, chmodSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { join, relative, resolve } from "node:path";
 
 export const SCORER_VERSION = "heldout-scorer/1";
 export const TEMP_PREFIX = "heldout-scorer-";
@@ -247,13 +247,50 @@ export function checkChangedFiles(repo: string, base: string, head: string, list
   return hits;
 }
 
-// ---------- Step 1: scorer-only location check ----------
-/** Reasons a key/identity location is NOT scorer-only (empty = ok): group/other access, or inside an agent working tree. */
-export function scorerOnlyProblems(path: string, agentRoots: string[] = ["/workspace"]): string[] {
+// ---------- Step 1: scorer-only location check (fail closed) ----------
+export const SCORER_ROOTS_ENV = "HELDOUT_SCORER_ONLY_ROOTS";
+export const AGENT_UIDS_ENV = "HELDOUT_AGENT_UIDS";
+/** Locations agents can always reach on the shared box; never scorer-only, even if allowlisted. */
+export const AGENT_REACHABLE_ROOTS = ["/workspace", "/cursor/stores", "/home", "/tmp"];
+
+export interface ScorerOnlyConfig {
+  /** Explicit allowlist of scorer-only roots. Empty/unset => every path is refused. */
+  allowRoots: string[];
+  /** Uids agents run as. Empty/unset => refused (cannot prove the owner is not an agent). */
+  agentUids: number[];
+  /** Roots agents can reach; defaults to AGENT_REACHABLE_ROOTS. */
+  agentRoots?: string[];
+}
+const list = (v: string | undefined) => String(v ?? "").split(/[,:]/).map((x) => x.trim()).filter(Boolean);
+export function scorerOnlyConfigFromEnv(env: NodeJS.ProcessEnv = process.env): ScorerOnlyConfig {
+  return {
+    allowRoots: list(env[SCORER_ROOTS_ENV]),
+    agentUids: list(env[AGENT_UIDS_ENV]).map(Number).filter((n) => Number.isInteger(n) && n >= 0),
+  };
+}
+const under = (root: string, p: string) => { const rel = relative(root, p); return rel === "" || (!rel.startsWith("..") && !rel.startsWith("/")); };
+
+/**
+ * Reasons a key/identity location is NOT scorer-only (empty = ok). Fails closed:
+ * - no allowlist configured, or the path is not under an allowlisted root;
+ * - the path is under a root agents can reach (/workspace, /cursor/stores, /home, /tmp);
+ * - no agent uid list configured, or the owner uid is an agent uid (or the caller's own uid is one);
+ * - group/other permission bits are set.
+ */
+export function scorerOnlyProblems(path: string, cfg: ScorerOnlyConfig = scorerOnlyConfigFromEnv()): string[] {
   const out: string[] = [];
-  let st; try { st = statSync(path); } catch { return [`missing: ${path}`]; }
+  const abs = resolve(path);
+  if (!cfg.allowRoots.length) out.push(`no scorer-only allowlist configured (${SCORER_ROOTS_ENV})`);
+  else if (!cfg.allowRoots.some((r) => under(resolve(r), abs))) out.push("not under an allowlisted scorer-only root");
+  for (const r of cfg.agentRoots ?? AGENT_REACHABLE_ROOTS) if (under(r, abs)) out.push(`inside agent-reachable root ${r}`);
+  let st; try { st = statSync(abs); } catch { return [...out, `missing: ${path}`]; }
+  if (!cfg.agentUids.length) out.push(`no agent uid list configured (${AGENT_UIDS_ENV})`);
+  else {
+    if (cfg.agentUids.includes(st.uid)) out.push(`owner uid ${st.uid} is an agent uid`);
+    const me = typeof process.getuid === "function" ? process.getuid() : -1;
+    if (cfg.agentUids.includes(me)) out.push(`checking process runs as agent uid ${me}`);
+  }
   if (st.mode & 0o077) out.push(`mode ${(st.mode & 0o777).toString(8)} allows group/other access`);
-  for (const r of agentRoots) { const rel = relative(r, path); if (rel === "" || (!rel.startsWith("..") && !rel.startsWith("/"))) out.push(`inside agent working tree ${r}`); }
   return out;
 }
 

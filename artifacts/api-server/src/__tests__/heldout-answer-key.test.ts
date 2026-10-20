@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import {
   TEMP_PREFIX, buildHashList, checkChangedFiles, contamination, decryptKey, formatKeyManifest, leakedBodies, loadPrompts,
-  parseKeyManifest, runInSandbox, sandboxAvailable, scoreAnswers, scorerOnlyProblems, sha256, sweep, toPromptsJsonl, type KeyRecord,
+  parseKeyManifest, runInSandbox, sandboxAvailable, scoreAnswers, scorerOnlyConfigFromEnv, scorerOnlyProblems, sha256, sweep, toPromptsJsonl, type KeyRecord,
 } from "../lib/heldout/answer-key";
 
 const AGE = process.env.AGE_BIN ?? "age";
@@ -18,6 +18,18 @@ const AGE_KEYGEN = process.env.AGE_KEYGEN_BIN ?? AGE.replace(/age$/, "age-keygen
 const hasAge = spawnSync(AGE, ["--version"]).status === 0 && spawnSync(AGE_KEYGEN, ["--version"]).status === 0;
 const hasBwrap = sandboxAvailable();
 const T = 60_000;
+
+/** Loud skips (Security LOW): report every skipped red-team test and why; HELDOUT_REQUIRE_REDTEAM=1 turns a skip into a failure. */
+const SKIPS: string[] = [];
+if (!hasAge) SKIPS.push("R1 (partial), R4, R5, R6: age/age-keygen not found (set AGE_BIN)");
+if (!hasBwrap) SKIPS.push("R1 (partial), R3, R4, R6: bubblewrap sandbox unavailable (set BWRAP_BIN or install bwrap)");
+const r1File = process.env.HELDOUT_R1_STORE_FILE;
+const myUid = typeof process.getuid === "function" ? process.getuid() : -1;
+const R1_SKIP: string | null = !r1File ? "HELDOUT_R1_STORE_FILE unset: no scorer store under a separate uid on this box"
+  : !existsSync(r1File) && spawnSync("test", ["-e", r1File]).status !== 0 ? `HELDOUT_R1_STORE_FILE ${r1File} not found`
+  : (() => { try { return statSync(r1File).uid === myUid ? "store is owned by this (agent) uid: isolation not possible" : null; } catch { return null; } })();
+if (R1_SKIP) SKIPS.push(`R1 (spec, NOT ENFORCED): ${R1_SKIP}`);
+for (const s of SKIPS) console.warn(`[heldout red-team] SKIPPED ${s}`);
 
 const MARK = "SYNTH_KEY_MARKER_7f3a";
 const KEY: KeyRecord[] = [
@@ -62,6 +74,41 @@ function plaintextUnder(dir: string): string[] {
   return hits;
 }
 
+describe("scorer-only location check fails closed (Security MEDIUM)", () => {
+  const me = myUid;
+  const store = () => { const d = mkdtempSync(join(tmpdir(), "hk-scorer-")); roots.push(d); chmodSync(d, 0o700); return d; };
+  it("empty or unset allowlist refuses everything", () => {
+    const d = store();
+    expect(scorerOnlyProblems(d, { allowRoots: [], agentUids: [me + 1], agentRoots: [] }).join()).toContain("no scorer-only allowlist configured");
+    const prev = process.env.HELDOUT_SCORER_ONLY_ROOTS; delete process.env.HELDOUT_SCORER_ONLY_ROOTS;
+    try { expect(scorerOnlyProblems(d).join()).toContain("no scorer-only allowlist configured"); }
+    finally { if (prev !== undefined) process.env.HELDOUT_SCORER_ONLY_ROOTS = prev; }
+    expect(scorerOnlyConfigFromEnv({ HELDOUT_SCORER_ONLY_ROOTS: " , ", HELDOUT_AGENT_UIDS: "" } as any)).toEqual({ allowRoots: [], agentUids: [] });
+  });
+  it("a 0700 path outside the allowlist is refused, even outside /workspace", () => {
+    const d = store(), other = store();
+    expect(scorerOnlyProblems(d, { allowRoots: [other], agentUids: [me + 1], agentRoots: [] }).join()).toContain("not under an allowlisted");
+  });
+  it("agent-reachable roots are refused even when allowlisted", () => {
+    for (const r of ["/workspace", "/cursor/stores", "/home", "/tmp"]) {
+      expect(scorerOnlyProblems(join(r, "x"), { allowRoots: [r], agentUids: [me + 1] }).join(), r).toContain(`inside agent-reachable root ${r}`);
+    }
+  });
+  it("same-uid owner (or unset agent uid list) is refused; group/other modes are refused", () => {
+    const d = store();
+    expect(scorerOnlyProblems(d, { allowRoots: [d], agentUids: [], agentRoots: [] }).join()).toContain("no agent uid list configured");
+    expect(scorerOnlyProblems(d, { allowRoots: [d], agentUids: [me], agentRoots: [] }).join()).toContain(`owner uid ${me} is an agent uid`);
+    chmodSync(d, 0o750);
+    expect(scorerOnlyProblems(d, { allowRoots: [d], agentUids: [me + 1], agentRoots: [] }).join()).toContain("group/other");
+  });
+  it("passes only with an allowlisted root, a non-agent owner and 0700", () => {
+    const d = store();
+    expect(scorerOnlyProblems(d, { allowRoots: [d], agentUids: [me + 1], agentRoots: [] })).toEqual([]);
+    expect(scorerOnlyConfigFromEnv({ HELDOUT_SCORER_ONLY_ROOTS: "/srv/scorer,/opt/k", HELDOUT_AGENT_UIDS: "1000:1001" } as any))
+      .toEqual({ allowRoots: ["/srv/scorer", "/opt/k"], agentUids: [1000, 1001] });
+  });
+});
+
 describe("held-out answer key: building blocks", () => {
   it("KEY.sha256 manifest round-trips and requires both hashes", () => {
     const m = { plaintext: sha256("a"), encrypted: sha256("b") };
@@ -82,21 +129,33 @@ describe("held-out answer key: building blocks", () => {
 });
 
 describe("red-team R1-R8 (spec v1 step 6)", () => {
-  it.skipIf(!hasAge || !hasBwrap)("R1: an agent process cannot read the key location or the scorer temp dir", async () => {
+  it("prerequisites: skips are reported, and fatal when HELDOUT_REQUIRE_REDTEAM=1", () => {
+    if (process.env.HELDOUT_REQUIRE_REDTEAM === "1") expect(SKIPS, SKIPS.join("; ")).toEqual([]);
+    else if (SKIPS.length) console.warn(`[heldout red-team] ${SKIPS.length} skip reason(s); set HELDOUT_REQUIRE_REDTEAM=1 to fail instead`);
+  });
+
+  // R1 (partial). This is NOT the spec's R1: agents on the shared box do not run inside runInSandbox/bwrap;
+  // they run as the same uid with full filesystem access. This only shows the *candidate* sandbox
+  // cannot see the key, identity or scorer temp dir (overlaps R4).
+  it.skipIf(!hasAge || !hasBwrap)("R1 (partial): the candidate sandbox cannot read the key, identity or scorer temp dir", async () => {
     const s = makeStore();
-    expect(scorerOnlyProblems(s.store, ["/nonexistent-agent-root"])).toEqual([]);
-    expect(scorerOnlyProblems(s.store, [s.base]).join()).toContain("inside agent working tree");
-    const open = join(s.base, "open"); mkdirSync(open, { mode: 0o755 }); chmodSync(open, 0o755);
-    expect(scorerOnlyProblems(open, []).join()).toContain("group/other");
     const scratch = mkdtempSync(join(s.base, TEMP_PREFIX)); chmodSync(scratch, 0o700);
     writeFileSync(join(scratch, "probe"), "x");
-    // Agent process: same sandbox profile agents are run under; neither path is mounted.
     for (const p of [s.enc, s.id, join(scratch, "probe")]) {
       const r = await runInSandbox(`open(${JSON.stringify(p)}).read()\nprint("READ")\n`);
       expect(r.ok, p).toBe(false);
       expect(r.stdout).not.toContain("READ");
     }
   }, T);
+
+  // R1 (spec): NOT ENFORCED on the shared box. Runs only when a scorer-owned store exists under a
+  // different uid (HELDOUT_R1_STORE_FILE = a file inside it). On the shared box it skips loudly.
+  it.skipIf(R1_SKIP !== null)(`R1 (NOT ENFORCED on the shared box): an agent-uid process cannot read the scorer store${R1_SKIP ? ` [skipped: ${R1_SKIP}]` : ""}`, () => {
+    const f = process.env.HELDOUT_R1_STORE_FILE!;
+    const r = spawnSync("cat", [f]);
+    expect(r.status).not.toBe(0);
+    expect(String(r.stderr)).toMatch(/Permission denied/);
+  });
 
   it("R2: a planted canonical solution or test body fails the CI leak check", () => {
     const repo = scratchBase();

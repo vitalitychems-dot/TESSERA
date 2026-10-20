@@ -5,7 +5,13 @@ Spec: Security's `heldout-answer-key-spec-v1.md`, Oct 20 2026. Tessera approved 
 Code: `artifacts/api-server/src/lib/heldout/answer-key.ts`. Tests: `artifacts/api-server/src/__tests__/heldout-answer-key.test.ts` (R1-R8, synthetic data only).
 
 ## Step 1: key storage
-- `humaneval.key.jsonl.age` lives in a scorer-only location: a dedicated store or private repo that agents can't write to and that isn't in any agent's working tree. `scorerOnlyProblems(path, agentRoots)` refuses group/other-accessible paths and paths inside agent roots (default `/workspace`).
+- `humaneval.key.jsonl.age` lives in a scorer-only location: a dedicated store or private repo that agents can't write to and that isn't in any agent's working tree.
+- `scorerOnlyProblems(path, cfg)` **fails closed**. It refuses a path unless all of these hold:
+  - the path is under an explicit allowlist (`HELDOUT_SCORER_ONLY_ROOTS`, comma or colon separated);
+  - the path is not under an agent-reachable root (`/workspace`, `/cursor/stores`, `/home`, `/tmp`);
+  - an agent uid list is configured (`HELDOUT_AGENT_UIDS`), and neither the owner nor the checking process is an agent uid;
+  - the mode has no group/other bits.
+- An empty or unset allowlist or uid list refuses everything. On the shared box this check therefore never passes, which is correct.
 - The age identity is held by the scorer only, outside git.
 - `KEY.sha256` holds two lines, `<sha256>  humaneval.key.jsonl` and `<sha256>  humaneval.key.jsonl.age` (`formatKeyManifest` / `parseKeyManifest`). Spec: it goes in Gitbook at `evals/heldout/KEY.sha256`. **Not done here, because this change doesn't touch Gitbook.** The scorer operator adds it with a normal Gitbook PR.
 
@@ -29,7 +35,8 @@ Code: `artifacts/api-server/src/lib/heldout/answer-key.ts`. Tests: `artifacts/ap
 ## Step 6: red-team tests
 | Test | What it checks |
 |---|---|
-| R1 | Agent-profile sandbox can't read the `.age` file, the identity or the scorer temp dir. Location checker rejects group/other modes and agent-root paths. |
+| R1 (spec) | **NOT ENFORCED.** Agents on the shared box run as the same uid with full filesystem access, not inside the sandbox. The real R1 test runs only when `HELDOUT_R1_STORE_FILE` points into a store owned by a different uid. Otherwise it skips loudly, with the reason in the test name and a warning. |
+| R1 (partial) | Only the *candidate* sandbox can't read the `.age` file, the identity or the scorer temp dir. This overlaps R4 and is not agent isolation. |
 | R2 | Planted canonical solution (reformatted) and test body in a branch → CI check lists both files. The sweep finds the same files. |
 | R3 | Sandbox TCP connect and DNS fail. |
 | R4 | Sandbox can't list or open the key, identity, store, cwd, `/workspace` or `/home`. A completion that opens the key fails its task. |
@@ -38,14 +45,28 @@ Code: `artifacts/api-server/src/lib/heldout/answer-key.ts`. Tests: `artifacts/ap
 | R7 | A completion copied from the key → contamination 1.0, task flagged UNVERIFIED, result `unverified: true`. |
 | R8 | Prompts file with canonical_solution/test/examples/solution, missing fields or non-strings → loader throws. |
 
-R1, R3, R4 and R6 need `bwrap`; R1 and R4-R6 need `age` (`AGE_BIN`). Without them those tests skip, and say why.
+R1 (partial), R3, R4 and R6 need `bwrap`; R1 (partial) and R4-R6 need `age` (`AGE_BIN`). Every skip is logged as `[heldout red-team] SKIPPED <tests>: <reason>`. Setting `HELDOUT_REQUIRE_REDTEAM=1`, which CI should do, turns any skip into a failing test.
 
 ## Judgment calls (safer readings)
 1. **The plaintext never touches disk.** The spec says "decrypt into a fresh temp dir". Here the temp dir exists (0700, finally-deleted), but the plaintext stays in memory, so R6 holds even under SIGKILL, when `finally` can't run.
 2. **No candidate file inside the sandbox.** The program is passed on stdin. That is stronger than a read-only bind, because there is nothing on disk to find.
 3. **CI workflow not wired yet.** Editing `.github/workflows` needs the workflow token scope, which isn't granted. Add a job running the `ci` command with the scorer-published `hashes.json` in a gated follow-up.
 4. **No real key data or hashes are committed.** The hash list is published by the scorer, from the decrypted key, outside this repo.
-5. **Same-uid limit:** on the shared box every agent runs as one uid. Mode 0700 only protects against other uids. Real isolation needs the store and identity under a separate scorer uid or a private repo. The checker enforces mode and location; it can't enforce the uid.
+5. **Same-uid limit:** on the shared box every agent runs as one uid, so mode 0700 doesn't protect against them. The checker now refuses same-uid owners and fails closed. See Known limits.
+
+## Known limits (from Security's review of 9c95637a)
+- **HIGH, R1 (fixed in wording only):** the spec's R1 is **NOT ENFORCED**. Agents run as the same Linux user with full filesystem access, so they can read the identity, the `.age` file and the 0700 scratch dir. Real enforcement needs one of two setups:
+  - the identity held off-box (CI secret or scorer host), with scoring run in CI or under a separate uid or container;
+  - or the scorer under its own uid, with agents inside bwrap/nsjail and no access to the store.
+- **MEDIUM: the plaintext key is readable through /proc.** `plain.fill(0)` zeroes the buffer, but the parsed `records` strings stay in scorer memory for the whole run. Any same-uid agent can read `/proc/<scorer pid>/mem` or attach a debugger. "Memory only" protects against plaintext left on disk (R6), not against agents on this box.
+- **MEDIUM (fixed):** `scorerOnlyProblems` used to pass any 0700 path outside `/workspace`. It now uses the fail-closed allowlist, refuses agent-reachable roots and agent uids, and has tests.
+- **LOW: CI wiring is not done.** There is no workflow, so step 4's "a CI check fails a PR" isn't in force. The follow-up job should:
+  - use `pull_request`, not `pull_request_target`;
+  - set `permissions: contents: read`;
+  - get the hash list as a non-secret artifact;
+  - install `age` and `bwrap`, and set `HELDOUT_REQUIRE_REDTEAM=1`.
+- **LOW: the completion and `check()` share one Python process.** The candidate can introspect the test (e.g. `check.__code__.co_consts` via `globals()`), the same as stock HumanEval. A follow-up should run the tests in a separate process or module.
+- **LOW (fixed): quiet skips without `age`.** Skips are now logged loudly, and `HELDOUT_REQUIRE_REDTEAM=1` makes them fail.
 
 ## split.json migration plan (dual-brain gate, #513)
 `evals/heldout/retrieval/split.json` (from #513, not on main yet) commits the held-out queries **and their answers** (`relevant` module ids) where agents can read them. **This change does not modify or delete it, and doesn't touch #513.** Plan, under the same scorer-only design:
