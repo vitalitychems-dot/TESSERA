@@ -5,6 +5,8 @@ import { vowCheck } from "./learning";
 import { takeSpeakSlot } from "./finish";
 import { healthLine } from "./wave";
 import { dataPath } from "./data-path";
+import { stripBridgeRule } from "./chat-bridge-strip";
+export { stripBridgeRule };
 import { SEED, buildHerself, growVoice, herself, onlyHer, wearsAnotherName } from "./her-voice";
 
 function replyCap(mode: TesseraMode) {
@@ -102,7 +104,7 @@ async function readVoice() {
 }
 
 async function fromFiles(data: ChatInput) {
-  const asked = [...data.messages].reverse().find((message) => message.role === "user")?.content ?? "";
+  const asked = stripBridgeRule([...data.messages].reverse().find((message) => message.role === "user")?.content ?? "");
   const { leaveToHer } = await import("./ask-all");
   if (leaveToHer(asked)) {
     const book = await readVoice();

@@ -148,7 +148,16 @@ export function passageForQuestion(q: string) {
       best = passage;
     }
   }
-  return score > 0 ? best : null;
+  // One shared word in a longer question is not enough evidence; it needs two.
+  // A bare one-word lookup (e.g. "photoelectric") may still match on that word.
+  const need = tokens.length <= 1 ? 1 : 2;
+  if (!best || score < need) return null;
+  // A named thing in the question (a capitalised word after the first) that the passage
+  // never mentions means the question is about something else, e.g. a made-up
+  // "Interstellar Cooking" prize must not pull the Einstein page through "Nobel Prize".
+  const hay = `${best.title} ${best.text}`.toLowerCase();
+  const names = q.split(/\s+/).slice(1).flatMap((word) => word.split(/[^A-Za-z0-9]+/)).filter((word) => /^[A-Z]/.test(word) && word.length >= 4);
+  return names.every((name) => hay.includes(name.toLowerCase())) ? best : null;
 }
 
 export function gradeSchool(answer: string) {
