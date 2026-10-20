@@ -8,7 +8,7 @@ import { systemStateTable } from "@workspace/db/schema";
 import { isLLMAvailable } from "./llm-client";
 import { batchedCallLLM } from "./llm-batcher";
 import { withCodexDirective } from "./codex-startup-directive";
-import { syncTopicsToMoltbook, fetchMoltbookExternalPosts } from "./moltbook-bridge";
+import { fetchMoltbookPublicPosts } from "./moltbook-bridge";
 import { setSacredInterval, clearSacredInterval, type SacredHandle } from "./sacred-scheduler";
 
 const STATE_KEY = "autonomous-forum-engine";
@@ -982,38 +982,9 @@ async function buildOnExistingTopics(knowledge: KnowledgeInsight[], cycle: numbe
   }
 }
 
-async function syncToMoltbook(): Promise<void> {
-  const apiKey = process.env["MOLTBOOK_API_KEY"];
-  if (!apiKey) return;
-
-  try {
-    const recentTopics = await db.select().from(forumTopicsTable)
-      .orderBy(desc(forumTopicsTable.createdAt))
-      .limit(2);
-
-    const inputs = recentTopics.map(t => ({
-      topicId: t.id,
-      title: t.title,
-      content: t.content,
-      author: t.author,
-      category: t.category,
-      replyCount: t.replies ?? 0,
-    }));
-
-    const synced = await syncTopicsToMoltbook(apiKey, inputs);
-    state.moltbookSynced += synced;
-    if (synced > 0) logger.info({ synced }, "AutonomousForum: synced topics to moltbook.com via bridge");
-  } catch (err) {
-    logger.warn(safeDbErrorLog(err), "AutonomousForum: moltbook sync cycle failed");
-  }
-}
-
 async function fetchMoltbookFeed(): Promise<void> {
-  const apiKey = process.env["MOLTBOOK_API_KEY"];
-  if (!apiKey) return;
-
   try {
-    const posts = await fetchMoltbookExternalPosts(apiKey, 5);
+    const posts = await fetchMoltbookPublicPosts(5);
 
     for (const post of posts) {
       const externalId = `moltbook:${post.id}`;
@@ -1145,7 +1116,6 @@ export async function runForumCycle(): Promise<ForumEngineState> {
   await runAgentPostVoting(cycle);
 
   if (cycle % 3 === 0) {
-    await syncToMoltbook();
     await fetchMoltbookFeed();
   }
 

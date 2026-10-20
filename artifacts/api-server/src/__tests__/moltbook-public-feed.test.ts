@@ -68,6 +68,7 @@ describe("Moltbook public read feed", () => {
     expect(options.method).toBe("GET");
     expect(options.headers).toEqual({ Accept: "application/json" });
     expect(options.headers).not.toHaveProperty("Authorization");
+    expect(fetchMock.mock.calls.every(([, init]) => (init as RequestInit | undefined)?.method === "GET")).toBe(true);
     expect(posts).toEqual([{
       id: "verified_1",
       title: "Verified title",

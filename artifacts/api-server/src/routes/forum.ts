@@ -16,6 +16,7 @@ import { createForumSummonHandler } from "../lib/forum-summons";
 import { dispatchLocalForumEvidence } from "../lib/forum-local-evidence-worker";
 import { persistForumSummonReplies } from "../lib/forum-summon-persistence";
 import { readMoltbookPublicFeed } from "../lib/moltbook-public-feed";
+import moltbookPublishingRouter from "./moltbook-publishing";
 
 const router: IRouter = Router();
 const forumReadRate = new Map<string, { windowStartedAt: number; requests: number }>();
@@ -448,6 +449,8 @@ router.get("/tesseract-forum/moltbook-feed", async (req, res) => {
     return res.status(503).json({ ok: false, error: "Moltbook public feed is unavailable." });
   }
 });
+
+router.use("/tesseract-forum/moltbook-publications", moltbookPublishingRouter);
 
 router.get("/tesseract-forum/topics/:id", async (req, res) => {
   try {

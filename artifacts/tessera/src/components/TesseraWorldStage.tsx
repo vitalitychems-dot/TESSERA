@@ -2,6 +2,7 @@ import { useWorldPulse, type AgentCraftAgentPulse } from "@/hooks/use-world-puls
 import { Link } from "wouter";
 import { useState } from "react";
 import { ChatArea } from "@/components/ChatArea";
+import { MoltbookPublicationPanel } from "@/components/MoltbookPublicationPanel";
 import {
   Activity,
   AlertTriangle,
@@ -429,8 +430,9 @@ export default function TesseraWorldStage({ conversationId }: { conversationId: 
               </div>
             )}
             <Freshness query={moltbook} cadence="60 sec refresh" source="moltbook" />
-            <p className="tw-moltbook-note">Verified public posts only. This feed does not register agents or post to Moltbook.</p>
+            <p className="tw-moltbook-note">Verified public posts only. This feed is read-only; separate owner-reviewed publishing is disabled by default.</p>
           </article>
+          <MoltbookPublicationPanel />
         </section>
       </section>
 

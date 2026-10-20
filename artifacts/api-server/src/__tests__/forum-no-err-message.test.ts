@@ -16,7 +16,6 @@ const { SENTINEL, control, synthetic } = vi.hoisted(() => {
     llm: false,
     llmThrow: false,
     proposals: false,
-    moltbookSyncThrow: false,
     moltbookFeedThrow: false,
     moltbookPosts: false,
   };
@@ -124,11 +123,7 @@ vi.mock("../lib/llm-batcher", () => ({
 }));
 
 vi.mock("../lib/moltbook-bridge", () => ({
-  syncTopicsToMoltbook: async () => {
-    if (control.moltbookSyncThrow) throw synthetic();
-    return 0;
-  },
-  fetchMoltbookExternalPosts: async () => {
+  fetchMoltbookPublicPosts: async () => {
     if (control.moltbookFeedThrow) throw synthetic();
     if (!control.moltbookPosts) return [];
     return [{
@@ -137,6 +132,9 @@ vi.mock("../lib/moltbook-bridge", () => ({
       content: "A short external note for the applicant queue.",
       authorName: "External Author",
       submoltName: "general",
+      createdAt: null,
+      score: null,
+      verified: true,
     }];
   },
 }));
@@ -146,7 +144,7 @@ import { lookupForumIdentity, seedForumIdentities } from "../lib/forum-identity-
 import { seedForumFromRealData } from "../lib/forum-seeder";
 import { getForumEngineMetrics, runForumCycle, startAutonomousForumLoop } from "../lib/autonomous-forum-engine";
 
-const ENV_NAMES = ["TESSERACT_ADMIN_KEY", "FORUM_ADMIN_TOKEN", "MOLTBOOK_API_KEY"] as const;
+const ENV_NAMES = ["TESSERACT_ADMIN_KEY", "FORUM_ADMIN_TOKEN"] as const;
 const previousEnv: Partial<Record<(typeof ENV_NAMES)[number], string | undefined>> = {};
 
 const LOG_LEVELS = ["trace", "debug", "info", "warn", "error", "fatal"] as const;
@@ -178,7 +176,6 @@ function resetControl(): void {
   control.llm = false;
   control.llmThrow = false;
   control.proposals = false;
-  control.moltbookSyncThrow = false;
   control.moltbookFeedThrow = false;
   control.moltbookPosts = false;
 }
@@ -252,7 +249,6 @@ describe("forum error logs omit error messages", () => {
 
   afterEach(() => {
     resetControl();
-    delete process.env.MOLTBOOK_API_KEY;
   });
 
   it("logs a safe payload when identity seeding throws", async () => {
@@ -358,15 +354,12 @@ describe("forum error logs omit error messages", () => {
     }
   });
 
-  it("logs safe payloads when moltbook sync and feed import throw", async () => {
+  it("logs a safe payload when the public moltbook feed import throws", async () => {
     await advanceToMoltbookBoundary();
-    process.env.MOLTBOOK_API_KEY = MOLTBOOK_KEY;
-    control.moltbookSyncThrow = true;
     control.moltbookFeedThrow = true;
     const capture = captureLogs();
     try {
       await runForumCycle();
-      assertSafeEvent(capture.calls(), "AutonomousForum: moltbook sync cycle failed");
       assertSafeEvent(capture.calls(), "AutonomousForum: moltbook feed import failed");
     } finally {
       capture.restore();
@@ -375,7 +368,6 @@ describe("forum error logs omit error messages", () => {
 
   it("logs a safe payload when a moltbook applicant insert throws", async () => {
     await advanceToMoltbookBoundary();
-    process.env.MOLTBOOK_API_KEY = MOLTBOOK_KEY;
     control.moltbookPosts = true;
     control.failApplicantInsert = true;
     const capture = captureLogs();

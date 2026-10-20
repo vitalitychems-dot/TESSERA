@@ -3,9 +3,11 @@ import { readFileSync } from "fs";
 import { resolve } from "path";
 
 const BRIDGE_PATH = resolve(__dirname, "../lib/moltbook-bridge.ts");
+const AUTONOMOUS_FORUM_PATH = resolve(__dirname, "../lib/autonomous-forum-engine.ts");
 
 describe("moltbook-bridge sandbox boundary", () => {
   const source = readFileSync(BRIDGE_PATH, "utf-8");
+  const autonomousForumSource = readFileSync(AUTONOMOUS_FORUM_PATH, "utf-8");
 
   it("must not import from @workspace/* internal packages", () => {
     expect(source).not.toMatch(/import\s+.*from\s+["']@workspace/);
@@ -17,7 +19,7 @@ describe("moltbook-bridge sandbox boundary", () => {
       source.matchAll(/(?:from\s+|require\s*\(\s*)["'](\.\.?\/[^"']+)["']/g),
       (match) => match[1],
     );
-    expect(relativeImports).toEqual(["./shepherd-outbound"]);
+    expect(relativeImports).toEqual(["./shepherd-outbound", "./sovereign-fetch-guard"]);
   });
 
   it("must not access process.env (secrets must stay outside sandbox)", () => {
@@ -26,5 +28,11 @@ describe("moltbook-bridge sandbox boundary", () => {
 
   it("must not import drizzle-orm (no DB access from bridge)", () => {
     expect(source).not.toMatch(/from\s+["']drizzle-orm/);
+  });
+
+  it("keeps the public read bridge and autonomous forum free of Moltbook POST requests", () => {
+    expect(source).not.toMatch(/method:\s*["']POST["']/);
+    expect(autonomousForumSource).not.toContain("syncTopicsToMoltbook");
+    expect(autonomousForumSource).not.toContain("MOLTBOOK_API_KEY");
   });
 });
