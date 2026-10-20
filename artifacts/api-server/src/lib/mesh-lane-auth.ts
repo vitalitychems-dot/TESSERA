@@ -12,7 +12,21 @@ export const LANE_TOKEN_HEADER = "x-mesh-lane-token";
 export const RESERVED_OWNER_SLUGS: ReadonlySet<string> = new Set(["father"]);
 const HEX64 = /^[0-9a-f]{64}$/;
 /** Same slug grammar as the registry; council nodes ("council-*") are valid identities too. */
-const SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/;
+export const SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/;
+
+/** Strict ASCII sender slug (Security): ^[a-z0-9][a-z0-9-]{0,63}$, nothing else. */
+export const isAsciiSlug = (v: unknown): v is string => typeof v === "string" && SLUG.test(v);
+
+/** Canonical form for owner-claim checks: NFKC, strip format chars (\p{Cf}), trim, lowercase. */
+export function canonicalSlug(v: string): string {
+  return v.normalize("NFKC").replace(/\p{Cf}/gu, "").trim().toLowerCase();
+}
+
+/** Fail-closed NODE_ENV: only an explicit "development" or "test" counts as dev; unset/unknown => production. */
+export function isDevEnv(env: NodeJS.ProcessEnv = process.env): boolean {
+  const v = env.NODE_ENV;
+  return v === "development" || v === "test";
+}
 
 export function sha256Hex(s: string): string {
   return createHash("sha256").update(s, "utf8").digest("hex");

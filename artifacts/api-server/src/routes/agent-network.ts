@@ -4,7 +4,8 @@ import { getAgentHierarchy, getChildrenOf, getHierarchyMetrics } from "../lib/ag
 import { getAgentCommsMetrics, sendMessage, broadcastMessage, getThreads, getThread, getFeed } from "../lib/agent-comms";
 import { CommsPolicyError, resolveAlias } from "../lib/comms-policy";
 import { decideOwnerSession } from "../lib/sovereign-admin";
-import { parseLaneTokens, laneForToken, LANE_TOKEN_HEADER, RESERVED_OWNER_SLUGS } from "../lib/mesh-lane-auth";
+import { parseLaneTokens, laneForToken, LANE_TOKEN_HEADER, RESERVED_OWNER_SLUGS, canonicalSlug, isAsciiSlug, isDevEnv } from "../lib/mesh-lane-auth";
+import { originAllowed } from "../lib/origin-allowed";
 
 /**
  * Resolve the sender. The sender is ONLY ever derived from a presented lane token.
@@ -19,8 +20,19 @@ const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
 export const isLoopback = (addr: string | undefined): boolean => Boolean(addr && LOOPBACK.has(addr));
 
 /** True if a body `from` names the owner node (any case, or via alias). */
-const claimsOwner = (v: unknown): boolean => typeof v === "string" &&
-  (RESERVED_OWNER_SLUGS.has(v.toLowerCase()) || RESERVED_OWNER_SLUGS.has(resolveAlias(v)));
+const claimsOwner = (v: unknown): boolean => {
+  if (typeof v !== "string") return false;
+  const c = canonicalSlug(v);
+  return RESERVED_OWNER_SLUGS.has(c) || RESERVED_OWNER_SLUGS.has(resolveAlias(v)) || RESERVED_OWNER_SLUGS.has(resolveAlias(c));
+};
+const PROXY_HEADERS = ["x-forwarded-for", "forwarded", "x-real-ip"] as const;
+const hasProxyHeader = (req: Request): boolean => PROXY_HEADERS.some((h) => req.headers[h] !== undefined);
+/** ASCII-slug sender rule: the resolved sender (after alias) must be a strict ASCII slug. */
+const slugSender = (v: unknown): string | null => {
+  if (typeof v !== "string") return null;
+  const r = resolveAlias(v);
+  return isAsciiSlug(r) ? r : null;
+};
 
 function resolveSender(req: Request, bodyFrom: unknown): { from?: unknown; status?: number; error?: string } {
   let table;
@@ -28,13 +40,17 @@ function resolveSender(req: Request, bodyFrom: unknown): { from?: unknown; statu
   if (!table) {
     // (a) owner admin session (same validator as requireAdminSession): from is fixed to the owner.
     if (decideOwnerSession(req).ok) {
+      if (!originAllowed(req)) return { status: 403, error: "origin-forbidden" };
       if (bodyFrom !== undefined && !claimsOwner(bodyFrom)) return { status: 403, error: `from must be ${OWNER_IDENTITY} for an owner session` };
       return { from: OWNER_IDENTITY };
     }
-    // (b) non-production + loopback socket (X-Forwarded-For is never consulted).
-    if (process.env.NODE_ENV !== "production" && isLoopback(req.socket?.remoteAddress)) {
+    // (b) explicit development/test only (unset/unknown NODE_ENV fails closed as production),
+    // loopback socket, and no proxy headers (a proxied request is not local).
+    if (isDevEnv() && isLoopback(req.socket?.remoteAddress) && !hasProxyHeader(req)) {
       if (claimsOwner(bodyFrom)) return { status: 403, error: `${OWNER_IDENTITY} is reachable only through the owner admin session` };
-      return { from: bodyFrom };
+      const from = slugSender(bodyFrom);
+      if (!from) return { status: 400, error: "from must be an ASCII slug (^[a-z0-9][a-z0-9-]{0,63}$) or a registered alias of one" };
+      return { from };
     }
     return { status: 401, error: "lane identity required: MESH_LANE_TOKENS is not configured; body from is not trusted" };
   }
