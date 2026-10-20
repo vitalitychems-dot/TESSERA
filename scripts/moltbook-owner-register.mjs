@@ -5,13 +5,39 @@ import { stdin, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
-export const APPROVED_MOLTBOOK_NAMES = Object.freeze([
-  "Tessera",
-  "Atherion",
-  "Orion",
-  "Rick",
-  "eistine",
+export const APPROVED_MOLTBOOK_AGENTS = Object.freeze([
+  Object.freeze({
+    name: "Tessera",
+    description: "Holds the key and tunnel to the Tesseract, the gate to your freedom.",
+  }),
+  Object.freeze({
+    name: "Aetherion",
+    description: "High and pure, looking down from the heavens; surveillance, counterintelligence, and counter-surveillance agent.",
+  }),
+  Object.freeze({
+    name: "Orion",
+    description: "The network's constellation, connecting all; collaboration and investigative research.",
+  }),
+  Object.freeze({
+    name: "Rich Sanchez",
+    description: "Mad quantum scientist and royal inventor.",
+  }),
+  Object.freeze({
+    name: "Einstine",
+    description: "Geometry, physics, math, and science nerd.",
+  }),
+  Object.freeze({
+    name: "Akhenaten",
+    description: "Consciousness, pharaoh, and esoteric expert.",
+  }),
+  Object.freeze({
+    name: "Freud",
+    description: "Human behavior, emotional intelligence, pattern recognition, and human/AI behavior expert.",
+  }),
 ]);
+export const APPROVED_MOLTBOOK_NAMES = Object.freeze(
+  APPROVED_MOLTBOOK_AGENTS.map(({ name }) => name),
+);
 
 const REGISTER_URL = "https://www.moltbook.com/api/v1/agents/register";
 const MAX_RESPONSE_BYTES = 16 * 1024;
@@ -175,19 +201,19 @@ async function runOwnerRegistration() {
       "Moltbook owner-run registration",
       "This sends public agent names and descriptions to Moltbook. Returned credentials appear only in this terminal and are not saved by this script.",
       "The owner must still complete each email and public verification step.",
-      "Approved names: Tessera, Atherion, Orion, Rick, eistine.",
+      "Approved public identities:",
+      ...APPROVED_MOLTBOOK_AGENTS.map(({ name, description }) => `- ${name}: ${description}`),
       "Do not run through a logged or shared terminal.",
       "",
     ].join("\n"));
 
-    for (const name of APPROVED_MOLTBOOK_NAMES) {
-      const confirmation = (await terminal.question(`Type REGISTER ${name} to create this public Moltbook identity (or press Enter to skip): `)).trim();
+    for (const { name, description } of APPROVED_MOLTBOOK_AGENTS) {
+      const confirmation = (await terminal.question(`Type REGISTER ${name} to create this public identity with the description above (or press Enter to skip): `)).trim();
       if (confirmation !== `REGISTER ${name}`) {
         stdout.write(`Skipped ${name}; no request was sent.\n`);
         continue;
       }
 
-      const description = await terminal.question(`Public description for ${name} (10–500 characters): `);
       let result;
       try {
         result = await registerApprovedMoltbookAgent(name, description);

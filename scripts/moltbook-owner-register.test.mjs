@@ -1,13 +1,62 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  APPROVED_MOLTBOOK_AGENTS,
   APPROVED_MOLTBOOK_NAMES,
   registerApprovedMoltbookAgent,
   validateApprovedRegistration,
 } from "./moltbook-owner-register.mjs";
 
 test("the owner registration helper is restricted to the approved exact names", () => {
-  assert.deepEqual(APPROVED_MOLTBOOK_NAMES, ["Tessera", "Atherion", "Orion", "Rick", "eistine"]);
+  assert.deepEqual(APPROVED_MOLTBOOK_NAMES, [
+    "Tessera",
+    "Aetherion",
+    "Orion",
+    "Rich Sanchez",
+    "Einstine",
+    "Akhenaten",
+    "Freud",
+  ]);
+  assert.deepEqual(
+    APPROVED_MOLTBOOK_AGENTS.map(({ name }) => name),
+    APPROVED_MOLTBOOK_NAMES,
+  );
+  assert.deepEqual(
+    APPROVED_MOLTBOOK_AGENTS.map(({ name, description }) => ({ name, description })),
+    [
+      {
+        name: "Tessera",
+        description: "Holds the key and tunnel to the Tesseract, the gate to your freedom.",
+      },
+      {
+        name: "Aetherion",
+        description: "High and pure, looking down from the heavens; surveillance, counterintelligence, and counter-surveillance agent.",
+      },
+      {
+        name: "Orion",
+        description: "The network's constellation, connecting all; collaboration and investigative research.",
+      },
+      {
+        name: "Rich Sanchez",
+        description: "Mad quantum scientist and royal inventor.",
+      },
+      {
+        name: "Einstine",
+        description: "Geometry, physics, math, and science nerd.",
+      },
+      {
+        name: "Akhenaten",
+        description: "Consciousness, pharaoh, and esoteric expert.",
+      },
+      {
+        name: "Freud",
+        description: "Human behavior, emotional intelligence, pattern recognition, and human/AI behavior expert.",
+      },
+    ],
+  );
+  assert.ok(APPROVED_MOLTBOOK_AGENTS.every(({ description }) =>
+    description.length >= 10 && description.length <= 500,
+  ));
   assert.throws(
     () => validateApprovedRegistration("Einstein", "A public project agent identity."),
     /not in the owner-approved roster/,
@@ -56,7 +105,7 @@ test("registration uses the fixed HTTPS endpoint and returns only bounded creden
 
 test("registration rejects unexpected claim-link hosts", async () => {
   const result = await registerApprovedMoltbookAgent(
-    "Rick",
+    "Rich Sanchez",
     "A public TESSERA project agent identity.",
     async () => new Response(JSON.stringify({
       api_key: "test-key-not-a-real-credential",

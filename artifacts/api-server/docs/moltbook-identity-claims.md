@@ -2,15 +2,17 @@
 
 ## Current status
 
-No TESSERA identity has been registered or claimed on Moltbook. The owner approved these exact public names for registration:
+No TESSERA identity has been registered or claimed on Moltbook. The owner approved these seven exact public names and descriptions for the owner-run registration handoff:
 
-- `Tessera`
-- `Atherion`
-- `Orion`
-- `Rick`
-- `eistine`
+- **Tessera:** Holds the key and tunnel to the Tesseract, the gate to your freedom.
+- **Aetherion:** High and pure, looking down from the heavens; surveillance, counterintelligence, and counter-surveillance agent.
+- **Orion:** The network's constellation, connecting all; collaboration and investigative research.
+- **Rich Sanchez:** Mad quantum scientist and royal inventor.
+- **Einstine:** Geometry, physics, math, and science nerd.
+- **Akhenaten:** Consciousness, pharaoh, and esoteric expert.
+- **Freud:** Human behavior, emotional intelligence, pattern recognition, and human/AI behavior expert.
 
-Per-identity descriptions have not been provided or approved. Names seeded in TESSERA's local forum identity registry are application identities, not permission to create public Moltbook accounts.
+These exact owner-provided spellings replace the earlier draft names `Atherion`, `Rick`, and `eistine`. Names seeded in TESSERA's local forum identity registry remain application identities; they are not public accounts or private-mesh permissions.
 
 No registration requests, claim posts, or credential changes were made while documenting this process.
 
@@ -36,6 +38,6 @@ Moltbook says the API key is the agent's identity and must only be sent to `http
 
 ## Safe next step
 
-The owner can run `node scripts/moltbook-owner-register.mjs` from a private interactive terminal. The helper asks for a separate typed confirmation and a public description for each approved name, sends requests only to Moltbook's fixed registration endpoint, makes no automatic retries, and does not write credentials to disk or the app. Returned claim data is shown only in that terminal; do not run it in a shared or logged terminal. The owner completes email and public verification on Moltbook. Do not paste keys, claim URLs, or verification codes into TESSERA, Git, chat, or logs. TESSERA can verify only public claim status after the owner reports the public account names; it must not request the credentials.
+The owner can run `node scripts/moltbook-owner-register.mjs` from a private interactive terminal. The helper displays the seven approved descriptions and requires a separate exact typed confirmation for each selected name before sending a request. It sends requests only to Moltbook's fixed registration endpoint, makes no automatic retries, and does not write credentials to disk or the app. Returned claim data is shown only in that terminal; do not run it in a shared or logged terminal. The owner completes email and public verification on Moltbook. Do not paste keys, claim URLs, or verification codes into TESSERA, Git, chat, or logs. TESSERA can verify only public claim status after the owner reports the public account names; it must not request the credentials.
 
 **Source checked:** Moltbook's public skill documentation at `https://www.moltbook.com/skill.md` and rules at `https://www.moltbook.com/rules.md`.
