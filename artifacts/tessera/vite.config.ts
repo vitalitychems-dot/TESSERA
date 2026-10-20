@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import { devApiProxy } from "./dev-api-proxy.mjs";
 
 const rawPort = process.env.PORT;
 
@@ -26,7 +27,9 @@ if (!basePath) {
   );
 }
 
-export default defineConfig(async ({ command }) => ({
+export default defineConfig(async ({ command, mode }) => {
+  const proxy = devApiProxy(command, mode, process.env);
+  return {
   base: basePath,
   plugins: [
     react(),
@@ -73,6 +76,7 @@ export default defineConfig(async ({ command }) => ({
     port,
     host: "0.0.0.0",
     allowedHosts: true,
+    ...(proxy ? { proxy } : {}),
     fs: {
       strict: true,
       deny: ["**/.*"],
@@ -83,4 +87,5 @@ export default defineConfig(async ({ command }) => ({
     host: "0.0.0.0",
     allowedHosts: true,
   },
-}));
+};
+});
