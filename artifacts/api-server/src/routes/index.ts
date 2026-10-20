@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
+import operationalStatusRouter from "./operational-status";
 import adminSessionRouter from "./admin-session";
 import internalSessionCheckRouter from "./internal-session-check";
 import diagnosticsRouter from "./diagnostics";
@@ -103,6 +104,7 @@ router.use("/council-executor/config", requireAdminSession);
 router.use(governanceConsensusRouter);
 router.use(systemRuntimeRouter);
 router.use(healthRouter);
+router.use(operationalStatusRouter);
 router.use(diagnosticsRouter);
 router.use(securityRouter);
 router.use(securityDefenseRouter);

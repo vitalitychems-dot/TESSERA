@@ -73,6 +73,7 @@ const AutoHealerPage = lazyRetry(() => import("@/pages/AutoHealerPage"));
 const GalleryPage = lazyRetry(() => import("@/pages/GalleryPage"));
 const CodexPage = lazyRetry(() => import("@/pages/CodexPage"));
 const NextFivePage = lazyRetry(() => import("@/pages/NextFivePage"));
+const OperationalCyclePage = lazyRetry(() => import("@/pages/OperationalCyclePage"));
 
 // ---- Hub wrappers ----
 const UniverseHubPage = lazyRetry(() => import("@/pages/UniverseHubPage"));
@@ -325,6 +326,7 @@ function AppRouter() {
         <Route path="/proof-center">{() => <ProofCenterPage />}</Route>
         <Route path="/rules">{() => <RulesPage />}</Route>
         <Route path="/auto-healer">{() => <AutoHealerPage />}</Route>
+        <Route path="/operational-cycle">{() => <OperationalCyclePage />}</Route>
 
         {/* Economy: Finance + Market + Arbitrage */}
         <Route path="/finance">{() => <FinanceHubPage />}</Route>

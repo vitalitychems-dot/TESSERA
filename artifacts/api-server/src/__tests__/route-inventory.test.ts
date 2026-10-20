@@ -294,8 +294,9 @@ describe("HYB-012 route inventory", () => {
     // Deleting POST /sigil/natal/verify drops one more (916). #7 adds
     // GET /agi/stream (SSE), so the total was 917.
     // POST /internal/session-check adds one, so the total is 918.
+    // GET /api/operational-status adds one, so the total is 919.
     // Any future route add/remove must update this.
-    expect(registrations.length).toBe(918);
+    expect(registrations.length).toBe(919);
   });
 
   it("allow-lists exactly the current duplicates, including the two ruling entries", () => {
