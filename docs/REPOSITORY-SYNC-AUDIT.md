@@ -2,7 +2,7 @@
 
 Date: 2026-10-19
 
-Status: **local source reconciliation and approved upload cleanup completed; application build and targeted checks pass. The full repository suite is not green.** The latest publishing failure was traced to the production working directory and corrected locally. No source was pushed, merged, or published; a help request was posted on Gitbook's coordination issue.
+Status: **local source reconciliation, approved upload cleanup, and a successful Replit publish completed. Application build and targeted checks pass; the full repository suite is not green.** No source was pushed or merged. Gitbook help was requested; no Gitbook release approval is claimed.
 
 ## Scope and source authority
 
@@ -103,8 +103,8 @@ Root runtime audit output is now excluded from new Git tracking and deployment u
 - Three production-entry regression checks passed. The **actual configured production command**, launched from the workspace root with a clean synthetic environment and no database/owner credentials, returned HTTP 200 from `/api/healthz`.
 - Refreshed development workflows are running. API health returned 200; unauthenticated provider and conversation requests returned 401. The mobile owner-entry preview and keyboard loaded without browser errors.
 - **The full root repository suite failed**, including checks that require absent `.github` governance files, gate support, and sibling runtime/registry checkout inputs. They were not silently skipped or described as passing. Separate applications and archived trees were not imported just to satisfy these checks.
-- Real owner sign-in, production database behavior, restart durability of private data, and a newly published build were not verified. No database migration was performed.
-- The latest published build is still failed. Its observed missing-module startup error is fixed locally; no successful republish is claimed.
+- Real owner sign-in, production database read/write behavior, restart durability of private data, and actual object-storage upload/download are not verified. `/api/healthz` returns HTTP 200 with the database configured; that health check does not establish durable data behavior. No database migration was performed.
+- The Replit republish at `2026-10-20T00:00:24Z` succeeded, and the public `/api/healthz` endpoint returned HTTP 200. Both startup errors found during the failed publishing attempts were fixed: incorrect workspace-root-relative launch paths, then an externalized `@google-cloud/storage` import missing after publishing pruned installed packages.
 - Background logs still contain disabled-subsystem heartbeat and unavailable external-feed warnings. These do not prevent the verified health endpoint or entry screen from loading, but they are not evidence that those integrations work.
 
 ## Retained and unresolved material

@@ -1,6 +1,16 @@
 # TESSERA launch verification
 
-Status: **PREPARED / BLOCKED — not published.**
+Status: **PUBLISHED — latest autoscale build succeeded and the live API health endpoint returned HTTP 200.**
+
+## Current deployment status
+
+Verified after the owner republished on 2026-10-20 UTC:
+
+- Publishing completed successfully; the deployment service reports `isDeployed: true` and `hasSuccessfulBuild: true`.
+- Public `GET /api/healthz` returned HTTP 200 with `{"status":"ok","db":"configured"}`.
+- The successful attempt includes two runtime fixes: published production paths now resolve from the workspace root, and `@google-cloud/storage` is bundled into the API output instead of being left as a bare import after the publishing image removes installed packages.
+- These checks establish successful startup and a reachable health endpoint. They do **not** establish owner sign-in, database read/write durability, or real object-storage upload/download operation.
+- Historical verification notes below describe the earlier pre-publish checkpoint and remain time-specific; use this section for the current deployment status.
 
 ## Canonical checkpoint
 
@@ -16,7 +26,7 @@ Status: **PREPARED / BLOCKED — not published.**
 
 - Managed web service at `/`; API routes at `/api`; mesh WebSocket route at `/ws`.
 - Static frontend output: `artifacts/tessera/dist/public`.
-- Development API runtime uses the API artifact working directory. Published production commands run from the workspace root: `node --import ./scripts/replit-runtime-env.mjs --enable-source-maps ./artifacts/api-server/dist/index.mjs`. This distinction was confirmed by the failed publishing logs and an isolated successful launch of the corrected command.
+- Development API runtime uses the API artifact working directory. Published production commands run from the workspace root: `node --import ./scripts/replit-runtime-env.mjs --enable-source-maps ./artifacts/api-server/dist/index.mjs`. The corrected command was verified in an isolated launch and then in the successful published deployment.
 - Node 24.13.0 and the available pnpm 10.26.1 are used. The upstream pnpm 11.25.0 self-bootstrap failed in this environment; the local package-manager declaration was adjusted. Dependency installation still passed with the upstream frozen lockfile.
 - Runtime adapter preserves an explicitly supplied sovereign session secret, otherwise maps the existing Replit session secret to the canonical required variable name without logging or persisting its value.
 - `TESSERA_ENABLE_RICK_LOOP=0`, `TESSERA_ENABLE_COLONIAL_FALLBACK=0`, and port fallback is disabled.
@@ -49,7 +59,7 @@ Verification after the rotation confirmation flow: three API test files / 19 tes
 - The Secret is configured, but its value was never read or entered by the agent. Owner unlock and live signed-in operation remain unverified. No real owner-triggered replacement was issued in this workspace.
 - Gitbook currently has five open issues, plus active TESSERA PRs including a theme-cleanup PR. No issue was closed, no PR opened, and no task marked complete: the required per-task overlap/check-in and review gates have not been completed.
 - Storage-backed upload/download endpoints are not verified. Their fake object-ID probes were removed from readiness checks because they do not test whether a real object exists; storage availability itself still needs testing/configuration before relying on file features.
-- Production persistence, production database behavior, and successful live access have not been verified. The deployment service now reports a failed published build; do not interpret the local preview as a successful deployment.
+- Production database persistence and real storage operations remain unverified. The current successful build and live health check are recorded at the top of this document; a configured health-check database is not proof of durable writes.
 - Gitbook's provenance/security review and exact release approval remain outstanding. Its current policy requires branches/PRs, green CI, a TESSERA build pass, Security PASS, and Moderator PASS before merge. No merge or publication occurred.
 - The full multi-application test suite was not run; only the active launch build and the selected canonical boot/access-control suite are reported here.
 - GitHub CI and secret-scan jobs on the checkpoint did not execute because of a GitHub account billing/spending restriction. This is not passing CI or secret-scan evidence.
