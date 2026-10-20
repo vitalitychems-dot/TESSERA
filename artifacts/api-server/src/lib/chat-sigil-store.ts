@@ -84,6 +84,9 @@ export class ChatSigilStore {
 let store: ChatSigilStore | undefined;
 export function chatSigilStore() { return store ??= new ChatSigilStore(); }
 
+/** Test-only: point the singleton at an isolated table or clear it between simulated restarts. */
+export function setChatSigilStoreForTests(next: ChatSigilStore | undefined) { store = next; }
+
 export async function requireChatSigil(req: Request, res: Response, next: NextFunction) {
   const session = lookupSession(req.cookies?.[SESSION_COOKIE]);
   if (!session.valid || !session.record) return res.status(401).json({ ok: false, error: "unauthenticated" });
