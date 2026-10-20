@@ -2,14 +2,17 @@
  * Bus-history logger (#11a).
  *
  * Append-only JSONL log, one record per bus message:
- *   { ts, from, topic, sha256, goal_id }
- * Hashes only: the payload itself is never written, only sha256 of its JSON.
+ *   { ts, from, topic, hmac_sha256, goal_id }
+ * Hashes only: the payload itself is never written, only HMAC-SHA256(key, JSON(payload)) with a
+ * server secret from BUS_HISTORY_HMAC_KEY (>= 32 chars), so short or guessable payloads can't be
+ * confirmed by hashing guesses. Unset or too-short key => fail closed: nothing is written.
+ * goal_id is kept only when it is id-like; emails and name-like values are dropped (null).
  * Off by default: enabled only when BUS_HISTORY_LOG=1 (or "true").
  * Size cap + rotation: when the file would exceed BUS_HISTORY_MAX_BYTES
  * (default 5 MB) it is renamed to <file>.1 (older files shift up to
  * BUS_HISTORY_MAX_FILES, default 3) and a fresh file is started.
  */
-import { createHash } from "node:crypto";
+import { createHmac } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, renameSync, rmSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
@@ -17,12 +20,14 @@ export interface BusHistoryRecord {
   ts: string;
   from: string;
   topic: string;
-  sha256: string;
+  hmac_sha256: string;
   goal_id: string | null;
 }
 
 export interface BusHistoryConfig {
   enabled: boolean;
+  /** HMAC key (server secret). null => logging is off even when enabled (fail closed). */
+  hmacKey: string | null;
   path: string;
   maxBytes: number;
   maxFiles: number;
@@ -40,27 +45,42 @@ export function busHistoryConfig(env: NodeJS.ProcessEnv = process.env): BusHisto
   const flag = String(env.BUS_HISTORY_LOG ?? "").trim().toLowerCase();
   return {
     enabled: flag === "1" || flag === "true",
+    hmacKey: typeof env.BUS_HISTORY_HMAC_KEY === "string" && env.BUS_HISTORY_HMAC_KEY.length >= MIN_HMAC_KEY_CHARS ? env.BUS_HISTORY_HMAC_KEY : null,
     path: resolve(env.BUS_HISTORY_PATH || "data/bus-history.jsonl"),
     maxBytes: posInt(env.BUS_HISTORY_MAX_BYTES, DEFAULT_MAX_BYTES),
     maxFiles: posInt(env.BUS_HISTORY_MAX_FILES, DEFAULT_MAX_FILES),
   };
 }
 
-export function hashPayload(payload: unknown): string {
+export const MIN_HMAC_KEY_CHARS = 32;
+
+export function hashPayload(payload: unknown, key: string): string {
+  if (typeof key !== "string" || key.length < MIN_HMAC_KEY_CHARS) throw new Error("BUS_HISTORY_HMAC_KEY missing or too short");
   let s: string;
   try { s = JSON.stringify(payload) ?? "undefined"; } catch { s = "[unserializable]"; }
-  return createHash("sha256").update(s).digest("hex");
+  return createHmac("sha256", key).update(s).digest("hex");
+}
+
+const EMAIL = /[^\s@]+@[^\s@]+/;
+/** id-like: ASCII, starts alphanumeric, at most 64 chars, and contains a digit or a separator (so a bare word like a first name is not kept). */
+const GOAL_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/;
+/** Returns the goal_id when it is safe to log, else null: no emails, no whitespace/name-like values. */
+export function safeGoalId(v: unknown): string | null {
+  if (typeof v === "number") return Number.isSafeInteger(v) && v >= 0 ? String(v) : null;
+  if (typeof v !== "string") return null;
+  if (EMAIL.test(v) || !GOAL_ID.test(v)) return null;
+  if (!/[0-9._:-]/.test(v)) return null;
+  return v;
 }
 
 export function goalIdOf(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") return null;
   const p = payload as Record<string, unknown>;
-  const g = p.goal_id ?? p.goalId;
-  return typeof g === "string" || typeof g === "number" ? String(g) : null;
+  return safeGoalId(p.goal_id ?? p.goalId);
 }
 
-export function toRecord(from: string, topic: string, payload: unknown, at: number = Date.now()): BusHistoryRecord {
-  return { ts: new Date(at).toISOString(), from, topic, sha256: hashPayload(payload), goal_id: goalIdOf(payload) };
+export function toRecord(from: string, topic: string, payload: unknown, key: string, at: number = Date.now()): BusHistoryRecord {
+  return { ts: new Date(at).toISOString(), from, topic, hmac_sha256: hashPayload(payload, key), goal_id: goalIdOf(payload) };
 }
 
 function rotate(cfg: BusHistoryConfig): void {
@@ -81,8 +101,8 @@ export function logBusMessage(
   at: number = Date.now(),
   cfg: BusHistoryConfig = busHistoryConfig(),
 ): BusHistoryRecord | null {
-  if (!cfg.enabled) return null;
-  const rec = toRecord(from, topic, payload, at);
+  if (!cfg.enabled || typeof cfg.hmacKey !== "string" || cfg.hmacKey.length < MIN_HMAC_KEY_CHARS) return null;
+  const rec = toRecord(from, topic, payload, cfg.hmacKey, at);
   const line = `${JSON.stringify(rec)}\n`;
   try {
     mkdirSync(dirname(cfg.path), { recursive: true });

@@ -106,3 +106,6 @@ config/secrets/*
 # Creator logs stay off the public tree (Gitbook #67)
 **/creator/*.jsonl
 **/father-msgs*.jsonl
+
+# Bus-history logger output (#11a): never commit, incl. rotated files
+**/data/bus-history.jsonl*
