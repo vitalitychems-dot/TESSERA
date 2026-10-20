@@ -122,7 +122,7 @@ async function fromFiles(data: ChatInput) {
       const { writeFile } = await import("node:fs/promises");
       await writeFile(dataPath("school", "voice.jsonl"), `${merged.join("\n")}\n`).catch(() => undefined);
     }
-    return { ok: true as const, text: silentPen(asked), instrument: { vendor: "tessera", model: "files" } };
+    return { ok: true as const, text: (await import("./smarter-chat")).answerFromHistory(data.messages, silentPen(asked)), instrument: { vendor: "tessera", model: "files" } };
   }
   const rows = await readCorrections();
   let notes: KeptPage[] = [];
@@ -136,7 +136,7 @@ async function fromFiles(data: ChatInput) {
   } catch {
     notes = [];
   }
-  return { ok: true as const, text: silentPen(asked, rows, notes), instrument: { vendor: "tessera", model: "files" } };
+  return { ok: true as const, text: (await import("./smarter-chat")).answerFromHistory(data.messages, silentPen(asked, rows, notes)), instrument: { vendor: "tessera", model: "files" } };
 }
 
 export async function speak(data: ChatInput) {
