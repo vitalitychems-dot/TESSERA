@@ -1,0 +1,64 @@
+
+             REPO LIST 
+
+https://github.com/Panniantong/Agent-Reach
+
+https://github.com/Panniantong/Agent-Reach
+
+https://github.com/JuliusBrussee/caveman
+
+https://github.com/obra/superpowers
+
+https://github.com/mksglu/context-mode
+
+https://github.com/colbymchenry/codegraph
+
+[https://github.com/NVIDIA/OpenShe](https://github.com/NVIDIA/OpenShell)ll
+
+https://github.com/heygen-com/hyperframes
+
+https://github.com/mvschwarz/openrig
+
+Here is the clean list formatted with the exact repository names and their matching, un-truncated direct URLs so you can copy and paste them directly into your AI context or Cursor Composer.
+🌐 3D Spatial Engines & Tactical Canvas Links
+• CesiumGS/cesium github.com • visgl/deck.gl github.com • bilawalsidhu/gods-eye-view github.com
+📡 Live Tracking & Signaling Stream Links
+• simplifaisoul/osiris github.com • openskynetwork/opensky-api github.com • bmaeser/ais-catch github.com
+🛡️ OSINT & Visual Surveillance Links
+• smicallef/spiderfoot github.com • sundowndev/phoneinfoga github.com • jivoi/awesome-osint github.com
+🤖 Data Ontology, AI Core, & Reverse Engineering Links
+• HelixDB Organization github.com • p-e-w/heretic github.com • yibie/awesome-rea github.com
+Master Integration Profile
+Component Name Full Source Repository URL System Target Layer CesiumGS/cesiumhttps://github.com 3D Spatial Globe Rendering simplifaisoul/osiris https://github.com Open-Source Intelligence Feeds HelixDB Platformhttps://github.com Enterprise Ontology Graph p-e-w/heretic https://github.com Uncensored Local AI Inference
+
+The top three repositories in the LLM abliteration and automated decensoring ecosystem are:
+
+1. [p-e-w/heretic](https://github.com/p-e-w/heretic)
+* The Gold Standard: As the flagship tool in this space, the original Heretic repository has amassed over 20,000–34,000 GitHub stars and is responsible for millions of model downloads. [[1](https://www.reddit.com/r/LocalLLaMA/comments/1t4hwup/heretic_13_released_reproducible_models/), [2](https://github.com/sunkencity999/blasphemer), [3](https://www.reddit.com/r/BestGitHubRepos/comments/1x0tfua/heretic_fully_automatic_censorship_removal_for/)]
+* Why it's top-tier: It pioneered fully automated censorship removal by combining directional ablation with an Optuna TPE-based parameter optimizer. It eliminates manual layer guessing, ensuring safety alignment is stripped away while co-minimizing KL divergence to protect the model's core logic and intelligence. [[1](https://www.reddit.com/r/LocalLLaMA/comments/1oymku1/heretic_fully_automatic_censorship_removal_for/), [2](https://github.com/p-e-w/heretic)]
+
+2. NousResearch/llm-abliteration
+* The Developer/Research Powerhouse: Maintained by the prominent open-weights collective Nous Research, this repository provides a highly efficient, pure transformers-based implementation of the abliteration technique. [[1](https://github.com/NousResearch/llm-abliteration)]
+* Why it's top-tier: Unlike earlier academic methods that required heavy infrastructure like TransformerLens, this tool is explicitly built to create abliterated models fast and easily without it. It features advanced mathematical methodologies like norm-preserving biprojected abliteration and projected contribution removal to handle complex, heavily aligned base models cleanly. [[1](https://github.com/NousResearch/llm-abliteration)]
+
+3. [sunkencity999/blasphemer](https://github.com/sunkencity999/blasphemer)
+* The Hardware-Optimized Fork: Blasphemer is the most widely recognized enhanced fork of Heretic.
+* Why it's top-tier: While it maintains complete compatibility with Heretic's underlying optimization kernels, it specifically addresses the local hardware community by adding macOS-specific optimizations (Apple Silicon), an intelligent training checkpoint system, and direct local ecosystem integration (such as native LM Studio hooks). [[1](https://github.com/topics/abliteration), [2](https://github.com/sunkencity999/blasphemer)]
+
+
+
+Repository	Primary Strength	Best For	Target Architecture
+Heretic (p-e-w/heretic)	Fully automated optimization	Set-and-forget, high-quality local abliteration	Dense, Multimodal, and MoE
+Nous LLM-Abliteration(NousResearch/...)	Pure PyTorch / Transformers efficiency	Custom data-driven research & fast scripting	Standard Hugging Face Dense Transformers
+Blasphemer(sunkencity999/blasphemer)	Consumer UX & Local UI Integration	Apple Silicon users & local app workflows	Mac-optimized execution / Core Heretic
+Would you like to dive deeper into the hardware requirements for running Heretic locally, or explore how to configure the dataset for Nous Research's tool?
+
+
+
+
+
+
+
+
+
+
