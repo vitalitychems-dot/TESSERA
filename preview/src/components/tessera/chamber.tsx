@@ -35,6 +35,7 @@ import { answerInContext } from "@/lib/tessera/skill-context";
 import { rememberAsk } from "@/lib/tessera/forty";
 import { loadAsks, recall, remember, type Ask } from "@/lib/tessera/ask-memory";
 import { heldBack, shouldStayLocal } from "@/lib/tessera/scope-stop";
+import { MESH_SEEN } from "@/lib/tessera/mesh-nodes";
 import { skillDrill, addedLines, drillText } from "@/lib/tessera/skill-drill";
 import { runSitting } from "@/lib/tessera/sitting-25";
 
@@ -552,27 +553,22 @@ export function Chamber() {
       sending.current = false;
       return;
     }
-    const result = await Promise.race([
-      speakAsTessera({
-        data: {
-          mode: "chat",
-          messages: history,
-          constitution: state.constitution,
-          pulses: state.pulses.map((p) => p.text),
-          lessons: state.lessons.filter((l) => l.status === "sealed").map((l) => l.text),
-          world: {
-            tick: state.worldTick,
-            events: state.worldEvents.slice(-4).map((e) => `Tick ${e.tick}: ${e.text}`),
-            laws: state.laws.map((l) => `${l.title}: ${l.body}`),
-          },
+    const result = await speakAsTessera({
+      data: {
+        mode: "chat",
+        messages: history,
+        constitution: state.constitution,
+        pulses: state.pulses.map((p) => p.text),
+        lessons: state.lessons.filter((l) => l.status === "sealed").map((l) => l.text),
+        world: {
+          tick: state.worldTick,
+          events: state.worldEvents.slice(-4).map((e) => `Tick ${e.tick}: ${e.text}`),
+          laws: state.laws.map((l) => `${l.title}: ${l.body}`),
         },
-      }),
-      new Promise<{ ok: false; error: string }>((resolve) => {
-        window.setTimeout(() => resolve({ ok: false, error: "The pen took too long. Your words stayed." }), 12000);
-      }),
-    ]).catch((error: unknown) => ({
+      },
+    }).catch((error: unknown) => ({
       ok: false as const,
-      error: error instanceof Error && /aborted|timeout/i.test(error.message) ? "The pen took too long. Your words stayed." : error instanceof Error ? error.message : "The pen did not answer.",
+      error: error instanceof Error ? error.message : "The pen did not answer.",
     }));
     setPending(false);
     sending.current = false;
@@ -739,6 +735,9 @@ export function Chamber() {
       </div>
 
       <div className="z-40 shrink-0 bg-bg px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-8">
+        <div className="mx-auto mb-2 w-full max-w-2xl text-xs tracking-wide text-muted">
+          Mesh seats: {MESH_SEEN.map((seat) => seat.name).join(", ")}
+        </div>
         <div className="mx-auto mb-2 grid w-full max-w-2xl grid-cols-3 gap-2">
           {[
             ["Help", "help"],
