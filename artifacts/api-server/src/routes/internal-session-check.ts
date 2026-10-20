@@ -7,6 +7,9 @@
 // Not exposed by a public or preview proxy:
 // - preview/vite.config.ts binds 127.0.0.1 and sets no server.proxy or
 //   preview.proxy, so the preview server does not forward /api anywhere.
+// - The Tessera web dev server proxies /api and /ws only for `vite serve`
+//   in development. That proxy bypasses /api/internal, keeps xfwd off, and
+//   strips forwarding headers. `vite build` and `vite preview` do not set it.
 // - The handler accepts only a socket peer of 127.0.0.1, ::1, or
 //   ::ffff:127.0.0.1, and rejects proxy forwarding headers. A reverse proxy in
 //   front of this process is a non-loopback peer, or it adds those headers.
