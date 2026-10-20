@@ -56,6 +56,23 @@ export function getDb(): Database {
   return dbSingleton;
 }
 
+/** A one-off, bounded connectivity probe that does not use or mutate the shared pool. */
+export async function probeDatabase(timeoutMs = 1_500): Promise<void> {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) throw new DbUnavailableError();
+  const client = new pg.Client({
+    connectionString,
+    connectionTimeoutMillis: timeoutMs,
+    query_timeout: timeoutMs,
+  });
+  try {
+    await client.connect();
+    await client.query("SELECT 1");
+  } finally {
+    await client.end().catch(() => undefined);
+  }
+}
+
 function lazyProxy<T extends object>(resolve: () => T): T {
   return new Proxy({} as T, {
     get(_target, prop) {

@@ -18,6 +18,7 @@ import {
   setPoolFactoryForTests,
 } from "@workspace/db";
 import healthRouter from "../routes/health";
+import operationalStatusRouter from "../routes/operational-status";
 import inventionsRouter from "../routes/inventions";
 import { rejectWhenDatabaseNotConfigured } from "../lib/db-availability";
 
@@ -92,6 +93,25 @@ describe("optional database boot", () => {
     const response = await fetch(`${baseUrl}/healthz`);
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: "ok", db: "not-configured" });
+    expect(poolCalls).toEqual([]);
+  });
+
+  it("GET /api/operational-status reports not-configured without connecting", async () => {
+    const app = express();
+    app.use(rejectWhenDatabaseNotConfigured);
+    app.use("/api", operationalStatusRouter);
+    const { server, baseUrl } = await listen(app);
+    servers.push(server);
+    const response = await fetch(`${baseUrl}/api/operational-status`);
+    expect(response.status).toBe(200);
+    const body = await response.json() as {
+      database: { state: string };
+      model: { state: string };
+      worker: { state: string };
+    };
+    expect(body.database.state).toBe("not-configured");
+    expect(body.model.state).toBe("unverified");
+    expect(body.worker.state).toBe("unverified");
     expect(poolCalls).toEqual([]);
   });
 

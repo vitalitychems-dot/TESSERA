@@ -43,6 +43,7 @@ const SECONDARY: NavTab[] = [
   { label: "Command", href: "/command-center", Icon: Terminal, match: (l) => l === "/command-center", color: "cyan" },
   { label: "Roadmap", href: "/sovereignty-roadmap", Icon: Map, match: (l) => l === "/sovereignty-roadmap", color: "violet" },
   { label: "System", href: "/system", Icon: Cpu, match: (l) => l === "/system", color: "cyan" },
+  { label: "Cycle", href: "/operational-cycle", Icon: Workflow, match: (l) => l === "/operational-cycle", color: "cyan" },
   { label: "Income", href: "/income", Icon: Workflow, match: (l) => l === "/income", color: "emerald" },
   { label: "Leads", href: "/lead-gen", Icon: Target, match: (l) => l === "/lead-gen", color: "amber" },
   { label: "Ecom", href: "/ecom", Icon: ShoppingCart, match: (l) => l === "/ecom", color: "amber" },
