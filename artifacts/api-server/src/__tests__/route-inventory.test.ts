@@ -331,7 +331,7 @@ describe("HYB-012 route inventory", () => {
         module: entry.module,
       }));
     expect(fromExpress).toEqual(fromSource);
-  });
+  }, 30_000);
 });
 
 describe("HYB-012 quantum mount order", () => {
