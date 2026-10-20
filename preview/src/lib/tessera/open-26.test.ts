@@ -46,7 +46,8 @@ test("the 26 open items run, and four stay open", () => {
   assert.equal(twentyEight().count, 2);
   assert.deepEqual(useBridgeUpgrade("").order, ["use", "bridge", "upgrade"]);
   assert.equal(useBridgeUpgrade("").replaced, false);
-  assert.equal(heldOut("are you agi"), "not met");
+  assert.equal(heldOut("open the zip"), "stays packed");
+  assert.equal(heldOut("are you agi"), "");
   assert.equal(unexpired([{ key: "a", value: "1", until: 5 }], 5).length, 0);
   assert.equal(unexpired([{ key: "a", value: "1", until: 5 }], 4)[0]?.value, "1");
   assert.equal(notice(10).at, 10);

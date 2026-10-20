@@ -1,6 +1,7 @@
 import { firmLine } from "./firm-combo.ts";
 import { watchLine } from "./watch-loop.ts";
 import { fortyLine } from "./forty-big.ts";
+import { matterLine } from "./matter-80.ts";
 import { trainLine } from "./five-train.ts";
 import { keptAnswer, type Correction } from "./corrections.ts";
 import { allEight } from "./desk-steps.ts";
@@ -203,6 +204,7 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (/\bfirmest combo\b/i.test(q)) return firmLine();
   if (/\bwatch the window\b/i.test(q)) return watchLine();
   if (/\bbuild forty\b/i.test(q)) return fortyLine();
+  if (/\b(run the five kinds|agentic loop|empathic pattern|self-model)\b/i.test(q)) return matterLine();
   if (/\b(train from chat|from inside this chat|build yourself from inside)\b/i.test(q)) return trainLine();
   if (/\b(build herself|build yourself)\b/i.test(q)) {
     const built = buildNow();
