@@ -298,5 +298,5 @@ export function getDecisionHistory() {
 }
 
 // Step 1 of the dual-brain plan: Brain B gates Brain A's memory/learning changes on held-out data.
-export { BrainA, runImprovementGate, DEFAULT_BRAIN_A } from "./agi/improvement-gate";
+export { BrainA, HeldoutBudget, runImprovementGate, selectOnDev, DEFAULT_BRAIN_A } from "./agi/improvement-gate";
 export type { BrainAConfig, GateDecision, Proposal } from "./agi/improvement-gate";

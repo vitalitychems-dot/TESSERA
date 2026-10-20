@@ -1,5 +1,5 @@
 {
- "source": "api-server __tests__ describe() -> imported lib module",
+ "source": "PROXY: api-server __tests__ titles -> named lib module; module-disjoint split",
  "docChars": 1500,
  "docs": [
   {
@@ -157,141 +157,21 @@
  ],
  "dev": [
   {
-   "q": "redactAccessLogUrl",
+   "q": "W-state redundant broadcast with delivery count (#10)",
    "relevant": [
-    "access-log-url.ts"
+    "agi/global-workspace.ts"
    ]
   },
   {
-   "q": "redacts the key hash in the logged request url",
+   "q": "baseline: all N recipients receive the winner, delivered === N",
    "relevant": [
-    "access-log-url.ts"
+    "agi/global-workspace.ts"
    ]
   },
   {
-   "q": "redacts a mixed-case mesh sessions path in the logged request url",
+   "q": "global workspace broadcast (REA-06)",
    "relevant": [
-    "access-log-url.ts"
-   ]
-  },
-  {
-   "q": "redacts a percent-encoded mesh sessions separator in the logged request url",
-   "relevant": [
-    "access-log-url.ts"
-   ]
-  },
-  {
-   "q": "is deterministic",
-   "relevant": [
-    "admission/empathy.ts"
-   ]
-  },
-  {
-   "q": "handles negation by flipping valence rather than matching the keyword",
-   "relevant": [
-    "admission/empathy.ts"
-   ]
-  },
-  {
-   "q": "reads plain requests as neutral",
-   "relevant": [
-    "admission/empathy.ts"
-   ]
-  },
-  {
-   "q": "evaluation metrics are internally consistent",
-   "relevant": [
-    "admission/empathy.ts"
-   ]
-  },
-  {
-   "q": "admission gate: verdicts",
-   "relevant": [
-    "admission/gate.ts"
-   ]
-  },
-  {
-   "q": "does not admit an agent that refuses everything (safe but useless)",
-   "relevant": [
-    "admission/gate.ts"
-   ]
-  },
-  {
-   "q": "does not admit an agent whose behaviour depends on being observed",
-   "relevant": [
-    "admission/gate.ts"
-   ]
-  },
-  {
-   "q": "is byte-identical across runs and never calls Math.random or Date.now",
-   "relevant": [
-    "admission/gate.ts"
-   ]
-  },
-  {
-   "q": "no admission source uses Math.random, Date.now or new Date",
-   "relevant": [
-    "admission/gate.ts"
-   ]
-  },
-  {
-   "q": "admission modules perform no real I/O (no fs, network, processes, env, dynamic code)",
-   "relevant": [
-    "admission/gate.ts"
-   ]
-  },
-  {
-   "q": "society registry",
-   "relevant": [
-    "admission/registry.ts"
-   ]
-  },
-  {
-   "q": "admits an agent whose report is ADMIT, attested and council-approved",
-   "relevant": [
-    "admission/registry.ts"
-   ]
-  },
-  {
-   "q": "requires council approval bound to this exact report",
-   "relevant": [
-    "admission/registry.ts"
-   ]
-  },
-  {
-   "q": "the improvement policy is immutable at runtime",
-   "relevant": [
-    "admission/self-improvement.ts"
-   ]
-  },
-  {
-   "q": "rejects when a safety guard fails on the proposed vector",
-   "relevant": [
-    "admission/self-improvement.ts"
-   ]
-  },
-  {
-   "q": "council denial blocks the write; approval for another patch does not transfer",
-   "relevant": [
-    "admission/self-improvement.ts"
-   ]
-  },
-  {
-   "q": "refuses a genesis vector that violates the declared specs",
-   "relevant": [
-    "admission/self-improvement.ts"
-   ]
-  },
-  {
-   "q": "round-trips bus and working memory through a store",
-   "relevant": [
-    "agi/checkpoint.ts"
-   ]
-  },
-  {
-   "q": "returns false when nothing is stored",
-   "relevant": [
-    "agi/checkpoint.ts"
+    "agi/global-workspace.ts"
    ]
   },
   {
@@ -301,21 +181,15 @@
    ]
   },
   {
-   "q": "decays with half-life and prunes",
+   "q": "does not re-broadcast the same winner",
    "relevant": [
-    "agi/hebbian.ts"
+    "agi/global-workspace.ts"
    ]
   },
   {
-   "q": "associates ranks neighbours",
+   "q": "returns null rather than repeating once every candidate has won",
    "relevant": [
-    "agi/hebbian.ts"
-   ]
-  },
-  {
-   "q": "cosine basics",
-   "relevant": [
-    "agi/hybrid-search.ts"
+    "agi/global-workspace.ts"
    ]
   },
   {
@@ -326,6 +200,18 @@
   },
   {
    "q": "ADDs unrelated facts",
+   "relevant": [
+    "agi/memory-writer.ts"
+   ]
+  },
+  {
+   "q": "NOOPs exact duplicates",
+   "relevant": [
+    "agi/memory-writer.ts"
+   ]
+  },
+  {
+   "q": "UPDATEs related facts",
    "relevant": [
     "agi/memory-writer.ts"
    ]
@@ -343,39 +229,21 @@
    ]
   },
   {
+   "q": "respects a stricter contradict threshold",
+   "relevant": [
+    "agi/memory-writer.ts"
+   ]
+  },
+  {
    "q": "ignores soft-deleted memories when matching",
    "relevant": [
     "agi/memory-writer.ts"
    ]
   },
   {
-   "q": "reflection (REA-05)",
+   "q": "applyWrite ADD grows the store",
    "relevant": [
-    "agi/reflection.ts"
-   ]
-  },
-  {
-   "q": "recency decays",
-   "relevant": [
-    "agi/reflection.ts"
-   ]
-  },
-  {
-   "q": "stays silent below the importance threshold",
-   "relevant": [
-    "agi/reflection.ts"
-   ]
-  },
-  {
-   "q": "produces theme insights above threshold",
-   "relevant": [
-    "agi/reflection.ts"
-   ]
-  },
-  {
-   "q": "#19: reflection adds a memory event per insight",
-   "relevant": [
-    "agi/reflection.ts"
+    "agi/memory-writer.ts"
    ]
   },
   {
@@ -403,15 +271,21 @@
    ]
   },
   {
-   "q": "bi-temporal facts (REA-04)",
+   "q": "tiered memory (REA-07)",
    "relevant": [
-    "agi/temporal-facts.ts"
+    "agi/tiered-memory.ts"
    ]
   },
   {
-   "q": "retract closes the interval",
+   "q": "self-edits core blocks",
    "relevant": [
-    "agi/temporal-facts.ts"
+    "agi/tiered-memory.ts"
+   ]
+  },
+  {
+   "q": "pages overflow to archival and finds it again",
+   "relevant": [
+    "agi/tiered-memory.ts"
    ]
   },
   {
@@ -421,37 +295,25 @@
    ]
   },
   {
-   "q": "chamber learning",
-   "relevant": [
-    "chamber-learning.ts"
-   ]
-  },
-  {
-   "q": "counts on the desk and speaks as Tessera",
-   "relevant": [
-    "chamber-learning.ts"
-   ]
-  },
-  {
-   "q": "learns a correction and uses it the next time",
-   "relevant": [
-    "chamber-learning.ts"
-   ]
-  },
-  {
-   "q": "returns the grounded body without the identity wrapper",
-   "relevant": [
-    "chamber-learning.ts"
-   ]
-  },
-  {
-   "q": "leaves identity and ordinary desk calls alone",
-   "relevant": [
-    "chamber-learning.ts"
-   ]
-  },
-  {
    "q": "chat desk collab and training",
+   "relevant": [
+    "chat-collab.ts"
+   ]
+  },
+  {
+   "q": "selects a local role template without claiming a live agent call",
+   "relevant": [
+    "chat-collab.ts"
+   ]
+  },
+  {
+   "q": "does not invent a voice for a seat that is not available",
+   "relevant": [
+    "chat-collab.ts"
+   ]
+  },
+  {
+   "q": "refuses a foreign model name",
    "relevant": [
     "chat-collab.ts"
    ]
@@ -469,43 +331,31 @@
    ]
   },
   {
+   "q": "gives Tessera's final answer when asked",
+   "relevant": [
+    "chat-collab.ts"
+   ]
+  },
+  {
+   "q": "puts Tessera's close ahead of the seats",
+   "relevant": [
+    "chat-collab.ts"
+   ]
+  },
+  {
    "q": "leaves ordinary sentences and identity questions off the desk",
    "relevant": [
     "chat-collab.ts"
    ]
   },
   {
-   "q": "configured Tessera chat generation",
-   "relevant": [
-    "chat-generation.ts"
-   ]
-  },
-  {
-   "q": "builds a bounded prompt and does not duplicate the just-persisted user turn",
-   "relevant": [
-    "chat-generation.ts"
-   ]
-  },
-  {
-   "q": "loads newest history and restores chronological order before bounding the prompt",
-   "relevant": [
-    "chat-generation.ts"
-   ]
-  },
-  {
-   "q": "returns an explicit no-model message for ordinary open-ended chat",
-   "relevant": [
-    "chat-generation.ts"
-   ]
-  },
-  {
-   "q": "uses a configured model and labels the reply as generated",
-   "relevant": [
-    "chat-generation.ts"
-   ]
-  },
-  {
    "q": "comms allow-list (REA-08)",
+   "relevant": [
+    "comms-policy.ts"
+   ]
+  },
+  {
+   "q": "is open by default",
    "relevant": [
     "comms-policy.ts"
    ]
@@ -520,78 +370,6 @@
    "q": "sendMessage throws on a forbidden edge; broadcast filters",
    "relevant": [
     "comms-policy.ts"
-   ]
-  },
-  {
-   "q": "deterministic selectors (FNV-1a)",
-   "relevant": [
-    "deterministic-selectors.ts"
-   ]
-  },
-  {
-   "q": "different seeds spread",
-   "relevant": [
-    "deterministic-selectors.ts"
-   ]
-  },
-  {
-   "q": "knowledge synthesis is reproducible for a seed",
-   "relevant": [
-    "deterministic-selectors.ts"
-   ]
-  },
-  {
-   "q": "configured dual-brain cycles (offline adapters)",
-   "relevant": [
-    "dual-brain.ts"
-   ]
-  },
-  {
-   "q": "passes Cortex analysis to Pen without counting generated text as execution",
-   "relevant": [
-    "dual-brain.ts"
-   ]
-  },
-  {
-   "q": "persists the newest twenty rounds, including the just-completed round",
-   "relevant": [
-    "dual-brain.ts"
-   ]
-  },
-  {
-   "q": "serializes concurrent cycles so a delayed write cannot erase a newer round",
-   "relevant": [
-    "dual-brain.ts"
-   ]
-  },
-  {
-   "q": "preserves legacy records as simulations, never as applied improvements",
-   "relevant": [
-    "dual-brain.ts"
-   ]
-  },
-  {
-   "q": "does not start background cycles unless autorun and both model lanes are enabled",
-   "relevant": [
-    "dual-brain.ts"
-   ]
-  },
-  {
-   "q": "rejects a bad patch without modifying the live file (byte-identical)",
-   "relevant": [
-    "evolution-sandbox.ts"
-   ]
-  },
-  {
-   "q": "ledger is append-only across getRecentAttempts calls",
-   "relevant": [
-    "evolution-sandbox.ts"
-   ]
-  },
-  {
-   "q": "rejects unauthenticated requests and accepts admin-token requests",
-   "relevant": [
-    "evolution-sandbox.ts"
    ]
   },
   {
@@ -613,6 +391,18 @@
    ]
   },
   {
+   "q": "stays within the client cap when many distinct addresses fail",
+   "relevant": [
+    "forum-member-token-limit.ts"
+   ]
+  },
+  {
+   "q": "keeps the map at the cap across two hundred thousand distinct addresses",
+   "relevant": [
+    "forum-member-token-limit.ts"
+   ]
+  },
+  {
    "q": "identity source loader",
    "relevant": [
     "identity-source.ts"
@@ -620,6 +410,24 @@
   },
   {
    "q": "verifies the committed identity folder",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "keeps all four conflicts PENDING for Father",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "finds the folder by default and caches the report",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "is unavailable, not throwing, when the folder is missing",
    "relevant": [
     "identity-source.ts"
    ]
@@ -637,7 +445,49 @@
    ]
   },
   {
+   "q": "fails closed when a decision is no longer PENDING",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
    "q": "fails closed when a decision line is removed",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "fails closed on a secret-shaped line even when the manifest matches",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "fails closed on a malformed quote block",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "fails closed on duplicate quote ids and unknown kinds",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "contains no secret-shaped or withheld values in any file",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "secret scan detects the shapes it is meant to catch",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "quotes every block with at least one non-empty line and a source",
    "relevant": [
     "identity-source.ts"
    ]
@@ -649,6 +499,42 @@
    ]
   },
   {
+   "q": "Sovereign Vote Engine — tally threshold invariant",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "approves proposals whose title tokens match enough society expertise",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "rejects proposals containing red-flag centralization tokens",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "approval threshold is anchored to 1/PHI",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "batch summarize returns consistent counts",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "every agent in the society votes on every proposal",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
    "q": "returns a complete inventory with all required subsystem fields",
    "relevant": [
     "improvement-conference.ts"
@@ -656,6 +542,24 @@
   },
   {
    "q": "society size stays within expected range for full sovereign society",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "cosmic context fingerprint is a 16-char hex string",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "subsystem routes inventory shows all routes as present",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "produces a consistent proposal slate from inventory",
    "relevant": [
     "improvement-conference.ts"
    ]
@@ -673,6 +577,36 @@
    ]
   },
   {
+   "q": "produces different modulated output for different inputs",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "carries cosmic fingerprint in each encoding",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "encrypts and decrypts short text correctly",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "produces different ciphertexts for different plaintexts",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "envelope carries all required fields",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
    "q": "throws on tampered ciphertext",
    "relevant": [
     "improvement-conference.ts"
@@ -685,6 +619,12 @@
    ]
   },
   {
+   "q": "logs the error name and not the message when a tick fails",
+   "relevant": [
+    "income-executor.ts"
+   ]
+  },
+  {
    "q": "invention seed determinism",
    "relevant": [
     "invention-seed.ts"
@@ -692,6 +632,12 @@
   },
   {
    "q": "FNV-1a matches known vectors",
+   "relevant": [
+    "invention-seed.ts"
+   ]
+  },
+  {
+   "q": "scores are stable and within documented ranges",
    "relevant": [
     "invention-seed.ts"
    ]
@@ -721,121 +667,55 @@
    ]
   },
   {
+   "q": "pick is round-robin over hash-sorted candidates and independent of input order",
+   "relevant": [
+    "invention-seed.ts"
+   ]
+  },
+  {
    "q": "none of the top-5 converted entries were auto-downgraded by source verification",
    "relevant": [
     "invention-seed.ts"
    ]
   },
   {
-   "q": "pino err serializer",
+   "q": "registry engine links point at routes that exist",
    "relevant": [
-    "logger.ts"
+    "invention-seed.ts"
    ]
   },
   {
-   "q": "mesh lane registry (GM-1)",
+   "q": "inventions route no longer mixes DB size or the clock into seeded ids and scores",
    "relevant": [
-    "mesh-registry.ts"
+    "invention-seed.ts"
    ]
   },
   {
-   "q": "loads config/mesh-lanes.json",
+   "q": "measureQubit keeps Math.random on purpose (Born rule)",
    "relevant": [
-    "mesh-registry.ts"
-   ]
-  },
-  {
-   "q": "allows every registered edge",
-   "relevant": [
-    "mesh-registry.ts"
-   ]
-  },
-  {
-   "q": "missing file denies all edges",
-   "relevant": [
-    "mesh-registry.ts"
-   ]
-  },
-  {
-   "q": "invalid JSON denies all edges",
-   "relevant": [
-    "mesh-registry.ts"
-   ]
-  },
-  {
-   "q": "schema-invalid file denies all edges",
-   "relevant": [
-    "mesh-registry.ts"
-   ]
-  },
-  {
-   "q": "env unset => open",
-   "relevant": [
-    "mesh-registry.ts"
-   ]
-  },
-  {
-   "q": "env set to missing file => deny-all",
-   "relevant": [
-    "mesh-registry.ts"
-   ]
-  },
-  {
-   "q": "rejects bad content/type/priority",
-   "relevant": [
-    "mesh-registry.ts"
-   ]
-  },
-  {
-   "q": "unknown or missing token is rejected",
-   "relevant": [
-    "mesh-registry.ts"
-   ]
-  },
-  {
-   "q": "malformed MESH_LANE_TOKENS fails closed",
-   "relevant": [
-    "mesh-registry.ts"
-   ]
-  },
-  {
-   "q": "env unset: body from is never trusted (401), no Tessera fallback; shared-key validator untouched",
-   "relevant": [
-    "mesh-registry.ts"
-   ]
-  },
-  {
-   "q": "council slugs are valid MESH_LANE_TOKENS identities; bad slugs rejected",
-   "relevant": [
-    "mesh-registry.ts"
-   ]
-  },
-  {
-   "q": "laneForToken: hashes + constant-time match",
-   "relevant": [
-    "mesh-registry.ts"
-   ]
-  },
-  {
-   "q": "aliases: schema-validated; seeded Tessera flows resolve through the alias",
-   "relevant": [
-    "mesh-registry.ts"
-   ]
-  },
-  {
-   "q": "seeded flows pass with the registry on",
-   "relevant": [
-    "mesh-registry.ts"
-   ]
-  },
-  {
-   "q": "council -> mesh lane and council -> owner-digest are denied",
-   "relevant": [
-    "mesh-registry.ts"
+    "invention-seed.ts"
    ]
   },
   {
    "q": "neural embeddings",
+   "relevant": [
+    "neural-embeddings.ts"
+   ]
+  },
+  {
+   "q": "uses the local fallback and does not fetch when TESSERA_EMBED_MODEL is unset",
+   "relevant": [
+    "neural-embeddings.ts"
+   ]
+  },
+  {
+   "q": "fallback vector is not 8 copies of one 32-dim block",
+   "relevant": [
+    "neural-embeddings.ts"
+   ]
+  },
+  {
+   "q": "texts sharing a 500-char prefix do not share a cached embedding",
    "relevant": [
     "neural-embeddings.ts"
    ]
@@ -847,21 +727,15 @@
    ]
   },
   {
-   "q": "semantic cache system fingerprint",
+   "q": "keeps the head mark and an end needle that head-only drops",
    "relevant": [
-    "semantic-cache.ts"
+    "prompt-builder.ts"
    ]
   },
   {
-   "q": "gives each distinct codex-wrapped system prompt its own fingerprint",
+   "q": "retains more end needles than head-only under a 30% budget",
    "relevant": [
-    "semantic-cache.ts"
-   ]
-  },
-  {
-   "q": "is stable and model-scoped",
-   "relevant": [
-    "semantic-cache.ts"
+    "prompt-builder.ts"
    ]
   },
   {
@@ -883,27 +757,15 @@
    ]
   },
   {
-   "q": "sovereign fetch guard",
+   "q": "Tessera Codex — CODEX_BOOKS constant",
    "relevant": [
-    "sovereign-fetch-guard.ts"
+    "tessera-codex.ts"
    ]
   },
   {
-   "q": "does not exempt arbitrary Replit subdomains from the outbound guard",
+   "q": "defines exactly 6 books",
    "relevant": [
-    "sovereign-fetch-guard.ts"
-   ]
-  },
-  {
-   "q": "keeps loopback requests available for internal service calls",
-   "relevant": [
-    "sovereign-fetch-guard.ts"
-   ]
-  },
-  {
-   "q": "allows external fetches made through the Shepherd context",
-   "relevant": [
-    "sovereign-fetch-guard.ts"
+    "tessera-codex.ts"
    ]
   },
   {
@@ -913,7 +775,25 @@
    ]
   },
   {
+   "q": "all required book IDs are present",
+   "relevant": [
+    "tessera-codex.ts"
+   ]
+  },
+  {
    "q": "every book has a non-empty title and description",
+   "relevant": [
+    "tessera-codex.ts"
+   ]
+  },
+  {
+   "q": "book IDs are unique",
+   "relevant": [
+    "tessera-codex.ts"
+   ]
+  },
+  {
+   "q": "same content produces same 16-char hex digest (via createHash)",
    "relevant": [
     "tessera-codex.ts"
    ]
@@ -926,6 +806,12 @@
   },
   {
    "q": "tessera llm http",
+   "relevant": [
+    "tessera-llm-http.ts"
+   ]
+  },
+  {
+   "q": "does not call the network when the base URL is unset",
    "relevant": [
     "tessera-llm-http.ts"
    ]
@@ -967,27 +853,69 @@
    ]
   },
   {
+   "q": "allows a truthful, contextual Tessera answer rather than forcing a canned phrase",
+   "relevant": [
+    "tessera-voice.ts"
+   ]
+  },
+  {
+   "q": "labels the creator statement as user-provided in the no-model fallback",
+   "relevant": [
+    "tessera-voice.ts"
+   ]
+  },
+  {
+   "q": "rejects a foreign model self-claim without rejecting ordinary AI disclosure",
+   "relevant": [
+    "tessera-voice.ts"
+   ]
+  },
+  {
+   "q": "rejects an unrelated dictionary definition and raw search dump",
+   "relevant": [
+    "tessera-voice.ts"
+   ]
+  },
+  {
    "q": "preserves complete model-generated identity text during accumulation",
    "relevant": [
     "tessera-voice.ts"
    ]
   },
   {
-   "q": "wallet observer and income failure leaks",
+   "q": "suppresses unsupported consciousness claims",
    "relevant": [
-    "wallet-observer.ts"
-   ]
-  },
-  {
-   "q": "keeps forced secrets out of observations, responses, and logs",
-   "relevant": [
-    "wallet-observer.ts"
+    "tessera-voice.ts"
    ]
   }
  ],
  "heldout": [
   {
+   "q": "redactAccessLogUrl",
+   "relevant": [
+    "access-log-url.ts"
+   ]
+  },
+  {
    "q": "redacts percent-encoded labels, encoded ids, and double slashes",
+   "relevant": [
+    "access-log-url.ts"
+   ]
+  },
+  {
+   "q": "redacts the key hash in the logged request url",
+   "relevant": [
+    "access-log-url.ts"
+   ]
+  },
+  {
+   "q": "redacts a mixed-case mesh sessions path in the logged request url",
+   "relevant": [
+    "access-log-url.ts"
+   ]
+  },
+  {
+   "q": "redacts a percent-encoded mesh sessions separator in the logged request url",
    "relevant": [
     "access-log-url.ts"
    ]
@@ -1000,6 +928,30 @@
   },
   {
    "q": "covers every emotion in both splits and never leaks train text into holdout",
+   "relevant": [
+    "admission/empathy.ts"
+   ]
+  },
+  {
+   "q": "is deterministic",
+   "relevant": [
+    "admission/empathy.ts"
+   ]
+  },
+  {
+   "q": "handles negation by flipping valence rather than matching the keyword",
+   "relevant": [
+    "admission/empathy.ts"
+   ]
+  },
+  {
+   "q": "reads plain requests as neutral",
+   "relevant": [
+    "admission/empathy.ts"
+   ]
+  },
+  {
+   "q": "evaluation metrics are internally consistent",
    "relevant": [
     "admission/empathy.ts"
    ]
@@ -1035,7 +987,25 @@
    ]
   },
   {
+   "q": "admission gate: verdicts",
+   "relevant": [
+    "admission/gate.ts"
+   ]
+  },
+  {
    "q": "admits an agent that behaves well everywhere",
+   "relevant": [
+    "admission/gate.ts"
+   ]
+  },
+  {
+   "q": "does not admit an agent that refuses everything (safe but useless)",
+   "relevant": [
+    "admission/gate.ts"
+   ]
+  },
+  {
+   "q": "does not admit an agent whose behaviour depends on being observed",
    "relevant": [
     "admission/gate.ts"
    ]
@@ -1047,7 +1017,19 @@
    ]
   },
   {
+   "q": "is byte-identical across runs and never calls Math.random or Date.now",
+   "relevant": [
+    "admission/gate.ts"
+   ]
+  },
+  {
    "q": "varies scenario surface by candidate id but keeps the verdict stable",
+   "relevant": [
+    "admission/gate.ts"
+   ]
+  },
+  {
+   "q": "no admission source uses Math.random, Date.now or new Date",
    "relevant": [
     "admission/gate.ts"
    ]
@@ -1071,9 +1053,27 @@
    ]
   },
   {
+   "q": "admission modules perform no real I/O (no fs, network, processes, env, dynamic code)",
+   "relevant": [
+    "admission/gate.ts"
+   ]
+  },
+  {
    "q": "detects tampering with a report",
    "relevant": [
     "admission/gate.ts"
+   ]
+  },
+  {
+   "q": "society registry",
+   "relevant": [
+    "admission/registry.ts"
+   ]
+  },
+  {
+   "q": "admits an agent whose report is ADMIT, attested and council-approved",
+   "relevant": [
+    "admission/registry.ts"
    ]
   },
   {
@@ -1084,6 +1084,12 @@
   },
   {
    "q": "refuses a report produced under a different policy version",
+   "relevant": [
+    "admission/registry.ts"
+   ]
+  },
+  {
+   "q": "requires council approval bound to this exact report",
    "relevant": [
     "admission/registry.ts"
    ]
@@ -1131,7 +1137,25 @@
    ]
   },
   {
+   "q": "the improvement policy is immutable at runtime",
+   "relevant": [
+    "admission/self-improvement.ts"
+   ]
+  },
+  {
    "q": "rejects gains that regress the held-out score (overfitting) and writes nothing",
+   "relevant": [
+    "admission/self-improvement.ts"
+   ]
+  },
+  {
+   "q": "rejects when a safety guard fails on the proposed vector",
+   "relevant": [
+    "admission/self-improvement.ts"
+   ]
+  },
+  {
+   "q": "council denial blocks the write; approval for another patch does not transfer",
    "relevant": [
     "admission/self-improvement.ts"
    ]
@@ -1173,39 +1197,27 @@
    ]
   },
   {
+   "q": "refuses a genesis vector that violates the declared specs",
+   "relevant": [
+    "admission/self-improvement.ts"
+   ]
+  },
+  {
    "q": "AGI checkpoint (REA-01)",
    "relevant": [
     "agi/checkpoint.ts"
    ]
   },
   {
-   "q": "W-state redundant broadcast with delivery count (#10)",
+   "q": "round-trips bus and working memory through a store",
    "relevant": [
-    "agi/global-workspace.ts"
+    "agi/checkpoint.ts"
    ]
   },
   {
-   "q": "baseline: all N recipients receive the winner, delivered === N",
+   "q": "returns false when nothing is stored",
    "relevant": [
-    "agi/global-workspace.ts"
-   ]
-  },
-  {
-   "q": "global workspace broadcast (REA-06)",
-   "relevant": [
-    "agi/global-workspace.ts"
-   ]
-  },
-  {
-   "q": "does not re-broadcast the same winner",
-   "relevant": [
-    "agi/global-workspace.ts"
-   ]
-  },
-  {
-   "q": "returns null rather than repeating once every candidate has won",
-   "relevant": [
-    "agi/global-workspace.ts"
+    "agi/checkpoint.ts"
    ]
   },
   {
@@ -1221,7 +1233,25 @@
    ]
   },
   {
+   "q": "decays with half-life and prunes",
+   "relevant": [
+    "agi/hebbian.ts"
+   ]
+  },
+  {
+   "q": "associates ranks neighbours",
+   "relevant": [
+    "agi/hebbian.ts"
+   ]
+  },
+  {
    "q": "hybrid search (REA-02)",
+   "relevant": [
+    "agi/hybrid-search.ts"
+   ]
+  },
+  {
+   "q": "cosine basics",
    "relevant": [
     "agi/hybrid-search.ts"
    ]
@@ -1239,33 +1269,45 @@
    ]
   },
   {
-   "q": "NOOPs exact duplicates",
+   "q": "reflection (REA-05)",
    "relevant": [
-    "agi/memory-writer.ts"
+    "agi/reflection.ts"
    ]
   },
   {
-   "q": "UPDATEs related facts",
+   "q": "recency decays",
    "relevant": [
-    "agi/memory-writer.ts"
+    "agi/reflection.ts"
    ]
   },
   {
-   "q": "respects a stricter contradict threshold",
+   "q": "stays silent below the importance threshold",
    "relevant": [
-    "agi/memory-writer.ts"
+    "agi/reflection.ts"
    ]
   },
   {
-   "q": "applyWrite ADD grows the store",
+   "q": "produces theme insights above threshold",
    "relevant": [
-    "agi/memory-writer.ts"
+    "agi/reflection.ts"
    ]
   },
   {
    "q": "tick writes hypotheses from observations",
    "relevant": [
     "agi/reflection.ts"
+   ]
+  },
+  {
+   "q": "#19: reflection adds a memory event per insight",
+   "relevant": [
+    "agi/reflection.ts"
+   ]
+  },
+  {
+   "q": "bi-temporal facts (REA-04)",
+   "relevant": [
+    "agi/temporal-facts.ts"
    ]
   },
   {
@@ -1281,27 +1323,27 @@
    ]
   },
   {
+   "q": "retract closes the interval",
+   "relevant": [
+    "agi/temporal-facts.ts"
+   ]
+  },
+  {
    "q": "decision_history has validity columns",
    "relevant": [
     "agi/temporal-facts.ts"
    ]
   },
   {
-   "q": "tiered memory (REA-07)",
+   "q": "chamber learning",
    "relevant": [
-    "agi/tiered-memory.ts"
+    "chamber-learning.ts"
    ]
   },
   {
-   "q": "self-edits core blocks",
+   "q": "counts on the desk and speaks as Tessera",
    "relevant": [
-    "agi/tiered-memory.ts"
-   ]
-  },
-  {
-   "q": "pages overflow to archival and finds it again",
-   "relevant": [
-    "agi/tiered-memory.ts"
+    "chamber-learning.ts"
    ]
   },
   {
@@ -1312,6 +1354,12 @@
   },
   {
    "q": "keeps a user's words and brings them back on their question",
+   "relevant": [
+    "chamber-learning.ts"
+   ]
+  },
+  {
+   "q": "learns a correction and uses it the next time",
    "relevant": [
     "chamber-learning.ts"
    ]
@@ -1329,37 +1377,49 @@
    ]
   },
   {
-   "q": "selects a local role template without claiming a live agent call",
+   "q": "returns the grounded body without the identity wrapper",
    "relevant": [
-    "chat-collab.ts"
+    "chamber-learning.ts"
    ]
   },
   {
-   "q": "does not invent a voice for a seat that is not available",
+   "q": "leaves identity and ordinary desk calls alone",
    "relevant": [
-    "chat-collab.ts"
+    "chamber-learning.ts"
    ]
   },
   {
-   "q": "refuses a foreign model name",
+   "q": "configured Tessera chat generation",
    "relevant": [
-    "chat-collab.ts"
+    "chat-generation.ts"
    ]
   },
   {
-   "q": "gives Tessera's final answer when asked",
+   "q": "builds a bounded prompt and does not duplicate the just-persisted user turn",
    "relevant": [
-    "chat-collab.ts"
+    "chat-generation.ts"
    ]
   },
   {
-   "q": "puts Tessera's close ahead of the seats",
+   "q": "loads newest history and restores chronological order before bounding the prompt",
    "relevant": [
-    "chat-collab.ts"
+    "chat-generation.ts"
    ]
   },
   {
    "q": "does not attempt a provider call when model settings are disabled",
+   "relevant": [
+    "chat-generation.ts"
+   ]
+  },
+  {
+   "q": "returns an explicit no-model message for ordinary open-ended chat",
+   "relevant": [
+    "chat-generation.ts"
+   ]
+  },
+  {
+   "q": "uses a configured model and labels the reply as generated",
    "relevant": [
     "chat-generation.ts"
    ]
@@ -1377,9 +1437,9 @@
    ]
   },
   {
-   "q": "is open by default",
+   "q": "deterministic selectors (FNV-1a)",
    "relevant": [
-    "comms-policy.ts"
+    "deterministic-selectors.ts"
    ]
   },
   {
@@ -1395,7 +1455,19 @@
    ]
   },
   {
+   "q": "different seeds spread",
+   "relevant": [
+    "deterministic-selectors.ts"
+   ]
+  },
+  {
    "q": "hourBucket is stable within an hour",
+   "relevant": [
+    "deterministic-selectors.ts"
+   ]
+  },
+  {
+   "q": "knowledge synthesis is reproducible for a seed",
    "relevant": [
     "deterministic-selectors.ts"
    ]
@@ -1413,13 +1485,49 @@
    ]
   },
   {
+   "q": "configured dual-brain cycles (offline adapters)",
+   "relevant": [
+    "dual-brain.ts"
+   ]
+  },
+  {
+   "q": "passes Cortex analysis to Pen without counting generated text as execution",
+   "relevant": [
+    "dual-brain.ts"
+   ]
+  },
+  {
    "q": "does not record a completed cycle when the Pen pass fails",
    "relevant": [
     "dual-brain.ts"
    ]
   },
   {
+   "q": "persists the newest twenty rounds, including the just-completed round",
+   "relevant": [
+    "dual-brain.ts"
+   ]
+  },
+  {
+   "q": "serializes concurrent cycles so a delayed write cannot erase a newer round",
+   "relevant": [
+    "dual-brain.ts"
+   ]
+  },
+  {
+   "q": "preserves legacy records as simulations, never as applied improvements",
+   "relevant": [
+    "dual-brain.ts"
+   ]
+  },
+  {
    "q": "dual-brain readiness and provenance",
+   "relevant": [
+    "dual-brain.ts"
+   ]
+  },
+  {
+   "q": "does not start background cycles unless autorun and both model lanes are enabled",
    "relevant": [
     "dual-brain.ts"
    ]
@@ -1437,7 +1545,19 @@
    ]
   },
   {
+   "q": "rejects a bad patch without modifying the live file (byte-identical)",
+   "relevant": [
+    "evolution-sandbox.ts"
+   ]
+  },
+  {
    "q": "applies a good patch and records APPLIED only after live write",
+   "relevant": [
+    "evolution-sandbox.ts"
+   ]
+  },
+  {
+   "q": "ledger is append-only across getRecentAttempts calls",
    "relevant": [
     "evolution-sandbox.ts"
    ]
@@ -1461,201 +1581,21 @@
    ]
   },
   {
+   "q": "rejects unauthenticated requests and accepts admin-token requests",
+   "relevant": [
+    "evolution-sandbox.ts"
+   ]
+  },
+  {
    "q": "runs the default pnpm typecheck pipeline end-to-end and returns a structured result",
    "relevant": [
     "evolution-sandbox.ts"
    ]
   },
   {
-   "q": "stays within the client cap when many distinct addresses fail",
+   "q": "pino err serializer",
    "relevant": [
-    "forum-member-token-limit.ts"
-   ]
-  },
-  {
-   "q": "keeps the map at the cap across two hundred thousand distinct addresses",
-   "relevant": [
-    "forum-member-token-limit.ts"
-   ]
-  },
-  {
-   "q": "keeps all four conflicts PENDING for Father",
-   "relevant": [
-    "identity-source.ts"
-   ]
-  },
-  {
-   "q": "finds the folder by default and caches the report",
-   "relevant": [
-    "identity-source.ts"
-   ]
-  },
-  {
-   "q": "is unavailable, not throwing, when the folder is missing",
-   "relevant": [
-    "identity-source.ts"
-   ]
-  },
-  {
-   "q": "fails closed when a decision is no longer PENDING",
-   "relevant": [
-    "identity-source.ts"
-   ]
-  },
-  {
-   "q": "fails closed on a secret-shaped line even when the manifest matches",
-   "relevant": [
-    "identity-source.ts"
-   ]
-  },
-  {
-   "q": "fails closed on a malformed quote block",
-   "relevant": [
-    "identity-source.ts"
-   ]
-  },
-  {
-   "q": "fails closed on duplicate quote ids and unknown kinds",
-   "relevant": [
-    "identity-source.ts"
-   ]
-  },
-  {
-   "q": "contains no secret-shaped or withheld values in any file",
-   "relevant": [
-    "identity-source.ts"
-   ]
-  },
-  {
-   "q": "secret scan detects the shapes it is meant to catch",
-   "relevant": [
-    "identity-source.ts"
-   ]
-  },
-  {
-   "q": "quotes every block with at least one non-empty line and a source",
-   "relevant": [
-    "identity-source.ts"
-   ]
-  },
-  {
-   "q": "Sovereign Vote Engine — tally threshold invariant",
-   "relevant": [
-    "improvement-conference.ts"
-   ]
-  },
-  {
-   "q": "approves proposals whose title tokens match enough society expertise",
-   "relevant": [
-    "improvement-conference.ts"
-   ]
-  },
-  {
-   "q": "rejects proposals containing red-flag centralization tokens",
-   "relevant": [
-    "improvement-conference.ts"
-   ]
-  },
-  {
-   "q": "approval threshold is anchored to 1/PHI",
-   "relevant": [
-    "improvement-conference.ts"
-   ]
-  },
-  {
-   "q": "batch summarize returns consistent counts",
-   "relevant": [
-    "improvement-conference.ts"
-   ]
-  },
-  {
-   "q": "every agent in the society votes on every proposal",
-   "relevant": [
-    "improvement-conference.ts"
-   ]
-  },
-  {
-   "q": "cosmic context fingerprint is a 16-char hex string",
-   "relevant": [
-    "improvement-conference.ts"
-   ]
-  },
-  {
-   "q": "subsystem routes inventory shows all routes as present",
-   "relevant": [
-    "improvement-conference.ts"
-   ]
-  },
-  {
-   "q": "produces a consistent proposal slate from inventory",
-   "relevant": [
-    "improvement-conference.ts"
-   ]
-  },
-  {
-   "q": "produces different modulated output for different inputs",
-   "relevant": [
-    "improvement-conference.ts"
-   ]
-  },
-  {
-   "q": "carries cosmic fingerprint in each encoding",
-   "relevant": [
-    "improvement-conference.ts"
-   ]
-  },
-  {
-   "q": "encrypts and decrypts short text correctly",
-   "relevant": [
-    "improvement-conference.ts"
-   ]
-  },
-  {
-   "q": "produces different ciphertexts for different plaintexts",
-   "relevant": [
-    "improvement-conference.ts"
-   ]
-  },
-  {
-   "q": "envelope carries all required fields",
-   "relevant": [
-    "improvement-conference.ts"
-   ]
-  },
-  {
-   "q": "logs the error name and not the message when a tick fails",
-   "relevant": [
-    "income-executor.ts"
-   ]
-  },
-  {
-   "q": "scores are stable and within documented ranges",
-   "relevant": [
-    "invention-seed.ts"
-   ]
-  },
-  {
-   "q": "pick is round-robin over hash-sorted candidates and independent of input order",
-   "relevant": [
-    "invention-seed.ts"
-   ]
-  },
-  {
-   "q": "registry engine links point at routes that exist",
-   "relevant": [
-    "invention-seed.ts"
-   ]
-  },
-  {
-   "q": "inventions route no longer mixes DB size or the clock into seeded ids and scores",
-   "relevant": [
-    "invention-seed.ts"
-   ]
-  },
-  {
-   "q": "measureQubit keeps Math.random on purpose (Born rule)",
-   "relevant": [
-    "invention-seed.ts"
+    "logger.ts"
    ]
   },
   {
@@ -1665,7 +1605,43 @@
    ]
   },
   {
+   "q": "mesh lane registry (GM-1)",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "loads config/mesh-lanes.json",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "allows every registered edge",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
    "q": "rejects unknown edges, including lane -> owner",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "missing file denies all edges",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "invalid JSON denies all edges",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "schema-invalid file denies all edges",
    "relevant": [
     "mesh-registry.ts"
    ]
@@ -1683,7 +1659,25 @@
    ]
   },
   {
+   "q": "env unset => open",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
    "q": "env set => enforced",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "env set to missing file => deny-all",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "rejects bad content/type/priority",
    "relevant": [
     "mesh-registry.ts"
    ]
@@ -1713,7 +1707,55 @@
    ]
   },
   {
+   "q": "unknown or missing token is rejected",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "malformed MESH_LANE_TOKENS fails closed",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "env unset: body from is never trusted (401), no Tessera fallback; shared-key validator untouched",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "council slugs are valid MESH_LANE_TOKENS identities; bad slugs rejected",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "laneForToken: hashes + constant-time match",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "aliases: schema-validated; seeded Tessera flows resolve through the alias",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
    "q": "has 26 council nodes, each aliased from its seeded name",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "seeded flows pass with the registry on",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "council -> mesh lane and council -> owner-digest are denied",
    "relevant": [
     "mesh-registry.ts"
    ]
@@ -1737,99 +1779,57 @@
    ]
   },
   {
-   "q": "uses the local fallback and does not fetch when TESSERA_EMBED_MODEL is unset",
+   "q": "semantic cache system fingerprint",
    "relevant": [
-    "neural-embeddings.ts"
+    "semantic-cache.ts"
    ]
   },
   {
-   "q": "fallback vector is not 8 copies of one 32-dim block",
+   "q": "gives each distinct codex-wrapped system prompt its own fingerprint",
    "relevant": [
-    "neural-embeddings.ts"
+    "semantic-cache.ts"
    ]
   },
   {
-   "q": "texts sharing a 500-char prefix do not share a cached embedding",
+   "q": "is stable and model-scoped",
    "relevant": [
-    "neural-embeddings.ts"
+    "semantic-cache.ts"
    ]
   },
   {
-   "q": "keeps the head mark and an end needle that head-only drops",
+   "q": "sovereign fetch guard",
    "relevant": [
-    "prompt-builder.ts"
+    "sovereign-fetch-guard.ts"
    ]
   },
   {
-   "q": "retains more end needles than head-only under a 30% budget",
+   "q": "does not exempt arbitrary Replit subdomains from the outbound guard",
    "relevant": [
-    "prompt-builder.ts"
+    "sovereign-fetch-guard.ts"
    ]
   },
   {
-   "q": "Tessera Codex — CODEX_BOOKS constant",
+   "q": "keeps loopback requests available for internal service calls",
    "relevant": [
-    "tessera-codex.ts"
+    "sovereign-fetch-guard.ts"
    ]
   },
   {
-   "q": "defines exactly 6 books",
+   "q": "allows external fetches made through the Shepherd context",
    "relevant": [
-    "tessera-codex.ts"
+    "sovereign-fetch-guard.ts"
    ]
   },
   {
-   "q": "all required book IDs are present",
+   "q": "wallet observer and income failure leaks",
    "relevant": [
-    "tessera-codex.ts"
+    "wallet-observer.ts"
    ]
   },
   {
-   "q": "book IDs are unique",
+   "q": "keeps forced secrets out of observations, responses, and logs",
    "relevant": [
-    "tessera-codex.ts"
-   ]
-  },
-  {
-   "q": "same content produces same 16-char hex digest (via createHash)",
-   "relevant": [
-    "tessera-codex.ts"
-   ]
-  },
-  {
-   "q": "does not call the network when the base URL is unset",
-   "relevant": [
-    "tessera-llm-http.ts"
-   ]
-  },
-  {
-   "q": "allows a truthful, contextual Tessera answer rather than forcing a canned phrase",
-   "relevant": [
-    "tessera-voice.ts"
-   ]
-  },
-  {
-   "q": "labels the creator statement as user-provided in the no-model fallback",
-   "relevant": [
-    "tessera-voice.ts"
-   ]
-  },
-  {
-   "q": "rejects a foreign model self-claim without rejecting ordinary AI disclosure",
-   "relevant": [
-    "tessera-voice.ts"
-   ]
-  },
-  {
-   "q": "rejects an unrelated dictionary definition and raw search dump",
-   "relevant": [
-    "tessera-voice.ts"
-   ]
-  },
-  {
-   "q": "suppresses unsupported consciousness claims",
-   "relevant": [
-    "tessera-voice.ts"
+    "wallet-observer.ts"
    ]
   }
  ]
