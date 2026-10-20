@@ -1,0 +1,11 @@
+{
+  "measured": "2026-10-20",
+  "command": "eslint src",
+  "eslint": "9.39.5",
+  "typescript-eslint": "8.x recommended",
+  "files": 523,
+  "errors": 724,
+  "warnings": 5,
+  "top_rules": { "@typescript-eslint/no-unused-vars": 298, "@typescript-eslint/no-explicit-any": 216, "no-empty": 129, "no-useless-escape": 32, "prefer-const": 30 },
+  "gate": "error and warning counts must not increase"
+}
