@@ -3,18 +3,34 @@ import { getSpawnerMetrics, spawnAgent, spawnBatchAsync, retireAgent, getSpawner
 import { getAgentHierarchy, getChildrenOf, getHierarchyMetrics } from "../lib/agent-hierarchy";
 import { getAgentCommsMetrics, sendMessage, broadcastMessage, getThreads, getThread, getFeed } from "../lib/agent-comms";
 import { CommsPolicyError, resolveAlias } from "../lib/comms-policy";
+import { decideOwnerSession } from "../lib/sovereign-admin";
 import { parseLaneTokens, laneForToken, LANE_TOKEN_HEADER } from "../lib/mesh-lane-auth";
 
 /**
  * Resolve the sender. The sender is ONLY ever derived from a presented lane token.
- * MESH_LANE_TOKENS unset => 401 (a body `from` is never trusted; no default sender).
+ * MESH_LANE_TOKENS unset => 401, except (a) a valid owner session (from = "Father") or
+ * (b) NODE_ENV !== "production" and a loopback socket address (body from used).
  * Set => `from` is the slug of the presented lane token; a body `from` that does not
  * resolve to that slug is rejected. Malformed env fails closed.
  */
+/** Owner identity used across the codebase (forum principal, natal-chart identity). */
+export const OWNER_IDENTITY = "Father";
+const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
+export const isLoopback = (addr: string | undefined): boolean => Boolean(addr && LOOPBACK.has(addr));
+
 function resolveSender(req: Request, bodyFrom: unknown): { from?: unknown; status?: number; error?: string } {
   let table;
   try { table = parseLaneTokens(); } catch { return { status: 403, error: "lane auth misconfigured" }; }
-  if (!table) return { status: 401, error: "lane identity required: MESH_LANE_TOKENS is not configured; body from is not trusted" };
+  if (!table) {
+    // (a) owner admin session (same validator as requireAdminSession): from is fixed to the owner.
+    if (decideOwnerSession(req).ok) {
+      if (bodyFrom !== undefined && bodyFrom !== OWNER_IDENTITY) return { status: 403, error: `from must be ${OWNER_IDENTITY} for an owner session` };
+      return { from: OWNER_IDENTITY };
+    }
+    // (b) non-production + loopback socket (X-Forwarded-For is never consulted).
+    if (process.env.NODE_ENV !== "production" && isLoopback(req.socket?.remoteAddress)) return { from: bodyFrom };
+    return { status: 401, error: "lane identity required: MESH_LANE_TOKENS is not configured; body from is not trusted" };
+  }
   const raw = req.headers[LANE_TOKEN_HEADER];
   const slug = laneForToken(Array.isArray(raw) ? raw[0] : raw, table);
   if (!slug) return { status: 403, error: "valid lane token required" };

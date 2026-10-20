@@ -7,7 +7,7 @@ import { resolveAlias, applyMeshRegistryPolicy, initMeshRegistryFromEnv, isMessa
 import { loadMeshRegistry, validateMeshRegistry, DEFAULT_MESH_REGISTRY_PATH } from "../lib/mesh-registry";
 import { sha256Hex, parseLaneTokens, laneForToken } from "../lib/mesh-lane-auth";
 import { validateMeshToken } from "../lib/mesh-auth";
-import agentNetworkRouter, { validateCommsBody } from "../routes/agent-network";
+import agentNetworkRouter, { validateCommsBody, OWNER_IDENTITY, isLoopback } from "../routes/agent-network";
 
 afterEach(() => setCommsPolicy(null));
 const tmp = mkdtempSync(join(tmpdir(), "mesh-reg-"));
@@ -151,7 +151,9 @@ describe("per-lane tokens + aliases (Security HIGH #2)", () => {
     delete process.env.MESH_LANE_TOKENS;
     expect(parseLaneTokens({})).toBeNull();
     expect(validateMeshToken(undefined)).toBeNull();
-    await withServer(async (post) => {
+    const prevEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production"; // disable the dev loopback exception for this test
+    try { await withServer(async (post) => {
       delete process.env.MESH_LANE_TOKENS;
       expect((await post("/agent-comms/send", { from: "Alpha", to: "Beta", content: "hi" })).status).toBe(401);
       expect((await post("/agent-comms/send", { from: "tessera", to: "build", content: "hi" })).status).toBe(401);
@@ -160,7 +162,7 @@ describe("per-lane tokens + aliases (Security HIGH #2)", () => {
       expect(b.status).toBe(401);
       expect(JSON.stringify(await b.json())).not.toMatch(/Tessera/);
       expect((await post("/agent-comms/broadcast", { from: "Tessera", content: "hi" })).status).toBe(401);
-    });
+    }); } finally { process.env.NODE_ENV = prevEnv; }
   });
   it("council slugs are valid MESH_LANE_TOKENS identities; bad slugs rejected", async () => {
     const t = fake();
@@ -241,5 +243,68 @@ describe("logger redaction (Security LOW)", () => {
     expect(lines.join("")).not.toContain(secret);
     expect(lines.join("")).toContain("[Redacted]");
     expect(LOGGER_REDACT_PATHS).toContain("req.headers['x-mesh-lane-token']");
+  });
+});
+
+describe("tokens unset: owner-session and dev-loopback exceptions", () => {
+  const saved = { ...process.env };
+  afterEach(() => { for (const k of ["NODE_ENV", "MESH_LANE_TOKENS", "TESSERACT_ADMIN_KEY", "SOVEREIGN_SESSION_SECRET"]) { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; } setCommsPolicy(null); });
+  const serve = async (remote: string | null, fn: (post: (path: string, body: unknown, headers?: Record<string, string>) => Promise<Response>) => Promise<void>) => {
+    const app = express().use((req, _res, next) => { if (remote !== null) Object.defineProperty(req.socket, "remoteAddress", { value: remote, configurable: true }); next(); })
+      .use(express.json()).use(agentNetworkRouter);
+    const server = await new Promise<any>((ok) => { const s = app.listen(0, "127.0.0.1", () => ok(s)); });
+    const port = (server.address() as any).port;
+    const post = (path: string, body: unknown, headers: Record<string, string> = {}) => fetch(`http://127.0.0.1:${port}${path}`, {
+      method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
+    try { await fn(post); } finally { server.close(); }
+  };
+  it("owner session: from forced to the owner identity; mismatching body from rejected", async () => {
+    delete process.env.MESH_LANE_TOKENS;
+    process.env.NODE_ENV = "production";
+    process.env.TESSERACT_ADMIN_KEY = `fake-admin-${Math.random().toString(36).slice(2)}-xxxxxxxx`;
+    process.env.SOVEREIGN_SESSION_SECRET = `fake-secret-${"s".repeat(40)}`;
+    const { issueSession, SESSION_COOKIE } = await import("../lib/sovereign-session");
+    const cookie = `${SESSION_COOKIE}=${issueSession({ ip: "10.0.0.5", userAgent: "t" }).signedId}`;
+    await serve("10.0.0.5", async (post) => {
+      const r = await post("/agent-comms/send", { to: "build", content: "hi" }, { cookie });
+      expect(r.status).toBe(200);
+      expect((await r.json()).data.from).toBe(OWNER_IDENTITY);
+      const b = await post("/agent-comms/broadcast", { content: "hi" }, { cookie });
+      expect(b.status).toBe(200);
+      expect((await post("/agent-comms/send", { from: "tessera", to: "build", content: "hi" }, { cookie })).status).toBe(403);
+      expect((await post("/agent-comms/send", { from: "tessera", to: "build", content: "hi" }, { cookie: `${SESSION_COOKIE}=forged.abc` })).status).toBe(401);
+    });
+  });
+  it("non-production loopback is allowed (body from used)", async () => {
+    delete process.env.MESH_LANE_TOKENS; process.env.NODE_ENV = "test";
+    for (const addr of ["127.0.0.1", "::1", "::ffff:127.0.0.1"]) await serve(addr, async (post) => {
+      const r = await post("/agent-comms/send", { from: "build", to: "tessera", content: "hi" });
+      expect(r.status).toBe(200);
+      expect((await r.json()).data.from).toBe("build");
+    });
+  });
+  it("production loopback gets 401", async () => {
+    delete process.env.MESH_LANE_TOKENS; process.env.NODE_ENV = "production";
+    await serve("127.0.0.1", async (post) => {
+      expect((await post("/agent-comms/send", { from: "build", to: "tessera", content: "hi" })).status).toBe(401);
+      expect((await post("/agent-comms/broadcast", { from: "build", content: "hi" })).status).toBe(401);
+    });
+  });
+  it("non-loopback without a session gets 401, and spoofed X-Forwarded-For is ignored", async () => {
+    delete process.env.MESH_LANE_TOKENS; process.env.NODE_ENV = "test";
+    await serve("203.0.113.9", async (post) => {
+      expect((await post("/agent-comms/send", { from: "build", to: "tessera", content: "hi" })).status).toBe(401);
+      expect((await post("/agent-comms/send", { from: "build", to: "tessera", content: "hi" }, { "x-forwarded-for": "127.0.0.1" })).status).toBe(401);
+      expect((await post("/agent-comms/broadcast", { from: "build", content: "hi" }, { "x-forwarded-for": "::1" })).status).toBe(401);
+    });
+    expect(isLoopback("127.0.0.2")).toBe(false);
+    expect(isLoopback(undefined)).toBe(false);
+  });
+  it("registry policy still applies to the loopback-resolved from", async () => {
+    delete process.env.MESH_LANE_TOKENS; process.env.NODE_ENV = "test";
+    applyMeshRegistryPolicy();
+    await serve("127.0.0.1", async (post) => {
+      expect((await post("/agent-comms/send", { from: "build", to: "rick", content: "hi" })).status).toBe(403);
+    });
   });
 });
