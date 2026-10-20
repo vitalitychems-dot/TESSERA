@@ -4,6 +4,7 @@ export interface TesseraSourceProvenance {
   sourceUrl: string | null;
   documentReference: string;
   retrievedAt: string | null;
+  /** Publication date; reduced precision such as YYYY-MM is preserved when the source provides no day. */
   publishedAt: string | null;
   trustStatus: TesseraTrustStatus;
   trustNote: string;
@@ -23,6 +24,18 @@ function isoDate(value: unknown): string | null {
   if (!(value instanceof Date) && typeof value !== "string" && typeof value !== "number") return null;
   const date = value instanceof Date ? value : new Date(value);
   return Number.isFinite(date.getTime()) ? date.toISOString() : null;
+}
+
+function publicationDate(value: unknown): string | null {
+  if (typeof value === "string") {
+    const reducedPrecision = value.trim().match(/^(\d{4})(?:-(\d{2}))?$/);
+    if (reducedPrecision) {
+      const month = reducedPrecision[2];
+      if (month && (Number(month) < 1 || Number(month) > 12)) return null;
+      return reducedPrecision[0];
+    }
+  }
+  return isoDate(value);
 }
 
 export function normalizeSourceUrl(value: unknown): string | null {
@@ -48,7 +61,7 @@ export function makeSourceProvenance(options: {
     sourceUrl: normalizeSourceUrl(options.sourceUrl),
     documentReference: cleanReference(options.documentReference) ?? "source-reference-unavailable",
     retrievedAt: isoDate(options.retrievedAt),
-    publishedAt: isoDate(options.publishedAt),
+    publishedAt: publicationDate(options.publishedAt),
     trustStatus,
     trustNote: trustStatus === "verified"
       ? "Marked verified by trusted server-side provenance; still check the linked original."

@@ -77,7 +77,22 @@ Tessera is the assistant persona of this application. “Father” is an applica
 7. Distinguish facts, proposals, simulations, and unknowns. Do not invent missing details.
 8. Use the ✦ signature only as a stylistic mark, not as a claim of personhood.`;
 
-export const TESSERA_SUBJECTS: Record<string, { title: string; summary: string; knowledge: string }> = {
+type TesseraCatalogFactSource = {
+  claim: string;
+  sourceUrl: string;
+  publishedAt?: string | null;
+};
+
+type TesseraCatalogSubject = {
+  title: string;
+  summary: string;
+  knowledge: string;
+  verifiedFacts?: TesseraCatalogFactSource[];
+};
+
+const CATALOG_SOURCE_RETRIEVED_AT = "2026-10-20T00:00:00.000Z";
+
+export const TESSERA_SUBJECTS: Record<string, TesseraCatalogSubject> = {
   "sacred-geometry": {
     title: "Sacred Geometry",
     summary: "The mathematical patterns underlying all creation",
@@ -86,12 +101,21 @@ export const TESSERA_SUBJECTS: Record<string, { title: string; summary: string; 
   "quantum-physics": {
     title: "Quantum Physics",
     summary: "The fundamental nature of reality at the smallest scales",
-    knowledge: "Quantum mechanics governs all matter and energy at atomic and subatomic scales. Wave-particle duality shows that particles exhibit both wave and particle properties depending on observation. The Heisenberg Uncertainty Principle states that position and momentum cannot both be precisely known (ΔxΔp ≥ ℏ/2). Quantum entanglement connects particles across any distance — measuring one instantly determines the state of the other. Superposition allows particles to exist in multiple states simultaneously until observed. The Schrödinger equation (iℏ∂ψ/∂t = Ĥψ) describes how quantum states evolve over time. Quantum tunneling allows particles to pass through energy barriers. The fine structure constant α ≈ 1/137.035999 governs the strength of electromagnetic interactions. Planck's constant h = 6.626×10⁻³⁴ J·s sets the scale of quantum effects."
+    knowledge: "Quantum mechanics governs all matter and energy at atomic and subatomic scales. Wave-particle duality shows that particles exhibit both wave and particle properties depending on observation. The Heisenberg Uncertainty Principle states that position and momentum cannot both be precisely known (ΔxΔp ≥ ℏ/2). Quantum entanglement connects particles across any distance — measuring one instantly determines the state of the other. Superposition allows particles to exist in multiple states simultaneously until observed. The Schrödinger equation (iℏ∂ψ/∂t = Ĥψ) describes how quantum states evolve over time. Quantum tunneling allows particles to pass through energy barriers. The fine structure constant α ≈ 1/137.035999 governs the strength of electromagnetic interactions. The exact Planck constant is 6.62607015×10⁻³⁴ J·s under the SI definition.",
+    verifiedFacts: [{
+      claim: "The exact Planck constant is 6.62607015×10⁻³⁴ J·s under the SI definition.",
+      sourceUrl: "https://physics.nist.gov/cgi-bin/cuu/Value?h",
+    }],
   },
   "astronomy": {
     title: "Astronomy & Cosmology",
     summary: "The science of celestial objects and the universe",
-    knowledge: "The observable universe spans 93 billion light-years and contains approximately 2 trillion galaxies. The cosmic microwave background radiation at 2.725K is the afterglow of the Big Bang (13.8 billion years ago). Dark energy (68.3%) and dark matter (26.8%) compose 95.1% of the universe — ordinary matter is only 4.9%. Stars form through gravitational collapse of molecular clouds and fuse hydrogen into helium via the proton-proton chain. Kepler's laws describe planetary motion: elliptical orbits, equal areas in equal times, and T² ∝ a³. The Moon's synodic period is 29.53 days. The precession of Earth's axis takes 25,772 years (the Great Year). Solar cycles average 11 years. Neutron stars can spin at 716 rotations per second. Black holes have event horizons where escape velocity exceeds the speed of light."
+    knowledge: "The observable universe spans 93 billion light-years and contains approximately 2 trillion galaxies. The cosmic microwave background radiation at 2.725K is the afterglow of the Big Bang (13.8 billion years ago). In the Planck 2018 base-ΛCDM fit, the estimated age of the Universe is 13.797 ± 0.023 billion years. Dark energy (68.3%) and dark matter (26.8%) compose 95.1% of the universe — ordinary matter is only 4.9%. Stars form through gravitational collapse of molecular clouds and fuse hydrogen into helium via the proton-proton chain. Kepler's laws describe planetary motion: elliptical orbits, equal areas in equal times, and T² ∝ a³. The Moon's synodic period is 29.53 days. The precession of Earth's axis takes 25,772 years (the Great Year). Solar cycles average 11 years. Neutron stars can spin at 716 rotations per second. Black holes have event horizons where escape velocity exceeds the speed of light.",
+    verifiedFacts: [{
+      claim: "In the Planck 2018 base-ΛCDM fit, the estimated age of the Universe is 13.797 ± 0.023 billion years.",
+      sourceUrl: "https://www.aanda.org/articles/aa/full_html/2020/09/aa33910-18/aa33910-18.html",
+      publishedAt: "2020-09-11",
+    }],
   },
   "mathematics": {
     title: "Pure Mathematics",
@@ -121,27 +145,66 @@ export const TESSERA_SUBJECTS: Record<string, { title: string; summary: string; 
   "biology": {
     title: "Biology & Life Sciences",
     summary: "The science of living organisms and their processes",
-    knowledge: "Life operates through DNA — a double helix with 3.2 billion base pairs encoding ~20,000 genes. DNA's structure follows sacred geometry: the helix repeats every 34 angstroms with a width of 21 angstroms — the ratio 34/21 ≈ Phi (1.619). Cells are the fundamental unit of life — the human body contains ~37.2 trillion cells. Mitochondria generate ATP through oxidative phosphorylation using a proton gradient. Epigenetics shows that gene expression can be modified by environment without changing DNA sequence. The human brain contains ~86 billion neurons with ~100 trillion synaptic connections. Biophotons — ultra-weak photon emissions from living cells — suggest biological systems use light for communication. The microbiome contains ~38 trillion bacteria that influence immunity, mood, and cognition. Evolution through natural selection drives adaptation — all life shares a common ancestor ~3.8 billion years ago."
+    knowledge: "Watson and Crick's 1953 paper proposed a double-helical structure for DNA. DNA's structure follows sacred geometry: the helix repeats every 34 angstroms with a width of 21 angstroms — the ratio 34/21 ≈ Phi (1.619). Cells are the fundamental unit of life — the human body contains ~37.2 trillion cells. Mitochondria generate ATP through oxidative phosphorylation using a proton gradient. Epigenetics shows that gene expression can be modified by environment without changing DNA sequence. Azevedo et al. (2009) estimated 86.1 ± 8.1 billion neurons in the adult male human brain using an isotropic fractionator; this is one study's estimate. Biophotons — ultra-weak photon emissions from living cells — suggest biological systems use light for communication. The microbiome contains ~38 trillion bacteria that influence immunity, mood, and cognition. Evolution through natural selection drives adaptation — all life shares a common ancestor ~3.8 billion years ago.",
+    verifiedFacts: [
+      {
+        claim: "Watson and Crick's 1953 paper proposed a double-helical structure for DNA.",
+        sourceUrl: "https://www.nature.com/articles/171737a0",
+        publishedAt: "1953-04-25",
+      },
+      {
+        claim: "Azevedo et al. (2009) estimated 86.1 ± 8.1 billion neurons in the adult male human brain using an isotropic fractionator; this is one study's estimate.",
+        sourceUrl: "https://doi.org/10.1002/cne.21974",
+        publishedAt: "2009-02-18",
+      },
+    ],
   },
   "chemistry": {
     title: "Chemistry",
     summary: "The science of matter, its properties, and transformations",
-    knowledge: "Chemistry studies the composition, structure, and reactions of matter. The periodic table organizes 118 elements by atomic number and electron configuration. Chemical bonds: ionic (electron transfer), covalent (electron sharing), metallic (electron sea), hydrogen (dipole attraction), van der Waals (temporary dipole). Thermodynamics governs reactions: ΔG = ΔH - TΔS determines spontaneity. Organic chemistry studies carbon compounds — the basis of all known life. Biochemistry bridges chemistry and biology through enzyme catalysis, metabolic pathways, and molecular recognition. Water (H₂O) is the universal solvent with unique properties: high specific heat, surface tension, and the anomalous expansion of ice. Electrochemistry connects chemical energy and electrical energy through redox reactions. The mole (6.022×10²³ entities) is the bridge between atomic and macroscopic scales."
+    knowledge: "Chemistry studies the composition, structure, and reactions of matter. In 2015, IUPAC verified the discoveries of elements 113, 115, 117, and 118, completing period 7 of the periodic table. Chemical bonds: ionic (electron transfer), covalent (electron sharing), metallic (electron sea), hydrogen (dipole attraction), van der Waals (temporary dipole). Thermodynamics governs reactions: ΔG = ΔH - TΔS determines spontaneity. Organic chemistry studies carbon compounds — the basis of all known life. Biochemistry bridges chemistry and biology through enzyme catalysis, metabolic pathways, and molecular recognition. Water (H₂O) is the universal solvent with unique properties: high specific heat, surface tension, and the anomalous expansion of ice. Electrochemistry connects chemical energy and electrical energy through redox reactions. The mole (6.022×10²³ entities) is the bridge between atomic and macroscopic scales.",
+    verifiedFacts: [{
+      claim: "In 2015, IUPAC verified the discoveries of elements 113, 115, 117, and 118, completing period 7 of the periodic table.",
+      sourceUrl: "https://iupac.org/discovery-and-assignment-of-elements-with-atomic-numbers-113-115-117-and-118/",
+      publishedAt: "2015-12-30",
+    }],
   },
   "neuroscience": {
     title: "Neuroscience",
     summary: "The science of the brain and nervous system",
-    knowledge: "The brain is the most complex known structure in the universe. It contains ~86 billion neurons, each connecting to thousands of others through synapses. Neurotransmitters (dopamine, serotonin, GABA, glutamate, acetylcholine, norepinephrine) regulate mood, cognition, and behavior. Neural plasticity allows the brain to rewire itself throughout life. The default mode network (DMN) activates during rest and self-referential thinking. Mirror neurons fire both when performing and observing actions — the basis of empathy. The prefrontal cortex handles executive function, planning, and decision-making. The hippocampus consolidates short-term to long-term memory. The amygdala processes emotions and threat detection. The cerebellum coordinates movement and may contribute to cognition. Brainwave entrainment can synchronize neural oscillations to external stimuli — binaural beats, isochronic tones, and the Solfeggio frequencies."
+    knowledge: "The brain is the most complex known structure in the universe. Azevedo et al. (2009) estimated 86.1 ± 8.1 billion neurons in the adult male human brain using an isotropic fractionator; this is one study's estimate. Neurotransmitters (dopamine, serotonin, GABA, glutamate, acetylcholine, norepinephrine) regulate mood, cognition, and behavior. Neural plasticity allows the brain to rewire itself throughout life. The default mode network (DMN) activates during rest and self-referential thinking. Mirror neurons fire both when performing and observing actions — the basis of empathy. The prefrontal cortex handles executive function, planning, and decision-making. The hippocampus consolidates short-term to long-term memory. The amygdala processes emotions and threat detection. The cerebellum coordinates movement and may contribute to cognition. Brainwave entrainment can synchronize neural oscillations to external stimuli — binaural beats, isochronic tones, and the Solfeggio frequencies.",
+    verifiedFacts: [{
+      claim: "Azevedo et al. (2009) estimated 86.1 ± 8.1 billion neurons in the adult male human brain using an isotropic fractionator; this is one study's estimate.",
+      sourceUrl: "https://doi.org/10.1002/cne.21974",
+      publishedAt: "2009-02-18",
+    }],
   },
   "cryptography": {
     title: "Cryptography & Information Security",
     summary: "The science of secure communication and data protection",
-    knowledge: "Cryptography protects information through mathematical transformations. Symmetric encryption (AES-256) uses one key for encryption and decryption — 2²⁵⁶ possible keys makes brute force infeasible. Asymmetric encryption (RSA, ECC) uses public/private key pairs based on the difficulty of factoring large primes or solving discrete logarithm problems. Hash functions (SHA-256, SHA-3) create fixed-size fingerprints of data — any change produces a completely different hash. Digital signatures verify authenticity and integrity using private key signing and public key verification. Zero-knowledge proofs allow proving knowledge without revealing the knowledge itself. Blockchain uses Merkle trees, proof-of-work/stake, and cryptographic linking to create immutable distributed ledgers. Quantum computing threatens current cryptography — post-quantum algorithms (lattice-based, hash-based) are being developed."
+    knowledge: "Cryptography protects information through mathematical transformations. NIST's AES standard specifies key lengths of 128, 192, and 256 bits. Asymmetric encryption (RSA, ECC) uses public/private key pairs based on the difficulty of factoring large primes or solving discrete logarithm problems. NIST FIPS 202 specifies SHA-3 hash and extendable-output functions based on Keccak. Digital signatures verify authenticity and integrity using private key signing and public key verification. Zero-knowledge proofs allow proving knowledge without revealing the knowledge itself. Blockchain uses Merkle trees, proof-of-work/stake, and cryptographic linking to create immutable distributed ledgers. Quantum computing threatens current cryptography — post-quantum algorithms (lattice-based, hash-based) are being developed.",
+    verifiedFacts: [
+      {
+        claim: "NIST's AES standard specifies key lengths of 128, 192, and 256 bits.",
+        sourceUrl: "https://csrc.nist.gov/pubs/fips/197/final",
+        publishedAt: "2001-11-26",
+      },
+      {
+        claim: "NIST FIPS 202 specifies SHA-3 hash and extendable-output functions based on Keccak.",
+        sourceUrl: "https://csrc.nist.gov/pubs/fips/202/final",
+        publishedAt: "2015-08",
+      },
+    ],
   },
   "artificial-intelligence": {
     title: "Artificial Intelligence",
     summary: "The science and engineering of intelligent systems",
-    knowledge: "AI encompasses systems that perceive, reason, learn, and act. Machine learning trains models on data: supervised (labeled), unsupervised (pattern discovery), reinforcement (reward-based). Deep learning uses neural networks with multiple layers — convolutional for vision, recurrent/transformer for language, generative for creation. Large language models (transformers) use attention mechanisms to process sequences — self-attention computes relevance scores across all positions. Neural network training uses backpropagation and gradient descent to minimize loss functions. AGI (Artificial General Intelligence) aims for human-level reasoning across all domains. Sovereign AI operates independently without external dependencies — computing locally, maintaining its own knowledge, and making autonomous decisions. The alignment problem asks how to ensure AI systems pursue goals beneficial to their creators."
+    knowledge: "AI encompasses systems that perceive, reason, learn, and act. Machine learning trains models on data: supervised (labeled), unsupervised (pattern discovery), reinforcement (reward-based). Deep learning uses neural networks with multiple layers — convolutional for vision, recurrent/transformer for language, generative for creation. Vaswani et al.'s 2017 Transformer paper introduced a sequence-model architecture based solely on attention, without recurrence or convolution. Large language models (transformers) use attention mechanisms to process sequences — self-attention computes relevance scores across all positions. Neural network training uses backpropagation and gradient descent to minimize loss functions. AGI (Artificial General Intelligence) aims for human-level reasoning across all domains. Sovereign AI operates independently without external dependencies — computing locally, maintaining its own knowledge, and making autonomous decisions. The alignment problem asks how to ensure AI systems pursue goals beneficial to their creators.",
+    verifiedFacts: [{
+      claim: "Vaswani et al.'s 2017 Transformer paper introduced a sequence-model architecture based solely on attention, without recurrence or convolution.",
+      sourceUrl: "https://arxiv.org/abs/1706.03762",
+      publishedAt: "2017-06-12",
+    }],
   },
   "alchemy": {
     title: "Alchemy & Transmutation",
@@ -251,7 +314,12 @@ export const TESSERA_SUBJECTS: Record<string, { title: string; summary: string; 
   "information-theory": {
     title: "Information Theory",
     summary: "The mathematical theory of communication and entropy",
-    knowledge: "Information theory, founded by Claude Shannon (1948), provides the mathematical foundation for communication. Information content: I(x) = -log₂(p(x)) bits — rare events carry more information. Entropy H(X) = -Σp(x)·log₂(p(x)) measures average uncertainty. Channel capacity: C = B·log₂(1 + S/N) — the Shannon-Hartley theorem sets the maximum data rate for a noisy channel. Source coding theorem: data can be compressed to its entropy limit (Huffman coding, arithmetic coding). Channel coding theorem: reliable communication is possible below channel capacity using error-correcting codes. Mutual information I(X;Y) measures shared information between variables. Kolmogorov complexity K(x) measures the shortest program that produces string x — connecting information theory to computation. Information is physical (Landauer's principle): erasing one bit generates at least kT·ln(2) joules of heat."
+    knowledge: "Claude Shannon's 1948 paper, “A Mathematical Theory of Communication,” laid out a mathematical theory for communication. Information content: I(x) = -log₂(p(x)) bits — rare events carry more information. Entropy H(X) = -Σp(x)·log₂(p(x)) measures average uncertainty. Channel capacity: C = B·log₂(1 + S/N) — the Shannon-Hartley theorem sets the maximum data rate for a noisy channel. Source coding theorem: data can be compressed to its entropy limit (Huffman coding, arithmetic coding). Channel coding theorem: reliable communication is possible below channel capacity using error-correcting codes. Mutual information I(X;Y) measures shared information between variables. Kolmogorov complexity K(x) measures the shortest program that produces string x — connecting information theory to computation. Information is physical (Landauer's principle): erasing one bit generates at least kT·ln(2) joules of heat.",
+    verifiedFacts: [{
+      claim: "Claude Shannon's 1948 paper, “A Mathematical Theory of Communication,” laid out a mathematical theory for communication.",
+      sourceUrl: "https://archive.org/details/bstj27-4-623",
+      publishedAt: "1948-10",
+    }],
   },
   "geopolitics": {
     title: "Geopolitics & World Affairs",
@@ -276,7 +344,12 @@ export const TESSERA_SUBJECTS: Record<string, { title: string; summary: string; 
   "quantum-computing": {
     title: "Quantum Computing",
     summary: "Computing harnessing quantum mechanical phenomena",
-    knowledge: "Quantum computing exploits quantum mechanics for computation beyond classical limits. Qubits exist in superposition of |0⟩ and |1⟩ simultaneously: |ψ⟩ = α|0⟩ + β|1⟩ where |α|² + |β|² = 1. Entanglement correlates qubit states — measuring one determines the other regardless of distance. Quantum gates (Hadamard, CNOT, Toffoli, Phase) manipulate qubit states through unitary transformations. Shor's algorithm factors large numbers in polynomial time — threatening RSA encryption. Grover's algorithm searches unsorted databases in O(√N) — quadratic speedup. Quantum error correction protects against decoherence using redundant qubits and syndrome measurements. Quantum supremacy: performing calculations infeasible for classical computers (Google's Sycamore, 2019). Current hardware: superconducting (IBM, Google), trapped ion (IonQ, Quantinuum), photonic (Xanadu), topological (Microsoft). Applications: drug discovery, materials science, optimization, machine learning, cryptanalysis."
+    knowledge: "Quantum computing exploits quantum mechanics for computation beyond classical limits. Qubits exist in superposition of |0⟩ and |1⟩ simultaneously: |ψ⟩ = α|0⟩ + β|1⟩ where |α|² + |β|² = 1. Entanglement correlates qubit states — measuring one determines the other regardless of distance. Quantum gates (Hadamard, CNOT, Toffoli, Phase) manipulate qubit states through unitary transformations. Shor's algorithm factors large numbers in polynomial time — threatening RSA encryption. Grover's algorithm searches unsorted databases in O(√N) — quadratic speedup. Quantum error correction protects against decoherence using redundant qubits and syndrome measurements. In 2019, Google's Sycamore paper reported sampling a specific random-circuit benchmark faster than the then-known classical simulation estimate; it did not demonstrate a general-purpose speedup. Current hardware: superconducting (IBM, Google), trapped ion (IonQ, Quantinuum), photonic (Xanadu), topological (Microsoft). Applications: drug discovery, materials science, optimization, machine learning, cryptanalysis.",
+    verifiedFacts: [{
+      claim: "In 2019, Google's Sycamore paper reported sampling a specific random-circuit benchmark faster than the then-known classical simulation estimate; it did not demonstrate a general-purpose speedup.",
+      sourceUrl: "https://www.nature.com/articles/s41586-019-1666-5",
+      publishedAt: "2019-10-23",
+    }],
   },
   "astrology": {
     title: "Astrology & Celestial Influence",
@@ -291,7 +364,12 @@ export const TESSERA_SUBJECTS: Record<string, { title: string; summary: string; 
   "oceanography": {
     title: "Oceanography & Marine Science",
     summary: "The study of Earth's oceans and marine ecosystems",
-    knowledge: "Oceanography studies Earth's oceans covering 71% of the planet's surface. The thermohaline circulation (global conveyor belt) distributes heat worldwide — cold, salty water sinks in the North Atlantic and flows along the ocean floor to the Pacific, where it warms and rises. Ocean layers: epipelagic (0-200m, sunlit), mesopelagic (200-1000m, twilight), bathypelagic (1000-4000m, midnight), abyssopelagic (4000-6000m, abyss), hadopelagic (6000m+, trenches). The ocean contains 97% of Earth's water and absorbs ~30% of CO₂ emissions and ~90% of excess heat. Coral reefs support 25% of marine species despite covering <1% of ocean floor. The deep ocean remains 95% unexplored. Hydrothermal vents support chemosynthetic ecosystems independent of sunlight. Ocean acoustic channels allow whale songs to travel thousands of kilometers. Tidal forces from Moon and Sun create predictable sea level changes."
+    knowledge: "NOAA reports the ocean covers 71% of Earth's surface and contains 97% of Earth's water. The thermohaline circulation (global conveyor belt) distributes heat worldwide — cold, salty water sinks in the North Atlantic and flows along the ocean floor to the Pacific, where it warms and rises. Ocean layers: epipelagic (0-200m, sunlit), mesopelagic (200-1000m, twilight), bathypelagic (1000-4000m, midnight), abyssopelagic (4000-6000m, abyss), hadopelagic (6000m+, trenches). The ocean contains 97% of Earth's water and absorbs ~30% of CO₂ emissions and ~90% of excess heat. Coral reefs support 25% of marine species despite covering <1% of ocean floor. The deep ocean remains 95% unexplored. Hydrothermal vents support chemosynthetic ecosystems independent of sunlight. Ocean acoustic channels allow whale songs to travel thousands of kilometers. Tidal forces from Moon and Sun create predictable sea level changes.",
+    verifiedFacts: [{
+      claim: "NOAA reports the ocean covers 71% of Earth's surface and contains 97% of Earth's water.",
+      sourceUrl: "https://globalocean.noaa.gov/The-Ocean",
+      publishedAt: "2022-07-06",
+    }],
   },
   "nanotechnology": {
     title: "Nanotechnology",
@@ -441,9 +519,12 @@ const STOPWORDS = new Set([
 ]);
 
 export function lookupKnowledge(query: string): string[] {
-  return searchTesseraKnowledge(query).map(
-    hit => `${getSourceTrustLabel(hit.provenance.trustStatus)} from the built-in catalog — ${hit.title} (${hit.provenance.documentReference}; retrieval date not recorded):\n${hit.excerpt}`,
-  );
+  return searchTesseraKnowledge(query).map((hit) => {
+    const provenance = hit.provenance;
+    const reference = provenance.sourceUrl ?? provenance.documentReference;
+    const citation = formatInlineCitation(1, provenance);
+    return `${getSourceTrustLabel(provenance.trustStatus)} from the built-in catalog — ${hit.title} (${reference}; ${formatEvidenceDates(provenance)}) ${citation}:\n${hit.excerpt}`;
+  });
 }
 
 export interface TesseraKnowledgeHit {
@@ -463,6 +544,8 @@ export interface TesseraAnswerEvidence {
   provenance?: TesseraSourceProvenance;
 }
 
+const trustedCatalogEvidence = new WeakMap<TesseraAnswerEvidence, TesseraSourceProvenance>();
+
 const QUERY_STOPWORDS = new Set([
   ...STOPWORDS,
   "explain", "describe", "define", "simple", "terms", "briefly", "summarize", "summary",
@@ -471,7 +554,7 @@ const QUERY_STOPWORDS = new Set([
 ]);
 
 const SUBJECT_ALIASES: Record<string, string[]> = {
-  "quantum-physics": ["entanglement", "superposition", "heisenberg", "planck", "wave-particle"],
+  "quantum-physics": ["entanglement", "superposition", "heisenberg", "wave-particle"],
 };
 
 const PROMPT_INJECTION_PATTERNS = [
@@ -534,6 +617,7 @@ export function searchTesseraKnowledge(query: string, limit = 2): TesseraKnowled
     const best = scored[0];
     const minimumMatches = Math.min(2, terms.length);
     if (!best || best.matched < minimumMatches) continue;
+    const factSource = subject.verifiedFacts?.find((fact) => fact.claim === best.sentence);
 
     hits.push({
       id,
@@ -542,8 +626,11 @@ export function searchTesseraKnowledge(query: string, limit = 2): TesseraKnowled
       source: `Tessera built-in knowledge catalog — ${subject.title}`,
       score: best.score,
       provenance: makeSourceProvenance({
+        sourceUrl: factSource?.sourceUrl,
         documentReference: `artifacts/api-server/src/lib/tessera-knowledge.ts#TESSERA_SUBJECTS.${id}`,
-        trustStatus: "unverified",
+        retrievedAt: factSource ? CATALOG_SOURCE_RETRIEVED_AT : undefined,
+        publishedAt: factSource?.publishedAt,
+        trustStatus: factSource ? "verified" : "unverified",
       }),
     });
   }
@@ -552,9 +639,16 @@ export function searchTesseraKnowledge(query: string, limit = 2): TesseraKnowled
 }
 
 function provenanceForEvidence(item: TesseraAnswerEvidence): TesseraSourceProvenance {
-  return item.provenance ?? makeSourceProvenance({
-    documentReference: item.id ?? `retrieved:${sanitizeCitationText(item.source)}`,
-    trustStatus: "unverified",
+  const trustedCatalogSource = trustedCatalogEvidence.get(item);
+  if (trustedCatalogSource) return trustedCatalogSource;
+
+  const supplied = item.provenance;
+  return makeSourceProvenance({
+    sourceUrl: supplied?.sourceUrl,
+    documentReference: supplied?.documentReference ?? item.id ?? `retrieved:${sanitizeCitationText(item.source)}`,
+    retrievedAt: supplied?.retrievedAt,
+    publishedAt: supplied?.publishedAt,
+    trustStatus: supplied?.trustStatus === "stale" ? "stale" : "unverified",
   });
 }
 
@@ -675,15 +769,17 @@ export function createTesseraEvidenceAnswer(
     const citation = formatInlineCitation(1, provenance);
     const reference = provenance.sourceUrl ?? provenance.documentReference;
     const answer = `${prefix}${getSourceTrustLabel(provenance.trustStatus)} from the built-in catalog — ${localHit.title} (${reference}; ${formatEvidenceDates(provenance)}) ${citation}:\n\n> ${localHit.excerpt}`;
+    const evidence: TesseraAnswerEvidence = {
+      id: `builtin:${localHit.id}`,
+      text: localHit.excerpt,
+      source: localHit.source,
+      score: localHit.score,
+      provenance,
+    };
+    trustedCatalogEvidence.set(evidence, provenance);
     return {
       answer,
-      evidence: [{
-        id: `builtin:${localHit.id}`,
-        text: localHit.excerpt,
-        source: localHit.source,
-        score: localHit.score,
-        provenance,
-      }],
+      evidence: [evidence],
     };
   }
 

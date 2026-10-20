@@ -40,6 +40,15 @@ describe("Tessera source provenance", () => {
     expect(provenance.retrievedAt).toBeNull();
   });
 
+  it("preserves month-level publication dates without inventing a day", () => {
+    const provenance = makeSourceProvenance({
+      sourceUrl: "https://archive.org/details/bstj27-4-623",
+      publishedAt: "1948-10",
+    });
+
+    expect(provenance.publishedAt).toBe("1948-10");
+  });
+
   it("cleans untrusted display labels before including them in citations", () => {
     expect(sanitizeCitationText("  <script>\nInjected\u0000 name  ")).toBe("script Injected name");
   });
