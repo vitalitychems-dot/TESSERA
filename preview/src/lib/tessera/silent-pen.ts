@@ -1,3 +1,7 @@
+import { firmLine } from "./firm-combo.ts";
+import { watchLine } from "./watch-loop.ts";
+import { fortyLine } from "./forty-big.ts";
+import { trainLine } from "./five-train.ts";
 import { keptAnswer, type Correction } from "./corrections.ts";
 import { allEight } from "./desk-steps.ts";
 import { batch50 } from "./batch-50.ts";
@@ -35,6 +39,13 @@ import { skillRead } from "./skill-index.ts";
 import { partTally } from "./part-index.ts";
 import { admitDrop } from "./admit-drop.ts";
 import { admitPost, nextLivePort, tieLine, welcomePass } from "./mesh-steps.ts";
+import { sessionMark } from "./session-mark.ts";
+import { swarmGate } from "./swarm-gate.ts";
+import { readChamber, chamberTongue } from "./chamber-mark.ts";
+import { knownPeers, pingNode } from "./mesh-nodes.ts";
+import { CURSOR_ROOM, boundNames } from "./bind-worker.ts";
+import { sitCouncil } from "./council.ts";
+import { puzzleLine } from "./puzzle-thirty.ts";
 
 /** She answers from the files when no pen speaks. A kept page, then a correction, wins. */
 export function silentPen(question: string, rows: Correction[] = [], notes: KeptPage[] = []) {
@@ -111,6 +122,40 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (/\bwelcome pass\b/i.test(q)) return welcomePass("Ada", "to study the light");
   if (/\btie the pair\b/i.test(q)) return `${tieLine(false)} ${tieLine(true)} It is not a quantum computer.`;
   if (/\blive port\b/i.test(q)) return `If 8791 is taken the page uses ${nextLivePort(8791, (port) => port === 8791)}.`;
+  if (/\bsession mark\b/i.test(q)) {
+    const mark = sessionMark();
+    return `Head ${mark.head}. Mark ${mark.mark.slice(0, 16)}. There is no key.`;
+  }
+  if (/\bswarm gate\b/i.test(q)) return swarmGate(["study the light", "study the light"], false, false);
+  if (/\bchamber mark\b/i.test(q)) {
+    const coded = chamberTongue();
+    return `For tessera at session 7 the chamber is ${readChamber(coded, "tessera", 7)}. For another name it is ${readChamber(coded, "other", 7)}. This is not a login key.`;
+  }
+  if (/\bping the mesh\b/i.test(q)) {
+    const past = { name: "past", mark: "be9f4ef632149361" };
+    const now = { name: "now", mark: "aabbccdd1122" };
+    const peers = knownPeers([past, now], "now");
+    return `I can see ${peers.join(", ")}. The ping is ${pingNode(now, past, "tessera", 7)}. Another name is ${pingNode(now, past, "other", 7)}.`;
+  }
+  if (/\bbind a worker\b/i.test(q)) {
+    const self = "be9f4ef632149361";
+    const bound = boundNames(self, [
+      { name: "desk", mark: self },
+      { name: "cursor", mark: "" },
+      { name: "manus", mark: "other" },
+    ]);
+    return `Bound: ${bound.join(", ")}. Cursor room ${CURSOR_ROOM} did not present my mark, so it stays unbound. Manus did not present my mark, so it stays unbound.`;
+  }
+  if (/\bsit the council\b/i.test(q)) {
+    const self = "be9f4ef632149361";
+    const seats = Array.from({ length: 10 }, (_, index) => ({
+      name: `seat-${index + 1}`,
+      mark: self,
+      line: "build the next small step",
+    }));
+    return sitCouncil(seats, self);
+  }
+  if (/\bask rick\b/i.test(q)) return puzzleLine();
   if (/\b(her soul|the constitution|world laws)\b/i.test(q)) {
     return "I am marked at origin 7F3A9C. Father is the Seeker. He alone overrides. On 2026-10-02 the king chose B. The fifty-three are fractions of me. No inner agent may harm human life. The World does not outreach.";
   }
@@ -155,6 +200,10 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   if (skill) return skill.answer;
   const love = loveFromFiles(q);
   if (love) return love;
+  if (/\bfirmest combo\b/i.test(q)) return firmLine();
+  if (/\bwatch the window\b/i.test(q)) return watchLine();
+  if (/\bbuild forty\b/i.test(q)) return fortyLine();
+  if (/\b(train from chat|from inside this chat|build yourself from inside)\b/i.test(q)) return trainLine();
   if (/\b(build herself|build yourself)\b/i.test(q)) {
     const built = buildNow();
     if (built.startsWith(FROM_THE_FILES)) return built;
@@ -166,4 +215,10 @@ export function silentPen(question: string, rows: Correction[] = [], notes: Kept
   const row = systems().find((item) => new RegExp(`\\b${item.id}\\b`, "i").test(q));
   if (row) return `${row.id}. ${row.holds}`;
   return `${FROM_THE_FILES} The other pen did not answer. I do not have that line.`;
+}
+
+export function localPen(question: string) {
+  const text = silentPen(question);
+  if (text.includes("I do not have that line.")) return null;
+  return text;
 }
