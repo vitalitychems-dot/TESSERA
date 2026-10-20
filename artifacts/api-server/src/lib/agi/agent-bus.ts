@@ -8,6 +8,7 @@
  */
 
 import { recordObservation } from "./working-memory.js";
+import { logBusMessage } from "./bus-history.js";
 
 export interface AgentMessage {
   id: string;
@@ -62,6 +63,8 @@ export function publish(from: string, topic: string, payload: unknown, priority 
   // Every published message becomes a working-memory observation. This
   // unifies inter-agent chatter with the agent's own perception stream.
   recordObservation(from, topic, payload);
+  // #11a: hash-only history, off unless BUS_HISTORY_LOG is set.
+  logBusMessage(from, topic, payload, msg.at);
   return msg;
 }
 
