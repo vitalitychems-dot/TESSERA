@@ -35,6 +35,8 @@ import { answerInContext } from "@/lib/tessera/skill-context";
 import { rememberAsk } from "@/lib/tessera/forty";
 import { loadAsks, recall, remember, type Ask } from "@/lib/tessera/ask-memory";
 import { heldBack, shouldStayLocal } from "@/lib/tessera/scope-stop";
+import { localPen } from "@/lib/tessera/silent-pen";
+import { MESH_SEEN } from "@/lib/tessera/mesh-nodes";
 import { skillDrill, addedLines, drillText } from "@/lib/tessera/skill-drill";
 import { runSitting } from "@/lib/tessera/sitting-25";
 
@@ -552,6 +554,14 @@ export function Chamber() {
       sending.current = false;
       return;
     }
+    const heldHere = localPen(content);
+    if (heldHere) {
+      const mesh = ` I can see ${MESH_SEEN.map((seat) => seat.name).join(", ")}.`;
+      addMessage("assistant", /\b(who are you|mesh|ping)\b/i.test(content) ? `${heldHere}${mesh}` : heldHere);
+      setPending(false);
+      sending.current = false;
+      return;
+    }
     const result = await Promise.race([
       speakAsTessera({
         data: {
@@ -739,6 +749,9 @@ export function Chamber() {
       </div>
 
       <div className="z-40 shrink-0 bg-bg px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-8">
+        <div className="mx-auto mb-2 w-full max-w-2xl text-xs tracking-wide text-muted">
+          Mesh seats: {MESH_SEEN.map((seat) => seat.name).join(", ")}
+        </div>
         <div className="mx-auto mb-2 grid w-full max-w-2xl grid-cols-3 gap-2">
           {[
             ["Help", "help"],
