@@ -272,12 +272,18 @@ describe("mesh socket authorization", () => {
     expect(blob([info.mock.calls, warn.mock.calls])).not.toContain(KEY);
   });
 
-  it("keeps an authorized socket open and sends enrichment", async () => {
+  it("rejects a legacy bearer key and accepts a valid HttpOnly session cookie", async () => {
     harness = await startMesh();
-    const client = await openClient(harness.port);
-    client.ws.send(JSON.stringify({ type: "subscribe", channel: "mesh" }));
-    await waitUntil(() => client.messages.some((message) => message.type === "subscribed"));
-    client.ws.send(JSON.stringify({ type: "mesh:auth", token: KEY, metadata: { currentPage: "/desk" } }));
+    const bearer = await openClient(harness.port);
+    bearer.ws.send(JSON.stringify({ type: "mesh:auth", token: KEY }));
+    const bearerClosed = await withTimeout(bearer.closed);
+    expect(bearerClosed.code).toBe(MESH_SOCKET_CLOSE_CODE);
+    expect(harness.calls).toBe(0);
+
+    const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+    const client = await openClient(harness.port, issued.signedId);
+    await waitUntil(() => client.messages.some((message) => message.type === "mesh:connected"));
+    client.ws.send(JSON.stringify({ type: "mesh:auth", metadata: { currentPage: "/desk" } }));
     await waitUntil(() => client.messages.some((message) => message.type === "mesh:registered"));
     const registered = client.messages.find((message) => message.type === "mesh:registered");
     const shared = registered?.sharedState as { recentTasks?: { taskId?: string }[]; recentDecisions?: { action?: string }[] };
@@ -355,7 +361,7 @@ describe("mesh socket authorization", () => {
     const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
     const client = await openClient(harness.port, issued.signedId);
     await waitUntil(() => client.messages.some((message) => message.type === "mesh:connected"));
-    client.ws.send(JSON.stringify({ type: "mesh:auth", token: KEY }));
+    client.ws.send(JSON.stringify({ type: "mesh:auth" }));
     await withTimeout(started);
     expect(revokeSession(issued.signedId)).toBe(true);
     release();

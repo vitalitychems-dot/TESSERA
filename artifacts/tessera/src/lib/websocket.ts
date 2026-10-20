@@ -6,10 +6,12 @@ class TesseraWebSocket {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectDelay = 1000;
   private maxReconnectDelay = 30000;
+  private manuallyClosed = false;
   private subscriptions = new Set<string>();
   private onOpenCallbacks: Array<() => void> = [];
 
   connect() {
+    this.manuallyClosed = false;
     if (this.ws?.readyState === WebSocket.OPEN) return;
     if (this.ws?.readyState === WebSocket.CONNECTING) return;
 
@@ -63,7 +65,7 @@ class TesseraWebSocket {
   }
 
   private scheduleReconnect() {
-    if (this.reconnectTimer) return;
+    if (this.manuallyClosed || this.reconnectTimer) return;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.reconnectDelay = Math.min(this.reconnectDelay * 2, this.maxReconnectDelay);
@@ -110,10 +112,12 @@ class TesseraWebSocket {
   }
 
   disconnect() {
+    this.manuallyClosed = true;
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+    this.onOpenCallbacks = [];
     this.ws?.close();
     this.ws = null;
   }

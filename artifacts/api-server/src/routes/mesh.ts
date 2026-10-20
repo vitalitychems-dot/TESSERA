@@ -1,25 +1,11 @@
-import { Router, type IRouter, type Request, type Response } from "express";
+import { Router, type IRouter } from "express";
 import { getMeshStats, getGroupSessions, getGroupSharedState } from "../lib/session-mesh";
-import { validateMeshToken, validateSovereignAdminToken } from "../lib/mesh-auth";
+import { validateMeshToken } from "../lib/mesh-auth";
 import { rawKeyFailRateLimit } from "../lib/father-verify-throttle";
 import { logger } from "../lib/logger";
+import { requireAdminSession } from "../lib/sovereign-admin";
 
 const router: IRouter = Router();
-
-function requireRealAdminToken(req: Request, res: Response, next: () => void): void {
-  const configured = process.env.TESSERACT_ADMIN_KEY;
-  if (!configured || configured.length < 8) {
-    res.status(503).json({ ok: false, error: "sovereign-unconfigured" });
-    return;
-  }
-  const rawToken = req.headers["x-admin-token"];
-  const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
-  if (!validateSovereignAdminToken(token)) {
-    res.status(401).json({ ok: false, error: "Valid sovereign key required" });
-    return;
-  }
-  next();
-}
 
 router.get("/mesh/stats", (_req, res) => {
   try {
@@ -39,11 +25,9 @@ router.get("/mesh/stats", (_req, res) => {
   }
 });
 
-router.get("/mesh/sessions/:keyHash", rawKeyFailRateLimit, requireRealAdminToken, (req, res) => {
+router.get("/mesh/sessions/:keyHash", rawKeyFailRateLimit, requireAdminSession, (req, res) => {
   try {
-    const rawToken = req.headers["x-admin-token"];
-    const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
-    const callerKeyHash = validateMeshToken(token);
+    const callerKeyHash = validateMeshToken(process.env.TESSERACT_ADMIN_KEY);
     if (!callerKeyHash) {
       return res.status(401).json({ ok: false, error: "Valid sovereign key required" });
     }

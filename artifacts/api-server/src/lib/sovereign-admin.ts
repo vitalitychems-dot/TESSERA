@@ -5,7 +5,7 @@
 // — never silently open. No credential material logged.
 
 import type { Request, Response, NextFunction } from "express";
-import { SESSION_COOKIE, lookupSession, isAdminTokenConfigured, verifyAdminToken } from "./sovereign-session";
+import { SESSION_COOKIE, lookupSession, isAdminTokenConfigured, isSessionSigningConfigured, verifyAdminToken } from "./sovereign-session";
 import { logger } from "./logger";
 
 export interface AdminRequest extends Request {
@@ -29,7 +29,7 @@ function readCookie(req: Request, name: string): string | undefined {
 export type OwnerSessionDecision =
   | { ok: true; issuedAt: number; expiresAt: number }
   | { ok: false; status: 401; error: "unauthenticated"; reason?: string }
-  | { ok: false; status: 503; error: "sovereign-unconfigured" };
+  | { ok: false; status: 503; error: "sovereign-unconfigured" | "session-signing-unconfigured" };
 
 /** Same fail-closed check as requireAdminSession, without writing a response. */
 export function decideOwnerSession(req: Request): OwnerSessionDecision {
@@ -37,6 +37,12 @@ export function decideOwnerSession(req: Request): OwnerSessionDecision {
     return { ok: false, status: 503, error: "sovereign-unconfigured" };
   }
   const cookie = readCookie(req, SESSION_COOKIE);
+  if (!cookie) {
+    return { ok: false, status: 401, error: "unauthenticated", reason: "no-cookie" };
+  }
+  if (!isSessionSigningConfigured()) {
+    return { ok: false, status: 503, error: "session-signing-unconfigured" };
+  }
   const lookup = lookupSession(cookie);
   if (!lookup.valid || !lookup.record) {
     return { ok: false, status: 401, error: "unauthenticated", reason: lookup.reason };
@@ -76,6 +82,15 @@ export function resolveFatherAuthorization(req: Request): FatherAuthorization {
 }
 
 export function requireAdminSession(req: AdminRequest, res: Response, next: NextFunction): void {
+  const forbiddenAdminQueryKey = Object.keys(req.query).some((key) =>
+    ["tesseractadminkey", "tesseract_admin_key", "adminkey", "admin_key"].includes(key.toLowerCase()),
+  );
+  if (forbiddenAdminQueryKey) {
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Referrer-Policy", "no-referrer");
+    res.status(403).json({ ok: false, error: "credential-in-query-forbidden" });
+    return;
+  }
   const decision = decideOwnerSession(req);
   if (!decision.ok) {
     if (decision.status === 401) {
@@ -83,10 +98,13 @@ export function requireAdminSession(req: AdminRequest, res: Response, next: Next
       res.status(401).json({ ok: false, error: "unauthenticated", reason: decision.reason ?? "unknown" });
       return;
     }
+    const sessionSecretMissing = decision.error === "session-signing-unconfigured";
     res.status(503).json({
       ok: false,
-      error: "sovereign-unconfigured",
-      message: "TESSERACT_ADMIN_KEY is not configured. Privileged surfaces are fail-closed.",
+      error: decision.error,
+      message: sessionSecretMissing
+        ? "SOVEREIGN_SESSION_SECRET is not configured. Privileged surfaces are fail-closed."
+        : "TESSERACT_ADMIN_KEY is not configured. Privileged surfaces are fail-closed.",
     });
     return;
   }

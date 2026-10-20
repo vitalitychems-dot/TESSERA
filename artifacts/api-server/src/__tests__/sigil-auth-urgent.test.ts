@@ -833,13 +833,42 @@ describe("sigil auth urgent", () => {
       cookie: ownerCookie(),
       body: { candidate: SYNTHETIC_LEGACY_TOKEN },
     });
-    expect(reveal.status).not.toBe(429);
+    expect(reveal.status).toBe(410);
+    const revealBody = await reveal.json() as { error?: string };
+    expect(revealBody.error).toBe("credential-reveal-disabled");
+    expect(JSON.stringify(revealBody)).not.toContain(SYNTHETIC_LEGACY_TOKEN);
     const login = await fetch(`${baseUrl}/admin/session`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ token: "wrong-synthetic-token" }),
     });
     expect(login.status).toBe(401);
+  });
+
+  it.sequential("fails closed when production has no dedicated session-signing secret", async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousSession = process.env[SESSION_ENV];
+    process.env.NODE_ENV = "production";
+    delete process.env[SESSION_ENV];
+    try {
+      const status = await send("GET", "/admin/session/status");
+      expect(status.status).toBe(200);
+      await expect(status.json()).resolves.toMatchObject({
+        configured: false,
+        authenticated: false,
+        reason: "session-signing-unconfigured",
+      });
+
+      const unlock = await send("POST", "/admin/session", { body: { token: SYNTHETIC_LEGACY_TOKEN } });
+      expect(unlock.status).toBe(503);
+      expect(unlock.headers.get("set-cookie")).toBeNull();
+      await expect(unlock.json()).resolves.toMatchObject({ error: "session-signing-unconfigured" });
+    } finally {
+      if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = previousNodeEnv;
+      if (previousSession === undefined) delete process.env[SESSION_ENV];
+      else process.env[SESSION_ENV] = previousSession;
+    }
   });
 });
 

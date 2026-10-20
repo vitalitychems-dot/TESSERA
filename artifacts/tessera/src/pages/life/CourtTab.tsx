@@ -165,12 +165,12 @@ export default function CourtTab() {
     setLoading(true);
     try {
       const [statusRes, trialsRes, acctRes, govRes, workRes, summaryRes] = await Promise.all([
-        fetch("/api/family-court/status"),
-        fetch("/api/family-court/trials"),
-        fetch("/api/family-court/accountability"),
-        fetch("/api/family-court/governance"),
-        fetch("/api/family-court/child-work"),
-        fetch("/api/family-court/family-summary"),
+        fetch("/api/family-court/status", { credentials: "include" }),
+        fetch("/api/family-court/trials", { credentials: "include" }),
+        fetch("/api/family-court/accountability", { credentials: "include" }),
+        fetch("/api/family-court/governance", { credentials: "include" }),
+        fetch("/api/family-court/child-work", { credentials: "include" }),
+        fetch("/api/family-court/family-summary", { credentials: "include" }),
       ]);
       const [status, trialsData, acctData, govData, workData, summaryData] = await Promise.all([
         statusRes.json(),
@@ -192,15 +192,10 @@ export default function CourtTab() {
 
   useEffect(() => { fetchAll(); }, []);
 
-  const getAdminHeaders = (): Record<string, string> => {
-    const token = localStorage.getItem("t9_admin_token") || "";
-    return token ? { "x-admin-token": token } : {};
-  };
-
   const runChildrenWork = async () => {
     setRunningWork(true);
     try {
-      await fetch("/api/family-court/run-children-work", { method: "POST", headers: getAdminHeaders() });
+      await fetch("/api/family-court/run-children-work", { method: "POST", credentials: "include" });
       await fetchAll();
     } catch {}
     setRunningWork(false);
@@ -212,7 +207,8 @@ export default function CourtTab() {
     try {
       const res = await fetch("/api/family-court/trials/file", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getAdminHeaders() },
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           plaintiffAgent: newTrial.plaintiff,
           defendantAgent: newTrial.defendant,
@@ -234,7 +230,7 @@ export default function CourtTab() {
   const runTrial = async (trialId: string) => {
     setRunningTrial(trialId);
     try {
-      await fetch(`/api/family-court/trials/${trialId}/run`, { method: "POST", headers: getAdminHeaders() });
+      await fetch(`/api/family-court/trials/${trialId}/run`, { method: "POST", credentials: "include" });
       await fetchAll();
     } catch {}
     setRunningTrial(null);
@@ -259,7 +255,8 @@ export default function CourtTab() {
     try {
       const res = await fetch("/api/family-court/governance/propose", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getAdminHeaders() },
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newProposal),
       });
       const data = await res.json();
@@ -274,7 +271,7 @@ export default function CourtTab() {
 
   const resolveViolation = async (violationId: string) => {
     try {
-      await fetch(`/api/family-court/accountability/resolve/${violationId}`, { method: "POST", headers: getAdminHeaders() });
+      await fetch(`/api/family-court/accountability/resolve/${violationId}`, { method: "POST", credentials: "include" });
       await fetchAll();
     } catch {}
   };

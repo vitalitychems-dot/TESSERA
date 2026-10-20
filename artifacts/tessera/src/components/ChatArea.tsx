@@ -33,7 +33,8 @@ import {
 } from "./chat/ChatPanels";
 import { type UploadedFile } from "./chat/ChatFileComponents";
 import { ChatShortcutsModal } from "./chat/ChatKeyboardShortcuts";
-import { MyKeyRevealModal, isShowMyKeyCommand } from "./chat/MyKeyRevealModal";
+import { isShowMyKeyCommand } from "./chat/MyKeyRevealModal";
+import { containsCredentialMaterial } from "@/lib/credential-guard";
 import { useChatCommandExecutor } from "./chat/useChatCommandExecutor";
 import { ChatDataCommandResult } from "./chat/ChatDataCommandResult";
 import { ChatVoiceModeOverlay } from "./chat/ChatVoiceModeOverlay";
@@ -73,16 +74,11 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
     try { return parseFloat(localStorage.getItem("tessera-voice-speed") || "1.0"); } catch { return 1.0; }
   });
   const [interimText, setInterimText] = useState("");
-  const [adminAuthAttempt, setAdminAuthAttempt] = useState(false);
-  const [inputIsAdminKey, setInputIsAdminKey] = useState(false);
-  const [colonelPhase, setColonelPhase] = useState<"idle" | "hash_accepted" | "authenticating" | "success" | "fail">("idle");
-  const [colonelMessage, setColonelMessage] = useState("");
   const [puterSelectorOpen, setPuterSelectorOpen] = useState(false);
   const [stealthKeyMode, setStealthKeyMode] = useState(false);
   const [stealthKeys, setStealthKeys] = useState<{service: string; keyName: string; keyValue: string}[]>([{ service: "", keyName: "", keyValue: "" }]);
   const [stealthKeySaving, setStealthKeySaving] = useState(false);
   const [stealthKeySaved, setStealthKeySaved] = useState(false);
-  const [walletDetected, setWalletDetected] = useState<{ label: string; type: string }[]>([]);
   const [discussOpen, setDiscussOpen] = useState(false);
   const [discussTopic, setDiscussTopic] = useState("");
   const [discussLoading, setDiscussLoading] = useState(false);
@@ -126,13 +122,12 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [summitFeedOpen, setSummitFeedOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [keyRevealOpen, setKeyRevealOpen] = useState(false);
   const [historyNavIndex, setHistoryNavIndex] = useState(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   
   const tesseractMode = true;
-  const { isAdmin, authenticate, stealthMode, toggleStealth, adminMode, savedAdminKey, saveAdminKey } = useAdmin();
+  const { isAdmin, stealthMode, toggleStealth, adminMode } = useAdmin();
 
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -482,64 +477,20 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
     setAutoSendCountdown(null);
     setShowCommandHints(false);
 
-    if (!isAdmin && !adminMode) {
-      const trimmed = currentInput.trim();
-      const looksLikeAuthKey = /^[a-zA-Z0-9_\-]{4,128}$/.test(trimmed) && !/\s/.test(trimmed) && !/^(hi|hey|hello|who|what|how|why|when|where|show|check|get|status|open|go|tell|can|do|is|are|the|yes|no|ok)\b/i.test(trimmed);
-
-      if (looksLikeAuthKey) {
-        setAdminAuthAttempt(true);
-        setColonelMessage("Verifying sovereign key...");
-        try { await fetch("/api/auth/reset-lockout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: trimmed }) }); } catch {}
-        const success = await authenticate(trimmed);
-        setAdminAuthAttempt(false);
-        if (success) {
-          setColonelPhase("success");
-          setColonelMessage("SOVEREIGN ACCESS GRANTED");
-          setInputBoth("");
-          saveAdminKey(trimmed);
-          setTimeout(() => { setColonelPhase("idle"); setColonelMessage(""); }, 5000);
-          return;
-        } else {
-          setColonelPhase("idle");
-          setColonelMessage("");
-        }
-      }
-    }
-
     const msgText = currentInput.trim();
 
-    // "show my key" / "give me my key" / "/my key" → open the LUS reveal modal.
-    // Adopted by the Grand Conference (Language & Security Summit).
     if (isShowMyKeyCommand(msgText)) {
-      setKeyRevealOpen(true);
       setInputBoth("");
+      setDataCommandResult({ label: "Credential protection", content: "The canonical admin key is never displayed in chat or returned to the browser. Enter it only at the secure session gate, and keep the deployed value in the hosting provider's secret store.", loading: false });
+      setTimeout(() => setDataCommandResult(null), 10000);
       return;
     }
 
-    if (isAdmin && msgText.length > 20) {
-      const bulkKeyPattern = /([A-Z][A-Z0-9_]{2,40}(?:_API_KEY|_SECRET_KEY|_KEY|_TOKEN|_SECRET|_API|_PASSWORD))\s*[=:]\s*["']?([^\s"',}{]+)["']?/g;
-      const matches = (Array.from(msgText.matchAll(bulkKeyPattern)) as RegExpExecArray[]).filter(m => (m[2] || "").length >= 8);
-      if (matches.length >= 1) {
-        try {
-          const adminToken = localStorage.getItem("t9_admin_token") || "";
-          const resp = await fetch("/api/keys/bulk-detect", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "x-admin-token": adminToken },
-            body: JSON.stringify({ text: msgText }),
-            credentials: "include",
-          });
-          if (resp.ok) {
-            const data = await resp.json();
-            if (data.count > 0) {
-              const keyNames = data.detected.map((d: { keyName: string }) => d.keyName).join(", ");
-              setDataCommandResult({ label: "Bulk Key Import", content: `Saved ${data.count} API key(s): ${keyNames}`, loading: false });
-              setTimeout(() => setDataCommandResult(null), 10000);
-              setInputBoth("");
-              return;
-            }
-          }
-        } catch {}
-      }
+    if (containsCredentialMaterial(msgText)) {
+      setInputBoth("");
+      setDataCommandResult({ label: "Not sent", content: "This message looks like it contains a credential or private key. Nothing was sent, saved, scanned, or forwarded. Remove the secret from chat and use the secure session gate or an approved secret-management flow instead.", loading: false });
+      setTimeout(() => setDataCommandResult(null), 12000);
+      return;
     }
 
     const commandHandled = await tryExecuteCommand(msgText);
@@ -583,19 +534,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
     setInputBoth("");
     setTimeout(() => setIsSending(false), 2000);
 
-    const hasKeyIndicator = /wallet|address|private\s?key|api\s?key|secret|token|sk-|shpat_|0x[a-f0-9]{40}|[1-9A-HJ-NP-Za-km-z]{40,}/i.test(msgText);
-    if (hasKeyIndicator && isAdmin) {
-      fetch("/api/wallets/scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: msgText }) })
-        .then(r => r.json())
-        .then(data => {
-          if (data.count > 0) {
-            setWalletDetected(data.detected.map((d: { label: string; type: string }) => ({ label: d.label, type: d.type })));
-            queryClient.invalidateQueries({ queryKey: ["/api/keys"] });
-            setTimeout(() => setWalletDetected([]), 6000);
-          }
-        })
-        .catch(() => {});
-    }
   };
 
   const stopSpeechRecognition = useCallback(() => {
@@ -1082,17 +1020,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
           />
         )}
 
-        {walletDetected.length > 0 && (
-          <div className="max-w-3xl mx-auto mb-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-[12px] animate-in fade-in" data-testid="wallet-saved-banner">
-            <CheckCircle2 size={14} className="shrink-0" />
-            <span className="flex-1">
-              <span className="font-semibold">Saved to Fleet:</span>{" "}
-              {walletDetected.map(w => w.label).join(", ")}
-            </span>
-            <button onClick={() => setWalletDetected([])} className="shrink-0 hover:text-green-300"><X size={12} /></button>
-          </div>
-        )}
-
         <ContextSuggestions
           // @ts-ignore
           messages={messages}
@@ -1186,20 +1113,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
             </AnimatePresence>
             <NLPGoalsPanel />
 
-            {colonelMessage && !isAdmin && (
-              <div className={cn(
-                "flex items-center gap-2 px-4 py-2 mx-2 mb-1 rounded-lg border font-mono text-[11px] tracking-wider transition-all duration-500",
-                colonelPhase === "hash_accepted" ? "bg-violet-950/60 border-violet-500/40 text-violet-400 shadow-[0_0_20px_rgba(228,198,255,0.15)]" :
-                colonelPhase === "authenticating" ? "bg-amber-950/40 border-amber-500/30 text-amber-400 animate-pulse" :
-                colonelPhase === "success" ? "bg-green-950/40 border-green-500/40 text-green-400 shadow-[0_0_20px_rgba(34,197,94,0.15)]" :
-                colonelPhase === "fail" ? "bg-red-950/40 border-red-500/30 text-red-400" :
-                "bg-violet-950/30 border-violet-500/20 text-violet-400"
-              )} data-testid="colonel-protocol-banner">
-                <span className="text-base">{colonelPhase === "success" ? "⊕" : colonelPhase === "fail" ? "⊗" : "⊕"}</span>
-                <span>{colonelMessage}</span>
-                {colonelPhase === "authenticating" && <span className="ml-auto flex gap-0.5">{[0,1,2].map(i => <span key={i} className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />)}</span>}
-              </div>
-            )}
             <div className="relative">
               <textarea
                 ref={textareaRef}
@@ -1216,12 +1129,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
                       /^\/?(status|check|show|scan|get)\s*/.test(trimmed))
                     || (deskHint && trimmed.length <= 48)
                   );
-                  if (savedAdminKey && savedAdminKey.length > 4 && val.trim() === savedAdminKey.trim()) {
-                    setInputIsAdminKey(true);
-                    if (!isAdmin) authenticate(savedAdminKey).catch(() => {});
-                  } else {
-                    setInputIsAdminKey(false);
-                  }
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -1254,15 +1161,7 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
                 onFocus={() => {}}
                 placeholder={
                   isAdmin ? "Sovereign command..." :
-                  colonelPhase === "hash_accepted" ? "Enter your sovereign key..." :
                   "Speak with Tessera"
-                }
-                style={
-                  adminMode
-                    ? {}
-                    : inputIsAdminKey
-                    ? { color: "#f59e0b", caretColor: "#f59e0b", textShadow: "0 0 12px rgba(245,158,11,0.5)" }
-                    : {}
                 }
                 className={cn(
                   "w-full bg-transparent px-5 pt-3 pb-12 min-h-[48px] max-h-[160px] sm:max-h-[400px] resize-none focus:outline-none custom-scrollbar text-[16px] leading-relaxed transition-all duration-200",
@@ -1270,10 +1169,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
                     ? "text-violet-500 caret-violet-500 admin-mode-font admin-mode-caret"
                     : isAdmin
                     ? "text-violet-400 caret-violet-400 admin-mode-font admin-mode-caret"
-                    : colonelPhase === "hash_accepted"
-                    ? "text-violet-400 caret-violet-400"
-                    : inputIsAdminKey
-                    ? ""
                     : "text-white/60 caret-cyan-400"
                 )}
                 rows={1}
@@ -1364,7 +1259,6 @@ export function ChatArea({ conversationId }: { conversationId: number }) {
       </div>
 
       <ChatShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
-      <MyKeyRevealModal open={keyRevealOpen} onClose={() => setKeyRevealOpen(false)} />
     </div>
   );
 }

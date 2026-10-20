@@ -2,7 +2,7 @@ import type { IncomingMessage } from "node:http";
 import { v4 as uuidv4 } from "uuid";
 import { WebSocket } from "ws";
 import { logger } from "./logger";
-import { configuredMeshKeyHash, validateMeshToken } from "./mesh-auth";
+import { configuredMeshKeyHash } from "./mesh-auth";
 import {
   broadcastToGroup,
   closeMeshSocket,
@@ -49,14 +49,11 @@ function readSessionCookie(header: string | undefined): { present: boolean; valu
 /** Fail closed. Returns the sovereign key hash, or null when unauthorized. */
 export function authorizeMeshCredential(state: MeshAuthState): string | null {
   try {
+    // WebSocket credentials are cookie-only. Never accept a client-supplied
+    // admin key or bearer token, even if a valid session cookie is present.
     const token = typeof state.token === "string" ? state.token.trim() : "";
-    const hasToken = token.length > 0;
-    if (!hasToken && !state.sessionPresented) return null;
-    if (state.sessionPresented) {
-      const lookup = lookupSession(state.sessionCookie);
-      if (!lookup.valid) return null;
-    }
-    if (hasToken) return validateMeshToken(token);
+    if (token.length > 0 || !state.sessionPresented) return null;
+    if (!lookupSession(state.sessionCookie).valid) return null;
     return configuredMeshKeyHash();
   } catch {
     return null;

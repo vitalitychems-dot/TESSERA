@@ -358,10 +358,9 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
+        {/* Mount privileged UI state only after the HttpOnly session gate succeeds. */}
+        <TesseractKeyGate>
         <AdminProvider>
-          {/* Sovereign gate: locked until the operator pastes the canonical Father
-              key into the TESSERACT_ADMIN_KEY (= SIGIL_ADMIN_KEY) Replit Secret. */}
-          <TesseractKeyGate>
           <MeshProvider>
           <NLPGoalsProvider>
           <TooltipProvider>
@@ -386,8 +385,8 @@ function App() {
           </TooltipProvider>
           </NLPGoalsProvider>
           </MeshProvider>
-          </TesseractKeyGate>
         </AdminProvider>
+        </TesseractKeyGate>
       </QueryClientProvider>
     </ErrorBoundary>
   );

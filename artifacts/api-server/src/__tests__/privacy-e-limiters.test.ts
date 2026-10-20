@@ -109,10 +109,16 @@ describe("privacy e limiters and admin key sources", () => {
       `${baseUrl}/admin/reflection/metrics?tesseractAdminKey=${encodeURIComponent(ADMIN_KEY)}`,
     );
     expect(queried.status).toBe(403);
+    expect(queried.headers.get("cache-control")).toBe("no-store");
     const header = await fetch(`${baseUrl}/admin/reflection/metrics`, {
       headers: { "x-tesseract-admin-key": ADMIN_KEY },
     });
-    expect(header.status).toBe(200);
+    expect(header.status).toBe(401);
+    const issued = issueSession({ ip: "127.0.0.1", userAgent: "vitest" });
+    const session = await fetch(`${baseUrl}/admin/reflection/metrics`, {
+      headers: { cookie: `${SESSION_COOKIE}=${issued.signedId}` },
+    });
+    expect(session.status).toBe(200);
   });
 
   it("fails closed on grand-evolution and ignores body and query keys", async () => {

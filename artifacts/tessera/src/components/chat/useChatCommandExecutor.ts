@@ -67,10 +67,7 @@ export function useChatCommandExecutor(callbacks: CommandCallbacks) {
           setInputBoth("");
           setDataCommandResult({ label: dc.label, content: "", loading: true });
           try {
-            const adminToken = localStorage.getItem("t9_admin_token") || "";
-            const headers: Record<string, string> = {};
-            if (adminToken) headers["x-admin-token"] = adminToken;
-            const res = await fetch(dc.endpoint, { credentials: "include", headers });
+            const res = await fetch(dc.endpoint, { credentials: "include" });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             setDataCommandResult({ label: dc.label, content: dc.format(data), loading: false });
@@ -91,12 +88,9 @@ export function useChatCommandExecutor(callbacks: CommandCallbacks) {
           setInputBoth("");
           setDataCommandResult({ label: ac.label, content: "", loading: true });
           try {
-            const adminToken = localStorage.getItem("t9_admin_token") || "";
-            const headers: Record<string, string> = { "Content-Type": "application/json" };
-            if (adminToken) headers["x-admin-token"] = adminToken;
             const res = await fetch(ac.endpoint, {
               method: "POST",
-              headers,
+              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ [ac.bodyKey]: body }),
               credentials: "include",
             });

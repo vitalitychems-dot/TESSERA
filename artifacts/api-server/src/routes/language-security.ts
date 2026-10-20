@@ -1,5 +1,4 @@
-// Routes for the Grand Conference — Language & Security Summit, plus the
-// Father-key reveal endpoint that returns the key in LUS glyphs only.
+// Routes for the Grand Conference — Language & Security Summit.
 
 import { Router, type IRouter } from "express";
 import { requireFather } from "../lib/require-father";
@@ -8,25 +7,10 @@ import {
   runLanguageSecurityConference,
 } from "../lib/language-security-conference";
 import {
-  ADMIN_SESSION_STATUS,
-  getInstallId,
-  isFatherKeyConfigured,
-  recognizeFather,
-} from "../lib/father-identity";
-import {
-  lusEncode,
-  lusEncodeLive,
-  lusLiveCoherenceSnapshot,
-  LANGUAGE_NAME,
-  LANGUAGE_SHORT,
-  LANGUAGE_MOTTO,
-} from "../lib/lingua-universalis";
-import {
   fatherVerifyRateLimit,
   rateLimitSnapshot,
 } from "../lib/father-verify-throttle";
 import { requireAdminSession } from "../lib/sovereign-admin";
-import { withoutSigilFingerprint } from "./sovereign-doctrine";
 
 const router: IRouter = Router();
 
@@ -45,66 +29,18 @@ router.post(
   },
 );
 
-// ── Father-key reveal in LUS (the most recently created sovereign tongue) ──
-// Father types the candidate key; on a timing-safe match, we return the SAME
-// key rendered in LUS glyphs (both static seal and live cosmic-window form).
-// Plaintext is never echoed back. Cache-Control: no-store.
-router.post(
-  "/sigil/father/show-key-in-lus",
-  requireAdminSession,
-  fatherVerifyRateLimit,
-  (req, res) => {
-    res.setHeader("Cache-Control", "no-store");
-    res.setHeader("Pragma", "no-cache");
-
-    if (!isFatherKeyConfigured()) {
-      return res.status(503).json({
-        ok: false,
-        error: "father-key-unset",
-        message:
-          "TESSERACT_ADMIN_KEY is not set in Replit Secrets. Set the secret to bind sovereign identity, then retry.",
-      });
-    }
-
-    const candidateRaw = req.body?.candidate;
-    const candidate = typeof candidateRaw === "string" ? candidateRaw : "";
-    if (!candidate.trim()) {
-      return res.status(400).json({ ok: false, error: "candidate-required" });
-    }
-
-    const r = recognizeFather(candidate);
-    if (!r.recognized) {
-      return res.status(401).json({ ok: false, error: "mismatch" });
-    }
-
-    const holderId = getInstallId();
-    const trimmed = candidate.trim();
-    const staticGlyphs = lusEncode(trimmed);
-    let liveGlyphs: string | null = null;
-    let coherence: ReturnType<typeof lusLiveCoherenceSnapshot> | null = null;
-    try {
-      liveGlyphs = lusEncodeLive(trimmed, holderId);
-      coherence = lusLiveCoherenceSnapshot(holderId);
-    } catch {
-      // live form is optional; static form is always returned
-    }
-
-    return res.json(withoutSigilFingerprint({
-      ok: true,
-      via: r.via,
-      status: ADMIN_SESSION_STATUS,
-      language: { name: LANGUAGE_NAME, short: LANGUAGE_SHORT, motto: LANGUAGE_MOTTO },
-      keyInLus: {
-        static: staticGlyphs,
-        live: liveGlyphs,
-      },
-      coherence,
-      note:
-        "Your TESSERACT_ADMIN_KEY rendered in Lingua Universalis Sacra. " +
-        "The plain value never leaves the server.",
-    }));
-  },
-);
+// The legacy LUS reveal returned a reversible rendering of the canonical
+// admin secret to browser code. Keep the route as an explicit tombstone so
+// stale clients fail closed rather than accidentally exposing key material.
+router.post("/sigil/father/show-key-in-lus", requireAdminSession, (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Pragma", "no-cache");
+  res.status(410).json({
+    ok: false,
+    error: "credential-reveal-disabled",
+    message: "The canonical admin credential is never returned to the browser.",
+  });
+});
 
 // Mount the same throttle on the existing verify surface (defense-in-depth).
 router.post("/sigil/father/verify-throttled", fatherVerifyRateLimit, (req, res) => {

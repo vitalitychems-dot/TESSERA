@@ -18,6 +18,7 @@ import { recallIngestedKnowledge } from "../lib/ingested-recall";
 import { validateResponse } from "../lib/response-validation-engine";
 import { runCritiqueLoop } from "../lib/self-critique";
 import { generateConfiguredChatReply } from "../lib/chat-generation";
+import { containsCredentialMaterial } from "../lib/credential-guard";
 import { acceptedChatLlmBaseUrl, isChatRedirectStatus } from "../lib/tessera-llm-http";
 import { classifyQuery } from "../lib/adaptive-router";
 import { hybridRetrieve, formatCitations } from "../lib/hybrid-retrieval";
@@ -520,8 +521,11 @@ router.post("/messages", requireAdminSession, async (req, res) => {
     const content = req.body?.content as string;
     const nlpGoals: string[] = Array.isArray(req.body?.nlpGoals) ? req.body.nlpGoals : [];
 
-    if (!conversationId || !content) {
+    if (!conversationId || typeof content !== "string" || !content) {
       return res.status(400).json({ error: "conversationId and content required" });
+    }
+    if (containsCredentialMaterial(content)) {
+      return res.status(400).json({ error: "Message blocked by credential safety filter" });
     }
 
     await db.insert(messagesTable).values({
