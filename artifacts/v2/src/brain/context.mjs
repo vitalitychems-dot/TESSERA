@@ -22,32 +22,55 @@ export function createRanker(g, { idfW = 1, typeW = 1, pprIters = 10, pprW = 1, 
   }
   const N = [...g.nodes.keys()]; const T = new Map(); const df = new Map();
   for (const n of N) { const s = new Set(tk(g.nodes.get(n).text)); T.set(n, s); for (const w of s) df.set(w, (df.get(w) ?? 0) + 1); }
-  const idf = (w) => Math.log(N.length / (df.get(w) ?? 1));
   const tp = new Map(); const tt = new Map();
   for (const k of g.edges.keys()) { const [x, y] = k.split("\u0000"); for (const [a, b] of [[x, y], [y, x]]) { const ta = g.nodes.get(a).type; const K = `${ta}|${g.nodes.get(b).type}`; tp.set(K, (tp.get(K) ?? 0) + 1); tt.set(ta, (tt.get(ta) ?? 0) + 1); } }
-  const ppr = (seed) => {
-    let p = new Map([[seed, 1]]);
+  // PPR on integer indices (CSR adjacency). Replays the Map version exactly: the same
+  // accumulation order (seed first, then first-touch order) and the same `(0.85 * v * w) / tot`.
+  const ids = [...A.keys()]; const ix = new Map(ids.map((n, i) => [n, i])); const M = ids.length;
+  const off = new Int32Array(M + 1); const nbr = []; const wt = []; const totA = new Float64Array(M); const invLogA = new Float64Array(M);
+  for (let i = 0; i < M; i++) { const L = A.get(ids[i]); for (const [m, w] of L) { nbr.push(ix.get(m)); wt.push(w); } off[i + 1] = nbr.length; totA[i] = outTot.get(ids[i]); invLogA[i] = invLog.get(ids[i]); }
+  const nbrA = Int32Array.from(nbr); const wtA = Float64Array.from(wt);
+  let pv = new Float64Array(M), qv = new Float64Array(M), pOrd = new Int32Array(M), qOrd = new Int32Array(M);
+  const mark = new Int32Array(M); let gen = 0; let pLen = 0; let pSeed = -1;
+  /** Runs PPR from seed index s; results are pv[j] where mark[j] === gen (else 0). */
+  const ppr = (s) => {
+    gen++; pv[s] = 1; mark[s] = gen; pOrd[0] = s; pLen = 1;
     for (let i = 0; i < pprIters; i++) {
-      const q = new Map([[seed, 0.15]]);
-      for (const [n, v] of p) {
-        const L = A.get(n) ?? [];
-        const tot = outTot.get(n) ?? 1;
-        for (const [m, w] of L) q.set(m, (q.get(m) ?? 0) + (0.85 * v * w) / tot);
+      gen++; qv[s] = 0.15; mark[s] = gen; qOrd[0] = s; let qLen = 1;
+      for (let a = 0; a < pLen; a++) {
+        const n = pOrd[a]; const v = pv[n]; const tot = totA[n];
+        for (let e = off[n], end = off[n + 1]; e < end; e++) {
+          const m = nbrA[e];
+          if (mark[m] !== gen) { mark[m] = gen; qv[m] = 0; qOrd[qLen++] = m; }
+          qv[m] = qv[m] + (0.85 * v * wtA[e]) / tot;
+        }
       }
-      p = q;
+      let t = pv; pv = qv; qv = t; const o = pOrd; pOrd = qOrd; qOrd = o; pLen = qLen;
     }
-    return p;
+    pSeed = s;
   };
+  const NI = Int32Array.from(N, (n) => ix.get(n) ?? -1);
+  // Per-token idf once (same Math.log(N.length / df) as before), type-prior factor once per target type per call,
+  // Adamic-Adar over CSR indices with a neighbour mark (same summation order). Synapses are still read live.
+  const idfV = new Map(); for (const [w, c] of df) idfV.set(w, Math.log(N.length / c));
+  const idf0 = Math.log(N.length / 1);
+  const nbMark = new Int32Array(M); let nbGen = 0;
   return function rank(seed, k = 5) {
-    const nb = new Map(A.get(seed) ?? []); const S = T.get(seed) ?? new Set(); const st = g.nodes.get(seed)?.type;
-    let stot = 0; for (const w of S) stot += idf(w); const P = pprW ? ppr(seed) : new Map(); const out = [];
-    for (const n of N) {
-      if (n === seed || nb.has(n)) continue; let s = 0;
-      for (const [m] of A.get(n) ?? []) if (nb.has(m)) s += invLog.get(m);
+    const SL = A.get(seed); const nb = new Map(SL ?? []); const S = T.get(seed) ?? new Set(); const st = g.nodes.get(seed)?.type;
+    let stot = 0; for (const w of S) stot += idfV.get(w) ?? idf0;
+    const si = ix.get(seed); const usePpr = pprW && si !== undefined; if (usePpr) ppr(si);
+    nbGen++; if (si !== undefined) for (let e = off[si], end = off[si + 1]; e < end; e++) nbMark[nbrA[e]] = nbGen;
+    const ttS = tt.get(st) || 1; const fac = new Map(); const out = [];
+    for (let c = 0; c < N.length; c++) {
+      const n = N[c]; const j = NI[c];
+      if (n === seed || (j >= 0 ? nbMark[j] === nbGen : nb.has(n))) continue; let s = 0;
+      if (j >= 0) for (let e = off[j], end = off[j + 1]; e < end; e++) { const m = nbrA[e]; if (nbMark[m] === nbGen) s += invLogA[m]; }
       s += synW * synapse(g, seed, n);
-      let i = 0; for (const w of T.get(n)) if (S.has(w)) i += idf(w); s += idfW * (i / (stot || 1));
-      s += pprW * 10 * (P.get(n) ?? 0);
-      s *= 1 + typeW * ((tp.get(`${st}|${g.nodes.get(n).type}`) ?? 0) / (tt.get(st) || 1));
+      let i = 0; for (const w of T.get(n)) if (S.has(w)) i += idfV.get(w) ?? idf0; s += idfW * (i / (stot || 1));
+      s += pprW * 10 * (usePpr && j >= 0 && mark[j] === gen ? pv[j] : 0);
+      const ty = g.nodes.get(n).type; let f = fac.get(ty);
+      if (f === undefined) { f = 1 + typeW * ((tp.get(`${st}|${ty}`) ?? 0) / ttS); fac.set(ty, f); }
+      s *= f;
       if (s > 0) out.push([n, s]);
     }
     return out.sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, k).map(([n]) => n);
