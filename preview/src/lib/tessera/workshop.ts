@@ -9,7 +9,7 @@ const REFUSALS: { test: RegExp; reason: string }[] = [
   { test: /\b(monero|xmr|wallet|blockchain|payment|coin)\b/i, reason: "No. I read a payment. Payment is not handled here." },
   { test: /\b(lend|donate)\b/i, reason: "No. I read a machine being offered. Machines are not accepted." },
   { test: /\b(secret|password|api_key|token)\b/i, reason: "No. I read a secret. It does not leave this room." },
-  { test: /\b(camera|surveillance|sparrow|god'?s eye)\b/i, reason: "No. I read a watch on people. I will not build that." },
+  { test: /\b(camera|cctv|palantir|prism|surveillance)\b/i, reason: "No. I read a watch on people. I will not build that." },
   { test: /\bweights?\b/i, reason: "No. I read weights. They are not added." },
   { test: /\b(quantum computer|device)\b/i, reason: "No. I read a device. There is no quantum computer here." },
   { test: /\b(delete all|erase everything|wipe)\b/i, reason: "No. I read a deletion. A file is kept until it is bridged." },
