@@ -4,7 +4,7 @@ import { getAgentHierarchy, getChildrenOf, getHierarchyMetrics } from "../lib/ag
 import { getAgentCommsMetrics, sendMessage, broadcastMessage, getThreads, getThread, getFeed } from "../lib/agent-comms";
 import { CommsPolicyError, resolveAlias } from "../lib/comms-policy";
 import { decideOwnerSession } from "../lib/sovereign-admin";
-import { parseLaneTokens, laneForToken, LANE_TOKEN_HEADER } from "../lib/mesh-lane-auth";
+import { parseLaneTokens, laneForToken, LANE_TOKEN_HEADER, RESERVED_OWNER_SLUGS } from "../lib/mesh-lane-auth";
 
 /**
  * Resolve the sender. The sender is ONLY ever derived from a presented lane token.
@@ -18,22 +18,30 @@ export const OWNER_IDENTITY = "Father";
 const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
 export const isLoopback = (addr: string | undefined): boolean => Boolean(addr && LOOPBACK.has(addr));
 
+/** True if a body `from` names the owner node (any case, or via alias). */
+const claimsOwner = (v: unknown): boolean => typeof v === "string" &&
+  (RESERVED_OWNER_SLUGS.has(v.toLowerCase()) || RESERVED_OWNER_SLUGS.has(resolveAlias(v)));
+
 function resolveSender(req: Request, bodyFrom: unknown): { from?: unknown; status?: number; error?: string } {
   let table;
   try { table = parseLaneTokens(); } catch { return { status: 403, error: "lane auth misconfigured" }; }
   if (!table) {
     // (a) owner admin session (same validator as requireAdminSession): from is fixed to the owner.
     if (decideOwnerSession(req).ok) {
-      if (bodyFrom !== undefined && bodyFrom !== OWNER_IDENTITY) return { status: 403, error: `from must be ${OWNER_IDENTITY} for an owner session` };
+      if (bodyFrom !== undefined && !claimsOwner(bodyFrom)) return { status: 403, error: `from must be ${OWNER_IDENTITY} for an owner session` };
       return { from: OWNER_IDENTITY };
     }
     // (b) non-production + loopback socket (X-Forwarded-For is never consulted).
-    if (process.env.NODE_ENV !== "production" && isLoopback(req.socket?.remoteAddress)) return { from: bodyFrom };
+    if (process.env.NODE_ENV !== "production" && isLoopback(req.socket?.remoteAddress)) {
+      if (claimsOwner(bodyFrom)) return { status: 403, error: `${OWNER_IDENTITY} is reachable only through the owner admin session` };
+      return { from: bodyFrom };
+    }
     return { status: 401, error: "lane identity required: MESH_LANE_TOKENS is not configured; body from is not trusted" };
   }
   const raw = req.headers[LANE_TOKEN_HEADER];
   const slug = laneForToken(Array.isArray(raw) ? raw[0] : raw, table);
   if (!slug) return { status: 403, error: "valid lane token required" };
+  if (RESERVED_OWNER_SLUGS.has(slug) || claimsOwner(bodyFrom)) return { status: 403, error: `a lane token cannot claim ${OWNER_IDENTITY}` };
   if (bodyFrom !== undefined && (typeof bodyFrom !== "string" || resolveAlias(bodyFrom) !== slug)) {
     return { status: 403, error: "from does not match authenticated lane" };
   }

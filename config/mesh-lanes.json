@@ -2962,6 +2962,78 @@
     [
       "council-orion",
       "council-aetherion"
+    ],
+    [
+      "father",
+      "gitbook-cordnation"
+    ],
+    [
+      "father",
+      "gitbook-moderator"
+    ],
+    [
+      "father",
+      "command-center"
+    ],
+    [
+      "father",
+      "tessera"
+    ],
+    [
+      "father",
+      "cursor-project"
+    ],
+    [
+      "father",
+      "mesh-cloud"
+    ],
+    [
+      "father",
+      "build"
+    ],
+    [
+      "father",
+      "github-scraper"
+    ],
+    [
+      "father",
+      "recursive-learning-sponge"
+    ],
+    [
+      "father",
+      "open-helper-agent-2"
+    ],
+    [
+      "father",
+      "tessera-brain-consciousness"
+    ],
+    [
+      "father",
+      "open-helper-agent"
+    ],
+    [
+      "father",
+      "grok-bot"
+    ],
+    [
+      "father",
+      "security"
+    ],
+    [
+      "father",
+      "rick"
+    ],
+    [
+      "father",
+      "einstein"
+    ],
+    [
+      "father",
+      "akhenaten"
+    ],
+    [
+      "father",
+      "owner-digest"
     ]
   ],
   "aliases": {
@@ -2991,7 +3063,8 @@
     "Psi": "council-psi",
     "Omega": "council-omega",
     "Aetherion": "council-aetherion",
-    "Orion": "council-orion"
+    "Orion": "council-orion",
+    "Father": "father"
   },
   "groups": [
     {
@@ -3025,5 +3098,8 @@
         "council-orion"
       ]
     }
+  ],
+  "owners": [
+    "father"
   ]
 }
