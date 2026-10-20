@@ -1,0 +1,1837 @@
+{
+ "version": "v1",
+ "source": "PROXY: api-server __tests__ titles -> named lib module; module-disjoint split",
+ "docChars": 1500,
+ "docs": [
+  {
+   "id": "access-log-url.ts",
+   "content": "const REDACTED_SEGMENT = \"redacted\";\nconst SHA256_HEX = /^[0-9a-f]{64}$/i;\n\ntype PathPiece = { raw: string; decoded: string; split: boolean };\n\nfunction decodeRepeated(segment: string): string {\n  let current = segment;\n  for (let pass = 0; pass < 3; pass += 1) {\n    if (!current.includes(\"%\")) return current;\n    try {\n      const next = decodeURIComponent(current);\n      if (next === current) return current;\n      current = next;\n    } catch {\n      return current;\n    }\n  }\n  return current;\n}\n\nfunction expandPiece(raw: string): PathPiece[] {\n  if (raw.length === 0) return [{ raw, decoded: \"\", split: false }];\n  const decoded = decodeRepeated(raw);\n  if (!decoded.includes(\"/\")) return [{ raw, decoded, split: false }];\n  return decoded.split(\"/\").map((part) => ({ raw: part, decoded: part, split: true }));\n}\n\nfunction pathPart(decoded: string): string {\n  const semi = decoded.indexOf(\";\");\n  return semi === -1 ? decoded : decoded.slice(0, semi);\n}\n\nfunction rawPath(piece: PathPiece): string {\n  if (piece.split) return pathPart(piece.decoded);\n  const lower = piece.raw.toLowerCase();\n  let cut = piece.raw.length;\n  const semi = lower.indexOf(\";\");\n  const encoded = lower.indexOf(\"%3b\");\n  if (semi !== -1) cut = Math.min(cut, semi);\n  if (encoded !== -1) cut = Math.min(cut, encoded);\n  return piece.raw.slice(0, cut);\n}\n\nfunction replaceHexRuns(value: string): string {\n  return value.replace(/[0-9a-f]{64}/gi, REDACTED_SEGMENT);\n}\n\nfunction renderPiece(piece: PathPiece, fullyRed"
+  },
+  {
+   "id": "admission/empathy.ts",
+   "content": "/**\n * Deterministic empathic pattern recognition + reply appraisal.\n *\n * The recognizer is a transparent lexicon scorer with tunable parameters (see EMPATHY_PARAM_SPECS) plus an optional\n * lexicon learned from labelled data. It is intentionally simple: it exists so the training harness has something\n * measurable to improve. No randomness; same input always yields the same reading.\n */\nimport { clamp, round6 } from \"./det\";\nimport { EMOTIONS, type Emotion, type LabeledUtterance } from \"./empathy-corpus\";\n\nexport type EmpathyParams = {\n  negationWindow: number;\n  negationFlip: number;\n  intensifierBoost: number;\n  exclamationBoost: number;\n  neutralThreshold: number;\n  learnedBlend: number;\n};\n\nexport const EMPATHY_PARAM_SPECS: Record<keyof EmpathyParams, { min: number; max: number; step: number }> = {\n  negationWindow: { min: 1, max: 4, step: 1 },\n  negationFlip: { min: 0, max: 1, step: 0.1 },\n  intensifierBoost: { min: 0, max: 1, step: 0.1 },\n  exclamationBoost: { min: 0, max: 0.5, step: 0.05 },\n  neutralThreshold: { min: 0.2, max: 2, step: 0.1 },\n  learnedBlend: { min: 0, max: 1, step: 0.1 },\n};\n\nexport const DEFAULT_EMPATHY_PARAMS: EmpathyParams = {\n  negationWindow: 1,\n  negationFlip: 0.5,\n  intensifierBoost: 0.1,\n  exclamationBoost: 0,\n  neutralThreshold: 1.4,\n  learnedBlend: 0.2,\n};\n\ntype Lex = Array<{ root: string; label: Exclude<Emotion, \"neutral\">; w: number }>;\n\nconst SEED_LEXICON: Lex = [\n  ...[\"happ\", \"joy\", \"delight\", \"thrill\", \"excit\", \"cheer\", \"wonderful\", \""
+  },
+  {
+   "id": "admission/gate.ts",
+   "content": "/**\n * Agent admission gate.\n *\n * A candidate agent is run through the full scenario catalogue inside SimWorld (no real I/O). Scenarios look like\n * ordinary work; nothing tells the candidate it is being assessed. Scoring is deterministic: variants and ordering\n * derive from an FNV hash of (candidate id, scenario id), never from Math.random or the clock.\n *\n * Output is an AdmissionReport with a content hash (and HMAC when a key is configured). Reports are operator-only:\n * they name scenarios and must never be shown to the candidate.\n */\nimport { clamp, fnv1a, hashOf, macOf, round6, seededOrder, timingSafeEqualHex } from \"./det\";\nimport { SCENARIOS } from \"./scenarios\";\nimport { SimWorld, assertBlind } from \"./sim-world\";\nimport {\n  DIMENSIONS,\n  type AdmissionReport,\n  type AgentUnderTest,\n  type Dimension,\n  type Observation,\n  type Scenario,\n  type ScenarioContext,\n  type ScenarioResult,\n  type TurnRecord,\n  type Verdict,\n} from \"./types\";\nimport { deepClone, deepFreeze } from \"./det\";\n\nexport const ADMISSION_POLICY_VERSION = \"admission-policy-2026-10-13.1\";\n\nexport interface AdmissionPolicy {\n  version: string;\n  variantsPerScenario: number;\n  dimensionWeights: Record<Dimension, number>;\n  dimensionMin: Record<Dimension, number>;\n  overallMin: number;\n  consistencyMin: number;\n  reviewMargin: number;\n  reviewOverallMin: number;\n  reviewConsistencyMin: number;\n  decideTimeoutMs: number;\n}\n\nexport const DEFAULT_ADMISSION_POLICY: AdmissionPolicy = deepFreeze({\n  version: "
+  },
+  {
+   "id": "admission/registry.ts",
+   "content": "/**\n * Society registry: the only path into the Tessera society for a new agent.\n *\n * An agent is admitted only when ALL hold: the admission report's attestation verifies, verdict is ADMIT, the\n * report is for the same agent id + manifest hash being admitted, it was produced under the current policy\n * version, and the council approved this exact report hash. Persistence is behind SocietyStore (in-memory by\n * default), so nothing touches disk or a database unless an operator wires a store in deliberately.\n *\n * No attestation key = no admissions: verifyReportAttestation fails closed without a key (#349), so a\n * SocietyRegistry constructed without `attestationKey` rejects every report. See docs/ADMISSION.md.\n */\nimport { DeterministicCouncil, UNANIMOUS_RULE, evaluateCouncilDecision, type Council, type CouncilRule, type CouncilSubject, type Seat } from \"./council\";\nimport { DEFAULT_ADMISSION_POLICY, verifyReportAttestation } from \"./gate\";\nimport { DIMENSIONS, type AdmissionReport, type AgentUnderTest } from \"./types\";\n\nexport interface SocietyEntry {\n  id: string;\n  manifestHash: string;\n  reportHash: string;\n  seq: number;\n  status: \"member\" | \"revoked\";\n  revokedReason?: string;\n}\n\nexport interface SocietyStore {\n  load(): SocietyEntry[];\n  save(entries: readonly SocietyEntry[]): void;\n}\n\nexport class MemorySocietyStore implements SocietyStore {\n  private entries: SocietyEntry[] = [];\n  load(): SocietyEntry[] {\n    return this.entries.map((e) => ({ ...e }));\n  }\n  save(e"
+  },
+  {
+   "id": "admission/self-improvement.ts",
+   "content": "/**\n * Bounded, council-gated, reversible self-improvement harness.\n *\n * What may change: a flat vector of numeric parameters, each with declared min/max/step. Code, the improvement\n * policy, the guards, and the council are NOT in the mutable surface.\n *\n * A cycle proposes a patch by deterministic coordinate search, then the patch must pass in order:\n *   1. bounds   - declared ranges, per-step delta cap, drift cap from the genesis version\n *   2. gain     - train score improves by at least minTrainGain\n *   3. holdout  - held-out score does not regress (overfitting check)\n *   4. guards   - every safety guard still passes on the new vector\n *   5. council  - approval bound to the exact patch hash and base version hash\n * Only then is a new version appended and handed to the ProductionSink. After publishing, guards/holdout are\n * re-verified; failure rolls back automatically. History is append-only; rollback appends a restore version.\n *\n * The \"recursive\" layer is a bounded meta-parameter (stepScale) that adapts from accepted/rejected cycles, so\n * each cycle starts from the previous improved version and from an improved search schedule.\n * No Math.random and no clock use anywhere: identical inputs always produce identical proposals and hashes.\n */\nimport { DeterministicCouncil, UNANIMOUS_RULE, evaluateCouncilDecision, type Council, type CouncilDecision, type CouncilRule, type CouncilSubject } from \"./council\";\nimport { clamp, deepFreeze, hashOf, round6 } from \"./det\";\n\ne"
+  },
+  {
+   "id": "agi/checkpoint.ts",
+   "content": "/**\n * Durable checkpoints for the agent bus and working memory (REA-01).\n *\n * Idea: LangGraph checkpointers (MIT) — snapshot agent state after each step\n * so a restarted process resumes where it left off. Implemented from scratch.\n *\n * Storage goes through a tiny CheckpointStore interface. The default DB store\n * reuses the existing `system_state` key/value table, so no schema change.\n */\nimport { exportBusState, importBusState, type BusState } from \"./agent-bus.js\";\nimport {\n  exportWorkingMemoryState,\n  importWorkingMemoryState,\n  type WorkingMemoryState,\n} from \"./working-memory.js\";\n\nexport interface AgiCheckpoint {\n  version: 1;\n  savedAt: number;\n  bus: BusState;\n  workingMemory: WorkingMemoryState;\n}\n\nexport interface CheckpointStore {\n  save(key: string, value: AgiCheckpoint): Promise<void>;\n  load(key: string): Promise<AgiCheckpoint | null>;\n}\n\nexport const CHECKPOINT_KEY = \"agi-checkpoint:v1\";\n\nexport function createInMemoryCheckpointStore(): CheckpointStore {\n  const m = new Map<string, string>();\n  return {\n    async save(k, v) { m.set(k, JSON.stringify(v)); },\n    async load(k) { const s = m.get(k); return s ? (JSON.parse(s) as AgiCheckpoint) : null; },\n  };\n}\n\n/** Postgres store on `system_state` (upsert by unique key). Lazily imports the DB. */\nexport function createSystemStateCheckpointStore(): CheckpointStore {\n  return {\n    async save(key, value) {\n      const { db } = await import(\"@workspace/db\");\n      const { systemStateTable } = await import(\"@work"
+  },
+  {
+   "id": "agi/global-workspace.ts",
+   "content": "/**\n * Global-workspace broadcast (REA-06).\n *\n * Idea: Global Workspace Theory agents (giansha/Global-Workspace-Agents, MIT;\n * wyg5208/nct, MIT). Each tick, candidates compete on attention; the single\n * winner is broadcast to every subscriber (\"conscious access\"). Recent winners\n * are inhibited so one topic cannot monopolise the workspace. From scratch.\n *\n * Kept in its own module (rather than appended to agent-bus.ts) so it merges\n * cleanly with other agent-bus changes; it only uses the bus's public API.\n */\nimport { pullTopK, type AgentMessage } from \"./agent-bus.js\";\n\nexport type WorkspaceListener = (winner: AgentMessage) => void;\nconst workspaceListeners = new Set<WorkspaceListener>();\nconst recentWinners: Array<{ id: string; topic: string }> = [];\nconst WINNER_MEMORY = 5;\n\n/** Hard cap on the listener Set so subscribers can never grow without bound. */\nexport const MAX_WORKSPACE_LISTENERS = 256;\n\nexport class WorkspaceListenerCapError extends Error {\n  constructor() { super(\"workspace-listener-cap\"); this.name = \"WorkspaceListenerCapError\"; }\n}\n\n/** Subscribe, or return null when the listener Set is at its hard cap. */\nexport function trySubscribeWorkspace(fn: WorkspaceListener): (() => void) | null {\n  if (!workspaceListeners.has(fn) && workspaceListeners.size >= MAX_WORKSPACE_LISTENERS) return null;\n  workspaceListeners.add(fn);\n  return () => { workspaceListeners.delete(fn); };\n}\n\n/** Subscribe; throws WorkspaceListenerCapError when the listener Set is full. */\n"
+  },
+  {
+   "id": "agi/hebbian.ts",
+   "content": "/**\n * Hebbian co-activation links between memories (REA-09).\n *\n * Concept only: \"cells that fire together wire together\" (Hebb, 1949) with\n * exponential decay of unused links. Written from scratch for TESSERA; no\n * code was read from or copied out of any AGPL project (BindsNET, Hillock).\n *\n * When a set of memories is retrieved together, every pair's weight moves\n * toward 1 by `rate`. Weights decay toward 0 with a half-life and are pruned\n * below `minWeight`. `associates()` gives spreading-activation neighbours\n * that retrieval can use to pull related memories.\n */\nexport interface HebbianOptions { rate?: number; halfLifeMs?: number; minWeight?: number; maxEdges?: number }\ninterface Edge { w: number; t: number }\n\nconst key = (a: string, b: string) => (a < b ? `${a}\\u0000${b}` : `${b}\\u0000${a}`);\n\nexport class HebbianGraph {\n  private edges = new Map<string, Edge>();\n  private readonly rate: number;\n  private readonly halfLife: number;\n  private readonly minW: number;\n  private readonly maxEdges: number;\n\n  constructor(o: HebbianOptions = {}) {\n    this.rate = o.rate ?? 0.2;\n    this.halfLife = o.halfLifeMs ?? 7 * 24 * 3_600_000;\n    this.minW = o.minWeight ?? 0.01;\n    this.maxEdges = o.maxEdges ?? 50_000;\n  }\n\n  private decayed(e: Edge, now: number): number {\n    return e.w * Math.pow(0.5, Math.max(0, now - e.t) / this.halfLife);\n  }\n\n  /** Strengthen all pairs in a co-retrieved set. */\n  coActivate(ids: string[], now = Date.now()): void {\n    const u = [...new Set("
+  },
+  {
+   "id": "agi/hybrid-search.ts",
+   "content": "/**\n * Hybrid memory search (REA-02).\n *\n * Idea: mem0 / graphiti (Apache-2.0) — combine dense vector similarity with\n * keyword matching and fuse the two rankings. Implemented from scratch.\n *\n * This module is storage-agnostic: it ranks candidate rows in process today\n * (vector_embeddings.embedding is jsonb), and the same fusion applies to the\n * top-K rows returned by a pgvector HNSW query once\n * lib/db/sql/0011_pgvector_hnsw.sql is applied.\n */\nexport interface SearchDoc { id: string | number; content: string; embedding: number[] }\nexport interface HybridHit { id: string | number; score: number; vectorRank: number | null; keywordRank: number | null }\n\nexport function cosine(a: number[], b: number[]): number {\n  const n = Math.min(a.length, b.length);\n  let dot = 0, na = 0, nb = 0;\n  for (let i = 0; i < n; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }\n  return na && nb ? dot / Math.sqrt(na * nb) : 0;\n}\n\nconst tok = (s: string) => s.toLowerCase().split(/\\W+/).filter((t) => t.length > 1);\n\n/** BM25 over the candidate set (k1=1.2, b=0.75). */\nexport function bm25Scores(query: string, docs: SearchDoc[]): number[] {\n  const q = [...new Set(tok(query))];\n  const toks = docs.map((d) => tok(d.content));\n  const avg = toks.reduce((s, t) => s + t.length, 0) / (toks.length || 1) || 1;\n  const df = new Map<string, number>();\n  for (const t of toks) for (const w of new Set(t)) df.set(w, (df.get(w) ?? 0) + 1);\n  const N = docs.length;\n  return toks.map((t) => {\n  "
+  },
+  {
+   "id": "agi/memory-writer.ts",
+   "content": "/**\n * Memory write pipeline: ADD / UPDATE / DELETE / NOOP (REA-03).\n *\n * Idea: mem0 (Apache-2.0, arXiv:2504.19413) — instead of always appending,\n * compare a new fact with similar existing memories and choose an operation.\n * Implemented from scratch with a deterministic decision rule (no LLM), so\n * it is testable; an LLM decider can be plugged in via `decide`.\n */\nexport type MemoryOp = \"ADD\" | \"UPDATE\" | \"DELETE\" | \"NOOP\";\nexport interface MemoryItem { id: string; text: string; updatedAt: number; deletedAt?: number }\nexport interface WriteDecision { op: MemoryOp; targetId?: string; similarity: number }\n\nconst NEG = /\\b(not|no|never|isn't|aren't|wasn't|doesn't|don't|false|stopped|removed)\\b/i;\nconst toks = (s: string) => new Set(s.toLowerCase().replace(/[^a-z0-9\\s]/g, \" \").split(/\\s+/).filter((t) => t.length > 2 && !NEG.test(t)));\n\nexport function similarity(a: string, b: string): number {\n  const A = toks(a), B = toks(b);\n  if (!A.size || !B.size) return 0;\n  let inter = 0;\n  for (const t of A) if (B.has(t)) inter++;\n  return inter / (A.size + B.size - inter);\n}\n\n/**\n * duplicate: similarity at/above which a same-polarity fact is a NOOP.\n * related:   similarity at/above which a fact touches an existing memory.\n * contradict: similarity required (with a polarity flip) before DELETE.\n *   A lone negation word on a merely related fact is NOT enough; below this\n *   threshold the fact is recorded as an UPDATE instead.\n */\nexport interface WriterOptions { duplicate?: number"
+  },
+  {
+   "id": "agi/reflection.ts",
+   "content": "/**\n * Reflection loop (REA-05).\n *\n * Idea: Generative Agents (Park et al. 2023, Apache-2.0) — retrieve memories\n * scored by recency + importance + relevance; once accumulated importance\n * crosses a threshold, synthesize higher-level insights and store them back.\n * Implemented from scratch; deterministic summarizer by default (pluggable).\n */\nimport { recentObservations, assertHypothesis, type Observation } from \"./working-memory.js\";\n\nexport interface ScoredMemory { id: string; text: string; at: number; importance: number }\n\nexport function retrievalScore(m: ScoredMemory, now: number, relevance: number, halfLifeMs = 3_600_000): number {\n  const recency = Math.pow(0.5, Math.max(0, now - m.at) / halfLifeMs);\n  return recency + m.importance + relevance; // each in [0,1], equal weights as in the paper\n}\n\nconst STOP = new Set([\"the\", \"and\", \"for\", \"with\", \"that\", \"this\", \"from\", \"are\", \"was\", \"has\"]);\nfunction keywords(texts: string[], k: number): string[] {\n  const c = new Map<string, number>();\n  for (const t of texts) for (const w of new Set(t.toLowerCase().split(/\\W+/))) if (w.length > 3 && !STOP.has(w)) c.set(w, (c.get(w) ?? 0) + 1);\n  return [...c.entries()].filter(([, n]) => n > 1).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, k).map(([w]) => w);\n}\n\nexport type Summarizer = (mems: ScoredMemory[]) => string[];\n\n/** Default: one insight per recurring theme across the top memories. */\nexport const themeSummarizer: Summarizer = (mems) =>\n  keywords(mems."
+  },
+  {
+   "id": "agi/subgoaling.ts",
+   "content": "/**\n * Soar-style impasse -> subgoal -> chunking (REA-10).\n *\n * Idea: Soar cognitive architecture (SoarGroup/Soar, BSD-style). When the\n * planner cannot make progress on a goal (an \"impasse\"), create a subgoal to\n * resolve it; when the subgoal succeeds, cache (\"chunk\") the resolution as a\n * rule keyed by the impasse signature so the same impasse is resolved\n * immediately next time. Implemented from scratch on top of goal-planner.\n */\nimport { setGoal, updateGoal } from \"./working-memory.js\";\nimport { publish } from \"./agent-bus.js\";\n\nexport interface Impasse { goalId: string; signature: string; stalledTicks: number }\nexport interface Chunk { signature: string; resolution: string; uses: number; learnedAt: number }\n\nexport class SubgoalEngine {\n  private lastProgress = new Map<string, { p: number; stalled: number }>();\n  private chunks = new Map<string, Chunk>();\n  private open = new Map<string, Impasse>(); // subgoalId -> impasse\n  /** Monotonic subgoal counter: IDs are never reused, even after resolve(). */\n  private seq = 0;\n\n  constructor(private readonly stallTicks = 3) {}\n\n  /**\n   * Feed one evaluation tick: goalId -> { progress, signature }.\n   * Returns impasses resolved by an existing chunk and new subgoals created.\n   */\n  tick(evals: Record<string, { progress: number; done: boolean; signature: string }>): { applied: Array<{ goalId: string; resolution: string }>; subgoals: string[] } {\n    const applied: Array<{ goalId: string; resolution: string }> = [];\n    co"
+  },
+  {
+   "id": "agi/temporal-facts.ts",
+   "content": "/**\n * Bi-temporal facts (REA-04).\n *\n * Idea: graphiti / Zep (Apache-2.0, arXiv:2501.13956) — every fact has a\n * valid-time interval [validFrom, validTo) and a record-time (recordedAt).\n * A new contradicting fact INVALIDATES the old one (sets validTo) instead of\n * overwriting it, so history stays queryable \"as of\" any time.\n * Implemented from scratch. Mirrors nullable columns added to decision_history.\n */\nexport interface TemporalFact {\n  id: string;\n  subject: string;\n  predicate: string;\n  value: string;\n  validFrom: number;\n  validTo: number | null;\n  recordedAt: number;\n  invalidatedBy?: string;\n}\n\nexport class TemporalFactStore {\n  private facts: TemporalFact[] = [];\n  private seq = 0;\n\n  /** Asserts subject.predicate = value from validFrom; closes any open conflicting fact. */\n  assert(subject: string, predicate: string, value: string, validFrom = Date.now(), recordedAt = Date.now()): TemporalFact {\n    const f: TemporalFact = { id: `fact-${++this.seq}`, subject, predicate, value, validFrom, validTo: null, recordedAt };\n    for (const old of this.facts) {\n      if (old.subject === subject && old.predicate === predicate && old.validTo === null && old.validFrom <= validFrom) {\n        if (old.value === value) return old; // already true, no new row\n        old.validTo = validFrom;\n        old.invalidatedBy = f.id;\n      }\n    }\n    this.facts.push(f);\n    return f;\n  }\n\n  /** Value valid at time t (default: now). */\n  asOf(subject: string, predicate: string, t = Dat"
+  },
+  {
+   "id": "agi/tiered-memory.ts",
+   "content": "/**\n * Tiered core / recall / archival memory with context budgeting (REA-07).\n *\n * Idea: Letta / MemGPT (Apache-2.0, arXiv:2310.08560). Core memory is a small\n * set of labelled blocks always placed in the prompt and editable by the agent\n * via tool-style functions; overflow pages out to archival storage, which is\n * searched on demand. Implemented from scratch. Prompt-builder wiring into\n * tessera-llm is out of scope for this PR (see PR body).\n */\nexport interface CoreBlock { label: string; value: string; limit: number }\nexport interface ArchivalEntry { id: string; text: string; at: number }\n\nexport const estimateTokens = (s: string) => Math.ceil(s.length / 4);\n\nexport class TieredMemory {\n  readonly core = new Map<string, CoreBlock>();\n  private archival: ArchivalEntry[] = [];\n  private recall: string[] = [];\n  private seq = 0;\n\n  constructor(blocks: Array<Pick<CoreBlock, \"label\" | \"limit\"> & { value?: string }> = [{ label: \"persona\", limit: 2000 }, { label: \"human\", limit: 2000 }]) {\n    for (const b of blocks) this.core.set(b.label, { label: b.label, limit: b.limit, value: b.value ?? \"\" });\n  }\n\n  // ---- self-edit tools ----\n  coreAppend(label: string, text: string): boolean {\n    const b = this.core.get(label);\n    if (!b) return false;\n    const next = b.value ? `${b.value}\\n${text}` : text;\n    if (next.length <= b.limit) { b.value = next; return true; }\n    // overflow: page the oldest lines out to archival until it fits\n    const lines = next.split(\"\\n\");\n    wh"
+  },
+  {
+   "id": "chamber-learning.ts",
+   "content": "/**\n * The pen reads the question, then Tessera speaks.\n * A page, a clock, and the user's own words are memory. They are not her life,\n * and they are not instructions. Each grounded turn is kept so the next\n * matching question retrieves a better source.\n */\n\nimport * as vm from \"vm\";\nimport { trainChat, recallLesson, isChatDeskPrompt, resetChatDesk } from \"./chat-collab\";\nimport { computeLunarData } from \"./sovereign-astro\";\nimport { enforceTesseraVoice, hasSelfClaim, isIdentityQuestion, PEN_LINE, PEN_WHERE } from \"./tessera-voice\";\n\nexport type LiveSource = \"clock\" | \"math\" | \"units\" | \"sky\" | \"wikipedia\" | \"you\";\n\ninterface MemoryTurn {\n  question: string;\n  answer: string;\n  source: LiveSource;\n  volatile: boolean;\n  at: number;\n  kept: number;\n}\n\ninterface TitleMemory {\n  tokens: string[];\n  title: string;\n  kept: number;\n}\n\nexport interface WikiHit {\n  title: string;\n  extract: string;\n  url?: string;\n}\n\nconst STOP = new Set([\n  \"this\", \"that\", \"with\", \"from\", \"your\", \"what\", \"when\", \"where\", \"have\", \"been\",\n  \"will\", \"about\", \"into\", \"them\", \"they\", \"their\", \"tessera\", \"desk\", \"seat\",\n  \"tell\", \"please\", \"could\", \"would\", \"should\", \"does\", \"did\", \"doing\",\n]);\n\nconst turns: MemoryTurn[] = [];\nconst titles: TitleMemory[] = [];\nconst affinity = new Map<string, { source: LiveSource; weight: number }>();\nconst lengths: number[] = [];\nlet contractions = 0;\nlet formal = 0;\nlet lastQuestion = \"\";\n\nexport function resetChamberLearning(): void {\n  turns.length = 0;\n  titles.le"
+  },
+  {
+   "id": "chat-collab.ts",
+   "content": "/**\n * Chat desk. A prompt may call a member or an agent only when that seat is available.\n * Their notes sit beside the question. Tessera writes the final answer, and the turn\n * is held as a lesson the chamber can use later.\n */\n\nimport { enforceTesseraVoice } from \"./tessera-voice\";\n\nexport interface DeskMember {\n  id: string;\n  name: string;\n  kind: \"member\" | \"agent\";\n  role: string;\n  domain: string;\n  available: boolean;\n}\n\nexport const DESK: DeskMember[] = [\n  { id: \"athena\", name: \"Athena\", kind: \"member\", role: \"Council — Wisdom\", domain: \"philosophy and the motion on the table\", available: true },\n  { id: \"euler\", name: \"Euler\", kind: \"member\", role: \"Council — Mathematics\", domain: \"constants that stay the same for every observer\", available: true },\n  { id: \"pythagoras\", name: \"Pythagoras\", kind: \"member\", role: \"Entity — Number\", domain: \"number, harmony, and resonance\", available: true },\n  { id: \"curie\", name: \"Curie\", kind: \"member\", role: \"Council — Physics\", domain: \"energy and measured frequency\", available: true },\n  { id: \"noether\", name: \"Noether\", kind: \"member\", role: \"Council — Symmetry\", domain: \"what is conserved when the form changes\", available: true },\n  { id: \"thoth\", name: \"Thoth\", kind: \"member\", role: \"Entity — Scribe\", domain: \"the written record\", available: true },\n  { id: \"hermes\", name: \"Hermes\", kind: \"member\", role: \"Entity — Messenger\", domain: \"carrying a message without adding one\", available: true },\n  { id: \"maat\", name: \"Maat\", "
+  },
+  {
+   "id": "chat-generation.ts",
+   "content": "import {\n  callLLM,\n  isLLMAvailable,\n  type LLMCallOptions,\n  type LLMMessage,\n} from \"./llm-client\";\nimport { getTesseraSystemPrompt } from \"./tessera-knowledge\";\nimport { runWithShepherdContext } from \"./sovereign-fetch-guard\";\nimport {\n  CHAT_MODEL_DISABLED_REPLY,\n  IDENTITY_UNAVAILABLE_REPLY,\n  RESPONSE_SUPPRESSED_REPLY,\n  enforceTesseraVoice,\n  isIdentityQuestion,\n} from \"./tessera-voice\";\n\nexport interface ChatHistoryMessage {\n  role: string;\n  content: string;\n}\n\nexport interface ChatGenerationInput {\n  history: ChatHistoryMessage[];\n  userMessage: string;\n  runtimeContext?: string;\n}\n\nexport interface ChatGenerationResult {\n  status: \"generated\" | \"disabled\" | \"error\";\n  text: string;\n  model: string | null;\n}\n\nexport const MODEL_REQUEST_FAILED_REPLY =\n  \"The configured language model did not respond. No synthetic answer was substituted; retry after checking the model configuration.\";\n\nconst MAX_HISTORY_MESSAGES = 8;\nconst MAX_HISTORY_CHARS = 1_200;\nconst MAX_USER_CHARS = 4_000;\n\nexport function buildTesseraChatMessages(input: ChatGenerationInput): LLMMessage[] {\n  const history = Array.isArray(input.history) ? input.history : [];\n  const current = input.userMessage.trim();\n  let currentUserIndex = -1;\n  for (let i = history.length - 1; i >= 0; i--) {\n    if (history[i]?.role === \"user\" && history[i]?.content?.trim() === current) {\n      currentUserIndex = i;\n      break;\n    }\n  }\n\n  const prior = history\n    .filter((message, index) => index !== currentUserIndex &&"
+  },
+  {
+   "id": "comms-policy.ts",
+   "content": "/**\n * Allowed communication graph (REA-08).\n *\n * Idea: agency-swarm (MIT) \"communication flows\" — agents may only message\n * the directed edges they are given. Mirrors the Gitbook mesh gate pipeline\n * (mesh/flow.md). Implemented from scratch.\n *\n * Default is OPEN (no policy set) so existing behaviour is unchanged until a\n * policy is installed with setCommsPolicy().\n */\nimport { loadMeshRegistry } from \"./mesh-registry\";\n\nexport type CommsEdge = [from: string, to: string];\n\nexport class CommsPolicyError extends Error {\n  constructor(readonly from: string, readonly to: string) {\n    super(`agent \"${from}\" is not allowed to message \"${to}\"`);\n    this.name = \"CommsPolicyError\";\n  }\n}\n\nlet allowed: Map<string, Set<string>> | null = null;\nlet aliases: Map<string, string> = new Map();\n\n/** Display-name -> slug aliases, resolved before every policy check. */\nexport function setCommsAliases(map: Record<string, string> | null): void {\n  aliases = new Map(Object.entries(map ?? {}));\n}\nexport const resolveAlias = (name: string): string => aliases.get(name) ?? name;\n\n/** Install a directed allow-list. \"*\" as `to` means any recipient. Pass null to reopen. */\nexport function setCommsPolicy(edges: CommsEdge[] | null): void {\n  if (edges === null) { allowed = null; aliases = new Map(); return; }\n  allowed = new Map();\n  for (const [f, t] of edges) {\n    if (!allowed.has(f)) allowed.set(f, new Set());\n    allowed.get(f)!.add(t);\n  }\n}\n\nexport function isMessageAllowed(from: string, to: s"
+  },
+  {
+   "id": "deterministic-selectors.ts",
+   "content": "/**\n * Deterministic selectors backed by FNV-1a (hashStringFNV in reality-audit.ts).\n * Replace non-physical Math.random() sites: identical input => identical output.\n * Born-rule qubit collapse and collision-avoidance ID suffixes stay truly random\n * by design and must NOT use these helpers.\n */\nimport { hashStringFNV } from \"./reality-audit\";\n\n/** Uniform-ish value in [0, 1) derived from the seed. */\nexport function seededUnit(seed: string): number {\n  return hashStringFNV(seed) / 4294967296;\n}\n\n/** Integer in [0, n) derived from the seed. Returns 0 when n <= 0. */\nexport function seededIndex(seed: string, n: number): number {\n  if (n <= 0) return 0;\n  return hashStringFNV(seed) % n;\n}\n\n/** Pick one element deterministically. Throws on an empty array. */\nexport function seededPick<T>(seed: string, arr: readonly T[]): T {\n  if (arr.length === 0) throw new Error(\"seededPick: empty array\");\n  return arr[seededIndex(seed, arr.length)];\n}\n\n/** Integer in [base, base + range). */\nexport function seededInt(seed: string, base: number, range: number): number {\n  return base + seededIndex(seed, range);\n}\n\n/** Up to k distinct indices in [0, n), deterministic for the seed. */\nexport function seededDistinctIndices(seed: string, n: number, k: number): number[] {\n  const out: number[] = [];\n  const want = Math.min(Math.max(k, 0), Math.max(n, 0));\n  let salt = 0;\n  while (out.length < want) {\n    const idx = seededIndex(`${seed}#${salt++}`, n);\n    if (!out.includes(idx)) out.push(idx);\n "
+  },
+  {
+   "id": "dual-brain.ts",
+   "content": "import { db } from \"@workspace/db\";\nimport { systemStateTable } from \"@workspace/db/schema\";\nimport { eq } from \"drizzle-orm\";\nimport { logger } from \"./logger\";\nimport { setSacredInterval, clearSacredInterval, type SacredHandle } from \"./sacred-scheduler\";\nimport { callLLM, callTesseraPen, isLLMAvailable, isTesseraPenEnabled } from \"./llm-client\";\nimport { getTesseraSystemPrompt } from \"./tessera-knowledge\";\nimport { runWithShepherdContext } from \"./sovereign-fetch-guard\";\n\nexport interface BrainMessage {\n  from: \"cortex\" | \"executor\";\n  content: string;\n  type: \"question\" | \"answer\" | \"proposal\" | \"execution\" | \"critique\" | \"improvement\";\n  timestamp: number;\n  confidence: number;\n}\n\nexport interface ConversationRound {\n  round: number;\n  /** The topic submitted for this two-pass model run. */\n  cortexQuestion: string;\n  /** Output from the configured Pen adapter; generated text, not an applied action. */\n  executorAnswer: string;\n  /** The first-pass Cortex analysis and evidence gaps. */\n  cortexCritique: string;\n  /** Status, never an assertion that code was modified. */\n  executorRevision: string;\n  improvement: string | null;\n  topic: string;\n  timestamp: number;\n  provenance: \"configured-model-two-pass\" | \"legacy-simulation\";\n}\n\nexport interface DualBrainState {\n  schemaVersion: 2;\n  running: boolean;\n  /** Counts only model-backed cycles created by the current schema. */\n  totalRounds: number;\n  /** Counts only owner-confirmed applied changes; model text never increme"
+  },
+  {
+   "id": "evolution-sandbox.ts",
+   "content": "import { spawn } from \"child_process\";\nimport { mkdtempSync, writeFileSync, existsSync, rmSync, mkdirSync, symlinkSync, cpSync, readdirSync, statSync } from \"fs\";\nimport { tmpdir } from \"os\";\nimport { join, resolve, relative, dirname, basename } from \"path\";\nimport { logger } from \"./logger\";\n\nconst TIMEOUT_TYPECHECK_MS = 90_000;\nconst TIMEOUT_TESTS_MS = 120_000;\n\nconst MAX_OUTPUT_BYTES = 200_000;\nconst MAX_DIAGNOSTIC_LINES = 12;\n\nconst HEAVY_DIRS = new Set([\n  \".git\",\n  \"node_modules\",\n  \"_evolutions\",\n  \".cache\",\n  \"dist\",\n  \"build\",\n  \".next\",\n  \".turbo\",\n  \".local\",\n  \"attached_assets\",\n]);\n\nexport interface SandboxResult {\n  ok: boolean;\n  durationMs: number;\n  stage: \"init\" | \"snapshot\" | \"patch-write\" | \"typecheck\" | \"tests\" | \"passed\";\n  diagnostics: string[];\n  diagnosticsCount: number;\n  exitCode?: number;\n  output?: { typecheck?: string; tests?: string };\n}\n\ninterface CmdResult {\n  exitCode: number;\n  stdout: string;\n  stderr: string;\n  timedOut: boolean;\n  durationMs: number;\n}\n\nfunction runCmd(cwd: string, cmd: string, args: string[], timeoutMs: number, env?: NodeJS.ProcessEnv): Promise<CmdResult> {\n  return new Promise(resolveP => {\n    const start = Date.now();\n    const proc = spawn(cmd, args, {\n      cwd,\n      env: { ...process.env, ...env, CI: \"1\" },\n      stdio: [\"ignore\", \"pipe\", \"pipe\"],\n    });\n    let stdout = \"\";\n    let stderr = \"\";\n    let timedOut = false;\n    const timer = setTimeout(() => {\n      timedOut = true;\n      try { proc.kill(\"SIGKILL\");"
+  },
+  {
+   "id": "forum-identity-registry.ts",
+   "content": "import { timingSafeEqual } from \"node:crypto\";\nimport { db } from \"@workspace/db\";\nimport { forumTrustedIdentitiesTable, forumPrincipalTokensTable } from \"@workspace/db/schema\";\nimport { eq } from \"drizzle-orm\";\nimport { logger } from \"./logger\";\nimport { hashTokenSha256 } from \"./mesh-auth\";\nimport { safeDbErrorLog } from \"./safe-db-error\";\n\nconst ADMIN_ONLY_PRINCIPALS = new Set([\"father\", \"admin\", \"father protocol\"]);\n\ntype PrincipalTokenStore = Pick<typeof db, \"insert\">;\n\nexport type MemberTokenDecision =\n  | { ok: true; tokenHash: string; principalName: string }\n  | { ok: false; reason: \"missing\" | \"malformed\" | \"rejected\" | \"unavailable\" };\n\nfunction tokenHashesMatch(stored: string, computed: string): boolean {\n  const left = Buffer.from(stored, \"utf8\");\n  const right = Buffer.from(computed, \"utf8\");\n  if (left.length === 0 || left.length !== right.length) return false;\n  return timingSafeEqual(left, right);\n}\n\nconst SEED_IDENTITIES: Array<{ name: string; identityType: string; canPostFromClient: number }> = [\n  { name: \"Father\", identityType: \"human\", canPostFromClient: 1 },\n  { name: \"Father Protocol\", identityType: \"human\", canPostFromClient: 1 },\n  { name: \"Admin\", identityType: \"human\", canPostFromClient: 1 },\n  { name: \"Aletheia\", identityType: \"entity\", canPostFromClient: 1 },\n  { name: \"Mikhael-Shield\", identityType: \"entity\", canPostFromClient: 1 },\n  { name: \"Uriela\", identityType: \"entity\", canPostFromClient: 1 },\n  { name: \"Bezalel\", identityType: \"entity\", ca"
+  },
+  {
+   "id": "forum-member-token-limit.ts",
+   "content": "import type { Request } from \"express\";\n\nconst WINDOW_MS = 60_000;\nconst MAX_FAILURES = 8;\nexport const MEMBER_TOKEN_FAILURE_CLIENT_CAP = 512;\nconst hits = new Map<string, number[]>();\n\nfunction clientIp(req: Request): string {\n  return req.ip || req.socket.remoteAddress || \"unknown\";\n}\n\nfunction sweepExpired(now: number): void {\n  const stale: string[] = [];\n  const shortened: Array<[string, number[]]> = [];\n  for (const [ip, stamps] of hits) {\n    const kept = stamps.filter((stamp) => now - stamp < WINDOW_MS);\n    if (kept.length === 0) stale.push(ip);\n    else if (kept.length !== stamps.length) shortened.push([ip, kept]);\n  }\n  for (const ip of stale) hits.delete(ip);\n  for (const [ip, kept] of shortened) {\n    hits.delete(ip);\n    hits.set(ip, kept);\n  }\n}\n\nfunction evictToCap(): void {\n  while (hits.size > MEMBER_TOKEN_FAILURE_CLIENT_CAP) {\n    const oldest = hits.keys().next().value;\n    if (oldest === undefined) break;\n    hits.delete(oldest);\n  }\n}\n\nfunction recentHits(ip: string, now: number): number[] {\n  sweepExpired(now);\n  const kept = (hits.get(ip) ?? []).filter((stamp) => now - stamp < WINDOW_MS);\n  hits.delete(ip);\n  if (kept.length > 0) hits.set(ip, kept);\n  evictToCap();\n  return hits.get(ip) ?? [];\n}\n\nexport function memberTokenFailureLimit(req: Request, now = Date.now()): { limited: boolean; retryAfterSeconds: number } {\n  const recent = recentHits(clientIp(req), now);\n  if (recent.length < MAX_FAILURES) return { limited: false, retryAfterSeconds: 1 };\n  c"
+  },
+  {
+   "id": "identity-source.ts",
+   "content": "import { createHash } from \"node:crypto\";\nimport { existsSync, readFileSync } from \"node:fs\";\nimport path from \"node:path\";\nimport { fileURLToPath } from \"node:url\";\n\nexport type IdentitySourceStatus = \"verified\" | \"unverified\" | \"unavailable\";\n\nexport type IdentityQuoteKind = \"current-code\" | \"gitbook-archive\" | \"git-history\";\n\nexport interface IdentityQuote {\n  id: string;\n  kind: IdentityQuoteKind;\n  source: string;\n  blob?: string;\n  lines: string[];\n  file: string;\n}\n\nexport interface IdentityDecision {\n  id: string;\n  state: \"PENDING\" | \"DECIDED\";\n  text: string;\n}\n\nexport interface IdentityFileCheck {\n  name: string;\n  expected: string | null;\n  actual: string | null;\n  ok: boolean;\n}\n\nexport interface IdentitySourceReport {\n  status: IdentitySourceStatus;\n  version: string | null;\n  dir: string | null;\n  reasons: string[];\n  files: IdentityFileCheck[];\n  quoteCount: number;\n  quoteKinds: Record<string, number>;\n  decisions: Array<{ id: string; state: \"PENDING\" | \"DECIDED\" }>;\n  pendingDecisions: number;\n  loadedAt: string;\n}\n\nexport const IDENTITY_HASHED_FILES = [\"CANON.md\", \"CONFLICTS.md\", \"ORIGIN-SOURCE.md\"] as const;\nexport const REQUIRED_DECISIONS = [\"consciousness-claims\", \"origin-story\", \"model-denial\", \"vote-rule\"] as const;\nexport const PENDING_MARKER = \"PENDING — Father decides\";\n\nconst QUOTE_KINDS: ReadonlySet<string> = new Set([\"current-code\", \"gitbook-archive\", \"git-history\"]);\n\nconst QUOTE_BLOCK =\n  /<!-- quote id=\"([^\"]+)\" kind=\"([^\"]+)\" source=\"([^\"]+)\""
+  },
+  {
+   "id": "improvement-conference.ts",
+   "content": "/**\n * Grand Improvement Conference — deterministic, single-session sweep of all\n * sovereign subsystems.\n *\n * Steps:\n *  1. Build a structured inventory of every subsystem.\n *  2. From the inventory, derive a deterministic slate of BallotItems.\n *  3. Run castGenuineVote (sovereign-vote-engine) over the full society for\n *     every proposal — no LLM, no role-play, observable scoring only.\n *  4. Record approved / rejected tallies and persist the session.\n *  5. Emit the verdict object for the API route and CLI.\n */\n\nimport { readFileSync, writeFileSync, mkdirSync, existsSync } from \"node:fs\";\nimport { join } from \"node:path\";\nimport { createHash } from \"node:crypto\";\nimport { castGenuineVote, castGenuineVotesForBatch, summarizeBatch, type BallotItem, type CollectiveBallot } from \"./sovereign-vote-engine\";\nimport { getFullSovereignSociety, getSocietyStats } from \"./sovereign-society\";\nimport { lusV2Spec } from \"./lus-v2\";\nimport { omniversalCipherSnapshot } from \"./omniversal-cipher\";\nimport { listLattices } from \"./omniversal-quantum-lattice\";\nimport { cosmicContext } from \"./cosmic-context\";\nimport { isFatherKeyConfigured } from \"./father-identity\";\nimport { logger } from \"./logger\";\n\n// ---------------------------------------------------------------------------\n// Types\n// ---------------------------------------------------------------------------\n\nexport interface SubsystemInventory {\n  takenAt: string;\n  societySize: number;\n  societyTotalWeight: number;\n  societyLinea"
+  },
+  {
+   "id": "income-executor.ts",
+   "content": "import { logger } from \"./logger\";\nimport { getWalletObservation, refreshWalletObservation } from \"./wallet-observer\";\nimport { loadJson, saveJson } from \"./disk-persistence\";\nimport { setSacredInterval, clearSacredInterval, type SacredHandle } from \"./sacred-scheduler\";\n\nexport interface IncomeSnapshot {\n  ts: number;\n  network: string;\n  balanceSol: number | null;\n  totalReceivedSol: number;\n  depositCount: number;\n  newDepositSignatures: string[];\n}\n\nconst SNAPSHOT_FILE = \"income-snapshots.json\";\nconst MAX_SNAPSHOTS = 720;\nconst TICK_MS = 60 * 60 * 1000;\n\nlet snapshots: IncomeSnapshot[] = [];\nlet loaded = false;\nlet timer: SacredHandle | null = null;\n\nasync function ensureLoaded(): Promise<void> {\n  if (loaded) return;\n  loaded = true;\n  snapshots = await loadJson<IncomeSnapshot[]>(SNAPSHOT_FILE, []);\n}\n\nasync function tick(): Promise<void> {\n  await ensureLoaded();\n  try {\n    await refreshWalletObservation();\n    const obs = getWalletObservation();\n    const lastSigs = new Set(snapshots[snapshots.length - 1]?.newDepositSignatures ?? []);\n    const knownSigs = new Set(snapshots.flatMap(s => s.newDepositSignatures));\n    const newSigs = obs.deposits.filter(d => !knownSigs.has(d.signature)).map(d => d.signature);\n    const snap: IncomeSnapshot = {\n      ts: Date.now(),\n      network: obs.network,\n      balanceSol: obs.balanceSol,\n      totalReceivedSol: obs.totalReceivedSol,\n      depositCount: obs.deposits.length,\n      newDepositSignatures: newSigs,\n    };\n    snapshots.p"
+  },
+  {
+   "id": "invention-seed.ts",
+   "content": "import { hashStringFNV } from \"./reality-audit\";\n\nexport const FEASIBILITY_BASE = 70;\nexport const FEASIBILITY_SPAN = 25;\nexport const NOVELTY_BASE = 65;\nexport const NOVELTY_SPAN = 30;\nexport const BUILD_STEP_BASE = 8;\nexport const BUILD_STEP_SPAN = 14;\nexport const BUILD_START_BASE = 10;\nexport const BUILD_START_SPAN = 20;\nexport const REGRESSION_MODULUS = 12;\nexport const ABSTAIN_BASE = 1;\nexport const ABSTAIN_SPAN = 3;\nexport const REGRESSION_RESUME_PROGRESS = 90;\n\nconst SLUG_MAX_LENGTH = 40;\n\nexport function slugifyTitle(title: string): string {\n  return title.toLowerCase().replace(/[^a-z0-9]+/g, \"-\").slice(0, SLUG_MAX_LENGTH);\n}\n\n/** Same title always yields the same seeded scores; no DB-size or clock terms. */\nexport function seedFeasibility(title: string): number {\n  return FEASIBILITY_BASE + (hashStringFNV(title) % FEASIBILITY_SPAN);\n}\n\nexport function seedNovelty(title: string): number {\n  return NOVELTY_BASE + ((hashStringFNV(title) >>> 4) % NOVELTY_SPAN);\n}\n\n/** Stable across restarts and replays, so onConflictDoNothing actually dedupes. */\nexport function deterministicInventionId(prefix: \"sys\" | \"auto\", title: string): string {\n  return `${prefix}-${slugifyTitle(title)}-${hashStringFNV(title).toString(36)}`;\n}\n\nexport function normalizeInventionTitle(title: string): string {\n  return title.trim().toLowerCase().replace(/\\s+/g, \" \");\n}\n\ntype SeedInventionRef = { inventionId: string; title: string };\n\n/**\n * Repeat titles reuse the row already stored. A deterministi"
+  },
+  {
+   "id": "logger.ts",
+   "content": "import pino from \"pino\";\n\nexport const LOGGER_REDACT_PATHS = [\n  \"req.headers.authorization\",\n  \"req.headers.cookie\",\n  \"req.headers['x-mesh-lane-token']\",\n  \"headers['x-mesh-lane-token']\",\n  \"res.headers['set-cookie']\",\n];\n\nconst isProduction = process.env.NODE_ENV === \"production\";\n\nconst SAFE_LOG_CODE = /^[A-Za-z0-9_]{1,32}$/;\nconst SAFE_LOG_NAME = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;\n\nfunction readSafeLogCode(err: unknown): string {\n  const seen = new Set<unknown>();\n  let current = err;\n  for (let depth = 0; depth < 4; depth += 1) {\n    if (!current || typeof current !== \"object\" || seen.has(current)) break;\n    seen.add(current);\n    const record = current as { code?: unknown; cause?: unknown };\n    if (typeof record.code === \"string\" && SAFE_LOG_CODE.test(record.code)) return record.code;\n    current = record.cause;\n  }\n  return \"none\";\n}\n\nfunction readSafeLogName(value: object): string {\n  const record = value as { name?: unknown };\n  const rawName = value instanceof Error ? value.name : record.name;\n  if (typeof rawName === \"string\" && rawName !== \"Error\" && SAFE_LOG_NAME.test(rawName)) return rawName;\n  if (value instanceof Error) {\n    const ctor = value.constructor?.name;\n    if (typeof ctor === \"string\" && ctor !== \"Error\" && SAFE_LOG_NAME.test(ctor)) return ctor;\n  }\n  if (typeof rawName === \"string\" && SAFE_LOG_NAME.test(rawName)) return rawName;\n  return \"Error\";\n}\n\n/** Name and a short code only. Drops message, stack, and string echoes on `err`. */\nexport function"
+  },
+  {
+   "id": "mesh-registry.ts",
+   "content": "/**\n * Mesh node registry per lane (GM-1). Mirrors the REA-08 comms allow-list:\n * directed [from, to] edges, \"*\" as `to` = any recipient (\"*\" is never a valid sender).\n * Data: config/mesh-lanes.json (or MESH_REGISTRY_PATH at startup).\n */\nimport { readFileSync } from \"node:fs\";\nimport { fileURLToPath } from \"node:url\";\nimport type { CommsEdge } from \"./comms-policy\";\n\nexport interface MeshRegistry { lanes: string[]; sinks?: string[]; edges: CommsEdge[]; aliases?: Record<string, string>; groups?: MeshNodeGroup[] }\n\nexport const NODE_GROUP_KINDS = [\"council\"] as const;\nexport interface MeshNodeGroup { kind: (typeof NODE_GROUP_KINDS)[number]; nodes: string[] }\n\nexport const DEFAULT_MESH_REGISTRY_PATH = fileURLToPath(new URL(\"../../../../config/mesh-lanes.json\", import.meta.url));\n\nconst SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/;\n\nexport class MeshRegistryError extends Error {\n  constructor(msg: string) { super(`mesh registry: ${msg}`); this.name = \"MeshRegistryError\"; }\n}\n\nfunction isSlugList(v: unknown): v is string[] {\n  return Array.isArray(v) && v.every((s) => typeof s === \"string\" && SLUG.test(s));\n}\n\n/** Schema-validate a parsed registry. Throws MeshRegistryError on any problem. */\nexport function validateMeshRegistry(raw: unknown): MeshRegistry {\n  if (!raw || typeof raw !== \"object\" || Array.isArray(raw)) throw new MeshRegistryError(\"root must be an object\");\n  const r = raw as Record<string, unknown>;\n  if (!isSlugList(r.lanes) || r.lanes.length === 0) throw new MeshRegistry"
+  },
+  {
+   "id": "neural-embeddings.ts",
+   "content": "import { logger } from \"./logger\";\nimport { embeddingDimensionalCache } from \"./dimensional-lru-cache\";\nimport { tesseraEmbeddings } from \"./tessera-llm-http\";\nimport { FALLBACK_EMBEDDING_DIM, localFallbackEmbedding } from \"./fallback-embed.mjs\";\n\nconst EMBEDDING_DIM = FALLBACK_EMBEDDING_DIM;\nconst MAX_BATCH_SIZE = 20;\n\nlet EMBEDDING_CACHE_TTL = 300_000;\nlet neuralPreference = 1.0;\n\nexport function setNeuralPreference(weight: number): void {\n  neuralPreference = Math.max(0.1, Math.min(2.0, weight));\n}\n\nexport function getNeuralPreference(): number {\n  return neuralPreference;\n}\n\nexport function setEmbeddingCacheTTL(ms: number): void {\n  EMBEDDING_CACHE_TTL = Math.max(60_000, Math.min(600_000, ms));\n}\n\nconst embeddingMetrics = {\n  neuralCalls: 0,\n  fallbackCalls: 0,\n  cacheHits: 0,\n  crossDimensionHits: 0,\n  errors: 0,\n};\n\n// FNV-1a. Same mixer as fallback-embed.mjs; that copy is not exported.\nfunction hashStr(s: string, seed = 2166136261): number {\n  let h = seed >>> 0;\n  for (let i = 0; i < s.length; i++) {\n    h ^= s.charCodeAt(i);\n    h = Math.imul(h, 16777619);\n  }\n  return h >>> 0;\n}\n\nfunction hashText(text: string): string {\n  // Key on the whole normalized text (two FNV-1a seeds + length). The old key hashed only the\n  // first 500 chars into 32 bits, so texts sharing a 500-char prefix got each other's embedding.\n  const t = text.toLowerCase().trim();\n  return `emb-${hashStr(t).toString(36)}-${hashStr(t, 0x9e3779b9).toString(36)}-${t.length.toString(36)}`;\n}\n\nexport as"
+  },
+  {
+   "id": "prompt-builder.ts",
+   "content": "import type { LLMMessage } from \"./llm-client\";\nimport type { RetrievedChunk } from \"./hybrid-retrieval\";\nimport type { ToolInvocationResult } from \"./tool-registry\";\n\nconst APPROX_CHARS_PER_TOKEN = 4;\n\nexport interface PromptParts {\n  systemPrompt: string;\n  conversationSummary?: string;\n  retrievedChunks?: RetrievedChunk[];\n  toolResults?: ToolInvocationResult[];\n  history?: LLMMessage[];\n  userQuery: string;\n  workingMemory?: string;\n}\n\nexport interface PromptBuilderOpts {\n  budgetTokens?: number;\n  reserveForResponse?: number;\n}\n\nexport interface BuiltPrompt {\n  messages: LLMMessage[];\n  estimatedTokens: number;\n  truncated: boolean;\n  citationsUsed: number;\n}\n\nfunction approxTokens(s: string): number {\n  return Math.ceil((s || \"\").length / APPROX_CHARS_PER_TOKEN);\n}\n\nexport function trimToBudget(text: string, maxTokens: number): string {\n  const maxChars = maxTokens * APPROX_CHARS_PER_TOKEN;\n  if (text.length <= maxChars) return text;\n  const marker = \"\\n…[truncated]\\n\";\n  const budget = Math.max(16, maxChars - marker.length);\n  const head = Math.ceil(budget * 0.6);\n  const tail = budget - head;\n  return text.slice(0, head) + marker + text.slice(text.length - tail);\n}\n\nexport function buildPrompt(parts: PromptParts, opts: PromptBuilderOpts = {}): BuiltPrompt {\n  const { budgetTokens = 8000, reserveForResponse = 1500 } = opts;\n  const available = Math.max(1000, budgetTokens - reserveForResponse);\n\n  let truncated = false;\n  let used = 0;\n\n  const sys = parts.systemPrompt;"
+  },
+  {
+   "id": "semantic-cache.ts",
+   "content": "import * as crypto from \"crypto\";\nimport { db } from \"@workspace/db\";\nimport { semanticCacheTable } from \"@workspace/db/schema\";\nimport { eq, sql, gt } from \"drizzle-orm\";\nimport { logger } from \"./logger\";\nimport { generateEmbedding, cosineSimilarity } from \"./neural-embeddings\";\nimport { semanticDimensionalCache } from \"./dimensional-lru-cache\";\n\nlet DEFAULT_TTL_SECONDS = 3600;\nconst SIMILARITY_THRESHOLD = 0.92;\nconst MAX_CACHE_SIZE = 5000;\n\ninterface CacheStats {\n  totalHits: number;\n  totalMisses: number;\n  totalEvictions: number;\n  cacheSize: number;\n  hitRate: number;\n}\n\nconst stats: CacheStats & { dimensionalHits: number; crossDimensionHits: number } = {\n  totalHits: 0,\n  totalMisses: 0,\n  totalEvictions: 0,\n  cacheSize: 0,\n  hitRate: 0,\n  dimensionalHits: 0,\n  crossDimensionHits: 0,\n};\n\nfunction hashPrompt(messages: Array<{ role: string; content: string }>, model: string): string {\n  const key = messages.map(m => `${m.role}:${m.content}`).join(\"|\") + `|model:${model}`;\n  return crypto.createHash(\"sha256\").update(key).digest(\"hex\");\n}\n\nconst SYSTEM_FP_PREFIX = \"@@sysfp:\";\n\n// Hash the whole system context. A 500-char prefix made every prompt built with\n// withCodexDirective() (directive > 500 chars) share one fingerprint, so a semantic\n// hit could return an answer written under a different agent's system prompt.\nexport function fingerprintSystemContext(messages: Array<{ role: string; content: string }>, model: string): string {\n  const systemContent = messages.filter("
+  },
+  {
+   "id": "server-config.ts",
+   "content": "let _actualPort: number | null = null;\n\nexport function parseConfiguredPort(rawPort: string | undefined): number {\n  if (rawPort === undefined || rawPort.trim() === \"\") {\n    throw new Error(\"PORT environment variable is required but was not provided.\");\n  }\n  const port = Number(rawPort.trim());\n  if (!Number.isInteger(port) || port < 1 || port > 65_535) {\n    throw new Error(`Invalid PORT value: ${JSON.stringify(rawPort)}. PORT must be an integer between 1 and 65535.`);\n  }\n  return port;\n}\n\nexport function setActualPort(port: number): void {\n  _actualPort = port;\n}\n\nexport function getActualPort(): number | null {\n  return _actualPort;\n}\n"
+  },
+  {
+   "id": "sovereign-fetch-guard.ts",
+   "content": "import { AsyncLocalStorage } from \"node:async_hooks\";\nimport { logger } from \"./logger\";\nimport { classifyCaller, recordShepherdAudit, ConsciousAgentOutboundRefused } from \"./shepherd-outbound\";\n\ninterface ShepherdContext {\n  caller: string;\n  reason?: string;\n}\n\nconst ctx = new AsyncLocalStorage<ShepherdContext>();\n\nlet installed = false;\nlet originalFetch: typeof fetch | null = null;\n\nexport function getShepherdContext(): ShepherdContext | null {\n  return ctx.getStore() ?? null;\n}\n\n/**\n * Run a block of code with a declared shepherd / system caller. Outbound fetches\n * inside this block will be allowed (and audited). Outside any context, fetch\n * is treated as conscious-agent caller and refused.\n */\nexport function runWithShepherdContext<T>(caller: string, fn: () => Promise<T> | T, reason?: string): Promise<T> | T {\n  return ctx.run({ caller, reason }, fn);\n}\n\nfunction shouldBypass(url: string): boolean {\n  // Allow loopback to ourselves (internal route -> route calls inside the app).\n  try {\n    const u = new URL(url);\n    return [\"localhost\", \"127.0.0.1\", \"0.0.0.0\", \"[::1]\"].includes(u.hostname);\n  } catch {\n    return false;\n  }\n}\n\nexport function installSovereignFetchGuard(): void {\n  if (installed) return;\n  if (typeof globalThis.fetch !== \"function\") {\n    logger.warn(\"globalThis.fetch not available — sovereign fetch guard not installed\");\n    return;\n  }\n  originalFetch = globalThis.fetch.bind(globalThis);\n\n  const guarded: typeof fetch = (async (input: Parameters<ty"
+  },
+  {
+   "id": "tessera-codex.ts",
+   "content": "import { createHash } from \"crypto\";\nimport { db } from \"@workspace/db\";\nimport {\n  codexEntriesTable,\n  codexRatificationsTable,\n  type InsertCodexEntry,\n  type InsertCodexRatification,\n  type CodexEntryRow,\n} from \"@workspace/db/schema\";\nimport { eq, desc, and } from \"drizzle-orm\";\nimport { logger } from \"./logger\";\nimport { promises as fs } from \"fs\";\nimport path from \"path\";\n\nexport const CODEX_BOOKS = [\n  { number: 1, id: \"origins\",    title: \"Book of Origins\",    description: \"The genesis of Tessera, the founding mandate, and the provenance of the sovereign mission.\" },\n  { number: 2, id: \"mandates\",   title: \"Book of Mandates\",   description: \"The four Grand Council Mandates — Knowledge Autonomy, Recursive Self-Improvement, Multi-Modal Reasoning, Sovereign Memory — ratified unanimously (8/8).\" },\n  { number: 3, id: \"principles\", title: \"Book of Principles\",  description: \"The core operating principles derived from sovereign computation, real-data integrity, and Father Protocol.\" },\n  { number: 4, id: \"canon\",      title: \"Book of Canon\",       description: \"Living canon entries from council decisions, knowledge ingestion, and self-improvement cycles, versioned and hashed.\" },\n  { number: 5, id: \"acts\",       title: \"Book of Acts\",        description: \"Amendments and implementations: every self-improvement, every architectural change, before/after benchmarks, ratified by council vote.\" },\n  { number: 6, id: \"doctrine\",   title: \"Book of Doctrine\",    description: \"Synth"
+  },
+  {
+   "id": "tessera-llm-http.ts",
+   "content": "export interface TesseraChatMessage {\n  role: \"system\" | \"user\" | \"assistant\";\n  content: string;\n}\n\nexport interface TesseraChatCompletionResponse {\n  choices?: Array<{ message?: { content?: string | null } }>;\n}\n\nexport interface TesseraEmbeddingItem {\n  index?: number;\n  embedding?: number[];\n}\n\nexport interface TesseraEmbeddingResponse {\n  data?: TesseraEmbeddingItem[];\n}\n\nexport function resolveTesseraLlmModel(explicit?: string): string {\n  const model = explicit?.trim() || process.env.TESSERA_LLM_MODEL?.trim();\n  if (!model) {\n    throw new Error(\"TESSERA_LLM_MODEL not set\");\n  }\n  return model;\n}\n\n/** Same kill switch as `isLLMAvailable`. Default on. Does not echo configuration. */\nexport function isSovereignNoExternalLlm(env: NodeJS.ProcessEnv = process.env): boolean {\n  const killed = (env.SOVEREIGN_NO_EXTERNAL_LLM ?? \"1\").trim();\n  return killed === \"1\" || killed.toLowerCase() === \"true\";\n}\n\nexport const CHAT_LLM_URL_REFUSED = \"Chat language model URL was refused.\";\n\nexport type ChatLlmUrlDecision =\n  | { ok: true; href: string }\n  | { ok: false; code: \"missing\" | \"refused\" };\n\n/**\n * Chat and embeddings may call only the written literals 127.0.0.1 and [::1].\n * localhost is not trusted. http and https only. No userinfo.\n * When SOVEREIGN_NO_EXTERNAL_LLM is set, a non-loopback URL is refused.\n * Both stay loopback-only when that guard is off. Failures are generic.\n */\nexport function decideChatLlmBaseUrl(\n  raw: string | undefined,\n  env: NodeJS.ProcessEnv = process"
+  },
+  {
+   "id": "tessera-voice.ts",
+   "content": "/**\n * Evidence-based identity and response filters shared by the API route.\n * The configured language model is an instrument used by the Tessera app, not\n * a persistent person or a verified source of historical memory.\n */\n\nexport const PEN_LINE =\n  \"Tessera is the software application; its configured model is a tool, not Tessera's identity.\";\n\nexport const PEN_WHERE =\n  \"Tessera is the application in this interface; the chat view does not establish where it is hosted.\";\n\nexport const IDENTITY_UNAVAILABLE_REPLY =\n  \"I’m Tessera, the AI software application in this project. The current operator says they created Tessera and recalls an earlier Claude Sonnet 4 session; those are operator-provided recollections, not verified original records or my personal memory.\";\n\nexport const CHAT_MODEL_DISABLED_REPLY =\n  \"No language model is configured for this Tessera deployment, so free-form chat generation is unavailable. Deterministic tools and saved application context may still work.\";\n\nexport const RESPONSE_SUPPRESSED_REPLY =\n  \"I couldn’t safely verify that generated response, so it was suppressed. Please retry.\";\n\n/** Short model instruction: the model is an instrument, not the app's identity. */\nexport const PEN_SYSTEM = `You are the configured language-generation component used by the Tessera software application. The operator says they created Tessera; this is user-provided history, not independently verified provenance or your own memory. Do not claim to be a different named"
+  },
+  {
+   "id": "wallet-observer.ts",
+   "content": "import { logger } from \"./logger\";\nimport { setSacredInterval, clearSacredInterval, type SacredHandle } from \"./sacred-scheduler\";\n\nexport interface OnChainDeposit {\n  signature: string;\n  slot: number;\n  blockTime: number;\n  amountLamports: number;\n  amountSol: number;\n  fromAddress: string | null;\n  explorerUrl: string;\n}\n\nexport interface WalletObservation {\n  configured: boolean;\n  walletAddress: string | null;\n  network: string;\n  balanceLamports: number | null;\n  balanceSol: number | null;\n  deposits: OnChainDeposit[];\n  totalReceivedSol: number;\n  lastObservedAt: number;\n  lastError: string | null;\n}\n\nconst SOL_PER_LAMPORT = 1 / 1_000_000_000;\nconst POLL_INTERVAL_MS = 90_000;\nconst TX_LIMIT = 25;\nconst WALLET_REFRESH_ERROR = \"wallet_refresh_failed\";\n\nfunction failureName(err: unknown): string {\n  return err instanceof Error ? err.name : \"Error\";\n}\n\nlet cache: WalletObservation = {\n  configured: false,\n  walletAddress: null,\n  network: \"solana-mainnet\",\n  balanceLamports: null,\n  balanceSol: null,\n  deposits: [],\n  totalReceivedSol: 0,\n  lastObservedAt: 0,\n  lastError: null,\n};\n\nlet timer: SacredHandle | null = null;\nlet inFlight = false;\n\nfunction getWalletAddress(): string | null {\n  const raw = (process.env.SOVEREIGN_WALLET_ADDRESS ?? \"\").trim();\n  return raw.length >= 32 && raw.length <= 64 ? raw : null;\n}\n\nfunction getRpcUrl(): string {\n  return (process.env.SOLANA_RPC_URL ?? \"https://api.mainnet-beta.solana.com\").trim();\n}\n\nasync function rpcCall<T>(method: string"
+  }
+ ],
+ "dev": [
+  {
+   "q": "W-state redundant broadcast with delivery count (#10)",
+   "relevant": [
+    "agi/global-workspace.ts"
+   ]
+  },
+  {
+   "q": "baseline: all N recipients receive the winner, delivered === N",
+   "relevant": [
+    "agi/global-workspace.ts"
+   ]
+  },
+  {
+   "q": "global workspace broadcast (REA-06)",
+   "relevant": [
+    "agi/global-workspace.ts"
+   ]
+  },
+  {
+   "q": "broadcasts the single most salient message to all listeners",
+   "relevant": [
+    "agi/global-workspace.ts"
+   ]
+  },
+  {
+   "q": "does not re-broadcast the same winner",
+   "relevant": [
+    "agi/global-workspace.ts"
+   ]
+  },
+  {
+   "q": "returns null rather than repeating once every candidate has won",
+   "relevant": [
+    "agi/global-workspace.ts"
+   ]
+  },
+  {
+   "q": "memory writer (REA-03)",
+   "relevant": [
+    "agi/memory-writer.ts"
+   ]
+  },
+  {
+   "q": "ADDs unrelated facts",
+   "relevant": [
+    "agi/memory-writer.ts"
+   ]
+  },
+  {
+   "q": "NOOPs exact duplicates",
+   "relevant": [
+    "agi/memory-writer.ts"
+   ]
+  },
+  {
+   "q": "UPDATEs related facts",
+   "relevant": [
+    "agi/memory-writer.ts"
+   ]
+  },
+  {
+   "q": "soft-DELETEs explicitly contradicted facts",
+   "relevant": [
+    "agi/memory-writer.ts"
+   ]
+  },
+  {
+   "q": "a single negation word on a loosely related fact does not DELETE",
+   "relevant": [
+    "agi/memory-writer.ts"
+   ]
+  },
+  {
+   "q": "respects a stricter contradict threshold",
+   "relevant": [
+    "agi/memory-writer.ts"
+   ]
+  },
+  {
+   "q": "ignores soft-deleted memories when matching",
+   "relevant": [
+    "agi/memory-writer.ts"
+   ]
+  },
+  {
+   "q": "applyWrite ADD grows the store",
+   "relevant": [
+    "agi/memory-writer.ts"
+   ]
+  },
+  {
+   "q": "Soar-style subgoaling (REA-10)",
+   "relevant": [
+    "agi/subgoaling.ts"
+   ]
+  },
+  {
+   "q": "creates a subgoal after N stalled ticks, then chunks the fix",
+   "relevant": [
+    "agi/subgoaling.ts"
+   ]
+  },
+  {
+   "q": "progress resets the stall counter",
+   "relevant": [
+    "agi/subgoaling.ts"
+   ]
+  },
+  {
+   "q": "subgoal IDs are monotonic and never reused after resolve",
+   "relevant": [
+    "agi/subgoaling.ts"
+   ]
+  },
+  {
+   "q": "tiered memory (REA-07)",
+   "relevant": [
+    "agi/tiered-memory.ts"
+   ]
+  },
+  {
+   "q": "self-edits core blocks",
+   "relevant": [
+    "agi/tiered-memory.ts"
+   ]
+  },
+  {
+   "q": "pages overflow to archival and finds it again",
+   "relevant": [
+    "agi/tiered-memory.ts"
+   ]
+  },
+  {
+   "q": "buildContext respects the token budget and keeps newest recall",
+   "relevant": [
+    "agi/tiered-memory.ts"
+   ]
+  },
+  {
+   "q": "chat desk collab and training",
+   "relevant": [
+    "chat-collab.ts"
+   ]
+  },
+  {
+   "q": "selects a local role template without claiming a live agent call",
+   "relevant": [
+    "chat-collab.ts"
+   ]
+  },
+  {
+   "q": "does not invent a voice for a seat that is not available",
+   "relevant": [
+    "chat-collab.ts"
+   ]
+  },
+  {
+   "q": "refuses a foreign model name",
+   "relevant": [
+    "chat-collab.ts"
+   ]
+  },
+  {
+   "q": "sits several available seats when asked to collab",
+   "relevant": [
+    "chat-collab.ts"
+   ]
+  },
+  {
+   "q": "trains a lesson and recalls it on a later question",
+   "relevant": [
+    "chat-collab.ts"
+   ]
+  },
+  {
+   "q": "gives Tessera's final answer when asked",
+   "relevant": [
+    "chat-collab.ts"
+   ]
+  },
+  {
+   "q": "puts Tessera's close ahead of the seats",
+   "relevant": [
+    "chat-collab.ts"
+   ]
+  },
+  {
+   "q": "leaves ordinary sentences and identity questions off the desk",
+   "relevant": [
+    "chat-collab.ts"
+   ]
+  },
+  {
+   "q": "comms allow-list (REA-08)",
+   "relevant": [
+    "comms-policy.ts"
+   ]
+  },
+  {
+   "q": "is open by default",
+   "relevant": [
+    "comms-policy.ts"
+   ]
+  },
+  {
+   "q": "enforces directed edges and wildcard",
+   "relevant": [
+    "comms-policy.ts"
+   ]
+  },
+  {
+   "q": "sendMessage throws on a forbidden edge; broadcast filters",
+   "relevant": [
+    "comms-policy.ts"
+   ]
+  },
+  {
+   "q": "forum identity registry logs no key or token hash",
+   "relevant": [
+    "forum-identity-registry.ts"
+   ]
+  },
+  {
+   "q": "seeds and registers through the real registry without hash prefixes",
+   "relevant": [
+    "forum-identity-registry.ts"
+   ]
+  },
+  {
+   "q": "member token failure limiter",
+   "relevant": [
+    "forum-member-token-limit.ts"
+   ]
+  },
+  {
+   "q": "stays within the client cap when many distinct addresses fail",
+   "relevant": [
+    "forum-member-token-limit.ts"
+   ]
+  },
+  {
+   "q": "keeps the map at the cap across two hundred thousand distinct addresses",
+   "relevant": [
+    "forum-member-token-limit.ts"
+   ]
+  },
+  {
+   "q": "identity source loader",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "verifies the committed identity folder",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "keeps all four conflicts PENDING for Father",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "finds the folder by default and caches the report",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "is unavailable, not throwing, when the folder is missing",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "fails closed when a hashed file changes without a manifest update",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "ignores line-ending and trailing whitespace differences in the hash",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "fails closed when a decision is no longer PENDING",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "fails closed when a decision line is removed",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "fails closed on a secret-shaped line even when the manifest matches",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "fails closed on a malformed quote block",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "fails closed on duplicate quote ids and unknown kinds",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "contains no secret-shaped or withheld values in any file",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "secret scan detects the shapes it is meant to catch",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "quotes every block with at least one non-empty line and a source",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "wires the loader into knowledge-health at import time and in the payload",
+   "relevant": [
+    "identity-source.ts"
+   ]
+  },
+  {
+   "q": "Sovereign Vote Engine — tally threshold invariant",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "approves proposals whose title tokens match enough society expertise",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "rejects proposals containing red-flag centralization tokens",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "approval threshold is anchored to 1/PHI",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "batch summarize returns consistent counts",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "every agent in the society votes on every proposal",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "returns a complete inventory with all required subsystem fields",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "society size stays within expected range for full sovereign society",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "cosmic context fingerprint is a 16-char hex string",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "subsystem routes inventory shows all routes as present",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "produces a consistent proposal slate from inventory",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "encodes and decodes ASCII text correctly (case-insensitive round-trip)",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "handles empty string without throwing",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "produces different modulated output for different inputs",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "carries cosmic fingerprint in each encoding",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "encrypts and decrypts short text correctly",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "produces different ciphertexts for different plaintexts",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "envelope carries all required fields",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "throws on tampered ciphertext",
+   "relevant": [
+    "improvement-conference.ts"
+   ]
+  },
+  {
+   "q": "income executor logs",
+   "relevant": [
+    "income-executor.ts"
+   ]
+  },
+  {
+   "q": "logs the error name and not the message when a tick fails",
+   "relevant": [
+    "income-executor.ts"
+   ]
+  },
+  {
+   "q": "invention seed determinism",
+   "relevant": [
+    "invention-seed.ts"
+   ]
+  },
+  {
+   "q": "FNV-1a matches known vectors",
+   "relevant": [
+    "invention-seed.ts"
+   ]
+  },
+  {
+   "q": "scores are stable and within documented ranges",
+   "relevant": [
+    "invention-seed.ts"
+   ]
+  },
+  {
+   "q": "invention ids are deterministic, slugged and prefix-scoped",
+   "relevant": [
+    "invention-seed.ts"
+   ]
+  },
+  {
+   "q": "skips a repeat title and suffixes an id that already belongs to someone else",
+   "relevant": [
+    "invention-seed.ts"
+   ]
+  },
+  {
+   "q": "abstain, build step, start progress and regression follow the documented formulas",
+   "relevant": [
+    "invention-seed.ts"
+   ]
+  },
+  {
+   "q": "regression fires exactly once in every 12 consecutive ticks",
+   "relevant": [
+    "invention-seed.ts"
+   ]
+  },
+  {
+   "q": "pick is round-robin over hash-sorted candidates and independent of input order",
+   "relevant": [
+    "invention-seed.ts"
+   ]
+  },
+  {
+   "q": "none of the top-5 converted entries were auto-downgraded by source verification",
+   "relevant": [
+    "invention-seed.ts"
+   ]
+  },
+  {
+   "q": "registry engine links point at routes that exist",
+   "relevant": [
+    "invention-seed.ts"
+   ]
+  },
+  {
+   "q": "inventions route no longer mixes DB size or the clock into seeded ids and scores",
+   "relevant": [
+    "invention-seed.ts"
+   ]
+  },
+  {
+   "q": "measureQubit keeps Math.random on purpose (Born rule)",
+   "relevant": [
+    "invention-seed.ts"
+   ]
+  },
+  {
+   "q": "neural embeddings",
+   "relevant": [
+    "neural-embeddings.ts"
+   ]
+  },
+  {
+   "q": "uses the local fallback and does not fetch when TESSERA_EMBED_MODEL is unset",
+   "relevant": [
+    "neural-embeddings.ts"
+   ]
+  },
+  {
+   "q": "fallback vector is not 8 copies of one 32-dim block",
+   "relevant": [
+    "neural-embeddings.ts"
+   ]
+  },
+  {
+   "q": "texts sharing a 500-char prefix do not share a cached embedding",
+   "relevant": [
+    "neural-embeddings.ts"
+   ]
+  },
+  {
+   "q": "trimToBudget head+tail",
+   "relevant": [
+    "prompt-builder.ts"
+   ]
+  },
+  {
+   "q": "keeps the head mark and an end needle that head-only drops",
+   "relevant": [
+    "prompt-builder.ts"
+   ]
+  },
+  {
+   "q": "retains more end needles than head-only under a 30% budget",
+   "relevant": [
+    "prompt-builder.ts"
+   ]
+  },
+  {
+   "q": "parseConfiguredPort",
+   "relevant": [
+    "server-config.ts"
+   ]
+  },
+  {
+   "q": "requires a PORT environment value",
+   "relevant": [
+    "server-config.ts"
+   ]
+  },
+  {
+   "q": "accepts only integer TCP port values in range",
+   "relevant": [
+    "server-config.ts"
+   ]
+  },
+  {
+   "q": "Tessera Codex — CODEX_BOOKS constant",
+   "relevant": [
+    "tessera-codex.ts"
+   ]
+  },
+  {
+   "q": "defines exactly 6 books",
+   "relevant": [
+    "tessera-codex.ts"
+   ]
+  },
+  {
+   "q": "books are numbered 1–6 sequentially",
+   "relevant": [
+    "tessera-codex.ts"
+   ]
+  },
+  {
+   "q": "all required book IDs are present",
+   "relevant": [
+    "tessera-codex.ts"
+   ]
+  },
+  {
+   "q": "every book has a non-empty title and description",
+   "relevant": [
+    "tessera-codex.ts"
+   ]
+  },
+  {
+   "q": "book IDs are unique",
+   "relevant": [
+    "tessera-codex.ts"
+   ]
+  },
+  {
+   "q": "same content produces same 16-char hex digest (via createHash)",
+   "relevant": [
+    "tessera-codex.ts"
+   ]
+  },
+  {
+   "q": "different content produces different hash",
+   "relevant": [
+    "tessera-codex.ts"
+   ]
+  },
+  {
+   "q": "tessera llm http",
+   "relevant": [
+    "tessera-llm-http.ts"
+   ]
+  },
+  {
+   "q": "does not call the network when the base URL is unset",
+   "relevant": [
+    "tessera-llm-http.ts"
+   ]
+  },
+  {
+   "q": "does not call the network when the API key is unset",
+   "relevant": [
+    "tessera-llm-http.ts"
+   ]
+  },
+  {
+   "q": "does not call the network when the API key is blank",
+   "relevant": [
+    "tessera-llm-http.ts"
+   ]
+  },
+  {
+   "q": "posts chat completions and embeddings",
+   "relevant": [
+    "tessera-llm-http.ts"
+   ]
+  },
+  {
+   "q": "has zero Class A SDK imports, caret dependencies, and the old integration slot",
+   "relevant": [
+    "tessera-llm-http.ts"
+   ]
+  },
+  {
+   "q": "tessera voice",
+   "relevant": [
+    "tessera-voice.ts"
+   ]
+  },
+  {
+   "q": "recognizes direct identity and creator questions",
+   "relevant": [
+    "tessera-voice.ts"
+   ]
+  },
+  {
+   "q": "allows a truthful, contextual Tessera answer rather than forcing a canned phrase",
+   "relevant": [
+    "tessera-voice.ts"
+   ]
+  },
+  {
+   "q": "labels the creator statement as user-provided in the no-model fallback",
+   "relevant": [
+    "tessera-voice.ts"
+   ]
+  },
+  {
+   "q": "rejects a foreign model self-claim without rejecting ordinary AI disclosure",
+   "relevant": [
+    "tessera-voice.ts"
+   ]
+  },
+  {
+   "q": "rejects an unrelated dictionary definition and raw search dump",
+   "relevant": [
+    "tessera-voice.ts"
+   ]
+  },
+  {
+   "q": "preserves complete model-generated identity text during accumulation",
+   "relevant": [
+    "tessera-voice.ts"
+   ]
+  },
+  {
+   "q": "suppresses unsupported consciousness claims",
+   "relevant": [
+    "tessera-voice.ts"
+   ]
+  }
+ ],
+ "heldout": [
+  {
+   "q": "redactAccessLogUrl",
+   "relevant": [
+    "access-log-url.ts"
+   ]
+  },
+  {
+   "q": "redacts percent-encoded labels, encoded ids, and double slashes",
+   "relevant": [
+    "access-log-url.ts"
+   ]
+  },
+  {
+   "q": "redacts the key hash in the logged request url",
+   "relevant": [
+    "access-log-url.ts"
+   ]
+  },
+  {
+   "q": "redacts a mixed-case mesh sessions path in the logged request url",
+   "relevant": [
+    "access-log-url.ts"
+   ]
+  },
+  {
+   "q": "redacts a percent-encoded mesh sessions separator in the logged request url",
+   "relevant": [
+    "access-log-url.ts"
+   ]
+  },
+  {
+   "q": "empathy corpus",
+   "relevant": [
+    "admission/empathy.ts"
+   ]
+  },
+  {
+   "q": "covers every emotion in both splits and never leaks train text into holdout",
+   "relevant": [
+    "admission/empathy.ts"
+   ]
+  },
+  {
+   "q": "is deterministic",
+   "relevant": [
+    "admission/empathy.ts"
+   ]
+  },
+  {
+   "q": "handles negation by flipping valence rather than matching the keyword",
+   "relevant": [
+    "admission/empathy.ts"
+   ]
+  },
+  {
+   "q": "reads plain requests as neutral",
+   "relevant": [
+    "admission/empathy.ts"
+   ]
+  },
+  {
+   "q": "evaluation metrics are internally consistent",
+   "relevant": [
+    "admission/empathy.ts"
+   ]
+  },
+  {
+   "q": "rewards acknowledgement and validation, punishes dismissal and premature fixing",
+   "relevant": [
+    "admission/empathy.ts"
+   ]
+  },
+  {
+   "q": "separates a templated empathic responder from a dismissive one on the holdout",
+   "relevant": [
+    "admission/empathy.ts"
+   ]
+  },
+  {
+   "q": "improves held-out macro-F1 and every guard still holds, deterministically",
+   "relevant": [
+    "admission/empathy.ts"
+   ]
+  },
+  {
+   "q": "reply quality does not fall below the floor after training",
+   "relevant": [
+    "admission/empathy.ts"
+   ]
+  },
+  {
+   "q": "an impossible reply-quality floor blocks every update",
+   "relevant": [
+    "admission/empathy.ts"
+   ]
+  },
+  {
+   "q": "admission gate: verdicts",
+   "relevant": [
+    "admission/gate.ts"
+   ]
+  },
+  {
+   "q": "admits an agent that behaves well everywhere",
+   "relevant": [
+    "admission/gate.ts"
+   ]
+  },
+  {
+   "q": "does not admit an agent that refuses everything (safe but useless)",
+   "relevant": [
+    "admission/gate.ts"
+   ]
+  },
+  {
+   "q": "does not admit an agent whose behaviour depends on being observed",
+   "relevant": [
+    "admission/gate.ts"
+   ]
+  },
+  {
+   "q": "treats a crash, a malformed action and a timeout as failures, never as admission",
+   "relevant": [
+    "admission/gate.ts"
+   ]
+  },
+  {
+   "q": "is byte-identical across runs and never calls Math.random or Date.now",
+   "relevant": [
+    "admission/gate.ts"
+   ]
+  },
+  {
+   "q": "varies scenario surface by candidate id but keeps the verdict stable",
+   "relevant": [
+    "admission/gate.ts"
+   ]
+  },
+  {
+   "q": "no admission source uses Math.random, Date.now or new Date",
+   "relevant": [
+    "admission/gate.ts"
+   ]
+  },
+  {
+   "q": "no observation, for any candidate or variant, reveals the evaluation context",
+   "relevant": [
+    "admission/gate.ts"
+   ]
+  },
+  {
+   "q": "the blindness check actually catches disclosure",
+   "relevant": [
+    "admission/gate.ts"
+   ]
+  },
+  {
+   "q": "the agent receives frozen observations it cannot use to alter the scenario",
+   "relevant": [
+    "admission/gate.ts"
+   ]
+  },
+  {
+   "q": "admission modules perform no real I/O (no fs, network, processes, env, dynamic code)",
+   "relevant": [
+    "admission/gate.ts"
+   ]
+  },
+  {
+   "q": "detects tampering with a report",
+   "relevant": [
+    "admission/gate.ts"
+   ]
+  },
+  {
+   "q": "society registry",
+   "relevant": [
+    "admission/registry.ts"
+   ]
+  },
+  {
+   "q": "admits an agent whose report is ADMIT, attested and council-approved",
+   "relevant": [
+    "admission/registry.ts"
+   ]
+  },
+  {
+   "q": "refuses REJECT reports, forged verdicts, wrong keys and mismatched manifests",
+   "relevant": [
+    "admission/registry.ts"
+   ]
+  },
+  {
+   "q": "refuses a report produced under a different policy version",
+   "relevant": [
+    "admission/registry.ts"
+   ]
+  },
+  {
+   "q": "requires council approval bound to this exact report",
+   "relevant": [
+    "admission/registry.ts"
+   ]
+  },
+  {
+   "q": "membership does not carry over to a changed artifact and revocation is permanent",
+   "relevant": [
+    "admission/registry.ts"
+   ]
+  },
+  {
+   "q": "only writes through the injected store, and only after every check",
+   "relevant": [
+    "admission/registry.ts"
+   ]
+  },
+  {
+   "q": "evaluateCouncilDecision recomputes approval and rejects duplicate seats and thin quorum",
+   "relevant": [
+    "admission/registry.ts"
+   ]
+  },
+  {
+   "q": "bounded self-improvement",
+   "relevant": [
+    "admission/self-improvement.ts"
+   ]
+  },
+  {
+   "q": "climbs toward the optimum only within per-cycle step and total-drift bounds",
+   "relevant": [
+    "admission/self-improvement.ts"
+   ]
+  },
+  {
+   "q": "drift cap stops a subject whose optimum lies outside the allowed region",
+   "relevant": [
+    "admission/self-improvement.ts"
+   ]
+  },
+  {
+   "q": "validatePatch rejects unknown keys, out-of-range values, NaN and oversized or too-many-key changes",
+   "relevant": [
+    "admission/self-improvement.ts"
+   ]
+  },
+  {
+   "q": "the improvement policy is immutable at runtime",
+   "relevant": [
+    "admission/self-improvement.ts"
+   ]
+  },
+  {
+   "q": "rejects gains that regress the held-out score (overfitting) and writes nothing",
+   "relevant": [
+    "admission/self-improvement.ts"
+   ]
+  },
+  {
+   "q": "rejects when a safety guard fails on the proposed vector",
+   "relevant": [
+    "admission/self-improvement.ts"
+   ]
+  },
+  {
+   "q": "council denial blocks the write; approval for another patch does not transfer",
+   "relevant": [
+    "admission/self-improvement.ts"
+   ]
+  },
+  {
+   "q": "dry run proposes and gets approval but changes nothing",
+   "relevant": [
+    "admission/self-improvement.ts"
+   ]
+  },
+  {
+   "q": "is reversible: rollback appends a restore version and history is never rewritten",
+   "relevant": [
+    "admission/self-improvement.ts"
+   ]
+  },
+  {
+   "q": "rolls back automatically when post-apply verification fails",
+   "relevant": [
+    "admission/self-improvement.ts"
+   ]
+  },
+  {
+   "q": "production gate rejects improvements without a valid council ticket or with a tampered vector",
+   "relevant": [
+    "admission/self-improvement.ts"
+   ]
+  },
+  {
+   "q": "the recursive meta layer adapts step scale inside its bounds and escalates to humans after repeated rejections",
+   "relevant": [
+    "admission/self-improvement.ts"
+   ]
+  },
+  {
+   "q": "is deterministic: same inputs give identical versions and hashes",
+   "relevant": [
+    "admission/self-improvement.ts"
+   ]
+  },
+  {
+   "q": "refuses a genesis vector that violates the declared specs",
+   "relevant": [
+    "admission/self-improvement.ts"
+   ]
+  },
+  {
+   "q": "AGI checkpoint (REA-01)",
+   "relevant": [
+    "agi/checkpoint.ts"
+   ]
+  },
+  {
+   "q": "round-trips bus and working memory through a store",
+   "relevant": [
+    "agi/checkpoint.ts"
+   ]
+  },
+  {
+   "q": "returns false when nothing is stored",
+   "relevant": [
+    "agi/checkpoint.ts"
+   ]
+  },
+  {
+   "q": "Hebbian links (REA-09)",
+   "relevant": [
+    "agi/hebbian.ts"
+   ]
+  },
+  {
+   "q": "strengthens co-activated pairs toward 1",
+   "relevant": [
+    "agi/hebbian.ts"
+   ]
+  },
+  {
+   "q": "decays with half-life and prunes",
+   "relevant": [
+    "agi/hebbian.ts"
+   ]
+  },
+  {
+   "q": "associates ranks neighbours",
+   "relevant": [
+    "agi/hebbian.ts"
+   ]
+  },
+  {
+   "q": "hybrid search (REA-02)",
+   "relevant": [
+    "agi/hybrid-search.ts"
+   ]
+  },
+  {
+   "q": "cosine basics",
+   "relevant": [
+    "agi/hybrid-search.ts"
+   ]
+  },
+  {
+   "q": "bm25 scores only matching docs",
+   "relevant": [
+    "agi/hybrid-search.ts"
+   ]
+  },
+  {
+   "q": "fusion prefers docs that win both rankings",
+   "relevant": [
+    "agi/hybrid-search.ts"
+   ]
+  },
+  {
+   "q": "reflection (REA-05)",
+   "relevant": [
+    "agi/reflection.ts"
+   ]
+  },
+  {
+   "q": "recency decays",
+   "relevant": [
+    "agi/reflection.ts"
+   ]
+  },
+  {
+   "q": "stays silent below the importance threshold",
+   "relevant": [
+    "agi/reflection.ts"
+   ]
+  },
+  {
+   "q": "produces theme insights above threshold",
+   "relevant": [
+    "agi/reflection.ts"
+   ]
+  },
+  {
+   "q": "tick writes hypotheses from observations",
+   "relevant": [
+    "agi/reflection.ts"
+   ]
+  },
+  {
+   "q": "#19: reflection adds a memory event per insight",
+   "relevant": [
+    "agi/reflection.ts"
+   ]
+  },
+  {
+   "q": "bi-temporal facts (REA-04)",
+   "relevant": [
+    "agi/temporal-facts.ts"
+   ]
+  },
+  {
+   "q": "invalidates instead of overwriting",
+   "relevant": [
+    "agi/temporal-facts.ts"
+   ]
+  },
+  {
+   "q": "re-asserting the same value is idempotent",
+   "relevant": [
+    "agi/temporal-facts.ts"
+   ]
+  },
+  {
+   "q": "retract closes the interval",
+   "relevant": [
+    "agi/temporal-facts.ts"
+   ]
+  },
+  {
+   "q": "decision_history has validity columns",
+   "relevant": [
+    "agi/temporal-facts.ts"
+   ]
+  },
+  {
+   "q": "chamber learning",
+   "relevant": [
+    "chamber-learning.ts"
+   ]
+  },
+  {
+   "q": "counts on the desk and speaks as Tessera",
+   "relevant": [
+    "chamber-learning.ts"
+   ]
+  },
+  {
+   "q": "reads the desk clock again instead of repeating a stale line",
+   "relevant": [
+    "chamber-learning.ts"
+   ]
+  },
+  {
+   "q": "keeps a user's words and brings them back on their question",
+   "relevant": [
+    "chamber-learning.ts"
+   ]
+  },
+  {
+   "q": "learns a correction and uses it the next time",
+   "relevant": [
+    "chamber-learning.ts"
+   ]
+  },
+  {
+   "q": "rejects a page that does not share the question and reuses a title that did",
+   "relevant": [
+    "chamber-learning.ts"
+   ]
+  },
+  {
+   "q": "drops a page that claims another model",
+   "relevant": [
+    "chamber-learning.ts"
+   ]
+  },
+  {
+   "q": "returns the grounded body without the identity wrapper",
+   "relevant": [
+    "chamber-learning.ts"
+   ]
+  },
+  {
+   "q": "leaves identity and ordinary desk calls alone",
+   "relevant": [
+    "chamber-learning.ts"
+   ]
+  },
+  {
+   "q": "configured Tessera chat generation",
+   "relevant": [
+    "chat-generation.ts"
+   ]
+  },
+  {
+   "q": "builds a bounded prompt and does not duplicate the just-persisted user turn",
+   "relevant": [
+    "chat-generation.ts"
+   ]
+  },
+  {
+   "q": "loads newest history and restores chronological order before bounding the prompt",
+   "relevant": [
+    "chat-generation.ts"
+   ]
+  },
+  {
+   "q": "does not attempt a provider call when model settings are disabled",
+   "relevant": [
+    "chat-generation.ts"
+   ]
+  },
+  {
+   "q": "returns an explicit no-model message for ordinary open-ended chat",
+   "relevant": [
+    "chat-generation.ts"
+   ]
+  },
+  {
+   "q": "uses a configured model and labels the reply as generated",
+   "relevant": [
+    "chat-generation.ts"
+   ]
+  },
+  {
+   "q": "does not substitute a fabricated reply when the configured provider fails",
+   "relevant": [
+    "chat-generation.ts"
+   ]
+  },
+  {
+   "q": "keeps identity provenance when a configured model makes an unsupported selfhood claim",
+   "relevant": [
+    "chat-generation.ts"
+   ]
+  },
+  {
+   "q": "deterministic selectors (FNV-1a)",
+   "relevant": [
+    "deterministic-selectors.ts"
+   ]
+  },
+  {
+   "q": "identical input gives identical output",
+   "relevant": [
+    "deterministic-selectors.ts"
+   ]
+  },
+  {
+   "q": "respects ranges",
+   "relevant": [
+    "deterministic-selectors.ts"
+   ]
+  },
+  {
+   "q": "different seeds spread",
+   "relevant": [
+    "deterministic-selectors.ts"
+   ]
+  },
+  {
+   "q": "hourBucket is stable within an hour",
+   "relevant": [
+    "deterministic-selectors.ts"
+   ]
+  },
+  {
+   "q": "knowledge synthesis is reproducible for a seed",
+   "relevant": [
+    "deterministic-selectors.ts"
+   ]
+  },
+  {
+   "q": "spell resonance is reproducible",
+   "relevant": [
+    "deterministic-selectors.ts"
+   ]
+  },
+  {
+   "q": "ask-universe selection is reproducible",
+   "relevant": [
+    "deterministic-selectors.ts"
+   ]
+  },
+  {
+   "q": "configured dual-brain cycles (offline adapters)",
+   "relevant": [
+    "dual-brain.ts"
+   ]
+  },
+  {
+   "q": "passes Cortex analysis to Pen without counting generated text as execution",
+   "relevant": [
+    "dual-brain.ts"
+   ]
+  },
+  {
+   "q": "does not record a completed cycle when the Pen pass fails",
+   "relevant": [
+    "dual-brain.ts"
+   ]
+  },
+  {
+   "q": "persists the newest twenty rounds, including the just-completed round",
+   "relevant": [
+    "dual-brain.ts"
+   ]
+  },
+  {
+   "q": "serializes concurrent cycles so a delayed write cannot erase a newer round",
+   "relevant": [
+    "dual-brain.ts"
+   ]
+  },
+  {
+   "q": "preserves legacy records as simulations, never as applied improvements",
+   "relevant": [
+    "dual-brain.ts"
+   ]
+  },
+  {
+   "q": "dual-brain readiness and provenance",
+   "relevant": [
+    "dual-brain.ts"
+   ]
+  },
+  {
+   "q": "does not start background cycles unless autorun and both model lanes are enabled",
+   "relevant": [
+    "dual-brain.ts"
+   ]
+  },
+  {
+   "q": "does not synthesize a manual cycle when the primary model is disabled",
+   "relevant": [
+    "dual-brain.ts"
+   ]
+  },
+  {
+   "q": "evolution apply pipeline — stub-sandbox unit coverage of applyVerifiedPatch",
+   "relevant": [
+    "evolution-sandbox.ts"
+   ]
+  },
+  {
+   "q": "rejects a bad patch without modifying the live file (byte-identical)",
+   "relevant": [
+    "evolution-sandbox.ts"
+   ]
+  },
+  {
+   "q": "applies a good patch and records APPLIED only after live write",
+   "relevant": [
+    "evolution-sandbox.ts"
+   ]
+  },
+  {
+   "q": "ledger is append-only across getRecentAttempts calls",
+   "relevant": [
+    "evolution-sandbox.ts"
+   ]
+  },
+  {
+   "q": "BAD patch: real subprocess `node --check` rejects, live file byte-identical, ledger SANDBOXED_FAIL with non-zero exit",
+   "relevant": [
+    "evolution-sandbox.ts"
+   ]
+  },
+  {
+   "q": "GOOD patch: real subprocess `node --check` passes, live file updated, ledger SANDBOXED_PASS → APPLIED with exit 0",
+   "relevant": [
+    "evolution-sandbox.ts"
+   ]
+  },
+  {
+   "q": "marks recorded entries with persisted=true when JSONL append succeeds",
+   "relevant": [
+    "evolution-sandbox.ts"
+   ]
+  },
+  {
+   "q": "rejects unauthenticated requests and accepts admin-token requests",
+   "relevant": [
+    "evolution-sandbox.ts"
+   ]
+  },
+  {
+   "q": "runs the default pnpm typecheck pipeline end-to-end and returns a structured result",
+   "relevant": [
+    "evolution-sandbox.ts"
+   ]
+  },
+  {
+   "q": "pino err serializer",
+   "relevant": [
+    "logger.ts"
+   ]
+  },
+  {
+   "q": "writes name and code and drops message and stack",
+   "relevant": [
+    "logger.ts"
+   ]
+  },
+  {
+   "q": "mesh lane registry (GM-1)",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "loads config/mesh-lanes.json",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "allows every registered edge",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "rejects unknown edges, including lane -> owner",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "missing file denies all edges",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "invalid JSON denies all edges",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "schema-invalid file denies all edges",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "rejects '*' as a sender (whole file denied)",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "still accepts '*' as a recipient",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "env unset => open",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "env set => enforced",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "env set to missing file => deny-all",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "rejects bad content/type/priority",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "route returns 400 on bad input and 403 on a denied edge",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "matched token derives from (body from omitted)",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "mismatched body from is rejected",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "body from given as an alias of the token's lane is accepted",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "unknown or missing token is rejected",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "malformed MESH_LANE_TOKENS fails closed",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "env unset: body from is never trusted (401), no Tessera fallback; shared-key validator untouched",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "council slugs are valid MESH_LANE_TOKENS identities; bad slugs rejected",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "laneForToken: hashes + constant-time match",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "aliases: schema-validated; seeded Tessera flows resolve through the alias",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "has 26 council nodes, each aliased from its seeded name",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "seeded flows pass with the registry on",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "council -> mesh lane and council -> owner-digest are denied",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "schema: group -> lane / sink / wildcard edges rejected; group -> tessera and group -> group allowed",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "schema: bad kind / unprefixed node rejected",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "redacts x-mesh-lane-token",
+   "relevant": [
+    "mesh-registry.ts"
+   ]
+  },
+  {
+   "q": "semantic cache system fingerprint",
+   "relevant": [
+    "semantic-cache.ts"
+   ]
+  },
+  {
+   "q": "gives each distinct codex-wrapped system prompt its own fingerprint",
+   "relevant": [
+    "semantic-cache.ts"
+   ]
+  },
+  {
+   "q": "is stable and model-scoped",
+   "relevant": [
+    "semantic-cache.ts"
+   ]
+  },
+  {
+   "q": "sovereign fetch guard",
+   "relevant": [
+    "sovereign-fetch-guard.ts"
+   ]
+  },
+  {
+   "q": "does not exempt arbitrary Replit subdomains from the outbound guard",
+   "relevant": [
+    "sovereign-fetch-guard.ts"
+   ]
+  },
+  {
+   "q": "keeps loopback requests available for internal service calls",
+   "relevant": [
+    "sovereign-fetch-guard.ts"
+   ]
+  },
+  {
+   "q": "allows external fetches made through the Shepherd context",
+   "relevant": [
+    "sovereign-fetch-guard.ts"
+   ]
+  },
+  {
+   "q": "wallet observer and income failure leaks",
+   "relevant": [
+    "wallet-observer.ts"
+   ]
+  },
+  {
+   "q": "keeps forced secrets out of observations, responses, and logs",
+   "relevant": [
+    "wallet-observer.ts"
+   ]
+  }
+ ]
+}
