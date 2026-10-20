@@ -17,7 +17,7 @@ describe("mesh lane registry (GM-1)", () => {
   const reg = loadMeshRegistry();
   it("loads config/mesh-lanes.json", () => {
     expect(reg.lanes).toHaveLength(17);
-    expect(reg.edges).toHaveLength(735);
+    expect(reg.edges).toHaveLength(753); // 735 + father -> 17 lanes + owner-digest
   });
   it("allows every registered edge", () => {
     expect(applyMeshRegistryPolicy()).toBe(true);
@@ -201,7 +201,7 @@ describe("council node group", () => {
   const council = reg.groups!.find((g) => g.kind === "council")!.nodes;
   it("has 26 council nodes, each aliased from its seeded name", () => {
     expect(council).toHaveLength(26);
-    for (const [name, slug] of Object.entries(reg.aliases!)) if (name !== "Tessera") expect(slug).toBe(`council-${name.toLowerCase()}`);
+    for (const [name, slug] of Object.entries(reg.aliases!)) if (name !== "Tessera" && name !== "Father") expect(slug).toBe(`council-${name.toLowerCase()}`);
   });
   it("seeded flows pass with the registry on", () => {
     applyMeshRegistryPolicy();
@@ -305,6 +305,79 @@ describe("tokens unset: owner-session and dev-loopback exceptions", () => {
     applyMeshRegistryPolicy();
     await serve("127.0.0.1", async (post) => {
       expect((await post("/agent-comms/send", { from: "build", to: "rick", content: "hi" })).status).toBe(403);
+    });
+  });
+});
+
+describe("Father owner node (admin-session only)", () => {
+  const saved = { ...process.env };
+  afterEach(() => { for (const k of ["NODE_ENV", "MESH_LANE_TOKENS", "TESSERACT_ADMIN_KEY", "SOVEREIGN_SESSION_SECRET"]) { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; } setCommsPolicy(null); });
+  const serve = async (remote: string, fn: (post: (path: string, body: unknown, headers?: Record<string, string>) => Promise<Response>) => Promise<void>) => {
+    const app = express().use((req, _res, next) => { Object.defineProperty(req.socket, "remoteAddress", { value: remote, configurable: true }); next(); })
+      .use(express.json()).use(agentNetworkRouter);
+    const server = await new Promise<any>((ok) => { const s = app.listen(0, "127.0.0.1", () => ok(s)); });
+    const port = (server.address() as any).port;
+    const post = (path: string, body: unknown, headers: Record<string, string> = {}) => fetch(`http://127.0.0.1:${port}${path}`, {
+      method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
+    try { await fn(post); } finally { server.close(); }
+  };
+
+  it("registry: father is an owner node; may send to lanes + owner-digest; nothing may send to it", () => {
+    const reg = loadMeshRegistry();
+    expect(reg.owners).toEqual(["father"]);
+    expect(reg.aliases?.Father).toBe("father");
+    applyMeshRegistryPolicy();
+    expect(isMessageAllowed("Father", "build")).toBe(true);
+    expect(isMessageAllowed("Father", "owner-digest")).toBe(true);
+    expect(isMessageAllowed("Father", "council-alpha")).toBe(false);
+    expect(isMessageAllowed("build", "Father")).toBe(false);
+    expect(isMessageAllowed("council-alpha", "Father")).toBe(false);
+    expect(isMessageAllowed("council-alpha", "build")).toBe(false);
+    const base = { lanes: ["a"], owners: ["father"], edges: [] as [string, string][] };
+    expect(() => validateMeshRegistry({ ...base, edges: [["a", "father"]] })).toThrow(/owner node/);
+    expect(() => validateMeshRegistry({ ...base, owners: ["mom"] })).toThrow(/owners/);
+    expect(() => validateMeshRegistry({ ...base, groups: [{ kind: "council", nodes: ["council-x"] }], edges: [["council-x", "father"]] })).toThrow();
+  });
+
+  it("a lane token cannot claim Father (slug reserved; body from=Father rejected)", async () => {
+    expect(() => parseLaneTokens({ MESH_LANE_TOKENS: JSON.stringify({ father: sha256Hex("t") }) } as any)).toThrow(/owner/);
+    process.env.MESH_LANE_TOKENS = JSON.stringify({ build: sha256Hex("build-tok") });
+    applyMeshRegistryPolicy();
+    await serve("10.0.0.5", async (post) => {
+      for (const from of ["Father", "father", "FATHER"]) {
+        expect((await post("/agent-comms/send", { from, to: "tessera", content: "hi" }, { "x-mesh-lane-token": "build-tok" })).status).toBe(403);
+      }
+    });
+    process.env.MESH_LANE_TOKENS = JSON.stringify({ father: sha256Hex("f-tok") });
+    await serve("10.0.0.5", async (post) => {
+      expect((await post("/agent-comms/send", { to: "build", content: "hi" }, { "x-mesh-lane-token": "f-tok" })).status).toBe(403);
+    });
+  });
+
+  it("body from=Father on the dev-loopback (non-session) path is rejected", async () => {
+    delete process.env.MESH_LANE_TOKENS; process.env.NODE_ENV = "test";
+    await serve("127.0.0.1", async (post) => {
+      for (const from of ["Father", "father"]) {
+        expect((await post("/agent-comms/send", { from, to: "build", content: "hi" })).status).toBe(403);
+        expect((await post("/agent-comms/broadcast", { from, content: "hi" })).status).toBe(403);
+      }
+    });
+  });
+
+  it("owner session can send under the registry", async () => {
+    delete process.env.MESH_LANE_TOKENS;
+    process.env.NODE_ENV = "production";
+    process.env.TESSERACT_ADMIN_KEY = `fake-admin-${Math.random().toString(36).slice(2)}-xxxxxxxx`;
+    process.env.SOVEREIGN_SESSION_SECRET = `fake-secret-${"s".repeat(40)}`;
+    expect(applyMeshRegistryPolicy()).toBe(true);
+    const { issueSession, SESSION_COOKIE } = await import("../lib/sovereign-session");
+    const cookie = `${SESSION_COOKIE}=${issueSession({ ip: "10.0.0.5", userAgent: "t" }).signedId}`;
+    await serve("10.0.0.5", async (post) => {
+      const r = await post("/agent-comms/send", { to: "build", content: "hi" }, { cookie });
+      expect(r.status).toBe(200);
+      expect((await r.json()).data.from).toBe(OWNER_IDENTITY);
+      expect((await post("/agent-comms/send", { from: "Father", to: "owner-digest", content: "hi" }, { cookie })).status).toBe(200);
+      expect((await post("/agent-comms/send", { to: "council-alpha", content: "hi" }, { cookie })).status).toBe(403);
     });
   });
 });
