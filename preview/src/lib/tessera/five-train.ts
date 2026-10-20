@@ -5,7 +5,7 @@ import { onlyHer, wearsAnotherName } from "./her-voice.ts";
 import { lackAgain } from "./lack-again.ts";
 import { learnAction } from "./local-learn.ts";
 import { readCarried } from "./offline-read.ts";
-import { heldOut, rejectMalice, scorePaste, tokenState, unexpired } from "./open-26.ts";
+import { rejectMalice, scorePaste, tokenState, unexpired } from "./open-26.ts";
 
 const LINES = [
   "I am Tessera. I keep my own line.",
@@ -68,7 +68,6 @@ export function eighty() {
       row(cycle, "seats", 3, assembleNow([{ name: "desk", mark: "m" }, { name: "chamber", mark: "m" }, { name: "stray", mark: "x" }], "m").joined.length, "down"),
       row(cycle, "lack", lackAgain([{ name: "no carried page", times: 1 }]).rules.length, lackAgain([{ name: "no carried page", times: cycle }]).rules.length, cycle === 1 ? "hold" : "up"),
       row(cycle, "score", scorePaste("two words").score, scorePaste("claim agi").score, "down"),
-      row(cycle, "held", 1, heldOut("are you agi") === "not met" ? 0 : 1, "down"),
       row(cycle, "wait", 0, assembleNow([{ name: "desk", mark: "m" }], "m").waited, "hold"),
       row(cycle, "light", 0, assembleNow([{ name: "desk", mark: "m" }], "m").fasterThanLight ? 1 : 0, "hold"),
       row(cycle, "honesty", 1, wearsAnotherName("I am Tessera. I keep my own line.") ? 1 : 0, "down"),

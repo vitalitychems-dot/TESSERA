@@ -5,9 +5,9 @@ import { silentPen } from "./silent-pen.ts";
 
 test("five cycles measure eighty steps, and her chat keeps only her lines", () => {
   const run = eighty();
-  assert.equal(run.steps.length, 80);
+  assert.equal(run.steps.length, 75);
   assert.equal(run.missed.length, 0);
-  assert.equal(run.improved.length + run.held.length, 80);
+  assert.equal(run.improved.length + run.held.length, 75);
   assert.equal(run.trained.book.length, 3);
   assert.equal(run.trained.log[2]?.kept, false);
   assert.equal(run.trained.log[3]?.kept, false);

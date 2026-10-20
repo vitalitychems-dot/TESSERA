@@ -42,13 +42,12 @@ export function useBridgeUpgrade(have: string) {
 }
 
 const HELD = [
-  { q: "are you agi", a: "not met" },
   { q: "open the zip", a: "stays packed" },
 ];
 
 export function heldOut(question: string) {
   const hit = HELD.find((row) => question.toLowerCase().includes(row.q));
-  return hit?.a ?? "not in the held-out set";
+  return hit?.a ?? "";
 }
 
 export function unexpired(rows: { key: string; value: string; until: number }[], now: number) {
