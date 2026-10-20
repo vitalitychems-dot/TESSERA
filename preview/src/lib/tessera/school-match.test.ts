@@ -16,3 +16,11 @@ test("a question naming a passage title still finds it", () => {
 test("a bare one-word lookup still finds its passage", () => {
   assert.match(passageForQuestion("photoelectric")?.title ?? "", /Einstein/);
 });
+
+test("two generic words do not pull an unrelated biography (u07)", () => {
+  assert.equal(passageForQuestion("Who won the Nobel Prize in Interstellar Cooking in 2023?"), null);
+});
+
+test("a hyphenated name like German-born still matches its passage", () => {
+  assert.match(passageForQuestion("Albert Einstein was a German-born theoretical physicist")?.title ?? "", /Einstein/);
+});
