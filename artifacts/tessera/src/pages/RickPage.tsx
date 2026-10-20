@@ -1168,6 +1168,9 @@ function RickProposalsPanel() {
     });
     const result = await response.json().catch(() => null) as { ok?: unknown; error?: unknown; proposal?: RickProposalItem | null } | null;
     if (!response.ok || result?.ok !== true) {
+      if (response.status === 401 || result?.error === "owner-session-required") {
+        throw new Error("Your owner session is no longer valid. Sign in again. This action did not change the proposal.");
+      }
       throw new Error(typeof result?.error === "string" ? result.error.slice(0, 400) : `Request failed (${response.status})`);
     }
     return result;

@@ -25,6 +25,7 @@ type RickProposal = {
 
 type MockState = {
   authenticated: boolean;
+  ownerSessionExpired: boolean;
   proposals: RickProposal[];
   proposalFetches: number;
   ownerCookieMissing: boolean;
@@ -51,6 +52,7 @@ function makeProposal(id: string, title: string): RickProposal {
 function makeState(): MockState {
   return {
     authenticated: false,
+    ownerSessionExpired: false,
     proposals: [
       makeProposal("owner-approval", "Owner approval evidence path"),
       makeProposal("rejection", "Rejected proposal stays rejected"),
@@ -91,14 +93,15 @@ async function installRickApiMocks(page: Page, state: MockState) {
       return fulfillJson(route, 200, {
         ok: true,
         configured: true,
-        authenticated: state.authenticated && hasOwnerCookie,
-        ...(state.authenticated && hasOwnerCookie ? { expiresAt: Date.now() + 8 * 60 * 60 * 1000 } : {}),
+        authenticated: state.authenticated && !state.ownerSessionExpired && hasOwnerCookie,
+        ...(state.authenticated && !state.ownerSessionExpired && hasOwnerCookie ? { expiresAt: Date.now() + 8 * 60 * 60 * 1000 } : {}),
       });
     }
 
     if (pathname === "/api/admin/session" && method === "POST") {
       const body = request.postDataJSON() as { token?: string };
       state.authenticated = body.token === TEST_OWNER_KEY;
+      if (state.authenticated) state.ownerSessionExpired = false;
       return fulfillJson(
         route,
         state.authenticated ? 200 : 401,
@@ -111,6 +114,7 @@ async function installRickApiMocks(page: Page, state: MockState) {
 
     if (pathname === "/api/admin/session/logout" && method === "POST") {
       state.authenticated = false;
+      state.ownerSessionExpired = false;
       return fulfillJson(route, 200, { ok: true });
     }
 
@@ -127,8 +131,8 @@ async function installRickApiMocks(page: Page, state: MockState) {
 
     const proposalAction = pathname.match(/^\/api\/rick\/proposals\/([^/]+)\/(approve|reject|implemented)$/);
     if (proposalAction && method === "POST") {
-      if (!state.authenticated || !hasOwnerCookie) {
-        state.mutationCookieMissing = true;
+      if (!hasOwnerCookie) state.mutationCookieMissing = true;
+      if (!state.authenticated || state.ownerSessionExpired || !hasOwnerCookie) {
         return fulfillJson(route, 401, { ok: false, error: "owner-session-required" });
       }
 
@@ -332,5 +336,61 @@ test.describe("Rick owner evidence on mobile", () => {
     await expect(page.getByText("YES 6", { exact: false })).toBeVisible();
     await expect(page.getByText("NO 2", { exact: false })).toBeVisible();
     await expect(page.getByText("Approval recorded by: Father", { exact: false })).toHaveCount(0);
+  });
+
+  test("keeps a proposal unchanged when the owner session expires during review", async ({ page }) => {
+    const state = makeState();
+    await signInOnRickPage(page, state);
+
+    const proposal = state.proposals.find((item) => item.id === "owner-approval");
+    if (!proposal) throw new Error("owner-approval fixture is missing");
+    const beforeExpiration = { ...proposal, evidence: [...proposal.evidence] };
+    const approvalCard = page.getByTestId("rick-proposal-card-owner-approval");
+    await page.getByLabel("Reviewer / implementer").fill("Father");
+    const testReference = "CI://rick-review/expired-session-must-not-save";
+    await page.getByLabel("Test result reference (submitted by you)").fill(testReference);
+
+    state.ownerSessionExpired = true;
+    const readsBeforeRejectedAction = state.proposalFetches;
+    await approvalCard.getByRole("button", { name: "Approve" }).click();
+
+    await expect(page.getByRole("alert")).toContainText("Your owner session is no longer valid.");
+    await expect(page.getByRole("alert")).toContainText("This action did not change the proposal.");
+    await expect(page.getByRole("status")).toHaveCount(0);
+    await expect(approvalCard).toContainText("pending review");
+    await expect(approvalCard).not.toContainText(testReference);
+    expect(state.proposalFetches).toBe(readsBeforeRejectedAction);
+    expect(proposal).toEqual(beforeExpiration);
+    expect(state.mutationCookieMissing).toBe(false);
+
+    const refetchedResponse = await page.evaluate(async () => {
+      const response = await fetch("/api/rick/proposals", { credentials: "include" });
+      return response.json() as Promise<{ proposals: Array<{ id: string; state: string; approvedBy?: string; approvalTestRef?: string }> }>;
+    });
+    expect(state.proposalFetches).toBeGreaterThan(readsBeforeRejectedAction);
+    const refetchedProposal = refetchedResponse.proposals.find((item) => item.id === "owner-approval");
+    expect(refetchedProposal).toMatchObject({ state: "pending-review" });
+    expect(refetchedProposal?.approvedBy).toBeUndefined();
+    expect(refetchedProposal?.approvalTestRef).toBeUndefined();
+    await expect(approvalCard).toContainText("pending review");
+    await expect(approvalCard).not.toContainText(testReference);
+    expect(proposal).toEqual(beforeExpiration);
+
+    const readsBeforeReload = state.proposalFetches;
+    await page.reload();
+    const adminField = page.getByLabel("Father admin code or LUS form");
+    await expect(adminField).toBeVisible();
+    const deviceKeyboard = page.getByRole("button", { name: "Use device keyboard", exact: true });
+    if (await deviceKeyboard.isVisible()) await deviceKeyboard.click();
+    await adminField.fill(TEST_OWNER_KEY);
+    await page.getByRole("button", { name: "Unlock Tesseract" }).click();
+
+    await expect.poll(() => state.proposalFetches).toBeGreaterThan(readsBeforeReload);
+    const reloadedApprovalCard = page.getByTestId("rick-proposal-card-owner-approval");
+    await expect(reloadedApprovalCard).toContainText("pending review");
+    await expect(reloadedApprovalCard).not.toContainText(testReference);
+    await expect(reloadedApprovalCard).not.toContainText("Approval recorded by: Father");
+    expect(proposal).toEqual(beforeExpiration);
+    expect(state.mutationCookieMissing).toBe(false);
   });
 });
