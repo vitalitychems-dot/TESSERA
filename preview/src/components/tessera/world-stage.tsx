@@ -345,7 +345,7 @@ export function WorldStage() {
       },
       getInside: () => view.current.inside,
     };
-    window.__controlsTest = probe;
+    if (import.meta.env.DEV) window.__controlsTest = probe;
     return () => {
       window.cancelAnimationFrame(frame);
       window.cancelAnimationFrame(walkFrame);
