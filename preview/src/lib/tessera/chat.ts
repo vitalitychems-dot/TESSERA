@@ -5,6 +5,8 @@ import { vowCheck } from "./learning";
 import { takeSpeakSlot } from "./finish";
 import { healthLine } from "./wave";
 import { dataPath } from "./data-path";
+import { stripBridgeRule } from "./chat-bridge-strip";
+export { stripBridgeRule };
 import { SEED, buildHerself, growVoice, herself, onlyHer, wearsAnotherName } from "./her-voice";
 
 function replyCap(mode: TesseraMode) {
@@ -99,11 +101,6 @@ async function readVoice() {
   } catch {
     return [...SEED];
   }
-}
-
-/** The bridge puts its rule block before the question. The file lookup must read the question only. */
-export function stripBridgeRule(text: string) {
-  return text.replace(/^BRIDGE\.[^\n]*\n\n/, "");
 }
 
 async function fromFiles(data: ChatInput) {
