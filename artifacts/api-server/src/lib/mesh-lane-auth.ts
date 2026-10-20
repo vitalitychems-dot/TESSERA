@@ -8,9 +8,25 @@ import { createHash, timingSafeEqual } from "node:crypto";
 
 export const MESH_LANE_TOKENS_ENV = "MESH_LANE_TOKENS";
 export const LANE_TOKEN_HEADER = "x-mesh-lane-token";
+/** Owner node(s): reachable only through the owner admin session, never by lane token. */
+export const RESERVED_OWNER_SLUGS: ReadonlySet<string> = new Set(["father"]);
 const HEX64 = /^[0-9a-f]{64}$/;
 /** Same slug grammar as the registry; council nodes ("council-*") are valid identities too. */
-const SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/;
+export const SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/;
+
+/** Strict ASCII sender slug (Security): ^[a-z0-9][a-z0-9-]{0,63}$, nothing else. */
+export const isAsciiSlug = (v: unknown): v is string => typeof v === "string" && SLUG.test(v);
+
+/** Canonical form for owner-claim checks: NFKC, strip format chars (\p{Cf}), trim, lowercase. */
+export function canonicalSlug(v: string): string {
+  return v.normalize("NFKC").replace(/\p{Cf}/gu, "").trim().toLowerCase();
+}
+
+/** Fail-closed NODE_ENV: only an explicit "development" or "test" counts as dev; unset/unknown => production. */
+export function isDevEnv(env: NodeJS.ProcessEnv = process.env): boolean {
+  const v = env.NODE_ENV;
+  return v === "development" || v === "test";
+}
 
 export function sha256Hex(s: string): string {
   return createHash("sha256").update(s, "utf8").digest("hex");
@@ -26,6 +42,7 @@ export function parseLaneTokens(env: NodeJS.ProcessEnv = process.env): Map<strin
   for (const [slug, h] of Object.entries(obj)) {
     if (slug.startsWith("_")) continue; // comment keys such as "_doc" (copied from the example file)
     if (!SLUG.test(slug)) throw new Error(`MESH_LANE_TOKENS: bad slug ${slug.slice(0, 64)}`);
+    if (RESERVED_OWNER_SLUGS.has(slug)) throw new Error(`MESH_LANE_TOKENS: ${slug} is the owner node and cannot hold a lane token`);
     if (typeof h !== "string" || !HEX64.test(h)) throw new Error(`MESH_LANE_TOKENS: bad sha256 for ${slug}`);
     out.set(slug, Buffer.from(h, "hex"));
   }

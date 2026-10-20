@@ -7,7 +7,14 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { CommsEdge } from "./comms-policy";
 
-export interface MeshRegistry { lanes: string[]; sinks?: string[]; edges: CommsEdge[]; aliases?: Record<string, string>; groups?: MeshNodeGroup[] }
+export interface MeshRegistry { lanes: string[]; sinks?: string[]; edges: CommsEdge[]; aliases?: Record<string, string>; groups?: MeshNodeGroup[]; owners?: string[] }
+
+/**
+ * Owner nodes ("father"): reachable ONLY via the owner admin-session path in
+ * routes/agent-network.ts. Never a valid MESH_LANE_TOKENS slug, never accepted from a
+ * request-body `from`. Only "father" is allowed; it may send, but nothing may send to it.
+ */
+export const OWNER_NODE_SLUGS = ["father"] as const;
 
 export const NODE_GROUP_KINDS = ["council"] as const;
 export interface MeshNodeGroup { kind: (typeof NODE_GROUP_KINDS)[number]; nodes: string[] }
@@ -43,9 +50,13 @@ export function validateMeshRegistry(raw: unknown): MeshRegistry {
       groups.push({ kind: g.kind, nodes: g.nodes });
     }
   }
+  if (r.owners !== undefined && (!isSlugList(r.owners) || r.owners.some((o) => !(OWNER_NODE_SLUGS as readonly string[]).includes(o)))) {
+    throw new MeshRegistryError(`owners must be a subset of ${OWNER_NODE_SLUGS.join(", ")}`);
+  }
+  const owners = (r.owners as string[] | undefined) ?? [];
   const groupNodes = groups.flatMap((g) => g.nodes);
-  const nodes = new Set([...r.lanes, ...sinks, ...groupNodes]);
-  if (nodes.size !== r.lanes.length + sinks.length + groupNodes.length) throw new MeshRegistryError("duplicate lane/sink/group node");
+  const nodes = new Set([...r.lanes, ...sinks, ...groupNodes, ...owners]);
+  if (nodes.size !== r.lanes.length + sinks.length + groupNodes.length + owners.length) throw new MeshRegistryError("duplicate lane/sink/group node");
   if (!Array.isArray(r.edges)) throw new MeshRegistryError("edges must be an array");
   for (const e of r.edges) {
     if (!Array.isArray(e) || e.length !== 2 || typeof e[0] !== "string" || typeof e[1] !== "string") {
@@ -55,6 +66,7 @@ export function validateMeshRegistry(raw: unknown): MeshRegistry {
     if (f === "*") throw new MeshRegistryError("'*' is not allowed as a sender");
     if (!nodes.has(f)) throw new MeshRegistryError(`unknown sender ${f}`);
     if (t !== "*" && !nodes.has(t)) throw new MeshRegistryError(`unknown recipient ${t}`);
+    if (owners.includes(t)) throw new MeshRegistryError(`owner node ${t} may not be a recipient (use a sink)`);
     // Group (council) nodes are internal personas: they may reach tessera and their own
     // group only, never a mesh lane, a sink, or a wildcard.
     if (groupNodes.includes(f) && t !== "tessera" && (t === "*" || r.lanes.includes(t) || sinks.includes(t))) {
@@ -70,7 +82,7 @@ export function validateMeshRegistry(raw: unknown): MeshRegistry {
     }
     aliases = r.aliases as Record<string, string>;
   }
-  return { lanes: r.lanes, sinks, edges: r.edges as CommsEdge[], aliases, groups };
+  return { lanes: r.lanes, sinks, edges: r.edges as CommsEdge[], aliases, groups, owners };
 }
 
 /** Read + validate. Throws on missing file, bad JSON, or schema failure. */
