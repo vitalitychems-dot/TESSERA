@@ -3,21 +3,61 @@ import { getSpawnerMetrics, spawnAgent, spawnBatchAsync, retireAgent, getSpawner
 import { getAgentHierarchy, getChildrenOf, getHierarchyMetrics } from "../lib/agent-hierarchy";
 import { getAgentCommsMetrics, sendMessage, broadcastMessage, getThreads, getThread, getFeed } from "../lib/agent-comms";
 import { CommsPolicyError, resolveAlias } from "../lib/comms-policy";
-import { parseLaneTokens, laneForToken, LANE_TOKEN_HEADER } from "../lib/mesh-lane-auth";
+import { decideOwnerSession } from "../lib/sovereign-admin";
+import { parseLaneTokens, laneForToken, LANE_TOKEN_HEADER, RESERVED_OWNER_SLUGS, canonicalSlug, isAsciiSlug, isDevEnv } from "../lib/mesh-lane-auth";
+import { originAllowed } from "../lib/origin-allowed";
 
 /**
  * Resolve the sender. The sender is ONLY ever derived from a presented lane token.
- * MESH_LANE_TOKENS unset => 401 (a body `from` is never trusted; no default sender).
+ * MESH_LANE_TOKENS unset => 401, except (a) a valid owner session (from = "Father") or
+ * (b) NODE_ENV !== "production" and a loopback socket address (body from used).
  * Set => `from` is the slug of the presented lane token; a body `from` that does not
  * resolve to that slug is rejected. Malformed env fails closed.
  */
+/** Owner identity used across the codebase (forum principal, natal-chart identity). */
+export const OWNER_IDENTITY = "Father";
+const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
+export const isLoopback = (addr: string | undefined): boolean => Boolean(addr && LOOPBACK.has(addr));
+
+/** True if a body `from` names the owner node (any case, or via alias). */
+const claimsOwner = (v: unknown): boolean => {
+  if (typeof v !== "string") return false;
+  const c = canonicalSlug(v);
+  return RESERVED_OWNER_SLUGS.has(c) || RESERVED_OWNER_SLUGS.has(resolveAlias(v)) || RESERVED_OWNER_SLUGS.has(resolveAlias(c));
+};
+const PROXY_HEADERS = ["x-forwarded-for", "forwarded", "x-real-ip"] as const;
+const hasProxyHeader = (req: Request): boolean => PROXY_HEADERS.some((h) => req.headers[h] !== undefined);
+/** ASCII-slug sender rule: the resolved sender (after alias) must be a strict ASCII slug. */
+const slugSender = (v: unknown): string | null => {
+  if (typeof v !== "string") return null;
+  const r = resolveAlias(v);
+  return isAsciiSlug(r) ? r : null;
+};
+
 function resolveSender(req: Request, bodyFrom: unknown): { from?: unknown; status?: number; error?: string } {
   let table;
   try { table = parseLaneTokens(); } catch { return { status: 403, error: "lane auth misconfigured" }; }
-  if (!table) return { status: 401, error: "lane identity required: MESH_LANE_TOKENS is not configured; body from is not trusted" };
+  if (!table) {
+    // (a) owner admin session (same validator as requireAdminSession): from is fixed to the owner.
+    if (decideOwnerSession(req).ok) {
+      if (!originAllowed(req)) return { status: 403, error: "origin-forbidden" };
+      if (bodyFrom !== undefined && !claimsOwner(bodyFrom)) return { status: 403, error: `from must be ${OWNER_IDENTITY} for an owner session` };
+      return { from: OWNER_IDENTITY };
+    }
+    // (b) explicit development/test only (unset/unknown NODE_ENV fails closed as production),
+    // loopback socket, and no proxy headers (a proxied request is not local).
+    if (isDevEnv() && isLoopback(req.socket?.remoteAddress) && !hasProxyHeader(req)) {
+      if (claimsOwner(bodyFrom)) return { status: 403, error: `${OWNER_IDENTITY} is reachable only through the owner admin session` };
+      const from = slugSender(bodyFrom);
+      if (!from) return { status: 400, error: "from must be an ASCII slug (^[a-z0-9][a-z0-9-]{0,63}$) or a registered alias of one" };
+      return { from };
+    }
+    return { status: 401, error: "lane identity required: MESH_LANE_TOKENS is not configured; body from is not trusted" };
+  }
   const raw = req.headers[LANE_TOKEN_HEADER];
   const slug = laneForToken(Array.isArray(raw) ? raw[0] : raw, table);
   if (!slug) return { status: 403, error: "valid lane token required" };
+  if (RESERVED_OWNER_SLUGS.has(slug) || claimsOwner(bodyFrom)) return { status: 403, error: `a lane token cannot claim ${OWNER_IDENTITY}` };
   if (bodyFrom !== undefined && (typeof bodyFrom !== "string" || resolveAlias(bodyFrom) !== slug)) {
     return { status: 403, error: "from does not match authenticated lane" };
   }
