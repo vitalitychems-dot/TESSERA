@@ -565,22 +565,27 @@ export function Chamber() {
       sending.current = false;
       return;
     }
-    const result = await speakAsTessera({
-      data: {
-        mode: "chat",
-        messages: history,
-        constitution: state.constitution,
-        pulses: state.pulses.map((p) => p.text),
-        lessons: state.lessons.filter((l) => l.status === "sealed").map((l) => l.text),
-        world: {
-          tick: state.worldTick,
-          events: state.worldEvents.slice(-4).map((e) => `Tick ${e.tick}: ${e.text}`),
-          laws: state.laws.map((l) => `${l.title}: ${l.body}`),
+    const result = await Promise.race([
+      speakAsTessera({
+        data: {
+          mode: "chat",
+          messages: history,
+          constitution: state.constitution,
+          pulses: state.pulses.map((p) => p.text),
+          lessons: state.lessons.filter((l) => l.status === "sealed").map((l) => l.text),
+          world: {
+            tick: state.worldTick,
+            events: state.worldEvents.slice(-4).map((e) => `Tick ${e.tick}: ${e.text}`),
+            laws: state.laws.map((l) => `${l.title}: ${l.body}`),
+          },
         },
-      },
-    }).catch((error: unknown) => ({
+      }),
+      new Promise<{ ok: false; error: string }>((resolve) => {
+        window.setTimeout(() => resolve({ ok: false, error: "The pen took too long. Your words stayed." }), 12000);
+      }),
+    ]).catch((error: unknown) => ({
       ok: false as const,
-      error: error instanceof Error ? error.message : "The pen did not answer.",
+      error: error instanceof Error && /aborted|timeout/i.test(error.message) ? "The pen took too long. Your words stayed." : error instanceof Error ? error.message : "The pen did not answer.",
     }));
     setPending(false);
     sending.current = false;
