@@ -9,6 +9,7 @@
  * policy is installed with setCommsPolicy().
  */
 import { loadMeshRegistry } from "./mesh-registry";
+import { RESERVED_OWNER_SLUGS, canonicalSlug } from "./mesh-lane-auth";
 
 export type CommsEdge = [from: string, to: string];
 
@@ -38,7 +39,15 @@ export function setCommsPolicy(edges: CommsEdge[] | null): void {
   }
 }
 
+/** Owner node(s) are never a recipient, even with the registry inert (any case/fullwidth/zero-width/alias). */
+export function isReservedOwnerRecipient(to: string): boolean {
+  if (typeof to !== "string") return false;
+  const c = canonicalSlug(to);
+  return RESERVED_OWNER_SLUGS.has(c) || RESERVED_OWNER_SLUGS.has(resolveAlias(to)) || RESERVED_OWNER_SLUGS.has(canonicalSlug(resolveAlias(c)));
+}
+
 export function isMessageAllowed(from: string, to: string): boolean {
+  if (isReservedOwnerRecipient(to)) return false;
   if (!allowed) return true;
   const s = allowed.get(resolveAlias(from));
   return Boolean(s && (s.has(resolveAlias(to)) || s.has("*")));

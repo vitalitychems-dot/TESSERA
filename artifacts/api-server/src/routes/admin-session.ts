@@ -6,6 +6,7 @@
 //   POST /api/admin/session/logout              -> clears cookie, 204
 
 import { Router, type Request, type Response } from "express";
+import { originAllowed } from "../lib/origin-allowed";
 import {
   SESSION_COOKIE,
   isAdminTokenConfigured,
@@ -63,21 +64,6 @@ function clearCookie(res: Response): void {
 // Origin is absent (e.g. curl, server-to-server) we permit it — the existing
 // token check still gates everything. This closes a CSRF vector without
 // breaking legitimate tooling.
-function originAllowed(req: Request): boolean {
-  const origin = req.headers.origin;
-  if (!origin || typeof origin !== "string") return true; // no Origin => not a browser CSRF vector
-  try {
-    const u = new URL(origin);
-    const host = req.headers.host;
-    if (host && u.host === host) return true;
-    const allowList = (process.env.SOVEREIGN_ALLOWED_ORIGINS ?? "")
-      .split(",").map((s) => s.trim()).filter(Boolean);
-    if (allowList.includes(origin) || allowList.includes(u.host)) return true;
-    return false;
-  } catch {
-    return false;
-  }
-}
 
 function requireSameOrigin(req: Request, res: Response, next: () => void): void {
   if (!originAllowed(req)) {

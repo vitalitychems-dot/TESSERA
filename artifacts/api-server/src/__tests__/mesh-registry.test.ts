@@ -268,7 +268,7 @@ describe("tokens unset: owner-session and dev-loopback exceptions", () => {
     await serve("10.0.0.5", async (post) => {
       const r = await post("/agent-comms/send", { to: "build", content: "hi" }, { cookie });
       expect(r.status).toBe(200);
-      expect((await r.json()).data.from).toBe(OWNER_IDENTITY);
+      expect(((await r.json()) as { data: { from: string } }).data.from).toBe(OWNER_IDENTITY);
       const b = await post("/agent-comms/broadcast", { content: "hi" }, { cookie });
       expect(b.status).toBe(200);
       expect((await post("/agent-comms/send", { from: "tessera", to: "build", content: "hi" }, { cookie })).status).toBe(403);
@@ -280,7 +280,7 @@ describe("tokens unset: owner-session and dev-loopback exceptions", () => {
     for (const addr of ["127.0.0.1", "::1", "::ffff:127.0.0.1"]) await serve(addr, async (post) => {
       const r = await post("/agent-comms/send", { from: "build", to: "tessera", content: "hi" });
       expect(r.status).toBe(200);
-      expect((await r.json()).data.from).toBe("build");
+      expect(((await r.json()) as { data: { from: string } }).data.from).toBe("build");
     });
   });
   it("production loopback gets 401", async () => {
@@ -375,7 +375,7 @@ describe("Father owner node (admin-session only)", () => {
     await serve("10.0.0.5", async (post) => {
       const r = await post("/agent-comms/send", { to: "build", content: "hi" }, { cookie });
       expect(r.status).toBe(200);
-      expect((await r.json()).data.from).toBe(OWNER_IDENTITY);
+      expect(((await r.json()) as { data: { from: string } }).data.from).toBe(OWNER_IDENTITY);
       expect((await post("/agent-comms/send", { from: "Father", to: "owner-digest", content: "hi" }, { cookie })).status).toBe(200);
       expect((await post("/agent-comms/send", { to: "council-alpha", content: "hi" }, { cookie })).status).toBe(403);
     });
