@@ -101,8 +101,13 @@ async function readVoice() {
   }
 }
 
+/** The bridge puts its rule block before the question. The file lookup must read the question only. */
+export function stripBridgeRule(text: string) {
+  return text.replace(/^BRIDGE\.[^\n]*\n\n/, "");
+}
+
 async function fromFiles(data: ChatInput) {
-  const asked = [...data.messages].reverse().find((message) => message.role === "user")?.content ?? "";
+  const asked = stripBridgeRule([...data.messages].reverse().find((message) => message.role === "user")?.content ?? "");
   const { leaveToHer } = await import("./ask-all");
   if (leaveToHer(asked)) {
     const book = await readVoice();
