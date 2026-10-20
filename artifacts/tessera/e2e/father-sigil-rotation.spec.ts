@@ -277,6 +277,8 @@ async function openSignedInChat(page: Page, state: MockState) {
   await page.goto("/");
   const keyField = page.getByLabel("Father admin code or LUS form");
   await expect(keyField).toBeVisible();
+  const deviceKeyboard = page.getByRole("button", { name: "Use device keyboard", exact: true });
+  if (await deviceKeyboard.isVisible()) await deviceKeyboard.click();
   await keyField.fill(TEST_ADMIN_KEY);
   await page.getByRole("button", { name: "Unlock Tesseract" }).click();
   await expect(page.getByTestId("input-message")).toBeVisible();
@@ -364,6 +366,7 @@ test.describe("owner session cookie-only lifecycle", () => {
     await assertNoBrowserLeaks([firstSession]);
 
     const keyField = page.getByLabel("Father admin code or LUS form");
+    await page.getByRole("button", { name: "Use device keyboard", exact: true }).click();
     await keyField.fill(TEST_ADMIN_KEY);
     await page.getByRole("button", { name: "Unlock Tesseract" }).click();
     await expect(page.getByTestId("input-message")).toBeVisible();
