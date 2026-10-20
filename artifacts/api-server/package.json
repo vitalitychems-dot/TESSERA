@@ -14,7 +14,9 @@
     "test:db": "vitest run --exclude '**/db-optional-boot.test.ts'",
     "test:memory": "vitest run src/__tests__/learning-memory.test.ts",
     "pen:local:gate": "node ./scripts/pen-local-gate.mjs",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "eval:gate": "node ./scripts/eval-gate.mjs",
+    "eval:gate:test": "node --test ./scripts/eval-gate.nodetest.mjs"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",
