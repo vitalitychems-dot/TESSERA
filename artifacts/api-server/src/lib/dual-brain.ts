@@ -296,3 +296,7 @@ export { runManualCycle as process };
 export function getDecisionHistory() {
   return getDualBrainState().conversations;
 }
+
+// Step 1 of the dual-brain plan: Brain B gates Brain A's memory/learning changes on held-out data.
+export { BrainA, runImprovementGate, DEFAULT_BRAIN_A } from "./agi/improvement-gate";
+export type { BrainAConfig, GateDecision, Proposal } from "./agi/improvement-gate";
