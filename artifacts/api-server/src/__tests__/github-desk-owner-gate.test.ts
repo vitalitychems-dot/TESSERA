@@ -1500,7 +1500,10 @@ describe("loopback session check", () => {
     expect(result.text.includes("database not configured")).toBe(false);
   });
 
-  it("copies a dev suite port and does not invent one when the api runs elsewhere", () => {
+  const [nodeMajor, nodeMinor] = process.versions.node.split(".").map(Number);
+  const hasStripTypes = nodeMajor > 22 || (nodeMajor === 22 && nodeMinor >= 6);
+  // --experimental-strip-types needs Node >= 22.6; older Node cannot run this probe.
+  it.skipIf(!hasStripTypes)("copies a dev suite port and does not invent one when the api runs elsewhere (needs Node >= 22.6 for --experimental-strip-types)", () => {
     expect(fillDevPort("serve", "development", {})).toEqual({ port: null });
     expect(fillDevPort("serve", "development", { API_SERVER_PORT: "   " })).toEqual({ port: "   " });
     expect(fillDevPort("serve", "development", { TESSERA_API_PORT: "8080" })).toEqual({ port: "8080" });
