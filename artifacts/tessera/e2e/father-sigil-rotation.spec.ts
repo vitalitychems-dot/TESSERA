@@ -68,17 +68,18 @@ async function installApiMocks(page: Page, state: MockState) {
     const cookie = request.headers().cookie ?? "";
 
     if (pathname === "/api/admin/session/status" && method === "GET") {
-      if (
-        state.authenticated &&
-        (!state.ownerCookieValue || !cookie.includes(`sovereign_session=${state.ownerCookieValue}`))
-      ) {
+      const hasOwnerCookie = Boolean(
+        state.ownerCookieValue && cookie.includes(`sovereign_session=${state.ownerCookieValue}`),
+      );
+      if (state.authenticated && !hasOwnerCookie) {
         state.ownerCookieMissing = true;
       }
+      const authenticated = state.authenticated && hasOwnerCookie;
       return fulfillJson(route, 200, {
         ok: true,
         configured: true,
-        authenticated: state.authenticated,
-        ...(state.authenticated ? { expiresAt: Date.now() + 8 * 60 * 60 * 1000 } : {}),
+        authenticated,
+        ...(authenticated ? { expiresAt: Date.now() + 8 * 60 * 60 * 1000 } : {}),
       });
     }
 
@@ -104,10 +105,21 @@ async function installApiMocks(page: Page, state: MockState) {
     }
 
     if (pathname === "/api/admin/session/logout" && method === "POST") {
+      if (
+        state.authenticated &&
+        (!state.ownerCookieValue || !cookie.includes(`sovereign_session=${state.ownerCookieValue}`))
+      ) {
+        state.ownerCookieMissing = true;
+      }
       state.authenticated = false;
       state.ownerCookieValue = null;
       state.rotatedThisSession = false;
-      return fulfillJson(route, 200, { ok: true });
+      return route.fulfill({
+        status: 204,
+        headers: {
+          "set-cookie": "sovereign_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0",
+        },
+      });
     }
 
     if (pathname === "/api/auth/reset-lockout") {
@@ -116,16 +128,17 @@ async function installApiMocks(page: Page, state: MockState) {
 
     if (pathname === "/api/sigil/father/status" && method === "GET") {
       state.sigilStatusCalls += 1;
-      if (
-        state.authenticated &&
-        (!state.ownerCookieValue || !cookie.includes(`sovereign_session=${state.ownerCookieValue}`))
-      ) {
+      const hasOwnerCookie = Boolean(
+        state.ownerCookieValue && cookie.includes(`sovereign_session=${state.ownerCookieValue}`),
+      );
+      if (state.authenticated && !hasOwnerCookie) {
         state.ownerCookieMissing = true;
       }
+      const authenticated = state.authenticated && hasOwnerCookie;
       return fulfillJson(
         route,
-        state.authenticated ? 200 : 401,
-        state.authenticated
+        authenticated ? 200 : 401,
+        authenticated
           ? {
               ok: true,
               enrolled: state.enrolled,
@@ -296,8 +309,83 @@ async function expectNoCredentialStorage(page: Page, values: string[]) {
   for (const value of values) expect(serialized).not.toContain(value);
   expect(stored.local.some(([key]) => key === "TESSERACT_ADMIN_KEY" || key === "t9_admin_token")).toBe(false);
   expect(stored.session.some(([key]) => key === "t9_sovereign_key")).toBe(false);
+  expect(stored.local.some(([key]) => key === "sovereign_session" || key === "admin-session")).toBe(false);
+  expect(stored.session.some(([key]) => key === "sovereign_session" || key === "admin-session")).toBe(false);
   expect(stored.documentCookie).not.toContain("sovereign_session");
 }
+
+test.describe("owner session cookie-only lifecycle", () => {
+  test("keeps access in the HttpOnly cookie across reloads, then locks on expiry and logout", async ({ page }) => {
+    const state = makeState();
+    const browserLogs: string[] = [];
+    const requestUrls: string[] = [];
+    page.on("console", message => browserLogs.push(message.text()));
+    page.on("pageerror", error => browserLogs.push(error.message));
+    page.on("request", request => requestUrls.push(request.url()));
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openSignedInChat(page, state);
+
+    const firstSession = state.ownerCookieValue;
+    expect(firstSession).toBeTruthy();
+    const sessionCookie = (await page.context().cookies(page.url()))
+      .find(cookie => cookie.name === "sovereign_session");
+    expect(sessionCookie?.httpOnly).toBe(true);
+    expect(sessionCookie?.sameSite).toBe("Strict");
+    await expectNoCredentialStorage(page, [TEST_ADMIN_KEY, firstSession ?? ""]);
+    expect(state.ownerCookieMissing).toBe(false);
+
+    const assertNoBrowserLeaks = async (sessionValues: Array<string | null>) => {
+      const rendered = await page.locator("html").evaluate(element => element.outerHTML);
+      const visibleText = await page.locator("body").innerText();
+      const checkedValues = [TEST_ADMIN_KEY, ...sessionValues].filter((value): value is string => Boolean(value));
+      for (const value of checkedValues) {
+        expect(page.url()).not.toContain(value);
+        expect(rendered).not.toContain(value);
+        expect(visibleText).not.toContain(value);
+        expect(browserLogs.join("\n")).not.toContain(value);
+        expect(requestUrls.join("\n")).not.toContain(value);
+      }
+    };
+    await assertNoBrowserLeaks([firstSession]);
+
+    await page.reload();
+    await expect(page.getByTestId("input-message")).toBeVisible();
+    expect(state.ownerCookieMissing).toBe(false);
+    await expectNoCredentialStorage(page, [TEST_ADMIN_KEY, firstSession ?? ""]);
+    await assertNoBrowserLeaks([firstSession]);
+
+    // Keep the browser's cookie but revoke its server-side session.
+    state.authenticated = false;
+    await page.reload();
+    await expect(page.getByLabel("Father admin code or LUS form")).toBeVisible();
+    await expect(page.getByTestId("input-message")).toHaveCount(0);
+    await expectNoCredentialStorage(page, [TEST_ADMIN_KEY, firstSession ?? ""]);
+    await assertNoBrowserLeaks([firstSession]);
+
+    const keyField = page.getByLabel("Father admin code or LUS form");
+    await keyField.fill(TEST_ADMIN_KEY);
+    await page.getByRole("button", { name: "Unlock Tesseract" }).click();
+    await expect(page.getByTestId("input-message")).toBeVisible();
+    const logoutSession = state.ownerCookieValue;
+    expect(logoutSession).toBeTruthy();
+
+    await page.getByRole("button", { name: "logout" }).click();
+    await expect(page.getByLabel("Father admin code or LUS form")).toBeVisible();
+    expect(state.authenticated).toBe(false);
+    expect(state.ownerCookieValue).toBeNull();
+    expect((await page.context().cookies(page.url())).some(cookie => cookie.name === "sovereign_session")).toBe(false);
+    await expectNoCredentialStorage(page, [TEST_ADMIN_KEY, firstSession ?? "", logoutSession ?? ""]);
+    await assertNoBrowserLeaks([firstSession, logoutSession]);
+
+    await page.reload();
+    await expect(page.getByLabel("Father admin code or LUS form")).toBeVisible();
+    await expect(page.getByTestId("input-message")).toHaveCount(0);
+    await expectNoCredentialStorage(page, [TEST_ADMIN_KEY, firstSession ?? "", logoutSession ?? ""]);
+    await assertNoBrowserLeaks([firstSession, logoutSession]);
+    expect(state.ownerCookieMissing).toBe(false);
+  });
+});
 
 test.describe("private chat sigil rotation", () => {
   test("enrolls, rejects the wrong prior sigil, confirms the replacement, and permits only one rotation per session", async ({ page }) => {

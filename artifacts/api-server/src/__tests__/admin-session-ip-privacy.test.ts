@@ -92,6 +92,52 @@ describe("admin session IP privacy", () => {
     expect(state.ingressRecords[0]).not.toHaveProperty("ip");
   });
 
+  it("issues an HttpOnly cookie, keeps credentials out of the response, and revokes the session on logout", async () => {
+    const loginResponse = await fetch(`${baseUrl}/admin/session`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token: ADMIN_KEY }),
+    });
+    expect(loginResponse.status).toBe(200);
+    const setCookie = loginResponse.headers.get("set-cookie") ?? "";
+    expect(setCookie).toMatch(/^sovereign_session=[^;]+;/);
+    expect(setCookie).toContain("HttpOnly");
+    expect(setCookie).toContain("SameSite=Strict");
+    const sessionCookie = setCookie.split(";")[0] ?? "";
+    const sessionValue = sessionCookie.slice("sovereign_session=".length);
+    expect(sessionValue).not.toBe("");
+
+    const loginBody = await loginResponse.text();
+    expect(loginBody).toContain('"authenticated":true');
+    expect(loginBody).not.toContain(ADMIN_KEY);
+    expect(loginBody).not.toContain(sessionValue);
+
+    const statusResponse = await fetch(`${baseUrl}/admin/session/status`, {
+      headers: { cookie: sessionCookie },
+    });
+    expect(statusResponse.status).toBe(200);
+    expect(await statusResponse.json()).toMatchObject({ authenticated: true });
+
+    const logoutResponse = await fetch(`${baseUrl}/admin/session/logout`, {
+      method: "POST",
+      headers: { cookie: sessionCookie },
+    });
+    expect(logoutResponse.status).toBe(204);
+    const clearedCookie = logoutResponse.headers.get("set-cookie") ?? "";
+    expect(clearedCookie).toContain("sovereign_session=");
+    expect(clearedCookie).toContain("HttpOnly");
+    expect(clearedCookie).toContain("Max-Age=0");
+
+    const statusAfterLogout = await fetch(`${baseUrl}/admin/session/status`, {
+      headers: { cookie: sessionCookie },
+    });
+    expect(statusAfterLogout.status).toBe(200);
+    expect(await statusAfterLogout.json()).toMatchObject({ authenticated: false });
+    const audit = JSON.stringify(state.ingressRecords);
+    expect(audit).not.toContain(ADMIN_KEY);
+    expect(audit).not.toContain(sessionValue);
+  });
+
   it("does not retain the address in the in-memory owner-session record", () => {
     const issued = issueSession({ ip: TEST_IP, userAgent: "synthetic-test-agent" });
     try {
