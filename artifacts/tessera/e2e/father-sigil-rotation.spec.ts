@@ -18,6 +18,7 @@ type MockState = {
   issuedCount: number;
   pendingCode: string | null;
   pendingConfirmation: string | null;
+  pendingSession: string | null;
   chatBodies: string[];
   ownerCookieMissing: boolean;
   submittedAdminKeys: string[];
@@ -39,6 +40,7 @@ function makeState(
     issuedCount: 0,
     pendingCode: null,
     pendingConfirmation: null,
+    pendingSession: null,
     chatBodies: [],
     ownerCookieMissing: false,
     submittedAdminKeys: [],
@@ -176,6 +178,7 @@ async function installApiMocks(page: Page, state: MockState) {
       state.issuedCount += 1;
       state.pendingCode = `LUS-SYNTHETIC-NEXT-SIGIL-${state.issuedCount}`;
       state.pendingConfirmation = `synthetic-confirmation-${state.issuedCount}`;
+      state.pendingSession = state.ownerCookieValue;
       return fulfillJson(route, 201, {
         ok: true,
         code: state.pendingCode,
@@ -186,10 +189,18 @@ async function installApiMocks(page: Page, state: MockState) {
 
     if (pathname === "/api/sigil/father/confirm-code" && method === "POST") {
       const body = request.postDataJSON() as { confirmationToken?: string };
-      if (!state.authenticated) {
+      if (
+        !state.authenticated ||
+        !state.ownerCookieValue ||
+        !cookie.includes(`sovereign_session=${state.ownerCookieValue}`)
+      ) {
         return fulfillJson(route, 401, { ok: false, error: "unauthenticated" });
       }
-      if (body.confirmationToken !== state.pendingConfirmation || !state.pendingCode) {
+      if (
+        body.confirmationToken !== state.pendingConfirmation ||
+        !state.pendingCode ||
+        state.pendingSession !== state.ownerCookieValue
+      ) {
         return fulfillJson(route, 409, { ok: false, error: "confirmation-expired-or-replaced" });
       }
       if (state.confirmBehavior === "expired") {
@@ -199,6 +210,7 @@ async function installApiMocks(page: Page, state: MockState) {
       state.currentSigil = state.pendingCode;
       state.pendingCode = null;
       state.pendingConfirmation = null;
+      state.pendingSession = null;
       state.rotatedThisSession = true;
 
       if (state.confirmBehavior === "lost-after-commit") {
@@ -524,6 +536,93 @@ test.describe("private chat sigil rotation", () => {
     expect(state.currentSigil).toBe(PREVIOUS_SIGIL);
     expect(state.rotatedThisSession).toBe(false);
     await expectNoCredentialStorage(page, [TEST_ADMIN_KEY, PREVIOUS_SIGIL, pendingCode]);
+  });
+
+  test("rejects an old-session confirmation and lets the owner reissue with the active sigil", async ({ page }) => {
+    const state = makeState({ enrolled: true });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await openSignedInChat(page, state);
+    await openRotationPanel(page, "Issue a replacement private chat sigil.");
+    await page.getByLabel("Current sigil").fill(PREVIOUS_SIGIL);
+    await page.getByRole("button", { name: "Verify & create" }).click();
+
+    const firstPendingCode = "LUS-SYNTHETIC-NEXT-SIGIL-1";
+    await expect(page.getByRole("status", { name: "New private chat sigil in LUS" })).toContainText(firstPendingCode);
+    const staleConfirmation = state.pendingConfirmation;
+    const firstOwnerSession = state.pendingSession;
+    expect(staleConfirmation).toBeTruthy();
+    expect(firstOwnerSession).toBeTruthy();
+    await page.getByLabel("I saved this new sigil somewhere private.").check();
+    await expect(page.getByLabel("I saved this new sigil somewhere private.")).toBeChecked();
+    await page.getByRole("button", { name: "logout" }).click();
+    await expect(page.getByLabel("Father admin code or LUS form")).toBeVisible();
+
+    expect(state.currentSigil).toBe(PREVIOUS_SIGIL);
+    expect(state.pendingCode).toBe(firstPendingCode);
+    expect(state.pendingSession).toBe(firstOwnerSession);
+
+    const keyField = page.getByLabel("Father admin code or LUS form");
+    await keyField.fill(TEST_ADMIN_KEY);
+    await page.getByRole("button", { name: "Unlock Tesseract" }).click();
+    await expect(page.getByTestId("input-message")).toBeVisible();
+    expect(state.loginCount).toBe(2);
+    expect(state.ownerCookieValue).not.toBe(firstOwnerSession);
+
+    const staleResult = await page.evaluate(async (confirmationToken) => {
+      const response = await fetch("/api/sigil/father/confirm-code", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmationToken }),
+      });
+      return { status: response.status, body: await response.json() };
+    }, staleConfirmation);
+    expect(staleResult.status).toBe(409);
+    expect(staleResult.body).toMatchObject({ ok: false, error: "confirmation-expired-or-replaced" });
+    expect(state.currentSigil).toBe(PREVIOUS_SIGIL);
+    expect(state.pendingCode).toBe(firstPendingCode);
+    expect(state.rotatedThisSession).toBe(false);
+
+    await openRotationPanel(page, "Reissue using my still-active saved sigil.");
+    await page.getByLabel("Current sigil").fill(PREVIOUS_SIGIL);
+    await page.getByRole("button", { name: "Verify & create" }).click();
+    const replacementCode = "LUS-SYNTHETIC-NEXT-SIGIL-2";
+    await expect(page.getByRole("status", { name: "New private chat sigil in LUS" })).toContainText(replacementCode);
+    const replacementConfirmation = state.pendingConfirmation;
+    expect(replacementConfirmation).toBeTruthy();
+    expect(replacementConfirmation).not.toBe(staleConfirmation);
+    expect(state.pendingSession).toBe(state.ownerCookieValue);
+    await page.getByLabel("I saved this new sigil somewhere private.").check();
+    await page.getByRole("button", { name: "Confirm saved & activate new sigil" }).click();
+    await expect(page.getByRole("status", { name: "New private chat sigil activated" })).toBeVisible();
+    expect(state.currentSigil).toBe(replacementCode);
+    expect(state.rotatedThisSession).toBe(true);
+    expect(state.submittedAdminKeys).toEqual([TEST_ADMIN_KEY, TEST_ADMIN_KEY]);
+
+    await page.getByRole("button", { name: "Continue to chat" }).click();
+    const composer = page.getByTestId("input-message");
+    await composer.fill("A normal message after the saved sigil was activated.");
+    await composer.press("Enter");
+    await expect.poll(() => state.chatBodies.length).toBe(1);
+    for (const secret of [
+      TEST_ADMIN_KEY,
+      PREVIOUS_SIGIL,
+      firstPendingCode,
+      replacementCode,
+      staleConfirmation ?? "",
+      replacementConfirmation ?? "",
+    ]) {
+      if (secret) expect(state.chatBodies.join("\n")).not.toContain(secret);
+    }
+    await expectNoCredentialStorage(page, [
+      TEST_ADMIN_KEY,
+      PREVIOUS_SIGIL,
+      firstPendingCode,
+      replacementCode,
+      staleConfirmation ?? "",
+      replacementConfirmation ?? "",
+    ]);
+    expect(state.ownerCookieMissing).toBe(false);
   });
 
   test("recovers a lost confirmation response from the authoritative session status", async ({ page }) => {
