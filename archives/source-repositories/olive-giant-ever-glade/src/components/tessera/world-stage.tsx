@@ -3,8 +3,8 @@ import { searchWeb } from "@/lib/tessera/study";
 import { useTessera } from "@/lib/tessera/store";
 import { LIST_DONE } from "@/lib/tessera/list-003";
 
-const LAT = 41.8781;
-const LON = -87.6298;
+const LAT = 48.8566;
+const LON = 2.3522;
 const ZOOM = 16;
 const COLS = 4;
 const ROWS = 3;
@@ -18,9 +18,9 @@ const WORK = [
 const LOOKUPS = ["Wilhelm Reich", "Pluto the playwright", "Vatican Apostolic Archive"];
 const RISING = ["Hearth", "Library", "Workshop", "Garden", "Orchard", "Well", "School", "Gate"];
 
-function chicagoHour(now: Date) {
+function localHour(now: Date) {
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Chicago",
+    timeZone: "Europe/Paris",
     hour: "numeric",
     minute: "numeric",
     hourCycle: "h23",
@@ -53,9 +53,9 @@ export function WorldStage() {
   const [risen, setRisen] = useState(3);
   const [live, setLive] = useState("Looking up a public page.");
   const [failed, setFailed] = useState(false);
-  const hour = chicagoHour(now);
+  const hour = localHour(now);
   const light = lightFor(hour);
-  const clock = now.toLocaleTimeString("en-US", { timeZone: "America/Chicago", hour: "numeric", minute: "2-digit" });
+  const clock = now.toLocaleTimeString("en-US", { timeZone: "Europe/Paris", hour: "numeric", minute: "2-digit" });
   const origin = useMemo(() => tileXY(LAT, LON, ZOOM), []);
   const tiles = useMemo(() => {
     const startX = Math.floor(origin.x) - 1;
@@ -142,7 +142,7 @@ export function WorldStage() {
       </p>
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 pt-10 pb-2">
         <p className="line-clamp-2 text-[11px] leading-snug text-white">
-          {clock} Central · {light.name} · {live}
+          {clock} Paris · {light.name} · {live}
           {failed ? " · imagery did not load" : ""}
         </p>
       </div>
