@@ -1,4 +1,6 @@
-import { readFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -7,7 +9,7 @@ import {
   type BrainAConfig, type GateDecision, type Proposal, type RetrievalSplit,
 } from "../lib/agi/improvement-gate";
 // @ts-expect-error plain .mjs build script, no type declarations
-import { build } from "../../../../evals/heldout/retrieval/build.mjs";
+import { drift } from "../../../../evals/heldout/retrieval/build.mjs";
 
 const DIR = join(__dirname, "../../../../evals/heldout/retrieval");
 const RAW = readFileSync(join(DIR, "split.json"), "utf8");
@@ -48,10 +50,39 @@ const BAD: Proposal[] = [
 const GRID_KW = [0, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5];
 
 describe("improvement gate (dual-brain step 1)", () => {
-  it("split rebuilds byte-identically at this commit and matches split.sha256", () => {
+  it("committed split.json matches split.sha256 (frozen v1, never rebuilt)", () => {
     const want = readFileSync(join(DIR, "split.sha256"), "utf8").split(/\s+/)[0];
     expect(createHash("sha256").update(RAW).digest("hex")).toBe(want);
-    expect(build().hash).toBe(want);
+    expect(SPLIT.version).toBe("v1");
+  });
+
+  it("--drift reports +1 query for an extra test title, exits 0, writes nothing", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "split-drift-"));
+    const api = join(tmp, "src");
+    cpSync(join(__dirname, ".."), api, { recursive: true, filter: (p) => !p.includes("node_modules") });
+    const f = join(api, "__tests__", `${SPLIT.dev[0].relevant[0].replace(/\.ts$/, "").replace(/\//g, "-")}.test.ts`);
+    writeFileSync(f, readFileSync(f, "utf8") + '\nit("drift probe extra title", () => {});\n');
+    const before = readFileSync(join(DIR, "split.json"), "utf8") + readFileSync(join(DIR, "split.sha256"), "utf8");
+    const r = spawnSync(process.execPath, [join(DIR, "build.mjs"), "--drift", "--api", api], { encoding: "utf8" });
+    expect(r.status).toBe(0);
+    const out = JSON.parse(r.stdout);
+    expect(out.summary.removedQueries).toBe(0);
+    expect(out.addedQueries.filter((q: { q: string }) => q.q === "drift probe extra title")).toHaveLength(1);
+    expect(readFileSync(join(DIR, "split.json"), "utf8") + readFileSync(join(DIR, "split.sha256"), "utf8")).toBe(before);
+    expect(drift(api).addedQueries.length).toBe(out.addedQueries.length);
+  }, T);
+
+  it("--write refuses without a version bump", () => {
+    const out = mkdtempSync(join(tmpdir(), "split-write-"));
+    for (const n of ["split.json", "split.sha256", "CHANGELOG.md"]) cpSync(join(DIR, n), join(out, n));
+    const snap = () => ["split.json", "split.sha256", "CHANGELOG.md"].map((n) => readFileSync(join(out, n), "utf8")).join("");
+    const before = snap();
+    for (const extra of [[], ["--version", "v1"], ["--version", "v0"], ["--version", "banana"]]) {
+      const r = spawnSync(process.execPath, [join(DIR, "build.mjs"), "--write", "--out", out, "--note", "x", ...extra], { encoding: "utf8" });
+      expect(r.status).toBe(1);
+      expect(r.stderr).toMatch(/refusing/);
+    }
+    expect(snap()).toBe(before);
   });
 
   it("split is module-disjoint: no target module in both dev and held-out", () => {

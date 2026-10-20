@@ -39,7 +39,8 @@ export interface BrainAConfig {
 export const DEFAULT_BRAIN_A: BrainAConfig = { vectorWeight: 1, keywordWeight: 1, rrfK: 60, docChars: 1500 };
 
 export interface RetrievalQuery { q: string; relevant: string[] }
-export interface RetrievalSplit { docs: { id: string; content: string }[]; dev: RetrievalQuery[]; heldout: RetrievalQuery[] }
+/** Loaded from the COMMITTED evals/heldout/retrieval/split.json (frozen, versioned; see its CHANGELOG.md). */
+export interface RetrievalSplit { version?: string; docs: { id: string; content: string }[]; dev: RetrievalQuery[]; heldout: RetrievalQuery[] }
 
 export interface Proposal { id: string; description: string; apply: (c: BrainAConfig) => BrainAConfig }
 
