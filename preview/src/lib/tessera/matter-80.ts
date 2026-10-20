@@ -275,8 +275,8 @@ export function matter80() {
     step("e16", "empathy", "The distress reply is one short sentence.", 80, replyLen, "down"),
   );
 
-  const focusA = "lamp";
-  const focusB = "door";
+  const focusA: string = "lamp";
+  const focusB: string = "door";
   const readers = [focusB, focusB];
   const inWin = ["lamp", "door"];
   const dropped = "chair";
@@ -284,8 +284,9 @@ export function matter80() {
   const tied = attend([{ text: "lamp", salience: 5 }, { text: "door", salience: 5 }]);
   const known = canDo("recall the line");
   const unknownSkill = canDo("fly the room");
-  const missPred = "lamp" === "door" ? 0 : 1;
-  const hitPred = "lamp" === "lamp" ? 0 : 1;
+  const differ = (left: string, right: string) => (left === right ? 0 : 1);
+  const missPred = differ("lamp", "door");
+  const hitPred = differ("lamp", "lamp");
   const gap = oldestGap([{ name: "chair", at: 5 }, { name: "lamp", at: 1 }]);
   const father = tagSource("Father");
   const ada = tagSource("Ada");
