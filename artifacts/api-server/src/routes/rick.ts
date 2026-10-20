@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { requireAdminSession } from "../lib/sovereign-admin";
+import { publicWriteRateLimit } from "../lib/father-verify-throttle";
 import { isRickLoopEnabled, RICK_LOOP_FLAG, testPlanFor, UNMEASURED } from "../lib/rick-gates";
 import { logger } from "../lib/logger";
 import { getRealityAudit, getRealityFlag, hashStringFNV } from "../lib/reality-audit";
@@ -133,7 +134,8 @@ router.get("/rick/proposals", async (_req, res) => {
   }
 });
 
-router.post("/rick/proposals/generate", async (_req, res) => {
+// Owner-only: generating proposals writes internal council state.
+router.post("/rick/proposals/generate", requireAdminSession, requireOwnerOrigin, async (_req, res) => {
   try {
     const result = await generateProposals();
     return res.json({ ok: true, ...result });
@@ -255,7 +257,8 @@ router.get("/rick/council-proposals", (_req, res) => {
   }
 });
 
-router.post("/rick/inventions/:index/submit", async (req, res) => {
+// Owner-only: submitting an invention writes internal council state.
+router.post("/rick/inventions/:index/submit", requireAdminSession, requireOwnerOrigin, async (req, res) => {
   try {
     const idx = parseInt(req.params.index, 10);
     const inventions = generateRickInventions();
@@ -271,7 +274,8 @@ router.post("/rick/inventions/:index/submit", async (req, res) => {
   }
 });
 
-router.post("/rick/inventions/submit-custom", async (req, res) => {
+// Owner-only: custom invention submissions write internal council state.
+router.post("/rick/inventions/submit-custom", requireAdminSession, requireOwnerOrigin, async (req, res) => {
   try {
     const body = req.body;
     if (!body.inventionName || !body.technicalApproach) {
@@ -297,7 +301,8 @@ router.post("/rick/inventions/submit-custom", async (req, res) => {
   }
 });
 
-router.post("/rick/chat", async (req, res) => {
+// Intentionally public: Rick chat. Rate-limited because it can call a paid LLM.
+router.post("/rick/chat", publicWriteRateLimit, async (req, res) => {
   try {
     const { messages, stream = true } = req.body as {
       messages: Array<{ role: string; content: string }>;
@@ -944,11 +949,15 @@ Current top priority: **${topInvention.inventionName}** — targeting ${topInven
 — *burp* — Rick Sanchez, C-137`;
 }
 
-router.post("/rick/engine-feedback", (req, res) => {
+// Intentionally public: user satisfaction feedback. Rate-limited and strictly
+// validated since domain/engineId become internal map keys.
+router.post("/rick/engine-feedback", publicWriteRateLimit, (req, res) => {
   try {
     const { domain, engineId, satisfaction } = req.body;
-    if (!domain || !engineId || typeof satisfaction !== "number" || satisfaction < 0 || satisfaction > 1) {
-      return res.status(400).json({ ok: false, error: "domain, engineId, and satisfaction (0-1) required" });
+    const validKey = (value: unknown): value is string =>
+      typeof value === "string" && value.trim().length > 0 && value.length <= 64;
+    if (!validKey(domain) || !validKey(engineId) || typeof satisfaction !== "number" || !Number.isFinite(satisfaction) || satisfaction < 0 || satisfaction > 1) {
+      return res.status(400).json({ ok: false, error: "domain, engineId (non-empty strings, max 64 chars), and satisfaction (0-1) required" });
     }
     recordUserSatisfaction(domain, engineId, satisfaction);
     return res.json({ ok: true, recorded: { domain, engineId, satisfaction } });

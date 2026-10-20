@@ -500,3 +500,88 @@ describe("Fake activity feed removed", () => {
     expect(src).not.toContain("Mandated Meeseeks Task Spawner Protocol");
   });
 });
+
+describe("Non-program Rick write routes have explicit access levels", () => {
+  const envNames = ["TESSERACT_ADMIN_KEY", "SOVEREIGN_SESSION_SECRET"] as const;
+
+  async function withOwnerSession<T>(fn: (ownerCookie: string) => Promise<T>): Promise<T> {
+    const savedEnv = Object.fromEntries(envNames.map(name => [name, process.env[name]]));
+    process.env.TESSERACT_ADMIN_KEY = "synthetic-rick-write-gate-owner";
+    process.env.SOVEREIGN_SESSION_SECRET = "synthetic-rick-write-gate-secret-32chars";
+    try {
+      const session = issueSession({ ip: "127.0.0.1", userAgent: "rick-write-gates-vitest" });
+      return await fn(`${SESSION_COOKIE}=${session.signedId}`);
+    } finally {
+      for (const name of envNames) {
+        const value = savedEnv[name];
+        if (value === undefined) delete process.env[name];
+        else process.env[name] = value;
+      }
+    }
+  }
+
+  const send = (path: string, body: unknown, cookie?: string, origin = routeBaseUrl) =>
+    fetch(`${routeBaseUrl}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: origin,
+        ...(cookie ? { Cookie: cookie } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+
+  it("denies anonymous and cross-origin writes on proposal generation and invention submission", async () => {
+    await withOwnerSession(async (ownerCookie) => {
+      const ownerOnly = [
+        { path: "/rick/proposals/generate", body: {} },
+        { path: "/rick/inventions/0/submit", body: {} },
+        { path: "/rick/inventions/submit-custom", body: { inventionName: "x", technicalApproach: "y" } },
+      ];
+      for (const mutation of ownerOnly) {
+        const anonymous = await send(mutation.path, mutation.body);
+        expect(anonymous.status, `${mutation.path} should deny anonymous writes`).toBe(401);
+        const crossOrigin = await send(mutation.path, mutation.body, ownerCookie, "https://attacker.example");
+        expect(crossOrigin.status, `${mutation.path} should reject cross-origin writes`).toBe(403);
+      }
+    });
+  });
+
+  it("lets the owner generate proposals and rejects invalid invention input past the gate", async () => {
+    await withOwnerSession(async (ownerCookie) => {
+      const generated = await send("/rick/proposals/generate", {}, ownerCookie);
+      expect(generated.status).toBe(200);
+      expect(await generated.json()).toMatchObject({ ok: true });
+
+      const badIndex = await send("/rick/inventions/not-a-number/submit", {}, ownerCookie);
+      expect(badIndex.status).toBe(400);
+      const missingFields = await send("/rick/inventions/submit-custom", {}, ownerCookie);
+      expect(missingFields.status).toBe(400);
+    });
+  });
+
+  it("keeps engine feedback public but validated and rate-limited", async () => {
+    const outOfRange = await send("/rick/engine-feedback", { domain: "chat", engineId: "engine-a", satisfaction: 2 });
+    expect(outOfRange.status).toBe(400);
+    const oversizedKey = await send("/rick/engine-feedback", { domain: "x".repeat(200), engineId: "engine-a", satisfaction: 0.5 });
+    expect(oversizedKey.status).toBe(400);
+    const wrongType = await send("/rick/engine-feedback", { domain: 42, engineId: "engine-a", satisfaction: 0.5 });
+    expect(wrongType.status).toBe(400);
+    const valid = await send("/rick/engine-feedback", { domain: "chat", engineId: "engine-a", satisfaction: 0.9 });
+    expect(valid.status).toBe(200);
+    expect(await valid.json()).toMatchObject({ ok: true });
+  });
+
+  it("route source shows every non-program Rick write route behind an explicit guard", () => {
+    const r = read("routes/rick.ts");
+    for (const route of [
+      'router.post("/rick/proposals/generate", requireAdminSession, requireOwnerOrigin',
+      'router.post("/rick/inventions/:index/submit", requireAdminSession, requireOwnerOrigin',
+      'router.post("/rick/inventions/submit-custom", requireAdminSession, requireOwnerOrigin',
+      'router.post("/rick/engine-feedback", publicWriteRateLimit',
+      'router.post("/rick/chat", publicWriteRateLimit',
+    ]) {
+      expect(r).toContain(route);
+    }
+  });
+});
