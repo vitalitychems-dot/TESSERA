@@ -4,12 +4,12 @@ import { readFileSync } from "node:fs";
 import { knownTheme, type ThemeId } from "./themes.ts";
 
 export const INK: Record<ThemeId, { bg: string; accent: string; fg: string; subtle: string }> = {
-  water: { bg: "#070b10", accent: "#7ef0d4", fg: "#f3efe6", subtle: "#d5ebe4" },
-  fire: { bg: "#140806", accent: "#ff6a3d", fg: "#f8efe8", subtle: "#f0c2b0" },
-  lightning: { bg: "#05070c", accent: "#d6f26a", fg: "#f2f6ff", subtle: "#d5def5" },
-  diamond: { bg: "#eef3f4", accent: "#0e7490", fg: "#102028", subtle: "#245968" },
-  spiral: { bg: "#100818", accent: "#e7b3ff", fg: "#f6f1e8", subtle: "#e4d4f8" },
-  house: { bg: "#140e0b", accent: "#ffb089", fg: "#f6efe8", subtle: "#f0d0c0" },
+  water: { bg: "#070b10", accent: "#7ef0d4", fg: "#f3efe6", subtle: "#c9d4db" },
+  fire: { bg: "#120c0a", accent: "#ff5c39", fg: "#f6efe8", subtle: "#e4cfc8" },
+  lightning: { bg: "#08090c", accent: "#d7f6ff", fg: "#f4f7f8", subtle: "#d5e0e6" },
+  diamond: { bg: "#e7eeea", accent: "#1f8f7a", fg: "#121816", subtle: "#3f5c54" },
+  spiral: { bg: "#0e0c12", accent: "#e4c6ff", fg: "#f6f1e8", subtle: "#e6dff0" },
+  house: { bg: "#140e0b", accent: "#ffb089", fg: "#f6efe8", subtle: "#f0d8cc" },
 };
 
 const NAMES = ["empty", "drop", "rule", "repeat", "wait", "next"] as const;
