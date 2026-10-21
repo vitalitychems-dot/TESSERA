@@ -16,8 +16,8 @@ const write = (name: string, body: string) => { const p = join(tmp, name); write
 describe("mesh lane registry (GM-1)", () => {
   const reg = loadMeshRegistry();
   it("loads config/mesh-lanes.json", () => {
-    expect(reg.lanes).toHaveLength(17);
-    expect(reg.edges).toHaveLength(753); // 735 + father -> 17 lanes + owner-digest
+    expect(reg.lanes).toHaveLength(21);
+    expect(reg.edges).toHaveLength(765); // 735 + father -> 17 lanes + owner-digest; +12 for storage, memory, network, computer (lane<->tessera, father->lane)
   });
   it("allows every registered edge", () => {
     expect(applyMeshRegistryPolicy()).toBe(true);
