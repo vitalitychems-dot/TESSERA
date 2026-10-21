@@ -1,15 +1,15 @@
 # Gitleaks triage, 2026-10-21 (report-only)
 
-Source: the `gitleaks` job of the Secret scan workflow, run 39682899501 (2026-10-21 17:01 CT, PR #524), which reported **250 findings**. The scan wrapper (`scripts/gitleaks-scan.mjs`) prints only `file:line rule-id`. Values were inspected locally by shape only (length, charset, decoded JWT header, placeholder patterns). **No secret value appears in this file.** Values are masked to at most 4 characters + `****`.
+Source: the `gitleaks` job of the Secret scan workflow, run 39682899501 (2026-10-21 17:01 CT, PR #524), which reported **250 findings**. The scan wrapper (`scripts/gitleaks-scan.mjs`) prints only `file:line rule-id`. Values were inspected locally by shape only (length, charset, decoded JWT header, and placeholder patterns). Masking keeps at most four characters of a value and then `****`. No full secret value appears in this file.
 
-No history was edited, no allowlist was applied, and nothing was rotated by this PR.
+No history was edited and nothing was rotated. One allowlist entry was added, for the two proven fixture findings at `scripts/tessera-credential-guard.test.mjs:15`. Every other finding stays flagged.
 
 ## Key finding: none of the 250 findings are on `main`
 
 `actions/checkout` with `fetch-depth: 0` fetches every branch, and `gitleaks detect` walks `git log --all`, so the job scans **every branch in the repo**, not just the PR or `main`. All 250 findings are on side branches:
 
-- 248 are on the seven archive branches `opened/01-XL1` … `opened/07-tesseract-consolidated` (the same 35–36 findings repeated once per archived project copy).
-- 2 are in `scripts/tessera-credential-guard.test.mjs` on `security/session-cookie-hardening-20261020` and `manus/session-cookie-hardening-20261017`. These two are also the only findings in the last `main` push run (39557493998, 2 findings).
+- 248 are on the seven archive branches `opened/01-XL1` … `opened/07-tesseract-consolidated` (the same findings repeated once per archived project copy).
+- 2 are in `scripts/tessera-credential-guard.test.mjs:15` on `security/session-cookie-hardening-20261020` (`1a6a43f4a2f673c1834b9d2e851379ee30ff1ae1`) and `manus/session-cookie-hardening-20261017` (`b69b9b782e1419eec4b9d909b7dc45839b7b0c33`). These two are also the only findings in the last `main` push run (39557493998, 2 findings). They are the allowlisted fixture below.
 
 So every PR fails Secret scan because of branches it never touches. See suggestion 1 below.
 
@@ -17,95 +17,312 @@ So every PR fails Secret scan because of branches it never touches. See suggesti
 
 | Class | Count |
 | --- | ---: |
-| REAL | 0 |
-| TEST | 10 |
-| FALSE-POSITIVE | 240 |
+| likely-live | 0 |
+| likely-fixture | 8 |
+| unknown | 240 |
+| allowlisted | 2 |
 | **Total** | **250** |
+
+Remaining flagged after the allowlist: **248** (likely-live 0, likely-fixture 8, unknown 240).
 
 | Rule | Class | Count |
 | --- | --- | ---: |
-| `generic-api-key` | FALSE-POSITIVE | 240 |
-| `jwt` | TEST | 7 |
-| `generic-api-key` | TEST | 3 |
+| `generic-api-key` | unknown | 240 |
+| `jwt` | likely-fixture | 7 |
+| `generic-api-key` | likely-fixture | 1 |
+| `generic-api-key` | allowlisted | 2 |
 
 ### By pattern
 
 | Class | Rule | Pattern | Count |
 | --- | --- | --- | ---: |
-| FALSE-POSITIVE | `generic-api-key` | secretLanguageId app label (cipher-*) | 210 |
-| FALSE-POSITIVE | `generic-api-key` | public Solana token mint address FMB4**** (TSRT) | 21 |
-| FALSE-POSITIVE | `generic-api-key` | .env.example template: public Solana RPC URL + public token mint address | 7 |
-| TEST | `jwt` | "Token Forgery" attack payload: alg=none, empty signature | 7 |
-| FALSE-POSITIVE | `generic-api-key` | prose listing free public data sources (Jupi****) | 2 |
-| TEST | `generic-api-key` | credential-guard unit-test fixture (fake sk-/ghp-style strings) | 2 |
-| TEST | `generic-api-key` | benchmark sample string "sk-a****" | 1 |
+| unknown | `generic-api-key` | secretLanguageId app label (`ciph****`) | 210 |
+| unknown | `generic-api-key` | public Solana token mint address `FMB4****` (TSRT) | 21 |
+| unknown | `generic-api-key` | .env.example template: public Solana RPC URL + public token mint address | 7 |
+| likely-fixture | `jwt` | "Token Forgery" attack payload: alg=none, empty signature | 7 |
+| unknown | `generic-api-key` | prose listing free public data sources (`Jupi****`) | 2 |
+| allowlisted | `generic-api-key` | credential-guard unit-test fixture at line 15 (labeled assignment, value length 34) | 2 |
+| likely-fixture | `generic-api-key` | benchmark sample string `sk-a****` | 1 |
 
-## REAL findings
+## likely-live findings
 
-**None (0).** No finding looks like a live credential:
+**None (0).** No finding was classed as a live credential.
 
-- `secretLanguageId` values are short lowercase `ciph****` labels (16–19 chars) in an app data file, not keys.
-- `FMB4****` is a 44-char base58 Solana token mint address (TSRT). It is public on-chain data, and `LIMN_TOKEN_CA` in the `.env.example` template is the same address.
-- The 7 JWTs decode to header `alg: none` with one `role` claim and an **empty signature**. They are forged-token attack payloads in a security tester.
-- The `sk-****`/`ghp`-style strings sit in the credential-guard unit test and a benchmark sample, and they match placeholder patterns (`abc`/`123`/`test`/`xxxx`).
+- `secretLanguageId` values are short lowercase `ciph****` labels (16–19 chars) in an app data file. They are not proven fixtures, so they stay **unknown**.
+- `FMB4****` is a 44-char base58 Solana token mint address (TSRT). It is public on-chain data, and `LIMN_TOKEN_CA` in the `.env.example` template is the same address. Public data stays **unknown**.
+- The 7 JWTs decode to header `alg: none` with one `role` claim and an empty signature. They are forged-token attack payloads in a security tester, classed **likely-fixture**.
+- The benchmark sample `sk-a****` is a const sample in `honest-benchmark.ts`, classed **likely-fixture**.
+- The line-15 credential-guard strings are the proven fixture and are **allowlisted**. Other strings in that test file were not part of this 250 and are not allowlisted.
 
-Recommended action: no rotation needed. Moving these to a secret store doesn't apply. If a later scan does turn up a REAL credential, rotate it first, then move it to a secret store; don't edit history.
+Recommended action: no rotation. Nothing was removed. If a later scan turns up a likely-live credential, rotate it first, then move it to a secret store. Do not edit history.
 
-## Findings by file (masked)
+## Allowlisted (1 entry, 2 findings)
 
-| Class | Rule | Branch | File | Lines |
-| --- | --- | --- | --- | --- |
-| FALSE-POSITIVE | `generic-api-key` | `opened/01-XL1` | `opened/01_XL1/XL1/server/realification-conference.ts` | 449 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/02-Tesseracxt9` | `opened/02_Tesseracxt9/Tesseracxt9/tess/server/realification-conference.ts` | 449 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/03-Tx17_9` | `opened/03_Tx17_9/Tx17/x/tess/server/realification-conference.ts` | 449 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/04-Tesseract-AI_5` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/server/conferences-archive.ts` | 3577 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/05-Tx13` | `opened/05_Tx13/Tx13/x/tess/server/realification-conference.ts` | 449 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/06-8-2` | `opened/06_8_2/x/tess/server/conferences-archive.ts` | 3577 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/07-tesseract-consolidated` | `opened/07_tesseract_consolidated/tess/server/realification-conference.ts` | 449 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/04-Tesseract-AI_5` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/server/self-knowledge-engine.ts` | 536 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/06-8-2` | `opened/06_8_2/x/tess/server/self-knowledge-engine.ts` | 507 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/01-XL1` | `opened/01_XL1/XL1/server/agi-implementations.ts` | 102 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/01-XL1` | `opened/01_XL1/XL1/server/realification-conference.ts` | 350 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/01-XL1` | `opened/01_XL1/XL1/server/summit-37-parallel-universes.ts` | 501 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/02-Tesseracxt9` | `opened/02_Tesseracxt9/Tesseracxt9/tess/server/agi-implementations.ts` | 102 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/02-Tesseracxt9` | `opened/02_Tesseracxt9/Tesseracxt9/tess/server/realification-conference.ts` | 350 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/02-Tesseracxt9` | `opened/02_Tesseracxt9/Tesseracxt9/tess/server/summit-37-parallel-universes.ts` | 501 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/03-Tx17_9` | `opened/03_Tx17_9/Tx17/x/tess/server/agi-implementations.ts` | 102 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/03-Tx17_9` | `opened/03_Tx17_9/Tx17/x/tess/server/realification-conference.ts` | 350 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/03-Tx17_9` | `opened/03_Tx17_9/Tx17/x/tess/server/summit-37-parallel-universes.ts` | 501 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/04-Tesseract-AI_5` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/server/agi-implementations.ts` | 102 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/04-Tesseract-AI_5` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/server/conferences-archive.ts` | 3478 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/04-Tesseract-AI_5` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/server/summits-register-archive.ts` | 509 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/05-Tx13` | `opened/05_Tx13/Tx13/x/tess/server/agi-implementations.ts` | 102 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/05-Tx13` | `opened/05_Tx13/Tx13/x/tess/server/realification-conference.ts` | 350 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/05-Tx13` | `opened/05_Tx13/Tx13/x/tess/server/summit-37-parallel-universes.ts` | 501 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/06-8-2` | `opened/06_8_2/x/tess/server/agi-implementations.ts` | 102 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/06-8-2` | `opened/06_8_2/x/tess/server/conferences-archive.ts` | 3478 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/06-8-2` | `opened/06_8_2/x/tess/server/summits-register-archive.ts` | 509 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/07-tesseract-consolidated` | `opened/07_tesseract_consolidated/tess/server/agi-implementations.ts` | 102 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/07-tesseract-consolidated` | `opened/07_tesseract_consolidated/tess/server/realification-conference.ts` | 350 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/07-tesseract-consolidated` | `opened/07_tesseract_consolidated/tess/server/summit-37-parallel-universes.ts` | 501 |
-| FALSE-POSITIVE | `generic-api-key` | `opened/01-XL1` | `opened/01_XL1/XL1/data/secret-society.json` | 30 lines (87–1288) |
-| FALSE-POSITIVE | `generic-api-key` | `opened/02-Tesseracxt9` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 30 lines (87–1288) |
-| FALSE-POSITIVE | `generic-api-key` | `opened/03-Tx17_9` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 30 lines (87–1288) |
-| FALSE-POSITIVE | `generic-api-key` | `opened/04-Tesseract-AI_5` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 30 lines (87–1288) |
-| FALSE-POSITIVE | `generic-api-key` | `opened/05-Tx13` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 30 lines (87–1288) |
-| FALSE-POSITIVE | `generic-api-key` | `opened/06-8-2` | `opened/06_8_2/x/tess/data/secret-society.json` | 30 lines (87–1288) |
-| FALSE-POSITIVE | `generic-api-key` | `opened/07-tesseract-consolidated` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 30 lines (87–1288) |
-| TEST | `generic-api-key` | `opened/06-8-2` | `opened/06_8_2/x/tess/server/honest-benchmark.ts` | 530 |
-| TEST | `generic-api-key` | `security/session-cookie-hardening-20261020, manus/session-cookie-hardening-20261017` | `scripts/tessera-credential-guard.test.mjs` | 15, 15 |
-| TEST | `jwt` | `opened/01-XL1` | `opened/01_XL1/XL1/server/sovereign-security-tester.ts` | 69 |
-| TEST | `jwt` | `opened/02-Tesseracxt9` | `opened/02_Tesseracxt9/Tesseracxt9/tess/server/sovereign-security-tester.ts` | 69 |
-| TEST | `jwt` | `opened/03-Tx17_9` | `opened/03_Tx17_9/Tx17/x/tess/server/sovereign-security-tester.ts` | 69 |
-| TEST | `jwt` | `opened/04-Tesseract-AI_5` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/server/sovereign-network.ts` | 405 |
-| TEST | `jwt` | `opened/05-Tx13` | `opened/05_Tx13/Tx13/x/tess/server/sovereign-security-tester.ts` | 69 |
-| TEST | `jwt` | `opened/06-8-2` | `opened/06_8_2/x/tess/server/sovereign-network.ts` | 405 |
-| TEST | `jwt` | `opened/07-tesseract-consolidated` | `opened/07_tesseract_consolidated/tess/server/sovereign-security-tester.ts` | 69 |
+| Rule | File:line | Why |
+| --- | --- | --- |
+| `generic-api-key` | `scripts/tessera-credential-guard.test.mjs:15` | Proven unit-test fixture. Same line on both commits above. Expected-true input to `containsCredentialMaterial` inside `blocks labeled administrator and provider credentials`. Shape: API_KEY label, value length 34, placeholder alphabet. Too short to be a live vendor key of that family. |
 
-## Suggested `.gitleaks.toml` changes (suggestions only, NOT applied)
+The `.gitleaks.toml` entry requires both the exact path `scripts/tessera-credential-guard.test.mjs` and the two `commit:file:rule:line` fingerprints. The fixture value is not copied into the config.
 
-1. **Scope the CI scan (fixes 248 of 250 on every PR).** Scan only the commits the event brings in, e.g. `--log-opts="${BASE_SHA}..${HEAD_SHA}"` on pull requests and `--log-opts="${BEFORE}..${AFTER}"` on pushes, plus a periodic full scan. Or check out with `fetch-depth: 0` without fetching every other branch. This changes `scripts/gitleaks-scan.mjs` and the workflow, not the allowlist.
-2. **Line-scoped allowlists for the archive branches.** These match on the surrounding line, not the value, and keep the repo's existing "no path blanket" policy:
+## Findings still flagged
+
+Each remaining finding is one row. Class is `likely-live`, `likely-fixture`, or `unknown`.
+
+| Class | Rule | File | Line |
+| --- | --- | --- | --- |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 87 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 116 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 145 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 174 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 203 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 232 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 261 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 290 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 348 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 377 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 492 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 521 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 550 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 579 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 666 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 695 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 724 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 753 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 782 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 811 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 868 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 924 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 980 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 1036 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 1064 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 1120 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 1176 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 1204 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 1260 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/data/secret-society.json` | 1288 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/server/agi-implementations.ts` | 102 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/server/realification-conference.ts` | 350 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/server/realification-conference.ts` | 449 |
+| likely-fixture | `jwt` | `opened/01_XL1/XL1/server/sovereign-security-tester.ts` | 69 |
+| unknown | `generic-api-key` | `opened/01_XL1/XL1/server/summit-37-parallel-universes.ts` | 501 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 87 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 116 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 145 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 174 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 203 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 232 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 261 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 290 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 348 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 377 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 492 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 521 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 550 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 579 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 666 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 695 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 724 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 753 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 782 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 811 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 868 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 924 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 980 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 1036 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 1064 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 1120 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 1176 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 1204 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 1260 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/data/secret-society.json` | 1288 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/server/agi-implementations.ts` | 102 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/server/realification-conference.ts` | 350 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/server/realification-conference.ts` | 449 |
+| likely-fixture | `jwt` | `opened/02_Tesseracxt9/Tesseracxt9/tess/server/sovereign-security-tester.ts` | 69 |
+| unknown | `generic-api-key` | `opened/02_Tesseracxt9/Tesseracxt9/tess/server/summit-37-parallel-universes.ts` | 501 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 87 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 116 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 145 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 174 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 203 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 232 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 261 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 290 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 348 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 377 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 492 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 521 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 550 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 579 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 666 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 695 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 724 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 753 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 782 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 811 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 868 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 924 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 980 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 1036 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 1064 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 1120 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 1176 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 1204 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 1260 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/data/secret-society.json` | 1288 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/server/agi-implementations.ts` | 102 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/server/realification-conference.ts` | 350 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/server/realification-conference.ts` | 449 |
+| likely-fixture | `jwt` | `opened/03_Tx17_9/Tx17/x/tess/server/sovereign-security-tester.ts` | 69 |
+| unknown | `generic-api-key` | `opened/03_Tx17_9/Tx17/x/tess/server/summit-37-parallel-universes.ts` | 501 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 87 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 116 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 145 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 174 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 203 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 232 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 261 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 290 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 348 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 377 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 492 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 521 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 550 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 579 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 666 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 695 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 724 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 753 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 782 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 811 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 868 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 924 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 980 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 1036 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 1064 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 1120 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 1176 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 1204 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 1260 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/data/secret-society.json` | 1288 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/server/agi-implementations.ts` | 102 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/server/conferences-archive.ts` | 3478 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/server/conferences-archive.ts` | 3577 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/server/self-knowledge-engine.ts` | 536 |
+| likely-fixture | `jwt` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/server/sovereign-network.ts` | 405 |
+| unknown | `generic-api-key` | `opened/04_Tesseract-AI_5/Tesseract-AI/x/tess/server/summits-register-archive.ts` | 509 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 87 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 116 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 145 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 174 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 203 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 232 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 261 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 290 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 348 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 377 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 492 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 521 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 550 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 579 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 666 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 695 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 724 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 753 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 782 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 811 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 868 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 924 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 980 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 1036 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 1064 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 1120 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 1176 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 1204 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 1260 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/data/secret-society.json` | 1288 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/server/agi-implementations.ts` | 102 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/server/realification-conference.ts` | 350 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/server/realification-conference.ts` | 449 |
+| likely-fixture | `jwt` | `opened/05_Tx13/Tx13/x/tess/server/sovereign-security-tester.ts` | 69 |
+| unknown | `generic-api-key` | `opened/05_Tx13/Tx13/x/tess/server/summit-37-parallel-universes.ts` | 501 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 87 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 116 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 145 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 174 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 203 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 232 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 261 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 290 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 348 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 377 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 492 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 521 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 550 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 579 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 666 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 695 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 724 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 753 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 782 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 811 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 868 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 924 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 980 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 1036 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 1064 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 1120 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 1176 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 1204 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 1260 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/data/secret-society.json` | 1288 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/server/agi-implementations.ts` | 102 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/server/conferences-archive.ts` | 3478 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/server/conferences-archive.ts` | 3577 |
+| likely-fixture | `generic-api-key` | `opened/06_8_2/x/tess/server/honest-benchmark.ts` | 530 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/server/self-knowledge-engine.ts` | 507 |
+| likely-fixture | `jwt` | `opened/06_8_2/x/tess/server/sovereign-network.ts` | 405 |
+| unknown | `generic-api-key` | `opened/06_8_2/x/tess/server/summits-register-archive.ts` | 509 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 87 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 116 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 145 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 174 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 203 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 232 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 261 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 290 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 348 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 377 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 492 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 521 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 550 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 579 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 666 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 695 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 724 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 753 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 782 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 811 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 868 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 924 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 980 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 1036 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 1064 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 1120 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 1176 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 1204 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 1260 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/data/secret-society.json` | 1288 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/server/agi-implementations.ts` | 102 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/server/realification-conference.ts` | 350 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/server/realification-conference.ts` | 449 |
+| likely-fixture | `jwt` | `opened/07_tesseract_consolidated/tess/server/sovereign-security-tester.ts` | 69 |
+| unknown | `generic-api-key` | `opened/07_tesseract_consolidated/tess/server/summit-37-parallel-universes.ts` | 501 |
+
+## Suggested `.gitleaks.toml` changes (suggestions only, not applied)
+
+1. **Scope the CI scan (fixes 248 of 250 on every PR).** Scan only the commits the event brings in, for example `--log-opts="${BASE_SHA}..${HEAD_SHA}"` on pull requests and `--log-opts="${BEFORE}..${AFTER}"` on pushes, plus a periodic full scan. Or check out with `fetch-depth: 0` without fetching every other branch. This changes `scripts/gitleaks-scan.mjs` and the workflow, not the allowlist.
+2. **Line-scoped allowlists for the archive branches.** These match on the surrounding line, not the value, and keep the repo's existing "no path blanket" policy. The TSRT block and the "no API keys needed" block are limited to `^opened/` paths. They are still suggestions.
 
 ```toml
 [[allowlists]]
@@ -115,8 +332,9 @@ regexTarget = "line"
 regexes = ['''"secretLanguageId":\s*"''']
 
 [[allowlists]]
-description = "Public Solana TSRT mint address in archived prose, code and .env.example templates"
+description = "Public Solana TSRT mint address in archived prose, code and .env.example templates under opened/"
 targetRules = ["generic-api-key"]
+paths = ['''^opened/''']
 regexTarget = "line"
 regexes = ['''TSRT [Tt]oken''', '''tokenAddress:\s*"''', '''LIMN_TOKEN_CA=''']
 
@@ -127,8 +345,9 @@ regexTarget = "line"
 regexes = ['''name: "Token Forgery", payload: "''']
 
 [[allowlists]]
-description = "Prose naming free public data sources (no keys)"
+description = "Prose naming free public data sources (no keys) under opened/"
 targetRules = ["generic-api-key"]
+paths = ['''^opened/''']
 regexTarget = "line"
 regexes = ['''no API keys needed:''']
 
@@ -139,7 +358,7 @@ regexTarget = "line"
 regexes = ['''const secret = "password = ''']
 ```
 
-3. **Credential-guard test.** Add the exact fake fixture strings in `scripts/tessera-credential-guard.test.mjs` as exact-secret `regexTarget = "secret"` entries, the way the existing `synthetic-colonial-secret-*` entries work. Even better, rewrite the fixtures with a `synthetic-` or `xxxx` marker so they stop matching. The values aren't reproduced here.
-4. If the `opened/*` branches are archive-only, consider leaving them out of the scan rather than allowlisting their content. Deleting branches needs Father's approval and is not proposed here.
+3. **Credential-guard test.** The line-15 fixture is already allowlisted by path plus fingerprint, in the section above. Do not add the fixture string as a secret regex. Other lines in `scripts/tessera-credential-guard.test.mjs` stay flagged. Rewriting fixtures with a `synthetic-` or `xxxx` marker so they stop matching is still open, and the values are not reproduced here.
+4. **Open decision for Father. Not adopted.** Excluding `opened/*` from the scan is not in effect. Whether those archive branches should be left out of Secret scan is an open decision for Father. This triage does not adopt that exclusion, and it does not delete or propose deleting any branch.
 
-_Triage by Computer (TESSERA orchestrator), 2026-10-21. Report-only._
+_Triage by Computer (TESSERA orchestrator), 2026-10-21. Report-only. Classes are likely-live, likely-fixture, and unknown. One fixture allowlisted._
