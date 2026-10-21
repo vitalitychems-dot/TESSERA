@@ -108,4 +108,16 @@ This is the TESSERA copy of the collab code gate at merge `eb81e932` (collab #28
 
 `scripts/code-gate/allowed-hosts.txt` was not one of the five source files. The gate and the example workflow fail closed when it is missing. The file here is an initial list: every host `test_allowlist_loader` requires, plus the badge and citation hosts named above (`img.shields.io`, `python.org`, `zenodo.org`, `doi.org`, `brain-cog.network`). It is not a byte copy of the collab allowlist. The unit tests read this file. No test was rewritten onto an inline fixture, because this file satisfies those reads.
 
-Feature flags stay at 0. The false-positive scan for this repository is `origin/main~20..origin/main` with this allowlist and no worktree root, matching the example workflow (size comes from added diff bytes). Results of that scan are on the pull request and are labeled TESTED there. The collab window in Measurements above is unchanged and was not rerun here.
+Feature flags stay at 0. The false-positive scan for this repository is `origin/main~20..origin/main` with this allowlist and no worktree root, matching the example workflow (size comes from added diff bytes). The collab window in Measurements above is unchanged and was not rerun here.
+
+TESSERA window (TESTED, base `dc1a003856e09a5b1ed52c5d4fdea91b99351470`, head `dc21f0fd6b38a4ce3a7ccbc958e2ffc21b969df6`): 7,427 added lines in code and config files (7,546 added text lines in 121 files). 6 blocking findings, 0 suppressed. Unit tests on this pull request: 38 passed (TESTED). False-negative harness: caught 240/240 (SYNTHETIC, TESTED).
+
+One finding is a public URL inside held-out eval source text: `evals/heldout/retrieval/split.json:156` `net-public-url`. It is not fixed here.
+
+Five are false positives specific to this repo. None are fixed here.
+
+- `artifacts/api-server/src/__tests__/gm1-secfix.test.ts:69` `net-public-url` — a `.local` test origin, not a public host.
+- `artifacts/api-server/src/__tests__/heldout-answer-key.test.ts:183` `net-public-ip` — a sandbox test that expects the outbound connect to fail.
+- `pnpm-lock.yaml:2910` `net-public-url` — a lockfile deprecation notice pointing at a documentation site.
+- `preview/src/lib/tessera/firm-combo.ts:36` `net-public-ip` — a fixture asserting that a public address is not a private host.
+- `preview/src/lib/tessera/suite-rules.ts:114` `db-nonlocal-host` — a negative check that a nonlocal database URL is rejected.
