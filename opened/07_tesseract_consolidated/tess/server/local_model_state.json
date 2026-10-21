@@ -1,0 +1,8 @@
+{
+  "totalDataCollected": 0,
+  "totalJobsRun": 0,
+  "bestModelAccuracy": 0,
+  "domainCoverage": {},
+  "trainingData": [],
+  "fineTuneJobs": []
+}

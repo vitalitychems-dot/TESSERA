@@ -1,0 +1,16 @@
+{
+  "totalChecks": 0,
+  "hallucinationsDetected": 0,
+  "simulationsDetected": 0,
+  "accuracyRate": 100,
+  "accuracyTarget": 95,
+  "autoCheckEnabled": false,
+  "simulationPoliceActive": true,
+  "totalFinesCollected": 0,
+  "penaltiesIssued": 0,
+  "agentOffenses": {},
+  "lastUpdated": "2026-04-03T21:25:48.091Z",
+  "recentChecks": [],
+  "recentPenalties": [],
+  "recentPoliceReports": []
+}
