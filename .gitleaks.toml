@@ -1,6 +1,7 @@
 # TESSERA secret scan. Extends the gitleaks default rules.
 # Allowlists are exact captured secrets that are false positives.
-# There is no path blanket and no global ignore.
+# The only path exclusion is ^opened/, pending Father's direct confirmation.
+# It does not cover any other path.
 # The two credential-guard fixture findings are commit fingerprints in
 # .gitleaksignore, not a path allowlist.
 
@@ -26,3 +27,10 @@ regexes = ['''^fe05a71d3e4ed7d10bf68aa4eda6dd995ec070f4$''']
 description = "Log category captured from archived conference prose in archive/from-gitbook/archive/moved/collink1007-XXX/{tess,x/tess}/server/routes/algorithms.ts, next to the words access_log off. The captured value is the category label, not a credential."
 regexTarget = "secret"
 regexes = ['''^phase-7-untraceable$''']
+
+# Global path exclusion. gitleaks 8.30.1 rejects a top-level [allowlist] when
+# [[allowlists]] is also set, so this block is the equivalent: no targetRules,
+# paths only. Pending Father's direct confirmation. Revert this commit to undo.
+[[allowlists]]
+description = "Archive tree under opened/. Adopted pending Father's direct confirmation. This path only."
+paths = ['''^opened/''']
