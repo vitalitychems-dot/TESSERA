@@ -1,8 +1,8 @@
-# Initial TESSERA allowlist.
-# The collab allowed-hosts.txt was not in the five-file source.
-# These are the hosts the collab unit test requires to be present,
-# plus the badge and citation hosts named in docs/CODE-GATE.md.
-# Not a byte copy of the collab file.
+# Reviewed hostnames for public URL checks. One hostname per line.
+# A listed host also allows its subdomains (api.github.com via github.com).
+# This file does not relax database URL rules.
+# Blank lines and # comments are ignored. No schemes or paths.
+
 github.com
 api.github.com
 docs.github.com
@@ -16,6 +16,7 @@ pages.nist.gov
 learn.microsoft.com
 passkeys.dev
 fidoalliance.org
+# Badge and citation hosts linked from checkout notes (.txt is scanned).
 img.shields.io
 python.org
 zenodo.org

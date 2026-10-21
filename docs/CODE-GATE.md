@@ -106,7 +106,7 @@ Labels follow the mesh rules: TESTED means rerun on the head of this pull reques
 
 This is the TESSERA copy of the collab code gate at merge `eb81e932` (collab #283). The programs are `scripts/code-gate/gate.py`, `test_gate.py`, and `fn_harness.py`. The workflow stays at `scripts/code-gate/tessera-mesh-sync.yml.example`. This change does not install that file under `.github/workflows`, does not add a CODEOWNERS file, and does not change branch protection.
 
-`scripts/code-gate/allowed-hosts.txt` was not one of the five source files. The gate and the example workflow fail closed when it is missing. The file here is an initial list: every host `test_allowlist_loader` requires, plus the badge and citation hosts named above (`img.shields.io`, `python.org`, `zenodo.org`, `doi.org`, `brain-cog.network`). It is not a byte copy of the collab allowlist. The unit tests read this file. No test was rewritten onto an inline fixture, because this file satisfies those reads.
+`scripts/code-gate/allowed-hosts.txt` is the collab file from merge `eb81e932`, byte for byte. SHA-256 `45cbe486bb214a8276297f79b0e9693821fc7b9fb32095e69d4ec8335e743105`. No TESSERA-only host was added. The unit tests read this file. No test was rewritten onto an inline fixture.
 
 Feature flags stay at 0. The false-positive scan for this repository is `origin/main~20..origin/main` with this allowlist and no worktree root, matching the example workflow (size comes from added diff bytes). The collab window in Measurements above is unchanged and was not rerun here.
 
