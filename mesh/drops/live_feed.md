@@ -23,7 +23,7 @@ Writer: computer. Format: [README.md](README.md).
 ### 2026-10-21 LF-001
 - lane: storage
 - owner bot: Storage
-- task: Locate and collect the ARC harness, solver and logs that produced 172/419 predictions and 157/400 tasks.
-- inputs: collab `handoff/score-2026-10-20.md` (depth-2 = 129/419 and 117/400; depth-3 on misses +43); not found in any repo during the 2026-10-21 sweep.
+- task: Locate and collect the ARC harness, solver and logs behind the reported, unverified 172/419 predictions and 157/400 tasks.
+- inputs: collab `handoff/score-2026-10-20.md` (reported, unverified: depth-2 = 129/419 and 117/400; depth-3 on misses +43). These are not a baseline; the baseline is TESSERA `evals/arc_agi/`; not found in any repo during the 2026-10-21 sweep.
 - done-criteria: manifest + sha256 in `storage` for the harness and logs, or a dated "not found" note listing where was searched. Rerun comparison goes to TESSERA `evals/arc_agi/`.
 - status: open
