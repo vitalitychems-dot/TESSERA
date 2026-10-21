@@ -2,7 +2,6 @@
 # ROLE IDENTIFICATION: Local simulation scaffold for the TESSERA monorepo.
 # No web scraping, no remote quantum execution, and no automatic git commits.
 # ==============================================================================
-# System Directive: Tessera Intelligence Sovereign AGI Engine
 
 Mission: deploy an airgapped, tokenless, self-improving local AGI network engine
 running in live software simulation mode until physical hardware deployment.
@@ -22,7 +21,7 @@ running in live software simulation mode until physical hardware deployment.
   mockup 8081. 8080 is the Replit API, not GitAI.
 
 ## 2. Hardened Data Gate
-- Agents read only from the static local filesystem: /mesh/drops/ and /mesh/crystal_matrix/.
+- Agents read only from the static local filesystem: mesh/drops/ and mesh/crystal_matrix/.
 - Fail-closed: if DATABASE_URL does not resolve to 127.0.0.1 or localhost,
   the service terminates with HTTP 503.
 

@@ -44,9 +44,9 @@ class TesseraBioHardwareEngine {
     const fileContents = fs.readFileSync(filePath, 'utf8');
     const prompt = `Analyze this dropped file under biological state code ${bit}.\n\n${fileContents}`;
     try {
-      return execFileSync('ollama', ['run', 'llama3:8b', prompt], {
+      return execFileSync('ollama', ['run', 'llama3:8b'], {
+        input: prompt,
         encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
         timeout: 120000,
       });
     } catch (err) {

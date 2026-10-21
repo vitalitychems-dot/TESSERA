@@ -9,8 +9,6 @@ name: Tessera Sovereign Mesh Synchronizer
 on:
   push:
     branches: [main]
-  schedule:
-    - cron: '*/30 * * * *'
 
 permissions:
   contents: write
@@ -46,6 +44,11 @@ jobs:
           fi
           grep -q "execFileSync('ollama'" "$hw"
           grep -q "readFileSync(filePath" "$hw"
+          grep -q "input: prompt" "$hw"
+          if grep -E -q "execFileSync\('ollama', \[[^]]*prompt" "$hw"; then
+            echo "ollama file contents must be passed on stdin, not argv"
+            exit 1
+          fi
 
           if grep -E -q 'IBM_QUANTUM|LIVE_CLOUD|FEED\.write_text' "$qb"; then
             echo "quantum bridge must stay a local simulation and must not write the live feed"
@@ -91,7 +94,7 @@ jobs:
           git commit -m "sync: mesh ledger update
 
           Original-Author: Computer
-          Co-authored-by: Computer"
+          Co-authored-by: Computer <computer@users.noreply.github.com>"
 
           dest="$BRANCH"
           case "$dest" in
