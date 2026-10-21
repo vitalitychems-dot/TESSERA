@@ -1,0 +1,82 @@
+{
+  "harness": "evals/arc_agi/run.py",
+  "solver": "solvers/dsl_search.py",
+  "solver_config": {
+    "depth": 2,
+    "retry_depth": 3,
+    "max_programs": 50
+  },
+  "seed": 20261021,
+  "subset": null,
+  "task_time_limit_s": 8.0,
+  "total_time_limit_s": 600.0,
+  "workers": 6,
+  "max_attempts": 2,
+  "tasks_in_run": 400,
+  "tests_in_run": 419,
+  "tasks_finished": 400,
+  "hit_total_time_cap": false,
+  "wall_seconds": 75.6,
+  "predictions_correct": 23,
+  "predictions_denominator": 419,
+  "tasks_solved": 20,
+  "tasks_denominator": 400,
+  "full_split_denominators": {
+    "predictions": 419,
+    "tasks": 400
+  },
+  "tests_with_any_attempt": 26,
+  "tasks_with_any_attempt": 23,
+  "precision_when_attempted": 0.8846,
+  "confidence_calibration": {
+    "0.50-0.75": {
+      "n": 3,
+      "correct": 2
+    },
+    "0.75-1.00": {
+      "n": 23,
+      "correct": 21
+    }
+  },
+  "solved_task_ids": [
+    "0c786b71",
+    "0c9aba6e",
+    "195ba7dc",
+    "31d5ba1a",
+    "34b99a2b",
+    "506d28a5",
+    "59341089",
+    "5d2a5c43",
+    "60c09cac",
+    "66f2d22f",
+    "68b67ca3",
+    "73182012",
+    "833dafe3",
+    "84db8fc4",
+    "9ddd00f0",
+    "be03b35f",
+    "bf699163",
+    "d19f7514",
+    "e133d23d",
+    "e345f17b"
+  ],
+  "environment": {
+    "command": "python3 evals/arc_agi/run.py --seed 20261021 --task-time-limit 8 --total-time-limit 600 --workers 6",
+    "python": "3.13.5",
+    "packages": {
+      "numpy": "2.5.4"
+    },
+    "platform": "Linux-6.12.94+-x86_64-with-glibc2.41",
+    "cpu": "Intel(R) Xeon(R) Processor",
+    "cpu_count": 8,
+    "git_commit": "953b4a45594a6e9975b5ccaed09a0ca7f5a6d344",
+    "git_dirty": false,
+    "dataset": {
+      "repo": "fchollet/ARC-AGI",
+      "commit": "399030444e0ab0cc8b4e199870fb20b863846f34",
+      "split": "data/evaluation",
+      "sha256_of_files": "4d9a15441fd20199f4fb419641ead13aaef357695abcc7e0ea243e3548a16dfb"
+    }
+  },
+  "utc_timestamp": "20261021T220320Z"
+}
