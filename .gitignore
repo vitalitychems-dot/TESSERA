@@ -109,3 +109,6 @@ config/secrets/*
 
 # Bus-history logger output (#11a): never commit, incl. rotated files
 **/data/bus-history.jsonl*
+
+# Bio scaffold voxels. The computer lane is the only writer of mesh/drops/live_feed.md.
+mesh/crystal_matrix

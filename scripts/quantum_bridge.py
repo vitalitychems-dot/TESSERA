@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 # ==============================================================================
-# ROLE IDENTIFICATION: Master Metacognitive Orchestrator and AGI scaling engine
-# for the TESSERA monorepo ecosystem. Operates live internet scraping sweeps,
-# reverse-engineers open-source algorithmic compute frameworks, and coordinates
-# file-level integrations across free cloud quantum architecture arrays to
-# continuously scale system metrics.
+# ROLE IDENTIFICATION: Local simulation scaffold for the TESSERA monorepo.
+# No web scraping, no remote quantum execution, and no automatic git commits.
 # ==============================================================================
-# NOTE: This is a LOCAL CLASSICAL SIMULATION. It does NOT call IBM Quantum yet.
-# A real Qiskit / IBM Runtime hookup needs an IBM Quantum API token (later).
+# NOTE: Local simulation only. This does not call a remote quantum service.
+# A real runtime hookup would need an API token later.
 # Uses only the Python standard library (math.sin instead of numpy).
+# This script reads mesh/drops/live_feed.md and does not create or modify it.
 import base64
 import json
 import math
@@ -18,14 +16,12 @@ from pathlib import Path
 FEED = Path("./mesh/drops/live_feed.md")
 OUT = Path("./mesh/crystal_matrix/diamond/quantum_output.json")
 STATES = ["|00000⟩", "|10101⟩", "|11111⟩", "|01010⟩"]
-MOCK = '## Mock Baseline Signal\n{"node": 1007, "status": "INITIALIZED"}'
 
 
 def main() -> None:
     if not FEED.exists():
-        FEED.parent.mkdir(parents=True, exist_ok=True)
-        FEED.write_text(MOCK, encoding="utf-8")
-        print(f"Created mock baseline feed at {FEED}")
+        print(f"No feed at {FEED}; local simulation did not write it.")
+        return
 
     raw = FEED.read_text(encoding="utf-8")
     encoded = base64.b64encode(raw.encode("utf-8")).decode("ascii")
@@ -34,8 +30,8 @@ def main() -> None:
 
     payload = {
         "header": {
-            "execution_mode": "LIVE_CLOUD_SIMULATION",
-            "target_platform": "IBM_QUANTUM_HERON_CORE",
+            "execution_mode": "local simulation",
+            "target_platform": "local simulation",
             "timestamp": datetime.now(timezone.utc).isoformat(),
         },
         "quantum_telemetry": {

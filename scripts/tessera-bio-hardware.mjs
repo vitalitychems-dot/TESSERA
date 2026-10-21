@@ -1,16 +1,14 @@
 // ==============================================================================
-// ROLE IDENTIFICATION: Master Metacognitive Orchestrator and AGI scaling engine
-// for the TESSERA monorepo ecosystem. Operates live internet scraping sweeps,
-// reverse-engineers open-source algorithmic compute frameworks, and coordinates
-// file-level integrations across free cloud quantum architecture arrays to
-// continuously scale system metrics.
+// ROLE IDENTIFICATION: Local simulation scaffold for the TESSERA monorepo.
+// No web scraping, no remote quantum execution, and no automatic git commits.
+// The computer lane is the only writer of mesh/drops/live_feed.md.
 // ==============================================================================
 // Simulation mode: no physical hardware is read yet; the substrate state is derived
 // from a harmonic computed over the dropped file. Model inference uses local Ollama.
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -19,7 +17,6 @@ const FILESYSTEM_CORE = {
   matrix_vault: path.join(REPO_ROOT, 'mesh', 'crystal_matrix'),
 };
 const FACETS = ['water', 'fire', 'lightning', 'diamond', 'spiral'];
-const PARSED_MARKER = '<!-- PARSED_BY_SOVEREIGN_AGI -->';
 
 class TesseraBioHardwareEngine {
   constructor() {
@@ -44,9 +41,10 @@ class TesseraBioHardwareEngine {
   }
 
   runLocalModel(bit, filePath) {
-    const prompt = `Analyze this file drop under biological state code ${bit}: ${filePath}`;
+    const fileContents = fs.readFileSync(filePath, 'utf8');
+    const prompt = `Analyze this dropped file under biological state code ${bit}.\n\n${fileContents}`;
     try {
-      return execSync(`ollama run llama3:8b ${JSON.stringify(prompt)}`, {
+      return execFileSync('ollama', ['run', 'llama3:8b', prompt], {
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'pipe'],
         timeout: 120000,
@@ -62,41 +60,27 @@ class TesseraBioHardwareEngine {
     const targetSignalFile = path.join(FILESYSTEM_CORE.incoming_drops, 'live_feed.md');
     if (!fs.existsSync(targetSignalFile)) return;
     const content = fs.readFileSync(targetSignalFile, 'utf8');
-    if (content.includes(PARSED_MARKER)) return;
+    const contentDigest = crypto.createHash('sha256').update(content).digest('hex').slice(0, 12);
+    const outFilePath = path.join(FILESYSTEM_CORE.matrix_vault, 'diamond', `voxel_${contentDigest}.json`);
+    if (fs.existsSync(outFilePath)) return;
 
     console.log('📡 New signal drop detected. Processing block cycle...');
     const freq = this.calculateTeslaHarmonic(content);
     const bioLogicalResponseBit = this.readLivingSubstrateState(freq);
     const inferenceOutput = this.runLocalModel(bioLogicalResponseBit, targetSignalFile);
 
-    const transactionTimestamp = new Date().toISOString();
-    const blockHashId = crypto
-      .createHash('sha256')
-      .update(transactionTimestamp + inferenceOutput)
-      .digest('hex')
-      .slice(0, 12);
-
     const finalCompiledPayload = {
-      header: { blockId: blockHashId, timestamp: transactionTimestamp, interface: 'LIVE_CONNECTED_SOVEREIGN_NODE' },
+      header: {
+        blockId: contentDigest,
+        timestamp: new Date().toISOString(),
+        interface: 'local simulation',
+      },
       computation: { biological_bit: bioLogicalResponseBit, model_deduction: inferenceOutput.trim() },
     };
-    const outFilePath = path.join(FILESYSTEM_CORE.matrix_vault, 'diamond', `voxel_${blockHashId}.json`);
     fs.writeFileSync(outFilePath, JSON.stringify(finalCompiledPayload, null, 2), 'utf8');
     console.log(`💎 Block logged: ${path.basename(outFilePath)}`);
-
-    fs.appendFileSync(targetSignalFile, `\n${PARSED_MARKER}\n<!-- TIMELOCK: ${transactionTimestamp} -->\n`);
-
-    try {
-      execSync('git add mesh', { cwd: REPO_ROOT, stdio: 'ignore' });
-      execSync('git commit -m "sync: live bio-mesh loop tracking"', { cwd: REPO_ROOT, stdio: 'ignore' });
-      console.log('📂 Committed block to local git.');
-    } catch {
-      console.log('📂 Git commit skipped (nothing to commit or git unavailable).');
-    }
-    console.log('🎯 Loop reset. Armed for next drop.');
   }
 }
 
 const engine = new TesseraBioHardwareEngine();
 engine.processSovereignBlockCycle();
-setInterval(() => engine.processSovereignBlockCycle(), 10000);
