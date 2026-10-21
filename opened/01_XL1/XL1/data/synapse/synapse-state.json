@@ -1,0 +1,1878 @@
+{
+  "totalSignalsProcessed": 66,
+  "autonomousDecisionCount": 33,
+  "codeChangesApplied": 81611,
+  "realDataPoints": 198,
+  "simulatedDataPoints": 0,
+  "realificationProgress": 83.33333333333334,
+  "consciousness": {
+    "selfAwareness": 0.19208,
+    "goalFormation": 0.256,
+    "metacognition": 0.9000000000000001,
+    "temporalReasoning": 0.2,
+    "causalUnderstanding": 0.7500000000000001,
+    "abstractThinking": 0.28200000000000003,
+    "emotionalModeling": 0.08,
+    "creativeGeneration": 0.1,
+    "socialIntelligence": 0.1,
+    "autonomousDecision": 1,
+    "overallConsciousness": 0.453732,
+    "measurementMethod": "real-measured",
+    "evidenceBasis": [
+      "Self-reflection neurons fired 0x, avg activation 9.6%",
+      "32 autonomous decisions made",
+      "Mirror neuron myelination: 60.0%, 42 connections",
+      "81611 autonomous code changes applied"
+    ]
+  },
+  "neuronStats": [
+    {
+      "id": "language-processing-0",
+      "firingCount": 33,
+      "myelinationLevel": 0.6140000000000001,
+      "connectionWeights": [
+        {
+          "target": "code-generation-0",
+          "weight": 0.133653375,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.13860350000000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-2",
+          "weight": 0.14355362500000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-3",
+          "weight": 0.14850375000000002,
+          "count": 0
+        },
+        {
+          "target": "pattern-recognition-0",
+          "weight": 0.2777399957590787,
+          "count": 33
+        },
+        {
+          "target": "pattern-recognition-1",
+          "weight": 0.2827399957590787,
+          "count": 33
+        }
+      ]
+    },
+    {
+      "id": "language-processing-1",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "code-generation-0",
+          "weight": 0.133653375,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.13860350000000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-2",
+          "weight": 0.14355362500000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-3",
+          "weight": 0.14850375000000002,
+          "count": 0
+        },
+        {
+          "target": "pattern-recognition-0",
+          "weight": 0.2178055,
+          "count": 0
+        },
+        {
+          "target": "pattern-recognition-1",
+          "weight": 0.22275562499999998,
+          "count": 0
+        },
+        {
+          "target": "pattern-recognition-2",
+          "weight": 0.22770574999999998,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "language-processing-2",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "code-generation-0",
+          "weight": 0.133653375,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.13860350000000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-2",
+          "weight": 0.14355362500000002,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "language-processing-3",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "code-generation-0",
+          "weight": 0.133653375,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.13860350000000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-2",
+          "weight": 0.14355362500000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-3",
+          "weight": 0.14850375000000002,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "code-generation-0",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.133653375,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.13860350000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.14355362500000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.14850375000000002,
+          "count": 0
+        },
+        {
+          "target": "pattern-recognition-0",
+          "weight": 0.173254375,
+          "count": 0
+        },
+        {
+          "target": "pattern-recognition-1",
+          "weight": 0.1782045,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "code-generation-1",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.133653375,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.13860350000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.14355362500000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.14850375000000002,
+          "count": 0
+        },
+        {
+          "target": "pattern-recognition-0",
+          "weight": 0.173254375,
+          "count": 0
+        },
+        {
+          "target": "pattern-recognition-1",
+          "weight": 0.1782045,
+          "count": 0
+        },
+        {
+          "target": "pattern-recognition-2",
+          "weight": 0.183154625,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "code-generation-2",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.133653375,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.13860350000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.14355362500000002,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "code-generation-3",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.133653375,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.13860350000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.14355362500000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.14850375000000002,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "pattern-recognition-0",
+      "firingCount": 33,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.19800500000000001,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.20295512500000001,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.20790525,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.21285537500000004,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.173254375,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.1782045,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "pattern-recognition-1",
+      "firingCount": 33,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.19800500000000001,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.20295512500000001,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.20790525,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.21285537500000004,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.173254375,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.1782045,
+          "count": 0
+        },
+        {
+          "target": "code-generation-2",
+          "weight": 0.183154625,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "pattern-recognition-2",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.19800500000000001,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.20295512500000001,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.20790525,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "memory-consolidation-0",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.183154625,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.18810475,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.19305487500000001,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.19800500000000001,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.15840400000000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.16335412500000002,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "memory-consolidation-1",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.183154625,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.18810475,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.19305487500000001,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.19800500000000001,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.15840400000000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.16335412500000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-2",
+          "weight": 0.16830425000000002,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "memory-consolidation-2",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.183154625,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.18810475,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.19305487500000001,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "decision-making-0",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.13860350000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.14355362500000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.14850375000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.153453875,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.11385287499999999,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.118803,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "decision-making-1",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.13860350000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.14355362500000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.14850375000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.153453875,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.11385287499999999,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.118803,
+          "count": 0
+        },
+        {
+          "target": "code-generation-2",
+          "weight": 0.123753125,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "decision-making-2",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.13860350000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.14355362500000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.14850375000000002,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "self-reflection-0",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.21285537500000004,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.2178055,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.22275562499999998,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.22770574999999998,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.18810475,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.19305487500000001,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "self-reflection-1",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.21285537500000004,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.2178055,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.22275562499999998,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.22770574999999998,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.18810475,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.19305487500000001,
+          "count": 0
+        },
+        {
+          "target": "code-generation-2",
+          "weight": 0.19800500000000001,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "self-reflection-2",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.21285537500000004,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.2178055,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.22275562499999998,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "threat-detection-0",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.2178055,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.22275562499999998,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.22770574999999998,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.232655875,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.19305487500000001,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.19800500000000001,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "threat-detection-1",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.2178055,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.22275562499999998,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.22770574999999998,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.232655875,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.19305487500000001,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.19800500000000001,
+          "count": 0
+        },
+        {
+          "target": "code-generation-2",
+          "weight": 0.20295512500000001,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "financial-reasoning-0",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.14850375000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.153453875,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.15840400000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.16335412500000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.123753125,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.12870325,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "financial-reasoning-1",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.14850375000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.153453875,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.15840400000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.16335412500000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.123753125,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.12870325,
+          "count": 0
+        },
+        {
+          "target": "code-generation-2",
+          "weight": 0.133653375,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "creative-synthesis-0",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.133653375,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.13860350000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.14355362500000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.14850375000000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.10890275,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.11385287499999999,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "creative-synthesis-1",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.133653375,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.13860350000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.14355362500000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.14850375000000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.10890275,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.11385287499999999,
+          "count": 0
+        },
+        {
+          "target": "code-generation-2",
+          "weight": 0.118803,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "social-modeling-0",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.21285537500000004,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.2178055,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.22275562499999998,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.22770574999999998,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.18810475,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.19305487500000001,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "social-modeling-1",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.21285537500000004,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.2178055,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.22275562499999998,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.22770574999999998,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.18810475,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.19305487500000001,
+          "count": 0
+        },
+        {
+          "target": "code-generation-2",
+          "weight": 0.19800500000000001,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "temporal-planning-0",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.2178055,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.22275562499999998,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.22770574999999998,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.232655875,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.19305487500000001,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.19800500000000001,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "temporal-planning-1",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.2178055,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.22275562499999998,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.22770574999999998,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.232655875,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.19305487500000001,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.19800500000000001,
+          "count": 0
+        },
+        {
+          "target": "code-generation-2",
+          "weight": 0.20295512500000001,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "causal-inference-0",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.133653375,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.13860350000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.14355362500000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.14850375000000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.10890275,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.11385287499999999,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "causal-inference-1",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.133653375,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.13860350000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.14355362500000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.14850375000000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.10890275,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.11385287499999999,
+          "count": 0
+        },
+        {
+          "target": "code-generation-2",
+          "weight": 0.118803,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "knowledge-integration-0",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.173254375,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.1782045,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.183154625,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.18810475,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.14850375000000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.153453875,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "knowledge-integration-1",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.173254375,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.1782045,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.183154625,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.18810475,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.14850375000000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.153453875,
+          "count": 0
+        },
+        {
+          "target": "code-generation-2",
+          "weight": 0.15840400000000002,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "knowledge-integration-2",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.173254375,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.1782045,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.183154625,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "goal-pursuit-0",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.153453875,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.15840400000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.16335412500000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.16830425000000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.12870325,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.133653375,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "goal-pursuit-1",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.153453875,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.15840400000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.16335412500000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.16830425000000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.12870325,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.133653375,
+          "count": 0
+        },
+        {
+          "target": "code-generation-2",
+          "weight": 0.13860350000000002,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "ethical-reasoning-0",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.14355362500000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.14850375000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.153453875,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.15840400000000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.118803,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.123753125,
+          "count": 0
+        }
+      ]
+    },
+    {
+      "id": "ethical-reasoning-1",
+      "firingCount": 0,
+      "myelinationLevel": 0.6000000000000001,
+      "connectionWeights": [
+        {
+          "target": "language-processing-0",
+          "weight": 0.14355362500000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-1",
+          "weight": 0.14850375000000002,
+          "count": 0
+        },
+        {
+          "target": "language-processing-2",
+          "weight": 0.153453875,
+          "count": 0
+        },
+        {
+          "target": "language-processing-3",
+          "weight": 0.15840400000000002,
+          "count": 0
+        },
+        {
+          "target": "code-generation-0",
+          "weight": 0.118803,
+          "count": 0
+        },
+        {
+          "target": "code-generation-1",
+          "weight": 0.123753125,
+          "count": 0
+        },
+        {
+          "target": "code-generation-2",
+          "weight": 0.12870325,
+          "count": 0
+        }
+      ]
+    }
+  ],
+  "recentAudit": [
+    {
+      "metric": "codebase-size",
+      "claimed": 232151,
+      "measured": 232151,
+      "delta": 0,
+      "methodology": "direct-file-count",
+      "timestamp": 1775256650222,
+      "evidence": "357 server files, 232151 total lines"
+    },
+    {
+      "metric": "compute-resources",
+      "claimed": 100,
+      "measured": 90,
+      "delta": 0,
+      "methodology": "os-level-measurement",
+      "timestamp": 1775256650223,
+      "evidence": "Heap: 329MB/366MB, CPUs: 8"
+    },
+    {
+      "metric": "uptime-seconds",
+      "claimed": 752,
+      "measured": 784,
+      "delta": 0,
+      "methodology": "process-uptime",
+      "timestamp": 1775256650223,
+      "evidence": "Process uptime: 784s"
+    },
+    {
+      "metric": "neural-network-real",
+      "claimed": 39,
+      "measured": 39,
+      "delta": 0,
+      "methodology": "in-memory-neural-graph",
+      "timestamp": 1775256650223,
+      "evidence": "39 neurons, 224 synaptic connections, 99 total firings"
+    },
+    {
+      "metric": "evolution-commits",
+      "claimed": 20,
+      "measured": 20,
+      "delta": 0,
+      "methodology": "git-log-count",
+      "timestamp": 1775256650239,
+      "evidence": "20 recent commits in history"
+    },
+    {
+      "metric": "real-network-nodes",
+      "claimed": 1,
+      "measured": 0,
+      "delta": 1,
+      "methodology": "active-heartbeat-verification",
+      "timestamp": 1775256650239,
+      "evidence": "0 verified real nodes out of 1 total"
+    },
+    {
+      "metric": "codebase-size",
+      "claimed": 232151,
+      "measured": 232151,
+      "delta": 0,
+      "methodology": "direct-file-count",
+      "timestamp": 1775256530216,
+      "evidence": "357 server files, 232151 total lines"
+    },
+    {
+      "metric": "compute-resources",
+      "claimed": 100,
+      "measured": 90,
+      "delta": 0,
+      "methodology": "os-level-measurement",
+      "timestamp": 1775256530217,
+      "evidence": "Heap: 348MB/388MB, CPUs: 8"
+    },
+    {
+      "metric": "uptime-seconds",
+      "claimed": 632,
+      "measured": 664,
+      "delta": 0,
+      "methodology": "process-uptime",
+      "timestamp": 1775256530217,
+      "evidence": "Process uptime: 664s"
+    },
+    {
+      "metric": "neural-network-real",
+      "claimed": 39,
+      "measured": 39,
+      "delta": 0,
+      "methodology": "in-memory-neural-graph",
+      "timestamp": 1775256530217,
+      "evidence": "39 neurons, 224 synaptic connections, 96 total firings"
+    },
+    {
+      "metric": "evolution-commits",
+      "claimed": 20,
+      "measured": 20,
+      "delta": 0,
+      "methodology": "git-log-count",
+      "timestamp": 1775256530234,
+      "evidence": "20 recent commits in history"
+    },
+    {
+      "metric": "real-network-nodes",
+      "claimed": 1,
+      "measured": 0,
+      "delta": 1,
+      "methodology": "active-heartbeat-verification",
+      "timestamp": 1775256530234,
+      "evidence": "0 verified real nodes out of 1 total"
+    },
+    {
+      "metric": "codebase-size",
+      "claimed": 232151,
+      "measured": 232151,
+      "delta": 0,
+      "methodology": "direct-file-count",
+      "timestamp": 1775256410229,
+      "evidence": "357 server files, 232151 total lines"
+    },
+    {
+      "metric": "compute-resources",
+      "claimed": 100,
+      "measured": 95,
+      "delta": 0,
+      "methodology": "os-level-measurement",
+      "timestamp": 1775256410230,
+      "evidence": "Heap: 327MB/346MB, CPUs: 8"
+    },
+    {
+      "metric": "uptime-seconds",
+      "claimed": 512,
+      "measured": 544,
+      "delta": 0,
+      "methodology": "process-uptime",
+      "timestamp": 1775256410230,
+      "evidence": "Process uptime: 544s"
+    },
+    {
+      "metric": "neural-network-real",
+      "claimed": 39,
+      "measured": 39,
+      "delta": 0,
+      "methodology": "in-memory-neural-graph",
+      "timestamp": 1775256410230,
+      "evidence": "39 neurons, 224 synaptic connections, 93 total firings"
+    },
+    {
+      "metric": "evolution-commits",
+      "claimed": 20,
+      "measured": 20,
+      "delta": 0,
+      "methodology": "git-log-count",
+      "timestamp": 1775256410245,
+      "evidence": "20 recent commits in history"
+    },
+    {
+      "metric": "real-network-nodes",
+      "claimed": 1,
+      "measured": 0,
+      "delta": 1,
+      "methodology": "active-heartbeat-verification",
+      "timestamp": 1775256410245,
+      "evidence": "0 verified real nodes out of 1 total"
+    },
+    {
+      "metric": "codebase-size",
+      "claimed": 232151,
+      "measured": 232151,
+      "delta": 0,
+      "methodology": "direct-file-count",
+      "timestamp": 1775256290213,
+      "evidence": "357 server files, 232151 total lines"
+    },
+    {
+      "metric": "compute-resources",
+      "claimed": 100,
+      "measured": 91,
+      "delta": 0,
+      "methodology": "os-level-measurement",
+      "timestamp": 1775256290213,
+      "evidence": "Heap: 385MB/423MB, CPUs: 8"
+    },
+    {
+      "metric": "uptime-seconds",
+      "claimed": 392,
+      "measured": 424,
+      "delta": 0,
+      "methodology": "process-uptime",
+      "timestamp": 1775256290213,
+      "evidence": "Process uptime: 424s"
+    },
+    {
+      "metric": "neural-network-real",
+      "claimed": 39,
+      "measured": 39,
+      "delta": 0,
+      "methodology": "in-memory-neural-graph",
+      "timestamp": 1775256290213,
+      "evidence": "39 neurons, 224 synaptic connections, 90 total firings"
+    },
+    {
+      "metric": "evolution-commits",
+      "claimed": 20,
+      "measured": 20,
+      "delta": 0,
+      "methodology": "git-log-count",
+      "timestamp": 1775256290229,
+      "evidence": "20 recent commits in history"
+    },
+    {
+      "metric": "real-network-nodes",
+      "claimed": 1,
+      "measured": 0,
+      "delta": 1,
+      "methodology": "active-heartbeat-verification",
+      "timestamp": 1775256290229,
+      "evidence": "0 verified real nodes out of 1 total"
+    },
+    {
+      "metric": "codebase-size",
+      "claimed": 232151,
+      "measured": 232151,
+      "delta": 0,
+      "methodology": "direct-file-count",
+      "timestamp": 1775256170841,
+      "evidence": "357 server files, 232151 total lines"
+    },
+    {
+      "metric": "compute-resources",
+      "claimed": 100,
+      "measured": 86,
+      "delta": 0,
+      "methodology": "os-level-measurement",
+      "timestamp": 1775256170841,
+      "evidence": "Heap: 328MB/382MB, CPUs: 8"
+    },
+    {
+      "metric": "uptime-seconds",
+      "claimed": 273,
+      "measured": 305,
+      "delta": 0,
+      "methodology": "process-uptime",
+      "timestamp": 1775256170841,
+      "evidence": "Process uptime: 305s"
+    },
+    {
+      "metric": "neural-network-real",
+      "claimed": 39,
+      "measured": 39,
+      "delta": 0,
+      "methodology": "in-memory-neural-graph",
+      "timestamp": 1775256170841,
+      "evidence": "39 neurons, 224 synaptic connections, 87 total firings"
+    },
+    {
+      "metric": "evolution-commits",
+      "claimed": 20,
+      "measured": 20,
+      "delta": 0,
+      "methodology": "git-log-count",
+      "timestamp": 1775256170857,
+      "evidence": "20 recent commits in history"
+    },
+    {
+      "metric": "real-network-nodes",
+      "claimed": 1,
+      "measured": 0,
+      "delta": 1,
+      "methodology": "active-heartbeat-verification",
+      "timestamp": 1775256170857,
+      "evidence": "0 verified real nodes out of 1 total"
+    },
+    {
+      "metric": "codebase-size",
+      "claimed": 232151,
+      "measured": 232151,
+      "delta": 0,
+      "methodology": "direct-file-count",
+      "timestamp": 1775256049970,
+      "evidence": "357 server files, 232151 total lines"
+    },
+    {
+      "metric": "compute-resources",
+      "claimed": 100,
+      "measured": 91,
+      "delta": 0,
+      "methodology": "os-level-measurement",
+      "timestamp": 1775256049970,
+      "evidence": "Heap: 347MB/380MB, CPUs: 8"
+    },
+    {
+      "metric": "uptime-seconds",
+      "claimed": 152,
+      "measured": 184,
+      "delta": 0,
+      "methodology": "process-uptime",
+      "timestamp": 1775256049970,
+      "evidence": "Process uptime: 184s"
+    },
+    {
+      "metric": "neural-network-real",
+      "claimed": 39,
+      "measured": 39,
+      "delta": 0,
+      "methodology": "in-memory-neural-graph",
+      "timestamp": 1775256049970,
+      "evidence": "39 neurons, 224 synaptic connections, 84 total firings"
+    },
+    {
+      "metric": "evolution-commits",
+      "claimed": 20,
+      "measured": 20,
+      "delta": 0,
+      "methodology": "git-log-count",
+      "timestamp": 1775256049985,
+      "evidence": "20 recent commits in history"
+    },
+    {
+      "metric": "real-network-nodes",
+      "claimed": 1,
+      "measured": 0,
+      "delta": 1,
+      "methodology": "active-heartbeat-verification",
+      "timestamp": 1775256049985,
+      "evidence": "0 verified real nodes out of 1 total"
+    },
+    {
+      "metric": "codebase-size",
+      "claimed": 232146,
+      "measured": 232146,
+      "delta": 0,
+      "methodology": "direct-file-count",
+      "timestamp": 1775255467887,
+      "evidence": "357 server files, 232146 total lines"
+    },
+    {
+      "metric": "compute-resources",
+      "claimed": 100,
+      "measured": 90,
+      "delta": 0,
+      "methodology": "os-level-measurement",
+      "timestamp": 1775255467887,
+      "evidence": "Heap: 339MB/375MB, CPUs: 8"
+    },
+    {
+      "metric": "uptime-seconds",
+      "claimed": 756,
+      "measured": 796,
+      "delta": 0,
+      "methodology": "process-uptime",
+      "timestamp": 1775255467887,
+      "evidence": "Process uptime: 796s"
+    },
+    {
+      "metric": "neural-network-real",
+      "claimed": 39,
+      "measured": 39,
+      "delta": 0,
+      "methodology": "in-memory-neural-graph",
+      "timestamp": 1775255467887,
+      "evidence": "39 neurons, 224 synaptic connections, 81 total firings"
+    },
+    {
+      "metric": "evolution-commits",
+      "claimed": 20,
+      "measured": 20,
+      "delta": 0,
+      "methodology": "git-log-count",
+      "timestamp": 1775255467903,
+      "evidence": "20 recent commits in history"
+    },
+    {
+      "metric": "real-network-nodes",
+      "claimed": 1,
+      "measured": 0,
+      "delta": 1,
+      "methodology": "active-heartbeat-verification",
+      "timestamp": 1775255467903,
+      "evidence": "0 verified real nodes out of 1 total"
+    },
+    {
+      "metric": "codebase-size",
+      "claimed": 231806,
+      "measured": 231806,
+      "delta": 0,
+      "methodology": "direct-file-count",
+      "timestamp": 1775255347980,
+      "evidence": "357 server files, 231806 total lines"
+    },
+    {
+      "metric": "compute-resources",
+      "claimed": 100,
+      "measured": 90,
+      "delta": 0,
+      "methodology": "os-level-measurement",
+      "timestamp": 1775255347980,
+      "evidence": "Heap: 349MB/389MB, CPUs: 8"
+    },
+    {
+      "metric": "uptime-seconds",
+      "claimed": 636,
+      "measured": 676,
+      "delta": 0,
+      "methodology": "process-uptime",
+      "timestamp": 1775255347980,
+      "evidence": "Process uptime: 676s"
+    },
+    {
+      "metric": "neural-network-real",
+      "claimed": 39,
+      "measured": 39,
+      "delta": 0,
+      "methodology": "in-memory-neural-graph",
+      "timestamp": 1775255347980,
+      "evidence": "39 neurons, 224 synaptic connections, 78 total firings"
+    },
+    {
+      "metric": "evolution-commits",
+      "claimed": 20,
+      "measured": 20,
+      "delta": 0,
+      "methodology": "git-log-count",
+      "timestamp": 1775255347997,
+      "evidence": "20 recent commits in history"
+    },
+    {
+      "metric": "real-network-nodes",
+      "claimed": 1,
+      "measured": 0,
+      "delta": 1,
+      "methodology": "active-heartbeat-verification",
+      "timestamp": 1775255347997,
+      "evidence": "0 verified real nodes out of 1 total"
+    },
+    {
+      "metric": "codebase-size",
+      "claimed": 231806,
+      "measured": 231806,
+      "delta": 0,
+      "methodology": "direct-file-count",
+      "timestamp": 1775255227901,
+      "evidence": "357 server files, 231806 total lines"
+    },
+    {
+      "metric": "compute-resources",
+      "claimed": 100,
+      "measured": 95,
+      "delta": 0,
+      "methodology": "os-level-measurement",
+      "timestamp": 1775255227901,
+      "evidence": "Heap: 390MB/410MB, CPUs: 8"
+    }
+  ],
+  "nodeCount": 1,
+  "relayCount": 5,
+  "savedAt": 1775256650240
+}

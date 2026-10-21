@@ -1,0 +1,1298 @@
+{
+  "chainLength": 43,
+  "blocks": [
+    {
+      "index": 0,
+      "timestamp": 1775186870371,
+      "data": {
+        "type": "genesis",
+        "message": "Tesseract Sovereign Blockchain — Genesis Block",
+        "tsrtContract": "FMB4v2RaHSMfJDwijqAij7ouTowK2rz6yW95Z94spump"
+      },
+      "dataHash": "aeebad4a796fcc2e15dc4c6061b45ed9b373f26adfc798ca7d2d8cc58182718e",
+      "previousHash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "hash": "00433c7059af5783ac7c639e5d2af0f06dbe4782bbd9c209c1e4bc2bf336911f",
+      "nonce": 242,
+      "encrypted": false,
+      "ephemeral": false
+    },
+    {
+      "index": 1,
+      "timestamp": 1775186870373,
+      "data": "fc6688e7485df1dcfd27ced7749a5c0e:18468342f373eaee41ab7183f5afcb2ec2af47603e2dedba35cc00645a69b97b8ab76f7a0b810618c77ab98d9f2dfe5c75946fdf50e58f77790c2978e3ee90d33addfa556eb0ad834e0909127a6fc5e7a739db03f21d9335071486eb0e7324b39d5e70d3836830a10891883a8cb387d6aa32dae2cfab40460c08cda7e9829bc8bd7e321cd8523fc56f9fa94623efd102dcbee695c7067dbf122ee643123133a3b601bbe09c22c653d1c94a4b04e6963240b60322dd7de76cbd86398df4d35565",
+      "dataHash": "474239c9642e07c52f7741799f76300a63b3b4d6b87c6529c963b7cea8944878",
+      "previousHash": "00433c7059af5783ac7c639e5d2af0f06dbe4782bbd9c209c1e4bc2bf336911f",
+      "nonce": 141,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00b369aec730bd85b1de5d41b5579225760cd8854807245d379b42efda333ef4"
+    },
+    {
+      "index": 2,
+      "timestamp": 1775186870374,
+      "data": "bb2785783d429674f70c7f48fb614c3c:cbd8754547e299f2ec550911c9052ac23e804a3361440f2b3dba46b170f69ca520a08567d5a92f1c368118d073eb55859d047d24a0d0743017ddd2c8fb759fa4f29bc41afbd1fcc19a3ea9870e80343b",
+      "dataHash": "a5e2381e5a5ad90e2b89a9d077dffd2a0046d99fa6ecdbd692f1397e3c1b4375",
+      "previousHash": "00b369aec730bd85b1de5d41b5579225760cd8854807245d379b42efda333ef4",
+      "nonce": 143,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00df0809281637baea75f7b7a700de36815864090a7d27bfbeaf5a1b70bc5a8f"
+    },
+    {
+      "index": 3,
+      "timestamp": 1775187615403,
+      "data": "7da50309c3ddfe7298fa83320c62cce7:ebe3d4ea2ef923f92d61f1dfb0e4460f6fbdca0c0e7513244f192dc476a21e09236eb702f5a2776564fdab3cb50329246fb203cca75001741761403c5bfe0cac86ecf2d7a7ae58b995e0154d7317db835268446fad2e75e15fc0db675f1e4d8553a951b2d3448952bc82e612ec338bf43c14804b04c211984b6a4bfe44625897a5ff3f84e9c0530f331ec806a525505673225977ae7f1381d779701a9e210ab035f6442c230ff9dd5d8a08a82b12e9c469bb5ea1ab3c80abe07a13abd5e1c00f",
+      "dataHash": "8cfb5d240c1963473543c26511a112da269ff91c92317cc99909b504af608020",
+      "previousHash": "00df0809281637baea75f7b7a700de36815864090a7d27bfbeaf5a1b70bc5a8f",
+      "nonce": 370,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00174613adb85e2fb34796a458720d56ab7ebdeead191b102c0672325828970d"
+    },
+    {
+      "index": 4,
+      "timestamp": 1775187615405,
+      "data": "548a19ecbf6e1f2c0971de65762c8c30:8cb8c3c9aedb0faada4497e6f15c1e2103c1d00d6999c62d4da7357aab2b773b5461c45286c49b08fe95da23ec10061bca7a628901a596da9d03f6f1250e9b59fa71da2f4200d3df3328ab94ba5096f0",
+      "dataHash": "f3fc7d7bdc0cb6cf057ff6e3a3a962f0cf911fe929d2b762113681738eaeb8e9",
+      "previousHash": "00174613adb85e2fb34796a458720d56ab7ebdeead191b102c0672325828970d",
+      "nonce": 17,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "009e7fc8e2ffe678a79ca73d3dc79243b3dcde3978f9de0a1b4b06b5eb6c024a"
+    },
+    {
+      "index": 5,
+      "timestamp": 1775188795198,
+      "data": "40638e5283ee492e7e775b1f8ebba1fd:a6e41c3591e0c7dd6f143e4401b04e5976d0fe37c4075b4e43698abf3c974c6d61973fff9c0f44b97b0d4c1eb783a73ba7c62683aed39ebc342defacdbff48778ff2bc7221f54a061c8f32ccc7e8d0a98f5504b2a70c1e6a971e42b685fd098bdf01393b2c83d13b497682790f6241a8e021df5d9045c0a1914b5713c956a51573f5cf5683cf1cb7a0dc0bd0668da17898467b312b00d2d971e7e402875778edba21cdcdbe00bb5fa26040eb5b722d42ab0c35f529a9f5fb9942cfdf7666a80e",
+      "dataHash": "7cd76878754a4a7d4c1128db37ac6bf674e544876fefb4b922df045bba3a5590",
+      "previousHash": "009e7fc8e2ffe678a79ca73d3dc79243b3dcde3978f9de0a1b4b06b5eb6c024a",
+      "nonce": 125,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "009cf2dd0df1d5831478fbc93b7bb24e8b0f7bd195f60fd0e6bfbd28672a03e2"
+    },
+    {
+      "index": 6,
+      "timestamp": 1775188795199,
+      "data": "45beb7de5ae8fda382ae0c6c3688e650:fd054a5bf5eca16f0e077d6daee47abb061a4a70a207b821b56e66465c525f8e34913beeebe235016cde075336397abc895a0210acf5db18fbf81e9dc67adb2ddd3df2c87284f03faa51d5740da06efb",
+      "dataHash": "df06189b0eec4dc4ae09bb625a505cf247db1c360f6148e7ca5fbdf892e57f30",
+      "previousHash": "009cf2dd0df1d5831478fbc93b7bb24e8b0f7bd195f60fd0e6bfbd28672a03e2",
+      "nonce": 10,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "000ca37001f6cc038cc83f43c813ea46a89c2bc65e9a27f1f9d3e4cc4577561e"
+    },
+    {
+      "index": 7,
+      "timestamp": 1775190851082,
+      "data": "eac67b55b83fac9ae36fe7fc5aa8ae0b:ee48e726b267d0610c33a77380a6225a1ec3e5951e8ec963237eb6b38a4deea07750c65e05c7b9c2d3d4458faedb7d7789258a59ba1cc1bfd775343d87dedec7eb8374071ea7c02125aa61f8e02eb4f9d754bfb8b45318eaafa5732f76b5d31cb367741049fea2c90cf5da13b57eab47aa9f7bee5a99dcc2746c7c9c892d48af80a9332682dcb0a9e9483b97d7d5516c0e04f1bf390e5d10b9abf29b4f0b3d15d1aa4b3c5708cee7cfc7056701c9506f4147ae7c987a98874f27b75dfc432746",
+      "dataHash": "d3b14b7dfb08e976f95b582d6b3186601ffd49d26883d4abbe6db148f4e9cc2f",
+      "previousHash": "000ca37001f6cc038cc83f43c813ea46a89c2bc65e9a27f1f9d3e4cc4577561e",
+      "nonce": 1626,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00d287b4b8d0a6880337d2eb0a32f96d1e32e82524e9d36052e1323657c6d0ef"
+    },
+    {
+      "index": 8,
+      "timestamp": 1775190851087,
+      "data": "97d837535a361417ea13f64e7f7c015d:c3a64840769114ae96f8ac04f737d745779f9a50481a0c0b2bb70ab7b4116ac1fe56fff456f7b7fdd9f8e85c81695d0cf3aad2dc922d6eee787ea8110b8b6254636c2125a646a7302f5ec2f78941af42",
+      "dataHash": "83baeea60dc7b2e882f706d901f1a79f9642c7e9ff80d97a85eb244210f3c64d",
+      "previousHash": "00d287b4b8d0a6880337d2eb0a32f96d1e32e82524e9d36052e1323657c6d0ef",
+      "nonce": 93,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "003ffd65164e79f07af9dfb51907c8caa6001046061bb831d0a64d9faa005457"
+    },
+    {
+      "index": 9,
+      "timestamp": 1775191775257,
+      "data": "aedd7f52c5f7c9c8ebfabbb1e6bc55c8:16a5c4cc942b4886e187145f02e889e02712ac932c0255cd57b05ca110a9cc6ba6c87c144f28278442c33d744cd9fe7cd010b7c0141fd6227cb2f1005b3fd52dcc58454bc7da9e050c7f2e5f35fe7c5b55afe0054f34610d88c73e57dfaacb587704907b6a93cc18acdc2a54c91d4a3e0a92de8a930ee568945c73a4983af6906bc720d24fad448e9a3db1acd5ba23a56e21e0b3d38d939f6ad06899785bb18d46c6ec6278c3a73e36f55496afd20281393f2e7c10b0441d9941117f3c45fc8d",
+      "dataHash": "8de690abc80a4b2bdaa9757632ba26bd0004ae377ddc9e214a345b633250cd6c",
+      "previousHash": "003ffd65164e79f07af9dfb51907c8caa6001046061bb831d0a64d9faa005457",
+      "nonce": 616,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00edb7daa8bcad931a07d9589c2b737460f1c54454dd0ab989194a3ea8411c5f"
+    },
+    {
+      "index": 10,
+      "timestamp": 1775191775261,
+      "data": "de6b08cb950906546da3f3e7b430c3ec:883aa13265e6a0dfb26c965070ab242556dd844bf05bbd0f19ec3f824ad1657e016ae273b5adb7f7d495289b1decfdbc8c1c551c25a9614978a3e0ec2adc0c54d637a788c364561cbebe42dbd5dd0406",
+      "dataHash": "1e307c01af5b781c0a097b04f6c0e0b36e0bf1f713916489da234da14804d781",
+      "previousHash": "00edb7daa8bcad931a07d9589c2b737460f1c54454dd0ab989194a3ea8411c5f",
+      "nonce": 285,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "000484c448d7572fd94e4291acadb3b53d20aa0c43185f0f2ee56b9c5b186d8f"
+    },
+    {
+      "index": 11,
+      "timestamp": 1775193096823,
+      "data": "1823e785843c5d0a94fecd49b2c287b2:ca8ba154a60b2027597824ad42f4718443202913d33616c6fa69e2a41f5c7f0e80abe963bf1d59e3a5fa2538d9f2f8edda95e74eeb82b3312db9fedfd98e12232da4bfca900c41639d4799b453c75515933aefcb8ee65cc06d9ed8485dbaa0d9a60334986089dd68da676868ddd3deba2d095b34e2e89626d9d72e15559267095fd2af086783664a389913fec7971d40c8e05a3c10a4603b6903e8b474d896b0d652179529edab92f5275b4afd2655467c588622d22494c88bbcaff8617b4224",
+      "dataHash": "21c3ad64ad50c130aade432d1fe068fd37c0b42fc65da15bb543074e700edd57",
+      "previousHash": "000484c448d7572fd94e4291acadb3b53d20aa0c43185f0f2ee56b9c5b186d8f",
+      "nonce": 475,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00881df7bb1ec523662c7879ba4c2bc683779c5520e333f6221811b364ff615d"
+    },
+    {
+      "index": 12,
+      "timestamp": 1775193096826,
+      "data": "71c216c3deef6ec45f0c0966ddfdfacd:849a9ce6fb6732f33ac5acc7104dff509a35931f8a29f1ec369cfdd3680fc012bf5042a50d23acffe149fbcda3d60f576c085b469eabeea5c66fc5e37e1bf3e7528cccb895bfbc718582ad417e50dfa4",
+      "dataHash": "b5ae22089514018565b6a05b3c34cabfefe82bbd794624287181e13656fa461f",
+      "previousHash": "00881df7bb1ec523662c7879ba4c2bc683779c5520e333f6221811b364ff615d",
+      "nonce": 468,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00e6f47e4628c783df0e98f30cc63beb84fd1f811ebf7d07645584bf1e56abc7"
+    },
+    {
+      "index": 13,
+      "timestamp": 1775194428665,
+      "data": "26ae38c3de7a02093b6cd6ffd7bf6048:817f5c62f5bd372de044826b6651fa23b33b8eb3a01e4b5d3a6f5d5841119fe53d948c83207646bba277b073ac90b686b2adfa5993d58c03a9d9d43e4a6a99e4d17983e2c7b803e765cce5248a777f85f2989240b3683f324f56255b14df3a5d798b4122a121d186503381afb6ddfe9b928460c609507482a909112522e59112547e38cd80464ca206537d464b34ebcdf580b78357de79a465a4afce0d0e432f351c51cc5d624af63b0834fd94678ee26c1fd3118936245cb706ee2313ba581b",
+      "dataHash": "03421d65ffabc51661cd8031c2c751869e34ba7c8b98119950a9864df5071a19",
+      "previousHash": "00e6f47e4628c783df0e98f30cc63beb84fd1f811ebf7d07645584bf1e56abc7",
+      "nonce": 517,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00c960a08e65a19267cd6d608b62dc9d1ed657d17b814710ff1527863ba27ee4"
+    },
+    {
+      "index": 14,
+      "timestamp": 1775194428667,
+      "data": "435609f2de9b6994ec46adf54da95a14:120959633a08523a855b7d75adf020cf121038b6cf57f5012e407757298f37aa0b36a6eaac7c185576605330835146c9ee2a41f497bf2b75a27353fc2354b7eac643893a90db3a65606f943408b57a44",
+      "dataHash": "11b51778d420fdee18e05dbd08abacf56f95c35352b33d88b0af72f6ed504b89",
+      "previousHash": "00c960a08e65a19267cd6d608b62dc9d1ed657d17b814710ff1527863ba27ee4",
+      "nonce": 19,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00f1333a99fd8fda1d638d2296336395af65e309510601f6e979233f77bcfe65"
+    },
+    {
+      "index": 15,
+      "timestamp": 1775196641227,
+      "data": "8ce930230200197035eecc4308d59595:a159bff728f064983b128e2a2c9e7b44a9f097300df8f3f1e030b9a5d694970c233ab8e8fd5325e19751f048250fb81f4e87299b7fba178aae4c46ac46a354c3e46a854b7282a36d9852dedf4044ccca45a6473e15fe55d51bd2241d1735bb9f95f95e72009509510a4582e5ead9cb15aea7c25247c894553ebc44b37497cd580e42377344baa4f84b8b8d6d627442dbf35a6d233110beb62641058a625e723a69e363d078b5148711bc8b8d2055ed5c215b61719d3af28c26ad61a1f013a3e2",
+      "dataHash": "144c58ca24e8f8ef988cd073887a63d019bdc7b30b3b8b8214cd1f57f6f5690c",
+      "previousHash": "00f1333a99fd8fda1d638d2296336395af65e309510601f6e979233f77bcfe65",
+      "nonce": 293,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "0037a83844291f34233c90b98ba275e091fea74015e29e0fba9f88756a27dd9c"
+    },
+    {
+      "index": 16,
+      "timestamp": 1775196641229,
+      "data": "4f9816094b3eeb9000125bd49ca95515:1a9efb882781c617710b72021672b7ddc939b3714571ca023805cd45369085ff35649118b08270df5e5b99589642cb0262388c26e9fb3a65b637330f80165b023941998a554bdef74c07a42a62876aef",
+      "dataHash": "2d9cb54343979d3520dcd451a03246e78d0688d10fae3aabff477c91793376ce",
+      "previousHash": "0037a83844291f34233c90b98ba275e091fea74015e29e0fba9f88756a27dd9c",
+      "nonce": 504,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00d22fc0290e7307c64ce70fd40de0646832e452e456c9e528dc2429d3c76f84"
+    },
+    {
+      "index": 17,
+      "timestamp": 1775197447014,
+      "data": "e8aac9cff6478b930a179221cfe1b3a6:2035eb0a8dc7cb91e441735185d8c8a23fb77df3a78746611de0ae0becd2c27316aaca15e1d079d6f041b546353260c3a0b06f4f91d57c0487df9bed0de151d4cabd538d53844ee858ffe76b917b1d1833d5cb89dfce9b4bcf4b4b0dfa29e26a6a3c64d13e69f916a9b877584fdb68d65111b353dd35bd984cc5a5bdb51cd154e77fc487de4936be90275d3b2e42c171a15938a578983aa643b4c9831686889f9d9a1a31c2bbdbed97a1bb870ffa139c0cc213f0b229cc3ae6cf0688a71eda54",
+      "dataHash": "fd649c21baea47951ebfced0b59cdc7b4b71e396f1f430f372f47030dc4b1487",
+      "previousHash": "00d22fc0290e7307c64ce70fd40de0646832e452e456c9e528dc2429d3c76f84",
+      "nonce": 223,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "0041a0adaef7e73a2afdeca13c741baa0ade393b06878f2c455d6cf08bef0cd7"
+    },
+    {
+      "index": 18,
+      "timestamp": 1775197447016,
+      "data": "b1224bd241b2a53662907aaed99c00aa:bdf9eb70a33f8d12063d22660908b922c041d486b99772432ce6236e5fedd7132ff8209a1021427256ebfb5bce541a58acd974524b8946c0d26ed47a10cd41cbd0559ac7e98c889e964a9841ba838118",
+      "dataHash": "56c674232b4e6312b406470f0af28797944afbd8495f62a0e6fbc34b768fd60d",
+      "previousHash": "0041a0adaef7e73a2afdeca13c741baa0ade393b06878f2c455d6cf08bef0cd7",
+      "nonce": 1,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "0084a04f3649acac5fb00039a77ed9b598a957228d22b5caefe4aaa172c815bf"
+    },
+    {
+      "index": 19,
+      "timestamp": 1775201103869,
+      "data": "8080b62362903f0c3e92b4b1c21a83ac:b69f23ccace442024ebd3661fc3b5f4e338357b4134b78a146151f050e1c4a21f1c01906b46e3c25e6f3e299c5099c713feaffbae457ca9bbb3b9602ccf12ab325d81bdfbaac80c4f33b7a3a5f9bdc47ba3bec541572ec69744d0a36334b4a3e2e04ff356f93bdd38b7a04a2d934b10e9dae6c95487d80a7979aafae4260b6738c724718bd44aa442d4a927370eb88cf05256b8f8cbc42b0863280296e92d1bb63b3c0a27ddd3f247849e0c43a5722f43003cca52e56c985b9587fdb70daf17b",
+      "dataHash": "66c7590399a05ef315429ed7b6bb8a9a5895eb8e00a6b83daa15f9334d3216a0",
+      "previousHash": "0084a04f3649acac5fb00039a77ed9b598a957228d22b5caefe4aaa172c815bf",
+      "nonce": 37,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00e5b04b312965a9e3d66fb0880a45b41320240da4177be2e082068ba00820d4"
+    },
+    {
+      "index": 20,
+      "timestamp": 1775201103870,
+      "data": "1571f1178033903c257b2f81faaa5c30:9b2d4c7b848e7bcc5fdfe0cf13ffe0efcb4de639d93e20c906bb7feb76489f58cf80b8fd2e96d866c4489b766b6e858825860f291037de9ecc13048a2a125d745206b63fc37fac33e52626649bc2a8b8",
+      "dataHash": "3b7cbd724ba022899f7dda7a9b03a764cc317a39e1e55da483638db913d5de8a",
+      "previousHash": "00e5b04b312965a9e3d66fb0880a45b41320240da4177be2e082068ba00820d4",
+      "nonce": 236,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "004e4529e8ba0effc4191093a30a960bf2e39e1904d1720d42395f4cd67c1102"
+    },
+    {
+      "index": 21,
+      "timestamp": 1775204075609,
+      "data": "c72c057e15b4074f1f3e5b1c4f0bd5db:ae7b482a67a19337a6a26b9f8f4b3b5dd117f52453d012acb7b04ff7639a8b969cd6251407f136b2e36dd03eef728907e73656fb9875e646757443f1f19bf70ce4c0f22d7456896c7736ff8773f467cd680f68d01e832cc3b46d58e83acd57c191cac068a9d8af65a5793a365f791c8430ed237debeaf7bc1e197b1c477fc2c794593ca80fd92519c1089323b57fadbd1be498154b7d3b57afc4d8c8ade51d8c768e92863b1ae301d55c8a87b28dda74ddf7bbd9e986dde405c5665e3e1412e0",
+      "dataHash": "1724f45e6007435f061af0053e3d32364cbdbe3ff7c52ae447185ac750f389d1",
+      "previousHash": "004e4529e8ba0effc4191093a30a960bf2e39e1904d1720d42395f4cd67c1102",
+      "nonce": 178,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00d9d56b6c4d6ad0fdb4b00ef43e23d32b9a746c61d3a61b1909c4a56e1e55eb"
+    },
+    {
+      "index": 22,
+      "timestamp": 1775204075611,
+      "data": "cc101cf384a76d3947707fdb317b2b85:fdbc492a515af6fe2529812046e5b6c6b59712d88ffd805e68025c67ef191bdda4751b8f23811b631fb65260c86d4d410d9569fc8a9e01c8f77c632aa7393cc9005e17ee5e2a04519ff13aa94c0d3d1e",
+      "dataHash": "271cc3829c113968dee710df6a440917fdc7ad030d6c44ed430ed0dae81af6ca",
+      "previousHash": "00d9d56b6c4d6ad0fdb4b00ef43e23d32b9a746c61d3a61b1909c4a56e1e55eb",
+      "nonce": 17,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00fabd5fe24e1c0333b3b6f329b9264d0edd9ca0fc00b16b2d054044194dec69"
+    },
+    {
+      "index": 23,
+      "timestamp": 1775204675546,
+      "data": "987192af68fad6ddf709952dae055e9e:8b189d03234a18e6280db8bf2093a287df9f137865793990121e12ad498699266f60bd71e235d40cc657bb6236bce4cafb7a9d6279dbbd89952a6c8d78d7c054e45be4fdb6b464988e6d027cdfe504f3",
+      "dataHash": "f28a95fa88e6d65999817055efc9028eb5416ea55a75c150298b0c0cfbfdb691",
+      "previousHash": "00fabd5fe24e1c0333b3b6f329b9264d0edd9ca0fc00b16b2d054044194dec69",
+      "nonce": 55,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "001dac0e5db8f3febecdf67593395bace3b36f7f5523ac9df16aa7931aa050a5"
+    },
+    {
+      "index": 24,
+      "timestamp": 1775232458756,
+      "data": "8100ea477d9a3e372754bc908e208186:4d9419ba59d2b26ecc81f7f8878b6e44f694d277ba9b1ffac3ca9f97cc112cbea139e099967ea4cf9ed4fc31da13432aca685985505e5d695ae0891e5c33340816601bb2a259dc3ce6db16e6c1c577a6e061723103c8e67fdba7c4d70a8e9c6d7c4d4e3483307db091c79e8cd021f79cd1e7b90adf67ce9be8ebd7c64f74e7bf12b361b1a02ff70bfd85412a26b1f2b1c44a5612e1d71c8bde7c6165a88ff6b7a3d6b0e15352caea83328a97bf22cdd66b0b3872589849da459f96f4b7f6383b",
+      "dataHash": "62ffc38e273e410bd20b20aec81f8601b814956df62ff26b97b200a00aab6cc9",
+      "previousHash": "001dac0e5db8f3febecdf67593395bace3b36f7f5523ac9df16aa7931aa050a5",
+      "nonce": 17,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "004bccb54b47fb7bdccbc7aaa58ae1526b7816534b599aca05a44019f25190e9"
+    },
+    {
+      "index": 25,
+      "timestamp": 1775232458757,
+      "data": "2440704b40700cc6b4db7fe2fd5bb46f:4f90f803ae1590b6e6e40b79a2a5f884b41bfc1d3aceedf90cebbf29bca2716ee3ab61e9f79c19ffb49492c2cd9cdd1ce4e06d4fc91f0f4a890fb44a07b92ee9a27e06e17d84f2e1df808fdd2b37ed29",
+      "dataHash": "d49e6272ad6a6ccf58482bc75cd950accb3cb641a094a2f4400dd917e0b20ade",
+      "previousHash": "004bccb54b47fb7bdccbc7aaa58ae1526b7816534b599aca05a44019f25190e9",
+      "nonce": 856,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "006f72b2db0de05acc6ab654daef965d0ae87e0d3a9c4535afb0d46f3a019829"
+    },
+    {
+      "index": 26,
+      "timestamp": 1775242946905,
+      "data": "7a94daaa4c1954da48189d5a7de4f9f6:db3bbbbcefc37864c727114f81c2daa5d34a6f5f21e3afb073ee4533c077ec70d066c15a80a932f3bce44bbfdd1103d338b98f66290353c98965c807302dc72f40eaf5613ff66f340b78193b2dcb9a711117f8f7b5793923715362ef68c7cbea1191d54ef8512571a4c1b9001f559763d083ed85060f23cb78f869499783e7fc27d236a4a0e0dd76c19e718d5b5100bc9e0e87fb68f0cf2065f5e3ecc498c47a76b828cfb755a5f7ba9816a2427ef26a4cf4abd4e318c06602ff90f903fed279",
+      "dataHash": "477ea1ecbf8379f6f3a2202a4762dca06d98a91b48423aaca8351e91bb0f9dea",
+      "previousHash": "006f72b2db0de05acc6ab654daef965d0ae87e0d3a9c4535afb0d46f3a019829",
+      "nonce": 97,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "000e7389c2d867ad6b08faf128849df7812cd1123a86d6b601434f1cabac1604"
+    },
+    {
+      "index": 27,
+      "timestamp": 1775242946906,
+      "data": "19452e43434b0ee2da810af10024c799:7a712e37ebdd4518af72f938baa23eeebfe01d02f8314f8828c7d86588e299c1cc27aae936a0beebfc1842785db4ab6d2ff91a5350f657ad7f7a7a494553f619338235ed276614628dfcf4d38f449a68",
+      "dataHash": "fec4b8052552916d4d6b22b2e9013b7d9a754182496b547e406ca9198ea099d5",
+      "previousHash": "000e7389c2d867ad6b08faf128849df7812cd1123a86d6b601434f1cabac1604",
+      "nonce": 472,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00f96d325e75c97784e56ed8cc11b8d17d0833b0d91efdd61cf665964e224b35"
+    },
+    {
+      "index": 28,
+      "timestamp": 1775244320426,
+      "data": "a86eda16bd4678ca634c56a76fe65e50:864da97cb60b0f08fa8a9d901de74cc105e4752a76361deda3b12acafb2e08f9bf7e0097bd2382313d8f84fbac1f4fda175db75c50616c1f4a6b0d479fcbae04ecc045e52aa441f42a2b6b71779d5b9389d5a9cf465d53ada685ecf6405eaa21ec89818c9904ea030b14544d12beaa7208fa152d287ccf0565aad874fa9cfde5dc4c9f43d6666052182d8ae49e5545c3d527ec9cad399de406c5c72d60af9c596e0c8f7ba4b484aae6932f801b3186a8e48a9fdcdc7eec25b4a96dd64c04eda9",
+      "dataHash": "b5aa4296a13b03b779547d7c54939c99ca23500f99be59f69868e3f5c462b993",
+      "previousHash": "00f96d325e75c97784e56ed8cc11b8d17d0833b0d91efdd61cf665964e224b35",
+      "nonce": 733,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00ac571bbefcd43b5f86abba9582d1c53626e2092df61cc4a368bbacfa0025c0"
+    },
+    {
+      "index": 29,
+      "timestamp": 1775244320430,
+      "data": "df7e344079339d2a2135ed0ac9d32592:ae1525fa0235c11dc4bde61331d72590702786a0c76dc7b1ce148f98916ac1f1c1ef75ae431c4072007ac46819401482768da2700498598f3333f223426323be9c5883177898c5bb352ddcb727195eac",
+      "dataHash": "61e17005897e4e39d36a9cf25662f93ed7a1a5a281276c884dbfa8ab15286029",
+      "previousHash": "00ac571bbefcd43b5f86abba9582d1c53626e2092df61cc4a368bbacfa0025c0",
+      "nonce": 648,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00a1f8d96f66b89ca26190fdc774f5fbf8d55543f97ee3d13c317235323f14be"
+    },
+    {
+      "index": 30,
+      "timestamp": 1775245964014,
+      "data": "3e473deeacdd5733279a5bb50f2f9cce:ad15b2b81615d840832cf6ada5b3c0a141f5790c0a5dbe7c0403d061ab277f4cf44e4cb805c16519d7f82b6eddb00674bfb0ae8aaf5f89c337aef1ce6e2ba7eb7037cf686f8a11e8d3609909f79c47430910dc363b7c3c59dc2288ffdbee17a5abe714d07284128f70162ea157b0eba005f7fdba28e40af7df01cb63e4693716cfb31af59d483abb462ad897bde94b62462c8723e8cbab23400be4f138454003fa72e268a22ea0b048ceed45b4df37cb76240a88f5d10cfacaa9bd83fa335fdc",
+      "dataHash": "5d10b188fedad8163a8b6fa6f5f5c7b3f69470d6e58475fda17a7de96740db69",
+      "previousHash": "00a1f8d96f66b89ca26190fdc774f5fbf8d55543f97ee3d13c317235323f14be",
+      "nonce": 137,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00bddca00bf34c48f5b06c8139d489c03b5705f017ff32a5c9866a5b4b3d6110"
+    },
+    {
+      "index": 31,
+      "timestamp": 1775245964015,
+      "data": "340521268cb92d151081ec38064aa350:b2b7c9e44bce1a3de409b5aa049cdf7f0dd82fb2fd42707490ae2568694b78679c095f0e430e796588e6fdc10ac2059f9e7ed1df38eb2f954985178ffbe6feb4b34c5557664caa405986df0cf64c9e03",
+      "dataHash": "628f3800dc73c63bc197d720d74485704450f2bda5cc901de2dcc32b8eab7eb3",
+      "previousHash": "00bddca00bf34c48f5b06c8139d489c03b5705f017ff32a5c9866a5b4b3d6110",
+      "nonce": 333,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00e7a8b9eb95dc0da6347c2f7b081220dfb66e97d72f7ffe268a393dfffdcbae"
+    },
+    {
+      "index": 32,
+      "timestamp": 1775246563925,
+      "data": "b52161f242d60ba1ad66b24aa70f4394:dca637e589bf704ec4348a160358a55094b2e6ac6437c7e7e9f97d4a97f990eb1e6de99af7b785f5ff5184185c3edeef26145a40077cf99b2826cabfe93d814ccc79e9b17ba118700cd95d1b4a96e2d0",
+      "dataHash": "38bd23e5372fc13d10c35a03272246abb52794fb82f3c9634292f9e0623ceccf",
+      "previousHash": "00e7a8b9eb95dc0da6347c2f7b081220dfb66e97d72f7ffe268a393dfffdcbae",
+      "nonce": 153,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "0034795d82376aec4abb1b701fde1382d30e416358942d4affb08d9dee7e4e62"
+    },
+    {
+      "index": 33,
+      "timestamp": 1775249232368,
+      "data": "5fb343741aeb68ee42a173385417650b:d60d6fbfc17bd86bffc17a831c7764ac149da9511d8f1db94d63352338943d1f821fd68ca8a4f5c2b9e8e84d09a8304f22af624c9d2da4dfba65abd1b82d8cffe34af87087e78bb72f9872aafd1aa2cd6cd3ea99e5bf6d2410a3f06ec61639821b029f3d984523d68117cdef91cebef69ab891451a352926737780673d60b785a4a58d5a32d96ed5659c8ff45a74edf109196f3863caf25295c8c7aba898d6f5a8db65cc23f1dbeb230041ac7534aba32ce4d08ac1930a74e0aba5d464db4a5f",
+      "dataHash": "2b54a1fc1395f6b5bff73f7442c071f76e52a5152b6de91e5a99e5172b2ea77b",
+      "previousHash": "0034795d82376aec4abb1b701fde1382d30e416358942d4affb08d9dee7e4e62",
+      "nonce": 50,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "001b17a117a202ffd9fab50fa11d031ed171c2eb135663d3ff23e222f87048d5"
+    },
+    {
+      "index": 34,
+      "timestamp": 1775249232369,
+      "data": "269a3f90cdffb517e3b728c0bb2c77ea:d9c58867c3e5dc1d068800d3b888449a5d6b37edc435aca0acbaf9f38b6119ff2fdba15006e44389bd1e79a82ed32ec4ad61610fa3375fcbd6b13032c69361c921b2d0845fdcff1fdb3b516b591b6e2f",
+      "dataHash": "ab2a0889ef6d00ef917b51c82025cbcd32df8d6168a07b7f2d2aa814a3d41b4b",
+      "previousHash": "001b17a117a202ffd9fab50fa11d031ed171c2eb135663d3ff23e222f87048d5",
+      "nonce": 394,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "0094d0dd0009b0268975ae17474602541ba5f3c0a36acb00da05287a03d4ea07"
+    },
+    {
+      "index": 35,
+      "timestamp": 1775251779236,
+      "data": "027f630d2670aaf7f08ea8bffa75fd0f:6aa6d4f1257942e1ffe10cdf571e599323aa424a335b7910158ae3bc9cca5ae56d88297f9d348ddc994cbd4635064a3a0f12774c47344caaeab0a58892a302b915b21fe4cd1f817c3464b9dc3df8ad9e58ec433c1b6b94711e7d2c5027726cfb00c5ad53786129b45e10a7f2df2236746e98a0daec333072c72791aa99c0f4c9b5237e573f2794cbdbe445ca872dfcddfdccea512cb58139a4e06ddf3ffe7c4744520d036291f82613aae7de33b13c2f81440fb9e2819d941171965af6ea121a",
+      "dataHash": "704296d0ff9d97fd8e1e17df0029fd15ed8daba711b89cb94983811eb3937fac",
+      "previousHash": "0094d0dd0009b0268975ae17474602541ba5f3c0a36acb00da05287a03d4ea07",
+      "nonce": 195,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "002906cb6653f377f0478fdcd0e42e2b0789f5868b9e3ea201150bb3360ec111"
+    },
+    {
+      "index": 36,
+      "timestamp": 1775251779239,
+      "data": "ce1a78c1a47378d55363b31cfdac5954:d804c90ad6c5b326b827479d1b87c8b289114083dc6bdefadd3d717aa90b797be49d3b26fee3972aa24163fc38c3d0a980b51a29b640a274eb0b2066e45e2438cedd5003faf74a21a3d2651d91e02a76",
+      "dataHash": "13be0bebfcd779d8ff7c56c62f7a96127393724a43d97f486f8102c75f7c00f3",
+      "previousHash": "002906cb6653f377f0478fdcd0e42e2b0789f5868b9e3ea201150bb3360ec111",
+      "nonce": 6,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "009cbcf952eed984faea72b695f1d015c838b78639049ec5517cf262eb12dc83"
+    },
+    {
+      "index": 37,
+      "timestamp": 1775253225361,
+      "data": "00303f895c9c8ac841b82d53bc2bd25c:8e981546e99b36a8b1f6cdf9b226fd67bd9054c984fa9599260636dfbe75d0d0863a72f4d19fb3aaca2babc78ee2002ba3f57894b68ff1c91fca87ef56dab0acfe5ee862ecd06073aff3abc9dc933ec757e1fee0cfa13e2e9495be6b131c8d52a4f57efdb63adf98da32efc4d93a41c6aaa0a263ac48ea152d8c356554e29bb55e23eb320c42140f6c07bf6949ead1d40cab802fc50fb2cc1b32e863e0f50e0356b28f58026c5d38d545f9f5073c5ead734e30549ded81296843fb5fc4176943",
+      "dataHash": "b4b4bd5b41edc0f9061aca63ee2566a3d3900ac7d9b7900dd2bdf579a29246ad",
+      "previousHash": "009cbcf952eed984faea72b695f1d015c838b78639049ec5517cf262eb12dc83",
+      "nonce": 73,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "003d701e39ac3c0fc570e2426f5305901d2ce6a806668ee8ac0dce86730006a7"
+    },
+    {
+      "index": 38,
+      "timestamp": 1775253225363,
+      "data": "03f678fe6098c9619e8d8e0fca86ee6c:84eb493f4e427e7ff7f92b6adb21aaa1051ad8cd8c925b17ad016854aef7302bf9e6b606039bbaf831583667169ed64054f818664a45bf80d0fe27fb498f4e63a96a42b2f27c0cc673d9e4e04351de14",
+      "dataHash": "d79ad03d39d5ea31a9a67619dc5a8588d206b260b84f767b9e1cf4e914e15591",
+      "previousHash": "003d701e39ac3c0fc570e2426f5305901d2ce6a806668ee8ac0dce86730006a7",
+      "nonce": 1015,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "001af5bdadbbb4870e3508acbc4fcabb5046e993bda38c3ae6bcddead334c8e1"
+    },
+    {
+      "index": 39,
+      "timestamp": 1775255327477,
+      "data": "c2f66ac25b0393be161eb3efe6b295aa:7c3ecd64ee2b7dcbf21a9c37a4215ec8660ae7fea02d3275a332ecefd6abcfd43e266b9aecbdb46e855ebb3ea948f04297cbfc936ff0a7fa08bfa1b13e0bad607e74faecb80adf5cf4c5beeb26e7da1d43fd2611e3936b4605321ba264d472f384c4ea4bda41f33a11cc4da25e8cb514c4fb5528211c0c6f0e3b12a56d0ae92413091b8ebc693fb85ff119722caa0fccb629c8075b8051887ab617f410bb1bcf63728b85dd86e420b057609d8807d64447c484cec83fc4973893845c0910f1e8",
+      "dataHash": "c58404bfa7391fe14058031c07cfcee064681d9f785d1ac1db4d00dabd3e59f7",
+      "previousHash": "001af5bdadbbb4870e3508acbc4fcabb5046e993bda38c3ae6bcddead334c8e1",
+      "nonce": 617,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00527b1abc71112af183d998b7f01ff0a75054378500f37ec4fd9b79a7ff51b9"
+    },
+    {
+      "index": 40,
+      "timestamp": 1775255327479,
+      "data": "3684890d8d79e255e0d6227e3c3a76e7:e3a195661ee003a183c584f786fd521493b21da9e93cb7caf1c9924fd88630d70e972cd79f28b7893301d54288c96d034ce4982c684a7f838d0b209a0877947200de858ea49c1aeb20ebe0e5560b21c5",
+      "dataHash": "fb50d5e1cc3985793a529ec7099278a04e7f37dc93f6a91a1809d8992da94b9d",
+      "previousHash": "00527b1abc71112af183d998b7f01ff0a75054378500f37ec4fd9b79a7ff51b9",
+      "nonce": 90,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "0042d987c0de3ee2f080f76bedcbb83fb889bef112ecfb96994ce67e0a6a0cc4"
+    },
+    {
+      "index": 41,
+      "timestamp": 1775256509984,
+      "data": "bb9b75ee6a2acc9a50698deaf02a1936:0f0b3900cab861d7023967a9d764ba181488d89c96091dd07de490e85958b206aa560307d451ab4c7efdc9ef24af58cc55c522943dbbf202cecb2ac51240169e3258623c98ea918ccbbe85c5f2a0f3d6edf93fcc95b04dcb97abe82ea85f8a7437173d0d65e12de279c84e51a7d1330f4b0546951851744e4a258685edb5e571c16e3b696b5dc32de298e0bcbcb1064f6c40799a8fd1d8ae4399132b39be0e0900840967c010a6bfdc138f624784a2581cb63f44f6acc7506f5195cbf7354bb9",
+      "dataHash": "12b4937ceebb03f265f59fe16f3f2ebbc6a4263a3fb30b84fece623da8bb2cfa",
+      "previousHash": "0042d987c0de3ee2f080f76bedcbb83fb889bef112ecfb96994ce67e0a6a0cc4",
+      "nonce": 14,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "00b0b8c23ea0b4705a68e673f3903964cc1403b00266872f7b4e8bc40b012988"
+    },
+    {
+      "index": 42,
+      "timestamp": 1775256509986,
+      "data": "9e161e21f669a6d0c954768f20ab8f7d:53b5f0b3a5a8ea839293a45378facbfb83573e96d7c58bd6741ae5764dd83e7e860bc08c975eb57188c695b804919d032b94ce6756315f652a1e24d579ee671f2f4e08920d07bd9db879d283be617a57",
+      "dataHash": "374f079667498b2b55b22a6996820f9d78797c10ace1ae58ab13668cfa560704",
+      "previousHash": "00b0b8c23ea0b4705a68e673f3903964cc1403b00266872f7b4e8bc40b012988",
+      "nonce": 282,
+      "encrypted": true,
+      "ephemeral": false,
+      "hash": "008b5995e070c06c37e0446077ad84ab5f3a2da49d571f2b376577a2b3686fd5"
+    }
+  ],
+  "links": [],
+  "nodes": [
+    {
+      "id": "edge-mnicffj8-9044",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775186870372,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnicveei-93ac",
+      "name": "Tesseract-Prime",
+      "type": "inference",
+      "status": "online",
+      "capabilities": [
+        "text-generation",
+        "code-analysis",
+        "threat-detection"
+      ],
+      "lastHeartbeat": 1775187615402,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnicveei-be6d",
+      "name": "Oracle-Relay",
+      "type": "relay",
+      "status": "online",
+      "capabilities": [
+        "data-transfer",
+        "encryption",
+        "proxy-rotation"
+      ],
+      "lastHeartbeat": 1775187615402,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnicveei-bc6a",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775187615402,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnidkoqm-2ad8",
+      "name": "Tesseract-Prime",
+      "type": "inference",
+      "status": "online",
+      "capabilities": [
+        "text-generation",
+        "code-analysis",
+        "threat-detection"
+      ],
+      "lastHeartbeat": 1775188795198,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnidkoqm-b36c",
+      "name": "Oracle-Relay",
+      "type": "relay",
+      "status": "online",
+      "capabilities": [
+        "data-transfer",
+        "encryption",
+        "proxy-rotation"
+      ],
+      "lastHeartbeat": 1775188795198,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnidkoqm-cab0",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775188795198,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mniesr2i-a3d7",
+      "name": "Tesseract-Prime",
+      "type": "inference",
+      "status": "online",
+      "capabilities": [
+        "text-generation",
+        "code-analysis",
+        "threat-detection"
+      ],
+      "lastHeartbeat": 1775190851082,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mniesr2i-1e31",
+      "name": "Oracle-Relay",
+      "type": "relay",
+      "status": "online",
+      "capabilities": [
+        "data-transfer",
+        "encryption",
+        "proxy-rotation"
+      ],
+      "lastHeartbeat": 1775190851082,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mniesr2i-1233",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775190851082,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnifck61-96dd",
+      "name": "Tesseract-Prime",
+      "type": "inference",
+      "status": "online",
+      "capabilities": [
+        "text-generation",
+        "code-analysis",
+        "threat-detection"
+      ],
+      "lastHeartbeat": 1775191775257,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnifck61-0c55",
+      "name": "Oracle-Relay",
+      "type": "relay",
+      "status": "online",
+      "capabilities": [
+        "data-transfer",
+        "encryption",
+        "proxy-rotation"
+      ],
+      "lastHeartbeat": 1775191775257,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnifck61-a974",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775191775257,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnig4vw7-bdf7",
+      "name": "Tesseract-Prime",
+      "type": "inference",
+      "status": "online",
+      "capabilities": [
+        "text-generation",
+        "code-analysis",
+        "threat-detection"
+      ],
+      "lastHeartbeat": 1775193096823,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnig4vw7-713f",
+      "name": "Oracle-Relay",
+      "type": "relay",
+      "status": "online",
+      "capabilities": [
+        "data-transfer",
+        "encryption",
+        "proxy-rotation"
+      ],
+      "lastHeartbeat": 1775193096823,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnig4vw7-a06f",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775193096823,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnigxfjs-d270",
+      "name": "Tesseract-Prime",
+      "type": "inference",
+      "status": "online",
+      "capabilities": [
+        "text-generation",
+        "code-analysis",
+        "threat-detection"
+      ],
+      "lastHeartbeat": 1775194428664,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnigxfjs-0c97",
+      "name": "Oracle-Relay",
+      "type": "relay",
+      "status": "online",
+      "capabilities": [
+        "data-transfer",
+        "encryption",
+        "proxy-rotation"
+      ],
+      "lastHeartbeat": 1775194428664,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnigxfjs-f8df",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775194428664,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnii8uru-3397",
+      "name": "Tesseract-Prime",
+      "type": "inference",
+      "status": "online",
+      "capabilities": [
+        "text-generation",
+        "code-analysis",
+        "threat-detection"
+      ],
+      "lastHeartbeat": 1775196641226,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnii8uru-6d9d",
+      "name": "Oracle-Relay",
+      "type": "relay",
+      "status": "online",
+      "capabilities": [
+        "data-transfer",
+        "encryption",
+        "proxy-rotation"
+      ],
+      "lastHeartbeat": 1775196641226,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnii8uru-d3ca",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775196641226,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mniiq4iu-7119",
+      "name": "Tesseract-Prime",
+      "type": "inference",
+      "status": "online",
+      "capabilities": [
+        "text-generation",
+        "code-analysis",
+        "threat-detection"
+      ],
+      "lastHeartbeat": 1775197447014,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mniiq4iu-e4a3",
+      "name": "Oracle-Relay",
+      "type": "relay",
+      "status": "online",
+      "capabilities": [
+        "data-transfer",
+        "encryption",
+        "proxy-rotation"
+      ],
+      "lastHeartbeat": 1775197447014,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mniiq4iu-375d",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775197447014,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnikwi64-bfaa",
+      "name": "Tesseract-Prime",
+      "type": "inference",
+      "status": "online",
+      "capabilities": [
+        "text-generation",
+        "code-analysis",
+        "threat-detection"
+      ],
+      "lastHeartbeat": 1775201103868,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnikwi64-83d0",
+      "name": "Oracle-Relay",
+      "type": "relay",
+      "status": "online",
+      "capabilities": [
+        "data-transfer",
+        "encryption",
+        "proxy-rotation"
+      ],
+      "lastHeartbeat": 1775201103868,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnikwi65-b0a5",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775201103869,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnimo76h-4e82",
+      "name": "Tesseract-Prime",
+      "type": "inference",
+      "status": "online",
+      "capabilities": [
+        "text-generation",
+        "code-analysis",
+        "threat-detection"
+      ],
+      "lastHeartbeat": 1775204075609,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnimo76h-d3b0",
+      "name": "Oracle-Relay",
+      "type": "relay",
+      "status": "online",
+      "capabilities": [
+        "data-transfer",
+        "encryption",
+        "proxy-rotation"
+      ],
+      "lastHeartbeat": 1775204075609,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnimo76h-42f9",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775204075609,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnj3kjr8-8760",
+      "name": "Tesseract-Prime",
+      "type": "inference",
+      "status": "online",
+      "capabilities": [
+        "text-generation",
+        "code-analysis",
+        "threat-detection"
+      ],
+      "lastHeartbeat": 1775232458756,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnj3kjr8-6aa7",
+      "name": "Oracle-Relay",
+      "type": "relay",
+      "status": "online",
+      "capabilities": [
+        "data-transfer",
+        "encryption",
+        "proxy-rotation"
+      ],
+      "lastHeartbeat": 1775232458756,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnj3kjr8-e0dc",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775232458756,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnj9tcgp-3fe3",
+      "name": "Tesseract-Prime",
+      "type": "inference",
+      "status": "online",
+      "capabilities": [
+        "text-generation",
+        "code-analysis",
+        "threat-detection"
+      ],
+      "lastHeartbeat": 1775242946905,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnj9tcgp-0027",
+      "name": "Oracle-Relay",
+      "type": "relay",
+      "status": "online",
+      "capabilities": [
+        "data-transfer",
+        "encryption",
+        "proxy-rotation"
+      ],
+      "lastHeartbeat": 1775242946905,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnj9tcgp-b2e4",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775242946905,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjamsa2-16d1",
+      "name": "Tesseract-Prime",
+      "type": "inference",
+      "status": "online",
+      "capabilities": [
+        "text-generation",
+        "code-analysis",
+        "threat-detection"
+      ],
+      "lastHeartbeat": 1775244320426,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjamsa2-4385",
+      "name": "Oracle-Relay",
+      "type": "relay",
+      "status": "online",
+      "capabilities": [
+        "data-transfer",
+        "encryption",
+        "proxy-rotation"
+      ],
+      "lastHeartbeat": 1775244320426,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjamsa2-245b",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775244320426,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjbm0h9-c157",
+      "name": "Tesseract-Prime",
+      "type": "inference",
+      "status": "online",
+      "capabilities": [
+        "text-generation",
+        "code-analysis",
+        "threat-detection"
+      ],
+      "lastHeartbeat": 1775245964013,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjbm0h9-1cda",
+      "name": "Oracle-Relay",
+      "type": "relay",
+      "status": "online",
+      "capabilities": [
+        "data-transfer",
+        "encryption",
+        "proxy-rotation"
+      ],
+      "lastHeartbeat": 1775245964013,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjbm0h9-6527",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775245964013,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjdk2cw-1897",
+      "name": "Tesseract-Prime",
+      "type": "inference",
+      "status": "online",
+      "capabilities": [
+        "text-generation",
+        "code-analysis",
+        "threat-detection"
+      ],
+      "lastHeartbeat": 1775249232368,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjdk2cw-f320",
+      "name": "Oracle-Relay",
+      "type": "relay",
+      "status": "online",
+      "capabilities": [
+        "data-transfer",
+        "encryption",
+        "proxy-rotation"
+      ],
+      "lastHeartbeat": 1775249232368,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjdk2cw-a179",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775249232368,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjf2nj8-045c",
+      "name": "Tesseract-Prime",
+      "type": "inference",
+      "status": "online",
+      "capabilities": [
+        "text-generation",
+        "code-analysis",
+        "threat-detection"
+      ],
+      "lastHeartbeat": 1775251779236,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjf2nj8-72f8",
+      "name": "Oracle-Relay",
+      "type": "relay",
+      "status": "online",
+      "capabilities": [
+        "data-transfer",
+        "encryption",
+        "proxy-rotation"
+      ],
+      "lastHeartbeat": 1775251779236,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjf2nj8-0e6c",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775251779236,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjfxndd-33bd",
+      "name": "Tesseract-Prime",
+      "type": "inference",
+      "status": "online",
+      "capabilities": [
+        "text-generation",
+        "code-analysis",
+        "threat-detection"
+      ],
+      "lastHeartbeat": 1775253225361,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjfxndd-a92b",
+      "name": "Oracle-Relay",
+      "type": "relay",
+      "status": "online",
+      "capabilities": [
+        "data-transfer",
+        "encryption",
+        "proxy-rotation"
+      ],
+      "lastHeartbeat": 1775253225361,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjfxndd-146d",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775253225361,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjh6pdg-0260",
+      "name": "Tesseract-Prime",
+      "type": "inference",
+      "status": "online",
+      "capabilities": [
+        "text-generation",
+        "code-analysis",
+        "threat-detection"
+      ],
+      "lastHeartbeat": 1775255327476,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjh6pdg-3863",
+      "name": "Oracle-Relay",
+      "type": "relay",
+      "status": "online",
+      "capabilities": [
+        "data-transfer",
+        "encryption",
+        "proxy-rotation"
+      ],
+      "lastHeartbeat": 1775255327476,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjh6pdg-fd51",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775255327476,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjhw1sw-9bfb",
+      "name": "Tesseract-Prime",
+      "type": "inference",
+      "status": "online",
+      "capabilities": [
+        "text-generation",
+        "code-analysis",
+        "threat-detection"
+      ],
+      "lastHeartbeat": 1775256509984,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjhw1sw-1b93",
+      "name": "Oracle-Relay",
+      "type": "relay",
+      "status": "online",
+      "capabilities": [
+        "data-transfer",
+        "encryption",
+        "proxy-rotation"
+      ],
+      "lastHeartbeat": 1775256509984,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    },
+    {
+      "id": "edge-mnjhw1sw-fb0c",
+      "name": "Sovereign-Store",
+      "type": "storage",
+      "status": "online",
+      "capabilities": [
+        "encrypted-storage",
+        "backup",
+        "replication"
+      ],
+      "lastHeartbeat": 1775256509984,
+      "tasksCompleted": 0,
+      "avgLatencyMs": 0
+    }
+  ],
+  "lastSaved": 1775256509988
+}

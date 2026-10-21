@@ -1,0 +1,805 @@
+{
+  "providerQuality": {
+    "sovereign-ai": {
+      "totalResponses": 18672,
+      "qualitySum": 1391500,
+      "avgQuality": 74.52,
+      "lastScores": [
+        85,
+        75,
+        95,
+        85,
+        75,
+        85,
+        85,
+        75,
+        85,
+        85,
+        75,
+        85,
+        85,
+        85,
+        85,
+        70,
+        85,
+        75,
+        75,
+        75
+      ]
+    },
+    "pollinations": {
+      "totalResponses": 400,
+      "qualitySum": 30540,
+      "avgQuality": 76.35,
+      "lastScores": [
+        85,
+        85,
+        20,
+        85,
+        75,
+        75,
+        85,
+        75,
+        50,
+        50,
+        60,
+        50,
+        60,
+        85,
+        75,
+        85,
+        50,
+        50,
+        85,
+        50
+      ]
+    },
+    "or-hermes-free": {
+      "totalResponses": 265,
+      "qualitySum": 18440,
+      "avgQuality": 69.58,
+      "lastScores": [
+        85,
+        75,
+        60,
+        50,
+        60,
+        60,
+        60,
+        75,
+        85,
+        60,
+        60,
+        60,
+        60,
+        75,
+        85,
+        80,
+        85,
+        65,
+        85,
+        85
+      ]
+    },
+    "or-mistral-free": {
+      "totalResponses": 276,
+      "qualitySum": 18650,
+      "avgQuality": 67.57,
+      "lastScores": [
+        85,
+        60,
+        60,
+        60,
+        50,
+        60,
+        60,
+        90,
+        80,
+        95,
+        75,
+        75,
+        75,
+        75,
+        85,
+        75,
+        70,
+        75,
+        75,
+        75
+      ]
+    },
+    "or-llama33-free": {
+      "totalResponses": 93,
+      "qualitySum": 6835,
+      "avgQuality": 73.49,
+      "lastScores": [
+        75,
+        70,
+        70,
+        95,
+        60,
+        70,
+        60,
+        70,
+        60,
+        60,
+        70,
+        70,
+        60,
+        85,
+        75,
+        75,
+        75,
+        90,
+        80,
+        70
+      ]
+    }
+  },
+  "providerSpeed": {
+    "sovereign-ai": {
+      "totalRequests": 12310,
+      "totalTimeMs": 18677298,
+      "avgTimeMs": 1517,
+      "lastTimes": [
+        2451,
+        708,
+        2298,
+        3333,
+        3487,
+        3784,
+        4242,
+        3452,
+        931,
+        3179,
+        3846,
+        831,
+        3433,
+        640,
+        3567,
+        2953,
+        2853,
+        1071,
+        1165,
+        700
+      ],
+      "minTimeMs": 284,
+      "maxTimeMs": 55025
+    },
+    "pollinations": {
+      "totalRequests": 88,
+      "totalTimeMs": 734026,
+      "avgTimeMs": 8341,
+      "lastTimes": [
+        166,
+        166,
+        287,
+        277,
+        168,
+        169,
+        317,
+        167,
+        347,
+        171,
+        604,
+        165,
+        198,
+        21935,
+        171,
+        12029,
+        275,
+        167,
+        9830,
+        180
+      ],
+      "minTimeMs": 158,
+      "maxTimeMs": 45034
+    },
+    "or-hermes-free": {
+      "totalRequests": 67,
+      "totalTimeMs": 582741,
+      "avgTimeMs": 8698,
+      "lastTimes": [
+        5513,
+        16827,
+        1410,
+        12412,
+        2225,
+        1346,
+        2035,
+        11967,
+        7551,
+        10022,
+        10051,
+        12269,
+        13465,
+        17183,
+        9558,
+        10482,
+        2902,
+        21822,
+        15221,
+        16793
+      ],
+      "minTimeMs": 1121,
+      "maxTimeMs": 49564
+    },
+    "or-mistral-free": {
+      "totalRequests": 97,
+      "totalTimeMs": 238032,
+      "avgTimeMs": 2454,
+      "lastTimes": [
+        18146,
+        4463,
+        3608,
+        1269,
+        1139,
+        1011,
+        3975,
+        4022,
+        8256,
+        4446,
+        2775,
+        1611,
+        6073,
+        3938,
+        4245,
+        3166,
+        4041,
+        3692,
+        3424,
+        2676
+      ],
+      "minTimeMs": 547,
+      "maxTimeMs": 18381
+    },
+    "or-llama33-free": {
+      "totalRequests": 22,
+      "totalTimeMs": 764532,
+      "avgTimeMs": 34751,
+      "lastTimes": [
+        63039,
+        1620,
+        3440,
+        40857,
+        29334,
+        7017,
+        14394,
+        29831,
+        16396,
+        8306,
+        89253,
+        5551,
+        43423,
+        10559,
+        29310,
+        25347,
+        11693,
+        8401,
+        150518,
+        35496
+      ],
+      "minTimeMs": 1620,
+      "maxTimeMs": 150518
+    }
+  },
+  "providerUsage": {
+    "sovereign-ai": {
+      "hourly": {
+        "2026-3-7-16": 13,
+        "2026-3-7-18": 1,
+        "2026-3-7-19": 1252,
+        "2026-3-7-20": 999,
+        "2026-3-7-21": 344,
+        "2026-3-7-22": 299,
+        "2026-3-7-23": 1016,
+        "2026-3-8-0": 1906,
+        "2026-3-8-1": 2008,
+        "2026-3-8-2": 1304,
+        "2026-3-8-3": 750,
+        "2026-3-8-4": 1316,
+        "2026-3-8-5": 440,
+        "2026-3-8-6": 748,
+        "2026-3-8-7": 1241,
+        "2026-3-8-14": 677,
+        "2026-3-8-15": 1803,
+        "2026-3-8-16": 1003,
+        "2026-3-8-17": 909,
+        "2026-3-8-18": 643
+      },
+      "daily": {
+        "2026-3-7": 3924,
+        "2026-3-8": 14748
+      },
+      "totalTokensUsed": 3584971
+    },
+    "pollinations": {
+      "hourly": {
+        "2026-3-7-20": 10,
+        "2026-3-7-21": 10,
+        "2026-3-7-22": 1,
+        "2026-3-7-23": 12,
+        "2026-3-8-0": 20,
+        "2026-3-8-1": 21,
+        "2026-3-8-2": 20,
+        "2026-3-8-3": 23,
+        "2026-3-8-4": 53,
+        "2026-3-8-5": 18,
+        "2026-3-8-6": 27,
+        "2026-3-8-7": 43,
+        "2026-3-8-14": 54,
+        "2026-3-8-15": 35,
+        "2026-3-8-16": 10,
+        "2026-3-8-17": 32,
+        "2026-3-8-18": 4
+      },
+      "daily": {
+        "2026-3-7": 33,
+        "2026-3-8": 360
+      },
+      "totalTokensUsed": 58179
+    },
+    "or-hermes-free": {
+      "hourly": {
+        "2026-3-8-0": 86,
+        "2026-3-8-1": 123,
+        "2026-3-8-2": 56
+      },
+      "daily": {
+        "2026-3-8": 265
+      },
+      "totalTokensUsed": 28182
+    },
+    "or-mistral-free": {
+      "hourly": {
+        "2026-3-8-0": 85,
+        "2026-3-8-1": 116,
+        "2026-3-8-2": 75
+      },
+      "daily": {
+        "2026-3-8": 276
+      },
+      "totalTokensUsed": 30507
+    },
+    "or-llama33-free": {
+      "hourly": {
+        "2026-3-8-0": 10,
+        "2026-3-8-1": 40,
+        "2026-3-8-2": 43
+      },
+      "daily": {
+        "2026-3-8": 93
+      },
+      "totalTokensUsed": 18528
+    }
+  },
+  "userFeedback": {},
+  "providerCosts": {
+    "sovereign-ai": {
+      "providerId": "sovereign-ai",
+      "totalInputTokens": 14044604,
+      "totalOutputTokens": 2607693,
+      "estimatedCostUsd": 0,
+      "callCount": 12068
+    },
+    "pollinations": {
+      "providerId": "pollinations",
+      "totalInputTokens": 18802,
+      "totalOutputTokens": 14682,
+      "estimatedCostUsd": 0,
+      "callCount": 81
+    },
+    "or-hermes-free": {
+      "providerId": "or-hermes-free",
+      "totalInputTokens": 55348,
+      "totalOutputTokens": 9356,
+      "estimatedCostUsd": 0,
+      "callCount": 67
+    },
+    "or-mistral-free": {
+      "providerId": "or-mistral-free",
+      "totalInputTokens": 75130,
+      "totalOutputTokens": 12863,
+      "estimatedCostUsd": 0,
+      "callCount": 97
+    },
+    "or-llama33-free": {
+      "providerId": "or-llama33-free",
+      "totalInputTokens": 15938,
+      "totalOutputTokens": 6074,
+      "estimatedCostUsd": 0,
+      "callCount": 22
+    }
+  },
+  "providerCalls": {},
+  "providerErrors": {},
+  "totalCalls": 8264128,
+  "cacheHits": 0,
+  "taskAffinity": {},
+  "providerWeightSnapshots": {
+    "puter-claude": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 10
+    },
+    "puter-deepseek": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 10
+    },
+    "puter-deepseek-r1": {
+      "hourlyTokenLimit": 3600000,
+      "dailyTokenLimit": 86400000,
+      "rpmLimit": 10
+    },
+    "puter-kimi": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 10
+    },
+    "puter-gemini": {
+      "hourlyTokenLimit": 3600000,
+      "dailyTokenLimit": 86400000,
+      "rpmLimit": 15
+    },
+    "or-llama33-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "or-hermes-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "or-nemotron-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "or-gemma3-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "or-mistral-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "hf-qwen72b": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 15
+    },
+    "hf-qwen-coder": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 15
+    },
+    "hf-llama70b": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 15
+    },
+    "hf-deepseek-v3": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 15
+    },
+    "gh-deepseek-r1-alt": {
+      "hourlyTokenLimit": 9000000,
+      "dailyTokenLimit": 216000000,
+      "rpmLimit": 15
+    },
+    "gh-deepseek-r1": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 10
+    },
+    "gh-codestral": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 15
+    },
+    "pollinations": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 20
+    },
+    "pollinations-mistral": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 20
+    },
+    "pollinations-deepseek": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 20
+    },
+    "pollinations-qwen": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 20
+    },
+    "pollinations-gemini": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 20
+    },
+    "pollinations-claude": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 20
+    },
+    "pollinations-command-r": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 20
+    },
+    "or-phi4-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "or-qwen3-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "or-llama4-scout-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "or-deepseek-v3-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "pollinations-llama4": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 20
+    },
+    "pollinations-unity": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 30
+    },
+    "pollinations-openai-large": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 20
+    },
+    "pollinations-reasoning": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 15
+    },
+    "pollinations-codestral": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 20
+    },
+    "pollinations-p1": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 20
+    },
+    "or-glm4-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "or-qwen3-30b-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "or-deepseek-r1-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "or-maverick-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "or-mistral-nemo-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "or-gemma3-12b-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "or-internvl3-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "hf-mistral-nemo": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 30
+    },
+    "hf-phi4": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 30
+    },
+    "hf-gemma3-27b": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 30
+    },
+    "pollinations-sur": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 30
+    },
+    "pollinations-phi": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 30
+    },
+    "pollinations-llamalight": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 30
+    },
+    "pollinations-hormoz": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 30
+    },
+    "gh-llama70b": {
+      "hourlyTokenLimit": 9000000,
+      "dailyTokenLimit": 216000000,
+      "rpmLimit": 15
+    },
+    "gh-mistral-nemo": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 15
+    },
+    "gh-phi4-mini": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 15
+    },
+    "or-llama4-maverick-instruct-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "or-devstral-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "or-olympicarena-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "or-gemma3-4b-free": {
+      "hourlyTokenLimit": 2400000,
+      "dailyTokenLimit": 57600000,
+      "rpmLimit": 20
+    },
+    "hf-zephyr": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 15
+    },
+    "hf-mistral-small": {
+      "hourlyTokenLimit": 3000000,
+      "dailyTokenLimit": 72000000,
+      "rpmLimit": 15
+    },
+    "openrouter-free::qwen/qwen3.6-plus:free": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 60
+    },
+    "openrouter-free::google/lyria-3-pro-preview": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 60
+    },
+    "openrouter-free::google/lyria-3-clip-preview": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 60
+    },
+    "openrouter-free::nvidia/nemotron-3-super-120b-a12b:free": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 60
+    },
+    "openrouter-free::liquid/lfm-2.5-1.2b-thinking:free": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 60
+    },
+    "openrouter-free::liquid/lfm-2.5-1.2b-instruct:free": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 60
+    },
+    "openrouter-free::nvidia/nemotron-3-nano-30b-a3b:free": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 60
+    },
+    "openrouter-free::arcee-ai/trinity-mini:free": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 60
+    },
+    "openrouter-free::openai/gpt-oss-20b:free": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 60
+    },
+    "openrouter-free::z-ai/glm-4.5-air:free": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 60
+    },
+    "openrouter-free::qwen/qwen3-coder:free": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 60
+    },
+    "openrouter-free::cognitivecomputations/dolphin-mistral-24b-venice-edition:free": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 60
+    },
+    "huggingface::Qwen/Qwen3-8B": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 60
+    },
+    "huggingface::meta-llama/Llama-3.1-8B-Instruct": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 60
+    },
+    "huggingface::Qwen/Qwen3-4B": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 60
+    },
+    "huggingface::Qwen/Qwen2.5-3B-Instruct": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 60
+    },
+    "huggingface::Qwen/Qwen3-1.7B": {
+      "hourlyTokenLimit": 6000000,
+      "dailyTokenLimit": 144000000,
+      "rpmLimit": 60
+    }
+  },
+  "adaptiveBudget": {
+    "multiplier": 1,
+    "hourlyHistory": [
+      229478,
+      247732
+    ],
+    "dailyHistory": [],
+    "rateLimitPredictionStats": {
+      "prevented429s": 1885,
+      "totalPredictions": 32821
+    },
+    "intuitionTokensSaved": 0
+  },
+  "savedAt": 1775256767866
+}

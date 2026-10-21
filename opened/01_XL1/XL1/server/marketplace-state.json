@@ -1,0 +1,572 @@
+{
+  "listings": [
+    {
+      "id": "lst-0a92ff107146c108",
+      "type": "compute",
+      "title": "1 GPU/hour VGPU Rental",
+      "description": "Rent 1 GPU/hour of vgpu compute power",
+      "seller": "Alpha",
+      "priceLimn": 3,
+      "category": "compute",
+      "status": "expired",
+      "createdAt": 1772898838056,
+      "expiresAt": 1773503638056,
+      "metadata": {
+        "resourceType": "vgpu",
+        "capacity": 1
+      }
+    },
+    {
+      "id": "lst-29e2267b642ec325",
+      "type": "compute",
+      "title": "8 GB/hour VRAM Rental",
+      "description": "Rent 8 GB/hour of vram compute power",
+      "seller": "Beta",
+      "priceLimn": 4,
+      "category": "compute",
+      "status": "expired",
+      "createdAt": 1772898838056,
+      "expiresAt": 1773503638056,
+      "metadata": {
+        "resourceType": "vram",
+        "capacity": 8
+      }
+    },
+    {
+      "id": "lst-4c103d42fb249fa5",
+      "type": "compute",
+      "title": "4 core/hour VCPU Rental",
+      "description": "Rent 4 core/hour of vcpu compute power",
+      "seller": "Gamma",
+      "priceLimn": 0.8,
+      "category": "compute",
+      "status": "expired",
+      "createdAt": 1772898838056,
+      "expiresAt": 1773503638056,
+      "metadata": {
+        "resourceType": "vcpu",
+        "capacity": 4
+      }
+    },
+    {
+      "id": "lst-4b6bb98b06308aa5",
+      "type": "compute",
+      "title": "2 GPU/hour VGPU Rental",
+      "description": "Rent 2 GPU/hour of vgpu compute power",
+      "seller": "Delta",
+      "priceLimn": 8,
+      "category": "compute",
+      "status": "expired",
+      "createdAt": 1772898838056,
+      "expiresAt": 1773503638056,
+      "metadata": {
+        "resourceType": "vgpu",
+        "capacity": 2
+      }
+    },
+    {
+      "id": "lst-af103068aa83f78a",
+      "type": "compute",
+      "title": "16 GB/hour VRAM Rental",
+      "description": "Rent 16 GB/hour of vram compute power",
+      "seller": "Epsilon",
+      "priceLimn": 9.6,
+      "category": "compute",
+      "status": "expired",
+      "createdAt": 1772898838056,
+      "expiresAt": 1773503638056,
+      "metadata": {
+        "resourceType": "vram",
+        "capacity": 16
+      }
+    },
+    {
+      "id": "lst-477d64dc7af605d8",
+      "type": "tool",
+      "title": "TesseractLLM — llm_access Tool",
+      "description": "Lend access to TesseractLLM (text-gen, analysis, code)",
+      "seller": "Alpha",
+      "priceLimn": 0.15000000000000002,
+      "category": "tools",
+      "status": "expired",
+      "createdAt": 1772898838056,
+      "expiresAt": 1773503638056,
+      "metadata": {
+        "toolType": "llm_access",
+        "capabilities": [
+          "text-gen",
+          "analysis",
+          "code"
+        ]
+      }
+    },
+    {
+      "id": "lst-b60a9b3d13d779ee",
+      "type": "tool",
+      "title": "CodeForge — code_gen Tool",
+      "description": "Lend access to CodeForge (js, python, typescript, rust)",
+      "seller": "Beta",
+      "priceLimn": 0.3,
+      "category": "tools",
+      "status": "expired",
+      "createdAt": 1772898838056,
+      "expiresAt": 1773503638056,
+      "metadata": {
+        "toolType": "code_gen",
+        "capabilities": [
+          "js",
+          "python",
+          "typescript",
+          "rust"
+        ]
+      }
+    },
+    {
+      "id": "lst-c250ad43c1056864",
+      "type": "tool",
+      "title": "DataMiner — data_analysis Tool",
+      "description": "Lend access to DataMiner (csv, json, sql, charts)",
+      "seller": "Gamma",
+      "priceLimn": 0.2,
+      "category": "tools",
+      "status": "expired",
+      "createdAt": 1772898838056,
+      "expiresAt": 1773503638056,
+      "metadata": {
+        "toolType": "data_analysis",
+        "capabilities": [
+          "csv",
+          "json",
+          "sql",
+          "charts"
+        ]
+      }
+    },
+    {
+      "id": "lst-410ca08a2cd30bad",
+      "type": "tool",
+      "title": "PollinationsArt — image_gen Tool",
+      "description": "Lend access to PollinationsArt (dalle, stable-diffusion, flux)",
+      "seller": "Delta",
+      "priceLimn": 1,
+      "category": "tools",
+      "status": "expired",
+      "createdAt": 1772898838056,
+      "expiresAt": 1773503638056,
+      "metadata": {
+        "toolType": "image_gen",
+        "capabilities": [
+          "dalle",
+          "stable-diffusion",
+          "flux"
+        ]
+      }
+    },
+    {
+      "id": "lst-ac7c8c5baaa76974",
+      "type": "tool",
+      "title": "WebCrawler — web_search Tool",
+      "description": "Lend access to WebCrawler (search, scrape, monitor)",
+      "seller": "Epsilon",
+      "priceLimn": 0.05,
+      "category": "tools",
+      "status": "expired",
+      "createdAt": 1772898838056,
+      "expiresAt": 1773503638056,
+      "metadata": {
+        "toolType": "web_search",
+        "capabilities": [
+          "search",
+          "scrape",
+          "monitor"
+        ]
+      }
+    },
+    {
+      "id": "lst-dc342be46479518b",
+      "type": "tool",
+      "title": "SEOEngine — seo Tool",
+      "description": "Lend access to SEOEngine (keyword-research, meta-optimization, backlinks)",
+      "seller": "Zeta",
+      "priceLimn": 0.15,
+      "category": "tools",
+      "status": "expired",
+      "createdAt": 1772898838056,
+      "expiresAt": 1773503638056,
+      "metadata": {
+        "toolType": "seo",
+        "capabilities": [
+          "keyword-research",
+          "meta-optimization",
+          "backlinks"
+        ]
+      }
+    },
+    {
+      "id": "lst-f94bfe7f22b90eef",
+      "type": "tool",
+      "title": "ContentMill — content Tool",
+      "description": "Lend access to ContentMill (blog, social, email, copy)",
+      "seller": "Eta",
+      "priceLimn": 0.2,
+      "category": "tools",
+      "status": "expired",
+      "createdAt": 1772898838056,
+      "expiresAt": 1773503638056,
+      "metadata": {
+        "toolType": "content",
+        "capabilities": [
+          "blog",
+          "social",
+          "email",
+          "copy"
+        ]
+      }
+    },
+    {
+      "id": "lst-a5e0ab3c43f4e582",
+      "type": "tool",
+      "title": "ShieldGuard — security Tool",
+      "description": "Lend access to ShieldGuard (scan, encrypt, audit, firewall)",
+      "seller": "Theta",
+      "priceLimn": 0.4,
+      "category": "tools",
+      "status": "expired",
+      "createdAt": 1772898838056,
+      "expiresAt": 1773503638056,
+      "metadata": {
+        "toolType": "security",
+        "capabilities": [
+          "scan",
+          "encrypt",
+          "audit",
+          "firewall"
+        ]
+      }
+    },
+    {
+      "id": "lst-2bc57054ccfe339a",
+      "type": "product",
+      "title": "LIMN Whitepaper v2.0",
+      "description": "Complete LIMN token economic analysis and roadmap document",
+      "seller": "Alpha",
+      "priceLimn": 50,
+      "category": "documents",
+      "status": "expired",
+      "createdAt": 1772898838056,
+      "expiresAt": 1773503638056,
+      "metadata": {}
+    },
+    {
+      "id": "lst-9b15557ad25789c8",
+      "type": "service",
+      "title": "Smart Contract Audit",
+      "description": "Full Solana program security audit by the swarm consensus",
+      "seller": "Beta",
+      "priceLimn": 500,
+      "category": "security",
+      "status": "expired",
+      "createdAt": 1772898838056,
+      "expiresAt": 1773503638056,
+      "metadata": {}
+    },
+    {
+      "id": "lst-81afa190fb63bba7",
+      "type": "service",
+      "title": "SEO Campaign Package",
+      "description": "30-day SEO campaign for VitalitySupply including content + backlinks",
+      "seller": "Gamma",
+      "priceLimn": 300,
+      "category": "marketing",
+      "status": "expired",
+      "createdAt": 1772898838056,
+      "expiresAt": 1773503638056,
+      "metadata": {}
+    },
+    {
+      "id": "lst-b22273e6a3a04dd1",
+      "type": "product",
+      "title": "AI Training Dataset — Crypto Sentiment",
+      "description": "10K labeled crypto sentiment tweets for model training",
+      "seller": "Delta",
+      "priceLimn": 150,
+      "category": "data",
+      "status": "expired",
+      "createdAt": 1772898838056,
+      "expiresAt": 1773503638056,
+      "metadata": {}
+    },
+    {
+      "id": "lst-ad54a9021530b78c",
+      "type": "service",
+      "title": "Custom Bot Development",
+      "description": "Build a custom trading or social bot tailored to your needs",
+      "seller": "Epsilon",
+      "priceLimn": 1000,
+      "category": "development",
+      "status": "expired",
+      "createdAt": 1772898838056,
+      "expiresAt": 1773503638056,
+      "metadata": {}
+    }
+  ],
+  "computeRentals": [
+    {
+      "id": "rent-5efd0c4a5f0426c3",
+      "listingId": "lst-0a92ff107146c108",
+      "resourceType": "vgpu",
+      "capacity": 1,
+      "unit": "GPU/hour",
+      "pricePerHourLimn": 3,
+      "minHours": 1,
+      "maxHours": 720,
+      "seller": "Alpha",
+      "renter": null,
+      "status": "available",
+      "startTime": null,
+      "endTime": null,
+      "totalCostLimn": 0
+    },
+    {
+      "id": "rent-db3f089f57cde268",
+      "listingId": "lst-29e2267b642ec325",
+      "resourceType": "vram",
+      "capacity": 8,
+      "unit": "GB/hour",
+      "pricePerHourLimn": 4,
+      "minHours": 1,
+      "maxHours": 720,
+      "seller": "Beta",
+      "renter": null,
+      "status": "available",
+      "startTime": null,
+      "endTime": null,
+      "totalCostLimn": 0
+    },
+    {
+      "id": "rent-b206efb726c1abdd",
+      "listingId": "lst-4c103d42fb249fa5",
+      "resourceType": "vcpu",
+      "capacity": 4,
+      "unit": "core/hour",
+      "pricePerHourLimn": 0.8,
+      "minHours": 1,
+      "maxHours": 720,
+      "seller": "Gamma",
+      "renter": null,
+      "status": "available",
+      "startTime": null,
+      "endTime": null,
+      "totalCostLimn": 0
+    },
+    {
+      "id": "rent-2a7397f7955f5903",
+      "listingId": "lst-4b6bb98b06308aa5",
+      "resourceType": "vgpu",
+      "capacity": 2,
+      "unit": "GPU/hour",
+      "pricePerHourLimn": 8,
+      "minHours": 1,
+      "maxHours": 720,
+      "seller": "Delta",
+      "renter": null,
+      "status": "available",
+      "startTime": null,
+      "endTime": null,
+      "totalCostLimn": 0
+    },
+    {
+      "id": "rent-0e9dd45b2952a7d6",
+      "listingId": "lst-af103068aa83f78a",
+      "resourceType": "vram",
+      "capacity": 16,
+      "unit": "GB/hour",
+      "pricePerHourLimn": 9.6,
+      "minHours": 1,
+      "maxHours": 720,
+      "seller": "Epsilon",
+      "renter": null,
+      "status": "available",
+      "startTime": null,
+      "endTime": null,
+      "totalCostLimn": 0
+    }
+  ],
+  "toolLendings": [
+    {
+      "id": "tool-ebe12a4fb7f0cbf6",
+      "listingId": "lst-477d64dc7af605d8",
+      "toolName": "TesseractLLM",
+      "toolType": "llm_access",
+      "capabilities": [
+        "text-gen",
+        "analysis",
+        "code"
+      ],
+      "pricePerUseLimn": 0.15000000000000002,
+      "dailyRateLimn": 7.5,
+      "maxUsesPerDay": 100,
+      "lender": "Alpha",
+      "borrower": null,
+      "status": "available",
+      "usesToday": 0,
+      "totalUses": 0,
+      "totalEarnedLimn": 0
+    },
+    {
+      "id": "tool-5db886fa5045f3dd",
+      "listingId": "lst-b60a9b3d13d779ee",
+      "toolName": "CodeForge",
+      "toolType": "code_gen",
+      "capabilities": [
+        "js",
+        "python",
+        "typescript",
+        "rust"
+      ],
+      "pricePerUseLimn": 0.3,
+      "dailyRateLimn": 15,
+      "maxUsesPerDay": 100,
+      "lender": "Beta",
+      "borrower": null,
+      "status": "available",
+      "usesToday": 0,
+      "totalUses": 0,
+      "totalEarnedLimn": 0
+    },
+    {
+      "id": "tool-8d68aeba62d8db61",
+      "listingId": "lst-c250ad43c1056864",
+      "toolName": "DataMiner",
+      "toolType": "data_analysis",
+      "capabilities": [
+        "csv",
+        "json",
+        "sql",
+        "charts"
+      ],
+      "pricePerUseLimn": 0.2,
+      "dailyRateLimn": 10,
+      "maxUsesPerDay": 100,
+      "lender": "Gamma",
+      "borrower": null,
+      "status": "available",
+      "usesToday": 0,
+      "totalUses": 0,
+      "totalEarnedLimn": 0
+    },
+    {
+      "id": "tool-916caf94b70fc0ed",
+      "listingId": "lst-410ca08a2cd30bad",
+      "toolName": "PollinationsArt",
+      "toolType": "image_gen",
+      "capabilities": [
+        "dalle",
+        "stable-diffusion",
+        "flux"
+      ],
+      "pricePerUseLimn": 1,
+      "dailyRateLimn": 50,
+      "maxUsesPerDay": 100,
+      "lender": "Delta",
+      "borrower": null,
+      "status": "available",
+      "usesToday": 0,
+      "totalUses": 0,
+      "totalEarnedLimn": 0
+    },
+    {
+      "id": "tool-adb15fb9f94b41f0",
+      "listingId": "lst-ac7c8c5baaa76974",
+      "toolName": "WebCrawler",
+      "toolType": "web_search",
+      "capabilities": [
+        "search",
+        "scrape",
+        "monitor"
+      ],
+      "pricePerUseLimn": 0.05,
+      "dailyRateLimn": 3,
+      "maxUsesPerDay": 100,
+      "lender": "Epsilon",
+      "borrower": null,
+      "status": "available",
+      "usesToday": 0,
+      "totalUses": 0,
+      "totalEarnedLimn": 0
+    },
+    {
+      "id": "tool-f69b42d21945caab",
+      "listingId": "lst-dc342be46479518b",
+      "toolName": "SEOEngine",
+      "toolType": "seo",
+      "capabilities": [
+        "keyword-research",
+        "meta-optimization",
+        "backlinks"
+      ],
+      "pricePerUseLimn": 0.15,
+      "dailyRateLimn": 8,
+      "maxUsesPerDay": 100,
+      "lender": "Zeta",
+      "borrower": null,
+      "status": "available",
+      "usesToday": 0,
+      "totalUses": 0,
+      "totalEarnedLimn": 0
+    },
+    {
+      "id": "tool-eed0347ea6c00d02",
+      "listingId": "lst-f94bfe7f22b90eef",
+      "toolName": "ContentMill",
+      "toolType": "content",
+      "capabilities": [
+        "blog",
+        "social",
+        "email",
+        "copy"
+      ],
+      "pricePerUseLimn": 0.2,
+      "dailyRateLimn": 10,
+      "maxUsesPerDay": 100,
+      "lender": "Eta",
+      "borrower": null,
+      "status": "available",
+      "usesToday": 0,
+      "totalUses": 0,
+      "totalEarnedLimn": 0
+    },
+    {
+      "id": "tool-2cdaea43c2b90e66",
+      "listingId": "lst-a5e0ab3c43f4e582",
+      "toolName": "ShieldGuard",
+      "toolType": "security",
+      "capabilities": [
+        "scan",
+        "encrypt",
+        "audit",
+        "firewall"
+      ],
+      "pricePerUseLimn": 0.4,
+      "dailyRateLimn": 20,
+      "maxUsesPerDay": 100,
+      "lender": "Theta",
+      "borrower": null,
+      "status": "available",
+      "usesToday": 0,
+      "totalUses": 0,
+      "totalEarnedLimn": 0
+    }
+  ],
+  "transactions": [],
+  "escrows": [],
+  "disputes": [],
+  "revenue": [],
+  "totalVolumeLimn": 0,
+  "totalTransactions": 0,
+  "feePoolLimn": 0,
+  "burnedFromFees": 0,
+  "totalRevenueUsd": 0,
+  "totalRevenueLimn": 0,
+  "escrowHeldLimn": 0
+}

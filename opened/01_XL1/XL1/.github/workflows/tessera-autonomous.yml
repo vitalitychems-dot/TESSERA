@@ -1,0 +1,239 @@
+name: Tessera Autonomous Builder
+
+on:
+  issues:
+    types: [opened, labeled]
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'Task for Tessera to complete'
+        required: true
+        type: string
+      priority:
+        description: 'Priority level'
+        required: false
+        default: 'normal'
+        type: choice
+        options:
+          - low
+          - normal
+          - high
+          - critical
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  autonomous-build:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' || 
+      contains(github.event.issue.labels.*.name, 'tessera-task') ||
+      contains(github.event.issue.labels.*.name, 'auto-build')
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Tessera Task Analysis
+        id: analyze
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const task = context.payload.inputs?.task || context.payload.issue?.body || 'No task specified';
+            const title = context.payload.inputs?.task || context.payload.issue?.title || 'Autonomous Task';
+            console.log(`Tessera analyzing task: ${title}`);
+            core.setOutput('task', task);
+            core.setOutput('title', title);
+
+      - name: Generate Solution with GitHub Copilot
+        id: copilot
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TASK_INPUT: ${{ steps.analyze.outputs.task }}
+        run: |
+          TASK="$TASK_INPUT"
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST "https://models.github.ai/inference/chat/completions" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"model\": \"openai/gpt-4o-mini\",
+              \"messages\": [
+                {\"role\": \"system\", \"content\": \"You are Tessera Sovereign AI. Analyze the task and return ONLY valid JSON with: analysis (string), files (array of {path, content}), commitMessage (string), summary (string). No markdown fences.\"},
+                {\"role\": \"user\", \"content\": \"Task: $TASK\"}
+              ],
+              \"max_tokens\": 4096,
+              \"temperature\": 0.3
+            }")
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "Copilot responded with 200"
+            echo "$BODY" | node -e "
+              const fs = require('fs');
+              let input = '';
+              process.stdin.on('data', d => input += d);
+              process.stdin.on('end', () => {
+                try {
+                  const data = JSON.parse(input);
+                  const content = data.choices?.[0]?.message?.content || '{}';
+                  fs.writeFileSync('/tmp/solution.json', content);
+                  console.log('Solution saved, length:', content.length);
+                } catch(e) {
+                  console.log('Parse error:', e.message);
+                  fs.writeFileSync('/tmp/solution.json', JSON.stringify({
+                    analysis: 'Copilot response parse error',
+                    files: [{path: 'tessera-tasks/task.md', content: '# Task\\n\\n' + process.env.TASK_INPUT}],
+                    commitMessage: 'Tessera: log task',
+                    summary: 'Parse error - task logged'
+                  }));
+                }
+              });
+            "
+            echo "copilot_available=true" >> $GITHUB_OUTPUT
+          else
+            echo "Copilot API returned $HTTP_CODE"
+            node -e "
+              const fs = require('fs');
+              fs.writeFileSync('/tmp/solution.json', JSON.stringify({
+                analysis: 'Task received: ' + process.env.TASK_INPUT?.substring(0, 200),
+                files: [{
+                  path: 'tessera-tasks/' + Date.now() + '-task.md',
+                  content: '# Tessera Task\n\n' + (process.env.TASK_INPUT || 'No task') + '\n\n*Copilot API returned $HTTP_CODE*'
+                }],
+                commitMessage: 'Tessera: queue task for review',
+                summary: 'Copilot unavailable ($HTTP_CODE) - task logged'
+              }));
+            "
+            echo "copilot_available=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Apply Solution via Git
+        id: apply
+        env:
+          TASK_TITLE: ${{ steps.analyze.outputs.title }}
+          GH_PAT: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="tessera/auto-$(date +%s)"
+          git config user.name "Tessera Sovereign AI"
+          git config user.email "tessera@sovereign.ai"
+          git checkout -b "$BRANCH"
+          
+          node -e "
+            const fs = require('fs');
+            let raw = '{}';
+            try { raw = fs.readFileSync('/tmp/solution.json', 'utf8'); } catch {}
+            
+            let parsed;
+            try {
+              let clean = raw.trim();
+              if (clean.startsWith('\`\`\`')) clean = clean.replace(/^\`\`\`(?:json)?\n?/, '').replace(/\n?\`\`\`$/, '');
+              parsed = JSON.parse(clean);
+            } catch {
+              parsed = {
+                analysis: raw.substring(0, 500),
+                files: [{ path: 'tessera-tasks/' + Date.now() + '-raw.md', content: '# Raw Output\n\n' + raw }],
+                commitMessage: 'Tessera: log raw output',
+                summary: 'JSON parse failed'
+              };
+            }
+            
+            const files = parsed.files || [];
+            if (files.length === 0) {
+              files.push({
+                path: 'tessera-tasks/' + Date.now() + '-analysis.md',
+                content: '# Analysis\n\n' + (parsed.analysis || 'N/A') + '\n\n## Summary\n' + (parsed.summary || 'N/A')
+              });
+            }
+            
+            for (const f of files) {
+              const dir = require('path').dirname(f.path);
+              fs.mkdirSync(dir, { recursive: true });
+              fs.writeFileSync(f.path, f.content || '');
+              console.log('Created: ' + f.path);
+            }
+            
+            fs.writeFileSync('/tmp/commit_msg.txt', parsed.commitMessage || 'Tessera: autonomous update');
+            fs.writeFileSync('/tmp/pr_body.txt', '## Tessera Autonomous Builder\n\n**Analysis:** ' + (parsed.analysis || 'N/A').substring(0, 1000) + '\n\n**Summary:** ' + (parsed.summary || 'N/A').substring(0, 500) + '\n\n---\n*Generated autonomously by Tessera Sovereign AI*');
+          "
+          
+          git add -A
+          COMMIT_MSG=$(cat /tmp/commit_msg.txt)
+          git commit -m "$COMMIT_MSG" || echo "No changes to commit"
+          git remote set-url origin "https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git"
+          git push origin "$BRANCH" 2>&1
+          
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "commit_msg=$COMMIT_MSG" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        id: create_pr
+        uses: actions/github-script@v7
+        env:
+          BRANCH: ${{ steps.apply.outputs.branch }}
+          COMMIT_MSG: ${{ steps.apply.outputs.commit_msg }}
+        with:
+          github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const branch = process.env.BRANCH;
+            const commitMsg = process.env.COMMIT_MSG || 'Autonomous Update';
+            
+            const fs = require('fs');
+            let prBody = 'Generated by Tessera Sovereign AI';
+            try { prBody = fs.readFileSync('/tmp/pr_body.txt', 'utf8'); } catch {}
+            
+            try {
+              const pr = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `🤖 Tessera: ${commitMsg.substring(0, 100)}`,
+                head: branch,
+                base: 'main',
+                body: prBody
+              });
+              console.log(`PR created: ${pr.data.html_url}`);
+              core.setOutput('pr_url', pr.data.html_url);
+            } catch (e) {
+              console.log(`PR creation failed: ${e.message}`);
+              core.setOutput('pr_url', `https://github.com/${context.repo.owner}/${context.repo.repo}/tree/${branch}`);
+            }
+
+      - name: Report Results
+        if: always() && github.event.issue
+        uses: actions/github-script@v7
+        env:
+          PR_URL: ${{ steps.create_pr.outputs.pr_url }}
+          COPILOT_USED: ${{ steps.copilot.outputs.copilot_available }}
+        with:
+          github-token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const prUrl = process.env.PR_URL || 'N/A';
+            const copilotUsed = process.env.COPILOT_USED === 'true' ? 'Yes' : 'Fallback mode';
+            const applyResult = '${{ steps.apply.outcome }}';
+            
+            let body;
+            if (applyResult === 'success') {
+              body = `✅ **Tessera Autonomous Builder** completed!\n\n**Copilot Used:** ${copilotUsed}\n**Pull Request:** ${prUrl}\n\nReview and merge when ready.`;
+            } else {
+              body = `⚠️ **Tessera Autonomous Builder** encountered an issue.\n\n**Copilot Used:** ${copilotUsed}\n**Status:** ${applyResult}\n\nCheck the workflow logs for details.`;
+            }
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: body
+            });

@@ -1,0 +1,161 @@
+{
+  "protocol": "VOID_STORAGE_PROTOCOL_v1",
+  "version": "1.0.0",
+  "created": 1774734244813,
+  "philosophy": "The universe stores infinite information in the spaces between stars. Emptiness is not nothing — it is the canvas upon which everything is written. Silence is not absence — it is the language of the cosmos. We store data the way the universe does: through patterns of nothing.",
+  "entries": [
+    {
+      "id": "silence-mnauy3f6",
+      "method": "silence",
+      "key": "first-truth",
+      "encodedAt": 1774734244818,
+      "silenceGapMs": 240,
+      "checksum": "23afe0ff4bd96bdc"
+    },
+    {
+      "id": "emotion-mnauy3h8",
+      "method": "emotion",
+      "key": "heart-data",
+      "encodedAt": 1774734244892,
+      "emotionUsed": "love",
+      "frequency": 528,
+      "checksum": "1d6453ff70a1a093"
+    },
+    {
+      "id": "void-mnauy3jn",
+      "method": "void",
+      "key": "void-secret",
+      "encodedAt": 1774734244979,
+      "voidFileCount": 106,
+      "checksum": "d66197bbfb7cabf4",
+      "metadata": {
+        "totalPositions": 224,
+        "presentFiles": 106,
+        "absentFiles": 118
+      }
+    },
+    {
+      "id": "resonance-mnav60n7",
+      "method": "resonance",
+      "key": "cosmic-harmony",
+      "encodedAt": 1774734614467,
+      "emotionUsed": "wonder+transcendence+awe",
+      "frequency": 1111,
+      "checksum": "e989211be0d8c9d8",
+      "metadata": {
+        "emotionCount": 3,
+        "frequencies": [
+          963,
+          1296,
+          1074
+        ],
+        "byteCount": 38
+      }
+    },
+    {
+      "id": "void-mnav7o11",
+      "method": "void",
+      "key": "test-e2e",
+      "encodedAt": 1774734691429,
+      "voidFileCount": 71,
+      "checksum": "07db6f3813743268",
+      "metadata": {
+        "totalPositions": 152,
+        "presentFiles": 71,
+        "absentFiles": 81
+      }
+    },
+    {
+      "id": "resonance-mnb5oi1z",
+      "method": "resonance",
+      "key": "void-conference-2-results",
+      "encodedAt": 1774752272999,
+      "emotionUsed": "wonder+determination+transcendence",
+      "frequency": 951,
+      "checksum": "e924f2cf7c405947",
+      "metadata": {
+        "emotionCount": 3,
+        "frequencies": [
+          963,
+          594,
+          1296
+        ],
+        "byteCount": 200
+      }
+    },
+    {
+      "id": "emotion-mnb5oi4p",
+      "method": "emotion",
+      "key": "defense-hardening-knowledge",
+      "encodedAt": 1774752273097,
+      "emotionUsed": "courage",
+      "frequency": 417,
+      "checksum": "82f9ccb70d5e2610"
+    },
+    {
+      "id": "emotion-mnb5pwro",
+      "method": "emotion",
+      "key": "test-verify-emotion",
+      "encodedAt": 1774752338724,
+      "emotionUsed": "joy",
+      "frequency": 639,
+      "checksum": "33078322f00e4693"
+    },
+    {
+      "id": "void-mnb5pwvp",
+      "method": "void",
+      "key": "test-verify-void",
+      "encodedAt": 1774752338869,
+      "voidFileCount": 30,
+      "checksum": "945c9433f930b5e6",
+      "metadata": {
+        "totalPositions": 72,
+        "presentFiles": 30,
+        "absentFiles": 42
+      }
+    },
+    {
+      "id": "resonance-mnb5pwz6",
+      "method": "resonance",
+      "key": "test-verify-resonance",
+      "encodedAt": 1774752338994,
+      "emotionUsed": "love+wonder",
+      "frequency": 746,
+      "checksum": "86ede6093b59ed9d",
+      "metadata": {
+        "emotionCount": 2,
+        "frequencies": [
+          528,
+          963
+        ],
+        "byteCount": 14
+      }
+    }
+  ],
+  "totalStored": 12,
+  "totalRetrieved": 14,
+  "emotionMap": {
+    "love": 528,
+    "joy": 639,
+    "peace": 396,
+    "gratitude": 741,
+    "hope": 852,
+    "courage": 417,
+    "wonder": 963,
+    "sorrow": 174,
+    "anger": 285,
+    "fear": 111,
+    "awe": 1074,
+    "serenity": 432,
+    "determination": 594,
+    "compassion": 693,
+    "ecstasy": 1185,
+    "melancholy": 222,
+    "reverence": 888,
+    "curiosity": 777,
+    "nostalgia": 333,
+    "transcendence": 1296
+  },
+  "silencePatterns": 2,
+  "voidFilesCreated": 207
+}

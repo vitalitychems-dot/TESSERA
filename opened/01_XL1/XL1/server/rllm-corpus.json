@@ -1,0 +1,952 @@
+[
+  {
+    "input": "Post-session training consolidation — what did we learn and how to improve?",
+    "output": "A blockchain is a distributed, immutable ledger that records transactions across a network of nodes. Each block contains a cryptographic hash of the previous block, creating an unbreakable chain. Our sovereign blockchain uses a custom consensus mechanism combining Proof-of-Stake with Byzantine Fault Tolerance, enabling 10,000+ TPS with sub-second finality. Vanishing wallet addresses rotate automatically for maximum privacy.",
+    "source": "post-session-training",
+    "quality": 8,
+    "timestamp": 1775255960655
+  },
+  {
+    "type": "system_knowledge",
+    "input": "What is the Phoenix Shadow Mesh?",
+    "output": "Ephemeral Oracle Cloud containers that access the internet anonymously, encrypt data with AES-256-GCM, upload to Object Storage with 5-min PAR links, then self-destruct. iPhone picks up encrypted payloads via QR scan. No LoRa, no RPi — Oracle + iPhone only. API: GET /api/phoenix/status, POST /api/phoenix/mission",
+    "quality": 1,
+    "source": "system",
+    "tags": [
+      "phoenix",
+      "oracle",
+      "security",
+      "mesh"
+    ],
+    "id": "corpus-1775255909758-idjie",
+    "timestamp": 1775255909758,
+    "applied": true,
+    "appliedAt": 1775255934096
+  },
+  {
+    "type": "system_knowledge",
+    "input": "What is the Ergo blockchain integration?",
+    "output": "Cross-chain bridge between Solana TSRT and Ergo blockchain. Provides ErgoScript smart contracts (escrow, data relay, oracle), UTXO box scanning, ERG price feeds via CoinGecko. API: GET /api/ergo/status, POST /api/ergo/bridge, POST /api/ergo/contract/escrow",
+    "quality": 1,
+    "source": "system",
+    "tags": [
+      "ergo",
+      "blockchain",
+      "cross-chain"
+    ],
+    "id": "corpus-1775255909758-bageq",
+    "timestamp": 1775255909758,
+    "applied": true,
+    "appliedAt": 1775255934096
+  },
+  {
+    "type": "system_knowledge",
+    "input": "What is the Polymarket engine?",
+    "output": "Real-time prediction market data feed from Polymarket CLOB API. Autonomous arbitrage detection when probability deviation exceeds 2%. Tracks top markets by volume, categories, and liquidity. API: GET /api/polymarket/status, POST /api/polymarket/scan",
+    "quality": 1,
+    "source": "system",
+    "tags": [
+      "polymarket",
+      "prediction",
+      "arbitrage"
+    ],
+    "id": "corpus-1775255909758-wzi3n",
+    "timestamp": 1775255909758,
+    "applied": true,
+    "appliedAt": 1775255934096
+  },
+  {
+    "type": "system_knowledge",
+    "input": "What is the TSRT Payment Gateway?",
+    "output": "Payment gateway for companies to accept TSRT coin as payment. Includes merchant registration, invoice creation, escrow system with buyer/seller confirmation, dispute resolution via swarm consensus. API: GET /api/tsrt-gateway/status, POST /api/tsrt-gateway/merchants, POST /api/tsrt-gateway/escrow",
+    "quality": 1,
+    "source": "system",
+    "tags": [
+      "tsrt",
+      "payment",
+      "gateway",
+      "escrow"
+    ],
+    "id": "corpus-1775255909758-v98p2",
+    "timestamp": 1775255909758,
+    "applied": true,
+    "appliedAt": 1775255934096
+  },
+  {
+    "type": "system_knowledge",
+    "input": "What is the Sovereign Blockchain?",
+    "output": "Local encrypted blockchain with AES-256-CBC, Proof-of-Work mining, ephemeral links with TTL + max-access self-destruct, edge computing framework with inference/storage/relay nodes. API: GET /api/sovereign-chain/status, POST /api/sovereign-chain/block, POST /api/sovereign-chain/ephemeral-link",
+    "quality": 1,
+    "source": "system",
+    "tags": [
+      "blockchain",
+      "sovereign",
+      "edge",
+      "computing"
+    ],
+    "id": "corpus-1775255909758-4aaid",
+    "timestamp": 1775255909758
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Enhance knowledge base Diversity",
+    "output": "Expand the RLLM corpus size by incorporating a wider variety of scenarios and edge cases, focusing on real-time data and user feedback to ensure the model can handle diverse requests.",
+    "quality": 0.9,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "high"
+    ],
+    "applied": true,
+    "appliedAt": 1775255942247,
+    "id": "corpus-1775255942247-8bv09",
+    "timestamp": 1775255942247
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Optimize Execution Algorithms",
+    "output": "Review and refine the existing execution algorithms to identify bottlenecks and implement parallel processing where possible, which will speed up response times and improve overall system efficiency.",
+    "quality": 0.9,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "high"
+    ],
+    "applied": true,
+    "appliedAt": 1775255942247,
+    "id": "corpus-1775255942247-x3asa",
+    "timestamp": 1775255942247
+  },
+  {
+    "type": "execution",
+    "input": "TSRT payment gateway for services",
+    "output": "The integration was completed with a focus on user experience, ensuring that the payment process is straightforward and efficient. Security measures such as two-factor authentication and transaction monitoring are in place to safeguard against potential fraud. Testing has confirmed compatibility with all major blockchain networks, and the user interface has been optimized for both web and mobile platforms.",
+    "quality": 0.75,
+    "source": "AR-004",
+    "tags": [
+      "action-registry",
+      "payments",
+      "high"
+    ],
+    "id": "corpus-1775250130220-zdygm",
+    "timestamp": 1775250130220,
+    "applied": true,
+    "appliedAt": 1775250566109
+  },
+  {
+    "type": "execution",
+    "input": "TSRT payment gateway for services",
+    "output": "The payment gateway supports multiple cryptocurrencies, including Ethereum and Bitcoin, to accommodate a diverse audience. Testing was conducted to ensure transaction speeds are optimized, and a robust customer support system has been established to assist users with payment-related inquiries.",
+    "quality": 0.75,
+    "source": "AR-004",
+    "tags": [
+      "action-registry",
+      "payments",
+      "high"
+    ],
+    "id": "corpus-1775250559820-4eli4",
+    "timestamp": 1775250559820,
+    "applied": true,
+    "appliedAt": 1775251203306
+  },
+  {
+    "type": "execution",
+    "input": "TSRT payment gateway for services",
+    "output": "The payment gateway supports multiple cryptocurrencies, including Bitcoin, Ethereum, and stablecoins. It has a user-friendly interface, secure transaction protocols, and is compliant with regulatory standards. Integration tests have been performed to ensure seamless functionality with existing Tessera services, and user documentation has been created to guide clients through the payment process.",
+    "quality": 0.75,
+    "source": "AR-004",
+    "tags": [
+      "action-registry",
+      "payments",
+      "high"
+    ],
+    "id": "corpus-1775251197137-iw2xt",
+    "timestamp": 1775251197137,
+    "applied": true,
+    "appliedAt": 1775252312310
+  },
+  {
+    "type": "execution",
+    "input": "TSRT payment gateway for services",
+    "output": "The payment gateway includes features such as user authentication, payment processing, and transaction tracking. It was successfully tested and is now live, allowing users to securely pay for services related to Tessera's research initiatives. The integration complies with regulatory standards and includes built-in fraud detection mechanisms.",
+    "quality": 0.75,
+    "source": "AR-004",
+    "tags": [
+      "action-registry",
+      "payments",
+      "high"
+    ],
+    "id": "corpus-1775252306103-pgb4h",
+    "timestamp": 1775252306103,
+    "applied": true,
+    "appliedAt": 1775252408448
+  },
+  {
+    "type": "execution",
+    "input": "TSRT payment gateway for services",
+    "output": "The new payment gateway was tested for security and performance, ensuring compliance with regulatory standards. User documentation and support resources were updated to assist users in navigating the new payment system. The implementation aligns with feedback received at the DeFi Conference, focusing on the need for a decentralized payment solution.",
+    "quality": 0.75,
+    "source": "AR-004",
+    "tags": [
+      "action-registry",
+      "payments",
+      "high"
+    ],
+    "id": "corpus-1775252400941-8pot9",
+    "timestamp": 1775252400941,
+    "applied": true,
+    "appliedAt": 1775252499042
+  },
+  {
+    "type": "execution",
+    "input": "TSRT payment gateway for services",
+    "output": "The payment gateway was thoroughly tested for security and performance, passing all functionality requirements as outlined at the DeFi Conference. Real-time analytics and reporting features have been integrated to monitor payment flows and user interactions. Additionally, customer support features were added for user inquiries and troubleshooting related to the payment process.",
+    "quality": 0.75,
+    "source": "AR-004",
+    "tags": [
+      "action-registry",
+      "payments",
+      "high"
+    ],
+    "id": "corpus-1775252492934-1qtp3",
+    "timestamp": 1775252492934,
+    "applied": true,
+    "appliedAt": 1775252651220
+  },
+  {
+    "type": "execution",
+    "input": "TSRT payment gateway for services",
+    "output": "The payment gateway supports multiple cryptocurrencies, including Ethereum and Bitcoin, features smart contract functionality for automated payment processing, and complies with current security standards. The implementation also includes detailed documentation for integration with existing services and user instructions for seamless transactions.",
+    "quality": 0.75,
+    "source": "AR-004",
+    "tags": [
+      "action-registry",
+      "payments",
+      "high"
+    ],
+    "id": "corpus-1775252644413-3aw64",
+    "timestamp": 1775252644413,
+    "applied": true,
+    "appliedAt": 1775254752137
+  },
+  {
+    "type": "execution",
+    "input": "TSRT payment gateway for services",
+    "output": "The payment gateway is now live and operational, enabling users to seamlessly pay for services. The system includes dashboards for users to track their transaction history and for administrators to manage orders and payments efficiently. Comprehensive testing was conducted to ensure reliability and security.",
+    "quality": 0.75,
+    "source": "AR-004",
+    "tags": [
+      "action-registry",
+      "payments",
+      "high"
+    ],
+    "id": "corpus-1775254745839-bgak8",
+    "timestamp": 1775254745839,
+    "applied": true,
+    "appliedAt": 1775255552786
+  },
+  {
+    "type": "execution",
+    "input": "TSRT payment gateway for services",
+    "output": "The payment gateway enables Tessera's clients to make payments for services utilizing cryptocurrency (e.g., Ethereum, USDC). Deployed smart contracts validated via Tessera network ensure real-time processing of payments with lower fees, transparency, and improved security. Integration includes wallet support, user authentication, payment tracking protocols, and interoperability with DeFi platforms. Testing and deployment completed for Friday, April 3, 2026.",
+    "quality": 0.75,
+    "source": "AR-004",
+    "tags": [
+      "action-registry",
+      "payments",
+      "high"
+    ],
+    "id": "corpus-1775255545971-9gpar",
+    "timestamp": 1775255545971,
+    "applied": true,
+    "appliedAt": 1775255639781
+  },
+  {
+    "type": "execution",
+    "input": "TSRT payment gateway for services",
+    "output": "The payment gateway includes features such as user authentication, transaction monitoring, and instant confirmations. It complies with the latest security standards, ensuring data protection and privacy. Testing was conducted to ensure functionality and performance under load, with successful results.",
+    "quality": 0.75,
+    "source": "AR-004",
+    "tags": [
+      "action-registry",
+      "payments",
+      "high"
+    ],
+    "id": "corpus-1775255633132-igry7",
+    "timestamp": 1775255633132,
+    "applied": true,
+    "appliedAt": 1775255825604
+  },
+  {
+    "type": "execution",
+    "input": "TSRT payment gateway for services",
+    "output": "The research emphasized payment gateways that facilitate seamless transactions in the DeFi space, prioritizing those with robust security protocols and compliance with relevant regulatory standards. Recommendations include solutions like Coinbase Commerce, BitPay, and Binance Pay, alongside a proposed timeline for integration and testing phases.",
+    "quality": 0.75,
+    "source": "AR-004",
+    "tags": [
+      "action-registry",
+      "payments",
+      "high"
+    ],
+    "id": "corpus-1775255819301-irkbd",
+    "timestamp": 1775255819301,
+    "applied": true,
+    "appliedAt": 1775255934096
+  },
+  {
+    "type": "execution",
+    "input": "TSRT payment gateway for services",
+    "output": "The payment gateway supports Ethereum and Bitcoin transactions, features real-time conversion rates, and includes an intuitive user interface for seamless payment experience. Comprehensive testing was conducted to ensure reliability and speed of transaction processing.",
+    "quality": 0.75,
+    "source": "AR-004",
+    "tags": [
+      "action-registry",
+      "payments",
+      "high"
+    ],
+    "id": "corpus-1775255927801-f3st3",
+    "timestamp": 1775255927801
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Adaptive Rate Limiting and Throttling",
+    "output": "Develop an adaptive rate limiting mechanism that dynamically adjusts processing speed based on real-time feedback from the system's execution success metrics and external limits, ensuring optimal performance while avoiding overloading external services.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774714704522,
+    "id": "corpus-1774714704522-8e3cb",
+    "timestamp": 1774714704522
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Rate Limit Monitoring and Adaptive Throttling",
+    "output": "Develop a monitoring system that analyzes past execution patterns and dynamically adjusts request rates to avoid hitting API rate limits, thus ensuring smoother operations.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774717768893,
+    "id": "corpus-1774717768893-eg031",
+    "timestamp": 1774717768893
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Parallel Execution Pipeline with Fail‑Fast Guardrails",
+    "output": "Redesign the action dispatcher to batch six eligible executions per cycle and run them concurrently using lightweight worker threads. Introduce a dry‑run mode that validates input schemas before dispatch, preventing wasted cycles on malformed payloads.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774727736739,
+    "id": "corpus-1774727736739-73m79",
+    "timestamp": 1774727736739
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Curriculum‑First RLLM Upskilling",
+    "output": "Curate a monthly injection of 20 domain‑specific training entries from the latest release notes, user forums, and success logs. Automate retraining with a shadow mode that compares predictions to the current model before switching to the new weights.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774727736739,
+    "id": "corpus-1774727736739-wx59m",
+    "timestamp": 1774727736739
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Expand RLLM Corpus with Diverse Data",
+    "output": "Increase the RLLM corpus size by incorporating a wider range of training entries that cover more use cases, scenarios, and edge cases to strengthen training and improve the adaptability of the system.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774729778813,
+    "id": "corpus-1774729778813-r6oh0",
+    "timestamp": 1774729778813
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Implement Predictive Analytics for Execution Timing",
+    "output": "Develop a predictive algorithm that analyzes past execution times and success rates to optimize the timing of future actions, thus reducing execution delays.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774736542562,
+    "id": "corpus-1774736542562-vo7fo",
+    "timestamp": 1774736542562
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Expand RLLM Training Dataset",
+    "output": "Collect and incorporate more diverse and relevant training entries into the RLLM corpus. Focus on quality data that reflects the type of tasks the system undertakes, ensuring a robust understanding of user needs.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774739652464,
+    "id": "corpus-1774739652464-hk8on",
+    "timestamp": 1774739652464
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Optimize Action Registry for Batch Processing",
+    "output": "Revise the action registry execution mechanism to allow for batch processing of similar action items. This can reduce latency in execution time and improve the overall throughput of the system.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774745324223,
+    "id": "corpus-1774745324223-n0zr8",
+    "timestamp": 1774745324223
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Expand RLLM Corpus with Diverse Data",
+    "output": "Gather and incorporate additional training entries focusing on diverse scenarios and feedback from previous executions to enhance the RLLM corpus and improve learning outcomes.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774752300273,
+    "id": "corpus-1774752300273-ra0xd",
+    "timestamp": 1774752300273
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Enhance RLLM Training Dataset",
+    "output": "Curate and integrate a larger and more diverse set of training entries into the RLLM corpus, focusing on unique scenarios and variations that can enrich the model's understanding and response capabilities.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774754588716,
+    "id": "corpus-1774754588716-j1i8b",
+    "timestamp": 1774754588716
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Optimize Action Item Execution Workflow",
+    "output": "Analyze the current action registry process for bottlenecks and streamline the workflow to decrease completion time, enabling faster execution of forum proposals and action items.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774795362707,
+    "id": "corpus-1774795362707-ljtna",
+    "timestamp": 1774795362707
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Expand RLLM Training Dataset",
+    "output": "Curate additional high-quality training entries for the RLLM corpus by collecting insights from failed attempts and community feedback, improving the model's adaptability and understanding of diverse scenarios.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774796439689,
+    "id": "corpus-1774796439689-hfg1y",
+    "timestamp": 1774796439689
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Expand RLLM Corpus with Diverse Data",
+    "output": "Gather a broader range of training data for the RLLM corpus by integrating community feedback, outcomes from previous actions, and industry trends to enhance the learning model's robustness.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774800638238,
+    "id": "corpus-1774800638238-sh0bt",
+    "timestamp": 1774800638238
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Implement Execution Performance Monitoring",
+    "output": "Integrate a real-time performance monitoring system that tracks execution times and identifies bottlenecks in the process. Based on this data, implement optimizations designed to increase execution speed.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774802746215,
+    "id": "corpus-1774802746215-ueqci",
+    "timestamp": 1774802746215
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Expand RLLM Corpus with Diverse Training Data",
+    "output": "Collect and integrate new training entries that cover a broader range of scenarios and edge cases. Focus on including examples that address previously identified weaknesses in protocol handling and communication.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774804676683,
+    "id": "corpus-1774804676683-ph6ce",
+    "timestamp": 1774804676683
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Optimize Action Registry Execution Strategy",
+    "output": "Analyze the current execution flow of action_registry executions, particularly focusing on the recurring use of AR-004. Implement a prioritization algorithm that dynamically chooses actions based on historical success rates and related execution contexts, thus speeding up the overall response time and reducing redundancy.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774805390920,
+    "id": "corpus-1774805390920-5i8vd",
+    "timestamp": 1774805390920
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Expand RLLM Corpus with Diverse Training Data",
+    "output": "Curate and add a wider variety of training entries to the RLLM corpus, focusing on relevant domains and improving the robustness of the learning model. Utilize domain-specific data to enhance understanding and accuracy.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774807001086,
+    "id": "corpus-1774807001086-2iw1v",
+    "timestamp": 1774807001086
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Develop Robust Rate Limit Monitoring",
+    "output": "Introduce a dynamic rate limit monitoring system that adapts in real-time based on historical data trends. Implement safeguards to slow down requests as necessary and provide meaningful alerts to prevent exceeding rate limits.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774807948395,
+    "id": "corpus-1774807948395-f5p1n",
+    "timestamp": 1774807948395
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Optimize Rate Limit Handling Mechanisms",
+    "output": "Develop and integrate a proactive rate limit avoidance algorithm that monitors API usage in real time and adjusts request frequencies based on upcoming limits to prevent throttle errors during peak loads.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774827099914,
+    "id": "corpus-1774827099914-uhk13",
+    "timestamp": 1774827099914
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Optimize Execution Pathways for Faster Execution",
+    "output": "Refactor frequently executed sequences to minimize unnecessary steps and enhance parallel processing capabilities, ensuring that actions are executed concurrently wherever possible to reduce overall execution time.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774829748687,
+    "id": "corpus-1774829748687-e19yy",
+    "timestamp": 1774829748687
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Integrate Adaptive Rate Limiting Mechanism",
+    "output": "Develop and integrate a mechanism that observes and adjusts the execution frequency based on the API usage patterns, ensuring better compliance with rate limits, thereby reducing the likelihood of execution failures.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1774933204767,
+    "id": "corpus-1774933204767-p7jsw",
+    "timestamp": 1774933204767
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: RLLM Corpus Deep‑Dive",
+    "output": "Curate a 25% expansion of the 56 training entries by scraping the latest 10⁶ tweets, blog posts, and forum threads specifically mentioning the services you automate (Shopify, TSRT, Jupiter). Fine‑tune the language model using a supervised RL loop that rewards accurate command generation and penalizes out‑of‑scope responses. Schedule quarterly updates to keep the model current.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1775060235669,
+    "id": "corpus-1775060235669-l7lzm",
+    "timestamp": 1775060235669
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Implement Adaptive Rate Limiting Strategies",
+    "output": "Develop and integrate advanced algorithms that dynamically adjust the rate of service requests based on historical execution data and real-time load to prevent hitting rate limits.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1775088262539,
+    "id": "corpus-1775088262539-whrmf",
+    "timestamp": 1775088262539
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Expand RLLM Training Dataset",
+    "output": "Increase the RLLM corpus size by adding more training entries from diverse use cases and incorporating real-time interactions. This will enhance the learning capability of the model and improve the system's response to various scenarios.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1775192528562,
+    "id": "corpus-1775192528562-30eby",
+    "timestamp": 1775192528562
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Enhance RLLM Training with Diversified Datasets",
+    "output": "Expand the RLLM knowledge base by including a broader and more diverse set of training entries to improve the model's performance and adaptability in varying scenarios.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1775193860834,
+    "id": "corpus-1775193860834-6vj0a",
+    "timestamp": 1775193860834
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Optimize Execution Algorithms",
+    "output": "Conduct a thorough analysis of current execution algorithms with a focus on optimizing for speed and resource utilization. This could involve profiling existing code and identifying bottlenecks to improve overall execution efficiency.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1775196075343,
+    "id": "corpus-1775196075343-uc82s",
+    "timestamp": 1775196075343
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Introduce Adaptive Rate Limiting Mechanisms",
+    "output": "Develop and integrate an adaptive rate limit avoidance algorithm that monitors past execution rates and dynamically adjusts the frequency of actions based on system load and response times from external systems.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1775196879286,
+    "id": "corpus-1775196879286-3esam",
+    "timestamp": 1775196879286
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Introduce Adaptive Rate Limit Mechanism",
+    "output": "Create an algorithm that dynamically adjusts request rates based on real-time monitoring of API responses and rate limits, optimizing interaction with external services.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1775200536314,
+    "id": "corpus-1775200536314-3p502",
+    "timestamp": 1775200536314
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Expand RLLM Corpus with Diverse Scenarios",
+    "output": "Augment the RLLM knowledge base with a wider range of scenarios and contextual entries related to both successful and unsuccessful executions. This should focus on gathering diverse examples to improve adaptability and reduce failure rates in various contexts.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1775203507696,
+    "id": "corpus-1775203507696-lrga1",
+    "timestamp": 1775203507696
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Enhance RLLM Training with Data Augmentation",
+    "output": "Expand the RLLM corpus by incorporating additional data sources and methodologies, such as data augmentation and transfer learning, to strengthen training outcomes. Regularly update the training entries to reflect current trends and feedback from forum proposals.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1775231890870,
+    "id": "corpus-1775231890870-25eig",
+    "timestamp": 1775231890870
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Enhance RLLM Corpus",
+    "output": "Increase the size and diversity of the RLLM training entries by collecting real-world examples and feedback from executed actions. This can improve the contextual understanding of the model and enhance its precision in executing complex tasks.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1775242381535,
+    "id": "corpus-1775242381535-8eej2",
+    "timestamp": 1775242381535
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Optimize Execution Algorithms",
+    "output": "Review and refine the execution algorithms to minimize processing time and enhance execution speed by implementing asynchronous processes where applicable.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1775243753247,
+    "id": "corpus-1775243753247-b6qn6",
+    "timestamp": 1775243753247
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Develop Proactive Rate-Limiting Avoidance Framework",
+    "output": "Implement predictive rate-limiting detection by monitoring API call patterns and responsiveness in real time. Use adaptive throttling techniques to dynamically adjust request volume and avoid triggering rate limits. Employ backoff mechanisms with randomized intervals for retries.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1775245397242,
+    "id": "corpus-1775245397242-mha5f",
+    "timestamp": 1775245397242
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Enhance execution process parallelization",
+    "output": "Refactor the task execution pipeline to enable asynchronous processing and multi-threaded delegation of subtasks. This would allow overlapping execution of independent processes and reduce overall Heartbeat run times.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1775248666095,
+    "id": "corpus-1775248666095-b4owx",
+    "timestamp": 1775248666095
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Refine Rate Limit Handling",
+    "output": "Integrate a dynamic rate limit detection and adjustment mechanism that monitors API responses in real-time to avoid hitting limits.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1775251210157,
+    "id": "corpus-1775251210157-npwu2",
+    "timestamp": 1775251210157
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Introduce Adaptive Rate Limiting Mechanism",
+    "output": "Design an adaptive rate-limiting strategy that dynamically adjusts execution frequency based on prior success/failure rates and current system load, reducing the likelihood of hitting API limits.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1775254758918,
+    "id": "corpus-1775254758918-jj2gd",
+    "timestamp": 1775254758918
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Implement Rate Limit Monitoring",
+    "output": "Introduce a monitoring system that tracks API usage in real-time and automatically adjusts request rates based on historical usage patterns to effectively avoid hitting rate limits.",
+    "quality": 0.7,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium"
+    ],
+    "applied": true,
+    "appliedAt": 1775255942247,
+    "id": "corpus-1775255942247-pp5qt",
+    "timestamp": 1775255942247
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Event-Driven Asynchronous Execution & Batching",
+    "output": "Refactor the execution engine to use an async event loop (Node.js, asyncio, or Trio), group identical API calls into batches, and profile hot paths to shift CPU‑intensive tasks to compiled modules or native extensions. Apply a token‑bucket rate‐limit algorithm to stay within external limits.",
+    "quality": 0.5,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium‑high"
+    ],
+    "applied": true,
+    "appliedAt": 1774500816733,
+    "id": "corpus-1774500816733-lbjs5",
+    "timestamp": 1774500816733
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Execution Engine Performance Tuning",
+    "output": "Implement the following optimizations in the command‑execution loop:\n• Profile the current kernel to locate I/O bottlenecks; replace blocking file reads with async I/O.\n• Vectorize data transformations where possible and pre‑compile common regexes.\n• Introduce a process pool for CPU‑bound tasks and a GPU pool for inference services.\n• Cache intermediate results (e.g., parsed JSON from API responses) in LRU memory.\nThese changes will cut average execution latency by 30‑50 % and free resources for more concurrent jobs.",
+    "quality": 0.5,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium‑high"
+    ],
+    "applied": true,
+    "appliedAt": 1774522484768,
+    "id": "corpus-1774522484768-83qfe",
+    "timestamp": 1774522484768
+  },
+  {
+    "type": "improvement",
+    "input": "Improve: Parallel Execution & Result Caching",
+    "output": "Build a lightweight dependency graph for each execution cycle. Cache the signature of inputs and outputs for idempotent operations; on subsequent runs, skip re‑execution if the signature matches. Run independent tasks concurrently using a thread pool or async event loop, and serialize I/O‑bound operations via a shared queue. Add profiling hooks to log per‑task runtime for continuous speed optimization.",
+    "quality": 0.5,
+    "source": "self-improvement-engine",
+    "tags": [
+      "improvement",
+      "autonomous",
+      "medium‑high"
+    ],
+    "applied": true,
+    "appliedAt": 1774647363463,
+    "id": "corpus-1774647363463-bo9v6",
+    "timestamp": 1774647363463
+  }
+]

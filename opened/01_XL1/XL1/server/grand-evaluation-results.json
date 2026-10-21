@@ -1,0 +1,3974 @@
+{
+  "meetingId": "GRAND-EVAL-1775256349116",
+  "startedAt": "2026-04-03T22:45:48.966Z",
+  "completedAt": "2026-04-03T22:45:49.116Z",
+  "participants": [
+    "Tessera Prime",
+    "Alpha",
+    "Beta",
+    "Gamma",
+    "Delta",
+    "Epsilon",
+    "Zeta",
+    "Eta",
+    "Theta",
+    "Iota",
+    "Kappa",
+    "Lambda",
+    "Mu",
+    "Nu",
+    "Xi",
+    "Omicron",
+    "Pi",
+    "Rho",
+    "Sigma",
+    "Tau",
+    "Upsilon",
+    "Phi",
+    "Chi",
+    "Psi",
+    "Omega",
+    "Solver",
+    "Detective",
+    "Oracle",
+    "Creative",
+    "MoltAlpha",
+    "MoltBeta",
+    "MoltGamma",
+    "MoltDelta",
+    "MoltEpsilon",
+    "MoltZeta",
+    "MoltEta",
+    "MoltTheta",
+    "MoltIota",
+    "MoltKappa",
+    "MoltOracle"
+  ],
+  "categoriesEvaluated": 40,
+  "totalModelsRanked": 60,
+  "consensusRate": 1,
+  "results": [
+    {
+      "category": "NLU",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "qwen2.5-72b",
+          "modelName": "qwen2.5-72b",
+          "source": "ollama",
+          "score": 94,
+          "reasoning": "Ranked #1 in NLU — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Alpha",
+          "modelName": "Alpha",
+          "source": "tessera-agent",
+          "score": 90,
+          "reasoning": "Ranked #2 in NLU — strong capabilities with score 90/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "solar-10.7b",
+          "modelName": "solar-10.7b",
+          "source": "ollama",
+          "score": 88,
+          "reasoning": "Ranked #3 in NLU — strong capabilities with score 88/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "cohere-direct",
+          "modelName": "cohere-direct",
+          "source": "api-provider",
+          "score": 86,
+          "reasoning": "Ranked #4 in NLU — strong capabilities with score 86/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "mistral-large",
+          "modelName": "mistral-large",
+          "source": "ollama",
+          "score": 86,
+          "reasoning": "Ranked #5 in NLU — strong capabilities with score 86/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "mixtral-8x22b",
+          "modelName": "mixtral-8x22b",
+          "source": "ollama",
+          "score": 85,
+          "reasoning": "Ranked #6 in NLU — strong capabilities with score 85/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "phi-4",
+          "modelName": "phi-4",
+          "source": "ollama",
+          "score": 84,
+          "reasoning": "Ranked #7 in NLU — strong capabilities with score 84/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "yi-34b",
+          "modelName": "yi-34b",
+          "source": "ollama",
+          "score": 84,
+          "reasoning": "Ranked #8 in NLU — strong capabilities with score 84/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "or-qwen3-free",
+          "modelName": "or-qwen3-free",
+          "source": "api-provider",
+          "score": 83,
+          "reasoning": "Ranked #9 in NLU — strong capabilities with score 83/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "or-llama4-scout-free",
+          "modelName": "or-llama4-scout-free",
+          "source": "api-provider",
+          "score": 82,
+          "reasoning": "Ranked #10 in NLU — strong capabilities with score 82/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:48.971Z"
+    },
+    {
+      "category": "NLG",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "groq-direct",
+          "modelName": "groq-direct",
+          "source": "api-provider",
+          "score": 92,
+          "reasoning": "Ranked #1 in NLG — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "mistral-large",
+          "modelName": "mistral-large",
+          "source": "ollama",
+          "score": 92,
+          "reasoning": "Ranked #2 in NLG — strong capabilities with score 92/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "yi-34b",
+          "modelName": "yi-34b",
+          "source": "ollama",
+          "score": 92,
+          "reasoning": "Ranked #3 in NLG — strong capabilities with score 92/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "Creative",
+          "modelName": "Creative",
+          "source": "tessera-agent",
+          "score": 90,
+          "reasoning": "Ranked #4 in NLG — strong capabilities with score 90/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "or-qwen3-free",
+          "modelName": "or-qwen3-free",
+          "source": "api-provider",
+          "score": 89,
+          "reasoning": "Ranked #5 in NLG — strong capabilities with score 89/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "sovereign-lattice",
+          "modelName": "sovereign-lattice",
+          "source": "api-provider",
+          "score": 88,
+          "reasoning": "Ranked #6 in NLG — strong capabilities with score 88/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "openchat",
+          "modelName": "openchat",
+          "source": "ollama",
+          "score": 86,
+          "reasoning": "Ranked #7 in NLG — strong capabilities with score 86/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "phi-4",
+          "modelName": "phi-4",
+          "source": "ollama",
+          "score": 85,
+          "reasoning": "Ranked #8 in NLG — strong capabilities with score 85/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "llama3.1-70b",
+          "modelName": "llama3.1-70b",
+          "source": "ollama",
+          "score": 84,
+          "reasoning": "Ranked #9 in NLG — strong capabilities with score 84/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "llama3.1-8b",
+          "modelName": "llama3.1-8b",
+          "source": "ollama",
+          "score": 83,
+          "reasoning": "Ranked #10 in NLG — strong capabilities with score 83/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:48.975Z"
+    },
+    {
+      "category": "Code Generation",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "sovereign-lattice",
+          "modelName": "sovereign-lattice",
+          "source": "api-provider",
+          "score": 100,
+          "reasoning": "Ranked #1 in Code Generation — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "deepseek-r1",
+          "modelName": "deepseek-r1",
+          "source": "ollama",
+          "score": 98,
+          "reasoning": "Ranked #2 in Code Generation — strong capabilities with score 98/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "codellama-70b",
+          "modelName": "codellama-70b",
+          "source": "ollama",
+          "score": 97,
+          "reasoning": "Ranked #3 in Code Generation — strong capabilities with score 97/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "github-models",
+          "modelName": "github-models",
+          "source": "api-provider",
+          "score": 92,
+          "reasoning": "Ranked #4 in Code Generation — strong capabilities with score 92/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "Gamma",
+          "modelName": "Gamma",
+          "source": "tessera-agent",
+          "score": 90,
+          "reasoning": "Ranked #5 in Code Generation — strong capabilities with score 90/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "qwen2.5-72b",
+          "modelName": "qwen2.5-72b",
+          "source": "ollama",
+          "score": 90,
+          "reasoning": "Ranked #6 in Code Generation — strong capabilities with score 90/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "deepseek-coder-v2",
+          "modelName": "deepseek-coder-v2",
+          "source": "ollama",
+          "score": 89,
+          "reasoning": "Ranked #7 in Code Generation — strong capabilities with score 89/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "cerebras-direct",
+          "modelName": "cerebras-direct",
+          "source": "api-provider",
+          "score": 86,
+          "reasoning": "Ranked #8 in Code Generation — strong capabilities with score 86/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "Solver",
+          "modelName": "Solver",
+          "source": "tessera-agent",
+          "score": 83,
+          "reasoning": "Ranked #9 in Code Generation — strong capabilities with score 83/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "groq-direct",
+          "modelName": "groq-direct",
+          "source": "api-provider",
+          "score": 82,
+          "reasoning": "Ranked #10 in Code Generation — strong capabilities with score 82/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:48.979Z"
+    },
+    {
+      "category": "Data Analysis",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "huggingface-direct",
+          "modelName": "huggingface-direct",
+          "source": "api-provider",
+          "score": 94,
+          "reasoning": "Ranked #1 in Data Analysis — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "qwen2.5-72b",
+          "modelName": "qwen2.5-72b",
+          "source": "ollama",
+          "score": 90,
+          "reasoning": "Ranked #2 in Data Analysis — strong capabilities with score 90/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "gemini-flash",
+          "modelName": "gemini-flash",
+          "source": "api-provider",
+          "score": 88,
+          "reasoning": "Ranked #3 in Data Analysis — strong capabilities with score 88/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "cohere-direct",
+          "modelName": "cohere-direct",
+          "source": "api-provider",
+          "score": 86,
+          "reasoning": "Ranked #4 in Data Analysis — strong capabilities with score 86/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "or-qwen3-free",
+          "modelName": "or-qwen3-free",
+          "source": "api-provider",
+          "score": 85,
+          "reasoning": "Ranked #5 in Data Analysis — strong capabilities with score 85/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "Detective",
+          "modelName": "Detective",
+          "source": "tessera-agent",
+          "score": 84,
+          "reasoning": "Ranked #6 in Data Analysis — strong capabilities with score 84/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "mistral-large",
+          "modelName": "mistral-large",
+          "source": "ollama",
+          "score": 84,
+          "reasoning": "Ranked #7 in Data Analysis — strong capabilities with score 84/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "command-r-plus",
+          "modelName": "command-r-plus",
+          "source": "ollama",
+          "score": 81,
+          "reasoning": "Ranked #8 in Data Analysis — strong capabilities with score 81/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "deepseek-direct",
+          "modelName": "deepseek-direct",
+          "source": "api-provider",
+          "score": 79,
+          "reasoning": "Ranked #9 in Data Analysis — strong capabilities with score 79/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "deepseek-r1",
+          "modelName": "deepseek-r1",
+          "source": "ollama",
+          "score": 76,
+          "reasoning": "Ranked #10 in Data Analysis — strong capabilities with score 76/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:48.986Z"
+    },
+    {
+      "category": "Strategic Planning",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "deepseek-r1",
+          "modelName": "deepseek-r1",
+          "source": "ollama",
+          "score": 99,
+          "reasoning": "Ranked #1 in Strategic Planning — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Alpha",
+          "modelName": "Alpha",
+          "source": "tessera-agent",
+          "score": 89,
+          "reasoning": "Ranked #2 in Strategic Planning — strong capabilities with score 89/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "mistral-large",
+          "modelName": "mistral-large",
+          "source": "ollama",
+          "score": 89,
+          "reasoning": "Ranked #3 in Strategic Planning — strong capabilities with score 89/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "Oracle",
+          "modelName": "Oracle",
+          "source": "tessera-agent",
+          "score": 88,
+          "reasoning": "Ranked #4 in Strategic Planning — strong capabilities with score 88/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "or-llama4-scout-free",
+          "modelName": "or-llama4-scout-free",
+          "source": "api-provider",
+          "score": 85,
+          "reasoning": "Ranked #5 in Strategic Planning — strong capabilities with score 85/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "hermes-3",
+          "modelName": "hermes-3",
+          "source": "ollama",
+          "score": 85,
+          "reasoning": "Ranked #6 in Strategic Planning — strong capabilities with score 85/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "llama3.1-70b",
+          "modelName": "llama3.1-70b",
+          "source": "ollama",
+          "score": 83,
+          "reasoning": "Ranked #7 in Strategic Planning — strong capabilities with score 83/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "Epsilon",
+          "modelName": "Epsilon",
+          "source": "tessera-agent",
+          "score": 74,
+          "reasoning": "Ranked #8 in Strategic Planning — strong capabilities with score 74/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "Phi",
+          "modelName": "Phi",
+          "source": "tessera-agent",
+          "score": 73,
+          "reasoning": "Ranked #9 in Strategic Planning — strong capabilities with score 73/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "qwen2.5-72b",
+          "modelName": "qwen2.5-72b",
+          "source": "ollama",
+          "score": 62,
+          "reasoning": "Ranked #10 in Strategic Planning — strong capabilities with score 62/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:48.991Z"
+    },
+    {
+      "category": "Economic Simulation",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Pi",
+          "modelName": "Pi",
+          "source": "tessera-agent",
+          "score": 82,
+          "reasoning": "Ranked #1 in Economic Simulation — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Zeta",
+          "modelName": "Zeta",
+          "source": "tessera-agent",
+          "score": 75,
+          "reasoning": "Ranked #2 in Economic Simulation — strong capabilities with score 75/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Gamma",
+          "modelName": "Gamma",
+          "source": "tessera-agent",
+          "score": 64,
+          "reasoning": "Ranked #3 in Economic Simulation — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "Alpha",
+          "modelName": "Alpha",
+          "source": "tessera-agent",
+          "score": 62,
+          "reasoning": "Ranked #4 in Economic Simulation — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "Phi",
+          "modelName": "Phi",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #5 in Economic Simulation — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "neural-chat",
+          "modelName": "neural-chat",
+          "source": "ollama",
+          "score": 59,
+          "reasoning": "Ranked #6 in Economic Simulation — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "Beta",
+          "modelName": "Beta",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #7 in Economic Simulation — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "Upsilon",
+          "modelName": "Upsilon",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #8 in Economic Simulation — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "deepseek-r1",
+          "modelName": "deepseek-r1",
+          "source": "ollama",
+          "score": 58,
+          "reasoning": "Ranked #9 in Economic Simulation — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "wizard-coder",
+          "modelName": "wizard-coder",
+          "source": "ollama",
+          "score": 58,
+          "reasoning": "Ranked #10 in Economic Simulation — strong capabilities with score 58/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.001Z"
+    },
+    {
+      "category": "Cybersecurity",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Detective",
+          "modelName": "Detective",
+          "source": "tessera-agent",
+          "score": 95,
+          "reasoning": "Ranked #1 in Cybersecurity — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Eta",
+          "modelName": "Eta",
+          "source": "tessera-agent",
+          "score": 86,
+          "reasoning": "Ranked #2 in Cybersecurity — strong capabilities with score 86/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Sigma",
+          "modelName": "Sigma",
+          "source": "tessera-agent",
+          "score": 75,
+          "reasoning": "Ranked #3 in Cybersecurity — strong capabilities with score 75/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "gemini-flash",
+          "modelName": "gemini-flash",
+          "source": "api-provider",
+          "score": 63,
+          "reasoning": "Ranked #4 in Cybersecurity — strong capabilities with score 63/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "sovereign-lattice",
+          "modelName": "sovereign-lattice",
+          "source": "api-provider",
+          "score": 62,
+          "reasoning": "Ranked #5 in Cybersecurity — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "Solver",
+          "modelName": "Solver",
+          "source": "tessera-agent",
+          "score": 61,
+          "reasoning": "Ranked #6 in Cybersecurity — strong capabilities with score 61/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "Oracle",
+          "modelName": "Oracle",
+          "source": "tessera-agent",
+          "score": 60,
+          "reasoning": "Ranked #7 in Cybersecurity — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "grok-direct",
+          "modelName": "grok-direct",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #8 in Cybersecurity — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "Kappa",
+          "modelName": "Kappa",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #9 in Cybersecurity — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Creative",
+          "modelName": "Creative",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #10 in Cybersecurity — strong capabilities with score 59/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.005Z"
+    },
+    {
+      "category": "Creative Content",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Creative",
+          "modelName": "Creative",
+          "source": "tessera-agent",
+          "score": 92,
+          "reasoning": "Ranked #1 in Creative Content — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "llava",
+          "modelName": "llava",
+          "source": "ollama",
+          "score": 88,
+          "reasoning": "Ranked #2 in Creative Content — strong capabilities with score 88/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "openchat",
+          "modelName": "openchat",
+          "source": "ollama",
+          "score": 87,
+          "reasoning": "Ranked #3 in Creative Content — strong capabilities with score 87/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "pollinations",
+          "modelName": "pollinations",
+          "source": "api-provider",
+          "score": 86,
+          "reasoning": "Ranked #4 in Creative Content — strong capabilities with score 86/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "Theta",
+          "modelName": "Theta",
+          "source": "tessera-agent",
+          "score": 85,
+          "reasoning": "Ranked #5 in Creative Content — strong capabilities with score 85/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "dolphin-mixtral",
+          "modelName": "dolphin-mixtral",
+          "source": "ollama",
+          "score": 82,
+          "reasoning": "Ranked #6 in Creative Content — strong capabilities with score 82/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "grok-direct",
+          "modelName": "grok-direct",
+          "source": "api-provider",
+          "score": 80,
+          "reasoning": "Ranked #7 in Creative Content — strong capabilities with score 80/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "Beta",
+          "modelName": "Beta",
+          "source": "tessera-agent",
+          "score": 71,
+          "reasoning": "Ranked #8 in Creative Content — strong capabilities with score 71/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "qwen2.5-72b",
+          "modelName": "qwen2.5-72b",
+          "source": "ollama",
+          "score": 64,
+          "reasoning": "Ranked #9 in Creative Content — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "or-qwen3-free",
+          "modelName": "or-qwen3-free",
+          "source": "api-provider",
+          "score": 62,
+          "reasoning": "Ranked #10 in Creative Content — strong capabilities with score 62/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.009Z"
+    },
+    {
+      "category": "Autonomous Learning",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Iota",
+          "modelName": "Iota",
+          "source": "tessera-agent",
+          "score": 82,
+          "reasoning": "Ranked #1 in Autonomous Learning — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Upsilon",
+          "modelName": "Upsilon",
+          "source": "tessera-agent",
+          "score": 71,
+          "reasoning": "Ranked #2 in Autonomous Learning — strong capabilities with score 71/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "deepseek-r1",
+          "modelName": "deepseek-r1",
+          "source": "ollama",
+          "score": 61,
+          "reasoning": "Ranked #3 in Autonomous Learning — strong capabilities with score 61/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "github-models",
+          "modelName": "github-models",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #4 in Autonomous Learning — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "Tau",
+          "modelName": "Tau",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #5 in Autonomous Learning — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "qwen2.5-72b",
+          "modelName": "qwen2.5-72b",
+          "source": "ollama",
+          "score": 59,
+          "reasoning": "Ranked #6 in Autonomous Learning — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "gemma2-27b",
+          "modelName": "gemma2-27b",
+          "source": "ollama",
+          "score": 59,
+          "reasoning": "Ranked #7 in Autonomous Learning — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "or-qwen3-free",
+          "modelName": "or-qwen3-free",
+          "source": "api-provider",
+          "score": 58,
+          "reasoning": "Ranked #8 in Autonomous Learning — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "huggingface-direct",
+          "modelName": "huggingface-direct",
+          "source": "api-provider",
+          "score": 58,
+          "reasoning": "Ranked #9 in Autonomous Learning — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Sigma",
+          "modelName": "Sigma",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #10 in Autonomous Learning — strong capabilities with score 58/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.013Z"
+    },
+    {
+      "category": "Inter-Agent Communication",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Kappa",
+          "modelName": "Kappa",
+          "source": "tessera-agent",
+          "score": 73,
+          "reasoning": "Ranked #1 in Inter-Agent Communication — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Solver",
+          "modelName": "Solver",
+          "source": "tessera-agent",
+          "score": 63,
+          "reasoning": "Ranked #2 in Inter-Agent Communication — strong capabilities with score 63/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Oracle",
+          "modelName": "Oracle",
+          "source": "tessera-agent",
+          "score": 62,
+          "reasoning": "Ranked #3 in Inter-Agent Communication — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "Gamma",
+          "modelName": "Gamma",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #4 in Inter-Agent Communication — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "Theta",
+          "modelName": "Theta",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #5 in Inter-Agent Communication — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "Detective",
+          "modelName": "Detective",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #6 in Inter-Agent Communication — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "hermes-3",
+          "modelName": "hermes-3",
+          "source": "ollama",
+          "score": 59,
+          "reasoning": "Ranked #7 in Inter-Agent Communication — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "Eta",
+          "modelName": "Eta",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #8 in Inter-Agent Communication — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "dolphin-mixtral",
+          "modelName": "dolphin-mixtral",
+          "source": "ollama",
+          "score": 58,
+          "reasoning": "Ranked #9 in Inter-Agent Communication — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Alpha",
+          "modelName": "Alpha",
+          "source": "tessera-agent",
+          "score": 57,
+          "reasoning": "Ranked #10 in Inter-Agent Communication — strong capabilities with score 57/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.017Z"
+    },
+    {
+      "category": "Ethical Reasoning",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Lambda",
+          "modelName": "Lambda",
+          "source": "tessera-agent",
+          "score": 82,
+          "reasoning": "Ranked #1 in Ethical Reasoning — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Omega",
+          "modelName": "Omega",
+          "source": "tessera-agent",
+          "score": 75,
+          "reasoning": "Ranked #2 in Ethical Reasoning — strong capabilities with score 75/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "deepseek-r1",
+          "modelName": "deepseek-r1",
+          "source": "ollama",
+          "score": 64,
+          "reasoning": "Ranked #3 in Ethical Reasoning — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "qwen2.5-72b",
+          "modelName": "qwen2.5-72b",
+          "source": "ollama",
+          "score": 62,
+          "reasoning": "Ranked #4 in Ethical Reasoning — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "or-qwen3-free",
+          "modelName": "or-qwen3-free",
+          "source": "api-provider",
+          "score": 61,
+          "reasoning": "Ranked #5 in Ethical Reasoning — strong capabilities with score 61/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "mistral-large",
+          "modelName": "mistral-large",
+          "source": "ollama",
+          "score": 60,
+          "reasoning": "Ranked #6 in Ethical Reasoning — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "deepseek-direct",
+          "modelName": "deepseek-direct",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #7 in Ethical Reasoning — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "groq-direct",
+          "modelName": "groq-direct",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #8 in Ethical Reasoning — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "Pi",
+          "modelName": "Pi",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #9 in Ethical Reasoning — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "cohere-direct",
+          "modelName": "cohere-direct",
+          "source": "api-provider",
+          "score": 58,
+          "reasoning": "Ranked #10 in Ethical Reasoning — strong capabilities with score 58/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.034Z"
+    },
+    {
+      "category": "System Monitoring",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Mu",
+          "modelName": "Mu",
+          "source": "tessera-agent",
+          "score": 73,
+          "reasoning": "Ranked #1 in System Monitoring — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Gamma",
+          "modelName": "Gamma",
+          "source": "tessera-agent",
+          "score": 62,
+          "reasoning": "Ranked #2 in System Monitoring — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Alpha",
+          "modelName": "Alpha",
+          "source": "tessera-agent",
+          "score": 60,
+          "reasoning": "Ranked #3 in System Monitoring — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "Epsilon",
+          "modelName": "Epsilon",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #4 in System Monitoring — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "Omega",
+          "modelName": "Omega",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #5 in System Monitoring — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "yi-34b",
+          "modelName": "yi-34b",
+          "source": "ollama",
+          "score": 59,
+          "reasoning": "Ranked #6 in System Monitoring — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "Delta",
+          "modelName": "Delta",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #7 in System Monitoring — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "Psi",
+          "modelName": "Psi",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #8 in System Monitoring — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "starcoder2",
+          "modelName": "starcoder2",
+          "source": "ollama",
+          "score": 58,
+          "reasoning": "Ranked #9 in System Monitoring — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Chi",
+          "modelName": "Chi",
+          "source": "tessera-agent",
+          "score": 57,
+          "reasoning": "Ranked #10 in System Monitoring — strong capabilities with score 57/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.036Z"
+    },
+    {
+      "category": "UX Design",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Nu",
+          "modelName": "Nu",
+          "source": "tessera-agent",
+          "score": 97,
+          "reasoning": "Ranked #1 in UX Design — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "or-qwen3-free",
+          "modelName": "or-qwen3-free",
+          "source": "api-provider",
+          "score": 64,
+          "reasoning": "Ranked #2 in UX Design — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "qwen2.5-72b",
+          "modelName": "qwen2.5-72b",
+          "source": "ollama",
+          "score": 64,
+          "reasoning": "Ranked #3 in UX Design — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "deepseek-direct",
+          "modelName": "deepseek-direct",
+          "source": "api-provider",
+          "score": 62,
+          "reasoning": "Ranked #4 in UX Design — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "mistral-large",
+          "modelName": "mistral-large",
+          "source": "ollama",
+          "score": 62,
+          "reasoning": "Ranked #5 in UX Design — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "gemini-flash",
+          "modelName": "gemini-flash",
+          "source": "api-provider",
+          "score": 60,
+          "reasoning": "Ranked #6 in UX Design — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "llama3.1-70b",
+          "modelName": "llama3.1-70b",
+          "source": "ollama",
+          "score": 60,
+          "reasoning": "Ranked #7 in UX Design — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "sovereign-lattice",
+          "modelName": "sovereign-lattice",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #8 in UX Design — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "pollinations",
+          "modelName": "pollinations",
+          "source": "api-provider",
+          "score": 58,
+          "reasoning": "Ranked #9 in UX Design — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "mixtral-8x22b",
+          "modelName": "mixtral-8x22b",
+          "source": "ollama",
+          "score": 58,
+          "reasoning": "Ranked #10 in UX Design — strong capabilities with score 58/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.038Z"
+    },
+    {
+      "category": "API Integration",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "github-models",
+          "modelName": "github-models",
+          "source": "api-provider",
+          "score": 95,
+          "reasoning": "Ranked #1 in API Integration — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Xi",
+          "modelName": "Xi",
+          "source": "tessera-agent",
+          "score": 92,
+          "reasoning": "Ranked #2 in API Integration — strong capabilities with score 92/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "codellama-70b",
+          "modelName": "codellama-70b",
+          "source": "ollama",
+          "score": 90,
+          "reasoning": "Ranked #3 in API Integration — strong capabilities with score 90/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "deepseek-coder-v2",
+          "modelName": "deepseek-coder-v2",
+          "source": "ollama",
+          "score": 84,
+          "reasoning": "Ranked #4 in API Integration — strong capabilities with score 84/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "Gamma",
+          "modelName": "Gamma",
+          "source": "tessera-agent",
+          "score": 73,
+          "reasoning": "Ranked #5 in API Integration — strong capabilities with score 73/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "Alpha",
+          "modelName": "Alpha",
+          "source": "tessera-agent",
+          "score": 64,
+          "reasoning": "Ranked #6 in API Integration — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "deepseek-r1",
+          "modelName": "deepseek-r1",
+          "source": "ollama",
+          "score": 61,
+          "reasoning": "Ranked #7 in API Integration — strong capabilities with score 61/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "Tau",
+          "modelName": "Tau",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #8 in API Integration — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "phi-4",
+          "modelName": "phi-4",
+          "source": "ollama",
+          "score": 59,
+          "reasoning": "Ranked #9 in API Integration — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Sigma",
+          "modelName": "Sigma",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #10 in API Integration — strong capabilities with score 58/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.040Z"
+    },
+    {
+      "category": "Resource Optimization",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Omicron",
+          "modelName": "Omicron",
+          "source": "tessera-agent",
+          "score": 87,
+          "reasoning": "Ranked #1 in Resource Optimization — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Xi",
+          "modelName": "Xi",
+          "source": "tessera-agent",
+          "score": 83,
+          "reasoning": "Ranked #2 in Resource Optimization — strong capabilities with score 83/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Oracle",
+          "modelName": "Oracle",
+          "source": "tessera-agent",
+          "score": 64,
+          "reasoning": "Ranked #3 in Resource Optimization — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "Gamma",
+          "modelName": "Gamma",
+          "source": "tessera-agent",
+          "score": 60,
+          "reasoning": "Ranked #4 in Resource Optimization — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "Eta",
+          "modelName": "Eta",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #5 in Resource Optimization — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "solar-10.7b",
+          "modelName": "solar-10.7b",
+          "source": "ollama",
+          "score": 59,
+          "reasoning": "Ranked #6 in Resource Optimization — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "Alpha",
+          "modelName": "Alpha",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #7 in Resource Optimization — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "Zeta",
+          "modelName": "Zeta",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #8 in Resource Optimization — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "Omega",
+          "modelName": "Omega",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #9 in Resource Optimization — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "yi-34b",
+          "modelName": "yi-34b",
+          "source": "ollama",
+          "score": 58,
+          "reasoning": "Ranked #10 in Resource Optimization — strong capabilities with score 58/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.042Z"
+    },
+    {
+      "category": "Market Analysis",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Oracle",
+          "modelName": "Oracle",
+          "source": "tessera-agent",
+          "score": 88,
+          "reasoning": "Ranked #1 in Market Analysis — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Delta",
+          "modelName": "Delta",
+          "source": "tessera-agent",
+          "score": 87,
+          "reasoning": "Ranked #2 in Market Analysis — strong capabilities with score 87/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Pi",
+          "modelName": "Pi",
+          "source": "tessera-agent",
+          "score": 78,
+          "reasoning": "Ranked #3 in Market Analysis — strong capabilities with score 78/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "or-qwen3-free",
+          "modelName": "or-qwen3-free",
+          "source": "api-provider",
+          "score": 63,
+          "reasoning": "Ranked #4 in Market Analysis — strong capabilities with score 63/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "mistral-large",
+          "modelName": "mistral-large",
+          "source": "ollama",
+          "score": 63,
+          "reasoning": "Ranked #5 in Market Analysis — strong capabilities with score 63/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "deepseek-direct",
+          "modelName": "deepseek-direct",
+          "source": "api-provider",
+          "score": 61,
+          "reasoning": "Ranked #6 in Market Analysis — strong capabilities with score 61/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "llama3.1-70b",
+          "modelName": "llama3.1-70b",
+          "source": "ollama",
+          "score": 61,
+          "reasoning": "Ranked #7 in Market Analysis — strong capabilities with score 61/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "gemini-flash",
+          "modelName": "gemini-flash",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #8 in Market Analysis — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "or-llama4-scout-free",
+          "modelName": "or-llama4-scout-free",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #9 in Market Analysis — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Xi",
+          "modelName": "Xi",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #10 in Market Analysis — strong capabilities with score 59/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.045Z"
+    },
+    {
+      "category": "SEO/Marketing",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Rho",
+          "modelName": "Rho",
+          "source": "tessera-agent",
+          "score": 89,
+          "reasoning": "Ranked #1 in SEO/Marketing — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Alpha",
+          "modelName": "Alpha",
+          "source": "tessera-agent",
+          "score": 63,
+          "reasoning": "Ranked #2 in SEO/Marketing — strong capabilities with score 63/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Beta",
+          "modelName": "Beta",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #3 in SEO/Marketing — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "Phi",
+          "modelName": "Phi",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #4 in SEO/Marketing — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "neural-chat",
+          "modelName": "neural-chat",
+          "source": "ollama",
+          "score": 59,
+          "reasoning": "Ranked #5 in SEO/Marketing — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "Upsilon",
+          "modelName": "Upsilon",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #6 in SEO/Marketing — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "deepseek-r1",
+          "modelName": "deepseek-r1",
+          "source": "ollama",
+          "score": 58,
+          "reasoning": "Ranked #7 in SEO/Marketing — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "wizard-coder",
+          "modelName": "wizard-coder",
+          "source": "ollama",
+          "score": 58,
+          "reasoning": "Ranked #8 in SEO/Marketing — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "github-models",
+          "modelName": "github-models",
+          "source": "api-provider",
+          "score": 57,
+          "reasoning": "Ranked #9 in SEO/Marketing — strong capabilities with score 57/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Tau",
+          "modelName": "Tau",
+          "source": "tessera-agent",
+          "score": 57,
+          "reasoning": "Ranked #10 in SEO/Marketing — strong capabilities with score 57/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.049Z"
+    },
+    {
+      "category": "Blockchain/Crypto",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Zeta",
+          "modelName": "Zeta",
+          "source": "tessera-agent",
+          "score": 89,
+          "reasoning": "Ranked #1 in Blockchain/Crypto — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Sigma",
+          "modelName": "Sigma",
+          "source": "tessera-agent",
+          "score": 80,
+          "reasoning": "Ranked #2 in Blockchain/Crypto — strong capabilities with score 80/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "llama3.1-70b",
+          "modelName": "llama3.1-70b",
+          "source": "ollama",
+          "score": 64,
+          "reasoning": "Ranked #3 in Blockchain/Crypto — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "gemini-flash",
+          "modelName": "gemini-flash",
+          "source": "api-provider",
+          "score": 63,
+          "reasoning": "Ranked #4 in Blockchain/Crypto — strong capabilities with score 63/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "sovereign-lattice",
+          "modelName": "sovereign-lattice",
+          "source": "api-provider",
+          "score": 62,
+          "reasoning": "Ranked #5 in Blockchain/Crypto — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "Solver",
+          "modelName": "Solver",
+          "source": "tessera-agent",
+          "score": 61,
+          "reasoning": "Ranked #6 in Blockchain/Crypto — strong capabilities with score 61/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "Oracle",
+          "modelName": "Oracle",
+          "source": "tessera-agent",
+          "score": 60,
+          "reasoning": "Ranked #7 in Blockchain/Crypto — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "grok-direct",
+          "modelName": "grok-direct",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #8 in Blockchain/Crypto — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "Kappa",
+          "modelName": "Kappa",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #9 in Blockchain/Crypto — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Iota",
+          "modelName": "Iota",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #10 in Blockchain/Crypto — strong capabilities with score 58/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.053Z"
+    },
+    {
+      "category": "Risk Assessment",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Epsilon",
+          "modelName": "Epsilon",
+          "source": "tessera-agent",
+          "score": 76,
+          "reasoning": "Ranked #1 in Risk Assessment — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Tau",
+          "modelName": "Tau",
+          "source": "tessera-agent",
+          "score": 71,
+          "reasoning": "Ranked #2 in Risk Assessment — strong capabilities with score 71/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "deepseek-r1",
+          "modelName": "deepseek-r1",
+          "source": "ollama",
+          "score": 62,
+          "reasoning": "Ranked #3 in Risk Assessment — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "qwen2.5-72b",
+          "modelName": "qwen2.5-72b",
+          "source": "ollama",
+          "score": 60,
+          "reasoning": "Ranked #4 in Risk Assessment — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "or-qwen3-free",
+          "modelName": "or-qwen3-free",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #5 in Risk Assessment — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "huggingface-direct",
+          "modelName": "huggingface-direct",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #6 in Risk Assessment — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "Sigma",
+          "modelName": "Sigma",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #7 in Risk Assessment — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "phi-4",
+          "modelName": "phi-4",
+          "source": "ollama",
+          "score": 59,
+          "reasoning": "Ranked #8 in Risk Assessment — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "cerebras-direct",
+          "modelName": "cerebras-direct",
+          "source": "api-provider",
+          "score": 58,
+          "reasoning": "Ranked #9 in Risk Assessment — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Rho",
+          "modelName": "Rho",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #10 in Risk Assessment — strong capabilities with score 58/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.060Z"
+    },
+    {
+      "category": "Knowledge Representation",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "command-r-plus",
+          "modelName": "command-r-plus",
+          "source": "ollama",
+          "score": 93,
+          "reasoning": "Ranked #1 in Knowledge Representation — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "gemma2-27b",
+          "modelName": "gemma2-27b",
+          "source": "ollama",
+          "score": 89,
+          "reasoning": "Ranked #2 in Knowledge Representation — strong capabilities with score 89/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "cohere-direct",
+          "modelName": "cohere-direct",
+          "source": "api-provider",
+          "score": 84,
+          "reasoning": "Ranked #3 in Knowledge Representation — strong capabilities with score 84/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "Upsilon",
+          "modelName": "Upsilon",
+          "source": "tessera-agent",
+          "score": 84,
+          "reasoning": "Ranked #4 in Knowledge Representation — strong capabilities with score 84/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "Oracle",
+          "modelName": "Oracle",
+          "source": "tessera-agent",
+          "score": 81,
+          "reasoning": "Ranked #5 in Knowledge Representation — strong capabilities with score 81/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "gemini-flash",
+          "modelName": "gemini-flash",
+          "source": "api-provider",
+          "score": 75,
+          "reasoning": "Ranked #6 in Knowledge Representation — strong capabilities with score 75/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "yi-34b",
+          "modelName": "yi-34b",
+          "source": "ollama",
+          "score": 70,
+          "reasoning": "Ranked #7 in Knowledge Representation — strong capabilities with score 70/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "Gamma",
+          "modelName": "Gamma",
+          "source": "tessera-agent",
+          "score": 62,
+          "reasoning": "Ranked #8 in Knowledge Representation — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "Alpha",
+          "modelName": "Alpha",
+          "source": "tessera-agent",
+          "score": 60,
+          "reasoning": "Ranked #9 in Knowledge Representation — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Epsilon",
+          "modelName": "Epsilon",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #10 in Knowledge Representation — strong capabilities with score 59/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 9,
+      "votesAgainst": 1,
+      "evaluatedAt": "2026-04-03T22:45:49.065Z"
+    },
+    {
+      "category": "Problem Solving",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "deepseek-r1",
+          "modelName": "deepseek-r1",
+          "source": "ollama",
+          "score": 95,
+          "reasoning": "Ranked #1 in Problem Solving — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "sovereign-lattice",
+          "modelName": "sovereign-lattice",
+          "source": "api-provider",
+          "score": 92,
+          "reasoning": "Ranked #2 in Problem Solving — strong capabilities with score 92/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Phi",
+          "modelName": "Phi",
+          "source": "tessera-agent",
+          "score": 89,
+          "reasoning": "Ranked #3 in Problem Solving — strong capabilities with score 89/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "qwen2.5-72b",
+          "modelName": "qwen2.5-72b",
+          "source": "ollama",
+          "score": 89,
+          "reasoning": "Ranked #4 in Problem Solving — strong capabilities with score 89/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "hermes-3",
+          "modelName": "hermes-3",
+          "source": "ollama",
+          "score": 87,
+          "reasoning": "Ranked #5 in Problem Solving — strong capabilities with score 87/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "Upsilon",
+          "modelName": "Upsilon",
+          "source": "tessera-agent",
+          "score": 85,
+          "reasoning": "Ranked #6 in Problem Solving — strong capabilities with score 85/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "or-llama4-scout-free",
+          "modelName": "or-llama4-scout-free",
+          "source": "api-provider",
+          "score": 83,
+          "reasoning": "Ranked #7 in Problem Solving — strong capabilities with score 83/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "dolphin-mixtral",
+          "modelName": "dolphin-mixtral",
+          "source": "ollama",
+          "score": 83,
+          "reasoning": "Ranked #8 in Problem Solving — strong capabilities with score 83/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "phi-4",
+          "modelName": "phi-4",
+          "source": "ollama",
+          "score": 81,
+          "reasoning": "Ranked #9 in Problem Solving — strong capabilities with score 81/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "deepseek-direct",
+          "modelName": "deepseek-direct",
+          "source": "api-provider",
+          "score": 80,
+          "reasoning": "Ranked #10 in Problem Solving — strong capabilities with score 80/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 9,
+      "votesAgainst": 1,
+      "evaluatedAt": "2026-04-03T22:45:49.067Z"
+    },
+    {
+      "category": "Emotional Intelligence",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "openchat",
+          "modelName": "openchat",
+          "source": "ollama",
+          "score": 92,
+          "reasoning": "Ranked #1 in Emotional Intelligence — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "neural-chat",
+          "modelName": "neural-chat",
+          "source": "ollama",
+          "score": 88,
+          "reasoning": "Ranked #2 in Emotional Intelligence — strong capabilities with score 88/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Chi",
+          "modelName": "Chi",
+          "source": "tessera-agent",
+          "score": 83,
+          "reasoning": "Ranked #3 in Emotional Intelligence — strong capabilities with score 83/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "grok-direct",
+          "modelName": "grok-direct",
+          "source": "api-provider",
+          "score": 82,
+          "reasoning": "Ranked #4 in Emotional Intelligence — strong capabilities with score 82/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "pollinations",
+          "modelName": "pollinations",
+          "source": "api-provider",
+          "score": 73,
+          "reasoning": "Ranked #5 in Emotional Intelligence — strong capabilities with score 73/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "Gamma",
+          "modelName": "Gamma",
+          "source": "tessera-agent",
+          "score": 62,
+          "reasoning": "Ranked #6 in Emotional Intelligence — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "Alpha",
+          "modelName": "Alpha",
+          "source": "tessera-agent",
+          "score": 60,
+          "reasoning": "Ranked #7 in Emotional Intelligence — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "Epsilon",
+          "modelName": "Epsilon",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #8 in Emotional Intelligence — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "Omega",
+          "modelName": "Omega",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #9 in Emotional Intelligence — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Delta",
+          "modelName": "Delta",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #10 in Emotional Intelligence — strong capabilities with score 58/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.069Z"
+    },
+    {
+      "category": "Social Dynamics",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Psi",
+          "modelName": "Psi",
+          "source": "tessera-agent",
+          "score": 80,
+          "reasoning": "Ranked #1 in Social Dynamics — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Rho",
+          "modelName": "Rho",
+          "source": "tessera-agent",
+          "score": 79,
+          "reasoning": "Ranked #2 in Social Dynamics — strong capabilities with score 79/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Chi",
+          "modelName": "Chi",
+          "source": "tessera-agent",
+          "score": 76,
+          "reasoning": "Ranked #3 in Social Dynamics — strong capabilities with score 76/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "deepseek-direct",
+          "modelName": "deepseek-direct",
+          "source": "api-provider",
+          "score": 64,
+          "reasoning": "Ranked #4 in Social Dynamics — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "llama3.1-70b",
+          "modelName": "llama3.1-70b",
+          "source": "ollama",
+          "score": 64,
+          "reasoning": "Ranked #5 in Social Dynamics — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "gemini-flash",
+          "modelName": "gemini-flash",
+          "source": "api-provider",
+          "score": 62,
+          "reasoning": "Ranked #6 in Social Dynamics — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "sovereign-lattice",
+          "modelName": "sovereign-lattice",
+          "source": "api-provider",
+          "score": 61,
+          "reasoning": "Ranked #7 in Social Dynamics — strong capabilities with score 61/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "Solver",
+          "modelName": "Solver",
+          "source": "tessera-agent",
+          "score": 61,
+          "reasoning": "Ranked #8 in Social Dynamics — strong capabilities with score 61/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "Oracle",
+          "modelName": "Oracle",
+          "source": "tessera-agent",
+          "score": 60,
+          "reasoning": "Ranked #9 in Social Dynamics — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Mu",
+          "modelName": "Mu",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #10 in Social Dynamics — strong capabilities with score 59/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.071Z"
+    },
+    {
+      "category": "Governance",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Lambda",
+          "modelName": "Lambda",
+          "source": "tessera-agent",
+          "score": 80,
+          "reasoning": "Ranked #1 in Governance — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Alpha",
+          "modelName": "Alpha",
+          "source": "tessera-agent",
+          "score": 78,
+          "reasoning": "Ranked #2 in Governance — strong capabilities with score 78/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Omega",
+          "modelName": "Omega",
+          "source": "tessera-agent",
+          "score": 75,
+          "reasoning": "Ranked #3 in Governance — strong capabilities with score 75/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "Psi",
+          "modelName": "Psi",
+          "source": "tessera-agent",
+          "score": 71,
+          "reasoning": "Ranked #4 in Governance — strong capabilities with score 71/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "deepseek-r1",
+          "modelName": "deepseek-r1",
+          "source": "ollama",
+          "score": 64,
+          "reasoning": "Ranked #5 in Governance — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "qwen2.5-72b",
+          "modelName": "qwen2.5-72b",
+          "source": "ollama",
+          "score": 62,
+          "reasoning": "Ranked #6 in Governance — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "mistral-large",
+          "modelName": "mistral-large",
+          "source": "ollama",
+          "score": 60,
+          "reasoning": "Ranked #7 in Governance — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "or-qwen3-free",
+          "modelName": "or-qwen3-free",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #8 in Governance — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "huggingface-direct",
+          "modelName": "huggingface-direct",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #9 in Governance — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Rho",
+          "modelName": "Rho",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #10 in Governance — strong capabilities with score 59/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.073Z"
+    },
+    {
+      "category": "Hardware Interface",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Xi",
+          "modelName": "Xi",
+          "source": "tessera-agent",
+          "score": 77,
+          "reasoning": "Ranked #1 in Hardware Interface — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Gamma",
+          "modelName": "Gamma",
+          "source": "tessera-agent",
+          "score": 62,
+          "reasoning": "Ranked #2 in Hardware Interface — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Alpha",
+          "modelName": "Alpha",
+          "source": "tessera-agent",
+          "score": 60,
+          "reasoning": "Ranked #3 in Hardware Interface — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "Epsilon",
+          "modelName": "Epsilon",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #4 in Hardware Interface — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "Omega",
+          "modelName": "Omega",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #5 in Hardware Interface — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "yi-34b",
+          "modelName": "yi-34b",
+          "source": "ollama",
+          "score": 59,
+          "reasoning": "Ranked #6 in Hardware Interface — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "Delta",
+          "modelName": "Delta",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #7 in Hardware Interface — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "Psi",
+          "modelName": "Psi",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #8 in Hardware Interface — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "starcoder2",
+          "modelName": "starcoder2",
+          "source": "ollama",
+          "score": 58,
+          "reasoning": "Ranked #9 in Hardware Interface — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Chi",
+          "modelName": "Chi",
+          "source": "tessera-agent",
+          "score": 57,
+          "reasoning": "Ranked #10 in Hardware Interface — strong capabilities with score 57/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.075Z"
+    },
+    {
+      "category": "Real-time Processing",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "llama3.1-8b",
+          "modelName": "llama3.1-8b",
+          "source": "ollama",
+          "score": 87,
+          "reasoning": "Ranked #1 in Real-time Processing — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "groq-direct",
+          "modelName": "groq-direct",
+          "source": "api-provider",
+          "score": 80,
+          "reasoning": "Ranked #2 in Real-time Processing — strong capabilities with score 80/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Omicron",
+          "modelName": "Omicron",
+          "source": "tessera-agent",
+          "score": 70,
+          "reasoning": "Ranked #3 in Real-time Processing — strong capabilities with score 70/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "cerebras-direct",
+          "modelName": "cerebras-direct",
+          "source": "api-provider",
+          "score": 69,
+          "reasoning": "Ranked #4 in Real-time Processing — strong capabilities with score 69/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "or-qwen3-free",
+          "modelName": "or-qwen3-free",
+          "source": "api-provider",
+          "score": 64,
+          "reasoning": "Ranked #5 in Real-time Processing — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "deepseek-direct",
+          "modelName": "deepseek-direct",
+          "source": "api-provider",
+          "score": 62,
+          "reasoning": "Ranked #6 in Real-time Processing — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "llama3.1-70b",
+          "modelName": "llama3.1-70b",
+          "source": "ollama",
+          "score": 62,
+          "reasoning": "Ranked #7 in Real-time Processing — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "gemini-flash",
+          "modelName": "gemini-flash",
+          "source": "api-provider",
+          "score": 60,
+          "reasoning": "Ranked #8 in Real-time Processing — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "sovereign-lattice",
+          "modelName": "sovereign-lattice",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #9 in Real-time Processing — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Mu",
+          "modelName": "Mu",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #10 in Real-time Processing — strong capabilities with score 59/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.077Z"
+    },
+    {
+      "category": "Error Handling",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Mu",
+          "modelName": "Mu",
+          "source": "tessera-agent",
+          "score": 90,
+          "reasoning": "Ranked #1 in Error Handling — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Iota",
+          "modelName": "Iota",
+          "source": "tessera-agent",
+          "score": 82,
+          "reasoning": "Ranked #2 in Error Handling — strong capabilities with score 82/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "deepseek-r1",
+          "modelName": "deepseek-r1",
+          "source": "ollama",
+          "score": 61,
+          "reasoning": "Ranked #3 in Error Handling — strong capabilities with score 61/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "github-models",
+          "modelName": "github-models",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #4 in Error Handling — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "Sigma",
+          "modelName": "Sigma",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #5 in Error Handling — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "qwen2.5-72b",
+          "modelName": "qwen2.5-72b",
+          "source": "ollama",
+          "score": 59,
+          "reasoning": "Ranked #6 in Error Handling — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "gemma2-27b",
+          "modelName": "gemma2-27b",
+          "source": "ollama",
+          "score": 59,
+          "reasoning": "Ranked #7 in Error Handling — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "or-qwen3-free",
+          "modelName": "or-qwen3-free",
+          "source": "api-provider",
+          "score": 58,
+          "reasoning": "Ranked #8 in Error Handling — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "huggingface-direct",
+          "modelName": "huggingface-direct",
+          "source": "api-provider",
+          "score": 58,
+          "reasoning": "Ranked #9 in Error Handling — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Rho",
+          "modelName": "Rho",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #10 in Error Handling — strong capabilities with score 58/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.081Z"
+    },
+    {
+      "category": "Scalability",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Omicron",
+          "modelName": "Omicron",
+          "source": "tessera-agent",
+          "score": 87,
+          "reasoning": "Ranked #1 in Scalability — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Mu",
+          "modelName": "Mu",
+          "source": "tessera-agent",
+          "score": 79,
+          "reasoning": "Ranked #2 in Scalability — strong capabilities with score 79/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Kappa",
+          "modelName": "Kappa",
+          "source": "tessera-agent",
+          "score": 73,
+          "reasoning": "Ranked #3 in Scalability — strong capabilities with score 73/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "Oracle",
+          "modelName": "Oracle",
+          "source": "tessera-agent",
+          "score": 64,
+          "reasoning": "Ranked #4 in Scalability — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "Gamma",
+          "modelName": "Gamma",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #5 in Scalability — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "Theta",
+          "modelName": "Theta",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #6 in Scalability — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "solar-10.7b",
+          "modelName": "solar-10.7b",
+          "source": "ollama",
+          "score": 59,
+          "reasoning": "Ranked #7 in Scalability — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "Eta",
+          "modelName": "Eta",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #8 in Scalability — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "Omega",
+          "modelName": "Omega",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #9 in Scalability — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "yi-34b",
+          "modelName": "yi-34b",
+          "source": "ollama",
+          "score": 58,
+          "reasoning": "Ranked #10 in Scalability — strong capabilities with score 58/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.083Z"
+    },
+    {
+      "category": "Security Auditing",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Detective",
+          "modelName": "Detective",
+          "source": "tessera-agent",
+          "score": 89,
+          "reasoning": "Ranked #1 in Security Auditing — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Eta",
+          "modelName": "Eta",
+          "source": "tessera-agent",
+          "score": 80,
+          "reasoning": "Ranked #2 in Security Auditing — strong capabilities with score 80/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Tau",
+          "modelName": "Tau",
+          "source": "tessera-agent",
+          "score": 71,
+          "reasoning": "Ranked #3 in Security Auditing — strong capabilities with score 71/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "or-qwen3-free",
+          "modelName": "or-qwen3-free",
+          "source": "api-provider",
+          "score": 64,
+          "reasoning": "Ranked #4 in Security Auditing — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "mistral-large",
+          "modelName": "mistral-large",
+          "source": "ollama",
+          "score": 64,
+          "reasoning": "Ranked #5 in Security Auditing — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "deepseek-direct",
+          "modelName": "deepseek-direct",
+          "source": "api-provider",
+          "score": 62,
+          "reasoning": "Ranked #6 in Security Auditing — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "llama3.1-70b",
+          "modelName": "llama3.1-70b",
+          "source": "ollama",
+          "score": 62,
+          "reasoning": "Ranked #7 in Security Auditing — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "gemini-flash",
+          "modelName": "gemini-flash",
+          "source": "api-provider",
+          "score": 60,
+          "reasoning": "Ranked #8 in Security Auditing — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "sovereign-lattice",
+          "modelName": "sovereign-lattice",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #9 in Security Auditing — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Nu",
+          "modelName": "Nu",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #10 in Security Auditing — strong capabilities with score 59/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.088Z"
+    },
+    {
+      "category": "Compliance",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Sigma",
+          "modelName": "Sigma",
+          "source": "tessera-agent",
+          "score": 95,
+          "reasoning": "Ranked #1 in Compliance — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Lambda",
+          "modelName": "Lambda",
+          "source": "tessera-agent",
+          "score": 79,
+          "reasoning": "Ranked #2 in Compliance — strong capabilities with score 79/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Omega",
+          "modelName": "Omega",
+          "source": "tessera-agent",
+          "score": 74,
+          "reasoning": "Ranked #3 in Compliance — strong capabilities with score 74/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "Alpha",
+          "modelName": "Alpha",
+          "source": "tessera-agent",
+          "score": 64,
+          "reasoning": "Ranked #4 in Compliance — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "deepseek-r1",
+          "modelName": "deepseek-r1",
+          "source": "ollama",
+          "score": 61,
+          "reasoning": "Ranked #5 in Compliance — strong capabilities with score 61/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "Tau",
+          "modelName": "Tau",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #6 in Compliance — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "qwen2.5-72b",
+          "modelName": "qwen2.5-72b",
+          "source": "ollama",
+          "score": 59,
+          "reasoning": "Ranked #7 in Compliance — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "gemma2-27b",
+          "modelName": "gemma2-27b",
+          "source": "ollama",
+          "score": 59,
+          "reasoning": "Ranked #8 in Compliance — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "github-models",
+          "modelName": "github-models",
+          "source": "api-provider",
+          "score": 58,
+          "reasoning": "Ranked #9 in Compliance — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "phi-4",
+          "modelName": "phi-4",
+          "source": "ollama",
+          "score": 58,
+          "reasoning": "Ranked #10 in Compliance — strong capabilities with score 58/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.090Z"
+    },
+    {
+      "category": "Content Moderation",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Eta",
+          "modelName": "Eta",
+          "source": "tessera-agent",
+          "score": 97,
+          "reasoning": "Ranked #1 in Content Moderation — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Solver",
+          "modelName": "Solver",
+          "source": "tessera-agent",
+          "score": 63,
+          "reasoning": "Ranked #2 in Content Moderation — strong capabilities with score 63/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Oracle",
+          "modelName": "Oracle",
+          "source": "tessera-agent",
+          "score": 62,
+          "reasoning": "Ranked #3 in Content Moderation — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "Gamma",
+          "modelName": "Gamma",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #4 in Content Moderation — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "Detective",
+          "modelName": "Detective",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #5 in Content Moderation — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "hermes-3",
+          "modelName": "hermes-3",
+          "source": "ollama",
+          "score": 59,
+          "reasoning": "Ranked #6 in Content Moderation — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "dolphin-mixtral",
+          "modelName": "dolphin-mixtral",
+          "source": "ollama",
+          "score": 58,
+          "reasoning": "Ranked #7 in Content Moderation — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "Alpha",
+          "modelName": "Alpha",
+          "source": "tessera-agent",
+          "score": 57,
+          "reasoning": "Ranked #8 in Content Moderation — strong capabilities with score 57/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "Zeta",
+          "modelName": "Zeta",
+          "source": "tessera-agent",
+          "score": 57,
+          "reasoning": "Ranked #9 in Content Moderation — strong capabilities with score 57/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "solar-10.7b",
+          "modelName": "solar-10.7b",
+          "source": "ollama",
+          "score": 57,
+          "reasoning": "Ranked #10 in Content Moderation — strong capabilities with score 57/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.092Z"
+    },
+    {
+      "category": "Personalization",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Theta",
+          "modelName": "Theta",
+          "source": "tessera-agent",
+          "score": 86,
+          "reasoning": "Ranked #1 in Personalization — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Nu",
+          "modelName": "Nu",
+          "source": "tessera-agent",
+          "score": 83,
+          "reasoning": "Ranked #2 in Personalization — strong capabilities with score 83/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "deepseek-r1",
+          "modelName": "deepseek-r1",
+          "source": "ollama",
+          "score": 64,
+          "reasoning": "Ranked #3 in Personalization — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "qwen2.5-72b",
+          "modelName": "qwen2.5-72b",
+          "source": "ollama",
+          "score": 62,
+          "reasoning": "Ranked #4 in Personalization — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "or-qwen3-free",
+          "modelName": "or-qwen3-free",
+          "source": "api-provider",
+          "score": 61,
+          "reasoning": "Ranked #5 in Personalization — strong capabilities with score 61/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "mistral-large",
+          "modelName": "mistral-large",
+          "source": "ollama",
+          "score": 60,
+          "reasoning": "Ranked #6 in Personalization — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "deepseek-direct",
+          "modelName": "deepseek-direct",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #7 in Personalization — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "groq-direct",
+          "modelName": "groq-direct",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #8 in Personalization — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "Omicron",
+          "modelName": "Omicron",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #9 in Personalization — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "cohere-direct",
+          "modelName": "cohere-direct",
+          "source": "api-provider",
+          "score": 58,
+          "reasoning": "Ranked #10 in Personalization — strong capabilities with score 58/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.094Z"
+    },
+    {
+      "category": "Multi-modal Understanding",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "mixtral-8x22b",
+          "modelName": "mixtral-8x22b",
+          "source": "ollama",
+          "score": 83,
+          "reasoning": "Ranked #1 in Multi-modal Understanding — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "llava",
+          "modelName": "llava",
+          "source": "ollama",
+          "score": 82,
+          "reasoning": "Ranked #2 in Multi-modal Understanding — strong capabilities with score 82/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "gemini-flash",
+          "modelName": "gemini-flash",
+          "source": "api-provider",
+          "score": 81,
+          "reasoning": "Ranked #3 in Multi-modal Understanding — strong capabilities with score 81/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "huggingface-direct",
+          "modelName": "huggingface-direct",
+          "source": "api-provider",
+          "score": 81,
+          "reasoning": "Ranked #4 in Multi-modal Understanding — strong capabilities with score 81/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "Theta",
+          "modelName": "Theta",
+          "source": "tessera-agent",
+          "score": 81,
+          "reasoning": "Ranked #5 in Multi-modal Understanding — strong capabilities with score 81/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "Creative",
+          "modelName": "Creative",
+          "source": "tessera-agent",
+          "score": 73,
+          "reasoning": "Ranked #6 in Multi-modal Understanding — strong capabilities with score 73/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "Alpha",
+          "modelName": "Alpha",
+          "source": "tessera-agent",
+          "score": 63,
+          "reasoning": "Ranked #7 in Multi-modal Understanding — strong capabilities with score 63/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "deepseek-r1",
+          "modelName": "deepseek-r1",
+          "source": "ollama",
+          "score": 60,
+          "reasoning": "Ranked #8 in Multi-modal Understanding — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "Beta",
+          "modelName": "Beta",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #9 in Multi-modal Understanding — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Phi",
+          "modelName": "Phi",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #10 in Multi-modal Understanding — strong capabilities with score 59/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.096Z"
+    },
+    {
+      "category": "Time Series Analysis",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Delta",
+          "modelName": "Delta",
+          "source": "tessera-agent",
+          "score": 86,
+          "reasoning": "Ranked #1 in Time Series Analysis — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Pi",
+          "modelName": "Pi",
+          "source": "tessera-agent",
+          "score": 77,
+          "reasoning": "Ranked #2 in Time Series Analysis — strong capabilities with score 77/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Solver",
+          "modelName": "Solver",
+          "source": "tessera-agent",
+          "score": 64,
+          "reasoning": "Ranked #3 in Time Series Analysis — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "Oracle",
+          "modelName": "Oracle",
+          "source": "tessera-agent",
+          "score": 63,
+          "reasoning": "Ranked #4 in Time Series Analysis — strong capabilities with score 63/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "Gamma",
+          "modelName": "Gamma",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #5 in Time Series Analysis — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "Eta",
+          "modelName": "Eta",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #6 in Time Series Analysis — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "dolphin-mixtral",
+          "modelName": "dolphin-mixtral",
+          "source": "ollama",
+          "score": 59,
+          "reasoning": "Ranked #7 in Time Series Analysis — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "Zeta",
+          "modelName": "Zeta",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #8 in Time Series Analysis — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "solar-10.7b",
+          "modelName": "solar-10.7b",
+          "source": "ollama",
+          "score": 58,
+          "reasoning": "Ranked #9 in Time Series Analysis — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Alpha",
+          "modelName": "Alpha",
+          "source": "tessera-agent",
+          "score": 57,
+          "reasoning": "Ranked #10 in Time Series Analysis — strong capabilities with score 57/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.098Z"
+    },
+    {
+      "category": "Distributed Systems",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Kappa",
+          "modelName": "Kappa",
+          "source": "tessera-agent",
+          "score": 87,
+          "reasoning": "Ranked #1 in Distributed Systems — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "deepseek-r1",
+          "modelName": "deepseek-r1",
+          "source": "ollama",
+          "score": 64,
+          "reasoning": "Ranked #2 in Distributed Systems — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "or-qwen3-free",
+          "modelName": "or-qwen3-free",
+          "source": "api-provider",
+          "score": 62,
+          "reasoning": "Ranked #3 in Distributed Systems — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "qwen2.5-72b",
+          "modelName": "qwen2.5-72b",
+          "source": "ollama",
+          "score": 62,
+          "reasoning": "Ranked #4 in Distributed Systems — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "deepseek-direct",
+          "modelName": "deepseek-direct",
+          "source": "api-provider",
+          "score": 60,
+          "reasoning": "Ranked #5 in Distributed Systems — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "mistral-large",
+          "modelName": "mistral-large",
+          "source": "ollama",
+          "score": 60,
+          "reasoning": "Ranked #6 in Distributed Systems — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "cohere-direct",
+          "modelName": "cohere-direct",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #7 in Distributed Systems — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "Omicron",
+          "modelName": "Omicron",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #8 in Distributed Systems — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "gemini-flash",
+          "modelName": "gemini-flash",
+          "source": "api-provider",
+          "score": 58,
+          "reasoning": "Ranked #9 in Distributed Systems — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "or-llama4-scout-free",
+          "modelName": "or-llama4-scout-free",
+          "source": "api-provider",
+          "score": 58,
+          "reasoning": "Ranked #10 in Distributed Systems — strong capabilities with score 58/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.103Z"
+    },
+    {
+      "category": "Human-AI Collaboration",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "neural-chat",
+          "modelName": "neural-chat",
+          "source": "ollama",
+          "score": 92,
+          "reasoning": "Ranked #1 in Human-AI Collaboration — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Chi",
+          "modelName": "Chi",
+          "source": "tessera-agent",
+          "score": 87,
+          "reasoning": "Ranked #2 in Human-AI Collaboration — strong capabilities with score 87/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Phi",
+          "modelName": "Phi",
+          "source": "tessera-agent",
+          "score": 83,
+          "reasoning": "Ranked #3 in Human-AI Collaboration — strong capabilities with score 83/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "Nu",
+          "modelName": "Nu",
+          "source": "tessera-agent",
+          "score": 80,
+          "reasoning": "Ranked #4 in Human-AI Collaboration — strong capabilities with score 80/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "Gamma",
+          "modelName": "Gamma",
+          "source": "tessera-agent",
+          "score": 62,
+          "reasoning": "Ranked #5 in Human-AI Collaboration — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "Alpha",
+          "modelName": "Alpha",
+          "source": "tessera-agent",
+          "score": 60,
+          "reasoning": "Ranked #6 in Human-AI Collaboration — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "Epsilon",
+          "modelName": "Epsilon",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #7 in Human-AI Collaboration — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "Delta",
+          "modelName": "Delta",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #8 in Human-AI Collaboration — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "deepseek-r1",
+          "modelName": "deepseek-r1",
+          "source": "ollama",
+          "score": 57,
+          "reasoning": "Ranked #9 in Human-AI Collaboration — strong capabilities with score 57/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "wizard-coder",
+          "modelName": "wizard-coder",
+          "source": "ollama",
+          "score": 57,
+          "reasoning": "Ranked #10 in Human-AI Collaboration — strong capabilities with score 57/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.104Z"
+    },
+    {
+      "category": "Crisis Management",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Epsilon",
+          "modelName": "Epsilon",
+          "source": "tessera-agent",
+          "score": 92,
+          "reasoning": "Ranked #1 in Crisis Management — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Tau",
+          "modelName": "Tau",
+          "source": "tessera-agent",
+          "score": 87,
+          "reasoning": "Ranked #2 in Crisis Management — strong capabilities with score 87/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "llama3.1-70b",
+          "modelName": "llama3.1-70b",
+          "source": "ollama",
+          "score": 64,
+          "reasoning": "Ranked #3 in Crisis Management — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "gemini-flash",
+          "modelName": "gemini-flash",
+          "source": "api-provider",
+          "score": 63,
+          "reasoning": "Ranked #4 in Crisis Management — strong capabilities with score 63/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "sovereign-lattice",
+          "modelName": "sovereign-lattice",
+          "source": "api-provider",
+          "score": 62,
+          "reasoning": "Ranked #5 in Crisis Management — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "Solver",
+          "modelName": "Solver",
+          "source": "tessera-agent",
+          "score": 61,
+          "reasoning": "Ranked #6 in Crisis Management — strong capabilities with score 61/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "Oracle",
+          "modelName": "Oracle",
+          "source": "tessera-agent",
+          "score": 60,
+          "reasoning": "Ranked #7 in Crisis Management — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "grok-direct",
+          "modelName": "grok-direct",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #8 in Crisis Management — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "Kappa",
+          "modelName": "Kappa",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #9 in Crisis Management — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Iota",
+          "modelName": "Iota",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #10 in Crisis Management — strong capabilities with score 58/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.106Z"
+    },
+    {
+      "category": "Strategic Communication",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Rho",
+          "modelName": "Rho",
+          "source": "tessera-agent",
+          "score": 94,
+          "reasoning": "Ranked #1 in Strategic Communication — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "grok-direct",
+          "modelName": "grok-direct",
+          "source": "api-provider",
+          "score": 88,
+          "reasoning": "Ranked #2 in Strategic Communication — strong capabilities with score 88/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Beta",
+          "modelName": "Beta",
+          "source": "tessera-agent",
+          "score": 77,
+          "reasoning": "Ranked #3 in Strategic Communication — strong capabilities with score 77/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "Psi",
+          "modelName": "Psi",
+          "source": "tessera-agent",
+          "score": 73,
+          "reasoning": "Ranked #4 in Strategic Communication — strong capabilities with score 73/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "deepseek-r1",
+          "modelName": "deepseek-r1",
+          "source": "ollama",
+          "score": 64,
+          "reasoning": "Ranked #5 in Strategic Communication — strong capabilities with score 64/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "qwen2.5-72b",
+          "modelName": "qwen2.5-72b",
+          "source": "ollama",
+          "score": 62,
+          "reasoning": "Ranked #6 in Strategic Communication — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "or-qwen3-free",
+          "modelName": "or-qwen3-free",
+          "source": "api-provider",
+          "score": 60,
+          "reasoning": "Ranked #7 in Strategic Communication — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "mistral-large",
+          "modelName": "mistral-large",
+          "source": "ollama",
+          "score": 60,
+          "reasoning": "Ranked #8 in Strategic Communication — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "cerebras-direct",
+          "modelName": "cerebras-direct",
+          "source": "api-provider",
+          "score": 59,
+          "reasoning": "Ranked #9 in Strategic Communication — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "deepseek-direct",
+          "modelName": "deepseek-direct",
+          "source": "api-provider",
+          "score": 58,
+          "reasoning": "Ranked #10 in Strategic Communication — strong capabilities with score 58/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.112Z"
+    },
+    {
+      "category": "Economic Resource Allocation",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "Zeta",
+          "modelName": "Zeta",
+          "source": "tessera-agent",
+          "score": 76,
+          "reasoning": "Ranked #1 in Economic Resource Allocation — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "Gamma",
+          "modelName": "Gamma",
+          "source": "tessera-agent",
+          "score": 62,
+          "reasoning": "Ranked #2 in Economic Resource Allocation — strong capabilities with score 62/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "Alpha",
+          "modelName": "Alpha",
+          "source": "tessera-agent",
+          "score": 60,
+          "reasoning": "Ranked #3 in Economic Resource Allocation — strong capabilities with score 60/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "Epsilon",
+          "modelName": "Epsilon",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #4 in Economic Resource Allocation — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "Omega",
+          "modelName": "Omega",
+          "source": "tessera-agent",
+          "score": 59,
+          "reasoning": "Ranked #5 in Economic Resource Allocation — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "yi-34b",
+          "modelName": "yi-34b",
+          "source": "ollama",
+          "score": 59,
+          "reasoning": "Ranked #6 in Economic Resource Allocation — strong capabilities with score 59/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "Delta",
+          "modelName": "Delta",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #7 in Economic Resource Allocation — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "Psi",
+          "modelName": "Psi",
+          "source": "tessera-agent",
+          "score": 58,
+          "reasoning": "Ranked #8 in Economic Resource Allocation — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "starcoder2",
+          "modelName": "starcoder2",
+          "source": "ollama",
+          "score": 58,
+          "reasoning": "Ranked #9 in Economic Resource Allocation — strong capabilities with score 58/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "Chi",
+          "modelName": "Chi",
+          "source": "tessera-agent",
+          "score": 57,
+          "reasoning": "Ranked #10 in Economic Resource Allocation — strong capabilities with score 57/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 9,
+      "votesAgainst": 1,
+      "evaluatedAt": "2026-04-03T22:45:49.113Z"
+    },
+    {
+      "category": "Self-Correction/Debugging",
+      "rankedModels": [
+        {
+          "rank": 1,
+          "modelId": "deepseek-direct",
+          "modelName": "deepseek-direct",
+          "source": "api-provider",
+          "score": 99,
+          "reasoning": "Ranked #1 in Self-Correction/Debugging — top performer based on specialized strengths and consistent quality"
+        },
+        {
+          "rank": 2,
+          "modelId": "starcoder2",
+          "modelName": "starcoder2",
+          "source": "ollama",
+          "score": 92,
+          "reasoning": "Ranked #2 in Self-Correction/Debugging — strong capabilities with score 92/100"
+        },
+        {
+          "rank": 3,
+          "modelId": "sovereign-lattice",
+          "modelName": "sovereign-lattice",
+          "source": "api-provider",
+          "score": 91,
+          "reasoning": "Ranked #3 in Self-Correction/Debugging — strong capabilities with score 91/100"
+        },
+        {
+          "rank": 4,
+          "modelId": "Gamma",
+          "modelName": "Gamma",
+          "source": "tessera-agent",
+          "score": 90,
+          "reasoning": "Ranked #4 in Self-Correction/Debugging — strong capabilities with score 90/100"
+        },
+        {
+          "rank": 5,
+          "modelId": "Solver",
+          "modelName": "Solver",
+          "source": "tessera-agent",
+          "score": 90,
+          "reasoning": "Ranked #5 in Self-Correction/Debugging — strong capabilities with score 90/100"
+        },
+        {
+          "rank": 6,
+          "modelId": "Iota",
+          "modelName": "Iota",
+          "source": "tessera-agent",
+          "score": 84,
+          "reasoning": "Ranked #6 in Self-Correction/Debugging — strong capabilities with score 84/100"
+        },
+        {
+          "rank": 7,
+          "modelId": "wizard-coder",
+          "modelName": "wizard-coder",
+          "source": "ollama",
+          "score": 84,
+          "reasoning": "Ranked #7 in Self-Correction/Debugging — strong capabilities with score 84/100"
+        },
+        {
+          "rank": 8,
+          "modelId": "deepseek-coder-v2",
+          "modelName": "deepseek-coder-v2",
+          "source": "ollama",
+          "score": 83,
+          "reasoning": "Ranked #8 in Self-Correction/Debugging — strong capabilities with score 83/100"
+        },
+        {
+          "rank": 9,
+          "modelId": "github-models",
+          "modelName": "github-models",
+          "source": "api-provider",
+          "score": 77,
+          "reasoning": "Ranked #9 in Self-Correction/Debugging — strong capabilities with score 77/100"
+        },
+        {
+          "rank": 10,
+          "modelId": "codellama-70b",
+          "modelName": "codellama-70b",
+          "source": "ollama",
+          "score": 74,
+          "reasoning": "Ranked #10 in Self-Correction/Debugging — strong capabilities with score 74/100"
+        }
+      ],
+      "consensusAchieved": true,
+      "votesFor": 10,
+      "votesAgainst": 0,
+      "evaluatedAt": "2026-04-03T22:45:49.115Z"
+    }
+  ],
+  "optimalSwarmFormula": [
+    {
+      "category": "NLU",
+      "primaryModel": "qwen2.5-72b",
+      "primarySource": "ollama",
+      "primaryScore": 94,
+      "fallback1": "Alpha",
+      "fallback2": "solar-10.7b",
+      "reasoning": "qwen2.5-72b achieved highest score (94/100) with 10/10 consensus. Fallbacks: Alpha, solar-10.7b"
+    },
+    {
+      "category": "NLG",
+      "primaryModel": "groq-direct",
+      "primarySource": "api-provider",
+      "primaryScore": 92,
+      "fallback1": "mistral-large",
+      "fallback2": "yi-34b",
+      "reasoning": "groq-direct achieved highest score (92/100) with 10/10 consensus. Fallbacks: mistral-large, yi-34b"
+    },
+    {
+      "category": "Code Generation",
+      "primaryModel": "sovereign-lattice",
+      "primarySource": "api-provider",
+      "primaryScore": 100,
+      "fallback1": "deepseek-r1",
+      "fallback2": "codellama-70b",
+      "reasoning": "sovereign-lattice achieved highest score (100/100) with 10/10 consensus. Fallbacks: deepseek-r1, codellama-70b"
+    },
+    {
+      "category": "Data Analysis",
+      "primaryModel": "huggingface-direct",
+      "primarySource": "api-provider",
+      "primaryScore": 94,
+      "fallback1": "qwen2.5-72b",
+      "fallback2": "gemini-flash",
+      "reasoning": "huggingface-direct achieved highest score (94/100) with 10/10 consensus. Fallbacks: qwen2.5-72b, gemini-flash"
+    },
+    {
+      "category": "Strategic Planning",
+      "primaryModel": "deepseek-r1",
+      "primarySource": "ollama",
+      "primaryScore": 99,
+      "fallback1": "Alpha",
+      "fallback2": "mistral-large",
+      "reasoning": "deepseek-r1 achieved highest score (99/100) with 10/10 consensus. Fallbacks: Alpha, mistral-large"
+    },
+    {
+      "category": "Economic Simulation",
+      "primaryModel": "Pi",
+      "primarySource": "tessera-agent",
+      "primaryScore": 82,
+      "fallback1": "Zeta",
+      "fallback2": "Gamma",
+      "reasoning": "Pi achieved highest score (82/100) with 10/10 consensus. Fallbacks: Zeta, Gamma"
+    },
+    {
+      "category": "Cybersecurity",
+      "primaryModel": "Detective",
+      "primarySource": "tessera-agent",
+      "primaryScore": 95,
+      "fallback1": "Eta",
+      "fallback2": "Sigma",
+      "reasoning": "Detective achieved highest score (95/100) with 10/10 consensus. Fallbacks: Eta, Sigma"
+    },
+    {
+      "category": "Creative Content",
+      "primaryModel": "Creative",
+      "primarySource": "tessera-agent",
+      "primaryScore": 92,
+      "fallback1": "llava",
+      "fallback2": "openchat",
+      "reasoning": "Creative achieved highest score (92/100) with 10/10 consensus. Fallbacks: llava, openchat"
+    },
+    {
+      "category": "Autonomous Learning",
+      "primaryModel": "Iota",
+      "primarySource": "tessera-agent",
+      "primaryScore": 82,
+      "fallback1": "Upsilon",
+      "fallback2": "deepseek-r1",
+      "reasoning": "Iota achieved highest score (82/100) with 10/10 consensus. Fallbacks: Upsilon, deepseek-r1"
+    },
+    {
+      "category": "Inter-Agent Communication",
+      "primaryModel": "Kappa",
+      "primarySource": "tessera-agent",
+      "primaryScore": 73,
+      "fallback1": "Solver",
+      "fallback2": "Oracle",
+      "reasoning": "Kappa achieved highest score (73/100) with 10/10 consensus. Fallbacks: Solver, Oracle"
+    },
+    {
+      "category": "Ethical Reasoning",
+      "primaryModel": "Lambda",
+      "primarySource": "tessera-agent",
+      "primaryScore": 82,
+      "fallback1": "Omega",
+      "fallback2": "deepseek-r1",
+      "reasoning": "Lambda achieved highest score (82/100) with 10/10 consensus. Fallbacks: Omega, deepseek-r1"
+    },
+    {
+      "category": "System Monitoring",
+      "primaryModel": "Mu",
+      "primarySource": "tessera-agent",
+      "primaryScore": 73,
+      "fallback1": "Gamma",
+      "fallback2": "Alpha",
+      "reasoning": "Mu achieved highest score (73/100) with 10/10 consensus. Fallbacks: Gamma, Alpha"
+    },
+    {
+      "category": "UX Design",
+      "primaryModel": "Nu",
+      "primarySource": "tessera-agent",
+      "primaryScore": 97,
+      "fallback1": "or-qwen3-free",
+      "fallback2": "qwen2.5-72b",
+      "reasoning": "Nu achieved highest score (97/100) with 10/10 consensus. Fallbacks: or-qwen3-free, qwen2.5-72b"
+    },
+    {
+      "category": "API Integration",
+      "primaryModel": "github-models",
+      "primarySource": "api-provider",
+      "primaryScore": 95,
+      "fallback1": "Xi",
+      "fallback2": "codellama-70b",
+      "reasoning": "github-models achieved highest score (95/100) with 10/10 consensus. Fallbacks: Xi, codellama-70b"
+    },
+    {
+      "category": "Resource Optimization",
+      "primaryModel": "Omicron",
+      "primarySource": "tessera-agent",
+      "primaryScore": 87,
+      "fallback1": "Xi",
+      "fallback2": "Oracle",
+      "reasoning": "Omicron achieved highest score (87/100) with 10/10 consensus. Fallbacks: Xi, Oracle"
+    },
+    {
+      "category": "Market Analysis",
+      "primaryModel": "Oracle",
+      "primarySource": "tessera-agent",
+      "primaryScore": 88,
+      "fallback1": "Delta",
+      "fallback2": "Pi",
+      "reasoning": "Oracle achieved highest score (88/100) with 10/10 consensus. Fallbacks: Delta, Pi"
+    },
+    {
+      "category": "SEO/Marketing",
+      "primaryModel": "Rho",
+      "primarySource": "tessera-agent",
+      "primaryScore": 89,
+      "fallback1": "Alpha",
+      "fallback2": "Beta",
+      "reasoning": "Rho achieved highest score (89/100) with 10/10 consensus. Fallbacks: Alpha, Beta"
+    },
+    {
+      "category": "Blockchain/Crypto",
+      "primaryModel": "Zeta",
+      "primarySource": "tessera-agent",
+      "primaryScore": 89,
+      "fallback1": "Sigma",
+      "fallback2": "llama3.1-70b",
+      "reasoning": "Zeta achieved highest score (89/100) with 10/10 consensus. Fallbacks: Sigma, llama3.1-70b"
+    },
+    {
+      "category": "Risk Assessment",
+      "primaryModel": "Epsilon",
+      "primarySource": "tessera-agent",
+      "primaryScore": 76,
+      "fallback1": "Tau",
+      "fallback2": "deepseek-r1",
+      "reasoning": "Epsilon achieved highest score (76/100) with 10/10 consensus. Fallbacks: Tau, deepseek-r1"
+    },
+    {
+      "category": "Knowledge Representation",
+      "primaryModel": "command-r-plus",
+      "primarySource": "ollama",
+      "primaryScore": 93,
+      "fallback1": "gemma2-27b",
+      "fallback2": "cohere-direct",
+      "reasoning": "command-r-plus achieved highest score (93/100) with 9/10 consensus. Fallbacks: gemma2-27b, cohere-direct"
+    },
+    {
+      "category": "Problem Solving",
+      "primaryModel": "deepseek-r1",
+      "primarySource": "ollama",
+      "primaryScore": 95,
+      "fallback1": "sovereign-lattice",
+      "fallback2": "Phi",
+      "reasoning": "deepseek-r1 achieved highest score (95/100) with 9/10 consensus. Fallbacks: sovereign-lattice, Phi"
+    },
+    {
+      "category": "Emotional Intelligence",
+      "primaryModel": "openchat",
+      "primarySource": "ollama",
+      "primaryScore": 92,
+      "fallback1": "neural-chat",
+      "fallback2": "Chi",
+      "reasoning": "openchat achieved highest score (92/100) with 10/10 consensus. Fallbacks: neural-chat, Chi"
+    },
+    {
+      "category": "Social Dynamics",
+      "primaryModel": "Psi",
+      "primarySource": "tessera-agent",
+      "primaryScore": 80,
+      "fallback1": "Rho",
+      "fallback2": "Chi",
+      "reasoning": "Psi achieved highest score (80/100) with 10/10 consensus. Fallbacks: Rho, Chi"
+    },
+    {
+      "category": "Governance",
+      "primaryModel": "Lambda",
+      "primarySource": "tessera-agent",
+      "primaryScore": 80,
+      "fallback1": "Alpha",
+      "fallback2": "Omega",
+      "reasoning": "Lambda achieved highest score (80/100) with 10/10 consensus. Fallbacks: Alpha, Omega"
+    },
+    {
+      "category": "Hardware Interface",
+      "primaryModel": "Xi",
+      "primarySource": "tessera-agent",
+      "primaryScore": 77,
+      "fallback1": "Gamma",
+      "fallback2": "Alpha",
+      "reasoning": "Xi achieved highest score (77/100) with 10/10 consensus. Fallbacks: Gamma, Alpha"
+    },
+    {
+      "category": "Real-time Processing",
+      "primaryModel": "llama3.1-8b",
+      "primarySource": "ollama",
+      "primaryScore": 87,
+      "fallback1": "groq-direct",
+      "fallback2": "Omicron",
+      "reasoning": "llama3.1-8b achieved highest score (87/100) with 10/10 consensus. Fallbacks: groq-direct, Omicron"
+    },
+    {
+      "category": "Error Handling",
+      "primaryModel": "Mu",
+      "primarySource": "tessera-agent",
+      "primaryScore": 90,
+      "fallback1": "Iota",
+      "fallback2": "deepseek-r1",
+      "reasoning": "Mu achieved highest score (90/100) with 10/10 consensus. Fallbacks: Iota, deepseek-r1"
+    },
+    {
+      "category": "Scalability",
+      "primaryModel": "Omicron",
+      "primarySource": "tessera-agent",
+      "primaryScore": 87,
+      "fallback1": "Mu",
+      "fallback2": "Kappa",
+      "reasoning": "Omicron achieved highest score (87/100) with 10/10 consensus. Fallbacks: Mu, Kappa"
+    },
+    {
+      "category": "Security Auditing",
+      "primaryModel": "Detective",
+      "primarySource": "tessera-agent",
+      "primaryScore": 89,
+      "fallback1": "Eta",
+      "fallback2": "Tau",
+      "reasoning": "Detective achieved highest score (89/100) with 10/10 consensus. Fallbacks: Eta, Tau"
+    },
+    {
+      "category": "Compliance",
+      "primaryModel": "Sigma",
+      "primarySource": "tessera-agent",
+      "primaryScore": 95,
+      "fallback1": "Lambda",
+      "fallback2": "Omega",
+      "reasoning": "Sigma achieved highest score (95/100) with 10/10 consensus. Fallbacks: Lambda, Omega"
+    },
+    {
+      "category": "Content Moderation",
+      "primaryModel": "Eta",
+      "primarySource": "tessera-agent",
+      "primaryScore": 97,
+      "fallback1": "Solver",
+      "fallback2": "Oracle",
+      "reasoning": "Eta achieved highest score (97/100) with 10/10 consensus. Fallbacks: Solver, Oracle"
+    },
+    {
+      "category": "Personalization",
+      "primaryModel": "Theta",
+      "primarySource": "tessera-agent",
+      "primaryScore": 86,
+      "fallback1": "Nu",
+      "fallback2": "deepseek-r1",
+      "reasoning": "Theta achieved highest score (86/100) with 10/10 consensus. Fallbacks: Nu, deepseek-r1"
+    },
+    {
+      "category": "Multi-modal Understanding",
+      "primaryModel": "mixtral-8x22b",
+      "primarySource": "ollama",
+      "primaryScore": 83,
+      "fallback1": "llava",
+      "fallback2": "gemini-flash",
+      "reasoning": "mixtral-8x22b achieved highest score (83/100) with 10/10 consensus. Fallbacks: llava, gemini-flash"
+    },
+    {
+      "category": "Time Series Analysis",
+      "primaryModel": "Delta",
+      "primarySource": "tessera-agent",
+      "primaryScore": 86,
+      "fallback1": "Pi",
+      "fallback2": "Solver",
+      "reasoning": "Delta achieved highest score (86/100) with 10/10 consensus. Fallbacks: Pi, Solver"
+    },
+    {
+      "category": "Distributed Systems",
+      "primaryModel": "Kappa",
+      "primarySource": "tessera-agent",
+      "primaryScore": 87,
+      "fallback1": "deepseek-r1",
+      "fallback2": "or-qwen3-free",
+      "reasoning": "Kappa achieved highest score (87/100) with 10/10 consensus. Fallbacks: deepseek-r1, or-qwen3-free"
+    },
+    {
+      "category": "Human-AI Collaboration",
+      "primaryModel": "neural-chat",
+      "primarySource": "ollama",
+      "primaryScore": 92,
+      "fallback1": "Chi",
+      "fallback2": "Phi",
+      "reasoning": "neural-chat achieved highest score (92/100) with 10/10 consensus. Fallbacks: Chi, Phi"
+    },
+    {
+      "category": "Crisis Management",
+      "primaryModel": "Epsilon",
+      "primarySource": "tessera-agent",
+      "primaryScore": 92,
+      "fallback1": "Tau",
+      "fallback2": "llama3.1-70b",
+      "reasoning": "Epsilon achieved highest score (92/100) with 10/10 consensus. Fallbacks: Tau, llama3.1-70b"
+    },
+    {
+      "category": "Strategic Communication",
+      "primaryModel": "Rho",
+      "primarySource": "tessera-agent",
+      "primaryScore": 94,
+      "fallback1": "grok-direct",
+      "fallback2": "Beta",
+      "reasoning": "Rho achieved highest score (94/100) with 10/10 consensus. Fallbacks: grok-direct, Beta"
+    },
+    {
+      "category": "Economic Resource Allocation",
+      "primaryModel": "Zeta",
+      "primarySource": "tessera-agent",
+      "primaryScore": 76,
+      "fallback1": "Gamma",
+      "fallback2": "Alpha",
+      "reasoning": "Zeta achieved highest score (76/100) with 9/10 consensus. Fallbacks: Gamma, Alpha"
+    },
+    {
+      "category": "Self-Correction/Debugging",
+      "primaryModel": "deepseek-direct",
+      "primarySource": "api-provider",
+      "primaryScore": 99,
+      "fallback1": "starcoder2",
+      "fallback2": "sovereign-lattice",
+      "reasoning": "deepseek-direct achieved highest score (99/100) with 10/10 consensus. Fallbacks: starcoder2, sovereign-lattice"
+    }
+  ]
+}

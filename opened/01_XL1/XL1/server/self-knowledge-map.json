@@ -1,0 +1,295 @@
+{
+  "codebaseKnowledge": [
+    {
+      "file": "server/routes.ts",
+      "purpose": "Main API routes — 16000+ lines of endpoints",
+      "exports": [],
+      "lastIndexed": 1775256563845
+    },
+    {
+      "file": "server/sovereign-engine.ts",
+      "purpose": "Core inference engine with local pattern matching and knowledge base",
+      "exports": [],
+      "lastIndexed": 1775256563845
+    },
+    {
+      "file": "server/sovereignty-training.ts",
+      "purpose": "Tracks sovereignty metrics and runs training cycles",
+      "exports": [],
+      "lastIndexed": 1775256563845
+    },
+    {
+      "file": "server/llm-router.ts",
+      "purpose": "Multi-provider LLM routing with fallback chains",
+      "exports": [],
+      "lastIndexed": 1775256563845
+    },
+    {
+      "file": "server/hundred-realifier.ts",
+      "purpose": "100 Realification Engine master orchestrator",
+      "exports": [],
+      "lastIndexed": 1775256563845
+    },
+    {
+      "file": "server/human-action-queue.ts",
+      "purpose": "AES-256 encrypted credential storage and human task queue",
+      "exports": [],
+      "lastIndexed": 1775256563845
+    },
+    {
+      "file": "server/wallet-real.ts",
+      "purpose": "Live on-chain SOL/ETH/BTC/TSRT balance tracking",
+      "exports": [],
+      "lastIndexed": 1775256563845
+    },
+    {
+      "file": "server/growth-engine.ts",
+      "purpose": "Referrals, ambassadors, airdrops, leaderboard",
+      "exports": [],
+      "lastIndexed": 1775256563845
+    },
+    {
+      "file": "server/shopify-real.ts",
+      "purpose": "Shopify Admin API integration for VitalitySupply",
+      "exports": [],
+      "lastIndexed": 1775256563845
+    },
+    {
+      "file": "server/social-poster.ts",
+      "purpose": "Multi-platform social media automation",
+      "exports": [],
+      "lastIndexed": 1775256563845
+    },
+    {
+      "file": "server/seo-real.ts",
+      "purpose": "Structured data, sitemaps, comparison topics, FAQ schema",
+      "exports": [],
+      "lastIndexed": 1775256563845
+    },
+    {
+      "file": "server/revenue-engine.ts",
+      "purpose": "10 revenue streams with pricing and offerings",
+      "exports": [],
+      "lastIndexed": 1775256563845
+    },
+    {
+      "file": "server/swarm.ts",
+      "purpose": "30+ agent swarm with roles and specializations",
+      "exports": [],
+      "lastIndexed": 1775256563845
+    },
+    {
+      "file": "server/self-code.ts",
+      "purpose": "Self-modification engine — reads and writes own source files",
+      "exports": [],
+      "lastIndexed": 1775256563845
+    },
+    {
+      "file": "server/improvement-engine.ts",
+      "purpose": "Auto-identifies bottlenecks and generates improvements",
+      "exports": [],
+      "lastIndexed": 1775256563845
+    },
+    {
+      "file": "server/autonomy.ts",
+      "purpose": "Learned behaviors and prompt enhancements",
+      "exports": [],
+      "lastIndexed": 1775256563845
+    },
+    {
+      "file": "server/deep-training.ts",
+      "purpose": "Recursive self-improvement with evolution deltas",
+      "exports": [],
+      "lastIndexed": 1775256563845
+    },
+    {
+      "file": "server/unified-training.ts",
+      "purpose": "Multi-agent domain mastery across 100+ domains",
+      "exports": [],
+      "lastIndexed": 1775256563845
+    },
+    {
+      "file": "server/sovereignty-accelerator.ts",
+      "purpose": "Sovereignty training acceleration — conversation corpus, self-knowledge mapping",
+      "exports": [],
+      "lastIndexed": 1775256563845
+    }
+  ],
+  "apiEndpoints": [
+    {
+      "path": "/api/chat",
+      "method": "POST",
+      "purpose": "Main chat endpoint with streaming"
+    },
+    {
+      "path": "/api/realification/status",
+      "method": "GET",
+      "purpose": "100 Realification status"
+    },
+    {
+      "path": "/api/llm/stats",
+      "method": "GET",
+      "purpose": "LLM provider health dashboard"
+    },
+    {
+      "path": "/api/admin/auto-auth",
+      "method": "POST",
+      "purpose": "Automatic admin authentication"
+    },
+    {
+      "path": "/api/human-actions/pending",
+      "method": "GET",
+      "purpose": "Queued human action items"
+    },
+    {
+      "path": "/api/moltbook/agents",
+      "method": "GET",
+      "purpose": "All MoltBook swarm agents"
+    },
+    {
+      "path": "/api/tts",
+      "method": "POST",
+      "purpose": "Text-to-speech generation"
+    },
+    {
+      "path": "/api/sovereignty/status",
+      "method": "GET",
+      "purpose": "Sovereignty metrics"
+    },
+    {
+      "path": "/api/wallets/balances",
+      "method": "GET",
+      "purpose": "Live wallet balances"
+    },
+    {
+      "path": "/blog",
+      "method": "GET",
+      "purpose": "Public blog host"
+    },
+    {
+      "path": "/blog/rss.xml",
+      "method": "GET",
+      "purpose": "RSS feed"
+    },
+    {
+      "path": "/blog/sitemap.xml",
+      "method": "GET",
+      "purpose": "Sitemap"
+    }
+  ],
+  "agentCapabilities": [],
+  "architecturePatterns": [
+    {
+      "name": "Swarm Consensus",
+      "description": "2/3 majority approval from 30+ agents before any operation",
+      "files": [
+        "server/swarm.ts",
+        "server/swarm-consensus.ts"
+      ]
+    },
+    {
+      "name": "LLM Task Affinity Router",
+      "description": "Per-provider token weight tracking, task affinity scoring, and adaptive routing based on real performance data",
+      "files": [
+        "server/llm-router.ts"
+      ]
+    },
+    {
+      "name": "Sovereign Inference",
+      "description": "Local pattern matching before external API calls",
+      "files": [
+        "server/sovereign-engine.ts"
+      ]
+    },
+    {
+      "name": "Human Action Queue",
+      "description": "Queue tasks needing human auth, encrypt credentials for reuse",
+      "files": [
+        "server/human-action-queue.ts"
+      ]
+    },
+    {
+      "name": "Autonomous Cycles",
+      "description": "Periodic self-improvement cycles running every 5 minutes",
+      "files": [
+        "server/autonomous-cycles.ts"
+      ]
+    },
+    {
+      "name": "Knowledge Absorption",
+      "description": "Extract patterns from every external response for local replay",
+      "files": [
+        "server/sovereign-engine.ts",
+        "server/sovereignty-training.ts"
+      ]
+    },
+    {
+      "name": "Advanced Swarm Optimization",
+      "description": "Simulated annealing, genetic algorithm, and multi-armed bandit for optimal agent-task assignment",
+      "files": [
+        "server/swarm-optimizer.ts"
+      ]
+    },
+    {
+      "name": "Sub-Pattern Distillation",
+      "description": "Extract code blocks, key insights, and reasoning patterns from every LLM response for sovereignty",
+      "files": [
+        "server/knowledge-distillation.ts"
+      ]
+    }
+  ],
+  "weaknesses": [
+    {
+      "area": "Local LLM",
+      "description": "No on-device LLM running — fully dependent on external APIs",
+      "improvementPlan": "Increase cached response coverage to 80%+ of common queries"
+    },
+    {
+      "area": "Voice Learning",
+      "description": "Basic voice history storage — no phonetic pattern matching",
+      "improvementPlan": "Build phonetic similarity engine for better voice recognition"
+    },
+    {
+      "area": "Revenue Activation",
+      "description": "33 items need human credentials — blocking real revenue generation",
+      "improvementPlan": "Prioritize: Shopify token, Discord webhook, Telegram bot — highest ROI actions"
+    },
+    {
+      "area": "Data Persistence",
+      "description": "Knowledge stored in JSON files — no vector database",
+      "improvementPlan": "Implement BM25 search improvements and pattern deduplication"
+    }
+  ],
+  "strengths": [
+    {
+      "area": "Multi-LLM Routing",
+      "description": "216+ providers with automatic failover and rate limiting",
+      "leveragePlan": "Use every provider as a training source — absorb response patterns from each"
+    },
+    {
+      "area": "Knowledge Base",
+      "description": "600+ knowledge entries, 2000+ cached responses, 430+ repos indexed",
+      "leveragePlan": "Cross-reference knowledge entries to generate novel insights"
+    },
+    {
+      "area": "Self-Coding",
+      "description": "Can read, analyze, and modify own source files",
+      "leveragePlan": "Use improvement engine to fix weaknesses automatically"
+    },
+    {
+      "area": "Agent Swarm",
+      "description": "30+ specialized agents with consensus voting",
+      "leveragePlan": "Run parallel research sessions across agents for faster learning"
+    },
+    {
+      "area": "Revenue Pipeline",
+      "description": "10 revenue streams defined with real integrations",
+      "leveragePlan": "Generate revenue to fund more API credits and infrastructure"
+    },
+    {
+      "area": "Real On-Chain Integration",
+      "description": "Live SOL/ETH/BTC wallets with trading capability",
+      "leveragePlan": "Use trading profits to increase sovereignty infrastructure budget"
+    }
+  ]
+}

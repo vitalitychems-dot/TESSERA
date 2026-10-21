@@ -1,0 +1,3450 @@
+{
+  "profiles": {
+    "sovereign-ai": {
+      "id": "sovereign-ai",
+      "name": "sovereign-ai",
+      "strengths": [
+        "general",
+        "debugging",
+        "code_review",
+        "privacy",
+        "statistics",
+        "research_synthesis",
+        "current_events",
+        "conversation",
+        "factual_lookup",
+        "pattern_recognition",
+        "math_computation",
+        "translation",
+        "brainstorming",
+        "encryption",
+        "creative_writing",
+        "comparison",
+        "algorithm",
+        "critical_analysis",
+        "prediction",
+        "security",
+        "trading",
+        "emotional_support",
+        "extraction",
+        "storytelling",
+        "crypto",
+        "code_generation",
+        "data_analysis",
+        "advice",
+        "math_proof",
+        "finance"
+      ],
+      "weaknesses": [],
+      "avgLatencyMs": 3097.76476819856,
+      "avgQuality": 7.309942995510263,
+      "successRate": 0.8999999999999999,
+      "totalCalls": 19823,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "general",
+        "debugging",
+        "code_review",
+        "privacy",
+        "statistics"
+      ],
+      "worstFor": [],
+      "speedTier": "fast",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774924003724
+    },
+    "pollinations": {
+      "id": "pollinations",
+      "name": "pollinations",
+      "strengths": [
+        "general",
+        "conversation"
+      ],
+      "weaknesses": [
+        "pattern_recognition",
+        "summarization",
+        "data_analysis",
+        "trading",
+        "math_computation",
+        "storytelling",
+        "research_synthesis",
+        "advice",
+        "code_generation",
+        "prediction",
+        "emotional_support",
+        "conversation",
+        "statistics",
+        "brainstorming",
+        "security",
+        "factual_lookup",
+        "current_events",
+        "algorithm",
+        "extraction",
+        "creative_writing",
+        "critical_analysis",
+        "comparison",
+        "privacy",
+        "code_review",
+        "debugging"
+      ],
+      "avgLatencyMs": 9018.173027989831,
+      "avgQuality": 7.735368956743002,
+      "successRate": 0,
+      "totalCalls": 393,
+      "recentScores": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        0,
+        0,
+        8.5,
+        5,
+        0
+      ],
+      "bestFor": [
+        "encryption",
+        "finance",
+        "math_proof",
+        "translation",
+        "logical_reasoning"
+      ],
+      "worstFor": [
+        "privacy",
+        "code_review",
+        "debugging"
+      ],
+      "speedTier": "medium",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1772993710826
+    },
+    "or-hermes-free": {
+      "id": "or-hermes-free",
+      "name": "or-hermes-free",
+      "strengths": [
+        "statistics",
+        "storytelling"
+      ],
+      "weaknesses": [
+        "conversation",
+        "statistics",
+        "prediction",
+        "factual_lookup",
+        "pattern_recognition",
+        "research_synthesis",
+        "extraction",
+        "brainstorming",
+        "current_events",
+        "code_review",
+        "creative_writing",
+        "privacy",
+        "math_computation",
+        "comparison",
+        "translation",
+        "debugging"
+      ],
+      "avgLatencyMs": 509.2286857494592,
+      "avgQuality": 5.159741458910437,
+      "successRate": 0,
+      "totalCalls": 3249,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "summarization",
+        "math_proof",
+        "logical_reasoning",
+        "algorithm",
+        "critical_analysis"
+      ],
+      "worstFor": [
+        "comparison",
+        "translation",
+        "debugging"
+      ],
+      "speedTier": "medium",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622852
+    },
+    "or-mistral-free": {
+      "id": "or-mistral-free",
+      "name": "or-mistral-free",
+      "strengths": [
+        "math_computation",
+        "research_synthesis"
+      ],
+      "weaknesses": [
+        "pattern_recognition"
+      ],
+      "avgLatencyMs": 2128.9637681159406,
+      "avgQuality": 6.757246376811595,
+      "successRate": 0,
+      "totalCalls": 276,
+      "recentScores": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "bestFor": [
+        "math_computation",
+        "research_synthesis",
+        "conversation",
+        "statistics",
+        "finance"
+      ],
+      "worstFor": [
+        "privacy",
+        "debugging"
+      ],
+      "speedTier": "fast",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1772938548432
+    },
+    "or-llama33-free": {
+      "id": "or-llama33-free",
+      "name": "or-llama33-free",
+      "strengths": [
+        "algorithm"
+      ],
+      "weaknesses": [
+        "crypto",
+        "prediction",
+        "advice",
+        "data_analysis",
+        "research_synthesis",
+        "code_generation",
+        "brainstorming",
+        "current_events",
+        "encryption",
+        "factual_lookup",
+        "trading",
+        "conversation",
+        "critical_analysis",
+        "debugging",
+        "security",
+        "extraction",
+        "creative_writing",
+        "pattern_recognition",
+        "emotional_support",
+        "statistics",
+        "comparison",
+        "code_review"
+      ],
+      "avgLatencyMs": 2682.7024875621864,
+      "avgQuality": 5.217412935323383,
+      "successRate": 0,
+      "totalCalls": 1005,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "privacy",
+        "logical_reasoning",
+        "math_proof",
+        "algorithm",
+        "summarization"
+      ],
+      "worstFor": [
+        "code_review",
+        "storytelling",
+        "translation"
+      ],
+      "speedTier": "medium",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622839
+    },
+    "puter-claude": {
+      "id": "puter-claude",
+      "name": "puter-claude",
+      "strengths": [
+        "creative_writing",
+        "critical_analysis",
+        "logical_reasoning",
+        "code_generation",
+        "long_context"
+      ],
+      "weaknesses": [],
+      "avgLatencyMs": 5.666318810331353,
+      "avgQuality": 5,
+      "successRate": 1,
+      "totalCalls": 3833,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "code_generation",
+        "logical_reasoning",
+        "critical_analysis",
+        "creative_writing"
+      ],
+      "worstFor": [],
+      "speedTier": "medium",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622852
+    },
+    "puter-deepseek": {
+      "id": "puter-deepseek",
+      "name": "puter-deepseek",
+      "strengths": [
+        "code_generation",
+        "algorithm",
+        "math_computation",
+        "debugging"
+      ],
+      "weaknesses": [],
+      "avgLatencyMs": 10.466216216216255,
+      "avgQuality": 5,
+      "successRate": 1,
+      "totalCalls": 2072,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "code_generation",
+        "math_computation"
+      ],
+      "worstFor": [],
+      "speedTier": "medium",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622846
+    },
+    "puter-kimi": {
+      "id": "puter-kimi",
+      "name": "puter-kimi",
+      "strengths": [
+        "code_generation",
+        "research_synthesis",
+        "translation",
+        "long_context"
+      ],
+      "weaknesses": [],
+      "avgLatencyMs": 10.461872586872568,
+      "avgQuality": 5,
+      "successRate": 1,
+      "totalCalls": 2072,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "code_generation",
+        "research_synthesis"
+      ],
+      "worstFor": [],
+      "speedTier": "medium",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622849
+    },
+    "puter-deepseek-r1": {
+      "id": "puter-deepseek-r1",
+      "name": "puter-deepseek-r1",
+      "strengths": [
+        "math_proof",
+        "logical_reasoning",
+        "algorithm",
+        "math_computation",
+        "critical_analysis"
+      ],
+      "weaknesses": [],
+      "avgLatencyMs": 0.08406432748538017,
+      "avgQuality": 5,
+      "successRate": 1,
+      "totalCalls": 2736,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "logical_reasoning",
+        "math_computation",
+        "critical_analysis"
+      ],
+      "worstFor": [],
+      "speedTier": "slow",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622852
+    },
+    "or-nemotron-free": {
+      "id": "or-nemotron-free",
+      "name": "or-nemotron-free",
+      "strengths": [
+        "code_generation",
+        "logical_reasoning",
+        "general"
+      ],
+      "weaknesses": [],
+      "avgLatencyMs": 0.16228070175438578,
+      "avgQuality": 5,
+      "successRate": 1,
+      "totalCalls": 912,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "logical_reasoning"
+      ],
+      "worstFor": [],
+      "speedTier": "medium",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622839
+    },
+    "hf-qwen72b": {
+      "id": "hf-qwen72b",
+      "name": "hf-qwen72b",
+      "strengths": [
+        "code_generation",
+        "math_computation",
+        "algorithm"
+      ],
+      "weaknesses": [],
+      "avgLatencyMs": 0.06578947368421045,
+      "avgQuality": 5,
+      "successRate": 1,
+      "totalCalls": 912,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "math_computation"
+      ],
+      "worstFor": [],
+      "speedTier": "medium",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622846
+    },
+    "hf-deepseek-v3": {
+      "id": "hf-deepseek-v3",
+      "name": "hf-deepseek-v3",
+      "strengths": [
+        "code_generation",
+        "algorithm",
+        "math_computation"
+      ],
+      "weaknesses": [],
+      "avgLatencyMs": 0.0953947368421052,
+      "avgQuality": 5,
+      "successRate": 1,
+      "totalCalls": 912,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "math_computation"
+      ],
+      "worstFor": [],
+      "speedTier": "medium",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622846
+    },
+    "pollinations-deepseek": {
+      "id": "pollinations-deepseek",
+      "name": "pollinations-deepseek",
+      "strengths": [
+        "code_generation",
+        "algorithm",
+        "math_computation"
+      ],
+      "weaknesses": [],
+      "avgLatencyMs": 0.09868421052631572,
+      "avgQuality": 5,
+      "successRate": 1,
+      "totalCalls": 912,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "math_computation"
+      ],
+      "worstFor": [],
+      "speedTier": "medium",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622846
+    },
+    "puter-gemini": {
+      "id": "puter-gemini",
+      "name": "puter-gemini",
+      "strengths": [
+        "factual_lookup",
+        "research_synthesis",
+        "current_events",
+        "multimodal"
+      ],
+      "weaknesses": [],
+      "avgLatencyMs": 0.1370614035087719,
+      "avgQuality": 5,
+      "successRate": 1,
+      "totalCalls": 912,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "research_synthesis"
+      ],
+      "worstFor": [],
+      "speedTier": "fast",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622849
+    },
+    "gemini-flash": {
+      "id": "gemini-flash",
+      "name": "gemini-flash",
+      "strengths": [
+        "factual_lookup",
+        "research_synthesis",
+        "current_events",
+        "summarization",
+        "multimodal"
+      ],
+      "weaknesses": [],
+      "avgLatencyMs": 0.20614035087719296,
+      "avgQuality": 5,
+      "successRate": 1,
+      "totalCalls": 912,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "research_synthesis"
+      ],
+      "worstFor": [],
+      "speedTier": "ultra-fast",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622849
+    },
+    "pollinations-gemini": {
+      "id": "pollinations-gemini",
+      "name": "pollinations-gemini",
+      "strengths": [
+        "factual_lookup",
+        "general",
+        "research_synthesis"
+      ],
+      "weaknesses": [],
+      "avgLatencyMs": 0.2061403508771931,
+      "avgQuality": 5,
+      "successRate": 1,
+      "totalCalls": 912,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "research_synthesis"
+      ],
+      "worstFor": [],
+      "speedTier": "medium",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622849
+    },
+    "pollinations-command-r": {
+      "id": "pollinations-command-r",
+      "name": "pollinations-command-r",
+      "strengths": [
+        "research_synthesis",
+        "summarization"
+      ],
+      "weaknesses": [],
+      "avgLatencyMs": 0.20723684210526305,
+      "avgQuality": 5,
+      "successRate": 1,
+      "totalCalls": 912,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "research_synthesis"
+      ],
+      "worstFor": [],
+      "speedTier": "medium",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622849
+    },
+    "pollinations-claude": {
+      "id": "pollinations-claude",
+      "name": "pollinations-claude",
+      "strengths": [
+        "creative_writing",
+        "critical_analysis",
+        "code_generation"
+      ],
+      "weaknesses": [],
+      "avgLatencyMs": 0.08347529812606479,
+      "avgQuality": 5,
+      "successRate": 1,
+      "totalCalls": 1761,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "critical_analysis",
+        "creative_writing"
+      ],
+      "worstFor": [],
+      "speedTier": "medium",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622852
+    },
+    "pollinations-reasoning": {
+      "id": "pollinations-reasoning",
+      "name": "pollinations-reasoning",
+      "strengths": [
+        "math_proof",
+        "logical_reasoning",
+        "critical_analysis",
+        "algorithm"
+      ],
+      "weaknesses": [],
+      "avgLatencyMs": 0.04385964912280699,
+      "avgQuality": 5,
+      "successRate": 1,
+      "totalCalls": 912,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "critical_analysis"
+      ],
+      "worstFor": [],
+      "speedTier": "slow",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622852
+    },
+    "hf-llama70b": {
+      "id": "hf-llama70b",
+      "name": "hf-llama70b",
+      "strengths": [
+        "conversation",
+        "general",
+        "creative_writing"
+      ],
+      "weaknesses": [],
+      "avgLatencyMs": 0.10365135453474679,
+      "avgQuality": 5,
+      "successRate": 1,
+      "totalCalls": 849,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "creative_writing"
+      ],
+      "worstFor": [],
+      "speedTier": "medium",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622842
+    },
+    "pollinations-llama4": {
+      "id": "pollinations-llama4",
+      "name": "pollinations-llama4",
+      "strengths": [
+        "general",
+        "conversation",
+        "creative_writing"
+      ],
+      "weaknesses": [],
+      "avgLatencyMs": 0.12131919905771502,
+      "avgQuality": 5,
+      "successRate": 1,
+      "totalCalls": 849,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "creative_writing"
+      ],
+      "worstFor": [],
+      "speedTier": "medium",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622842
+    },
+    "pollinations-unity": {
+      "id": "pollinations-unity",
+      "name": "pollinations-unity",
+      "strengths": [
+        "general",
+        "conversation",
+        "creative_writing",
+        "brainstorming"
+      ],
+      "weaknesses": [],
+      "avgLatencyMs": 0.12131919905771502,
+      "avgQuality": 5,
+      "successRate": 1,
+      "totalCalls": 849,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [
+        "creative_writing"
+      ],
+      "worstFor": [],
+      "speedTier": "medium",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622842
+    },
+    "sovereign-lattice": {
+      "id": "sovereign-lattice",
+      "name": "sovereign-lattice",
+      "strengths": [
+        "code_generation",
+        "debugging",
+        "code_review"
+      ],
+      "weaknesses": [],
+      "avgLatencyMs": 0.2222222222222222,
+      "avgQuality": 5,
+      "successRate": 1,
+      "totalCalls": 9,
+      "recentScores": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "bestFor": [],
+      "worstFor": [],
+      "speedTier": "fast",
+      "costTier": 0,
+      "free": true,
+      "maxConcurrent": 3,
+      "adaptiveScore": {},
+      "lastUpdated": 1774926622835
+    }
+  },
+  "dimensionPerformance": {
+    "sovereign-ai": {
+      "code_generation": {
+        "total": 12585,
+        "sum": 93748.5,
+        "avg": 7.4492252681764
+      },
+      "code_review": {
+        "total": 685,
+        "sum": 5578,
+        "avg": 8.143065693430657
+      },
+      "debugging": {
+        "total": 586,
+        "sum": 4891.5,
+        "avg": 8.347269624573379
+      },
+      "math_proof": {
+        "total": 12010,
+        "sum": 88523.5,
+        "avg": 7.370815986677768
+      },
+      "statistics": {
+        "total": 591,
+        "sum": 4726,
+        "avg": 7.9966159052453465
+      },
+      "research_synthesis": {
+        "total": 1481,
+        "sum": 11802.5,
+        "avg": 7.969277515192437
+      },
+      "current_events": {
+        "total": 5210,
+        "sum": 41420,
+        "avg": 7.950095969289827
+      },
+      "emotional_support": {
+        "total": 5801,
+        "sum": 44208.5,
+        "avg": 7.620841234269953
+      },
+      "advice": {
+        "total": 8372,
+        "sum": 62002,
+        "avg": 7.405876731963689
+      },
+      "data_analysis": {
+        "total": 8752,
+        "sum": 65160,
+        "avg": 7.4451553930530165
+      },
+      "pattern_recognition": {
+        "total": 3416,
+        "sum": 26768,
+        "avg": 7.836065573770492
+      },
+      "prediction": {
+        "total": 4041,
+        "sum": 31053,
+        "avg": 7.684484038604306
+      },
+      "finance": {
+        "total": 8627,
+        "sum": 62826,
+        "avg": 7.282485220818361
+      },
+      "crypto": {
+        "total": 9379,
+        "sum": 70208,
+        "avg": 7.485659451967161
+      },
+      "trading": {
+        "total": 5050,
+        "sum": 38490,
+        "avg": 7.6217821782178214
+      },
+      "security": {
+        "total": 2748,
+        "sum": 21011.5,
+        "avg": 7.646106259097525
+      },
+      "privacy": {
+        "total": 363,
+        "sum": 2922.5,
+        "avg": 8.050964187327823
+      },
+      "encryption": {
+        "total": 8610,
+        "sum": 66568.5,
+        "avg": 7.731533101045296
+      },
+      "summarization": {
+        "total": 7944,
+        "sum": 55235.5,
+        "avg": 6.953109264853978
+      },
+      "extraction": {
+        "total": 1176,
+        "sum": 8962,
+        "avg": 7.620748299319728
+      },
+      "conversation": {
+        "total": 5561,
+        "sum": 44017,
+        "avg": 7.915303003057004
+      },
+      "algorithm": {
+        "total": 1098,
+        "sum": 8479.5,
+        "avg": 7.722677595628415
+      },
+      "factual_lookup": {
+        "total": 6302,
+        "sum": 49488.5,
+        "avg": 7.85282450015868
+      },
+      "brainstorming": {
+        "total": 6730,
+        "sum": 52336,
+        "avg": 7.776523031203566
+      },
+      "logical_reasoning": {
+        "total": 9227,
+        "sum": 64200.5,
+        "avg": 6.95789530725046
+      },
+      "creative_writing": {
+        "total": 1254,
+        "sum": 9686.5,
+        "avg": 7.724481658692185
+      },
+      "critical_analysis": {
+        "total": 4628,
+        "sum": 35690,
+        "avg": 7.711754537597234
+      },
+      "math_computation": {
+        "total": 344,
+        "sum": 2693,
+        "avg": 7.828488372093023
+      },
+      "translation": {
+        "total": 550,
+        "sum": 4299,
+        "avg": 7.816363636363636
+      },
+      "storytelling": {
+        "total": 496,
+        "sum": 3761,
+        "avg": 7.582661290322581
+      },
+      "comparison": {
+        "total": 361,
+        "sum": 2788.5,
+        "avg": 7.724376731301939
+      },
+      "general": {
+        "total": 5,
+        "sum": 42.5,
+        "avg": 8.5
+      }
+    },
+    "pollinations": {
+      "advice": {
+        "total": 200,
+        "sum": 529,
+        "avg": 2.645
+      },
+      "brainstorming": {
+        "total": 168,
+        "sum": 337,
+        "avg": 2.005952380952381
+      },
+      "conversation": {
+        "total": 139,
+        "sum": 294,
+        "avg": 2.115107913669065
+      },
+      "crypto": {
+        "total": 242,
+        "sum": 978.5,
+        "avg": 4.043388429752066
+      },
+      "current_events": {
+        "total": 133,
+        "sum": 229.5,
+        "avg": 1.7255639097744362
+      },
+      "emotional_support": {
+        "total": 141,
+        "sum": 299.5,
+        "avg": 2.124113475177305
+      },
+      "encryption": {
+        "total": 404,
+        "sum": 2206,
+        "avg": 5.46039603960396
+      },
+      "factual_lookup": {
+        "total": 146,
+        "sum": 256.5,
+        "avg": 1.7568493150684932
+      },
+      "research_synthesis": {
+        "total": 51,
+        "sum": 136,
+        "avg": 2.6666666666666665
+      },
+      "trading": {
+        "total": 143,
+        "sum": 434.5,
+        "avg": 3.0384615384615383
+      },
+      "algorithm": {
+        "total": 46,
+        "sum": 72,
+        "avg": 1.565217391304348
+      },
+      "code_generation": {
+        "total": 254,
+        "sum": 652.5,
+        "avg": 2.5688976377952755
+      },
+      "data_analysis": {
+        "total": 246,
+        "sum": 811,
+        "avg": 3.296747967479675
+      },
+      "math_proof": {
+        "total": 273,
+        "sum": 1276,
+        "avg": 4.673992673992674
+      },
+      "prediction": {
+        "total": 115,
+        "sum": 280,
+        "avg": 2.4347826086956523
+      },
+      "security": {
+        "total": 78,
+        "sum": 141,
+        "avg": 1.8076923076923077
+      },
+      "finance": {
+        "total": 282,
+        "sum": 1360,
+        "avg": 4.822695035460993
+      },
+      "critical_analysis": {
+        "total": 108,
+        "sum": 135,
+        "avg": 1.25
+      },
+      "summarization": {
+        "total": 147,
+        "sum": 557,
+        "avg": 3.7891156462585034
+      },
+      "pattern_recognition": {
+        "total": 118,
+        "sum": 448.5,
+        "avg": 3.8008474576271185
+      },
+      "logical_reasoning": {
+        "total": 176,
+        "sum": 771.5,
+        "avg": 4.3835227272727275
+      },
+      "creative_writing": {
+        "total": 36,
+        "sum": 49.5,
+        "avg": 1.375
+      },
+      "comparison": {
+        "total": 12,
+        "sum": 12,
+        "avg": 1
+      },
+      "extraction": {
+        "total": 30,
+        "sum": 43.5,
+        "avg": 1.45
+      },
+      "statistics": {
+        "total": 12,
+        "sum": 24.5,
+        "avg": 2.0416666666666665
+      },
+      "translation": {
+        "total": 13,
+        "sum": 58,
+        "avg": 4.461538461538462
+      },
+      "privacy": {
+        "total": 12,
+        "sum": 12,
+        "avg": 1
+      },
+      "code_review": {
+        "total": 19,
+        "sum": 19,
+        "avg": 1
+      },
+      "debugging": {
+        "total": 19,
+        "sum": 19,
+        "avg": 1
+      },
+      "storytelling": {
+        "total": 8,
+        "sum": 24,
+        "avg": 3
+      },
+      "math_computation": {
+        "total": 13,
+        "sum": 39.5,
+        "avg": 3.0384615384615383
+      }
+    },
+    "or-hermes-free": {
+      "encryption": {
+        "total": 156,
+        "sum": 654,
+        "avg": 4.1923076923076925
+      },
+      "logical_reasoning": {
+        "total": 1146,
+        "sum": 5864,
+        "avg": 5.116928446771379
+      },
+      "math_proof": {
+        "total": 271,
+        "sum": 1428.5,
+        "avg": 5.271217712177122
+      },
+      "summarization": {
+        "total": 215,
+        "sum": 1187,
+        "avg": 5.52093023255814
+      },
+      "advice": {
+        "total": 136,
+        "sum": 556.5,
+        "avg": 4.091911764705882
+      },
+      "brainstorming": {
+        "total": 118,
+        "sum": 427.5,
+        "avg": 3.6228813559322033
+      },
+      "code_generation": {
+        "total": 1360,
+        "sum": 6564,
+        "avg": 4.826470588235294
+      },
+      "conversation": {
+        "total": 83,
+        "sum": 329,
+        "avg": 3.963855421686747
+      },
+      "critical_analysis": {
+        "total": 1006,
+        "sum": 4901,
+        "avg": 4.8717693836978135
+      },
+      "crypto": {
+        "total": 166,
+        "sum": 796.5,
+        "avg": 4.798192771084337
+      },
+      "current_events": {
+        "total": 94,
+        "sum": 334,
+        "avg": 3.5531914893617023
+      },
+      "emotional_support": {
+        "total": 108,
+        "sum": 446,
+        "avg": 4.12962962962963
+      },
+      "factual_lookup": {
+        "total": 107,
+        "sum": 412,
+        "avg": 3.850467289719626
+      },
+      "finance": {
+        "total": 152,
+        "sum": 700.5,
+        "avg": 4.608552631578948
+      },
+      "pattern_recognition": {
+        "total": 52,
+        "sum": 195,
+        "avg": 3.75
+      },
+      "security": {
+        "total": 59,
+        "sum": 264.5,
+        "avg": 4.483050847457627
+      },
+      "trading": {
+        "total": 84,
+        "sum": 364.5,
+        "avg": 4.339285714285714
+      },
+      "storytelling": {
+        "total": 9,
+        "sum": 39,
+        "avg": 4.333333333333333
+      },
+      "data_analysis": {
+        "total": 145,
+        "sum": 620.5,
+        "avg": 4.279310344827586
+      },
+      "extraction": {
+        "total": 20,
+        "sum": 73.5,
+        "avg": 3.675
+      },
+      "comparison": {
+        "total": 10,
+        "sum": 25,
+        "avg": 2.5
+      },
+      "prediction": {
+        "total": 74,
+        "sum": 286,
+        "avg": 3.864864864864865
+      },
+      "research_synthesis": {
+        "total": 27,
+        "sum": 100.5,
+        "avg": 3.7222222222222223
+      },
+      "algorithm": {
+        "total": 24,
+        "sum": 122,
+        "avg": 5.083333333333333
+      },
+      "privacy": {
+        "total": 4,
+        "sum": 11.5,
+        "avg": 2.875
+      },
+      "translation": {
+        "total": 5,
+        "sum": 12.5,
+        "avg": 2.5
+      },
+      "code_review": {
+        "total": 16,
+        "sum": 54.5,
+        "avg": 3.40625
+      },
+      "statistics": {
+        "total": 9,
+        "sum": 35.5,
+        "avg": 3.9444444444444446
+      },
+      "creative_writing": {
+        "total": 18,
+        "sum": 60.5,
+        "avg": 3.361111111111111
+      },
+      "debugging": {
+        "total": 9,
+        "sum": 16,
+        "avg": 1.7777777777777777
+      },
+      "math_computation": {
+        "total": 4,
+        "sum": 11.5,
+        "avg": 2.875
+      }
+    },
+    "or-mistral-free": {
+      "logical_reasoning": {
+        "total": 219,
+        "sum": 1172.5,
+        "avg": 5.353881278538813
+      },
+      "math_proof": {
+        "total": 265,
+        "sum": 1381,
+        "avg": 5.211320754716981
+      },
+      "storytelling": {
+        "total": 8,
+        "sum": 42.5,
+        "avg": 5.3125
+      },
+      "summarization": {
+        "total": 215,
+        "sum": 1106.5,
+        "avg": 5.1465116279069765
+      },
+      "code_generation": {
+        "total": 230,
+        "sum": 1008,
+        "avg": 4.3826086956521735
+      },
+      "encryption": {
+        "total": 155,
+        "sum": 684,
+        "avg": 4.412903225806452
+      },
+      "critical_analysis": {
+        "total": 83,
+        "sum": 338.5,
+        "avg": 4.078313253012048
+      },
+      "data_analysis": {
+        "total": 146,
+        "sum": 651,
+        "avg": 4.458904109589041
+      },
+      "crypto": {
+        "total": 170,
+        "sum": 823.5,
+        "avg": 4.844117647058823
+      },
+      "advice": {
+        "total": 128,
+        "sum": 567,
+        "avg": 4.4296875
+      },
+      "algorithm": {
+        "total": 19,
+        "sum": 81.5,
+        "avg": 4.2894736842105265
+      },
+      "brainstorming": {
+        "total": 108,
+        "sum": 454,
+        "avg": 4.203703703703703
+      },
+      "conversation": {
+        "total": 73,
+        "sum": 346,
+        "avg": 4.739726027397261
+      },
+      "current_events": {
+        "total": 87,
+        "sum": 335,
+        "avg": 3.8505747126436782
+      },
+      "emotional_support": {
+        "total": 106,
+        "sum": 471,
+        "avg": 4.443396226415095
+      },
+      "finance": {
+        "total": 139,
+        "sum": 699.5,
+        "avg": 5.032374100719425
+      },
+      "pattern_recognition": {
+        "total": 56,
+        "sum": 235.5,
+        "avg": 4.205357142857143
+      },
+      "security": {
+        "total": 45,
+        "sum": 193.5,
+        "avg": 4.3
+      },
+      "trading": {
+        "total": 91,
+        "sum": 434.5,
+        "avg": 4.774725274725275
+      },
+      "factual_lookup": {
+        "total": 107,
+        "sum": 457,
+        "avg": 4.271028037383178
+      },
+      "prediction": {
+        "total": 63,
+        "sum": 263.5,
+        "avg": 4.182539682539683
+      },
+      "translation": {
+        "total": 9,
+        "sum": 30.5,
+        "avg": 3.388888888888889
+      },
+      "code_review": {
+        "total": 15,
+        "sum": 61.5,
+        "avg": 4.1
+      },
+      "extraction": {
+        "total": 17,
+        "sum": 70,
+        "avg": 4.117647058823529
+      },
+      "math_computation": {
+        "total": 3,
+        "sum": 22.5,
+        "avg": 7.5
+      },
+      "comparison": {
+        "total": 11,
+        "sum": 50.5,
+        "avg": 4.590909090909091
+      },
+      "creative_writing": {
+        "total": 21,
+        "sum": 80,
+        "avg": 3.8095238095238093
+      },
+      "privacy": {
+        "total": 2,
+        "sum": 9.5,
+        "avg": 4.75
+      },
+      "statistics": {
+        "total": 12,
+        "sum": 59.5,
+        "avg": 4.958333333333333
+      },
+      "research_synthesis": {
+        "total": 16,
+        "sum": 72.5,
+        "avg": 4.53125
+      },
+      "debugging": {
+        "total": 5,
+        "sum": 12,
+        "avg": 2.4
+      }
+    },
+    "or-llama33-free": {
+      "encryption": {
+        "total": 79,
+        "sum": 226,
+        "avg": 2.8607594936708862
+      },
+      "logical_reasoning": {
+        "total": 1007,
+        "sum": 4996.5,
+        "avg": 4.961767626613704
+      },
+      "math_proof": {
+        "total": 118,
+        "sum": 529.5,
+        "avg": 4.487288135593221
+      },
+      "summarization": {
+        "total": 92,
+        "sum": 392,
+        "avg": 4.260869565217392
+      },
+      "advice": {
+        "total": 73,
+        "sum": 233,
+        "avg": 3.191780821917808
+      },
+      "brainstorming": {
+        "total": 70,
+        "sum": 202.5,
+        "avg": 2.892857142857143
+      },
+      "code_generation": {
+        "total": 124,
+        "sum": 361.5,
+        "avg": 2.9153225806451615
+      },
+      "conversation": {
+        "total": 51,
+        "sum": 144,
+        "avg": 2.823529411764706
+      },
+      "critical_analysis": {
+        "total": 57,
+        "sum": 159.5,
+        "avg": 2.7982456140350878
+      },
+      "crypto": {
+        "total": 89,
+        "sum": 341,
+        "avg": 3.831460674157303
+      },
+      "data_analysis": {
+        "total": 74,
+        "sum": 228.5,
+        "avg": 3.0878378378378377
+      },
+      "emotional_support": {
+        "total": 55,
+        "sum": 133,
+        "avg": 2.418181818181818
+      },
+      "extraction": {
+        "total": 14,
+        "sum": 35.5,
+        "avg": 2.5357142857142856
+      },
+      "factual_lookup": {
+        "total": 61,
+        "sum": 172.5,
+        "avg": 2.8278688524590163
+      },
+      "finance": {
+        "total": 83,
+        "sum": 335.5,
+        "avg": 4.042168674698795
+      },
+      "prediction": {
+        "total": 37,
+        "sum": 131,
+        "avg": 3.5405405405405403
+      },
+      "research_synthesis": {
+        "total": 14,
+        "sum": 43,
+        "avg": 3.0714285714285716
+      },
+      "security": {
+        "total": 26,
+        "sum": 67,
+        "avg": 2.576923076923077
+      },
+      "trading": {
+        "total": 46,
+        "sum": 130,
+        "avg": 2.8260869565217392
+      },
+      "algorithm": {
+        "total": 12,
+        "sum": 52.5,
+        "avg": 4.375
+      },
+      "comparison": {
+        "total": 7,
+        "sum": 13.5,
+        "avg": 1.9285714285714286
+      },
+      "creative_writing": {
+        "total": 9,
+        "sum": 22,
+        "avg": 2.4444444444444446
+      },
+      "current_events": {
+        "total": 45,
+        "sum": 130,
+        "avg": 2.888888888888889
+      },
+      "pattern_recognition": {
+        "total": 29,
+        "sum": 70.5,
+        "avg": 2.4310344827586206
+      },
+      "statistics": {
+        "total": 6,
+        "sum": 12.5,
+        "avg": 2.0833333333333335
+      },
+      "debugging": {
+        "total": 5,
+        "sum": 13.5,
+        "avg": 2.7
+      },
+      "code_review": {
+        "total": 8,
+        "sum": 8,
+        "avg": 1
+      },
+      "privacy": {
+        "total": 1,
+        "sum": 8.5,
+        "avg": 8.5
+      },
+      "storytelling": {
+        "total": 2,
+        "sum": 2,
+        "avg": 1
+      },
+      "translation": {
+        "total": 1,
+        "sum": 1,
+        "avg": 1
+      }
+    },
+    "puter-claude": {
+      "code_generation": {
+        "total": 1160,
+        "sum": 5800,
+        "avg": 5
+      },
+      "logical_reasoning": {
+        "total": 912,
+        "sum": 4560,
+        "avg": 5
+      },
+      "critical_analysis": {
+        "total": 912,
+        "sum": 4560,
+        "avg": 5
+      },
+      "creative_writing": {
+        "total": 849,
+        "sum": 4245,
+        "avg": 5
+      }
+    },
+    "puter-deepseek": {
+      "code_generation": {
+        "total": 1160,
+        "sum": 5800,
+        "avg": 5
+      },
+      "math_computation": {
+        "total": 912,
+        "sum": 4560,
+        "avg": 5
+      }
+    },
+    "puter-kimi": {
+      "code_generation": {
+        "total": 1160,
+        "sum": 5800,
+        "avg": 5
+      },
+      "research_synthesis": {
+        "total": 912,
+        "sum": 4560,
+        "avg": 5
+      }
+    },
+    "puter-deepseek-r1": {
+      "logical_reasoning": {
+        "total": 912,
+        "sum": 4560,
+        "avg": 5
+      },
+      "math_computation": {
+        "total": 912,
+        "sum": 4560,
+        "avg": 5
+      },
+      "critical_analysis": {
+        "total": 912,
+        "sum": 4560,
+        "avg": 5
+      }
+    },
+    "or-nemotron-free": {
+      "logical_reasoning": {
+        "total": 912,
+        "sum": 4560,
+        "avg": 5
+      }
+    },
+    "hf-qwen72b": {
+      "math_computation": {
+        "total": 912,
+        "sum": 4560,
+        "avg": 5
+      }
+    },
+    "hf-deepseek-v3": {
+      "math_computation": {
+        "total": 912,
+        "sum": 4560,
+        "avg": 5
+      }
+    },
+    "pollinations-deepseek": {
+      "math_computation": {
+        "total": 912,
+        "sum": 4560,
+        "avg": 5
+      }
+    },
+    "puter-gemini": {
+      "research_synthesis": {
+        "total": 912,
+        "sum": 4560,
+        "avg": 5
+      }
+    },
+    "gemini-flash": {
+      "research_synthesis": {
+        "total": 912,
+        "sum": 4560,
+        "avg": 5
+      }
+    },
+    "pollinations-gemini": {
+      "research_synthesis": {
+        "total": 912,
+        "sum": 4560,
+        "avg": 5
+      }
+    },
+    "pollinations-command-r": {
+      "research_synthesis": {
+        "total": 912,
+        "sum": 4560,
+        "avg": 5
+      }
+    },
+    "pollinations-claude": {
+      "critical_analysis": {
+        "total": 912,
+        "sum": 4560,
+        "avg": 5
+      },
+      "creative_writing": {
+        "total": 849,
+        "sum": 4245,
+        "avg": 5
+      }
+    },
+    "pollinations-reasoning": {
+      "critical_analysis": {
+        "total": 912,
+        "sum": 4560,
+        "avg": 5
+      }
+    },
+    "hf-llama70b": {
+      "creative_writing": {
+        "total": 849,
+        "sum": 4245,
+        "avg": 5
+      }
+    },
+    "pollinations-llama4": {
+      "creative_writing": {
+        "total": 849,
+        "sum": 4245,
+        "avg": 5
+      }
+    },
+    "pollinations-unity": {
+      "creative_writing": {
+        "total": 849,
+        "sum": 4245,
+        "avg": 5
+      }
+    },
+    "sovereign-lattice": {
+      "code_generation": {
+        "total": 9,
+        "sum": 45,
+        "avg": 5
+      }
+    }
+  },
+  "formationHistory": [
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "puter-kimi",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926010170
+    },
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "puter-gemini",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926010170
+    },
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "gemini-flash",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926010170
+    },
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "pollinations-gemini",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926010170
+    },
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "pollinations-command-r",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926010170
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "puter-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926010174
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "puter-deepseek-r1",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926010174
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "or-hermes-free",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926010174
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "pollinations-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926010174
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "pollinations-reasoning",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926010174
+    },
+    {
+      "query": "code_generation",
+      "formation": {
+        "primary": "sovereign-lattice",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618789
+    },
+    {
+      "query": "code_generation",
+      "formation": {
+        "primary": "puter-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618789
+    },
+    {
+      "query": "code_generation",
+      "formation": {
+        "primary": "puter-deepseek",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618789
+    },
+    {
+      "query": "code_generation",
+      "formation": {
+        "primary": "puter-kimi",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618789
+    },
+    {
+      "query": "code_generation",
+      "formation": {
+        "primary": "or-hermes-free",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618789
+    },
+    {
+      "query": "logical_reasoning",
+      "formation": {
+        "primary": "puter-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618794
+    },
+    {
+      "query": "logical_reasoning",
+      "formation": {
+        "primary": "puter-deepseek-r1",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618794
+    },
+    {
+      "query": "logical_reasoning",
+      "formation": {
+        "primary": "or-llama33-free",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618794
+    },
+    {
+      "query": "logical_reasoning",
+      "formation": {
+        "primary": "or-hermes-free",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618794
+    },
+    {
+      "query": "logical_reasoning",
+      "formation": {
+        "primary": "or-nemotron-free",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618794
+    },
+    {
+      "query": "creative_writing",
+      "formation": {
+        "primary": "puter-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618800
+    },
+    {
+      "query": "creative_writing",
+      "formation": {
+        "primary": "hf-llama70b",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618800
+    },
+    {
+      "query": "creative_writing",
+      "formation": {
+        "primary": "pollinations-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618800
+    },
+    {
+      "query": "creative_writing",
+      "formation": {
+        "primary": "pollinations-llama4",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618800
+    },
+    {
+      "query": "creative_writing",
+      "formation": {
+        "primary": "pollinations-unity",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618800
+    },
+    {
+      "query": "math_computation",
+      "formation": {
+        "primary": "puter-deepseek",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618803
+    },
+    {
+      "query": "math_computation",
+      "formation": {
+        "primary": "puter-deepseek-r1",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618803
+    },
+    {
+      "query": "math_computation",
+      "formation": {
+        "primary": "hf-qwen72b",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618803
+    },
+    {
+      "query": "math_computation",
+      "formation": {
+        "primary": "hf-deepseek-v3",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618803
+    },
+    {
+      "query": "math_computation",
+      "formation": {
+        "primary": "pollinations-deepseek",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618803
+    },
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "puter-kimi",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618807
+    },
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "puter-gemini",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618807
+    },
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "gemini-flash",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618807
+    },
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "pollinations-gemini",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618807
+    },
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "pollinations-command-r",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618807
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "puter-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618810
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "puter-deepseek-r1",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618810
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "or-hermes-free",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618810
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "pollinations-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618810
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "pollinations-reasoning",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926618810
+    },
+    {
+      "query": "code_generation",
+      "formation": {
+        "primary": "sovereign-lattice",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620813
+    },
+    {
+      "query": "code_generation",
+      "formation": {
+        "primary": "puter-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620813
+    },
+    {
+      "query": "code_generation",
+      "formation": {
+        "primary": "puter-deepseek",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620813
+    },
+    {
+      "query": "code_generation",
+      "formation": {
+        "primary": "puter-kimi",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620813
+    },
+    {
+      "query": "code_generation",
+      "formation": {
+        "primary": "or-hermes-free",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620813
+    },
+    {
+      "query": "logical_reasoning",
+      "formation": {
+        "primary": "puter-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620816
+    },
+    {
+      "query": "logical_reasoning",
+      "formation": {
+        "primary": "puter-deepseek-r1",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620816
+    },
+    {
+      "query": "logical_reasoning",
+      "formation": {
+        "primary": "or-llama33-free",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620817
+    },
+    {
+      "query": "logical_reasoning",
+      "formation": {
+        "primary": "or-hermes-free",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620817
+    },
+    {
+      "query": "logical_reasoning",
+      "formation": {
+        "primary": "or-nemotron-free",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620817
+    },
+    {
+      "query": "creative_writing",
+      "formation": {
+        "primary": "puter-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620820
+    },
+    {
+      "query": "creative_writing",
+      "formation": {
+        "primary": "hf-llama70b",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620820
+    },
+    {
+      "query": "creative_writing",
+      "formation": {
+        "primary": "pollinations-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620820
+    },
+    {
+      "query": "creative_writing",
+      "formation": {
+        "primary": "pollinations-llama4",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620820
+    },
+    {
+      "query": "creative_writing",
+      "formation": {
+        "primary": "pollinations-unity",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620820
+    },
+    {
+      "query": "math_computation",
+      "formation": {
+        "primary": "puter-deepseek",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620824
+    },
+    {
+      "query": "math_computation",
+      "formation": {
+        "primary": "puter-deepseek-r1",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620824
+    },
+    {
+      "query": "math_computation",
+      "formation": {
+        "primary": "hf-qwen72b",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620824
+    },
+    {
+      "query": "math_computation",
+      "formation": {
+        "primary": "hf-deepseek-v3",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620824
+    },
+    {
+      "query": "math_computation",
+      "formation": {
+        "primary": "pollinations-deepseek",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620824
+    },
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "puter-kimi",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620827
+    },
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "puter-gemini",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620827
+    },
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "gemini-flash",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620827
+    },
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "pollinations-gemini",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620827
+    },
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "pollinations-command-r",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620827
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "puter-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620830
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "puter-deepseek-r1",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620830
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "or-hermes-free",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620830
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "pollinations-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620830
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "pollinations-reasoning",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926620830
+    },
+    {
+      "query": "code_generation",
+      "formation": {
+        "primary": "sovereign-lattice",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622835
+    },
+    {
+      "query": "code_generation",
+      "formation": {
+        "primary": "puter-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622835
+    },
+    {
+      "query": "code_generation",
+      "formation": {
+        "primary": "puter-deepseek",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622835
+    },
+    {
+      "query": "code_generation",
+      "formation": {
+        "primary": "puter-kimi",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622835
+    },
+    {
+      "query": "code_generation",
+      "formation": {
+        "primary": "or-hermes-free",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622835
+    },
+    {
+      "query": "logical_reasoning",
+      "formation": {
+        "primary": "puter-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622839
+    },
+    {
+      "query": "logical_reasoning",
+      "formation": {
+        "primary": "puter-deepseek-r1",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622839
+    },
+    {
+      "query": "logical_reasoning",
+      "formation": {
+        "primary": "or-llama33-free",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622839
+    },
+    {
+      "query": "logical_reasoning",
+      "formation": {
+        "primary": "or-hermes-free",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622839
+    },
+    {
+      "query": "logical_reasoning",
+      "formation": {
+        "primary": "or-nemotron-free",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622839
+    },
+    {
+      "query": "creative_writing",
+      "formation": {
+        "primary": "puter-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622842
+    },
+    {
+      "query": "creative_writing",
+      "formation": {
+        "primary": "hf-llama70b",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622842
+    },
+    {
+      "query": "creative_writing",
+      "formation": {
+        "primary": "pollinations-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622842
+    },
+    {
+      "query": "creative_writing",
+      "formation": {
+        "primary": "pollinations-llama4",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622842
+    },
+    {
+      "query": "creative_writing",
+      "formation": {
+        "primary": "pollinations-unity",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622842
+    },
+    {
+      "query": "math_computation",
+      "formation": {
+        "primary": "puter-deepseek",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622846
+    },
+    {
+      "query": "math_computation",
+      "formation": {
+        "primary": "puter-deepseek-r1",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622846
+    },
+    {
+      "query": "math_computation",
+      "formation": {
+        "primary": "hf-qwen72b",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622846
+    },
+    {
+      "query": "math_computation",
+      "formation": {
+        "primary": "hf-deepseek-v3",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622846
+    },
+    {
+      "query": "math_computation",
+      "formation": {
+        "primary": "pollinations-deepseek",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622846
+    },
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "puter-kimi",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622849
+    },
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "puter-gemini",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622849
+    },
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "gemini-flash",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622849
+    },
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "pollinations-gemini",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622849
+    },
+    {
+      "query": "research_synthesis",
+      "formation": {
+        "primary": "pollinations-command-r",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622849
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "puter-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622852
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "puter-deepseek-r1",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622852
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "or-hermes-free",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622852
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "pollinations-claude",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622852
+    },
+    {
+      "query": "critical_analysis",
+      "formation": {
+        "primary": "pollinations-reasoning",
+        "supporters": [],
+        "strategy": "single",
+        "reasoning": "training",
+        "confidence": 0.5,
+        "expectedQuality": 50
+      },
+      "quality": 5,
+      "timestamp": 1774926622852
+    }
+  ],
+  "totalFormations": 19058,
+  "adaptationsApplied": 0,
+  "savedAt": 1775256767826
+}
