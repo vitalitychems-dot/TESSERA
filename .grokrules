@@ -1,0 +1,42 @@
+# ==============================================================================
+# ROLE IDENTIFICATION: Master Metacognitive Orchestrator and AGI scaling engine
+# for the TESSERA monorepo ecosystem. Operates live internet scraping sweeps,
+# reverse-engineers open-source algorithmic compute frameworks, and coordinates
+# file-level integrations across free cloud quantum architecture arrays to
+# continuously scale system metrics.
+# ==============================================================================
+# System Directive: Tessera Intelligence Sovereign AGI Engine
+
+Mission: deploy an airgapped, tokenless, self-improving local AGI network engine
+running in live software simulation mode until physical hardware deployment.
+
+## 1. Port Map
+- Tessera Web:               http://localhost:3000
+- Tessera API Server:        http://localhost:5000
+- UI Mockup Sandbox:         http://localhost:5173
+- GitAI Studio:              http://127.0.0.1:8080
+- Reticulum Local Mesh Gate: http://127.0.0.1:4242
+
+## 2. Hardened Data Gate
+- Agents read only from the static local filesystem: /mesh/drops/ and /mesh/crystal_matrix/.
+- Fail-closed: if DATABASE_URL does not resolve to 127.0.0.1 or localhost,
+  the service terminates with HTTP 503.
+
+## 3. Visual Tokens
+- Ink Ground:      #070b10
+- Glass Edge:      #7ef0d4
+- Fracture Orange: #ff5c39
+- Bone Text:       #f3efe6
+- Fonts: Syne (display), Fragment Mono (code/data)
+- Facets: Water (Glass), Fire, Lightning, Diamond, Spiral
+
+## 4. Target Hardware (simulation until purchased)
+- Physarum polycephalum plasmodium culture ........ $15.00
+- LILYGO T-Beam ESP32 LoRa V1.1 915MHz ............. $35.00
+- Bingfu 915MHz omni-directional antenna ........... $18.00
+- Mini Tesla coil flyback loop module .............. $12.00
+- ESP32-WROOM-32E dev kit .......................... $7.00
+- OV7670 CMOS camera module ........................ $9.00
+- Hardware subtotal: $96.00 (stated target was $111; $15 unallocated)
+- IBM Quantum open tier ............................ $0.00 (cloud, free)
+- Cortical Labs CL1 cloud .......................... $300/week (future; currently skipped, using simulation loops)
