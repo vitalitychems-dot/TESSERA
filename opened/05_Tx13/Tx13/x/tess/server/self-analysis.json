@@ -1,0 +1,59 @@
+{
+  "lastUpdated": "2026-04-03T01:44:36.939Z",
+  "totalSourceFiles": 30,
+  "totalLines": 11486,
+  "totalSizeKB": 486,
+  "largestFiles": [
+    {
+      "file": "server/arbitrage-engine.ts",
+      "lines": 1604,
+      "size": 57441
+    },
+    {
+      "file": "server/agencies.ts",
+      "lines": 1070,
+      "size": 62307
+    },
+    {
+      "file": "server/auto-pilot.ts",
+      "lines": 937,
+      "size": 37946
+    },
+    {
+      "file": "server/airdrop-scanner.ts",
+      "lines": 791,
+      "size": 28539
+    },
+    {
+      "file": "server/agent-factory.ts",
+      "lines": 671,
+      "size": 26464
+    },
+    {
+      "file": "server/ad-farm-agency.ts",
+      "lines": 601,
+      "size": 21208
+    },
+    {
+      "file": "server/api-data-feeds.ts",
+      "lines": 576,
+      "size": 21422
+    },
+    {
+      "file": "server/agi-implementations.ts",
+      "lines": 574,
+      "size": 32026
+    },
+    {
+      "file": "server/airdrop-aggregator.ts",
+      "lines": 412,
+      "size": 14094
+    },
+    {
+      "file": "server/ad-exchange.ts",
+      "lines": 343,
+      "size": 16936
+    }
+  ],
+  "integrityHash": "-7947614ce6f05000892ce2c0"
+}

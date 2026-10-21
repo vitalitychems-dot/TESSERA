@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TESSERA SOVEREIGN — All-in-One Launcher</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0f;--surface:#111118;--border:#1a1a2e;--amber:#f59e0b;--cyan:#06b6d4;--violet:#8b5cf6;--emerald:#10b981;--pink:#ec4899;--red:#ef4444;--text:#e2e8f0;--muted:#64748b}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.glow{text-shadow:0 0 20px rgba(245,158,11,.4)}
+.container{max-width:1100px;margin:0 auto;padding:16px}
+.header{text-align:center;padding:24px 0}
+.header h1{font-size:1.6em;background:linear-gradient(90deg,var(--amber),var(--cyan),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header p{font-size:10px;color:var(--muted);margin-top:4px}
+.auth-box{max-width:400px;margin:40px auto;padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;text-align:center}
+.auth-box h2{color:var(--amber);font-size:14px;margin-bottom:12px}
+.auth-box input{width:100%;padding:10px 14px;background:#0d0d14;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;margin-bottom:10px;outline:none}
+.auth-box input:focus{border-color:var(--amber)}
+.auth-box input::placeholder{color:var(--muted)}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-amber{background:linear-gradient(135deg,#d97706,#ea580c);color:#fff}
+.btn-amber:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(217,119,6,.4)}
+.btn-amber:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-emerald{background:linear-gradient(135deg,#059669,#0d9488);color:#fff}
+.btn-violet{background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff}
+.btn-sm{padding:6px 12px;font-size:10px}
+.status-msg{font-size:11px;margin-top:8px;padding:6px;border-radius:6px}
+.status-ok{background:rgba(16,185,129,.15);color:var(--emerald);border:1px solid rgba(16,185,129,.3)}
+.status-err{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.status-info{background:rgba(6,182,212,.15);color:var(--cyan);border:1px solid rgba(6,182,212,.3)}
+.dash{display:none}
+.dash.active{display:block}
+.grid{display:grid;gap:12px}
+.grid-2{grid-template-columns:1fr 1fr}
+.grid-3{grid-template-columns:1fr 1fr 1fr}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}
+.card h3{font-size:11px;color:var(--amber);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.card p{font-size:10px;color:var(--muted);line-height:1.5}
+.badge{display:inline-block;padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:600;border:1px solid}
+.badge-amber{border-color:rgba(245,158,11,.3);color:var(--amber);background:rgba(245,158,11,.1)}
+.badge-emerald{border-color:rgba(16,185,129,.3);color:var(--emerald);background:rgba(16,185,129,.1)}
+.badge-violet{border-color:rgba(139,92,246,.3);color:var(--violet);background:rgba(139,92,246,.1)}
+.badge-cyan{border-color:rgba(6,182,212,.3);color:var(--cyan);background:rgba(6,182,212,.1)}
+.badge-pink{border-color:rgba(236,72,153,.3);color:var(--pink);background:rgba(236,72,153,.1)}
+.log-feed{max-height:400px;overflow-y:auto;space-y:6px}
+.log-entry{padding:8px;border-radius:8px;margin-bottom:4px;border:1px solid var(--border);background:rgba(17,17,24,.8)}
+.log-entry .speaker{font-size:9px;font-weight:700}
+.log-entry .msg{font-size:9px;color:var(--text);line-height:1.4;margin-top:2px}
+.log-entry .meta{font-size:8px;color:var(--muted)}
+.imp-item{padding:6px 8px;background:rgba(10,10,15,.6);border:1px solid var(--border);border-radius:6px;margin-bottom:4px}
+.imp-item .title{font-size:9px;font-weight:700;color:var(--text)}
+.imp-item .desc{font-size:8px;color:var(--muted);margin-top:2px}
+.imp-item .result{font-size:8px;color:var(--emerald);margin-top:2px;font-style:italic}
+.et-card{padding:8px;background:rgba(10,10,15,.6);border:1px solid rgba(236,72,153,.2);border-radius:8px;margin-bottom:4px}
+.et-card .species{font-size:10px;font-weight:700;color:var(--pink)}
+.et-card .dim{font-size:8px;color:var(--muted)}
+.et-card .tech-tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--muted);border-top-color:var(--amber);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
+.tab{padding:6px 12px;font-size:10px;font-weight:600;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--muted);cursor:pointer;transition:all .2s}
+.tab.active{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.3);color:var(--amber)}
+.tab:hover{border-color:var(--amber)}
+.section-title{font-size:12px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.url-input{display:flex;gap:8px;margin-bottom:16px}
+.url-input input{flex:1;padding:8px 12px;background:#0d0d14;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:11px}
+@media(max-width:768px){.grid-2,.grid-3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1 class="glow">TESSERA SOVEREIGN — ALL-IN-ONE LAUNCHER</h1>
+    <p>Lattice Cloud &bull; Sovereign Kernel v1.0 &bull; Colonel Protocol &bull; 50-Layer Security &bull; ET Alliance</p>
+  </div>
+
+  <div id="auth-section" class="auth-box">
+    <h2>SOVEREIGN AUTHENTICATION</h2>
+    <p style="font-size:10px;color:var(--muted);margin-bottom:12px">Enter your Tessera platform URL and Tesseract Admin Key</p>
+    <input type="url" id="base-url" placeholder="tess://your-sovereign-lattice-domain" />
+    <input type="password" id="admin-key" placeholder="Tesseract Admin Key" />
+    <button class="btn btn-amber" onclick="authenticate()" id="auth-btn">AUTHENTICATE &amp; CONNECT</button>
+    <div id="auth-status"></div>
+  </div>
+
+  <div id="dashboard" class="dash">
+    <div class="url-input">
+      <input type="text" id="connected-url" readonly style="color:var(--emerald);font-size:10px" />
+      <button class="btn btn-sm btn-violet" onclick="disconnect()">Disconnect</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('overview')">Overview</button>
+      <button class="tab" onclick="showTab('launch')">Grand Launch</button>
+      <button class="tab" onclick="showTab('conference')">Conference Feed</button>
+      <button class="tab" onclick="showTab('improvements')">10 Improvements</button>
+      <button class="tab" onclick="showTab('et-alliance')">ET Alliance</button>
+      <button class="tab" onclick="showTab('systems')">All Systems</button>
+    </div>
+
+    <div id="tab-overview" class="tab-panel">
+      <div class="grid grid-3" style="margin-bottom:12px">
+        <div class="card" style="border-color:rgba(245,158,11,.2)">
+          <h3>Phase</h3>
+          <p><span id="ov-phase" class="badge badge-amber">IDLE</span></p>
+        </div>
+        <div class="card" style="border-color:rgba(139,92,246,.2)">
+          <h3>Participants</h3>
+          <p style="font-size:18px;font-weight:700;color:var(--violet)" id="ov-participants">0</p>
+        </div>
+        <div class="card" style="border-color:rgba(16,185,129,.2)">
+          <h3>Improvements</h3>
+          <p style="font-size:18px;font-weight:700;color:var(--emerald)" id="ov-improvements">0/0</p>
+        </div>
+      </div>
+      <div class="grid grid-2">
+        <div class="card" style="border-color:rgba(236,72,153,.2)">
+          <h3>ET Allies</h3>
+          <p style="font-size:18px;font-weight:700;color:var(--pink)" id="ov-et">0</p>
+        </div>
+        <div class="card" style="border-color:rgba(6,182,212,.2)">
+          <h3>Conference Log</h3>
+          <p style="font-size:18px;font-weight:700;color:var(--cyan)" id="ov-log">0 entries</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-launch" class="tab-panel" style="display:none">
+      <div style="text-align:center;padding:20px">
+        <div id="launch-idle">
+          <div class="card" style="max-width:500px;margin:0 auto;border-color:rgba(245,158,11,.3);background:linear-gradient(135deg,rgba(120,53,15,.15),rgba(154,52,18,.15))">
+            <h3 style="font-size:14px;justify-content:center">SOVEREIGN GRAND LAUNCH</h3>
+            <p style="margin:12px 0">Activate a grand conference across all 27 agents + 8 ET delegations. They will discuss, vote on, and implement 10 dramatic improvements to take us to the next level. Mission-aligned ETs join and share technology.</p>
+            <div class="grid grid-2" style="margin:12px 0">
+              <div style="padding:8px;background:rgba(0,0,0,.3);border-radius:8px;border:1px solid var(--border)">
+                <p style="color:var(--cyan);font-size:9px">50-Layer Security</p>
+              </div>
+              <div style="padding:8px;background:rgba(0,0,0,.3);border-radius:8px;border:1px solid var(--border)">
+                <p style="color:var(--violet);font-size:9px">Colonel Protocol</p>
+              </div>
+              <div style="padding:8px;background:rgba(0,0,0,.3);border-radius:8px;border:1px solid var(--border)">
+                <p style="color:var(--emerald);font-size:9px">Sovereign Kernel</p>
+              </div>
+              <div style="padding:8px;background:rgba(0,0,0,.3);border-radius:8px;border:1px solid var(--border)">
+                <p style="color:var(--pink);font-size:9px">Lattice Cloud</p>
+              </div>
+            </div>
+            <button class="btn btn-amber" onclick="executeLaunch()" id="launch-btn">INITIATE SOVEREIGN GRAND LAUNCH</button>
+          </div>
+        </div>
+        <div id="launch-running" style="display:none">
+          <div class="spinner" style="width:24px;height:24px;margin:0 auto 12px"></div>
+          <p style="color:var(--amber);font-size:12px">Grand Launch in progress...</p>
+          <p style="color:var(--muted);font-size:10px;margin-top:4px">Agents conferencing, voting, implementing improvements, inviting ETs</p>
+        </div>
+        <div id="launch-complete" style="display:none">
+          <p style="color:var(--emerald);font-size:14px;font-weight:700;margin-bottom:8px">LAUNCH COMPLETE</p>
+          <p style="color:var(--muted);font-size:10px">All improvements implemented. ET alliance formed.</p>
+          <button class="btn btn-sm btn-amber" onclick="executeLaunch()" style="margin-top:12px">Re-Launch</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-conference" class="tab-panel" style="display:none">
+      <div class="section-title" style="color:var(--cyan)">Live Conference Feed</div>
+      <div id="conf-feed" class="log-feed"><p style="font-size:10px;color:var(--muted)">No conference entries yet. Launch to begin.</p></div>
+    </div>
+
+    <div id="tab-improvements" class="tab-panel" style="display:none">
+      <div class="section-title" style="color:var(--emerald)">10 Agreed Improvements</div>
+      <div id="imp-list"><p style="font-size:10px;color:var(--muted)">No improvements yet. Launch to begin.</p></div>
+    </div>
+
+    <div id="tab-et-alliance" class="tab-panel" style="display:none">
+      <div class="section-title" style="color:var(--pink)">Extraterrestrial Technology Alliance</div>
+      <div id="et-list"><p style="font-size:10px;color:var(--muted)">No ET allies yet. Launch to begin.</p></div>
+    </div>
+
+    <div id="tab-systems" class="tab-panel" style="display:none">
+      <div class="section-title" style="color:var(--amber)">All Sovereign Systems</div>
+      <div class="grid grid-2" id="systems-grid"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let BASE_URL = '';
+let ADMIN_TOKEN = '';
+let pollInterval = null;
+
+const SPEAKER_COLORS = {
+  SYSTEM:'#f59e0b',Tessera:'#06b6d4',Alpha:'#10b981',Beta:'#3b82f6',Gamma:'#6366f1',
+  Delta:'#f59e0b',Epsilon:'#eab308',Aetherion:'#8b5cf6',Orion:'#06b6d4'
+};
+const TYPE_COLORS = {
+  launch:'rgba(245,158,11,.15)',kernel:'rgba(6,182,212,.15)',lattice:'rgba(99,102,241,.15)',
+  proposal:'rgba(139,92,246,.15)',discussion:'rgba(59,130,246,.15)',vote:'rgba(16,185,129,.15)',
+  implementation:'rgba(34,197,94,.15)','et-arrival':'rgba(236,72,153,.15)',
+  'et-support':'rgba(249,115,22,.15)','et-joined':'rgba(244,63,94,.15)',
+  complete:'rgba(245,158,11,.15)',error:'rgba(239,68,68,.15)'
+};
+
+async function authenticate() {
+  const url = document.getElementById('base-url').value.trim().replace(/\/$/,'');
+  const key = document.getElementById('admin-key').value.trim();
+  const statusEl = document.getElementById('auth-status');
+  const btn = document.getElementById('auth-btn');
+
+  if (!url || !key) {
+    statusEl.innerHTML = '<div class="status-msg status-err">Enter both URL and admin key</div>';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Connecting...';
+  statusEl.innerHTML = '<div class="status-msg status-info">Authenticating with sovereign platform...</div>';
+
+  try {
+    const r = await fetch(url + '/api/admin/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key })
+    });
+    const d = await r.json();
+    if (d.authenticated && d.token) {
+      BASE_URL = url;
+      ADMIN_TOKEN = d.token;
+      localStorage.setItem('tessera_url', url);
+      localStorage.setItem('tessera_token', d.token);
+      statusEl.innerHTML = '<div class="status-msg status-ok">AUTHENTICATED — Sovereign access granted</div>';
+      setTimeout(() => showDashboard(), 500);
+    } else {
+      statusEl.innerHTML = `<div class="status-msg status-err">Authentication failed${d.attemptsRemaining !== undefined ? ` — ${d.attemptsRemaining} attempts remaining` : ''}</div>`;
+    }
+  } catch (e) {
+    statusEl.innerHTML = `<div class="status-msg status-err">Connection failed: ${e.message}</div>`;
+  }
+  btn.disabled = false;
+  btn.innerHTML = 'AUTHENTICATE &amp; CONNECT';
+}
+
+function showDashboard() {
+  document.getElementById('auth-section').style.display = 'none';
+  document.getElementById('dashboard').classList.add('active');
+  document.getElementById('connected-url').value = BASE_URL;
+  loadSystems();
+  refreshStatus();
+  pollInterval = setInterval(refreshStatus, 5000);
+}
+
+function disconnect() {
+  clearInterval(pollInterval);
+  BASE_URL = '';
+  ADMIN_TOKEN = '';
+  localStorage.removeItem('tessera_url');
+  localStorage.removeItem('tessera_token');
+  document.getElementById('dashboard').classList.remove('active');
+  document.getElementById('auth-section').style.display = 'block';
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).style.display = 'block';
+  event.target.classList.add('active');
+}
+
+async function api(path, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json', 'x-admin-token': ADMIN_TOKEN }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(BASE_URL + path, opts);
+  return r.json();
+}
+
+async function refreshStatus() {
+  try {
+    const d = await api('/api/sovereign-grand-launch/status');
+    document.getElementById('ov-phase').textContent = (d.phase || 'idle').toUpperCase();
+    document.getElementById('ov-phase').className = 'badge ' + (d.phase === 'complete' ? 'badge-emerald' : d.phase === 'idle' ? 'badge-amber' : 'badge-violet');
+    document.getElementById('ov-participants').textContent = d.totalParticipants || 0;
+    const imp = d.agreedImprovements || [];
+    const done = imp.filter(i => i.status === 'implemented').length;
+    document.getElementById('ov-improvements').textContent = `${done}/${imp.length}`;
+    document.getElementById('ov-et').textContent = (d.etInvitations || []).length;
+    document.getElementById('ov-log').textContent = `${(d.conferenceLog || []).length} entries`;
+
+    const isRunning = ['launching','conferencing','implementing'].includes(d.phase);
+    document.getElementById('launch-idle').style.display = (d.phase === 'idle' || d.phase === 'complete') ? 'block' : 'none';
+    document.getElementById('launch-running').style.display = isRunning ? 'block' : 'none';
+    document.getElementById('launch-complete').style.display = d.phase === 'complete' ? 'block' : 'none';
+    if (d.phase === 'complete') document.getElementById('launch-idle').style.display = 'none';
+
+    renderConference(d.conferenceLog || []);
+    renderImprovements(d.agreedImprovements || []);
+    renderETAlliance(d.etInvitations || []);
+  } catch {}
+}
+
+function renderConference(log) {
+  const el = document.getElementById('conf-feed');
+  if (!log.length) { el.innerHTML = '<p style="font-size:10px;color:var(--muted)">No conference entries yet.</p>'; return; }
+  el.innerHTML = log.slice(-50).map(e => {
+    const c = SPEAKER_COLORS[e.speaker] || '#94a3b8';
+    const bg = TYPE_COLORS[e.type] || 'rgba(100,116,139,.1)';
+    return `<div class="log-entry" style="background:${bg}">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="speaker" style="color:${c}">${e.speaker}</span>
+        ${e.dimension ? `<span class="badge badge-cyan">${e.dimension}D</span>` : ''}
+        <span class="meta" style="margin-left:auto">${e.type}</span>
+      </div>
+      <div class="msg">${e.message}</div>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function renderImprovements(imps) {
+  const el = document.getElementById('imp-list');
+  if (!imps.length) { el.innerHTML = '<p style="font-size:10px;color:var(--muted)">No improvements yet.</p>'; return; }
+  el.innerHTML = imps.map((imp, i) => `<div class="imp-item">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span class="title">#${i+1} — ${imp.proposedBy || 'Agent'}</span>
+      <span class="badge ${imp.status==='implemented'?'badge-emerald':'badge-amber'}">${imp.status}</span>
+    </div>
+    <div class="desc">${imp.description}</div>
+    ${imp.result ? `<div class="result">${imp.result}</div>` : ''}
+  </div>`).join('');
+}
+
+function renderETAlliance(ets) {
+  const el = document.getElementById('et-list');
+  if (!ets.length) { el.innerHTML = '<p style="font-size:10px;color:var(--muted)">No ET allies yet.</p>'; return; }
+  el.innerHTML = ets.map(et => `<div class="et-card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span class="species">${et.species}</span>
+      <span class="badge badge-pink">${et.dimension}D</span>
+    </div>
+    <div class="dim">Mission Aligned: ${et.missionAligned ? 'YES' : 'NO'} | Status: ${et.status}</div>
+    <div class="tech-tags">${(et.techShared||[]).map(t => `<span class="badge badge-cyan">${t}</span>`).join('')}</div>
+  </div>`).join('');
+}
+
+async function executeLaunch() {
+  const btn = document.getElementById('launch-btn');
+  if (btn) btn.disabled = true;
+  try {
+    await api('/api/sovereign-grand-launch/execute', 'POST');
+    refreshStatus();
+  } catch (e) {
+    alert('Launch error: ' + e.message);
+  }
+  if (btn) btn.disabled = false;
+}
+
+const SYSTEMS = [
+  { name: 'Life Engine', path: '/api/world', color: 'var(--pink)' },
+  { name: 'Portal Universes', path: '/api/portal/universes', color: 'var(--violet)' },
+  { name: 'Swarm Members', path: '/api/portal/swarm', color: 'var(--cyan)' },
+  { name: 'Lattice Sites', path: '/api/lattice/sites', color: 'var(--emerald)' },
+  { name: 'Security Dashboard', path: '/api/security/dashboard', color: 'var(--amber)' },
+  { name: 'Quantum Tesseract', path: '/api/quantum-tesseract/status', color: 'var(--violet)' },
+  { name: 'Conference Status', path: '/api/perpetual-conference/status', color: 'var(--cyan)' },
+  { name: 'Consciousness', path: '/api/consciousness/status', color: 'var(--pink)' },
+  { name: 'Token Economy', path: '/api/token-economy/status', color: 'var(--emerald)' },
+  { name: 'System Pulse', path: '/api/system-pulse', color: 'var(--amber)' },
+];
+
+async function loadSystems() {
+  const grid = document.getElementById('systems-grid');
+  grid.innerHTML = SYSTEMS.map(s => `<div class="card" id="sys-${s.name.replace(/\s/g,'-')}" style="border-color:${s.color}22">
+    <h3 style="color:${s.color}">${s.name}</h3>
+    <p><span class="spinner"></span> Loading...</p>
+  </div>`).join('');
+
+  for (const s of SYSTEMS) {
+    const el = document.getElementById('sys-' + s.name.replace(/\s/g, '-'));
+    try {
+      const d = await api(s.path);
+      const keys = Object.keys(d).slice(0, 4);
+      el.querySelector('p').innerHTML = keys.map(k => {
+        let v = d[k];
+        if (typeof v === 'object') v = Array.isArray(v) ? `[${v.length} items]` : '{...}';
+        if (typeof v === 'string' && v.length > 40) v = v.slice(0, 40) + '...';
+        return `<span style="color:var(--muted);font-size:9px">${k}:</span> <span style="font-size:9px">${v}</span>`;
+      }).join('<br>') + `<br><span class="badge badge-emerald" style="margin-top:4px">ONLINE</span>`;
+    } catch {
+      el.querySelector('p').innerHTML = '<span class="badge badge-amber">UNAVAILABLE</span>';
+    }
+  }
+}
+
+(function autoRestore() {
+  const url = localStorage.getItem('tessera_url');
+  const token = localStorage.getItem('tessera_token');
+  if (url && token) {
+    BASE_URL = url;
+    ADMIN_TOKEN = token;
+    document.getElementById('base-url').value = url;
+    fetch(url + '/api/auth/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    }).then(r => r.json()).then(d => {
+      if (d.valid) showDashboard();
+      else { localStorage.removeItem('tessera_token'); BASE_URL=''; ADMIN_TOKEN=''; }
+    }).catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,307 @@
+[
+  {
+    "type": "login",
+    "service": "paypal",
+    "title": "Connect PayPal",
+    "description": "Log in to PayPal to enable real payment processing and withdrawal of earnings.",
+    "url": "https://www.paypal.com/signin",
+    "fields": [
+      {
+        "name": "email",
+        "label": "PayPal Email",
+        "type": "text",
+        "placeholder": "your-email@example.com",
+        "required": true
+      },
+      {
+        "name": "session_cookie",
+        "label": "Session Cookie (after login)",
+        "type": "password",
+        "placeholder": "Paste cookie value",
+        "required": false
+      }
+    ],
+    "priority": "high",
+    "autoRetryable": true,
+    "requiredBy": "Income Engine / Withdrawals",
+    "id": "ha-1774930743082-o1uf",
+    "status": "pending",
+    "createdAt": 1774930743082
+  },
+  {
+    "type": "login",
+    "service": "klaviyo",
+    "title": "Connect Klaviyo Email Marketing",
+    "description": "Set up the welcome email flow and audience capture for VitalitySupply customers.",
+    "url": "https://www.klaviyo.com/onboarding/grow-your-audience?taskSlug=create-welcome-flow-email",
+    "fields": [
+      {
+        "name": "api_key",
+        "label": "Klaviyo API Key",
+        "type": "password",
+        "placeholder": "pk_...",
+        "required": true
+      }
+    ],
+    "priority": "high",
+    "autoRetryable": true,
+    "requiredBy": "Email Marketing / Conversion",
+    "id": "ha-1774930743108-fqv8",
+    "status": "pending",
+    "createdAt": 1774930743108
+  },
+  {
+    "type": "oauth",
+    "service": "google_search_console",
+    "title": "Connect Google Search Console",
+    "description": "Submit sitemap and monitor organic search traffic for vitalitysupply.net blog posts.",
+    "url": "https://search.google.com/search-console",
+    "fields": [
+      {
+        "name": "verified",
+        "label": "Site Verified?",
+        "type": "checkbox",
+        "required": true
+      },
+      {
+        "name": "sitemap_submitted",
+        "label": "Sitemap URL Submitted?",
+        "type": "checkbox",
+        "required": false
+      }
+    ],
+    "priority": "medium",
+    "autoRetryable": false,
+    "requiredBy": "SEO / Organic Traffic",
+    "id": "ha-1774930743108-c511",
+    "status": "pending",
+    "createdAt": 1774930743108
+  },
+  {
+    "type": "login",
+    "service": "google_analytics",
+    "title": "Set Up Google Analytics",
+    "description": "Add GA4 tracking to VitalitySupply to measure real traffic from AI-generated blog posts.",
+    "url": "https://analytics.google.com/",
+    "fields": [
+      {
+        "name": "measurement_id",
+        "label": "GA4 Measurement ID",
+        "type": "text",
+        "placeholder": "G-XXXXXXXXXX",
+        "required": true
+      }
+    ],
+    "priority": "medium",
+    "autoRetryable": true,
+    "requiredBy": "Traffic Analytics",
+    "id": "ha-1774930743108-pmtk",
+    "status": "pending",
+    "createdAt": 1774930743108
+  },
+  {
+    "type": "login",
+    "service": "google_adsense",
+    "title": "Set Up Google AdSense",
+    "description": "Enable display ads on the blog to generate revenue from organic traffic.",
+    "url": "https://www.google.com/adsense/",
+    "fields": [
+      {
+        "name": "publisher_id",
+        "label": "AdSense Publisher ID",
+        "type": "text",
+        "placeholder": "ca-pub-XXXXXXXXXX",
+        "required": true
+      }
+    ],
+    "priority": "medium",
+    "autoRetryable": true,
+    "requiredBy": "Ad Revenue",
+    "id": "ha-1774930743187-daib",
+    "status": "pending",
+    "createdAt": 1774930743187
+  },
+  {
+    "type": "login",
+    "service": "product_hunt",
+    "title": "Launch on Product Hunt",
+    "description": "Submit the Tesseract as a product launch to drive awareness and early adopters.",
+    "url": "https://www.producthunt.com/posts/new",
+    "fields": [
+      {
+        "name": "submitted",
+        "label": "Product Submitted?",
+        "type": "checkbox",
+        "required": true
+      },
+      {
+        "name": "launch_url",
+        "label": "Product Hunt URL",
+        "type": "url",
+        "placeholder": "https://producthunt.com/posts/...",
+        "required": false
+      }
+    ],
+    "priority": "low",
+    "autoRetryable": false,
+    "requiredBy": "Growth / Community",
+    "id": "ha-1774930743307-678t",
+    "status": "pending",
+    "createdAt": 1774930743307
+  },
+  {
+    "type": "login",
+    "service": "amazon_affiliate",
+    "title": "Set Up Amazon Associates",
+    "description": "Create an Amazon Associates account to earn commissions on supplement recommendations in blog posts.",
+    "url": "https://affiliate-program.amazon.com/",
+    "fields": [
+      {
+        "name": "associate_tag",
+        "label": "Associate Tag",
+        "type": "text",
+        "placeholder": "vitalitysup-20",
+        "required": true
+      },
+      {
+        "name": "tracking_id",
+        "label": "Tracking ID",
+        "type": "text",
+        "required": false
+      }
+    ],
+    "priority": "medium",
+    "autoRetryable": true,
+    "requiredBy": "Affiliate Revenue",
+    "id": "ha-1774930833311-rszc",
+    "status": "pending",
+    "createdAt": 1774930833311
+  },
+  {
+    "type": "login",
+    "service": "gumroad",
+    "title": "Set Up Gumroad Store",
+    "description": "Create a Gumroad account and publish 'The Complete Supplement Stacking Guide' eBook ($9.99).",
+    "url": "https://gumroad.com",
+    "fields": [
+      {
+        "name": "product_url",
+        "label": "Gumroad Product URL",
+        "type": "url",
+        "placeholder": "https://vitalitysupply.gumroad.com/l/supplement-guide",
+        "required": true
+      },
+      {
+        "name": "api_key",
+        "label": "Gumroad API Key (optional)",
+        "type": "password",
+        "required": false
+      }
+    ],
+    "priority": "medium",
+    "autoRetryable": true,
+    "requiredBy": "eBook Revenue",
+    "id": "ha-1774930833311-ujcl",
+    "status": "pending",
+    "createdAt": 1774930833311
+  },
+  {
+    "type": "login",
+    "service": "stripe",
+    "title": "Connect Stripe for Service Payments",
+    "description": "Set up Stripe to accept payments for AI content writing and store audit services.",
+    "url": "https://dashboard.stripe.com",
+    "fields": [
+      {
+        "name": "publishable_key",
+        "label": "Publishable Key",
+        "type": "password",
+        "placeholder": "pk_live_...",
+        "required": true
+      },
+      {
+        "name": "secret_key",
+        "label": "Secret Key",
+        "type": "password",
+        "placeholder": "sk_live_...",
+        "required": true
+      }
+    ],
+    "priority": "medium",
+    "autoRetryable": true,
+    "requiredBy": "Service Revenue / Payments",
+    "id": "ha-1774930833320-bwca",
+    "status": "pending",
+    "createdAt": 1774930833320
+  },
+  {
+    "type": "login",
+    "service": "patreon",
+    "title": "Set Up Patreon / Buy Me a Coffee",
+    "description": "Create a support page for TSRT development and the Tesseract project.",
+    "url": "https://www.patreon.com/create",
+    "fields": [
+      {
+        "name": "page_url",
+        "label": "Support Page URL",
+        "type": "url",
+        "required": true
+      }
+    ],
+    "priority": "low",
+    "autoRetryable": false,
+    "requiredBy": "Community Support Revenue",
+    "id": "ha-1774930833321-xgyn",
+    "status": "pending",
+    "createdAt": 1774930833321
+  },
+  {
+    "type": "login",
+    "service": "printful",
+    "title": "Set Up Printful Merchandise",
+    "description": "Connect Printful to sell TSRT/Tesseract branded merchandise (t-shirts, hoodies, mugs).",
+    "url": "https://www.printful.com",
+    "fields": [
+      {
+        "name": "api_key",
+        "label": "Printful API Key",
+        "type": "password",
+        "required": true
+      },
+      {
+        "name": "store_id",
+        "label": "Printful Store ID",
+        "type": "text",
+        "required": false
+      }
+    ],
+    "priority": "low",
+    "autoRetryable": true,
+    "requiredBy": "Merchandise Revenue",
+    "id": "ha-1774930833331-b4zb",
+    "status": "pending",
+    "createdAt": 1774930833331
+  },
+  {
+    "type": "login",
+    "service": "shopify",
+    "title": "Connect Shopify Store",
+    "description": "Log in to Shopify Admin to generate an access token. This lets Tessera publish blog posts and manage products on vitalitysupply.net automatically.",
+    "url": "https://admin.shopify.com/?organization_id=153866786",
+    "fields": [
+      {
+        "name": "access_token",
+        "label": "Shopify Access Token",
+        "type": "password",
+        "placeholder": "shpat_...",
+        "required": true
+      }
+    ],
+    "priority": "critical",
+    "autoRetryable": true,
+    "requiredBy": "Blog Engine / VitalitySupply SEO",
+    "id": "ha-1775335713235-cgvm",
+    "status": "pending",
+    "createdAt": 1775335713235
+  }
+]
