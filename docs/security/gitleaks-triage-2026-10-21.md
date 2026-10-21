@@ -20,17 +20,17 @@ So every PR fails Secret scan because of branches it never touches. See suggesti
 | likely-live | 0 |
 | likely-fixture | 8 |
 | unknown | 240 |
-| allowlisted | 2 |
+| ignored via .gitleaksignore | 2 |
 | **Total** | **250** |
 
-Remaining flagged after the allowlist: **248** (likely-live 0, likely-fixture 8, unknown 240).
+Remaining flagged after the .gitleaksignore entries: **248** (likely-live 0, likely-fixture 8, unknown 240).
 
 | Rule | Class | Count |
 | --- | --- | ---: |
 | `generic-api-key` | unknown | 240 |
 | `jwt` | likely-fixture | 7 |
 | `generic-api-key` | likely-fixture | 1 |
-| `generic-api-key` | allowlisted | 2 |
+| `generic-api-key` | ignored via .gitleaksignore | 2 |
 
 ### By pattern
 
@@ -41,7 +41,7 @@ Remaining flagged after the allowlist: **248** (likely-live 0, likely-fixture 8,
 | unknown | `generic-api-key` | .env.example template: public Solana RPC URL + public token mint address | 7 |
 | likely-fixture | `jwt` | "Token Forgery" attack payload: alg=none, empty signature | 7 |
 | unknown | `generic-api-key` | prose listing free public data sources (`Jupi****`) | 2 |
-| allowlisted | `generic-api-key` | credential-guard unit-test fixture at line 15 (labeled assignment, value length 34) | 2 |
+| ignored via .gitleaksignore | `generic-api-key` | credential-guard unit-test fixture at line 15 (labeled assignment, value length 34) | 2 |
 | likely-fixture | `generic-api-key` | benchmark sample string `sk-a****` | 1 |
 
 ## likely-live findings
