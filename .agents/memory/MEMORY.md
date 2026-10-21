@@ -5,6 +5,7 @@
 - [Worker and dependency authority](tessera-worker-governance.md) — models and packages stay least-privilege tools; the owner retains final authority and violations trigger isolation.
 - [Public repository imports](public-repository-imports.md) — check anonymous access before treating a failed GitHub credential as a private-repo problem.
 - [TESSERA live world interface](tessera-design-direction.md) — unify the voxel-inspired Eye, Brain, and Chat using real, clearly sourced live data.
+- [Tessera visual identity](tessera-identity.md) — use the owner's Origin Sigil and portrait traits as the canonical creative brief.
 - [TESSERA source provenance](tessera-source-provenance.md) — preserve structured evidence through every factual reply path; ingested metadata cannot promote notes to verified.
 - [Cursor run history](cursor-run-history.md) — batch result reads below the connector's 10 RPS limit; run summaries are not full chat streams.
 - [Mockup scanner dependency policy](mockup-glob-vulnerability.md) — use built-in traversal until a patched braces release or clean alternative is verified.
