@@ -1,0 +1,202 @@
+import { logger } from "./logger";
+import { embeddingDimensionalCache } from "./dimensional-lru-cache";
+import { tesseraEmbeddings } from "./tessera-llm-http";
+import { FALLBACK_EMBEDDING_DIM, localFallbackEmbedding } from "./fallback-embed.mjs";
+
+const EMBEDDING_DIM = FALLBACK_EMBEDDING_DIM;
+const MAX_BATCH_SIZE = 20;
+
+let EMBEDDING_CACHE_TTL = 300_000;
+let neuralPreference = 1.0;
+
+export function setNeuralPreference(weight: number): void {
+  neuralPreference = Math.max(0.1, Math.min(2.0, weight));
+}
+
+export function getNeuralPreference(): number {
+  return neuralPreference;
+}
+
+export function setEmbeddingCacheTTL(ms: number): void {
+  EMBEDDING_CACHE_TTL = Math.max(60_000, Math.min(600_000, ms));
+}
+
+const embeddingMetrics = {
+  neuralCalls: 0,
+  fallbackCalls: 0,
+  cacheHits: 0,
+  crossDimensionHits: 0,
+  errors: 0,
+};
+
+// FNV-1a. Same mixer as fallback-embed.mjs; that copy is not exported.
+function hashStr(s: string, seed = 2166136261): number {
+  let h = seed >>> 0;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function hashText(text: string): string {
+  // Key on the whole normalized text (two FNV-1a seeds + length). The old key hashed only the
+  // first 500 chars into 32 bits, so texts sharing a 500-char prefix got each other's embedding.
+  const t = text.toLowerCase().trim();
+  return `emb-${hashStr(t).toString(36)}-${hashStr(t, 0x9e3779b9).toString(36)}-${t.length.toString(36)}`;
+}
+
+export async function generateEmbedding(text: string, dimension: string = "general"): Promise<number[]> {
+  const key = hashText(text);
+
+  const cached = embeddingDimensionalCache.lookup(key, dimension);
+  if (cached && Date.now() - cached.value.ts < EMBEDDING_CACHE_TTL) {
+    embeddingMetrics.cacheHits++;
+    if (cached.dimension !== dimension) embeddingMetrics.crossDimensionHits++;
+    return cached.value.vec;
+  }
+
+  const embedModel = process.env.TESSERA_EMBED_MODEL?.trim();
+  if (neuralPreference < 0.3 || !embedModel) {
+    embeddingMetrics.fallbackCalls++;
+    const fallback = localFallbackEmbedding(text);
+    embeddingDimensionalCache.set(key, { vec: fallback, ts: Date.now() }, dimension);
+    return fallback;
+  }
+
+  const timeoutMs = Math.round(10_000 * Math.min(neuralPreference, 2.0));
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    const response = await tesseraEmbeddings(
+      { model: embedModel, input: text.slice(0, 8000) },
+      controller.signal,
+    );
+    clearTimeout(timer);
+
+    const vec = response.data?.[0]?.embedding;
+    if (vec && vec.length > 0) {
+      embeddingMetrics.neuralCalls++;
+      embeddingDimensionalCache.set(key, { vec, ts: Date.now() }, dimension);
+      return vec;
+    }
+  } catch (err) {
+    embeddingMetrics.errors++;
+    logger.debug({ err: (err as Error).message }, "NeuralEmbeddings: API call failed, using fallback");
+  }
+
+  embeddingMetrics.fallbackCalls++;
+  const fallback = localFallbackEmbedding(text);
+  embeddingDimensionalCache.set(key, { vec: fallback, ts: Date.now() }, dimension);
+  return fallback;
+}
+
+export async function generateEmbeddingsBatch(texts: string[], dimension: string = "general"): Promise<number[][]> {
+  if (texts.length === 0) return [];
+
+  const results: number[][] = new Array(texts.length);
+  const uncachedIndices: number[] = [];
+
+  for (let i = 0; i < texts.length; i++) {
+    const key = hashText(texts[i]);
+    const cached = embeddingDimensionalCache.lookup(key, dimension);
+    if (cached && Date.now() - cached.value.ts < EMBEDDING_CACHE_TTL) {
+      results[i] = cached.value.vec;
+    } else {
+      uncachedIndices.push(i);
+    }
+  }
+
+  if (uncachedIndices.length === 0) return results;
+
+  const embedModel = process.env.TESSERA_EMBED_MODEL?.trim();
+  if (!embedModel) {
+    for (const origIdx of uncachedIndices) {
+      const vec = localFallbackEmbedding(texts[origIdx]);
+      results[origIdx] = vec;
+      embeddingMetrics.fallbackCalls++;
+      embeddingDimensionalCache.set(hashText(texts[origIdx]), { vec, ts: Date.now() }, dimension);
+    }
+    return results;
+  }
+
+  const batches: number[][] = [];
+  for (let i = 0; i < uncachedIndices.length; i += MAX_BATCH_SIZE) {
+    batches.push(uncachedIndices.slice(i, i + MAX_BATCH_SIZE));
+  }
+
+  for (const batch of batches) {
+    const batchTexts = batch.map(idx => texts[idx].slice(0, 8000));
+    let embeddings: Array<number[] | undefined> | null = null;
+
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15_000);
+
+      const response = await tesseraEmbeddings(
+        { model: embedModel, input: batchTexts },
+        controller.signal,
+      );
+      clearTimeout(timer);
+
+      const data = response.data;
+      if (!data) {
+        throw new Error("Tessera LLM embeddings response missing data");
+      }
+      embeddings = [...data]
+        .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+        .map(d => d.embedding);
+    } catch (err) {
+      logger.debug({ err: (err as Error).message, batchSize: batch.length }, "NeuralEmbeddings: batch API call failed");
+    }
+
+    for (let j = 0; j < batch.length; j++) {
+      const origIdx = batch[j];
+      const vec = embeddings?.[j] ?? localFallbackEmbedding(texts[origIdx]);
+      results[origIdx] = vec;
+      embeddingDimensionalCache.set(hashText(texts[origIdx]), { vec, ts: Date.now() }, dimension);
+    }
+  }
+
+  return results;
+}
+
+export function cosineSimilarity(a: number[], b: number[]): number {
+  const len = Math.min(a.length, b.length);
+  if (len === 0) return 0;
+  let dot = 0, magA = 0, magB = 0;
+  for (let i = 0; i < len; i++) {
+    dot += a[i] * b[i];
+    magA += a[i] * a[i];
+    magB += b[i] * b[i];
+  }
+  const denom = Math.sqrt(magA) * Math.sqrt(magB);
+  return denom === 0 ? 0 : dot / denom;
+}
+
+export function getEmbeddingStats() {
+  const total = embeddingMetrics.neuralCalls + embeddingMetrics.fallbackCalls;
+  const neuralRate = total > 0 ? Math.round((embeddingMetrics.neuralCalls / total) * 1000) / 1000 : 0;
+  const healthy = total === 0 || neuralRate >= 0.5;
+  const dimStats = embeddingDimensionalCache.getStats();
+  const avoidedEmbeddingCalls = embeddingMetrics.cacheHits + embeddingMetrics.crossDimensionHits;
+  const estimatedTimeSavedMs = avoidedEmbeddingCalls * 50;
+  return {
+    cacheSize: dimStats.totalSize,
+    dimension: EMBEDDING_DIM,
+    maxBatchSize: MAX_BATCH_SIZE,
+    neuralCalls: embeddingMetrics.neuralCalls,
+    fallbackCalls: embeddingMetrics.fallbackCalls,
+    cacheHits: embeddingMetrics.cacheHits,
+    crossDimensionHits: embeddingMetrics.crossDimensionHits,
+    errors: embeddingMetrics.errors,
+    neuralRate,
+    mode: embeddingMetrics.neuralCalls > 0 ? "neural" : embeddingMetrics.fallbackCalls > 0 ? "fallback" : "idle",
+    healthy,
+    healthWarning: !healthy ? `Neural embedding rate ${(neuralRate * 100).toFixed(1)}% is below 50% threshold — semantic quality degraded` : null,
+    dimensionalCache: dimStats,
+    speedup: { avoidedEmbeddingCalls, estimatedTimeSavedMs },
+  };
+}

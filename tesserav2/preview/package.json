@@ -1,0 +1,11 @@
+{
+  "name": "@workspace/preview",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node ../artifacts/tessera/node_modules/vite/bin/vite.js --config vite.config.ts --host 127.0.0.1",
+    "build": "node ../artifacts/tessera/node_modules/vite/bin/vite.js build --config vite.config.ts",
+    "typecheck": "node ../node_modules/typescript/bin/tsc -p tsconfig.json --noEmit"
+  }
+}

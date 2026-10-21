@@ -1,0 +1,31 @@
+# Locked paths: only Father may change these (moderator-lock + CODEOWNERS).
+/.github/
+/CODEOWNERS
+/.github/CODEOWNERS
+/gate/
+/SETUP-FATHER.md
+/AGENTS.md
+/.cursor/
+/mesh/roles/
+/mesh/policy/
+**/prompts/
+*.prompt.md
+**/routines/
+**/baseline.json
+**/qa_set*
+renovate.json
+# TESSERA gate scripts, scorer and benches (Rick #1, #2)
+/scripts/historical-merge-gate.mjs
+/scripts/historical-merge-gate.test.mjs
+/scripts/suite-policy.mjs
+/scripts/suite-policy.test.mjs
+/scripts/test-unified.mjs
+/scripts/bench-latency.mjs
+/scripts/loop/
+**/bench/
+/artifacts/api-server/scripts/pen-local-gate.mjs
+/artifacts/api-server/src/lib/pen-local/
+# Held-out eval runner (scoring data is private, in Gitbook)
+/evals/heldout/
+# Father approval flow page (Father only)
+/docs/FATHER-FLOW.md

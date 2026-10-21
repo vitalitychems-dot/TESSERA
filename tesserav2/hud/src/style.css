@@ -1,0 +1,20 @@
+:root {
+  color-scheme: dark;
+  --ground: #070b10;
+  --edge: #7ef0d4;
+  --bone: #f3efe6;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+html, body { margin: 0; height: 100%; background: var(--ground); color: var(--bone); overflow: hidden; }
+#terrain { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+#hud {
+  position: fixed; top: 16px; left: 16px; min-width: 280px; max-width: 420px;
+  padding: 12px 14px; font: 12px/1.5 var(--mono);
+  background: rgba(7, 11, 16, 0.72); border: 1px solid var(--edge);
+  box-shadow: 0 0 18px rgba(126, 240, 212, 0.18); backdrop-filter: blur(6px);
+}
+#hud h1 { margin: 0 0 8px; font-size: 12px; letter-spacing: 0.18em; color: var(--edge); font-weight: 600; }
+#hud dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; }
+#hud dt { color: rgba(126, 240, 212, 0.7); }
+#hud dd { margin: 0; word-break: break-all; }
+#hud dd.pulse { color: var(--edge); }

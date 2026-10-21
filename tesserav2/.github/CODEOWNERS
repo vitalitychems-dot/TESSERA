@@ -1,0 +1,29 @@
+# Owner: Father only. Mirrors gate/locked-paths.txt. Agents cannot approve changes here (see SETUP-FATHER.md: agents must not hold this account's token).
+# Follow-up: CODEOWNER is @collink1007 (Father's owner login). #297 keeps that owner and adds /evals/heldout/.
+/.github/ @collink1007
+/CODEOWNERS @collink1007
+/.github/CODEOWNERS @collink1007
+/gate/ @collink1007
+/SETUP-FATHER.md @collink1007
+/AGENTS.md @collink1007
+/.cursor/ @collink1007
+/mesh/roles/ @collink1007
+/mesh/policy/ @collink1007
+**/prompts/ @collink1007
+*.prompt.md @collink1007
+**/routines/ @collink1007
+**/baseline.json @collink1007
+**/qa_set* @collink1007
+renovate.json @collink1007
+/scripts/historical-merge-gate.mjs @collink1007
+/scripts/historical-merge-gate.test.mjs @collink1007
+/scripts/suite-policy.mjs @collink1007
+/scripts/suite-policy.test.mjs @collink1007
+/scripts/test-unified.mjs @collink1007
+/scripts/bench-latency.mjs @collink1007
+/scripts/loop/ @collink1007
+**/bench/ @collink1007
+/artifacts/api-server/scripts/pen-local-gate.mjs @collink1007
+/artifacts/api-server/src/lib/pen-local/ @collink1007
+/evals/heldout/ @collink1007
+/docs/FATHER-FLOW.md @collink1007

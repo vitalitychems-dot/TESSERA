@@ -1,0 +1,10 @@
+{
+  "measured": "2026-10-20",
+  "source": "node dist/cli/run-eval.mjs on c17490f1 lineage (local/sponge-r2)",
+  "grade": "F",
+  "percentile": 13,
+  "score": 390,
+  "maxPossible": 2900,
+  "passed": 6,
+  "total": 29
+}
